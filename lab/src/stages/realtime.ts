@@ -30,6 +30,8 @@ import update from './cacheupdate.wgsl' with { type: 'text' };
 const SLOTS = 262144, HITS = 1 << 20;
 export const CHANGES: Record<string, [string, string, 'uniform']> = { changes: ['changes', 'Changes', 'uniform'] };
 export interface CachePart { name: string; lib: string; bind: Stage['buffers']; stages: Stage[]; init(lab: Lab): Promise<void>; /** more rounds this frame: the light has changed everywhere */ rush?: number }
+/** the sum, whole (the teaching panel swaps this for a mask) */
+export const WHOLE = 'fn part(k: u32) -> f32 { return 1.0; }\n';
 export interface DenoisePart { name: string; stages(o: { signal: string; div: 1 | 2; cap: number; rounds: number; narrow?: boolean; fractions?: boolean }, g: Graph): { stages: Stage[]; result: string } }
 export interface UpscalePart { name: string; stages(g: Graph): { stages: Stage[]; result: string } }
 
@@ -118,7 +120,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
         ...dVis.stages, ...dB.stages, ...dM.stages,
         S('air', cache.lib + air, 'half', { surf: 'surf' }, { outA: 'air' }, { ...c, plumes: ['plumes', 'array<vec4f, 18>', 'uniform'] }),
         S('air history', temporal, 'half', { air: 'cur', 'airH@prev': 'hist', 'airM@prev': 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, { outH: 'airH', outM: 'airM' }, {}, { DIV: 2, CAP: 16, SPREAD: 1.0, NARROW: 0, KIND: 0 }),
-        S('resolve', resolve, 'render', { surf: 'surf', emit: 'emit', front: 'frontT', [dVis.result]: 'vis', lampU: 'lampU', [dB.result]: 'bounce', [dM.result]: 'mirror', airH: 'air' }, { outC: 'color' }),
+        S('resolve', WHOLE + resolve, 'render', { surf: 'surf', emit: 'emit', front: 'frontT', [dVis.result]: 'vis', lampU: 'lampU', [dB.result]: 'bounce', [dM.result]: 'mirror', airH: 'air' }, { outC: 'color' }),
         ...u.stages, ...glows,
       ].map(s => o.edit ? o.edit(s) : s);
     },

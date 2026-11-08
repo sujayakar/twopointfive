@@ -1,0 +1,170 @@
+// THE FRAME, STEP BY STEP. The world stands still; the frame goes on being made. Each step shows what it writes, the types it takes and gives (read from the
+// stages themselves), what it costs here, and the values under the pointer. A look is a small stage of its own, made when it is first asked for.
+import type { Lab, Method } from './lab';
+import type { Stage } from './graph';
+import type { Present } from './present';
+import { CURVE } from './stages/expose';
+import { WHOLE } from './stages/realtime';
+import { MATERIALS } from './scene/materials';
+import signals from './wgsl/signals.wgsl' with { type: 'text' };
+import cacheLib from './wgsl/cache.wgsl' with { type: 'text' };
+
+interface Look { name: string; note?: string; /** signal → variable */ reads?: Record<string, string>; /** the body of look(p, q, uv): p output pixel, q render pixel. Linear color out */ code?: string; cache?: boolean; /** the sum's parts (a mask), shown as the picture is */ parts?: number; /** shown through the whole exposure and curve */ picture?: boolean; signal?: string; /** one more path a pixel of the reference is traced while this is looked at */ ref?: boolean }
+interface Step { group: string; title: string; sig: string; what: string; why: string; stages: string[]; looks: Look[]; probe?: string[] }
+
+const half = (v: string, t: string) => `let h = vec2u(uv * vec2f(textureDimensions(${t}))); let ${v} = textureLoad(${t}, min(h, textureDimensions(${t}) - 1u), 0);`;
+const P = 'let rd = pxRay(q); let s = unpackPx(textureLoad(surf, q, 0), rd);', SURF = { surf: 'surf' };
+const light = (signal: string, name: string, note?: string): Look => ({ name, ...(note ? { note } : {}), reads: { [signal]: 't0' }, code: `${half('v', 't0')} return asWall(v.rgb);` });
+const frac = (signal: string, name: string, note?: string): Look => ({ name, ...(note ? { note } : {}), reads: { [signal]: 't0' }, code: `${half('v', 't0')} return vec3f(v.x, v.a, v.y);` });
+const N = (x: number) => x.toLocaleString('en-US');
+export function steps(lab: Lab): Step[] {
+  const c = lab.scene.counts, w = lab.building.world;
+  return [
+    { group: 'Given', title: 'The world', stages: [], sig: 'World = { Piece[], Crown[], Lamp[], Opening[] }',
+      what: `${N(c.pieces)} pieces that stand, ${N(c.moving)} that move, ${N(c.instances)} crowns and tufts of leaves, ${w.lamps.length} lamps. A piece is a box, cut by up to eight planes and at most one quadric: walls, pipes, doors and people are all that one thing.`,
+      why: 'One kind of piece means one ray test. The camera, the shadows, the bounces and the mirrors all call it, so they can not disagree about where a thing is.',
+      looks: [{ name: 'By piece', reads: { id: 'idT' }, code: 'let a = textureLoad(idT, q, 0).x; if (a == 0u) { return vec3f(0.02); } return hue(a);' }, { name: 'By material', reads: SURF, code: `${P} if (s.sky) { return vec3f(0.02); } return hue(s.kind * 977u + 5u);` }], probe: ['piece', 'material'] },
+    { group: 'Find', title: 'Which piece is at each pixel', stages: ['raster', 'raster clear', 'sun leaves'], sig: 'raster : Camera → World → Id × Depth',
+      what: 'Triangles, for the numbers only: which piece or leaf, and how far. No color, no normal. The clear layer (glass, water) goes to a second pair. The leaves are drawn once more as the sun sees them.',
+      why: 'What is curved or cut is drawn as its box, and the true surface is then found inside it with the same test a ray uses. The raster is only a fast first ray.',
+      looks: [{ name: 'Id', reads: { id: 'idT' }, code: 'let a = textureLoad(idT, q, 0).x; if (a == 0u) { return vec3f(0.02); } return hue(a);' }, { name: 'Depth', reads: SURF, code: `${P} return heat(1.0 - clamp(log2(max(s.t, 1.0) / 8.0) / 5.0, 0.0, 1.0));` }, { name: 'Clear layer', note: 'glass and water, nearest only', reads: { idClear: 'idC' }, code: 'let a = textureLoad(idC, q, 0).x; if (a == 0u) { return vec3f(0.02); } return hue(a);' }, { name: 'Leaves from the sun', reads: { sunLeaves: 'sl' }, code: 'let d = vec2f(textureDimensions(sl)); let k = textureLoad(sl, vec2u(clamp(uv, vec2f(0.0), vec2f(0.999)) * d), 0); return vec3f(select(0.02, k * 0.9, k > 0.0));' }], probe: ['piece', 'leaf'] },
+    { group: 'Find', title: 'The surface there', stages: ['first hit', 'water'], sig: 'first hit : Id → Surface { t, n, albedo, rough, metal } × Glow × Motion',
+      what: 'The piece says exactly where the ray meets it, and its material says what is there. Under water the ray is bent and asked again.',
+      why: 'Albedo is paint with no light in it. From here on nobody asks the raster: every later step takes a Surface, whether a camera ray or a bounce found it.',
+      looks: [{ name: 'Normal', reads: SURF, code: `${P} if (s.sky) { return vec3f(0.02); } return pow(s.n * 0.5 + 0.5, vec3f(2.2));` }, { name: 'Albedo', note: 'paint, no light', reads: SURF, code: `${P} if (s.sky) { return vec3f(0.02); } return s.albedo;` }, { name: 'Roughness', note: 'black = a mirror', reads: SURF, code: `${P} return vec3f(select(s.rough * s.rough, 0.0, s.sky)); ` }, { name: 'Metal', reads: SURF, code: `${P} return vec3f(select(0.02 + s.metal, 0.0, s.sky));` }, { name: 'What shines by itself', reads: { emit: 'em' }, code: 'return asSeen(textureLoad(em, q, 0).rgb);' }, { name: 'Motion', note: 'where this point was last frame; move the camera', reads: { aux: 'ax' }, code: 'let m = textureLoad(ax, q, 0).xy * frame.size.zw; return vec3f(0.18) + vec3f(m.x, -m.x * 0.5 + m.y, -m.y) * 0.12;' }], probe: ['t', 'normal', 'albedo', 'rough', 'metal', 'motion'] },
+    { group: 'Light', title: 'Light kept on surfaces', stages: ['cache claim', 'cache', 'cache keep'], sig: 'cache : Map<(cell, facing), { E, sun seen, samples }>',
+      what: 'A table of how much light lands on each patch of wall, a third of a metre wide. Each frame some entries get one more sample: a ray to the sun, one to a lamp, one to look around, whose hit is read from this same table.',
+      why: 'This is the bottom of the recursion. Reading last frame\'s table at the end of a ray is what turns one bounce a frame into all bounces over time. Only what is kept is blurry; what you see directly never reads it.',
+      looks: [{ name: 'Kept light', note: 'as it would light a white wall', reads: { ...SURF, front: 'fr' }, cache: true, code: `${P} if (s.sky) { return vec3f(0.02); } let k = cacheRead(s.x, select(s.ng, vec3f(0.0), s.leaf), vec2f(0.5)); if (k.n <= 0.0) { return vec3f(0.25, 0.0, 0.2); } return asWall(k.E + frame.sunE.xyz * max(dot(s.ng, frame.sunDir.xyz), 0.0) * k.sun);` }, { name: 'The cells', reads: SURF, cache: true, code: `${P} if (s.sky) { return vec3f(0.02); } let k = cacheKey(s.x, select(s.ng, vec3f(0.0), s.leaf), 0u); return hue(k) * select(0.15, 1.0, cacheFind(k) != NOTHING);` }, { name: 'Samples', note: 'blue few, yellow 96', reads: SURF, cache: true, code: `${P} if (s.sky) { return vec3f(0.02); } let k = cacheRead(s.x, select(s.ng, vec3f(0.0), s.leaf), vec2f(0.5)); return heat(k.n / 96.0);` }, { name: 'Sun seen', reads: SURF, cache: true, code: `${P} if (s.sky) { return vec3f(0.02); } return vec3f(cacheRead(s.x, select(s.ng, vec3f(0.0), s.leaf), vec2f(0.5)).sun);` }] },
+    { group: 'Light', title: 'Signal 1: which lamps are seen', stages: ['lamps'], sig: 'lamps : Surface → { U exact, V ∈ [0,1]³ one ray each }',
+      what: 'For the sun, for one standing lamp and for one torch: is anything in the way? The lamp is drawn by what it would send, so the mean of the answers is the share of their light that arrives. How much light that is (U) is a formula.',
+      why: 'The only unknown is whether. So only a number from 0 to 1 is noisy, and the brightness it multiplies is exact and never filtered. The sun, lamps and flashlights differ only in which channel they use.',
+      looks: [{ name: 'U: nothing in the way', note: 'the standing lamps\' light, no shadows', reads: { lampU: 't0' }, code: `${half('v', 't0')} return asWall(v.rgb + vec3f(1.06, 0.99, 0.87) * v.a);` }, { name: 'V: sun', note: 'one ray a pixel this frame', reads: { vis: 't0' }, code: `${half('v', 't0')} return vec3f(v.a);` }, { name: 'V: standing', reads: { vis: 't0' }, code: `${half('v', 't0')} return vec3f(v.x);` }, { name: 'V: torches', reads: { vis: 't0' }, code: `${half('v', 't0')} return vec3f(v.y);` }, { name: 'Lamps that can reach', note: 'mapped once; the rest are never asked', reads: SURF, code: `${P} if (s.sky) { return vec3f(0.02); } var k = 0.0; for (var g = 0u; g * 4u < frame.counts.x; g++) { let r = lampReach(s.x, g); k += r.x + r.y + r.z + r.w; } return heat(k / 24.0);` }], probe: ['lampU', 'vis'] },
+    { group: 'Light', title: 'Signal 1, settled', stages: ['vis history', 'vis blur'], sig: 'denoise : V × V@prev → V',
+      what: 'Last frame\'s answer for this same point, held to what this frame says nearby, and mixed in. Then neighbors on the same surface are averaged, as far as the doubt that is left.',
+      why: 'Red = standing lamps, green = sun, blue = torches. A shadow\'s edge moves with the surface it lies on, so this history follows the surface.',
+      looks: [frac('vis', 'This frame'), frac('visH', '+ history'), frac('visA', '+ neighbors'), { name: 'Frames behind it', note: 'blue few, yellow 18', reads: { visM: 't0' }, code: `${half('v', 't0')} return heat(v.z / 18.0);` }], probe: ['vis', 'visH', 'frames'] },
+    { group: 'Light', title: 'Signal 2: wide incoming', stages: ['gather', 'bounce history', 'bounce blur'], sig: 'gather : Surface → E (two rays, half size) → denoise',
+      what: 'Two rays over the hemisphere, some aimed through windows and doors. What they hit is read from the kept light; what they miss is sky.',
+      why: 'Everything that is not a lamp: the sky, and every wall. It is always soft, so it can be found at half the size and blurred far. This is the orange on the floor outside an orange room.',
+      looks: [light('bounce', 'This frame\'s rays'), light('bounceH', '+ history'), light('bounceB', '+ neighbors', 'as it lights a white wall')], probe: ['bounce', 'bounceB'] },
+    { group: 'Light', title: 'Signal 3: narrow incoming', stages: ['mirror', 'mirror history', 'mirror blur'], sig: 'mirror : Surface × Eye → L (one ray, half size) → denoise',
+      what: 'One ray along the way the coat reflects. Its hit is lit by the kept light, and asks the sun itself so shadows stay sharp in the mirror.',
+      why: 'The same question as signal 2, asked of a narrow cone. It depends on the eye, so its history follows the image behind the surface, as if that stood there.',
+      looks: [{ name: 'This frame\'s ray', reads: { mirror: 't0' }, code: `${half('v', 't0')} if (v.a < 0.0) { return vec3f(0.02); } return asSeen(v.rgb * 2.0);` }, { name: '+ history', reads: { mirrorH: 't0' }, code: `${half('v', 't0')} if (v.a < 0.0) { return vec3f(0.02); } return asSeen(v.rgb * 2.0);` }, { name: '+ neighbors', reads: { mirrorA: 't0' }, code: `${half('v', 't0')} if (v.a < 0.0) { return vec3f(0.02); } return asSeen(v.rgb * 2.0);` }, { name: 'How far the image is', reads: { mirror: 't0' }, code: `${half('v', 't0')} if (v.a < 0.0) { return vec3f(0.02); } return heat(v.a / 30.0);` }], probe: ['mirror', 'mirrorA'] },
+    { group: 'Light', title: 'The air', stages: ['air', 'air history'], sig: 'air : Ray → { L added, T through }',
+      what: 'Haze, dust, steam and rain are one density. Steps along the ray ask what stands there and what lights it: the sun, a torch, the rooms.',
+      why: 'Not a fourth signal: a point in the air is lit by the same recursion. How much gets through is exact, since the density is known.',
+      looks: [{ name: 'Light it adds', reads: { airH: 't0' }, code: `${half('v', 't0')} return asSeen(v.rgb * 4.0);` }, { name: 'What gets through', reads: { airH: 't0' }, code: `${half('v', 't0')} return vec3f(v.a);` }], probe: ['air'] },
+    { group: 'Sum', title: 'Together', stages: ['resolve'], sig: 'resolve : Surface × U × V × E × L × Air → Color',
+      what: 'The exact parts times the three signals, added up. Nothing here looks for light. Step through the looks to see each part come in, or switch parts on and off.',
+      why: 'color = glow + sun·V + matte·(U·V + E) + coat·(U·V + L), then glass and water over it, then the air in front.',
+      looks: ['Glow and sky', '+ sun', '+ lamps', '+ highlights', '+ bounce', '+ mirrors', '+ glass and water', '+ air'].map((name, i) => ({ name, parts: (2 << i) - 1 })), probe: ['color'] },
+    { group: 'Show', title: 'More pixels, fewer jaggies', stages: ['upscale'], sig: 'upscale : Color × Motion × Picture@prev → Picture',
+      what: 'Each frame the camera is moved by a fraction of a pixel. Sixteen such frames, put where they belong, make a picture larger and smoother than any of them.',
+      why: 'The picture keeps a count of samples at each pixel, so it is quick at first and calm later. What moved is found by the motion from step 3; what can not be trusted is held to its neighbors.',
+      looks: [{ name: 'This frame alone', signal: 'color', picture: true }, { name: 'The standing picture', picture: true }, { name: 'Samples behind it', note: 'blue few, yellow 28', reads: { picture: 't0' }, code: 'return heat(textureLoad(t0, p, 0).a / 28.0);' }], probe: ['color', 'picture'] },
+    { group: 'Show', title: 'Glow', stages: ['glow'], sig: 'glow : Picture → ½ → ¼ → … → Glow',
+      what: 'The picture halved five times, and the small ones added back softly: light that scatters in the lens.', why: 'It is added after exposure is chosen, so a dark place that is lifted does not lift its glow.',
+      looks: [{ name: 'The glow alone', reads: { rtBloom: 't0' }, code: 'return asSeen(textureSampleLevel(t0, linSamp, uv, 0.0).rgb);' }] },
+    { group: 'Show', title: 'How bright to show it', stages: ['meter', 'base'], sig: 'expose : Picture → stops to add per pixel',
+      what: 'The scene\'s light spans far more than a screen can. The broad part of it (rooms, shadows) is found by an edge-keeping blur and drawn together; the fine part is kept, and a little more.',
+      why: 'So a dark room and a white roof both show and neither goes flat. Yellow is brighter, blue darker, a band a stop.',
+      looks: [{ name: 'The light, in stops', reads: { picture: 't0' }, code: 'let l = log2(max(strong(textureLoad(t0, p, 0).rgb), 1e-5)) - e[0]; return heat(clamp(l / 8.0 + 0.5, 0.0, 1.0)) * (0.82 + 0.18 * step(0.5, fract(l)));' }, { name: 'The broad part', reads: { picture: 't0', rtBase: 't1' }, code: 'let l = log2(max(strong(textureLoad(t0, p, 0).rgb), 1e-5)); let ab = textureSampleLevel(t1, linSamp, uv, 0.0).xy; let d = ab.x * (l - e[0]) + ab.y; return heat(clamp(d / 8.0 + 0.5, 0.0, 1.0)) * (0.82 + 0.18 * step(0.5, fract(d)));' }, { name: 'Stops added', note: 'grey none, warm up, cold down', reads: { picture: 't0', rtBase: 't1' }, code: 'let l = log2(max(strong(textureLoad(t0, p, 0).rgb), 1e-5)); let s = stops(l, e[0], textureSampleLevel(t1, linSamp, uv, 0.0).xy) + 2.1 + 0.9 * e[0]; return max(vec3f(0.0), vec3f(0.18) + vec3f(0.22, 0.10, -0.05) * max(s, 0.0) + vec3f(0.05, -0.05, -0.22) * min(s, 0.0));' }] },
+    { group: 'Show', title: 'The curve', stages: [], sig: 'shown : light → [0,1]³',
+      what: 'A toe that keeps black black, a straight middle, a shoulder that rolls bright light off. Half by each color, half with the hue held.',
+      why: 'Without it, anything brighter than the screen clips to a flat patch and strong colors shift.',
+      looks: [{ name: 'Clipped', note: 'exposure only', reads: { picture: 't0' }, code: 'return textureLoad(t0, p, 0).rgb * exp2(-2.1 - 0.9 * e[0]);' }, { name: 'One exposure + curve', reads: { picture: 't0' }, code: 'return asSeen(textureLoad(t0, p, 0).rgb);' }, { name: 'The picture', picture: true }], probe: ['picture'] },
+    { group: 'Check', title: 'Against the reference', stages: [], sig: 'reference : World × Camera → Picture (paths to the end, no cache, no filter)',
+      what: 'The same world, traced plainly: one path a pixel a frame, followed until it dies, summed for as long as you look. Nothing is kept, reused, clamped or blurred.',
+      why: 'This is what every step above is trying to say sooner. Red is where real time is too bright, blue too dark, a full color a whole stop.',
+      looks: [{ name: 'Reference', signal: 'hdr', picture: true, ref: true, note: 'settles as you wait' }, { name: 'Difference', ref: true, reads: { picture: 't0', hdr: 't1' }, code: 'var a = 0.0; var b = 0.0; let d = vec2i(textureDimensions(t0)) - 1; for (var y = -1; y <= 1; y++) { for (var x = -1; x <= 1; x++) { let k = clamp(vec2i(p) + vec2i(x, y), vec2i(0), d); a += lum(textureLoad(t0, k, 0).rgb); b += lum(textureLoad(t1, k, 0).rgb); } } let r = log2((a + 1e-3) / (b + 1e-3)); return vec3f(max(r, 0.0), 0.0, max(-r, 0.0)) + 0.004;' }, { name: 'Real time', picture: true, ref: true }], probe: ['picture', 'paths'] },
+  ];
+}
+const HELP = `
+fn heat(x: f32) -> vec3f { let t = clamp(x, 0.0, 1.0); return pow(clamp(vec3f(1.6 * t - 0.25, 1.5 * t - 0.28 * t * t - 0.12, 0.45 + 0.9 * t - 2.1 * t * t + 0.55 * t * t * t), vec3f(0.01), vec3f(1.0)), vec3f(1.8)); }
+fn hue(k: u32) -> vec3f { let h = pcg(k); let a = f32(h & 1023u) / 1023.0; let c = clamp(abs(fract(a + vec3f(0.0, 0.667, 0.333)) * 6.0 - 3.0) - 1.0, vec3f(0.0), vec3f(1.0)); return mix(vec3f(0.5), c, 0.55) * (0.25 + 0.55 * f32((h >> 10u) & 255u) / 255.0); }
+/** light, by one exposure and the curve */
+fn asSeen(c: vec3f) -> vec3f { return shown(max(c, vec3f(0.0)) * exp2(-2.1 - 0.9 * e[0])); }
+/** what lands, as a white wall would send it back */
+fn asWall(E: vec3f) -> vec3f { return asSeen(E * (0.8 / PI)); }
+`;
+
+export class Teach {
+  on = false; step = 0; look = 0; steps: Step[]; mask = 255; pace = 0; private built = new Map<Look, Stage | 'making'>(); private parts: Stage | null = null; private pinned: [number, number] | null = null; private busy = false; private lastDraw = 0; private el = document.createElement('div');
+  constructor(private lab: Lab, private present: Present, private method: Method, private ref: Method & { samples: number }, private ui: { close(): void; point(): { x: number; y: number } }) { this.steps = steps(lab); this.el.id = 'teach'; this.el.hidden = true; document.body.append(this.el); }
+  open() { this.on = true; this.el.hidden = false; document.body.classList.add('teaching'); this.lab.graph.signal('look', 'rgba16float', 'output').signal('parts', 'rgba16float', 'render'); this.paint(); }
+  close() { this.on = false; this.el.hidden = true; document.body.classList.remove('teaching'); this.ui.close(); }
+  go(step: number, look = 0) { this.step = Math.max(0, Math.min(this.steps.length - 1, step)); this.look = look; if (this.now().parts !== undefined) this.mask = this.now().parts!; this.paint(); }
+  now() { const s = this.steps[this.step]!; return s.looks[Math.max(0, Math.min(s.looks.length - 1, this.look))]!; }
+  key(k: string): boolean {
+    const s = this.steps[this.step]!; if (k === 'arrowright') { if (this.look < s.looks.length - 1) this.go(this.step, this.look + 1); else this.go(this.step + 1); } else if (k === 'arrowleft') { if (this.look > 0) this.go(this.step, this.look - 1); else if (this.step > 0) this.go(this.step - 1, this.steps[this.step - 1]!.looks.length - 1); } else if (k === 'arrowdown') this.go(this.step + 1); else if (k === 'arrowup') this.go(this.step - 1); else if (k === 'escape' || k === 't') this.close(); else if (k === '.') this.single = true; else return false; return true;
+  }
+  private single = false;
+  /** may this frame be made? (the pace) */
+  due(now: number): boolean { if (this.single) { this.single = false; this.lastDraw = now; return true; } if (this.pace === 2) return false; if (this.pace === 1 && now - this.lastDraw < 250) return false; this.lastDraw = now; return true; }
+  private stageOf(l: Look): Stage | null {
+    const have = this.built.get(l); if (have) return have === 'making' ? null : have; this.built.set(l, 'making');
+    const bufs: Stage['buffers'] = { e: ['exposure', 'array<f32, 4>', 'read'], changes: ['changes', 'Changes', 'uniform'], ...(l.cache ? { keys: ['keys', 'array<atomic<u32>>', 'read_write'], cand: ['cand', 'array<atomic<u32>>', 'read_write'], cells: ['cells', 'array<vec4f>', 'read'] } as Stage['buffers'] : {}) };
+    const s: Stage = { name: 'look', over: 'output', reads: l.reads ?? {}, writes: { outI: 'look' }, buffers: bufs, code: signals + CURVE + (l.cache ? cacheLib : '') + HELP + `fn look(p: vec2u, q: vec2u, uv: vec2f) -> vec3f { ${l.code} }\n@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let d = vec2u(frame.size.zw); if (id.x >= d.x || id.y >= d.y) { return; } let uv = (vec2f(id.xy) + 0.5) / vec2f(d); let q = min(vec2u(uv * frame.size.xy), vec2u(frame.size.xy) - 1u); textureStore(outI, id.xy, vec4f(max(look(id.xy, q, uv), vec3f(0.0)), 1.0)); }` };
+    void this.lab.graph.build([s]).then(() => { this.built.set(l, s); this.single = true; }, er => { console.error('look ' + l.name + ': ' + er); }); return null;
+  }
+  private partsOf(): Stage | null {
+    if (this.parts) return this.parts; const r = this.lab.methods.get(this.method.name)!.stages.find(s => s.name === 'resolve')!; this.lab.uniform('partsK', new Uint32Array([255, 0, 0, 0]));
+    const s: Stage = { ...r, name: 'parts', writes: { outC: 'parts' }, buffers: { ...r.buffers, partsK: ['partsK', 'vec4u', 'uniform'] }, code: r.code.replace(WHOLE, 'fn part(k: u32) -> f32 { return select(0.0, 1.0, ((partsK.x >> k) & 1u) != 0u); }\n') };
+    this.parts = s; this.partsReady = this.lab.graph.build([s]).then(() => { this.partsDone = true; this.single = true; }, er => console.error('parts: ' + er)); return s;
+  }
+  private partsReady: Promise<void> | null = null; private partsDone = false;
+  /** is what is asked for what is shown? */
+  ready() { const l = this.now(), s = this.built.get(l); return l.parts !== undefined ? this.partsDone : !l.code || (!!s && s !== 'making'); }
+  /** the current look onto the canvas */
+  draw(e: GPUCommandEncoder, result: GPUTexture, to: GPUTextureView) {
+    const l = this.now(), g = this.lab.graph, f = this.lab.gpu.format, was = g.timer.on; g.timer.on = false; if (l.ref) { this.ref.frame?.(this.lab); g.run(e, this.lab.methods.get(this.ref.name)!.stages.filter(s => s.name === 'reference')); }
+    if (l.parts !== undefined) { const s = this.partsOf()!; if (this.partsDone) { this.lab.uniform('partsK', new Uint32Array([this.mask, 0, 0, 0])); g.run(e, [s]); this.present.run(e, this.lab, g.texture('parts'), to, f, 'rt', { grain: 0, sharpen: 0 }); g.timer.on = was; return; } }
+    else if (l.code) { const s = this.stageOf(l); if (s) { g.run(e, [s]); this.present.run(e, this.lab, g.texture('look'), to, f, 'rt', { plain: 1 }); g.timer.on = was; return; } }
+    else if (l.signal) { this.present.run(e, this.lab, g.texture(l.signal), to, f, 'rt', { grain: 0, sharpen: 0 }); g.timer.on = was; return; }
+    this.present.run(e, this.lab, result, to, f, 'rt', { grain: 0 }); g.timer.on = was;
+  }
+  // ---- the panel
+  private types(s: Step): string { const g = this.lab.graph, all = this.lab.methods.get(this.method.name)!.stages.filter(x => s.stages.includes(x.name)), line = (k: string, n: string) => { const sg = g.signals.get(n.split('@')[0]!); if (!sg) return ''; const [w, h] = g.px(sg.size); return `<div><i class="${k}">${k}</i><b>${n}</b> ${sg.format} <span>${w}×${h}</span></div>`; }, seen = new Set<string>(), out: string[] = [];
+    const made = new Set(all.flatMap(x => Object.values(x.writes ?? {}))); for (const x of all) for (const n of Object.keys(x.reads ?? {})) if (!seen.has(n) && !made.has(n)) { seen.add(n); out.push(line('in', n)); } for (const x of all) for (const [, [n, type]] of Object.entries(x.buffers ?? {}).map(([k, v]) => [k, v] as const)) if (!seen.has(n) && n !== 'changes') { seen.add(n); const b = g.buffers.get(n); out.push(`<div><i class="buf">buf</i><b>${n}</b> ${type.replace(/</g, '&lt;')} <span>${b ? (b.size / 1024 < 1 ? b.size + ' B' : (b.size / 1048576 >= 1 ? (b.size / 1048576).toFixed(1) + ' MB' : Math.round(b.size / 1024) + ' KB')) : ''}</span></div>`); } for (const n of made) out.push(line('out', n)); return out.join(''); }
+  private cost(s: Step) { let t = 0; for (const n of s.stages) t += this.lab.graph.timer.ms.get(n) ?? 0; return t; }
+  paint() {
+    const s = this.steps[this.step]!, l = this.now(); let group = '';
+    this.el.innerHTML = `<div class="t-card"><header><span>${this.step + 1} of ${this.steps.length}</span><button data-a="close" title="Esc">Close</button></header><h2>${s.title}</h2><code class="t-sig">${s.sig}</code><p>${s.what}</p><p class="t-why">${s.why}</p>
+      <div class="t-types">${this.types(s)}</div></div>
+      <nav class="t-list">${this.steps.map((x, i) => { const h = x.group !== group ? `<h3>${group = x.group}</h3>` : ''; return `${h}<button data-step="${i}" class="${i === this.step ? 'on' : ''}"><b>${i + 1}</b>${x.title}<em data-cost="${i}"></em></button>`; }).join('')}</nav>
+      <div class="t-bar"><div class="t-looks">${s.looks.map((x, i) => `<button data-look="${i}" class="${x === l ? 'on' : ''}">${x.name}</button>`).join('')}</div>${l.parts !== undefined ? `<div class="t-parts">${['glow, sky', 'sun', 'lamps', 'highlights', 'bounce', 'mirrors', 'glass, water', 'air'].map((x, i) => `<button data-part="${i}" class="${(this.mask >> i) & 1 ? 'on' : ''}">${x}</button>`).join('')}</div>` : ''}${l.note ? `<div class="t-note">${l.note}</div>` : ''}
+      <div class="t-run"><button data-a="back">←</button><button data-a="fwd">→</button><span>Frames</span>${['all', '4 a second', 'one at a time'].map((x, i) => `<button data-pace="${i}" class="${this.pace === i ? 'on' : ''}">${x}</button>`).join('')}${this.pace === 2 ? '<button data-a="one">Next frame</button>' : ''}<span>Forget</span><button data-a="forget">the histories</button><button data-a="forgetAll">and the kept light</button></div></div>
+      <div class="t-probe"><h3>This pixel${this.pinned ? ' (held, click to let go)' : ''}</h3><div id="t-rows"></div></div>`;
+    this.el.onclick = ev => { const b = (ev.target as HTMLElement).closest('button'); if (!b) return; const d = b.dataset; if (d.step) this.go(Number(d.step)); else if (d.look) this.go(this.step, Number(d.look)); else if (d.part) { this.mask ^= 1 << Number(d.part); this.paint(); } else if (d.pace) { this.pace = Number(d.pace); this.paint(); } else if (d.a === 'close') this.close(); else if (d.a === 'back') this.key('arrowleft'); else if (d.a === 'fwd') this.key('arrowright'); else if (d.a === 'one') this.single = true; else if (d.a === 'forget') this.forget(false); else if (d.a === 'forgetAll') this.forget(true); b.blur(); };
+    this.el.querySelector('.t-list .on')?.scrollIntoView({ block: 'nearest' }); this.costs();
+  }
+  costs() { this.el.querySelectorAll<HTMLElement>('[data-cost]').forEach(x => { const t = this.cost(this.steps[Number(x.dataset.cost)]!); x.textContent = t > 0.005 ? t.toFixed(2) : ''; }); }
+  /** every history as if the frame before had never been; and the kept light too */
+  forget(all: boolean) {
+    const d = this.lab.gpu.device; for (const [n, s] of this.lab.graph.signals) if (s.history && s.format === 'rgba16float') for (const ref of [n, n + '@prev']) { const t = this.lab.graph.texture(ref); d.queue.writeTexture({ texture: t }, new Uint8Array(t.width * t.height * 8), { bytesPerRow: t.width * 8 }, [t.width, t.height]); }
+    if (all) for (const n of ['keys', 'cells', 'fresh', 'norms', 'cand']) { const b = this.lab.graph.buffers.get(n); if (b) d.queue.writeBuffer(b, 0, n === 'cand' ? new Uint32Array(b.size / 4).fill(0xffffffff) : new Uint32Array(b.size / 4)); }
+    this.method.reset?.(this.lab); this.single = true;
+  }
+  click(x: number, y: number) { this.pinned = this.pinned ? null : [x, y]; this.paint(); }
+  /** the values under the pointer: one texel of each signal, read back */
+  async probe() {
+    if (this.busy || !this.on) return; this.busy = true;
+    try {
+      const g = this.lab.graph, d = this.lab.gpu.device, at = this.pinned ?? [this.ui.point().x, this.ui.point().y], names = ['id', 'surf', 'aux', 'vis', 'visH', 'visM', 'visA', 'lampU', 'bounce', 'bounceB', 'mirror', 'mirrorA', 'airH', 'color', 'picture'].filter(n => g.signals.has(n)), buf = d.createBuffer({ size: names.length * 256, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ }), e = d.createCommandEncoder();
+      g.flip(); const fmt: GPUTextureFormat[] = []; names.forEach((n, i) => { const t = g.texture(n); fmt.push(t.format); e.copyTextureToBuffer({ texture: t, origin: [Math.min(t.width - 1, Math.max(0, Math.floor(at[0]! * t.width))), Math.min(t.height - 1, Math.max(0, Math.floor(at[1]! * t.height)))] }, { buffer: buf, offset: i * 256, bytesPerRow: 256 }, [1, 1]); }); g.flip();
+      d.queue.submit([e.finish()]); await buf.mapAsync(GPUMapMode.READ); const raw = buf.getMappedRange().slice(0); buf.destroy(); const u = new Uint32Array(raw), f = new Float32Array(raw), h = new Uint16Array(raw);
+      const H = (x: number) => { const s = x & 0x8000 ? -1 : 1, ex = (x >> 10) & 31, m = x & 1023; return ex === 0 ? s * m * 2 ** -24 : ex === 31 ? Infinity * s : s * (1 + m / 1024) * 2 ** (ex - 15); }, v = (n: string) => { const i = names.indexOf(n); return [0, 1, 2, 3].map(k => H(h[i * 128 + k]!)); }, n2 = (x: number) => Math.abs(x) >= 100 ? x.toFixed(0) : Math.abs(x) >= 1 ? x.toFixed(2) : x.toFixed(3), v3 = (a: number[]) => a.slice(0, 3).map(n2).join('  '), dot = (a: number[]) => { const k = 1 / Math.max(0.05, ...a.slice(0, 3)), q = (x: number) => Math.round(255 * Math.sqrt(Math.max(0, Math.min(1, x * k)))); return `<i style="background:rgb(${q(a[0]!)},${q(a[1]!)},${q(a[2]!)})"></i>`; };
+      const id = u[names.indexOf('id') * 64]!, si = names.indexOf('surf') * 64, t = f[si]!, rows: [string, string, string][] = [], leaf = id >>> 31 === 1, sky = t > 1500, sc = this.lab.scene, piece = leaf || id === 0 ? null : (sc.standing[id - 1] ?? [...this.lab.slots].find(([, s]) => s === id - 1)?.[0] ?? null);
+      const oct = (p: number) => { const x = (p & 0xffff) / 65535 * 2 - 1, z = (p >>> 16) / 65535 * 2 - 1, y = 1 - Math.abs(x) - Math.abs(z); let a = x, b = z; if (y < 0) { a = (1 - Math.abs(z)) * Math.sign(x || 1); b = (1 - Math.abs(x)) * Math.sign(z || 1); } const l = Math.hypot(a, y, b) || 1; return [a / l, y / l, b / l]; }, sq = (x: number) => (x / 255) ** 2, c = u[si + 2]!;
+      rows.push(['piece', leaf ? `a leaf of crown ${(id >>> 13) & 0x3ffff}` : id === 0 ? 'nothing: the sky' : `number ${id - 1}`, '']); if (!sky) rows.push(['material', leaf ? 'leaf' : piece ? MATERIALS[piece.mat]!.name : '?', '']);
+      if (!sky) { const a = [sq(c & 255), sq((c >> 8) & 255), sq((c >> 16) & 255)]; rows.push(['t', t.toFixed(2) + ' m', ''], ['normal', v3(oct(u[si + 1]!)), ''], ['albedo', v3(a), dot(a)], ['rough', ((c >>> 24) / 255).toFixed(2), ''], ['metal', (((u[si + 3]! >>> 16) & 15) / 15).toFixed(2), '']); }
+      const ax = v('aux'), o = g.output; rows.push(['motion', `${(ax[0]! * o[0]).toFixed(2)}  ${(ax[1]! * o[1]).toFixed(2)} px`, '']);
+      if (!sky) { const U = v('lampU'), q = (n: string) => { const a = v(n); const k = (x: number) => x.toFixed(2); return `${k(a[3]!)} sun ${k(a[0]!)} lamp ${k(a[1]!)} torch`; }; rows.push(['lampU', v3(U), dot(U)], ['vis', q('vis'), ''], ['visH', q('visH'), ''], ['visA', q('visA'), ''], ['frames', v('visM')[2]!.toFixed(0), ''], ['bounce', v3(v('bounce')), dot(v('bounce'))], ['bounceB', v3(v('bounceB')), dot(v('bounceB'))]); const m = v('mirror'); rows.push(['mirror', m[3]! < 0 ? 'none asked' : v3(m), m[3]! < 0 ? '' : dot(m)], ['mirrorA', m[3]! < 0 ? '' : v3(v('mirrorA')), '']); }
+      const A = v('airH'); rows.push(['air', `${v3(A)} · ${n2(A[3]!)} through`, ''], ['color', v3(v('color')), dot(v('color'))], ['picture', `${v3(v('picture'))}  of ${v('picture')[3]!.toFixed(0)}`, dot(v('picture'))]);
+      if (this.now().ref) rows.push(['paths', String(this.ref.samples), '']);
+      const hot = new Set(this.steps[this.step]!.probe ?? []), el = document.getElementById('t-rows'); if (el) el.innerHTML = rows.map(([k, x, s]) => `<div class="${hot.has(k) ? 'hot' : ''}"><b>${k}</b><span>${s}${x}</span></div>`).join('');
+    } finally { this.busy = false; }
+  }
+}
