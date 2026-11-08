@@ -110,7 +110,10 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     g.search_probe_n = 0.0;
     crate::game::game_deal_weapons(g, Some(dt));
     crate::director::director_tick(g, dt, None, None);
-    crate::pairorders::pair_orders_input(g, input);
+    for &s in &seats {
+        let input = g.tab.cmd_seat[s].input;
+        in_seat(g, s, |g| crate::pairorders::pair_orders_input(g, input));
+    }
     for &s in &seats {
         let input = g.tab.cmd_seat[s].input;
         in_seat(g, s, |g| {

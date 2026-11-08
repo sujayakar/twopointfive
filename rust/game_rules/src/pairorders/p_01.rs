@@ -68,9 +68,8 @@ pub fn pair_orders_noticed(g: &Game, h: GuardId) -> bool {
 
 /// the squad block's line while men wait on the mark: who takes whom, and what stands in his way   (pairorders.ts's note)
 pub fn pair_orders_mark_note(g: &Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
-    if !g.pair.seated { return Vec::new(); }
-    let mine = crate::orders::squad_orders_squad(g, seat);
-    let rows: Vec<String> = pair_orders_waiting(g).into_iter().filter(|(gd, _)| mine.contains(gd)).map(|(gd, j)| match j.watcher {
+    if !seated_in(g, seat) { return Vec::new(); }
+    let rows: Vec<String> = pair_orders_waiting(g, seat).into_iter().map(|(gd, j)| match j.watcher {
         Some(w) => alloc::format!("{} takes {} anyway ({} is watching)", g.gd[gd].callsign, name_of(g, j.foe), name_of(g, w)),
         None => alloc::format!("{} takes {}{}", g.gd[gd].callsign, name_of(g, j.foe), if j.set { "" } else { " (not set)" }),
     }).collect();
@@ -78,11 +77,11 @@ pub fn pair_orders_mark_note(g: &Game, seat: &crate::seats::SeatRef) -> Vec<crat
 }
 
 /// the men waiting on the mark; each row a COPY: a writer goes back to g.pair.jobs by the man   (PairOrders.waiting)
-pub fn pair_orders_waiting(g: &Game) -> Vec<(GuardId, crate::pairorders::Job)> {
+pub fn pair_orders_waiting(g: &Game, seat: &crate::seats::SeatRef) -> Vec<(GuardId, crate::pairorders::Job)> {
     let t = g.time;
     let mut out = Vec::new();
     for (gd, j) in g.pair.jobs.iter() {
-        let waits = j.handed != Some(true)
+        let waits = crate::orders::squad_orders_mine(g, seat, gd) && j.handed != Some(true)
             && ((j.mode == crate::pairorders::JobMode::Mark && !j.go)
                 || (j.watcher.is_some() && !j.force && t - m::max(j.seen_t, j.back_t.unwrap_or(-1e9)) < 1.0))
             && g.gd[gd].state != crate::game::GuardState::Dead;
@@ -329,8 +328,7 @@ pub fn pair_orders_quiet_first(g: &mut Game) {
 /// The rows on the menu while `up` and off it otherwise; asked every frame, work only when something changes   (PairOrders.seat)
 pub fn pair_orders_seat(g: &mut Game) {
     let up = pair_orders_up(g, &crate::seats::here(g));
-    if up != g.pair.seated {
-        g.pair.seated = up;
+    if up != seated_in(g, &crate::seats::here(g)) {
         for id in crate::pairorders::rows().iter() { crate::orders::squad_orders_unregister(g, id); }
         for id in ["fallIn", "hold"] {
             let found = g.orders.defs.iter().copied().find(|x| g.tab.orders_order_def[*x].id == id);
@@ -339,7 +337,6 @@ pub fn pair_orders_seat(g: &mut Game) {
             if up && !has { g.tab.orders_order_def[d].targets.push(crate::orders::TargetKind::Foe); }
             else if !up && has { g.tab.orders_order_def[d].targets.retain(|k| *k != crate::orders::TargetKind::Foe); }
         }
-        g.pair.go_seated = false;
         if up {
             let r = pair_orders_rows(g);
             crate::orders::squad_orders_register(g, r[0], Some("cover"));
@@ -350,9 +347,8 @@ pub fn pair_orders_seat(g: &mut Game) {
             pair_orders_reset(g);
         }
     }
-    let waits = up && !pair_orders_waiting(g).is_empty();
-    if waits != g.pair.go_seated {
-        g.pair.go_seated = waits;
+    let waits = up && !pair_orders_waiting(g, &crate::seats::here(g)).is_empty();
+    if waits != book_has(g, &crate::seats::here(g), "pairGo") {
         crate::orders::squad_orders_unregister(g, "pairGo");
         if waits { let r = pair_orders_go_row(g); crate::orders::squad_orders_register(g, r, None); }
     }
@@ -365,15 +361,18 @@ pub fn pair_orders_reset(g: &mut Game) {
             if crate::pairorders::rows().contains(&asg!(g, a).order) { pair_orders_stand(g, gd, "holding", None); }
         }
     }
-    g.pair.jobs.clear();
+    let seat = crate::seats::here(g);
+    let gone: Vec<GuardId> = g.pair.jobs.keys().into_iter().filter(|gd| crate::orders::squad_orders_mine(g, &seat, *gd)).collect();
+    for gd in gone { g.pair.jobs.delete(gd); }
     g.pair.dark_memo.clear();
-    g.pair.hands_was = false;
+    let pl = g.player;
+    g.pl[pl].pair_hands_was = false;
 }
 
 // ------------------------------------------------------------ once a frame
 /// F: the mark, while somebody waits on it; the press is used here and a menu that is up goes away   (PairOrders.input)
 pub fn pair_orders_input(g: &mut Game, input: InputId) {
-    if !g.pair.seated || !g.tab.input[input].pressed.has(String::from("KeyF")) || g.pl[g.player].down || pair_orders_waiting(g).is_empty() { return; }
+    if !seated_in(g, &crate::seats::here(g)) || !g.tab.input[input].pressed.has(String::from("KeyF")) || g.pl[g.player].down || pair_orders_waiting(g, &crate::seats::here(g)).is_empty() { return; }
     g.tab.input[input].pressed.delete(String::from("KeyF"));
     crate::orders::squad_orders_close(g);
     pair_orders_mark(g, Some(crate::pairorders::PairOrdersMarkBy::F));
@@ -381,8 +380,9 @@ pub fn pair_orders_input(g: &mut Game, input: InputId) {
 
 /// Once a frame before the orders pose the men: the rows, where every defender mostly looks, Sam's hands as the mark, stale jobs forgotten   (PairOrders.tick)
 pub fn pair_orders_tick(g: &mut Game, dt: f64) {
-    pair_orders_seat(g);
-    if !g.pair.seated { return; }
+    crate::seats::each_seat(g, &mut |g| pair_orders_seat(g));
+    pair_orders_summary(g);
+    if !g.pair.seated { pair_orders_hands_summary(g); return; }
     let mut i = 0;
     while i < g.guards.len() {
         let h = g.guards[i];
@@ -422,12 +422,31 @@ pub fn pair_orders_tick(g: &mut Game, dt: f64) {
         }
         if forget { g.pair.swept.set(h, 0.0); }
     }
+    crate::seats::each_seat(g, &mut |g| if seated_in(g, &crate::seats::here(g)) { pair_orders_mine(g); });
+    pair_orders_hands_summary(g);
+}
+
+/// the rows are up on this seat's menu: the book says, whoever else's are
+fn book_has(g: &Game, seat: &crate::seats::SeatRef, id: &str) -> bool { seat.orders.defs.iter().any(|d| g.tab.orders_order_def[*d].id == id) }
+fn seated_in(g: &Game, seat: &crate::seats::SeatRef) -> bool { book_has(g, seat, "pairMark") }
+/// the game's own summary of the rows: up on some seat's menu
+fn pair_orders_summary(g: &mut Game) {
+    let up = g.seats.iter().any(|&s| seated_in(g, &crate::seats::seat(g, s)));
+    let go = g.seats.iter().any(|&s| book_has(g, &crate::seats::seat(g, s), "pairGo"));
+    g.pair.seated = up;
+    g.pair.go_seated = go;
+}
+fn pair_orders_hands_summary(g: &mut Game) { g.pair.hands_was = crate::seats::men(g).into_iter().any(|p| g.pl[p].pair_hands_was); }
+
+/// this seat's man and this seat's jobs, standing on the seat
+fn pair_orders_mine(g: &mut Game) {
     let pl = g.player;
     let hands = g.pl[pl].takedown.is_some() || g.pl[pl].holding.is_some();
-    if hands && !g.pair.hands_was { pair_orders_mark(g, Some(crate::pairorders::PairOrdersMarkBy::Hands)); }
-    g.pair.hands_was = hands;
+    if hands && !g.pl[pl].pair_hands_was { pair_orders_mark(g, Some(crate::pairorders::PairOrdersMarkBy::Hands)); }
+    g.pl[pl].pair_hands_was = hands;
     let mut at = 0;
     while let Some(gd) = g.pair.jobs.next_key(&mut at) {
+        if !crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd) { continue; }
         let foe = g.pair.jobs.get(gd).unwrap().foe;
         let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd);
         if g.gd[gd].state == crate::game::GuardState::Dead { g.pair.jobs.delete(gd); continue; }
@@ -446,7 +465,7 @@ pub fn pair_orders_tick(g: &mut Game, dt: f64) {
 pub fn pair_orders_mark(g: &mut Game, by: Option<crate::pairorders::PairOrdersMarkBy>) -> bool {
     use crate::pairorders::PairOrdersMarkBy as By;
     let by = by.unwrap_or(By::Api);
-    let w = pair_orders_waiting(g);
+    let w = pair_orders_waiting(g, &crate::seats::here(g));
     if w.is_empty() { return false; }
     let (gd0, j0) = w[0];
     let again = j0.watcher.is_some();
