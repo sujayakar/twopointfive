@@ -14,7 +14,7 @@
 // the floor going up, the tour taking the floor, the response team — CANCELS the trip on the frame, wherever he stands (a man startled halfway to the fire door
 // looks into it from there, off his route: interesting, and fair). It is not resumed: the need is put back to half and he returns to his route as the ordinary
 // AI has him. `Game.tune.needs` is the switch (default on; off = the patrol byte for byte as it was — tools/qa needs-identity holds it); NEEDS the numbers, Tab ▸
-// Sandbox, kept per machine. guards.ts calls needsPatrol from the patrol branch (his feet while a trip owns them) and game.ts needsTick once a frame (levels,
+// Sandbox. guards.ts calls needsPatrol from the patrol branch (his feet while a trip owns them) and game.ts needsTick once a frame (levels,
 // the deal, the interrupts); character.ts has the two tells (CharacterAnimator.tell); dialogue.ts the lines (NEEDS_LINES); chronicle.ts the 'needBreak' rows.
 import { allDown } from './seats';
 import { SideMap } from '../math/side';
@@ -52,7 +52,7 @@ export function needSpot(g: Game, kind: NeedKind): NeedSpot | null {
 const owned = new SideMap<object, NeedSpot>('needs.owned');
 function ownSpot(s: { name: string; pos: Vec3; face: number; loop?: Vec3[] }, kind: NeedKind): NeedSpot { let o = owned.get(s); if (!o) owned.set(s, o = { kind, name: s.name, pos: s.pos, face: s.face, ...(s.loop ? { loop: s.loop } : {}) }); return o; }
 
-// ================================================================ numbers (Tab ▸ Sandbox ▸ needs rows; the kept ones persist per machine — loadNeeds / saveNeeds)
+// ================================================================ numbers 
 export const NEEDS = {
   /** × every man's fill rate (1 = as dealt: a coffee fills in 6–9 min of calm patrol, a smoke in 8–12, water in 6–10, the stretch in 5–7) */
   rateK: 1,
@@ -78,7 +78,6 @@ export const NEEDS = {
   /** the walk there and back: × the patrol pace (1 = exactly the route's walk); seconds of no headway on a leg before the trip is given up where he stands */
   paceK: 1, stuckSecs: 6,
 };
-export const NEEDS_DEFAULTS = { rateK: 1, maxAway: 1, announceLead: 20, dwell: { ...NEEDS.dwell } };
 /** per-kind fill windows (minutes of calm patrol from empty to full, dealt per man inside the range) and how far along a fresh man may start (0.3‥0.7 of full: the
  *  first man is over his line two to four minutes into a quiet run, and goes when his route next brings him to that need's waypoint) */
 const FILL_MIN: Record<NeedKind, [number, number]> = { coffee: [6, 9], smoke: [8, 12], water: [6, 10], stretch: [5, 7] };
@@ -223,28 +222,6 @@ export function needsSend(g: Game, gd: Guard | null | undefined, kind: NeedKind 
 }
 /** the probes: put a man's need at a level (deals him first); false if he does not carry that kind */
 export function needsSetLevel(g: Game, gd: Guard, kind: NeedKind, level: number): boolean { return crossToRust('needsSetLevel', undefined, [g, gd, kind, level]) as any; }
-
-// ================================================================ persistence (one key, per machine — the switch and the fairness knobs)
-const LS_KEY = 'twopointsix.needs';
-export function saveNeeds(tune: { needs: boolean }) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify({ on: tune.needs, rateK: NEEDS.rateK, maxAway: NEEDS.maxAway, announceLead: NEEDS.announceLead, dwell: NEEDS.dwell })); }
-  catch { /* no storage (the harness, a locked-down page): nothing to keep */ }
-}
-export function loadNeeds(tune: { needs: boolean }) {
-  try {
-    const j = JSON.parse(localStorage.getItem(LS_KEY) ?? 'null'); if (!j || typeof j !== 'object') return;
-    if (typeof j.on === 'boolean') tune.needs = j.on;
-    if (Number.isFinite(j.rateK)) NEEDS.rateK = clamp(j.rateK, 0.1, 60);
-    if (Number.isFinite(j.maxAway)) NEEDS.maxAway = clamp(Math.round(j.maxAway), 0, 3);
-    if (Number.isFinite(j.announceLead)) NEEDS.announceLead = clamp(j.announceLead, 8, 60);
-    if (j.dwell && typeof j.dwell === 'object') for (const k of NEED_KINDS) if (Number.isFinite(j.dwell[k])) NEEDS.dwell[k] = clamp(j.dwell[k], 0, 180);
-  } catch { /* nothing stored, or not readable: the shipped values stand */ }
-}
-/** the knobs back to the shipped values (the switch back on) and the stored copy dropped */
-export function resetNeeds(tune: { needs: boolean }) {
-  tune.needs = true; NEEDS.rateK = NEEDS_DEFAULTS.rateK; NEEDS.maxAway = NEEDS_DEFAULTS.maxAway; NEEDS.announceLead = NEEDS_DEFAULTS.announceLead; Object.assign(NEEDS.dwell, NEEDS_DEFAULTS.dwell);
-  try { localStorage.removeItem(LS_KEY); } catch { /* none */ }
-}
 
 // ================================================================ checkpoints (game/savestate.ts): every staff man's needs + the trip under way, and the floor's gap clock
 /** one man's slice, by roster index (null = the needs have never touched him: a corpse from before, the switch off) */

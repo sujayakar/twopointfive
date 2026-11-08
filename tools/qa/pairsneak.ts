@@ -25,7 +25,8 @@ const { SILENT, squadSilent } = await import(`${ROOT}/src/game/silent.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { setDifficulty } = await import(`${ROOT}/src/game/difficulty.ts`);
-const { feelTables } = await import(`${ROOT}/src/game/teamfeel.ts`);
+const { knobsNamed } = await import(`${ROOT}/src/game/knobs.ts`);
+const feelNow = () => knobsNamed(['FLASH', 'PACE', 'LIGHTS', 'NVG', 'IR', 'IRLIGHT', 'FOG', 'LASER', 'DOORTOOLS', 'ROOMFIGHT', 'ORDERS', 'COVER', 'ENTRY', 'REAR', 'SILENT', 'FRAG', 'PAIR', 'DOORMANNERS']) as any;
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -77,7 +78,7 @@ export class Run {
     SILENT.on = true;   // (the shipped default: the harness stands the game up with the order off the menu)
     setDifficulty(opts.hard ? 'hard' : 'standard', false);
     if (SNEAKM) SNEAKM.SNEAK.on = !!opts.sneak;
-    if (opts.set) { const T: any = { ...feelTables(), SILENT, ...(SNEAKM ? { SNEAK: SNEAKM.SNEAK } : {}) }; for (const [n, kv] of Object.entries(opts.set)) { if (!T[n]) throw new Error(`--set: no table '${n}'`); Object.assign(T[n], kv); } }
+    if (opts.set) { const T: any = { ...feelNow(), SILENT, ...(SNEAKM ? { SNEAK: SNEAKM.SNEAK } : {}) }; for (const [n, kv] of Object.entries(opts.set)) { if (!T[n]) throw new Error(`--set: no table '${n}'`); Object.assign(T[n], kv); } }
     const { why } = await quiet(!opts.verbose, () => startFromQuery(R.g, new URLSearchParams(query))); if (why) throw new Error(`start refused — ${why}`);
     R.step(20);
     return R;

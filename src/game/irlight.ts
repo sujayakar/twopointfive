@@ -96,8 +96,8 @@ export const IRLIGHT = {
    *  `?irnear=0`, or `?irnear=<metres>` for another distance). false = full strength whatever is in front of it, as it was. Never judged on a real GPU */
   near: false, nearM: 5, nearMin: 0.003, nearUp: 3, nearDown: 12,
 };
-/** ?irpower=<n> · ?irnear=<metres> — the light's strength and the distance it turns down inside, for a visit, over the kept Team feel rows (the Game's
- *  constructor, right after teamfeel.ts has read those back; no page — the harness — nothing) */
+/** ?irpower=<n> · ?irnear=<metres> — the light's strength and the distance it turns down inside, for a visit, (the Game's
+ *  constructor; no page — the harness — nothing) */
 export function irFlags() { try { const q = new URLSearchParams(location.search);
   const p = parseFloat(q.get('irpower') ?? ''); if (Number.isFinite(p) && p > 0) IRLIGHT.power = Math.min(100, p);
   const n = parseFloat(q.get('irnear') ?? ''); if (Number.isFinite(n) && n > 0) IRLIGHT.nearM = clamp(n, 0.5, 20); } catch { /* no page */ } }

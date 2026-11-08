@@ -55,7 +55,7 @@ import type { Game, Guard } from './game';
 import './teams';
 import { underSilence, squadSilent } from './silent';
 import { lightEstimateAt } from './guards';
-import { PAIRUP, keptOn } from './pairup';
+
 import './combat';
 import './sneak';
 import './takedown';   // the partner's takedown as a move, and the man it lands on (takedown.ts): poses only
@@ -207,11 +207,8 @@ export function spottedOf(gd: Guard): { mode: SpottedMode; what: string | null; 
   const M = men.get(gd); return M ? { mode: M.mode, what: M.what, exposed: M.exposed, spot: M.spot, by: M.by?.callsign ?? null, wary: M.wary.map(h => h.callsign) } : null;
 }
 
-// ------------------------------------------------------------ the switch: per machine, the URL, the harness's environment
-const LS = 'twopointsix.spotted';
+// ------------------------------------------------------------ the switch: the URL, the harness's environment
 const KEPT = ['on', 'hold', 'low', 'freeze', 'slip', 'brace', 'close', 'keen', 'gun', 'step', 'holdUnaware', 'cue'] as const;   // (the panel's rows)
-export function saveSpotted() { try { const o: Record<string, boolean | number> = {}; for (const k of KEPT) if (SPOTTED[k] !== SPOTTED_DEFAULTS[k] && !(k === 'on' && PAIRUP.on)) o[k] = SPOTTED[k];   /* (on by pairup.ts's switch is that switch's to keep, not this row's: what the store held stands) */ if (PAIRUP.on) { const was = keptOn(LS); if (was !== undefined && was !== SPOTTED_DEFAULTS.on) o.on = was; } if (Object.keys(o).length) globalThis.localStorage?.setItem(LS, JSON.stringify(o)); else globalThis.localStorage?.removeItem(LS); } catch { /* no store */ } }
-try { const o = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); if (o) for (const k of KEPT) if (typeof o[k] === typeof SPOTTED[k]) (SPOTTED as Record<string, unknown>)[k] = o[k]; } catch { /* no store, or not ours */ }
 try { const q = new URLSearchParams(location.search); if (q.has('spotted')) SPOTTED.on = q.get('spotted') !== '0'; if (q.has('nospotted')) SPOTTED.on = false; } catch { /* no page (the harness) */ }
 try { const e = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SPOTTED; if (e) { SPOTTED.on = e !== '0' && e.toLowerCase() !== 'off';
   for (const w of e.toLowerCase().split(/[\s,+]+/)) { const m = w.match(/^(no)?([a-z]+)$/); const k = m && KEPT.find(x => x.toLowerCase() === m[2]); if (k && k !== 'on') (SPOTTED as Record<string, unknown>)[k] = !m![1];

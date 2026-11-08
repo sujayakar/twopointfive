@@ -19,7 +19,7 @@
 //              and a running camera ever share a frame today (if that changes: a lens reads Sam's meter, never a box). What no scenario has is a RED teammate laser to compare (a scenario's teammate never shows one): the red line's own
 //              invisibility to every reader is the same mechanism (NoShadow boxes, no light) and is held by ir-draw's 'every box NoShadow'.
 //   ir-off     THE SWITCH: IR.on false is the build before — every teammate's laser the old red draw field for field whatever his goggles and the picture
-//              do, Sam with none; flipped in play it takes hold inside a frame; the Team feel rows are kept by teamfeel.ts. (The frame-for-frame identity
+//              do, Sam with none; flipped in play it takes hold inside a frame. (The frame-for-frame identity
 //              against the merged base is `bun run tools/qa/irlaser-probes.ts digest`: one hash per scenario of a scripted minute with the switch off, the
 //              frames' boxes included; the same file copied into a checkout of the base must print the same lines.)
 import { ROOT } from './headless.ts';

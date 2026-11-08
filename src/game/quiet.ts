@@ -115,7 +115,7 @@ export class QuietMission {
     this.data = g.level.scenarios!.quiet!; this.pin = pin; this.squad = squad; this.failure = null; this.staged = 0; this.log.length = 0;
     this.authored = { spawn: g.level.playerSpawn, mission: g.level.mission };
     this.current();
-    if (squad) {   // the pair rules and the silent posture, for this run (put back by release; the pair's stored row keeps its own word while held — pairup.ts PAIR_HELD)
+    if (squad) {   // the pair rules and the silent posture, for this run (put back by release)
       this.was = heldNow(); PAIR_HELD.row = PAIRUP.on; holder = this;
       PAIRUP.on = true; pairUpApply();   // (the switch's own road to its three parts: this visit's word against one of them — `?sneak=0`, SNEAK=off — stands, as under the switch anywhere else)
       SILENT.on = true; SILENT.start = true;

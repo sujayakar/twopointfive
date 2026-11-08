@@ -182,7 +182,6 @@ export function bodySeen(g: Game, gd: Guard, o: Guard, around: boolean | number 
  *  torch beam squarely on it reads 0.7+, open floor between two panels at night ~0.35, a dark office 0); inside NEAR_M he all but trips on it — found in any light
  *  — and from NEAR to FAR the bar eases up from LIT_NEAR to LIT; SMOKE: eye → body transmittance under which the plume hides it (canSee's own line for a standing man) */
 export const BODY_LIGHT = { lit: 0.22, litNear: 0.04, nearM: 2.0, farM: 5.0, smoke: 0.3 };
-export const BODY_LIGHT_DEFAULTS = { ...BODY_LIGHT };
 /** the body's light meter, per body (the light ON it is whoever's-looking-independent): eased reading + when; and the last irradiance behind it for the panel */
 const bodyMeters = new SideMap<Guard, { vis: number; E: number; t: number }>('guards.bodyMeters');
 /** probe queries these tests may spend a frame between them (light points + smoke segments): they run inside the guards' update, AHEAD of Sam's own two meter
@@ -204,17 +203,6 @@ export function bodyVisibility(g: Game, o: Guard): number {
   const target = g.visibilityOf(E); const vis = m && dt > 0 ? damp(m.vis, target, 6, dt) : target;   // (first look: the reading as it stands — a torch swung onto it a frame ago has already lit it)
   m = { vis, E, t: now }; bodyMeters.set(o, m); return vis;
 }
-/** the switch + its numbers kept per machine (Tab ▸ Sandbox ▸ 'bodies found by light'), like the tactics' clocks */
-const BODY_LIGHT_LS = 'twopointsix.bodyLight';
-export function loadBodyLight(tune: { bodyLight: boolean }) {
-  try {
-    const j = JSON.parse(localStorage.getItem(BODY_LIGHT_LS) ?? 'null'); if (!j || typeof j !== 'object') return;
-    if (typeof j.on === 'boolean') tune.bodyLight = j.on;
-    for (const k of ['lit', 'litNear', 'nearM', 'farM'] as const) { const v = j[k]; if (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 20) BODY_LIGHT[k] = v; }
-  } catch { /* no storage (the harness, a locked-down page): the shipped values stand */ }
-}
-export function saveBodyLight(tune: { bodyLight: boolean }) { try { localStorage.setItem(BODY_LIGHT_LS, JSON.stringify({ on: tune.bodyLight, lit: BODY_LIGHT.lit, litNear: BODY_LIGHT.litNear, nearM: BODY_LIGHT.nearM, farM: BODY_LIGHT.farM })); } catch { /* nothing to keep it in */ } }
-export function resetBodyLight(tune: { bodyLight: boolean }) { tune.bodyLight = true; Object.assign(BODY_LIGHT, BODY_LIGHT_DEFAULTS); try { localStorage.removeItem(BODY_LIGHT_LS); } catch { /* none */ } }
 /** Panel / QA: what each unfound body on the floor reads right now — 'bodies ▸ Reyes 0.61 (E 0.412) · Novak 0.02 (E 0.001)' */
 export function bodyLightSummary(g: Game): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('bodyLightSummary', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   const parts: string[] = [];

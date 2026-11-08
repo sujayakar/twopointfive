@@ -634,8 +634,6 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   panel.toggleBox(gp, 'god mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'guards still see and shoot you, but hits do no damage');
   panel.toggleBox(gp, 'unlimited ammo', () => game.infiniteAmmo, v => { game.infiniteAmmo = v; saveSandbox(game, 'ammo'); }, 'bottomless magazine: rounds still cycle (cadence, reload animation if you press R) but the count never drops; cans, ring airfoils and wall charges do not run out either');
   panel.buttons(gp, 'encounter', [{ text: 'restart (Shift+Enter)', run: () => game.restart() }]);
-  // (the pages these numbers were moved on are gone: what a machine stored there goes on applying, so one press clears it. Saves are not touched.)
-  panel.buttons(gp, 'old tuning', [{ text: 'forget it', title: 'numbers once moved on the pages that have gone (squad, enemy, stealth, player, destruction, effects) are still read from this browser, and no row shows them. This drops them, hard defenders with them, and loads the page again', run: () => { for (const k of ['aim', 'blastfeel', 'buddy', 'civilians', 'clearline', 'cues', 'devices', 'bodyLight', 'laststand', 'needs', 'pair', 'dust.v2', 'qrf', 'tactics', 'teamfeel', 'whistle', 'chaos']) localStorage.removeItem(`twopointsix.${k}`); location.reload(); } }]);
   panel.toggleBox(gp, 'show AI debug labels', () => game.showDebug, v => { game.showDebug = v; }, 'state / awareness tags over the guards');
   panel.toggleBox(gp, 'light fixture dots', () => overlay.showLightDots, v => { overlay.showLightDots = v; });
   panel.system(SYS.missions);
