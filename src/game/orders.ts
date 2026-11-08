@@ -153,13 +153,6 @@ export const ORDERS = {
    *  is a spot of floor, and the floor's menu has no door rows. The cursor on a door's own LEAF is that door too, wherever Sam stands. False: `doorPickM`
    *  alone, as it was */
   doorRay: true, doorRayPad: 0.08, doorRayReachM: 3.0,
-  /** HIS OWN BODY UNDER THE CURSOR IS HIMSELF (rust/game_rules/src/orders target_under_of). The cursor's ray through his chest lands on the floor a pace PAST him, and what was near
-   *  that point was the target: with a door a pace behind him the squad's key 'on himself' was that door (a stack), and only at his feet was it fall
-   *  in — found by two tutorial missions that ask for the key on himself right after a room is taken, which is beside its door. With this on his body
-   *  under the cursor, nearer than anything of the scene, is himself, whatever is near where the ray lands; a teammate, a man of the other side or a
-   *  thing to be worked in front of him is still that. On in the page (`?selfbody=0` off); off here and on the frozen stand (`TPS_SELFBODY=1`; a
-   *  FROZEN_HOLDS row): false = the point past him, as it was. Check: tools/qa/selfbody-check.ts (the rule is the Rust game's and it reads no such switch) */
-  selfBody: false,
   /** a reticle on something a man cannot stand on (a wall's top, a desk) means the nearest free floor within this of it */
   floorSnapM: 1.0,
   /** the stack: how far off the wall a man stands, how far past the jamb, and the gap to the second man when both file on one side */
