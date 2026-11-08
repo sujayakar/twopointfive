@@ -54,13 +54,13 @@ const CSS = `
 #tapebar .ghost::after{content:attr(data-t);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);padding:2px 6px;border-radius:2px;background:var(--h-field,rgb(21,19,16));font-variant-numeric:tabular-nums;white-space:nowrap}
 #tapebar .say{min-width:0;white-space:nowrap;color:#ffb35c}
 #tapebar .say:empty{display:none}
-body.taping #equip{bottom:calc(86px + var(--tape-h,44px) / var(--tz, 1))}
-body.taping #meters{bottom:calc(16px + var(--tape-h,44px) / var(--tz, 1))}
-body.taping #log{bottom:calc(44px + var(--tape-h,44px) / var(--tz, 1))}
-#tapebig{position:fixed;left:0;right:0;top:0;bottom:calc(var(--tape-h,44px) / var(--tz, 1));z-index:69;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#e9e2d6;font:14px var(--m-head,system-ui),system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+body.taping #equip{bottom:calc(86px + (var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1))}
+body.taping #meters{bottom:calc(16px + (var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1))}
+body.taping #log{bottom:calc(44px + (var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1))}
+#tapebig{position:fixed;left:0;right:0;top:0;bottom:calc((var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1));z-index:69;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#e9e2d6;font:14px var(--m-head,system-ui),system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
 #tapebig b{display:grid;place-items:center;width:84px;height:84px;border:2px solid var(--m-accent,#e8833a);border-radius:50%;font-size:34px;color:var(--m-accent,#e8833a);padding-left:6px;box-sizing:border-box;background:var(--h-field,rgb(21,19,16))}
 #tapebig span{padding:5px 12px;border-radius:3px;background:var(--h-field,rgb(21,19,16))}
-#tapenote{position:fixed;left:50%;bottom:calc(var(--tape-h,44px) / var(--tz, 1) + 10px);transform:translateX(-50%);z-index:71;width:min(560px,calc(100vw / var(--tz, 1) - 32px))}
+#tapenote{position:fixed;left:50%;bottom:calc((var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1) + 10px);transform:translateX(-50%);z-index:71;width:min(560px,calc(100vw / var(--tz, 1) - 32px))}
 #tapenote[hidden]{display:none}
 #tapenote input{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--m-accent,#e8833a);border-radius:3px;background:var(--h-field,rgb(21,19,16));color:#e9e2d6;font:14px system-ui,sans-serif;outline:none}`;
 
@@ -121,7 +121,8 @@ export class TapeBar {
     if (e.target === this.field) { if (e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); this.noteClose(true); } else if (e.code === 'Escape') { e.preventDefault(); this.noteClose(false); } e.stopImmediatePropagation(); return; }
     if (e.metaKey || e.ctrlKey || e.altKey) cam.letGo();   // (a key let go under Cmd sends no keyup on a Mac)
     if (e.metaKey || e.ctrlKey || e.altKey || /^F\d+$/.test(e.code) || e.code === 'Backslash') return;
-    const t = e.target as HTMLElement | null; if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || (t.tagName === 'TEXTAREA' && t.getAttribute('aria-label') !== 'game input'))) return;   // (the game's own key sink is no field somebody types in)
+    const t = e.target as HTMLElement | null; if (e.code === 'Escape' && (t instanceof HTMLInputElement || t instanceof HTMLSelectElement)) { t.dataset.esc = '1'; t.blur(); delete t.dataset.esc; e.preventDefault(); e.stopImmediatePropagation(); return; }   // (a field lets go of the keyboard, and of what was typed)
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || (t.tagName === 'TEXTAREA' && t.getAttribute('aria-label') !== 'game input'))) return;   // (the game's own key sink is no field somebody types in)
     e.stopImmediatePropagation();
     if (this.noting) { if (e.code === 'Escape') this.noteClose(false); else this.field.focus(); return; }   // (a press of the picture took the keyboard from the note)
     if (cam.key(e.code, true) || e.repeat) return;

@@ -2,7 +2,7 @@
 // voice in the game and from its sibling, sits at that voice's level, and rendering them leaves the game's own table sample for sample what it was. It prints each take's
 // length, level and where its energy lies BESIDE the old voice ('before') and the one in the game's redone table ('after') — numbers, since nobody here can listen.
 // The same holds of the two other takes of each of the grab's three beats (grabCatch, gunStrip, gunDown), which have no 'before'.
-// THE TUNER'S HOOK (the sound lanes' card, src/replay/soundtune.ts): a voice built ALONE under a tune that changes nothing is the table's voice sample for sample, for
+// THE TUNER'S HOOK (the sound lanes' card, src/tape/soundtune.ts): a voice built ALONE under a tune that changes nothing is the table's voice sample for sample, for
 // every voice and every other take; a number laid over a layer, another seed, a muted layer each make another buffer; a layer heard alone and the voice without it add
 // up to the voice (the level scale is the whole voice's) wherever the recipe only adds; a kept tune of garbage reads as no tune.
 //   bun run tools/qa/sound-takes-check.ts [name …]        exit 0 = holds, 1 = a line failed        TAKES_BREAK=1 = a take handed back as the game's own voice, and the
@@ -13,7 +13,7 @@ import { buildSfxWas } from '../../src/audio/sfxWas';
 import { altNames, altOne, altPicked, altSay, altTake, altTakes } from '../../src/audio/sfxAlt';
 import { sfxContext, type SfxBuffer } from '../../src/audio/backend';
 import { band, heard, loudest, type Layer, type Tune } from '../../src/audio/synth';
-import { GUARD_PEAK, madeOf, pulledOf, renderTune, tuneOf, tuneText } from '../../src/replay/soundtune';
+import { GUARD_PEAK, madeOf, pulledOf, renderTune, tuneOf, tuneText } from '../../src/tape/soundtune';
 
 const SR = 48000, ctx = sfxContext(SR);
 let bad = 0; const line = (ok: boolean, what: string) => { console.log(`  - ${ok ? 'PASS' : 'FAIL'} — ${what}`); if (!ok) bad++; };

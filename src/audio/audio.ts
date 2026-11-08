@@ -130,7 +130,7 @@ export class AudioEngine implements GameAudioLike {
   private lastEnvT = 0;   // when the reverb environment was last re-probed
   volume = { ...VOLUME_DEFAULTS };
   started = false; enabled = true;
-  /** told of every sound asked for (the replay's sound lanes: src/replay/soundlanes.ts); null = nobody listens, nothing is built */
+  /** told of every sound asked for (the replay's sound lanes: src/tape/soundlanes.ts); null = nobody listens, nothing is built */
   tap: ((a: SoundAsk) => void) | null = null;
   /** per sound name, what plays in its place / how (the replay page's picks); empty = the table as loaded */
   trims = new Map<string, SoundTrim>();
