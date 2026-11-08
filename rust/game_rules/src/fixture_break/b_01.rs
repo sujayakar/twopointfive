@@ -247,7 +247,6 @@ pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, d
         state(g).recs = keep; for r in gone.iter() { let_go(g, r); }
     }
     let mut boxes = 0;
-    let pool = crate::particle_fx::gpu_fx(g);
     for ri in 0..state(g).recs.len() {
         let mut r = state(g).recs[ri].clone();
         let a = now - r.born;
@@ -261,7 +260,7 @@ pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, d
             let tt = m::sqrt(2.0 * m::max(0.1, r.h0[1] - r.lie[1]) / 9.8); let s = m::min(1.0, m::max(0.0, a - r.t0) / tt);
             r.th = r.th0 * (1.0 - s); if s > r.lay { r.lay = s; } land(&mut r, s);
             if s >= 1.0 { r.phase = 2.0; r.still = true;
-                if pool { let seed = seed_of(&mut r); crate::render_particles::particles_emit(g, PKind::Debris, [r.hinge[0] + r.uh[0] * r.l / 2.0, r.lie[1], r.hinge[2] + r.uh[2] * r.l / 2.0], [0.0, 1.0, 0.0], 10.0,
+                { let seed = seed_of(&mut r); crate::render_particles::particles_emit(g, PKind::Debris, [r.hinge[0] + r.uh[0] * r.l / 2.0, r.lie[1], r.hinge[2] + r.uh[2] * r.l / 2.0], [0.0, 1.0, 0.0], 10.0,
                     EmitOpts { speed: 1.2, speed_jit: Some(0.7), spread: Some(1.4), life: 25.0, life_jit: Some(0.3), size: 0.012, size_jit: Some(0.6), aspect: Some(1.6), pos_jit: Some(m::min(0.3, r.l * 0.3)), color: Some(GLASS), seed: Some(seed), ..EmitOpts::default() }); } }
             pose(g, &mut r);
         } else if hang && !r.still {   // the swing: a damped spring about the rest angle, the ceiling its stop
@@ -275,7 +274,7 @@ pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, d
             let gl = glow_at(g, &mut r, m::max(0.0, a), &mut sp); let warm = m::min(1.0, m::max(0.0, a) / 1.5);
             if hang { let e = f.glow_tip * gl; g.tab.frame_boxes[r.hang[5]].emissive = [e * (0.8 + 0.2 * warm), e * (0.9 - 0.25 * warm), e * (1.0 - 0.8 * warm)]; }
             // (every emit carries a seed of the fixture's own, so the particles' serial is never advanced by the look)
-            if pool && sp.sparks > 0.0 {
+            if sp.sparks > 0.0 {
                 // out past its free end and down from where it hangs, up off where it lies
                 let d: V3 = if r.phase == 2.0 { [r.uh[0] * f.spark_aside, f.spark_up, r.uh[2] * f.spark_aside] } else if hang { [r.uh[0] * f.spark_aside, -f.spark_down, r.uh[2] * f.spark_aside] } else { [r.uh[0] * f.spark_aside * 0.5, -1.0, r.uh[2] * f.spark_aside * 0.5] };
                 let seed = seed_of(&mut r);
@@ -283,7 +282,7 @@ pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, d
                     EmitOpts { speed: f.spark.speed, speed_jit: Some(f.spark.speed_jit), spread: Some(f.spark.spread), life: f.spark.life, life_jit: Some(f.spark.life_jit), size: f.spark.size, seed: Some(seed), ..EmitOpts::default() });
                 g.stats.fixture_break.sparks += sp.sparks as i32;
             }
-            if pool && !r.glass_out && a >= f.glass_at && hang { r.glass_out = true;   // born well under the ceiling, in two lots along the fixture
+            if !r.glass_out && a >= f.glass_at && hang { r.glass_out = true;   // born well under the ceiling, in two lots along the fixture
                 for k in [0.3, 0.7] { let seed = seed_of(&mut r);
                     crate::render_particles::particles_emit(g, PKind::Debris, [r.hinge[0] + r.uh[0] * r.l * k, r.hinge[1] - 0.3, r.hinge[2] + r.uh[2] * r.l * k], [0.0, -1.0, 0.0], (js::to_i32(f.glass) >> 1) as f64,
                         EmitOpts { speed: 1.3, speed_jit: Some(0.8), spread: Some(1.25), life: 25.0, life_jit: Some(0.3), size: f.glass_size, size_jit: Some(0.6), aspect: Some(1.7), pos_jit: Some(m::min(0.2, r.l * 0.2)), color: Some(GLASS), seed: Some(seed), ..EmitOpts::default() }); }
@@ -305,7 +304,7 @@ pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, d
                 if b.c[1] <= lie + (if p.bounced { 0.0 } else { m::max(b.h[0], b.h[2]) * 0.5 }) {   // down: one dead bounce for a diffuser piece, then flat where it stopped
                     if !p.bounced && !p.glass { p.bounced = true; p.v = [p.v[0] * 0.4, 1.1, p.v[2] * 0.4]; p.rate *= 0.5; b.c[1] = lie + m::max(b.h[0], b.h[2]) * 0.5;
                         let at: V3 = [b.c[0], p.floor_y + 0.03, b.c[2]];
-                        if pool { let seed = seed_of(&mut r); crate::render_particles::particles_emit(g, PKind::Debris, at, [0.0, 1.0, 0.0], 8.0,
+                        { let seed = seed_of(&mut r); crate::render_particles::particles_emit(g, PKind::Debris, at, [0.0, 1.0, 0.0], 8.0,
                             EmitOpts { speed: 1.4, speed_jit: Some(0.7), spread: Some(1.3), life: 25.0, life_jit: Some(0.3), size: 0.012, size_jit: Some(0.6), aspect: Some(1.6), pos_jit: Some(0.15), color: Some(GLASS), seed: Some(seed), ..EmitOpts::default() }); } }
                     else { p.rest = true; b.c[1] = lie; b.rot = Some(quat::yaw(p.yaw + p.ang * 0.3)); b.yaw = p.yaw + p.ang * 0.3; }
                 }
