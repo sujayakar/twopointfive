@@ -79,7 +79,6 @@ impl Default for HostApiAir { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct HostBooks {
     pub fire: Option<crate::fire::FireShown>,
-    pub smoke_break: Option<crate::smokebreak::SmokeShown>,
     pub breath: Option<crate::snow_breath::BreathShown>,
     pub snow: Option<crate::snow_fx::SnowState>,
     pub snow_blast: Option<crate::snow_blast::SnowBlastShown>,
@@ -90,7 +89,6 @@ impl HostBooks {
     pub fn zeroed() -> Self {
         HostBooks {
             fire: None,
-            smoke_break: None,
             breath: None,
             snow: None,
             snow_blast: None,

@@ -7304,7 +7304,8 @@
 "game::Game.stood",
 "game::Game.solo_card",
 "smoke_types::WindGpuSourceBound.c",
-"smoke_types::WindGpuSourceBound.r"
+"smoke_types::WindGpuSourceBound.r",
+"smoke_types::SmokeEmitter.fire"
 ],
 "everyTickNotCarried": [
 {
@@ -12435,7 +12436,8 @@
 "game::Game.stood",
 "game::Game.solo_card",
 "smoke_types::WindGpuSourceBound.c",
-"smoke_types::WindGpuSourceBound.r"
+"smoke_types::WindGpuSourceBound.r",
+"smoke_types::SmokeEmitter.fire"
 ],
 "unsent": {
 "anim_characters::CharacterRenderer": "the page's renderer: the host fills its arrays and draws from them",
