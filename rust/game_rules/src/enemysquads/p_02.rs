@@ -217,7 +217,7 @@ pub fn home(g: &mut crate::game::Game, q: EnemysquadsSquadId) -> Vec<RoomfightDe
     let mut out = Vec::new();
     let men = g.tab.enemysquads_squad[q].men.clone();
     for m in men {
-        if !fit(g, m) || g.time - g.gd[m].last_seen_t < 2.0 || g.tab.enemysquads_squad[q].sent.iter().any(|s| s.gd == m) || crate::owner::has(g, m, crate::owner::by::STAND)
+        if !fit(g, m) || g.time - g.gd[m].last_seen_t < 2.0 || g.tab.enemysquads_squad[q].sent.iter().any(|s| s.gd == m)
             || g.tab.enemysquads_squad[q].rc.as_ref().map_or(false, |c| c.look.iter().any(|l| l.gd == m)) { continue; }
         if crate::owner::has(g, m, crate::owner::by::LAST_MAN) { continue; }
         if g.gd[m].script.is_some() && crate::director::director_lesson_runs(g) { continue; }

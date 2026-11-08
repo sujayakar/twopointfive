@@ -432,7 +432,6 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
         && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
         && g.time - df(g, d).noise_t < g.k.pressure.memory_secs && g.time - g.gd[gd].last_seen_t > 3.0
         && g.time - state_of(g).done_at.get(d).copied().unwrap_or(-100.0) > again && !state_of(g).outs.iter().any(|o| o.def == d)
-        && !crate::owner::has(g, gd, crate::owner::by::STAND)
         && !{ let n = df(g, d).noise_at; crate::lanes::lane_bars(g, gd, n) }
         && !crate::owner::has(g, gd, crate::owner::by::SQUAD)
         && !(g.k.digin.on && crate::digin::dig_in_stays(g, gd));
@@ -986,8 +985,7 @@ pub fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
             }
             !other
         }
-        && !g.gd[gd].stays_in_rooms
-        && !crate::owner::has(g, gd, crate::owner::by::STAND);
+        && !g.gd[gd].stays_in_rooms;
     if !ok { state_of(g).last.delete(d); return; }
     let r = room.unwrap();
     let mut why: Option<HookedWhy> = None;
