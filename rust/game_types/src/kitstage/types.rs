@@ -117,7 +117,7 @@ pub struct KitStage {
     /// what the way writes of the light · the way's own lamps the hour has out · the link's quiet kind (1 a quiet mission, 2 the solo night, 0 loud) · the link asks for no mission
     pub over: WayLights, pub way_room_lights: Option<f64>, pub day_out: Vec<String>, pub quiet_kind: u8, pub asks_none: bool,
     /// the men by slot · their places and yaws · Sam's place and yaw · a partner's rest · the foot of the door · the men already sent to their places
-    pub order: Vec<GuardId>, pub spots: Vec<V2>, pub yaws: Vec<f64>, pub sam: V2, pub sam_yaw: f64, pub mate: Option<(V2, f64)>, pub foot: V3, pub sent: Vec<GuardId>,
+    pub order: Vec<GuardId>, pub spots: Vec<V2>, pub sam: V2, pub mate: Option<V2>, pub foot: V3, pub sent: Vec<GuardId>,
     /// the lights it hung and the porch lamp's box
     pub porch: Option<LightId>, pub fill: Option<LightId>, pub inside: Option<LightId>, pub fixture: Option<BoxId>,
     /// what the staging wrote each time, so that the tick cannot move them: the moon, the fill, Sam's mark and his aim's point on the wall, the sky

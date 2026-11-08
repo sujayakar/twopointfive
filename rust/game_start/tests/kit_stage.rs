@@ -42,9 +42,20 @@ fn on_their_places(p: &Play, what: &str, tol: f64) {
     let d = flat(p.g.ch[p.g.pl[pl].ch].pos, s.sam);
     assert!(d <= tol, "{}: Sam is {} m off his place", what, d);
     for (k, &x) in s.order.iter().enumerate() {
-        let want = match s.mate { Some((m, _)) if k == 0 && s.who == 0 => m, _ => s.spots[k] };
+        let want = match s.mate { Some(m) if k == 0 && s.who == 0 => m, _ => s.spots[k] };
         let d = flat(p.g.ch[p.g.gd[x].ch].pos, want);
         assert!(d <= tol, "{}: man {} of the file is {} m off his place", what, k, d);
+    }
+}
+/// every man is turned to the middle of the way in, within `deg`
+fn turned(p: &Play, what: &str, deg: f64) {
+    let s = st(p);
+    let pl = p.g.player;
+    for (k, c) in core::iter::once(p.g.pl[pl].ch).chain(s.order.iter().map(|&x| p.g.gd[x].ch)).enumerate() {
+        let ch = &p.g.ch[c];
+        let off = ch.body_yaw - (s.foot[0] - ch.pos[0]).atan2(s.foot[2] - ch.pos[2]);
+        let off = off.sin().atan2(off.cos()).to_degrees().abs();
+        assert!(off <= deg, "{}: man {} looks {:.0} degrees off the way in", what, k, off);
     }
 }
 fn parked(p: &Play, what: &str) -> usize {
@@ -75,6 +86,7 @@ fn every_kind_of_way_stands_stays_and_is_lit() {
         assert_eq!(st(&p).order.len(), mates, "{}: the men", what);
         assert!(!p.g.fog_of_war.on && !game::fogofwar::fog_of_war_active(&p.g), "{}: the fog of war is on", what);
         on_their_places(&p, &what, 0.05);
+        turned(&p, &what, 8.0);
         let plan = st(&p).plan.clone().unwrap();
         // the plan's places, but on the quiet picture's rest
         if !st(&p).quiet { for k in 0..mates { assert_eq!(st(&p).spots[k], [plan.slots[k + 1][0], plan.slots[k + 1][1]], "{}: man {}", what, k); } }
