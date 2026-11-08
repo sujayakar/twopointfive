@@ -43,8 +43,9 @@ export class DrawGame {
       throw new Error(words ? `the game stopped in ${what}: ${words}` : `${what}: ${String((e as Error)?.message ?? e)}`); }
   }
 
+  /** A GAME, from its start; what has been commanded by now is done to it before it is made */
   start(o: Start): void {
-    const parts = [o.level, this.enc.encode(o.words), o.mannequin, o.mannequinBin, o.cast, o.castLook, new Uint8Array(0)], n = 4 + parts.reduce((s, p) => s + 4 + p.length, 0);
+    const parts = [o.level, this.enc.encode(o.words), o.mannequin, o.mannequinBin, o.cast, o.castLook, new Uint8Array(0), this.commands.take().slice()], n = 4 + parts.reduce((s, p) => s + 4 + p.length, 0);
     const at = this.X.face_alloc(n) >>> 0, b = new Uint8Array(this.memory.buffer, at, n), d = new DataView(this.memory.buffer, at, n); let q = 4;
     d.setUint32(0, parts.length, true);
     for (const p of parts) { d.setUint32(q, p.length, true); b.set(p, q + 4); q += 4 + p.length; }
