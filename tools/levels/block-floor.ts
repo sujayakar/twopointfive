@@ -600,7 +600,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   };
   // THE FLOOR NOBODY HOLDS, BY NAME (scene/scenarios.ts PlacesData — words only, nothing in the simulation reads it). The four notch rooms are not here: an
   // area may not overlap a room's rectangle, and a held room's rectangle is its L's bounding box.
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): both ways in show the block's own kitchen door off the hall —
+  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): both ways in show the block's own kitchen door off the hall —
   // indoors, under the hall's own lamps (no porch lamp, no fill: `roomLights` 1 is said outright, the door being the level's own), the stack on the hinge's side.
   { const way: KitViewWay = { door: 'kitchen_to_hall', side: -1, roomLights: 1, pane: false, light: { porch: { intensity: 0 }, fill: { intensity: 0 } } }; scenarios.kitView = { ways: [way, { ...way }] }; }
   scenarios.places = { areas: [{ name: 'staging area', bounds: { ...R.staging } }, { name: 'hall', bounds: { ...R.hall } },

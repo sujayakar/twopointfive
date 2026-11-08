@@ -96,7 +96,7 @@ const RESCUE: RescueData = {
   },
 };
 
-/** THE TEAM & KIT PICTURE of the office (src/host/kitView.ts; keys: docs/level-format.md `kitView`) — the office's block lives HERE, as every other level's lives
+/** THE TEAM & KIT PICTURE of the office (rust/game_rules/src/kitstage; keys: docs/level-format.md `kitView`) — the office's block lives HERE, as every other level's lives
  *  in its own file: one way (the night breach, the room clear, the rescue and the plain night all show way 0). INDOORS: the server room's door from the
  *  corridor, the stack up the corridor's wall under its one lit ceiling panel, the racks behind that stretch of wall. That door and no nearer one to a
  *  mission's own: it stands shut as authored (the break room's west door and the manager's stand open as authored, and a leaf that stands open is no door to
@@ -105,7 +105,7 @@ const RESCUE: RescueData = {
  *  extinguisher that hang on it — written, so nothing else does. The building's own lights stay as the mission has them (`roomLights` 1); the picture's lamp
  *  over the door stays too: the lit panel is at the stack's far end. The third man of the stack is written across the corridor from the second, a step
  *  short of the worked-out place: that one is on the corridor's tripwire (`laser_corridor`, x 14.5). No pane for the gun's row (`pane` false: the nearest glass in that wall is the conference
- *  room's, past the last man). Everything else is measured (src/host/kitViewPlan.ts). */
+ *  room's, past the last man). Everything else is measured (rust/game_start/src/kit_plan.rs). */
 const KIT_VIEW: KitViewData = { ways: [{ door: 'server', ref: [17.6, 11.1], hide: ['box_0120', 'box_0121', 'box_0380', 'box_0390'], slots: [null, null, null, [15.0, 11.56, 90]], roomLights: 1, pane: false }] };
 
 /** THE RESPONSE TEAM (game/qrf.ts, RESPONSE.on): the building's own. The marks are qrf.ts QRF_MARKS number for number — the landing behind the steel stair

@@ -164,7 +164,7 @@ export function build() {
   const out = T.finish({
     spawn: [5.2, 0, 14.0], routes,
     mission: { serverRoom: { ...STRONG }, entryDoor: 'strongroom', rack: { index: 0, front, halfW: 0.35 }, exfilDoor: 'gate_w', exfilX: EXIT_W.x, exfilZ: EXIT_W.z, exfilOut: EXIT_W.out },
-    // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the counting house's own front door from the yard, under
+    // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the counting house's own front door from the yard, under
     // its lens, the counting room behind the wall (from the west gate the picture's column holds a bare wall: the house is five metres in). Out of the
     // picture, by the ids the export gives them: the porch lamp (its pole and head stand in the camera's line) and the bike parked where the file forms.
     // The counting room's bulb is left lit (the picture puts a level's own lights out): without it the room behind the wall is a black hole.

@@ -97,7 +97,7 @@ export const FLOODLIT_STRUCTURE: StructureData = {
   ],
 };
 
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the main gate has no leaf, and a picture anchored on
+/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the main gate has no leaf, and a picture anchored on
  *  that opening had nothing for the kit that works a leaf (the hammer, the shotgun, a door charge, the wand, a bang or a frag on order all stood idle). So
  *  the way is the door the gate leads to: the building's front door, straight across the yard under its floodlights. The picture hangs no lamp of its own:
  *  the yard's floods are the level's, one of them over this door, and they are lit. */

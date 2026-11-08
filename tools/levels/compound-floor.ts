@@ -112,10 +112,10 @@ export const COMPOUND_ROOMS: Record<'kitchen' | 'pantry' | 'bunk' | 'back' | 'co
   hut: { x0: 26.12, x1: 30.38, z0: 21.12, z1: 23.88 },
 };
 
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest). This is the start page's first mission, so its
+/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest). This is the start page's first mission, so its
  *  picture is the first one a player sees. THE WEST GATE is the level's own: the leaf in the mud wall, the stack along the wall north of it, and behind the
  *  wall the west yard — the garden's rows and the cistern. THE NORTH GATE is a bespoke set, and a near copy: on the level the strip behind that gate is 2.26 m
- *  to the house's back wall, 1.92 m of it floor, and a can thrown through the gate wants 2 m (kitViewPlan's `inside`). The set is that gate with the house's
+ *  to the house's back wall, 1.92 m of it floor, and a can thrown through the gate wants 2 m (the plan's `inside`). The set is that gate with the house's
  *  wall stood half a metre further back: the wall, the blue frame, the house's back wall with its rooms behind it, their lights on (every held room's is).
  *  The strip's washing line and cans, and the rooms' beds, are stood where the picture's camera sees them over a 3 m wall, not at its foot. Its boxes name their paint 'look|plain': the first the file's
  *  palette holds, so this one block serves the look file too. */

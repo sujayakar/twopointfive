@@ -19,8 +19,7 @@
 // first frame — does the first three with the switch up. Game.restart — THE PLAYER'S restart: the pause and down cards' buttons, the panel's, Shift+Enter, Enter
 // when down — is restartEncounter and then the last two. So a checkpoint's load (it resets the encounter under itself and lays the file over it: the file's own
 // mains, clocks and lines), a recording's first frame and a tape's restart row keep their own camera and picture.
-// Not touched: the panel's 'repair' button (lighting.ts repairLights, as it was), and the kit picture's own window (`?kitview` restages on every kit message
-// under its own dissolve: the switch is off there, host/profile.ts).
+// Not touched: the panel's 'repair' button (lighting.ts repairLights, as it was).
 //
 // ONE switch: ON in the page (`?cleanrestart=0` = as it was), OFF in the module and on the frozen harness stand (`TPS_CLEANRESTART=1`); a FROZEN_HOLDS row, in the
 // knob registry and a journal's tables (a recording from before the table replays its restarts as they were). Off = the restart as it was, by run digest.
