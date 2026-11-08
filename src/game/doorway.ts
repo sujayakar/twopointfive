@@ -54,7 +54,7 @@ export const DOORMANNERS = {
    *  stepping back onto it after a nudge — so a man whose way goes on past him walks round him and is never walked into him; and the rule is also asked on
    *  the last `ownEndM` metres of a walk that ENDS by a door (a stack's second rank stands further than 2.5 m from the frame's middle: the man bound for the
    *  wall place beyond it shoved the rear man off his mark, onto his own, and the two then stood on each other's). Off = the rule as it was */
-  ownPlace: true, ownM: 0.45, ownEndM: 2.5,
+  ownM: 0.45, ownEndM: 2.5,
   /** AN OPEN LEAF ACROSS HIS WALK (the squad; doors.ts does it, game.ts hands it this row as `DoorContact.round`): a door pulled open toward a corridor stands
    *  across it, and a man whose walk goes through where the leaf stands herded it round to its frame with his body — onto the man ahead of him, who had to pull
    *  it again (the registry's copy room with four behind Sam: ten seconds on a door Sam had just opened, the leaf pressed back on the man re-opening it by the
@@ -103,7 +103,7 @@ export const DOORMANNERS = {
    *  frame he steps only to covered floor or stays; with nobody in his sights a covered spot comes before any other free one; and with them within
    *  `planeDeg` of the door's own wall line (never less than half a metre of it: neither face is 'away from them') covered floor on EITHER face will do —
    *  the face the half-plane calls theirs only ever under cover */
-  stepCover: true, planeDeg: 30,
+  planeDeg: 30,
   /** REST (orders.ts restClear): a fall-in follower is not left standing in a frame's strip or where a leaf swings — with Sam stopped, a place the file's
    *  half-metre slack has left in one is given up for his place on the trail (or the nearest clear floor), and a man who has stood `restSecs` in one short
    *  of his place steps to the nearest clear floor (within `clearM`) and waits there. MARKS (orders.ts stackPosts): the stack marks

@@ -51,8 +51,6 @@ fn blast_step(s: u32) -> u32 {
 
 // ---- the part ----
 
-/// the choice kept on this machine: the browser's storage is the host's, which sets g.k.glassfx and g.k.glass.crack_gap; with no storage the TypeScript's own try does nothing (glass.ts loadGlassFx)
-pub fn load_glass_fx(g: &crate::game::Game) {}
 
 /// per-Game glass bookkeeping, made at first asking: the row itself (glass.ts glassState)
 pub fn glass_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::glass::GlassState {

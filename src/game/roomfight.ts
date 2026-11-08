@@ -93,7 +93,7 @@ export const ROOMFIGHT = {
   /** below this no entry is feared: he faces the way he was put */
   fearMin: 0.15,
   /** defenders leave a lost room (off = they hold to the last) / go to a fight next door */
-  fallBack: true, rally: true,
+  fallBack: true, 
   /** a man who leaves a lost room by a door never picks a spot outside the BUILDING: one that lies outside the rectangle round every room of the level's
    *  structure (scenarios.roomClear.rooms' bounds) AND has no roof over it (most of five upward rays from head height find nothing — wet.ts's open-sky test).
    *  A door onto the lot is then no way out for him — he takes another door or goes to cover inside. A yard between the rooms (the compound's, the barracks')
@@ -141,7 +141,7 @@ export const ROOMFIGHT = {
    *  mate has him (the mate is behind a jamb, reloading, has a friend in his line or his muzzle down), his muzzle comes onto this man, or he is inside
    *  `coverNearM`; a man he is already on he hands over only when the mate is past his own beat to fire. A look he had begun at such a man is dropped.
    *  Not covered: coverfire.ts's rounds into cover at a man a mate knows of. Off = as it was: his eyes took any man they saw. */
-  coverKeep: false, coverHalfDeg: 45, coverNearM: 6,
+  coverHalfDeg: 45, coverNearM: 6,
   /** s a teammate stays ROUSED after a shot, a charge or a boot last reached his ears: a sighting alone is a man to him (no making the shape out first) and he
    *  reads at the roused rate. 10 = as it was — a quarter of a minute after a room was taken the team looked as calm men look, and a defender walking in through
    *  a connecting door two metres off had three tenths of a second on the man watching it */

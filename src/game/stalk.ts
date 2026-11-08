@@ -77,7 +77,7 @@ export const STALK = {
    *  of the grab's reach, growing to `cornerReach[1]` as the nearest man he could take comes from `cornerSee` m to `cornerM`; he comes up out of the coil over
    *  `cornerRise` s of the step in. `cornerShow` off = the wall stance alone, as it was.
    *  (Of the polish, so DOWN here: `jolt` 0 and `cornerShow` off — and above, `catchLong` 1, `turnIn` and `yankWith` off. stalkPolish(true) writes POLISH_UP's.) */
-  jolt: 0, joltFace: 50, joltSecs: 0.6, joltAtOnce: false, cornerShow: false, cornerSee: 3.2, cornerReach: [0.25, 0.55] as [number, number], cornerCoil: 0.3, cornerRise: 0.24,  /** THE KEY FINISHES IT (the maintainer, having played the creep: "one change we should make is that I think you should really have to hit E to finish
+  jolt: 0, joltFace: 50, joltSecs: 0.6, cornerShow: false, cornerSee: 3.2, cornerReach: [0.25, 0.55] as [number, number], cornerCoil: 0.3, cornerRise: 0.24,  /** THE KEY FINISHES IT (the maintainer, having played the creep: "one change we should make is that I think you should really have to hit E to finish
    *  the grab. it feels weird having it happen automatically"). With `key` up the held click only walks him in: inside the grab's reach he eases to a stop `keyM` m
    *  behind the man and waits there — keeping station, at the man's own speed, if the man walks on — and the grab is the row's own, 'grab him' on the interaction's key (E in the page), back
    *  whatever `only` says and taken AS the stalk's: the step in, the landing, the haul back (game.ts, stalkKeyGrab). He may also walk in on his own keys

@@ -862,8 +862,6 @@ pub fn needs_set_level(g: &mut crate::game::Game, gd: GuardId, kind: crate::need
     }
 }
 
-/// Read back what `save_needs` kept. Nothing is stored here: the TypeScript's "nothing stored, the shipped values stand". (needs.ts loadNeeds)
-pub fn load_needs(g: &crate::game::Game) {}
 
 #[cfg(test)]
 mod tests {

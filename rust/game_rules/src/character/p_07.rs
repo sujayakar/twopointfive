@@ -935,11 +935,6 @@ pub fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
         a.twists.push(crate::anim_skeleton::TwistSpec { node: nd.neck as f64, yaw: look * 0.4, pitch: 0.0 });
         a.twists.push(crate::anim_skeleton::TwistSpec { node: nd.head as f64, yaw: look * 0.6, pitch: 0.0 });
     }
-    if a.look_pitch_extra != 0.0 {
-        let e = a.look_pitch_extra;
-        a.twists.push(crate::anim_skeleton::TwistSpec { node: nd.neck as f64, yaw: 0.0, pitch: e * 0.4 });
-        a.twists.push(crate::anim_skeleton::TwistSpec { node: nd.head as f64, yaw: 0.0, pitch: e * 0.6 });
-    }
     if a.nv.is_some() || a.smoke.is_some() {   // what turns the head after the layers, kept for the hand's reach next frame
         a.nv_tw = [0.0; 4];
         for i in 0..a.twists.len() {

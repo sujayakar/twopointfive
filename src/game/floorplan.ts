@@ -59,7 +59,7 @@ import { teamPaired } from './seats';   // (the same)
 export const PLAN = {
   on: true,
   /** the parts, each off = that part not drawn */
-  paths: true, marks: true, sectors: true, who: true, tags: true, word: true, throws: true,
+  paths: true, marks: true, sectors: true, who: true, word: true, throws: true,
   /** the men's ways, marks, tags and fans only while the order menu is up — his word 10-13: 'they should only show when you're in the mode after pressing x. in
    *  normal gameplay they shouldn't show up'. Outside it stay: an order just GIVEN (the order book's own log, not a module's re-assign), fading out inside
    *  `freshSecs`; whatever waits on the key; a teammate's ordered throw until it leaves his hand. false = all of it for as long as the orders stand, as before */
