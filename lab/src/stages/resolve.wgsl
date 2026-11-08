@@ -25,7 +25,8 @@ fn upMirror(id: vec2u, p: Px, f: vec4u) -> vec4f {
     if (p.rough >= 0.3 && !p.leaf && (u.r + u.g + u.b + u.a) > 1e-3) { for (var g = 0u; g * 4u < frame.counts.x; g++) { let reach = lampReach(p.x, g); if (max4(reach) <= 0.0) { continue; } for (var j = 0u; j < 4u; j++) { let i = g * 4u + j; if (i >= frame.counts.x) { break; } let k = select(vz.x, vz.y, lamps[i].kind == 2u) * reach[j]; if (k > 0.0) { Cl += lampCoat(i, s, V) * k; } } } }
     c += part(2u) * El * select(m, (m + s.through / PI) * 0.5, p.leaf) + part(3u) * Cl * smoothstep(0.3, 0.42, p.rough); c += part(4u) * b.rgb * select(m, m + s.through / PI, p.leaf);
     if (f.x == 0u && mir.a >= 0.0) { let k = 1.0 - smoothstep(0.36, 0.43, p.rough); let amb = b.rgb / PI * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(1.0 - nv, 5.0)) * 0.9; c += mix(amb * part(4u), mir.rgb * part(5u), select(k, 1.0, p.metal > 0.5)); }
-    else if (f.x == 0u) { c += part(4u) * select(1.0, 0.25, p.leaf) * b.rgb / PI * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(1.0 - nv, 5.0)) * 0.8; }
+    else if (f.x == 0u && p.leaf) { let R = reflect(rd, p.n); let open = sat(lum(b.rgb) / max(lum(skyLod(p.n, 7.0)) * PI, 1e-5)); c += part(4u) * skyLod(R, 4.0) * open * (F * 0.8); }     // a waxy leaf shows the sky, as much of it as reaches here
+    else if (f.x == 0u) { c += part(4u) * b.rgb / PI * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(1.0 - nv, 5.0)) * 0.8; }
     else { c += part(4u) * b.rgb / PI * coatF0(s) * 0.6; }
   }
   if (f.x != 0u && part(6u) > 0.0) {                                 // the clear layer: what it lets through, and what it shows

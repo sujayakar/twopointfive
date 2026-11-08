@@ -31,7 +31,7 @@ fn oneMore(s: u32) {
     let h = nearest(x, w.xyz, 2e-3, 600.0, NOSHADOW * 0u, 1e9);
     if (h.piece == NOTHING) { E += skyLod(w.xyz, 4.0) * h.thru * w.w; }
     else { let q = surfaceMean(x, w.xyz, h); let leaf = (h.piece & LEAF_HIT) != 0u; let own = !leaf && (pieces[h.piece].lamp & 255u) != 255u;
-      let L = select(q.glow, vec3f(0.0), own) + sentBack(q, leaf, rnd2());
+      let L = select(q.glow, vec3f(0.0), own) + sentBack(q, leaf, rnd2(), w.xyz);
       E += min(L * h.thru * w.w, vec3f(60.0)); }
   }
   let cap = mix(7.0, 96.0, st); let m = min(a.w + 1.0, cap); let k = min(1.0, 2.0 / (m + 1.0));   // later samples weigh more: the first ones were lit by a table that was still dark
