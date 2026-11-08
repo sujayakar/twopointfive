@@ -67,7 +67,7 @@ async function stage(S: Stage): Promise<Out> {
   for (let i = 0, n = Math.round((S.secs ?? 4) * 60); i < n; i++) { puppet(); W.step(DT); out.frames++;
     out.maxOff = Math.max(out.maxOff, Math.abs(wrap(c.aimYaw - way)) * DEG); if (O.tgt === E) out.onHim++; if (X.tgt === E && X.blockT < ROOMFIGHT.noShot) out.redOn++; if (X.tgt === E) { out.afterRed++; if (O.tgt === E) out.afterRedOn++; }
     out.seen = Math.max(out.seen, O.meters.get(E)?.m ?? 0); }
-  out.state = `${E.state}${E.wound ? '/wounded' : ''}`; out.line = !g.col.segmentBlocked([c.pos[0], 1.5, c.pos[2]], [S.at[0], 1.2, S.at[2]]);
+  out.state = E.state; out.line = !g.col.segmentBlocked([c.pos[0], 1.5, c.pos[2]], [S.at[0], 1.2, S.at[2]]);
   return out;
 }
 
