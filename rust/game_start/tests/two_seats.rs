@@ -1,7 +1,8 @@
 //! A GAME OF TWO: what the world's lines of the tick say about the team is about every player, not the first (tools/blitz/sweeps/seat-tick.py lists them).
 use game::game::Foe;
 use game::ids::GuardId;
-use game_start::play::{Opts, Play};
+use game_start::play::{nudge, Opts, Play};
+use game_start::scene::{Axis, Scene};
 
 const SEEDS: [u32; 2] = [21, 22];
 /// a clear run of floor down the office's aisle
@@ -236,4 +237,44 @@ fn a_teammates_lane_is_clear_of_both_players() {
             assert!(!game::coverfire::cover_lane(&mut p.g, shooter, [12.0, 1.4, AISLE], [20.0, 1.4, AISLE]), "seed {s}: seat {seat}'s man stands in the lane and it is called clear");
         }
     }
+}
+
+/// THE RULE: a man's walk through a door goes by his own seat's order, whichever seat he is. Back from a fight his order's way is taken up again.
+/// A failure means the walk finds no order for the second player's men.
+#[test]
+fn a_walk_through_a_door_goes_by_his_own_seats_order() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let scene = store(s);
+            let door = scene.door_centre("store-yard");
+            let mut p = Play::scene(&scene, &Opts { seed: s, seats: 2, ..Default::default() });
+            let inside = p.defender_at([17.25, 9.25]);
+            p.falls(inside, game::game::DownBy::Player);
+            p.run(0.5);
+            p.seat_orders(seat, "stack", door, game::orders::Who::All);
+            p.run(7.0);
+            p.seat_orders(seat, "openClear", door, game::orders::Who::All);
+            let sn = p.g.seats[seat];
+            let mine = game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, sn));
+            let walker = p.until(5.0, |p| mine.iter().any(|m| p.g.door_path.walks.has(*m))).map(|_| *mine.iter().find(|m| p.g.door_path.walks.has(**m)).unwrap());
+            let Some(m) = walker else { panic!("seed {s}, seat {seat}: CONTROL: five seconds after the word no man of his has a walk") };
+            let a = game::orders::squad_orders_of(&p.g, &game::seats::seat(&p.g, sn), m).expect("he is on the order");
+            let pod = p.g.door_path.walks.get(m).unwrap().pod;
+            p.g.tab.orders_assignment[a].post = Some(pod);
+            p.g.tab.orders_assignment[a].via = vec![pod];
+            p.frame();
+            assert!(p.g.tab.orders_assignment[a].via.is_empty(), "seed {s}: seat {seat}'s man's walk did not take his order's way up");
+        }
+    }
+}
+
+/// (coop.rs's store: a door and a room behind it)
+fn store(seed: u32) -> Scene {
+    let mut s = Scene::new("store");
+    s.room("store", 10.0, 8.0, 18.0, 14.0).room("far", 26.0, 8.0, 34.0, 14.0);
+    s.door("store-yard", Axis::X, 14.0, 13.4 + nudge(seed, 0)).locked("store-yard").door("far-yard", Axis::X, 14.0, 29.4).door("far-back", Axis::X, 8.0, 29.4);
+    s.bulb(14.0, 11.0).bulb(30.0, 11.0).moon();
+    s.team([14.0, 21.0], std::f64::consts::PI, &[[13.0, 22.0 + nudge(seed, 1)], [15.0, 22.0], [13.0, 23.0], [15.0, 23.0]]);
+    s.defender("far", [32.25, 10.25], "far-yard").defender("store", [17.25, 9.25], "store-yard");
+    s
 }

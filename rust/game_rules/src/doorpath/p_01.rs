@@ -889,7 +889,8 @@ fn tick_walk(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64, d
     for gd in g.door_path.walks.keys() {
         let Some(row) = g.door_path.walks.get(gd) else { continue };
         let mut w = row.clone();
-        if tick_walk(g, gd, &mut w, t, dt) {
+        // (his walk goes by his order, in his own seat's book)
+        if crate::seats::standing_for(g, gd, &mut |g| tick_walk(g, gd, &mut w, t, dt)) {
             g.door_path.walks.set(gd, w);
         }
     }
