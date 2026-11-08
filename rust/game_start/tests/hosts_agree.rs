@@ -29,7 +29,7 @@ fn run(shown: usize) -> Vec<Vec<u32>> {
 #[test]
 fn what_breaks_is_the_same_on_two_machines() {
     let (a, b) = (run(1), run(0));
-    let names = game::state_words::state_names();
+    let names = game_start::parts::names();
     for k in 0..a.len() {
         for (i, part) in names.iter().enumerate() {
             assert_eq!(a[k][i], b[k][i], "{part} parted by frame {}", k * EVERY + 1);
