@@ -193,7 +193,7 @@ pub fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p: crate:
         && crate::weapons::firearm_fire(g, w)
     {
         let mods = crate::suppression::guard_fire_mods(g, gd);
-        g.gd[gd].fire_cd = (STANDOFF_SHOT_SECS + crate::math_dice::sim_random(g) * 0.6) * mods.gap;
+        g.gd[gd].fire_cd = (STANDOFF_SHOT_SECS + crate::dice::draw_of(g, "guards::standoff_alert#1", gd) * 0.6) * mods.gap;
         let o = crate::aim::guard_round(g, gd, mods.spread, None);
         crate::combat::fire_weapon(g, c, aim, false, Some(&o));
         g.tab.guards_standoff[s].shots += 1.0;
@@ -257,10 +257,10 @@ pub fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::
             }
         }
         g.gd[gd].fire_cd = if g.tune.muzzle_discipline {
-            SHIELD_RELEASE_BEAT_MIN + crate::math_dice::sim_random(g) * SHIELD_RELEASE_BEAT_JITTER
+            SHIELD_RELEASE_BEAT_MIN + crate::dice::draw_of(g, "guards::standoff_upkeep#1", gd) * SHIELD_RELEASE_BEAT_JITTER
         } else {
             let cd = g.gd[gd].fire_cd;
-            m::min(cd, 0.15 + crate::math_dice::sim_random(g) * 0.3)
+            m::min(cd, 0.15 + crate::dice::draw_of(g, "guards::standoff_upkeep#2", gd) * 0.3)
         };
     } else if why == "free" && watched {
         standoff_bark(g, gd, crate::guards::StandoffMoment::Freed, Some(crate::guards::StandoffBarkForce::Bool(true)), Some(pair));

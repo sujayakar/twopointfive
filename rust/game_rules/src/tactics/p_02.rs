@@ -604,7 +604,7 @@ pub fn lone_call(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics:
         }
         if was_calm {
             let near = m::min(1.2, flat(pos_of(g, o), pos_of(g, gd)) / 25.0);
-            let die = crate::math_dice::sim_random(g);
+            let die = crate::dice::draw_of(g, "tactics::lone_call#1", gd);
             g.gd[o].react_t = m::max(g.gd[o].react_t, 0.25 + near + die * 0.4);
         }
         // (a unit with nobody yet takes his colleague's man)
