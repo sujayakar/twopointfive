@@ -98,6 +98,10 @@ line).
     or renames a part: a name the module has not got is passed over): `mpclient-page --words DIR` writes every machine's whole words of its game
     (and the alarm's own parts beside them, as `block.<part>`: when the alarm fires they say which) into DIR (so does `MP_WORDS` in front of anything stood through `tools/mp/stand.ts`), one folder a game, then
     `bun run tools/mp/agreed.ts <folders> --write`. A LIST MADE FROM RUNS IS ONLY AS WIDE AS THE RUNS, which is why it is watched and not an alarm.
+    A READ BETWEEN TWO TICKS WRITES NOTHING OF THE BLOCK: the block is what two machines hold to each other every tick. A page's `Door.pos` kept the centre it
+    worked out in the block's own columns (the Rust step's memo), so a HUD row that asked a swung leaf's centre parted the alarm with every door, man and
+    thing equal, and the page let its seat go (1 long game in 22, then most of them once the Rust reads stopped making the memo anew; named by the
+    `block.<part>` words of one run, 2026-11-08). It is worked out and not kept, as Rust's `door_pos`; `seats-check` `twin` reads every door before every tick.
     A cheat set on one page cannot part two machines: the page lays the recipe's flags (god mode, the AI, ammunition, invisibility) over its game
     before every confirmed tick, so in a co-op game they are the server's.
   - **Networked machines step in QUIET RUNS** (`step.ts netQuiet`, the hosts' `quietRun(on)`): between two ticks of a run nothing is brought across to
