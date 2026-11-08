@@ -53,7 +53,6 @@ export const PAGES: readonly PageRow[] = [
   ['lobby-page.cjs', 'coop', "host or join a co-op game, two windows", 0],
   ['savetimeline-page.cjs', 'saves', "the save timeline: F5, the strip, a click goes back", 0],
   ['savedoor-page.cjs', 'saves', "a saved file goes to the backend, no download", 0],
-  ['savepic-page.cjs', 'saves', "a save's picture", 0],
   ['cloud-page.cjs', 'cloud', "the hosted page's backend: tape, visit, settings, the link", 0],
   ['cloudfatal-page.cjs', 'cloud', "a red card tells the backend", 0],
   ['cloudlocal-page.cjs', 'cloud', "a local build with a local backend, a note typed on a replay", 0],
