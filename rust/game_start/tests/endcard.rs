@@ -1,5 +1,4 @@
-//! THE END CARD IS AN EVENT (rust/game_rules/src/mission, `end_card`): the game tells its host once that the card is due, and nobody clears a flag on a copy. Each test holds
-//! one kind of end over three seeds beside a control. Before this, the game raised a flag no rule ever put down and each page cleared its own copy of it.
+//! THE END CARD IS DUE ONCE (game_draw `ended`, which a page opens it on). Each test holds one kind of end over three seeds beside a control.
 use game::game::MissionStage;
 use game::mission::DOWN_CARD_SECS;
 use game_start::play::{Opts, Play};
@@ -54,7 +53,7 @@ fn in_a_game_of_two_the_card_waits_for_both() {
         p.frame();
         assert!(p.g.recap.all_down, "seed {}: the game says so, for the HUD", seed);
         p.run(DOWN_CARD_SECS + 0.3);
-        assert_eq!(p.end_cards.len(), 1, "seed {}: both down: one card, one event for the game", seed);
+        assert_eq!(p.end_cards.len(), 1, "seed {}: both down: one card", seed);
         p.run(3.0);
         assert_eq!(p.end_cards.len(), 1, "seed {}", seed);
     }
@@ -90,7 +89,7 @@ fn no_card_while_the_tour_runs() {
         let mut p = yard(seed, 1);
         p.seat_goes_down(0);
         p.frame();
-        p.g.mission_in_tour = true;   // (after the fall: a fall in a show arms no beat at all, so this is the end_card's own rule)
+        p.g.mission_in_tour = true;   // (after the fall: a fall in a show arms no beat at all, so this is the card's own rule)
         p.run(DOWN_CARD_SECS + 1.0);
         assert!(p.end_cards.is_empty() && p.g.mission.stage == MissionStage::Failed, "seed {}: down in a show: no card", seed);
         drop(p);
