@@ -81,9 +81,6 @@ pub fn debris_spawn(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, b
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
     let level = level.unwrap_or(0.0);
     let mut v = v;
-    if kind == ChunkKind::Shard {
-        if let Some(r) = crate::shards::glass_shards_take(g, box_, v, w, who) { return Some(r); }
-    }
     if let Some(f) = g.destr.debris.fling { v = v3::add(v, f); }
     debris_thrown(g, kind, box_, v, level, who);
     debris_spawn_raw(g, kind, box_, v, w, Some(who), Some(true))
