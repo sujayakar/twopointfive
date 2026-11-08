@@ -23,7 +23,7 @@ fn upMirror(id: vec2u, p: Px, f: vec4u) -> vec4f {
     if (cs > 0.0) { c += sun * (m * cs + coatOf(s, V, L, 0.006)); } else if (p.leaf) { c += sun * s.through * (-cs / PI); }
     let u = textureLoad(lampU, id.xy, 0); let El = u.rgb * vz.x + vec3f(1.06, 0.99, 0.87) * u.a * vz.y; var Cl = vec3f(0.0);
     if (p.rough >= 0.3 && !p.leaf && (u.r + u.g + u.b + u.a) > 1e-3) { for (var i = 0u; i < frame.counts.x; i++) { let k = select(vz.x, vz.y, lamps[i].kind == 2u); if (k > 0.0) { Cl += lampCoat(i, s, V) * k; } } }
-    c += El * select(m, (m + s.through / PI) * 0.42, p.leaf) + Cl * smoothstep(0.3, 0.42, p.rough); c += b.rgb * select(m, (m + s.through / PI * 0.8) * 0.8, p.leaf);
+    c += El * select(m, (m + s.through / PI) * 0.28, p.leaf) + Cl * smoothstep(0.3, 0.42, p.rough); c += b.rgb * select(m, (m + s.through / PI * 0.8) * 0.8, p.leaf);
     if (f.x == 0u && mir.a >= 0.0) { let k = 1.0 - smoothstep(0.36, 0.43, p.rough); let amb = b.rgb / PI * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(1.0 - nv, 5.0)) * 0.9; c += mix(amb, mir.rgb, select(k, 1.0, p.metal > 0.5)); }
     else if (f.x == 0u) { c += b.rgb / PI * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(1.0 - nv, 5.0)) * 0.8; }
     else { c += b.rgb / PI * coatF0(s) * 0.6; }
