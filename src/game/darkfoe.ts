@@ -46,7 +46,6 @@ import { hasHim, OWN } from './owner';
 import { gunKeepsPost } from './gunroles';
 import './lanes';
 import { pressKeepsHome } from './pressure';
-import { buddyPaired } from './buddy';
 import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nodarkfoe = defenders leave their lights alone and stand
@@ -133,7 +132,7 @@ export function darkFoeKept(g: Game, gd: Guard, D: Def | undefined = g.fight.def
   if (digInPhase(g, gd) !== 'idle') return 'dug in';
   if (hasHim(gd, OWN.squadWord)) return 'his squad\'s';
   if (gunKeepsPost(gd) || hasHim(gd, OWN.lane)) return 'holds a lane';
-  if (hasHim(D.gd, OWN.press | OWN.buddy) || pressKeepsHome(g, D, false) || buddyPaired(g, D)) return 'the press\'s';
+  if (hasHim(D.gd, OWN.press) || pressKeepsHome(g, D, false)) return 'the press\'s';
   if (g.rescue.captor() === gd || hasHim(gd, OWN.stand)) return 'the captor / last stand';
   return null;
 }

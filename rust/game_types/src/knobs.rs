@@ -11871,47 +11871,6 @@ impl CuesK {
 }
 impl Default for CuesK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/buddy.ts:38 BUDDY, src/game/buddy.ts:38)
-#[derive(Clone, Copy, Debug)]
-pub struct BuddyK {
-    pub on: bool,
-    pub loud_secs: f64,
-    pub beat: [f64; 2],
-    pub quiet: f64,
-    pub calm: f64,
-    pub calm_m: f64,
-    pub answer: [f64; 2],
-    pub max_m: f64,
-    pub clear_m: f64,
-    pub loners: bool,
-    pub from_pair: bool,
-    pub empty_room: bool,
-    pub again: f64,
-    pub calls: f64,
-}
-impl BuddyK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BuddyK {
-            on: false,
-            loud_secs: 0.0,
-            beat: [0.0; 2],
-            quiet: 0.0,
-            calm: 0.0,
-            calm_m: 0.0,
-            answer: [0.0; 2],
-            max_m: 0.0,
-            clear_m: 0.0,
-            loners: false,
-            from_pair: false,
-            empty_room: false,
-            again: 0.0,
-            calls: 0.0,
-        }
-    }
-}
-impl Default for BuddyK { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/weather.ts:58 WX_SIM, src/game/weather.ts:58)
 #[derive(Clone, Copy, Debug)]
 pub struct WxSimK {
@@ -13568,10 +13527,6 @@ pub fn page_cues() -> CuesK {
     crate::knobs::CuesK { on: true, rows: 3.0, secs: 8.0, min_show: 2.5, per_class: 2.0, dup_secs: 10.0, gaps: alloc::vec![0.0, 1.2, 3.0, 3.0, 2.5, 3.0, 12.0], squelch: 0.35, man_secs: 2.5, again_secs: 28.0, still_secs: 8.0, still_quiet: 5.0, stay_secs: 2.0, overheard: true, overheard_gap: 4.0 }
 }
 
-pub fn page_buddy() -> BuddyK {
-    crate::knobs::BuddyK { on: false, loud_secs: 30.0, beat: [2.0, 4.5], quiet: 3.0, calm: 6.0, calm_m: 4.0, answer: [1.0, 2.5], max_m: 30.0, clear_m: 3.0, loners: true, from_pair: false, empty_room: true, again: 20.0, calls: 2.0 }
-}
-
 pub fn page_wx_sim() -> WxSimK {
     crate::knobs::WxSimK { rain_k: 1.2, thunder_k: 1.5, thunder_secs: 1.4, thunder_loud: 0.45, roof_bed: 0.32, loud_dry: true }
 }
@@ -13886,7 +13841,6 @@ pub struct Knobs {
     pub squads: SquadsK,
     pub drill_at: DrillAtK,
     pub cues: CuesK,
-    pub buddy: BuddyK,
     pub wx_sim: WxSimK,
     pub wx_own: WxOwnK,
     pub snow: SnowK,
@@ -14127,7 +14081,6 @@ impl Knobs {
             squads: page_squads(),
             drill_at: page_drill_at(),
             cues: page_cues(),
-            buddy: page_buddy(),
             wx_sim: page_wx_sim(),
             wx_own: page_wx_own(),
             snow: page_snow(),
