@@ -222,6 +222,8 @@ pub struct CardPick {
     pub now: bool,
     /// it is drawn with its suppressor
     pub can: bool,
+    /// the kind of gun it is drawn as (empty: none)
+    pub icon: String,
     /// none where it is no gun
     pub bars: Vec<f64>,
 }
@@ -268,6 +270,8 @@ pub struct CardRow {
     pub more: String,
     /// the gun of the row wears a suppressor
     pub can: bool,
+    /// the kind of gun it is drawn as (empty: none, or no gun's row)
+    pub icon: String,
     /// how loud the thing is when used: 0 none, 1 nearby, 2 the floor, 3 a blast
     pub noise: f64,
     /// what it takes of the two weights, or what one more would
@@ -278,7 +282,7 @@ pub struct CardRow {
     /// the guns the slot could hold
     pub picks: Vec<crate::view::CardPick>,
 }
-impl Default for CardRow { fn default() -> Self { CardRow { field: String::new(), label: String::new(), kind: CardKind::Count, value: String::new(), n: 0.0, word: String::new(), note: String::new(), cost: String::new(), under: String::new(), look: false, none: false, fixed: false, changed: false, idle: false, lent: 0.0, less: String::new(), more: String::new(), can: false, noise: 0.0, takes: None, would: None, bars: Vec::new(), picks: Vec::new() } } }
+impl Default for CardRow { fn default() -> Self { CardRow { field: String::new(), label: String::new(), kind: CardKind::Count, value: String::new(), n: 0.0, word: String::new(), note: String::new(), cost: String::new(), under: String::new(), look: false, none: false, fixed: false, changed: false, idle: false, lent: 0.0, less: String::new(), more: String::new(), can: false, icon: String::new(), noise: 0.0, takes: None, would: None, bars: Vec::new(), picks: Vec::new() } } }
 
 /// pouches, full and in all
 #[derive(Clone, Copy, Debug, Default)]
@@ -325,4 +329,91 @@ pub struct Pressed {
     pub passed: String,
     pub changed: Vec<String>,
     pub kept: String,
+}
+
+/// a size of the team
+#[derive(Clone, Debug, Default)]
+pub struct TeamSize {
+    pub n: f64,
+    /// it can be picked on this mission
+    pub ok: bool,
+    /// it is the mission's own
+    pub own: bool,
+    pub words: String,
+    /// why it can not, or what it changes
+    pub note: String,
+}
+
+/// a named kit of the squad's row
+#[derive(Clone, Debug, Default)]
+pub struct TeamKit {
+    pub id: String,
+    pub name: String,
+    /// the cards are this kit
+    pub now: bool,
+    /// it is offered at this size
+    pub offered: bool,
+}
+
+/// a thing a man carries, as his chip draws it
+#[derive(Clone, Debug, Default)]
+pub struct TeamThing {
+    pub field: String,
+    pub value: String,
+    pub label: String,
+    /// how many (0: not a thing that is counted)
+    pub n: f64,
+    pub can: bool,
+    pub icon: String,
+}
+
+/// a place of the team
+#[derive(Clone, Debug, Default)]
+pub struct TeamMan {
+    /// somebody comes in it
+    pub here: bool,
+    pub title: String,
+    pub sub: String,
+    /// "you", "red" or "blue"
+    pub pair: String,
+    /// his card is not as issued
+    pub changed: bool,
+    /// his kit in a line: his card's, or what the mission hands him
+    pub words: String,
+    pub pouches: crate::view::CardPouches,
+    /// the gun in his hands: its row's id, the kind it is drawn as, and whether it wears its suppressor
+    pub gun: String,
+    pub icon: String,
+    pub can: bool,
+    /// he wears the copied card
+    pub clip: bool,
+    pub things: Vec<crate::view::TeamThing>,
+    /// the card he will be staged with, as a card is kept
+    pub worn: String,
+}
+
+/// the team as it would go on the mission the cards are for
+#[derive(Clone, Debug, Default)]
+pub struct TeamView {
+    pub size: f64,
+    pub sizes: Vec<crate::view::TeamSize>,
+    /// the size's line, with what a mission that issues its own kit says
+    pub note: String,
+    /// there are cards to change (not on a lesson, nor where the mission issues the kit)
+    pub cards: bool,
+    /// the mission is played with the kit as issued
+    pub as_issued: bool,
+    /// what the squad's pouches hold between them (empty: no limit, or nobody comes)
+    pub squad: String,
+    /// what is carried between them
+    pub pool: String,
+    /// the mission hands out wall charges of its own
+    pub walls: bool,
+    pub kits: Vec<crate::view::TeamKit>,
+    /// you first, then the four places
+    pub men: Vec<crate::view::TeamMan>,
+    /// on your card, and between the others
+    pub frags: f64,
+    pub smoke: f64,
+    pub bangs: f64,
 }
