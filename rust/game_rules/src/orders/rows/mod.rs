@@ -42,6 +42,11 @@ macro_rules! rows {
 }
 rows! {
     shell40;
+    movethere;
+    stack;
+    cover;
+    fallin;
+    hold;
 }
 
 /// The row of the menu for an order: `data` is what only it knows (its page, its targets, its key), and the functions
