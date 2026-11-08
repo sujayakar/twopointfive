@@ -77,7 +77,8 @@ export async function enemysquadsStage(): Promise<boolean> {
     const H = g.nightBreach.hostiles;
     F.verdict(H.every((h: any) => hasHim(h, OWN.squad)) && H.filter((h: any) => h.staysInRooms).length === 3, 'every defender is a squad\'s man; Charlie\'s three stay in its rooms', `owned ${H.filter((h: any) => hasHim(h, OWN.squad)).length}/11 · stay in ${H.filter((h: any) => h.staysInRooms).length}`);
     R.step(6);
-    F.verdict(squadsReport(g).every((q: any) => q.state === 'hold' && !q.events.length) && !R.said.length, 'with nothing heard and nobody met, every squad holds and the net is silent', squadsReport(g).map((q: any) => `${q.name} ${q.state}`).join(' · ') + ` · ${R.said.length} radio lines`);
+    const calls = R.said.filter(l => !/radio check/.test(l));   // (a squad's routine check falls when its die says, and is the check's own question below)
+    F.verdict(squadsReport(g).every((q: any) => q.state === 'hold' && !q.events.filter((e: any) => !/check/.test(`${e.what} ${e.why}`)).length) && !calls.length, 'with nothing heard and nobody met, every squad holds and the net is silent but for its radio check', squadsReport(g).map((q: any) => `${q.name} ${q.state} [${q.events.map((e: any) => `${e.what}${e.why ? `: ${e.why}` : ''}`).join(', ')}]`).join(' · ') + ` · ${calls.length} radio lines`);
   } finally { R.done(); }
   return F.done();
 }
