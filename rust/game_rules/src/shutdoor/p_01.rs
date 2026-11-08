@@ -43,7 +43,7 @@ pub fn stands_open(g: &mut crate::game::Game, d: DoorId) -> bool {
 }
 
 /// The floor the leaf crosses on its way shut from where it stands now, with `pad` m of slack. (shutdoor.ts inShutSwing)
-pub fn in_shut_swing(g: &mut crate::game::Game, d: DoorId, x: f64, z: f64, pad: Option<f64>) -> bool {
+pub fn in_shut_swing(g: &crate::game::Game, d: DoorId, x: f64, z: f64, pad: Option<f64>) -> bool {
     let pad = pad.unwrap_or(0.0);
     let f = crate::guards::frame_of(g, d);
     let (px, pz) = (x - f.hx, z - f.hz);
@@ -59,10 +59,7 @@ pub fn in_shut_swing(g: &mut crate::game::Game, d: DoorId, x: f64, z: f64, pad: 
 
 /// A wall, a sill or a pane between two floor points at shin height, the level's statics only. (shutdoor.ts walled)
 pub fn walled(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
-    let keep = core::mem::take(&mut g.col.dynamic_boxes);
-    let blocked = crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None);
-    g.col.dynamic_boxes = keep;
-    blocked
+    crate::scene_collision::solid_blocked_over(g, &crate::ask::Over::statics(), [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None)
 }
 
 /// Can a man stand at p: a cell the walkers' grid calls free, nothing of the level inside his body. (shutdoor.ts stands)
@@ -193,7 +190,7 @@ pub fn plan(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]) -> crate::shu
 }
 
 /// inTheWay's `body`: a body lying in the leaf's way (the particles a leaf feels).
-fn body_in_swing(g: &mut Game, d: DoorId, c: CharId) -> bool {
+fn body_in_swing(g: &Game, d: DoorId, c: CharId) -> bool {
     let rag = match g.ch[c].ragdoll { Some(rag) => rag, None => return false };
     if flat(g.ch[c].pos, g.dr[d].frame_centre) > 4.0 { return false; }
     let r = crate::ragdoll::rag();

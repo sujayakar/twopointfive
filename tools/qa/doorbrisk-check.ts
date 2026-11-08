@@ -1,5 +1,6 @@
 // Nobody sprints to a stack (game/teampace.ts TEAMPACE.doorBrisk; teamDash, asked by game/orders.ts of a man walking to the mark a stack order gave him).
 //   bun run tools/qa/doorbrisk-check.ts [--verbose]      (probes.ts doorbrisk, in family squadorders)
+//   DOORBRISK_BREAK=1 = the rule's body out: line 1's second half (the same leg, rule on) must FAIL.   DOORBRISK_BREAK=2 = the rule taken for every order: line 3 must FAIL
 // Found on pass-four as shipped, from the maintainer's play: with a fight on, men ordered to stack on a door ran to it at the player's sprint with their
 // guns low — the team's run to cover, taken on the way to a door. Scripted runs of the mission had it on every seed read, always on a stack order.
 //   1. THE FOUND CASE, staged the same way on either stand: the tea room's door, a man stood on open floor a known enemy has a line on, three metres or

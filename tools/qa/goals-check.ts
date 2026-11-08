@@ -14,6 +14,8 @@
 //   5. Shift + the key on a spot of floor, nobody on anything: all four cover it. On a second spot: two cover each. On a third: two, one and one.
 //   6. every group down to one man: Shift + the key on one more spot gives nothing, and the squad says so.
 //   7. Shift + the key KEPT DOWN with nobody on anything is still everyone's ring: it comes up, and no goal is added by it.
+//   8. CONTROL — the switch off: Shift + the key is the key, everyone's: a second door takes all four. And on a tutorial mission the rule is not asked.
+//   9. CONTROL (plumbing) — a recording from before the key replays with it off; the frozen stand holds it off, the page's has it on, FROZEN_HOLDS has its row.
 // … AND KEPT DOWN IT IS THE RING FOR THAT PART (CMDRING.goalRing, orders.ts ringUp; the maintainer, 10-26, having played the first nine: "okay this
 // feels good. let's make shift-Q long press open the radial menu to append another order too"):
 //  10. all four stacked on one door, Shift + the key KEPT DOWN on the second: the ring comes up for one whole pair, named on it, and nobody is told
@@ -21,6 +23,7 @@
 //  11. all four covering a spot, Shift + the key kept down on a second spot and 'cover' picked: two cover each. Kept down on a third and the first
 //      wedge picked: ONE man is sent there (the tap would have had him cover it) and three still cover.
 //  12. every group down to one man: Shift + the key kept down on one more spot puts no ring up and gives nothing.
+//  13. CONTROL — that switch off: kept down on a second door it is everyone's ring, for no part of the squad, as the prototype was first built.
 // GOALS_BREAK=1 = the switch left off and the same lines asked: 1 to 7 and 10 to 12 must fail.
 // GOALRING_BREAK=1 = only the ring's switch left off: 10 to 12 must fail.
 //   exit 0 = all hold · 1 = one does not
@@ -34,8 +37,12 @@ const PM: any = await import(`${ROOT}/src/game/planmode.ts`);
 const { AUTOPILOT } = await import(`${ROOT}/src/game/autopilot.ts`);
 const { DOORTOOLS, offOf } = await import(`${ROOT}/src/game/doortools.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
+const { applyKnobs, knobsSnapshot } = await import(`${ROOT}/src/game/journal.ts`);
+const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
 const VERBOSE = process.argv.includes('--verbose'), BREAK = process.env.GOALS_BREAK === '1', RBREAK = process.env.GOALRING_BREAK === '1', LEVEL = 'tut-queue', DT = 1 / 60, SEED = 1;
 type V = number[];
+/** the switch as the stand first stood it up, before the check raises it */
+let stood: boolean | null = null, stoodRing: boolean | null = null;
 /** … and the whole ring table as the stand stood it (halftwice-check.ts reads its own two keys off it) */
 export let stoodCmd: Record<string, unknown> | null = null;
 const flat = (a: V, b: V) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -47,7 +54,7 @@ export async function rig(on: boolean, more: Record<string, unknown> = {}, squad
   try {
     const data: any = parseLevelData(readFileSync(`${ROOT}/levels/${LEVEL}.json`, 'utf8')); if (data.scenarios?.lesson) delete data.scenarios.lesson.rails;   // (this floor's lesson off its rails: these lines ask the goals, whichever step a lesson has them from)
     const level = loadLevel(data);
-    W = await standUp({ uploadEvery: 4, level, seed: SEED }); stoodCmd ??= { ...CMDRING };
+    W = await standUp({ uploadEvery: 4, level, seed: SEED }); stood ??= !!CMDRING.goals; stoodRing ??= !!CMDRING.goalRing; stoodCmd ??= { ...CMDRING };
     // (the ring and its later switches as the page has them)
     // (… and the two after them held off: these lines ask the rule as it was built — with nothing going the first goal is everyone's, and a second tap
     //  is the key's order again. CMDRING.goalHalf and CMDRING.twice have their own lines in halftwice-check.ts)
@@ -147,7 +154,7 @@ export async function goalsCheck(): Promise<boolean> {
       R.I.keys.clear(); O.cmdRing = null; O.close(); R.step(4); const asked = PM.PLAN_STATS.goals - g0, gave = O.log.length - n0;
       line(onA && ring && whole && asked === 0 && gave === 0, '7. Shift + the key KEPT DOWN with nobody on anything is still everyone\'s ring: it comes up, and no goal is added by it',
         `the ring ${ring ? 'up' : 'NOT up'} · goals added ${asked} · orders given ${gave}`); }
-    // 10 (the ring for a part: the switches as this run has them)
+    // 10 (the ring for a part: the switches as this run has them — line 8 and 9 raised them)
     R.home(); K.goals = !BREAK; K.goalRing = !BREAK && !RBREAK;
     { const all = R.stackAll(A), onB = R.onDoor(B), n0 = O.log.length, g0 = PM.PLAN_STATS.goals, r0 = PM.PLAN_STATS.rings;
       const ring = R.hold(), part: any[] = O.menu?.part ?? [], cap = String(O.ringView()?.caption ?? ''), told = O.log.length - n0;

@@ -19,7 +19,8 @@ const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { feelTables } = await import(`${ROOT}/src/game/teamfeel.ts`);
+const { knobsNamed } = await import(`${ROOT}/src/game/knobs.ts`);
+const feelNow = () => knobsNamed(['FLASH', 'PACE', 'LIGHTS', 'NVG', 'IR', 'IRLIGHT', 'FOG', 'LASER', 'DOORTOOLS', 'ROOMFIGHT', 'ORDERS', 'COVER', 'ENTRY', 'REAR', 'SILENT', 'FRAG', 'PAIR', 'DOORMANNERS']) as any;
 const FR: any = await import(`${ROOT}/src/game/frag.ts`);
 
 const DT = 1 / 60, FUSE = 2.4;
@@ -31,8 +32,8 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
-/** the probe leaves the feel tables (teamfeel.ts: DOORTOOLS among them) as it found them, pass, fail or throw */
-const guarded = (fn: () => Promise<boolean>) => async () => { const T = feelTables(), keep = JSON.parse(JSON.stringify(T)); try { return await fn(); } finally { for (const n of Object.keys(keep)) Object.assign(T[n], keep[n]); } };
+/** the probe leaves the feel tables (DOORTOOLS among them) as it found them, pass, fail or throw */
+const guarded = (fn: () => Promise<boolean>) => async () => { const T = feelNow(), keep = JSON.parse(JSON.stringify(T)); try { return await fn(); } finally { for (const n of Object.keys(keep)) Object.assign(T[n], keep[n]); } };
 async function quiet<T>(fn: () => T | Promise<T>): Promise<T> { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } }
 const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
 const offOf = (d: any, p: number[], side: number) => { const th = d.def.closedDir; return (Math.cos(th) * (p[2] - d.def.hinge[1]) - Math.sin(th) * (p[0] - d.def.hinge[0])) * side; };
@@ -54,6 +55,7 @@ async function stage(scn: string, seed: number, K: Knobs) {
   await quiet(() => R.step(20));
   return R;
 }
+type Rig = Awaited<ReturnType<typeof stage>>;
 
 /** when the grenade is put down: `word` — the order is given on Sam's word, the stack is made, the grenade lands and the word comes a second later (`word2`:
  *  and the word AGAIN a second after that) · `open` — the order goes on its own clock, the grenade lands with the men a few strides short of their marks ·
@@ -82,7 +84,7 @@ interface Run {
   /** a second door on the same word (`pairDoor`): its beats, and when ITS leaf first moved */
   other?: { door: string; beats: { t: number; what: string }[]; goT: number; ended: string };
 }
-const OFF = 1.5, LEAD = 1, AGAIN = 1, NEAR = 2.5;
+const OFF = 1.5, LEAD = 1, AGAIN = 1, NEAR = 2.5, BEGUN = 0.6;
 const tOf = (b: { t: number; what: string }[], re: RegExp) => b.find(x => re.test(x.what))?.t ?? NaN;
 const has = (r: Run, re: RegExp) => r.beats.some(b => re.test(b.what));
 

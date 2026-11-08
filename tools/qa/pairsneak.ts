@@ -16,6 +16,7 @@
 // with Sam through the route and the partner back at his shoulder (within `joinM` inside `joinSecs`: a partner who is never seen because he never came is 'left').
 // WHAT IT IS NOT: no GPU (no bounce light, no smoke, no picture); one plan per route; nobody shoots and nobody is taken down (those are the orders' and the
 // compromise parts' — this is the walk).
+import { menuKey, sneakWordOf } from './squadwords';
 import { writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { standUp, ROOT } from './headless.ts';
@@ -25,7 +26,8 @@ const { SILENT, squadSilent } = await import(`${ROOT}/src/game/silent.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { setDifficulty } = await import(`${ROOT}/src/game/difficulty.ts`);
-const { feelTables } = await import(`${ROOT}/src/game/teamfeel.ts`);
+const { knobsNamed } = await import(`${ROOT}/src/game/knobs.ts`);
+const feelNow = () => knobsNamed(['FLASH', 'PACE', 'LIGHTS', 'NVG', 'IR', 'IRLIGHT', 'FOG', 'LASER', 'DOORTOOLS', 'ROOMFIGHT', 'ORDERS', 'COVER', 'ENTRY', 'REAR', 'SILENT', 'FRAG', 'PAIR', 'DOORMANNERS']) as any;
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -69,15 +71,19 @@ export class Run {
   mateM = 0; crouchS = 0; uprightS = 0; farM = 0; litS = 0; movS = 0;
   private eyes = new Map<any, { mate: number; sam: number }>(); private wasState = new Map<any, string>(); private matePrev: number[] | null = null; private msgLast: any = null; private logN = SNEAKM ? SNEAKM.SNEAK_LOG.length : 0; private said = new Map<any, string>();
   digest = 0; private digestT = 0; stopOnNotice = true;
-  static async start(query: string, dice: number, opts: { verbose?: boolean; hard?: boolean; sneak?: boolean; set?: Record<string, Record<string, unknown>>; level?: string } = {}): Promise<Run> {
+  /** a run for a check that reads none of the watcher's tallies (Run.start's `lean`): no watcher and no digest, Sam's meter every sixth frame. The watcher asks the game's eyes ten times a frame and the meter its light twice: they are most of the CPU of a check that stands on this file */
+  lean = false; digesting = true; private frame = 0;
+  /** called before each frame is stepped: what a check writes every frame (a man's gaze) */
+  beforeFrame: (() => void) | null = null;
+  static async start(query: string, dice: number, opts: { verbose?: boolean; hard?: boolean; sneak?: boolean; set?: Record<string, Record<string, unknown>>; level?: string; lean?: boolean; digest?: boolean } = {}): Promise<Run> {
     Math.random = seeded(0x51ea + dice * 7919);
-    const R = new Run(); R.verbose = !!opts.verbose;
+    const R = new Run(); R.verbose = !!opts.verbose; if (opts.lean) { R.lean = true; R.digesting = !!opts.digest; R.watch = () => { }; }
     const level = opts.level ? loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${opts.level}`, 'utf8'))) : undefined;
     R.W = await quiet(true, () => standUp({ uploadEvery: 2, ...(level ? { level } : {}) })); R.g = R.W.game; R.I = R.W.input; R.cam = R.W.cam;
     SILENT.on = true;   // (the shipped default: the harness stands the game up with the order off the menu)
     setDifficulty(opts.hard ? 'hard' : 'standard', false);
     if (SNEAKM) SNEAKM.SNEAK.on = !!opts.sneak;
-    if (opts.set) { const T: any = { ...feelTables(), SILENT, ...(SNEAKM ? { SNEAK: SNEAKM.SNEAK } : {}) }; for (const [n, kv] of Object.entries(opts.set)) { if (!T[n]) throw new Error(`--set: no table '${n}'`); Object.assign(T[n], kv); } }
+    if (opts.set) { const T: any = { ...feelNow(), SILENT, ...(SNEAKM ? { SNEAK: SNEAKM.SNEAK } : {}) }; for (const [n, kv] of Object.entries(opts.set)) { if (!T[n]) throw new Error(`--set: no table '${n}'`); Object.assign(T[n], kv); } }
     const { why } = await quiet(!opts.verbose, () => startFromQuery(R.g, new URLSearchParams(query))); if (why) throw new Error(`start refused — ${why}`);
     R.step(20);
     return R;
@@ -97,11 +103,12 @@ export class Run {
       if (goal && !g.player.down) { const dx = goal[0] - this.pos[0], dz = goal[2] - this.pos[2], d = Math.hypot(dx, dz);
         if (d > 0.12) { const { fwd, right } = this.cam.planarBasis(), a = (dx * fwd[0] + dz * fwd[2]) / d, b = (dx * right[0] + dz * right[2]) / d, T = 0.3827; if (a > T) I.keys.add('KeyW'); if (a < -T) I.keys.add('KeyS'); if (b > T) I.keys.add('KeyD'); if (b < -T) I.keys.add('KeyA'); } }
       // Sam's light meter, as the harness can have it: the CPU estimate of the direct light on him (his own lights skipped), through the game's own mapping
-      { const c = g.player.char, pc = c.bones.chest ?? [c.pos[0], 1.2, c.pos[2]], ph = c.bones.head ?? [c.pos[0], 1.6, c.pos[2]], own = (o: number) => o === PLAYER_ID;
+      if (!this.lean || this.frame++ % 6 === 0) { const c = g.player.char, pc = c.bones.chest ?? [c.pos[0], 1.2, c.pos[2]], ph = c.bones.head ?? [c.pos[0], 1.6, c.pos[2]], own = (o: number) => o === PLAYER_ID;
         g.player.visibility = g.visibilityOf(Math.max(lightEstimateAt(g, pc, own), lightEstimateAt(g, ph, own))); }
+      this.beforeFrame?.();
       this.W.step(DT); this.t += DT;
       this.watch();
-      if (this.t - this.digestT >= 0.5) { this.digestT = this.t; this.digest = (Math.imul(this.digest, 31) + parseInt(hashDigest(digestGame(g, true)), 16)) | 0; }
+      if (this.digesting && this.t - this.digestT >= 0.5) { this.digestT = this.t; this.digest = (Math.imul(this.digest, 31) + parseInt(hashDigest(digestGame(g, true)), 16)) | 0; }
       if (this.verbose) { const M = g.messages, last = M[M.length - 1]; if (last && last !== this.msgLast) { const i = M.indexOf(this.msgLast); for (const m of M.slice(i + 1)) this.say(`   “${m.text}”`); this.msgLast = last; }
         if (SNEAKM) for (; this.logN < SNEAKM.SNEAK_LOG.length; this.logN++) { const e = SNEAKM.SNEAK_LOG[this.logN]; this.say(`   · ${e.who} ${e.what} at ${at([e.at[0], 0, e.at[1]])}`); }
         for (const o of this.ops) { const b = o.bubble; if (b && this.said.get(o) !== b.text) { this.said.set(o, b.text); this.say(`   ${o.callsign}: “${b.text}”`); } } }
@@ -111,7 +118,7 @@ export class Run {
     }
   }
   /** the watcher (the head comment) */
-  private watch() {
+  watch() {
     const g = this.g, mate = this.mate, K = Math.exp(-DT / 3);
     if (mate) { const p = mate.char.pos, sp = Math.hypot(mate.char.vel[0], mate.char.vel[2]);
       if (this.matePrev) { const d = flat(p, this.matePrev); if (d < 1) this.mateM += d; } this.matePrev = [p[0], 0, p[2]];
@@ -124,7 +131,7 @@ export class Run {
       const vm = mate ? canSeeChar(g, h, mate.char, false) : null, gm = vm?.visible ? sightGainOn(g, h, mate, vm.dist) : 0;
       E.sam = E.sam * K + gs * DT; E.mate = E.mate * K + gm * DT;
       if (gs > 0.05) this.samSeenS += DT; if (gm > 0.05) this.mateSeenS += DT;
-      if (this.verbose && process.env.PS_EYES && gm > 0.05 && Math.round(this.t * 60) % 30 === 0) this.say(`   ~ ${h.callsign} on partner: gain ${gm.toFixed(2)} at ${at(mate!.char.pos)} lit ${mate!.visibility.toFixed(2)} crouch ${mate!.char.anim.crouch.toFixed(1)} d ${vm!.dist.toFixed(1)} · ${SNEAKM?.sneakWord(g, mate) ?? '-'} · sam ${at(this.pos)}`);
+      if (this.verbose && process.env.PS_EYES && gm > 0.05 && Math.round(this.t * 60) % 30 === 0) this.say(`   ~ ${h.callsign} on partner: gain ${gm.toFixed(2)} at ${at(mate!.char.pos)} lit ${mate!.visibility.toFixed(2)} crouch ${mate!.char.anim.crouch.toFixed(1)} d ${vm!.dist.toFixed(1)} · ${sneakWordOf(g, mate) ?? '-'} · sam ${at(this.pos)}`);
       this.peak = Math.max(this.peak, h.awareness);
       const was = this.wasState.get(h) ?? 'patrol'; this.wasState.set(h, h.state);
       const note = (what: string): Notice => {
@@ -182,7 +189,7 @@ export class Run {
   /** the order menu by presses: the cursor on the target, X, the row's digit(s). The row is checked by id: a menu whose digit means something else is a failed order. */
   order(target: () => void, digits: string[], id: string): boolean {
     const O = this.g.orders, n0 = O.log.length;
-    target(); this.step(); this.press(ORDERS.key); this.step();
+    target(); this.step(); (menuKey(O), this.step()); this.step();
     if (!O.menu) { this.say(`order ${id}: the menu did not open`); return false; }
     const M0 = O.menu, seen = `rows ${M0.rows.map((d: any) => `${d.key ?? '·'} ${d.id}`).join(', ')}`;
     for (const d of digits) { target(); this.press(d); this.step(); }

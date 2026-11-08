@@ -1,6 +1,6 @@
 // ROWSET-CHECK: a mission row's own hour and weather (src/game/rowset.ts ROWSET; scene/scenarios.ts ScenarioEntry.hour / weather).
 //   bun run tools/qa/rowset-check.ts            (both stands: TPS_PROFILE=shipped in front for the page's; `probes.ts rowset`, family `missions`)
-//   ROWSET_ORDER_BREAK=1 bun run tools/qa/rowset-check.ts   must FAIL its last line: main.ts read with the rule run after the hour is read
+//   ROWSET_ORDER_BREAK=1 bun run tools/qa/rowset-check.ts   must FAIL its last line: the address's reader (host/standup.ts addressBeforeGame) read with the rule run after the hour is read
 // WHAT IT SAYS:
 //   · the rule alone: a query that boots a row with its own hour and weather gets both, OVER an `hour=` / `weather=` it carried; the same level at another
 //     seed and team size gets them too; a row on the bundled office has none whatever it names; a query that boots no row is left to the character
@@ -97,10 +97,10 @@ export async function rowsetCheck(): Promise<boolean> {
       // (the tape's tables are a RECIPE's since the page can also play a game server's ticks: main.ts lays them with its own recipeTables() at each point of the boot
       //  that wrote over them, and the first of those calls is the one the rule must come after. ROWSET_ORDER_BREAK=1 reads the source with the rule's call moved
       //  below the hour's: the line must FAIL.)
-      const src0 = readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'), call = /^ *rowSettings\(q\);[^\n]*\n/m.exec(src0)?.[0] ?? '', hourAt = /^ *initHour\(q\);[^\n]*\n/m.exec(src0);
+      const main = readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'), src0 = readFileSync(resolve(ROOT, 'src/host/standup.ts'), 'utf8'), call = /^ *rowSettings\(q\);[^\n]*\n/m.exec(src0)?.[0] ?? '', hourAt = /^ *const hour = hourAsked\(q\);[^\n]*\n/m.exec(src0);
       const src = process.env.ROWSET_ORDER_BREAK === '1' && call && hourAt ? (x => x.slice(0, x.indexOf(hourAt[0]) + hourAt[0].length) + call + x.slice(x.indexOf(hourAt[0]) + hourAt[0].length))(src0.replace(call, '')) : src0;
-      const p = src.indexOf('pageSwitches(q)'), t = src.search(/^ *recipeTables\(\);/m), r = src.indexOf('rowSettings(q)'), w = src.indexOf('initWeather(q)'), h = src.indexOf('initHour(q)'), s = src.indexOf('snowLevelOfQuery(q)');
-      say(p > 0 && t > 0 && p < r && t < r && r < w && r < h && r < s, 'main.ts runs the rule after the page\'s switches and the recipe\'s tables (a tape\'s, or a game server\'s), and before it reads the weather, the snow and the hour');
+      const p = main.indexOf('pageSwitches(q)'), t = main.search(/^ *recipeTables\(\);/m), a = main.indexOf('addressBeforeGame(q)'), f = src.indexOf('export function addressBeforeGame'), body = f < 0 ? '' : src.slice(f, src.indexOf('\n}', f)), r = body.indexOf('rowSettings(q)'), w = body.indexOf('weatherAsked(q)'), h = body.indexOf('hourAsked(q)'), s = body.indexOf('snowLevelOfQuery(q)');
+      say(p > 0 && t > 0 && p < a && t < a && r > 0 && r < w && r < h && r < s, 'main.ts reads the address (host/standup.ts addressBeforeGame) after the page\'s switches and the recipe\'s tables (a tape\'s, or a game server\'s), and that function runs the rule before it reads the weather, the snow and the hour');
     }
   } finally { own(L); own(E); unhush(); }
   log(bad ? `=== rowset-check: FAIL (${bad} line(s) do not hold) ===` : '=== rowset-check: ALL PASS ===');

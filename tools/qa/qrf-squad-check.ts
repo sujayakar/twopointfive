@@ -1,6 +1,6 @@
 // THE RESPONSE TEAM TAKES A ROOM BY THE SQUAD'S OWN CODE — the check behind qrf.ts `startDrill` / `phaseDrill` (`tune.qrfSquad`, src/game/squadcast.ts).
 //   bun run tools/qa/qrf-squad-check.ts   (`probes.ts qrfsquad`, in the `qrf` family)     exit 0 = all hold · 1 = one does not
-// The switch is raised here, so the lines hold on BOTH stands (run it plain and under TPS_PROFILE=shipped). Headless: nothing here has been seen on a GPU.
+// Headless: nothing here has been seen on a GPU. A sweep: an ordinary run plays (1) (2) (3) (5) (6) (8) (11); QA_SWEEP=all plays every arm.
 //   (1) the element at a door is a second cast of the very classes Sam's squad runs — a DoorTools and a SquadOrders of its own, not the squad's instances,
 //       not another class; it says of itself: the player is not theirs, the cans are the guards', every lock opens
 //   (2) the room that holds the fix: BANG AND CLEAR off the squad's menu — stacked, the can in, in behind it, the room's floor searched, all four inside,
@@ -9,7 +9,6 @@
 //   (4) a room that does not hold the fix: worked from THE THRESHOLD first — the jambs held, floor seen from outside before anybody is in, then the step in
 //   (5) contact in the stack: every man to the fight inside 1.5 s, the entry let go of (no order, nobody on the cast's books), the unthrown can back in the pool
 //   (6) Sam's own squad code never hears of it: its door tools ran no order, spent no can, hold no entry
-//   (7) the switch off: no cast is ever built and the room is taken by the element's own drill (its 'squeeze' / 'flow' beats), as it was
 //   (8) a restart of a night that built a cast leaves nothing: no cast, no entry
 //   (9) a man leaves the element under an entry (the roster the tools were dealt changes): the entry is let go of, the cans are the element's own count and
 //       not a fresh bag's, and who is left re-forms and takes the room
@@ -18,8 +17,9 @@
 //       back into it for as long as the fix stands)
 //   (12) their can does to Sam what a can does to anyone (samstun.ts, raised here): stood in the room in the open when it goes, he is dazzled — the door
 //       code spares the thrower's own side, and to this cast he is not on it
-// QRFSQUAD_BREAK=1 = the switch left off for the 'on' lines (and on for the 'off' line): every line but (3) and (6) must fail.
+// QRFSQUAD_BREAK=1 = the switch left off: every line but (3) and (6) must fail.
 import { standUp, ROOT } from './headless.ts';
+import { sample } from './sweep.ts';
 const { requestQrf } = await import(`${ROOT}/src/game/qrf.ts`);
 const { DoorTools } = await import(`${ROOT}/src/game/doortools.ts`);
 const { SquadOrders } = await import(`${ROOT}/src/game/orders.ts`);
@@ -52,6 +52,9 @@ export async function qrfSquadCheck(): Promise<boolean> {
   let squadOrders = 0, squadOps = 0, squadBangs: number | null = null, squadBangsEnd: number | null = null;
   const watchSquad = (game: any) => { squadOps = Math.max(squadOps, game.doorTools.ops.length); squadOrders = Math.max(squadOrders, game.doorTools.stats.orders); squadBangs ??= game.doorTools.bangs; squadBangsEnd = game.doorTools.bangs; };
 
+  // (each arm a play of half a minute: an ordinary run asks the first of the cases and the last; QA_SWEEP=all asks them all, and (8) (11) (6) under the plays that ran)
+  const arms: (() => Promise<void>)[] = [
+  async () => {
   // ---- (1) (2) (3): the room that holds the fix
   { const W = await called(41, [8, 0, 8], !BREAK); const { game } = W; const Q = game.qrf;
     let cast: any = null, kind = '', tStack = NaN, tIn = NaN, room = '', inside = 0, bangsAt = -1, strayBang = 0, theirs = 0, pool0 = -1;
@@ -72,7 +75,8 @@ export async function qrfSquadCheck(): Promise<boolean> {
     let next = ''; for (let f = 0; f < 60 * 20 && !next && !isNaN(tIn); f++) { hideSam(game); W.step(DT); const L = Q.log.filter((l: any) => l.t > tIn && /^target:/.test(l.what)); if (L.length) next = L[0].what; }
     after11 = { room, next };
     line(strayBang === 0 && theirs >= 1, '(3) the can is theirs to the shift: no \'bang\' report left on the floor, a loud door-kind report with a response man\'s id in its place', `'bang' reports left ${strayBang} · re-filed as theirs ${theirs}`); }
-
+  },
+  async () => {
   // ---- (4): a room that does not hold the fix is worked from the threshold
   { const W = await called(42, [30, 0, 11.2], !BREAK); const { game } = W; const Q = game.qrf;
     let done = false, kind = '', room = '';
@@ -85,7 +89,44 @@ export async function qrfSquadCheck(): Promise<boolean> {
     const sliced = !!m && !!h && iHeld >= 0 && (iCross < 0 || iHeld < iCross) && (cut ? Number(m[1]) < Number(m[2]) && Number(h[1]) <= Number(m[1]) && iSet < iHeld : Number(h[1]) < Number(m[1]));
     const ok = kind === 'threshold' && jambs && sliced && stepIn && done;
     line(ok, '(4) a room that does not hold the fix: the threshold — jambs held, floor seen from outside before anybody crosses, then the step in, the room taken', `order ${kind || '—'} on ${room || '—'} · jambs held ${jambs} · ${set.replace(/^drill:/, '') || 'never set'} → ${held.replace(/^drill:/, '') || 'never held'} · less unseen before the first man crossed ${sliced} · stepped in ${stepIn} · taken ${done}`); }
-
+  },
+  async () => {
+  // ---- (9): a man leaves the element under an entry
+  { const W = await called(44, [8, 0, 8], !BREAK); const { game } = W; const Q = game.qrf;
+    let cut = NaN, pool = -1, most = -1, gone = false, cleared = false, left = 0, inside = 0, out: any = null;
+    for (let f = 0; f < 60 * 150 && !cleared; f++) {
+      hideSam(game); W.step(DT);
+      if (isNaN(cut) && Q.op && Q.op.phase === 'stack' && game.time - Q.op.t0 > 1.0) { cut = game.time; pool = Q.bangs; out = Q.men[Q.men.length - 1]; Q.men = Q.men.slice(0, -1); out.script = null; out.hold = true; }   // the rear man taken off the element where he stands
+      if (!isNaN(cut)) { most = Math.max(most, Q.bangs); gone ||= beats(Q).includes('drill-end:gone'); if (game.time > cut + 0.5 && beats(Q).some((b: string) => b.startsWith('clear:'))) { cleared = true; left = Q.men.length; const B = Q.target.plan.bounds; inside = Q.men.filter((m: any) => inBounds(m.char.pos, B, 0.2)).length; } }
+    }
+    line(gone && cleared && left === 3 && inside === 3 && pool === 4 && most <= pool && !Q.cast.orders.has(out), '(9) a man leaves the element under an entry: it is let go of, the cans stay the element\'s own count, the three left re-form and take the room', `entry ended 'gone' ${gone} · cans at the cut ${pool}, most held after ${most} · room called ${cleared} with ${inside}/${left} inside · the man who left on the cast's books ${out ? Q.cast?.orders.has(out) : '—'}`); }
+  },
+  async () => {
+  // ---- (10): where Sam stands is not theirs to know
+  { const marks = async (onMark: Vec3 | null) => { const W = await called(45, [8, 0, 8], !BREAK); const { game } = W; const Q = game.qrf; let P: Vec3[] | null = null;
+      for (let f = 0; f < 60 * 90 && !P; f++) { hideSam(game);
+        if (onMark && Q.state === 'deployed') game.teleportPlayer(onMark);
+        W.step(DT); if (Q.op) P = Q.men.map((m: any) => Q.op.post.get(m)?.pos).filter(Boolean).map((p: Vec3) => [p[0], p[1], p[2]] as Vec3); }
+      return P; };
+    const far = await marks(null), on = far?.length ? await marks(far[far.length - 1]) : null;   // (the rear man's mark: with the seam out — SquadOrders.samStood answering for any cast — the marks move 5.9 m here)
+    const worst = far && on && far.length === on.length ? Math.max(...far.map((p, i) => Math.hypot(p[0] - on[i][0], p[2] - on[i][2]))) : NaN;
+    line(!!far && far.length === 4 && worst < 1e-6, '(10) where Sam stands is not theirs to know: unseen on their rear man\'s stack mark, the four marks they are dealt are the ones dealt with him a street away', `marks dealt ${far?.length ?? 0} · furthest any mark moved with Sam stood on the rear man's ${isNaN(worst) ? '—' : worst.toFixed(3) + ' m'}`); }
+  },
+  async () => {
+  // ---- (12): their can and Sam
+  { // (a can on Sam, SAMSTUN.on, is settled on and no longer written here)
+    { const W = await called(46, [8, 0, 8], !BREAK); const { game } = W; const Q = game.qrf;
+      let at: Vec3 | null = null, banged = false, dazzled = 0, far = NaN;
+      for (let f = 0; f < 60 * 90 && !(banged && game.time > (Q.log.find((l: any) => l.what === 'bang')?.t ?? 1e9) + 0.5); f++) {
+        if (!at) hideSam(game); else { game.teleportPlayer(at); game.player.visibility = 0.02; game.playerInvisible = true; game.player.crouch = false; }
+        W.step(DT);
+        if (!at && (Q.op || Q.phase === 'stack')) { const P = Q.target.plan, B = P.bounds, d = game.doors.byName(P.door).frameCentre, c: Vec3 = [(B.x0 + B.x1) / 2, 0, (B.z0 + B.z1) / 2], l = Math.hypot(c[0] - d[0], c[2] - d[2]) || 1; at = [d[0] + (c[0] - d[0]) / l * 2.6, 0, d[2] + (c[2] - d[2]) / l * 2.6]; }
+        if (beats(Q).includes('bang')) { banged = true; dazzled = Math.max(dazzled, game.player.dazzledUntil - game.time); const b = [...game.events].reverse().find((e: any) => e.kind === 'door' && e.loud && e.level === 1.0); if (b && at) far = Math.hypot(b.pos[0] - at[0], b.pos[2] - at[2]); }
+      }
+      line(banged && dazzled > 0.5, '(12) their can does to Sam what a can does to anyone: stood in the open in the room when it goes, he is dazzled', `the can went ${banged} · ${isNaN(far) ? '—' : far.toFixed(1) + ' m'} from him · dazzled ${dazzled.toFixed(1)} s`);
+    } }
+  },
+  async () => {
   // ---- (5): contact in the stack
   { const W = await called(43, [8, 0, 8], !BREAK); const { game } = W; const Q = game.qrf;
     let cast: any = null, tShown = NaN, tFight = NaN, pool = -1, alert = 0, left = -1, opLeft = true;
@@ -101,54 +142,17 @@ export async function qrfSquadCheck(): Promise<boolean> {
     }
     const ok5 = !!cast && tFight - tShown <= 1.5 && alert === 4 && left === 0 && !opLeft && pool === 4; restart = () => { game.resetGuards(); W.steps(5, DT); return { built: !!cast, cast: game.qrf.cast, op: game.qrf.op, state: game.qrf.state as string, held: cast ? cast.tools.ops.length + cast.orders.squad().filter((m: any) => cast.orders.has(m)).length : -1 }; };
     line(ok5, '(5) contact in the stack: all four to the fight inside 1.5 s, the entry let go of, the unthrown can back in the pool', `shown at ${f1(tShown)} · fight ${isNaN(tFight) ? 'NEVER' : `${(tFight - tShown).toFixed(2)} s later`} · alert and off the script ${alert}/4 · still on the cast's books ${left} · entry kept ${opLeft} · cans ${pool}`); }
+  },
+  ];
+  for (const play of sample(arms, 2)) await play();
 
-  // ---- (6): Sam's own squad code
-  line(squadOps === 0 && squadOrders === 0 && squadBangs === squadBangsEnd, '(6) Sam\'s own door tools never heard of it: no order run, no entry held, no can spent', `squad door tools: most entries at once ${squadOps} · orders run ${squadOrders} · cans ${squadBangs} → ${squadBangsEnd}`);
-
-  // ---- (7): the switch off = the element's own drill
-  { const W = await called(41, [8, 0, 8], BREAK); const { game } = W; const Q = game.qrf;
-    let done = false, built = false;
-    for (let f = 0; f < 60 * 90 && !done; f++) { hideSam(game); W.step(DT); built ||= !!Q.cast; done = beats(Q).some((b: string) => b.startsWith('clear:')); }
-    const B = beats(Q);
-    line(!built && done && B.includes('squeeze') && B.includes('flow') && !B.some((b: string) => b.startsWith('drill')), '(7) the switch off: no cast is built, the room is taken by the element\'s own drill', `cast built ${built} · own drill's beats squeeze ${B.includes('squeeze')} flow ${B.includes('flow')} · squad-drill beats ${B.filter((b: string) => b.startsWith('drill')).length} · room called ${done}`);
-  }
-  { const R = restart!();
+  { const R = restart!();   // (the arm of (5))
     line(R.built && R.cast === null && R.op === null && R.state === 'idle' && R.held === 0, '(8) a restart of a night that built a cast leaves nothing: no cast, no entry, nobody on the old cast\'s books, the response idle', `a cast had been built ${R.built} · cast ${R.cast === null ? 'none' : 'LEFT'} · entry ${R.op === null ? 'none' : 'LEFT'} · on the old cast's books ${R.held} · state ${R.state}`); }
 
   line(!!after11.room && !!after11.next && after11.next !== `target:room:${after11.room}`, '(11) the room called clear on the fix is not the next room on the same word', `called clear: ${after11.room || '—'} · next: ${after11.next || 'nothing picked in 20 s'}`);
 
-  // ---- (9): a man leaves the element under an entry
-  { const W = await called(44, [8, 0, 8], !BREAK); const { game } = W; const Q = game.qrf;
-    let cut = NaN, pool = -1, most = -1, gone = false, cleared = false, left = 0, inside = 0, out: any = null;
-    for (let f = 0; f < 60 * 150 && !cleared; f++) {
-      hideSam(game); W.step(DT);
-      if (isNaN(cut) && Q.op && Q.op.phase === 'stack' && game.time - Q.op.t0 > 1.0) { cut = game.time; pool = Q.bangs; out = Q.men[Q.men.length - 1]; Q.men = Q.men.slice(0, -1); out.script = null; out.hold = true; }   // the rear man taken off the element where he stands
-      if (!isNaN(cut)) { most = Math.max(most, Q.bangs); gone ||= beats(Q).includes('drill-end:gone'); if (game.time > cut + 0.5 && beats(Q).some((b: string) => b.startsWith('clear:'))) { cleared = true; left = Q.men.length; const B = Q.target.plan.bounds; inside = Q.men.filter((m: any) => inBounds(m.char.pos, B, 0.2)).length; } }
-    }
-    line(gone && cleared && left === 3 && inside === 3 && pool === 4 && most <= pool && !Q.cast.orders.has(out), '(9) a man leaves the element under an entry: it is let go of, the cans stay the element\'s own count, the three left re-form and take the room', `entry ended 'gone' ${gone} · cans at the cut ${pool}, most held after ${most} · room called ${cleared} with ${inside}/${left} inside · the man who left on the cast's books ${out ? Q.cast?.orders.has(out) : '—'}`); }
-
-  // ---- (10): where Sam stands is not theirs to know
-  { const marks = async (onMark: Vec3 | null) => { const W = await called(45, [8, 0, 8], !BREAK); const { game } = W; const Q = game.qrf; let P: Vec3[] | null = null;
-      for (let f = 0; f < 60 * 90 && !P; f++) { hideSam(game);
-        if (onMark && Q.state === 'deployed') game.teleportPlayer(onMark);
-        W.step(DT); if (Q.op) P = Q.men.map((m: any) => Q.op.post.get(m)?.pos).filter(Boolean).map((p: Vec3) => [p[0], p[1], p[2]] as Vec3); }
-      return P; };
-    const far = await marks(null), on = far?.length ? await marks(far[far.length - 1]) : null;   // (the rear man's mark: with the seam out — SquadOrders.samStood answering for any cast — the marks move 5.9 m here)
-    const worst = far && on && far.length === on.length ? Math.max(...far.map((p, i) => Math.hypot(p[0] - on[i][0], p[2] - on[i][2]))) : NaN;
-    line(!!far && far.length === 4 && worst < 1e-6, '(10) where Sam stands is not theirs to know: unseen on their rear man\'s stack mark, the four marks they are dealt are the ones dealt with him a street away', `marks dealt ${far?.length ?? 0} · furthest any mark moved with Sam stood on the rear man's ${isNaN(worst) ? '—' : worst.toFixed(3) + ' m'}`); }
-
-  // ---- (12): their can and Sam
-  { // (a can on Sam, SAMSTUN.on, is settled on and no longer written here)
-    { const W = await called(46, [8, 0, 8], !BREAK); const { game } = W; const Q = game.qrf;
-      let at: Vec3 | null = null, banged = false, dazzled = 0, far = NaN;
-      for (let f = 0; f < 60 * 90 && !(banged && game.time > (Q.log.find((l: any) => l.what === 'bang')?.t ?? 1e9) + 0.5); f++) {
-        if (!at) hideSam(game); else { game.teleportPlayer(at); game.player.visibility = 0.02; game.playerInvisible = true; game.player.crouch = false; }
-        W.step(DT);
-        if (!at && (Q.op || Q.phase === 'stack')) { const P = Q.target.plan, B = P.bounds, d = game.doors.byName(P.door).frameCentre, c: Vec3 = [(B.x0 + B.x1) / 2, 0, (B.z0 + B.z1) / 2], l = Math.hypot(c[0] - d[0], c[2] - d[2]) || 1; at = [d[0] + (c[0] - d[0]) / l * 2.6, 0, d[2] + (c[2] - d[2]) / l * 2.6]; }
-        if (beats(Q).includes('bang')) { banged = true; dazzled = Math.max(dazzled, game.player.dazzledUntil - game.time); const b = [...game.events].reverse().find((e: any) => e.kind === 'door' && e.loud && e.level === 1.0); if (b && at) far = Math.hypot(b.pos[0] - at[0], b.pos[2] - at[2]); }
-      }
-      line(banged && dazzled > 0.5, '(12) their can does to Sam what a can does to anyone: stood in the open in the room when it goes, he is dazzled', `the can went ${banged} · ${isNaN(far) ? '—' : far.toFixed(1) + ' m'} from him · dazzled ${dazzled.toFixed(1)} s`);
-    } }
+  // ---- (6): Sam's own squad code
+  line(squadOps === 0 && squadOrders === 0 && squadBangs === squadBangsEnd, '(6) Sam\'s own door tools never heard of it: no order run, no entry held, no can spent', `squad door tools: most entries at once ${squadOps} · orders run ${squadOrders} · cans ${squadBangs} → ${squadBangsEnd}`);
 
   console.log(`=== qrf-squad-check: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

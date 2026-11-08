@@ -25,7 +25,7 @@ pub fn guard_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, id_2:
     let id = g.gd.push(Guard::blank());
     g.gd[id].witness = new_witness();
     g.gd[id].talk = new_talk(g);
-    g.gd[id].look_phase = crate::math_dice::sim_random(g) * 10.0;
+    g.gd[id].look_phase = crate::dice::draw_world(g, "game::guard_new#1") * 10.0;
 
     let (p0, p1, weapon, keys) = {
         let r = &g.tab.route[route];
@@ -78,21 +78,5 @@ pub fn game_rehand(g: &mut crate::game::Game) {
     g.snow_look_was = -1.0;
     crate::air_sim::air_resend(g);
     crate::air_dust::air_dust_resend(g);
-}
-
-/// Asks the renderer's irradiance at a point under `key`. (game.ts Game.lightQuery; the tools' swap of this field is not carried)
-pub fn game_light_query(g: &mut crate::game::Game, key: &str, pos: V3, skip_owner: Option<f64>) {
-    let skip_owner = skip_owner.unwrap_or(0.0);
-    crate::sensors::sensors_ask(g, key, pos, Some(skip_owner));
-}
-
-/// The latest answer for `key`, or None while there is none. (game.ts Game.lightAt)
-pub fn game_light_at(g: &mut crate::game::Game, key: &str) -> Option<f64> {
-    crate::sensors::sensors_read(g, key)
-}
-
-/// Drops a stale answer for `key`. (game.ts Game.lightForget)
-pub fn game_light_forget(g: &mut crate::game::Game, key: &str) {
-    crate::sensors::sensors_forget(g, key);
 }
 

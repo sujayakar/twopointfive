@@ -14,6 +14,9 @@ pub fn push_smoke_system_like_clear_all(g: &mut crate::game::Game) { g.out.push(
 pub fn push_smoke_system_like_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEmitter) { g.out.push(crate::out_events::OutEvent::SmokeSystemLikeEmit(crate::out_events::OutSmokeSystemLikeEmit { e: e.clone() })); }
 /// (Tap: its body does something of its own, so a part calls this beside it)
 pub fn push_tap(g: &mut crate::game::Game, row: u32, args: &[u8], answer: &[u8]) { g.out.push(crate::out_events::OutEvent::Tap(crate::out_events::OutTap { row: row, args: args.to_vec(), answer: answer.to_vec() })); }
+/// the end card is due: the host opens it after the step (mission `end_card`)
+pub fn end_card(g: &mut crate::game::Game) { g.out.push(crate::out_events::OutEvent::EndCard); }
+
 /// (WallFeel: its body does something of its own, so a part calls this beside it)
 pub fn push_wall_feel(g: &mut crate::game::Game, at: V3) { g.out.push(crate::out_events::OutEvent::WallFeel(crate::out_events::OutWallFeel { at: at })); }
 pub fn play_opts(o: &crate::audio_iface::PlayOpts) -> crate::out_events::OutPlayOpts { use crate::audio_iface::PlayOpts as P; let mut x = crate::out_events::OutPlayOpts::default(); match o { P::Rate { rate } => x.rate = Some(*rate), P::Duration { duration } => x.duration = Some(*duration), P::Thunder { lowpass, rate, pan, wet } => { x.lowpass = Some(*lowpass); x.rate = Some(*rate); x.pan = Some(*pan); x.wet = Some(*wet); } P::ChairRoll { tok } => x.tok = Some(*tok), } x }

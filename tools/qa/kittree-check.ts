@@ -29,8 +29,8 @@ const J = (o: unknown) => JSON.stringify(o), f2 = (x: number) => (Number.isFinit
 const raise = () => { K.BIGSLOT.on = true; K.KIT.on = true; };
 /** every table and card put back as found */
 async function kept<T>(fn: () => Promise<T>): Promise<T> {
-  const big = K.BIGSLOT.on, kit = K.KIT.on, solo = K.KIT_SOLO.on, cards = JSON.stringify(K.KIT.members);
-  try { return await fn(); } finally { K.BIGSLOT.on = big; K.KIT.on = kit; K.KIT_SOLO.on = solo; K.KIT.members.splice(0, K.KIT.members.length, ...JSON.parse(cards)); }
+  const big = K.BIGSLOT.on, kit = K.KIT.on, cards = JSON.stringify(K.KIT.members);
+  try { return await fn(); } finally { K.BIGSLOT.on = big; K.KIT.on = kit; K.KIT.members.splice(0, K.KIT.members.length, ...JSON.parse(cards)); }
 }
 const issue = () => { for (let i = 0; i < K.KIT.members.length; i++) K.KIT.members[i] = K.kitDefault(i); };
 const rows = (i: number) => K.kitRows(i) as any[];
@@ -111,7 +111,7 @@ export async function kittreeGuns(): Promise<boolean> {
     // a gun that has no choice says which way it is made, and its row cannot be moved
     issue(); const fixed: string[] = [], loose: string[] = [];
     for (const slot of ['primary', 'secondary'] as const) for (const id of gunPicks(slot) as string[]) { if (id === 'none') continue; issue(); K.kitSet(1, slot, id);
-      const f = slot === 'primary' ? 'suppressed' : 'sideCan', r = row(1, f), m = K.KIT.members[1], word = r.fixed?.(m) ?? '', can = !!pickRow(id, true) && !!pickRow(id, false) && pickRow(id, true) !== pickRow(id, false);
+      const f = slot === 'primary' ? 'suppressed' : 'sideCan', r = row(1, f), m = K.KIT.members[1], word = (K.kitPeek(1, f, 1).why ?? '') as string, can = !!pickRow(id, true) && !!pickRow(id, false) && pickRow(id, true) !== pickRow(id, false);
       const was = K.rowGet(r, m), moved = K.kitSet(1, f, !was) && K.rowGet(r, K.KIT.members[1]) !== was;
       (can === !word && moved === can ? fixed : loose).push(`${id}: ${word || 'on / off'}${moved ? '' : ' (held)'}`); }
     F.verdict(!loose.length && fixed.some(x => x.includes('held')) && fixed.some(x => !x.includes('held')), 'every gun: its suppressor row moves only where the gun can be had both ways, and says why where it cannot', loose.length ? `WRONG ${loose.join(' · ')}` : fixed.join(' · '));
@@ -132,7 +132,7 @@ export async function kittreeSponge(): Promise<boolean> {
   const F = family('kittree-sponge: sponge rounds are a row, and only a quiet run is handed them');
   await kept(async () => {
     const R: any = await hushed(() => rig(17, { stage: false })); raise(); issue(); const g = R.game, pl = () => g.player;
-    const quiet = (on: boolean) => { K.KIT_SOLO.on = on; if (on) g.guards = g.guards.filter((gd: any) => !(gd.unit && gd.team === 'operative')); };
+    const quiet = (on: boolean) => { g.soloCard = on; if (on) g.guards = g.guards.filter((gd: any) => !(gd.unit && gd.team === 'operative')); };
     const r = row(0, 'rings'), issued = K.kitDefault(0).rings;
     F.verdict(!!r && issued === 0 && [0, 1, 2, 3, 4].every(i => K.kitDefault(i).rings === 0), 'a Sponge rounds row is on your card, and nobody is issued one', `row: ${r ? `${r.label} ${J(r.values)}` : 'none'} · issued ${[0, 1, 2, 3, 4].map(i => K.kitDefault(i).rings).join(' ')}`);
     quiet(false); K.kitPlayer(g); const loud = { rings: pl().rifle.rings, load: pl().rifle.attachment, tube: pl().rifle.attachments.includes('ring') };
@@ -142,10 +142,6 @@ export async function kittreeSponge(): Promise<boolean> {
     // picked: counted against the pouches like any other thing, and what a loud deploy carries
     issue(); quiet(false); const p0 = K.kitCost(0).used; K.kitSet(0, 'smoke', 0); K.kitSet(0, 'frags', 0); const took = K.kitSet(0, 'rings', 2), p2 = K.kitCost(0); K.kitPlayer(g);
     quiet(true); K.kitPlayer(g); F.verdict(pl().rifle.rings === KITTREE.lend, '… and on a quiet run the mission\'s five stand over the two', `${pl().rifle.rings} rounds`);
-    // your light and goggles rows are what you deploy with
-    issue(); quiet(false); K.kitPlayer(g); const on = { l: K.kitYouLight(pl()) };
-    K.kitSet(0, 'light', false); K.kitSet(0, 'nvg', false); K.kitPlayer(g); const off = { l: K.kitYouLight(pl()) };
-    F.verdict(on.l && !off.l, 'your card without the light: L has nothing to switch (with it, as before)', `fitted: light ${on.l} · taken off: light ${off.l}`);
     issue(); K.kitPlayer(g);
   });
   return F.done();

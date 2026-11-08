@@ -137,6 +137,12 @@ Strongest first, with why each stands above the next:
 
 For a team: his part in a door or wall drill, then a pair's job, then a plain order, then fall in.
 
+**What stands today**: `owner::TASKERS` (`game_types/src/owner/types.rs`) is that list of fifteen, a line each with
+its name and its reasons, in the code's present order. Who has a man is one word, a bit a tasker: `owner::claim(g,
+man, by::LANE, t, why)`, `owner::release`, `owner::has(&Game, man, by::PRESS | by::BUDDY)`, and `owner::who` (the
+strongest, why, since when), which `control_line` prints. It RECORDS: a tasker takes its man whoever has him, and
+each rule asks `has` of those it yields to. Deciding by the list is step G.
+
 In code an assignment is three calls, and a tasker is whoever makes them (not built yet; step E makes the
 first, for `hold` and `pinned`):
 
@@ -259,6 +265,31 @@ they share with the player's team from the start is `Assignment`, the limits and
   (local prediction). The arbiter is not the only door to a body: ACT takes `&World` and one `&mut Body`.
 - A rule of the world that says "the player is close, seen, down" means any player's man or each, never the first.
 
+## 6b. The map: which file holds what
+
+Under `rust/game_rules/src/`. One man's frame, in the order it runs (`guards/frame.rs update_guard`):
+
+| what | where | to add one |
+|---|---|---|
+| what takes him whole, before he senses: a live grenade, broke and ran, shaken, startled | `control/{frag,runner,morale,startle}.rs`, the list in `control/mod.rs` | a file and a line of `rules!` |
+| his own script (an order, a drill, a mission's staging) | `squad/` (`run_guard_script`), `gd.script` | |
+| what he senses, a file a sense: his ears, his eyes on his man, where his man went, a colleague on the floor, the man he trails, a kicked lock | `guards/senses/{hearing,foe,lead,body,leader,lock}.rs`, in order in `senses/mod.rs` | a file and its line in `perceive`; a kind of sound is a function of `hearing.rs` |
+| where a man looks, for every eye | `guards/p_04.rs look_of`, which is `fogofwar::gaze_of` | |
+| how alert he is | `guards/frame.rs alertness`; every write of awareness, state and fix through `mind.rs` | |
+| what takes him in his fight: head down under fire | `control/duck.rs`, asked at the top of `alert` | a file and a line of `rules!` |
+| what he does, by his state | `guards/behave/{patrol,suspicious,alert,search}.rs` | his state's file |
+| the looks laid over his aim | `guards/looks.rs` | a line of `LOOKS` |
+| his pose, his light, his footfall | `guards/frame.rs pose` | |
+| whose man he is (fifteen taskers, strongest first) | `game_types/src/owner/types.rs`, `owner/` | a line of `taskers!` |
+| what a rule may ask of a man (enemy, blind, staggered, held, in contact, still) | `control/man.rs` | a function |
+| why he is doing that | `control::control_line`, `mind::why`, `owner::who` | |
+
+The squad's side: an order is `orders/rows/<name>.rs` and a line of `rows!`; a throw is `squadthrow/plan.rs`; who is
+asked about which player's seat is a `SeatRef` (`seats/seat_ref.rs`). What the team knows under the fog is
+`fogofwar/p_02.rs`, what the picture shows of it `fogofwar/picture.rs`. The room fight is `roomfight/{defender,
+operative,rooms,line,fight}.rs`: a man who holds a room, a squad man in the fight (his frame is a dozen named parts),
+the rooms, who is in the line of a round, the whole.
+
 ## 7. Add a reaction, an order, a behaviour
 
 **A reaction**: something happens to an enemy and it takes him for a while (a grenade lands by him, a blast shakes
@@ -332,14 +363,21 @@ the first frame and the parts that differ. A new reaction or order is meant to c
 it this way: every run in which it never acted must still be the same (each run's line says how long each rule
 had a man), and what it does where it acts is for the mission tallies to judge.
 
-**What is NOT one file and one line today**, plainly. *A behaviour of a man's own* (how he patrols, searches,
-fights when nothing has taken him) is still a function of the guard's update in `guards/p_07.rs`, and the room
-fight's defenders and operatives are still their own module: neither is in a list. A reaction can take a man
+**A behaviour of a man's own** (how he patrols, looks, fights and searches when nothing has taken him) is one file a
+state: `rust/game_rules/src/guards/behave/{patrol,suspicious,alert,search}.rs`, each one function from what he
+senses (`Sensed`, settled before it is asked and written by no behaviour) to what he does (`Acts`: how fast his legs
+go, what his hands have up, where he aims, how low, gun lowered, slicing), which the pose reads and no behaviour
+does. `guards/frame.rs` is the frame round them: incapable, lent, senses, alertness, behave, pose. What he senses is a
+file a sense (`guards/senses/`: his eyes on his man, where his man went, a colleague on the floor, the man he trails,
+a kicked lock), and the looks some module lays over his aim are a list (`guards/looks.rs`, a line a look).
+
+**What is NOT one file and one line today**, plainly. A new STATE of a man is an arm of `GuardState`, which many
+modules read, and one of `behave::act`. The room fight's defenders and operatives are still their own module, in no
+list. A reaction can take a man
 whole, not his legs alone while he goes on shooting. A reaction's file is longer than its idea, because it must
 ask for itself whether a man is on a post, kept to his rooms or somebody's (a third of the worked example).
 A reaction that draws from the die re-deals the rest of the mission until the keyed draws land. An order that
-shows a line in the squad's HUD block still needs an arm of `OrderNoteFn`, which the page reads over the wire,
-and an order that keeps state of its own still needs a field on the game. About thirty older orders are still
+shows a line in the squad's HUD block registers an arm of `OrderNoteFn` on the seat's `SquadOrders.notes` and gives that arm a reader in `orders/hud.rs notes_of` (a function of the game shared and the seat: its words reach the page in `TickView.squad.notes`, and the page words nothing), and an order that keeps state of its own still needs a field on the game. About thirty older orders are still
 arms of six enums. The rest of this section is the detail of each of these.
 
 ### The pieces in detail
@@ -373,7 +411,7 @@ impl Reaction for Rule {
 A line names the rule's file and the words that name it. The stage of a man's frame at which it is asked is the
 type of what it asks for, so a rule cannot answer out of its stage: the compiler refuses it. `GuardScript`:
 asked before he senses, and his whole body follows the script. `TakeCover`: asked at the top of `alert`
-(`guards/p_07.rs`), that is of a man whose state is Alert and whom no script has, before his reaction time and
+(`guards/behave/alert.rs`), that is of a man whose state is Alert and whom no script has, before his reaction time and
 before his fight: down where he is or off to a spot crouched, gun lowered toward the danger, no round fired,
 hands free to change magazine. The line makes the rule's module, its id, the table of its rows
 (`g.ctl.rows.reload_in_cover`) and its place in the list. Nothing else names the rule: the commit that added
@@ -406,7 +444,7 @@ what `Assignment` and its limits are for. A rule is one file today; it is a SHOR
 
 **What a rule calls, today.** Four doors are built, each a hand-written file a
 person can read in a few minutes, and a rule uses them instead of writing a man's fields. (The fight's three
-parts, `fight_sight`, `fight_legs` and `fight_trigger` in `guards/p_07.rs`, are NOT a door: they are private
+parts, `fight_sight`, `fight_legs` and `fight_trigger` in `guards/behave/alert.rs`, are NOT a door: they are private
 to the guard's update and take `&mut Game`, so a rule cannot call them.)
 
 | to do this | call | file |
@@ -501,9 +539,7 @@ TypeScript). The pilot's test: a guard who runs dry in the open kneels to change
   new rule that draws moves every later draw of the mission, and a tally cannot judge it. The pilot waits on it.
 - A rule's rows are cloned with the game (a kept game keeps them) but are not in a checkpoint written to a file.
 - Orders: one is moved, about thirty are not. The one long-hand left for an order that has a line in the
-  squad's HUD block: that line is still an arm of `OrderNoteFn`, an enum the page reads by its tag over the
-  wire. It ends when a `Row` has a `notes` function and the page is handed the lines as text, which is a change
-  of the wire's table and of the HUD's reader, not of the game. An order's own state is still a field of the
+  squad's HUD block: that line is an arm of `OrderNoteFn` with a reader in `orders/hud.rs notes_of`; the page is handed the lines as text (`TickView.squad.notes`). It ends when a `Row` has a `notes` function. An order's own state is still a field of the
   game's `Mods` (`g.m.squad40`).
 - No-change proofs are native now (`rust/game_start`, `hold keep` / `hold check`: 24 levels by three scripted
   hands, every part of the game hashed every frame), but the hands reach three things: a pushed fight, cans
@@ -609,8 +645,9 @@ tallies before and after.
 - B (E, BUILT) The four body rules as transition / propose / commit, `propose` on `&Game`; a rule's transition
   still runs only where its old function ran.
 - C (E, BUILT) `update_guard` cut by program into incapable, lent, perceive, alertness, patrol / suspicious /
-  alert / search, pose. What passes between them is one `Frame` of 18 fields, which is honest about how much
-  they share: narrowing it (what he sensed, read-only; what his behaviour decided, returned) is the next cut.
+  alert / search, pose. What passed between them was one `Frame` of 18 fields.
+- C2 (E, BUILT) The frame narrowed to what he sensed, read-only (`Sensed`), and what his behaviour decided, returned
+  (`Acts`), and the four behaviours a file each (`guards/behave/`).
 - A3 (E, BUILT) One list with one vocabulary (section 7), `lost`, the record written once a tick.
 - A4 (E, BUILT) The fight's shooting branch is three functions in the order it ran: `fight_sight` (aim),
   `fight_legs`, `fight_trigger` (hands). The seam a rule needs to move a man who goes on shooting.

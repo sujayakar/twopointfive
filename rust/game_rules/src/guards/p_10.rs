@@ -361,28 +361,26 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Res
     Ok(gd)
 }
 
-/// What of a unit lives outside his row: his weapon light, his meter keys.   (guards.ts releaseUnit)
+/// What of a unit lives outside his row: his weapon light.   (guards.ts releaseUnit)
 pub fn release_unit(g: &mut crate::game::Game, gd: GuardId) {
     let fl = g.gd[gd].flashlight;
     crate::render_lights::light_set_remove(g, fl);
-    let c = g.gd[gd].ch;
-    let id = g.ch[c].id;
-    crate::game::game_light_forget(g, &format!("unitC{}", id));
-    crate::game::game_light_forget(g, &format!("unitH{}", id));
 }
 
 /// Take a spawned man back out, and every hand on him. True if he was one.   (guards.ts despawnUnit)
 pub fn despawn_unit(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.gd[gd].unit.is_none() { return false; }
     let Some(i) = g.guards.iter().position(|&x| x == gd) else { return false; };
-    if g.pl[g.player].holding.as_ref().map(|h| h.g) == Some(gd) { crate::game::game_free_held(g, crate::game::GameFreeHeldWhy::Cancel); }
-    if g.pl[g.player].dragging == Some(gd) { crate::game::game_toggle_drag(g, None); }
-    if g.pl[g.player].takedown.as_ref().map(|t| t.g) == Some(gd) { g.pl[g.player].takedown = None; }
+    crate::seats::each_seat(g, &mut |g| {
+        if g.pl[g.player].holding.as_ref().map(|h| h.g) == Some(gd) { crate::game::game_free_held(g, crate::game::GameFreeHeldWhy::Cancel); }
+        if g.pl[g.player].dragging == Some(gd) { crate::game::game_toggle_drag(g, None); }
+        if g.pl[g.player].takedown.as_ref().map(|t| t.g) == Some(gd) { g.pl[g.player].takedown = None; }
+    });
     release_unit(g, gd);
     g.guards.remove(i);
     let at = i as f64;
     if g.spectate == at { g.spectate = -1.0; } else if g.spectate > at { g.spectate -= 1.0; }
-    if g.aim_guard == Some(gd) { g.aim_guard = None; }
+    crate::seats::each_seat(g, &mut |g| if g.aim_guard == Some(gd) { g.aim_guard = None; });
     let mut k = 0;
     while k < g.guards.len() {
         let o = g.guards[k];

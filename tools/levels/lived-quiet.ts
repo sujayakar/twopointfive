@@ -10,7 +10,7 @@ import type { Vec3 } from '../../src/math/vec';
 import type { Box } from '../../src/scene/boxes';
 import { BoxFlag } from '../../src/scene/boxes';
 import type { PropDef, PropKind, PropPart } from '../../src/scene/level';
-import { roundSlabs, type GwotMat } from '../../src/scene/gwotKit';
+import { drawnRoundSlabs, ROUND_FROM, roundFace, roundRadius, roundSlabs, type GwotMat } from '../../src/scene/gwotKit';
 import { pieces } from '../../src/scene/library';
 
 type Mat = { albedo: Vec3; rough: number; metal?: boolean };
@@ -23,20 +23,20 @@ const NS = BoxFlag.NoShadow, Q = Math.PI / 4;
 
 export function livedQuiet(K: LivedHost, M: Record<GwotMat, Mat>) {
   let room = ''; const names = new Set<string>();
-  const put = (x: number, z: number, y0: number, y1: number, hx: number, hz: number, m: GwotMat, yaw: number, flags: number) => {
+  const put = (x: number, z: number, y0: number, y1: number, hx: number, hz: number, m: GwotMat, yaw: number, flags: number, isRound = false) => {
     if (!room) throw new Error(`lived-quiet: a box at (${x}, ${z}) before room() — it would land in a group that is not lived`);
-    return K.add({ c: [x, (y0 + y1) / 2, z], h: [hx, (y1 - y0) / 2, hz], yaw, albedo: M[m].albedo, rough: M[m].rough, ...(M[m].metal ? { metal: true } : {}), ...(flags ? { flags } : {}) });
+    return K.add({ c: [x, (y0 + y1) / 2, z], h: [hx, (y1 - y0) / 2, hz], yaw, albedo: M[m].albedo, rough: M[m].rough, ...(M[m].metal ? { metal: true } : {}), ...(flags ? { flags } : {}), ...(isRound ? { round: true } : {}) });
   };
   // The two bands only one of body and nav grid sees (tools/qa/lived-check.ts holds them on the built floor; here they are refused as the piece is written):
   // R1 a top in [0.20, 0.25) m stops a body on floor the grid calls free; R2 an underside in [1.50, 1.70) m stops a standing player where every guard walks under.
-  const solid = (x: number, z: number, y0: number, y1: number, hx: number, hz: number, m: GwotMat, yaw: number, stood: boolean) => {
+  const solid = (x: number, z: number, y0: number, y1: number, hx: number, hz: number, m: GwotMat, yaw: number, stood: boolean, isRound = false) => {
     const E = 1e-9, at = `the solid at (${x}, ${z}) y ${y0}‥${y1} of lived.${room}`;
     if (y1 >= 0.2 - E && y1 < 0.25 - E) throw new Error(`lived-quiet: ${at} tops out between 0.20 and 0.25 m (make it 0.19 or under, or 0.25 or over, or draw it with d())`);
     if (!stood && y0 >= 1.5 - E && y0 < 1.7 - E) throw new Error(`lived-quiet: ${at} has its underside between 1.50 and 1.70 m (draw it with d(), or — stood on furniture that shuts the floor under it — use on())`);
-    return put(x, z, y0, y1, hx, hz, m, yaw, 0);
+    return put(x, z, y0, y1, hx, hz, m, yaw, 0, isRound);
   };
   /** a SOLID box: centre (x, z), from y0 up to y1, half extents hx × hz */
-  const s = (x: number, z: number, y0: number, y1: number, hx: number, hz: number, m: GwotMat, yaw = 0) => solid(x, z, y0, y1, hx, hz, m, yaw, false);
+  const s = (x: number, z: number, y0: number, y1: number, hx: number, hz: number, m: GwotMat, yaw = 0, isRound = false) => solid(x, z, y0, y1, hx, hz, m, yaw, false, isRound);
   /** a SOLID box STOOD ON FURNITURE that already shuts the floor under it (ledgers on a shelf's top board): R2 is not asked here — lived-check still asks it of the built floor */
   const on = (x: number, z: number, y0: number, y1: number, hx: number, hz: number, m: GwotMat, yaw = 0) => solid(x, z, y0, y1, hx, hz, m, yaw, true);
   /** a DRAWN-ONLY box (no shadow, no foot, no round) */
@@ -47,10 +47,12 @@ export function livedQuiet(K: LivedHost, M: Record<GwotMat, Mat>) {
   const line = (x0: number, z0: number, x1: number, z1: number, wid: number, m: GwotMat, y = 0.03) => {
     const L = Math.hypot(x1 - x0, z1 - z0) || 0.01; return put((x0 + x1) / 2, (z0 + z1) / 2, y, y + 0.004, L / 2, wid / 2, m, Math.atan2(-(z1 - z0), x1 - x0), NS);
   };
-  /** a ROUND thing standing from y0 to y1, radius r: the kits' one way of writing a round (src/scene/gwotKit.ts roundSlabs). From 0.2 m an octagon of four
-   *  slabs, which the round rule (src/scene/round.ts) finds and makes one round box of; smaller, two squares 45° apart, the second a hair lower so the tops
-   *  never fight. Only for a round standing on a FLOOR or a table: a disc on a wall's face is one flat `d()`. `solid` false = drawn only */
-  const round = (x: number, z: number, y0: number, y1: number, r: number, m: GwotMat, solid = true) => { const f = solid ? s : d; for (const o of roundSlabs(r)) f(x, z, y0, y1 - o.drop, o.hx, o.hz, m, o.yaw); };
+  /** a ROUND thing standing from y0 to y1, radius r: the kits' one way of writing a round (src/scene/gwotKit.ts): from 0.2 m one box that says it is round; smaller,
+   *  two squares 45° apart, the second a hair lower so the tops never fight. Only for a round standing on a FLOOR or a table: a disc on a wall's face is one flat
+   *  `d()`. `solid` false = drawn only */
+  const round = (x: number, z: number, y0: number, y1: number, r: number, m: GwotMat, solid = true) => {
+    if (r >= ROUND_FROM && solid) { const R = roundRadius(roundFace(r).a); s(x, z, y0, y1, R, R, m, 0, true); return; }
+    const f = solid ? s : d; for (const o of solid ? roundSlabs(r) : drawnRoundSlabs(r)) f(x, z, y0, y1 - o.drop, o.hx, o.hz, m, o.yaw); };
   /** PAPER lying on a surface whose top is at y */
   const paper = (x: number, z: number, y: number, yaw = 0, w = 0.3, dd = 0.21, m: GwotMat = 'whitewash') => d(x, z, y, y + 0.008, w / 2, dd / 2, m, yaw);
   /** a loose PROP of this room: named `lived.<room>.<what>` */

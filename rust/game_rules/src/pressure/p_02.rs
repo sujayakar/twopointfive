@@ -22,7 +22,6 @@ fn op_gd(g: &Game, i: usize) -> GuardId { g.tab.roomfight_op[g.fight.ops[i]].gd 
 #[inline]
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 #[inline]
-fn player_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player].ch].pos }
 #[inline]
 fn door_centre(g: &Game, door: DoorId) -> V3 { g.dr[door].frame_centre }
 #[inline]
@@ -58,7 +57,7 @@ fn off_line(p: V3, a: V3, mouth: V3) -> f64 {
 }
 /// the place's own steady light at q is enough to be seen by
 fn lit_at(g: &mut Game, q: V3) -> bool {
-    let e = crate::guards::light_estimate_at(g, [q[0], 1.2, q[2]], Some(&mut |_g: &mut Game, _o: f64| true), Some(true), None, None, None);
+    let e = crate::guards::light_estimate_at(g, [q[0], 1.2, q[2]], Some(&mut |_g: &mut Game, _o: f64| true), Some(true), None);
     crate::game::game_visibility_of(g, e) >= g.k.lights.lit_at
 }
 /// the way on foot to q that does not cross T: its length, or none
@@ -126,8 +125,7 @@ pub fn stand_off_spot(g: &mut crate::game::Game, d: RoomfightDefId, t: Roomfight
             if tries >= STAND_OFF_TRIES || best.map_or(false, |b| k.d >= b.1) { break; }
             if k.ok == Some(false) || k.way == Some(None) || taken.iter().any(|q| flat(*q, k.p) < apart || off_line(k.p, *q, mouth) < lane || off_line(*q, k.p, mouth) < lane) { continue; }
             if k.ok.is_none() {
-                let energy = crate::glasspen::side_shot_energy(g, team);
-                k.ok = Some(!crate::scene_collision::shot_blocked(g, [k.p[0], 1.35, k.p[2]], mouth, Some(0.02), energy));
+                k.ok = Some(!crate::scene_collision::shot_blocked(g, [k.p[0], 1.35, k.p[2]], mouth, Some(0.02), None));
             }
             if k.ok != Some(true) { continue; }
             if dark {
@@ -221,8 +219,8 @@ pub fn team_stands(g: &mut crate::game::Game, r: RoomfightRoomId) -> bool {
         let o = op_gd(g, i);
         if g.gd[o].state != crate::game::GuardState::Dead && in_room(g, r, pos_of(g, o)) { return true; }
     }
-    let p = player_pos(g, &crate::seats::here(g));
-    in_room(g, r, p)
+    for pl in crate::seats::men_left(g) { let p = g.ch[g.pl[pl].ch].pos; if in_room(g, r, p) { return true; } }
+    false
 }
 /// the last of his side alive: nobody left to go to. (pressure.ts lastAlone)
 pub fn last_alone(g: &crate::game::Game, d: RoomfightDefId) -> bool {
@@ -268,7 +266,6 @@ fn bang_by(g: &mut Game, r: Option<RoomfightRoomId>, c: V3, p: V3) -> bool {
 }
 /// once a frame while anybody carries a charge: the team's loud doings read off the floor's events; marked doors the team has left let be; the counts of charges gone off. (pressure.ts learn)
 pub fn learn(g: &mut crate::game::Game) {
-    let pid = g.ch[g.pl[g.player].ch].id;
     let now = g.time;
     for i in 0..g.events.len() {
         let e = g.events[i];
@@ -279,7 +276,7 @@ pub fn learn(g: &mut crate::game::Game) {
         if st.ev_seen.has(e.serial) { continue; }
         st.ev_seen.add(e.serial);
         if !kick && e.level.unwrap_or(0.0) < 1.0 { continue; }
-        if who != pid && !g.fight.ops.iter().any(|&o| g.ch[g.gd[g.tab.roomfight_op[o].gd].ch].id == who) { continue; }
+        if !crate::seats::is_man_id(g, who) && !g.fight.ops.iter().any(|&o| g.ch[g.gd[g.tab.roomfight_op[o].gd].ch].id == who) { continue; }
         let mut p = e.pos;
         if kick {
             let mut bd = 2.5;
@@ -347,8 +344,8 @@ pub fn learn(g: &mut crate::game::Game) {
             let o = op_gd(g, i);
             if g.gd[o].state != crate::game::GuardState::Dead { let p = pos_of(g, o); if bang_by(g, room, c, p) { any = true; break; } }
         }
-        let pp = player_pos(g, &crate::seats::here(g));
-        if !any && !bang_by(g, room, c, pp) { state_of(g).stats.stun_empty += 1.0; }
+        if !any { for pl in crate::seats::men_left(g) { let p = g.ch[g.pl[pl].ch].pos; if bang_by(g, room, c, p) { any = true; break; } } }
+        if !any { state_of(g).stats.stun_empty += 1.0; }
     }
 }
 /// handed to the fight AI as the stock rally hands a man over: off his post, roused, the fight's place his fix. (pressure.ts loose)
@@ -435,9 +432,9 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
         && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
         && g.time - df(g, d).noise_t < g.k.pressure.memory_secs && g.time - g.gd[gd].last_seen_t > 3.0
         && g.time - state_of(g).done_at.get(d).copied().unwrap_or(-100.0) > again && !state_of(g).outs.iter().any(|o| o.def == d)
-        && !crate::owner::has_him(g, gd, crate::owner::own().stand)
+        && !crate::owner::has(g, gd, crate::owner::by::STAND)
         && !{ let n = df(g, d).noise_at; crate::lanes::lane_bars(g, gd, n) }
-        && !crate::owner::has_him(g, gd, crate::owner::own().squad)
+        && !crate::owner::has(g, gd, crate::owner::by::SQUAD)
         && !(g.k.digin.on && crate::digin::dig_in_stays(g, gd));
     // the last of them alive has no others to go to, and nobody on the net to call: he keeps his room
     let lone = last_alone(g, d);
@@ -786,7 +783,7 @@ fn tick_man(g: &mut Game, p: &mut Press, mi: PressureManId, team_in: bool) {
     }
     if g.tab.pressure_man[mi].moving {   // a flanker off his leg: round at his door, or met on the way, or stopped short and he sets off again
         let contact = g.time - g.gd[gd].last_seen_t < 0.5;
-        let fc: Option<CharId> = match g.gd[gd].foe { Some(crate::game::Foe::Player) => Some(g.pl[g.player].ch), Some(crate::game::Foe::Guard(o)) => Some(g.gd[o].ch), None => None };
+        let fc: Option<CharId> = crate::teams::foe_char(g, gd);
         let spot = g.tab.pressure_man[mi].spot;
         let off = flat(pos_of(g, gd), spot);
         if !contact && off > 1.5 && { let x = &mut g.tab.pressure_man[mi]; x.tries += 1.0; x.tries < 3.0 } { run(g, d, spot, Some(door), None); return; }
@@ -990,7 +987,7 @@ pub fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
             !other
         }
         && !g.gd[gd].stays_in_rooms
-        && !crate::owner::has_him(g, gd, crate::owner::own().stand);
+        && !crate::owner::has(g, gd, crate::owner::by::STAND);
     if !ok { state_of(g).last.delete(d); return; }
     let r = room.unwrap();
     let mut why: Option<HookedWhy> = None;

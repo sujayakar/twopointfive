@@ -53,11 +53,11 @@ const { raiseEscalation } = await import(`${ROOT}/src/game/guards.ts`);
 type Vec3 = [number, number, number];
 const DT = 1 / 60, BREAK = process.env.RESPONSE_BREAK === '1';
 /** the levels that have a team, and nobody else (a level added to this list has its reason in its file's `why` and in docs/agents/enemies.md) */
-const WITH = ['bazaar.json', 'crossing.json', 'depot-gwot.json', 'depot.json', 'police-post.json', 'records-gwot.json', 'records.json', 'snatch.json'];
+const WITH = ['bazaar.json', 'crossing.json', 'depot-gwot.json', 'depot.json', 'police-post.json', 'records-gwot.json', 'records.json'];
 /** …and the office's own two files, whose block is the old constant (line 2) */
 const OFFICE = ['office.json', 'office-relief.json'];
 /** …of them, the ones whose team answers a squad's raid (ResponseData.raid), with the mission that raids them */
-const RAIDS: Record<string, string> = { 'depot.json': '?roomclear&squad=4', 'depot-gwot.json': '?roomclear&squad=4', 'records.json': '?roomclear&squad=2', 'records-gwot.json': '?roomclear&squad=2', 'snatch.json': '?roomclear&squad=4' };
+const RAIDS: Record<string, string> = { 'depot.json': '?roomclear&squad=4', 'depot-gwot.json': '?roomclear&squad=4', 'records.json': '?roomclear&squad=2', 'records-gwot.json': '?roomclear&squad=2' };
 const f1 = (x: number) => x.toFixed(1), flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]), at = (p: number[]) => `${f1(p[0])},${f1(p[2])}`;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 async function hushed<T>(f: () => T | Promise<T>): Promise<T> { const log = console.log; console.log = () => {}; try { return await f(); } finally { console.log = log; } }
@@ -115,7 +115,7 @@ export async function responseCheck(): Promise<boolean> {
   // ---- (2) the floor
   { const out: string[] = []; let caught = 0, clean = true;
     for (const f of [null, ...sample(WITH, 3)]) { const W = await stand(f, 2, true, f ? RAIDS[f] ?? null : null); const g = W.game; const c: string[] = checkResponse(g); clean &&= c.length === 0 && !!g.level.scenarios?.response; out.push(`${f ?? 'office'}: ${c.length ? c.slice(0, 2).join(' / ') : 'stands'}`);
-      if (f === 'police-post.json') { const R = g.level.scenarios.response, keep = R.ways[0].muster[0]; let wall: Vec3 | null = null; for (let x = 5; x < 35 && !wall; x += 0.5) for (let z = 5; z < 23 && !wall; z += 0.5) if (g.col.nav.isBlocked(x, z)) wall = [x, 0, z];
+      if (f && !caught) { const R = g.level.scenarios.response, keep = R.ways[0].muster[0]; let wall: Vec3 | null = null; for (let x = 5; x < 35 && !wall; x += 0.5) for (let z = 5; z < 23 && !wall; z += 0.5) if (g.col.nav.isBlocked(x, z)) wall = [x, 0, z];
         R.ways[0].muster[0] = wall!; caught = checkResponse(g).length; R.ways[0].muster[0] = keep; } }
     const W = await stand(null, 2, true, null), R = W.game.level.scenarios.response, y = R.ways[0];
     const same = JSON.stringify(y.muster) === JSON.stringify(QRF_MARKS.landing) && JSON.stringify(y.entry) === JSON.stringify(QRF_MARKS.entry) && JSON.stringify(y.entryFace) === JSON.stringify(QRF_MARKS.entryFace) && y.door === QRF_MARKS.door && JSON.stringify(R.posts) === JSON.stringify(QRF_MARKS.posts) && JSON.stringify(R.outside) === JSON.stringify(QRF_MARKS.outsideSpawn);
@@ -123,7 +123,7 @@ export async function responseCheck(): Promise<boolean> {
 
   // ---- (3) no block, no team
   { const out: string[] = []; let ok = true;
-    for (const f of sample(['quiet-yard.json', 'quiet-relay.json'], 1)) { const W = await stand(f, 3, ON); const g = W.game; goLoud(W); steps(W, 12);
+    for (const f of sample(['quiet-relay.json'], 1)) { const W = await stand(f, 3, ON); const g = W.game; goLoud(W); steps(W, 12);
       const idle = g.qrf.state === 'idle', heard = g.qrf.loudT > -1e8, panel = requestQrf(g, 'panel'), none = !g.guards.some((x: any) => g.qrf.owns(x));
       ok &&= idle && heard && !panel && none && !hasResponse(g) && notes(g).some(n => n === 'no-team:this level has none'); out.push(`${f}: gunfire heard ${heard} · locked down ${g.escalation} · ${g.qrf.state} · panel call ${panel ? 'taken' : 'refused'}`); }
     line(ok, '(3) a level with no block has no team: the same gunfire on a locked-down floor calls nobody, and the panel\'s own call is refused', out.join(' · ')); }

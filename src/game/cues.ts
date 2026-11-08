@@ -1,8 +1,10 @@
 // CUES — what the defenders decide, told to the player (the maintainer, 10-07, of defenders that hold their rooms after he is down: "maybe we just need more
-// telegraphing from the NPCs then"; earlier "lean into unpredictability but with cues to be able to know what's happening"). Game.cues, behind `CUES.on`
-// (off: nothing here runs, the radio strip is the 'radio: ' rows of Game.messages and every line is worded as it was).
+// telegraphing from the NPCs then"; earlier "lean into unpredictability but with cues to be able to know what's happening"). Game.cues.
 //
-// THIS FILE ONLY READS THE GAME. It writes nothing a man's AI, the dice or a digest reads: its rows and its bubbles live on the Cues object, never on a Guard
+// THE RULES BELOW ARE THE RUST GAME'S (rust/game_rules/src/cues), and what a HUD is told of them is the view's (game.view.radio, game.view.bubbles). What is left here is
+// the words' tables and the record the bridge fills.
+//
+// They write nothing a man's AI, the dice or a digest reads: the rows and the bubbles live on the Cues record, never on a Guard
 // (Guard.bubble is read by the bark clocks — suppression.ts, the stand-off's — and a line put there would move a die). A cue never moves a man.
 //
 //   1 · THE NET IS DELIVERED. A unit's radio line went into the log as '<callsign> (radio): …', which the strip (ui/overlay.ts)
@@ -37,20 +39,10 @@
 //   The one line that said what nobody then did — 'back to your posts', from a man whose side then stands where it is — is reworded for a unit (guards.ts),
 //   and a place on the net is named by the level's own rooms (dialogue.ts placeName: 'coming at him from the car park' on a floor with no car park).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
-import { men } from './seats';
 import { SideMap } from '../math/side';
-import type { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
-import type { RoomFight } from './roomfight';
-import { placeName, hashStr } from './dialogue';
-import { fightLive } from './roomfight';
 import { bubbleSecs } from './guards';
-import { squadMen } from './enemysquads';
 import { w, wg } from './words';
-import { isHostile } from './teams';
-import { hearPath } from './weather';
-import { DIGIN } from './digin';   // (call-time only: how far a shout carries)
-import { runnerMute } from './runner';   // (asked inside a tick only: false with its switch off)
 import './owner';
 import './pressure';
 import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
@@ -78,12 +70,7 @@ export const CUES = {
    *  of this table's: digin.ts DIGIN.shoutM, the one the defenders' own shouted cues are heard by. */
   overheard: false, overheardGap: 4,
 };
-export const CUES_DEFAULTS: typeof CUES = JSON.parse(JSON.stringify(CUES));
-const LS = 'twopointsix.cues';
-/** the panel's three rows are kept per machine (a scenario pick is a page load); `?nocues` / `?cues` set the switch for the visit */
-const KEPT = ['on', 'squelch', 'stillSecs'] as const;
-export function saveCues() { try { const o: Record<string, unknown> = {}; for (const k of KEPT) if (CUES[k] !== CUES_DEFAULTS[k]) o[k] = CUES[k]; if (Object.keys(o).length) globalThis.localStorage?.setItem(LS, JSON.stringify(o)); else globalThis.localStorage?.removeItem(LS); } catch { /* no store */ } }
-try { const o = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); if (o) for (const k of KEPT) if (typeof o[k] === typeof CUES[k]) (CUES as Record<string, unknown>)[k] = o[k]; } catch { /* no store, or not ours */ }
+/** `?nocues` / `?cues` set the switch for the visit */
 try { const q = new URLSearchParams(location.search); if (q.has('cues')) CUES.on = q.get('cues') !== '0'; if (q.has('nocues')) CUES.on = false; } catch { /* no page (the harness) */ }
 
 /** THE RANKING of the lines the defenders already had: a radio line's class by its words, first match (what a player would most want to know first —
@@ -124,15 +111,10 @@ const LINES: Record<CueKind, { cls: number; say: string[]; now?: string[]; /** (
 };
 /** a kind's lines as they are said now: the pass's where it has any — as many as before, so the pick falls on the same place in the list either way */
 const said = (k: CueKind): string[] => w(wg(LINES[k].guide, undefined) ?? LINES[k].now ?? LINES[k].say, LINES[k].say);
-/** s before the same KIND of cue is said again by anybody on the floor (three men over one body say it once; absent = no wait) */
-const KIND_GAP: Partial<Record<CueKind, number>> = { cover: 15, huntOver: 4, calm: 4, still: 6, stay: 3, stayOurs: 3 };
 /** every new line's words (the QA probe: each falls in a row of CLASSES, none is said twice by the table) */
 export function cueLines(): { kind: CueKind; cls: number; text: string }[] { return (Object.keys(LINES) as CueKind[]).flatMap(k => said(k).map(text => ({ kind: k, cls: LINES[k].cls, text }))); }
 
-type Def = RoomFight['defs'][number];
 export interface CueRow { t: number; text: string; cls: number; /** class × 2, a squad's word a step ahead of a man's */ rank: number; who: string }
-/** a row under a squad's name ('Bravo: …'), not a man's callsign ('Tango 4: …') */
-const SQUAD_WORD = /^[A-Z][a-z]{1,11}: /;
 /** a line is SHOUTED when its writer put an exclamation mark in it ('find them!', 'grenade!'): the tables' own mark, and the only lines that carry through a wall */
 export const isShout = (text: string) => text.includes('!');
 type Bubble = { text: string; t: number; dur: number; radio: boolean };
@@ -140,7 +122,6 @@ interface Man { state: string; alertT: number; saidT: number; againT: number; st
 const newStats = () => ({ /** unit radio lines handed over by say() · of them drawn */ heard: 0, heardDrawn: 0, /** shouts of hidden defenders offered (CUES.overheard) · of them drawn as a row heard */ shouts: 0, shoutsDrawn: 0, /** new lines said · of them on the net · of those drawn */ cues: 0, cueNet: 0, cueDrawn: 0,
   /** rows not drawn: the same words just went out · its class had just spoken · the strip was full of better rows */ dup: 0, gap: 0, full: 0, /** rows that had a drawn row's place · of them rows not yet 1.5 s old */ bumped: 0, bumpedYoung: 0,
   /** rows offered · drawn, by class (index 0 = the rows that were always on the strip) */ filed: [0, 0, 0, 0, 0, 0, 0], drawn: [0, 0, 0, 0, 0, 0, 0] });
-const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 
 export class Cues {
   /** the strip's rows, oldest first (at most CUES.rows alive) */
@@ -163,153 +144,38 @@ export class Cues {
   reset() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Cues.reset', this, []); if (__r !== RUST_PASS) return __r as any; } } this.heardRow = null; this.heardLog = []; this.heardSaid.clear(); this.shoutT = undefined; this.rows = []; this.bubbles = new SideMap(); this.men = new SideMap(); this.lastNote = null; this.said.clear(); this.classT = []; this.squadT = []; this.kindT = {}; this.squelchDue = false; this.stats = newStats(); this.kinds = {}; this.log = []; }
 
   // ---------------------------------------------------------------- the strip
-  private alive(): CueRow[] { const t = this.g.time; return this.rows = this.rows.filter(r => r.t <= t && t - r.t < CUES.secs); }
-  /** one row for the strip, or not (the rules at the head); `raw` = a 'radio: ' row as the game has always written them (control, the staff's net): always drawn */
-  private file(text: string, cls: number, who: string, kind: CueKind | 'heard' | 'raw' | 'call'): boolean {
-    const g = this.g, t = g.time, K = CUES, S = this.stats; const live = this.alive();
-    S.filed[cls]++;
-    const done = (drawn: boolean, why: string) => { if (drawn) S.drawn[cls]++; this.log.push({ t: +t.toFixed(2), who, text, cls, kind, drawn, why }); if (this.log.length > 400) this.log.splice(0, 100); return drawn; };
-    const words = kind === 'raw' || !who || !text.startsWith(who + ': ') ? text : text.slice(who.length + 2);   // (the same words from another man are the same news)
-    const squad = SQUAD_WORD.test(text), rank = cls * 2 + (squad ? 0 : 1), within = (at: number | undefined, secs: number) => at !== undefined && t >= at && t - at < secs;
-    if (cls > 0) {
-      if (within(this.said.get(words), K.dupSecs)) { S.dup++; return done(false, 'dup'); }
-      const gap = K.gaps[cls] ?? 0;   // (a squad's word waits only on another squad's; with the strip nearly empty nobody waits)
-      if (live.length >= K.rows - 1 && within(squad ? this.squadT[cls] : this.classT[cls], gap)) { S.gap++; return done(false, 'gap'); }
-    }
-    if (live.length >= K.rows) {   // the strip is full: whose place does it take?
-      const held = (c: number) => live.filter(r => r.cls === c).length;
-      const over = live.find(r => r.cls > 0 && r.cls !== cls && held(r.cls) > K.perClass);
-      let v: number;
-      if (over) v = live.indexOf(over);   // another class holds more than its share (it had the strip to itself): its oldest row
-      else if (cls > 0 && held(cls) >= K.perClass) { v = live.findIndex(r => r.cls === cls); if (t - live[v].t < K.minShow) { S.full++; return done(false, 'full'); } }   // its own class has its share: the older of those, once that has been read
-      else { v = 0; for (let i = 1; i < live.length; i++) if (live[i].rank > live[v].rank) v = i;   // else the worst-ranked row, the oldest of them — never a better one
-        if (rank > live[v].rank || (rank === live[v].rank && cls > 0 && t - live[v].t < K.minShow)) { S.full++; return done(false, 'full'); } }
-      if (t - live[v].t < 1.5) S.bumpedYoung++;
-      live.splice(v, 1); S.bumped++;
-    }
-    if (cls > 0) this.squelchDue = true;   // the net in his ear: a row that arrives is heard arriving (tick: once a frame, not placed — the man may be four rooms off)
-    live.push({ t, text, cls, rank, who }); this.said.set(words, t); this.classT[cls] = t; if (squad) this.squadT[cls] = t;
-    if (this.heardRow && live.length >= K.rows) this.heardRow = null;   // (the strip is full of the net's and the team's rows: a shout heard gives its place up, for good)
-    if (this.said.size > 96) for (const [k, v] of this.said) if (t - v > K.dupSecs || v > t) this.said.delete(k);
-    return done(true, '');
-  }
   /** Game.msg: a row written 'radio: …' (control, the staff's net, Sam's own call) — on the strip as it always was */
-  raw(text: string) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Cues.raw', this, [text]); if (__r !== RUST_PASS) return __r as any; } } if (CUES.on && text.startsWith('radio: ')) this.file(text.slice(7), 0, '', 'raw'); }
+  raw(text: string) { RUST_SURFACE?.call('Cues.raw', this, [text]); }
   /** guards.ts say(): a UNIT's line went out on his side's net — the strip gets it, under his callsign (a squad's word is already under the squad's name) */
-  heard(gd: Guard, text: string) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Cues.heard', this, [gd, text]); if (__r !== RUST_PASS) return __r as any; } }
-    if (!CUES.on || gd.team !== 'hostile' || !fightLive(this.g)) return;   // (the defenders of a room fight: not a showcase's cast, not the team's own net, not the night game's response)
-    this.stats.heard++;
-    if (this.file(SQUAD_WORD.test(text) ? text : `${gd.callsign}: ${text}`, cueClass(text), gd.callsign, 'heard')) this.stats.heardDrawn++;
-  }
+  heard(gd: Guard, text: string) { RUST_SURFACE?.call('Cues.heard', this, [gd, text]); }
   /** laststand.ts, enemysquads.ts's radio check: a defender's line on his side's net that is TELLING only — the strip's row under his callsign (a squad's
    *  word is already under the squad's name) and this file's own bubble over him, never Guard.bubble (the bark clocks and the digest read that) */
   net(gd: Guard, text: string, cls: number): void { if (RUST_SURFACE?.tapFiring('Cues.net')) return RUST_SURFACE.tapAnswer() as any; return goneWithTick('Cues.net') as any; }
   /** fogofwar.ts: a TEAMMATE calls what the fog's cone hides ('contact left!') — this file's own bubble over him (never Guard.bubble) and a row on the strip
    *  under his callsign, in the first class (men coming), logged under a kind of its own ('call': a tally of the defenders' 'heard' lines never counts the team's).
    *  Returns whether the strip drew it */
-  call(gd: Guard, text: string): boolean {
-    this.bubbles.set(gd, { text, t: this.g.time, dur: bubbleSecs(text), radio: false });
-    return CUES.on && this.file(`${gd.callsign}: ${text}`, 1, gd.callsign, 'call');
-  }
-  /** every ear of the team's a shout could reach: each player's who is up (one today), each living teammate's */
-  private ears(): Vec3[] {
-    const g = this.g, out: Vec3[] = []; const at = (p: Vec3): Vec3 => [p[0], p[1] + 1.6, p[2]];
-    for (const pl of men(g)) if (pl && !pl.down) out.push(at(pl.char.pos));
-    for (const o of g.guards) if (o.team === 'operative' && o.state !== 'dead' && o.char.alive) out.push(at(o.char.pos));
-    return out;
-  }
+  call(gd: Guard, text: string): boolean { return crossToRust('Cues.call', this, [gd, text]) as any; }
   /** guards.ts say(): a line a man SPOKE, not one on a net. A defender the fog hides who SHOUTS it (isShout) where an ear of the team's really gets it — the
    *  shout's own law (digin.ts heardBy: the path under DIGIN.shoutM × the propagation's carry) — is a row of its own kind on the strip: HIS WORDS ALONE, no
    *  name and no place, drawn as something heard (stripRows: 'heard: …'). It never takes a row's place: no free row, no row, and the first row filed onto a
    *  full strip ends it (file()). One such row at a time; the same words not twice inside `dupSecs`, two of them `overheardGap` s apart; no squelch (it is
    *  not on the net), no class clock (laststand.ts netWait never waits on it). The cheap questions come first, and the hearing model is asked WITHOUT keeping
    *  the answer (hearPath's `keep`): the row leaves no route in the cache the AI's own hearing reads. Returns whether the strip drew it. */
-  overheard(gd: Guard, text: string): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Cues.overheard', this, [gd, text]); if (__r !== RUST_PASS) return __r as any; } }
-    const g = this.g, K = CUES, t = g.time;
-    if (!K.on || !K.overheard || !isShout(text) || gd.state === 'dead' || !isHostile(gd.team, 'player') || !g.fogOfWar?.hidden(gd)) return false;
-    if (this.shoutT !== undefined && t < this.shoutT) { this.shoutT = undefined; this.heardRow = null; this.heardSaid.clear(); }   // (the clock went back: a checkpoint loaded)
-    const S = this.stats; S.shouts++;
-    const done = (why: string) => { this.heardLog.push({ t: +t.toFixed(2), text, drawn: !why, why }); if (this.heardLog.length > 200) this.heardLog.splice(0, 50); return !why; };
-    const within = (at: number | undefined, secs: number) => at !== undefined && t - at < secs;
-    if (within(this.heardSaid.get(text), K.dupSecs)) return done('dup');
-    if (within(this.shoutT, K.overheardGap)) return done('gap');
-    if (this.rows.filter(r => r.t <= t && t - r.t < K.secs).length >= K.rows) return done('full');
-    const p = gd.char.pos, mouth: Vec3 = [p[0], p[1] + 1.2, p[2]], reach = DIGIN.shoutM;
-    if (!this.ears().some(ear => { if (flat(mouth, ear) > reach) return false; const h = hearPath(g, mouth, ear, false); return h.pathLen < reach * h.carry; })) return done('far');
-    if (this.heardSaid.size > 64) this.heardSaid.clear();
-    this.heardRow = { t, text }; this.heardSaid.set(text, t); this.shoutT = t; S.shoutsDrawn++;
-    return done('');
-  }
+  overheard(gd: Guard, text: string): boolean { return RUST_SURFACE?.call('Cues.overheard', this, [gd, text]) === true; }
   /** deathrecap.ts: a word over a man for the player's eyes alone — the bubble, no strip row, no class clock: nothing the net's own lines wait on (laststand.ts netWait); false with the cues off (nothing is drawn) */
   aside(gd: Guard, text: string): boolean { if (!CUES.on) return false; this.bubbles.set(gd, { text, t: this.g.time, dur: bubbleSecs(text), radio: false }); return true; }
   /** laststand.ts: seconds until the strip would take a line of this class without dropping it for the class's gap (0 = now, and with the cues off) */
   netWait(cls: number): number { return goneWithTick('Cues.netWait') as any; }
   /** savestate.ts: the message ring has been put back as it was saved — its 'radio: ' rows are the strip's again */
   adopt(msgs: { text: string; t: number }[]) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Cues.adopt', this, [msgs]); if (__r !== RUST_PASS) return __r as any; } } this.heardRow = null; if (CUES.on) this.rows = msgs.filter(m => m.text.startsWith('radio: ')).slice(-CUES.rows).map(m => ({ t: m.t, text: m.text.slice(7), cls: 0, rank: 1, who: '' })); }
-  /** what a man is saying, as the bubbles draw it: his line (Guard.bubble) or a cue of this file's, whichever is the later and still running */
-  bubbleOf(gd: Guard): Bubble | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Cues.bubbleOf', this, [gd]); if (__r !== RUST_PASS) return __r as any; } }
-    const b = gd.bubble; if (!CUES.on) return b;
-    const c = this.bubbles.get(gd); if (!c) return b;
-    const t = this.g.time; if (t < c.t || t - c.t > c.dur) { this.bubbles.delete(gd); return b; }
-    return b && b.t >= c.t ? b : c;
-  }
-
-  // ---------------------------------------------------------------- the words
-  private at(p: Vec3): { the: string; at: string } { const n = placeName(this.g.level, p); return { the: n, at: /^outside /.test(n) ? n : `in ${n}` }; }
-  private man(gd: Guard): Man { let M = this.men.get(gd); if (!M) { M = { state: gd.state, alertT: this.g.time, saidT: -100, againT: -100, stoodT: -100, moved: null, from: '', noiseT: -100, ep: -1, rallyAt: NaN, covered: false }; this.men.set(gd, M); } return M; }
-  /** one cue from this man, if he can speak and has not just spoken: a bubble, and (a net line) a row for the strip */
-  private cue(gd: Guard, kind: CueKind, vars: Record<string, string> = {}): boolean {
-    const g = this.g, t = g.time, M = this.man(gd);
-    if (gd.state === 'dead' || gd.held || t < gd.dazzledUntil || t - M.saidT < CUES.manSecs || runnerMute(gd)) return false;   // (runner.ts nobody: a man who has given up is nobody's voice)
-    const b = gd.bubble, own = !!b && t >= b.t && t - b.t < 1.5;   // he has just said something of his own: that was his word on it —
-    if (own && !(kind === 'help' || kind === 'fellBack' || kind === 'squadWaits' || kind === 'squadCopiesWaits')) return false;   // — but a shout to the men beside him ('fall back!', 'move!') is not the net: these two still go out on it (and a squad's 'hold — wait for my word' is the squad's word on its net, whatever he has just barked at the noise)
-    if (this.kindBusy(kind)) return false;   // (the floor has just heard this from somebody)
-    this.kindT[kind] = t;
-    const L = LINES[kind], say = said(kind); const text = say[(hashStr(gd.callsign) + this.n++) % say.length].replace(/\{(\w+)\}/g, (_m, k: string) => vars[k] ?? '');
-    M.saidT = t; this.stats.cues++; this.kinds[kind] = (this.kinds[kind] ?? 0) + 1;
-    if (!own) this.bubbles.set(gd, { text, t, dur: bubbleSecs(text), radio: L.cls > 0 });
-    if (!L.cls) return true;
-    this.stats.cueNet++;
-    if (this.file(SQUAD_WORD.test(text) ? text : `${gd.callsign}: ${text}`, L.cls, gd.callsign, kind)) this.stats.cueDrawn++;
-    return true;
-  }
-  private kindBusy(kind: CueKind): boolean { const t = this.g.time, kt = this.kindT[kind]; return kt !== undefined && t >= kt && t - kt < (KIND_GAP[kind] ?? 0); }
-  private fit(gd: Guard): boolean { const t = this.g.time; return gd.state !== 'dead' && !gd.held && t >= gd.dazzledUntil && t >= gd.staggerUntil && !runnerMute(gd); }
-  private squadVoice(name: string, by: string): Guard | null {
-    const g = this.g, men = squadMen(g, name).filter(m => this.fit(m)); if (!men.length) return null;
-    return men.find(m => m.callsign === by) ?? men.find(m => g.fight.defs.some(D => D.gd === m && D.mode === 'hold')) ?? men[0];
+  /** what a man is saying on this copy (deathrecap.ts witness alone: the HUD is told by the game, game.view.bubbles) */
+  bubbleOf(gd: Guard): Bubble | null {
+    const b = gd.bubble, c = this.bubbles.get(gd), t = this.g.time;
+    return !c || t < c.t || t - c.t > c.dur || (b && b.t >= c.t) ? b : c;
   }
 
   // ---------------------------------------------------------------- once a frame, after everybody has moved
   tick(): void { return crossToRust('Cues.tick', this, []) as any; }
-  private note(who: string, what: string) {
-    const g = this.g; const D: Def | undefined = who === '-' ? undefined : g.fight.defs.find(d => d.gd.callsign === who && d.gd.state !== 'dead');
-    const sq = /^\[squads\] (\S+) (hears of them \((\S+?)'s call\)|hears of them|stays on its doors|quiet:)/.exec(what);
-    if (sq) {
-      const v = this.squadVoice(sq[1], who); if (!v) return;
-      if (sq[2].startsWith('hears')) {
-        const vars = { sq: sq[1], ally: sq[3] ?? '' };
-        if (!/\), holds:/.test(what)) this.cue(v, sq[3] ? 'squadCopies' : 'squadHears', vars);
-        // (a drilled garrison holding on purpose is the tell that its word comes late: if its voice has just spoken, the next man of the squad says it)
-        else for (const m of [v, ...squadMen(this.g, sq[1]).filter(x => x !== v && this.fit(x))]) if (this.cue(m, sq[3] ? 'squadCopiesWaits' : 'squadWaits', vars)) break;
-      }
-      else this.cue(v, sq[2].startsWith('stays') ? 'squadStays' : 'squadQuiet', { sq: sq[1] });
-      return;
-    }
-    if (!D) return;
-    const gd = D.gd, M = this.man(gd), here = () => this.at(gd.char.pos);
-    if (/^goes to the fight next door/.test(what)) this.cue(gd, 'help', this.at(D.noiseAt ?? gd.lastKnown ?? gd.char.pos));
-    else if (/^holds where he ended up/.test(what)) { if (g.time - M.stoodT > 15 && this.cue(gd, 'huntOver', here())) M.stoodT = g.time; }
-    else if (/^falls back (through|to his squad)/.test(what)) { M.moved = 'fallback'; M.from = placeName(g.level, D.station); M.saidT = -100; this.cue(gd, 'fellBack', { the: M.from }); }
-    else if (/^takes cover/.test(what)) M.moved = 'cover';
-    else if (/^plants \(/.test(what)) {
-      if (M.moved === 'fallback' && !/^plants \(contact\)/.test(what)) { const h = here(); M.saidT = Math.min(M.saidT, g.time - CUES.manSecs); this.cue(gd, h.the === M.from ? 'pinnedIn' : 'planted', h); }
-      M.moved = null;
-    }
-    else if (/^surprised /.test(what)) this.cue(gd, 'surprised');
-    else if (/^flinches:/.test(what)) this.cue(gd, 'flinch');
-    else if (/stays to keep his room/.test(what)) { if (g.time - M.againT > CUES.againSecs && D.noiseAt && this.cue(gd, 'stayOurs', this.at(D.noiseAt))) M.againT = g.time; }
-  }
 
   /** 'on · 14 rows drawn of 41 · 9 new lines' — the panel's line */
   summary(): string {
@@ -317,14 +183,4 @@ export class Cues {
     const S = this.stats, drawn = S.heardDrawn + S.cueDrawn, of = S.heard + S.cueNet;
     return `${drawn} of ${of} net lines drawn · ${S.cues} new lines${S.dup + S.gap + S.full ? ` · held back: ${S.dup} said already, ${S.gap} too soon, ${S.full} outranked` : ''}`;
   }
-}
-
-/** the strip's rows this frame, as 'radio: …' rows (and, with CUES.overheard, at most one 'heard: …' row, only ever in a place no other row wants) oldest first (both HUDs draw these): this file's while it is on, else the message ring's as ever */
-export function stripRows(g: Game): { text: string; t: number }[] {
-  if (!CUES.on) return g.messages.filter(m => g.time - m.t < 8 && m.text.startsWith('radio: ')).slice(-3);
-  const live = [...g.cues.rows].filter(r => r.t <= g.time && g.time - r.t < CUES.secs);
-  const out = live.slice(-CUES.rows).map(r => ({ text: 'radio: ' + r.text, t: r.t })), h = g.cues.heardRow;
-  // ('heard: ' = a shout that reached an ear, not a line on a net — the same seven letters, so a HUD cuts either the same way)
-  if (h && CUES.overheard && out.length < CUES.rows && h.t <= g.time && g.time - h.t < CUES.secs) { out.push({ text: 'heard: ' + h.text, t: h.t }); out.sort((a, b) => a.t - b.t); }
-  return out;
 }

@@ -199,12 +199,7 @@ pub fn stand_and_fight(g: &mut crate::game::Game) {
         let pos = g.ch[c].pos;
         let mine = cell_of(g, pos);
         let d_at = dc.get(crate::Num(at)).copied();
-        let fc = match g.gd[gd].foe {
-            Some(crate::game::Foe::Player) => Some(g.pl[g.player].ch),
-            Some(crate::game::Foe::Guard(f)) => Some(g.gd[f].ch),
-            None => None,
-        };
-        let fc = match fc { Some(fc) => fc, None => continue };
+        let Some(fc) = crate::teams::foe_char(g, gd) else { continue };
         let t = k.room;
         if g.tab.roomfight_room[t].cells.has(crate::Num(at)) || g.tab.roomfight_room[t].cells.has(crate::Num(mine)) || dc.has(crate::Num(mine)) { continue; }   // (never in a door frame himself: his mates need it)
         if let Some(door) = d_at {
@@ -235,8 +230,7 @@ fn look_free(g: &mut Game, d: RoomfightDefId, p: V3) -> bool {
     if !alive(g, d) || g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Hold || state_of(g).of.has(d) { return false; }
     let gd = g.tab.roomfight_def[d].gd;
     if g.gd[gd].held.is_some() || g.tab.roomfight_def[d].rally_at == f64::INFINITY || crate::control::man::blind(g, gd) || crate::control::man::staggered(g, gd) { return false; }
-    let own = crate::owner::own();
-    if state_of(g).outs.iter().any(|o| o.def == d) || crate::owner::has_him(g, gd, own.stand) || crate::owner::has_him(g, gd, own.squad) { return false; }
+    if state_of(g).outs.iter().any(|o| o.def == d) || crate::owner::has(g, gd, crate::owner::by::STAND) || crate::owner::has(g, gd, crate::owner::by::SQUAD) { return false; }
     let ph = crate::digin::dig_in_phase(g, gd);   // (on his way to cover or at a door with a wedge: busy. Set on his door, he has done getting ready)
     if ph != "idle" && ph != "set" { return false; }
     !crate::lanes::lane_bars(g, gd, Some(p)) && !crate::lanes::lane_known_at(g, gd, Some(p))
@@ -429,12 +423,12 @@ pub fn step_press(g: &mut crate::game::Game, _dt: f64) {
 /// the fight is over: every press forgotten; the counts stay for whoever reads them after the run   (pressure.ts pressStop)
 pub fn press_stop(g: &mut crate::game::Game) {
     if g.m.pressure.states.is_none() { return; }
-    let press = crate::owner::own().press;
+    let press = crate::owner::by::PRESS;
     let mut i = 0;
     while i < g.guards.len() {
         let (gd, now) = (g.guards[i], g.time);
         i += 1;
-        crate::owner::release_man(g, gd, press, now);
+        crate::owner::release(g, gd, press, now);
     }
     let st = match g.m.pressure.states.as_mut() { Some(st) => st, None => return };
     st.presses = Vec::new();

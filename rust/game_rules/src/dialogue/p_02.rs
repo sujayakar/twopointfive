@@ -18,7 +18,7 @@ fn place_of_room(r: &Rect) -> PlaceRect { PlaceRect { id: None, name: r.name.clo
 fn route_at(g: &Game, i: i32) -> Option<RouteId> { usize::try_from(i).ok().and_then(|i| g.level.routes.get(i).copied()) }
 
 /// WHERE, for a line on the net: the level's own name for the spot, else roomName.   (dialogue.ts placeName)
-pub fn place_name(g: &mut crate::game::Game, p: V3) -> String {
+pub fn place_name(g: &crate::game::Game, p: V3) -> String {
     match own_name(g, p) { Some(n) => n, None => room_name(g, p) }
 }
 /// the level the game was written on (its three patrol routes)   (dialogue.ts isOffice)
@@ -30,8 +30,7 @@ pub fn with_the(n: &str) -> String {
     if n.starts_with("the ") || n.as_bytes().last().map_or(false, |c| c.is_ascii_digit()) { String::from(n) } else { alloc::format!("the {}", n) }
 }
 /// THE LEVEL'S OWN NAMES for its floor, first match wins; null on the office and on a level that names nothing.   (dialogue.ts levelRects)
-pub fn level_rects(g: &mut crate::game::Game) -> Option<Vec<crate::dialogue::PlaceRect>> {
-    if let Some(r) = g.m.dialogue.own_rects.as_ref() { return r.clone(); }
+pub fn level_rects(g: &crate::game::Game) -> Option<Vec<crate::dialogue::PlaceRect>> {
     let mut r: Option<Vec<PlaceRect>> = None;
     if !is_office(g) {
         let mut out: Vec<PlaceRect> = Vec::new();
@@ -59,26 +58,27 @@ pub fn level_rects(g: &mut crate::game::Game) -> Option<Vec<crate::dialogue::Pla
         }
         if !out.is_empty() { r = Some(out); }
     }
-    g.m.dialogue.own_rects = Some(r.clone());
     r
 }
-/// ownPlace with the rectangle's place in the list, the identity watchedPlace compares   (dialogue.ts ownPlace)
-fn own_place_at(g: &mut Game, p: V3) -> Option<(usize, OwnPlace)> {
-    let r = level_rects(g)?;
+/// ownPlace over a list of named rectangles, with the rectangle's place in the list, the identity watchedPlace compares   (dialogue.ts ownPlace)
+fn place_among(r: &[PlaceRect], p: V3) -> (usize, OwnPlace) {
     let (mut best, mut bd) = (0usize, f64::INFINITY);
     for (i, x) in r.iter().enumerate() {
         let d = rect_dist_of(x.x0, x.x1, x.z0, x.z1, p);
-        if d == 0.0 { return Some((i, OwnPlace { rect: x.clone(), d: 0.0 })); }
+        if d == 0.0 { return (i, OwnPlace { rect: x.clone(), d: 0.0 }); }
         if d < bd - 0.02 { bd = d; best = i; }
     }
-    Some((best, OwnPlace { rect: r[best].clone(), d: if bd <= PLACE_EDGE { 0.0 } else { bd } }))
+    (best, OwnPlace { rect: r[best].clone(), d: if bd <= PLACE_EDGE { 0.0 } else { bd } })
+}
+fn own_place_at(g: &Game, p: V3) -> Option<(usize, OwnPlace)> {
+    Some(place_among(&level_rects(g)?, p))
 }
 /// the named rectangle a point is in, or the nearest (`d` metres off its edge)   (dialogue.ts ownPlace)
-pub fn own_place(g: &mut crate::game::Game, p: V3) -> Option<crate::dialogue::OwnPlace> {
+pub fn own_place(g: &crate::game::Game, p: V3) -> Option<crate::dialogue::OwnPlace> {
     own_place_at(g, p).map(|x| x.1)
 }
 /// a squad row's word for floor a man WATCHES from `from`, null for his own floor or floor nobody named   (dialogue.ts watchedPlace)
-pub fn watched_place(g: &mut crate::game::Game, from: V3, p: V3) -> Option<String> {
+pub fn watched_place(g: &crate::game::Game, from: V3, p: V3) -> Option<String> {
     if is_office(g) {
         let a = room_name(g, p);
         return if a != room_name(g, from) { Some(a) } else { None };
@@ -91,29 +91,27 @@ pub fn watched_place(g: &mut crate::game::Game, from: V3, p: V3) -> Option<Strin
     }
 }
 /// (dialogue.ts ownName)
-pub fn own_name(g: &mut crate::game::Game, p: V3) -> Option<String> {
+pub fn own_name(g: &crate::game::Game, p: V3) -> Option<String> {
     let w = own_place(g, p)?;
     Some(if w.d == 0.0 { w.rect.name } else { alloc::format!("outside {}", w.rect.name) })
 }
 /// WHERE A MAN STANDS, for a line that has to be true of the spot: the named rectangle he is INSIDE, or null.   (dialogue.ts placeIn)
-pub fn place_in(g: &mut crate::game::Game, p: V3) -> Option<crate::dialogue::PlaceRect> {
+pub fn place_in(g: &crate::game::Game, p: V3) -> Option<crate::dialogue::PlaceRect> {
     if let Some(w) = own_place(g, p) { return if w.d == 0.0 { Some(w.rect) } else { None }; }
     if !is_office(g) { return None; }
-    room_name(g, p);
-    let rr = g.m.dialogue.room_rects.as_ref().unwrap();
-    for r in rr.rooms.iter() { if rect_holds(r, p) { return Some(place_of_room(r)); } }
+    for r in office_rooms(g).0.iter() { if rect_holds(r, p) { return Some(place_of_room(r)); } }
     None
 }
 /// the name of the place a point is in, for wayName (its closure `at`)
-fn at_name(g: &mut Game, p: V3) -> Option<String> {
-    match own_place(g, p) { Some(w) if w.d == 0.0 => Some(w.rect.name), _ => None }
+fn at_name(rects: &[PlaceRect], p: V3) -> Option<String> {
+    match place_among(rects, p).1 { w if w.d == 0.0 => Some(w.rect.name), _ => None }
 }
 /// THE WAY A WALK COMES BY, for a line on the net: 'through the …' / 'from the …'. Words only: the search is asked and thrown away.   (dialogue.ts wayName)
 pub fn way_name(g: &mut crate::game::Game, a: V3, b: V3, into: Option<&str>) -> Option<String> {
-    if level_rects(g).is_none() { return None; }
+    let rects = level_rects(g)?;
     let room = into.filter(|s| !s.is_empty()).map(with_the);
-    let end = at_name(g, b);
-    let from = at_name(g, a);
+    let end = at_name(&rects, b);
+    let from = at_name(&rects, a);
     let path = crate::scene_collision::nav_grid_find_path(g, a, b, Some(6000.0), None)?;
     if from.is_some() && (from == room || from == end) { return None; }
     let mut way = from.clone();
@@ -122,7 +120,7 @@ pub fn way_name(g: &mut crate::game::Game, a: V3, b: V3, into: Option<&str>) -> 
         let n = m::max(1.0, m::ceil(v3::dist(prev, q) / 0.5));
         let mut i = 1.0;
         while i <= n {
-            let r = at_name(g, v3::lerp3(prev, q, i / n));
+            let r = at_name(&rects, v3::lerp3(prev, q, i / n));
             if r.is_some() && (r == room || r == end) { break 'walk; }
             if r.is_some() { way = r; }
             i += 1.0;
@@ -133,55 +131,41 @@ pub fn way_name(g: &mut crate::game::Game, a: V3, b: V3, into: Option<&str>) -> 
     if from.as_deref() == Some(way.as_str()) { Some(alloc::format!("from {}", way)) } else { Some(alloc::format!("through {}", way)) }
 }
 /// every rectangle placeIn answers by   (dialogue.ts placeRects)
-pub fn place_rects(g: &mut crate::game::Game) -> Vec<crate::dialogue::PlaceRect> {
+pub fn place_rects(g: &crate::game::Game) -> Vec<crate::dialogue::PlaceRect> {
     if let Some(r) = level_rects(g) { return r; }
     if !is_office(g) { return Vec::new(); }
-    room_name(g, [0.0, 0.0, 0.0]);
-    g.m.dialogue.room_rects.as_ref().unwrap().rooms.iter().map(place_of_room).collect()
+    office_rooms(g).0.iter().map(place_of_room).collect()
+}
+/// The office's rooms as the men say them, the level's own first, and its walls: the only level that has them.
+fn office_rooms(g: &crate::game::Game) -> (Vec<Rect>, Rect) {
+    let level = &g.level;
+    let mut rooms: Vec<Rect> = Vec::new();
+    if let Some(cps) = level.clear_plans.as_ref() {
+        for cp in cps.iter() {
+            if let (Some(b), Some(room)) = (cp.bounds.as_ref(), cp.room.as_ref().filter(|r| !r.is_empty())) {
+                if !rooms.iter().any(|r| r.name.ends_with(room.as_str())) { rooms.push(Rect { name: with_the_room(room), x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1 }); }
+            }
+        }
+    }
+    if let Some(q) = level.scenarios.as_ref().and_then(|s| s.quiet.as_ref()) {
+        for sp in q.spots.iter() {
+            if !rooms.iter().any(|r| r.name == sp.place) { rooms.push(Rect { name: sp.place.clone(), x0: sp.area.x0, x1: sp.area.x1, z0: sp.area.z0, z1: sp.area.z1 }); }
+        }
+    } else if !rooms.iter().any(|r| r.name.contains("server")) {
+        let s = &level.mission.server_room;
+        rooms.push(Rect { name: String::from("the server room"), x0: s.x0, x1: s.x1, z0: s.z0, z1: s.z1 });
+    }
+    rooms.extend(office_areas());
+    (rooms, office_walls())
 }
 /// The room a floor point is in, as the men would say it.   (dialogue.ts roomName)
-pub fn room_name(g: &mut crate::game::Game, p: V3) -> String {
-    if g.m.dialogue.room_rects.is_none() {
-        let office = is_office(g);
-        let level = &g.level;
-        let mut rooms: Vec<Rect> = Vec::new();
-        if let Some(cps) = level.clear_plans.as_ref() {
-            for cp in cps.iter() {
-                if let (Some(b), Some(room)) = (cp.bounds.as_ref(), cp.room.as_ref().filter(|r| !r.is_empty())) {
-                    if !rooms.iter().any(|r| r.name.ends_with(room.as_str())) { rooms.push(Rect { name: with_the_room(room), x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1 }); }
-                }
-            }
-        }
-        if let Some(q) = level.scenarios.as_ref().and_then(|s| s.quiet.as_ref()) {
-            for sp in q.spots.iter() {
-                if !rooms.iter().any(|r| r.name == sp.place) { rooms.push(Rect { name: sp.place.clone(), x0: sp.area.x0, x1: sp.area.x1, z0: sp.area.z0, z1: sp.area.z1 }); }
-            }
-        } else if !rooms.iter().any(|r| r.name.contains("server")) {
-            let s = &level.mission.server_room;
-            rooms.push(Rect { name: String::from("the server room"), x0: s.x0, x1: s.x1, z0: s.z0, z1: s.z1 });
-        }
-        // (on another level the walls are the box round every route's points, three metres out; a level with no route keeps the empty box. Nothing reads it
-        // there while the cues are on, but it is the memo's value and it is kept as the TypeScript keeps it)
-        let mut building = office_walls();
-        if office { rooms.extend(office_areas()); } else {
-            building = Rect { name: String::from("inside"), x0: f64::INFINITY, x1: f64::NEG_INFINITY, z0: f64::INFINITY, z1: f64::NEG_INFINITY };
-            for r in g.level.routes.iter() {
-                for q in g.tab.route[*r].points.iter() {
-                    building.x0 = m::min(building.x0, q[0] - 3.0);
-                    building.x1 = m::max(building.x1, q[0] + 3.0);
-                    building.z0 = m::min(building.z0, q[2] - 3.0);
-                    building.z1 = m::max(building.z1, q[2] + 3.0);
-                }
-            }
-        }
-        g.m.dialogue.room_rects = Some(DialogueModRoomRectsValue { rooms, building, office });
-    }
-    if !g.m.dialogue.room_rects.as_ref().unwrap().office {
+pub fn room_name(g: &crate::game::Game, p: V3) -> String {
+    if !is_office(g) {
         return match own_place(g, p) { Some(w) => w.rect.name, None => String::from(NAMELESS) };
     }
-    let rr = g.m.dialogue.room_rects.as_ref().unwrap();
-    for r in rr.rooms.iter() { if rect_holds(r, p) { return r.name.clone(); } }
-    if rect_holds(&rr.building, p) { return String::from("the back offices"); }
+    let (rooms, building) = office_rooms(g);
+    for r in rooms.iter() { if rect_holds(r, p) { return r.name.clone(); } }
+    if rect_holds(&building, p) { return String::from("the back offices"); }
     String::from("the car park")
 }
 /// (dialogue.ts routeName)
@@ -679,7 +663,7 @@ pub fn interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn 
     let mut ctx = gather(g, gd);
     let pick = match rnd {
         Some(r) => pick_line(g, &mut ctx, talk, r),
-        None => pick_line(g, &mut ctx, talk, &mut |g: &mut Game| crate::math_dice::sim_random(g)),
+        None => pick_line(g, &mut ctx, talk, &mut |g: &mut Game| crate::dice::draw_of(g, "dialogue::interrogate#1", gd)),
     };
     let player = g.player;
     let holds_him = g.pl[player].holding.as_ref().map_or(false, |h| h.g == gd);

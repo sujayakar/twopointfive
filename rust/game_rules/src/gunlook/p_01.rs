@@ -7,9 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The switch as every reader asks it: settled on, on the page.   (gunlook.ts gunLookOn)
-pub fn gun_look_on(g: &crate::game::Game) -> bool { true }
-
 /// What a row has of its own; None: its stand-in fields are the gun.   (gunlook.ts gunOwn)
 pub fn gun_own(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<crate::weapons::WeaponDefOwn> {
     def.own.clone()

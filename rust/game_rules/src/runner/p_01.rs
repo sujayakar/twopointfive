@@ -28,7 +28,7 @@ pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::runner::LineKin
     let mut pool = l.say;
     pool.extend(extra.unwrap_or_default());
     let n = pool.len() as f64;
-    let at = js::rem(m::floor(crate::math_dice::sim_random(g) * n), n) as usize;
+    let at = js::rem(m::floor(crate::dice::draw_of(g, "runner::bark#1", gd) * n), n) as usize;
     crate::game::game_say(g, gd, &pool[at], Some(false), Some(true), None);
 }
 
@@ -78,12 +78,12 @@ pub fn foe_at(g: &crate::game::Game, c_2: CharId, who: crate::picture::Who) -> c
 }
 
 /// his enemies on the floor: the player and every living man of a side hostile to his   (runner.ts foes)
-pub fn foes(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Vec<crate::runner::Foe> {
+pub fn foes(g: &crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
     let mut out = Vec::new();
     let team = g.gd[gd].team;
-    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[seat.player].down {
-        let c = g.pl[seat.player].ch;
-        out.push(foe_at(g, c, crate::picture::Who::Player));
+    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) {
+        // (a man's picture holds one place for "the player": the one nearest him)
+        if let Some(pl) = crate::seats::nearest_man(g, &g.ch[g.gd[gd].ch].pos) { let c = g.pl[pl].ch; out.push(foe_at(g, c, crate::picture::Who::Player)); }
     }
     let mut i = 0;
     while i < g.guards.len() {
@@ -103,7 +103,7 @@ pub fn by_picture(g: &crate::game::Game) -> bool { !g.touring }
 
 /// the enemies a run is planned round: the men he knows of, each where he believes him to be   (runner.ts known)
 pub fn known(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
-    if !by_picture(g) { return foes(g, &crate::seats::here(g), gd); }
+    if !by_picture(g) { return foes(g, gd); }
     let mut out = Vec::new();
     let (forget, eye_h) = (g.k.picture.forget_secs, g.k.picture.eye_h);
     for i in crate::picture::ideas_of(g, gd) {
@@ -162,8 +162,8 @@ pub fn lost(g: &mut crate::game::Game, gd: GuardId) -> bool {
 pub fn start(g: &mut crate::game::Game, gd: GuardId, from: V3) {
     let c = g.gd[gd].ch;
     let at = v3::copy(g.ch[c].pos);
-    let (rule, now) = (crate::owner::own().runner, g.time);
-    crate::owner::claim_man(g, gd, rule, now, None);
+    let (rule, now) = (crate::owner::by::RUNNER, g.time);
+    crate::owner::claim(g, gd, rule, now, None);
     g.m.runner.state_of.set(gd, Run {
         phase: RunPhase::Say, t: 0.0, from: [from[0], 0.0, from[2]], goal: None, mate: None, told: 0.0, unseen: 0.0, at, stall: 0.0, is_out: false,
         tries: 0.0, plan: 0.0, face: None, bold: false, bare: false, drive: false, drive_t: -1.0, script: crate::game::GuardScript::zeroed(),
@@ -324,7 +324,7 @@ pub fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runne
     let pos = g.ch[g.gd[gd].ch].pos;
     if by_picture(g) {
         g.stats.picture.ran += 1;
-        let t = foes(g, &crate::seats::here(g), gd);
+        let t = foes(g, gd);
         if t.len() != e.len() || t.iter().any(|t| !e.iter().any(|x| flat(x.pos, t.pos) < 1.0)) { g.stats.picture.ran_off += 1; }
     }
     let mut pen = |_g: &mut Game, ix: f64, iz: f64| -> f64 {
@@ -451,8 +451,8 @@ pub fn drop(g: &mut crate::game::Game, gd: GuardId) {
         run!(g, gd).bare = true;
     }
     g.gd[gd].fled = true;
-    let (rule, now) = (crate::owner::own().runner, g.time);
-    crate::owner::claim_man(g, gd, rule, now, Some(1.0));
+    let (rule, now) = (crate::owner::by::RUNNER, g.time);
+    crate::owner::claim(g, gd, rule, now, Some(1.0));
     g.stats.runner.dropped += 1;
     {
         crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "runner");
@@ -625,8 +625,8 @@ pub fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     if run!(g, gd).phase == RunPhase::Say {
         if !reacts(g, gd) {
             g.m.runner.state_of.delete(gd);
-            let (rule, now) = (crate::owner::own().runner, g.time);
-            crate::owner::release_man(g, gd, rule, now);
+            let (rule, now) = (crate::owner::by::RUNNER, g.time);
+            crate::owner::release(g, gd, rule, now);
             return;
         }
         let beat = g.k.runner.beat_secs;
@@ -704,7 +704,7 @@ pub fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         if is_out {
             // (the world's rule, not his: he leaves the floor when no TRUE enemy has a line to him)
             let eyes: Option<Vec<Foe>> = if by_picture(g) {
-                let t = foes(g, &crate::seats::here(g), gd);
+                let t = foes(g, gd);
                 Some(t.into_iter().filter(|f| line_to(g, *f, pos)).collect())
             } else {
                 None
@@ -834,7 +834,7 @@ pub fn runner_bare(g: &crate::game::Game, gd: GuardId) -> bool { g.m.runner.stat
 pub fn runner_nobody(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].fled }
 
 /// speaks for nobody, from the shout   (runner.ts runnerMute)
-pub fn runner_mute(g: &mut crate::game::Game, gd: GuardId) -> bool { let rule = crate::owner::own().runner; crate::owner::has_him(g, gd, rule) }
+pub fn runner_mute(g: &crate::game::Game, gd: GuardId) -> bool { let rule = crate::owner::by::RUNNER; crate::owner::has(g, gd, rule) }
 
 #[cfg(test)]
 mod tests {

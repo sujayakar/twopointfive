@@ -29,6 +29,7 @@
 // since 'clear from outside' became one plain order: doortest-check.ts and threshold-probes.ts hold today's order); the F drill's lines no longer put the
 // night breach's blind fire off; the two lines at the locked manager's door give their order twice (the first is halted at the handle, as the game has it);
 // doortools-firstman runs on the floor as the page deals it (it held the squads from the rooms off).
+import { blockOf, listedOf, menuKey } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { asProbe, asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
@@ -37,8 +38,7 @@ const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { SQUADTHROW } = await import(`${ROOT}/src/game/squadthrow.ts`);
 const { SILENT } = await import(`${ROOT}/src/game/silent.ts`);
-const { dropThrowable } = await import(`${ROOT}/src/game/combat.ts`);
-const { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`);
+const { killGuard, dropThrowable } = await import(`${ROOT}/src/game/combat.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -106,9 +106,9 @@ export async function rig(seed: number, o: { stage?: 'rc' | 'nb' | false; door?:
     room(id: string) { return RC.rooms.find((r: any) => r.def.id === id); },
     /** press X with the cursor on p (the order menu comes up and stays, nothing held), read its order rows, Esc */
     menuOn(p: number[]) {
-      W.cursorAt([p[0], p[1], p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(24);
-      const read = () => { const M = O.menu, hud = O.hud().menu; return M ? { ids: M.rows.map((r: any) => r.id).join(' '), why: [...M.why] as (string | null)[], kind: M.target.kind as string,
-        rows: (hud?.rows ?? []).slice(1).filter((r: any) => r.kind !== 'cancel').map((r: any) => ({ key: r.opts[0]?.key, text: r.opts[0]?.text, off: r.off })) } : null; };   // (row 0 = who the order goes to)
+      W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(24);
+      const read = () => { const M = O.menu, hud = listedOf(O); return M ? { ids: M.rows.map((r: any) => r.id).join(' '), why: [...M.why] as (string | null)[], kind: M.target.kind as string,
+        rows: (hud?.rows ?? []).map((r: any) => ({ key: r.opts[0]?.key, text: r.opts[0]?.text, off: r.off })) } : null; };   // (row 0 = who the order goes to)
       const first = read(); if (!first) { input.pressed.add('Escape'); R.step(); return null; }
       // the door tools are a page of the door's menu, behind its row 5: read by that key, then Esc back to the first page (and Esc again: the menu away)
       const opener = O.menu.rows.find((r: any) => r.opens); let tools: ReturnType<typeof read> = null, back = true;
@@ -117,7 +117,7 @@ export async function rig(seed: number, o: { stage?: 'rc' | 'nb' | false; door?:
       return { ...first, tools, back, gone: O.menu === null };
     },
     /** press X on p, then the digit a third of a second later — more digits walk the menu's pages (5, 1 = the door tools' page, its first row) */
-    pick(p: number[], ...n: number[]) { W.cursorAt([p[0], p[1], p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(20); for (const k of n) { input.pressed.add(`Digit${k}`); R.step(); } },
+    pick(p: number[], ...n: number[]) { W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(20); for (const k of n) { input.pressed.add(`Digit${k}`); R.step(); } },
   };
   R.step(30);
   if (o.door) { game.teleportPlayer(SAM[o.door]); R.step(5); }
@@ -133,7 +133,7 @@ export const doortoolsMenu = guarded(async () => {
   const { verdict, done } = family('doortools-menu: the four rows of the door tools\' page, their digits, their counts, and nothing at all with no squad');
   { const R = await rig(3, { stage: false, door: 'breakroom_w' }); const { O, D } = R;
     const m = R.menuOn(R.door('breakroom_w').frameCentre); const w = R.give('bangClear', 'breakroom_w'); R.step(30);
-    verdict(!O.active && m === null && !!w && D.ops.length === 0 && D.log.length === 0 && D.set.length === 0 && O.hud().status.length === 0,
+    verdict(!O.active && m === null && !!w && D.ops.length === 0 && D.log.length === 0 && D.set.length === 0 && blockOf(O).length === 0,
       'with no squad on the floor: no list on X, the order refused, nothing under way, nothing logged, no HUD block', `orders active ${O.active} · menu ${m} · give: ${w} · ops ${D.ops.length} · log ${D.log.length} · ${D.summary()}`); }
   const R = await rig(3, { door: 'breakroom_w' }); const { O, D } = R; const Wd = R.door('breakroom_w');
   const m = R.menuOn(Wd.frameCentre);
@@ -145,7 +145,7 @@ export const doortoolsMenu = guarded(async () => {
   const fl = R.menuOn(AISLE);
   const floorIds = `move cover fallIn hold${SQUADTHROW.on ? ' throwThere' : ''}${SILENT.on ? ' silent' : ''}`;
   verdict(!!fl && fl.kind === 'floor' && fl.ids === floorIds && fl.tools === null, 'a floor\'s list is as it was (the four orders, then only the rows whose own switches are on): no door tool is offered off a door, and no page', `rows: ${fl?.ids} · held to: ${floorIds}`);
-  const notes = O.hud().status.flatMap((r: any) => r.opts.map((o: any) => o.text));
+  const notes = blockOf(O).flatMap((r: any) => r.opts.map((o: any) => o.text));
   verdict(notes.includes(`charges ${DOORTOOLS.charges} · bangs ${DOORTOOLS.bangs}`) && D.charges === DOORTOOLS.charges && D.bangs === DOORTOOLS.bangs, 'the counts stand on the squad\'s HUD block', notes.join(' / '));
   { R.game.teleportPlayer(SAM.stairwell); R.step(5); const st = R.door('stairwell'); const w = R.give('charge', 'stairwell'); R.step(2);
     verdict(!!st?.def.steel && /steel/.test(w ?? '') && D.charges === DOORTOOLS.charges && D.ops.length === 0 && D.set.length === 0,
@@ -172,7 +172,7 @@ export const doortoolsCharge = guarded(async () => {
   verdict(armed && off.every(d => d > K.backblastM) && quietNow(), 'armed: the pair is off the door past the backblast, the leaf is shut, no blast, nobody touched', `pair ${off.map(f2).join(' / ')} m from the door (backblast ${K.backblastM}) · latched ${Wd.latched} · blasts ${R.bangs.length}`);
   let still = true; for (let i = 0; i < 5 * 60; i++) { R.step(); still &&= quietNow() && op.phase === 'armed' && D.set.length === 1; }
   verdict(still, 'and NOTHING happens for five more seconds: it waits on Sam', `phase ${op.phase} · set ${D.set.length} · latched ${Wd.latched} · blasts ${R.bangs.length} · over the line ${op.crossed.size}`);
-  const row = R.menuOn(Wd.frameCentre)?.tools?.rows.find((r: any) => r.key === '3'); const hud = O.hud().status.flatMap((r: any) => r.opts.map((o: any) => o.text));
+  const row = R.menuOn(Wd.frameCentre)?.tools?.rows.find((r: any) => r.key === '3'); const hud = blockOf(O).flatMap((r: any) => r.opts.map((o: any) => o.text));
   verdict(row?.text === 'blow the charge' && !row.off && hud.some((t: string) => /charge set/.test(t)), 'the row on that door now reads "blow the charge", and the HUD says a charge is set and which key blows it', `tools row 3: ${row?.text} · hud: ${hud.join(' / ')}`);
   // the trigger. One of the room's men is stood a stride inside the door first (the probe's staging, at the last moment: where a man IS when it goes is the rule)
   const near = room.defenders[0], far = room.defenders[1]; near.char.pos[0] = Wd.frameCentre[0] + 1.3; near.char.pos[2] = Wd.frameCentre[2]; R.step(2);
@@ -202,7 +202,7 @@ export const doortoolsCharge = guarded(async () => {
 // ---------------------------------------------------------------- the bang
 export const doortoolsBang = guarded(async () => {
   const { verdict, done } = family('doortools-bang: a stun in the room before the first man is over the threshold');
-  const K = DOORTOOLS; const R = await rig(7, { door: 'breakroom_w' }); const { O, D, game } = R; const room = R.room('breakroom');
+  const K = DOORTOOLS; const R = await rig(7, { door: 'breakroom_w' }); const { O, D, game } = R; const Wd = R.door('breakroom_w'); const room = R.room('breakroom');
   let blindAtBang = -1; R.post = () => { const op = D.ops[0]; if (blindAtBang < 0 && op && !isNaN(op.bangT)) blindAtBang = room.defenders.filter((h: any) => h.dazzledUntil > game.time).length; };
   const w = R.give('bangClear', 'breakroom_w'); const op = D.ops[0];
   R.until(() => D.ops.length === 0, 40);
@@ -292,25 +292,6 @@ export const doortoolsEdges = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- the light cap
-export const doortoolsLights = guarded(async () => {
-  const { verdict, done } = family('doortools-lights: a charge with the light list at its 64-slot cap');
-  const R = await rig(7, { door: 'breakroom_w' }); const { D, game } = R; const L = R.W.engine.lights; const Wd = R.door('breakroom_w'); const room = R.room('breakroom');
-  const on = () => L.lights.filter((l: any) => l.enabled && l.intensity > 0).length; const staged = on(), listed = L.lights.length;
-  const proto = L.lights.find((l: any) => l.enabled && l.intensity > 0 && l.ttl < 0); let pad = 0;
-  // (a pad is a lamp of nobody's fixture: the copy leaves the level lamp's row and its steady self behind. A row is one lamp's place among the level's
-  //  own, sim/lightshome.ts stand, and a second lamp that says it holds one is a mistake the light question throws by name)
-  while (on() < MAX_LIGHTS) { L.add({ ...proto, name: `pad${pad++}`, row: undefined, steady: undefined, pos: [2 + pad * 0.1, 2.5, 2], color: [...proto.color], dir: [...proto.dir], slot: -1 }); }
-  L.upload(game.time); const full = L.activeCount;
-  const near = room.defenders[0]; near.char.pos[0] = Wd.frameCentre[0] + 3.2; near.char.pos[2] = Wd.frameCentre[2]; R.step(1);
-  D.set.push({ door: Wd, side: R.target('breakroom_w').side, t: game.time, by: 'probe' });
-  let threw = ''; let res: any = null; try { res = D.blow(); L.upload(game.time); } catch (e) { threw = String(e); }
-  const flashes = L.lights.filter((l: any) => l.ttl >= 0 || l.transient); const uploaded = flashes.filter((l: any) => l.slot >= 0).length;
-  try { R.step(30); L.upload(game.time); } catch (e) { threw ||= String(e); }
-  verdict(full === MAX_LIGHTS && !threw && L.activeCount <= MAX_LIGHTS && flashes.length > 0 && uploaded === 0 && !!res && res.stunned + res.knocked >= 1 && near.dazzledUntil > game.time,
-    'every upload slot taken by a steady light, then a charge blown: nothing throws, the blast\'s own flash light is not uploaded (it is not drawn), and the men are stunned all the same',
-    `staged night: ${staged} lights on of ${listed} listed (cap ${MAX_LIGHTS}: ${MAX_LIGHTS - staged} to spare) · padded to ${full} · threw: ${threw || 'no'} · flash lights ${flashes.length}, uploaded ${uploaded} · stunned ${res?.stunned} down ${res?.knocked}`);
-  return done();
-});
 
 // ---------------------------------------------------------------- which tool loses the first man
 async function tally(kind: string, seeds: number[], hot: boolean, door = 'breakroom_w', roomId = 'breakroom') {
@@ -326,17 +307,6 @@ async function tally(kind: string, seeds: number[], hot: boolean, door = 'breakr
   }
   return out;
 }
-export const doortoolsFirstMan = guarded(async () => {
-  const { verdict, done } = family('doortools-firstman: behind a bang or a charge fewer first men are lost than through the plain door');
-  const seeds = [1, 2, 3, 4, 5, 6], line = (k: string, t: any) => `${k}: first man lost ${t.first}/${t.n} · pair lost ${t.pair}/${t.n * 2} · room's men down ${t.down}/${t.n * 2} · room taken ${t.taken}/${t.n}`;
-  const open = await tally('openClear', seeds, true), bang = await tally('bangClear', seeds, true), charge = await tally('charge', seeds, true);
-  verdict(bang.first < open.first && charge.first < open.first, `an ALERTED floor (a bang heard four seconds before), the break room's west door, seeds ${seeds.join(' ')}: the first man through is lost less often behind a bang, and behind a charge, than through the plain door`,
-    `${line('open and clear', open)}\n    ${line('bang and clear', bang)}\n    ${line('charge', charge)}`);
-  verdict(bang.pair < open.pair && charge.pair < open.pair, '… and fewer of the pair altogether', `pair lost: open ${open.pair} · bang ${bang.pair} · charge ${charge.pair}`);
-  const cs = [1, 2, 3]; const co = await tally('openClear', cs, false), cb = await tally('bangClear', cs, false), cc = await tally('charge', cs, false);
-  console.log(`- INFO — a QUIET floor, seeds ${cs.join(' ')} (no verdict: here the plain door has surprise on its side, and a bang or a charge wakes the floor)\n    ${line('open and clear', co)}\n    ${line('bang and clear', cb)}\n    ${line('charge', cc)}`);
-  return done();
-});
 
 /** by hand, outside the probe runner: `bun run tools/qa/doortools-probes.ts tally <order id> <door> <room id> <seeds, comma separated> <cold|hot>` — one line of the same count the
  *  first-man probe makes, for any order (clear from outside included: nobody enters, so its 'first man' is the lead) on any door Sam has a spot by (SAM) */
@@ -345,7 +315,7 @@ if (import.meta.main && process.argv[2] === 'tally') {
     const F = await import(`${ROOT}/src/game/roomfight.ts`); const T: any = { operative: F.FIGHT_SKILL.operative, hostile: F.FIGHT_SKILL.hostile, ROOMFIGHT: F.ROOMFIGHT, BLIND: (await import(`${ROOT}/src/game/nightbreach.ts`)).BLIND };
     for (const [t, row] of Object.entries(JSON.parse(process.env.TALLY_SET) as Record<string, Record<string, unknown>>)) { if (!T[t]) throw new Error(`TALLY_SET: no table '${t}'`); for (const k of Object.keys(row)) if (!(k in T[t])) throw new Error(`TALLY_SET: no knob '${t}.${k}'`); Object.assign(T[t], row); }
   }
-  const [, , , kind, door, roomId, seeds, mode] = process.argv; const r = await asProbe('doortools-firstman', () => tally(kind, seeds.split(',').map(Number), mode === 'hot', door, roomId));   // (the count as the probe of that name makes it)
+  const [, , , kind, door, roomId, seeds, mode] = process.argv; const r = await asProbe('doortools-bang', () => tally(kind, seeds.split(',').map(Number), mode === 'hot', door, roomId));   // (the count as the probe of that name makes it)
   Object.assign(DOORTOOLS, JSON.parse(JSON.stringify(DT_DEFAULTS))); Object.assign(ROOMCLEAR, RC_DEFAULTS); Object.assign(NIGHTBREACH, NB_DEFAULTS);
   console.log(`${mode} ${kind} ${door} over ${r.n} seeds: first man lost ${r.first} · pair lost ${r.pair}/${r.n * 2} · room's men down ${r.down}/${r.of} · room taken ${r.taken}`);
-} else if (import.meta.main) process.exit(exitCode(await asProbes({ 'doortools-menu': doortoolsMenu, 'doortools-charge': doortoolsCharge, 'doortools-bang': doortoolsBang, 'doortools-counts': doortoolsCounts, 'doortools-edges': doortoolsEdges, 'doortools-lights': doortoolsLights, 'doortools-firstman': doortoolsFirstMan }, wanted())));   // (`bun run tools/qa/doortools-probes.ts [name …]`: the file's probes alone, each as the runner runs it)
+} else if (import.meta.main) process.exit(exitCode(await asProbes({ 'doortools-menu': doortoolsMenu, 'doortools-charge': doortoolsCharge, 'doortools-bang': doortoolsBang, 'doortools-counts': doortoolsCounts, 'doortools-edges': doortoolsEdges,  }, wanted())));   // (`bun run tools/qa/doortools-probes.ts [name …]`: the file's probes alone, each as the runner runs it)

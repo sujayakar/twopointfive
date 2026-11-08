@@ -1,8 +1,6 @@
 pub use ::game_types::orders::types;
 pub use types::*;
 pub mod rows;
-pub mod missing;
-pub use missing::*;
 pub mod b_01;
 pub use b_01::*;
 pub mod p_01;
@@ -21,3 +19,5 @@ pub mod p_07;
 pub use p_07::*;
 pub mod p_08;
 pub use p_08::*;
+pub mod hud;
+pub use hud::*;

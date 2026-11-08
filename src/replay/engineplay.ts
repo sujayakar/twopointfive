@@ -268,6 +268,7 @@ export class TapePlay {
     if (this.first) { this.first = false; this.tables(); g.fogOfWar.pageLook(); this.rs?.tune(g); }   // (the last word over what the boot wrote after the staging: this machine's sandbox row, its kept feel rows)
     for (const [, kind, data] of W.outside()) {
       if (kind === 'restart') g.restartEncounter();
+      else if (kind === 'load') { const why = g.saves.load(g, String(data)); if (why) this.drift ??= { f, who: `the checkpoint (${why})`, metres: Infinity }; }   // (a save this run made: the walk has made it too)
       else if (this.poses?.row(f, kind, data)) { /* where the player was put from outside a step, or by a restart inside the coming one: runtape.ts, as tools/qa/rerun.ts does it */ }
       else if (kind === 'flags') this.fl = data as Plain;
       else if (kind === 'tune') K.assignDeep(g.tune as never, data as Plain);
@@ -280,7 +281,6 @@ export class TapePlay {
     W.layCamera(cam);   // (tapewalk.ts: the pose, and the matrices the page's step read, as tools/qa/rerun.ts lays them)
     try { g.update(dt, I, cam, cv as unknown as HTMLCanvasElement); } catch (e) { W.failed(); throw e; }
     W.done();
-    if (g.mission.debrief) g.mission.debrief = false;   // (the page's own line after a step: the end card's flag is taken — the card itself is not opened over a replay)
     this.simTime += dt; h.engine.lights.update(dt, this.simTime); this.f = f + 1; this.lastDt = dt;
     if (tw) this.blendEnd(tw); else { const lt = h.loop.tween; if (lt && !lt.stale) lt.rest(); }   // (a step no slow frame will draw between — a seek, a script's, a faster pace — ends the blend: nothing is ever drawn across it)
     this.hold(f + 1); return dt;
@@ -361,7 +361,7 @@ export class TapePlay {
     if (L.audio) { const p = g.player.char.pos; L.audio.setListener([p[0], p[1] + 1.6, p[2]], cam.forward); L.audio.update(dt, L.time); }
     L.smoke?.update(pdt);
     cam.update(dt, g.followPos(), null);
-    L.hud?.setCaption('', ''); L.hud?.setTimeline(null, () => { /* */ });
+    L.hud?.setCaption('', ''); L.hud?.setTimeline(null);
     cam.kickIn();
     try { g.fogLift(this.nofog, tube, g.viewPx(cam, h.canvas));   // (the fog taken off the picture and its HUD, the infrared lines the viewer's tube shows or does not, and laser lines / tracers re-fit to THIS picture's pixel — the step sized them for the recording's view — for this draw only; Game.fogBack puts the step's own lists back)
       if (blent) { try { tw!.pose(a); L.render(cam, tPic, pdt, L.present()); } finally { tw!.unpose(); } }   // (the blend hangs on the drawn things for the render alone: the HUD below, and the next step, read the game's own)
@@ -597,7 +597,7 @@ body.taping #equip{bottom:calc(86px + (var(--tape-h,44px) + var(--sndl-h,0px)) /
 body.taping #meters{bottom:calc(16px + (var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1))}
 body.tapetight #equip,body.tapetight #meters{visibility:hidden}
 body.taping #log{bottom:calc(44px + (var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1))}
-body.taping #checkpoint,body.taping #journal{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))}
+body.taping #checkpoint{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))}
 body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1)) !important}
 #tapebar .say.off{color:#ffb35c;opacity:1}
 #tapebig{position:fixed;left:0;right:0;top:0;bottom:calc((var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1));z-index:69;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#e9e2d6;font:14px var(--m-head,system-ui),system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}

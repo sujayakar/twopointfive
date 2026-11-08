@@ -248,7 +248,7 @@ export interface LessonStep {
   /** the line while a page UNDER the ring's first is showing (the first page's key pressed: what is left to press — absent: `menuLine`) */
   pageLine?: string;
   /** the line while the squad's ring is up as ONE ring of every order of the thing (a mission whose `rails.flatRing` is set, game/rails.ts RAILS.flatRing:
-   *  what to press in it — absent: `menuLine`). The digit it names is the wedge the row is on with this level's `rails.orders` (tools/qa/rails-check.ts asks) */
+   *  what to press in it — absent: `menuLine`). The digit it names is the wedge the row is on with this level's `rails.orders` */
   flatLine?: string;
   done: LessonTest;
   /** seconds the test must stay true before the step counts (absent: the frame it turns true) */
@@ -333,7 +333,7 @@ export interface LessonData {
 
 /** A PAR (game/par.ts): the level's room clear run AGAINST A CLOCK. The clock runs from the squad's first order (or Sam's first stride off his start) to the
  *  room clear's 'taken'; every teammate lost adds `lossSecs`; the total is held against three times, best first (gold < silver < bronze, seconds). The par only
- *  READS the game: a level with the block plays the same run with it switched off (PAR.on). Only beside a `roomClear`. */
+ *  READS the game: a level with the block plays the same run as one without it. Only beside a `roomClear`. */
 export interface ParData { gold: number; silver: number; bronze: number; lossSecs: number }
 /** A MISSION'S OWN ISSUE (game/kit.ts kitIssue): kit this level hands the squad whatever the machine keeps, with no visit to the loadout screen. `members` is
  *  keyed by the man's place on the roster ('0' = you, '1'‥'4' = the teammates in order); each record is the FIELDS THAT DIFFER from his issue card (kit.ts
@@ -347,41 +347,6 @@ export interface IssueCard { weapon?: 'rifle' | 'pistol' | 'shotgun'; suppressed
    *  as above). The stealth tutorial names the grenade, so that its lesson is the swap to the sponge round before the right button is his */
   loaded?: 'ring' | 'he40' }
 export interface IssueData { members: { [place: string]: IssueCard } }
-/** A SNATCH (game/snatch.ts — an overlay on a level's ROOM CLEAR, as a lesson is one on a mission): ONE unarmed man the team has to take alive. He is a
- *  civilian of the usual make (game/civilians.ts: his eyes, his ears, his run, his hands on his head), put on the floor at every staging of the room clear;
- *  the overlay adds who he gives up to, which way out he will not run at, and what ends the mission. A level without the block is the game as it was. */
-export interface SnatchData {
-  /** who he is and where he keeps while the floor is quiet: `points` (default: `pos` alone) are the marks he moves between, `wait` the seconds at each */
-  man: { name: string; pos: Vec3; face: number; tint: Vec3; tint2?: Vec3; points?: Vec3[]; wait?: number[] };
-  /** the WAYS OFF THE FLOOR he runs for once it is loud (nearest first by walking): a spot beyond a gate or an outside door — on it, he is gone */
-  exits: { name: string; pos: Vec3 }[];
-  /** THE WAY HE IS TAKEN OFF THE FLOOR (game/snatchout.ts, while its switch is up): the team's own vehicle by its way in — `pos` is the spot at its open doors a
-   *  man is put in from. Tied, he is led there by the player and the mission is won the moment he is in it, the house taken or not. Without the key, or with the
-   *  switch off, the snatch ends as it did: the house taken with him in hand. */
-  van?: { name: string; pos: Vec3 };
-}
-
-/** A DEFUSE mission's overlay on a room clear (game/defuse.ts): timed charges in rooms of the structure, all on ONE clock. A charge is made safe by a man
- *  standing at it and working it `workSecs`; the clock running out sets off every charge still live — a real blast where it stands. Read by game/defuse.ts
- *  and by nothing else: a level without the block is the room clear as it was. */
-export interface DefuseDevice {
-  id: string;
-  /** the objective row's and the order menu's words for it ('charge 1': a name the level shows — no compass words, the HUD has none) */
-  name: string;
-  /** the point on it a hand goes to (world; y = the height of the thing it sits on) */
-  pos: Vec3;
-  /** the planar unit normal out of it, toward the floor a man stands on to work it */
-  n: [number, number];
-}
-export interface DefuseData {
-  /** the one clock, seconds from the team's first move */
-  secs: number;
-  /** seconds of work at a charge to make it safe (absent: game/defuse.ts DEFUSE.workSecs) */
-  workSecs?: number;
-  devices: DefuseDevice[];
-  /** the blast of one charge (absent: game/defuse.ts DEFUSE's) — frag.ts blast()'s radii and the destruction engine's */
-  blast?: { lethalM?: number; woundM?: number; radius?: number; power?: number };
-}
 /** THE KIT VIEW (src/host/kitView.ts — the start page's Team & kit step shows the team as picked, stood at the mission's own way-in door, drawn by a second
  *  instance of the page opened `?kitview`): where the men stand and how the camera looks, per WAY IN. `ways` is indexed as the team starts are — [0] the
  *  structure's own `team`, [k] its `starts[k − 1]` (roomclear.ts RoomClearScenario.way). A way needs only its `door` (a door id): the slots, the camera and the
@@ -533,7 +498,7 @@ export interface ResponseData {
    *  raids only; one without answers a quiet night gone loud, never a raid */
   raid?: { room?: string };
 }
-export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: StructureData; rescue?: RescueData; places?: PlacesData; quiet?: QuietData; lesson?: LessonData; par?: ParData; snatch?: SnatchData; defuse?: DefuseData; issue?: IssueData; kitView?: KitViewData; response?: ResponseData;
+export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: StructureData; rescue?: RescueData; places?: PlacesData; quiet?: QuietData; lesson?: LessonData; par?: ParData; issue?: IssueData; kitView?: KitViewData; response?: ResponseData;
   /** WHAT A DOOR IS CALLED where its id cannot say it (game/doornames.ts, words.ts WORDS.doors): a row a door — its id and the name on the squad's rows
    *  and in a defender's call, written as it is read there ('yard gate', 'records side door': no 'the'). For a door whose id carries a bearing or a letter
    *  and that the room clear structure does not list (or a level with no structure): the HUD has no compass. No bearing in a name, no two doors of a level
@@ -555,7 +520,7 @@ export const MISSION_GROUPS: { id: MissionGroup; title: string; line: string }[]
   { id: 'tutorial', title: 'Tutorial', line: 'The game, a mission at a time' },   // (game/rails.ts: missions on rails — one thing at a time, everything not yet met switched off)
   { id: 'raids', title: 'Raids', line: 'Small buildings, up to seven defenders' },   // (where a squad's mission that names no group falls: ui/missions.ts groupOf)
   { id: 'strongholds', title: 'Strongholds', line: 'Eight to eleven defenders' },
-  { id: 'clock', title: 'On the clock', line: 'A hostage, a runner, a charge or a par time' },
+  { id: 'clock', title: 'On the clock', line: 'A hostage or a par time' },
   { id: 'quiet-alone', title: 'Quiet, alone', line: 'Light, noise and cameras' },
   { id: 'quiet-two', title: 'Quiet, as two', line: 'You and one partner, silent from the start' },
 ];
@@ -576,7 +541,7 @@ export interface ScenarioEntry {
    *  squadChoices). A design call, not an inability: the level still stages any size from a URL or a harness tool (loadout-probes.ts knows the difference) */
   only?: string;
   /** a lesson THE PLAYER PACKS FOR (kit.ts ISSUE.picked): its Team & kit step shows the cards and its page stages what this machine keeps, not the plain issue
-   *  every other lesson is played with. A row that carries it has a plan written for it (ui/kitPlan.ts). `frags` = the least of them he carries there whatever
+   *  every other lesson is played with. `frags` = the least of them he carries there whatever
    *  he packs (kit.ts kitLessonPage: a step of that mission asks for one of his own) */
   packs?: { frags?: number };
   /** a file under levels/ (absent = the bundled office) */

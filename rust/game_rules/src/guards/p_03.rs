@@ -120,13 +120,6 @@ pub fn pair_sight_rate(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards
     rate
 }
 
-/// Forget the probe's answers under the held man's keys. (guards.ts forgetHeldMeter)
-pub fn forget_held_meter(g: &mut crate::game::Game, gd: GuardId) {
-    let id = g.ch[g.gd[gd].ch].id;
-    crate::game::game_light_forget(g, &format!("heldC{}", id));
-    crate::game::game_light_forget(g, &format!("heldH{}", id));
-}
-
 /// The held man's own light meter while he is held, kept per hold; started over for a new hold and for a pair unmetered for a gap that has moved. (guards.ts heldVisibility)
 pub fn held_visibility(g: &mut crate::game::Game, p: &crate::guards::Pair) -> f64 {
     let hd = p.held;
@@ -141,14 +134,13 @@ pub fn held_visibility(g: &mut crate::game::Game, p: &crate::guards::Pair) -> f6
     };
     if stale {
         row = None;
-        forget_held_meter(g, hd);
     }
     if let Some(r) = &row {
         if r.t == now {
             return r.vis;
         }
     }
-    let e = meter_of(g, hc, "held");
+    let [_, e] = light_on(g, hc);
     let dt = match &row {
         Some(r) => m::min(0.1, m::max(0.0, now - r.t)),
         None => 0.1,
@@ -299,7 +291,7 @@ pub fn hostage_call(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pa
         crate::belief::word(g, o, p.sam);
         if was_calm {
             let d = v3::dist(g.ch[g.gd[o].ch].pos, p.sam);
-            let roll = crate::math_dice::sim_random(g);
+            let roll = crate::dice::draw_of(g, "guards::hostage_call#1", gd);
             g.gd[o].react_t = m::max(g.gd[o].react_t, 0.25 + m::min(1.2, d / 25.0) + roll * 0.4);
         }
     }
@@ -510,7 +502,7 @@ pub fn standoff_bark(g: &mut crate::game::Game, gd: GuardId, moment: crate::guar
         return;
     }
     let n = pool.len() as f64;
-    let mut i = js::rem(m::floor(crate::math_dice::sim_random(g) * n), n) as usize;
+    let mut i = js::rem(m::floor(crate::dice::draw_of(g, "guards::standoff_bark#1", gd) * n), n) as usize;
     if pool.len() > 1 && g.m.guards.last_bark.get(gd).map_or(false, |l| l.as_str() == pool[i]) {
         i = (i + 1) % pool.len();
     }

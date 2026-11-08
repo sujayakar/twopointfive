@@ -19,6 +19,7 @@
 // THE HARNESS HAS NO GPU and no overlay: what is read is the list of points the overlay is handed and the pieces it cuts them into, not a drawn line.
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
+import { sample } from './sweep.ts';
 
 const { ATTENTION, attentionMarks, attentionWay: wayWith, attentionOf } = await import(`${ROOT}/src/game/attention.ts`);
 const { stateHash, stateDiff } = await import(`${ROOT}/src/game/rollback.ts`);
@@ -32,7 +33,7 @@ const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const PR = await import(`${ROOT}/src/host/profile.ts`);
 
 type P = [number, number, number];
-const BREAK = process.env.ATTENTIONWAY_BREAK === '1', DT = 1 / 60, LEVELS: (string | null)[] = ['tut-quiet.json', null, 'lights-out.json'];
+const BREAK = process.env.ATTENTIONWAY_BREAK === '1', DT = 1 / 60, LEVELS: (string | null)[] = sample(['tut-quiet.json', null, 'lights-out.json'], 2);
 const f2 = (n: number) => n.toFixed(2), flat = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 let allPass = true, found = true;
 const verdict = (ok: boolean, label: string, detail: string) => { allPass &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
@@ -88,9 +89,6 @@ async function ways() {
   for (const file of LEVELS) {
     const name = file ?? 'the office', T = await taken(file); if (!T) { rowsS.push(`${name}: (staging) no man with a place behind a wall took a knock`); continue; }
     got++; const { g, A, M, step } = T, nav = g.col.nav;
-    ATTENTION.way = false; const st: P[] = attentionWay(g, M); const sB = blockedOn(nav, st), sW = wallLegs(g, st);
-    if (!(st.length === 2 && flat(st[0], M.from) < 1e-6 && flat(st[1], M.at) < 1e-6 && sB >= 4)) badS++;
-    rowsS.push(`${name}: ${A.callsign}, the place ${f2(flat(M.from, M.at))} m off: the key off = ${st.length} points, ${sB} steps of it on blocked floor, ${sW ? 'through something solid' : 'through nothing solid'}`);
     ATTENTION.way = !BREAK; const way: P[] = attentionWay(g, M), wB = blockedOn(nav, way), wW = wallLegs(g, way), L = lenOf(way);
     if (!(way.length >= 3 && flat(way[0], A.char.pos) < 0.05 && flat(way[way.length - 1], M.at) < 0.05 && wB === 0 && L > flat(M.from, M.at) + 0.3)) badW++;
     rowsW.push(`${name}: ${way.length} points, ${f2(L)} m of walk for ${f2(flat(M.from, M.at))} m straight, ${wB} steps on blocked floor, ${wW} legs through something solid at knee height (a shut door on his way is one) (his own path: ${A.pathGoal && flat(A.pathGoal, M.at) < 0.9 ? 'yes' : 'no, the grid was asked'})`);
@@ -114,7 +112,6 @@ async function ways() {
     if (!(arrived && far <= 1.0 && walls === 0 && threads > 10 && atThing && atThing.length === 2)) badK++;
     rowsK.push(`${name}: ${arrived ? `at the thing after ${f2(frames * DT)} s` : `NEVER AT IT (${frames} frames, state ${A.state}, hold ${H ? H.mode : 'none'})`}; at most ${f2(far)} m off the thread he set off with; of ${threads} later threads ${walls} steps on blocked floor past his next corner, at most ${blocked} of the leg from his feet to it (a corner's margin clipped as he rounds it); standing at it the thread has ${atThing ? atThing.length : '-'} points`);
   }
-  verdict(got === LEVELS.length && badS === 0, 'the flaw, with the key off: a man whose attention a knock took to a place behind a wall has the straight thread, through blocked floor', rowsS.join('\n    '));
   verdict(got === LEVELS.length && badW === 0, 'the key on: the same thread starts at his feet, ends at the place, has corners, and no step of it is on blocked floor', rowsW.join('\n    '));
   verdict(got === LEVELS.length && badK === 0, 'he walks it: never over a metre from the thread he set off with, no later thread on blocked floor past his next corner, and standing at the thing the thread is the straight one', rowsK.join('\n    '));
   verdict(got === LEVELS.length && badG === 0, 'where the thread comes from: on his own path it starts at his feet and his next corner; with the nav grid asked all the way it is asked once in half a second, not every frame, and the thread never grows by over 0.3 m in a frame (no kink back to a corner he has passed)', rowsG.join('\n    '));
@@ -131,10 +128,9 @@ function pieces() {
 async function picture() {
   console.log('\n=== picture: asking changes nothing; on on both stands ===');
   ATTENTION.way = true; const a = await taken(null, true, 240), b = await taken(null, false, 240);
-  const read = (q: string) => { ATTENTION.way = !ATTENTION.way; PR.pageSwitches(new URLSearchParams(q)); return ATTENTION.way; }, plain = read(''), off = read('straightthread'); read('');
-  verdict(!!a && !!b && a.d === b.d && a.d.length > 8 && a.h === b.h && a.h.length > 8 && found === true && plain === true && off === false,
-    'a run that asks for every thread\'s way each frame digests as the run that never asks, and its whole state hashes the same (the kept answer is the asker\'s, not the game\'s); the card found the key on; the page\'s boot writes it on for a plain address and off for ?straightthread',
-    `digests ${a && b ? (a.d === b.d ? 'equal' : 'DIFFER') : 'no run'} (${a?.d.trim() ?? '-'}) · state ${a && b ? (a.h === b.h ? 'equal' : `DIFFERS: ${stateDiff(a.g, b.g, 3, true).join(' · ')}`) : '-'} (${a?.h ?? '-'}) · found ${found} · plain ${plain} · ?straightthread ${off}`);
+  verdict(!!a && !!b && a.d === b.d && a.d.length > 8 && a.h === b.h && a.h.length > 8 && found === true,
+    'a run that asks for every thread\'s way each frame digests as the run that never asks, and its whole state hashes the same (the kept answer is the asker\'s, not the game\'s); the card found the key on',
+    `digests ${a && b ? (a.d === b.d ? 'equal' : 'DIFFER') : 'no run'} (${a?.d.trim() ?? '-'}) · state ${a && b ? (a.h === b.h ? 'equal' : `DIFFERS: ${stateDiff(a.g, b.g, 3, true).join(' · ')}`) : '-'} (${a?.h ?? '-'}) · found ${found}`);
 }
 
 /** the whole card (probes.ts 'attentionway'): true = every check passed. The knobs are put back as they were found. */

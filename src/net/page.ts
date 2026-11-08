@@ -7,7 +7,7 @@
 // WHO STEPS THE GAME: this file, through the loop's `tick` seam (host/loop.ts LoopCtx.tick). On each tick of the page the player's input is sampled into a
 // record (game/cmd.ts sampleCmd, off the page's own camera) and SENT; the game itself is stepped only through the ticks the server has confirmed, each on the
 // records the server decided, by step.ts netStep — the one tick every machine runs. So this page's game is the server's to the bit, and its state word is held
-// against the server's every NET.wordEvery ticks. Round those ticks it does the host's half of one (Game.hostBefore / hostAfter: update's own lines).
+// against the server's every NET.wordEvery ticks. Round those ticks it does the host's half of one (Game.hostAfter: update's own lines).
 // HOW FAST: a page tick walks one confirmed tick, two while more than NET.lead wait (the page's clock and the server's are two clocks). A page far behind
 // (NETPAGE.far ticks: it joined late, its tab slept) CATCHES UP as a replay seeks — the mixer shut, as many ticks a page tick as fit in NETPAGE.farMs, its
 // hands off the keys, nothing drawn between two of those ticks, and the picture's queues let go when it is level again (engineplay.ts unseenDone). Nothing smooths a tick that came late: no playout buffer is built.
@@ -28,7 +28,9 @@ import type { Input } from '../game/input';
 import type { View } from '../host/hud';
 import type { PlayerCmd } from '../game/cmd';
 import { sampleCmd } from '../game/cmd';                    // (game exports are called inside functions only: src/game is one import cycle)
+import { irMade, irViewer } from '../game/irlaser';
 import { activeScenario } from '../game/scenarioRun';
+import type { Box } from '../scene/boxes';
 import type { Stand } from '../host/ahead';
 import { RecipeStand } from '../replay/recipestand';
 import { recipeSearch, unseenDone } from '../replay/engineplay';
@@ -89,7 +91,7 @@ export interface NetHost {
   audio: { enabled: boolean; setVolumes(): void };
   loop: { tween?: { stale: boolean; rest(): void } | null };
   /** the picture's half of the prediction (host/ahead.ts AheadDraw): told, each page tick, where the game has the player's man and where his records take him */
-  ahead?: { capture(id: number, from: Stand, to: Stand): void; rest(): void; last?: unknown; readonly draws: number } | null;
+  ahead?: { capture(id: number, from: Stand, to: Stand): void; rest(): void; last?: unknown; readonly draws: number; hides: (() => ((b: Box) => boolean) | null) | null } | null;
 }
 export interface NetPageState { seat: number; state: string; confirmed: number; heard: number; behind: number; far: boolean; wordsOk: number; bad: { t: number; server: string; mine: string } | null; word: string;
   /** the wider word, watched (client.ts): word ticks it was the server's, was not, and the first that was not */ watchOk: number; watchOff: number; watchFirst: number | null;
@@ -196,6 +198,9 @@ export class NetPlay {
     if (activeScenario(g) !== this.recipe?.scenario || g.seats.length !== c.welcome?.seats) { this.alone = h; this.refuse = CANT_PLAY; this.close(); this.say(this.refuse); return; }   // (…and plays on as its own game under the words: tick below)
     this.host = h; netStand(g);
     if (c.seat >= 0) g.localSeat = g.seats[c.seat];   // (the seat this page plays is the one it shows — game/seats.ts: its man under the camera, its HUD, its record sampled; a watcher keeps the first. The simulation never reads it)
+    // (another player's goggles: an infrared line is in the frame's list on EVERY machine of a game once any player wears his — the Rust tick's ir_viewer asks
+    //  every seat's man, so that the machines hold one game. A page whose own man's eyes are bare leaves them out of what it draws)
+    if (h.ahead) h.ahead.hides = () => g.seats.length > 1 && !irViewer(g) ? irMade : null;
     const restart = g.restart.bind(g);   // (the player's restart: inside a tick — a key in a record — it is every machine's; from OUTSIDE one — a card's button — it is this page's alone, so not this page's to do)
     g.restart = said => { if (this.stepping) restart(said); else this.pass('You can’t restart a co-op game from here.'); };
     const load = g.saves.load.bind(g.saves);   // (…and a checkpoint's load, the same: the words are the card's own 'why it would not load')
@@ -209,7 +214,6 @@ export class NetPlay {
   tick(_dt: number, input: Input, cam: FollowCamera, view: View): void {
     const h = this.host; if (!h) { const a = this.alone; if (a) { a.game.update(_dt, input, cam, view); a.engine.lights.update(_dt, a.game.time); } return; }   // (refused once stood: the loop's own tick)
     const g = h.game, c = this.client, now = performance.now();
-    g.hostBefore(input);
     if (c.behind >= NETPAGE.far) this.catching(true);   // (BEFORE the record: a page that wakes far behind sends no key made at a picture seconds old)
     if (c.seat >= 0 && c.state !== 'waiting') { if (this.audioWas === null) c.beat(this.cmd = sampleCmd(g.hostSeat().view, input, cam, view, this.cmd), now); else c.rest(now); }
     this.walk(); this.foresee();

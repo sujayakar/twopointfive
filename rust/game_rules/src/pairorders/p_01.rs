@@ -32,7 +32,7 @@ pub fn look_of(g: &Game, h: GuardId) -> [f64; 2] {
 pub fn pair_orders_new(g: &mut Game) -> crate::pairorders::PairOrders {
     // (SquadOrdersPeople has no fields: being set is what orders' squad_orders_people_near and _ray test)
     g.orders.people = Some(crate::orders::SquadOrdersPeople::zeroed());
-    g.orders.notes.push(crate::orders::OrderNoteFn::Pair);
+    crate::orders::squad_orders_voice(g, crate::orders::OrderNoteFn::Pair);
     crate::pairorders::PairOrders::blank()
 }
 
@@ -51,19 +51,30 @@ pub fn pair_orders_quiet(g: &Game, seat: &crate::seats::SeatRef) -> bool {
 }
 
 /// a man an order can be about: standing, on the other side from Sam, not in Sam's arm, and seen   (PairOrders.isFoe)
-pub fn pair_orders_is_foe(g: &mut Game, h: GuardId) -> bool {
+pub fn pair_orders_is_foe(g: &Game, h: GuardId) -> bool {
     let team = g.gd[h].team;
     g.gd[h].state != crate::game::GuardState::Dead
         && team != crate::teams::Team::Operative
         && crate::teams::is_hostile(g, crate::teams::Team::Player, team)
         && g.gd[h].held.is_none()
-        && !crate::fogofwar::fog_of_war_hidden(g, h)
+        && !crate::fogofwar::fog_of_war_hides(g, h)
 }
 
 /// he has noticed somebody: roused, searching, or his meter past the silent order's own `noticed`   (PairOrders.noticed)
 pub fn pair_orders_noticed(g: &Game, h: GuardId) -> bool {
     let s = g.gd[h].state;
     s == crate::game::GuardState::Alert || s == crate::game::GuardState::Search || g.gd[h].awareness >= g.k.silent.noticed
+}
+
+/// the squad block's line while men wait on the mark: who takes whom, and what stands in his way   (pairorders.ts's note)
+pub fn pair_orders_mark_note(g: &Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
+    if !g.pair.seated { return Vec::new(); }
+    let mine = crate::orders::squad_orders_squad(g, seat);
+    let rows: Vec<String> = pair_orders_waiting(g).into_iter().filter(|(gd, _)| mine.contains(gd)).map(|(gd, j)| match j.watcher {
+        Some(w) => alloc::format!("{} takes {} anyway ({} is watching)", g.gd[gd].callsign, name_of(g, j.foe), name_of(g, w)),
+        None => alloc::format!("{} takes {}{}", g.gd[gd].callsign, name_of(g, j.foe), if j.set { "" } else { " (not set)" }),
+    }).collect();
+    if rows.is_empty() { Vec::new() } else { alloc::vec![crate::view::Note { key: String::from("F"), text: alloc::format!("mark · {}", rows.join(" · ")) }] }
 }
 
 /// the men waiting on the mark; each row a COPY: a writer goes back to g.pair.jobs by the man   (PairOrders.waiting)
@@ -1092,7 +1103,7 @@ pub fn pair_orders_lit_cell(g: &mut Game, x: f64, z: f64) -> f64 {
 pub fn pair_orders_lit_at(g: &mut Game, p: V3) -> f64 {
     let at = [p[0], g.k.pair.dark_h, p[2]];
     let mut any = |_g: &mut Game, _o: f64| -> bool { true };
-    let e = crate::guards::light_estimate_at(g, at, Some(&mut any), Some(true), None, None, None);
+    let e = crate::guards::light_estimate_at(g, at, Some(&mut any), Some(true), None);
     crate::game::game_visibility_of(g, e)
 }
 

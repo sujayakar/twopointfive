@@ -61,9 +61,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the software adapter. FLAT DECALS THAT CROSS ARE 0.7 MM APART (`tools/levels/flatLayers.ts`, `FLAT_STEP`; the maintainer, 10-11, on the block: "seeing some zorder issues on the floor"): the skins used to tell two crossing floor decals apart by 20 µm, under one step of the depth buffer at the camera's own 21 m (depth32float, near 0.5: about 1.2e-7 × z² m a step — 52 µm at 21 m, 190 µm at 40), so on a GPU every pixel of an overlap went to either paint; `skinLevel` now ends on `layFlats` (two flat decals of DIFFERENT paint that overlap on the plan, or a decal and a thin flat of the level itself, have their tops ≥ 0.7 mm apart, the order the skin wrote kept, nothing moved down, no centre across a centimetre so a checkpoint's level fingerprint is the same), `export.ts` prints how many it raised, and `probes.ts look` holds it per look file (`LOOK_BREAK=1` must fail). A new site that lays a floor decal needs no height of its own beyond the ORDER it wants. EVERY LEVEL'S OWN FLOOR IS SWEPT TOO (the maintainer, 10-11, on Training 3: "more bad zsorting in tutorial level" — the gravel court and the generator slab lay over the yard's dirt with all three tops at 4 mm): `tools/levels/export.ts` runs `flatLayers.ts layFloor` over every level it writes, before the look's skin — everything drawn whose top face is at the floor (ground finishes, mats, floor decals; `isFloorFlat` / `atFloor`), in TIERS (the generator's boxes, then its lived things, then the dressing: a later tier never moves an earlier one, so a level with its furniture or dressing left out is the same level), a SOLID finish raised by growing 0.7 mm thicker with its underside where it was, a decal lifted whole; `isFlat` and the skin's `under` reach 5 cm up now (marks laid on a carpet). `bun run tools/qa/floor-order-check.ts` (`probes.ts floororder`, also under `look`; `FLOOR_BREAK=1` must fail) holds it in EVERY level file, the office's included. A re-export that moves heights wants its commit at the front of `tools/qa/lived-check.ts`'s base revisions (the levels owner's list). The class's real fix is a reversed depth buffer — the renderer's, not done. A SKIN'S DECALS ALL START AT THE FLOOR (rugs, patches, wear at every door, the damp foot + the strip of ground along an outside wall, a painted dado in
   lived-in rooms; `skinLevel` throws and `probes.ts look` is red on one that does not): wallbreak.ts lets a drawn-only static that hangs OFF the floor fall when what it touches breaks
   (debris, a sound — a run would differ), and never asks one that starts at the floor. A decal on a wall's face is hidden with its wall when the wall is holed by `src/scene/lookTidy.ts`
-  (called once a frame by main.ts; picture only; whole with the wall's box, on any level that carries one of the look's paints and no other). The same file has the look's two other page-only passes: a GROUND decal goes wet and dry with the
-  ground under it (the storm soaks the lot in place and knows nothing of decals: render-only `Box.wetK` + the ground's finish, `albedo` never written), and `lookDoors` (once, after the game stands,
-  under the switch) repaints the door LEAVES of a level that wears the look — outside doors in the level's accent paint (its row in `look.ts LOOK_DOORS`, keyed by the level's own file; without a row the accent is counted off its boxes among blue / green / oxide red, army green where none), inside ones weathered wood or the row's `in`; steel doors and the office are left alone. Wear is the ground's own colour darker (`SkinTools.tone(floorAt(x, z), k)`), never paler; THE PALETTE'S GROUND IS DARKER THAN ITS WALLS
+  (called once a frame by main.ts; picture only; whole with the wall's box, on any level that carries one of the look's paints and no other). The same file has the look's other page-only pass: a GROUND decal goes wet and dry with the
+  ground under it (the storm soaks the lot in place and knows nothing of decals: render-only `Box.wetK` + the ground's finish, `albedo` never written). `leafPaint.ts paintLeaves` (as the game is stood, where its doors are made, on every host,
+  under the switch) paints the door LEAVES of a level that wears the look — outside doors in the level's accent paint (its row in `look.ts LOOK_DOORS`, keyed by the level's own name; without a row the accent is counted off its boxes among blue / green / oxide red, army green where none), inside ones weathered wood or the row's `in`; steel doors and a level with none of the look's paints are left alone (the office carries them today, so its inside doors are wood). Wear is the ground's own colour darker (`SkinTools.tone(floorAt(x, z), k)`), never paler; THE PALETTE'S GROUND IS DARKER THAN ITS WALLS
   on purpose (midday exposure flattens earth tones: `gwotPalette.ts`'s ground comment), and a repaint of an unnamed non-steel box must not be a plain grey or white (`steelGrey` would
   make it a steel cabinet — the skin's check throws). THE MEN'S DRESS FOLLOWS THE PLACE (the maintainer, 10-10: "middle eastern enemies also don't make sense for the office level"): on the OFFICE family the page boots the FIRST cast file and tables with the look on (`look.ts setLookPlace(placeOfQuery(q))` in main.ts before the cast is fetched; `lookDress()` = what `castFile()` / `charMatsOf` / `charMatsVersion` ask, `lookOffice()` = `cast.ts officeDress`: of the first cast's defenders only the ones dressed for a building — no straw hat, boonie, bandana, bandolier or vest top), the sneaking suit as on any level; not a knob, and everything headless leaves the place true (`probes.ts cast-look` holds both). THE MEN: a second cast file `public/assets/chars/cast-gwot.gltf` (`tools/chars/build_cast.py --look gwot`; `gltf.ts castFile()`
   picks by the switch — helmets and plate carriers, pakol / turban / shalwar kameez) and `charMaterials.ts CHAR_MATS_LOOK` (`charMatsOf(side)`: MultiCam-toned operators with small pair
@@ -338,7 +338,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and `scenarios.roomClear.wallCharges` (wall charges of its own, whatever the cards carry: nobody is issued one). The listing's row for a mission
   says the sizes it offers, whether the cards can be changed there, the level's own kit, its locked and steel doors against the two door charges a
   squad is issued (no hammer or shotgun opens steel, and only a team of three or four as issued is lent a big-slot tool: `KITDEAL.more`, menus.md), whether frags can be ordered at all (never with a hostage,
-  the man a snatch came for or a civilian in the blast: `squadthrow.ts`), and whether the Team & kit picture has a place for each way in
+  a civilian in the blast: `squadthrow.ts`), and whether the Team & kit picture has a place for each way in
   (`scenarios.kitView.ways`). A listing, not a gate: it always exits 0.
 - **THE LEVEL SKILL AND ITS ONE COMMAND** (10-18; tools and a list only: no switch, no game code, no level file touched). The maintainer, on a Team & kit
   screen where the blue pair carried a rifle and nothing else: "as issued still has blue team pretty empty" · "i think we should make something like a level
@@ -636,27 +636,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   leaf, for `doors` carry no finish in this tool; a prop), and the weaker share of the same blend in the diffuse gather and on presets with no
   traced reflections, which the named and strong counts are the place to look for. A mend for the reflections was being handed in when this was
   written; this number will not move with it.
-- **Round things are round** (`ROUND`, `src/scene/round.ts`, 10-23; the maintainer's pick on the geometry trial: round drums and tyres into the
-  game). ON in the page, `?round=0` puts it off; OFF in the module and on the frozen stand, `TPS_ROUND=1`; a `FROZEN_HOLDS` row; in the knob
-  registry and the journal. THE SWITCH IS READ ONCE, AS A LEVEL IS STOOD UP (`host/standup.ts populateHost`, before the boxes go to the world and
-  before `new Game`): a recording from before the table has it put down before its level stands (`roundTape`, called by `replay/engineplay.ts
-  tables()` and `tools/qa/rerun.ts tables()`; `applyKnobs` says the same afterwards; `tools/qa/replay.ts` says the file's word for its one
-  stand-up), and the debugger's row 'round things are round (reloads)' reloads the page with the word on the address. The level files are not
-  touched. The kit (`gwotKit.ts round`, radius 0.2 m or more: drums, tyres, stoves, the oven, the water tank) and three older generators (round
-  table tops and drums in lived-in rooms) write a round thing as FOUR slabs through one centre, 45° apart, their tops stepped 2 or 3 mm;
-  `findOctagons` finds them by that shape, and `roundLevel` makes the first slab ONE box with `Box.round` (the cylinder about the box's own y,
-  radius `h[0]` = 1.026 × the slabs' half length, the circle with the octagon's area, which is 0.985 of the radius the kit was asked for; half
-  height `h[1]`; yaw 0) and the other three specks that carry NoPrimary | NoShadow, so every box keeps its index. What each box was is kept on
-  it (`Box.was`), `roundLevel(…, false)` puts every box back, and the level's fingerprint is taken over the boxes as authored (`authoredC /
-  authoredH`).
+- **Round things are round** (`src/scene/round.ts`, 10-23; the maintainer's pick on the geometry trial: round drums and tyres into the game). THE FILE SAYS IT, SINCE
+  2026-11-07 (his word: "yeah seems like we should remove the round detector"): `BoxData.round`, one box, the cylinder about its own y, radius `h[0]` = `h[2]`, half height
+  `h[1]`, no yaw, rot, flags or shape, version 2 of the format (`docs/level-format.md`). There is no switch, no recogniser in the game or the lint, and no stand on which
+  a level's drums are slabs: until then two detectors, page and Rust, took four slabs through one centre for one round box at every stand-up and left three specks in the
+  list, 691 round things and 2,073 specks in 52 of 59 files. `tools/levels/round-convert.ts` made the files once, and refuses to carry a reference to a slab that left
+  unless the list named all four. The kits write the one box (`gwotKit.ts round`, `roundFace`, `roundRadius`, `roundMarks`; `livedKit`, `livedPieces`, `lived-train`,
+  `lived-quiet`, `officeGen` `pipe`); a drawn-only round is still four flagged slabs (`drawnRoundSlabs`), which nothing meets, 19 of them in the files today. Every
+  generator's run equals its converted file byte for byte (`export.ts --check`). `tools/qa/round-same.ts --base <hash>` stands every level by the tree before the
+  conversion and by this one and holds the round boxes to the bit (`ROUNDSAME_BREAK=1` red). THE STANDS: frozen numbers on levels with a round moved to what the page
+  plays, since the frozen stand had the slabs. A LEVEL WITH A ROUND CHANGED ITS FINGERPRINT, so older checkpoints and tapes of it are refused. THE PICTURE moved in one way: a mark's hand and wear are salted by its box's place in the list (`markings.wgsl markSurfaceGB`, `bi * 7 + k`), and every box after a round has a new place, so the paint on a drum's band or a crate's stamp wobbles differently. With that salt held still, the pass and the long hall came out with no pixel different on the software adapter. NEVER SEEN ON A GPU.
+  Below, what was written of the old form is kept where it says how a round is met; `?round`, `?roundexact`, `roundConfig`, `findOctagons`, `roundLevel`, `Box.was` are gone.
   ONE MODEL: CPU rays and segments (`boxes.ts rayBoxRound` behind `rayBox`, `collision.ts lineBox`, and the two fast paths in `segmentBlocked`
   and the dynamic walk hand a round box to them), MOVEMENT (`collideCircle` pushes a body straight out from the axis, `circleTouches` asks circle
   against circle, so the walk grid is baked round too), GPU rays (`common.wgsl isectRound`, called from `isectBox` behind the scene prelude's
   `const ROUND_BOXES` on a box whose flags word carries `GEO_ROUND`; the side answers the code `ROUND_SIDE` and the closest-hit walks ask
   `roundNormalAt` — in a program compiled WITHOUT the cut rule; one compiled with it traces the picture's prism, THE CUT SET below), and the picture (the g-buffer's cut pass draws a twelve-sided prism standing round the cylinder, shaded with one turning
   normal, its marks run round it, a rolled rim on the lid: `gbuffer_cut.wgsl`, the ROUND block). Round wins over a cut record in every one of
-  them; nothing gives a round box one. THE GPU HALF RIDES THE CUT TABLE AND THE CUT PIPELINE BUT NOT THE CUT RULE: `roundConfig.gpu` is set at
-  boot (`main.ts`: the switch AND the cut switch); a round box has no `BOX_CUT_BIT`, its prism's eight planes sit in its own rows of the cut
+  them; nothing gives a round box one. THE GPU HALF RIDES THE CUT TABLE AND THE CUT PIPELINE BUT NOT THE CUT RULE: it goes with the cut switch; a round box has no `BOX_CUT_BIT`, its prism's eight planes sit in its own rows of the cut
   table with `ROUND_CORE_W` in the core row, it is listed at the cut list's picture-only end, and `BoxWorld.cutTraced` does not count it, so the
   cut swap (`render/cutSwap.ts`, "a calm room pays nothing") is as it was and every ray program holds a round rule from boot (the cylinder's in
   the calm set, the prism's in the cut set). SINCE 2026-11-07 THERE IS ONE SET (`docs/agents/render.md`): every ray meets a round as its prism at all
@@ -717,7 +714,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   distance; tut-pair's seven chewable drums one cell each; a save loading with the switch as saved and across it; a lone
   round's walk grid a disc; ten seconds of the pass with the switch down the same run by digest on a level that was rounded and put back;
   fingerprint, stands, an old recording; the box world's words, rows and lists with the GPU half up and down. PAGE: `node
-  tools/qa/round-page.cjs --root . --out <dir>` boots the pass twice on the software adapter (`round=0` and as it opens), wants every pipeline
+  tools/qa/round-page.cjs --root . --out <dir>` boots a level on the software adapter, once for each checkout it is run on, wants every pipeline
   compiled and no console or GPU error, and writes a still of the brazier from each.
   EVERY LEVEL'S ROUND THINGS, WHERE THEY STAND (`round-check` line 4c; the routine is `tools/qa/round-lib.ts probeRound`, and line 4's brazier
   is handed to the same one): no recorded run reaches most round things (the depot's ten tyres became round and no play-through result
@@ -921,22 +918,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   run by digest; the vault's scripted runs (five plans, the breaker's among them, seeds 1 and 2) and Lights out's (three plans), each record the same.
   No mission of the list's 21 loads one of the eight, so the 42 say nothing of them (they are the same too). A checkpoint or a recording made on one of
   the eight before this is refused after it: the level's fingerprint reads every box to the centimetre. Never seen on a GPU and not played.
-- **THE SMOKE LAB'S FLOOR** (11-01; `levels/smoke-lab.json` from `tools/levels/smoke-lab.ts`, the GWOT kit; opened by the dev server's `/smokelab`, in no
-  mission list, nobody on it but Sam; the lab's panel is `docs/agents/render.md`, THE SMOKE LAB). The maintainer asked for "a separate smoke lab that's more
-  suited to playing with it". Each place shows one thing smoke does and is there for nothing else: the YARD (open ground under the sky and a low wall of
-  sandbags: the wind takes smoke, and smoke parts round a thing), the TUNNEL (a roofed passage 16 m long up the screen, shut at its far end, its mouth to the
-  camera: smoke rolls down a passage and out), the KITCHEN (a door to the yard, a door to the pantry and a window hole with no glass: smoke leaks through a
-  hole all the time and through a door when it opens), the PANTRY (the room beside it, shut by its two doors) and the SHED (four walls and one door: a shut
-  room fills). TWO LIT FRONTS (11-01, the maintainer: "can we add something like the lit sign (or the vending machine from the office) to smoke bench to
-  test it?"): the office's red and blue vending machines, its own boxes and markings at its own brightness, backs to the house's yard wall between the
-  kitchen's window and the pantry's door, facing down the screen, switchable group `fronts`: a bright sharp thing to look at through smoke and a light
-  that colours it. Never seen on a GPU there. Five doors, three roofs, a bulb a room, two in the tunnel, one floodlight and a moon. Level data only: no switch, no game code. Check:
-  `bun run tools/qa/smokelab-check.ts` (the file is its generator's; by the renderer's own floor plan the shed and the pantry are shut rooms with their doors
-  shut, the kitchen is joined to the yard by its window, the tunnel by its mouth, the two rooms are one with the door between them open; roofs; the page's
-  address; no mission names it; `SMOKELAB_BREAK=1` leaves the shed's door open and fails). `level-needs smoke-lab` passes with two notes (no mission row; 211 m²
-  of the yard is one finish, left bare on purpose: nothing there should stop the wind). Every bulb is lit. The address opens it at a dry dusk (`&hour=dusk&weather=clear`: the plain page's own night came up in rain, which is noise over
-  smoke); an hour or a weather on the address wins. Drawn on the software adapter only (the whole floor at dusk with cans burning in the yard, the tunnel,
-  the kitchen and the shed, no GPU errors): never seen on a GPU, and nobody has thrown smoke on it by hand.
 - **The library: every object and every paint, once (`docs/library.md`, dress every level, 11-03; tools and level data, no switch).** The maintainer: "as we
   dress the levels, I'd love for us to have a library of objects, materials, etc. that we reuse across them". What exists is SIX KITS with their own pieces and
   paints: `src/scene/gwotKit.ts` (the look's), `src/scene/officeGen.ts officeKit`, `tools/levels/livedKit.ts`, `livedPieces.ts`, `lived-quiet.ts`,
@@ -1566,7 +1547,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   knows a thing by a colour; its mend is a word on the box and is the cars'). (b) A TONE THAT LANDS ON ANOTHER ROW'S COLOUR STILL THROWS (`toned`: a
   file's writer names a row by its numbers), but two kit rows that wear ONE row are not each other's clash; the tones are the pieces' own numbers, so
   a palette whose rows sit within 0.006 of a tone of another is the palette's to move. (c) THE PAGE'S OWN LOOK STEPS DO NOT KNOW IT YET: whether a
-  level "wears the look" is asked of its boxes' colours against the kit's palette (`scene/lookTidy.ts`, `lookDoors`' accent, and the checks
+  level "wears the look" is asked of its boxes' colours against the kit's palette (`scene/lookTidy.ts`, `leafPaint.ts paintLeaves`' accent, and the checks
   `look-check` and `wetground-check`), so a level wholly in a second palette is tidied as a plain one and a level partly in it takes the kit's accent
   for its doors. That question wants a word in the level file (which palette it wears) and belongs to the first level that wears one.
   CHECK: `bun run tools/qa/palette-check.ts` (the same on both stands; no game is stood up), three lines, one a thing: every call the two showrooms

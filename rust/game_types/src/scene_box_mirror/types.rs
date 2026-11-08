@@ -3,48 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Furniture, src/scene/boxMirror.ts:68)
-#[derive(Clone, Debug)]
-pub struct Furniture {
-    pub all: Vec<crate::scene_box_mirror::FurnitureThing>,
-    pub props: Vec<crate::scene_box_mirror::FurnitureThing>,
-}
-impl Furniture {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Furniture {
-            all: Vec::new(),
-            props: Vec::new(),
-        }
-    }
-}
-impl Default for Furniture { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: FurnitureThing, src/scene/boxMirror.ts:69)
-#[derive(Clone, Debug)]
-pub struct FurnitureThing {
-    pub id: f64,
-    pub x: f64,
-    pub z: f64,
-    pub yaw: f64,
-    pub radius: f64,
-    pub boxes: Vec<BoxId>,
-}
-impl FurnitureThing {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FurnitureThing {
-            id: 0.0,
-            x: 0.0,
-            z: 0.0,
-            yaw: 0.0,
-            radius: 0.0,
-            boxes: Vec::new(),
-        }
-    }
-}
-impl Default for FurnitureThing { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: PaneSite, src/scene/boxMirror.ts:72)
 #[derive(Clone, Debug)]
 pub struct PaneSite {
@@ -246,7 +204,6 @@ pub struct BoxMirror {
     pub used: f64,
     pub caps: crate::scene_box_mirror::BoxMirrorCaps,
     pub things_at: f64,
-    pub things_of: Option<crate::scene_box_mirror::Furniture>,
     pub things_ok: bool,
     pub things_all: bool,
     pub snow_len: f64,
@@ -262,6 +219,8 @@ pub struct BoxMirror {
     pub own_at: f64,
     pub played: bool,
     pub of: Option<String>,
+    /// the module's world as this game wrote it last (world.rs `stood`): a number of this process's, on no wire and in no word of the state
+    pub stood: u32,
 }
 impl BoxMirror {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
@@ -306,7 +265,6 @@ impl BoxMirror {
             used: 0.0,
             caps: crate::scene_box_mirror::BoxMirrorCaps { boxes: 0.0, leaves: 0.0, cuts: 0.0, panes: 0.0, cells: 0.0, items: 0.0, tilted: 0.0, things: 0.0, glass: 0.0, view: 0.0 },
             things_at: -1.0,
-            things_of: None,
             things_ok: false,
             things_all: true,
             snow_len: -1.0,
@@ -322,6 +280,7 @@ impl BoxMirror {
             own_at: -1.0,
             played: false,
             of: None,
+            stood: 0,
         }
     }
 }

@@ -23,6 +23,10 @@ const info = (m: string) => { notes.push(m); if (!QUIET) console.log(`   ${m}`);
 const fin = (...xs: number[]) => xs.every(Number.isFinite);
 const f2 = (x: number) => Number(x.toFixed(2));
 
+// The programme writes three flags from src/game/attract.ts, a file the harness's walk does not read (tools/blitz/scan.ts watches the names a tool's own text
+// writes; the page carries them by name, host/rustgame.ts GAME_FIELDS). Named here so that they reach the Rust game as they do on the page, without which
+// the poke's opening rule ran on a show the Rust game was never told had ended:
+//   game.quietUtility = game.touring = game.playerInvisible = …
 const W = await standUp();
 const { game, cam, level } = W;
 game.restartEncounter();   // the page at boot: a fresh encounter, Sam at the insertion point

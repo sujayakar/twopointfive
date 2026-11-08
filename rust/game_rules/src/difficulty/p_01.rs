@@ -179,12 +179,12 @@ macro_rules! rows_same {
 
 /// `same` of two PRESSURE tables. (difficulty.ts:163)
 fn pressure_same(a: &crate::knobs::PressureK, b: &crate::knobs::PressureK) -> bool {
-    rows_same!(a, b, crate::knobs::PressureK; on, press, flank, fall_back, squad_drill, second, second_keeps, second_set, max_men, keep_room, memory_secs, organise_k, warned, stand_press, keeper_left, report_secs, stand_secs, stand_grace, again_secs, stuns, stun_known, stun_know_secs, stun_moved_secs, last_holds, picket, by_way, rescue_crew, drilled, flank_max_m, flank_k, flank_slack_m, last_man_secs, out_early, loud_secs, out_secs, gather, gather_secs, flank_secs, siege_secs, listen, converge, word_secs, way_out, way_out_m, way_out_secs, sweep, sweep_secs, sweep_men, sweep_beat, sweep_pair_m)
+    rows_same!(a, b, crate::knobs::PressureK; on, press, flank, squad_drill, second, max_men, memory_secs, organise_k, warned, stand_press, report_secs, stand_secs, stand_grace, again_secs, stuns, stun_know_secs, stun_moved_secs, last_holds, picket, by_way, rescue_crew, drilled, flank_max_m, flank_k, flank_slack_m, last_man_secs, loud_secs, out_secs, gather_secs, flank_secs, siege_secs, word_secs, way_out, way_out_m, way_out_secs, sweep, sweep_secs, sweep_men, sweep_beat, sweep_pair_m)
 }
 
 /// `same` of two DIGIN tables. (difficulty.ts:163)
 fn digin_same(a: &crate::knobs::DiginK, b: &crate::knobs::DiginK) -> bool {
-    rows_same!(a, b, crate::knobs::DiginK; on, stay, reach_m, hold_set, keeper, refuge, cover, brace, brace_in_room, doors, radio, noticed, noticed_secs, shut_open, shut_secs, shut_home_rad, shut_doors, deep, far, learn, gather, gather_m, gather_shy_m, steady, think, wedge_secs, wedges, caught, try_secs, pace, close_m, prop_m, haul_speed, scrape_level, scrape_every, shout_m, alt_m, better, fear, hold_secs, redig_secs, lanes, lane_secs)
+    rows_same!(a, b, crate::knobs::DiginK; on, stay, reach_m, keeper, cover, brace_in_room, noticed_secs, shut_open, shut_secs, shut_home_rad, shut_doors, gather, gather_m, gather_shy_m, think, wedge_secs, wedges, caught, try_secs, pace, close_m, prop_m, haul_speed, scrape_level, scrape_every, shout_m, alt_m, better, fear, hold_secs, redig_secs, lane_secs)
 }
 
 // ---------------------------------------------------------------- the levers' words
@@ -473,18 +473,10 @@ pub fn write(g: &mut crate::game::Game, fog_only: Option<bool>) {
 }
 
 
-/// the kept rungs this visit's switches hide; with both switches settled on, none. (difficulty.ts keptHidden)
-pub fn kept_hidden(g: &crate::game::Game) -> crate::difficulty::KeptHidden {
-    KeptHidden { fog: None, ai: None, kit: None, told: None }
-}
-
 /// the machine's store keeps the moved levers, with the kept rungs this visit hides unless `all`. (difficulty.ts storeLevers)
 pub fn store_levers(g: &crate::game::Game, all: Option<bool>) {
     let s = g.m.difficulty.set;
-    let (fog, ai, kit, told) = if all.unwrap_or(false) { (s.fog, s.ai, s.kit, s.told) } else {
-        let h = kept_hidden(g);
-        (s.fog.or(h.fog), s.ai.or(h.ai), s.kit.or(h.kit), s.told.or(h.told))
-    };
+    let (fog, ai, kit, told) = (s.fog, s.ai, s.kit, s.told);
     match levers_json(&[("fog", fog.map(|r| r.as_str())), ("ai", ai.map(|r| r.as_str())), ("kit", kit.map(|r| r.as_str())), ("told", told.map(|r| r.as_str()))]) {
         Some(line) => { crate::savestate::save_store_set(g, LS_LEVERS, &line); }
         None => crate::savestate::save_store_remove(g, LS_LEVERS),
@@ -632,6 +624,33 @@ pub fn difficulty_custom(g: &mut crate::game::Game) {
             None => crate::savestate::save_store_remove(g, LS_LEVERS),
         }
     }
+}
+
+/// WHAT AN ADDRESS SAYS OF THE DIFFICULTY, and no more: None where it says nothing. `plain` (a Training lesson's address) reads no lever. Writes nothing. (difficulty.ts difficultyAsked)
+pub fn difficulty_asked(g: &crate::game::Game, q: &crate::query::Query, plain: bool) -> Option<crate::difficulty::DifficultyAsked> {
+    let v = if q.has("hard") { Some(if q.get("hard") == Some("0") { "standard" } else { "hard" }) } else { q.get("difficulty") };
+    let level = match v { Some("hard") => Some(Difficulty::Hard), Some("standard") => Some(Difficulty::Standard), _ => None };
+    let mut levers = Vec::new();
+    if !plain {
+        for l in levers_now(g).iter() {
+            if let Some(r) = q.get(&l.param) { if is_rung(g, l.key, Some(r)) { levers.push((l.key, String::from(r))); } }
+        }
+    }
+    let digin = q.has("digin");
+    let pressure = if q.has("pressure") { Some(q.get("pressure") != Some("0")) } else { None };
+    let cone = if q.has("fogcone") { Some(q.get("fogcone") != Some("0")) } else { None };
+    if level.is_none() && levers.is_empty() && !digin && pressure.is_none() && cone.is_none() { return None; }
+    Some(DifficultyAsked { level, levers, digin, pressure, cone })
+}
+
+/// …AND IT LAID ON THE GAME'S TABLES, not stored: the level, the levers over it, the two older single-switch flags over whatever those wrote. (difficulty.ts difficultyLay; no host of a
+/// Rust start keeps anything, so nothing goes between)
+pub fn difficulty_lay(g: &mut crate::game::Game, a: &crate::difficulty::DifficultyAsked) {
+    if let Some(level) = a.level { set_difficulty(g, level, Some(false)); }
+    for (key, rung) in a.levers.iter() { set_lever(g, *key, Some(rung.as_str()), Some(false), None); }
+    if a.digin { g.k.digin.on = true; }
+    if let Some(on) = a.pressure { g.k.pressure.on = on; }
+    if a.cone.is_some() { set_cone_visit(g, a.cone); }
 }
 
 /// the levers this machine keeps, only rungs the build still has. (difficulty.ts keptLevers)

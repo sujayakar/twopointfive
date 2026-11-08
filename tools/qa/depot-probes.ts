@@ -289,7 +289,7 @@ function wallRun(g: any, d: any, side: number, dir: 1 | -1): number {
 export const depotDoors = guarded(async () => {
   const { verdict, done } = family('depot-doors: stack room for a pair, and for four, on every door');
   const measure = async (S: { rooms: any[] }) => {
-    const R = await rig(5, 'depot', { quiet: true, empty: true }); const { game: g, D, NB } = R; const men = NB.ops; const rows: string[] = []; let ok = true, sides = 0; const runs: number[] = [], depths: number[] = [];
+    const R = await rig(5, 'depot', { quiet: true, empty: true }); const { game: g, O, D, NB } = R; const men = NB.ops; const rows: string[] = []; let ok = true, sides = 0; const runs: number[] = [], depths: number[] = [];
     for (const room of S.rooms) for (const { id } of room.doors) { const d = R.door(id); if (!d) continue; const side = outsideOf(d, room.bounds);
       const four = D.stackPosts(d, side, men), pair = D.stackPosts(d, side, men.slice(0, 2)); sides++;
       const good = (posts: any[] | null, n: number) => !!posts && posts.length === n && minApart(posts.map((p: any) => p.pos)) > 0.7 && posts.every((p: any) => !g.col.nav.isBlocked(p.pos[0], p.pos[2]) && !inDoorway(d, p.pos) && !inBounds(room.bounds, p.pos)
@@ -493,68 +493,3 @@ const PLAN: { room: string; red: string; blue: string | null; stand: number[]; v
   { room: 'comms', red: 'b_n', blue: null, stand: [26.9, 0, 6.6], via: [[21.4, 0, 7.6], [26.4, 0, 7.4]] },
   { room: 'store', red: 'c_n', blue: 'c_w', stand: [16.6, 0, 17.4], blueVia: [[16.4, 0, 17.3], [16.4, 0, 19.8], [13.2, 0, 20.9]] },
 ];
-/** the floor between the rooms, as points a commander sends the squad to when a room is empty and its men are not down: the yard's west and east halves, the
- *  mouth, the east yard, the aerial park, the generator room, the bay — and the rooms nobody holds (the wash room, the battery room, the duty office, the tyre
- *  store): a hut man who has left for a fight can end his walk in one, and a sweep that never opened it left the run going at the cap */
-const SPACES: number[][] = [[9.0, 0, 13.6], [18.0, 0, 13.0], [26.0, 0, 16.8], [31.0, 0, 19.5], [33.0, 0, 9.0], [26.9, 0, 6.6], [13.2, 0, 20.9], [17.2, 0, 7.4], [21.5, 0, 7.4], [6.5, 0, 7.4], [6.5, 0, 21.2]];
-export interface DepotRun { policy: string; seed: number; end: string; t: number; lost: number; rooms: Record<string, boolean>; two: string[]; home: Record<string, string>; fratricide: number; refused: string[]; rallied: number; }
-/** One scripted run. `two`: red and blue stack on a door each and go on one word (red with a bang, blue quietly as it bursts) where the room has two doors.
- *  `one`: all four bang and clear through the room's first door. Then, either way, whoever is up sweeps: every room still held, door by door, and the floor between the rooms (a defender who
- *  left his room for a fight is out there, and his room is not clear while he lives) — round and round until the end. Ends 'taken' (every defender down),
- *  'wiped' (all four down) or 'stalled' (`cap` seconds gone). */
-export async function depotPlay(policy: 'two' | 'one', seed: number, cap = 300, trace = false): Promise<DepotRun> {
-  const R = await rig(seed, 'depot', { ghost: true }); const { game: g, O, D, RC } = R;
-  const t0 = g.time, over = () => !!RC.end || g.time - t0 > cap, room = (id: string) => RC.rooms.find((r: any) => r.def.id === id), up = (who: any) => R.men(who).length > 0;
-  const two: string[] = [], refused: string[] = [], home: Record<string, string> = {}; const say = (s: string) => { if (trace) console.log(`  ${f1(g.time - t0).padStart(6)}  ${s}`); };
-  const wait = (pred: () => boolean, secs: number) => R.until(() => over() || pred(), secs);
-  /** the first of `ids` the menu accepts; a refusal is filed only when none was */
-  const order = (ids: string[], door: string, who: any, onWord = false): boolean => { const whys: string[] = [];
-    for (const id of ids) { const why = R.give(id, door, who, onWord ? { onWord: true } : undefined); if (!why) { say(`${id} ${door} → ${who}${onWord ? ' (on the word)' : ''}`); return true; } whys.push(`${id}: ${why}`); }
-    say(`${door} → ${who} REFUSED (${whys.join(' · ')})`); refused.push(`${door} → ${who}: ${whys.join(' · ')}`); return false; };
-  const entry = (): string[] => (D.bangs > 0 ? ['bangClear', 'openClear'] : ['openClear']);
-  /** `who` walked through `pts` in turn, a 'move' each, waited on for 25 s */
-  const walk = (who: any, pts: number[][] = []) => { for (const p of pts) { if (over() || !up(who)) return; const why = R.here(() => O.give('move', O.targetAt(p), who)); say(`move ${at(p)} → ${who}${why ? ` REFUSED (${why})` : ''}`); if (!why) wait(() => R.men(who).every((m: any) => O.of(m)?.arrived), 25); } };
-  for (const P of PLAN) { if (over()) break; R.stand = P.stand; const rm = room(P.room);
-    walk('all', P.via); if (policy === 'two' && P.blue) walk('blue', P.blueVia);
-    home[P.room] = `${rm.defenders.filter((h: any) => h.state !== 'dead' && inBounds(rm.def.bounds, h.char.pos)).length} of ${rm.def.garrison}`;
-    if (policy === 'two' && P.blue && up('red') && up('blue')) {
-      const a = order(entry(), P.red, 'red', true), b = order(['openClear'], P.blue, 'blue', true);
-      if (a || b) wait(() => D.ops.length > 0 && D.ops.every((op: any) => op.phase === 'ready'), 60);
-      // both stacked OUTSIDE the room on a door each when the word is given, and a man of each across his frame line after it: that is a room taken from two
-      // entries (read off the orders' own `crossed` sets — a man who crossed and went down still crossed — and not off how an order closed: the last room's
-      // orders end with the run)
-      const ops = [...D.ops], outside = ops.length === 2 && ops[0].door !== ops[1].door && ops.every((op: any) => op.phase === 'ready' && op.men.every((m: any) => !inBounds(rm.def.bounds, m.char.pos)));
-      const said = R.here(() => (R.W.input.pressed.add('KeyF'), R.step(), null)); say(`the word → ${said} (${ops.map((op: any) => `${op.door.def.name}: ${op.phase}, ${op.men.map((m: any) => at(m.char.pos)).join(' ')}`).join(' · ')})`);
-      const across = () => ops.every((op: any) => op.crossed.size > 0);
-      R.until(() => over() || !D.ops.length || across(), 45); const crossed = across(); wait(() => !D.ops.length, 45);
-      if (a && b && outside && crossed) two.push(P.room);
-    } else if (order(entry(), P.red, 'all')) wait(() => !D.ops.length, 60);
-    wait(() => rm.cleared, 12); say(`${P.room}: ${rm.cleared ? 'clear' : 'still held'} · ${R.men().length} up`);
-  }
-  for (let lap = 0; !over(); lap++) {
-    for (const P of PLAN) { if (over()) break; const rm = room(P.room); if (rm.cleared) continue;
-      R.stand = P.stand; if (!order(['openClear'], (lap % 2 && P.blue) || P.red, 'all')) { wait(() => false, 3); continue; } wait(() => !D.ops.length, 45); wait(() => rm.cleared, 6); say(`sweep ${P.room}: ${rm.cleared ? 'clear' : 'still held'}`); }
-    for (const p of SPACES) { if (over()) break; const why = R.here(() => O.give('move', O.targetAt(p), 'all')); if (why) { wait(() => false, 2); continue; } wait(() => R.men().every((m: any) => O.of(m)?.arrived), 14); wait(() => false, 3); }
-    if (!over()) say(`lap ${lap + 1} of the floor done · ${R.hostiles.filter((h: any) => h.state !== 'dead').map((h: any) => `${h.callsign} ${at(h.char.pos)}`).join(' ')}`);
-  }
-  const end = RC.end ?? 'stalled';
-  return { policy, seed, end, t: (RC.end ? RC.endAt : g.time) - t0, lost: R.men('all', true).filter((m: any) => m.state === 'dead').length, rooms: Object.fromEntries(RC.rooms.map((r: any) => [r.def.id, r.cleared])), two, home, fratricide: R.fratricide.length, refused, rallied: g.fight.stats.rallied };
-}
-const RUN_SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-/** the most orders a run may have refused (measured: see depot-run's line; the bound is the most seen on either stand, and one) */
-const RUN_REFUSED = 2;
-const mean = (a: number[]) => a.reduce((s, x) => s + x, 0) / Math.max(1, a.length);
-const runSum = (rs: DepotRun[]) => { const tk = rs.filter(r => r.end === 'taken'); return `${tk.length} of ${rs.length} taken · wiped ${rs.filter(r => r.end === 'wiped').length} · stalled ${rs.filter(r => r.end === 'stalled').length} · teammates lost ${f2(mean(rs.map(r => r.lost)))} a run (runs with nobody lost ${rs.filter(r => r.lost === 0).length}) · ${f1(mean(tk.map(r => r.t)))} s when taken`; };
-const runRows = (rs: DepotRun[]) => rs.map(r => `seed ${r.seed}: ${r.end} at ${f1(r.t)} s · lost ${r.lost} · two-door rooms ${r.two.join(', ') || 'none'} · defenders at home when its turn came: ${Object.entries(r.home).map(([k, v]) => `${k} ${v}`).join(', ')} · rallied ${r.rallied}${r.refused.length ? ` · refused ${r.refused.length}` : ''}`).join('\n    ');
-const twoDoor = (rs: DepotRun[]) => ['crew', 'store'].map(room => `${room} ${rs.filter(r => r.two.includes(room)).length}`).join(' · ') + ` of ${rs.length}`;
-async function runsOf(policy: 'two' | 'one') { const out: DepotRun[] = []; for (const seed of RUN_SEEDS) { out.push(await depotPlay(policy, seed, 300)); restore(); } return out; }
-export const depotRun = guarded(async () => {
-  const { verdict, done } = family('depot-run: scripted runs of the obvious plan — two pairs through two doors beside one stack through one (who wins is printed, not judged)');
-  const tw = await runsOf('two'), on = await runsOf('one');
-  const all = [...tw, ...on], stalled = all.filter(r => r.end === 'stalled'), most = Math.max(...all.map(r => r.refused.length));
-  verdict(stalled.length === 0 && all.some(r => r.end === 'taken') && most <= RUN_REFUSED, `the scripted commander's orders work on this floor: no run of the ${all.length} is still going at the cap, one at least ends with every defender down, and no run has more than ${RUN_REFUSED} orders refused (today's most, and one)`, `stalled ${stalled.length}${stalled.length ? ` (${stalled.map(r => `${r.policy} seed ${r.seed}`).join(', ')})` : ''} · taken ${all.filter(r => r.end === 'taken').length} · most refused in a run ${most}${most ? ` — e.g. ${all.find(r => r.refused.length === most)!.refused[0]}` : ''}`);
-  verdict(all.every(r => r.fratricide === 0), 'no teammate goes down to a teammate in any run of either policy', `${all.reduce((s, r) => s + r.fratricide, 0)} over ${all.length} runs`);
-  verdict(true, 'TWO PAIRS, TWO DOORS on the crew room and the store, all four through the hut\'s one (printed, not judged)', `${runSum(tw)} · rooms entered from two doors on one word: ${twoDoor(tw)}\n    ${runRows(tw)}`);
-  verdict(true, 'beside it, ONE STACK through each room\'s first door (printed, not judged)', `${runSum(on)}\n    ${runRows(on)}`);
-  return done();
-});

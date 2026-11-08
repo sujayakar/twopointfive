@@ -1,7 +1,7 @@
 //! The Rust start of a level file, written out for the compare with the TypeScript start (tools/blitz/start.sh; README.md "The compare").
 //!
 //!   start --lacks <level file>…        a file a line: what the start does not carry of it
-//!   start <level file> --out DIR [--seed N] [--seats 2] [--scenario roomclear|nightbreach|rescue|quiet [--squad N] [--deal N] | --link '?words'] [--cpu] [--frames N [--beside]]
+//!   start <level file> --out DIR [--seed N] [--seats 2] [--scenario roomclear|nightbreach|rescue|quiet [--squad N] [--deal N] | --link '?words'] [--frames N [--beside]]
 //!
 //! Stands the level by `game_start::stand` and writes into DIR `n1.bin` (the whole state, by the bridge's writer) and `ns0.bin` (rust/sim's block),
 //! the names tools/blitz/diff.ts reads beside the TypeScript start's `c1.bin` and `s0.bin`. With `--frames N` it then runs N frames of a host with
@@ -30,13 +30,12 @@ fn main() {
         }
         return;
     }
-    let (Some(file), Some(out)) = (a.get(1).filter(|f| !f.starts_with("--")), opt("--out")) else { eprintln!("start <level file> --out DIR [--seed N] [--scenario <kind> [--squad N] [--deal N]] [--cpu] [--frames N [--beside]]"); std::process::exit(64); };
+    let (Some(file), Some(out)) = (a.get(1).filter(|f| !f.starts_with("--")), opt("--out")) else { eprintln!("start <level file> --out DIR [--seed N] [--scenario <kind> [--squad N] [--deal N]] [--frames N [--beside]]"); std::process::exit(64); };
     let seed: u32 = opt("--seed").map(|s| s.parse().expect("--seed")).unwrap_or(20942);
     let link = opt("--link");
     let seats: u32 = opt("--seats").map(|s| s.parse().expect("--seats")).unwrap_or(1);
     let frames: usize = opt("--frames").map(|s| s.parse().expect("--frames")).unwrap_or(0);
     let beside = a.iter().any(|x| x == "--beside");
-    let cpu = a.iter().any(|x| x == "--cpu");
     let scenario = opt("--scenario").map(|k| {
         use game::scene_scenario_list::{ScenarioSpec, ScenarioSpecKind as K};
         let kind = match k.as_str() { "roomclear" => K::Roomclear, "nightbreach" => K::Nightbreach, "rescue" => K::Rescue, "quiet" => K::Quiet, k => { eprintln!("start: no scenario kind '{}'", k); std::process::exit(64) } };
@@ -47,7 +46,7 @@ fn main() {
     let h = std::thread::Builder::new().stack_size(1 << 30).spawn(move || {
         let ch = files::CharacterFiles::read();
         let data = json::parse(&files::level_text(&file)).unwrap_or_else(|e| panic!("{}: {}", file, e));
-        let mut s = stand::stand(&data, ch.assets(), &stand::StartOpts { seed, seats, scenario, link, cpu_senses: cpu, ..Default::default() });
+        let mut s = stand::stand(&data, ch.assets(), &stand::StartOpts { seed, seats, scenario, link, ..Default::default() });
         std::fs::create_dir_all(&out).unwrap();
         let len = block::len();
         std::fs::write(format!("{}/n1.bin", out), game::io::export(&s.game)).unwrap();
@@ -57,7 +56,7 @@ fn main() {
         let mut beside = if beside {
             let (state, blk) = (std::fs::read(format!("{}/c1.bin", out)).expect("--beside: c1.bin of the TypeScript start"), std::fs::read(format!("{}/s0.bin", out)).expect("--beside: s0.bin"));
             let mut g = Box::new(game::io::import(&state));
-            unsafe { let at = sim::state::addr(1) as *mut u8; core::ptr::write_bytes(at, 0, len); core::ptr::copy_nonoverlapping(blk.as_ptr(), at, blk.len().min(len)); }
+            sim::state::put(1, &blk);
             game::io::set_slot(&mut g, 1);
             // (the TypeScript's start was handed its host's Input and camera at ITS stand, and they came across with it: this host steps with
             //  those rows. A state from before a stand handed them holds none, and is given a pair as the start gives one)

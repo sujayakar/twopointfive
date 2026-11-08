@@ -164,9 +164,9 @@ pub fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// whose body (coverfire.ts charOf)
-pub fn char_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, who: crate::game::Foe) -> CharId {
+pub fn char_of(g: &crate::game::Game, gd: GuardId, who: crate::game::Foe) -> CharId {
     match who {
-        crate::game::Foe::Player => g.pl[seat.player].ch,
+        crate::game::Foe::Player => g.pl[crate::seats::faced_man(g, gd)].ch,
         crate::game::Foe::Guard(x) => g.gd[x].ch,
     }
 }
@@ -198,7 +198,7 @@ pub fn weight_of(g: &crate::game::Game, gd: GuardId) -> f64 {
 
 /// a sighting of `who` copied into what `gd` knows (coverfire.ts see)
 pub fn see(g: &mut crate::game::Game, gd: GuardId, who: crate::game::Foe, low: bool) {
-    let c = char_of(g, &crate::seats::here(g), who);
+    let c = char_of(g, gd, who);
     let (pos, vel) = (g.ch[c].pos, g.ch[c].vel);
     let trunk = match g.ch[c].bones.get(crate::character::Bone::Spine2) {
         Some(t) => *t,
@@ -378,9 +378,10 @@ pub fn cover_lane(g: &mut crate::game::Game, gd: GuardId, from: V3, to: V3) -> b
     };
     let t_max = 1.0 + flight / l;
     let team = g.gd[gd].team;
-    if !crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[g.player].down {
-        let pc = g.pl[g.player].ch;
-        if lane_hit(g, pc, from, dx, dz, l2, t_max, l) { return false; }
+    if !crate::teams::is_hostile(g, team, crate::teams::Team::Player) {
+        for pl in crate::seats::men(g) {
+            if !g.pl[pl].down { let pc = g.pl[pl].ch; if lane_hit(g, pc, from, dx, dz, l2, t_max, l) { return false; } }
+        }
     }
     let mut i = 0;
     while i < g.guards.len() {
@@ -581,7 +582,7 @@ pub fn cover_seen(g: &mut crate::game::Game, gd: GuardId, who: Option<crate::gam
         Some(who) => who,
     };
     state_of(g);
-    let c = char_of(g, &crate::seats::here(g), who);
+    let c = char_of(g, gd, who);
     let k = Know { who, at: to, y0: g.ch[c].pos[1], v: [0.0, 0.0], t: g.time, call: None };
     let cw = match choose(g, gd, k, false, true) {
         Some(cw) => cw,
@@ -662,7 +663,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
         let mods = crate::suppression::guard_fire_mods(g, gd);
         let w = g.m.weapons.weapons.get(def).unwrap();
         let (r, cd, cd_jitter) = (w.ai_spread, w.cd, w.cd_jitter);
-        g.gd[gd].fire_cd = (cd + crate::math_dice::sim_random(g) * cd_jitter) * mods.gap;
+        g.gd[gd].fire_cd = (cd + crate::dice::draw_of(g, "coverfire::cover_blind#1", gd) * cd_jitter) * mods.gap;
         let spread_k = g.gd[gd].skill.as_ref().map_or(1.0, |sk| sk.spread_k);
         let hands = (r.base + m::max(0.0, dist - r.range_from) * r.range_k) * spread_k;
         let opts = if g.tune.aim_model {
@@ -766,7 +767,7 @@ pub fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, speed: f64
     g.fight.stats.op_rounds += 1.0;
     let str_ = crate::gunroles::gun_string(g, gd);
     let gap = if js::rem(k_now, js::or(str_, 2.0)) == 0.0 {
-        sk.shift[0] + crate::math_dice::sim_random(g) * (sk.shift[1] - sk.shift[0])
+        sk.shift[0] + crate::dice::draw_op(g, "coverfire::cover_op#1", o) * (sk.shift[1] - sk.shift[0])
     } else if js::truthy(str_) {
         crate::gunroles::gun_string_gap(g, gd)
     } else {
@@ -938,7 +939,7 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
 pub fn coverfire_saw(g: &mut crate::game::Game, gd: GuardId, who: crate::game::Foe, age: Option<f64>) {
     let age = age.unwrap_or(0.0);
     state_of(g);
-    let c = char_of(g, &crate::seats::here(g), who);
+    let c = char_of(g, gd, who);
     let low = g.ch[c].anim.crouch > 0.5;
     see(g, gd, who, low);
     let t = g.time - age;

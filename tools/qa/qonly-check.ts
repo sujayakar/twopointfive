@@ -14,11 +14,13 @@
 import { standUp, ROOT } from './headless.ts';
 
 const { CMDRING, CMDRING_STATS, ringHoldSecs } = await import(`${ROOT}/src/game/cmdring.ts`);
+const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { AUTOPILOT } = await import(`${ROOT}/src/game/autopilot.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { TOOLS_PAGE } = await import(`${ROOT}/src/game/doortools.ts`);
-const { SQUADTHROW } = await import(`${ROOT}/src/game/squadthrow.ts`);
+const { THROW_PAGE, THROW_OPEN, SQUADTHROW } = await import(`${ROOT}/src/game/squadthrow.ts`);
 const PROFILE = await import(`${ROOT}/src/host/profile.ts`), { FROZEN_HOLDS } = PROFILE;
+const JOURNAL = await import(`${ROOT}/src/game/journal.ts`);
 const K = await import(`${ROOT}/src/host/keymap.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
 void CMDRING_STATS;
@@ -45,9 +47,17 @@ async function rig(set?: () => void) {
     down(secs: number) { I.keys.add(KEY); I.pressed.add(KEY); R.step(); R.step(Math.max(0, frames(secs) - 1)); },
     /** … and comes up: the frame it is read in */
     up() { I.keys.delete(KEY); R.step(); },
+    /** a tap as a hand makes it: down for one frame, seen up on the next */
+    tap() { I.keys.add(KEY); I.pressed.add(KEY); R.step(); R.up(); },
+    press(code: string) { I.pressed.add(code); R.step(); },
     click(bit: number) { I.clicked |= bit; I.buttons |= bit; R.step(); I.buttons &= ~bit; R.step(); },
+    /** the cursor `r` px out of the ring's middle toward wedge `k` (1 at the top, clockwise) */
+    out(k: number, r = 80) { const C = O.cmdRing; if (!C) return; const a = (-90 + (k - 1) * 360 / CMDRING.wedges) * Math.PI / 180; I.mouseX = C.ax + Math.cos(a) * r; I.mouseY = C.ay + Math.sin(a) * r; R.step(); },
+    mid() { const C = O.cmdRing; if (!C) return; I.mouseX = C.ax; I.mouseY = C.ay; R.step(); },
     /** the ring opened by the plain hold and left up: the key down past the hold, then up in the middle */
     open(p: number[]) { R.aim(p); R.down(ringHoldSecs() + 0.1); R.up(); R.step(5); return !!O.cmdRing; },
+    tail() { return O.log[O.log.length - 1]; },
+    rowOf(k: number) { return O.menu?.rows.find((r: any) => r.key === k); },
     home() { I.keys.clear(); I.buttons = 0; O.cmdRing = null; O.cmdPress = null; O.close(); O.who = 'all'; O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); R.until(() => g.doorTools.ops.length === 0, 40); R.until(() => R.team.every((m: any) => dist(m.char.pos, g.player.char.pos) < 4.5), 25); R.step(30); },
   };
   R.step(30); for (const m of R.team) m.god = true;
@@ -74,7 +84,7 @@ export async function qonlyCheck(): Promise<boolean> {
       line(C.only === want && rows, `the stand: the switch ${shipped ? 'on, as the page opens' : 'held off, as every frozen tally was recorded'}; FROZEN_HOLDS carries its row and word`,
         `after the stand-up: only ${C.only} (the ring ${C.on}) · TPS_QONLY ${E.TPS_QONLY ?? 'unset'}, TPS_QRING ${E.TPS_QRING ?? 'unset'} · TPS_PROFILE ${E.TPS_PROFILE ?? 'unset'} · row and word ${rows ? 'there' : 'MISSING'}`); }
 
-    const R = await quiet(() => rig(page)), g = R.g, O = R.O;
+    const R = await quiet(() => rig(page)), g = R.g, O = R.O, I = R.I;
     if (R.why) { line(false, 'the room clear stands up', R.why); return false; }
     const spot = floorSpot(R);
     if (!spot) { line(false, 'a spot of open floor to point at', 'none round Sam'); return false; }
@@ -82,7 +92,7 @@ export async function qonlyCheck(): Promise<boolean> {
     for (const d of [...g.doors.list].sort((a: any, b: any) => dist(a.frameCentre, g.player.char.pos) - dist(b.frameCentre, g.player.char.pos))) { const t = O.targetAt(d.frameCentre); if (t.kind !== 'door' || t.door !== d) continue; if (!O.whyNot(stackDef, O.forMen(t, men()), men()) && R.aimOf(d)) { D = d; break; } }
     if (!D) { line(false, 'a door to open the ring on', 'none the cursor finds'); return false; }
     const view = () => O.ringView(), wedges = () => (view()?.wedges ?? []).map((w: any) => `${w.key}:${w.text.split(' · ')[0]}${w.opens ? ' ▸' : ''}${w.off ? ' (off)' : ''}`).join(' | ');
-    const rmb = () => R.click(4);
+    const wedge = (k: number) => (view()?.wedges ?? []).find((w: any) => w.key === k), rmb = () => R.click(4);
     // a row of the check's own on the door tools' page, on a letter: with the page's four digits and its frag row that is one row more than five wedges hold
     let probed = 0; O.register({ id: 'qonlyProbe', page: TOOLS_PAGE, hotKey: 'KeyJ', label: 'probe row', targets: ['door'], free: true, issue: () => { probed++; } });
 
@@ -96,15 +106,15 @@ export async function qonlyCheck(): Promise<boolean> {
 
     // (9) the board
     { const boot = (q: string) => { K.keysBoot(new URLSearchParams(q ? `${q}&slotsetup=0` : 'slotsetup=0')); if (BREAK) KM.qOnly = false; },   // (the selector's row and the light's left on Z and L: the rows the gun's setup frees are slotsetup-check.ts's)
-      read = () => `${K.gameCode('KeyX') || '∅'}/${K.gameCode('KeyT') || '∅'} ${K.capNow('KeyX')}/${K.capNow('KeyT')}`;
-      boot(''); const a = read(), others = K.KEY_ACTS.flatMap((x: any) => x.codes).filter((c: string) => !['KeyX', 'KeyT', 'KeyQ', 'KeyB', 'KeyG', 'KeyH'].includes(c) && K.gameCode(c) !== c).length + ['KeyG', 'KeyH'].filter(c => K.gameCode(c) !== '').length, f = K.gameCode('KeyF');   // (the menu's two letters go with its key: spare, giving nothing — host/keymap.ts LETTERS, keybinds-check)
+      read = () => `${K.gameCode('KeyT') || '∅'} ${K.capNow('KeyT')}`;
+      boot(''); const a = read(), others = K.KEY_ACTS.flatMap((x: any) => x.codes).filter((c: string) => !['KeyT', 'KeyQ', 'KeyB', 'KeyG', 'KeyH'].includes(c) && K.gameCode(c) !== c).length + ['KeyG', 'KeyH'].filter(c => K.gameCode(c) !== '').length, f = K.gameCode('KeyF');   // (the menu's two letters go with its key: spare, giving nothing — host/keymap.ts LETTERS, keybinds-check)
      
-      boot('qonly=0'); const b = read(); boot('qring=0'); const c = read();
+      boot('qonly=0'); const b = read();
       boot(''); const w1 = K.keyText('X on the ground, then 5: he goes loud'), w2 = K.keyText('Stack up. X on the door, then 1'), w3 = K.keyText('T again, off the men: BLUE'), cmd = K.capNow('KeyB');
-      boot(''); const r = K.bindKey('KeyX', 'KeyX'), d = read(); K.resetKeys(); const e = read(); boot('');
-      line(a === `∅/∅ ${K.NONE}/${K.NONE}` && others === 0 && f === 'KeyF' && b === 'KeyX/KeyT X/T' && c === b && r.ok && d === `KeyX/∅ X/${K.NONE}` && e === a && w1 === `Hold ${cmd} on the ground, then 5: he goes loud` && w2 === `Stack up. Hold ${cmd} on the door, then 1` && w3 === 'T again, off the men: BLUE',
-        'the board: the orders key and the who key give nothing and read as no key, nothing else moves; ?qonly=0 and ?qring=0 put both back; a row put back on its key by hand gives its code again, and Reset frees it; a line of words that names the orders key names the command key kept down in its place',
-        `(X/T give · read) as it boots ${a}, ${others} other keys moved, F gives ${f} · ?qonly=0 ${b} · ?qring=0 ${c} · X bound back: ${d} · Reset: ${e} · words: "${w1}" · "${w2}" · "${w3}"`); }
+      boot(''); const r = K.bindKey('KeyT', 'KeyT'), d = read(); K.resetKeys(); const e = read(); boot('');
+      line(a === `∅ ${K.NONE}` && others === 0 && f === 'KeyF' && b === 'KeyT T' && r.ok && d === 'KeyT T' && e === a && w1 === `Hold ${cmd} on the ground, then 5: he goes loud` && w2 === `Stack up. Hold ${cmd} on the door, then 1` && w3 === 'T again, off the men: BLUE',
+        'the board: the who key gives nothing and reads as no key, nothing else moves; ?qonly=0 puts it back; a row put back on its key by hand gives its code again, and Reset frees it; a line of words that names the orders key names the command key kept down in its place',
+        `(T gives · reads) as it boots ${a}, ${others} other keys moved, F gives ${f} · ?qonly=0 ${b} · T bound back: ${d} · Reset: ${e} · words: "${w1}" · "${w2}" · "${w3}"`); }
 
   } finally { console.log = log; knobsBack(knobs0); Math.random = rnd0; AUTOPILOT.on = ap0; Object.assign(KM, km0); K.resetKeys(); }   // (pageSwitches, applyKnobs and keysBoot wrote: each back as this check found it)
   console.log(`=== qonly: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);

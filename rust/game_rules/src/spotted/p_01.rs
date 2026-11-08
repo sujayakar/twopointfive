@@ -58,16 +58,14 @@ pub fn eye_of(g: &crate::game::Game, gd: GuardId) -> V3 {
 /// a line from a man's eyes to a body at `q`, asked of the walls and furniture only: no door leaves (spotted.ts inLine)
 pub fn in_line(g: &mut crate::game::Game, h: GuardId, q: &[f64], low: bool) -> bool {
     let eye = eye_of(g, h);
-    let dyn_boxes = core::mem::take(&mut g.col.dynamic_boxes);
-    let seen = !crate::scene_collision::segment_blocked(g, eye, [q[0], if low { 0.75 } else { 1.25 }, q[2]], None, None, None)
-        || !crate::scene_collision::segment_blocked(g, eye, [q[0], if low { 1.05 } else { 1.6 }, q[2]], None, None, None);
-    g.col.dynamic_boxes = dyn_boxes;
-    seen
+    let walls = crate::ask::Over::statics();
+    !crate::scene_collision::segment_blocked_over(g, &walls, eye, [q[0], if low { 0.75 } else { 1.25 }, q[2]], None, None)
+        || !crate::scene_collision::segment_blocked_over(g, &walls, eye, [q[0], if low { 1.05 } else { 1.6 }, q[2]], None, None)
 }
 
 /// the meter's reading for a man knelt at `q` (spotted.ts litAt)
 pub fn lit_at(g: &mut crate::game::Game, q: &[f64]) -> f64 {
-    let e = crate::guards::light_estimate_at(g, [q[0], 0.9, q[2]], None, None, None, None, None);
+    let e = crate::guards::light_estimate_at(g, [q[0], 0.9, q[2]], None, None, None);
     crate::game::game_visibility_of(g, e)
 }
 
@@ -95,6 +93,21 @@ pub fn live(g: &mut crate::game::Game, gd: GuardId) -> bool {
 pub fn spotted_mode(g: &mut crate::game::Game, gd: GuardId) -> crate::spotted::SpottedMode {
     if !live(g, gd) { return crate::spotted::SpottedMode::Calm; }
     match g.m.spotted.men.get(gd) { Some(r) => r.mode, None => crate::spotted::SpottedMode::Calm }
+}
+
+/// the squad line's word while a silent squad is not yet compromised: any man caught, else any man wary; None: nothing to add (spotted.ts spottedWord)
+pub fn spotted_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<&'static str> {
+    if !g.k.spotted.on || !crate::silent::squad_silent(g, seat) { return None; }
+    let mut wary = false;
+    for gd in crate::orders::squad_orders_squad(g, seat) {
+        if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+        match g.m.spotted.men.get(gd).map_or(crate::spotted::SpottedMode::Calm, |r| r.mode) {
+            crate::spotted::SpottedMode::Caught => return Some("SILENT · contact"),
+            crate::spotted::SpottedMode::Wary => wary = true,
+            crate::spotted::SpottedMode::Calm => {}
+        }
+    }
+    wary.then_some("SILENT · low")
 }
 
 /// the alert man who has them, while this teammate is caught (spotted.ts spottedBy)

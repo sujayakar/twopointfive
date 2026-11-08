@@ -1,5 +1,5 @@
 // standGame — THE ONE STAND-UP: the level into the host's world + light set, the mannequin, `new Game(host, level, ch, smoke)`, the harness's
-// three settings when asked, the follow camera on the spawn. src/main.ts (the browser), tools/qa/headless.ts (the QA harness), tools/qa/replay.ts and the native entry all
+// three settings when asked, the follow camera on the spawn. src/main.ts (the browser), tools/qa/headless.ts (the QA harness), tools/qa/rerun.ts and the native entry all
 // come through here, so the ORDER in which the level is added and the Game constructed — the Math.random draws of the guards' construction dice among it — is one order.
 // Host-neutral: no DOM, no window; every import below is used inside a function only (src/game/'s import cycle: nothing here runs a game import at module load).
 import { OPENING } from '../game/opening';
@@ -10,7 +10,6 @@ import type { SmokeSystemLike } from '../smoke/types';
 import type { GameAudioLike } from '../game/audio_iface';
 import { buildLevel } from '../scene/level';
 import { UNDERFOOT } from '../scene/collision';
-import { ROUND, roundLevel } from '../scene/round';
 import { SHAPES, shapeLevel, plainLevel } from '../scene/shapes';
 import { thinClear, thinLevel } from '../scene/thin';
 import { barClear, barLevel } from '../scene/bars';
@@ -42,7 +41,8 @@ import { COVER } from '../game/cover';
 import { SNEAK } from '../game/sneak';
 import { FURN } from '../game/furnblast';
 import { SNOWBOG } from '../game/snowBog';
-import { WX_OWN, SNOW, SNOW_LOOK } from '../game/weatherKinds';
+import { WX_OWN, SNOW, SNOW_LOOK, weatherAsked, snowLevelOfQuery } from '../game/weatherKinds';
+import type { StoodWith } from '../game/stood';
 import { AIR_SIM } from '../game/airSim';
 import { GUNWALL } from '../game/gunwall';
 import { REARWATCH } from '../game/rearwatch';
@@ -55,7 +55,6 @@ import { CLOSE } from '../game/close';
 import { FOOTFALL, TWOGEARS, CROUCHRUN } from '../game/player';
 import { SAMLOOK } from '../game/samlook';
 import { STALK, stalkPolish } from '../game/stalk';
-import { TAPSTEP } from '../game/tapstep';
 import { KITANIM } from '../game/kitanim';
 import { HANDS } from '../game/hands';
 import { WORK } from '../game/workthings';
@@ -76,7 +75,6 @@ import { CONDITION } from '../game/condition';
 import { INHAND } from '../game/inhand';
 import { GUNHAND } from '../game/gunhand';
 import { PACKSIDE } from '../game/packside';
-import { PLANLAY } from '../game/planlay';
 import { CMDRING } from '../game/cmdring';
 import { STACKROOM } from '../game/stackroom';
 import { HANDLE } from '../game/handleside';
@@ -108,7 +106,7 @@ import { FINDTUNED, findMeStarts } from './findme';
 import { MORALE } from '../game/morale';
 import { RUNNER } from '../game/runner';
 import { STARTLE } from '../game/startle';
-import { ROWSET } from '../game/rowset';
+import { ROWSET, rowSettings } from '../game/rowset';
 import { SMOKEBREAK } from '../game/smokebreak';
 import { SHOWWHY } from '../game/showwhy';
 import { FIRE } from '../game/fire';
@@ -122,12 +120,10 @@ import { STAYASK } from '../game/stayask';
 import { KITLOAD } from '../game/kitload';
 import { RESCUECHECK } from '../game/rescuecheck';
 import { RESCUEEND } from '../game/rescueend';
-import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
 import { POSEMATH } from '../anim/skeleton';
 import { rustRows, rustRow, rustOn, retiredEnvWord } from '../sim/sim';
-import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
 import { DOZE } from '../game/doze';
 import { NETQUIET } from '../game/netquiet';
@@ -162,23 +158,26 @@ import { CLEANRESTART } from '../game/cleanrestart';
 import { FIRELINE } from '../game/fireline';
 import { SAVETIMELINE } from '../game/savestate';
 import { hostAfterPutBack } from './putback';
-import { kitSoloStand } from '../game/kit';
+import { kitSoloStand, kitSoloIf } from '../game/kit';
+import { startFromQuery } from '../game/scenarioRun';
 import { glassPenHarness } from '../game/glasspen';
 import { glassFxForced, GLASS } from '../game/glass';
 import { WALLPEN } from '../game/wallpen';
 import { DOORSHOT } from '../game/doorblast';
 import { WINBARS } from '../game/winbars';
 import { FRAG } from '../game/frag';
-import { HOUR, applyHour } from '../game/hours';
+import { applyHour, hourAsked } from '../game/hours';
 import { DOORPATH } from '../game/doorpath';
 import { HOLD, MOVES, TURN, TURN_FEEL, THROW_BY, HARDBREATH, RUNREADY, RUNARMS } from '../game/character';
-import { WOUND } from '../game/wounds';
 import { DOORSTAY, DOORWAY, DOORTHROW } from '../game/doors';
 import { SHARDS } from '../game/shards';
 import { DEBRIS } from '../game/destructionSwitch';
 import { FollowCamera } from '../game/camera';
 import { Input } from '../game/input';
 import { pinned } from './profile';
+import { difficultyAsked, difficultyLay } from '../game/difficulty';
+import { LESSON_MISSIONS } from '../scene/scenarioList';
+import { lessonGroup } from '../scene/scenarios';
 import { newDice, useDice } from '../math/dice';
 import { v3 } from '../math/vec';
 
@@ -209,9 +208,55 @@ export interface StandOpts {
   seed?: number | null;
   /** HOW MANY PLAYERS (src/game/seats.ts): 1 (the default) or 2, fixed for the life of the game — each seat a man, its own teammates, its own record a tick */
   seats?: number;
+  /** WHAT THE GAME IS STOOD WITH (game/stood.ts; a host reads it off an address: addressBeforeGame). Absent = the picks as they stand */
+  stood?: StoodWith;
   /** …or, with no count: the address to read it from (`?seats=2` — seats.ts seatsOfSearch; a recipe's `search`). Neither: the page's own address, 1 with no page */
   search?: string;
 }
+
+/** A MISSION'S ADDRESS IS READ IN TWO PLACES, AND EVERY HOST THAT STARTS A GAME FROM ONE READS IT IN BOTH (the page: main.ts; the harness: tools/qa/headless.ts
+ *  standUp({ address }) and its `start`; the Rust start: rust/game_start stand.rs, the same two by the same names).
+ *  BEFORE THE GAME IS MADE: the mission row's own hour and weather written onto the words (rowset.ts: FIRST, the two readers below read what it wrote), then
+ *  the weather the game is BORN in (`?weather=`, or snow on a level built for it; locked: the address's for the game's life)
+ *  and the visit's hour (`?hour=`, `?sun=`), which standGame lays over the level as the game is stood. All of it is READ INTO THE RECORD THE GAME IS MADE WITH
+ *  (game/stood.ts, Game.stood) and written nowhere of the process's: only `q` is written on. A Weather born in its kind lays its
+ *  roofs, its wet ground and its wind once. Handed the address only after the game was made, a host stood the level's own storm, put the solo night's card
+ *  on its player, and changed both afterwards: the same mission on a page and on such a host then differed in the order list's rows (one more, every later
+ *  id one on), in the kit's issue record, in the door tools and in the weather's own (found by the co-op check, on the depot in a downpour).
+ *  Answers the record; the page compiles its weather shaders by its kind (null: the level's own). */
+export function addressBeforeGame(q: URLSearchParams): StoodWith {
+  rowSettings(q);
+  const asked = weatherAsked(q), weather = snowLevelOfQuery(q) ? 'snow' : asked;   // (a level BUILT FOR SNOW is in snow whatever ?weather= said: weatherKinds.ts SNOW_LEVELS; ?snow=0 = not so)
+  const hour = hourAsked(q);
+  return { weather, locked: true, hour: hour.id, sun: hour.sun, sunGiven: hour.sunGiven, dry: hour.dry, soloStand: false };
+}
+/** …AND THE DIFFICULTY IT ASKS FOR (difficulty.ts difficultyAsked), before the game is made, as a page reads it: a Training lesson's address reads no lever, as its page
+ *  doesn't. It is the address's alone: no host but a page keeps a level. The tables it writes are knob tables, the process's in the TypeScript (the Rust start writes its game's
+ *  own: scenario_run::difficulty_of_address), so in the harness an address that names a level leaves the tables on it, as a tool's own setDifficulty does, and one that names
+ *  none leaves them as they stand. What it writes names no game, so it runs here and not on a Rust game an older stand left alive (tools/blitz/surface.ts hostOf). */
+export function difficultyOfAddress(q: URLSearchParams): void {
+  const a = difficultyAsked(q, lessonGroup(LESSON_MISSIONS.find(e => e.level === q.get('levelFile'))?.group));
+  if (a) difficultyLay(a);
+}
+/** THE TWO SWITCHES THE ADDRESS'S READER READS, pinned by a harness run's own words (`TPS_SNOW`, `TPS_ROWSET`: profile.ts pinned). standGame pins them as it
+ *  stands a harness game; a harness that reads an address before the game is made pins them first, by these same two lines (tools/qa/headless.ts). */
+export function pinSnow(): void { if (pinned('TPS_SNOW')) SNOW.on = String((globalThis as any).process?.env?.TPS_SNOW ?? '') === '1'; }
+export function pinRowset(): void { if (pinned('TPS_ROWSET')) ROWSET.on = String((globalThis as any).process?.env?.TPS_ROWSET ?? '') === '1'; }
+/** …AND OF THE STOOD GAME: the mission the address names, staged (scenarioRun.ts startFromQuery), then the solo card's question. A host with work of its own
+ *  between the two hands it in as `between` (a recipe's tables laid again after the staging, as the page lays them: main.ts recipeTables) or, as the page
+ *  does with its hooks, calls the two one after the other. */
+export function startAtAddress(game: Game, q: URLSearchParams, between?: () => void): ReturnType<typeof startFromQuery> {
+  if (q.has('noweather')) game.weather.setEnabled(false);   // (?noweather: the level's own storm off from the start, as the page puts it off once its game is stood: main.ts. The address's reader has told the hour so — hours.ts hourAsked, Game.stood.dry)
+  const r = startFromQuery(game, q); between?.();
+  // (A TRAINING LEVEL, one that carries a lesson, is left as it stands on a host that calls this: the page says the lesson's page before its game is
+  //  made (main.ts kitLessonPage) and its stagings then wear what the lesson asks; no other host says it yet, and the card dealt without it is neither
+  //  the page's kit nor the fresh Player the older road left there. Goes when the address's reader says the lesson's page on every host)
+  if (!game.level.scenarios?.lesson?.steps?.length) soloOfAddress(game, q);
+  return r;
+}
+/** THE SOLO CARD'S QUESTION OF AN ADDRESS (kit.ts kitSoloIf): the plain night (`?solo`, or no mission up and no quiet one), or a quiet mission alone, wears the
+ *  player's own card; a squad's mission leaves the kit to its own staging. */
+export function soloOfAddress(game: Game, q: URLSearchParams): void { kitSoloIf(game, q.has('solo') || !game.quiet.active); }
 
 export interface Stood {
   game: Game; level: Level; ch: GltfCharacter; smoke: SmokeSystemLike;
@@ -228,8 +273,7 @@ export function nullSmoke(): SmokeSystemLike & { params?: Record<string, unknown
 
 /** the level's statics into the host's box world and its lights into the light set — the two loops main.ts and headless.ts ran before `new Game` */
 export function populateHost(host: HostApi, level: Level): void {
-  thinClear(level.boxes); barClear(level.boxes);   // (a level stood up a second time: last time's thin marks off before the round things are looked for)
-  roundLevel(level.boxes, ROUND.on, level.markTexel);   // ROUND THINGS (scene/round.ts): the kit's octagons as one round box each, or every box put back as its file has it — before a box goes to the world and before the Game's collision is built from the list
+  thinClear(level.boxes); barClear(level.boxes);   // (a level stood up a second time: last time's thin marks off)
   plainLevel(level.boxes);   // A BOX SAYS ITS SHAPE (scene/shapes.ts): what an earlier stand-up of this level gave is taken back first, so that the two rules below read the level's plain boxes whatever shapes say
   thinLevel(level.boxes, level.doors);   // THIN THINGS THAT STAND FREE (scene/thin.ts): marked for the fog of war's own eyes (FOG.thin) and a teammate's (FOG.mates), on the list as it now is
   barLevel(level.boxes);   // A WINDOW'S BARS (scene/bars.ts): marked for the one rule that reads them (game/winbars.ts WINBARS)
@@ -255,22 +299,15 @@ export function pinPoseMath(): void { if (pinned('TPS_POSESINGLES')) POSEMATH.si
 /** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: every row of RUST_ON, on both stands, as the page. No word of the environment moves
  *  one (TPS_RUST, TPS_RUST<ROW> are retired and stop the tool that says them); a check's own arm is HELD, above. */
 export function pinRust(): void { for (const r of rustRows()) rustRow(r, HELD.rows[r] ?? rustOn(r)); }   // (one write a row: a held row is never raised and dropped again, which would remake every constant kept from the maths twice — pinMaths, called beside this, is what reads the environment)
-/** THE SENSES ON THE CPU (src/game/sense.ts) on the harness: off on both stands, as the page (TPS_CPUSENSE=1 raises it, the page's ?cpusense) */
-export function pinSenses(): void { if (pinned('TPS_CPUSENSE')) SENSE.cpu = String((globalThis as any).process?.env?.TPS_CPUSENSE ?? '') === '1';
-  if (pinned('TPS_SMOKEGRID')) SENSE.grid = String((globalThis as any).process?.env?.TPS_SMOKEGRID ?? '') === '1';   // (…and their smoke on the coarse grid: off on both stands, TPS_SMOKEGRID=1 raises it, the page's ?smokegrid)
-  if (pinned('TPS_CPULIGHT')) SENSE.bounce = String((globalThis as any).process?.env?.TPS_CPULIGHT ?? '') === '1';   // (…and the light model on that grid: off on both stands, TPS_CPULIGHT=1 raises it, the page's ?cpulight)
-  if (pinned('TPS_MOONLIGHT')) SENSE.moon = String((globalThis as any).process?.env?.TPS_MOONLIGHT ?? '') === '1';   // (…and the night's light from the sky in the estimate: off on both stands, TPS_MOONLIGHT=1 raises it, the page's ?moonlight)
-  if (pinned('TPS_SMOKEDRIFT')) SENSE.drift = String((globalThis as any).process?.env?.TPS_SMOKEDRIFT ?? '') === '1'; }   // (…and the grid's smoke drifting with the wind: off on both stands, TPS_SMOKEDRIFT=1 raises it, the page's ?smokedrift)
 /** A RECORD FROM ANYONE (src/game/cmd.ts checkCmd) on the harness: off on the frozen stand (TPS_CMDCHECK=1 raises it); the shipped stand keeps the page's (on) */
 export function pinCmdCheck(): void { if (pinned('TPS_CMDCHECK')) CMDCHECK.on = String((globalThis as any).process?.env?.TPS_CMDCHECK ?? '') === '1'; }
 
 export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<Stood> {
-  if (opts.harness) { pinMaths(); pinPoseMath(); pinRust(); pinSenses(); pinCmdCheck(); }   // (first: the level and the Game's constructor work out sines and cosines)
+  if (opts.harness) { pinMaths(); pinPoseMath(); pinRust(); pinCmdCheck(); }   // (first: the level and the Game's constructor work out sines and cosines)
   const level = opts.level ?? buildLevel();
   let ch = opts.ch;
   if (!ch) { if (!opts.gltfUrl) throw new Error('standGame: neither ch nor gltfUrl given'); ch = await loadGltfCharacter(opts.gltfUrl); }
   const smoke = opts.smoke ?? nullSmoke();
-  if (opts.harness && pinned('TPS_ROUND')) ROUND.on = String((globalThis as any).process?.env?.TPS_ROUND ?? '') === '1';   // round things are round (src/scene/round.ts; read as the level's boxes go to the world, so written before that): off, so a drum is the kit's octagon of four slabs to every ray and every foot, as when every frozen digest and tally was recorded
   if (opts.harness && pinned('TPS_SHAPES')) SHAPES.on = String((globalThis as any).process?.env?.TPS_SHAPES ?? '') === '1';   // a box says its shape (src/scene/shapes.ts; read as the level's boxes go to the world, so written before that): off, so every box of a level is the plain box its file has, as when every frozen digest was recorded
   if (opts.harness && pinned('TPS_COATFINISH')) COATFINISH.on = String((globalThis as any).process?.env?.TPS_COATFINISH ?? '') === '1';   // a named coat's finish goes wherever its word goes (src/scene/stuff.ts; a picture only, read where a box's finish is handed to the GPU): off, so a vehicle's body has the finish its file gives it, as it was
   if (opts.harness && pinned('TPS_SOLIDGLASS')) SOLIDGLASS.on = String((globalThis as any).process?.env?.TPS_SOLIDGLASS ?? '') === '1';   // a thing of solid glass is dark and smooth (src/scene/stuff.ts; a picture only, read where a box's colour and finish are handed to the GPU): off, so a vehicle's window is the grey its file gives it, as it was
@@ -278,7 +315,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   if (opts.harness && pinned('TPS_OPENING')) OPENING.on = String((globalThis as any).process?.env?.TPS_OPENING ?? '') === '1';   // THE NIGHT'S OPENING (src/game/opening.ts): off, so every man of the shift starts on his route's first waypoint as when every frozen digest, tally and session fixture was recorded — set before the Game exists (its constructor places them); `TPS_OPENING=1` runs any harness tool with it on, tools/qa/solo-night.ts raises it for its as-shipped stand (the shipped default is ON)
   if (opts.harness && pinned('TPS_GEAR')) GEAR.on = String((globalThis as any).process?.env?.TPS_GEAR ?? '') === '1';   // the 2010s issue kit (src/game/gear.ts): off, so the kit's names in every frozen probe's HUD, message and debrief text are the ones they were written against, and Sam's pistol holds the ten it held; `TPS_GEAR=1` turns it on (the shipped default). Words, drawn boxes and the Glock's fifteen-round magazines — set before the Game exists (its constructor loads Sam's pistol)
   if (opts.harness && pinned('TPS_AIRDUST')) AIRDUST.on = String((globalThis as any).process?.env?.TPS_AIRDUST ?? '') === '1';   // THE WEATHER'S DUST IN THE ROOMS (src/game/airDust.ts): off, so a sight line under a picked weather is cut by the leak under every roof, as when every frozen digest and tally was recorded; `TPS_AIRDUST=1` runs any tool with it (before the Game exists: its constructor seeds the field)
-  if (opts.harness && pinned('TPS_SNOW')) SNOW.on = String((globalThis as any).process?.env?.TPS_SNOW ?? '') === '1';   // a level built for snow is born in snow (src/game/weatherKinds.ts SNOW_LEVELS, weather.ts levelKind): off, so such a level stands under the weather any level has; `TPS_SNOW=1` raises it — set before the Game exists: the Weather picks its kind in its constructor
+  if (opts.harness) pinSnow();   // a level built for snow is born in snow (src/game/weatherKinds.ts SNOW_LEVELS, weather.ts levelKind): off, so such a level stands under the weather any level has; `TPS_SNOW=1` raises it — set before the Game exists: the Weather picks its kind in its constructor
   if (opts.harness && pinned('TPS_SNOWLOOK')) SNOW_LOOK.on = String((globalThis as any).process?.env?.TPS_SNOWLOOK ?? '') === '1';   // the snow's look (weatherKinds.ts SNOW_LOOK; picture only): off, so a snow level is drawn as its painted boxes
   if (opts.harness && pinned('TPS_SNOWWISPS')) SNOW_LOOK.wisps = String((globalThis as any).process?.env?.TPS_SNOWWISPS ?? '') === '1';   // … and no wisps run over its ground
   if (opts.harness && pinned('TPS_SNOWTRACKS')) SNOW_LOOK.tracks = String((globalThis as any).process?.env?.TPS_SNOWTRACKS ?? '') === '1';   // … no boot presses a trail into it
@@ -301,7 +338,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   if (opts.harness && pinned('TPS_WALLSKIN')) WALLSKIN.on = String((globalThis as any).process?.env?.TPS_WALLSKIN ?? '') === '1';   // the paint on a wall goes with the wall (src/game/wallskin.ts): off, so a band on a holed wall is drawn whole across the hole, as it was
   const dice = opts.seed == null ? null : newDice(opts.seed); useDice(dice);   // (before the Game exists: its constructor rolls the men's construction dice)
   const seats = opts.seats ?? seatsOfSearch(opts.search ?? (typeof location !== 'undefined' ? location.search : ''));
-  const game = new Game(host, level, ch, smoke, { seats }); game.dice = dice;
+  const game = new Game(host, level, ch, smoke, { seats, stood: opts.stood }); game.dice = dice;
   // THE GAME'S STATE THAT STILL MOVES IS AT HOME FROM HERE (sim/state.ts settle, the statement every tick's open makes; said once, where every Game is
   // made, and after its die is hung): the die and the poses go into the game's block now, so a roll of the die before the first tick is the Rust
   // module's like any other. (The doors, the falls, the furniture, the slabs and the thrown things were made over the block and need no move.)
@@ -318,7 +355,6 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned()) AIM.player.low = 0;                  // …and a man under his reticle is aimed at a standing chest over his feet whatever his pose, as he was for every one of those (the shipped default goes to a low man's own chest — player.ts manAim; `probes.ts aimlow` turns it on)
     if (pinned('TPS_MOVES')) MOVES.on = String((globalThis as any).process?.env?.TPS_MOVES ?? '').split(',')[0] === '1' ? 1 : 0;                        // the loud demo's motion pass (src/game/character.ts MOVES): off, so every pose — and with it every muzzle, hit column and frozen digest — is what it was; `probes.ts moves` and tools/qa/pose-strip.ts turn it on, `TPS_MOVES=1` runs any harness tool (the tour, the soak, a family) with it on (the shipped default is on)
     if (pinned('TPS_TURN')) { const h = String((globalThis as any).process?.env?.TPS_TURN ?? '').split(',')[0]; TURN.on = h === '1' || Object.hasOwn(TURN_FEEL, h) ? 1 : 0; }                                    // … and the turn weight (character.ts TURN): off, so every yaw is the one the AI wrote; `TPS_TURN=1` (or a setting's name: `TPS_TURN=heavy` — tools/qa/headless.ts reads the numbers) turns it on
-    if (pinned('TPS_WOUNDS')) WOUND.on = String((globalThis as any).process?.env?.TPS_WOUNDS ?? '') === '1';   // wounds (src/game/wounds.ts): off, so every round that finds a man kills him, as in every frozen digest; `TPS_WOUNDS=1` runs any tool with the rule on
     if (pinned('TPS_DOORPATH')) DOORPATH.on = String((globalThis as any).process?.env?.TPS_DOORPATH ?? '').split(',')[0] === '1';   // the room entry's real paths through the door (src/game/doorpath.ts): off, so every entry — and every frozen digest — walks as it did; `TPS_DOORPATH=1` turns it on
     if (pinned('TPS_FOGTHINGS')) FOG.things = String((globalThis as any).process?.env?.TPS_FOGTHINGS ?? '') === '1';   // nothing moves in the fog (src/game/fogofwar.ts things()): off, so the list the cursor's ray meets is the game's own — a remembered thing under the cursor turned Sam's facing a few degrees in 2 of 26 frozen play-throughs; `probes.ts fog-things` turns it on, `TPS_FOGTHINGS=1` for any harness tool (the shipped default is ON)
     if (pinned('TPS_FOGFLAT')) FOG.flat = String((globalThis as any).process?.env?.TPS_FOGFLAT ?? '') === '1' ? FOG_FLAT_ON : 0;   // the fog's own light (src/game/fogofwar.ts FOG.flat; the picture only): off, so the fog block handed to the renderer is the one every stored frame was drawn with
@@ -344,7 +380,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_WALLSLOW')) WALLSNAP.slow = String((globalThis as any).process?.env?.TPS_WALLSLOW ?? '') === '1';   // the unhurried take (wallsnap.ts `slow`): off, so every frozen probe and digest has the take's seconds as they were; `TPS_WALLSLOW=1` turns it on (the shipped default)
     if (pinned('TPS_HANDSLOT')) HANDSLOT.on = String((globalThis as any).process?.env?.TPS_HANDSLOT ?? '') === '1';   // empty hands are a slot (game/handslot.ts): off, so the frozen stand's kit keys are as every probe and digest has them; `TPS_HANDSLOT=1` raises it
     if (pinned()) THROWBACK.restMark = false;   // the throw preview's rest mark (throwback.ts `restMark`): the overlay's, held off here like every newer rule
-    if (pinned()) THROWBACK.reach = false;   // the throw preview's reach rings (throwback.ts `reach`, throwreach.ts): the overlay's, held off here like the mark above
+    if (pinned()) THROWBACK.reach = false;   // the throw preview's reach rings (throwback.ts `reach`): the overlay's, held off here like the mark above
     if (pinned('TPS_THROWBACK')) THROWBACK.on = String((globalThis as any).process?.env?.TPS_THROWBACK ?? '') === '1';   // a can in the wind-up goes back on the belt when another beat begins (game/throwback.ts): off, so the frozen stand's throws are as every probe has them; `TPS_THROWBACK=1` raises it
     if (pinned('TPS_AUTOCAM')) AUTOCAM.on = String((globalThis as any).process?.env?.TPS_AUTOCAM ?? '') === '1';   // the camera running itself (src/host/autocam.ts): off, so the camera's key tapped twice is the Options row's on the frozen stand; `TPS_AUTOCAM=1` raises it
     if (pinned('TPS_AUTOSWAY')) AUTOCAM.sway = String((globalThis as any).process?.env?.TPS_AUTOSWAY ?? '') === '1';   // …and its slow turn in a fight and on the move (AUTOCAM.sway): off = it turns only at rest; `TPS_AUTOSWAY=1` raises it
@@ -446,7 +482,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_SMOKEBREAK')) SMOKEBREAK.on = String((globalThis as any).process?.env?.TPS_SMOKEBREAK ?? '') === '1';   // a man told to have a smoke (src/game/smokebreak.ts): off, so he stands where the script sent him with his hands as they were
     if (pinned('TPS_SHOWWHY')) SHOWWHY.on = String((globalThis as any).process?.env?.TPS_SHOWWHY ?? '') === '1';   // a teammate shows why he is not acting (src/game/showwhy.ts): off, so no man of the squad signals or says anything of what holds him, as every frozen run had it
     if (pinned('TPS_FIRE')) FIRE.on = String((globalThis as any).process?.env?.TPS_FIRE ?? '') === '1';   // an open fire burns (src/game/fire.ts): off, so a brazier is its glowing lid and its steady lamp, and the light meter beside it reads a steady light
-    if (pinned('TPS_ROWSET')) ROWSET.on = String((globalThis as any).process?.env?.TPS_ROWSET ?? '') === '1';   // a mission row's own hour and weather (src/game/rowset.ts): off, so a row that names one starts at the query's, as every row did
+    pinRowset();   // a mission row's own hour and weather (src/game/rowset.ts): off, so a row that names one starts at the query's, as every row did
     if (pinned('TPS_STARTLE')) STARTLE.on = String((globalThis as any).process?.env?.TPS_STARTLE ?? '') === '1';   // enemies startle when they first see you (src/game/startle.ts): off, so a man who sees you goes for his gun the frame he knows, as in every frozen probe, tally and digest; `TPS_STARTLE=1` turns it on (the shipped default)
     if (pinned('TPS_FLINCH')) FLINCH.on = String((globalThis as any).process?.env?.TPS_FLINCH ?? '') === '1';   // a man flinches when fire comes close (src/game/flinch.ts): off, so nobody ducks but on the suppression model's own edge and no green man breaks under fire, as in every frozen probe, tally and digest; `TPS_FLINCH=1` turns it on (the shipped default)
     if (pinned('TPS_FLINCHRUN')) FLINCH.run = String((globalThis as any).process?.env?.TPS_FLINCHRUN ?? '') === '1';   // …and a green man alone kept under close fire drops it and runs (flinch.ts FLINCH.run): off with it; `TPS_FLINCHRUN=1` turns it on (the shipped default), and under TPS_PROFILE=shipped `TPS_FLINCHRUN=0` leaves the duck alone
@@ -460,7 +496,6 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_SQUADDEAL')) SQUADDEAL.on = String((globalThis as any).process?.env?.TPS_SQUADDEAL ?? '') === '1';   // squads from the rooms (src/game/squaddeal.ts): off, so a level with no squads block is one pool, as every frozen digest and tally was made
     if (pinned('TPS_STAYASK')) STAYASK.on = String((globalThis as any).process?.env?.TPS_STAYASK ?? '') === '1';   // squads that stay in their rooms still miss a silent room (src/game/stayask.ts): off, so nobody on such a floor asks after another squad, as every frozen digest and tally was made
     if (pinned('TPS_KITLOAD')) KITLOAD.on = String((globalThis as any).process?.env?.TPS_KITLOAD ?? '') === '1';   // lighter kit moves faster and hides better (src/game/kitload.ts): off, so nobody's pace, notice or footfall reads his card, as every frozen digest and tally was made
-    if (pinned('TPS_SNATCHOUT')) SNATCHOUT.on = String((globalThis as any).process?.env?.TPS_SNATCHOUT ?? '') === '1';   // how a snatch ends (src/game/snatchout.ts): off, so the house taken with the man in hand ends it, as every frozen digest and tally was made
     if (pinned('TPS_RESCUEEND')) RESCUEEND.on = String((globalThis as any).process?.env?.TPS_RESCUEEND ?? '') === '1';   // how a rescue is won (src/game/rescueend.ts): off, so the hostage room held fifteen seconds ends it, as every frozen digest and tally was made
     if (pinned('TPS_RESCUEFLUSH')) RESCUEFLUSH.on = String((globalThis as any).process?.env?.TPS_RESCUEFLUSH ?? '') === '1';   // the men left alive come for the hostages (src/game/rescueflush.ts): off, so they stay where the fight left them, as every frozen digest and tally was made
     if (pinned('TPS_RESCUECHECK')) RESCUECHECK.on = String((globalThis as any).process?.env?.TPS_RESCUECHECK ?? '') === '1';   // the rescue's men check in (src/game/rescuecheck.ts): off, so nobody of a rescue's cast misses a man taken quietly, as every frozen digest and tally was made
@@ -490,7 +525,6 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_INWAY')) ORDERS.inWay = String((globalThis as any).process?.env?.TPS_INWAY ?? '') === '1';   // a stack refused only for Sam's own body says so (src/game/orders.ts noRoomWords): off, so every frozen probe's refusal reads 'no room on that door.' as it did; TPS_INWAY=1 raises it
     if (pinned('TPS_WALKTRIES')) ORDERS.walkTries = String((globalThis as any).process?.env?.TPS_WALKTRIES ?? '') === '1';   // a walk whose way runs at a door nobody has tried walks up and tries it (src/game/orders.ts walkStacks): off, so every frozen probe's 'move' at a lock is refused '<door> is locked.' as it was; TPS_WALKTRIES=1 raises it
     if (pinned('TPS_SAMEWAY')) ORDERS.sameWay = String((globalThis as any).process?.env?.TPS_SAMEWAY ?? '') === '1';   // a pair goes round a building by one side (src/game/orders.ts sameWays): off, so every frozen probe's men walk each his own short way as they did; TPS_SAMEWAY=1 raises it
-    if (pinned('TPS_SELFBODY')) ORDERS.selfBody = String((globalThis as any).process?.env?.TPS_SELFBODY ?? '') === '1';   // his own body under the cursor is himself (src/game/orders.ts targetUnderOf): off, so every frozen probe's cursor on him reads the point past him as it did; TPS_SELFBODY=1 raises it
     if (pinned('TPS_TRAILDOORS')) ORDERS.trailDoors = String((globalThis as any).process?.env?.TPS_TRAILDOORS ?? '') === '1';   // a follower goes by the doors Sam took (src/game/orders.ts trailWay): off, so every frozen probe's followers walk each his own short way as they did; TPS_TRAILDOORS=1 raises it
     if (pinned('TPS_COVERKEEP')) ROOMFIGHT.coverKeep = String((globalThis as any).process?.env?.TPS_COVERKEEP ?? '') === '1';   // a man told to cover keeps his angle (src/game/roomfight.ts)
     if (pinned('TPS_DOORSHOTS')) ROOMFIGHT.doorShots = String((globalThis as any).process?.env?.TPS_DOORSHOTS ?? '') === '1';   // rounds through a doorway keep his gun on it (src/game/roomfight.ts)
@@ -561,8 +595,6 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_STALK')) STALK.on = String((globalThis as any).process?.env?.TPS_STALK ?? '') === '1';   // the stalk (src/game/stalk.ts): off, so a held click on a man walks nobody anywhere, as on every frozen recording
     if (pinned('TPS_STALKKEY')) STALK.key = String((globalThis as any).process?.env?.TPS_STALKKEY ?? '') === '1';   // …the row's key finishing a stalk (stalk.ts STALK.key): off, so the hold becomes the grab by itself as on the stalk's own recordings
     if (pinned('TPS_STALKLOW')) STALK.low = String((globalThis as any).process?.env?.TPS_STALKLOW ?? '') === '1';   // …and the lower, hands-down way in (STALK.low): off, the arm up and the rise
-    if (pinned('TPS_STALKDRAG')) STALK.drag = String((globalThis as any).process?.env?.TPS_STALKDRAG ?? '') === '1';   // …and the mouse as a stick in the creep (STALK.drag, a prototype: down in the plain page too)
-    if (pinned('TPS_TAPSTEP')) TAPSTEP.on = String((globalThis as any).process?.env?.TPS_TAPSTEP ?? '') === '1';   // …and the crouch's keys as steps (tapstep.ts, a prototype: down in the plain page too)
     if (pinned('TPS_STALKHEFT')) STALK.heft = String((globalThis as any).process?.env?.TPS_STALKHEFT ?? '') === '1';   // …and his trunk and arms carried by his legs (STALK.heft): off, so a creep's body is as it was
     if (pinned('TPS_STALKORBIT')) STALK.orbit = String((globalThis as any).process?.env?.TPS_STALKORBIT ?? '') === '1';   // …and his keys taking him round the man in the creep (STALK.orbit): off, so a move key ends it as in every frozen probe and digest; `TPS_STALKORBIT=1` turns it on
     if (pinned('TPS_STALKWIDE')) STALK.wide = String((globalThis as any).process?.env?.TPS_STALKWIDE ?? '') === '1';   // …and his arms out wide and low as he creeps (STALK.wide, under STALK.low): off, his hands by his knees
@@ -593,7 +625,6 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_KITTREE')) KITTREE.on = String((globalThis as any).process?.env?.TPS_KITTREE ?? '') === '1';   // the gear screen as a tree (src/game/kittree.ts): off, so a card has the rows of the build before and every launcher its five sponge rounds
     if (pinned('TPS_GUNLOOK')) GUNLOOK.on = String((globalThis as any).process?.env?.TPS_GUNLOOK ?? '') === '1';   // each gun its own look, sound and reload (src/game/gunlook.ts): off, so every row is drawn, heard and fed as its stand-in
     if (pinned('TPS_GUNROLES')) GUNROLES.on = String((globalThis as any).process?.env?.TPS_GUNROLES ?? '') === '1';   // a gun used for what it is for (src/game/gunroles.ts): off, so every defender carries the short carbine and no stack, entry, cover deal or trigger reads a man's gun
-    if (pinned('TPS_PLANLAY')) PLANLAY.on = String((globalThis as any).process?.env?.TPS_PLANLAY ?? '') === '1';   // X is where the plan is laid (src/game/planlay.ts): off, so 'wait for my word' is the four's door tools' row on every frozen probe; TPS_PLANLAY=1 raises it
     if (pinned('TPS_CONDITION')) CONDITION.on = String((globalThis as any).process?.env?.TPS_CONDITION ?? '') === '1';   // a man's condition (src/game/condition.ts): off, so a blast that leaves a man up folds him for its seconds and then he is as he was, as every frozen probe, digest and tally was recorded
     if (pinned('TPS_PACKSIDE')) PACKSIDE.on = String((globalThis as any).process?.env?.TPS_PACKSIDE ?? '') === '1';   // a long thing on a back that wears a pack stands at the pack's side (src/game/packside.ts): off, so every back box and part mask is what every frozen probe read; looks only, no digest moves either way
     if (pinned('TPS_INHAND')) INHAND.on = String((globalThis as any).process?.env?.TPS_INHAND ?? '') === '1';   // a pistol drawn in the hand, the hand turned onto the aim line (src/game/inhand.ts): off, so every held box and joint palette is what every frozen probe read; looks only, no digest moves either way
@@ -617,7 +648,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_STICKY')) STICKY.on = String((globalThis as any).process?.env?.TPS_STICKY ?? '') === '1';   // sticky cameras (src/game/stickycam.ts): off, so your kit card has no such row and the rifle's launcher no third load
     if (pinned('TPS_CAMTAKE')) STICKY.take = String((globalThis as any).process?.env?.TPS_CAMTAKE ?? '') === '1';   // a stuck camera taken back onto the launcher (stickycam.ts takeCam): off, so a camera sent stays on its wall
     if (pinned('TPS_OVERHEARD')) CUES.overheard = String((globalThis as any).process?.env?.TPS_OVERHEARD ?? '') === '1';   // a hidden defender's shout as a row on the strip (src/game/cues.ts overheard): off, so a shout nobody sees is no row
-    if (pinned('TPS_CAMMARK')) STICKY.mark = String((globalThis as any).process?.env?.TPS_CAMMARK ?? '') === '1';   // his own stuck cameras shown in the fog of war (stickycam.ts stickyMarks): off, so a camera on floor nobody sees is not in the picture
+    if (pinned('TPS_CAMMARK')) STICKY.mark = String((globalThis as any).process?.env?.TPS_CAMMARK ?? '') === '1';   // his own stuck cameras shown in the fog of war (game.view.marks.cams): off, so a camera on floor nobody sees is not in the picture
     if (pinned('TPS_WORKTHINGS')) WORK.on = String((globalThis as any).process?.env?.TPS_WORKTHINGS ?? '') === '1';   // a teammate works a thing (src/game/workthings.ts): off, so the menu on the breaker is the floor's and lighting.ts deals the breaker errand as every frozen probe read it; `TPS_WORKTHINGS=1` turns it on
     if (pinned('TPS_UNSEEN')) UNSEEN.on = String((globalThis as any).process?.env?.TPS_UNSEEN ?? '') === '1';   // a squad nobody has found sneaks when Sam sneaks (src/game/unseen.ts): off, so teammates beside a crouched, slow or wall-hugging Sam stand, walk and shoot as in every frozen probe and digest; `TPS_UNSEEN=1` runs any tool with it on, tools/qa/unseen-probes.ts raises it itself
     if (pinned('TPS_WALLBEAT')) UNSEEN.wallBeat = String((globalThis as any).process?.env?.TPS_WALLBEAT ?? '') === '1';   // a wall hold counts as sneaking after a beat (src/game/unseen.ts)
@@ -642,7 +673,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('QA_DOORSTAY')) DOORSTAY.on = false;                 // doors stay where they are left (src/game/doors.ts): every leaf has its closer, which is what every older probe, frozen digest and session fixture was staged against — `probes.ts stay-open` and playthrough.ts turn it on (the shipped default); QA_DOORSTAY=1 turns it on for any harness run
     kitSoloStand(game);                  // the solo night's Sam (src/game/kit.ts): under the SHIPPED stand a game stood up plain wears your card as the page's ?solo does; the frozen stand: this line does nothing
   }
-  if (HOUR.id !== 'night') applyHour(game, HOUR.id);   // the visit's hour (?hour= / PT_HOUR — src/game/hours.ts) laid over the level's own night; night = this line does nothing
+  if (game.stood.hour !== 'night') applyHour(game, game.stood.hour);   // the visit's hour (?hour= / PT_HOUR — src/game/hours.ts) laid over the level's own night; night = this line does nothing
   const cam = new FollowCamera(); cam.target = v3.copy(level.playerSpawn);
   // THE HOST'S CAMERA AND KEYS ARE HANDED TO THE GAME HERE, ONCE, FOR EVERY HOST (the page, the harness, a watcher, a server): before the first export of a
   // game's state and before its first step, so every host of one game holds the same rows in the same order (game.ts hostCam)

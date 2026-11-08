@@ -14,10 +14,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "game_draw"
+version = "0.1.0"
+dependencies = [
+ "game",
+ "sim",
+]
+
+[[package]]
 name = "game_face"
 version = "0.1.0"
 dependencies = [
  "game",
+ "game_draw",
  "game_run",
  "game_start",
  "sim",
@@ -38,6 +47,7 @@ name = "game_run"
 version = "0.1.0"
 dependencies = [
  "game",
+ "game_start",
  "sim",
 ]
 

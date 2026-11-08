@@ -1,25 +1,33 @@
 // THE WIRE'S TABLE: what the page reads of the Rust game. `tools/blitz/schema.json` declares it, `tools/wire/fields.json` says which of it goes every tick, and a person changes them with this tool. Nothing here reads the game's TypeScript or the Rust types: a state only Rust uses needs no line in the table at all.
-//   bun run tools/wire/wire.ts gen [--check]                                        write puppet.rs, puppet-apply.ts, puppet-lists.json, out-dispatch.ts and the stamp · --check: exit 1 where a file would change
+//   bun run tools/wire/wire.ts gen [--check]                                        write puppet.rs, puppet-apply.ts, puppet-lists.json, out-dispatch.ts, src/view/read.ts (from the view:: types; an ID in one is refused) and the stamp · --check: exit 1 where a file would change
 //   bun run tools/wire/wire.ts add <mod::Type.field> --ty <type> [--ts <name>] [--expr <e>] [--start-only]    a field the page reads; refused if nothing the page runs reads that name
 //   bun run tools/wire/wire.ts add <mod::Type.serial> --serial                      the row's own serial: a new serial is a new object on the puppet, and no name is read
 //   bun run tools/wire/wire.ts add <mod::Type.field> --ty u32 --holds-serial        a field that names another object by its serial · --serial-keys: a map or set keyed by serials
 //   bun run tools/wire/wire.ts add-struct <mod::Type> <field:type,...> [--page|--tick]    a struct of the table, new: its line on the wire and its write by path · --page lists every field for the page and the tools, --tick for the tools only; a type may hold commas
 //   bun run tools/wire/wire.ts list <mod::Type.field>... [--page|--start-only]      a field already on the wire comes back every tick: to the tools, and with --page to the page too; --start-only: at a start only · --file <list>
 //   bun run tools/wire/wire.ts serial <mod::Type.field>... [--keys]                 a field already on the wire names an object by its serial · --keys: a map or set keyed by serials
+//   bun run tools/wire/wire.ts unsent <mod::Type[.field]> "<why>"                    a field the page reads and is not sent, with the reason (fields.json `unsent`; tools/qa/readtrap-page.cjs holds the page to it)
+//   bun run tools/wire/wire.ts page-writes <mod::Type[.field] | block.<part>> "<why>"    a field, or a part of the block, the page writes, with the reason (fields.json `pageWrites`; tools/qa/writetrap-page.cjs holds the page to it)
 //   bun run tools/wire/wire.ts drop <mod::Type.field>...                            fields off the wire · --file <list> takes the names one a line
 //   bun run tools/wire/wire.ts add-hand-arm <mod::Enum> <Arm[(Type)]>                 an arm on a hand-written enum of the table (the out events), last
 //   bun run tools/wire/wire.ts add-word-arm <mod::Enum> <Tag> <word> <f:ty,...>       an arm on a word enum of the table (a track)
 //   bun run tools/wire/wire.ts add-enum <mod::Type> <word[:Tag],...>                a plain enum of the table, new: its line on the wire
 //   bun run tools/wire/wire.ts add-event <crate::mod::fn|Name> [field:type,...] (--ts <name> --file <src file> [--no-game] | --host <arm>)   a call the Rust game hands to the host after a step: the event's line on the wire and the host's end. The Rust arm, its struct and the function that pushes it are a person's to write
 //   bun run tools/wire/wire.ts drop-event <Arm>...                                 events off the table: their rows, their structs, their arms on the wire (the Rust arm and what pushed it are a person's)
-//   bun run tools/wire/wire.ts drop-type <mod::Type>...                             a type off the table once no field names it
+//   bun run tools/wire/wire.ts drop-call <key>...                                 rows off the call surface by their keys ('Game.objectivePos'): the row, its arm, its place among the readers; refused while a TypeScript file crosses by it · --idle: every row no TypeScript file names
+//   bun run tools/wire/wire.ts drop-type <mod::Type>...                             a type off the table once no field names it · --idle: every type nothing on the wire comes to
+//   bun run tools/wire/wire.ts add-table <Id> <table> <mod::Type> <ts>              a table of the game, last, under an ID of its own (its lines in io.rs and io_rules.rs are written by hand)
+//   bun run tools/wire/wire.ts add-mix <Mix> <Id>,<Id>                              an ID of either of two tables: one number on the wire, the page's book answers it (io.rs writes the number by hand)
+//   bun run tools/wire/wire.ts retype <mod::Type.field>=<type>...                   fields that now hold another type: the bytes they write are their type's
+//   bun run tools/wire/wire.ts retype-call <row id>:<type>=<type>...                a row of the call surface whose argument or answer holds another type now
 //   tools/blitz/rust.sh rust bun run tools/wire/cost.ts [address]                   what a tick's export and apply cost now, on the page's list
 // An enum arm needs nothing: an arm the table does not know goes out as the tag 0xffff, and the page keeps what it had.
+import { nullTable } from './nulls';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-const ROOT = join(import.meta.dir, '../..'), BLITZ = join(ROOT, 'tools/blitz'), HERE = import.meta.dir, SCHEMA = join(BLITZ, 'schema.json'), FIELDS = join(HERE, 'fields.json');
+const ROOT = join(import.meta.dir, '../..'), BLITZ = join(ROOT, 'tools/blitz'), HERE = import.meta.dir, SCHEMA = join(BLITZ, 'schema.json'), VIEW = join(ROOT, 'src/view/read.ts'), NULLS = join(BLITZ, 'class-nulls.json'), FIELDS = join(HERE, 'fields.json');
 const die = (s: string): never => { console.error(`wire: ${s}`); process.exit(1); };
 const rustFile = (name: string): string => { const hits = readdirSync(join(ROOT, 'rust')).map(c => join(ROOT, 'rust', c, 'src', name)).filter(existsSync); if (hits.length !== 1) die(`${name} is in ${hits.length} crates`); return hits[0]; };
 const read = (p: string) => readFileSync(p, 'utf8'), readJ = (p: string) => JSON.parse(read(p));
@@ -50,19 +58,56 @@ function stateWords(io: string): string { const fieldsOf = (path: string): strin
   return L.join('\n'); }
 /** each table's length by its ID's name: what an ID from outside the game is measured against */
 function idTables(S: any): string { return ['//! How long each table is, by the name of its ID. Written by tools/wire from the schema; a value from outside the game is measured against this (io.rs, `R::measured`).', '#![allow(unused_imports)]', 'use alloc::vec::Vec;', 'pub fn id_tables(g: &crate::game::Game) -> Vec<(&\'static str, usize)> { alloc::vec![', ...S.tables.map((t: any) => `    ("${t.id}", g.${t.table}.len()),`), '] }', ''].join('\n'); }
+/** A WRITE BY PATH NAMES A FIELD BY ITS PLACE IN THE TABLE (tools/blitz: a tool's write to one field of a Rust game), so every arm of a struct's `Poke` line is
+ *  numbered by the table here, whatever an add, a drop or a pick of two cuts left in it. Found by two arms numbered four places late after two cuts met:
+ *  a write to the two fields added after them went to the wrong fields, and the module read past the bytes. */
+function pokeArms(io: string, S: { types: Record<string, { k: string; fields: { rust: string }[] }> }): string {
+  return io.split('\n').map(l => { const path = /^impl Poke for (crate::[A-Za-z_0-9:]+) \{/.exec(l)?.[1], T = path && S.types[path]; if (!T || T.k !== 'struct') return l;
+    const at = new Map(T.fields.map((f, i) => [f.rust, i]));
+    return l.replace(/ \d+ => self\.([a-z_0-9]+)\.poke\(i\),/g, (_, f) => { if (!at.has(f)) die(`${path}.${f} has an arm in io.rs and is not in the table`); return ` ${at.get(f)} => self.${f}.poke(i),`; }); }).join('\n');
+}
+/** THE VIEW'S READER (src/view/read.ts): the types of rust/game_types/src/view and how their bytes are read, with no table and no book of the game's at run time. A page that
+ *  holds no game reads it. So no type under it names a row: a man is named by his character's id, a door by its name (an ID here is refused) */
+function viewReader(S: any): string { const T = S.types as Record<string, any>, want: string[] = [], seen = new Set<string>(), name = (q: string): string => T[q].name, top = (t: string): string[] => { const o: string[] = []; let d = 0, st = 0; for (let i = 0; i < t.length; i++) { const c = t[i]; if (c === '<' || c === '(' || c === '[') d++; else if (c === '>' || c === ')' || c === ']') d--; else if (c === ',' && d === 0) { o.push(t.slice(st, i).trim()); st = i + 1; } } if (t.slice(st).trim()) o.push(t.slice(st).trim()); return o; };
+  const NUM: Record<string, [string, number]> = { f64: ['getFloat64', 8], f32: ['getFloat32', 4], u32: ['getUint32', 4], usize: ['getUint32', 4], i32: ['getInt32', 4], u16: ['getUint16', 2], i16: ['getInt16', 2], u8: ['getUint8', 1], i8: ['getInt8', 1] };
+  const visit = (q: string): void => { if (seen.has(q)) return; seen.add(q); if (!T[q]) die(`the view names ${q}, which is no type of the table: \`wire add-struct\` first`); for (const f of T[q].fields ?? []) for (const m of String(f.ty).matchAll(/crate::[A-Za-z_0-9:]+/g)) visit(m[0]); for (const v of T[q].vars ?? []) for (const m of String(v.ty ?? '').matchAll(/crate::[A-Za-z_0-9:]+/g)) visit(m[0]); want.push(q); };
+  for (const q of Object.keys(T)) if (q.startsWith('crate::view::')) visit(q);
+  const names = new Map<string, string>(); for (const q of want) { const n = name(q), had = names.get(n); if (had && had !== q) die(`the view's types ${had} and ${q} have one name`); names.set(n, q); }
+  /** a type's TypeScript, and the expression that reads it */
+  const of = (t0: string, where: string): { ts: string; rd: string } => { const t = t0.trim(); let m;
+    if (NUM[t]) return { ts: 'number', rd: `n('${NUM[t][0]}', ${NUM[t][1]})`.replace(/n\('(\w+)', (\d)\)/, (_, f, w) => `I.${f.replace('get', '').toLowerCase()}()`) };
+    if (t === 'bool') return { ts: 'boolean', rd: 'I.bool()' }; if (t === 'String') return { ts: 'string', rd: 'I.str()' };
+    if (t === 'V3') return { ts: 'Vec3', rd: '[I.float64(), I.float64(), I.float64()]' };
+    if ((m = t.match(/^Option<(.*)>$/))) { const x = of(m[1], where); return { ts: `${x.ts} | null`, rd: `I.bool() ? ${x.rd} : null` }; }
+    if ((m = t.match(/^Vec<(.*)>$/))) { const x = of(m[1], where); return { ts: `${/[ |]/.test(x.ts) ? `(${x.ts})` : x.ts}[]`, rd: `I.list(() => ${x.rd.startsWith('{') ? `(${x.rd})` : x.rd})` }; }
+    if ((m = t.match(/^\[(.+); (\d+)\]$/))) { const x = of(m[1], where); return { ts: `[${Array(+m[2]).fill(x.ts).join(', ')}]`, rd: `[${Array(+m[2]).fill(x.rd).join(', ')}]` }; }
+    if ((m = t.match(/^\((.*)\)$/))) { const xs = top(m[1]).map(x => of(x, where)); return { ts: `[${xs.map(x => x.ts).join(', ')}]`, rd: `[${xs.map(x => x.rd).join(', ')}]` }; }
+    if (T[t]) return { ts: name(t), rd: `read${name(t)}In(I)` };
+    return die(`${where}: a view's field is a number, a word, a truth, a place, a list or an option of those, or another of its types; not ${t}${/Id$/.test(t) ? ' (it names no row: a man is his character\'s id, a door its name)' : ''}`); };
+  const camelT = (f: any) => f.ts ?? camel(f.rust), L: string[] = ['// THE VIEW, READ: the types of rust/game_types/src/view and their bytes, as plain values. Written by tools/wire (gen) from the table; never edited by hand. It imports nothing of the game:', '// a page that holds no game reads the same record.', "import type { Vec3 } from '../math/vec';", '',
+    'class In { p = 0; dv: DataView; constructor(readonly b: Uint8Array) { this.dv = new DataView(b.buffer, b.byteOffset, b.byteLength); }', ...Object.values(NUM).filter((x, i, A) => A.findIndex(y => y[0] === x[0]) === i).map(([f, w]) => `  ${f.replace('get', '').toLowerCase()}(): number { const v = this.dv.${f}(this.p${w > 1 ? ', true' : ''}); this.p += ${w}; return v; }`),
+    '  bool(): boolean { return this.b[this.p++] !== 0; }', '  str(): string { const n = this.uint32(), s = DEC.decode(this.b.subarray(this.p, this.p + n)); this.p += n; return s; }', '  list<T>(f: () => T): T[] { const n = this.uint32(), o: T[] = []; for (let i = 0; i < n; i++) o.push(f()); return o; }', "  word<T>(W: readonly T[], of: string): T { const k = this.uint16(); if (k >= W.length) throw new Error(`the view: no such word of ${of} (${k})`); return W[k]; } }", 'const DEC = new TextDecoder();', ''];
+  for (const q of want) { const X = T[q], n = name(q);
+    if (X.k === 'enum') { L.push(`export type ${n} = ${X.words.map((w: string) => `'${w}'`).join(' | ')};`, `const ${n}Words: readonly ${n}[] = [${X.words.map((w: string) => `'${w}'`).join(', ')}];`, `function read${n}In(I: In): ${n} { return I.word(${n}Words, '${n}'); }`); continue; }
+    if (X.k !== 'struct') die(`the view: ${q} is a ${X.k}; a view's type is a struct or a plain enum`);
+    const F = X.fields.map((f: any) => ({ k: camelT(f), ...of(f.ty, `${q}.${f.rust}`) }));
+    L.push(`export interface ${n} { ${F.map((f: any) => `${f.k}: ${f.ts}`).join('; ')} }`, `function read${n}In(I: In): ${n} { return { ${F.map((f: any) => `${f.k}: ${f.rd}`).join(', ')} }; }`,
+      `export function read${n}(b: Uint8Array): ${n} { const I = new In(b), r = read${n}In(I); if (I.p !== b.length) throw new Error(\`the view: ${n} is \${b.length} bytes and \${I.p} were read\`); return r; }`); }
+  return L.join('\n') + '\n'; }
 /** every generated file, and the stamp both halves carry */
 function gen(check: boolean): void { const T = mkdtempSync(join(tmpdir(), 'wire-')); mkdirSync(join(T, 'bridge'));
   const S0 = read(SCHEMA); writeFileSync(join(T, 'bridge/schema.json'), S0);
   execFileSync(process.execPath, ['run', join(HERE, 'puppetgen.cjs'), T, FIELDS, ROOT], { stdio: ['ignore', 'pipe', 'inherit'] });
   const S = readJ(join(T, 'bridge/schema.json')); delete S.layout;
+  { const L = readJ(FIELDS), page = new Set<string>(L.pageTick); for (const q of Object.keys(L.unsent ?? {})) { unsentOk(S, q); if (page.has(q)) die(`${q} is on the page's list and in fields.json \`unsent\``); } for (const q of Object.keys(L.pageWrites ?? {})) if (!q.startsWith('block.')) unsentOk(S, q); }
   // (the stamp is of what the two halves read of each other's bytes. `knobSettled` is no part of that: which settings a page's walk leaves out)
   const settled = S.knobSettled; delete S.knobSettled;
   const O = { 'bridge/puppet-apply.ts': join(BLITZ, 'puppet-apply.ts'), 'bridge/puppet-lists.json': join(BLITZ, 'puppet-lists.json'), 'bridge/out-dispatch.ts': join(BLITZ, 'out-dispatch.ts'), 'puppet.rs': rustFile('puppet.rs') } as Record<string, string>;
   const words = JSON.stringify(S) + Object.keys(O).map(k => read(join(T, k))).join(''); const layout = fnv(words); S.layout = layout; S.knobSettled = settled;
-  const ioP = rustFile('io.rs'), io0 = read(ioP), io1 = io0.replace(/\npub const LAYOUT: u32 = \d+;\n?/, '').trimEnd() + `\npub const LAYOUT: u32 = ${layout};\n`;
-  const swP = join(ROOT, 'rust/game/src/state_words.rs'); const idP = join(ioP, '../id_tables.rs'); const out: [string, string][] = [[SCHEMA, JSON.stringify(S)], [ioP, io1], [swP, stateWords(io1)], [idP, idTables(S)], ...Object.entries(O).map(([k, p]) => [p, read(join(T, k))] as [string, string])];
+  const ioP = rustFile('io.rs'), io0 = read(ioP), io1 = pokeArms(io0, S).replace(/\npub const LAYOUT: u32 = \d+;\n?/, '').trimEnd() + `\npub const LAYOUT: u32 = ${layout};\n`;
+  const swP = join(ROOT, 'rust/game/src/state_words.rs'); const idP = join(ioP, '../id_tables.rs'); const out: [string, string][] = [[SCHEMA, JSON.stringify(S)], [ioP, io1], [swP, stateWords(io1)], [idP, idTables(S)], [VIEW, viewReader(S)], [NULLS, nullTable(S).text], ...Object.entries(O).map(([k, p]) => [p, read(join(T, k))] as [string, string])];
   // THE TOOL NEVER WRITES A TYPE. The game's types are source a person edits (each module's types.rs, knobs.rs, ids.rs); this list of files is all gen touches, and the two Rust files it makes in whole declare none.
-  const made = new Set([SCHEMA, ioP, swP, idP, ...Object.values(O)]); for (const [p, t] of out) { if (!made.has(p)) die(`${p.slice(ROOT.length + 1)}: gen writes no file off its list`); if (p.endsWith('.rs') && p !== ioP && /^\s*(pub(\([a-z]+\))?\s+)?(struct|enum|union)\s/m.test(t)) die(`${p.slice(ROOT.length + 1)}: a generated file declares a type; the game's types are written by hand`); }
+  const made = new Set([SCHEMA, ioP, swP, idP, VIEW, NULLS, ...Object.values(O)]); for (const [p, t] of out) { if (!made.has(p)) die(`${p.slice(ROOT.length + 1)}: gen writes no file off its list`); if (p.endsWith('.rs') && p !== ioP && /^\s*(pub(\([a-z]+\))?\s+)?(struct|enum|union)\s/m.test(t)) die(`${p.slice(ROOT.length + 1)}: a generated file declares a type; the game's types are written by hand`); }
   let moved = 0; for (const [p, t] of out) { const was = existsSync(p) ? read(p) : ''; if (was === t) continue; moved++; if (check) console.log(`wire: ${p.slice(ROOT.length + 1)} would change`); else writeFileSync(p, t); }
   rmSync(T, { recursive: true, force: true }); console.log(`wire: ${moved ? `${moved} files ${check ? 'differ' : 'written'}` : 'no file changes'}; layout ${layout}`); if (check && moved) process.exit(1); }
 const camel = (x: string) => x.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
@@ -95,7 +140,14 @@ function addStruct(path0: string, fields: string, lists: ('everyTick' | 'pageTic
   const ioP = rustFile('io.rs'), t = read(ioP).replace(/\npub const LAYOUT: u32 = \d+;\n?/, '').trimEnd(); const w = F.map(x => `self.${x.rust}.w(o);`).join(' '), r = F.map(x => `s.${x.rust} = Io::r(i);`).join(' '), ri = F.map(x => `self.${x.rust}.ri(i);`).join(' '), arms = F.map((x, i) => `${i} => self.${x.rust}.poke(i),`).join(' ');
   writeFileSync(ioP, `${t}\nimpl Io for ${path} { fn w(&self, o: &mut W) { ${w} } fn r(i: &mut R) -> Self { let mut s = Self::default(); ${r} s } fn ri(&mut self, i: &mut R) { ${ri} } }\nimpl Poke for ${path} { fn poke(&mut self, i: &mut R) { match u16::r(i) { 0xffff => self.ri(i), ${arms} k => panic!("bridge: no field {} of ${m![2]}", k) } } }\n`); if (lists.length) { const L = readJ(FIELDS); for (const k of lists) for (const x of F) if (!L[k].includes(`${m![1]}::${m![2]}.${x.rust}`)) L[k].push(`${m![1]}::${m![2]}.${x.rust}`); writeFields(L); } gen(false); console.log(`wire: ${path} is in the table, with ${F.length} fields${lists.length ? `, listed for ${lists.includes('pageTick') ? 'the page and the tools' : 'the tools'}` : ''}`); }
 /** a field the table has comes back every tick: `everyTick` is the tools' list, and `pageTick` the page's, which costs every frame */
-function list(Q: string[], page: boolean, startOnly = false): void { const S = readJ(SCHEMA), L = readJ(FIELDS); let n = 0; for (const q of Q) { const { f, path } = parseQ(q); if (!S.types[path]?.fields?.some((x: any) => x.rust === f)) die(`${q} is not on the wire: \`wire add\` first`); for (const k of startOnly ? ['atStartOnly'] : page ? ['everyTick', 'pageTick'] : ['everyTick']) if (!L[k].includes(q)) { L[k].push(q); n++; } } writeFields(L); gen(false); console.log(`wire: ${n} list rows added, ${startOnly ? 'at a start only' : `for ${page ? 'the page and the tools' : 'the tools'}`}`); }
+function list(Q: string[], page: boolean, startOnly = false): void { const S = readJ(SCHEMA), L = readJ(FIELDS); let n = 0; for (const q of Q) { const { f, path } = parseQ(q); if (!S.types[path]?.fields?.some((x: any) => x.rust === f)) die(`${q} is not on the wire: \`wire add\` first`); for (const k of startOnly ? ['atStartOnly'] : page ? ['everyTick', 'pageTick'] : ['everyTick']) if (!L[k].includes(q)) { L[k].push(q); n++; } if (page) delete L.unsent?.[q]; } writeFields(L); gen(false); console.log(`wire: ${n} list rows added, ${startOnly ? 'at a start only' : `for ${page ? 'the page and the tools' : 'the tools'}`}`); }
+/** a row of `unsent` is a field of the table, or a whole type of it */
+function unsentOk(S: any, q: string): void { const T = S.types[`crate::${q}`]; if (T?.k === 'struct') return; const { f, path } = parseQ(q); if (!S.types[path]?.fields?.some((x: any) => x.rust === f)) die(`${q} is no field and no type of the wire's table`); }
+/** a field the page's code reads and is not sent, and why that is right: kept beside the list (fields.json `unsent`), held by tools/qa/readtrap-page.cjs. Read off a page that reads a field with no reason here, and it's a fault */
+function unsent(q: string, why: string | undefined): void { const L = readJ(FIELDS); if (L.pageTick.includes(q)) die(`${q} is on the page's list`); reason('unsent', q, why); }
+/** a row of one of the lists of reasons kept beside the fields (fields.json): `unsent` what the page reads and is not sent, `pageWrites` what the page writes (of the block: `block.<part>`) and why each is right */
+function reason(list: 'unsent' | 'pageWrites', q: string, why: string | undefined): void { const S = readJ(SCHEMA), L = readJ(FIELDS); if (!why || why.length < 12) die(`${list}: say why that is right`); if (!(list === 'pageWrites' && q.startsWith('block.'))) unsentOk(S, q);
+  L[list] = Object.fromEntries(Object.entries({ ...(L[list] ?? {}), [q]: why }).sort((x, y) => x[0] < y[0] ? -1 : 1)); writeFields(L); console.log(`wire: ${q}, ${list}: ${why}`); }
 /** a field already on the wire names an object by its serial (or, --keys, is a map or set keyed by serials): the tools that hold two games to each other read past it, and the apply keeps the object */
 function serialWord(Q: string[], keys: boolean): void { const S = readJ(SCHEMA); for (const q of Q) { const { f, path } = parseQ(q), F = S.types[path]?.fields?.find((x: any) => x.rust === f); if (!F) die(`${q} is not on the wire: \`wire add\` first`); if (!keys && F.ty !== 'u32' && F.ty !== 'Option<u32>') die(`${q} is a ${F.ty}: a serial is a u32 or an Option<u32>`); (S.serial ??= {})[keys ? `${q}{}` : q] = true; } writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); console.log(`wire: ${Q.length} serial rows`); }
 /** every module's top-level name an expression is written from: `B.top(file, name…)`, in either quote, anywhere in it */
@@ -103,9 +155,9 @@ const TOPS = /B\.top\(['"]([^'"]+)['"], ['"]([^'"]+)['"]/g;
 function drop(Q: string[]): void { const S = readJ(SCHEMA), L = readJ(FIELDS), ioP = rustFile('io.rs'), io = read(ioP).split('\n'), index = new Map<string, number>(); io.forEach((l, i) => { const m = l.match(/^impl (Io|Poke) for (crate::[A-Za-z_0-9:]+) \{/); if (m) index.set(`${m[1]} ${m[2]}`, i); }); const set = new Set(Q), gone = new Map<string, Set<string>>(); let n = 0, listed = 0;
   const lineOf = (kind: string, path: string) => { const k = index.get(`${kind} ${path}`); if (k === undefined) die(`${path} has no ${kind} line on the wire`); return k!; };
   for (const q of Q) { const { f, path } = parseQ(q), T = S.types[path]; if (!T) die(`${path} is no type of the table`); const at = T.fields.findIndex((x: any) => x.rust === f); if (at < 0) die(`${q} is not on the wire`); for (const m of String(T.fields[at].expr ?? '').matchAll(TOPS)) { if (!gone.has(m[1])) gone.set(m[1], new Set()); gone.get(m[1])!.add(m[2]); } T.fields.splice(at, 1); n++; if (S.serial) { delete S.serial[q]; delete S.serial[`${q}{}`]; }
-    const k = lineOf('Io', path); let l = io[k]; for (const [a, b] of [[` self.${f}.w(o);`, ''], [` s.${f} = Io::r(i);`, ''], [` ${f}: Io::r(i),`, ''], [` self.${f}.ri(i);`, '']]) l = l.split(a).join(b); if (new RegExp(`\\b${f}\\b`).test(l)) die(`${q}: its line on the wire is not of a form this tool knows`); io[k] = l;
+    const k = lineOf('Io', path); let l = io[k]; for (const [a, b] of [[` { let at = o.b.len(); 0u32.w(o); self.${f}.w(o); let n = (o.b.len() - at - 4) as u32; o.b[at..at + 4].copy_from_slice(&n.to_le_bytes()); }`, ''], [` if u32::r(i) != 0 { s.${f} = Io::r(i); }`, ''], [` if u32::r(i) != 0 { self.${f}.ri(i); }`, ''], [` self.${f}.w(o);`, ''], [` s.${f} = Io::r(i);`, ''], [` ${f}: Io::r(i),`, ''], [` self.${f}.ri(i);`, '']]) l = l.split(a).join(b); if (new RegExp(`\\b${f}\\b`).test(l)) die(`${q}: its line on the wire is not of a form this tool knows`); io[k] = l;
     const p = lineOf('Poke', path); let i2 = 0; io[p] = io[p].replace(` ${at} => self.${f}.poke(i),`, '').replace(/ \d+ => self\.([a-z_0-9]+)\.poke\(i\),/g, (_, x) => ` ${i2++} => self.${x}.poke(i),`); }
-  for (const k of ['everyTick', 'pageTick', 'atStartOnly']) { const b = L[k].length; L[k] = L[k].filter((x: string) => !set.has(x)); listed += b - L[k].length; } S.knobSettled = (S.knobSettled ?? []).filter((x: string) => !set.has(x));
+  for (const k of ['everyTick', 'pageTick', 'atStartOnly']) { const b = L[k].length; L[k] = L[k].filter((x: string) => !set.has(x)); listed += b - L[k].length; } for (const q of Q) { delete L.unsent?.[q]; delete L.pageWrites?.[q]; } S.knobSettled = (S.knobSettled ?? []).filter((x: string) => !set.has(x));
   // (a module's top-level name that only a dropped field was written from is asked of its file no more: tools/blitz/expose.ts reads `top`, and a name the file no longer has is a throw as it loads)
   const asked = new Set<string>(); for (const T of Object.values(S.types) as any[]) for (const x of T.fields ?? []) for (const m of String(x.expr ?? '').matchAll(TOPS)) asked.add(`${m[1]}:${m[2]}`);
   for (const [f, names] of gone) if (S.top?.[f]) { S.top[f] = S.top[f].filter((x: string) => !names.has(x) || asked.has(`${f}:${x}`)); if (!S.top[f].length) delete S.top[f]; }
@@ -147,16 +199,56 @@ function addEvent(what: string, fields: string, ts: string | undefined, file: st
   if (io[k] !== outEventLine(E.arms.slice(0, -1))) die('OutEvent\'s line on the wire is not of the form this tool writes'); io[k] = outEventLine(E.arms);
   if (F.length) io.splice(k + 1, 0, `impl Io for ${path} { fn w(&self, o: &mut W) { ${F.map(x => `self.${x.rust}.w(o);`).join(' ')} } fn r(i: &mut R) -> Self { Self { ${F.map(x => `${x.rust}: Io::r(i),`).join(' ')} } } }`, `impl Poke for ${path} { fn poke(&mut self, i: &mut R) { match u16::r(i) { 0xffff => self.ri(i), ${F.map((x, i) => `${i} => self.${x.rust}.poke(i),`).join(' ')} k => panic!("bridge: no field {} of ${st}", k) } } }`); writeFileSync(ioP, io.join('\n') + '\n');
   gen(false); console.log(`wire: the event ${arm} is on the wire, tag ${tag}. Yours to write in Rust: the arm \`${F.length ? `${arm}(${path})` : arm}\`${F.length ? `, the struct ${st} in out_events/types.rs` : ''}, and the function that pushes it.`); }
-/** a type off the table, once no field names it: its lines on the wire go with it. The Rust type itself is a person's to delete */
-function dropType(Q: string[]): void { const S = readJ(SCHEMA), ioP = rustFile('io.rs'); let io = read(ioP).split('\n');
-  for (const q of Q) { const path = q.startsWith('crate::') ? q : `crate::${q}`, T = S.types[path]; if (!T) die(`${path} is no type of the table`); const named = new RegExp(`\\b${path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
-    const users = Object.entries(S.types).filter(([k, x]: [string, any]) => k !== path && JSON.stringify([x.fields, x.vars]).match(named)).map(([k]) => k); if (users.length) die(`${path} is still named by ${users.slice(0, 5).join(', ')}`);
-    delete S.types[path]; const before = io.length; io = io.filter(l => !l.startsWith(`impl Io for ${path} {`) && !l.startsWith(`impl Poke for ${path} {`)); console.log(`wire: ${path} off the table, ${before - io.length} lines on the wire`); }
-  writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); }
+/** the types nothing on the wire comes to: not from the game, a table of rows, the out events, a call's or a tap's words, nor by name in a hand-written crate (the face, the runner, the start) or the bridge */
+function idleTypes(S: any): string[] { const refs = (t: string) => t.match(/crate::[A-Za-z_0-9:]+/g) ?? [], seen = new Set<string>(), queue: string[] = [], add = (m: string) => { if (S.types[m] && !seen.has(m)) { seen.add(m); queue.push(m); } };
+  // (a type's line on the wire may write more than the table says of it: an echo field is bytes to the page and its own type in Rust. So a type comes to whatever its Rust declaration names)
+  const named = new Map<string, string[]>(); for (const k of Object.keys(S.types)) { const n = k.split('::').pop()!; named.set(n, [...named.get(n) ?? [], k]); }   // (a bare name is any type of that name)
+  const files = new Map<string, string>(), declared = (k: string) => { const m = k.match(/^crate::([a-z_0-9]+)::([A-Za-z_0-9]+)$/); if (!m) return ''; if (!files.has(m[1])) files.set(m[1], ['game_types', 'game_rules', 'game_wire', 'game'].map(c => join(ROOT, 'rust', c, 'src', m[1], 'types.rs')).filter(existsSync).map(read).join('\n')); const t = files.get(m[1])!, i = t.search(new RegExp(`pub (struct|enum) ${m[2]}\\b`)); return i < 0 ? '' : t.slice(i, t.indexOf('\n}', i)); };
+  const drain = () => { for (let k = queue.pop(); k !== undefined; k = queue.pop()) { refs(JSON.stringify(S.types[k])).forEach(add); const D = declared(k); refs(D).forEach(add); for (const x of D.match(/\b[A-Z][A-Za-z0-9_]*\b/g) ?? []) (named.get(x) ?? []).forEach(add); } };
+  [S.root, 'crate::out_events::OutEvent', ...refs(JSON.stringify(S.tables)), ...refs(read(join(BLITZ, 'calls.json'))), ...refs(read(join(BLITZ, 'taps.json')))].forEach(add); drain();
+  const walk = (d: string, x: RegExp): string[] => readdirSync(d).flatMap(e => { const p = join(d, e); return statSync(p).isDirectory() ? e === 'node_modules' || e === 'target' ? [] : walk(p, x) : x.test(e) && !/^(puppet-apply|classes)\.ts$/.test(e) ? [read(p)] : []; });
+  const all = [...walk(join(ROOT, 'rust/game_wire/src/type_impls'), /\.rs$/), ...['game_face', 'game_run', 'game_start'].flatMap(c => walk(join(ROOT, 'rust', c), /\.rs$/)), ...walk(BLITZ, /\.ts$/), ...walk(join(ROOT, 'src'), /\.ts$/)].join('\n'); for (const k of Object.keys(S.types)) if (!seen.has(k) && (all.includes(k) || all.includes(k.replace('crate::', 'game::')))) add(k);
+  // (a module whose types have their lines by hand: game_wire's type_impls/parts/<module>.rs)
+  for (const e of readdirSync(join(ROOT, 'rust/game_wire/src/type_impls/parts'))) { const at = join(ROOT, 'rust/game_types/src', e.replace('.rs', ''), 'types.rs'); if (existsSync(at)) refs(read(at)).forEach(add); }
+  drain();
+  return Object.keys(S.types).filter(k => !seen.has(k)); }
+/** a type off the table, once no field names it: its lines on the wire go with it. The Rust type itself is a person's to delete. A list is taken off together, so types that name one another may go in any order */
+function dropType(Q: string[], idle: boolean): void { const S = readJ(SCHEMA), ioP = rustFile('io.rs'); let io = read(ioP).split('\n'); if (idle) { Q = idleTypes(S); if (!Q.length) return console.log('wire: no idle type'); }
+  const paths = Q.map(q => q.startsWith('crate::') ? q : `crate::${q}`), set = new Set(paths); for (const path of paths) if (!S.types[path]) die(`${path} is no type of the table`);
+  for (const [k, x] of Object.entries<any>(S.types)) if (!set.has(k)) for (const m of JSON.stringify([x.fields, x.vars, x.arms]).match(/crate::[A-Za-z_0-9:]+/g) ?? []) if (set.has(m)) die(`${m} is still named by ${k}`);
+  const before = io.length; io = io.filter(l => { const m = l.match(/^impl (?:Io|Poke) for (crate::[A-Za-z_0-9:]+) \{/); return !m || !set.has(m[1]); }); for (const path of paths) delete S.types[path];
+  // (its fields' rows on the lists go with it)
+  const L = readJ(FIELDS), gone = paths.map(x => `${x.replace(/^crate::/, '')}.`); for (const k of ['everyTick', 'pageTick', 'atStartOnly']) L[k] = L[k].filter((x: string) => !gone.some(g => x.startsWith(g))); for (const q of Object.keys(L.unsent ?? {})) if (gone.some(g => `${q}.`.startsWith(g))) delete L.unsent[q]; writeFields(L);
+  writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); console.log(`wire: ${paths.length === 1 ? paths[0] : `${paths.length} types`} off the table, ${before - io.length} lines on the wire`); }
+/** calls.json's own form: one line, a space after each comma and colon */
+const form = (v: unknown): string => v === null || typeof v !== 'object' ? JSON.stringify(v) : Array.isArray(v) ? `[${v.map(form).join(', ')}]` : `{${Object.entries(v as object).map(([k, x]) => `${JSON.stringify(k)}: ${form(x)}`).join(', ')}}`;
+/** a row off the call surface: its line of calls.json, its arm of call_gen.rs, its place in reads.json. A row's number is its name, so it leaves a hole and no other moves. The Rust function is a person's to delete */
+function dropCall(keys: string[], idle: boolean): void { const P = join(BLITZ, 'calls.json'), text = read(P), J = JSON.parse(text) as { rows: { id: number; key: string; stub?: string }[] };
+  if (form(J) !== text.trimEnd()) die('calls.json is not in the form this tool writes: it would rewrite more than the rows');
+  const walk = (d: string): string[] => readdirSync(d).flatMap(e => { const p = join(d, e); return statSync(p).isDirectory() ? e === 'node_modules' ? [] : walk(p) : /\.(tsx?|cjs)$/.test(e) ? [p] : []; });
+  // (idle: the key stands in quotes in no TypeScript or page check of the tree, as a crossing, a call by hand or a list. No key is built at run time)
+  if (idle) { const all = [...walk(join(ROOT, 'src')), ...walk(join(ROOT, 'tools'))].map(read).join('\n'); keys = J.rows.filter(r => ![r.key, r.stub ?? r.key].some(k => [`'${k}'`, `"${k}"`, `\`${k}\``].some(x => all.includes(x)))).map(r => r.key); if (!keys.length) return console.log('wire: no idle row'); }
+  const gone = keys.map(k => J.rows.find(r => r.key === k) ?? die(`${k} is no row of the call surface`) as never), genP = rustFile('call_gen.rs'); let gen = read(genP).split('\n');
+  for (const f of [...walk(join(ROOT, 'src')), ...walk(BLITZ)]) { const t = read(f); for (const r of gone) if ([`call('${r.key}'`, `'${r.stub ?? r.key}', this`, `crossing('${r.stub ?? r.key}'`].some(x => t.includes(x))) die(`${f.slice(ROOT.length + 1)} still crosses by ${r.key}`); }
+  for (const r of gone) { const n = gen.length; gen = gen.filter(l => !l.startsWith(`${r.id} => `)); if (gen.length !== n - 1) die(`${r.key}: call_gen.rs has ${n - gen.length} arms numbered ${r.id}`); }
+  J.rows = J.rows.filter(r => !gone.includes(r)); writeFileSync(P, form(J) + (text.endsWith('\n') ? '\n' : '')); writeFileSync(genP, gen.join('\n'));
+  const R = join(BLITZ, 'reads.json'), rt = read(R), left = rt.split('\n').filter(l => !keys.some(k => l.trim().replace(/,$/, '') === JSON.stringify(k))), n = rt.split('\n').length - left.length; if (n) { const fixed = left.join('\n').replace(/,(\s*\])/, '$1'); JSON.parse(fixed); writeFileSync(R, fixed); }
+  const C = readJ(join(BLITZ, 'reads-contract.json')).rows, held = keys.filter(k => JSON.stringify(C).includes(JSON.stringify(k))); if (held.length) console.log(`wire: reads-contract.json still names ${held.join(', ')}: that list is written by hand`);
+  console.log(`wire: ${gone.length} rows off the call surface (${gone.map(r => `${r.key} ${r.id}`).join(', ')}), ${n} off the readers; ${J.rows.length} left`); }
+/** a table of the game, last: the table's own number and every row's place stay as they were */
+function addTable(id: string, table: string, ty0: string, ts: string): void { const S = readJ(SCHEMA), ty = `crate::${ty0}`, T = S.types[ty]; if (!T) die(`${ty} is no type of the table`); if (S.ids.includes(id)) die(`${id} is on the table already`); S.ids.push(id); S.tables.push({ id, table, ty, ts, mod: T.mod }); writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); }
+/** an ID that names a row of either of two tables. On the wire it is one number, the first table's row twice over, the second's twice over and one more (io.rs writes it, tools/blitz/export.ts `Book` reads it) */
+function addMix(id: string, of: string): void { const S = readJ(SCHEMA), two = of.split(','); if (two.length !== 2 || two.some(x => !S.ids.includes(x))) die(`add-mix: ${of} is not two IDs of the table`); if (S.ids.includes(id)) die(`${id} is on the table already`); S.ids.push(id); (S.mixes ??= {})[id] = two; writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); }
+/** fields that hold another type now (each is `mod::Type.field=the type`) */
+function retype(Q: string[]): void { const S = readJ(SCHEMA); for (const q of Q) { const k = q.indexOf('='); if (k < 0) die(`${q}: write it mod::Type.field=the type`); const { f, path } = parseQ(q.slice(0, k)), row = S.types[path]?.fields?.find((x: any) => x.rust === f); if (!row) die(`${q.slice(0, k)} is not on the wire`); row.ty = q.slice(k + 1); } writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); }
+/** a row of the call surface whose argument or answer holds another type now: its row in calls.json and its arm in call_gen.rs (each is `row id:the type it held=the type it holds`) */
+function retypeCall(Q: string[]): void { const CP = join(BLITZ, 'calls.json'), C = readJ(CP), GP = join(ROOT, 'rust/game/src/call_gen.rs'), L = read(GP).split('\n'); for (const q of Q) { const m = q.match(/^(\d+):(.*)=(.*)$/); if (!m) die(`${q}: write it <row id>:<type>=<type>`); const [id, was, now] = [+m![1], m![2], m![3]], row = C.rows.find((r: any) => r.id === id); /* (an arm may outlive its row) */ if (row) { for (const a of row.args) if (a.ty === was) a.ty = now; if (row.ret === was) row.ret = now; } const k = L.findIndex(l => l.startsWith(`${id} => {`)); if (k < 0) die(`no arm ${id} in call_gen.rs`); if (!L[k].includes(`: ${was} = Io::r`)) die(`arm ${id} holds no ${was}`); L[k] = L[k].split(`: ${was} = Io::r`).join(`: ${now} = Io::r`); } writeFileSync(CP, form(C) + (read(CP).endsWith('\n') ? '\n' : '')); writeFileSync(GP, L.join('\n')); }
 const A = process.argv.slice(2), opt = (n: string) => { const i = A.indexOf(n); return i < 0 ? undefined : A[i + 1]; };
 switch (A[0]) { case 'gen': gen(A.includes('--check')); break;
   case 'add': { const serial: SerialWord = A.includes('--serial') ? 'own' : A.includes('--holds-serial') ? 'holds' : A.includes('--serial-keys') ? 'keys' : null; add(A[1], opt('--ty') ?? (serial === 'own' ? 'u32' : die('add: --ty') as never), opt('--ts'), opt('--expr'), A.includes('--start-only'), serial); break; }
   case 'list': list(A.includes('--file') ? read(opt('--file')!).split('\n').map(x => x.trim()).filter(Boolean) : A.slice(1).filter(x => x.includes('::')), A.includes('--page'), A.includes('--start-only')); break;
+  case 'unsent': unsent(A[1], A[2]); break;
+  case 'page-writes': reason('pageWrites', A[1], A[2]); break;
   case 'serial': serialWord(A.slice(1).filter(x => x.includes('::')), A.includes('--keys')); break;
   case 'drop-event': dropEvent(A.slice(1).filter(x => !x.startsWith('--'))); break;
   case 'add-event': addEvent(A[1], A[2] && !A[2].startsWith('--') ? A[2] : '', opt('--ts'), opt('--file'), A.includes('--no-game'), opt('--host')); break;
@@ -164,6 +256,11 @@ switch (A[0]) { case 'gen': gen(A.includes('--check')); break;
   case 'add-enum': addEnum(A[1], A[2]); break;
   case 'add-hand-arm': addHandArm(A[1], A[2]); break;
   case 'add-word-arm': addWordArm(A[1], A[2], A[3], A[4]); break;
-  case 'drop-type': dropType(A.slice(1)); break;
+  case 'drop-call': dropCall(A.slice(1).filter(x => !x.startsWith('--')), A.includes('--idle')); break;
+  case 'drop-type': dropType(A.slice(1).filter(x => !x.startsWith('--')), A.includes('--idle')); break;
+  case 'add-table': addTable(A[1], A[2], A[3], A[4]); break;
+  case 'add-mix': addMix(A[1], A[2]); break;
+  case 'retype': retype(A.slice(1)); break;
+  case 'retype-call': retypeCall(A.slice(1)); break;
   case 'drop': { const f = opt('--file'); drop(f ? read(f).split('\n').map(x => x.trim()).filter(Boolean) : A.slice(1)); break; }
-  default: console.error(read(import.meta.path).split('\n').slice(0, 7).join('\n')); process.exit(64); }
+  default: console.error(read(import.meta.path).split('\n').filter(l => l.startsWith('//')).join('\n')); process.exit(64); }

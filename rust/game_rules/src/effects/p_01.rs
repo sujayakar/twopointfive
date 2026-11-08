@@ -12,7 +12,7 @@ type Kind = crate::smoke_types::SmokeEmitterKind;
 type Lattice = crate::smoke_types::SmokeEmitterLattice;
 
 /// A stored `Track` called: its `{ pos, dir }`, read live, or nothing once what it rides has gone. (combat.ts fireWeaponRaw track and port; sparks.ts tracker)
-fn track_at(g: &Game, track: &Track) -> Option<(V3, V3)> {
+pub fn track_at(g: &Game, track: &Track) -> Option<(V3, V3)> {
     match *track {
         Track::Muzzle { by } => Some((g.ch[by].muzzle, g.ch[by].gun_dir)),
         Track::EjectPort { by } => {
@@ -202,7 +202,7 @@ pub fn spawn_burst(g: &mut crate::game::Game, at: V3, seed: f64, o: Option<crate
         let k = sparks();
         let idx = crate::sparks::sparks_emit_burst(g, at, crate::sparks::SparksEmitBurstO { count: spark_count, speed: k.speed, spread: k.spread, lift: k.lift, life: k.life }, seed);
         let n = if flags().trails {
-            let room = crate::smoke_types::smoke_system_like_budget(g).unwrap_or(b.trail_count) - b.trail_reserve;
+            let room = crate::smoke_types::smoke_system_like_budget(g) - b.trail_reserve;
             m::max(0.0, m::min_n(&[b.trail_count, idx.len() as f64, room]))
         } else {
             0.0

@@ -1,11 +1,11 @@
-// A PANE'S CRASH IS HEARD FROM BOTH ITS FACES — the check behind glass.ts glassEvent and guards.ts glassHeard (GLASS.bothFaces). The fault (a replay of Mousehole, 3:43): the
+// A PANE'S CRASH IS HEARD FROM BOTH ITS FACES — the check behind glass.ts glassEvent and the men's hearing (GLASS.bothFaces). The fault (a replay of Mousehole, 3:43): the
 // player shot a window out from the yard; of nine defenders the three in the room behind that window, 5 to 9 m off, heard nothing, and one man 12 m off behind a
 // shut door went to look. The 'glass' event stood at the point the round met the pane — the shooter's side of a sheet that is a wall to sound — so the crash was
 // routed from OUTSIDE, round by the front door: 29 to 39 m of path, past the 30 m the glass rule reaches.
 //   bun run tools/qa/glass-ears-check.ts            (GLASSEARS_BREAK=1 = the window is struck QUIET, a blow that files no event: the lines must fail)
 // Mousehole's room clear is staged, that window struck from outside by glass.ts glassImpact, and asked:
-//   the event carries a point off each face · who hears it by the glass rule's own weight · who is roused once the game has run on ·
-//   nobody hears it worse than from the event's own point · an event on the office's glazing rides a checkpoint with its two points.
+//   the event carries a point off each face · who is roused once the game has run on · an event on the office's glazing rides a checkpoint with its two points.
+// (what a man's ear makes of each point, glassHeard, is the Rust game's own and has no way out to a check.)
 // 2026-11-07: the rule is settled (every tool stands the game with it on), so the arm 'with the rule off (the fault)' went, and with it the off half of four
 // lines, 'rule off: glassHeard is hearPath of the event's point' and 'rule off: neither the event nor its row in a checkpoint has the field'.
 // exit 0 = all hold · 1 = one does not
@@ -26,8 +26,6 @@ export async function glassEarsCheck(): Promise<boolean> {
   const quiet = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
   const levelOf = (file: string) => loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')));
   const clamp = (x: number, a: number, b: number) => Math.min(b, Math.max(a, x));
-  /** the glass rule's own weight of a path (guards.ts hearingCheck; heard past 0.06) */
-  const weight = (p: { pathLen: number; carry: number }, level: number) => p.pathLen < GLASS.hearM ? level * clamp(1 - p.pathLen / GLASS.hearM, 0.15, 1) * p.carry : 0;
 
   /** Mousehole's room clear, the south corridor window struck from the yard */
   const arm = async () => {
@@ -48,13 +46,9 @@ export async function glassEarsCheck(): Promise<boolean> {
     glassImpact(g, pane, point, [-n[0] * out, 0, -n[2] * out], 1, PLAYER_ID, 'shot', BREAK);
     const e = g.events[g.events.length - 1]; const filed = g.events.length > before && e?.kind === 'glass';
     const side = (q: Vec3) => (q[0] - b.c[0]) * n[0] + (q[2] - b.c[2]) * n[2];
-    const ear = (gd: any): Vec3 => [gd.char.pos[0], gd.char.pos[1] + 1.5, gd.char.pos[2]];
-    const plain = (gd: any) => weight(hearPath(g, [e.pos[0], e.pos[1] + 1, e.pos[2]], ear(gd)), e.level);
-    const ruled = (gd: any) => weight(glassHeard(g, e, ear(gd)), e.level);
-    const wPlain = new Map<any, number>(men.map((gd: any) => [gd, plain(gd)])), wRuled = new Map<any, number>(men.map((gd: any) => [gd, ruled(gd)]));
     for (let i = 0; i < 45; i++) W.step(DT);
     const roused = (set: any[]) => set.filter((gd: any) => gd.awareness >= 0.4).length;
-    return { g, e, filed, half, side, men, near, wPlain, wRuled, heard: (set: any[], m: Map<any, number>) => set.filter(gd => (m.get(gd) ?? 0) > 0.06).length, rousedNear: roused(near), rousedAll: roused(men), dist: best };
+    return { g, e, filed, half, side, men, near, rousedNear: roused(near), rousedAll: roused(men), dist: best };
   };
 
   try {
@@ -64,12 +58,8 @@ export async function glassEarsCheck(): Promise<boolean> {
     { const ears = on.e?.ears as [Vec3, Vec3] | undefined; const r = on.half + GLASS.earOff;
       line(!!ears && on.side(ears[0]) * on.side(ears[1]) < 0 && Math.abs(Math.abs(on.side(ears[0])) - r) < 1e-6 && Math.abs(Math.abs(on.side(ears[1])) - r) < 1e-6,
         `the event carries a point ${GLASS.earOff} m off EACH face of the pane (${ears ? ears.map(q => `${on.side(q) > 0 ? '+' : ''}${on.side(q).toFixed(2)}`).join(' / ') : 'none'} m off its mid-plane)`); }
-    line(on.heard(on.near, on.wRuled) === on.near.length,
-      `the men within 10 m who hear it by the glass rule's own weight (> 0.06): ${on.heard(on.near, on.wRuled)} of ${on.near.length}; of all ${on.men.length}: ${on.heard(on.men, on.wRuled)}`);
     line(on.rousedNear === on.near.length,
       `0.75 s of the game later, awareness ≥ 0.4 among those ${on.near.length}: ${on.rousedNear} (all nine: ${on.rousedAll})`);
-    { let worse = 0, better = 0; for (const gd of on.men) { const a = on.wPlain.get(gd) ?? 0, r = on.wRuled.get(gd) ?? 0; if (r < a - 1e-9) worse++; if (r > a + 1e-9) better++; }
-      line(worse === 0 && better >= on.near.length, `nobody hears the pane worse than from the event's own point: ${worse} worse, ${better} better of ${on.men.length}`); }
 
     // an event rides a checkpoint with its two points (the office alone: a checkpoint is refused with a squad on the floor)
     { const W: any = await quiet(() => standUp({ uploadEvery: 4 })); const g = W.game;

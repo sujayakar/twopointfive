@@ -6,6 +6,7 @@
 // it stands beside the menu (ui/debrief.ts). DEBRIEF: the mission's card proper — up on mission complete (Again / Keep playing) and, a beat after Sam drops, as
 // the down card (Restart): the rating word and score, the numbers, the badges, the floor map with his path and the pins, the timeline. While any of them is
 // open main.ts freezes the simulation and keeps rendering the frozen frame underneath. Plain DOM, styled in index.html (#menu…) with ui/theme.ts's tokens.
+import { kitSolo } from '../game/kit';   // (the mission list's solo night off the start card: your card, on this game)
 export { loadSandbox } from '../game/sandbox';
 import { Engine } from '../engine';
 import { Game } from '../game/game';
@@ -20,12 +21,13 @@ import { pickEntry } from '../scene/picks';
 import { quitSearch } from '../scene/scenarioList';
 import { openList, openStartPage, startPageWanted, startPageFromQuery } from './startpage';
 import { menuTheme } from './theme';
-import { tabNow } from './tabkey';
 import { keyText, typedInto } from '../host/keymap';
 import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions } from './options';
 import { cloudNote } from './cloudnote';
 import { COOP } from '../net/lobby';
 import { coopRows } from './coop';
+import type { SlotInfo } from '../game/savestate';
+import { button, checkpointButton, el, saveStrip, walkMenu, type Press, type RunSaves } from './runcard';
 
 /** the title screen's line under the wordmark */
 const TITLE_LINE = 'Squad tactics and stealth. Every light, shadow and wisp of smoke is live.';
@@ -62,8 +64,7 @@ export function bootCard(): { status(text: string): void; off(): void } {
 /** the title screen's head and its main menu (the boot card and the real start card build the same screen) */
 function titleHead(): HTMLElement { const head = el('div', 'head'); head.innerHTML = `<div class="t1">two<b>point</b>six</div><div class="t2">${TITLE_LINE}</div>`; return head; }
 /** EXTRAS (the title screen's fourth entry: the maintainer, 10-11 — "the showcase and editor and whatever other tools we have … should all be linked in the main menu"): the
- *  tool pages, each a LINK — a tool is its own page (the `.html` names: the dev server forwards them to its routes, the build has them as files; the one-file build has no tool
- *  pages and lists none: `onePage`); a row whose link is a key of this page (`?bench`) keeps the visitor's other flags (`showHref`) and, ON THE LIVE TITLE, STARTS IN PLACE
+ *  tool pages, each a LINK — a tool is its own page (the `.html` names: the dev server forwards them to its routes, the build has them as files); a row whose link is a key of this page (`?bench`) keeps the visitor's other flags (`showHref`) and, ON THE LIVE TITLE, STARTS IN PLACE
  *  (Menu.title hands `TitleShows`) — no page load, the click is the gesture the sound needs; the link is what such a row is while the page still boots, or in a new tab.
  *  (The two showcases that were this list's first section — the night and the day — were removed.) What is listed and what is not, and why: rebuild/menus/tools.md. */
 export const EXTRAS: { head: string; rows: { id: string; label: string; line: string; href: string }[] }[] = [
@@ -74,8 +75,6 @@ export const EXTRAS: { head: string; rows: { id: string; label: string; line: st
 ];
 /** the link of a row that is a key of this page (`?bench`): its key, then the visitor's own flags as every mission link keeps them (`?mute&quality=low` rides along; another mission's keys do not) */
 function showHref(href: string): string { if (href[0] !== '?') return href; const rest = quitSearch(typeof location !== 'undefined' ? location.search ?? '' : ''); return href + (rest ? '&' + rest.slice(1) : ''); }
-/** the one-file build (tools/build-one.ts marks its page): index.html is all there is, so the tool pages are not listed */
-const onePage = () => typeof document !== 'undefined' && !!document.querySelector?.('meta[name="tps-one-page"]');
 /** a row started in place, by its id: true = started (or refused aloud), false = not from here — the row's link loads it */
 type TitleShows = Partial<Record<string, () => boolean>>;
 /** which page of the title's menu is up: the main one, or EXTRAS (kept through the boot card handing over to the real title) */
@@ -91,9 +90,8 @@ function titleActions(onClose?: () => void, shows?: TitleShows): { actions: HTML
     actions.innerHTML = ''; actions.classList.toggle('extras', titleExtras);
     if (titleCoop && COOP.on && !titleExtras) { coopRows(actions, () => { titleCoop = false; fill('coop'); }, !!focus); play = actions.querySelector('.btn') as HTMLElement; return; }
     if (titleExtras) {
-      const one = onePage();
       for (const sec of EXTRAS) {
-        const rows = sec.rows.filter(r => !one || r.href[0] === '?'); if (!rows.length) continue;
+        const rows = sec.rows; if (!rows.length) continue;
         const h = el('div', 'xhead'); h.textContent = sec.head; actions.appendChild(h);
         for (const r of rows) {
           const a = el('a', 'btn xrow') as HTMLAnchorElement; a.href = showHref(r.href); a.dataset.extra = r.id; a.innerHTML = `<b>${esc(r.label)}</b>`; a.title = r.line;   // (show, not tell: a row is its name; its sentence is the tooltip)
@@ -150,10 +148,8 @@ export class Menu {
   /** Auto's calibration has just settled (main.ts wires Quality.onCalibrated): the options screen's live line follows, if it is the one up */
   refreshQualityNote() { refreshOptions(); }
 
-  open(mode: 'start' | 'pause' | 'debrief') { if (mode === 'debrief') closeOptions(); this.mode = mode; MISSIONS.startSolo = mode === 'start' ? () => this.close() : null; this.render(); this.root.classList.add('on'); }   // (the mission list's solo night off the start card IS Start)
+  open(mode: 'start' | 'pause' | 'debrief') { if (mode === 'debrief') closeOptions(); this.mode = mode; MISSIONS.startSolo = mode === 'start' ? (card) => { this.close(); if (card) kitSolo(this.d.game); } : null; this.render(); this.root.classList.add('on'); }   // (the mission list's solo night off the start card IS Start)
   close() { closeOptions(); MISSIONS.startSolo = null; closeMissions(); if (this.mode === 'start') this.d.onStart(); this.mode = 'closed'; this.run = false; this.root.classList.remove('on'); this.d.focusGame?.(); }   // keys go to the game, not the (now hidden) button that had focus
-  /** the pause card with 'Run so far' open beside it (Tab, while that is what Tab is trying out: ui/tabkey.ts) */
-  openRun() { this.run = true; this.open('pause'); }
   private stripAt: HTMLElement | null = null;   // (the pause card's node the strip of saves sits before)
   /** F5 came on the pause card (main.ts `saveDue`): the strip alone is laid again, with the tile to come — the card and where the keys had walked on it stay */
   saveAsked() {
@@ -162,7 +158,6 @@ export class Menu {
     if (old) old.replaceWith(strip); else if (this.stripAt?.parentNode) this.stripAt.parentNode.insertBefore(strip, this.stripAt); else return;
     if (held) (strip.querySelector('.tile[tabindex="0"]') as HTMLElement | null)?.focus();
   }
-  get runOpen() { return this.mode === 'pause' && this.run; }
   toggle() { if (this.titled) return; if (this.isOpen) this.close(); else this.open('pause'); }   // (Esc: on the title screen there is nothing to back out of — the solo night is a row of the starting page)
 
   private render() {
@@ -224,7 +219,7 @@ export class Menu {
   /** the URL named a scenario and its start() said no: the reason, where the player is looking */
   private refused(card: HTMLElement) { const why = this.d.scenario?.refused?.() ?? null; if (why) { const r = el('div', 'refused'); r.textContent = why; card.appendChild(r); } }
 
-  /** The debrief card (main.ts opens it whenever game.mission.debrief is raised): on MISSION COMPLETE — Again = a fresh encounter (and mission), Keep playing / Esc =
+  /** The debrief card (main.ts opens it when the game says the end card is due): on MISSION COMPLETE — Again = a fresh encounter (and mission), Keep playing / Esc =
    *  back to the sandbox with the mission left done — and, a beat after Sam goes DOWN, as the down card — Restart (or Esc back to the floor, where Enter restarts
    *  as it always has). The contents are ui/debrief.ts's: rating + score, the numbers, the badges, the map, the timeline. */
   private debrief(card: HTMLElement) {
@@ -235,7 +230,7 @@ export class Menu {
     const cur = this.d.scenario?.current() ?? null, scn = !!cur;   // down under a scenario: the restart stages it again, and the picker is one press away (no checkpoint button: none is written with a team on the floor, and a solo run's is refused there — but a scenario that SAVES, a quiet mission alone, offers its own)
     const ck = info ? this.checkpointButton(mine ? 'primary' : '', () => performance.now() - shown >= 500) : null;
     const strip = down ? this.saveStrip(() => performance.now() - shown >= 500) : null;   // (this run's saves laid out in time: any of them is one press away, the default stays the newest sound one)
-    const nl = V && V.won && !down && g.verdict.kept?.lesson ? nextLessonOf(cur?.entry?.id) : null;   // a Training lesson done (the row that is UP, as the books read it — main.ts vBooks): the next lesson leads the card (ui/verdictNext.ts; none under ?noverdict)
+    const nl = V && V.won && !down && g.verdict.kept?.lesson ? nextLessonOf(cur?.entry?.id) : null;   // a Training lesson done (the row that is UP, as the books read it — main.ts vBooks): the next lesson leads the card (ui/verdictNext.ts)
     const lead = nl ? button(`Next: ${nl.title} ›`, () => { if (performance.now() - shown < 500) return; this.d.stopTour?.(); nl.start(); }, 'primary next') : null;
     const primary = button(down ? (scn ? 'Restart scenario' : 'Restart encounter') : 'Again', restart, (ck && mine) || lead ? '' : 'primary');
     const actions: HTMLElement[] = down ? (ck ? (mine ? [ck, primary] : [primary, ck]).concat([button('Back to the floor', () => this.close())]) : [primary, button('Back to the floor', () => this.close())]) : [primary, button('Keep playing', () => this.close())];
@@ -252,15 +247,16 @@ export class Menu {
   /** 'Restart from checkpoint (40 s ago)' for the newest stored checkpoint (this run's for choice), or null when there is none / no loader is wired: loads it
    *  through main.ts (any show stopped, the camera snapped) and closes the card; a refusal goes on the message line and re-renders the card. `armed`: the down
    *  card's half-second guard against the tap that raised it. */
-  private checkpointButton(cls = '', armed: () => boolean = () => true): HTMLElement | null {
+  private checkpointButton(cls = '', armed: () => boolean = () => true): HTMLElement | null { const run = this.saves(); return run && checkpointButton(run, this.press(armed), cls); }
+  private press(armed: () => boolean): Press { return { armed, gone: () => this.close(), again: () => this.render() }; }
+  /** this run's saves as a card asks of them (ui/runcard.ts) */
+  private saves(): RunSaves | null {
     const g = this.d.game, load = this.d.loadCheckpoint; if (!load) return null;
-    const info = this.checkpointInfo(); if (!info) return null;
-    return button(`Restart from checkpoint (${g.saves.ageWords(g, info)})`, () => { if (!armed()) return; const why = load(info.key); if (why) { g.msg(`checkpoint: ${why}`); this.render(); return; } this.close(); }, cls);
+    return { elapsed: () => g.mission.stats.elapsed, timeline: () => g.saves.timeline(), offer: () => this.checkpointInfo(), age: row => g.saves.ageWords(g, row as SlotInfo), picture: row => g.saves.pictureOf(row as SlotInfo), load, due: () => this.mode === 'pause' && !!this.d.saveDue?.() };
   }
   /** 'Quit to scenarios' (the pause card and the down card while a scenario is up): the scenario stopped and the start card's picker back (main.ts) */
   private quitButton(armed: () => boolean = () => true): HTMLElement { return button('Quit to scenarios', () => { if (!armed()) return; this.d.stopTour?.(); this.d.scenario?.quit(); }, 'quit'); }
-  /** 'Next: <title>' while the page is a run the short list started (scene/picks.ts pickOfQuery) and a row follows it: that row's own page load. Null otherwise,
-   *  and always under ?nopicks. */
+  /** 'Next: <title>' while the page is a run the short list started (scene/picks.ts pickOfQuery) and a row follows it: that row's own page load. Null otherwise. */
   private nextPickButton(armed: () => boolean = () => true): HTMLElement | null {
     const nx = nextPickOf(); if (!nx) return null;
     if (!!pickEntry(nx.from) !== !!this.d.scenario?.current()) return null;   // (the URL is a pick's, but what is up is not it: its scenario was refused at boot and the plain night is being played — or a scenario is up on the solo pick's page)
@@ -273,34 +269,8 @@ export class Menu {
     if (scn && !scn.saves) return n && g.saves.isThisRun(n) ? n : null;   // (a scenario with a team: no file is written there and a solo run's is refused — but this run's own saves, kept in memory, are offered)
     return n;
   }   // (savestate.ts offer: an earlier run's slot only if this game would load it)
-  /** THE STRIP (savestate.ts SAVETIMELINE): this run's saves in the order they were made, each a tile — its picture, how long ago, a mark on the ones made by
-   *  hand, a regretted autosave dimmed. A click, or Enter on the tile the arrows (A D too) have walked to, goes back to it. Null with the switch off, no loader,
-   *  or fewer than two saves (one save is the button above it) unless one is asked for on this card. */
-  private saveStrip(armed: () => boolean = () => true): HTMLElement | null {
-    const g = this.d.game, load = this.d.loadCheckpoint; if (!load) return null;
-    const due = this.mode === 'pause' && !!this.d.saveDue?.();   // (a save asked for on this card: its tile stands where the save will, empty until play goes on and writes it)
-    const line = g.saves.timeline(); if (line.length < 2 && !due) return null;
-    const now = g.mission.stats.elapsed, offered = this.checkpointInfo();
-    const strip = el('div', 'saves'); strip.setAttribute('role', 'group'); strip.setAttribute('aria-label', 'saves of this run');
-    const tiles = line.map(info => {
-      const t = el('button', 'tile' + (info.slot === 'manual' ? ' hand' : '') + (info.regret ? ' regret' : '') + (info.missionT > now + 0.5 ? ' ahead' : '')) as HTMLButtonElement; t.type = 'button';
-      const pic = g.saves.pictureOf(info); if (pic) t.style.backgroundImage = `url("${pic}")`; t.dataset.save = `${info.key}@${info.savedAt}`;
-      const age = el('span', 'age'); age.textContent = tileAge(now - info.missionT); t.appendChild(age);
-      if (info.slot === 'manual') t.appendChild(el('i'));
-      t.title = info.label || (info.slot === 'manual' ? 'by hand' : 'autosave'); t.setAttribute('aria-label', `${info.slot === 'manual' ? 'saved by hand' : 'autosave'}, ${g.saves.ageWords(g, info)}`);
-      t.tabIndex = -1;
-      t.onclick = () => { if (!armed()) return; const why = load(info.key); if (why) { g.msg(`checkpoint: ${why}`); this.render(); return; } this.close(); };
-      strip.appendChild(t); return t;
-    });
-    if (due) { const t = el('div', 'tile hand due'); t.appendChild(el('i')); t.setAttribute('aria-label', 'a save by hand, written as play goes on'); strip.insertBefore(t, tiles[line.findIndex(x => x.missionT > now + 0.5)] ?? null); }   // (before the saves a load has left ahead of this moment)
-    if (!tiles.length) return strip;
-    let cur = Math.max(0, offered ? line.findIndex(x => x.key === offered.key) : line.length - 1); tiles[cur].tabIndex = 0;   // (one stop for W S and Tab: the tile the button above would load)
-    strip.addEventListener('keydown', e => {
-      const d = e.code === 'ArrowLeft' || e.code === 'KeyA' ? -1 : e.code === 'ArrowRight' || e.code === 'KeyD' ? 1 : 0; if (!d || e.ctrlKey || e.metaKey || e.altKey) return;
-      tiles[cur].tabIndex = -1; cur = Math.max(0, Math.min(tiles.length - 1, cur + d)); tiles[cur].tabIndex = 0; tiles[cur].focus(); e.preventDefault(); e.stopPropagation();
-    });
-    return strip;
-  }
+  /** this run's saves laid out in time (ui/runcard.ts) */
+  private saveStrip(armed: () => boolean = () => true): HTMLElement | null { const run = this.saves(); return run && saveStrip(run, this.press(armed)); }
 
   /** a save's picture came after its tile was laid (main.ts takes it a frame or a few after the save, host/savepic.ts): the tile on the card, if one is up, takes it — nothing is laid again */
   pictureCame(info: { key: string; savedAt: number }, url: string) {
@@ -311,20 +281,10 @@ export class Menu {
 // W S / ↑ ↓ walk the title screen's and the pause card's menu (Enter and Space are the focused button's own). Registered here, at module load, like the other
 // screens' keys; it only ever moves the focus, and stands down while a screen is up over the card (#menu is inert then) or the focus is somewhere else.
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') window.addEventListener('keydown', e => {
-  if (e.code === 'Tab' && (tabNow() === 'run' || tabNow() === 'keys')) { const m = document.getElementById('menu'); if (m?.classList.contains('on') && m.classList.contains('paused') && !m.hasAttribute('inert')) e.preventDefault(); return; }   // (Tab is the game's key on the pause card then, not the browser's walk over its buttons: main.ts tabKey)
   if (e.code === 'Escape' && (titleExtras || titleCoop)) { const m = document.getElementById('menu'); if (e.timeStamp >= titleShownAt && m?.classList.contains('on') && m.classList.contains('title') && !m.hasAttribute('inert')) { (m.querySelector('.actions .xback') as HTMLElement | null)?.click(); e.preventDefault(); } return; }   // (Esc on the title's EXTRAS or CO-OP page = back to its main menu; the title itself has nothing to back out of)
   if (e.code === 'Space' && !e.repeat && titleExtras) { const a = document.activeElement as HTMLElement | null; if (a?.classList?.contains('xrow') && document.getElementById('menu')?.contains(a)) { a.click(); e.preventDefault(); } return; }   // (a row of EXTRAS is a link, and Space does not follow a link: here it does, as it presses every other entry of this menu)
-  const d = e.code === 'KeyW' || e.code === 'ArrowUp' ? -1 : e.code === 'KeyS' || e.code === 'ArrowDown' ? 1 : 0; if (!d || e.ctrlKey || e.metaKey || e.altKey) return;
-  const m = document.getElementById('menu'); if (!m || !m.classList.contains('on') || !(m.classList.contains('title') || m.classList.contains('paused')) || m.hasAttribute('inert')) return;
-  const a = document.activeElement as HTMLElement | null; if (a && a !== document.body && !m.contains(a)) return;
-  if (typedInto(a) && e.code.startsWith('Key')) return;   // (a letter typed into a field is the field's: the arrows still walk)
-  const bs = [...m.querySelectorAll('.actions .btn:not(:disabled), .actions input[type="text"]:not([data-walk="off"]), .actions .saves .tile[tabindex="0"]')] as HTMLElement[]; if (!bs.length) return;   // (the strip of saves is one stop: its own arrows walk it)
-  const i = a ? bs.indexOf(a) : -1; bs[i < 0 ? (d > 0 ? 0 : bs.length - 1) : (i + d + bs.length) % bs.length].focus(); e.preventDefault();
+  walkMenu(e, typedInto);
 }, { capture: true });
 
 // ---- tiny DOM helpers (menu-local styling lives in index.html)
 function esc(t: string) { return t.replace(/[&<>"]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&quot;'); }
-/** a save's age on its tile: '40 s', '3 min' — '+40 s' for one AHEAD of the clock (a later save of this run, after going back past it) */
-function tileAge(d: number): string { const a = Math.abs(d), w = a < 90 ? `${Math.round(a)} s` : `${Math.round(a / 60)} min`; return d < -0.5 ? `+${w}` : w; }
-function el(tag: string, cls?: string) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
-function button(text: string, run: () => void, cls = '') { const b = el('button', 'btn ' + cls) as HTMLButtonElement; b.textContent = text; b.onclick = run; return b; }

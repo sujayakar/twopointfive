@@ -5,11 +5,16 @@
 //! The order round a tick (tools/blitz/BRIDGE.md, "What a Rust host calls round a step"):
 //!   a start  `start` (c1.bin, s0.bin)
 //!   before   `host_half` (h<k>.bin) · `give` (each line of gives.txt for this tick) · `write_before` (each line of hostwrites.txt for this tick) · `meter`
-//!            (a line of meter.txt, a tutorial mission's) · `upload`
+//!            (a line of meter.txt, a tutorial mission's)
 //!            … or, where the TypeScript side wrote ONE ORDERED RECORD (between.txt), `between` for each of the tick's lines as they stand: the orders,
 //!            the writes, the rules the driver called and the meter in the driver's own order, in place of `give`, `write_before` and `meter`
 //!   the tick `step`
 //!   after    `write_after` (each line of hostwrites.txt for this tick) · the compare (`part_hashes`) · `lights` · `view` · `follow`
+pub mod command;
+pub mod desk;
+pub mod kept;
+pub mod knobs;
+mod knobs_list;
 use game::ids::Id;
 use game::io::Io;
 
@@ -42,12 +47,7 @@ pub fn part_hashes(slot: usize) -> [u32; 13] {
 pub fn start(state: &[u8], block: &[u8], slot: usize) -> (Box<game::game::Game>, Vec<String>) {
     let mut g = Box::new(game::io::import(state));
     let mut said: Vec<String> = Vec::new();
-    let len = core::mem::size_of::<sim::state::State>();
-    unsafe {
-        let at = sim::state::addr(slot) as *mut u8;
-        core::ptr::write_bytes(at, 0, len);
-        core::ptr::copy_nonoverlapping(block.as_ptr(), at, block.len().min(len));
-    }
+    sim::state::put(slot, block);
     // (the one way to say which of rust/sim's slots a game stands in: the game's own word and the box mirror's)
     game::io::set_slot(&mut g, slot);
     // (the level's script and its define pass are the import's own now: io::deal_scripts)
@@ -186,11 +186,11 @@ pub fn write_before(g: &mut game::game::Game, k: usize, l: &str) -> Option<Strin
         let r = game::wallcharge::wall_charge_blow(g, c, None);
         return Some(format!("  the driver before tick {}: blows the wall charge on wall {} ({}) -> {:?}", k, ix, if c.is_some() { "set" } else { "NOT SET HERE" }, r));
     }
-    // HARNESS STAND-IN: the scripted player gives the hostages (rescueend.ts `word`) or the man in hand (snatchout.ts `word`) the word by the module's own
+    // HARNESS STAND-IN: the scripted player gives the hostages (rescueend.ts `word`) the word by the module's own
     // call between ticks: `player` they follow the player, `none` they stay where they stand
-    if w.get(1) == Some(&"rescue_word") || w.get(1) == Some(&"snatch_word") {
+    if w.get(1) == Some(&"rescue_word") {
         let by = match w.get(2) { Some(&"player") => Some(g.pl[g.player].ch), Some(&"none") => None, x => return Some(format!("  NOTE tick {}: a word to follow somebody this runner cannot give: {:?}", k, x)) };
-        let ok = if w[1] == "rescue_word" { game::rescueend::rescue_end_word(g, by) } else { game::snatchout::snatch_out_word(g, by) };
+        let ok = game::rescueend::rescue_end_word(g, by);
         return Some(format!("  the driver before tick {}: {}({}) -> {}", k, w[1], w[2], ok));
     }
     // HARNESS STAND-IN: the scripted player puts the highlight on a row of the nearby list between ticks (it writes `Player.nearSel` and calls
@@ -226,11 +226,6 @@ pub fn call(g: &mut game::game::Game, k: usize, rule: &str) -> String {
             let c = game::stickycam::fire_cam(g, pl, [n[0], n[1], n[2]], [n[3], n[4], n[5]]);
             format!("  the case's call before tick {}: a sticky camera fired ({:?}); {} out", k, c, g.pl[pl].cams.len())
         }
-        // (a lesson's player asks the words of a set door charge: the answer is kept a quarter second and the tick's own ask reads it, doortools.ts closeAt)
-        "door_close_words" => match arg.and_then(|x| x.parse::<usize>().ok()).and_then(|i| g.door_tools.set.get(i).copied()) {
-            Some(c) => { let said = game::doortools::door_tools_close_words(g, c); format!("  the driver's ask before tick {}: door_close_words -> {:?}", k, said) }
-            None => format!("  NOTE tick {}: the driver asked the words of a set charge this game does not hold: {:?}", k, arg),
-        },
         "frag_step_off" => { let r = game::frag::frag_step_off(g, None); if r.is_some() { format!("  the driver's ask before tick {}: frag_step_off -> {:?}", k, r) } else { String::new() } }
         // (BLITZ_CALL, mission.ts: a rule of the game called before a tick on both sides, to hold the Rust game's restart to the TypeScript's)
         "restart_encounter" => { game::game::game_restart_encounter(g); format!("  the rule called before tick {}: restart_encounter; {} guards, time {}", k, g.guards.len(), g.time) }
@@ -315,10 +310,6 @@ pub fn checkpoint(g: &mut game::game::Game, label: &str) -> bool {
     let _ = game::chronicle::chron_checkpoint(g, game::chronicle::ChronCheckpointWhat::Save, Some(label));
     stopped
 }
-
-/// HOST STEP: where the headless host listed the box world again between two ticks (`engine.world.upload()`). The listing is also where the rows of the
-/// frames gone by are freed (`boxes_frame_reset`, inside `host_world_upload`): a host that never lists keeps every frame box as a row for good.
-pub fn upload(g: &mut game::game::Game) { game::host_api::b_01::host_world_upload(g); }
 
 /// HOST STEP AFTER THE TICK (the headless host's `engine.lights.update(dt, game.time)`): every flash's envelope and retirement, which the next tick's light reads
 pub fn lights(g: &mut game::game::Game, dt: f64) { let now = g.time; game::render_lights::light_set_update(g, dt, now); }

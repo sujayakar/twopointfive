@@ -32,7 +32,6 @@ pub enum SamWorkKind {
     Drive,
     Wall,
     Switch,
-    Defuse,
 }
 impl SamWorkKind {
     pub const fn as_str(self) -> &'static str {
@@ -42,7 +41,6 @@ impl SamWorkKind {
             SamWorkKind::Drive => "drive",
             SamWorkKind::Wall => "wall",
             SamWorkKind::Switch => "switch",
-            SamWorkKind::Defuse => "defuse",
         }
     }
 }

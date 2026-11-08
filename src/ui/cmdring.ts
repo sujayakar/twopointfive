@@ -2,33 +2,19 @@
 // the lit one filled, a greyed one for a row that cannot be given now, its words outside it, the middle left open so what is pointed at shows through.
 // Under it, small, who the order goes to and what the ring was opened on. Sam's own ring (Space, CMDRING.hands — interact.ts `handRingView`) is the same
 // drawing in his own colour, the thing's name under it. A ring with ONE row draws it as a pill beside a small ring round the middle (game/ringlone.ts).
-// Before the key, with CMDRING.hint, a small glyph beside the cursor and an outline on the floor say what the ring would open on (orders.ts `hintView`).
-// index.html `.cmdring …` and `.cmdhint …` are the look. Nothing is built until there is something to show; an attribute is written only when it changes.
+// index.html `.cmdring …` is the look. Nothing is built until there is something to show; an attribute is written only when it changes.
 // The layer is zoomed with the page's words (ui/textsize.ts): a place in the view's px is divided by that factor, and the ring is drawn at the game's own
 // (cmdring.ts ringZoom), so the wedge under the cursor is the wedge the game lights.
 import type { Game } from '../game/game';
 import type { FollowCamera } from '../game/camera';
-import type { Vec3 } from '../math/vec';
-import { CMDRING, ringPin, type RingHint, type RingState, type RingView } from '../game/cmdring';
+import { CMDRING, ringPin, type RingState, type RingView } from '../game/cmdring';
 import { handRingView } from '../game/interact';
-import { hoverKept } from './hoverkept';
 import { RING_BOX, RING_HOLE, RING_RIM, lonePill, loneWedge, wedgeMid, wedgeWords, type LonePill, type RingPlace } from '../game/ringlone';
 
 const NS = 'http://www.w3.org/2000/svg';
 const R0 = RING_HOLE, R1 = RING_RIM, RN = 30.5, RT = 53, RC = 86;   // px: the hole, the rim, where a digit sits, where a wedge's words start, how far under the middle the caption sits
 const GAP = 3;   // degrees left open each side of a wedge
 
-const HINT_OFF = 15, HINT_N = 28, NEAR_W = 0.5;   // px: how far up and right of the cursor the glyph rides (the other way at the view's edge) · points on a floor ring · a point this near the camera's plane is not drawn
-/** a glyph a kind, drawn in a 16 px box about 0,0: a leaf with its knob · courses of brick · head and shoulders · a pin on a spot · a thing to work · a man who is not ours · the squad itself */
-const GLYPH: Record<RingHint, string> = {
-  door: 'M-4,-6.5h8v13h-8z M1.6,0.4a0.9,0.9 0 1 0 1.8,0a0.9,0.9 0 1 0 -1.8,0',
-  wall: 'M-7,-5h14v10h-14z M-7,0h14 M-1,-5v5 M3,0v5 M-4,0v5',
-  man: 'M-2.6,-3.6a2.6,2.6 0 1 0 5.2,0a2.6,2.6 0 1 0 -5.2,0 M-5.5,6a5.5,5.5 0 0 1 11,0',
-  floor: 'M0,6.5C-5.4,0.6 -5.2,-6 0,-6C5.2,-6 5.4,0.6 0,6.5Z M-1.7,-1.6a1.7,1.7 0 1 0 3.4,0a1.7,1.7 0 1 0 -3.4,0',
-  thing: 'M0,-6l6,6l-6,6l-6,-6z M-2,0h4',
-  foe: 'M0,-6l6,11h-12z',
-  squad: 'M-6.4,2a1.9,1.9 0 1 0 3.8,0a1.9,1.9 0 1 0 -3.8,0 M2.6,2a1.9,1.9 0 1 0 3.8,0a1.9,1.9 0 1 0 -3.8,0 M-1.9,-3a1.9,1.9 0 1 0 3.8,0a1.9,1.9 0 1 0 -3.8,0',
-};
 /** a wedge's elements, its place on the wheel, and what it is placed as now ('': nothing yet) */
 interface WedgeEls { g: SVGGElement; path: SVGPathElement; num: SVGTextElement; text: SVGTextElement; home: RingPlace; as: string }
 
@@ -88,33 +74,7 @@ class RingDraw {
 
 export class CmdRingViz {
   private orders: RingDraw; private hands: RingDraw;   // the squad's ring, and Sam's own (CMDRING.hands)
-  private hint: SVGGElement | null = null;
-  private hintWorld: SVGPathElement | null = null;
-  private hintGlyph: SVGPathElement | null = null;
-  private hintWas = '';
   constructor(private svg: SVGSVGElement) { this.orders = new RingDraw(svg); this.hands = new RingDraw(svg); }
-  /** the hint of what the ring would open on (orders.ts hintView): the thing's outline on the floor and a glyph beside the cursor — in the ring's middle
-   *  once a ring is up */
-  private updateHint(game: Game, cam: FollowCamera, w: number, h: number, tz: number) {
-    const bc = document.body.classList, H = !(bc.contains('blinded') || bc.contains('attract')) ? game.orders.hintView(hoverKept) : null;   // (hidden by the page under those: nothing asked)
-    if (!H) { if (this.hintWas) { this.hintWas = ''; if (this.hint) this.hint.style.display = 'none'; } return; }
-    const pt = (p: Vec3): string | null => { const [x, y, front] = cam.project(p, w, h, Infinity, NEAR_W); return front ? `${x.toFixed(1)},${y.toFixed(1)}` : null; };
-    let d = '';
-    if (H.seg) { const a = pt(H.seg[0]), b = pt(H.seg[1]); if (a && b) d += `M${a}L${b}`; }
-    if (H.ring) { const out: string[] = []; for (let i = 0; i < HINT_N; i++) { const t = i / HINT_N * 2 * Math.PI, q = pt([H.ring.at[0] + Math.cos(t) * H.ring.r, H.ring.at[1], H.ring.at[2] + Math.sin(t) * H.ring.r]); if (!q) { out.length = 0; break; } out.push(q); }
-      if (out.length) d += `M${out.join('L')}Z`; }
-    // (the glyph: in the ring's middle once it is up; before, up and right of the cursor — clear of the reticle's own words — and the other way where the view ends)
-    const mid = H.held && !H.press;   // (the ring up: the glyph is its middle · the key down and no ring yet: it stays beside the cursor)
-    const P = mid ? this.pinned(game.orders.cmdRing, cam, w, h, tz) : null, s = H.zoom / tz, off = HINT_OFF * s, cx = (P ? P[0] : H.x) / tz, cy = (P ? P[1] : H.y) / tz;
-    const gx = mid ? cx : cx + (cx + 2 * off > w ? -off : off), gy = mid ? cy : cy + (cy - 2 * off < 0 ? off : -off);
-    const key = `${H.kind}|${H.tone ?? ''}|${H.held}|${gx.toFixed(0)},${gy.toFixed(0)},${s.toFixed(2)}|${d}`;
-    if (key === this.hintWas) return; this.hintWas = key;
-    if (!this.hint) { const g = this.hint = document.createElementNS(NS, 'g') as SVGGElement; this.svg.appendChild(g);
-      this.hintWorld = document.createElementNS(NS, 'path') as SVGPathElement; this.hintWorld.setAttribute('class', 'hw');
-      this.hintGlyph = document.createElementNS(NS, 'path') as SVGPathElement; this.hintGlyph.setAttribute('class', 'hg'); g.append(this.hintWorld, this.hintGlyph); }
-    const g = this.hint; g.style.display = ''; g.setAttribute('class', `cmdhint k-${H.kind}${H.held ? ' held' : ''}${H.tone && H.tone !== 'gold' ? ` t-${H.tone}` : ''}`);
-    this.hintWorld!.setAttribute('d', d); this.hintGlyph!.setAttribute('d', H.glyph ? GLYPH[H.kind] : ''); this.hintGlyph!.setAttribute('transform', `translate(${gx.toFixed(1)},${gy.toFixed(1)}) scale(${s.toFixed(3)})`);   // (cmdring.ts plainHint: no glyph, the outline alone)
-  }
   /** A ring that stays on its point (CMDRING.pin), where THIS picture's camera puts it, in the view's px: the game's own place for it (RingState.ax / ay) was
    *  worked out before the tick's camera step, and a ring drawn there swims a few px against the floor while the view moves. null = the game's place stands */
   private pinned(R: RingState | null, cam: FollowCamera, w: number, h: number, tz: number): [number, number] | null {
@@ -124,7 +84,6 @@ export class CmdRingViz {
   }
   /** `w`, `h`: the layer's own size · `tz`: the factor it is zoomed by (ui/textsize.ts) */
   update(game: Game, cam: FollowCamera, w: number, h: number, tz: number) {
-    this.updateHint(game, cam, w, h, tz);
     const V0 = game.orders.ringView(), P = V0 ? this.pinned(game.orders.cmdRing, cam, w, h, tz) : null, V = V0 && P ? { ...V0, x: P[0], y: P[1] } : V0;
     const H0 = game.player.sel.ring ? handRingView(game) : null, HP = H0 ? this.pinned(game.player.sel.ring, cam, w, h, tz) : null, H = H0 && HP ? { ...H0, x: HP[0], y: HP[1] } : H0;   // (his own ring on its thing: handring.ts onThing)
     this.orders.draw(V, tz); this.hands.draw(H, tz); this.clear(V, H, tz);

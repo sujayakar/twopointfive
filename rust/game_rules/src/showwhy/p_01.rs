@@ -446,17 +446,15 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
                     r.waves += 1;
                     r.wave_t = t + if r.waves < 2 { k.wave_every } else { k.wave_later };
                 }
-                if !g.k.clearline.on {
-                    if mine {
-                        // it stands while it is true
-                        let b = g.gd[gd].bubble.as_mut().unwrap();
-                        b.dur = m::max(b.dur, t - b.t + 0.6);
-                    } else if quiet && t >= st_row(g, pl).line_say_t && !line_said_by(g, gd) && say(g, pl, gd, Why::Line, LINE_LINE) {
-                        // one voice: a mate who has it up says it for all of them
-                        let bt = g.gd[gd].bubble.as_ref().unwrap().t;
-                        g.m.showwhy.mem.get_mut(gd).unwrap().line_b = bt;
-                        st_row(g, pl).line_say_t = t + k.line_say_gap;
-                    }
+                if mine {
+                    // it stands while it is true
+                    let b = g.gd[gd].bubble.as_mut().unwrap();
+                    b.dur = m::max(b.dur, t - b.t + 0.6);
+                } else if quiet && t >= st_row(g, pl).line_say_t && !line_said_by(g, gd) && say(g, pl, gd, Why::Line, LINE_LINE) {
+                    // one voice: a mate who has it up says it for all of them
+                    let bt = g.gd[gd].bubble.as_ref().unwrap().t;
+                    g.m.showwhy.mem.get_mut(gd).unwrap().line_b = bt;
+                    st_row(g, pl).line_say_t = t + k.line_say_gap;
                 }
             }
         }

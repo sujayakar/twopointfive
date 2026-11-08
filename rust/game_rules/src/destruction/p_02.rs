@@ -202,6 +202,7 @@ pub fn destruction_blast_raw(g: &mut crate::game::Game, at: V3, opts: crate::wal
     let who = js::or(opts.who.unwrap_or(0.0), crate::consts::NOBODY_ID);
     let mut ev = crate::wallbreak::BlastEvent { at, radius, power, who, res };
     for l in g.destr.blast_listeners.clone() { tell_listener(g, &l, &mut ev); }   // (a copy: as `[...this.blastListeners]`)
+    crate::snow_blast::snow_blast_at(g, &at, radius);
     res = ev.res;   // (the event's `res` IS `res` in the TypeScript)
     let tear = radius * g.k.walls.blast.door_k;
     res.doors += crate::doors::doors_blast(g, at, tear, who).len() as f64;
@@ -236,34 +237,6 @@ pub fn destruction_walls_for(g: &mut crate::game::Game, at: V3, opts: Option<cra
     if chaos_of(g) <= 0.0 || !crate::wallbreak::wall_break_on(g) { return Vec::new(); }
     let ask = crate::wallbreak::BlastOpts { radius: opts.radius, power: opts.power, ..Default::default() };
     crate::wallbreak::wall_break_would_open(g, at, Some(ask))
-}
-
-/// Run `fn_` with the level's line tests as they would be once `walls` had opened; everything is put back.   (destruction.ts withWallsOpen)
-pub fn destruction_with_walls_open<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, walls: &[crate::wallbreak::WallOpening], fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    if walls.is_empty() { return fn_(g); }
-    let no_shadow = crate::scene_boxes::box_flag().no_shadow;
-    let mut was: Vec<(BoxId, f64)> = Vec::new();
-    let mut extra: Vec<BoxId> = Vec::new();
-    for w in walls {
-        for &b in &w.standing {
-            let f = seam_box(g, b).flags;
-            was.push((b, f));
-            seam_box(g, b).flags = or_bits(f, no_shadow);
-        }
-        for &b in &w.left { extra.push(b); }
-    }
-    // (with nothing left over the TypeScript assigns the same list back: nothing to swap)
-    let keep = if extra.is_empty() { None } else {
-        let keep = g.col.dynamic_boxes.clone();
-        g.col.dynamic_boxes.extend_from_slice(&extra);
-        Some(keep)
-    };
-    crate::scene_collision::wrote(g);
-    let out = fn_(g);
-    if let Some(keep) = keep { g.col.dynamic_boxes = keep; }
-    for &(b, f) in was.iter().rev() { seam_box(g, b).flags = f; }
-    crate::scene_collision::wrote(g);
-    out
 }
 
 /// Furniture under a blast, for a charge that does not come through blast().   (destruction.ts furnBlast)
@@ -647,7 +620,7 @@ pub fn destruction_burst(g: &mut crate::game::Game, hit_p: V3, dir: V3, n: V3, s
 
 /// A cold short cloud of dust into the smoke solver at `p`. Returns whether it went.   (destruction.ts dustPuff)
 pub fn destruction_dust_puff(g: &mut crate::game::Game, p: V3, n: V3, scale: f64, surf: crate::scene_materials::Surf) -> bool {
-    if g.destr.puffs_this_frame >= g.k.chaos.puffs_per_frame || crate::smoke_types::smoke_system_like_budget(g).unwrap_or(8.0) < 4.0 || !destruction_take(g, DestructionTakeK::Puff) {
+    if g.destr.puffs_this_frame >= g.k.chaos.puffs_per_frame || crate::smoke_types::smoke_system_like_budget(g) < 4.0 || !destruction_take(g, DestructionTakeK::Puff) {
         g.stats.destruction.destr_puffs_refused += 1;
         return false;
     }
@@ -688,7 +661,7 @@ pub fn destruction_pall_hash(g: &crate::game::Game, at: V3, k: f64) -> f64 {
 #[doc(hidden)] pub fn destruction_pall_emit__body(g: &mut crate::game::Game, r: crate::destruction::DestructionPallEmitR, from: V3, pos: V3, dir: V3, j: f64, tint: V3, gain: Option<f64>) -> bool {
     let gain = gain.unwrap_or(1.0);
     let k = g.k.chaos.pall;
-    if crate::smoke_types::smoke_system_like_budget(g).unwrap_or(64.0) < k.slack {
+    if crate::smoke_types::smoke_system_like_budget(g) < k.slack {
         g.stats.destruction.pall_starved += 1;
         return false;
     }

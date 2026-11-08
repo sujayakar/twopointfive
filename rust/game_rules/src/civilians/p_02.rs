@@ -50,13 +50,6 @@ pub fn hostage_say(g: &mut crate::game::Game, gd: GuardId, moment: crate::dialog
     true
 }
 
-/// Her light meter's keys are dropped.   (civilians.ts forgetMeter)
-pub fn forget_meter(g: &mut crate::game::Game, gd: GuardId) {
-    let id = g.ch[g.gd[gd].ch].id;
-    crate::game::game_light_forget(g, &format!("civC{}", id));
-    crate::game::game_light_forget(g, &format!("civH{}", id));
-}
-
 /// Are the civilians on the floor at all right now.   (civilians.ts civiliansOnFloor)
 pub fn civilians_on_floor(g: &crate::game::Game) -> bool {
     !g.civilians.is_empty() && !g.quiet_utility && !g.touring && !crate::lighting::is_daylight(g)
@@ -215,10 +208,7 @@ pub fn run_pending(g: &mut crate::game::Game, p: &crate::civilians::Pending) {
 pub fn civ_say(g: &mut crate::game::Game, gd: GuardId, text: &str, hold: Option<f64>, unheard: Option<bool>) {
     let hold = hold.unwrap_or(0.0);
     let unheard = unheard.unwrap_or(false);
-    let mut text = String::from(text);
-    if crate::snatch::snatch_is_man(g, gd) {
-        match crate::snatch::snatch_voice(g, gd, &text) { Some(own) => text = own, None => return }
-    }
+    let text = String::from(text);
     let cv = civ_of(g, gd);
     let t = fill(g, gd, &text, None);
     let length = t.encode_utf16().count() as f64;   // (a JavaScript string's length)
@@ -431,9 +421,8 @@ pub fn update_one(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     }
     let cower_now = g.cv[cv].state == CivState::Cower;
     let led = g.cv[cv].lead.is_some();
-    let bound = if cower_now && led && crate::snatch::snatch_is_tied(g, gd) { 1.0 }
-        else if cower_now && move_ == 0.0 && !led {
-            if crate::rescue::rescue_is_hostage(g, gd) || crate::snatch::snatch_is_tied(g, gd) { 1.0 }
+    let bound = if cower_now && move_ == 0.0 && !led {
+            if crate::rescue::rescue_is_hostage(g, gd) { 1.0 }
             else if g.cv[cv].complied && g.time < g.cv[cv].comply_until { 2.0 } else { 0.0 }
         } else { 0.0 };
     g.ch[c].anim.bound = bound;
@@ -502,9 +491,7 @@ pub fn see(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let eye = bone_or(g, c, Bone::Head, [0.0, 1.6, 0.0]);
     let look = crate::guards::look_of(g, c);
     let chest = bone_or(g, pc, Bone::Chest, [0.0, 1.1, 0.0]);
-    let key = format!("civS{}", g.ch[c].id);
-    let probe = crate::sensors::sensors_segment(g, &key, eye, chest, None).unwrap_or(1.0);
-    g.gd[gd].smoke_trans = probe * crate::weather::air_trans(g, eye, chest);
+    g.gd[gd].smoke_trans = crate::sense::smoke_between(g, eye, chest) * crate::weather::air_trans(g, eye, chest);
     let e = eye_of(g, gd);
     let smoke = g.gd[gd].smoke_trans;
     let vis = crate::guards::eye_contact(g, crate::guards::Eye { pos: eye, look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: None }, pc, true, false, smoke, None);
@@ -629,11 +616,11 @@ pub fn bodies(g: &mut crate::game::Game, gd: GuardId) {
 pub fn civ_visibility(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> f64 {
     let cv = civ_of(g, gd);
     let c = g.gd[gd].ch;
-    let e = crate::guards::meter_of(g, c, "civ");
+    let [stands, e] = crate::guards::light_on(g, c);
     let seen = crate::game::game_visibility_of(g, e);
     g.cv[cv].vis = v3::damp(g.cv[cv].vis, seen, 6.0, dt);
     g.gd[gd].visibility = g.cv[cv].vis;
-    g.gd[gd].irradiance = e;
+    g.gd[gd].irradiance = stands;
     g.cv[cv].vis
 }
 

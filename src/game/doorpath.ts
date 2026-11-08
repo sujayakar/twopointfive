@@ -66,16 +66,7 @@ export const DOORPATH = {
    *  light off the room, 2.7 s an entry in the office. What it buys is real: in the office two men carry rifle and light through the server door's leaf
    *  for half a second in every run without it (rifle spells of 0.2 s and over 370 → 175, weapon light 339 → 17; the depot 27 → 0). Wanted in its
    *  place: a carry that pulls the rifle in and keeps eyes and light up — no such pose exists */
-  gun: false, gunM: 0.95, gunAjar: 0.12, gunLead: 0.3, gunSide: 0.15, gunOver: false,
-  /** the gun rule also has a man who STANDS (on his mark, in the stack, holding his point): off, only a man on his way somewhere is touched — a standing man
-   *  keeps his gun where his order has it, through a leaf or not (a lowered gun takes his sights and his light off the room) */
-  gunStill: true,
-  /** the gun rule may bring a gun DOWN to the low ready: off, it only ever carries the gun up along a walking man's way (nothing is lowered: a gun at the
-   *  low ready sees nothing, lights nothing and fires nothing, and a contested doorway is where that costs men) */
-  gunDown: true,
-  /** the gun is carried along his way only while nobody of his own stands in that line (a gun turned onto the back of the man ahead in the file is a gun
-   *  the room fight then lowers for him): with a friend there it stays where his order has it */
-  gunLane: true,
+  gun: false, gunM: 0.95, gunAjar: 0.12, gunLead: 0.3, gunSide: 0.15, 
   /** a man down within this of a point still being walked to: the point is moved off him (0: never — a man walks onto the fallen as before) · the new
    *  point stands this far from where any man down lies · and at most this far from the point as dealt */
   bodyM: 0, bodyOff: 0.6, bodyMove: 1.2,

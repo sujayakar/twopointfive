@@ -23,7 +23,7 @@
 //   view, never to a yaw that would put a wall between the lens and him or a man he could shoot, and still while a button is down. It is a function of the
 //   moment, not a sum of turns: the fight over or his feet still, it comes back to the hand's yaw. Nothing carries his aim through it: the view turns
 //   slowly under a live cursor, as the floor does when he walks. Off = the view turns by itself only at rest.
-//   WHAT IT MAY KNOW: what the picture shows. An enemy the fog hides is never asked about (FogOfWar.hidden), and no sound is: Game.events is every sound
+//   WHAT IT MAY KNOW: what the picture shows. An enemy the fog hides is never asked about (game.view: fogHides), and no sound is: Game.events is every sound
 //   on the floor, the HUD marks none of them, and a lean toward one would point at a man the fog hides.
 //   IT WRITES NOTHING OF THE GAME'S: read() asks (roomRead, the fog, the orders, the door tools) and the frame goes to the host's camera. The view is the
 //   seat's input (cmd.ts), so a recording replays the view it was made with whatever this table says; with the mode never put on the build is the build
@@ -67,7 +67,7 @@ import type { DoorOp } from '../game/doortools';
 import { roomRead, type RoomRead } from '../game/roomread';
 import { isHostile } from '../game/teams';
 import { closeMode, closeSubject } from '../game/close';
-import { stalkOn, stalkWait } from '../game/stalk';
+import { fogHides } from '../view/seatview';
 import { samWork } from '../game/handwork';
 
 export const AUTOCAM = {
@@ -264,13 +264,13 @@ export function autoRead(A: AutoCam, g: Game, input: Input, dt: number): AutoSce
   const K = AUTOCAM, pl = g.player, c = pl.char, p = c.pos, now = g.time; AUTOCAM_STATS.reads++;
   // ---- the men he could shoot: hostile, on their feet, in the picture (the fog's word) and in his line — asked ten times a second
   if (now - A.seenT >= 0.1 || now < A.seenT) {
-    A.seenT = now; A.seen.length = 0; A.fight.length = 0; A.shown = 0; if (A.lineT.size > g.guards.length) A.lineT.clear(); const eye: Vec3 = [p[0], 1.5, p[2]], fog = g.fogOfWar;
+    A.seenT = now; A.seen.length = 0; A.fight.length = 0; A.shown = 0; if (A.lineT.size > g.guards.length) A.lineT.clear(); const eye: Vec3 = [p[0], 1.5, p[2]], V = g.view;
     let lockD = K.lockM, onto = false; const had = A.lockGd; A.lockGd = null;
     for (const gd of g.guards) {
       if (gd.state === 'dead' || gd.held || !isHostile('player', gd.team)) continue;
       if (gd.state === 'alert') onto = true;   // (the soft lock's fight: a man onto him anywhere, in the picture or not — the one shooting from the far end)
-      const q = gd.char.pos; if (flat(p, q) > K.fightM || fog?.hidden(gd)) continue;
-      const inLine = !g.col.segmentBlocked(eye, [q[0], 1.3, q[2]]); if (inLine) { A.seen.push([q[0], 0, q[2]]); A.lineT.set(gd, now); }
+      const q = gd.char.pos; if (flat(p, q) > K.fightM || fogHides(V, gd.char.id)) continue;
+      const inLine = !g.ask.blocked(eye, [q[0], 1.3, q[2]]); if (inLine) { A.seen.push([q[0], 0, q[2]]); A.lineT.set(gd, now); }
       const last = A.lineT.get(gd); if (last !== undefined && now >= last && now - last <= K.swayLinger) A.fight.push([q[0], 0, q[2]]);   // (a man of the fight: the sway's)
       // the soft lock's man: the nearest in his line who is not onto him — the one it has until another is clearly nearer, and through a moment out of the line
       if (gd.state !== 'alert' && (inLine || gd === had && last !== undefined && now >= last && now - last <= K.lockLinger)) { const d = flat(p, q) - (gd === had ? K.lockStick : 0); if (d < lockD) { lockD = d; A.lockGd = gd; } }
@@ -279,7 +279,7 @@ export function autoRead(A: AutoCam, g: Game, input: Input, dt: number): AutoSce
     // (somebody is onto him, or was a moment ago: that is a fight, and the fight's rules frame it)
     if (onto || now < A.lockFightT) A.lockFightT = onto ? now : -1e9; A.lockFight = now >= A.lockFightT && now - A.lockFightT < (onto ? Infinity : K.lockCalm); if (A.lockFight) A.lockGd = null;
   }
-  const lmb = input.lmb(), lock = autoLock(A, g, lmb ? stalkOn(g) : null, lmb && !!stalkWait(g));   // (a stalk, and the wait at a corner, live only under the held click)
+  const lmb = input.lmb(), M = g.view.marks, lock = autoLock(A, g, lmb && M.stalk !== null ? g.guards.find(gd => gd.char.id === M.stalk) ?? null : null, lmb && M.stalkWaits);   // (a stalk, and the wait at a corner, live only under the held click)
   // ---- the squad: the newest beat — a door order's phase as it changes (the order given, its men set, the word, the entry), or men just sent somewhere
   let beat: AutoScene['beat'] = null;
   if (g.orders?.active) {

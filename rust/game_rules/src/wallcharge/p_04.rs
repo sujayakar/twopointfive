@@ -112,7 +112,7 @@ pub fn wall_charge_draw(g: &mut crate::game::Game, c_2: WallChargeId) {
     let n = wall_pt(g, &w, 0.0, 1.0, None);
     let o = wall_pt(g, &w, 0.0, 0.0, None);
     let flag = crate::scene_boxes::box_flag();
-    let slab = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+    let slab = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP {
         c: p,
         h: [0.07, 0.11, 0.02],
         yaw: Some(yaw),
@@ -121,7 +121,7 @@ pub fn wall_charge_draw(g: &mut crate::game::Game, c_2: WallChargeId) {
         ..Default::default()
     });
     g.fx.push(crate::game::GameFxItem { box_: slab, ttl: 1e-3 });
-    let tell = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+    let tell = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP {
         c: [p[0] + (n[0] - o[0]) * 0.022, p[1] + 0.07, p[2] + (n[2] - o[2]) * 0.022],
         h: [0.012, 0.012, 0.004],
         yaw: Some(yaw),
@@ -167,6 +167,30 @@ pub fn wall_charge_sam_fatal(g: &mut crate::game::Game, c_2: WallChargeId) -> bo
     let off = wall_off(g, &w, p);
     let t = thick(g, &w);
     v3::dist_xz(p, at) < (if off < -t / 2.0 { g.k.doortools.knock_m } else { g.k.wallkill.near_m })
+}
+
+/// The squad block's lines: what is carried, while this run brought wall charges of its own, and a charge waiting for the trigger: the squad's key for those that are its to blow, the interaction's for his own, a note each, counted apart. (wallcharge.ts WallCharge.hudNotes)
+pub fn wall_charge_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
+    use crate::view::Note;
+    if !wall_charge_on(g) { return Vec::new(); }
+    let W = seat.wall_charge;
+    let mut out = Vec::new();
+    if let Some(n) = W.carried { if W.brought.unwrap_or(0.0) > 0.0 { out.push(Note { key: String::new(), text: alloc::format!("wall charges {}", n) }); } }
+    if W.set.is_empty() { return out; }
+    let mine = crate::orders::squad_orders_squad(g, seat);
+    let mark = crate::pairorders::pair_orders_waiting(g).iter().any(|(gd, _)| mine.contains(gd));   // (while his partner waits on a mark, the key is the mark first: the note says so)
+    let f = g.k.doortools.blow_key.replacen("Key", "", 1);
+    let p = g.ch[g.pl[seat.player].ch].pos;
+    for own in [false, true] {
+        let of: Vec<WallChargeId> = W.set.iter().copied().filter(|&c| wall_charge_key_is(g, seat, c) != own).collect();
+        if of.is_empty() { continue; }
+        let mut by: Vec<(WallChargeId, f64)> = of.iter().map(|&c| (c, v3::dist_xz(wall_pt(g, &g.tab.wallcharge_set_wall_charge[c].wall, 0.0, 0.0, None), p))).collect();
+        js::sort_by(&mut by, |a, b| a.1 - b.1);
+        let many = if of.len() > 1 { alloc::format!(" ({})", of.len()) } else { String::new() };
+        let after = if mark && !own { " · after the mark" } else { "" };
+        out.push(Note { key: crate::ownblow::blow_key_word(!own, &f), text: alloc::format!("blow the charge · the wall{}{}{}", many, after, wall_charge_close_words_of(g, seat, by.first().map(|x| x.0), Some(true))) });
+    }
+    out
 }
 
 /// With the cursor on a partition and Sam at its foot, the marker and its row (wallcharge.ts WallCharge.samRows)

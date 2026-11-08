@@ -98,7 +98,7 @@ fn kept(a: &crate::character::Anim, k: &'static str) -> ClipId {
     *a.clips.get(k).unwrap()
 }
 /// the fist-taking `grab` of the constructor: each hand's 15 digit joints' rotations off a pose
-fn grab(g: &mut crate::game::Game, hands: &[Vec<i32>], q: crate::anim_skeleton::Pose) -> Vec<Vec<f32>> {
+fn grab(g: &crate::game::Game, hands: &[Vec<i32>], q: crate::anim_skeleton::Pose) -> Vec<Vec<f32>> {
     hands.iter().map(|ns| {
         let mut a = vec![0.0f32; 60];
         for (k, i) in ns.iter().enumerate() {
@@ -422,7 +422,7 @@ pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim 
     crate::anim_skeleton::pose_copy(g, s1, rest);
     crate::anim_skeleton::pose_copy(g, s2, rest);
     g.k.posemath.singles = pose_rule;
-    a.phase = crate::math_dice::sim_random(g);
+    a.phase = crate::dice::draw_world(g, "character::anim_new#1");
     a
 }
 

@@ -31,12 +31,12 @@
 //     the door order' · 'no key or button was down on any frame' · 'blue stacked on the door (T twice, B), then "open and clear" (X, 5, 1) to red'
 // 2026-11-07: the rig no longer holds CMDRING.wholeSquad and CMDRING.only off (both settled on: the lines are asked of the menu as the page has it), and the
 // two lines behind knobs that are settled off went: 'ORDERS.wheelElement on' (orderui-hud) and 'ORDERS.clickGives on' (orderui-keys).
+import { blockOf, menuKey } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { ORDERS, sideOf } = await import(`${ROOT}/src/game/orders.ts`);
-const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { SILENT } = await import(`${ROOT}/src/game/silent.ts`);
 const { START } = await import(`${ROOT}/src/game/startfile.ts`);
 
@@ -85,7 +85,7 @@ async function rig(seed: number, o: { squad?: 2 | 4; sam?: number[] } = {}) {
     rclick() { input.clicked |= 4; R.step(); },
     wheel(d: number) { input.wheel += d; R.step(); },
     last(): any { return O.log[O.log.length - 1] ?? null; },
-    status(): any { return O.hud().status[0] ?? null; },
+    status(): any { return blockOf(O)[0] ?? null; },
   };
   R.step(30);
   if (o.sam) { game.teleportPlayer(o.sam); R.step(5); }
@@ -111,7 +111,7 @@ export const orderuiFour = guarded(async () => {
   const K = ORDERS;
   const CASES: { name: string; tag: string; tone: string; want: number[]; address(R: any): void; give(R: any): void; how: string }[] = [
     { name: 'the squad', tag: 'GOLD', tone: 'gold', want: [0, 1, 2, 3], how: 'X pressed on the spot, then 1',
-      address: () => {}, give: R => { R.cursor(SPOT); R.press(K.key); R.step(20); R.press('Digit1'); } },
+      address: () => {}, give: R => { R.cursor(SPOT); menuKey(R.O ?? R.game.orders); R.step(20); R.press('Digit1'); } },
   ];
   for (const c of CASES) {
     const R = await rig(21); const { O } = R; const ops = R.ops; const p0 = ops.map((m: any) => [...m.char.pos]);
@@ -152,7 +152,7 @@ export const orderuiBlock = guarded(async () => {
   verdict(ops.length === 4 && s0?.label === head('GOLD') && s0.tone === 'gold' && named(r0) && r0.map((o: any) => o.tone).join() === tones,
     'no ring up, everyone addressed: the header says the orders go to GOLD, in gold, and each of the four has a row in his pair\'s colour that names him and says what he is doing', txt(s0));
   const was = r0.map((o: any) => o.text);
-  if (!BREAK) { R.cursor(SPOT); R.press(K.key); R.step(20); R.press('Digit1'); } R.step(30);
+  if (!BREAK) { R.cursor(SPOT); menuKey(R.O ?? R.game.orders); R.step(20); R.press('Digit1'); } R.step(30);
   const s1 = R.status(), r1 = rows(s1), l = R.last();
   verdict(l?.order === 'move' && l.who.length === 4 && named(r1) && r1.every((o: any, i: number) => o.text !== was[i]) && r1.map((o: any) => o.tone).join() === tones && s1?.label === head('GOLD'),
     '"move there" given to everyone: each man\'s row now says something else than it did, in the same colour, and the header still says GOLD', `${line(l)} · before: ${was.join(' | ')} · after: ${txt(s1)}`);
@@ -191,47 +191,3 @@ export const orderuiHalf = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- the frame's input while the menu is up
-export const orderuiKeys = guarded(async () => {
-  const { verdict, done } = family('orderui-keys: what the menu takes of the frame\'s input, and what it never takes');
-  const R = await rig(25); const { O, game: g, input, W } = R; const K = ORDERS; const sam = g.player.char;
-  // Sam walks on with the menu up (movement keys are his, not the menu's): it stays, frozen on its target
-  R.cursor(SPOT); R.press(K.key); R.step(5); const t0 = O.menu?.target, at0 = [...sam.pos];
-  let walked = 0; for (const code of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) { const from = [...sam.pos]; input.keys.add(code); R.step(40); input.keys.delete(code); R.step(10); walked = Math.max(walked, dist(sam.pos, from)); }
-  const stillUp = !!O.menu && O.menu.target === t0 && O.menu.target.kind === 'floor' && dist(O.menu.target.at, SPOT) < 0.3;
-  verdict(walked > 0.5 && stillUp && O.log.length === 0, 'Sam walks with the menu up (W A S D held in turn): it stays up, on the spot it was opened on, and no order is given', `Sam moved up to ${f2(walked)} m a key, ${f2(dist(sam.pos, at0))} m in all · menu up ${!!O.menu} on ${O.menu?.target.kind} · orders logged ${O.log.length}`);
-  // a digit with no row: nothing, and not his weapon slot; B: nothing while it is up
-  const slot0 = g.player.slot; R.press('Digit7'); const up7 = !!O.menu; R.press(K.quickKey); const upB = !!O.menu;
-  verdict(up7 && upB && O.log.length === 0 && g.player.slot === slot0, 'with the menu up a digit that has no row does nothing (and is not Sam\'s slot), and the quick key is dead', `after 7: up ${up7} · after B: up ${upB} · orders logged ${O.log.length} · slot ${slot0} → ${g.player.slot}`);
-  // the left button is Sam's trigger with the menu up: the menu goes away, no order, he fires
-  const gun = g.player.gunInHand(), n0 = gun?.shotsFired ?? NaN;
-  input.clicked |= 1; input.buttons |= 1; R.step(); input.buttons &= ~1; R.step(20); const n1 = gun?.shotsFired ?? NaN, gone1 = O.menu === null, log1 = O.log.length;
-  verdict(!!gun && gone1 && log1 === 0 && n1 === n0 + 1, 'a left click with the menu up is Sam\'s shot: the menu goes away, no order is given, a round is fired', gun ? `menu gone ${gone1} · orders logged ${log1} · rounds fired ${n0} → ${n1}` : 'Sam has no gun in hand: the check did not run');
-  // a right click is used up by the menu
-  R.cursor(SPOT); R.press(K.key); R.step(5); input.clicked |= 4; O.input(DT, input, W.cam, W.canvas); const rGone = O.menu === null, rBit = (input.clicked & 4) !== 0; R.step();
-  verdict(rGone && !rBit, 'a right click with the menu up closes it and is taken out of the frame (not the OCP, not the ring)', `menu gone ${rGone} · the click still in the frame's input: ${rBit}`);
-  // the frame it opens on is not the menu's; two digits in one frame are one order and no slot
-  const nA = O.log.length; R.cursor(SPOT); input.pressed.add(K.key); input.pressed.add('Space'); R.step(); const upA = !!O.menu, logA = O.log.length - nA; R.step(10);
-  const slotB = g.player.slot; input.pressed.add('Digit4'); input.pressed.add('Digit3'); R.step(); const lB = R.last(), logB = O.log.length - nA;
-  verdict(upA && logA === 0 && O.menu === null && logB === 1 && lB?.order === 'fallIn' && g.player.slot === slotB, 'X and Space in one frame: the list comes up and nothing is given; then 3 and 4 in one frame: one order (the lower digit), and neither is Sam\'s slot', `on the press: up ${upA}, orders ${logA} · two digits: ${line(lB)} (${logB} order) · slot ${slotB} → ${g.player.slot}`);
-  // the men a menu was for go down: the menu goes, the order never lands on everybody else
-  // (blue is nobody's here: with START.fallIn it holds the fall in it started on throughout — the same assignment at the end, never the digit's order)
-  { const R2 = await rig(26); const O2 = R2.O, ops = R2.ops; const was2 = [2, 3].map(i => O2.of(ops[i]));
-    R2.on(ops[0]); R2.press(K.key); R2.step(5); const up = O2.menu?.men.length === 1;
-    killGuard(R2.game, ops[0], [1, 0, 0], false, 'shot', 'player'); R2.step(2); R2.press('Digit4'); const a = { up: !!O2.menu, log: O2.log.length }; R2.step(70); const gone = O2.menu === null;
-    R2.cursor(SPOT); R2.press(K.whoKey); const who = O2.who; R2.press(K.key); R2.step(5); const up2 = !!O2.menu;
-    killGuard(R2.game, ops[1], [1, 0, 0], false, 'shot', 'player'); R2.step(2); const gone2 = O2.menu === null, who2 = O2.who; R2.press('Digit1'); R2.step(5);
-    verdict(up && a.log === 0 && gone && who === 'red' && up2 && gone2 && who2 === 'all' && O2.log.length === 0 && [2, 3].every((i, k) => kept(O2, ops[i], was2[k])),
-      'a menu opened on Red One, he goes down, 4 is pressed: nobody is ordered and the menu is gone; red addressed with one man left, he goes down: the menu goes at once and the digit orders nobody', `on him: up ${up} · after his death + 4: orders ${a.log}, menu ${gone ? 'gone' : 'up'} · red's menu up ${up2} → after the last red man: ${gone2 ? 'gone' : 'up'}, who ${who2} · orders logged ${O2.log.length} · blue ordered: ${START.fallIn ? `${[2, 3].some((i, k) => !kept(O2, ops[i], was2[k]))} (each still on the fall in he started on: ${[2, 3].map(i => `"${O2.statusOf(ops[i])}"`).join(', ')})` : [2, 3].some(i => O2.has(ops[i]))}`);
-  }
-  // the one pair: T on a man, T on him again = all (never round to the other man and back)
-  { const R3 = await rig(27, { squad: 2 }); const O3 = R3.O, ops = R3.ops; const seq: any[] = [];
-    R3.on(ops[0]); for (let i = 0; i < 4; i++) { R3.press(K.whoKey); seq.push(O3.who); } const tLine = R3.status()?.opts.find((o: any) => o.key === 'T')?.text;
-    R3.press(K.whoKey); const tLine2 = R3.status()?.opts.find((o: any) => o.key === 'T')?.text;
-    verdict(ops.length === 2 && seq.join() === '0,all,0,all' && tLine === 'who · Blue One (under the cursor)' && tLine2 === 'who · back to all', 'the pair, the cursor resting on Blue One: T is him, T again is all — and the HUD\'s T line says which it will be', `who after each T: ${seq.join(' ')} · T line "${tLine}" → "${tLine2}"`);
-  }
-  // a restart with it up
-  NIGHTBREACH.squad = 4;   // (the pair's rig above set the knob: the restart below stages what it says)
-  const nLog = O.log.length; R.cursor(SPOT); R.press(K.whoKey); R.press(K.key); R.step(5); const upR = !!O.menu, whoR = O.who; g.restartEncounter(); R.step(3);
-  verdict(upR && whoR === 'red' && O.menu === null && O.who === 'all' && R.ops.length === 4 && O.log.length <= nLog, 'a restart with the menu up and red addressed: the menu is gone and the choice is back to everyone', `before: up ${upR}, who ${whoR} · after: menu ${O.menu ? 'up' : 'gone'}, who ${O.who}, ${R.ops.length} teammates`);
-  return done();
-});

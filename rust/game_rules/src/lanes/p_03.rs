@@ -292,7 +292,7 @@ pub fn lane_gate(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.time - last_look < 0.2 { return false; }
     let now = g.time;
     s(g).look.set(gd, now);
-    if close_fight(g, &crate::seats::here(g), gd) || crate::control::man::blind(g, gd) || crate::frag::frag_flee(g, gd).is_some() { return false; }
+    if close_fight(g, gd) || crate::control::man::blind(g, gd) || crate::frag::frag_flee(g, gd).is_some() { return false; }
     let here = in_mask(g, Some(&m), pos_of(g, gd));
     let Some(mut first) = ahead(g, &m, gd, here) else { return false };
     if !here {
@@ -405,7 +405,7 @@ pub fn ahead(g: &crate::game::Game, m: &[u8], gd: GuardId, inside: bool) -> Opti
 /// He is held short of a lane his side knows is covered, and what wants him (`to`; none = anything) lies at its guns or down it. (lanes.ts laneBars)
 pub fn lane_bars(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>) -> bool {
     if crate::gunroles::gun_keeps_post(g, gd) { return true; }
-    if g.m.lanes.states.is_none() || !live(g) || !crate::owner::has_him(g, gd, crate::owner::own().lane) { return false; }
+    if g.m.lanes.states.is_none() || !live(g) || !crate::owner::has(g, gd, crate::owner::by::LANE) { return false; }
     let Some(l) = lane_of(g, gd) else { return false };
     let Some(to) = to else { return true };
     let field = g.k.lanes.field_m;
@@ -464,7 +464,7 @@ pub fn lane_covers(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
 pub fn lane_exposed(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.m.lanes.states.is_none() || !live(g) || !mine(g, gd) { return false; }
     if pushing(g, gd) || flanking(g, gd) { return false; }
-    if no_lanes(g) || close_fight(g, &crate::seats::here(g), gd) { return false; }
+    if no_lanes(g) || close_fight(g, gd) { return false; }
     let p = pos_of(g, gd);
     lane_on(g, p, gd).is_some()
 }

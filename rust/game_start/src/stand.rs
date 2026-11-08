@@ -49,12 +49,11 @@ pub struct StartOpts {
     pub link: Option<String>,
     /// the rows that only dress the picture up (a page) or down (a host that draws nothing: the moths do not fly, the fixtures do not swing)
     pub dress: bool,
-    /// THE SENSES WORKED OUT BY THE GAME ITSELF (game/sense.ts SENSE.cpu, and the sky's light in its estimate, SENSE.moon): what a host with no
-    /// picture has for eyes. Off = the page's own stand, where the renderer's light meter answers; on a host with no renderer nothing does, and
-    /// every man is in the dark for good (the harness's TPS_CPUSENSE=1 TPS_MOONLIGHT=1)
-    pub cpu_senses: bool,
+    /// read the difficulty off `link` (`&hard`, `&enemyai=hard`: `scenario_run::difficulty_of_address`). A host that hands its knob tables has read its own address, and what it
+    /// keeps, onto them, and has laid its recipe over that: such a start says false, or the address's words would be laid over what the host decided
+    pub difficulty: bool,
 }
-impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, link: None, dress: false, cpu_senses: false } } }
+impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, link: None, dress: false, difficulty: true } } }
 
 /// THE HOST'S OWN HALF of a stood game: the Input a hand writes, the camera that follows, the canvas's size (headless.ts standUp: `input`, `cam`, `canvas`).
 #[derive(Clone, Copy, Debug)]
@@ -64,15 +63,12 @@ pub struct Stood { pub game: Box<Game>, pub host: Host, pub level: level::Loaded
 
 /// a block for a game that had none: zeros under the layout's word (state.ts born; a slot another game stood in is that game's no more)
 fn born(slot: usize) {
-    let len = core::mem::size_of::<sim::state::State>();
-    unsafe { core::ptr::write_bytes(sim::state::addr(slot) as *mut u8, 0, len); }
-    sim::state::state(slot).head.layout = sim::state::LAYOUT;
+    sim::state::put(slot, &[]);
 }
 
 /// the level's statics into the host's box world and its lights into the light set (standup.ts populateHost)
 fn populate_host(g: &mut Game, boxes: &mut Vec<BoxId>) {
     let doors = g.level.doors.clone();
-    if g.k.round.on { let texel = g.level.mark_texel; passes::round_level(g, boxes, texel); }
     passes::thin_level(g, boxes, &doors);
     passes::bar_level(g, boxes);
     if g.k.shapes.on { passes::shape_level(g, boxes); }
@@ -84,7 +80,6 @@ fn populate_host(g: &mut Game, boxes: &mut Vec<BoxId>) {
 pub fn settle(g: &mut Game) {
     game::math_dice::use_dice(g);
     game::posehome::pose_home_tend(g);
-    game::sense::settle_grid(g);
     // what the TypeScript's stores say of themselves in the block's head as they are made or moved in (state.ts keep, settle), and the Rust stores,
     // which hold their part of the block from the start, do not: the pose pool (2), the doors (4), the furniture (32), the thrown things (128) and the
     // men's columns (256) are at home. No rule reads these bits; the block is then the block the TypeScript start leaves, to the byte.
@@ -105,7 +100,7 @@ pub fn host_new(g: &mut Game) -> Host {
     g.tab.camera[cam].target = g.level.player_spawn;
     g.tab.camera[cam].aspect = canvas.width / canvas.height;
     game::camera::follow_camera_rebuild(g, cam);
-    game::host_api::b_01::host_world_upload(g);
+    game::scene_boxes::box_world_listed(g);
     // (the host's camera and keys are handed to the game here, once, as standGame hands a TypeScript host's: game.ts hostCam)
     g.host_cam = Some(cam);
     g.host_input = Some(input);
@@ -119,6 +114,14 @@ pub fn host_of(g: &Game) -> Option<Host> {
     Some(Host { input, cam, canvas: canvas() })
 }
 
+/// is the level an address boots one of the look's places? The office and what is made of it are not, nor is an address that names no file   (scene/look.ts placeOfQuery)
+fn place_of(link: &str) -> bool {
+    let q = game::query::Query::parse(link);
+    let Some(f) = q.get("levelFile") else { return false };
+    let Some(name) = f.strip_suffix(".json") else { return false };
+    !(name == "office" || name.starts_with("office-"))
+}
+
 /// STAND A GAME on the level file `data` (the file's text, parsed).
 pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood { stand_with(data, assets, o, &mut |_| {}) }
 
@@ -128,8 +131,17 @@ pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood { stand_with(d
 pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn FnMut(&mut Game)) -> Stood {
     let mut g = Box::new(Game::blank());
     before(&mut g);
+    // THE ADDRESS, BEFORE THE GAME IS MADE, as every host that starts a game from one reads it (src/host/standup.ts addressBeforeGame): the row's
+    // own hour and weather onto its words, the weather the game is born in, and the difficulty it asks for
+    let mut address = o.link.as_deref().map(game::query::Query::parse);
+    if let Some(q) = address.as_mut() {
+        game::scenario_run::address_before_game(&mut g, q);
+        if o.difficulty { game::scenario_run::difficulty_of_address(&mut g, q); }   // (over `before`'s tables where a host handed none of its own: StartOpts.difficulty)
+    }
     born(o.slot);
     g.sim = o.slot;
+    // (a host that draws dresses the men for the place its address names: the page's own cast is picked by the same rule)
+    if o.dress { if let Some(l) = o.link.as_ref() { g.m.scene_look.look_place = place_of(l); } }
     let cast = if game::scene_look::look_dress(&mut g) { assets.cast_look.or(assets.cast) } else { assets.cast };
     let rig = gltf::character(&mut g, assets.mannequin, cast);
     // the rows that only dress the picture, as this host has them (game/dress.ts DRESS: up on a page, down on a host that draws nothing)
@@ -140,7 +152,6 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     g.engine.lights = game::render_lights::LightSet::blank();
     g.engine.settings = settings::default_settings();
     g.engine.effective_scale = 1.0;
-    if o.cpu_senses { g.k.sense.cpu = true; g.k.sense.moon = true; }
     let (dressing, lived) = (g.k.destruction.on, g.k.lived.on);
     let mut loaded = level::load(&mut g, data, dressing, lived);
     populate_host(&mut g, &mut loaded.boxes);
@@ -150,14 +161,19 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     g.col.boxes = loaded.boxes.clone();   // (`level.boxes`, which the constructor reads as the collision's list)
     game::game::game_new(&mut g, rig, Some(game::game::GameNewOpts { seats: Some(o.seats as f64) }));
     settle(&mut g);
-    // the harness's stand (standGame with `harness`): the solo night's card on a game stood plain
-    // (the flag is the page's boot: host/profile.ts shippedBoot raises it, and the page's own plain night asks `kitSoloIf` by its address)
-    g.m.kit.kit_solo.stand = true;
-    game::kit::kit_solo_stand(&mut g, None);
+    // A GAME STOOD WITH NO ADDRESS is the harness's plain stand (standGame with `harness`): the solo night's card goes on at the stand, by the
+    // harness's own flag (host/profile.ts shippedBoot raises it). A game stood FROM AN ADDRESS has no such flag, as a page has none: nothing is
+    // put on at the stand, and the address's own question is asked once its mission is staged (`start_at_address`)
+    if address.is_none() {
+        g.stood.solo_stand = true;
+        game::kit::kit_solo_stand(&mut g, None);
+    }
+    // the visit's hour laid over the level's own night (standGame's line: the hour is the address's, read before the game was made)
+    { let hour = g.stood.hour; if hour != game::hours::HourId::Night { game::hours::apply_hour(&mut g, hour); } }
     let host = host_new(&mut g);
-    if let Some(link) = o.link.as_ref() {
-        let r = game::scenario_run::start_from_query(&mut g, &game::scenario_run::StartFromQuerySearch::Text(link.clone()));
-        if let Some(why) = r.why { panic!("the game refused the start from '{}': {}", link, why); }
+    if let Some(q) = address.as_ref() {
+        let r = game::scenario_run::start_at_address(&mut g, q);
+        if let Some(why) = r.why { panic!("the game refused the start from '{}': {}", o.link.as_deref().unwrap_or(""), why); }
         settle(&mut g);
     } else if let Some(spec) = o.scenario.as_ref() {
         if let Some(why) = game::scenario_run::start_scenario(&mut g, spec) { panic!("the game refused the {}: {}", spec.kind.as_str(), why); }
@@ -167,7 +183,7 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
 }
 
 /// ONE FRAME OF A HOST WITH NO PICTURE (headless.ts `step`): the game's update on the host's Input and camera, the camera after the man, the lights'
-/// envelopes, the box world listed again, the Input's frame ended. Answers WHAT THE STEP TOLD ITS HOST (tools/blitz/OUT-EVENTS.md: the sounds to
+/// envelopes, the Input's frame ended. Answers WHAT THE STEP TOLD ITS HOST (tools/blitz/OUT-EVENTS.md: the sounds to
 /// play, the marks to draw, the lines said): the list is a step's output and the host drains it, or it grows for the life of the game.
 pub fn frame(g: &mut Game, h: &Host, dt: f64) -> Vec<game::out_events::OutEvent> {
     game::game::game_update(g, dt, h.input, h.cam, h.canvas);
@@ -177,7 +193,6 @@ pub fn frame(g: &mut Game, h: &Host, dt: f64) -> Vec<game::out_events::OutEvent>
     game::camera::follow_camera_update(g, h.cam, dt, follow, aim);
     let now = g.time;
     game::render_lights::light_set_update(g, dt, now);
-    game::host_api::b_01::host_world_upload(g);
     game::input::input_end_frame(g, h.input);
     core::mem::take(&mut g.out)
 }

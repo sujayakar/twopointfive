@@ -21,7 +21,7 @@ const CBM = await import(`${ROOT}/src/game/combat.ts`);
 
 const args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 const VERBOSE = args.includes('--verbose'), SEED = Number(flag('--seed') ?? 1), BREAK = process.env.DOORLOOK_BREAK === '1';
-const SCN = 'compound-four', DOOR = 'g_e', DEG = 180 / Math.PI, NEAR = 25;
+const SCN = 'compound-four', DOOR = 'g_e', DEG = 180 / Math.PI, NEAR = 25, AWAY = 70;
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { if (VERBOSE) return await fn(); const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
@@ -78,7 +78,7 @@ export async function doorlookCheck(): Promise<boolean> {
   await arm(false, true, false, true);   // (the first stand-up of a process deals the men's arcs otherwise than every later one: it asks nothing, so that the arms below are held to the same deal)
   const on = await arm(false, false, false, BREAK), off = await arm(false, true, false, true), shut = await arm(false, true), twice = await arm(false, false, true);
   console.log(`  worked: ${show(on)}\n  no door worked: ${show(off)}\n  shut: ${show(shut)}\n  twice: ${show(twice)} · notes ${twice.notes} (once: ${on.notes})`);
-  const seen = (A: Arm) => A.men.filter(m => m.line), blind = (A: Arm) => A.men.filter(m => !m.line);
+  const seen = (A: Arm) => A.men.filter(m => m.line), blind = (A: Arm) => A.men.filter(m => !m.line), left = (A: Arm) => seen(A).filter(m => m.at15 > AWAY);
   const same = (m: Man) => { const o = off.men.find(x => x.name === m.name); return !!o && Math.abs(o.at15 - m.at15) < 5; }, say = (ms: Man[]) => ms.map(m => `${m.name} ${m.at15.toFixed(0)}°`).join(', ');
   line(!on.note && seen(on).length === 3 && seen(on).every(m => m.turned && m.at15 <= NEAR), `every man with a line to the doorway has his gun on it a second and a half after an enemy's hand works the door (${say(seen(on)) || on.note})`);
   line(!on.note && blind(on).length === 1 && blind(on).every(m => !m.turned && same(m)), `the man with no line to the doorway is not turned by it: his gun is where it is with no door worked (${say(blind(on))})`);

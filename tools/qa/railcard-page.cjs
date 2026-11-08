@@ -11,7 +11,7 @@
 // (tut-page.cjs's way). Nothing here is a GPU's picture. exit 0 = all hold · 1 = one does not.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
-const ROOT = path.resolve(__dirname, '../..'), PORT = process.env.PORT || 5199, OUT = process.env.OUT || '/tmp', name = process.argv[2] || 'tut-sky';
+const ROOT = path.resolve(__dirname, '../..'), PORT = process.env.PORT || 5199, OUT = process.env.OUT || '/tmp', name = process.argv[2] || 'tut-team';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 let bad = 0; const check = (ok, what, how) => { if (!ok) bad++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${how}`); };

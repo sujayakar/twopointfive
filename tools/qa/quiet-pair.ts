@@ -110,7 +110,7 @@ async function one(seed: number, arm: Arm, cap: number, verbose: boolean, levelF
   const { standUp, ROOT } = await import('./headless.ts');
   if (process.env.SOLO_CLEAR_M) { try { (await import(`${ROOT}/src/game/opening.ts`)).OPENING.clearM = Number(process.env.SOLO_CLEAR_M); } catch { /* a build from before the opening rule */ } }
   const { lightEstimateAt, escalationOf, canSeeChar, sightGain, sightGainOn, pointInView } = await import(`${ROOT}/src/game/guards.ts`);
-  const { debriefOf, fmtEvent } = await import(`${ROOT}/src/game/chronicle.ts`);
+  const { debriefOf, rowsOf, rowLine } = await import('./debrief-read.ts');;
   const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
   const { alive: deviceAlive } = await import(`${ROOT}/src/game/devices.ts`);
   const { DEVICE_DEFAULTS } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -197,7 +197,7 @@ async function one(seed: number, arm: Arm, cap: number, verbose: boolean, levelF
       { const e = escalationOf(g); if (e !== escWas) { say(`   the floor: escalation ${escWas} → ${e}`); if (e > escWas) first(`the floor's escalation ${escWas} → ${e}`, 'control', '?', 'the net (a camera, a body, a report)', pos()); escWas = e; } out.escalation = Math.max(out.escalation, e); }
       for (const m of g.messages as { text: string }[]) { if (heardMsg.has(m)) continue; heardMsg.add(m); if (m.text.startsWith('radio: CONTROL')) say(`   ${m.text}`); }
       { const h = g.player.hitFlash ?? 0; if (h > 0 && lastHit <= 0) { out.hits++; say(`   !! Sam is hit at ${at(pos())}`); } lastHit = h; }
-      { const ev = g.chronicle.events as any[]; for (; chronSeen < ev.length; chronSeen++) { const line = fmtEvent(ev[chronSeen]); out.timeline.push(line); say(`   · ${line}`); } }
+      if (chronSeen < g.chronicle.events.length) { const ev = rowsOf(g); for (; chronSeen < ev.length; chronSeen++) { const line = rowLine(ev[chronSeen]); out.timeline.push(line); say(`   · ${line}`); } }
       if (mate) { const b = mate.bubble; if (b && b !== wordWas) { wordWas = b; words.push(`${f1(t)} “${b.text}”`); say(`   ${mate.callsign}: “${b.text}”`); } }   // (the partner's own words: every line he says, as his bubble carries it)
       { const L0 = PO.PAIR_LOG as any[], fresh: any[] = []; for (let i = L0.length - 1; i >= 0 && !plSeen.has(L0[i]); i--) { plSeen.add(L0[i]); fresh.unshift(L0[i]); }
         for (const L of fresh) { say(`   ~ orders: ${L.what}`); if (O.log.length < 80) O.log.push(`${f1(t)} ${L.what}`); } }

@@ -545,7 +545,10 @@ export async function controlsBehind() {
   }
   // ---- (f) a smoke can up (the smoke slot selected, not holstered) + a click behind him: that is a throw — the row says holster for the takedown; Space would still be the arm grab (gunhold-variant (c))
   {
-    const S = await hands(807, true); const { W, game, A } = S; game.player.slot = 'smoke'; W.step(DT);
+    const S = await hands(807, true); const { W, game, A } = S; game.player.slot = 'smoke';
+    // (his back stays to Sam whatever the man makes of him: the row asked of is the one behind a man)
+    const step0 = W.step.bind(W); const facing = Math.PI / 2; W.step = (dt: number) => { A.char.bodyYaw = A.char.aimYaw = facing; return step0(dt); };
+    W.step(DT);
     const row = rowOf(game, A); const cans0 = game.player.canisters;
     // (a click made while the can is still coming is kept and thrown as it arrives — kitanim.ts kitClick; KITANIM.throwKeep is the longest such a click may wait)
     const most = dueFrames(KITANIM.throwKeep), thrown = () => !!game.player.pendingThrow || game.player.canisters < cans0; let threwAt = -1; const lateAt = most + 2;

@@ -12,6 +12,7 @@
 // keys given to a fresh game tick by tick (what a recording holds and a replay does) end the same way.
 // A headless run cannot press the page's keys: main.ts's lines (Esc's press taken out of the frame, no back-out on it, Tab's trial waiting its turn) are held
 // by their source text here, and looked at on the real page apart.
+import { menuKey } from './squadwords';
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 type V = [number, number, number];
@@ -23,6 +24,7 @@ export async function tabBackCheck(): Promise<boolean> {
   console.log(`\n=== tabback: Esc is only the pause, Tab backs out${BRK ? ' (TABBACK_BREAK: another key where Tab is pressed — must fail)' : ''} ===`);
   const { backName } = await import(`${ROOT}/src/game/backkey.ts`); const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
+  const { stage, rmbHold, rmbUp } = await import('./fn2000-probes.ts');
   const log = console.log, err = console.error, warn = console.warn;
   const quiet = async <T>(f: () => T | Promise<T>): Promise<T> => { console.log = console.error = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.error = err; console.warn = warn; } };
   const key = (W: any, code: string, n = 1) => { W.input.pressed.add(code); for (let i = 0; i < n; i++) W.step(DT); };
@@ -46,18 +48,18 @@ export async function tabBackCheck(): Promise<boolean> {
     // ---- the squad's order menu: a room clear with four, X on the floor ahead
     const squad = async () => quiet(async () => { const W: any = await standUp({ seed: 33 }); const g = W.game; g.godMode = true;
       const why = startFromQuery(g, new URLSearchParams('roomclear&squad4')).why; for (let i = 0; i < 20; i++) { g.player.visibility = 0.05; W.step(DT); }
-      const p = g.player.char.pos, at: V = [p[0] + 1.5, 0, p[2] + 0.5]; W.cursorAt(at); key(W, ORDERS.key); W.cursorAt(at); W.step(DT);
+      const p = g.player.char.pos, at: V = [p[0] + 1.5, 0, p[2] + 0.5]; W.cursorAt(at); menuKey(g.orders); W.step(DT); W.cursorAt(at); W.step(DT);
       return { W, g, O: g.orders, why, at }; });
-    { const A = await squad(), hintOn = String(A.O.hud().menu?.hint ?? ''), upA = !!A.O.menu, ableA = A.g.backable(); await quiet(() => { A.W.cursorAt(A.at); key(A.W, TAB, 2); }); const goneA = !A.O.menu, ableAfter = A.g.backable();
-      verdict(A.why === null && upA && goneA && ableA && !ableAfter && /\btab\b/.test(hintOn) && !/\besc\b/.test(hintOn),
-        'the order menu: Tab closes it and its line names Tab, not Esc', `up ${upA} → gone on Tab ${goneA} · something to back out of before ${ableA}, after ${ableAfter} · "${hintOn}"`); }
+    { const A = await squad(), upA = !!A.O.menu, ableA = A.g.backable(); await quiet(() => { A.W.cursorAt(A.at); key(A.W, TAB, 2); }); const goneA = !A.O.menu, ableAfter = A.g.backable();
+      verdict(A.why === null && upA && goneA && ableA && !ableAfter,
+        'the order menu: Tab closes it', `up ${upA} → gone on Tab ${goneA} · something to back out of before ${ableA}, after ${ableAfter}`); }
 
     // ---- the pause: the first tick after the card holds 'Paused'; a held list and a held arc are let go unsent in it; the order menu stays
     { const { stepFrame } = await import(`${ROOT}/src/host/loop.ts`);
       const under = (W: any, st: { frozen: boolean; seen: number; esc: number }) => { const g = W.game, up = g.update;
         g.update = function (this: any, dt: number, input: any, ...a: unknown[]) { if (input.pressed.has('Paused')) st.seen++; if (input.pressed.has('Escape')) st.esc++; return up.call(this, dt, input, ...a); };
         return { game: g, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.relist(); },
-          smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => st.frozen, present: () => false, fixedStep: () => false }; };
+          smoke: null, audio: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => st.frozen, present: () => false, fixedStep: () => false }; };
       const A = await squad(), up0 = !!A.O.menu, stA = { frozen: false, seen: 0, esc: 0 };
       await quiet(() => { const ctx = under(A.W, stA); A.W.cursorAt(A.at); stepFrame(ctx, DT); stA.frozen = true; for (let i = 0; i < 3; i++) stepFrame(ctx, DT); stA.frozen = false; for (let i = 0; i < 3; i++) { A.W.cursorAt(A.at); stepFrame(ctx, DT); } }); const up1 = !!A.O.menu;
       const stL = { frozen: false, seen: 0, esc: 0 };
@@ -70,12 +72,6 @@ export async function tabBackCheck(): Promise<boolean> {
       verdict(up0 && up1 && stA.seen === 1 && L.open && L.under0 && L.shut && !L.did && stL.seen === 1 && stL.esc === 0 && T.open && T.shut && !T.did && never && takes && trial && backName() === 'Tab',
         'the pause is the pause and nothing else: the first tick after the card holds \'Paused\' once, a Space list held as the card came up is shut with its row not done (and the same keys given tick by tick, as a replay gives them, end the same), the order menu is still up, and main.ts takes Esc\'s press out of the frame and never backs out on it',
         `order menu up ${up0} → after the card ${up1}, ticks holding 'Paused' ${stA.seen} · Space list open ${L.open}, still open under the card ${L.under0} → shut on the first tick back ${L.shut}, anything done ${L.did}, ticks holding 'Paused' ${stL.seen} · the same keys tick by tick: shut ${T.shut}, anything done ${T.did} · main.ts: no back-out on Esc ${never}, the press leaves the frame ${takes}, Tab's trial waits its turn ${trial} · the hint rows name ${backName()}`); }
-
-    // ---- the words: Options ▸ Game's 'Tab key' row must not say Tab does nothing while Tab is the back key (ui/tabkey.ts tabChoices)
-    { const { tabChoices, TAB_CHOICES, TAB_BACK_LINE } = await import(`${ROOT}/src/ui/tabkey.ts`); const on = tabChoices(true);
-      const first = on[0].v === 'off' && on[0].label === 'Nothing more' && on[0].line.startsWith(TAB_BACK_LINE) && !/does nothing/.test(on[0].line), rest = on.slice(1).every((c: any, i: number) => c.label === TAB_CHOICES[i + 1].label && c.line === `${TAB_CHOICES[i + 1].line} Backing out comes first.`);
-      verdict(first && rest, 'the Tab key row on Options says what Tab does: the first choice is \'Nothing more\' and says Tab backs out, every other choice says backing out comes first',
-        `'${on[0].label}' · '${on[0].line}' · the others end 'Backing out comes first.' ${rest}`); }
 
   } finally { console.log = log; console.error = err; console.warn = warn; }
   console.log(`=== tabback: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);

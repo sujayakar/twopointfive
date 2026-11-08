@@ -218,7 +218,7 @@ pub fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables:
     let poses = if held { let c = civ_most(g); men_most(g, c) * man_singles_of(g, g_2) } else { 0.0 };
     rows.push(row("poses", "singles of the pool the men's poses stand in, against every man a game can hold (menMost with civMost), each with every pose an animator can make", poses, if held { crate::anim_skeleton::pose_pool_room() } else { inf }, None));
     let civ_cap = civ_most(g);
-    rows.push(row("civilians", "civilians: the level's own, or those in the game as it stands (a rescue's hostages and the man a snatch is for join in play; civilians.ts join holds every one to this number as he joins)", civs, civ_cap, None));
+    rows.push(row("civilians", "civilians: the level's own, or those in the game as it stands (a rescue's hostages join in play; civilians.ts join holds every one to this number as he joins)", civs, civ_cap, None));
     rows.push(row("doormen", "contacts one step of the doors is handed at most (every man a game holds: himself, and his body's particles near a doorway)", most.door_men, dio.as_ref().map_or(inf, |d| d.max_contacts), None));
     rows.push(row("propmen", "men one step of the furniture is handed at most", most.prop_men, pio.as_ref().map_or(inf, |p| p.max_contacts), None));
     rows.push(row("frames", "door frames one step of the furniture is handed (a frame a door)", big.doors, pio.as_ref().map_or(inf, |p| p.max_ways), None));

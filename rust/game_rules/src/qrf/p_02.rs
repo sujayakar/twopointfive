@@ -9,6 +9,8 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small private helpers
 fn pos_of(g: &Game, x: GuardId) -> V3 { g.ch[g.gd[x].ch].pos }
+/// where a man with no foe named looks: the player nearest him
+fn near_man_pos(g: &Game, gd: GuardId) -> V3 { let pl = crate::seats::nearest_or_first(g, &g.ch[g.gd[gd].ch].pos); g.ch[g.pl[pl].ch].pos }
 fn player_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player].ch].pos }
 fn char_id(g: &Game, x: GuardId) -> f64 { g.ch[g.gd[x].ch].id }
 fn nav_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
@@ -57,11 +59,11 @@ pub fn dealt(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> crate:
     let eta = r.eta.unwrap_or([qrf_eta, qrf_eta]);
     let mut open: Vec<usize> = Vec::new();
     for (i, y) in r.ways.iter().enumerate() { if way_open(g, y) { open.push(i); } }
-    let a = crate::math_dice::sim_random(g);   // (three draws whatever the level allows)
-    let b = crate::math_dice::sim_random(g);
-    let c = crate::math_dice::sim_random(g);
+    let a = crate::dice::draw_world(g, "qrf::dealt#1");
+    let b = crate::dice::draw_world(g, "qrf::dealt#2");
+    let c = crate::dice::draw_world(g, "qrf::dealt#3");
     let mut clear: Vec<usize> = Vec::new();
-    for &i in &open { if clear_of_foes(g, &crate::seats::here(g), r.ways[i].muster[0]) { clear.push(i); } }
+    for &i in &open { if clear_of_foes(g, r.ways[i].muster[0]) { clear.push(i); } }
     let from = if !clear.is_empty() { clear } else { open };
     let step = g.k.response.eta_step;
     let span = men[1] - men[0] + 1.0;
@@ -296,10 +298,10 @@ pub fn re_deal(g: &mut crate::game::Game, quiet: bool) {
     let r = match response_of(g) { Some(r) => r, None => return };
     if r.ways.len() < 2 { return; }
     let way = g.qrf.way as usize;
-    if clear_of_foes(g, &crate::seats::here(g), r.ways[way].muster[0]) { return; }
+    if clear_of_foes(g, r.ways[way].muster[0]) { return; }
     let mut other = None;
     for (i, y) in r.ways.iter().enumerate() {
-        if i != way && way_open(g, y) && clear_of_foes(g, &crate::seats::here(g), y.muster[0]) { other = Some(i); break; }
+        if i != way && way_open(g, y) && clear_of_foes(g, y.muster[0]) { other = Some(i); break; }
     }
     let other = match other { Some(i) => i, None => return };
     g.qrf.way = other as f64;
@@ -433,7 +435,7 @@ pub fn tick_men(g: &mut crate::game::Game, dt: f64) {
         Phase::File => phase_file(g, &el),
         Phase::Fan => if g.qrf.phase_t > ENTRY_HOLD { pick_target(g, &mut el, true); },
         Phase::Move => phase_move(g, &mut el, dt),
-        Phase::Stack => phase_stack(g, &mut el),
+        Phase::Stack => phase_stack(g, &el),
         Phase::Breach => phase_breach(g, &mut el),
         Phase::Bang => phase_bang(g, &el),
         Phase::Flow => phase_flow(g, &mut el),
@@ -452,12 +454,12 @@ pub fn tick_men(g: &mut crate::game::Game, dt: f64) {
     }
     if let Some(c) = contact {
         let near = g.qrf.phase != Phase::File || {
-            let foe = match crate::teams::foe_char(g, c) { Some(f) => g.ch[f].pos, None => player_pos(g, &crate::seats::here(g)) };
+            let foe = match crate::teams::foe_char(g, c) { Some(f) => g.ch[f].pos, None => near_man_pos(g, c) };
             flat(pos_of(g, c), foe) < 8.0
         };
         if near { to_fight(g, &el, c); }
         else {
-            g.qrf.fix = Some(v3::copy(g.gd[c].last_known.unwrap_or(player_pos(g, &crate::seats::here(g)))));
+            g.qrf.fix = Some(v3::copy(g.gd[c].last_known.unwrap_or(near_man_pos(g, c))));
             g.qrf.fix_t = g.time;
             g.qrf.cue_rush = true;
             crate::mind::cap(g, c, 0.84, "qrf");
@@ -467,6 +469,9 @@ pub fn tick_men(g: &mut crate::game::Game, dt: f64) {
 
 /// The senses updateGuard would have run for a man the runner drives. A noise is a cue; eyes on him is contact (true).   (qrf.ts perceiveScripted)
 pub fn perceive_scripted(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
+    crate::seats::standing_for(g, m, &mut |g| perceive_here(g, m, dt))
+}
+fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
     use crate::game::{Foe, GuardState};
     if !g.ai_enabled { return false; }
     let mut ids: Vec<f64> = Vec::new();
@@ -634,7 +639,8 @@ pub fn man_down(g: &mut crate::game::Game) {
         note(g, &what);
     }
     // the run ending on one of THEIR rounds
-    if g.pl[g.player].down && !g.qrf.sam_was_down && !g.qrf.got_sam {
+    let down = crate::seats::all_down(g);
+    if down && !g.qrf.sam_was_down && !g.qrf.got_sam {
         for &o in &theirs {
             if let Some(ls) = g.gd[o].aim.last_shot.as_ref() {
                 if m::abs(ls.t - g.time) < 1e-6 {
@@ -646,7 +652,7 @@ pub fn man_down(g: &mut crate::game::Game) {
             }
         }
     }
-    g.qrf.sam_was_down = g.pl[g.player].down;
+    g.qrf.sam_was_down = down;
 }
 
 // ---------------------------------------------------------------- entry
@@ -804,7 +810,7 @@ pub fn sweep_next(g: &mut crate::game::Game, from: V3, fix: V3) -> Option<crate:
 }
 
 /// The list: the block's own `sweep`, or the quiet block's spots, a raid's quiet rooms and scenarios.places' areas by their middles.   (qrf.ts sweepPlaces)
-pub fn sweep_places(g: &mut crate::game::Game) -> Vec<crate::qrf::SweepPlacesItem> {
+pub fn sweep_places(g: &crate::game::Game) -> Vec<crate::qrf::SweepPlacesItem> {
     use crate::qrf::SweepPlacesItem;
     fn mid(b: &crate::scene_scenarios::Rect) -> V3 { [(b.x0 + b.x1) / 2.0, 0.0, (b.z0 + b.z1) / 2.0] }
     let mut out: Vec<SweepPlacesItem> = Vec::new();
@@ -823,7 +829,7 @@ pub fn sweep_places(g: &mut crate::game::Game) -> Vec<crate::qrf::SweepPlacesIte
         for r in &rooms {
             let mut held = false;
             for &h in &r.defenders {
-                if g.gd[h].state != crate::game::GuardState::Dead && !crate::owner::has_him(g, h, crate::owner::own().runner) { held = true; break; }
+                if g.gd[h].state != crate::game::GuardState::Dead && !crate::owner::has(g, h, crate::owner::by::RUNNER) { held = true; break; }
             }
             if !held { out.push(SweepPlacesItem { name: r.def.name.clone(), pos: mid(&r.def.bounds) }); }
         }

@@ -43,6 +43,7 @@
 // where he is (`wait`) and the way he is walking (`path`) — every plan times its moves off those, the lone arms as much as the pair. --moon adds the moon
 // to the PLAYER's meter only (the partner's is the stand-in's: he waits in the cage's shadow either way).
 // LIGHTSOUT_BREAK=1 = the check's own red path: `pair` never gives the breaker order and walks at the live door.
+import { menuKey } from './squadwords';
 import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -80,7 +81,7 @@ async function one(plan: Plan, seed: number, deal: number | null, trace: boolean
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { lightEstimateAt, escalationOf } = await import(`${ROOT}/src/game/guards.ts`);
   const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
-  const { debriefOf } = await import(`${ROOT}/src/game/chronicle.ts`);
+  const { debriefOf, rowsOf, rowLine } = await import('./debrief-read.ts');;
   const log = console.log, err = console.error, warn = console.warn;
   const hush = () => { if (!has('--verbose')) console.log = console.error = console.warn = () => { }; }, unhush = () => { console.log = log; console.error = err; console.warn = warn; };
   const lines: string[] = [];
@@ -219,13 +220,13 @@ async function one(plan: Plan, seed: number, deal: number | null, trace: boolean
   function order(what: string, p: number[], want: string, alt?: number[]): boolean {
     for (let k = 0; k < 4; k++) {
       const q = k % 2 && alt ? alt : p, n0 = O.log.length;
-      aim(q); step(2); aim(q); I.pressed.add('KeyX'); step(2);
+      aim(q); step(2); aim(q); menuKey(O); step(2);
       const M = O.menu;
       if (!M) { say(`  ${what}: X opened no menu on ${at(q)}`); step(10); continue; }
       const i = M.rows.findIndex((r: any) => r.id === want);
-      if (i < 0 || M.why[i]) { say(`  ${what}: the menu on ${M.target.kind}${M.target.thing ? ` ▸ ${M.target.thing.name}` : ''} at ${at(M.target.at)} ${i < 0 ? `has no '${want}' row (rows: ${M.rows.map((r: any) => r.id).join(' ')})` : `refuses it: ${M.why[i]}`}`); I.pressed.add('KeyX'); step(14); continue; }
+      if (i < 0 || M.why[i]) { say(`  ${what}: the menu on ${M.target.kind}${M.target.thing ? ` ▸ ${M.target.thing.name}` : ''} at ${at(M.target.at)} ${i < 0 ? `has no '${want}' row (rows: ${M.rows.map((r: any) => r.id).join(' ')})` : `refuses it: ${M.why[i]}`}`); menuKey(O); step(14); continue; }
       const key = M.rows[i].key ?? i + 1; aim(q); I.pressed.add(`Digit${key}`); step(2);
-      if (O.log.length === n0 || O.log[O.log.length - 1].order !== want) { say(`  ${what}: ${key} was pressed and no '${want}' order was logged`); if (O.menu) { I.pressed.add('KeyX'); step(2); } continue; }
+      if (O.log.length === n0 || O.log[O.log.length - 1].order !== want) { say(`  ${what}: ${key} was pressed and no '${want}' order was logged`); if (O.menu) { menuKey(O); step(2); } continue; }
       say(`  X, ${key}: ${what} (he is ${mateIs()})`); out.orders++; return true;
     }
     const why = want === 'work' ? O.give('work', (() => { const th = g.work?.things?.().find((x: any) => x.kind === 'breaker'); return th ? { kind: 'floor', at: th.stand, thing: th } : O.targetAt(p as any); })()) : O.give(want, O.targetAt(p as any), 'all');
@@ -352,7 +353,7 @@ async function one(plan: Plan, seed: number, deal: number | null, trace: boolean
     out.ok = g.mission.stage === 'done';
   }
   catch (e) { unhush(); out.why = e instanceof Stop ? e.message : `threw: ${(e as Error).stack ?? e}`; say(`!! ${out.why}`); }
-  if (trace) { const { fmtEvent } = await import(`${ROOT}/src/game/chronicle.ts`); for (const e of g.chronicle.events) log(`   chron ${e.t.toFixed(1).padStart(6)} ${e.kind} ${fmtEvent(e)}`); for (const r of g.devices.log) log(`   device ${JSON.stringify(r)}`); for (const r of O.log) log(`   order ${JSON.stringify(r)}`); }
+  if (trace) { for (const e of rowsOf(g)) log(`   chron ${e.t.toFixed(1).padStart(6)} ${e.kind} ${rowLine(e)}`); for (const r of g.devices.log) log(`   device ${JSON.stringify(r)}`); for (const r of O.log) log(`   order ${JSON.stringify(r)}`); }
   out.secs = Number(t.toFixed(1)); out.stage = g.mission.stage; out.down = !!g.player.down;
   for (const r of g.devices.log as { device: string; what: string }[]) { out.devices[r.what] = (out.devices[r.what] ?? 0) + 1; if (r.what === 'trip' || r.what === 'suspicion' || r.what === 'alarm') out.tripped.push(`${r.device}:${r.what}`); }
   out.roused = [...roused]; out.alert = [...alert]; out.escalation = peakEsc;

@@ -1,9 +1,8 @@
-// THE UNPLAYED ROWS STAND APART, ON THE REAL PAGE (src/ui/missions.ts UNPLAYED_UI; the lists as data are tools/qa/unplayed-check.ts): headless Chromium on the
+// THE UNPLAYED ROWS STAND APART, ON THE REAL PAGE (src/ui/missions.ts unplayedClass; the lists as data are tools/qa/unplayed-check.ts): headless Chromium on the
 // software WebGPU adapter (tools/qa/page-look.cjs's recipe — no GPU here, so this reads the DOM and the computed style; it judges no rendering of the game).
 // The title's Play opens the start page's Mission step; what is read: every group's cards in order with their classes, that a group's unplayed cards stand last
 // and the first of them (where a played one stands before it) wears the break and starts a line of its own, the opacity a quiet card's picture and title are
-// drawn at against a played one's and against the highlighted one's; and the flat one (?nogroups); and under ?unplayed=0
-// that no card wears either class.
+// drawn at against a played one's and against the highlighted one's.
 //   PORT=5233 node tools/qa/unplayed-page.cjs        (a dev server on that port: PORT=5233 bun run tools/serve.ts)   OUT=<dir> also saves stills (no GPU at all): unplayed-on.png / -off.png / -list.png
 // exit 0 = all of it holds and no page printed an error · 1 = otherwise
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -39,7 +38,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
   const lay = rows => groupsOf(rows).map(g => { const of = rows.filter(r => r.group === g); return `${g || '(no group)'} ${of.length} (${of.filter(r => r.quiet).length} unplayed${of.some(r => r.first) ? ', break at ' + of.find(r => r.first).id : ''})`; }).join(' · ');
 
   // ---- the start page's cards, the switch on
-  const CUT = ['night-breach', 'room-clear-four', 'block-squads', 'quiet-yard-alone', 'quiet-yard-two', 'tut-squad', 'tut-solo', 'tut-sky', 'tut-quiet', 'tut-pair', 'records-pair', 'block-four', 'warehouse-four', 'barracks-four', 'rescue-registry', 'snatch-four', 'defuse-four', 'floodlit-four', 'killhouse-four', 'hall-four', 'glasshouse-four', 'police-post-quiet', 'quiet-crossing-two', 'quiet-relay-two'];   // (the rows cut from the list — scene/scenarios.ts offList; the page's entry puts OFFLIST_UI on)
+  const CUT = ['night-breach', 'room-clear-four', 'block-squads', 'tut-quiet', 'tut-pair', 'records-pair', 'block-four', 'warehouse-four', 'barracks-four', 'rescue-registry', 'floodlit-four', 'killhouse-four', 'hall-four', 'glasshouse-four', 'police-post-quiet', 'quiet-crossing-two', 'quiet-relay-two'];   // (the rows cut from the list — scene/scenarios.ts offList; the page's entry puts OFFLIST_UI on)
   let wordsOn = '', boxesOn = [], gOn = ''; const sorted = t => t.split(/\n+/).map(x => x.trim()).filter(Boolean).sort().join('\n');   // (the page's words as a bag of lines: a row that moves adds no word)
   { const { page, errors, own } = await open(''), A = await read(page); wordsOn = A.words;
     line(/\bone\b/.test(A.root) && /\btiles\b/.test(A.root) && A.rows.length > 0 && errors.length === 0, `the title's Play opens the Mission step as cards with no page error (${A.rows.length} cards)${errors.length ? ' — ' + errors.join(' ; ').slice(0, 400) : ''}`);
@@ -57,22 +56,10 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
     await page.evaluate(h => { document.querySelector(`#missions .msec[data-head="${h}"]`).click(); }, g); await page.mouse.move(2, 2); await page.waitForTimeout(600);
     line(errors.length === 0, `no page error through all of that${errors.length ? ' — ' + errors.join(' ; ').slice(0, 400) : ''}`);
     await shut(own); }
-  // ---- the same page under ?unplayed=0
-  { const { page, errors, own } = await open('unplayed=0'), A = await read(page);
-    const g = gOn; if (g) { await page.evaluate(h => { document.querySelector(`#missions .msec[data-head="${h}"]`).click(); }, g); await page.mouse.move(2, 2); await page.waitForTimeout(600); }
-    const B = await read(page), of = B.rows.filter(r => r.group === g && !r.sel);
-    line(A.rows.length > 0 && A.rows.every(r => !r.quiet && !r.first) && of.every(r => r.thumb >= 0.9 && r.title === 1) && sorted(A.words) === sorted(wordsOn) && B.rows.filter(r => r.group === g).map(r => [r.x, r.y, r.h].join()).join(' ') === boxesOn.join(' ') && errors.length === 0,
-      `?unplayed=0: no card wears either class, every card of '${g}' is drawn at ${of[0]?.thumb} / ${of[0]?.title}, the page's words are the same with the switch on or off (it adds none), and the group's ${boxesOn.length} cards stand in the same boxes either way (no line broken, no card squeezed)${errors.length ? ' — ' + errors.join(' ; ').slice(0, 400) : ''}`);
-    await shut(own); }
   // ---- ?offlist=0: the cut rows are drawn again
   { const { page, errors, own } = await open('offlist=0'), A = await read(page);
     line(CUT.every(id => A.rows.some(r => r.id === id)) && errors.length === 0, `?offlist=0: the cut rows are cards again (${A.rows.length} cards)${errors.length ? ' — ' + errors.join(' ; ').slice(0, 400) : ''}`);
     await shut(own); }
-  // ---- the flat one (?nogroups)
-  { const { page, errors, own } = await open('nogroups'), A = await read(page); await shut(own); const off = await open('nogroups&unplayed=0'), B = await read(off.page); await shut(off.own);
-    line(A.rows.some(r => r.quiet) && A.rows.every(r => !r.first) && A.rows.map(r => r.id).join() === B.rows.map(r => r.id).join() && B.rows.every(r => !r.quiet) && errors.length + off.errors.length === 0,
-      `?nogroups: ${A.rows.length} rows in the same order with the switch on or off, ${A.rows.filter(r => r.quiet).length} quiet, no break`);
-    void page; }
   clearTimeout(dog);
   // ---- THE STILLS, for a person's eye (OUT=<dir>): a second browser with NO GPU at all (tools/qa/startpage-look.cjs's way — a still of the page over the software
   // adapter's frames does not come back), the page's own 'no WebGPU' notice hidden; the menus are DOM and are drawn the same. A still's absence fails nothing.
@@ -80,7 +67,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
     await ctx.addInitScript(() => { addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '#fatal { display: none !important; }'; document.head.appendChild(s); }); });
     const shot = (page, name) => page.screenshot({ path: `${OUT}/${name}`, timeout: 60000 }).then(() => console.log(`  still: ${OUT}/${name}`), e => console.log(`  no still ${name}: ${String(e).split('\n')[0].slice(0, 120)}`));
     const group = (page, id) => page.evaluate(id => { const h = document.querySelector(`#missions .mrow[data-mission="${id}"]`)?.getAttribute('data-group'); if (h) document.querySelector(`#missions .msec[data-head="${h}"]`).click(); }, id);
-    for (const [q, name] of [['', 'unplayed-on.png'], ['unplayed=0', 'unplayed-off.png']]) {
+    for (const [q, name] of [['', 'unplayed-on.png']]) {
       try { const { page } = await open(q, ctx); await group(page, 'compound-four'); await page.mouse.move(2, 2); await page.waitForTimeout(1500); await shot(page, name); await page.close(); }
       catch (e) { console.log(`  no still ${name}: ${String(e).split('\n')[0].slice(0, 120)}`); } }
     await shut(B); }

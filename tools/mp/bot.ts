@@ -45,11 +45,22 @@ ws.onclose = () => down(() => { closed = true; });
 ws.onerror = () => down(() => { closed = true; });
 
 // ---- the seat's hands: a walk, the cursor round a circle, shots, an order key. By the beat, so every run of the bot asks the same of its man
+// (OFF THE WALL: a leg of the square held into a wall takes the hold, and on it he has no look ahead by rule and a lone key only sidles him. The keys nearest
+//  square away from it are held for half a second and the square goes on a leg later; he never stands a run out with his legs not his own)
+const WAYS: [string[], number, number][] = [[['KeyW'], 1, 0], [['KeyS'], -1, 0], [['KeyD'], 0, 1], [['KeyA'], 0, -1], [['KeyW', 'KeyD'], 1, 1], [['KeyW', 'KeyA'], 1, -1], [['KeyS', 'KeyD'], -1, 1], [['KeyS', 'KeyA'], -1, -1]];
+function offWall(S: Stood): string[] | null {
+  const w = S.W.game.hostSeat().view.player.wall as { n: ArrayLike<number> } | null; if (!w) return null;
+  const B = S.W.cam.planarBasis(), away = ([, f, r]: [string[], number, number]): number => ((B.fwd[0] * f + B.right[0] * r) * w.n[0] + (B.fwd[2] * f + B.right[2] * r) * w.n[2]) / Math.hypot(f, r);
+  return WAYS.reduce((a, b) => away(b) > away(a) ? b : a)[0];
+}
+let off: { keys: string[]; till: number } | null = null, later = 0;
 let beatN = 0, shots = 0, start: number[] | null = null, tickMs = 0, tickN = 0;
 function hands(S: Stood): PlayerCmd {
   const W = S.W, I = W.input, n = beatN++;
   I.keys.clear(); I.pressed.clear(); I.clicked = 0; I.buttons = 0; I.wheel = 0;
-  const leg = (Math.floor(n / 90) + Math.max(0, client.seat)) % 4; I.keys.add(['KeyW', 'KeyD', 'KeyS', 'KeyA'][leg]);   // (a second seat walks the same square a side on)
+  if (off && n >= off.till) off = null;
+  if (!off) { const keys = offWall(S); if (keys) { off = { keys, till: n + 30 }; later++; } }
+  const leg = (Math.floor(n / 90) + later + Math.max(0, client.seat)) % 4; for (const k of off?.keys ?? [['KeyW', 'KeyD', 'KeyS', 'KeyA'][leg]]) I.keys.add(k);   // (a second seat walks the same square a side on)
   const a = n * 0.05 + Math.max(0, client.seat) * 2; I.mouseX = W.canvas.clientWidth / 2 + Math.cos(a) * 260; I.mouseY = W.canvas.clientHeight / 2 + Math.sin(a) * 180;
   if (n > 120 && n % 40 < 4) { I.buttons = 1; if (n % 40 === 0) { I.clicked = 1; shots++; } }
   if (n === 200 || n === 500) I.pressed.add('KeyF');

@@ -94,10 +94,7 @@ pub fn flat(a: V3, b: V3) -> f64 {
 
 /// A wall, a sill or a pane between two floor points at shin height: the level's statics only. (handleside.ts walled)
 pub fn walled(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
-    let keep = core::mem::take(&mut g.col.dynamic_boxes);
-    let r = crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None);
-    g.col.dynamic_boxes = keep;
-    r
+    crate::scene_collision::solid_blocked_over(g, &crate::ask::Over::statics(), [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None)
 }
 
 /// Can a man stand at p: nothing of the level inside his body there (and, `nav`, on a cell the walkers' grid calls free). (handleside.ts stands)
@@ -110,7 +107,7 @@ pub fn stands(g: &mut crate::game::Game, p: V3, nav: Option<bool>) -> bool {
 }
 
 /// Is `p` at the handle of d: on the handle half, within reach, and on the face it opens into clear of the sweep. (handleside.ts atHandle)
-pub fn at_handle(g: &mut crate::game::Game, d: DoorId, p: V3, reach: Option<f64>) -> bool {
+pub fn at_handle(g: &crate::game::Game, d: DoorId, p: V3, reach: Option<f64>) -> bool {
     let reach = reach.unwrap_or(g.k.handle.reach + 0.05);
     let f = crate::guards::frame_of(g, d);
     let along = along_of(&f, p);
@@ -210,13 +207,13 @@ pub fn find_face(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::hand
 }
 
 /// The angle under which a leaf stands in a man's way. (handleside.ts ajarOf)
-pub fn ajar_of(g: &mut crate::game::Game, d: DoorId) -> f64 {
+pub fn ajar_of(g: &crate::game::Game, d: DoorId) -> f64 {
     let open = crate::doors::doors_swing_of(g, d).open;
     m::min(g.k.handle.ajar, 0.8 * open)
 }
 
 /// A leaf that wants a hand from `gd` standing at `from`: in his way, on its hinges, not locked against him, and nobody's already. (handleside.ts wantsHand)
-pub fn wants_hand(g: &mut crate::game::Game, gd: GuardId, d: DoorId, from: V3) -> bool {
+pub fn wants_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, d: DoorId, from: V3) -> bool {
     if g.gd[gd].team == crate::teams::Team::Civilian { return false; }
     if crate::doors::door_off(g, d) { return false; }
     let latched = crate::doors::door_latched(g, d);
@@ -227,7 +224,7 @@ pub fn wants_hand(g: &mut crate::game::Game, gd: GuardId, d: DoorId, from: V3) -
     }
     if !latched && (crate::doors::door_pull_t(g, d) > 0.0 || crate::doors::door_vel(g, d) * crate::doors::door_swing(g, d) > 0.5) { return false; }
     if g.gd[gd].team == crate::teams::Team::Operative {
-        let p = g.player;
+        let p = seat.player;
         // `new Set([...keys, ...codes])` where he holds codes, else his keys: lent by copy, the stub wants `g` too
         let mut keys: JsSet<String> = g.pl[p].keys.clone();
         if g.pl[p].codes.len() > 0 { for c in g.pl[p].codes.keys() { keys.add(c); } }
@@ -344,7 +341,7 @@ pub fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe:
             _ => None,
         };
         if fresh(g, theirs.as_ref()) && theirs.as_ref().unwrap().door == d {   // a man of his has that leaf in hand: he keeps out of where it is coming round
-            if !pull || !wants_hand(g, gd, d, pos) { return false; }
+            if !pull || !wants_hand(g, &crate::seats::here(g), gd, d, pos) { return false; }
             let s = crate::doors::doors_swing_of(g, d);
             let f = crate::guards::frame_of(g, d);
             let pad = k.body + 0.1;
@@ -381,7 +378,7 @@ pub fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe:
         if let Some(r) = g.m.handleside.rested.get(gd).copied() { if r.door == d && g.time < r.until { return false; } }
         let f = face_of(g, d, side);
         let l = g.m.handleside.lined.get(gd).copied();
-        if !wants_hand(g, gd, d, pos) {   // it stands open: from the face it opens into he still goes through the half its handle left
+        if !wants_hand(g, &crate::seats::here(g), gd, d, pos) {   // it stands open: from the face it opens into he still goes through the half its handle left
             let thru = pull
                 && !crate::doors::door_off(g, d)
                 && !crate::doors::door_latched(g, d)
@@ -454,7 +451,7 @@ pub fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe:
     }
     if phase == StPhase::Go {
         let pos = g.ch[c].pos;
-        if !wants_hand(g, gd, d, pos) { release(g, gd,false); return false; }   // somebody opened it meanwhile
+        if !wants_hand(g, &crate::seats::here(g), gd, d, pos) { release(g, gd,false); return false; }   // somebody opened it meanwhile
         if speed < 0.05 {   // whoever moves him wants him still this frame: he waits where he is
             halt(g, gd, dt);
             g.m.handleside.states.get_mut(gd).unwrap().t -= dt;
@@ -508,7 +505,7 @@ pub fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe:
     let far = flat(pos, hd) > k.reach + 0.05;
     let (phase, t) = { let st = g.m.handleside.states.get(gd).unwrap(); (st.phase, st.t) };
     if phase == StPhase::Turn {
-        if !wants_hand(g, gd, d, pos) { release(g, gd,false); return false; }
+        if !wants_hand(g, &crate::seats::here(g), gd, d, pos) { release(g, gd,false); return false; }
         if !strafe { g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, yaw, 7.0 * dt); }
         if !strafe && t < k.turn && m::abs(v3::wrap_angle(yaw - g.ch[c].body_yaw)) > 0.6 { return true; }
         pull_open(g, gd, d, far);

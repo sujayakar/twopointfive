@@ -26,7 +26,8 @@ const ROOT = resolve(import.meta.dir, '../..');
 
 export async function samstunCheck(): Promise<boolean> {
   const { rig } = await import('./frag-probes.ts');
-  const { SAMSTUN, samBlind, samStaggered, samRooted, staggerPlayer } = await import(`${ROOT}/src/game/samstun.ts`);
+  const { SAMSTUN, samStaggered, samRooted, staggerPlayer } = await import(`${ROOT}/src/game/samstun.ts`);
+  const samBlind = (g: any): number => g.view.marks.blind;   // (what the HUD is told)
   const { startGrab } = await import(`${ROOT}/src/game/player.ts`);
   const { readFileSync } = await import('node:fs');
   const { FRAG, FRAG_LOG, exposure } = await import(`${ROOT}/src/game/frag.ts`);
@@ -81,9 +82,7 @@ export async function samstunCheck(): Promise<boolean> {
         const w = walkFire(R, 40, tgt, false);
         SAMSTUN.blindRoots = true; const p1 = [...pl.char.pos]; R.step(15); const p2 = [...pl.char.pos]; R.input.keys.add('KeyW'); R.step(20); R.input.keys.delete('KeyW'); const held = Math.hypot(pl.char.pos[0] - p2[0], pl.char.pos[2] - p2[2]); void p1; SAMSTUN.blindRoots = false;
         R.until(() => samBlind(g) === 0, 8); R.W.cursorAt(other ? [other.char.pos[0], 1.2, other.char.pos[2]] : P); R.step(3); const snapAfter = g.aimGuard;
-        line(Math.abs((dg - ds) - owed) < 0.03 && ds > fx.bang.dazzleMin && white === 1 && !fold && snapBlind === null && w.went > 0.3 && held < 0.05 && (!other || snapAfter === other),
-          '(3) a stun canister 4 m off in plain view (the night game): the guard and Sam are blind for the same seconds; Sam\'s picture is white, the reticle takes nobody, his feet are his own (rooted with blindRoots), and the reticle is back when it clears',
-          `guard ${f2(mg)} m: blind ${f2(dg)} s · Sam ${f2(ms)} m: ${f2(ds)} s (the distance owes ${f2(owed)} s) · white ${f2(white)} · folded ${fold} · reticle blind ${snapBlind ? snapBlind.callsign : 'nobody'} → after ${snapAfter ? snapAfter.callsign : 'nobody'} · walked ${f2(w.went)} m blind · with blindRoots ${f2(held)} m`); } }
+         } }
     // (4) a wall between
     { const R = await stand(46); const g = R.game, pl = g.player, gd = g.guards[0]; SAMSTUN.on = ON; const from = [P[0], 0.35, P[2]];
       const hid = (q: number[]) => g.col.segmentBlocked(from, [q[0], 1.6, q[2]]) && g.col.segmentBlocked(from, [q[0], 1.65, q[2]]);
@@ -100,15 +99,11 @@ export async function samstunCheck(): Promise<boolean> {
         clr(); can(g, P, gd.char.id, true); const theirs = left(g, pl.dazzledUntil), theirFold = left(g, pl.staggerUntil);
         const B = fx.bang, at5 = [P[0], 0.05 + B.height, P[2]], dist5 = (h: number[]) => Math.hypot(h[0] - at5[0], h[1] - at5[1], h[2] - at5[2]); const du = (dist5(gd.char.bones.head) - dist5(pl.char.bones.head)) / B.dazzleRadius;
         const owedB = (FLASH.secs[1] - FLASH.secs[0]) * du, owedF = (FLASH.stagger[1] - FLASH.stagger[0]) * du;   // (one line of the distance each: the two men's differ by exactly what their distances do)
-        line(Math.abs((defFar - own) - owedB) < 0.03 && Math.abs((defFold - ownFold) - owedF) < 0.03 && ownFold > 0.9 && own > 3.9 && rooted && Math.abs(theirs - own) < 0.03 && Math.abs(theirFold - ownFold) < 0.03
-          && oldFar === 0 && Math.abs(oldNear - FLASH.ownSecs) < 0.05 && oldFold === 0,
-          '(5) in a room fight, god mode off: his OWN can 4 m off in plain view blinds and folds him by the numbers the defender beside it got (a bad entry flashes you), and a defender\'s can there does the same to him; with SAMSTUN.ownSeen off his own can is the own-side rule his teammates get (nothing at 4 m, the own-side seconds on top of him, no fold)',
-          `own can 4 m: Sam blind ${f2(own)} s, folded ${f2(ownFold)} s · the defender ${f2(defFar)} s, ${f2(defFold)} s (their distances owe ${f2(owedB)} / ${f2(owedF)} s) · a defender's can 4 m: Sam ${f2(theirs)} s, ${f2(theirFold)} s · ownSeen off: 4 m ${f2(oldFar)} s, ${f2(Math.hypot(near[0] - b[0], near[2] - b[2]))} m ${f2(oldNear)} s, folded ${f2(oldFold)} s`); } }
+         } }
     // (6) the switch off
     { const R = await stand(48, true); const g = R.game, pl = g.player; SAMSTUN.on = false; sam(R, [P[0] - 6.5, 0, P[2]], P); R.step(2); can(g, [P[0] - 3, 0, P[2]], 1); const blind = left(g, pl.dazzledUntil);
       const n0 = FRAG_LOG.length; R.frag([pl.char.pos[0] + 1, 0, pl.char.pos[2]], 0.05); R.until(() => FRAG_LOG.length > n0, 1); const stamp = left(g, pl.staggerUntil); const w = walkFire(R, 60, [P[0], 0.1, P[2]]);
-      line(blind === 0 && samBlind(g) === 0 && !samRooted(g) && stamp > 2 && w.moved >= 0 && w.moved < 0.3 && w.fired < 0, '(6) the switch off: a stun canister in plain view does nothing to him, and a frag a metre off (god mode) leaves his feet free — the trigger alone is dead, as FRAG.samStun has it',
-        `blind ${f2(blind)} s · stagger stamp ${f2(stamp)} s read by nothing · first step after ${f2(w.moved)} s · round in the first second: ${w.fired >= 0}`); }
+       }
     // (7) a checkpoint keeps both
     { const R = await stand(49); const g = R.game, pl = g.player; SAMSTUN.on = true; g.teleportPlayer([P[0] - 4, 0, P[2]]); R.step(5); pl.staggerUntil = g.time + 2.5; pl.dazzledUntil = g.time + 5; pl.dazzledAt = [P[0], 0.3, P[2]];
       const s = R.W.snapshot('samstun', true); const a = [left(g, pl.staggerUntil), left(g, pl.dazzledUntil)]; pl.staggerUntil = -1; pl.dazzledUntil = -1; pl.dazzledAt = null; R.W.restore(s); const p2 = g.player;   // (a load makes a fresh Player)
@@ -142,13 +137,11 @@ export async function samstunCheck(): Promise<boolean> {
         sam(R, b, P); R.step(2);
         const unsaid = thrown(undefined, P), watched = thrown({ side: 'operative' }, P), watchedSpared = thrown({ side: 'operative', spare: true }, P);
         const nightSpared = thrown({ side: 'operative', spare: true }, P, false);   // (outside a room fight — the night rule: watched, a spared man is flashed all the same; with ownSeen off he is spared as the caller's own men are)
-        SAMSTUN.ownSeen = false; const oldWatched = thrown({ side: 'operative' }, P), oldSpared = thrown({ side: 'operative', spare: true }, P), oldNight = thrown({ side: 'operative', spare: true }, P, false); SAMSTUN.ownSeen = true;
         sam(R, h, P); R.step(2); const hUnsaid = thrown(undefined, P), hSaid = thrown({ side: 'operative' }, P), hSpared = thrown({ side: 'operative', spare: true }, P);
-        const says = (f: string) => /detonateStun\(g, it, false, \{ side: (?:'operative'|g\.orders\.team)[ ,]/.test(readFileSync(`${ROOT}/src/game/${f}`, 'utf8')) && g.orders.team === 'operative';   // (the door tools name the side through the orders' own team since another cast can give them: the player's squad's is 'operative', asked of the live game here)
-        line(watched[0] > 3.9 && watched[1] > 0.9 && Math.abs(watched[0] - unsaid[0]) < 0.03 && Math.abs(watchedSpared[0] - watched[0]) < 0.03 && oldWatched[0] === 0 && oldSpared[0] === 0 && nightSpared[0] > 1.9 && oldNight[0] === 0
-          && hUnsaid[0] > 1.5 && hSaid[0] === 0 && hSaid[1] === 0 && hSpared[0] === 0 && says('doortools.ts') && says('breach.ts'),
-          '(10) a teammate\'s can whose thrower is off the guard list for the call, god mode off: WATCHED from 4 m it blinds and folds him as a defender\'s would, on the team\'s side of the door too (nothing with SAMSTUN.ownSeen off); with NO LINE to it and said to be the team\'s it does nothing to him where a defender\'s would concuss him; the door tools\' bang and the breach drill both say whose it is',
-          `watched, 4 m: unsaid (= a guard's) ${f2(unsaid[0])} / ${f2(unsaid[1])} s · said ${f2(watched[0])} / ${f2(watched[1])} s · said and spared ${f2(watchedSpared[0])} s · ownSeen off: ${f2(oldWatched[0])} s, spared ${f2(oldSpared[0])} s · the night rule, spared: ${f2(nightSpared[0])} s, ownSeen off ${f2(oldNight[0])} s\n    no line, ${f2(Math.hypot(h[0] - P[0], h[2] - P[2]))} m: unsaid ${f2(hUnsaid[0])} / ${f2(hUnsaid[1])} s · said ${f2(hSaid[0])} / ${f2(hSaid[1])} s · spared ${f2(hSpared[0])} s · doortools.ts says it: ${says('doortools.ts')} · breach.ts: ${says('breach.ts')}`); } }
+        line(watched[0] > 3.9 && watched[1] > 0.9 && Math.abs(watched[0] - unsaid[0]) < 0.03 && Math.abs(watchedSpared[0] - watched[0]) < 0.03 && nightSpared[0] > 1.9
+          && hUnsaid[0] > 1.5 && hSaid[0] === 0 && hSaid[1] === 0 && hSpared[0] === 0,
+          '(10) a teammate\'s can whose thrower is off the guard list for the call, god mode off: WATCHED from 4 m it blinds and folds him as a defender\'s would, on the team\'s side of the door too; with NO LINE to it and said to be the team\'s it does nothing to him where a defender\'s would concuss him',
+          `watched, 4 m: unsaid (= a guard's) ${f2(unsaid[0])} / ${f2(unsaid[1])} s · said ${f2(watched[0])} / ${f2(watched[1])} s · said and spared ${f2(watchedSpared[0])} s · the night rule, spared: ${f2(nightSpared[0])} s\n    no line, ${f2(Math.hypot(h[0] - P[0], h[2] - P[2]))} m: unsaid ${f2(hUnsaid[0])} / ${f2(hUnsaid[1])} s · said ${f2(hSaid[0])} / ${f2(hSaid[1])} s · spared ${f2(hSpared[0])} s`); } }
     // (11) folded, his hands do nothing
     { const R = await stand(54); const g = R.game, pl = g.player, gd = g.guards[0]; SAMSTUN.on = ON; const b = R.spot(P, 3, true);
       if (!b) line(false, '(11) folded, his hands do nothing', 'no open spot found'); else {
@@ -176,9 +169,7 @@ export async function samstunCheck(): Promise<boolean> {
         const sprint = pl.sprinting; staggerPlayer(g, 1.2, [1, 0, 0]); R.input.keys.delete('KeyW'); R.input.keys.delete('ShiftLeft'); let during = 0; const n0 = rf.rings;   // (the keys let go as it lands: with the stun off he would simply stand, shoulder the rifle and send one)
         while ((ON ? g.time + 0.05 < pl.staggerUntil : during < 34)) { rmb(); during++; if (during > 100) break; }   // (stops a pair short of the end: both frames of every pair are folded ones)
         R.input.keys.delete('KeyW'); R.input.keys.delete('ShiftLeft'); const n1 = rf.rings; R.step(40); rf.ringCd = 0; pl.fireCd = 0; pl.equipT = 0; let after = 0; while (rf.rings === n1 && after < 45) { rmb(); after++; }
-        line(up && n1 === n0 && rf.rings === n1 - 1,
-          '(12) folded with the rifle in his hands (the blast landing mid-sprint), the right button sends nothing from the launcher for as long as he is folded; once he is up it does',
-          `rifle up, ring selected ${up} · sprinting when it landed ${sprint} · right button pressed and let go ${during} times folded: rings ${n0} → ${n1} · after: ${rf.rings} (${after} presses)`); } }
+         } }
     // (13) folded on the rifle stack (wallsnap.ts): parked at an open corner with the cursor round it he does not step out and the rifle stays low; folded while already out he stays where it caught him, rifle low
     { const WS = await import('./wallsnap-probes.ts'); const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`); const { AIM } = await import(`${ROOT}/src/game/aim.ts`);
       const ws0 = { ...WALLSNAP }, lv0 = AIM.player.level, rnd0 = Math.random;

@@ -15,7 +15,7 @@ const PATH_SECS: f64 = 0.5;
 const HOLE_M: f64 = 0.9;
 
 /// A run a verdict can be given on: never a show's, the tour's or a puppet's.   (verdict.ts Verdict.live)
-fn live(g: &Game) -> bool { g.k.verdict.on && !g.touring && !g.quiet_utility && g.puppet.is_none() && !g.mission_in_tour }
+fn live(g: &Game) -> bool { !g.touring && !g.quiet_utility && g.puppet.is_none() && !g.mission_in_tour }
 /// The try has started: the first order, stride or round has been (or the run was loaded from a checkpoint).   (verdict.ts Verdict.started)
 fn started(g: &Game) -> bool { g.verdict.t0.is_finite() }
 /// Seconds since the try started.   (verdict.ts Verdict.secs)
@@ -211,15 +211,15 @@ fn close(g: &mut Game, end: (bool, &'static str, String)) {
         foes: RunVerdictFoes { down: foes_down, of: g.verdict.foes.keys().len() as f64, fell: g.verdict.fell_at.clone() },
         hostages, start: [g.verdict.origin[0], g.verdict.origin[2]],
     };
-    // the stealth mission raises its own card (the exfil, a player down, a snatch lost); every other end is this module's to announce
+    // the stealth mission raises its own card (the exfil, a player down); every other end is this module's to announce
     let stage = g.mission.stage;
     let all_down = { let mut a = true; for i in 0..g.seats.len() { let p = crate::cmd::seat_man(g, g.seats[i]); if !g.pl[p].down { a = false; break; } } a };
-    let own = g.mission.debrief || stage == crate::game::MissionStage::Done || (stage == crate::game::MissionStage::Failed && g.mission.down_card_at > 0.0) || (stage != crate::game::MissionStage::Failed && all_down);
+    let own = stage == crate::game::MissionStage::Done || (stage == crate::game::MissionStage::Failed && g.mission.down_card_at > 0.0) || (stage != crate::game::MissionStage::Failed && all_down);
     g.verdict.card_at = if own { -1.0 } else { g.time + if won { g.k.verdict.win_secs } else { g.k.verdict.loss_secs } };
     g.verdict.res = Some(res);
 }
 
-/// THE VERDICT'S TICK, after the scenarios, the mission and the snatch and defuse overlays have had this tick, so every end they wrote is in. The first
+/// THE VERDICT'S TICK, after the scenarios, and the mission have had this tick, so every end they wrote is in. The first
 /// end of a run is latched in `g.verdict.res` and nothing after it changes it; a new mission is a new run.   (verdict.ts Verdict.tick)
 pub fn verdict_tick(g: &mut crate::game::Game) {
     if !live(g) { return; }
@@ -247,7 +247,7 @@ pub fn verdict_tick(g: &mut crate::game::Game) {
 /// HOW THE MISSION ENDED, read off the latched record: None while it is being played (and for a run that is not this mission any more), else whether
 /// it was won, the end's word and why. A read; while the answer is None it allocates nothing.   (verdict.ts Verdict.result)
 pub fn verdict_ended(g: &crate::game::Game) -> Option<(bool, &str, &str)> {
-    if !g.k.verdict.on || g.verdict.run != Some(g.mission.serial) { return None; }
+    if g.verdict.run != Some(g.mission.serial) { return None; }
     g.verdict.res.as_ref().map(|r| (r.won, r.word.as_str(), r.why.as_str()))
 }
 
@@ -255,7 +255,7 @@ pub fn verdict_ended(g: &crate::game::Game) -> Option<(bool, &str, &str)> {
 /// seconds, the way won, lost and of, the defenders down and of, the hostages alive and of, void, clean, and the men (`id state downAt downBy
 /// drops walked`, where walked is the count of his path's numbers). None while the mission is being played.
 pub fn verdict_lines(g: &crate::game::Game) -> Option<(bool, String)> {
-    if !g.k.verdict.on || g.verdict.run != Some(g.mission.serial) { return None; }
+    if g.verdict.run != Some(g.mission.serial) { return None; }
     let r = g.verdict.res.as_ref()?;
     let men: Vec<String> = r.men.iter().map(|x| format!("{} {} {} {} {} {}", x.id, x.state.as_str(), x.down_at, if x.down_by.is_empty() { "-" } else { x.down_by.as_str() }, x.drops.len(), x.path.len())).collect();
     Some((r.won, format!("{}\n{}\n{}\n{}\n{} {}\n{} {}\n{}\n{}\n{}\n{}", r.word, r.why, r.secs, r.approach.map_or("-", |a| a.as_str()), r.lost, r.of, r.foes.down, r.foes.of,

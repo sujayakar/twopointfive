@@ -145,8 +145,8 @@ pub enum OrderGone {
     DoorBigClear,
     WallRow,
 }
-/// SquadOrders.notes: who has a line for the squad's HUD block, in the order they were pushed. Read only by hud() (triage: dress).
-#[derive(Clone, Copy, Debug)]
+/// SquadOrders.notes: who has a line for the squad's HUD block, in the order they were pushed. Read only by `orders::squad_view` (rust/game_rules/src/orders/hud.rs).
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum OrderNoteFn {
     DoorToolsHud,
     DoorToolsWord,
@@ -212,8 +212,6 @@ pub struct SquadOrders {
     pub cmd_press: Option<crate::orders::SquadOrdersCmdPress>,
     pub tap_was: Option<crate::orders::SquadOrdersTapWas>,
     pub log: Vec<crate::orders::SquadOrdersLogItem>,
-    pub lay: crate::planlay::LayState,
-    pub by_hand: bool,
     pub shows: Vec<crate::orders::SquadOrdersShowsItem>,
     pub asg: JsMap<GuardId, OrdersAssignmentId>,
     pub trail: Vec<V3>,
@@ -253,7 +251,7 @@ impl SquadOrders {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
     pub fn blank() -> Self {
         SquadOrders {
-            knobs: crate::knobs::OrdersK { key: String::from("KeyX"), mouse_opens: true, click_gives: false, who_key: String::from("KeyT"), quick_key: String::from("KeyB"), wheel_element: false, wait_key: String::from("Digit5"), wait_alt: String::from("KeyF"), refresh_secs: 1.0, door_pick_m: 1.0, self_m: 1.0, man_m: 0.8, door_ray: true, door_ray_pad: 0.08, door_ray_reach_m: 3.0, self_body: false, floor_snap_m: 1.0, jamb_out: 0.55, jamb_past: 0.45, file_gap: 0.9, seam_m: 0.03, second_floor: true, work_out: true, work_seen_m: 4.0, hall_file: true, follow_back: alloc::vec![1.3, 2.4], crumb: 0.4, trail_m: 10.0, run: 2.2, walk: 1.5, gain: 1.5, near_m: 0.6, band_m: 0.6, word_far_m: 2.0, word_hold_s: 2.5, file_hold: false, file_spread: false, file_apart: 0.9, file_tight: 0.75, off_door: 0.8, back_end: false, in_way: false, retake_goal: false, walk_tries: false, aside_m: 2.6, aside_lane: 0.8, aside_off: 0.95, aside_clear: false, file_queue: false, file_queue_gap: 1.3, file_queue_cost: 500.0, prop_round: false, prop_round_pad: 0.25, prop_round_cost: 6.0, prop_round_more: 2.0, prop_round_door: 2.5, aside_hold: 1.5, brisk: 2.0, brisk_in: 1.8, onto: 1.3, entry: 2.2, move_spread: 0.9, cold_secs: 2.5, pin_posted: true, lane_in: 0.45, lane_out: 0.7, hold_stride: 0.15, stuck_secs: 4.0, hold_group_m: 4.0, hold_door_m: 2.0, cleared: true, cleared_dear: 20.0, known_face: true, own_door: true, round_cap: 0.0, round_own: true, same_way: false, same_near_m: 5.0, same_apart_m: 6.0, same_long: 1.5, trail_doors: false, trail_reach_m: 3.0, trail_long: 1.5 },
+            knobs: crate::knobs::OrdersK { key: String::from("KeyX"), mouse_opens: true, click_gives: false, who_key: String::from("KeyT"), quick_key: String::from("KeyB"), wheel_element: false, wait_key: String::from("Digit5"), wait_alt: String::from("KeyF"), refresh_secs: 1.0, door_pick_m: 1.0, self_m: 1.0, man_m: 0.8, door_ray: true, door_ray_pad: 0.08, door_ray_reach_m: 3.0, floor_snap_m: 1.0, jamb_out: 0.55, jamb_past: 0.45, file_gap: 0.9, seam_m: 0.03, second_floor: true, work_out: true, work_seen_m: 4.0, hall_file: true, follow_back: alloc::vec![1.3, 2.4], crumb: 0.4, trail_m: 10.0, run: 2.2, walk: 1.5, gain: 1.5, near_m: 0.6, band_m: 0.6, word_far_m: 2.0, word_hold_s: 2.5, file_hold: false, file_spread: false, file_apart: 0.9, file_tight: 0.75, off_door: 0.8, back_end: false, in_way: false, retake_goal: false, walk_tries: false, aside_m: 2.6, aside_lane: 0.8, aside_off: 0.95, aside_clear: false, file_queue: false, file_queue_gap: 1.3, file_queue_cost: 500.0, prop_round: false, prop_round_pad: 0.25, prop_round_cost: 6.0, prop_round_more: 2.0, prop_round_door: 2.5, aside_hold: 1.5, brisk: 2.0, brisk_in: 1.8, onto: 1.3, entry: 2.2, move_spread: 0.9, cold_secs: 2.5, lane_in: 0.45, lane_out: 0.7, hold_stride: 0.15, stuck_secs: 4.0, hold_group_m: 4.0, hold_door_m: 2.0, cleared: true, cleared_dear: 20.0, known_face: true, own_door: true, round_cap: 0.0, round_own: true, same_way: false, same_near_m: 5.0, same_apart_m: 6.0, same_long: 1.5, trail_doors: false, trail_reach_m: 3.0, trail_long: 1.5 },
             defs: Vec::new(),
             made: JsMap::new(),
             owners: Vec::new(),
@@ -266,8 +264,6 @@ impl SquadOrders {
             cmd_press: None,
             tap_was: None,
             log: Vec::new(),
-            lay: crate::planlay::LayState { laid: Vec::new(), kept: None, kept_for: String::from(""), try_key: String::from(""), started: false, sending: false, restored_t: -1.0 },
-            by_hand: false,
             shows: Vec::new(),
             asg: JsMap::new(),
             trail: Vec::new(),
@@ -828,44 +824,6 @@ impl SquadOrdersReachedValueLock {
 }
 impl Default for SquadOrdersReachedValueLock { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: HoverKept, src/game/orders.ts:347)
-#[derive(Clone, Debug)]
-pub struct HoverKept {
-    pub hov: Option<crate::orders::HoverKeptHov>,
-    pub cam: Vec<f64>,
-}
-impl HoverKept {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoverKept {
-            hov: None,
-            cam: Vec::new(),
-        }
-    }
-}
-impl Default for HoverKept { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/orders.ts:347 HoverKept.hov, src/game/orders.ts:347)
-#[derive(Clone, Debug)]
-pub struct HoverKeptHov {
-    pub x: f64,
-    pub y: f64,
-    pub t: f64,
-    pub v: crate::orders::OrderTarget,
-}
-impl HoverKeptHov {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoverKeptHov {
-            x: 0.0,
-            y: 0.0,
-            t: 0.0,
-            v: crate::orders::OrderTarget::Floor(crate::orders::OrderTargetFloor::zeroed()),
-        }
-    }
-}
-impl Default for HoverKeptHov { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum TargetKind {
@@ -1220,30 +1178,6 @@ impl OrderHudMenu {
 }
 impl Default for OrderHudMenu { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
-#[derive(Clone, Debug)]
-pub enum OrderNote {
-    Text(String),
-    Arm1(crate::orders::OrderNoteArm1),
-}
-
-/// (TypeScript: inline at src/game/orders.ts:503 OrderNote, src/game/orders.ts:503)
-#[derive(Clone, Debug)]
-pub struct OrderNoteArm1 {
-    pub key: String,
-    pub text: String,
-}
-impl OrderNoteArm1 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OrderNoteArm1 {
-            key: String::new(),
-            text: String::new(),
-        }
-    }
-}
-impl Default for OrderNoteArm1 { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: FightLease, src/game/orders.ts:520)
 #[derive(Clone, Copy, Debug)]
 pub struct FightLease {
@@ -1570,39 +1504,6 @@ impl SquadOrdersGoalPart {
     }
 }
 impl Default for SquadOrdersGoalPart { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/orders.ts:1225 hintView ->, src/game/orders.ts:1225)
-#[derive(Clone, Copy, Debug)]
-pub struct SquadOrdersHintView {
-    pub kind: crate::cmdring::RingHint,
-    pub x: f64,
-    pub y: f64,
-    pub zoom: f64,
-    pub held: bool,
-    pub press: bool,
-    pub tone: Option<crate::orders::Tone>,
-    pub seg: Option<[V3; 2]>,
-    pub ring: Option<crate::orders::SquadOrdersHintViewRing>,
-    pub glyph: bool,
-}
-impl SquadOrdersHintView {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadOrdersHintView {
-            kind: crate::cmdring::RingHint::Door,
-            x: 0.0,
-            y: 0.0,
-            zoom: 0.0,
-            held: false,
-            press: false,
-            tone: None,
-            seg: None,
-            ring: None,
-            glyph: false,
-        }
-    }
-}
-impl Default for SquadOrdersHintView { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:1225 SquadOrdersHintView.ring, src/game/orders.ts:1225)
 #[derive(Clone, Copy, Debug)]
@@ -2038,23 +1939,6 @@ pub enum SquadOrdersHoverWordsT {
     None(crate::orders::OrderTargetNone),
     Foe(crate::orders::OrderTargetFoe),
 }
-
-/// (TypeScript: inline at src/game/orders.ts:2583 hud ->, src/game/orders.ts:2583)
-#[derive(Clone, Debug)]
-pub struct SquadOrdersHud {
-    pub menu: Option<crate::orders::OrderHudMenu>,
-    pub status: Vec<crate::orders::OrderHudRow>,
-}
-impl SquadOrdersHud {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadOrdersHud {
-            menu: None,
-            status: Vec::new(),
-        }
-    }
-}
-impl Default for SquadOrdersHud { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:2619 mark ->, src/game/orders.ts:2619)
 #[derive(Clone, Debug)]

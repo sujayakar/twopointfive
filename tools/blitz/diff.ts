@@ -45,7 +45,7 @@ const KEYED_BY_SERIAL = new Set(opt('--keyed-by-serial', 'gunhold::GunholdMod.kn
 // STAND-IN (belongs in schema.json's `serial`, as `dialogue::RadioState.run` is there): fields that hold an object's identity serial as a plain number.
 // A mission's own module keeps the mission it last saw (`this.run === g.mission`; the Rust keeps the mission's serial), and each side deals serials by
 // its own count of objects, so the number is not compared; whether one is held still is.
-const SERIAL_COPIES = new Set(opt('--serial-copies', 'rails::Rails.run,defuse::Defuse.run,lesson::Lesson.run,snatch::Snatch.run').split(','));
+const SERIAL_COPIES = new Set(opt('--serial-copies', 'rails::Rails.run,lesson::Lesson.run').split(','));
 /** --live: the entries of maps and sets keyed by a canon row, met by the reach walk and held back until their key is live */
 type Held = { K: Node; V: Node | null; kp: number; vp: number; done: boolean };
 let HELD: Held[] | null = null;
@@ -59,13 +59,15 @@ class Side { liveN = new Map<string, number>(); name2 = new Map<string, Map<numb
   constructor(public b: Uint8Array) { this.dv = new DataView(b.buffer, b.byteOffset, b.byteLength); }
   u8() { return this.b[this.p++]; } u16() { const x = this.dv.getUint16(this.p, true); this.p += 2; return x; } u32() { const x = this.dv.getUint32(this.p, true); this.p += 4; return x; }
   hex(n: number) { let s = ''; for (let i = 0; i < n; i++) s += this.b[this.p + i].toString(16).padStart(2, '0'); this.p += n; return s; }
-  cid(id: string, v: number): string { const M = this.canon.get(id); if (!M || v === 0xffffffff) return `${id}(${v})`; const c = M.get(v); return c === undefined ? `${id}(unreached)` : c >= (this.liveN.get(id) ?? Infinity) ? `${id}(~${nameOf(this, id, v)})` : `${id}(c${c})`; } }
+  cid(id: string, v: number): string { if (MIX[id]) { const [t, r] = unmix(id, v); return this.cid(t, r); } const M = this.canon.get(id); if (!M || v === 0xffffffff) return `${id}(${v})`; const c = M.get(v); return c === undefined ? `${id}(unreached)` : c >= (this.liveN.get(id) ?? Infinity) ? `${id}(~${nameOf(this, id, v)})` : `${id}(c${c})`; } }
 const T = (path: string) => SCHEMA.types[path];
+/** an ID of either of two tables (schema `mixes`): which table, and its row */
+const MIX: Record<string, string[]> = SCHEMA.mixes ?? {}, unmix = (id: string, v: number): [string, number] => MIX[id] ? [MIX[id][v & 1], v >>> 1] : [id, v];
 /** walk past a value; `onId` hears every ID of a canon table met */
 function skip(n: Node, s: Side, onId: ((id: string, v: number) => void) | null): void {
   switch (n.k) {
     case 'f64': case 'u64': case 'i64': s.p += 8; return; case 'f32': case 'u32': case 'i32': case 'usize': s.p += 4; return; case 'bool': case 'u8': case 'i8': s.p += 1; return; case 'u16': case 'i16': s.p += 2; return;
-    case 'id': { const v = s.u32(); if (onId && CANON.has(n.id)) onId(n.id, v); return; }
+    case 'id': { const v = s.u32(); if (onId) { const [id, r] = unmix(n.id, v); if (CANON.has(id)) onId(id, r); } return; }
     case 'str': { const L = s.u32(); s.p += L; return; } case 'unit': return;
     case 'opt': if (s.u8()) skip(n.of, s, onId); return;
     case 'vec': { const L = s.u32(); const of = n.of; if (!onId || !hasId(of)) { const w = fixed(of); if (w >= 0) { s.p += w * L; return; } } for (let k = 0; k < L; k++) skip(of, s, onId); return; }
@@ -93,7 +95,7 @@ const FIX = new Map<Node, number>(); function fixed(n: Node): number { let w = F
     default: w = -1; }
   FIX.set(n, w!); return w!; }
 const HAS = new Map<Node, boolean>(); function hasId(n: Node): boolean { let h = HAS.get(n); if (h !== undefined) return h; HAS.set(n, false);
-  switch (n.k) { case 'id': h = CANON.has(n.id); break; case 'opt': case 'vec': case 'arr': h = hasId(n.of); break; case 'tup': h = n.of.some(hasId); break; case 'map': h = hasId(n.K) || hasId(n.V); break; case 'set': h = hasId(n.K); break;
+  switch (n.k) { case 'id': h = CANON.has(n.id) || (MIX[n.id] ?? []).some(x => CANON.has(x)); break; case 'opt': case 'vec': case 'arr': h = hasId(n.of); break; case 'tup': h = n.of.some(hasId); break; case 'map': h = hasId(n.K) || hasId(n.V); break; case 'set': h = hasId(n.K); break;
     case 'type': { const t = T(n.path); h = t.k === 'struct' ? fieldsOf(t).some(hasId) : t.k === 'data' ? t.vars.some((a: any) => a.ty && hasId(parse(a.ty))) : t.k === 'handEnum' ? t.arms.some((a: string) => { const ty = a.match(/\((.*)\)/)?.[1]; return ty ? hasId(parse(ty)) : false; }) : t.k === 'wordEnum' ? t.arms.some((a: any) => a.fields.some((f: any) => hasId(parse(f.ty)))) : false; break; }
     default: h = false; }
   HAS.set(n, h!); return h!; }
@@ -150,11 +152,11 @@ const MKEY_FAMILY: Record<string, number> = { look: 9, skin: 10 };
 const LEAVE = new Set(opt('--leave-out', '').split(',').filter(Boolean).map(w => { if (!(w in MKEY_FAMILY)) throw new Error(`diff: --leave-out knows ${Object.keys(MKEY_FAMILY).join(', ')}, not ${w}`); return MKEY_FAMILY[w]; }));
 const BOX_T: any = SCHEMA.tables.find((t: any) => t.id === 'BoxId'), BOX_N: any = BOX_T ? T(parse(BOX_T.ty).path) : null, MKEY_AT = BOX_N ? BOX_N.fields.findIndex((f: any) => f.rust === 'mkey') : -1;
 function leftOut(s: Side, id: string, v: number): boolean {
-  if (id !== 'BoxId' || !LEAVE.size || MKEY_AT < 0) return false;
-  let out = s.left.get(v); if (out !== undefined) return out;
-  const at = s.rows.get('BoxId')!; out = false;
+  if ((id !== 'BoxId' && id !== 'FrameBoxId') || !LEAVE.size || MKEY_AT < 0) return false;
+  const key = id === 'BoxId' ? v : -1 - v; let out = s.left.get(key); if (out !== undefined) return out;
+  const at = s.rows.get(id)!; out = false;
   if (v < at.length) { const p0 = s.p, F = fieldsOf(BOX_N); s.p = at[v]; for (let i = 0; i < MKEY_AT; i++) skip(F[i], s, null); if (s.u8()) out = LEAVE.has(s.dv.getFloat64(s.p, true) >>> 24); s.p = p0; }
-  s.left.set(v, out); if (out) s.leftN++; return out;
+  s.left.set(key, out); if (out) s.leftN++; return out;
 }
 // ---- the comparison
 // BY RULE (schema.json, as paths.ts): a field in `schema.scratch` is a memo no rule reads back and is not compared; a field in `schema.serial` holds an object's
@@ -189,9 +191,9 @@ function cmp(n: Node, A: Side, B: Side, mod: string): void {
     case 'unit': return;
     case 'opt': { const a = A.u8(), b = B.u8(); if (!a && !b) return; if (a && b) { cmp(n.of, A, B, mod); return; }
       if (a) rep(mod, word(n.of, A), 'None'); else rep(mod, 'None', word(n.of, B)); return; }
-    case 'vec': if (n.of.k === 'id' && n.of.id === 'BoxId' && CANON.has('BoxId') && LEAVE.size) { const rd = (s: Side) => { const L = s.u32(), o: number[] = []; for (let k = 0; k < L; k++) { const v = s.u32(); if (!leftOut(s, 'BoxId', v)) o.push(v); } return o; };
+    case 'vec': if (n.of.k === 'id' && (n.of.id === 'BoxId' || n.of.id === 'FrameBoxId' || n.of.id === 'AnyBoxId') && CANON.has('BoxId') && LEAVE.size) { const of = n.of.id; const rd = (s: Side) => { const L = s.u32(), o: number[] = []; for (let k = 0; k < L; k++) { const v = s.u32(); if (!leftOut(s, ...unmix(of, v))) o.push(v); } return o; };
         const a = rd(A), b = rd(B); if (a.length !== b.length) rep(mod, String(a.length), String(b.length), '.len'); const c = Math.min(a.length, b.length);
-        for (let k = 0; k < c; k++) { const x = A.cid('BoxId', a[k]), y = B.cid('BoxId', b[k]); if (x !== y) { P.push(`[${k}]`); rep(mod, x, y); P.pop(); } }
+        for (let k = 0; k < c; k++) { const x = A.cid(of, a[k]), y = B.cid(of, b[k]); if (x !== y) { P.push(`[${k}]`); rep(mod, x, y); P.pop(); } }
         if (a.length !== b.length) rep(mod, a.length > c ? `${a.length - c} more` : '(absent)', b.length > c ? `${b.length - c} more` : '(absent)', `[${c}..]`); return; }
       { const a = A.u32(), b = B.u32(); if (DUMP) { const path = P.join(''); if (DUMP.test(path + '.len') && dumped++ < DUMP_MAX) console.log(`  ${a === b ? ' ' : '≠'} ${path}.len\t${a}\t${b}`); } if (a !== b) rep(mod, String(a), String(b), '.len'); const c = Math.min(a, b); for (let k = 0; k < c; k++) { P.push(`[${k}]`); cmp(n.of, A, B, mod); P.pop(); }
       if (a > c) { for (let k = c; k < a; k++) skip(n.of, A, null); rep(mod, `${a - c} more`, '(absent)', `[${c}..]`); } if (b > c) { for (let k = c; k < b; k++) skip(n.of, B, null); rep(mod, '(absent)', `${b - c} more`, `[${c}..]`); } return;  }
@@ -254,7 +256,7 @@ if (argv.includes('--dynboxes')) {
   const BT = SCHEMA.tables.find((t: any) => t.id === 'BoxId'), BN = T(parse(BT.ty).path), GT = T(SCHEMA.root);
   const field = (t: any, s: Side, at: number, name: string): [Node, number] => { s.p = at; const F = fieldsOf(t); for (let i = 0; i < F.length; i++) { if (t.fields[i].rust === name) return [F[i], s.p]; skip(F[i], s, null); } throw new Error('no field ' + name); };
   const count = (s: Side) => { const [n, at] = field(GT, s, 0, 'dyn_boxes'); s.p = at; const L = s.u32(), ids: number[] = []; for (let k = 0; k < L; k++) ids.push(s.u32()); const by = new Map<string, number>();
-    for (const id of ids) { const row = s.rows.get('BoxId')![id]; const wordO = (n: Node): string => n.k === 'opt' ? (s.u8() ? wordO(n.of) : 'None') : word(n, s); const g1 = (nm: string) => { const [fn, fa] = field(BN, s, row, nm); s.p = fa; return wordO(fn); }; const mk = g1('mkey'); const k = `owner ${g1('owner')} flags ${g1('flags')} key ${mk === '(…)' || mk === 'None' ? mk : (Number(mk) >>> 24)} name ${g1('name')} h ${g1('h').split(',').map(x => (+x).toFixed(3)).join('x')} glow ${g1('emissive').split(',').some(x => +x > 0) ? 'yes' : 'no'}`; by.set(k, (by.get(k) ?? 0) + 1); } return by; };
+    for (const id of ids) { const [tb, r] = unmix('AnyBoxId', id), row = s.rows.get(tb)![r]; const wordO = (n: Node): string => n.k === 'opt' ? (s.u8() ? wordO(n.of) : 'None') : word(n, s); const g1 = (nm: string) => { const [fn, fa] = field(BN, s, row, nm); s.p = fa; return wordO(fn); }; const mk = g1('mkey'); const k = `owner ${g1('owner')} flags ${g1('flags')} key ${mk === '(…)' || mk === 'None' ? mk : (Number(mk) >>> 24)} name ${g1('name')} h ${g1('h').split(',').map(x => (+x).toFixed(3)).join('x')} glow ${g1('emissive').split(',').some(x => +x > 0) ? 'yes' : 'no'}`; by.set(k, (by.get(k) ?? 0) + 1); } return by; };
   const a = count(A), b = count(B); for (const k of new Set([...a.keys(), ...b.keys()])) if ((a.get(k) ?? 0) !== (b.get(k) ?? 0)) console.log(`  dyn boxes ${a.get(k) ?? 0} / ${b.get(k) ?? 0}: ${k}`);
 }
 let bytes = -1; { const i = argv.indexOf('--blocks'); if (i >= 0) { const s = readFileSync(argv[i + 1]), t = readFileSync(argv[i + 2]); bytes = 0; for (let k = 0; k < Math.max(s.length, t.length); k++) if ((s[k] ?? 0) !== (t[k] ?? 0)) bytes++; } }

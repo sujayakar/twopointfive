@@ -4,6 +4,7 @@
 import index from "../index.html";
 import replay from "../replay.html";   // the REPLAY VIEWER (src/replay/viewer.ts): a replay saved with F7 as a map with a scrubber and notes
 import sounds from "../sounds.html";   // the LISTENING PAGE (src/sounds/main.ts): every sound the game makes, one row each, through the game's own mixer graph
+import draw from "../draw.html";   // THE PAGE THAT DRAWS A GAME IT DOES NOT HOLD (src/host/drawpage.ts)
 import music from "../music.html";   // the SCORE'S LISTENING PAGE (src/music/main.ts): every piece of the score on one row, played by the game's own sequencer and voices
 import { handleLevels } from "./levels-api.ts";
 import { localCloud } from "./cloud/local.ts";
@@ -20,11 +21,8 @@ const server = Bun.serve({
   port, hostname, maxRequestBodySize: 512 << 20,   // (a frame capture of a whole 4K frame, gzipped: POST /capture below, which says who may send one)
   development: { hmr: false, console: true },
   routes: {
-    "/": index, "/replay": replay, "/sounds": sounds, "/music": music,
+    "/": index, "/replay": replay, "/sounds": sounds, "/music": music, "/draw": draw,
     "/look": req => { const u = new URL(req.url); return Response.redirect("/?look&" + (u.searchParams.has("levelFile") ? "" : "roomclear&squad4&levelFile=pass.json&hud&") + u.search.slice(1), 302); },   // THE LOOK PROTOTYPE (src/render/shaders/look.wgsl): the game's page with ?look, on the pass unless the link names its own mission
-    "/sneaklab": req => { const q = new URL(req.url).search.slice(1); return Response.redirect("/?levelFile=sneak-lab.json&solo&sneaklab" + (q ? "&" + q : ""), 302); },   // the sneak lab: the close-in on a man, its numbers live (src/host/sneaklab.ts)
-    "/firelab": req => { const q = new URL(req.url).search.slice(1); return Response.redirect("/?levelFile=pass.json&roomclear&squad4&nofow&firelab" + (q ? "&" + q : ""), 302); },   // the fire lab: beside the pass's brazier, the flame's numbers live (src/host/firelab.ts)
-    "/smokelab": req => { const q = new URL(req.url).search.slice(1), has = (k: string) => new RegExp("(^|&)" + k + "=").test(q); return Response.redirect((has("levelFile") ? "/?look&hud&smokelab" : "/?look&levelFile=smoke-lab.json&solo&hud&smokelab" + (has("hour") ? "" : "&hour=dusk") + (has("weather") ? "" : "&weather=clear")) + (q ? "&" + q : ""), 302); },   // the smoke lab: the look page on the lab's own floor (tools/levels/smoke-lab.ts) at a dry dusk, with the solver's bricks and curls drawn and its numbers live (src/host/smokelab.ts); an hour or a weather on the address wins, and a levelFile there opens that level instead (/smokelab?levelFile=pass.json&roomclear&squad4)
   },
   async fetch(req) {
     const url = new URL(req.url);
@@ -33,6 +31,7 @@ const server = Bun.serve({
     if (path === "/index.html") return Response.redirect("/" + url.search + url.hash, 302);   // the game is '/', and a built page's neighbour link ('index.html?…') must open here too
     if (path === "/replay.html" || path === "/replay/") return Response.redirect("/replay" + url.search, 302);
     if (path === "/sounds.html" || path === "/sounds/") return Response.redirect("/sounds" + url.search, 302);
+    if (path === "/draw.html" || path === "/draw/") return Response.redirect("/draw" + url.search, 302);
     if (path === "/music.html" || path === "/music/") return Response.redirect("/music" + url.search, 302);
     { const mp = await MP?.handle(req); if (mp) return mp; }   // /mp/runner/…: the backend's calls, by the runner's key
     if (path === "/capture" && req.method === "POST") {   // a frame capture from the page (src/render/framecap.ts, F6): one gzipped file under captures/ (gitignored); read with tools/qa/capture-read.ts
@@ -55,10 +54,9 @@ const server = Bun.serve({
       return new Response(Bun.file(r.path), { headers: { "Content-Type": "application/wasm", "Cache-Control": "no-store" } });
     }
     const lv = await handleLevels(req); if (lv) return lv;
-    if (path === "/qa/commit") return new Response(COMMIT, { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the commit this server was started on (the session journal files it with a recording: src/ui/sessionrec.ts)
+    if (path === "/qa/commit") return new Response(COMMIT, { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the commit this server was started on (a replay and a report file it: src/ui/replaykey.ts)
     if (path === "/qa/cloud") return new Response(CLOUD?.url() ?? "", { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the backend this server runs for the page, or nothing (src/cloud/cloud.ts cloudFind asks once a page load)
     if (/^\/qa\/[\w.-]+\.js$/.test(path)) { const qa = Bun.file("./tools" + path); if (await qa.exists()) return new Response(qa, { headers: { "Cache-Control": "no-store" } }); }   // the in-page measurement harnesses (dev only, never bundled): `await import('/qa/perf-harness.js')` → window.__perf, '/qa/perf-frames.js' → window.__pf
-    { const m = path.match(/^\/qa\/shader\/([a-z_0-9]+)\.wgsl$/); if (m) { const sf = Bun.file(`./src/render/shaders/${m[1]}.wgsl`); if (await sf.exists()) return new Response(sf, { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } }); } }   // a pass shader's current source on disk, for the page's hot-swap hook (main.ts __hotVol): edit, fetch, recompile, A/B — without rebooting a staged scene
     const f = Bun.file("./public" + path);
     if (await f.exists()) return new Response(f);
     return new Response("not found: " + path, { status: 404 });

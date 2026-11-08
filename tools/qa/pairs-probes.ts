@@ -26,6 +26,7 @@
 //                 CONTROLs, the key-off half of the no-charge CONTROL — and the journal. Out of the rest of the file with the same day: the
 //                 defenders' grenades held off in pairs-hold (a) and (b), and the plain-stack run of the tool under a charge, COVER.stacked off)
 //   pairs-lanes   lines of fire: a posted man lowers his muzzle while a man of the OTHER pair crosses his line (the fights' own lanes are asked in pairs-hold and pairs-go)
+import { doing, notesOf } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { sample, swept } from './sweep.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
@@ -95,7 +96,7 @@ async function rig(seed: number, sam: number[], o: { squad?: 2 | 4; quiet?: bool
     set(who: any = 'all', secs = 30) { return R.until(() => R.men(who).every((m: any) => O.of(m)?.arrived), secs); },
     lost(who: any = 'all'): any[] { return R.men(who, true).filter((m: any) => m.state === 'dead'); },
     killsBy(men: any[]): any[] { return NB.hostiles.filter((h: any) => h.state === 'dead' && men.some((m: any) => m.char.id === h.killerId)); },
-    where(who: any = 'all') { return R.men(who, true).map((m: any) => `${m.callsign} ${m.state === 'dead' ? 'DOWN' : at(m.char.pos)} [${O.statusOf(m)}]`).join(' · '); },
+    where(who: any = 'all') { return R.men(who, true).map((m: any) => `${m.callsign} ${m.state === 'dead' ? 'DOWN' : at(m.char.pos)} [${doing(O.g, m)}]`).join(' · '); },
     beats(op: any): string { return (op?.beats ?? []).map((b: any) => `${f2(b.t)} ${b.what}`).join(' | '); },
     beatT(op: any, what: string): number { return op?.beats.find((b: any) => b.what === what || b.what.startsWith(what))?.t ?? NaN; },
     /** friendly fire: a teammate down by a teammate's (or Sam's) hand */
@@ -108,26 +109,6 @@ async function rig(seed: number, sam: number[], o: { squad?: 2 | 4; quiet?: bool
   return R;
 }
 
-// ============================================================================================================================ pairs-off
-export const pairsOff = guarded(async () => {
-  const { verdict, done } = family('pairs-off: the pair build is as it was; the four get the word');
-  { const R = await rig(5, CUBICLES, { squad: 2, quiet: true }); const { O } = R; const men = R.men('all');
-    const goDef = O.defs.find((d: any) => d.id === 'go'), why = O.give('go', R.here(), 'all');
-    // (the small squad's word, DOORTOOLS.wordSmall, on in the page: 'go' is registered for the pair too, on no menu row, and is refused while nobody is stacked — `probes.ts wordsmall`)
-    verdict(men.length === 2 && !O.big && !!goDef && (goDef.listed ?? []).length === 0 && why === 'nobody waiting.', 'two men: not a big squad; \'go\' is on the list for the key alone (on no menu row) and giving it with nobody stacked is refused', `${men.length} men · big ${O.big} · go listed [${(goDef?.listed ?? []).join(' ')}] · give('go') → ${why}`);
-    const t = R.target('breakroom_n'), t2 = O.forMen(t, men);
-    verdict(t2.side === t.side && t.side === sideOf(R.door('breakroom_n'), R.game.player.char.pos), 'two men: a door order keeps Sam\'s side of the door (he is in the cubicles: the INSIDE of the north door), as before', `Sam's side ${t.side} · the men's ${t2.side}`);
-    R.game.teleportPlayer(CORRIDOR); R.step(5);
-    O.give('move', O.targetAt(FLANK), 'all'); R.set('all', 30); O.give('hold', R.here(), 'all'); R.step(60);
-    const as = men.map((m: any) => O.of(m)); const plain = as.every((a: any) => a?.order === 'hold' && a.there === 'holding' && !a.watch && !a.door && a.upper !== 'aim' && !a.light);
-    verdict(plain, 'two men: hold is the old hold — where they stand, the way they face, low ready, no arc, no light', as.map((a: any, i: number) => `${men[i].callsign} [${a?.there}] upper ${a?.upper} watch ${a?.watch ? at(a.watch) : '-'} light ${!!a?.light}`).join(' · '));
-    R.give('stack', 'breakroom_n', 'all'); R.set('all', 30); R.W.input.pressed.add('KeyF'); R.step(60); const ops = R.D.ops.length;
-    verdict(ops === 0, 'two men: the word does nothing for a pair on a plain stack', `door orders running ${ops}`); }
-  { const R = await rig(5, CORRIDOR, { quiet: true }); const { O } = R;
-    const has = O.defs.some((d: any) => d.id === 'go'), why = O.give('go', R.here(), 'all'), moved = R.men('all').filter((m: any) => O.of(m)?.order === 'go').length;
-    verdict(R.men('all').length === 4 && O.big && has && why === 'nobody waiting.' && moved === 0, 'four men: a big squad, the \'go\' order is on the list, and with nobody waiting it is refused and moves nobody', `${R.men('all').length} men · big ${O.big} · 'go' listed ${has} (key ${O.defs.find((d: any) => d.id === 'go')?.key}) · give('go') → ${why}`); }
-  return done();
-});
 
 // ============================================================================================================================ pairs-side
 export const pairsSide = guarded(async () => {
@@ -207,10 +188,10 @@ export const pairsGo = guarded(async () => {
     verdict(thr === 0 && ff === 0, 'two pairs converging in one room: no teammate down to a teammate, no round fired through one', `through ${thr} · fratricide ${ff}`); }
   // ---- (c) tools given `onWord`: a bang at the north door, a quiet open at the west door
   { const SEEDS = sample([2, 5, 9], 1); const rows: string[] = []; let waited = 0, ordered = 0, noted = 0, lost = 0, thr = 0, ff = 0, inAll = 0;
-    for (const seed of SEEDS) { const R = await rig(seed, CORRIDOR, { tag: 'go-bang' }); const { D } = R;
+    for (const seed of SEEDS) { const R = await rig(seed, CORRIDOR, { tag: 'go-bang' }); const { O, D } = R;
       const w1 = R.give('bangClear', 'breakroom_n', 'red', { onWord: true }), w2 = R.give('openClear', 'breakroom_w', 'blue', { onWord: true });
       const ready = R.until(() => D.ops.length === 2 && D.ops.every((o: any) => o.phase === 'ready'), 45); R.step(180);
-      const still = D.ops.length === 2 && D.ops.every((o: any) => o.phase === 'ready'), notes = D.hudNotes().filter((s: string) => s.includes('on your word'));
+      const still = D.ops.length === 2 && D.ops.every((o: any) => o.phase === 'ready'), notes = notesOf(D.g).filter((s: string) => s.includes('on your word'));
       if (ready && still && w1 === null && w2 === null) waited++; if (notes.length === 2) noted++;
       R.W.input.pressed.add('KeyF'); R.step(); const said = null; const ops = [...D.ops], red = ops.find((o: any) => o.kind === 'bangClear'), blue = ops.find((o: any) => o.kind === 'openClear');
       R.until(() => !D.ops.length, 45); R.step(240); R.tally();
@@ -299,7 +280,7 @@ export const pairsHaltback = guarded(async () => {
     else if (mode === 'set') { R.set('red', 20); R.step(30); atBlow = snap(); const c = D.chargeOn(d); if (c) res = D.blow(c); R.step(180); }
     else R.step(600);
     const blue = cop ? [...cop.post.values()].map((P: any) => [...P.pos]) : []; R.step(180);
-    return { w1, w2, ended, said, halt, atBlow, blue, frame: [...d.frameCentre], res, chEnded: cop ? String(cop.ended) : gone ? String(gone.ended) : 'no charge', stale: R.men('all').filter((m: any) => O.statusOf(m) === 'setting the charge').map((m: any) => m.callsign),
+    return { w1, w2, ended, said, halt, atBlow, blue, frame: [...d.frameCentre], res, chEnded: cop ? String(cop.ended) : gone ? String(gone.ended) : 'no charge', stale: R.men('all').filter((m: any) => doing(O.g, m).startsWith('setting the charge')).map((m: any) => m.callsign),
       stepped: D.stats.steppedBack - was, notes: D.log.slice(log0).map((l: any) => l.what).filter((w: string) => /made room|no room to stand off/.test(w)), end: snap(), orphan };
   };
   const row = (r: Run, l: Man[] = r.halt) => l.map(m => `${m.c} ${at(m.post)} ${f2(dist(m.post, r.frame))} m off the frame [${m.there}]`).join(', ');

@@ -13,7 +13,6 @@
 //               uniform block, the cascade dice (texture) } → 9 storage buffers in the compute stage;
 //   splat       group 0 = the scene group (only `frame` is touched) + group 1 = { pool (read-only storage, VERTEX), the same uniform block, g-buffer depth,
 //               the volumetric texture } → +1 storage buffer in the vertex stage (3 with the scene's two `all`-visible ones), +0 in the fragment stage.
-import { tuned } from './shaderTune';   // the scene tweak panel's constant overrides (empty map = each text itself)
 import { makeBuffer, makeShader, computePipelineAsync, renderPipelineAsync } from '../gpu/device';
 import { Vec3 } from '../math/vec';
 import { scenePrelude, glassBreakConfig } from './frame';
@@ -145,9 +144,6 @@ export interface RainStats { live: number; born: number; records: number; droppe
 const rgba8 = (c: Vec3) => ((Math.round(Math.min(1, Math.max(0, c[0])) * 255)) | (Math.round(Math.min(1, Math.max(0, c[1])) * 255) << 8) | (Math.round(Math.min(1, Math.max(0, c[2])) * 255) << 16) | (255 << 24)) >>> 0;
 /** integer hash for the per-emit seed (the GPU hashes it again with the particle index) */
 function hashU32(x: number): number { x = (x ^ 61) ^ (x >>> 16); x = (x + (x << 3)) >>> 0; x ^= x >>> 4; x = Math.imul(x, 0x27d4eb2d) >>> 0; x ^= x >>> 15; return x >>> 0; }
-/** the three particle texts as bundled (the scene tweak panel lists their constants off them: render/shaderTune.ts shaderConsts). The page's own programs are built from these as they are — the
- *  panel is made after them — and only retune() reads them through tuned(). */
-export function particleTexts(): { common: string; sim: string; draw: string } { return { common: particlesCommon, sim: particlesSrc, draw: particlesDrawSrc }; }
 
 export class Particles {
   /** live per-kind numbers (the panel edits these; written into the uniform block every frame) */
@@ -267,70 +263,6 @@ export class Particles {
           alpha: { srcFactor: 'zero', dstFactor: 'one', operation: 'add' } } },             // (the HDR target's own alpha stays what the composite wrote)
           { format: 'r8unorm', blend: { color: { srcFactor: 'one', dstFactor: 'one', operation: 'max' }, alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'max' } }, writeMask: GPUColorWrite.RED }] },   // the REACTIVE mask for the TAAU resolve (render/passes.ts react): how much of this pixel is a thing with no history — max over everything splatted here
         primitive: { topology: 'triangle-list' } }) ]);
-  }
-  private retuning: Promise<unknown> = Promise.resolve();   // (retune(): one at a time, in the order asked)
-  private tunedAs = particlesCommon + particlesSrc + particlesDrawSrc;   // the texts the installed programs were built from (retune skips a text that already runs)
-  /** Dev / measurement hook (tools/qa/trace-lab.js via main.ts __hotCommon): rebuild the two SIM kernels (emit + update — the ones that trace) from the CURRENT scene prelude + the bundled
-   *  particle sources exactly as the constructor concatenates them, so a traversal variant under test reaches the particles' collision / lighting rays too. The splat is untouched. Both or
-   *  neither: the old pipelines stay on an error. */
-  async hotSwapSim(): Promise<{ ok: boolean; messages: string[] }> {
-    const d = this.device; const pre = scenePrelude() + lightingCommon + particlesCommon + windFieldSrc; const off = pre.split('\n').length - 1;
-    const mod = d.createShaderModule({ code: pre + particlesSrc, label: 'particles-hot' });
-    const info = await mod.getCompilationInfo();
-    const messages = info.messages.map(m => `${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`);
-    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    [this.pEmit, this.pUpdate] = await Promise.all([
-      d.createComputePipelineAsync({ label: 'particlesEmit-hot', layout: this.simLay, compute: { module: mod, entryPoint: 'emit' } }),
-      d.createComputePipelineAsync({ label: 'particlesUpdate-hot', layout: this.simLay, compute: { module: mod, entryPoint: 'update' } }) ]);
-    this.simMod = mod;
-    return { ok: true, messages };
-  }
-  /** Dev hook (main.ts __hotRain): rebuild ALL THREE pipelines from particle sources handed in (particles_common / particles / particles_draw as they are on disk) with the live preludes —
-   *  the rain look's kernels and splat swapped under a staged storm without a reboot. All or nothing: the old pipelines stay on any error. */
-  async hotSwapAll(commonSrc: string, simSrc: string, drawSrc: string, refractSrc: string = refractCommon, placeSrc: string = placeCommonSrc): Promise<{ ok: boolean; messages: string[] }> {
-    const d = this.device; const preS = scenePrelude() + lightingCommon + commonSrc + windFieldSrc; const preD = scenePrelude() + commonSrc + refractSrc + placeSrc;
-    const offS = preS.split('\n').length - 1, offD = preD.split('\n').length - 1;
-    const modS = d.createShaderModule({ code: preS + simSrc, label: 'particles-hot' }); const modD = d.createShaderModule({ code: preD + drawSrc, label: 'particlesDraw-hot' });
-    const [iS, iD] = await Promise.all([modS.getCompilationInfo(), modD.getCompilationInfo()]);
-    const messages = [...iS.messages.map(m => `sim ${m.type} ${m.lineNum - offS}:${m.linePos} ${m.message}`), ...iD.messages.map(m => `draw ${m.type} ${m.lineNum - offD}:${m.linePos} ${m.message}`)];
-    if (iS.messages.some(m => m.type === 'error') || iD.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    const [pE, pU, pD] = await Promise.all([
-      d.createComputePipelineAsync({ label: 'particlesEmit-hot', layout: this.simLay, compute: { module: modS, entryPoint: 'emit' } }),
-      d.createComputePipelineAsync({ label: 'particlesUpdate-hot', layout: this.simLay, compute: { module: modS, entryPoint: 'update' } }),
-      d.createRenderPipelineAsync(this.drawDesc(modD, 'particlesDraw-hot')) ]);
-    this.pEmit = pE; this.pUpdate = pU; this.pDraw = pD; this.simMod = modS; this.drawMod = modD;
-    return { ok: true, messages };
-  }
-  /** the splat's descriptor over a rebuilt module (hotSwapAll, retune): init()'s targets and blends */
-  private drawDesc(mod: GPUShaderModule, label: string): GPURenderPipelineDescriptor {
-    return { label, layout: this.drawLay, vertex: { module: mod, entryPoint: 'vs' },
-      fragment: { module: mod, entryPoint: 'fs', targets: [{ format: 'rgba16float', blend: { color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' }, alpha: { srcFactor: 'zero', dstFactor: 'one', operation: 'add' } } },
-        { format: 'r8unorm', blend: { color: { srcFactor: 'one', dstFactor: 'one', operation: 'max' }, alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'max' } }, writeMask: GPUColorWrite.RED }] }, primitive: { topology: 'triangle-list' } };
-  }
-  /** SCENE TWEAK PANEL (ui/sceneTweak.ts over render/shaderTune.ts): rebuild all three pipelines from the bundled texts as SHADER_TUNE has them now, with the live preludes. All or nothing: the old pipelines stay on any
-   *  error. One at a time, in the order asked, so the newest text is the one left installed. */
-  retune(): Promise<{ ok: boolean; messages: string[] }> {
-    const run = this.retuning.then(() => this.retuneNow());
-    this.retuning = run.catch(() => { /* its caller has it */ });
-    return run;
-  }
-  private async retuneNow(): Promise<{ ok: boolean; messages: string[] }> {
-    const d = this.device, common = tuned(particlesCommon);
-    const preS = scenePrelude() + lightingCommon + common + windFieldSrc, preD = scenePrelude() + common + refractCommon + placeCommonSrc;
-    const sim = tuned(particlesSrc), draw = tuned(particlesDrawSrc), as = common + sim + draw;
-    if (as === this.tunedAs) return { ok: true, messages: [] };
-    const mods = [{ tag: 'sim', mod: d.createShaderModule({ code: preS + sim, label: 'particles' }), off: preS.split('\n').length - 1 }, { tag: 'draw', mod: d.createShaderModule({ code: preD + draw, label: 'particlesDraw' }), off: preD.split('\n').length - 1 }];
-    const infos = await Promise.all(mods.map(m => m.mod.getCompilationInfo()));
-    const messages = infos.flatMap((info, i) => info.messages.map(m => `${mods[i].tag} ${m.type} ${m.lineNum - mods[i].off}:${m.linePos} ${m.message}`));
-    if (infos.some(info => info.messages.some(m => m.type === 'error'))) return { ok: false, messages };
-    const modS = mods[0].mod, modD = mods[1].mod;
-    const cp = (mod: GPUShaderModule, entryPoint: string, label: string) => d.createComputePipelineAsync({ label, layout: this.simLay, compute: { module: mod, entryPoint } });
-    try {
-      const [pEmit, pUpdate, pDraw] = await Promise.all([cp(modS, 'emit', 'particlesEmit'), cp(modS, 'update', 'particlesUpdate'), d.createRenderPipelineAsync(this.drawDesc(modD, 'particlesDraw'))]);
-      this.pEmit = pEmit; this.pUpdate = pUpdate; this.pDraw = pDraw;
-    } catch (e) { return { ok: false, messages: [...messages, `pipeline: ${(e as Error)?.message ?? e}`] }; }
-    this.simMod = modS; this.drawMod = modD; this.tunedAs = as;
-    return { ok: true, messages };
   }
 
   // ------------------------------------------------------------------ emit API (game code; deterministic — the seed counts off this object's own serial)

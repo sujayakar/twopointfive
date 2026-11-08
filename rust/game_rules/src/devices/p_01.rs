@@ -9,7 +9,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- seams
 /// devices.ts:370 `out[k].mkey = …`: the made box's row in `g.tab.boxes`
-fn seam_set_mkey(g: &mut Game, b: BoxId, mkey: f64) { g.tab.boxes[b].mkey = Some(mkey); }
+fn seam_set_mkey(g: &mut Game, b: AnyBoxId, mkey: f64) { g.tab[b].mkey = Some(mkey); }
 
 // ---------------------------------------------------------------- small readers of this file
 /// `c.bones.<b> ?? v3.add(c.pos, off)`
@@ -30,8 +30,8 @@ fn bits_or(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
 
 // ---------------------------------------------------------------- runtime records
 /// A camera of the level: its machine is rust/sim's row `slot`.   (devices.ts CameraRt)
-pub fn camera_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::CameraDef2, index: f64, target: FixtureId, cone: LightId, smoke_key: &str) -> CameraRtId {
-    g.tab.devices_camera_rt.push(CameraRt { smoke_trans: 1.0, def: def.clone(), index, target, cone, smoke_key: String::from(smoke_key), slot, st })
+pub fn camera_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::CameraDef2, index: f64, target: FixtureId, cone: LightId) -> CameraRtId {
+    g.tab.devices_camera_rt.push(CameraRt { def: def.clone(), index, target, cone, slot, st })
 }
 /// A tripwire of the level: its machine is rust/sim's row `slot`.   (devices.ts LaserRt)
 pub fn laser_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::LaserDef2, index: f64, target: FixtureId, dir: V3, len: f64) -> LaserRtId {
@@ -76,7 +76,7 @@ pub fn devices_new(g: &mut crate::game::Game) -> crate::devices::Devices {
                 let cone = lamp;
                 let slot = crate::sim_lightshome::light_home_camera(g, target, d.yaw, d.sweep, d.sweep_period.unwrap_or(dd.sweep_period), d.pitch.unwrap_or(dd.pitch), d.pos);
                 ci += 1.0;
-                let rt = camera_rt_new(g, slot, crate::Opaque, d, ci, target, cone, &format!("smokeCam{}", ci));
+                let rt = camera_rt_new(g, slot, crate::Opaque, d, ci, target, cone);
                 this.cameras.push(rt);
             }
             crate::scene_level::DeviceDef::Laser(d) => {
@@ -159,7 +159,7 @@ pub fn devices_reset(g: &mut crate::game::Game) {
 }
 
 /// Powered, unbroken, not knocked out: the device works this frame.   (devices.ts alive)
-pub fn alive(g: &mut crate::game::Game, t: FixtureId) -> bool {
+pub fn alive(g: &crate::game::Game, t: FixtureId) -> bool {
     crate::sim_lightshome::fixture_factor(g, t) > 0.05 && !crate::sim_lightshome::fixture_broken(g, t)
 }
 /// Live play: devices sense.   (devices.ts sensing)
@@ -205,14 +205,10 @@ pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: 
     let half = d.fov_deg.unwrap_or(dd.fov_deg) / 2.0;
     let look = lens_dir(crate::sim_lightshome::camera_machine_yaw(g, c), d.pitch.unwrap_or(dd.pitch));
     let e = crate::guards::Eye { pos: d.pos, look, range, half_deg: half, near_m: 0.0, near_deg: half, v_half_deg: Some(half) };
-    let key = g.tab.devices_camera_rt[c].smoke_key.clone();
-    if let Some(tr) = crate::sensors::sensors_read(g, &key) { g.tab.devices_camera_rt[c].smoke_trans = tr; }
     let chest = bone_or(g, pc, crate::character::Bone::Chest, [0.0, 1.1, 0.0]);
-    let smoke = g.tab.devices_camera_rt[c].smoke_trans;
-    let air = smoke * crate::weather::air_trans(g, d.pos, chest);
+    let air = crate::sense::smoke_between(g, d.pos, chest) * crate::weather::air_trans(g, d.pos, chest);
     let vis = crate::guards::eye_contact(g, e, pc, true, false, air, None);
-    if vis.in_cone { let chest = bone_or(g, pc, crate::character::Bone::Chest, [0.0, 1.1, 0.0]); crate::sensors::sensors_ask_segment(g, &key, d.pos, chest); }
-    let gain = if vis.visible { lens_gain(g, &crate::seats::here(g), vis.dist, range, air) } else { 0.0 };
+    let gain = if vis.visible { let s = crate::seats::seat_of_char(g, Some(pc)).unwrap_or(g.seat); lens_gain(g, &crate::seats::seat(g, s), vis.dist, range, air) } else { 0.0 };
     let (now, at, sus, alarm) = (g.time, g.ch[pc].pos, g.tune.camera_suspicion_secs, g.tune.camera_alarm_secs);
     let r = crate::sim_lightshome::light_home_camera_see(g, slot, now, dt, vis.visible, gain, at, sus, alarm);
     if has(r, bit.suspect) { camera_suspect(g, c); }
@@ -292,6 +288,7 @@ pub fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool
     }
     let end = v3::mad(d.from, dir, sense);
     let mut who: Option<&'static str> = None;
+    let mut by: Option<PlayerId> = None;
     let mut at: Option<V3> = None;
     let mut cut = reach;
     for pl in crate::seats::men(g) {
@@ -299,7 +296,7 @@ pub fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool
         if !g.pl[pl].down && !g.player_invisible {
             let c = g.pl[pl].ch;
             at = body_breaks(g, c, d.from, end);
-            if at.is_some() { who = Some("player"); }
+            if at.is_some() { who = Some("player"); by = Some(pl); }
         }
         if who.is_none() {
             if let Some(dg) = g.pl[pl].dragging {
@@ -334,7 +331,7 @@ pub fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool
     }
     let now = g.time;
     if has(crate::sim_lightshome::light_home_laser_close(g, slot, now, live, cut, sense, who.is_some()), bit.trip) {
-        laser_trip(g, l, who.unwrap(), at.unwrap());
+        laser_trip(g, l, who.unwrap(), by, at.unwrap());
     }
 }
 /// Does any capsule of `c` cross the beam a→b: the point on the beam where it does.   (devices.ts bodyBreaks)
@@ -350,12 +347,12 @@ pub fn body_breaks(g: &crate::game::Game, c_2: CharId, a: V3, b: V3) -> Option<V
     None
 }
 /// A beam broken: the chirp, the radio, a man sent, by the beam's level.   (devices.ts laserTrip)
-pub fn laser_trip(g: &mut crate::game::Game, l: LaserRtId, who: &str, at: V3) {
+pub fn laser_trip(g: &mut crate::game::Game, l: LaserRtId, who: &str, by: Option<PlayerId>, at: V3) {
     let d = g.tab.devices_laser_rt[l].def.clone();
     let where_ = crate::chronicle::room_of(g, at);
     let level: String = match d.alarm { Some(x) => String::from(x.as_str()), None => crate::scene_level_data::device_defaults().alarm };
     crate::audio_iface::game_audio_like_play(g, "alarmChirp", Some(d.from), Some(0.7), None);
-    if who == "player" { let pl = g.player; g.pl[pl].noise = m::max(g.pl[pl].noise, 0.3); }
+    if let Some(pl) = by { g.pl[pl].noise = m::max(g.pl[pl].noise, 0.3); }
     let sent: Option<GuardId>;
     if level == "alarm" {
         control(g, &format!("beam broken in the {} — that's an intruder. weapons out", where_));
@@ -483,6 +480,12 @@ pub fn learn_code(g: &mut crate::game::Game, lock_id: &str, how: crate::devices:
 }
 /// A man has just said the code aloud: the player learns it iff it carried to him; whether he now knows it.   (devices.ts overhear)
 pub fn overhear(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str) -> bool {
+    let mut any = false;
+    crate::seats::each_seat(g, &mut |g| { if overhear_here(g, speaker, lock_id, any) { any = true; } });
+    any
+}
+/// … by the man of the seat that stands; `told`: another man has already learnt it just now, and the telling is not said again
+fn overhear_here(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str, told: bool) -> bool {
     let pl = g.player;
     if g.pl[pl].down || g.pl[pl].codes.has(String::from(lock_id)) { return g.pl[pl].codes.has(String::from(lock_id)); }
     let mouth = bone_or(g, g.gd[speaker].ch, crate::character::Bone::Head, [0.0, 1.6, 0.0]);
@@ -490,6 +493,7 @@ pub fn overhear(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str) -> b
     let ear = bone_or(g, g.pl[pl].ch, crate::character::Bone::Head, [0.0, ear_up, 0.0]);
     let prop = crate::weather::hear_path(g, mouth, ear, None);
     if prop.path_len > g.k.overhear.path_m || prop.carry < g.k.overhear.carry { return false; }
+    if told { g.pl[pl].codes.add(String::from(lock_id)); return true; }
     learn_code(g, lock_id, LearnCodeHow::Overheard, Some(speaker)) || g.pl[pl].codes.has(String::from(lock_id))
 }
 /// The digits as said ('7-3-9-1').   (devices.ts spell)
@@ -507,10 +511,10 @@ pub fn pad_door_name(g: &crate::game::Game, k: &crate::devices::KeypadRt) -> Str
     if name == "server_manager" { String::from("side door") } else { format!("{} door", name.replace('_', " ")) }
 }
 /// Is `d` a keypad door locked against the player where he stands, and does he know its code.   (devices.ts padState)
-pub fn pad_state(g: &mut crate::game::Game, d: DoorId, from: V3) -> Option<crate::devices::PadState> {
+pub fn pad_state(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, from: V3) -> Option<crate::devices::PadState> {
     let pad = devices_pad_of(g, d)?;
     if !crate::doors::doors_locked_out(g, d, from, None) { return None; }
-    let pl = g.player;
+    let pl = seat.player;
     let known = g.pl[pl].codes.has(g.dr[d].lock_id.clone());
     Some(PadState { pad, known })
 }
@@ -518,7 +522,7 @@ pub fn pad_state(g: &mut crate::game::Game, d: DoorId, from: V3) -> Option<crate
 pub fn start_coding(g: &mut crate::game::Game, d: DoorId) -> bool {
     let pl = g.player;
     let here = g.ch[g.pl[pl].ch].pos;
-    let st = pad_state(g, d, here);
+    let st = pad_state(g, &crate::seats::here(g), d, here);
     let p = &mut g.pl[pl];
     match st {
         Some(s) if s.known && p.coding.is_none() && !p.down => {}
@@ -591,14 +595,14 @@ pub fn update_coding(g: &mut crate::game::Game, dt: f64) {
 
 // ---------------------------------------------------------------- the boxes of the devices (a rule reads them: world.raycast takes a camera's body and bracket; see notes)
 /// The devices' boxes into the frame's list, keyed by ordinal.   (devices.ts deviceBoxes)
-pub fn device_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn device_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let n0 = out.len();
     device_boxes_raw(g, out);
     let base = crate::scene_boxes::mkey().device;
     for k in n0..out.len() { seam_set_mkey(g, out[k], base + (k - n0) as f64); }
 }
 /// A camera's bracket, body, lens and LED; a pad's plate, keys and LED; a beam's housings, LED and line.   (devices.ts deviceBoxesRaw)
-pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     use crate::scene_boxes::{make_box_frame as make_box, MakeBoxP};   // (every box here is pushed straight onto the frame's list)
     let fl = crate::scene_boxes::box_flag();
     let dyn_ = fl.dynamic;
@@ -611,40 +615,40 @@ pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
         let yaw = crate::sim_lightshome::camera_machine_yaw(g, c);
         let look = lens_dir(yaw, pitch);
         let back: V3 = [-m::sin(d.yaw), 0.0, -m::cos(d.yaw)];
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, back, 0.16), h: [0.025, 0.025, 0.09], yaw: Some(d.yaw), albedo: Some(cam_dark()), flags: Some(dyn_), ..MakeBoxP::zeroed() }));
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, back, 0.16), h: [0.025, 0.025, 0.09], yaw: Some(d.yaw), albedo: Some(cam_dark()), flags: Some(dyn_), ..MakeBoxP::zeroed() }).into());
         let x = v3::normalize(v3::cross([0.0, 1.0, 0.0], look));
         let y = v3::cross(look, x);
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, look, -0.04), h: [0.055, 0.05, 0.1], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some(cam_col()), flags: Some(dyn_), ..MakeBoxP::zeroed() }));
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, look, 0.075), h: [0.03, 0.03, 0.02], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some([0.02, 0.02, 0.025]), flags: Some(deco), ..MakeBoxP::zeroed() }));
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, look, -0.04), h: [0.055, 0.05, 0.1], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some(cam_col()), flags: Some(dyn_), ..MakeBoxP::zeroed() }).into());
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, look, 0.075), h: [0.03, 0.03, 0.02], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some([0.02, 0.02, 0.025]), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
         let seen = crate::sim_lightshome::camera_machine_seen(g, c);
         let hot = seen > 0.02;
         let blink = if crate::sim_lightshome::camera_machine_state(g, c) != crate::sim_lightshome::CameraState::Idle { if m::sin(g.time * 18.0) > 0.0 { 1.0 } else { 0.15 } } else { 1.0 };
         let led: V3 = if !ok { [0.0, 0.0, 0.0] } else {
             v3::scale(if hot { led_hot() } else { led_idle() }, blink * (if hot { v3::clamp(0.4 + seen / m::max(0.1, g.tune.camera_suspicion_secs), 0.4, 1.6) } else { 1.0 }))
         };
-        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, look, 0.02), v3::scale(y, 0.062)), h: [0.012, 0.008, 0.012], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some([0.05, 0.0, 0.0]), emissive: Some(led), flags: Some(deco), ..MakeBoxP::zeroed() }));
+        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, look, 0.02), v3::scale(y, 0.062)), h: [0.012, 0.008, 0.012], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some([0.05, 0.0, 0.0]), emissive: Some(led), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
     }
     for k in g.devices.keypads.clone() {
         let d = &k.def;
         let n = k.n;
         let yaw = d.yaw;
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, n, 0.012), h: [0.045, 0.065, 0.012], yaw: Some(yaw), albedo: Some(pad_col()), flags: Some(deco), ..MakeBoxP::zeroed() }));
-        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, -0.015, 0.0]), h: [0.03, 0.035, 0.003], yaw: Some(yaw), albedo: Some([0.06, 0.06, 0.07]), stuff: Some(crate::scene_stuff::BoxStuff::Metal), flags: Some(deco), ..MakeBoxP::zeroed() }));
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, n, 0.012), h: [0.045, 0.065, 0.012], yaw: Some(yaw), albedo: Some(pad_col()), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
+        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, -0.015, 0.0]), h: [0.03, 0.035, 0.003], yaw: Some(yaw), albedo: Some([0.06, 0.06, 0.07]), stuff: Some(crate::scene_stuff::BoxStuff::Metal), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
         let locked = crate::doors::door_locked(g, k.door) && crate::doors::door_latched(g, k.door);
         let busy = crate::seats::men(g).iter().any(|&pl| g.pl[pl].coding == Some(k.door));
         let led: V3 = if busy { v3::scale(amber(), if m::sin(g.time * 30.0) > 0.0 { 1.0 } else { 0.2 }) } else if locked { red() } else { green() };
-        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, 0.045, 0.0]), h: [0.012, 0.006, 0.003], yaw: Some(yaw), albedo: Some([0.04, 0.04, 0.04]), emissive: Some(v3::scale(led, 0.5)), flags: Some(deco), ..MakeBoxP::zeroed() }));
+        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, 0.045, 0.0]), h: [0.012, 0.006, 0.003], yaw: Some(yaw), albedo: Some([0.04, 0.04, 0.04]), emissive: Some(v3::scale(led, 0.5)), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
     }
     for l in g.devices.lasers.clone() {
         let d = g.tab.devices_laser_rt[l].def.clone();
         let (target, dir, len) = (g.tab.devices_laser_rt[l].target, g.tab.devices_laser_rt[l].dir, g.tab.devices_laser_rt[l].len);
         let ok = alive(g, target);
         let yaw = v3::yaw_of(dir);
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.from, dir, -0.03), h: [0.03, 0.035, 0.03], yaw: Some(yaw), albedo: Some(emit_col()), flags: Some(deco), ..MakeBoxP::zeroed() }));
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.to, dir, 0.03), h: [0.03, 0.035, 0.03], yaw: Some(yaw), albedo: Some(emit_col()), flags: Some(deco), ..MakeBoxP::zeroed() }));
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.from, dir, -0.03), h: [0.03, 0.035, 0.03], yaw: Some(yaw), albedo: Some(emit_col()), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.to, dir, 0.03), h: [0.03, 0.035, 0.03], yaw: Some(yaw), albedo: Some(emit_col()), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
         let (last, cut) = (crate::sim_lightshome::laser_machine_last_trip_at(g, l), crate::sim_lightshome::laser_machine_cut(g, l));
         let glow: V3 = if ok { if g.time - last < 1.5 { v3::scale(red(), if m::sin(g.time * 40.0) > 0.0 { 2.0 } else { 0.2 }) } else { [1.5, 0.1, 0.05] } } else { [0.0, 0.0, 0.0] };
-        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.from, dir, -0.03), [0.0, 0.043, 0.0]), h: [0.008, 0.005, 0.008], yaw: Some(yaw), albedo: Some([0.05, 0.0, 0.0]), emissive: Some(glow), flags: Some(deco), ..MakeBoxP::zeroed() }));
+        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.from, dir, -0.03), [0.0, 0.043, 0.0]), h: [0.008, 0.005, 0.008], yaw: Some(yaw), albedo: Some([0.05, 0.0, 0.0]), emissive: Some(glow), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
         if ok && cut > 0.05 { crate::combat::beam_boxes(g, d.from, dir, cut, out, cut < len - 0.05, None, None); }
     }
 }

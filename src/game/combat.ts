@@ -62,7 +62,6 @@ import { fireShell, pelletDrops, pelletEnd, type Shell } from './shotgun';
 import { fragInFist, FRAG } from './frag';
 import { GUNHAND } from './gunhand';
 import { SAMSTUN, staggerPlayer, dazzlePlayer } from './samstun';
-import { recapRound } from './deathrecap';
 import { wallReport } from './blastFeel';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { ffLive, ffBody, ffSide, ffUnpressed, ffNote, ffPast } from './friendlyfire';   // (called inside fireWeapon only)
@@ -253,10 +252,8 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
   if (def.tracer && g.tune.tracers) g.tracers.round(firearmOf(g, shooter, isPlayer), def, muzzle, pen ? v3.normalize(v3.sub(hitP, muzzle)) : dir, pen ? v3.dist(muzzle, hitP) : tHit, hitGuard || playerHit ? 'flesh' : st || ph || through ? 'solid' : 'none', shooter.id);   // tracers (R6, tracers.ts): the row lights every third round and the last three of the box, counted off the gun that fired it — a streak travelling this same segment over the next few frames with a small light on its head, an ember where it stopped in geometry. A pistol row never asks (tracer null: not one instruction more than before); the flag off, nobody does
   if (ffOurs && (playerHit || (hitGuard && !hitGuard.civ && !isHostile('player', hitGuard.team)))) ffNote(sg, isPlayer, playerHit);
   if (ffOn && isPlayer && lead) ffPast(g, muzzle, hitP, hitGuard?.char ?? null);
-  recapRound(g, playerHit ? hitView.player.char : hitGuard?.char, playerHit ? hitView.player.down : hitGuard?.state === 'dead', shooter, muzzle, hitP, def, o.blind);   // deathrecap.ts: the round about to land on a man, for the end card (reads only)
   const manDown = !hitGuard ? null : () => {   // (by 'guard': the held man, above — the only colleague a guard's round ever tests — or, teams, an enemy AI man)
     const wasUp = hitGuard.state !== 'dead';
-    if (wasUp && hitGuard.civ) g.snatch?.roundOn(hitGuard, sg);   // (snatch.ts: whose round found the man the team came for — the tally's, nothing else reads it)
     const foeLine = sg && isHostile(sg.team, hitGuard.team) ? `${hitGuard.callsign} down — ${sg.callsign}'s round` : undefined;   // (teams: not 'hit by his own side' — he was the other side's to hit)
     const ownHit = ffOurs && !hitGuard.civ && !isHostile('player', hitGuard.team);   // (friendlyfire.ts: a man of Sam's side by a round of Sam's side — the log says whose)
     const does = roundDoes(g, hitGuard, v3.dist(v3.mad(muzzle, dir, tHit), hitP) < 1e-6 ? muzzle : v3.mad(hitP, dir, -tHit), dir, tHit, hostageHit, isPlayer);   // WOUNDS (wounds.ts): where it landed decides — 'shot' is the only answer with the switch off. (Its line is the muzzle's for a straight round, as ever; for a round that has changed direction on its way — through glass, in a build where one can: `dir` and `tHit` are then its last leg's and its whole path's — it is taken BACK from where the round stopped, so the stretch of the man that is measured is the one it went into)
@@ -520,7 +517,7 @@ export function irBeams(g: Game, out: Box[]) {
   });
 }
 
-/** WHETHER AN ENEMY CARRIES A VISIBLE WEAPON LASER (Tab ▸ Sandbox ▸ Team feel ▸ 'enemies carry visible lasers', kept per machine by teamfeel.ts; ?enemylasers
+/** WHETHER AN ENEMY CARRIES A VISIBLE WEAPON LASER (?enemylasers
  *  for a visit; the maintainer after playing: 'the enemies having super visible lasers is a bit much', then 'we should probably just remove them for realism,
  *  not just tone them down'). false, the default: a man hostile to Sam has no laser — no line and no dot, in any state, in every game and both showcases.
  *  true = the game as it was: every hunting man's red line from muzzle to dot. Nothing else changes with it either way: the laser was only ever a picture

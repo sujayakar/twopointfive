@@ -11,7 +11,7 @@
 //! The cosines and the lines' lengths are the game's own, so this answers only where EXACT.on.
 
 use crate::bricks;
-use crate::lights::{Lights, ROWS, R_ON, R_STEADY};
+use crate::lights::{Lights, ROWS, R_DAY, R_ON, R_STEADY};
 use crate::lines;
 use crate::smoke;
 use crate::state::state;
@@ -45,6 +45,35 @@ pub struct Rows {
     pub g: usize,
     pub leave: u32,
     pub steady: bool,
+    /// the hour's exposure (game_rules hours; 1 = a night): how strong each is beside it (`by_day`)
+    pub exposure: f64,
+}
+/// WHAT A LAMP IS, for how strong it stands beside an hour's light: none of these (as it is: the hour's own, a device's tell) · a fixture · a light in a hand · a
+/// vehicle's · a flash or a fire · a glowing face
+pub const DAY_NONE: u32 = 0;
+pub const DAY_FIXTURE: u32 = 1;
+pub const DAY_HAND: u32 = 2;
+pub const DAY_VEHICLE: u32 = 3;
+pub const DAY_FLASH: u32 = 4;
+pub const DAY_FACE: u32 = 5;
+/// A LAMP BESIDE THE HOUR. A level's lamps are those of a night, and a night's one unit is 3.3 lux. An hour's sun and sky are the real ones times that hour's
+/// exposure, so a lamp's real strength times it is what it counts for: what a fixture gives is real as authored, what a hand, a vehicle, a flash or a glowing
+/// face gives was held down for the night to be bearable, and is never more than that. `intensity` is the lamp's now, `full` its whole.
+#[inline(always)]
+pub fn by_day(what: u32, intensity: f64, full: f64, exposure: f64) -> f64 {
+    if exposure >= 1.0 {
+        return intensity;
+    }
+    let full = if full > 0.0 { full } else { intensity };
+    let real = match what {
+        DAY_FIXTURE => 1.0,
+        DAY_HAND => 10000.0 / 3.3 / full,
+        DAY_VEHICLE => 15000.0 / 3.3 / full,
+        DAY_FLASH => 6.0,
+        DAY_FACE => 50.0,
+        _ => return intensity,
+    };
+    intensity * js_min(1.0, js_max(real, 1.0) * exposure)
 }
 /// a lamp as the sum takes it, whichever of the two it came from
 struct Lamp {
@@ -77,6 +106,7 @@ fn row(l: &Lights, r: usize, q: &Rows) -> Option<Lamp> {
         return None;
     }
     let s = q.steady && b & R_STEADY != 0;
+    let int = if s { l.s_intensity[r] } else { l.intensity[r] };
     Some(Lamp {
         pos: if s { [l.sx[r], l.sy[r], l.sz[r]] } else { [l.x[r], l.y[r], l.z[r]] },
         range: l.range[r],
@@ -86,7 +116,7 @@ fn row(l: &Lights, r: usize, q: &Rows) -> Option<Lamp> {
         outer: l.outer[r],
         inner: l.inner[r],
         color: [l.r[r], l.g[r], l.b[r]],
-        int: if s { l.s_intensity[r] } else { l.intensity[r] },
+        int: by_day(b >> R_DAY & 7, int, int, q.exposure),
     })
 }
 /// THE ONE LIST: the first `n` lamps written and the rows `rows` names, in the order of the engine's list — before each written lamp come the rows that
@@ -219,11 +249,13 @@ pub fn estimate(w: usize, set: i32, n: usize, p: [f64; 3], shade: &Shade, more: 
     if n > MAX_LAMPS {
         return ASK_HOST;
     }
-    each(n, rows, last, at, |l| one(w, set, p, shade, l, acc))
+    // (a lamp this dim on the point is no lamp; beside an hour's light, at which eyes are used to as much less)
+    let least = 0.002 * rows.map_or(1.0, |q| q.exposure);
+    each(n, rows, last, at, |l| one(w, set, p, shade, l, least, acc))
 }
 /// one lamp's light on the point, onto the six faces: the shader's own terms, then one line to it, then the receiving cosine a face. 0, or ASK_HOST.
 #[inline(always)]
-fn one(w: usize, set: i32, p: [f64; 3], shade: &Shade, l: &Lamp, acc: &mut [f64]) -> u32 {
+fn one(w: usize, set: i32, p: [f64; 3], shade: &Shade, l: &Lamp, least: f64, acc: &mut [f64]) -> u32 {
     let (dx, dy, dz) = (l.pos[0] - p[0], l.pos[1] - p[1], l.pos[2] - p[2]);
     let range = l.range;
     // (a lamp further off along one axis than its range is further off than its range: the test below would pass it by, at the price of a root)
@@ -258,7 +290,7 @@ fn one(w: usize, set: i32, p: [f64; 3], shade: &Shade, l: &Lamp, acc: &mut [f64]
         return 0;
     }
     let (c0, c1, c2, int) = (l.color[0], l.color[1], l.color[2], l.int);
-    if js_max3(c0, c1, c2) * int * att < 0.002 {
+    if js_max3(c0, c1, c2) * int * att < least {
         return 0;
     }
     let mut lum = (0.2126 * c0 + 0.7152 * c1 + 0.0722 * c2) * int * att;

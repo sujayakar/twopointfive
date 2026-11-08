@@ -18,7 +18,7 @@
 //        digit still gives its wedge;
 //   (10b) a save kept in memory with the ring left up, put back: the ring is not up;
 // QRING_BREAK=1 = `stay`, `stayDigit` and `tapNow` left off and the same lines asked: the lines that say what those rules do must fail (2 to 7b, 8b, 8c and
-// 10b).
+// 10b; ).
 // RINGPIN_BREAK=1 = `pin` left off: line 8c must fail.
 // QLOAD_BREAK=1 = a loaded memory save puts nothing away (orders.ts `loaded` left out): line 10b must fail.
 //   exit 0 = all hold · 1 = one does not
@@ -29,6 +29,7 @@ const { AUTOPILOT } = await import(`${ROOT}/src/game/autopilot.ts`);
 const { BACKKEY } = await import(`${ROOT}/src/game/backkey.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const PROFILE = await import(`${ROOT}/src/host/profile.ts`), { FROZEN_HOLDS } = PROFILE;
+const JOURNAL = await import(`${ROOT}/src/game/journal.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
 const { SAVETIMELINE } = await import(`${ROOT}/src/game/savestate.ts`);
 

@@ -18,8 +18,8 @@
 // than the night draws it. The weather's cloud dims the sun and the sky under an hour's one exposure (game/hours.ts), so under rain at noon the lamps count for
 // more by themselves.
 //
-// PICTURE ONLY, on the look page only: applied to what the GPU is handed (render/lights.ts upload, the frame's emissive scale) and never written to a light, so
-// the game's own readers of the list (guards.ts lightEstimateAt) still take the authored strength. That break is to be settled before any of it goes to the build.
+// Applied to what the GPU is handed (render/lights.ts upload, the frame's emissive scale) and never written to a light. The rules' own light takes the same
+// strengths (rust/sim light.rs by_day, game_rules hours::exposure): one fact of the hour.
 // The check: tools/qa/lookunits-check.ts.
 
 /** lux per unit of the renderer's irradiance (so candela per unit of a light's `intensity`): the night's fixtures say so (above) */
@@ -49,11 +49,12 @@ export function hourExposure(id: string, sunAuthored: number): number {
 }
 
 export type LightClass = 'none' | 'fixture' | 'hand' | 'vehicle' | 'flash' | 'face';
-interface LightLike { name: string; group: string; kind: number; ttl: number; transient?: boolean; card?: boolean; steady?: unknown; intensity: number; peakIntensity: number }
+interface LightLike { name: string; group: string; kind: number; ttl: number; transient?: boolean; card?: boolean; steady?: unknown; intensity: number; peakIntensity: number; class?: LightClass }
 const VEHICLE = /^(van|gun_truck|truck|pickup|lorry|jeep|car)\w*_lamp/;
 /** what a light is, for the rule. NONE (drawn as authored at every hour): the sun and the moon (the hour's own), the sky at a window (the look page's), a lightning stroke (the sky's), a device's
  *  sight cone (a tell, not a lamp) and the Team & kit figure's staging. */
 export function lightClass(l: LightLike): LightClass {
+  if (l.class !== undefined) return l.class;
   if (l.kind === 2 || l.transient || l.group === 'devices' || l.group === 'sky' || l.name.startsWith('kitview')) return 'none';   // (sky: the look page's opening lights, scene/openings.ts: the hour's own light, come in at a window)
   // A LIGHT THAT STANDS FOR A GLOWING FACE (kind 3, the one-sided panel: a ceiling panel's, a screen's, a lit sign's marking; game.ts makes each as the face's
   // radiance × its area) IS A CLASS OF ITS OWN: the night holds it down like a torch, about FACE_TRUE under the real thing. As a 'fixture' (authored = real) a

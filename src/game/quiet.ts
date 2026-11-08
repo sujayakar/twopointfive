@@ -115,7 +115,7 @@ export class QuietMission {
     this.data = g.level.scenarios!.quiet!; this.pin = pin; this.squad = squad; this.failure = null; this.staged = 0; this.log.length = 0;
     this.authored = { spawn: g.level.playerSpawn, mission: g.level.mission };
     this.current();
-    if (squad) {   // the pair rules and the silent posture, for this run (put back by release; the pair's stored row keeps its own word while held — pairup.ts PAIR_HELD)
+    if (squad) {   // the pair rules and the silent posture, for this run (put back by release)
       this.was = heldNow(); PAIR_HELD.row = PAIRUP.on; holder = this;
       PAIRUP.on = true; pairUpApply();   // (the switch's own road to its three parts: this visit's word against one of them — `?sneak=0`, SNEAK=off — stands, as under the switch anywhere else)
       SILENT.on = true; SILENT.start = true;
@@ -211,7 +211,7 @@ export class QuietMission {
   // ---------------------------------------------------------------- inside
   private note(s: string) { this.log.push(`${this.g.time.toFixed(2)} ${s}`); if (this.log.length > 60) this.log.splice(0, 30); }
   private dealOne(Q: QuietData): QuietDeal {
-    if (this.pin === null && SAMESTART.on) { simRandom(); simRandom(); simRandom(); return { start: 0, spot: 0, patrol: Q.patrols?.length ? 0 : -1 }; }   // (samestart.ts: a mission that names no pin is the first of each of its lists, on every load and every restart; the three draws are made all the same, so the run rolls the stream it would with the switch off)
+    if (this.pin === null && SAMESTART.on) return { start: 0, spot: 0, patrol: Q.patrols?.length ? 0 : -1 };   // (samestart.ts: a mission that names no pin is the first of each of its lists, on every load and every restart, and nothing is drawn)
     const r = this.pin === null ? simRandom : mulberry32((this.pin | 0) ^ 0x51ed270b);
     const pick = (n: number) => Math.min(n - 1, Math.floor(r() * n));
     // (three draws whatever the lists' lengths: a list grown by one does not shift the others' draws)

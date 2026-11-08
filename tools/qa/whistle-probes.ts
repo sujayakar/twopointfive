@@ -37,6 +37,9 @@ async function floor(seed: number, sam: Vec3) {
   return W;
 }
 /** press V this frame and step once; returns whether an event went out (the blown counter moved) */
+/** Sam at (14, 11.1) stands under a corridor panel and in the answering man's beam, and a headless game has its own light meter: once a man has answered, Sam is kept
+ *  from his eyes (playerInvisible) and let back only for the sound a staging makes (a guard is not even asked while Sam is invisible). */
+function audible<T>(game: any, sound: () => T): T { game.playerInvisible = false; const r = sound(); game.playerInvisible = true; return r; }
 function pressV(W: any): boolean { const n0 = WHISTLE_STATS.blown; W.input.pressed.add('KeyV'); W.step(DT); return WHISTLE_STATS.blown > n0; }
 /** what the propagation says between Sam's mouth and a man's head right now (the numbers hearWhistle works from) */
 function propTo(game: any, gd: any) { const c = game.player.char; return game.col.sound.propagate([c.pos[0], game.player.crouch ? 1.0 : 1.55, c.pos[2]], v3.add(gd.char.pos, [0, 1.5, 0])); }
@@ -189,11 +192,11 @@ export async function whistleTwice(): Promise<boolean> {
     for (let i = 0; i < 3; i++) W.step(DT);
     pressV(W); W.step(DT);
     const first = { state: gd.state, said: gd.bubble?.text ?? null };
-    for (let i = 0; i < 60 * 3; i++) W.step(DT);   // three seconds on: he is on his way over (and Sam, meter dark, is not seen at this range)
+    game.playerInvisible = true;
+    for (let i = 0; i < 60 * 3; i++) W.step(DT);   // three seconds on: he is on his way over (and Sam is not seen)
     const dMid = v3.distXZ(gd.char.pos, game.player.char.pos); const seenMid = gd.state === 'alert';
-    const went2 = pressV(W); W.step(DT);
+    const went2 = audible(game, () => pressV(W)); W.step(DT);
     const M = whistleMem(gd); const said2 = gd.bubble && game.time - gd.bubble.t < 0.1 ? gd.bubble.text : null; const state2 = gd.state;
-    game.playerInvisible = true;   // (from here the arrival is not the point: nobody is to be found)
     let planned = false, planFix: Vec3 | null = null, spots = 0, searchSecs = 0, endedWith: string | null = null, alertEver = false, radioLine = false;
     const fixAt = v3.copy(gd.lastKnown ?? [0, 0, 0]);
     for (let i = 0; i < 60 * 40 && !endedWith; i++) {
@@ -224,10 +227,11 @@ export async function whistleTwice(): Promise<boolean> {
     placeGuard(gd, [20, 0, 11.1], [40, 0, 11.1], true);
     for (let i = 0; i < 3; i++) W.step(DT);
     pressV(W); W.step(DT); const s1 = gd.state, said1 = gd.bubble?.text ?? null;
+    game.playerInvisible = true;
     for (let i = 0; i < 60 * 70; i++) W.step(DT);   // seventy seconds: he watches the spot from his mark, talks himself out of it, stands calm again
     const sMid = gd.state; placeGuard(gd, [20, 0, 11.1], [40, 0, 11.1], true);   // (square him up again where he stands: seventy seconds of idle look-about drift his facing)
     W.step(DT);
-    const went = pressV(W); W.step(DT);
+    const went = audible(game, () => pressV(W)); W.step(DT);
     const M = whistleMem(gd); const said2 = gd.bubble && game.time - gd.bubble.t < 0.1 ? gd.bubble.text : null;
     const f: string[] = [];
     if (s1 !== 'suspicious' || !said1 || !LOOK.has(said1)) f.push(`the first: ${s1} "${said1}"`);
@@ -363,16 +367,17 @@ export async function whistleTorch(): Promise<boolean> {
   for (let i = 0; i < 3; i++) W.step(DT);
   pressV(W); W.step(DT);
   const h0 = handCarry(gd), up0 = gd.char.anim.upper, lightAtLens0 = gd.flashlight.enabled;
+  game.playerInvisible = true;
   for (let i = 0; i < 60; i++) W.step(DT);
   const h1 = handCarry(gd), up1 = gd.char.anim.upper;
-  game.events.push({ kind: 'step', pos: [17.5, 0, 11.1], time: game.time, loud: false, level: 0.8 });   // a running footfall 2.5 m off him (Sam's: no who)
-  W.step(DT); W.step(DT);
+  audible(game, () => { game.events.push({ kind: 'step', pos: [17.5, 0, 11.1], time: game.time, loud: false, level: 0.8 });   // a running footfall 2.5 m off him (Sam's: no who)
+    W.step(DT); W.step(DT); });
   const h2 = handCarry(gd), aw2 = gd.awareness, st2 = gd.state, up2 = gd.char.anim.upper;
   // and calm again → patrol → torch as ever; then a whistle → torch; then CONTACT by hand → weapon; back to suspicious after → weapon still (alerted since)
   gd.awareness = 0.05; for (let i = 0; i < 5; i++) W.step(DT); const st3 = gd.state, h3 = handCarry(gd);
   for (let i = 0; i < Math.ceil(WHISTLE.cooldown / DT); i++) W.step(DT);
   const tw0 = WHISTLE.twiceWindow; WHISTLE.twiceWindow = 1;   // (a FRESH whistle to him: outside the twice window — shrunk for the two frames rather than seventy seconds stepped)
-  pressV(W); W.step(DT); WHISTLE.twiceWindow = tw0; const h4 = handCarry(gd), st4 = gd.state;
+  audible(game, () => pressV(W)); W.step(DT); WHISTLE.twiceWindow = tw0; const h4 = handCarry(gd), st4 = gd.state;
   gd.awareness = 1; W.step(DT); const st5 = gd.state; gd.awareness = 0.4; gd.state = 'suspicious'; W.step(DT); const h6 = handCarry(gd);
   const f: string[] = [];
   if (h0 !== 'torch' || h1 !== 'torch') f.push(`answering: carries ${h0} then ${h1} (want torch, torch)`);

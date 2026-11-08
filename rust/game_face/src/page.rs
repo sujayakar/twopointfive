@@ -9,16 +9,23 @@
 //!   face_puppet(h, start)              the filtered export at face_out. `start` = 1: the long list and every row (after face_new_at, and it fills the
 //!                                      memo of what was last sent); 0: what changed since the last call. The out events ride on its tail, and the
 //!                                      game's list of them is emptied here: they are a step's output, read once.
-//!   face_probe_asks(h)                 THE LIGHT PROBE IS THE HOST'S (render/probe.ts: the GPU answers a frame or more later). What the tick asked of it
-//!                                      and the host has not yet taken, at face_out: u32 count, then for each its key (u32 length, utf-8), the point
-//!                                      (3 f64), whose own proxies are skipped (f64), a byte and the far end of a line (3 f64) where the byte is 1,
-//!                                      and its rank (f64). Nothing is taken: the host calls this after each step and holds its own table to it.
-//!                                      Then u32 count and the keys the tick still holds an ANSWER for: a key it forgot inside the tick (a sight
-//!                                      line picked up again starts from no answer: `sensors_forget`) is gone from the list, and the host lets its
-//!                                      own answer for it go, or it would hand the stale one straight back before the next step.
-//!   face_probe_took(h)                 the host's frame has sent the table to the GPU: it is empty again here, and whose turn it is on a full frame is
-//!                                      kept (`probe_like_take_asks`)
-//!   face_probe_results(h, p, n)        the answers the host holds now, before a step: u32 count, each a key and its three numbers
+//!   face_hand(h, seat, p, pn, keys, n) WHAT A PLAYER DID, for the next step: `HAND` numbers (`pn` bytes; src/draw/hand.ts says them in the same order) and his keys' codes as
+//!                                      text, those held and, after a line feed, those that went down. A seat nobody hands is as it last was, with
+//!                                      nothing pressed.
+//!   face_recover(h, newest) -> h | 0   a game lost to a panic stands again from the best kept of it, or from its run's first step (`face_recover_what(h)`: from what)
+//!   face_commands(h, p, n) -> 1 | 0    WHAT A PLAYER OR A PANEL DID THAT IS NOT INPUT, before a step: the typed list (game_run::command), done in its order.
+//!                                      0 = a number no command has (said at face_out)
+//!   face_draw(h, want) -> p            WHAT THE LAST TICK LEFT TO BE DRAWN (the crate game_draw): the sections of `want` made again from the game as it
+//!                                      stands, which is not written. `p` is a table of two words a section, its address and its rows; they lie here
+//!                                      until the next call. Once a tick.
+//!   face_frame(h, a, x, y, z) -> p     A FRAME IS DRAWN, `a` of the way from the tick before to the last (1 = where the last left everything), looking at
+//!                                      x y z: the rows that move stand there, and the table again
+//!   face_saves(h)                      this run's saves as a card lays them out, at face_out: the mission's clock (f64), the key of the one to go back to (text), how many,
+//!                                      then each: its key and label (text), 1 by hand and 2 regretted (u32), the clock it was made at and which came after which (f64)
+//!   face_knobs(h)                      every knob a person may turn, at face_out: its name's length (its top bit: a yes or no), the name, what it is turned to (f64)
+//!   face_draw_name(h, i)               a name that crosses by its number (a sound's), at face_out
+//!   face_draw_look(h, p, n)                 what the page says of its look (game_draw::LOOK numbers), once and when it changes
+//!   face_draw_layout() -> stamp        the stamp of the sections' declarations (and their text at face_out): a page whose offsets are of another is refused
 //!   face_poke(h, what, v) -> 1 | 0     a host's switch written between ticks, by number: 0 god mode · 1 the AI on · 2 infinite ammunition · 3 the
 //!                                      player unseen · 4 the launcher's held button let go unsent (the pause card: host/loop.ts). `v` != 0 = on.
 //!   face_mem() -> bytes                the module's memory now (a host holds its typed arrays to this: a memory that grew has detached them)
@@ -26,7 +33,7 @@
 //! A GAME KEPT (a checkpoint, the start a restart goes back to). The host's save controller (src/game/savestate.ts) decides when and under which label; what
 //! it keeps is the Rust game's own, held here and named by a number the controller's slot holds:
 //!   face_keep(h, how) -> k             how 0: THE GAME'S OWN VALUE (a clone of the whole `Game`, every field the bridge does not carry with it: a closure
-//!                                      in flight, the probe's table, the counters) and its block of rust/sim's. Nothing is lost by it, and it lives only
+//!                                      in flight, the counters) and its block of rust/sim's. Nothing is lost by it, and it lives only
 //!                                      as long as this module. how 1: THE BRIDGE'S BYTES (`io::export`) and the block: what a file holds.
 //!   face_keep_given(s, n, b, bn) -> k  a kept game from a file's two parts
 //!   face_kept_state(k) · face_kept_block(k)   at face_out: the bridge's bytes of kept `k` (a clone is exported now) · its block
@@ -58,9 +65,15 @@ use std::cell::RefCell;
 /// a game kept: its own value, or the bridge's bytes of it; and its block
 enum Kept { Own(Box<game::game::Game>, Vec<u8>), Bytes(Vec<u8>, Vec<u8>) }
 
+/// a game the save controller keeps: its number, which came after which, its label, and whether the floor came down straight after it
+#[derive(Clone)]
+struct Shelved { k: u32, at: f64, label: String, regret: bool }
+
 thread_local! {
     /// the games kept, by number less one
     static KEPT: RefCell<Vec<Option<Kept>>> = const { RefCell::new(Vec::new()) };
+    /// the games the save controller keeps, by the game they are of and its key: here and not with the game, so a game lost to a panic leaves them
+    static SHELF: RefCell<std::collections::BTreeMap<(u32, String), Shelved>> = const { RefCell::new(std::collections::BTreeMap::new()) };
 }
 fn block_len() -> usize { core::mem::size_of::<sim::state::State>() }
 fn block_of(slot: usize) -> Vec<u8> { unsafe { std::slice::from_raw_parts(sim::state::addr(slot) as *const u8, block_len()).to_vec() } }
@@ -72,7 +85,7 @@ fn keep(k: Kept) -> u32 {
 /// file's text, the address's words, the character's files). No state crosses: the level is read, the men are made and the mission is staged on
 /// this side, as the TypeScript start does them (rust/game_start/LEVELS.md holds the two to each other, mission by mission).
 /// `slot`: the slot of rust/sim to stand in, whose block is made anew; below 0 = a free one. `flags`: 1 = the rows that dress the picture are
-/// up (a page), 2 = the senses worked out by the game itself (a host with no GPU). Answers the game, or 0 where no slot is free.
+/// up (a page). Answers the game, or 0 where no slot is free.
 /// # Safety
 /// `p`, `n` name bytes the host wrote into memory from face_alloc.
 #[no_mangle]
@@ -80,9 +93,14 @@ pub unsafe extern "C" fn face_start(p: *const u8, n: usize, slot: i32, seed: u32
     super::hook();
     let slot = if slot < 0 { match super::free_slot() { Some(s) => s, None => return 0 } } else { slot as usize };
     if slot >= sim::state::GAMES { return 0; }
-    let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, cpu_senses: flags & 2 != 0, ..Default::default() };
-    let stood = game_start::handed::stand_handed(super::bytes(p, n), &o);
-    let h = super::put(super::Held { g: stood.game, cmd: None, cmds: None, after: Vec::new() });
+    let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, ..Default::default() };
+    let mut stood = game_start::handed::stand_handed(super::bytes(p, n), &o, &mut |g, b| if let Err(why) = game_run::command::apply(g, b) { panic!("face_start: {why}") });
+    // (a host that draws has a particle pool, and keeps the lights' reach: the tick asks only whether they are there)
+    if o.dress {
+        stood.game.engine.particles = Some(game::render_particles::Particles { collide: true, spark_bounce: true, ..game::render_particles::Particles::blank() });
+        stood.game.engine.reach = Some(game::render_reach_keep::ReachKeep::blank());
+    }
+    let h = super::put(super::Held::new(stood.game));
     crate::memo::forget(h);
     h
 }
@@ -98,7 +116,7 @@ pub unsafe extern "C" fn face_new_at(state: *const u8, n: usize, slot: usize) ->
     let block = std::slice::from_raw_parts(sim::state::addr(slot) as *const u8, len).to_vec();
     let (g, said) = game_run::start(super::bytes(state, n), &block, slot);
     super::out(said.join("\n").into_bytes());
-    let h = super::put(super::Held { g, cmd: None, cmds: None, after: Vec::new() });
+    let h = super::put(super::Held::new(g));
     crate::memo::forget(h);
     h
 }
@@ -108,48 +126,103 @@ pub extern "C" fn face_mem() -> usize {
     core::arch::wasm32::memory_size(0) * 65536
 }
 
+/// the numbers of a hand: buttons clicked wheel, cursor x y, the view's size in CSS pixels and in its own, the view-projection and its inverse, the eye, where it
+/// looks, the look-at, yaw pitch distance, field of view, aspect, how far it leads the aim, and the distance it is on its way to
+const HAND: usize = 57;
+/// # Safety
+/// `p`, `pn` and `keys`, `n` name bytes the host wrote into memory from face_alloc.
 #[no_mangle]
-pub extern "C" fn face_probe_asks(h: u32) {
-    let b = super::with(h, |x| {
-        let mut o: Vec<u8> = Vec::new();
-        o.extend_from_slice(&(x.g.probe.pending.len() as u32).to_le_bytes());
-        for a in x.g.probe.pending.iter() {
-            o.extend_from_slice(&(a.key.len() as u32).to_le_bytes());
-            o.extend_from_slice(a.key.as_bytes());
-            for v in a.pos.iter() { o.extend_from_slice(&v.to_le_bytes()); }
-            o.extend_from_slice(&a.skip_owner.to_le_bytes());
-            match a.b.as_ref() { None => o.push(0), Some(b) => { o.push(1); for v in b.iter() { o.extend_from_slice(&v.to_le_bytes()); } } }
-            o.extend_from_slice(&a.rank.to_le_bytes());
+pub unsafe extern "C" fn face_hand(h: u32, seat: usize, p: *const f64, pn: usize, keys: *const u8, n: usize) {
+    use game::cmd::{PlayerCmd, PlayerCmdView};
+    if pn != HAND * 8 { panic!("face_hand: {} bytes, and a hand is {} numbers", pn, HAND); }
+    let v = std::slice::from_raw_parts(p, HAND);
+    let text = super::text(keys, n);
+    let mut lines = text.split('\n');
+    let mut codes = || lines.next().unwrap_or("").split(' ').filter(|k| !k.is_empty()).map(String::from).collect::<Vec<String>>();
+    let three = |i: usize| [v[i], v[i + 1], v[i + 2]];
+    let cmd = PlayerCmd {
+        keys: codes(), pressed: codes(), buttons: v[0], clicked: v[1], wheel: v[2], mx: v[3], my: v[4], w: v[5], h: v[6], pw: v[7], ph: v[8],
+        view: PlayerCmdView { vp: v[9..25].to_vec(), ivp: v[25..41].to_vec(), pos: three(41), forward: three(44), target: three(47), yaw: v[50], pitch: v[51], distance: v[52], fov: v[53], aspect: v[54], aim_lead: v[55] },
+    };
+    super::with(h, |x| {
+        // (the host's own camera, as the hand has it: what a rule asks of the host's view, and where one writes to it)
+        if let (true, Some(c)) = (x.g.seats[seat] == game::game::game_host_seat(&x.g), x.g.host_cam) {
+            x.drawn.desired = v[56];
+            // (where the view looks: what is gathered round it, gusts and embers, follows it and not the man)
+            x.g.engine.view_focus = Some(cmd.view.target);
+            let (c, v) = (&mut x.g.tab.camera[c], &cmd.view);
+            (c.target, c.pos, c.forward) = (v.target, v.pos, v.forward);
+            (c.yaw, c.pitch, c.distance, c.desired_distance, c.fov, c.aspect) = (v.yaw, v.pitch, v.distance, x.drawn.desired, v.fov, v.aspect);
         }
-        // (…and the keys the tick still holds an answer for: one it forgot inside the tick, `sensors_forget`, is not among them)
-        let keys = x.g.probe.results.keys();
-        o.extend_from_slice(&(keys.len() as u32).to_le_bytes());
-        for k in keys.iter() { o.extend_from_slice(&(k.len() as u32).to_le_bytes()); o.extend_from_slice(k.as_bytes()); }
-        o
+        let still = |s: game::ids::SeatId| { let c = x.g.tab.cmd_seat[s].cmd.as_ref().unwrap_or(&cmd); PlayerCmd { keys: Vec::new(), pressed: Vec::new(), buttons: 0.0, clicked: 0.0, wheel: 0.0, ..c.clone() } };
+        let mut cmds = x.cmds.take().unwrap_or_else(|| x.g.seats.iter().map(|&s| still(s)).collect());
+        cmds[seat] = cmd;
+        x.cmds = Some(cmds);
+    });
+}
+#[no_mangle]
+pub extern "C" fn face_draw(h: u32, want: u32) -> *const u32 {
+    super::with(h, |x| { x.drawn.take(&x.g, want); x.drawn.table().as_ptr() })
+}
+#[no_mangle]
+pub extern "C" fn face_frame(h: u32, a: f64, x: f64, y: f64, z: f64) -> *const u32 {
+    super::with(h, |k| { k.drawn.frame(&k.g, a, [x, y, z]); k.drawn.table().as_ptr() })
+}
+/// # Safety
+/// `p` names `n` numbers the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_draw_look(h: u32, p: *const f64, n: usize) {
+    if n != game_draw::LOOK { panic!("face_draw_look: {} numbers, and a look is {}", n, game_draw::LOOK); }
+    let v = std::slice::from_raw_parts(p, n);
+    super::with(h, |k| k.drawn.look(v));
+}
+#[no_mangle]
+pub extern "C" fn face_saves(h: u32) {
+    let b = super::with_ref(h, |x| {
+        let g = &x.g;
+        let mut b = Vec::new();
+        let text = |b: &mut Vec<u8>, s: &str| { b.extend_from_slice(&(s.len() as u32).to_le_bytes()); b.extend_from_slice(s.as_bytes()); };
+        b.extend_from_slice(&g.mission.stats.elapsed.to_le_bytes());
+        let offer = game::savestate::checkpoints_newest(g, Some(true), Some(g.mission.stats.elapsed)).filter(|i| game::savestate::checkpoints_is_this_run(g, i));
+        text(&mut b, offer.as_ref().map_or("", |i| i.key.as_str()));
+        let rows = game::savestate::control::timeline(g);
+        b.extend_from_slice(&(rows.len() as u32).to_le_bytes());
+        for r in rows {
+            text(&mut b, &r.key);
+            text(&mut b, &r.label);
+            b.extend_from_slice(&((r.slot == game::savestate::SlotInfoSlot::Manual) as u32 | (r.regret.is_some() as u32) << 1).to_le_bytes());
+            b.extend_from_slice(&r.mission_t.to_le_bytes());
+            b.extend_from_slice(&r.saved_at.to_le_bytes());
+        }
+        b
     });
     super::out(b);
 }
-
 #[no_mangle]
-pub extern "C" fn face_probe_took(h: u32) {
-    super::with(h, |x| { let _ = game::sensors::probe_like_take_asks(&mut x.g); });
-}
-
-/// # Safety
-/// `p`, `n` name bytes the host wrote into memory from face_alloc.
-#[no_mangle]
-pub unsafe extern "C" fn face_probe_results(h: u32, p: *const u8, n: usize) {
-    let b = super::bytes(p, n);
-    let u32_at = |at: usize| u32::from_le_bytes([b[at], b[at + 1], b[at + 2], b[at + 3]]) as usize;
-    let f64_at = |at: usize| f64::from_le_bytes([b[at], b[at + 1], b[at + 2], b[at + 3], b[at + 4], b[at + 5], b[at + 6], b[at + 7]]);
-    super::with(h, |x| {
-        let mut at = 4;
-        for _ in 0..u32_at(0) {
-            let len = u32_at(at); at += 4;
-            let key = String::from_utf8_lossy(&b[at..at + len]).into_owned(); at += len;
-            x.g.probe.results.set(key, [f64_at(at), f64_at(at + 8), f64_at(at + 16)]); at += 24;
+pub extern "C" fn face_knobs(h: u32) {
+    let b = super::with(h, |x| {
+        let mut b = Vec::new();
+        for (name, yes, v) in game_run::knobs::all(&x.g) {
+            b.extend_from_slice(&(name.len() as u32 | (yes as u32) << 31).to_le_bytes());
+            b.extend_from_slice(name.as_bytes());
+            b.extend_from_slice(&v.to_le_bytes());
         }
+        b
     });
+    super::out(b);
+}
+#[no_mangle]
+pub extern "C" fn face_draw_name(h: u32, i: usize) {
+    let b = super::with(h, |k| k.drawn.events.names.get(i).cloned().unwrap_or_default());
+    super::out(b.into_bytes());
+}
+#[no_mangle]
+pub extern "C" fn face_draw_layout() -> u32 {
+    let t = game_draw::layout();
+    let mut s = 0x811c_9dc5u32;
+    for b in t.bytes() { s = (s ^ b as u32).wrapping_mul(0x0100_0193); }
+    super::out(t.into_bytes());
+    s
 }
 #[no_mangle]
 pub extern "C" fn face_poke(h: u32, what: u32, v: f64) -> u32 {
@@ -171,7 +244,9 @@ pub extern "C" fn face_poke(h: u32, what: u32, v: f64) -> u32 {
 pub extern "C" fn face_keep(h: u32, how: u32) -> u32 {
     let k = super::with(h, |x| {
         let block = block_of(x.g.sim);
-        if how == 0 { let mut g = x.g.clone(); g.out.clear(); Kept::Own(g, block) } else { Kept::Bytes(game::io::export(&x.g), block) }
+        // (either way a kept game has no recap: a load is a run in which that death has not happened)
+        let mut g = x.g.clone(); g.out.clear(); game::deathrecap::recap_left_behind(&mut g);
+        if how == 0 { Kept::Own(g, block) } else { Kept::Bytes(game::io::export(&g), block) }
     });
     keep(k)
 }
@@ -194,34 +269,134 @@ pub extern "C" fn face_kept_block(k: u32) {
 }
 #[no_mangle]
 pub extern "C" fn face_kept_drop(k: u32) {
-    KEPT.with(|v| if let Some(x) = v.borrow_mut().get_mut((k as usize).wrapping_sub(1)) { *x = None; });
+    drop_kept(k);
 }
 #[no_mangle]
 pub extern "C" fn face_kept_n() -> usize {
     KEPT.with(|v| v.borrow().iter().flatten().count())
 }
-#[no_mangle]
-pub extern "C" fn face_back(h: u32, k: u32) -> u32 {
-    let (slot, serial_next) = super::with(h, |x| (x.g.sim, x.g.serial_next));
-    let made: Option<Box<game::game::Game>> = KEPT.with(|v| match v.borrow().get((k as usize).wrapping_sub(1)).and_then(|x| x.as_ref()) {
+/// kept `k` again, in `slot`
+fn again(k: u32, slot: usize) -> Option<Box<game::game::Game>> {
+    KEPT.with(|v| match v.borrow().get((k as usize).wrapping_sub(1)).and_then(|x| x.as_ref()) {
         Some(Kept::Own(g, block)) => {
-            unsafe { core::ptr::copy_nonoverlapping(block.as_ptr(), sim::state::addr(slot) as *mut u8, block.len().min(block_len())); }
+            sim::state::put(slot, block);
             let mut g = g.clone();
             game::io::set_slot(&mut g, slot);
-            // (the box world's copy in rust/sim stands outside the block and is the abandoned moment's: written whole again as the next tick opens, as the
-            //  TypeScript's is after a snapshot is put back: boxMirror.ts `putBacks`)
+            // (the box world's copy in rust/sim stands outside the block and is the abandoned moment's: written whole again, below)
             g.col.mirror.put_backs = -1.0;
             Some(g)
         }
         Some(Kept::Bytes(state, block)) => Some(game_run::start(state, block, slot).0),
         None => None,
-    });
-    let Some(mut g) = made else { return 0 };
+    })
+}
+/// the game held is kept `k` again; false = there is no such game
+fn back(x: &mut super::Held, k: u32) -> bool {
+    let Some(mut g) = again(k, x.g.sim) else { return false };
     // (the serial counter never goes back in a game: what was dealt after the save is still held on the host's side, and a number means one thing)
-    g.serial_next = g.serial_next.max(serial_next);
-    super::with(h, |x| { x.g = g; x.cmd = None; x.cmds = None; x.after.clear(); });
+    g.serial_next = g.serial_next.max(x.g.serial_next);
+    // (…and the box world's copy with it: it stands again, of this moment, before anybody asks)
+    game::scene_collision::unstand(&mut g);
+    game::scene_collision::stands(&mut g);
+    x.g = g;
+    x.cmd = None;
+    x.cmds = None;
+    x.after.clear();
+    x.drawn.cut();
+    true
+}
+#[no_mangle]
+pub extern "C" fn face_back(h: u32, k: u32) -> u32 {
+    if !super::with(h, |x| back(x, k)) { return 0; }
     crate::memo::forget(h);
     1
+}
+
+/// AFTER A STEP, for a host that keeps games: what the step asked of the save controller, and the controller's own turn (game::savestate::control). A game is
+/// kept as its own value; one put back is whole again here, and nothing is drawn through it.
+pub fn saves(h: u32, x: &mut super::Held, dt: f64) {
+    use game::out_events::OutEvent as E;
+    use game::savestate::control::{self, Do};
+    let asked: Vec<E> = x.g.out.iter().filter(|e| matches!(e, E::CheckpointsKeep(_) | E::CheckpointsRequest(_))).cloned().collect();
+    for e in asked { match e { E::CheckpointsKeep(e) => control::keep(&mut x.g, &e.label), E::CheckpointsRequest(e) => control::request(&mut x.g, &e.why, &e.label), _ => {} } }
+    if core::mem::replace(&mut x.g.restart_cut, false) { x.drawn.cut(); }
+    match control::tick(&mut x.g, dt) {
+        Some(Do::Keep { key, label }) => {
+            game_run::checkpoint(&mut x.g, &label);
+            let mut g = x.g.clone();
+            g.out.clear();
+            let k = keep(Kept::Own(g, block_of(x.g.sim)));
+            shelve(h, key, Shelved { k, at: x.g.saves.shelf.m.values().map(|e| e.info.saved_at).fold(0.0, f64::max), label, regret: false });
+        }
+        Some(Do::Back { key }) => {
+            let was = control::abandoned(&x.g);
+            let kept = SHELF.with(|s| s.borrow().get(&(h, key.clone())).map(|e| e.k));
+            if kept.is_some_and(|k| back(x, k)) { control::put_back(&mut x.g, &key, was); crate::memo::forget(h); } else { control::gone(&mut x.g, &key); }
+        }
+        None => {}
+    }
+    // (a run's saves go with the run; its first step is kept, for a game that is lost before anything else is)
+    shelf_off(h, |key| key != START && !x.g.saves.shelf.m.has(String::from(key)));
+    let run = x.g.mission.serial;
+    if SHELF.with(|s| s.borrow().get(&(h, String::from(START))).map(|e| e.at)) != Some(run as f64) {
+        let mut g = x.g.clone();
+        g.out.clear();
+        let k = keep(Kept::Own(g, block_of(x.g.sim)));
+        shelve(h, String::from(START), Shelved { k, at: run as f64, label: String::new(), regret: false });
+    }
+    SHELF.with(|s| for ((of, key), e) in s.borrow_mut().iter_mut() { if *of == h && !e.regret { if let Some(m) = x.g.saves.shelf.m.get(key.clone()) { e.regret = m.info.regret.is_some(); } } });
+}
+fn shelve(h: u32, key: String, e: Shelved) { if let Some(old) = SHELF.with(|s| s.borrow_mut().insert((h, key), e)) { drop_kept(old.k); } }
+/// the key of a run's first step
+const START: &str = "start";
+/// what is kept of game `h`, the best to go back to first: the newest save nothing came down after, the newest at all, and the run's first step last
+fn kept_of(h: u32) -> Vec<(String, Shelved)> {
+    let mut of: Vec<(String, Shelved)> = SHELF.with(|s| s.borrow().iter().filter(|((g, _), _)| *g == h).map(|((_, key), e)| (key.clone(), e.clone())).collect());
+    of.sort_by(|a, b| (a.0 == START).cmp(&(b.0 == START)).then(a.1.regret.cmp(&b.1.regret)).then(b.1.at.total_cmp(&a.1.at)));
+    of
+}
+/// what a game lost to a panic would stand again from: 0 nothing, 1 its run's first step, 2 a save (its label at face_out)
+#[no_mangle]
+pub extern "C" fn face_recover_what(h: u32) -> u32 {
+    match kept_of(h).first() { None => 0, Some((key, _)) if key == START => 1, Some((_, e)) => { super::out(e.label.clone().into_bytes()); 2 } }
+}
+/// A GAME LOST TO A PANIC STANDS AGAIN, from the best save of it (`newest` = 0: from its run's first step), under a new number; 0 = nothing of it is kept. What was
+/// kept of the lost game is the new one's.
+#[no_mangle]
+pub extern "C" fn face_recover(h: u32, newest: u32) -> u32 {
+    super::hook();
+    let of = kept_of(h);
+    let Some((key, e)) = of.iter().find(|(key, _)| newest != 0 || key == START).cloned() else { return 0 };
+    let Some(slot) = KEPT.with(|v| match v.borrow().get((e.k as usize).wrapping_sub(1)).and_then(|x| x.as_ref()) { Some(Kept::Own(g, _)) => Some(g.sim), _ => None }) else { return 0 };
+    // (a game that still stands under the lost number would share the slot: it is let go, and what is kept of it is not)
+    super::GAMES.with(|v| if let Some(x) = v.borrow_mut().get_mut((h as usize).wrapping_sub(1)) { *x = None; });
+    let n = face_stand(e.k, slot);
+    if n == 0 { return 0; }
+    SHELF.with(|s| { let mut s = s.borrow_mut(); for (key, _) in &of { if let Some(e) = s.remove(&(h, key.clone())) { s.insert((n, key.clone()), e); } } });
+    super::with(n, |x| {
+        // (the saves made after the one that stands are still kept: the shelf names them all)
+        for (key, e) in of.iter().filter(|(key, _)| key != START) {
+            let m = KEPT.with(|v| match v.borrow().get((e.k as usize).wrapping_sub(1)).and_then(|x| x.as_ref()) { Some(Kept::Own(g, _)) => g.saves.shelf.m.get(key.clone()).cloned(), _ => None });
+            if let Some(mut m) = m { if e.regret && m.info.regret.is_none() { m.info.regret = Some(String::from("the floor came down straight after")); } x.g.saves.shelf.m.set(key.clone(), m); }
+        }
+        if key != START { let was = game::savestate::control::abandoned(&x.g); game::savestate::control::put_back(&mut x.g, &key, was); }
+        x.drawn.cut();
+    });
+    super::out(e.label.into_bytes());
+    n
+}
+/// the games kept for game `h` that are let go
+pub fn shelf_off(h: u32, go: impl Fn(&str) -> bool) {
+    let gone: Vec<String> = SHELF.with(|s| s.borrow().keys().filter(|(g, key)| *g == h && go(key)).map(|(_, key)| key.clone()).collect());
+    for key in gone { if let Some(e) = SHELF.with(|s| s.borrow_mut().remove(&(h, key))) { drop_kept(e.k); } }
+}
+fn drop_kept(k: u32) { KEPT.with(|v| if let Some(x) = v.borrow_mut().get_mut((k as usize).wrapping_sub(1)) { *x = None; }) }
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_commands(h: u32, p: *const u8, n: usize) -> u32 {
+    let b = super::bytes(p, n);
+    match super::with(h, |x| game_run::command::apply(&mut x.g, b)) { Ok(()) => 1, Err(why) => { super::out(why.into_bytes()); 0 } }
 }
 
 thread_local! {
@@ -235,20 +410,10 @@ pub fn serial_seen(next: u32) { SERIAL_SEEN.with(|s| if next > s.get() { s.set(n
 pub extern "C" fn face_stand(k: u32, slot: usize) -> u32 {
     super::hook();
     if slot >= sim::state::GAMES { return 0; }
-    let made: Option<Box<game::game::Game>> = KEPT.with(|v| match v.borrow().get((k as usize).wrapping_sub(1)).and_then(|x| x.as_ref()) {
-        Some(Kept::Own(g, block)) => {
-            unsafe { core::ptr::copy_nonoverlapping(block.as_ptr(), sim::state::addr(slot) as *mut u8, block.len().min(block_len())); }
-            let mut g = g.clone();
-            game::io::set_slot(&mut g, slot);
-            g.col.mirror.put_backs = -1.0;
-            Some(g)
-        }
-        Some(Kept::Bytes(state, block)) => Some(game_run::start(state, block, slot).0),
-        None => None,
-    });
-    let Some(mut g) = made else { return 0 };
+    let Some(mut g) = again(k, slot) else { return 0 };
     g.serial_next = g.serial_next.max(SERIAL_SEEN.with(|s| s.get()));
-    let h = super::put(super::Held { g, cmd: None, cmds: None, after: Vec::new() });
+    game::scene_collision::unstand(&mut g);   // (whatever rows its copy says it wrote were another slot's, or another moment's)
+    let h = super::put(super::Held::new(g));
     crate::memo::forget(h);
     h
 }
@@ -295,7 +460,7 @@ pub unsafe extern "C" fn face_saves_in(h: u32, p: *const u8, n: usize) {
         let s = &mut x.g.saves;
         s.run_id = run;
         s.shelf.m.clear();
-        for info in list { s.shelf.m.set(info.key.clone(), MemSave { info, pic: None, take: 0.0 }); }
+        for info in list { s.shelf.m.set(info.key.clone(), MemSave { info, pic: None }); }
     });
 }
 #[no_mangle]
@@ -326,6 +491,7 @@ pub unsafe extern "C" fn face_loaded(h: u32, p: *const u8, n: usize, loads: f64,
         }
         g.pl[pl].setup = None;   // (slotsetup.ts: a gun's setup that was up at the save is not up after the load)
         game::orders::squad_orders_loaded(g);
+        game::sense::smoke_clear(g);   // (a save keeps no smoke in the air: the picture's own is cleared with it, and nobody is to be hidden by smoke that is not drawn)
         g.chronicle.counts.loads = loads;
         g.chronicle.counts.saves = saves;
         let _ = game::chronicle::chron_checkpoint(g, game::chronicle::ChronCheckpointWhat::Load, Some(&label));

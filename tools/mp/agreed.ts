@@ -21,8 +21,8 @@ for (const d of dirs) {
   for (let a = 0; a < runs.length; a++) for (let b = a + 1; b < runs.length; b++) for (const [t, wa] of runs[a].at) { const wb = runs[b].at.get(t); if (!wb) continue; ticks++;
     for (let i = 0; i < wa.length; i++) if (wa[i] !== wb[i]) { const k = names![i]; if (!off.has(k)) off.set(k, new Set()); off.get(k)!.add(d.split('/').filter(Boolean).pop()!); } }
 }
-const list = names!.filter(n => !off.has(n) && !leave.has(n));
-console.log(`agreed.ts: ${dirs.length} games, ${ticks} word ticks held pair by pair, ${names!.length} parts: ${list.length} agreed everywhere, ${off.size} differed somewhere${leave.size ? `, ${[...leave].filter(n => !off.has(n)).length} left out by name` : ''}`);
+const list = names!.filter(n => !off.has(n) && !leave.has(n) && !n.startsWith('block.'));   // (the alarm's own parts are the alarm's: step.ts netWhole)
+console.log(`agreed.ts: ${dirs.length} games, ${ticks} word ticks held pair by pair, ${names!.filter(n => !n.startsWith('block.')).length} parts: ${list.length} agreed everywhere, ${off.size} differed somewhere${leave.size ? `, ${[...leave].filter(n => !off.has(n)).length} left out by name` : ''}`);
 for (const [k, where] of off) console.log(`  differed: ${k} (${[...where].join(', ')})`);
 if (WRITE) { const p = `${ROOT}/src/net/agreed.ts`, s = readFileSync(p, 'utf8'), a = s.indexOf('// <list>'), b = s.indexOf('// </list>'); if (a < 0 || b < 0) { console.error('src/net/agreed.ts has lost its marks'); process.exit(2); }
   const rows: string[] = []; let row = ' '; for (const n of list) { const w = ` '${n}',`; if (row.length + w.length > 150) { rows.push(row); row = ' '; } row += w; } if (row.trim()) rows.push(row);

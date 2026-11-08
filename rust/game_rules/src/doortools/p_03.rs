@@ -428,7 +428,7 @@ pub fn door_tools_halt_back(g: &mut crate::game::Game, d: DoorId, side: f64, hal
     }
     let mut rest = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None);
     rest.retain(|m| !halted.contains(m));
-    let hold = door_tools_holders(g, d, side, &rest);
+    let hold = door_tools_holders(g, &crate::seats::here(g), d, side, &rest);
     let mut taken: Vec<V3> = match ch { Some(c) => g.tab.doortools_door_op[c].post.values().map(|p| p.pos).collect(), None => Vec::new() };
     for m in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
         let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), m);

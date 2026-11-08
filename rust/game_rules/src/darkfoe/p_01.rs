@@ -47,14 +47,9 @@ pub fn dark_foe_lit(g: &crate::game::Game, gd: GuardId) -> bool {
     g.m.darkfoe.state_of.get(gd).map_or(false, |s| s.lit) && carries_dark_lamp(g, gd) && dark_foe_ruled(g, gd)
 }
 
-/// A light filter that leaves out every carried lamp.   (darkfoe.ts placeOnly)
-pub fn place_only() -> bool {
-    true
-}
-
 /// The meter's reading of a point of floor: everything steady but the lights `skip` names.   (darkfoe.ts floorLight)
 pub fn floor_light(g: &mut crate::game::Game, x: f64, z: f64, skip: &mut dyn FnMut(&mut crate::game::Game, f64) -> bool) -> f64 {
-    let e = crate::guards::light_estimate_at(g, [x, 1.2, z], Some(skip), Some(true), None, None, None);
+    let e = crate::guards::light_estimate_at(g, [x, 1.2, z], Some(skip), Some(true), None);
     crate::game::game_visibility_of(g, e)
 }
 
@@ -142,7 +137,7 @@ pub fn lit_in_view(g: &mut crate::game::Game, p: V3) -> bool {
             let a = ((i as f64) + turn) * m::PI / 4.0;
             let qx = p[0] + m::sin(a) * r;
             let qz = p[2] + m::cos(a) * r;
-            if !crate::scene_collision::segment_blocked(g, eye, [qx, 1.5, qz], None, None, None) && floor_light(g, qx, qz, &mut |_: &mut Game, _: f64| place_only()) >= k.lit_at {
+            if !crate::scene_collision::segment_blocked(g, eye, [qx, 1.5, qz], None, None, None) && floor_light(g, qx, qz, &mut |_: &mut Game, _: f64| true) >= k.lit_at {
                 return true;
             }
         }
@@ -153,7 +148,7 @@ pub fn lit_in_view(g: &mut crate::game::Game, p: V3) -> bool {
 /// Floor a man can see from: the place's own light on it, or lit floor in plain view; `edge`: only the second.   (darkfoe.ts darkFoeSees)
 pub fn dark_foe_sees(g: &mut crate::game::Game, p: V3, edge: Option<bool>) -> bool {
     let edge = edge.unwrap_or(false);
-    let lit = floor_light(g, p[0], p[2], &mut |_: &mut Game, _: f64| place_only()) >= g.k.darkfoe.lit_at;
+    let lit = floor_light(g, p[0], p[2], &mut |_: &mut Game, _: f64| true) >= g.k.darkfoe.lit_at;
     if edge { !lit && lit_in_view(g, p) } else { lit || lit_in_view(g, p) }
 }
 
@@ -187,11 +182,6 @@ pub fn threat_of(g: &crate::game::Game, d: RoomfightDefId) -> V3 {
     }
 }
 
-/// His room is his fence: always, `roam` being off on the page.   (darkfoe.ts fenced)
-pub fn fenced(g: &crate::game::Game, gd: GuardId) -> bool {
-    true
-}
-
 /// A way of no more than `walkM` to a spot, never by a doorway of his room nor out of it.   (darkfoe.ts wayTo)
 pub fn way_to(g: &mut crate::game::Game, d: RoomfightDefId, q: V3) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
@@ -208,9 +198,8 @@ pub fn way_to(g: &mut crate::game::Game, d: RoomfightDefId, q: V3) -> bool {
         len += v3::dist_xz(w0, w);
         w0 = w;
         if let Some(room) = room {
-            if fenced(g, gd)
-                && ((!in_room(g, d, w) && v3::dist_xz(w, q) > 0.8)
-                    || g.tab.roomfight_room[room].entries.iter().any(|e| v3::dist_xz(w, e.at) < 0.9))
+            if (!in_room(g, d, w) && v3::dist_xz(w, q) > 0.8)
+                    || g.tab.roomfight_room[room].entries.iter().any(|e| v3::dist_xz(w, e.at) < 0.9)
             {
                 return false;
             }
@@ -232,7 +221,7 @@ fn free(g: &mut Game, d: RoomfightDefId, threat: V3, far: f64, p: V3) -> bool {
     {
         return false;
     }
-    if fenced(g, gd) && !in_room(g, d, p) { return false; }
+    if !in_room(g, d, p) { return false; }
     if crate::lanes::lane_known_at(g, gd, Some(p)) { return false; }
     if let Some(room) = g.tab.roomfight_def[d].room {
         if g.tab.roomfight_room[room].entries.iter().any(|e| v3::dist_xz(p, e.at) < 1.2) { return false; }
@@ -344,15 +333,14 @@ pub fn dark_foe_kept(g: &mut crate::game::Game, gd: GuardId, d: Option<Roomfight
         return Some(String::from("in a fight"));
     }
     if crate::digin::dig_in_phase(g, gd) != "idle" { return Some(String::from("dug in")); }
-    let own = crate::owner::own();
-    if crate::owner::has_him(g, gd, own.squad_word) { return Some(String::from("his squad's")); }
-    if crate::gunroles::gun_keeps_post(g, gd) || crate::owner::has_him(g, gd, own.lane) { return Some(String::from("holds a lane")); }
+    if crate::owner::has(g, gd, crate::owner::by::SQUAD_WORD) { return Some(String::from("his squad's")); }
+    if crate::gunroles::gun_keeps_post(g, gd) || crate::owner::has(g, gd, crate::owner::by::LANE) { return Some(String::from("holds a lane")); }
     let man = g.tab.roomfight_def[d].gd;
-    let hands = (js::to_i32(own.press) | js::to_i32(own.buddy)) as f64;
-    if crate::owner::has_him(g, man, hands) || crate::pressure::press_keeps_home(g, d, Some(false)) || crate::buddy::buddy_paired(g, d) {
+    let hands = crate::owner::by::PRESS | crate::owner::by::BUDDY;
+    if crate::owner::has(g, man, hands) || crate::pressure::press_keeps_home(g, d, Some(false)) || crate::buddy::buddy_paired(g, d) {
         return Some(String::from("the press's"));
     }
-    if crate::rescue::rescue_captor(g) == Some(gd) || crate::owner::has_him(g, gd, own.stand) {
+    if crate::rescue::rescue_captor(g) == Some(gd) || crate::owner::has(g, gd, crate::owner::by::STAND) {
         return Some(String::from("the captor / last stand"));
     }
     None

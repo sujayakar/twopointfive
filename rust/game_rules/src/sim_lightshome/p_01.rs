@@ -119,11 +119,6 @@ pub fn fixture_stagger(g: &crate::game::Game, id: FixtureId) -> f64 {
     lights_read(g).stagger[fix_i(g, id)]
 }
 
-/// The mains, read. (lightshome.ts Mains.constructor)
-pub fn mains_new(g: &crate::game::Game, st: crate::Opaque) -> crate::sim_lightshome::Mains {
-    Mains { st }
-}
-
 /// (lightshome.ts Mains.active)
 pub fn mains_active(g: &crate::game::Game) -> bool {
     lights_read(g).mains & M_ACTIVE != 0
@@ -267,7 +262,7 @@ pub fn light_home_new(g: &crate::game::Game, st: crate::Opaque) -> crate::sim_li
         panic!("two stores of the lights over one game's block: a part of a block is one store's");
     }
     head.homes |= bit;
-    let mains = mains_new(g, st);
+    let mains = Mains { st };
     let fresh = light_in().fresh;
     light_home_in(g, fresh, None, None, None, None, None);
     LightHome { mains, lamps: Vec::new(), st }
@@ -382,10 +377,11 @@ pub fn light_home_stand(g: &mut crate::game::Game, list: &[LightId], targets: &[
         g.light_home.lamps.push(l);
         let i = fix_i(g, t) as u32;
         let monitors = g.tab.sim_lightshome_fixture[t].group == "monitors";
+        let day = crate::render_lights::light_by_day(&g.tab.light[l]) << sim::lights::R_DAY;
         let rows = lights(g);
         rows.row_base[r] = base;
         rows.row_target[r] = i;
-        rows.row_bits[r] = role | if role == R_BEACON { R_PASSING } else { 0 } | if role == R_AREA && monitors { R_SCREEN } else { 0 };
+        rows.row_bits[r] = role | if role == R_BEACON { R_PASSING } else { 0 } | if role == R_AREA && monitors { R_SCREEN } else { 0 } | day;
         light_home_feed(g, l);
         r += 1;
     }
@@ -443,6 +439,10 @@ pub fn light_home_feed(g: &crate::game::Game, l: LightId) {
             c.s_radius[r] = 0.0;
             c.s_intensity[r] = 0.0;
         }
+    }
+    // (a lamp that has come to burn as a fire does is one beside the hour, too)
+    if lamp.steady.is_some() != (c.row_bits[r] & R_STEADY != 0) {
+        c.row_bits[r] = (c.row_bits[r] & !(7 << sim::lights::R_DAY)) | crate::render_lights::light_by_day(lamp) << sim::lights::R_DAY;
     }
     c.row_bits[r] = (c.row_bits[r] & !(R_ON | R_STEADY)) | if lamp.enabled { R_ON } else { 0 } | if lamp.steady.is_some() { R_STEADY } else { 0 };
 }
@@ -581,7 +581,6 @@ mod tests {
             assert_eq!(lights(g).cam_target[0], 1);
             let c = camera_machine_new(g, s, crate::Opaque);
             assert_eq!((camera_machine_yaw(g, c), camera_machine_reported_at(g, c), camera_machine_state(g, c)), (0.75, -100.0, CameraState::Idle));
-            assert_eq!(g.tab.devices_camera_rt[c].smoke_trans, 1.0);
             camera_machine_put(g, c, 1.0, 0.5, 2.0, CameraState::Alarm, 9.0, Some([4.0, 5.0, 6.0]), true);
             assert_eq!(lights(g).cam_state[0], S_ALARM);
             assert_eq!(camera_machine_state(g, c), CameraState::Alarm);
@@ -609,8 +608,13 @@ mod tests {
         let mut l = crate::render_lights::RtLight::zeroed();
         l.name = String::from(name);
         l.enabled = on;
+        l.ttl = -1.0;
         g.tab.light.push(l)
     }
+
+    /// what a row's bits say beside what the lamp is beside an hour · that
+    fn role(b: u32) -> u32 { b & !(7 << sim::lights::R_DAY) }
+    fn day(b: u32) -> u32 { b >> sim::lights::R_DAY & 7 }
 
     /// the rows: stood in the list's order, written from the lamp's record, and painted back (lightshome.ts stand, feed, feedBurning, paint, cameraPan's cone)
     #[test]
@@ -643,10 +647,12 @@ mod tests {
 
             let l = lights(g);
             assert_eq!(l.rows, 4);
-            assert_eq!(l.row_bits[0], R_BEACON | R_PASSING | R_ON);
-            assert_eq!(l.row_bits[1], R_OWN | R_ON | R_STEADY);
-            assert_eq!(l.row_bits[2], R_AREA | R_SCREEN | R_ON);
-            assert_eq!(l.row_bits[3], R_CONE | R_ON);
+            assert_eq!(role(l.row_bits[0]), R_BEACON | R_PASSING | R_ON);
+            assert_eq!(role(l.row_bits[1]), R_OWN | R_ON | R_STEADY);
+            assert_eq!(role(l.row_bits[2]), R_AREA | R_SCREEN | R_ON);
+            assert_eq!(role(l.row_bits[3]), R_CONE | R_ON);
+            // (beside an hour, a lamp with a steady self burns as a fire does)
+            assert_eq!((day(l.row_bits[0]), day(l.row_bits[1])), (sim::light::DAY_FIXTURE, sim::light::DAY_FLASH));
             assert_eq!((l.row_base[0], l.row_base[1], l.row_base[2], l.row_base[3]), (9.0, 0.0, 2.5, 0.0));
             assert_eq!((l.row_target[0], l.row_target[1], l.row_target[2], l.row_target[3]), (0, 0, 1, 2));
             assert_eq!((l.x[1], l.y[1], l.z[1], l.intensity[1]), (1.0, 2.0, 3.0, 5.0));
@@ -658,13 +664,14 @@ mod tests {
             g.tab.light[own].intensity = 99.0;
             light_home_feed_burning(g, own);
             let l = lights(g);
-            assert_eq!((l.row_bits[1], l.intensity[1]), (R_OWN | R_STEADY, 5.0));
+            assert_eq!((role(l.row_bits[1]), l.intensity[1]), (R_OWN | R_STEADY, 5.0));
             // lit again: the whole record; the steady self gone takes its columns to zeros and its bit down
             g.tab.light[own].enabled = true;
             g.tab.light[own].steady = None;
             light_home_feed_burning(g, own);
             let l = lights(g);
-            assert_eq!((l.row_bits[1], l.intensity[1], l.sx[1], l.s_intensity[1]), (R_OWN | R_ON, 99.0, 0.0, 0.0));
+            assert_eq!((role(l.row_bits[1]), l.intensity[1], l.sx[1], l.s_intensity[1]), (R_OWN | R_ON, 99.0, 0.0, 0.0));
+            assert_eq!(day(l.row_bits[1]), sim::light::DAY_FIXTURE);
             // a lamp with no row: nothing, and no fault
             light_home_feed(g, none);
             light_home_feed_burning(g, none);

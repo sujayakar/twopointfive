@@ -1,5 +1,6 @@
 //! src/game/stackroom.ts lines 1 to 378
 use super::*;                      // your own module: its types, its other parts' functions
+use crate::ask::Over;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -180,7 +181,7 @@ fn floor_read(g: &mut Game, d: DoorId, side: f64) {
 }
 
 /// steps of walking from the doorway to `p` on that floor (−1: not on it)   (stackroom.ts stepsTo)
-pub fn steps_to(g: &mut crate::game::Game, f: &crate::stackroom::Floor, p: V3) -> f64 {
+pub fn steps_to(g: &mut crate::game::Game, over: &Over, f: &crate::stackroom::Floor, p: V3) -> f64 {
     let (nw, nh, cell) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let (x, z) = (m::floor(p[0] / cell), m::floor(p[2] / cell));
     if x < 0.0 || z < 0.0 || x >= nw || z >= nh { return -1.0; }
@@ -199,7 +200,7 @@ pub fn steps_to(g: &mut crate::game::Game, f: &crate::stackroom::Floor, p: V3) -
             let here = f.dist[c as usize] as f64;
             if here < 0.0 || (best >= 0.0 && here + 1.0 >= best) { continue; }
             let mid = centre(g, c);
-            if door_between(g, mid, p) || crate::scene_collision::solid_blocked(g, [mid[0], 0.45, mid[2]], [p[0], 0.45, p[2]], None) { continue; }
+            if door_between(g, mid, p) || crate::scene_collision::solid_blocked_over(g, over, [mid[0], 0.45, mid[2]], [p[0], 0.45, p[2]], None) { continue; }
             best = here + 1.0;
         }
     }
@@ -207,20 +208,24 @@ pub fn steps_to(g: &mut crate::game::Game, f: &crate::stackroom::Floor, p: V3) -
 }
 
 /// on the floor, and the walk there no way round a wall   (stackroom.ts onFloor)
-pub fn on_floor(g: &mut crate::game::Game, f: &crate::stackroom::Floor, p: V3) -> bool {
-    let s = steps_to(g, f, p);
+pub fn on_floor(g: &mut crate::game::Game, f: &crate::stackroom::Floor, p: V3) -> bool { on_floor_over(g, &Over::OWN, f, p) }
+/// …of the world as the question takes it
+pub fn on_floor_over(g: &mut Game, over: &Over, f: &crate::stackroom::Floor, p: V3) -> bool {
+    let s = steps_to(g, over, f, p);
     if !(s >= 0.0) { return false; }
     let mid = centre(g, f.seed);
     s * g.col.nav.cell <= g.k.stackroom.round_m + g.k.stackroom.round_k * flat(mid, p)
 }
 
 /// is `p` on the floor of that face of `d`: true for a face with no floor at all   (stackroom.ts stackRoomHas)
-pub fn stack_room_has(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3) -> bool {
+pub fn stack_room_has(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3) -> bool { stack_room_has_over(g, &Over::OWN, d, side, p) }
+/// …of the world as the question takes it (the floor itself is the book's, read of the level as it stands)
+pub fn stack_room_has_over(g: &mut Game, over: &Over, d: DoorId, side: f64, p: V3) -> bool {
     floor_read(g, d, side);
     // the face out of its row for the one question, not a copy of its W*H cells: on_floor never reads the book
     let at = if side > 0.0 { 0 } else { 1 };
     let f = g.m.stackroom.books.as_mut().unwrap().floors.get_mut(d).unwrap()[at].take();
-    let ok = match &f { Some(Some(f)) => on_floor(g, f, p), _ => true };
+    let ok = match &f { Some(Some(f)) => on_floor_over(g, over, f, p), _ => true };
     g.m.stackroom.books.as_mut().unwrap().floors.get_mut(d).unwrap()[at] = f;
     ok
 }
@@ -465,14 +470,14 @@ pub fn far_cells(g: &crate::game::Game, d: DoorId, side: f64) -> Vec<V3> {
 }
 
 /// the leaf stands open: off its hinges, or unlatched and swung   (stackroom.ts stackViewOpen)
-pub fn stack_view_open(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn stack_view_open(g: &crate::game::Game, d: DoorId) -> bool {
     if crate::doors::door_off(g, d) { return true; }
     if crate::doors::door_latched(g, d) { return false; }
     m::abs(crate::doors::door_angle(g, d)) >= g.k.stackroom.view_ajar
 }
 
 /// how far from the frame's centre a plain stack's mark on this door can be   (stackroom.ts stackViewReach)
-pub fn stack_view_reach(g: &mut crate::game::Game, d: DoorId) -> f64 {
+pub fn stack_view_reach(g: &crate::game::Game, d: DoorId) -> f64 {
     if stack_view_open(g, d) { m::max(2.6, g.dr[d].def.width / 2.0 + g.k.stackroom.view_past + 0.7) } else { 2.6 }
 }
 

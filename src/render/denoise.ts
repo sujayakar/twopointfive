@@ -23,9 +23,8 @@ export interface DenoiseKnobs {
    *  a change past shJump within ONE frame (a switch, a fluorescent's dropout stroke, a lightning stroke: measured against the luminance the pixel believes reaches it — ReSTIR's U.a — else the larger of the two) takes that class's value from the frame alone and carries its
    *  sample variance across the step (denoise.wgsl shTemporal 'jump'; 0 = off) */
   shMoveCap: number; shMoveThresh: number; shJump: number;
-  /** DIFFUSE GI: iterations, cap, clamp k, σ_l, fast-history cap (frames; 0 = clamp round the raw neighbourhood mean), firefly bound (incoming ≤ mean + z·σ of its 5×5; 0 = off);
-   *  GI in motion (docs/internal/gi-motion.md §D, both 0 = off): giClampCut = history length cut by how far the clamp dragged it, giYoungWiden = à-trous σ allowance on young texels */
-  giIters: number; giCap: number; giClampK: number; giSigmaL: number; giFast: number; giFirefly: number; giClampCut: number; giYoungWiden: number;
+  /** DIFFUSE GI: iterations, cap, clamp k, σ_l, fast-history cap (frames; 0 = clamp round the raw neighbourhood mean) */
+  giIters: number; giCap: number; giClampK: number; giSigmaL: number; giFast: number;
   /** SPECULAR: iterations, cap, clamp k, σ_l, roughness stand-in for the gather-res chain (0 mirror ‥ 1), virtual-hit share override (< 0 = from roughness), the reflection chain's roughness cutoff
    *  (its per-pixel mode: settings.rtMaxRough) and iterations (the reflection chain may run more than the gather-res one: presets) */
   spIters: number; spCap: number; spClampK: number; spSigmaL: number; spRough: number; spVirtual: number; spMaxRough: number; rfIters: number; rfCap: number;
@@ -34,7 +33,7 @@ export interface DenoiseKnobs {
 }
 export const defaultDenoiseKnobs = (): DenoiseKnobs => ({
   shIters: 3, shCap: 12, shClampK: 1.25, shSigmaL: 4, shPrior: true, shLitAlike: true, shOccl: true, shMoveCap: 3, shMoveThresh: 0.04, shJump: 0.5,
-  giIters: 4, giCap: 24, giClampK: 1.0, giSigmaL: 4, giFast: 3, giFirefly: 0, giClampCut: 0, giYoungWiden: 0,
+  giIters: 4, giCap: 24, giClampK: 1.0, giSigmaL: 4, giFast: 3,
   spIters: 1, spCap: 16, spClampK: 1.0, spSigmaL: 2, spRough: 0.08, spVirtual: -1, spMaxRough: 0.45, rfIters: 3, rfCap: 32,
   depthK: 0.004, normalPow: 12, motionVectors: true, ratioHi: 4,   // ratioHi = direct_common.wgsl RATIO_HI, which sharp direct clamps by (tools/qa/frame-layout.ts holds the two equal)
 });
@@ -62,8 +61,8 @@ export interface RadianceViews {
 
 export class Denoiser {
   knobs: DenoiseKnobs = defaultDenoiseKnobs();
-  private sent = [new Uint32Array(32), new Uint32Array(32)];   // what dnParams / dnParamsRefl hold (gpu/device.ts writeWordsIfChanged)
-  private params: GPUBuffer; private paramData = new ArrayBuffer(128); private pf = new Float32Array(this.paramData); private pu = new Uint32Array(this.paramData);   // struct DnParams in denoise.wgsl: seven vec4 + gi3 = 128 B
+  private sent = [new Uint32Array(28), new Uint32Array(28)];   // what dnParams / dnParamsRefl hold (gpu/device.ts writeWordsIfChanged)
+  private params: GPUBuffer; private paramData = new ArrayBuffer(112); private pf = new Float32Array(this.paramData); private pu = new Uint32Array(this.paramData);   // struct DnParams in denoise.wgsl: seven vec4 = 112 B
   /** the REFLECTION chain's copy of the parameters: the same block with its own divisor (flags.y = the reflection target's) and the per-pixel roughness mode up (sp2.w = the cutoff) */
   private paramsRefl: GPUBuffer;
   private nearSamp: GPUSampler;
@@ -112,15 +111,13 @@ export class Denoiser {
     await Promise.all(jobs);
   }
   private layPack: GPUPipelineLayout; private layShTemp: GPUPipelineLayout; private layGiTemp: GPUPipelineLayout; private laySpecTemp: GPUPipelineLayout;
-  private async buildFixed(mod: GPUShaderModule = this.mod): Promise<[GPUComputePipeline, GPUComputePipeline, GPUComputePipeline, GPUComputePipeline]> {
-    const d = this.device;
-    const four = await Promise.all([
+  private async buildFixed(): Promise<void> {
+    const d = this.device, mod = this.mod;
+    [this.pPack, this.pShTemp, this.pGiTemp, this.pSpecTemp] = await Promise.all([
       computePipelineAsync(d, { label: 'dnPack', layout: this.layPack, compute: { module: mod, entryPoint: 'shPack' } }),
       computePipelineAsync(d, { label: 'dnShTemporal', layout: this.layShTemp, compute: { module: mod, entryPoint: 'shTemporal' } }),
       computePipelineAsync(d, { label: 'dnGiTemporal', layout: this.layGiTemp, compute: { module: mod, entryPoint: 'giTemporal', constants: { SPEC: 0 } } }),
       computePipelineAsync(d, { label: 'dnSpecTemporal', layout: this.laySpecTemp, compute: { module: mod, entryPoint: 'specTemporal', constants: { SPEC: 1 } } }) ]);
-    if (mod === this.mod) [this.pPack, this.pShTemp, this.pGiTemp, this.pSpecTemp] = four;   // (a hot swap builds off its new module first and installs everything in one step itself)
-    return four;
   }
   /** the async twins of shAtrous / radAtrous for init(): the same descriptors into the same maps (a key already present, or in flight, is not made twice) */
   private pending = new Map<string, Promise<GPUComputePipeline>>();
@@ -135,18 +132,6 @@ export class Denoiser {
     let p = this.pending.get('R' + key);
     if (!p) { p = computePipelineAsync(this.device, { label: `dnRadAtrous${key}`, layout: this.layRadAtrous, compute: { module: this.mod, entryPoint: 'radAtrous', constants: { STRIDE: stride, FIRST: first ? 1 : 0, SPEC: spec ? 1 : 0 } } }).then(pl => { this.pRadAtrous.set(key, pl); this.pending.delete('R' + key); return pl; }); this.pending.set('R' + key, p); }
     return p;
-  }
-  /** Dev / measurement hook (main.ts __hotDenoise): rebuild every pipeline from `src` (a denoise.wgsl variant; the scene prelude is prepended) so an edited core can be A/B'd against a
-   *  staged scene without a reboot. Resolves to the compiler's messages; nothing is swapped if there is an error. */
-  async hotSwap(src: string): Promise<{ ok: boolean; messages: string[] }> {
-    const mod = this.device.createShaderModule({ code: scenePrelude() + src, label: 'denoise-hot' });
-    const info = await mod.getCompilationInfo();
-    const off = scenePrelude().split('\n').length - 1;
-    const messages = info.messages.map(m => `${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`);
-    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    const four = await this.buildFixed(mod);   // built off the NEW module first; then the swap is one synchronous step (no frame sees a mix, overlapping swaps end on the last to install)
-    this.mod = mod; this.pShAtrous.clear(); this.pRadAtrous.clear(); this.pending.clear(); [this.pPack, this.pShTemp, this.pGiTemp, this.pSpecTemp] = four;   // (the à-trous variants re-make themselves lazily off the new module, as before)
-    return { ok: true, messages };
   }
   private shAtrous(stride: number, final: boolean, first: boolean): GPUComputePipeline {
     const key = `${stride}/${final ? 1 : 0}/${first ? 1 : 0}`; let p = this.pShAtrous.get(key);
@@ -168,15 +153,14 @@ export class Denoiser {
     p[0] = k.shClampK; p[1] = Math.max(0, k.shCap); p[2] = k.shSigmaL; p[3] = Math.max(0.005, k.shMoveThresh);
     p[4] = k.depthK; p[5] = k.normalPow; p[6] = f.historyScale; p[7] = k.ratioHi;
     p[8] = k.giClampK; p[9] = Math.max(0, k.giCap); p[10] = k.giSigmaL; p[11] = Math.max(0, k.giFast);
-    p[12] = k.depthK * 2.5; p[13] = Math.max(1, k.normalPow * 0.66); p[14] = Math.max(0, k.giFirefly); p[15] = 0;   // (the gather grid's plane test spans gdiv× the ground per tap: looser, as giblur's was; normals a little softer)
+    p[12] = k.depthK * 2.5; p[13] = Math.max(1, k.normalPow * 0.66); p[14] = 0; p[15] = 0;   // (the gather grid's plane test spans gdiv× the ground per tap: looser, as giblur's was; normals a little softer)
     p[16] = k.spClampK; p[17] = Math.max(0, k.spCap); p[18] = k.spSigmaL; p[19] = Math.max(0, Math.min(1, k.spRough));
     p[20] = k.depthK * 2.5; p[21] = Math.max(1, k.normalPow * 0.66); p[22] = k.spVirtual; p[23] = 0;
     u[24] = (k.motionVectors ? 1 : 0) | (f.temporalFlag ? 2 : 0) | (k.shLitAlike ? 4 : 0) | (f.shadowTemporal ? 8 : 0) | (k.shPrior ? 16 : 0) | (f.cueUv ? 32 : 0) | (k.shOccl ? 64 : 0);   // (64: the shadow client's occluded-light reading, denoise.wgsl occlScale; 32: the U textures' alpha holds ReSTIR's believed-visible luminance — the yardstick the shadow client's light-jump is measured against)
     u[25] = f.gatherDiv; u[26] = Math.max(0, Math.min(31, Math.round(k.shMoveCap))); u[27] = Math.max(0, Math.round(k.shJump * 1000));   // (flags.z = the moving history length; flags.w = the shadow client's light-jump threshold ‰, 0 = off)
-    p[28] = Math.max(0, k.giClampCut); p[29] = Math.max(0, k.giYoungWiden); p[30] = 0; p[31] = 0;   // gi3 (GI in motion §D; 0 = off)
     writeWordsIfChanged(this.device, this.params, 0, u, this.sent[0]);   // (the two blocks hold knobs and divisors: the same words frame after frame until a knob, a preset or a size moves)
     // the reflection chain's copy: its own divisor, and the per-pixel roughness mode (sp2.w = the cutoff — texels rougher than it hold no term)
-    if (f.reflDiv > 0) { p[23] = Math.max(0.02, Math.min(1, k.spMaxRough)); u[25] = f.reflDiv; p[17] = Math.max(0, k.rfCap); const g3x = p[28], g3y = p[29]; p[28] = 0; p[29] = 0; writeWordsIfChanged(this.device, this.paramsRefl, 0, u, this.sent[1]); p[23] = 0; u[25] = f.gatherDiv; p[17] = Math.max(0, k.spCap); p[28] = g3x; p[29] = g3y; }   // (+ its own history cap: the roughest finishes keep rfCap frames, a polish ~6 — denoise.wgsl capEff; the diffuse-only gi3 knobs zeroed in this block like gi2.w — every read of them sits behind !SPEC, insurance all the same)
+    if (f.reflDiv > 0) { p[23] = Math.max(0.02, Math.min(1, k.spMaxRough)); u[25] = f.reflDiv; p[17] = Math.max(0, k.rfCap); writeWordsIfChanged(this.device, this.paramsRefl, 0, u, this.sent[1]); p[23] = 0; u[25] = f.gatherDiv; p[17] = Math.max(0, k.spCap);}   // (+ its own history cap: the roughest finishes keep rfCap frames, a polish ~6 — denoise.wgsl capEff)
   }
 
   private bg(key: string, layout: GPUBindGroupLayout, entries: GPUBindGroupEntry[], refl = false): GPUBindGroup {

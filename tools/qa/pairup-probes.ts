@@ -30,6 +30,7 @@
 // rules' off sides: pairup-identity whole (every line moved the rule rows), the 'rule off' / 'without it' / 'as it was' line of hunted, rejoin, word,
 // grip (two), hands (two), stay; the orders' own rule beside the one eye (three halves); the moon's rule-off halves, its roofed CONTROL (on against off,
 // no keeper) and its recording. STALKAMBIENT_BREAK=1 is a staging now: the partner's meter is not held at the moon's half — the moon lines must fail.
+import { doing, sneakWordOf } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
@@ -132,7 +133,7 @@ export async function rig(o: RigOpts = {}) {
       return false; },
     foe(h: any) { return { kind: 'foe', at: [h.char.pos[0], 0, h.char.pos[2]], foe: h }; },
     silent(): boolean { return SLM.squadSilent(game); },
-    status(): string { return O.statusOf(R.mate); },
+    status(): string { return doing(O.g, R.mate); },
     log(): string { return PM.PAIR_LOG.map((x: any) => `${f1(x.t)} ${x.what}`).join(' | '); },
     lines(re: RegExp): string[] { return said.filter(t => re.test(t)); },
     /** the meter's reading for a man LOW on a spot, as the sneak reads a step (the CPU's steady direct light at his chest and head) */
@@ -192,7 +193,7 @@ async function feetRun(o: { lit: boolean; spotted: boolean; samLow?: boolean }) 
   fallIn(R); const samLow = o.samLow ? crouchKey(R) : false;
   const rows: { f: number; what: string | null; spot: number[] | null; goal: number[] | null; speed: number; crouch: boolean; here: number[]; word: string | null; lit: number; trail: number }[] = [], trail: number[][] = [];
   R.post = () => { const sp = SPM.spottedOf(m), w = written(m), s = g.player.char.pos; trail.push([s[0], 0, s[2]]);
-    rows.push({ f: R.frames, what: sp?.what ?? null, spot: sp?.spot ? [...sp.spot] : null, ...w, here: [m.char.pos[0], 0, m.char.pos[2]], word: SNM.sneakWord(g, m), lit: m.visibility, trail: w.goal ? Math.min(...trail.map(t => flat(t, w.goal!))) : NaN }); };
+    rows.push({ f: R.frames, what: sp?.what ?? null, spot: sp?.spot ? [...sp.spot] : null, ...w, here: [m.char.pos[0], 0, m.char.pos[2]], word: sneakWordOf(g, m), lit: m.visibility, trail: w.goal ? Math.min(...trail.map(t => flat(t, w.goal!))) : NaN }); };
   // (lit: Sam stands a moment first. spotted.ts holds the partner still for `slipWait` after the man turned before it moves him off the line, and once Sam
   //  has walked on up the corridor every spot out of the man's line is in SAM's line to him: the slip has to be found while Sam still stands here)
   if (o.lit) R.step(Math.ceil(60 * (SPOTTED.slipWait + 0.6)));
@@ -284,84 +285,6 @@ export const pairupCaughtJob = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- one eye
-export const pairupOneEye = guarded(async () => {
-  const { verdict, done } = family('pairup-one-eye: the stalk judged by the sneak\'s read of a defender\'s eye — where it agrees with the orders\' own rule, and where it does not');
-  const len = (from: number[], path: number[][]) => { let l = 0, a = from; for (const b of path) { l += flat(a, b); a = b; } return l; };
-  // (a) the corridor: the man faces away at its dark east end, the way to his back is the lamp's pool — and a second man beyond him looks back along it
-  { const R = await rig({ up: true }); const g = R.game, m = R.mate, P = R.P, F = R.tango(1), W = R.tango(2); R.only(F, W);
-    R.pin(F, { at: [20.5, 0, 11], yaw: EAST }); R.pin(W, { at: [23, 0, 11], yaw: WEST }); g.teleportPlayer([6, 0, 11]); R.put(m, [7.5, 0, 10.8], EAST); R.step(60 * 8);   // (eight seconds: where each man MOSTLY looks is learnt)
-    const pool = Math.max(...[11, 12, 13, 14, 15, 16, 17].map(x => R.lit([x, 0, 11])));
-    const a = P.stalk(m, P.stage(F)), la = len(m.char.pos, a.path);
-    verdict(pool > SNEAK.litAt && a.exposed && a.by === W, 'a lit stretch a second defender looks along: exposed, and by him',
-      `the pool reads ${f2(pool)} (lit at ${SNEAK.litAt}) · one eye: ${a.exposed ? 'exposed' : 'clear'} by ${a.by?.callsign ?? 'nobody'}, the best way found ${f1(la)} m`);
-    R.turn(W, EAST); R.step(60 * 6); const b = P.stalk(m, P.stage(F)), lb = len(m.char.pos, b.path);
-    verdict(!b.exposed && lb < la, 'he turns round (six seconds: it is how he mostly looks now): the same way is clear, and straight',
-      `one eye: ${b.exposed ? `exposed by ${b.by?.callsign ?? 'nobody'}` : 'clear'}, ${f1(lb)} m (it was ${f1(la)} m, round by the aisle and exposed all the same)`); }
-  // (b) DARK floor in front of a defender, past the sneak's elbow and inside the orders' front
-  { const R = await rig({ up: true }); const g = R.game, m = R.mate, P = R.P, D = R.tango(2); R.only(D);
-    R.pin(D, { at: [17.8, 0, 11], yaw: EAST }); g.teleportPlayer([25, 0, 11]); R.put(m, [21.6, 0, 11], WEST); R.step(60 * 8);
-    if (flat(m.char.pos, [21.6, 0, 11]) > 0.05) { R.put(m, [21.6, 0, 11], WEST); R.step(2); }   // (the shipped stand: the team starts fallen in — START.fallIn — and he has walked to Sam's shoulder, onto lit floor: the line is about a man stood in the dark)
-    const to = [20.4, 0, 11], d = flat(to, D.char.pos), dark = Math.max(...[20.4, 20.8, 21.2, 21.6].map(x => R.lit([x, 0, 11])));
-    const one = P.stalk(m, to);
-    // … and what the defender's own eye makes of a body walked there: his state and meter are his own (only his feet and gaze are held)
-    const aw0 = D.awareness; let sum = 0, seenF = 0, peak = 0, maxLit = 0;
-    R.O.give('pairDark', R.O.targetAt(to), 'all');
-    R.post = () => { const see = GDM.canSeeChar(g, D, m.char, false); if (see.visible) { seenF++; sum += GDM.sightGainOn(g, D, m, see.dist) * DT; } peak = Math.max(peak, D.awareness); maxLit = Math.max(maxLit, m.visibility); };
-    R.step(60 * 6); R.post = null; const end = flat(m.char.pos, D.char.pos);
-    verdict(d > SNEAK.nearM && d < PAIR.frontM && dark < SNEAK.litAt && !one.exposed, `dark floor ${f1(d)} m in front of a defender: the one eye says clear`,
-      `${f1(d)} m from him (the sneak's elbow ${SNEAK.nearM} m, the orders' front ${PAIR.frontM} m), the floor reads ${f3(dark)} (lit at ${SNEAK.litAt}) · one eye: ${one.exposed ? 'exposed' : 'clear'}`);
-    verdict(end < PAIR.frontM && end > SNEAK.nearM && seenF > 200 && sum < SNEAK.budget && peak < 0.3 && D.state === 'patrol', 'and the eye bears the one eye out: the partner walked there and stood six seconds in his sight adds next to nothing to him',
-      `stood ${f2(end)} m in front of him, in his cone on ${seenF} of 360 frames, his own meter at most ${f3(maxLit)} · the eye's arithmetic (Σ sightGainOn·dt) adds ${f3(sum)} of awareness (the sneak's budget for a crossing: ${SNEAK.budget}) · his awareness ${f2(aw0)} → peak ${f3(peak)}, ${D.state}`); }
-  // (c) the plain cases
-  { const R = await rig({ up: true }); const g = R.game, m = R.mate, P = R.P, D = R.tango(1); R.only(D);
-    R.pin(D, { at: AISLE_MID, yaw: EAST }); g.teleportPlayer([11, 0, 18.5]); R.put(m, AISLE_W, EAST); R.step(60 * 8);
-    const b1 = P.stalk(m, P.stage(D));
-    const k0 = PUM.PAIRUP_STATS.waysKept ?? 0, b2 = P.stalk(m, P.stage(D)), kept = (PUM.PAIRUP_STATS.waysKept ?? 0) - k0;   // (asked again at once: the way he is on stands while it reads unseen)
-    R.turn(D, WEST); R.step(60 * 20); const to = [17, 0, 17.6], lit = R.lit(to), d = flat(to, D.char.pos);
-    const f1_ = P.stalk(m, to);
-    verdict(!b1.exposed && !b2.exposed && f1_.exposed && f1_.by === D && lit > PAIR.coneLit, 'a way wholly behind him is clear; lit floor five metres in front of his eyes is exposed',
-      `to his back: ${b1.exposed ? 'exposed' : 'clear'} (asked again: ${b2.exposed ? 'exposed' : 'clear'}, ways kept +${kept}) · to ${at(to)}, ${f1(d)} m in front of him, reading ${f2(lit)}: ${f1_.exposed ? `exposed by ${f1_.by?.callsign}` : 'clear'}`); }
-  // (d) THE MOON (SNEAK.stalkAmbient; STALKAMBIENT_BREAK=1 leaves his meter at the estimate where these lines hold it at the moon's half, and must fail): the estimate has no moon, so a yard
-  //     under it reads 0 while the partner's own meter — the picture's — reads half. His meter is held through the light seam (Game.lightAt, the harness's
-  //     table), so the defenders' eyes read him as the page would. The man watching the way is NOT the target. Staged on the open strip north of the
-  //     office (no roof: the excess is the sky's, all of it on every open step) — and once in the corridor, where a roofed step takes it as a crumb does.
-  { const BREAK = !!process.env.STALKAMBIENT_BREAK;
-    const EV = (g: any, v: number) => g.tune.visFloor * Math.exp(v / g.tune.visSlope);   // (a STEADY meter: what it reads this frame — Guard.irradiance — is what it has eased to; the rule takes the lower of the two, so a meter still falling from a brighter place is not a moon)
-    {
-      const stageIt = async (z = 1.5) => { const R = await rig({ up: true }); const g = R.game, m = R.mate, F = R.tango(1), D = R.tango(2); R.only(F, D);
-        R.pin(F, { at: [19.2, 0, z], yaw: WEST, state: 'patrol', aw: 0 }); R.pin(D, { at: [17.8, 0, z], yaw: EAST, state: 'patrol', aw: 0 }); g.teleportPlayer([25, 0, z]); R.put(m, [21.6, 0, z], WEST);
-        const id = m.char.id, la = g.lightAt, H = { v: null as number | null }, E = (v: number) => g.tune.visFloor * Math.exp(v / g.tune.visSlope);
-        g.lightAt = (k: string) => H.v !== null && (k === `unitC${id}` || k === `unitH${id}`) ? E(H.v) : la(k);
-        R.step(60 * 8); return { R, g, m, F, D, H }; };
-      const { R, g, m, F, D, H } = await stageIt(), P = R.P;
-      const spot = R.O.freeSpot(P.stage(F)) ?? P.stage(F), dSpot = flat(spot, D.char.pos), here = [m.char.pos[0], 0, m.char.pos[2]];
-      const dark = Math.max(...[0, 0.25, 0.5, 0.75, 1].map(k => R.lit([here[0] + (spot[0] - here[0]) * k, 0, here[2] + (spot[2] - here[2]) * k])));
-      const c = m.char, own = g.visibilityOf(Math.max(GDM.lightEstimateAt(g, c.bones.chest), GDM.lightEstimateAt(g, c.bones.head)));
-      const ask = (meter: number) => { m.visibility = meter; m.irradiance = EV(g, meter); (P as any).ways.delete(m); const w = P.stalk(m, spot); return { exposed: w.exposed as boolean, by: w.by ?? null, path: JSON.stringify(w.path.map((q: number[]) => [+q[0].toFixed(3), +q[2].toFixed(3)])) }; };
-      const eq = ask(own), onMoon = ask(BREAK ? own : 0.5);
-      const open = !g.weather.underRoof(here[0], here[2]) && !g.weather.underRoof(spot[0], spot[2]);
-      verdict(open && dark < SNEAK.litAt && dSpot > SNEAK.nearM && !eq.exposed && onMoon.exposed && onMoon.by === D && D !== F, 'the moon: his meter at 0.5 on open ground the estimate reads dark, in the cone of a man who is not the target — the way is exposed, and by him; his meter equal to the estimate, it is clear',
-        `the way to ${F.callsign}'s back ${at(spot)}, ${f1(dSpot)} m in front of ${D.callsign}, reads ${f3(dark)} (lit at ${SNEAK.litAt}), ${open ? 'no roof over it' : 'UNDER A ROOF'} · his meter 0.500 over an estimate of ${f3(own)} · his meter at the estimate: ${eq.exposed ? 'exposed' : 'clear'} · at 0.5${BREAK ? ' (NOT HELD: the break)' : ''}: ${onMoon.exposed ? `exposed by ${onMoon.by?.callsign ?? 'nobody'}` : 'clear'}`);
-      // … and on his feet: the order given with his meter held at 0.5 for as long as it runs — he holds where he stands, in words
-      const walk = async () => { const S = await stageIt(); S.H.v = BREAK ? null : 0.5; S.R.step(30); const p0 = [S.m.char.pos[0], 0, S.m.char.pos[2]];
-        const err = S.R.O.give('pairMark', S.R.foe(S.F), 'all'); let far = 0, lit = 1; S.R.post = () => { far = Math.max(far, flat(S.m.char.pos, p0)); lit = Math.min(lit, S.m.visibility); }; S.R.step(60 * 4); S.R.post = null;
-        return { err, far, lit, status: S.R.status() as string }; };
-      const on = await walk();
-      // … and THE METER'S OWN LAG IS NOT A MOON: he stands in a lamp pool until his meter has it, then is on the dark strip — for a fifth of a second his eased
-      //     meter is still the lamp's while what it reads this frame is the dark's. No step of the dark way takes that: the way reads as it does once the meter settles.
-      { const S = await stageIt(), g2 = S.g, m2 = S.m, nav = g2.col.nav, sp = S.R.O.freeSpot(S.R.P.stage(S.F)) ?? S.R.P.stage(S.F), dark0 = [m2.char.pos[0], 0, m2.char.pos[2]];
-        let lamp: number[] | null = null, best = 0; for (let x = 12; x <= 26; x += 0.5) for (const z of [10.5, 11, 11.5]) { if (nav.isBlocked(x, z)) continue; const v = S.R.lit([x, 0, z]); if (v > best) { best = v; lamp = [x, 0, z]; } }
-        const q = () => { (S.R.P as any).ways.delete(m2); const w = S.R.P.stalk(m2, sp); return w.exposed as boolean; };
-        let vLamp = 0, vLag = 0, now = 0, lag = false, settled = false;
-        const stand = (p: number[], frames: number) => { for (let i = 0; i < frames; i++) { S.R.put(m2, p, WEST); S.R.step(1); } S.R.put(m2, p, WEST); };   // (held on the spot: on the page's stand he would walk back to Sam)
-        if (lamp) { stand(lamp, 60 * 3); vLamp = m2.visibility; stand(dark0, 2); vLag = m2.visibility; now = g2.visibilityOf(m2.irradiance); lag = q(); stand(dark0, 60 * 3); settled = q(); }
-        verdict(!!lamp && vLamp > SNEAK.litAt + 0.1 && vLag > SNEAK.litAt + 0.06 && now < 0.03 && flat(m2.char.pos, dark0) < 0.5 && !lag && !settled, `CONTROL (STALKAMBIENT_BREAK does not touch it; it fails on the rule as it was before the lag was taken out) — out of a lamp pool onto dark floor: his meter still falling is not the light of the place — the dark way is not read exposed`,
-          `${lamp ? `the lamp pool ${at(lamp)} (the estimate ${f3(best)}): his meter there ${f3(vLamp)}` : 'NO LAMP POOL FOUND'} · two frames after he is on the dark strip ${at(dark0)}: his eased meter ${f3(vLag)}, what it reads this frame ${f3(now)} · the way to ${at(sp)}: ${lag ? 'EXPOSED' : 'clear'} · three seconds on: ${settled ? 'EXPOSED' : 'clear'}`); }
-      verdict(on.err === null && on.far < 0.3 && /waiting/.test(on.status) && on.lit > 0.4, 'the order given under that moon: he does not walk into the man\'s view (four seconds) — and says who is looking',
-        `moved ${f2(on.far)} m, his meter never under ${f2(on.lit)}, '${on.status}'${on.err ? ` · the order: ${on.err}` : ''}`);
-    } }
-  return done();
-});
 
 // ---------------------------------------------------------------- rejoin
 export const pairupRejoin = guarded(async () => {
@@ -388,7 +311,7 @@ async function waitRun(o: RigOpts) {
   const R = await rig(o); const g = R.game, m = R.mate, W = R.tango(2); R.only(W);
   R.pin(W, { at: [27, 0, 11], yaw: WEST, state: 'suspicious', aw: 0.4, eyesOn: null }); g.teleportPlayer([20.9, 0, 11]); R.put(m, [20.3, 0, 11], EAST); fallIn(R);
   const s0 = clone(SNM.SNEAK_STATS), modes = new Set<string>(), words = new Set<string>();
-  R.post = () => { modes.add(SPM.spottedMode(g, m)); const w = SNM.sneakWord(g, m); if (w) words.add(w); };
+  R.post = () => { modes.add(SPM.spottedMode(g, m)); const w = sneakWordOf(g, m); if (w) words.add(w); };
   R.walk([24.5, 0, 11], 1.0, 6); R.step(60 * 9); R.post = null;
   return { R, waits: SNM.SNEAK_STATS.waits - s0.waits, cues: SNM.SNEAK_STATS.cues - s0.cues, modes: [...modes], words: [...words], lines: mine(R) };
 }
@@ -403,7 +326,7 @@ export const pairupVoice = guarded(async () => {
 });
 export const pairupWord = guarded(async () => {
   const { verdict, done } = family('pairup-word: the squad line says why a following partner is not at Sam\'s shoulder');
-  const r = await waitRun({ up: true }), R = r.R, m = R.mate, word = SNM.sneakWord(R.game, m), gap = flat(m.char.pos, R.game.player.char.pos);
+  const r = await waitRun({ up: true }), R = r.R, m = R.mate, word = sneakWordOf(R.game, m), gap = flat(m.char.pos, R.game.player.char.pos);
   const withW = R.status();
   verdict(word === 'waiting on eyes' && withW.endsWith(` · ${word}`), 'waiting short of a watched stretch: the line carries the sneak\'s word', `${f1(gap)} m behind Sam · '${withW}'`);
   return done();
@@ -435,8 +358,8 @@ export const pairupGrip = guarded(async () => {
     R.O.give('pairMark', R.foe(T1), 'all'); const ready = R.until(() => !!R.P.jobOf(m)?.set, 30) && R.P.mark('api') && R.until(() => (R.P.jobOf(m)?.t0 ?? -1) >= 0, 5);
     let frames = 0, gripped = 0, seen = 0, cutAt = -1, after = 0, afterGrip = 0, afterSeen = 0;
     R.post = () => { if (T1.state === 'dead') return;
-      if (cutAt >= 0) { after++; if (PM.pairGripped(g, T1)) afterGrip++; if (GDM.bodySeen(g, T1, T2)) afterSeen++; return; }   // (the hands came off: he is no longer blind to it)
-      if (cut && frames >= 5) { cutAt = R.frames; killGuard(g, m, [1, 0, 0], false, 'shot', 'guard'); return; }
+      if (cutAt >= 0) { R.turn(T1, yawTo(T1.char.pos, T2.char.bones?.hips ?? T2.char.pos)); after++; if (PM.pairGripped(g, T1)) afterGrip++; if (GDM.bodySeen(g, T1, T2)) afterSeen++; return; }   // (the hands came off: he is no longer blind to it, and still turned to it)
+      if (cut && frames >= 25) { cutAt = R.frames; killGuard(g, m, [1, 0, 0], false, 'shot', 'guard'); return; }   // (25: his head, which follows his body in about 20 frames, has come round by then)
       R.turn(T1, yawTo(T1.char.pos, m.char.pos)); frames++; if (PM.pairGripped(g, T1)) gripped++; if (GDM.bodySeen(g, T1, T2)) seen++; };
     R.turn(T1, yawTo(T1.char.pos, m.char.pos)); const down = R.until(() => T1.state === 'dead', cut ? 1 : 5); R.post = null;
     return { ok: ready && (down || cut), down, before, frames, gripped, seen, after, afterGrip, afterSeen, dist: flat(T1.char.pos, T2.char.bones?.hips ?? T2.char.pos), kind: T2.state as string };
@@ -446,7 +369,7 @@ export const pairupGrip = guarded(async () => {
   verdict(c.ok && !c.before && c.frames > 20 && c.gripped === c.frames && c.seen === 0, 'PAIR.gripBody: turned round onto a colleague\'s body with the hands on him, he finds none (the line below has him find it the frame the hands are off)', wb(c));
   // (the grip is the JOB's: it holds while the partner's job on the man stands, at most PAIR.secs + 0.5 s from the hands going on — and ends with the job)
   const e = await body(true);
-  verdict(e.ok && !e.down && e.frames >= 5 && e.seen === 0 && e.after > 20 && e.afterGrip === 0 && e.afterSeen === e.after, 'the partner shot with his hands on the man: the hold on the body ends with the hands — from the next frame he has it', `hands on ${e.frames} frames (bodySeen on ${e.seen}), then the partner shot: ${e.after} frames on, gripped ${e.afterGrip}, bodySeen on ${e.afterSeen}`);
+  verdict(e.ok && !e.down && e.frames >= 25 && e.seen === 0 && e.after > 20 && e.afterGrip === 0 && e.afterSeen === e.after, 'the partner shot with his hands on the man: the hold on the body ends with the hands — from the next frame he has it', `hands on ${e.frames} frames (bodySeen on ${e.seen}), then the partner shot: ${e.after} frames on, gripped ${e.afterGrip}, bodySeen on ${e.afterSeen}`);
   return done();
 });
 
@@ -547,7 +470,7 @@ export const pairupClatter = guarded(async () => {
 });
 
 if (import.meta.main) {
-  const all: Record<string, () => Promise<boolean>> = { switch: pairupSwitch, feet: pairupFeet, hunted: pairupHunted, 'caught-job': pairupCaughtJob, 'one-eye': pairupOneEye, rejoin: pairupRejoin, voice: pairupVoice, word: pairupWord, grip: pairupGrip, hands: pairupHands, stay: pairupStay, clatter: pairupClatter };
+  const all: Record<string, () => Promise<boolean>> = { switch: pairupSwitch, feet: pairupFeet, hunted: pairupHunted, 'caught-job': pairupCaughtJob, rejoin: pairupRejoin, voice: pairupVoice, word: pairupWord, grip: pairupGrip, hands: pairupHands, stay: pairupStay, clatter: pairupClatter };
   const want = process.argv.slice(2).filter(a => !a.startsWith('--')); let ok = true;
   for (const k of want.length ? want : Object.keys(all)) { if (!all[k]) { console.log(`unknown: ${k} (${Object.keys(all).join(' ')})`); process.exit(2); } ok = (await all[k]()) && ok; }
   process.exit(ok ? 0 : 1);

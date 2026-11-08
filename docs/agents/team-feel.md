@@ -21,10 +21,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   follower keeps stepping aside for 1.5 s after Sam's measured pace last asked. Rows: Tab ▸ Sandbox ▸ Team feel (next bullet). QA: `probes.ts flashweight` (pace / flash / night / fog / lights /
   corners / entry — each in every start-card scenario; entry = `tools/qa/bang-tally.ts`, every door of every held room under open / bang / Sam's own can, `--json`
   `--md`, `trace <scn>:<door>:<arm>:<seed>`). The rescue-flow probes walk Sam at his WALK (1.55) since the team no longer jogs.
-- **Polish pass, 10-05 → (while the maintainer was away;** record rebuild/polish/log.md): `src/game/teamfeel.ts` = the feel rules above gathered for
-  ONE Tab section (Sandbox ▸ 'Team feel', `feelRows` in bindings.ts) and KEPT PER MACHINE (localStorage `twopointsix.teamfeel`, only the keys a row touched and
-  that differ from shipped; `KEPT` is the list with each row's range — a row whose key is not in it is refused; `loadTeamFeel()` in the Game constructor,
-  `resetTeamFeel`, `teamFeelSummary`; `probes.ts flashweight-feel`). The panel's slider labels are cut at ~19 characters and its switch labels at ~37: keep new
+- **Polish pass, 10-05 → (while the maintainer was away;** record rebuild/polish/log.md): the Team feel rows and their store, `src/game/teamfeel.ts`, went with the debugger's pages (2026-11-07). The panel's slider labels are cut at ~19 characters and its switch labels at ~37: keep new
   rows inside that and put the sentence in the `title`. New rules, each a row there, each scoped by `teamPaced` / `fightLive` (a scenario, never the night game):
   `PACE.turn` 8 rad/s (guards.ts `teamTurn`, used by squad.ts's runner: a scripted teammate's gun TRAVELS to a point an order or the cover gives it, round his
   front; a point his own eyes gave him — `GuardScript.over`, the room fight's — is NOT slowed; 0 = the snap) · `ORDERS.offDoor` 0.8 m (Sam stopped: no follower's
@@ -134,8 +131,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   whether he was on his killer, the beat he still owed, gun down for a friend, lights, blind — sort them by cause before guessing at a fix); exit 1 on an error or a stall. Runs are chaotic per seed: read 12 seeds × six scenarios at the least (72 runs, ~6 min at --jobs 4), 24 to call a default, and do not
   edit src/game or the runner under a running set — every run is a fresh bun that imports the tree as it is (measure from a `git worktree` snapshot and keep working).
 - **Calls taken, 10-06 (while the maintainer was away;** record rebuild/away-build/calls.md = one row per open call the earlier pages left him: the pick, why,
-  how to flip, checked or guessed — then the calls still his): every call TAKEN is a Team feel row (labelled `calls ▸ …` until 10-10; now named by what each does: `thr menu ▸ …`, `held door ▸ …`, `pair ▸ F is the word with a menu up`, `defenders ▸ rally ×`, `fog ▸ last seen s`) (own `Object.assign(KEPT.…)` lines under teamfeel.ts's
-  table, own `feelRows` blocks in bindings.ts) whose shipped value is the pick and whose other side is one flick away; `probes.ts calls` (tools/qa/calls-probes.ts on
+  how to flip, checked or guessed — then the calls still his): every call TAKEN is a Team feel row (labelled `calls ▸ …` until 10-10; now named by what each does: `thr menu ▸ …`, `held door ▸ …`, `pair ▸ F is the word with a menu up`, `defenders ▸ rally ×`, `fog ▸ last seen s`) whose shipped value is the pick and whose other side is one flick away; `probes.ts calls` (tools/qa/calls-probes.ts on
   thresholdmenu-probes.ts's rig) holds BOTH sides of each. The threshold's menu (doortools.ts `thrRows()`, re-dealt from `sync()` when `thrSigNow()` moves — the switches work
   live): `thrHoldFirst` true (hold = X, 5, 4, 1; false = the two forms trade keys) · `thrBangFirst` true (**the held page is `thrBang` 1 · `thrStep` 2 worded 'step in · no
   bang'** — the plain step in was the one clearly bad row to have under key 1; false = as built) · `thrOutsideRow` true · `thrLeaveFallIn` false ('leave it' = stay stacked;
@@ -162,7 +158,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   long with no round at him — glass, a jamb — says 'no shot — moving.', lets him go for `noShotPass` 4 s and walks on; the pass lifts the moment a round would
   reach, and `cue()` does not turn him back to that man meanwhile; nothing on the rescue as shipped, 15 → 23 of 24 once the lights are freed) · `RESCUE.holdHot` OFF
   (Tab ▸ Sandbox rescue rows; on, a flow cover man stays on a hot room past `hotHold` — measured: nothing gained with goggles on, ten more teammates lost with them
-  off, so it ships off). `playthrough.ts --set` now reaches `RESCUE` as well as the feel tables. A new KEPT row goes in teamfeel.ts's `Object.assign` lines under the
+  off, so it ships off). `playthrough.ts --set` now reaches `RESCUE` as well as the feel tables.
   table, not into the table's own lines (other parts merge against those).
 - **Dark on a lit man (10-06;** record rebuild/away-build/night-breach-hunt.md): `LIGHTS.litMan` ON, ONE Team feel switch for two halves (Tab ▸
   Sandbox ▸ Team feel ▸ 'light ▸ dark on a man who stands lit'; off = 1df2ad2 run for run). A teammate who stands in the DARK with his eyes on a man standing in
@@ -212,7 +208,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lampGlare, nvgSight)` with `tubeVis(g, E)` = post.wgsl's intensifier curve at the GAME'S OWN tube gain and exposure for the hour (`env.ts ENV.tubeGain`, `hours.ts exposureOf`: never the
   picture's `settings.nvGain` / `settings.exposure`, which a player's Brightness turns — `docs/agents/net.md`, "A player's Brightness is his picture's alone") read back onto the meter's 0‥1 (E 0.03 = bare 0,
   tube 0.59; E 0 = 0 — a tube amplifies) — cone, range, smoke, motion untouched; hostiles never have it. Drawn by combat.ts handProps (`nvgWorn` / `nvgDown` →
-  rigProps `gogglesBoxes`; a downed teammate keeps his). Rows: Tab ▸ Sandbox ▸ Team feel ▸ 'night vision ▸ …' / 'nv ▸ …' (teamfeel.ts `KEPT.NVG`) + `nvgSummary`.
+  rigProps `gogglesBoxes`; a downed teammate keeps his). Rows: Tab ▸ Sandbox ▸ Team feel ▸ 'night vision ▸ …' / 'nv ▸ …' + `nvgSummary`.
   QA `probes.ts nvg` (quiet / lead / loud / sight / fight / rig / off; `NVG_BREAK=1 … nvg-quiet` must fail). Older probes that assumed bare eyes are PINNED to them
   (`NVG.on = false` for that block, restored after) because they measure something the goggles supersede or break the premise of: flashweight-lights and
   rescue-orders' light line (the LIGHTS rule alone), cover-side (its defenders stand dazzled in dark rooms — a goggled team shoots them on the walk up),
@@ -235,7 +231,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the red laser's luminance, albedo 0; UNTUNED BY EYE). An IR beam also stops on a standing civilian (`laserReach(…, civ)`: the hostages; the red one never did), and an IR line whose bore lies on Sam or a
   teammate that frame is simply off (`paintsOwn`, asked with `laserReach().on` = the body it met; the red one is left alone). THE ONE-MODEL RULE is held by construction: a weapon laser of either band is NoShadow emissive boxes —
   never in the trace grid, never a light — so no eye, camera, meter or CPU estimate reads one (**enemies do not notice a teammate's red laser either**; an open
-  call, nothing built). `combat.ts laserReach(g, c, self, civ)` = the bore ray both use (returns `on`, the character it ended on). Rows: Tab ▸ Sandbox ▸ Team feel ▸ 'IR lasers ▸ …' (three: `on` / `sam` / `carry`; teamfeel.ts `KEPT.IR`) +
+  call, nothing built). `combat.ts laserReach(g, c, self, civ)` = the bore ray both use (returns `on`, the character it ended on). Rows: Tab ▸ Sandbox ▸ Team feel ▸ 'IR lasers ▸ …' (three: `on` / `sam` / `carry`) +
   `irSummary`. QA `probes.ts irlaser` (ir-draw: eight ways round, both pictures, the 0.49 / 0.51 threshold, band follows each man's goggles, on with the gun
   up · ir-sam · ir-unseen: five runs a scenario — IR on / off × Sam's goggles up / down — hash the game, every man's awareness / irradiance / visibility, every
   camera and the light list identically, then Sam LIT in front of an enemy with his laser on / off: awareness rises the same — and in front of a camera: with a
@@ -253,7 +249,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   frames (hunting) 74 → 0, Sam's boxes unchanged (42 and 39), a hostile man asked while hunting still on, the lines back inside a frame when it is
   flipped, a scripted fall in, stack, open and clear the same game frame for frame with it on and off, the stand's own word on a fresh staging, and
   a recording (the `IR` table is carried from this change on, the last name in `JOURNAL_KNOBS`: a file with the key keeps it, a file from before
-  the key or before the table replays with the lines drawn). The row is in `teamfeel.ts KEPT.IR` (a row not listed there is never built). The older
+  the key or before the table replays with the lines drawn). The older
   laser probes and `replayfog` hold it off after each staging (they read the lines drawn). A tutorial mission's own clause (`g.rails?.noLasers()`)
   sits beside it in `laserOn` and is not this switch. `ir-draw` was red before this change and is as red after it (block-four, block-squads,
   warehouse-four, and snatch-four on the page's stand: the same lines on the untouched build). Never seen on a GPU; nobody has played it. Open with
@@ -378,7 +374,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   reads on him, for a GOGGLED TEAMMATE'S eye only; nvg.ts `readPlace`'s `black` (too dark for the tube, so the white light comes on) retires
   (`irCarried`) — goggled teammates no longer put a white light on because a room has no light of its own; doortools.ts `thrTube` counts floor a jamb
   man's gun is across as seen when his own flood would show a man there (`irShowsAt`). Rows: Tab ▸ Sandbox ▸ Team feel ▸ 'IR light ▸ …' (eight: on the
-  goggles / the team carries one too / only where it is too dark / by the light the picture has / floor min / power / half angle / reach; teamfeel.ts `KEPT.IRLIGHT`) + `irLightSummary`. QA `probes.ts irlight` (irl-list: 21
+  goggles / the team carries one too / only where it is too dark / by the light the picture has / floor min / power / half angle / reach) + `irLightSummary`. QA `probes.ts irlight` (irl-list: 21
   scenarios — a lamp per pair of goggles down, at the brow, the upload's bits for a bare and a tube picture, never out under a tube frame, the shader's
   text · irl-unseen: a held-door play of 2,160 frames a scenario, Sam's goggles down, the light on and off — the game digest, every man's awareness /
   irradiance / visibility, every camera, the light list and the light estimate on the lit floor identical frame for frame; `IRLIGHT_BREAK=1` puts the
@@ -519,9 +515,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   of silent with one line, as does `DoorTools.order('bangClear')` (a scenario's F). COMPROMISED = loud in a silent man's ears SINCE the order (`reached`:
   `fight.hotFor` ∧ `hotOf ≥ since`): said once ('compromised.'), shown in the HUD word ('SILENT · compromised'), and he then shoots whoever a loud man would —
   pace, lights, cans and boots stay as ordered. A captor at his last warning (`rescue.lastWarning`) un-holds rounds and the boot. The HUD: the squad block's
-  header `squad · loud|SILENT · orders to …` (orders.ts `hud()`, read by both overlays — the native twin has it by construction). `SILENT.start` = the posture
+  header `squad · loud|SILENT · orders to …` (`game.view.squad`'s `posture` and `who`, `silent posture_word`). `SILENT.start` = the posture
   a FRESH cast stands up in (the loadout screen's knob; `setSilent(g, on, 'api')`); a man joining / leaving leaves his word standing. Knobs `SILENT` kept by
-  teamfeel (Tab ▸ Team feel ▸ silent rows + `silentSummary`). **The QA harness stands the game up with `SILENT.on` false** (src/host/standup.ts, like chaos 0:
+  (`silentSummary`). **The QA harness stands the game up with `SILENT.on` false** (src/host/standup.ts, like chaos 0:
   the menu and the squad block as every older probe was written against); `probes.ts silent` (tools/qa/silent-probes.ts: order / hud / walk / doors / pick / cans /
   tools / fire / hush / start / off) turns it on. Not judged by anyone yet: how the walk, the dark and the net lines FEEL; the hold-fire rule in play.
   **A silent stack beside unaware men is set** (`SILENT.stackSet`, 10-13; a claim from the hold-fire goal, reproduced: a silent pair told `stack` inside a room with
@@ -857,7 +853,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   later place hidden from everybody is still reached). Line (l) was red on the shipped stand for it at the build head and is green; its staging
   no longer believes the second enemy on the pinned man's own spot. MEASURED, the same runs with the mend against without: none of 24 standard
   and none of 40 Hard differs (21 and 30 taken both ways), so it is rare in a scripted fight; the check line is what shows it.
-- **No wary mark over a man of your own** (`src/ui/headmark.ts headMark`, drawn by `overlay.ts`; the maintainer, 10-16, of the yellow dots over
+- **No wary mark over a man of your own** (`rust/game_rules/src/view/marks.rs guard_mark`, drawn by `overlay.ts`; the maintainer, 10-16, of the yellow dots over
   his squad: telegraph a man's state through his animation instead). The row of yellow dots (`awareness`) and the yellow '?' (`search` /
   `suspicious`) are the stealth game's read of a man who may find you out. A teammate under an order runs no senses, so nothing drains his
   number: whatever a stun can (0.6), a frag that left him up (0.92), a charge's backblast (0.6) or the mains going (0.34) wrote stood over him
@@ -866,10 +862,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stun (in the yellow it had) and 'zz' / '✚' / '✕' on the floor. NO SWITCH: the HUD only — nothing the simulation, a save or a digest reads.
   NOT MENDED HERE: `Guard.awareness` is written on a teammate as before, and what reads it off every man still does (guards.ts `tension`,
   the score's intensity: a teammate a frag left at 0.92 holds it at 0.32 until his order ends); a teammate's speech bubble kept the wary
-  yellow while he was left searching — MENDED 10-17 by the dialogue pass, the same way and with no switch: `bubbles.ts bubbleTone` gives a living man of the
+  yellow while he was left searching — MENDED 10-17 by the dialogue pass, the same way and with no switch: `cues.rs bubble_tone` (`bubbles.ts bubbleTone` until it moved) gives a living man of the
   player's own the calm tone while he is searching or suspicious (the red of a fight stays his, as his '!' does; a defender's and a civilian's tones as they
-  were); the check's lines (2b), the defender's bubble line and the bubbles.ts line say so, and `HEADMARK_BREAK=1` puts the yellow back with the marks. Check `tools/qa/headmark-check.ts` (`probes.ts headmark`, family `ui`; the same on both
-  stands; `HEADMARK_BREAK=1` puts the marks back and lines 1, 2, 2b and 3 must fail) asks `headMark` what would be drawn over each man of a staged
+  were); `rust/game_start/tests/radio.rs` `a_line_sounds_as_the_man_is` says so. Check `rust/game_start/tests/hud_marks.rs` `the_mark_over_a_man_says_what_he_is` (the same on both
+  stands; the record's `men`) reads what would be drawn over each man of a staged
   room clear; `tools/qa/headmark-page.cjs` reads the marks off the real page on the software adapter. Never seen on a GPU, never played.
 - **A man's condition: a blast that leaves a man standing leaves him HURT** (`src/game/condition.ts`, table `CONDITION {on, hurtPace 1.5, hurtSup
   0.35, hurtSecs 0, ownCalm, looks}`; ON in the page, `?nocondition`; OFF in the module and on the frozen stand, `TPS_CONDITION=1`; in the knob registry
@@ -892,7 +888,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   score's intensity up for the mission) — with the switch off it counts it as before. Saves: `hurtAt` is an optional key written only for a
   hurt man, so an older save loads and a save with nobody hurt is byte for byte what it was. The panel: `condition ▸ you hurt · Reyes folded
   hurt` (`Game.conditionSummary()`). HOW IT SHOWS is the poses' (docs/agents/anim.md, "A man's condition on the figure"), and with them on a
-  stunned teammate's '✹' is gone from the HUD (`headmark.ts`: `CONDITION.on` and `MOVES.on` and `MOVES.dazzle`; a defender keeps his; headmark-check
+  stunned teammate's '✹' is gone from the HUD (`view/marks.rs`: `CONDITION.on` and `MOVES.on` and `MOVES.dazzle`; a defender keeps his; marks.rs
   line 3b). Checks: `tools/qa/condition-check.ts` (`probes.ts condition`, which also runs `condition-pose`; twelve lines — off, on, the fold's
   seconds unchanged, pace through followPath / stepAlongPath, the player's sprint, spread and the gap, one round still downs each of the three
   while hurt, god mode, the score, a checkpoint, who is not hurt, the registry; `CONDITION_BREAK=1` leaves the switch off and eight lines must

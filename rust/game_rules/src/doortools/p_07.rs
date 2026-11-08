@@ -874,7 +874,7 @@ fn leaf_cut(closed_dir: f64, a: f64, w: f64, hx: f64, hz: f64, p: V3, rx: f64, r
 }
 
 /// How much door `o`'s own leaf, stood open, would hide the door from a man at `p`. (doortools.ts DoorTools.leafAcross)
-pub fn door_tools_leaf_across(g: &mut crate::game::Game, o: DoorId, p: V3, at: V3) -> f64 {
+pub fn door_tools_leaf_across(g: &crate::game::Game, o: DoorId, p: V3, at: V3) -> f64 {
     if crate::doors::door_off(g, o) { return 0.0; }
     let stop = if crate::doors::door_swing(g, o) > 0.0 { crate::doors::door_max_a(g, o) } else { crate::doors::door_min_a(g, o) };
     let (sg, top) = (m::sign(stop), m::abs(stop));
@@ -992,10 +992,7 @@ pub fn door_tools_hold_doors(g: &mut crate::game::Game, op: DoorOpId) {
                 };
                 taken.push(there);
             }
-            // (offSwing moves P.pos in place, and P.pos is `post`)
-            let mut moved = crate::doortools::DoorToolsOffSwingP { pos: to, watch: None };
-            door_tools_off_swing(g, &moved, Some(d), side, &taken, Some(at));
-            post = Some(moved.pos);
+            post = Some(to);
         }
         let from = match post { Some(p) => p, None => pos(g, gd) };
         let yaw = v3::yaw_to(from, w);

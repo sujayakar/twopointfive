@@ -21,7 +21,7 @@ const LG: any = await import(`${ROOT}/src/game/lighting.ts`), LS: any = await im
 const LIGHT_IN = H.LIGHT_IN, LIGHT_COLS: readonly string[] = H.LIGHT_COLS, WORDS: ReadonlySet<string> = H.WORD_COLS, CAPS = H.LIGHT_CAPS;
 const argv = process.argv.slice(2), flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; }, has = (n: string) => argv.includes(n);
 const TICKS = Number(flag('--ticks') ?? 2400), SEED = Number(flag('--seed') ?? 1), BREAK = process.env.LIGHTS_BREAK === '1', DT = 1 / 60;
-const LEVELS = (flag('--levels') ?? 'office.json,lights-out.json,vault.json,tut-sky.json,bazaar.json,pass.json,depot.json').split(',');
+const LEVELS = (flag('--levels') ?? 'office.json,lights-out.json,vault.json,tut-team.json,bazaar.json,pass.json,depot.json').split(',');
 const FIXTURE = resolve(ROOT, 'tools/qa/fixtures/lights-ident.json');
 const log = console.log, err = console.error; const hush = (on: boolean) => { console.log = on ? () => {} : log; console.error = on ? () => {} : err; };
 let bad = 0; const fail = (why: string) => { if (bad++ < 12) log(`- FAIL — ${why}`); };

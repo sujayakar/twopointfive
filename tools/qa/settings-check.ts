@@ -53,8 +53,6 @@ const KNOWN: Record<string, Record<string, Row>> = {
     emissiveScale: [1, 'CARRIED, TO MOVE (2026-11-05): what a fixture gives a light question, as an argument of the lights\' step'],
   },
   'game/fogofwar.ts': { emissiveScale: [2, 'CARRIED, TO MOVE (2026-11-05, with lighting.ts\'s): the fog\'s lamps'] },
-  'game/guards.ts': { flashlightRadius: [3, 'CARRIED, TO MOVE (2026-11-05): a torch\'s radius, part of the light on a point'] },
-  'game/debris.ts': { debrisCap: [1, 'CARRIED, TO MOVE (2026-11-05): the pool\'s size; with DEBRIS.dress on the pool is dressing'] },
   'game/journal.ts': { '(all)': [5, 'CARRIED: this is the carrying (envSnapshot reads the settings a file keeps, applyEnvSettings lays them back)'] },
   'game/fire.ts': { fireSmoke: [1, 'TO JUDGE (2026-11-05): whether the fire\'s smoke is drawn by the solver, on a line that also reads the picture\'s camera'] },
   'game/weather.ts': { gloss: [3, 'PICTURE: the wet ground\'s gloss, kept and handed back'] },
@@ -68,7 +66,7 @@ const KNOWN: Record<string, Record<string, Row>> = {
   'game/charLook.ts': { charMats: [1, 'PICTURE: the men\'s materials'] },
   'game/particleFx.ts': { gpuParticles: [1, 'PICTURE: whether the particle pass exists'] },
   'game/snowFx.ts': { '(all)': [7, 'PICTURE: the flakes that are drawn (the particle rain\'s own settings: count, radius, how it answers a blast)'] },
-  'game/rainFx.ts': { '(all)': [9, 'PICTURE: the drops that are drawn (the particle rain\'s own settings)'] },
+  'game/rainFx.ts': { '(all)': [10, 'PICTURE: the drops that are drawn (the particle rain\'s own settings; the tenth, warmRainFx: the first played frame finds the drops already falling, only where the picture has them)'] },
   'game/airSim.ts': { airSim: [1, 'TO JUDGE (2026-11-05): whether the air field runs; AIR_SIM decides what play reads of it'] },
 };
 /** the simulation's ground, as tools/qa/rollback-check.ts's static pass has it */

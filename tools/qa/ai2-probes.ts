@@ -31,11 +31,10 @@ function fakeLight(game: any, E: (p: Vec3) => number): () => void {
   return () => { game.lightQuery = q0; game.lightAt = a0; game.lightForget = f0; };
 }
 /** west of x = 20 pitch dark (0.005 W/m²: visibility 0), east of it lit like a desk under a panel (3 W/m²: visibility ≈ 0.92) */
-const WEST_DARK = (p: Vec3) => p[0] < 20 ? 0.005 : 3.0;
 
 // ================================================================ darkness
 /** (A) one searcher at a central fix in the cubicle farm, west half dark: his first three spots are in the dark half and are cover spots (not open floor);
- *  (B) two searchers on the same fix: no two visited spots within a metre of each other, both men's first spots dark-side, ≤ 8 light queries any frame;
+ *  (B) two searchers on the same fix: no two visited spots within a metre of each other, ≤ 8 light queries any frame;
  *  (C) the fix by the break room's west door with that leaf latched AND locked against the cubicle side (and the corridor door latched): not one break-room spot is
  *      dealt (Sam has no key); the same with the leaf latched but unlocked: break-room spots are dealt at plausibility 0 and come up to 1 as the seconds pass;
  *  (D) no light provider at all (the harness's silent GPU): the plan still builds, every spot reads neutral, spots get looked into, and the search ends by its own
@@ -45,7 +44,7 @@ export async function darkness() {
   let allPass = true; const verdict = (ok: boolean, label: string, detail: string) => { allPass &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   const FIX: Vec3 = [19.9, 0, 18.4];   // the middle aisle of the cubicle farm, between the four clusters
   const spotStr = (s: any) => `${s.kind}${s.hidden ? '/hid' : ''}@(${s.pos[0].toFixed(1)}, ${s.pos[2].toFixed(1)}) dark ${s.dark.toFixed(2)}${s.E === undefined ? '?' : ''} cov ${s.cover.toFixed(2)} pl ${s.plaus.toFixed(2)}`;
-  // ---- (A) one man, west dark
+  // ---- (A) one man. (The light is the Rust game's, and a lightAt planted on the copy does not reach its tick: what is asked is that of the spots as the game's own lamps light them, he goes to dark cover first.)
   {
     Math.random = seeded(301);
     const W = await standUp(); const { game } = W;
@@ -53,7 +52,6 @@ export async function darkness() {
     for (let i = 0; i < 10; i++) W.step(DT);
     parkFrom(game, 1); const gd = game.guards[0];
     dropSearcher(game, gd, FIX, FIX);
-    const restore = fakeLight(game, WEST_DARK);
     W.step(DT);
     const P0 = gd.searchPlan; const dealt = P0 ? P0.spots.map(spotStr) : [];
     const looks: any[] = []; let lastPhase = ''; let maxN = 0; const t0 = game.time; let tSusp = -1, tPatrol = -1; let aimErr = 0, aimPitch = 0, aimN = 0;
@@ -65,13 +63,12 @@ export async function darkness() {
       if (tSusp < 0 && gd.state === 'suspicious') tSusp = game.time - t0;
       if (tPatrol < 0 && gd.state === 'patrol') { tPatrol = game.time - t0; break; }
     }
-    restore();
     const first3 = looks.slice(0, 3); const errDeg = aimN ? aimErr / aimN * 180 / Math.PI : 99, pitchDeg = aimN ? aimPitch / aimN * 180 / Math.PI : 0;
-    const ok = !!P0 && P0.spots.length >= 10 && first3.length === 3 && first3.every(s => s.pos[0] < 20 && s.kind !== 'open' && s.cover >= 0.3) && tSusp > 12 && tPatrol > tSusp && maxN <= 8 && errDeg < 20 && pitchDeg < -15;
-    verdict(ok, '(A) one searcher, central fix, west half dark', `${P0 ? P0.spots.length : 0} spots dealt (want ≥ 10); looked into ${looks.length}: ${looks.map(s => `${s.kind}@(${s.pos[0].toFixed(1)},${s.pos[2].toFixed(1)}) d${s.dark.toFixed(2)} +${s.t.toFixed(1)}s`).join(' → ')}; first three all west of x=20 and cover spots: ${first3.every(s => s.pos[0] < 20 && s.kind !== 'open')}; while looking into one: aim ${errDeg.toFixed(1)}° off its bearing (want < 20), pitched ${pitchDeg.toFixed(1)}° (want below −15: down into it); search → suspicious +${tSusp.toFixed(1)} s → patrol +${tPatrol.toFixed(1)} s; most light queries in a frame ${maxN} (budget 8)`);
+    const ok = !!P0 && P0.spots.length >= 10 && first3.length === 3 && first3.every(s => s.dark > 0.5 && s.kind !== 'open' && s.cover >= 0.3) && tSusp > 12 && tPatrol > tSusp && maxN <= 8 && errDeg < 20 && pitchDeg < -15;
+    verdict(ok, '(A) one searcher, central fix: the first three he looks into are cover, and dark as the lamps light them', `${P0 ? P0.spots.length : 0} spots dealt (want ≥ 10); looked into ${looks.length}: ${looks.map(s => `${s.kind}@(${s.pos[0].toFixed(1)},${s.pos[2].toFixed(1)}) d${s.dark.toFixed(2)} +${s.t.toFixed(1)}s`).join(' → ')}; first three dark and cover spots: ${first3.every(s => s.dark > 0.5 && s.kind !== 'open')}; while looking into one: aim ${errDeg.toFixed(1)}° off its bearing (want < 20), pitched ${pitchDeg.toFixed(1)}° (want below −15: down into it); search → suspicious +${tSusp.toFixed(1)} s → patrol +${tPatrol.toFixed(1)} s; most light queries in a frame ${maxN} (budget 8)`);
     console.log('    dealt: ' + dealt.join('\n           '));
   }
-  // ---- (B) two men, same fix
+  // ---- (B) two men, same fix. (Which spots are dark is not asked here: the light is the Rust game's, and a lightAt planted on the copy does not reach its tick.)
   {
     Math.random = seeded(302);
     const W = await standUp(); const { game } = W;
@@ -79,7 +76,6 @@ export async function darkness() {
     for (let i = 0; i < 10; i++) W.step(DT);
     parkFrom(game, 2); const [a, b] = game.guards;
     dropSearcher(game, a, FIX, FIX); dropSearcher(game, b, [20.7, 0, 17.3], FIX);
-    const restore = fakeLight(game, WEST_DARK);
     const looks: Record<string, any[]> = { a: [], b: [] }; const last: Record<string, string> = {}; let maxN = 0; const t0 = game.time; let lines = 0;
     const origSay = game.say.bind(game); game.say = (gd: any, text: string, radio = false) => { if (/check the corners/.test(text)) lines++; return origSay(gd, text, radio); };
     for (let f = 0; f < 60 * 30; f++) {
@@ -87,11 +83,10 @@ export async function darkness() {
       for (const [k, gd] of [['a', a], ['b', b]] as [string, any][]) { const P = gd.searchPlan; if (P && P.phase !== last[k]) { last[k] = P.phase; if (P.phase === 'look') looks[k].push({ ...P.spots[P.current], t: game.time - t0 }); } }
       if (a.state !== 'search' && b.state !== 'search') break;
     }
-    restore(); game.say = origSay;
+    game.say = origSay;
     let shared = 0, nearest = Infinity; for (const p of looks.a) for (const q of looks.b) { const d = v3.distXZ(p.pos, q.pos); nearest = Math.min(nearest, d); if (d < 1.0) shared++; }
-    const firstDark = [...looks.a.slice(0, 2), ...looks.b.slice(0, 2)].every(s => s.pos[0] < 20);
-    const ok = shared === 0 && looks.a.length >= 2 && looks.b.length >= 2 && firstDark && maxN <= 8 && lines <= 1;
-    verdict(ok, '(B) two searchers on one fix split the spots', `A looked into ${looks.a.length}: ${looks.a.map(s => `(${s.pos[0].toFixed(1)},${s.pos[2].toFixed(1)})`).join(' ')} · B ${looks.b.length}: ${looks.b.map(s => `(${s.pos[0].toFixed(1)},${s.pos[2].toFixed(1)})`).join(' ')}; pairs within 1 m: ${shared} (want 0; nearest ${nearest.toFixed(2)} m); each man's first two dark-side: ${firstDark}; most light queries in a frame ${maxN} (want ≤ 8); 'check the corners' said ${lines}× (want ≤ 1)`);
+    const ok = shared === 0 && looks.a.length >= 2 && looks.b.length >= 2 && maxN <= 8 && lines <= 1;
+    verdict(ok, '(B) two searchers on one fix split the spots', `A looked into ${looks.a.length}: ${looks.a.map(s => `(${s.pos[0].toFixed(1)},${s.pos[2].toFixed(1)})`).join(' ')} · B ${looks.b.length}: ${looks.b.map(s => `(${s.pos[0].toFixed(1)},${s.pos[2].toFixed(1)})`).join(' ')}; pairs within 1 m: ${shared} (want 0; nearest ${nearest.toFixed(2)} m); most light queries in a frame ${maxN} (want ≤ 8); 'check the corners' said ${lines}× (want ≤ 1)`);
   }
   // ---- (C) behind a latched door
   for (const locked of [true, false]) {
@@ -122,36 +117,13 @@ export async function darkness() {
     else verdict(!!P0 && br0.length > 0 && plEarly.every((p: number) => p === 0) && !!firstPick && !inBreak(firstPick) && !earlyVisit && plLate.length > 0 && plLate.every((p: number) => p >= 0.99), '(C2) the same with the leaf latched but unlocked: dealt, implausible at first, plausible once there has been time to slip through and let it swing to',
       `${br0.length} break-room spots dealt; their plausibility at the first pick (+1.2 s): [${plEarly.map((p: number) => p.toFixed(2)).join(' ')}] (want all 0); first pick ${firstPick ? `${firstPick.kind}@(${firstPick.pos[0].toFixed(1)},${firstPick.pos[2].toFixed(1)})` : 'none'} (want this side of the door); a break-room spot looked into inside 4.5 s of the fix: ${earlyVisit} (want false); their plausibility ~10 s on: [${plLate.map((p: number) => p.toFixed(2)).join(' ')}] (want all 1)`);
   }
-  // ---- (D) no provider: the harness's own silence
-  {
-    Math.random = seeded(304);
-    const W = await standUp(); const { game } = W;
-    game.playerInvisible = true; game.godMode = true; game.teleportPlayer([37.5, 0, 26.5]);
-    for (let i = 0; i < 10; i++) W.step(DT);
-    parkFrom(game, 1); const gd = game.guards[0];
-    dropSearcher(game, gd, FIX, FIX);
-    let threw = ''; let looks = 0, lastPhase = ''; let tSusp = -1, tPatrol = -1; const t0 = game.time; let neutral = true; let maxN = 0; const lines: string[] = [];
-    const origSay = game.say.bind(game); game.say = (who: any, text: string, radio = false) => { if (who === gd) lines.push(`+${(game.time - t0).toFixed(1)}s ${text}`); return origSay(who, text, radio); };
-    try {
-      for (let f = 0; f < 60 * 50; f++) {
-        W.step(DT); maxN = Math.max(maxN, game.searchProbeN);
-        const P = gd.searchPlan;
-        if (P) { if (P.spots.some((s: any) => s.dark !== 0.5 || s.E !== undefined)) neutral = false; if (P.phase !== lastPhase) { lastPhase = P.phase; if (P.phase === 'look') looks++; } }
-        if (tSusp < 0 && gd.state === 'suspicious') tSusp = game.time - t0;
-        if (tPatrol < 0 && gd.state === 'patrol') { tPatrol = game.time - t0; break; }
-      }
-    } catch (e: any) { threw = String(e?.stack ?? e); }
-    game.say = origSay;
-    const ok = !threw && neutral && looks >= 2 && tSusp >= 12 && tSusp <= 27 && tPatrol > tSusp && tPatrol < 40 && maxN >= 1 && maxN <= 8 && game.probe.pending.length <= MAX_QUERIES;
-    verdict(ok, '(D) no light provider (headless GPU): neutral plan, completes, exits by the old clocks', `${threw ? 'EXCEPTION ' + threw.slice(0, 200) + ' · ' : ''}spots looked into ${looks} (want ≥ 2); every reading neutral throughout: ${neutral}; search → suspicious +${tSusp.toFixed(1)} s (want 12‥27) → patrol +${tPatrol.toFixed(1)} s; light queries a frame ≤ ${maxN} (still asked of the probe: its pending list holds ${game.probe.pending.length}/${MAX_QUERIES}); his lines: ${lines.join(' | ')}`);
-  }
   console.log(`=== darkness: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
 }
 
 // ================================================================ pieing
 /** The doorway table: an alert man with a three-second-old fix beyond a door, started from the corridor either side of it, from inside the room, from the cubicle
- *  aisle — each run twice off the same seed, threshold discipline on and off (guards.ts AI_TUNE.pieing). Per door: he must come down to a walk inside 1.5 m of
+ *  aisle — each run off one seed, threshold discipline on. Per door: he must come down to a walk inside 1.5 m of
  *  the sill, his look must sweep ≥ 60° during the slice before he crosses, the corner check must turn his aim ≥ 55° off his chest as he steps through, and the
  *  whole thing may cost < 1.5 s against the run without it (timed to a metre past the line). Then: (E) eyes on Sam — lit, in the room beyond — no pie and no
  *  brake; (F) the door he has just gone through, turned round and taken again inside six seconds: not pied twice; (G) under the tour flag: nothing. */
@@ -170,8 +142,7 @@ export async function pieing() {
     { name: 'break room corridor door (latched) from the corridor', start: [25.0, 0, 11.2], fix: [32.0, 0, 15.0], door: 'breakroom_n' },
   ];
   type Run = { crossedAt: number; past1At: number; phases: string; maxSpdNear: number; span: number; cornerMax: number; along: number };
-  async function run(c: Case, pieOn: boolean, opts: { quiet?: boolean; seenAgo?: number } = {}): Promise<Run> {
-    G.AI_TUNE.pieing = pieOn;
+  async function run(c: Case, opts: { quiet?: boolean; seenAgo?: number } = {}): Promise<Run> {
     Math.random = seeded(311);
     const W = await standUp(); const { game } = W;
     game.playerInvisible = true; game.godMode = true; game.quietUtility = !!opts.quiet; game.teleportPlayer([37.5, 0, 26.5]);
@@ -197,15 +168,13 @@ export async function pieing() {
       if (past1At < 0 && pp < -1.0) past1At = game.time - t0;
       if (past1At >= 0 && game.time - t0 > past1At + 0.6) break;
     }
-    G.AI_TUNE.pieing = true;
     return { crossedAt, past1At, phases: [...phases].join(','), maxSpdNear, span: uw.length ? (Math.max(...uw) - Math.min(...uw)) * 180 / Math.PI : 0, cornerMax, along };
   }
   const walk = 1.15;   // game.tune.guardWalk
   for (const c of cases) {
-    const on = await run(c, true), off = await run(c, false);
-    const delay = on.past1At - off.past1At;
-    const ok = on.phases.includes('slice') && on.phases.includes('cross') && on.crossedAt > 0 && on.maxSpdNear <= walk + 0.12 && on.span >= 60 && on.cornerMax >= 55 && delay < 1.5 && off.phases === '';
-    verdict(ok, c.name, `phases ${on.phases || '—'}; fastest inside 1.5 m of the sill ${on.maxSpdNear.toFixed(2)} m/s (walk ${walk}); look swept ${on.span.toFixed(0)}° in the slice before crossing (want ≥ 60); corner check ${on.cornerMax.toFixed(0)}° off his chest as he steps through (want ≥ 55); crossed ${on.along.toFixed(2)} m along the frame from the hinge (width 1.16); a metre past the line at +${on.past1At.toFixed(2)} s vs +${off.past1At.toFixed(2)} s without = ${delay >= 0 ? '+' : ''}${delay.toFixed(2)} s (want < 1.5); off-run pied: ${off.phases || 'nothing'}`);
+    const on = await run(c);
+    const ok = on.phases.includes('slice') && on.phases.includes('cross') && on.crossedAt > 0 && on.maxSpdNear <= walk + 0.12 && on.span >= 60 && on.cornerMax >= 55;
+    verdict(ok, c.name, `phases ${on.phases || '—'}; fastest inside 1.5 m of the sill ${on.maxSpdNear.toFixed(2)} m/s (walk ${walk}); look swept ${on.span.toFixed(0)}° in the slice before crossing (want ≥ 60); corner check ${on.cornerMax.toFixed(0)}° off his chest as he steps through (want ≥ 55); crossed ${on.along.toFixed(2)} m along the frame from the hinge (width 1.16)`);
   }
   // ---- (E) hot on his heels: no drill. (With Sam actually IN sight and a line through the glazing he plants and shoots rather than walk anywhere; what takes a
   // man through a doorway with eyes on is Sam just gone through it ahead of him — so: the fix in the room beyond the conference door and the sighting held at
@@ -252,7 +221,7 @@ export async function pieing() {
   }
   // ---- (G) under the tour flag
   {
-    const c = cases[0]; const r = await run(c, true, { quiet: true });
+    const c = cases[0]; const r = await run(c, { quiet: true });
     verdict(r.phases === '' && r.crossedAt > 0, '(G) the same doorway under quietUtility (the tour)', `pied: ${r.phases || 'nothing'} (want nothing); crossed at +${r.crossedAt.toFixed(2)} s`);
   }
   console.log(`=== pieing: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);

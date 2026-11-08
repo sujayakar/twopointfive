@@ -14,7 +14,7 @@ pub fn team_door_hand(g: &mut crate::game::Game, gd: GuardId) -> Option<DoorId> 
     if crate::character::anim_kicking(g, c) { return None; }
     let (pos, vel, id) = (g.ch[c].pos, g.ch[c].vel, g.ch[c].id);
     let seat = crate::seats::view_of(g, gd);
-    let at_handle = crate::seats::with_seat(g, seat, &mut |g: &mut Game| lead_at_handle(g, gd, pos));
+    let at_handle = crate::seats::with_seat(g, seat, &mut |g: &mut Game| lead_at_handle(g, &crate::seats::here(g), gd, pos));
     if at_handle.is_some() { return at_handle; }
     let slow = m::hyp2(vel[0], vel[2]) < g.k.hands.team_pace;
     let mut i = 0;
@@ -33,10 +33,10 @@ pub fn team_door_hand(g: &mut crate::game::Game, gd: GuardId) -> Option<DoorId> 
 }
 
 /// The door tools' lead a step from the handle he was sent to, among the door work on Game: the seat this pass is about. (hands.ts:523)
-fn lead_at_handle(g: &mut Game, gd: GuardId, pos: V3) -> Option<DoorId> {
+fn lead_at_handle(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId, pos: V3) -> Option<DoorId> {
     let mut i = 0;
-    while i < g.door_tools.ops.len() {
-        let row = &g.tab.doortools_door_op[g.door_tools.ops[i]];
+    while i < seat.door_tools.ops.len() {
+        let row = &g.tab.doortools_door_op[seat.door_tools.ops[i]];
         i += 1;
         if row.lead != gd || row.phase != crate::doortools::Phase::Kick { continue; }
         let Some(k) = row.kick.as_ref() else { continue };

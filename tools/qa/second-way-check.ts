@@ -4,7 +4,7 @@
 //
 // What the defenders can do (src/game/digin.ts, asked here through the game's own predicates — nothing is re-derived): a room of the room fight (roomfight.ts
 // roomAt: the floor reached without crossing a door) has its doors as ENTRIES; a man whose room it is hauls furniture to a door and wedges it when the door is
-// `wedgeable` (not steel, not locked in the level file, no keypad), when the wedge HOLDS (doors.ts wedgeHolds: the leaf opens toward him), when his squad may
+// `wedgeable` (not steel, not locked in the level file, no keypad), when the wedge HOLDS (the leaf opens toward him: `wedgeHolds` below, doors.ts frameRule and pullFace), when his squad may
 // (enemysquads.ts: a squad's `barricade` list — as shipped; `--nolists` asks it as one pool or a last stand would have it: any door), and while his room has
 // wedged fewer than DIGIN.wedges doors.
 //
@@ -29,7 +29,7 @@
 //   bun run tools/qa/second-way-check.ts [level.json …] [--list] [--walls] [--nolists] [--verbose]     exit 0 = every such room is reached, 1 = a FAIL line,
 //                                                                                                       2 = an unknown flag or level (nothing ran)
 //   SECONDWAY_BREAK=1 …  = a window and an issued wall charge are not counted: must fail (the kill house's four rooms, the clinic's three)
-//   bun run tools/qa/probes.ts secondway   (family `missions`; run in a process of its own)
+//   bun run tools/qa/probes.ts secondway   (family `missions`; run in a process of its own: four of the levels, tools/qa/sweep.ts; QA_SWEEP=all for all of them, and a new level by its file as below)
 // It stands AS SHIPPED whatever TPS_PROFILE says: which way a door opens is dealt under the page's door rules — on the frozen stand every leaf swings both
 // ways, a wedge holds any of them, and the check would have nothing to say. A stand word in the caller's environment that takes the page's door rules or
 // its breaking glass away (ONEWAY=0, QA_EXITSOUT=1, GLASSFX=off, GLASSBREAK=off …) is not the game the question is about: the check says so and exits 2.
@@ -41,6 +41,7 @@
 // or over — and under 1.9 m, or door-size.ts reads it as a doorway without a leaf — glass 'whole', wide enough not to be laminated: the kill house's `port`).
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
+import { sample } from './sweep.ts';
 
 const DT = 1 / 60, f1 = (x: number) => x.toFixed(1);
 /** a window a man steps through: its bottom under this (the walker's band starts at 0.2 m: a kerb that high stops him) and its top at this or over */
@@ -80,7 +81,7 @@ export async function secondWay(o: { levels?: string[]; walls?: boolean; nolists
   // every KIND of squad mission a level has is staged (the office: night breach, room clear, rescue), each at its largest squad: who stands where differs
   const byLevel = new Map<string, any[]>();
   for (const e of rows) { const f = e.level ?? 'office.json', L = byLevel.get(f) ?? []; const i = L.findIndex(w => w.kind === e.kind); if (i < 0) L.push(e); else if ((e.squad ?? 0) > (L[i].squad ?? 0)) L[i] = e; byLevel.set(f, L); }
-  const LEVELS = o.levels?.length ? o.levels.map(f => basename(f)) : [...byLevel.keys()].sort();
+  const LEVELS = o.levels?.length ? o.levels.map(f => basename(f)) : BREAK ? [...byLevel.keys()].sort() : sample([...byLevel.keys()].sort(), 4);   // (four levels spread over the list on an ordinary run; QA_SWEEP=all for every one)
   const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { if (o.verbose) return await fn(); const l = console.log, e = console.error, w = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = l; console.error = e; console.warn = w; } };
   const out: RoomWays[] = []; let fails = 0, checks = 0;
   const verdict = (ok: boolean, label: string, detail: string) => { checks++; if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
@@ -138,18 +139,18 @@ export async function secondWay(o: { levels?: string[]; walls?: boolean; nolists
       const onList = (d: any) => o.nolists || !squads.length || lists.some(L => L.has(d.def.name));
       // ---- doors: the two rooms each joins, the one it opens into (whose men a wedge holds for), and whether anybody may wedge it at all
       interface DoorRec { d: any; name: string; a: number; b: number; into: number; away: boolean; plain: string; pad: boolean; lockedSteel: boolean }
-      const doors = new Map<any, DoorRec>();
+      const doors = new Map<any, DoorRec>(), wedgeHolds = (d: any, from: number[]): boolean => !g.doors.frameRule || g.doors.pullFace(d, from);
       rooms.forEach((R, i) => { for (const e of R.entries) {
         let rec = doors.get(e.door);
         if (!rec) {
           const d = e.door; let other: any = null; for (const k of [0.6, 0.8, 1.0, 1.3, 1.7]) { other = roomAtXZ(e.at[0] + e.out[0] * k, e.at[2] + e.out[1] * k); if (other && other !== R) break; other = null; }
           const pad = !!g.devices?.padOf(d), locked = !!(d.def.locked || d.locked);
           rec = { d, name: d.def.name, a: i, b: other ? idx.get(other) ?? -1 : -1, into: -1, pad,
-            away: g.doors.wedgeHolds(d, [e.at[0] + e.out[0] * 0.8, 0, e.at[2] + e.out[1] * 0.8]),   // (opens toward the floor beyond: open ground lists no doors of its own)
+            away: wedgeHolds(d, [e.at[0] + e.out[0] * 0.8, 0, e.at[2] + e.out[1] * 0.8]),   // (opens toward the floor beyond: open ground lists no doors of its own)
             lockedSteel: !!d.def.steel && locked, plain: d.def.steel ? 'steel' : locked ? 'locked in the level' : pad ? 'keypad' : !onList(d) ? 'on no squad\'s list' : '' };
           doors.set(d, rec);
         }
-        if (g.doors.wedgeHolds(e.door, [e.at[0] - e.out[0] * 0.8, 0, e.at[2] - e.out[1] * 0.8])) rec.into = i;
+        if (wedgeHolds(e.door, [e.at[0] - e.out[0] * 0.8, 0, e.at[2] - e.out[1] * 0.8])) rec.into = i;
       } });
       const recs = [...doors.values()];
       const W_of = rooms.map((_, i) => manned[i] ? recs.filter(r => r.into === i && !r.plain) : []);

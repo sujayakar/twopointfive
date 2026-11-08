@@ -50,7 +50,7 @@ import { SideMap } from '../math/side';
 import { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import { squadSilent, silentCompromised } from './silent';
-import { pairUp, keptOn, PAIRUP } from './pairup';
+import { pairUp } from './pairup';
 import { SPOTTED, spottedMode } from './spotted';
 import { lightEstimateAt } from './guards';
 import './teams';
@@ -66,14 +66,12 @@ export const SNEAK = {
   crouch: true,
   /** his legs: the least he is asked for while following (m/s; the loud file's is the walk, 1.5) · the most while low · across an exposed stretch */
   minPace: 0.5, lowPace: 1.45, crossPace: 1.6,
-  /** sent to a MARK while he sneaks (the rescue flow's cover, a move / cover of Sam's): he goes there low while Sam is low, at the low pace */
-  post: true,
   /** a crouched footfall's level while he sneaks (silent's walk is 0.2, Sam's crouch 0.125; 0 = silent's own) — "only the player is truly amazing" at it */
   step: 0.14,
   /** he walks Sam's own trail (off: his place is the build's, by its own route) · metres of it kept · metres further back than the loud file he closes to */
-  trail: true, trailM: 60, back: 0.3,
+  trailM: 60, back: 0.3,
   /** he looks before he steps (off: he never waits) · how far up the trail he reads · this lit (0‥1 on the meter's curve) is a lit step */
-  look: true, aheadM: 2.4, litAt: 0.1,
+  aheadM: 2.4, litAt: 0.1,
   /** LIT TO WHOM (the maintainer's partner would not follow him across an open yard at night: on a GPU the open night shadow reads 14 to 27 on the meter,
    *  over `litAt`, where the software renderer reads near 0 — so on the page every step with a line was "lit" and only lines decided). With `byEye` a step
    *  at or over `litAt` with a line from a defender is SEEN only where THAT defender's eye would gain on a man there: the guards' own arithmetic (eyeRate:
@@ -108,15 +106,15 @@ export const SNEAK = {
   /** a man he saw looking at a lit stretch, and can no longer see (a door swung to between them): taken to be looking still for this long (s) */
   memory: 12,
   /** his words over the net when he waits (and after `nagSecs` of waiting, and when he comes on) — at most one every `cueGap` seconds */
-  cue: true, nagSecs: 7, cueGap: 12,
+  nagSecs: 7, cueGap: 12,
   /** Sam stopped: he stands in the nearest unexposed spot along the trail (back within `standM` of his place, or on towards Sam but never inside
    *  `standNear` of him) rather than on a lit, seen one */
-  stand: true, standM: 4, standNear: 0.8,
+  standM: 4, standNear: 0.8,
   /** … and with no such step on the trail (a corridor that runs straight at an open door: every step Sam took is in the doorway's line), a spot OFF it,
    *  within `sideM` of where he is, that is not exposed: he steps aside out of the door's line — never into a door frame, never onto Sam or a mate.
    *  A lit spot a defender would have a line to THROUGH AN OPEN DOORWAY but for its leaf is no such spot: a leaf swings (the door's FUNNEL: the lines from
    *  his eye through the frame's whole opening) */
-  side: true, sideM: 2.6,
+  sideM: 2.6,
   /** … and where he will STOP on his way to such a spot is out of sight too: he pulls up within a quarter metre of it, on the side he comes from, so a
    *  spot centimetres past the edge of a door's line left him standing in the line (the points `sideStop` and half of it short of the spot, towards
    *  him, are read as well). 0 = only the spot itself is read, as it was. */
@@ -139,11 +137,7 @@ export const SNEAK = {
   skill: 1,
 };
 export const SNEAK_DEFAULTS: typeof SNEAK = JSON.parse(JSON.stringify(SNEAK));
-const LS = 'twopointsix.sneak';
-/** the panel's rows are kept per machine; `?sneak` (`=0` off) sets the switch for the visit; the harness sets it by SNEAK=on */
-const KEPT = ['on', 'crouch', 'post', 'trail', 'look', 'stand', 'side', 'door', 'cue', 'patience', 'skill'] as const;
-export function saveSneak() { try { const o: Record<string, boolean | number> = {}; for (const k of KEPT) if (SNEAK[k] !== SNEAK_DEFAULTS[k] && !(k === 'on' && PAIRUP.on)) o[k] = SNEAK[k];   /* (on by pairup.ts's switch is that switch's to keep, not this row's: what the store held stands) */ if (PAIRUP.on) { const was = keptOn(LS); if (was !== undefined && was !== SNEAK_DEFAULTS.on) o.on = was; } if (Object.keys(o).length) globalThis.localStorage?.setItem(LS, JSON.stringify(o)); else globalThis.localStorage?.removeItem(LS); } catch { /* no store */ } }
-try { const o = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); if (o) for (const k of KEPT) if (typeof o[k] === typeof SNEAK[k]) (SNEAK as Record<string, unknown>)[k] = o[k]; } catch { /* no store, or not ours */ }
+/** `?sneak` (`=0` off) sets the switch for the visit; the harness sets it by SNEAK=on */
 try { const q = new URLSearchParams(location.search); if (q.has('sneak')) SNEAK.on = q.get('sneak') !== '0'; } catch { /* no page (the harness) */ }
 try { const e = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SNEAK; if (e) SNEAK.on = e !== '0' && e.toLowerCase() !== 'off'; } catch { /* no process (the page) */ }
 
@@ -204,11 +198,6 @@ export function sneakLow(g: Game, gd: Guard): boolean { { const __s = RUST_SURFA
  *  on his way to a sound: no errand, no body to see to, not held to his post or in Sam's arm, none of them in his view this moment, still on the walk,
  *  his route's end the place he means to look at, and what is left of that route inside `noiseWalkM` of the teammate with nothing solid between (where the man stands, the corners still ahead, the place itself) */
 export function sneakComing(g: Game, gd: Guard, h: Guard): boolean { return crossToRust('sneakComing', undefined, [g, gd, h]) as any; }
-/** what he is doing, for a HUD's line (null: nothing to say — he is walking with Sam) */
-export function sneakWord(g: Game, gd: Guard): string | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('sneakWord', undefined, [g, gd]); if (__r !== RUST_PASS) return __r as any; } }
-  if (!SNEAK.on) return null; const M = states.get(g)?.men.get(gd); if (!M || !sneaking(g, gd)) return null;
-  return M.mode === 'wait' ? (M.why === 'door' ? 'clear of the door' : M.why === 'lit' || M.why === 'near' ? 'waiting on eyes' : 'waiting on the light') : M.mode === 'cross' ? 'crossing' : M.mode === 'back' ? 'backing off' : null;
-}
 
 const cpuLit = (g: Game, a: Vec3, b: Vec3, own?: (o: number) => boolean, steady = true) => g.visibilityOf(Math.max(lightEstimateAt(g, a, own, steady), lightEstimateAt(g, b, own, steady)));
 

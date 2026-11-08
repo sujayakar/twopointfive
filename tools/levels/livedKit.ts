@@ -9,7 +9,7 @@
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';
 import { OFFICE_PALETTE, type officeKit } from '../../src/scene/officeGen';
-import { roundSlabs, tileMarks } from '../../src/scene/gwotKit';
+import { drawnRoundSlabs, ROUND_FROM, roundFace, roundMarks, roundRadius, roundSlabs, tileMarks } from '../../src/scene/gwotKit';
 import { pieces } from '../../src/scene/library';
 import { MAX_MARKS_PER_BOX, faceHalf, faceIndex, type MarkFace, type MarkingDef } from '../../src/scene/markings';
 import { madeOf, toned } from '../../src/scene/stuff';
@@ -57,20 +57,24 @@ export function livedKit(K: Kit) {
   };
 
   // ---- round things (static)
-  /** a ROUND thing standing from y0 to y1, radius r (a drum, a tyre, a pot, a tank): the kits' one way of writing a round (src/scene/gwotKit.ts roundSlabs) —
-   *  from 0.2 m an octagon of four slabs, which the round rule (src/scene/round.ts) finds as the level is stood up and makes ONE round box of; smaller, two
-   *  squares. From 0.2 m the whole of it lies inside the square of half r turned by `yaw`, which is what the older pieces stood here: nothing new is in
-   *  anybody's way. A smaller one's second square reaches 1.32 r from the centre at its corners.
-   *  `lid` = a colour drawn in the middle of its top (a tyre's well, the dark of an open pot): a disc once the thing is round. `ribs` = two darker hoops round
-   *  it (a steel drum's): on every slab's two ends, which are the octagon's sides, and once on a long face, where the round rule reads the band it carries all
-   *  the way round. `drawn` = drawn only (no ray, foot or round meets it, and the round rule leaves it an octagon: a tray, a thing that may lie on a mark) */
+  /** a ROUND thing standing from y0 to y1, radius r (a drum, a tyre, a pot, a tank): the kits' one way of writing a round (src/scene/gwotKit.ts) — from 0.2 m one
+   *  box that says it is round; smaller, two squares, the second reaching 1.32 r from the centre at its corners.
+   *  `lid` = a colour drawn in the middle of its top (a tyre's well, the dark of an open pot), a disc. `ribs` = two darker hoops round it (a steel drum's), laid on a
+   *  long face and carried round. `drawn` = drawn only (no ray, foot or round meets it: a tray, a thing that may lie on a mark) */
   const round = (x: number, z: number, y0: number, y1: number, r: number, albedo: Vec3, yaw = 0, o: { lid?: Vec3; ribs?: boolean; drawn?: boolean } = {}) => {
-    if (!(y1 - y0 > 0.008)) throw new Error(`livedKit: a round ${((y1 - y0) * 1000).toFixed(0)} mm thick at (${x}, ${z}) — its slabs' tops step down 2 to 4 mm each: lay a flat piece (mat, sheet) for a thing that thin`);
-    roundSlabs(r).forEach((s, k) => {
-      const h: Vec3 = [s.hx, (y1 - s.drop - y0) / 2, s.hz], marks: MarkingDef[] = [];
+    if (!(y1 - y0 > 0.008)) throw new Error(`livedKit: a round ${((y1 - y0) * 1000).toFixed(0)} mm thick at (${x}, ${z}) — lay a flat piece (mat, sheet) for a thing that thin`);
+    const onFace = (h: Vec3, first: boolean) => { const marks: MarkingDef[] = [];
       const on = (f: MarkFace, res: 'base' | 'coarse', pal: Parameters<typeof tileMarks>[4], fn: Parameters<typeof tileMarks>[5]) => { const { hu, hv } = faceHalf(h, faceIndex(f)); if (marks.length < MAX_MARKS_PER_BOX) marks.push(...tileMarks(f, res, hu, hv, pal, fn, K.TX, 0, 1)); };
-      if (K.MARKS && k === 0 && o.lid) on('+y', 'base', [{ albedo: o.lid }], (i, j, W, Hc) => Math.hypot(i - (W - 1) / 2, j - (Hc - 1) / 2) < Math.min(W, Hc) / 2 ? 1 : 0);
-      if (K.MARKS && o.ribs) for (const f of (k === 0 ? ['+x', '-x', '+z'] : ['+x', '-x']) as MarkFace[]) on(f, 'coarse', [{ mul: 0.62 }], (_i, j, _W, Hc) => j === Math.floor(Hc / 3) || j === Math.floor(2 * Hc / 3) ? 1 : 0);
+      if (K.MARKS && first && o.lid) on('+y', 'base', [{ albedo: o.lid }], (i, j, W, Hc) => Math.hypot(i - (W - 1) / 2, j - (Hc - 1) / 2) < Math.min(W, Hc) / 2 ? 1 : 0);
+      if (K.MARKS && o.ribs) for (const f of (first ? ['+x', '-x', '+z'] : ['+x', '-x']) as MarkFace[]) on(f, 'coarse', [{ mul: 0.62 }], (_i, j, _W, Hc) => j === Math.floor(Hc / 3) || j === Math.floor(2 * Hc / 3) ? 1 : 0);
+      return marks; };
+    if (r >= ROUND_FROM && !o.drawn) {
+      const { a, t } = roundFace(r), R = roundRadius(a), marks = roundMarks([onFace([a, (y1 - y0) / 2, t], true)], R, K.TX);
+      add({ c: [x, (y0 + y1) / 2, z], h: [R, (y1 - y0) / 2, R], round: true, albedo, ...(marks ? { marks } : {}) });
+      return;
+    }
+    (o.drawn ? drawnRoundSlabs(r) : roundSlabs(r)).forEach((s, k) => {
+      const h: Vec3 = [s.hx, (y1 - s.drop - y0) / 2, s.hz], marks = onFace(h, k === 0);
       add({ c: [x, (y0 + y1 - s.drop) / 2, z], h, yaw: yaw + s.yaw, albedo, ...(marks.length ? { marks } : {}), ...(o.drawn ? { flags: NS } : {}) });
     });
   };

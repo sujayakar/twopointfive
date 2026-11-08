@@ -323,12 +323,9 @@ pub fn prop_gap(p: crate::roomclear::PropGapP, at: V3) -> f64 {
     m::hyp2(m::max(0.0, m::abs(c * dx - s * dz) - p.hx), m::max(0.0, m::abs(s * dx + c * dz) - p.hz))
 }
 
-/// the sight line a→b against the level's STATICS alone: the door leaves out for the one call   (roomclear.ts wallBetween)
+/// the sight line a→b against the level's STATICS alone   (roomclear.ts wallBetween)
 pub fn wall_between(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
-    let leaves = core::mem::take(&mut g.col.dynamic_boxes);
-    let hit = crate::scene_collision::segment_blocked(g, a, b, None, None, None);
-    g.col.dynamic_boxes = leaves;
-    hit
+    crate::scene_collision::segment_blocked_over(g, &crate::ask::Over::statics(), a, b, None, None)
 }
 
 /// the level's own stack-and-enter plan for a door, where it has one   (roomclear.ts doorPlan)
@@ -805,24 +802,7 @@ pub fn room_clear_scenario_finish(g: &mut crate::game::Game, end: crate::roomcle
     room_clear_scenario_note(g, &format!("end:{}", end.as_str()));
     let down = end == Wiped && crate::seats::all_down(g) && ops_up(g) > 0;
     g.room_clear.end_say = String::from(if down { "player down" } else { "team wiped" });
-    // (a snatch level: the house is the team's and the man is not: it is not over)
-    let loose = if end == Taken && crate::snatch::snatch_active(g) && crate::snatch::snatch_owes(g) {
-        crate::snatch::snatch_objective(g, &crate::seats::here(g)).map(|o| match o.text.strip_prefix("objective ▸ ") {
-            Some(t) => String::from(t),
-            None => o.text.clone(),
-        })
-    } else {
-        None
-    };
-    let loose = loose.filter(|t| !t.is_empty());
-    // (a defuse mission whose charge has gone off stays FAILED)
-    if end == Taken && crate::defuse::defuse_active(g) && g.defuse.end == Some(crate::defuse::DefuseEnd::Failed) {
-        crate::game::game_msg(g, "you took the house too late. a charge went off, so you still failed the mission. press Shift+Enter to restart");
-        return;
-    }
-    let line = if let Some(loose) = loose {
-        format!("structure taken — {}. it's not over yet: {}", why, loose)
-    } else if end == Taken {
+    let line = if end == Taken {
         format!("structure taken — {}. press Shift+Enter to restart", why)
     } else if g.room_clear.end_say == "player down" {
         String::from("the mission is over. press Enter to restart")

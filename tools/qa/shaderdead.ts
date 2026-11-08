@@ -14,7 +14,7 @@ import { wgslDecls } from '../../src/gpu/wgslTrim';
 const ROOT = join(import.meta.dir, '../..'), DIR = join(ROOT, 'src/render/shaders');
 const nameOf = (d: string): string | null => (/^(?:@[a-z_]+(?:\([^)]*\))?\s*)*(?:fn|struct|alias)\s+(\w+)/.exec(d) ?? /^(?:@[a-z_]+(?:\([^)]*\))?\s*)*(?:const|override|var(?:<[^>]*>)?)\s+(\w+)/.exec(d))?.[1] ?? null;
 const tmp = mkdtempSync(join(tmpdir(), 'shaderdead-')); let code = '';
-for (const s of ['title', 'snow', 'smokelab', 'nowalls']) {
+for (const s of ['title', 'snow', 'nowalls']) {
   const out = join(tmp, `${s}.json`); const r = Bun.spawnSync(['bun', 'run', join(ROOT, 'tools/qa/wgsl-dump.ts'), out, '--setting', s], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
   if (r.exitCode !== 0) { console.error(`shaderdead: the dump of '${s}' failed: ${r.stderr.toString().slice(0, 400)}`); process.exit(2); }
   for (const m of JSON.parse(readFileSync(out, 'utf8')) as { code: string }[]) code += '\n' + m.code;

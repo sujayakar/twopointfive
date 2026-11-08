@@ -145,20 +145,22 @@ fn cut_clip(planes: &[f64], n: usize, ox: f64, oy: f64, oz: f64, dx: f64, dy: f6
     }
     Some((t0, t1, k))
 }
+/// a cut box's planes, in the table its record's place is of (the copy's, or a question's own extra boxes')
 #[inline(always)]
-fn planes_of<'a>(o: &'a World, b: &[f64]) -> (&'a [f64], usize) {
+fn planes_of<'a>(cut: &'a [f64], b: &[f64]) -> (&'a [f64], usize) {
     let at = b[R_CUT] as usize * CUT_PLANES * 4;
-    (&o.cut[at..at + CUT_PLANES * 4], b[R_CUTN] as usize)
+    (&cut[at..at + CUT_PLANES * 4], b[R_CUTN] as usize)
 }
 
 /// boxes.ts rayBox for a box that is not a plain yawed one (round, cut or rotated): where the ray enters it, if it does within tmax (ray_box_n's answer
 /// without the face: one walk of each shape in this file)
-fn ray_box_t(o: &World, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64], tmax: f64) -> Option<f64> {
-    ray_box_n(o, a0, a1, a2, r0, r1, r2, b, tmax).map(|h| h.0)
+fn ray_box_t(cut: &[f64], a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64], tmax: f64) -> Option<f64> {
+    ray_box_n(cut, a0, a1, a2, r0, r1, r2, b, tmax).map(|h| h.0)
 }
 
 /// collision.ts lineBox: the interval [t0, t1] over which the LINE lies inside the box, and how deep inside it the origin sits; None = the line misses it
 pub fn line_box(o: &World, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64]) -> Option<(f64, f64, f64)> {
+    let cut = &o.cut[..];
     let kind = b[R_KIND] as u32;
     let (ox, oy, oz, dx, dy, dz);
     if kind & K_ROT != 0 {
@@ -225,7 +227,7 @@ pub fn line_box(o: &World, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64,
         }
         depth = js_min(h[0] - sqrt(ox * ox + oz * oz), h[1] - oy.abs());
     } else if kind & K_CUT != 0 {
-        let (planes, n) = planes_of(o, b);
+        let (planes, n) = planes_of(cut, b);
         let (c0, c1, _) = cut_clip(planes, n, ox, oy, oz, dx, dy, dz, t0, t1)?;
         t0 = c0;
         t1 = c1;
@@ -242,54 +244,62 @@ pub fn line_box(o: &World, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64,
     Some((t0, t1, depth))
 }
 
-/// collision.ts dynamicHit: the leaves of list `set` against a segment already reduced to origin + unit direction + length
-fn dynamic_hit(o: &World, set: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, len: f64, need: u32) -> bool {
-    let n = o.leaves[set] as usize;
+/// collision.ts dynamicHit: one loose box against a segment already reduced to origin + unit direction + length
+#[inline(always)]
+#[allow(clippy::too_many_arguments)]
+fn loose_hit(cut: &[f64], b: &[f64], a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, len: f64, uu: f64, su: f64, lu: f64) -> bool {
+    if (b[R_KIND] as u32) & K_SHAPED != 0 {
+        if seg_clear(a0, a1, a2, r0, r1, r2, len, b, SEG_PAD) {
+            return false;
+        }
+        return match ray_box_t(cut, a0, a1, a2, r0, r1, r2, b, len) {
+            Some(t) => t >= 0.0,
+            None => false,
+        };
+    }
+    let rr = neg_up(b[R_H]) + neg_up(b[R_H + 2]) + SEG_PAD;
+    let (m0, m2) = (b[R_C] - a0, b[R_C + 2] - a2);
+    let cr = m0 * r2 - m2 * r0;
+    if cr * cr > rr * rr * uu {
+        return false;
+    }
+    let (s, e) = (m0 * r0 + m2 * r2, rr * su);
+    if s < -e || s > lu + e {
+        return false;
+    }
+    ray_box_hits(a0, a1, a2, r0, r1, r2, b, len)
+}
+/// …the leaves the question stands with that carry every flag of `need`, and the boxes it adds (which carry none)
+#[allow(clippy::too_many_arguments)]
+fn dynamic_hit(o: &World, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, len: f64, need: u32) -> bool {
     let uu = r0 * r0 + r2 * r2;
     let su = sqrt(uu);
     let lu = len * uu;
-    for i in 0..n {
-        let at = set * MAX_LEAVES + i;
-        if o.leaf_flags[at] & need != need {
-            continue;
-        }
-        let b = &o.leaf[at * REC..at * REC + REC];
-        if (b[R_KIND] as u32) & K_SHAPED != 0 {
-            if seg_clear(a0, a1, a2, r0, r1, r2, len, b, SEG_PAD) {
+    if v.set >= 0 {
+        let set = v.set as usize;
+        for i in 0..o.leaves[set] as usize {
+            let at = set * MAX_LEAVES + i;
+            if o.leaf_flags[at] & need != need || (!v.but.is_empty() && v.but.contains(&(i as u32))) {
                 continue;
             }
-            if let Some(t) = ray_box_t(o, a0, a1, a2, r0, r1, r2, b, len) {
-                if t >= 0.0 {
-                    return true;
-                }
+            if loose_hit(&o.cut, &o.leaf[at * REC..at * REC + REC], a0, a1, a2, r0, r1, r2, len, uu, su, lu) {
+                return true;
             }
-            continue;
-        }
-        let rr = neg_up(b[R_H]) + neg_up(b[R_H + 2]) + SEG_PAD;
-        let (m0, m2) = (b[R_C] - a0, b[R_C + 2] - a2);
-        let cr = m0 * r2 - m2 * r0;
-        if cr * cr > rr * rr * uu {
-            continue;
-        }
-        let (s, e) = (m0 * r0 + m2 * r2, rr * su);
-        if s < -e || s > lu + e {
-            continue;
-        }
-        if ray_box_hits(a0, a1, a2, r0, r1, r2, b, len) {
-            return true;
         }
     }
-    false
+    need == 0 && v.extra.chunks_exact(REC).any(|b| loose_hit(v.extra_cut, b, a0, a1, a2, r0, r1, r2, len, uu, su, lu))
 }
 
 /// collision.ts segmentBlockedDynamic, past its length: is the segment crossed by a leaf of list `set` carrying every flag of `need`
 pub fn leaves_blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, need: u32, set: i32) -> bool {
-    if set < 0 {
-        return false;
-    }
+    leaves_blocked_over(w, &Over::with(set), a0, a1, a2, b0, b1, b2, len, need)
+}
+/// …of the world as the question takes it
+#[allow(clippy::too_many_arguments)]
+fn leaves_blocked_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, need: u32) -> bool {
     let (d0, d1, d2) = (b0 - a0, b1 - a1, b2 - a2);
     let il = 1.0 / len;
-    dynamic_hit(world(w), set as usize, a0, a1, a2, d0 * il, d1 * il, d2 * il, len, need)
+    dynamic_hit(world_read(w), v, a0, a1, a2, d0 * il, d1 * il, d2 * il, len, need)
 }
 
 /// what the walk was asked beside the segment
@@ -301,7 +311,7 @@ pub const ASK_PANES: u32 = 2; // a line of fire: glass in the way is listed, and
 /// list of panes is full
 #[inline]
 #[allow(clippy::too_many_arguments)]
-fn pane_in_way(o: &mut World, rule: bool, panes: bool, bi: usize, t0: f64, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64) -> i32 {
+fn pane_in_way(o: &World, s: &mut Asking, rule: bool, panes: bool, bi: usize, t0: f64, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64) -> i32 {
     if rule {
         let te = js_max(0.0, t0);
         if glass::open(o, bi, a0 + r0 * te, a1 + r1 * te, a2 + r2 * te) {
@@ -311,7 +321,7 @@ fn pane_in_way(o: &mut World, rule: bool, panes: bool, bi: usize, t0: f64, a0: f
     if !panes {
         return -1;
     }
-    if o.note(bi, t0) {
+    if s.note(bi, t0) {
         0
     } else {
         -2
@@ -322,14 +332,19 @@ fn pane_in_way(o: &mut World, rule: bool, panes: bool, bi: usize, t0: f64, a0: f
 /// n ≥ 0 = nothing solid is, and n panes of glass are (listed in pane_bi / pane_t: 0 unless it is a line of fire) · −2 = more glass than the list holds
 /// (the host asks its own walk instead)
 pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, shrink: f64, through: u32, set: i32, ask: u32) -> i32 {
-    let o = world(w);
+    blocked_over(w, &Over::with(set), a0, a1, a2, b0, b1, b2, len, shrink, through, ask)
+}
+/// …of the world as the question takes it: the leaves it lets through, the statics it lets through, the boxes it adds
+#[allow(clippy::too_many_arguments)]
+pub fn blocked_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, shrink: f64, through: u32, ask: u32) -> i32 {
+    let (o, s) = (world_read(w), asking(w));
     let (d0, d1, d2) = (b0 - a0, b1 - a1, b2 - a2);
     let il = 1.0 / len;
     let (r0, r1, r2) = (d0 * il, d1 * il, d2 * il);
-    if set >= 0 && dynamic_hit(o, set as usize, a0, a1, a2, r0, r1, r2, len, 0) {
+    if (v.set >= 0 || !v.extra.is_empty()) && dynamic_hit(o, v, a0, a1, a2, r0, r1, r2, len, 0) {
         return -1;
     }
-    let id = o.ask();
+    let id = s.ask();
     let steps = -floor(-(len / 0.5)) + 1.0;
     let (cs, gw, gh) = (o.cs, o.w as f64, o.h as f64);
     let wi = o.w as usize;
@@ -345,14 +360,14 @@ pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, l
     let rule = ask & ASK_GLASS != 0;
     let near = !panes && lxz > 1e-6 && pad < 0.5 && a0 > g0 && a0 < gx && b0 > g0 && b0 < gx && a2 > g0 && a2 < gz && b2 > g0 && b2 < gz;
     let mut n = 0usize;
-    o.panes = 0;
+    s.panes = 0;
     if near {
         for k in 0..o.n_tilted as usize {
             let tl = &o.tilted[k * 5..k * 5 + 5];
             let bi = tl[0] as usize;
-            o.stamp[bi] = id;
+            s.stamp[bi] = id;
             let fl = o.flags[bi];
-            if fl & skip != 0 {
+            if fl & skip != 0 || (!v.open.is_empty() && v.open.contains(&(bi as u32))) {
                 continue;
             }
             let b = &o.rec[bi * REC..bi * REC + REC];
@@ -383,7 +398,7 @@ pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, l
             }
             if t1 > shrink && t0 < len - shrink {
                 if fl & F_GLASS != 0 {
-                    match pane_in_way(o, rule, panes, bi, t0, a0, a1, a2, r0, r1, r2) {
+                    match pane_in_way(o, s, rule, panes, bi, t0, a0, a1, a2, r0, r1, r2) {
                         0 => continue,
                         said => return said,
                     }
@@ -429,7 +444,7 @@ pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, l
             let mut r = q0;
             while r <= q1 {
                 let ri = r as usize;
-                o.seg_cells[n] = (if x_major { ri * wi + ci } else { ci * wi + ri }) as u32;
+                s.seg_cells[n] = (if x_major { ri * wi + ci } else { ci * wi + ri }) as u32;
                 n += 1;
                 r += 1.0;
             }
@@ -457,11 +472,11 @@ pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, l
                         continue;
                     }
                     let ci = cz as usize * wi + cx as usize;
-                    if o.cell_stamp[ci] == id {
+                    if s.cell_stamp[ci] == id {
                         continue;
                     }
-                    o.cell_stamp[ci] = id;
-                    o.seg_cells[n] = ci as u32;
+                    s.cell_stamp[ci] = id;
+                    s.seg_cells[n] = ci as u32;
                     n += 1;
                 }
                 dz += 1.0;
@@ -469,16 +484,16 @@ pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, l
         }
     }
     for j in 0..n {
-        let cell = o.seg_cells[j] as usize;
+        let cell = s.seg_cells[j] as usize;
         let (from, to) = (o.start[cell] as usize, o.start[cell + 1] as usize);
         for k in from..to {
             let bi = o.items[k] as usize;
-            if o.stamp[bi] == id {
+            if s.stamp[bi] == id {
                 continue;
             }
-            o.stamp[bi] = id;
+            s.stamp[bi] = id;
             let fl = o.flags[bi];
-            if fl & skip != 0 {
+            if fl & skip != 0 || (!v.open.is_empty() && v.open.contains(&(bi as u32))) {
                 continue;
             }
             let b = &o.rec[bi * REC..bi * REC + REC];
@@ -489,10 +504,10 @@ pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, l
                     continue;
                 }
                 match line_box(o, a0, a1, a2, r0, r1, r2, b) {
-                    Some(s) => {
-                        t0 = s.0;
-                        t1 = s.1;
-                        depth = s.2;
+                    Some(x) => {
+                        t0 = x.0;
+                        t1 = x.1;
+                        depth = x.2;
                     }
                     None => continue,
                 }
@@ -582,7 +597,7 @@ pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, l
             }
             if t1 > shrink && t0 < len - shrink {
                 if fl & F_GLASS != 0 {
-                    match pane_in_way(o, rule, panes, bi, t0, a0, a1, a2, r0, r1, r2) {
+                    match pane_in_way(o, s, rule, panes, bi, t0, a0, a1, a2, r0, r1, r2) {
                         0 => continue,
                         said => return said,
                     }
@@ -591,7 +606,7 @@ pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, l
             }
         }
     }
-    o.panes as i32
+    s.panes as i32
 }
 
 // ---- a line asked from inside the module (the senses: sight.rs, light.rs, smoke.rs, hear.rs, nav.rs), from its two ends
@@ -700,7 +715,7 @@ fn face_of(axis: i32, sgn: f64) -> (f64, f64, f64) {
 /// boxes.ts rayBox, whole (a round box, a cut one, a fully rotated one, a plain yawed one, asked in that order): where the ray enters the box within tmax
 /// and the normal of the face it enters by. None = it does not, or it starts inside (the rule rayBox documents).
 #[allow(clippy::too_many_arguments)]
-fn ray_box_n(o: &World, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64], tmax: f64) -> Option<(f64, f64, f64, f64)> {
+pub(crate) fn ray_box_n(cut: &[f64], a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64], tmax: f64) -> Option<(f64, f64, f64, f64)> {
     let kind = b[R_KIND] as u32;
     if kind & K_ROUND != 0 {
         // rayBoxRound: face 0 = none entered (the origin is inside), 1 = an end, 2 = the side
@@ -761,7 +776,7 @@ fn ray_box_n(o: &World, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b:
         if !slab_n(b[R_H + 2], oz, inv_or(dz), &mut t0, &mut t1, &mut axis, &mut sgn, 2) {
             return None;
         }
-        let (planes, n) = planes_of(o, b);
+        let (planes, n) = planes_of(cut, b);
         let (c0, _c1, k) = cut_clip(planes, n, ox, oy, oz, dx, dy, dz, t0, t1)?;
         if k < 0 && axis < 0 {
             return None;
@@ -823,6 +838,8 @@ pub const RAY_NONE: i32 = -1;
 pub const RAY_HOST: i32 = -2;
 /// what a leaf's index is offset by in the answer (collision.ts raycast: index ≥ 1e6 = a dynamic occluder)
 pub const RAY_LEAF: i32 = 1_000_000;
+/// …and a box the question added
+pub const RAY_EXTRA: i32 = 2_000_000;
 
 /// collision.ts raycast: the nearest thing the ray from a along the unit r meets within tmax — the leaves of list `set` first (−1: none), then the statics of
 /// the cells round the ray, walked in half-metre steps UNTIL THE RAY HAS LEFT THE LEVEL FOR GOOD (so no length is too long: a ray of a thousand
@@ -831,22 +848,28 @@ pub const RAY_LEAF: i32 = 1_000_000;
 /// met where it is open is passed, and the ray flies on to what stands beyond.
 #[allow(clippy::too_many_arguments)]
 pub fn ray(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, ask: bool, out: &mut [f64]) -> i32 {
-    ray_but(w, a0, a1, a2, r0, r1, r2, tmax, set, -1, ask, out)
+    ray_over(w, &Over::with(set), a0, a1, a2, r0, r1, r2, tmax, ask, out)
 }
 /// …with ONE LEAF OF THE LIST LEFT OUT, `but` (−1: none): the ray of a thing that is itself one of the leaves (a slab off its hinges is no wall to
 /// itself: doorblast.ts withoutLeaf). The leaves keep their own indices in the answer.
 #[allow(clippy::too_many_arguments)]
 pub fn ray_but(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, ask: bool, out: &mut [f64]) -> i32 {
-    let o = world(w);
+    let one = [but as u32];
+    ray_over(w, &Over { but: if but >= 0 { &one } else { &[] }, ..Over::with(set) }, a0, a1, a2, r0, r1, r2, tmax, ask, out)
+}
+/// …of the world as the question takes it. A box it adds is RAY_EXTRA + its place.
+#[allow(clippy::too_many_arguments)]
+pub fn ray_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, ask: bool, out: &mut [f64]) -> i32 {
+    let (o, q) = (world_read(w), asking(w));
     let (mut best, mut bi, mut bn) = (tmax, -1i32, (0.0, 1.0, 0.0));
-    if set >= 0 {
-        let s = set as usize;
+    if v.set >= 0 {
+        let s = v.set as usize;
         for i in 0..o.leaves[s] as usize {
-            if i as i32 == but {
+            if !v.but.is_empty() && v.but.contains(&(i as u32)) {
                 continue;
             }
             let at = (s * MAX_LEAVES + i) * REC;
-            if let Some((t, n0, n1, n2)) = ray_box_n(o, a0, a1, a2, r0, r1, r2, &o.leaf[at..at + REC], best) {
+            if let Some((t, n0, n1, n2)) = ray_box_n(&o.cut, a0, a1, a2, r0, r1, r2, &o.leaf[at..at + REC], best) {
                 if t < best {
                     best = t;
                     bi = RAY_LEAF + i as i32;
@@ -855,7 +878,16 @@ pub fn ray_but(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, t
             }
         }
     }
-    let id = o.ask();
+    for (i, b) in v.extra.chunks_exact(REC).enumerate() {
+        if let Some((t, n0, n1, n2)) = ray_box_n(v.extra_cut, a0, a1, a2, r0, r1, r2, b, best) {
+            if t < best {
+                best = t;
+                bi = RAY_EXTRA + i as i32;
+                bn = (n0, n1, n2);
+            }
+        }
+    }
+    let id = q.ask();
     let steps = js_ceil(tmax / 0.5) + 1.0;
     let (cs, gw, gh) = (o.cs, o.w as f64, o.h as f64);
     let wi = o.w as usize;
@@ -888,15 +920,15 @@ pub fn ray_but(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, t
                 let (k0, k1) = (o.start[c] as usize, o.start[c + 1] as usize);
                 for k in k0..k1 {
                     let b = o.items[k] as usize;
-                    if o.stamp[b] == id {
+                    if q.stamp[b] == id {
                         continue;
                     }
-                    o.stamp[b] = id;
+                    q.stamp[b] = id;
                     let fl = o.flags[b];
-                    if fl & F_NO_SHADOW != 0 {
+                    if fl & F_NO_SHADOW != 0 || (!v.open.is_empty() && v.open.contains(&(b as u32))) {
                         continue;
                     }
-                    if let Some((t, n0, n1, n2)) = ray_box_n(o, a0, a1, a2, r0, r1, r2, &o.rec[b * REC..b * REC + REC], best) {
+                    if let Some((t, n0, n1, n2)) = ray_box_n(&o.cut, a0, a1, a2, r0, r1, r2, &o.rec[b * REC..b * REC + REC], best) {
                         if t < best {
                             if ask && fl & F_GLASS != 0 && glass::open(o, b, a0 + r0 * t, a1 + r1 * t, a2 + r2 * t) {
                                 continue;
@@ -942,7 +974,7 @@ pub const RAY_PART: usize = 4;
 /// along, the face's normal, and which part of the list.
 #[allow(clippy::too_many_arguments)]
 pub fn ray_things(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, out: &mut [f64]) -> i32 {
-    let o = world(w);
+    let o = world_read(w);
     let (mut best, mut bp, mut bn, mut bb) = (tmax, -1i32, (0.0, 1.0, 0.0), 0usize);
     let fl = crate::maths::hypot2(r0, r2);
     for r in 0..o.things as usize {
@@ -962,7 +994,7 @@ pub fn ray_things(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64
         }
         for i in start..start + count {
             let at = (THING_SET * MAX_LEAVES + i) * REC;
-            if let Some((t, n0, n1, n2)) = ray_box_n(o, a0, a1, a2, r0, r1, r2, &o.leaf[at..at + REC], best) {
+            if let Some((t, n0, n1, n2)) = ray_box_n(&o.cut, a0, a1, a2, r0, r1, r2, &o.leaf[at..at + REC], best) {
                 if t < best {
                     best = t;
                     bp = r as i32;

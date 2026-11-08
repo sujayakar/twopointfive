@@ -8,6 +8,7 @@
 // src/game/doortools.ts), and both probes asked for the pages as they were to have anything to walk. Row 4 as each stand has it is
 // orderkeys-high's, doormenu-rows' and doortools-menu's; the order behind it is threshold-probes.ts's and doortest-check.ts's. The calls that lived on the
 // old page (calls-menu, calls-leave, calls-held, calls-rally) went 2026-11-07 with `pagesAsTheyWere`: both rows it wrote are settled.
+import { listedOf, menuKey } from './squadwords';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -17,7 +18,8 @@ const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { feelTables } = await import(`${ROOT}/src/game/teamfeel.ts`);
+const { knobsNamed } = await import(`${ROOT}/src/game/knobs.ts`);
+const feelNow = () => knobsNamed(['FLASH', 'PACE', 'LIGHTS', 'NVG', 'IR', 'IRLIGHT', 'FOG', 'LASER', 'DOORTOOLS', 'ROOMFIGHT', 'ORDERS', 'COVER', 'ENTRY', 'REAR', 'SILENT', 'FRAG', 'PAIR', 'DOORMANNERS']) as any;
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -27,12 +29,11 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
-/** every probe leaves the feel tables (teamfeel.ts: DOORTOOLS among them) as it found them, and one that throws is a FAIL line, not a crash of the runner */
-const guarded = (fn: () => Promise<boolean>) => async () => { const T = feelTables(), keep = JSON.parse(JSON.stringify(T));
+/** every probe leaves the feel tables (DOORTOOLS among them) as it found them, and one that throws is a FAIL line, not a crash of the runner */
+const guarded = (fn: () => Promise<boolean>) => async () => { const T = feelNow(), keep = JSON.parse(JSON.stringify(T));
   try { return await fn(); } catch (e) { console.log(`- FAIL — the probe threw\n    ${e instanceof Error ? e.stack : String(e)}`); return false; } finally { for (const n of Object.keys(keep)) Object.assign(T[n], keep[n]); } };
 async function quiet<T>(fn: () => T | Promise<T>): Promise<T> { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } }
 const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
-const X = ORDERS.key as string;
 
 /** a row of the open menu as the panel shows it */
 interface Row { id: string; key: string; text: string; off: boolean; why: string | null; opens: string | null }
@@ -57,11 +58,11 @@ async function stage(E: any, seed: number) {
     press(code: string) { R.pressed.push(code); input.pressed.add(code); R.step(); },
     digit(n: number) { R.press(`Digit${n}`); R.step(2); },
     /** X on what the cursor is on, then a few frames with every key up */
-    openX(): any { if (O.menu) O.close(); R.press(X); R.step(6); return O.menu; },
+    openX(): any { if (O.menu) O.close(); menuKey(O); R.step(); R.step(6); return O.menu; },
     /** the open menu's page, read off the order table and off the panel (rows[0] of the panel = who the orders go to) */
-    read(): Page | null { const M = O.menu; if (!M) return null; const hud = O.hud().menu, body = (hud?.rows ?? []).slice(1, 1 + M.rows.length);
+    read(): Page | null { const M = O.menu; if (!M) return null; const hud = listedOf(O), body = (hud?.rows ?? []).slice(0, M.rows.length);
       const rows: Row[] = M.rows.map((d: any, i: number) => ({ id: d.id, key: String(body[i]?.opts?.[0]?.key ?? ''), text: String(body[i]?.opts?.[0]?.text ?? ''), off: !!body[i]?.off, why: M.why[i] ?? null, opens: d.opens ?? null }));
-      const w = M.wordRow ? hud?.rows?.[1 + M.rows.length] : null;
+      const w = M.wordRow ? hud?.rows?.[M.rows.length] : null;
       return { page: M.page ?? null, rows, wait: w && w.label === WORD_HEAD ? { key: String(w.opts?.[0]?.key ?? ''), text: String(w.opts?.[0]?.text ?? '') } : null }; },
     /** Sam put at p (a ghost: he is put there), the cursor on door d: true when X would open on that door, on face `side` of it */
     place(p: number[], d: any, side?: number): boolean {

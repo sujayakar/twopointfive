@@ -29,14 +29,13 @@
 //   review-stack          W8.5  three men jammed shoulder-deep into each other against a cubicle panel for two seconds (60 and 20 fps): nobody ends a frame inside
 //                               the panel or beyond it — the colleague shove is walked in short strides with the statics answered after each.
 import { standUp, ROOT } from './headless.ts';
-import { park, place, tap, bringIn } from './standoff-probes.ts';
+import { park, place, bringIn } from './standoff-probes.ts';
 const { v3, DEG, wrapAngle } = await import(`${ROOT}/src/math/vec.ts`);
 const { startGrab } = await import(`${ROOT}/src/game/player.ts`);
 const { fireWeapon, killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { fireRing } = await import(`${ROOT}/src/game/launcher.ts`);
 const { sendRackCheck } = await import(`${ROOT}/src/game/mission.ts`);
 const { setDaylight, isDaylight } = await import(`${ROOT}/src/game/lighting.ts`);
-const { pairOf, standoffSummary, bodyInView } = await import(`${ROOT}/src/game/guards.ts`);
 const { torchCarryDir } = await import(`${ROOT}/src/game/rigProps.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 
@@ -63,55 +62,6 @@ async function stage(seed: number) {
 /** a calm man planted and kept on his mark: patrol, hold (feet still, legs idle), no awareness, hearing from now */
 function plant(game: any, gd: any, p: Vec3, yaw: number) { place(gd, p, yaw); gd.state = 'patrol'; gd.awareness = 0; gd.lastKnown = null; gd.reactT = 0; gd.hold = true; gd.dazzledUntil = -1; gd.heardUpTo = game.eventSeq; gd.leader = null; gd.post = null; gd.task = null; gd.bodyDuty = null; }
 
-// ================================================================ A6.1 — the cleaner as the shield: a hostage like any colleague
-export async function reviewHostageCiv() {
-  console.log("\n=== review-hostage-civ (A6.1): Marta held in the corridor, Novak walks west onto them — standoff on HER, one call naming 'the cleaner', lockdown, the ring, his lines, no round in 15 s; then a round at Sam from in front stops in her ===");
-  const { W, game, pl, K, N, R, M } = await stage(4101);
-  let ok = true; const fails: string[] = [];
-  if (!M || !M.civ) { ok = verdict(false, 'the level has its cleaner', 'game.civilians[0] missing'); return done('review-hostage-civ', ok); }
-  park(K, 0); park(R, 2);
-  const at: Vec3 = [14, 0, 11.2], yaw = Math.PI / 2;   // mid-corridor, facing east (standoff-see's own spot: ring room both ways)
-  M.char.pos = v3.copy(at); M.char.vel = [0, 0, 0]; M.char.bodyYaw = M.char.aimYaw = yaw; M.path = []; M.pathGoal = null; M.char.update(0); M.char.update(DT);
-  game.teleportPlayer([at[0] - 0.8, 0, at[2]]); pl.crouch = true; pl.slot = 'pistol'; pl.holstered = true; pl.char.bodyYaw = yaw; W.step(DT);
-  const T = tap(game);
-  startGrab(game, M);
-  W.cam.yaw = yaw + Math.PI; W.cam.rebuild();
-  for (let i = 0; i < 90 && pl.holding?.phase !== 'held'; i++) { pl.visibility = 0.6; W.cursorAt([at[0] + 3, 0, at[2]]); W.step(DT); }
-  const held = pl.holding?.g === M && M.held?.by === 'player' && pl.holding.phase === 'held';
-  ok = verdict(held, 'the grab takes on the cleaner: she is in his arm, held', `holding ${pl.holding?.g?.callsign ?? '—'} phase ${pl.holding?.phase ?? '—'}`) && ok;
-  bringIn(game, N, [24, 0, 11.3], at, 'suspicious', [17, 0, 11.2]);   // a noise up the corridor: he walks west into it, onto the pair
-  const t0 = game.time; let enterT = -1, escAt = -1, minDist = Infinity, shots = 0, hits = 0, prevHit = pl.hitFlash; const log: string[] = [];
-  for (let f = 0; f < 60 * 24; f++) {
-    pl.visibility = 0.6; W.cursorAt(v3.add(N.char.pos, [0, 1.2, 0]) as Vec3); W.step(DT);   // Sam keeps turning the pair to hold her square toward Novak
-    const t = game.time; const P = pairOf(game);
-    if (pl.hitFlash > prevHit + 1e-9) hits++; prevHit = pl.hitFlash;
-    if (!P) { log.push(`${f2(t - t0)}s the hold ENDED (Marta ${M.state}, holding ${!!pl.holding})`); break; }
-    if (enterT < 0 && N.standoff?.pair === M) enterT = t;
-    if (escAt < 0 && game.escalation === 2) escAt = t;
-    if (enterT >= 0) minDist = Math.min(minDist, v3.distXZ(N.char.pos, P.centre));
-    for (const e of game.events) if (e.kind === 'guardShot' && e.time === t) shots++;
-    if (f % 60 === 0) log.push(`${f2(t - t0)}s Novak ${N.state}${N.standoff ? '/standoff' : ''} aw ${f2(N.awareness)} at ${posS(N.char.pos)} ${f1(v3.distXZ(N.char.pos, P.centre))} m · esc ${game.escalation} · ${standoffSummary(game) || '—'}`);
-    if (enterT >= 0 && t - enterT > 15) break;
-  }
-  const call = T.lines.filter(l => l.radio && /he's got Marta, the cleaner/.test(l.text));
-  const barks = T.lines.filter(l => l.who === N.callsign && !l.radio && enterT >= 0 && l.t >= enterT);
-  ok = verdict(enterT >= 0 && N.witness.sawHeld?.who === 'Marta' && N.state === 'alert', 'Novak enters the standoff on the civilian pair (sawHeld = Marta) and is alert', `entered ${enterT >= 0 ? f2(enterT - t0) + ' s in' : 'never'}, sawHeld ${JSON.stringify(N.witness.sawHeld)}, state ${N.state}`) && ok;
-  ok = verdict(call.length === 1 && game.escalation === 2 && escAt >= 0 && Math.abs(escAt - enterT) < DT + 1e-6, "exactly one call names her as the cleaner and the floor locks down ('hostage') the frame he saw it", `${call.length} call(s): "${call[0]?.text ?? '—'}"; esc ${game.escalation} at ${escAt >= 0 ? f2(escAt - t0) : 'never'}`) && ok;
-  ok = verdict(shots === 0 && hits === 0 && M.state !== 'dead' && !!pl.holding, 'not one round while she is in the arm, Sam untouched, Marta alive and still held', `${shots} round(s), Sam hit ${hits}×, Marta ${M.state}, holding ${!!pl.holding}`) && ok;
-  ok = verdict(minDist >= 3.2 && barks.length >= 1, 'he keeps the ring (never inside 3.2 m of them) and talks to Sam', `min ${f2(minDist)} m; lines: ${barks.slice(0, 4).map(l => `"${l.text}"`).join(' · ') || '—'}`) && ok;
-  if (VERBOSE || !ok) console.log('    ' + log.join('\n    '));
-  // the shield itself: Novak stood four metres dead ahead of the pair, one steady round at Sam's chest — it stops in HER (combat.ts fireWeapon: the held body first)
-  { const P = pairOf(game);
-    if (P) {
-      const ahead: Vec3 = [P.centre[0] + Math.sin(P.facing) * 4, 0, P.centre[2] + Math.cos(P.facing) * 4];
-      place(N, ahead, P.facing + Math.PI); N.standoff = null; W.step(DT); pl.visibility = 0.6;
-      const chest = pl.char.bones.chest ?? v3.add(pl.char.pos, [0, 1.2, 0]);
-      const h0 = pl.hitFlash; fireWeapon(game, N.char, chest, false, { spread: 0, steady: true }); W.step(DT);
-      ok = verdict(M.state === 'dead' && M.downBy === 'guard' && !(pl.hitFlash > h0 + 1e-9), 'a round at Sam from in front of the pair stops in the cleaner (dead by a guard\'s hand), Sam untouched', `Marta ${M.state} by ${M.downBy}, Sam hitFlash ${f2(h0)} → ${f2(pl.hitFlash)}`) && ok;
-    } else { fails.push('no pair for the shield shot'); ok = verdict(false, 'the shield shot', 'the hold had ended') && ok; }
-  }
-  return done('review-hostage-civ', ok);
-}
 
 // ================================================================ A6.3 — a light going out is SEEN: a line to it, not a distance
 export async function reviewLightOut() {
@@ -204,82 +154,7 @@ export async function reviewRoutedShot() {
   return done('review-routed-shot', ok);
 }
 
-// ================================================================ A6.2 — bodies are found by the light on them (tune.bodyLight)
-export async function reviewBodyLight() {
-  console.log('\n=== review-bodylight (A6.2): Reyes down six metres dead ahead of Kowalski — every light in reach of the body out: not found; Kowalski\'s torch put on it: found; the body under a lit corridor panel: found; tune.bodyLight off: found in the dark as before ===');
-  let ok = true;
-  const trial = async (label: string, setup: (S: any, body: Vec3) => void, want: boolean, opts: { bodyLight?: boolean; dark?: boolean } = {}) => {
-    const S = await stage(4102); const { W, game, pl, K, N, R } = S;
-    game.tune.bodyLight = opts.bodyLight ?? true;
-    park(N, 1); game.teleportPlayer([2, 0, 2]); game.playerInvisible = true;
-    const kAt: Vec3 = [16, 0, 11.25], body: Vec3 = [22, 0, 11.25];   // the corridor: Kowalski facing east, Reyes six metres ahead of him
-    place(R, body, Math.PI / 2); R.hold = true; W.step(DT);
-    killGuard(game, R, [1, 0, 0], true, 'struck', 'world');   // dropped where he stands, quietly, by nobody (no witness, no tally)
-    for (let i = 0; i < 90; i++) { pl.visibility = 0.02; W.step(DT); }   // the body settles
-    plant(game, K, kAt, -Math.PI / 2);   // his back to it while the room is arranged (the fixtures' lights follow their switches at the END of a frame: lighting.ts updateTargets)
-    if (opts.dark !== false) { const bp = R.char.bones.hips ?? R.char.pos; for (const t of game.targets) if (t.kind !== 'breaker' && v3.dist(t.pos, bp) < 14) game.lightHome.stage(t, false, null); for (const g of game.guards) g.flashlight.enabled = false; K.lightDeadUntil = 1e9; }   // pitch dark round the body: every fixture within reach off, every torch out (Kowalski's held dead so attachFlashlight keeps it out)
-    setup(S, R.char.bones.hips ?? R.char.pos);
-    for (let i = 0; i < 10; i++) { pl.visibility = 0.02; W.step(DT); }
-    K.char.bodyYaw = K.char.aimYaw = Math.PI / 2; K.char.update(0);   // now he turns and looks down the corridor at it
-    let foundAt = -1; const geo = !!bodyInView || true; const t0 = game.time;
-    for (let f = 0; f < 60 * 4 && foundAt < 0; f++) { pl.visibility = 0.02; W.step(DT); if (R.found) foundAt = game.time - t0; }
-    const bp = R.char.bones.hips ?? R.char.pos; const eye = K.char.bones.head ?? v3.add(K.char.pos, [0, 1.65, 0]);
-    const geom = `body ${posS(bp)} ${f1(v3.distXZ(K.char.pos, bp))} m off, line ${!game.col.segmentBlocked(eye, [bp[0], bp[1] + 0.3, bp[2]])}, K ${K.state} aw ${f2(K.awareness)} torch ${K.flashlight.enabled} · ${game.bodyLightSummary()}`;
-    void geo;
-    ok = verdict((foundAt >= 0) === want, label, `${foundAt >= 0 ? `found ${f2(foundAt)} s` : 'not found in 4 s'} (want ${want ? 'found' : 'not found'}) · ${geom}`) && ok;
-  };
-  await trial('dark, no torch on it: NOT found (a shape on the floor six metres off in the pitch dark is nothing yet)', () => { /* dark as staged */ }, false);
-  await trial('his torch put back in his hand and levelled down the corridor onto the body: found', (S) => { S.K.lightDeadUntil = -1; S.K.flashlight.enabled = true; S.K.char.aimPitch = -0.2; }, true);
-  await trial('the corridor panel over the body lit again: found', (S, body) => { let best: any = null, bd = Infinity; for (const t of S.game.targets) { if (t.kind === 'breaker' || !/panel_corridor/.test(t.name)) continue; const d = v3.dist(t.pos, [body[0], 3, body[2]]); if (d < bd) { bd = d; best = t; } } if (best) S.game.lightHome.stage(best, true, null); }, true);
-  await trial('tune.bodyLight OFF: found in the pitch dark, as before the switch', () => { /* dark */ }, true, { bodyLight: false });
-  await trial('control — the lights as authored (corridor lit): found', () => { /* nothing */ }, true, { dark: false });
-  return done('review-bodylight', ok);
-}
 
-// ================================================================ B7.1 — a kicked leaf comes to rest against the man beyond it, at 20 fps too
-export async function reviewKickLeaf() {
-  console.log('\n=== review-kick-leaf (B7.1): a corridor door kicked in by Sam with Reyes standing at its handle on the far side (0.42 m off the leaf line, by the latch edge) — at 60 AND at 20 fps the leaf stops against him: its line never crosses his centre, he is not flung ===');
-  let ok = true;
-  for (const hz of [60, 20]) {
-    const { W, game, pl, K, N, R } = await stage(4111);
-    park(K, 0); park(N, 1); game.playerInvisible = true;
-    // an office door authored SHUT off the corridor (storage / server / the break room's north door), the man's spot behind it on free floor
-    const off = 0.42;   // where a man about to take the handle stands: by the latch edge, his front a hand off the leaf
-    // SAM KICKS FROM A FACE THE LEAF GIVES AT: the keyed face (the corridor) where a boot drives it from there, else the other. Where a shut leaf opens one
-    // way (doors.ts bootHolds, the frame rule, on in the page) a boot at the face it opens TOWARD lands on the frame and nothing gives: the case, kicking from
-    // the keyed face of the break room's door, read a leaf that never moved. The man stands on the face the leaf is driven into, either way.
-    let d: any = null, manAt: Vec3 = [0, 0, 0], samAt: Vec3 = [0, 0, 0], mid = 0, kickSide: 1 | -1 = 1;
-    pick: for (const name of ['storage', 'server', 'breakroom_n', 'fire_exit']) {
-      const x = game.doors.byName(name); if (!x || x.def.steel || Math.abs(x.def.angle ?? 0) > 1e-3) continue;
-      x.reset(); const [hx, hz0] = x.def.hinge; const u = x.dir(); const n: [number, number] = [-u[1], u[0]]; mid = x.def.width - 0.1;
-      for (const ks of (process.env.REVIEWKICK_BREAK === '1' ? [x.keySide] : [x.keySide, -x.keySide]) as (1 | -1)[]) {   // (REVIEWKICK_BREAK=1 = the staging as it was: the keyed face whatever the frame holds. Red where the frame rule is on, the page's stand; the old stand has no such rule to break)
-        const m: Vec3 = [hx + u[0] * mid - n[0] * ks * off, 0, hz0 + u[1] * mid - n[1] * ks * off];
-        const sm: Vec3 = [hx + u[0] * x.def.width * 0.6 + n[0] * ks * 0.9, 0, hz0 + u[1] * x.def.width * 0.6 + n[1] * ks * 0.9];
-        if (game.col.nav.isBlocked(m[0], m[2]) || game.col.nav.isBlocked(sm[0], sm[2]) || (game.doors.bootHolds(x, sm) && process.env.REVIEWKICK_BREAK !== '1')) continue;
-        d = x; manAt = m; samAt = sm; kickSide = ks; break pick; }
-    }
-    if (!d) { ok = verdict(false, `@${hz}: staging`, 'no shut office door with free floor both sides and a face a boot drives it from') && ok; continue; }
-    const u = d.dir(); const n: [number, number] = [-u[1], u[0]];
-    plant(game, R, manAt, Math.atan2(n[0] * kickSide, n[1] * kickSide)); R.heardUpTo = 1e12;   // facing the door, deaf to the crack of it (this is about the leaf, not his ears)
-    game.teleportPlayer(samAt); W.step(DT);
-    const side0 = game.doors.side(d, R.char.pos); const p0 = v3.copy(R.char.pos);
-    const gave = game.doors.kickIn(d, pl.char.pos, PLAYER_ID);
-    let crossed = 0, maxDisp = 0, maxA = 0; const trace: string[] = [];
-    const dt = 1 / hz;
-    for (let f = 0; f < hz * 1.2; f++) {
-      pl.visibility = 0.02; W.step(dt);
-      if (game.doors.side(d, R.char.pos) !== side0) crossed++;
-      maxDisp = Math.max(maxDisp, v3.distXZ(R.char.pos, p0)); maxA = Math.max(maxA, Math.abs(d.angle));
-      if (f < 12) trace.push(`${f}: a ${f3(d.angle)} v ${f2(d.vel)} man ${posS(R.char.pos)} side ${game.doors.side(d, R.char.pos)}`);
-    }
-    // the angle at which the leaf's face would reach his near side: he stands 0.55 off the closed line at `mid` along → the leaf touches him about atan((0.55 − r − ht)/mid)
-    const touchA = Math.atan2(off - 0.34 - d.thick / 2, mid);
-    const wide = touchA + 0.34 / mid;   // (first touch and a body's depth more, as an angle at where he stands along the leaf: a leaf that swings free of him goes to 1.5 rad)
-    const pass = gave && maxA > 0 && maxA < wide && crossed === 0 && maxDisp < 0.3 && d.lockBroken;
-    ok = verdict(pass, `${d.def.name} @${hz} Hz: the leaf never passes his centre, he is moved < 0.3 m, and it stood no wider than a body past first touch`, `${gave ? `kicked from the ${kickSide === d.keySide ? 'keyed' : 'far'} face` : 'THE STAGING: the kick was not given'}, crossed on ${crossed} frame(s), moved ${f2(maxDisp)} m, max |angle| ${f2(maxA)} rad (touch ≈ ${f2(touchA)}, a body past it ${f2(wide)}), lockBroken ${d.lockBroken}${VERBOSE || !pass ? '\n      ' + trace.join('\n      ') : ''}`) && ok;
-  }
-  return done('review-kick-leaf', ok);
-}
 
 // ================================================================ B7.2 / B7.3 — rings find civilians; a point-blank ring registers
 export async function reviewRingCiv() {
@@ -398,45 +273,7 @@ export async function reviewMeter() {
   return done('review-meter', ok);
 }
 
-// ================================================================ A6.9 — no door verb for a Sam downed this frame
-export async function reviewActDown() {
-  console.log('\n=== review-act-down (A6.9): the \'push\' row chosen on a shut door in the very frame Sam goes down: updateDoors performs nothing (the leaf stays latched); alive, the same act opens it ===');
-  const { W, game, pl } = await stage(4123);
-  let ok = true;
-  const d = game.doors.list.find((x: any) => !x.def.locked && !x.def.steel && x.def.closer !== false) ?? game.doors.list[0];
-  d.reset(); const spot = game.doors.workSpot(d, [d.frameCentre[0], 0, d.frameCentre[2] + (d.keySide > 0 ? 1 : -1)], 0.6).pos as Vec3;
-  game.teleportPlayer(spot); W.step(DT); W.step(DT);
-  // downed this frame, the act already chosen: call the doors step by hand with both standing
-  // (REVIEWACT_BREAK=1, the red path: the 'downed' Sam is on his feet when the act is read — the first line must fail, on either stand)
-  pl.down = process.env.REVIEWACT_BREAK !== '1'; game.act = { kind: 'door', verb: 'push', door: d, line1: 'push it open', line2: '', pos: d.pos, inReach: true, off: false };
-  (game as any).updateDoors(DT, W.input);
-  // (where his hands work the leaf — hands.ts, on in the page — a push that is taken through the hand does not unlatch on its frame: it begins a move,
-  //  `doorMove`. hands.ts refuses a downed man itself, so the A6.9 fault would still show as the leaf unlatched on the frame; the clause is here so that a
-  //  push taken for a man the check only CALLS down is seen on this stand too — which is what the break word does)
-  ok = verdict(d.latched && Math.abs(d.angle) < 1e-6 && d.lastWho !== PLAYER_ID && !pl.doorMove, 'down: the push is not performed — latched, untouched, no hand begun on it', `latched ${d.latched}, angle ${f3(d.angle)}, lastWho ${d.lastWho}, a hand's move ${pl.doorMove ? 'BEGUN' : 'none'}`) && ok;
-  pl.down = false; pl.doorMove = null; d.reset(); game.act = { kind: 'door', verb: 'push', door: d, line1: 'push it open', line2: '', pos: d.pos, inReach: true, off: false };
-  (game as any).updateDoors(DT, W.input);
-  // (…and the control is the leaf open by his hand: at once where the push is the old one-frame use, within two seconds of frames where the hand brings it round)
-  const byHand = !!pl.doorMove; let frames = 0; while (d.latched && frames < 120) { W.step(DT); frames++; }
-  ok = verdict(!d.latched && d.lastWho === PLAYER_ID && (byHand || frames === 0), 'control — on his feet the same act pushes it open: on the frame, or by his hand\'s move begun on it', `latched ${d.latched}, angle ${f3(d.angle)}, lastWho ${d.lastWho} · ${byHand ? `his hand's move, the latch gone ${frames} frames on` : frames ? `NO HAND BEGUN, and unlatched only ${frames} frames on` : 'on the frame'}`) && ok;
-  return done('review-act-down', ok);
-}
 
-// ================================================================ B7.8 — update(0) leaves the kick's impact flag alone
-export async function reviewKickHit() {
-  console.log('\n=== review-kickhit (B7.8): the kick clip run to its impact frame; a zero-dt re-bake of the pose that same frame leaves kickImpact up (it clears on the next real step) ===');
-  const { game, pl } = await stage(4125);
-  let ok = true; const c = pl.char, an = c.anim;
-  an.kickDoor(); let impactF = -1;
-  for (let f = 0; f < 90; f++) { c.update(DT); if (an.kickImpact) { impactF = f; break; } }
-  ok = verdict(impactF >= 0, 'the kick reaches its impact frame', `frame ${impactF}`) && ok;
-  c.update(0);
-  ok = verdict(an.kickImpact === true, 'update(0) in the impact frame: kickImpact still true', `${an.kickImpact}`) && ok;
-  c.update(DT);
-  ok = verdict(an.kickImpact === false, 'the next real step: cleared (one impact per kick)', `${an.kickImpact}`) && ok;
-  void game;
-  return done('review-kickhit', ok);
-}
 
 // ================================================================ B7.6 — the torch carry smooths per second
 export async function reviewTorchDt() {

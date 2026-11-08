@@ -5,6 +5,25 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 244–260 -->
+- **THE CHECK SUITE SINCE THE CUT (2026-11-07/08; the maintainer: "cutting checks before AI rework all sgtm"). READ THIS BEFORE WRITING OR MENDING A CHECK; older bullets
+  describe the suite before it.** 1,446 names became about 1,150. What holds now:
+  - **A check reads the same alone, in its family and on every run.** A game stood with no seed and no die gets die 1 (`tools/qa/die.ts`; `standdie-check.ts`,
+    STANDDIE_BREAK=1 fails it), each probe begins on it (`holds.ts asProbe`), and `probes.ts <family>` runs a process a probe, `QA_JOBS` at a time (the cores by
+    default), each stopped at `QA_PROBE_CAP` seconds (600; 0 = none). The closing line says what the run cost and names the five slowest.
+  - **`probes.ts all-quick` is every probe that costs at most 8 CPU seconds** (`tools/qa/costs.json`, written anew by `probes.ts all --costs`; `QA_QUICK_SECS`): some 290
+    probes in five to six minutes on four cores. `all` is about 950 in an hour and a half there.
+  - **A probe is under a minute of CPU.** A sweep asks a sample (`tools/qa/sweep.ts`: `sample`, `everyNth`, floors through `swept`); `QA_SWEEP=all` asks every case.
+    A game stood with `reach: true` makes the picture's light masks every step: only a check that reads masks asks for it (it was nine tenths of the wall family's time).
+  - **A red is the game's only when the check reached the game.** A tool holds a COPY of the Rust game's state. Of about sixty reds placed one by one, five were the
+    game's. What does NOT reach it, or never comes back: a method or hook wrapped on the copy (`onRelease`, `WALLPEN_HOOKS.crossed`, `lightAt`, `probe.results`); a thing
+    planted on it (`col.addStatic`, `lists.push`, a record opened by hand); a TypeScript rule that kept its body and has no row on the call surface; a kit card changed after the
+    stand (a card reaches a game by Deploy); `saveState` by hand (use `W.snapshot()` / `W.restore()`). What does: keys, orders, functions that cross, fields named in a tool's own
+    text (a yaw is written EVERY frame). A bubble's object is reused: compare its `t`. Only the newest game of a process is live: play one arm to its end, then stand the next.
+  - `game.msg` / `game.say` wrapped by a check are told what the Rust game said (`headless.ts`, `heard.ts`): the log's five rows a tick and one line a man.
+  - **A rule of the simulation is asked natively first** (`rust/game_start/tests`); a probe is for what crosses the bridge or the page.
+  - **The expected reds are one short list** (`tools/qa/expected-red.ts`): faults of the game, placed or waiting for their owner's read. A check's own red is mended, cut or deleted,
+    never listed; a row goes the day its check is green. (The five tables, `red-rows.ts`, `LIST_READ_ON`, the `on` / `bisect` / `rust` fields that older bullets name are gone.)
+  - A check file that is a script of its own is a row of the runner's script table (`probes.ts`, [name, file, families]): a file nothing runs is not a check.
 - **THE HARNESS STANDS THE GAME AS THE PAGE OPENS IT (2026-11-05; the maintainer ruled that the frozen stand may be retired).** With no word in front a
   headless tool is on what the bullet below calls the SHIPPED stand. THE RULE IS ONE FUNCTION, `standOf` in the import-free `src/host/standEnv.ts`: no
   word or `TPS_PROFILE=shipped` = the page's stand, `TPS_PROFILE=frozen` = the old one, any other word stops the tool. `harnessProfile()`
@@ -44,7 +63,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   it). A plain night or a quiet mission alone stood on the shipped stand has the page's `?solo` Sam (one of each can, one round: `kit.ts kitSoloStand`, asked by `standGame` and `startFromQuery`; frozen = as built, nothing written) — and the PAGE's plain night is that Sam whichever way it was started: main.ts asks `kitSoloIf` for `?solo` and for a page with no mission, show or quiet run in its URL, so the card's own Start no longer hands him the eleven things (`PORT=<dev server> node tools/qa/start-kit-page.cjs`: Start and `?solo` carry the same, after a restart too). What shipped still is not: the player (a scripted commander who cannot be hurt), the GPU's light meter and smoke lines (headless = the CPU stand-in), localStorage, V8.
   STILL ON THE OLD FIVE ROWS and calling it 'shipped' / 'the page': kit-cells.ts, snap-probes.ts `PAGE` (framecost.ts's shipped arms and frame-spikes.ts `--ship` stand on `TPS_PROFILE=shipped` now; the five-row arm is kept there as `shipped5` / `pair5` / `--ship5`).
 - **One knob registry** (`src/game/knobs.ts knobRegistry()` — built lazily: the import cycle): every module knob table by name. The session journal (`JOURNAL_KNOBS` = the subset a
-  recording carries), `playthrough.ts --set` and its put-back, the probe runner's copy / put-back round every probe (`knobsCopy / knobsBack`, in place, every depth; it also puts back `KIT_SOLO.on`, which is in no table) and the page's
+  recording carries), `playthrough.ts --set` and its put-back, the probe runner's copy / put-back round every probe (`knobsCopy / knobsBack`, in place, every depth; a game's own `stood` and `soloCard` are no knobs, and a tool's write to them reaches a Rust game only where that host scans for tools' writes, not on a co-op machine) and the page's
   `__knobs` all read it. A new table = one line there; `bun run tools/qa/knobs-check.ts` holds the round trip and is red on an exported table with an `on` switch that is neither registered nor on that file's `UNREGISTERED` list with its reason (six today: four look tables, the kit's two).
   (Added 10-13, the switches goal's step c28ba4fb:) A TABLE THE PAGE'S BOOT WRITES — any `NAME.key = …` in `host/profile.ts pageSwitches` — differs between the page and the stand a
   replay is stood on, so it is carried by a recording (its name at the END of `JOURNAL_KNOBS`) or excused on knobs-check's `PAGE_ONLY` list with how a replay gets it or why it need
@@ -62,7 +81,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   loader, `src/main.ts`) adds, up to a ceiling of fifteen minutes, one mission stood and played 45 s under real keys in headless Chromium
   (`PORT=<port> node tools/blitz/page-walk.cjs`). A red is placed by one run on the named head: the same red there is old, a new one goes back to its
   sender. A read with a memory kill beside it, a time cap or a lost browser is spoiled and is read again, not called. EVERYTHING ELSE IS ASYNC, after the
-  name, and its reds are fixed forward by their owners and told, never hidden: the page as it opens and the other page checks, the 84 mission tallies
+  name, and its reds are fixed forward by their owners and told, never hidden: the page as it opens and the other page checks, the read trap over a few missions (`tools/qa/readtrap-page.cjs`: a field the page reads that is neither on its list nor in `tools/wire/fields.json` `unsent`), its twin (`tools/qa/writetrap-page.cjs`: a word of the block or a field the page writes outside a call of the module, with no reason in `pageWrites`; `--seats2` the page in a two-player game), the 84 mission tallies
   (seeds 1 to 4) against the named head, the check families read as a list of reds by kind (not a bar), tour, soak, the two-seat run and the co-op
   checks, rollback, a build of the Rust module compared with the checked-in one. What the short gate does not see: a page that does not boot (unless the
   change is of the kind above), a rule that breaks on one die in ten, any mission but one, co-op, a family's red, timing, and a real GPU (no tool has
@@ -525,8 +544,7 @@ bun run typecheck      # node vendor/typescript/bin/tsc --noEmit -p tsconfig.jso
 bun run tools/shot-server.ts   # :5174 capture sink (loopback only; CORS granted to loopback pages on any port): __shot() → docs/shots/<name>.jpg, __png() → docs/shots/ab/<name>.png
 ```
 There are no unit tests, but there IS a headless QA harness under `tools/qa/` (the whole Game over a Proxy GPU device, ~1 s
-of wall per simulated minute): `bun run tools/qa/tour.ts --runs 3 --quiet` (the 13-stop tour with the by-hand checks as
-assertions, exit 1 on failure), `bun run tools/qa/soak.ts --seeds 1,2,3 --minutes 12 --quiet` (seeded randomized soak with
+of wall per simulated minute): `bun run tools/qa/soak.ts --seeds 1,2,3 --minutes 12 --quiet` (seeded randomized soak with
 per-frame invariants — among them: the player never crosses a static between frames and never ends a frame inside one), `bun run tools/qa/
 probes.ts <name>` (single-situation repros; `player` = the player-side PASS/FAIL set incl. the wall-clip brute force, `wall-clip` = that
 family in full with its 4-minute door sweep, `attract` = tools/qa/attract.ts, the start card's attract mode without a page). THE EXIT CODES ARE VERDICTS:
@@ -535,8 +553,7 @@ the failed ones, 2 on an unknown name (the known list printed, nothing ran), 0 w
 checked nothing); soak.ts exits 1 on any exception / invariant violation and 2 on an unknown `--flag` (the valid ones listed); `sh tools/qa/gate.sh fam1 fam2 …`
 prints every sub-family verdict, counts both check-line shapes (`- PASS —` and the editor / level probes' two-space `  PASS`), and is red (exit ≠ 0) on any FAIL /
 error line, a non-zero probes.ts exit, or a family that printed neither a verdict nor one counted check (`probes.ts selftest` / `selftest-quiet` exercise the red
-paths); `bun run tools/qa/replay.ts <session.json[.gz]> | --all [--strict] [--invariants]` replays SESSION JOURNALS recorded with F10 (the *Session journal* bullet: exit 0 =
-identical, 1 = diverged with the frame / field / sensor key named, 2 = bad file; `probes.ts journal` = its self-test + the fixtures in `tools/qa/sessions/`). Run tour + soak after every gameplay merge, and `probes.ts player` after touching movement,
+paths). Run soak after every gameplay merge, and `probes.ts player` after touching movement,
 doors' contacts or props. Since 08-12 the runner returns a real verdict (`bun run tools/qa/probes.ts <name|family|all>`: unknown name exits 2 with
 the list, any failed probe exits 1, a probe that checks nothing is 'NO VERDICT'; `tools/qa/gate.sh <families…>` prints every sub-verdict, counts both check formats and
 exits non-zero on a failure / unknown family / silent probe; it finds a time cap it can use — timeout, gtimeout, a perl alarm — so a stock macOS runs it, `GATE_TIMEOUT` overrides) and the soak rejects unknown `--flags` and exits 1 on any violation. `probes.ts all-quick` (`sh tools/qa/gate.sh all-quick`; ~20 min on the maintainer's Mac before the rebuilt families joined it, an hour on a busy four-core cloud box with them: 170 probes, red today only in `expected-red.ts`'s rows) = the union of the gate lists a lane runs before handing back (perf · player · doors · qrf · checkpoints · journal · ui + every identity card, and since 10-09 the rebuilt game's: roomclear · threshold · silent · lineoffire · doorpath · kit · missions · depot · registry · shipped) where `all` is hours; `probes.ts repros` = the informational who-does-what tables (NO VERDICT by design, out of `all`); `probes.ts list` = the name index. The runner snapshots the module knob tables (CIV, WHISTLE, NEEDS, AIM …) round every probe, so a probe cannot tint the next one's identity digest. The deep-review fixes carry their
@@ -585,10 +602,8 @@ plus a clean typecheck — the harness cannot see rendering, the light meter, sm
 
 ## Driving the app headlessly (Browser pane / any automation)
 
-`src/main.ts` exposes hooks on `window`: `__game __engine __cam __demo __input __smoke __menu __audio __quality __marks __particles __weather __findme __glass __wet __rt __mark __save __sharp __civ __sdfrig __wind __qrf __needs __destr __taa __dn __attract __stage __meshTrace __boot __ready __perfrec __journal __replay __prewarm __anim __killGuard __readout`
+`src/main.ts` exposes hooks on `window`: `__game __engine __cam __input __smoke __menu __audio __quality __marks __particles __weather __findme __glass __wet __rt __mark __save __sharp __civ __sdfrig __wind __qrf __needs __destr __taa __dn __attract __stage __meshTrace __boot __ready __perfrec __replay __prewarm __anim __killGuard __readout`
 (+ since the rebuild, the squad game's: `__orders __roomclear __nightbreach __rescue __scenarios __picks __doortools __doors __doorblast __fight __wallcharge __glassbreak __director __pair __wounds __hour __fow __extra`)
-(+ the hot-swap hooks `__hotVol __hotRestir __hotDenoise __hotReflect __hotGather`: recompile a pass from source WITH its real preludes — prefer them to `__wgsl` for the big kernels;
-`__hotCommon(src?, variant?)` swaps an edited common.wgsl / `TRACE_VARIANT` into EVERY tracing pipeline at once — the ray-traversal lab's hook, see the *Stratified gather directions + the trace lab* bullet)
 (+ URL flags `?sharp` / `?nosharp` / `?noiq` / `?gbaa` / `?nomv` from the image-quality program),
 `__runFrames(n, dt=1/60, keys=[], draw=true)` (fixed-step frames with synthetic keys held; `draw` false = only the burst's last step is drawn, the others pack the world as a draw would and go on — what a script on the software adapter wants, and NOT a check of the drawn-every-step path: the GPU's senses then answer once a burst), `__mouse(x, y, buttons?)`,
 `__click`, `__pauseLoop` (stop the rAF loop; step only via `__runFrames`), `__resetClock()`, `__shot(name, q, scale)`
@@ -598,7 +613,7 @@ ui/domshot.ts and laid over the frame + the overlay's canvases; native sliders i
 temporal, 'lighting' adds lighting_common for gather/rc/probe/volumetrics — `naga` is not installed here, so Chrome/Tint through the page is the WGSL validator; a Linux sandbox could run naga if ever
 needed).
 URL flags: `?keeppage=0` (every load a whole page, as before the kept page — `docs/agents/render.md`, the kept page; a DRIVEN page and a `?paused` one are whole by themselves, so a tool reads `window.__game` as ever, and `?keeppage=1` asks such a page for the shell: the game's hooks are then on `document.getElementById('kept-page').contentWindow`), `?keepdrain=0` (on the tab's first address: a load on the kept page does not wait for the last mission's GPU queue before it takes the device), `?callclock=0` (a load's buffer, texture and submit calls are not timed, and its record has no `calls`), `?playclock=0` (after the load, a frame's time inside the GPU queue's calls is not totalled; `?callclock=0` puts both off), `?paused` (deterministic boot, nothing runs until stepped), `?quality=verylow|low|medium|high|ultra` (pins a preset,
-auto off), (`?demo` and `?breach` started the night and day showcases; both were removed with `__night` / `__breach` — docs/agents/showcases.md — and the flags now do nothing; the old tour is `__demo.start()` only), `?mute` (or `localStorage twopointsix.testMute=1` once in the automation
+auto off), (`?demo` and `?breach` started the night and day showcases; both were removed with `__night` / `__breach` — docs/agents/showcases.md — and the flags now do nothing), `?mute` (or `localStorage twopointsix.testMute=1` once in the automation
 profile — **keep test pages silent**, the user listens to their own audio), `?nodecals` / `?noparticles` / `?noweather` / `?noglass` / `?nocivilians` (each merged experiment off from boot — its untouched path), `?nortreflect` (+ `?detail=0‥1`; `?nortreflect&detail=0` = renderer v3 phase 4 off: main's frame bit for bit), `?nomarkings` / `?level=relief` / `?levelFile=<name>.json` (the markings bullet), `?decalStress=N`, `?nogatherstrata` / `?nomotioncalm` (the two 08-12 defaults off), `?hud` (the debug read-out under the HUD on
 from boot — otherwise opt-in per machine, Tab ▸ Frame ▸ debug read-out), `?nop5` (renderer v3 phase 5's ultra extras off from boot AND vetoed for the presets — ultra's frame as it was before the
 phase; the Tab rows still flip them), `?reachUniform` (A/B only: force the reach masks' uniform binding instead of the storage buffer).
@@ -610,7 +625,7 @@ camera drifts under scripts and framed walls instead of the subject for a whole 
 write becomes a walk that stops at the first wall). **The boot is asynchronous** (every pipeline through `createComputePipelineAsync`, `Engine.init()` awaited
 behind a start card that counts them in): `window.__ready` is a Promise that exists from the first tick and resolves once every hook above is assigned, the
 card is live AND every kernel is in (rejects if the boot dies) — `await window.__ready` is the one line a script needs. Since 2026-10-27 the start card of a
-PERSON'S browser does not wait for the heaviest kernels (the row Start on first frame shaders starts on there: `docs/agents/render.md`). A browser a script
+PERSON'S browser does not wait for the heaviest kernels (the start on first frame shaders is on there: `docs/agents/render.md`). A browser a script
 drives (`navigator.webdriver`: every page tool) starts with that row OFF, so there the card still waits for everything and `__ready`, the hooks and the first
 picture are as they were. `window.__started` is true from the moment the card is live (on a mission's page a person sits at the brief's block is live later, at `__boot.marks.settled`: `docs/agents/menus.md`, the brief's Start waits for the picture; `?settle=0` off); with the row on (`?firstframe=1` on a tool's address) the later set
 may still be compiling then and its passes drawing stand-ins, the hooks are already assigned, and `__ready` resolves only once the set is in (`gpu/device.ts
@@ -695,8 +710,8 @@ but synthetic writes still work.
   words (`savedWords('The checkpoint', …)`): "is being sent to the developer", "will be sent" (held in memory until the sharing notice has been read),
   "wasn't sent" (no backend, sharing off, `?cloud=0`); a second line follows a file that was taken (`savedEnd`): "was sent", or "couldn't be sent." The
   file's name and size go to the console. IMPORT STAYS ('import…': a way in, not a download; an old export, or a file written back out by
-  `bun run tools/cloud/pull.ts [--local] --out DIR`), and so does `__save.export()` (it hands the console the text). The F10 journal went the same way
-  in the step before (`ui/sessionrec.ts`; replays.md). SWITCH: the door's own, a page-only table with no row on the frozen stand and no knob:
+  `bun run tools/cloud/pull.ts [--local] --out DIR`), and so does `__save.export()` (it hands the console the text).
+  SWITCH: the door's own, a page-only table with no row on the frozen stand and no knob:
   `?downloads=1` (or `__saveUp.on = false` in the console) = the file downloaded and the line the old "exported <name> (N KB)"; no game state reads it,
   so both stands play the same. CHECKS: `bun run tools/qa/savefile-check.ts` (the kinds that still download; the row read in source;
   `SAVEFILE_BREAK=1` exit 1), `probes.ts panel-inventory` (two rows reworded in the fixture), and on a real page `tools/qa/savedoor-page.cjs`
@@ -730,7 +745,7 @@ but synthetic writes still work.
     its own two rings of five, `SlotInfo.mem`, key `twopointsix.save.mem.<slot>.<i>`, nothing in the store. It lasts THIS RUN ON THIS PAGE: a restart, another mission or a
     reload of the tab drops it. Its gate is `canSnap` (no show or puppet, the Director not blocking, Sam up, the run not over, the response not out) and the soft autosave
     gates as ever; the REGRET rule under the switch counts any man against him going alert (a mission's defenders are units too: `!x.unit` never saw them), and the
-    rooms an autosave is asked at and named for are the level's own on every level (`roomHere`: the office's table named a lesson's street 'cubicles'). Loading one
+    rooms an autosave is asked at and named for are the level's own on every level (`roomHere`, the game's word for it in `game.view.place`: the office's table named a lesson's street 'cubicles'). Loading one
     restores the Game in place (`loadMem`). NOT taken back, as a file's load leaves them: the run's save and load counts, the controller's log and stats, the autosave
     switch, the three hooks, the sandbox row, the tune rows; any OTHER setting kept on the Game goes back with the save. The page's run books start over (main.ts
     `vRun = null`: the Mission is the same object, and a load is another try). Then it calls
@@ -815,7 +830,7 @@ but synthetic writes still work.
     off a frame of play), not built. THE FIRST CUT TOOK THE BASE AT THE STAGING (Game.restartEncounter's last
     act) and was wrong twice, both found by review: every tutorial threw on its first tick (the walk met the beat context's showcase-only `view`
     getter with the program live: the authored gate lets a program by because an authored save STOPS it first) — `TPS_PROFILE=shipped bun run
-    tools/qa/rails-check.ts` and `lesson-run.ts tut-road` are the checks that see it, the save's own did not; and the chain's stale limit
+    tools/qa/lesson-run.ts tut-road` is the check that sees it, the save's own did not; and the chain's stale limit
     (`WALK_AGAIN` × the base's count) counted the game before its first tick (24,058 objects on the compound, 27,875 a tick later), so a fight forced
     a whole walk in play two saves sooner than no base did. From the first tick: five saves, one every 30 s, over a fight that kills ten men in
     150 s with him stood still are all takes since (32,452 to 34,653 objects held). MEASURED 11-03, this box (4 cores), one seed, fresh process each, a scratch script (three squad missions,
@@ -830,7 +845,7 @@ but synthetic writes still work.
     the first save is a take since it and to the bit a whole take of its moment, it loads and plays on, a restart gives the next run its own, the
     run and its loads are those of a run with no base, `warm` made before the first tick keeps and changes nothing, and with autosave off no base is
     taken; (5b) reads the first save's kind from what its run's first tick left on the shelf. The tutorials are NOT in it: run
-    `TPS_PROFILE=shipped bun run tools/qa/rails-check.ts` after a change to when a take is made.
+    `TPS_PROFILE=shipped bun run tools/qa/lesson-run.ts tut-road` after a change to when a take is made.
     `PORT=5199 node tools/qa/savebase-page.cjs` (two boots, about five minutes each; needs no `?mute`: that flag makes the page a script's and the
     brief goes): behind the brief with the first tick not run the code has been warmed once and nothing kept, Enter, the first tick leaves the base,
     the first save a take since (one whole walk later is let by); `?savebase=0` = nothing warmed, no base, the first save WHOLE; it prints what each
@@ -912,7 +927,7 @@ but synthetic writes still work.
   `bun run tools/retire/lines.ts run <dir> [--tree <the tree before>] <the check files the fold's report names>` before and after, `lines.ts diff <before>
   <after> --drop places.json`, `retire.ts --drop-lines places.json --write`, and `run` once more. (`diff` also says a check that DIED after the fold, one
   that throws exits 1 as a red check does, and does not count a line that was red before under other words.) After a fold that took a row with a slider
-  out: `bun run tools/gen-scene-notes.ts` (the scene panel's notes are keyed by row). WHAT GOES THAT WAY, by kind: the stand's and the journal's
+  out. WHAT GOES THAT WAY, by kind: the stand's and the journal's
   lines, the off arm, the on arm measured against the off arm ("a quarter of those metres"), and the lines of a check that held a newer rule off for its
   length; in the first fifteen checks of the squad's family that was 65 of 147 lines. A check left saying nothing goes whole (`--drop`). THE TOOL'S OWN CHECK:
   `bun run tools/retire/retire-check.ts` runs it on a small tree of its own (`tools/retire/fixture`) and holds that each of its cases there (110 today) answers the same,
@@ -976,7 +991,7 @@ but synthetic writes still work.
   minutes. ITS SCENES ARE REAL FLOORS (the set `floors-1`; the day showcase it once played was removed with both showcases): the pass in night snow, the block
   with the mains thrown by a teammate (red emergency lights, the men's torches), the compound in a storm; four teammates, hard, each a mission of the list on
   its own deal and die. A LEVEL IS ONLY LOADED AT BOOT, so a run is A PAGE PER SCENE: `benchBegin` writes a small record to the tab's session store and loads
-  the first scene's address (the mission's own query with `roomclear=<seed>&seed=<seed>&difficulty=hard&noverdict&nokeep&benchrun=<i>`); each page finds the
+  the first scene's address (the mission's own query with `roomclear=<seed>&seed=<seed>&difficulty=hard&nokeep&benchrun=<i>`); each page finds the
   record (`benchLegOfPage`), plays its part (`BenchLeg`) and hands its lines on with the next page's load; the last page shows the card, and Close (or an Esc
   with nothing to show) loads the address the run was asked on. Of the visitor's flags only `mute`, `nomusic`, `quality`, `pipequeue`, `shadertrim`, `shaderfold`, `savepic` (2026-11-02: until then
   `?bench&savepic=0` against `?bench`, the pair the save picture's bullet names, was one run twice), `pace` (11-03: a benchmark draws every display frame whatever the word says, as it
@@ -1035,7 +1050,7 @@ but synthetic writes still work.
   (`?look=plain&look=…`: the scenes are the set's dressed levels). NEVER PLAYED TO ITS CARD, and never on a GPU. A reload in the middle is a plain mission page (the page marks the record before it plays); `?bench` on the address
   goes to the first scene BEFORE the game boots (`main()`'s first lines, a `replace`: that load is the machine's first and the one the report's `load` line
   times, and Back does not ask again), the row is a second load and the report says so. EACH SCENE IS PLAYED BY THE HANDS-OFF PLAYER (`HandsOff`, the page
-  twin of `command-tally.ts`'s hand `b`): W A S D along the nav path, the cursor on a door, the quick key B (stack, then B again when the men have arrived),
+  twin of the removed tally's hand `b`): W A S D along the nav path, the cursor on a door, the quick key B (stack, then B again when the men have arrived),
   the rifle on whoever the fog shows on a clear line after a rolled beat, then a hunt for whoever is left; all of it written onto the host `Input` in the
   loop's `beforeTick`, before the tick samples the command, so the game is played by its own keys and its own AI on both sides. Sam cannot go down while it
   plays (`godMode`, put back after; a scene's page does not read the machine's own sandbox row since 2026-11-02 — `benchSceneWaits`, asked before the mission is staged: with
@@ -1066,7 +1081,7 @@ but synthetic writes still work.
   a real page: a take with no download that the backend has, the notes, the card's lines, Close's wait, `?downloads=1`, and a page with nobody
   listening. `tools/qa/bench-page.cjs` expects no download and reads the take off `__lastPerfDump` (run whole on the software adapter 2026-11-04 with the
   benchmark's wait in: 28 lines, all pass). A DEVELOPER'S WAY TO A FILE: `?downloads=1`, or after the fact `__saveUp.on = false` in the console, then
-  `__journal.save()` or `__perfrec.deliver(__lastPerfDump)`. Never seen on a GPU. Esc stops a run and puts everything back. HANDS OFF: the page's Esc and hotkeys stand down while a run is on, no attract
+  `__perfrec.deliver(__lastPerfDump)`. Never seen on a GPU. Esc stops a run and puts everything back. HANDS OFF: the page's Esc and hotkeys stand down while a run is on, no attract
   reel starts. `?bench=N` = N seconds a window; `?benchcap=N` = N seconds a scene (the page check's). A tab hidden during a run starts that window over, or
   leaves that frame out of the scene's line. While a window is timed on a held picture the page's quality model does not run. A scene that will not start is
   said in the report and the next page loads all the same. SEEDS: `bun run tools/qa/bench-seeds.ts` plays each scene headless (the shipped stand) over a range
@@ -1237,8 +1252,8 @@ but synthetic writes still work.
 - **A mission's page waits for Start; a script's page does not** (2026-10-19, `src/ui/loadbrief.ts`; `docs/agents/menus.md` has the screen). A page
   whose address names a mission resolves `__ready` with the mission's brief up and the world held: nothing ticks until the brief is started. A tool is
   never held by it: no brief is made under `?paused`, a replay, `?kitview` or a benchmark scene, `?mute` (or the test profile's mute) drops it at the
-  boot's end, and a hook that drives the game (`__runFrames`, `__mouse`, `__click`, a save or a load, `__journal.start`) drops it at the loop's next
-  step. A tool that loads a mission with none of those and only watches or shoots the page (`__shot`, `__png`, `__demo.start`) is looking at a held
+  boot's end, and a hook that drives the game (`__runFrames`, `__mouse`, `__click`, a save or a load) drops it at the loop's next
+  step. A tool that loads a mission with none of those and only watches or shoots the page (`__shot`, `__png`) is looking at a held
   world under the brief: it presses Enter, or loads the page with `?loadbrief=0`.
 
 - **A lost GPU device: quiet when the page is leaving, one fresh load for a real loss, then a card that says what was lost (2026-10-19, a play test: the game did not come up on an
@@ -1434,6 +1449,54 @@ but synthetic writes still work.
   what is the host's (`src/game/rollback.ts HOST_FIELDS`) has the two fields too: it is a second list beside the wire's (`tools/wire/wire.ts
   HOSTS_OWN`), in the TypeScript's names and with another rule (what a snapshot leaves alone, against what no state word reads), and the two are
   not made one here.
+- **A mission's address is read in two places, and a host that starts a game from one reads it in both** (2026-11-07; `src/host/standup.ts`
+  `addressBeforeGame(q)` and `startAtAddress(game, q)` / `soloOfAddress`; in Rust `scenario_run::address_before_game` and `start_at_address`, called
+  by `rust/game_start stand.rs`). BEFORE THE GAME IS MADE: the mission row's own hour and weather onto the words, the weather the game is BORN in
+  and the visit's hour, which `standGame` lays over the level: both into the game's own record ((3) below). OF THE STOOD GAME: `?noweather` (the level's own storm
+  off), the mission staged (`startFromQuery`), then the solo card's question (`?solo`, or nothing staged and no quiet mission: the player's own card). The page did this by
+  hand in `main.ts` and still calls the two halves apart (its hooks and a recipe's tables stand between them); **the harness takes the address at the
+  stand: `standUp({ address })`, then `W.start()`.** THE OLDER ROAD, which every tool was on and most still are: `standUp()` stands a PLAIN game
+  (the level's own storm, the solo night's card put on its player by a flag only the harness raises, `KIT_SOLO.stand`, which such a game holds as `Game.stood.soloStand`), and `startFromQuery`
+  afterwards changes the weather's kind, takes the card's flag down and stages the mission. The same mission on the two roads differs at its start
+  in: the order list (one more row on the older road, pushed by the solo card's door-tool setup, so every later order id is one on), the kit's
+  issue record (`issued_player.slot` pistol where the address gives rifle), the door tools (charges 0 and the solo night's keys, left standing
+  under a squad's mission), `weather.fits`, and the dust in the rooms as the picture is handed it. A page and a co-op server differed in exactly
+  these.
+  ON THE ADDRESS NOW: the start tables (`tools/blitz/start.ts`, the Rust start with it), the two-seat stand (`seats-run.ts standTwo`: `seats.ts`,
+  `thrice`, `show-seat-check`), a page's tape in `tools/qa/rerun.ts` and so EVERY co-op machine (`tools/mp/stand.ts standRecipe`, `freshRecipe`),
+  the play-through (`playthrough.ts`: `--set WEATHER.kind` goes onto the address), `tools/blitz/starts.ts`, `picks-probes --boot`. NOT YET:
+  every other tool that calls `startFromQuery` on a game stood plain (about 160 files); when the last is moved, `kitSoloStand`, `KIT_SOLO.stand`
+  and the late `setKind` in `startFromQuery` go.
+  WHAT WHOEVER WRITES A TOOL NEEDS TO KNOW. (1) The floor is still the caller's: `level`, or the bundled office; the address's `levelFile` is not
+  loaded by the stand, and a level built for snow handed apart from an address that does not name it is refused with the word to add. (2) An hour
+  or a weather a tool wrote into `HOUR` / `WEATHER_BOOT` by hand before the stand-up (`PT_HOUR`, a check's own) is put onto an address that names
+  none, so the hand-set value plays as it did. (3) THE ADDRESS IS READ INTO THE RECORD THE GAME IS MADE WITH: `Game.stood` (`src/game/stood.ts`; in Rust `game::StoodWith`), set once at the stand: the weather it is born in and whether that is locked, the hour, its sun and its storm, and whether it is a harness game stood plain. The rules read that. `WEATHER_BOOT`, `HOUR` and `KIT_SOLO` are PICKS, what a page, a menu or a tool chose before any game exists: no rule reads them, the bridge does not carry them, and a game stood with nothing said for it takes them as they stand (`stoodOfPick`). So nothing of the process is written by a stand-up or put back after one, a page and a headless host hold the same record for the same mission (it is locked on both), and a tool that wants to change one on a game already stood writes that game's `stood`. The solo night's card is the game's too: `Game.soloCard`. A tool's write to a game's `stood` or `soloCard` is carried to a Rust game only where that host scans for tools' writes: not on a co-op machine. (4) The two switches the address's reader reads (`ROWSET.on`, `SNOW.on`) are pinned by the run's own words before it reads them
+  (`standup.ts pinSnow`, `pinRowset`: the lines standGame runs). (5) A tape made on a page from before the row's own hour and weather has that rule
+  off before the stand, and the recipe's tables are laid again between the staging and the solo card's question (`rerun.ts`, as the page's player
+  has them). (6) NOT NEW, AND STILL SO: every other module table is the process's, so two games alive in one process share what a stand-up writes there, and a
+  game whose start is made late takes such a table as the last game left it. (7) STILL THE PAGE'S ALONE, so three tutorial rows (the lessons that
+  play the issue kit) and anything kept on a machine stand off the page on every other host: the lesson's kit line (`kitLessonPage`), the kit
+  the machine keeps, the level and levers the machine keeps, the look's place and cast, the page's own switches. (8) THE DIFFICULTY THE ADDRESS ASKS FOR IS EVERY HOST'S (2026-11-07; `&hard`,
+  `&difficulty=`, `&fog= &enemyai= &enemykit= &told=`, `&digin`, `&pressure[=0]`, `&fogcone[=0]`). ONE READER: `difficulty.ts difficultyAsked(q, plain)` reads the words and writes nothing,
+  `difficultyLay` lays them; `initDifficulty` is the page's: what the machine keeps, through those two, its order unchanged. `standup.ts difficultyOfAddress(q)` is every other host's: the address's alone,
+  called by `standUp({ address })` after the address's reader and before the game is made; in Rust `scenario_run::difficulty_of_address`, called by `stand_with`. A lesson's address reads no lever
+  (`plain`) and does read a level. WHAT WRITES WHAT: in the TypeScript the knob tables and the difficulty module's own state are the PROCESS'S, so an address that names a level leaves the tables
+  on it, as a tool's own `setDifficulty` does, and one that names none leaves them as they stand; such a call names no game, so it runs the TypeScript's body and does not cross to a Rust game an older
+  stand left alive, which takes it by the scan if it is stepped again ((6): `surface.ts hostOf`, `scan.ts SETTING`). In Rust they are the game's own. A host's tables win: `standUp`'s new `tables` is laid right after the
+  address's reading (a co-op machine's `tools/mp/stand.ts`, a page's tape in `rerun.ts`, as a page lays `recipeTables`), and a Rust start HANDED knob tables (`stand_handed`, part 6) does not read the
+  address's difficulty at all (`StartOpts.difficulty`), because that host already has.
+  THE CHECKS: `bun run tools/blitz/start-levels.ts` and `--seats 2` hold the Rust start to this one mission by mission; `--again` holds a second
+  start in one process to the first; `--words '&hard'` holds every mission's hard start, the knob tables and the difficulty module's record with it; `tests/hard.rs` and the probe `levers-address` (`LEVERS_ADDRESS_BREAK=1` must fail) hold the reading; `tools/qa/rowset-check.ts` reads the order of the address's reader off its source (`ROWSET_ORDER_BREAK=1`
+  must fail its last line).
+  READ 2026-11-07 (the module built from these sources; a 4-core cloud box): IT MOVES NO PLAY. Against the
+  tree before it: `thrice` and `thrice --one` one digest each, the same as before; `night-breach` seed 1 the same on every tick; the six packed
+  fuzz runs THE PLAY IS THE SAME; the play-through on depot-four, records-pair, compound-four and rescue-registry, seeds 1 to 4, sixteen results
+  the same to the letter. What moves is the START'S RECORDS on the hosts that came onto the address: 24 squad missions by 24 paths each (orders
+  18, door tools 5, kit 1; 193 with two seats, where each seat's order ids move), four quiet pairs by 50 (order ids, the wall charge's), tut-kit,
+  tut-squad and tut-queue by their weather being born once. `weather.ts`'s own-storm rule lost a word the picture had put in it
+  (`docs/agents/weather.md`). NOBODY HAS SEEN any of this on a GPU, and nobody has played a mission on it by hand. A page was run by script on the
+  software adapter, a co-op client of its own server on the depot in a downpour, 2,882 ticks and no error (before the records were the game's own:
+  it then still differed from a headless watcher in those three rows).
 - **A game stood up has done with the last one: `standUp` asks for a full collection first** (2026-11-05; `tools/qa/headless.ts STANDUP_COLLECTS`; the
   harness only, nothing of the game). FOUND by the merge: the workers of `bang-tally.ts` (the `flashweight` family's tally, missions back to back in one
   process) grew about 1.6 GB a minute on the page's stand and two died at a 12 GB limit; old, on every build looked at. Reproduced here: one worker from

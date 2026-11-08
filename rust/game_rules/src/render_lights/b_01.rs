@@ -8,32 +8,35 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// One light's GPU record (common.wgsl struct Light, 16 words) at word `o`. In the TypeScript `f` and `u` are two views of one buffer; here they are two
-/// lists, so every word is written to both, the same bits, and a host may hand either on. `inten` scales the colour; `kind_word` is the kind with whatever
-/// flag bits the caller sets above its low byte, `owner_word` the owner byte with the glass mask above it.   (src/render/lights.ts:113 packLight)
-pub fn pack_light(g: &crate::game::Game, f: &mut Vec<f32>, u: &mut Vec<u32>, o: f64, l: LightId, inten: f64, kind_word: f64, volumetric: f64, owner_word: f64) {
+/// One light's GPU record (common.wgsl struct Light, 16 words), hung at `pos` with that radius. `inten` scales the colour; `kind_word` is the kind with
+/// whatever flag bits the caller sets above its low byte, `owner_word` the owner byte with the glass mask above it.   (src/render/lights.ts packLight)
+pub fn pack_light(row: &RtLight, pos: V3, radius: f64, inten: f64, kind_word: u32, volumetric: f64, owner_word: u32) -> [u32; 16] {
     const DEG: f64 = core::f64::consts::PI / 180.0;
-    let o = o as usize;
-    if f.len() < o + 16 { f.resize(o + 16, 0.0); }
-    if u.len() < o + 16 { u.resize(o + 16, 0); }
-    let row = &g.tab.light[l];
+    let w = |v: f64| (v as f32).to_bits();
     // (a portal has no cone: the two cone words are its own)
     let (w11, w12) = match row.portal.as_ref() {
         Some(p) => (p.half_wide, p.share),
         None => (m::cos(row.outer_deg * DEG), m::cos(m::min(row.inner_deg, row.outer_deg - 0.5) * DEG)),
     };
-    let mut fw = |k: usize, v: f64| { let x = v as f32; f[o + k] = x; u[o + k] = x.to_bits(); };
-    fw(0, row.pos[0]); fw(1, row.pos[1]); fw(2, row.pos[2]);
-    fw(4, row.dir[0]); fw(5, row.dir[1]); fw(6, row.dir[2]); fw(7, row.range);
-    fw(8, row.color[0] * inten); fw(9, row.color[1] * inten); fw(10, row.color[2] * inten); fw(11, w11);
-    fw(12, w12); fw(13, volumetric); fw(15, row.radius);
-    let mut uw = |k: usize, v: f64| { let x = js::to_u32(v); u[o + k] = x; f[o + k] = f32::from_bits(x); };
-    uw(3, kind_word); uw(14, owner_word);
+    [w(pos[0]), w(pos[1]), w(pos[2]), kind_word, w(row.dir[0]), w(row.dir[1]), w(row.dir[2]), w(row.range),
+        w(row.color[0] * inten), w(row.color[1] * inten), w(row.color[2] * inten), w(w11), w(w12), w(volumetric), owner_word, w(radius)]
 }
 
 
 // ---- THE LIGHTS' LIST IS THE GAME'S (render/lights.ts LightSet: "this set is the game's and goes into every checkpoint"): its add / remove / flash and the fog's class
 // are translated, not no-ops. Round one made `remove` a boundary no-op: a light taken off the list went on lighting the estimate.
+
+/// WHAT A LIGHT IS BESIDE AN HOUR'S (sim/light.rs by_day), by what it is called and how it burns. (render/photometry.ts lightClass)
+pub fn light_by_day(l: &crate::render_lights::RtLight) -> u32 {
+    use sim::light::{DAY_FACE, DAY_FIXTURE, DAY_FLASH, DAY_HAND, DAY_NONE, DAY_VEHICLE};
+    if l.kind == 2.0 || l.transient == Some(true) || l.group == "devices" || l.group == "sky" || l.name.starts_with("kitview") { return DAY_NONE; }
+    if l.kind == 3.0 { return DAY_FACE; }
+    if l.ttl >= 0.0 || l.group == "tracer" || l.steady.is_some() { return DAY_FLASH; }
+    if l.card || l.group == "flashlights" { return DAY_HAND; }
+    let body: &str = l.name.split("_lamp").next().unwrap_or("");
+    let car = l.name.contains("_lamp") && ["van", "gun_truck", "truck", "pickup", "lorry", "jeep", "car"].iter().any(|v| body.starts_with(v) && body[v.len()..].chars().all(|c| c.is_ascii_alphanumeric() || c == '_'));
+    if car { DAY_VEHICLE } else { DAY_FIXTURE }
+}
 
 /// (lights.ts LightSet.add)
 pub fn light_set_add(g: &mut crate::game::Game, l: LightId) -> LightId { g.engine.lights.lights.push(l); l }

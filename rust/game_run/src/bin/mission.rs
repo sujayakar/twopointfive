@@ -11,7 +11,7 @@
 //! the block are written (n<k>.bin, ns<k>.bin), `--after` more ticks run, and the exit code is 1. A panic prints `PANIC in tick <k>`, its message and
 //! place and the game's frames of the backtrace; the exit code is then 2. A kept tick (--keep / --every) writes n<k>.bin and ns<k>.bin for tools/blitz/diff.ts.
 //!
-//! BLITZ_SKIP=<names> leaves one of the host's calls round a step out (lights, upload, view, follow), to see by a run what it is for.
+//! BLITZ_SKIP=<names> leaves one of the host's calls round a step out (lights, view, follow), to see by a run what it is for.
 use game::ids::Id;
 use std::io::Write;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -128,12 +128,8 @@ fn main() {
                 println!("TEND as tick {} opens: {} sets posed, {} of them at home, {} held (of them {} on no list), strays {}, poses of posed sets outside the pool {}, loose rows {}", k, sets.len(), home, g.pose_sets.len(), held_not_posed, stray, loose, g.loose_poses.len());
             }
             let cmd = match host_half(&mut g, &dir, k) { Some(c) => c, None => { println!("no h{}.bin: the TypeScript's run ended at tick {}", k, k - 1); break; } };
-            // HOST STEP: where the headless host listed the box world again between two ticks. BEFORE the driver's orders and writes: the host lists as its
-            // step ends, and what the driver then does to the box world (a wall charge blown by the module's own call) is not listed until the next step
-            // ends. Listed after it, the aim ray of the tick met a piece of wall the TypeScript's list did not yet hold (mousehole-four with wall charges, tick 6326).
             // HOST STEP: between two ticks the view's matrix is the host camera's live one (game_run::view_live), as the host's half has just brought it
             if !skip("viewlive") { game_run::view_live(&mut g); }
-            if !skip("upload") && host[k - 1].get(4).copied().unwrap_or(0.0) > 0.0 { game_run::upload(&mut g); }
             // HARNESS STAND-IN: the test driver's orders, its writes and the rules it called before this tick, in its own order (game_run::between)
             if ordered { for l in between.get(&k).map(|v| v.as_slice()).unwrap_or(&[]) { let t = game_run::between(&mut g, k, l, &no_between); if !t.is_empty() { println!("{}", t); } } }
             else {
@@ -205,7 +201,7 @@ fn main() {
             if !same { n_parted += 1; if n_parted <= 40 && !first_part { println!("TICK {}: the block PARTS in {:?} (die n={} / {})", k, off, d.n, p.map(|p| p[1].as_str()).unwrap_or("?")); } } else if n_parted > 0 && !was_same { println!("TICK {}: the block is the same again", k); }
             was_same = same;
             if first_part || k % 100 == 0 || k == ticks || !die_same {
-                println!("TICK {}; time {:.4}; die n={} (TypeScript {}); block {}; boxes {}; mean tick {:.2} ms, worst {:.1} ms", k, g.time, d.n, p.map(|p| p[1].as_str()).unwrap_or("?"), if same { "the same".to_string() } else { format!("PARTS in {:?}", off) }, g.tab.boxes.len(), spent.as_secs_f64() * 1e3 / k as f64, worst.as_secs_f64() * 1e3);
+                println!("TICK {}; time {:.4}; die n={} (TypeScript {}); block {}; boxes {}; mean tick {:.2} ms, worst {:.1} ms", k, g.time, d.n, p.map(|p| p[1].as_str()).unwrap_or("?"), if same { "the same".to_string() } else { format!("PARTS in {:?}", off) }, g.tab.boxes.len() + g.tab.frame_boxes.len(), spent.as_secs_f64() * 1e3 / k as f64, worst.as_secs_f64() * 1e3);
             }
             if first_part || keep.iter().any(|(a, b)| k >= *a && k <= *b) || (every > 0 && k % every == 0) {
                 std::fs::write(format!("{}/n{}.bin", dir, k), game::io::export(&g)).unwrap();
@@ -228,9 +224,11 @@ fn main() {
         if std::env::var("BLITZ_BOXES").is_ok() {
             let mut by: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
             let free: std::collections::HashSet<usize> = g.box_frame_free.iter().map(|b| b.ix()).collect();
-            for (i, id) in g.tab.boxes.ids().enumerate() { if i < rows0 || free.contains(&i) { continue; } let b = &g.tab.boxes[id]; *by.entry(format!("h {:.3} {:.3} {:.3} flags {} owner {} name {:?}", b.h[0], b.h[1], b.h[2], b.flags, b.owner, b.name)).or_default() += 1; }
+            let mut tally = |b: &game::scene_boxes::Box| *by.entry(format!("h {:.3} {:.3} {:.3} flags {} owner {} name {:?}", b.h[0], b.h[1], b.h[2], b.flags, b.owner, b.name)).or_default() += 1;
+            for (i, id) in g.tab.boxes.ids().enumerate() { if i >= rows0 { tally(&g.tab.boxes[id]); } }
+            for (i, id) in g.tab.frame_boxes.ids().enumerate() { if !free.contains(&i) { tally(&g.tab.frame_boxes[id]); } }
             let mut v: Vec<_> = by.into_iter().collect(); v.sort_by(|a, b| b.1.cmp(&a.1));
-            println!("BOXES: {} rows at the start, {} now, {} of them free frame rows; made since and held:", rows0, g.tab.boxes.len(), free.len());
+            println!("BOXES: {} rows of the world at the start, {} now; {} rows of the frame, {} of them free; made since and held:", rows0, g.tab.boxes.len(), g.tab.frame_boxes.len(), free.len());
             for (k, n) in v.iter().take(14) { println!("   {} x {}", n, k); }
         }
         beats_line(&g);

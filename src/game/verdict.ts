@@ -4,12 +4,12 @@
 // How a run went, said once it is over (the end card's record: ui/verdictCard.ts draws it, ui/verdictStore.ts keeps what this machine keeps of it).
 //
 // THE MODULE ONLY READS THE GAME (as par.ts and lesson.ts do): it moves nobody, draws no die and writes nothing the simulation reads, so a run is the same run
-// with `VERDICT.on` false, digest for digest, on either stand. `tick()` comes after the scenarios, the mission and the snatch / defuse overlays have had this
+// with `VERDICT.on` false, digest for digest, on either stand. `tick()` comes after the scenarios, and the mission have had this
 // frame, so every end they wrote is in.
 //
 //   A TRY starts at the squad's first order, Sam's first stride (PAR_START_M off the mark he was staged on) or the first round or throw — the par clock's rule,
 //     for every kind of mission: restarting before that is free. `started` goes up then and the run's clock runs from there.
-//   THE END is each mission kind's own (a room clear taken or wiped, a hostage rescue's result, the night breach's room, a snatch or defuse level's own end, the
+//   THE END is each mission kind's own (a room clear taken or wiped, a hostage rescue's result, the night breach's room, the
 //     quiet game's exfil) or a player down. One `RunVerdict` is made then and never again for that run: won or lost in one word, the seconds, one row per man
 //     (who was up at the end, when and where a man fell and to whom, when he dropped somebody, where he walked), the defenders, and — for a win — THE WAY it
 //     was won, read off the run, one way a run:
@@ -19,7 +19,7 @@
 //       doors   anything else
 //     in that order, so two pips on a mission card are two different plans.
 //   CHEATS (god mode, no AI, unlimited ammo, invisible) on at any frame of the try: `void` — the card still shows, nothing is kept of it.
-//   THE CARD: the stealth mission raises its own (`mission.debrief`); for every other end this module says when (`takeDue()`, read by the page).
+//   THE CARD: the stealth mission sends its own (the game's out event EndCard); for every other end this module says when (`takeDue()`, read by the page).
 //
 // Per-player by construction: the men are `humans(g)` (today the one Player) then the AI teammates; nothing here asks for "the" player by name but that list.
 // Not in a checkpoint: a load is the SAME try (`resumed`), and for the kinds that can be loaded (the quiet game alone) the way won is read off the chronicle,

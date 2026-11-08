@@ -180,46 +180,46 @@ pub fn door_tools_standoff_walk(g: &mut crate::game::Game, men: &[GuardId], d: D
     None
 }
 
-/// One man's test for close_words, asked inside without_leaf: blow()'s own reach and line.
-fn close_ask(g: &mut Game, d: DoorId, side: f64, out: V3, inn: V3, p: V3, who: String, sam: bool, near: &mut Vec<String>, far: &mut Vec<String>) {
+/// One man's test for close_words: blow()'s own reach and line, the door's own leaf (which is coming apart) let through.
+fn close_ask(g: &Game, others: &crate::ask::WorldAsk, d: DoorId, side: f64, out: V3, inn: V3, p: V3, who: String, sam: bool, near: &mut Vec<String>, far: &mut Vec<String>) {
     let beyond = off_of(g, d, p, side) < 0.0;
     let dist = flat(p, g.dr[d].frame_centre);
     let (stun_m, backblast_m) = (g.k.doortools.stun_m, g.k.doortools.backblast_m);
     if if sam { dist >= (if beyond { stun_m } else { backblast_m }) } else { dist > stun_m || (!beyond && dist >= backblast_m) } { return; }
-    if !crate::scene_collision::solid_blocked(g, if beyond { inn } else { out }, [p[0], 1.1, p[2]], None) {
+    if !others.line(if beyond { inn } else { out }, [p[0], 1.1, p[2]], crate::ask::Line::Solid) {
         if beyond { far.push(who); } else { near.push(who); }
     }
 }
 
-/// Who a charge on a door would catch if it went now, as words for the row; kept a quarter second a charge.   (doortools.ts closeWords)
-pub fn door_tools_close_words(g: &mut crate::game::Game, c_2: ChargeId) -> String {
+/// Who a charge on a door would catch if it went now, as words for the row: the seat's own man and his men, as things stand, of the game shared (the copy of the boxes standing).   (doortools.ts closeWords)
+pub fn door_tools_close_words_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, c_2: ChargeId) -> String {
     let c = c_2;
-    if let Some(kept) = g.door_tools.close_at.get(c) { if m::abs(g.time - kept.t) < 0.25 { return kept.w.clone(); } }
     let (d, side) = (g.tab.doortools_set_charge[c].door, g.tab.doortools_set_charge[c].side);
     let width = g.dr[d].def.width;
     let into = -side;
     let out = door_pt(g, d, width / 2.0, 0.5, side, Some(1.1));
     let inn = door_pt(g, d, width / 2.0, 0.45, into, Some(1.1));
     let (mut near, mut far): (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
-    crate::doorblast::without_leaf(g, d, &mut |g: &mut Game| {
-        let pl = g.player;
-        if !g.pl[pl].down && g.puppet.is_none() && !g.touring {
-            let p = g.ch[g.pl[pl].ch].pos;
-            close_ask(g, d, side, out, inn, p, String::from("you"), true, &mut near, &mut far);
-        }
-        for gd in g.guards.clone() {
-            if g.gd[gd].unit.is_some() && g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].state != crate::game::GuardState::Dead {
-                let (p, who) = (pos_of(g, gd), callsign(g, gd));
-                close_ask(g, d, side, out, inn, p, who, false, &mut near, &mut far);
-            }
-        }
-    });
+    let others = crate::ask::WorldAsk::of(g).over(crate::ask::Over::but_door(g, d));
+    if !g.pl[seat.player].down && g.puppet.is_none() && !g.touring {
+        let p = g.ch[g.pl[seat.player].ch].pos;
+        close_ask(g, &others, d, side, out, inn, p, String::from("you"), true, &mut near, &mut far);
+    }
+    // (every man of the team's who is up, whoever's orders he takes: a charge asks nobody)
+    for &gd in &g.guards {
+        if g.gd[gd].unit.is_none() || g.gd[gd].team != crate::teams::Team::Operative || g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+        let (p, who) = (pos_of(g, gd), callsign(g, gd));
+        close_ask(g, &others, d, side, out, inn, p, who, false, &mut near, &mut far);
+    }
     let mut w = String::new();
     if !near.is_empty() { w.push_str(&alloc::format!(" · too close: {}", near.join(", "))); }
     if !far.is_empty() { w.push_str(&alloc::format!(" · behind the door: {}", far.join(", "))); }
-    let t = g.time;
-    g.door_tools.close_at.set(c, DoorToolsCloseAtValue { t, w: w.clone() });
     w
+}
+/// …for a rule that holds the game: the copy of the boxes stood first
+pub fn door_tools_close_words(g: &mut crate::game::Game, c_2: ChargeId) -> String {
+    crate::scene_collision::stands(g);
+    door_tools_close_words_of(g, &crate::seats::here(g), c_2)
 }
 
 /// The face of this door the player could set a charge on by hand right now (None: none).   (doortools.ts samFace)
@@ -240,7 +240,7 @@ pub fn door_tools_sam_rows(g: &mut crate::game::Game, it: &mut crate::game::Inte
     let f = crate::ownblow::blow_key_word(false, &key);
     if let Some(c) = c {
         let close = door_tools_close_words(g, c);
-        let is = door_tools_key_is(g, c);
+        let is = door_tools_key_is(g, &crate::seats::here(g), c);
         let w = alloc::format!("{} · charge set{}", close, crate::ownblow::blow_tail(is, &key, None));
         it.line1.push_str(&w);
         for v in verbs.iter_mut() { v.line1.push_str(&w); }
@@ -253,13 +253,13 @@ pub fn door_tools_sam_rows(g: &mut crate::game::Game, it: &mut crate::game::Inte
 }
 
 /// Is this set charge the squad's key's to blow: one the squad set, or his own while the squad works its door.   (doortools.ts keyIs)
-pub fn door_tools_key_is(g: &mut crate::game::Game, c_2: ChargeId) -> bool {
+pub fn door_tools_key_is(g: &crate::game::Game, seat: &crate::seats::SeatRef, c_2: ChargeId) -> bool {
     let c = c_2;
     if !by_sam(g, c) { return true; }
     let door = g.tab.doortools_set_charge[c].door;
-    if g.door_tools.ops.iter().any(|o| g.tab.doortools_door_op[*o].door == door) { return true; }
-    let men = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None);
-    door_tools_stacks_of(g, &men).iter().any(|x| x.stack == door)
+    if seat.door_tools.ops.iter().any(|o| g.tab.doortools_door_op[*o].door == door) { return true; }
+    let men = crate::orders::squad_orders_men(g, seat, None, None);
+    door_tools_stacks_of(g, seat, &men).iter().any(|x| x.stack == door)
 }
 
 /// The nearest charge his own hands set that is on no word still to go.   (doortools.ts samSet)
@@ -824,7 +824,7 @@ pub fn door_tools_stack_posts(g: &mut crate::game::Game, d: DoorId, side: f64, m
 }
 
 /// tuckedIn of stackTucked: the tuck does not take a man off his mark to put him on Sam, nor put a mark where a leaf swings.
-fn tucked_in(g: &mut Game, own: &[V3], sam: V3, p: &crate::orders::StackPost, q: V3) -> bool {
+fn tucked_in(g: &Game, own: &[V3], sam: V3, p: &crate::orders::StackPost, q: V3) -> bool {
     let mine = |x: V3| own.iter().any(|o| flat(*o, x) < crate::orders::OWN_EPS);
     (mine(p.pos) && flat(sam, q) < 0.7 && !mine(q))
         || (!p.lead && crate::doorway::doorway_in_way(g, q) && !crate::doorway::doorway_in_way(g, p.pos))
@@ -871,10 +871,10 @@ pub fn door_tools_stack_tucked(g: &mut crate::game::Game, d: DoorId, side: f64, 
 }
 
 /// Teammates outside this order stacked on this door, this face, under a plain 'stack up'.   (doortools.ts holders)
-pub fn door_tools_holders(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId]) -> Vec<GuardId> {
+pub fn door_tools_holders(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, side: f64, men: &[GuardId]) -> Vec<GuardId> {
     if !crate::orders::squad_orders_big(g, &crate::seats::here(g)) { return Vec::new(); }
     let fc = g.dr[d].frame_centre;
-    let jamb_out = g.orders.knobs.jamb_out;
+    let jamb_out = seat.orders.knobs.jamb_out;
     let mut out: Vec<GuardId> = Vec::new();
     for gd in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
         if men.contains(&gd) { continue; }
@@ -908,7 +908,7 @@ pub fn door_tools_step_backs(g: &mut crate::game::Game, d: DoorId, side: f64, me
     let mut walls: Vec<f64> = Vec::new();
     let away = { let a = door_pt(g, d, width / 2.0, 0.0, side, None); let b = door_pt(g, d, width / 2.0, 1.0, side, None); v3::yaw_to(a, b) };
     let out2 = crate::stackroom::stack_view_reach(g, d) > 2.6;
-    for gd in door_tools_holders(g, d, side, men) {
+    for gd in door_tools_holders(g, &crate::seats::here(g), d, side, men) {
         let a_id = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd).unwrap();
         let from = g.tab.orders_assignment[a_id].post.unwrap();
         let stack_side = g.tab.orders_assignment[a_id].stack_side;
@@ -947,7 +947,7 @@ pub fn door_tools_step_backs(g: &mut crate::game::Game, d: DoorId, side: f64, me
 
 /// The stack for an order on a door other teammates hold: its marks as if they had stepped back, and where they step back to.   (doortools.ts dealStack)
 pub fn door_tools_deal_stack(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId]) -> Option<crate::doortools::DoorToolsDealStack> {
-    let hold = door_tools_holders(g, d, side, men);
+    let hold = door_tools_holders(g, &crate::seats::here(g), d, side, men);
     if hold.is_empty() {
         let posts = door_tools_stack_posts(g, d, side, men, None)?;
         return Some(DoorToolsDealStack { posts, back: JsMap::new() });

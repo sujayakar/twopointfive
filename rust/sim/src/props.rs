@@ -29,7 +29,7 @@
 use crate::collide;
 use crate::maths::{cos, exp, hypot2, sin};
 use crate::state::state;
-use crate::world::{js_abs, js_ceil, js_max, js_min, world, MAX_LEAVES, REC, R_C, R_COS, R_H, R_SIN};
+use crate::world::{asking, js_abs, js_ceil, js_max, js_min, world, MAX_LEAVES, REC, R_C, R_COS, R_H, R_SIN};
 use core::mem::{offset_of, size_of};
 use prim::sqrt;
 
@@ -582,7 +582,7 @@ impl Step {
             let o = world(self.w);
             let mut any = false;
             for k in 0..n {
-                let b = o.list[k] as usize * REC;
+                let b = asking(self.w).list[k] as usize * REC;
                 // (props.ts works out the cos and sin of the static's yaw here; the copy keeps the same two beside the yaw, written by the same maths)
                 let (bx, bz, bhx, bhz) = (o.rec[b + R_C], o.rec[b + R_C + 2], o.rec[b + R_H], o.rec[b + R_H + 2]);
                 let (bcs, bsn) = (o.rec[b + R_COS], o.rec[b + R_SIN]);

@@ -223,7 +223,7 @@
         window.__killGuard(1, 'struck');   // (main.ts hook: killGuard where he stands, quietly; his torch is off so nothing sputters and nobody parked hears)
         await P.step(150);
         const b = g.guards[1].char.pos; const hips = g.guards[1].char.bones?.hips ?? [b[0], 0.15, b[2]];
-        if (!window.__s3light) { window.__s3light = e.lights.add({ name: 's3_torch', group: 'test', kind: 1, pos: [31.3, 0.9, 7.7], dir: [1, 0, 0], color: [1.0, 0.92, 0.78], intensity: 70, range: 16, innerDeg: 7, outerDeg: 19, radius: e.settings.flashlightRadius, volumetric: 1.0, owner: 0, enabled: true, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 70, card: true }); }
+        if (!window.__s3light) { window.__s3light = e.lights.add({ name: 's3_torch', group: 'test', kind: 1, pos: [31.3, 0.9, 7.7], dir: [1, 0, 0], color: [1.0, 0.92, 0.78], intensity: 70, range: 16, innerDeg: 7, outerDeg: 19, radius: 0.07, volumetric: 1.0, owner: 0, enabled: true, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 70, card: true }); }
         const L = window.__s3light; const d = [hips[0] - L.pos[0], (hips[1] ?? 0.15) - L.pos[1], hips[2] - L.pos[2]]; const l = Math.hypot(...d); L.dir = d.map(v => v / l);
         await P.step(10); await P.render(60);
         return { body: P.project([hips[0], hips[1] ?? 0.15, hips[2]]), hips, torch: { pos: L.pos, dir: L.dir } };

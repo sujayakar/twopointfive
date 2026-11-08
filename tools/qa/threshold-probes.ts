@@ -39,7 +39,8 @@ const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { feelTables } = await import(`${ROOT}/src/game/teamfeel.ts`);
+const { knobsNamed } = await import(`${ROOT}/src/game/knobs.ts`);
+const feelNow = () => knobsNamed(['FLASH', 'PACE', 'LIGHTS', 'NVG', 'IR', 'IRLIGHT', 'FOG', 'LASER', 'DOORTOOLS', 'ROOMFIGHT', 'ORDERS', 'COVER', 'ENTRY', 'REAR', 'SILENT', 'FRAG', 'PAIR', 'DOORMANNERS']) as any;
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -50,8 +51,8 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
-/** every probe leaves the feel tables (teamfeel.ts: DOORTOOLS among them) as it found them, pass, fail or throw */
-const guarded = (fn: () => Promise<boolean>) => async () => { const T = feelTables(), keep = JSON.parse(JSON.stringify(T)); try { return await fn(); } finally { YARDOUT = LEAFBREAK = false; for (const n of Object.keys(keep)) Object.assign(T[n], keep[n]); } };
+/** every probe leaves the feel tables (DOORTOOLS among them) as it found them, pass, fail or throw */
+const guarded = (fn: () => Promise<boolean>) => async () => { const T = feelNow(), keep = JSON.parse(JSON.stringify(T)); try { return await fn(); } finally { YARDOUT = LEAFBREAK = false; for (const n of Object.keys(keep)) Object.assign(T[n], keep[n]); } };
 async function quiet<T>(fn: () => T | Promise<T>): Promise<T> { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } }
 const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
 
@@ -423,15 +424,6 @@ async function playthrough(env: Record<string, string>, seeds: string, set?: Rec
   const err = await new Response(pr.stderr).text(); await pr.exited;
   try { const runs = JSON.parse(readFileSync(file, 'utf8')).runs; rmSync(file); return { runs, err }; } catch { return { runs: [], err }; }
 }
-export const thresholdPlay = guarded(async () => {
-  const { verdict, done } = family('threshold-play: the scripted commander works every held room from the threshold, all seven scenarios (playthrough.ts, PT_TOOL=threshold)');
-  const { runs, err } = await playthrough({ PT_TOOL: 'threshold' }, '1');
-  const bad = runs.filter(r => r.end === 'error' || r.end === 'stalled');
-  verdict(runs.length === SCENARIOS.length && bad.length === 0, 'seven runs, each ended by its scenario\'s own rules: none threw, none stalled with an order hanging', runs.length ? runs.map(r => `${r.scn}:${r.seed} ${r.end} at ${r.t} s · team ${r.team}/${r.of} · theirs ${r.hostiles}/${r.hostilesOf} up · ${r.rooms} doors worked${r.end === 'error' ? ` — ${String(r.why).split('\n')[0]}` : ''}`).join('\n    ') : `no result — ${err.trim().split('\n').slice(-3).join(' / ')}`);
-  const rooms = runs.filter(r => !/rescue/.test(r.scn)), none = rooms.filter(r => !(r.thr > 0));   // (the two rescues are their own F: playRescue never gives the order)
-  verdict(rooms.length === (SCENARIOS as any[]).filter(e => e.kind !== 'rescue').length && none.length === 0, 'the room-clearing runs each had rooms worked from the threshold (the order taken, not refused and swapped for a bang)', rooms.map(r => `${r.scn}: ${r.thr ?? 0} of ${r.rooms} rooms${(r.refused ?? []).filter((x: string) => /^threshold/.test(x)).map((x: string) => ` · refused ${x}`).join('')}`).join(' · '));
-  return done();
-});
 /** NO CAN FROM A HAND THAT IS NOT AT THE DOOR. Staged: a threshold given to hold, the men run off the door a second before Sam says
  *  'bang, then step in' (doorRun's `away`: what a grenade landing by the stack does to them), and what the can then does — and past its wait, and
  *  with nobody run off at all. THRHAND_BREAK=1: nobody is run off the door — red. */

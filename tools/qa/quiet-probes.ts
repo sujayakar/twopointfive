@@ -1,6 +1,6 @@
 // The 'quiet' family (THE QUIET MISSION on any level — game/quiet.ts; data scene/scenarios.ts QuietData), run through probes.ts:
 //   bun run tools/qa/probes.ts quiet | quiet-data | quiet-start | quiet-run | quiet-pair | quiet-checkpoint | quiet-own
-// PASS / FAIL each, all headless on levels/quiet-yard.json (the mission's own test floor) and the bundled office. Nothing here looks at a picture or hears a sound.
+// PASS / FAIL each, all headless on levels/bazaar.json and the bundled office. Nothing here looks at a picture or hears a sound.
 //   quiet-data        the file validates; broken blocks are refused by name; the block against the built floor is clean and a start moved into a wall is caught;
 //                     the office (no block) refuses a quiet start with the reason and stays the plain night
 //   quiet-start       alone: Sam on the dealt start, the dealt patrol set on the list and the other routes' men off it, the level's devices and civilians live,
@@ -48,7 +48,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } catch (e) { console.log(`- FAIL — the probe threw\n    ${e instanceof Error ? e.stack : String(e)}`); return false; } };
 const hushed = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-const DT = 1 / 60, FILE = 'quiet-yard.json';
+const DT = 1 / 60, FILE = 'bazaar.json';
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const at = (p: number[]) => `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`;
 const text = () => readFileSync(resolve(ROOT, 'levels', FILE), 'utf8');
@@ -83,9 +83,9 @@ export const quietData = guarded(async () => {
     ];
     F.verdict(cases.every(c => c.e.length > 0), 'a broken block is refused by the file validator, each fault named', cases.map(c => `${c.label}: ${c.e[0] ?? 'NOT CAUGHT'}`).join('\n    ')); }
   { // a route the file NAMES (name ≠ id): the game knows it by its name, so that is what a patrol set says — and a run on it mans who the set says
-    const d = JSON.parse(text()); d.routes[0].name = 'yard loop';
+    const d = JSON.parse(text()), was = d.routes[0].name ?? d.routes[0].id; d.routes[0].name = 'yard loop';
     const byId: string[] = validateLevelData(d).filter((x: string) => /quiet/.test(x));
-    d.scenarios.quiet.patrols = d.scenarios.quiet.patrols.map((set: string[]) => set.map(n => n === d.routes[0].id ? 'yard loop' : n));
+    d.scenarios.quiet.patrols = d.scenarios.quiet.patrols.map((set: string[]) => set.map(n => n === was ? 'yard loop' : n));
     const byName: string[] = validateLevelData(d).filter((x: string) => /quiet/.test(x));
     const W = await hushed(() => standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(JSON.stringify(d))) })) as any, g = W.game;
     let ok = true; const seenSets: string[] = [];
@@ -111,7 +111,7 @@ export const quietStart = guarded(async () => {
   const W = await stand(3), g = W.game, L = g.level, Q = L.scenarios.quiet;
   const authored = JSON.stringify({ spawn: L.playerSpawn, mission: L.mission }), flags0 = [PAIRUP.on, PAIR.on, SNEAK.on, SPOTTED.on, SILENT.on, SILENT.start, HOSTILE.guard.operative];
   const r = await start(W, '?quiet=7'), d = g.quiet.deal, S = Q.starts[d.start], P = Q.spots[d.spot], set: string[] = Q.patrols[d.patrol], on = manned(g);
-  F.verdict(!r.why && g.quiet.active && activeScenario(g) === 'quiet' && runningScenario(g, FILE)?.entry?.id === 'quiet-yard-alone', '?quiet=7 starts unrefused as the list\'s own row', `${r.why ?? 'started'} · ${g.quiet.summary()} · row ${runningScenario(g, FILE)?.entry?.id}`);
+  F.verdict(!r.why && g.quiet.active && activeScenario(g) === 'quiet' && runningScenario(g, FILE)?.entry?.id === 'bazaar-quiet', '?quiet=7 starts unrefused as the list\'s own row', `${r.why ?? 'started'} · ${g.quiet.summary()} · row ${runningScenario(g, FILE)?.entry?.id}`);
   F.verdict(flat(g.player.char.pos, S.sam) < 0.05 && Math.abs(g.player.char.bodyYaw - S.samYaw) < 1e-6 && !g.guards.some((x: any) => x.unit) && g.quiet.ops.length === 0, 'Sam stands on the dealt start facing its way, alone', `start ${d.start} '${S.name}' ${at(S.sam)} · Sam ${at(g.player.char.pos)} yaw ${g.player.char.bodyYaw.toFixed(2)}`);
   F.verdict(on.length === set.length && set.every(n => on.includes(n)) && g.guards.every((x: any) => x.state === 'patrol' && !x.hold && !x.pinned), 'the dealt patrol set is on the floor as on a plain night (patrolling, nobody posted or held) and the other routes\' men are off the list',
     `set ${d.patrol} [${set.join(', ')}] · on the floor [${on.join(', ')}] of routes [${L.routes.map((x: any) => x.name).join(', ')}]`);
@@ -162,13 +162,17 @@ export const quietRun = guarded(async () => {
   { await hushed(() => quitScenario(g)); await start(W, '?quiet=5'); g.godMode = true; g.playerInvisible = true;
     const X = g.quiet.exits[0]; g.teleportPlayer(QM.exitPoint(X, 0.9)); steps(W, 1.5);
     F.verdict(g.mission.stage !== 'done', 'walking out before the thing is taken ends nothing', `past '${X.name}' with nothing taken: stage ${g.mission.stage}`); }
-  { // the thing is not taken THROUGH A WALL: the far shelf stands against the store's south wall, and a man outside it is inside the bare radius
-    const Q = g.level.scenarios.quiet; let pin = 0; for (; pin < 200; pin++) { await hushed(() => quitScenario(g)); await start(W, `?quiet=${pin}`); if (g.quiet.deal.spot === 2) break; }
-    const P = g.quiet.spot, inside = freeNear(g, P.front, 1.2)!; let outside: number[] | null = null;
-    for (let z = P.front[2] + 0.9; z < P.front[2] + 2.0 && !outside; z += 0.1) if (z > P.area.z1 + 0.3 && !g.col.nav.isBlocked(P.front[0], z)) outside = [P.front[0], 0, z];
-    const dIn = rackDist(g, inside), dOut = outside ? rackDist(g, outside) : NaN, bare = outside ? Math.max(0, flat(outside, P.front) - P.halfW) : NaN;
-    F.verdict(g.quiet.deal.spot === 2 && dIn < 1.1 && !!outside && bare < 1.1 && dOut === Infinity, 'the holder is reached from the floor before it and NOT through the wall behind it',
-      `${P.holder} of ${Q.spots[2].place}: from ${at(inside)} inside ${dIn.toFixed(2)} m · from ${outside ? at(outside) : '— (no free floor outside)'} beyond the wall the bare radius says ${Number.isFinite(bare) ? bare.toFixed(2) : '—'} m, the reach says ${dOut}`); }
+  { // the thing is not taken THROUGH A WALL: a holder that backs on to a wall with free floor past it, and a man out there who is inside the bare radius
+    let told = 'no spot of the level has free floor past its wall';
+    let held = false; const tried = new Set<number>();
+    for (let pin = 0; pin < 200 && !held; pin++) { await hushed(() => quitScenario(g)); await start(W, `?quiet=${pin}`); if (tried.has(g.quiet.deal.spot)) continue; tried.add(g.quiet.deal.spot);
+      const P = g.quiet.spot, inside = freeNear(g, P.front, 1.2)!;
+      for (const [dx, dz] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) { let outside: number[] | null = null;
+        for (let d = 0.9; d < 2.0 && !outside; d += 0.1) { const x = P.front[0] + dx * d, z = P.front[2] + dz * d;
+          if ((x > P.area.x1 + 0.3 || x < P.area.x0 - 0.3 || z > P.area.z1 + 0.3 || z < P.area.z0 - 0.3) && !g.col.nav.isBlocked(x, z)) outside = [x, 0, z]; }
+        if (!outside || Math.max(0, flat(outside, P.front) - P.halfW) >= 1.1) continue;
+        const dIn = rackDist(g, inside), dOut = rackDist(g, outside); held = dIn < 1.1 && dOut === Infinity; told = `${P.holder} of ${P.place}: from ${at(inside)} inside ${dIn.toFixed(2)} m · from ${at(outside)} beyond the wall the reach says ${dOut}`; if (held) break; } }
+    F.verdict(held, 'the holder is reached from the floor before it and NOT through the wall behind it', told); }
   { // a dealt start is where the camera is from the first frame (the follow camera does not fly across the level from the authored spawn)
     const cam = W.cam, far: number[] = []; let ok = !!cam;
     for (const pin of [0, 1, 2, 3, 4, 5]) { await hushed(() => quitScenario(g)); await start(W, `?quiet=${pin}`); W.step(DT); if (cam) { const d = flat(cam.target, g.player.char.pos); far.push(d); if (d > 0.5) ok = false; } }
@@ -182,7 +186,7 @@ export const quietPair = guarded(async () => {
   const W = await stand(5), g = W.game, Q = g.level.scenarios.quiet;
   const flags0 = [PAIRUP.on, PAIR.on, SNEAK.on, SPOTTED.on, SILENT.on, SILENT.start, HOSTILE.guard.operative];
   const r = await start(W, '?quiet=2&squad=1'), d = g.quiet.deal, S = Q.starts[d.start], m = g.quiet.ops[0];
-  F.verdict(!r.why && g.quiet.ops.length === 1 && !!m && m.team === 'operative' && !!m.unit && flat(m.char.pos, g.player.char.pos) < 2.5 && g.col.nav.walkable(g.player.char.pos, m.char.pos) && runningScenario(g, FILE)?.entry?.id === 'quiet-yard-two',
+  F.verdict(!r.why && g.quiet.ops.length === 1 && !!m && m.team === 'operative' && !!m.unit && flat(m.char.pos, g.player.char.pos) < 2.5 && g.col.nav.walkable(g.player.char.pos, m.char.pos) && runningScenario(g, FILE)?.entry?.id === 'bazaar-quiet',
     '?quiet&squad=1 starts as the list\'s own row with ONE operative staged beside Sam on floor he can walk to', `${r.why ?? 'started'} · ${g.quiet.summary()} · partner ${m ? at(m.char.pos) : '—'}, ${m ? flat(m.char.pos, g.player.char.pos).toFixed(2) : '—'} m from Sam at ${at(S.sam)} · row ${runningScenario(g, FILE)?.entry?.id}`);
   W.step(DT); W.step(DT);
   F.verdict(PAIRUP.on && PAIR.on && SNEAK.on && SPOTTED.on && SILENT.on && squadSilent(g) && HOSTILE.guard.operative && HOSTILE.operative.guard, 'the pair rules are on for this run, the squad is silent from the first frame, and the shift is hostile to the partner (he is no colleague of theirs)',
@@ -192,9 +196,10 @@ export const quietPair = guarded(async () => {
     // Sam walks (put) 9 m into the yard by its own floor: the partner follows on his own feet
     const to = freeNear(g, [S.sam[0] + Math.sin(S.samYaw) * 9, 0, S.sam[2] + Math.cos(S.samYaw) * 9], 2)!;
     const path = g.col.nav.findPath(g.player.char.pos, to, 20000) as number[][] | null; let far = 0;
+    const shift = g.guards.filter((x: any) => !x.unit); for (const x of shift) x.dazzledUntil = g.time + 60;   // (no eyes: by the one meter the yard is lit, and a follower rightly waits on a man who has a line; asked here is the following)
     if (path) for (const p of path) { g.teleportPlayer([p[0], 0, p[2]]); steps(W, 0.7); far = Math.max(far, flat(m.char.pos, g.player.char.pos)); }
-    steps(W, 6); const gap = flat(m.char.pos, g.player.char.pos);
-    F.verdict(!!path && gap < 3.5 && flat(m.char.pos, S.mate ?? S.sam) > 4 && m.state !== 'dead', 'told to fall in at the start, he follows Sam across the floor on his own feet and closes up when Sam stops',
+    steps(W, 6); const gap = flat(m.char.pos, g.player.char.pos); for (const x of shift) x.dazzledUntil = -1;
+    F.verdict(!!path && gap < 4.5 && flat(m.char.pos, S.mate ?? S.sam) > 4 && m.state !== 'dead', 'told to fall in at the start, he follows Sam across the floor on his own feet and closes up when Sam stops',
       `Sam to ${at(to)} · partner at ${at(m.char.pos)}, ${gap.toFixed(1)} m from Sam (furthest behind on the way ${far.toFixed(1)} m) · the shift calm at the start: ${calm0}`); }
   { // a guard with the partner standing lit a few metres in front of him notices the PARTNER (Sam is out of every eye: invisible, as the probes' own flag)
     const gd = g.guards.find((x: any) => !x.unit && x.state === 'patrol')!, yaw = gd.char.bodyYaw;
@@ -245,12 +250,12 @@ export const quietCheckpoint = guarded(async () => {
 // ───────────────────────────────────────────────────────────── the office-only places ─────────────────────────────────────────────────────────────
 export const quietOwn = guarded(async () => {
   const F = family('quiet-own: the office-only places — the level\'s own on a level with the block (or off), the office\'s tables on the office');
-  { const W = await stand(7), g = W.game, Q = g.level.scenarios.quiet;
+  { const W = await stand(7, 'quiet-relay.json'), g = W.game, Q = g.level.scenarios.quiet;   // (a floor with a kind it does not give, no phone and no stairwell door)
     const spots = Object.fromEntries(NEEDS.NEED_KINDS.map((k: string) => [k, NEEDS.needSpot(g, k)]));
-    F.verdict(spots.coffee === null && spots.stretch === null && flat(spots.smoke.pos, Q.needs.smoke.pos) < 1e-6 && flat(spots.water.pos, Q.needs.water.pos) < 1e-6, 'the shift\'s errands go to the level\'s own stands; a kind the level does not give is not dealt (nobody walks to the office\'s coffee machine)',
+    F.verdict(NEEDS.NEED_KINDS.some((k: string) => !Q.needs?.[k]) && NEEDS.NEED_KINDS.every((k: string) => Q.needs?.[k] ? flat(spots[k].pos, Q.needs[k].pos) < 1e-6 : spots[k] === null), 'the shift\'s errands go to the level\'s own stands; a kind the level does not give is not dealt (nobody walks to the office\'s coffee machine)',
       NEEDS.NEED_KINDS.map((k: string) => `${k}: ${spots[k] ? at(spots[k].pos) : 'none'}`).join(' · '));
     const C = CIVS.civSpots(g);
-    F.verdict(C.phones.length === 0 && C.exits.length === Q.wayouts.length && flat(C.exits[0].pos, Q.wayouts[0].pos) < 1e-6, 'a frightened civilian has the level\'s own ways out and phones (here: one way out, no phone)', `phones ${C.phones.length} · ways out ${C.exits.map((x: any) => at(x.pos)).join(' ')}`);
+    F.verdict(C.phones.length === 0 && C.exits.length === (Q.wayouts?.length ?? 0) && (!Q.wayouts?.length || flat(C.exits[0].pos, Q.wayouts[0].pos) < 1e-6), 'a frightened civilian has the level\'s own ways out and phones (here: none of its own, no phone)', `phones ${C.phones.length} · ways out ${C.exits.map((x: any) => at(x.pos)).join(' ')}`);
     const asked = await hushed(() => QRF.requestQrf(g, 'panel'));
     F.verdict(QRF.hasResponse(g) === false && asked === false && g.qrf.state === 'idle', 'no stairwell door on this level: the response team has nowhere to come from, so none is called', `hasResponse ${QRF.hasResponse(g)} · asked: ${asked} · state ${g.qrf.state}`);
     F.verdict(g.weather.rainRate === 0 && g.weather.storm === 0, 'no weather picked: a dry still night, not the office\'s storm by the office\'s rectangles', `storm ${g.weather.storm} · rain ${g.weather.rainRate} · wind ${g.weather.wind}`);

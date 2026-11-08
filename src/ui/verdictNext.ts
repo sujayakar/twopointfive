@@ -1,6 +1,6 @@
 // A LESSON DONE LEADS TO THE NEXT ONE: the end card of a tutorial mission that was won offers the next row of the tutorial as its first button (ui/menu.ts
-// debrief) — that row's own page load, the visitor's other flags kept, as a pick of it on the mission list would be. Null on any other page, after the last
-// lesson, and with no verdict (?noverdict: the card as it was). "Next" is the next lesson the lists draw (ui/missions.ts listedMissions; ?offlist=0: every row).
+// debrief) — that row's own page load, the visitor's other flags kept, as a pick of it on the mission list would be. Null on any other page and after the last
+// lesson. "Next" is the next lesson the lists draw (ui/missions.ts listedMissions; ?offlist=0: every row).
 import { TUTORIAL_MISSIONS } from '../scene/scenarioList';
 import { listedMissions, missionHref, missionList } from './missions';
 

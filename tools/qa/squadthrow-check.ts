@@ -4,6 +4,7 @@
 // unless a line wants one. What is checked is the menu's rows by KEYS, who throws, the item (whose it is, where its fuse finds it), the count, the words and every
 // refusal; nothing here looks at a picture. (The squad block's line is not asked: the panel on the tools' copy does not carry the Rust game's notes.)
 // SQUADTHROW_BREAK=1 = the switch left off and the same lines asked: they must fail.   exit 0 = all hold · 1 = one does not
+import { blockOf, listedOf, menuKey } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 
 const ST: any = await import(`${ROOT}/src/game/squadthrow.ts`);
@@ -43,15 +44,15 @@ export async function rig(seed: number, on: boolean, o: { rescue?: boolean; squa
     cursor(p: number[]) { W.cursorAt([p[0], p[1], p[2]]); },
     press(code: string) { input.pressed.add(code); R.step(); },
     /** the menu's order rows as the panel draws them now (the who row and the cancel row left out) */
-    rows(): Row[] { const hud = O.hud().menu; return (hud?.rows ?? []).slice(1).filter((r: any) => r.kind !== 'cancel').map((r: any) => ({ key: r.opts[0]?.key ?? '', text: r.opts[0]?.text ?? '', off: !!r.off })); },
+    rows(): Row[] { const hud = listedOf(O); return (hud?.rows ?? []).map((r: any) => ({ key: r.opts[0]?.key ?? '', text: r.opts[0]?.text ?? '', off: !!r.off })); },
     /** X with the cursor on p: the first page — the menu left UP */
-    menu(p: number[]): Row[] { R.esc(); R.cursor(p); R.press(ORDERS.key); R.step(2); return R.rows(); },
+    menu(p: number[]): Row[] { R.esc(); R.cursor(p); (menuKey(O), R.step()); R.step(2); return R.rows(); },
     /** X on p, then G: the throw page — the menu left UP */
     page(p: number[]): Row[] { R.menu(p); R.press(FRAG.orderKey); R.step(2); return R.rows(); },
     /** the same page with the menu opened from code on p (the camera, settled over Sam, may have a wall's top between it and the spot) — G is still a key */
     pageAt(p: number[]): Row[] { R.esc(); O.open(O.targetAt(p)); R.step(2); R.press(FRAG.orderKey); R.step(2); return R.rows(); },
     esc() { for (let i = 0; i < 4 && O.menu; i++) R.press('Escape'); },
-    notes(): string[] { return (O.hud().status ?? []).flatMap((r: any) => r.opts.map((x: any) => x.text as string)); },
+    notes(): string[] { return (blockOf(O) ?? []).flatMap((r: any) => r.opts.map((x: any) => x.text as string)); },
     items(kind: string): any[] { return game.items.items.filter((x: any) => x.kind === kind); },
     /** the squad's own bag, written (the frozen stand issues no frags) */
     bag(frags: number, bangs: number) { game.doorTools.frags = frags; game.doorTools.bangs = bangs; },
@@ -221,7 +222,7 @@ export async function squadthrowCheck(): Promise<boolean> {
 
     // ───────────── 4 · a silent squad ─────────────
     await guard('silent', async () => {
-      const R = await rig(7, ON, { silent: true }), { game } = R, team = R.team;
+      const R = await rig(7, ON, { silent: true }), { O, game } = R, team = R.team;
       SLM.setSilent(game, true); R.step(5); const was = SLM.squadSilent(game);
       const spot = find(R, [7, 8, 6, 9], at => !!ST.squadThrower(game, team, at, 'stun'));
       if (!spot) { verdict(false, 'a spot a teammate has a stun throw to', 'none'); return; }

@@ -146,7 +146,7 @@ for (const name of list) {
 // A LESSON'S PAGE AND THE KEPT KIT (kit.ts kitIssuedPage): on the page of a Training level every staging puts the ISSUE cards on the men, and the table and
 // its store stay this machine's — so the loadout screen opened there for another mission (the boot card's button, or the card with no scenario up) shows the
 // kept cards and keeps a change, and a start or restart of the lesson under that screen still stages the issue kit. Run once (with the first lesson, or all).
-if (!names.length || names.includes('tut-solo')) { console.log('\n=== lesson-check: a lesson\'s page and the kit this machine keeps ===');
+if (!names.length || names.includes('tut-road')) { console.log('\n=== lesson-check: a lesson\'s page and the kit this machine keeps ===');
   const { El, withDom } = await import('./scenario-picker-probes.ts');
   const K = await import(`${ROOT}/src/game/kit.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`);
   const m = new Map<string, string>(), st = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); } };
@@ -164,7 +164,7 @@ if (!names.length || names.includes('tut-solo')) { console.log('\n=== lesson-che
       // (staged on a tutorial mission whose level issues no kit of its own — tut-solo, tut-quiet and tut-pair do, scenarios.issue, and the kept card never
       // shows on those; tut-squad is packed for, ISSUE.picked, and stages the kept cards on its own page. Both are played with the team: no tutorial mission
       // played alone is left without a card of its own, so standRow's kitSolo line is not walked here)
-      const alone: any = rowOf('tut-sky'), pair: any = alone;   // (the second such mission, tut-plan, went out with plan mode: both halves are asked of the one)
+      const alone: any = rowOf('tut-team'), pair: any = alone;   // (the second such mission, tut-plan, went out with plan mode: both halves are asked of the one)
       // the plant is real: off a lesson's page that start wears the kept card
       const P = await standRow(alone); const plainRifle = P.g.player.hasRifle;
       K.kitIssuedPage(true);   // (main.ts on a lesson level's load)
@@ -177,7 +177,7 @@ if (!names.length || names.includes('tut-solo')) { console.log('\n=== lesson-che
         verdict(K.SLOTS.on && held(A.g) === '4/2/2/3' && held(P.g) === '1/1/1/0', 'under the pouches rule a lesson\'s player carries what a Player is built with (4 smoke, 2 stun, 2 frags, 3 rounds of 40 mm: the kit lesson throws more than one can), while the same start off a lesson\'s page carries the kept card\'s counts',
           `smoke/stun/frag/40 mm — on its page ${held(A.g)} · off a lesson's page (the kept card: no rifle, one of each) ${held(P.g)}`); }
       // another mission's loadout over the lesson: the kept cards, a change kept — and the lesson restarted under it is still the issue kit
-      const S = UI.openLoadout(other, { host: new El('BODY') as any, deploy: () => { } });
+      const S = UI.openLoadout(other, { search: '', host: new El('BODY') as any, deploy: () => { } });
       const shown = K.KIT.members[0].weapon, cards = !!S.card, stepped = K.kitTry(0, 'suit', 1).ok, suit = K.KIT.members[0].suit, written = kept().weapon === 'pistol' && kept().suit === suit && suit !== 'issued';
       const tint0 = JSON.stringify(A.g.player.char.tint);
       await quiet(() => { A.g.restartEncounter(); if (!A.g.lesson.data) startFromQuery(A.g, scenarioQuery(alone)); for (let i = 0; i < 3; i++) A.W.step(1 / 60); });
@@ -196,7 +196,7 @@ if (!names.length || names.includes('tut-solo')) { console.log('\n=== lesson-che
       const after = K.KIT.members[0].weapon, stored2 = K.kitTry(0, 'trim', 1).ok && kept().trim === K.KIT.members[0].trim; const B = await standRow(alone);
       verdict(threw && after === 'pistol' && stored2 && B.g.player.hasRifle === true, 'a staging that throws leaves the kept table and its store in place, and the next lesson start is still the issue kit', `threw ${threw} · table '${after}' · a change written ${stored2} · next start's rifle ${B.g.player.hasRifle}`);
     });
-  } finally { UI.loadoutOpen()?.close(); K.kitIssuedPage(false); K.KIT_SOLO.on = false; K.kitLoad(null, ''); LESSON.on = lessonOn; }
+  } finally { UI.loadoutOpen()?.close(); K.kitIssuedPage(false); K.kitLoad(null, ''); LESSON.on = lessonOn; }
 }
 console.log(fails ? `\n=== lesson-check: ${fails} FAIL of ${checks} ===` : `\n=== lesson-check: ALL PASS (${checks} checks) ===`);
 process.exit(fails ? 1 : 0);

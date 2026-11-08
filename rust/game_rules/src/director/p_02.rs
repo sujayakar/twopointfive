@@ -388,7 +388,6 @@ pub fn director_tick(g: &mut crate::game::Game, dt: f64, _input: Option<InputId>
     if let Some(shot) = rr.show.as_mut().and_then(|s| s.shot.as_mut()) {
         shot.t += dt;
     }
-    director_tick_tracks(g, r, dt);
     director_tick_bursts(g, r);
     director_tick_kicks(g, r);
     director_tick_shown(g);
@@ -450,7 +449,7 @@ pub fn director_fire_triggers(g: &mut crate::game::Game, r: DirectorRunId, fresh
                     Some(TriggerDefWho::AnyUnit) => DirectorInsideVolumeWho::AnyUnit,
                     Some(TriggerDefWho::Unit(u)) => DirectorInsideVolumeWho::Unit(u.clone()),
                 };
-                director_inside_volume(g, r, t.volume.as_deref().unwrap(), &who)
+                director_inside_volume(g, &crate::seats::here(g), r, t.volume.as_deref().unwrap(), &who)
             }
             TriggerDefKind::When => unreachable!("P.when has no page caller: a trigger of this kind is never made"),
         };
@@ -1051,9 +1050,6 @@ pub fn director_tick_bursts(g: &mut crate::game::Game, r: DirectorRunId) {
     g.tab.director_run[r].bursts.retain(|b| b.left > 0.0);
 }
 
-/// R.tracks is only ever pushed for a c.order with aimAt a unit, which no script on the page gives: always empty, so this returns at its first line. (director.ts Director.tickTracks)
-pub fn director_tick_tracks(g: &crate::game::Game, r: DirectorRunId, dt: f64) {}
-
 /// Kicks in the air: on the animator's impact frame (or the instant the clip is somehow over) doors.ts kickIn does the boot's work from where he stands. (director.ts Director.tickKicks)
 pub fn director_tick_kicks(g: &mut crate::game::Game, r: DirectorRunId) {
     if g.tab.director_run[r].kicks.is_empty() {
@@ -1131,10 +1127,10 @@ fn in_volume(v: &crate::scene_level::VolumeDef, p: V3) -> bool {
     m::abs(lx) <= v.h[0] && m::abs(lz) <= v.h[2] && p[1] >= v.c[1] - v.h[1] - 0.1 && p[1] <= v.c[1] + v.h[1] + 2.0
 }
 /// (director.ts Director.insideVolume)
-pub fn director_inside_volume(g: &mut crate::game::Game, r: DirectorRunId, id_2: &str, who: &crate::director::DirectorInsideVolumeWho) -> bool {
+pub fn director_inside_volume(g: &crate::game::Game, seat: &crate::seats::SeatRef, r: DirectorRunId, id_2: &str, who: &crate::director::DirectorInsideVolumeWho) -> bool {
     let g = &*g;
     let Some(v) = g.level.volumes.as_ref().and_then(|l| l.iter().find(|x| x.name == id_2)) else { return false };
-    let pl = &g.pl[g.player];
+    let pl = &g.pl[seat.player];
     let alive = |gd: GuardId| g.gd[gd].state != crate::game::GuardState::Dead;
     let sam = !pl.down && in_volume(v, g.ch[pl.ch].pos);
     let units = &g.tab.director_run[r].units;
@@ -1161,8 +1157,8 @@ pub fn director_query_state(g: &crate::game::Game, r: DirectorRunId, u: &crate::
     director_guard_of(g, r, u).ok().map(|gd| g.gd[gd].state)
 }
 /// (director.ts Query.room, of 'sam')
-pub fn director_query_room_sam(g: &mut crate::game::Game) -> String {
-    let p = g.ch[g.pl[g.player].ch].pos;
+pub fn director_query_room_sam(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> String {
+    let p = g.ch[g.pl[seat.player].ch].pos;
     crate::chronicle::room_of(g, p)
 }
 /// (director.ts Query.pos, of a man)
@@ -1171,7 +1167,7 @@ pub fn director_query_pos_unit(g: &crate::game::Game, r: DirectorRunId, u: &crat
     Ok(v3::copy(g.ch[g.gd[gd].ch].pos))
 }
 /// (director.ts Query.door; DOORWAY.oneWay is settled on: swing is the door's)
-pub fn director_query_door(g: &mut crate::game::Game, d: &crate::director::DoorRef) -> Result<crate::director::QueryDoor, String> {
+pub fn director_query_door(g: &crate::game::Game, d: &crate::director::DoorRef) -> Result<crate::director::QueryDoor, String> {
     let id = director_door_of(g, d)?;
     Ok(QueryDoor {
         angle: crate::doors::door_angle(g, id),
@@ -1187,9 +1183,9 @@ pub fn director_query_signalled(g: &crate::game::Game, r: DirectorRunId, n: &str
     g.tab.director_run[r].signals.iter().any(|s| s.name == n)
 }
 /// (director.ts Query.routed)
-pub fn director_query_routed(g: &mut crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
+pub fn director_query_routed(g: &crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
     match director_guard_of(g, r, u) {
-        Ok(gd) => crate::owner::has_him(g, gd, crate::owner::own().runner),
+        Ok(gd) => crate::owner::has(g, gd, crate::owner::by::RUNNER),
         Err(_) => false,
     }
 }

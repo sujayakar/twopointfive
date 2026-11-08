@@ -32,22 +32,12 @@ export function gpuFx(g: Game): Particles | null {
 // gypsum / wood / concrete bursts, the stun charge's ring and column, a kicked door's threshold dust, a dropped tile's powder — is tuned from ONE table (the maintainer, 08-11:
 // "the dust puffs on destruction (gpu particles, not the real smoke sim) also look kinda lame. make sure they're configurable"). EMIT side = multipliers on what each site
 // asks for; LOOK side = the kind's numbers the kernels read (render/particles.ts params.dust: opacity, growth, and — in the slots a puff never used for physics — the fade-in,
-// the edge softness, the scatter toward the eye, the ambient share). Kept per machine (localStorage twopointsix.dust); all 1 / the shipped look = the game as it was.
+// the edge softness, the scatter toward the eye, the ambient share). All 1 / the shipped look = the game as it was.
 export const DUST = { count: 1, size: 1, life: 1, speed: 1, rise: 1, spread: 1 };
 /** the LOOK, mirrored onto Particles.params.dust by applyDustLook: opacity = peak opacity at the centre (brightOrOpacity), growth = × radius over its life (shutterOrGrowth), fadeIn = s to
  *  full opacity (sleepV slot), soft = × the depth-softening / edge feather (holdOrFade slot), wrap = the share of a crossing beam scattered toward the eye (restitution slot), ambient = × the
  *  cache's ambient on it (keep slot) */
 export const DUST_LOOK = { opacity: 0.3, growth: 0.6, fadeIn: 0.05, soft: 1.3, wrap: 0.5, ambient: 1.0 };   // (08-12, the maintainer: the puffs 'radially expanding outwards look pretty fake' — was opacity 0.4 / growth 2.2: discs blooming to 3× while flying out; now a puff blooms a little where it was raised and hangs)
-export const DUST_DEFAULTS = { emit: { ...DUST }, look: { ...DUST_LOOK } };
-const DUST_LS = 'twopointsix.dust.v2';   // (v2: the 08-12 look defaults; a table saved under the first key would put the blooming discs back)
-export function loadDust() {
-  try { const raw = localStorage.getItem(DUST_LS); if (!raw) return; const o = JSON.parse(raw);
-    for (const k of Object.keys(DUST) as (keyof typeof DUST)[]) { const v = o?.emit?.[k]; if (typeof v === 'number' && isFinite(v) && v >= 0) DUST[k] = v; }
-    for (const k of Object.keys(DUST_LOOK) as (keyof typeof DUST_LOOK)[]) { const v = o?.look?.[k]; if (typeof v === 'number' && isFinite(v) && v >= 0) DUST_LOOK[k] = v; }
-  } catch { /* no storage (bun) / junk */ }
-}
-export function saveDust() { try { localStorage.setItem(DUST_LS, JSON.stringify({ emit: DUST, look: DUST_LOOK })); } catch { /* */ } }
-export function resetDust(g: Game) { Object.assign(DUST, DUST_DEFAULTS.emit); Object.assign(DUST_LOOK, DUST_DEFAULTS.look); try { localStorage.removeItem(DUST_LS); } catch { /* */ } applyDustLook(gpuFx(g)); }
 /** the look table onto the kind's numbers (the kernels read params.dust every frame; a null system = nothing to do) */
 export function applyDustLook(P: Particles | null) {
   if (!P) return; const d = P.params.dust;

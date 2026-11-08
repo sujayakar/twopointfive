@@ -65,6 +65,11 @@ fn out_plain(exfil_x: f64, exfil_z: f64, exfil_out: Option<[f64; 2]>, p: V3) -> 
     p[0] > exfil_x && m::abs(p[2] - exfil_z) < 1.8
 }
 
+/// THE END CARD, once: the mission's run is over and the card is due. The host opens it after the step. Never while the tour runs: a show's mission is nobody's run.
+fn end_card(g: &mut crate::game::Game) {
+    if !g.mission_in_tour { crate::out_events::end_card(g); }
+}
+
 /// The mission's stage machine: infiltrate, drive, exfil, and the run's counts. (mission.ts updateMission)
 pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
     use crate::game::{GuardState, InteractableKind, MissionStage, Verb};
@@ -89,7 +94,7 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
     }
     if g.mission.stage == MissionStage::Failed && g.mission.down_card_at > 0.0 && g.time >= g.mission.down_card_at {
         g.mission.down_card_at = -1.0;
-        g.mission.debrief = true;
+        end_card(g);
     }
     if g.mission.stage == MissionStage::Done || g.mission.stage == MissionStage::Failed {
         return;
@@ -191,7 +196,7 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
             };
             crate::chronicle::chron_objective(g, &line, None);
             g.mission.stage = MissionStage::Done;
-            g.mission.debrief = true;
+            end_card(g);
             let d = crate::chronicle::debrief_of(g, &crate::seats::here(g));
             let mut line = format!("exfiltrated — {}", crate::game::fmt_clock(g.mission.stats.elapsed));
             if !d.grade.is_empty() {
@@ -324,7 +329,7 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
 }
 
 /// THE MISSION'S ONE LINE AND ITS PLACE, as they stand now, and whose they are: a level's program while it runs, a lesson's step over its own scenario,
-/// a charge's overlay, the man to take alive, the room clear, the rescue, the night breach by itself, and else the stealth mission's own stages.
+/// the room clear, the rescue, the night breach by itself, and else the stealth mission's own stages.
 /// None while a show runs. A read: the HUD's view of it is `view::MissionView`, and nothing of it is kept.
 pub fn objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::view::MissionView> {
     use crate::view::{MissionOf, MissionView};
@@ -332,8 +337,6 @@ pub fn objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<
     let of = |of: MissionOf, text: String, pos: Option<V3>| Some(MissionView { of, text, pos });
     if let Some(o) = crate::director::director_objective(g) { return of(MissionOf::Script, format!("objective ▸ {}", o.text), o.pos); }
     if let Some(o) = crate::lesson::lesson_objective(g, seat) { return of(MissionOf::Lesson, o.text, o.pos); }
-    if let Some(o) = crate::defuse::defuse_objective(g, seat) { return of(MissionOf::Defuse, o.text, o.pos); }
-    if let Some(o) = crate::snatch::snatch_objective(g, seat) { return of(MissionOf::Snatch, o.text, o.pos); }
     if let Some(o) = crate::roomclear::room_clear_scenario_objective(g, seat) { return of(MissionOf::Roomclear, crate::par::par_objective(g, &o.text), o.pos); }
     if let Some(o) = crate::rescue::rescue_objective(g, seat) { return of(MissionOf::Rescue, o.text, o.pos); }
     if let Some(o) = crate::nightbreach::night_breach_objective(g) { return of(MissionOf::Nightbreach, o.text, o.pos); }

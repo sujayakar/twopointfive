@@ -74,7 +74,7 @@ pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
         s.idle = None;
         s.held = 0.0;
     }
-    lesson_count(g, &mut s);
+    lesson_count(g, &crate::seats::here(g), &mut s);
     let i = g.lesson.i;
     let t = &l.steps[i as usize];
     if s.done_t.is_none() {
@@ -156,8 +156,8 @@ pub fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: O
 }
 
 /// This frame's deeds into the step's counts.   (lesson.ts Lesson.count)
-pub fn lesson_count(g: &mut crate::game::Game, s: &mut crate::lesson::StepSeen) {
-    let cam = g.tab.cmd_seat[g.seat].cam;
+pub fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut crate::lesson::StepSeen) {
+    let cam = g.tab.cmd_seat[seat.id].cam;
     if js::truthy(g.rails.fresh) {
         let yaw = g.tab.camera[cam].yaw;
         s.yaw_last = yaw;
@@ -172,7 +172,7 @@ pub fn lesson_count(g: &mut crate::game::Game, s: &mut crate::lesson::StepSeen) 
         s.turned += m::abs(d);
         s.yaw_last = y;
     }
-    if let Some(verb) = g.act.as_ref().and_then(|a| a.verb) {
+    if let Some(verb) = seat.act.as_ref().and_then(|a| a.verb) {
         if !who_down(g, &crate::seats::here(g)) {
             add(s, format!("act:{}", verb.as_str()));
         }
@@ -206,18 +206,18 @@ pub fn lesson_count(g: &mut crate::game::Game, s: &mut crate::lesson::StepSeen) 
         }
     }
     {
-        let serials: Vec<u32> = g.orders.log.iter().map(|r| r.serial).collect();
+        let serials: Vec<u32> = seat.orders.log.iter().map(|r| r.serial).collect();
         let mut k = after(&serials, s.last_order);
-        while k < g.orders.log.len() {
-            add(s, format!("order:{}", g.orders.log[k].order));
-            add(s, format!("order:{}@{}", g.orders.log[k].order, g.orders.log[k].target));
+        while k < seat.orders.log.len() {
+            add(s, format!("order:{}", seat.orders.log[k].order));
+            add(s, format!("order:{}@{}", seat.orders.log[k].order, seat.orders.log[k].target));
             k += 1;
         }
-        if let Some(r) = g.orders.log.last() {
+        if let Some(r) = seat.orders.log.last() {
             s.last_order = Some(r.serial);
         }
     }
-    for &id in &g.door_tools.ops {
+    for &id in &seat.door_tools.ops {
         let op = &g.tab.doortools_door_op[id];
         if !s.words.has(op.door) && op.beats.iter().any(|b| b.what == "the word" && b.t > s.t0) {
             s.words.add(op.door);

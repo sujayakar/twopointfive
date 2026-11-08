@@ -32,7 +32,7 @@ fn issue_names_you(g: &Game) -> bool {
     kit_issue_whole(g, members.as_ref())
 }
 /// `const { loaded, ...card } = c; Object.assign(m, card)`: the fields a level's block names
-fn assign_card(m: &mut MemberKit, c: &crate::scene_scenarios::IssueCard) {
+pub(super) fn assign_card(m: &mut MemberKit, c: &crate::scene_scenarios::IssueCard) {
     if let Some(x) = c.weapon { m.weapon = x; }
     if let Some(x) = c.suppressed { m.suppressed = x; }
     if let Some(x) = c.light { m.light = x; }
@@ -175,7 +175,7 @@ pub fn kit_you_nvg(g: &crate::game::Game, pl: PlayerId) -> bool {
 
 /// A run that is played quietly: a quiet mission, or the plain night alone off the loadout screen.   (kit.ts stealthRun)
 pub fn stealth_run(g: &crate::game::Game) -> bool {
-    g.quiet.active || (g.m.kit.kit_solo.on && !team_on_floor(g))
+    g.quiet.active || (g.solo_card && !team_on_floor(g))
 }
 
 /// Your card onto the fresh Player.   (kit.ts kitPlayer)
@@ -323,7 +323,7 @@ pub fn kit_alone(g: &mut crate::game::Game) {
     crate::wallcharge::wall_charge_raise_carried(g, 0.0);
     let n = if charge_row(g, 0.0) { g.m.kit.kit.members[0].charges } else { 0.0 };
     crate::doortools::door_tools_alone(g, n);
-    if g.k.slots.on && wall_here() {
+    if g.k.slots.on {
         let w = kit_walls(g, 0.0);
         crate::wallcharge::wall_charge_set_carried(g, Some(w));
     }
@@ -331,7 +331,7 @@ pub fn kit_alone(g: &mut crate::game::Game) {
 
 /// The solo night wears your card.   (kit.ts kitSolo)
 pub fn kit_solo(g: &mut crate::game::Game) {
-    g.m.kit.kit_solo.on = true;
+    g.solo_card = true;
     crate::seats::each_seat(g, &mut |v| kit_player(v));
 }
 
@@ -340,18 +340,18 @@ pub fn kit_solo_if(g: &mut crate::game::Game, solo: bool) {
     if (solo || (g.quiet.active && !js::truthy(g.quiet.squad))) && !g.night_breach.active && !g.rescue.active { kit_solo(g); }
 }
 
-/// The harness's shipped stand asks it too.   (kit.ts kitSoloStand)
+/// A mission started lowers the card on every host, and the harness's shipped stand asks the question too.   (kit.ts kitSoloStand)
 pub fn kit_solo_stand(g: &mut crate::game::Game, plain: Option<bool>) {
     let plain = plain.unwrap_or(true);
-    if !g.m.kit.kit_solo.stand { return; }
-    g.m.kit.kit_solo.on = false;
+    g.solo_card = false;
+    if !g.stood.solo_stand { return; }
     let lesson = g.level.scenarios.as_ref().and_then(|s| s.lesson.as_ref()).map_or(false, |l| !l.steps.is_empty());
     if !lesson { kit_solo_if(g, plain); }
 }
 
 /// Every fresh Player of the plain night, while the solo night is up.   (kit.ts kitFresh)
 pub fn kit_fresh(g: &mut crate::game::Game) {
-    if g.m.kit.kit_solo.on && !g.touring && !crate::director::director_showing(g) { kit_player(g); }
+    if g.solo_card && !g.touring && !crate::director::director_showing(g) { kit_player(g); }
 }
 
 /// A showcase is about to start on this Player: his card comes off.   (kit.ts kitShow)
@@ -459,7 +459,7 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
             v.door_tools.frags = crate::seats::seat_share(v, pool.frags);
         });
     }
-    if js::truthy(n) && g.k.slots.on && wall_here() {
+    if js::truthy(n) && g.k.slots.on {
         let walls = kit_walls(g, n);
         crate::seats::each_seat(g, &mut |v| {
             let share = crate::seats::seat_share(v, walls);

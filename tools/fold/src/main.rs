@@ -81,6 +81,10 @@ struct Engine<'a> {
     /// functions that are plain readings (fold::pure_fns_of), to a fixed point over the tree as it stood
     pure: HashSet<(String, String)>,
     world: dead::World,
+    /// fold the calls of functions that answer a constant too (`--const-fns`)
+    const_fns: bool,
+    /// `module::name` of keep.txt's `not-constant` lines: a function that answers a constant today because something is missing, not because a rule was settled
+    not_constant: HashSet<String>,
 }
 
 #[derive(Default)]
@@ -130,6 +134,18 @@ impl<'a> Engine<'a> {
         let whole = start.is_none();
         let mut changed: BTreeSet<usize> = BTreeSet::new();
         let mut work: Vec<usize> = start.unwrap_or_else(|| (0..texts.len()).collect());
+        if self.const_fns {
+            for (i, t) in texts.iter().enumerate() {
+                if let Ok(f) = syn::parse_file(t) {
+                    for (name, fact) in fold::constant_fns(&f) {
+                        let key = (self.bodies[i].module.clone(), name);
+                        if !self.not_constant.contains(&format!("{}::{}", key.0, key.1)) {
+                            out.fns.insert(key, fact);
+                        }
+                    }
+                }
+            }
+        }
         loop {
             for &i in &work {
                 let b = &self.bodies[i];
@@ -680,6 +696,7 @@ fn main() {
     let mut write = false;
     let mut report_to: Option<String> = None;
     let mut settle_file: Option<String> = None;
+    let mut const_fns = false;
     let mut table_to: Option<String> = None;
     let mut knobs_to: Option<String> = None;
     let mut drop_to: Option<String> = None;
@@ -694,6 +711,7 @@ fn main() {
             "--unnamed" => unnamed = true,
             "--report" => report_to = Some(val()),
             "--settle" => settle_file = Some(val()),
+            "--const-fns" => const_fns = true,
             "--table" => table_to = Some(val()),
             "--knobs" => knobs_to = Some(val()),
             "--drop" => drop_to = Some(val()),
@@ -727,10 +745,15 @@ fn main() {
     // found to be no reason to keep a row (`written-ok TABLE.row  why`)
     let mut kept_by_hand: BTreeMap<String, String> = BTreeMap::new();
     let mut written_ok: BTreeMap<String, String> = BTreeMap::new();
+    let mut not_constant: HashSet<String> = HashSet::new();
     if let Ok(t) = std::fs::read_to_string(root.join("tools/fold/keep.txt")) {
         for l in t.lines() {
             let l = l.trim();
             if l.is_empty() || l.starts_with('#') {
+                continue;
+            }
+            if let Some(r) = l.strip_prefix("not-constant ") {
+                not_constant.insert(r.split_whitespace().next().unwrap_or("").to_string());
                 continue;
             }
             let (ok, rest) = match l.strip_prefix("written-ok ") {
@@ -812,7 +835,7 @@ fn main() {
             }
         }
     }
-    let eng = Engine { rows: &rows, bodies: &bodies, modules: bodies.iter().map(|b| b.module.clone()).collect(), stems: bodies.iter().map(|b| b.path.file_stem().and_then(|n| n.to_str()).unwrap_or("").to_string()).collect(), mfns, pure, world: dead::world(&root, &body_paths) };
+    let eng = Engine { rows: &rows, bodies: &bodies, modules: bodies.iter().map(|b| b.module.clone()).collect(), stems: bodies.iter().map(|b| b.path.file_stem().and_then(|n| n.to_str()).unwrap_or("").to_string()).collect(), mfns, pure, world: dead::world(&root, &body_paths) , const_fns, not_constant: not_constant.clone() };
     let pristine: Vec<String> = bodies.iter().map(|b| b.was.clone()).collect();
     let no_fns: FnTable = HashMap::new();
 

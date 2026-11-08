@@ -107,7 +107,7 @@ fn man_pos(g: &Game, d: RoomfightDefId) -> V3 { let gd = g.tab.roomfight_def[d].
 /// (:230) the place as this man says it, asked now
 fn man_spoken(g: &mut Game, d: RoomfightDefId) -> Spoken { let p = man_pos(g, d); spoken(g, p) }
 /// the defenders who are `alive`, in the list's order
-fn up_defs(g: &mut Game) -> Vec<RoomfightDefId> { let defs = g.fight.defs.clone(); defs.into_iter().filter(|&d| alive(g, d)).collect() }
+fn up_defs(g: &Game) -> Vec<RoomfightDefId> { let defs = g.fight.defs.clone(); defs.into_iter().filter(|&d| alive(g, d)).collect() }
 /// a line's `vars`
 fn vars_of(pairs: &[(&str, &str)]) -> JsMap<String, String> { let mut v = JsMap::new(); for (k, x) in pairs { v.set(String::from(*k), String::from(*x)); } v }
 /// `/^the |\d$/.test(n) ? n : 'the ' + n` (:191, :327)
@@ -140,7 +140,7 @@ pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 /// up, and not broken and run: off the net from his shout on (laststand.ts alive)
 pub fn alive(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
-    g.gd[gd].state != crate::game::GuardState::Dead && !crate::owner::has_him(g, gd, crate::owner::own().runner)
+    g.gd[gd].state != crate::game::GuardState::Dead && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
 }
 
 /// a beat between two numbers, off the state's own die (laststand.ts pick)
@@ -168,13 +168,13 @@ pub fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
 }
 
 /// fit to speak or be spoken to: up, not held, his wits about him (laststand.ts fitGd)
-pub fn fit_gd(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && !crate::owner::has_him(g, gd, crate::owner::own().runner)
+pub fn fit_gd(g: &crate::game::Game, gd: GuardId) -> bool {
+    g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
         && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
 }
 
 /// (laststand.ts fit)
-pub fn fit(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
+pub fn fit(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     fit_gd(g, gd)
 }
@@ -189,7 +189,7 @@ pub fn calm(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
 pub fn movable(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     calm(g, d) && g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold && g.tab.roomfight_def[d].rally_at != f64::INFINITY
-        && !crate::owner::has_him(g, gd, crate::owner::own().squad_word) && !crate::owner::has_him(g, gd, crate::owner::own().squad_leg) && !crate::owner::has_him(g, gd, crate::owner::own().press) && !crate::pressure::press_keeps_home(g, d, None)
+        && !crate::owner::has(g, gd, crate::owner::by::SQUAD_WORD) && !crate::owner::has(g, gd, crate::owner::by::SQUAD_LEG) && !crate::owner::has(g, gd, crate::owner::by::PRESS) && !crate::pressure::press_keeps_home(g, d, None)
         && (crate::digin::dig_in_phase(g, gd) == "idle" || crate::digin::dig_in_phase(g, gd) == "set")
 }
 
@@ -358,7 +358,7 @@ pub fn tick_moved(g: &mut crate::game::Game) {
 }
 
 /// where the team is, as far as the survivors know; never the team's true positions (laststand.ts teamKnown)
-pub fn team_known(g: &mut crate::game::Game, near: V3) -> crate::laststand::TeamKnown {
+pub fn team_known(g: &crate::game::Game, near: V3) -> crate::laststand::TeamKnown {
     let known_secs = g.k.laststand.known_secs;
     let defs = g.fight.defs.clone();
     let mut pts: Vec<V3> = Vec::new();
@@ -625,7 +625,7 @@ pub fn tick_check(g: &mut crate::game::Game) {
         st.next_at = m::min(st.next_at, time + 5.0);
         return;
     }
-    if g.k.laststand.regroup { decide(g, caller, &heard); } else { tell_only(g, caller); }
+    tell_only(g, caller);
 }
 
 /// nobody answers him: true the first time (laststand.ts lone)
@@ -663,7 +663,7 @@ pub fn new_stand(g: &crate::game::Game, room: Option<RoomfightRoomId>, id_2: Opt
 }
 
 /// where a man coming in is put beside: a man of theirs in the room, else the spot the room was picked by (laststand.ts anchorOf)
-pub fn anchor_of(g: &mut crate::game::Game, s: &crate::laststand::Stand) -> V3 {
+pub fn anchor_of(g: &crate::game::Game, s: &crate::laststand::Stand) -> V3 {
     for d in s.in_.keys() {
         if alive(g, d) { return man_pos(g, d); }
     }

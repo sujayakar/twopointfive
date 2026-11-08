@@ -55,7 +55,7 @@ pub fn hands(g: &mut crate::game::Game) -> bool {
         && g.pl[me].wanding.is_none()
         && g.pl[me].wall.is_none()
         && !crate::game::player_list_open(g, me)
-        && able(g)
+        && able(g, &crate::seats::here(g))
 }
 
 /// Is the held click his to begin one with. (stalk.ts free)
@@ -69,9 +69,9 @@ pub fn shut(g: &mut crate::game::Game) -> bool {
 }
 
 /// The gate game.ts puts on a grab: not folded by a blast, no hand on a breaker's lever. (stalk.ts able)
-pub fn able(g: &mut crate::game::Game) -> bool {
-    let me = g.player;
-    !crate::samstun::sam_staggered(g, None) && g.pl[me].breaker_move.is_none()
+pub fn able(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    let me = seat.player;
+    !crate::samstun::sam_staggered(g, seat, None) && g.pl[me].breaker_move.is_none()
 }
 
 /// How far off a press can begin one. (stalk.ts beginM)
@@ -170,7 +170,7 @@ pub fn corner_gate(g: &mut crate::game::Game) -> bool {
         || g.pl[me].picking.is_some()
         || g.pl[me].wanding.is_some()
         || crate::game::player_list_open(g, me)
-        || !able(g)
+        || !able(g, &crate::seats::here(g))
         || shut(g)
         || (g.pl[me].crouch && !crate::player::can_stand(g)))
 }
@@ -325,11 +325,6 @@ pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys:
         let l = js::or(m::hyp2(k.mx, k.mz), 1.0);
         let pace = g.k.stalk.pace;
         return Some(orbited(g, me, gd, &p, at, dist, k.mx / l, k.mz / l, pace, k.dt));
-    }
-    if g.k.stalk.drag {
-        if let (Some(st), Some(mid)) = (stick, g.m.stalk.state.get(me).unwrap().stick) {
-            return Some(dragged(g, me, gd, &p, at, dist, st, mid, 1.0 / 60.0));
-        }
     }
     // toward the point behind his back
     let yaw = g.ch[c].body_yaw;
@@ -513,6 +508,11 @@ pub fn stalk_wait(g: &mut crate::game::Game) -> Option<crate::stalk::StalkWait> 
     };
     let near = if best.is_some() { v3::clamp((g.k.stalk.corner_see - bd) / m::max(0.05, g.k.stalk.corner_see - g.k.stalk.corner_m), 0.0, 1.0) } else { 0.0 };
     Some(StalkWait { at, reach: r[0] + (r[1] - r[0]) * near, coil: g.k.stalk.corner_coil })
+}
+
+/// He waits at a corner this frame: what the tick found, as the view is told it. (stalk.ts stalkWait, whose man and reach are his body's alone)
+pub fn stalk_waits(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    g.pl[seat.player].wall.is_some() && g.m.stalk.state.get(seat.player).map_or(false, |r| r.wait == Some(true) && g.time - r.t <= 0.1)
 }
 
 /// A man is being stalked, or the stalk has just become a grab: this frame's left click is no blow. (stalk.ts stalkHas)

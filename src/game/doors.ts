@@ -413,25 +413,15 @@ export class Door {
     this.frameCentre = [def.hinge[0] + Math.cos(def.closedDir) * def.width * 0.5, 1.0, def.hinge[1] + Math.sin(def.closedDir) * def.width * 0.5];
     this.place();
   }
-  /** Leaf centre (1 m up) at the current angle. Read in per-frame loops (interactables, body contacts, every emitted DoorEvent), so it is only recomputed
-   *  when the angle has moved — as a fresh array each time, so a caller holding an earlier result keeps the snapshot it always got. */
+  /** Leaf centre (1 m up) at the current angle, a fresh array. A READER WRITES NOTHING, as in Rust (door_pos): the centre kept for an angle is columns of the
+   *  block (posAngle, posX, posZ: the step's own, for the noises it lists), and the block is what two machines of a networked game hold to each other. Kept
+   *  here too, a HUD row that asked a swung leaf's centre between two ticks moved this machine's block alone, and its game was told it was out of step. */
   get pos(): Vec3 {
     if (this.off) return [this.frameCentre[0], this.frameCentre[1], this.frameCentre[2]];   // (off its hinges: 'the door' is its doorway — the slab on the floor is nobody's to use, and the fog looks for the frame)
-    const a = this.angle;
-    if (a !== this.g(DC.posAngle)) { this.p(DC.posAngle, a); const u = this.dir(); this.keptPos([this.def.hinge[0] + u[0] * this.def.width * 0.5, 1.0, this.def.hinge[1] + u[1] * this.def.width * 0.5]); }
-    return this.posAt;
+    const u = this.dir(); return [this.def.hinge[0] + u[0] * this.def.width * 0.5, 1.0, this.def.hinge[1] + u[1] * this.def.width * 0.5];
   }
-  /** the kept centre: the angle it was made for is a column (posAngle), and so are its x and z beside the array (a step in the module makes it anew for a
-   *  noise it lists, and the array is made from them: keptPos) */
+  /** the Rust game's kept centre, carried for it (`doors::Door.pos_at`): nothing here reads it */
   private posAt: Vec3 = [0, 1, 0];
-  /** `p` is the kept centre from here on (the array itself: who holds it holds what he always got) */
-  keptPos(p: Vec3): void { this.posAt = p; this.p(DC.posX, p[0]); this.p(DC.posZ, p[2]); }
-  /** `fn` asked aside (a question of the picture's — orders.ts hover): reading `pos` after a leaf has swung makes its kept centre anew; what each of `doors`
-   *  kept is put back after, so a game that is drawn keeps what the simulation's own reads left */
-  static posAside<T>(doors: readonly Door[], fn: () => T): T {
-    const a = doors.map(d => d.g(DC.posAngle)), p = doors.map(d => d.posAt);
-    try { return fn(); } finally { for (let i = 0; i < doors.length; i++) { doors[i].p(DC.posAngle, a[i]); doors[i].keptPos(p[i]); } }
-  }
   /** Static doorway centre (where the closed leaf's middle sits). */
   readonly frameCentre: Vec3;
   /** 'Closed enough' that using it means opening it (shared by use() and the HUD prompt). */
@@ -1071,6 +1061,4 @@ export class Doors {
 
   /** Leaf boxes, for registering as dynamic occluders with the collision layer. */
   leafBoxes(): Box[] { return this.list.map(d => d.box); }
-  /** `fn` asked aside of every door here (Door.posAside) */
-  posAside<T>(fn: () => T): T { return Door.posAside(this.list, fn); }
 }

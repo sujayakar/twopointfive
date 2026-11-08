@@ -39,18 +39,36 @@ pub fn mat_of(g: &crate::game::Game, kind: crate::debris::ChunkKind, box_: &crat
     mat_of_surf(s)
 }
 
+/// WHAT A THING IS INSIDE IS WHAT IT SAYS IT IS MADE OF. The break table's row gives a piece its shape; what the piece is made of comes from the thing it broke off.
+/// A body says what is inside it: mud is mud all through and stands by itself, block is grey, timber is pale, cloth is paler than its dye. A coat (plaster, paint,
+/// enamel: the thing's stuff is only its skin) and a thing that says nothing leave it to what the thing does, which is the row `mat`'s core: paint on a wooden
+/// locker is timber inside, skim on a partition is board.
+pub fn inside_of(stuff: Option<crate::scene_stuff::BoxStuff>, mat: crate::break_table::Mat) -> crate::break_table::Inside {
+    use crate::scene_stuff::BoxStuff as S;
+    let body = |core: Option<V3>, pale: Option<f64>, framed: bool| Inside { core, pale, facing: None, framed };
+    match stuff {
+        Some(S::MudWall | S::Earth | S::Gravel | S::Tarmac | S::Grass) => body(None, None, false),
+        Some(S::Block | S::Slab | S::GlossBlock | S::BoardConcrete | S::CastPanel | S::Paver) => body(break_row(Mat::Blockwork).core, None, true),
+        Some(S::Wood | S::Veneer) => body(break_row(Mat::Wood).core, None, true),
+        Some(S::Metal | S::Steel | S::Sheet | S::Brushed | S::Louvre | S::Rubber | S::Carpet) => body(None, None, true),
+        Some(S::Plastic) => body(None, break_row(Mat::Plastic).pale, true),
+        Some(S::Cloth | S::Fabric) => body(None, break_row(Mat::Fabric).pale, true),
+        _ => { let r = break_row(mat); Inside { core: r.core, pale: r.pale, facing: r.facing, framed: true } }
+    }
+}
+
 /// What a broken edge shows.   (breakTable.ts coreOf)
-pub fn core_of(row: &crate::break_table::BreakRow, paint: V3) -> V3 {
-    match row.core {
+pub fn core_of(inside: crate::break_table::Inside, paint: V3) -> V3 {
+    match inside.core {
         Some(c) => c,
-        None => v3::lerp3(paint, [1.0, 1.0, 1.0], row.pale.unwrap_or(0.0)),
+        None => v3::lerp3(paint, [1.0, 1.0, 1.0], inside.pale.unwrap_or(0.0)),
     }
 }
 
 /// The colour a piece's cut faces show; None = the box's own.   (breakTable.ts faceCore)
-pub fn face_core(row: &crate::break_table::BreakRow, paint: V3) -> Option<V3> {
-    if let Some(c) = row.core { return Some(v3::copy(c)); }
-    match row.pale {
+pub fn face_core(inside: crate::break_table::Inside, paint: V3) -> Option<V3> {
+    if let Some(c) = inside.core { return Some(v3::copy(c)); }
+    match inside.pale {
         Some(p) if js::truthy(p) => Some(v3::lerp3(paint, [1.0, 1.0, 1.0], p)),
         _ => None,
     }

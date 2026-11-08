@@ -1,10 +1,9 @@
 // THE FOG'S FRAME RECORD REACHES A PAGE.
 //
-// The picture draws the fog of war from one record, `game.fogOfWar.frame` (render_fogofwar::FogFrame: is the fog on, the eyes, the lit and thinned cells),
-// which the engine holds as `engine.fogFrame`. A page is sent only the fields on the page's list (tools/wire/fields.json `pageTick`); a headless tool is
-// sent every field unless it asks for the page's list (TPS_GAME_LIST=page). The record's 26 fields were once on the every-tick list alone: every headless
-// check read a full record and every page drew no fog at all, from the day the page became the Rust game. This stands a game ON THE PAGE'S LIST and
-// holds the record to what the same game reads when it is sent whole.
+// The picture draws the fog of war from one record, `game.fogOfWar.frame`, which the engine holds as `engine.fogFrame`. It is filled from the fog's section
+// (rust/game_draw, src/draw/fog.ts) by every host alike and is on no list of the bridge: it was once, on the tools' list and not on the page's, and every
+// headless check read a full record while every page drew no fog at all. This stands a game ON THE PAGE'S LIST and holds the record to what the same game
+// reads when it is sent whole.
 //
 //   bun run tools/blitz/fogpage-check.ts          exit 0 all pass · 1 a line failed
 //   FOGPAGE_BREAK=1 …                             the page's game is read before its first tick (the record as made): lines 1 and 2 must fail

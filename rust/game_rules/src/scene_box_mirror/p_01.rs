@@ -84,12 +84,12 @@ pub fn too_big(name: Option<&str>, why: &str) -> String {
 }
 
 /// What kind of row a box is: rotated, round, cut.   (boxMirror.ts kindOf)
-pub fn kind_of(g: &mut crate::game::Game, b: BoxId, cut_on: bool) -> f64 {
+pub fn kind_of(g: &crate::game::Game, b: BoxId, cut_on: bool) -> f64 {
     let (rot, round, has_cut, cut_len) = {
-        let x = seam_box(g, b);
+        let x = &g.tab.boxes[b];
         (x.rot.is_some(), x.round == Some(true), x.cut.is_some(), x.cut.as_ref().map_or(0, |c| c.len()))
     };
-    let cut = has_cut && (cut_on || crate::scene_boxes::shape_cut(g, b)) && cut_len > 0;
+    let cut = has_cut && (cut_on || crate::scene_boxes::shape_cut(g, b.into())) && cut_len > 0;
     ((if rot { K_ROT_ } else { 0 }) | (if round { K_ROUND_ } else { 0 }) | (if cut { K_CUT_ } else { 0 })) as f64
 }
 
@@ -206,13 +206,17 @@ pub fn put(g: &mut crate::game::Game, m: &mut Vec<f64>, fl: &mut Vec<u32>, o: f6
     }
 }
 
+/// what a box sends back of the light on it, of 255
+fn back_of(b: &SBox) -> u8 { (v3::clamp(crate::hours::lum(b.albedo), 0.0, 1.0) * 255.0) as u8 }
 /// static `i`'s row in world `w` is box b: the row of the statics' table, the planes in the cut table.
 fn static_same(g: &mut Game, w: usize, i: usize, b: BoxId, kind: f64) -> bool {
-    let o = world_read(w);
-    row_same(&o.rec, i * REC_, o.flags[i], &o.cut, 0, seam_box(g, b), kind)
+    let (o, x) = (world_read(w), seam_box(g, b));
+    o.back[i] == back_of(x) && row_same(&o.rec, i * REC_, o.flags[i], &o.cut, 0, x, kind)
 }
 fn static_put(g: &mut Game, w: usize, i: usize, b: BoxId, kind: f64, cut_row: f64) {
     let (o, x) = (world(w), seam_box(g, b));
+    o.wrote = o.wrote.wrapping_add(1);
+    o.back[i] = back_of(x);
     row_put(&mut o.rec, i * REC_, &mut o.flags[i], x, kind, cut_row);
     if (kind as u32) & K_CUT_ != 0 {
         planes_put(&mut o.cut, (cut_row * CUT_ROW) as usize, x);
@@ -229,6 +233,19 @@ fn leaf_put(g: &mut Game, w: usize, at: usize, b: BoxId, kind: f64, cut_row: f64
     if (kind as u32) & K_CUT_ != 0 {
         planes_put(&mut o.cut, (cut_row * CUT_ROW) as usize, x);
     }
+}
+
+/// the rows of boxes a question adds, and their cut planes: as the copy's own rows are written
+pub fn rows_of(g: &Game, boxes: &[BoxId]) -> (Vec<f64>, Vec<f64>) {
+    let cut_on = true;
+    let (mut rows, mut cuts) = (vec![0.0; boxes.len() * REC_], vec![0.0; boxes.len() * CUT_ROW as usize]);
+    for (i, &b) in boxes.iter().enumerate() {
+        let kind = kind_of(g, b, cut_on);
+        let x = &g.tab.boxes[b];
+        row_put(&mut rows, i * REC_, &mut 0, x, kind, i as f64);
+        if (kind as u32) & K_CUT_ != 0 { planes_put(&mut cuts, i * CUT_ROW as usize, x); }
+    }
+    (rows, cuts)
 }
 
 /// How much each table of the copy holds, by name.   (boxMirror.ts BoxMirror.tables)
@@ -301,7 +318,8 @@ pub fn box_mirror_open(g: &mut crate::game::Game, boxes: &[BoxId], cells: &[Vec<
     g.col.mirror.glass = glass.cloned();
     let fresh = box_mirror_take(g);
     let (epoch, put_backs) = (g.m.math_exact.maths_epoch, g.m.math_side.put_backs.n);
-    let all = fresh || g.col.mirror.epoch != epoch || g.col.mirror.put_backs != put_backs;
+    // (…or the rows in the module are another game's, or another moment's of this one: whatever they say is compared with nothing)
+    let all = fresh || g.col.mirror.epoch != epoch || g.col.mirror.put_backs != put_backs || g.col.mirror.stood == 0 || g.col.mirror.stood != world_read(g.sim).stood;
     g.col.mirror.epoch = epoch;
     g.col.mirror.put_backs = put_backs;
     let s = g.sim;
@@ -345,9 +363,26 @@ pub fn box_mirror_open(g: &mut crate::game::Game, boxes: &[BoxId], cells: &[Vec<
     x.lines = lines;
     x.rays = rays;
     x.circles = circles;
+    copied(g);
 }
 
-/// The tick is over.   (boxMirror.ts BoxMirror.shut)
+/// something of the module's rows was written by this game: they are its, of this moment
+fn copied(g: &mut Game) {
+    let o = world(g.sim);
+    o.stood = o.stood.wrapping_add(1).max(1);
+    g.col.mirror.stood = o.stood;
+}
+/// does the copy stand, the game's own and of this moment, with no debt to pay before a question may read it
+pub fn box_mirror_stands(g: &Game) -> Result<(), &'static str> {
+    let x = &g.col.mirror;
+    if !x.live { return Err("no copy of the boxes stands"); }
+    if x.stood == 0 || x.stood != world_read(g.sim).stood { return Err("the copy is another game's, or another moment's of this one"); }
+    if x.owes && (x.owed != 0.0 || x.glass_busy == 0.0) { return Err("a static or a pane was written and the copy has not been compared since"); }
+    if x.own.as_deref() != Some(&g.col.dynamic_boxes[..]) || x.own_at != g.m.scene_box_mirror.leaves.n || x.own_len != g.col.dynamic_boxes.len() as f64 { return Err("a leaf was written and the copy's leaves are as they were"); }
+    Ok(())
+}
+
+/// The copy is put down.   (boxMirror.ts BoxMirror.shut)
 pub fn box_mirror_shut(g: &mut crate::game::Game) {
     let x = &mut g.col.mirror;
     x.block = None;
@@ -420,11 +455,11 @@ pub fn box_mirror_grid(g: &mut crate::game::Game, cells: &[Vec<f64>], tilted_at:
 /// Every static against its row; a row that differs (or every row, `all`) written again.   (boxMirror.ts BoxMirror.statics)
 pub fn box_mirror_statics(g: &mut crate::game::Game, boxes: &[BoxId], all: bool) {
     let n = boxes.len();
-    let cut_on = crate::scene_cut::cut_boxes_on(g);
     let s = g.sim;
     let grid = !all && g.col.mirror.grid_over;
     let was = g.col.mirror.boxes as usize;
     for i in n..was {
+        world(s).wrote = world(s).wrote.wrapping_add(1);
         let r = g.col.mirror.cut_of[i];
         if r >= 0 {
             g.col.mirror.cut_free.push(r as f64);
@@ -437,7 +472,7 @@ pub fn box_mirror_statics(g: &mut crate::game::Game, boxes: &[BoxId], all: bool)
     g.col.mirror.boxes = n as f64;
     for i in 0..n {
         let b = boxes[i];
-        let kind = kind_at_copy(g, b, i, cut_on);
+        let kind = kind_at_copy(g, b, i, true);
         if !all && i < was && static_same(g, s, i, b, kind) {
             continue;
         }
@@ -585,6 +620,7 @@ pub fn box_mirror_again(g: &mut crate::game::Game, boxes: &[BoxId], walk: Option
     } else if owed & OWE_VIEW_ != 0 {
         box_mirror_view_in(g);
     }
+    copied(g);
     let x = &mut g.col.mirror;
     if x.glass_busy > 0.0 {
         x.owes = true;
@@ -713,15 +749,15 @@ pub fn box_mirror_leaves(g: &mut crate::game::Game, dyn_: &[BoxId]) -> f64 {
         return -2.0;
     }
     let set = if own { 0usize } else { 1usize };
-    let cut_on = crate::scene_cut::cut_boxes_on(g);
     let base = set * caps.leaves as usize;
     let s = g.sim;
     for i in 0..n {
         let b = dyn_[i];
-        let kind = kind_of(g, b, cut_on);
+        let kind = kind_of(g, b, true);
         leaf_put(g, s, base + i, b, kind, caps.cuts + (base + i) as f64);
     }
     sim::world_leaves(s, set, n as u32);
+    copied(g);
     if own {
         g.col.mirror.own_at = writes;
         g.col.mirror.own_len = n as f64;
@@ -729,54 +765,37 @@ pub fn box_mirror_leaves(g: &mut crate::game::Game, dyn_: &[BoxId]) -> f64 {
     set as f64
 }
 
-/// THE FURNITURE'S PARTS, FOR A QUESTION THAT MEETS THEM: list THING_SET of the leaves. → does the copy stand.   (boxMirror.ts BoxMirror.things)
-pub fn box_mirror_things(g: &mut crate::game::Game, p: &crate::scene_box_mirror::Furniture) -> bool {
+/// THE FURNITURE'S PARTS, FOR A QUESTION THAT MEETS THEM: list THING_SET of the leaves, read of the game's things only where one was written since
+/// (`thing_wrote`). → does the copy stand.
+pub fn box_mirror_things(g: &mut crate::game::Game) -> bool {
     if !g.col.mirror.live {
         return false;
     }
     let writes = g.m.scene_box_mirror.things.n;
-    if g.col.mirror.things_at == writes && g.col.mirror.things_of.is_some() {
-        return g.col.mirror.things_ok; // (`thingsOf === P`: a game has one furniture; the marker says it was copied)
+    if g.col.mirror.things_at == writes {
+        return g.col.mirror.things_ok;
     }
     g.col.mirror.things_at = writes;
-    g.col.mirror.things_of = Some(Furniture::zeroed());
     g.col.mirror.things_ok = false;
     let c = g.col.mirror.caps;
-    if p.all.len() as f64 > c.things {
+    let (all, props) = (g.props.all.clone(), g.props.props.clone());
+    let parts: usize = props.iter().map(|&p| g.tab.props_prop[p].boxes.len()).sum();
+    if all.len() as f64 > c.things || parts as f64 > c.leaves {
         return false;
     }
-    let mut parts = 0usize;
-    for t in &p.props {
-        parts += t.boxes.len();
-    }
-    if parts as f64 > c.leaves {
-        return false;
-    }
-    let cut_on = crate::scene_cut::cut_boxes_on(g);
     let base = THING_SET_ * c.leaves as usize;
     let every = g.col.mirror.things_all;
     let s = g.sim;
-    {
-        let o = world(s);
-        for (i, t) in p.all.iter().enumerate() {
-            let q = i * TH_;
-            o.thing[q] = t.x;
-            o.thing[q + 1] = t.z;
-            o.thing[q + 2] = t.yaw;
-            o.thing[q + 3] = t.radius;
-        }
+    for (i, &p) in all.iter().enumerate() {
+        let row = [crate::props::prop_x(g, p), crate::props::prop_z(g, p), crate::props::prop_yaw(g, p), g.tab.props_prop[p].radius];
+        world(s).thing[i * TH_..i * TH_ + 4].copy_from_slice(&row);
     }
     let mut at = 0usize;
-    for (r, t) in p.props.iter().enumerate() {
-        {
-            let o = world(s);
-            let q = r * TL_;
-            o.thing_live[q] = js::to_u32(t.id);
-            o.thing_live[q + 1] = at as u32;
-            o.thing_live[q + 2] = t.boxes.len() as u32;
-        }
-        for &b in &t.boxes {
-            let kind = kind_of(g, b, cut_on);
+    for (r, &p) in props.iter().enumerate() {
+        let boxes = g.tab.props_prop[p].boxes.clone();
+        world(s).thing_live[r * TL_..r * TL_ + 3].copy_from_slice(&[js::to_u32(g.tab.props_prop[p].id), at as u32, boxes.len() as u32]);
+        for b in boxes {
+            let kind = kind_of(g, b, true);
             let row = base + at;
             if every || !leaf_same(g, s, row, b, kind) {
                 leaf_put(g, s, row, b, kind, c.cuts + row as f64);
@@ -785,20 +804,22 @@ pub fn box_mirror_things(g: &mut crate::game::Game, p: &crate::scene_box_mirror:
         }
     }
     sim::world_leaves(s, THING_SET_, parts as u32);
-    sim::world_things(s, p.props.len() as u32);
+    sim::world_things(s, props.len() as u32);
+    copied(g);
     g.col.mirror.things_all = false;
     g.col.mirror.things_ok = true;
     true
 }
 
 /// Part `at` of the copied list → its box.   (boxMirror.ts BoxMirror.thingBox)
-pub fn box_mirror_thing_box(g: &crate::game::Game, p: &crate::scene_box_mirror::Furniture, at: f64) -> Option<BoxId> {
-    let mut at = at;
-    for t in &p.props {
-        if at < t.boxes.len() as f64 {
-            return Some(t.boxes[at as usize]);
+pub fn box_mirror_thing_box(g: &crate::game::Game, at: f64) -> Option<BoxId> {
+    let mut at = at as usize;
+    for &p in &g.props.props {
+        let boxes = &g.tab.props_prop[p].boxes;
+        if at < boxes.len() {
+            return Some(boxes[at]);
         }
-        at -= t.boxes.len() as f64;
+        at -= boxes.len();
     }
     None
 }
@@ -818,6 +839,7 @@ pub fn box_mirror_rules(g: &mut crate::game::Game, dyn_: &[BoxId]) -> bool {
     let writes = g.m.scene_box_mirror.leaves.n;
     if g.col.mirror.own_at != writes || g.col.mirror.own_len != 0.0 {
         sim::world_leaves(g.sim, 0, 0);
+        copied(g);
         g.col.mirror.own_at = writes;
         g.col.mirror.own_len = 0.0;
     }
@@ -846,7 +868,7 @@ pub fn box_mirror_follow_row(g: &mut crate::game::Game, b: BoxId, r: &[f64]) -> 
 }
 
 /// Leaf i's row of list 0: its centre, its yaw, its flags.   (boxMirror.ts BoxMirror.leafRow)
-pub fn box_mirror_leaf_row(g: &mut crate::game::Game, i: f64) -> Vec<f64> {
+pub fn box_mirror_leaf_row(g: &crate::game::Game, i: f64) -> Vec<f64> {
     let (o, i) = (world_read(g.sim), i as usize);
     let q = i * REC_;
     vec![o.leaf[q], o.leaf[q + 1], o.leaf[q + 2], o.leaf[q + R_YAW_], o.leaf_flags[i] as f64]
@@ -1027,15 +1049,5 @@ mod tests {
         let t = box_mirror_tables(&mut g);
         assert_eq!(t.get(String::from("glass")), Some(&PANE_CAP));
         assert_eq!(t.keys().first().map(|k| k.as_str()), Some("boxes"));
-    }
-
-    #[test]
-    fn the_copied_list_names_a_part_by_where_it_stands() {
-        let mut g = game(0);
-        let thing = |ids: &[u32]| FurnitureThing { id: 0.0, x: 0.0, z: 0.0, yaw: 0.0, radius: 0.0, boxes: ids.iter().map(|&i| BoxId(i)).collect() };
-        let p = Furniture { all: Vec::new(), props: vec![thing(&[4, 5]), thing(&[]), thing(&[9])] };
-        assert_eq!(box_mirror_thing_box(&mut g, &p, 1.0), Some(BoxId(5)));
-        assert_eq!(box_mirror_thing_box(&mut g, &p, 2.0), Some(BoxId(9)));
-        assert_eq!(box_mirror_thing_box(&mut g, &p, 3.0), None);
     }
 }

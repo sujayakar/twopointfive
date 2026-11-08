@@ -23,6 +23,21 @@ pub fn arc_armed(g: &crate::game::Game, sol: &crate::throwables::ThrowSolution) 
     arc_length(sol) >= g.k.he40.arm_m
 }
 
+/// The rifle is up with rounds in its 40 mm under it. (he40.ts, the arc's own gate)
+pub fn he40_ready(g: &crate::game::Game, pl: PlayerId) -> bool {
+    let r = g.pl[pl].rifle;
+    crate::game::player_rifle_up(g, pl) && crate::weapons::rifle_attachment(g, r) == Some(crate::weapons::RifleAttachment::He40) && g.fa[r].shells > 0.0
+}
+
+/// The arc he has up is the launcher's, and too short to arm. (he40.ts previewTooClose)
+pub fn preview_too_close(g: &crate::game::Game, pl: PlayerId) -> bool {
+    let r = g.pl[pl].rifle;
+    match &g.pl[pl].throw_preview {
+        Some(sol) => crate::game::player_rifle_up(g, pl) && crate::weapons::rifle_attachment(g, r) == Some(crate::weapons::RifleAttachment::He40) && !arc_armed(g, sol),
+        None => false,
+    }
+}
+
 /// The living man under the reticle a round can meet, never one of Sam's own side. (he40.ts shellMan)
 pub fn shell_man(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<GuardId> {
     let puppet_target = match &g.puppet {
@@ -314,10 +329,11 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
                 let c = g.gd[cv].ch;
                 try_char(g, shooter, c, Some(cv), pos, dir, reach, &mut best, &mut hit_c, &mut hit_g);
             }
-            let pl = g.player;
-            if !g.pl[pl].down {
-                let c = g.pl[pl].ch;
-                try_char(g, shooter, c, None, pos, dir, reach, &mut best, &mut hit_c, &mut hit_g);
+            for pl in crate::seats::men(g) {
+                if !g.pl[pl].down {
+                    let c = g.pl[pl].ch;
+                    try_char(g, shooter, c, None, pos, dir, reach, &mut best, &mut hit_c, &mut hit_g);
+                }
             }
             let st = crate::scene_collision::raycast(g, pos, dir, reach);
             let ph = crate::props::prop_system_raycast(g, pos, dir, reach);
@@ -454,7 +470,7 @@ pub fn dud_hits_character(g: &mut crate::game::Game, r: crate::he40::Shell, c_2:
 }
 
 /// Rounds in flight as boxes: the stubby body and its gold nose along the line of flight. Picture only; nothing in the tick calls it. (he40.ts shellBoxes)
-pub fn shell_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn shell_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let flag = crate::scene_boxes::box_flag();
     let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
     let item = crate::throwables::shell_item();
@@ -484,7 +500,7 @@ pub fn shell_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
             flags: Some(flags),
             ..Default::default()
         });
-        out.push(body);
+        out.push(body.into());
         let nose = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
             c: v3::mad(r.pos, z, 0.031),
             h: [0.021, 0.021, 0.02],
@@ -494,7 +510,7 @@ pub fn shell_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
             flags: Some(flags),
             ..Default::default()
         });
-        out.push(nose);
+        out.push(nose.into());
     }
 }
 

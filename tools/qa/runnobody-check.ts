@@ -1,7 +1,7 @@
 // A MAN WHO HAS RUN IS NOBODY'S ENEMY ON THE BOOKS (src/game/runner.ts RUNNER.nobody; runnerNobody from the drop, runnerMute from the shout). His own script runs
 // and nothing else of his does, but every module that walks the roster from outside still met a calm living man in state 'patrol'. The readers mended under the key:
 // fogofwar.ts tellCalls (a teammate's 'contact' on him), doortools.ts ('room clear' held back), morale.ts hasMate (a mate beside him was not alone),
-// suppression.ts (his bark under fire, and a mate's 'got us pinned' with him as the other man), cues.ts (his side's voice). NO LINE HERE for two
+// suppression.ts (his bark under fire, and a mate's 'got us pinned' with him as the other man). NO LINE HERE for two
 // of the clauses: darkdoor.ts mateBy (the same clause as hasMate, asked only inside the dark room's own move) and fogofwar.ts's 'heard' call (five seconds of his
 // run past a teammate with his back turned put no footfall of his in that teammate's ear in this staging, key on or off).
 //   bun run tools/qa/runnobody-check.ts        (or: bun run tools/qa/probes.ts runnobody)        exit 0 = every line PASS, 1 = a FAIL line
@@ -15,8 +15,7 @@
 //   company    a mate three metres from him with a line is alone (morale.ts hasMate)
 //   bark       rounds past his head: he says nothing
 //   pinned     the same rounds past him and a mate beside him: the mate is pinned and does not shout 'got us pinned' (he would be the other of the 'us')
-//   voice      his side's cue asked of him: refused
-//   (contact, company and voice each carry a man who has NOT broken: the old answer)
+//   (contact and company each carry a man who has NOT broken: the old answer)
 // RUNNOBODY_BREAK=1: the man is never broken (the runner's seam is not called), so every line that wants the others to make nothing of him — red.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -81,11 +80,6 @@ export async function runnobodyCheck(): Promise<boolean> {
         return { us, bPinned: g.time - B.sup.pinnedAt < 60, aPinned: g.time - A.sup.pinnedAt < 60, all: [...all].join(' | ') }; };
       const b = await pinned();
       line(!b.us && b.bPinned, `rounds past him and past a mate three metres off: the mate is pinned (${b.bPinned}) and says his own line, not that they've got US pinned ("${b.all}")`); }
-    // ------------------------------------------------------------ voice
-    { const voice = async (broken = true) => { const s = await world(broken), { g, A } = s; s.step(120); A.dazzledUntil = 0; const C: any = g.cues;   // (his eyes are his own again: a blinded man is nobody's voice either)
-        return { fit: C.fit(A) as boolean, said: C.cue(A, 'help') as boolean }; };
-      const b = await voice(), c = await voice(false);
-      line(!b.fit && !b.said && c.fit && c.said, `his side's cue asked of him (cues.ts): fit to speak ${b.fit} and said ${b.said} · a man who has NOT broken: ${c.fit} and ${c.said}`); }
   } catch (err) { line(false, `threw: ${(err as Error)?.stack ?? err}`); }
   finally { PICTURE.tellSecs = tell0; FOG.cone = cone0; FOG.own = own0; }
   console.log(failed ? '=== runnobody-check: FAIL ===' : '=== runnobody-check: ALL PASS ===');

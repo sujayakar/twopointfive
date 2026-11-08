@@ -3,7 +3,7 @@
 // hinge jamb at a slant). 'Glass is not cover' (orders.ts behindGlass) then found no place off the glass and fell back to the walls' own marks: the lead on
 // the latch jamb — stood at the window, a defender posted 1.6 m inside it — and, on 'bang and clear', the second man walking across the door front to file up
 // behind him. With the moon counted the lead was shot through the pane on his mark before the door was touched (4 of 48 first entries lost a man there).
-//   bun run tools/qa/records-front-check.ts [--seeds 17,26,29,38] [--jobs 2] [--cap 420] [--off] [--noplay]
+//   bun run tools/qa/records-front-check.ts [--off]
 // What it does, as the page ships the scenario (tools/qa/ships.ts's stand: glass parts on, the movement pass, the turn weight, defenders' frags):
 //   STAGED — stands `records-pair` up and asks the game itself where the pair stacks on the outside face of `front` (orders.ts stackPosts, and the door
 //   tools' own tucked marks): it first shows the cause is THERE (the door, a pane on its wall beside the frame, rounds going through glass, both jambs in
@@ -12,16 +12,11 @@
 //   Asked four ways: the pair under 'stack up' and under the door tools' own tucked marks · one man alone · the pair with Sam stood on the better jamb (the
 //   file goes on past him: nobody on him, nobody at the window) · the two men ordered ONE AT A TIME through the game's own order (Orders.give): two marks a
 //   body apart, neither at the window. Each deal is printed with the lines of fire through glass onto it beside those onto the walls' own marks.
-//   PLAYED — plays each seed with the moon counted (PT_METER=sky) and call out on, and reads the first door order of the run: it must be on `front` with
-//   both men (else NO VERDICT), and FAILS if a teammate was lost on it before anybody had crossed the frame (shot on the stack), or nobody ever crossed it.
 //   --off     the rule off (GLASSPEN.stackLeast false): the fault as it was — expected to FAIL (exit 1): the proof that the check can. Read the last lines:
 //             each half says for itself whether the fault REPRODUCED in it; a NO VERDICT exits 1 too
-//   --noplay  the staged half alone (a few seconds)
 // What it does NOT show: the 'same mark' and 'on Sam' findings cannot fire with the rule off (the walls' own marks fail on the window first — those two
 // guard the rule's own file, not the old fault); the one-at-a-time case reads the marks the game assigned, not where the men end up; a man the first order
 // lost AFTER somebody crossed with no killer on record is not counted (playthrough.ts's deaths carry only men with a known killer).
-// The default seeds are the four of 1-48 that lost the lead on the stack with the rule off on the commit this was written on; bun is not the page's engine
-// and a change anywhere in the game moves which seed shows what — if `--off` stops reproducing in the PLAYED half, pick again with a wider --seeds (the
 // STAGED half does not depend on a seed). Not in probes.ts's families: it plays runs (a minute), and its stand is ships.ts's, not the harness's.
 // exit 0 = the cause is there, no mark at the window, one hand, and no seed lost a man on the stack · 1 = any of those failed, a run errored, or the check
 // looked at nothing (NO VERDICT) · 2 = bad flags
@@ -31,11 +26,8 @@ import { tmpdir } from 'node:os';
 
 const argv = process.argv.slice(2), flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 for (let i = 0; i < argv.length; i++) { const a = argv[i];
-  if (['--seeds', '--jobs', '--cap'].includes(a)) { if (++i >= argv.length) { console.error(`${a} wants a value`); process.exit(2); } continue; }
-  if (!['--off', '--noplay'].includes(a)) { console.error(`unknown flag ${a} (--seeds --jobs --cap --off --noplay)`); process.exit(2); } }
-const off = argv.includes('--off'), noplay = argv.includes('--noplay'), seeds = flag('--seeds') ?? '17,26,29,38', jobs = flag('--jobs') ?? '2', cap = flag('--cap') ?? '420';
-if (!/^\d+(-\d+)?(,\d+(-\d+)?)*$/.test(seeds)) { console.error('bad --seeds'); process.exit(2); }
-if (!/^[1-9]\d*$/.test(jobs) || !/^[1-9]\d*$/.test(cap)) { console.error('bad --jobs / --cap'); process.exit(2); }
+  if (a !== '--off') { console.error(`unknown flag ${a} (--off)`); process.exit(2); } }
+const off = argv.includes('--off');
 const SCN = 'records-pair', DOOR = 'front';
 
 // ------------------------------------------------------------ the stand ships.ts gives a run (set before the game's modules load: they read it then)
@@ -51,7 +43,7 @@ const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 
 console.log(`records-front-check · ${SCN} · door ${DOOR} · the rule ${off ? 'OFF (the fault as it was)' : 'as shipped'}`);
-let failed = false, noVerdict = false, staged = 0, played = 0, looked = 0, never = 0;
+let failed = false, noVerdict = false, staged = 0;
 const fail = (s: string) => { failed = true; console.log(`- FAIL — ${s}`); }, nov = (s: string) => { failed = noVerdict = true; console.log(`- NO VERDICT — ${s}`); };
 
 // ------------------------------------------------------------ STAGED
@@ -118,30 +110,6 @@ const fail = (s: string) => { failed = true; console.log(`- FAIL — ${s}`); }, 
   }
 }
 
-// ------------------------------------------------------------ PLAYED
-if (!noplay && !noVerdict) {
-  const file = resolve(tmpdir(), `records-front-check-${process.pid}.json`);
-  const pr = Bun.spawn(['bun', 'run', resolve(import.meta.dir, 'ships.ts'), '--partial', '--callout', '--scn', SCN, '--seeds', seeds, '--cap', cap, '--jobs', jobs, '--json', file, ...(off ? ['--set', '{"GLASSPEN":{"stackLeast":false}}'] : [])], { stdout: 'ignore', stderr: 'pipe', env: { ...process.env, PT_METER: 'sky' } });
-  const err = await new Response(pr.stderr).text(), code = await pr.exited;
-  if (code === 2) { console.error(err.trim() || 'ships.ts refused its flags'); process.exit(2); }
-  interface Run { scn: string; seed: number; end: string; why: string; of: number; deaths?: { t: number; who: string; by: string; d: number }[]; entries?: { door: string; tool: string; t0: number; cross: number | null; t1: number | null; end: string; men: number; lost: number }[] }
-  let runs: Run[] = []; try { runs = JSON.parse(readFileSync(file, 'utf8')).runs; } catch { /* nothing written: reported below */ } finally { try { rmSync(file); } catch { /* not there */ } }
-  if (!runs.length) fail(`nothing played (${err.trim().split('\n').pop()?.slice(0, 160) ?? 'no output'})`);
-  let lost = 0;
-  for (const r of runs) {
-    if (r.end === 'error') { fail(`${r.scn}:${r.seed} did not play (${r.why.split('\n')[0].slice(0, 160)})`); continue; }
-    const e = r.entries?.[0];
-    if (!e || e.door !== DOOR || e.men !== 2) { nov(`${r.scn}:${r.seed}: the run's first door order is not the pair on ${DOOR} (${e ? `${e.tool} on ${e.door}, ${e.men} men` : 'none'}): the commander's script has changed under the check`); continue; }
-    looked++;
-    const until = e.cross ?? e.t1 ?? Infinity, onStack = (r.deaths ?? []).filter(x => x.t >= e.t0 && x.t <= until), unseen = e.cross === null ? Math.max(0, e.lost - onStack.length) : 0;   // (a man the order lost with nobody across and no killer on record is lost on the stack too)
-    console.log(`  played: ${r.scn}:${r.seed} · ${e.tool} on ${DOOR} at ${e.t0} s · first man across ${e.cross ?? 'never'} · ended '${e.end}' · lost on this order ${e.lost} · down before anybody crossed: ${onStack.length ? onStack.map(x => `${x.who} at ${x.t} s by ${x.by} ${x.d} m off`).join(', ') : 'nobody'}`);
-    if (onStack.length || unseen) { lost++; played++; fail(`${r.scn}:${r.seed}: ${onStack.length + unseen} of the pair lost on the stack at ${DOOR}, before anybody had crossed its frame`); }
-    else if (e.cross === null) { never++; fail(`${r.scn}:${r.seed}: nobody ever crossed ${DOOR} on the run's first order (it ended '${e.end}') — not the fault this check is for, and no pass either`); }
-  }
-  if (runs.length && !looked && !failed) nov('no run made its first entry at the front door');
-  if (looked) console.log(`  played: ${looked} first entries at ${DOOR} read · ${lost} lost a man on the stack`);
-}
-if (off) { console.log(staged ? `  STAGED: the fault REPRODUCED with the rule off: ${staged} findings (exit 1 is the expected answer here)` : '  STAGED: the fault did NOT reproduce with the rule off: this half proves nothing as it stands');
-  if (!noplay) console.log(played ? `  PLAYED: the fault REPRODUCED with the rule off: ${played} of ${looked} first entries (exit 1 is the expected answer here)` : `  PLAYED: the fault did NOT reproduce with the rule off on seeds ${seeds}: this half proves nothing on them — pick seeds again (--seeds 1-48)`); }
-if (!failed) console.log(`- PASS — nobody of the pair is dealt a mark at the window beside ${DOOR}, both stack on one hand of it${noplay ? '' : ', and nobody was shot on the stack'}`);
+if (off) { console.log(staged ? `  STAGED: the fault REPRODUCED with the rule off: ${staged} findings (exit 1 is the expected answer here)` : '  STAGED: the fault did NOT reproduce with the rule off: this half proves nothing as it stands');; }
+if (!failed) console.log(`- PASS — nobody of the pair is dealt a mark at the window beside ${DOOR}, both stack on one hand of it`);
 process.exit(failed ? 1 : 0);

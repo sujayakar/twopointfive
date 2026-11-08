@@ -202,7 +202,7 @@ export function leversBase(): Difficulty { return BASE; }
 /** levers are moved and every one stands on a rung, but on no level's: 'your own mix' (false at a level's own setting, and with rows moved under a lever by hand) */
 export function leversMixed(): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('leversMixed', undefined, []); if (__r !== RUST_PASS) return __r as any; } } return anySet() && shownWhole() && difficultyNow() === 'custom'; }
 let coneVisit: boolean | null = null;   // (setConeVisit, below: the fog's cone for this visit; null = the level decides)
-let ownWas: boolean | null = null;      // (FOG.own as it stood before the fog lever wrote it — the kept option, teamfeel.ts — put back when the lever lets go)
+let ownWas: boolean | null = null;      // (FOG.own as it stood before the fog lever wrote it — put back when the lever lets go)
 let ownFor: FogRung | FogOff | null = null;      // (the rung FOG.own was last written for: written again only when the lever MOVES, so a ?fogown visit or the Tab row flipped over the lever stands through a later write of the tables — a scenario's start)
 /** the tables written whole from the level and the levers over it, the fog's two rows with them (`fogOnly`: the fog's rows alone — the fog lever moves nothing of the defenders') */
 function write(fogOnly = false) {
@@ -257,10 +257,9 @@ export function setLever<K extends LeverKey>(key: K, rung: Levers[K] | null, kee
   if (keep) { if (!own(key)) { resetPressure(); resetDigIn(); } storeLevers(); if (stood || !own(key)) storeName(BASE); }   // (the level's name with them: what the screen showed under the lever is what the next plain page load starts from)
   write(own(key));
 }
-/** game.ts, ROUND the kept feel rows being read back (`load` — teamfeel.ts loadTeamFeel writes FOG.own as this machine keeps it): the fog lever's rung over it again, the kept one remembered for when the lever lets go */
-export function leversFog(load: () => void) {
-  if (ownFor !== null && ownWas !== null) FOG.own = ownWas;   // (the lever's hand off the row while the kept copy is read: it only writes the keys it keeps)
-  load();
+/** game.ts, as a game is made: the fog lever's rung over FOG.own again, what it stood at remembered for when the lever lets go */
+export function leversFog() {
+  if (ownFor !== null && ownWas !== null) FOG.own = ownWas;
   if (SET.fog) { ownWas = FOG.own; FOG.own = SET.fog === 'own'; ownFor = SET.fog; }
 }
 /** THE CONE FOR THIS VISIT, whatever the level and through every later write of it (a scenario's start writes hard's rows again — difficultyHere; the mission
@@ -277,24 +276,40 @@ export function difficultyCustom() { { const __s = RUST_SURFACE; if (__s) { cons
   if (SET.ai !== undefined || SET.kit !== undefined || HELD) { delete SET.ai; delete SET.kit; if (HELD) { delete HELD.ai; delete HELD.kit; } const fog = SET.fog ?? HELD?.fog, told = SET.told ?? HELD?.told;   // (…and the AI and kit levers with it: the rows as they stand are what this machine plays now. The fog lever is its own)
     try { if (fog || told) globalThis.localStorage?.setItem(LS_LEVERS, JSON.stringify({ ...(fog ? { fog } : {}), ...(told ? { told } : {}) })); else globalThis.localStorage?.removeItem(LS_LEVERS); } catch { /* no store */ } }   // (…and how much you're told, which has no rows under it either)
 }
-/** main.ts, BEFORE the boot card paints (both tables have read their own stores at import): the level this machine keeps, then the visit's flags over it —
- *  (not on a `plain` page, unless ?lessonhard) — ?hard / ?hard=0 / ?difficulty=hard|standard (not stored) — then THE LEVERS over the level: the ones this machine keeps, and ?fog= / ?enemyai= /
- *  ?enemykit= for the visit over those (neither on a page that is `plain` — a Training lesson is taught on the level as it is) — and the two older single-switch flags last,
- *  over whatever the level wrote (?hard&pressure=0 = hard without the press, as the harness's --set reads it) */
+/** WHAT AN ADDRESS SAYS OF THE DIFFICULTY, and no more: null where it says nothing. `level` ?hard / ?hard=0 / ?difficulty=hard|standard; `levers` ?fog= / ?enemyai= /
+ *  ?enemykit= / ?told=, only rungs the build has, and none on a `plain` address (a Training lesson is taught on the level as it is; `told=0`, that lever's own off
+ *  switch, is no rung: host/profile.ts reads it); `digin` ?digin; `pressure` ?pressure / ?pressure=0; `cone` ?fogcone / ?fogcone=0, the fog's cone whatever the level
+ *  (setConeVisit).   (?fogown / ?fogcalls are the fog's own flags: fogofwar.ts fogFlags, read where the kept rows are — the Game's constructor.)
+ *  Reads the words and writes nothing, so every host that starts a game from an address reads it by this one function (a page, host/standup.ts difficultyOfAddress). */
+export interface DifficultyAsked { level: Difficulty | null; levers: Partial<Levers>; digin: boolean; pressure: boolean | null; cone: boolean | null }
+export function difficultyAsked(q: URLSearchParams, plain: boolean): DifficultyAsked | null {
+  const v = q.has('hard') ? (q.get('hard') === '0' ? 'standard' : 'hard') : q.get('difficulty'), level = v === 'hard' || v === 'standard' ? v : null;
+  const levers: Partial<Levers> = {};
+  if (!plain) for (const L of leversNow()) { const r = q.get(L.param); if (r !== null && isRung(L.key, r)) (levers as Record<string, string>)[L.key] = r; }
+  const digin = q.has('digin'), pressure = q.has('pressure') ? q.get('pressure') !== '0' : null, cone = q.has('fogcone') ? q.get('fogcone') !== '0' : null;
+  return level === null && !Object.keys(levers).length && !digin && pressure === null && cone === null ? null : { level, levers, digin, pressure, cone };
+}
+/** …AND IT LAID ON THE TABLES, not stored. The level first, then the levers over it, then the two older single-switch flags over whatever those wrote (?hard&pressure=0 = hard
+ *  without the press, as the harness's --set reads it). `kept`: what a page's machine keeps goes between the level and the levers, so the address's levers stand over it */
+export function difficultyLay(a: DifficultyAsked, kept?: () => void) {
+  if (a.level) setDifficulty(a.level, false);
+  kept?.();
+  for (const L of leversNow()) { const r = a.levers[L.key]; if (r !== undefined) setLever(L.key, r as never, false); }
+  if (a.digin) DIGIN.on = true;
+  if (a.pressure !== null) PRESSURE.on = a.pressure;
+  if (a.cone !== null) setConeVisit(a.cone);
+}
+/** main.ts, BEFORE the boot card paints (both tables have read their own stores at import): the level this machine keeps (not on a `plain` page, unless ?lessonhard), then the
+ *  visit's own words over it (difficultyAsked), with THE LEVERS this machine keeps between its level and its levers (not on a `plain` page either: a Training lesson is taught
+ *  on the level as it is). No other host keeps anything, so no other host calls this: host/standup.ts difficultyOfAddress */
 export function initDifficulty(q: URLSearchParams, plain = false) {
   let kept: string | null = null; try { kept = globalThis.localStorage?.getItem(LS) ?? null; } catch { /* no store */ }
   if (kept === 'hard' && (!plain || q.has('lessonhard'))) setDifficulty('hard', false);   // (a `plain` page — a Training lesson — is taught on standard whatever this machine keeps, as its levers are held off below: hard's men come looking while a line is being read. ?lessonhard = as it was: the kept level on a lesson too; ?hard still sets it for the visit)
-  const v = q.has('hard') ? (q.get('hard') === '0' ? 'standard' : 'hard') : q.get('difficulty');
-  if (v === 'hard' || v === 'standard') setDifficulty(v, false);
-  HELD = null;
-  if (plain) { const kept = keptLevers(); if (Object.keys(kept).length) HELD = kept; }
-  else for (const [k, r] of Object.entries(keptLevers())) setLever(k as LeverKey, r as never, false);
-  if (!plain) for (const L of leversNow()) { const r = q.get(L.param); if (r !== null && isRung(L.key, r)) setLever(L.key, r as never, false); }   // (`told=0`, that lever's own off switch, is no rung: host/profile.ts reads it)
-  if (q.has('digin')) DIGIN.on = true;
-  if (q.has('pressure')) PRESSURE.on = q.get('pressure') !== '0';
-  // ?fogcone / ?fogcone=0 — the fog of war's cone for this visit whatever the level (setConeVisit).   (?fogown / ?fogcalls are the fog's own flags: fogofwar.ts
-  // fogFlags, read where the kept rows are — the Game's constructor)
-  if (q.has('fogcone')) setConeVisit(q.get('fogcone') !== '0');
+  difficultyLay(difficultyAsked(q, plain) ?? { level: null, levers: {}, digin: false, pressure: null, cone: null }, () => {   // (an address that says nothing still has the machine's levers read)
+    HELD = null;
+    if (plain) { const kept = keptLevers(); if (Object.keys(kept).length) HELD = kept; }
+    else for (const [k, r] of Object.entries(keptLevers())) setLever(k as LeverKey, r as never, false);
+  });
 }
 /** the levers this machine keeps (only rungs the build still has) */
 export function keptLevers(): Partial<Levers> {

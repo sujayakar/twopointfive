@@ -72,7 +72,7 @@ pub struct FogOfWar {
     pub thing_recs: JsMap<crate::Num, crate::fogofwar::ThingRec>,
     pub props_loaded: bool,
     pub loaded: bool,
-    pub thing_out: Vec<BoxId>,
+    pub thing_out: Vec<AnyBoxId>,
     pub thing_since: f64,
     pub thing_stats: crate::fogofwar::FogOfWarThingStats,
     pub rig_from: f64,
@@ -81,9 +81,6 @@ pub struct FogOfWar {
     pub span_z: f64,
     pub cell_seen: JsMap<crate::Num, bool>,
     pub frame_no: f64,
-    pub asked: JsMap<String, f64>,
-    pub pending: Vec<crate::fogofwar::FogOfWarPendingItem>,
-    pub turn: f64,
     pub door_from: f64,
     pub door_n: f64,
     pub call_log: Vec<crate::fogofwar::FogOfWarCallLogItem>,
@@ -128,9 +125,6 @@ impl FogOfWar {
             span_z: 0.0,
             cell_seen: JsMap::new(),
             frame_no: 0.0,
-            asked: JsMap::new(),
-            pending: Vec::new(),
-            turn: 0.0,
             door_from: 0.0,
             door_n: 0.0,
             call_log: Vec::new(),
@@ -153,28 +147,18 @@ impl Default for FogOfWar { fn default() -> Self { Self::blank() } }
 /// The game lists it among the host's own, so it has no word of the state: two machines that show different seats need not agree on it.
 #[derive(Clone, Debug)]
 pub struct FogPicture {
-    pub frame: crate::render_fogofwar::FogFrame,
-    pub lamp_pick: Vec<crate::fogofwar::FogOfWarLampPickItem>,
-    pub lamp_n: f64,
-    pub lit_stats: crate::fogofwar::FogOfWarLitStats,
     pub face_recs: JsMap<FixtureId, Vec<V3>>,
     pub full_stats: crate::fogofwar::FogOfWarFullStats,
     pub viewer: bool,
-    pub look_frames: f64,
-    pub raw_list: Vec<BoxId>,
+    pub raw_list: Vec<AnyBoxId>,
     pub raw_at: f64,
 }
 impl FogPicture {
     pub fn blank() -> Self {
         FogPicture {
-            frame: crate::render_fogofwar::FogFrame { eyes: alloc::vec![0.0; (crate::render_fogofwar::FOG_EYES * 4.0) as usize], looks: alloc::vec![0.0; (crate::render_fogofwar::FOG_EYES * 4.0) as usize], dim: 0.4, desat: 0.75, top_pad: 0.3, lights: alloc::vec![0.0; (crate::render_fogofwar::FOG_LIGHTS * 16.0) as usize], lights_u: alloc::vec![0; (crate::render_fogofwar::FOG_LIGHTS * 16.0) as usize], thin_bits: alloc::vec![0; crate::render_fogofwar::FOG_THIN_WORDS as usize], thin_serial: -1.0, thin_count: -1.0, ..crate::render_fogofwar::FogFrame::zeroed() },
-            lamp_pick: Vec::new(),
-            lamp_n: 0.0,
-            lit_stats: crate::fogofwar::FogOfWarLitStats { lamps: 0.0, lights: 0.0, held: 0.0 },
             face_recs: JsMap::new(),
             full_stats: crate::fogofwar::FogOfWarFullStats { hidden: 0.0, ghosts: 0.0, held: 0.0 },
             viewer: false,
-            look_frames: 0.0,
             raw_list: Vec::new(),
             raw_at: -1.0,
         }
@@ -220,8 +204,6 @@ pub struct Rec {
     pub at: Option<V3>,
     pub wand_t: Option<f64>,
     pub body: bool,
-    pub smoked: bool,
-    pub smoke_f: f64,
 }
 impl Rec {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -233,8 +215,6 @@ impl Rec {
             at: None,
             wand_t: None,
             body: false,
-            smoked: false,
-            smoke_f: 0.0,
         }
     }
 }
@@ -257,48 +237,10 @@ impl FogOfWarDoorRecsValue {
 }
 impl Default for FogOfWarDoorRecsValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:453 FogOfWar.lampPick, src/game/fogofwar.ts:453)
-#[derive(Clone, Copy, Debug)]
-pub struct FogOfWarLampPickItem {
-    pub l: LightId,
-    pub i: f64,
-    pub d: f64,
-}
-impl FogOfWarLampPickItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FogOfWarLampPickItem {
-            l: LightId(0),
-            i: 0.0,
-            d: 0.0,
-        }
-    }
-}
-impl Default for FogOfWarLampPickItem { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/fogofwar.ts:454 FogOfWar.litStats, src/game/fogofwar.ts:454)
-#[derive(Clone, Copy, Debug)]
-pub struct FogOfWarLitStats {
-    pub lamps: f64,
-    pub lights: f64,
-    pub held: f64,
-}
-impl FogOfWarLitStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FogOfWarLitStats {
-            lamps: 0.0,
-            lights: 0.0,
-            held: 0.0,
-        }
-    }
-}
-impl Default for FogOfWarLitStats { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: ThingRec, src/game/fogofwar.ts:378)
 #[derive(Clone, Debug)]
 pub struct ThingRec {
-    pub ghost: Vec<BoxId>,
+    pub ghost: Vec<FrameBoxId>,
     pub x: f64,
     pub z: f64,
     pub ox: f64,

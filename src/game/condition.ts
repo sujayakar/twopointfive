@@ -11,7 +11,7 @@
 //   spread   as if fire were on him at `hurtSup`: conditionSup, which the three readers of a man's suppression for his rounds ask (suppression.ts
 //            guardFireMods and samSpread; the room fight's and the covering man's own line). The larger of that and the fire really on him, never a sum;
 //            how fast he fires is not touched. It rides suppression's own switch: with `tune.suppression` off nobody's rounds open, a hurt man's included.
-// Only a burst (frag.ts blast: a frag, a 40 mm, the bomb a defuse lost) leaves a man hurt. A door or wall charge and the player's own charge fold a man
+// Only a burst (frag.ts blast: a frag, a 40 mm) leaves a man hurt. A door or wall charge and the player's own charge fold a man
 // and blind him as they did and leave him sound.
 // What a man looks like in each state is the poses' to say (character.ts mvPost / mvArms: the fold of a man knocked about, the hunch and short step of a
 // hurt one, the tucked head of one under fire), dealt by conditionPose every frame for all three alike. A showcase's cast is left as it was written.
@@ -33,9 +33,6 @@ export const CONDITION = {
   hurtSecs: 0,
   /** the score does not read wariness off one of the player's own men at rest (guards.ts tension: under an order nothing drains that number) */
   ownCalm: true,
-  /** the figures are dealt each state's look (conditionPose). Off = the model and its costs with nobody showing any of it: QA's lever for telling what the
-   *  looks alone do to a run (a figure's head and muzzle are where the simulation reads them) */
-  looks: true,
 };
 export const CONDITION_STATS = { hurt: 0 };
 

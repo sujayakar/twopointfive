@@ -42,7 +42,7 @@ pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::morale::LineKin
     pool.extend_from_slice((if st.dark { l.dark } else { l.lit }).unwrap_or(&[]));
     pool.extend_from_slice((if g.gd[gd].team != crate::teams::Team::Guard { l.they } else { l.he }).unwrap_or(&[]));
     let n = pool.len() as f64;
-    let i = js::rem(m::floor(crate::math_dice::sim_random(g) * n), n);
+    let i = js::rem(m::floor(crate::dice::draw_of(g, "morale::bark#1", gd) * n), n);
     crate::game::game_say(g, gd, pool[i as usize], Some(radio), None, None);
     g.m.morale.state_of.get_mut(gd).unwrap().bark = 0.0;
     if radio { g.stats.morale.calls += 1; } else { g.stats.morale.shouts += 1; }
@@ -99,9 +99,9 @@ pub fn in_the_dark(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let id = g.ch[c].id;
     let mut own = |_g: &mut Game, owner: f64| owner == id;
     let chest = chest_of(g, c);
-    let a = crate::guards::light_estimate_at(g, chest, Some(&mut own), Some(true), None, None, None);
+    let a = crate::guards::light_estimate_at(g, chest, Some(&mut own), Some(true), None);
     let head = head_of(g, c);
-    let b = crate::guards::light_estimate_at(g, head, Some(&mut own), Some(true), None, None, None);
+    let b = crate::guards::light_estimate_at(g, head, Some(&mut own), Some(true), None);
     m::max(a, b) < g.tune.vis_floor
 }
 
@@ -293,13 +293,13 @@ pub fn morale_reset(g: &mut crate::game::Game, men: Option<bool>) {
     g.m.morale.blasts_of = None;
     if men.unwrap_or(false) {
         let mut i = 0;
-        let rule = crate::owner::own().morale;
+        let rule = crate::owner::by::MORALE;
         while i < g.guards.len() {
             let gd = g.guards[i];
             i += 1;
             g.m.morale.state_of.delete(gd);
             let t = g.time;
-            crate::owner::release_man(g, gd, rule, t);
+            crate::owner::release(g, gd, rule, t);
         }
     }
 }
@@ -649,13 +649,13 @@ pub fn morale_tick(g: &mut crate::game::Game, dt: f64) {
         if r.act != MoraleAct::None { step(g, gd, dt); }
     }
     // who this file's script has this frame, as it stands when the sequences have all been stepped
-    let rule = crate::owner::own().morale;
+    let rule = crate::owner::by::MORALE;
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
         let t = g.time;
-        if g.m.morale.state_of.get(gd).map_or(false, |s| s.drive) { crate::owner::claim_man(g, gd, rule, t, None); } else { crate::owner::release_man(g, gd, rule, t); }
+        if g.m.morale.state_of.get(gd).map_or(false, |s| s.drive) { crate::owner::claim(g, gd, rule, t, None); } else { crate::owner::release(g, gd, rule, t); }
     }
 }
 

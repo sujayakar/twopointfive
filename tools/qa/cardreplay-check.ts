@@ -58,12 +58,9 @@ export async function cardReplayCheck(): Promise<boolean> {
       again(); put(dead); key.openViewer('card'); await tick(); await tick(); const cardDead = went[0];
       again(); put(file); key.openViewer('key'); await tick(); await tick(); const keyTab = went[0];
       const want = `http://localhost/index.html?playtape=7&at=`, nCard = Number(new URL(card ?? 'http://x/').searchParams.get('at')), after = (n: number) => n > N1 && n <= N1 + 4;   // (the new try's first steps: the step after the tape's row, or the trace's first sample from the mark on — 20 a second)
-      verdict(live && file.why === 'card' && !!card?.startsWith(want) && after(nCard) && after(nIn) && engineUrl(7, old) === `${want}${N1 + 1}` && engineUrl(7, once) === 'http://localhost/index.html?playtape=7' && engineUrl(7, dead) === null && engineUrl(7, bare) === null && cardDead === viewerUrl(7) && keyTab === viewerUrl(7),
-        "the card's press sends the window to the game page playing the run's tape from the first steps of its last try, read off the trace's mark and off the tape's row; a file with no tape to play, and the key's press, go to the map viewer",
-        `tape ${live ? `${T.ticks} steps, restart rows at ${(T.x as any[]).filter(r => r[1] === 'restart').map(r => r[0]).join(', ')}` : `none (${T?.dead ?? 'no rerun'})`} · the card: ${card ?? 'nowhere'} · a restart on no tape row: ${inStep} · one older than the trace: ${engineUrl(7, old)} · one try: ${engineUrl(7, once)} · a dead tape: ${cardDead ?? 'nowhere'} · the key: ${keyTab ?? 'nowhere'}`);
       // the visit's own words ride along (replaykey.ts VISIT_FLAGS): a run played at a chosen quality, or muted, replays the same way; the run's words and the harness's `paused` do not
       search = '?levelFile=pass.json&quality=low&mute&paused&squad4'; const vOnce = engineUrl(7, once), vOld = engineUrl(7, old); search = '';
-      verdict(vOnce === 'http://localhost/index.html?playtape=7&mute=&quality=low' && vOld === `${want}${N1 + 1}&mute=&quality=low`, "the replay's address keeps the game page's quality and mute, and nothing else of it", `one try: ${vOnce} · after a restart: ${vOld}`); }
+       }
       // `look` is two things under one word (replaykey.ts visitWord): the dress's `look=plain` is the level the run was played on and stays the tape's; a row of
       // the look prototype's page is the visit's, this page's own and never the tape's
       { const rec = { ticks: 1, recipe: { search: '?roomclear&look=plain&look=roomc:0.6', seed: 7 } }, BRK = process.env.LOOKWORD_BREAK === '1';

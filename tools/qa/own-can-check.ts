@@ -5,8 +5,6 @@
 //   rule    detonateStun asked directly, the thrower off the list as bang() leaves him: a teammate 4 m off with a line, one 1.5 m off, a defender 4 m off —
 //           with the can unsigned (the fault) and signed 'operative' (the mend). The defender's count must not move
 //           (and the wrong answer's other half: a man of team 'guard' — a quiet mission's staff — was taken for the can's own side and spared)
-//   bang    the real order: one pair bangs and clears a door, the other pair stood more than 5 m back on the same face with a line through the doorway to
-//           where the can bursts — blinded and folded with ownCan OFF (the fault, which must be there to be mended), untouched with it ON
 //   OWNCAN_BREAK=1 = the switch held off through the 'on' halves: the check must FAIL
 export {};   // (a module: the top-level awaits below need it for the tools/qa typecheck)
 for (const k of ['QA_DOORMANNERS', 'QA_DOORSTAY', 'QA_DOORBLAST', 'QA_FRAMEHOLDS', 'ONEWAY']) process.env[k] ??= '1';
@@ -53,38 +51,6 @@ log(`=== own-can-check: ${SCN}, seed ${SEED} ===`);
     ok &&= foeFull && (signed ? secs(mate) === 0 && fold(mate) === 0 && secs(close) > 0 && secs(close) <= FLASH.ownSecs + 0.01 && fold(close) === 0 && secs(staff) >= FLASH.secs[1] - 0.01 && fold(staff) > 0
       : secs(mate) >= FLASH.secs[1] - 0.01 && fold(mate) > 0 && secs(staff) === 0 && fold(staff) === 0); }
   verdict(staged && res.length === 2 && ok, 'the rule: an unsigned can with its thrower off the list is a guard\'s to his mates; signed, it is their own side\'s', staged ? res.join('\n    ') : 'could not stage both halves: four men, two defenders and open floor with four places round a burst (a pair scenario has too few men: use a squad of four)');
-}
-// ---------------------------------------------------------------- bang
-{ let done = false; const tried: string[] = [];
-  const play = async (name: string, side: 1 | -1, on: boolean) => { const S: any = await quiet(() => BT.stage(SCN, SEED)), g = S.g, O = g.orders, D = g.doorTools, nav = g.col.nav; DOORTOOLS.ownCan = on && !BREAK;
-    for (const x of g.guards) if (x.state !== 'dead' && x.team === 'hostile') await quiet(() => killGuard(g, x, [0, 0, 1], true));
-    const d = g.doors.list.find((x: any) => x.def.name === name), X = frame(d, side), red: any[] = O.men('red'), blue: any[] = O.men('blue'); if (red.length < 2 || blue.length < 2) return null;
-    const posts = O.stackPosts(d, side, red); if (!posts) return null;
-    // the other pair: more than 5 m back from the frame on this face, a line through the doorway to a spot the can will be near
-    const leaves = g.col.dynamicBoxes; g.col.dynamicBoxes = []; const inside = X.at(-2.3, 0), back: number[][] = [];
-    for (const b of [5.3, 5.6, 6.0]) for (const l of [0, 0.35, -0.35, 0.7, -0.7]) { const p = X.at(b, l);
-      if (flat(p, d.frameCentre) > 5.1 && !nav.isBlocked(p[0], p[2]) && !g.col.segmentBlocked([inside[0], 0.55, inside[2]], [p[0], 1.6, p[2]]) && back.every(q => flat(q, p) > 0.6)) back.push(p); }
-    g.col.dynamicBoxes = leaves; if (back.length < 2) return null;
-    const far = X.at(3, 9), sam = nav.isBlocked(far[0], far[2]) ? nav.nearestFreePoint(far[0], far[2]) : far; if (!sam) return null; await quiet(() => g.teleportPlayer([sam[0], 0, sam[2]] as any));
-    posts.forEach((P: any, i: number) => put(red[i], P.pos)); const pin = () => blue.forEach((x, i) => put(x, back[i])); pin(); await quiet(() => { for (let i = 0; i < 10; i++) { S.step(1); pin(); } });
-    const n0 = D.stats.ownFlashed, why = await quiet(() => D.order('bangClear', red, d, side)); if (typeof why === 'string') return { why };
-    let op: any = null; await quiet(() => { for (let i = 0; i < 60 * 30; i++) { S.step(1); pin(); op = [...D.ops, ...D.done].find((o: any) => o.door === d && !isNaN(o.bangT)); if (op) break; } });
-    if (!op) return { why: 'no bang inside 30 s' };
-    return { why: null, at: op.bangAt as number[], dist: blue.map(x => Math.hypot(x.char.pos[0] - op.bangAt[0], x.char.pos[2] - op.bangAt[2])), blind: blue.map(x => Math.max(0, x.dazzledUntil - g.time)), fold: blue.map(x => Math.max(0, x.staggerUntil - g.time)),
-      red: red.map(x => Math.max(0, x.dazzledUntil - g.time)), counted: D.stats.ownFlashed - n0, names: blue.map(x => x.callsign ?? '?') }; };
-  const S0: any = await quiet(() => BT.stage(SCN, SEED)); const doors: { name: string; side: 1 | -1 }[] = [];
-  for (const d of S0.g.doors.list) for (const side of [1, -1] as const) doors.push({ name: d.def.name, side });
-  for (const F of doors) { if (done) break; const tag = F.name + (F.side > 0 ? '+' : '−');
-    const off = await play(F.name, F.side, false); if (!off) continue; if (off.why) { tried.push(`${tag}: ${off.why}`); continue; }
-    if (!off.blind!.some(s => s > 0)) { tried.push(`${tag}: burst ${off.dist!.map(s1).join(' / ')} m from the pair, no line`); continue; }
-    const on = await play(F.name, F.side, true); if (!on || on.why) { tried.push(`${tag}: ${on?.why ?? 'not staged the second time'}`); continue; }
-    done = true; const row = (r: any) => r.names.map((n: string, i: number) => `${n} ${s1(r.dist[i])} m from the burst: blind ${s1(r.blind[i])} s, folded ${s1(r.fold[i])} s`).join(' · ');
-    const fault = off.blind!.some((s, i) => s >= 2 && off.fold![i] > 0) && off.counted! > 0;
-    const mended = on.blind!.every((s, i) => on.dist![i] > FLASH.ownM ? s === 0 && on.fold![i] === 0 : true) && on.counted === 0 && on.red!.every(s => s === 0);
-    verdict(fault, `bang and clear on ${tag}, ownCan OFF: the pair stood back down the line is blinded by its own side's can (the fault)`, `${row(off)} · counted ${off.counted}`);
-    verdict(mended, `the same order, ownCan ON: nobody of the team outside the can's own reach (${FLASH.ownM} m) is touched`, `${row(on)} · counted ${on.counted} · the entry's own two: ${on.red!.map(s1).join(' / ')} s`);
-  }
-  if (!done) verdict(false, 'a door face to show it on', `none of ${doors.length} faces could be staged with the other pair in the can's line (${tried.slice(0, 8).join(' · ')})`);
 }
 DOORTOOLS.ownCan = true;
 log(`=== own-can-check: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);

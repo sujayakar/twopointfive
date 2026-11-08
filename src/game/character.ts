@@ -18,7 +18,7 @@ import { feedPath, feedLive } from './gunreload';   // (read inside methods only
 import type { GunModelId } from './weapons';
 import { INHAND, BELT_TORCH, InHandWord } from './inhand';   // (a leaf: the switch and its numbers)
 import { GUNHAND } from './gunhand';   // (a leaf: the switch and its keys)
-import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { simDraw, simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 export type UpperMode = 'none' | 'relaxed' | 'aim' | 'torch';
@@ -1910,7 +1910,7 @@ export class CharacterAnimator {
       if (zmax > zmin) this.sprintMid = (zmin + zmax) / 2; if (ymin < 1e8) this.sprintFloorY = ymin;
       this.runGait.sprint = this.stanceOf(ty, tz) ?? this.runGait.sprint; }
     } finally { POSEMATH.singles = poseRule; }
-    this.phase = simRandom();
+    this.phase = simDraw('character::anim_new#1');
   }
   /** every named node of the rig this animator has no number for yet (the rig says each; a table that came over the bridge with one missing is made whole) */
   private nodeTable(): void { const ch = this.ch, T = this.nodes as Record<string, number>;

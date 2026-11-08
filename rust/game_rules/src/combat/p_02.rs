@@ -10,9 +10,9 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- seams: what skeleton 5 still cannot give
 
 /// `b.owner` of a box made this frame: BoxId has no table of rows in skeleton 5.   (combat.ts:457)
-fn seam_box_owner(g: &Game, b: BoxId) -> f64 { g.tab.boxes[b].owner }
+fn seam_box_owner(g: &Game, b: AnyBoxId) -> f64 { g.tab[b].owner }
 /// `b.mkey = k` of a box made this frame: the same.   (combat.ts:457)
-fn seam_box_set_mkey(g: &mut Game, b: BoxId, k: f64) { g.tab.boxes[b].mkey = Some(k); }
+fn seam_box_set_mkey(g: &mut Game, b: AnyBoxId, k: f64) { g.tab[b].mkey = Some(k); }
 
 // ---------------------------------------------------------------- panels and contact
 
@@ -47,18 +47,19 @@ pub fn arm_through(g: &mut crate::game::Game, c_2: CharId) -> bool {
 }
 
 /// A panel between `from` and `to`: a static, or a leaf standing shut or as good as (SoundSeal). Short segments only.   (combat.ts solidBetween)
-pub fn solid_between(g: &mut crate::game::Game, from: V3, to: V3) -> bool {
-    if crate::scene_collision::segment_blocked_dynamic(g, from, to, Some(crate::scene_boxes::box_flag().sound_seal)) { return true; }
+pub fn solid_between(a: &mut impl crate::ask::Asker, from: V3, to: V3) -> bool {
+    if a.leaf_across(from, to, Some(crate::scene_boxes::box_flag().sound_seal)) { return true; }
     let d = v3::sub(to, from);
     let l = v3::len(d);
     if l < 1e-3 { return false; }
     let rd = v3::scale(d, 1.0 / l);
     let mut scratch: Vec<i32> = solid_scratch();
-    let n = crate::scene_collision::gather(g, m::min(from[0], to[0]) - 0.1, m::min(from[2], to[2]) - 0.1, m::max(from[0], to[0]) + 0.1, m::max(from[2], to[2]) + 0.1, m::min(from[1], to[1]) - 0.1, m::max(from[1], to[1]) + 0.1, &mut scratch);
+    let n = a.gather(m::min(from[0], to[0]) - 0.1, m::min(from[2], to[2]) - 0.1, m::max(from[0], to[0]) + 0.1, m::max(from[2], to[2]) + 0.1, m::min(from[1], to[1]) - 0.1, m::max(from[1], to[1]) + 0.1, &mut scratch);
     let mut i = 0usize;
     while (i as f64) < n {
+        let g = a.game();
         let b = g.col.boxes[scratch[i] as usize];   // gather answers places in g.col.boxes, not IDs
-        if crate::scene_boxes::ray_box(g, from, rd, b, l).is_some() { return true; }
+        if crate::scene_boxes::ray_box(g, from, rd, b.into(), l).is_some() { return true; }
         i += 1;
     }
     false
@@ -180,11 +181,11 @@ pub fn drop_from_hand(g: &mut crate::game::Game, c_2: CharId, kind: crate::comba
         None => { let or = v3::add(g.ch[c_2].pos, [0.0, 1.0, 0.0]); bone_or(g, c_2, crate::character::Bone::HandR, or) }
     };
     let vel = g.ch[c_2].vel;
-    let r0 = crate::math_dice::sim_random(g);
+    let r0 = crate::dice::draw_body(g, "combat::drop_from_hand#1", c_2);
     let v0 = vel[0] * 0.6 + dir[0] * 1.1 + (r0 - 0.5) * 0.6;
-    let r1 = crate::math_dice::sim_random(g);
+    let r1 = crate::dice::draw_body(g, "combat::drop_from_hand#2", c_2);
     let v1 = 0.9 + r1 * 0.6;
-    let r2 = crate::math_dice::sim_random(g);
+    let r2 = crate::dice::draw_body(g, "combat::drop_from_hand#3", c_2);
     let v2 = vel[2] * 0.6 + dir[2] * 1.1 + (r2 - 0.5) * 0.6;
     let item_kind = match kind {
         DropFromHandKind::Pistol => crate::throwables::ItemKind::Pistol,
@@ -256,14 +257,14 @@ pub fn hit_player(g: &mut crate::game::Game, from_dir: V3) {
 // ---------------------------------------------------------------- what the men carry, as boxes (world.raycast sees them) and the words the figure is told
 
 /// Held and worn props as small boxes, and what each figure is told it holds; then every rig box's motion key.   (combat.ts handProps)
-pub fn hand_props(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn hand_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let n0 = out.len() as f64;
     hand_props_raw(g, out);
     rig_keys(g, out, n0);
 }
 
 /// Motion identity: every rig box from `n0` on gets its man's id and its ordinal among his boxes this frame. Owner 0 stays on the index rule.   (combat.ts rigKeys)
-pub fn rig_keys(g: &mut crate::game::Game, out: &Vec<BoxId>, n0: f64) {
+pub fn rig_keys(g: &mut crate::game::Game, out: &Vec<AnyBoxId>, n0: f64) {
     let mut ord = hand_ord();
     let mut k = n0 as usize;
     while k < out.len() {
@@ -278,7 +279,7 @@ pub fn rig_keys(g: &mut crate::game::Game, out: &Vec<BoxId>, n0: f64) {
 }
 
 /// Each player's own kit, then each man's, then the hostages' wrist ties.   (combat.ts handPropsRaw)
-pub fn hand_props_raw(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn hand_props_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     crate::seats::each_seat(g, &mut |g| player_props(g, out));
     let mut i = 0usize;
     while i < g.guards.len() {
@@ -299,7 +300,7 @@ pub fn hand_props_raw(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
 }
 
 /// What the player carries and wears, as boxes, and the fist's and the figure's words for this frame.   (combat.ts playerProps)
-pub fn player_props(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     use crate::kitanim::KitShowVRifle as Rf;
     use crate::rig_props::{RigOpts, RigOptsRifle};
     let p = g.player;
@@ -404,7 +405,7 @@ pub fn hammer_side(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::comb
 }
 
 /// What one guard or unit carries and wears, as boxes.   (combat.ts guardProps)
-pub fn guard_props(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<BoxId>) {
+pub fn guard_props(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
     let c = g.gd[gd].ch;
     let big = crate::bigkit::big_carried(g, crate::bigkit::BigCarriedC { id: g.ch[c].id });
     let stow = crate::workstow::stow_hang(g, gd);
@@ -438,7 +439,7 @@ pub fn guard_props(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<BoxId>)
 }
 
 /// A man throwing with his free hand, the long gun still in the other: the grenade in the left fist until it leaves him.   (combat.ts freeCan)
-pub fn free_can(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<BoxId>) {
+pub fn free_can(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
     let c = g.gd[gd].ch;
     if crate::character::anim_throw_off(g, c) && crate::frag::frag_in_fist(g, gd) {
         crate::rig_props::free_can_boxes(g, c, crate::game::ThrowKind::Frag, out, None);
@@ -446,7 +447,7 @@ pub fn free_can(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<BoxId>) {
 }
 
 /// A teammate with his sidearm out: the long gun he let go of hangs down his front.   (combat.ts hungSide)
-pub fn hung_side(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<BoxId>) {
+pub fn hung_side(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
     if let Some(own) = crate::gunslots::side_hung(g, gd) {
         let c = g.gd[gd].ch;
         let w = match own { crate::gunslots::SideHung::Carbine => crate::rig_props::HungBoxesWeapon::Carbine, crate::gunslots::SideHung::Sc20k => crate::rig_props::HungBoxesWeapon::Sc20k };
@@ -456,7 +457,7 @@ pub fn hung_side(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<BoxId>) {
 }
 
 /// A man's row without the big slot's tool. `hang`: his own gun is out of his hands.   (combat.ts guardKit)
-pub fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<BoxId>, hang: bool) {
+pub fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, hang: bool) {
     use crate::guards::RigOf;
     use crate::handwork::{SwapHeld, SwapHeldHeld};
     use crate::rig_props::{rig, RigOpts, RigOptsRifle, RigOptsWeapon};
@@ -569,7 +570,7 @@ pub fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<BoxId>, h
 // ---------------------------------------------------------------- what only a viewer's picture asks for
 
 /// What the men the fog of war leaves out carry, for a viewer's picture without the fog. Never part of a step.   (combat.ts hiddenProps)
-pub fn hidden_props(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn hidden_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let n0 = out.len() as f64;
     let mut i = 0usize;
     while i < g.guards.len() {
@@ -586,7 +587,7 @@ pub fn hidden_props(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
 }
 
 /// The infrared lines the run's men really have on, for a viewer's picture through a tube the run's own picture did not have. Never part of a step.   (combat.ts irBeams)
-pub fn ir_beams(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn ir_beams(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     crate::irlaser::ir_view_as(g, true, &mut |g| {
         let mut i = 0usize;
         while i < g.guards.len() {
@@ -603,7 +604,7 @@ pub fn ir_beams(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
 }
 
 /// A hunting man's weapon laser: a thin emissive line from the muzzle to what it meets, and a dot there. LASER.enemy is off on the page: a man hostile to the player has none.   (combat.ts laserBoxes)
-pub fn laser_boxes(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<BoxId>) {
+pub fn laser_boxes(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
     let team = g.gd[gd].team;
     if crate::teams::is_hostile(g, team, crate::teams::Team::Player) { return; }
     let ir = crate::irlaser::laser_band(g, gd) == crate::irlaser::LaserBand::Ir;
@@ -669,7 +670,7 @@ pub fn laser_reach(g: &mut crate::game::Game, c_2: CharId, self_: Option<GuardId
 }
 
 /// A laser line from `from` along unit `dir` for `l` metres and (dot) the bead where it lands: emissive geometry no ray sees. The one place an infrared box is made.   (combat.ts beamBoxes)
-pub fn beam_boxes(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, out: &mut Vec<BoxId>, dot: bool, ir: Option<bool>, air: Option<bool>) {
+pub fn beam_boxes(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, out: &mut Vec<AnyBoxId>, dot: bool, ir: Option<bool>, air: Option<bool>) {
     let ir = ir.unwrap_or(false);
     let air = air.unwrap_or(false);
     if ir && !crate::irlaser::ir_viewer(g) { return; }
@@ -691,8 +692,8 @@ pub fn beam_boxes(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, out: &mu
         flags: Some(box_flags),
         ..Default::default()
     });
-    crate::thinline::thin_note(g, line, 0.0022, 0.45, red[0] * 9.0, red[1] * 9.0, red[2] * 9.0);
-    let shown = if ir { crate::irlaser::ir_note(g, line) } else { line };
+    crate::thinline::thin_note(g, line.into(), 0.0022, 0.45, red[0] * 9.0, red[1] * 9.0, red[2] * 9.0);
+    let shown = if ir { crate::irlaser::ir_note(g, line.into()) } else { line.into() };
     out.push(shown);
     if dot {
         let end = v3::mad(from, dir, l - 0.006);
@@ -705,11 +706,11 @@ pub fn beam_boxes(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, out: &mu
             flags: Some(box_flags),
             ..Default::default()
         });
-        let shown = if ir { crate::irlaser::ir_note(g, bead) } else { bead };
+        let shown = if ir { crate::irlaser::ir_note(g, bead.into()) } else { bead.into() };
         out.push(shown);
-        if air { crate::thinline::thin_air(g, line, Some(bead)); }
+        if air { crate::thinline::thin_air(g, line.into(), Some(bead.into())); }
     } else if air {
-        crate::thinline::thin_air(g, line, None);
+        crate::thinline::thin_air(g, line.into(), None);
     }
 }
 

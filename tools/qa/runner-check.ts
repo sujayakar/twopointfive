@@ -34,7 +34,7 @@ const quiet = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = c
 
 export async function runnerCheck(): Promise<boolean> {
   const { standUp } = (await import('./headless.ts')) as any;
-  const { MORALE, moraleOf, rungOf } = await import(`${ROOT}/src/game/morale.ts`);
+  const { MORALE, moraleOf, rungOf, inTheDark } = await import(`${ROOT}/src/game/morale.ts`);
     const { toggleTarget } = await import(`${ROOT}/src/game/lighting.ts`);
   const { RUNNER, runnerOf, runnerLines, runnerBreak } = await import(`${ROOT}/src/game/runner.ts`);
   const { DOORBLAST } = await import(`${ROOT}/src/game/doorblast.ts`);
@@ -66,7 +66,7 @@ export async function runnerCheck(): Promise<boolean> {
    *  player's team staged with him (blind until the case wants one of them); `shoulder` = a mate put two metres from him as his change begins */
   const stage = async (seed: number, mates: 'parked' | 'none' = 'parked', bait = true) => {
     Math.random = seeded(seed); Object.assign(RUNNER, was.runner);
-    const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'compound.json'), 'utf8'))) }));
+    const W: any = await quiet(() => standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'compound.json'), 'utf8'))) }));
     const g = W.game; DOORBLAST.on = true; DESTRUCTION.on = true; FRAG.doorStun = true; g.tune.chaos = 0.5; first();
     startFromQuery(g, 'levelFile=compound.json&roomclear'); g.godMode = true;
     const gone: any[] = [];
@@ -84,11 +84,11 @@ export async function runnerCheck(): Promise<boolean> {
     const p = doorPt(d, d.def.width / 2, 2.4, inside, 0);
     men.forEach((o: any, i: number) => { if (o === T) return; if (mates === 'none') killGuard(g, o, [1, 0, 0], true, 'struck', 'guard'); else put(o, [4.8 + (i % 4) * 0.9, 0, 5.8 + Math.floor(i / 4) * 0.9]); });
     put(T, p);
-    for (const t of g.targets) if (t.on && flat(t.pos, p) < 5) toggleTarget(g, t);
-    step(40);
+    for (const t of g.targets) if (t.on) toggleTarget(g, t);   // (every lamp: what the yard's and the next room's lamps send round lights a dark hut past the floor)
+    step(40); for (let i = 0; i < 300 && !(inTheDark(g, T) && moraleOf(T)?.dark); i++) step();   // (the place's light eases down over a couple of seconds, and he reads where he stands on his own beat)
     const hole = doorPt(d, d.def.width / 2, HE40.standoff + 0.03, side, 1.0) as V3;
     blast(g, [hole[0], hole[1] - FRAG.lift, hole[2]], { who: PLAYER_ID, name: '40 mm grenade' });
-    step(Math.round((T.staggerUntil - g.time + 3.5) * 60) + 150);
+    for (let i = Math.round((T.staggerUntil - g.time + 3.5) * 60) + 150; i > 0 && !(moraleOf(T)?.act === 'hold' && rungOf(T) === 2); i--) step();
     const held = moraleOf(T)?.act === 'hold' && rungOf(T) === 2, mag0 = T.weapon.roundsReady;
     /** the weapon items of his on the floor */
     const guns = () => g.items.items.filter((it: any) => it.who === T.char.id && (it.kind === 'rifle' || it.kind === 'pistol'));

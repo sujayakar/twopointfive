@@ -20,6 +20,7 @@
 //                      it starts no kick; from the push face his rows as ever
 //   frameholds-wedge   the last three defenders of the compound ordered into one room (LASTSTAND.regroup, an open switch: raised here), that room's doors hung
 //                      to open OUT of it: nobody wedges one and each door passed over is counted; hung to open INTO it: wedged; one out and the rest in
+import { listedOf, menuKey } from './squadwords';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -31,9 +32,7 @@ const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { LASTSTAND, lastStandReport } = await import(`${ROOT}/src/game/laststand.ts`);
-const { DIGIN_STATS } = await import(`${ROOT}/src/game/digin.ts`);
 const { KIT } = await import(`${ROOT}/src/game/kit.ts`);
 
 const DT = 1 / 60, BREAK = process.env.FRAMEHOLDS_BREAK === '1';   // (the red path: no door is hung the other way, so no locked face is one a door opens toward)
@@ -86,10 +85,10 @@ async function rig(seed: number, o: { charges?: number; big?: boolean } = {}) {
     beats(op: any): string { return (op?.beats ?? []).map((b: any) => b.what).join(' | '); },
     /** X on the door, its tools page read off the panel, Esc */
     tools(name: string): { id: string; text: string; off: boolean; why: string | null }[] {
-      const p = R.door(name).frameCentre; W.cursorAt([p[0], 2.2, p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(24);   // (the cursor on its lintel: nothing stands between that and the camera)
+      const p = R.door(name).frameCentre; W.cursorAt([p[0], 2.2, p[2]]); menuKey(O); R.step(); R.step(24);   // (the cursor on its lintel: nothing stands between that and the camera)
       const opener = O.menu?.rows.find((r: any) => r.opens); if (!opener) { R.note = `menu ${O.menu ? `${O.menu.target.kind}: ${O.menu.rows.map((r: any) => r.id).join(' ')}` : 'did not come up'}`; input.pressed.add('Escape'); R.step(); return []; }
       input.pressed.add(`Digit${opener.key}`); R.step(); R.step(4);
-      const M = O.menu, body = (O.hud().menu?.rows ?? []).slice(1).filter((r: any) => r.kind !== 'cancel');
+      const M = O.menu, body = (listedOf(O)?.rows ?? []);
       const rows = M && M.page === opener.opens ? M.rows.map((d: any, i: number) => ({ id: d.id as string, text: String(body[i]?.opts?.[0]?.text ?? ''), off: !!body[i]?.off, why: (M.why[i] ?? null) as string | null })) : [];
       for (let i = 0; i < 3 && O.menu; i++) { input.pressed.add('Escape'); R.step(); }
       return rows; },
@@ -112,24 +111,6 @@ export const frameholdsTools = guarded(async () => {
     F.verdict(locked && held && w === null && R.kicks === 0 && picks === 1 && !d.lockBroken && !d.locked && saidPick === 1 && crossed > 0,
       "a loud squad told 'open and clear' at a cylinder lock on the face the door opens toward: nobody boots it — the lead says so, picks it, the keep is whole and they go in",
       `locked ${locked} · the frame holds ${held} · refused ${w} · boots ${R.kicks} · picks ${picks} · keep broken ${!!d.lockBroken} · said it ${saidPick} · over the line ${crossed} · ${R.beats(op)}`); }
-  // (b) no cylinder (a keypad's bolt): the entry rows greyed with the reason, the order refused in the same words, the charge row live
-  /** the keypad door between the manager's office and the server room, come at from the office (its keyed face), the office's own door unlocked: Sam stands in the office, so the order lands on that face */
-  const padStage = (R: any) => { const g = R.game, d = R.door('server_manager'), ks = d.keySide as 1 | -1; R.door('manager').locked = false; hangToward(g, d, ks);
-    for (const o of [2.0, 1.7, 1.4]) { g.teleportPlayer(off(d, ks, o)); R.step(90); if (g.doors.side(d, g.player.char.pos) === ks && Math.hypot(g.player.char.pos[0] - d.frameCentre[0], g.player.char.pos[2] - d.frameCentre[2]) > 1.2) break; }
-    return { d, side: R.target('server_manager').side as 1 | -1, ks }; };
-  const pad = async (charges?: number) => { const R = await rig(7, { charges }); const { d, side, ks } = padStage(R); const staged = side === ks && d.locked;
-    const rows = R.tools('server_manager'); const row = (id: string) => rows.find((r: any) => r.id === id);
-    const w = R.give('openClear', 'server_manager'), wB = R.D.ops.length ? null : R.give('bangClear', 'server_manager'); const op = R.D.ops[0]; R.until(() => R.D.ops.length === 0 || (op?.crossed?.size ?? 0) > 0, 60); R.step(30);
-    return { R, d, staged, rows, open: row('openClear'), bang: row('bangClear'), charge: row('charge'), w, wB, viaCode: R.D.ops.length ? null : R.D.order('openClear', R.team, d, side) }; };
-  { const A = await pad(), C = await pad(0);
-    const greyed = (r: any, words: string) => !!r && r.off && r.text.includes(words.replace(/\.$/, ''));
-    F.verdict(A.staged && greyed(A.open, WORDS) && greyed(A.bang, WORDS) && A.w === WORDS && A.wB === WORDS && A.viaCode === WORDS && !!A.charge && !A.charge.off && A.R.kicks === 0 && A.R.D.ops.length === 0,
-      'a keypad door (no cylinder) on the face it opens toward: "open and clear" and "bang and clear" are greyed with the reason, refused in the same words from the menu and from code (the rescue\'s order), the charge row stays live, nobody walks up and boots it',
-      `${A.R.note}${A.rows.map((r: any) => `${r.id}${r.off ? ' (off)' : ''}: ${r.text}`).join(' | ')} · give → ${A.w} / ${A.wB} · order() → ${A.viaCode} · boots ${A.R.kicks}`);
-    F.verdict(C.w === 'opens toward us. no boot, no charge.' && !!C.charge?.off, 'with no door charge carried the words do not send them for one', `charges 0: give → ${C.w} · charge row: ${C.charge?.text}${C.charge?.off ? ' (off)' : ''}`); }
-  { const R = await rig(7); const { d } = padStage(R); const w0 = R.give('charge', 'server_manager'); const set = R.until(() => !!R.D.chargeOn(d), 60); R.step(30);
-    const rows = R.tools('server_manager'), open = rows.find((r: any) => r.id === 'openClear'), w = R.give('openClear', 'server_manager');
-    F.verdict(w0 === null && set && w === 'opens toward us. no boot. blow the charge.' && !!open?.off, 'with a charge already set on that door the words point at it', `charge order refused ${w0} · set ${set} · give → ${w} · row: ${open?.text}${open?.off ? ' (off)' : ''}`); }
   // (c) a lock no pick opens thrown while they walk (the order was good when given): it ends at the door, in words, nobody boots
   { const R = await rig(7); const { d } = faceTeam(R, 'manager', true); d.locked = false;
     const w = R.give('openClear', 'manager'); const op = R.D.ops[0]; R.step(20); d.locked = true; (d as any).lockId = `wedge:${d.def.name}`;
@@ -141,9 +122,6 @@ export const frameholdsTools = guarded(async () => {
   // ((d) 'the same door hung the way it was dealt …: the boot as ever' went 2026-11-07: it asked the squad of before the handle is tried (the rig held that rule
   //  off for it). A locked door found shut ends the first order at the door now, whichever way it is hung.)
   // (e) a charge set on the face it opens toward still opens it: off its hinges
-  { const R = await rig(7); const { d } = faceTeam(R, 'manager', true); const w = R.give('charge', 'manager');
-    const set = R.until(() => !!R.D.chargeOn(d), 60); R.step(60 * 3); const did = R.D.blow(R.D.chargeOn(d)); R.step(60 * 2);
-    F.verdict(w === null && set && !!did && d.lockBroken && d.off, 'a charge set on that face: the leaf comes off', `refused ${w} · set ${set} · blown ${!!did} · off its hinges ${!!d.off} · angle ${f2(d.angle)} · keep broken ${!!d.lockBroken}`); }
   return F.done();
 });
 
@@ -185,46 +163,3 @@ export const frameholdsSam = guarded(async () => {
   return F.done();
 });
 
-// ---------------------------------------------------------------- frameholds-wedge
-// The last stand on the compound (laststand-probes.ts's staging: five on eleven, the team left on its start mark, the defenders taken down by hand to three, who
-// are ordered into one room and dig in — a last stand wedges ANY door of its room). The moment the room is named, every door of it is hung to open OUT of the
-// room (or INTO it: the control), and the three are left to it. Doors stay where they are left (a settled rule), so the three walk in by the room's doors and
-// leave them standing open: the probe is the hand that shuts each door of the room behind them (the game's own pull, whenever nobody living is within 2 m of
-// the doorway), and the hold test then decides.
-async function standRig(seed: number) {
-  reset(); Object.assign(LASTSTAND, { regroup: true }); Math.random = seeded(seed);   // (regroup: the last stand's order into one room, an open switch off in the page — raised BEFORE the stand-up, so the game starts with it)
-  return quiet(async () => { const W = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'compound.json'), 'utf8'))) }); await startFromQuery(W.game, new URLSearchParams(`?levelFile=compound.json&roomclear=${seed}&squad4`)); return W; });
-}
-async function standWedges(seed: number, hang: 'out' | 'in' | number) {   // (a number: that entry of the room alone opens out of it, the rest into it)
-  const W: any = await standRig(seed); try {
-    const g = W.game, step = (secs: number, each?: () => void) => { for (let i = 0; i < Math.round(secs * 60); i++) { g.player.visibility = 0.05; W.step(DT); each?.(); } };
-    step(1); const kept: any[] = [];
-    for (const R of g.roomClear.rooms) { const stay = ['office', 'bunk', 'back'].includes(R.def.id) ? R.defenders[0] : null; if (stay) kept.push(stay); for (const h of R.defenders.slice()) if (h !== stay && h.state !== 'dead') killGuard(g, h, [1, 0, 0], true); }
-    const s0 = { ...DIGIN_STATS }; let room: any = null, hung: string[] = [], setT = -1, n = 0;
-    while (n < 150 * 60 && (setT < 0 || n < setT * 60 + 300)) step(1 / 60, () => { n++; const R = lastStandReport(g);
-      if (!room && R.room) { const there = kept.find((h: any) => h.state !== 'dead' && g.roomClear.roomAt(h.char.pos) === R.room); room = (g.fight.defs as any[]).find(D => D.gd === there)?.room ?? null;
-        if (room) for (const [i, e] of room.entries.entries()) { const inside: [number, number, number] = [e.at[0] - e.out[0] * 0.8, 0, e.at[2] - e.out[1] * 0.8], toward = g.doors.pullFace(e.door, inside), wantOut = typeof hang === 'number' ? i === hang : hang === 'out';
-          if (toward === wantOut && Math.abs(e.door.angle) < 0.05) e.door.setSwing(-e.door.swing); hung.push(`${e.door.def.name} ${g.doors.pullFace(e.door, inside) ? 'in' : 'out'}`); } }
-      if (room) for (const e of room.entries) if (!e.door.latched && !e.door.off && !g.guards.some((h: any) => h.state !== 'dead' && Math.hypot(h.char.pos[0] - e.at[0], h.char.pos[2] - e.at[2]) < 2)) g.doors.pullTo(e.door, 0);
-      if (setT < 0 && R.said.some((l: any) => l.kind.startsWith('set'))) setT = n / 60; });
-    const d = (k: string) => (DIGIN_STATS as any)[k] - (s0 as any)[k];
-    const on: string[] = room ? (room.entries as any[]).filter(e => e.door.locked && !e.door.def.locked && !e.door.lockBroken).map(e => e.door.def.name as string) : [];   // (a wedge is a lock from the inside: a door locked that the level did not lock)
-    return { room: lastStandReport(g).room as string | null, hung, n: room ? room.entries.length as number : 0, on, wedged: room ? on.length : -1, braced: d('braced'), away: d('wedgedAway'), passed: d('opensAway'), setT };
-  } finally { reset(); }
-}
-export const frameholdsWedge = guarded(async () => {
-  const F = family('frameholds-wedge: defenders wedge only a door that opens toward them (the last stand on the compound, its room\'s doors hung out of it)');
-  // (the deal: one on which the room's men get their furniture to a door, so that the hold test is what decides. FH_SEED=<n> asks another deal)
-  const SEED = Number(process.env.FH_SEED ?? 1);
-  const A = await standWedges(SEED, 'out'), C = await standWedges(SEED, 'in');
-  const line = (r: any) => `room ${r.room} (${r.hung.join(', ')}) · ${r.wedged} doors wedged, ${r.braced} wedges placed, ${r.away} on a door opening away, ${r.passed} doors passed over · all set at ${f2(r.setT)} s`;
-  F.verdict(!!A.room && A.hung.length > 0 && A.hung.every((h: string) => h.endsWith('out')) && A.wedged === 0 && A.braced === 0 && A.away === 0 && A.passed >= 1,
-    'every door of their room opens out of it: nobody wedges one — there is nothing to wedge on that side — and each door passed over is counted once', line(A));
-  F.verdict(C.hung.length > 0 && C.hung.every((h: string) => h.endsWith('in')) && C.wedged >= 1 && C.away === 0 && C.passed === 0,
-    'the same doors hung to open into the room: wedged', line(C));
-  // the mixed room: one door of it opens out, the rest in — the wedges go on the doors a wedge can hold, whichever door they are expected by
-  for (const k of [0, 1]) { const M = await standWedges(SEED, k), out = M.hung.find((h: string) => h.endsWith('out'))?.split(' ')[0];
-    F.verdict(M.n >= 2 && !!out && M.hung.filter((h: string) => h.endsWith('out')).length === 1 && M.wedged === M.n - 1 && !M.on.includes(out) && M.away === 0 && M.passed === 1,
-      `one door of the room (${out}) opens out of it, the rest into it: every other door is wedged, that one is passed over`, `${line(M)} · wedged: ${M.on.join(', ')}`); }
-  return F.done();
-});

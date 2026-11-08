@@ -19,8 +19,8 @@
 import { ROOT } from './headless.ts';
 
 /** his taps: these and no other (the block's row joined when its rebuild said which of the two it was for; the second line is his "Keep my 13" of 2026-11-05, done 11-07) */
-const CUT = ['night-breach', 'room-clear-four', 'block-squads', 'quiet-yard-alone', 'quiet-yard-two', 'tut-squad', 'tut-solo', 'tut-sky',
-  'tut-quiet', 'tut-pair', 'records-pair', 'block-four', 'warehouse-four', 'barracks-four', 'rescue-registry', 'snatch-four', 'defuse-four', 'floodlit-four', 'killhouse-four', 'hall-four', 'glasshouse-four', 'police-post-quiet', 'quiet-crossing-two', 'quiet-relay-two'];
+const CUT = ['night-breach', 'room-clear-four', 'block-squads',
+  'tut-quiet', 'tut-pair', 'records-pair', 'block-four', 'warehouse-four', 'barracks-four', 'rescue-registry', 'floodlit-four', 'killhouse-four', 'hall-four', 'glasshouse-four', 'police-post-quiet', 'quiet-crossing-two', 'quiet-relay-two'];
 
 export async function offlistCheck(): Promise<boolean> {
   const { El, withDom } = await import('./scenario-picker-probes.ts');
@@ -33,8 +33,8 @@ export async function offlistCheck(): Promise<boolean> {
   const line = (ok: boolean, s: string, detail = '') => { checks++; if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
   const ids = (L: Mi[]) => L.map(m => m.id), same = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
   const drawn = (tiles: boolean, select?: string) => withDom('?mute', () => {
-    const host = new El('DIV'), list = tiles ? SP.startPageList(M.listedMissions(undefined, select)).list : undefined;
-    const S = M.openMissions({ root: host as any, list: list as any, fold: tiles, tiles, select }), got = host.all((e: any) => e.cls.has('mrow')).map((a: any) => a.attrs['data-mission'] as string);
+    const host = new El('DIV'), list = tiles ? SP.startPageList(M.listedMissions(undefined, select)) : undefined;
+    const S = M.openMissions({ root: host as any, list: list as any, select, onPick: () => { } }), got = host.all((e: any) => e.cls.has('mrow')).map((a: any) => a.attrs['data-mission'] as string);
     S.close(); return got as string[];
   });
   try {
@@ -44,7 +44,7 @@ export async function offlistCheck(): Promise<boolean> {
 
     M.OFFLIST_UI.on = !brk;
     const want = ids(all).filter(id => !CUT.includes(id));
-    { const L: Mi[] = M.listedMissions(), S: Mi[] = SP.startPageList().list;
+    { const L: Mi[] = M.listedMissions(), S: Mi[] = SP.startPageList();
       line(same(ids(L), want) && same([...ids(S)].sort(), [...want].sort()), 'on: the list and the start page\'s list hold every other row once, the list in the order it stood, and none of the cut ones', `${L.length} of ${all.length} rows · start page ${S.length}`);
       const A = await drawn(true), B = await drawn(false);
       line(same([...A].sort(), [...want].sort()) && same(B, want), 'on: the start page\'s cards and the older list\'s rows are those rows and no other', `cards ${A.length} · list ${B.length}`); }

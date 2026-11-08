@@ -80,7 +80,7 @@ pub fn book_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::rearwatch::Bo
 }
 
 /// A door off its hinges, or unlatched and far enough open. (rearwatch.ts isOpenWay)
-pub fn is_open_way(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn is_open_way(g: &crate::game::Game, d: DoorId) -> bool {
     if crate::doors::door_off(g, d) {
         return true;
     }
@@ -1043,11 +1043,6 @@ pub fn rear_pin_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Guar
         Some(p) => Some(*p),
         None => b.keeps.get(gd).map(|r| r.pin),
     }
-}
-
-/// doortools.ts, the entry's queue: nobody is held back, REARWATCH.hold being off on the page. (rearwatch.ts rearWatcherWaits)
-pub fn rear_watcher_waits(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
-    false
 }
 
 /// doortools.ts enter(): the turn the men go in by, with the rear man put last. (rearwatch.ts rearLast)

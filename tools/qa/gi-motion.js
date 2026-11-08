@@ -15,7 +15,7 @@
 // + ×3 nearest crops of three consecutive frames round each tile and the max−min boil map, posted to this lane's shot sink; + the same under debug view 4 (indirect only)
 // and 3 (direct only) for attribution. Everything under whatever engine.settings hold (variants = settings bundles, __gim.apply).
 //   __gim.boot({ framing })        framing 'ref' = 1280×720 CSS at dpr 2 (high: 1368×770 → 1777×1000, every lane's reference) | 'maint' = the maintainer's window (high: 788×770 → 1024×1000)
-//   __gim.apply(name | {…})        settings bundle over the boot defaults ('main', 'old', 'A090', 'D1', … VARIANTS)
+//   __gim.apply(name | {…})        settings bundle over the boot defaults ('main', 'old', 'A090', … VARIANTS)
 //   __gim.s1(opts)                 run the scene → Seq (kept in __gim.seqs[key]); opts.view = 0 | 4 | 3 (composite / indirect only / direct only)
 //   __gim.metrics(seq)             per-tile numbers; __gim.crops(seq, tag) posts crops + boil maps + one annotated frame
 //   __gim.run(tag, { scenes, views, png })   fire-and-forget: apply → scenes × views → metrics + crops → docs/perf/gim-<tag>.json; poll __gim.busy / __gim.res[tag]
@@ -67,8 +67,6 @@
     A080: { renderScale: 0.80 }, A085: { renderScale: 0.85 }, A090: { renderScale: 0.90 }, A1: { renderScale: 1.0 }, A1g: { renderScale: 1.0, gatherThird: false }, A1gv: { renderScale: 1.0, gatherThird: false, volQuarter: false },
     g2: { gatherThird: false },   // the divisor alone at the tier's own scale (which buys more per ms: pixels or gather density?)
     mainNoTaaMotion: { taauMotionAlpha: 0, taauSharpenMotion: 0 },   // (reference: how much of the motion flow is the resolve's motion terms letting the frame's own noise through)
-    // D = the diffuse client's follow-ups: the clamp-cut history length (dnGiClampCut) and the young-texel à-trous allowance (dnGiYoungWiden)
-    D1: { dnGiClampCut: 1.0 }, D2: { dnGiYoungWiden: 2.0 },
     // direct-side diagnostics (not this lane's files — attribution only): the leader / tail estimator instead of ReSTIR, the shadow client's occluder cue off
     dNoMoveCue: { dnShadowMoveCap: 0 },
     // the FLOOR = what the old renderer's calm-in-motion look amounts to inside v3: the leader / tail estimator + the resolve without its motion terms

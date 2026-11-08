@@ -60,7 +60,7 @@ fn join_line2(rows: &[crate::game::Interactable]) -> String {
     s
 }
 /// the door's marker this frame, or a plain one if it has none   (player.ts marker)
-fn marker(g: &mut Game, list: &[crate::game::Interactable], d: DoorId) -> crate::game::Interactable {
+fn marker(g: &Game, list: &[crate::game::Interactable], d: DoorId) -> crate::game::Interactable {
     if let Some(x) = list.iter().find(|x| x.door == Some(d)) { return x.clone(); }
     let pos = crate::doors::door_pos(g, d);
     let mut it = mark(crate::game::InteractableKind::Door, pos, String::from("door"), String::new(), true, false);
@@ -294,7 +294,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             let mut it = mark(crate::game::InteractableKind::Door, dp, String::new(), String::from(if reach { "" } else { "step closer" }), reach, false);
             it.door = Some(d);
             let mut verbs: Vec<crate::game::Interactable> = Vec::new();
-            let pad = crate::devices::pad_state(g, d, p);
+            let pad = crate::devices::pad_state(g, &crate::seats::here(g), d, p);
             if let Some(pad) = pad {
                 it.line1 = if g.pl[pl].coding == Some(d) {
                     String::from("door · keypad · keying it in")
@@ -396,7 +396,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
                 let far = if can && !reach && g.pl[pl].holding.is_none() { crate::bigkit::sam_big_far(g, d, p) } else { None };
                 let tool = match far {
                     Some(t) => Some(t == crate::bigkit::SamBigFar::Shotgun),
-                    None => if reach && can { crate::bigkit::sam_big(g, d, Some(p)).map(|t| t == crate::bigkit::SamBig::Shotgun) } else { None },
+                    None => if reach && can { crate::bigkit::sam_big(g, &crate::seats::here(g), d, Some(p)).map(|t| t == crate::bigkit::SamBig::Shotgun) } else { None },
                 };
                 if far.is_some() { it.in_reach = true; }
                 if let Some(shotgun) = tool {
@@ -484,7 +484,6 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             if g.pl[pl].takedown.is_some() || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
             let cv = g.gd[gd].civ.unwrap();
             if crate::rescue::rescue_is_hostage(g, gd) { continue; }
-            if crate::snatchout::snatch_out_owns(g, gd) { continue; }
             let gc = g.gd[gd].ch;
             let gp = g.ch[gc].pos;
             let (dx, dz) = (p[0] - gp[0], p[2] - gp[2]);
@@ -614,11 +613,9 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             }
         }
         crate::wallcharge::wall_charge_rows(g, p, busy, row_cb!(crate::wallcharge::WallChargeRowsRowOver), offer_cb!(list, things));
-        crate::snatchout::snatch_out_rows_2(g, p, busy, row_cb!(crate::snatchout::SnatchOutRows2RowOver), offer_cb!(list, things));
         crate::rescueend::rescue_end_rows_2(g, p, busy, row_cb!(crate::rescueend::RescueEndRows2RowOver), offer_cb!(list, things));
         let setting = crate::wallcharge::wall_charge_setting(g, &crate::seats::here(g));
-        crate::defuse::defuse_rows(g, p, busy || setting, row_cb!(crate::defuse::DefuseRowsRowOver), offer_cb!(list, things));
-        let working = setting || crate::defuse::defuse_working(g);
+        let working = setting;
         crate::stickycam::sticky_rows(g, pl, busy || working, row_cb!(crate::stickycam::StickyRowsRowOver), offer_cb!(list, things));
         crate::lightswitch::switch_rows(g, pl, busy || working, row_cb!(crate::lightswitch::SwitchRowsRowOver), offer_cb!(list, things));
         // ---- the rows: the running verb alone (or a status while the feet are committed), else the top MAX_NEAR verbs of the things in reach by what matters
@@ -656,8 +653,6 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             rows = vec![running(&base, crate::game::Verb::Charge, "setting the charge… — Space or a step breaks it off", Some(progress))];
         } else if crate::wallcharge::wall_charge_setting(g, &crate::seats::here(g)) {
             rows = vec![crate::wallcharge::wall_charge_running_row(g, &mut running_cb)];
-        } else if crate::defuse::defuse_working(g) {
-            rows = vec![crate::defuse::defuse_running_row(g, &mut running_cb)];
         } else if g.pl[pl].takedown.is_none() {
             let priority = interact_priority();
             js::sort_by(&mut things, |a, b| interact_cmp(g, p, &priority, &list[a.0], &list[b.0]));

@@ -5,11 +5,10 @@
 // (A TOOL EACH PAIR, game/kit.ts KITDEAL.more, on as the page opens: of four Blue Two is LENT that hammer, so the store and the table leave his slot to the
 // deal — a tool a man is only lent is never written, by a paste either — and what he WEARS is read off his card's line.)
 // nothing fatal and no console error. SLOW: about eight minutes on a quiet four-core box (the software adapter compiles the pipelines twice).
-//   node tools/qa/kitpaste-deploy-page.cjs      env: PORT (the dev server's, default 5199) · KITPASTE_BREAK=1 (the page opened ?nokitcopy: nothing is pasted, must FAIL)
+//   node tools/qa/kitpaste-deploy-page.cjs      env: PORT (the dev server's, default 5199)
 // PASS / FAIL lines, exit 1 on a FAIL. Nothing here has been seen on a GPU: the staged men are read off the kit table, not looked at.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const PORT = process.env.PORT || 5199;
-const BREAK = process.env.KITPASTE_BREAK === '1';
 const KEY = 'twopointsix.kit';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage|Failed to load resource/;
@@ -28,7 +27,7 @@ const carried = m => ({ weapon: m?.weapon, suppressed: m?.suppressed, light: m?.
   const page = await ctx.newPage(); const errors = []; page.setDefaultTimeout(T);
   page.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text())) errors.push(m.text().slice(0, 200)); });
   page.on('pageerror', e => errors.push(`pageerror: ${String(e).slice(0, 200)}`));
-  await page.goto(`http://localhost:${PORT}/?loadout=depot-four&paused&quality=verylow&mute${BREAK ? '&nokitcopy' : ''}`, { waitUntil: 'domcontentloaded', timeout: T });
+  await page.goto(`http://localhost:${PORT}/?loadout=depot-four&paused&quality=verylow&mute`, { waitUntil: 'domcontentloaded', timeout: T });
   await page.waitForSelector('#missions.one.on #loadout .lo-slot.in', { state: 'attached' }); await page.waitForTimeout(1500);
   const press = sel => page.evaluate(s => document.querySelector(s).click(), sel);   // (the element's own click: this adapter paints too slowly for a wait on a still page)
   const stored = () => page.evaluate(k => JSON.parse(localStorage.getItem(k) || '{}').members ?? [], KEY);

@@ -13,7 +13,7 @@ const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), os = require('os'), path = require('path');
 const argv = process.argv.slice(2), flag = (n, d) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; };
 const PORT = process.env.PORT; if (!PORT) { console.error('PORT=<the dev server\'s port> is needed (bun run dev, or PORT=5199 bun run tools/serve.ts)'); process.exit(2); }
-const QUERY = flag('--query', 'look&solo&levelFile=office.json&quality=high&seed=1&noverdict&nokeep&mute&adapt=0').replace(/^\?/, ''), OUT = flag('--out', '');
+const QUERY = flag('--query', 'look&solo&levelFile=office.json&quality=high&seed=1&nokeep&mute&adapt=0').replace(/^\?/, ''), OUT = flag('--out', '');
 const PLAN = flag('--plan', 'full:5:full short:5:3 big:5:3:102400 restart:4:full::restart').split(/\s+/).filter(Boolean).map(s => { const [name, visits, stay, kb, how] = s.split(':'); return { name, visits: +visits || 3, stay: stay === 'full' || !stay ? 'full' : +stay, kb: +kb || 0, restart: how === 'restart' }; });
 const LIMIT = +flag('--limit', 240) * 1000, T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 const sleep = ms => new Promise(r => setTimeout(r, ms));

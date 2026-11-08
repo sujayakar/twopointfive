@@ -37,7 +37,8 @@ import { standUp, ROOT } from './headless.ts';
 import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 
 const SC = await import(`${ROOT}/src/game/stickycam.ts`);
-const { STICKY, STICKY_STATS, stickyIssue, fireCam, stickyEyes, camLens, stickyMarks } = SC;
+const { STICKY, STICKY_STATS, stickyIssue, fireCam, stickyEyes, camLens } = SC;
+const stickyMarks = (g: any): any[] => g.view.marks.cams;   // (what the HUD is told)
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const QF = await import(`${ROOT}/src/game/quietfog.ts`);
 const { FOG, fieldDeg, fogEyeCount } = await import(`${ROOT}/src/game/fogofwar.ts`);
@@ -61,10 +62,10 @@ const LIVE_WAS = STICKY.live;
 const back = () => { STICKY.live = LIVE_WAS; };
 const steps = (W: any, n: number, each?: () => void) => { for (let i = 0; i < n; i++) { each?.(); W.step(DT); } };
 const memStore = (init: Record<string, string> = {}) => { const m = new Map(Object.entries(init)); return { m, getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, String(v)); }, removeItem: (k: string) => { m.delete(k); } }; };
-/** the kit table, its rule and the solo kit flag (kit.ts KIT_SOLO.on: raised by every kitSoloIf on a quiet mission alone) as they stood, put back after `fn` */
+/** the kit table and its rule as they stood, put back after `fn` */
 async function keepKit<T>(fn: () => Promise<T> | T): Promise<T> {
-  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on, solo = K.KIT_SOLO.on;
-  try { return await fn(); } finally { K.kitLoad(null, ''); for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; K.KIT.on = on; K.SLOTS.on = slots; K.KIT_SOLO.on = solo; }
+  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on;
+  try { return await fn(); } finally { K.kitLoad(null, ''); for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; K.KIT.on = on; K.SLOTS.on = slots; }
 }
 async function stand(seed: number, file?: string) {
   Math.random = seeded(0x51c4 + seed * 7919);
@@ -358,10 +359,9 @@ export async function stickyMark(): Promise<boolean> {
       let n = 0; while (C.vel && n++ < 180) W.step(DT); steps(W, 20); const M3 = stickyMarks(g) as any[];
       F.verdict(air && mAir === 2 && keyAir && !C.vel && M3.length === 3 && M3.filter(m => m.sends).length === 1 && near(M3.find(m => m.sends), C),
         'a third one in the air is in the picture too (keyed) and carries no mark; landed it is marked and is the one that sends', `in the air ${air}: marks ${mAir}, keyed ${keyAir} · landed: marks ${M3.length}, sending ${M3.filter(m => m.sends).length} (the newest ${near(M3.find(m => m.sends), C)})`);
-      // a camera that is no longer out (taken back, retired) has no mark; a viewer's picture with the fog lifted has none
+      // a camera that is no longer out (taken back, retired) has no mark
       const gone = pl.cams.splice(pl.cams.indexOf(A), 1)[0]; steps(W, 2); const M4 = stickyMarks(g) as any[], k0 = (5 << 24) + 0x800000 + (gone.id % 4096) * 2, goneBoxes = (g.dynBoxes as any[]).filter(b => b.mkey === k0 || b.mkey === k0 + 1).length; pl.cams.unshift(gone); steps(W, 2);   // (by its own keys: the third camera lies beside where it was)
-      fog.bared = true; const mBared = stickyMarks(g).length; fog.bared = false;
-      F.verdict(M4.length === 2 && goneBoxes === 0 && stickyMarks(g).length === 3 && mBared === 0, 'a camera no longer out has no mark and no box; with the fog lifted for a viewer nothing is marked', `one gone: marks ${M4.length}, its boxes ${goneBoxes} · back: ${stickyMarks(g).length} · fog lifted for a viewer: ${mBared}`);
+      F.verdict(M4.length === 2 && goneBoxes === 0 && stickyMarks(g).length === 3, 'a camera no longer out has no mark and no box', `one gone: marks ${M4.length}, its boxes ${goneBoxes} · back: ${stickyMarks(g).length}`);
       // no fog, no marks (the floor is in plain view) — and the fog back, they are back
       fog.on = false; steps(W, 2); const mNoFog = stickyMarks(g).length, allIn = pl.cams.every((c: any) => boxesOf(g, c).length >= 2); fog.on = true; steps(W, 45); const mBack = stickyMarks(g).length;
       F.verdict(mNoFog === 0 && allIn && mBack === 3, 'with no fog up nothing is marked (every camera is drawn anyway); the fog back, the marks are back', `no fog: marks ${mNoFog}, all drawn ${allIn} · fog back: marks ${mBack}`);
@@ -422,7 +422,6 @@ export async function stickyDefault(): Promise<boolean> {
     const { QUIET_MISSIONS, LESSON_MISSIONS, SCENARIOS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`), { quitScenario, fogOfQuery, quietRungOfQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
     const { withDom, El } = await import('./scenario-picker-probes.ts'), LV = await import(`${ROOT}/src/ui/levers.ts`);
     const store = memStore(); G.localStorage = store;
-    const soloWas = K.KIT_SOLO.on;
     const two = STICKY.issue, withCams = `ring,he40,cam ×${two}`, has = (h: string) => /[?&](quietfog|cams)\b/.test(h);
     await keepKit(async () => {
       K.kitLoad(null, ''); K.KIT.on = true;
@@ -451,7 +450,6 @@ export async function stickyDefault(): Promise<boolean> {
       F.verdict(!L.fog && L.at0 === 'ring,he40' && quietRungOfQuery(new URLSearchParams(lq)) === 'off' && !has(sqHref) && !has(QF.quietFogHref(`/${lq}`, false)),
         'a tutorial mission played alone is as it was (every guard shown, no camera), and neither its link nor a squad row\'s carries a key', `${les.id}: fog ${L.fog}, ${L.at0}, rung ${quietRungOfQuery(new URLSearchParams(lq))} · squad row ${sq.id}: ${sqHref}`);
     });
-    F.verdict(K.KIT_SOLO.on === soloWas, 'the starts above put your card on Sam (the page\'s own order) and leave the solo kit flag as they found it for whatever runs next', `KIT_SOLO.on ${soloWas} → ${K.KIT_SOLO.on}`);
     // the links and the lever say only what differs from the default
     store.m.clear();
     await withDom('?mute', async () => {

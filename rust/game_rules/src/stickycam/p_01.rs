@@ -239,7 +239,7 @@ pub fn update_stickies(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// Is its surface flat. (stickycam.ts flat)
-pub fn flat(g: &mut crate::game::Game, c_2: StickyCamId) -> bool {
+pub fn flat(g: &crate::game::Game, c_2: StickyCamId) -> bool {
     m::abs(g.tab.stickycam_sticky_cam[c_2].n[1]) > g.k.sticky.flat_y
 }
 
@@ -262,8 +262,8 @@ pub fn sticky_live(g: &crate::game::Game, pl: &crate::stickycam::StickyLivePl) -
 }
 
 /// The fog's eyes a player's live stuck cameras are, newest first. (stickycam.ts stickyEyes)
-pub fn sticky_eyes(g: &mut crate::game::Game) -> Vec<crate::fogofwar::FogEye> {
-    let pl = g.player;
+pub fn sticky_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::fogofwar::FogEye> {
+    let pl = seat.player;
     if g.pl[pl].cams.is_empty() { return none(); }
     let mut out: Vec<crate::fogofwar::FogEye> = Vec::new();
     // (under the fog's cone a camera's wedge is no wider than an eye's   stickycam.ts:195)
@@ -372,7 +372,7 @@ pub fn take_cam(g: &mut crate::game::Game, pl: PlayerId) -> bool {
 }
 
 /// Drawn: a dark block on its surface and a lens proud of it, keyed as a wall device's so the fog lets them through; the lens is red on the one that sends. (stickycam.ts stickyBoxes)
-pub fn sticky_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn sticky_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let pl = g.player;
     let flag = crate::scene_boxes::box_flag();
     let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
@@ -389,17 +389,16 @@ pub fn sticky_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
         let c1 = v3::mad(c.pos, z, if c.vel.is_some() { 0.02 } else { 0.034 });
         let key = device + CAM_KEY + js::rem(c.id, 4096.0) * 2.0;
         let b0 = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: c0, h: body_h, yaw: Some(yaw), albedo: Some(v3::copy(body())), flags: Some(flags), mkey: Some(key), ..Default::default() });
-        out.push(b0);
-        let paint = if sending(g, id) { lens_live() } else { lens() };
+        out.push(b0.into());
+        let paint = if sending(g, g.player, id) { lens_live() } else { lens() };
         let b1 = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: c1, h: lens_h, yaw: Some(yaw), albedo: Some(v3::copy(paint)), flags: Some(flags), mkey: Some(key + 1.0), ..Default::default() });
-        out.push(b1);
+        out.push(b1.into());
     }
 }
 
 /// Is this camera sending this frame: one of the newest `live` stuck, and the fog took it as an eye. (stickycam.ts sending)
-pub fn sending(g: &mut crate::game::Game, c: StickyCamId) -> bool {
+pub fn sending(g: &crate::game::Game, pl: PlayerId, c: StickyCamId) -> bool {
     let live = if crate::fogofwar::fog_of_war_active(g) {
-        let pl = g.player;
         let cams = StickyLivePl { cams: g.pl[pl].cams.clone() };
         sticky_live(g, &cams)
     } else {
@@ -407,6 +406,12 @@ pub fn sending(g: &mut crate::game::Game, c: StickyCamId) -> bool {
     };
     let eye = EYE_ID + js::rem(g.tab.stickycam_sticky_cam[c].id, 50.0);
     live.contains(&c) && g.fog_of_war.eyes.iter().any(|e| e.id == eye)
+}
+
+/// A small lens on each of his own stuck cameras while the fog is live. (stickycam.ts stickyMarks)
+pub fn sticky_marks(g: &crate::game::Game, pl: PlayerId) -> Vec<crate::view::CamMark> {
+    if !g.k.sticky.on || !g.k.sticky.mark || !crate::fogofwar::fog_of_war_active(g) { return Vec::new(); }
+    g.pl[pl].cams.iter().filter(|&&c| g.tab.stickycam_sticky_cam[c].vel.is_none()).map(|&c| crate::view::CamMark { at: cam_lens(g, c), sends: sending(g, pl, c) }).collect()
 }
 
 /// A camera of his is still in the air. (stickycam.ts stickyFlying)
@@ -488,7 +493,7 @@ mod tests {
         g.k.sticky.live = 3.0;
         assert_eq!(sticky_live(&mut g, &cams), vec![b, a]);
         g.k.sticky.live = 1.0;
-        let eyes = sticky_eyes(&mut g);
+        let eyes = sticky_eyes(&g, &crate::seats::here(&g));
         assert_eq!(eyes.len(), 1);
         assert_eq!((eyes[0].id, eyes[0].fov, eyes[0].near), (202.0, Some(360.0), Some(0.0)));
     }

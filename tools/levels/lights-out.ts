@@ -82,14 +82,8 @@ const LIGHTS_OUT_KITVIEW: KitViewData = {
       { id: 'lo_007', group: 'lo.generator', c: [9.3, 1.02, 12.65], h: [0.12, 0.02, 0.12], yaw: 1.5708, material: 'iron' },
       { id: 'lo_008', group: 'lo.breaker', c: [10.6, 1.35, 11.16], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], stuff: 'sheet' },   // (drawn as sheet by its colour until 11-04, as the level's own breaker box is: scene/stuff.ts drawnAs)
       { id: 'lo_009', group: 'lo.breaker', c: [10.42, 1.62, 11.21], h: [0.015, 0.015, 0.015], material: 'plasticBlack', emissive: [0.3, 4, 0.6], flags: ['NoShadow'] },
-      { id: 'lo_010', group: 'lo.fuel', c: [10.2, 0.44, 12.7], h: [0.2784, 0.44, 0.1153], yaw: 0.0846, material: 'drumBlue' },
-      { id: 'lo_011', group: 'lo.fuel', c: [10.2, 0.439, 12.7], h: [0.2784, 0.439, 0.1153], yaw: 0.87, material: 'drumBlue' },
-      { id: 'lo_012', group: 'lo.fuel', c: [10.2, 0.438, 12.7], h: [0.2784, 0.438, 0.1153], yaw: 1.6554, material: 'drumBlue' },
-      { id: 'lo_013', group: 'lo.fuel', c: [10.2, 0.437, 12.7], h: [0.2784, 0.437, 0.1153], yaw: 2.4408, material: 'drumBlue' },
-      { id: 'lo_014', group: 'lo.fuel', c: [10.84, 0.44, 12.76], h: [0.2784, 0.44, 0.1153], yaw: 0.5574, material: 'drumBlue' },
-      { id: 'lo_015', group: 'lo.fuel', c: [10.84, 0.439, 12.76], h: [0.2784, 0.439, 0.1153], yaw: 1.3428, material: 'drumBlue' },
-      { id: 'lo_016', group: 'lo.fuel', c: [10.84, 0.438, 12.76], h: [0.2784, 0.438, 0.1153], yaw: 2.1282, material: 'drumBlue' },
-      { id: 'lo_017', group: 'lo.fuel', c: [10.84, 0.437, 12.76], h: [0.2784, 0.437, 0.1153], yaw: 2.9136, material: 'drumBlue' },
+      { id: 'lo_010', group: 'lo.fuel', c: [10.2, 0.44, 12.7], h: [0.28563839999999996, 0.44, 0.28563839999999996], round: true, material: 'drumBlue' },
+      { id: 'lo_014', group: 'lo.fuel', c: [10.84, 0.44, 12.76], h: [0.28563839999999996, 0.44, 0.28563839999999996], round: true, material: 'drumBlue' },
       { id: 'lo_018', group: 'lo.bulb', c: [9.4, 2.3, 11.16], h: [0.06, 0.06, 0.04], material: 'plasticWhite', emissive: [30, 21, 11], flags: ['NoShadow'] },
     ] } },
   ways: [{ door: 'lo_gate', set: 'shed', side: -1, pane: false }] };

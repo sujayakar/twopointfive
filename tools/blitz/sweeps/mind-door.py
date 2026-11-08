@@ -36,7 +36,8 @@ borrows the game. Each call writes the same value at the same place, so play is 
 Run again on a later tree it rewrites only what is still written the old way. `--check` writes nothing, lists what a hand
 has to look at, and exits 1 if anything is still written the old way.
 """
-import glob, os, re, sys
+import os, re, sys
+from bodies import bodies
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rust', 'game_rules', 'src')
 MAN = r'((?:[^\[\]]|\[[^\[\]]*\])+)'
@@ -181,9 +182,7 @@ LEFT = re.compile(r'\.awareness (?:\+|-|\*)?= |\.state = (?:crate::game::GuardSt
 def main():
     check = '--check' in sys.argv
     names, writes, files, notes = 0, 0, 0, []
-    for path in sorted(glob.glob(os.path.join(ROOT, '*', '[pb]_*.rs'))):
-        module = os.path.basename(os.path.dirname(path))
-        where = '%s/%s' % (module, os.path.basename(path))
+    for path, module, where in bodies(ROOT):
         whole = open(path).read()
         cut = re.search(r'^\s*#\[cfg\(test\)\]', whole, re.M)
         text, tests = (whole[:cut.start()], whole[cut.start():]) if cut else (whole, '')

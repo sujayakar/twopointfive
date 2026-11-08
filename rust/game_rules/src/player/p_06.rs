@@ -197,7 +197,7 @@ pub fn update_wanding(g: &mut crate::game::Game, dt: f64) {
         stop_wand(g, None);
     } else if !crate::wand::wand_fits(g, d) || crate::doors::doors_side(g, d, pos) != w.side {
         stop_wand(g, Some("the door moved — the wand is out"));
-    } else if crate::samstun::sam_staggered(g, None) || g.time < g.pl[pl].dazzled_until {
+    } else if crate::samstun::sam_staggered(g, &crate::seats::here(g), None) || g.time < g.pl[pl].dazzled_until {
         stop_wand(g, None);
     } else {
         let along = g.dr[d].def.width * 0.5;
@@ -333,7 +333,6 @@ fn work_at_walked(g: &mut crate::game::Game, pl: PlayerId, kind: crate::handwork
     let at = match kind {
         crate::handwork::SamWorkKind::Wall => g.wall_charge.sam.as_mut().map(|s| &mut s.at),
         crate::handwork::SamWorkKind::Door => g.pl[pl].charging.as_mut().map(|s| &mut s.at),
-        crate::handwork::SamWorkKind::Defuse => g.defuse.sam.as_mut().map(|s| &mut s.at),
         _ => None,
     };
     if let Some(at) = at {
@@ -776,7 +775,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
             }
         }
     }
-    if crate::samstun::sam_blind(g, None) > 0.5 {
+    if crate::samstun::sam_blind(g, &crate::seats::here(g), None) > 0.5 {
         g.aim_guard = None;
         g.aim_target = None;
         g.aim_snap = None;
