@@ -314,15 +314,6 @@ export async function bigMate(): Promise<boolean> {
 }
 
 // ───────────────────────────────────────────────────────────── any shut door, from beside the frame
-/** what the squad's ring draws on a door, its first ring and the one behind 'more', as a hand reads it: the cursor on the door, the squad's key kept down; then put away with nothing given */
-function ringRows(R: Rig, d: any): string {
-  const { W, O, input: I } = R, KEY = CMDRING.key, c = d.frameCentre, th = d.def.closedDir, words = () => (O.g.view.ring?.wedges ?? []).map((x: any) => x.text as string);
-  search: for (const y of [c[1], 0.05, 1.0, 1.8]) for (const k of [0, 0.35, -0.35]) { W.cursorAt([c[0] - Math.sin(th) * k, y, c[2] + Math.cos(th) * k]); R.step(2); const t = O.hover(); if (t?.kind === 'door' && t.door === d) break search; }
-  I.keys.add(KEY); I.pressed.add(KEY); R.until(() => !!O.cmdRing, 1.5); const first = words(), more = (O.g.view.ring?.wedges ?? []).find((x: any) => x.text === 'more');
-  if (more) { I.pressed.add(`Digit${more.key}`); R.step(2); } const second = more ? words() : [];
-  I.keys.delete(KEY); O.cmdRing = null; O.close(); I.pressed.add('Escape'); R.step(3);
-  return `${first.join(' | ') || 'no ring'} ▸ ${second.join(' | ')}`;
-}
 /** the room clear, `tool` on the first teammate's card, and the big slot's own row on a door: the manager's from the corridor (the face the leaf opens AWAY
  *  from) or the break room's north door from inside the room (the face it opens TOWARD — its defenders taken off the floor first, as bigMate does). The door
  *  NOT locked unless `lock` says so (by hand either way). `key`: the row given as the page gives it — the menu opened on the door, then H; else by its id
