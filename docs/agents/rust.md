@@ -1234,6 +1234,9 @@ one stops the tool by name, on an address one does nothing and says so in the co
     one reading, its own place's; a man in the yard looking into a dark room is not told it is darker to him.
     Notice times, Sam 3 to 7 m before each man, before -> after: barracks midday 3.10 s -> 0.26, dusk 2.95 -> 0.48, night 3.74 -> 4.30; compound midday 1.63 -> 0.23; warehouse midday 6 of 10 in 0.58
     -> 10 of 10 in 0.26; tut-queue (stands at dusk) 1 of 7 either way.
+  - THE SMOKE AGAINST THE CARD, 2026-11-08 (eleven places, nobody on the can, 0.3 to 25 s): indoors and in a courtyard a level line is hidden at 1.2 m from about 1.0 s (the game 0.9), at 1.6 m from
+    1.5 to 2.3 s (1.9), and the two agree to a line or two in eleven from 3 s on. UNDER A CEILING DIFFUSER the drawn cloud takes 2.5 to 4 s: a vent's downdraught is not in the grid. In a storm's yard a
+    plume loses 0.4 of its rise (`bricks.rs LAID`): lines at 1.2 m apart 39 % -> 19 % (office), 26 -> 21 (compound), at 1.4 m 34 -> 5. Who writes `visibility` by hand in a check is overruled the next tick.
   - WHAT A BOX SENDS BACK of the light is in its row of the box world (`World.back`) and compared with it: whoever paints a static says `scene_collision::wrote`.
   - COST, native: 0.30 to 0.38 ms a step of a tenth of a second (0.06 ms a tick), the same by day and night; 125 to 190 ms once, in a mission's first step. 1.8 MB a world beside the block, 80 KB in it.
     Two machines of two seats at midday, one of them put back four ticks twice a second: five minutes equal in every part, on the barracks and the compound. `game_start/tests/senses.rs`.
