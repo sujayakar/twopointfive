@@ -6,7 +6,7 @@ const NO_SHADOW: u32 = game_draw::boxes::NO_SHADOW;
 const GLASS: u32 = game_draw::boxes::GLASS;
 
 fn r2(v: f64) -> f64 { (v * 100.0).round() / 100.0 }
-use game_run::kept::text;
+fn text(s: &str) -> String { format!("\"{}\"", s.replace('\\', "").replace('"', "")) }
 
 /// {bounds: [x0, z0, x1, z1], boxes: [x, z, half width, half depth, yaw in degrees, kind …]}: every solid thing between knee and head height (0 a wall, 1 low, 2 glass)
 #[no_mangle]

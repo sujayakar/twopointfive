@@ -5,7 +5,7 @@
 // `#missions .mrow[data-mission]` gets one `.vpips` child, made again when what is kept or the difficulty changes — from a MutationObserver on `#missions`,
 // so a list drawn again (a group opened, the page reopened) is dressed again by itself. Training rows are lessons, not runs to be won: they get none.
 // Styled in index.html (`#missions .mrow > .vpips`).
-import type { KeptNote } from '../view/runend';
+import type { KeptNote } from '../game/verdict';
 import { desk } from '../view/desk';
 import { recordOf, verdictKey, keptWays } from './verdictStore';
 import { pipsEl } from './verdictPips';

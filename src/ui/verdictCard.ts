@@ -9,25 +9,26 @@
 //   THE SLOT  an empty box under the men that other panels fill (`verdictPanels`: the death recap's) — nothing is drawn for an empty one.
 //
 // Plain DOM through createElement / className / textContent / title / style only: it builds on the checks' fake document. Styled in index.html (#menu .vd-…).
-import { clock, type RunEnd, type RunVerdict, type VerdictMan } from '../view/runend';
+import type { Game } from '../game/game';
+import { clock, type KeptNote, type RunVerdict, type VerdictMan } from '../game/verdict';
 import { pipsEl } from './verdictPips';
+import { shownName } from '../host/names';
 
 /** a mission played by a squad (its end card is the men's): one of the squad's kinds. The stealth game is a quiet mission, alone or as two, and the plain night, whose
  *  record names no kind (null, or not there at all: a record made here for the Rust game's has no word it was not given) */
 export function squadVerdict(V: RunVerdict): boolean { return V.kind === 'roomclear' || V.kind === 'rescue' || V.kind === 'nightbreach'; }
 /** Panels other goals put inside the end card, under the men's rows: each is called once per card with an empty box it may fill (leave it empty = nothing
  *  drawn). A panel that throws is dropped for that card. */
-export const verdictPanels: ((slot: HTMLElement, end: RunEnd, V: RunVerdict) => void)[] = [];
+export const verdictPanels: ((slot: HTMLElement, game: Game, V: RunVerdict) => void)[] = [];
 const TICKS_MAX = 12, SQUARES_MAX = 16;
 
-export function verdictHead(end: RunEnd, V: RunVerdict): HTMLElement {
-  const kept = end.kept;
+export function verdictHead(game: Game, V: RunVerdict, kept: KeptNote | null): HTMLElement {
   const box = el('div', `vd ${V.won ? 'won' : 'lost'}${V.void ? ' void' : ''}`);
   const top = el('div', 'vd-top'); box.appendChild(top);
   const word = el('b', 'vd-word'); word.textContent = V.word; top.appendChild(word);
   const time = el('span', 'vd-time'); time.textContent = clock(V.secs); time.title = 'timed from your first order, step or shot'; top.appendChild(time);
-  const P = end.par;
-  if (P && V.won && P.medal !== 'none') { const m = el('span', `vd-medal m-${P.medal}`); m.textContent = P.medal; m.title = P.shown; top.appendChild(m); }
+  const P = game.par?.result?.();
+  if (P && V.won && P.medal !== 'none') { const m = el('span', `vd-medal m-${P.medal}`); m.textContent = P.medal; m.title = game.par.shown ?? P.line; top.appendChild(m); }
   if (V.void) { const v = el('span', 'vd-void'); v.textContent = 'cheats'; v.title = 'a cheat was on during this try, so it doesn\'t count'; top.appendChild(v); }
   top.appendChild(el('span', 'vd-gap'));
   if (kept?.lesson) box.classList.add('lesson');   // a Training lesson: the word and the clock, nothing graded (no ways, no tries: main.ts keeps none)
@@ -43,9 +44,9 @@ export function verdictHead(end: RunEnd, V: RunVerdict): HTMLElement {
   return box;
 }
 
-export function verdictMen(end: RunEnd, V: RunVerdict): HTMLElement {
+export function verdictMen(game: Game, V: RunVerdict): HTMLElement {
   const box = el('div', 'vd-men'), T = Math.max(1, V.secs), pct = (t: number) => `${(Math.min(1, Math.max(0, t / T)) * 100).toFixed(1)}%`;
-  for (const m of namedMen(end, V)) {
+  for (const m of namedMen(game, V)) {
     const row = el('div', `vd-man t-${m.tone ?? 'mate'} s-${m.state}`);
     const name = el('span', 'nm'); name.textContent = m.name; name.title = m.name; row.appendChild(name);   // (the title: a long picked name is cut by the column)
     const bar = el('span', 'bar'), fill = el('i', 'fill'); fill.style.width = m.state === 'up' ? '100%' : pct(m.downAt); bar.appendChild(fill);
@@ -60,17 +61,17 @@ export function verdictMen(end: RunEnd, V: RunVerdict): HTMLElement {
   return box;
 }
 /** the slot the other panels fill (null when no panel drew anything) */
-export function verdictSlot(end: RunEnd, V: RunVerdict): HTMLElement | null {
+export function verdictSlot(game: Game, V: RunVerdict): HTMLElement | null {
   if (!verdictPanels.length) return null;
   const slot = el('div', 'vd-slot');
-  for (const f of verdictPanels) { try { f(slot, end, V); } catch { /* a panel that cannot draw is left out */ } }
+  for (const f of verdictPanels) { try { f(slot, game, V); } catch { /* a panel that cannot draw is left out */ } }
   return slot.children && slot.children.length ? slot : null;
 }
 
 /** THE VERDICT'S MEN AS A PAGE NAMES THEM: a player's picked name over his number (host/names.ts), in his own row and in the words of whoever he put
  *  down. The verdict itself keeps the game's names: they are its state */
-export function namedMen(end: RunEnd, V: RunVerdict): VerdictMan[] {
-  const alias = new Map<string, string>(); for (const m of V.men) if (m.human) alias.set(m.name, end.name(m.id, m.name));
+export function namedMen(game: Game, V: RunVerdict): VerdictMan[] {
+  const alias = new Map<string, string>(); for (const m of V.men) if (m.human) alias.set(m.name, shownName(game, m.id, m.name));
   return V.men.map(m => ({ ...m, name: (m.human ? alias.get(m.name) : undefined) ?? m.name, downBy: alias.get(m.downBy) ?? m.downBy }));
 }
 /** when, where and to whom a man went down (the cross's tooltip, the map mark's) */

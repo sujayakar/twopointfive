@@ -1,7 +1,7 @@
 // The four ways a mission can be won, as a strip of four small marks (the end card's head; a mission's card): a way won is lit, the rest are dim, two won
 // frame the strip in gold. Under a lit mark, a '1' = won at the first try, a bar = won with nobody lost. No words are drawn: each mark's tooltip carries its
 // name. Plain DOM (createElement / className / textContent / title only, so it builds on the checks' fake document too); styled in index.html (.vpips).
-import type { Approach, KeptNote } from '../view/runend';
+import type { Approach, KeptNote } from '../game/verdict';
 
 export const WAYS: readonly Approach[] = ['doors', 'walls', 'dark', 'quiet'];
 export const WAY_NAME: Record<Approach, string> = { doors: 'through the doors', walls: 'through a wall', dark: 'in the dark', quiet: 'never found' };

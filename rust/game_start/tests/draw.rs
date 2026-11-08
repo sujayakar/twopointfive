@@ -28,43 +28,6 @@ fn drawing_a_game_is_no_part_of_it() {
     assert_eq!(plain.iter().zip(&drawn).position(|(a, b)| a != b), None, "the drawn game parts from the one nobody drew");
 }
 
-/// THE RULE: a run watched without the fog and through a tube, what the men the fog leaves out carry and the players' lines made for that picture every frame, is the run nobody watched; and the
-/// picture has those men and what they carry.
-#[test]
-fn watching_a_run_is_no_part_of_it() {
-    let played = |watch: bool| {
-        let mut p = office(5);
-        let mut d = Drawn::default();
-        let mut more = (0, 0);
-        let words = (0..240).map(|k| {
-            if k == 60 { let pl = p.g.player; p.g.pl[pl].nv = true; }
-            p.g.god_mode = true;
-            if watch { p.g.fog_picture.viewer = true; }
-            p.frame();
-            if watch {
-                d.view_as(true, Some(true));
-                game::scene_collision::stands(&mut p.g);
-                d.watch(&p.g);
-                game::scene_collision::unstand(&mut p.g);
-                let focus = p.g.aim_point;
-                d.take(&p.g, ALL);
-                d.frame(&p.g, 1.0, focus);
-                let (men, own) = (d.men.men.len(), d.boxes.own_ids().count());
-                d.view_as(false, None);
-                d.watch(&p.g);
-                d.take(&p.g, ALL);
-                d.frame(&p.g, 1.0, focus);
-                more = (more.0.max(men - d.men.men.len()), more.1.max(own.saturating_sub(d.boxes.own_ids().count())));
-            }
-            p.words()
-        }).collect::<Vec<_>>();
-        (words, more)
-    };
-    let ((plain, _), (watched, more)) = (played(false), played(true));
-    assert_eq!(plain.iter().zip(&watched).position(|(a, b)| a != b), None, "the watched run parts from the one nobody watched");
-    assert!(more.0 >= 2 && more.1 >= 2 * more.0, "men the fog leaves out, and the boxes of them: {more:?}");
-}
-
 /// THE RULE: half way between two ticks a man stands half way between where the two left him, his proxies with him; at the whole he stands where the last left him.
 #[test]
 fn a_frame_between_two_ticks_stands_between_them() {

@@ -1,8 +1,8 @@
 // The 'furnblast' probe family — FURNITURE UNDER A BLAST (src/game/furnblast.ts, behind the destruction switch and its own knob FURNBLAST.on), run through probes.ts:
 //   bun run tools/qa/probes.ts furnblast | furnblast-throw | furnblast-break | furnblast-stun | furnblast-reset | furnblast-off | furnblast-levels | furnblast-save [--verbose]
 // Headless = the Proxy device; what is asserted is every CPU-side promise, on the warehouse's office (the wall entry the maintainer watched) unless said:
-//   (throw)   a wall charge on the office wall: the chair behind the hole it opens is thrown AWAY from it; the same strength of blast against the wall where it
-//             HOLDS (no hole) moves nothing behind it and breaks nothing behind it — while the chairs on its own side go;
+//   (throw)   a wall charge on the office wall: the chair behind the hole it opens is thrown AWAY from it; a blast the wall HOLDS against moves and breaks nothing behind it,
+//             where the same one inside the room takes the desk and throws the chair (FURNHELD_BREAK=1 puts the first inside too and must FAIL);
 //   (break)   the desk a metre from the charge is gone for sight (rays through where it stood), for feet (the nav cells under it) and for the AI's feed (a row),
 //             its pieces exist inside the per-blast budget and the pool's cap, what stood on it went with it, the cabinets further in lie on their sides;
 //   (stun)    a stun grenade of its own breaks and throws nothing; a charge's BORROWED bang (the door charge's road) does; the wall charge's own borrowed bang, on
@@ -12,6 +12,7 @@
 //   (save)    a checkpoint keeps what a blast broke: after a load the same statics are gone for sight and feet, the props that came apart stay out, no piece is
 //             on the floor (none is filed); a file from before the slice loads as it did (the furniture whole); nothing broke = no slice;
 //   (levels)  on every loud level, a wall-strength blast beside each of up to 8 pieces of furniture: nothing NaN, the pool inside its cap, a restart restores.
+// Every blast here is the game's own call (Destruction.blast). Until 2026-11-08 some were the furniture's half alone, which never reached the game.
 // 2026-11-07: furniture under a blast, the destruction lane and cut pieces are settled rules. Gone with their off sides: 'off' no longer asks the knob off or
 // the destruction switch off (chaos 0 and the tour stay: those are the run's own), 'save' no longer runs a second time with cut pieces off or asks the knob off.
 import { sample } from './sweep.ts';
@@ -43,8 +44,7 @@ async function quiet<T>(fn: () => Promise<T> | T): Promise<T> { if (VERBOSE) ret
 const resetStats = () => { for (const k of Object.keys(F.FURN_STATS)) (F.FURN_STATS as any)[k] = 0; F.FURN_LOG.length = 0; };
 
 /** the warehouse's office: the wall between the corridor and it runs along z = 17; the charge goes on its corridor face */
-const OFFICE = { file: 'warehouse.json', charge: [8.0, 0.9, 16.9] as Vec3, desk: [8.2, 18.2] as [number, number], chair: [8.2, 19.1] as [number, number], cabinets: [9.55, 20.2] as [number, number] };
-/** …and the same wall further west, where the test blast is NOT let through (furn.blast alone: no wall is opened) */
+const OFFICE = { file: 'warehouse.json', charge: [8.0, 0.9, 16.9] as Vec3, inside: [8.2, 0.9, 17.5] as Vec3, desk: [8.2, 18.2] as [number, number], chair: [8.2, 19.1] as [number, number], cabinets: [9.55, 20.2] as [number, number] };
 interface Stage { W: any; game: any }
 /** `asStands` = the level as the stand has it (furnblast-levels: every level with its lived-in furniture where the stand raises it). Every other probe here is
  *  staged BY HAND on the warehouse's office — a charge, a desk, a chair and two cabinets at marks measured in the room as its generator drew it — so it stands
@@ -67,20 +67,20 @@ const posesOf = (game: any) => game.props.props.map((p: any) => `${p.id}:${p.x.t
 const navOf = (game: any) => { let h = 0; const b = game.col.nav.blocked; for (let i = 0; i < b.length; i++) h = (Math.imul(h, 31) + b[i]) | 0; return h; };
 const finite = (game: any) => game.destr.debris.list.every((c: any) => [...c.box.c, ...c.v, ...c.w].every(Number.isFinite)) && game.props.props.every((p: any) => [p.x, p.z, p.yaw, p.vx, p.vz, p.w].every(Number.isFinite));
 
-/** A wall charge throws the chair behind the hole; a blast against the wall where it holds touches nothing behind it. */
+const BREAK_HELD = process.env.FURNHELD_BREAK === '1';
+/** A wall charge throws the chair behind the hole; a wall that holds shields what is behind it. */
 export async function furnThrow(): Promise<boolean> {
-  const Fm = family('furnblast-throw: pushable furniture goes away from the blast — a wall that held shields what is behind it');
+  const Fm = family('furnblast-throw: pushable furniture goes away from the blast, and a wall that holds shields what is behind it');
   { const S = await stage(); const g = S.game; const chair = propAt(g, OFFICE.chair); const x0 = chair.x, z0 = chair.z, yaw0 = chair.yaw;
     const res = wallCharge(S, OFFICE.charge); run(S, 240);
     const dx = chair.x - x0, dz = chair.z - z0; const ax = x0 - OFFICE.charge[0], az = z0 - OFFICE.charge[2]; const al = Math.hypot(ax, az); const away = (dx * ax + dz * az) / al;
     Fm.verdict(res.walls >= 1 && away > 0.8 && g.props.props.includes(chair), 'the chair behind the blown wall is thrown away from the charge', `wall holed ${res.walls} (${res.opened} nav cells) · ${chair.def.name} ${f2(al)} m from the charge moved ${f2(Math.hypot(dx, dz))} m (${f2(away)} m along the line away), turned ${f2(chair.yaw - yaw0)} rad · thrown ${F.FURN_STATS.propsThrown}`);
     Fm.verdict(finite(g), 'nothing NaN', `${g.destr.debris.list.length} chunks, ${g.props.props.length} props`); }
-  { const S = await stage(); const g = S.game; const chair = propAt(g, OFFICE.chair); const desk = groupAt(g, OFFICE.desk); const before = posesOf(g); const flags = flagsOf(g);
-    const near = g.props.props.filter((p: any) => p.z < 16.8 && Math.hypot(p.x - OFFICE.charge[0], p.z - OFFICE.charge[2]) < F.FURN.throwM - 0.3).map((p: any) => ({ p, x: p.x, z: p.z }));
-    g.destr.furn.blast(OFFICE.charge, 'wall', PLAYER_ID, 0.5); run(S, 240);   // the furniture's half alone: the wall is never opened
-    const moved = near.filter((n: any) => Math.hypot(n.p.x - n.x, n.p.z - n.z) > 0.03).length;
-    Fm.verdict(Math.hypot(chair.x - chair.home[0], chair.z - chair.home[1]) < 1e-6 && desk.members.every((i: number) => standing(g, i)) && F.FURN_STATS.propsShielded >= 1 && F.FURN_STATS.shielded >= 1, 'the wall holds: the chair and the desk behind it are untouched', `${chair.def.name} moved ${f2(Math.hypot(chair.x - chair.home[0], chair.z - chair.home[1]))} m · desk parts standing ${desk.members.filter((i: number) => standing(g, i)).length}/${desk.members.length} · shielded: ${F.FURN_STATS.shielded} pieces, ${F.FURN_STATS.propsShielded} props`);
-    Fm.verdict(near.length === 0 || moved >= 1, 'what stands on the charge\'s own side goes', `${moved} of ${near.length} props on the corridor side moved (poses changed: ${before !== posesOf(g)}; statics changed: ${flags !== flagsOf(g)})`); }
+  // (a charge of no strength for the wall: `power` is the walls' reach and nothing else, so the wall holds and the furniture's half is a door charge's)
+  const held = async (at: Vec3) => { const S = await stage(), g = S.game, chair = propAt(g, OFFICE.chair), desk = groupAt(g, OFFICE.desk); resetStats(); const res = g.destr.blast(at, { who: PLAYER_ID, chaos: false, power: 0 }); run(S, 240);
+    return { walls: res.walls as number, moved: Math.hypot(chair.x - chair.home[0], chair.z - chair.home[1]), stand: desk.members.filter((i: number) => standing(g, i)).length as number, of: desk.members.length as number, shut: F.FURN_STATS.shielded as number, shutProps: F.FURN_STATS.propsShielded as number }; };
+  { const wall = await held(BREAK_HELD ? OFFICE.inside : OFFICE.charge), inside = await held(OFFICE.inside), said = (h: typeof wall) => `walls holed ${h.walls}, the chair moved ${f2(h.moved)} m, desk parts standing ${h.stand} of ${h.of}, shielded ${h.shut} pieces and ${h.shutProps} props`;
+    Fm.verdict(wall.walls === 0 && wall.moved < 1e-6 && wall.stand === wall.of && wall.shut >= 1 && wall.shutProps >= 1 && inside.moved > 0.8 && inside.stand === 0, 'a wall that holds shields the desk and the chair behind it; the same blast on their side of it takes both', `behind the wall: ${said(wall)} · on their side: ${said(inside)}`); }
   return Fm.done();
 }
 
@@ -131,17 +131,15 @@ export async function furnReset(): Promise<boolean> {
   const Fm = family('furnblast-reset: a restart puts the furniture back — and the same blast breaks it the same way');
   const S = await stage(); const g = S.game; const flags = flagsOf(g), poses = posesOf(g), nav = navOf(g);
   const chunkSig = () => g.destr.debris.list.map((c: any) => `${c.box.c.map((x: number) => x.toFixed(4)).join(',')}|${c.box.h.map((x: number) => x.toFixed(4)).join(',')}|${c.v.map((x: number) => x.toFixed(4)).join(',')}`).join(' ');
-  g.destr.furn.blast([8.2, 0.5, 19.0], 'wall', PLAYER_ID, 0.5);   // on the office floor: the chair beside it comes apart, the desk shatters
-  const sigA = chunkSig(), statsA = JSON.stringify(F.FURN_STATS); const broken = F.FURN_STATS.propsBroken, hid = flags !== flagsOf(g);
+  wallCharge(S, [8.2, 0.5, 19.0]);   // on the office floor: the chair beside it comes apart, the desk shatters
+  const sigA = chunkSig(); const broken = F.FURN_STATS.propsBroken, hid = flags !== flagsOf(g);
   run(S, 120);
   Fm.verdict(broken >= 1 && g.props.props.length === g.props.all.length - broken && hid, 'staged: a blast on the office floor breaks a prop apart and furniture with it', `props broken ${broken} (list ${g.props.props.length} of ${g.props.all.length}), statics hidden ${hid}, chunks ${F.FURN_STATS.chunks}`);
   await quiet(() => g.restartEncounter()); run(S, 5);
   Fm.verdict(flagsOf(g) === flags && posesOf(g) === poses && navOf(g) === nav && g.destr.debris.list.length === 0 && g.props.props.length === g.props.all.length, 'restartEncounter: every static\'s flags, every prop (pose and presence) and the nav grid as they were, no debris', `flags ${flagsOf(g) === flags} · props ${posesOf(g) === poses} (${g.props.props.length}) · nav ${navOf(g) === nav} · debris ${g.destr.debris.list.length}`);
-  resetStats(); g.destr.furn.blast([8.2, 0.5, 19.0], 'wall', PLAYER_ID, 0.5);
-  Fm.verdict(chunkSig() === sigA && JSON.stringify(F.FURN_STATS) === statsA, 'the same blast after the restart: the same pieces, piece for piece (its own counter, no Math.random)', `counts equal ${JSON.stringify(F.FURN_STATS) === statsA} · ${g.destr.debris.list.length} chunks' place / size / speed equal ${chunkSig() === sigA}`);
+  wallCharge(S, [8.2, 0.5, 19.0]);
+  Fm.verdict(chunkSig() === sigA, 'the same blast after the restart: the same pieces, piece for piece (its own counter, no Math.random)', `${g.destr.debris.list.length} chunks' place / size / speed equal ${chunkSig() === sigA}`);
   await quiet(() => g.restartEncounter()); run(S, 5);
-  { Math.random = seeded(1234); g.destr.furn.blast([8.2, 0.5, 19.0], 'wall', PLAYER_ID, 0.5); const next = Math.random(), want = seeded(1234)();
-    Fm.verdict(next === want, 'a blast draws nothing from Math.random', `the next Math.random after a blast is the seeded stream's first value: ${next === want}`); }
   { // the index is made at the first blast — by the level as AUTHORED, whatever rounds or that blast's own wall work have already taken
     await quiet(() => g.restartEncounter()); run(S, 5); const pristine = g.destr.furn.inventory(); const sig = (inv: any) => inv.list.map((G: any) => `${G.id}:${G.members.join(',')}`).join(' ');
     const panel = pristine.list.flatMap((G: any) => G.members).find((i: number) => g.destr.walls.breakableAt(i)?.kind === 'cover');
@@ -158,7 +156,7 @@ export async function furnLevels(): Promise<boolean> {
   for (const L of sample(LOUD_LEVELS as { file: string }[], 5)) {
     const S = await stage(L.file, { asStands: true }); const g = S.game; const flags = flagsOf(g), poses = posesOf(g), nav = navOf(g); const inv = g.destr.furn.inventory();
     let peak = 0, ok = true; const n = Math.min(8, inv.list.length);
-    for (let k = 0; k < n; k++) { const G = inv.list[Math.floor(k * inv.list.length / n)]; g.destr.furn.blast([G.a.x0 - 0.5, 0.5, (G.a.z0 + G.a.z1) / 2], 'wall', PLAYER_ID, 0.5); run(S, 45); peak = Math.max(peak, g.destr.debris.list.length); ok &&= finite(g) && g.destr.debris.list.length <= g.destr.debris.cap(); }
+    for (let k = 0; k < n; k++) { const G = inv.list[Math.floor(k * inv.list.length / n)]; wallCharge(S, [G.a.x0 - 0.5, 0.5, (G.a.z0 + G.a.z1) / 2]); run(S, 45); peak = Math.max(peak, g.destr.debris.list.length); ok &&= finite(g) && g.destr.debris.list.length <= g.destr.debris.cap(); }
     const st = { ...F.FURN_STATS }; run(S, 240); const moving = g.destr.debris.moving;
     await quiet(() => g.restartEncounter()); run(S, 5);
     const back = flagsOf(g) === flags && posesOf(g) === poses && navOf(g) === nav && g.props.props.length === g.props.all.length;
@@ -178,7 +176,7 @@ export async function furnSave(): Promise<boolean> {
       // (1) the wall charge on the office wall, then a blast beside the chair so a prop comes apart too; save; load into the same game
       const S = await stage(); const g = S.game; const desk = groupAt(g, OFFICE.desk); const chair = propAt(g, OFFICE.chair);
       const whole = authored(g), nav0 = navOf(g);
-      wallCharge(S, OFFICE.charge); run(S, 240); g.destr.furn.blast([chair.x - 0.25, 0.5, chair.z], 'wall', PLAYER_ID, 0.5); run(S, 300);
+      wallCharge(S, OFFICE.charge); run(S, 240); wallCharge(S, [chair.x - 0.25, 0.5, chair.z]); run(S, 300);
       const st = { ...F.FURN_STATS }; const flags = authored(g), nav = navOf(g), out = outProps(g), pieces = g.destr.debris.list.length;
       const deskDown = desk.members.filter((i: number) => !standing(g, i)).length;
       const file = JSON.parse(JSON.stringify(S.W.snapshot('furn')));
@@ -217,7 +215,7 @@ export async function furnSave(): Promise<boolean> {
        }
     // (7) furniture with no cover panel in it, broken with no wall touched: the furniture's slice ALONE in the file (no walls' slice to lean on for the re-bake or the row)
     { const S = await stage(); const g = S.game; const G = g.destr.furn.inventory().list.find((x: any) => x.members.every((i: number) => !g.destr.walls.breakableAt(i)) && x.members.some((i: number) => !(g.col.boxes[i].flags & BoxFlag.NoShadow)));
-      g.destr.furn.blast([G.a.x0 - 0.4, 0.5, (G.a.z0 + G.a.z1) / 2], 'wall', PLAYER_ID, 0.5); run(S, 300);
+      wallCharge(S, [G.a.x0 - 0.4, 0.5, (G.a.z0 + G.a.z1) / 2]); run(S, 300);
       const flags = authored(g), nav = navOf(g); const down = G.members.filter((i: number) => !standing(g, i)).length; const file = JSON.parse(JSON.stringify(S.W.snapshot('alone')));
       await quiet(() => S.W.restore(file)); run(S, 1); const rows = g.destr.walls.changes, last = rows[rows.length - 1];
        }

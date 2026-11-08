@@ -8,10 +8,8 @@ import { resolve } from 'node:path';
 import { faceHere } from '../blitz/face-build.ts';
 import { characterFiles } from '../blitz/start-pack.ts';
 import { freshStart, standStart } from '../mp/modstand.ts';
-import { drawEnd } from '../../src/host/drawend';
 import { DrawGame } from '../../src/host/drawgame';
 import { DrawNet } from '../../src/host/drawnet';
-import { shownAs } from '../../src/host/myname';
 import { NetDoor } from '../../src/net/door';
 import { FORESEE } from '../../src/net/foresee';
 import { NetClient } from '../../src/net/client';
@@ -31,7 +29,7 @@ const server = new NetServer({ now: () => now, step: c => S.step(c), word: () =>
 const joined = (c: NetClient, keep: { conn: Conn | null }): void => { keep.conn = { send: t => { later(() => c.message(t, now)); return 1; }, close: () => { /* */ } }; };
 
 // ---- the second player
-const B = await standStart(start), bWire = { conn: null as Conn | null }, b = new NetClient(t => later(() => server.message(bWire.conn!, t)), { game: 'g', build: '', key: 'b', name: 'Grace' }); joined(b, bWire);
+const B = await standStart(start), bWire = { conn: null as Conn | null }, b = new NetClient(t => later(() => server.message(bWire.conn!, t)), { game: 'g', build: '', key: 'b' }); joined(b, bWire);
 B.show(1);
 
 // ---- the first: the page's half
@@ -39,7 +37,7 @@ const wasm = faceHere(); if (!wasm) { console.error('net-check: no module of the
 const instance = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))), { env: { face_roll: () => { throw new Error('the game asked a die'); } } });
 const [mannequin, mannequinBin, cast, castLook] = characterFiles(ROOT);
 const game = new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 }), D = game.drawn, aWire = { conn: null as Conn | null };
-const door = new NetDoor('', 'g', 'a', 'Ada'); (door as unknown as { ws: unknown }).ws = { readyState: 1, send: (t: string) => later(() => server.message(aWire.conn!, t)), close: () => { /* */ } }; joined(door.client, aWire);
+const door = new NetDoor('', 'g', 'a', ''); (door as unknown as { ws: unknown }).ws = { readyState: 1, send: (t: string) => later(() => server.message(aWire.conn!, t)), close: () => { /* */ } }; joined(door.client, aWire);
 FORESEE.on = true;
 let deaf = 0; const net = new DrawNet(door, start, game, () => { deaf++; });
 net.start({ level: new Uint8Array(readFileSync(resolve(ROOT, 'levels', start.file))), mannequin, mannequinBin, cast, castLook });
@@ -90,8 +88,5 @@ line(spreads > 5 && spread < 0.02, 'two ticks in one of the page\'s are blended 
   line(!c.bad && deaf === 1 && level === 1 && !door.far && c.wordsOk > ok && seen - was < game.ticks - ticks, 'a page that slept catches up over ticks nobody sees, and is level again', `${game.ticks - ticks} ticks, ${seen - was} of them seen`); }
 // his hands off under a card
 { input.keys.add('KeyW'); run(30); off = true; run(20); const p = game.view().me, a = game.at(p)!; run(30); const z = game.at(p)!; line(far([a[0], a[2]], [z[0], z[2]]) < 0.02 && !c.bad, 'under a card his hands are off, and the game goes on', `${walked} ticks seen in all before it`); }
-// what a card calls the players
-{ const E = drawEnd(game, {} as never, c.names), own = [1, 2, 3].map(n => E.name(0, `Player ${n}`)), mate = E.name(0, 'Grey'), twin = shownAs('Player 1', ['Ada', 'ada']), posed = shownAs('Player 1', ['player 2', 'Grace']), one = shownAs('Player', ['Ada']);
-  line(own.join() === 'Ada,Grace,Player 3' && mate === 'Grey' && twin === 'Player 1' && posed === 'Player 1' && one === 'Ada', 'a card calls a player what he picked, over the game\'s own word for his seat; a name that tells nobody apart is not used', `${own.join(', ')} \u00b7 ${mate} \u00b7 ${twin} \u00b7 ${posed} \u00b7 ${one}`); }
 console.log(fails ? `=== net: ${fails} FAILED ===` : '=== net: ALL PASS ===');
 process.exit(fails ? 1 : 0);

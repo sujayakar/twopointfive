@@ -74,7 +74,7 @@ export function button(text: string, run: () => void, cls = '') { const b = el('
 // screen is up over the card (#menu is inert then) or the focus is somewhere else
 export function walkMenu(e: KeyboardEvent, typed: (t: EventTarget | null) => boolean): void {
   const d = e.code === 'KeyW' || e.code === 'ArrowUp' ? -1 : e.code === 'KeyS' || e.code === 'ArrowDown' ? 1 : 0; if (!d || e.ctrlKey || e.metaKey || e.altKey) return;
-  const m = document.getElementById('menu'); if (!m || !m.classList.contains('on') || !(['title', 'paused', 'ended'].some(c => m.classList.contains(c))) || m.hasAttribute('inert')) return;
+  const m = document.getElementById('menu'); if (!m || !m.classList.contains('on') || !(m.classList.contains('title') || m.classList.contains('paused')) || m.hasAttribute('inert')) return;
   const a = document.activeElement as HTMLElement | null; if (a && a !== document.body && !m.contains(a)) return;
   if (typed(a) && e.code.startsWith('Key')) return;   // (a letter typed into a field is the field's: the arrows still walk)
   const bs = [...m.querySelectorAll('.actions .btn:not(:disabled), .actions input[type="text"]:not([data-walk="off"]), .actions .saves .tile[tabindex="0"]')] as HTMLElement[]; if (!bs.length) return;   // (the strip of saves is one stop: its own arrows walk it)

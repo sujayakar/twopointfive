@@ -33,7 +33,7 @@ import { kitViewSetLevel, kitViewAddLevel, kitViewWayOfLink, kitViewSetQuery, ki
 import { KITANIM } from './game/kitanim';   // (written once, in ?kitview's own window on a quiet mission's set: where the rifle hangs — host/kitViewSet.ts kitViewSetDress)
 import { Input } from './game/input';
 import type { FollowCamera } from './game/camera';
-import { standGame, populateHost, addressBeforeGame, soloOfAddress } from './host/standup';
+import { standGame, populateHost, addressBeforeGame, lessonOfAddress, soloOfAddress } from './host/standup';
 import { pageSwitches, pageRows } from './host/profile';
 import { MARKING_TEXEL } from './scene/markings';
 import { LOOK, LOOK_LAB, lookLabOn, lookLevelFile, lookPageRows, placeOfQuery, setLookPlace, setSuitAs, lookKeptOf } from './scene/look';
@@ -123,8 +123,7 @@ import { checkQuiet } from './game/quiet';
 import { LESSON_STATS, checkLesson } from './game/lesson';
 import { RunBooks } from './ui/runBooks';
 import { watchMissionRows } from './ui/verdictRows';
-import { SCENARIOS, ALL_MISSIONS, LESSON_MISSIONS, pickSearch } from './scene/scenarioList';
-import { lessonGroup } from './scene/scenarios';
+import { SCENARIOS, ALL_MISSIONS, pickSearch } from './scene/scenarioList';
 import { DOORWAY } from './game/doors';
 import { HANDLE, HANDLE_STATS } from './game/handleside';
 import { initDifficulty, difficultyNow, difficultyFromStore, keptLevers } from './game/difficulty';
@@ -251,7 +250,7 @@ async function main() {
     setDesk(new Desk(F.exports, F.memory, (key, text) => { let store: Storage | null = null; try { store = window.localStorage; if (text) store.setItem(key, text); else store.removeItem(key); } catch { /* a sandboxed frame: nothing is kept */ }
       if (key === KIT_KEPT) kitLoad(store, location.search); else if (key.startsWith('twopointsix.quiet')) quietFogForget(); else difficultyFromStore(); }));
     machineBefore(q, q.get('levelFile') ?? 'office.json', C); desk().do(C); }
-  const lessonRow = LESSON_MISSIONS.find(e => e.level === q.get('levelFile')) ?? null; kitLessonPage(lessonRow && lessonGroup(lessonRow.group) ? lessonRow : null);   // …but a TRAINING level is played with the kit AS ISSUED (game/loadout.ts kitAsIssued): the page names its lesson's row (kit.ts kitLessonPage) and every staging on it puts the issue cards on the men — all but the one lesson he packs for (kit.ts ISSUE.picked), whose stagings wear the kept cards —, since a lesson's steps ask for the issue kit's own things (a card with no rifle left 'press 2' a step that could never pass; your own four counts stay what a Player is built with — the kit lesson throws more than the one of each the pouches rule issues). The table and the store stay this machine's: the lesson neither wears nor writes the kept cards, and the loadout screen opened from this page for ANOTHER mission shows and keeps them
+  const lessonRow = lessonOfAddress(q); kitLessonPage(lessonRow);   // …but a TRAINING level is played with the kit AS ISSUED (game/loadout.ts kitAsIssued): the page names its lesson's row (kit.ts kitLessonPage) and every staging on it puts the issue cards on the men — all but the one lesson he packs for (kit.ts ISSUE.picked), whose stagings wear the kept cards —, since a lesson's steps ask for the issue kit's own things (a card with no rifle left 'press 2' a step that could never pass; your own four counts stay what a Player is built with — the kit lesson throws more than the one of each the pouches rule issues). The table and the store stay this machine's: the lesson neither wears nor writes the kept cards, and the loadout screen opened from this page for ANOTHER mission shows and keeps them
   recipeTables();
   const canvas = document.getElementById('view') as HTMLCanvasElement;
   const loading = document.getElementById('loading')!;
@@ -260,7 +259,7 @@ async function main() {
   // re-renders over it, buttons live, when everything is ready. `tick()` yields to the event loop between the CPU-heavy phases so the card and its status line actually paint.
   // THE DIFFICULTY SWITCH (game/difficulty.ts) before the card paints its row: the level this machine keeps, then ?hard / ?hard=0 / ?difficulty=hard|standard for
   // the visit, then ?pressure / ?pressure=0 and ?digin — the two tables under the switch (game/pressure.ts, game/digin.ts) one at a time — over that
-  initDifficulty(q, lessonGroup(lessonRow?.group));   // (…and the LEVERS this machine keeps over the level — fog of war, enemy AI, enemy kit — but not on a Training lesson's page: it is taught on the level as it is)
+  initDifficulty(q, !!lessonRow);   // (…and the LEVERS this machine keeps over the level — fog of war, enemy AI, enemy kit — but not on a Training lesson's page: it is taught on the level as it is)
   watchMissionRows();   // each mission's card on the start page shows the ways it has been won (ui/verdictRows.ts: this machine's record at the difficulty picked) — here, before the boot card paints: the start page is live long before the renderer is
   { const n = parseInt(q.get('smokepool') || q.get('sparsesmoke') || '', 10); if (n >= 256) smokeGridConfig.cap = Math.min(8192, Math.ceil(n / 256) * 256); }   // ?smokepool=N: the smoke solver's pool in bricks (smoke/smokeGrid.ts; 4096 ships) — buffer sizes and shader constants, so it is read at boot. (?sparsesmoke[=N] = the flag the pool was tried behind: still read for its N, otherwise nothing)
   // (a mission's address BEFORE THE GAME IS MADE, as every host reads it: host/standup.ts addressBeforeGame. Its lines:)

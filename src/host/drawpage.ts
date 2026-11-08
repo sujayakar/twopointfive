@@ -36,8 +36,6 @@ import { Measure } from './measure';
 import { oneAirFlip, wispMotesFlip } from '../ui/sweepSnow';
 import { drawBench } from './drawbench';
 import { DrawHud } from './drawhud';
-import { drawEnd } from './drawend';
-import { nextLessonOf } from '../ui/verdictNext';
 import { DrawPlay } from './drawplay';
 import { DrawNet, netAsked } from './drawnet';
 import { COOP } from '../net/lobby';
@@ -47,8 +45,7 @@ import { netKeyed, netLeave } from '../net/door';
 import { NETPLAY, NET_JOIN } from '../net/address';
 import { keptName, keptNotes, tapeAddress, tapeAsked } from './tapepage';
 import { sessionId } from './session';
-import { TapeBar, type Played, type Sees } from '../tape/bar';
-import { TapeMap } from '../tape/map';
+import { TapeBar, type Played } from '../tape/bar';
 import { FreeCam } from '../tape/freecam';
 import { PLAYTAPE } from '../tape/address';
 import { RunKeep, keeps } from '../tape/run';
@@ -84,14 +81,12 @@ import { RunBooks } from '../ui/runBooks';
 import { watchMissionRows } from '../ui/verdictRows';
 import { KitPage, kitNone } from './kitpage';
 import { Desk, desk, setDesk, type DeskFace } from '../view/desk';
-import type { BriefView } from '../view/read';
 import { Commands } from '../draw/commands';
 import { pickRedirect } from '../scene/picks';
-import { nextPickOf } from '../ui/picks';
 import { keepPageBoot } from './keeppage';
 import { heldPage, ownPage, runPage } from './runpage';
 import { bootTextSize } from '../ui/textsize';
-import { Fog, Heard, Man, Section, Sky, View } from '../draw/sections';
+import { Heard, Man, Section, Sky, View } from '../draw/sections';
 import { AudioEngine, SFX_TABLE, SFX_WARM, warmSfx } from '../audio/audio';
 import { setlistOfQuery } from '../audio/setlist';
 import { MUSIC } from '../audio/pieces';
@@ -278,7 +273,7 @@ async function main(): Promise<void> {
   let time = 0, acc = 0, drift = 0, paused = false, settling = false, thaw = false, owed = false, ended = 0, onEnded = (): void => { /* no card is made yet */ };
   // ---- a tape being played: what a bar over it turns
   const firstAt = Math.max(0, Math.floor(Number(q.get('at')) || 0));
-  const played: Played & { to: number; readonly ends: string } = { paused: !!play, pace: 1, to: firstAt > 0 ? firstAt : -1, get seeking() { return this.to >= 0; }, get at() { return play?.at ?? 0; }, get total() { return play?.total ?? 0; }, get ends() { return play?.ends ?? ''; }, get parted() { return play?.parted?.tick ?? null; }, get lost() { return play ? (play.lost ?? game.lost)?.words.split('\n')[0] ?? null : null; }, get tries() { return play?.tries ?? []; }, seek(t: number): void { played.to = Math.max(0, Math.min(played.total, Math.round(t))); } };
+  const played: Played & { to: number; readonly ends: string } = { paused: !!play, pace: 1, to: firstAt > 0 ? firstAt : -1, get seeking() { return this.to >= 0; }, get at() { return play?.at ?? 0; }, get total() { return play?.total ?? 0; }, get ends() { return play?.ends ?? ''; }, get parted() { return play?.parted?.tick ?? null; }, get lost() { return play?.lost?.words.split('\n')[0] ?? null; }, get tries() { return play?.tries ?? []; }, seek(t: number): void { played.to = Math.max(0, Math.min(played.total, Math.round(t))); } };
   if (!play && !kitPicture) gameUp();
   let bar: TapeBar | null = null; const runView = (): { look: [number, number, number]; yaw: number; pitch: number; dist: number; fov: number } => { const n = play?.next; return n && play!.total ? { look: [n[HAND.target], n[HAND.target + 1], n[HAND.target + 2]], yaw: n[HAND.yaw], pitch: n[HAND.pitch], dist: n[HAND.distance], fov: n[HAND.fov] } : { look: [cam.target[0], cam.target[1], cam.target[2]], yaw: cam.yaw, pitch: cam.pitch, dist: cam.distance, fov: cam.fov }; };
   // whoever watches a run sees it his own way: the fog off his picture, a tube or none whatever the run's goggles were (null: as the run had it), eased by the page's clock
@@ -351,8 +346,8 @@ async function main(): Promise<void> {
     if (ticks === undefined) pageKeys(); else hud?.tabShow(false);
     if (!sought()) return;
     if (play && game.lost) { input.endFrame(); return; }
-    const wall = dt; dt *= played.pace; if (freeCam && played.paused) { posed(); pair.cut(); }
-    const still = ticks === undefined && !net && stopped(); if (still) dt = 0;   // (the world holds still under a card: what only the picture moves with it)
+    dt *= played.pace; if (freeCam && played.paused) { posed(); pair.cut(); }
+    const wall = dt, still = ticks === undefined && !net && stopped(); if (still) dt = 0;   // (the world holds still under a card: what only the picture moves with it)
     time += dt;
     const t0 = performance.now(), plan = ticks !== undefined ? { ticks, acc, drift } : still ? { ticks: 0, acc, drift } : planTicks(acc, dt, FIXEDSTEP, drift); acc = plan.acc; drift = plan.drift;
     const locks = D.u[view() + View.locks];
@@ -430,7 +425,7 @@ async function main(): Promise<void> {
   const kept0 = game.tape && keeps(q) ? new RunKeep({ sid, tape: () => game.tape ?? game.ended, on: () => !!game.tape, head: () => ({ level: { file: name, scenario: desk().brief(location.search).title || '' }, seed, ...(built ? { commit: built } : {}) }),
     over: () => !game.lost && (D.u[view() + View.run] & 2) !== 0, live: () => !title && !stopped() && !game.lost && game.view().live, began: () => (game.tape ?? game.ended)?.began ?? 0, say: words => readout.say(words), ended: () => { void cloud?.cloud.tapes?.round(); } }) : null;
   const inPanel = (): HTMLElement | null => { const a = document.activeElement; return (a instanceof HTMLInputElement || a instanceof HTMLSelectElement) && a.closest('#panel') ? a : null; };
-  const pause = new PauseCard({ title: ((b: BriefView) => b.title ? `${b.title}${b.team ? ` · ${b.team}` : ''}` : name.replace(/\.json$/, ''))(desk().brief(location.search)), saves: runSaves, end: () => drawEnd(game, books, net?.door.client.names), lesson: () => nextLessonOf(game.run().mission), pick: () => { const p = nextPickOf(); return p && p.scenario === (game.run().mission !== '') ? p : null; }, may: () => !game.lost && !title && !play && !brief?.up && !measure.bench?.active, restart: () => { if (net) net.door.pass('You can\u2019t restart a co-op game from here.'); else { game.commands.restart('restarted'); owed = true; } }, replay: () => kept0?.whole ? () => kept0.watch() : null, quit: () => { reopenMissionsAfterLoad(); location.assign(location.pathname + desk().leave(net ? netLeave(location.search) : location.search) + location.hash); }, 
+  const pause = new PauseCard({ title: desk().brief(location.search).title || name.replace(/\.json$/, ''), saves: runSaves, verdict: () => game.verdict(), may: () => !game.lost && !title && !play && !brief?.up && !measure.bench?.active, restart: () => { if (net) net.door.pass('You can\u2019t restart a co-op game from here.'); else { game.commands.restart('restarted'); owed = true; } }, replay: () => kept0?.whole ? () => kept0.watch() : null, quit: () => { reopenMissionsAfterLoad(); location.assign(location.pathname + desk().leave(net ? netLeave(location.search) : location.search) + location.hash); }, 
     // (Escape: Tab's card goes, or a field of the debugger's is let go, and that is the press's whole job)
     away: () => { const field = inPanel(); if (hud?.tabUp) hud.tabShow(false); else if (field && !pause.up) { field.dataset.esc = '1'; field.blur(); delete field.dataset.esc; } else return false; input.pressed.delete('Escape'); return true; },
     save: () => { if (optionsOpen() || missionsBusy() || !input.saveKey?.()) return false; if (net) { net.door.pass(NO_SAVE); return false; } game.commands.save(); return asked = game.saves().hand; },
@@ -438,9 +433,7 @@ async function main(): Promise<void> {
   onEnded = () => { if (!kit && !play && !ownPage(q)) pause.end(); };   // (a run's page has no end card: the next is its own)
   const cloud = kitPicture || play ? null : drawCloud(q, { sid, store: !unkept && keeps(q) ? keptStore() : null, gpu, engine, quality, game, measure, mission: desk().brief(location.search).title || (q.get('levelFile') ?? ''), offBooks: ownPage(q) || !!net, live: () => !title && !stopped() && !document.hidden && game.view().live, still: () => stopped() || measure.sweep.active });
   if (play && freeCam) { const named = q.get(PLAYTAPE) ?? '', mine = keptName(named), notes = mine ? await keptNotes(named) : [];
-    const map = new TapeMap({ floor: () => game.floor(), now: () => game.map(), view: () => freeCam.view(), notes, to: (x, z) => freeCam.to([x, freeCam.view().look[1], z]), at: () => played.at });
-    const sees: Sees = { get fog() { return watched.fog; }, get tube() { return watched.tube; }, get fogged() { return D.u[D.at[Section.fog] + Fog.on] !== 0; }, get runs() { return D.f[view() + View.night] > 0.5; }, get lit() { return watched.tube ?? this.runs; }, set: seesAs };
-    bar = new TapeBar({ played, sees, map, cam: freeCam, canvas, title: desk().brief(location.search).title || name.replace(/\.json$/, ''), notes, keep: mine ? async all => { const ok = await keptStore().patch(named, { notes: all }); if (ok) void cloudNotes(q, keptStore()).catch(() => { /* on the next round */ }); return ok; } : null,
+    bar = new TapeBar({ played, cam: freeCam, canvas, title: desk().brief(location.search).title || name.replace(/\.json$/, ''), notes, keep: mine ? async all => { const ok = await keptStore().patch(named, { notes: all }); if (ok) void cloudNotes(q, keptStore()).catch(() => { /* on the next round */ }); return ok; } : null,
       back: () => backToGame(named, location.pathname), begun: () => { audio.start(); input.focusGame(); } }); }
   const bencher = drawBench({ idle: capMs => cloud ? cloud.cloud.filesIdle(capMs) : Promise.resolve(true), gpu, engine, smoke, quality, input, game, settings, measure, say: words => readout.say(words) }); bencher.go(); if (refused) readout.say(`benchmark not now: ${refused}`);
   // ---- the title stays up over its floor, live; a mission's run begins when the player starts it
@@ -449,7 +442,7 @@ async function main(): Promise<void> {
   if (title) { drawTitle(); if (missionsReopenAsked() && !startPage()) openStartPage(); }
   else if (brief) startWaits(brief, { drawn: () => told.frames, measuring: () => quality.calibrating, settling: on => { settling = on; }, settled: () => { boot.mark('settled'); }, run: () => { input.keys.clear(); input.buttons = 0; input.endFrame(); thaw = true; audio.start(); input.focusGame(); last = performance.now(); } });
   else card.off();
-  loading.style.display = 'none'; debuggerPanel({ game, engine, smoke, cam, quality, input, chars: ch, marks: decals, over: hud, card: e => !pause.up && !!hud?.overlay.cardUp && hud.overlay.cardKey(e), hud: () => ({ fps: told.fps, union: engine.timer.unionMs(rendered) }) });
+  loading.style.display = 'none'; debuggerPanel({ game, engine, smoke, cam, quality, input, chars: ch, marks: decals, over: hud, net, card: e => !pause.up && !!hud?.overlay.cardUp && hud.overlay.cardKey(e), hud: () => ({ fps: told.fps, union: engine.timer.unionMs(rendered) }) });
   // (for a tool: the page's parts, and frames stepped by hand)
   const steps = (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last'): void => { if (title || brief?.up) { title = false; reel.poke(); brief?.off(); card.off(); } for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } };
   Object.assign(window, { __draw: { game, hud, played: play ? played : null, seesAs, get watched() { return watched; }, books, kit, measure, reel, pics, engine, world, audio, pause, cam, input, quality, told, fog, weather, smoke, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: steps } });

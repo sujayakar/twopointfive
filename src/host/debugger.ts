@@ -1,16 +1,18 @@
 // THE DEBUGGER, on a page that draws a game it does not hold (ui/panel.ts; backslash): every number of the rules a person may turn, found by its name and turned while the game plays
-// (rust/game_run knobs.rs), then the renderer's pages (ui/graphicspanel.ts) and the look's, with its takes (ui/lookpanel.ts).
+// (rust/game_run knobs.rs), then the renderer's pages (ui/graphicspanel.ts) and the look's, with its takes (ui/lookpanel.ts); on a networked game's page, its connection (ui/netrows.ts).
 import type { Engine } from '../engine';
 import type { GltfCharacter } from '../anim/gltf';
 import type { FollowCamera } from '../game/camera';
 import type { Input } from '../game/input';
 import type { Decals } from '../render/decals';
 import type { SmokeSystem } from '../smoke/smoke';
+import type { NetPageState } from '../net/door';
 import type { Quality } from '../ui/quality';
 import { buildGraphics, graphicsSystems } from '../ui/graphicspanel';
 import { HOURS_OF } from '../draw/sky';
 import { Section, Sky } from '../draw/sections';
 import { buildLookPanel, type SkyTurns } from '../ui/lookpanel';
+import { netRows } from '../ui/netrows';
 import { Panel } from '../ui/panel';
 import type { DrawGame } from './drawgame';
 import type { DrawHud } from './drawhud';
@@ -58,7 +60,7 @@ function skyOf(game: DrawGame): SkyTurns {
   };
 }
 
-export interface DebuggerDeps { game: DrawGame; engine: Engine; smoke: SmokeSystem; cam: FollowCamera; quality: Quality; input: Input; chars: GltfCharacter; marks: Decals; over: DrawHud | null; /** a key that is a card's over the game, before the panel's or the game's */ card(e: KeyboardEvent): boolean; hud(): { fps: number; union: number } }
+export interface DebuggerDeps { game: DrawGame; engine: Engine; smoke: SmokeSystem; cam: FollowCamera; quality: Quality; input: Input; chars: GltfCharacter; marks: Decals; over: DrawHud | null; /** a networked game's page: its connection, made worse on purpose (ui/netrows.ts) */ net: { state(): NetPageState } | null; /** a key that is a card's over the game, before the panel's or the game's */ card(e: KeyboardEvent): boolean; hud(): { fps: number; union: number } }
 export function debuggerPanel(d: DebuggerDeps): Panel {
   const panel = new Panel();
   panel.system('Rules', { icon: '⚑', short: 'Rules', title: 'every knob of the rules, by its name' });
@@ -69,6 +71,7 @@ export function debuggerPanel(d: DebuggerDeps): Panel {
   graphicsSystems(panel);
   buildGraphics(panel, d.engine, d.smoke, d.cam, d.quality, { chars: d.chars, marks: d.marks }, d.hud);
   buildLookPanel(panel, d.engine, () => d.hud().fps, false, skyOf(d.game));
+  if (d.net) netRows(panel, d.net);
   d.input.keyVeto = e => d.card(e) || panel.onKey(e);
   addEventListener('keydown', e => { if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || gameCode(e.code) !== 'Backquote' || typedInto(e.target)) return; e.preventDefault(); panel.toggle(); }, true);
   (window as unknown as { __panel: Panel }).__panel = panel;

@@ -6,7 +6,7 @@
 //   try all the same, and restarting before anything was done is free. `s` = the tries started since the last win: the ticks on the end card.
 //   A WAY WON (doors · walls · dark · quiet) is kept for good: the fewest tries a win by it ever took, whether one of those wins lost nobody, its best time.
 //   Nothing here resets by itself; `clearVerdicts` is the only way back to nothing.
-import type { Approach } from '../view/runend';
+import type { Approach } from '../game/verdict';
 
 const KEY = 'twopointsix.verdicts';
 export const APPROACHES: readonly Approach[] = ['doors', 'walls', 'dark', 'quiet'];

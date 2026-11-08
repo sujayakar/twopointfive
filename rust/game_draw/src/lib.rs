@@ -76,7 +76,6 @@ pub mod events;
 pub mod fires;
 pub mod fog;
 pub mod lead;
-pub mod watched;
 pub mod lights;
 pub mod marks;
 pub mod men;
@@ -186,7 +185,6 @@ pub struct Drawn {
     pub lead: lead::Lead,
     /// the picture is a tube's, whatever the run's was
     tube: Option<bool>,
-    watched: Vec<(game::scene_boxes::Box, bool)>,
 }
 impl Drawn {
     /// A TICK HAS RUN: the sections of `want`, made again from the game as it stands
@@ -204,7 +202,7 @@ impl Drawn {
         if want & want::fog != 0 { self.fog.clear(); fog::fill(g, &mut self.fog, self.men.bared); }
         if want & want::view != 0 { self.view.clear(); view::fill(g, self.stood, self.desired, &mut self.view); }
         if want & want::sky != 0 { self.sky.clear(); sky::fill(g, &mut self.sky); }
-        if want & want::boxes != 0 { let night = self.tube.unwrap_or(g.pl[game::seats::host_man(g)].nv_amount > 0.5); self.boxes.take(g, night, over || again && self.had & want::boxes != 0, &self.watched); }
+        if want & want::boxes != 0 { let night = self.tube.unwrap_or(g.pl[game::seats::host_man(g)].nv_amount > 0.5); self.boxes.take(g, night, over || again && self.had & want::boxes != 0); }
         if want & want::lights != 0 { self.lights.take(g, again && self.had & want::lights != 0); }
         if want & want::men != 0 { self.men.take(g, over || again && self.had & want::men != 0); }
         if want & want::rims != 0 { rims::fill(g, &mut self.rims); }
@@ -231,10 +229,6 @@ impl Drawn {
         }
         if self.want & want::decals != 0 { self.marks.frame(g, &self.boxes); }
     }
-    /// does this picture show what no list of the game's holds (watched.rs)
-    pub fn watches(&self) -> bool { self.men.bared || self.tube == Some(true) }
-    /// …that, of the game as it stands: before a take
-    pub fn watch(&mut self, g: &Game) { self.watched = if self.watches() { watched::boxes(g, self.men.bared && game::fogofwar::fog_of_war_active(g), self.tube == Some(true)) } else { Vec::new() }; }
     /// A VIEWER'S OWN PICTURE of a run: with the fog off it, or through a tube the run's was not (nothing said: as the run had it)
     pub fn view_as(&mut self, bared: bool, tube: Option<bool>) { self.tube = tube; self.boxes.bare(bared); self.men.bared = bared; self.lights.bared = bared; }
     /// a host's tick came and the game was not stepped (a networked host with nothing confirmed): what moves stands where the last tick left it, and is blended from there

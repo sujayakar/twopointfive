@@ -265,12 +265,12 @@ export async function debriefDom() {
   let copied = ''; const prevNav = G.navigator;
   try { Object.defineProperty(G, 'navigator', { value: { clipboard: { writeText: async (s: string) => { copied = s; } } }, configurable: true, writable: true }); } catch { /* bun's navigator may be read-only: the button then falls back to showing the line */ }
   try {
-    const { renderDebrief, pinnedRow } = await import(`${ROOT}/src/ui/debrief.ts`), { runEndOf } = await import(`${ROOT}/src/host/gameend.ts`);
+    const { renderDebrief, pinnedRow } = await import(`${ROOT}/src/ui/debrief.ts`);
     if (!G.__debriefDoneWorld) await debriefRun();   // (the card off a run with rows on it: alone, this probe would hold an empty card)
     const W = G.__debriefDoneWorld; if (!W) throw new Error('the scripted run left no world'); W.step(DT);   // (the record is asked of the Rust game: a tick stands it again, its slot given up to the probes between)
     const game = W.game;
     const host = new El('DIV'); const btnA = new El('BUTTON'); btnA.textContent = 'Again';
-    const ui = renderDebrief(host as any, runEndOf(game), [btnA as any]);
+    const ui = renderDebrief(host as any, game, [btnA as any]);
     const root: El = host.children[0];
     if (!root || !root.cls.has('db')) fails.push('no .db root appended to the host');
     const by = (c: string) => root.all(e => e.cls.has(c));
@@ -286,12 +286,12 @@ export async function debriefDom() {
     { const cv = root.all(e => e.tagName === 'CANVAS')[0]; if (!cv || cv.width < 100 || cv.height < 60) fails.push(`canvas ${cv?.width}×${cv?.height}`); else notes.push(`canvas ${cv.width}×${cv.height}`); }
     { const btns = by('btn'); const copy = btns.find(b => b.cls.has('db-copy')); if (!root.all(e => e === (btnA as any)).length) fails.push("the host's button was not placed"); if (!copy) fails.push('no copy-summary button'); else { try { copy.onclick?.(); await new Promise(r => setTimeout(r, 5)); } catch (e) { fails.push(`copy button threw: ${e}`); } const V = game.verdict?.result, wantCopy = V && (await import(`${ROOT}/src/ui/verdictCard.ts`)).squadVerdict(V) ? (await import(`${ROOT}/src/game/verdict.ts`)).verdictLine(V, game.verdict.kept) : D.summary; if (ui.copyText !== wantCopy) fails.push('copyText is not the summary line'); if (copied && copied !== wantCopy) fails.push(`clipboard got "${copied}"`); notes.push(`copy → ${copied ? 'clipboard' : 'fallback line'}: "${ui.copyText.slice(0, 60)}…"`); } }
     // and the 'run so far' shape off a fresh world (empty timeline row, sofar title)
-    { const W2 = await standUp(); W2.step(DT); const host2 = new El('DIV'); renderDebrief(host2 as any, runEndOf(W2.game)); const root2: El = host2.children[0]; const empty = root2.all(e => e.cls.has('empty')); const t1 = root2.all(e => e.cls.has('db-t1'))[0]?.textContent; if (empty.length !== 1 || t1 !== 'run so far') fails.push(`fresh world: ${empty.length} empty-row(s), title '${t1}'`); notes.push(`fresh: '${t1}', ${root2.all(e => e.cls.has('pin')).length} pins`); }
+    { const W2 = await standUp(); W2.step(DT); const host2 = new El('DIV'); renderDebrief(host2 as any, W2.game); const root2: El = host2.children[0]; const empty = root2.all(e => e.cls.has('empty')); const t1 = root2.all(e => e.cls.has('db-t1'))[0]?.textContent; if (empty.length !== 1 || t1 !== 'run so far') fails.push(`fresh world: ${empty.length} empty-row(s), title '${t1}'`); notes.push(`fresh: '${t1}', ${root2.all(e => e.cls.has('pin')).length} pins`); }
     // and a row that leans loud draws no rating, no score, no docked line, no badges, and its numbers untoned (ui/debrief.ts over Debrief.scored — debrief-loud has the rule)
     {
       { const row4 = LOUD_BREAK ? 'tut-quiet.json' : 'tut-road.json', W4 = await standRow(row4, `?levelFile=${row4}&quiet`), cells = (r: El) => r.all(e => e.cls.has('st') && /^(seen|alarms|floor up|bodies found|kills|doors kicked|called in|checkpoint loads|civilians saw you|…and told them)/.test(e.textContent)), toned = (r: El) => cells(r).filter(e => e.cls.has('good') || e.cls.has('bad') || e.cls.has('warn')).length;
         { const st = W4.game.mission.stats, n = W4.game.chronicle.counts; st.bodies = 1; st.kills = 2; n.kicked = 1; n.devices = 1; n.loads = 1; n.civSeen = 1; n.hits = 1; }   // (a run that would tone every one of them, and one cell that keeps its red: a hit taken)
-        const h4 = new El('DIV'); const ui4 = renderDebrief(h4 as any, runEndOf(W4.game)); const r4: El = h4.children[0];
+        const h4 = new El('DIV'); const ui4 = renderDebrief(h4 as any, W4.game); const r4: El = h4.children[0];
         const drawn = ['db-rating', 'db-score', 'db-t3', 'chip'].filter(c => r4.all(e => e.cls.has(c)).length), t2 = r4.all(e => e.cls.has('db-t2'))[0]?.textContent ?? '';
         const hits = (r: El) => r.all(e => e.cls.has('st') && /^hits taken/.test(e.textContent) && e.cls.has('bad')).length;
         if (!r4.cls.has('db-loud') || drawn.length || toned(r4) || cells(r4).length !== 10 || hits(r4) !== 1 || r4.all(e => e.cls.has('db-badges')).length || BANDS.some(w => t2.includes(w) || ui4.copyText.includes(w))) fails.push(`a loud row's card: class ${r4.cls.has('db-loud')}, still drawn [${drawn.join(' ')}], ${toned(r4)} of ${cells(r4).length} sneak cells toned, head "${t2}", copy "${ui4.copyText.slice(0, 40)}"`);

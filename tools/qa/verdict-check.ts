@@ -114,10 +114,10 @@ export async function verdictCheck(): Promise<boolean> {
     // 4b. which kinds the squad's card is for: the plain night's record has no kind, and one made on the page for the Rust game's has no such word at all
     { const { squadVerdict } = await import(`${ROOT}/src/ui/verdictCard.ts`), said = [undefined, null, 'quiet', 'roomclear', 'rescue', 'nightbreach'].map(kind => squadVerdict({ kind } as any));
       line(said.join() === 'false,false,false,true,true,true', `no kind, null and quiet are the stealth game's card, the squad's three kinds the squad's (${said.join(' ')})`);
-      const { withDom, El } = await import('./scenario-picker-probes.ts'), { renderDebrief } = await import(`${ROOT}/src/ui/debrief.ts`), { runEndOf } = await import(`${ROOT}/src/host/gameend.ts`);
+      const { withDom, El } = await import('./scenario-picker-probes.ts'), { renderDebrief } = await import(`${ROOT}/src/ui/debrief.ts`);
       const N = await stage('night'), R = { kind: undefined, won: true, word: 'OUT', why: '', secs: 123, approach: 'quiet', void: false, clean: true, men: [], lost: 0, of: 1, foes: { down: 0, of: 3, fell: [] }, hostages: null, start: [0, 0] };
       Object.defineProperty(N.V, 'result', { configurable: true, get: () => R });
-      await withDom('', async () => { const host = new El('DIV'); renderDebrief(host as any, runEndOf(N.g)); const root: any = host.children[0], n = (c: string) => root.all((e: any) => e.cls.has(c)).length;
+      await withDom('', async () => { const host = new El('DIV'); renderDebrief(host as any, N.g); const root: any = host.children[0], n = (c: string) => root.all((e: any) => e.cls.has(c)).length;
         line(!root.cls.has('vd-squad') && n('vd-man') === 0 && n('db-rating') === 1 && n('st') >= 14 && n('db-timeline') === 1, `the solo night's card, its record with no kind: the rating, ${n('st')} numbers and the timeline stand (squad rows ${n('vd-man')})`); }); }
 
     // 5. off = the same game
@@ -132,10 +132,10 @@ export async function verdictCheck(): Promise<boolean> {
       VERDICT.on = !brk; }
 
     // 6. the card
-    { const { withDom, El } = await import('./scenario-picker-probes.ts'), { renderDebrief } = await import(`${ROOT}/src/ui/debrief.ts`), { runEndOf } = await import(`${ROOT}/src/host/gameend.ts`), { verdictPanels } = await import(`${ROOT}/src/ui/verdictCard.ts`);
+    { const { withDom, El } = await import('./scenario-picker-probes.ts'), { renderDebrief } = await import(`${ROOT}/src/ui/debrief.ts`), { verdictPanels } = await import(`${ROOT}/src/ui/verdictCard.ts`);
       const A = await stage(); await A.nudge(); await A.step(20); await A.found(); await A.drop([A.g.nightBreach.ops[0]], 'guard'); await A.step(20); await A.drop(A.foes()); await A.step(4);
       const R = A.V.result; A.V.kept = { streak: 3, fresh: true, gold: true, ways: { doors: { first: false, clean: false }, quiet: { first: true, clean: true } } };
-      await withDom('', async () => { const host = new El('DIV'); const ui = renderDebrief(host as any, runEndOf(A.g)); const root: any = host.children[0], has = (c: string) => root.all((e: any) => e.cls.has(c));
+      await withDom('', async () => { const host = new El('DIV'); const ui = renderDebrief(host as any, A.g); const root: any = host.children[0], has = (c: string) => root.all((e: any) => e.cls.has(c));
         line(root.cls.has('db') && root.cls.has('vd-squad') && root.children[0].cls.has('vd') && has('vd-word')[0]?.textContent === 'CLEAR' && /^\d:\d\d$/.test(has('vd-time')[0]?.textContent ?? ''), `the squad's card leads with the word and the clock: ${has('vd-word')[0]?.textContent} ${has('vd-time')[0]?.textContent}`);
         const pips = has('vpip');
         line(pips.length === 4 && pips.filter((p: any) => p.cls.has('won')).length === 2 && pips.filter((p: any) => p.cls.has('now')).length === 1 && pips.find((p: any) => p.cls.has('now')).cls.has('w-doors') && has('vpips')[0].cls.has('gold'), 'four pips: two won, the one this run was won by marked, two won = the gold frame');
@@ -144,13 +144,13 @@ export async function verdictCheck(): Promise<boolean> {
         line(rows.length === R.men.length + 1 && rows.filter((r: any) => r.cls.has('vd-count')).length === 1 && has('fell').length === 1 && has('vfell').length === 1 && has('drop').length === R.men[0].drops.length, `a row a man and one for the defenders (${rows.length}); the lost man has his cross on his row and on the map`);
         line(ui.copyText === verdictLine(R, A.V.kept) && has('mark').filter((e: any) => e.tagName === 'I').length === 3 && has('st').length >= 14, `the copy line is the verdict's: '${ui.copyText}'`);
         verdictPanels.push((slot: any) => { const d = new El('DIV'); d.className = 'recap'; slot.appendChild(d); }); verdictPanels.push(() => { throw new Error('x'); });
-        const host2 = new El('DIV'); renderDebrief(host2 as any, runEndOf(A.g)); const r2: any = host2.children[0];
+        const host2 = new El('DIV'); renderDebrief(host2 as any, A.g); const r2: any = host2.children[0];
         line(r2.all((e: any) => e.cls.has('vd-slot')).length === 1 && r2.all((e: any) => e.cls.has('recap')).length === 1, 'another panel can draw in the card\'s slot; one that throws is left out');
         verdictPanels.length = 0;
-        A.V.kept = null; const host3 = new El('DIV'); renderDebrief(host3 as any, runEndOf(A.g)); const r3: any = host3.children[0];
+        A.V.kept = null; const host3 = new El('DIV'); renderDebrief(host3 as any, A.g); const r3: any = host3.children[0];
         line(r3.all((e: any) => e.cls.has('try')).length === 0 && r3.all((e: any) => e.cls.has('vpip')).length === 4 && r3.all((e: any) => e.cls.has('vd-slot')).length === 0, 'nothing kept (a cheat, no storage): no ticks, the pips dim, no empty slot'); });
       const O = await stage('clear', false); await O.nudge(); await O.step(5); await O.drop(O.foes()); await O.step(4);
-      await withDom('', async () => { const host = new El('DIV'); renderDebrief(host as any, runEndOf(O.g)); const root: any = host.children[0];
+      await withDom('', async () => { const host = new El('DIV'); renderDebrief(host as any, O.g); const root: any = host.children[0];
          });
       VERDICT.on = !brk; }
 
