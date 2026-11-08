@@ -2384,7 +2384,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("smokebreak.thread.speed", offset_of!(Knobs, smokebreak.thread.speed), false),
     ("smokebreak.thread.push", offset_of!(Knobs, smokebreak.thread.push), false),
     ("smokebreak.thread.jitter", offset_of!(Knobs, smokebreak.thread.jitter), false),
-    ("smokebreak.thread_gone", offset_of!(Knobs, smokebreak.thread_gone), false),
     ("smokebreak.breath.radius", offset_of!(Knobs, smokebreak.breath.radius), false),
     ("smokebreak.breath.cells", offset_of!(Knobs, smokebreak.breath.cells), false),
     ("smokebreak.breath.density", offset_of!(Knobs, smokebreak.breath.density), false),
@@ -2395,13 +2394,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("smokebreak.breath.attack", offset_of!(Knobs, smokebreak.breath.attack), false),
     ("smokebreak.breath.jitter", offset_of!(Knobs, smokebreak.breath.jitter), false),
     ("smokebreak.breath.down", offset_of!(Knobs, smokebreak.breath.down), false),
-    ("smokebreak.puffs.records", offset_of!(Knobs, smokebreak.puffs.records), false),
-    ("smokebreak.puffs.count", offset_of!(Knobs, smokebreak.puffs.count), false),
-    ("smokebreak.puffs.speed", offset_of!(Knobs, smokebreak.puffs.speed), false),
-    ("smokebreak.puffs.spread", offset_of!(Knobs, smokebreak.puffs.spread), false),
-    ("smokebreak.puffs.life", offset_of!(Knobs, smokebreak.puffs.life), false),
-    ("smokebreak.puffs.size", offset_of!(Knobs, smokebreak.puffs.size), false),
-    ("smokebreak.puffs.opacity", offset_of!(Knobs, smokebreak.puffs.opacity), false),
     ("smokebreak.color.0", offset_of!(Knobs, smokebreak.color), false),
     ("smokebreak.color.1", offset_of!(Knobs, smokebreak.color) + 8, false),
     ("smokebreak.color.2", offset_of!(Knobs, smokebreak.color) + 16, false),
@@ -5651,7 +5643,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.smokebreak.thread.speed;
     let _: &f64 = &k.smokebreak.thread.push;
     let _: &f64 = &k.smokebreak.thread.jitter;
-    let _: &f64 = &k.smokebreak.thread_gone;
     let _: &f64 = &k.smokebreak.breath.radius;
     let _: &f64 = &k.smokebreak.breath.cells;
     let _: &f64 = &k.smokebreak.breath.density;
@@ -5662,13 +5653,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.smokebreak.breath.attack;
     let _: &f64 = &k.smokebreak.breath.jitter;
     let _: &f64 = &k.smokebreak.breath.down;
-    let _: &f64 = &k.smokebreak.puffs.records;
-    let _: &f64 = &k.smokebreak.puffs.count;
-    let _: &f64 = &k.smokebreak.puffs.speed;
-    let _: &f64 = &k.smokebreak.puffs.spread;
-    let _: &f64 = &k.smokebreak.puffs.life;
-    let _: &f64 = &k.smokebreak.puffs.size;
-    let _: &f64 = &k.smokebreak.puffs.opacity;
     let _: &[f64; 3] = &k.smokebreak.color;
     let _: &f64 = &k.smokebreak.mouth_ahead;
     let _: &f64 = &k.smokebreak.mouth_down;

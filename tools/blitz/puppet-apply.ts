@@ -1603,6 +1603,9 @@ export function puppetRows(C: Ctx) {
   function f_out_events_OutParticlesSetHeat(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(212, o);   // srcs
   }
+  function f_out_events_OutSmokeSystemLikeEmit(o: any, m: number) {
+    { let c = o.e; if (!c || typeof c !== 'object') c = o.e = C.made("crate::smoke_types::SmokeEmitter"); f_smoke_types_SmokeEmitter(c, m + 0); }   // e
+  }
   function f_cmd_PlayerCmd(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(213, o);   // view
   }
@@ -4044,6 +4047,9 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.dMax; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.dMax = v !== 0 as any; else o.dMax = v; } }   // d_max
     { let c = o.bound; if (!c || typeof c !== 'object') c = o.bound = C.made("crate::smoke_types::WindGpuSourceBound"); f_smoke_types_WindGpuSourceBound(c, m + 9); }   // bound
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.heat !== v) o.heat = v; } else if (o.heat !== undefined) o.heat = undefined; }   // heat
+  }
+  function f_smoke_types_SmokeEmitter(o: any, m: number) {
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.fire !== v) o.fire = v; } else if (o.fire !== undefined && o.fire !== null) o.fire = null; }   // fire
   }
   function f_workthings_WorkThing(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_101[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
