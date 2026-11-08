@@ -83,7 +83,7 @@ did not.
   sidelight (under 0.7 m wide) or a high outside strip (under 0.8 m tall): laminated, it webs and never opens. So choose
   the foot on purpose: glass to the floor is a second door for the price of a round, a sill window is a slit that opens
   slowly. **seen** "it seems like there are two types of glass breaking ... what's the situation?": every outside
-  window was toughened and every partition float, whatever its height. **check** `probes.ts glassreal` (line 9 counts
+  window was toughened and every partition float, whatever its height. **check** no check today (`rust/game_start/tests`) (line 9 counts
   every level's panes by kind against a table: a new level with glass adds its row; `--verbose` prints them).
 - **Every room they can shut has another way in.** The maintainer: "maybe we just need to design levels so there's always
   another route in?" A door hung to open OUT (`swing`), a walk-through window, or issued wall charges. **seen** barricaded
@@ -105,7 +105,7 @@ did not.
   `bun run tools/qa/marksight-check.ts <name>` on both stands (export runs it too; a new level writes its
   count file with `--write` once on each stand, and a move that makes a man see less carries the file with a `#` line
   saying why).
-- **A door a held room lists opens into that room**, and can be walked from both faces. **check** `probes.ts oneway-men`,
+- **A door a held room lists opens into that room**, and can be walked from both faces. **check** no check today (`rust/game_start/tests`),
   `oneway-deal`.
 - **Every door face has floor for a stack**: a man on each jamb, 2 m of wall clear, nothing on the marks. **seen** a carton on
   a stack place; a table on the wall refused the order "no room on that door". **check**
@@ -120,7 +120,7 @@ did not.
 - **A corridor players walk runs up the screen, or is wide.** The camera looks from the south, so a wall hides about two metres of floor behind it: a corridor 2.4 m wide running along the
   screen hides whoever is in it. **seen** the sneak lab's first dark corridor, Sam under the top of its south wall. **By eye.**
 - **No door close under a tall wall to its south** (the camera looks from the south: the door is never drawn, never under
-  the cursor). Hang it 1.9 m or more back. **check** `probes.ts doormenu-drawn doormenu-open`.
+  the cursor). Hang it 1.9 m or more back. **check** no check today (`rust/game_start/tests`).
 - **A painted band stops at the jambs.** A door's `at` is the opening's low end, not its middle. **seen** "weird box in
   front of door in duo stealth mission": a dado ran across the doorway; two more levels had the same. **check** `doorway`.
 - **Flat decals are ordered, and start at the floor.** Crossing decals lie 0.7 mm apart by the exporter's order; a
@@ -137,7 +137,7 @@ did not.
   busted on records office". **check** `roof`; `bun run tools/qa/ownroofs-check.ts`; `rain-reach.ts --map <name>.json`.
 - **A wall a charge may hole has floor behind it and marks 2.7 m off it.** **seen** "can't walk through hole i blew in wall
   with 40mm"; "weird that it doesn't let me use a wall charge here". **check** `bun run tools/qa/wallfurn-check.ts`,
-  `probes.ts blasthole`.
+  no check today (`rust/game_start/tests`).
 
 - **No door has an always-safe spot to command it from.** Plan mode's view stays with the player (6.5 m to either
   side of him, 4.5 m up the screen and 6 m down; `?plannear=0` is the view as it was), so he orders an entry from
@@ -193,7 +193,7 @@ like that."
   own picture. Rust on a rack is drawn into the `metal` stuff itself, so a clean rack is another stuff's word
   (`steel`, `enamel`, `brushed`), not a kept level. **seen** an office's half-metre wall numerals drew chipped,
   because every mark was old paint whatever the place; its racks drew rusty because they were said as `metal`.
-  **check** `probes.ts kept`.
+  **check** `bun run tools/qa/checks.ts kept`.
 - **Furniture is additions only**, the tail of the generator's lists, group `lived.<room>`, behind `LIVED.on`.
 - **Clear of doors, stacks, marks and lines**: 1.1 m off a door's line and out of its sweep; a 0.9 m lane between a room's
   doors; nothing on or 0.45 m beside an authored point; never across a mark's aim line; never a new wall; nothing in the
@@ -308,7 +308,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   It works the lights that hang overhead and the lamps (not screens, signs or lamps outside), split by the level's own
   lighting groups, so a big room on two circuits wants two groups. A room you ship dark can be struck on by the player
   and is left dark by its defenders. **seen** "we should have light switches for rooms!"; two rooms of 176 keep a
-  circuit no plate was found for. **check** `bun run tools/qa/probes.ts lightswitch` (every level file: each plate on
+  circuit no plate was found for. **check** no check today (`rust/game_start/tests`) (every level file: each plate on
   plain wall with floor in a hand's reach). Never seen on a GPU.
 - **`leak` · Bare metal against the wall of a dark room shows the lamp behind that wall.** The picture keeps bounced
   light in probes a metre apart. A traced reflection shades what it hits with the probes round a point a metre along
@@ -351,7 +351,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   hostage room no longer ends it. So the start wants room for the team and the hostages to stand, and a way back from
   the hostage room that a hostage can walk. First numbers, and whether the way out stays the way in is the maintainer's
   open call. **seen** "the hostage rescue missions should have you safely extract the hostage or fully clear the map."
-  **check** `bun run tools/qa/probes.ts rescueend` (the mission's `out` line walks them there).
+  **check** no check today (`rust/game_start/tests`) (the mission's `out` line walks them there).
 - **`response` · Who comes when it goes loud is this level's own answer.** A response team comes only where the file
   carries `scenarios.response` (`docs/level-format.md`): who, by which ways, how many and how soon as ranges, the
   radio's words, and a `why` that says in a sentence who would plausibly come here. A block with a `raid` key answers a
@@ -435,15 +435,15 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
 - **Every word on the row is true to the file**, from every way in: title, `place` (6..64), `blurb` (the premise, never
   the answer; 20..140 on a squad row, 160 elsewhere), `lean`, `defenders`, `ways` (one name per start), `squads` when the
   file names squads, a group of eight drawn rows at most (a row cut from the list, `offList`, is not counted), `untuned: true` until somebody has played it. **check** `row`;
-  `probes.ts missions-list missions-screen levers-rules picker-list`.
+  `cargo test -p game_run --test desk` (in `rust/`).
 - **Its music**: two pieces in `src/audio/setlist.ts`. The maintainer: "we should curate the music for each level, not do
-  it randomly". **check** `music`; `probes.ts music`.
+  it randomly". **check** `music`.
 - **Its picture**: `public/assets/menu/<row>.jpg` and `stills.json`, from a recipe in `tools/menu-shots/recipes.cjs` (a
   frame of real play; no two in a group share a moment, an hour and a camera) or `tools/menu-art.ts`. **check** `picture`
   (that it is there; whether it looks like play is **by eye**).
 - **Its look**: built on the look's kit (or the plain kit with `tools/levels/gwotSkin.ts` over it, box for box, other paint), with its row in
   `src/scene/look.ts LOOK_DOORS`; one accent and one family of ground marks no other level has. **check**
-  `look`; `probes.ts look`.
+  `look`; no check today (`rust/game_start/tests`).
 - **Hard, the short list, the par clock** where the level has them: `HARD_AT` / `SQUAD_HARD`, `src/scene/picks.ts`,
   `scenarios.par` set from 24 measured seeds.
 

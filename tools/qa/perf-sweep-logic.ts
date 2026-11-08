@@ -194,9 +194,9 @@ sw.start({ rounds: 1, only: ['heldAdaptive'] }); check(S.heldAdaptive === true, 
       'a page on a software adapter opens on the GPU-written count (?smokeindirect=0 gives it the whole pool), and that way is as it was: the whole pool from directAt of it stepping');
     // …and that the page and the solver really ask these two (no GPU here to run them): read in the source, as the pacer's word is (pace-check.ts)
     const src = (f: string) => readFileSync(new URL(`../../src/${f}`, import.meta.url), 'utf8');
-    check(/smoke\.sparse\.indirect = pageIndirect\(q\.get\('smokeindirect'\), gpu\.adapterFallback === true\);/.test(src('main.ts')) && /const indirect = byGpuCount\(this\.sparse, this\.stats\.stepped, cap\);/.test(src('smoke/smoke.ts'))
+    check(/smoke\.sparse\.indirect = pageIndirect\(q\.get\('smokeindirect'\), gpu\.adapterFallback === true\);/.test(src('host/drawpage.ts')) && /const indirect = byGpuCount\(this\.sparse, this\.stats\.stepped, cap\);/.test(src('smoke/smoke.ts'))
       && /else if \(indirect\) pass\.dispatchWorkgroupsIndirect\(this\.argsBuf, op\.all \? 0 : 16\); else pass\.dispatchWorkgroups\(cap\);/.test(src('smoke/smoke.ts')) && /indirect: true, directAt: 0\.5/.test(src('smoke/smoke.ts'))
-      && /'smokeindirect'/.test(src('ui/replaykey.ts')) && /\|smokeindirect\|/.test(src('ui/benchrun.ts')),
+      && /'smokeindirect'/.test(src('tape/address.ts')) && /\|smokeindirect\|/.test(src('ui/benchrun.ts')),
       "the page sets the solver's dispatch by that rule as it opens, the solver's encode asks the one predicate and dispatches the whole pool otherwise, the solver's own default is the count as it was, and the word is a visit's (not kept in a link) that a benchmark carries");
   }
   { const p = mk(); p.wispMotes = hook; p.start({ ...opts, live: true });

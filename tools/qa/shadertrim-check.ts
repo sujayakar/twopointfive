@@ -10,7 +10,7 @@
 //   bun run tools/qa/shadertrim-check.ts             exit 0 = every check passed, 1 = one failed
 //   SHADERTRIM_BREAK=1 bun run tools/qa/shadertrim-check.ts     a declaration something still mentions is taken out of one cut text: must FAIL
 export {};
-const { ROOT, fake } = await import('./headless.ts');
+import { ROOT, fake } from './here.ts';
 const { Engine } = await import(`${ROOT}/src/engine.ts`);
 const { SHADER_TRIM, SHADER_FOLD, trimWgsl, wgslDecls, trimTotals } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof import('../../src/gpu/wgslTrim');
 SHADER_FOLD.on = false;   // (the trim's own rule, a declaration kept as written: the fold of constant switches changes a function's text and has its own check, shaderfold-check.ts)

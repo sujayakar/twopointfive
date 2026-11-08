@@ -1,29 +1,12 @@
-// THE CAST (public/assets/chars/cast.gltf, tools/chars/README.md; src/anim/gltf.ts loadGltfCast · src/game/cast.ts · the part mask in CharInst) — headless:
+// THE CAST (public/assets/chars/cast.gltf, tools/chars/README.md; src/anim/gltf.ts loadGltfCast):
 //   cast-loader   the loader against a SYNTHETIC cast cut out of the mannequin (parts by region, the joint list shuffled, the slots dealt round): every vertex and triangle
 //                 arrives, joints are re-mapped by NAME (the skinned rest pose is the mannequin's to the bit), matSel = slot + 16 × part, variants → masks; and files off
 //                 contract are REFUSED (an unknown slot, a joint not on the skeleton, a variant wearing a part that is not there, 33 parts)
 //   cast-file     the SHIPPED file: loads; operators, defenders and a civilian exist; every variant under the triangle budget and the union under its own; every part worn by
 //                 somebody; feet on the floor, inside the mannequin's reach; every slot name legal (by loading); the mesh-shadow tree builds — its size printed
 //   cast-fit      the round-cone proxy fit per VARIANT (render/sdfrig.ts fitRig(ch, mask)): finite, 1–30 cm, deterministic; an operator's trunk is not a defender's
-//   cast-game     the Game stood on the cast: every man drawn wears a variant of HIS side (Sam the first operator), the mask is in his instance block and a fit under his id;
-//                 the SIMULATION is the mannequin's — a seeded 20 s digests identically on either mesh (looks only); and on the mannequin every mask is 0
-//   cast-look     THE LOOK (src/scene/look.ts LOOK.on → the second file cast-gwot.gltf, the second colour tables): cast-file's and cast-fit's
-//                 checks hold on the second file too (both run on BOTH files); the two files deal the same variant names to the same sides in the same order; OFF = the
-//                 masks cast.gltf has always had (frozen below); under the look every man wears a variant of HIS side and every defender the local suit;
-//                 the colour tables switch and switch back (what is in the hands and on the heads — rifles, pistols, goggles — is not this probe's) — and THE
-//                 SIMULATION DOES NOT KNOW: a seeded 20 s digests identically with the look on, with it off, and on the mannequin
-//                 + THE SNEAKING SUIT (LOOK.suit; game/cast.ts sneakSuit): on the plain night and on a quiet mission as two, Sam (and the partner) drawn without helmet,
-//                 back kit and mesh goggles, in black rows; on a room clear the issue dress; nothing with the suit's switch or the look off
-//   cast-beam     STATURE's laser (game/stature.ts drawnBeam through combat.ts laserBoxes — the cast is drawn a few per cent taller or shorter per man, about his feet):
-//                 a teammate's weapon laser laid twenty-four ways leaves his DRAWN muzzle and still ends on the point the simulation's ray ends on, bead and all; the
-//                 men asked are not all at 1 (the gap between the two muzzles is printed); a man at 1 gets the very ray back. Asked of the boxes laserBoxes hands
-//                 out (which carry no drawn copy of their own: Box.dc / dh unset), against a drawn muzzle worked out here (his feet + scale × the rest), never of
-//                 drawnBeam's own answer; a way with no beam must be one the game holds back (a goggled man's bore on one of his own). NOT asked: an enemy's beam
-//                 cut by the fog of war (laserBoxes' other branch). Also rides 'lasers'. Its red path: CASTBEAM_BREAK=1 bun run tools/qa/probes.ts cast-beam
-//                 must FAIL (the check is handed beamBoxes' line along the simulation's own ray: a beam from the muzzle the simulation has)
-//   bun run tools/qa/probes.ts cast
-import { ROOT, standUp, loadCastOf } from './headless.ts';
-import { spawnUnit, despawnUnit } from '../../src/game/guards.ts';
+//   bun run tools/qa/cast-probes.ts
+import { characterSet, main, ROOT } from './here.ts';
 import { writeFileSync, mkdtempSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -32,8 +15,6 @@ const { loadGltfCharacter, loadGltfCast, SLOT_NAMES, CAST_PART_STEP, CAST_MAX_PA
 const { fitRig, fitRigCast, rigTable, RIG_SLOTS, RIG_PAD_MAX } = await import(`${ROOT}/src/render/sdfrig.ts`);
 const { meshBvhFor } = await import(`${ROOT}/src/render/meshShadows.ts`);
 const { MESH_MAX_CHARS } = await import(`${ROOT}/src/render/meshbvh.ts`);
-const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-const { castVariantOf, castParts, sneakSuit, officeDress } = await import(`${ROOT}/src/game/cast.ts`);
 
 let fails = 0;
 const verdict = (ok: boolean, label: string, detail = '') => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); return ok; };
@@ -42,8 +23,6 @@ const MANNEQUIN = 'file://' + ROOT + '/public/assets/ual/AnimationLibrary_Godot_
 const { LOOK, setLookPlace, lookDress, lookOffice, placeOfQuery } = await import(`${ROOT}/src/scene/look.ts`);
 const CAST_PATH = ROOT + '/public/assets/chars/' + castFileName();   // (the file this run stands on: cast-gwot.gltf under TPS_LOOK=1)
 const pathOf = (look: boolean) => ROOT + '/public/assets/chars/' + (look ? CAST_FILE_LOOK : CAST_FILE);
-/** the masks of cast.gltf's variants as they have always been (the look OFF must draw exactly these) */
-const PLAIN_MASKS: Record<string, number> = { civilian_1: 805308416, civilian_2: 306186261, defender_1: 168298537, defender_2: 353372306, defender_3: 169871629, defender_4: 210241553, defender_5: 310904906, operator_1: 30217, operator_2: 46601, operator_3: 79370, operator_4: 144909, operator_5: 275978, responder_1: 3393196042, responder_2: 1245712393 };
 /** the budgets tools/chars builds to (README there): one man, and everything in the file */
 const MAX_VARIANT_TRIS = 14000, MAX_UNION_TRIS = 45000;
 
@@ -104,7 +83,7 @@ export async function castFile() { await castFileOf(false); await castFileOf(tru
 async function castFileOf(look: boolean) {
   console.log(`\n=== cast-file: the shipped public/assets/chars/${look ? CAST_FILE_LOOK : CAST_FILE}${look ? ' (the look)' : ''} ===`);
   if (!verdict(existsSync(pathOf(look)), 'the file exists')) return;
-  const ch = await loadCastOf(look); const cast = ch.cast, m = ch.mesh;
+  const ch = await characterSet(look); const cast = ch.cast, m = ch.mesh;
   const union = m.indices.length / 3;
   console.log(`  ${cast.parts.length} parts, ${m.vertexCount} vertices, ${union} triangles in all`);
   console.log('  ' + cast.parts.map((p: string, i: number) => `${p} ${cast.partTris[i]}`).join(' · '));
@@ -138,7 +117,7 @@ export async function castFit() { await castFitOf(false); await castFitOf(true);
 async function castFitOf(look: boolean) {
   console.log(`\n=== cast-fit: each variant's round-cone proxy fit — ${look ? CAST_FILE_LOOK : CAST_FILE} ===`);
   if (!verdict(existsSync(pathOf(look)), 'the file exists')) return;
-  const ch = await loadCastOf(look); const cast = ch.cast;
+  const ch = await characterSet(look); const cast = ch.cast;
   const base = await loadGltfCharacter(MANNEQUIN); const mf = fitRig(base);
   const row = (name: string, f: any) => `  ${name.padEnd(14)} ` + f.slots.map((s: any) => `${s.name.replace(/upper|fore/, (m: any) => m[0])} ${(s.r0 * 100).toFixed(0)}/${(s.r1 * 100).toFixed(0)}`).join(' ');
   console.log(row('mannequin', mf));
@@ -158,228 +137,4 @@ async function castFitOf(look: boolean) {
 
 const seeded = (s: number) => () => { s |= 0; s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 
-export async function castGame() {
-  console.log('\n=== cast-game: the Game stood on the cast ===');
-  if (!verdict(existsSync(CAST_PATH), 'the file exists')) return;
-  const sysRandom = Math.random;
-  const runOn = async (cast: boolean) => {
-    Math.random = seeded(20261008); const W: any = await standUp({ cast, ch: cast ? undefined : await loadGltfCharacter(MANNEQUIN) }); const hashes: string[] = [];
-    for (let f = 0; f < 1200; f++) { W.input.keys.clear?.(); if (f > 60 && f < 600) W.input.keys.add('KeyW'); if (f > 300 && f < 700) W.input.keys.add('KeyD'); W.step(1 / 60); if (f % 120 === 119) hashes.push(hashDigest(digestGame(W.game, true))); }
-    return { W, hashes };
-  };
-  try {
-    const A = await runOn(true), B = await runOn(false);
-    const g = A.W.game, cast = g.ch.cast;
-    const men: any[] = [g.player.char, ...g.guards.map((x: any) => x.char), ...g.civilians.map((x: any) => x.char)];
-    const drawn = men.filter(c => c.parts !== 0);
-    verdict(!!cast && drawn.length >= 1 + g.guards.length, `every man drawn wears parts (${drawn.length} of ${men.length}; civilians off the floor are never drawn)`);
-    { const sideOf = (c: any) => castVariantOf(g, c)?.side; const wrong: string[] = [];
-      if (castVariantOf(g, g.player.char) !== castSide(cast, 'operator')[0]) wrong.push('Sam');
-      for (const c of drawn) if (c.parts !== castParts(g, c) || (c.parts & ~castVariantOf(g, c).mask)) wrong.push(`id ${c.id} draws parts outside his variant`);
-      for (const gd of g.guards) { const want = gd.team === 'operative' ? 'operator' : gd.team === 'civilian' ? 'civilian' : 'defender'; if (sideOf(gd.char) !== want) wrong.push(`${gd.callsign} (${gd.team}) wears ${sideOf(gd.char)}`); }
-      const hasCiv = cast.variants.some((v: any) => v.side === 'civilian');
-      for (const gd of g.civilians) if (hasCiv && gd.char.parts !== 0 && sideOf(gd.char) !== 'civilian') wrong.push(`${gd.callsign} wears ${sideOf(gd.char)}`);
-      verdict(wrong.length === 0, 'Sam is the first operator; staff and hostiles wear defender variants, civilians civilian ones', wrong.join(' · '));
-      const kinds = new Set(g.guards.map((x: any) => x.char.parts)); console.log(`  the shift: ${g.guards.map((x: any) => `${x.callsign} ${castVariantOf(g, x.char)?.name}`).join(' · ')}`);
-      verdict(kinds.size >= Math.min(g.guards.length, castSide(cast, 'defender').length), `the shift's ${g.guards.length} men wear ${kinds.size} different variants`); }
-    { const at = g.guards[0].char.pos; const mk = (name: string, dx: number) => spawnUnit(g, { team: 'guard', pos: [at[0] + dx, 0, at[2]], yaw: 0, weapon: 'aks74u', name });
-      const hasR = cast.variants.some((v: any) => v.side === 'responder'); const q = mk('QRF-T1', 0.9); q.trained = true; const u = mk('UNIT-T2', -0.9);
-      const vq = castVariantOf(g, q.char), vu = castVariantOf(g, u.char);
-      verdict(vq?.side === (hasR ? 'responder' : 'defender') && vu?.side === 'defender', `a trained staff unit (the response team) wears the responder outfit, an untrained staff unit a defender's (${vq?.name} · ${vu?.name})`);
-      despawnUnit(g, q); despawnUnit(g, u); }
-    { const u: Uint32Array = g.chars.instU32; const list = [g.player.char, ...g.guards.map((x: any) => x.char)]; let ok = true; for (let i = 0; i < list.length; i++) if (u[i * 24 + 22] !== list[i].parts) ok = false;
-       }
-    { const missing = drawn.filter(c => !g.rigFits?.has(c.id & 0xff)); 
-      const sam = g.rigFits.get(g.player.char.id & 0xff), want = fitRig(g.ch, g.player.char.parts); }
-    { // the four-man squad (the loud demo's team): Sam + four operatives = five different operator variants; their defenders wear defender variants
-      const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`); const was = NIGHTBREACH.squad;
-      Math.random = seeded(7); const W: any = await standUp({ cast: true }); const g4 = W.game;
-      try { NIGHTBREACH.squad = 4; const why = g4.nightBreach.start(); for (let f = 0; f < 30; f++) W.step(1 / 60);
-        const ops = g4.guards.filter((x: any) => x.team === 'operative'), others = g4.guards.filter((x: any) => x.team !== 'operative');
-        const names = [castVariantOf(g4, g4.player.char)?.name, ...ops.map((x: any) => castVariantOf(g4, x.char)?.name)];
-        console.log(`  the four: Sam ${names[0]} · ${ops.map((x: any, i: number) => `${x.callsign} ${names[i + 1]}`).join(' · ')}   against ${others.map((x: any) => castVariantOf(g4, x.char)?.name.replace('defender_', 'd')).join(' ')}`);
-        const nOps = castSide(g4.ch.cast, 'operator').length;
-        verdict(!why && ops.length === 4 && names.every(n => n?.startsWith('operator')) && new Set(names).size === Math.min(5, nOps), `the squad of four + Sam wear ${Math.min(5, nOps)} different operator variants`, why ?? names.join(' '));
-        verdict(others.length > 0 && others.every((x: any) => castVariantOf(g4, x.char)?.side === 'defender'), `their ${others.length} defenders all wear defender variants (${new Set(others.map((x: any) => x.char.parts)).size} different)`);
-      } finally { NIGHTBREACH.squad = was; try { g4.nightBreach.stop(); } catch { /* the probe is over */ } } }
-    { // the goggles are the game's: Sam (always in the rig's box goggles) draws neither mesh pair; a teammate the game gives no goggles keeps the mesh pair UP, whichever his variant lists
-      const bit = (n: string) => { const i = cast.parts.indexOf(n); return i < 0 ? 0 : (1 << i) >>> 0; }; const up = bit('nvg_up'), down = bit('nvg_down');
-      const sam = g.player.char.parts; const ops = castSide(cast, 'operator');
-      verdict((up | down) !== 0 && (sam & (up | down)) === 0, 'Sam draws no mesh goggles (the rig\'s lit box goggles are his)');
-      const fake: any = { ch: g.ch, id: 250 }; const res = ops.map((v: any) => { const c = { ...fake, id: 250 + ops.indexOf(v) }; return { v, c }; });
-      const { castWear } = await import(`${ROOT}/src/game/cast.ts`); let ok = true;
-      for (const { v, c } of res) { castWear(c, v.name); const m = castParts(g, c); if (!(m & up) || (m & down) || ((m & ~(up | down)) >>> 0) !== ((v.mask & ~(up | down)) >>> 0)) ok = false; }
-      verdict(ok, `an operator the game gives no goggles wears the mesh pair flipped up, never down (all ${ops.length} variants)`); }
-    verdict(A.hashes.length === 10 && A.hashes.every((h, i) => h === B.hashes[i]), 'the simulation is the mannequin\'s: a seeded 20 s digests identically on either mesh, every 2 s', A.hashes.map((h, i) => h === B.hashes[i] ? '=' : `≠@${(i + 1) * 2}s`).join(''));
-    { const gm = B.W.game; const anyParts = [gm.player.char, ...gm.guards.map((x: any) => x.char)].some((c: any) => c.parts !== 0); const u: Uint32Array = gm.chars.instU32; let z = true; for (let i = 0; i < 16; i++) if (u[i * 24 + 22] !== 0) z = false;
-      verdict(!gm.ch.cast && !anyParts && z && gm.rigFits === null, 'on the mannequin nobody has a mask, the instance word stays 0 and there are no per-man fits (the build as it was)'); }
-  } finally { Math.random = sysRandom; }
-}
-
-/** STATURE's laser: the line the draw hands the renderer runs from the DRAWN muzzle to the simulation's own end point (see the head). */
-export async function castBeam() {
-  console.log('\n=== cast-beam: a weapon laser leaves the drawn muzzle and ends where the simulation\'s ray ends ===');
-  if (!verdict(existsSync(CAST_PATH), 'the file exists')) return;
-  const BREAK = process.env.CASTBEAM_BREAK === '1', sysRandom = Math.random;
-  const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`); const CBM: any = await import(`${ROOT}/src/game/combat.ts`);
-  const ST: any = await import(`${ROOT}/src/game/stature.ts`); const IRL: any = await import(`${ROOT}/src/game/irlaser.ts`); const { v3, quat } = await import(`${ROOT}/src/math/vec.ts`);
-  const was = NIGHTBREACH.squad; let g: any = null;
-  try {
-    Math.random = seeded(7); const W: any = await standUp({ cast: true }); g = W.game;
-    NIGHTBREACH.squad = 4; const why = g.nightBreach.start(); for (let f = 0; f < 30; f++) W.step(1 / 60);
-    const ops: any[] = g.guards.filter((x: any) => x.team === 'operative'), scales = ops.map(x => ST.statureOf(x.char));
-    const mm = (a: number[], b: number[]) => v3.dist(a, b) * 1000, at = v3.mad;
-    let asked = 0, blank = 0, lost = 0, copies = 0, beads = 0, nearMax = 0, farMax = 0, beadMax = 0, gapMax = 0, lenMax = 0; const bad: string[] = [];
-    for (const gd of ops) {
-      const c = gd.char, s = ST.statureOf(c), ch = c.bones.chest ?? [c.pos[0], 1.2, c.pos[2]], keep = { m: c.muzzle, d: c.gunDir };
-      try {
-        for (let w = 0; w < 24; w++) {
-          const yaw = (w % 8) * Math.PI / 4 + 0.2, pitch = [-0.15, 0, 0.1][w >> 3], dir = [Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)];
-          c.muzzle = at(ch, [dir[0], 0, dir[2]], 0.5); c.gunDir = dir;
-          const ir = IRL.laserBand(g, gd) === 'ir', R = CBM.laserReach(g, c, gd, ir), out: any[] = [];
-          IRL.irViewAs(true, () => BREAK && R ? CBM.beamBoxes(g, R.from, R.dir, R.L, out, R.dot, ir, true) : CBM.laserBoxes(g, gd, out));
-          if (out.length === 0) {   // no beam: only where the game holds one back (nothing to meet inside 5 cm, or a goggled man's bore on one of his own)
-            if (!R || (ir && R.on && IRL.paintsOwn(g, gd, R.on))) blank++; else if (++lost && bad.length < 4) bad.push(`${gd.callsign} (×${s}) way ${w}: no beam, and nothing holds one back`);
-            continue; }
-          asked++; const line = out[0], z = quat.rotate(line.rot, [0, 0, 1]), near = at(line.c, z, -line.h[2]), far = at(line.c, z, line.h[2]);
-          if (out.some((b: any) => b.dc || b.dh)) copies++;   // (a beam is not bolted to him: scaled about his feet its far end would leave the simulation's point)
-          const muzzle = at(c.pos, v3.sub(R.from, c.pos), s), end = at(R.from, R.dir, R.L), eN = mm(near, muzzle), eF = mm(far, end);
-          nearMax = Math.max(nearMax, eN); farMax = Math.max(farMax, eF); gapMax = Math.max(gapMax, mm(muzzle, R.from)); lenMax = Math.max(lenMax, Math.abs(line.h[2] * 2 - R.L) * 1000);
-          let eB = 0; if (R.dot) { beads++; eB = out[1] ? Math.abs(mm(out[1].c, end) - 6) + mm(out[1].c, at(far, z, -0.006)) : 99; beadMax = Math.max(beadMax, eB); }
-          if ((eN > 0.5 || eF > 0.5 || eB > 0.5) && bad.length < 4) bad.push(`${gd.callsign} (×${s}) way ${w}: near end ${eN.toFixed(1)} mm off his drawn muzzle, far end ${eF.toFixed(1)} mm off the ray's end${R.dot ? `, bead ${eB.toFixed(1)} mm` : ''}`);
-        }
-      } finally { c.muzzle = keep.m; c.gunDir = keep.d; }
-    }
-    verdict(copies === 0, 'no beam box carries a drawn copy of its own (Box.dc / dh): the line is handed to the renderer where it was asked', `${copies} beams with one`);
-    { const sam = g.player.char, from = [1, 1.3, 2], dir = [0, 0, 1], B = ST.drawnBeam(sam, from, dir, 7);
-      verdict(ST.statureOf(sam) === 1 && B.from === from && B.dir === dir && B.k === 1, 'a man drawn as the skeleton has him (Sam) gets the very ray back'); }
-  } finally { NIGHTBREACH.squad = was; try { g?.nightBreach.stop(); } catch { /* the probe is over */ } Math.random = sysRandom; }
-}
-
-/** THE LOOK: the second file and everything LOOK.on switches — and the simulation knowing none of it (see the head). */
-export async function castLook() {
-  console.log('\n=== cast-look: the look switch (scene/look.ts LOOK.on) — a second file, second colours, the same simulation ===');
-  if (!verdict(existsSync(pathOf(false)) && existsSync(pathOf(true)), 'both files exist')) return;
-  const was = LOOK.on, sysRandom = Math.random;
-  try {
-    verdict(castFileName(false) === CAST_FILE && castFileName(true) === CAST_FILE_LOOK && CAST_FILE !== CAST_FILE_LOOK, `the switch names the file: off ${castFileName(false)}, on ${castFileName(true)}`);
-    const P = await loadCastOf(false), L = await loadCastOf(true);
-    { const off = P.cast.variants.filter((v: any) => (PLAIN_MASKS[v.name] >>> 0) !== (v.mask >>> 0)).map((v: any) => v.name);
-      verdict(P.cast.variants.length === Object.keys(PLAIN_MASKS).length && off.length === 0, `OFF = today's masks: all ${P.cast.variants.length} variants of ${CAST_FILE} wear the parts they always did`, off.join(' ')); }
-    { const a = P.cast.variants.map((v: any) => `${v.name}:${v.side}`).join(' '), b = L.cast.variants.map((v: any) => `${v.name}:${v.side}`).join(' ');
-      verdict(a === b, 'both files list the same variants on the same sides in the same order (a man is dealt the same NAME under either look)', a === b ? '' : `${a}\n    ${b}`); }
-    { const same: string[] = [], diff: string[] = []; for (const v of L.cast.variants) { const o = P.cast.variants.find((x: any) => x.name === v.name); (o && o.parts.join() === v.parts.join() ? same : diff).push(v.name); }
-      console.log(`  re-dressed by the look: ${diff.join(' ')}`); for (const n of diff) console.log(`    ${n.padEnd(12)} ${L.cast.variants.find((v: any) => v.name === n).parts.join(' ')}`);
-      verdict(diff.length > 0 && diff.every(n => n.startsWith('defender')) && same.length + diff.length === L.cast.variants.length, `the look re-dresses the defenders only by part list (${diff.length}); operators, responders and civilians keep their part names (${same.length})`);
-      const ds = castSide(L.cast, 'defender'); const bare = ds.filter((v: any) => !v.parts.includes('local_suit')).map((v: any) => v.name);
-      verdict(bare.length === 0, `under the look every defender variant wears the long shirt and loose trousers (local_suit) — ${ds.length} of them`, bare.join(' '));
-      const heads = ds.map((v: any) => v.parts.find((p: string) => /^(pakol|turban|kufi|scarf)$/.test(p)) ?? '-'); const rigs = ds.filter((v: any) => v.parts.includes('chest_rig')).length;
-      verdict(new Set(heads).size >= 3 && rigs >= 1 && rigs < ds.length, `their heads differ (${heads.join(' ')}) and a chest rig is on some, not all (${rigs} of ${ds.length})`); }
-    { // the goggle contract the game keys on survives (anim/gltf.ts castGoggles reads these two names)
-      verdict(L.cast.parts.includes('nvg_up') === P.cast.parts.includes('nvg_up') && L.cast.parts.includes('nvg_down') === P.cast.parts.includes('nvg_down') && L.cast.parts.length <= CAST_MAX_PARTS, `the look's file carries the same goggle parts by name as today's and fits the mask (${L.cast.parts.length} parts of ${CAST_MAX_PARTS})`); }
-    { // THE GOGGLE MOUNT (tools/chars/README.md stage 6): the brow plate on the operators' helmet, its outer face clear — where two-tube goggles are to hang
-      const MOUNT = [0, 1.775, 0.1419], N = [0, 0.4695, 0.8829]; const res = (ch: any) => { const m = ch.mesh, hp = ch.cast.parts.indexOf('helmet'); let on = 0, proud = 0;
-        for (let v = 0; v < m.vertexCount; v++) { if (m.part[v] !== hp) continue; const d = [m.positions[v * 3] - MOUNT[0], m.positions[v * 3 + 1] - MOUNT[1], m.positions[v * 3 + 2] - MOUNT[2]]; const along = d[0] * N[0] + d[1] * N[1] + d[2] * N[2]; const lat = Math.hypot(d[0] - N[0] * along, d[1] - N[1] * along, d[2] - N[2] * along); if (lat < 0.036 && Math.abs(along) < 0.002) on++; if (lat < 0.03 && along > 0.002) proud++; }
-        return { on, proud }; };
-      const a = res(L), b = res(P);
-      verdict(a.on >= 4 && a.proud === 0 && b.on >= 4 && b.proud === 0, `the helmet's brow plate is where the README says (its outer face 0.206 up, 0.137 ahead of the head joint, facing 28° above straight ahead) with nothing of the helmet in front of it, in both files (${a.on} face vertices, ${a.proud} proud)`); }
-    { // the colour tables
-      const CM: any = await import(`${ROOT}/src/render/charMaterials.ts`);
-      LOOK.on = false; const v0 = CM.charMatsVersion(), dOff = CM.charMatsOf('defender'), oOff = CM.charMatsOf('operator'), rOff = CM.charMatsOf('responder');
-      LOOK.on = true; const v1 = CM.charMatsVersion(), dOn = CM.charMatsOf('defender'), oOn = CM.charMatsOf('operator'), rOn = CM.charMatsOf('responder');
-      LOOK.on = false; const dBack = CM.charMatsOf('defender');
-      verdict(dOff === CM.CHAR_MATS.defender && oOff === CM.CHAR_MATS.operator && dBack === dOff, 'look off: the colour tables are today\'s own objects (CHAR_MATS), and they come back when it is switched off again');
-      verdict(dOn !== dOff && oOn !== oOff && rOn === rOff && v0 !== v1, 'look on: operators and defenders read a second table (CHAR_MATS_LOOK), responders the one they had; the tables\' version moves so the cached palettes re-pack');
-      const lost: string[] = []; for (const side of ['operator', 'defender'] as const) for (const slot of SLOT_NAMES as string[]) if (!(slot in CM.CHAR_MATS_LOOK[side]) && (slot in CM.CHAR_MATS[side])) lost.push(`${side}.${slot}`);
-      verdict(lost.length === 0, 'the second tables carry a row for every slot the first ones do', lost.join(' ')); }
-    // the game under the look, the look off, the mannequin: one seeded script, three digests
-    const runOn = async (which: 'look' | 'plain' | 'mannequin') => {
-      LOOK.on = which === 'look'; Math.random = (() => { let s = 20261010; return () => { s |= 0; s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })();
-      const W: any = await standUp({ ch: which === 'mannequin' ? await loadGltfCharacter(MANNEQUIN) : await loadCastOf(which === 'look') }); const hashes: string[] = [];
-      for (let f = 0; f < 1200; f++) { W.input.keys.clear?.(); if (f > 60 && f < 600) W.input.keys.add('KeyW'); if (f > 300 && f < 700) W.input.keys.add('KeyD'); if (f === 720 || f === 760 || f === 800) W.input.clicked?.add?.(0); W.step(1 / 60); if (f % 120 === 119) hashes.push(hashDigest(digestGame(W.game, true))); }
-      return { W, hashes };
-    };
-    const A = await runOn('look'), B = await runOn('plain'), C = await runOn('mannequin');
-    console.log(`  look on   ${A.hashes.join(' ')}`); console.log(`  look off  ${B.hashes.join(' ')}`); console.log(`  mannequin ${C.hashes.join(' ')}`);
-    verdict(A.hashes.length === 10 && A.hashes.every((h, i) => h === B.hashes[i] && h === C.hashes[i]), 'THE SIMULATION DOES NOT KNOW WHICH LOOK IS DRAWN: a seeded 20 s (walking, then three rounds) digests identically with the look on, with it off and on the mannequin, every 2 s', A.hashes.map((h, i) => h === B.hashes[i] && h === C.hashes[i] ? '=' : `≠@${(i + 1) * 2}s`).join(''));
-    { LOOK.on = true; const g = A.W.game, cast = g.ch.cast; const wrong: string[] = [];
-      const men: any[] = [g.player.char, ...g.guards.map((x: any) => x.char), ...g.civilians.map((x: any) => x.char)].filter((c: any) => c.parts !== 0);
-      if (castVariantOf(g, g.player.char) !== castSide(cast, 'operator')[0]) wrong.push('Sam');
-      for (const c of men) if (c.parts !== castParts(g, c) || (c.parts & ~castVariantOf(g, c).mask)) wrong.push(`id ${c.id} draws parts outside his variant`);
-      const suit = 1 << cast.parts.indexOf('local_suit');
-      for (const gd of g.guards) { const want = gd.team === 'operative' ? 'operator' : gd.team === 'civilian' ? 'civilian' : 'defender'; const v = castVariantOf(g, gd.char); if (v?.side !== want) wrong.push(`${gd.callsign} (${gd.team}) wears ${v?.side}`); else if (want === 'defender' && !(gd.char.parts & suit)) wrong.push(`${gd.callsign} has no local suit`); }
-      console.log(`  under the look: Sam ${castVariantOf(g, g.player.char)?.name} · ${g.guards.map((x: any) => `${x.callsign} ${castVariantOf(g, x.char)?.name}`).join(' · ')}`);
-      verdict(cast.parts.includes('local_suit') && men.length >= 1 + g.guards.length && wrong.length === 0, `under the look every man drawn wears a variant of his side out of ${CAST_FILE_LOOK} (${men.length} men; the shift in the local suit)`, wrong.join(' · '));
-      const gp = B.W.game; const offWrong = [gp.player.char, ...gp.guards.map((x: any) => x.char)].filter((c: any) => (PLAIN_MASKS[castVariantOf(gp, c)?.name] === undefined) || (c.parts & ~PLAIN_MASKS[castVariantOf(gp, c).name]) !== 0);
-      const names = (w: any) => [w.game.player.char, ...w.game.guards.map((x: any) => x.char)].map((c: any) => castVariantOf(w.game, c)?.name).join(' ');
-      verdict(offWrong.length === 0 && !gp.ch.cast.parts.includes('local_suit') && names(A.W) === names(B.W), 'with the look off the same men wear today\'s masks, and each is dealt the same variant NAME under either look', `${names(A.W)}\n    ${names(B.W)}`); }
-    { // THE OFFICE IS NOT ONE OF THE LOOK'S PLACES (scene/look.ts setLookPlace / lookDress / lookOffice; game/cast.ts officeDress): the look on, the page booted on
-      // the office family → the first cast file and its tables, its defenders dressed for a building, Sam's sneaking suit as on any level
-      const Q = (q: string) => placeOfQuery(new URLSearchParams(q));
-      verdict(!Q('') && !Q('levelFile=office.json&roomclear') && !Q('levelFile=office-t20.json') && Q('levelFile=compound.json&roomclear') && Q('levelFile=bazaar.json&quiet') && Q('levelFile=vault.json') && Q('levelFile=officers-mess.json') && !Q('levelFile=compound') && !Q('levelFile=../compound.json'),
-        'the place by the page\'s query: no levelFile and office / office-* files are the office; every other level file is one of the look\'s places; a name the boot will not fetch is the office it falls back to');
-      const CM: any = await import(`${ROOT}/src/render/charMaterials.ts`), wasSuit = LOOK.suit;
-      try {
-        LOOK.on = true; LOOK.suit = true; const vLook = CM.charMatsVersion(); setLookPlace(false);
-        verdict(!lookDress() && lookOffice() && castFileName() === CAST_FILE && CM.charMatsOf('defender') === CM.CHAR_MATS.defender && CM.charMatsOf('operator') === CM.CHAR_MATS.operator && CM.charMatsOf('operator', true) === CM.SNEAK_SUIT && CM.charMatsVersion() !== vLook,
-          `on the office under the look: the file is ${CAST_FILE}, the tables are the first ones, the suit's rows are still the suit's, and the tables' version moves`);
-        const P2 = await loadCastOf(false), defs = castSide(P2.cast, 'defender'), kept = officeDress(P2.cast.parts, defs), FIELD = ['hat_straw', 'hat_boonie', 'bandana', 'bandolier', 'tank_top'];
-        const partsOf = (v: any) => P2.cast.parts.filter((_: string, i: number) => v.mask & (1 << i));
-        verdict(kept.length >= 2 && kept.length < defs.length && kept.every((v: any) => !partsOf(v).some((n: string) => FIELD.includes(n))) && officeDress(L.cast.parts, castSide(L.cast, 'defender')).length === castSide(L.cast, 'defender').length,
-          `dressed for a building: of ${defs.length} defenders ${kept.map((v: any) => v.name).join(', ')} are dealt (no straw hat, boonie, bandana, bandolier or vest top); a cast without those parts loses nobody`);
-        Math.random = (() => { let s = 7; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; })();
-        const W: any = await standUp({ ch: P2 }); W.step(1 / 60); const g = W.game, bad: string[] = [];
-        for (const gd of g.guards) { const v = castVariantOf(g, gd.char); if (!v || v.side !== 'defender' || !kept.includes(v)) bad.push(`${gd.callsign} ${v?.name}`); }
-        console.log(`  on the office under the look: Sam ${castVariantOf(g, g.player.char)?.name}${sneakSuit(g, g.player.char) ? ' (the suit)' : ''} · ${g.guards.map((x: any) => `${x.callsign} ${castVariantOf(g, x.char)?.name}`).join(' · ')}`);
-        verdict(g.guards.length >= 3 && bad.length === 0 && sneakSuit(g, g.player.char), 'the office\'s shift is dealt only those variants, and Sam on the plain night is in the sneaking suit there too', bad.join(' · '));
-        setLookPlace(true);
-        verdict(lookDress() && !lookOffice() && castFileName() === CAST_FILE_LOOK && CM.charMatsOf('defender') !== CM.CHAR_MATS.defender, 'a place of the look\'s again: the second file and tables');
-        LOOK.on = false; setLookPlace(false);
-        verdict(!lookDress() && !lookOffice() && castFileName() === CAST_FILE, 'with the look off the place changes nothing: no office rule, the first file');
-      } finally { setLookPlace(true); LOOK.on = true; LOOK.suit = wasSuit; }
-    }
-    { // THE SNEAKING SUIT (scene/look.ts LOOK.suit; game/cast.ts sneakSuit; render/charMaterials.ts SNEAK_SUIT): black, no helmet, no back kit — on a mission that is
-      // not a squad's loud one, for Sam and a quiet mission's partner; nothing with either switch off; and it is looks (the digests above ran with it on)
-      const CM: any = await import(`${ROOT}/src/render/charMaterials.ts`); const { charLookFrame } = await import(`${ROOT}/src/game/charLook.ts`);
-      const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`); const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`); const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-      const { readFileSync } = await import('node:fs'); const { castGoggles } = await import(`${ROOT}/src/anim/gltf.ts`);
-      const U = (CM.CHAR_SLOTS as string[]).indexOf('cloth_uniform'), WB = (CM.CHAR_SLOTS as string[]).indexOf('webbing'), BT = (CM.CHAR_SLOTS as string[]).indexOf('boot');
-      const lumAt = (pal: Float32Array, slot: number) => 0.2126 * pal[8 + slot * 8] + 0.7152 * pal[9 + slot * 8] + 0.0722 * pal[10 + slot * 8];
-      const worn = (g: any, c: any) => { const cast = g.ch.cast, m = castParts(g, c) >>> 0; return (cast.parts as string[]).filter((_: string, i: number) => (m & ((1 << i) >>> 0)) !== 0); };
-      const hard = (ps: string[]) => ps.filter(n => n === 'helmet' || n.startsWith('kit_') || n.startsWith('nvg_'));
-      const cloth = (g: any, c: any) => { g.engine.settings.charMats = true; const F = charLookFrame(g); const pal = F.palette(c); return { u: lumAt(pal, U), w: lumAt(pal, WB), b: lumAt(pal, BT) }; };
-      const wasSuit = LOOK.suit; try {
-        LOOK.on = true; LOOK.suit = true; const g = A.W.game, sam = g.player.char, v = castVariantOf(g, sam);
-        const on = worn(g, sam), con = cloth(g, sam);
-        console.log(`  the plain night under the look: Sam wears ${on.join(' ')} · cloth ${con.u.toFixed(3)} rig ${con.w.toFixed(3)} boots ${con.b.toFixed(3)} (luminance)`);
-        verdict(sneakSuit(g, sam) && hard(on).length === 0 && on.includes('op_suit') && on.includes('hands_glove') && on.some(n => n.startsWith('head')) && on.includes('hair_short'), 'the plain night under the look: Sam is in the suit — no helmet, no back kit, no mesh goggles; his head, hair, gloves and suit part drawn', hard(on).join(' '));
-        verdict((castParts(g, sam) & ~v.mask) === 0, 'the suit draws nothing his variant does not wear (a subset of its mask)');
-        verdict(con.u < 0.05 && con.w < 0.05 && con.b < 0.05 && Math.max(con.u, con.w, con.b) / Math.min(con.u, con.w, con.b) < 2, `its cloth, rig and boots are all black and within a stop of each other (${con.u.toFixed(3)} / ${con.w.toFixed(3)} / ${con.b.toFixed(3)})`);
-        // THE SUIT'S RIFLE (rigProps.ts RigOpts.rifleBlack ← combat.ts handProps): the 2010s carbine's dark earth furniture is drawn black on a man in the suit, tan on a loud mission
-        const { handProps } = await import(`${ROOT}/src/game/combat.ts`); const { SC20K_TAG, M4_BOXES } = await import(`${ROOT}/src/game/rigProps.ts`); const { GEAR } = await import(`${ROOT}/src/game/gear.ts`);
-        const rifleOf = (game: any, c: any) => { const was = GEAR.on; GEAR.on = true; try { const out: any[] = []; handProps(game, out); const r = out.filter((b: any) => b.name === SC20K_TAG && b.owner === (c.id & 0xff)); return { n: r.length, dark: r.filter((b: any) => Math.max(b.albedo[0], b.albedo[1], b.albedo[2]) < 0.08).length, tan: r.filter((b: any) => Math.abs(b.albedo[0] - 0.2) < 1e-6 && Math.abs(b.albedo[1] - 0.155) < 1e-6 && Math.abs(b.albedo[2] - 0.1) < 1e-6).length, geo: r.map((b: any) => [...b.c, ...b.h].map((x: number) => x.toFixed(4)).join(',')).join('|') }; } finally { GEAR.on = was; } };
-        { const rb = rifleOf(g, sam);   // (until 2026-11-07 laid beside the same rifle with the suit switched off, a settled row: 'the suit off puts the tan back, and not a box moves' went with that write)
-          verdict(rb.n === M4_BOXES && rb.tan === 0, `in the suit his carbine is drawn with no dark earth part (${rb.tan} of ${rb.n} boxes tan)`); }
-        { const f = fitRig(g.ch, castParts(g, sam)); let ok = !!f; for (let i = 0; ok && i < RIG_SLOTS; i++) ok = Number.isFinite(f.r0[i]) && Number.isFinite(f.r1[i]) && f.r0[i] > 0.005 && f.r0[i] < 0.3;
-          const { castSuit } = await import(`${ROOT}/src/anim/gltf.ts`); const fresh = { ...g.ch, mesh: { ...g.ch.mesh } }; fitRigCast(fresh); const t0 = performance.now(); let hot = true; for (const v of castSide(g.ch.cast, 'operator')) { const a = fitRig(fresh, castSuit(g.ch.cast, v.mask)); hot = hot && !!a; } const ms = performance.now() - t0;
-          verdict(ok && hot && (castSuit(g.ch.cast, v.mask) >>> 0) === (castParts(g, sam) >>> 0), `the proxy fit of the suit's part mask solves (finite, 0.5–30 cm) and every operator's suit mask is solved AHEAD of play with the cast's others (sdfrig.ts fitRigCast: asked after it, all ${castSide(g.ch.cast, 'operator').length} answer, in ${ms.toFixed(1)} ms; a wall-clock bound is no line on a shared machine)`); }
-        LOOK.on = false; verdict(!sneakSuit(g, sam) && !sneakSuit(B.W.game, B.W.game.player.char) && (castParts(B.W.game, B.W.game.player.char) >>> 0) === (castGoggles(B.W.game.ch.cast, castVariantOf(B.W.game, B.W.game.player.char).mask, true) >>> 0), 'the look off: no suit whatever its own switch says (the plain cast as it always was)');
-        LOOK.on = true;
-        { // a loud mission: the issue dress, for Sam and his men
-          const W: any = await standUp({ ch: await loadCastOf(true) }); const gr = W.game; try { const r = startFromQuery(gr, '?roomclear'); for (let f = 0; f < 6; f++) W.step(1 / 60);
-          const sm = gr.player.char, ps = worn(gr, sm), cl = cloth(gr, sm), ops = gr.guards.filter((x: any) => x.team === 'operative');
-          verdict(!r.why && !!gr.roomClear?.active && !sneakSuit(gr, sm) && ps.includes('helmet') && ps.some(n => n.startsWith('kit_')) && cl.u > 0.12 && ops.length >= 2 && ops.every((x: any) => !sneakSuit(gr, x.char) && worn(gr, x.char).includes('helmet')), `a room clear (loud): Sam and his ${ops.length} men wear the issue dress — helmet, kit, the look's cloth (${cl.u.toFixed(3)})`, r.why ?? ps.join(' '));
-          { const rl = rifleOf(gr, sm); verdict(rl.n === M4_BOXES && rl.tan === 5, `a loud mission: his carbine keeps its dark earth furniture (${rl.tan} of ${rl.n} boxes tan)`); }
-          // (a picture's host saying the dress, scene/look.ts setSuitAs, is the page's own: a crossing castParts does not hear it. The suit a staged room clear is asked for is the Rust game's native test)
-          } finally { gr.nightBreach?.stop?.(); } }
-        { // a quiet mission as two: Sam and the partner in the suit, the staff in their own
-          const W: any = await standUp({ ch: await loadCastOf(true), level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/vault.json`, 'utf8'))) }); const gq = W.game; try { const r = startFromQuery(gq, '?quiet=1&squad=1'); for (let f = 0; f < 6; f++) W.step(1 / 60);
-          const sm = gq.player.char, mates: any[] = gq.quiet?.ops ?? [], staff = gq.guards.filter((x: any) => x.team !== 'operative');
-          const pm = mates[0]?.char, pw = pm ? worn(gq, pm) : [], pc = pm ? cloth(gq, pm) : { u: 1, w: 1, b: 1 };
-          verdict(!r.why && !!gq.quiet?.active && mates.length === 1 && !!pm && sneakSuit(gq, sm) && hard(worn(gq, sm)).length === 0 && sneakSuit(gq, pm) && hard(pw).length === 0 && pw.includes('op_suit') && pc.u < 0.05, `a quiet mission as two: Sam and ${mates[0]?.callsign ?? 'the partner'} are both in the suit (his cloth ${pc.u.toFixed(3)})`, r.why ?? pw.join(' '));
-          verdict(staff.length > 0 && staff.every((x: any) => !sneakSuit(gq, x.char) && (castParts(gq, x.char) >>> 0) === (castVariantOf(gq, x.char).mask >>> 0)), `…and the ${staff.length} staff wear their own variants whole`);
-          } finally { gq.quiet?.stop?.(); } }
-      } finally { LOOK.suit = wasSuit; }
-    }
-  } finally { LOOK.on = was; Math.random = sysRandom; }
-}
+if (import.meta.main) await main([castLoader, castFile, castFit], castFailures);
