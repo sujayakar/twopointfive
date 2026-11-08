@@ -148,7 +148,7 @@ for (const name of list) {
 // kept cards and keeps a change, and a start or restart of the lesson under that screen still stages the issue kit. Run once (with the first lesson, or all).
 if (!names.length || names.includes('tut-road')) { console.log('\n=== lesson-check: a lesson\'s page and the kit this machine keeps ===');
   const { El, withDom } = await import('./scenario-picker-probes.ts');
-  const K = await import(`${ROOT}/src/game/kit.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`);
+  const K = await import(`${ROOT}/src/game/kit.ts`);
   const m = new Map<string, string>(), st = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); } };
   const kept = (i = 0) => JSON.parse(m.get(K.KIT_LS) ?? '{}').members?.[i] ?? {};
   const rowOf = (id: string) => (LESSON_MISSIONS as any[]).find(e => e.id === id), other = (ALL_MISSIONS as any[]).find(e => e.group !== 'tutorial' && e.kind !== 'solo' && e.kind !== 'quiet');
@@ -195,7 +195,7 @@ if (!names.length || names.includes('tut-road')) { console.log('\n=== lesson-che
       const after = K.KIT.members[0].weapon, stored2 = K.kitTry(0, 'trim', 1).ok && kept().trim === K.KIT.members[0].trim; const B = await standRow(alone);
       verdict(threw && after === 'pistol' && stored2 && B.g.player.hasRifle === true, 'a staging that throws leaves the kept table and its store in place, and the next lesson start is still the issue kit', `threw ${threw} · table '${after}' · a change written ${stored2} · next start's rifle ${B.g.player.hasRifle}`);
     });
-  } finally { UI.loadoutOpen()?.close(); K.kitIssuedPage(false); K.kitLoad(null, ''); LESSON.on = lessonOn; }
+  } finally { K.kitIssuedPage(false); K.kitLoad(null, ''); LESSON.on = lessonOn; }
 }
 console.log(fails ? `\n=== lesson-check: ${fails} FAIL of ${checks} ===` : `\n=== lesson-check: ALL PASS (${checks} checks) ===`);
 process.exit(fails ? 1 : 0);
