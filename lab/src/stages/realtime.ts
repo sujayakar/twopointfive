@@ -42,7 +42,7 @@ export function hashCache(): CachePart {
   const groups = { groups: (): [number, number, number] => [SLOTS / 64 / 8, 8, 1] }, lin = (t: string) => t.replaceAll('let s = id.x;', `let s = id.x + id.y * ${SLOTS / 8}u;`);
   const claimS: Stage = { name: 'cache claim', over: groups, buffers: { ...bind, norms: ['norms', 'array<u32>', 'read_write'], hits: ['hits', 'array<vec4u>', 'read'], fresh: ['fresh', 'array<vec4f>', 'read_write'] }, code: cacheLib + lin(claim) };
   const keep: Stage = { name: 'cache keep', over: groups, code: '', async make() { return (enc, g) => { if (keep.when && !keep.when()) return; enc.copyBufferToBuffer(g.buffers.get('fresh')!, 0, g.buffers.get('cells')!, 0, SLOTS * 32); }; } };
-  const updateS: Stage = { name: 'cache', over: { groups: () => [SLOTS / 256, 1, 1] }, buffers: { ...bind, norms: ['norms', 'array<u32>', 'read'], fresh: ['fresh', 'array<vec4f>', 'read_write'], ...CHANGES }, code: signals + cacheLib + bounceLib + update };
+  const updateS: Stage = { name: 'cache', reads: { sunLeaves: 'sunLeaves' }, over: { groups: () => [SLOTS / 256, 1, 1] }, buffers: { ...bind, norms: ['norms', 'array<u32>', 'read'], fresh: ['fresh', 'array<vec4f>', 'read_write'], ...CHANGES }, code: signals + cacheLib + bounceLib + update };
   let at: [number, number] = [0, 0]; const warmS: Stage = { name: 'cache warm', over: { groups: () => [Math.ceil((at[1] - at[0]) / 64), 1, 1] }, buffers: { ...bind, hits: ['hits', 'array<vec4u>', 'read'], warmAt: ['warmAt', 'vec4u', 'uniform'] }, code: cacheLib + warm };
   const again = (k: number): Stage => ({ ...updateS, name: 'cache', when: () => (part.rush ?? 0) > k, code: updateS.code.replace('rngKey(key, 91u)', `rngKey(key, ${92 + k}u)`) });
   const part: CachePart = {
@@ -116,9 +116,9 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
         S('water', waterpx, 'render', { idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }),
         ...cache.stages, ...lab.smoke.stages(g, c, cache.lib, bounceLib),
         S('lamps', lamps, 'render', { surf: 'surf', front: 'frontT', sunLeaves: 'sunLeaves' }, { outVis: 'vis', outU: 'lampU', outC: 'lampC' }, {}, { FINE: 4 }),
-        S('gather', cache.lib + bounceLib + gather, 'half', { surf: 'surf', front: 'frontT' }, { outE: 'bounce', outD: 'bounceD' }, { ...c, hits: ['hits', 'array<vec4u>', 'read_write'] }, { HITS }),
-        S('mirror', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2, LAYER: 0 }),
-        S('shine', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'shine' }, c, { DIV: 2, LAYER: 1 }),
+        S('gather', cache.lib + bounceLib + gather, 'half', { sunLeaves: 'sunLeaves', surf: 'surf', front: 'frontT' }, { outE: 'bounce', outD: 'bounceD' }, { ...c, hits: ['hits', 'array<vec4u>', 'read_write'] }, { HITS }),
+        S('mirror', cache.lib + bounceLib + mirror, 'half', { sunLeaves: 'sunLeaves', surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2, LAYER: 0 }),
+        S('shine', cache.lib + bounceLib + mirror, 'half', { sunLeaves: 'sunLeaves', surf: 'surf', front: 'frontT' }, { outM: 'shine' }, c, { DIV: 2, LAYER: 1 }),
         ...dVis.stages, ...dB.stages, ...dD.stages, ...dM.stages, ...dS.stages,
         S('air', cache.lib + air, 'half', { surf: 'surf' }, { outA: 'air', outD: 'airD' }, { ...c, plumes: ['plumes', 'array<vec4f, 18>', 'uniform'] }),
         S('air history', 'fn airAt2(p: vec2u) -> f32 { return textureLoad(airD, p, 0).x; }\n' + temporal.replace('CAP_NOW', 'f32(CAP)'), 'half', { airD: 'airD', air: 'cur', 'airH@prev': 'hist', 'airM@prev': 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, { outH: 'airH', outM: 'airM' }, {}, { DIV: 2, CAP: 16, SPREAD: 1.0, NARROW: 0, KIND: 0, LAYER: 0, LEAVES: 0 }),

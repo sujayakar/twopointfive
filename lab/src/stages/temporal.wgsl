@@ -37,7 +37,7 @@ var<workgroup> tile: array<vec4f, 144>;                            // this group
     let e = se * (mix(SPREAD, 4.5, dull) * @tune.leash) + abs(m1) * mix(0.04, 0.25, dull) + 1e-4; let hc = clamp(h, m1 - e, m1 + e); let moved = select(length((hc - h).rgb) / (length(e.rgb) + 1e-4), length((hc - h).xyw) / (length(e.xyw) + 1e-4), KIND == 1); n *= 1.0 / (1.0 + moved * 0.35);
     var k = 1.0 / (n + 1.0); o = mix(hc, c1, k); mom = vec4f(mix(mo.x, mom.x, max(k, 0.06)), mix(mo.y, mom.y, max(k, 0.06)), 0.0, mix(mo.w, mom.w, max(k, 0.06)));
     if (NARROW == 1) { o.a = mix(h.a, c.a, max(k, 0.2)); }
-    if (KIND == 1) { o = select(o, c, c < vec4f(0.0)); if (p.leaf) { o.a = c.a; } }   /* (between leaves the sun goes with the leaf: a mean over the leaves a pixel has shown would light them all alike) */
+    if (KIND == 1) { o = select(o, c, c < vec4f(0.0)); }
   }
   mom.z = n + 1.0;
   textureStore(outH, id.xy, o); textureStore(outM, id.xy, mom);
