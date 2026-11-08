@@ -55,12 +55,12 @@ const land = async () => { await tick(); for (const f of flying.splice(0)) f.don
 const got = async <T,>(p: Promise<T> | T): Promise<T> => { await land(); return p; };
 
 // ---- which window is what
-{ const R = K.keepRole, base = { word: null, tab: null, top: true, keeper: false, own: false, driven: false, onefile: false };
+{ const R = K.keepRole, base = { word: null, tab: null, top: true, keeper: false, own: false, driven: false };
   check(R(base) === 'shell', 'a visitor\'s tab, no word: the shell');
   check(R({ ...base, driven: true }) === 'plain' && R({ ...base, driven: true, word: '1' }) === 'shell', 'a driven browser keeps its own page unless ?keeppage=1 asks');
   check(R({ ...base, proven: false }) === 'plain' && R({ ...base, proven: false, word: '1' }) === 'shell' && R({ ...base, proven: true }) === 'shell', 'a browser where a frame was never seen to draw with its parent\'s device keeps its own page unless ?keeppage=1 asks');
   check(R({ ...base, word: '0' }) === 'plain' && R({ ...base, tab: '0' }) === 'plain' && R({ ...base, tab: '0', word: '1' }) === 'shell', '?keeppage=0 is a whole page, and the tab\'s kept word too, until ?keeppage=1');
-  check(R({ ...base, own: true }) === 'plain' && R({ ...base, onefile: true }) === 'plain' && R({ ...base, top: false }) === 'plain', 'the benchmark, the one-file page and a page in somebody else\'s frame keep their own page');
+  check(R({ ...base, own: true }) === 'plain' && R({ ...base, top: false }) === 'plain', 'the benchmark and a page in somebody else\'s frame keep their own page');
   check(R({ ...base, top: false, keeper: true }) === 'kept', 'a frame under its shell takes the shell\'s device');
   check(R({ ...base, top: false, keeper: true, picture: true }) === 'beside' && R({ ...base, top: false, picture: true }) === 'plain' && R({ ...base, top: false, keeper: true, picture: true, word: '0' }) === 'plain' && R({ ...base, top: false, keeper: true, picture: true, tab: '0' }) === 'plain'
     && R({ ...base, top: false, stale: true, picture: true }) === 'plain' && R({ ...base, picture: true }) === 'plain',

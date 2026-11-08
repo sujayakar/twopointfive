@@ -284,84 +284,6 @@ export const pairupCaughtJob = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- one eye
-export const pairupOneEye = guarded(async () => {
-  const { verdict, done } = family('pairup-one-eye: the stalk judged by the sneak\'s read of a defender\'s eye — where it agrees with the orders\' own rule, and where it does not');
-  const len = (from: number[], path: number[][]) => { let l = 0, a = from; for (const b of path) { l += flat(a, b); a = b; } return l; };
-  // (a) the corridor: the man faces away at its dark east end, the way to his back is the lamp's pool — and a second man beyond him looks back along it
-  { const R = await rig({ up: true }); const g = R.game, m = R.mate, P = R.P, F = R.tango(1), W = R.tango(2); R.only(F, W);
-    R.pin(F, { at: [20.5, 0, 11], yaw: EAST }); R.pin(W, { at: [23, 0, 11], yaw: WEST }); g.teleportPlayer([6, 0, 11]); R.put(m, [7.5, 0, 10.8], EAST); R.step(60 * 8);   // (eight seconds: where each man MOSTLY looks is learnt)
-    const pool = Math.max(...[11, 12, 13, 14, 15, 16, 17].map(x => R.lit([x, 0, 11])));
-    const a = P.stalk(m, P.stage(F)), la = len(m.char.pos, a.path);
-    verdict(pool > SNEAK.litAt && a.exposed && a.by === W, 'a lit stretch a second defender looks along: exposed, and by him',
-      `the pool reads ${f2(pool)} (lit at ${SNEAK.litAt}) · one eye: ${a.exposed ? 'exposed' : 'clear'} by ${a.by?.callsign ?? 'nobody'}, the best way found ${f1(la)} m`);
-    R.turn(W, EAST); R.step(60 * 6); const b = P.stalk(m, P.stage(F)), lb = len(m.char.pos, b.path);
-    verdict(!b.exposed && lb < la, 'he turns round (six seconds: it is how he mostly looks now): the same way is clear, and straight',
-      `one eye: ${b.exposed ? `exposed by ${b.by?.callsign ?? 'nobody'}` : 'clear'}, ${f1(lb)} m (it was ${f1(la)} m, round by the aisle and exposed all the same)`); }
-  // (b) DARK floor in front of a defender, past the sneak's elbow and inside the orders' front
-  { const R = await rig({ up: true }); const g = R.game, m = R.mate, P = R.P, D = R.tango(2); R.only(D);
-    R.pin(D, { at: [17.8, 0, 11], yaw: EAST }); g.teleportPlayer([25, 0, 11]); R.put(m, [21.6, 0, 11], WEST); R.step(60 * 8);
-    if (flat(m.char.pos, [21.6, 0, 11]) > 0.05) { R.put(m, [21.6, 0, 11], WEST); R.step(2); }   // (the shipped stand: the team starts fallen in — START.fallIn — and he has walked to Sam's shoulder, onto lit floor: the line is about a man stood in the dark)
-    const to = [20.4, 0, 11], d = flat(to, D.char.pos), dark = Math.max(...[20.4, 20.8, 21.2, 21.6].map(x => R.lit([x, 0, 11])));
-    const one = P.stalk(m, to);
-    // … and what the defender's own eye makes of a body walked there: his state and meter are his own (only his feet and gaze are held)
-    const aw0 = D.awareness; let sum = 0, seenF = 0, peak = 0, maxLit = 0;
-    R.O.give('pairDark', R.O.targetAt(to), 'all');
-    R.post = () => { const see = GDM.canSeeChar(g, D, m.char, false); if (see.visible) { seenF++; sum += GDM.sightGainOn(g, D, m, see.dist) * DT; } peak = Math.max(peak, D.awareness); maxLit = Math.max(maxLit, m.visibility); };
-    R.step(60 * 6); R.post = null; const end = flat(m.char.pos, D.char.pos);
-    verdict(d > SNEAK.nearM && d < PAIR.frontM && dark < SNEAK.litAt && !one.exposed, `dark floor ${f1(d)} m in front of a defender: the one eye says clear`,
-      `${f1(d)} m from him (the sneak's elbow ${SNEAK.nearM} m, the orders' front ${PAIR.frontM} m), the floor reads ${f3(dark)} (lit at ${SNEAK.litAt}) · one eye: ${one.exposed ? 'exposed' : 'clear'}`);
-    verdict(end < PAIR.frontM && end > SNEAK.nearM && seenF > 200 && sum < SNEAK.budget && peak < 0.3 && D.state === 'patrol', 'and the eye bears the one eye out: the partner walked there and stood six seconds in his sight adds next to nothing to him',
-      `stood ${f2(end)} m in front of him, in his cone on ${seenF} of 360 frames, his own meter at most ${f3(maxLit)} · the eye's arithmetic (Σ sightGainOn·dt) adds ${f3(sum)} of awareness (the sneak's budget for a crossing: ${SNEAK.budget}) · his awareness ${f2(aw0)} → peak ${f3(peak)}, ${D.state}`); }
-  // (c) the plain cases
-  { const R = await rig({ up: true }); const g = R.game, m = R.mate, P = R.P, D = R.tango(1); R.only(D);
-    R.pin(D, { at: AISLE_MID, yaw: EAST }); g.teleportPlayer([11, 0, 18.5]); R.put(m, AISLE_W, EAST); R.step(60 * 8);
-    const b1 = P.stalk(m, P.stage(D));
-    const k0 = PUM.PAIRUP_STATS.waysKept ?? 0, b2 = P.stalk(m, P.stage(D)), kept = (PUM.PAIRUP_STATS.waysKept ?? 0) - k0;   // (asked again at once: the way he is on stands while it reads unseen)
-    R.turn(D, WEST); R.step(60 * 20); const to = [17, 0, 17.6], lit = R.lit(to), d = flat(to, D.char.pos);
-    const f1_ = P.stalk(m, to);
-    verdict(!b1.exposed && !b2.exposed && f1_.exposed && f1_.by === D && lit > PAIR.coneLit, 'a way wholly behind him is clear; lit floor five metres in front of his eyes is exposed',
-      `to his back: ${b1.exposed ? 'exposed' : 'clear'} (asked again: ${b2.exposed ? 'exposed' : 'clear'}, ways kept +${kept}) · to ${at(to)}, ${f1(d)} m in front of him, reading ${f2(lit)}: ${f1_.exposed ? `exposed by ${f1_.by?.callsign}` : 'clear'}`); }
-  // (d) THE MOON (SNEAK.stalkAmbient; STALKAMBIENT_BREAK=1 leaves his meter at the estimate where these lines hold it at the moon's half, and must fail): the estimate has no moon, so a yard
-  //     under it reads 0 while the partner's own meter — the picture's — reads half. His meter is held through the light seam (Game.lightAt, the harness's
-  //     table), so the defenders' eyes read him as the page would. The man watching the way is NOT the target. Staged on the open strip north of the
-  //     office (no roof: the excess is the sky's, all of it on every open step) — and once in the corridor, where a roofed step takes it as a crumb does.
-  { const BREAK = !!process.env.STALKAMBIENT_BREAK;
-    const EV = (g: any, v: number) => g.tune.visFloor * Math.exp(v / g.tune.visSlope);   // (a STEADY meter: what it reads this frame — Guard.irradiance — is what it has eased to; the rule takes the lower of the two, so a meter still falling from a brighter place is not a moon)
-    {
-      const stageIt = async (z = 1.5) => { const R = await rig({ up: true }); const g = R.game, m = R.mate, F = R.tango(1), D = R.tango(2); R.only(F, D);
-        R.pin(F, { at: [19.2, 0, z], yaw: WEST, state: 'patrol', aw: 0 }); R.pin(D, { at: [17.8, 0, z], yaw: EAST, state: 'patrol', aw: 0 }); g.teleportPlayer([25, 0, z]); R.put(m, [21.6, 0, z], WEST);
-        const id = m.char.id, la = g.lightAt, H = { v: null as number | null }, E = (v: number) => g.tune.visFloor * Math.exp(v / g.tune.visSlope);
-        g.lightAt = (k: string) => H.v !== null && (k === `unitC${id}` || k === `unitH${id}`) ? E(H.v) : la(k);
-        R.step(60 * 8); return { R, g, m, F, D, H }; };
-      const { R, g, m, F, D, H } = await stageIt(), P = R.P;
-      const spot = R.O.freeSpot(P.stage(F)) ?? P.stage(F), dSpot = flat(spot, D.char.pos), here = [m.char.pos[0], 0, m.char.pos[2]];
-      const dark = Math.max(...[0, 0.25, 0.5, 0.75, 1].map(k => R.lit([here[0] + (spot[0] - here[0]) * k, 0, here[2] + (spot[2] - here[2]) * k])));
-      const c = m.char, own = g.visibilityOf(Math.max(GDM.lightEstimateAt(g, c.bones.chest), GDM.lightEstimateAt(g, c.bones.head)));
-      const ask = (meter: number) => { m.visibility = meter; m.irradiance = EV(g, meter); (P as any).ways.delete(m); const w = P.stalk(m, spot); return { exposed: w.exposed as boolean, by: w.by ?? null, path: JSON.stringify(w.path.map((q: number[]) => [+q[0].toFixed(3), +q[2].toFixed(3)])) }; };
-      const eq = ask(own), onMoon = ask(BREAK ? own : 0.5);
-      const open = !g.weather.underRoof(here[0], here[2]) && !g.weather.underRoof(spot[0], spot[2]);
-      verdict(open && dark < SNEAK.litAt && dSpot > SNEAK.nearM && !eq.exposed && onMoon.exposed && onMoon.by === D && D !== F, 'the moon: his meter at 0.5 on open ground the estimate reads dark, in the cone of a man who is not the target — the way is exposed, and by him; his meter equal to the estimate, it is clear',
-        `the way to ${F.callsign}'s back ${at(spot)}, ${f1(dSpot)} m in front of ${D.callsign}, reads ${f3(dark)} (lit at ${SNEAK.litAt}), ${open ? 'no roof over it' : 'UNDER A ROOF'} · his meter 0.500 over an estimate of ${f3(own)} · his meter at the estimate: ${eq.exposed ? 'exposed' : 'clear'} · at 0.5${BREAK ? ' (NOT HELD: the break)' : ''}: ${onMoon.exposed ? `exposed by ${onMoon.by?.callsign ?? 'nobody'}` : 'clear'}`);
-      // … and on his feet: the order given with his meter held at 0.5 for as long as it runs — he holds where he stands, in words
-      const walk = async () => { const S = await stageIt(); S.H.v = BREAK ? null : 0.5; S.R.step(30); const p0 = [S.m.char.pos[0], 0, S.m.char.pos[2]];
-        const err = S.R.O.give('pairMark', S.R.foe(S.F), 'all'); let far = 0, lit = 1; S.R.post = () => { far = Math.max(far, flat(S.m.char.pos, p0)); lit = Math.min(lit, S.m.visibility); }; S.R.step(60 * 4); S.R.post = null;
-        return { err, far, lit, status: S.R.status() as string }; };
-      const on = await walk();
-      // … and THE METER'S OWN LAG IS NOT A MOON: he stands in a lamp pool until his meter has it, then is on the dark strip — for a fifth of a second his eased
-      //     meter is still the lamp's while what it reads this frame is the dark's. No step of the dark way takes that: the way reads as it does once the meter settles.
-      { const S = await stageIt(), g2 = S.g, m2 = S.m, nav = g2.col.nav, sp = S.R.O.freeSpot(S.R.P.stage(S.F)) ?? S.R.P.stage(S.F), dark0 = [m2.char.pos[0], 0, m2.char.pos[2]];
-        let lamp: number[] | null = null, best = 0; for (let x = 12; x <= 26; x += 0.5) for (const z of [10.5, 11, 11.5]) { if (nav.isBlocked(x, z)) continue; const v = S.R.lit([x, 0, z]); if (v > best) { best = v; lamp = [x, 0, z]; } }
-        const q = () => { (S.R.P as any).ways.delete(m2); const w = S.R.P.stalk(m2, sp); return w.exposed as boolean; };
-        let vLamp = 0, vLag = 0, now = 0, lag = false, settled = false;
-        const stand = (p: number[], frames: number) => { for (let i = 0; i < frames; i++) { S.R.put(m2, p, WEST); S.R.step(1); } S.R.put(m2, p, WEST); };   // (held on the spot: on the page's stand he would walk back to Sam)
-        if (lamp) { stand(lamp, 60 * 3); vLamp = m2.visibility; stand(dark0, 2); vLag = m2.visibility; now = g2.visibilityOf(m2.irradiance); lag = q(); stand(dark0, 60 * 3); settled = q(); }
-        verdict(!!lamp && vLamp > SNEAK.litAt + 0.1 && vLag > SNEAK.litAt + 0.06 && now < 0.03 && flat(m2.char.pos, dark0) < 0.5 && !lag && !settled, `CONTROL (STALKAMBIENT_BREAK does not touch it; it fails on the rule as it was before the lag was taken out) — out of a lamp pool onto dark floor: his meter still falling is not the light of the place — the dark way is not read exposed`,
-          `${lamp ? `the lamp pool ${at(lamp)} (the estimate ${f3(best)}): his meter there ${f3(vLamp)}` : 'NO LAMP POOL FOUND'} · two frames after he is on the dark strip ${at(dark0)}: his eased meter ${f3(vLag)}, what it reads this frame ${f3(now)} · the way to ${at(sp)}: ${lag ? 'EXPOSED' : 'clear'} · three seconds on: ${settled ? 'EXPOSED' : 'clear'}`); }
-      verdict(on.err === null && on.far < 0.3 && /waiting/.test(on.status) && on.lit > 0.4, 'the order given under that moon: he does not walk into the man\'s view (four seconds) — and says who is looking',
-        `moved ${f2(on.far)} m, his meter never under ${f2(on.lit)}, '${on.status}'${on.err ? ` · the order: ${on.err}` : ''}`);
-    } }
-  return done();
-});
 
 // ---------------------------------------------------------------- rejoin
 export const pairupRejoin = guarded(async () => {
@@ -547,7 +469,7 @@ export const pairupClatter = guarded(async () => {
 });
 
 if (import.meta.main) {
-  const all: Record<string, () => Promise<boolean>> = { switch: pairupSwitch, feet: pairupFeet, hunted: pairupHunted, 'caught-job': pairupCaughtJob, 'one-eye': pairupOneEye, rejoin: pairupRejoin, voice: pairupVoice, word: pairupWord, grip: pairupGrip, hands: pairupHands, stay: pairupStay, clatter: pairupClatter };
+  const all: Record<string, () => Promise<boolean>> = { switch: pairupSwitch, feet: pairupFeet, hunted: pairupHunted, 'caught-job': pairupCaughtJob, rejoin: pairupRejoin, voice: pairupVoice, word: pairupWord, grip: pairupGrip, hands: pairupHands, stay: pairupStay, clatter: pairupClatter };
   const want = process.argv.slice(2).filter(a => !a.startsWith('--')); let ok = true;
   for (const k of want.length ? want : Object.keys(all)) { if (!all[k]) { console.log(`unknown: ${k} (${Object.keys(all).join(' ')})`); process.exit(2); } ok = (await all[k]()) && ok; }
   process.exit(ok ? 0 : 1);

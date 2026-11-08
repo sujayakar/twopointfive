@@ -23,9 +23,6 @@ const server = Bun.serve({
   routes: {
     "/": index, "/replay": replay, "/sounds": sounds, "/music": music, "/draw": draw,
     "/look": req => { const u = new URL(req.url); return Response.redirect("/?look&" + (u.searchParams.has("levelFile") ? "" : "roomclear&squad4&levelFile=pass.json&hud&") + u.search.slice(1), 302); },   // THE LOOK PROTOTYPE (src/render/shaders/look.wgsl): the game's page with ?look, on the pass unless the link names its own mission
-    "/sneaklab": req => { const q = new URL(req.url).search.slice(1); return Response.redirect("/?levelFile=sneak-lab.json&solo&sneaklab" + (q ? "&" + q : ""), 302); },   // the sneak lab: the close-in on a man, its numbers live (src/host/sneaklab.ts)
-    "/firelab": req => { const q = new URL(req.url).search.slice(1); return Response.redirect("/?levelFile=pass.json&roomclear&squad4&nofow&firelab" + (q ? "&" + q : ""), 302); },   // the fire lab: beside the pass's brazier, the flame's numbers live (src/host/firelab.ts)
-    "/smokelab": req => { const q = new URL(req.url).search.slice(1), has = (k: string) => new RegExp("(^|&)" + k + "=").test(q); return Response.redirect((has("levelFile") ? "/?look&hud&smokelab" : "/?look&levelFile=smoke-lab.json&solo&hud&smokelab" + (has("hour") ? "" : "&hour=dusk") + (has("weather") ? "" : "&weather=clear")) + (q ? "&" + q : ""), 302); },   // the smoke lab: the look page on the lab's own floor (tools/levels/smoke-lab.ts) at a dry dusk, with the solver's bricks and curls drawn and its numbers live (src/host/smokelab.ts); an hour or a weather on the address wins, and a levelFile there opens that level instead (/smokelab?levelFile=pass.json&roomclear&squad4)
   },
   async fetch(req) {
     const url = new URL(req.url);
@@ -60,7 +57,6 @@ const server = Bun.serve({
     if (path === "/qa/commit") return new Response(COMMIT, { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the commit this server was started on (a replay and a report file it: src/ui/replaykey.ts)
     if (path === "/qa/cloud") return new Response(CLOUD?.url() ?? "", { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the backend this server runs for the page, or nothing (src/cloud/cloud.ts cloudFind asks once a page load)
     if (/^\/qa\/[\w.-]+\.js$/.test(path)) { const qa = Bun.file("./tools" + path); if (await qa.exists()) return new Response(qa, { headers: { "Cache-Control": "no-store" } }); }   // the in-page measurement harnesses (dev only, never bundled): `await import('/qa/perf-harness.js')` → window.__perf, '/qa/perf-frames.js' → window.__pf
-    { const m = path.match(/^\/qa\/shader\/([a-z_0-9]+)\.wgsl$/); if (m) { const sf = Bun.file(`./src/render/shaders/${m[1]}.wgsl`); if (await sf.exists()) return new Response(sf, { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } }); } }   // a pass shader's current source on disk, for the page's hot-swap hook (main.ts __hotVol): edit, fetch, recompile, A/B — without rebooting a staged scene
     const f = Bun.file("./public" + path);
     if (await f.exists()) return new Response(f);
     return new Response("not found: " + path, { status: 404 });

@@ -4,7 +4,7 @@
 // the camera's pose is kept and they are rebuilt from it, as the session journal does) and every value the game READ off the GPU that step (Game.sensors). What
 // reaches the game from OUTSIDE a step is taped where it can be seen: a restart from a card (the player is a new object between two steps), a sandbox switch, a
 // knob moved on the Tab panel, the player put somewhere (a 'pose' row: where he stands at the first step and after every restart — a page that stages its own scene,
-// host/sneaklab.ts, stands him there — and wherever he was moved between two steps, a debug teleport; 'posein': where a restart made INSIDE a step, Shift+Enter,
+// a lab's page, stood him there — and wherever he was moved between two steps, a debug teleport; 'posein': where a restart made INSIDE a step, Shift+Enter,
 // left him once the page's own wrap of Game.restart had staged its scene — the game's restart is wrapped on this Game's instance to see it, as the sensors' read is).
 // A control worked on the page between two steps (`touched()`: ui/replaykey.ts hears the document's input, change and click) has every table looked at before the
 // next step, so a number moved on a panel while playing is taped at the step it first acts on, not on the tables' slow round. A save of this run loaded from a card is taped by its slot: the walk has made the same save. What cannot be followed — a scenario started or quit from a menu, a file's checkpoint or another run's loaded — ends the tape with its reason (`dead`),
@@ -180,7 +180,7 @@ export class RunTapeRec {
       const S = g.sensors as unknown as { read(key: string): number | undefined }, read = S.read, self = this;
       S.read = function (this: unknown, key: string) { const v = read.call(this, key); self.sensed(key, v); return v; };
       // …and a restart made INSIDE a step (Shift+Enter, the bare Enter once down) is followed to where it left the player: a page that wraps the restart to
-      // stage its own scene (host/sneaklab.ts, at boot — before this) has staged it by then, and nothing between two steps would show that it had
+      // stage its own scene (at boot — before this) has staged it by then, and nothing between two steps would show that it had
       afterRestart(g, () => { if (self.inTick && !self.dead) self.x.push([self.ticks, 'posein', poseOf(g, []).map(enc)]); });
       this.wrapped = true;
     }

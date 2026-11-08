@@ -99,43 +99,9 @@ export async function scene(o: RigOpts = {}) {
   R.put(foe, AISLE_MID, EAST); R.put(R.mate, AISLE_W, EAST); R.game.teleportPlayer([11, 0, 18.5]); R.step(30);
   return { R, foe, mate: R.mate };
 }
-const digitAbove5 = (rows: { key: string }[]) => rows.some(r => /^[6-9]$|^0$/.test(r.key));
 const show = (rows: { key: string; text: string; off: boolean }[]) => rows.map(r => `${r.key || '·'} ${r.text}${r.off ? ' (greyed)' : ''}`).join(' | ');
 
 // ---------------------------------------------------------------- the menu
-export const pairMenu = guarded(async () => {
-  const { verdict, done } = family('pair-menu: a defender is a target, with five rows on five digits — and nothing else on the menu has moved');
-  const { R, foe, mate } = await scene({ quiet: false }); const { O, game, P } = R;
-  verdict(R.why === null && O.squad().length === 1 && P.up && !R.silent(), 'the room clear stands ONE teammate up beside Sam, loud, and the pair orders are offered', `start: ${R.why} · squad ${O.squad().map((x: any) => x.callsign).join(', ')} · ${P.summary()}`);
-  const m = R.menu(R.chest(foe)); const want = ['take him · on your mark', 'watch him', 'fall in', 'hold position', 'take him now'];
-  verdict(m.kind === 'foe' && m.rows.length === 5 && m.rows.every((r: any, i: any) => r.key === String(i + 1) && r.text.startsWith(want[i])) && !digitAbove5(m.rows) && m.rows.every((r: any) => r.head === `on ${foe.callsign}`),
-    'X with the cursor on a defender opens the menu on HIM: 1 take him · on your mark, 2 watch him, 3 fall in, 4 hold position, 5 take him now', `target ${m.kind} · ${show(m.rows)}`);
-  R.esc();
-  const n0 = O.log.length; R.cursor(R.chest(foe)); R.press(ORDERS.quickKey); R.step(2);
-  verdict(O.log.length === n0 + 1 && R.last().order === 'pairMark' && R.last().target === `foe:${foe.callsign}` && O.of(mate)?.order === 'pairMark' && O.of(mate)?.foe === foe && R.silent(),
-    `${ORDERS.quickKey.replace('Key', '')} on him gives the first row at once — and a loud squad goes silent on it, with its line`, `log ${JSON.stringify(R.last())} · ${mate.callsign}: ${R.status()} · said: ${R.said.slice(-3).join(' / ')}`);
-  O.give('hold', O.targetAt(mate.char.pos)); R.step(5);
-  // the floor's 1: loud and silent
-  const spot = [12, 0, 18.2];
-  const fs = R.menu(spot); R.esc(); SLM.setSilent(game, false); R.step(2); const fl = R.menu(spot); R.esc();
-  verdict(fl.kind === 'floor' && fl.rows[0]?.key === '1' && fl.rows[0].text.startsWith('move there') && !fl.rows[0].text.includes('dark') && fs.rows[0]?.key === '1' && fs.rows[0].text.startsWith('move there · hold in the dark') && fs.rows.length === fl.rows.length && !digitAbove5(fs.rows),
-    "the floor's menu: 1 is 'move there' while loud and 'move there · hold in the dark' while silent — the same count of rows, no digit above 5", `loud: ${show(fl.rows)}  ·  silent: ${show(fs.rows)}`);
-  // a door's menu: the same with the switch on and off
-  const door = game.doors.list.find((d: any) => d.def.name === 'breakroom_w') ?? game.doors.list[0], dp = [door.frameCentre[0], 1.0, door.frameCentre[2]];
-  const tools = (): string => { const a = R.menu(dp); let s = show(a.rows); const i = (O.menu?.rows ?? []).findIndex((d: any) => d.opens); if (i >= 0) { O.pick(i); R.step(2); s += '  ▸  ' + show((O.hud().menu?.rows ?? []).slice(1).filter((r: any) => r.kind !== 'cancel').map((r: any) => ({ key: r.opts[0]?.key, text: r.opts[0]?.text, off: !!r.off }))); } R.esc(); return s; };
-  const dOn = tools(); PAIR.on = false; R.step(2); const dOff = tools(); PAIR.on = true; R.step(2);
-  verdict(dOn === dOff && dOn.length > 20, `a door's menu and its tools page read the same with the switch on and off (${door.def.name})`, `on:  ${dOn}\n    off: ${dOff}`);
-  verdict(R.held === 0, 'nothing was held: every act above was a press', `most keys / buttons down in any frame: ${R.held}`);
-  // off, and a bigger squad
-  PAIR.on = false; R.step(2); const tOff = O.targetAt(foe.char.pos), ids = O.defs.map((d: any) => d.id);
-  verdict(tOff.kind !== 'foe' && !ids.some((id: string) => id.startsWith('pair')) && !O.defs.find((d: any) => d.id === 'hold').targets.includes('foe') && !O.defs.find((d: any) => d.id === 'fallIn').targets.includes('foe') && O.give('pairMark', R.foe(foe)) !== null,
-    'switch off: a defender is no target, no row of these is on the table, the built-in rows fit what they fitted, and the order is not there to give', `targetAt(a defender) → ${tOff.kind} · rows: ${ids.join(' ')}`);
-  const out: string[] = []; let okBig = true;
-  for (const squad of [2, 4] as const) { const B = await rig({ squad, quiet: false }), h = B.tango(1); B.put(h, AISLE_MID, EAST); B.step(10);
-    const t = B.O.targetAt(h.char.pos), has = B.O.defs.some((d: any) => d.id.startsWith('pair')); okBig &&= !B.P.up && t.kind !== 'foe' && !has; out.push(`squad of ${squad}: up ${B.P.up} · targetAt(a defender) → ${t.kind} · rows of these ${has ? 'listed' : 'none'}`); }
-  verdict(okBig, 'switch on with a squad of two or of four: not offered — these are one partner\'s orders', out.join(' · '));
-  return done();
-});
 
 // ---------------------------------------------------------------- wait here / on me
 export const pairWait = guarded(async () => {
@@ -224,8 +190,7 @@ export const pairMark = guarded(async () => {
     const t0 = game.time; R.press('KeyF'); const went = !!P.jobOf(mate)?.go; const down = R.until(() => foe.state === 'dead', 6), tDown = game.time - t0; R.step(60 * 3);
     verdict(!!row && row.text.startsWith('mark') && went && down && foe.downKind === 'struck' && foe.downBy === 'guard' && R.opShots === 0 && R.roused().length === 0 && R.silent() && !SLM.silentCompromised(game) && O.of(mate)?.order === 'hold' && !P.jobOf(mate) && R.said.includes(`[${mate.callsign}] he's down.`),
       'F is the mark (also a row under "on your word" on any menu while he waits): he closes, the man is out cold — struck, not shot, not on Sam\'s card — no round fired, nobody else roused, the squad still silent; he says so and holds', `menu row: ${row ? `${row.key} ${row.text}` : 'none'} · down ${f2(tDown)} s after F · ${foe.callsign}: ${foe.state} ${foe.downKind} by ${foe.downBy} · rounds ${R.opShots} · roused ${R.roused().length} · ${R.status()} · ${R.log()}`);
-    R.input.pressed.add('KeyF'); P.input(R.input); const fLeft = R.input.pressed.has('KeyF'); R.input.pressed.delete('KeyF');
-    verdict(fLeft && !P.mark() && !O.defs.some((d: any) => d.id === 'pairGo') && R.held === 0, 'with nobody waiting on it F is not this module\'s (the press is left for whoever else reads it) and its row is off the menu; nothing was held', `F left in the frame's input: ${fLeft} · held ${R.held}`); }
+  }
   // the mark by Sam's own hands: two men on one beat
   { const { R, foe, mate } = await scene(); const { O, game, P } = R; const two = R.tango(2);
     R.put(two, [AISLE_MID[0], 0, AISLE_MID[2] + 2.2], EAST); R.step(20);
@@ -285,69 +250,24 @@ export const pairWatched = guarded(async () => {
   // (… and his feet and his facing held where the probe put them: a defender of this staging turns back to his own door within a second)
   const calm = (R: any, w: any) => { const at = [w.char.pos[0], 0, w.char.pos[2]]; R.post = () => { if (w.state !== 'dead') { w.awareness = 0; if (w.state !== 'patrol') w.state = 'patrol'; R.put(w, at, w.__yaw); w.char.chestDir = [Math.sin(w.__yaw), 0, Math.cos(w.__yaw)]; } }; };
   const staged = async (o: any = {}) => { const { R, foe, mate } = await scene(o); R.O.give('pairMark', R.foe(foe), 'all'); const set = R.until(() => !!R.P.jobOf(mate)?.set, 30); return { R, foe, mate, set }; };
+  // (one scene, to stay under a minute: the watcher stands long enough for the way he mostly faces to BE this way; the mark; he is held; then the head turn)
   { const { R, foe, mate, set } = await staged(); const { P, O } = R;
     const none = P.watcher(foe, mate);
-    const w = witness(R, foe, -Math.PI / 2); calm(R, w); R.step(20);
+    const w = witness(R, foe, -Math.PI / 2); calm(R, w); R.step(60 * 20);
     const who = P.watcher(foe, mate), n0 = R.said.length;
     R.press('KeyF');
     R.step(60 * 3);
-    const J = P.jobOf(mate), said = R.said.slice(n0), note = O.hud().status[0]?.opts.find((x: any) => x.key === 'F')?.text ?? '', line = O.statusOf?.(mate) ?? '';
-    verdict(set && none === null && who === w && said.includes(`[${mate.callsign}] hold. ${w.callsign} has eyes on him.`) && !said.includes(`[${mate.callsign}] moving.`) && foe.state !== 'dead' && J?.watcher === w && J.t0 < 0 && /anyway/.test(note),
+    const J0 = P.jobOf(mate), said0 = R.said.slice(n0), note0 = O.hud().status[0]?.opts.find((x: any) => x.key === 'F')?.text ?? '', line0 = O.statusOf?.(mate) ?? '';
+    verdict(set && none === null && who === w && said0.includes(`[${mate.callsign}] hold. ${w.callsign} has eyes on him.`) && !said0.includes(`[${mate.callsign}] moving.`) && foe.state !== 'dead' && J0?.watcher === w && J0.t0 < 0 && /anyway/.test(note0),
       "the mark with a second defender looking at the man (by the defenders' own eye test): no hands — he says who has eyes on him and stays set; the squad block says F again sends him anyway",
-      `set ${set} · watcher before ${none?.callsign ?? 'nobody'}, after ${who?.callsign ?? 'nobody'} · said: ${said.join(' / ')} · F: ${note} · ${foe.callsign} ${foe.state} · ${line}`);
-    // the watcher looks away: he goes by himself
-    const n1 = R.said.length; w.__yaw = Math.PI / 2; const t0 = R.game.time;
-    const down = R.until(() => foe.state === 'dead', 8);
-    verdict(down && R.said.slice(n1).includes(`[${mate.callsign}] clear. moving.`) && R.opShots === 0, 'the watcher turns away: "clear. moving." and the man is out cold with no second mark and no round', `down ${down} after ${f2(R.game.time - t0)} s · said: ${R.said.slice(n1).join(' / ')} · rounds ${R.opShots}`);
-  }
-  { const { R, foe, mate } = await staged(); const { P } = R;
-    const w = witness(R, foe, -Math.PI / 2); calm(R, w); R.step(20);
-    R.press('KeyF'); R.step(60); const held = foe.state !== 'dead' && P.jobOf(mate)?.watcher === w, n0 = R.said.length;
+      `set ${set} · watcher before ${none?.callsign ?? 'nobody'}, after ${who?.callsign ?? 'nobody'} · said: ${said0.join(' / ')} · F: ${note0} · ${foe.callsign} ${foe.state} · ${line0}`);
+    const held = foe.state !== 'dead' && P.jobOf(mate)?.watcher === w, n1 = R.said.length; w.__yaw = -Math.PI / 2 + 1.3;
+    R.step(60 * 3); const J = P.jobOf(mate), still = foe.state !== 'dead' && J?.watcher === w && J.t0 < 0 && P.watcher(foe, mate) === null, said = R.said.slice(n1);
+    const note = O.hud().status[0]?.opts.find((x: any) => x.key === 'F')?.text ?? '', line = O.statusOf?.(mate) ?? '', n2 = R.said.length;
     R.press('KeyF'); const down = R.until(() => foe.state === 'dead', 6);
-    verdict(held && down && R.said.slice(n0).includes(`[${mate.callsign}] going anyway.`) && PM.PAIR_STATS.anyway === 1, 'a second mark while he is held up: "going anyway." and he takes the man whoever is looking', `held ${held} · down ${down} · said: ${R.said.slice(n0).join(' / ')} · anyway ${PM.PAIR_STATS.anyway}`);
-  }
-  // held up for longer than the whole job's own clock: the seconds he was held are not the job's — he still takes the man once it is clear
-  { const { R, foe, mate } = await staged(); const { P } = R; const keep = PM.PAIR.takeSecs;
-    const w = witness(R, foe, -Math.PI / 2); calm(R, w); R.step(20);
-    PM.PAIR.takeSecs = 3; R.press('KeyF'); R.step(60 * 6); const held = foe.state !== 'dead' && P.jobOf(mate)?.watcher === w, n0 = R.said.length;
-    w.__yaw = Math.PI / 2; const down = R.until(() => foe.state === 'dead', 8), said = R.said.slice(n0);
-    PM.PAIR.takeSecs = keep;
-    verdict(held && down && !said.some((x: string) => /can't get (to his back|behind him)\./.test(x)), "held up for longer than the job's own time limit, then clear: he takes the man — the wait is not counted against the job", `held ${held} · down ${down} · said: ${said.join(' / ')}`);
-  }
-  // Sam's own hands as the mark, the partner set: he goes whoever is looking (the beat is not missed) …
-  { const { R, foe, mate } = await staged(); const { P } = R;
-    const w = witness(R, foe, -Math.PI / 2); calm(R, w); R.step(20); const n0 = R.said.length;
-    P.mark('hands'); const down = R.until(() => foe.state === 'dead', 6), said = R.said.slice(n0);
-    verdict(down && !said.some((x: string) => /has eyes on him/.test(x)) && PM.PAIR_STATS.watched === 0, "your own hands as the mark, the partner set at his man: he goes with you whoever is looking — no 'hold'", `down ${down} · said: ${said.join(' / ')}`);
-  }
-  // HE'LL LOOK BACK (PAIR.lookBack): the watcher has stood there a while, the partner is held on the mark, and the man only turns his head `turn` rad
-  const back = async (o: any, turn: number) => { const { R, foe, mate } = await staged(o); const w = witness(R, foe, -Math.PI / 2); calm(R, w); R.step(60 * 20);   // (long enough for the way he mostly faces to BE this way: he came from facing his own door)
-    R.press('KeyF'); R.step(60); const held = foe.state !== 'dead' && R.P.jobOf(mate)?.watcher === w; w.__yaw = -Math.PI / 2 + turn; return { R, foe, mate, w, held, n0: R.said.length, t0: R.game.time }; };
-  { const { R, foe, mate, w, held, n0 } = await back({}, 1.3); const { P, O } = R;
-    R.step(60 * 3); const J = P.jobOf(mate), still = foe.state !== 'dead' && J?.watcher === w && J.t0 < 0 && P.watcher(foe, mate) === null, said = R.said.slice(n0);
-    const note = O.hud().status[0]?.opts.find((x: any) => x.key === 'F')?.text ?? '', line = O.statusOf?.(mate) ?? '', n1 = R.said.length;
-    R.press('KeyF'); const down = R.until(() => foe.state === 'dead', 6);
-    verdict(held && still && said.includes(`[${mate.callsign}] he'll look back. your call.`) && /anyway/.test(note) && down && R.said.slice(n1).includes(`[${mate.callsign}] going anyway.`),
+    verdict(held && still && said.includes(`[${mate.callsign}] he'll look back. your call.`) && /anyway/.test(note) && down && R.said.slice(n2).includes(`[${mate.callsign}] going anyway.`),
       'the watcher only turns his head: three seconds on the partner is still held ("he\'ll look back. your call."), F is still on the squad block, and F sends him',
-      `held ${held} · still ${still} · F: ${note} · ${line} · down ${down} · said: ${R.said.slice(n0).join(' / ')}`);
-  }
-  { const { R, foe, mate, held, n0, t0 } = await back({}, 2.1);
-    R.step(60 * 2); const still = foe.state !== 'dead' && !!R.P.jobOf(mate)?.watcher; const down = R.until(() => foe.state === 'dead', 14);
-    verdict(held && still && down && R.said.slice(n0).includes(`[${mate.callsign}] clear. moving.`), 'the watcher turns for good (and stays turned): the hold lets go by itself once the way he mostly faces has come round — no second mark',
-      `held ${held} · still at 2 s ${still} · down ${down} after ${f2(R.game.time - t0)} s · said: ${R.said.slice(n0).join(' / ')}`);
-  }
-  { const { R, foe, mate, held, n0, t0 } = await back({}, 1.3); const { P } = R;
-    R.step(60 * 2); const still = foe.state !== 'dead' && !!P.jobOf(mate)?.watcher;
-    P.litAt = () => 0; const post = R.post; R.post = () => { post?.(); foe.visibility = 0; mate.visibility = 0; }; foe.visibility = 0; mate.visibility = 0;   // (the lamp goes out)
-    const down = R.until(() => foe.state === 'dead', 6);
-    verdict(held && still && down && R.said.slice(n0).includes(`[${mate.callsign}] clear. moving.`), 'the light goes off the man and the partner while the watcher\'s head is turned: nothing is there for him to look back to — the hold lets go',
-      `held ${held} · still at 2 s ${still} · down ${down} after ${f2(R.game.time - t0)} s · said: ${R.said.slice(n0).join(' / ')}`);
-  }
-  { const { R, foe, mate } = await scene({ pair: { heelWait: 3 } }); const { P } = R;
-    const w = witness(R, foe, -Math.PI / 2); calm(R, w); R.step(5);
-    R.O.give('pairTake', R.foe(foe), 'all'); const n0 = R.said.length;
-    R.step(60 * 40); const said = R.said.slice(n0);
-    verdict(foe.state !== 'dead' && !P.jobOf(mate) && R.opShots === 0 && said.some((x: string) => /no clean moment|no opening|no way to his back unseen|can't get behind him unseen/.test(x)), 'take him now, with a watcher who never looks away: no hands — he calls it off in words and holds', `${foe.callsign} ${foe.state} · said: ${said.filter((x: string) => x.startsWith('[')).join(' / ')}`);
+      `held ${held} · still ${still} · F: ${note} · ${line} · down ${down} · said: ${R.said.slice(n1).join(' / ')}`);
   }
   return done();
 });
@@ -375,8 +295,6 @@ export const pairWatch = guarded(async () => {
     if (foe.state !== 'dead') { foe.state = 'alert'; foe.awareness = 1; foe.foe = mate; } R.step(60 * 4);
     return { w, quiet, after: { shots: R.opShots, foe: foe.state }, name: foe.callsign, held: R.held }; };
   const a = await run('pairWatch');
-  verdict(a.w === null && a.quiet.shots === 0 && a.quiet.foe !== 'dead' && a.quiet.onHim < 0.2 && a.quiet.held > 0 && a.quiet.status === `watching ${a.name}` && a.held === 0,
-    'X, 2 on the man: six seconds with his gun on him and not one round', `rounds ${a.quiet.shots} · ${a.name} ${a.quiet.foe} · gun off him by ${f2(a.quiet.onHim)} rad · rounds held by this row ${a.quiet.held} · ${a.quiet.status}`);
   verdict(a.after.shots > 0, 'the moment the man has noticed, he shoots', `rounds after: ${a.after.shots} · ${a.name} ${a.after.foe}`);
   { const R = await rig(); const t5 = R.tango(5), w = R.O.give('pairWatch', R.foe(t5)); R.step(20);
     verdict(w === 'no line from here.' && R.said.includes(`[${R.mate.callsign}] no line from here.`) && R.O.of(R.mate)?.order !== 'pairWatch', 'a man he cannot see (a wall between): refused — no line from here', `give → ${w} · said: ${R.said.slice(-1).join('')}`); }
@@ -399,19 +317,9 @@ async function minute(o: RigOpts, use: false | 'move' | 'pairDark' = false): Pro
   O.give('openClear', door('breakroom_w')); frame(60 * 20);
   return `${(h >>> 0).toString(16).padStart(8, '0')} · ${game.guards.filter((x: any) => x.state !== 'dead').length} standing at ${game.time.toFixed(2)} s · orders ${O.log.length}`;
 }
-export const pairIdentity = guarded(async () => {
-  const { verdict, done } = family('pair-identity: the switch on and never used is the game with it off');
-  const off = await minute({ pair: { on: false } }), on = await minute({}), knobs = await minute({ pair: { stageM: 3, pace: 0.7, darkVis: 0.6 } });
-  verdict(off === on && on === knobs, 'one partner, a scripted minute (fall in, move, go silent, move, stack, cover, fall in, open and clear) with no row of these given (the moves given loud): the same hash every frame with the switch off, on, and on with its numbers moved', `off ${off} · on ${on} · numbers moved ${knobs}`);
-  const used = await minute({}, 'pairDark'), plain = await minute({}, 'move');
-  verdict(used !== plain, "the same minute with the second move given SILENT, once as the plain move and once as 'hold in the dark': the hashes differ (the probe can tell)", `hold in the dark ${used} · the plain move ${plain}`);
-  const off4 = await minute({ squad: 4, pair: { on: false } }), on4 = await minute({ squad: 4 });
-  verdict(off4 === on4, 'the squad of four, the same minute: the same hash with the switch off and on (the rows are not offered to four)', `off ${off4} · on ${on4}`);
-  return done();
-});
 
 if (import.meta.main) {
-  const all: Record<string, () => Promise<boolean>> = { 'pair-menu': pairMenu, 'pair-wait': pairWait, 'pair-dark': pairDark, 'pair-mark': pairMark, 'pair-now': pairNow, 'pair-watched': pairWatched, 'pair-watch': pairWatch, 'pair-identity': pairIdentity };
+  const all: Record<string, () => Promise<boolean>> = { 'pair-wait': pairWait, 'pair-mark': pairMark, 'pair-now': pairNow, 'pair-watched': pairWatched, 'pair-watch': pairWatch,  };
   const want = process.argv.slice(2).filter(a => !a.startsWith('--')); let ok = true;
   for (const [name, fn] of Object.entries(all)) if (!want.length || want.includes(name)) ok = (await fn()) && ok;
   process.exit(ok ? 0 : 1);

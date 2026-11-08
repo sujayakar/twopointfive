@@ -159,14 +159,14 @@ impl Default for BoxWas { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct BoxWorld {
     pub statics: Vec<BoxId>,
-    pub dynamics: Vec<BoxId>,
+    pub dynamics: Vec<AnyBoxId>,
     pub hide_primary: Option<JsSet<BoxId>>,
     pub undrawn: Option<crate::scene_boxes::BoxWorldUndrawn>,
     pub motion_ids: bool,
     pub mkey_prev: JsMap<crate::Num, f64>,
     pub mkey_cur: JsMap<crate::Num, f64>,
     pub mkey_stats: crate::scene_boxes::BoxWorldMkeyStats,
-    pub all: Vec<BoxId>,
+    pub all: Vec<AnyBoxId>,
     pub max_boxes: f64,
     pub geo_data: crate::Opaque,
     pub geo_f32: Vec<f32>,

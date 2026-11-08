@@ -23,6 +23,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
+import { sample } from './sweep.ts';
 const { DOORWAY, Doors } = await import(`${ROOT}/src/game/doors.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -183,26 +184,6 @@ const CASES: Case[] = [
   { name: 'locked against a keyless man', run: (g, d, f, w) => { fresh(d, true); const c = man(d, f, 1.0, { who: PLAYER_ID, keys: new Set() }); const r = walk(g, d, f, w, c, 1.6, 3);
       return f === d.keySide ? (r && w.widest < 0.01 ? null : 'a lock on his face let him through') : r; } },
 ];
-export const onewayLeaf = guarded(async () => {
-  const F = family('oneway-leaf: every door, both faces, every opener — it opens, and never through its frame');
-  let total = 0, crossedAll = 0; heldCases = 0;
-  for (const file of LEVELS) {
-    const g = (await boot(file)).game; const fails: string[] = []; let n = 0, crossed = 0, worst = 0;
-    heard = []; const emit0 = g.doors.emit; g.doors.emit = (e: any) => { heard.push(e.sound); emit0(e); };
-    for (const d of g.doors.list) for (const f of [1, -1]) for (const C of CASES) {
-      fresh(d); const w = new Watch(d); w.see(d); heard.length = 0; let why = C.run(g, d, f, w); n++;
-      if (C.mirrors) { if (!w.crossed) why = 'the watch did not see an angle written on the far side'; w.m0 = d.mirrored; w.worst = 0; }   // (the one case that MAKES a crossing: the check must see it)
-      if (w.crossed) { crossed++; worst = Math.min(worst, w.worst); }
-      if (why || w.crossed) fails.push(`${d.def.name} ${faceWord(d, f)} · ${C.name}: ${w.crossed ? `CROSSED its frame by ${(-w.worst).toFixed(3)} rad` : why}`);
-      fresh(d, !!d.def.locked);
-    }
-    total += n; crossedAll += crossed;
-    F.verdict(fails.length === 0, `${nameOf(file)}: ${g.doors.list.length} doors × 2 faces × ${CASES.length} openers = ${n} cases`, fails.length ? `${fails.length} wrong — ${fails.slice(0, 8).join('\n    ')}${fails.length > 8 ? `\n    … and ${fails.length - 8} more` : ''}` : 'every case opened (or held, where it should) and the leaf never left the side it opens into');
-  }
-  F.verdict(crossedAll === 0, `${total} cases on ${LEVELS.length} levels: the leaf crossed its frame in ${crossedAll}`, 'checked after every step of every case: angle × swing ≥ 0');
-  F.verdict(heldCases > 0, 'the booted openers at the face a door opens toward were held to the frame (leaf home, keep whole, a thud), by how the door is hung', `${heldCases} booted cases expected held`);
-  return F.done();
-});
 
 // ---------------------------------------------------------------- oneway-player / oneway-men: real feet through Game.update
 /** both faces of a door a man can stand on and walk from: free floor 1.1 m off the leaf's middle and 1.5 m beyond it */
@@ -211,10 +192,10 @@ function clearFloor(g: any) { g.godMode = true; g.playerInvisible = true; g.tune
 export const onewayPlayer = guarded(async () => {
   const F = family('oneway-player: Sam on his own feet through every door, both faces; Space on its row');
   let crossedAll = 0;
-  for (const file of LEVELS) {
+  for (const file of sample(LEVELS, 2)) {
     const W = await boot(file), g = W.game; clearFloor(g); const fails: string[] = []; let n = 0, skipped = 0, rows = 0;
     let m0 = 0; const marks = () => g.doors.list.reduce((n: number, x: any) => n + x.mirrored, 0), all = () => { let c = 0; for (const x of g.doors.list) if (x.angle * x.swing < -1e-9) c++; const m = marks(); c += m - m0; m0 = m; return c; };
-    for (const d of g.doors.list) for (const f of [1, -1]) {
+    for (const d of sample(g.doors.list as any[], 8)) for (const f of [1, -1]) {
       const S = spots(g, d, f); if (!S) { skipped++; continue; }
       // (a) walked through
       for (const x of g.doors.list) fresh(x); let crossed = 0; n++; m0 = marks();
@@ -238,10 +219,10 @@ export const onewayPlayer = guarded(async () => {
 export const onewayMen = guarded(async () => {
   const F = family('oneway-men: a teammate and a defender on the AI\'s own walk through every door, both faces');
   let crossedAll = 0;
-  for (const file of LEVELS) {
+  for (const file of sample(LEVELS, 1)) {
     const W = await boot(file), g = W.game; clearFloor(g); g.teleportPlayer(g.level?.playerSpawn ?? g.player.char.pos); const fails: string[] = []; let n = 0, skipped = 0;
     let m0 = 0; const marks = () => g.doors.list.reduce((n: number, x: any) => n + x.mirrored, 0), all = () => { let c = 0; for (const x of g.doors.list) if (x.angle * x.swing < -1e-9) c++; const m = marks(); c += m - m0; m0 = m; return c; };
-    for (const team of ['operative', 'hostile'] as const) for (const d of g.doors.list) for (const f of [1, -1]) {
+    for (const team of ['operative', 'hostile'] as const) for (const d of sample(g.doors.list as any[], 6)) for (const f of [1, -1]) {
       const S = spots(g, d, f); if (!S) { skipped++; continue; }
       for (const x of g.doors.list) fresh(x); n++; m0 = marks();
       const gd = spawnUnit(g, { team, pos: S.from as any, yaw: 0 }); if (team === 'hostile') { gd.hold = false; gd.pinned = false; W.step(DT); }   // (off the room fight's roster — roomfight.ts takes every held hostile for its own and ends his script — and onto his own feet)

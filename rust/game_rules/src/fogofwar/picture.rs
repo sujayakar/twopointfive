@@ -15,7 +15,7 @@ use crate::v3::V3;
 use alloc::{vec, vec::Vec};
 
 /// a box's row
-fn bx<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
+fn bx<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 /// Called at the end of the game's pass, once a tick, on every machine.
 /// The lights' classes for this frame, painted: the level's lamps the team has in another state than they are in. Out but remembered lit = lit where nobody
@@ -154,7 +154,7 @@ pub fn fog_of_war_faces_lift(g: &mut crate::game::Game) {
 /// The frame's list of boxes as it stands BEFORE the fog cuts it, kept for a viewer's draw with the fog off: the doors live in place of the copies the
 /// fog keeps of them. The page reads the list off its copy of the game (fogofwar.ts `raw`); nothing is kept where no viewer has asked. Called just
 /// before `fog_of_war_things`.   (fogofwar.ts FogOfWar.things, its head)
-pub fn keep_raw(g: &mut crate::game::Game, list: &[BoxId]) {
+pub fn keep_raw(g: &mut crate::game::Game, list: &[AnyBoxId]) {
     if !(g.fog_picture.viewer && fog_of_war_active(g)) { return; }
     let mut raw = core::mem::take(&mut g.fog_picture.raw_list);
     raw.clear();

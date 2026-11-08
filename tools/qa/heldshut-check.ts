@@ -49,7 +49,7 @@ async function arm(shut: boolean): Promise<Arm> {
   await quiet(() => step(45));
   const n0 = op.beats.length;
   if (shut) { d.angle = 0; d.vel = 0; d.latched = true; d.closing = false; d.pullT = 0; await quiet(() => step(10)); A.angle = d.angle; if (!d.latched) { A.note = 'the leaf would not stay shut'; return A; } }
-  const r = await quiet(() => D.thresholdTell('bang', DOOR, 'all')); if (typeof r === 'string' && r) { A.note = `the word was refused: ${r}`; return A; }
+  const r = await quiet(() => O.give('bangClear', O.targetAt(d.frameCentre), 'all')); if (typeof r === 'string' && r) { A.note = `the word was refused: ${r}`; return A; }
   const men: any[] = [...op.men];
   await quiet(() => { for (let f = 0; f < 60 * 12; f++) { step(); if (A.crossed < 0 && men.some(m => m.state !== 'dead' && offOf(d, m.char.pos, side) < -0.3)) A.crossed = f / 60; } });
   A.beats = op.beats.slice(n0).map((b: any) => String(b.what));

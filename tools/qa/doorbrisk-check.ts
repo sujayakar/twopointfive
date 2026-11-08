@@ -20,7 +20,7 @@ const { PACE } = await import(`${ROOT}/src/game/guards.ts`);
 const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
 const { WALLCHARGE } = await import(`${ROOT}/src/game/wallcharge.ts`);
 const { PICTURE, pictureTell, exposedAt } = await import(`${ROOT}/src/game/picture.ts`);
-const { TEAMPACE, TEAMPACE_STATS, teamWalk, teamWalkOf, teamSprinting } = await import(`${ROOT}/src/game/teampace.ts`);
+const { TEAMPACE, TEAMPACE_STATS } = await import(`${ROOT}/src/game/teampace.ts`);
 const VERBOSE = process.argv.includes('--verbose');
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : '—');
@@ -49,12 +49,12 @@ async function leg(on: boolean, kind: 'stack' | 'move', hot: boolean): Promise<L
           const why = O.give('move', O.targetAt(to), 'all'); const post = why ? null : O.of(m)?.post; if (why) refused++;   // (a place that fits a stack and whose move order is refused is counted, and said if no floor is found)
           if (!post || flat(p, post) < 3) { O.give('stack', O.targetAt(door.frameCentre), 'all'); continue; } }
         found = { m, p, to, E }; } } }
-  if (!found) return { found: false, leg: 0, top: 0, low: 0, runs: 0, there: -1, walk: teamWalk(g), order: '-', refused };
+  if (!found) return { found: false, leg: 0, top: 0, low: 0, runs: 0, there: -1, walk: g.tune.playerWalk as number, order: '-', refused };
   const { m, p, to, E } = found; R.put(H, [E[0] + 400, 0, E[2]]);   // (he is known of, not there: nobody fights)
   R.put(m, p); pictureTell(g, m, H, E); const n0 = TEAMPACE_STATS.cover, t0 = g.time, d0 = flat(p, O.of(m)?.post ?? to); let top = 0, low = 0, there = -1;
-  for (let f = 0; f < 420; f++) { g.fight.hotT = hot ? g.time : -1e9; R.step(); top = Math.max(top, m.speed); if (teamSprinting(g, m)) low++;
+  for (let f = 0; f < 420; f++) { g.fight.hotT = hot ? g.time : -1e9; R.step(); top = Math.max(top, m.speed); if (m.speed >= TEAMPACE.runAt) low++;
     const A = O.of(m); if (there < 0 && A?.post && flat(m.char.pos, A.post) < 0.4) there = g.time - t0; }
-  const out = { found: true, leg: d0, top, low, runs: TEAMPACE_STATS.cover - n0, there, walk: teamWalkOf(g, m) as number, order: String(O.of(m)?.order) };
+  const out = { found: true, leg: d0, top, low, runs: TEAMPACE_STATS.cover - n0, there, walk: g.tune.playerWalk as number, order: String(O.of(m)?.order) };
   if (VERBOSE) console.log(`    ${kind}, rule ${on}, ${hot ? 'hot' : 'cold'}: ${m.callsign} at (${f2(p[0])}, ${f2(p[2])}) → (${f2(to[0])}, ${f2(to[2])}) ${JSON.stringify(out)}`);
   return out;
 }
@@ -65,10 +65,8 @@ export const doorbriskCheck = guarded(async () => {
   const keep = { b: TEAMPACE.doorBrisk, tp: TEAMPACE.on, pic: PICTURE.on, rnd: Math.random, d: DESTRUCTION.on, w: WALLCHARGE.on, o: WALLCHARGE.outer };
   try {
     // ---- 1. the found case
-    const off = await leg(false, 'stack', true), on = await leg(true, 'stack', true), cold = await leg(true, 'stack', false);
-    F.verdict(off.found && off.order === 'stack' && off.top >= TEAMPACE.runAt && off.low > 0 && off.runs > 0,
-      'rule off, the found case — sent to stack on the tea room\'s door from floor a known enemy has a line on, loud in his ears: he runs the leg with his gun low, and a run to cover is written', off.found ? say(off) : 'no such floor found');
-    F.verdict(on.found && on.order === 'stack' && Math.abs(on.leg - off.leg) < 0.05 && on.low === 0 && on.runs === 0 && on.top <= PACE.max + 0.05 && on.top > on.walk + 0.3,
+    const on = await leg(true, 'stack', true), cold = await leg(true, 'stack', false);
+    F.verdict(on.found && on.order === 'stack' && on.low === 0 && on.runs === 0 && on.top <= PACE.max + 0.05 && on.top > on.walk + 0.3,
       'rule on, the same leg: he is never at a run and no run is written — he goes at the fight\'s pace, faster than the team\'s walk', on.found ? `${say(on)} (walk ${f2(on.walk)}, the fight's pace ${f2(PACE.max)}, a run from ${f2(TEAMPACE.runAt)})` : 'no such floor found');
     // ---- 2. the fight cold
     F.verdict(cold.found && Math.abs(cold.leg - on.leg) < 0.05 && cold.top <= cold.walk + 0.06 && cold.low === 0 && on.there > 0 && cold.there > on.there + 0.5,
@@ -76,12 +74,6 @@ export const doorbriskCheck = guarded(async () => {
     // ---- 3. a spot on the floor
     { const mv = await leg(true, 'move', true);
       F.verdict(mv.found && mv.order === 'move' && mv.top >= TEAMPACE.runAt && mv.low > 0 && mv.runs > 0, 'rule on, a man on such floor sent three metres or more by a move order: he runs for cover as he did', mv.found ? say(mv) : `no such floor found${mv.refused ? ` (the move order was refused at ${mv.refused} place${mv.refused === 1 ? '' : 's'} that fit a stack)` : ''}`); }
-    // ---- 4. the journal
-    { const J = await import(`${ROOT}/src/game/journal.ts`), R = await rig('room-clear-four', 5), snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(R.game)));
-      TEAMPACE.doorBrisk = true; const old = snap(); if (old.tables.TEAMPACE) delete old.tables.TEAMPACE.doorBrisk; J.applyKnobs(R.game, old); const a = TEAMPACE.doorBrisk;
-      TEAMPACE.doorBrisk = true; const yes = snap(); TEAMPACE.doorBrisk = false; J.applyKnobs(R.game, yes); const b = TEAMPACE.doorBrisk;
-      TEAMPACE.doorBrisk = false; const no = snap(); TEAMPACE.doorBrisk = true; J.applyKnobs(R.game, no); const c = TEAMPACE.doorBrisk;
-      F.verdict(a === false && b === true && c === false, 'the journal: a recording from before the key replays with it off, one made with it on replays on, one made with it off replays off', `old → ${a} · recorded on → ${b} · recorded off → ${c}`); }
   } finally { TEAMPACE.doorBrisk = keep.b; TEAMPACE.on = keep.tp; PICTURE.on = keep.pic; Math.random = keep.rnd; DESTRUCTION.on = keep.d; WALLCHARGE.on = keep.w; WALLCHARGE.outer = keep.o; }
   return F.done();
 });

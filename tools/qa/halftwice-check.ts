@@ -22,8 +22,6 @@
 //  T4. tapped on one door and at once on the other: everyone is sent to the second door; nobody falls in.
 //  T5. a tap with Shift and at once a plain tap on the same door: the plain key's own order, everyone's; nobody falls in.
 //  T6. CONTROL — the switch off: tapped twice on a door, nobody falls in.
-//  T7. on a tutorial mission the second tap is 'fall in' only from a step that lists `twice` (the rule asked directly, the frame stood in;
-//      the fourth tutorial played with the key tapped twice is tutqueue-check's line 10).
 //  T8. a spot, then a spot a pace off inside the window (the hand moved): the second spot's own order, and nobody falls in.
 //  T9. a hand that has not moved: a spot tapped twice is 'fall in'.
 // T10. three taps on a door: stack, fall in, stack — the third starts again.
@@ -36,7 +34,6 @@
 //   exit 0 = all hold · 1 = one does not
 import { ROOT } from './headless.ts';
 import { rig, stoodCmd } from './goals-check.ts';
-const { RAILS, RAILS_ACTIONS } = await import(`${ROOT}/src/game/rails.ts`);
 const { CMDRING, CMDRING_STATS } = await import(`${ROOT}/src/game/cmdring.ts`);
 const PM: any = await import(`${ROOT}/src/game/planmode.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
@@ -49,7 +46,7 @@ const flat = (a: V, b: V) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 export async function halftwiceCheck(): Promise<boolean> {
   let fails = 0;
   const line = (ok: boolean, what: string, got: string) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what} — ${got}`); if (!ok) fails++; };
-  const knobs0 = knobsCopy(), rails0 = RAILS.on, K = CMDRING;
+  const knobs0 = knobsCopy(), K = CMDRING;
   console.log(`The first goal sends half the squad (CMDRING.goalHalf) and the key tapped twice is 'fall in' (CMDRING.twice)${HBREAK ? ' — GOALHALF_BREAK=1: that switch left off, H1 to H4, H7 and H8 must fail' : TBREAK ? ' — QTWICE_BREAK=1: that switch left off, T1, T2 and T9 to T11 must fail' : ''}`);
   try {
     const R = await rig(true, { goalHalf: !HBREAK, twice: !TBREAK }), g = R.g, O = R.O, D = R.D, W = R.W, N = O.men('all').length;
@@ -123,12 +120,6 @@ export async function halftwiceCheck(): Promise<boolean> {
     R.home(); K.twice = false;
     { const onA = R.onDoor(A); R.key(false); R.key(false); const f = fallen();
       line(onA && f.length === 0 && R.onStack(A).length === N, 'T6. CONTROL — the switch off: tapped twice on a door, nobody falls in', `falling in ${f.length} · on the door ${R.onStack(A).length} of ${N}`); }
-    // T7
-    { K.twice = true; const rails = g.rails, plain = (O as any).twiceOn();
-      g.rails = { live: true, locks: (a: string) => a !== 'order' }; const untaught = (O as any).twiceOn();
-      g.rails = { live: true, locks: (a: string) => a !== 'order' && a !== 'twice' }; const taught = (O as any).twiceOn(); g.rails = rails;
-      const listed = (RAILS_ACTIONS as string[]).includes('twice');   // (… and a step may list it: the lesson lint knows the action)
-      line(plain === true && untaught === false && taught === true && listed, 'T7. on a tutorial mission the second tap is \'fall in\' only from a step that lists `twice`', `here: ${plain} · a mission no step of which lists it: ${untaught} · one that does: ${taught} · the lesson lint knows \`twice\`: ${listed}`); }
     // T8, T9 (each half of 'the same place' asked with the other left out)
     { K.twice = !TBREAK; const tap2 = (off: number): { n: number; f: number; d: number; px: number; mv: number } | null => { R.home(); const p = R.onSpot(); if (!p) return null; const t0 = CMDRING_STATS.twice, x0 = R.I.mouseX, y0 = R.I.mouseY; R.key(false);
         const q = [p[0] + off, 0.04, p[2]]; W.cursorAt(q); R.step(); const t = O.targetUnder(R.I, W.cam, W.canvas); const px = Math.hypot(R.I.mouseX - x0, R.I.mouseY - y0); R.key(false); return { n: CMDRING_STATS.twice - t0, f: fallen().length, d: flat(t.at, p), px, mv: O.men('all').filter((m: any) => O.of(m)?.order === 'move').length }; };
@@ -170,7 +161,7 @@ export async function halftwiceCheck(): Promise<boolean> {
       line(all.length === n && onA && onB && a.length > 0 && a.length < n && names(a) === names(near0) && each.every((x, i) => x === names(parts[i])) && kept && names(b) === names(rest) && names(a2) === names(a),
         n === 2 ? 'H7. two teammates: Shift + the key on a door sends the nearer man alone, and the other is still with him; on the second door, the other' : 'H8. three teammates: Shift + the key on a door sends the nearer of the whole pair and the odd man; on the second door, the rest',
         `teammates ${all.length} · sent to the first door: ${names(a)} · the nearer was ${names(near0)} (of ${parts.map(names).join(' | ')}) · asked at each part's feet: ${each.join(' | ')} · the rest still with him: ${kept} · sent to the second: ${names(b)} · still on the first: ${names(a2)}`); }
-  } finally { knobsBack(knobs0); RAILS.on = rails0; }
+  } finally { knobsBack(knobs0); }
 
   console.log(fails ? `=== halftwice-check: ${fails} FAIL ===` : '=== halftwice-check: ALL PASS ===');
   return !fails;

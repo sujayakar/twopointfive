@@ -6,7 +6,7 @@ use alloc::{string::String, vec::Vec};
 /// (TypeScript: Piece, src/game/fixtureBreak.ts:53)
 #[derive(Clone, Copy, Debug)]
 pub struct Piece {
-    pub box_: BoxId,
+    pub box_: FrameBoxId,
     pub v: V3,
     pub axis: V3,
     pub rate: f64,
@@ -26,7 +26,7 @@ impl Piece {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         Piece {
-            box_: BoxId(0),
+            box_: FrameBoxId(0),
             v: [0.0; 3],
             axis: [0.0; 3],
             rate: 0.0,
@@ -62,7 +62,7 @@ pub struct Rec {
     pub om: f64,
     pub rest: f64,
     pub still: bool,
-    pub hang: Vec<BoxId>,
+    pub hang: Vec<FrameBoxId>,
     pub pieces: Vec<crate::fixture_break::Piece>,
     pub pop: f64,
     pub last_slot: f64,

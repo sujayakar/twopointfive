@@ -23,13 +23,13 @@ struct SP {
   dt: f32, time: f32, buoyancy: f32, weight: f32,
   vortConf: f32, velDamp: f32, densDecay: f32, tempDecay: f32,
   turbulence: f32, omega: f32, flushEps: f32, ring: u32,          // ring: CELLS of air kept round the smoke (1‥8; 8 = every brick that holds smoke has all 26 neighbours)
-  stirConf: f32, show: f32, numDirty: u32, bakeAll: u32,          // stirConf: × MORE vorticity confinement right round a moving body (forces, emBody; 0 = one strength everywhere, as it was) · show: THE SMOKE LAB'S PICTURES (0 anywhere else; smoke.ts `show`): bit 0 the bricks drawn (the readers' business: boxes hands the word on), bit 1 the smoke coloured by its spin (publish), the rest = the spin drawn as full colour, 1/s
+  stirConf: f32, pad17: f32, numDirty: u32, bakeAll: u32,          // stirConf: × MORE vorticity confinement right round a moving body (forces, emBody; 0 = one strength everywhere, as it was)
   softLo: f32, softHi: f32, softEps: f32, softDecay: f32,         // the pool's soft ceiling: between softLo and softHi of CAP in use the flush threshold rises to softEps and thin smoke decays softDecay/s faster
   thinDecay: f32, thinBelow: f32, readSkip: f32, fresh: f32,       // density under thinBelow decays up to thinDecay/s faster, always (0 = off): how far a plume's faint skirt spreads before it is gone · fresh: WHO GIVES WAY below
   viewX: f32, viewZ: f32, viewR: f32, viewBias: f32,              // where the camera looks (floor plan) and how far round it counts as seen: past viewR, rising to full at 2 viewR, the pool's ceiling comes sooner and harder (farOf); bias 0 = one ceiling for all
   calmCells: f32, farCells: f32, calmMax: u32, dtCap: f32,        // WHO STEPS (buildList): cells a brick's fastest air may cross between two of its steps, in sight / out of sight; the longest wait in frames (1 = every brick every frame, 2, 4); the most time one step integrates
   scaleCan: f32, scaleFx: f32, fineDecay: f32, fineShare: f32,    // the render density × of canister smoke / of everything else (publish) · THE FINE LATTICE LETS GO below
-  fineEps: f32, fineHeat: f32, fineRing: u32, fineKeep: f32,     // … and fineKeep: gas hotter than this on the fine lattice is not let go (0 = none kept, as first built)
+  fineEps: f32, fineHeat: f32, fineRing: u32, pad43: f32,
   levels: array<Level, 2>,
   dirty: array<vec4f, 16>,                                        // ≤ 8 boxes (lo, hi) whose obstacles changed since the last step
   windBound: array<vec4f, 8>,                                     // per wind source: bounding sphere (w < 0 = the storm: everywhere)
@@ -115,8 +115,6 @@ fn ringOf(l: u32, st: f32) -> i32 {
 // it shows: 1.7 s of automatic fire held 2,663 of 4,096 bricks for 3 % of the smoke in the air, and still held them 3 s later. In the boxes a fine domain was a 1.4 m cube whose faces ate what left it. Here:
 //   · density under the thin bar fades fineDecay/s faster on this lattice, always, and the heat in those cells with it (heat alone would hold a brick for seconds after its gas has gone): the crisp gas by the
 //     muzzle is untouched, what has spread to a haze is gone in a second or two;
-//   · … BUT NOT WHILE IT IS HOT (sp.fineKeep > 0; 0 = no such rule, as first built): a cell hotter than fineKeep is not thin, whatever its density, and from half of it up
-//     it is let go by degrees — so a flame (game/fire.ts FIRE.gas: heat with next to no smoke in it) keeps its lift for as long as its own cooling takes, then goes at once;
 //   · its floors are higher (fineEps, fineHeat: what is stored as nothing) and it keeps less air round the gas (fineRing cells): two bricks in three were clear air round thin wisps;
 //   · it has a share of the pool, counted by buildList, so a step late: fineShare of CAP, or whatever the coarse lattice leaves under the soft ceiling's foot (softLo) if that is more. From 0.7 of it new
 //     bricks are refused to the thinnest gas first, at all of it to everything but a source: the gas then meets an open face and fades there, as at a box's.
@@ -787,7 +785,6 @@ fn injectDecay(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) 
     var kd = vec4f(0.0); if (kinds) { kd = unpack4x8unorm(V[V_CURL + i].x); }
     // (the pool's soft ceiling: as it fills, THIN smoke goes faster — the body of a plume is untouched, its faint skirts give their bricks back)
     var faint = 1.0 - smoothstep(0.0, thin, v.x);
-    if (k.l == 1u && sp.fineKeep > 0.0) { faint *= 1.0 - smoothstep(0.5 * sp.fineKeep, sp.fineKeep, v.y); }   // (hot gas on the fine lattice is not let go: THE FINE LATTICE LETS GO)
     v.x *= exp(-(sp.densDecay + extra * faint) * k.dt);
     v.y *= exp(-(sp.tempDecay + cool * faint) * k.dt);
     let Pw = worldP(k, c); var fed = false;
@@ -884,8 +881,6 @@ fn publish(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) l
     if (r.x != 0u) {
       let at = (r.x - 1u) * 512u + r.y; let dt2 = unpack2x16float(S[S_DEN0 + at]); let d = dt2.x;
       if (kinds) { let kd = unpack4x8unorm(S[S_KIND + at]); o.x = d * mix(sp.scaleCan, sp.scaleFx, kd.x); o = vec4f(o.x, o.x * kd.yzw); } else { o.x = d * plain; }
-      if (k.l == 1u) { o.w = dt2.y; }   // (a FINE brick's last channel is its HEAT, as the solver has it: nobody read that channel of a fine brick — smoke_read.wgsl spgFineHot, for a fire's flame)
-      else if ((u32(sp.show) & 2u) != 0u) { o = vec4f(o.x, o.x * clamp(unpack2x16float(V[V_CURL + at].y).y / f32(max(u32(sp.show) >> 2u, 1u)), 0.0, 1.0), 0.0, 0.0); }   // (THE SMOKE LAB, spin: a coarse cell's tint channels carry density × how hard the air in it turns, 0‥1, from the curl the step left: composite.wgsl smokeLabOver draws it; smoke.ts holds the dust twin off meanwhile)
     }
     textureStore(atlasOut, org + c, o);
   }
@@ -922,7 +917,7 @@ fn wipePage(@builtin(global_invocation_id) gid: vec3u) {
 // The marchers and the shadow rays start from `smoke: array<SmokeBound, 8>` (common.wgsl): boxes to clip against, bounds round wherever renderable bricks are:
 // bricks are binned into plan tiles, each tile keeps the box of its bricks, and the tiles are merged greedily into at most four boxes a level. More plumes than boxes = looser boxes
 // (rays walk some empty page entries), never lost smoke.
-struct DomOut { origin: vec3f, voxel: f32, pad0: vec3u, live: u32, dims: vec3u, pad1: u32, show: f32, readSkip: f32, pad3: f32, pad4: f32 };   // = common.wgsl SmokeBound
+struct DomOut { origin: vec3f, voxel: f32, pad0: vec3u, live: u32, dims: vec3u, pad1: u32, pad2: f32, readSkip: f32, pad3: f32, pad4: f32 };   // = common.wgsl SmokeBound
 @group(2) @binding(9) var<storage, read_write> domOut: array<DomOut, 8>;
 @group(2) @binding(10) var<storage, read_write> statsOut: array<u32>;
 var<workgroup> tl: array<atomic<u32>, NTILES * 6u>;
@@ -966,7 +961,7 @@ fn boxes(@builtin(local_invocation_index) li: u32) {
   for (var q = 0u; q < 8u; q++) {
     let l = q >> 2u; let on = (q & 3u) < cnt[l]; let h = sp.levels[l].voxel;
     var d: DomOut;
-    d.voxel = h; d.live = select(0u, 1u, on); d.readSkip = sp.readSkip; d.show = sp.show;   // (record 0's: the readers' switch for hopping over empty air, smoke_read.wgsl spgSkip)
+    d.voxel = h; d.live = select(0u, 1u, on); d.readSkip = sp.readSkip;   // (record 0's: the readers' switch for hopping over empty air, smoke_read.wgsl spgSkip)
     if (on) { d.origin = vec3f(lo[q]) * (8.0 * h); d.dims = vec3u(hi[q] - lo[q] + 1) * 8u; }
     domOut[q] = d;
     statsOut[16u + q * 2u] = select(0u, u32(lo[q].x) | (u32(lo[q].y) << 10u) | (u32(lo[q].z) << 20u) | 0x80000000u, on);

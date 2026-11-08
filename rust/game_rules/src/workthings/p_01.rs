@@ -284,8 +284,8 @@ pub fn work_things_near(g: &mut crate::game::Game, at: V3) -> Option<crate::work
 }
 
 /// orders.ts targetUnder: the thing whose own box the cursor's ray landed on. (workthings.ts WorkThings.on)
-pub fn work_things_on(g: &mut crate::game::Game, box_: Option<BoxId>) -> Option<crate::orders::OrderTarget> {
-    let b = box_?;
+pub fn work_things_on(g: &mut crate::game::Game, box_: Option<AnyBoxId>) -> Option<crate::orders::OrderTarget> {
+    let b = box_?.world()?;   // (a thing's own box is the level's)
     if !g.level.breaker.boxes.iter().any(|&i| g.engine.world.statics.get(i as usize) == Some(&b)) { return None; }
     let th = work_things_things(g).into_iter().find(|x| x.kind == WorkThingKind::Breaker)?;
     Some(crate::orders::OrderTarget::Floor(thing_target(th)))
@@ -657,7 +657,7 @@ pub fn work_near(g: &mut crate::game::Game, at: V3) -> Option<crate::workthings:
 }
 
 /// orders.ts targetUnder: the thing whose own box the cursor is on. (workthings.ts workOn)
-pub fn work_on(g: &mut crate::game::Game, box_: Option<BoxId>) -> Option<crate::orders::OrderTarget> {
+pub fn work_on(g: &mut crate::game::Game, box_: Option<AnyBoxId>) -> Option<crate::orders::OrderTarget> {
     work_things_on(g, box_)
 }
 

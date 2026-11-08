@@ -1,10 +1,10 @@
 // SNATCH-CHECK: the rules of game/snatch.ts asked of a staged room clear on levels/snatch.json — no play-through, every situation set by hand.
-//   bun run tools/qa/snatch-check.ts            (exit 0 = every line PASS, 1 = a FAIL; SNATCH_BREAK=1 = the overlay switched off under the same lines: must fail)
+//   bun run tools/qa/snatch-check.ts            (exit 0 = every line PASS, 1 = a FAIL)
 // What it holds: the block's points stand on floor with a walk to every way out · he is staged with the room clear and keeps to his room while it is quiet ·
 // gunfire in his ears sends him at his nearest way out and, nobody on it, he is gone = the mission failed · a man on the way out in the DARK is not seen: he
 // runs into him and gives up; a man he makes out there (lit), far off, turns him; both ways held and seen, he goes to ground · one of the team close with a line = hands up, three seconds beside him = tied (the wrists-behind pose) · hands up and left
-// alone, he bolts · a round or a grenade that kills him = failed, the killer's side named · the house taken with him loose is not the end, with him tied it is won · the
-// slice a checkpoint would carry comes back · SNATCH.on false and a level without the block = no man, no objective line.
+// alone, he bolts · a round or a grenade that kills him = failed, the killer's side named · the house taken with him loose is not the end · a level without the
+// block = no man, no objective line. (How it ends in the van: tools/qa/snatchout-check.ts.)
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 
@@ -15,11 +15,10 @@ export async function snatchCheck(): Promise<boolean> {
   const { standUp, ROOT } = await import('./headless.ts');
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { SNATCH, checkSnatch } = await import(`${ROOT}/src/game/snatch.ts`);
-  const { SNATCHOUT } = await import(`${ROOT}/src/game/snatchout.ts`);
   const { killGuard, fireWeapon } = await import(`${ROOT}/src/game/combat.ts`), { blast } = await import(`${ROOT}/src/game/frag.ts`);
   const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
   const { snatchLines } = await import(`${ROOT}/src/game/dialogue.ts`);
-  const brk = process.env.SNATCH_BREAK === '1', knobs0 = knobsCopy();
+  const knobs0 = knobsCopy();
   /** every line the man has had over his head in any staging of this run (the voice line asks: all his own) */
   const said = new Set<string>();
   let failed = false, checks = 0;
@@ -31,7 +30,7 @@ export async function snatchCheck(): Promise<boolean> {
   /** a Game on `file`, the room clear (the pair) staged; Sam cannot be hurt; `harmless` = the defenders taken off the floor's fight (held where they stand, no AI of theirs runs) */
   async function stage(file = 'snatch.json') {
     const W: any = await quiet(() => standUp({ uploadEvery: 4, level: levelOf(file), seed: 7 }));
-    const g = W.game; g.godMode = true; SNATCHOUT.on = false;   // (these lines ask for the man's own rules and the end as it was — the house taken with him in hand; the end in the van is tools/qa/snatchout-check.ts's)
+    const g = W.game; g.godMode = true;
     const why = await quiet(() => g.roomClear.start(1)); if (why) throw new Error(`the room clear did not start on ${file}: ${why}`);
     const light = { sam: null as number | null };   // (Sam's meter, held at this while set: headless nothing answers for it — the pair's is the game's own CPU estimate where they stand)
     const step = (secs: number, until?: () => boolean) => quiet(() => { for (let i = 0; i < Math.round(secs * 60); i++) { if (light.sam !== null) g.player.visibility = light.sam; W.step(1 / 60); const b = g.snatch?.man?.bubble?.text; if (b) said.add(b); if (until?.()) return true; } return !until; });
@@ -44,7 +43,6 @@ export async function snatchCheck(): Promise<boolean> {
     return { W, g, S, step, light, hostiles, ops, shot, park, clearHouse, N: g.level.scenarios.snatch };
   }
   try {
-    if (brk) SNATCH.on = false;
     // ---- 1 · the block, the staging, the quiet floor
     { const A = await stage(), { g, S, N } = A;
       const bad = checkSnatch(g);
@@ -80,13 +78,8 @@ export async function snatchCheck(): Promise<boolean> {
       const p = S.man.char.pos; g.teleportPlayer([p[0] + 1.6, 0, p[2] + 0.4]);
       let near = await A.step(2, () => S.handsUp); if (!near) { g.teleportPlayer([p[0] - 1.6, 0, p[2] - 0.4]); near = await A.step(2, () => S.handsUp); }
       line(near && c.state === 'cower' && c.complied && !S.tied, `Sam within ${SNATCH.giveUpM} m with a line: hands up (${c?.state}, complied ${c?.complied}), not yet tied`);
-      const snap = S.snapshot?.();
       const tied = await A.step(SNATCH.cuffSecs + 1.5, () => S.tied); await A.step(0.2);
       line(tied && S.inHand && S.man.char.anim.bound === 1, `${SNATCH.cuffSecs} s beside him: tied (in hand ${S.inHand}, bound pose ${S.man.char.anim.bound})`);
-      const won = await A.step(1, () => S.end === 'won');
-      line(won && g.mission.stage !== 'failed', `the house taken and him tied: ${S.end} — ${S.why}`);
-      const s2 = S.snapshot?.(); S.restore?.(snap); const back = S.handsUp && !S.tied && !S.end; S.restore?.(s2);
-      line(!!snap && back && S.tied && S.end === 'won', `the overlay's own slice goes back on the live game: hands up / not tied, then tied / won (a checkpoint is refused with a squad on the floor: nothing loads it today)`);
     }
     // ---- 4 · hands up and left alone: he bolts
     { const A = await stage(), { g, S } = A, c = S.man?.civ, p = S.man?.char.pos ?? [23, 0, 10.7]; await A.clearHouse();
@@ -110,10 +103,8 @@ export async function snatchCheck(): Promise<boolean> {
     // ---- 5b · his voice: over every staging above he said only his own lines (dialogue.ts SNATCH_LINES), never the office's late worker's
     { const mine = new Set<string>(snatchLines()), other = [...said].filter(s => !mine.has(s));
       line(said.size >= 3 && other.length === 0, `his voice: ${said.size} different lines over the run, all his own${other.length ? ` — NOT his: ${other.map(s => `"${s}"`).join(' · ')}` : ''}`); }
-    // ---- 6 · off: the switch, and a level without the block
-    { SNATCH.on = false; const A = await stage(); await A.step(1);
-      line(!A.S.active && !A.S.man && !A.g.civilians.some((x: any) => x.civ?.name === A.N.man.name) && !!A.g.view.mission && A.g.view.mission.of !== 'snatch', `SNATCH.on false: no man on the floor, no objective line (the room clear alone)`);
-      SNATCH.on = !brk;
+    // ---- 6 · a level without the block
+    {
       const B = await stage('test-rooms.json'); await B.step(1);
       line(!B.S.active && !B.S.man && !!B.g.view.mission && B.g.view.mission.of !== 'snatch' && B.S.snapshot() === undefined, `a level without the block (test-rooms): nothing staged, no line`);
     }

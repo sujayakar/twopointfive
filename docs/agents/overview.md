@@ -115,7 +115,7 @@ src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `save
                      hands it to the door; a kind nobody saves, a kind off the list, and a save whose kind is not said outright or by one
                      const are red. A new kind needs no line in the check. Both rules are tried on lines of the check's own. Not seen by it: a
                      download with no address of the page's making and no `download` spelling (a `data:` link built as an object).
-src/render/          passes.ts (pass graph + target lifecycles), frame.ts (uniforms/flags — THE flag table + Frame byte table + the scene prelude incl. TRACE_VARIANT), lights.ts (+ identity
+src/render/          passes.ts (pass graph + target lifecycles), frame.ts (uniforms/flags — THE flag table + Frame byte table + the scene prelude), lights.ts (+ identity
                      maps for the reservoirs), rc.ts (cascades), probe.ts (the light meter / smoke probe queries), gbuffer.ts, texpool.ts (pooled targets + history resampling),
                      denoise.ts (the shared denoiser's pipelines), particles.ts (GPU pool + impulses + wind records), decals.ts, reach.ts (per-light reach masks), wear.ts (traffic
                      map), meshbvh.ts + meshShadows.ts (mesh-traced character shadows at ultra), sdfrig.ts (round-cone proxy fit)
@@ -124,7 +124,7 @@ src/render/shaders/  common.wgsl (structs, flags, box/grid traversal, glassTrace
                      clients) + softtile (the old chains dtemporal / softblur / temporal / giblur went 2026-11-07); fgather.wgsl + gather_split.wgsl (the final gather's helpers and its two programs; gatherStrata variant) over gather_split_common
                      + lighting_common (the reflections over gather_common); rc.wgsl / probe.wgsl (radiance cache, meter); reflect.wgsl + reflect_p5.wgsl (RT reflections; the ultra program), detail.wgsl, markings.wgsl,
                      decals.wgsl; volumetrics.wgsl over vol_common (haze, smoke march, rain: one march on every tier); particles.wgsl / particles_common / particles_draw (+ wind_field.wgsl shared with the solver);
-                     gbuffer.wgsl, cards.wgsl, composite.wgsl (+ its SHARP compute twin) → taau.wgsl (or fxaa.wgsl on ?notaau) → bloom → post (AgX); resample.wgsl (history resampling); trace_lab.wgsl (the traversal lab);
+                     gbuffer.wgsl, cards.wgsl, composite.wgsl (+ its SHARP compute twin) → taau.wgsl (or fxaa.wgsl on ?notaau) → bloom → post (AgX); resample.wgsl (history resampling);
                      smoke_read.wgsl (how every ray and march reads the smoke: appended to the scene prelude after common.wgsl)
 src/smoke/           ONE POOL OF 8³-CELL BRICKS on a level-wide lattice (the *Smoke = one pool of bricks* bullet; the eight 64³ boxes it replaced are in git history before 2026-10-10): smoke.ts
                      (SmokeSystem), smoke.wgsl, smokeGrid.ts (the lattice + the consts both shader sides get), red-black SOR pressure solve, emitters; SoundSeal'd door LEAVES are obstacles (a

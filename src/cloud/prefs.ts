@@ -16,7 +16,7 @@ const SKIP: (string | RegExp)[] = [
   /^twopointsix\.cloud\./,
   'twopointsix.quality', 'twopointsix.autoPreset', 'twopointsix.autoScaleRel', 'twopointsix.textsize', 'twopointsix.gpuLost', 'twopointsix.gentle', 'twopointsix.plainAir' /* (two notes of mitigations gone 2026-11-07: a browser may still hold one, and a machine's note is never another machine's) */, 'twopointsix.bench', 'twopointsix.shaderrows',
   /^twopointsix\.save\./, 'twopointsix.editorLevel', /^twopointsix\.editor\./, /^twopointsix\.viewer\./, /^twopointsix\.workbench\./,
-  /^twopointsix\.kept\./, /^twopointsix\.onefile/, 'twopointsix.replay.from', 'twopointsix.testMute', /\.visit$/,
+  /^twopointsix\.kept\./, 'twopointsix.replay.from', 'twopointsix.testMute', /\.visit$/,
 ];
 export const skipped = (k: string): boolean => !k.startsWith(PREFIX) || SKIP.some(s => typeof s === 'string' ? s === k : s.test(k));
 
