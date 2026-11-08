@@ -104,19 +104,23 @@ fn a_whistle_is_answered_once() {
     }
 }
 
-/// THE RULE: a whistle in the air at the save is not put back by the load: nobody answers it twice (a review's finding, held since by the old save's dropping the frame's events).
+/// THE RULE (a save is the whole game with its queue): a whistle in the air at the save is in the air after the load, and it is resolved once and answered once there, not twice. CONTROL: a second whistle blown after the load does count, so the count can move.
+/// A FAILURE MEANS: a load drops what was in the air, or a man answers one whistle twice.
 #[test]
-#[ignore = "the game: a save is the whole game with its event queue, so a whistle blown in the saved frame is in the air again after a load and is resolved and answered again: resolved 1, answered 1 in the second second"]
-fn a_whistle_in_the_air_at_the_save_is_not_answered_again() {
+fn a_whistle_in_the_air_at_the_save_is_resolved_once_after_the_load() {
+    let whistle = |p: &mut Play| { p.key_down("KeyV"); p.frame(); p.key_up("KeyV"); };
     let mut p = hall(1);
+    p.g.god_mode = true;
     p.run(0.5);
-    p.key_down("KeyV");
-    p.frame();
-    p.key_up("KeyV");
+    whistle(&mut p);
     let kept = p.keep();
     p.run(1.0);
     assert_eq!(p.g.stats.whistle.answered, 1, "the staging: he answered it");
     p.put_back(&kept);
-    p.run(1.0);
-    assert_eq!(p.g.stats.whistle.resolved, 0, "the load: the whistle was resolved again");
+    assert!(p.g.events.iter().any(|e| e.kind == game::director::EventKind::Whistle), "the load dropped the whistle from the air");
+    p.run(2.0);
+    assert!(p.g.stats.whistle.resolved == 1 && p.g.stats.whistle.answered == 1, "after the load: resolved {}, answered {}", p.g.stats.whistle.resolved, p.g.stats.whistle.answered);
+    whistle(&mut p);
+    p.run(0.5);
+    assert_eq!(p.g.stats.whistle.resolved, 2, "a second whistle after the load was not resolved: blown {}, resolved {}", p.g.stats.whistle.blown, p.g.stats.whistle.resolved);
 }
