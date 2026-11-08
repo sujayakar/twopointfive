@@ -70,7 +70,6 @@ import './lanes';
 import { BELIEF, cover, word } from './belief';
 import './glasspen';
 import { airTrans } from './weather';
-import './clearline';
 import './gunwall';
 import './gunslots';   // (called inside tickOp only)
 import { gunBlindGap } from './gunroles';   // (called inside tickOp only)

@@ -34,7 +34,6 @@ pub mod chronicle;
 pub mod civilians;
 pub mod cleanrestart;
 pub mod cleared;
-pub mod clearline;
 pub mod close;
 pub mod cloud_report;
 pub mod cmd;

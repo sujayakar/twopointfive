@@ -62,7 +62,6 @@ pub mod chronicle { pub mod types; pub use types::*; }
 pub mod civilians { pub mod types; pub use types::*; }
 pub mod cleanrestart { pub mod types; pub use types::*; }
 pub mod cleared { pub mod types; pub use types::*; }
-pub mod clearline { pub mod types; pub use types::*; }
 pub mod close { pub mod types; pub use types::*; }
 pub mod cloud_report { pub mod types; pub use types::*; }
 pub mod cmd { pub mod types; pub use types::*; }

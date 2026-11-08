@@ -417,13 +417,8 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
             if w.plain > t { strafe = false; face = None; }
         }
         g.tab.orders_assignment[a].face_now = face;
-        let mut cl = crate::clearline::clear_line_feet(g, gd);
-        if cl.is_some() && !posted && squad_orders_aside(g, gd).is_some() { cl = None; }   // (stepping out of Sam's own way still comes first)
-        if cl.is_some() && sp.is_some() { cl = None; }   // (…and so does the silent partner's rule)
-        let (cl_goal, cl_speed, cl_crouch) = match &cl { Some(x) => (Some(x.goal), Some(x.speed), x.crouch), None => (None, None, false) };
-        if let Some(x) = &cl { face = x.face; strafe = x.strafe; }
         let own_goal = if keep { None } else { Some(s_goal.unwrap_or(g.tab.orders_assignment[a].goal)) };
-        let fl = if sp.is_some() || cl.is_some() { None }   // (`sp?.speed !== undefined`: every answer of spottedFeet has the key, null or a number)
+        let fl = if sp.is_some() { None }   // (`sp?.speed !== undefined`: every answer of spottedFeet has the key, null or a number)
              else { crate::fireline::fire_line_feet(g, gd, own_goal, speed, stepping || must) };
         let (fl_goal, fl_speed) = match &fl { Some(x) => (x.goal, Some(x.speed)), None => (None, None) };
         if pose.1 == crate::character::UpperMode::Aim || pose.0 == crate::character::Stance::Stack {   // Sam in the line of his gun: the muzzle comes down until he is clear of it
@@ -447,9 +442,9 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
             if low_now { let k = crate::orders::low(); pose = (k.stance, k.upper); }
         } else { g.tab.orders_assignment[a].low = false; }
         // (who has the follower's feet: spotted.ts, clearline.ts, fireline.ts, else the sneak's step, else the order's own goal)
-        let goal = sp_goal.or(cl_goal).or(fl_goal).or(own_goal);
-        let speed_out = sp_speed.or(cl_speed).or(fl_speed).unwrap_or(speed);
-        let crouch = g.tab.orders_assignment[a].crouch.unwrap_or(false) || low || sp_crouch || cl_crouch;
+        let goal = sp_goal.or(fl_goal).or(own_goal);
+        let speed_out = sp_speed.or(fl_speed).unwrap_or(speed);
+        let crouch = g.tab.orders_assignment[a].crouch.unwrap_or(false) || low || sp_crouch;
         // (the lean is written only where one is asked or one is to be taken off: a script patch keeps what it is not told. He leans on his mark, not on the walk to it)
         let a_lean = g.tab.orders_assignment[a].lean.unwrap_or(0.0);
         let script_lean = match &g.gd[gd].script { Some(s) => s.lean.unwrap_or(0.0), None => 0.0 };
@@ -459,7 +454,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
         } else { None };
         let (stack_side, light) = (g.tab.orders_assignment[a].stack_side, g.tab.orders_assignment[a].light);
         // (held: everything this call passes is a kept point, compared by value; A.goal written anew is the one exception: Assignment.new_leg, spent when it is the arm chosen)
-        let own_passed = sp_goal.is_none() && cl_goal.is_none() && fl_goal.is_none() && s_goal.is_none() && !keep;
+        let own_passed = sp_goal.is_none() && fl_goal.is_none() && s_goal.is_none() && !keep;
         let fresh = own_passed && g.tab.orders_assignment[a].new_leg;
         if fresh { g.tab.orders_assignment[a].new_leg = false; }
         crate::squad::order(g, gd, crate::squad::OrderPatch {
@@ -469,7 +464,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
             held: !fresh,
             ..Default::default()
         });
-        if let Some(q) = s_goal { if sp_goal.is_none() && cl_goal.is_none() && fl_goal.is_none() { crate::sneak::sneak_way(g, gd, q); } }
+        if let Some(q) = s_goal { if sp_goal.is_none() && fl_goal.is_none() { crate::sneak::sneak_way(g, gd, q); } }
     }
     // 'set.': once, from the last man on, when everybody the order sent is on his mark
     let mut at = 0usize;

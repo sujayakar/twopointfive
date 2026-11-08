@@ -84,7 +84,6 @@ import { DOORMANNERS, DOORMANNERS_STATS, STACK_OWN, doorwayLanePrice, doorwayInW
 import { PICTURE, PICTURE_STATS, anyIdea, exposedFor, pictureQuiet } from './picture';   // (asked inside stackSeen and the file's pose only: src/game is one import cycle)
 import './stackline';
 import './handleside';
-import './clearline';
 import './fireline';
 import { fitSpots, fitGroups, fitTick, type Fit } from './roomfit';   // (used inside the 'move' order only: nothing of roomfit.ts is touched at load)
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)

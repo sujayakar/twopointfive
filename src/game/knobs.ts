@@ -81,7 +81,6 @@ import { SQUADS, DRILL_AT } from './enemysquads';
 import { CUES } from './cues';
 import { BUDDY } from './buddy';
 import { LASTSTAND } from './laststand';
-import { CLEARLINE } from './clearline';
 import { STACKROOM } from './stackroom';
 import { REARWATCH } from './rearwatch';
 import { STACKLINE } from './stackline';
@@ -534,7 +533,7 @@ export function knobRegistry(): Record<string, object> {
     // the squad's feel (teamfeel.ts keeps rows of these per machine; FOG, FRAG and DOORMANNERS are above)
     FLASH, PACE, LIGHTS, NVG, IR, IRLIGHT, WALLPEN, LASER, DOORTOOLS, ROOMFIGHT, ORDERS, COVER, ROOMFIT, ENTRY, REAR, SILENT, PAIR,
     // the scenario's and the defenders' tables (a play-through's --set reaches them)
-    RESCUE, DIGIN, HAULHOME, PRESSURE, LANES, GUNHOLD, HARD, HARD_AT, DRILLED, SQUADS, DRILL_AT, CUES, BUDDY, WX_SIM, WX_OWN, SNOW, SNOW_LOOK, AIR_SIM, LASTSTAND, CLEARLINE, STACKROOM, REARWATCH, STACKLINE,
+    RESCUE, DIGIN, HAULHOME, PRESSURE, LANES, GUNHOLD, HARD, HARD_AT, DRILLED, SQUADS, DRILL_AT, CUES, BUDDY, WX_SIM, WX_OWN, SNOW, SNOW_LOOK, AIR_SIM, LASTSTAND, STACKROOM, REARWATCH, STACKLINE,
     // the team's own rules that no other list named (found by tools/qa/knobs-check.ts), and the two scenarios' own tables
     SNEAK, PAIRUP, SPOTTED, NIGHTBREACH, ROOMCLEAR, LESSON,
     // a room clear against a clock (the Rust game keeps it, rust/game_rules/src/par). A SETTLED row, on: nothing reads it any more, on either side

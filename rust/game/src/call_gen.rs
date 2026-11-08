@@ -302,7 +302,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 462 => {  crate::entrypoints::entry_points_tick(g);  }
 463 => { let a1: V3 = Io::r(&mut i); crate::entrypoints::entry_points_mark(g, a1);  }
 464 => { let a1: V3 = Io::r(&mut i); let a2: Option<DoorId> = Io::r(&mut i); let a3: Option<bool> = Io::r(&mut i); let r = crate::entrypoints::entry_points_risk_at(g, a1, a2, a3); r.w(&mut o);  }
-467 => { let a1: GuardId = Io::r(&mut i); let r = crate::clearline::clear_line_of(g, a1); r.w(&mut o);  }
 468 => {  let r = crate::unseen::unseen_live(g); r.w(&mut o);  }
 469 => { let a1: GuardId = Io::r(&mut i); let r = crate::unseen::under_unseen(g, a1); r.w(&mut o);  }
 472 => {  let r = crate::unseen::unseen_summary(g); r.w(&mut o);  }

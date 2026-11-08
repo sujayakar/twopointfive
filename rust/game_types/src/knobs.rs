@@ -12119,53 +12119,6 @@ impl LaststandK {
 }
 impl Default for LaststandK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/clearline.ts:49 CLEARLINE, src/game/clearline.ts:49)
-#[derive(Clone, Copy, Debug)]
-pub struct ClearlineK {
-    pub on: bool,
-    pub after: f64,
-    pub reach_m: f64,
-    pub pace: f64,
-    pub body_m: f64,
-    pub spare_m: f64,
-    pub cover_secs: f64,
-    pub again: f64,
-    pub lose: f64,
-    pub hold_max: f64,
-    pub rest: f64,
-    pub stale: f64,
-    pub after_edge: f64,
-    pub hold_behind: f64,
-    pub hold_step: bool,
-    pub still: f64,
-    pub still_far: f64,
-}
-impl ClearlineK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ClearlineK {
-            on: false,
-            after: 0.0,
-            reach_m: 0.0,
-            pace: 0.0,
-            body_m: 0.0,
-            spare_m: 0.0,
-            cover_secs: 0.0,
-            again: 0.0,
-            lose: 0.0,
-            hold_max: 0.0,
-            rest: 0.0,
-            stale: 0.0,
-            after_edge: 0.0,
-            hold_behind: 0.0,
-            hold_step: false,
-            still: 0.0,
-            still_far: 0.0,
-        }
-    }
-}
-impl Default for ClearlineK { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/stackroom.ts:48 STACKROOM, src/game/stackroom.ts:48)
 #[derive(Clone, Copy, Debug)]
 pub struct StackroomK {
@@ -13660,10 +13613,6 @@ pub fn page_laststand() -> LaststandK {
     crate::knobs::LaststandK { regroup: false, call_out: true, places: true, moved_secs: 3.0, still_secs: 2.0, moved_gap: 8.0, few: 3.0, quiet: 3.0, first: [3.0, 6.0], every: 22.0, again: 30.0, answer: [1.2, 2.2], between: [3.2, 3.9], listen: [3.2, 3.8], max_m: 38.0, clear_m: 4.0, known_secs: 30.0, go: [1.3, 2.0], legs: 5.0, dig: [0.6, 1.6], thump: [9.0, 14.0], thump_level: 0.6 }
 }
 
-pub fn page_clearline() -> ClearlineK {
-    crate::knobs::ClearlineK { on: false, after: 0.3, reach_m: 3.0, pace: 2.0, body_m: 0.6, spare_m: 0.15, cover_secs: 3.0, again: 0.5, lose: 1.0, hold_max: 10.0, rest: 8.0, stale: 1.5, after_edge: 0.0, hold_behind: 2.0, hold_step: true, still: 0.0, still_far: 0.0 }
-}
-
 pub fn page_stackroom() -> StackroomK {
     crate::knobs::StackroomK { on: true, apart: 0.75, squeeze: 0.5, round_m: 2.0, round_k: 1.6, walk_m: 9.0, next_walk_m: 14.0, next_m: 3.5, lane_back: 1.6, view: true, view_hand: true, view_ajar: 0.6, view_cells: 3.0, view_far: 7.0, view_eye: 1.2, view_step: 0.3, view_past: 4.2, view_off: 0.4, view_apart: 0.85, view_out: 0.3, view_men: 12.0, view_wall: 0.35 }
 }
@@ -13962,7 +13911,6 @@ pub struct Knobs {
     pub snow_look: SnowLookK,
     pub air_sim: AirSimK,
     pub laststand: LaststandK,
-    pub clearline: ClearlineK,
     pub stackroom: StackroomK,
     pub rearwatch: RearwatchK,
     pub stackline: StacklineK,
@@ -14205,7 +14153,6 @@ impl Knobs {
             snow_look: page_snow_look(),
             air_sim: page_air_sim(),
             laststand: page_laststand(),
-            clearline: page_clearline(),
             stackroom: page_stackroom(),
             rearwatch: page_rearwatch(),
             stackline: page_stackline(),
