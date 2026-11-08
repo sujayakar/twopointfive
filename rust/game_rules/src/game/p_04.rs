@@ -419,7 +419,7 @@ fn light_def_mains(level: &crate::scene_level::Level, name: &str) -> bool {
 /// (game.ts constructor, staggerOf) A contactor group's restrike stagger: the die is drawn at the group's first appearance.
 fn stagger_of(g: &mut Game, stagger: &mut JsMap<String, f64>, grp: &str) -> f64 {
     if !stagger.has(String::from(grp)) {
-        let v = stagger.len() as f64 * 0.45 + crate::math_dice::sim_random(g) * 0.5;
+        let v = stagger.len() as f64 * 0.45 + crate::dice::draw_world(g, "game::stagger_of#1") * 0.5;
         stagger.set(String::from(grp), v);
     }
     *stagger.get(String::from(grp)).unwrap()

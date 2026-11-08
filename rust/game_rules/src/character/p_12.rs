@@ -545,11 +545,11 @@ pub fn character_ragdollize(g: &mut crate::game::Game, id: CharId, world: bool, 
     let rag = crate::ragdoll::ragdoll_new(g, &pts, vel.as_deref(), if world { Some(&in_world) } else { None });
     // the shove: carried along `dir` and pitched top-first the same way, then the knees kicked out
     let f = character_forward(g, id);
-    let j = 0.85 + crate::math_dice::sim_random(g) * 0.3;
-    let twist = (crate::math_dice::sim_random(g) - 0.5) * (if quiet { 0.8 } else { 1.6 });
+    let j = 0.85 + crate::dice::draw_body(g, "character::character_ragdollize#1", id) * 0.3;
+    let twist = (crate::dice::draw_body(g, "character::character_ragdollize#2", id) - 0.5) * (if quiet { 0.8 } else { 1.6 });
     let h = v3::normalize([dir[0], 0.0, dir[2]]);
     let pitch_axis: V3 = [h[2], 0.0, -h[0]];
-    let fall = if !quiet && mv_on(g, MvOnK::Fall) { crate::math_dice::sim_random(g) } else { 0.6 };   // (the one extra draw only with the switch on)
+    let fall = if !quiet && mv_on(g, MvOnK::Fall) { crate::dice::draw_body(g, "character::character_ragdollize#3", id) } else { 0.6 };   // (the one extra draw only with the switch on)
     use_shove(g, id, rag, &rg, quiet, fall, f, h, j, twist, pitch_axis);
     clear_fall(g, id);
     // what the mesh drive needs from the moment of death

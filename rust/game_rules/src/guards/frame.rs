@@ -153,7 +153,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
         reset_chase(g, gd);
         crate::mind::set_state(g, gd, St::Alert, "guards");
         g.gd[gd].react_t = m::max(g.gd[gd].react_t, 0.35);
-        g.gd[gd].fire_cd = 0.6 + crate::math_dice::sim_random(g) * 0.4;
+        g.gd[gd].fire_cd = 0.6 + crate::dice::draw_of(g, "guards::alertness#1", gd) * 0.4;
         let now = g.time;
         let radio_recent = match &g.gd[gd].bubble { Some(b) => b.radio && now - b.t < 1.0, None => false };
         if g.gd[gd].standoff.is_none() && !radio_recent {
@@ -183,7 +183,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
         crate::mind::set_state(g, gd, St::Suspicious, "guards");
         g.gd[gd].search_t = 0.0;
         if g.gd[gd].body_duty.is_some() {
-            g.gd[gd].react_t = 0.5 + crate::math_dice::sim_random(g) * 0.5;
+            g.gd[gd].react_t = 0.5 + crate::dice::draw_of(g, "guards::alertness#2", gd) * 0.5;
         } else {
             g.gd[gd].react_t = 0.9;
             if g.gd[gd].team != crate::teams::Team::Operative && !crate::attention::attention_again(g, gd) {
