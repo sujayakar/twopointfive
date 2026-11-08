@@ -33,8 +33,10 @@ import { lostCard } from './lostcard';
 import { PauseCard } from '../ui/pausecard';
 import { agoWords, type RunSaves } from '../ui/runcard';
 import { camKey, keysBoot } from './keymap';
-import { Section, Sky, View } from '../draw/sections';
+import { Heard, Section, Sky, View } from '../draw/sections';
 import { AudioEngine } from '../audio/audio';
+import { setlistOfQuery } from '../audio/setlist';
+import { MUSIC } from '../audio/pieces';
 import { askOf } from '../draw/ask';
 import { rimsFrom } from '../draw/rims';
 import { makeOutlineFrame } from '../render/outline';
@@ -117,6 +119,7 @@ async function main(): Promise<void> {
   { const eye: [number, number] = [0, 0]; lookConfig.eyeAt = () => { const o = view() + View.at; eye[0] = D.f[o]; eye[1] = D.f[o + 2]; return eye; }; }
   const gaps = doorways(D); { const lines = gaps.map(d => [d.hinge[0], d.hinge[1], d.hinge[0] + Math.cos(d.closedDir) * d.width, d.hinge[1] + Math.sin(d.closedDir) * d.width] as [number, number, number, number]); lookConfig.doorGaps = () => lines; }
   const fog = makeFogFrame(), ask = askOf(game), audio = new AudioEngine(ask), events = new DrawEvents(D, engine.particles, smoke, audio, i => game.nameOf(i));
+  MUSIC.pieces = MUSIC.byLevel = MUSIC.theirs = true; audio.scoreSet = setlistOfQuery(location.search); let run = -1;   // (the level's own music, as tense as those who are against him)
   if (q.has('mute')) { audio.volume.master = 0; audio.start = () => { /* silent */ }; }
   for (const ev of ['pointerdown', 'keydown'] as const) window.addEventListener(ev, () => audio.start(), { capture: true });   // (a browser's sound begins with a hand on the page)
   engine.fogFrame = fog; const rims = engine.outline = makeOutlineFrame(); engine.beams = world.beams;
@@ -195,7 +198,8 @@ async function main(): Promise<void> {
     game.look(lookNumbers(engine.settings, engine.world, !!ch.cast));
     const t1 = performance.now();
     if (!drawn) { input.endFrame(); return; }
-    { const o = view() + View.at; ear[0] = D.f[o]; ear[1] = D.f[o + 1] + 1.6; ear[2] = D.f[o + 2]; audio.setListener(ear, cam.forward); audio.update(dt, time); }
+    { const o = view() + View.at; ear[0] = D.f[o]; ear[1] = D.f[o + 1] + 1.6; ear[2] = D.f[o + 2]; audio.setListener(ear, cam.forward); audio.update(dt, time);
+      D.fresh(); const h = D.at[Section.heard]; if (audio.music) { audio.music.intensity = D.f[h + Heard.tension]; if (D.u[h + Heard.run] !== run) audio.music.mission(); } run = D.u[h + Heard.run]; }
     smoke.update(dt);
     const a = ticks === undefined ? lag.at(acc * FIXEDSTEP.hz) : 1, pose = pair.at(a, cam);
     if (pose) cam.drawIn(pose);
