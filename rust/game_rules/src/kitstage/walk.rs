@@ -80,7 +80,7 @@ fn homeward(g: &mut Game, st: &mut KitStage, x: GuardId) {
 /// each tick: every man's walk, the order sent again where it is not his
 pub(super) fn walks(g: &mut Game, st: &mut KitStage) {
     // (a row of Sam's: every order is taken away each step, each man stands where he is and is sent on as it ends)
-    if g.puppet.is_some() { for &x in &st.order { g.gd[x].hold = true; } return; }
+    if g.puppet.is_some() { for &x in &st.order { crate::control::set_hold(g, x, true, "kitstage"); } return; }
     let (team, loose, man, none_door) = match st.a.beat.as_ref() { Some(b) => { let r = row(b.row); (r.team, b.loose, b.man, r.door == Leaf::None) } None => (false, false, None, false) };
     if team && !loose { return; }   // (the squad's own order has every man: the wall charge)
     let now = g.time;
