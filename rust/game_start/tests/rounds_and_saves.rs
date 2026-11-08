@@ -113,3 +113,54 @@ fn a_save_carries_the_broken_level() {
         assert!(!segment_blocked(&mut p.g, [16.8, 1.6, 11.0], [19.2, 1.6, 11.0], None, None, None) && !nav_grid_is_blocked(&p.g, 18.0, 11.0), "seed {s}: the hole is not a hole after the load");
     }
 }
+
+/// THE RULE (a fault once found: the first row of a two-wall blast was flooded with the second hole already in the floor, and a defender's evidence was carried onto a short door list): a blast that opens two walls is flooded once: every door a defender had evidence of, he still has it, at least as much. CONTROL: the rooms did become one, and the blast did open two walls.
+/// A FAILURE MEANS: a man forgets what he knew of a door because the wall beside him fell.
+#[test]
+fn a_blast_that_opens_two_walls_floods_the_rooms_once() {
+    use game::roomfight::room_fight_room_at as room_at;
+    let (mut asked, mut bad) = (0, Vec::new());
+    for level in ["compound.json", "block.json", "warehouse.json"] {
+        let mut p = Play::mission(level, &format!("?levelFile={level}&roomclear=6&squad4"), &Opts { seed: 6, ..Default::default() });
+        p.g.god_mode = true; p.g.tune.chaos = 0.5;
+        p.run(1.0);
+        let mut place = None;
+        for w in game::wallbreak::wall_break_all(&p.g) {
+            if w.kind != game::wallbreak::BKind::Wall { continue; }
+            let (c, h) = (p.g.tab.boxes[w.box_].c, p.g.tab.boxes[w.box_].h);
+            for along in [-0.25, 0.25, 0.0, -0.4, 0.4] {
+                let n = if h[0] >= h[2] { [0.0, 1.0] } else { [1.0, 0.0] };
+                let mid = if h[0] >= h[2] { [c[0] + along * h[0] * 2.0, c[2]] } else { [c[0], c[2] + along * h[2] * 2.0] };
+                for sign in [1.0, -1.0] {
+                    let (a, b) = ([mid[0] + n[0] * sign * 1.2, 0.0, mid[1] + n[1] * sign * 1.2], [mid[0] - n[0] * sign * 1.2, 0.0, mid[1] - n[1] * sign * 1.2]);
+                    let (ra, rb) = (room_at(&mut p.g, a), room_at(&mut p.g, b));
+                    if ra.is_none() || rb.is_none() || ra == rb { continue; }
+                    let at = [mid[0] + n[0] * sign * 0.3, 1.0, mid[1] + n[1] * sign * 0.3];
+                    let plan = game::destruction::destruction_walls_for(&mut p.g, at, None);
+                    if plan.iter().filter(|o| o.kind == game::wallbreak::BKind::Wall).count() < 2 { continue; }
+                    let d = p.g.fight.defs.iter().copied().find(|&d| { let x = &p.g.tab.roomfight_def[d]; x.room == ra && p.up(x.gd) });
+                    if let Some(d) = d { place = Some((at, a, b, d)); break; }
+                }
+                if place.is_some() { break; }
+            }
+            if place.is_some() { break; }
+        }
+        let Some((at, a, b, d)) = place else { continue };
+        asked += 1;
+        let room = p.g.tab.roomfight_def[d].room.unwrap();
+        let doors: Vec<_> = p.g.tab.roomfight_room[room].entries.iter().map(|e| e.door).collect();
+        p.g.tab.roomfight_def[d].ev = (0..doors.len()).map(|i| 0.1 * (i + 1) as f64).collect();
+        let was: Vec<_> = doors.iter().copied().zip(p.g.tab.roomfight_def[d].ev.iter().copied()).collect();
+        p.wall_blast(at, None);
+        p.run(0.1);
+        let (ra, rb) = (room_at(&mut p.g, a), room_at(&mut p.g, b));
+        if ra != rb { bad.push(format!("{level}: the rooms are not one")); }
+        let (now, ev) = { let x = &p.g.tab.roomfight_def[d]; (x.room.unwrap(), x.ev.clone()) };
+        let list: Vec<_> = p.g.tab.roomfight_room[now].entries.iter().map(|e| e.door).collect();
+        for (door, v) in was {
+            let got = list.iter().position(|&x| x == door).and_then(|i| ev.get(i).copied());
+            if !got.is_some_and(|g| g >= v - 0.05) { bad.push(format!("{level}: door {} had {v}, now {got:?}", p.g.dr[door].def.name)); }
+        }
+    }
+    assert!(asked >= 1 && bad.is_empty(), "{asked} levels asked: {bad:#?}");
+}
