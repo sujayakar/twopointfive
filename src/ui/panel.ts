@@ -167,8 +167,6 @@ export class Panel {
   clear() { this.body.innerHTML = ''; if (this.rail) this.rail.innerHTML = ''; this.sections.clear(); this.secOfBody.clear(); this.systems.length = 0; this.curSys = this.activeSys = null; this.refreshers.length = 0; if (!this.game) this.open.clear(); }
   /** True while the search box has focus (main.ts: let Esc / keys go to it, not the game). */
   get typing() { return !!this.search && document.activeElement === this.search; }
-  /** Put the cursor in the search box (the viewer's 'all knobs' overlay opens straight into it). */
-  focusSearch() { this.search?.focus(); this.search?.select(); }
   /** the status strip's text (bindings.ts: preset · scale · fps · gpu ∪), refreshed with the rows */
   setStatus(get: () => string) { this.statusGet = get; }
   private get searching() { return !!this.search && this.search.value.trim().length > 0; }

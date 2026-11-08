@@ -35,8 +35,6 @@ export function plainShort(def: { id: string; short: string }): string { return 
 export function gearFromQuery(q: URLSearchParams) { GEAR.on = !q.has('oldgear'); }
 /** the HUD tag of the rifle's first attachment (the kit column, the reticle's right-button word, the draw line) */
 export function ringTag(): string { return GEAR.on ? 'SPONGE' : 'RING'; }
-/** …and of its second, the 40 mm high-explosive round, in the kit column (beside SPONGE, '40MM' said nothing: both are 40 mm) */
-export function shellTag(): string { return GEAR.on ? 'HE' : '40MM'; }
 /** a line written in the old kit's words, in the kit's words as issued: every player-facing string that names the kit goes through here where it is SHOWN (never
  *  as a module loads), so off is the string as written, character for character */
 export function gearText(s: string): string {

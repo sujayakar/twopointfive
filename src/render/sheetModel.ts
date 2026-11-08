@@ -39,65 +39,9 @@ export const SHEET = {
 };
 
 export interface SheetState { p: Vec3; v: Vec3; n: Vec3; w: Vec3; asleep: boolean; age: number; /** s of blast wind still carrying it (impulses; absent / 0 = still air) */ gust?: number; }
-/** the gust: how long a full kick's wind carries the leaf (TAU s: all of it but the last RAMP share, over which the still air comes back), and how much of the drag /
- *  torque it takes away while it does (particles_common.wgsl SHEET_GUST_TAU / _K / _RAMP) */
-export const SHEET_GUST = { TAU: 0.4, K: 0.98, RAMP: 0.35 };
 
-/** One step of the free-flight model above (no collision). Mutates s. Mirrors particles.wgsl sheetAir(). */
-export function sheetAir(s: SheetState, dt: number, K = SHEET) {
-  if (s.asleep || dt <= 0) return;
-  const v = s.v; let n = s.n;
-  const gust = s.gust ?? 0; const g = gust > 0 ? Math.min(1, gust / (SHEET_GUST.TAU * SHEET_GUST.RAMP)) : 0; if (gust > 0) s.gust = Math.max(0, gust - dt);
-  const air = 1 - SHEET_GUST.K * g;   // (exactly 1 in still air: the model as it was, bit for bit)
-  v[1] -= K.gravity * dt;
-  const vn = v3.dot(v, n);
-  const vt: Vec3 = [v[0] - n[0] * vn, v[1] - n[1] * vn, v[2] - n[2] * vn];
-  const kn = Math.exp(-(K.KN_LIN + K.KN_Q * v3.len(v)) * air * dt), kt = Math.exp(-K.KT * air * dt);
-  const vn2 = vn * kn;
-  s.v = [vt[0] * kt + n[0] * vn2, vt[1] * kt + n[1] * vn2, vt[2] * kt + n[2] * vn2];
-  // flutter torque → ω (⊥ n), damped
-  const c = v3.cross(vt, n);
-  const a = K.FLUT * (-vn) * air;
-  let w: Vec3 = [s.w[0] + c[0] * a * dt, s.w[1] + c[1] * a * dt, s.w[2] + c[2] * a * dt];
-  const wd = Math.exp(-K.ANG_DAMP * dt); w = v3.scale(w, wd);
-  const wn = v3.dot(w, n); w = [w[0] - n[0] * wn, w[1] - n[1] * wn, w[2] - n[2] * wn];
-  // n turns by ω
-  const dn = v3.cross(w, n);
-  n = v3.normalize([n[0] + dn[0] * dt, n[1] + dn[1] * dt, n[2] + dn[2] * dt]);
-  s.n = n; s.w = w; s.age += dt;
-}
 
-/** The reference's ground: a floor plane at y = floorY (the shader traces the level instead). An up-facing touch lays the sheet toward flat, kills the through
- *  motion, rubs the slide; below sleepV it sleeps flat. Returns true the step it went to sleep. Mirrors particles.wgsl's sheet branch of the hit response. */
-export function sheetGround(s: SheetState, floorY = 0, K = SHEET): boolean {
-  if (s.asleep) return false;
-  const clearance = 0.004;
-  if (s.p[1] > floorY + clearance) return false;
-  s.p[1] = floorY + clearance;
-  const hn: Vec3 = [0, 1, 0];
-  const vin = v3.dot(s.v, hn);
-  if (vin < 0) s.v = [s.v[0] - hn[0] * vin * 1.05, s.v[1] - hn[1] * vin * 1.05, s.v[2] - hn[2] * vin * 1.05];   // no bounce to speak of
-  s.v = v3.scale(s.v, 0.6);                                                                                     // paper on laminate: it does not skate
-  const sgn = v3.dot(s.n, hn) >= 0 ? 1 : -1;
-  s.n = v3.normalize(v3.lerp(s.n, v3.scale(hn, sgn), 0.7)); s.w = v3.scale(s.w, 0.3);
-  if (v3.len(s.v) < K.sleepV) { s.asleep = true; s.v = [0, 0, 0]; s.w = [0, 0, 0]; s.n = v3.scale(hn, sgn); if (s.gust) s.gust = 0; return true; }
-  return false;
-}
 
-/** Fly one sheet from `s` until it sleeps or `maxT` passes (dt fixed): the reference trajectory the probes measure (settle time, peak speed, how far it drifted,
- *  how many times the along-slip reversed = flutter half-cycles, how high it got). */
-export function flySheet(s: SheetState, dt = 1 / 60, maxT = 20, floorY = 0): { t: number; asleep: boolean; peakV: number; peakY: number; drift: number; reversals: number; nan: boolean } {
-  let t = 0, peakV = 0, peakY = s.p[1], reversals = 0, lastSign = 0; const p0: Vec3 = v3.copy(s.p); let nan = false;
-  while (t < maxT && !s.asleep) {
-    sheetAir(s, dt); s.p = v3.mad(s.p, s.v, dt); sheetGround(s, floorY);
-    const sp = v3.len(s.v); if (sp > peakV) peakV = sp; if (s.p[1] > peakY) peakY = s.p[1];
-    const vn = v3.dot(s.v, s.n); const vt: Vec3 = [s.v[0] - s.n[0] * vn, 0, s.v[2] - s.n[2] * vn]; const along = vt[0] * 0.7071 + vt[2] * 0.7071;   // the horizontal slide, signed along a fixed diagonal
-    const sg = along > 0.05 ? 1 : along < -0.05 ? -1 : 0; if (sg && lastSign && sg !== lastSign) reversals++; if (sg) lastSign = sg;
-    if (!s.p.every(Number.isFinite) || !s.n.every(Number.isFinite)) { nan = true; break; }
-    t += dt;
-  }
-  return { t, asleep: s.asleep, peakV, peakY, drift: Math.hypot(s.p[0] - p0[0], s.p[2] - p0[2]), reversals, nan };
-}
 
 // ================================================================== IMPULSES (render/particles.ts Particles.impulse → particles.wgsl applyImpulses; sites in
 // game/destruction.ts): a game event — a stun charge going off, a round landing beside settled litter, a body or a boot or a shoved desk thumping the floor —
@@ -123,11 +67,6 @@ export const IMP_RESPONSE = {
   sheet:  { gain: 1.0,  upK: 1.0, vMax: 6.0, wake: 0.12 },   // THE reference kind: strength is quoted as a sheet's Δv at the centre
   rain:   { gain: 0,    upK: 0,   vMax: 0,   wake: 0 },      // ignored like the spark: a rain drop (game/rainFx.ts) is gone before a push could show, and the impulses leave its ring alone
 } satisfies Record<string, ImpulseResponse>;
-/** the sheet's shape response (particles_common.wgsl SHEET_IMP_TILT / _TUMBLE / _WMAX / _GUST0 / _GUST1): a kicked leaf is tipped off flat by up to TILT rad (× the
- *  kick over 1.5 m/s, × 0.4‥1 per leaf) toward a hashed side — so the push is partly ALONG it and persists, where a face-on shove dies in three frames of through-drag
- *  — lifted by the height its dipped edge would otherwise dig in, set turning about a hashed in-plane axis at TUMBLE rad/s per m/s of kick (≤ 4), |ω| ≤ WMAX, and
- *  given the blast's wind for SHEET_GUST.TAU × clamp((kick − GUST0) / GUST1) s: a scoot from a round beside it gets next to none, a charge's kick the whole gust */
-export const SHEET_IMP = { TILT: 0.9, TUMBLE: 3.0, WMAX: 12, GUST0: 0.5, GUST1: 1.5 };
 export interface ImpulseLike { pos: Vec3; radius: number; strength: number; up: number; bias: Vec3; }
 /** per-particle raggedness of a push (a blast front is not smooth: two leaves a hand apart do not get the same shove — without it a pile lifts as one clump):
  *  the kick × (1 − MAG/2 ‥ 1 + MAG/2) off one hash, plus SIDE × the kick sideways along a hashed bearing */
@@ -145,30 +84,4 @@ export function impulseKick(imp: ImpulseLike, p: Vec3, G: ImpulseResponse, j?: [
   if (!j) return { dv: v3.scale(dir, s), s };
   s *= 1 - IMP_JITTER.MAG / 2 + IMP_JITTER.MAG * j[0]; const a = j[1] * 6.2831853;
   return { dv: [dir[0] * s + Math.cos(a) * IMP_JITTER.SIDE * s, dir[1] * s, dir[2] * s + Math.sin(a) * IMP_JITTER.SIDE * s], s };
-}
-/** Apply a summed kick (Σ dv over the frame's impulses, s = the largest single kick) to one sheet: wake it if the kick clears the wake threshold, add the Δv and cap
- *  |v|, hand it the gust, spin it about an in-plane axis by h[2]; a leaf that was LYING (asleep) is also tipped off flat toward the hashed side h[0] by the hashed
- *  share h[1] and lifted by its dipped edge (one already in the air keeps its attitude: a second kick must not snap it). `halfLen` = half the leaf's length (m).
- *  Returns false when a resting sheet slept through it. Mirrors particles.wgsl applyImpulses' P_SHEET tail. */
-export function sheetImpulse(s: SheetState, dv: Vec3, kick: number, h: Vec3, halfLen = 0.15, G: ImpulseResponse = IMP_RESPONSE.sheet, K = SHEET_IMP): boolean {
-  if (kick <= 0) return false;
-  const lay = s.asleep;
-  if (lay) { if (kick < G.wake) return false; s.asleep = false; }
-  let v: Vec3 = v3.add(s.v, dv); const sp = v3.len(v); if (sp > G.vMax) v = v3.scale(v, G.vMax / sp); s.v = v;
-  s.gust = Math.max(s.gust ?? 0, SHEET_GUST.TAU * Math.min(1, Math.max(0, (kick - K.GUST0) / K.GUST1)));
-  const az = h[0] * 6.2831853; const tilt = lay ? K.TILT * (0.4 + 0.6 * h[1]) * Math.min(1, kick / 1.5) : 0;
-  const side: Vec3 = [Math.cos(az), 0, Math.sin(az)];
-  let n = s.n; const sn = v3.dot(side, n); let t: Vec3 = [side[0] - n[0] * sn, side[1] - n[1] * sn, side[2] - n[2] * sn]; const tl = v3.len(t);
-  if (tl > 1e-3) {
-    t = v3.scale(t, 1 / tl);
-    if (lay) {
-      n = v3.normalize([n[0] * Math.cos(tilt) + t[0] * Math.sin(tilt), n[1] * Math.cos(tilt) + t[1] * Math.sin(tilt), n[2] * Math.cos(tilt) + t[2] * Math.sin(tilt)]);
-      s.p = [s.p[0], s.p[1] + Math.sin(tilt) * halfLen, s.p[2]];
-    }
-    const axis = v3.normalize(v3.cross(n, t));   // in-plane, across the tilt: the leaf pitches on round the way it was tipped
-    let w: Vec3 = v3.mad(s.w, axis, K.TUMBLE * Math.min(kick, 4) * (0.5 + h[2]) * (h[0] < 0.5 ? -1 : 1));
-    const wl = v3.len(w); if (wl > K.WMAX) w = v3.scale(w, K.WMAX / wl);
-    const wn = v3.dot(w, n); s.w = [w[0] - n[0] * wn, w[1] - n[1] * wn, w[2] - n[2] * wn]; s.n = n;
-  }
-  return true;
 }

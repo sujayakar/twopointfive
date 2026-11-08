@@ -352,5 +352,3 @@ export function altOne(ctx: SfxContext, name: string, k: number, tune: Tune): Sf
   const as = HEARD[name as SfxName] ?? AS[name as SfxName]; if (as === undefined) return null;
   return tuned(tune, () => voiced(ctx, as, T.dur, T.seed, T.fn));
 }
-/** the seed take k is written with (what a tuner's 'seed' starts from) */
-export function altSeed(name: string, k: number): number | undefined { return TAKES[name as SfxName]?.[k]?.seed; }
