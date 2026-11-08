@@ -82,8 +82,6 @@ export const SQUADTHROW = {
   tries: 12, keepSecs: 0.4,
   /** he gives the walk up after this long on it (s; time the fight has him is not counted) · on his spot he turns to the throw for this long at most (s) · the toss: he stays this long after it leaves his hand (s) */
   walkSecs: 16, turnSecs: 1.2, tossSecs: 0.5,
-  /** thrown, he walks back to where he stood and to the order he had (off: he holds where he threw from) */
-  back: true,
   /** A MAN WORKS HIS THROW OUT (rust throwplan; on with the switch, off = the one straight arc that rests on the spot, as it was; `?throwlob=0`): where the
    *  straight arc has no answer he flies a few throws before he makes one — straight at the spot at `lobPaces` (m/s over the ground: the solver's, flat and
    *  hard, a slow lob) and at up to `lobWalls` walls that stand within `lobWallM` of it (met `lobWallH` up; `lobBankPaces`) — and takes the one that GOES OFF

@@ -65,8 +65,6 @@ export const SPOTTED = {
   /** THE switch (off = the build as it was; ?spotted on the URL, SPOTTED=1 in the harness's environment, Tab ▸ Sandbox ▸ Spotted) */
   on: false,
   // ---- suspicious
-  /** no round at a man who is only suspicious */
-  hold: true,
   /** … and still (following only), while Sam is within `leashM` */
   leashM: 7,
   /** lit (the meter at `litAt` or over) and in his line: the nearest spot within `slipM` out of the line, or dark */
@@ -80,7 +78,7 @@ export const SPOTTED = {
   /** (off as shipped) a man dropped: for `braceSecs` every unroused defender within `braceM` of the body is his business as if he had already turned to the noise */
   brace: false, braceSecs: 3, braceM: 7,
   /** a roused man who has turned to him inside `takeM` is taken by hand: `takeSecs` with his hands on him inside `takeReach` (m) */
-  close: true, takeM: 2.2, takeReach: 1.05, takeSecs: 0.6,
+  takeM: 2.2, takeReach: 1.05, takeSecs: 0.6,
   // ---- caught
   /** an alert man's sighting of one of them counts for this long (s) · within this of the teammate (m) · and 'caught' lasts this long past the last one (s) */
   freshSecs: 2.5, caughtM: 30, lastSecs: 6,

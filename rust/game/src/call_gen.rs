@@ -638,7 +638,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 934 => {  crate::civilians::reset_civilians(g);  }
 935 => { let a1: crate::civilians::SpawnHostageDef = Io::r(&mut i); let r = crate::civilians::spawn_hostage(g, &a1); r.w(&mut o);  }
 937 => {  let r = crate::civilians::civilian_comply(g); r.w(&mut o);  }
-938 => {  crate::civilians::load_civ_tune(g);  }
 939 => { let a1: bool = Io::r(&mut i); crate::civilians::set_civilians(g, a1);  }
 940 => { let a1: Option<GuardId> = Io::r(&mut i); let a2: Option<crate::civilians::CivPanicWhat> = Io::r(&mut i); let r = crate::civilians::civ_panic(g, a1, a2); r.w(&mut o);  }
 941 => {  let r = crate::civilians::check_civ_spots(g); r.w(&mut o);  }

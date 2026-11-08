@@ -81,16 +81,9 @@ export const SNEAK = {
    *  (an eye behind a frame that would not gain on a man at the spot is no eye on it). NOT read so: a remembered stretch with no eye on it now (the flat
    *  number stands), darkfoe.ts, seenwalk.ts, spotted.ts. His kit card's shape (kitload.ts loadSeen) is in the rate, as the guards have it. The page: on
    *  (`?byeye=0`; `?seenrate=<n>`); false here and on the frozen harness stand (`TPS_BYEYE=1`; a FROZEN_HOLDS row). false = the flat number, as it was */
-  byEye: false, seenRate: 0.05,
+  seenRate: 0.05,
   /** a step's light is the CPU's direct-light estimate PLUS what Sam's own meter read there over that estimate when he walked it (the moon, the bounce) */
   ambient: true,
-  /** … and a man on a way of his OWN (sneakWalk: the stalk to a man's back — floor nobody has walked) reads every step of it by the estimate PLUS what his own
-   *  meter reads over the estimate of where he stands: all of it on open ground when he stands on open ground (the moon the estimate has not got is on the
-   *  yard ahead of him as it is on him), as a crumb carries Sam's where he or the step is under a roof. OFF here and on the frozen stand
-   *  (`TPS_STALKAMBIENT=1`), ON in the page (`?stalkambient=0`). Off = the estimate alone, as it was. Honest limit: it is the light of where he STANDS — from
-   *  under a roof's edge, or in a wall's moon shadow, the moonlit ground ahead still reads dark until he is in it; the stalk is read again every
-   *  PAIR.stalkEvery, and he stops on the first read after his meter has risen. */
-  stalkAmbient: false,
   /** a defender's cone is read this many degrees wider (a glance travels) · a step whose chest is inside this of an unwary defender's eye, in his near
    *  field, is exposed, lit or not (the eye's own point-blank rule is 1.8 m, eye to chest) */
   coneDeg: 25, nearM: 2.1,

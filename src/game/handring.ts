@@ -29,10 +29,6 @@ export const HANDRING = {
   on: false,
   /** the key down this long (s) puts the ring up; let go sooner it is the tap. The squad ring's own number for a ring that stays (cmdring.ts) */
   holdSecs: 0.3,
-  /** a digit pressed with the key down and the ring not yet up (inside `holdSecs`) puts the ring up at once and is its wedge — never the weapon slot
-   *  or the gun's setup, which a quick "key, 2" used to reach. Off in the module and on the frozen stand with `on` (`TPS_HANDRING=1` raises both); a
-   *  recording from before the key replays with it off */
-  early: false,
   /** a tap of the key with nothing in reach says so in the corner for a moment (interact.ts files `EMPTY_WORD`, ui/overlay.ts shows it): on open floor
    *  the key looked dead. On and off with `on`, as `early` is (the same address word and stand word; a recording from before the key replays with it off) */
   empty: false,
@@ -50,16 +46,6 @@ export const HANDRING = {
    *  cursor is read on two lines tall with it. Off in the module and on the frozen stand (`TPS_HANDRING=1` raises it with the rest); on in the
    *  page with its own word, `?lonewrap=0` (one line, drawn tighter, as it was), and off with `lone`. A recording from before the key replays with it off */
   loneWrap: false,
-  /** HIS RING STANDS ON THE THING IT IS ABOUT, never where the cursor happened to be (the maintainer, 10-23: "radial menu should always be near the
-   *  player, probably on the most relevant option (like the rack in this caes)"): its middle on the thing its first row is about (the row lit as it
-   *  opens), on his own body where no row is about a thing (the whistle alone), whole inside the view's edge as any ring (cmdring.ts edgeX / edgeY),
-   *  and it stays on that point as the view moves (the squad ring's own rule). The cursor may be anywhere when it comes up, so
-   *  the cursor ON a wedge's own shape lights it once it has been off every shape (cmdring.ts ringWant `shapes`: a cursor that was resting where a
-   *  wedge came up lights nothing until it has left and come back, and a cursor at rest lights nothing); out past the ring, a direction still
-   *  counts only from the middle, as before. Digits, a click and the key again are as they were. The squad's ring is not moved: it is opened on
-   *  the place the order goes to, which is where the cursor is, and it stays on that place already. Off in the module and on the frozen stand
-   *  (`TPS_HANDRING=1`); on in the page, `?ringonthing=0` (at the cursor, as it was). A recording from before the key replays with it off */
-  onThing: false,
   /** …and no line of words under it (the maintainer, 10-23, of 'RACK 6 · THE DRIVE · PULL THE DRIVE — STAY ON IT' under the ring: "this is too
    *  busy, should just be the radial menu"): the wedges' own words are the ring's words. What the line said of the lit row is the corner's line
    *  still (ui/overlay.ts: the thing's name and the row's long words, 'stay on it' with them); the whistle's 'one guard will come to look' is said

@@ -59,9 +59,6 @@ export const RAILS = { on: false,
   afterSecs: 8,
   /** …and however long they walk, the step asks again this many seconds after the order went out (men who cannot get there never arrive) */
   afterMax: 45,
-  /** Shift with the command key IS the command key (before, the press was thrown away — and a Shift left down by a system shortcut, or a sprinting
-   *  finger, made the key dead with its row still offered on the squad's panel) */
-  shiftTap: true,
   /** the big line goes to the bottom edge from over the player and his teammates where they stand under it (ui/railclear.ts; picture only) */
   lineClear: true,
   /** a step's mark is not drawn where a ring lies over it, the squad's or his own (ui/overlay.ts asks ui/cmdring.ts `covers`; picture only): the mark
