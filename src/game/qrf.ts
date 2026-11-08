@@ -117,7 +117,7 @@ interface Marks { door: string | null; name: string; muster: readonly Vec3[]; en
 export function responseOf(g: Game): ResponseData | null { return g.level.scenarios?.response ?? null; }
 /** A RAID ON A PLACE THAT HAS A TEAM TO CALL (RESPONSE.raid): a squad's room clear under way on a level whose block carries `raid`. The team is then the
  *  DEFENDERS' (side 'hostile': the squad's enemies and Sam's), counted inside the eleven a squad ever faces, and it has no second lift */
-function raid(g: Game): boolean { return RESPONSE.on && RESPONSE.raid && !!g.nightBreach?.active && !g.rescue?.active && !!responseOf(g)?.raid && (!g.level.scenarios?.snatch || !!g.snatch?.out.on); }   // (a snatch level's block answers only the snatch that ends in the van — snatchout.ts: with that rule off the level is as it was, and nobody comes)
+function raid(g: Game): boolean { return RESPONSE.on && RESPONSE.raid && !!g.nightBreach?.active && !g.rescue?.active && !!responseOf(g)?.raid; }
 /** a raid: the men who can call it in — the living defenders of the block's room (where the set is), any defender when it names none; never the team itself */
 function callers(g: Game): Guard[] {
   const R = responseOf(g), id = R?.raid?.room, nb = g.nightBreach;

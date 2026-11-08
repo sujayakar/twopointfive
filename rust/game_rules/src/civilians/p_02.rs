@@ -215,10 +215,7 @@ pub fn run_pending(g: &mut crate::game::Game, p: &crate::civilians::Pending) {
 pub fn civ_say(g: &mut crate::game::Game, gd: GuardId, text: &str, hold: Option<f64>, unheard: Option<bool>) {
     let hold = hold.unwrap_or(0.0);
     let unheard = unheard.unwrap_or(false);
-    let mut text = String::from(text);
-    if crate::snatch::snatch_is_man(g, gd) {
-        match crate::snatch::snatch_voice(g, gd, &text) { Some(own) => text = own, None => return }
-    }
+    let text = String::from(text);
     let cv = civ_of(g, gd);
     let t = fill(g, gd, &text, None);
     let length = t.encode_utf16().count() as f64;   // (a JavaScript string's length)
@@ -431,9 +428,8 @@ pub fn update_one(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     }
     let cower_now = g.cv[cv].state == CivState::Cower;
     let led = g.cv[cv].lead.is_some();
-    let bound = if cower_now && led && crate::snatch::snatch_is_tied(g, gd) { 1.0 }
-        else if cower_now && move_ == 0.0 && !led {
-            if crate::rescue::rescue_is_hostage(g, gd) || crate::snatch::snatch_is_tied(g, gd) { 1.0 }
+    let bound = if cower_now && move_ == 0.0 && !led {
+            if crate::rescue::rescue_is_hostage(g, gd) { 1.0 }
             else if g.cv[cv].complied && g.time < g.cv[cv].comply_until { 2.0 } else { 0.0 }
         } else { 0.0 };
     g.ch[c].anim.bound = bound;

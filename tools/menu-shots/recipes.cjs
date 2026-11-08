@@ -126,14 +126,6 @@ R['rescue-consulate'] = { // dusk; the four in by the suite's side door behind a
          return ms.sim(8, () => ms.ops().filter(x => x.char.pos[0] > 29.3).length >= 2);`,
   cam: { look: [30.7, 1.0, 17.0], yaw: Math.PI / 2 - 0.25, pitch: 0.16, dist: 4.6 } };
 
-R['snatch-four'] = {    // dawn; Sam's rounds at the hut wake the house, the man runs for the side door and meets the stack coming in: on his knees in their lights
-  query: 'levelFile=snatch.json&roomclear&squad4&hour=dawn' + Q, quality: 'medium', frames: 8,
-  play: `const sn = g.snatch, d = ms.door('side'); ms.approach('side', 3.5, 45); ms.go([27.8, 0, 10.6]); ms.sim(6, () => ms.arrived());
-         const t8 = ms.man('Tango 8'); let n = 0; ms.sim(10, () => { ms.aim([t8.char.pos[0], 1.2, t8.char.pos[2]]); if (n++ % 9 === 4) ms.fire(); return false; });
-         ms.go([28.4, 0, 12.2]); ms.order('openClear', 'side');
-         return ms.sim(14, () => Math.abs(d.angle) > 0.9 && ms.ops().some(x => x.char.pos[0] < 26.3) && !!sn.tied);`,
-  cam: { look: [25.3, 1.05, 10.8], yaw: -1.3, pitch: 0.3, dist: 5.3 } };
-
 R['defuse-four'] = {    // grey day; the west shop taken by its back door, Sam's hands on the charge at the bench with the clock running, a teammate's gun on the room beside him
   query: 'levelFile=defuse.json&roomclear&squad4&hour=overcast' + Q, quality: 'medium', frames: 8,
   play: `ms.approach('back_1', 3.4, 45); ms.order('bangClear', 'back_1'); const t0 = g.time; ms.must(ms.sim(25, () => ${bang('back_1')}), 'the can');

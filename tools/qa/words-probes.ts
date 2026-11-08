@@ -191,29 +191,27 @@ export const wordsDoors = guarded(async () => withWords(true, async () => {
   return F.done();
 }));
 
-/** words-frag: the squad's refused frag says WHO is in it (squadthrow.ts `squadFragCatches`): a rescue's hostages are 'hostages', the man a snatch came for is named,
+/** words-frag: the squad's refused frag says WHO is in it (squadthrow.ts `squadFragCatches`): a rescue's hostages are 'hostages',
  *  anybody else unarmed is 'a civilian'. Asked of the function itself on a staged rescue, the player and the
- *  team taken out of the question so only the unarmed are judged. WORDS_BREAK=1 expects the old line of the snatch's man with the pass on: must fail. */
+ *  team taken out of the question so only the unarmed are judged. WORDS_BREAK=1 expects the old line of a civilian with the pass on: must fail. */
 export const wordsFrag = guarded(async () => {
   const F = family('words-frag'), { squadFragCatches } = await import(`${ROOT}/src/game/squadthrow.ts`), OLD = 'hostages. no frag.';
   {
     const T = await staged(true, 3, {}), g = T.game, h = T.R.hostages.find((x: any) => x.state !== 'dead');
     F.verdict(!!h, 'a rescue staged with a living hostage', T.why ?? '');
     if (!h) return F.done();
-    const at: [number, number, number] = [h.char.pos[0], 0, h.char.pos[2]], name = h.civ?.name ?? 'our man';
+    const at: [number, number, number] = [h.char.pos[0], 0, h.char.pos[2]];
     const base = { player: { down: true, char: g.player.char }, guards: g.guards.filter((x: any) => x.team !== 'operative') };
     const as = (over: Record<string, unknown>) => Object.assign(Object.create(g), base, over);
     const cases: [string, any, string][] = [
-      ['a hostage', as({ snatch: { man: null }, civilians: [] }), OLD],
-      ['the man a snatch came for', as({ rescue: null, snatch: { man: h }, civilians: [] }), process.env.WORDS_BREAK ? OLD : `${name} is in it. no frag.`],
-      ['a civilian', as({ rescue: null, snatch: { man: null }, civilians: [h] }), 'a civilian is in it. no frag.'],
-      ['nobody unarmed', as({ rescue: null, snatch: { man: null }, civilians: [] }), 'null'],
+      ['a hostage', as({ civilians: [] }), OLD],
+      ['a civilian', as({ rescue: null, civilians: [h] }), process.env.WORDS_BREAK ? OLD : 'a civilian is in it. no frag.'],
+      ['nobody unarmed', as({ rescue: null, civilians: [] }), 'null'],
     ];
     for (const [who, G, want] of cases) {
       const got = String(squadFragCatches(G, at, at));
       F.verdict(got === want, `${who}: '${want}'`, got === want ? '' : `said '${got}'`);
     }
-    F.verdict(!/hostage/i.test(`${name} is in it. no frag.`) && !/\b(north|south|east|west)\b/i.test(name), `the named line calls nobody a hostage ('${name} is in it. no frag.')`, '');
   }
   return F.done();
 });
@@ -230,9 +228,9 @@ export const wordsFrag = guarded(async () => {
  *    4 · the office stood up: the squad's row, a rear man's 'holding ·' and the response team's 'stack on …' say the one name */
 const DOORS_OWED: Record<string, string> = {   // (10-19: NONE OWED. The 96 doors of 25 files that stood here are named in their levels' own generators — scenarios.doorNames; a door that
 };                                              //  turns up called by a bearing goes red here until its level names it: `'<file>.json': 'id id'`, as the census prints it)
-/** THE SAME RULE FOR A PLACE A SCREEN PRINTS (line 7): a quiet mission's or a snatch's exit is on the objective's line and the debrief's map
- *  (quiet.ts brief `outs`, snatch.ts, ui/debrief.ts), an area's name is in the men's lines the strip prints and on the debrief's timeline (dialogue.ts roomName, chronicle.ts) — and the
- *  HUD has no compass. These are the level files' own words (scenarios.quiet.exits / .snatch.exits / .places.areas): each is renamed in its level's
+/** THE SAME RULE FOR A PLACE A SCREEN PRINTS (line 7): a quiet mission's exit is on the objective's line and the debrief's map
+ *  (quiet.ts brief `outs`, ui/debrief.ts), an area's name is in the men's lines the strip prints and on the debrief's timeline (dialogue.ts roomName, chronicle.ts) — and the
+ *  HUD has no compass. These are the level files' own words (scenarios.quiet.exits / .places.areas): each is renamed in its level's
  *  generator and comes OFF this list in the same change. `'<file>.json': "exit '<name>' · area '<name>'"`, as the census prints it. */
 const PLACES_OWED: Record<string, string> = {   // (10-19: NONE OWED. The 56 names of 20 files that stood here are renamed in their levels' own generators, each by what stands there —
 };                                               //  a gate by its door's written name, an area by its rooms; one that turns up named by a bearing goes red here until its level renames it)
@@ -273,7 +271,7 @@ export const wordsDoorNames = guarded(async () => {
       const ds = ids.map(id => ({ def: { name: id } })); N.nameDoors(L, office, ds); const names = ds.map(d => O.doorWords(d)); doorsN += ids.length;
       names.forEach((n, i) => { if (names.indexOf(n) !== i) twins.push(`${file}: two doors called '${n}'`); });
       const k = ids.filter((_id, i) => bearing(names[i])).sort().join(' '); if (k) owed[file] = k;
-      const S = L.scenarios ?? {}, pl = [...(S.quiet?.exits ?? []).map((x: any) => `exit '${x.name}'`), ...(S.snatch?.exits ?? []).map((x: any) => `exit '${x.name}'`), ...(S.places?.areas ?? []).map((a: any) => `area '${a.name}'`)];
+      const S = L.scenarios ?? {}, pl = [...(S.quiet?.exits ?? []).map((x: any) => `exit '${x.name}'`), ...(S.places?.areas ?? []).map((a: any) => `area '${a.name}'`)];
       const pk = [...new Set(pl.filter(bearing))].sort().join(' · '); if (pk) places[file] = pk;
       const lk = office ? '' : ids.filter((id, i) => (N.shorthandId(id) && names[i] === O.doorIdWords(id)) || /\b(\w+) \1\b/.test(names[i])).sort().join(' '); if (lk) letters[file] = lk;
     }

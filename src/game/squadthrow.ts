@@ -389,11 +389,10 @@ function fragCatches(g: Game, rest: Vec3, at: Vec3, moved: { gd: Guard; at: Vec3
   const mate = g.guards.find(gd => gd.team === 'operative' && (gd.state !== 'dead' ? on(gd) : isBreathing(gd) && inIt(bodyPos(gd))));   // (a teammate down and breathing — wounded, out cold — is still one of ours)
   if (mate) return `${mate.callsign} is in it.`;
   const live = (c: Guard | null | undefined) => !!c && c.state !== 'dead' && inIt(c.char.pos), no = burst?.no ?? 'no frag.';
-  const hostage = !!g.rescue?.hostages.some(live), wanted = live(g.snatch?.man) ? g.snatch!.man! : null;
-  if (!WORDS.on) return hostage || wanted || g.civilians.some(live) ? `hostages. ${no}` : null;
-  // (the words name who it is: a rescue's hostages; the man a snatch came for, by the name his objective row gives him; anybody else unarmed on the floor)
+  const hostage = !!g.rescue?.hostages.some(live);
+  if (!WORDS.on) return hostage || g.civilians.some(live) ? `hostages. ${no}` : null;
+  // (the words name who it is: a rescue's hostages; anybody else unarmed on the floor)
   if (hostage) return `hostages. ${no}`;
-  if (wanted) return `${wanted.civ?.name ?? 'our man'} is in it. ${no}`;
   if (g.civilians.some(live)) return `a civilian is in it. ${no}`;
   return null;
 }
