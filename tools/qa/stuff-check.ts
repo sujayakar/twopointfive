@@ -9,7 +9,7 @@
 // this asks it. What a material LOOKS like on a desk is a page's still and then a GPU's. The same on both stands: nothing here is a rule of play and no
 // stand's word reaches it. What every box WAS drawn as before the colour rule went, against what it is now, is tools/qa/stuff-audit.ts.
 import { readFileSync, readdirSync } from 'node:fs';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 import { fromBefore, paintUsers, rowOf } from '../levels/paintUsers.ts';
 const ST = await import(`${ROOT}/src/scene/stuff.ts`), { PAINT_STUFF, stuffOfName, rowWord, BOX_STUFFS, saidFor, namePaints, paintOf, toned, tonedAs, madeOf, drawnAs, saidAs, wordFor, worded, repainted, repaintWord, NAMED_COATS } = ST;
 const { LOOK_NAMES, LOOK_PAINTED, lookStuffOf } = await import(`${ROOT}/src/render/lookTex.ts`);

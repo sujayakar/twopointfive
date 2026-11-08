@@ -57,7 +57,7 @@
 //   said        docs/agents names the level (its file, its generator or a row's id) — that a write-up is THERE, not that it is good
 import { resolve } from 'node:path';
 import { readdirSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 import { fitPropFootprint } from '../../src/scene/levelLoad.ts';
 const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { setlistNames } = await import(`${ROOT}/src/audio/setlist.ts`);
