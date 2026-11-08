@@ -5,6 +5,7 @@
 //   node lab/tools/card.cjs <views.json> --poison              NaN and Inf in every history: does the picture heal?
 //   node lab/tools/card.cjs <views.json> --guards 3            what the checks cost: none, histories (play), everything, in turn, so many rounds
 //   node lab/tools/card.cjs <views.json> --watch 600           every write looked at over the fixed run; then stages broken on purpose, which must be named and must heal
+//   node lab/tools/card.cjs lab/tools/steady.json --steady     what shimmers, and what is off in motion, by what a pixel shows; heat maps
 //   node lab/tools/card.cjs <views.json> --bench realtime,raw  methods against the reference → $OUT/bench.json
 const { execSync } = require('child_process'), fs = require('fs'), path = require('path'), http = require('http');
 let chromium; for (const p of ['/opt/node-tools/node_modules/playwright', 'playwright-core', 'playwright']) { try { chromium = require(p).chromium; break; } catch { } }
@@ -32,6 +33,10 @@ execSync(`bun build src/shot.ts --outfile "${SITE}/shot.js" --target browser --l
       await again({ spoil: { stage, signal, frame: 5 } }); const r = await ask('spoilt', [sw, sh]); judge(typeof r === 'object' && r.picture.slice(1).every(x => x === 0) && r.after === 0, `  in play: bad in the picture, that frame and after: ${r.picture ?? r}; left in histories ${r.after}`);
     }
     process.exit(wrong ? 1 : 0);
+  }
+  if (process.argv.includes('--steady')) {           // what shimmers with nothing moving (of 255), and % off the reference in motion and at rest, by what a pixel shows
+    const all = {}; for (const v of views) { const r = await ask('steady', [v, !!process.env.QUICK]); if (typeof r === 'string') { console.log(v.name, r); process.exit(1); } for (const [k, d] of Object.entries(r.pictures)) fs.writeFileSync(path.join(OUT, `${v.name.replace(/ /g, '-')}-${k}.jpg`), Buffer.from(d.split(',')[1], 'base64')); delete r.pictures; all[v.name] = r; for (const part of ['flicker', 'moving', 'still']) console.log(v.name.padEnd(14), part.padEnd(8), Object.entries(r[part]).map(([k, x]) => `${k} ${x.mean.toFixed(2)} (p99 ${x.p99.toFixed(1)}, ${(x.share * 100).toFixed(0)} %)`).join('  ')); }
+    fs.writeFileSync(path.join(OUT, 'steady.json'), JSON.stringify(all, null, 1)); fs.rmSync(SITE, { recursive: true, force: true }); process.exit(0);
   }
   if (process.argv.includes('--trace')) { const n = +process.argv[process.argv.indexOf('--trace') + 1] || 8, runs = []; for (let k = 0; k < 2; k++) { if (k) { await p.reload(); await p.waitForFunction('window.shots'); await p.evaluate(async () => { window.S = await window.shots(); }); } runs.push(await p.evaluate(async n => { try { return await window.S.trace(n, 1440, 810); } catch (e) { return [String(e.stack || e)]; } }, n)); } let d = 0; runs[0].forEach((l, i) => { if (l !== runs[1][i] && d++ < 40) console.log('parts:', l, '|', runs[1][i]); }); console.log(d ? d + ' of ' + runs[0].length + ' part' : 'all ' + runs[0].length + ' agree'); process.exit(0); }
   if (process.argv.includes('--tour')) { const n = +process.argv[process.argv.indexOf('--tour') + 1] || 600; for (let k = 0; k < 2; k++) { if (k) { await p.reload(); await p.waitForFunction('window.shots'); await p.evaluate(async () => { window.S = await window.shots(); }); } const said = await p.evaluate(async n => { try { return await window.S.tour(n, 1920, 1080, 0.75); } catch (e) { return 'FAILED ' + String(e.stack || e); } }, n); console.log(said); if (said.startsWith('FAILED')) process.exit(1); } process.exit(0); }

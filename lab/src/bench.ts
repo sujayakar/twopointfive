@@ -86,3 +86,28 @@ export async function spoilt(lab: Lab, m: Method, w: number, h: number): Promise
   for (let i = 0; i <= at + 3; i++) { lab.step(); lab.draw(); await lab.gpu.device.queue.onSubmittedWorkDone(); if (i >= at) { lab.graph.flip(); seen.push(count((await lab.read(m.result)).data)); lab.graph.flip(); } }
   let after = 0; for (const [n, s] of lab.graph.signals) if (s.format === 'rgba16float' && s.history) after += count((await lab.read(n + '@prev')).data); return { picture: seen, after };
 }
+
+// ---- what shimmers, and what is wrong while the camera moves; each by what the pixel shows
+export const KINDS = ['matte', 'shiny', 'clear', 'leaves'] as const;
+/** what each output pixel shows: 0 matte, 1 shiny, 2 through a clear layer, 3 leaves, 255 sky */
+async function kindsOf(lab: Lab, w: number, h: number): Promise<Uint8Array> {
+  lab.graph.flip(); const s = await lab.read('surf'), f = await lab.read('front'); lab.graph.flip(); const S = new Uint32Array(s.data), T = new Float32Array(s.data), F = new Uint32Array(f.data), o = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = 4 * (Math.min(s.h - 1, Math.floor((y + 0.5) * s.h / h)) * s.w + Math.min(s.w - 1, Math.floor((x + 0.5) * s.w / w))); const rough = (S[i + 2]! >>> 24) / 255, metal = ((S[i + 3]! >>> 16) & 15) > 7; o[y * w + x] = F[i] ? 2 : T[i]! > 1.5e3 ? 255 : (S[i + 3]! >>> 26) & 1 ? 3 : rough < 0.3 || metal ? 1 : 0; }
+  return o;
+}
+export interface ByKind { [kind: string]: { share: number; mean: number; p99: number } }
+function byKind(v: Float32Array, k: Uint8Array): ByKind { const out: ByKind = {}; for (let c = -1; c < KINDS.length; c++) { const l: number[] = []; for (let i = 0; i < v.length; i++) if (c < 0 ? k[i] !== 255 : k[i] === c) l.push(v[i]!); if (!l.length) continue; const s = Float32Array.from(l).sort(); let m = 0; for (const x of l) m += x; out[c < 0 ? 'all' : KINDS[c]!] = { share: +(l.length / v.length).toFixed(3), mean: +(m / l.length).toFixed(3), p99: +s[Math.floor(s.length * 0.99)]!.toFixed(2) }; } return out; }
+/** nothing moves but the dice: how much each pixel of the shown picture (0‥255) changes about its mean, over 32 frames */
+export async function flicker(lab: Lab, m: Method, shown: () => Promise<Uint8ClampedArray>, w: number, h: number, settle = 240, N = 32): Promise<{ by: ByKind; map: Float32Array }> {
+  await lab.use(m); lab.frameNo = 0; for (let i = 0; i < settle; i++) { lab.draw(); if (i % 4 === 3) await lab.gpu.device.queue.onSubmittedWorkDone(); }
+  const a = new Float32Array(w * h), b = new Float32Array(w * h);  for (let f = 0; f < N; f++) { lab.draw(); const p = await shown(); for (let i = 0; i < a.length; i++) { const l = 0.2126 * p[i * 4]! + 0.7152 * p[i * 4 + 1]! + 0.0722 * p[i * 4 + 2]!; a[i]! += l; b[i]! += l * l; } }
+  for (let i = 0; i < a.length; i++) { const u = a[i]! / N; b[i] = Math.sqrt(Math.max(0, b[i]! / N - u * u)); } return { by: byKind(b, await kindsOf(lab, w, h)), map: b };
+}
+/** the camera has been turning for 90 frames: that frame against the reference from where it stands; and the same once it has stood still for 120 */
+export async function moving(lab: Lab, m: Method, ref: Method, w: number, h: number, paths = 400, quick = false): Promise<{ moving: ByKind; still: ByKind; maps: Float32Array[] }> {
+  const idle = () => lab.gpu.device.queue.onSubmittedWorkDone(), c = lab.camera; await lab.use(m); lab.frameNo = 0; const yaw = c.want.yaw; c.want.yaw = yaw - 0.36; c.snap(); for (let i = 0; i < (quick ? 4 : 120); i++) { lab.draw(); if (i % 4 === 3) await idle(); }
+  for (let i = 0; i < (quick ? 4 : 90); i++) { c.want.yaw += 0.004; c.snap(); lab.draw(); if (i % 4 === 3) await idle(); } const a = await picture(lab, m), kinds = await kindsOf(lab, w, h); for (let i = 0; i < (quick ? 4 : 120); i++) { lab.draw(); if (i % 4 === 3) await idle(); } const s = await picture(lab, m);
+  await lab.use(ref); lab.frameNo = 0; for (let i = 0; i < paths; i++) { lab.draw(); if (i % 4 === 3) await idle(); } const t = soft(await picture(lab, ref), w, h); c.want.yaw = yaw; c.snap();
+  let mean = 0; for (const x of t) mean += x; const fl = mean / t.length * 0.02 + 1e-5, off = (q: Float32Array) => { const p = soft(q, w, h), v = new Float32Array(w * h); for (let i = 0; i < v.length; i++) { const o = i * 3; v[i] = Math.min(100, 100 * (Math.abs(p[o]! - t[o]!) + Math.abs(p[o + 1]! - t[o + 1]!) + Math.abs(p[o + 2]! - t[o + 2]!)) / (t[o]! + t[o + 1]! + t[o + 2]! + 3 * fl)); } return v; };
+  const A = off(a), S = off(s); return { moving: byKind(A, kinds), still: byKind(S, kinds), maps: [A, S] };
+}
