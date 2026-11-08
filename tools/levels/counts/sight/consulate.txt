@@ -1,0 +1,10 @@
+# how many of 21 lines each man of consulate has open to the ground his gun rests on: his name, his count (levels sight --write; a line that starts # under this one is a note and is kept)
+rescue.captor 15
+rescue.doorMan.inside 12
+rescue.doorMan.outside 18
+rescue.guards#0 15
+rescue.roamers#0 12
+rescue.roamers#1 18
+rescue.roamers#2 18
+rescue.roamers#3 12
+rescue.roamers#4 18

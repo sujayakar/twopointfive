@@ -309,6 +309,18 @@ each the game they are alone.
 What this does NOT hold: that a game started this way can be PLAYED through a puppet. It cannot yet: item 13 of the list above. A host with
 no puppet (a game server) needs nothing more than this.
 
+## Levels: what a level owes whoever plays it (`src/bin/levels.rs`)
+
+```
+cd rust/game_start
+cargo run --release --bin levels -- second-way [level …]   # every room the defenders can shut has another way in
+cargo run --release --bin levels -- sight [level …]        # a defender sees what he watches
+cargo run --release --bin levels -- walked [level …]       # its starts and its doors are on a way
+cargo run --release --bin levels -- stacks [mission …]     # every stack mark is by its door
+```
+
+Each stands the level (or every mission of it) by this crate's start and asks the game's own rules; the head of the file says what each holds and why.
+
 ## Hold: is this build the same game as that one (`src/bin/hold.rs`)
 
 For a change that is meant to change nothing of play. It needs no page, no TypeScript, no module build and no file of the wire, so a
