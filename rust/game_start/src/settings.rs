@@ -16,19 +16,15 @@ pub fn default_settings() -> RenderSettings {
     s.taau_kernel = 6.0;
     s.taau_vel_k = 1.0;
     s.taau_motion_alpha = 0.4;
-    s.taau_motion_clip = 0.0;
     s.taau_sharpen_motion = 0.3;
     s.taau_hist_sharp = 0.0;
-    s.taau_light_jump = 1.0;
     s.sharp_direct = false;
     s.sharp_decouple = false;
     s.sharp_plane_k = 0.01;
     s.sharp_sliver = 1.0;
     s.sharp_sliver_cap = 24.0;
-    s.sharp_diag = 0.0;
     s.gbaa_clamp = true;
     s.portal_hole = true;
-    s.portal_worth = 0.0;
     s.restir_hue_split = true;
     s.held_rays = 6.0;
     s.held_adaptive = false;
@@ -49,11 +45,7 @@ pub fn default_settings() -> RenderSettings {
     s.dn_gi_clamp_k = 1.0;
     s.dn_gi_sigma_l = 4.0;
     s.dn_gi_fast = 3.0;
-    s.dn_gi_firefly = 0.0;
-    s.dn_gi_clamp_cut = 0.0;
-    s.dn_gi_young_widen = 0.0;
     s.ladder_climb = true;
-    s.cap_climb = false;
     s.ladder_aim = 60.0;
     s.ladder_paced = true;
     s.ladder_held = true;
@@ -92,7 +84,6 @@ pub fn default_settings() -> RenderSettings {
     s.restir_grad_k = 5.0;
     s.restir_young = 8.0;
     s.restir_spatial_all = false;
-    s.restir_pen_cap = 0.0;
     s.restir_pen_rays = false;
     s.restir_known_dark = true;
     s.restir_audit = 0.25;
@@ -101,7 +92,6 @@ pub fn default_settings() -> RenderSettings {
     s.restir_motion_min = 0.35;
     s.restir_motion_px = 0.5;
     s.restir_motion_taps = 6.0;
-    s.restir_motion_static = false;
     s.direct_history = 1.0;
     s.direct_blur_cap = 10.0;
     s.sec_min_e = 0.006;
