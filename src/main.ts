@@ -39,7 +39,7 @@ import { LOOK, LOOK_LAB, lookLabOn, lookLevelFile, lookPageRows, placeOfQuery, s
 import { lookTidy } from './scene/lookTidy';
 import { stepFrame, FIXEDSTEP, type LoopCtx } from './host/loop';
 import { bindFindMe, FINDME, setFindMe } from './host/findme';
-import { findMeOutline } from './ui/findme';
+import { findMeOutline } from './ui/findmeviz';
 import { makeOutlineFrame } from './render/outline';
 import { SavePicture } from './render/savepic';
 import { EVENPACE, pacer, pageRoom, rateMeter } from './host/pace';
@@ -214,12 +214,7 @@ async function main() {
   await rustGame.rustBoot();
   { const no = simWhyNot(); if (no) { console.info(simSay()); throw noWasm() ? new NoWasmError(no) : new Error(`the Rust simulation did not start: ${no}`); } }
   if (!kitViewOn && await cloudAdopt(q)) return;   // a browser handed another's id (`?player=`) takes it and its settings before a single key is read, then loads once more without the word (cloud/cloud.ts; no request at all on a build with no backend)
-  keymap.KEYMAP.handWhen = () => true;   // (…and his own actions on the key that leaves spare, the whistle's row with no key: host/keymap.ts HAND, the rule game/handring.ts)
-  keymap.KEYMAP.slotWhen = () => true;   // (empty hands are a slot on backtick, the debugger on backslash, E spare: host/keymap.ts SLOT, the rule game/handslot.ts)
-  keymap.KEYMAP.freeWhen = () => WALLSNAP.on && walkInNow();   // (the wall hold's row has no key while walking into a wall takes it: host/keymap.ts qFree)
-  keymap.KEYMAP.setWhen = () => true;   // (…and the selector's and the light's while a gun's key again opens its setup: host/keymap.ts setFree)
-  keymap.KEYMAP.onlyWhen = () => true; keymap.KEYMAP.throwWhen = () => false;   // (the old menu's letters sleep while the ring carries every order and the menu has no key; G not while it is the quick throw's: host/keymap.ts letGo)
-  keymap.keysBoot(q);   // the player's own keys (host/keymap.ts): live on this page from before anything is drawn; ?keybinds=0 = the build's
+  keymap.gameKeysBoot(q, walkInNow);   // the player's own keys (host/keymap.ts): live on this page from before anything is drawn; ?keybinds=0 = the build's
   (window as any).__keys = keymap;   // …and its hook from the same moment: the Controls screen is up before the boot is over, and a check of it asks the table (tools/qa/keybinds-page.cjs)
   bootTextSize(q, kitViewOn);   // the page's words at the window's size, the browser's zoom keys the game's (ui/textsize.ts; ?textsize=0 = the page as it was) — before anything is drawn
   // `?pick=<id | place>` alone (scene/picks.ts): a link to a row of the short list that stays right when the row's settings change — answered with ONE replace to

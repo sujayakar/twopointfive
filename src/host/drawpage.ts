@@ -32,7 +32,10 @@ import { knobPanel } from './knobpanel';
 import { lostCard } from './lostcard';
 import { PauseCard } from '../ui/pausecard';
 import { agoWords, type RunSaves } from '../ui/runcard';
-import { keysBoot } from './keymap';
+import { gameKeysBoot } from './keymap';
+import { settingsOf } from './settings';
+import { refreshOptions, setOptionsDeps, walkInNow } from '../ui/options';
+import { bootTextSize } from '../ui/textsize';
 import { Heard, Section, Sky, View } from '../draw/sections';
 import { AudioEngine } from '../audio/audio';
 import { setlistOfQuery } from '../audio/setlist';
@@ -70,7 +73,7 @@ async function main(): Promise<void> {
   const canvas = document.getElementById('view') as HTMLCanvasElement;
   // (of the page's markup, what this page drives: the rest of the HUD comes as it is told of the game)
   for (const el of document.getElementById('app')!.children) if (!['view', 'loading', 'menu', 'fatal'].includes(el.id)) (el as HTMLElement).style.display = 'none';
-  keysBoot(q);
+  gameKeysBoot(q, walkInNow); bootTextSize(q);
   LOOK.on = lookOfQuery(q); setLookPlace(placeOfQuery(q));
   const name = /^[\w.-]+\.json$/.test(q.get('levelFile') ?? '') ? q.get('levelFile')! : 'office.json', at = (p: string) => new URL(p, document.baseURI).href;
 
@@ -111,7 +114,7 @@ async function main(): Promise<void> {
   game.look(lookNumbers(engine.settings, engine.world, !!ch.cast)); game.frame(1, [20, 0, 14]); engine.world.upload();   // (every stuff the level is made of is known from here: its maps are made with the programs)
   await Promise.all([engine.init({ sharp: true }), smoke.init(), engine.particles!.init(), engine.gbuffer.needLook(), shadows.init(), engine.gbuffer.prepareSkin(chars.jointsFormat)]);
   pipelineProgress.onChange = null; pipeQueue.settle(); engine.warmFirstUse();
-  const quality = new Quality(engine, smoke); quality.visit(location.search);
+  const quality = new Quality(engine, smoke); quality.visit(location.search); quality.onCalibrated = refreshOptions;
   lookSync();
   lookConfig.exposure = () => { const h = HOURS_OF[D.u[sky() + Sky.hour]]; return h === 'night' ? null : hourExposure(h, D.f[sky() + Sky.hourSun]); };
   { const own = { zenith: [0, 0, 0] as Vec3, horizon: [0, 0, 0] as Vec3 }; for (let i = 0; i < 3; i++) { own.zenith[i] = D.f[sky() + Sky.ownZenith + i]; own.horizon[i] = D.f[sky() + Sky.ownHorizon + i]; } lookConfig.nightSky = () => own; }
@@ -121,6 +124,7 @@ async function main(): Promise<void> {
   const fog = makeFogFrame(), ask = askOf(game), audio = new AudioEngine(ask), events = new DrawEvents(D, engine.particles, smoke, audio, i => game.nameOf(i));
   MUSIC.pieces = MUSIC.byLevel = MUSIC.theirs = true; audio.scoreSet = setlistOfQuery(location.search); let run = -1;   // (the level's own music, as tense as those who are against him)
   if (q.has('mute')) { audio.volume.master = 0; audio.start = () => { /* silent */ }; }
+  setOptionsDeps({ engine, quality, audio, game: settingsOf(game) });   // (what this machine keeps of the volumes and the wall hold is put on them)
   for (const ev of ['pointerdown', 'keydown'] as const) window.addEventListener(ev, () => audio.start(), { capture: true });   // (a browser's sound begins with a hand on the page)
   engine.fogFrame = fog; const rims = engine.outline = makeOutlineFrame(); engine.beams = world.beams;
   const lights = new DrawLights(engine.lights, D); lights.from();   // (the lights stand too: their reach is worked out of the level as it opens)
