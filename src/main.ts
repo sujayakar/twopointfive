@@ -1,7 +1,7 @@
 import { kitViewOn, kitViewStart, kitViewFatal, kitViewQuietOf, type KitView } from './host/kitView';   // (FIRST on purpose: under ?kitview its load makes this window's storage read-only before any module below reads or writes a store — it imports no module at run time, so nobody's load order changes)
 import { END_CARD } from './host/endcard';
 import { Menu, loadSandbox, bootCard } from './ui/menu';
-import { optionsOpen, walkInNow } from './ui/options';
+import { optionsOpen, openOptions, closeOptions, walkInNow } from './ui/options';
 import { LOADBRIEF, loadBrief } from './ui/loadbrief';
 import { SETTLE, Settle } from './ui/settle';
 import { CMDRING } from './game/cmdring';   // (a prototype: with the orders ring on, Tab is its key and nothing else's)
@@ -11,10 +11,10 @@ import { modelErrAsked, modelErrBoot, modelErrFrame, sceneOf } from './host/mode
 import { SENSE_PAGE } from './game/sense';
 import { kitFresh, kitShow, kitPlayer, kitGun, kitLessonPage, kitLoad, kitRows, KIT, SUITS, TRIMS } from './game/kit';
 import { kitBoot } from './ui/kitBoot';
-import { Desk, desk, setDesk } from './view/desk';
+import { Desk, KIT_KEPT, desk, setDesk } from './view/desk';
 import { Commands } from './draw/commands';
 import { machineBefore } from './host/machine';
-import { missionsBusy, reopenMissionsAfterLoad, missionsReopenAsked, OFFLIST_UI } from './ui/missions';
+import { missionsBusy, reopenMissionsAfterLoad, missionsReopenAsked } from './ui/missions';
 import { startPage, startPageWanted, openStartPage, openList } from './ui/startpage';
 import { PICKS, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
 import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, laterIdle, laterProgress, PIPE_QUEUE, FATAL } from './gpu/device';
@@ -126,7 +126,8 @@ import { SCENARIOS, ALL_MISSIONS, LESSON_MISSIONS, pickSearch } from './scene/sc
 import { lessonGroup } from './scene/scenarios';
 import { DOORWAY } from './game/doors';
 import { HANDLE, HANDLE_STATS } from './game/handleside';
-import { initDifficulty, difficultyNow, keptLevers } from './game/difficulty';
+import { initDifficulty, difficultyNow, difficultyFromStore, keptLevers } from './game/difficulty';
+import { quietFogForget } from './game/quietfog';
 import { WEATHER_PRESETS, snowLevelOfQuery } from './game/weatherKinds';
 import { SNOW_SURF, snowCfgRows } from './render/snowField';
 import { SNOWTRACKS, TRACK_RES } from './game/snowTracks';
@@ -245,13 +246,14 @@ async function main() {
   pageSwitches(q);   // the switches this boot writes from the URL — the destruction goal's (?nodestruction ?nofurnblast ?nowallreact ?nocoverfire ?nowallcharge ?wallmenu=direct) and the room entry's door walk (?nodoorpath ?doorpath=0|gun) — in src/host/profile.ts, which the QA harness's shipped stand calls too with an empty query: one function, so the two cannot drift. Before the level loads (the destruction's dressing)
   const recipeTables = (): void => { if (!recipe) return; recipe.tables(); pageRows(q); };   // a recipe's knob tables over this machine's (below, at each point of the boot that wrote over them) — and then the Rust module's rows as the build has them, whatever an older recipe wrote (profile.ts pageRows: a row is no switch, and no recipe made now carries one)
   setLookPlace(placeOfQuery(q));   // the men's dress follows the place (scene/look.ts): on the office family the first cast and its tables, dressed for a building — said before the cast is fetched below
-  OFFLIST_UI.on = q.get('offlist') !== '0';   // the rows cut from the mission list are drawn on no list (ui/missions.ts listedMissions; ?offlist=0 = every row drawn, as before the cut)
+  LOADBRIEF.options = { open: () => openOptions({ tab: 'controls' }), close: closeOptions, up: optionsOpen };
   LOADBRIEF.on = q.get('loadbrief') !== '0';   // a mission's page loads behind that mission's brief and waits for the player's Start (ui/loadbrief.ts; ?loadbrief=0 = the boot card and the straight start, as before)
   { const v = q.get('settle'), w = Number(q.get('settlewait')); SETTLE.on = v === null ? navigator.webdriver !== true : v !== '0'; if (v && /^\d+$/.test(v) && +v > 1) SETTLE.frames = +v; if (w > 0) SETTLE.programSecs = w; }   // the brief's START is live when the picture behind it is ready: every shader in, the first frames drawn, auto quality's pick made (ui/settle.ts). On where a person sits; ?settle=0 = live the moment the level stands, as before; ?settle=1 = on for a page a script drives too, a number over 1 = that many frames and ?settlewait=N = that many seconds for the programs (a page tool on a slow adapter)
   kitBoot();   // each member's kit and uniform read from this machine's store (ui/kitBoot.ts, game/kit.ts)
-  // THE DESK (view/desk.ts): the cards before a game ask the module the page has booted. What a press keeps goes in this machine's store and from there into the table the page's own start wears
+  // THE DESK (view/desk.ts): the cards before a game ask the module the page has booted. What a press keeps goes in this machine's store and from there into the tables the page's own start wears
   { const F = rustGame.rustFace(), C = new Commands();
-    setDesk(new Desk(F.exports, F.memory, (key, text) => { let store: Storage | null = null; try { store = window.localStorage; if (text) store.setItem(key, text); else store.removeItem(key); } catch { /* a sandboxed frame: nothing is kept */ } kitLoad(store, location.search); }));
+    setDesk(new Desk(F.exports, F.memory, (key, text) => { let store: Storage | null = null; try { store = window.localStorage; if (text) store.setItem(key, text); else store.removeItem(key); } catch { /* a sandboxed frame: nothing is kept */ }
+      if (key === KIT_KEPT) kitLoad(store, location.search); else if (key.startsWith('twopointsix.quiet')) quietFogForget(); else difficultyFromStore(); }));
     machineBefore(q, q.get('levelFile') ?? 'office.json', C); desk().do(C); }
   const lessonRow = LESSON_MISSIONS.find(e => e.level === q.get('levelFile')) ?? null; kitLessonPage(lessonRow && lessonGroup(lessonRow.group) ? lessonRow : null);   // …but a TRAINING level is played with the kit AS ISSUED (game/loadout.ts kitAsIssued): the page names its lesson's row (kit.ts kitLessonPage) and every staging on it puts the issue cards on the men — all but the one lesson he packs for (kit.ts ISSUE.picked), whose stagings wear the kept cards —, since a lesson's steps ask for the issue kit's own things (a card with no rifle left 'press 2' a step that could never pass; your own four counts stay what a Player is built with — the kit lesson throws more than the one of each the pouches rule issues). The table and the store stay this machine's: the lesson neither wears nor writes the kept cards, and the loadout screen opened from this page for ANOTHER mission shows and keeps them
   recipeTables();
@@ -1161,7 +1163,6 @@ function weatherHourHooks(game: Game, smoke: SmokeSystem) {
   (window as any).__weather = game.weather;
   // the hour (hours.ts): __hour.set('dusk') live, .sun(0.4) = the one number a cloud dims, .at([x,y,z]) = the hour's light the meter's stand-in adds there, .est(p, skipOwner) = that
   // stand-in whole (guards.ts lightEstimateAt: what the harness and the team's rules read) — beside `__game.sensors.read('playerChest')` it is the stand-in against the renderer's own meter
-  HOUR.live = () => hourOf(game);   // (the mission sheet's no-load shortcut asks which hour the page is standing at: a checkpoint or the panel may have moved it off the visit's)
   (window as any).__hour = { ids: HOUR_IDS, table: HOURS, visit: HOUR, get id() { return hourOf(game); }, set: (id: string) => { applyHour(game, HOUR_IDS.includes(id as any) ? id as any : 'night'); return hourOf(game); },
     sun: (k?: number) => { if (k !== undefined) setSunStrength(game, k); return sunStrength(game); }, cloud: () => { sunToCloud(game); return sunStrength(game); },
     cover: (c?: number) => { const W = game.weather; if (!W?.kind) return null; if (c !== undefined && Number.isFinite(c)) { WEATHER_PRESETS[W.kind].cloud = Math.min(1, Math.max(0, c)); sunToCloud(game); game.engine.invalidateWorldCache?.(); } return W.cloud; },   // the picked weather's cloud cover for the VISIT (the look panel's Cloud row): the sun, its disc and the sky follow by hours.ts's own rule; null with no weather picked. Not carried by a save or a recording
