@@ -19,7 +19,7 @@ export class Commands extends Writer {
   restart(said: string): void { this.u32(6); this.text(said); }
   /** a save by hand, as the next step ends */
   save(): void { this.u32(7); }
-  /** a save goes back, as the next step ends, by its key */
+  /** a save goes back, as the next step ends, by its key (one that will not is said then) */
   load(key: string): void { this.u32(8); this.text(key); }
   /** the run saves itself */
   autosave(on: number): void { this.u32(9); this.u32(on); }
@@ -47,6 +47,8 @@ export class Commands extends Writer {
   quietCams(on: number): void { this.u32(20); this.u32(on); }
   /** encounter back */
   aside(on: number, x: number, z: number): void { this.u32(21); this.u32(on); this.f64(x); this.f64(z); }
+  /** what each man is thinking is said over him (and the meters' raw numbers with it) */
+  labels(on: number): void { this.u32(22); this.u32(on); }
   /** the kit picture: the team's cards (as Kit's text) and how many come (under 0: as it stands), staged again */
   kitStageCards(kept: string, size: number): void { this.u32(30); this.text(kept); this.i32(size); }
   /** whose card is open (0 the player) and the row under its highlight */

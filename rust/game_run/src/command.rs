@@ -82,8 +82,8 @@ commands! {
     6 Restart { said: &str } = |g, said| game::game::game_restart(g, if said.is_empty() { None } else { Some(said) });
     /// a save by hand, as the next step ends
     7 Save {} = |g| saves::ask_save(g);
-    /// a save goes back, as the next step ends, by its key
-    8 Load { key: &str } = |g, key| if let Some(why) = saves::ask_load(g, key) { game::game::game_msg(g, &format!("checkpoint: {why}")); };
+    /// a save goes back, as the next step ends, by its key (one that will not is said then)
+    8 Load { key: &str } = |g, key| g.saves.due = Some(String::from(key));
     /// the run saves itself
     9 Autosave { on: u32 } = |g, on| g.saves.enabled = on != 0;
     /// a card came up over the game: what the hands were lining up is let go unsent
@@ -114,6 +114,8 @@ commands! {
         if on == 0 { game::game::game_restart(g, None); }
         else { game::game::game_clear_aftermath(g); game::game::game_teleport_player(g, [x, 0.0, z]); }
     };
+    /// what each man is thinking is said over him (and the meters' raw numbers with it)
+    22 Labels { on: u32 } = |g, on| g.show_debug = on != 0;
     /// the kit picture: the team's cards (as Kit's text) and how many come (under 0: as it stands), staged again
     30 KitStageCards { kept: &str, size: i32 } = |g, kept, size| { crate::kept::read(g, kept); game::kitstage::cards(g, size); };
     /// whose card is open (0 the player) and the row under its highlight

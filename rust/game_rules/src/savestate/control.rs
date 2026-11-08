@@ -17,6 +17,8 @@ pub enum Do {
     Keep { key: String, label: String },
     /// put back the game kept under this key
     Back { key: String },
+    /// tell the player this
+    Say(String),
 }
 
 fn key_of(slot: SlotInfoSlot, i: usize) -> String { format!("{}.{}", if slot == SlotInfoSlot::Auto { "auto" } else { "manual" }, i) }
@@ -131,6 +133,11 @@ pub fn request(g: &mut Game, why: &str, label: &str) {
 }
 /// A tutorial's step says: a checkpoint is here.   (Checkpoints.keep)
 pub fn keep(g: &mut Game, label: &str) { g.saves.authored = Some(String::from(label)); }
+/// Why a save by hand would not be made now.   (Checkpoints.handNo)
+pub fn hand_no(g: &Game) -> Option<String> {
+    if crate::rails::rails_live(g) { return Some(String::from("a tutorial saves where its steps say")); }
+    run_no(g, &crate::seats::here(g), false)
+}
 /// A save by hand, at the end of this update.   (Checkpoints.askSave)
 pub fn ask_save(g: &mut Game) { g.saves.hand = true; }
 /// A game kept under this key is to be put back; why not, or nothing.   (Checkpoints.load, of a save in memory)
@@ -160,13 +167,17 @@ fn fresh(g: &mut Game) {
 
 /// After every step: the triggers, then what is waiting against the gates.   (Checkpoints.tick)
 pub fn tick(g: &mut Game, dt: f64) -> Option<Do> {
-    if g.seats.len() > 1 { return None; }
+    // (two players: none is made and none goes back, and whoever asked is told)
+    if g.seats.len() > 1 {
+        let (back, hand) = (g.saves.due.take(), core::mem::take(&mut g.saves.hand));
+        return if back.is_some() { run_no(g, &crate::seats::here(g), false).map(|w| Do::Say(format!("checkpoint: {w}"))) } else if hand { write(g, SlotInfoSlot::Manual, "by hand", false) } else { None };
+    }
     if g.saves.mission_ref != Some(g.mission.serial) { fresh(g); }
     if let Some(key) = g.saves.due.take() {
         g.saves.hand = false;
         let run = g.saves.shelf.m.get(key.clone()).map(|e| e.info.run_id.clone());
         let why = match run { None => Some(String::from("that checkpoint is gone")), Some(r) => super::b_01::mem_no(g, &r) };
-        match why { None => return Some(Do::Back { key }), Some(w) => { crate::game::game_msg(g, &format!("checkpoint: {w}")); return None; } }
+        match why { None => return Some(Do::Back { key }), Some(w) => return Some(Do::Say(format!("checkpoint: {w}"))) }
     }
     if crate::rails::rails_live(g) {
         // a tutorial mission's checkpoints are where its steps say, and nowhere else
@@ -251,8 +262,7 @@ fn write(g: &mut Game, slot: SlotInfoSlot, label: &str, authored: bool) -> Optio
     if let Some(why) = run_no(g, &crate::seats::here(g), authored) {
         g.saves.stats.refused += 1.0;
         note(g, format!("refused: {why}"));
-        if slot == SlotInfoSlot::Manual { crate::game::game_msg(g, &format!("not saved: {why}")); }
-        return None;
+        return (slot == SlotInfoSlot::Manual).then(|| Do::Say(format!("not saved: {why}")));
     }
     let (mut n, mut at) = (0, f64::INFINITY);
     for i in 0..ring(g, slot) {
@@ -274,18 +284,18 @@ fn write(g: &mut Game, slot: SlotInfoSlot, label: &str, authored: bool) -> Optio
 }
 
 /// What the abandoned game hands to the one put back: what is the host's and the run's as it is NOW, and not the saved moment's to take back.
-pub struct Abandoned { saves: Checkpoints, loads: f64, kept: f64, god: bool, ai: bool, ammo: bool, unseen: bool, tune: crate::game::GameTune }
+pub struct Abandoned { saves: Checkpoints, loads: f64, kept: f64, god: bool, ai: bool, ammo: bool, unseen: bool, labels: bool, tune: crate::game::GameTune }
 pub fn abandoned(g: &Game) -> Abandoned {
     let c = &g.chronicle.counts;
-    Abandoned { saves: g.saves.clone(), loads: c.loads, kept: c.saves, god: g.god_mode, ai: g.ai_enabled, ammo: g.infinite_ammo, unseen: g.player_invisible, tune: g.tune.clone() }
+    Abandoned { saves: g.saves.clone(), loads: c.loads, kept: c.saves, god: g.god_mode, ai: g.ai_enabled, ammo: g.infinite_ammo, unseen: g.player_invisible, labels: g.show_debug, tune: g.tune.clone() }
 }
-/// There is no game kept under this key any more: it is off the shelf, and he is told.
-pub fn gone(g: &mut Game, key: &str) {
+/// There is no game kept under this key any more: it is off the shelf. What the player is told of it.
+pub fn gone(g: &mut Game, key: &str) -> String {
     g.saves.shelf.m.delete(String::from(key));
-    crate::game::game_msg(g, "checkpoint: that checkpoint is gone");
+    String::from("checkpoint: that checkpoint is gone")
 }
-/// The game kept under `key` stands again: the lines that follow a load.   (Checkpoints.loadMem, after the snapshot is restored)
-pub fn put_back(g: &mut Game, key: &str, was: Abandoned) {
+/// The game kept under `key` stands again: the lines that follow a load, and what the player is told of it.   (Checkpoints.loadMem, after the snapshot is restored)
+pub fn put_back(g: &mut Game, key: &str, was: Abandoned) -> String {
     // (a ring that merely stood at the save, and a gun's setup that was up, are nothing of the saved moment)
     let pl = g.player;
     if g.pl[pl].sel.ring.as_ref().is_some_and(|r| r.free == Some(true)) {
@@ -309,16 +319,16 @@ pub fn put_back(g: &mut Game, key: &str, was: Abandoned) {
     g.saves.due = None;
     g.saves.authored = None;
     g.saves.last_save_t = g.time;
-    (g.god_mode, g.ai_enabled, g.infinite_ammo, g.player_invisible, g.tune) = (was.god, was.ai, was.ammo, was.unseen, was.tune);
+    (g.god_mode, g.ai_enabled, g.infinite_ammo, g.player_invisible, g.show_debug, g.tune) = (was.god, was.ai, was.ammo, was.unseen, was.labels, was.tune);
     g.chronicle.counts.loads = was.loads;
     g.chronicle.counts.saves = was.kept;
     let _ = crate::chronicle::chron_checkpoint(g, crate::chronicle::ChronCheckpointWhat::Load, Some(&label));
-    crate::game::game_msg(g, &if label.is_empty() { String::from("checkpoint loaded") } else { format!("checkpoint loaded \u{2014} {label}") });
     g.saves.stats.loads += 1.0;
     let t = g.time;
     g.saves.flash = Some(CheckpointsFlash { text: String::from("CHECKPOINT LOADED"), t });
     note(g, format!("loaded {key}"));
     crate::rails::rails_put_back(g);
+    if label.is_empty() { String::from("checkpoint loaded") } else { format!("checkpoint loaded \u{2014} {label}") }
 }
 /// This run's saves, oldest first on the mission's clock: what a card lays out.   (Checkpoints.timeline)
 pub fn timeline(g: &Game) -> Vec<SlotInfo> {
