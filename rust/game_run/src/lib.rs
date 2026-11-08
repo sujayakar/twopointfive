@@ -5,7 +5,7 @@
 //! The order round a tick (tools/blitz/BRIDGE.md, "What a Rust host calls round a step"):
 //!   a start  `start` (c1.bin, s0.bin)
 //!   before   `host_half` (h<k>.bin) · `give` (each line of gives.txt for this tick) · `write_before` (each line of hostwrites.txt for this tick) · `meter`
-//!            (a line of meter.txt, a tutorial mission's) · `upload`
+//!            (a line of meter.txt, a tutorial mission's)
 //!            … or, where the TypeScript side wrote ONE ORDERED RECORD (between.txt), `between` for each of the tick's lines as they stand: the orders,
 //!            the writes, the rules the driver called and the meter in the driver's own order, in place of `give`, `write_before` and `meter`
 //!   the tick `step`
@@ -318,10 +318,6 @@ pub fn checkpoint(g: &mut game::game::Game, label: &str) -> bool {
     let _ = game::chronicle::chron_checkpoint(g, game::chronicle::ChronCheckpointWhat::Save, Some(label));
     stopped
 }
-
-/// HOST STEP: where the headless host listed the box world again between two ticks (`engine.world.upload()`). The listing is also where the rows of the
-/// frames gone by are freed (`boxes_frame_reset`, inside `host_world_upload`): a host that never lists keeps every frame box as a row for good.
-pub fn upload(g: &mut game::game::Game) { game::host_api::b_01::host_world_upload(g); }
 
 /// HOST STEP AFTER THE TICK (the headless host's `engine.lights.update(dt, game.time)`): every flash's envelope and retirement, which the next tick's light reads
 pub fn lights(g: &mut game::game::Game, dt: f64) { let now = g.time; game::render_lights::light_set_update(g, dt, now); }

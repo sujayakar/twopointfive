@@ -32,8 +32,6 @@ export interface HostOpts {
   audit?: boolean;
   /** fast: a whole apply every N ticks beside the filtered one (0: only where the host decides one is owed) */
   wholeEvery?: number;
-  /** audit: the ticks on which the headless host lists the box world (headless.ts `uploadEvery`), made on the Rust side before the apply */
-  uploadEvery?: number;
   /** false: the verdict and the autosave are not run on the puppet */
   dress?: boolean;
   /** the seed of the game's own die where it has none (mission.ts stands its game the same way); null: the game is left as it is */
@@ -163,7 +161,6 @@ const BUSY = { n: 0 };
 const hang = (o: any, k: string, v: unknown) => { Object.defineProperty(o, k, { value: v, writable: true, configurable: true, enumerable: false }); };
 /** the objects whose calls the host has already taken (a start may meet new ones: a mission started by the tool makes its own menu, fight and saves) */
 const TAPPED = new WeakSet<object>();
-const TAPPED_LIST = new WeakSet<object>();
 /** RH_OFF=<names, comma>: a stand-in left out, to see whether a run still needs it: ends · doors · marks · last · own (a weak table lists every game's keys) */
 const OFF = new Set((process.env.RH_OFF ?? '').split(','));
 const enc = new TextEncoder();
@@ -190,7 +187,6 @@ export class RustHost {
   outN = new Map<string, number>(); outThrew = new Map<string, string>(); outNoHand = new Map<string, number>(); outTicks = 0;
   made: Record<string, number> = {}; noWay = new Map<string, number>(); noSetter = new Map<string, number>(); noWindow = new Set<string>();
   standIns = { marks: 0 };
-  uploads = { rust: 0, late: 0, missed: 0 };
   /** the whole Rust state last applied (audit), and the puppet as the last tick opened */
   lastRust: Uint8Array | null = null; openState: Uint8Array | null = null;
   // ---- the audit's books
@@ -198,7 +194,7 @@ export class RustHost {
   wb = { fired: 0, meter: 0, block: 0, hostOnly: 0, refused: 0 }; handbacks = 0; handbacksInBeat = 0; applyChecks = 0; applyUnequal = 0;
   private lastState: Uint8Array | null = null; private lastBlock: Uint8Array | null = null;
   private pup: any; private say: (s: string) => void;
-  private hoverApplied: unknown = null; private visApplied = NaN; private wholeNow = false; private uploadDone = false;
+  private hoverApplied: unknown = null; private visApplied = NaN; private wholeNow = false;
   private lastChanged = true; private missionRef: any = null; private loadsRef = 0; private stageRef: any = null; private downRef = -1; private outQ: { arm: string; e: any }[] = [];
   private asks: { after(): void } | null = null; asked = 0; asksRefused = 0;
   private threw: Record<string, number> = {}; private warmDue = false;
@@ -658,29 +654,18 @@ export class RustHost {
     // so the puppet's own lamps are stepped by the TypeScript's own update, as the Rust game's are by its own.
     const E = g.engine, L = E.lights, W = E.world, lightsUpdate = L.update;
     if (!TAPPED.has(L)) { TAPPED.add(L); hang(L, 'update', function (this: any, ...a: any[]) { if (!H.live() || (!H.audit && !H.wholeNow)) return lightsUpdate.apply(this, a); H.count('engine.lights.update (not run on the puppet: it holds what the Rust side\'s left)'); }); }
-    // The box world's listing. Audit: made on the Rust side before the apply on the ticks the headless host lists (`uploadEvery`), and the puppet holds the
-    // listed world; a listing asked for on another tick is made then and the puppet takes the state again. Fast: the list of every box and the ray grid
-    // are not on the filtered list (they are the TypeScript's own there), so the TypeScript's listing runs as it is, and the Rust game lists its own
-    // at the same moment.
-    const upload = W.upload; this.tsUpload = () => { this.tsOnly = true; try { W.upload(); } finally { this.tsOnly = false; } };
+    // The box world's listing. The Rust game lists its own as a tick opens. Audit: the puppet holds that listed world. Fast: the list of every box and the ray grid
+    // are not on the filtered list (they are the TypeScript's own there), so the TypeScript's listing runs as it is.
+    const upload = W.upload; this.tsUpload = () => { W.upload(); };
     if (!TAPPED.has(W)) { TAPPED.add(W); hang(W, 'upload', function (this: any, ...a: any[]) {
       if (!H.live()) return upload.apply(this, a);
-      if (!H.audit) { if (!H.tsOnly) { X.face_upload(H.h); H.uploads.rust++; } if (H.quietOn) return;
+      if (!H.audit) { if (H.quietOn) return;
         // STAND-IN: A BOX WHOSE MARKINGS WENT is `marks: null` after an apply (the importer writes a None as null), and the listing tests
         // `b.marks !== undefined` (scene/boxes.ts:841) and then reads its length: it threw at tick 1817 of tut-solo. Belongs in import.ts: the None of a
         // field the TypeScript declares optional is `undefined`.
         for (const L of [this.statics, this.dynamics, g.dynBoxes] as any[][]) if (!OFF.has('marks')) for (const b of L) if (b.marks === null) { b.marks = undefined; H.standIns.marks++; }
         return upload.apply(this, a); }
-      if (H.uploadDone) { H.uploadDone = false; return; }
-      H.uploads.late++; X.face_upload(H.h); H.uploads.rust++; H.applyStep(); H.applyWhole('a listing off its tick'); H.lastState = B.exportGame(g, B.reg); }); }
-    // STAND-IN (a driver's call tapped by hand; belongs with the generated taps): THE LIST ALONE (`relist`: a tick that is not a draw; src/net/step.ts makes one after every tick of a networked game, where the headless world's own
-    // step calls `upload`). The Rust game lists its world at the same moment here too. Without it the Rust game never listed: its state grew by the
-    // frame's boxes every tick (35 KB a tick on the game server's room clear) and the every-tick export, which walks them, slowed tick by tick (9 ms a
-    // tick over the first hundred ticks, 41 over the sixth).
-    const relist = W.relist;
-    if (typeof relist === 'function' && !TAPPED_LIST.has(W)) { TAPPED_LIST.add(W); hang(W, 'relist', function (this: any, ...a: any[]) {
-      if (H.live() && !H.audit && !H.tsOnly && !OFF.has('relist')) { X.face_upload(H.h); H.uploads.rust++; }
-      return relist.apply(this, a); }); }
+    }); }
     // THE SAVE CONTROLLER KEEPS THE PUPPET (a save in memory is the TypeScript objects as they stand; a file is their serialisation), so a save taken off
     // a puppet that holds only the filtered state would keep fields that stopped moving ticks ago. Before a take the puppet takes the whole state.
     // WITH KEPT GAMES (`keeps`): a save is the Rust game's own clone, so no whole apply is made for one; while the controller runs, every save is one in
@@ -790,7 +775,6 @@ export class RustHost {
     if (TICKS_DIR) { if (k === 1 || this.ticksFile === '') { this.ticksFile = ticksFile(this.audit ? 'audit' : 'rust'); writeFileSync(this.ticksFile, ''); } tickLine(this.F, this.ticksFile, k, this.dieN(), this.rustBlock(), hw, this.gave.map(l => { const w = l.split(' '); return `${w[0]}:${w[1]}`; }).join(',')); }
     // ---- the host's steps after a tick, on the Rust side: the lights' update, the host's view of a level on rails, the camera's ask
     t = now(); X.face_lights(this.h, dt); X.face_view(this.h); X.face_follow?.(this.h);
-    if (this.audit) { const U = this.o.uploadEvery ?? 4; if (k % U === 1 % U) { X.face_upload(this.h); this.uploads.rust++; if (this.uploadDone) this.uploads.missed++; this.uploadDone = true; } else if (this.uploadDone) { this.uploads.missed++; this.uploadDone = false; } }
     this.T.after += now() - t;
     // ---- A QUIET STEP (`quietBegin`): the tool that asked for this run of steps has said none of its code runs between them, so nothing of the state
     // goes to the puppet until the run ends. The host's own camera needs two things of the game after every tick: asked for by `face_look`.
@@ -861,7 +845,7 @@ export class RustHost {
   // dispatched in their order, and the dress step runs once. WHAT DIFFERS from the same steps taken one by one: an autosave that fell due inside the
   // run is taken as it ends; the verdict ticks once for the run, over the run's whole time; an out event reaches the host's objects late.
   quietOn = false; quietSteps = 0; quietRuns = 0; private quietOwed = 0; private lastDt = 1 / 60; private lookNow: { follow: number[]; aim: number[] } | null = null;
-  private tsUpload: (() => void) | null = null; tsOnly = false;
+  private tsUpload: (() => void) | null = null;
   /** true where the host can step quietly (the fast way, a face that answers `face_look`) */
   // NOT YET THE SAME PLAY, so it is asked for by name (RH_QUIET=1): the Rust tick writes the lens's own row at times (a start snaps it onto the man), a
   // quiet run does not bring that across, and the host hands its own lens back with the next record. tools/blitz/quiet-check.ts: the die and the
