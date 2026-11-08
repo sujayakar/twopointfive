@@ -74,7 +74,7 @@ export async function glasshouseCheck(): Promise<boolean> {
     const grid = (x0: number, x1: number, z0: number, z1: number, step: number, ys: number[]) => { const out: number[][] = []; for (let x = x0; x <= x1 + 1e-6; x += step) for (let z = z0; z <= z1 + 1e-6; z += step) for (const y of ys) out.push([x, y, z]); return out; };
     const col = g.col, rifle = GLASSPEN.energy.aks74u as number;
     const court = grid(12, 28, 19.5, 23.5, 1, [1.2, 1.6]);
-        const thru = marks.filter((m: any) => court.some(p => !col.segmentBlocked(m.eye, p) && col.solidBlocked(m.eye, p) && !col.shotBlocked(m.eye, p, 0.02, rifle)));
+    const thru = marks.filter((m: any) => court.some(p => !col.segmentBlocked(m.eye, p) && col.solidBlocked(m.eye, p) && !col.shotBlocked(m.eye, p, 0.02, rifle)));
     const openNoGlass = marks.filter((m: any) => court.some(p => !col.solidBlocked(m.eye, p)));
     const rooms = [...new Set(thru.map((m: any) => m.room))];
     const say = (L: any[]) => L.map(l => `${l.room} mark ${l.i}`).join(', ') || 'none';

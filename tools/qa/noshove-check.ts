@@ -54,7 +54,6 @@ async function stand() {
   };
   return { R, g, home, open, tight, men, deal };
 }
-type Stand = Awaited<ReturnType<typeof stand>>;
 
 interface Walk { shoved: number; nearest: number; samV: number; passed: boolean; arrived: boolean; end: number; who: string; stats: Record<string, number>; legs: number; stuck: number }
 /** a man `d` from the player on the far side of him from the other three (who stand off along the axis), `off` to the side of the line through him;

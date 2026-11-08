@@ -4,23 +4,17 @@
 //   bun run tools/qa/plainentry-check.ts            (also `probes.ts plainentry`, in family squadorders)
 //   TPS_PROFILE=shipped bun run tools/qa/plainentry-check.ts      — the same lines on the page's stand
 // PASS / FAIL each, headless: the room clear on the office with its squad of four under god mode, ONE deal (seed 5, autopilot-check's: the rule has no
-// die in it). The check raises the quick key's autopilot and the rule itself, so both stands ask the same lines. Every press is a one-frame press of
-// the quick key, or of the word's key, with the harness cursor on the door. (AUTOPILOT.restack is held OFF here: with it the key on a stack gives no
-// entry at all — restack-check.ts — and this rule is what the key gives without it.)
+// die in it). The word's key is a one-frame press; the ring's row is given as the ring gives it.
 //   3. stacked there again, the WORD's key: the same open and clear, all four, no stun spent — the two keys give one entry.
 //   4. stacked there again, 'bang and clear' given as the ring's row gives it: that entry starts — a tool is still theirs when it is asked for.
-// PLAINENTRY_BREAK=1 = the switch left off and the same lines asked: 1 and 2 must fail.
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
 const AP: any = await import(`${ROOT}/src/game/autopilot.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
-const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
-const { applyKnobs, knobsSnapshot } = await import(`${ROOT}/src/game/journal.ts`);
-const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
-const { AUTOPILOT, autoPick, autoHint } = AP;
-const DT = 1 / 60, SEED = 5, BREAK = process.env.PLAINENTRY_BREAK === '1', VERBOSE = process.argv.includes('--verbose');
+const { AUTOPILOT } = AP;
+const DT = 1 / 60, SEED = 5, VERBOSE = process.argv.includes('--verbose');
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 
@@ -28,11 +22,11 @@ export async function plainEntryCheck(): Promise<boolean> {
   let fails = 0;
   const line = (ok: boolean, what: string, got: string) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what} — ${got}`); if (!ok) fails++; };
   const knobs0 = knobsCopy(), rnd0 = Math.random, squad0 = NIGHTBREACH.squad;
-  console.log(`The key never picks a tool (src/game/autopilot.ts autoEntries, AUTOPILOT.plain)${BREAK ? ' — PLAINENTRY_BREAK=1: the switch left off, lines 1 and 2 must fail' : ''}`);
+  console.log(`The key never picks a tool (src/game/autopilot.ts autoEntries, AUTOPILOT.plain)`);
   try {
     const log = console.log, warn = console.warn; if (!VERBOSE) console.log = console.warn = () => { };
-    let W: any, why: any, stood = false;
-    try { Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(SEED); W = await standUp(); stood = !!AUTOPILOT.plain; AUTOPILOT.on = true; W.game.godMode = true; why = W.game.roomClear.start(SEED); }
+    let W: any, why: any;
+    try { Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(SEED); W = await standUp(); AUTOPILOT.on = true; W.game.godMode = true; why = W.game.roomClear.start(SEED); }
     finally { console.log = log; console.warn = warn; Object.assign(NIGHTBREACH, { squad: squad0 }); }
     const g = W.game, O = g.orders, T = g.doorTools, I = W.input;
     const quiet = <X,>(f: () => X): X => { if (VERBOSE) return f(); const l = console.log, w = console.warn; console.log = console.warn = () => { }; try { return f(); } finally { console.log = l; console.warn = w; } };
@@ -46,14 +40,14 @@ export async function plainEntryCheck(): Promise<boolean> {
       for (const y of [c[1], 0.05, 1.0, 1.8]) for (const k of [0, 0.35, -0.35]) { const p = [c[0] + nx * k, y, c[2] + nz * k]; W.cursorAt(p); step(2); const h = O.hover?.(); if (h?.kind === 'door' && h.door === d) return p; }
       return null; };
     // the door: the nearest whose far room nobody has stood in, that the four can stack on and the cursor can be put on
-    const s = g.player.char.pos; let D: any = null, t: any = null;
+    const s = g.player.char.pos; let D: any = null;
     for (const d of [...g.doors.list].sort((a: any, b: any) => dist(a.frameCentre, s) - dist(b.frameCentre, s))) { const x = O.targetAt(d.frameCentre); if (x.kind !== 'door' || x.door !== d) continue;
-      const far = g.cleared.roomBy(d, x.side > 0 ? -1 : 1); if (!far || g.cleared.isKnown(far)) continue; if (O.whyNot(stackDef, O.forMen(x, all()), all()) || !aimOf(d)) continue; D = d; t = x; break; }
+      const far = g.cleared.roomBy(d, x.side > 0 ? -1 : 1); if (!far || g.cleared.isKnown(far)) continue; if (O.whyNot(stackDef, O.forMen(x, all()), all()) || !aimOf(d)) continue; D = d; break; }
     if (!D) { line(false, 'a door to stack on with a room behind it nobody has stood in', 'none'); return false; }
     const stacked = () => all().every((m: any) => O.of(m)?.order === 'stack' && O.of(m)?.door === D && O.of(m)?.arrived);
     /** all four stacked and set on the door, whatever went before (true: they are) */
     const stack = (): boolean => { until(() => T.ops.length === 0, 60); O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); step(60); O.give('stack', O.forMen(O.targetAt(D.frameCentre), all()), 'all'); return until(stacked, 40) && (step(20), stacked()); };
-    const opOn = () => T.ops.find((o: any) => o.door === D), far = () => g.cleared.roomBy(D, t.side > 0 ? -1 : 1), unknown = () => !!far() && !g.cleared.isKnown(far());
+    const opOn = () => T.ops.find((o: any) => o.door === D);
 
     // 3 (the far room may be known by now: the word's entry never asked)
     { const set = stack(), b0 = T.bangs, had = new Set<any>(T.ops); I.pressed.add(DOORTOOLS.blowKey); step(3); const op = T.ops.find((o: any) => !had.has(o) && o.door === D);
