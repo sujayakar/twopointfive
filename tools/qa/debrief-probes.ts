@@ -89,7 +89,8 @@ export async function debriefRun() {
     game.teleportPlayer([20, 0, 21]); game.player.crouch = true; game.player.slot = 'pistol'; game.player.holstered = false; steps(W, 0.3); game.player.visibility = 0.02;
     const alertsBefore = game.mission.stats.alerts;
     fireWeapon(game, game.player.char, [20, 0.4, 23.6], true);
-    steps(W, 1.5);
+    steps(W, 2 * DT); game.playerInvisible = true;   // (heard: from here he turns to a man under the cubicles' lamps, and what he then sees is not the question)
+    steps(W, 1.5); game.playerInvisible = false;
     if (game.mission.stats.alerts !== alertsBefore || B.state === 'alert') fails.push(`the muffled shot raised an alarm (alerts ${alertsBefore} → ${game.mission.stats.alerts}, ${B.callsign} ${B.state})`);
     // ---- the timeline
     const ev = game.chronicle.events as any[]; const kindsGot = kindsOf(game);
@@ -169,6 +170,7 @@ export async function debriefRun() {
       const sol = game.items.solve(hand, [8.5, 0.1, 15]); doThrow(game, sol, 'smoke'); const thrown = steps(W, 2.0, () => kindsOf(game).includes('thrown')); if (!thrown) fails.push('the canister never left his hand'); }
     // the mission: into the server room, the drive, out through the fire exit
     const M = level.mission;
+    for (const lamp of ['server', 'server_glow', 'server_leds']) game.setGroup(lamp, false);   // (the room's lamps light Sam 0.77 under the room's camera, and this run is the one nobody sees)
     game.player.holstered = true; game.teleportPlayer([18.0, 0, 8.9]); steps(W, 0.3);
     if (game.mission.stage !== 'drive') fails.push(`in the server room the stage is ${game.mission.stage} (want drive)`);
     game.teleportPlayer([M.rack.front[0], 0, M.rack.front[2] + 0.65]); game.player.crouch = false; steps(W, 2 * DT);
