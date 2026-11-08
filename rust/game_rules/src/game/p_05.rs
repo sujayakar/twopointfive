@@ -382,10 +382,7 @@ pub fn game_reset_level_state(g: &mut crate::game::Game) {
     crate::shards::glass_shards_reset(g);
     crate::snow_blast::clear_snow_blast(g);
     crate::snow_marks::clear_snow_marks(g);
-    if let Some(mut t) = g.snow_tracks.take() {   // (the stub takes g and the tracks inside it: out of g for the call)
-        crate::snow_tracks::clear_snow_tracks(g, &t);
-        g.snow_tracks = Some(t);
-    }
+    g.out.push(crate::out_events::OutEvent::ClearSnowTracks);   // (the prints are the picture's: the game says they go, on a level with them or not)
     crate::hours::hour_after_reset(g);
     crate::air_dust::air_dust_reset(g);
 }
