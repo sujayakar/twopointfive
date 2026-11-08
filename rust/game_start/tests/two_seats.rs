@@ -171,3 +171,69 @@ fn wall_seen(p: &mut Play, seat: usize) -> Option<String> {
     if p.g.tab.wallreact_breach[b].ops < 0.0 { return Some(format!("seat {seat}'s man looks at the hole from {stand:?} and the team does not know of it")); }
     None
 }
+
+/// One of the response team or the floor's clearing party with the second player at arm's length, the first across the floor.
+fn man_at_arms(s: u32, seat: usize) -> (Play, GuardId) {
+    let (mut p, t1) = two(s);
+    for m in p.mates() { p.man_stands(m, [3.5, 3.5]); }
+    p.seat_stands(1 - seat, [3.0, 3.0]);
+    p.seat_stands(seat, [20.6, AISLE]);
+    p.pin_man(t1, [21.0, AISLE], 0.0, game::game::GuardState::Patrol, 0.0);
+    p.g.gd[t1].faces = Some(seat as f64);
+    p.g.gd[t1].last_known = None;
+    p.g.gd[t1].awareness = 0.0;
+    (p, t1)
+}
+/// THE RULE: a man's senses, whoever runs them, are about the player he faces: at arm's length he is found, and it is his place that is fixed.
+/// A failure means the man sees one player and fixes on the other, or walks into the second with no word.
+#[test]
+fn a_mans_senses_are_about_the_player_he_faces() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let near = |p: &Play, t: GuardId| p.g.gd[t].last_known.map_or(false, |k| ((k[0] - 20.6f64).powi(2) + (k[2] - AISLE).powi(2)).sqrt() < 1.0);
+            let (mut p, t1) = man_at_arms(s, seat);
+            let r = game::squad::perceive(&mut p.g, t1, 1.0 / 60.0, 0.0);
+            assert!(r.is_some() || near(&p, t1), "seed {s}: the clearing man has nothing");
+            assert!(near(&p, t1), "seed {s}: seat {seat}'s man at arm's length and the clearing man fixes {:?}", p.g.gd[t1].last_known);
+            drop(p);
+            let (mut p, t1) = man_at_arms(s, seat);
+            game::qrf::perceive_scripted(&mut p.g, t1, 1.0 / 60.0);
+            assert!(near(&p, t1), "seed {s}: seat {seat}'s man at arm's length and the response man fixes {:?}", p.g.gd[t1].last_known);
+        }
+    }
+}
+
+/// THE RULE: an eye asks about the man it looks at. Another player being down does not blind it.
+#[test]
+fn an_eye_sees_a_man_up_with_the_other_down() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, _) = two(s);
+            let m = man(&p, seat);
+            let other = man(&p, 1 - seat);
+            p.g.pl[other].down = true;
+            p.seat_stands(seat, [16.0, AISLE]);
+            let pc = p.g.pl[m].ch;
+            let (from, chest) = ([20.0, 1.5, AISLE], [16.0, 1.2, AISLE]);
+            let look = game::v3::normalize(game::v3::sub(chest, from));
+            let e = game::guards::Eye { pos: from, look, range: 20.0, half_deg: 45.0, near_m: 0.0, near_deg: 45.0, v_half_deg: Some(45.0) };
+            let vis = game::guards::eye_contact(&mut p.g, e, pc, true, false, 1.0, None);
+            assert!(vis.visible, "seed {s}: seat {seat}'s man stands in the cone, up, with the other down");
+        }
+    }
+}
+
+/// THE RULE: a teammate's lane is clear of both players.
+#[test]
+fn a_teammates_lane_is_clear_of_both_players() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, _) = two(s);
+            let shooter = p.mates()[0];
+            for x in p.mates() { p.man_stands(x, [3.5, 3.5]); }
+            p.seat_stands(1 - seat, [3.0, 3.0]);
+            p.seat_stands(seat, [16.0, AISLE]);
+            assert!(!game::coverfire::cover_lane(&mut p.g, shooter, [12.0, 1.4, AISLE], [20.0, 1.4, AISLE]), "seed {s}: seat {seat}'s man stands in the lane and it is called clear");
+        }
+    }
+}
