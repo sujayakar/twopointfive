@@ -7,7 +7,7 @@
 //   PALETTE_BREAK=1   the second paints say nothing of what they do (each is laid as itself):          line 1 must FAIL
 //   PALETTE_BREAK=2   the skin's second arm is not handed the second paints (it lays the kit's own):   line 2 must FAIL
 //   PALETTE_BREAK=3   the exporter's helper keeps every row:                                           line 3 must FAIL
-// The same on both stands: nothing here is a rule of play, and no game is stood up. Never seen on a GPU: this asks what is laid, not how it looks.
+// Nothing here is a rule of play, and no game is stood up. Never seen on a GPU: this asks what is laid, not how it looks.
 import { readFileSync } from 'node:fs';
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
@@ -16,7 +16,7 @@ import { sayPaint, type BoxStuff } from '../../src/scene/stuff';
 import { officeKit } from '../../src/scene/officeGen';
 import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
 import { watchPieces } from '../../src/scene/library';
-import { findCarLamps } from '../../src/game/carlamps';
+import { carLampsIn } from '../../src/scene/carLamps';
 import { parseLevelData, type LevelData } from '../../src/scene/levelData';
 import { loadLevel } from '../../src/scene/levelLoad';
 import { skinLevel } from '../levels/gwotSkin';
@@ -52,7 +52,7 @@ const shapeOf = (b: Box) => JSON.stringify(b.shape ? { ...b.shape, with: b.shape
     try { P = layOne(c); } catch { leaned++; continue; }   // (a call that takes a thing another call made does not lay alone: not asked, counted)
     let S: ReturnType<typeof layOne>; try { S = layOne(c, SECOND); } catch (e) { threw.push(`${c.name}: ${String((e as Error).message).split('\n')[0].slice(0, 90)}`); continue; }
     asked++; names.add(c.name); nBoxes += S.boxes.length;
-    const lp = findCarLamps(P.boxes), ls = findCarLamps(S.boxes), lens = new Set(ls.map(l => l.box)); lenses += ls.length;
+    const lp = carLampsIn(P.boxes), ls = carLampsIn(S.boxes), lens = new Set(ls.map(l => l.box)); lenses += ls.length;
     if (lp.length !== ls.length) lamps.push(`${c.name}: ${lp.length} lamps the game finds in the kit's palette, ${ls.length} over the second paints`);
     if (P.boxes.length !== S.boxes.length) { moved.push(`${c.name}: ${P.boxes.length} boxes, then ${S.boxes.length}`); continue; }
     for (let i = 0; i < P.boxes.length; i++) { const a = P.boxes[i], b = S.boxes[i];

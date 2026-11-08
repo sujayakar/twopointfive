@@ -16,7 +16,7 @@
 // one cell, or a wall is turned, the cell says nothing and the read is as it was. NO LEAF IS IN THE PLAN (scene/placePlan.ts placeMask: doors open by
 // degrees): a shut door's cells are a wall on the door's own line whatever angle its leaf has reached, so a door that has begun to swing says what a
 // shut one says until its line opens.
-// Pure: the check's too (tools/qa/wallsides-check.ts). No GPU thing is made here.
+// Pure. No GPU thing is made here.
 import { Box } from '../scene/boxes';
 import { WORLD } from '../scene/world';
 import { PLACE, PLACE_W, PLACE_H, PLACE_RES, PlaceGap, PlaceMap, placeWall, stampCells } from '../scene/placePlan';

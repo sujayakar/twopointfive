@@ -1131,11 +1131,11 @@ but synthetic writes still work.
   running read only at the newest running file's second (a row keeps its own file's, `ranTo`), keeps a level's newest running read on its line when a
   later run took held pictures only, and prints the run's own reasons where it set one apart. The report prints no "running adds" where the g-buffer's stamp holds the display's wait
   (`waitsOn`), and a wait for the GPU's queue in the play and the run-up has the run's own limit (`capS`).
-- **THE LEVEL TOOLS (2026-11-04; files only, no GPU, no page of the game's changed).** `bun run tools/qa/level-audit.ts [level …]` counts every level the mission
+- **THE LEVEL TOOLS (2026-11-04; files only, no GPU, no page of the game's changed).** `tools/qa/level-audit.ts` (gone 2026-11-08 with the old game it stood) counted every level the mission
   list draws as the look page draws it (boxes, cut planes, round things, lamps burning at its hour, how much of the picture is each material and how much
   has none: a box is made of what it says, `Box.stuff`, read as the renderer reads it), about a second a level; `--check <level>` holds the engine's caps and the PROPOSED bars of `level-count.ts` (`LEVELAUDIT_BREAK=1` must fail),
   `--counts` gives a level's row for its dressing file, `--write-base` the baseline (`fixtures/level-audit-base.json`: the levels before they were
-  dressed). `node tools/qa/level-cost-page.cjs <level>` is one boot of the look page on the software adapter: what it compiled, layers off against on, a
+  dressed). `tools/qa/level-cost-page.cjs <level>` (gone with it) was one boot of the look page on the software adapter: what it compiled, layers off against on, a
   still; a relative read, and the GPU's particles are never stepped in it, so a snow or rain level is read without what is in its air.
   `bun run tools/qa/level-table.ts --dir <folder>` makes one page of every level from those files, a GPU's price file and each dressing row (the folder's `notice.txt` is printed first and marks a level whose price no longer stands; `cloud/before/` holds the run the newest one takes the place of, printed beside it). It reads a row's layers off and on; rows merge within one version of the file; a Mac file older than version 7 is shown as an older build with no verdicts, because a 6's were read against a second page no run opens now. "Which levels
   the list draws" is one answer (`scene/scenarioList.ts listedLevels`) and the render passes are one list (`gpu/timer.ts RENDER_PASSES`): both tools ask those.
