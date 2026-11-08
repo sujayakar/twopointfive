@@ -342,6 +342,10 @@ pub fn own_noise(g: &crate::game::Game, gd: GuardId, who: Option<f64>) -> bool {
 
 /// A defender's live grenade Sam can see, or hear land, inside cueM: one HUD line, once.   (frag.ts samCue)
 pub fn sam_cue(g: &mut crate::game::Game, l: usize, eye_at: V3) {
+    crate::seats::each_seat(g, &mut |g| if !live!(g, l).cued { cue_here(g, l, eye_at); });
+}
+/// … to the man of the seat that stands
+fn cue_here(g: &mut crate::game::Game, l: usize, eye_at: V3) {
     let pl = g.player;
     let pc = g.pl[pl].ch;
     if g.pl[pl].down { return; }
