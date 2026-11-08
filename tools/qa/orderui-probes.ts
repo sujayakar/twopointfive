@@ -173,8 +173,8 @@ export const orderuiHalf = guarded(async () => {
   // Shift and the key kept down until the ring is up: it is one whole pair's (the nearer); its 'open and clear' wedge by its digit; then every key let go
   if (!BREAK) I.keys.add('ShiftLeft'); I.keys.add(KEY); I.pressed.add(KEY); const ring = R.until(() => !!O.cmdRing, 1.5);
   const part: any[] = [...(O.menu?.part ?? [])], pair = part.length === 2 && O.pairOf(part[0]) !== null && O.pairOf(part[0]) === O.pairOf(part[1]);
-  const pick = (re: RegExp): string | null => { const x = (O.ringView()?.wedges ?? []).find((y: any) => re.test(y.text)); if (!x) return null; I.pressed.add(`Digit${x.key}`); R.step(); R.step(3); return x.text; };
-  const wedges = (O.ringView()?.wedges ?? []).map((y: any) => `${y.key} ${y.text}`).join(' | '), w = ring ? pick(/^open and clear/) : null; I.keys.clear(); R.step(4); if (O.cmdRing) { O.cmdRing = null; O.close(); R.step(2); }
+  const pick = (re: RegExp): string | null => { const x = (O.g.view.ring?.wedges ?? []).find((y: any) => re.test(y.text)); if (!x) return null; I.pressed.add(`Digit${x.key}`); R.step(); R.step(3); return x.text; };
+  const wedges = (O.g.view.ring?.wedges ?? []).map((y: any) => `${y.key} ${y.text}`).join(' | '), w = ring ? pick(/^open and clear/) : null; I.keys.clear(); R.step(4); if (O.cmdRing) { O.cmdRing = null; O.close(); R.step(2); }
   const l = R.last(), op = D.ops[0] ?? null, rest = ops.filter((m: any) => !part.includes(m));
   verdict(on && ring && pair && !!w && l?.order === 'openClear' && l.who.join(' + ') === names(part) && !!op && op.men.length === 2 && op.men.every((m: any) => part.includes(m)),
     'Shift and the squad\'s key kept down on a door: the ring is one whole pair\'s; its "open and clear" wedge: the order is that pair\'s, and the door order that starts has that pair in it and nobody else',

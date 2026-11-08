@@ -13,9 +13,8 @@ import { backName } from '../game/backkey';
 import { KEYMAP, keyCap, keyText, keysInLine } from '../host/keymap';   // (the player's own keys: every key this HUD names is named as it is bound — the same string back while nothing is rebound)
 import { thingDist } from '../game/player';
 import { GEAR, gearText } from '../game/gear';
-import { HANDRING, EMPTY_WORD, EMPTY_WHY, EMPTY_SHOW_SECS } from '../game/handring';
+import { HANDRING } from '../game/handring';
 import { cornerRows, cornerOn } from './corner';
-import { emptyThing, emptyWord } from '../game/interact';
 /** the reticle's ONE word: the 40 mm's arc is too short to arm (the plain 'RMB  OCP' / 'RMB  RING' / 'RMB  40 MM' words went on the 10-11 play note: "we can remove
  *  the RMB overlay on the cursor" — what the right button holds is read on the kit column's rows) */
 const HE40_SHORT = '40 MM · TOO CLOSE TO ARM';
@@ -99,7 +98,7 @@ export class Overlay implements HudLike {
   showLightDots = true;
   /** the wind field's debug view (Tab ▸ Weather & wind ▸ Wind — field view): a canvas of its own in #overlay, drawn only while one of its switches is on */
   readonly windViz = new WindViz(this.root);
-  /** the squad's plan on the floor (ui/planfloor.ts ← game/floorplan.ts): ways, marks, fans, who an open menu goes to */
+  /** the squad's plan on the floor (ui/planfloor.ts ← view.plan): ways, marks, fans, who an open menu goes to */
   readonly plan = new PlanFloor(this.traj);
   /** the player's own man made easy to find (ui/findme.ts ← host/findme.ts): a ring at his feet — nothing unless his Options ask */
   readonly findme = new FindMeViz(this.traj);
@@ -440,13 +439,8 @@ export class Overlay implements HudLike {
     const thing = (it: Interactable) => `${it.kind}:${it.door?.def.name ?? it.guard?.callsign ?? ''}`;
     const cap = MAX_ROWS + (list.some(it => it.kind === 'cam') ? 1 : 0);   // (stickycam.ts: a stuck camera's 'take it back' is one row past every row the list had before it — it is always drawn)
     const rows = list.slice(0, cap).map((it, i): InteractRow => { const d = dist(it); return { kind: it.kind, label: it.line1, opts: it.kind === 'cancel' ? [] : parseOpts(it.line2), inReach: it.inReach, off: it.off, dist: it.inReach || it.kind === 'light' || it.kind === 'cancel' ? undefined : d, progress: it.progress, cont: i > 0 && it.kind !== 'cancel' && thing(list[i - 1]) === thing(it) }; });
-    // (handring.ts `empty`: the key tapped with no row to give — said here for a moment, where his rows come up. `near`: beside a thing the word names
-    // it, with how far off a door a step short is; every such tap answers, and the word is up only while it is still what a tap would say — a step into
-    // reach, or away, takes it down. With `near` off, as it was: the log's newest line, while that is the word)
-    if (HANDRING.empty && !list.length && !game.puppet && !game.player.down) { const S = game.player.sel, young = (t: number) => game.time >= t && game.time - t < EMPTY_SHOW_SECS;
-      if (!HANDRING.near) { const m = game.messages[game.messages.length - 1]; if (m?.text === EMPTY_WORD && young(m.t)) rows.push({ kind: 'wall', label: EMPTY_WORD, opts: [], inReach: false, off: false }); }
-      else if (S.word && young(S.wordT)) { const T = emptyThing(game);
-        if (emptyWord(game, T) === S.word) rows.push({ kind: T ? T.it.kind : 'wall', label: S.word, opts: [], inReach: false, off: false, dist: T && T.why === EMPTY_WHY.far ? T.d : undefined }); } }
+    // (the key tapped with no row to give: said here for a moment, where his rows come up, with how far off a door a step short is; the view says while it is up, and a step into reach, or away, takes it down)
+    { const E = game.view.empty; if (E && !list.length) rows.push({ kind: E.kind as InteractRow['kind'], label: E.word, opts: [], inReach: false, off: false, dist: E.dist ?? undefined }); }
     const primary = hv ? list.indexOf(hv) : -1;
     if (cornerOn(!!game.puppet)) {   // (ui/corner.ts: the objective, his key's line, the squad key's line, and what the block and a door's heading said that it would lose: a key's line kept back where the mission's frame keeps the squad's notes back, a warning never)
       const V = game.view.squad, shut = locked(game.view, 'menu'), quick = game.orders.quickLine();

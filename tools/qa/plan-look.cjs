@@ -114,7 +114,7 @@ process.on('exit', stop); for (const s of ['SIGINT', 'SIGTERM', 'SIGHUP']) proce
     cands.sort((a, b) => b.walks - a.walks);
     for (const c of cands.slice(0, 10)) {
       O.open(c.t); window.__runFrames(2); window.__input.pressed.add(key); window.__runFrames(3);
-      const P = T.plans(), one = P[0] && P[0].kind === 'frag' ? { at: c.t.at, who: P[0].gd.callsign, walk: (P[0].walk || []).length, arc: P[0].points.length, tried: cands.length } : null;
+      const P = T.plans(), one = P[0] && P[0].kind === 'frag' ? { at: c.t.at, who: P[0].man, walk: (P[0].walk || []).length, arc: P[0].points.length, tried: cands.length } : null;
       if (one && (!best || one.walk > best.walk)) best = one;
       if (best && best.walk > 1 && one === best) break;   // (left open on the pick)
       O.close(); window.__quiet(); window.__runFrames(1);

@@ -653,6 +653,8 @@ pub fn squad_orders_open(g: &mut crate::game::Game, target: Option<&crate::order
         men_side: None,
         side_key: String::new(),
         flat: if flat { Some(true) } else { None },
+        words: Vec::new(),
+        quick: None,
     });
     squad_orders_refresh(g);
     g.orders.menu.is_some()
@@ -830,6 +832,7 @@ pub fn squad_orders_refresh(g: &mut crate::game::Game) {
     }
     let now = g.time;
     if let Some(up) = g.orders.menu.as_mut() { up.why = why; up.read_t = now; }
+    super::read_words(g);
 }
 
 /// Is the open menu's list stale now (orders.ts SquadOrders.due)
