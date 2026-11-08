@@ -66,3 +66,27 @@ fn with_no_shells_brought_the_order_is_not_on_the_menu() {
         assert!(why.is_some(), "seed {s}: an order that is not on the menu was taken");
     }
 }
+
+/// THE RULE: every row on the menu's table holds the order of its own id, each order has one line of the list ('go' two, one a size of squad),
+/// and reading a game back deals every row what it was made with: its functions, whether it is gone from the ring and when it stands in.
+/// A FAILURE MEANS: a row was made from another order's `Row`, or the table in `deal_closures` has parted from what a row is registered with.
+#[test]
+fn every_row_holds_its_own_order_and_reading_a_game_back_deals_it_the_same() {
+    use game::orders::rows;
+    let mut p = Play::scene(&yard(), &seed(1));
+    p.run(1.0);
+    let rows_now = |p: &Play| -> Vec<String> { p.g.tab.orders_order_def.ids().map(|d| format!("{:?}", p.g.tab.orders_order_def[d])).collect() };
+    let was = rows_now(&p);
+    assert!(was.len() > 10, "only {} rows on the table", was.len());
+    for d in p.g.tab.orders_order_def.ids() {
+        let r = &p.g.tab.orders_order_def[d];
+        assert_eq!(r.row.id, r.id, "the row {} holds another order's functions", r.id);
+        assert!(rows::by_id(&r.id).is_some(), "the row {} is no line of the list", r.id);
+    }
+    for r in rows::ROWS {
+        let same = rows::ROWS.iter().filter(|x| x.id == r.id).count();
+        assert_eq!(same, if r.id == "go" { 2 } else { 1 }, "{} lines of the list have the id {}", same, r.id);
+    }
+    game::io::deal_closures(&mut p.g);
+    assert_eq!(rows_now(&p), was, "reading a game back deals a row other than it was made with");
+}

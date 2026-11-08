@@ -1,8 +1,8 @@
 //! AN ORDER IS ONE MODULE AND ONE LINE.
 //!
-//! An order of the squad's menu is a `Row`: its id and the functions the menu and the tick call. An order written this
-//! way is one file here (`orders/rows/<name>.rs`, with a `pub const ORDER: Row`) and one line of `rows!` below. Nothing
-//! else names it.
+//! An order of the squad's menu is a `Row`: its id and the functions the menu and the tick call. An order is one file
+//! here (`orders/rows/<name>.rs`, with a `pub const ORDER: Row`) and one line of `rows!` below. `OrderDef.row` is the
+//! row the menu holds it by.
 //!
 //!   label   the words of its row on the menu, for this target
 //!   can     this man can do his part (None), or the word for why not
@@ -18,18 +18,14 @@
 //! What an order's functions call, so that its id is written once, in its `Row`:
 //!   `list(g, &ORDER, data)`    its row on the menu (`data`: its page, its targets, its key, its words of assent). Listing again is the same row.
 //!   `unlist(g, &ORDER)`        off the menu
-//!   `listed(g, &ORDER)`        is it on the menu
+//!   `listed(g, seat, &ORDER)`  is it on this seat's menu
 //!   `assign(g, &ORDER, man, a)`  hand a man his task under this order: where he stands, which way he faces, how he carries his gun, the two
 //!                              lines he says (`squad_orders_assign`, with the order's own id)
 //!
-//! The older orders are arms of the enums in orders/types.rs (OrderLabel, OrderCan, OrderOnly, OrderValid, OrderIssue,
-//! OrderTick) with their bodies in the matches of orders/p_03.rs and p_05.rs. Each of those enums has one arm, `Row`,
-//! through which every order written this way is called, so moving an older order here deletes its arms and adds none.
-//! The first moved is the 40 mm shell (`shell40`), whose own code and state are still the module `squad40`.
 pub use super::Row;
 use crate::game::Game;
 use crate::ids::*;
-use crate::orders::{GiveOpts, OrderCan, OrderDef, OrderIssue, OrderLabel, OrderOnly, OrderTarget, OrderTick, OrderValid};
+use crate::orders::{GiveOpts, OrderDef, OrderTarget};
 use alloc::string::String;
 use alloc::vec::Vec;
 
@@ -78,18 +74,7 @@ rows! {
 
 /// The row of the menu for an order: `data` is what only it knows (its page, its targets, its key), and the functions
 /// are the order's own.
-pub fn def(r: &'static Row, data: OrderDef) -> OrderDef {
-    OrderDef {
-        id: String::from(r.id),
-        label: OrderLabel::Row(r),
-        can: r.can.map(|_| OrderCan::Row(r)),
-        only: r.only.map(|_| OrderOnly::Row(r)),
-        valid: r.valid.map(|_| OrderValid::Row(r)),
-        issue: OrderIssue::Row(r),
-        tick: r.tick.map(|_| OrderTick::Row(r)),
-        ..data
-    }
-}
+pub fn def(r: &'static Row, data: OrderDef) -> OrderDef { OrderDef { id: String::from(r.id), row: r, ..data } }
 
 /// Put the order's row on the menu. Listing it again is the same row (`squad_orders_row`), in the place the menu deals it.
 pub fn list(g: &mut Game, r: &'static Row, data: OrderDef) -> OrdersOrderDefId {
@@ -127,5 +112,5 @@ pub fn plain_valid(w: Option<String>) -> Result<(), Option<String>> {
     match w { Some(w) => Err(Some(w)), None => Ok(()) }
 }
 
-/// the order of that id, if it is written as a module
+/// the order of that id. 'go' is two lines, one for each size of squad: this answers the first, and whoever deals it asks `go_key`
 pub fn by_id(id: &str) -> Option<&'static Row> { ROWS.iter().copied().find(|r| r.id == id) }

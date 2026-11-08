@@ -3,44 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// OrderDef.label: the row's words, written out or read off the target (returns the String). The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Debug)]
-pub enum OrderLabel {
-    Text { text: String },
-    /// an order written as a module (orders/rows/): its own function
-    Row(&'static crate::orders::Row),
-}
-/// OrderDef.can: this man can do his part (true in the TypeScript), or the word for why not. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Copy, Debug)]
-pub enum OrderCan {
-    /// an order written as a module (orders/rows/): its own function
-    Row(&'static crate::orders::Row),
-}
-/// OrderDef.only: the men among those addressed this order is for. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Debug)]
-pub enum OrderOnly {
-    /// an order written as a module (orders/rows/): its own function
-    Row(&'static crate::orders::Row),
-}
-/// OrderDef.valid: these men together can carry it out here (true), or not (false, or the word for why). The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Debug)]
-pub enum OrderValid {
-    /// an order written as a module (orders/rows/): its own function
-    Row(&'static crate::orders::Row),
-}
-/// OrderDef.issue: hand each man his assignment; a String back is a refusal. Nothing: a row that only opens a page (give() refuses it at orders.ts:862, so it is never run). The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Debug)]
-pub enum OrderIssue {
-    Nothing,
-    /// an order written as a module (orders/rows/): its own function
-    Row(&'static crate::orders::Row),
-}
-/// OrderDef.tick: once a frame for each man under the order, before he is posed. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Copy, Debug)]
-pub enum OrderTick {
-    /// an order written as a module (orders/rows/): its own function
-    Row(&'static crate::orders::Row),
-}
 /// OrderDef.standsIn.when: the row stands in for the other one now. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Copy, Debug)]
 pub enum OrderWhen {
@@ -777,7 +739,8 @@ impl Default for GiveOpts { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct OrderDef {
     pub id: String,
-    pub label: crate::orders::OrderLabel,
+    /// what it does: its label, who it is for, what it asks and hands out (orders/rows/)
+    pub row: &'static crate::orders::Row,
     pub targets: Vec<crate::orders::TargetKind>,
     pub key: Option<f64>,
     pub page: Option<String>,
@@ -785,11 +748,6 @@ pub struct OrderDef {
     pub listed: Option<Vec<crate::orders::TargetKind>>,
     pub hot_key: Option<String>,
     pub page_only: Option<bool>,
-    pub can: Option<crate::orders::OrderCan>,
-    pub only: Option<crate::orders::OrderOnly>,
-    pub valid: Option<crate::orders::OrderValid>,
-    pub issue: crate::orders::OrderIssue,
-    pub tick: Option<crate::orders::OrderTick>,
     pub ack: Option<Vec<String>>,
     pub ack_now: Option<Vec<String>>,
     pub on_word: Option<bool>,
@@ -803,7 +761,7 @@ impl OrderDef {
     pub fn zeroed() -> Self {
         OrderDef {
             id: String::new(),
-            label: crate::orders::OrderLabel::Text { text: String::new() },
+            row: &crate::orders::Row::NONE,
             targets: Vec::new(),
             key: None,
             page: None,
@@ -811,11 +769,6 @@ impl OrderDef {
             listed: None,
             hot_key: None,
             page_only: None,
-            can: None,
-            only: None,
-            valid: None,
-            issue: crate::orders::OrderIssue::Nothing,
-            tick: None,
             ack: None,
             ack_now: None,
             on_word: None,
@@ -1997,6 +1950,12 @@ impl Row {
     pub const fn new(id: &'static str, label: fn(&mut Game, &OrderTarget) -> String, issue: fn(&mut Game, &[GuardId], &OrderTarget, Option<&GiveOpts>) -> Option<String>) -> Row {
         Row { id, label, can: None, only: None, valid: None, issue, tick: None, frame: None }
     }
+}
+fn none_label(_g: &mut Game, _t: &OrderTarget) -> String { String::new() }
+fn none_issue(_g: &mut Game, _men: &[GuardId], _t: &OrderTarget, _o: Option<&GiveOpts>) -> Option<String> { Some(String::from("no such order.")) }
+impl Row {
+    /// The row a blank OrderDef holds until it is dealt its own: it says nothing and refuses.
+    pub const NONE: Row = Row::new("", none_label, none_issue);
 }
 impl core::fmt::Debug for Row {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result { write!(f, "Row({})", self.id) }
