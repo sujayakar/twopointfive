@@ -252,7 +252,7 @@ pub fn door_tools_sam_rows(g: &mut crate::game::Game, it: &mut crate::game::Inte
 }
 
 /// Is this set charge the squad's key's to blow: one the squad set, or his own while the squad works its door.   (doortools.ts keyIs)
-pub fn door_tools_key_is(g: &mut crate::game::Game, c_2: ChargeId) -> bool {
+pub fn door_tools_key_is(g: &crate::game::Game, c_2: ChargeId) -> bool {
     let c = c_2;
     if !by_sam(g, c) { return true; }
     let door = g.tab.doortools_set_charge[c].door;
@@ -823,7 +823,7 @@ pub fn door_tools_stack_posts(g: &mut crate::game::Game, d: DoorId, side: f64, m
 }
 
 /// tuckedIn of stackTucked: the tuck does not take a man off his mark to put him on Sam, nor put a mark where a leaf swings.
-fn tucked_in(g: &mut Game, own: &[V3], sam: V3, p: &crate::orders::StackPost, q: V3) -> bool {
+fn tucked_in(g: &Game, own: &[V3], sam: V3, p: &crate::orders::StackPost, q: V3) -> bool {
     let mine = |x: V3| own.iter().any(|o| flat(*o, x) < crate::orders::OWN_EPS);
     (mine(p.pos) && flat(sam, q) < 0.7 && !mine(q))
         || (!p.lead && crate::doorway::doorway_in_way(g, q) && !crate::doorway::doorway_in_way(g, p.pos))
@@ -870,7 +870,7 @@ pub fn door_tools_stack_tucked(g: &mut crate::game::Game, d: DoorId, side: f64, 
 }
 
 /// Teammates outside this order stacked on this door, this face, under a plain 'stack up'.   (doortools.ts holders)
-pub fn door_tools_holders(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId]) -> Vec<GuardId> {
+pub fn door_tools_holders(g: &crate::game::Game, d: DoorId, side: f64, men: &[GuardId]) -> Vec<GuardId> {
     if !crate::orders::squad_orders_big(g, &crate::seats::here(g)) { return Vec::new(); }
     let fc = g.dr[d].frame_centre;
     let jamb_out = g.orders.knobs.jamb_out;

@@ -186,7 +186,7 @@ pub fn door_tools_can_behind(g: &mut crate::game::Game, d: DoorId, side: f64, me
 // ------------------------------------------------------------ the word
 
 /// what is waiting on Sam's word among these men (doortools.ts waiting4)
-pub fn door_tools_waiting4(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<crate::doortools::DoorToolsWaiting4Item> {
+pub fn door_tools_waiting4(g: &crate::game::Game, men: &[GuardId]) -> Vec<crate::doortools::DoorToolsWaiting4Item> {
     let mut out = Vec::new();
     let ops = g.door_tools.ops.clone();
     for op in ops {
@@ -204,7 +204,7 @@ pub fn door_tools_waiting4(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<cr
     out
 }
 /// the men among `men` standing on a plain 'stack up', a door at a time (doortools.ts stacksOf)
-pub fn door_tools_stacks_of(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<crate::doortools::DoorToolsStacksOfItem> {
+pub fn door_tools_stacks_of(g: &crate::game::Game, men: &[GuardId]) -> Vec<crate::doortools::DoorToolsStacksOfItem> {
     let mut by: JsMap<DoorId, [Vec<GuardId>; 2]> = JsMap::new();
     for &gd in men {
         let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) else { continue };
@@ -228,7 +228,7 @@ pub fn door_tools_stacks_of(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<c
     out
 }
 /// the small squad's word: its plain stacks, but for one on a door with a charge set on it (doortools.ts stackWaits)
-pub fn door_tools_stack_waits(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<crate::doortools::DoorToolsStackWaitsItem> {
+pub fn door_tools_stack_waits(g: &crate::game::Game, men: &[GuardId]) -> Vec<crate::doortools::DoorToolsStackWaitsItem> {
     if crate::orders::squad_orders_big(g, &crate::seats::here(g)) {
         return Vec::new();
     }
@@ -241,7 +241,7 @@ pub fn door_tools_stack_waits(g: &mut crate::game::Game, men: &[GuardId]) -> Vec
     out
 }
 /// (doortools.ts stackWords)
-pub fn door_tools_stack_words(g: &mut crate::game::Game, men: &[GuardId]) -> String {
+pub fn door_tools_stack_words(g: &crate::game::Game, men: &[GuardId]) -> String {
     let mut words = Vec::new();
     for x in door_tools_stack_waits(g, men) {
         words.push(crate::orders::squad_orders_who_words(g, &crate::seats::here(g), Some(&x.men)));
@@ -256,7 +256,7 @@ fn item_men(g: &Game, x: &DoorToolsWaitingAnyItem) -> Vec<GuardId> {
     }
 }
 /// the men among `men` with something waiting on the word (doortools.ts waitingMen)
-pub fn door_tools_waiting_men(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
+pub fn door_tools_waiting_men(g: &crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
     let mut on: JsSet<GuardId> = JsSet::new();
     for x in door_tools_waiting_any(g, men) {
         for m in item_men(g, &x) {
@@ -266,7 +266,7 @@ pub fn door_tools_waiting_men(g: &mut crate::game::Game, men: &[GuardId]) -> Vec
     men.iter().copied().filter(|&m| on.has(m)).collect()
 }
 /// the men the word is for: those the orders go to, or whoever stands waiting on it when none of those does (doortools.ts wordMen)
-pub fn door_tools_word_men(g: &mut crate::game::Game) -> Vec<GuardId> {
+pub fn door_tools_word_men(g: &crate::game::Game) -> Vec<GuardId> {
     let men = crate::orders::squad_orders_recipients(g, &crate::seats::here(g), None, None);
     let big = crate::orders::squad_orders_big(g, &crate::seats::here(g));
     if if big { !door_tools_waiting_any(g, &men).is_empty() } else { !door_tools_stack_waits(g, &men).is_empty() } {
@@ -300,7 +300,7 @@ pub fn door_tools_word_men(g: &mut crate::game::Game) -> Vec<GuardId> {
     }
 }
 /// (doortools.ts waitingAny)
-pub fn door_tools_waiting_any(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<crate::doortools::DoorToolsWaitingAnyItem> {
+pub fn door_tools_waiting_any(g: &crate::game::Game, men: &[GuardId]) -> Vec<crate::doortools::DoorToolsWaitingAnyItem> {
     let mut out = Vec::new();
     for x in door_tools_waiting4(g, men) {
         out.push(match x {
@@ -358,7 +358,7 @@ pub fn door_tools_word_pending(g: &crate::game::Game, seat: &crate::seats::SeatR
     door_tools_on_pending_word(g, seat, c_2)
 }
 /// (doortools.ts waitingWords)
-pub fn door_tools_waiting_words(g: &mut crate::game::Game, men: &[GuardId]) -> String {
+pub fn door_tools_waiting_words(g: &crate::game::Game, men: &[GuardId]) -> String {
     let mut words = Vec::new();
     for x in door_tools_waiting_any(g, men) {
         let of = item_men(g, &x);
@@ -608,7 +608,7 @@ pub fn door_tools_go_men(g: &mut crate::game::Game, men: &[GuardId], only: Optio
     None
 }
 /// `only ?? this.waitingAny(men)`
-fn go_list(g: &mut Game, men: &[GuardId], only: Option<&[DoorToolsGoMenOnlyItem]>) -> Vec<DoorToolsWaitingAnyItem> {
+fn go_list(g: &Game, men: &[GuardId], only: Option<&[DoorToolsGoMenOnlyItem]>) -> Vec<DoorToolsWaitingAnyItem> {
     match only {
         Some(l) => l.iter().map(|x| DoorToolsWaitingAnyItem::Arm1(DoorToolsWaitingAnyItemArm1 { stack: x.stack, men: x.men.clone() })).collect(),
         None => door_tools_waiting_any(g, men),

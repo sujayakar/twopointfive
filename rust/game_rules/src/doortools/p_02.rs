@@ -336,7 +336,7 @@ pub fn door_tools_stackable(g: &mut crate::game::Game, t: &crate::orders::OrderT
 }
 
 /// is the door locked against the team from that face   (doortools.ts DoorTools.lockedOut)
-pub fn door_tools_locked_out(g: &mut crate::game::Game, d: DoorId, side: f64) -> bool {
+pub fn door_tools_locked_out(g: &crate::game::Game, d: DoorId, side: f64) -> bool {
     let w = g.dr[d].def.width;
     let from = door_pt(g, d, w / 2.0, 0.6, side, None);
     let ring = crate::orders::squad_orders_ring(g, &crate::seats::here(g));

@@ -1115,7 +1115,7 @@ pub fn cover_pose_for(g: &mut Game, gd: GuardId, still: bool, pace: f64) -> Opti
 }
 
 /// An opening in a few words, as this man would say it. (cover.ts nameOf)
-pub fn cover_name_of(g: &mut Game, o: CoverOpeningId, from: Option<V3>) -> String {
+pub fn cover_name_of(g: &Game, o: CoverOpeningId, from: Option<V3>) -> String {
     let (kind, door, at) = (g.tab.cover_opening[o].kind, g.tab.cover_opening[o].door, g.tab.cover_opening[o].at);
     if kind == OpeningKind::Rear { return String::from("the rear"); }
     if let Some(d) = door { return alloc::format!("the {}", crate::orders::door_words(g, d)); }
@@ -1137,7 +1137,7 @@ pub fn cover_on_of(g: &Game, gd: GuardId) -> Option<CoverJob> {
 }
 
 /// What he is on, in words. (cover.ts words)
-pub fn cover_words(g: &mut Game, gd: GuardId) -> String {
+pub fn cover_words(g: &Game, gd: GuardId) -> String {
     match cover_on_of(g, gd) {
         Some(j) if !j.off => { let p = pos_of(g, gd); alloc::format!("on {}", cover_name_of(g, j.o, Some(p))) }
         _ => String::new(),
@@ -1145,13 +1145,13 @@ pub fn cover_words(g: &mut Game, gd: GuardId) -> String {
 }
 
 /// The tail of his row in the squad block. (cover.ts tail)
-pub fn cover_tail(g: &mut Game, gd: GuardId) -> String {
+pub fn cover_tail(g: &Game, gd: GuardId) -> String {
     let w = cover_words(g, gd);
     if w.is_empty() { w } else { alloc::format!(" · {}", w) }
 }
 
 /// One line for the console. (cover.ts summary)
-pub fn cover_summary(g: &mut Game) -> String {
+pub fn cover_summary(g: &Game) -> String {
     if g.cover.men.is_empty() { return alloc::format!("cover: nobody free · {} openings on the level", g.cover.openings.len()); }
     let mut on: Vec<String> = Vec::new();
     for gd in g.cover.men.clone() {

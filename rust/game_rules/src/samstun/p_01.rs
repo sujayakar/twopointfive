@@ -60,7 +60,7 @@ pub fn dazzle_player(g: &mut crate::game::Game, secs: f64, at: V3) {
 }
 
 /// Is he folded right now (rooted, gun down, no round)? `now`: the clock asked of.   (samstun.ts samStaggered)
-pub fn sam_staggered(g: &mut crate::game::Game, now: Option<f64>) -> bool {
+pub fn sam_staggered(g: &crate::game::Game, now: Option<f64>) -> bool {
     let now = now.unwrap_or(g.time);
     if !live(g, &crate::seats::here(g)) { return false; }
     let p = g.player;
@@ -78,7 +78,7 @@ pub fn man_blind(g: &crate::game::Game, p: PlayerId, now: Option<f64>) -> f64 {
 }
 
 /// May his feet move? A dazzle does not root him on the page (SAMSTUN.blindRoots).   (samstun.ts samRooted)
-pub fn sam_rooted(g: &mut crate::game::Game, now: Option<f64>) -> bool {
+pub fn sam_rooted(g: &crate::game::Game, now: Option<f64>) -> bool {
     sam_staggered(g, now)
 }
 
