@@ -28,9 +28,12 @@ import { EVENPACE, FLIGHT_PAGE, pacer, pageRoom, rateMeter } from './pace';
 import { PLAN_PACE } from '../render/planPace';
 import { RENDER_PASSES } from '../gpu/timer';
 import { DrawGame, GameLost } from './drawgame';
-import { knobPanel } from './knobpanel';
+import { debuggerPanel } from './debugger';
 import { lostCard } from './lostcard';
 import { Reel } from './reel';
+import { Measure } from './measure';
+import { urlFlagsOnEngine } from './engineflags';
+import { FRAMECAP, watchTextures } from '../render/framecap';
 import { SavePics } from './savepics';
 import { Readout } from '../ui/readout';
 import { PauseCard } from '../ui/pausecard';
@@ -53,7 +56,7 @@ import { keepPageBoot } from './keeppage';
 import { ownPage, runPage } from './runpage';
 import { bootTextSize } from '../ui/textsize';
 import { Heard, Man, Section, Sky, View } from '../draw/sections';
-import { AudioEngine } from '../audio/audio';
+import { AudioEngine, SFX_TABLE, warmSfx } from '../audio/audio';
 import { setlistOfQuery } from '../audio/setlist';
 import { MUSIC } from '../audio/pieces';
 import { askOf } from '../draw/ask';
@@ -91,10 +94,12 @@ async function main(): Promise<void> {
   { const to = pickRedirect(location.search); if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }
   const canvas = document.getElementById('view') as HTMLCanvasElement;
   // (of the page's markup, what this page drives: the rest of the HUD comes as it is told of the game)
-  for (const el of document.getElementById('app')!.children) if (!['view', 'lcol', 'veil', 'loading', 'menu', 'missions', 'fatal'].includes(el.id)) (el as HTMLElement).style.display = 'none';
+  for (const el of document.getElementById('app')!.children) if (!['view', 'panel', 'lcol', 'veil', 'loading', 'menu', 'missions', 'fatal'].includes(el.id)) (el as HTMLElement).style.display = 'none';
   gameKeysBoot(q, walkInNow); bootTextSize(q);
   LOOK.on = lookOfQuery(q); setLookPlace(placeOfQuery(q));
   const name = /^[\w.-]+\.json$/.test(q.get('levelFile') ?? '') ? q.get('levelFile')! : 'office.json', at = (p: string) => new URL(p, document.baseURI).href;
+
+  SFX_TABLE.was = q.has('oldsounds'); SFX_TABLE.redone = q.has('newsounds'); if (!q.has('mute')) warmSfx();   // (the sounds, a voice at a time in idle moments)
 
   // ---- the game
   const chP = loadCharacterSet(at('assets/ual/AnimationLibrary_Godot_Standard.gltf'), castUrlFor(location.search, document.baseURI)); chP.catch(() => { /* awaited below */ });
@@ -106,9 +111,9 @@ async function main(): Promise<void> {
   // (an address that plays a mission comes up on that mission's brief, one that plays nothing on the title; either is live from here, and the game is made behind it)
   LOADBRIEF.on = q.get('loadbrief') !== '0'; settleOfQuery(q);
   LOADBRIEF.options = { open: () => openOptions({ tab: 'controls' }), close: closeOptions, up: optionsOpen };
-  TITLE.ownKeys = false; KIT_VIEW.page = new URL('./', document.baseURI).pathname; KIT_VIEW.tier = () => tier();   // (no benchmark on this page; the Team & kit picture is the game's page in a frame)
+  TITLE.ownKeys = false; KIT_VIEW.page = new URL('./', document.baseURI).pathname;   // (no benchmark on this page; the Team & kit picture is the game's page in a frame)
   watchMissionRows();   // (each mission's card shows the ways this machine has won it)
-  let title = startPageWanted(); const brief = q.has('paused') || runPage(q) ? null : loadBrief(location.search), card = brief ?? bootCard(); let tier = (): string | undefined => undefined;
+  let title = startPageWanted(); const brief = q.has('paused') || runPage(q) ? null : loadBrief(location.search), card = brief ?? bootCard();
   loading.textContent = ''; say = line => card.status(line);
   const [level, mannequin, mannequinBin, cast, castLook] = await filesP;
   say('starting the game …');
@@ -127,10 +132,13 @@ async function main(): Promise<void> {
   COATFINISH.on = true; SOLIDGLASS.on = true;
 
   const gpu = await initGpu(canvas, { retry: true, canvasRead: true, keeper: keep.keeper, seat: keep.seat });   // (the module's game has stood by now)
+  if (q.get('framecap') === '0') FRAMECAP.on = false;
+  if (FRAMECAP.on) watchTextures(gpu.device);   // (a frame capture knows every texture made from here on)
   let world!: DrawWorld; const engine = new Engine(gpu, undefined, d => world = new DrawWorld(d, D)), smoke = new SmokeSystem(engine);
+  urlFlagsOnEngine(engine);
   engine.setParticles(new Particles(engine.device, engine.sceneLayout));
   engine.setSmoke(smoke.binding); engine.afterSubmit.push(() => smoke.afterSubmit());
-  engine.setDecals(new DrawDecals(engine.device, D)); trafficFrom(engine.gbuffer, D);
+  const decals = new DrawDecals(engine.device, D); engine.setDecals(decals); trafficFrom(engine.gbuffer, D);
   engine.settings.markingTexel = D.f[sky() + Sky.markTexel] || MARKING_TEXEL;
   pipelineProgress.onChange = () => say(`compiling shaders ${pipelineProgress.done} / ${pipelineProgress.total} …`);
   // the men: the mesh and its skinning, the tree that shadows him, the cones the rays meet of him
@@ -143,7 +151,7 @@ async function main(): Promise<void> {
   game.look(lookNumbers(engine.settings, engine.world, !!ch.cast)); game.frame(1, [20, 0, 14]); engine.world.upload();   // (every stuff the level is made of is known from here: its maps are made with the programs)
   await Promise.all([engine.init({ sharp: true }), smoke.init(), engine.particles!.init(), engine.gbuffer.needLook(), shadows.init(), engine.gbuffer.prepareSkin(chars.jointsFormat)]);
   pipelineProgress.onChange = null; pipeQueue.settle(); engine.warmFirstUse();
-  const quality = new Quality(engine, smoke); quality.visit(location.search); quality.onCalibrated = refreshOptions; tier = () => quality.current;
+  const quality = new Quality(engine, smoke); quality.visit(location.search); quality.onCalibrated = refreshOptions; (window as unknown as { __quality: Quality }).__quality = quality;
   lookSync();
   lookConfig.exposure = () => { const h = HOURS_OF[D.u[sky() + Sky.hour]]; return h === 'night' ? null : hourExposure(h, D.f[sky() + Sky.hourSun]); };
   { const own = { zenith: [0, 0, 0] as Vec3, horizon: [0, 0, 0] as Vec3 }; for (let i = 0; i < 3; i++) { own.zenith[i] = D.f[sky() + Sky.ownZenith + i]; own.horizon[i] = D.f[sky() + Sky.ownHorizon + i]; } lookConfig.nightSky = () => own; }
@@ -218,15 +226,16 @@ async function main(): Promise<void> {
     { const n = D.u[o + View.saves]; if (n !== saves) { saves = n; const rows = game.saves().rows, all = new Set(rows.map(r => ofRun(nameOf(r)))); for (const k of pictures.keys()) if (!all.has(k)) pictures.delete(k); const newest = rows.reduce<typeof rows[number] | null>((a, r) => a && a.savedAt > r.savedAt ? a : r, null); if (newest && !pictures.has(ofRun(nameOf(newest)))) pics.want(ofRun(nameOf(newest))); } }
     told.tick = game.ms.step; told.draw = game.ms.draw;
   };
+  const measure = new Measure({ gpu, engine, smoke, quality, cam, input, canvas, game, marks: () => decals.count, blocked: () => quality.calibrating ? 'auto quality is still measuring this machine' : title || brief?.held ? 'start a run first' : null, say: words => readout.say(words) });
   /** the world holds still: a card, the title, a mission not yet started */
-  const stopped = (): boolean => paused || title && !reel.live || !!brief?.held;
+  const stopped = (): boolean => paused || measure.freezing || title && !reel.live || !!brief?.held;
   /** one drawn frame: `dt` seconds of the display's, in whole ticks (`drawn` false: a script's, stepped and not drawn) */
   const frame = (dt: number, ticks?: number, drawn = true): void => {
     const still = ticks === undefined && stopped(); if (still) dt = 0;   // (the world holds still under a card: what only the picture moves with it)
     time += dt;
     const t0 = performance.now(), plan = ticks !== undefined ? { ticks, acc, drift } : still ? { ticks: 0, acc, drift } : planTicks(acc, dt, FIXEDSTEP, drift); acc = plan.acc; drift = plan.drift;
     const locks = D.u[view() + View.locks];
-    if (input.wheelCtrl) { if (!(locks & 2)) cam.zoom(input.wheelCtrl); input.wheelCtrl = 0; }
+    if (input.wheelCtrl) { if (!still && !(locks & 2)) cam.zoom(input.wheelCtrl); input.wheelCtrl = 0; }
     if (input.orbitDX && plan.ticks && !(locks & 1)) cam.rotate(ctrlTurn(input.orbitDX));   // (in a frame's first tick: the next tick's hand looks the way it left the view)
     cam.frame();
     for (let i = 0; i < plan.ticks; i++) { if (i) input.endTick(); tick(1 / FIXEDSTEP.hz); }
@@ -235,11 +244,12 @@ async function main(): Promise<void> {
     // (the run's end card, once each time one is due; a restart or a load is another end to come)
     { const e = D.u[view() + View.ended]; if (e !== ended) { ended = e; if (e) onEnded(); } }
     D.fresh();
-    skyFrom(engine, D); fogFrom(fog, D); rimsFrom(rims, D); weather.frame(cam); dustFrom(engine.particles!, D);
+    if (!measure.freezing) { skyFrom(engine, D); fogFrom(fog, D); }   // (a take over a held world flips what these write)
+    rimsFrom(rims, D); weather.frame(cam); dustFrom(engine.particles!, D);
     { const o = view(); engine.settings.nvAmount = D.f[o + View.night]; engine.settings.hitFlash = D.f[o + View.hit]; }
     game.look(lookNumbers(engine.settings, engine.world, !!ch.cast));
     const t1 = performance.now();
-    if (!drawn) { input.endFrame(); return; }
+    if (!drawn) { input.endFrame(); if (still) thaw = true; return; }
     { if (reel.live) { ear[0] = cam.target[0]; ear[1] = cam.target[1] + 1.6; ear[2] = cam.target[2]; } else { const o = view() + View.at; ear[0] = D.f[o]; ear[1] = D.f[o + 1] + 1.6; ear[2] = D.f[o + 2]; } audio.setListener(ear, cam.forward); audio.update(dt, time); audio.scoreMenu = title;
       D.fresh(); const h = D.at[Section.heard]; if (audio.music) { audio.music.intensity = D.f[h + Heard.tension]; if (D.u[h + Heard.run] !== run) audio.music.mission(); } run = D.u[h + Heard.run]; }
     smoke.update(dt);
@@ -247,13 +257,13 @@ async function main(): Promise<void> {
     if (pose) cam.drawIn(pose);
     game.frame(a, cam.focus); lights.from(); men.from(engine.device.queue); reach.from(); world.from();
     cam.kickIn(); try { engine.render(cam, time, dt, true); } finally { cam.kickOut(); cam.drawOut(); }
-    if (plan.ticks) input.endFrame();
+    if (plan.ticks) input.endFrame(); else if (still) { input.endFrame(); thaw = true; }   // (pressed over a held world: nobody's, and the first tick after it is told)
     told.update = t1 - t0; told.render = performance.now() - t1; told.frames++;
     if (pics.wanted) pics.take();
     readout.frame();
   };
   // a page over the whole view (the brief, the start page): the still behind it is drawn until its histories are full, and then not again while it is up
-  let covered = -1; const unseen = (): boolean => { if (settling || quality.measuring || !(brief?.held || startPage())) { covered = -1; return false; } if (covered < 0) covered = told.frames; return told.frames - covered >= 90; };
+  let covered = -1; const unseen = (): boolean => { if (settling || quality.measuring || measure.rec.recording || !(brief?.held || startPage())) { covered = -1; return false; } if (covered < 0) covered = told.frames; return told.frames - covered >= 90; };
   let last = performance.now(), held = q.has('paused');
   // THE PAGE'S PACE (host/pace.ts): a frame is not begun while two are still with the GPU, and a fast display's frames between the ladder's are passed over. A tab
   // nobody sees is not drawn; the time it was away is not the game's
@@ -271,14 +281,14 @@ async function main(): Promise<void> {
   };
   const loop = (ts: number): void => {
     try {
-      const room = pageRoom({ calibrating: quality.calibrating, measuring: false, kitView: false });
+      const room = pageRoom({ calibrating: quality.calibrating, measuring: measure.active, kitView: false });
       if (held || document.hidden) { last = performance.now(); pace.reset(); rate.reset(); requestAnimationFrame(loop); return; }
-      if (pace.skip(ts, !quality.calibrating && (quality.adaptive || quality.auto) ? quality.bands.target : 0, false, room)) { requestAnimationFrame(loop); return; }
+      if (pace.skip(ts, !quality.calibrating && !measure.active && (quality.adaptive || quality.auto) ? quality.bands.target : 0, false, room)) { requestAnimationFrame(loop); return; }
       const now = performance.now(), raw = (now - last) / 1000; last = now; told.fps = rate.push(now);
       if (quality.early) quality.remeasure();
       if (quality.calibrating) quality.calibrateTick(raw);
-      else if (raw < 0.5 && !stopped()) { const fresh = engine.timer.resolved !== resolved; resolved = engine.timer.resolved; quality.sample(raw, !engine.timer.enabled ? 0 : fresh ? engine.timer.unionMs(rendered) : NaN); }
-      reel.frame(raw); frame(Math.min(1 / 20, raw), undefined, !unseen());
+      else if (raw < 0.5 && !stopped() && !measure.active) { const fresh = engine.timer.resolved !== resolved; resolved = engine.timer.resolved; quality.sample(raw, !engine.timer.enabled ? 0 : fresh ? engine.timer.unionMs(rendered) : NaN); }
+      measure.begins(); reel.frame(raw); frame(Math.min(1 / 20, raw), undefined, !unseen()); measure.drawn(raw, told.fps, told.update, told.render);
       if (room > 0) { const w = pace.sent(performance.now()), end = (): void => pace.done(w, performance.now(), 0); gpu.device.queue.onSubmittedWorkDone().then(end, end); }
       requestAnimationFrame(loop);
     } catch (e) {
@@ -295,9 +305,9 @@ async function main(): Promise<void> {
   if (title) { drawTitle(); if (missionsReopenAsked() && !startPage()) openStartPage(); }
   else if (brief) startWaits(brief, { drawn: () => told.frames, measuring: () => quality.calibrating, settling: on => { settling = on; }, settled: () => { /* the block is live */ }, run: () => { input.keys.clear(); input.buttons = 0; input.endFrame(); thaw = true; audio.start(); input.focusGame(); last = performance.now(); } });
   else card.off();
-  loading.style.display = 'none'; knobPanel(document.getElementById('app')!, game);
+  loading.style.display = 'none'; debuggerPanel({ game, engine, smoke, cam, quality, input, chars: ch, marks: decals, hud: () => ({ fps: told.fps, union: engine.timer.unionMs(rendered) }) });
   // (for a tool: the page's parts, and frames stepped by hand)
-  Object.assign(window, { __draw: { game, books, reel, pics, engine, world, audio, pause, cam, input, quality, told, fog, weather, smoke, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last') => { if (title || brief?.up) { title = false; reel.poke(); brief?.off(); card.off(); } for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } } } });
+  Object.assign(window, { __draw: { game, books, measure, reel, pics, engine, world, audio, pause, cam, input, quality, told, fog, weather, smoke, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last') => { if (title || brief?.up) { title = false; reel.poke(); brief?.off(); card.off(); } for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } } } });
   requestAnimationFrame(loop);
 }
 // (a tool waits for the programs made behind the start too: until then a pass draws its stand-in, and the fog of war is the lit one)
