@@ -19,7 +19,7 @@
 import { ROOT } from './headless.ts';
 
 /** his taps: these and no other (the block's row joined when its rebuild said which of the two it was for; the second line is his "Keep my 13" of 2026-11-05, done 11-07) */
-const CUT = ['night-breach', 'room-clear-four', 'block-squads',
+const CUT = ['night-breach', 'room-clear-four',
   'tut-quiet', 'tut-pair', 'records-pair', 'block-four', 'warehouse-four', 'barracks-four', 'rescue-registry', 'floodlit-four', 'killhouse-four', 'hall-four', 'glasshouse-four', 'police-post-quiet', 'quiet-crossing-two', 'quiet-relay-two'];
 
 export async function offlistCheck(): Promise<boolean> {

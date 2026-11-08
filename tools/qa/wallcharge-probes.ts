@@ -1,5 +1,5 @@
 // The 'wallcharge' probes (src/game/wallcharge.ts — the door charge's twin on a partition wall), run as their own program:
-//   bun run tools/qa/wallcharge-probes.ts [all | menu | squad | sam | refusals | trigger | reset | hold | cost | standoff] [--scn block-squads,compound-four,warehouse-four] [--verbose]
+//   bun run tools/qa/wallcharge-probes.ts [all | menu | squad | sam | refusals | trigger | reset | hold | cost | standoff] [--scn block-four,compound-four,warehouse-four] [--verbose]
 // Headless = the Proxy device: nothing is drawn. Each family runs on every scenario of --scn (a squad of four on a level with partitions). The module only runs
 // under the destruction goal's switch (destructionSwitch.ts DESTRUCTION.on), which these probes raise themselves, at the page's chaos 0.5.
 //   (menu)      X on a partition: the floor's rows with row 5 'wall tools ▸', and behind it row 3 'breach the wall · uses both charges' — X, 5, 3: the door charge's own
@@ -51,7 +51,7 @@ type Vec3 = [number, number, number];
 const DT = 1 / 60;
 const argv = process.argv.slice(2), flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 const VERBOSE = argv.includes('--verbose');
-const SCNS = (flag('--scn') ?? 'block-squads,compound-four,warehouse-four').split(',');
+const SCNS = (flag('--scn') ?? 'block-four,compound-four,warehouse-four').split(',');
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x));
 const at = (p: number[]) => `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`;
@@ -531,7 +531,7 @@ const FAMILIES: Record<string, (scn: string) => Promise<boolean>> = { menu: prob
 export { rig, partitions, structure, family, chargePt, FAMILIES, SCNS, f2, at, flat, VERBOSE, restoreKnobs };
 
 /** probes.ts's door in (family 'wallcharge'): one family on one map, the switches, the knobs and the dice put back as they were found */
-export async function wallchargeFamily(name: string, scn = 'block-squads'): Promise<boolean> {
+export async function wallchargeFamily(name: string, scn = 'block-four'): Promise<boolean> {
   const rnd = Math.random, sw = DESTRUCTION.on, wc = WALLCHARGE.on;
   try { return await FAMILIES[name](scn); } finally { restoreKnobs(); Math.random = rnd; DESTRUCTION.on = sw; WALLCHARGE.on = wc; }
 }

@@ -2,7 +2,7 @@
 // mid-fight beside living defenders by this tool, so that what both sides do about a level that changes (game/wallreact.ts) is played through whole fights
 // and set against the same fights with that switch off.
 //
-//   bun run tools/qa/wallreact-play.ts --scn block-squads,compound-four,warehouse-four --seeds 1-24 [--jobs 4] [--cap 300] [--blasts 4] [--gap 7] --json out.json
+//   bun run tools/qa/wallreact-play.ts --scn block-four,compound-four,warehouse-four --seeds 1-24 [--jobs 4] [--cap 300] [--blasts 4] [--gap 7] --json out.json
 //   PT_WALLREACT=0 … the same, with nobody reacting (the destruction engine's own build)      --blasts 0 = playthrough.ts exactly (no hand in the fight)
 //
 // THE BLASTS (nobody's: no man is hurt by them and nobody is named as their maker — what is measured is the reaction to the level, not to a charge): the
@@ -105,7 +105,7 @@ if (import.meta.main) {
     if (DEBUG) { (H.out as any).log = [...WALLREACT_LOG]; (H.out as any).dbg = dbg; }
     writeFileSync(flag('--out')!, JSON.stringify({ ...rest, wallplay: H.out })); process.exit(0);
   }
-  const ids = (flag('--scn') ?? 'block-squads,compound-four,warehouse-four').split(','); for (const id of ids) if (!entryOf(id)) { console.error(`no scenario '${id}'`); process.exit(2); }
+  const ids = (flag('--scn') ?? 'block-four,compound-four,warehouse-four').split(','); for (const id of ids) if (!entryOf(id)) { console.error(`no scenario '${id}'`); process.exit(2); }
   const seeds = (flag('--seeds') ?? '1-6').split(',').flatMap(p => { const m = p.match(/^(\d+)-(\d+)$/); if (m) { const o: number[] = []; for (let i = +m[1]; i <= +m[2]; i++) o.push(i); return o; } return [Number(p)]; });
   const jobs = Math.max(1, Number(flag('--jobs') ?? 4)), todo = ids.flatMap(scn => seeds.map(seed => ({ scn, seed }))), runs: (RunOut & { wallplay?: WallPlay })[] = []; let next = 0; const t0 = Date.now();
   const worker = async () => { for (;;) { const j = todo[next++]; if (!j) return;

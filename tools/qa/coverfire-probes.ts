@@ -1,5 +1,5 @@
 // The 'coverfire' probes (src/game/coverfire.ts — a shooter who KNOWS a man is behind breakable cover or a thin partition puts aimed rounds into it until it gives).
-//   bun run tools/qa/coverfire-probes.ts [cover|wall|seen|holds|stale|friend|all] [--verbose] [--level block-squads] [--seed N]
+//   bun run tools/qa/coverfire-probes.ts [cover|wall|seen|holds|stale|friend|all] [--verbose] [--level block] [--seed N]
 // Self-running (exit 0 = every check passed, 1 = a FAIL line, 2 = an unknown name); registering it in tools/qa/probes.ts is one line at merge.
 // Headless = the Proxy device: nothing is drawn; the harness runs AIM.player.level 0. What is asserted, for BOTH SIDES and both of a teammate's fire paths
 // (def = a defender on the fight AI · op = a teammate on the fight AI · order = a teammate under an order, the room fight's trigger):
@@ -31,7 +31,7 @@ const DT = 1 / 60;
 const args = process.argv.slice(2);
 const VERBOSE = args.includes('--verbose');
 const argOf = (k: string, d: string) => { const i = args.indexOf(k); return i >= 0 && args[i + 1] ? args[i + 1] : d; };
-const LEVEL = argOf('--level', 'block-squads'), SEED = +argOf('--seed', '11');
+const LEVEL = argOf('--level', 'block'), SEED = +argOf('--seed', '11');
 // (cover) wants a stack a kneeling man is HIDDEN by: the squad maps' tallest breakable cover is a metre (his head shows over it and he is simply shot at), the
 // warehouse has 1.3 m crates and carton stacks
 const COVER_LEVEL = argOf('--cover-level', 'warehouse');
