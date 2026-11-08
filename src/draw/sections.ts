@@ -1,7 +1,7 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 2386143277;
+export const LAYOUT = 4249064872;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
@@ -379,10 +379,12 @@ export const enum Man {
   at = 13,
   /** f32 × 3: where he is drawn standing: between the last two ticks, as his bones are */
   feet = 16,
+  /** f32 × 3: … and where his head is drawn */
+  head = 19,
   /** f32 × 4: the sphere round his proxies */
-  bound = 19,
+  bound = 22,
   /** words a row */
-  row = 23,
+  row = 26,
 }
 
 /** a man's instance, as the skinning reads it: tint, bones' place · tint2, owner · wet coat · its knobs · the waterline, the parts he wears */
