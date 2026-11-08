@@ -1,5 +1,5 @@
 // WAYS IN, LOOKED AT ON THE REAL PAGE: boot the page in headless Chromium on the software WebGPU adapter (tools/qa/page-look.cjs's own recipe — SwiftShader, no
-// GPU) once per way into the build that is NOT a row of the scenario list — the plain start card, ?solo, ?loadout=, a ?levelFile= / ?level= with
+// GPU) once per way into the build that is NOT a row of the scenario list — the plain start card, ?solo, ?loadout=, a ?levelFile= with
 // no scenario on it — and write down what the page itself says it opened: the card's buttons, the mission list's rows, the level, who is on the floor, whether a
 // scenario or a showcase is up, the console's errors, and what a stretch of the page's own loop does to it. A measuring tool: it edits nothing.
 //   node tools/qa/ways-in-look.cjs <outDir> [name=query[:kind] ...]      kind: plain (default) | card
@@ -17,7 +17,7 @@ const path = require('path');
 const outDir = process.argv[2] || 'ways-in-look';
 const JOBS = ['plain=:card', 'solo=solo', 'loadout=loadout=solo-night',
   'kityard=levelFile=kit-yard.json', 'kityard-rc=levelFile=kit-yard.json&roomclear&squad4', 'testrooms=levelFile=test-rooms.json', 'testrooms-rc=levelFile=test-rooms.json&roomclear',
-  'testrooms-rescue=levelFile=test-rooms.json&rescue', 'relief=level=relief', 'relief-file=levelFile=office-relief.json',
+  'testrooms-rescue=levelFile=test-rooms.json&rescue', 
   'nofile=levelFile=no-such-level.json'];
 const jobs = (process.argv.length > 3 ? process.argv.slice(3) : JOBS).map(a => { const i = a.indexOf('='), name = i < 0 ? a : a.slice(0, i); let query = i < 0 ? '' : a.slice(i + 1), kind = 'plain';
   const m = query.match(/:(plain|card)$/); if (m) { kind = m[1]; query = query.slice(0, -m[0].length); } return { name, query, kind }; });

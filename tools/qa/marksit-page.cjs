@@ -1,6 +1,6 @@
 // MARKS THAT SIT IN THE SURFACE, on the page (render/decals.ts MARKSIT, shaders/decals.wgsl dkSit; ?marksit=0): what several hand grenades leave on open
 // ground of the yard (each one's films of dust and its scorch, laid as the game's records), and stills of the same marks with the word down and up, dry or in the weather asked for.
-//   node tools/qa/marksit-page.cjs [--out DIR] [--level gwot-yard.json] [--hour overcast] [--weather rain] [--bursts 5] [--quality high]
+//   node tools/qa/marksit-page.cjs [--out DIR] [--level crossing.json] [--hour overcast] [--weather rain] [--bursts 5] [--quality high]
 //   headless Chromium on the software adapter. It shows that the page boots with the shader, that the word changes what the marks look like and that the
 //   picture without it is the picture as it was drawn before. Whether the marks READ as part of the ground is for a GPU: nobody has seen that there.
 //   writes DIR/marks-<dry|the weather>-<0|1>.png and DIR/marks.json   (one weather a run: about nine minutes to boot and twenty seconds a frame here)
@@ -10,7 +10,7 @@ const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const { spawn } = require('child_process'); const net = require('net'), path = require('path'), fs = require('fs');
 const argv = process.argv.slice(2), flag = (n, d) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; };
 const ROOT = path.resolve(__dirname, '../..'), OUT = path.resolve(flag('--out', 'marksit')), QUALITY = flag('--quality', 'high'), SCALE = +flag('--scale', 0.6), VW = +flag('--w', 640), VH = +flag('--h', 400);
-const LEVEL = flag('--level', 'gwot-yard.json'), HOUR = flag('--hour', 'overcast'), WEATHER = flag('--weather', ''), BURSTS = +flag('--bursts', 5), BREAK = process.env.MARKSIT_BREAK === '1';
+const LEVEL = flag('--level', 'crossing.json'), HOUR = flag('--hour', 'overcast'), WEATHER = flag('--weather', ''), BURSTS = +flag('--bursts', 5), BREAK = process.env.MARKSIT_BREAK === '1';
 const FLAGS = ['--js-flags=--no-use-libm-trig-functions --no-use-std-math-pow', '--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 const freePort = () => new Promise((res, rej) => { const s = net.createServer(); s.unref(); s.on('error', rej); s.listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => res(p)); }); });
