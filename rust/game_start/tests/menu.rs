@@ -104,3 +104,46 @@ fn a_walls_menu_copies_no_row() {
         assert_eq!((p.menu_rows(), p.menu()), (rows, menu), "seed {s}: opening a wall's menu changed the table");
     }
 }
+
+/// THE RULE: the quick key's words on the panel are the row its press gives, for what that seat's cursor is on; none while a menu is up.
+/// A FAILURE MEANS: the panel and the press have gone back to asking apart.
+#[test]
+fn the_quick_keys_words_are_the_order_it_gives() {
+    for s in SEEDS {
+        let mut p = yard(s);
+        p.run(1.0);
+        let (mut said, mut none) = (Vec::new(), 0);
+        for at in [[13.4, 16.0], [21.4, 16.0], [16.0, 24.0], [20.0, 22.0]] {
+            p.point_at(at);
+            p.run(0.2);
+            let Some(words) = p.g.orders.shown.quick.clone() else { none += 1; continue };
+            let n = p.g.orders.log.len();
+            let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
+            game::orders::squad_orders_quick_give(&mut p.g, &t);
+            assert!(p.g.orders.log.len() > n, "seed {s}: '{words}' is on the panel at {at:?} and the key gives nothing");
+            let id = p.g.orders.log.last().unwrap().order.clone();
+            let d = p.g.orders.defs.iter().copied().find(|&d| p.g.tab.orders_order_def[d].id == id).unwrap();
+            let row = game::orders::squad_orders_label_of(&mut p.g, d, &t);
+            assert_eq!(row, words, "seed {s}: the panel says '{words}' and the key gave '{id}'");
+            said.push(words);
+        }
+        assert!(said.len() >= 3, "seed {s}: the panel said {said:?}, and nothing on {none} of four");
+        let t = game::orders::squad_orders_target_at(&mut p.g, [16.0, 0.0, 24.0]);
+        game::orders::squad_orders_open(&mut p.g, Some(&t), None, None);
+        p.run(0.1);
+        assert_eq!(p.g.orders.shown.quick, None, "seed {s}: a menu is up");
+    }
+}
+
+/// THE RULE: two players' panels are two: each seat keeps the words for its own cursor, whichever seat stands.
+#[test]
+fn each_seat_keeps_its_own_quick_words() {
+    for s in SEEDS {
+        let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: s, seats: 2, ..Default::default() });
+        p.run(1.0);
+        let (a, b) = (p.g.seats[0], p.g.seats[1]);
+        let g = &*p.g;
+        let (sa, sb) = (game::seats::seat(g, a).orders.shown.clone(), game::seats::seat(g, b).orders.shown.clone());
+        assert!(sa.quick.is_some() && sb.quick.is_some(), "seed {s}: {sa:?} and {sb:?}");
+    }
+}
