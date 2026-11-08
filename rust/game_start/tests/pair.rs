@@ -114,3 +114,78 @@ fn the_hold_on_a_body_ends_with_the_hands() {
     for _ in 0..54 { turn(&mut p); p.frame(); assert!(!game::pairorders::pair_gripped(&mut p.g, t1), "the hands are off and the grip stands"); if game::guards::body_seen(&mut p.g, t1, t2, None) { seen += 1; } }
     assert!(seen > 30, "turned to the body with the hands off, he saw it on {seen} frames of 54");
 }
+
+// ---------------------------------------------------------------- is this way seen
+
+/// The office with Sam and one partner, the squad silent, the one defender left held where `at` says with his back to `yaw`'s far side; the partner sent to take
+/// him on the mark. `oneeye`: the pair rules' own switch, as a quiet mission throws it; off, the orders alone, as `?pairorders`.
+fn sent_to_a_back(oneeye: bool, at: [f64; 2], yaw: f64) -> (Play, GuardId, GuardId) {
+    let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear=10&squad=1", &Opts { seed: 10, ..Default::default() });
+    p.g.god_mode = true;
+    p.g.fog_of_war.on = false;   // (whether Sam can see him to give the order is not what is asked)
+    p.g.k.pair.on = true;
+    if oneeye { p.g.k.pairup.on = true; game::pairup::pair_up_apply(&mut p.g, None); }
+    p.g.k.silent.on = true;
+    p.run(0.5);
+    game::silent::set_silent(&mut p.g, true, None);
+    let m = p.mates()[0];
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foe = foes[0];
+    p.drop_all_but(&foes[..1]);
+    for _ in 0..5 { p.pin_man(foe, at, yaw, GuardState::Patrol, 0.0); p.frame(); }
+    let t = game::orders::OrderTarget::Foe(game::orders::OrderTargetFoe { at: [at[0], 0.0, at[1]], foe });
+    assert_eq!(game::orders::squad_orders_give(&mut p.g, "pairMark", Some(&t), None, None), None, "the order was refused");
+    (p, m, foe)
+}
+fn status_of(p: &mut Play, m: GuardId) -> String { game::orders::squad_orders_status_of(&mut p.g, m) }
+
+/// THE RULE: the only way to a man's back lies along the corridor he is looking down: the partner does not set out, the word on his row names who has him, and when
+/// the wait is up he says he can't get there. The same with the pair rules' switch on or off: the way has one eye.
+/// A FAILURE MEANS: a partner walks into a man's face, or (before the second test of the floor went) says 'no way' with nobody named on the orders alone.
+#[test]
+fn a_way_across_his_eyes_is_waited_on_by_one_eye() {
+    for oneeye in [true, false] {
+        let west = -std::f64::consts::FRAC_PI_2;
+        let (mut p, m, foe) = sent_to_a_back(oneeye, [33.5, 11.3], west);
+        let start = p.g.ch[p.g.gd[m].ch].pos;
+        let t0 = p.time();
+        for _ in 0..60 { p.pin_man(foe, [33.5, 11.3], west, GuardState::Patrol, 0.0); p.frame(); }
+        let word = status_of(&mut p, m);
+        assert_eq!(word, "waiting · Tango 1 is facing this way", "switch {oneeye}: a second in");
+        let mut done = None;
+        for _ in 0..(60 * 22) {
+            p.pin_man(foe, [33.5, 11.3], west, GuardState::Patrol, 0.0);
+            p.frame();
+            if game::pairorders::pair_orders_job_of(&p.g, m).is_none() { done = Some(p.time() - t0); break; }
+        }
+        assert!(done.is_some(), "switch {oneeye}: he never gave it up");
+        assert!(p.lines(m).contains(&"can't get behind him unseen."), "switch {oneeye}: said {:?}", p.lines(m));
+        let end = p.g.ch[p.g.gd[m].ch].pos;
+        assert!((end[0] - start[0]).hypot(end[2] - start[2]) < 0.5, "switch {oneeye}: he walked {start:?} to {end:?} on a way he could not take");
+    }
+}
+
+/// THE RULE: where there is a way round, he takes it. The man in the break room faces the door to the aisle; the floor behind him is dark and there is a second door to
+/// it. The partner goes round by that door, sets up at the man's back and never stands in front of him.
+/// A FAILURE MEANS: a partner gives up, or goes the short way across the man's eyes, with a dark way round to be had.
+#[test]
+fn a_dark_way_round_is_a_way() {
+    for oneeye in [true, false] {
+        let west = -std::f64::consts::FRAC_PI_2;
+        let at = [32.3, 17.95];
+        let (mut p, m, foe) = sent_to_a_back(oneeye, at, west);
+        let mut in_front = 0;
+        let mut set = false;
+        for _ in 0..(60 * 45) {
+            p.pin_man(foe, at, west, GuardState::Patrol, 0.0);
+            p.frame();
+            let q = p.g.ch[p.g.gd[m].ch].pos;
+            if (q[0] - at[0]).hypot(q[2] - at[1]) < 2.6 && q[0] < at[0] { in_front += 1; }
+            if game::pairorders::pair_orders_job_of(&p.g, m).map_or(false, |j| j.set) { set = true; break; }
+        }
+        assert!(set, "switch {oneeye}: he never got there: {} said {:?}", status_of(&mut p, m), p.lines(m));
+        assert_eq!(in_front, 0, "switch {oneeye}: frames in front of him inside 2.6 m");
+        let q = p.g.ch[p.g.gd[m].ch].pos;
+        assert!(q[0] > at[0] && (q[0] - at[0]).hypot(q[2] - at[1]) < 1.6, "switch {oneeye}: set at {q:?}, the man at {at:?}, looking west");
+    }
+}
