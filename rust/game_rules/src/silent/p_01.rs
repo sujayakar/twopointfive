@@ -283,7 +283,7 @@ pub fn seat(g: &mut crate::game::Game) {
 pub fn posture_word(g: &mut crate::game::Game) -> Option<String> {
     if !crate::orders::squad_orders_active(g, &crate::seats::here(g)) { return None; }
     if squad_silent(g, &crate::seats::here(g)) {
-        return Some(String::from(if silent_compromised(g, &crate::seats::here(g)) { "SILENT · compromised" } else { "SILENT" }));
+        return Some(String::from(if silent_compromised(g, &crate::seats::here(g)) { "SILENT · compromised" } else { crate::spotted::spotted_word(g).unwrap_or("SILENT") }));
     }
     let w = crate::unseen::unseen_word(g);
     Some(loud_word(w.as_deref()))
