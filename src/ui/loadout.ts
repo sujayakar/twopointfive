@@ -44,7 +44,7 @@ const CHIP_SHOWS = new Set(['primary', 'wand', 'big']), CHIP_NARROW = new Set(['
 const CHIP_GAP = 0.65, CHIP_IN = 0.18, CHIP_DIGIT = 0.46;   // a chip's icon row in icon heights: between two things, between a drawing and its count, one digit (startpage.ts's em values for the same)
 
 /** what the screen preps: a scenario's row (scene/scenarios.ts ScenarioEntry fits as it is), or the solo night (`kind: 'solo'`, squad 0) */
-export interface LoadoutEntry { id: string; title: string; kind: LoadoutKind; squad: number; level?: string; blurb?: string; untuned?: boolean; group?: string; packs?: { frags?: number } }
+export interface LoadoutEntry { id: string; title: string; kind: LoadoutKind; squad: number; level?: string; group?: string; packs?: { frags?: number } }
 export interface LoadoutOpts {
   /** Esc (after the screen has closed itself) */
   back?: () => void;
@@ -303,8 +303,8 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts): LoadoutScre
         case 'KeyD': case 'ArrowRight': row?.change?.(1); return true;
         case 'Enter': case 'NumpadEnter': case 'Space': if (row?.confirm) row.confirm(); else S.deploy(); return true;
         case 'Escape': S.back(); return true;
-        case 'KeyC': if (!repeat) kitCard?.copy?.(); return true;    // (copy / paste the picked man's kit from any row: ui/kitCard.ts — ?.: a probe's own card has neither)
-        case 'KeyV': if (!repeat) kitCard?.paste?.(); return true;
+        case 'KeyC': if (!repeat) kitCard?.copy(); return true;    // (copy / paste the picked man's kit from any row: ui/kitCard.ts)
+        case 'KeyV': if (!repeat) kitCard?.paste(); return true;
       }
       return false;
   };
@@ -343,7 +343,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts): LoadoutScre
 }
 
 /** a mission of the list as this screen takes it: its scenario's row, or the solo night's stand-in */
-export function entryOfMission(m: Mission): LoadoutEntry { return m.scenario ?? { id: m.id, title: m.title, kind: 'solo', squad: 0, blurb: m.blurb }; }
+export function entryOfMission(m: Mission): LoadoutEntry { return m.scenario ?? { id: m.id, title: m.title, kind: 'solo', squad: 0 }; }
 // every key is the screen's while it has them (registered at module load: ahead of main.ts's Esc — which would close the start card under it — and of the game's Input)
 const eaten = new Set<string>();
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
