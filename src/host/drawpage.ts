@@ -33,6 +33,7 @@ import { debuggerPanel } from './debugger';
 import { lostCard } from './lostcard';
 import { Reel } from './reel';
 import { Measure } from './measure';
+import { oneAirFlip, wispMotesFlip } from '../ui/sweepSnow';
 import { drawBench } from './drawbench';
 import { DrawHud } from './drawhud';
 import { drawCloud } from './drawcloud';
@@ -255,6 +256,7 @@ async function main(): Promise<void> {
     told.tick = game.ms.step; told.draw = game.ms.draw;
   };
   const measure = new Measure({ gpu, engine, smoke, quality, cam, input, canvas, game, marks: () => decals.count, blocked: mine => quality.calibrating ? 'auto quality is still measuring this machine' : (title || brief?.held) && !mine ? 'start a run first' : null, say: words => readout.say(words) });
+  { const s = weather.snow?.fx.swept; if (s) { measure.sweep.oneAir = () => oneAirFlip(s); measure.sweep.wispMotes = () => wispMotesFlip(s); } }
   /** the world holds still: a card, the title, a mission not yet started */
   const stopped = (): boolean => paused || measure.freezing || title && !reel.live || !!brief?.held || !!hud?.holds && !owed;
   /** the page's own keys, ahead of the tick: a press that is one of them is nobody else's (a frame with no tick keeps the presses for the next) */

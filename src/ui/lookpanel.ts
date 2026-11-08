@@ -65,7 +65,14 @@ export const LOOK_SYSTEM = 'Materials prototype';
 // stood over the debugger's own corner, so on this page the debugger's rows (the debug views, the denoiser, the gather) could not be reached while the look's rows
 // were up. Now the rows are the panel's own: its sliders (a dot puts one row back, the section's ↺ puts them all back), its search finds them, its key shuts them.
 // The page still OPENS with them up (panel.show), as the box did.
-export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, open: boolean, /** the page's hour, sun and moon can be turned */ sky = true): void {
+/** THE SKY OF A PAGE, read and set for the visit by this panel's rows. `cover` null: no weather is picked; `moon` null: the level has none */
+export interface SkyTurns {
+  hour(): string; setHour(id: string): void;
+  cover(): number | null; setCover(v: number): void;
+  sun(): number; setSun(v: number): void;
+  moon(): { k: number; elev: number; bearing: number; up: boolean } | null; setMoon(o: { k?: number; elev?: number; bearing?: number }): void;
+}
+export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, open: boolean, /** the page's hour, sun and moon, where they can be turned */ sky: SkyTurns | null): void {
   const w = window as any;
   const here = () => panel.system(LOOK_SYSTEM, { icon: '◍', short: 'Look', title: 'a slider a layer of the look · plain boxes to compare · the hour, sun and moon · performance takes' });
   here();
@@ -144,16 +151,17 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
   panel.toggleBox(cmp, 'stay plain', () => stayPlain, v => { stayPlain = v; plain(v); }, 'the boxes stay plain until this is put off');
   // THE SUN AND THE MOON (the maintainer, 10-23: "do we model a sun at all for dawn/midday? i think that's a big reason why it looks flat. and perhaps we should also
   // model a moon on night levels (and can configure it)"). Both are there: the hour's sun (game/hours.ts), which a snow level's cloud leaves 9 % of, and the level's
-  // moon, which the pass has at 0.06. These rows set them for the visit: Sun = the share of the hour's own sun that comes through (window.__hour.sun: it then stands
-  // against the cloud), Moon / height / bearing = the level's moon (window.__moon). The page shows what it has: a row follows the hour and the level.
+  // moon, which the pass has at 0.06. These rows set them for the visit: Sun = the share of the hour's own sun that comes through (it then stands
+  // against the cloud), Moon / height / bearing = the level's moon (`SkyTurns`: the page's own way to them). The page shows what it has: a row follows the hour and the level.
   if (sky) {
-    const hour = panel.section('Hour, sun and moon', { open: true, summary: () => String(w.__hour?.id ?? '') });
-    panel.buttons(hour, 'hour', ['night', 'dawn', 'midday', 'overcast', 'dusk'].map(h => ({ text: h, run: () => { w.__hour?.set(h); } })));
-    slide(hour, 'Cloud', `by day: how much of the sky the weather’s cloud covers. 0 = a clear sky and a hard sun, 1 = a solid deck and no shadows. The game’s snow falls from 0.90; this page opens at ${LOOK_SNOW_COVER.toFixed(2)}. The sun, its shadows’ edge and the sky’s colour follow, and so do the guards and your light meter`, 0, 1, 0.01, () => w.__hour && w.__hour.id !== 'night' ? w.__hour.cover() : null, v => w.__hour?.cover(v));
-    slide(hour, 'Sun', 'by day: how much of the hour’s own sun comes through that cloud (the game’s snow leaves 0.09). Set by hand it stands until Cloud is moved', 0, 1, 0.01, () => w.__hour && w.__hour.id !== 'night' ? w.__hour.sun() : null, v => w.__hour?.sun(v));
-    slide(hour, 'Moon', 'at night: the moon’s strength (the pass has 0.06, the level kit’s own is 0.9)', 0, 1.5, 0.01, () => { const m = w.__moon?.get(); return m && m.up ? m.k : null; }, v => w.__moon?.set({ k: v }));
-    slide(hour, 'Moon height', 'degrees over the horizon: low = long shadows', 5, 85, 1, () => { const m = w.__moon?.get(); return m && m.up ? m.elev : null; }, v => w.__moon?.set({ elev: v }));
-    slide(hour, 'Moon bearing', 'where it stands, in degrees round the level', 0, 359, 1, () => { const m = w.__moon?.get(); return m && m.up ? m.bearing : null; }, v => w.__moon?.set({ bearing: v }));
+    const H = sky, night = () => H.hour() === 'night', moon = () => { const m = H.moon(); return m && m.up ? m : null; };
+    const hour = panel.section('Hour, sun and moon', { open: true, summary: () => H.hour() });
+    panel.buttons(hour, 'hour', ['night', 'dawn', 'midday', 'overcast', 'dusk'].map(h => ({ text: h, run: () => H.setHour(h) })));
+    slide(hour, 'Cloud', `by day: how much of the sky the weather’s cloud covers. 0 = a clear sky and a hard sun, 1 = a solid deck and no shadows. The game’s snow falls from 0.90; this page opens at ${LOOK_SNOW_COVER.toFixed(2)}. The sun, its shadows’ edge and the sky’s colour follow, and so do the guards and your light meter`, 0, 1, 0.01, () => night() ? null : H.cover(), v => H.setCover(v));
+    slide(hour, 'Sun', 'by day: how much of the hour’s own sun comes through that cloud (the game’s snow leaves 0.09). Set by hand it stands until Cloud is moved', 0, 1, 0.01, () => night() ? null : H.sun(), v => H.setSun(v));
+    slide(hour, 'Moon', 'at night: the moon’s strength (the pass has 0.06, the level kit’s own is 0.9)', 0, 1.5, 0.01, () => moon()?.k ?? null, v => H.setMoon({ k: v }));
+    slide(hour, 'Moon height', 'degrees over the horizon: low = long shadows', 5, 85, 1, () => moon()?.elev ?? null, v => H.setMoon({ elev: v }));
+    slide(hour, 'Moon bearing', 'where it stands, in degrees round the level', 0, 359, 1, () => moon()?.bearing ?? null, v => H.setMoon({ bearing: v }));
   }
   const qual = panel.section('Quality', { open: true, summary: () => String(w.__quality?.current ?? '') });
   panel.buttons(qual, 'preset', ['low', 'medium', 'high'].map(p => ({ text: p, run: () => { if (w.__quality) { w.__quality.auto = false; w.__quality.apply(p); } } })));   // (auto off for the visit: the ladder would move the preset again)
