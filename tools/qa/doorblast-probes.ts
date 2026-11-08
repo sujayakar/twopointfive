@@ -40,10 +40,10 @@ const DEFAULTS = JSON.parse(JSON.stringify(DOORBLAST));   // (the switch is sett
 const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } catch (e) { console.log(`- FAIL — the probe threw\n    ${e instanceof Error ? e.stack : String(e)}`); return false; } finally { Object.assign(DOORBLAST, JSON.parse(JSON.stringify(DEFAULTS))); } };
 const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
 
-async function rig(seed = 7, level?: string) {
+async function rig(seed = 7, level?: string, query?: string) {
   Math.random = seeded(seed);
   const W: any = await standUp(level ? { level: levelOfFile(level) } : {});
-  const g = W.game; g.godMode = true; g.aiEnabled = false;
+  const g = W.game; g.godMode = true; if (query) (await import(`${ROOT}/src/game/scenarioRun.ts`)).startFromQuery(g, new URLSearchParams(query)); g.aiEnabled = false;
   const R = { W, g,
     step(n = 1) { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; W.step(DT); } },
     door(name: string): any { return g.doors.list.find((d: any) => d.def.name === name); },
@@ -259,10 +259,11 @@ export const offHingesAfter = guarded(async () => {
     verdict(P.off && Q.off && P.arrived && Q.arrived && P.held + P.bent + P.lined + P.pulls === 0 && Q.held + Q.bent + Q.lined + Q.pulls === 0 && Math.abs(P.secs - Q.secs) <= 0.5,
       'blown from either face, he walks the empty frame from its old pull face with no handle walk, no hold and no bend, in the same time', `blown from the pull face: ${txt(P)}\n    blown from the push face: ${txt(Q)}`);
     // the order cursor on the slab where it lies
-    { const R = await rig(23), g = R.g, O = g.orders; let best: any = null;
-      for (const d of sample<any>(ordinary(g), 3)) for (const s of [1, -1] as const) {   // the door and face (of a sample of the level's) whose slab comes to rest furthest from its frame
-        const T = await rig(23), dd = T.door(d.def.name); shut(T.g, dd); T.step(3); T.g.doors.blast(off(dd, s, 0.9, 0.9), DOORBLAST.tearM.frag, PLAYER_ID); T.step(300);
-        const far = dd.off ? Math.hypot(dd.box.c[0] - dd.frameCentre[0], dd.box.c[2] - dd.frameCentre[2]) : 0; if (!best || far > best.far) best = { name: d.def.name, s, far }; }
+    { let best: any = null;
+      for (const name of sample<any>(ordinary((await rig(23)).g), 3).map((d: any) => d.def.name)) for (const s of [1, -1] as const) {   // the door and face (of a sample of the level's) whose slab comes to rest furthest from its frame
+        const T = await rig(23), dd = T.door(name); shut(T.g, dd); T.step(3); T.g.doors.blast(off(dd, s, 0.9, 0.9), DOORBLAST.tearM.frag, PLAYER_ID); T.step(300);
+        const far = dd.off ? Math.hypot(dd.box.c[0] - dd.frameCentre[0], dd.box.c[2] - dd.frameCentre[2]) : 0; if (!best || far > best.far) best = { name, s, far }; }
+      const R = await rig(23, undefined, '?roomclear'), g = R.g, O = g.orders;   // (stood after the arms above: only the newest game of a process is live. The cursor's target is a squad's: with none on the floor nothing answers it)
       const d = R.door(best.name); shut(g, d); R.step(3); g.doors.blast(off(d, best.s, 0.9, 0.9), DOORBLAST.tearM.frag, PLAYER_ID); R.step(300);
       const c = d.box.c as V3, far = Math.hypot(c[0] - d.frameCentre[0], c[2] - d.frameCentre[2]);
       // Sam beside the slab, the cursor on it: the first standing spot and height from which the cursor's own ray lands on the slab's box
