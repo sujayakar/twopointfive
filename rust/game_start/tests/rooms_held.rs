@@ -82,7 +82,7 @@ fn cover_stage(s: u32, red: bool) -> (f64, i32, i32, i32) {
     let foe = p.room_men("east")[0];
     for m in p.room_men("west") { p.falls(m, DownBy::Player); }
     let (a, b) = ([12.0 + nudge(s, 81), 24.0], [13.2 + nudge(s, 81), 24.8]);
-    for (i, &m) in men.iter().enumerate().skip(2) { p.man_stands(m, [6.0 + i as f64 * 1.2, 26.0]); p.blinded(m); }
+    for (i, &m) in men.iter().enumerate().skip(2) { p.man_stands(m, [6.0 + i as f64 * 1.2, 26.0]); p.blind_now(m); }
     let way = [24.0, 27.0];
     let dir = yaw_to(a, way);
     let side = dir + 52f64.to_radians();
@@ -91,13 +91,13 @@ fn cover_stage(s: u32, red: bool) -> (f64, i32, i32, i32) {
     for _ in 0..20 { p.puppet(foe, [-30.0, 3.0], 0.0); p.man_stands(blue, a); p.man_stands(mate, b); p.frame(); }
     assert_eq!(p.order_men("cover", way, &[blue]), None, "seed {s}");
     assert_eq!(p.order_men("cover", man, &[mate]), None, "seed {s}");
-    for _ in 0..90 { p.puppet(foe, [-30.0, 3.0], 0.0); if !red { p.blinded(mate); } for &m in men.iter().skip(2) { p.blinded(m); } p.frame(); }
+    for _ in 0..90 { p.puppet(foe, [-30.0, 3.0], 0.0); if !red { p.blind_now(mate); } for &m in men.iter().skip(2) { p.blind_now(m); } p.frame(); }
     let settled = off_by(p.gun_yaw(blue), dir).to_degrees();
     let (mut most, mut on, mut red_on, mut frames) = (settled, 0, 0, 0);
     for _ in 0..240 {
         p.puppet(foe, man, away);
-        if !red { p.blinded(mate); }
-        for &m in men.iter().skip(2) { p.blinded(m); }
+        if !red { p.blind_now(mate); }
+        for &m in men.iter().skip(2) { p.blind_now(m); }
         p.frame();
         frames += 1;
         most = most.max(off_by(p.gun_yaw(blue), dir).to_degrees());
@@ -131,7 +131,7 @@ fn an_order_under_fire_is_never_written_over() {
         let m = men[0];
         let foe = p.room_men("east")[0];
         for w in p.room_men("west") { p.falls(w, DownBy::Player); }
-        p.blinded(men[1]);
+        p.blind_now(men[1]);
         let spot = [13.0 + nudge(s, 82), 24.0];
         let at = [spot[0] + 5.0, spot[1]];
         p.order_floor("move", spot, Who::Num(0.0));
@@ -145,8 +145,8 @@ fn an_order_under_fire_is_never_written_over() {
         for _ in 0..360 {
             if !p.up(foe) { break; }
             p.pin_man(foe, at, 0.0, GuardState::Alert, 1.0);
-            p.blinded(foe);
-            p.blinded(men[1]);
+            p.blind_now(foe);
+            p.blind_now(men[1]);
             p.frame();
             if let Some(x) = p.script_says(m) { if x.3 && during.is_none() { during = Some((x, p.arms_shown(m))); } }
         }

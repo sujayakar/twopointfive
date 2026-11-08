@@ -249,7 +249,7 @@ pub trait DoorsAsk {
     /// STAGING, each frame: a man the probe stands where it wants him, blind and not to be killed; nobody's round goes; the floor is hot
     fn puppet(&mut self, foe: GuardId, at: [f64; 2], yaw: f64);
     /// STAGING: this man sees nothing for now
-    fn blinded(&mut self, gd: GuardId);
+    fn blind_now(&mut self, gd: GuardId);
     /// an order to these men by the menu's call
     fn order_men(&mut self, id: &str, at: [f64; 2], men: &[GuardId]) -> Option<String>;
     /// his script as his order wrote it: what his arms and body are told, and is the fight's overlay on him
@@ -631,7 +631,7 @@ impl DoorsAsk for Play {
         self.g.fight.hot_t = t;
         for m in self.mates() { let c = self.g.gd[m].ch; self.g.gd[foe].god = true; }
     }
-    fn blinded(&mut self, gd: GuardId) { self.g.gd[gd].dazzled_until = self.g.time + 9.0; }
+    fn blind_now(&mut self, gd: GuardId) { self.g.gd[gd].dazzled_until = self.g.time + 9.0; }
     fn order_men(&mut self, id: &str, at: [f64; 2], men: &[GuardId]) -> Option<String> {
         let t = game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]);
         let o = game::orders::GiveOpts { men: Some(men.to_vec()), ..game::orders::GiveOpts::zeroed() };
@@ -707,7 +707,7 @@ impl DoorsAsk for Play {
     }
     fn stack_mark(&mut self, d: DoorId) -> Option<(Option<String>, bool)> {
         let name = self.door_name(d);
-        self.view().plan.as_ref()?.own.doors.iter().find(|x| x.door.as_deref() == Some(name.as_str()) && x.why == game::view::WaitWhy::Stack).map(|x| (x.key.clone(), x.now))
+        self.view().plan.own.doors.iter().find(|x| x.door.as_deref() == Some(name.as_str()) && x.why == game::view::WaitWhy::Stack).map(|x| (x.key.clone(), x.now))
     }
     fn word_cap_put(&mut self, secs: f64) { self.g.k.doortools.word_cuts_cap = secs; }
     fn op_kind(&self, op: DoorOpId) -> game::doortools::DoorToolKind { self.g.tab.doortools_door_op[op].kind }
