@@ -58,7 +58,7 @@ process.on('exit', stop); for (const s of ['SIGINT', 'SIGTERM', 'SIGHUP']) proce
     const r = await page.evaluate(async ([pin, dist]) => {
       if (pin) window.__stage({ look: [pin[0], 0, pin[2]], yaw: window.__cam.yaw || 0, pitch: 58 * Math.PI / 180, dist }, {});
       window.__draw(true); for (let i = 0; i < 4; i++) { window.__runFrames(1, 1 / 600); await window.__done(); } window.__draw(false);
-      return { dom: window.__planDom(), gpuErrs: window.__gpuErrs.slice(), rows: window.__game.orders.squad().map(m => `${m.callsign}: ${window.__game.orders.statusOf(m)}`) };
+      return { dom: window.__planDom(), gpuErrs: window.__gpuErrs.slice(), rows: window.__game.orders.squad().map(m => `${m.callsign}: ${(window.__game.view.squad?.mates.find(x => x.man === m.char.id)?.doing ?? '')}`) };
     }, [pin, DIST]);
     const file = path.join(OUT, `plan_${NAME}_${name}.png`); await page.screenshot({ path: file });
     const d = r.dom, ok = expect(d); shots.push({ name, ok, d, gpu: r.gpuErrs.length });

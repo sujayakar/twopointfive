@@ -25,6 +25,7 @@
 // `open`, the threshold's page behind row 4 in `rows`, and the off pick `man` used to tell a hidden man from a shown one (now read off the scene's own boxes).
 // The family's own red path: DOORMENU_BREAK=1 bun run tools/qa/probes.ts doormenu-drawn must FAIL (the cursor read a quarter of the screen off every sample).
 // And of the door a reading is taken on: DOORMENUFIND_BREAK=1 bun run tools/qa/probes.ts doormenu-rows must FAIL (find, below: a leaf that moved under the stand).
+import { listedOf, menuKey } from './squadwords';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -127,7 +128,7 @@ async function rig(scn: Scn, seed = 33) {
     /** every door of the level stood open and held there (the closer off, as the Director's doors.open(…, {hold}) does it) */
     openAll() { for (const d of game.doors.list) standOpen(d); R.step(4); },
     /** X pressed with the cursor at that pixel, a few frames with every key up: the panel's menu (or null) */
-    openX(sx: number, sy: number): any { if (O.menu) O.close(); input.mouseX = sx; input.mouseY = sy; R.press(ORDERS.key); R.step(3); return O.hud().menu; },
+    openX(sx: number, sy: number): any { if (O.menu) O.close(); input.mouseX = sx; input.mouseY = sy; (menuKey(O), R.step()); R.step(3); return listedOf(O); },
   };
   R.step(30);
   return R;
@@ -184,9 +185,9 @@ export const doormenuOpen = guarded(() => drawnFamily('doormenu-open: the cursor
 /** the panel's rows of an open menu: [the who row, one row an order …, (the four's wait row), the cancel row] */
 interface PanelRow { id: string; key: string; text: string; off: boolean; why: string | null; opens: string | null }
 function panel(R: Rig): { rows: PanelRow[]; wait: boolean; page: string | null } {
-  const M = R.O.menu, hud = R.O.hud().menu, body = (hud?.rows ?? []).slice(1, 1 + M.rows.length);
+  const M = R.O.menu, hud = listedOf(R.O), body = (hud?.rows ?? []).slice(0, M.rows.length);
   const rows: PanelRow[] = M.rows.map((d: any, i: number) => ({ id: d.id, key: String(body[i]?.opts?.[0]?.key ?? ''), text: String(body[i]?.opts?.[0]?.text ?? ''), off: !!body[i]?.off, why: M.why[i] ?? null, opens: d.opens ?? null }));
-  return { rows, wait: !!M.wordRow && hud?.rows?.[1 + M.rows.length]?.label === WORD_HEAD, page: M.page ?? null };
+  return { rows, wait: !!M.wordRow && hud?.rows?.[M.rows.length]?.label === WORD_HEAD, page: M.page ?? null };
 }
 const shape = (rows: PanelRow[]) => rows.map(r => `${r.key} ${r.id}${r.opens ? ' ▸' : ''}`).join(' · ');
 /** a door of the rig with a spot and a pixel where the cursor is on it as asked: `through` an open doorway, or on the shut leaf */

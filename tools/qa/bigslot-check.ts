@@ -45,6 +45,7 @@
 // the face a leaf opens toward, a wedge under a leaf) the check sets it by hand and the verdict's line says so.
 // BIGKIT_BREAK and BIGWEIGHT_BREAK are bigkit.ts's own. Nothing here looks at
 // a picture: neither tool has ever been seen on a GPU.
+import { listedOf } from './squadwords';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
@@ -327,7 +328,7 @@ async function mateShut(tool: 'none' | 'hammer' | 'shotgun', o: { face?: 'push' 
   const switched = !!o.silent && !SIL.SILENT.on; if (o.silent) { SIL.SILENT.on = true; SIL.setSilent(g, true); R.step(2); }
   const st = stats(), t0 = g.time, target = () => R.O.targetAt(d.frameCentre), id = o.order ?? 'bigClear';
   let w: string | null = null, shown = '', menuDown = true;
-  if (o.key) { const up = R.O.open(target()); R.step(2); shown = ((R.O.hud().menu?.rows ?? []) as any[]).flatMap(r => r.opts.map((x: any) => `${x.key ? `[${x.key}] ` : ''}${x.text}`)).join(' | ');
+  if (o.key) { const up = R.O.open(target()); R.step(2); shown = ((listedOf(R.O)?.rows ?? []) as any[]).flatMap(r => r.opts.map((x: any) => `${x.key ? `[${x.key}] ` : ''}${x.text}`)).join(' | ');
     R.input.pressed.add('KeyH'); R.step(); menuDown = !R.O.menu; if (!up || !menuDown) w = 'the menu took no H'; }
   else w = R.O.give(id, target());
   const big = R.D.ops.some((op: any) => op.big);

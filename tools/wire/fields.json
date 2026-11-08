@@ -2324,7 +2324,6 @@
 "doortools::DoorTools.big_row",
 "doortools::DoorTools.big_said",
 "doortools::DoorTools.charges",
-"doortools::DoorTools.close_at",
 "doortools::DoorTools.done",
 "doortools::DoorTools.frag_next",
 "doortools::DoorTools.frags",
@@ -2349,8 +2348,6 @@
 "doortools::DoorTools.watches",
 "doortools::DoorTools.word_key_t",
 "doortools::DoorTools.words",
-"doortools::DoorToolsCloseAtValue.t",
-"doortools::DoorToolsCloseAtValue.w",
 "doortools::DoorToolsDoneItemAim.at",
 "doortools::DoorToolsDoneItemAim.from",
 "doortools::DoorToolsDoneItemBeatsItem.t",
@@ -9222,7 +9219,9 @@
 "view::TickView.kit",
 "view::TickView.marks",
 "view::TickView.aim",
-"view::TickView.worn"
+"view::TickView.worn",
+"view::TickView.squad",
+"view::TickView.corner"
 ],
 "pageTick": [
 "aim::AimState.bearing_rate",
@@ -12658,7 +12657,6 @@
 "civilians::Civ.her",
 "civilians::Civ.she",
 "doortools::DoorOp.hold",
-"doortools::DoorTools.close_at",
 "doortools::DoorTools.words",
 "game::Game.rolls",
 "glassbreak::GlassBreak.view_of",

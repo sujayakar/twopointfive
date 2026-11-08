@@ -234,7 +234,7 @@ const noteWrite = (u: Unit, key: string, node: any, loose = false, f?: { key: st
   else if (how) u.acts.push({ kind: 'overwrites', what: `${key} (${how})`, line: lineOf(node), loose });
   else u.acts.push({ kind: 'keeps', what: key, line: lineOf(node), loose }); };
 
-/** A CLOSURE KEPT IN A FIELD (`S.notes.push(() => this.hudNotes())`, `x.hook = () => …`) runs when whoever reads the field calls it, not where it was
+/** A CLOSURE KEPT IN A FIELD (`x.hook = () => …`) runs when whoever reads the field calls it, not where it was
  *  written: it is a unit of its own, and a function that reads the field reaches it */
 const STORED = new Map<string, Unit[]>();
 for (const sf of files) { const file = rel(sf.fileName); const v = (n: any) => {

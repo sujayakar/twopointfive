@@ -515,7 +515,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   of silent with one line, as does `DoorTools.order('bangClear')` (a scenario's F). COMPROMISED = loud in a silent man's ears SINCE the order (`reached`:
   `fight.hotFor` ∧ `hotOf ≥ since`): said once ('compromised.'), shown in the HUD word ('SILENT · compromised'), and he then shoots whoever a loud man would —
   pace, lights, cans and boots stay as ordered. A captor at his last warning (`rescue.lastWarning`) un-holds rounds and the boot. The HUD: the squad block's
-  header `squad · loud|SILENT · orders to …` (orders.ts `hud()`, read by both overlays — the native twin has it by construction). `SILENT.start` = the posture
+  header `squad · loud|SILENT · orders to …` (`game.view.squad`'s `posture` and `who`, `silent posture_word`). `SILENT.start` = the posture
   a FRESH cast stands up in (the loadout screen's knob; `setSilent(g, on, 'api')`); a man joining / leaving leaves his word standing. Knobs `SILENT` kept by
   (`silentSummary`). **The QA harness stands the game up with `SILENT.on` false** (src/host/standup.ts, like chaos 0:
   the menu and the squad block as every older probe was written against); `probes.ts silent` (tools/qa/silent-probes.ts: order / hud / walk / doors / pick / cans /

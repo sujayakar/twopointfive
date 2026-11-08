@@ -815,7 +815,7 @@ pub fn door_tools_cuts_owe(g: &mut crate::game::Game, op: DoorOpId) -> bool {
     if !th.jamb.iter().any(|m_| r.slice.get(*m_).map_or(false, |s| s.pie.is_some())) { return false; }
     if th.cut_owed == Some(true) && g.time - th.owed_t.unwrap_or(-1e9) >= g.k.doortools.word_cuts_cap { return false; }
     for c in g.door_tools.set.clone() {   // (a set charge goes on this same word: they go in behind its blast)
-        if !door_tools_on_pending_word(g, &crate::seats::here(g), c) && door_tools_key_is(g, c) { return false; }
+        if !door_tools_on_pending_word(g, &crate::seats::here(g), c) && door_tools_key_is(g, &crate::seats::here(g), c) { return false; }
     }
     if last_held(g, op) { return false; }
     let d = o!(g, op).door;

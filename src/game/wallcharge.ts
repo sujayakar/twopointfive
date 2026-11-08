@@ -49,7 +49,7 @@ import { SideMap } from '../math/side';
 import { holdFireOrder } from './holdfire';   // (called inside blow only)
 import { Vec3, v3, clamp, lerp } from '../math/vec';
 import type { Game, Guard, Interactable, Player } from './game';
-import type { OrderDef, OrderTarget, OrderNote, SquadOrders, Assignment } from './orders';
+import type { OrderDef, OrderTarget, SquadOrders, Assignment } from './orders';
 import type { Box } from '../scene/boxes';
 import { BoxFlag } from '../scene/boxes';
 import { DOORTOOLS } from './doortools';
@@ -58,7 +58,7 @@ import { chaosOf } from './destruction';
 import { FURN, chargeSource, type BlastFirst } from './furnblast';
 import { doesOf } from '../scene/materials';
 import { killGuard, detonateStun, hitPlayer } from './combat';
-import { OWNBLOW, SAM_BY, blowKeyWord } from './ownblow';   // (called inside rows, notes and the key's press only: his own charge is his own actions' to set off — ownblow.ts)
+import { OWNBLOW, SAM_BY } from './ownblow';   // (called inside rows, notes and the key's press only: his own charge is his own actions' to set off — ownblow.ts)
 import { chronHit } from './chronicle';
 import { civiliansShown } from './civilians';   // (called inside blow only)
 import './nightbreach';
@@ -398,10 +398,9 @@ export class WallCharge {
 
   constructor(private g: Game) {
     this.opener = { id: WALL_PAGE, label: 'wall tools', targets: ['floor'], listed: [], opens: WALL_PAGE, key: 5, issue: () => { } };
-    this.row = { id: WALL_ORDER, label: t => { const c = this.chargeOnTarget(t); return c ? `blow the charge${this.closeWords(c)}` : this.rowWords(); }, targets: ['floor'], listed: [], ack: ['copy.', 'on it.'],
+    this.row = { id: WALL_ORDER, label: t => { const c = this.chargeOnTarget(t); return c ? 'blow the charge' : this.rowWords(); }, targets: ['floor'], listed: [], ack: ['copy.', 'on it.'],
       gone: (_S, t) => this.brought === 0 && !this.chargeOnTarget(t),   // (orders.ts OrderDef.gone: the squad never carried one — the flat ring does not offer it)
       can: (_S, gd, t) => this.canOf(gd, t), valid: (_S, t, men) => this.valid(t, men), issue: (_S, men, t) => this.issue(men, t) };
-    g.orders.notes.push(() => this.hudNotes());
   }
 
   // ------------------------------------------------------------ the run, the switch, the rows
@@ -463,18 +462,6 @@ export class WallCharge {
   private giveBack(c: SetWallCharge, why: string) {
     if (c.free) { /* (nothing was spent on it) */ } else if (c.paid <= 0) { if (this.carried !== null) this.carried++; } else { for (let i = 0; i < c.paid; i++) this.g.doorTools.refund('charge'); if (!this.roster.length) this.alone = Math.max(0, this.alone - c.paid); }
     this.stats.back++; this.note(`charge off wall ${c.wall.index}: ${why}`); }
-  /** the squad block's lines: what is CARRIED, while this run brought wall charges of its own (a kit card's, a mission's issue) — the door tools' count line beside it
-   *  is the breaching bag, which a carried wall charge never touches, so without this the player learned of them only at a wall's menu row; nothing under the
-   *  cost rule (the bag's own line is the count) nor on a run that brought none — and a charge waiting for the trigger. The count is read as it stands: the HUD is the page's alone, so a read here never
-   *  re-syncs the roster (that writes state the simulation reads) */
-  private hudNotes(): OrderNote[] { const n = this.set.length; if (!wallChargeOn(this.g)) return [];
-    const out: OrderNote[] = this.carried !== null && (this.brought ?? 0) > 0 ? [{ key: '', text: `wall charges ${this.carried}` }] : []; if (!n) return out;
-    const mark = ((this.g as any).pair?.waiting?.().length ?? 0) > 0;   // (a build with the pair's orders in it: while his partner waits on a mark, F is the mark first — the note says so)
-    // (ownblow.ts: the squad's key for the charges that are its to blow, the interaction's for his own — a note each, counted apart)
-    for (const own of [false, true]) { const of = (c: SetWallCharge) => this.keyIs(c) !== own, k = this.set.filter(of).length; if (!k) continue;
-      out.push({ key: blowKeyWord(!own, DOORTOOLS.blowKey.replace('Key', '')), text: `blow the charge · the wall${k > 1 ? ` (${k})` : ''}${mark && !own ? ' · after the mark' : ''}${this.closeWords(this.nearest(of), true)}` }); }
-    return out; }
-
   // ------------------------------------------------------------ the place
   chargeOn(W: WallSpot): SetWallCharge | null { return this.set.find(c => sameWall(c.wall, W)) ?? null; }
   private chargeOnTarget(t: OrderTarget): SetWallCharge | null { return t.kind === 'floor' && t.wall ? this.chargeOn(t.wall) : null; }
@@ -687,23 +674,6 @@ export class WallCharge {
     for (const gd of g.orders.men()) if (this.blastShare(c.wall, gd.char.pos, R, false) > 0) out.push(gd.callsign);
     return out;
   }
-  /** WHO THE BLAST WOULD CATCH BEYOND THE WALL right now (WALLCHARGE.safe): the far-side half of blow()'s own test, asked BEFORE the wall has gone — past
-   *  the wall's middle, inside the stun's reach of the charge, and a line to him from the far face. blow() asks that line from the hole's own middle with the
-   *  leaves where the blast left them; neither is known yet, so the warning asks from the far face at the charge and a step either side of it with the door
-   *  leaves out (noLeaves, as tooClose asks: the blast flings a leaf) and names him if any is clear — it may name a man the blast then spares, never the other
-   *  way where the level lets it know. A teammate who walked round; and 'you' where the blast does to the player what it does to a teammate standing there
-   *  (samstun.ts, live play only, as blow() has it — off, nothing reaches him through the wall and nothing is said). [] = nobody, or the switch off */
-  behind(c: SetWallCharge | null): string[] {
-    if (!c || !WALLCHARGE.safe) return []; const g = this.g, W = c.wall, T = thick(W), at = wallPt(W, 0, 0), out: string[] = [];
-    const lined = (p: Vec3) => this.noLeaves(() => [0, 0.4, -0.4].some(du => !g.col.solidBlocked(wallPt(W, du, -(T + 0.45), 1.1), [p[0], 1.1, p[2]])));
-    const beyond = (p: Vec3) => wallOff(W, p) < -T / 2;
-    { const p = g.player.char.pos; if (SAMSTUN.on && !g.player.down && !g.puppet && !g.touring && beyond(p) && flat(p, at) < DOORTOOLS.stunM && lined(p)) out.push('you'); }
-    for (const gd of g.orders.men()) { const p = gd.char.pos; if (beyond(p) && flat(p, at) <= DOORTOOLS.stunM && lined(p)) out.push(gd.callsign); }
-    return out;
-  }
-  /** the trigger's warning in words: who is inside the radius on the charge's side, then who stands beyond the wall where it will open ('' = nobody) */
-  private closeWords(c: SetWallCharge | null, caps = false): string { const near = this.tooClose(c), far = this.behind(c);
-    return (near.length ? `${caps ? ' · TOO CLOSE: ' : ' · too close: '}${near.join(', ')}` : '') + (far.length ? `${caps ? ' · BEHIND THE WALL: ' : ' · behind the wall: '}${far.join(', ')}` : ''); }
   /** a teammate OUTSIDE the order in the blast: past the wall in the charge's open reach once it is a hole, or too near it on its own side (the word for it; null: none) */
   private inBlast(W: WallSpot, men: Guard[]): string | null {
     const g = this.g, at = wallPt(W, 0, 0), out = wallPt(W, 0, 0.5, 1.1), inn = wallPt(W, 0, -(thick(W) + 0.45), 1.1);

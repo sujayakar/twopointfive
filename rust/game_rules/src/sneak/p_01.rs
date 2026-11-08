@@ -135,10 +135,11 @@ pub fn sneak_coming(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool 
 }
 
 /// What he is doing, for a HUD's line; None: he is walking with Sam. (sneak.ts sneakWord)
-pub fn sneak_word(g: &mut crate::game::Game, gd: GuardId) -> Option<String> {
+pub fn sneak_word(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if !g.k.sneak.on { return None; }
     let (mode, why) = match g.m.sneak.states.as_ref().and_then(|s| s.men.get(gd)) { Some(mm) => (mm.mode, mm.why), None => return None };
-    if !sneaking(g, gd) { return None; }
+    // (`sneaking`, as the tick's `sneak_tick` last read the sneak live: a HUD's line asks and writes nothing)
+    if !(mate(g, gd) && g.m.sneak.live_at.is_some_and(|l| l.v)) { return None; }
     let word = match mode {
         Mode::Wait => match why {
             Why::Door => "clear of the door",

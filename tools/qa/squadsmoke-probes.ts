@@ -12,6 +12,7 @@
 //                       spot nobody can reach is refused in the row's words; a silent squad stays silent; the throw is on the order log
 //   squadsmoke-restart  a restart puts the count back and the row on the menu once; the cards back as issued (or the table off) and a restart takes the row
 //                       and the HUD line away; the pair's count is its two men's
+import { blockOf, listedOf, menuKey } from './squadwords';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -69,11 +70,11 @@ async function rig(seed: number, o: { squad?: 2 | 4; empty?: boolean; silent?: b
     cursor(p: number[]) { W.cursorAt([p[0], p[1], p[2]]); },
     press(code: string) { input.pressed.add(code); R.step(); },
     /** X with the cursor on p: the menu's order rows as the panel draws them (the who row and the cancel row left out) — the menu left UP */
-    menu(p: number[]): { kind: string | undefined; rows: Row[] } { R.cursor(p); R.press(ORDERS.key); R.step(2);
-      const hud = O.hud().menu; return { kind: O.menu?.target.kind, rows: (hud?.rows ?? []).slice(1).filter((r: any) => r.kind !== 'cancel').map((r: any) => ({ head: r.label, key: r.opts[0]?.key, text: r.opts[0]?.text, off: !!r.off })) }; },
+    menu(p: number[]): { kind: string | undefined; rows: Row[] } { R.cursor(p); (menuKey(O), R.step()); R.step(2);
+      const hud = listedOf(O); return { kind: O.menu?.target.kind, rows: (hud?.rows ?? []).map((r: any) => ({ head: r.label, key: r.opts[0]?.key, text: r.opts[0]?.text, off: !!r.off })) }; },
     esc() { for (let i = 0; i < 3 && O.menu; i++) R.press('Escape'); },
     /** the squad block's lines (the HUD's status rows' texts) */
-    notes(): string[] { return (O.hud().status ?? []).flatMap((r: any) => r.opts.map((x: any) => x.text as string)); },
+    notes(): string[] { return (blockOf(O) ?? []).flatMap((r: any) => r.opts.map((x: any) => x.text as string)); },
     cans(): any[] { return game.items.items.filter((x: any) => x.kind === 'smoke'); },
     restart() { const log = console.log; console.log = () => {}; try { game.restartEncounter(); } finally { console.log = log; } R.step(30); },
   };

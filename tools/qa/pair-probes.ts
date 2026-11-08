@@ -21,6 +21,7 @@
 // the lit point anyway', 'the rule switched off (PAIR.watched)', 'the rule off, hands as the mark', 'the rule off (PAIR.lookBack)', and pair-watch's
 // contrast (a plain hold with the silent order's fire hold off: the probe no longer puts SILENT.holdFire off).
 // The cross-commit identity (switch off = the base build 25e5e7c) is the play-through digests, run in this checkout and in one of the base: the same lines.
+import { blockOf, doing, listedOf, menuKey } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
@@ -76,15 +77,15 @@ async function rig(o: RigOpts = {}) {
     press(code: string) { input.pressed.add(code); R.step(); },
     last(): any { return O.log[O.log.length - 1] ?? null; },
     /** X with the cursor on p: the menu's order rows as the panel draws them (the who row and the cancel row left out) — the menu left UP */
-    menu(p: number[]) { R.cursor(p); R.press(ORDERS.key); R.step(2);
-      const hud = O.hud().menu; return { kind: O.menu?.target.kind as string | undefined, rows: (hud?.rows ?? []).slice(1).filter((r: any) => r.kind !== 'cancel').map((r: any) => ({ head: r.label as string, key: r.opts[0]?.key as string, text: r.opts[0]?.text as string, off: !!r.off })) }; },
+    menu(p: number[]) { R.cursor(p); (menuKey(O), R.step()); R.step(2);
+      const hud = listedOf(O); return { kind: O.menu?.target.kind as string | undefined, rows: (hud?.rows ?? []).map((r: any) => ({ head: r.label as string, key: r.opts[0]?.key as string, text: r.opts[0]?.text as string, off: !!r.off })) }; },
     esc() { for (let i = 0; i < 3 && O.menu; i++) R.press('Escape'); },
     /** a man stood somewhere by hand, facing `yaw` */
     put(gd: any, p: number[], yaw: number) { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.lastPos = [p[0], 0, p[2]]; gd.path = []; gd.pathGoal = null; },
     chest(h: any): number[] { return [h.char.pos[0], 1.2, h.char.pos[2]]; },
     foe(h: any) { return { kind: 'foe', at: [h.char.pos[0], 0, h.char.pos[2]], foe: h }; },
     silent(): boolean { return SLM.squadSilent(game); },
-    status(): string { return O.statusOf(R.mate); },
+    status(): string { return doing(O.g, R.mate); },
     log(): string { return PM.PAIR_LOG.map((x: any) => `${f1(x.t)} ${x.what}`).join(' | '); },
     roused(): any[] { return R.hostiles.filter((h: any) => h.state !== 'dead' && (h.state === 'alert' || h.state === 'search' || h.awareness >= 0.5)); },
   };
@@ -182,7 +183,7 @@ export const pairMark = guarded(async () => {
     let seenFront = 0; R.post = () => { const [lx, lz] = [Math.sin(foe.char.bodyYaw), Math.cos(foe.char.bodyYaw)], dx = mate.char.pos[0] - foe.char.pos[0], dz = mate.char.pos[2] - foe.char.pos[2]; if (foe.state !== 'dead' && Math.hypot(dx, dz) < 2.6 && dx * lx + dz * lz > 0) seenFront++; };
     const set = R.until(() => !!P.jobOf(mate)?.set, 30), tSet = game.time, dSet = flat(mate.char.pos, foe.char.pos), crouched = mate.char.anim.crouch;
     R.step(60 * 5);
-    const still = !!P.jobOf(mate)?.set && foe.state !== 'dead' && flat(mate.char.pos, foe.char.pos) > PAIR.reach, note = O.hud().status[0]?.opts.find((o: any) => o.key === 'F')?.text ?? '';
+    const still = !!P.jobOf(mate)?.set && foe.state !== 'dead' && flat(mate.char.pos, foe.char.pos) > PAIR.reach, note = blockOf(O)[0]?.opts.find((o: any) => o.key === 'F')?.text ?? '';
     verdict(set && still && R.said.includes(`[${mate.callsign}] set.`) && foe.awareness < 0.3 && seenFront === 0 && crouched > 0.5 && /mark/.test(note),
       "obeyed: he works round to the man's back on a knee, never in front of him, says set — and WAITS there five seconds, the man none the wiser; the squad block says what F does", `set at ${f1(tSet)} s, ${f2(dSet)} m behind him · still set ${still} · ${foe.callsign} awareness ${f2(foe.awareness)} · frames in front of him inside 2.6 m: ${seenFront} · crouch ${f1(crouched)} · status: ${R.status()} · note: F ${note}`);
     // the mark
@@ -257,13 +258,13 @@ export const pairWatched = guarded(async () => {
     const who = P.watcher(foe, mate), n0 = R.said.length;
     R.press('KeyF');
     R.step(60 * 3);
-    const J0 = P.jobOf(mate), said0 = R.said.slice(n0), note0 = O.hud().status[0]?.opts.find((x: any) => x.key === 'F')?.text ?? '', line0 = O.statusOf?.(mate) ?? '';
+    const J0 = P.jobOf(mate), said0 = R.said.slice(n0), note0 = blockOf(O)[0]?.opts.find((x: any) => x.key === 'F')?.text ?? '', line0 = doing(O.g, mate) ?? '';
     verdict(set && none === null && who === w && said0.includes(`[${mate.callsign}] hold. ${w.callsign} has eyes on him.`) && !said0.includes(`[${mate.callsign}] moving.`) && foe.state !== 'dead' && J0?.watcher === w && J0.t0 < 0 && /anyway/.test(note0),
       "the mark with a second defender looking at the man (by the defenders' own eye test): no hands — he says who has eyes on him and stays set; the squad block says F again sends him anyway",
       `set ${set} · watcher before ${none?.callsign ?? 'nobody'}, after ${who?.callsign ?? 'nobody'} · said: ${said0.join(' / ')} · F: ${note0} · ${foe.callsign} ${foe.state} · ${line0}`);
     const held = foe.state !== 'dead' && P.jobOf(mate)?.watcher === w, n1 = R.said.length; w.__yaw = -Math.PI / 2 + 1.3;
     R.step(60 * 3); const J = P.jobOf(mate), still = foe.state !== 'dead' && J?.watcher === w && J.t0 < 0 && P.watcher(foe, mate) === null, said = R.said.slice(n1);
-    const note = O.hud().status[0]?.opts.find((x: any) => x.key === 'F')?.text ?? '', line = O.statusOf?.(mate) ?? '', n2 = R.said.length;
+    const note = blockOf(O)[0]?.opts.find((x: any) => x.key === 'F')?.text ?? '', line = doing(O.g, mate) ?? '', n2 = R.said.length;
     R.press('KeyF'); const down = R.until(() => foe.state === 'dead', 6);
     verdict(held && still && said.includes(`[${mate.callsign}] he'll look back. your call.`) && /anyway/.test(note) && down && R.said.slice(n2).includes(`[${mate.callsign}] going anyway.`),
       'the watcher only turns his head: three seconds on the partner is still held ("he\'ll look back. your call."), F is still on the squad block, and F sends him',

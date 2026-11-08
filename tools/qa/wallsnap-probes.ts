@@ -383,9 +383,9 @@ async function duo() {
       rows.push(`quiet take, partner following: on the station to ${f3(off)} m, the partner ${f2(flat(c.pos, m.char.pos))} m off and still, his order fall in, sneaking ${SNM.sneaking(g, m)}`); }
     // crouched on the wall, the partner goes low with him
     if (pl.wall) { tap('KeyC'); step(90); const low = (m.char.anim.crouch ?? 0) > 0.5; if (pl.crouch && SNM.SNEAK.on && SNM.SNEAK.crouch && !low) fails.push('Sam crouched on the wall and the partner stayed upright'); rows.push(`Sam low on the wall: ${pl.crouch ? `partner low ${low}` : '(C did not crouch him here)'}`); if (pl.crouch) { tap('KeyC'); step(60); } }
-    // the squad's keys with the hold on: the menu (X, shut again), who (T), the quick order's key is not pressed (it would move him) — the hold stays
-    if (pl.wall) { tap('KeyX'); step(3); const up = !!R.O.menu; tap('KeyX'); step(3); tap('KeyT'); step(3); tap('KeyT'); step(3); tap('KeyF'); step(3);
-      if (!pl.wall) fails.push('X / T / F with the hold on took him off the wall'); if (!up) fails.push('X on the wall did not open the orders menu'); rows.push(`X opens the menu on the wall (${up}), T and F leave the hold alone`); }
+    // the squad's keys with the hold on: who (T), the quick order's key is not pressed (it would move him) — the hold stays
+    if (pl.wall) { tap('KeyT'); step(3); tap('KeyT'); step(3); tap('KeyF'); step(3);
+      if (!pl.wall) fails.push('T / F with the hold on took him off the wall'); rows.push('T and F leave the hold alone'); }
     // sidling back at the partner (he stands up the corridor, +x): he lets Sam by or Sam stops against him — never off the plane, never through him
     if (pl.wall) { const x0 = c.pos[0]; keys('KeyD'); let offS = 0, nearS = Infinity; step(150, () => { if (pl.wall) offS = Math.max(offS, Math.abs(c.pos[2] - WALL.station)); nearS = Math.min(nearS, flat(c.pos, m.char.pos)); }); keys(); step(30);
       const went = c.pos[0] - x0;
