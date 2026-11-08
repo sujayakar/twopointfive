@@ -151,8 +151,20 @@ pub fn box_world_new(g: &crate::game::Game, device: crate::Opaque, max_boxes: Op
 pub fn box_world_add_static(g: &mut crate::game::Game, b: BoxId) -> f64 {
     let w = &mut g.engine.world;
     w.statics.push(b);
-    w.statics_dirty = true;
     (w.statics.len() - 1) as f64
+}
+
+/// The first n statics stand and the rest go, the one place the statics are cut short. The grid's numbers then name other boxes, and a static added later in the tick would pass the ray's guard, so
+/// the grid goes with them: the rays ask one by one until the next tick opens.
+pub fn box_world_keep_statics(g: &mut crate::game::Game, n: usize) {
+    g.engine.world.statics.truncate(n);
+    g.ray_grid = Default::default();
+}
+
+/// Static `i` goes and those after it close up, the one place one static is taken out. The grid's numbers then name other boxes, so the grid goes too: the rays ask one by one until the next tick opens.
+pub fn box_world_drop_static(g: &mut crate::game::Game, i: usize) {
+    g.engine.world.statics.remove(i);
+    g.ray_grid = Default::default();
 }
 
 /// Begin a frame's proxy list. (boxes.ts BoxWorld.resetCapsules)
@@ -178,51 +190,58 @@ fn footprint_of(b: &Bx) -> [f64; 2] {
     [cs * b.h[0] + sn * b.h[2], sn * b.h[0] + cs * b.h[2]]
 }
 
-/// What the game reads of the world: `all`, the glass statics, and the ray grid when a static's shape moved. Returns the statics' count. (boxes.ts BoxWorld.list)
+/// THE RAY GRID: the statics by the cells of the floor, which is all it is. It is made from them, so it is no part of the record: it stands in a slot of the game (`Game.ray_grid`),
+/// brought up as a tick opens. A game with none, or a grid of fewer statics than stand, asks the rest one by one and has the same answers.
+#[derive(Clone, Debug)]
+pub struct RayGrid { start: Vec<u32>, items: Vec<u32>, globals: Vec<f64>, n: f64, shape: Vec<f64>, fill: Vec<u32>, ranges: Vec<i32>, pub builds: u32 }
+impl Default for RayGrid {
+    fn default() -> Self {
+        let wd = crate::scene_world::world();
+        let cells = (wd.grid_w * wd.grid_h) as usize;
+        RayGrid { start: vec![0; cells + 1], items: vec![0; 4096], globals: Vec::new(), n: -1.0, shape: Vec::new(), fill: vec![0; cells], ranges: Vec::new(), builds: 0 }
+    }
+}
+
+/// Box `i` of the world, the number a ray's `index` is: the statics first, then the frame's boxes.
+pub fn box_world_at(g: &crate::game::Game, i: usize) -> Option<AnyBoxId> {
+    let w = &g.engine.world;
+    let n = w.statics.len();
+    if i < n { Some(AnyBoxId::World(w.statics[i])) } else { w.dynamics.get(i - n).copied() }
+}
+
+/// The ray grid brought up to the statics, where one of their shapes moved. Returns the statics' count. (boxes.ts BoxWorld.list)
 pub fn box_world_list(g: &mut crate::game::Game) -> f64 {
-    let w = &mut g.engine.world;
-    w.all.clear();
-    w.all.extend(w.statics.iter().map(|&b| AnyBoxId::World(b)));
-    w.all.extend_from_slice(&w.dynamics);
-    if w.all.len() as f64 > w.max_boxes { panic!("too many boxes: {}", w.all.len()); }
+    let w = &g.engine.world;
     let n_stat = w.statics.len();
-    if w.statics_dirty || w.glass_statics_n != n_stat as f64 {
-        g.engine.world.glass_statics.clear();
-        let glass = js::to_i32(box_flag().glass);
-        for i in 0..n_stat {
-            let id = g.engine.world.statics[i];
-            if js::to_i32(bx(g, id).flags) & glass != 0 { g.engine.world.glass_statics.push(i as f64); }
-        }
-        g.engine.world.statics_dirty = false;
-        g.engine.world.glass_statics_n = n_stat as f64;
+    if (n_stat + w.dynamics.len()) as f64 > w.max_boxes { panic!("too many boxes: {}", n_stat + w.dynamics.len()); }
+    let mut slot = core::mem::take(&mut g.ray_grid);
+    let r: &mut RayGrid = slot.at();
+    if r.shape.len() < n_stat * RS {
+        r.shape = vec![0.0; core::cmp::max(n_stat, g.engine.world.max_boxes as usize) * RS];
+        r.n = -1.0;
     }
-    let w = &mut g.engine.world;
-    if w.rg_shape.len() < n_stat * RS {
-        w.rg_shape = vec![0.0; core::cmp::max(n_stat, w.max_boxes as usize) * RS];
-        w.rg_n = -1.0;
-    }
-    let mut moved = w.rg_n != n_stat as f64;
+    let mut moved = r.n != n_stat as f64;
     for i in 0..n_stat {
-        let id = g.engine.world.all[i];
-        let (c, h, yaw, rot) = { let b = bx(g, id); (b.c, b.h, b.yaw, b.rot) };
+        let (c, h, yaw, rot) = { let b = bx(g, g.engine.world.statics[i]); (b.c, b.h, b.yaw, b.rot) };
         let o = i * RS;
-        let s = &mut g.engine.world.rg_shape;
+        let s = &mut r.shape;
         if s[o] == c[0] && s[o + 1] == c[1] && s[o + 2] == c[2] && s[o + 3] == yaw && s[o + 4] == h[0] && s[o + 5] == h[1] && s[o + 6] == h[2]
-            && (match rot { Some(r) => s[o + 7] == 1.0 && s[o + 8] == r[0] && s[o + 9] == r[1] && s[o + 10] == r[2] && s[o + 11] == r[3], None => s[o + 7] == 0.0 }) { continue; }
+            && (match rot { Some(q) => s[o + 7] == 1.0 && s[o + 8] == q[0] && s[o + 9] == q[1] && s[o + 10] == q[2] && s[o + 11] == q[3], None => s[o + 7] == 0.0 }) { continue; }
         moved = true;
         s[o] = c[0]; s[o + 1] = c[1]; s[o + 2] = c[2]; s[o + 3] = yaw; s[o + 4] = h[0]; s[o + 5] = h[1]; s[o + 6] = h[2];
         match rot {
-            Some(r) => { s[o + 7] = 1.0; s[o + 8] = r[0]; s[o + 9] = r[1]; s[o + 10] = r[2]; s[o + 11] = r[3]; }
+            Some(q) => { s[o + 7] = 1.0; s[o + 8] = q[0]; s[o + 9] = q[1]; s[o + 10] = q[2]; s[o + 11] = q[3]; }
             None => { s[o + 7] = 0.0; s[o + 8] = 0.0; s[o + 9] = 0.0; s[o + 10] = 0.0; s[o + 11] = 0.0; }
         }
     }
-    if moved { box_world_build_ray_grid(g, n_stat as f64); }
+    if moved { build_ray_grid(g, r, n_stat); }
+    g.ray_grid = slot;
     n_stat as f64
 }
 
 /// words a ray's bits stand in: a bit a static
 pub const MET: usize = 128;
-/// the nearest a ray has met so far: how far, which box of `all` (−1 none), the face
+/// the nearest a ray has met so far: how far, which box of the world (−1 none), the face
 struct Nearest { best: f64, bi: f64, bn: V3 }
 
 /// Closest box along the ray, of every box of the frame as it is drawn (the statics by their grid). A read: the game keeps nothing of a ray. (boxes.ts BoxWorld.raycast)
@@ -233,21 +252,23 @@ pub fn box_world_raycast(g: &crate::game::Game, ro: V3, rd: V3, tmax: Option<f64
     let with_look = with_look.unwrap_or(false);
     let w = &g.engine.world;
     let mut near = Nearest { best: tmax, bi: -1.0, bn: [0.0, 1.0, 0.0] };
-    let n_s = w.rg_n;
-    let gridded = n_s >= 0.0 && n_s <= w.all.len() as f64;
-    for i in (if gridded { n_s as usize } else { 0 })..w.all.len() {
-        if with_look || !look_keyed(g, w.all[i]) { ray_test(g, &mut near, i, ro, rd, skip_flags, skip_owner); }
+    let n_stat = w.statics.len();
+    // (a grid of more statics than stand was made before some went: its numbers name other boxes now, so it is not asked)
+    let grid = g.ray_grid.get::<RayGrid>().filter(|r| r.n >= 0.0 && r.n as usize <= n_stat);
+    // (a look's box is passed over among the frame's boxes only: the grid holds every static, so a static asked one by one is asked whatever its look, and a game with no grid has the same answers)
+    for i in grid.map_or(0, |r| r.n as usize)..n_stat + w.dynamics.len() {
+        if i < n_stat || with_look || !look_keyed(g, w.dynamics[i - n_stat]) { ray_test(g, &mut near, i, ro, rd, skip_flags, skip_owner); }
     }
-    if gridded {
-        for &gi in &w.rg_globals { ray_test(g, &mut near, gi as usize, ro, rd, skip_flags, skip_owner); }
-        ray_walk(g, &mut near, ro, rd, skip_flags, skip_owner);
+    if let Some(r) = grid {
+        for &gi in &r.globals { ray_test(g, &mut near, gi as usize, ro, rd, skip_flags, skip_owner); }
+        ray_walk(g, r, &mut near, ro, rd, skip_flags, skip_owner);
     }
     if near.bi >= 0.0 { Some(crate::scene_boxes::BoxWorldRaycast { t: near.best, index: near.bi, n: near.bn }) } else { None }
 }
 
 /// One candidate of the raycast, with the tie rule the index order gave it. (boxes.ts BoxWorld.rayTest)
 fn ray_test(g: &Game, near: &mut Nearest, i: usize, ro: V3, rd: V3, skip_flags: f64, skip_owner: f64) {
-    let id = g.engine.world.all[i];
+    let id = box_world_at(g, i).expect("a ray asked a box the world has not got");
     let (flags, owner) = { let b = bx(g, id); (b.flags, b.owner) };
     if js::to_i32(flags) & js::to_i32(skip_flags) != 0 { return; }
     if js::truthy(skip_owner) && owner == skip_owner { return; }
@@ -261,7 +282,7 @@ fn ray_test(g: &Game, near: &mut Nearest, i: usize, ro: V3, rd: V3, skip_flags: 
 }
 
 /// The statics along the ray: a 2D DDA over the XZ cells, each cell's statics tested once. (boxes.ts BoxWorld.rayWalk)
-fn ray_walk(g: &Game, near: &mut Nearest, ro: V3, rd: V3, skip_flags: f64, skip_owner: f64) {
+fn ray_walk(g: &Game, r: &RayGrid, near: &mut Nearest, ro: V3, rd: V3, skip_flags: f64, skip_owner: f64) {
     let wd = crate::scene_world::world();
     let (w_, h_, cs) = (wd.grid_w, wd.grid_h, wd.grid_cell);
     let (gx, gz) = (w_ * cs, h_ * cs);
@@ -287,7 +308,6 @@ fn ray_walk(g: &Game, near: &mut Nearest, ro: V3, rd: V3, skip_flags: f64, skip_
     let mut tmx = if dx > 0.0 { ((cx + 1.0) * cs - ox) / dx } else if dx < 0.0 { (cx * cs - ox) / dx } else { f64::INFINITY };
     let mut tmz = if dz > 0.0 { ((cz + 1.0) * cs - oz) / dz } else if dz < 0.0 { (cz * cs - oz) / dz } else { f64::INFINITY };
     // (a static filed in several cells is tested once: a bit a static, which this ray alone has)
-    let w = &g.engine.world;
     let mut met = [0u64; MET];
     let mut t_enter = t0;
     loop {
@@ -296,9 +316,9 @@ fn ray_walk(g: &Game, near: &mut Nearest, ro: V3, rd: V3, skip_flags: f64, skip_
         // (a NaN origin leaves the cell NaN: the TypeScript's array reads give undefined and no candidate)
         if c == c {
             let c = c as usize;
-            let (s, e) = (w.rg_start[c] as usize, w.rg_start[c + 1] as usize);
+            let (s, e) = (r.start[c] as usize, r.start[c + 1] as usize);
             for k in s..e {
-                let i = w.rg_items[k] as usize;
+                let i = r.items[k] as usize;
                 if met[i >> 6] >> (i & 63) & 1 != 0 { continue; }
                 met[i >> 6] |= 1 << (i & 63);
                 ray_test(g, near, i, ro, rd, skip_flags, skip_owner);
@@ -320,69 +340,62 @@ fn ray_walk(g: &Game, near: &mut Nearest, ro: V3, rd: V3, skip_flags: f64, skip_
     }
 }
 
-/// The static prefix of `all` into the ray grid: padded footprints into cells, the oversize and outside ones as globals. (boxes.ts BoxWorld.buildRayGrid)
-pub fn box_world_build_ray_grid(g: &mut crate::game::Game, n: f64) {
+/// The first n statics into the ray grid: padded footprints into cells, the oversize and outside ones as globals. (boxes.ts BoxWorld.buildRayGrid)
+fn build_ray_grid(g: &Game, w: &mut RayGrid, count: usize) {
     let wd = crate::scene_world::world();
     let (w_, h_, cs) = (wd.grid_w, wd.grid_h, wd.grid_cell);
     let (wi, cells) = (w_ as usize, (w_ * h_) as usize);
-    let count = n as usize;
-    let w = &mut g.engine.world;
-    let max_boxes = w.max_boxes as usize;
-    if w.rg_ranges.len() < count * 4 { w.rg_ranges = vec![0; core::cmp::max(count, max_boxes) * 4]; }
+    let max_boxes = g.engine.world.max_boxes as usize;
+    if w.ranges.len() < count * 4 { w.ranges = vec![0; core::cmp::max(count, max_boxes) * 4]; }
     assert!(count <= MET * 64, "more statics than a ray keeps a bit for");
-    w.rg_start.fill(0);
-    w.rg_globals.clear();
+    w.start.fill(0);
+    w.globals.clear();
     for i in 0..count {
-        let id = g.engine.world.all[i];
         let r = i * 4;
-        let b = bx(g, id);
+        let b = bx(g, g.engine.world.statics[i]);
         let [ex, ez] = footprint_of(b);
         let c = b.c;
         let x0 = m::floor((c[0] - ex - BOX_WORLD_RAY_PAD) / cs);
         let x1 = m::floor((c[0] + ex + BOX_WORLD_RAY_PAD) / cs);
         let z0 = m::floor((c[2] - ez - BOX_WORLD_RAY_PAD) / cs);
         let z1 = m::floor((c[2] + ez + BOX_WORLD_RAY_PAD) / cs);
-        let w = &mut g.engine.world;
         if !(x0 >= 0.0 && z0 >= 0.0 && x1 < w_ && z1 < h_) || (x1 - x0 + 1.0) * (z1 - z0 + 1.0) > 96.0 {
-            w.rg_ranges[r] = -1;
-            w.rg_globals.push(i as f64);
+            w.ranges[r] = -1;
+            w.globals.push(i as f64);
             continue;
         }
         let (xa, xb, za, zb) = (x0 as i32, x1 as i32, z0 as i32, z1 as i32);
-        w.rg_ranges[r] = xa;
-        w.rg_ranges[r + 1] = xb;
-        w.rg_ranges[r + 2] = za;
-        w.rg_ranges[r + 3] = zb;
-        for z in za as usize..=zb as usize { for x in xa as usize..=xb as usize { w.rg_start[z * wi + x] += 1; } }
+        w.ranges[r] = xa;
+        w.ranges[r + 1] = xb;
+        w.ranges[r + 2] = za;
+        w.ranges[r + 3] = zb;
+        for z in za as usize..=zb as usize { for x in xa as usize..=xb as usize { w.start[z * wi + x] += 1; } }
     }
-    let w = &mut g.engine.world;
     let mut sum = 0u32;
     for c in 0..cells {
-        let k = w.rg_start[c];
-        w.rg_start[c] = sum;
+        let k = w.start[c];
+        w.start[c] = sum;
         sum += k;
     }
-    w.rg_start[cells] = sum;
-    if sum as usize > w.rg_items.len() { w.rg_items = vec![0; core::cmp::max(sum as usize, w.rg_items.len() * 2)]; }
-    w.rg_fill.fill(0);
+    w.start[cells] = sum;
+    if sum as usize > w.items.len() { w.items = vec![0; core::cmp::max(sum as usize, w.items.len() * 2)]; }
+    w.fill.fill(0);
     for i in 0..count {
         let r = i * 4;
-        let x0 = w.rg_ranges[r];
+        let x0 = w.ranges[r];
         if x0 < 0 { continue; }
-        let (x1, z0, z1) = (w.rg_ranges[r + 1], w.rg_ranges[r + 2], w.rg_ranges[r + 3]);
+        let (x1, z0, z1) = (w.ranges[r + 1], w.ranges[r + 2], w.ranges[r + 3]);
         for z in z0 as usize..=z1 as usize {
             for x in x0 as usize..=x1 as usize {
                 let c = z * wi + x;
-                let at = w.rg_start[c] + w.rg_fill[c];
-                w.rg_fill[c] += 1;
-                w.rg_items[at as usize] = i as u32;
+                let at = w.start[c] + w.fill[c];
+                w.fill[c] += 1;
+                w.items[at as usize] = i as u32;
             }
         }
     }
-    w.rg_n = n;
-    w.ray_grid_stats.statics = n;
-    w.ray_grid_stats.globals = w.rg_globals.len() as f64;
-    w.ray_grid_stats.items = sum as f64;
+    w.n = count as f64;
+    w.builds += 1;
 }
 
 /// Is this box's record a shape's and no break's? (boxes.ts shapeCut)
@@ -642,24 +655,43 @@ mod tests {
         let mut g = Game::blank();
         let mut x = Lcg(12345);
         world(&mut g, &mut x);
-        // no list yet: rg_n is −1, `all` empty, as in the TypeScript before an upload
+        // no list yet: no grid, as in the TypeScript before an upload
         assert_eq!(box_world_list(&mut g), 200.0);
-        assert_eq!(g.engine.world.all.len(), 220);
+        assert!(box_world_at(&g, 219).is_some() && box_world_at(&g, 220).is_none());
         let mut seen = 2166136261u32;
-        seen = fnv_f(seen, g.engine.world.ray_grid_stats.globals);
-        seen = fnv_f(seen, g.engine.world.ray_grid_stats.items);
+        { let r = g.ray_grid.get::<RayGrid>().unwrap(); seen = fnv_f(seen, r.globals.len() as f64); seen = fnv_f(seen, r.start[r.start.len() - 1] as f64); }
         for i in 0..200 { let id = g.engine.world.statics[i]; let f = box_world_footprint(&mut g, id); seen = fnv_f(seen, f[0]); seen = fnv_f(seen, f[1]); }
         assert_eq!(seen, TS_GRID, "grid and footprints");
         let hits = rays(&mut g, &mut x);
         assert_eq!(hits, TS_RAYS, "the rays through the grid");
         // the same rays by the brute force: the grid changes no answer
         let mut x2 = Lcg(777);
-        g.engine.world.rg_n = -1.0;
+        g.ray_grid = Default::default();
         let brute = rays(&mut g, &mut x2);
         box_world_list(&mut g);
-        g.engine.world.rg_n = 200.0;
         let mut x3 = Lcg(777);
         assert_eq!(rays(&mut g, &mut x3), brute, "grid against brute force");
+        // the statics cut short and one added elsewhere in the same tick: no grid stands to name other boxes, and the rays are those of a grid made afresh
+        box_world_keep_statics(&mut g, 150);
+        assert!(g.ray_grid.get::<RayGrid>().is_none());
+        let far = g.engine.world.statics[3];
+        let mut added = bx(&g, far).clone();
+        added.c[0] += 3.0;
+        let added = seam_box_push(&mut g, added);
+        box_world_add_static(&mut g, added);
+        let mut x4 = Lcg(777);
+        let brute = rays(&mut g, &mut x4);
+        box_world_list(&mut g);
+        let mut x5 = Lcg(777);
+        assert_eq!(rays(&mut g, &mut x5), brute, "statics cut short: brute force against a grid made afresh");
+        // one static taken out from the middle: the same
+        box_world_drop_static(&mut g, 40);
+        assert!(g.ray_grid.get::<RayGrid>().is_none());
+        let mut x6 = Lcg(777);
+        let brute = rays(&mut g, &mut x6);
+        box_world_list(&mut g);
+        let mut x7 = Lcg(777);
+        assert_eq!(rays(&mut g, &mut x7), brute, "a static taken out: brute force against a grid made afresh");
     }
 
     #[test]
@@ -668,15 +700,15 @@ mod tests {
         let mut x = Lcg(99);
         world(&mut g, &mut x);
         box_world_list(&mut g);
-        g.engine.world.rg_n = 200.0;
+        let builds = |g: &Game| g.ray_grid.get::<RayGrid>().unwrap().builds;
+        let was = builds(&g);
         let id = g.engine.world.statics[3];
         bx_mut(&mut g, id).albedo = [1.0, 0.0, 0.0];
-        g.engine.world.ray_grid_stats.items = -1.0;
         box_world_list(&mut g);
-        assert_eq!(g.engine.world.ray_grid_stats.items, -1.0, "colour leaves it standing");
+        assert_eq!(builds(&g), was, "colour leaves it standing");
         bx_mut(&mut g, id).c[0] += 1.0;
         box_world_list(&mut g);
-        assert!(g.engine.world.ray_grid_stats.items > 0.0, "a move rebuilds it");
+        assert_eq!(builds(&g), was + 1, "a move rebuilds it");
     }
 
     #[test]

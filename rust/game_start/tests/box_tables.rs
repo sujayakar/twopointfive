@@ -30,9 +30,9 @@ fn a_step_lists_the_box_world_itself() {
     step(&mut p, 120);
     let at_two_seconds = p.g.tab.frame_boxes.len();
     step(&mut p, 600);
-    let stood: Vec<game::ids::AnyBoxId> = p.g.engine.world.statics.iter().map(|&b| game::ids::AnyBoxId::World(b)).chain(p.g.engine.world.dynamics.iter().copied()).collect();
-    p.g.engine.world.all.clear();
+    // the tick brings the ray grid up with no host's call: a grid thrown away is there again after one tick
+    p.g.ray_grid = Default::default();
     step(&mut p, 1);
-    assert!(p.g.engine.world.all == stood, "the tick's list is not what stood as it opened");
+    assert!(p.g.ray_grid.get::<game::scene_boxes::RayGrid>().is_some(), "the tick brought no grid up");
     assert!(p.g.tab.frame_boxes.len() < at_two_seconds + 200, "the frame's table grew from {} to {} rows in ten seconds: nothing freed them", at_two_seconds, p.g.tab.frame_boxes.len());
 }

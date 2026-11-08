@@ -45,8 +45,15 @@ fn step_listed(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd
     // (the tick opens by listing the box world, on every host at the same moment: this tick's rays meet the last tick's boxes and whatever was written since, and
     // the rows of the frames gone by are free again, after whoever showed the last frame has read it)
     crate::scene_boxes::box_world_listed(g);
-    if n == 1 { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); return; }
-    crate::seats::on_first_bare(g, &mut |g| { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); });
+    if n == 1 { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); game_tick_end(g, dt); return; }
+    crate::seats::on_first_bare(g, &mut |g| { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); game_tick_end(g, dt); });
+}
+
+/// THE TICK'S LAST LINE: every flash's envelope for the frame, and its retirement. The next tick's light reads what it leaves, so it is a rule's state and the tick steps it, on every host at
+/// the same moment, with no host's call round it.
+fn game_tick_end(g: &mut crate::game::Game, dt: f64) {
+    let now = g.time;
+    crate::render_lights::light_set_update(g, dt, now);
 }
 
 /// The tick's lines, with the first seat on Game.   (game.ts stepSeats)
