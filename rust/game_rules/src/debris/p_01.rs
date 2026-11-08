@@ -19,11 +19,11 @@ fn sfx_of(l: &LANDINGValue) -> Vec<ChunkSfxItem> {
 // ---------------------------------------------------------------- seams: what skeleton 5 still cannot do
 
 /// A box's row (Box.* in the TypeScript). On skeleton 5.1, which has the table `g.tab.boxes`, the body is `&mut g.tab.boxes[b]`.
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
+fn seam_box(g: &mut Game, b: impl Into<AnyBoxId>) -> &mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 // ---------------------------------------------------------------- the arithmetic of a box's attitude
 
-fn rot_of(g: &mut Game, b: BoxId) -> Quat {
+fn rot_of(g: &mut Game, b: AnyBoxId) -> Quat {
     match seam_box(g, b).rot {
         Some(r) => r,
         None => v3::quat::yaw(seam_box(g, b).yaw),
@@ -95,7 +95,7 @@ pub fn debris_thrown(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, 
     let f = crate::falling::flight_of(g, c, v, G, crate::falling::FallWorld::StaticsAndProps);
     let down = m::sqrt(v[1] * v[1] + 2.0 * G * m::max(0.0, c[1] - f.pos[1]));
     if !(down > g.k.debris.min_speed) { return; }
-    let l = crate::break_table::breaks_lands(g, kind, box_, down);
+    let l = crate::break_table::breaks_lands(g, kind, box_.into(), down);
     let mut lv = level;
     if !js::truthy(lv) { lv = l.level; }
     if !js::truthy(lv) { lv = landing_of(kind).level; }
@@ -158,7 +158,7 @@ pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKin
     let b = crate::scene_boxes::make_box(g, &p);
     let l = landing_of(kind);
     let id = g.tab.debris_chunk.push(Chunk {
-        kind, box_: b, v: v3::copy(v), w: v3::copy(w), rest: false, still_t: 0.0, age: 0.0, sounded: false,
+        kind, box_: b.into(), v: v3::copy(v), w: v3::copy(w), rest: false, still_t: 0.0, age: 0.0, sounded: false,
         level: l.level, sfx: sfx_of(&l), serial, who, on: None, on_pose: 0.0,
         dress: Some(true),
         ..Chunk::zeroed()
@@ -183,7 +183,7 @@ pub fn debris_clear(g: &mut crate::game::Game) {
 }
 
 /// The pool's boxes for the picture; a mate rides its chunk's pose.   (debris.ts Debris.boxes)
-pub fn debris_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn debris_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let list = g.destr.debris.list.clone();
     for c in list {
         let (b, dress, mate) = { let ch = &g.tab.debris_chunk[c]; (ch.box_, is_on(ch.dress), ch.mate) };
@@ -196,7 +196,7 @@ pub fn debris_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
             row.yaw = by;
             row.rot = br;
             row.dress = bd;
-            out.push(mt);
+            out.push(mt.into());
         }
     }
 }
@@ -395,7 +395,7 @@ pub fn debris_feet(g: &mut crate::game::Game, men: &[crate::debris::FootMan], k:
 }
 
 /// A piece outside the pool, for the feet alone: a chunk record round its box, at rest.   (debris.ts Debris.loose)
-pub fn debris_loose(g: &mut crate::game::Game, box_: BoxId, lift: Option<f64>) -> DebrisChunkId {
+pub fn debris_loose(g: &mut crate::game::Game, box_: AnyBoxId, lift: Option<f64>) -> DebrisChunkId {
     let l = landing_of(ChunkKind::Chunk);
     g.tab.debris_chunk.push(Chunk {
         kind: ChunkKind::Chunk, box_, lift: Some(lift.unwrap_or(0.0)), v: [0.0, 0.0, 0.0], w: [0.0, 0.0, 0.0], rest: true, still_t: 0.0, age: 0.0,
@@ -417,7 +417,7 @@ pub fn debris_foot_step(g: &mut crate::game::Game, c_2: DebrisChunkId, dt: f64) 
 }
 
 /// A man's circle against a piece's footprint: the gap, the way out, the boot's lever.   (debris.ts Debris.footGap)
-pub fn debris_foot_gap(g: &mut crate::game::Game, b: BoxId, px: f64, pz: f64, d1x: f64, d1z: f64, e1: f64, e2: f64, radius: f64) -> crate::debris::DebrisFootGap {
+pub fn debris_foot_gap(g: &mut crate::game::Game, b: AnyBoxId, px: f64, pz: f64, d1x: f64, d1z: f64, e1: f64, e2: f64, radius: f64) -> crate::debris::DebrisFootGap {
     let bc = seam_box(g, b).c;
     let (d2x, d2z) = (-d1z, d1x);
     let (rx, rz) = (px - bc[0], pz - bc[2]);
@@ -442,7 +442,7 @@ pub fn debris_foot_gap(g: &mut crate::game::Game, b: BoxId, px: f64, pz: f64, d1
 }
 
 /// slide's `back`: the piece where it was.   (debris.ts Debris.slide)
-fn slide_back(g: &mut Game, b: BoxId, c0: V3, rot0: Option<Quat>, yaw0: f64) {
+fn slide_back(g: &mut Game, b: AnyBoxId, c0: V3, rot0: Option<Quat>, yaw0: f64) {
     seam_box(g, b).c = c0;
     seam_box(g, b).rot = rot0;
     seam_box(g, b).yaw = yaw0;
@@ -556,7 +556,7 @@ pub fn debris_slide(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
 }
 
 /// Does a piece's footprint reach into a static? Level rays from its middle to its four corners.   (debris.ts Debris.footIn)
-pub fn debris_foot_in(g: &mut crate::game::Game, b: BoxId) -> bool {
+pub fn debris_foot_in(g: &mut crate::game::Game, b: AnyBoxId) -> bool {
     let q = rot_of(g, b);
     let bh = seam_box(g, b).h;
     let bc = seam_box(g, b).c;
@@ -639,7 +639,7 @@ pub fn debris_update(g: &mut crate::game::Game, dt: f64) {
     st.peak_moving = m::max(st.peak_moving, moving);
 }
 
-fn box_add_c(g: &mut Game, b: BoxId, d: V3) {
+fn box_add_c(g: &mut Game, b: AnyBoxId, d: V3) {
     let mut c = seam_box(g, b).c;
     c[0] += d[0];
     c[1] += d[1];
@@ -951,7 +951,7 @@ pub fn debris_land(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) {
 }
 
 /// The box's half extent along world direction n.   (debris.ts supportAlong)
-pub fn support_along(g: &mut crate::game::Game, b: BoxId, n: V3) -> f64 {
+pub fn support_along(g: &mut crate::game::Game, b: AnyBoxId, n: V3) -> f64 {
     let r = rot_of(g, b);
     support_of(r, seam_box(g, b).h, n)
 }
@@ -963,13 +963,13 @@ pub fn evictable(g: &crate::game::Game, c_2: DebrisChunkId) -> bool {
 }
 
 /// (debris.ts boundR)
-pub fn bound_r(g: &mut crate::game::Game, b: BoxId) -> f64 { bound_of(seam_box(g, b).h) }
+pub fn bound_r(g: &mut crate::game::Game, b: AnyBoxId) -> f64 { bound_of(seam_box(g, b).h) }
 
 /// A nominal mass off the volume, clamped.   (debris.ts massOf)
-pub fn mass_of(g: &mut crate::game::Game, b: BoxId) -> f64 { mass_from(seam_box(g, b).h) }
+pub fn mass_of(g: &mut crate::game::Game, b: AnyBoxId) -> f64 { mass_from(seam_box(g, b).h) }
 
 /// Radians between n and the box axis layFlat would settle onto it.   (debris.ts faceTilt)
-pub fn face_tilt(g: &mut crate::game::Game, b: BoxId, n: V3) -> f64 {
+pub fn face_tilt(g: &mut crate::game::Game, b: AnyBoxId, n: V3) -> f64 {
     let q = rot_of(g, b);
     face_tilt_of(q, seam_box(g, b).h, n)
 }

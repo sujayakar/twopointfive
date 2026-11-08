@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Turn box `b` by fraction `k` of the way toward lying with its nearest face on a surface of normal `n` (k = 1: exactly flat); keeps yaw as the heading.   (debris.ts layFlat)
-pub fn lay_flat(g: &mut crate::game::Game, b: BoxId, n: V3, k: f64) {
+pub fn lay_flat(g: &mut crate::game::Game, b: AnyBoxId, n: V3, k: f64) {
     lay_flat_row(seam_box(g, b), n, k);
 }
 
@@ -66,7 +66,7 @@ fn lay_axis_row(row: &mut crate::scene_boxes::Box, bi: usize, n: V3, k: f64) {
 }
 
 /// A box's row. Once `g.col.boxes` is the table the index says, the body is `&mut g.col.boxes[b]`.
-fn seam_box(g: &mut crate::game::Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
+fn seam_box(g: &mut crate::game::Game, b: impl Into<AnyBoxId>) -> &mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 /// Any change of a prop's pose changes this (exact float compare: 'did it move', not a hash).   (debris.ts poseKey)
 pub fn pose_key(g: &mut crate::game::Game, p: PropId) -> f64 {

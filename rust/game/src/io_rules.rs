@@ -133,6 +133,7 @@ pub fn import(b: &[u8]) -> crate::game::Game { let mut i = R::tallied(b); let mu
     g.cv = Io::r(&mut i);
     g.tab.game_talk = Io::r(&mut i);
     g.fa = Io::r(&mut i);
+    g.tab.frame_boxes = Io::r(&mut i);
     g.serial_next = Io::r(&mut i); g.loose_poses = Io::r(&mut i); assert!(i.p == b.len(), "bridge: bytes left over"); i.refuse_past(&crate::id_tables::id_tables(&g)); refuse_mid_script(&g); deal_closures(&mut g); deal_scripts(&mut g); g.col.mirror.slot = g.sim as f64; g }
 /// the same bytes over a game that already stands: what the walk does not carry (closures as enums, what a body sets up at new) stays as this game has it
 pub fn import_into(g: &mut crate::game::Game, b: &[u8]) { let mut i = R::tallied(b); g.ri(&mut i);
@@ -192,6 +193,7 @@ pub fn import_into(g: &mut crate::game::Game, b: &[u8]) { let mut i = R::tallied
     g.cv.ri(&mut i);
     g.tab.game_talk.ri(&mut i);
     g.fa.ri(&mut i);
+    g.tab.frame_boxes.ri(&mut i);
     g.serial_next = Io::r(&mut i); g.loose_poses = Io::r(&mut i); assert!(i.p == b.len(), "bridge: bytes left over"); i.refuse_past(&crate::id_tables::id_tables(g)); refuse_mid_script(g); deal_closures(g); deal_scripts(g); }
 #[cfg(test)]
 mod bridge_test {

@@ -16,7 +16,7 @@ fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { 
 #[cfg(not(test))]
 fn made_box(g: &mut Game, p: &crate::scene_boxes::MakeBoxP) -> BoxId { crate::scene_boxes::make_box(g, p) }
 #[cfg(not(test))]
-fn noted_thin(g: &mut Game, b: BoxId, hw0: f64, k: f64, r: f64, g_2: f64, bl: f64) { crate::thinline::thin_note(g, b, hw0, k, r, g_2, bl); }
+fn noted_thin(g: &mut Game, b: BoxId, hw0: f64, k: f64, r: f64, g_2: f64, bl: f64) { crate::thinline::thin_note(g, b.into(), hw0, k, r, g_2, bl); }
 #[cfg(test)]
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { tests::row(b) }
 #[cfg(test)]
@@ -188,7 +188,7 @@ fn release_at(g: &mut Game, i: usize) {
 }
 
 /// One frame: a head that reached the end last frame retires, the others advance, one arriving now makes its ember, the lights ride the heads, each streak's box is rewritten tail to head and goes out. (tracers.ts Tracers.update)
-pub fn tracers_update(g: &mut crate::game::Game, dt: f64, out: &mut Vec<BoxId>, m_per_px: Option<f64>) {
+pub fn tracers_update(g: &mut crate::game::Game, dt: f64, out: &mut Vec<AnyBoxId>, m_per_px: Option<f64>) {
     let m_per_px = m_per_px.unwrap_or(0.0);
     if g.tracers.live == 0.0 { return; }
     let p = g.tracers.params;
@@ -230,7 +230,7 @@ pub fn tracers_update(g: &mut crate::game::Game, dt: f64, out: &mut Vec<BoxId>, 
         b.emissive = [t.color[0] * gain, t.color[1] * gain, t.color[2] * gain];
         noted_thin(g, t.box_, p.thickness * 0.5, 0.6, t.color[0] * p.emissive, t.color[1] * p.emissive, t.color[2] * p.emissive);
         g.tracers.pool[i].frames += 1.0;
-        out.push(t.box_);
+        out.push(t.box_.into());
     }
     g.tracers.live = live;
     g.tracers.lit = lit;
@@ -322,7 +322,7 @@ mod tests {
         tracers_update(&mut g, 0.1, &mut out, None); // reaches the end: stays one frame, drawn there
         let t = g.tracers.pool[0];
         assert_eq!((t.s, t.arrived, t.alive, t.frames, g.tracers.live), (1.0, true, true, 1.0, 1.0));
-        assert_eq!(out, vec![t.box_]);
+        assert_eq!(out, vec![AnyBoxId::World(t.box_)]);
         tracers_update(&mut g, 0.0, &mut out, None); // dt 0 never retires, and redraws where it is
         assert!(g.tracers.pool[0].alive);
         assert_eq!(out.len(), 2);

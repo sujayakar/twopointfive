@@ -115,7 +115,7 @@ pub fn line_box(g: &mut crate::game::Game, a: V3, rd: V3, b: BoxId) -> Option<cr
         return Some(LineBox { t0: s.t0, t1: s.t1, depth: s.depth });
     }
     let (mut t0, mut t1, mut depth) = (s.t0, s.t1, s.depth);
-    if has_cut && crate::scene_boxes::cut_met(g, b) {
+    if has_cut && crate::scene_boxes::cut_met(g, b.into()) {
         let cut = seam_box(g, b).cut.clone().unwrap();
         let ([ox, oy, oz], [dx, dy, dz]) = (s.o, s.d);
         if !crate::scene_cut::cut_clip(g, &cut, ox, oy, oz, dx, dy, dz, t0, t1) { return None; }
@@ -742,9 +742,9 @@ pub fn dynamic_hit(g: &mut crate::game::Game, a: V3, r0: f64, r1: f64, r2: f64, 
         i += 1;
         let (flags, c, h, tilted, round, cut) = { let x = seam_box(g, db); (x.flags, x.c, x.h, x.rot.is_some(), x.round == Some(true), x.cut.is_some()) };
         if ((js::to_i32(flags) & need) as f64) != need_flags { continue; }
-        if tilted || round || (cut && crate::scene_boxes::cut_met(g, db)) {
+        if tilted || round || (cut && crate::scene_boxes::cut_met(g, db.into())) {
             if seg_clear(g, a0, a1, a2, r0, r1, r2, len, db, SEG_PAD) { continue; }
-            if let Some(hit) = crate::scene_boxes::ray_box(g, a, [r0, r1, r2], db, len) {
+            if let Some(hit) = crate::scene_boxes::ray_box(g, a, [r0, r1, r2], db.into(), len) {
                 if hit.t >= 0.0 { return true; }
             }
             continue;

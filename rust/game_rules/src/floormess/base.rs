@@ -20,7 +20,7 @@ pub fn mess_evicted(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     let c = &g.tab.debris_chunk[c_2];
     if c.glass.is_some() { return; }
     let (mat, kind, at) = (c.mat.as_ref().map(|m| m.mat), c.kind, c.box_);
-    let b = &g.tab.boxes[at];
+    let b = &g.tab[at];
     let e = crate::out_events::OutMessEvicted { c: b.c, h: b.h, yaw: b.yaw, rot: b.rot, mat, kind };
     g.out.push(crate::out_events::OutEvent::MessEvicted(e));
 }
