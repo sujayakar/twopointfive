@@ -1206,8 +1206,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `killed` and in `finished`, and the log's 'N down' is the men who were up. The body is shoved off the burst (`downShove`). A defender does not
   throw where the burst would reach a mate of his who is down breathing (`ownClear`, as `squadthrow.ts` already has it for the team). NOT ASKED:
   a teammate or a hostage who is down, and a civilian (what her death costs is `civilians.ts`'s to say); a wall charge and the stun charge (they
-  do not go through `blast()`). NOT MENDED, seen on the way: a man on his feet killed by a burst is filed on the timeline under the gun in hand
-  (`chronicle.ts chronDown` reads the weapon off the hand), so one burst can write two weapons. Check: `frag-down` (three men put down the way a
+  do not go through `blast()`). A man on his feet or a civilian killed by a burst is filed on the timeline under what went off (`combat::kill_guard_by`, since 2026-11-08; it was the gun in hand), and the row reads 'killed — the frag grenade'. Check: `frag-down` (three men put down the way a
   ring to the head puts them, a burst beside them: dead in the open, breathing behind a wall and past the reach; the 40 mm's call; a wounded man;
   a defender's grenade; the pair's card both ways; a watcher's memory and his own throw; a teammate passed over; off = as it was; the journal;
   the stand), 14 lines green on both stands; `DOWNKILL_BREAK=1` fails (a), (a2), (d), (e), (f), (f2), (f3), (g2) on both. Never seen on a GPU,
