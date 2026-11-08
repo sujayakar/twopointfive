@@ -14,7 +14,7 @@
 // page's to show.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 export async function highlightsCheck(): Promise<boolean> {
   const BRK = process.env.HIGHLIGHTS_BREAK === '1', PB = process.env.PORTALMIRROR_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };

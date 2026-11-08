@@ -3,7 +3,7 @@
 // replays', and /replay's two buttons) until that was taken out on 2026-10-27; tools/cloud/pull.ts still writes the same file from a hosted build's backend,
 // and every tape sent before is one. So the READER stays (tools/qa/replay-dump.ts over kept.ts visitsOf / assemble; no page opens this file, /replay reads a visit out of
 // the store with keepstore.ts readVisit), and replaykeep-probes.ts holds it over files made here. Nothing of a page calls this.
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 const KP = await import(`${ROOT}/src/replay/kept.ts`), KS = await import(`${ROOT}/src/replay/keepstore.ts`);
 
 export interface HandOver { blob: Blob; name: string; visits: number; pieces: number }

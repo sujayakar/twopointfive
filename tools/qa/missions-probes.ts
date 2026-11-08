@@ -3,7 +3,7 @@
 //   missions-start   rows' URLs (six, spread over the list; all under QA_SWEEP=all) booted in a process of its own (scenario-picker-probes.ts --boot, the page's own startFromQuery): it starts unrefused as
 //                    that row, with the row's team beside Sam and exactly the defenders the sheet says; ?solo boots the plain night — no scenario, the shift
 //                    and the civilians the solo sheet counts
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 import { sample } from './sweep.ts';
 
 const { ALL_MISSIONS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`);

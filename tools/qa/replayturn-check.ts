@@ -8,7 +8,7 @@
 // REPLAYTURN_BREAK=1 makes the replay's turn not ask the row: 'the other way with the row flipped' must fail.
 //   bun run tools/qa/replayturn-check.ts          exit 0 = all pass · 1 = a line failed
 // On the page: engine-replay-page.cjs `turn` (the row flipped) and `fog` (the row as the page starts it). The row's own page check: findme-page.cjs.
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 import { readFileSync } from 'node:fs';
 const { ctrlTurn } = await import(`${ROOT}/src/replay/engineplay.ts`) as { ctrlTurn: (dx: number) => number };
 const { FINDME, FINDME_BUILT } = await import(`${ROOT}/src/host/findme.ts`) as { FINDME: { turn: 1 | -1 }; FINDME_BUILT: { turn: 1 | -1 } };   // (as BUILT: the page's own start is the other way since 2026-10-26, host/findme.ts FINDME_TUNED, and so is the shipped stand's)
