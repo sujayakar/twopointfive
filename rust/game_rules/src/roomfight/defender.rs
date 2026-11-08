@@ -32,8 +32,8 @@ pub(super) fn cover_pt(g: &mut Game, d: RoomfightDefId) {
     crate::belief::cover(g, gd, pt);
 }
 
-/// `DIGIN.on || squadsLive(g) || hasHim(gd, OWN.stand)`
-pub(super) fn digs_in(g: &Game, gd: GuardId) -> bool { g.k.digin.on || crate::enemysquads::squads_live(g) || crate::owner::has(g, gd, crate::owner::by::STAND) }
+/// `DIGIN.on || squadsLive(g)`
+pub(super) fn digs_in(g: &Game) -> bool { g.k.digin.on || crate::enemysquads::squads_live(g) }
 
 /// (roomfight.ts adopt)
 pub fn room_fight_adopt(g: &mut crate::game::Game, gd: GuardId) -> RoomfightDefId {
@@ -68,7 +68,7 @@ pub fn room_fight_tick_def(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64
     if g.gd[gd].held.is_some() { room_fight_blind(g, d, k); return; }
     if crate::owner::has(g, gd, crate::owner::by::MORALE) { return; }
     if crate::owner::has(g, gd, crate::owner::by::RUNNER) { return; }
-    if digs_in(g, gd) {
+    if digs_in(g) {
         let keeps = g.level.scenarios.as_ref().and_then(|s| s.room_clear.as_ref()).and_then(|r| r.dig_in) != Some(false);
         if keeps && !crate::lanes::lane_throws(g, gd) { crate::digin::dig_in_tick(g, d, dt); }
     }
@@ -121,7 +121,7 @@ pub fn room_fight_evidence(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64
             }
             if H.kick > cnt.kick && e >= 0.0 && flat(ent[e as usize].at, at) < 2.5 && !crate::control::man::blind(g, gd) {
                 let door = ent[e as usize].door;
-                if skill.startle[1] > 0.0 && !(digs_in(g, gd) && crate::digin::dig_in_braced(g, gd, door)) {
+                if skill.startle[1] > 0.0 && !(digs_in(g) && crate::digin::dig_in_braced(g, gd, door)) {
                     let p = pick(g, crate::dice::Who::Def(d), skill.startle);
                     let t = p * (if room_fight_drilled(g) { g.k.drilled.shaken } else { 1.0 });
                     g.gd[gd].react_t = m::max(g.gd[gd].react_t, t); g.fight.stats.startled += 1.0;
@@ -208,7 +208,7 @@ pub fn room_fight_apply_watch(g: &mut crate::game::Game, d: RoomfightDefId, dt: 
     let tgt = if e >= 0.0 && (e as usize) < ent.len() { ent[e as usize].at } else { g.tab.roomfight_def[d].home };
     move_pt(g, d, [tgt[0], 0.0, tgt[2]]);
     // (each look writes into D.pt in place: lent as a local and put back, the fix carried with it if it is that object)
-    if digs_in(g, gd) { let mut p = g.tab.roomfight_def[d].pt; crate::digin::dig_in_look(g, gd, &mut p); move_pt(g, d, p); }
+    if digs_in(g) { let mut p = g.tab.roomfight_def[d].pt; crate::digin::dig_in_look(g, gd, &mut p); move_pt(g, d, p); }
     if g.rescue.active { let mut p = g.tab.roomfight_def[d].pt; crate::rescue::rescue_crew_look(g, gd, &mut p); move_pt(g, d, p); }
     { let mut p = g.tab.roomfight_def[d].pt; crate::netquiet::net_quiet_look(g, gd, &mut p); move_pt(g, d, p); }
     { let mut p = g.tab.roomfight_def[d].pt; crate::wallreact::wall_react_look_2(g, gd, &mut p); move_pt(g, d, p); }
@@ -377,8 +377,7 @@ const BEYOND: [(f64, f64); 9] = [(3.0, 1.6), (3.0, -1.6), (2.4, 1.2), (2.4, -1.2
 pub fn room_fight_break_off(g: &mut crate::game::Game, d: RoomfightDefId) {
     let gd = g.tab.roomfight_def[d].gd; let c = g.gd[gd].ch; let threat = room_fight_threat_of(g, d);
     g.tab.roomfight_def[d].moved_at = g.time;
-    let stays = crate::owner::has(g, gd, crate::owner::by::STAND);
-    let rp = if stays { None } else { crate::enemysquads::squad_rally(g, gd, threat) };
+    let rp = crate::enemysquads::squad_rally(g, gd, threat);
     if let Some(rp) = rp {
         crate::pressure::run(g, d, rp, None, Some(0.3));
         g.fight.stats.fell_back += 1.0;
@@ -393,7 +392,7 @@ pub fn room_fight_break_off(g: &mut crate::game::Game, d: RoomfightDefId) {
     let cp = g.ch[c].pos;
     let here = match &mut asker { Some(a) => crate::picture::exposure_ask(g, a, cp), None => 0.0 };
     let room = g.tab.roomfight_def[d].room;
-    let ent = if stays || g.gd[gd].stays_in_rooms { Vec::new() } else { entries_of(g, room) };
+    let ent = if g.gd[gd].stays_in_rooms { Vec::new() } else { entries_of(g, room) };
     for (i, e) in ent.iter().enumerate() {
         if ev_at(g, d, i) > 0.3 || flat(e.at, threat) < 3.0 || g.dr[e.door].def.steel == Some(true) || crate::doors::doors_locked_out(g, e.door, cp, None) { continue; }
         let f = crate::guards::frame_of(g, e.door);
@@ -585,7 +584,6 @@ pub fn room_fight_rally(g: &mut crate::game::Game, d: RoomfightDefId) {
         if g.tab.roomfight_def[d].rally_at != f64::INFINITY { g.tab.roomfight_def[d].rally_at = f64::NAN; }
         return;
     }
-    if crate::owner::has(g, gd, crate::owner::by::STAND) { g.tab.roomfight_def[d].rally_at = f64::NAN; return; }
     if crate::owner::has(g, gd, crate::owner::by::LAST_MAN) { g.tab.roomfight_def[d].rally_at = f64::NAN; return; }
     let noise_t = g.tab.roomfight_def[d].noise_t;
     let fresh = g.time - noise_t < 1.5 && g.time - g.gd[gd].last_seen_t > 3.0;

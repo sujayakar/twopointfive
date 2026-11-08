@@ -106,11 +106,11 @@ mod tests {
         assert_eq!(row(g), (16481, 15, 0, 9.0));
         release(g, m, by::FRAG, 10.0);
         assert_eq!(row(g), (97, 7, 0, 10.0));
-        claim(g, m, by::STAND, 11.0, Some(0.0));
-        assert_eq!(row(g), (1121, 11, 0, 11.0));
+        claim(g, m, by::SQUAD_LEG, 11.0, Some(0.0));
+        assert_eq!(row(g), (609, 10, 0, 11.0));
         claim(g, m, by::WALK, 12.0, Some(1.0));
-        assert_eq!(row(g), (1137, 11, 0, 11.0), "a reason given below the top is not written");
-        release(g, m, by::STAND | by::LANE | by::PRESS | by::WALK, 13.0);
+        assert_eq!(row(g), (625, 10, 0, 11.0), "a reason given below the top is not written");
+        release(g, m, by::SQUAD_LEG | by::LANE | by::PRESS | by::WALK, 13.0);
         assert_eq!(row(g), (1, 1, 0, 13.0));
         assert!(has(g, m, by::SQUAD));
         assert!(!has(g, m, by::FRAG));

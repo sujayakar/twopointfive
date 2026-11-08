@@ -131,7 +131,7 @@ export function darkFoeKept(g: Game, gd: Guard, D: Def | undefined = g.fight.def
   if (hasHim(gd, OWN.squadWord)) return 'his squad\'s';
   if (gunKeepsPost(gd) || hasHim(gd, OWN.lane)) return 'holds a lane';
   if (hasHim(D.gd, OWN.press) || pressKeepsHome(g, D, false)) return 'the press\'s';
-  if (g.rescue.captor() === gd || hasHim(gd, OWN.stand)) return 'the captor / last stand';
+  if (g.rescue.captor() === gd) return 'the captor';
   return null;
 }
 
