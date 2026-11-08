@@ -10,9 +10,6 @@
 //                dust off the ceiling AND off the floor, fixtures within reach and in view dark; out of doors no tile and no ceiling dust; `power` scales the reach;
 //   (fixtures)   a round that is not the player's puts out a fixture only when it is IN it (its box, or within 18 cm of its flight), a guard with a line to it notices
 //                (the 'lightOut' event the OCP always filed); the per-encounter cap and the gap hold; breakers, devices and scenery never;
-//   (sight)      the AI's sight through dust is the rule it always was: guards.ts reads ONE number per sight line off the Sensors segment query and blocks under
-//                0.3 / scales to 0.8 — planted answers move it exactly so; the harness's CPU dust stand-in (dust-standin.ts) feeds that
-//                same query (a cloud between two points dims the line, a cloud behind a wall does not, no puff = no answer);
 //   (off)        with NO scenario up the loud rules stay down (destruction.ts loudNow): a round stokes the office's own heat, the player-only fixture rule
 //                stands alone, a blast under a lit panel leaves it and raises no floor dust. LOUDOFF_BREAK=1 = the floor's scenario is started: must fail.
 // 2026-11-07: the destruction switch is a settled rule (on), and a write of its other side is refused. Gone with that: every 'with the switch off' arm (the
@@ -34,7 +31,6 @@ const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const D = await import(`${ROOT}/src/game/destruction.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { NOBODY_ID } = await import(`${ROOT}/src/game/consts.ts`);
-const { installDustStandin } = await import('./dust-standin.ts');
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
