@@ -13,11 +13,5 @@ pub fn smoke_system_like_push(g: &mut crate::game::Game, p: crate::smoke_types::
 
 
 
-/// (src/smoke/types.ts:73 SmokeSystemLike.keepHot)
-pub fn smoke_system_like_keep_hot(g: &mut crate::game::Game, heat: f64) { g.out.push(crate::out_events::OutEvent::SmokeSystemLikeKeepHot(crate::out_events::OutSmokeSystemLikeKeepHot { heat: heat })); }
-
-
-
-
 /// (src/smoke/types.ts:82 SmokeSystemLike.obstaclesChanged)
 pub fn smoke_system_like_obstacles_changed(g: &mut crate::game::Game, c_2: V3, r: f64) { g.out.push(crate::out_events::OutEvent::SmokeSystemLikeObstaclesChanged(crate::out_events::OutSmokeSystemLikeObstaclesChanged { c_2: c_2, r: r })); }

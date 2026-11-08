@@ -1,7 +1,7 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 4217857405;
+export const LAYOUT = 2503851926;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
@@ -745,14 +745,12 @@ export const enum FireTable {
   lean = 20,
   /** f32 × 12: its smoke: on, up, radius, cells, density, temp, speed, push, jitter, every, view_r, lean */
   smoke = 21,
-  /** f32 × 13: the flame as gas: on, up, radius, cells, density, temp, speed, push, jitter, every, view_r, keep, ease */
-  gas = 33,
   /** f32 × 14: one column: up, radius, density, soot_ease, puff_every, puff_secs, puff_up, puff_radius, puff_off, puff_density, puff_temp, puff_speed, puff_push, puff_expand */
-  column = 46,
+  column = 33,
   /** f32 × 3 */
-  soot = 60,
+  soot = 47,
   /** words a row */
-  row = 63,
+  row = 50,
 }
 
 /** who a record is, in the same order: the id of what made it (its tick; the arm in the top byte and its place among that tick's) */
