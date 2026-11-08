@@ -75,6 +75,14 @@ impl Json {
     pub fn nums(&self) -> Vec<f64> { self.items().iter().map(|x| x.num().expect("json: a number")).collect() }
     /// three numbers
     pub fn v3(&self) -> Option<[f64; 3]> { let a = self.items(); if a.len() == 3 { Some([a[0].num()?, a[1].num()?, a[2].num()?]) } else { None } }
+    /// the member `k` takes this value, in its place where it has one, at the end where it has none (as the language's spread and overwrite keep a key's place)
+    pub fn set_member(&mut self, k: &str, v: Json) {
+        if let Json::Obj(m, _) = self { match m.iter_mut().find(|(n, _)| n == k) { Some(e) => e.1 = v, None => m.push((String::from(k), v)) } }
+    }
+    /// a copy with the member `k` gone
+    pub fn without(&self, k: &str) -> Json {
+        match self { Json::Obj(m, _) => { let kept: Vec<(String, Json)> = m.iter().filter(|(n, _)| n != k).cloned().collect(); let asked = Asked::of(kept.len()); Json::Obj(kept, asked) } v => v.clone() }
+    }
 }
 
 /// The text as a value. A text that is not JSON is refused with where it stopped.
@@ -246,6 +254,16 @@ fn value_text(v: &Json, depth: usize, out: &mut String) {
 }
 /// The value as text: an object's members in their order, a top-level list a record to a line.
 pub fn to_text(v: &Json) -> String { let mut out = String::new(); value_text(v, 0, &mut out); out.push('\n'); out }
+
+/// The value as one line of text, with no spaces.
+pub fn to_line(v: &Json) -> String { let mut out = String::new(); line_text(v, &mut out); out }
+fn line_text(v: &Json, out: &mut String) {
+    match v {
+        Json::Arr(a) => { out.push('['); for (i, x) in a.iter().enumerate() { if i > 0 { out.push(','); } line_text(x, out); } out.push(']'); }
+        Json::Obj(m, _) => { out.push('{'); for (i, (k, x)) in m.iter().enumerate() { if i > 0 { out.push(','); } str_text(k, out); out.push(':'); line_text(x, out); } out.push('}'); }
+        v => value_text(v, 0, out),
+    }
+}
 
 /// short hands for making a value
 pub fn n(x: f64) -> Json { Json::Num(x) }
