@@ -229,15 +229,22 @@ pub fn door_tools_shut_why(g: &crate::game::Game, d: DoorId) -> String {
     String::from(s)
 }
 
-/// does the team know this door is locked against it on that face; a door since opened, unlocked or broken is forgotten (doortools.ts DoorTools.knownShut)
-pub fn door_tools_known_shut(g: &mut crate::game::Game, d: DoorId, side: f64) -> bool {
-    if !door_tools_knows(g, &crate::seats::here(g), d, side, false) { return false; }
-    if is_open(g, d) || crate::doors::door_off(g, d) || !door_tools_locked_out(g, d, side) { door_tools_learn(g, d, side, None); return false; }
-    true
+/// does the team know this door is locked against it on that face (doortools.ts DoorTools.knownShut)
+pub fn door_tools_known_shut(g: &crate::game::Game, d: DoorId, side: f64) -> bool {
+    door_tools_knows(g, &crate::seats::here(g), d, side, false) && stays_shut(g, d, side)
+}
+fn stays_shut(g: &Game, d: DoorId, side: f64) -> bool { !is_open(g, d) && !crate::doors::door_off(g, d) && door_tools_locked_out(g, d, side) }
+/// once a tick: a door since opened, unlocked or broken is no longer one the team knows is shut
+pub fn door_tools_forget(g: &mut Game) {
+    for d in g.door_tools.tried.keys() {
+        for side in [-1.0, 1.0] {
+            if door_tools_knows(g, &crate::seats::here(g), d, side, false) && !stays_shut(g, d, side) { door_tools_learn(g, d, side, None); }
+        }
+    }
 }
 
 /// nobody of the team has tried that face of it (doortools.ts DoorTools.untried)
-pub fn door_tools_untried(g: &mut crate::game::Game, d: DoorId, side: f64) -> bool {
+pub fn door_tools_untried(g: &crate::game::Game, d: DoorId, side: f64) -> bool {
     !door_tools_known_shut(g, d, side)
 }
 
