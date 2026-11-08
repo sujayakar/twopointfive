@@ -37,6 +37,12 @@ import { oneAirFlip, wispMotesFlip } from '../ui/sweepSnow';
 import { drawBench } from './drawbench';
 import { DrawHud } from './drawhud';
 import { DrawPlay } from './drawplay';
+import { DrawNet, netAsked } from './drawnet';
+import { COOP } from '../net/lobby';
+import { HOSTED, coopFromUrl, coopInvite, coopRows } from '../ui/coop';
+import { commandText } from '../net/start';
+import { netKeyed, netLeave } from '../net/door';
+import { NETPLAY, NET_JOIN } from '../net/address';
 import { tapeAddress, tapeAsked } from './tapepage';
 import { buildName } from './buildname';
 import { HandTape } from '../tape/handtape';
@@ -105,13 +111,21 @@ async function levelBytes(name: string): Promise<Uint8Array> {
   try { return await bytesOf(`levels/${look}`); } catch (e) { if (look === name) throw e; return bytesOf(`levels/${name}`); }
 }
 
+const NO_SAVE = 'You can\u2019t save a co-op game.';
+
 async function main(): Promise<void> {
   const q = new URLSearchParams(location.search), loading = document.getElementById('loading')!; let say = (line: string): void => { loading.textContent = line; };
   // THE KEPT PAGE (gpu/keep.ts): the tab's own page keeps the GPU device and shows the game in a frame of this address, so a mission's start compiles nothing this visit has compiled
   const keep = keepPageBoot(q, ownPage(q), kitPicture); if (keep.role === 'shell' || keep.role === 'leave') { boot.stopRafProbe(); return; }
   if (!kitPicture && await cloudAdopt(q)) return;   // (a browser handed another's id takes it and its settings before a key is read, then loads once more without the word)
   const tape = kitPicture ? null : await tapeAsked(q); if (tape) { const to = tapeAddress(tape, q); if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }   // (a tape plays at its run's own address)
-  { const to = tape ? null : pickRedirect(location.search); if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }
+  // (a co-op game's code is given a seat and sent on to its server; a server's page comes up at its game's own address)
+  if (COOP.on && !tape && !kitPicture && q.has(NET_JOIN) && !(q.has(NETPLAY) && netKeyed(q))) { if (await coopFromUrl(q) === 'moved') return; q.delete(NET_JOIN); }
+  const coop = tape || kitPicture ? null : await netAsked(q); if (coop === 'moved') return;
+  TITLE.coop = () => COOP.on ? coopRows : null;
+  // (a game hosted from here stands on the module, on this machine's settings; both players play the kit as issued)
+  HOSTED.setup = scenario => { const w = new URLSearchParams(scenario), C = new Commands(); w.set('nokit', ''); machineBefore(w, w.get('levelFile') ?? '', C); return { stand: 'module', commands: commandText(C.take()) }; };
+  { const to = tape || coop ? null : pickRedirect(location.search); if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }
   const canvas = document.getElementById('view') as HTMLCanvasElement;
   // (the Team & kit picture has no HUD)
   if (kitPicture) for (const el of document.getElementById('app')!.children) if (!['view', 'panel', 'lcol', 'veil', 'loading', 'menu', 'missions', 'fatal'].includes(el.id)) (el as HTMLElement).style.display = 'none';
@@ -120,14 +134,14 @@ async function main(): Promise<void> {
   if (priceLevelsPage(q)) return;
   gameKeysBoot(q, walkInNow); bootTextSize(q, kitPicture);
   LOOK.on = lookOfQuery(q); setLookPlace(placeOfQuery(q));
-  const name = /^[\w.-]+\.json$/.test(q.get('levelFile') ?? '') ? q.get('levelFile')! : 'office.json', at = (p: string) => new URL(p, document.baseURI).href;
+  const name = coop?.start.file ?? (/^[\w.-]+\.json$/.test(q.get('levelFile') ?? '') ? q.get('levelFile')! : 'office.json'), at = (p: string) => new URL(p, document.baseURI).href;
 
   SFX_TABLE.was = q.has('oldsounds'); SFX_TABLE.redone = q.has('newsounds'); if (q.has('bench') || q.has(BENCH_RUN_KEY)) SFX_WARM.on = false; else if (!q.has('mute')) warmSfx();   // (the sounds, a voice at a time in idle moments)
 
   // ---- the game
   const tBoot = performance.now();
   const chP = loadCharacterSet(at('assets/ual/AnimationLibrary_Godot_Standard.gltf'), castUrlFor(location.search, document.baseURI)); chP.then(() => boot.span('gltf', tBoot), () => { /* awaited below */ });
-  const tFiles = performance.now(), filesP = Promise.all([tape ? new Uint8Array(0) : levelBytes(name).then(b => { boot.span('level', tFiles); return b; }), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.gltf')), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.bin')), bytesOf(at(`assets/chars/${CAST_FILE}`)), bytesOf(at(`assets/chars/${CAST_FILE_LOOK}`))]); filesP.catch(() => { /* awaited below */ });
+  const tFiles = performance.now(), filesP = Promise.all([tape ? new Uint8Array(0) : coop ? bytesOf(`levels/${name}`) : levelBytes(name).then(b => { boot.span('level', tFiles); return b; }), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.gltf')), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.bin')), bytesOf(at(`assets/chars/${CAST_FILE}`)), bytesOf(at(`assets/chars/${CAST_FILE_LOOK}`))]); filesP.catch(() => { /* awaited below */ });
   boot.expose();
   const face = await fetchFace(say, () => { throw new Error('the game asked a die the page never hands in'); });
   // THE DESK: the cards before a game ask the module, and what a press keeps goes in this machine's store, where the next page's start reads it
@@ -137,15 +151,17 @@ async function main(): Promise<void> {
   LOADBRIEF.on = q.get('loadbrief') !== '0'; settleOfQuery(q);
   LOADBRIEF.options = { open: () => openOptions({ tab: 'controls' }), close: closeOptions, up: optionsOpen };
   watchMissionRows();   // (each mission's card shows the ways this machine has won it)
-  let title = !kitPicture && !tape && startPageWanted(); const brief = kitPicture || tape || q.has('paused') || runPage(q) ? null : loadBrief(location.search), card = kitPicture ? { status: () => { /* nobody reads it */ }, off: () => { /* */ } } : brief ?? bootCard();
+  let title = !kitPicture && !tape && !coop && startPageWanted(); const brief = kitPicture || tape || coop || q.has('paused') || runPage(q) ? null : loadBrief(location.search), card = kitPicture ? { status: () => { /* nobody reads it */ }, off: () => { /* */ } } : brief ?? bootCard();
   loading.textContent = ''; say = line => card.status(line);
   const [level, mannequin, mannequinBin, cast, castLook] = await filesP;
   say('starting the game …');
   boot.mark('module'); const tGame = performance.now();
   const game = new DrawGame(face), seed = Number(q.get('seed') ?? NaN);
-  const unkept = kitPicture || !!tape || ownPage(q);   // (what this machine keeps of the runs played: a page that plays a run of its own is nobody's)
+  const unkept = kitPicture || !!tape || !!coop || ownPage(q);   // (what this machine keeps of the runs played: a page that plays a run of its own is nobody's)
   const play = tape ? new DrawPlay(game, tape) : null;
+  const net = coop ? new DrawNet(coop.door, coop.start, game, () => deaf()) : null; let deaf = (): void => { /* nothing sounds yet */ };
   if (play) play.start({ mannequin, mannequinBin, cast, castLook });
+  else if (net) net.start({ level, mannequin, mannequinBin, cast, castLook });
   else {
     // (the run's tape: not of a title's floor, which nobody plays, nor of a page that measures)
     if (!title && !unkept && !q.has('noreplay')) game.tape = new HandTape(HAND.count);
@@ -201,6 +217,7 @@ async function main(): Promise<void> {
   MUSIC.pieces = MUSIC.byLevel = MUSIC.theirs = true; audio.scoreSet = setlistOfQuery(location.search); let run = -1;   // (the level's own music, as tense as those who are against him)
   if (q.has('mute')) { audio.volume.master = 0; audio.start = () => { /* silent */ }; }
   const hud = kitPicture ? null : new DrawHud(game, ask); if (hud && (play || q.get('cards') === '0')) hud.overlay.cards = false;   // (a run being played again waits for nobody)
+  deaf = () => audio.hush();
   const settings = settingsOf(game, hud?.overlay); setOptionsDeps({ engine, quality, audio, game: settings });   // (what this machine keeps of the volumes and the wall hold is put on them)
   for (const ev of ['pointerdown', 'keydown'] as const) window.addEventListener(ev, () => audio.start(), { capture: true });   // (a browser's sound begins with a hand on the page)
   engine.fogFrame = fog; const rims = engine.outline = makeOutlineFrame(); engine.beams = world.beams;
@@ -262,23 +279,29 @@ async function main(): Promise<void> {
   };
   /** the walk was lost to a panic: the picture stands as it was, and any place before it can be gone back to */
   const lostWalk = (): void => { console.error(play!.lost!.message); readout.say(`${play!.ends === play!.lost!.message ? 'the run stopped here when it was played' : 'the replay stopped here'}: ${play!.lost!.words.split('\n')[0]}`); };
-  const tick = (dt: number): void => {
-    if (thaw) { thaw = false; input.pressed.add('Paused'); input.pressed.add('Thawed'); }   // (the first tick after a card is told: what was held when it came up is let go unsent, in the tick)
-    owed = false;   // (a card asked for another game, and this tick stands it, whatever else holds the world still)
-    if (play) { if (!play.tick()) { played.paused = true; if (game.lost) lostWalk(); return; } }
-    else game.step(dt, sampleHand(game.numbersOf(), input, cam, canvas));
+  /** what a tick of the game's did once is played, and what it left for the view is taken */
+  const told1 = (): void => {
     if (D.u[view() + View.stood] !== stood) anew();
     weather.told();
     events.from();
     D.fresh();   // (a sound asks the module, whose memory may have grown)
     lens();
+  };
+  const tick = (dt: number): void => {
+    if (thaw) { thaw = false; if (!net) { input.pressed.add('Paused'); input.pressed.add('Thawed'); } }   // (the first tick after a card is told: what was held when it came up is let go unsent, in the tick)
+    owed = false;   // (a card asked for another game, and this tick stands it, whatever else holds the world still)
+    if (play) { if (!play.tick()) { played.paused = true; if (game.lost) lostWalk(); return; } }
+    else if (net) { if (net.tick(input, cam, canvas, stopped(), told1)) { anew(); lens(); } }
+    else game.step(dt, sampleHand(game.numbersOf(), input, cam, canvas));
+    if (!net) told1();
     const o = view(), reeled = reel.step(dt), spectating = !reeled && D.u[o + View.spectating] !== 0;
     if (reeled) { follow[0] = reeled[0]; follow[1] = reeled[1]; follow[2] = reeled[2]; } else three(follow, o + View.follow);
+    const led = net?.lead ?? null; if (led) for (let i = 0; i < 3; i++) follow[i] += led.by[i];   // (his own man is drawn ahead of the game, and looked at where he is drawn)
     // come round a man spectated to a side he can be seen from, low where the view is close; else the usual tilt
     if (spectating) cam.autoYaw(dt, follow, ask.blocked);
     cam.easeYaw(dt, spectating);
     if (!cam.pin) cam.pitch += ((spectating && cam.desiredDistance < 12 ? LOW_PITCH : HIGH_PITCH) - cam.pitch) * Math.min(1, dt * 3);
-    if (!posed()) cam.step(dt, follow, spectating || reeled ? null : three(aim, o + View.aim));
+    if (!posed()) cam.step(dt, follow, spectating || reeled ? null : led?.aim ?? three(aim, o + View.aim));
     pair.capture(cam);
     weather.tick(dt, cam);
     { const n = D.u[o + View.saves]; if (n !== saves) { saves = n; const rows = game.saves().rows, all = new Set(rows.map(r => ofRun(nameOf(r)))); for (const k of pictures.keys()) if (!all.has(k)) pictures.delete(k); const newest = rows.reduce<typeof rows[number] | null>((a, r) => a && a.savedAt > r.savedAt ? a : r, null); if (newest && !pictures.has(ofRun(nameOf(newest)))) pics.want(ofRun(nameOf(newest))); } }
@@ -294,6 +317,7 @@ async function main(): Promise<void> {
     if (hud.tabUp && (paused || optionsOpen() || hud.overlay.cardUp)) hud.tabShow(false);   // (a card or a screen over Tab's puts it away)
     const still = stopped();
     if (!title && input.hit('Tab') && hud.tabKey(!still)) input.pressed.delete('Tab');
+    if (net && input.hit('F5')) { input.pressed.delete('F5'); net.door.pass(NO_SAVE); }
     if (hud.tabUp && input.hit('F5') && input.saveKey?.()) { input.pressed.delete('F5'); game.commands.save(); hud.tabShow(false); }   // (written as play goes on)
     if (still) return;
     if (input.hit('BracketLeft')) { engine.settings.exposure /= 1.25; input.pressed.delete('BracketLeft'); }
@@ -306,7 +330,7 @@ async function main(): Promise<void> {
     if (!sought()) return;
     if (play && game.lost) { input.endFrame(); return; }
     dt *= played.pace;
-    const still = ticks === undefined && stopped(); if (still) dt = 0;   // (the world holds still under a card: what only the picture moves with it)
+    const still = ticks === undefined && !net && stopped(); if (still) dt = 0;   // (the world holds still under a card: what only the picture moves with it)
     time += dt;
     const t0 = performance.now(), plan = ticks !== undefined ? { ticks, acc, drift } : still ? { ticks: 0, acc, drift } : planTicks(acc, dt, FIXEDSTEP, drift); acc = plan.acc; drift = plan.drift;
     const locks = D.u[view() + View.locks];
@@ -314,6 +338,7 @@ async function main(): Promise<void> {
     if (input.orbitDX && plan.ticks && !(locks & 1)) cam.rotate(ctrlTurn(input.orbitDX));   // (in a frame's first tick: the next tick's hand looks the way it left the view)
     cam.frame(); kit?.before(Math.max(1, canvas.clientWidth) / Math.max(1, canvas.clientHeight));
     for (let i = 0; i < plan.ticks; i++) { if (i) input.endTick(); tick(1 / FIXEDSTEP.hz); }
+    if (net?.door.far) { if (plan.ticks) input.endFrame(); return; }   // (ticks nobody sees: the picture stands until the page is level)
     // (what this machine keeps of the run: its try as it begins, its end before the card of it)
     { const on = D.u[view() + View.run]; if (!unkept && books.due((on & 1) !== 0, (on & 2) !== 0)) books.tell(game.run()); }
     // (the run's end card, once each time one is due; a restart or a load is another end to come)
@@ -321,7 +346,7 @@ async function main(): Promise<void> {
     D.fresh();
     if (!measure.freezing) { skyFrom(engine, D); fogFrom(fog, D); }   // (a take over a held world flips what these write)
     smokeFrom(smoke, D);
-    if (!kit) rimsFrom(rims, D); weather.frame(cam); dustFrom(engine.particles!, D);
+    weather.frame(cam); dustFrom(engine.particles!, D);
     { const o = view(); engine.settings.nvAmount = D.f[o + View.night]; engine.settings.hitFlash = D.f[o + View.hit]; }
     game.look(lookNumbers(engine.settings, engine.world, !!ch.cast));
     const t1 = performance.now();
@@ -331,7 +356,7 @@ async function main(): Promise<void> {
     smoke.update(dt);
     const a = ticks === undefined ? lag.at(acc * FIXEDSTEP.hz) : 1, pose = pair.at(a, cam);
     if (pose) cam.drawIn(pose);
-    game.frame(a, cam.focus); lights.from(); men.from(engine.device.queue); reach.from(); world.from();
+    game.frame(a, cam.focus); if (!kit) rimsFrom(rims, D); lights.from(); men.from(engine.device.queue); reach.from(); world.from();
     cam.kickIn(); try { engine.render(cam, time, dt, true); const tH = performance.now(); if (hud) { hud.blank = title && !reel.live; hud.told(); hud.draw(cam, canvas); } told.hud = performance.now() - tH; } finally { cam.kickOut(); cam.drawOut(); }
     kit?.after(D.u[view() + View.kit]);
     if (plan.ticks) input.endFrame(); else if (still) { input.endFrame(); thaw = true; }   // (pressed over a held world: nobody's, and the first tick after it is told)
@@ -376,19 +401,20 @@ async function main(): Promise<void> {
       console.error(e); showFatal(`The frame loop threw and has been stopped:\n\n${(e as Error)?.stack ?? e}`); }
   };
   // ---- the pause card: the world holds still under it
-  const runSaves: RunSaves = { elapsed: () => game.saves().elapsed, timeline: () => game.saves().rows, offer: () => { const s = game.saves(); return s.rows.find(r => r.key === s.offer) ?? null; }, age: row => agoWords(game.saves().elapsed - row.missionT), picture: row => pictures.get(ofRun(nameOf(row))) ?? null, load: key => { game.commands.load(key); owed = true; return null; }, due: () => asked };
+  const runSaves: RunSaves = { elapsed: () => game.saves().elapsed, timeline: () => game.saves().rows, offer: () => { const s = game.saves(); return s.rows.find(r => r.key === s.offer) ?? null; }, age: row => agoWords(game.saves().elapsed - row.missionT), picture: row => pictures.get(ofRun(nameOf(row))) ?? null, load: key => { if (net) return 'You can\u2019t load a checkpoint in a co-op game.'; game.commands.load(key); owed = true; return null; }, due: () => asked };
   let asked = false;   // (a save by hand asked for on the card that is up)
   const inPanel = (): HTMLElement | null => { const a = document.activeElement; return (a instanceof HTMLInputElement || a instanceof HTMLSelectElement) && a.closest('#panel') ? a : null; };
-  const pause = new PauseCard({ title: desk().brief(location.search).title || name.replace(/\.json$/, ''), saves: runSaves, verdict: () => game.verdict(), may: () => !game.lost && !title && !play && !brief?.up && !measure.bench?.active, restart: () => { game.commands.restart('restarted'); owed = true; }, quit: () => { reopenMissionsAfterLoad(); location.assign(location.pathname + desk().leave(location.search) + location.hash); }, 
+  const pause = new PauseCard({ title: desk().brief(location.search).title || name.replace(/\.json$/, ''), saves: runSaves, verdict: () => game.verdict(), may: () => !game.lost && !title && !play && !brief?.up && !measure.bench?.active, restart: () => { if (net) net.door.pass('You can\u2019t restart a co-op game from here.'); else { game.commands.restart('restarted'); owed = true; } }, quit: () => { reopenMissionsAfterLoad(); location.assign(location.pathname + desk().leave(net ? netLeave(location.search) : location.search) + location.hash); }, 
     // (Escape: Tab's card goes, or a field of the debugger's is let go, and that is the press's whole job)
     away: () => { const field = inPanel(); if (hud?.tabUp) hud.tabShow(false); else if (field && !pause.up) { field.dataset.esc = '1'; field.blur(); delete field.dataset.esc; } else return false; input.pressed.delete('Escape'); return true; },
-    save: () => { if (optionsOpen() || missionsBusy() || !input.saveKey?.()) return false; game.commands.save(); return asked = game.saves().hand; },
+    save: () => { if (optionsOpen() || missionsBusy() || !input.saveKey?.()) return false; if (net) { net.door.pass(NO_SAVE); return false; } game.commands.save(); return asked = game.saves().hand; },
     turned: up => { paused = up; if (up) { game.commands.letGo(); hud?.tabShow(false); } else { thaw = true; asked = false; } input.keys.clear(); input.buttons = 0; input.endFrame(); input.lockExcept = up ? new Set() : null; last = performance.now(); } });
   onEnded = () => { if (!kit && !play && !ownPage(q)) pause.end(); };   // (a run's page has no end card: the next is its own)
-  const cloud = kitPicture || play ? null : drawCloud(q, { gpu, engine, quality, game, measure, mission: desk().brief(location.search).title || (q.get('levelFile') ?? ''), offBooks: ownPage(q), live: () => !title && !stopped() && !document.hidden && game.view().live, still: () => stopped() || measure.sweep.active });
+  const cloud = kitPicture || play ? null : drawCloud(q, { gpu, engine, quality, game, measure, mission: desk().brief(location.search).title || (q.get('levelFile') ?? ''), offBooks: ownPage(q) || !!net, live: () => !title && !stopped() && !document.hidden && game.view().live, still: () => stopped() || measure.sweep.active });
   const bencher = drawBench({ idle: capMs => cloud ? cloud.cloud.filesIdle(capMs) : Promise.resolve(true), gpu, engine, smoke, quality, input, game, settings, measure, say: words => readout.say(words) }); bencher.go(); if (refused) readout.say(`benchmark not now: ${refused}`);
   // ---- the title stays up over its floor, live; a mission's run begins when the player starts it
   const drawTitle = (): void => { const root = document.getElementById('menu')!, c = document.createElement('div'); c.className = 'card'; root.textContent = ''; root.classList.add('on', 'title'); root.appendChild(c); titleScreen(c, { note: cloudNote, shows: { bench: () => { bencher.begin(); return true; } }, cheats: () => cheatWords(settings), closed: moved => { if (title && moved) drawTitle(); } }); };
+  if (net) { net.ready(); coopInvite(net.door, q); }
   if (title) { drawTitle(); if (missionsReopenAsked() && !startPage()) openStartPage(); }
   else if (brief) startWaits(brief, { drawn: () => told.frames, measuring: () => quality.calibrating, settling: on => { settling = on; }, settled: () => { boot.mark('settled'); }, run: () => { input.keys.clear(); input.buttons = 0; input.endFrame(); thaw = true; audio.start(); input.focusGame(); last = performance.now(); } });
   else card.off();

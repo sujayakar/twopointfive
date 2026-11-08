@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dir, '../..'), ENTRIES = ['src/host/drawpage.ts', 'src/ui/startpage.ts', 'src/ui/loadbrief.ts'].map(f => join(ROOT, f));
-const BANNED = /^(src\/(game|sim|net|replay)\/|src\/anim\/skeleton\.ts$|src\/host\/(rustgame|rustdress|standup|profile|loop|tween|ahead)\.ts$|tools\/)|^tps-bridge\//;
+const BANNED = /^(src\/(game|sim|replay)\/|src\/anim\/skeleton\.ts$|src\/host\/(rustgame|rustdress|standup|profile|loop|tween|ahead)\.ts$|tools\/)|^tps-bridge\//;
 /** leaves that stand in those folders and hold nothing of the game: each goes to a folder of its own when src/game does */
 const LEAVES = new Set(['src/game/camera.ts', 'src/game/input.ts', 'src/game/crossing.ts', 'src/game/sheetModel.ts', 'src/game/shardModel.ts',
   // (the replays this browser keeps, as files: no game)

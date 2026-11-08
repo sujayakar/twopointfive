@@ -11,6 +11,7 @@ import { NetClient, type ClientHost } from './client';
 import { onWay, wayOff, type Way } from './delay';
 import { FORESEE, Foresee, type Ahead, type Foreseen } from './foresee';
 import { NET, type WireCmd } from './wire';
+import { buildName } from '../host/buildname';
 
 const KEEP = 'tps.net.seat', KEEP_TRY = 'tps.net.try';
 /** `helloMs`: how long the page waits for the server's welcome. `walkMs`: past it a page tick that is level does not walk its second tick (one is always
@@ -90,11 +91,6 @@ function seatKey(q: URLSearchParams, url: string, game: string): { key: string |
     if (Array.isArray(k) && k[0] === url && k[1] === game && typeof k[2] === 'string') return { key: k[2], kept: true };
   } catch { /* a browser that keeps nothing */ }
   return { key: on, kept: false };
-}
-
-/** the build this page is, as the dev server and a hosted build both say it ('' = it has no name: uncommitted changes, a static copy) */
-export async function buildName(): Promise<string> {
-  try { const r = await fetch('/qa/commit', { cache: 'no-store', signal: AbortSignal.timeout(3000) }); const c = r.ok ? (await r.text()).trim() : ''; return /^[0-9a-f]{7,40}$/.test(c) ? c : ''; } catch { return ''; }
 }
 
 /** what a walk of confirmed ticks goes round: `far`: ticks nobody sees begin / are over (the mixer shut; its tidy when the page is level) · `run`: a run of ticks between

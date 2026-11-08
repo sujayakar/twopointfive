@@ -216,6 +216,7 @@ impl Boxes {
         self.epoch += 1;
     }
     /// nothing is drawn through what went before: the game is another than the one last drawn
+    pub fn hold(&mut self) { self.have = self.have.min(1); }
     pub fn cut(&mut self) { self.have = 0; self.drawn.clear(); self.glass.cut(); }
 
     /// A TICK HAS RUN: the statics that changed are packed again, and the frame's own boxes are packed where the tick left them (`again`: the tick already taken)
@@ -304,7 +305,7 @@ impl Boxes {
     }
 
     /// A FRAME IS DRAWN `a` of the way from the tick before to the last (1 = where the last left them). `focus` = where the view looks; `drawn` = this is drawn
-    pub fn frame(&mut self, g: &Game, a: f64, focus: [f64; 3]) {
+    pub fn frame(&mut self, g: &Game, a: f64, focus: [f64; 3], lead: Option<&crate::lead::Moved>) {
         let n = self.was.len();
         self.stood.truncate(n);
         for k in 0..self.own.len() {
@@ -321,6 +322,7 @@ impl Boxes {
                     }
                 }
             }
+            if let Some(by) = lead { if by.wears(o.key) { c = by.pt(c); yaw += by.turn; rot = rot.map(|q| by.rot(q)); } }
             pack::place(&mut self.geo[n + k], &mut self.mat[n + k], c, yaw, rot);
             self.stood.push(grid::Stood { c, h: o.h, yaw, rot, flags: o.flags });
         }

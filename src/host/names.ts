@@ -12,14 +12,8 @@
 // recap's cast) are what every machine holds to the bit. Nothing a tick does reads this file; a page with no names reads as it did.
 import type { Game } from '../game/game';
 import { rawGame, seatOfId, playerName } from '../game/seats';
-import { cleanName } from '../net/wire';
 
-const LS = 'twopointsix.name';
-let mem: string | null = null;   // (a browser with no store: the name lasts the page)
-/** this browser's player's name ('' = none) */
-export function myName(): string { if (mem !== null) return mem; try { return cleanName(localStorage.getItem(LS)); } catch { return ''; } }
-/** …as he types it: cleaned, kept, and handed back as kept */
-export function setMyName(raw: string): string { const n = cleanName(raw); try { if (n) localStorage.setItem(LS, n); else localStorage.removeItem(LS); mem = null; } catch { mem = n; } return n; }
+export { myName, setMyName } from './myname';
 
 const NAMES = new WeakMap<object, readonly string[]>();
 /** the seats' names as the server last said them, one a seat ('' = that player picked none), cleaned by whoever heard them (net/client.ts) */

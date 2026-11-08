@@ -23,7 +23,14 @@ line).
     turning, the other at nothing; and `a_look_ahead_is_where_the_game_then_has_him`). KNOWN: `g.wind.to_pool` (the gusts the picture's particles take)
     follows the host's view and is in the wider word's `wind`; nothing of a tick reads it. A level with more jets than the pool near one view and not the
     other's would count there, never in the alarm: it wants to be the drawing's own list.
-  - NOT DONE: the page (its owner's `host/drawnet.ts`); Host game through the control plane with this setup; a kit the host keeps rides `commands`
+  - **The page that draws** (`draw.html?net=`; `src/host/drawnet.ts`): the welcome's start stood as it is said, at the game's own address; a page tick samples the hand, sends it as a record, walks, and
+    draws. His own man is moved as one body where the look ahead has him (`rust/game_draw/src/lead.rs`: bones, proxies, what he wears, the lights in his hands, his rim), a page tick with nothing confirmed
+    holds what moves where it stands (`face_draw_hold`), several ticks in one are blended over them all (`face_draw_over`), ticks nobody sees are not drawn. A card takes the hands off and the game goes on;
+    Restart, a save and a load are refused in words; the title has Co-op (`ui/coop.ts` with no game under it; a hosted game's setup carries `stand: 'module'` and this machine's settings but the kit). Check:
+    `bun run tools/draw/net-check.ts` (the server's core, a second player and the page's half on a check's clock: the whole game's words through stalls, bunched ticks, a restart and a page asleep;
+    `NET_BREAK=1` fails). READ in Chromium in software against `tools/mp/server.ts` and a bot: 69 of 69 words of the whole game over 2,078 ticks. Players' picked names are not shown on it yet. Not seen on
+    a GPU, nor played by two.
+  - NOT DONE: Host game through the control plane with this setup; a kit the host keeps rides `commands`
     already (machineBefore's own), nobody sends one yet.
 - **CO-OP IS ON THE RUST GAME** (2026-11-07). The TypeScript tick is deleted; the game server, the scripted clients and the page in a game step the Rust
   game, and the Co-op screen is up again (for some hours of 2026-11-07 it answered "Co-op can’t be played on this build yet": `COOP.down`, gone once
