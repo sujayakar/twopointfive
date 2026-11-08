@@ -280,7 +280,6 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/math/side.ts sorted': 'CACHE · (math/side.ts\'s own bookkeeping: how many names the registry was last sorted at)',
   'src/scene/cut.ts CUT_CLIP': 'SCRATCH · the clip test\'s answer (cut.ts:237, on its `return true`), read by the caller straight after (boxes.ts:894-899, collision.ts:30)',
   'src/scene/shapes.ts SHAPES_STATS': 'TALLY · counted in shapes.ts shapeLevel as a level is stood up; no read in src/game, src/scene or src/anim',
-  'src/scene/round.ts ROUND_STATS': 'TALLY · counted in round.ts roundLevel as a level is stood up; no read in src/game, src/scene or src/anim',
   'src/scene/cut.ts cutConfig': 'CONFIG · written by cutBoxesInit from the URL / store (cut.ts:44-47) and the knob roads; read by boxes.ts, wallpen.ts',
   'src/scene/look.ts lookPlace': 'CONFIG · written by setLookPlace only (look.ts:36: the page says it once at boot)',
   'src/scene/look.ts suitAsked': 'CONFIG · (no initialiser). Written by setSuitAs only (look.ts:24: a window\'s host says it for its own picture)',

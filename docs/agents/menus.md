@@ -1300,7 +1300,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (it is held on, so two sliders there move nothing), 'setup ▸ seconds it stays up unused' (the only row left in Gun setup), 'far line: distance from
   you (edge off)'; section summaries that print a constant 'on'. THE NOTES WERE NOT SWEPT: where an area note names a debugger box for a settled
   switch, that box is gone.
-  KNOWN BESIDE IT, NOT THIS CHANGE'S: `?round=0` still puts the PICTURE's half of round things off (`main.ts` reads `ROUND.on` for the GPU before the hold
+  KNOWN BESIDE IT, NOT THIS CHANGE'S, AND GONE SINCE 2026-11-07 WITH THE WORD: `?round=0` put the PICTURE's half of round things off (`main.ts` reads `ROUND.on` for the GPU before the hold
   is laid) while the game holds them round; a machine that once unticked a glass box keeps `{on:false}` in its store, read back and refused at every
   visit, with no box left to rewrite it ('1 kept row … is not applied' on the panel's first line); `wallpen-page.cjs` cannot pass on this tree for its
   `?wallpen=0` arm, a settled word the hold turns away (its panel line now reads the rule's status line where it read the box; NOT run).

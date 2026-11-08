@@ -120,7 +120,8 @@ export async function levelValidate() {
   plant('two vents with one id', d => { d.vents[2].id = d.vents[1].id; }, /vents\[2\]: duplicate id/);
   plant('a vent with a typo\'d key ("reech")', d => { d.vents[3].reech = 2; }, /unknown key 'reech'/);
   plant('a stair connector (G2 stub) to an unknown floor', d => { d.connectors.push({ id: 'st0', kind: 'stair', from: { floor: 'f0', c: [1, 0, 1], h: [1, 1, 1] }, to: { floor: 'mezz', c: [1, 3, 1], h: [1, 1, 1] } }); }, /connectors\[0\]\.to/);
-  plant('version 2 handed to the v1 loader', d => { d.version = 2; }, /version: expected 1/);
+  plant('version 3 handed to the v2 loader', d => { d.version = 3; }, /version: expected 2/);
+  plant('a file of version 1 is told the command that converts it', d => { d.version = 1; }, /version: version 1 writes a round thing as four slabs: bun run tools\/levels\/round-convert\.ts/);
   // hand-edit typos and prototype tricks: an unknown key anywhere is data that would be ignored on load and dropped on save — reported, per record
   plant('a typo\'d key on a box ("emmisive")', d => { d.boxes[7].emmisive = [1, 1, 1]; }, /boxes\[7\] 'box_0007': unknown key 'emmisive'/);
   plant('a typo\'d key on a light ("colour")', d => { d.lights[1].colour = [1, 1, 1]; }, /lights\[1\] 'storage_bulb': unknown key 'colour'/);
