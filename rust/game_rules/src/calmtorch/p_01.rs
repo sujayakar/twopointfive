@@ -19,7 +19,7 @@ pub fn place_light(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
     crate::game::game_visibility_of(g, e)
 }
 
-/// Is this point lit enough to work in: `bar` there, on floor in plain view inside `spillM`, or by day on daylit floor out to `dayM`. (calmtorch.ts workLit)
+/// Is this point lit enough to work in: `bar` there, on floor in plain view inside `spillM`, or by day on lit floor out to `dayM`. (calmtorch.ts workLit)
 pub fn work_lit(g: &mut crate::game::Game, x: f64, z: f64, bar: Option<f64>) -> bool {
     let bar = bar.unwrap_or(g.k.torch.lit_at);
     if place_light(g, x, z) >= bar {
@@ -54,8 +54,7 @@ pub fn work_lit(g: &mut crate::game::Game, x: f64, z: f64, bar: Option<f64>) -> 
             if crate::scene_collision::segment_blocked(g, eye, [qx, 1.5, qz], None, None, None) {
                 break;
             }
-            let e = crate::hours::hour_light_at(g, [qx, 1.2, qz]);
-            if crate::game::game_visibility_of(g, e) >= bar {
+            if place_light(g, qx, qz) >= bar {
                 return true;
             }
             r += 3.0;

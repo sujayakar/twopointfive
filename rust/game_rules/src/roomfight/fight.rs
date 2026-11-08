@@ -56,8 +56,8 @@ pub fn pair_smoke(g: &mut crate::game::Game, a: CharId, b: CharId) -> f64 {
     }
 }
 
-/// The light to read for `o` when `eye` stands inside the cone of his burning weapon light, else 0.   (roomfight.ts lampGlare)
-pub fn lamp_glare(g: &crate::game::Game, eye: CharId, o: GuardId) -> f64 {
+/// The light to read for `o` when `eye` stands inside the cone of his burning weapon light, else 0: as strong beside an hour's light as the lamp is, to eyes used to the place.   (roomfight.ts lampGlare)
+pub fn lamp_glare(g: &mut crate::game::Game, eye: CharId, o: GuardId) -> f64 {
     if !g.fight.live { return 0.0; }
     let l = g.gd[o].flashlight;
     let light = &g.tab.light[l];
@@ -67,7 +67,12 @@ pub fn lamp_glare(g: &crate::game::Game, eye: CharId, o: GuardId) -> f64 {
     let (dx, dy, dz) = (e[0] - pos[0], e[1] - pos[1], e[2] - pos[2]);
     let len = m::hyp3(dx, dy, dz);
     if len > range || len < 1e-3 { return 0.0; }
-    if (dx * dir[0] + dy * dir[1] + dz * dir[2]) / len >= m::cos(outer_deg * v3::DEG) { g.k.roomfight.lamp } else { 0.0 }
+    if !((dx * dir[0] + dy * dir[1] + dz * dir[2]) / len >= m::cos(outer_deg * v3::DEG)) { return 0.0; }
+    let exposure = crate::hours::exposure(g);
+    if exposure >= 1.0 { return g.k.roomfight.lamp; }
+    let k = sim::light::by_day(crate::render_lights::light_by_day(light), light.intensity, light.peak_intensity, exposure) / light.intensity;
+    let k = m::min(1.0, k * crate::guards::eyes_in(g, e));
+    m::max(0.0, g.k.roomfight.lamp + g.tune.vis_slope * m::log(k))
 }
 
 /// Is the room fight running this frame?   (roomfight.ts fightLive)

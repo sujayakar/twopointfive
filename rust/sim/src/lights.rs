@@ -54,6 +54,8 @@ pub const R_AREA: u32 = 8;
 pub const R_BEACON: u32 = 16;
 pub const R_CONE: u32 = 24;
 pub const R_STEADY: u32 = 32;
+/// what the lamp is by day (light.rs by_day), three bits from here
+pub const R_DAY: u32 = 6;
 // a camera's truths (`cam_bits`)
 pub const C_SWEEP: u32 = 1;
 pub const C_LAST: u32 = 2;

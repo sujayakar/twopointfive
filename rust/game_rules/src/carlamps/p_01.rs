@@ -134,6 +134,7 @@ pub fn car_lamp_paint(g: &mut crate::game::Game, t: FixtureId) {
     let albedo = seam_box_row(g, b).albedo;
     if !near3(&albedo, &want, 0.0) {
         seam_box_row(g, b).albedo = want;
+        crate::scene_collision::wrote(g);   // (what it sends back of the light is of the box world's row)
         if broken { g.stats.carlamps.painted += 1; }
     }
 }
