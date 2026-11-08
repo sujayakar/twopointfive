@@ -663,7 +663,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   19,264, the bazaar alone 19,711, each replayed on a second page with the die and every block part equal at every step and no man over 0.007 m off the trace (its
   own rounding); night breach and rescue walked by `rerun.ts` to 0.01 m; a room clear of 1,505 steps on a page that does draw (software adapter) the same.
   CHECK: `probes.ts cardreplay`, `replaybuf-probes.ts`, `replaykeep-probes.ts`, and the page tool `engine-replay-page.cjs` (every section but `sent`,
-  on the software adapter). The five sound replays are of the version before and are refused until they are recorded again. Never seen on a GPU.
+  on the software adapter). The five sound replays (office-loud,
+  wall-charge, chairs, reloads, doors) were recorded again on the page after it and play back as recorded to their last step (seed 1 each; `sound-tapes.cjs --check`).
+  Their player plants no light meter any more: the game senses for itself. Never seen on a GPU.
 - **A run's tape lives over a restart and a loaded checkpoint, and a page's run walks again headless** (2026-11-07). The card's Restart puts the game back to the
   start it was kept at, clock and die and all, with the same player object (`host/rustgame.ts toStart`): the tape read that as 'the game clock was moved between
   two steps' and ended, and the trace marked it a loaded checkpoint, so the map viewer opened a card's file at the wrong try. The host now counts it
