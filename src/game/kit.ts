@@ -1156,29 +1156,13 @@ export function kitIssuedPage(on = true) { { const __s = RUST_SURFACE; if (__s) 
  *  block, and every mission with none are as they were. The sponge rounds are a row of the card as a tree: with the tree off the rifle's are what it is
  *  built with, on every mission, and this rule has none to take. Off (and ISSUEWHOLE_BREAK=1, the check's) = the build before: the hand-overs land
  *  over the card. */
-/** A LESSON THE PLAYER PACKS FOR (`ISSUE.picked`; ?kitpack=0 puts it off, TPS_KITPACK=1 raises it on a frozen run): a tutorial row that carries `packs`
- *  (scene/scenarios.ts ScenarioEntry — no row today; the one that did, the squad mission, went 2026-11-07, and the rule leaves with its Rust side)
- *  is NOT played with the kit as issued. Its loadout screen shows the cards (kitPacks below, read by game/loadout.ts kitAsIssued) and its page stages what
- *  this machine keeps, as any mission's does: so what he packs on that step is what he and the four carry down the street. Every other lesson is as it
- *  was. The headless lesson runs never raised the issued page, so no frozen or shipped digest moves: the rule is the page's, and a recording's. A
- *  recording from before the key replays with it off (journal.ts). Off (and KITPACK_BREAK=1, the check's) = the build before: that row is as issued too,
- *  no card on its screen. */
-export const ISSUE = { on: true, whole: false, picked: false };
-const WHOLE_BREAK = envIs('ISSUEWHOLE_BREAK'), PICKED_BREAK = envIs('KITPACK_BREAK');
-/** this row's lesson is packed for by the player (the rule on, the row marked) */
-export const kitPacks = (e: { packs?: unknown } | null | undefined): boolean => ISSUE.picked && !PICKED_BREAK && !!e?.packs;
-/** THE PAGE OF A LESSON SAYS WHICH (main.ts as it boots, with the row of the level it loads — null on every other page; the re-run of a page's recording
- *  says it again): what its stagings wear is asked of the row AT EACH STAGING, with the rule as it then stands — the page says its row before a
- *  recording's knobs are on the tables, and a recording from before the key must stage the issue. A row not packed for = the issued page (kitIssuedPage,
- *  which a tool may still raise by itself). A row packed for = the kept cards, and THE LEAST HE CARRIES THERE (`packs.frags`): the street's steps ask for
- *  one thing of his own, a frag over the sandbags, and the men behind them are held down until it lands, so a card packed with none would leave a line
- *  asking for what he cannot do. His frags are never fewer than that there; the loadout screen shows it on his tile as the mission's (ui/loadout.ts). */
-let lessonRow: { packs?: { frags?: number } } | null = null;
-export function kitLessonPage(row: { packs?: { frags?: number } } | null | undefined) { lessonRow = row ?? null; }
-/** every staging on this page wears the issue cards (a tool raised it, or the page's lesson is not one he packs for) */
-const pageIssued = (): boolean => issuedPage || (!!lessonRow && !kitPacks(lessonRow));
-/** the least frags he carries on this page (0: no such page) */
-const pageFrags = (): number => (lessonRow && kitPacks(lessonRow) ? lessonRow.packs?.frags ?? 0 : 0);
+export const ISSUE = { on: true, whole: false };
+const WHOLE_BREAK = envIs('ISSUEWHOLE_BREAK');
+/** THE PAGE OF A LESSON SAYS WHICH (as it boots, with the row of the level it loads; null on every other page): every staging on it wears the issue. A tool may raise the issued page by itself (kitIssuedPage). */
+let lessonRow: object | null = null;
+export function kitLessonPage(row: object | null | undefined) { lessonRow = row ?? null; }
+/** every staging on this page wears the issue cards */
+const pageIssued = (): boolean => issuedPage || !!lessonRow;
 /** the level's block names a card for you, and the rule is on: nothing is handed over it (the staging below; ui/loadout.ts, which draws what is handed) */
 export const kitIssueWhole = (members?: { [place: string]: unknown } | null): boolean => ISSUE.whole && !WHOLE_BREAK && !!members?.['0'];
 function kitIssue(g: Game, f: () => void): boolean {
@@ -1279,7 +1263,6 @@ export function kitPlayer(g: Game) { { const __s = RUST_SURFACE; if (__s) { cons
   pl.wand = (m.wand && wandRow()) || (lent && WAND.on && quietWand(g));   // (the optical wand in a pouch: wand.ts — a card as issued carries none, so nothing changes on him; quietfog.ts: a quiet mission under the fog that hands out cameras hands him one too — even on a card whose gun has no launcher for them)
   if (m.suit !== 'issued') pl.char.tint = [...SUITS[m.suit].tint] as Vec3;
   if (m.trim !== 'issued') pl.char.tint2 = [...TRIMS[m.trim].tint] as Vec3;
-  if (!issuing && pl.frags < pageFrags()) pl.frags = pageFrags();   // (a lesson he packed for: never fewer than its street asks — kitLessonPage)
   loadWear(g, issuing ? null : m);   // (kitload.ts: what this card weighs — not where the staging chose his kit itself: a lesson's page, a mission's own issue)
   kitAlone(g);
 }
