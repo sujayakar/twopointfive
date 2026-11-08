@@ -76,7 +76,7 @@ const RESCUE: RescueData = {
   hostages: [{ pos: [26.4, 0, 4.9], face: 0 }, { pos: [28.4, 0, 5.45], face: -0.5 }],
   captor: { pos: [27.8, 0, 7.3], aimAt: DOOR_AIM },
   doorMan: { inside: { pos: [23.4, 0, 6.6], aimAt: DOOR_AIM }, outside: { pos: [29.4, 0, 11.1], aimAt: [21, 1.1, 11.1] } },
-  roamers: [{ pos: [31.4, 0, 15.2], aimAt: [30.6, 1.1, 12.4] }, { pos: [7.2, 0, 6.4], aimAt: [9.6, 1.1, 9.8] }],
+  roamers: [{ pos: [31.4, 0, 15.2], aimAt: [30.6, 1.1, 12.4] }, { pos: [19.5, 0, 13.4], aimAt: [15.9, 1.1, 13.4] }],
   /** the corridor from the lobby arch to the hostage room, and the four openings onto it, west to east: the conference room's glass and door, the cubicles' west
    *  doorway, the server room's door, the cubicles' east doorway — where a man stands to cover each, and the point his gun is on */
   flow: {
