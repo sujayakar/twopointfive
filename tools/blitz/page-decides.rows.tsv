@@ -24,7 +24,6 @@ src/game/nightbreach.ts:*	decides	HUD mission lines	the plain night's state is w
 src/game/roomclear.ts:*	decides	HUD mission lines	whether the room clear is up and where it starts are worked out again on the copy
 src/game/defuse.ts:*	decides	HUD mission lines	whether the defuse is up, which charges are live and what Sam is working on are worked out again on the copy
 src/game/rescue*.ts:*	decides	HUD mission lines	who is a hostage is worked out again on the copy
-src/game/snatch*.ts:*	decides	HUD mission lines	whether the snatch is up is worked out again on the copy
 src/game/scenarioRun.ts:*	decides	HUD mission lines	which scenario is running and whose team a man is on are worked out again on the copy
 src/game/doors.ts:Doors.*	decides	HUD door and charge notes	which door is which by name, which side a man is on and whether he is locked out are worked out again on the copy
 src/game/doortools.ts:*	decides	HUD door and charge notes	the door notes (who waits, on which word, TOO CLOSE and who it names) are worked out by TypeScript on the copy each frame, and a door found shut is learnt on the copy only

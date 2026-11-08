@@ -211,7 +211,7 @@ fn close(g: &mut Game, end: (bool, &'static str, String)) {
         foes: RunVerdictFoes { down: foes_down, of: g.verdict.foes.keys().len() as f64, fell: g.verdict.fell_at.clone() },
         hostages, start: [g.verdict.origin[0], g.verdict.origin[2]],
     };
-    // the stealth mission raises its own card (the exfil, a player down, a snatch lost); every other end is this module's to announce
+    // the stealth mission raises its own card (the exfil, a player down); every other end is this module's to announce
     let stage = g.mission.stage;
     let all_down = { let mut a = true; for i in 0..g.seats.len() { let p = crate::cmd::seat_man(g, g.seats[i]); if !g.pl[p].down { a = false; break; } } a };
     let own = stage == crate::game::MissionStage::Done || (stage == crate::game::MissionStage::Failed && g.mission.down_card_at > 0.0) || (stage != crate::game::MissionStage::Failed && all_down);
@@ -219,7 +219,7 @@ fn close(g: &mut Game, end: (bool, &'static str, String)) {
     g.verdict.res = Some(res);
 }
 
-/// THE VERDICT'S TICK, after the scenarios, the mission and the snatch and defuse overlays have had this tick, so every end they wrote is in. The first
+/// THE VERDICT'S TICK, after the scenarios, the mission and the defuse overlay have had this tick, so every end they wrote is in. The first
 /// end of a run is latched in `g.verdict.res` and nothing after it changes it; a new mission is a new run.   (verdict.ts Verdict.tick)
 pub fn verdict_tick(g: &mut crate::game::Game) {
     if !live(g) { return; }

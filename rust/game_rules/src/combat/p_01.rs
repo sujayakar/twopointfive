@@ -188,7 +188,6 @@ fn man_down(g: &mut Game, hit_guard: GuardId, sg: Option<GuardId>, shooter: Char
     use crate::game::{DownBy, DownKind, GuardState};
     use crate::wounds::RoundDoes;
     let was_up = g.gd[hit_guard].state != GuardState::Dead;
-    if was_up && g.gd[hit_guard].civ.is_some() { crate::snatch::snatch_round_on(g, hit_guard, sg); }
     let team = g.gd[hit_guard].team;
     let foe = match sg { Some(s) => { let st = g.gd[s].team; crate::teams::is_hostile(g, st, team) } None => false };
     let sign = g.gd[hit_guard].callsign.clone();
