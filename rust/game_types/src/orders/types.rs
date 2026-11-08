@@ -7,21 +7,12 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug)]
 pub enum OrderLabel {
     Text { text: String },
-    DoorOpenClear,
-    DoorBangClear,
-    DoorCharge,
-    DoorFragClear,
-    DoorThresholdHold,
-    DoorGoSmall,
-    DoorGoBig,
-    DoorBigClear,
     WallRow,
     ThrowRow { kind: crate::squadthrow::SquadThrowKind },
     ThrowOpen,
     Work,
     Smoke,
     PairGo,
-    DoorThrWord,
     /// an order written as a module (orders/rows/): its own function
     Row(&'static crate::orders::Row),
 }
@@ -39,9 +30,6 @@ pub enum OrderCan {
 /// OrderDef.only: the men among those addressed this order is for. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Debug)]
 pub enum OrderOnly {
-    DoorHeldOrAll,
-    DoorGoSmall,
-    DoorGoBig,
     SilentAll,
     ShutDoor,
     ThrowRow { kind: crate::squadthrow::SquadThrowKind },
@@ -50,21 +38,12 @@ pub enum OrderOnly {
     Smoke,
     PairTake,
     PairGo,
-    DoorThrWord,
     /// an order written as a module (orders/rows/): its own function
     Row(&'static crate::orders::Row),
 }
 /// OrderDef.valid: these men together can carry it out here (true), or not (false, or the word for why). The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Debug)]
 pub enum OrderValid {
-    DoorOpenClear,
-    DoorBangClear,
-    DoorCharge,
-    DoorFragClear,
-    DoorThresholdHold,
-    DoorGoSmall,
-    DoorGoBig,
-    DoorBigClear,
     WallRow,
     ShutDoor,
     ThrowRow { kind: crate::squadthrow::SquadThrowKind },
@@ -74,7 +53,6 @@ pub enum OrderValid {
     PairTake,
     PairWatch,
     PairGo,
-    DoorThrWord,
     /// an order written as a module (orders/rows/): its own function
     Row(&'static crate::orders::Row),
 }
@@ -82,14 +60,6 @@ pub enum OrderValid {
 #[derive(Clone, Debug)]
 pub enum OrderIssue {
     Nothing,
-    DoorOpenClear,
-    DoorBangClear,
-    DoorCharge,
-    DoorFragClear,
-    DoorThresholdHold,
-    DoorGoSmall,
-    DoorGoBig,
-    DoorBigClear,
     WallRow,
     Silent,
     Loud,
@@ -102,7 +72,6 @@ pub enum OrderIssue {
     PairWatch,
     PairDark,
     PairGo,
-    DoorThrWord,
     /// an order written as a module (orders/rows/): its own function
     Row(&'static crate::orders::Row),
 }
