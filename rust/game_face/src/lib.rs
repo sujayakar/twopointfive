@@ -64,6 +64,7 @@ mod memo;
 mod page;
 mod harness;
 mod desk;
+mod net;
 
 type Game = game::game::Game;
 /// a game and what the host has handed over for its next step
@@ -80,7 +81,16 @@ struct Held {
     /// the seat nobody's hands are on, and who plays it
     hands: Option<(usize, game_run::hands_off::HandsOff)>,
 }
-impl Held { fn new(g: Box<Game>) -> Held { Held { g, cmd: None, cmds: None, after: Vec::new(), drawn: Default::default(), hands: None } } }
+impl Held {
+    fn new(g: Box<Game>) -> Held { Held { g, cmd: None, cmds: None, after: Vec::new(), drawn: Default::default(), hands: None } }
+    /// a seat's record for the next step; a seat nobody hands one is as it last was, with nothing pressed
+    fn hand_over(&mut self, seat: usize, cmd: game::cmd::PlayerCmd) {
+        let still = |s: game::ids::SeatId| { let c = self.g.tab.cmd_seat[s].cmd.as_ref().unwrap_or(&cmd); game::cmd::PlayerCmd { keys: Vec::new(), pressed: Vec::new(), buttons: 0.0, clicked: 0.0, wheel: 0.0, ..c.clone() } };
+        let mut cmds = self.cmds.take().unwrap_or_else(|| self.g.seats.iter().map(|&s| still(s)).collect());
+        cmds[seat] = cmd;
+        self.cmds = Some(cmds);
+    }
+}
 
 thread_local! {
     static GAMES: RefCell<Vec<Option<Held>>> = const { RefCell::new(Vec::new()) };
