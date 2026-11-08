@@ -1,4 +1,4 @@
-// THE AIR, THE WIND AND THE FIRES OF A PAGE THAT HOLDS NO GAME: each the picture's own, each reading the rows a tick left. Once a tick what it files, once a drawn frame what the frame
+// THE WEATHER, THE AIR AND THE FIRES OF A PAGE THAT HOLDS NO GAME: each the picture's own, each reading the rows a tick left. Once a tick what it files, once a drawn frame what the frame
 // is told; on a cut (a load, a restart, a rollback) what it holds is another moment's, and it begins again from the rows.
 import type { FollowCamera } from '../game/camera';
 import type { Particles } from '../render/particles';
@@ -10,21 +10,24 @@ import type { DrawWorld } from '../draw/world';
 import { Reset, Section, View } from '../draw/sections';
 import { AirPicture } from './air';
 import { FirePicture } from './fire';
+import { RainPicture, Roofs } from './rain';
+import { skyFrom } from '../draw/sky';
 
 const LEVEL = 1, SMOKE = 2;
 
 export class WeatherPicture {
-  readonly winds: DrawWinds; readonly air: AirPicture; readonly fire: FirePicture;
+  readonly winds: DrawWinds; readonly air: AirPicture; readonly fire: FirePicture; readonly rain: RainPicture; readonly roofs: Roofs;
   private said = -1;
   constructor(private E: Engine, private D: Drawn, world: DrawWorld, private P: Particles | null, private smoke: SmokeSystem) {
-    this.winds = new DrawWinds(D, P, smoke);
+    this.winds = new DrawWinds(D, P, smoke); this.roofs = new Roofs(D);
     this.air = new AirPicture(E, D, world.statics, this.winds);
     this.fire = new FirePicture(E, D, smoke, P);
+    this.rain = new RainPicture(E, D, P, world.statics, this.roofs);
     this.from();
   }
-  private from(): void { this.winds.from(); }
+  private from(): void { this.winds.from(); this.roofs.from(); }
   /** the game is another moment than the one last drawn: the field is told its map again, the books begin again */
-  cut(): void { const D = this.D; this.said = D.n[Section.resets] ? D.u[D.at[Section.resets] + Reset.tick] : -1; this.air.cut(); this.fire.cut(); }
+  cut(): void { const D = this.D; this.said = D.n[Section.resets] ? D.u[D.at[Section.resets] + Reset.tick] : -1; this.air.cut(); this.fire.cut(); this.rain.cut(); }
   /** what the game said goes this tick, before anything of the tick is played: the tick's own order */
   told(): void {
     const D = this.D;
@@ -36,10 +39,11 @@ export class WeatherPicture {
   /** a tick has run, the camera that follows it stepped */
   tick(dt: number, cam: FollowCamera): void {
     const D = this.D, time = D.u[D.at[Section.view] + View.tick] / 60;
-    this.from();
+    this.from(); skyFrom(this.E, D);
+    this.rain.tick(dt, cam);
     this.fire.tick(dt, cam.focus, this.winds.heat.read());
     this.air.tick(dt, time, cam.focus);
   }
-  /** before a frame is drawn */
-  frame(cam: FollowCamera): void { this.fire.frame(cam.focus); }
+  /** before a frame is drawn, the sky's section just written over the frame's weather */
+  frame(cam: FollowCamera): void { this.rain.dress(); this.fire.frame(cam.focus); }
 }

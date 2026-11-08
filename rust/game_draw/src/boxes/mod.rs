@@ -150,9 +150,9 @@ impl Default for Look { fn default() -> Look { Look { on: false, marks: true, cu
 
 /// what a static's rows were packed of: where it stands, and everything else of it as one word
 #[derive(Clone, Copy, PartialEq)]
-struct Was { c: [f64; 3], h: [f64; 3], yaw: f64, rot: Option<[f64; 4]>, flags: u32, cut_height: f64, rest: u64 }
+pub struct Was { c: [f64; 3], h: [f64; 3], yaw: f64, rot: Option<[f64; 4]>, flags: u32, cut_height: f64, rest: u64 }
 impl Was {
-    fn of(b: &Box, look: &Look) -> Was {
+    pub fn of(b: &Box, look: &Look) -> Was {
         let mut k = 0xcbf2_9ce4_8422_2325u64;
         let mut eat = |v: u64| { k = (k ^ v).wrapping_mul(0x0000_0100_0000_01b3); k ^= k >> 29; };
         for v in pack::sent(b, look).iter().chain(pack::emission(b).iter()) { eat(v.to_bits()); }
@@ -192,6 +192,7 @@ pub struct Boxes {
     pub glass: glass::Glass,
     pub leaves: Vec<Leaf>,
     pub beams: Vec<Beam>,
+    pub wet: crate::wet::Wet,
     /// the frame's own that are drawn as light and not as boxes
     unboxed: Vec<u32>,
     /// every box as it is drawn this frame, the statics first
@@ -234,8 +235,9 @@ impl Boxes {
         self.cut.resize(total, Cut::ZERO);
         let (mut from, mut to) = (n as u32, 0u32);
         let mut cut_at = (u32::MAX, 0u32);
+        self.wet.follow(g);
         for i in 0..n {
-            let b = &all[st[i]];
+            let b = if self.wet.is(i as u32) { let was = Was::of(&all[st[i]], &self.look); self.wet.dressed(g, i as u32, &all[st[i]], was) } else { &all[st[i]] };
             let now = Was::of(b, &self.look);
             if !whole && self.was[i] == now { continue; }
             let anew = i >= self.was.len();

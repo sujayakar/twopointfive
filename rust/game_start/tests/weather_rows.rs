@@ -37,3 +37,29 @@ fn the_winds_are_whole_every_tick() {
     assert!(d.winds.air[0].master > 0.0, "the pass has its wind");
     assert!(d.winds.active.iter().any(|w| w.kind == 1), "the storm blows on the pass");
 }
+
+/// THE RULE: what the rain wets is told in the box's rows: under a picked rain the open ground is darker and glossy, and the box in the game is as it was.
+#[test]
+fn wet_ground_is_the_rows_and_not_the_box() {
+    let mut p = Play::mission("compound.json", "?levelFile=compound.json&weather=downpour&roomclear&squad4", &Opts { seed: 8, ..Default::default() });
+    for _ in 0..30 { p.frame(); }
+    assert!(p.g.weather.wet_on, "a downpour has the ground wet in half a second");
+    let mut d = Drawn::default();
+    d.take(&p.g, ALL);
+    d.frame(&p.g, 1.0, p.g.aim_point);
+    let wet = (0..p.g.engine.world.statics.len() as u32).filter(|&i| d.boxes.wet.is(i)).collect::<Vec<_>>();
+    assert!(!wet.is_empty(), "a downpour wets something on the compound");
+    for &i in &wet {
+        let b = &p.g.tab.boxes[p.g.engine.world.statics[i as usize]];
+        let m = &d.boxes.mat[i as usize];
+        if b.metal != Some(true) && b.wet_k.is_none() { assert!((m.w[0] as f64 - b.albedo[0] * 0.5).abs() < 1e-5, "box {i} is sent darker: {} of {}", m.w[0], b.albedo[0]); }
+    }
+    // (a wet box whose game box did not move is not packed again: it is told as one row of a tick's changes only when it changed)
+    for _ in 0..3 {
+        p.frame();
+        d.take(&p.g, ALL);
+        d.frame(&p.g, 1.0, p.g.aim_point);
+        let h = d.boxes.head[0];
+        assert!(!wet.iter().any(|&i| i >= h.from && i < h.to), "a wet box is sent again every tick: {}..{}", h.from, h.to);
+    }
+}
