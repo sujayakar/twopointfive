@@ -264,13 +264,9 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
                 if v3::dist_xz(lk, cur_pos) < 1.5 { crate::mind::fix(g, gd, None, "guards"); }
             }
             mine = g.gd[cur].state == GuardState::Dead && g.gd[cur].killer_id == g.ch[g.gd[gd].ch].id && g.gd[gd].state == GuardState::Alert;
-            g.gd[gd].foe = None;
+            crate::mind::foe(g, gd, None, "guards");
             crate::aim::aim_state_clear(&mut g.gd[gd].aim);
             lost_man = true;
-            if knee {
-                let w = g.gd[gd].weapon;
-                g.fa[w].burst = None;
-            }
         }
     }
     let (mut best, mut best_rate, mut cur_visible): (Option<Foe>, f64, bool) = (None, 0.05, false);
@@ -295,7 +291,7 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
     if cur_visible { return; }
     if let Some(b) = best {
         if g.gd[gd].foe != Some(b) {
-            g.gd[gd].foe = Some(b);
+            crate::mind::foe(g, gd, Some(b), "guards");
             crate::aim::aim_state_clear(&mut g.gd[gd].aim);
             if mine { crate::game::game_say(g, gd, if op { "he's down — next." } else { "got him!" }, None, None, None); }
             return;
@@ -303,10 +299,8 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
     }
     if lost_man && best.is_none() && g.gd[gd].unit.is_none() && team == Team::Guard && !g.pl[g.player].down {
         // a staff man: the man he dropped is one of two intruders, and the other is still on his floor
-        g.gd[gd].foe = Some(Foe::Player);
+        crate::mind::foe(g, gd, Some(Foe::Player), "guards");
         g.gd[gd].last_seen_t = m::min(g.gd[gd].last_seen_t, g.time - 0.5);
-        let w = g.gd[gd].weapon;
-        g.fa[w].burst = None;
         if mine { crate::game::game_say(g, gd, "got him!", None, None, None); }
     } else if lost_man && best.is_none() && (g.gd[gd].state == GuardState::Alert || g.gd[gd].state == GuardState::Search) {
         // the man he was fighting is down and no other enemy is in his sight: he comes off the alert to a wary look round
@@ -478,6 +472,11 @@ pub fn tick_reload_beat(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
 // ------------------------------------------------------------ rifles: the burst trigger
 
 /// The closure of burstTrigger: the burst ends, and the beat to the next runs from its last serviced frame. (guards.ts:2809 end)
+/// The burst he is firing, if he is firing one, is broken off: the next waits its moment.
+pub fn burst_broken(g: &mut Game, gd: GuardId) {
+    let w = g.gd[gd].weapon;
+    if g.fa[w].burst.is_some() { burst_end(g, gd, w, BURST_BROKEN_CD); }
+}
 fn burst_end(g: &mut Game, gd: GuardId, w: FirearmId, cd: f64) {
     let b = g.fa[w].burst;
     g.fa[w].burst = None;

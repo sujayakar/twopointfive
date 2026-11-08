@@ -457,7 +457,7 @@ pub fn drop(g: &mut crate::game::Game, gd: GuardId) {
     {
         crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "runner");
         crate::mind::set(g, gd, 0.0, "runner");
-        g.gd[gd].foe = None;
+        crate::mind::foe(g, gd, None, "runner");
         crate::aim::aim_state_clear(&mut g.gd[gd].aim);
         g.gd[gd].pieing = None;
         g.gd[gd].search_plan = None;
@@ -646,7 +646,7 @@ pub fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     crate::control::set_pinned(g, gd, true, "runner");
     if g.gd[gd].state != crate::game::GuardState::Patrol { crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "runner"); }
     crate::mind::set(g, gd, 0.0, "runner");
-    g.gd[gd].foe = None;
+    crate::mind::foe(g, gd, None, "runner");
     if g.gd[gd].held.is_some() { return; }
     let e = known(g, gd);
     run!(g, gd).t += dt;

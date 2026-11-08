@@ -454,7 +454,7 @@ pub fn room_fight_tick_move(g: &mut crate::game::Game, d: RoomfightDefId, dt: f6
     let contact = g.gd[gd].foe.filter(|&f| g.gd[gd].saw_foe_this_frame && near && !crate::control::man::blind(g, gd) && Some(f) != from);
     if let Some(ct) = contact {
         let fc = match ct { crate::game::Foe::Player => { let man = crate::seats::faced_man(g, gd); g.pl[man].ch } crate::game::Foe::Guard(o) => g.gd[o].ch };
-        g.gd[gd].foe = Some(ct);
+        crate::mind::foe(g, gd, Some(ct), "roomfight");
         crate::aim::aim_state_clear(&mut g.gd[gd].aim);
         room_fight_plant(g, d, "contact");
         crate::mind::set(g, gd, 1.0, "roomfight");
