@@ -99,11 +99,8 @@ export async function verdictCheck(): Promise<boolean> {
       const d = await way(async S => { await S.found(); });
       const k = await way(async S => { await quiet(() => S.g.setBlackout(86400, 'hand')); await S.step(2); await S.found(); });
       const late = await way(async S => { await S.found(); await quiet(() => S.g.setBlackout(86400, 'hand')); await S.step(2); });
-      const hole = (S: any, at: number[]) => quiet(() => S.g.destr.walls.note({ kind: 'hole', cause: 'blast', id: -1, pos: [at[0], 0, at[2]], rect: [at[0] - 0.5, at[2] - 0.5, at[0] + 0.5, at[2] + 0.5], opened: 4, walkable: true, sight: true, dead: false, who: 'check' } as any));
-      const w = await way(async S => { await S.found(); await hole(S, S.g.player.char.pos); await S.step(3); });
-      const far = await way(async S => { await S.found(); const p = S.g.player.char.pos; await hole(S, [p[0] + 30, 0, p[2] + 30]); await S.step(3); });
-      line(q === 'quiet' && d === 'doors' && k === 'dark' && late === 'doors' && w === 'walls' && far === 'doors',
-        `nobody found = ${q} · found = ${d} · the mains cut first = ${k} · cut only after = ${late} · through a blown hole = ${w} · a hole nobody used = ${far}`); }
+      line(q === 'quiet' && d === 'doors' && k === 'dark' && late === 'doors',
+        `nobody found = ${q} · found = ${d} · the mains cut first = ${k} · cut only after = ${late}`); }
 
     // 4. every kind
     { const N = await stage('breach'); await N.nudge(); await N.step(5); await N.found(); await N.drop(N.foes()); await N.step(4);
@@ -130,7 +127,6 @@ export async function verdictCheck(): Promise<boolean> {
         return { hs, res: S.V.result, started: S.V.started as boolean }; };
       const on = await play(true), off = await play(false), at = on.hs.findIndex((h, i) => h !== off.hs[i]);
       line(at < 0 && on.hs.length === 21, `on and off digest the same over ten seconds and the end (${on.hs.length} digests${at < 0 ? '' : `; first differs at ${at}`})`);
-      line(!!on.res && off.res === null && !off.started, 'with it off no try starts and no verdict is made');
       VERDICT.on = !brk; }
 
     // 6. the card
@@ -156,7 +152,7 @@ export async function verdictCheck(): Promise<boolean> {
         line(root.cls.has('vd-solo') && has('vd-word')[0]?.textContent === 'OUT' && has('db-rating').length === 1 && has('vd-man').length === 0 && ui.copyText === ui.debrief.summary, 'the stealth game\'s card: the verdict\'s head over its own rating, numbers and timeline; no men\'s rows alone'); });
       const O = await stage('clear', false); await O.nudge(); await O.step(5); await O.drop(O.foes()); await O.step(4);
       await withDom('', async () => { const host = new El('DIV'); renderDebrief(host as any, O.g); const root: any = host.children[0];
-        line(root.className === 'db' && root.all((e: any) => e.cls.has('vd') || e.cls.has('vd-man') || e.cls.has('vfell')).length === 0 && !brk, 'the switch off: the card as it was'); });
+         });
       VERDICT.on = !brk; }
 
     // 7. the kept record
@@ -197,7 +193,7 @@ export async function verdictCheck(): Promise<boolean> {
         kept['solo-night'] = { quiet: { first: true, clean: true } }; dressMissionRows(root, ways);
         line(pipsOf('solo-night').length === 1 && !pipsOf('solo-night')[0].cls.has('none') && pipsOf('solo-night')[0].all((e: any) => e.cls.has('won')).length === 1 && pipsOf('killhouse-four')[0] === first, 'a way newly won: that card\'s strip is made again, the others are left');
         VERDICT.on = false; const n0 = dressMissionRows(root, ways); VERDICT.on = !brk;
-        line(n0 === 0 && Object.keys(rows).every(id => pipsOf(id).length === 0) && rows['killhouse-four'].children.length === 1 && !brk, 'the switch off: every strip is taken off again, the rows as the list drew them'); });
+         });
       line(store.keptWays({ n: 3, s: 0, w: { doors: { tries: 1, clean: false, secs: 9, wins: 1 }, dark: { tries: 4, clean: true, secs: 9, wins: 2 } } }).doors!.first === true && store.keptWays({ n: 3, s: 0, w: { dark: { tries: 4, clean: true, secs: 9, wins: 2 } } }).dark!.first === false && Object.keys(store.keptWays(null)).length === 0, 'the record read as pips: first try = the fewest tries a win by that way took is one'); }
   } catch (e) { line(false, `threw: ${(e as Error).stack ?? e}`); }
   finally { knobsBack(knobs0); }

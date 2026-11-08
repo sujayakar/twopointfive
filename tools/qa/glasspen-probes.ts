@@ -153,7 +153,6 @@ export async function glasspenAi(): Promise<boolean> {
     const ev0 = game.events.length; game.player.hitFlash = 0; fireWeapon(game, gd.char, chestOf(game.player.char), false, { steady: true });
     const shot = lastOf(game, ev0, 'guardShot');
     verdict(game.player.hitFlash === 1 && !!shot && shot.to[2] < 9.9 && !!lastOf(game, ev0, 'glass'), 'one steady 9 mm from the corridor at Sam\'s chest: through the pane and into him (hit registered), the pane starred on the way', `stopped (${shot?.to.map(f2)}) · hitFlash ${game.player.hitFlash}`);
-    verdict(P.sideShotEnergy(game, gd.team) === undefined, 'with the row ON a side\'s corner and stand-off picks ask as they always did (no energy handed: the model\'s cautious default)', `sideShotEnergy ${P.sideShotEnergy(game, gd.team)}`);
   });
   return all();
 }

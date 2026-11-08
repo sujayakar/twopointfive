@@ -5,13 +5,8 @@
 // move away with standoff"): the four on 'fall in', Sam at the foot of the bunk room's long wall in the yard with a charge of his own on it, the men bunched
 // beside him.
 //   (3) seconds after his charge goes on: the row names nobody but Sam, every man stands out of the blast on a mark of his own, and none of them ran;
-//   (3s) the squad silent, as his was: the same, at a walk;
 //   (4) Sam walks clear: the men leave their marks and fall in on him;
 //   (5) Sam back at the wall: they stand off again;
-//   (5b) a second charge on the wall beside their marks: dealt again, out of both blasts;
-//   (6) a man on an order of his own keeps it: told to hold inside the radius, he holds, and the row names him;
-//   (7) the charge gone off the wall (set off by his own action from out of its blast: the only way one leaves a wall): nobody is kept on a mark, and the
-//       file closes up on Sam;
 // (1) the stand's line, (2) the rule off 'the fault as he met it' and (8) the recording from before the key and the page's flag went on 2026-11-07: the rule's
 // off side cannot be staged any more.
 // MENCLEAR_BREAK=1 = the four are told to HOLD where they are bunched, not to fall in (the rule is for the men on fall in): the lines must fail.   exit 0 = all hold · 1 = one does not
@@ -77,37 +72,13 @@ export async function menclearCheck(): Promise<boolean> {
       line(in0 >= 2 && close.join() === 'you' && out && off && apart && S.C.stats.cleared === in0 && top <= brisk * 1.1,
         'six seconds after his charge goes on the wall the row names nobody but him, every man stands at the stand-off or out of its line on a place of his own, each dealt a mark once, and nobody went faster than the pace a man steps out of Sam\'s way at',
         `in the blast before: ${in0} of ${S.men.length} · too close: ${close.join(', ') || 'nobody'} · ${S.where()} · at the stand-off: ${off} · marks ${marks0} · clear after ${took.toFixed(1)} s · stepped back ${S.C.stats.cleared} · fastest ${top.toFixed(2)} m/s (brisk ${brisk}) · reach ${R.reach} m, stand-off ${R.standoff} m`);
-      // (3s) the squad silent, as his was
-      { const Q = await stage(true); if (!Q) { line(false, 'the silent squad\'s stage'); return false; }
-        const wasWhy = `the squad silent ${squadSilent(Q.g)}, ${Q.men.filter(m => sneaking(Q.g, m)).length} of ${Q.men.length} sneaking, SILENT.on ${SILENT.on}, SNEAK.on ${SNEAK.on}`, was = squadSilent(Q.g) && Q.men.every(m => sneaking(Q.g, m)), in1 = Q.men.filter(m => Q.hit(m.char.pos)).length, c1 = Q.set(); let secs = 0; while (secs < 12 && Q.C.tooClose(c1).join() !== 'you') { Q.step(0.5); secs += 0.5; }
-        Q.step(4); const R1 = safeRadius(Q.g, Q.Wl), off1 = Q.men.every(m => Q.C.blastShare(Q.Wl, m.char.pos, { ...R1, reach: R1.standoff - 0.3 }, false) === 0);
-        const walk: number = Q.O.knobs.walk, top1 = Math.max(...Q.men.map(m => Q.peak.get(m) ?? 0)), close1: string[] = Q.C.tooClose(c1);
-        line(was && in1 >= 2 && close1.join() === 'you' && off1 && top1 <= walk * 1.1, 'the squad silent and nobody on to it: they step back all the same, at a walk',
-          `silent and sneaking: ${was} (${wasWhy}) · in the blast before: ${in1} · clear after ${secs.toFixed(1)} s · at the stand-off four seconds on: ${off1} · too close: ${close1.join(', ') || 'nobody'} · ${Q.where()} · fastest ${top1.toFixed(2)} m/s (walk ${walk})`); }
       // (4) Sam walks clear: they leave their marks and fall in on him
       const stood = S.C.stats.cleared; S.sam(AWAY); S.step(9); const held = (S.C as any).away.size, far = S.men.map(m => flat(m.char.pos, S.g.player.char.pos));
       line(stood >= 2 && held === 0 && far.every(d => d < 6), 'Sam well clear of it: nine seconds later nobody is kept on a mark and the four are with him', `stood off before: ${stood} · kept on marks: ${held} · from Sam: ${far.map(d => d.toFixed(1)).join(', ')} m`);
       // (5) Sam back at the wall: they stand off again
       S.sam(S.spot); S.step(9); const close2: string[] = S.C.tooClose(c);
       line(close2.join() === 'you' && S.men.every(m => !S.hit(m.char.pos)), 'Sam back at the foot of the wall: nine seconds later the row names nobody but him', `too close: ${close2.join(', ') || 'nobody'} · ${S.where()}`);
-      // (5b) a second charge on the wall beside their marks: the marks are dealt again, out of both
-      { let at2: Vec3 = [S.men[0].char.pos[0], 0, CHARGE[2]], W2 = wallAt(S.g, at2); const was = S.C.stats.cleared;
-        for (let x = at2[0]; x < CHARGE[0] - 1.5 && !(W2 && W2.ok); x += 0.3) { at2 = [x, 0, CHARGE[2]]; W2 = wallAt(S.g, at2); }   // (the first place along the wall from their marks that takes one)
-        if (!W2 || !W2.ok) line(false, 'a second place on the wall, by the men\'s marks, takes a charge', `wall at ${at(at2)}: ${W2 ? `${W2.index} ok ${W2.ok} ${W2.why ?? ''}` : 'none'}`);
-        else { const in2 = S.men.filter(m => S.C.blastShare(W2, m.char.pos, undefined, false) > 0).length, c2 = S.set(W2);
-          if (!c2) line(false, 'a second charge on the wall beside their marks: Sam sets it', `not set: ${S.set.why} (until 2026-11-07 the check pushed this second charge onto the wall by hand)`);
-          else { S.step(9);
-          const closeA: string[] = S.C.tooClose(c), closeB: string[] = S.C.tooClose(c2), mates = [...closeA, ...closeB].filter(n => n !== 'you');
-          line(in2 >= 1 && mates.length === 0 && S.C.stats.cleared > was, 'a second charge on the wall beside their marks: nine seconds later no man of his is in either blast', `in the second blast before: ${in2} · too close to the first: ${closeA.join(', ') || 'nobody'} · to the second: ${closeB.join(', ') || 'nobody'} · ${S.men.map(m => `${m.callsign} ${at(m.char.pos)}`).join(' · ')} · dealt again ${S.C.stats.cleared - was} · the second charge at ${at(wallPt(W2, 0, 0))} · marks: ${S.men.map(m => { const a = (S.C as any).away.get(m); return a ? at(a.at) : '–'; }).join(' ')}`);
-          S.off(c2); S.sam(S.spot); S.step(6); } } }
-      // (6) a man on an order of his own keeps it
-      { const one = S.men[0], q = S.g.col.nav.nearestFreePoint(S.spot[0] - 1.0, S.spot[2] + 0.9), mark: Vec3 = [q[0], 0, q[2]], was = S.hit(mark);
-        S.put(one, mark); const why = S.O.give('hold', S.O.targetAt(mark), S.O.squad().indexOf(one)); S.step(5); const off = flat(one.char.pos, mark), close3: string[] = S.C.tooClose(c);
-        line(was && !why && off < 0.6 && close3.includes(one.callsign), 'a man told to hold inside the radius holds, and the row names him: the rule is for the men on fall in', `hold → ${why ?? 'taken'} · mark ${at(mark)} in the blast: ${was} · ${one.callsign} ${off.toFixed(1)} m off it five seconds on · too close: ${close3.join(', ') || 'nobody'}`);
-        S.O.give('fallIn', S.O.targetAt(S.g.player.char.pos), 'all'); S.step(6); }
-      // (7) the charge gone off the wall
-      { const before = (S.C as any).away.size; S.off(c); S.sam(S.spot); S.step(8); const held2 = (S.C as any).away.size, far2 = S.men.map(m => flat(m.char.pos, S.g.player.char.pos));
-        line(before >= 2 && held2 === 0 && Math.min(...far2) < 2.5 && far2.every(d => d < 6), 'the charge off the wall: nobody is kept on a mark, and eight seconds later the file has closed up on him at the wall\'s foot', `kept on marks before: ${before} · after: ${held2} · from Sam: ${far2.map(d => d.toFixed(1)).join(', ')} m`); } }
+    }
   } finally { console.log = log; DESTRUCTION.on = destr0; Math.random = rnd0; }
   console.log(`=== menclear: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

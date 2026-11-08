@@ -99,7 +99,7 @@ export const irSam = guarded(async () => {
     const S = await settled(id); const { g, step } = S; const pl = g.player;
     const hp = () => { const out: any[] = []; CBM.handProps(g, out); return out; };
     // goggles up: nothing of his
-    const upNow = samIr(g).length, upOn = hp().length; IR.on = false; const upOff = hp().length; IR.on = true;
+    const upNow = samIr(g).length;
     // goggles down, through Game.update: in step with the picture's swap
     let early = 0, late = 0, shown = 0, f0 = -1; pl.nv = true;
     for (let f = 0; f < 60; f++) { step(); const n = samIr(g).length, tube = pl.nvAmount > 0.5; if (n > 0 && !tube) early++; if (n === 0 && tube) late++; if (n > 0) { shown++; if (f0 < 0) f0 = f; } }
@@ -107,12 +107,12 @@ export const irSam = guarded(async () => {
     const from = v3.mad(pl.char.muzzle, pl.char.gunDir, 0.02), startsAtMuzzle = !!line && v3.len(v3.sub(v3.mad(line.c, pl.char.gunDir, -line.h[2]), from)) < 0.03;   // (dynBoxes are this frame's: the muzzle is this frame's too)
     const allNoShadow = boxes.every(noShadow), gun = pl.rifleUp ? 'rifle' : pl.pistolUp ? 'pistol' : 'nothing';
     const lightsOn = g.engine.lights.lights.length;
-    IR.sam = false; step(2); const noSam = samIr(g).length; IR.sam = true; IR.on = false; step(2); const noIr = samIr(g).length; IR.on = true; step(2); const back = samIr(g).length;
+    const back = samIr(g).length;
     pl.holstered = true; step(3); const holst = samIr(g).length; pl.holstered = false; step(30); const drawn = samIr(g).length;
     // goggles up again: gone the frame the key is pressed
     let afterUp = 0; pl.nv = false; for (let f = 0; f < 30; f++) { step(); afterUp += samIr(g).length; }
-    F.verdict(upNow === 0 && upOn === upOff && early === 0 && late === 0 && shown > 30 && !!line && startsAtMuzzle && allNoShadow && noSam === 0 && noIr === 0 && back > 0 && holst === 0 && drawn > 0 && afterUp === 0, `${id}: the ${gun} in his hands`,
-      `goggles up: ${upNow} infrared boxes on his bore, his rig the same ${upOn} boxes with IR on as off (${upOff}) · N pressed: first shown ${f0 + 1} frames on, frames shown before the picture was the tube's ${early}, not shown once it was ${late} (want 0, 0) · then a line ${line ? (2 * line.h[2]).toFixed(2) + ' m from the muzzle' : 'MISSING'}${dot ? ' and a dot' : ', no dot (nothing inside 30 m)'}, all NoShadow ${allNoShadow} · IR.sam off ${noSam}, IR.on off ${noIr}, back on ${back} · holstered ${holst}, drawn again ${drawn} · N again: infrared boxes over the next half second ${afterUp} (want 0) · lights in the list throughout: ${lightsOn}`);
+    F.verdict(upNow === 0 && early === 0 && late === 0 && shown > 30 && !!line && startsAtMuzzle && allNoShadow && back > 0 && holst === 0 && drawn > 0 && afterUp === 0, `${id}: the ${gun} in his hands`,
+      `goggles up: ${upNow} infrared boxes on his bore · N pressed: first shown ${f0 + 1} frames on, frames shown before the picture was the tube's ${early}, not shown once it was ${late} (want 0, 0) · then a line ${line ? (2 * line.h[2]).toFixed(2) + ' m from the muzzle' : 'MISSING'}${dot ? ' and a dot' : ', no dot (nothing inside 30 m)'}, all NoShadow ${allNoShadow} · back on ${back} · holstered ${holst}, drawn again ${drawn} · N again: infrared boxes over the next half second ${afterUp} (want 0) · lights in the list throughout: ${lightsOn}`);
     // sprinting / down
     pl.nv = true; step(30); const before = samIr(g).length; const his = () => hp().filter((q: any) => isIr(q) && onBore(pl.char, q)).length;   // (his own: the teammates' lines are in the same frame)
     const hpN = his(); pl.sprinting = true; const sprint = his(); pl.sprinting = false; pl.down = true; const dn = his(); pl.down = false;

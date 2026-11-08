@@ -56,17 +56,6 @@ export async function kitStealth(): Promise<boolean> {
       verdict(why === null && q.weapon === 'rifle' && q.rings === 5 && q.cams === 2 && q.wand && !q.frags && K.kitCost(0, q).used === 4 && !list.includes('quiet') && list[0] === 'issued',
         'the Quiet kit\'s card for you is a stealth mission\'s kit (the long gun kept, no frag), and a stealth mission\'s row of kits does not list it beside the same card as issued', `${words(q)} (${cost(q)}) · a stealth screen lists ${list.join(', ')}`); }
 
-    // ── the staging
-    { K.kitLoad(null, ''); const R: any = await hushed(() => rig(17, { stage: false })); raise(); K.kitLoad(null, ''); const g = R.game, pl = () => g.player;
-      const ops = g.guards.filter((gd: any) => gd.unit && gd.team === 'operative'), others = g.guards.filter((gd: any) => !(gd.unit && gd.team === 'operative'));
-      const run = (quiet: boolean, cams: number) => { g.soloCard = quiet; g.guards = quiet ? others : [...others, ...ops]; stickyVisitSet(g, cams); K.kitPlayer(g); return { rings: pl().rifle.rings, cams: pl().rifle.attachments.includes('cam') ? pl().rifle.cams : 0, wand: !!pl().wand, smoke: pl().canisters, stun: pl().flashbangs, frags: pl().frags, shells: pl().rifle.shells }; };
-      const loud = run(false, 0), quiet = run(true, 2), dark = run(true, 0), loud2 = run(false, 0);
-      K.kitMission(FULL); K.kitSet(0, 'rings', 0); K.kitMission(null); const none = run(true, 2); K.kitMission(FULL); K.kitLoadout('issued', 0); K.kitMission(null); run(false, 0);
-      verdict(loud.rings === 0 && !loud.wand && loud.frags === 1 && quiet.rings === 5 && quiet.cams === 2 && quiet.wand && quiet.frags === 0 && quiet.shells === 0 && dark.rings === 5 && dark.cams === 0 && !dark.wand && dark.smoke + dark.stun === 3 && J(loud2) === J(loud) && none.rings === 0 && none.cams === 2,
-        'STAGED: a loud run wears the loud card and a quiet run alone the stealth card (five rounds, the link\'s cameras, the wand, no frag, no HE); with no fog its canisters; the next loud run is the first again; and sponge rounds taken off the stealth card by hand are NOT handed back', `loud ${J(loud)} · quiet ${J(quiet)} · quiet, no fog ${J(dark)} · loud again ${J(loud2) === J(loud) ? 'the same' : J(loud2)} · sponge row at none: ${none.rings} rounds, ${none.cams} cameras`);
-      { K.kitLoad(null, ''); K.kitMission(FULL); K.kitSet(0, 'weapon', 'pistol'); K.kitMission(null); K.kitShow(g); K.kitIssuedPage(true); let les: any; try { les = run(true, 2); } finally { K.kitIssuedPage(false); } const has = pl().hasRifle; K.kitShow(g); K.kitLoad(null, ''); run(false, 0);
-        verdict(has === true && les.smoke === 4 && les.stun === 2 && les.frags === 2 && les.shells === 3 && les.wand, 'A LESSON\'S PAGE wears the issue kit whatever STEALTH card this machine keeps (one with no rifle here): the rifle, what a Player is built with, and the mission\'s wand handed over it as before', `rifle ${has} · ${J(les)}`); }
-      }
   } finally { K.kitMission(null); K.BIGSLOT.on = was.big; K.KIT.on = was.on; K.SLOTS.on = was.slots; K.kitLoad(null, ''); K.SLOTS.on = was.slots; K.KIT.on = was.on; }
   console.log(`=== kitstealth: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

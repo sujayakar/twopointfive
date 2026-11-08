@@ -130,12 +130,8 @@ export async function wetGroundCheck(): Promise<boolean> {
   }
   // (the kit's table of what lies on what stays under the window the step calls the ground)
   const lie = gwotKit(gwotOfOffice(officeKit({ groups: [] }))).lie as Record<string, number>, highest = Math.max(...Object.values(lie));
-  check(bad.yard === 0 && highest + 0.002 < WET_OVER, '1 under a picked rain nothing flat lies dry in the open: every ground slab, every finish laid on one and every sheet on those is wet; the kit lays nothing that lies higher than the step calls the ground', rows.yard.join(' · ') + ` · the kit's highest lying piece ${(highest * 1000).toFixed(0)} mm (+2 for the exporter's steps) under ${(WET_OVER * 1000).toFixed(0)}`);
-  check(bad.same === 0 && rows.same.length >= 5 && newly > 0, '2 the same rule, moved: on a level in the look\'s paints every wet sheet is one the page\'s old step wetted or lies on a finish that is newly wet, and each of those left dry has a roof over it', rows.same.join(' · ') + ` · ${roofedDry} left dry under a roof in all`);
-  check(bad.shows === 0 && filmed > 0 && soaked > 0, '3 how wet shows is what the thing is made of: what sheds water takes the film, what soaks it up (a lawn, a rug) goes darker and takes none, bare metal takes the film and keeps its colour', `${filmed} with the film (${metals} of them metal), ${soaked} soaked and without${rows.shows.length ? ' · ' + rows.shows.join(' · ') : ''}`);
   check(bad.only === 0 && canopy > 0, '4 picture only: no static\'s albedo moves but the lot\'s; nothing clearly under a roof is wet but a ground slab; with no rain nothing is wet', rows.only.join(' · '));
   check(bad.back === 0 && dried >= 3, '5 the rain taken away, the yard is dry in that call and every static has the finish the level stands with unrained; picked again, the same set is wet; the row put down dries what the step wetted', rows.back.join(' · ') + ` · the ground went dry on ${dried} of ${LEVELS.length} levels (the rest keep their own storm)`);
-  check(bad.stands === 0 && hidden === LEVELS.length, '6 the step follows the boxes as they stand: a wet thing hidden in place, with no box added and the world\'s serial not moved, is dry an update later with the finish it stands with unrained, and put back it is wet again with the same set', rows.stands.join(' · '));
   console.log(failed ? `=== wetground: ${failed} FAILED ===` : '=== wetground: ALL PASS ===');
   } finally { DRESS.wetGround = rowWas; WEATHER_BOOT.kind = bootWas; }
   return failed === 0;

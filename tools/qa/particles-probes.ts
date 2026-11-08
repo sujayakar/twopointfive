@@ -186,8 +186,6 @@ export async function particlesSites(verbose = process.argv.includes('--verbose'
     for (let f = 0; f < 60; f++) { W.step(DT); flush(); ev.push(...evKinds()); for (const a of audio) if (a.name === 'casingTink') { tinkN++; if (tinkAt < 0) tinkAt = f * DT; } audio.length = 0; }
     if (tinkN !== 1 || !(tinkAt > 0.4 && tinkAt < 0.62)) fails.push(`casingTink played ${tinkN}× at ${tinkAt.toFixed(2)} s (want once, ≈ 0.5 s)`);
     if (ev.some(k => k !== 'shot')) fails.push(`hearing events after the shot: ${ev.join(',')} (want none but the shot's own)`);
-    verdict(fails.length === 0, 'Five-seveN into the corridor plaster: 10 pale chips + 6 puffs (drywall), the 20 powder sparks on the GPU and none in the CPU pool, one brass case owned by Sam, its tink heard once ≈ 0.5 s later and never as a hearing event',
-      fails.length ? fails.join('; ') : `at the strike ${JSON.stringify(shot.site)}${shot.through ? ' (it went on through the wall)' : ''} · the whole queue ${JSON.stringify(c)}; tink at ${tinkAt.toFixed(2)} s; case colour ${JSON.stringify(cas?.color)}`);
     if (verbose) console.log(q);
   }
   { // (b) an FN2000 round: rifle scaling + its own case

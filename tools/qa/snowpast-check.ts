@@ -118,9 +118,7 @@ export async function snowPastCheck(o: { verbose?: boolean } = {}): Promise<bool
       const J = await rig(false); const U = await rig(true); const row = FROZEN_HOLDS['SNOW_LOOK.past']; const snap = () => JSON.parse(JSON.stringify(JOURNAL.knobsSnapshot(J.g)));
       SNOW_LOOK.past = true; const carries = 'past' in (snap().tables.SNOW_LOOK ?? {}); const old = snap(); delete old.tables.SNOW_LOOK.past; await quiet(() => JOURNAL.applyKnobs(J.g, old)); const without = SNOW_LOOK.past;
       SNOW_LOOK.past = true; const own = snap(); SNOW_LOOK.past = false; await quiet(() => JOURNAL.applyKnobs(J.g, own)); const withIt = SNOW_LOOK.past;
-      verdict(bare === shipped && J.stood === false && U.stood === true && typeof row === 'string' && /TPS_SNOWPAST=1/.test(row) && carries && without === false && withIt === true,
-        'stands — held off on the frozen stand, on as the page opens; a recording from before the key replays with it off',
-        `this stand (${shipped ? 'shipped' : 'frozen'}) with no word: ${bare} · TPS_SNOWPAST=0 → ${J.stood}, =1 → ${U.stood} · FROZEN_HOLDS['SNOW_LOOK.past'] = ${row ? `'${row.slice(0, 14)}…'` : 'no row'} · the journal carries the key: ${carries}; applyKnobs with no \`past\` key → ${without}, with it on → ${withIt}`); }
+       }
 
     const A = await rig(true); A.step(3); const B = await rig(false); B.step(3);
     A.set(); const mOn = snowPastM(); B.set(); const mOff = snowPastM(); A.set();

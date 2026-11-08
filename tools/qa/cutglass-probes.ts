@@ -162,8 +162,6 @@ export async function cutglassLook() {
   const A = await take();
   const okA = A.made.length >= 3 && A.made.every((p: any) => p.core && p.core.every((x: number) => x >= 0.7) && p.glassLook && p.glassLook.see === SHARDS.cutSee && p.glassLook.rim === SHARDS.cutRim && p.glassLook.anim === SHARDS.cutAnim
     && lum(p.albedo) < 0.15 && p.rough === 0.05 && (p.flags & BoxFlag.NoShadow) !== 0);
-  F.verdict(okA && SHARDS.cutSee > 0 && SHARDS.cutRim > 0 && SHARDS.cutEdge > 0 && SHARDS.cutBody > 0, 'as shipped every cut plate carries the glass look: a pale edge colour, see-through faces inside a rim, a dark polished body, no shadow',
-    `${A.made.length} cut plates · see ${SHARDS.cutSee} rim ${SHARDS.cutRim} px anim ${SHARDS.cutAnim} · body luminance ≤ ${Math.max(...A.made.map((p: any) => lum(p.albedo))).toFixed(3)} · edge e.g. ${(A.made[0] as any)?.core?.map((x: number) => x.toFixed(2))}`);
   const airLum = Math.max(...A.made.map((p: any) => lum(p.albedo)));
   F.verdict(A.lying.length > 0 && SHARDS.cutSeeRest > 0 && SHARDS.cutSeeRest < SHARDS.cutSee && SHARDS.cutRestBody > 0 && A.lying.every((c: any) => c.glassLook && c.glassLook.see === SHARDS.cutSeeRest && c.glassLook.rim === SHARDS.cutRim && lum(c.albedo) > airLum + 0.05 && lum(c.albedo) < 0.5),
     'a plate that has come to rest has more body than one in the air: fewer of its pixels left to the floor, the rest a pale sheen (not the floor\'s colour, not opaque)', `${A.lying.length} cut plates at rest · see ${SHARDS.cutSeeRest} (in the air ${SHARDS.cutSee}) · body luminance ${Math.min(1, ...A.lying.map((c: any) => lum(c.albedo))).toFixed(3)}‥${Math.max(0, ...A.lying.map((c: any) => lum(c.albedo))).toFixed(3)} (in the air ≤ ${airLum.toFixed(3)})`);

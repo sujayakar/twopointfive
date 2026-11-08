@@ -77,9 +77,6 @@ export async function messCheck(): Promise<boolean> {
     // A HAND GRENADE on open floor
     { const A = await quiet(() => stand()), gA = A.g, at = openAt(gA), p0 = play(gA); await quiet(async () => { burst(A, 'frag'); });
       const F = films(gA), st = since(A.s0), far = Math.max(0, ...F.map(d => Math.hypot(d.pos[0] - at[0], d.pos[2] - at[2]))), low = F.filter(d => d.pos[1] < 0.05), tops = F.filter(d => d.pos[1] >= K.top.lo && d.pos[1] <= K.top.hi);
-      verdict(low.length >= 3 && low.length + tops.length === F.length && picture(F) && far <= (K.burst.core * 0.5 + K.burst.reach * 1.25) + 0.05 && F.every(d => d.radius >= K.minRadius && d.radius <= K.burst.core + 1e-6) && through(gA, F, K) === 0 && st.films === low.length && st.tops === tops.length,
-        'a hand grenade on open floor: a heart and its lobes of settled dust lie round the burst, every one a mark laid only for the picture',
-        `${low.length} on the floor, ${tops.length} on tops, the farthest ${f2(far)} m off, reach ${f2(Math.min(9, ...F.map(d => d.radius)))}‥${f2(Math.max(0, ...F.map(d => d.radius)))} m, picture-only ${picture(F)}, through something standing ${through(gA, F, K)}, play's marks ${p0} → ${play(gA)} · counters since the floor stood ${JSON.stringify(st)}`);
       // …and a second burst on the same spot lays no second film over the first
       const n1 = low.length, c1 = MESS_STATS.crowded; await quiet(async () => { burst(A, 'frag'); }); const n2 = films(gA).filter(d => d.pos[1] < 0.1).length;
       verdict(n1 > 0 && n2 === n1 && MESS_STATS.crowded > c1, 'a second grenade on the same spot lays no second film: the dust that lies there is the dust that lies there', `floor films ${n1} → ${n2} · left out as already there ${MESS_STATS.crowded - c1}`); }

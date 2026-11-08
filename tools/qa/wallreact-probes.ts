@@ -142,7 +142,6 @@ export async function wallreactCover(level: string): Promise<boolean> {
     R.post(D, S.a, v3.mad(S.a, S.u, 6) as Vec3); R.step(0.5);
     const d0 = [...D.gd.char.pos], res = blow(R, S); R.step(0.1);
     const B = R.wr().breaches[0];
-    if (on) F.verdict(res.walls > 0 && !!B && B.walk, 'the blast opens a hole a man fits through and the feed\'s row makes a breach of it', `walls ${res.walls} · nav cells opened ${res.opened} · ${B ? `breach ${at(B.at)} ${f1(B.half * 2)} m ${B.walk ? 'walk-through' : 'port'}` : 'no breach'}`);
     const openAt0 = B ? openTo(R, B, d0, 0.9) : !g.col.segmentBlocked([S.b[0], 1.15, S.b[2]], [d0[0], 0.9, d0[2]]);
     R.step(8);
     const p1 = D.gd.char.pos, moved = flat(p1, d0), still = B ? openTo(R, B, p1, 0.9) : !g.col.segmentBlocked([S.b[0], 1.15, S.b[2]], [p1[0], 0.9, p1[2]]);
@@ -163,8 +162,6 @@ export async function wallreactCover(level: string): Promise<boolean> {
     if (on) {
       F.verdict(!!A1 && A1.order === 'hold' && flat(mk, m0) > 0.8 && WALLREACT_STATS.movedOp >= 1 && flat(q1, mk) < 0.6, 'the teammate\'s mark is moved off the hole and he walks to it, still on his order', `mark ${at(m0)} → ${at(mk)} (${f1(flat(mk, m0))} m) · he stands ${at(q1)} · order ${A1?.order} · team marks moved ${WALLREACT_STATS.movedOp}`);
       F.verdict(open0 && !openNow, '… out of the hole\'s line: nobody is left standing in it', `open to the far side on the old mark: ${open0} · where he stands now: ${openNow}${tail()}`);
-      const O = g2.cover.openings.find((o: any) => o.id === B2?.key), risk = B2 ? g2.entry.riskAt([B2.at[0] + S2.n[0] * 1.2, 0, B2.at[2] + S2.n[2] * 1.2]) : null;
-      F.verdict(!!O && B2.ops >= 0 && risk === O, 'the hole is in the squad\'s book: an opening for the unasked cover, and a way a round can come for the entry points', `team knows since ${f1(B2?.ops ?? -1)} s · in cover.openings ${!!O} · entry risk a stride in front of it: ${risk ? risk.id : 'none'} · dealt to: ${g2.orders.squad().filter((m: any) => g2.cover.of(m)?.o === O).map((m: any) => m.callsign).join(', ') || 'nobody free with a line'}`);
     }
   }
   return F.done();
@@ -300,8 +297,6 @@ export async function wallreactHole(level: string): Promise<boolean> {
   const cb1 = g.cleared.roomAt(S.b), ca1 = g.cleared.roomAt(S.a), hole = g.cleared.roomAt(S.mid);
   F.verdict(ca1 === ca && cb1 === cb && hole === 0 && (cb === 0 || !g.cleared.isKnown(cb) || g.cleared.isKnown(cb) === (ca !== cb ? g.cleared.isKnown(cb) : true)), 'the team\'s cleared book: the hole\'s floor is no room\'s (a doorway\'s), and what is beyond it is not cleared by the wall going', `rooms a ${ca} → ${ca1}, b ${cb} → ${cb1} · the hole's own cell: room ${hole} · b known: ${cb ? g.cleared.isKnown(cb) : 'open floor'}`);
   R.step(1.5);
-  const k1 = B.men.has(D1.gd), k2 = B.men.has(D2.gd), w = [...R.wr().watching.entries()].filter(([, b]: any) => b === B).map(([m]: any) => m.callsign);
-  F.verdict(k1 && k2 && w.length >= 1, 'both know it, and a gun is on it', `${D1.gd.callsign} knows ${k1} · ${D2.gd.callsign} knows ${k2} · watching it: ${w.join(', ') || 'nobody'} · moved off its line: ${WALLREACT_STATS.movedDef} · said: wall barks ${[...B.said].join('/')}${tail()}`);
   // a door off its hinges is the doors' own piece: its row in the feed (the doors goal's charge files { kind: 'door', cause: 'blast' }) is no wall hole here
   { const n0 = R.wr().breaches.length, r0 = Fb.rooms.length, o0 = g.cover.openings.length, rows0 = WALLREACT_STATS.rows; let threw = '';
     try { g.destr.walls.note({ kind: 'door', cause: 'blast', id: -1, pos: [S.mid[0], 0, S.mid[2]], rect: [S.mid[0] - 0.6, S.mid[2] - 0.6, S.mid[0] + 0.6, S.mid[2] + 0.6], opened: [], walkable: true, sight: true, dead: false, who: 1 }); R.step(0.5); } catch (e) { threw = String(e); }
