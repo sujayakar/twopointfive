@@ -27,7 +27,7 @@ import { drawHandBox } from './handbox';
 import type { KitView } from '../view/seatview';
 import { CmdRingViz } from './cmdring';
 import { PlanFloor } from './planfloor';
-import { FindMeViz } from './findme';
+import { FindMeViz } from './findmeviz';
 import { WindViz } from './windviz';
 import { SquadThrowViz } from './squadthrowviz';
 import { AttentionViz } from './attentionviz';
@@ -97,7 +97,7 @@ export class Overlay implements HudLike {
   readonly windViz = new WindViz(this.root);
   /** the squad's plan on the floor (ui/planfloor.ts ← game/floorplan.ts): ways, marks, fans, who an open menu goes to */
   readonly plan = new PlanFloor(this.traj);
-  /** the player's own man made easy to find (ui/findme.ts ← host/findme.ts): a ring at his feet — nothing unless his Options ask */
+  /** the player's own man made easy to find (ui/findmeviz.ts ← host/findme.ts): a ring at his feet — nothing unless his Options ask */
   readonly findme = new FindMeViz(this.traj);
   /** Tour timeline: one segment per stop (width ∝ duration) with its chapter title, the live one filled to its progress; segments are clickable. */
   setTimeline(ch: { list: { title: string; dur: number }[]; i: number; frac: number } | null) {
