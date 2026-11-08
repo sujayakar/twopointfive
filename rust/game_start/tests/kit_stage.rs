@@ -154,15 +154,17 @@ fn a_card_may_be_open_before_its_man_has_come() {
     kitstage::cards(&mut p.g, 4); p.frame();
     assert_eq!(st(&p).who, 4);
     assert_eq!(st(&p).order[0], game::scenario_run::team_of(&p.g)[3], "he came, and his card is open");
-    // (a message and a card in the same moment are one restaging, and the lamps hung are the same rows)
+    // (a message and a card in the same moment are one restaging, from the same start)
     kitstage::cards(&mut p.g, 3); p.frame();
     let was = p.g.mission.serial;
     kitstage::cards(&mut p.g, 3); p.frame();
     let (once, at) = (p.g.mission.serial - was, p.g.mission.serial);
     let lamps = (st(&p).porch, st(&p).fill);
+    let rows = (p.g.gd.len(), p.g.ch.len(), p.g.tab.light.len(), p.g.tab.boxes.len());
     kitstage::cards(&mut p.g, 3);
     kitstage::open(&mut p.g, 1, "weapon"); p.frame();
     assert_eq!((st(&p).porch, st(&p).fill), lamps);
+    assert_eq!((p.g.gd.len(), p.g.ch.len(), p.g.tab.light.len(), p.g.tab.boxes.len()), rows, "a game staged again and again is no bigger");
     assert_eq!(p.g.mission.serial - at, once, "staged again once");
 }
 
