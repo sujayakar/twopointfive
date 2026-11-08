@@ -362,25 +362,6 @@
 "armCode": "{ if (e.e.track) e.e.track = trackOf(g, e.e.track); g.smoke?.emit?.(e.e); }"
 },
 {
-"call": "SmokeSystemLike.keepHot",
-"rust": "crate::smoke_types::smoke_system_like_keep_hot",
-"sites": 3,
-"ts": "keepHot",
-"of": "SmokeSystemLike",
-"file": "src/smoke/types.ts",
-"why": "this",
-"params": [
-{
-"ts": "heat",
-"rust": "heat"
-}
-],
-"sig": "pub fn smoke_system_like_keep_hot(g: &mut crate::game::Game, heat: f64)",
-"bodyFile": "smoke_types/b_01.rs",
-"mode": "body",
-"answer": null
-},
-{
 "call": "SmokeSystemLike.obstaclesChanged",
 "rust": "crate::smoke_types::smoke_system_like_obstacles_changed",
 "sites": 8,

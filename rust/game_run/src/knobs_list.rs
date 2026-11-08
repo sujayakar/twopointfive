@@ -2472,20 +2472,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("fire.smoke.every", offset_of!(Knobs, fire.smoke.every), false),
     ("fire.smoke.view_r", offset_of!(Knobs, fire.smoke.view_r), false),
     ("fire.smoke.lean", offset_of!(Knobs, fire.smoke.lean), false),
-    ("fire.gas.up", offset_of!(Knobs, fire.gas.up), false),
-    ("fire.gas.radius", offset_of!(Knobs, fire.gas.radius), false),
-    ("fire.gas.cells", offset_of!(Knobs, fire.gas.cells), false),
-    ("fire.gas.density", offset_of!(Knobs, fire.gas.density), false),
-    ("fire.gas.temp", offset_of!(Knobs, fire.gas.temp), false),
-    ("fire.gas.speed", offset_of!(Knobs, fire.gas.speed), false),
-    ("fire.gas.push", offset_of!(Knobs, fire.gas.push), false),
-    ("fire.gas.jitter", offset_of!(Knobs, fire.gas.jitter), false),
-    ("fire.gas.every", offset_of!(Knobs, fire.gas.every), false),
-    ("fire.gas.view_r", offset_of!(Knobs, fire.gas.view_r), false),
-    ("fire.gas.keep", offset_of!(Knobs, fire.gas.keep), false),
-    ("fire.gas.ref_", offset_of!(Knobs, fire.gas.ref_), false),
-    ("fire.gas.lo", offset_of!(Knobs, fire.gas.lo), false),
-    ("fire.gas.ease", offset_of!(Knobs, fire.gas.ease), false),
     ("fire.bed", offset_of!(Knobs, fire.bed), false),
     ("fire.crack", offset_of!(Knobs, fire.crack), false),
     ("fire.bed_secs", offset_of!(Knobs, fire.bed_secs), false),
@@ -5729,20 +5715,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.fire.smoke.every;
     let _: &f64 = &k.fire.smoke.view_r;
     let _: &f64 = &k.fire.smoke.lean;
-    let _: &f64 = &k.fire.gas.up;
-    let _: &f64 = &k.fire.gas.radius;
-    let _: &f64 = &k.fire.gas.cells;
-    let _: &f64 = &k.fire.gas.density;
-    let _: &f64 = &k.fire.gas.temp;
-    let _: &f64 = &k.fire.gas.speed;
-    let _: &f64 = &k.fire.gas.push;
-    let _: &f64 = &k.fire.gas.jitter;
-    let _: &f64 = &k.fire.gas.every;
-    let _: &f64 = &k.fire.gas.view_r;
-    let _: &f64 = &k.fire.gas.keep;
-    let _: &f64 = &k.fire.gas.ref_;
-    let _: &f64 = &k.fire.gas.lo;
-    let _: &f64 = &k.fire.gas.ease;
     let _: &f64 = &k.fire.bed;
     let _: &f64 = &k.fire.crack;
     let _: &f64 = &k.fire.bed_secs;

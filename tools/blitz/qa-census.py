@@ -111,7 +111,7 @@ def closure(path, fn):
         todo += nxt
     return texts, heads
 HOST_LHS = re.compile(r'^(?:W|w|H|P|world)?\.?(?:input|cam|canvas|audioLog|I\d?|inp)\b|^(?:console|process|Math|globalThis|module|exports|opts?|o|args?|res|out|r|R|F|T|S|rec|row|acc|st|stats?|ctx|cfg|env)\.')
-OUT_CALLS = re.compile(r'(audio\.(play|footstep|rain)|smoke\.(emit|push|keepHot|clearAll|obstaclesChanged)|particles\.(emit|impulse|setHeat)|decals\.(add|touch|clear)|saves\.\w+|journal\.cut|engine\.\w+|sensors\.\w+)$')   # (what the out events' dispatcher calls on the host's objects, and the host's own hooks)
+OUT_CALLS = re.compile(r'(audio\.(play|footstep|rain)|smoke\.(emit|push|clearAll|obstaclesChanged)|particles\.(emit|impulse|setHeat)|decals\.(add|touch|clear)|saves\.\w+|journal\.cut|engine\.\w+|sensors\.\w+)$')   # (what the out events' dispatcher calls on the host's objects, and the host's own hooks)
 WRAP_OK = re.compile(r'^(console|process|Math|globalThis|window|document|performance|Date|JSON|Bun)\.')
 def read(path, fn):
     texts, heads = closure(path, fn); T = '\n'.join(t for _, t in texts)
