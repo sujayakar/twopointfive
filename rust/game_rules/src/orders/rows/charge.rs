@@ -48,7 +48,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
 }
 
 /// a steel door takes none, but for the one that is on it
-fn gone(g: &mut Game, t: &OrderTarget, _men: &[GuardId]) -> bool {
+fn gone(g: &Game, seat: &crate::seats::SeatRef, t: &OrderTarget, _men: &[GuardId]) -> bool {
     let OrderTarget::Door(x) = t else { return false };
-    on(g.dr[x.door].def.steel) && crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door).is_none()
+    on(g.dr[x.door].def.steel) && crate::doortools::door_tools_charge_on(g, seat, x.door).is_none()
 }

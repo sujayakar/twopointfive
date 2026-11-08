@@ -19,4 +19,4 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
 }
 
 /// in silent's place while the squad is silent
-fn when(g: &mut Game, _t: &OrderTarget, _men: &[GuardId]) -> bool { crate::silent::squad_silent(g, &crate::seats::here(g)) }
+fn when(g: &Game, seat: &crate::seats::SeatRef, _t: &OrderTarget, _men: &[GuardId]) -> bool { crate::silent::squad_silent(g, seat) }

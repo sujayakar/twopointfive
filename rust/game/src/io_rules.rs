@@ -11,8 +11,8 @@ pub fn ask(g: &mut crate::game::Game, kind: u32, row: u32, seat: u32, args: &[u8
         1 => { let gd: GuardId = Io::r(&mut i); let t: T = Io::r(&mut i); crate::orders::order_can(g, d, gd, &t).w(&mut o); }
         2 => { let men: Vec<GuardId> = Io::r(&mut i); let t: T = Io::r(&mut i); crate::orders::order_only(g, d, &men, &t).w(&mut o); }
         3 => { let t: T = Io::r(&mut i); let men: Vec<GuardId> = Io::r(&mut i); match crate::orders::order_valid(g, d, &t, &men) { Ok(()) => o.b.push(0), Err(None) => o.b.push(1), Err(Some(w)) => { o.b.push(2); w.w(&mut o); } } }
-        4 => { let t: T = Io::r(&mut i); let men: Vec<GuardId> = Io::r(&mut i); crate::orders::order_when(g, d, &t, &men).w(&mut o); }
-        5 => { let t: T = Io::r(&mut i); let men: Vec<GuardId> = Io::r(&mut i); crate::orders::order_gone(g, d, &t, &men).w(&mut o); }
+        4 => { let t: T = Io::r(&mut i); let men: Vec<GuardId> = Io::r(&mut i); crate::orders::order_when(g, &crate::seats::here(g), d, &t, &men).w(&mut o); }
+        5 => { let t: T = Io::r(&mut i); let men: Vec<GuardId> = Io::r(&mut i); crate::orders::order_gone(g, &crate::seats::here(g), d, &t, &men).w(&mut o); }
         6 => { String::from(crate::silent::posture_mark(g, &crate::seats::here(g), d)).w(&mut o); }
         7 => { crate::silent::posture_given(g, d); }
         8 => { let men: Vec<GuardId> = Io::r(&mut i); let t: T = Io::r(&mut i); let opts: Option<crate::orders::GiveOpts> = Io::r(&mut i); crate::orders::order_issue(g, d, &men, &t, opts.as_ref()).w(&mut o); }

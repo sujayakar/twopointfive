@@ -507,7 +507,7 @@ pub fn squad_orders_all_in(g: &mut crate::game::Game) {
 /// The quick key's own order on `t`, given by hand: the entry the men pick, else the target's first row. (orders.ts quickGive)
 pub fn squad_orders_quick_give(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) {
     if !crate::autopilot::auto_quick(g, t) {
-        if let Some(d) = squad_orders_default_for(g, t) {
+        if let Some(d) = squad_orders_default_for(g, &crate::seats::here(g), t) {
             let id = g.tab.orders_order_def[d].id.clone();
             squad_orders_give(g, &id, Some(t), None, None);
         }
@@ -519,7 +519,7 @@ pub fn squad_orders_quick_for(g: &mut crate::game::Game, men: &[GuardId], t: &cr
     use crate::autopilot::AutoPickWhy as Why;
     let n = g.orders.group;
     let tail = g.orders.log.last().map(|row| row.serial);
-    let a = crate::autopilot::auto_pick(g, t, Some(true), Some(men));
+    let a = crate::autopilot::auto_pick(g, &crate::seats::here(g), t, Some(true), Some(men));
     if a.why == Why::Pending { return None; }
     let to: Vec<GuardId> = a.men.clone().unwrap_or_else(|| men.to_vec());
     if a.why == Why::Set {
@@ -559,7 +559,7 @@ pub fn squad_orders_quick_words(g: &mut crate::game::Game, t: &crate::orders::Or
 /// … for the open menu's first wedge; for a ring of a part of the squad, what those men would do. (orders.ts menuQuick)
 pub fn squad_orders_menu_quick(g: &mut crate::game::Game, m: &crate::orders::Menu) -> Option<String> {
     if m.part.is_some() {
-        let p = crate::autopilot::auto_pick(g, &m.target, Some(false), Some(&m.men));
+        let p = crate::autopilot::auto_pick(g, &crate::seats::here(g), &m.target, Some(false), Some(&m.men));
         crate::autopilot::auto_hint(g, &m.target, Some(&p))
     } else {
         squad_orders_quick_words(g, &m.target, None)

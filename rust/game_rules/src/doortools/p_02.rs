@@ -35,7 +35,7 @@ pub fn off_of(g: &crate::game::Game, d: DoorId, p: V3, side: f64) -> f64 {
     frame_off(g.dr[d].def.closed_dir, g.dr[d].def.hinge, p, side)
 }
 /// unlatched and swung past OPEN_RAD   (doortools.ts isOpen)
-pub fn is_open(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn is_open(g: &crate::game::Game, d: DoorId) -> bool {
     !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= OPEN_RAD
 }
 /// is most of a room's floor under the sky (asked once per room, of every cell or about 64 of them)   (doortools.ts underSky)

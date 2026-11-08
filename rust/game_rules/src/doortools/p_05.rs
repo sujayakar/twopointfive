@@ -316,7 +316,7 @@ pub fn door_tools_waiting_any(g: &crate::game::Game, seat: &crate::seats::SeatRe
     out
 }
 /// what of these men's waits on THAT door, and who (doortools.ts waitsOn)
-pub fn door_tools_waits_on(g: &mut crate::game::Game, men: &[GuardId], d: DoorId) -> Option<crate::doortools::DoorToolsWaitsOn> {
+pub fn door_tools_waits_on(g: &crate::game::Game, men: &[GuardId], d: DoorId) -> Option<crate::doortools::DoorToolsWaitsOn> {
     let mut st: Option<Vec<GuardId>> = None;
     for x in door_tools_waiting_any(g, &crate::seats::here(g), men) {
         match x {
