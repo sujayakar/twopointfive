@@ -4,8 +4,8 @@ import type { Graph, Stage } from '../graph';
 import type { V3 } from '../math';
 import head from './smoke.wgsl' with { type: 'text' };
 import signals from '../wgsl/signals.wgsl' with { type: 'text' };
-export const SMOKE = { slots: 3072, pages: [50, 20, 36] as const, pairs: 6, atlas: [160, 160, 120] as const };
-const CELLS = SMOKE.slots * 512, WORDS = 134320 + 3072;
+export const SMOKE = { slots: 3072, pages: [75, 24, 60] as const, pairs: 6, atlas: [160, 160, 120] as const };
+const CELLS = SMOKE.slots * 512, PG = 108000, WORDS = PG + 33 * 3072 + 16;
 const ONE = { groups: (): [number, number, number] => [SMOKE.slots / 64, 1, 1] }, BRICK = { groups: (): [number, number, number] => [64, SMOKE.slots / 64, 1] };
 /** a group a live brick: s its slot, b its brick */
 const perBrick = (body: string, n = 256, extra = '') => `${extra}
@@ -36,7 +36,7 @@ const freeCode = `
 const linkCode = `
 @compute @workgroup_size(64) fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_index) li: u32) { let at = wg.x + wg.y * 64u; if (at >= M[M_N + 1u] || li >= 27u) { return; } let s = M[M_LIVE + at]; let b = brickOf(M[M_BRICK + s] - 1u); let q = b + vec3i(i32(li) % 3, (i32(li) / 3) % 3, i32(li) / 9) - 1; var n = NONE; if (inPage(q)) { let p = M[M_PAGE + brickIx(q)]; if (p != 0u && p != NONE) { n = p - 1u; } } M[M_NBR + s * 27u + li] = n; }`;
 const facesCode = perBrick(`
-  let born = live && M[M_BORN + s] != 0u; let x0 = mid(b, vec3i(0)) - 0.5 * H; fineLeaves = false;
+  let born = live && M[M_BORN + s] != 0u; if (born && li < 64u) { G[s * 64u + li] = vec2u(0u); } let x0 = mid(b, vec3i(0)) - 0.5 * H; fineLeaves = false;
   for (var k = li; k < 512u; k += 256u) { let c = cellOf(k); let i = s * 512u + k; var f = 0u; if (live) { f = W[i] & 63u; }
     if (born) { f = 0u; let x = mid(b, c); for (var a = 0u; a < 6u; a++) { if (a > 2u && c[a - 3u] != 0) { continue; } var d = vec3f(0.0); d[a % 3u] = select(1.0, -1.0, a > 2u); let h = nearest(x, d, 0.0, H, 0x4000u | WATER, 1e9); if ((h.piece != 0xffffffffu && (h.piece & LEAF_HIT) == 0u) || h.gt < H) { f |= 1u << a; } } Va[i] = vec2u(0u); Vb[i] = vec2u(0u); Q[i] = 0.0; Q[i + HALF] = 0.0; }
     sh[k] = f; }
@@ -55,13 +55,26 @@ const moveCode = FETCH + SHUT + perBrick(`
     for (var q = 0.0; q < n; q += 1.0) { f += st; for (var a = 0u; a < 3u; a++) { let g = select(-1, 1, f[a] > 0.0); if (abs(f[a]) > 0.5) { var t = c; t[a] += g; let j = cell(s, t); if (shut(i, a, g) || j == NONE) { f[a] = f32(g) * 0.5; } else { c = t; i = j; f[a] -= f32(g); } } } }
     var acc = vec4f(0.0); var ht = 0.0; let sg = vec3i(select(vec3f(-1.0), vec3f(1.0), f > vec3f(0.0))); let w = abs(f); var lo = 1e9; var hi = -1e9;
     for (var q = 0u; q < 8u; q++) { var t = c; var j = i; var wt = 1.0; for (var a = 0u; a < 3u; a++) { let on = ((q >> a) & 1u) == 1u; wt *= select(1.0 - w[a], w[a], on); if (on && j != NONE) { if (!shut(j, a, sg[a])) { t[a] += sg[a]; j = cell(s, t); } } } if (j == NONE) { lo = min(lo, 0.0); continue; } let e = unpackV(Va[j]); lo = min(lo, e.w); hi = max(hi, e.w); acc += e * wt; ht += Q[j + FROM] * wt; }
-    Vb[i0] = packV(acc); Q[i0 + TO] = ht * exp(-dt / 2.5); }
+    Vb[i0] = packV(acc); Q[i0 + TO] = ht * exp(-dt / 2.5); R[i0] = pack2x16float(vec2f(min(lo, 60.0), clamp(hi, 0.0, 60.0))); }
 `, 256, `const HALF = SLOTS_S * 512u;`);
+/** MacCormack: what the trip there and back again lost is given back by half, within what was found there. Keeps edges that one step would blur */
+const sharpCode = FETCH + SHUT + perBrick(`
+  if (!live) { return; } let dt = smokeK.x;
+  for (var k = li; k < 512u; k += 256u) { let i0 = s * 512u + k; let one = unpackV(Vb[i0]).w; let lim = unpack2x16float(R[i0]); if (lim.y < 0.004) { R[i0] = bitcast<u32>(one); continue; } let v = unpackV(Va[i0]);
+    let d = clamp(v.xyz * (dt / H), vec3f(-3.5), vec3f(3.5)); let c0 = cellOf(k); let b0 = vec3i(floor(d)); let f = d - vec3f(b0); var back = 0.0; var ok = true; for (var q = 0u; q < 8u; q++) { let o = vec3i(i32(q & 1u), i32((q >> 1u) & 1u), i32(q >> 2u)); let j = cell(s, c0 + b0 + o); if (j == NONE) { ok = false; continue; } let w = select(1.0 - f.x, f.x, o.x == 1) * select(1.0 - f.y, f.y, o.y == 1) * select(1.0 - f.z, f.z, o.z == 1); back += unpackV(Vb[j]).w * w; }
+    let wall = (W[i0] >> 6u) != 0u; R[i0] = bitcast<u32>(select(one, clamp(one + 0.5 * (v.w - back), lim.x, lim.y), ok && !wall)); }
+`);
 const pushCode = FETCH + SHUT + perBrick(`
   if (!live) { return; } let dt = smokeK.x;
-  for (var k = li; k < 512u; k += 256u) { let c = cellOf(k); let i = s * 512u + k; var e = unpackV(Vb[i]); var heat = Q[i + TO]; let x = mid(b, c); var v = e.xyz;
+  for (var k = li; k < 512u; k += 256u) { let c = cellOf(k); let i = s * 512u + k; var e = unpackV(Vb[i]); e.w = bitcast<f32>(R[i]); var heat = Q[i + TO]; let x = mid(b, c); var v = e.xyz;
     if (e.w > 0.01) { let w = curl(s, c); let g = vec3f(length(curl(s, c + vec3i(1, 0, 0))) - length(curl(s, c - vec3i(1, 0, 0))), length(curl(s, c + vec3i(0, 1, 0))) - length(curl(s, c - vec3i(0, 1, 0))), length(curl(s, c + vec3i(0, 0, 1))) - length(curl(s, c - vec3i(0, 0, 1)))); let l = length(g); if (l > 1e-4) { v += cross(g / l, w) * (dt * 4.0 * H); } }
-    v.y += dt * (heat * 1.6 - e.w * 0.03); let out = select(0.0, 1.0, openAir(x)); let gust = 0.6 + 0.5 * vnoise(x.xz * 0.35 - vec2f(cos(frame.weather.w), sin(frame.weather.w)) * frame.misc.x * 0.6); let wind = vec3f(cos(frame.weather.w), 0.0, sin(frame.weather.w)) * (1.2 * gust); v = mix(v, wind, out * (1.0 - exp(-dt * 0.9))); e.w *= exp(-dt * (0.013 + out * 0.14)); v *= exp(-dt * 0.2);
+    v.y += dt * (heat * 1.6 - e.w * 0.03); let out = select(0.0, 1.0, openAir(x)); let wd = vec2f(cos(frame.weather.w), sin(frame.weather.w)); let gust = max(0.15, 0.55 + 0.45 * sin(frame.misc.x * 0.7 - dot(x.xz, wd) * 0.35) + 0.5 * (vnoise(x.xz * 0.45 - wd * frame.misc.x * 0.8) - 0.5)); let wind = vec3f(wd.x, 0.0, wd.y) * (1.5 * gust * frame.misc2.w); v = mix(v, wind, out * (1.0 - exp(-dt * 1.1)));
+    // swirls finer than confinement finds, where there is smoke to show them
+    if (e.w > 0.02) { let q = x * 2.6 + vec3f(0.0, -frame.misc.x * 0.5, frame.misc.x * 0.2); let g = fract(q); let w3 = g * g * (3.0 - 2.0 * g); var n3 = vec3f(0.0); for (var m = 0u; m < 8u; m++) { let o = vec3f(f32(m & 1u), f32((m >> 1u) & 1u), f32(m >> 2u)); let wt = select(1.0 - w3, w3, o > vec3f(0.5)); n3 += (hash33(floor(q) + o) - 0.5) * (wt.x * wt.y * wt.z); } v += vec3f(n3.z - n3.y, n3.x - n3.z, n3.y - n3.x) * (dt * 2.2 * min(1.0, e.w)); }
+    // bodies and leaves of doors take the air with them
+    for (var n = 0u; n < u32(smokeK2.x); n++) { let a = pushes[n * 2u]; let f = pushes[n * 2u + 1u]; let d = length((x - a.xyz) * vec3f(1.0, f.w, 1.0)) / a.w; if (d < 1.0) { v = mix(v, f.xyz, (1.0 - d * d) * (1.0 - exp(-dt * 22.0))); } }
+    let rim = min(min(x.x - AT.x, AT.x + f32(PN.x) * 8.0 * H - x.x), min(x.z - AT.z, AT.z + f32(PN.z) * 8.0 * H - x.z)); e.w *= exp(-dt * 4.0 * (1.0 - smoothstep(0.3, 3.0, rim)));
+    e.w *= exp(-dt * (0.013 + out * 0.14)); v *= exp(-dt * 0.2);
     for (var n = 0u; n < u32(smokeK.w); n++) { let a = sources[n * 2u]; let f = sources[n * 2u + 1u]; let d = x - a.xyz; let r = length(d); if (r < a.w) { let q = 1.0 - r / a.w; let sp = hash33(vec3f(floor(x * 9.0)) + floor(frame.misc.x * 20.0)) - 0.5; e.w = min(e.w + f.x * q * dt, 11.0); heat = min(heat + f.y * q * dt, 2.5); v += (normalize(d + vec3f(0.0, 0.1, 0.0)) * 3.0 + sp * 7.0) * (q * dt * f.z); } }
     v *= min(1.0, (3.4 * H / dt) / max(length(v), 1e-4)); if (e.w < 0.002) { e.w = 0.0; } Va[i] = packV(vec4f(v, e.w)); Q[i + TO] = heat; }
 `, 256, `const HALF = SLOTS_S * 512u;
@@ -111,33 +124,35 @@ export class Smoke {
   get burning() { return this.sources.some(q => this.lab.tick - q.born < q.last * 60 + 1200); }
   frame() {
     const lab = this.lab, steam = lab.steam > 0 ? lab.building.world.plumes : []; if (steam.length) this.on = true; if (!this.on) { this.dt = 0; return; } const d = Math.max(0, Math.min(3, lab.tick - this.lastTick)); this.dt = this.lastTick < 0 ? 1 / 60 : d / 60; this.lastTick = lab.tick; if (this.dt <= 0 && !this.fresh) return; this.steps++; this.flip ^= 1;
-    if (this.fresh) { this.fresh = false; const m = new Uint32Array(WORDS); for (let i = 0; i < SMOKE.slots; i++) m[128160 + i] = SMOKE.slots - 1 - i; m[134304] = SMOKE.slots; lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('smokeM')!, 0, m); this.dt = this.dt || 1 / 60; }
-    else lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('smokeM')!, (134304 + 1) * 4, new Uint32Array([0]));
+    if (this.fresh) { this.fresh = false; const m = new Uint32Array(WORDS); for (let i = 0; i < SMOKE.slots; i++) m[PG + 30 * SMOKE.slots + i] = SMOKE.slots - 1 - i; m[PG + 32 * SMOKE.slots] = SMOKE.slots; lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('smokeM')!, 0, m); this.dt = this.dt || 1 / 60; }
+    else lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('smokeM')!, (PG + 32 * SMOKE.slots + 1) * 4, new Uint32Array([0]));
     const key = lab.building.doors.map(x => x.open.toFixed(3)).join(); this.faceNow = key !== this.doorKey; this.doorKey = key; void this.faceNow;
     const boxes = lab.building.doors.map(x => x.leaf[0]!), f = new Float32Array(16 * 16); boxes.slice(0, 16).forEach((p, i) => { for (let k = 0; k < 3; k++) { const r = p.rot[k]!; f.set([r[0], r[1], r[2], -(r[0] * p.at[0] + r[1] * p.at[1] + r[2] * p.at[2])], i * 16 + k * 4); } f.set(p.half, i * 16 + 12); }); lab.uniform('smokeDoors', f);
-    const s = new Float32Array(16 * 8); let n = 0; for (const q of this.sources) { const age = (lab.tick - q.born) / 60; if (age > q.last || n >= 10) continue; const k = Math.min(1, age / 0.5) * Math.min(1, (q.last - age) / 2); s.set([...q.at, 0.34, 210 * q.rate * k, 1.3 * k, 1.0 * k, 24 * q.rate * k], n++ * 8); }
+    const s = new Float32Array(16 * 8); let n = 0; for (const q of this.sources) { const age = (lab.tick - q.born) / 60; if (age > q.last || n >= 10) continue; const k = Math.min(1, age / 0.5) * Math.min(1, (q.last - age) / 2); s.set([...q.at, 0.34, 300 * q.rate * k, 1.1 * k, 1.0 * k, 95 * q.rate * k], n++ * 8); }
     for (const p of steam) { if (n >= 16) break; const k = 0.75 + 0.25 * Math.sin(lab.tick * 0.11 + p.at[0]) * Math.sin(lab.tick * 0.043 + p.at[2]); s.set([p.at[0], p.at[1], p.at[2], p.r, 7 * p.k * k, 5.0, 0.35, 3 * k], n++ * 8); } lab.uniform('smokeSources', s);
+    const ps = new Float32Array(128); let m = 0; for (const q of lab.building.people) for (const [h, rad] of [[0.45, 0.42], [1.25, 0.45]] as const) if (m < 14) ps.set([q.pos[0], q.pos[1] + h, q.pos[2], rad, q.vel[0] * 1.15, 0, q.vel[2] * 1.15, 0.8], m++ * 8); for (const d of lab.building.doors) { const l = d.leaf[0]!, w = lab.prevAt.get(l); if (!w || m >= 16) continue; const v = [0, 1, 2].map(k => (l.at[k]! - w.at[k]!) / this.dt); if (Math.hypot(...v) > 0.05) ps.set([...l.at, 0.75, v[0]!, 0, v[2]!, 0.5], m++ * 8); } lab.uniform('smokePushes', ps); lab.uniform('smokeK2', new Float32Array([m, 0, 0, 0]));
     lab.uniform('smokeK', new Float32Array([this.dt, this.steps, boxes.length, n]));
   }
   stages(g: Graph, cacheBind: NonNullable<Stage['buffers']>, cacheLib: string, bounceLib: string): Stage[] {
-    const lab = this.lab, B = (n: string, bytes: number) => lab.buffer(n, bytes, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); B('smokeM', WORDS * 4); B('smokeA', CELLS * 8); B('smokeB', CELLS * 8); B('smokeQ', CELLS * 8); B('smokeP', CELLS * 8); B('smokeW', CELLS * 4); B('smokeG', SMOKE.slots * 64 * 8); B('smokeD', SMOKE.slots * 4);
-    lab.uniform('smokeK', new Float32Array(4)); lab.uniform('smokeDoors', new Float32Array(256)); lab.uniform('smokeSources', new Float32Array(128)); lab.uniform('changes', new Float32Array(36)); g.bind('smokeAtlas', lab.scene.smokeTex); g.bind('smokePage', lab.scene.smokePage);
+    const lab = this.lab, B = (n: string, bytes: number) => lab.buffer(n, bytes, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); B('smokeM', WORDS * 4); B('smokeA', CELLS * 8); B('smokeB', CELLS * 8); B('smokeQ', CELLS * 8); B('smokeP', CELLS * 8); B('smokeW', CELLS * 4); B('smokeR', CELLS * 4); B('smokeG', SMOKE.slots * 64 * 8); B('smokeD', SMOKE.slots * 4);
+    lab.uniform('smokeK', new Float32Array(4)); lab.uniform('smokeDoors', new Float32Array(256)); lab.uniform('smokeSources', new Float32Array(128)); lab.uniform('smokePushes', new Float32Array(128)); lab.uniform('smokeK2', new Float32Array(4)); lab.uniform('changes', new Float32Array(36)); g.bind('smokeAtlas', lab.scene.smokeTex); g.bind('smokePage', lab.scene.smokePage);
     const go = () => this.on && this.dt > 0, K: NonNullable<Stage['buffers']> = { smokeK: ['smokeK', 'vec4f', 'uniform'], sources: ['smokeSources', 'array<vec4f, 32>', 'uniform'] }, rw = (n: string, t: string): [string, string, 'read_write'] => [n, t, 'read_write'], ro = (n: string, t: string): [string, string, 'read'] => [n, t, 'read'];
     const MA = { M: rw('smokeM', 'array<atomic<u32>>') }, MR = { M: ro('smokeM', 'array<u32>') }, MW = { M: rw('smokeM', 'array<u32>') }, V2 = 'array<vec2u>', F = 'array<f32>', U = 'array<u32>';
     const S = (name: string, code: string, buffers: NonNullable<Stage['buffers']>, over: Stage['over'] = BRICK, consts?: Record<string, number>): Stage => ({ name, over, code: head + code, buffers, when: go, ...(consts ? { consts } : {}) });
     const half = SMOKE.slots * 512, twice = (name: string, code: string, buffers: NonNullable<Stage['buffers']>): Stage[] => [0, 1].map(k => ({ ...S(name, code, buffers, BRICK, { FROM: k ? half : 0, TO: k ? 0 : half }), when: () => go() && this.flip === k }));
     return [
       S('smoke page', emitCode, { ...MA, ...K }, { groups: () => [1, 1, 1] }), S('smoke page', spreadCode, { ...MA, smokeK: K.smokeK! }, ONE), S('smoke page', freeCode, { ...MA, smokeK: K.smokeK! }, ONE), S('smoke page', linkCode, MW),
-      S('smoke faces', facesCode, { ...MR, W: rw('smokeW', U), Va: rw('smokeA', V2), Vb: rw('smokeB', V2), Q: rw('smokeQ', F), smokeK: K.smokeK!, doors: ['smokeDoors', 'array<Box, 16>', 'uniform'] }),
-      ...twice('smoke move', moveCode, { ...MR, W: ro('smokeW', U), Va: ro('smokeA', V2), Vb: rw('smokeB', V2), Q: rw('smokeQ', F), smokeK: K.smokeK! }),
-      ...twice('smoke push', pushCode, { ...MR, W: ro('smokeW', U), Vb: ro('smokeB', V2), Va: rw('smokeA', V2), Q: rw('smokeQ', F), ...K }),
+      S('smoke faces', facesCode, { ...MR, W: rw('smokeW', U), Va: rw('smokeA', V2), Vb: rw('smokeB', V2), Q: rw('smokeQ', F), G: rw('smokeG', V2), smokeK: K.smokeK!, doors: ['smokeDoors', 'array<Box, 16>', 'uniform'] }),
+      ...twice('smoke move', moveCode, { ...MR, W: ro('smokeW', U), Va: ro('smokeA', V2), Vb: rw('smokeB', V2), Q: rw('smokeQ', F), R: rw('smokeR', U), smokeK: K.smokeK! }),
+      S('smoke move', sharpCode, { ...MR, W: ro('smokeW', U), Va: ro('smokeA', V2), Vb: ro('smokeB', V2), R: rw('smokeR', U), smokeK: K.smokeK! }),
+      ...twice('smoke push', pushCode, { ...MR, W: ro('smokeW', U), Vb: ro('smokeB', V2), Va: rw('smokeA', V2), Q: rw('smokeQ', F), ...K, R: ro('smokeR', U), smokeK2: ['smokeK2', 'vec4f', 'uniform'], pushes: ['smokePushes', 'array<vec4f, 32>', 'uniform'] }),
       S('smoke press', divCode, { ...MR, W: ro('smokeW', U), Va: ro('smokeA', V2), P: rw('smokeP', F), ...K }),
       ...Array.from({ length: SMOKE.pairs * 2 }, (_, i) => S('smoke press', solveCode, { ...MR, W: ro('smokeW', U), P: rw('smokeP', F) }, BRICK, { PARITY: i & 1 })),
       S('smoke free', freedCode, { ...MR, W: ro('smokeW', U), Va: ro('smokeA', V2), P: ro('smokeP', F), Vb: rw('smokeB', V2), D: rw('smokeD', F) }),
       S('smoke page', doneCode, { ...MW, D: ro('smokeD', F) }, ONE),
       { ...S('smoke light', '', {}), code: signals + cacheLib + bounceLib + head + lightCode, buffers: { ...cacheBind, ...MR, Vb: ro('smokeB', V2), G: rw('smokeG', V2), changes: ['changes', 'Changes', 'uniform'] } },
       { ...S('smoke show', publishCode, { ...MR, W: ro('smokeW', U), Vb: ro('smokeB', V2), G: ro('smokeG', V2) }), writes: { atlas: 'smokeAtlas' }, alone: true },
-      { ...S('smoke show', pageCode, MR, { groups: () => [Math.ceil(36000 / 64), 1, 1] }), writes: { page: 'smokePage' }, alone: true },
+      { ...S('smoke show', pageCode, MR, { groups: () => [Math.ceil(PG / 64), 1, 1] }), writes: { page: 'smokePage' }, alone: true },
       { name: 'smoke keep', over: BRICK, code: '', async make() { return enc => { if (go()) enc.copyBufferToBuffer(g.buffers.get('smokeB')!, 0, g.buffers.get('smokeA')!, 0, CELLS * 8); }; } },
     ];
   }

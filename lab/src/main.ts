@@ -46,7 +46,7 @@ async function main() {
   const floorOf = (y: number) => y < 3.3 ? 2 : y < 6.7 ? 1 : 0, placePins = () => {
     const c = lab.camera.frame(lab.graph.output[0] / lab.graph.output[1]); lab.building.world.lamps.forEach((l, i) => {
       if (l.kind === 'spot' || l.name === 'pool') return; let b = pinOf[i]; if (!b) { b = pinOf[i] = document.createElement('button'); b.title = l.name; b.setAttribute('aria-label', 'Switch lamp ' + l.name); b.onclick = () => { flip(i); b!.blur(); }; pins.append(b); }
-      const v = sub(l.at, c.pos), z = dot(v, c.fwd), x = dot(v, c.right) / dot(c.right, c.right) / z, y = dot(v, c.up) / dot(c.up, c.up) / z, f = floorOf(l.at[1]), here = lab.level === 0 ? f < 2 && l.name === 'terrace' : f === lab.level || (l.name === 'terrace' && lab.level === 1); b.hidden = !here || z < 0.5 || Math.abs(x) > 1.05 || Math.abs(y) > 1.05; b.style.transform = `translate(${(x * 0.5 + 0.5) * innerWidth}px,${(0.5 - y * 0.5) * innerHeight}px)`; b.className = lab.lampOff.has(i) ? 'off' : ''; }); };
+      const v = sub(l.at, c.pos), z = dot(v, c.fwd), x = dot(v, c.right) / dot(c.right, c.right) / z, y = dot(v, c.up) / dot(c.up, c.up) / z, f = floorOf(l.at[1]), here = lab.level === 0 ? f < 2 && l.name === 'terrace' : f === lab.level || (l.name === 'terrace' && lab.level === 1); const off = !here || z < 0.5 || Math.abs(x) > 1.05 || Math.abs(y) > 1.05; if (b.hidden !== off) b.hidden = off; if (off) return; b.style.transform = `translate(${(x * 0.5 + 0.5) * innerWidth}px,${(0.5 - y * 0.5) * innerHeight}px)`; b.className = lab.lampOff.has(i) ? 'off' : ''; }); };
   // ---- N: a smoke canister where the pointer is, on this floor
   const toss = (at?: V3) => { const r = lab.camera.ray(lab.graph.output[0] / lab.graph.output[1], point.x, point.y), f = lab.level === 2 ? 0.02 : lab.level === 1 ? 3.42 : 3.42; lab.smoke.drop(at ?? add(r.from, mul(r.dir, (f - r.from[1]) / Math.min(r.dir[1], -0.05)))); paint(); };
   // ---- X: what the exposure looks at: the person nearest the pointer, else the spot under it; again to let go
@@ -106,7 +106,7 @@ async function main() {
       if (watch && !looking) { looking = true; void watch.read().then(b => { looking = false; if (b.length) { bad = true; showError(watch.say()); } }); }
       placePins(); placeEye(); if (teach.on) { if (frames % 8 === 0) void teach.probe(); if (frames % 30 === 0) teach.costs(); }
       perf.end(lab.gpu.device.queue);
-      if (++frames % 12 === 0) { const t = [...lab.graph.timer.ms].sort((a, b) => b[1] - a[1]); $('stats').textContent = `${(1000 / ms).toFixed(0)} fps  ${lab.graph.render.join('×')} → ${lab.graph.output.join('×')}\n` + (method === ref ? `${ref.samples} paths a pixel\n` : '') + (gpu ? `GPU ${gpu.toFixed(1)} ms\n` + t.slice(0, 14).map(([k, v]) => k.padEnd(16) + v.toFixed(2)).join('\n') : lab.gpu.info); }
+      if (++frames % 30 === 0 && !document.body.classList.contains('nopanel') && !teach.on) { const t = [...lab.graph.timer.ms].sort((a, b) => b[1] - a[1]); $('stats').textContent = `${(1000 / ms).toFixed(0)} fps  ${lab.graph.render.join('×')} → ${lab.graph.output.join('×')}\n` + (method === ref ? `${ref.samples} paths a pixel\n` : '') + (gpu ? `GPU ${gpu.toFixed(1)} ms\n` + t.slice(0, 14).map(([k, v]) => k.padEnd(16) + v.toFixed(2)).join('\n') : lab.gpu.info); }
     } catch (e) { bad = true; showError(String((e as Error).stack ?? e)); }
   };
   requestAnimationFrame(loop);

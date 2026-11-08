@@ -16,7 +16,7 @@ struct Frame {
   pool: vec4f,         // the water: x0 z0 x1 z1
   pool2: vec4f,        // its level, its depth
   weather: vec4f,      // how wet the open ground is, how hard it rains, steam, the wind's way (rad)
-  misc2: vec4f,        // is there smoke, where the blue noise starts in extra, how dense foliage is to rays that see it as fog (1)
+  misc2: vec4f,        // is there smoke, where the blue noise starts in extra, how dense foliage is to rays that see it as fog (1), how hard the wind blows (1)
   tune: array<vec4f, 6>,  // what can be turned while looking (tune.ts)
 };
 struct Piece { r0: vec4f, r1: vec4f, r2: vec4f, half: vec3f, flags: u32, quad: vec4f, mat: u32, tint: u32, planes: u32, lamp: u32 };
@@ -227,8 +227,8 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
 }
 
 // ================================================================ smoke
-const SM_AT = vec3f(-16.0, -0.16, -11.52); const SM_SIZE = vec3f(32.0, 12.8, 23.04); const SM_BRICK = 0.64;
-fn smokeSlot(x: vec3f) -> u32 { let c = vec3i(floor((x - SM_AT) / SM_BRICK)); if (any(c < vec3i(0)) || any(c >= vec3i(50, 20, 36))) { return 0u; } return textureLoad(smokePage, c, 0).x; }
+const SM_AT = vec3f(-24.0, -0.16, -19.2); const SM_SIZE = vec3f(48.0, 15.36, 38.4); const SM_BRICK = 0.64;
+fn smokeSlot(x: vec3f) -> u32 { let c = vec3i(floor((x - SM_AT) / SM_BRICK)); if (any(c < vec3i(0)) || any(c >= vec3i(75, 24, 60))) { return 0u; } return textureLoad(smokePage, c, 0).x; }
 fn smokeBlock(x: vec3f) -> bool { return smokeSlot(x) != 0u; }
 fn smokeIn(p: u32, x: vec3f) -> vec4f { let s = p - 1u; let l = fract((x - SM_AT) / SM_BRICK) * 8.0; return textureSampleLevel(smokeTex, linSamp, (vec3f(f32(s & 15u), f32((s >> 4u) & 15u), f32(s >> 8u)) * 10.0 + 1.0 + l) / vec3f(160.0, 160.0, 120.0), 0.0); }
 fn smokeAt(x: vec3f) -> vec4f { let p = smokeSlot(x); if (p == 0u) { return vec4f(0.0); } return smokeIn(p, x); }
