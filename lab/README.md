@@ -1,10 +1,30 @@
 # Lab: a renderer to try ideas on
 
-A small WebGPU renderer, from scratch, with no dependencies: one world, one clock in ticks, and a list of stages with typed inputs and outputs.
+A small WebGPU renderer, from scratch, with no dependencies: one world, one clock in ticks, and stages with typed inputs and outputs. `rooftop.html` is the built page; it opens from disk in Chrome.
 
-- `src/graph.ts` writes a stage's bindings from the signals it names, so a stage's WGSL is the algorithm alone.
-- `src/stages/realtime.ts` builds the real-time picture from swappable parts: `CachePart`, `DenoisePart`, `UpscalePart`.
-- `src/stages/path.wgsl` is the reference: the same pieces, materials, lamps and sky, traced with nothing cached, clamped or filtered.
-- `src/scene` is the world as data. Everything drawn is a function of (tick, inputs, seed), so a run repeats exactly.
+    bun run build.ts                                                   # dist/index.html, dist/artifact.html, rooftop.html
+    node lab/tools/card.cjs lab/tools/views.json                       # stills and GPU time a pass
+    node lab/tools/card.cjs lab/tools/bench.json --bench realtime,raw  # bias, noise, error against the reference
+    node lab/tools/card.cjs lab/tools/poison.json --tour 900           # the fixed run, twice: times, and fingerprints that must agree
+    node lab/tools/card.cjs lab/tools/poison.json --poison             # bad numbers in every history: does the picture heal?
 
-`bun run build.ts` writes one page, `dist/index.html`.
+The page: `?bench` plays the fixed run and prints it; `?scale=0.75` fixes the render scale; `?tour` starts the tour.
+
+## How it is put together
+
+- `src/graph.ts` A stage names the signals it reads and writes; its bindings are written from those names, so its WGSL is the algorithm alone. Every float a stage writes is checked by its bits before it is kept.
+- `src/stages/realtime.ts` The real-time picture, from swappable parts with fixed signatures:
+  - `CachePart` how light on surfaces is kept (`cacheRead`, `cacheFound`, and stages that fill it). `hashCache`, `noCache`.
+  - `DenoisePart` signal to quieter signal. `svgf`, `noDenoise`.
+  - `UpscalePart` color at render size to picture at output size. `taauUp`, `bilinear`.
+- `src/stages/path.wgsl` The reference: the same pieces, materials, lamps and sky; nothing cached, clamped, reused or filtered.
+- `src/wgsl/scene.wgsl` One kind of piece (box, up to 8 planes, at most one quadric) and the two ray queries, `nearest` and `visible`.
+- `src/wgsl/cache.wgsl` Light on surfaces: a table keyed by place and facing.
+- `src/bench.ts` Measures, the fixed run, the poisoning, and `capture`: the noisy signals, what is known exactly, and the reference of a view, for training.
+- `src/scene` The world as data. `people.ts` steps people a tick at a time. Everything drawn is a function of (tick, inputs, seed).
+
+## The frame
+
+raster ids (camera, clear layer, the leaves the sun sees) → first hit → cache → lamps (three fractions: standing lamps, torches, sun) → gather (half size) → mirror (half size) → denoise each → air → resolve → upscale → glow, exposure fusion → canvas.
+
+A new part: copy the one it replaces, keep its signature, register it in `src/shot.ts`, and name it after `--bench`.

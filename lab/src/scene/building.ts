@@ -222,7 +222,7 @@ export function makeBuilding(): Building {
   // ---------------------------------------------------------------- people
   const who = (color: V3, pace: number, torch: boolean, stops: Stop[]) => people.push(new Person(w, stops, pace, color, people.length, { torch }));
   who(C.orange as V3, 1.25, true, [{ at: [-1.5, 0.02, 6.9] }, { at: [2.4, 0.02, 2.6] }, { at: [2.1, 0.02, -4.2], wait: 2.6, face: 2.2 }, { at: [-2.9, 0.02, -6.2] }, { at: [-3.2, 0.02, 1.0], wait: 2.2, face: -1.5 }]);
-  who(C.orange as V3, 1.05, true, [{ at: [5.2, FL + 0.05, 1.2] }, { at: [9.6, FL + 0.05, 1.3], wait: 3.0, face: 1.6 }, { at: [11.3, FL + 0.05, 0.6] }, { at: [11.3, FL + 0.05, -1.2] }, { at: [5.2, FL + 0.05, -1.3], wait: 2.0, face: 0.2 }, { at: [4.9, FL + 0.05, -0.4] }]);
+  who(C.orange as V3, 1.05, true, [{ at: [5.0, FL + 0.05, 1.45] }, { at: [9.0, FL + 0.05, 1.5], wait: 3.0, face: 0.2 }, { at: [9.45, FL + 0.05, 0.2] }, { at: [9.4, FL + 0.05, -1.35], wait: 2.2, face: 2.9 }, { at: [4.9, FL + 0.05, -1.4] }, { at: [4.75, FL + 0.05, 0.2] }]);
   who(C.teal as V3, 1.45, true, [{ at: [-14, 0, 6] }, { at: [-14, 0, 11.4] }, { at: [-4, 0, 11.6] }, { at: [2.5, 0, 11.4], wait: 2.4, face: 2.9 }, { at: [-4, 0, 11.0] }, { at: [-13.4, 0, 10.6] }, { at: [-14.2, 0, -2], wait: 2, face: 1.4 }]);
   who(C.teal as V3, 1.1, true, [{ at: [-9.5, Y, -2.6] }, { at: [-6.0, Y, -2.2] }, { at: [-5.4, Y, -5.6], wait: 2.6, face: -2.2 }, { at: [-7.2, Y, -7.0] }, { at: [-10.9, Y, -3.2], wait: 2.2, face: 0.5 }]);
   who(C.red as V3, 1.2, true, [{ at: [5.6, 0.02, -5.8] }, { at: [10.6, 0.02, -5.6], wait: 2.2, face: 2.6 }, { at: [10.8, 0.02, -2.0] }, { at: [5.2, 0.02, -1.6], wait: 1.8, face: -0.6 }]);
