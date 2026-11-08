@@ -334,7 +334,7 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   check(s.bench.last === 'done' && said.length === 1 && /^some shaders were still building 180 s in/.test(said[0]) && said[0].length <= 150 && s.bench.report.includes(said[0]) && sFirst >= 180000 && sFirst < 200000,
     `shaders that never come in: the run waits ${Math.round(sFirst / 1000)} s, then times its lines and says so once (${said[0]})`);
   const q = page({ rows: [] }); q.bench.start(); q.run();
-  check(JSON.stringify(q.bench.result!.rows) === '[]' && /^shaders\s+no Shaders row is on \(Options, Graphics\)$/m.test(q.bench.report) && !q.bench.result!.notes.some(n => /still building/.test(n)), 'no row on: the report says so, and has no such note');
+  check(JSON.stringify(q.bench.result!.rows) === '[]' && /^shaders\s+no Shaders row is on$/m.test(q.bench.report) && !q.bench.result!.notes.some(n => /still building/.test(n)), 'no row on: the report says so, and has no such note');
 }
 { // the result and the take go to whoever listens at the door (src/host/savefile.ts), each by itself, and the card says what became of them
   const told: SavedFile[] = []; SAVED.sink = f => { told.push(f); return f.kind === 'bench' ? 'sent' : false; };

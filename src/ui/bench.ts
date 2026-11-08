@@ -110,7 +110,7 @@ export interface BenchFeature { id: string; label: string; gpu: number | null; m
 export interface BenchSceneRun { id: string; name: string; query: string; end?: string; boot?: BenchBoot | null }
 /** `set` + `scenes`: which scenes the run played (absent = a file from before the scenes were floors: the one 'scene' line is the office's day showcase, and its
  *  numbers are not read against a set's)
- *  `rows`: the Shaders rows of Options this page was built with, by their URL words (ui/shaderrows.ts; [] = none; absent in a result from before 2026-10-27) */
+ *  `rows`: the shader words this page was built with (ui/shaderrows.ts; [] = none; absent in a result from before 2026-10-27) */
 /** `wait`: how many frames could be with the GPU when the page began one while it measured (host/pace.ts pageRoom; 0 = any number). ABSENT in a result
  *  from before a benchmark waited for the GPU (2026-11-04): on a machine with no display to hold the browser back (a headless cloud card) such a result's
  *  frame rates read the display's on any line whose GPU time is over the display's frame, and its features' rows are not to be believed there. */
@@ -172,7 +172,7 @@ export function benchReport(r: BenchResult): string {
   const L: string[] = [], M = r.machine, row = (k: string, v: string) => L.push(k.padEnd(10) + v);
   L.push(`twopointsix benchmark · ${r.at.slice(0, 16).replace('T', ' ')} UTC${r.commit ? ` · build ${r.commit.slice(0, 8)}` : ''}${r.set ? ` · scenes ${r.set}` : ''}`);
   row('address', r.query || '(no flags)');
-  if (r.rows) row('shaders', r.rows.length ? `on: ${r.rows.map(shaderRowLabel).join(', ')}` : 'no Shaders row is on');   // (a row can be on from Options with nothing on the address, so the address alone does not say)
+  if (r.rows) row('shaders', r.rows.length ? `on: ${r.rows.map(shaderRowLabel).join(', ')}` : 'no Shaders row is on');
   row('GPU', `${M.webgl || M.webgpu}${M.fallback ? ' · SOFTWARE RENDERING (no GPU in use)' : ''}`);
   if (M.webgl) row('', `WebGPU says: ${M.webgpu}`);
   row('browser', [M.browser, M.os].filter(Boolean).join(' · ') || M.userAgent);
@@ -348,7 +348,7 @@ export interface BenchDeps {
   hz?: () => number;
   /** the tab was hidden since this was last asked (the page's visibilitychange). A page that cannot say goes by the frame's gap alone (opts.awayMs) */
   away?: () => boolean;
-  /** the Shaders rows of Options this page was built with, by their URL words (ui/shaderrows.ts shaderRowsOn) */
+  /** the shader words this page was built with (ui/shaderrows.ts shaderRowsOn) */
   rows?: () => string[];
   /** the smoke row a preset writes (quality.apply: smoke.params.rbIters), put back with the rest */
   smoke?: { params: { rbIters: number } };
