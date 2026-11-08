@@ -25,7 +25,6 @@ bun run tools/qa/checks.ts [group|name … --list]          # the picture, the s
 bun run tools/qa/pages.ts [group|name …]                  # the real page in a browser on the software adapter, one script at a time
 bun run tools/qa/knobs-check.ts                           # after adding a knob table
 bun run tools/sim/build.ts                                # after any change under rust/ → src/sim/built.ts, src/dress/built.ts; `--check` is red on a stale one
-bun run tools/qa/soak.ts --seeds 1,2,3 --minutes 12 --quiet   # after gameplay changes
 ```
 Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`.
 

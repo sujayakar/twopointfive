@@ -283,7 +283,7 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   seed (seeds 1, 2, 3, 5, 7 read 0, 0, 0, 4, 0 men down after the keyed dice). A second in, each player is set down over open floor three to six metres
   from an enemy of his own, in both plays of the twin alike; the line wants both set down besides. Seeds 1, 2, 3, 5, 7, 9: 7 to 9 men down on the office
   floor, 3 to 5 on the night breach, 2 to 5 of them the other side's.
-- **The two-seat checks on the Rust game** (2026-11-07). `bun run tools/qa/seats-check.ts` is restated: every tick is `stepSeats(dt, [record, record])`,
+- **The two-seat checks on the Rust game** (2026-11-07; the check went 2026-11-08: the gate's `seats` rows and `rust/game_start/tests/two_seats.rs`, `coop.rs`). `tools/qa/seats-check.ts` was restated: every tick is `stepSeats(dt, [record, record])`,
   the word a line holds a game to is the game's own (the die and the block: `stateWords`), a moment is kept and put back through `savestate.ts SNAPS`
   (the Rust game kept), and each fight runs in a process of its own (`--fight`: a game stood after another in one process does not start as the first
   did; the modules holdfire, nvg, kit and guards carry something over, found with `tools/mp/words-diff.ts`). The count of asks of the Game for "the

@@ -914,7 +914,7 @@ function dressDown(B: any): void { DRESS_WAS ??= { ...B.DRESS }; B.dressAll(fals
 // same with the audit; TPS_GAME=ts the SAME STAND (the game's own die, the dress rows down) stepped by the TypeScript tick, for a tally to hold the Rust
 // game's beside. Unset: nothing here is loaded. (Not TPS_RUST: src/sim/sim.ts refuses that word as a retired one.)
 export async function standRust(g: any, word: string, o: { /** the dressing rows up for this game (a check about one of them) */ dress?: boolean; /** false: no walk of the puppet for a tool's writes (HostOpts.scan) */ scan?: boolean; /** false: nothing is drawn (HostOpts.draws) */ draws?: boolean } = {}): Promise<RustHost | null> {
-  if (!(globalThis as any).__tpsTop) throw new Error(`TPS_GAME=${word} needs the bridge's preload in this process and its children: BUN_OPTIONS=--preload=./tools/blitz/expose.ts (tools/blitz/rust.sh sets both)`);
+  if (!(globalThis as any).__tpsTop) throw new Error(`TPS_GAME=${word} needs the bridge's preload in this process and its children: BUN_OPTIONS=--preload=./tools/blitz/expose.ts (bunfig.toml's preload does both, in the repository's root)`);
   // (THE DIE: the game's own, seeded off the tool's `Math.random` as it stands when the game is stood, so a tool that seeds a run by its seed number
   // (playthrough.ts:1646) rolls another die a seed, and the same die under `ts` and `rust`)
   const die = g.dice ? null : (Math.random() * 4294967296) >>> 0;

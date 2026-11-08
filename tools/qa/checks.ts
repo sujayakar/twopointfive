@@ -1,5 +1,5 @@
 // THE CHECKS THAT STAND NO GAME OF THEIR OWN MAKING: the picture's code, the shaders' texts, the page and its cards, the sounds, the level files, the player's words.
-// Each is a file run in a process of its own. The game's rules are asked in Rust (`cargo test` in rust/), whole plays by the native missions and `hold`, the page by pages.ts.
+// Each is a file run in a process of its own. The game's rules are asked in Rust (`cargo test` in rust/), whole plays by the native `gate`, missions and `hold`, the page by pages.ts.
 //   bun run tools/qa/checks.ts [group | name …] [--list]     no word: every group    groups: picture · shaders · page · menus · sound · levels · words · build
 //   env: CHECK_JOBS (four) at a time · CHECK_CAP (ten) minutes each, its process group stopped there
 // Exit 0 every one green · 1 one red (its exit, a FAIL line, or the cap), or a *-check.ts here that no row names · 2 an unknown name
@@ -27,7 +27,7 @@ const ROWS: readonly Row[] = [
 ];
 /** check files no row runs, each with who runs it */
 const BY_HAND: Readonly<Record<string, string>> = {
-  'cloud-check.ts': 'the backend\'s packages', 'lobby-check.ts': 'the backend\'s packages', 'mp-control-check.ts': 'the backend\'s packages', 'mpserver-check.ts': 'three processes, minutes', 'seats-check.ts': 'two players, minutes', 'teams-check.ts': 'co-op\'s',
+  'cloud-check.ts': 'the backend\'s packages', 'lobby-check.ts': 'the backend\'s packages', 'mp-control-check.ts': 'the backend\'s packages', 'mpserver-check.ts': 'three processes, minutes', 'teams-check.ts': 'co-op\'s',
   'knobs-check.ts': 'the gate',
   'lesson-check.ts': 'the level skill',
   'samestart-check.ts': 'the level skill',
