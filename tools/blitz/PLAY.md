@@ -476,6 +476,14 @@ The gate's forms of the tour and the soak (`--runs 3`; three seeds, twelve minut
   ticks; `--weave` stands the later games together and steps them in turn. The modules' own logs and tallies (`destr_log`, `holdfire_log`, `scene_collision.sensed` …) are still a process's, on both sides: they grow from
   game to game and no rule reads them.
 
+- **A game's first start reads the modules' tops.** They are the process's: the next stand-up writes them for its own game and another game's step writes them with
+  its rows. So a game stood and not started takes its start before another game is stood or steps (`RustHost.startWaiting`). A LATER start (a mission begun again, a
+  checkpoint loaded) of a game that shares a process with another that steps still reads what that game left there: `--weave` does not cover it. From a stand-up to the
+  next start no call crosses to any game, as in the process's first stand: a stand asks about what a process shares (the cast's rig, in the book of the game that met it
+  first), and the answer's apply wrote the older game's rows over what the stand had just put back. After that start such a call still names the older game. Checks:
+  `thrice.ts --weave` (red under `RH_OFF=waiting`), `tools/blitz/stand-after.ts` (red under `RH_OFF=standing`). Under `--weave` three tallies (`g.stats.picture.lost`,
+  `doorway.held`, `netquiet.last`) read double in the later games: another game's apply moved the module's tally and the scan took that for a tool's write. No rule reads them.
+
 - **The slots.** rust/sim has four. A tool that stands a fifth game in one process (the probe runner stands hundreds) gets the slot of the game stepped
   longest ago: that game's puppet takes the whole state first, and if the tool steps it again it starts anew from its puppet.
 - **The host's hooks are hidden fields** (`stepSeats`, `rustHost`, the wrappers on the menu's `give`, `fight.roomAt`, `selectVerb`, the lamps' update, the
