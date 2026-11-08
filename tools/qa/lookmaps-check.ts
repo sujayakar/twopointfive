@@ -105,7 +105,7 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
   const stand = async (file: string) => { const l0 = console.log, w0 = console.warn; console.log = console.warn = () => { };
     const W: any = await standUp({ level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${file}.json`, 'utf8'))), seed: 1 }); for (let i = 0; i < 4; i++) W.step(1 / 60);
     console.log = l0; console.warn = w0; return W; };
-  { const world = (await stand('smoke-lab')).game.engine.world, word = (i: number) => world.matData[i * MAT_STRIDE + 7], all = () => [...world.statics, ...world.dynamics];
+  { const world = (await stand('pass')).game.engine.world, word = (i: number) => world.matData[i * MAT_STRIDE + 7], all = () => [...world.statics, ...world.dynamics];
     world.forgetSent(); world.upload(); const plain = all().every((b: any, i: number) => word(i) === Math.fround(matWord(b)));
     world.setStuffOf(lookWordOf(), lookCoreOf()); world.upload();   // (on the page the engine sets it before the first box is packed; the setter has every static packed again)
     const nS = world.statics.length, boxes = all(); let classed = 0, finishOff = 0, classOff = 0, said = 0, movesOff = 0, saltOff = 0; const salts = new Set<number>(), mine = new Map<any, number>();
@@ -116,7 +116,7 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
     let jumped = 0; world.dynamics.forEach((b: any, k: number) => { if (Math.floor(word(world.statics.length + k) / 8) !== mine.get(b)) jumped++; });
     check(plain && classOff === 0 && finishOff === 0 && classed > boxes.length / 2 && movesOff === 0 && saltOff === 0 && mine.size > 4 && salts.size > 2 && jumped === 0 && world.statics.length === nS + 1,
       'on a level, through the real pack: with nobody asking, the finish word is as it ever was; on the look page every box carries its stuff (the word it says, nothing else) above its finish and the finish reads back (to a 500th: the word shares the float); a box past the statics, and no other, says it moves; and when a static is appended no mover\'s word changes, though every mover\'s place in the list does',
-      `smoke-lab: ${boxes.length} boxes, ${classed} with a material, ${classOff} not their own word's (${said} say a word), ${finishOff} finishes moved, ${mine.size} movers with ${salts.size} numbers between them, ${movesOff} wrong about moving, ${jumped} changed when a static was added`); }
+      `pass: ${boxes.length} boxes, ${classed} with a material, ${classOff} not their own word's (${said} say a word), ${finishOff} finishes moved, ${mine.size} movers with ${salts.size} numbers between them, ${movesOff} wrong about moving, ${jumped} changed when a static was added`); }
   // the rain, by the game's own weather: a level whose lot is gravel and stands wet
   { const g = (await stand('consulate-gwot')).game, world = g.engine.world, st = world.statics as any[];
     const li = st.findIndex(b => b.c[1] < 0 && b.c[1] + b.h[1] > -0.01 && b.h[0] > 18 && b.h[2] > 12), lot = st[li], dry = li < 0 ? undefined : g.weather.dryPaint(lot);
