@@ -32,6 +32,7 @@ const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 
 const TOLD = T.TOLD, BREAK = process.env.TOLD_BREAK === '1';
+const CROSSING = await import(`${ROOT}/src/game/crossing.ts`);
 const J = (o: unknown) => JSON.stringify(o);
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const tables = () => J({ P: PRESSURE, D: DIGIN, cone: FOG.cone, own: FOG.own });
@@ -140,6 +141,8 @@ export async function toldCheck(): Promise<boolean> {
     });
 
     // ───────────────────────────── the screens
+    // (the page installs no call surface, so its screens run setLever and kitRows whole; a game stood in this process has put one up, and it is taken down for them)
+    const surface = CROSSING.RUST_SURFACE; CROSSING.setSurface(null);
     await withStore({}, async store => { await withDom('?quality=high&mute', async () => {
       G.location.pathname = '/'; G.location.hash = ''; G.location.assign = () => { }; G.location.reload = () => { };
       const M = await import(`${ROOT}/src/ui/missions.ts`);
@@ -176,6 +179,7 @@ export async function toldCheck(): Promise<boolean> {
       const words = [D.TOLD_LEVER.label, ...D.TOLD_LEVER.rungs.map((x: any) => `${x.label} ${x.words}`), D.FOG_OFF_RUNG.words].join(' ');
       verdict(!/[6-9]|\d\d/.test(words) && !/\b(north|south|east|west)/i.test(words) && !/hit points|\bHP\b/i.test(words), 'the new rows\' words: no digit above 5, no compass word, nothing about hit points', words);
     }); });
+    CROSSING.setSurface(surface);
 
   } catch (e) { verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   finally {

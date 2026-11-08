@@ -95,7 +95,7 @@ export async function wallstunCheck(): Promise<boolean> {
         '(5) walls that do not break: shielded and not a beat lost, as ever', c ? `cells opened ${c.opened} · ${words(c.rep, c.T, c.g)}` : 'NO WALL'); }
     { const R = await rig(), g = R.g, S = site, pl = g.player;
       if (S) { const at = R.off(S, 1, 0.3, 1.0), p = R.off(S, -1, 1.0); R.clear(null, at, true); g.teleportPlayer([p[0], 0, p[2]]); R.step(3); R.said.length = 0;
-        const hits0 = pl.hitsLeft, open0 = R.wall(S).open; const rep = R.burst(S, 'he40', 0); const secs = pl.staggerUntil - g.time;
+        const hits0 = pl.hitsLeft, open0 = R.wall(S).open; const rep = R.burst(S, 'he40', 0); const secs = pl.staggerUntil - g.time; R.step(1);   // (what the Rust game said reaches `said` as the tick closes)
         line(R.wall(S).open > open0 && rep.player === 'stunned' && rep.stunned === 0 && !pl.down && pl.hitsLeft === hits0 && secs > 2 && pl.fireCd > 2 && R.said.some((s: string) => /broke through your cover, stunned/.test(s)),
           '(7) the player behind a wall a burst holes: stunned like anybody — trigger dead for the seconds, not hurt, a line saying why', `cells opened ${R.wall(S).open - open0} · player ${rep.player} · down ${pl.down} · hits left ${pl.hitsLeft} of ${hits0} · stagger ${f2(secs)} s · fireCd ${f2(pl.fireCd)} · "${R.said[0] ?? ''}"`); }
       else line(false, '(7) the player behind a wall a burst holes', 'NO WALL'); }
@@ -110,8 +110,8 @@ export async function wallstunCheck(): Promise<boolean> {
         const stand = R.off(S, 1, S.open); g.godMode = true; g.teleportPlayer([stand[0], 0, stand[2]]); R.step(3); R.said.length = 0;   // (the player square on to the wall in front of the burst, kept on his feet to read the line)
         const rep = R.burst(S, 'he40', 0), eye = g.player.char.bones.head ?? [g.player.char.pos[0], 1.6, g.player.char.pos[2]];
         const seen = !g.player.down && Math.hypot(eye[0] - at[0], eye[1] - at[1], eye[2] - at[2]) < 30 && !g.col.segmentBlocked(eye, at), inView = seen && !g.col.segmentBlocked(eye, T.char.bones.chest ?? [T.char.pos[0], 1.2, T.char.pos[2]]);
-        const last = R.said[R.said.length - 1] ?? '';
-        line(rep.stunned === 1 && inView && /1 stunned behind what it broke/.test(last) && !/behind the door/.test(last),
+        R.step(1); const last = R.said.find((s: string) => /behind what it broke|behind the door/.test(s)) ?? R.said[R.said.length - 1] ?? '';   // (its own line among whatever else the burst had said)
+        line(rep.stunned === 1 && inView && R.said.some((s: string) => /1 stunned behind what it broke/.test(s) && !/behind the door/.test(s)),
           '(9) the log counts the man folded behind what it broke, seen through the hole', `player ${f2(Math.hypot(stand[0] - at[0], stand[2] - at[2]))} m off on the burst's side · ${inView ? 'sees' : 'does not see'} him · "${last}"`); }
       else line(false, '(9) the log line', 'NO WALL'); }
   } catch (e) { all = false; console.log(`- FAIL — the check threw\n    ${e instanceof Error ? e.stack : String(e)}`); }

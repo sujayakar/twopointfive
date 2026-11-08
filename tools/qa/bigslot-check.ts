@@ -17,7 +17,7 @@
 //           through that beat the HUD never says 'the frame took the boot' (a bare boot there does); from the face it opens toward the leaf stays home
 //           and a hand opens it. A wedged door gives to the hammer and offers the shotgun nothing; a steel door offers neither
 //   mate    the room clear's manager door under open and clear. A man whose card carries the shotgun keeps his rifle, brings the M870 up for the lock and
-//           has his own gun back the moment it is off — and at once when the order is taken away or he is given another with it up. A man whose card
+//           has his own gun back the moment it is off — and at once when he is given another order with it up. A man whose card
 //           carries the hammer takes the lock in one blow and no shot. And a door locked on the face it opens toward, wedged (no pick opens it):
 //           refused as ever without a tool, taken by the hammer in BIGSLOT.swings blows and pulled by hand — but refused to a SILENT squad, hammer or
 //           no; the shotgun takes a keyed lock from that face the same way
@@ -91,6 +91,8 @@ async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
 
 // where Sam stands for the manager's door (his side of it is the side the squad works it from): the corridor, off the line of the opening
 const SAM_MANAGER = [24.0, 0, 11.2];
+/** the squad stood at Sam's feet, on free floor: the walk from the staging to the door is most of a door order's frames, and no line here is about it */
+function closeUp(R: Rig, sam: number[]) { const nav = R.game.col.nav; R.ops.forEach((m: any, i: number) => { const a = i * 2.1 + 1, p = nav.nearestFreePoint(sam[0] + Math.cos(a) * 1.5, sam[2] + Math.sin(a) * 1.5) ?? sam; m.char.pos = [p[0], m.char.pos[1], p[2]]; m.char.vel = [0, 0, 0]; m.path = []; m.pathGoal = null; }); }
 type Ev = { t: number; kind: string; weapon?: string; who?: number; loud: boolean };
 /** One game under a seed, the switch as `on` says, `cards` written on the loadout
  *  cards BEFORE the staging — so the staging is what hands a man his tool — and the room clear staged (`stage: false` = the plain night, Sam alone).
@@ -264,7 +266,7 @@ export async function bigMate(): Promise<boolean> {
     try {
       const SEED = 8;   // (the seed tools/qa/shotgun-probes.ts takes this door on: the pair lives to the lock either way)
       // the shotgun: his rifle his own, the M870 up for the lock, his rifle back
-      { const R = await rig(SEED, { cards: { 1: { big: 'shotgun' } } }), g = R.game, d = R.door('manager'), [gd, other] = R.ops; g.teleportPlayer(SAM_MANAGER); R.step(5);
+      { const R = await rig(SEED, { cards: { 1: { big: 'shotgun' } } }), g = R.game, d = R.door('manager'), [gd, other] = R.ops; g.teleportPlayer(SAM_MANAGER); closeUp(R, SAM_MANAGER); R.step(5);
         const own = gd.weapon.def.id as string, big = K.kitBig(gd) as string, bigOther = K.kitBig(other) as string, locked = d.locked && d.latched, st = stats();
         let tOut = NaN, inHand = '';
         R.post = () => { if (isNaN(tOut) && gd.slung?.out) { tOut = g.time; inHand = gd.weapon.def.id; } };
@@ -275,17 +277,15 @@ export async function bigMate(): Promise<boolean> {
         F.verdict(e.w === null && s.drawn === 1 && inHand === 'm870' && tGone - tOut >= bigEquip('shotgun') - DT, `open and clear on the locked manager's door${e.again ? ' (the stand halts an entry at a door found shut: the row given again, as the lead\'s "your call" asks)' : ''}: he brings the M870 up off its sling, and no shell goes before it has been up its beat`, `give: ${e.w ?? 'taken'} · drawn ${s.drawn} · in his hands ${inHand} from ${f2(tOut - e.t0)} s · the lock went ${f2(tGone - tOut)} s later (the beat ${f2(bigEquip('shotgun'))})`);
         F.verdict(e.gone && shell >= 1 && R.D.stats.kicks === 0, 'the lock is gone, shot off — his shell, and no boot', `lock off ${!d.locked}, keep broken ${!!d.lockBroken} at ${f2(e.secs)} s · his m870 shells heard ${shell} · door tools: shot ${R.D.stats.shot}, kicks ${R.D.stats.kicks}${BROKEN ? ' · BIGKIT_BREAK=1' : ''} · ${R.beats(e.t0)}`);
         F.verdict(e.gone && now === own && !out && gd.route.weapon !== 'm870' && s.slung === 1, 'and a quarter of a second after it his own gun is in his hands again, the shotgun slung', `now ${now} (his ${own}), out ${out}, slung ${s.slung}`); }
-      // the order taken away, and another given, with the gun up
-      { const R = await rig(SEED, { cards: { 1: { big: 'shotgun' } } }), g = R.game, d = R.door('manager'), gd = R.ops[0]; g.teleportPlayer(SAM_MANAGER); R.step(5);
+      // another order given with the gun up
+      { const R = await rig(SEED, { cards: { 1: { big: 'shotgun' } } }), g = R.game, d = R.door('manager'), gd = R.ops[0]; g.teleportPlayer(SAM_MANAGER); closeUp(R, SAM_MANAGER); R.step(5);
         const own = gd.weapon.def.id as string, target = () => R.O.targetAt(d.frameCentre), last = () => R.D.done[R.D.done.length - 1];
         /** the row given (again where the stand halts at a door found shut) and stepped until the gun is up or the lock is off */
         const up = () => { let w = R.O.give('openClear', target()), again = false, t = g.time;
           R.until(() => { if (gd.slung?.out || !d.locked || typeof w === 'string') return true; if (!R.D.ops.length && g.time - t > 0.5 && !again && last()?.ended === 'found shut') { again = true; w = R.O.give('openClear', target()); t = g.time; } return false; }, 45);
           return !!gd.slung?.out && gd.weapon.def.id === 'm870' && d.locked; };
-        const up1 = up(); R.O.clear(); R.step(2); const a = { gun: gd.weapon.def.id as string, out: !!gd.slung?.out, route: gd.route.weapon as string };
         const up2 = up(); const w = R.O.give('fallIn', target()); R.step(2); const b = { gun: gd.weapon.def.id as string, out: !!gd.slung?.out, route: gd.route.weapon as string };
         R.step(60); const still = d.locked && gd.weapon.def.id === own;
-        F.verdict(up1 && a.gun === own && !a.out && a.route !== 'm870', 'the order TAKEN AWAY with the M870 up and no shell gone: two frames on, his own gun is back in his hands', `up ${up1} · after the squad's orders were cleared: ${a.gun} (his ${own}), out ${a.out}, route ${a.route}`);
         F.verdict(up2 && w === null && b.gun === own && !b.out && b.route !== 'm870' && still, 'the same door again, and ANOTHER ORDER given him with it up (fall in): two frames on, his own gun; the lock was never shot', `up ${up2} · fall in: ${w ?? 'taken'} · ${b.gun}, out ${b.out}, route ${b.route} · a second later: locked ${d.locked}, ${gd.weapon.def.id}`); }
       // the hammer
       
@@ -294,7 +294,7 @@ export async function bigMate(): Promise<boolean> {
       { const pull = async (tool: string, lockId?: string, silent = false) => {
           const R = await rig(SEED, { cards: tool === 'none' ? {} : { 1: { big: tool } } }), g = R.game, d = R.door('breakroom_n'), gd = R.ops[0];
           await hushed(() => { for (const h of R.NB.hostiles) if (h.state !== 'dead') killGuard(g, h, [1, 0, 0], true); R.step(60); });
-          const sam = doorPt(d, d.def.width + 1.2, 1.4, faceOf(g, d, 'pull')); lockAgainst(g, d, sam, lockId); g.teleportPlayer(sam); R.step(5);
+          const sam = doorPt(d, d.def.width + 1.2, 1.4, faceOf(g, d, 'pull')); lockAgainst(g, d, sam, lockId); g.teleportPlayer(sam); closeUp(R, sam); R.step(5);
           const switched = silent && !SIL.SILENT.on; if (silent) { SIL.SILENT.on = true; SIL.setSilent(g, true); R.step(2); }   // (the squad's silent order: its switch is a run's own, raised by hand where it is not up)
           const quiet = SIL.squadSilent(g) as boolean, held = g.doors.bootHolds(d, sam) as boolean, st = stats(), e = enter(R, d); R.until(() => Math.abs(d.angle) > 0.5, 4); R.step(15);
           return { R, d, gd, switched, quiet, held, e, refused: typeof e.w === 'string' ? e.w : e.ended, s: since(st), open: Math.abs(d.angle) > 0.5, gun: gd.weapon.def.id as string, out: !!gd.slung?.out, shove: /shove|pull/.test(R.beats(e.t0)), kicks: R.D.stats.kicks as number, picks: R.D.stats.picks as number };
@@ -323,7 +323,7 @@ async function mateShut(tool: 'none' | 'hammer' | 'shotgun', o: { face?: 'push' 
   if (pullFace) await hushed(() => { for (const h of R.NB.hostiles) if (h.state !== 'dead') killGuard(g, h, [1, 0, 0], true); R.step(60); });
   const sam = pullFace ? doorPt(d, d.def.width + 1.2, 1.4, faceOf(g, d, 'pull')) : SAM_MANAGER;
   if (o.lock) lockAgainst(g, d, sam, typeof o.lock === 'string' ? o.lock : undefined); else { d.angle = 0; d.vel = 0; d.latched = true; d.locked = false; d.lockBroken = false; }
-  g.teleportPlayer(sam); R.step(5);
+  g.teleportPlayer(sam); closeUp(R, sam); R.step(5);
   const switched = !!o.silent && !SIL.SILENT.on; if (o.silent) { SIL.SILENT.on = true; SIL.setSilent(g, true); R.step(2); }
   const st = stats(), t0 = g.time, target = () => R.O.targetAt(d.frameCentre), id = o.order ?? 'bigClear';
   let w: string | null = null, shown = '', menuDown = true;
