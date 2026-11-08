@@ -16,7 +16,7 @@ struct Frame {
   pool: vec4f,         // the water: x0 z0 x1 z1
   pool2: vec4f,        // its level, its depth
   weather: vec4f,      // how wet the open ground is, how hard it rains, steam, the wind's way (rad)
-  misc2: vec4f,        // is there smoke
+  misc2: vec4f,        // is there smoke, where the blue noise starts in extra
   tune: array<vec4f, 6>,  // what can be turned while looking (tune.ts)
 };
 struct Piece { r0: vec4f, r1: vec4f, r2: vec4f, half: vec3f, flags: u32, quad: vec4f, mat: u32, tint: u32, planes: u32, lamp: u32 };
@@ -39,7 +39,6 @@ struct Mark { at: vec2f, size: vec2f, uv: vec4f, color: vec3f, face: u32 };
 @group(0) @binding(8) var linSamp: sampler;
 @group(0) @binding(9) var skyTex: texture_2d<f32>;
 @group(0) @binding(10) var artTex: texture_2d<f32>;
-@group(0) @binding(11) var noiseTex: texture_2d<f32>;
 @group(0) @binding(12) var causticTex: texture_2d<f32>;
 @group(0) @binding(13) var repSamp: sampler;
 @group(0) @binding(14) var lampTex: texture_3d<f32>;
@@ -58,7 +57,7 @@ fn rnd2() -> vec2f { return vec2f(rnd(), rnd()); }
 /** blue noise over the screen, stepped through the frames by the golden ratio: neighbours differ, and so do frames */
 fn blue2(p: vec2u, k: u32) -> vec2f {
   let o = vec2u((k * 23u) & 63u, (k * 41u) & 63u);
-  let n = textureLoad(noiseTex, (p + o) & vec2u(63u), 0).xy;
+  let c = (p + o) & vec2u(63u); let i = c.y * 64u + c.x; let r = extra[u32(frame.misc2.y) + (i >> 1u)]; let n = select(r.xy, r.zw, (i & 1u) == 1u);
   return fract(n + f32(frame.counts.z & 1023u) * vec2f(0.61803399, 0.75487767));
 }
 // ---- the sky: one function, one image (its mips are the blur)

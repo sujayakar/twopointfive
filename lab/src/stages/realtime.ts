@@ -33,7 +33,7 @@ export const CHANGES: Record<string, [string, string, 'uniform']> = { changes: [
 export interface CachePart { name: string; lib: string; bind: Stage['buffers']; stages: Stage[]; init(lab: Lab): Promise<void>; /** more rounds this frame: the light has changed everywhere */ rush?: number }
 /** the sum, whole (the teaching panel swaps this for a mask) */
 export const WHOLE = 'fn part(k: u32) -> f32 { return 1.0; }\n';
-export interface DenoisePart { name: string; stages(o: { signal: string; div: 1 | 2; cap: number; rounds: number; narrow?: boolean; fractions?: boolean; /** of a mirror: 0 the surface's own, 1 the clear layer's */ layer?: number }, g: Graph): { stages: Stage[]; result: string } }
+export interface DenoisePart { name: string; stages(o: { signal: string; div: 1 | 2; cap: number; rounds: number; narrow?: boolean; fractions?: boolean; /** of a mirror: 0 the surface's own, 1 the clear layer's */ layer?: number; /** only leaves have it */ leaves?: boolean }, g: Graph): { stages: Stage[]; result: string } }
 export interface UpscalePart { name: string; stages(g: Graph): { stages: Stage[]; result: string } }
 
 /** light on surfaces, in a table */
@@ -81,10 +81,10 @@ function facePoints(lab: Lab): Float32Array {
 /** history, then a few rounds of blur that know their surface */
 export const svgf: DenoisePart = {
   name: 'svgf',
-  stages({ signal, div, cap, rounds, narrow, fractions, layer }, g) {
+  stages({ signal, div, cap, rounds, narrow, fractions, layer, leaves }, g) {
     const size: Size = div === 2 ? 'half' : 'render', N = narrow ? 1 : 0; g.signal(signal + 'H', 'rgba16float', size, true).signal(signal + 'M', 'rgba16float', size, true).signal(signal + 'A', 'rgba16float', size).signal(signal + 'B', 'rgba16float', size);
-    const stages: Stage[] = [{ name: signal + ' history', over: size, reads: { [signal]: 'cur', [signal + 'H@prev']: 'hist', [signal + 'M@prev']: 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, writes: { outH: signal + 'H', outM: signal + 'M' }, buffers: CHANGES, consts: { DIV: div, CAP: cap, SPREAD: narrow ? 1.6 : 1.25, NARROW: N, KIND: fractions ? 1 : 0, LAYER: layer ?? 0 }, code: signals + 'fn airAt2(p: vec2u) -> f32 { return 0.0; }\n' + temporal.replace('CAP_NOW', fractions ? '@tune.visFrames' : narrow ? '@tune.mirrorFrames' : '@tune.bounceFrames') }];
-    let from = signal + 'H'; for (let i = 0; i < rounds; i++) { const to = signal + (i % 2 ? 'B' : 'A'); stages.push({ name: signal + ' blur', over: size, reads: { [from]: 'src', [signal + 'M']: 'mom', surf: 'surf', front: 'frontT', ...(fractions ? { lampU: 'lampU' } : {}) }, writes: { outB: to }, buffers: CHANGES, consts: { DIV: div, STRIDE: 1 << i, SHARE: narrow ? 2.5 : 3.0, NARROW: N, KIND: fractions ? 1 : 0, LAYER: layer ?? 0 }, code: signals + (fractions ? 'fn lightOf(q: vec2i) -> vec4f { let u = textureLoad(lampU, q, 0); let a = lum(u.rgb) + 1e-4; return vec4f(a, u.a + 1e-4, a, 1.0); }\n' : 'fn lightOf(q: vec2i) -> vec4f { return vec4f(1.0); }\n') + blur }); from = to; }
+    const stages: Stage[] = [{ name: signal + ' history', over: size, reads: { [signal]: 'cur', [signal + 'H@prev']: 'hist', [signal + 'M@prev']: 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, writes: { outH: signal + 'H', outM: signal + 'M' }, buffers: CHANGES, consts: { DIV: div, CAP: cap, SPREAD: narrow ? 1.6 : 1.25, NARROW: N, KIND: fractions ? 1 : 0, LAYER: layer ?? 0, LEAVES: leaves ? 1 : 0 }, code: signals + 'fn airAt2(p: vec2u) -> f32 { return 0.0; }\n' + temporal.replace('CAP_NOW', fractions ? '@tune.visFrames' : narrow ? '@tune.mirrorFrames' : '@tune.bounceFrames') }];
+    let from = signal + 'H'; for (let i = 0; i < rounds; i++) { const to = signal + (i % 2 ? 'B' : 'A'); stages.push({ name: signal + ' blur', over: size, reads: { [from]: 'src', [signal + 'M']: 'mom', surf: 'surf', front: 'frontT', ...(fractions ? { lampU: 'lampU' } : {}) }, writes: { outB: to }, buffers: CHANGES, consts: { DIV: div, STRIDE: 1 << i, SHARE: narrow ? 2.5 : 3.0, NARROW: N, KIND: fractions ? 1 : 0, LAYER: layer ?? 0, LEAVES: leaves ? 1 : 0 }, code: signals + (fractions ? 'fn lightOf(q: vec2i) -> vec4f { let u = textureLoad(lampU, q, 0); let a = lum(u.rgb) + 1e-4; return vec4f(a, u.a + 1e-4, a, 1.0); }\n' : 'fn lightOf(q: vec2i) -> vec4f { return vec4f(1.0); }\n') + blur }); from = to; }
     return { stages, result: from };
   },
 };
@@ -101,14 +101,14 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
     name: o.name ?? 'realtime', result: 'picture', glow: 'rt',
     signals(g, lab) {
       g.signal('surf', 'rgba32uint', 'render', true).signal('aux', 'rgba16float', 'render').signal('emit', 'rgba16float', 'render').signal('front', 'rgba32uint', 'render');
-      g.signal('vis', 'rgba16float', 'render').signal('lampU', 'rgba16float', 'render').signal('bounce', 'rgba16float', 'half').signal('mirror', 'rgba16float', 'half').signal('shine', 'rgba16float', 'half').signal('lampC', 'rgba16float', 'render').signal('air', 'rgba16float', 'half').signal('airD', 'rgba16float', 'half').signal('airH', 'rgba16float', 'half', true).signal('airM', 'rgba16float', 'half', true).signal('color', 'rgba16float', 'render');
+      g.signal('vis', 'rgba16float', 'render').signal('lampU', 'rgba16float', 'render').signal('bounce', 'rgba16float', 'half').signal('bounceD', 'rgba16float', 'half').signal('mirror', 'rgba16float', 'half').signal('shine', 'rgba16float', 'half').signal('lampC', 'rgba16float', 'render').signal('air', 'rgba16float', 'half').signal('airD', 'rgba16float', 'half').signal('airH', 'rgba16float', 'half', true).signal('airM', 'rgba16float', 'half', true).signal('color', 'rgba16float', 'render');
       lab.buffer('past', Math.max(1, lab.building.world.moving.length) * 64); lab.buffer('pastLeaves', Math.max(1, lab.building.world.instances.length) * 48); lab.uniform('changes', new Float32Array(36)); lab.uniform('taauK', new Float32Array(4)); const pl = new Float32Array(72), ps = lab.building.world.plumes.slice(0, 8); ps.forEach((p, i) => { pl.set([...p.at, p.r], i * 4); pl.set([p.h, p.k, 0, 0], 36 + i * 4); }); pl[32] = ps.length; lab.uniform('plumes', pl);
     },
     stages(lab) {
       const g = lab.graph, c = { ...cache.bind, ...CHANGES };
       const raster = rasterStage(lab, g);
       const S = (name: string, code: string, over: Size, reads: Record<string, string>, writes: Record<string, string>, buffers: Stage['buffers'] = {}, consts?: Record<string, number>): Stage => ({ name, code: signals + code, over, reads, writes, buffers: { ...CHANGES, ...buffers }, ...(consts ? { consts } : {}) });
-      const dVis = dn.stages({ signal: 'vis', div: 1, cap: 18, rounds: 3, fractions: true }, g), dB = dn.stages({ signal: 'bounce', div: 2, cap: 36, rounds: 4 }, g), dM = dn.stages({ signal: 'mirror', div: 2, cap: 40, rounds: 4, narrow: true }, g), dS = dn.stages({ signal: 'shine', div: 2, cap: 26, rounds: 2, narrow: true, layer: 1 }, g), u = up.stages(g); m.result = u.result;
+      const dVis = dn.stages({ signal: 'vis', div: 1, cap: 18, rounds: 3, fractions: true }, g), dB = dn.stages({ signal: 'bounce', div: 2, cap: 36, rounds: 4 }, g), dM = dn.stages({ signal: 'mirror', div: 2, cap: 40, rounds: 4, narrow: true }, g), dS = dn.stages({ signal: 'shine', div: 2, cap: 26, rounds: 2, narrow: true, layer: 1 }, g), dD = dn.stages({ signal: 'bounceD', div: 2, cap: 36, rounds: 3, leaves: true }, g), u = up.stages(g); m.result = u.result;
       const rains = rainStages(lab, g); const glows = [...glowStages(g, u.result, 'rt'), ...exposeStages(lab, g, u.result, 'rtGlow2', 'rt')];
       return [
         raster,
@@ -116,13 +116,13 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
         S('water', waterpx, 'render', { idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }),
         ...cache.stages, ...lab.smoke.stages(g, c, cache.lib, bounceLib),
         S('lamps', lamps, 'render', { surf: 'surf', front: 'frontT', sunLeaves: 'sunLeaves' }, { outVis: 'vis', outU: 'lampU', outC: 'lampC' }, {}, { FINE: 4 }),
-        S('gather', cache.lib + bounceLib + gather, 'half', { surf: 'surf', front: 'frontT' }, { outE: 'bounce' }, { ...c, hits: ['hits', 'array<vec4u>', 'read_write'] }, { HITS }),
+        S('gather', cache.lib + bounceLib + gather, 'half', { surf: 'surf', front: 'frontT' }, { outE: 'bounce', outD: 'bounceD' }, { ...c, hits: ['hits', 'array<vec4u>', 'read_write'] }, { HITS }),
         S('mirror', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2, LAYER: 0 }),
         S('shine', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'shine' }, c, { DIV: 2, LAYER: 1 }),
-        ...dVis.stages, ...dB.stages, ...dM.stages, ...dS.stages,
+        ...dVis.stages, ...dB.stages, ...dD.stages, ...dM.stages, ...dS.stages,
         S('air', cache.lib + air, 'half', { surf: 'surf' }, { outA: 'air', outD: 'airD' }, { ...c, plumes: ['plumes', 'array<vec4f, 18>', 'uniform'] }),
-        S('air history', 'fn airAt2(p: vec2u) -> f32 { return textureLoad(airD, p, 0).x; }\n' + temporal.replace('CAP_NOW', 'f32(CAP)'), 'half', { airD: 'airD', air: 'cur', 'airH@prev': 'hist', 'airM@prev': 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, { outH: 'airH', outM: 'airM' }, {}, { DIV: 2, CAP: 16, SPREAD: 1.0, NARROW: 0, KIND: 0, LAYER: 0 }),
-        S('resolve', WHOLE + resolve, 'render', { surf: 'surf', emit: 'emit', front: 'frontT', [dVis.result]: 'vis', lampU: 'lampU', [dB.result]: 'bounce', [dM.result]: 'mirror', [dS.result]: 'shine', lampC: 'lampC', airH: 'air' }, { outC: 'color' }),
+        S('air history', 'fn airAt2(p: vec2u) -> f32 { return textureLoad(airD, p, 0).x; }\n' + temporal.replace('CAP_NOW', 'f32(CAP)'), 'half', { airD: 'airD', air: 'cur', 'airH@prev': 'hist', 'airM@prev': 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, { outH: 'airH', outM: 'airM' }, {}, { DIV: 2, CAP: 16, SPREAD: 1.0, NARROW: 0, KIND: 0, LAYER: 0, LEAVES: 0 }),
+        S('resolve', WHOLE + resolve, 'render', { surf: 'surf', emit: 'emit', front: 'frontT', [dVis.result]: 'vis', lampU: 'lampU', [dB.result]: 'bounce', [dD.result]: 'bounceD', [dM.result]: 'mirror', [dS.result]: 'shine', lampC: 'lampC', airH: 'air' }, { outC: 'color' }),
         ...u.stages, ...rains, ...glows,
       ].map(s => o.edit ? o.edit(s) : s);
     },
