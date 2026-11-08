@@ -30,3 +30,7 @@ fn finite(x: f32, most: f32) -> f32 { let b = bitcast<u32>(x); if ((b & 0x7f8000
 fn bad(x: f32) -> bool { return (bitcast<u32>(x) & 0x7f800000u) == 0x7f800000u; }
 fn bad4(v: vec4f) -> bool { let b = bitcast<vec4u>(v) & vec4u(0x7f800000u); return any(b == vec4u(0x7f800000u)); }
 fn finite4(v: vec4f, most: f32) -> vec4f { return vec4f(finite(v.x, most), finite(v.y, most), finite(v.z, most), finite(v.w, most)); }
+
+/** to half precision, up or down by chance in proportion to what is lost. A history that mixes in a fiftieth of each frame would otherwise lose every change
+ *  under its last bit, and stand still short of the answer. Already exact in half precision, so it does not matter how the hardware rounds */
+fn round16(v: vec4f, r: vec4u) -> vec4f { return bitcast<vec4f>((bitcast<vec4u>(v) + (r & vec4u(8191u))) & vec4u(0xffffe000u)); }

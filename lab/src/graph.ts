@@ -78,7 +78,7 @@ export class Graph {
     // EVERY FLOAT A STAGE WRITES IS CHECKED, whether or not its author thought of it: a stage cannot reach its outputs but through this. One bad value in a
     // history would otherwise be read back for ever, and spread.
     let code = s.code;
-    for (const [v, n] of Object.entries(s.writes ?? {})) { const f = this.signals.get(n)!.format; if (SCALAR[f]) continue; const most = f.includes('16float') ? '60000.0' : f.includes('32float') ? '1e30' : '1.0'; out.push(`fn put_${v}(p: vec2u, c: vec4f) { textureStore(${v}, p, finite4(c, ${most})); }`); code = code.replaceAll(`textureStore(${v},`, `put_${v}(`); }
+    for (const [v, n] of Object.entries(s.writes ?? {})) { const f = this.signals.get(n)!.format; if (SCALAR[f]) continue; const most = f.includes('16float') ? '60000.0' : f.includes('32float') ? '1e30' : '1.0'; const kept = this.signals.get(n)!.history && f === 'rgba16float'; out.push(`fn put_${v}(p: vec2u, c: vec4f) { ${kept ? `let a = pcg(p.x + pcg(p.y + pcg(frame.counts.z + ${31 + out.length}u))); let b = pcg(a); textureStore(${v}, p, round16(finite4(c, ${most}), vec4u(a, a >> 13u, b, b >> 13u)));` : `textureStore(${v}, p, finite4(c, ${most}));`} }`); code = code.replaceAll(`textureStore(${v},`, `put_${v}(`); }
     out.push(code); return out.join('\n');
   }
   async build(stages: Stage[]) {

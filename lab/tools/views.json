@@ -1,8 +1,8 @@
 [
- {"name":"80-day","w":1920,"h":1080,"scale":0.8,"samples":120,"run":true,"method":"realtime","dist":52,"hour":16.4,"tick":1200,"pitch":0.75,"yaw":0.7},
- {"name":"81-cut","w":1920,"h":1080,"scale":0.8,"samples":120,"run":true,"method":"realtime","dist":44,"hour":15.0,"cut":2.55,"look":[0,0.6,0],"doors":0.8,"tick":1400},
- {"name":"82-night-cut","w":1920,"h":1080,"scale":0.8,"samples":160,"run":true,"method":"realtime","dist":44,"hour":21.5,"cut":2.55,"look":[0,0.6,0],"doors":0.9,"tick":1600},
- {"name":"83-upper","w":1920,"h":1080,"scale":0.8,"samples":120,"run":true,"method":"realtime","dist":40,"hour":9.5,"cut":5.95,"look":[-3,3.4,0],"doors":0.6,"tick":1900},
- {"name":"84-low","w":1920,"h":1080,"scale":0.8,"samples":120,"run":true,"method":"realtime","dist":46,"hour":18.0,"yaw":0.5,"pitch":0.3,"look":[2,3,0],"tick":2200},
- {"name":"85-dusk","w":1920,"h":1080,"scale":0.8,"samples":160,"run":true,"method":"realtime","dist":54,"hour":18.6,"yaw":0.9,"pitch":0.62,"tick":2500}
+ {"name":"90-day","w":1920,"h":1080,"scale":0.8,"samples":120,"run":true,"method":"realtime","dist":52,"hour":16.4,"tick":1200,"pitch":0.75,"yaw":0.7},
+ {"name":"91-cut","w":1920,"h":1080,"scale":0.8,"samples":120,"run":true,"method":"realtime","dist":44,"hour":15.0,"cut":2.55,"look":[0,0.6,0],"doors":0.8,"tick":1400},
+ {"name":"92-night-cut","w":1920,"h":1080,"scale":0.8,"samples":160,"run":true,"method":"realtime","dist":44,"hour":21.5,"cut":2.55,"look":[0,0.6,0],"doors":0.9,"tick":1600},
+ {"name":"93-night-cut-ref","w":1920,"h":1080,"samples":900,"method":"reference","dist":44,"hour":21.5,"cut":2.55,"look":[0,0.6,0],"doors":0.9,"tick":1760},
+ {"name":"95-dusk","w":1920,"h":1080,"scale":0.8,"samples":160,"run":true,"method":"realtime","dist":54,"hour":18.6,"yaw":0.9,"pitch":0.62,"tick":2500},
+ {"name":"96-dawn-low","w":1920,"h":1080,"scale":0.8,"samples":160,"run":true,"method":"realtime","dist":44,"hour":7.4,"yaw":2.3,"pitch":0.4,"look":[4,3.2,0],"tick":2800}
 ]
