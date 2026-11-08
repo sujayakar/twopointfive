@@ -70,7 +70,6 @@ import './handleside';
 import './gunhold';
 import { teamAtWalk } from './teampace';   // (teampace.ts: a teammate's walk is a share of the player's, and he runs only for a reason — all read inside functions)
 import { loadSeen } from './kitload';   // what a man's card weighs: his pace, the notice he builds, his footfall (1 each with its switch off)
-import './tapstep';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import './rails';   // (a tutorial mission's spared teammate is a man down to the enemy's eye: asked inside acquireFoe only)
 import { LIGHT_IN, ROW_BIT } from '../sim/lightshome';

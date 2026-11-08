@@ -241,7 +241,6 @@
 "tactics::Gate":["lead","look","path","pathFor","stallRef","can","thrower"],
 "tactics::Lone":["holdAt"],
 "tactics::Role":["holdAt","avoid"],
-"tapstep::St":["prev","man"],
 "throwables::Item":["kept"],
 "tracers::Tracer":["light"],
 "unseen::State":["hold"],

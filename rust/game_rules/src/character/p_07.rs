@@ -281,23 +281,6 @@ pub fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
     if g_h > 0.0 { rate = v3::lerp(rate, v3::lerp((w_walk / (pr.walk_speed * d_walk) + w_jog / (pr.jog_speed * d_jog * kj) + w_sprint / (pr.sprint_speed * d_sprint)) / wsum, 1.0 / (pr.crouch_speed * d_crouch * stride_d), a.crouch) * a.cr_v, g_h); }
     let rev = if a.reverse { -1.0 } else { 1.0 };
     a.phase = js::rem(a.phase + dt * rate * rev + 100.0, 1.0);
-    if a.tap_u >= 0.0 && g_h > 0.0 {   // (tapstep.ts: the stride belongs to the step)
-        if a.tap_was < 0.0 { a.tap_seen = a.tap_n; a.tap_from = a.phase; a.tap_to = a.phase; }
-        else if a.tap_n != a.tap_seen {
-            a.tap_seen = a.tap_n;
-            let p = anim_creep_plant(g, c)[1];
-            let a = &mut g.ch[c].anim;
-            let w = a.tap_way;
-            let off = js::rem(js::rem(a.phase - p, 0.5) + 0.5, 0.5);
-            let go = if w > 0.0 { 0.5 - off } else { off };
-            a.tap_from = a.phase;
-            a.tap_to = a.phase + w * (if go < 0.2 { go + 0.5 } else { go });
-        }
-        let a = &mut g.ch[c].anim;
-        a.phase = js::rem(a.tap_from + (a.tap_to - a.tap_from) * v3::clamp(a.tap_u, 0.0, 1.0) + 100.0, 1.0);
-    }
-    let a = &mut g.ch[c].anim;
-    a.tap_was = if g_h > 0.0 { a.tap_u } else { -1.0 };
     if g.k.wallsnap.on {   // the wall hold's own step clock, signed along the wall
         if a.stance == Stance::Wall {
             let st_ = wall_pose().gait.step;
