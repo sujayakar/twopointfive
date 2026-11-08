@@ -76,11 +76,19 @@ pub fn wall_charge_on(g: &crate::game::Game) -> bool {
 
 /// The faces of a wall the open sky is over: 0 a wall inside, 1 a building's outer wall, 2 a yard wall. Kept per static.   (wallcharge.ts skyFaces)
 pub fn sky_faces(g: &mut crate::game::Game, index: f64) -> f64 {
-    if let Some(&n) = g.m.wallcharge.sky_memo.get_or_insert_with(JsMap::new).get(crate::Num(index)) {
+    if let Some(&n) = g.m.wallcharge.sky_memo.as_ref().and_then(|k| k.get(crate::Num(index))) { return n; }
+    crate::scene_collision::stands(g);
+    let n = sky_faces_of(g, index);
+    g.m.wallcharge.sky_memo.get_or_insert_with(JsMap::new).set(crate::Num(index), n);
+    n
+}
+/// …asked of the game shared: what is kept, or worked out and not kept
+pub fn sky_faces_of(g: &Game, index: f64) -> f64 {
+    if let Some(&n) = g.m.wallcharge.sky_memo.as_ref().and_then(|k| k.get(crate::Num(index))) {
         return n;
     }
-    let b = g.col.boxes[index as usize];
-    let (c, h) = { let x = seam_box(g, b); (x.c, x.h) };
+    let world = crate::ask::WorldAsk::of(g);
+    let (c, h) = { let x = &g.tab.boxes[g.col.boxes[index as usize]]; (x.c, x.h) };
     let along_x = h[0] >= h[2];
     let hu = if along_x { h[0] } else { h[2] };
     let ht = if along_x { h[2] } else { h[0] };
@@ -92,7 +100,7 @@ pub fn sky_faces(g: &mut crate::game::Game, index: f64) -> f64 {
             for &t in &sky_along {
                 let d = sg * (ht + off);
                 let p: V3 = if along_x { [c[0] + t * hu, 1.5, c[2] + d] } else { [c[0] + d, 1.5, c[2] + t * hu] };
-                if !crate::scene_collision::solid_blocked(g, p, [p[0], SKY_TOP, p[2]], Some(0.02)) {
+                if !world.line(p, [p[0], SKY_TOP, p[2]], crate::ask::Line::Solid) {
                     sky += 1;
                 }
             }
@@ -101,46 +109,38 @@ pub fn sky_faces(g: &mut crate::game::Game, index: f64) -> f64 {
             n += 1.0;
         }
     }
-    g.m.wallcharge.sky_memo.get_or_insert_with(JsMap::new).set(crate::Num(index), n);
     n
-}
-
-/// `fn_` asked aside: what it adds to the memo of sky faces is taken out again, so a wall is in it only once the simulation has asked.   (wallcharge.ts skyAside)
-pub fn sky_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    let had = g.m.wallcharge.sky_memo.as_ref().map(|memo| memo.len());
-    let out = fn_(g);
-    match had {
-        None => g.m.wallcharge.sky_memo = None,
-        Some(n) => {
-            if let Some(memo) = g.m.wallcharge.sky_memo.as_mut() {
-                if memo.len() > n {
-                    for (i, k) in memo.keys().into_iter().enumerate() {
-                        if i >= n {
-                            memo.delete(k);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    out
 }
 
 /// Is structure static `index` an outer wall a charge cuts: not steel, thin enough, long enough, adoptable, the sky over one face or both.   (wallcharge.ts outerWall)
 pub fn outer_wall(g: &mut crate::game::Game, index: f64) -> bool {
+    crate::scene_collision::stands(g);
+    let mut asked = Vec::new();
+    let r = outer_wall_of(g, index, &mut asked);
+    sky_kept(g, asked);
+    r
+}
+/// the sky's answers a rule asked for are kept: a wall is in the memo once the simulation has asked
+pub fn sky_kept(g: &mut Game, asked: Vec<(f64, f64)>) {
+    for (i, n) in asked { g.m.wallcharge.sky_memo.get_or_insert_with(JsMap::new).set(crate::Num(i), n); }
+}
+/// …asked of the game shared (`asked` = the walls whose sky was asked, and the answer)
+fn outer_wall_of(g: &Game, index: f64, asked: &mut Vec<(f64, f64)>) -> bool {
     let b = g.col.boxes[index as usize];
-    let h = seam_box(g, b).h;
+    let row = &g.tab.boxes[b];
+    let h = row.h;
     let thin = 2.0 * m::min(h[0], h[2]);
     let long = 2.0 * m::max(h[0], h[2]);
     if thin > g.k.wallcharge.outer_thick
         || long < g.k.wallcharge.outer_min_len
-        || seam_box(g, b).metal == Some(true)
-        || { let word = seam_box(g, b).does; crate::scene_materials::does_of(g, word).surf == crate::scene_materials::Surf::Metal }
+        || row.metal == Some(true)
+        || { let word = row.does; crate::scene_materials::does_of(g, word).surf == crate::scene_materials::Surf::Metal }
         || !crate::wallbreak::wall_break_adoptable(g, index)
     {
         return false;
     }
-    let sky = sky_faces(g, index);
+    let sky = sky_faces_of(g, index);
+    asked.push((index, sky));
     sky == 1.0 || sky == 2.0
 }
 
@@ -184,13 +184,15 @@ pub fn room_beyond(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, d
 
 /// The wall at a point: the full-height unrotated wall whose footprint the point is on, a partition or structure with the word for what it is.   (wallcharge.ts wallAt)
 pub fn wall_at(g: &mut crate::game::Game, at: V3, from: Option<V3>) -> Option<crate::wallcharge::WallSpot> {
-    let from = match from {
-        Some(f) => f,
-        None => {
-            let c = g.pl[g.player].ch;
-            g.ch[c].pos
-        }
-    };
+    let from = from.unwrap_or_else(|| g.ch[g.pl[g.player].ch].pos);
+    crate::scene_collision::stands(g);
+    let mut asked = Vec::new();
+    let r = wall_at_of(g, at, from, &mut asked);
+    sky_kept(g, asked);
+    r
+}
+/// …asked of the game shared, the copy of the boxes standing
+fn wall_at_of(g: &Game, at: V3, from: V3, asked: &mut Vec<(f64, f64)>) -> Option<crate::wallcharge::WallSpot> {
     let n = m::min(g.destr.walls.authored, g.col.boxes.len() as f64) as usize;
     let f = crate::scene_boxes::box_flag();
     let skip = js::to_i32(f.glass) | js::to_i32(f.no_primary) | js::to_i32(f.no_shadow) | js::to_i32(f.dynamic);
@@ -199,7 +201,7 @@ pub fn wall_at(g: &mut crate::game::Game, at: V3, from: Option<V3>) -> Option<cr
     for i in 0..n {
         let index = i as f64;
         let b = g.col.boxes[i];
-        let (c, h) = { let x = seam_box(g, b); (x.c, x.h) };
+        let (c, h) = { let x = &g.tab.boxes[b]; (x.c, x.h) };
         let dx = m::max_n(&[c[0] - h[0] - at[0], 0.0, at[0] - c[0] - h[0]]);
         if dx > bd {
             continue;
@@ -211,12 +213,12 @@ pub fn wall_at(g: &mut crate::game::Game, at: V3, from: Option<V3>) -> Option<cr
         let bb = crate::wallbreak::wall_break_breakable_at(g, index);
         let passed = match &bb {
             Some(x) => x.kind != crate::wallbreak::BKind::Wall,
-            None => (js::to_i32(seam_box(g, b).flags) & skip) != 0,
+            None => (js::to_i32(g.tab.boxes[b].flags) & skip) != 0,
         };
         if passed {
             continue; // (a partition already holed is hidden: its pieces stand in for it, and it is still the wall)
         }
-        if seam_box(g, b).rot.is_some() || m::abs(m::sin(seam_box(g, b).yaw)) > 1e-6 {
+        if g.tab.boxes[b].rot.is_some() || m::abs(m::sin(g.tab.boxes[b].yaw)) > 1e-6 {
             continue;
         }
         let sx = h[0] * 2.0;
@@ -233,12 +235,12 @@ pub fn wall_at(g: &mut crate::game::Game, at: V3, from: Option<V3>) -> Option<cr
             if c[1] - h[1] > 0.1 || c[1] + h[1] < g.k.walls.wall_min_top || long < 0.8 || thin > 1.2 {
                 continue;
             }
-            let word = seam_box(g, b).does;
+            let word = g.tab.boxes[b].does;
             let s = crate::scene_materials::does_of(g, word).surf;
             if s != crate::scene_materials::Surf::Drywall && s != crate::scene_materials::Surf::Concrete && s != crate::scene_materials::Surf::Metal {
                 continue;
             }
-            why = String::from(if s == crate::scene_materials::Surf::Metal || seam_box(g, b).metal == Some(true) {
+            why = String::from(if s == crate::scene_materials::Surf::Metal || g.tab.boxes[b].metal == Some(true) {
                 "steel. a charge won't cut it."
             } else if thin > g.k.walls.wall_max_thick || s == crate::scene_materials::Surf::Concrete {
                 "concrete. a charge won't cut it."
@@ -251,7 +253,7 @@ pub fn wall_at(g: &mut crate::game::Game, at: V3, from: Option<V3>) -> Option<cr
             continue;
         }
         // (an outer wall takes a charge; one already holed is the engine's by now, and still it)
-        let outer = !part && (if bb.is_some() { true } else { outer_wall(g, index) });
+        let outer = !part && (if bb.is_some() { true } else { outer_wall_of(g, index, asked) });
         // (with outer walls taking a charge, 'outer wall' is no reason)
         if !part && !outer && !why.starts_with("steel") && thin <= g.k.wallcharge.outer_thick {
             if long < g.k.wallcharge.outer_min_len {
@@ -281,12 +283,12 @@ pub fn wall_at(g: &mut crate::game::Game, at: V3, from: Option<V3>) -> Option<cr
 }
 
 /// A floor target whose point is on a wall carries the wall (nothing when the module is not live).   (wallcharge.ts wallTarget)
-pub fn wall_target(g: &mut crate::game::Game, at: V3, base: &crate::orders::OrderTarget) -> crate::orders::OrderTarget {
+pub fn wall_target(g: &crate::game::Game, seat: &crate::seats::SeatRef, at: V3, base: &crate::orders::OrderTarget, asked: &mut Vec<(f64, f64)>) -> crate::orders::OrderTarget {
     let crate::orders::OrderTarget::Floor(floor) = base else { return base.clone() };
     if !wall_charge_on(g) {
         return base.clone();
     }
-    match wall_at(g, at, None) {
+    match wall_at_of(g, at, g.ch[g.pl[seat.player].ch].pos, asked) {
         Some(w) => crate::orders::OrderTarget::Floor(crate::orders::OrderTargetFloor { wall: Some(w), ..floor.clone() }),
         None => base.clone(),
     }
@@ -418,24 +420,4 @@ mod tests {
         assert_eq!(wall_off_of(c, h, &w, p), 0.5);
     }
 
-    /// What is asked aside leaves the memo as it was; a memo that did not exist does not exist after.
-    #[test]
-    fn sky_aside_takes_out_what_it_added() {
-        let mut g = alloc::boxed::Box::new(Game::blank());
-        let got = sky_aside(&mut g, &mut |g: &mut Game| {
-            g.m.wallcharge.sky_memo.get_or_insert_with(JsMap::new).set(crate::Num(1.0), 1.0);
-            7
-        });
-        assert_eq!(got, 7);
-        assert!(g.m.wallcharge.sky_memo.is_none());
-
-        g.m.wallcharge.sky_memo.get_or_insert_with(JsMap::new).set(crate::Num(2.0), 2.0);
-        sky_aside(&mut g, &mut |g: &mut Game| {
-            let memo = g.m.wallcharge.sky_memo.as_mut().unwrap();
-            memo.set(crate::Num(3.0), 0.0);
-            memo.set(crate::Num(4.0), 1.0);
-        });
-        let memo = g.m.wallcharge.sky_memo.as_ref().unwrap();
-        assert_eq!(memo.keys(), vec![crate::Num(2.0)]);
-    }
 }

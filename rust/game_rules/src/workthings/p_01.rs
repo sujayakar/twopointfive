@@ -125,19 +125,6 @@ pub fn breaker_errand(g: &mut crate::game::Game) -> Option<crate::workthings::Br
     e
 }
 
-/// A question of the picture's: the list it reads is kept in the asker's store and the game's own put back after. (workthings.ts WorkThings.askAside)
-pub fn work_things_ask_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, own: &mut crate::workthings::WorkThingsAskAsideOwn, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    let was = g.work.asking;
-    let mine = g.work.cache.take();
-    g.work.asking = true;
-    g.work.cache = own.c.take();
-    let r = fn_(g);
-    own.c = g.work.cache.take();
-    g.work.cache = mine;
-    g.work.asking = was;
-    r
-}
-
 /// Makes the row and registers it on the orders' menu. (workthings.ts WorkThings.constructor)
 pub fn work_things_new(g: &mut crate::game::Game) -> crate::workthings::WorkThings {
     let def = crate::orders::OrderDef {
@@ -159,8 +146,11 @@ pub fn work_things_new(g: &mut crate::game::Game) -> crate::workthings::WorkThin
     WorkThings { row, ..WorkThings::blank() }
 }
 
-/// The things that can be worked now, read afresh when what places them changes and once a second besides. (workthings.ts WorkThings.things)
-pub fn work_things_things(g: &mut crate::game::Game) -> Vec<crate::workthings::WorkThing> {
+/// The things that can be worked now: the tick's list. (workthings.ts WorkThings.things)
+pub fn work_things_things(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::workthings::WorkThing> { seat.work.cache.as_ref().map_or(Vec::new(), |c| c.list.clone()) }
+
+/// THE TICK'S LIST OF THEM, for the seat standing: read afresh when what places them changes and once a second besides
+pub fn work_things_keep(g: &mut crate::game::Game) {
     let (active, permanent) = mains(g);
     let drive = g.mission.stage == crate::game::MissionStage::Drive && !g.quiet_utility && g.puppet.is_none();
     let w = if drive { crate::quiet::quiet_words(g) } else { None };
@@ -177,9 +167,9 @@ pub fn work_things_things(g: &mut crate::game::Game) -> Vec<crate::workthings::W
         dkey,
     );
     if let Some(c) = &g.work.cache {
-        if c.key == key && g.time >= c.t && g.time - c.t < 1.0 { return c.list.clone(); }
+        if c.key == key && g.time >= c.t && g.time - c.t < 1.0 { return; }
     }
-    if !g.work.asking { work_things_prune(g); }
+    work_things_prune(g);
     let mut list: Vec<WorkThing> = Vec::new();
     if live {
         let PanelFace { face, n } = panel_face(g);
@@ -209,8 +199,7 @@ pub fn work_things_things(g: &mut crate::game::Game) -> Vec<crate::workthings::W
         let stand = stand_for(g, d.face, Some(d.n), None);
         list.push(WorkThing { kind: WorkThingKind::Device, face: d.face, n: d.n, stand, name: d.name, dev: Some(d.i) });
     }
-    g.work.cache = Some(WorkThingsCache { key, t: g.time, list: list.clone() });
-    list
+    g.work.cache = Some(WorkThingsCache { key, t: g.time, list });
 }
 
 /// Drops the records of men no longer at it, and hands with no living owner on the roster. (workthings.ts WorkThings.prune)
@@ -269,10 +258,10 @@ pub fn work_things_moot(g: &mut crate::game::Game, th: &crate::workthings::WorkT
 }
 
 /// orders.ts targetAt: the thing a point is on, on its own side of whatever it is fixed to. (workthings.ts WorkThings.near)
-pub fn work_things_near(g: &mut crate::game::Game, at: V3) -> Option<crate::workthings::WorkThingsNear> {
+pub fn work_things_near(g: &crate::game::Game, seat: &crate::seats::SeatRef, at: V3) -> Option<crate::workthings::WorkThingsNear> {
     let mut best: Option<WorkThing> = None;
     let mut bd = m::INF;
-    for th in work_things_things(g) {
+    for th in work_things_things(g, seat) {
         let d = flat(th.face, at);
         let wide = th.kind != WorkThingKind::Breaker;
         if d >= (if wide { g.k.work.pick_wide_m } else { g.k.work.pick_m }) || d >= bd { continue; }
@@ -284,10 +273,10 @@ pub fn work_things_near(g: &mut crate::game::Game, at: V3) -> Option<crate::work
 }
 
 /// orders.ts targetUnder: the thing whose own box the cursor's ray landed on. (workthings.ts WorkThings.on)
-pub fn work_things_on(g: &mut crate::game::Game, box_: Option<AnyBoxId>) -> Option<crate::orders::OrderTarget> {
+pub fn work_things_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, box_: Option<AnyBoxId>) -> Option<crate::orders::OrderTarget> {
     let b = box_?.world()?;   // (a thing's own box is the level's)
     if !g.level.breaker.boxes.iter().any(|&i| g.engine.world.statics.get(i as usize) == Some(&b)) { return None; }
-    let th = work_things_things(g).into_iter().find(|x| x.kind == WorkThingKind::Breaker)?;
+    let th = work_things_things(g, seat).into_iter().find(|x| x.kind == WorkThingKind::Breaker)?;
     Some(crate::orders::OrderTarget::Floor(thing_target(th)))
 }
 
@@ -639,7 +628,7 @@ pub fn work_things_note(g: &mut crate::game::Game, gd: GuardId, what: &str) {
 
 /// One line for a probe. (workthings.ts WorkThings.summary)
 pub fn work_things_summary(g: &mut crate::game::Game) -> String {
-    let th = work_things_things(g);
+    let th = work_things_things(g, &crate::seats::here(g));
     let mut n = 0;
     for gd in g.work.jobs.keys() {
         if work_things_working(g, &crate::seats::here(g), gd) { n += 1; }
@@ -652,13 +641,13 @@ pub fn work_things_summary(g: &mut crate::game::Game) -> String {
 }
 
 /// orders.ts targetAt: a thing a teammate can work near a point. (workthings.ts workNear)
-pub fn work_near(g: &mut crate::game::Game, at: V3) -> Option<crate::workthings::WorkNear> {
-    work_things_near(g, at).map(|x| WorkNear { d: x.d, target: x.target })
+pub fn work_near(g: &crate::game::Game, seat: &crate::seats::SeatRef, at: V3) -> Option<crate::workthings::WorkNear> {
+    work_things_near(g, seat, at).map(|x| WorkNear { d: x.d, target: x.target })
 }
 
 /// orders.ts targetUnder: the thing whose own box the cursor is on. (workthings.ts workOn)
-pub fn work_on(g: &mut crate::game::Game, box_: Option<AnyBoxId>) -> Option<crate::orders::OrderTarget> {
-    work_things_on(g, box_)
+pub fn work_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, box_: Option<AnyBoxId>) -> Option<crate::orders::OrderTarget> {
+    work_things_on(g, seat, box_)
 }
 
 /// orders.ts rowsFor. (workthings.ts workRows)

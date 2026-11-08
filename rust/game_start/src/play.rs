@@ -303,6 +303,17 @@ impl Play {
     pub fn objective(&self) -> String { self.view().mission.map_or(String::new(), |m| m.text) }
     /// WHAT A HUD IS TOLD of the game as it stands (`view::tick_view`: the record the page draws, asked of the game and never kept by it)
     pub fn view(&self) -> game::view::TickView { self.view_of(0) }
+    /// WHAT A HUD IS TOLD OF ITS CURSOR with the cursor on a point of the world, through the host's camera as it stands (None: the point is not in the picture)
+    pub fn pointed_at(&self, seat: usize, at: [f64; 3]) -> Option<game::view::CursorView> {
+        let (w, h) = (self.host.canvas.client_width, self.host.canvas.client_height);
+        let (sx, sy, front) = game::camera::follow_camera_project(&self.g, self.host.cam, at, w, h, None, None);
+        if front && sx >= 0.0 && sx < w && sy >= 0.0 && sy < h { Some(self.pointed(seat, [sx, sy])) } else { None }
+    }
+    /// …with the cursor at a place of the picture
+    pub fn pointed(&self, seat: usize, mouse: [f64; 2]) -> game::view::CursorView {
+        let now = game::view::HostNow { mouse, ..game::view::host_now(&self.g, self.host.input, self.host.cam, self.host.canvas) };
+        game::view::cursor_view(&self.g, &game::seats::seat(&self.g, self.g.seats[seat]), &now)
+    }
     /// …and what another player's HUD is told (0 = the first)
     pub fn view_of(&self, seat: usize) -> game::view::TickView { game::view::tick_view(&self.g, &game::seats::seat(&self.g, self.g.seats[seat])) }
     /// the lines on the game's log now, oldest first (it keeps the last five)
@@ -330,6 +341,8 @@ impl Play {
     pub fn seat_id(&mut self, seat: usize) -> f64 { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| g.ch[g.pl[g.player].ch].id) }
     /// a man's character id
     pub fn id_of(&self, gd: GuardId) -> f64 { self.g.ch[self.g.gd[gd].ch].id }
+    /// what the end card shows the seat of this number
+    pub fn debrief_view(&self, seat: usize) -> game::view::DebriefView { game::view::debrief_view(&self.g, &game::seats::seat(&self.g, self.g.seats[seat])) }
     /// THE RECAP, as the game keeps it. What the end card may show (None: somebody still plays, or nobody of ours went down) …
     pub fn recap_card(&self) -> Option<game::deathrecap::DeathRecap> { game::deathrecap::recap_card(&self.g) }
     /// … every one of ours lost so far this run, whoever still plays: never for a screen …
@@ -338,6 +351,23 @@ impl Play {
     pub fn recap_lost(&self) -> Vec<game::deathrecap::LostMan> { self.g.recap.lost_live.clone() }
     /// … and the word a man has over his head of the cues' own (the recap's side call goes there; his own lines do not).
     pub fn cue_over(&self, gd: GuardId) -> Option<String> { self.g.cues.bubbles.get(gd).map(|b| b.text.clone()) }
+    /// A man held where a test wants him, his back the way it says, as suspicious or alert as it says: for a rule that is not about his senses. Each frame.
+    pub fn pin_man(&mut self, gd: GuardId, at: [f64; 2], yaw: f64, state: GuardState, aware: f64) {
+        let c = self.g.gd[gd].ch;
+        self.g.ch[c].pos = [at[0], 0.0, at[1]];
+        self.g.ch[c].vel = [0.0; 3];
+        self.g.ch[c].body_yaw = yaw;
+        self.g.ch[c].aim_yaw = yaw;
+        let h = &mut self.g.gd[gd];
+        (h.hold, h.pinned, h.state, h.awareness, h.path_goal) = (true, true, state, aware, None);
+        h.path.clear();
+    }
+    /// Every man of the other side but these is down.
+    pub fn drop_all_but(&mut self, keep: &[GuardId]) {
+        for gd in self.g.guards.clone() {
+            if self.g.gd[gd].team != game::teams::Team::Operative && !keep.contains(&gd) && self.up(gd) { game::combat::kill_guard(&mut self.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, None, None); }
+        }
+    }
     /// Sam's teammates, in the order the game made them
     pub fn mates(&self) -> Vec<GuardId> { self.g.guards.iter().copied().filter(|&gd| self.g.gd[gd].team == game::teams::Team::Operative).collect() }
     /// every man of the game's list in a line, for a failure's message

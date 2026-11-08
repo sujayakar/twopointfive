@@ -739,9 +739,9 @@ pub fn squad_orders_clear(g: &mut crate::game::Game, men: Option<&[GuardId]>) {
 }
 
 /// `this.people?.near(at) ?? null`: the man of the other side nearest the point, with how near; None while g.orders.people is None.   (orders.ts:742, the closure at pairorders.ts:159)
-pub fn squad_orders_people_near(g: &mut crate::game::Game, at: V3) -> Option<(GuardId, f64)> {
-    if g.orders.people.is_none() { return None; }
-    if !crate::pairorders::pair_orders_up(g, &crate::seats::here(g)) { return None; }
+pub fn squad_orders_people_near(g: &crate::game::Game, seat: &crate::seats::SeatRef, at: V3) -> Option<(GuardId, f64)> {
+    if seat.orders.people.is_none() { return None; }
+    if !crate::pairorders::pair_orders_up(g, seat) { return None; }
     let mut best: Option<GuardId> = None;
     let mut bd = g.k.pair.pick_m;
     let mut i = 0;
@@ -757,8 +757,21 @@ pub fn squad_orders_people_near(g: &mut crate::game::Game, at: V3) -> Option<(Gu
 
 /// What a point in the world is, as a target: the nearest of a door, a teammate and Sam himself; else the free floor at or nearest it; else nothing.   (orders.ts SquadOrders.targetAt)
 pub fn squad_orders_target_at(g: &mut crate::game::Game, p: V3) -> crate::orders::OrderTarget {
+    pointed(g);
+    let mut asked = Vec::new();
+    let t = target_at(g, &crate::seats::here(g), p, &mut asked);
+    crate::wallcharge::sky_kept(g, asked);
+    t
+}
+/// what a question of a point wants standing (before the first tick: the seat's list of things to work, which a tick keeps)
+fn pointed(g: &mut Game) {
+    if g.work.cache.is_none() { crate::workthings::work_things_keep(g); }
+    crate::scene_collision::stands(g);
+}
+/// …asked of the game shared, the copy of the boxes standing (`asked` = the walls whose sky was asked, for a rule to keep)
+pub fn target_at(g: &Game, seat: &crate::seats::SeatRef, p: V3, asked: &mut Vec<(f64, f64)>) -> crate::orders::OrderTarget {
     let (door_pick_m, man_m, self_m) = (g.k.orders.door_pick_m, g.k.orders.man_m, g.k.orders.self_m);
-    let sam = g.ch[g.pl[g.player].ch].pos;
+    let sam = g.ch[g.pl[seat.player].ch].pos;
     let at: V3 = [p[0], 0.0, p[2]];
     let mut door: Option<DoorId> = None;
     let mut dd = door_pick_m;
@@ -773,19 +786,19 @@ pub fn squad_orders_target_at(g: &mut crate::game::Game, p: V3) -> crate::orders
     }
     let mut man: Option<GuardId> = None;
     let mut dm = man_m;
-    for gd in squad_orders_squad(g, &crate::seats::here(g)) {
+    for gd in squad_orders_squad(g, seat) {
         let x = v3::dist_xz(g.ch[g.gd[gd].ch].pos, at);
         if !is_dead(g, gd) && x < dm { dm = x; man = Some(gd); }
     }
     let ds = v3::dist_xz(sam, at);
-    let fo = squad_orders_people_near(g, at);   // (pairorders.ts: a man of the other side nearer the point than a door, a teammate or Sam himself)
+    let fo = squad_orders_people_near(g, seat, at);   // (pairorders.ts: a man of the other side nearer the point than a door, a teammate or Sam himself)
     if let Some((foe, fd)) = fo {
         if !(door.is_some() && dd < fd) && !(man.is_some() && dm < fd) && !(ds < self_m && ds < fd) {
             let fp = g.ch[g.gd[foe].ch].pos;
             return OrderTarget::Foe(OrderTargetFoe { at: [fp[0], 0.0, fp[2]], foe });
         }
     }
-    let wk = crate::workthings::work_near(g, at);   // (workthings.ts: a thing a teammate can work, nearer the point than a door, a teammate or Sam himself)
+    let wk = crate::workthings::work_near(g, seat, at);   // (workthings.ts: a thing a teammate can work, nearer the point than a door, a teammate or Sam himself)
     if let Some(wk) = wk {
         if !(door.is_some() && dd < wk.d) && !(man.is_some() && dm < wk.d) && !(ds < self_m && ds < wk.d) { return wk.target; }
     }
@@ -800,11 +813,11 @@ pub fn squad_orders_target_at(g: &mut crate::game::Game, p: V3) -> crate::orders
         }
     }
     if ds < self_m { return OrderTarget::None(OrderTargetNone { at, man: None }); }
-    let base = match squad_orders_free_spot(g, &crate::seats::here(g), at) {
+    let base = match squad_orders_free_spot(g, seat, at) {
         Some(spot) => OrderTarget::Floor(OrderTargetFloor { at: spot, wall: None, thing: None, serial: 0 }),   // (serial 0: no menu's yet; orders.ts:937 stamps the one a menu keeps)
         None => OrderTarget::None(OrderTargetNone { at, man: None }),
     };
-    crate::wallcharge::wall_target(g, at, &base)   // (wallcharge.ts: a floor target under a wall carries the wall)
+    crate::wallcharge::wall_target(g, seat, at, &base, asked)   // (wallcharge.ts: a floor target under a wall carries the wall)
 }
 
 /// How far along the ray it crosses one door's doorway rectangle, nearer than `bt` and with nothing of the scene short of the frame line (orders.ts:757-763)
@@ -840,9 +853,18 @@ pub fn squad_orders_door_on_ray(g: &crate::game::Game, ro: V3, rd: V3, t_scene: 
 
 /// What the cursor is on, for the menu; with CMDRING.wholeSquad a teammate under it is the squad itself.   (orders.ts SquadOrders.targetUnder)
 pub fn squad_orders_target_under(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> crate::orders::OrderTarget {
-    let t = squad_orders_target_under_of(g, input, cam, canvas);
+    pointed(g);
+    let now = crate::view::host_now(g, input, cam, canvas);
+    let mut asked = Vec::new();
+    let t = target_under(g, &crate::seats::here(g), &now, &mut asked);
+    crate::wallcharge::sky_kept(g, asked);
+    t
+}
+/// …asked of the game shared, by a cursor and a camera as they stand
+pub fn target_under(g: &Game, seat: &crate::seats::SeatRef, now: &crate::view::HostNow, asked: &mut Vec<(f64, f64)>) -> crate::orders::OrderTarget {
+    let t = target_under_of(g, seat, now, asked);
     if let OrderTarget::None(x) = &t {
-        if x.man.is_some() && squad_orders_whole(g, &crate::seats::here(g)) { return OrderTarget::None(OrderTargetNone { at: x.at, man: None }); }
+        if x.man.is_some() && squad_orders_whole(g, seat) { return OrderTarget::None(OrderTargetNone { at: x.at, man: None }); }
     }
     t
 }

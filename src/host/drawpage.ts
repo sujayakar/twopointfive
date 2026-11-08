@@ -44,6 +44,7 @@ import { Particles } from '../render/particles';
 import { DrawReach, doorways } from '../draw/reach';
 import { DrawMen } from '../draw/men';
 import { DrawLights } from '../draw/lights';
+import { DrawDecals } from '../draw/marks';
 import { DrawWorld } from '../draw/world';
 import { lookNumbers } from '../draw/look';
 import { sampleHand } from '../draw/hand';
@@ -94,6 +95,7 @@ async function main(): Promise<void> {
   let world!: DrawWorld; const engine = new Engine(gpu, undefined, d => world = new DrawWorld(d, D)), smoke = new SmokeSystem(engine);
   engine.setParticles(new Particles(engine.device, engine.sceneLayout));
   engine.setSmoke(smoke.binding); engine.afterSubmit.push(() => smoke.afterSubmit());
+  engine.setDecals(new DrawDecals(engine.device, D));
   engine.settings.markingTexel = D.f[sky() + Sky.markTexel] || MARKING_TEXEL;
   pipelineProgress.onChange = () => say(`compiling shaders ${pipelineProgress.done} / ${pipelineProgress.total} …`);
   // the men: the mesh and its skinning, the tree that shadows him, the cones the rays meet of him
@@ -153,6 +155,7 @@ async function main(): Promise<void> {
     const keys = sampleHand(game.numbersOf(), input, cam, canvas);
     game.step(dt, keys);
     if (D.u[view() + View.stood] !== stood) anew();
+    weather.told();
     events.from();
     D.fresh();   // (a sound asks the module, whose memory may have grown)
     lens();

@@ -92,7 +92,7 @@ pub fn state_words(g: &mut crate::game::Game, o: &mut W, out: &mut Vec<u32>) { o
     o.b.clear(); g.rack_targets.w(o); out.push(word(&o.b));
     o.b.clear(); g.mark_lights.w(o); out.push(word(&o.b));
     o.b.clear(); g.tune.w(o); out.push(word(&o.b));
-    o.b.clear(); { g.engine.world.statics.w(o); g.engine.world.dynamics.w(o); g.engine.world.all.w(o); g.engine.world.max_boxes.w(o); g.engine.world.glass_list.w(o); g.engine.world.glass_statics.w(o); g.engine.world.glass_statics_n.w(o); g.engine.world.statics_dirty.w(o); g.engine.world.geom_serial.w(o); g.engine.world.rg_start.w(o); g.engine.world.rg_items.w(o); g.engine.world.rg_globals.w(o); g.engine.world.rg_n.w(o); g.engine.world.rg_shape.w(o); g.engine.world.rg_fill.w(o); g.engine.world.rg_ranges.w(o); g.engine.world.glass_open.w(o); } out.push(word(&o.b));
+    o.b.clear(); g.engine.world.w(o); out.push(word(&o.b));
     o.b.clear(); g.engine.lights.w(o); out.push(word(&o.b));
     o.b.clear(); g.engine.weather.w(o); out.push(word(&o.b));
     o.b.clear(); g.engine.glass_fracture.w(o); out.push(word(&o.b));

@@ -1,16 +1,16 @@
 // The debrief card's contents (menu.ts hosts it: the end card on mission complete, the down card a beat after Sam drops, and the pause card's 'Run so far' tab):
 // the rating word big with the score beside it, what the score was docked for, a compact stats grid, the badges as chips (lit / dim), the floor map — the nav
 // grid's walkable cells drawn light on dark, Sam's path over it coloured by the clock, a pin per notable event with its timeline row on hover, spawn / rack / exit
-// marked — and the timeline itself as a scrollable list. Everything read comes from game/chronicle.ts (debriefOf: counts, score, badges, summary; the events; the
-// path) so the QA probes see the same numbers the card shows. Plain DOM, styled in index.html (#menu .db-…); builds headlessly too (no canvas context: the map's
+// marked — and the timeline itself as a scrollable list. Everything read comes from the Rust game, asked once as the card is built (src/view/debriefview.ts: counts, score,
+// badges, summary; the rows in words; the path; the recap), so the QA probes see the same numbers the card shows. Plain DOM, styled in index.html (#menu .db-…); builds headlessly too (no canvas context: the map's
 // pins and marks still land, the cells and the path are simply not painted).
 import { gearText } from '../game/gear';
 import type { Game } from '../game/game';
 import { mountRecap } from './recap';
 import { MYSTERY } from './missions';
 import { quietWords } from '../game/quiet';
-import { debriefOf, fmtEvent, fmtMMSS, pinned, PIN, roomOf, indoors, roomsOf, ROOMS, eventText } from '../game/chronicle';
-import type { Debrief, ChronEvent } from '../game/chronicle';
+import { indoors, roomOf } from '../game/rooms';
+import type { Debrief, DebriefRow, DebriefRoom, DeathRecap } from '../view/debriefview';
 import { verdictLine, type RunVerdict } from '../game/verdict';
 import { verdictHead, verdictMen, verdictSlot, verdictPanels, squadVerdict, fellWords, namedMen } from './verdictCard';
 
@@ -26,9 +26,35 @@ export interface DebriefUi { root: HTMLElement; debrief: Debrief; copyText: stri
 /** the death recap as a panel of the verdict's slot (verdictCard.ts verdictPanels): under the men's rows on a squad's card. Put on the list at the first card
  *  drawn, never as this module loads; `recapIn` = it drew this time, so the map's column does not get a second one. */
 let recapIn = false;
-const recapPanel = (slot: HTMLElement, game: Game): void => { if (mountRecap(slot, game)) recapIn = true; };
+let recapNow: DeathRecap | null | undefined = null;
+const recapPanel = (slot: HTMLElement, game: Game): void => { if (mountRecap(slot, game, recapNow)) recapIn = true; };
+/** the map's pins: which kinds get a glyph on the floor map, and the glyph */
+const PIN: Partial<Record<string, { glyph: string; cls: string; label: string }>> = {
+  spotted: { glyph: '◉', cls: 'seen', label: 'spotted' },
+  alarm: { glyph: '!', cls: 'alarm', label: 'alarm up' },
+  kill: { glyph: '✕', cls: 'kill', label: 'kill' },
+  ko: { glyph: 'z', cls: 'ko', label: 'knockout' },
+  ocp: { glyph: '✦', cls: 'light', label: 'OCP / light' },
+  lightShot: { glyph: '✦', cls: 'light', label: 'OCP / light' },
+  blackout: { glyph: '✦', cls: 'light', label: 'OCP / light' },
+  bodyFound: { glyph: '◇', cls: 'body', label: 'body found' },
+  down: { glyph: '✚', cls: 'down', label: 'you went down' },
+  doorKicked: { glyph: '▮', cls: 'door', label: 'door kicked / picked' },
+  lockPicked: { glyph: '▯', cls: 'door', label: 'door kicked / picked' },
+  cameraSpotted: { glyph: '◎', cls: 'seen', label: 'camera / beam' },
+  cameraAlarm: { glyph: '◎', cls: 'alarm', label: 'camera / beam' },
+  laserTripped: { glyph: '≋', cls: 'seen', label: 'camera / beam' },
+  civilianSpotted: { glyph: '◉', cls: 'seen', label: 'a civilian saw / told' },
+  civilianReported: { glyph: '☎', cls: 'alarm', label: 'a civilian saw / told' },
+  civilianKO: { glyph: 'z', cls: 'ko', label: 'knockout' },
+  civilianKilled: { glyph: '✕', cls: 'kill', label: 'kill' },
+};
+/** the map's pin a row wears, if any: an alarm going down wears none */
+export const pinnedRow = (e: { kind: string; down: boolean }) => e.down ? null : PIN[e.kind] ?? null;
+/** mm:ss off seconds */
+function fmtMMSS(sec: number): string { const s = Math.max(0, Math.floor(sec)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; }
 export function renderDebrief(into: HTMLElement, game: Game, actions: HTMLElement[] = []): DebriefUi {
-  const D = debriefOf(game); const C = game.chronicle; const c = D.counts;
+  const W = game.debriefView(), D = W.debrief, c = D.counts; recapNow = W.recap;
   const root = el('div', 'db'); into.appendChild(root);
   // ---- the verdict (game/verdict.ts), once the run is over: its head leads the card. A squad's mission then shows the men (their rows, their paths) where the
   // stealth game's rating, numbers and timeline stand — those are built all the same and hidden by the card's class (index.html .vd-squad): one builder, and
@@ -72,21 +98,21 @@ export function renderDebrief(into: HTMLElement, game: Game, actions: HTMLElemen
   st('shots', c.shots, '', `${c.shotsNearMen} of them into or near an enemy`); st('OCP', c.ocps); st('lights shot', c.lightsShot);
   st('doors kicked', c.kicked, tone(c.kicked ? 'warn' : '')); st('locks picked', c.picked); st('keys', c.keys); st('intel', c.intel, '', MYSTERY.on ? `${c.questioned} ${c.questioned === 1 ? 'enemy' : 'enemies'} questioned` : `${c.questioned} of ${c.roster} enemies questioned`); /* (the roster is the floor's head count: ui/missions.ts MYSTERY) */ st('called in', c.devices, tone(c.devices ? 'warn' : ''), 'a camera or a tripwire radioed you in');
   if (c.thrown) st('thrown', c.thrown, '', 'smoke and stun canisters, frag grenades, and 40 mm grenades off the launcher'); if (c.hits) st('hits taken', c.hits, 'bad'); if (c.loads) st('checkpoint loads', c.loads, tone('warn')); if (c.blackout) st('blackout', 'used');
-  if (c.civSeen || c.civReported || c.civKO || c.civKilled || c.civComplied) { st('civilians saw you', c.civSeen, tone(c.civSeen ? 'warn' : 'good'), 'times the cleaner or the late worker saw you (or you grabbed them)'); st('…and told them', c.civReported, tone(c.civReported ? 'bad' : 'good'), 'a civilian\'s reports that reached the guards, whether she told a guard, called it in, or control called the floor after she got out'); if (c.civComplied) st('told to stay down', c.civComplied); if (c.civKO) st('civilian KOs', c.civKO, 'bad', 'civilians you knocked out, which costs you a lot'); if (c.civKilled) st('CIVILIANS KILLED', c.civKilled, 'bad'); }   // (the civilians' block only on a run that met one — civilians.ts)
+  if (c.civSeen || c.civReported || c.civKo || c.civKilled || c.civComplied) { st('civilians saw you', c.civSeen, tone(c.civSeen ? 'warn' : 'good'), 'times the cleaner or the late worker saw you (or you grabbed them)'); st('…and told them', c.civReported, tone(c.civReported ? 'bad' : 'good'), 'a civilian\'s reports that reached the guards, whether she told a guard, called it in, or control called the floor after she got out'); if (c.civComplied) st('told to stay down', c.civComplied); if (c.civKo) st('civilian KOs', c.civKo, 'bad', 'civilians you knocked out, which costs you a lot'); if (c.civKilled) st('CIVILIANS KILLED', c.civKilled, 'bad'); }   // (the civilians' block only on a run that met one — civilians.ts)
   // badges
   if (!plain) { const badges = el('div', 'db-badges'); left.appendChild(badges);
   for (const b of D.badges) { const chip = el('span', `chip${b.on ? ' on' : ''}`); chip.textContent = b.name; chip.title = b.hint; badges.appendChild(chip); } }
   // timeline
-  const tlHead = el('div', 'gtitle db-tlhead'); tlHead.textContent = `timeline · ${C.events.length} entr${C.events.length === 1 ? 'y' : 'ies'}${C.dropped ? ` (${C.dropped} more not kept)` : ''}`; left.appendChild(tlHead);
+  const tlHead = el('div', 'gtitle db-tlhead'); tlHead.textContent = `timeline · ${W.rows.length} entr${W.rows.length === 1 ? 'y' : 'ies'}${W.dropped ? ` (${W.dropped} more not kept)` : ''}`; left.appendChild(tlHead);
   const tl = el('div', 'db-timeline'); left.appendChild(tl);
-  if (!C.events.length) { const e0 = el('div', 'ev empty'); e0.textContent = 'nothing yet — nobody has noticed a thing'; tl.appendChild(e0); }
-  for (const e of C.events) { const row = el('div', `ev k-${e.kind}${e.kind === 'alarm' && !e.data.up ? ' down' : ''}`); const t = el('i'); t.textContent = fmtMMSS(e.t); const r = el('u'); r.textContent = e.room; const x = el('span'); x.textContent = eventText(e, game); row.append(t, r, x); tl.appendChild(row); }
+  if (!W.rows.length) { const e0 = el('div', 'ev empty'); e0.textContent = 'nothing yet — nobody has noticed a thing'; tl.appendChild(e0); }
+  for (const e of W.rows) { const row = el('div', `ev k-${e.kind}${e.down ? ' down' : ''}`); const t = el('i'); t.textContent = fmtMMSS(e.t); const r = el('u'); r.textContent = e.room; const x = el('span'); x.textContent = e.text; row.append(t, r, x); tl.appendChild(row); }
   // map + legend
-  if (!recapIn) mountRecap(right, game);   // every death explains itself (ui/recap.ts): who shot whom, from where — nothing while the run is still on. Over the map unless the verdict's slot took it
-  right.appendChild(buildMap(game, C.events, V));
+  if (!recapIn) mountRecap(right, game, recapNow);   // every death explains itself (ui/recap.ts): who shot whom, from where — nothing while the run is still on. Over the map unless the verdict's slot took it
+  right.appendChild(buildMap(game, W.rows, W.rooms, W.path, V));
   const legend = el('div', 'db-legend');
   const seenLabels = new Set<string>();
-  for (const k of Object.keys(PIN) as (keyof typeof PIN)[]) { const p = PIN[k]!; if (seenLabels.has(p.label)) continue; seenLabels.add(p.label); const s = el('span', `lg ${p.cls}`); const g = el('i'); g.textContent = p.glyph; s.append(g, ` ${p.label}`); legend.appendChild(s); }
+  for (const k of Object.keys(PIN)) { const p = PIN[k]!; if (seenLabels.has(p.label)) continue; seenLabels.add(p.label); const s = el('span', `lg ${p.cls}`); const g = el('i'); g.textContent = p.glyph; s.append(g, ` ${p.label}`); legend.appendChild(s); }
   for (const [g, label] of [['S', 'insertion'], ['◎', quietWords(game)?.holder ?? 'the rack'], ['⇥', quietWords(game) ? 'a way out' : 'fire exit']] as const) { const s = el('span', 'lg mark'); const i = el('i'); i.textContent = g; s.append(i, ` ${label}`); legend.appendChild(s); }
   { const s = el('span', 'lg path'); const i = el('i'); i.textContent = '━'; s.append(i, ' his path, early → late'); legend.appendChild(s); }
   right.appendChild(legend);
@@ -96,7 +122,7 @@ export function renderDebrief(into: HTMLElement, game: Game, actions: HTMLElemen
 /** The floor map: a canvas at the nav grid's resolution (walkable cells light — lighter indoors — blocked dark, so walls read as lines and doorways as gaps), the
  *  path as a polyline coloured by the clock (teal early → amber late; a jump longer than PATH_GAP_M is left as a gap), spawn / rack / exit marks; over it, one
  *  absolutely-placed glyph per pinned event (its timeline row as the tooltip), and the room under the cursor as the box's own tooltip. */
-function buildMap(game: Game, events: ChronEvent[], V: RunVerdict | null = null): HTMLElement {
+function buildMap(game: Game, events: DebriefRow[], rooms: DebriefRoom[], P: ArrayLike<number>, V: RunVerdict | null = null): HTMLElement {
   const box = el('div', 'db-map'); const nav = game.col.nav; const W = nav.W, H = nav.H, cell = nav.cell;
   const wx = W * cell, wz = H * cell;   // world extent covered (40 × 28 m)
   const px = Math.max(2, Math.floor(MAP_MAX_W / W));   // canvas px per nav cell
@@ -113,8 +139,7 @@ function buildMap(game: Game, events: ChronEvent[], V: RunVerdict | null = null)
     }
     // room names, faint, centred in each room
     ctx.font = `${Math.max(8, px * 1.8)}px ui-monospace, Menlo, monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(214,210,200,0.34)';
-    const short = roomsOf(game.level) === ROOMS ? / room$| office$/ : /$^/;   // (the office's table is shortened to fit; another level's names are drawn whole — "registrar's" is no label)
-    for (const r of roomsOf(game.level)) ctx.fillText(r.name.replace(short, ''), ((r.x0 + r.x1) / 2 / cell) * px, ((r.z0 + r.z1) / 2 / cell) * px);
+    for (const r of rooms) ctx.fillText(r.label, ((r.x0 + r.x1) / 2 / cell) * px, ((r.z0 + r.z1) / 2 / cell) * px);
     // the team's paths under a verdict: every man's in his own colour (a squad's mission: the player's too — the clock-coloured line below is the stealth game's)
     if (V) { const squad = squadVerdict(V); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       if (squad) { ctx.fillStyle = 'rgba(255,156,132,0.75)'; const r = Math.max(1.5, px * 0.45); for (let i = 0; i + 1 < V.foes.fell.length; i += 2) ctx.fillRect(V.foes.fell[i] / cell * px - r, V.foes.fell[i + 1] / cell * px - r, r * 2, r * 2); }   // where each defender fell: a small square
@@ -123,7 +148,7 @@ function buildMap(game: Game, events: ChronEvent[], V: RunVerdict | null = null)
         ctx.stroke();
         if (m.state === 'up' && P.length >= 3) { ctx.fillStyle = TONE[m.tone ?? 'mate']; ctx.beginPath(); ctx.arc(P[P.length - 3] / cell * px, P[P.length - 2] / cell * px, px * 0.6, 0, Math.PI * 2); ctx.fill(); } } }
     // the path
-    const C = game.chronicle, P = C.path, n = V && squadVerdict(V) ? 0 : C.pathN; const T = Math.max(1e-3, n ? P[(n - 1) * 3 + 2] : 1);
+    const n = V && squadVerdict(V) ? 0 : Math.floor(P.length / 3); const T = Math.max(1e-3, n ? P[(n - 1) * 3 + 2] : 1);
     ctx.lineWidth = Math.max(1.5, px * 0.45); ctx.lineCap = 'round';
     for (let i = 1; i < n; i++) {
       const x0 = P[(i - 1) * 3], z0 = P[(i - 1) * 3 + 1], x1 = P[i * 3], z1 = P[i * 3 + 1], t = P[i * 3 + 2];
@@ -141,7 +166,7 @@ function buildMap(game: Game, events: ChronEvent[], V: RunVerdict | null = null)
   mark('◎', 'rack', M.rack.front[0], M.rack.front[2], QW ? `${QW.holder} — ${QW.thing}` : `rack ${M.rack.index + 1} — the drive`);
   if (QW) { for (const X of game.quiet.exits) { const ex = game.doors.byName(X.door)?.frameCentre ?? [X.x, 0, X.z]; mark('⇥', 'exit', ex[0], ex[2], X.name); } }
   else { const ex = game.doors.byName(M.exfilDoor)?.frameCentre; if (ex) mark('⇥', 'exit', ex[0], ex[2], 'the fire exit'); }
-  for (const e of events) { if (!pinned(e)) continue; const p = PIN[e.kind]!; const pin = el('i', `pin ${p.cls}`); pin.textContent = p.glyph; pin.title = fmtEvent(e, game); place(pin, e.pos[0], e.pos[2]); }
+  for (const e of events) { const p = pinnedRow(e); if (!p) continue; const pin = el('i', `pin ${p.cls}`); pin.textContent = p.glyph; pin.title = `${fmtMMSS(e.t)} · ${e.room} · ${e.text}`; place(pin, e.pos[0], e.pos[2]); }
   if (V) for (const m of namedMen(game, V)) { if (!m.downPos || (m.human && !squadVerdict(V))) continue; const x = el('i', `vfell t-${m.tone ?? 'mate'}`); x.textContent = m.state === 'dead' ? '✕' : m.state === 'wounded' ? '✚' : 'z'; x.title = fellWords(m); place(x, m.downPos[0], m.downPos[1]); }   // (where each man of the team fell; not a `mark`: the three marks are the level's)
   // the room under the cursor
   box.title = 'the floor';

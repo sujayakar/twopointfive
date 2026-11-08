@@ -84,8 +84,6 @@ fn this_run(g: &mut Game) {
 /// A round is about to land on a man (combat's fire_weapon, before anything is done to him): remembered as the last round into him. Whether it puts him down is the
 /// game's to say: the tick reads the answer off the man himself. `was_down`: a round into a man on the floor is not the round that put him there, and must not replace it.
 pub fn recap_round(g: &mut Game, victim: Option<CharId>, was_down: bool, shooter: CharId, muzzle: V3, hit: V3, def: &crate::weapons::WeaponDef, blind: Option<bool>) {
-    // (the page's end card still makes its own record, and this round is what tells it whose round it was: this line goes when the card reads the game's)
-    g.out.push(crate::out_events::OutEvent::RecapRound(crate::out_events::OutRecapRound { victim, was_down, shooter, muzzle, hit, def: def.id, blind }));
     let Some(victim) = victim else { return; };
     if was_down || !live(g) { return; }
     this_run(g);
@@ -400,5 +398,5 @@ pub fn recap_card(g: &Game) -> Option<DeathRecap> {
     for due in g.recap.due.iter() { if let Some(t) = take_of(g, &due.death) { file_take(&mut takes, t, g.k.recap.keep); } }
     if !crate::seats::all_down(g) { let end = g.recap.over_at + 1e-6; takes.retain(|t| t.death.t <= end); }
     let main = takes.iter().rposition(|t| t.death.player).or(takes.len().checked_sub(1))?;
-    Some(DeathRecap { takes, main })
+    Some(DeathRecap { takes, main: main as f64 })
 }

@@ -2,14 +2,12 @@
 # TAB kind TAB reason. The first line that matches a row sorts it. Sorts: decides (to move into the Rust game) · moving (its move is already under way) · picture (the
 # picture's or the sound's own) · host (the host's own plumbing) · hand (the player's or the developer's own hand). A kind is the move a row belongs to.
 # ---- already on its way into the Rust game
-src/game/verdict.ts:*	moving	the verdict	the verdict is being moved into the Rust tick, which latches it; this file and src/game/thisrun.ts go when it lands	9
+src/game/verdict.ts:*	moving	the verdict	the verdict is being moved into the Rust tick, which latches it; this file and src/game/thisrun.ts go when it lands	3
 src/main.ts:main › vBooks	moving	the verdict	the verdict's books kept on the page go with src/game/verdict.ts	1
-src/game/director.ts:*	moving	the Director	its host fields (the camera and Input rows) are being moved to the game's own; the show's pins and key locks wait for the host's half to be redrawn	4
+src/game/director.ts:*	moving	the Director	its host fields (the camera and Input rows) are being moved to the game's own; the show's pins and key locks wait for the host's half to be redrawn	3
 # ---- decides: the records the page keeps and the lines it says
 src/game/par.ts:Par.best*	picture	the picture's feel	this machine's words about its best time, handed in by the page for the result as it shows it (the browser's store is a machine's own)	1
 src/game/par.ts:*	decides	HUD mission lines	what the page reads of the clock (armed, started, the result) is asked of the copy; the row with the clock on it is the Rust game's own (par_objective, in the view)
-src/game/deathrecap.ts:*	decides	debrief	the dress step runs recapTick on the copy: who fell, who saw it and when the recap is due are kept in a record only TypeScript has
-src/game/chronicle.ts:*	decides	debrief	the debrief reads the chronicle through TypeScript's own counts and words, and the save controller adds its checkpoint row on the copy
 src/game/lesson.ts:*	decides	lesson conditions	a lesson's step, its line and whether it is over are worked out again on the copy (the camera and the HUD ask Lesson.step each frame)
 src/game/rails.ts:*	decides	lesson conditions	what a tutorial's rails allow, offer and teach is worked out again on the copy each frame (its key locks wait for the host's half to be redrawn)
 src/game/cues.ts:Cues.aside	decides	debrief	the death recap's witness files his word on the copy: it goes when the recap is the tick's (its aside is a bubble of the cues' own, and the view tells it with the rest)
@@ -96,7 +94,8 @@ src/game/kitload.ts:*	decides	kit rows	a gun's load and its share are worked out
 src/game/gunslots.ts:*	decides	kit rows	the gun picks are worked out again on the copy
 src/game/slotsetup.ts:*	decides	kit rows	a slot's setup steps are worked out again on the copy
 # ---- the host's own
-src/host/rustgame.ts:*	host	the Rust host	the host itself: it hands the Rust game the host's half, steps it, takes the state and the out events	19
+src/host/rustgame.ts:*	host	the Rust host	the host itself: it hands the Rust game the host's half, steps it, takes the state and the out events	23
+src/game/under.ts:*	host	the Rust host	the view's answer in the page's objects	1
 src/host/rustdress.ts:*	host	the Rust host	the dress step hands the frame's men to the picture	1
 src/game/game.ts:Game.update	host	the Rust host	the game's update round the step: the die, the record sampled, the camera's cut	1
 src/game/game.ts:Game.host*	host	the Rust host	the host's half round the step: the Input's drag, the camera's peek and kick	3
@@ -110,17 +109,17 @@ src/host/autocam.ts:*	host	the Rust host	the camera's own framing	2
 tools/blitz/out-dispatch.ts:*	host	the Rust host	the out events' dispatcher: what the tick told the host is made as today's calls on the page's objects (sound, particles, decals, smoke)	1
 src/game/savestate.ts:*	host	saves	the save controller's rhythm and shelf (saves and replays are not this list's)	16
 src/game/journal.ts:*	host	saves	the F10 session recorder (saves and replays are not this list's)	4
-src/game/sensors.ts:*	host	saves	the recorder's sensor stream	5
+src/game/sensors.ts:*	host	saves	the recorder's sensor stream	6
 src/game/rollback.ts:*	host	saves	snapshots for the networked page and the recorder	5
-src/game/replaybuf.ts:*	host	saves	the replay buffer's own cursor	2
-src/game/runtape.ts:*	host	saves	the run tape's own cursor	1
+src/game/replaybuf.ts:*	host	saves	the replay buffer's own cursor	9
+src/game/runtape.ts:*	host	saves	the run tape's own cursor	8
 src/game/rustknobs.ts:*	host	the bridge	the knob tables written across to the Rust game	2
 src/math/*	host	the bridge	the die's and the side tables' own book-keeping under the bridge	13
 src/sim/sim.ts:*	host	the bridge	the module's binding	6
 src/sim/state.ts:*	host	the bridge	the block's views	11
 src/sim/weatherhome.ts:*	host	the bridge	the weather's words in the block	2
-src/scene/boxMirror.ts:*	host	the bridge	the box world's mirror in the block	24
-src/scene/collision.ts:*	host	the bridge	the queries' own stamps and counters (a query asked from the page is answered by the block)	31
+src/scene/boxMirror.ts:*	host	the bridge	the box world's mirror in the block	21
+src/scene/collision.ts:*	host	the bridge	the queries' own stamps and counters (a query asked from the page is answered by the block)	32
 src/scene/cut.ts:*	host	the bridge	a cut's clip scratch	3
 src/game/seats.ts:*	host	the bridge	the seats' book: which man sits in which seat, looked up in the copy's own lists	16
 # ---- the picture's own
@@ -153,7 +152,7 @@ src/game/destruction.ts:*	picture	the picture's feel	roofs and broken walls for 
 src/game/furnblast.ts:Furniture.index	host	saves	the save controller checks the furniture before it offers a load	1
 src/game/furnblast.ts:*	picture	the picture's feel	furniture's groups for the picture	3
 src/game/props.ts:*	picture	the picture's feel	a prop's box placed for the picture	3
-src/game/doors.ts:Door.pos*	picture	the picture's feel	a door's leaf placed for the picture	2
+src/game/doors.ts:Door.pos*	picture	the picture's feel	a door's leaf placed for the picture	1
 src/game/doors.ts:Door.keptPos	picture	the picture's feel	a door's leaf placed for the picture	1
 src/game/doors.ts:Door.dir	picture	the picture's feel	a door's leaf placed for the picture	1
 src/game/doors.ts:Door.swing	picture	the picture's feel	a door's leaf placed for the picture	1
@@ -169,7 +168,7 @@ src/game/particleFx.ts:*	picture	the picture's feel	the particle pool	2
 src/game/attract.ts:*	picture	the picture's feel	the attract mode's camera	4
 src/game/demo.ts:*	picture	the picture's feel	the tour's camera and captions	2
 src/scene/*	picture	the box world	the box world packed for the renderer	39
-src/sim/lightshome.ts:*	picture	the box world	the lights' rows read for the renderer	4
+src/sim/lightshome.ts:*	picture	the box world	the lights' rows read for the renderer	5
 src/engine.ts:*	picture	the box world	the renderer's own frame	2
 src/host/tween.ts:*	picture	the box world	boxes posed between two ticks for the draw, and put back	2
 src/host/ahead.ts:*	picture	the box world	boxes posed ahead for the draw, and put back	2
@@ -193,3 +192,4 @@ src/game/sandbox.ts:*	hand	menus	the sandbox's rows kept	1
 src/cloud/*	hand	the cloud	the backend's client	2
 src/net/*	hand	the cloud	the networked page's own	1
 src/main.ts:main › {save}*	hand	the cloud	a save's file sent	1
+src/main.ts:main › refreshFrozenStill*	host	the Rust host	the page holds its own keys up while it draws a frozen picture again (an update of no time): its input, put back after, and no state of the game	1

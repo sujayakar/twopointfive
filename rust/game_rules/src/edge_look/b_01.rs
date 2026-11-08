@@ -550,11 +550,10 @@ pub fn edge_look_shed(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike
     }
 }
 
-/// One soot mark, tagged as the picture's. The answer is `None` here: the TypeScript's only use of it is a count for the checks, not kept. (edgeLook.ts:406-409,423)
+/// One soot mark, the picture's alone. (edgeLook.ts:406-409,423)
 fn soot(g: &mut crate::game::Game, pos: V3, normal: V3, size: f64, param: f64) {
     let opts = crate::render_decals::DecalOpts { param: Some(param), look: Some(true), ..Default::default() };
-    let d = crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Scorch, pos, normal, Some(size), Some(opts));
-    crate::look_decals::look_decal(g, d.as_ref());
+    crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Scorch, pos, normal, Some(size), Some(opts));
 }
 
 /// Soot round a blast's gap: where along the wall the charge opened it (the edge pieces there are sooted), then both faces of the wall about the opening, the floor at its foot, the rim of what still stands. (src/game/edgeLook.ts:398 EdgeLook.scorch)

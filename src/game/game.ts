@@ -79,7 +79,9 @@ import { seatsStand, seatManId, standMen, spotBeside, manById, isManId, eachSeat
 import { doorMan } from './doorthrow';
 import './mission';
 import { NO_VIEW, type TickView } from '../view/seatview';
+import { NO_DEBRIEF, type DebriefView } from '../view/debriefview';
 import type { WorldAsk } from '../view/worldask';
+import type { CursorAt, CursorLens, CursorView, Under } from '../view/cursor';
 import { Chronicle, chronInterrogated } from './chronicle';
 import { hiddenProps, irBeams } from './combat';
 import { irViewer, irMade } from './irlaser';
@@ -1669,6 +1671,9 @@ export class Game {
   get view(): TickView { return this.viewAsk?.() ?? NO_VIEW; }
   /** the host's: asks the Rust game for its view (src/host/rustgame.ts in a page, tools/blitz/rust-host.ts in bun) */
   viewAsk: (() => TickView) | null = null;
+  /** WHAT THE END CARD SHOWS OF THE RUN (src/view/debriefview.ts): asked of the Rust game by the host that steps it, as the card is built */
+  debriefView(): DebriefView { return this.debriefAsk?.() ?? NO_DEBRIEF; }
+  debriefAsk: (() => DebriefView) | null = null;
   /** THE BOX WORLD, ASKED (src/view/worldask.ts) by whoever draws, hears or points: the Rust game's answer where one steps this game (the host sets `askHost`), and
    *  this page's own copy of the level where none does (a workbench's floor, the moment before the first start) */
   readonly ask: WorldAsk = {
@@ -1679,6 +1684,9 @@ export class Game {
     together: f => this.askHost ? f() : this.col.window(f),
   };
   askHost: WorldAsk | null = null;
+  /** what the cursor is on, through a camera as it stands, and what a point is, as an order would be about them (src/view/read.ts): the host's, asked of the Rust game */
+  cursorAsk: ((input: CursorAt, cam: CursorLens, canvas: { clientWidth: number; clientHeight: number }, seat?: number) => CursorView) | null = null;
+  underAsk: ((p: Vec3, seat?: number) => Under | null) | null = null;
   objectivePos(): Vec3 | null { return this.view.mission?.pos ?? null; }
   objectiveText(): string { return this.view.mission?.text ?? ''; }
 

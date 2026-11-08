@@ -1,5 +1,5 @@
 // The 'levers' family (THE DIFFICULTY LEVERS — game/difficulty.ts LEVERS / setLever, ui/levers.ts on the mission sheet and the loadout screen), run through probes.ts:
-//   bun run tools/qa/probes.ts levers | levers-rules | levers-screens | levers-run          (or this file: bun run tools/qa/levers-probes.ts [name …])
+//   bun run tools/qa/probes.ts levers | levers-rules | levers-screens | levers-run | levers-address          (or this file: bun run tools/qa/levers-probes.ts [name …])
 // PASS / FAIL each, all headless. Nothing here looks at a picture.
 //   levers-rules    the module alone: standard and hard put every lever on the level's own rung and read back as that level with nothing moved (on a plain
 //                   structure and on The block, whose hard carries the stun charges); each lever moved alone writes its own rows and no other's; hard's rungs set
@@ -11,6 +11,8 @@
 //                   moves that lever alone and every row's link follows; A / D leave a mix alone; the solo night, a quiet mission and a Training lesson grey the rows; the loadout of a squad mission
 //                   carries the same three rows (its keys' rows unchanged), the solo night's and a Training lesson's carry none, and Deploy loads the link with the levers put right on it
 //   levers-run      the fog lever's top rung is in force in a Game built after it (over what the machine keeps for the fog's own option)
+//   levers-address  the harness stood from an address (standUp({ address })) holds the difficulty that address names before the game is made, and one that names none leaves
+//                   the tables as they stood. LEVERS_ADDRESS_BREAK=1 leaves the words off: must fail
 // THESE LINES WERE WRITTEN FOR THREE LEVERS and ran, until 2026-11-07, with the fourth lever and the squad fog's off rung held down (told.ts's two switches,
 // by told-check.ts threeLevers). Both are settled up and the hold was refused, so it is out: a line here that counts three levers, or the fog's three rungs,
 // fails by what the game is today. The runs' own pin went the same way (SQUADDEAL.on off, handed to each playthrough).
@@ -244,8 +246,41 @@ export async function leversRun(): Promise<boolean> {
   return F.done();
 }
 
+/** A MISSION'S ADDRESS NAMES THE DIFFICULTY, AND THE HARNESS'S ADDRESSED STAND READS IT WHERE A PAGE DOES: before the game is made, and so before the mission is staged. No mission is
+ *  staged here: what is held is the moment. `LEVERS_ADDRESS_BREAK=1`: the words are left off every address, as the stand was before it read them. Must fail. */
+export async function leversAddress(): Promise<boolean> {
+  const F = family('levers-address: the harness stood from an address holds the difficulty that address names, before the game is made');
+  const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`), knobs0 = knobsCopy(), ownWas = FOG.own, BREAK = process.env.LEVERS_ADDRESS_BREAK === '1';
+  const stand = (place: string, words: string, opts: Record<string, unknown> = {}) => quiet(() => standUp({ seed: 1, address: `?${place}${BREAK ? '' : words}`, ...opts }));
+  const read = () => J({ now: D.difficultyNow(), pressure: PRESSURE.on, digin: DIGIN.on, cone: FOG.cone });
+  const SQUAD = 'levelFile=kit-yard.json&roomclear&squad4', LESSON = 'levelFile=tut-kit.json&roomclear&squad4';
+  try {
+    fresh();
+    { await stand(SQUAD, '&hard'); const ok = D.difficultyNow() === 'hard' && PRESSURE.on && DIGIN.on && FOG.cone === D.HARD.cone;
+      F.verdict(ok, '&hard: the tables stand on hard as the stand-up hands the game back, with no mission staged', read()); }
+    fresh();
+    { const was = tables(); await stand(SQUAD, ''); F.verdict(tables() === was && D.difficultyNow() === 'standard', 'no word on the address, standard before it: the tables are not touched', read()); }
+    fresh(); D.setDifficulty('hard', false);
+    { const was = tables(); await stand(SQUAD, ''); F.verdict(tables() === was && D.difficultyNow() === 'hard', 'no word on the address, a tool\'s own hard before it: the tables stand as the tool left them', read()); }
+    for (const w of ['&hard=0', '&difficulty=standard']) { fresh(); D.setDifficulty('hard', false); await stand(SQUAD, w);
+      F.verdict(D.difficultyNow() === 'standard' && !PRESSURE.on && !DIGIN.on, `${w}: an address that names standard puts it there, over a hard before it`, read()); }
+    fresh();
+    { await stand(SQUAD, '&enemyai=hard'); F.verdict(PRESSURE.on && DIGIN.on && !FOG.cone, '&enemyai=hard alone moves the defenders and leaves the fog', read()); }
+    fresh();
+    { await stand(SQUAD, '&hard&pressure=0'); F.verdict(!PRESSURE.on && DIGIN.on, '&hard&pressure=0: the older single switch stands over the level', read()); }
+    fresh();
+    { const was = tables(); await stand(LESSON, '&enemyai=hard'); F.verdict(tables() === was, 'a Training lesson\'s address reads no lever, as its page does not', read()); }
+    fresh();
+    { await stand(LESSON, '&hard'); F.verdict(D.difficultyNow() === 'hard', '…and it does read a level', read()); }
+    fresh();
+    { let on: boolean | null = null; await stand(SQUAD, '&hard', { tables: () => { PRESSURE.on = false; on = DIGIN.on; } });
+      F.verdict(on === true && !PRESSURE.on, '`tables`, a recipe\'s, are laid over what the address wrote and before the game is made', read()); }
+  } finally { fresh(); knobsBack(knobs0); FOG.own = ownWas; }
+  return F.done();
+}
+
 if (import.meta.main) {
-  const want = process.argv.slice(2).filter(a => !a.startsWith('--')), all: [string, () => Promise<boolean>][] = [['levers-rules', leversRules], ['levers-screens', leversScreens], ['levers-run', leversRun]];
+  const want = process.argv.slice(2).filter(a => !a.startsWith('--')), all: [string, () => Promise<boolean>][] = [['levers-rules', leversRules], ['levers-screens', leversScreens], ['levers-run', leversRun], ['levers-address', leversAddress]];
   let ok = true; for (const [n, fn] of all) if (!want.length || want.includes(n)) ok = (await fn()) && ok;
   process.exit(ok ? 0 : 1);
 }

@@ -883,6 +883,10 @@ pub struct Game {
     pub sim: usize,
     /// who has each man's body this tick, and who was asked (control/): written by the arbiter, read by the debugger's lines; not on the wire
     pub ctl: crate::owned::Owned,
+    /// the marks on the world (render_decals set.rs): what the picture draws of what happened; no rule reads them, and they are not on the wire
+    pub mark_set: crate::owned::Owned,
+    /// the stages to come of a wall charge's feel, the picture's half (blast_feel picture.rs)
+    pub feel: crate::owned::Owned,
     /// this tick's count of keyed draws a (site, man) (dice.rs): empty between ticks; not on the wire
     pub keyed: crate::dice::Keyed,
 }
@@ -1051,6 +1055,8 @@ impl Game {
             stats: Stats::blank(),
             sim: 0,
             ctl: crate::owned::Owned::new(),
+            mark_set: crate::owned::Owned::new(),
+            feel: crate::owned::Owned::new(),
             keyed: crate::dice::Keyed::default(),
         }
     }
@@ -2311,6 +2317,8 @@ pub struct Guard {
     pub god: bool,
     pub held: Option<crate::game::GuardHeld>,
     pub bubble: Option<crate::game::GuardBubble>,
+    /// lines he said in the same frame as the one on his bubble, shown after it, oldest first
+    pub bubble_next: Vec<crate::game::GuardBubble>,
     pub found: bool,
     pub down_kind: Option<crate::game::DownKind>,
     pub down_by: Option<crate::game::DownBy>,
@@ -2453,6 +2461,7 @@ impl Guard {
             god: false,
             held: None,
             bubble: None,
+            bubble_next: Vec::new(),
             found: false,
             down_kind: None,
             down_by: None,

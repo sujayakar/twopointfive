@@ -26,7 +26,7 @@ export async function calmtorchCheck(): Promise<boolean> {
   const { standUp } = await import('./headless.ts');
   const { TORCH, TORCH_STATS, placeRead, workLit, calmTorchRuled, calmTorchOf } = await import(`${ROOT}/src/game/calmtorch.ts`);
   const { HOUR, applyHour } = await import(`${ROOT}/src/game/hours.ts`);
-  const { roomOf } = await import(`${ROOT}/src/game/chronicle.ts`);
+  const { roomOf } = await import(`${ROOT}/src/game/rooms.ts`);
   const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
   const DT = 1 / 60, rnd0 = Math.random, was = { ...TORCH }; let all = true;
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
