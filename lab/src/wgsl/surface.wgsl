@@ -255,6 +255,9 @@ fn roughMatte(kind: u32, alb: vec3f, n: vec3f, V: vec3f, L: vec3f) -> vec3f {
   let g = matteRough(kind); if (g <= 0.0) { return vec3f(1.0); } let nl = clamp(dot(n, L), 1e-3, 1.0); let nv = clamp(dot(n, V), 1e-3, 1.0); let s = dot(L, V) - nl * nv; let st = select(s, s / max(nl, nv), s > 0.0); let af = 1.0 / (1.0 + 0.287793409 * g);
   let avg = af * (1.0 + 0.072488213 * g); let ms = alb * avg / (vec3f(1.0) - alb * (1.0 - avg)); return vec3f(af * (1.0 + g * st)) + ms * (max(1.0 - facetE(nv, g), 1e-4) * max(1.0 - facetE(nl, g), 1e-4) / max(1.0 - avg, 1e-4));
 }
+/** the same under light from all round, as seen from V; and on the mean of that too */
+fn matteSeen(kind: u32, alb: vec3f, nv: f32) -> vec3f { let g = matteRough(kind); if (g <= 0.0) { return vec3f(1.0); } let e = facetE(clamp(nv, 1e-3, 1.0), g); let avg = (1.0 + 0.072488213 * g) / (1.0 + 0.287793409 * g); return vec3f(e) + alb * avg / (vec3f(1.0) - alb * (1.0 - avg)) * (1.0 - e); }
+fn matteMean(kind: u32, alb: vec3f) -> vec3f { let g = matteRough(kind); if (g <= 0.0) { return vec3f(1.0); } let avg = (1.0 + 0.072488213 * g) / (1.0 + 0.287793409 * g); return vec3f(avg) + alb * avg / (vec3f(1.0) - alb * (1.0 - avg)) * (1.0 - avg); }
 /** a facet the eye can see (Heitz), in the normal's frame */
 fn visibleNormal(v: vec3f, a: f32, u: vec2f) -> vec3f {
   let vh = normalize(vec3f(a * v.x, a * v.y, v.z)); let l2 = vh.x * vh.x + vh.y * vh.y; var t1 = vec3f(1.0, 0.0, 0.0); if (l2 > 1e-7) { t1 = vec3f(-vh.y, vh.x, 0.0) * inverseSqrt(l2); }
