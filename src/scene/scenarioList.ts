@@ -184,8 +184,7 @@ export function listedLevels(): { level: string; rows: ScenarioEntry[] }[] {
 }
 
 /** the query keys a scenario owns: a pick replaces them, a quit drops them, everything else on the URL (?quality=, ?mute, ?hud …) rides along.
- *  (`?level=` is NOT: a scenario on the
- *  relief office is a thing to want.) `solo` is the mission list's flag for the plain night straight in (ui/missions.ts): a pick or
+ *  `solo` is the mission list's flag for the plain night straight in (ui/missions.ts): a pick or
  *  a quit drops it like the rest. */
 export const SCENARIO_KEYS = ['levelFile', 'nightbreach', 'roomclear', 'rescue', 'quiet', 'squad4', 'squad', 'loadout', 'solo'];   // (`squad=N`: the loadout's size, game/loadout.ts; `loadout=<id>`: its screen, ui/loadout.ts)
 

@@ -11,7 +11,7 @@ A piece is something a level asks a kit for by name. Each row is one call laid a
 - **Size** is length × width × height in metres of the call that was laid. A wall, a rug or a line is as long as it was asked for.
 - **Boxes** is what the piece costs: solid boxes, drawn-only boxes, loose things and their parts, round things, marking bitmaps, lamps.
 - **Paints** are rows of the tables under Paints below, most boxes first; `row × 0.60` is a row darkened; a colour a kit writes as numbers shows as its numbers.
-- **The showrooms**: `?levelFile=gwot-yard.json&solo&hour=midday` and `?levelFile=library-hall.json&solo&hour=midday`. Between them one of each piece stands, and its line in the
+- **The showrooms**: `tools/levels/gwot-yard.ts` and `?levelFile=library-hall.json&solo&hour=midday`. Between them one of each piece stands, and its line in the
   showroom's generator is the call to copy.
 - Which level lays which piece is not on this page (it moves with every generator): `bun run tools/levels/library.ts --uses FILE` writes it.
 
