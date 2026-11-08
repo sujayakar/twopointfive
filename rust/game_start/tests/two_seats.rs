@@ -405,3 +405,60 @@ fn each_player_has_his_own_partner() {
         }
     }
 }
+
+/// THE RULE: a camera watches every player in its cone. The player nearest the lens does not hide the other.
+/// A failure means standing behind a camera shields your partner.
+#[test]
+fn a_camera_sees_any_player_in_its_cone() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, _) = two(s);
+            let c = *p.g.devices.cameras.first().expect("the office has a camera");
+            let def = p.g.tab.devices_camera_rt[c].def.clone();
+            let yaw = game::sim_lightshome::camera_machine_yaw(&p.g, c);
+            let look = game::devices::lens_dir(yaw, def.pitch.unwrap_or(game::scene_level_data::device_defaults().pitch));
+            let m = man(&p, seat);
+            for x in p.mates() { p.man_stands(x, [3.5, 3.5]); }
+            p.seat_stands(1 - seat, [def.pos[0] - look[0] * 0.4, def.pos[2] - look[2] * 0.4]);
+            let spot = [4.0, 3.0, 5.0, 2.0, 6.0].into_iter().map(|d| [def.pos[0] + look[0] * d, 0.0, def.pos[2] + look[2] * d])
+                .find(|q| !game::scene_collision::segment_blocked(&mut p.g, def.pos, [q[0], 1.1, q[2]], None, None, None)).expect("the lens looks down some clear floor");
+            p.seat_stands(seat, [spot[0], spot[2]]);
+            p.frame();
+            let pc = p.g.pl[m].ch;
+            let spot = p.g.ch[pc].pos;
+            p.g.pl[m].visibility = 1.0;
+            let dd = game::scene_level_data::device_defaults();
+            let half = def.fov_deg.unwrap_or(dd.fov_deg) / 2.0;
+            let yaw = game::sim_lightshome::camera_machine_yaw(&p.g, c);
+            let look = game::devices::lens_dir(yaw, def.pitch.unwrap_or(dd.pitch));
+            let e = game::guards::Eye { pos: def.pos, look, range: def.range.unwrap_or(dd.range), half_deg: half, near_m: 0.0, near_deg: half, v_half_deg: Some(half) };
+            assert!(game::guards::eye_contact(&mut p.g, e, pc, true, false, 1.0, None).visible, "seed {s}: CONTROL: the lens has seat {seat}'s man in its cone at {spot:?}");
+            game::devices::update_camera(&mut p.g, c, 1.0 / 60.0, true);
+            let last = game::sim_lightshome::camera_machine_last_seen(&p.g, c);
+            assert!(last.map_or(false, |l| (l[0] - spot[0]).abs() < 0.1 && (l[2] - spot[2]).abs() < 0.1), "seed {s}: seat {seat}'s man stands at {spot:?} in the cone, the other behind the lens, and the camera last saw {last:?}");
+        }
+    }
+}
+
+/// THE RULE: a kill by a blast is written down with the man who set it off, not whoever stands.
+/// A failure means the debrief names the first player's gun for the second player's grenade.
+#[test]
+fn a_blast_kill_is_the_man_who_set_it_off() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, t1) = two(s);
+            let (m, other) = (man(&p, seat), man(&p, 1 - seat));
+            p.g.pl[other].holstered = true;
+            p.g.pl[m].holstered = false;
+            let c = p.g.gd[t1].ch;
+            let (who, at) = (p.g.ch[p.g.pl[m].ch].id, p.g.ch[c].pos);
+            let n0 = p.g.chronicle.events.len();
+            let spec = game::frag::BlastSpec { who, name: Some(String::from("grenade")), fx: Some(false), ..Default::default() };
+            game::frag::blast(&mut p.g, [at[0] + 0.1, 0.05, at[2]], &spec);
+            let row = p.g.chronicle.events[n0..].iter().find(|e| e.kind == game::chronicle::ChronKind::Kill).cloned();
+            let Some(row) = row else { panic!("seed {s}: CONTROL: a grenade at his feet and no kill row: {:?}", p.g.gd[t1].state) };
+            let said = format!("{:?}", row.data);
+            assert!(!said.contains("a round"), "seed {s}: seat {seat}'s blast is written with the other man's empty hands: {said}");
+        }
+    }
+}
