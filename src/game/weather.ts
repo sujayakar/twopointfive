@@ -282,7 +282,7 @@ export class Weather {
     return WX_WATCH.on ? WX_WATCH.said('weather.hearMask', r, [this.g.time, ear[0], ear[2]]) : r;
   }
   /** SIGHT under this weather: the fog's transmittance along a → b (the field composite.wgsl draws: fogTau × the roof leak, the leak averaged over four points of
-   *  the line) — exactly 1 with no kind picked or no fog in it. The smoke's own answer is the module's smoke.rs, and the product is the asker's */
+   *  the line) — exactly 1 with no kind picked or no fog in it. The smoke's own answer is the Rust game's, and the product is the asker's */
   airTrans(a: Vec3, b: Vec3): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Weather.airTrans', this, [a, b]); if (__r !== RUST_PASS) return __r as any; } }
     if (this.fog && this.kind) { const air = this.g.airDust; if (air) air.ready(); }   // (the field stands before it is read: it is built when first asked)
     const r = sim().weather_air_trans(this.g.sim.bind(), a[0], a[1], a[2], b[0], b[1], b[2]);

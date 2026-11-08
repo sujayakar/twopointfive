@@ -462,22 +462,6 @@ pub fn open_rays(g: &mut crate::game::Game, c_2: V3) -> Vec<crate::hours::Open> 
     out
 }
 
-/// The hour's light at world point P, added to the meter stand-in's six faces. Nothing at night. (hours.ts hourLight)
-pub fn hour_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
-    if g.m.hours.states.is_some() { sky_light(g, p, acc); }
-}
-
-/// The night's own light from the sky at P, for the level with no hour laid over it. (hours.ts moonLight)
-pub fn moon_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
-    if g.m.hours.states.is_none() { sky_light(g, p, acc); }
-}
-
-/// The light from the sky at P, by the hour or by the night: its one directional light where P has a line to it, and the ambient of P's cell. (hours.ts skyLight)
-pub fn sky_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
-    sun_light(g, p, acc);
-    dome_light(g, p, acc);
-}
-
 /// What the sky's one directional light puts on a face turned to it.
 fn sun_of(g: &Game, st: &Sky) -> f64 {
     match st.sun {
@@ -575,13 +559,6 @@ pub fn dome_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
         if lr <= 0.0 { continue; }
         for k in 0..6 { acc[k] += lr * r.c6[k]; }
     }
-}
-
-/// The hour's light alone at P, as the meter would report it. (hours.ts hourLightAt)
-pub fn hour_light_at(g: &mut crate::game::Game, p: V3) -> f64 {
-    let mut acc = vec![0.0; 6];
-    hour_light(g, p, &mut acc);
-    m::max_n(&acc)
 }
 
 /// `t.intensity = t.peakIntensity = x` of a light (hours.ts:171, 227)
