@@ -77,7 +77,7 @@ try { data = JSON.parse(readFileSync(PATH, 'utf8')); } catch (e) { fail(`levels/
 { const v: string[] = validateLevelData(data).map((e: any) => typeof e === 'string' ? e : `${e.path ?? ''} ${e.msg ?? JSON.stringify(e)}`.trim());
   verdict(v.length === 0, `levels/${FILE} validates (LevelData v1)`, v.length ? `${v.length} error(s): ${v.slice(0, 6).join(' | ')}` : `${(data.boxes ?? []).length} boxes, ${(data.doors ?? []).length} doors, ${(data.lights ?? []).length} lights`);
   if (v.length) { console.log(`\n=== map-check ${name}: FAIL (the file does not validate; nothing else was run) ===`); process.exit(1); } }
-// (a generator is tools/levels/<name>.ts, or one under another file name whose NAME is this map's: blocksquads.ts → block-squads)
+// (a generator is tools/levels/<name>.ts, or one under another file name whose NAME is this map's)
 const GEN = existsSync(resolve(ROOT, 'tools/levels', `${name}.ts`)) ? name : readdirSync(resolve(ROOT, 'tools/levels')).filter(f => f.endsWith('.ts') && f !== 'export.ts').find(f => new RegExp(`export const NAME\\s*=\\s*['"]${name}['"]`).test(readFileSync(resolve(ROOT, 'tools/levels', f), 'utf8')))?.replace(/\.ts$/, '');
 if (GEN) {
   const p = Bun.spawn(['bun', 'run', resolve(ROOT, 'tools/levels/export.ts'), GEN, '--check'], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe', env: process.env });

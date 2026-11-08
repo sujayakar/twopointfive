@@ -1,2 +1,0 @@
-# places for a wall charge on levels/block-squads.json (floor behind them as the nav grid stands; the level with its lived-in rooms in)
-861

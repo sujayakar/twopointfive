@@ -1,5 +1,5 @@
 // THE WALL CHARGE'S SAFETY RADIUS — the check behind WALLCHARGE.safe (src/game/wallcharge.ts safeRadius; a settled rule: every tool stands the game with it on).
-//   bun run tools/qa/wallsafe-check.ts [--scn room-clear-four,block-squads] [--verbose]        (also `probes.ts wallsafe`)
+//   bun run tools/qa/wallsafe-check.ts [--scn room-clear-four,block-four] [--verbose]        (also `probes.ts wallsafe`)
 // On the office and on a level with outer walls, a squad of four, the destruction switch raised as the wall charge's own probes raise it:
 //   (1) the level's own geometry says which side of a wall is indoors: an outer wall worked from outside is not, a partition (or an outer wall from inside) is;
 //       the radius is larger than it was outdoors and larger again indoors;
@@ -31,7 +31,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 type Vec3 = [number, number, number];
 
 /** the two levels asked when none is named: each has a room to play the charge in from a fresh start */
-const FRESH = sample(['room-clear-four', 'block-squads'], 1);
+const FRESH = sample(['room-clear-four', 'block-four'], 1);
 export async function wallsafeCheck(scns = FRESH): Promise<boolean> {
   const { rig, outerSites, partition } = (await import('./outerwall-probes.ts')) as any;
   const { WALLCHARGE, WALL_ORDER, wallTarget, chargeIndoors, safeRadius, wallPt, wallOff } = await import(`${ROOT}/src/game/wallcharge.ts`);
