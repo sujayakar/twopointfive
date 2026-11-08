@@ -5,7 +5,6 @@
 //   levels stands police-post  the quiet block against the built floor, every deal started
 //   bun run tools/qa/quiet-light.ts police-post       the light a sneaking man stands in, on paper
 //   bun run tools/qa/quiet-plan.ts police-post --png  the plan picture: beats, starts, places, ways out, the cameras' cones
-//   bun run tools/qa/solo-night.ts --level police-post.json --quiet --plan careful,sneak,walk --out short --seeds 1-12      the scripted player against it
 //   QUIET_VARIANT=1,0,0 bun run tools/levels/export.ts police-post     → levels/police-post-v100.json: ONE deal (spot, patrol set, start), a scratch file
 //   page: ?levelFile=police-post.json&quiet   (&quiet=N pins the deal)
 //
