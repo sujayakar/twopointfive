@@ -122,7 +122,7 @@ fn meetLeaf(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> f32 {
 fn sunMap(x: vec3f) -> vec3f { let b = basis(frame.sunDir.xyz); let d = x - vec3f(4.0, 4.0, 0.0); return vec3f(dot(d, b[0]) / 30.0 + 0.5, dot(d, b[1]) / 30.0 + 0.5, dot(d, frame.sunDir.xyz) / 80.0 + 0.5); }
 /** leaves one by one, or as a ball of them: a medium. Rays from what the camera sees take them one by one; the rest do not need to */
 var<private> fineLeaves: bool = true; var<private> noLeaves: bool = false;
-const TUFT_SIGMA = 1.0; const BALL_SIGMA = 0.80;                                            // per unit of the ball's radius, with the clumping a ball of leaves has (three quarters of its even density)
+const TUFT_SIGMA = 1.3; const BALL_SIGMA = 0.80;                                            // per unit of the ball's radius, with the clumping a ball of leaves has (three quarters of its even density)
 fn ballStay(o: vec3f, d: vec3f, tmin: f32, tmax: f32) -> vec2f { let a = dot(d, d); let b = dot(o, d); let c = dot(o, o) - 1.0; let q = b * b - a * c; if (q <= 0.0) { return vec2f(1.0, 0.0); } let s = sqrt(q); return vec2f(max((-b - s) / a, tmin), min((-b + s) / a, tmax)); }
 /** NEAREST: what is out there. `cut` < 1e8 is the camera's section; `skip` = flags a ray does not meet. Glass is passed, and what it lets through is in thru */
 fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) -> Hit {

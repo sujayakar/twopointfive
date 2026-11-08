@@ -24,12 +24,14 @@ fn relief(kind: u32, p: vec2f, s: f32) -> f32 {
   }
   return h + a.z * (0.65 * vnoise(p * a.xy) + 0.35 * vnoise(p * a.xy * 2.7 + 5.0)) + b * vnoise(p * a.w);
 }
+/** a leaf sends on less than it gets, both sides together, whatever its tint asks: else a crown of them would light itself */
+fn leafKeeps(all: vec3f) -> f32 { return min(1.0, 0.88 / max(max3(all), 1e-3)); }
 fn leafSurf(h: Hit, x: vec3f, rd: vec3f) -> Surf {
-  let I = &insts[h.piece & 0x7fffffffu]; if (h.code == NOTHING) { var q: Surf; let t = unpackTint((*I).tint); q.x = x; q.ng = -rd; q.n = -rd; q.albedo = t * t; q.through = t * t * vec3f(0.9, 1.1, 0.35); q.rough = 1.0; q.f0 = 0.0; q.kind = 14u; q.piece = h.piece; q.flags = MOVES; return q; }
+  let I = &insts[h.piece & 0x7fffffffu]; if (h.code == NOTHING) { var q: Surf; let t = unpackTint((*I).tint); q.x = x; q.ng = -rd; q.n = -rd; q.albedo = t * t; q.through = t * t * vec3f(0.9, 1.1, 0.35) * 0.85; let k = leafKeeps(q.albedo + q.through); q.albedo *= k; q.through *= k; q.rough = 1.0; q.f0 = 0.0; q.kind = 14u; q.piece = h.piece; q.flags = MOVES; return q; }
   let b = bitcast<vec4u>(extra[h.code * 2u + 1u]); let ln = octUnpack(b.x);
   var n = normalize((*I).r0.xyz * ln.x + (*I).r1.xyz * ln.y + (*I).r2.xyz * ln.z); if (dot(n, rd) > 0.0) { n = -n; }
   var s: Surf; s.x = x; s.ng = n; s.n = n; let t = unpackTint((*I).tint); let tone = bitcast<f32>(b.z);
-  s.albedo = t * t * mix(0.62, 1.25, tone) * select(1.0, 0.7, b.w == 1u); s.through = s.albedo * vec3f(0.95, 1.15, 0.35) * select(0.85, 0.5, b.w == 1u); s.rough = 0.45; s.f0 = 0.035; s.metal = 0.0; s.glow = vec3f(0.0); s.kind = 14u; s.piece = h.piece; s.flags = MOVES; return s;
+  s.albedo = t * t * mix(0.62, 1.25, tone) * select(1.0, 0.7, b.w == 1u); s.through = s.albedo * vec3f(0.95, 1.15, 0.35) * select(0.85, 0.5, b.w == 1u); { let k = leafKeeps(s.albedo + s.through); s.albedo *= k; s.through *= k; } s.rough = 0.45; s.f0 = 0.035; s.metal = 0.0; s.glow = vec3f(0.0); s.kind = select(14u, 20u, b.w == 1u); s.piece = h.piece; s.flags = MOVES; return s;
 }
 fn localNormal(k: u32, code: u32, lp: vec3f) -> vec3f {
   if (code < 6u) { var n = vec3f(0.0); n[code >> 1u] = select(-1.0, 1.0, (code & 1u) == 1u); return n; }
@@ -104,7 +106,7 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
 fn openAir(x: vec3f) -> bool { let room = abs(x.x) < 12.0 && abs(x.z) < 8.0 && (x.y < 3.3 || (x.y < 6.55 && x.x < 4.0)); return !room; }
 /** THE WET FILM, laid over any material the rain reaches: darker, smoother, and where the ground is low a mirror with rings in it */
 fn wetFilm(s0: Surf, fp: f32) -> Surf {
-  var s = s0; let w = frame.weather.x; if (w <= 0.0 || !openAir(s.x + s.ng * 0.02) || s.kind == 14u) { return s; }
+  var s = s0; let w = frame.weather.x; if (w <= 0.0 || !openAir(s.x + s.ng * 0.02) || s.kind == 14u || s.kind == 20u) { return s; }
   let up = sat(s.ng.y); let low = fbm(s.x.xz * 0.42 + 5.0); let pud = w * smoothstep(0.47 - 0.05 * w, 0.545, low) * smoothstep(0.9, 0.99, up); let film = w * (0.35 + 0.65 * up);
   let lumA = lum(s.albedo); s.albedo *= mix(1.0, 0.52 + 0.25 * lumA, film * select(1.0, 0.4, s.metal > 0.5)); s.rough = mix(s.rough, max(0.09, s.rough * 0.30), film); s.f0 = max(s.f0, mix(s.f0, 0.03, film));
   if (pud > 0.0) {
