@@ -32,6 +32,13 @@ fn hg(mu: f32, g: f32) -> f32 { return (1.0 - g * g) / (4.0 * PI * pow(1.0 + g *
     let c = cacheRead(vec3f(x.x, floor(x.y / 3.4) * 3.4 + select(0.02, 0.0, room < 0.5), x.z), vec3f(0.0, 1.0, 0.0), vec2f(0.5)); let near = select(amb * 0.25, c.E * (1.0 / (4.0 * PI)) * 0.5, room > 0.5 && c.n > 0.0);
     let e = exp(-st[i].w); let part = exp(-tau) * (1.0 - e); seen += vec2f(dot(x - ro, rd), 1.0) * part; L += part * (V + near); tau += st[i].w;
   }
+  // the smoke: small steps where there is any, over empty blocks in one
+  if (frame.misc2.x > 0.5) { let s = smokeSpan(ro, rd, t1); var t = s.x + 0.16 * j.x; var T = 1.0; var G = vec3f(0.0);
+    for (var i = 0u; i < 150u; i++) { if (t >= s.y || T < 0.012) { break; } let x = ro + rd * t;
+      if (x.y > frame.misc.y && !openAir(x)) { t += 0.2; continue; }
+      if (!smokeBlock(x)) { let c = floor((x - SM_AT) / 1.6); let e = (SM_AT + (c + select(vec3f(0.0), vec3f(1.0), rd > vec3f(0.0))) * 1.6 - ro) * safeInv(rd); t = max(min3(e), t) + 0.03; continue; }
+      let dt = min(0.16, s.y - t); let v = smokeAt(x); let dn = v.w * smoothstep(0.0, 0.10, v.w); if (dn > 0.003) { let e = exp(-dn * dt); let part = T * (1.0 - e) * exp(-tau); seen += vec2f(t, 1.0) * part; G += v.rgb * part; T *= e; } t += dt; }
+    L += G; tau -= log(max(T, 1e-5)); }
   // beams: one lamp a pixel, drawn by how near the ray passes it, and one point drawn by its nearness along the ray
   { var W = 0.0; var pick = -1; var w0 = 0.0; var u = j2.y; for (var i = 0u; i < frame.counts.x; i++) { if (lamps[i].kind == 0u || lamps[i].on <= 0.0 || lamps[i].at.y > frame.misc.y) { continue; } let d = lamps[i].at - ro; let b = clamp(dot(d, rd), 0.0, t1); let D = max(length(d - rd * b), 0.15); if (D > lamps[i].reach * 0.7) { continue; } var w = lum(lamps[i].radiance) * lamps[i].area * lamps[i].area / D; if (lamps[i].kind == 2u) { let c = dot(normalize(ro + rd * b - lamps[i].at), lamps[i].n); w *= 0.05 + smoothstep(0.2, 0.95, c); } W += w; let q = w / W; if (u < q) { pick = i32(i); w0 = w; u = u / q; } else { u = (u - q) / (1.0 - q); } }
     if (pick >= 0) { let l = &lamps[u32(pick)]; let d = (*l).at - ro; let b = dot(d, rd); let D = max(length(d - rd * b), 0.12); let ta = max(0.0, b - 9.0); let tb = min(t1, b + 9.0);

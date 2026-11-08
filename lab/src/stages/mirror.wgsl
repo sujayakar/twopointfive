@@ -16,6 +16,7 @@
     let m = returns(q); L += select(m, q.albedo + q.through, leaf) / PI * c.E * select(0.0, 1.0, c.n > 0.0) + select(m / PI * max(cs, 0.0), leafPhase(q, d), leaf) * frame.sunE.xyz * V1;
     if ((h.piece & LEAF_HIT) == 0u && (pieces[h.piece].flags & WATER) != 0u) { L = skyLod(reflect(d, vec3f(0.0, 1.0, 0.0)), 2.0) * 0.12 + vec3f(0.02, 0.09, 0.1) * lum(frame.sunE.xyz) * 0.2; }
   }
+  let sm = smokeSeen(o, d, min(h.t, 80.0)); L = L * sm.a + sm.rgb;
   L *= h.thru; let m0 = lum(L); L *= min(1.0, 40.0 / max(m0, 1e-4));
   textureStore(outM, id.xy, vec4f(L * l.w, select(h.t, 60.0, h.piece == NOTHING)));
 }

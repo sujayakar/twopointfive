@@ -16,6 +16,7 @@ struct Frame {
   pool: vec4f,         // the water: x0 z0 x1 z1
   pool2: vec4f,        // its level, its depth
   weather: vec4f,      // how wet the open ground is, how hard it rains, steam, the wind's way (rad)
+  misc2: vec4f,        // is there smoke
   tune: array<vec4f, 6>,  // what can be turned while looking (tune.ts)
 };
 struct Piece { r0: vec4f, r1: vec4f, r2: vec4f, half: vec3f, flags: u32, quad: vec4f, mat: u32, tint: u32, planes: u32, lamp: u32 };
@@ -42,6 +43,8 @@ struct Mark { at: vec2f, size: vec2f, uv: vec4f, color: vec3f, face: u32 };
 @group(0) @binding(12) var causticTex: texture_2d<f32>;
 @group(0) @binding(13) var repSamp: sampler;
 @group(0) @binding(14) var lampTex: texture_3d<f32>;
+@group(0) @binding(15) var smokeTex: texture_3d<f32>;       // light scattered per unit, and how much smoke per metre
+@group(0) @binding(16) var<uniform> smokeOcc: array<vec4u, 8>;   // which blocks of eight cells hold any
 
 const GLASS = 256u; const WATER = 512u; const CUT = 1024u; const GLOW = 2048u; const NOSHADOW = 4096u; const QUAD = 8192u; const MOVES = 16384u; const FAR = 32768u; const OPEN = 0x10000000u; const OPEN_FLOOR = 3.5;
 const NOTHING = 0xffffffffu; const LEAF_HIT = 0x80000000u;
@@ -165,7 +168,7 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
         if (!fineLeaves) { let tuft = ((*I).tint & 0x2000000u) != 0u; let sigma = f32((*I).tint >> 26u) / 16.0; let bd = select(d, d / 0.85, tuft); let st = ballStay(select(o, (o - vec3f(0.0, 0.8, 0.0)) / 0.85, tuft), bd, tmin, best); let t = st.x - log(1.0 - rnd()) / (sigma * length(bd)); if (st.y > st.x && t < st.y && ro.y + rd.y * t < lc) { best = t; id = LEAF_HIT | k; code = NOTHING; } i++; continue; }
         let inv2 = safeInv(d); let q0 = (*I).node + octant(d) * (*I).per; var q = 0u; let qn = (*I).per;
         while (q < qn) {
-          let m = &nodes[q0 + q];
+          walked += 1u; let m = &nodes[q0 + q];
           if (!boxHit(m, o, inv2, tmin, best)) { q = (*m).skip; continue; }
           let l2 = (*m).leaf; let c2 = l2 & 15u;
           for (var j = 0u; j < c2; j++) { let w = (*I).leaf + (l2 >> 4u) + j; let t = meetLeaf(w, o, d, tmin, best); if (t > 0.0 && ro.y + rd.y * t < lc) { best = t; id = LEAF_HIT | k; code = w; } }
@@ -211,7 +214,7 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
         if (!fineLeaves) { let tuft = ((*I).tint & 0x2000000u) != 0u; let sigma = f32((*I).tint >> 26u) / 16.0; let bd = select(d, d / 0.85, tuft); let st = ballStay(select(o, (o - vec3f(0.0, 0.8, 0.0)) / 0.85, tuft), bd, tmin, tmax); if (st.y > st.x) { T *= exp(-vec3f(1.0, 0.86, 1.1) * sigma * (st.y - st.x) * length(bd)); if (T.y < 0.02) { return vec3f(0.0); } } i++; continue; }
         let inv2 = safeInv(d); let q0 = (*I).node + octant(d) * (*I).per; var q = 0u; let qn = (*I).per;
         while (q < qn) {
-          let m = &nodes[q0 + q];
+          walked += 1u; let m = &nodes[q0 + q];
           if (!boxHit(m, o, inv2, tmin, tmax)) { q = (*m).skip; continue; }
           let l2 = (*m).leaf; let c2 = l2 & 15u;
           for (var j = 0u; j < c2; j++) { if (meetLeaf((*I).leaf + (l2 >> 4u) + j, o, d, tmin, tmax) > 0.0) { T *= vec3f(0.1, 0.16, 0.03); if (T.y < 0.02) { return vec3f(0.0); } } }
@@ -220,9 +223,25 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
       }
       i++;
     } }
+  if (frame.misc2.x > 0.5) { T *= smokeThrough(ro + rd * tmin, rd, tmax); }
   return T;
 }
 
+// ================================================================ smoke
+const SM_AT = vec3f(-12.8, 0.0, -9.6); const SM_SIZE = vec3f(25.6, 8.0, 19.2);
+fn smokeAny() -> bool { var m = vec4u(0u); for (var i = 0u; i < 8u; i++) { m |= smokeOcc[i]; } return any(m != vec4u(0u)); }
+fn smokeBlock(x: vec3f) -> bool { let c = vec3i(floor((x - SM_AT) / 1.6)); if (any(c < vec3i(0)) || any(c >= vec3i(16, 5, 12))) { return false; } let b = u32(c.x + 16 * (c.y + 5 * c.z)); return ((smokeOcc[b >> 7u][(b >> 5u) & 3u] >> (b & 31u)) & 1u) != 0u; }
+fn smokeAt(x: vec3f) -> vec4f { return textureSampleLevel(smokeTex, linSamp, (x - SM_AT) / SM_SIZE, 0.0); }
+/** where a ray is in the grid */
+fn smokeSpan(ro: vec3f, rd: vec3f, t1: f32) -> vec2f { let inv = safeInv(rd); let a = (SM_AT - ro) * inv; let b = (SM_AT + SM_SIZE - ro) * inv; return vec2f(max(max3(min(a, b)), 0.0), min(min3(max(a, b)), t1)); }
+/** what a ray that is blurred anyway sees of it on its way to t1: light, and how much gets through. Six looks */
+fn smokeSeen(ro: vec3f, rd: vec3f, t1: f32) -> vec4f {
+  if (frame.misc2.x < 0.5) { return vec4f(0.0, 0.0, 0.0, 1.0); } let s = smokeSpan(ro, rd, t1); if (s.y <= s.x) { return vec4f(0.0, 0.0, 0.0, 1.0); } let dt = (s.y - s.x) / 6.0; var T = 1.0; var L = vec3f(0.0);
+  for (var i = 0u; i < 6u; i++) { let x = ro + rd * (s.x + dt * (f32(i) + 0.5)); if (!smokeBlock(x)) { continue; } let v = smokeAt(x); let e = exp(-v.w * dt); L += v.rgb * (T * (1.0 - e)); T *= e; } return vec4f(L, T);
+}
+fn smokeThrough(ro: vec3f, rd: vec3f, t1: f32) -> f32 {
+  if (frame.misc2.x < 0.5) { return 1.0; } let s = smokeSpan(ro, rd, t1); if (s.y <= s.x) { return 1.0; } let dt = (s.y - s.x) / 8.0; var a = 0.0; for (var i = 0u; i < 8u; i++) { let x = ro + rd * (s.x + dt * (f32(i) + 0.5)); if (smokeBlock(x)) { a += smokeAt(x).w; } } return exp(-a * dt);
+}
 /** the camera's ray through a point of the picture (0‥1, y down) */
 fn camRay(uv: vec2f) -> vec3f { let p = uv * 2.0 - 1.0; return normalize(frame.camFwd.xyz + frame.camRight.xyz * p.x - frame.camUp.xyz * p.y); }
 /** where a world point is in the picture, now or last frame (z = its distance along the view; <= 0 behind) */

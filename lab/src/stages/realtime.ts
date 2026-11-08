@@ -114,7 +114,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
         raster,
         S('first hit', surf, 'render', { id: 'idT', idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }, { past: ['past', 'array<vec4f>', 'read'], pastLeaves: ['pastLeaves', 'array<vec4f>', 'read'] }),
         S('water', waterpx, 'render', { idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }),
-        ...cache.stages,
+        ...cache.stages, ...lab.smoke.stages(g, c, cache.lib, bounceLib),
         S('lamps', lamps, 'render', { surf: 'surf', front: 'frontT', sunLeaves: 'sunLeaves' }, { outVis: 'vis', outU: 'lampU', outC: 'lampC' }, {}, { FINE: 4 }),
         S('gather', cache.lib + bounceLib + gather, 'half', { surf: 'surf', front: 'frontT' }, { outE: 'bounce' }, { ...c, hits: ['hits', 'array<vec4u>', 'read_write'] }, { HITS }),
         S('mirror', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2, LAYER: 0 }),
@@ -127,7 +127,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
       ].map(s => o.edit ? o.edit(s) : s);
     },
     frame(lab) {
-      rainKnobs(lab);
+      rainKnobs(lab); lab.smoke.frame();
       // where each moving piece was; and what changed
       const mv = lab.building.world.moving, f = new Float32Array(mv.length * 16); for (const p of mv) { const s = lab.slots.get(p); if (s === undefined) continue; const q = lab.prevAt.get(p) ?? p, o = (s - lab.scene.piece0[2]) * 16; f.set(q.at, o); f.set(q.rot[0], o + 4); f.set(q.rot[1], o + 8); f.set(q.rot[2], o + 12); } if (mv.length) lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('past')!, 0, f); lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('pastLeaves')!, 0, lab.scene.instWas as Float32Array<ArrayBuffer>);
       const ch = new Float32Array(36); let n = 0; for (const d of lab.building.doors) if (Math.abs(d.want - d.open) > 1e-3 && n < 8) { ch.set([d.hinge[0], d.hinge[1] + 1, d.hinge[2], 7.5], n * 4); n++; }
