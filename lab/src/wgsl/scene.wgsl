@@ -9,10 +9,11 @@ struct Frame {
   misc: vec4f,         // time (s), cut height, exposure, haze
   knobs: vec4f,        // free for a stage under study
   counts: vec4u,       // lamps, openings, frame, seed
-  tree: vec4u,         // nodes per octant of: the standing pieces, the moving ones, the instances; the piece index the moving ones start at
+  per: vec4u,          // nodes per octant of the four trees: standing pieces the section cuts, standing pieces it does not, moving pieces, leaf clusters
+  node0: vec4u,        // where each starts in nodes
+  piece0: vec4u,       // where each one's pieces start (the fourth's are instances)
   pool: vec4f,         // the water: x0 z0 x1 z1
   pool2: vec4f,        // its level, its depth
-  base: vec4u,         // where the moving tree and the instance tree start in nodes; flags; spare
 };
 struct Piece { r0: vec4f, r1: vec4f, r2: vec4f, half: vec3f, flags: u32, quad: vec4f, mat: u32, tint: u32, planes: u32, lamp: u32 };
 struct Node { mn: vec3f, skip: u32, mx: vec3f, leaf: u32 };
@@ -35,6 +36,8 @@ struct Mark { at: vec2f, size: vec2f, uv: vec4f, color: vec3f, face: u32 };
 @group(0) @binding(9) var skyTex: texture_2d<f32>;
 @group(0) @binding(10) var artTex: texture_2d<f32>;
 @group(0) @binding(11) var noiseTex: texture_2d<f32>;
+@group(0) @binding(12) var causticTex: texture_2d<f32>;
+@group(0) @binding(13) var repSamp: sampler;
 
 const GLASS = 256u; const WATER = 512u; const CUT = 1024u; const GLOW = 2048u; const NOSHADOW = 4096u; const QUAD = 8192u; const MOVES = 16384u; const FAR = 32768u;
 const NOTHING = 0xffffffffu; const LEAF_HIT = 0x80000000u;
@@ -121,12 +124,13 @@ fn ballStay(o: vec3f, d: vec3f, tmin: f32, tmax: f32) -> vec2f { let a = dot(d, 
 fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) -> Hit {
   var best = tmaxIn; var id = NOTHING; var code = 0u; let inv = safeInv(rd); let oc = octant(rd);
   var g0 = vec2f(1e30, 0.0); var g1 = vec2f(1e30, 0.0); var gp = NOTHING; var gc = 0u;   // the two nearest panes: (t, tint)
-  for (var s = 0u; s < 2u; s++) {
-    let per = select(frame.tree.x, frame.tree.y, s == 1u); let b0 = select(0u, frame.base.x, s == 1u) + oc * per; let pb = select(0u, frame.tree.w, s == 1u);
+  let t0 = select(tmin, max(tmin, (cut - ro.y) / rd.y), cut < 1e8 && ro.y > cut && rd.y < -1e-5);   // above the section nothing it cuts is there
+  for (var s = 0u; s < 3u; s++) {
+    let per = frame.per[s]; let b0 = frame.node0[s] + oc * per; let pb = frame.piece0[s]; let tm = select(t0, tmin, s == 1u);
     var i = 0u;
     while (i < per) {
       let n = &nodes[b0 + i];
-      if (!boxHit(n, ro, inv, tmin, best)) { i = (*n).skip; continue; }
+      if (!boxHit(n, ro, inv, tm, best)) { i = (*n).skip; continue; }
       let lf = (*n).leaf; let cnt = lf & 15u; let first = pb + (lf >> 4u);
       for (var j = 0u; j < cnt; j++) {
         let k = first + j; let fl = pieces[k].flags;
@@ -139,7 +143,7 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
       i++;
     }
   }
-  { let per = frame.tree.z; let b0 = frame.base.y + oc * per; var i = 0u;
+  { let per = frame.per.w; let b0 = frame.node0.w + oc * per; var i = 0u;
     while (i < per) {
       let n = &nodes[b0 + i];
       if (!boxHit(n, ro, inv, tmin, best)) { i = (*n).skip; continue; }
@@ -167,8 +171,8 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
 /** VISIBLE: how much gets through from ro along rd to tmax. Glass tints it, leaves let a little by */
 fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
   var T = vec3f(1.0); let inv = safeInv(rd); let oc = octant(rd);
-  for (var s = 0u; s < 2u; s++) {
-    let per = select(frame.tree.x, frame.tree.y, s == 1u); let b0 = select(0u, frame.base.x, s == 1u) + oc * per; let pb = select(0u, frame.tree.w, s == 1u);
+  for (var s = 0u; s < 3u; s++) {
+    let per = frame.per[s]; let b0 = frame.node0[s] + oc * per; let pb = frame.piece0[s];
     var i = 0u;
     while (i < per) {
       let n = &nodes[b0 + i];
@@ -185,7 +189,7 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
       i++;
     }
   }
-  { let per = frame.tree.z; let b0 = frame.base.y + oc * per; var i = 0u;
+  { let per = frame.per.w; let b0 = frame.node0.w + oc * per; var i = 0u;
     while (i < per) {
       let n = &nodes[b0 + i];
       if (!boxHit(n, ro, inv, tmin, tmax)) { i = (*n).skip; continue; }

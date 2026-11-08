@@ -8,7 +8,7 @@ fn varOf(q: vec2i) -> vec2f { let m = textureLoad(mom, q, 0); var v = max(m.y - 
   let m0 = textureLoad(mom, p0, 0); let n = m0.z; let sg = sqrt(vm.x) * SHARE / sqrt(max(n * 0.5, 1.0)) + 1e-3 + 0.012 * lum(c.rgb);
   let young = 1.0 - smoothstep(1.0, 10.0, n);
   var acc = c; var ws = 1.0; var wf = vec4f(1.0); let sf = sqrt(max(c * (1.0 - c), vec4f(0.0))) * 2.2 / sqrt(max(n, 1.0)) + vec4f(0.012) + vec4f(0.35 * young); let l0 = lum(c.rgb); let fr = textureLoad(frontT, full, 0).x != 0u;
-  var reach = 1.0; if (NARROW == 1) { var rough = p.rough; if (fr) { rough = 0.02; } let lobe = rough * rough * 1.6 * c.a / max(p.t + c.a, 0.1) * frame.size.y / (2.0 * length(frame.camUp.xyz)); reach = lobe * (0.6 + young) + 1.5 * young; if (reach < 0.6 * f32(STRIDE)) { textureStore(outB, p0, c); return; } }
+  var reach = 1.0; if (NARROW == 1) { var rough = p.rough; if (fr) { rough = 0.02; } let lobe = rough * rough * 1.6 * c.a / max(p.t + c.a, 0.1) * frame.size.y / (2.0 * length(frame.camUp.xyz) * f32(DIV)); reach = lobe * (0.6 + young) + 1.5 * young; if (reach < 0.6 * f32(STRIDE)) { textureStore(outB, p0, c); return; } }
   for (var y = -1; y <= 1; y++) { for (var x = -1; x <= 1; x++) {
     if (x == 0 && y == 0) { continue; } let q = p0 + vec2i(x, y) * STRIDE; if (any(q < vec2i(0)) || any(q >= dim)) { continue; }
     let fq = min(q * DIV, rdim - 1); let s = unpackPx(textureLoad(surf, fq, 0), pxRay(vec2u(fq))); if (s.sky && NARROW == 0) { continue; } let v = textureLoad(src, q, 0); if (NARROW == 1) { if (v.a < 0.0 || (textureLoad(frontT, fq, 0).x != 0u) != fr) { continue; } }

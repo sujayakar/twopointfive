@@ -71,7 +71,7 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
     case 5u: { base *= 0.92 + 0.12 * nA; let g = abs(fract(uv.x / 1.5 + 0.5) - 0.5) * 1.5; base *= 1.0 - 0.10 * band(g, 0.02, fp); let pud = smoothstep(0.52, 0.66, nB); s.rough = mix(s.rough, 0.36, pud * 0.6); base *= 1.0 - 0.10 * pud; }
     case 6u: { let pl = floor(uv.y / 0.14); base *= 0.78 + 0.34 * hash21(vec2f(pl, floor(uv.x / 2.1 + hash21(vec2f(pl, 5.0))))); base *= 0.9 + 0.2 * nC; base *= 1.0 - 0.75 * band(0.07 - abs(abs(fract(uv.y / 0.14) - 0.5) * 0.14), 0.004, fp); }
     case 7u: { // a tower across the street: floors of windows, some of them lit
-      if (an.y < 0.5) { let cw = vec2f(1.6, 3.2); let c = floor(uv / cw + seed); let f = fract(uv / cw + seed); let win = band(abs(f.x - 0.5), 0.40, fp / 1.6) * band(abs(f.y - 0.52), 0.33, fp / 3.2); base = mix(m.base * tint2, m.b2, win); s.rough = mix(0.8, 0.08, win); let lit = step(0.72, hash21(c + seed * 3.0)); s.glow = vec3f(1.0, 0.82, 0.55) * (win * lit * frame.knobs.w); }
+      if (an.y < 0.5) { let cw = vec2f(1.6, 3.2); let c = floor(uv / cw + seed); let f = fract(uv / cw + seed); let win = band(abs(f.x - 0.5), 0.40, fp / 1.6) * band(abs(f.y - 0.52), 0.33, fp / 3.2); base = mix(m.base * tint2, m.b2, win); s.rough = mix(0.8, 0.08, win); let r = hash33(vec3f(c, seed)); let lit = step(0.80, r.x); let warm = mix(vec3f(1.0, 0.74, 0.42), vec3f(0.82, 0.92, 1.0), step(0.75, r.y)); s.glow = warm * (win * lit * frame.knobs.w * (0.25 + 0.9 * r.z) * mix(1.0, 0.35, step(0.6, r.y) * step(f.y, 0.5))); }
       else { base *= 0.85 + 0.2 * nA; } }
     case 10u: { base *= 0.85 + 0.15 * sin(uv.x * 900.0) * sin(uv.y * 900.0) * fade + 0.1 * (nB - 0.5); }
     case 11u: { base *= (0.95 + 0.07 * nA) * (1.0 - 0.08 * foot * nC); }
@@ -207,19 +207,9 @@ fn coatOf(s: Surf, V: vec3f, L: vec3f, widen: f32) -> vec3f {
 // ================================================================ water
 /** in the pool: where the sun's ray to x crosses the surface, and how deep x is (w = 1) */
 fn poolSun(x: vec3f) -> vec4f {
-  if (x.y < frame.pool2.x - 0.004 && x.y > frame.pool2.x - frame.pool2.y - 0.1 && x.x > frame.pool.x && x.x < frame.pool.z && x.z > frame.pool.y && x.z < frame.pool.w) { let d = frame.pool2.x - x.y; let L = frame.sunDir.xyz; return vec4f(x.xz + L.xz / max(L.y, 0.2) * d * 0.75, d, 1.0); }
+  if (x.y < frame.pool2.x - 0.004 && x.y > frame.pool2.x - frame.pool2.y - 0.1 && x.x > frame.pool.x && x.x < frame.pool.z && x.z > frame.pool.y && x.z < frame.pool.w) { let d = frame.pool2.x - x.y; let r = refract(-frame.sunDir.xyz, vec3f(0.0, 1.0, 0.0), 0.75); return vec4f(x.xz + r.xz / min(r.y, -0.1) * d, d, 1.0); }
   return vec4f(0.0);
 }
 const WATER_SIGMA = vec3f(0.45, 0.07, 0.05);
 /** the sun through the water to x, beside what visible() already took for the surface */
-fn poolLight(x: vec3f) -> vec3f { let w = poolSun(x); if (w.w <= 0.0) { return vec3f(1.0); } return caustic(w.xy, w.z, frame.misc.x) * exp(-WATER_SIGMA * w.z * 1.3) / vec3f(0.62, 0.86, 0.9); }
-fn waveHeight(p: vec2f, t: f32) -> f32 {
-  return 0.010 * sin(dot(p, vec2f(1.9, 1.1)) + t * 1.5) + 0.007 * sin(dot(p, vec2f(-1.3, 2.7)) + t * 1.9) + 0.0045 * sin(dot(p, vec2f(3.7, -2.1)) + t * 2.6) + 0.003 * sin(dot(p, vec2f(-5.3, -3.9)) + t * 3.3) + 0.0016 * sin(dot(p, vec2f(8.1, 6.7)) + t * 4.1) + 0.0011 * sin(dot(p, vec2f(-11.0, 9.3)) + t * 4.9);
-}
-fn waveNormal(p: vec2f, t: f32) -> vec3f { let e = 0.02; let h = waveHeight(p, t); return normalize(vec3f(-(waveHeight(p + vec2f(e, 0.0), t) - h) / e, 1.0, -(waveHeight(p + vec2f(0.0, e), t) - h) / e)); }
-/** how much the waves gather the sun at a point d below the surface */
-fn caustic(p: vec2f, d: f32, t: f32) -> f32 {
-  let e = 0.05; let h = waveHeight(p, t); let hx = waveHeight(p + vec2f(e, 0.0), t); let hX = waveHeight(p - vec2f(e, 0.0), t); let hy = waveHeight(p + vec2f(0.0, e), t); let hY = waveHeight(p - vec2f(0.0, e), t);
-  let hxy = waveHeight(p + vec2f(e, e), t); let xx = (hx + hX - 2.0 * h) / (e * e); let yy = (hy + hY - 2.0 * h) / (e * e); let xy = (hxy - hx - hy + h) / (e * e); let k = 0.25 * d * 4.0;
-  let det = (1.0 + k * xx) * (1.0 + k * yy) - k * k * xy * xy; return clamp(1.0 / max(abs(det), 0.12), 0.35, 4.5);
-}
+fn poolLight(x: vec3f) -> vec3f { let w = poolSun(x); if (w.w <= 0.0) { return vec3f(1.0); } let c = textureSampleLevel(causticTex, repSamp, w.xy / WAVE_TILE, 0.0).x; return mix(1.0, c, smoothstep(0.0, 0.25, w.z)) * exp(-WATER_SIGMA * w.z * 1.3) / vec3f(0.62, 0.86, 0.9); }

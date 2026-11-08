@@ -1,6 +1,6 @@
 // FIRST HIT. What each pixel shows, and the clear layer before it, if any. (Pieces are traced, not rasterized: exact for curves, and the same shapes light meets.)
 fn moved(k: u32, x: vec3f) -> vec3f {                              // where this point of a moving piece was last frame
-  if (k < frame.tree.w) { return x; } let l = toLocal(k, x); let o = (k - frame.tree.w) * 4u; return past[o].xyz + past[o + 1u].xyz * l.x + past[o + 2u].xyz * l.y + past[o + 3u].xyz * l.z;
+  if (k < frame.piece0.z) { return x; } let l = toLocal(k, x); let o = (k - frame.piece0.z) * 4u; return past[o].xyz + past[o + 1u].xyz * l.x + past[o + 2u].xyz * l.y + past[o + 3u].xyz * l.z;
 }
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   let dim = vec2u(frame.size.xy); if (id.x >= dim.x || id.y >= dim.y) { return; }

@@ -1,8 +1,8 @@
 // SIGNAL 3, NARROW INCOMING. One ray along the lobe of what shines: the clear layer where there is one, else the surface's own coat. The hit is lit by the
 // light on surfaces, with the sun asked again so that its shadows stay sharp in the mirror.
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
-  let dim = vec2u(frame.size.xy); if (id.x >= dim.x || id.y >= dim.y) { return; }
-  let rd = pxRay(id.xy); let p = unpackPx(textureLoad(surf, id.xy, 0), rd); let f = textureLoad(frontT, id.xy, 0); var s = pxSurf(p); var on = !p.sky && p.kind != 99u && (p.rough < 0.43 || p.metal > 0.5) && !p.leaf; var off = 0.004 * (1.0 + p.t * 0.02);
+  let dim = textureDimensions(outM); if (id.x >= dim.x || id.y >= dim.y) { return; }
+  let full = min(id.xy * u32(DIV), vec2u(frame.size.xy) - 1u); let rd = pxRay(full); let p = unpackPx(textureLoad(surf, full, 0), rd); let f = textureLoad(frontT, full, 0); var s = pxSurf(p); var on = !p.sky && p.kind != 99u && (p.rough < 0.43 || p.metal > 0.5) && !p.leaf; var off = 0.004 * (1.0 + p.t * 0.02);
   if (f.x != 0u) { let t = bitcast<f32>(f.x); s.x = frame.camPos.xyz + rd * t; s.n = octUnpack(f.y); s.ng = select(s.n, vec3f(0.0, 1.0, 0.0), (f.z >> 24u) == 2u); if (dot(s.n, rd) > 0.0) { s.n = -s.n; s.ng = -s.ng; } s.metal = 0.0; s.f0 = select(0.04, 0.02, (f.z >> 24u) == 2u); s.rough = select(0.015, 0.06, (f.z >> 24u) == 2u); on = true; off = 0.01; }
   if (!on) { textureStore(outM, id.xy, vec4f(0.0, 0.0, 0.0, -1.0)); return; }
   rngInit(id.xy, 29u); let V = -rd; let l = coatDir(s, V, blue2(id.xy, 5u)); fineLeaves = true;

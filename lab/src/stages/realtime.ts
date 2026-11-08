@@ -19,6 +19,7 @@ import air from './air.wgsl' with { type: 'text' };
 import resolve from './resolve.wgsl' with { type: 'text' };
 import taau from './taau.wgsl' with { type: 'text' };
 import { glowStages } from './glow';
+import { exposeStages } from './expose';
 import claim from './cacheclaim.wgsl' with { type: 'text' };
 import warm from './cachewarm.wgsl' with { type: 'text' };
 import update from './cacheupdate.wgsl' with { type: 'text' };
@@ -87,30 +88,30 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
     name: o.name ?? 'realtime', result: 'picture', glow: 'rt',
     signals(g, lab) {
       g.signal('surf', 'rgba32uint', 'render', true).signal('aux', 'rgba16float', 'render').signal('emit', 'rgba16float', 'render').signal('front', 'rgba32uint', 'render');
-      g.signal('vis', 'rgba16float', 'render').signal('bounce', 'rgba16float', 'half').signal('mirror', 'rgba16float', 'render').signal('air', 'rgba16float', 'half').signal('airH', 'rgba16float', 'half', true).signal('airM', 'rgba16float', 'half', true).signal('color', 'rgba16float', 'render');
+      g.signal('vis', 'rgba16float', 'render').signal('lampU', 'rgba16float', 'render').signal('bounce', 'rgba16float', 'half').signal('mirror', 'rgba16float', 'half').signal('air', 'rgba16float', 'half').signal('airH', 'rgba16float', 'half', true).signal('airM', 'rgba16float', 'half', true).signal('color', 'rgba16float', 'render');
       lab.buffer('past', Math.max(1, lab.building.world.moving.length) * 64); lab.uniform('changes', new Float32Array(36)); lab.uniform('taauK', new Float32Array(4));
     },
     stages(lab) {
       const g = lab.graph, c = { ...cache.bind, ...CHANGES };
       const S = (name: string, code: string, over: Size, reads: Record<string, string>, writes: Record<string, string>, buffers: Stage['buffers'] = {}, consts?: Record<string, number>): Stage => ({ name, code: signals + code, over, reads, writes, buffers: { ...CHANGES, ...buffers }, ...(consts ? { consts } : {}) });
-      const dVis = dn.stages({ signal: 'vis', div: 1, cap: 18, rounds: 3, fractions: true }, g), dB = dn.stages({ signal: 'bounce', div: 2, cap: 36, rounds: 4 }, g), dM = dn.stages({ signal: 'mirror', div: 1, cap: 22, rounds: 2, narrow: true }, g), u = up.stages(g); m.result = u.result;
-      const glows = glowStages(g, u.result, 'rt');
+      const dVis = dn.stages({ signal: 'vis', div: 1, cap: 18, rounds: 3, fractions: true }, g), dB = dn.stages({ signal: 'bounce', div: 2, cap: 36, rounds: 4 }, g), dM = dn.stages({ signal: 'mirror', div: 2, cap: 26, rounds: 2, narrow: true }, g), u = up.stages(g); m.result = u.result;
+      const glows = [...glowStages(g, u.result, 'rt'), ...exposeStages(lab, g, u.result, 'rtGlow2', 'rt')];
       return [
         S('first hit', surf, 'render', {}, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }, { past: ['past', 'array<vec4f>', 'read'] }),
         ...cache.stages,
-        S('lamps', lamps, 'render', { surf: 'surf' }, { outVis: 'vis' }),
+        S('lamps', lamps, 'render', { surf: 'surf' }, { outVis: 'vis', outU: 'lampU' }),
         S('gather', cache.lib + gather, 'half', { surf: 'surf' }, { outE: 'bounce' }, { ...c, hits: ['hits', 'array<vec4f>', 'read_write'] }),
-        S('mirror', cache.lib + mirror, 'render', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c),
+        S('mirror', cache.lib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2 }),
         ...dVis.stages, ...dB.stages, ...dM.stages,
         S('air', air, 'half', { surf: 'surf' }, { outA: 'air' }),
         S('air history', temporal, 'half', { air: 'cur', 'airH@prev': 'hist', 'airM@prev': 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, { outH: 'airH', outM: 'airM' }, {}, { DIV: 2, CAP: 16, SPREAD: 1.0, NARROW: 0 }),
-        S('resolve', resolve, 'render', { surf: 'surf', emit: 'emit', front: 'frontT', [dVis.result]: 'vis', [dB.result]: 'bounce', [dM.result]: 'mirror', airH: 'air' }, { outC: 'color' }),
+        S('resolve', resolve, 'render', { surf: 'surf', emit: 'emit', front: 'frontT', [dVis.result]: 'vis', lampU: 'lampU', [dB.result]: 'bounce', [dM.result]: 'mirror', airH: 'air' }, { outC: 'color' }),
         ...u.stages, ...glows,
       ];
     },
     frame(lab) {
       // where each moving piece was; and what changed
-      const mv = lab.building.world.moving, f = new Float32Array(mv.length * 16); for (const p of mv) { const s = lab.slots.get(p); if (s === undefined) continue; const q = lab.prevAt.get(p) ?? p, o = (s - lab.scene.tree[3]) * 16; f.set(q.at, o); f.set(q.rot[0], o + 4); f.set(q.rot[1], o + 8); f.set(q.rot[2], o + 12); } if (mv.length) lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('past')!, 0, f);
+      const mv = lab.building.world.moving, f = new Float32Array(mv.length * 16); for (const p of mv) { const s = lab.slots.get(p); if (s === undefined) continue; const q = lab.prevAt.get(p) ?? p, o = (s - lab.scene.piece0[2]) * 16; f.set(q.at, o); f.set(q.rot[0], o + 4); f.set(q.rot[1], o + 8); f.set(q.rot[2], o + 12); } if (mv.length) lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('past')!, 0, f);
       const ch = new Float32Array(36); let n = 0; for (const d of lab.building.doors) if (Math.abs(d.want - d.open) > 1e-3 && n < 8) { ch.set([d.hinge[0], d.hinge[1] + 1, d.hinge[2], 7.5], n * 4); n++; }
       lab.building.world.lamps.forEach((l, i) => { if (Math.abs(lab.scene.lampOn[i]! - prevOn[i]!) > 0.02 && l.kind !== 'spot' && n < 8) { ch.set([...l.at, 9], n * 4); n++; } }); prevOn = lab.scene.lampOn.slice();
       const key = lab.hour.toFixed(3) + lab.lampsMode; if (key !== last) { last = key; quiet = 24; } quiet = Math.max(0, quiet - 1); ch[32] = 1 - 0.85 * (quiet / 24); lab.uniform('changes', ch);

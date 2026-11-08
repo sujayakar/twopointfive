@@ -55,7 +55,7 @@ async function main() {
       let gpu = 0; for (const v of lab.graph.timer.ms.values()) gpu += v;
       if (auto && method === rt && ++seen > 45) { const cost = lab.gpu.timestamps && gpu > 0.2 ? gpu : ms; if (cost > 15.0) slow++; else if (cost < 11.0) slow--; else slow = 0; if (slow > 14 && scale > 0.4) { scale = Math.max(0.4, scale - 0.07); slow = 0; seen = 0; fit(); } else if (slow < -90 && scale < 1) { scale = Math.min(1, scale + 0.06); slow = 0; seen = 0; fit(); } }
       const pre = method === ref ? 'ref' : 'rt';
-      lab.draw((e, result) => { const G = (i: number) => lab.graph.texture(pre + 'Glow' + i), v = views[viewIx]!; let src = result; if (v !== 'picture' && method === rt) src = lab.graph.texture(signalOf[v]!); const plain = src !== result; present.run(e, lab, src, lab.gpu.context!.getCurrentTexture().createView(), lab.gpu.format, plain ? {} : { glow: G(3), wide: G(5), wider: G(6) }); });
+      present.set(lab); lab.draw((e, result) => { const v = views[viewIx]!, plain = v !== 'picture' && method === rt, src = plain ? lab.graph.texture(signalOf[v]!) : result; present.run(e, lab, src, lab.gpu.context!.getCurrentTexture().createView(), lab.gpu.format, pre, plain ? { plain: v === 'vis' || v === 'air' ? 1 : 0.25 } : {}); });
       if (++frames % 12 === 0) { const t = [...lab.graph.timer.ms].sort((a, b) => b[1] - a[1]); $('stats').textContent = `${(1000 / ms).toFixed(0)} fps  ${lab.graph.render.join('×')} → ${lab.graph.output.join('×')}\n` + (method === ref ? `${ref.samples} paths a pixel\n` : '') + (gpu ? `GPU ${gpu.toFixed(1)} ms\n` + t.slice(0, 14).map(([k, v]) => k.padEnd(16) + v.toFixed(2)).join('\n') : lab.gpu.info); }
     } catch (e) { bad = true; showError(String((e as Error).stack ?? e)); }
   };
