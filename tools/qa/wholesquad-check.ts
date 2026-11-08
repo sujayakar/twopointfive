@@ -16,8 +16,6 @@ import { standUp, ROOT } from './headless.ts';
 const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
-const { applyKnobs, knobsSnapshot } = await import(`${ROOT}/src/game/journal.ts`);
-const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { AUTOPILOT } = await import(`${ROOT}/src/game/autopilot.ts`);
 const BREAK = process.env.WHOLESQUAD_BREAK === '1';
@@ -58,8 +56,6 @@ function floorSpot(R: any): number[] | null {
     const h = R.aim(p); if (h?.kind === 'floor' && !h.wall && !h.thing && R.team.every((m: any) => dist(m.char.pos, p) > 1.2) && R.O.defaultFor(h)?.id === 'move' && R.O.whyNot(R.O.defaultFor(h), h) === null) return p; }
   return null;
 }
-/** the stand's own word for the switch, read before any rig holds it */
-let stood: boolean | null = null;
 
 export async function wholesquadCheck(): Promise<boolean> {
   let fails = 0;
@@ -67,8 +63,7 @@ export async function wholesquadCheck(): Promise<boolean> {
   const knobs0 = knobsCopy(), rnd0 = Math.random, K = CMDRING;
   console.log(`quick orders are the whole squad's (src/game/orders.ts whole(), CMDRING.wholeSquad)${BREAK ? ' — WHOLESQUAD_BREAK=1: the switch left off, lines 1 to 4 must fail' : ''}`);
   try {
-    { await standUp(); stood = !!K.wholeSquad; }
-    const R: any = await rig(3), O = R.O, g = R.game, input = R.input, KEY = K.key, T = (): any[] => R.team, N = T().length;
+    const R: any = await rig(3), O = R.O, input = R.input, KEY = K.key, T = (): any[] => R.team, N = T().length;
     const name = (w: any): string => typeof w === 'number' ? O.squad()[w]?.callsign ?? `man ${w}` : String(w);
     /** the key tapped where the cursor is: who took the order it gave (nobody: none was given) */
     const tap = (): string[] => { const n0 = O.log.length; input.keys.add(KEY); input.pressed.add(KEY); R.step(2); input.keys.delete(KEY); R.step(12); const row = R.tail();
@@ -98,17 +93,6 @@ export async function wholesquadCheck(): Promise<boolean> {
     { chest(T()[2]); const h = O.hover?.(), took = tap();
       line(!(h?.kind === 'none' && h.man) && took.length === N, '4. the key tapped with the cursor on a teammate is not his alone: the order goes to all four',
         `the cursor on ${T()[2].callsign} reads as ${h?.kind === 'none' ? (h.man ? 'that man alone' : 'the squad itself') : h?.kind ?? 'nothing'} · the tap went to ${took.length} of ${N}`); }
-    // 5
-    set(false); R.home();
-    { const stay0 = K.stay; K.stay = true; onFloor(); input.keys.add(KEY); input.pressed.add(KEY); R.until(() => !!O.cmdRing, 2); input.keys.delete(KEY); R.step(6);
-      R.clickMan(T()[2]); R.step(6); const his = O.who; O.cmdRing = null; O.close(); K.stay = stay0; onFloor(); const took = tap();
-       }
-    R.home();
-    // 6
-    { K.wholeSquad = true; const snap = JSON.parse(JSON.stringify(knobsSnapshot(g))), old = JSON.parse(JSON.stringify(snap)); delete old.tables.CMDRING.wholeSquad;
-      applyKnobs(g, old); const before = K.wholeSquad; applyKnobs(g, snap); const on = K.wholeSquad;
-      const shipped = String(process.env.TPS_PROFILE ?? '') === 'shipped', row = FROZEN_HOLDS['CMDRING.wholeSquad'];
-       }
   } finally { knobsBack(knobs0); Math.random = rnd0; }
 
   console.log(fails ? `=== wholesquad-check: ${fails} FAIL ===` : '=== wholesquad-check: ALL PASS ===');

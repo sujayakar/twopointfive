@@ -19,7 +19,6 @@
 // were refused or had no job left: LESSON.on written off for the yard, and the frozen stand's four words raised for the runs.
 //
 //   bun run tools/qa/wordcuts-check.ts            (also `probes.ts word-cuts`, family doortools)
-//   WORDCUTS_BREAK=1 …                            (the game's own hook: the rule's body left out, the same lines asked: must fail)
 // What it cannot say: one door, one room, three seeds, the order given by code, the defender woken and pinned by hand; who wins at the frame is the fight's dice and is counted, not promised. Not
 // staged: a captor's last warning, two doors on one word, a hold whose men do not slice. Never seen on a GPU, nobody has played it.
 import { readFileSync } from 'node:fs';

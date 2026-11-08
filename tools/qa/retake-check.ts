@@ -8,11 +8,9 @@
 import { standUp, ROOT } from './headless.ts';
 
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
-const { WORDS } = await import(`${ROOT}/src/game/words.ts`);
 const { endGuardScript } = await import(`${ROOT}/src/game/squad.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const PROFILE = await import(`${ROOT}/src/host/profile.ts`), { FROZEN_HOLDS } = PROFILE;
-const JOURNAL = await import(`${ROOT}/src/game/journal.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
 
 const DT = 1 / 60, BREAK = process.env.RETAKE_BREAK === '1';
@@ -29,7 +27,7 @@ export async function retakeCheck(): Promise<boolean> {
     // (1) the stand, read before the check sets anything
     { const on = ORDERS.retakeGoal === true, held = FROZEN_HOLDS['ORDERS.retakeGoal'];
       line(shipped ? on : !on && typeof held === 'string', shipped ? 'the page\'s stand has the rule on' : 'the frozen stand holds the rule off, and FROZEN_HOLDS names the word that raises it', `ORDERS.retakeGoal ${ORDERS.retakeGoal} · FROZEN_HOLDS: ${held ?? '(no row)'}`); }
-    const words0 = WORDS.on; ORDERS.retakeGoal = !BREAK;
+    ORDERS.retakeGoal = !BREAK;
     W.game.godMode = true; W.game.roomClear.start(5);
     const g = W.game, O = g.orders, pl = g.player;
     const step = (n = 1) => { for (let i = 0; i < n; i++) { pl.visibility = 0.05; W.step(DT); } };
