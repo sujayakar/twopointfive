@@ -8,7 +8,7 @@
 // NOTHING UNDER src/view IMPORTS THE GAME (src/game, src/sim, src/scene, src/anim, the bridge): a page that holds no game reads the same record
 // (tools/qa/view-check.ts). So a man is named by his character's id, a door by its name, and never by an object of the page's.
 import type { TickView } from './read';
-export type { BubbleView, MissionOf, MissionView, RadioRow, TickView } from './read';
+export type { BubbleView, KitGun, KitSetup, KitSlot, KitThing, KitView, MissionOf, MissionView, RadioRow, TickView } from './read';
 
 /** what a game no host steps is told */
-export const NO_VIEW: TickView = { mission: null, radio: [], bubbles: [], me: -1, place: '' };
+export const NO_VIEW: TickView = { mission: null, radio: [], bubbles: [], me: -1, place: '', kit: { slots: [], gun: null, setup: null, takes: [], big: null, hitsLeft: 0, hitsMax: 0, down: false, god: false, nightVision: null, keyTag: null } };
