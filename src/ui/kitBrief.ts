@@ -31,9 +31,6 @@ try { const q = new URLSearchParams(location.search); if (q.get('kitbrief') === 
 const WORDS = ['none', '1', '2', '3', '4', '5', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
 /** a count as the menus write one: a digit up to five, a word past it */
 export function countWords(n: number): string { return WORDS[n] ?? 'many'; }
-/** the cells this file adds to the facts row: [label, value, the sentence its tooltip says] */
-/** a line of the list's with its counts as the menus write them ('11' → 'eleven', '3 holding hostages' as it is) */
-export function wordsOf(line: string): string { return line.replace(/\d+/g, n => countWords(Number(n))); }
 function needCells(n: PlaceNeeds | null, rescue: boolean): [string, string, string][] {
   const out: [string, string, string][] = [];
   if (rescue) out.push(['Hostages', n && n.hostages > 0 ? countWords(n.hostages) : 'inside', 'a frag thrown onto their floor will hit them too']);

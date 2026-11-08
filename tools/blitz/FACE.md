@@ -16,43 +16,7 @@ cargo build --target wasm32-unknown-unknown --profile small    # the same at opt
 ```
 
 The compiler and the target are `rust/rust-toolchain.toml`'s. On two cores: dev about 3 minutes from nothing, release 6, small 3.5. The module imports
-nothing (wasm-run.ts stops on one that does). The face crate links `std` (the panic hook, the allocator); `rust/game` and `rust/sim` stay `no_std`.
-
-## The mission loop through wasm
-
-```sh
-tools/blitz/wasm-run.sh room-clear-four:1                 # the TypeScript side once (mission.ts), the dev build, then every tick through wasm
-tools/blitz/wasm-run.sh <DIR> --release -- --two          # a folder run.sh already filled (--out): the mission is not played twice
-bun run tools/blitz/wasm-run.ts <DIR> [ticks] [--wasm FILE] [--two] [--one-call] [--reserve MB] [--max-mb N] [--quiet]
-bun run tools/blitz/wasm-run.ts --exports                 # the export list beside the shipped simulation's
-bun run tools/blitz/wasm-run.ts --ts-time <mission>:<seed>   # the TypeScript tick's own time for the same play
-```
-
-`wasm-run.ts` reads what `mission.ts` wrote (the start `c1.bin` + `s0.bin`, the host's half `h<k>.bin`, `host.txt`, `gives.txt`, `hostwrites.txt`, a
-tutorial's `lesson.json` and `meter.txt`), makes a game in the module, and for every tick hands over the host's half, steps, and holds the die's count and
-the hash of each of the block's 13 parts to `post.txt`'s line. It stops at the first tick a part other than `poses` parts and names the part (`poses` parts
-by design from the first death: README.md). The lines round a step are the native runner's own: both call `rust/game_run/src/lib.rs`.
-
-Exit: 0 in step · 1 the block or the die parted · 2 the Rust tick panicked (the panic's words and place are printed) · 3 a file is missing.
-
-What was run, with frame boxes on (the release build; every tick, the die's count and 12 parts by the module's hashes, every 100th tick also hashed in
-the host over the module's memory in place):
-
-| mission | ticks | through wasm | `poses` first parts | the native runner on the same folder |
-|---|---|---|---|---|
-| room-clear-four:1 | 3,006 | in step (dev, release, small) | tick 1794 | `run.sh --every 500` exit 0, tick 1794, 0 paths not known |
-| tut-solo:1 (a tutorial, its level script) | 8,052 | in step (dev, release) | tick 404 | `run.sh` exit 0, tick 404, 12 beats |
-| mousehole-four:1 | 7,087 | in step | tick 1764 | in step, tick 1764 |
-
-Before frame boxes, on the dev build: hostage-rescue:1 (3,119 ticks, `poses` at 740) and glasshouse-four:1 (4,276, at 690) in step through wasm and
-natively; not run again since.
-
-Also run on room-clear-four:1: `--two` (two games from the one start in slots 0 and 1, stepped one after the other every tick: both in step for 3,006
-ticks); `--one-call` (the host's view inside `face_step`: in step, and the `lights` part does not differ, the update
-writes none of the block). Before frame boxes, the red paths (the driver's orders left out: parts at tick 628 in `props`; one hash of `post.txt` altered:
-parts at that tick; exit 1 both).
-
-Not checked: the game's own state by path (`diff.ts` over `face_export`), a second seat, a start taken anywhere but a mission's first tick, any browser.
+nothing. The face crate links `std` (the panic hook, the allocator); `rust/game` and `rust/sim` stay `no_std`.
 
 ## The exports
 

@@ -1719,11 +1719,11 @@ row on his machine is the answer, and the word puts the count back on any machin
   pairs in a level file.
   `hills` WAS ON EVERY PAGE FOR ONE STEP OF THE BUILD AND PARTED CO-OP (step 1906, the same day; mended the step after). The first cut kept it with
   the picture as "the picture's alone". It is not: `groundRayConfig.on` was read by the game's own box world (`scene/boxes.ts groundOn`; both are gone since 11-08, the table and the read: the rays a sight line and the cursor's point use then meet the ground field) and `game/game.ts` builds the snow
-  field with its roll. A game server stands with no look, so a page had `on: true` beside its server's `false`: co-op's wider word (the parts of
-  the whole game's state a page and a server agree on, `src/net/agreed.ts`, part `m.scene_ground_field`) held on 0 of 282 word ticks with one seat
+  field with its roll. A game server stands with no look, so a page had `on: true` beside its server's `false`: co-op's word of every part
+  (part `m.scene_ground_field`) held on 0 of 282 word ticks with one seat
   where the step before held 257 of 257. The alarm's narrow word did not part, the office being flat; on a snow level the two would have played
   different ground. THE RULE THIS TEACHES: before a switch is called the picture's, look for its readers under `src/scene`, `src/game` and
-  `rust/`, and run `PORT=<dev server> node tools/qa/mpclient-page.cjs`: its `wider word` line is the check that a page's game is its server's.
+  `rust/`, and run `PORT=<dev server> node tools/qa/mpclient-page.cjs`: its `same fight` line is the check that a page's game is its server's.
   If rays should see the hills on every page, that is a rule of the game with its own registered switch, laid on every machine from the recipe.
   No `FROZEN_HOLDS` row, no knob table, no journal key. THE TOOLS' PAGE BOOT (`tools/qa/pageboot.ts`): its settings are `title` (the page as it opens), `snow` and `smokelab`.
   CHECKS: `bench-check` (a run with no look word carries the
@@ -2167,7 +2167,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   COMING TO REST OR LEAVING IT, by the very test the words make (`SIDE_TURNED`). The map's own key steps every 0.04 rad, at other angles: a leaf that stopped
   inside the step it was last keyed in kept the words of a leaf still ajar (a shut door that said nothing), and a swing made the words on every frame, 2 ms
   each on the main thread. A leaf in mid-swing is keyed by a sixth of a quarter turn. The map itself is drawn once a frame for both its readers
-  (`placeField.ts PlaceMap`). THE CHECK: `bun run tools/qa/wallsides-check.ts` (the pass,
+  (`placeField.ts PlaceMap`). THE CHECK, until 2026-11-08, when the headless game it stood went: `wallsides-check` (the pass,
   headless, the shader's read mirrored in TS: 11 places, 5674 pairs within three cells and none sharing a number; 318 face points 3 cm off six faces all on their
   own side; 65964 floor points and none with a column across a wall; 28 slow closings from four angles and none left stale, the words made 122 times in 11,228
   frames; the column table right at 40 × 28 and at 80 × 56; `WALLSIDES_BREAK=1` leaves one wall out of the map, skips the last rebuilds of each closing, and

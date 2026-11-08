@@ -19,7 +19,7 @@ const ROWS: readonly Row[] = [
   ['dust-look-check.ts', 'shaders'], ['levelset-check.ts', 'shaders'], ['parse-check.ts', 'shaders'], ['shaderfold-check.ts', 'shaders'], ['shaderinline-check.ts', 'shaders'], ['shaderrows-check.ts', 'shaders'], ['shadertrim-check.ts', 'shaders'],
   ['bench-check.ts', 'page'], ['framecap-check.ts', 'page'], ['gpulost-check.ts', 'page'], ['keeppage-check.ts', 'page'], ['nogpu-check.ts', 'page'], ['pace-check.ts', 'page'], ['perfrec-check.ts', 'page'], ['pipequeue-check.ts', 'page'],
   ['pricerun-check.ts', 'page'], ['savefile-check.ts', 'page'], ['settle-check.ts', 'page'], ['view-check.ts', 'page'], ['perf-sweep-logic.ts', 'page'], ['perf-sweep-selftest.ts', 'page'],
-  ['camspace-check.ts', 'menus'], ['death-summary-check.ts', 'menus'], ['hud-look-check.ts', 'menus'], ['menustills-check.ts', 'menus'], ['squadkeys-check.ts', 'menus'], ['textsize-check.ts', 'menus'],
+  ['camspace-check.ts', 'menus'], ['hud-look-check.ts', 'menus'], ['menustills-check.ts', 'menus'], ['squadkeys-check.ts', 'menus'], ['textsize-check.ts', 'menus'],
   ['gunfire-table-check.ts', 'sound'], ['sfxwarm-check.ts', 'sound'], ['sound-takes-check.ts', 'sound'],
   ['ground-pieces-check.ts', 'levels'], ['kit-stores-check.ts', 'levels'], ['palette-check.ts', 'levels'], ['walked-check.ts', 'levels'], ['ways-check.ts', 'levels'],
   ['mystery-check.ts', 'words'], ['writing-check.ts', 'words'],
@@ -29,10 +29,10 @@ const ROWS: readonly Row[] = [
 /** check files no row runs, each with who runs it */
 const BY_HAND: Readonly<Record<string, string>> = {
   'cloud-check.ts': 'the backend\'s packages', 'lobby-check.ts': 'the backend\'s packages', 'mp-control-check.ts': 'the backend\'s packages', 'mpserver-check.ts': 'three processes, minutes', 'seats-check.ts': 'two players, minutes', 'teams-check.ts': 'co-op\'s',
-  'dice-check.ts': 'the gate', 'dress-check.ts': 'the gate', 'knobs-check.ts': 'the gate', 'rollback-check.ts': 'the gate', 'rust-check.ts': 'the gate', 'men-check.ts': 'the Rust build',
+  'knobs-check.ts': 'the gate',
   'issue-check.ts': 'the level skill', 'kitdeal-check.ts': 'the level skill', 'lesson-check.ts': 'the level skill', 'level-names-check.ts': 'the level skill', 'lived-check.ts': 'the level skill', 'map-check.ts': 'the level skill', 'marksight-check.ts': 'the level skill',
   'ownroofs-check.ts': 'the level skill', 'quiet-check.ts': 'the level skill', 'response-check.ts': 'the level skill', 'samestart-check.ts': 'the level skill', 'second-way-check.ts': 'the level skill', 'stack-marks-check.ts': 'the level skill', 'wallfurn-check.ts': 'the level skill',
-  'wallissue-check.ts': 'the level skill', 'stuff-check.ts': 'the level files: lines red before 2026-11-08', 'wallsides-check.ts': 'minutes', 'zfight-check.ts': 'the level skill',
+  'wallissue-check.ts': 'the level skill', 'stuff-check.ts': 'the level files: lines red before 2026-11-08', 'zfight-check.ts': 'the level skill',
 };
 
 const HERE = import.meta.dir, argv = process.argv.slice(2), words = argv.filter(a => !a.startsWith('--')), name = (r: Row): string => r[0].replace(/(-check|-probes)?\.ts$/, '');
