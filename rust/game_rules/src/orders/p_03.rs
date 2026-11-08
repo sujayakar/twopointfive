@@ -89,8 +89,6 @@ fn seam_box_flags(g: &Game, b: AnyBoxId) -> f64 { g.tab[b].flags }
 /// Some: refused, in those words
 fn seam_arm_issue(g: &mut Game, arm: &OrderIssue, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
     match arm {
-        // squad40.ts:208, squadsmoke.ts:135, pairorders.ts:211 / :227 / :240. These bodies are not in the skeleton's sig.rs: the paths resolve only in the joined crate
-        OrderIssue::Smoke => crate::squadsmoke::p_01::row_smoke_issue(g, men, t, o),
         OrderIssue::PairTake { mode } => crate::pairorders::p_01::take_issue(g, *mode, men, t),
         OrderIssue::PairWatch => crate::pairorders::p_01::watch_issue(g, men, t),
         OrderIssue::PairDark => crate::pairorders::p_01::dark_issue(g, men, t),
@@ -99,18 +97,11 @@ fn seam_arm_issue(g: &mut Game, arm: &OrderIssue, men: &[GuardId], t: &OrderTarg
 }
 
 // ---- OrderDef's fields: the matches (the skeleton's INVENTED order_*: orders.ts calls these fields in this part's lines). An arm is the row's public name, or a few public calls written here; the rest wait in the seams above ----
-fn plain_valid(w: Option<String>) -> Result<(), Option<String>> {
-    match w { Some(w) => Err(Some(w)), None => Ok(()) }
-}
 /// `d.label(t)`
 pub fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget) -> String {
     let arm = g.tab.orders_order_def[d].label.clone();
     match arm {
         OrderLabel::Text { text } => text,
-        OrderLabel::WallRow => match crate::wallcharge::wall_charge_charge_on_target(g, &crate::seats::here(g), t) {
-            Some(c) => format!("blow the charge{}", crate::wallcharge::wall_charge_close_words(g, Some(c), None)),
-            None => crate::wallcharge::wall_charge_row_words(g, &crate::seats::here(g)),
-        },
         OrderLabel::ThrowRow { kind } => crate::squadthrow::row_label(g, kind, at_of(t)),
         OrderLabel::ThrowOpen => {
             let frag = crate::squadthrow::left(g, crate::squadthrow::SquadThrowKind::Frag);
@@ -118,11 +109,6 @@ pub fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
             format!("throw · frag {} · bang {}{}", frag, stun, crate::squad40::squad40_word(g, &crate::seats::here(g)))
         }
         OrderLabel::Row(r) => (r.label)(g, t),
-        OrderLabel::Work => match t {
-            OrderTarget::Floor(OrderTargetFloor { thing: Some(th), .. }) => crate::workthings::work_things_words(g, th),
-            _ => String::from("work it"),
-        },
-        OrderLabel::Smoke => format!("smoke there · {} left", crate::squadsmoke::squad_smoke_left(g, &crate::seats::here(g))),
         OrderLabel::PairGo => {
             let waiting = crate::pairorders::pair_orders_waiting(g);
             if waiting.is_empty() { return String::from("mark"); }
@@ -141,11 +127,6 @@ pub fn order_can(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, t:
     let at = at_of(t);
     match arm {
         OrderCan::Row(r) => match r.can { Some(f) => f(g, gd, t), None => None },
-        OrderCan::WallRow => match crate::wallcharge::wall_charge_can_of(g, gd, t) {
-            crate::wallcharge::WallChargeCanOf::Text(w) => Some(w),
-            crate::wallcharge::WallChargeCanOf::Bool(_) => None,
-        },
-        OrderCan::Work => squad_orders_reach(g, gd, at),
         OrderCan::PairTake => {
             let OrderTarget::Foe(x) = t else {
                 let (now, was) = (String::from("nobody there."), String::from("no man there."));
@@ -177,27 +158,8 @@ pub fn order_only(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId
     let Some(arm) = g.tab.orders_order_def[d].only.clone() else { return men.to_vec() };
     let at = at_of(t);
     match arm {
-        OrderOnly::SilentAll => squad_orders_men(g, &crate::seats::here(g), None, None),
-        OrderOnly::ShutDoor => {
-            let OrderTarget::Door(x) = t else { return men.to_vec() };
-            if crate::doors::door_off(g, x.door) || !crate::shutdoor::stands_open(g, x.door) { return men.to_vec(); }
-            match crate::shutdoor::plan(g, x.door, men) {
-                crate::shutdoor::Plan::Text(_) => men.to_vec(),
-                crate::shutdoor::Plan::Arm1(p) => vec![p.gd],
-            }
-        }
         OrderOnly::ThrowRow { kind } => crate::squadthrow::row_only(g, men, at, kind),
-        OrderOnly::Wand => {
-            let OrderTarget::Door(x) = t else { return Vec::new() };
-            for side in [x.side, -x.side] {
-                let mut there = OrderTarget::Door(OrderTargetDoor { side, ..*x });
-                if let crate::wandorder::Pick::Arm1(p) = crate::wandorder::pick(g, men, &there) { return vec![p.gd]; }
-            }
-            Vec::new()
-        }
         OrderOnly::Row(r) => match r.only { Some(f) => f(g, men, t), None => men.to_vec() },
-        OrderOnly::Work => crate::workthings::work_things_pick(g, men, t),
-        OrderOnly::Smoke => match crate::squadsmoke::squad_smoke_thrower(g, men, at) { Some(th) => vec![th.gd], None => Vec::new() },
         OrderOnly::PairTake => {
             let OrderTarget::Foe(x) = t else { return Vec::new() };
             let to = crate::pairorders::pair_orders_stage(g, x.foe);
@@ -217,31 +179,8 @@ pub fn order_valid(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
     let Some(arm) = g.tab.orders_order_def[d].valid.clone() else { return Ok(()) };
     let at = at_of(t);
     match arm {
-        OrderValid::WallRow => match crate::wallcharge::wall_charge_valid(g, t, men) {
-            crate::wallcharge::WallChargeValid::Text(w) => Err(Some(w)),
-            crate::wallcharge::WallChargeValid::Bool(true) => Ok(()),
-            crate::wallcharge::WallChargeValid::Bool(false) => Err(None),
-        },
-        OrderValid::ShutDoor => {
-            let OrderTarget::Door(x) = t else { return Err(None) };
-            plain_valid(crate::shutdoor::why_not_shut(g, x.door, men))
-        }
         OrderValid::ThrowRow { kind } => crate::squadthrow::row_valid(g, men, at, kind).map_err(Some),
-        OrderValid::Wand => match crate::wandorder::pick(g, men, &t.clone()) {
-            crate::wandorder::Pick::Text(w) => Err(Some(w)),
-            crate::wandorder::Pick::Arm1(_) => Ok(()),
-        },
         OrderValid::Row(r) => match r.valid { Some(f) => f(g, t, men), None => Ok(()) },
-        OrderValid::Work => {
-            let OrderTarget::Floor(OrderTargetFloor { thing: Some(th), .. }) = t else { return Err(Some(String::from("nothing to work there."))) };
-            if th.stand.is_none() { return Err(Some(String::from("can't get a hand on it."))); }
-            let verb = crate::workthings::work_things_verb_of(g, th);
-            plain_valid(crate::workthings::work_things_moot(g, th, verb))
-        }
-        OrderValid::Smoke => {
-            if crate::squadsmoke::squad_smoke_left(g, &crate::seats::here(g)) <= 0.0 { return Err(Some(String::from("no smoke left."))); }
-            if crate::squadsmoke::squad_smoke_thrower(g, men, at).is_some() { Ok(()) } else { Err(Some(String::from("no throw from here."))) }
-        }
         OrderValid::PairTake => {
             let OrderTarget::Foe(x) = t else { return Err(None) };
             if let Some(w) = crate::pairorders::pair_orders_gone(g, x.foe) { return Err(Some(w)); }
@@ -257,7 +196,7 @@ pub fn order_valid(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
         }
         OrderValid::PairWatch => {
             let OrderTarget::Foe(x) = t else { return Err(None) };
-            plain_valid(crate::pairorders::pair_orders_gone(g, x.foe))
+            rows::plain_valid(crate::pairorders::pair_orders_gone(g, x.foe))
         }
         OrderValid::PairGo => {
             if !crate::pairorders::pair_orders_waiting(g).is_empty() { return Ok(()); }
@@ -271,22 +210,7 @@ pub fn order_issue(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardI
     let arm = g.tab.orders_order_def[d].issue.clone();
     match arm {
         OrderIssue::Nothing => None,
-        OrderIssue::Silent => { crate::silent::set_silent(g, true, Some(crate::silent::By::Order)); None }
-        OrderIssue::Loud => { crate::silent::set_silent(g, false, Some(crate::silent::By::Order)); None }
-        OrderIssue::ShutDoor => crate::shutdoor::order_issue(g, men, t),
         OrderIssue::ThrowRow { kind } => crate::squadthrow::row_issue(g, men, t, kind),
-        OrderIssue::WallRow => match crate::wallcharge::wall_charge_issue(g, men, t) {
-            crate::wallcharge::WallChargeIssue::Text(w) => Some(w),
-            crate::wallcharge::WallChargeIssue::Arm1(()) => None,
-        },
-        OrderIssue::Wand => match crate::wandorder::issue(g, men, &t.clone()) {
-            crate::wandorder::Issue::Text(w) => Some(w),
-            crate::wandorder::Issue::Arm1(()) => None,
-        },
-        OrderIssue::Work => match crate::workthings::work_things_issue(g, men, t) {
-            crate::workthings::WorkThingsIssue::Text(w) => Some(w),
-            crate::workthings::WorkThingsIssue::Arm1(()) => None,
-        },
         OrderIssue::PairGo => { crate::pairorders::pair_orders_mark(g, Some(crate::pairorders::PairOrdersMarkBy::Row)); None }
         OrderIssue::Row(r) => (r.issue)(g, men, t, o),
         arm => seam_arm_issue(g, &arm, men, t, o),
