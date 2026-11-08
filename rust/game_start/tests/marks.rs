@@ -179,3 +179,99 @@ fn the_buffer_is_as_the_shader_reads_it() {
     assert_eq!(w[LIST0 + (c & 0xffff) as usize + 47], 60, "…ending in the newest mark");
     assert_eq!(d.marks.head[0].moved, 1);
 }
+
+/// A charge on the office's partition (tests/wallcharge.rs has the place), on a game with a particle system, as a page's has.
+fn a_charge_set(seed: u32) -> (Play, game::ids::WallChargeId) {
+    let mut p = office(seed);
+    p.sam_unhurt();
+    p.g.engine.particles = Some(game::render_particles::Particles { collide: true, spark_bounce: true, ..game::render_particles::Particles::blank() });
+    p.g.engine.settings.gpu_particles = true;
+    p.g.m.dress.dress.blast_feel = true;
+    p.run(0.1);
+    game::wallcharge::wall_charge_raise_carried(&mut p.g, 2.0);
+    p.sam_put([14.6, 15.2]);
+    p.frame();
+    if let Some(why) = game::wallcharge::wall_charge_order(&mut p.g, [12.06, 0.0, 13.78], None) { panic!("the wall charge was refused: {why}"); }
+    assert!(p.until(60.0, |p| !p.g.wall_charge.set.is_empty()).is_some(), "no charge is on the wall");
+    let c = p.g.wall_charge.set[0];
+    p.sam_put([20.0, 15.2]);
+    p.frame();
+    (p, c)
+}
+
+/// THE RULE: a wall charge's blast is told as the tick's particles, each with its id: the fireball in its own tick, the ring and the pushes and the ceiling's dust as their times come, and then nothing; and it leaves its dust on the floor.
+/// A FAILURE MEANS: the picture's half of the feel has gone quiet, or a stage is played twice.
+#[test]
+fn a_wall_charge_is_told_as_its_stages_come() {
+    let (mut p, c) = a_charge_set(11);
+    let mut d = Drawn::default();
+    game::wallcharge::wall_charge_blow(&mut p.g, Some(c), Some(true));
+    let (mut seen, mut sparks, mut dust, mut kicks) = (Vec::new(), 0, 0, 0);
+    let mut last_busy = 0;
+    for k in 0..240 {
+        p.frame();
+        d.take(&p.g, want::events);
+        for e in &d.events.emits { assert!(!seen.contains(&(e.tick, e.serial)), "an id told twice"); seen.push((e.tick, e.serial)); if e.seed != u32::MAX { last_busy = k; if e.kind == game::render_particles::PKind::Spark as u32 { sparks += 1; } if e.kind == game::render_particles::PKind::Dust as u32 { dust += 1; } } }
+        kicks += d.events.kicks.iter().filter(|e| e.seed != u32::MAX).count();
+    }
+    assert!(sparks >= 2 && dust > 20, "the fireball and the ring: {sparks} lots of sparks, {dust} of dust");
+    assert!(kicks >= 3, "the three pushes: {kicks}");
+    assert!(last_busy < 200, "its stages are over within a few seconds, and something was still told at tick {last_busy}");
+    assert!(mark_set(&p.g).unwrap().list.iter().any(|m| m.look && m.kind == DecalKind::Damage), "no film of dust where the wall went");
+}
+
+/// THE RULE: the level put back, nothing of the old encounter's blast plays into this one.
+#[test]
+fn a_level_put_back_stops_a_blast_s_stages() {
+    let (mut p, c) = a_charge_set(12);
+    game::wallcharge::wall_charge_blow(&mut p.g, Some(c), Some(true));
+    p.frame();
+    decals_clear(&mut p.g);
+    let mut d = Drawn::default();
+    p.frame();
+    d.take(&p.g, want::events);
+    let told = |d: &Drawn| d.events.emits.iter().filter(|e| e.seed != u32::MAX).count();
+    for _ in 0..60 { p.frame(); d.take(&p.g, want::events); assert_eq!(told(&d), 0, "a stage came after the level was put back"); }
+}
+
+/// THE RULE: the traffic map is one word for two texels over the floor; where a door stands the floor is walked; along a long wall stones gather, and a level's own map does not change as it is played.
+#[test]
+fn the_traffic_map_says_where_the_level_is_walked() {
+    let mut p = office(13);
+    let mut d = Drawn::default();
+    d.take(&p.g, want::level_look);
+    assert_eq!(d.traffic.words.len(), 40 * 8 * 28 * 8 / 2);
+    let texel = |d: &Drawn, i: usize| (d.traffic.words[i / 2].w >> (i % 2 * 16)) & 0xffff;
+    let at = |x: f64, z: f64| (z * 8.0) as usize * 320 + (x * 8.0) as usize;
+    let door = &p.g.level.doors[0];
+    let mid = [door.hinge[0] + door.closed_dir.cos() * door.width * 0.5, door.hinge[1] + door.closed_dir.sin() * door.width * 0.5];
+    assert!(texel(&d, at(mid[0], mid[1])) & 0xff > 100, "a door's threshold is not worn: {}", texel(&d, at(mid[0], mid[1])) & 0xff);
+    assert!((0..320 * 224).any(|i| texel(&d, i) >> 8 == 255), "no band along any wall");
+    assert!((0..320 * 224).filter(|&i| texel(&d, i) & 0xff == 0).count() > 320 * 224 / 2, "the whole floor is walked");
+    let was = d.traffic.words.clone();
+    p.run(0.5);
+    d.take(&p.g, want::level_look);
+    assert!(was == d.traffic.words, "the map moved");
+}
+
+/// THE RULE: on a level that wears the look a leaf is drawn in its paint, a shade of its own by its name, the game's own box left as it was; with the look off nothing is painted.
+#[test]
+fn a_leaf_is_drawn_in_the_look_s_paint() {
+    let mut p = Play::mission("compound-gwot.json", "?levelFile=compound-gwot.json&roomclear&squad4", &Opts { seed: 14, ..Default::default() });
+    p.run(0.1);
+    let paints = game_draw::boxes::paint::paints(&p.g);
+    assert!(!paints.is_empty(), "the compound wears the look, and no leaf was painted");
+    let mut d = Drawn::default();
+    d.take(&p.g, want::boxes);
+    d.frame(&p.g, 1.0, [20.0, 0.0, 14.0]);
+    let n = p.g.engine.world.statics.len();
+    let list = &p.g.engine.world.dynamics;
+    for (id, a, _) in &paints {
+        let k = list.iter().position(|b| *b == game::ids::AnyBoxId::from(*id)).expect("a leaf is in the list");
+        let m = &d.boxes.mat[n + k].w;
+        assert!((m[0] as f64 - a[0]).abs() < 1e-5 && (m[1] as f64 - a[1]).abs() < 1e-5, "drawn in {:?}, painted {a:?}", &m[..3]);
+        assert!((0..3).any(|i| p.g.tab.boxes[*id].albedo[i] != a[i]), "the paint is the box's own: the game's box was written, or nothing was painted");
+    }
+    p.g.k.look.on = false;
+    assert!(game_draw::boxes::paint::paints(&p.g).is_empty(), "the look is off, and a leaf was painted");
+}

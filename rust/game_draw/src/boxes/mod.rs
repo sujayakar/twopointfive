@@ -11,6 +11,7 @@ pub mod glass;
 pub mod grid;
 pub mod marks;
 pub mod pack;
+pub mod paint;
 pub mod rank;
 
 /// no key: the box is another thing each frame
@@ -207,6 +208,8 @@ pub struct Boxes {
     stuffs: u32,
     moved: (u32, u32),
     undrawn: Vec<u32>,
+    /// the leaves' paint, by box (paint.rs): worked out as a game is first drawn
+    painted: Option<Vec<(BoxId, [f64; 3], Option<game::scene_stuff::BoxStuff>)>>,
 }
 
 impl Boxes {
@@ -272,9 +275,11 @@ impl Boxes {
         self.own.clear();
         self.leaves.clear();
         let ir = &g.m.irlaser.ir_made;
+        if self.painted.is_none() { self.painted = Some(paint::paints(g)); }
         for &id in w.dynamics.iter().take(total - n) {
             if !night && ir.has(id) { continue; }
-            let b = &g.tab[id];
+            let leaf = id.world().and_then(|w| self.painted.as_ref().and_then(|p| p.binary_search_by_key(&w.0, |x| x.0 .0).ok().map(|i| paint::on(&g.tab[id], p[i].1, p[i].2))));
+            let b = leaf.as_ref().unwrap_or(&g.tab[id]);
             let (c, h) = match b.dc { Some(c) => (c, b.dh.unwrap_or(b.h)), None => (b.c, b.h) };
             let i = n + self.own.len();
             pack::pack(b, c, h, true, &self.look, &mut self.marks, &mut self.geo[i], &mut self.mat[i], &mut self.cut[i]);

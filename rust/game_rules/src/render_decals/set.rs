@@ -66,11 +66,13 @@ pub enum Ask {
     /// (and whether what it throws is the team's own: the fog of war asks, as the round is fired)
     Round(OutWallWearRound, bool),
     Reset,
+    /// (no mark: a wall charge's feel, whose start asks the world where the tick leaves it, in its place among the rest)
+    Feel(crate::wallcharge::WallSpot),
 }
 impl Ask {
     /// the arm's number, in a mark's key
     fn arm(&self) -> u32 {
-        match self { Ask::Add(_) => 1, Ask::Bullet(_) => 2, Ask::Chip(_) => 3, Ask::Bang(_) => 4, Ask::Kick(_) => 5, Ask::Burst(_) => 6, Ask::Opened(_) => 7, Ask::Wall(_) => 8, Ask::Evicted(_) => 9, Ask::Round(..) | Ask::Reset => 10 }
+        match self { Ask::Add(_) => 1, Ask::Bullet(_) => 2, Ask::Chip(_) => 3, Ask::Bang(_) => 4, Ask::Kick(_) => 5, Ask::Burst(_) => 6, Ask::Opened(_) => 7, Ask::Wall(_) => 8, Ask::Evicted(_) => 9, Ask::Round(..) | Ask::Reset => 10, Ask::Feel(_) => 11 }
     }
 }
 
@@ -86,7 +88,7 @@ pub struct MarkSet {
     /// prints laid (a print's look is off how many came before it)
     pub prints: u32,
     pub wear: Wear,
-    /// the particles the last tick's marks threw: the picture's alone, and no out event of the page that has a copy of the game
+    /// the particles the last tick's marks and feels threw: the picture's alone, and no out event of the page that has a copy of the game
     pub thrown: Vec<OutEvent>,
     asks: Vec<Ask>,
     tick: u32,
@@ -107,9 +109,10 @@ pub fn marks_clear(g: &mut Game) {
     let s = mark_set_mut(g);
     s.asks.clear();
     s.list.clear();
+    crate::blast_feel::feel_cleared(g);
 }
 
-/// THE TICK'S LAST STEP: what it asked is answered in its order, with the world where it left it; and a print that has dried goes
+/// THE TICK'S LAST STEP: what it asked is answered in its order, with the world where it left it; a feel's stages come due; and a print that has dried goes
 pub fn marks_settle(g: &mut Game) {
     let tick = m::round(g.time * 60.0) as u32;
     let s = mark_set_mut(g);
@@ -132,9 +135,11 @@ pub fn marks_settle(g: &mut Game) {
                 Ask::Evicted(e) => crate::floormess::lay_evicted(g, e),
                 Ask::Round(e, ours) => crate::wallwear::wear_round(g, e, *ours),
                 Ask::Reset => mark_set_mut(g).wear = Wear::default(),
+                Ask::Feel(w) => crate::blast_feel::feel_starts(g, w),
             }
         }
     }
+    crate::blast_feel::feel_stages(g);
     let t = g.time;
     let s = mark_set_mut(g);
     s.list.retain(|d| !d.dries.is_some_and(|w| w.at(t) <= 0.01));
