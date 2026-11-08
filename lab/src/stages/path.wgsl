@@ -2,7 +2,7 @@
 // frame, summed. It also keeps direct light, one bounce and the rest apart, so that each estimator can be compared with the part it owns.
 /** lamps at a surface: the sun, then one lamp drawn by weight. One visible() in the text, asked twice */
 fn lampsAt(s: Surf, V: vec3f, glossy: bool) -> vec3f {
-  var L = vec3f(0.0); let m = matteOf(s) / PI; let leaf = any(s.through > vec3f(0.0)); let coatOnly = s.kind == 8u;
+  var L = vec3f(0.0); let m = matteOf(s) * (1.0 - lum(fresnel(coatF0(s), max(dot(s.n, V), 0.02)))) / PI; let leaf = any(s.through > vec3f(0.0)); let coatOnly = s.kind == 8u;
   for (var q = 0u; q < 2u; q++) {
     var d: vec3f; var E: vec3f; var far = 400.0; var widen = 0.004;
     if (q == 0u) { if (frame.sunE.x + frame.sunE.y <= 0.0) { continue; } d = coneDir(frame.sunDir.xyz, frame.sunDir.w, rnd2()); E = frame.sunE.xyz; }

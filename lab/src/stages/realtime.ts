@@ -75,11 +75,14 @@ export const svgf: DenoisePart = {
   name: 'svgf',
   stages({ signal, div, cap, rounds, narrow, fractions }, g) {
     const size: Size = div === 2 ? 'half' : 'render', N = narrow ? 1 : 0; g.signal(signal + 'H', 'rgba16float', size, true).signal(signal + 'M', 'rgba16float', size, true).signal(signal + 'A', 'rgba16float', size).signal(signal + 'B', 'rgba16float', size);
-    const stages: Stage[] = [{ name: signal + ' history', over: size, reads: { [signal]: 'cur', [signal + 'H@prev']: 'hist', [signal + 'M@prev']: 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, writes: { outH: signal + 'H', outM: signal + 'M' }, buffers: CHANGES, consts: { DIV: div, CAP: cap, SPREAD: narrow ? 1.6 : 1.25, NARROW: N }, code: signals + temporal }];
+    const stages: Stage[] = [{ name: signal + ' history', over: size, reads: { [signal]: 'cur', [signal + 'H@prev']: 'hist', [signal + 'M@prev']: 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, writes: { outH: signal + 'H', outM: signal + 'M' }, buffers: CHANGES, consts: { DIV: div, CAP: cap, SPREAD: narrow ? 1.6 : 1.25, NARROW: N, KIND: fractions ? 1 : 0 }, code: signals + temporal }];
     let from = signal + 'H'; for (let i = 0; i < rounds; i++) { const to = signal + (i % 2 ? 'B' : 'A'); stages.push({ name: signal + ' blur', over: size, reads: { [from]: 'src', [signal + 'M']: 'mom', surf: 'surf', front: 'frontT' }, writes: { outB: to }, buffers: CHANGES, consts: { DIV: div, STRIDE: 1 << i, SHARE: narrow ? 2.5 : 3.0, NARROW: N, KIND: fractions ? 1 : 0 }, code: signals + blur }); from = to; }
     return { stages, result: from };
   },
 };
+/** no memory of light at all: what a bounce hits is lit by nothing. Shows what the cache is worth */
+export function noCache(): CachePart { const lib = 'struct Cached { E: vec3f, sun: f32, n: f32 };\nfn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached { var c: Cached; return c; }\nfn cacheKey(x: vec3f, n: vec3f, level: u32) -> u32 { return 1u; }\nfn cacheFind(key: u32) -> u32 { return 1u; }\nfn cacheFound(key: u32, who: u32) {}\n'; return { name: 'none', lib, bind: {}, stages: [], async init(lab) { lab.buffer('hits', HITS * 16); } }; }
+export const bilinear: UpscalePart = { name: 'bilinear', stages(g) { g.signal('picture', 'rgba16float', 'output', true); return { result: 'picture', stages: [{ name: 'upscale', over: 'output', reads: { color: 'color' }, writes: { outT: 'picture' }, buffers: { taauK: ['taauK', 'vec4f', 'uniform'] }, code: '@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let o = frame.size.zw; if (f32(id.x) >= o.x || f32(id.y) >= o.y) { return; } textureStore(outT, id.xy, textureSampleLevel(color, linSamp, (vec2f(id.xy) + 0.5) / o, 0.0)); }' }] }; } };
 export const noDenoise: DenoisePart = { name: 'none', stages: ({ signal }) => ({ stages: [], result: signal }) };
 export const taauUp: UpscalePart = { name: 'taau', stages(g) { g.signal('picture', 'rgba16float', 'output', true); return { result: 'picture', stages: [{ name: 'upscale', over: 'output', reads: { color: 'color', 'picture@prev': 'hist', aux: 'auxT' }, writes: { outT: 'picture' }, buffers: { taauK: ['taauK', 'vec4f', 'uniform'] }, code: taau }] }; } };
 
@@ -107,7 +110,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
         S('mirror', cache.lib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2 }),
         ...dVis.stages, ...dB.stages, ...dM.stages,
         S('air', air, 'half', { surf: 'surf' }, { outA: 'air' }),
-        S('air history', temporal, 'half', { air: 'cur', 'airH@prev': 'hist', 'airM@prev': 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, { outH: 'airH', outM: 'airM' }, {}, { DIV: 2, CAP: 16, SPREAD: 1.0, NARROW: 0 }),
+        S('air history', temporal, 'half', { air: 'cur', 'airH@prev': 'hist', 'airM@prev': 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, { outH: 'airH', outM: 'airM' }, {}, { DIV: 2, CAP: 16, SPREAD: 1.0, NARROW: 0, KIND: 0 }),
         S('resolve', resolve, 'render', { surf: 'surf', emit: 'emit', front: 'frontT', [dVis.result]: 'vis', lampU: 'lampU', [dB.result]: 'bounce', [dM.result]: 'mirror', airH: 'air' }, { outC: 'color' }),
         ...u.stages, ...glows,
       ];

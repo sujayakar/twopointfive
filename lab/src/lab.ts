@@ -21,7 +21,7 @@ export class Lab {
   gpu!: Gpu; graph!: Graph; scene!: SceneGpu; sky!: Sky; water!: Water; camera = new Camera(); building!: Building;
   tick = 0; frameNo = 0; seed = 0; hour = 15.2; hourNow!: Hour; level = 0; cut = 1e9; wantCut = 1e9; knobs = [0, 0, 0, 0]; lampsMode: 'auto' | 'on' | 'off' = 'auto'; wind: V3 = norm([1, 0, 0.35]); exposure = 0; paused = false;
   private prev: ReturnType<Camera['frame']> | null = null; prevAt = new Map<Piece, { at: V3; rot: Piece['rot'] }>(); slots = new Map<Piece, number>(); jitter: [number, number] = [0, 0]; private prevJitter: [number, number] = [0, 0];
-  methods = new Map<string, { m: Method; stages: Stage[] }>(); current = ''; doorsAuto = false; torch: { on: boolean; at: V3; dir: V3 } | null = null; jittered = true; lampGroup: Record<string, number> = {};
+  methods = new Map<string, { m: Method; stages: Stage[] }>(); current = ''; doorsAuto = false; torch: { on: boolean; at: V3; dir: V3 } | null = null; jittered = true; haze = 1; lampGroup: Record<string, number> = {};
   async open(canvas: HTMLCanvasElement | null) {
     this.gpu = await openGpu(canvas); this.building = makeBuilding(); this.sky = new Sky(this.gpu); await this.sky.init();
     this.water = new Water(this.gpu); await this.water.init(); this.scene = new SceneGpu(this.gpu, this.building.world, this.sky.tex, this.water.tex);
@@ -47,7 +47,7 @@ export class Lab {
   pose() {
     const b = this.building, t = this.tick * TICK, on = this.scene?.lampOn; for (const d of b.doors) poseDoor(d);
     const h = hourOf(this.hour), dark = this.lampsMode === 'on' ? 1 : this.lampsMode === 'off' ? 0 : h.night, inside = this.lampsMode === 'auto' ? Math.max(dark, 0.45) : dark; this.hourNow = h;
-    b.world.lamps.forEach((l, i) => { if (on && l.kind !== 'spot') on[i] = l.on * (l.name === 'terrace' || l.name === 'pool' ? dark : inside) * (this.lampGroup[l.name] ?? 1); });
+    b.world.lamps.forEach((l, i) => { if (on && l.kind !== 'spot') on[i] = l.on * (l.name === 'terrace' || l.name === 'pool' ? dark : l.name === 'blue' ? Math.max(inside, 0.9) : inside) * (this.lampGroup[l.name] ?? 1); });
     for (const p of b.people) if (p.torch >= 0) { const l = b.world.lamps[p.torch]!; l.at = p.torchAt; l.v = p.torchDir; if (on) on[p.torch] = h.night > 0.5 ? 1 : 0; } void t;
   }
   /** the frame's numbers to the GPU */
@@ -55,7 +55,7 @@ export class Lab {
     const [rw, rh] = this.graph.render, [ow, oh] = this.graph.output, c = this.camera.frame(ow / oh), p = this.prev ?? c, b = this.building, h = this.hourNow; this.sky.update(h);
     const f = new Float32Array(128), u = new Uint32Array(f.buffer); let o = 0; const v = (a: ArrayLike<number>, w = 0) => { f.set([a[0]!, a[1]!, a[2]!, w], o); o += 4; };
     v(c.pos); v(c.right); v(c.up); v(c.fwd); v(p.pos); v(p.right); v(p.up); v(p.fwd); v(h.sun, h.radius); v(h.sunE, 1);
-    f.set([rw, rh, ow, oh], o); o += 4; f.set([this.jitter[0], this.jitter[1], this.prevJitter[0], this.prevJitter[1]], o); o += 4; f.set([this.tick * TICK, this.cut, this.exposure, h.haze], o); o += 4; f.set([this.knobs[0]!, this.knobs[1]!, this.knobs[2]!, h.night * 2.2], o); o += 4;
+    f.set([rw, rh, ow, oh], o); o += 4; f.set([this.jitter[0], this.jitter[1], this.prevJitter[0], this.prevJitter[1]], o); o += 4; f.set([this.tick * TICK, this.cut, this.exposure, h.haze * this.haze], o); o += 4; f.set([this.knobs[0]!, this.knobs[1]!, this.knobs[2]!, h.night * 2.2], o); o += 4;
     this.slots = this.scene.moved(this.tick * TICK, this.wind); this.scene.sendLamps();
     u.set([Math.min(64, b.world.lamps.length), Math.min(32, b.world.openings.length), this.frameNo, this.seed], o); o += 4; u.set(this.scene.per, o); o += 4; u.set(this.scene.node0, o); o += 4; u.set(this.scene.stepOf, o); o += 4; u.set(this.scene.piece0, o); o += 4; f.set(b.pool, o); o += 4; f.set([b.poolTop, b.poolDeep, 0, 0], o);
     this.gpu.device.queue.writeBuffer(this.scene.frame, 0, f); this.prev = c; this.prevJitter = this.jitter;

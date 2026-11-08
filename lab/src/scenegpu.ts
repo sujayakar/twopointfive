@@ -23,7 +23,7 @@ export class SceneGpu {
     // ---- leaves, planes, marks share one buffer
     const packed = world.clusters.map(packCluster); let leafRows = 0; for (const p of packed) leafRows += p.data.byteLength / 16;
     const rows: number[] = [], planeAt = new Map<Piece, number>(), markAt = new Map<Piece, number>(); let row = leafRows;
-    for (const p of [...order, ...world.moving]) { if (p.planes?.length) { planeAt.set(p, row); for (const [n, dd] of p.planes) { rows.push(...n, dd); row++; } } if (p.marks?.length) { markAt.set(p, row); for (const m of p.marks) { const a = artRect(m.art); rows.push(m.at[0], m.at[1], m.size[0], m.size[1], 0, a[0], a[1], 0, 0, 0, 0, 0); const o = rows.length - 8; rows[o] = m.turn ?? 0; rows[o + 1] = a[0]; rows[o + 2] = a[1]; rows[o + 3] = a[2]; rows[o + 4] = m.color[0]; rows[o + 5] = m.color[1]; rows[o + 6] = m.color[2]; rows[o + 7] = m.face; row += 3; } } }
+    for (const p of [...order, ...world.moving]) { if (p.planes?.length) { planeAt.set(p, row); for (const [n, dd] of p.planes) { rows.push(...n, dd); row++; } } if (p.marks?.length) { markAt.set(p, row); for (const m of p.marks) { const a = artRect(m.art); rows.push(m.at[0], m.at[1], m.size[0], m.size[1], a[0], a[1], a[2], a[3], m.color[0], m.color[1], m.color[2], m.face); row += 3; } } }
     const ex = new Float32Array((leafRows + rows.length / 4) * 4); let at = 0; for (const p of packed) { ex.set(new Float32Array(p.data), at); at += p.data.byteLength / 4; } ex.set(rows, leafRows * 4);
     // bits of packed leaves must survive: copied as words
     { const u = new Uint32Array(ex.buffer); let o = 0; for (const p of packed) { u.set(new Uint32Array(p.data), o); o += p.data.byteLength / 4; } }

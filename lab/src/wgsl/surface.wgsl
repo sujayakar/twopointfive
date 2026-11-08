@@ -94,7 +94,7 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
     let r = (f - a.xy) / a.zw; if (abs(r.x) > 0.5 || abs(r.y) > 0.5) { continue; }
     let t = vec2f(r.x + 0.5, select(0.5 - r.y, r.y + 0.5, h.code == 2u || h.code == 3u));
     let px = b.zw * 2048.0; let lod = log2(max(1.0, fp * px.x / a.z));
-    let art = textureSampleLevel(artTex, linSamp, b.xy + t * b.zw, lod);
+    let art = textureSampleLevel(artTex, linSamp, b.xy + t * b.zw, min(lod, 6.0));
     let wear = 1.0 - 0.25 * smoothstep(0.5, 0.72, nB);
     let al = art.a * wear; base = mix(base, c.rgb * c.rgb * art.rgb, al); s.rough = mix(s.rough, min(s.rough, 0.42), al); if (s.metal > 0.5) { s.metal *= 1.0 - al; }
   }
