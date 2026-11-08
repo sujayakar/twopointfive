@@ -2,7 +2,7 @@
 // the guards' probe — asks. The field is one world-wide lattice per voxel size, cut into 8³-cell bricks that exist only where smoke is.
 //   smokePage  (binding 14, r32uint 3D): rows [SPG_TEXY0, …) = the COARSE lattice's bricks: low 31 bits = slot + 1 of a brick with something to fetch (0 = nothing), bit 31 = fine smoke
 //              somewhere inside this coarse brick; rows [0, SPG_N1.y) = the FINE lattice's bricks: slot + 1 or 0; rows [SPG_TEXYM, …) = one word per MACRO cell of 4 × 2 × 4 coarse bricks:
-//              bit x + 4 z + 16 y = that brick's entry is not 0 (smoke.wgsl compose), so one load clears 1.76 × 0.88 × 1.76 m of air.
+//              bit x + 4 z + 16 y = that brick's entry is not 0 (smoke.wgsl compose), so one load clears 2 × 1 × 2 m of air.
 //   smokeAtlas (binding 8): one 10³-texel block per slot = the brick's 8³ cells + one cell of apron copied from its neighbours, so a hardware trilinear fetch inside a brick is seamless.
 //   smoke[8]   (binding 7): BOUNDS only — boxes round wherever smoke is (0‥3 coarse, 4‥7 fine), for the readers that clip a ray before marching it. Density never depends on them.
 //              (smoke[0].readSkip = the solver's knob of that name: 0 = nobody hops, every brick and every step asks the page.)
