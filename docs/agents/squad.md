@@ -1372,3 +1372,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   it no longer goes off. With no menu up nothing outlives the frame. Before, up to a second could stand between what was shown and what was thrown (4 of 337 presses differed, never in the man). No
   switch. CHECK: native, `rust/game_start/tests/throw.rs`, six levels by two seeds: shown is given, 70 presses of 70 (66 of 66 before: not a fault mended; two simpler forms failed it, 33 of 84 and 7 of
   76). Never seen on a GPU, never played.
+- **A 40 mm shell is one plan (2026-11-08; `squad40/p_01.rs plan` → `ShellPlan`).** The man, his shot and why it may not be given are asked each time they are wanted (0.016 ms with one carrier) by the row's
+  `only` and `valid`, the order and, once a frame while its row is lit, by the menu (`follow` → `states[seat].plan`), which is what is drawn. Gone: the answers two askers kept for 0.3 s each. A change of
+  play only where one of those was stale; no switch. CHECK: native, `rust/game_start/tests/orders.rs the_shell_shown_is_the_shell_given`, three seeds. Never seen on a GPU, never played.
