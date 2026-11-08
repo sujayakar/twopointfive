@@ -857,7 +857,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   later place hidden from everybody is still reached). Line (l) was red on the shipped stand for it at the build head and is green; its staging
   no longer believes the second enemy on the pinned man's own spot. MEASURED, the same runs with the mend against without: none of 24 standard
   and none of 40 Hard differs (21 and 30 taken both ways), so it is rare in a scripted fight; the check line is what shows it.
-- **No wary mark over a man of your own** (`src/ui/headmark.ts headMark`, drawn by `overlay.ts`; the maintainer, 10-16, of the yellow dots over
+- **No wary mark over a man of your own** (`rust/game_rules/src/view/marks.rs guard_mark`, drawn by `overlay.ts`; the maintainer, 10-16, of the yellow dots over
   his squad: telegraph a man's state through his animation instead). The row of yellow dots (`awareness`) and the yellow '?' (`search` /
   `suspicious`) are the stealth game's read of a man who may find you out. A teammate under an order runs no senses, so nothing drains his
   number: whatever a stun can (0.6), a frag that left him up (0.92), a charge's backblast (0.6) or the mains going (0.34) wrote stood over him
@@ -868,8 +868,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the score's intensity: a teammate a frag left at 0.92 holds it at 0.32 until his order ends); a teammate's speech bubble kept the wary
   yellow while he was left searching — MENDED 10-17 by the dialogue pass, the same way and with no switch: `cues.rs bubble_tone` (`bubbles.ts bubbleTone` until it moved) gives a living man of the
   player's own the calm tone while he is searching or suspicious (the red of a fight stays his, as his '!' does; a defender's and a civilian's tones as they
-  were); `rust/game_start/tests/radio.rs` `a_line_sounds_as_the_man_is` says so. Check `tools/qa/headmark-check.ts` (`probes.ts headmark`, family `ui`; the same on both
-  stands; `HEADMARK_BREAK=1` puts the marks back and lines 1, 2 and 3 must fail) asks `headMark` what would be drawn over each man of a staged
+  were); `rust/game_start/tests/radio.rs` `a_line_sounds_as_the_man_is` says so. Check `rust/game_start/tests/hud_marks.rs` `the_mark_over_a_man_says_what_he_is` (the same on both
+  stands; the record's `men`) reads what would be drawn over each man of a staged
   room clear; `tools/qa/headmark-page.cjs` reads the marks off the real page on the software adapter. Never seen on a GPU, never played.
 - **A man's condition: a blast that leaves a man standing leaves him HURT** (`src/game/condition.ts`, table `CONDITION {on, hurtPace 1.5, hurtSup
   0.35, hurtSecs 0, ownCalm, looks}`; ON in the page, `?nocondition`; OFF in the module and on the frozen stand, `TPS_CONDITION=1`; in the knob registry
@@ -892,7 +892,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   score's intensity up for the mission) — with the switch off it counts it as before. Saves: `hurtAt` is an optional key written only for a
   hurt man, so an older save loads and a save with nobody hurt is byte for byte what it was. The panel: `condition ▸ you hurt · Reyes folded
   hurt` (`Game.conditionSummary()`). HOW IT SHOWS is the poses' (docs/agents/anim.md, "A man's condition on the figure"), and with them on a
-  stunned teammate's '✹' is gone from the HUD (`headmark.ts`: `CONDITION.on` and `MOVES.on` and `MOVES.dazzle`; a defender keeps his; headmark-check
+  stunned teammate's '✹' is gone from the HUD (`view/marks.rs`: `CONDITION.on` and `MOVES.on` and `MOVES.dazzle`; a defender keeps his; marks.rs
   line 3b). Checks: `tools/qa/condition-check.ts` (`probes.ts condition`, which also runs `condition-pose`; twelve lines — off, on, the fold's
   seconds unchanged, pace through followPath / stepAlongPath, the player's sprint, spread and the gap, one round still downs each of the three
   while hurt, god mode, the score, a checkpoint, who is not hurt, the registry; `CONDITION_BREAK=1` leaves the switch off and eight lines must

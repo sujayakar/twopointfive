@@ -6,7 +6,7 @@
 //       lands exactly on the cursor's bearing; the time it took is printed
 //   (2) the pistol swings faster than the rifle, empty hands faster than the pistol
 //   (3) a small correction (10°) still lands in a quarter second
-//   (4) the CIRCLE (aimGunPoint) trails the cursor's point through the swing and is the cursor's point, to the bit, once it has landed
+//   (4) the CIRCLE (game.view.aim.ring) trails the cursor's point through the swing and is the cursor's point, to the bit, once it has landed
 //   (5) a round fired mid-swing goes where the circle is, not where the cursor is; a round fired once it has landed goes at the cursor as the build's did
 //   (6) a sprint drives his facing itself: nothing is weighed, the circle is the cursor's, and the swing afterwards starts from rest
 //   (7) a checkpoint taken mid-swing carries the swing: the frames after a load are the frames without one
@@ -24,7 +24,8 @@ const ROOT = resolve(import.meta.dir, '../..');
 export async function aimweightCheck(): Promise<boolean> {
   const { stage, eventTap } = await import('./fn2000-probes.ts');
   const seeded = (a: number) => () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-  const { AIMWEIGHT, aimGunPoint, aimGunOn } = await import(`${ROOT}/src/game/aimweight.ts`);
+  const { AIMWEIGHT } = await import(`${ROOT}/src/game/aimweight.ts`);
+  const aimGunPoint = (g: any) => g.view.aim.ring?.at ?? null, aimGunOn = (g: any) => !g.view.aim.ring?.trail;   // (what the ring is told)
   const { handlingOf } = await import(`${ROOT}/src/game/weapons.ts`);
   const DT = 1 / 60; let all = true; const BREAK = process.env.AIMWEIGHT_BREAK === '1';
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
@@ -88,7 +89,7 @@ export async function aimweightCheck(): Promise<boolean> {
         `half turn: rifle ${s1.secs.toFixed(2)} s · pistol ${sP.secs.toFixed(2)} s (fastest ${sP.top.toFixed(2)} rad/s) · empty hands ${sB.secs.toFixed(2)} s (fastest ${sB.top.toFixed(2)} rad/s)`); }
     // (6) a sprint is not weighed
     { settle(AHEAD); input.keys.add('ShiftLeft'); input.keys.add('KeyD'); let weighed = 0;
-      for (let i = 0; i < 30; i++) { W.cursorAt(BEHIND); W.step(DT); if (aimGunPoint(game)) weighed++; }
+      for (let i = 0; i < 30; i++) { W.cursorAt(BEHIND); W.step(DT); if (pl.aimw.live) weighed++; }
       input.keys.delete('ShiftLeft'); input.keys.delete('KeyD'); const sprinted = Math.hypot(c.pos[0] - AT[0], c.pos[2] - AT[2]);
       W.cursorAt(BEHIND); W.step(DT);
       game.teleportPlayer(AT); hold(AHEAD, 150);

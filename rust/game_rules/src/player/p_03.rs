@@ -576,15 +576,15 @@ pub fn wall_take_yaw(g: &mut crate::game::Game, pl: PlayerId) -> bool {
 }
 
 /// Where the can he is aiming will come to rest: the arc's first touch bounces and rolls on. Read only. (player.ts throwRest)
-pub fn throw_rest(g: &mut crate::game::Game) -> Option<crate::player::ThrowRest> {
-    let pl = g.player;
+pub fn throw_rest(world: &mut crate::ask::WorldAsk, pl: PlayerId) -> Option<crate::player::ThrowRest> {
+    let g = world.shared();
     let (from, v0) = match &g.pl[pl].throw_preview {
         Some(sol) if !sol.points.is_empty() => (sol.points[0], sol.v0),
         _ => return None,
     };
     if !(g.pl[pl].throw_held || (!g.pl[pl].holstered && crate::game::player_canister_sel(g, pl).is_some())) { return None; }
     let kind = g.pl[pl].held_kind;
-    let rest = crate::frag::rest_of_throw(g, kind, from, v0);
+    let rest = crate::frag::rest_of_throw(world, kind, from, v0);
     Some(ThrowRest { at: rest.at, path: rest.path })
 }
 

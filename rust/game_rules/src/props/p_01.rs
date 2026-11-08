@@ -64,7 +64,7 @@ fn turn_row(c: &mut sim::props::Props, r: usize, y: f64) {
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// (props.ts Prop.x)
-pub fn prop_x(g: &mut crate::game::Game, id: PropId) -> f64 {
+pub fn prop_x(g: &crate::game::Game, id: PropId) -> f64 {
     let s = cols_read(g);
     s.x[row(s, id)]
 }
@@ -78,7 +78,7 @@ pub fn prop_set_x(g: &mut crate::game::Game, id: PropId, v: f64) {
 }
 
 /// (props.ts Prop.z)
-pub fn prop_z(g: &mut crate::game::Game, id: PropId) -> f64 {
+pub fn prop_z(g: &crate::game::Game, id: PropId) -> f64 {
     let s = cols_read(g);
     s.z[row(s, id)]
 }

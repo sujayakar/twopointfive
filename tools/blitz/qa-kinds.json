@@ -136,9 +136,6 @@
 "OWNBLOW.on=false",
 "HANDWORK.on=false"
 ],
-"headmark": [
-"OWNBLOW.on=false"
-],
 "inhand": [
 "FOG.cone=true",
 "INHAND.on=false"
@@ -590,7 +587,6 @@
 "close-duo": "iv-b",
 "close-grab": "iii",
 "close-held": "iii",
-"close-marks": "iii",
 "close-melee": "iii",
 "close-mode": "iii",
 "close-offer": "iii",
@@ -825,7 +821,6 @@
 "he40-burst": "iii",
 "he40-dud": "iii",
 "he40-quiet": "iii",
-"headmark": "0",
 "held-leader": "iii",
 "heldclicks": "iv-a",
 "heldshut": "iii",

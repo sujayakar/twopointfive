@@ -390,16 +390,15 @@ pub fn sticky_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         let key = device + CAM_KEY + js::rem(c.id, 4096.0) * 2.0;
         let b0 = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: c0, h: body_h, yaw: Some(yaw), albedo: Some(v3::copy(body())), flags: Some(flags), mkey: Some(key), ..Default::default() });
         out.push(b0.into());
-        let paint = if sending(g, id) { lens_live() } else { lens() };
+        let paint = if sending(g, g.player, id) { lens_live() } else { lens() };
         let b1 = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: c1, h: lens_h, yaw: Some(yaw), albedo: Some(v3::copy(paint)), flags: Some(flags), mkey: Some(key + 1.0), ..Default::default() });
         out.push(b1.into());
     }
 }
 
 /// Is this camera sending this frame: one of the newest `live` stuck, and the fog took it as an eye. (stickycam.ts sending)
-pub fn sending(g: &mut crate::game::Game, c: StickyCamId) -> bool {
+pub fn sending(g: &crate::game::Game, pl: PlayerId, c: StickyCamId) -> bool {
     let live = if crate::fogofwar::fog_of_war_active(g) {
-        let pl = g.player;
         let cams = StickyLivePl { cams: g.pl[pl].cams.clone() };
         sticky_live(g, &cams)
     } else {
@@ -407,6 +406,12 @@ pub fn sending(g: &mut crate::game::Game, c: StickyCamId) -> bool {
     };
     let eye = EYE_ID + js::rem(g.tab.stickycam_sticky_cam[c].id, 50.0);
     live.contains(&c) && g.fog_of_war.eyes.iter().any(|e| e.id == eye)
+}
+
+/// A small lens on each of his own stuck cameras while the fog is live. (stickycam.ts stickyMarks)
+pub fn sticky_marks(g: &crate::game::Game, pl: PlayerId) -> Vec<crate::view::CamMark> {
+    if !g.k.sticky.on || !g.k.sticky.mark || !crate::fogofwar::fog_of_war_active(g) { return Vec::new(); }
+    g.pl[pl].cams.iter().filter(|&&c| g.tab.stickycam_sticky_cam[c].vel.is_none()).map(|&c| crate::view::CamMark { at: cam_lens(g, c), sends: sending(g, pl, c) }).collect()
 }
 
 /// A camera of his is still in the air. (stickycam.ts stickyFlying)

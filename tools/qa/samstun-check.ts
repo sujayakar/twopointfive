@@ -26,7 +26,8 @@ const ROOT = resolve(import.meta.dir, '../..');
 
 export async function samstunCheck(): Promise<boolean> {
   const { rig } = await import('./frag-probes.ts');
-  const { SAMSTUN, samBlind, samStaggered, samRooted, staggerPlayer } = await import(`${ROOT}/src/game/samstun.ts`);
+  const { SAMSTUN, samStaggered, samRooted, staggerPlayer } = await import(`${ROOT}/src/game/samstun.ts`);
+  const samBlind = (g: any): number => g.view.marks.blind;   // (what the HUD is told)
   const { startGrab } = await import(`${ROOT}/src/game/player.ts`);
   const { readFileSync } = await import('node:fs');
   const { FRAG, FRAG_LOG, exposure } = await import(`${ROOT}/src/game/frag.ts`);

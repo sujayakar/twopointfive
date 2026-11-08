@@ -1,4 +1,4 @@
-// THE MARK OVER A MAN'S HEAD ON THE REAL PAGE (src/ui/headmark.ts, drawn by src/ui/overlay.ts): headless Chromium on the software WebGPU adapter
+// THE MARK OVER A MAN'S HEAD ON THE REAL PAGE (game.view.marks, drawn by src/ui/overlay.ts): headless Chromium on the software WebGPU adapter
 // (tools/qa/page-look.cjs's recipe), the four-man room clear staged, nobody's senses on.
 //   PORT=5241 node tools/qa/headmark-page.cjs [outDir]        (a dev server on that port: PORT=5241 bun run tools/serve.ts)
 //   seen   every living teammate put in a fight: a red '!' is drawn for each (their marks are on the screen and the page draws them)

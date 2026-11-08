@@ -45,16 +45,16 @@ fn lose_path(g: &mut Game, gd: GuardId) {
 }
 
 /// Stacked: is the first WALLSNAP.bore of the rifle's line in a wall?   (player.ts stackInWay)
-pub fn stack_in_way(g: &mut crate::game::Game) -> bool {
-    let p = g.player;
+pub fn stack_in_way(a: &mut impl crate::ask::Asker, p: PlayerId, ap: V3) -> bool {
+    let g = a.game();
     let c = g.pl[p].ch;
-    let (ap, pos) = (g.aim_point, g.ch[c].pos);
+    let pos = g.ch[c].pos;
     let (dx, dz) = (ap[0] - pos[0], ap[2] - pos[2]);
     let d = m::hyp2(dx, dz);
     let hit = if d > 0.25 {
         let h = if g.pl[p].crouch { 0.85 } else { 1.3 };
         let bore = g.k.wallsnap.bore;
-        crate::scene_collision::raycast(g, [pos[0], h, pos[2]], [dx / d, 0.0, dz / d], bore)
+        a.ray([pos[0], h, pos[2]], [dx / d, 0.0, dz / d], bore)
     } else {
         None
     };
@@ -65,8 +65,9 @@ pub fn stack_in_way(g: &mut crate::game::Game) -> bool {
 }
 
 /// His gun cannot get a round out this frame (the aim ring's bar). Read only.   (player.ts gunShut)
-pub fn gun_shut(g: &mut crate::game::Game) -> bool {
-    let p = g.player;
+pub fn gun_shut(world: &mut crate::ask::WorldAsk, seat: &crate::seats::SeatRef) -> bool {
+    let g = world.shared();
+    let p = seat.player;
     let c = g.pl[p].ch;
     if g.pl[p].holstered { return false; }
     if crate::gunwall::gun_wall_is(g, c) { return true; }
@@ -74,7 +75,7 @@ pub fn gun_shut(g: &mut crate::game::Game) -> bool {
         if w.kind == Some(WallHoldKind::Stack) {
             if yes(w.lean_want) || un(w.lean) > 0.0 || un(w.lean_dwell) > 0.0 {
                 if un(w.lean) < 1.0 { return false; }
-            } else if w.settle >= 1.0 && stack_in_way(g) {
+            } else if w.settle >= 1.0 && stack_in_way(world, p, seat.aim_point) {
                 return true;
             }
         }
@@ -87,7 +88,7 @@ pub fn gun_shut(g: &mut crate::game::Game) -> bool {
         None => v3::add(g.ch[c].pos, [0.0, 1.4, 0.0]),
     };
     let muzzle = g.ch[c].muzzle;
-    crate::gunwall::wood_between(g, a, muzzle)
+    crate::gunwall::wood_between(world, a, muzzle)
 }
 
 /// `hold()` of stackUp: the fire sites' 'still coming into the hands' beat.
@@ -123,7 +124,7 @@ pub fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bool {
             let w = g.pl[p].wall.unwrap();
             truthy_opt(w.owed) && !(un(w.up) > 0.0)
         };
-    if stack_in_way(g) {
+    if { let ap = g.aim_point; stack_in_way(g, p, ap) } {
         let w = w!(g, p);
         w.up = Some(0.0);
         w.rise = Some(0.0);

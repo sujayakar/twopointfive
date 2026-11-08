@@ -501,9 +501,6 @@ pub fn close_took(g: &mut crate::game::Game, gd: GuardId, what: crate::close::Cl
     note(g, gd, what, Some(kind), Some(bearing), Some(dist));
 }
 
-/// The windows to draw: none on the page, CLOSE.marks being off. (close.ts closeMarks)
-pub fn close_marks(g: &crate::game::Game) -> Vec<crate::close::CloseMark> { Vec::new() }
-
 /// A man calm enough to sit. (close.ts calm)
 pub fn calm(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let m = &g.gd[gd];
