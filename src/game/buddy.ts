@@ -39,7 +39,7 @@ export const BUDDY = {
    *  rebuild/telegraphing/buddy.md */
   on: false,
   /** a man POSTED alone calls too, once a loud thing has reached his own ears inside `loudSecs` (false = only a man whose room mates are down or gone) */
-  staged: false, loudSecs: 30,
+  loudSecs: 30,
   /** s alone before he calls · s since the team was last in his sight before he may (a man in a fight does not radio for company) */
   beat: [2, 4.5] as [number, number], quiet: 3,
   /** s since a loud thing last reached his ears from INSIDE his room or from one of its doors (inside `calmM` of it) before he may call: a room being hit is a

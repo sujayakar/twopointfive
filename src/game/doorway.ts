@@ -38,9 +38,7 @@ export const DOORMANNERS = {
   /** THE switch: off = the build before this file, by run digest */
   on: true,
   /** its three rules, each off = that rule as it was (the head comment) */
-  pass: true, stand: true, fight: true,
-  /** STAND, the half of it that costs something: a place in the file also keeps off where a leaf swings (the file stands a metre or two longer by a door) */
-  swing: true,
+  stand: true, fight: true,
   /** metres of his walk ahead looked along for a frame; the strip either face of the frame line that is 'the opening'; how far short of the line a held man stops */
   reach: 3.0, half: 0.45, throat: 1.25,
   /** following a friend through: full pace at `gap` metres from him, none at `gapMin`; how hard he brakes for it (m/s²) */
@@ -77,7 +75,7 @@ export const DOORMANNERS = {
    *  shoots — straight down, out to `laneM` metres or the first wall; as wide as the opening and `laneOut` past each jamb, wider by `laneFlare` a metre of depth
    *  (what a man well back on the far side sees through it). No place in the file is in one, Sam stopped or walking: it is stepped square off it, `laneClear`
    *  past its edge, on the side its man is on (a place with no floor off the lane stays on the trail). Off = places only keep off the strip and the swing */
-  lane: true, laneAjar: 0.6, laneM: 6, laneOut: 0.3, laneFlare: 0.12, laneClear: 0.15, laneApart: 0.7, laneMove: true, laneLeaf: true,
+  lane: true, laneAjar: 0.6, laneM: 6, laneOut: 0.3, laneFlare: 0.12, laneClear: 0.15, laneApart: 0.7, laneLeaf: true,
   /** STAND, on the walk to the next door: a door standing open by the way (`laneAjar`), with floor beyond it the team has not been on, is the REAR man's to
    *  watch for the whole walk to a stack (cover.ts: the last man of the file, the last two of four — at a walk, his gun on it over his shoulder or walking
    *  backwards past it), not only for his last steps to the mark. Off = on the walk every gun is forward, as it was */
@@ -113,7 +111,7 @@ export const DOORMANNERS = {
    *  left on after an entry — measured on the barracks it loses the entry (11 runs won of 12 → 4: a corner point behind an open leaf is cover). SHORT (orders.ts
    *  restShort): a man who cannot get to his mark does not give it up standing in a strip or a swing, and the
    *  seconds the PASS gate holds him (`heldCap` of them an order) are not counted toward 'stuck'. Each off = as it was */
-  restClear: true, restSecs: 1.0, markClear: true, podClear: false, clearM: 1.4, shortClear: true, heldCap: 12,
+  restSecs: 1.0, markClear: true, podClear: false, clearM: 1.4, heldCap: 12,
   /** OWN LEAF (orders.ts stackPosts): a door whose own leaf stands open across the face the stack is ordered on — every mark on its hinge side cut off from
    *  the doorway's front by it — is no longer refused 'no room on that door': where that was the answer the marks are asked again with that one leaf left
    *  out, which gives the marks the door has when shut. Off = the leaf is a wall to its own stack, as it was.

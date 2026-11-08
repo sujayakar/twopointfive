@@ -586,7 +586,7 @@ export async function kitSlots() {
     const stats0 = { ...game.mission.stats }; msgs.length = 0;
     for (let f = 0; f < 10; f++) { W.cursorAt(v3.add(B.char.pos, [0, 1.4, 0])); W.step(DT); }
     const row = game.hover?.kind === 'guard' ? game.hover.line2 : '(no guard row)';
-    const two = CLOSE.lethal;   // (the blow is the player's choice: the left click is the knife and the RIGHT click the knockout this line is about — close.ts)
+    const two = true;   // (the blow is the player's choice: the left click is the knife and the RIGHT click the knockout this line is about — close.ts)
     W.cursorAt(v3.add(B.char.pos, [0, 1.4, 0])); input.clicked |= two ? 4 : 1; for (let f = 0; f < 60; f++) W.step(DT);
     for (let f = 0; f < 5; f++) { W.cursorAt(v3.add(B.char.bones.hips ?? B.char.pos, [0, 0.2, 0])); W.step(DT); }
     const bodyRow = game.interactables.find((it: any) => it.kind === 'body' && it.guard === B)?.line1 ?? '(no body marker)';

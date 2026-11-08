@@ -43,15 +43,6 @@ import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 export const NVG = {
   /** off = the team as it was: no goggles, lights by guards.ts LIGHTS alone */
   on: true,
-  /** the team follows Sam's own kit: his light on frees theirs, his goggles down with his light off puts them dark (off = they never look at what he does) */
-  lead: true,
-  /** with no lead to follow they stay dark until the team is compromised (off = the light rule has them whenever Sam's goggles are up) */
-  own: true,
-  /** a man HUNTING the team in a teammate's sight counts as compromised by himself. false (the rescue's numbers, 10-06): only what is LOUD does — gunfire, a
-   *  charge, a boot in a teammate's ears, or an alarm; one man who has seen them is one man to shoot through the tube, and the rest of the floor does not know
-   *  yet. true = as it was: the lights came free the moment he was seen to be alert — onto a man behind a pane nobody could shoot through, who fired blind
-   *  into the glass at the glare and brought the whole floor up with the team strung down a corridor */
-  huntFrees: false,
   /** s of quiet — nothing loud heard, no alarm (nobody seen hunting: huntFrees) — before a compromised team goes dark again */
   quietSecs: 30,
   /** s Sam's light counts as on after it was last switched on in his hands (changing guns, a holster and a draw put it away for a moment) */

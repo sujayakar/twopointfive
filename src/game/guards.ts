@@ -78,7 +78,7 @@ import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 /** A/B switches for the AI passes (the QA probes flip them to print before / after off the same build; play never touches them): motion acuity in the sight
  *  gain, the search that deals hide spots and reads the renderer's light (off: the old sweep-and-wander), threshold discipline at doorways (off: straight through). */
-export const AI_TUNE = { motionAcuity: true, darkSearch: true, pieing: true };
+export const AI_TUNE = { motionAcuity: true, pieing: true };
 
 // ------------------------------------------------------------ guards
 /** HOW A 'glass' EVENT REACHES AN EAR (hearingCheck below, civilians.ts): the usual propagation from the event's own point — and, where the event carries the
@@ -418,20 +418,12 @@ export function standoffSummary(g: Game): string { return crossToRust('standoffS
 export function canSee(g: Game, gd: Guard): { visible: boolean; dist: number; inCone: boolean } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('canSee', undefined, [g, gd]); if (__r !== RUST_PASS) return __r as any; } } g = viewOfBody(g, gd.char); return canSeeChar(g, gd, g.player.char, true); }   // (the player he has in mind: seats.ts)
 /** canSee against any man `pc` — Sam (`isPlayer`: his sandbox invisibility, his down flag, the smoke marched between this man's eye and HIS chest) or an AI man of a
  *  side hostile to this one (teams: alive; the same cone, near field, range and line of sight off the same bones; no smoke term — the probe's segment is to Sam
- *  only — and the magnesium in his eyes hides everybody). One test, so an operative sees a hostile exactly as a guard sees Sam — but for one thing, in a room
- *  fight only: a man with his long gun in the shoulder ALSO sees an AI man through the same eye laid along his aim, its cone ROOMFIGHT.sightsDeg (roomfight.ts
- *  ROOMFIGHT.sights for the teammates, on; sightsFoe for every other side, off). Sam is never read through it. */
+ *  only — and the magnesium in his eyes hides everybody). One test, so an operative sees a hostile exactly as a guard sees Sam. */
 export function canSeeChar(g: Game, gd: Guard, pc: Character, isPlayer: boolean): { visible: boolean; dist: number; inCone: boolean } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('canSeeChar', undefined, [g, gd, pc, isPlayer]); if (__r !== RUST_PASS) return __r as any; } }
   const eye = gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.65, 0]);
   const look = v3.normalize(v3.lerp(gd.char.chestDir, gd.char.headDir(), 0.5)), E: Eye = { pos: eye, look, range: reachFor(g, gd, pc, isPlayer, eye), halfDeg: GUARD_EYE.halfDeg, nearM: GUARD_EYE.nearM, nearDeg: GUARD_EYE.nearDeg };   // (reachFor: a man standing in light is seen from past `range`; `range` itself otherwise)
   const through = eyeThrough(gd);   // (FOG.mates: a teammate's eye passes the thin things the fog's lines pass)
-  let r = eyeContact(g, E, pc, isPlayer, g.time < gd.dazzledUntil || pairGripped(g, gd) || dozeAsleep(gd), gd.smokeTrans, through);   // dazzled: eyes full of magnesium (pairorders.ts: or a teammate's hands on him; doze.ts: or asleep in his chair)
-  if (!r.inCone && r.dist < E.range && !isPlayer && (gd.team === 'operative' ? ROOMFIGHT.sights : ROOMFIGHT.sightsFoe) && fightLive(g)) {   // (roomfight.ts ROOMFIGHT.sights: a long gun in the shoulder and level along his aim — he ALSO sees what is along his sights, the same eye laid on the aim)
-    const c = gd.char, ax = Math.sin(c.gunYaw), az = Math.cos(c.gunYaw);   // (gunYaw: aimYaw — or, turning under weight, where the gun has got to)
-    let lv = c.gunDir[0] * ax + c.gunDir[2] * az;   // how level along his aim the bore lies, in plan
-    const lift = c.anim.sightsLift; if (lift > 0) { const gh = Math.hypot(c.gunDir[0], c.gunDir[2]); if (gh > 1e-6) lv *= Math.cos(lift) - c.gunDir[1] / gh * Math.sin(lift); }   // (character.ts MOVES.entryEyes: the entry dip's own pitch put back — the question asked of his gun line as if it were not down past a friend; 0 unless that switch is on and he is dipped)
-    if (c.anim.longShown === 'shoulder' && !c.anim.atWell && lv > SIGHTS_COS) { E.look = [ax, 0, az]; E.halfDeg = Math.min(E.halfDeg, ROOMFIGHT.sightsDeg); r = eyeContact(g, E, pc, false, g.time < gd.dazzledUntil || pairGripped(g, gd) || dozeAsleep(gd), gd.smokeTrans, through); }
-  }
+  const r = eyeContact(g, E, pc, isPlayer, g.time < gd.dazzledUntil || pairGripped(g, gd) || dozeAsleep(gd), gd.smokeTrans, through);   // dazzled: eyes full of magnesium (pairorders.ts: or a teammate's hands on him; doze.ts: or asleep in his chair)
   if (!isPlayer && r.visible && pairSmoke(g, gd.char, pc) < 0.3) r.visible = false;   // an AI man lost in a plume, by the same line as Sam (roomfight.ts marches the pair's segment; 1 = clear wherever it does not)
   return r;
 }
@@ -478,8 +470,6 @@ export function eyeThrough(gd: Guard): number { return gd.team === 'operative' ?
 /** …and that man's own line to a point, asked bare (roomfight.ts: which teammate has a line to the man who fired, to a mate's target; the lost-behind-
  *  something line below): is anything his eye stops at between `a` and `b`. With the row off this is col.segmentBlocked(a, b), as each caller had it. */
 export function eyeBlocked(g: Game, gd: Guard, a: Vec3, b: Vec3): boolean { return crossToRust('eyeBlocked', undefined, [g, gd, a, b]) as any; }
-/** cos 30°: how level along his aim (in plan, the bore's own pitch counted) a shouldered long gun must lie for its owner's eyes to be on its sights */
-const SIGHTS_COS = 0.866;
 /** An eye — a man's (canSeeChar fills it off his bones) or a device's (devices.ts: a camera's lens): where it is, the unit direction it looks along, how far it
  *  reaches, its half-angle in plan (and the wider near-field one inside `nearM`), and — a lens only — the half-angle in ELEVATION about the look direction's
  *  own pitch (`vHalfDeg`; a man's cone is a flat wedge, floor to ceiling, and leaves it undefined). */
