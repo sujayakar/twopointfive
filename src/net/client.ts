@@ -11,12 +11,11 @@
 //   were on it: one about a tick this client had sent nothing past (it was standing its game, its tab slept, its beat hitched) is not acted on. Beats that come
 //   in a bunch (two ticks of one drawn frame) go to the ticks that follow, up to NET.burst ahead; past that a beat is held, its edges riding the next record.
 //   What was sent and is not confirmed yet is kept (`pending`): the records a prediction of the seat's own man plays ahead of the confirmed world.
-import type { PlayerCmd } from '../game/cmd';
 import type { Hello, ToClient, Welcome, WireCmd, NetState, Outcome } from './wire';
-import { NET, netText, netParse, fromWire, toWire, heldOf, restOf, withEdges, cleanName } from './wire';
+import { NET, netText, netParse, heldOf, restOf, withEdges, cleanName } from './wire';
 
 /** the host's game as the client drives it: one confirmed tick on every seat's record, and the chained state word after the last */
-export interface ClientHost { step(cmds: PlayerCmd[]): void; word(): string; /** the wider word after the last word tick (step.ts netWatch), where the host has one */ watch?(): string | null; }
+export interface ClientHost { step(cmds: WireCmd[]): void; word(): string; /** the wider word after the last word tick (step.ts netWatch), where the host has one */ watch?(): string | null; }
 
 export class NetClient {
   welcome: Welcome | null = null;
@@ -55,7 +54,7 @@ export class NetClient {
 
   constructor(private send: (text: string) => void, readonly who: { game: string; build: string; key?: string; name?: string }) {}
 
-  /** the host has stood its game from the welcome's recipe: a seat's fight does not start before */
+  /** the host has stood its game from what the welcome carries: a seat's fight does not start before */
   ready(): void { this.send(netText({ k: 'ready' })); }
   hello(): void { const m: Hello = { k: 'hello', proto: NET.proto, build: this.who.build, game: this.who.game, ...(this.who.key !== undefined ? { key: this.who.key } : {}), ...(this.who.key !== undefined && this.who.name ? { name: this.who.name } : {}) }; this.send(netText(m)); }   // (a watcher says no name: nobody is shown one)
 
@@ -83,7 +82,7 @@ export class NetClient {
 
   /** one beat of the host's own clock (1 / hz) at `now`: `cmd` = the record its player made this beat (null: a watcher, or nothing to send). While the server
    *  waits for the other seat, and before its first live tick is heard, nothing is sent. */
-  beat(cmd: PlayerCmd | null, now: number): void { if (cmd) this.out(toWire(cmd), now); }
+  beat(cmd: WireCmd | null, now: number): void { if (cmd) this.out(cmd, now); }
   /** the host's hands are off (a card is up over its game, its tab is hidden): one record that holds nothing and says so (wire.ts restOf), so the server
    *  does not hold the seat's last keys down for as long as that lasts. Nothing is sent when nothing was held */
   rest(now: number): void { const l = this.last; if (l && (l.k.length || l.b)) this.out(restOf(l), now, true); }
@@ -107,7 +106,7 @@ export class NetClient {
       const row = this.queue.shift()!, wire = row.c.map((c, i) => c === 0 ? heldOf(this.prev[i]!) : c);
       for (let i = 0; i < wire.length; i++) this.prev[i] = wire[i];
       if (this.seat >= 0 && row.c[this.seat] === 0) this.heldRun++;
-      host.step(wire.map(fromWire));
+      host.step(wire);
       const t = this.confirmed++; n++;
       while (this.pending.length && this.pending[0][0] <= t) this.pending.shift();
       if (row.w !== undefined) { const mine = host.word(); if (mine === row.w) this.wordsOk++; else if (!this.bad) { this.bad = { t, server: row.w, mine }; this.send(netText({ k: 'lost', t, w: mine })); } }
