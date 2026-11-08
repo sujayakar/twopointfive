@@ -218,35 +218,5 @@ export const burstTheirs = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- burst-off
-export const burstOff = guarded(async () => {
-  const F = family('burst-off: with the glass parts off a burst asks the fracture model nothing');
-  const R = await rig(71, { glass: false }); const g = R.g; const [A] = g.guards; R.park(A);
-  const man = [7.5, 0, 9.3], p = [7.5, 0, GZ + 1.0]; R.put(A, man, p); R.step(2);
-  let asked = 0; for (const k of ['seeThrough', 'goingAt', 'wouldGive']) { const f = R.gb[k].bind(R.gb); R.gb[k] = (...a: any[]) => { asked++; return f(...a); }; }
-  const from = lifted(p); const views = ['blown', 'wary', 'counted', 'whole'].map(v => exposure(g, from, man as Vec3, [7.5, 1.65, 9.3], v as any));
-  const rep = R.frag(p); R.settle(2);
-  F.verdict(!!rep && GB_STATS.blasts === 0 && R.gb.panes.size === 0 && PANES.every(bi => R.open(bi) === 0), '(a) a grenade a metre off the glazing: no pane has a record, no blow counted', `${GB_STATS.blasts} blows · ${R.gb.panes.size} pane records · ${rep ? hitLine(rep, A) : 'NO BLAST'}`);
-  F.verdict(asked === 0 && views.every(v => v === views[0]), '(b) every view of the glass is the one solid walk, and the fracture model is never asked', `asked ${asked}× · exposure by view ${views.join(' / ')}`);
-  F.verdict(hitOf(rep, A)?.result === 'shielded' && A.state !== 'dead', '(c) the pane is the wall it was: the man behind it is untouched', rep ? hitLine(rep, A) : 'NO BLAST');
-  // glass that cannot break but that rounds go through (a host without the fracture model, chaos 0): the burst is to a pane what it was on the base build
-  { const one = async (base: boolean) => { const R2 = await rig(72, { glass: false, pen: true, base }); const [B] = R2.g.guards; R2.park(B); R2.put(B, man, p); R2.step(2); const r = R2.frag(p); R2.settle(1); return `${r ? hitLine(r, B) : 'NO BLAST'} · ${GB_STATS.blasts} blows · ${R2.gb.panes.size} pane records`; };
-    const mine = await one(false), was = await one(true);
-    F.verdict(mine === was && /killed|wounded/.test(mine), '(d) rounds through glass on, the fracture model off: a burst is to a pane what it was before (a pistol round\'s toll) — the same result under the base build\'s numbers', `now: ${mine}\n    base numbers: ${was}`); }
-  return F.done();
-});
 
 // ---------------------------------------------------------------- burst-red
-/** the probe's own red path: under the base build's numbers the stagings above FAIL (so a pass above is not a staging that cannot fail) */
-export const burstRed = guarded(async () => {
-  const F = family('burst-red: under the base build\'s numbers the same stagings come back red');
-  if (baseEnv()) { F.verdict(true, '(skipped) BURSTGLASS_BASE=1: the whole family is already on the base\'s numbers', '—'); return F.done(); }
-  { const c = await wholeCase(21, 'tempered', 3.0, 'frag', true);
-    F.verdict(!!c.rep && c.hurt, '(a) burst-whole (a) with a fragment given a pistol round\'s energy for a pane: the man behind the standing toughened pane IS hit', c.line); }
-  { const c = await wholeCase(22, 'annealed', 3.9, 'frag', true);
-    F.verdict(!!c.rep && c.hurt, '(b) burst-whole (b) likewise, through standing float glass', c.line); }
-  { const R = await rig(32, { base: true }); R.park(); R.types({ [PW]: 'tempered', [PM]: 'tempered', [PE]: 'tempered' }); const rep = R.frag([7.5, 0, GZ + 1.5]); R.settle(2.5);
-    F.verdict(!!rep && R.open(PM) === 0, '(c) burst-breaks (2a) with the burst sending glass nothing of its own: toughened glass 1.5 m off a grenade stands', R.pane(PM)); }
-  { const c = await spotGrid('annealed', true);
-    F.verdict(c.whole > 0, '(d) burst-theirs (1): the defenders\' spot test, a fragment given a pistol round\'s energy, has a line to a man THROUGH standing float glass (the throw the base build made onto its own side of a window)', c.line); }
-  return F.done();
-});

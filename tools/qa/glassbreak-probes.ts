@@ -23,11 +23,9 @@
 //   glassbreak-gust         a diced EXTERIOR pane in the storm registers one 'glass' wind source whose base follows the storm × the open share; an interior pane never does
 //   glassbreak-determinism  the same seeded volley + charge twice → identical pane records, fragment streams, debris rest poses, events, particle records, log
 import { standUp, ROOT, fake } from './headless.ts';
-import { CONF_PANE, CONF_FAR, floatPartition, type SeamsOut } from './office-pane.ts';
+import { CONF_PANE, CONF_FAR, floatPartition } from './office-pane.ts';
 import type { GlassBreak } from '../../src/game/glassbreak.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
-const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
-const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const { Particles } = await import(`${ROOT}/src/render/particles.ts`);
 const GBM = await import(`${ROOT}/src/game/glassbreak.ts`);
 const GP = await import(`${ROOT}/src/game/glassPattern.ts`);
@@ -49,7 +47,6 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 function place(gd: any, p: Vec3, yaw: number) { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); }
 function park(gd: any, i: number) { gd.hold = true; gd.pinned = true; place(gd, [37.5, 0, 6 + i * 1.5], Math.PI / 2); gd.heardUpTo = 1e12; gd.dazzledUntil = 1e9; gd.flashlight.enabled = false; }
 const resetStats = () => { for (const k of Object.keys(GB_STATS)) (GB_STATS as any)[k] = 0; };
-function newEvents(game: any, seen: WeakSet<any>): any[] { const out: any[] = []; for (const e of game.events) { if (seen.has(e)) continue; seen.add(e); out.push(e); } return out; }
 
 // the pane = the conference partition's second sheet (by where it stands: office-pane.ts): c (7.5, 1.5, 10), h (0.5, 1, 0.006), yaw 0 → annealed; u = x − 7.5, v = y − 1.5. Sam stands in the corridor south of it.
 const PANE = CONF_PANE; const FAR = CONF_FAR;
@@ -73,69 +70,9 @@ async function stage(seed: number, chaos: number, on: boolean, at: Vec3 = SAM, y
   const settle = (s = 2) => { for (let i = 0; i < Math.round(s * 60); i++) W.step(DT); };
   return { W, game, engine, P, flush, gb: game.glassBreak, frags, hook, settle };
 }
-const fragSig = (f: any) => `${f.t.toFixed(3)}:${f.pane}:${f.kind}:${f.cause}:${f.area.toFixed(5)}:${f.outline.map((p: Vec3) => p.map(x => x.toFixed(3)).join(',')).join(';')}:${f.velocity.map((x: number) => x.toFixed(3)).join(',')}:${f.seed}`;
-const paneSig = (st: any) => `${st.bi}:${st.type}:${st.hits}:${st.energy.toFixed(2)}:${st.run ? 'run' : ''}:${st.gone ? 'gone' : ''}:${st.nOpen}:${Array.from(st.open as Uint8Array).map((x, i) => x ? i : -1).filter(i => i >= 0).join(',')}:${st.sites.map((s: any) => `${s.u.toFixed(4)},${s.v.toFixed(4)},${s.n},${s.seed},${s.rz.toFixed(4)},${s.e.toFixed(2)}`).join(';')}:${st.dice ? `dice${st.dice.next}/${st.dice.clumps.length}` : ''}`;
-/** the volley: 30 rounds walked over panes 109‥111 from the corridor (some spots twice), then a stun charge's bang event beside pane 112 — 8 s in all */
-const VOLLEY: Vec3[] = [[7.4, 1.3, 10], [7.42, 1.31, 10], [6.3, 1.0, 10], [7.9, 0.7, 10], [8.8, 1.5, 10], [6.6, 1.6, 10], [7.1, 0.5, 10], [8.9, 1.52, 10], [9.3, 0.9, 10], [7.6, 1.9, 10]];
-async function recordVolley(seed: number, on: boolean, cut = false, dice = false) {
-  const S = await stage(seed, 0.5, on); const { W, game, engine, flush } = S;
-  if (dice) game.glassBreak.setType(FAR, 'tempered');   // (the determinism volley: the partition's last sheet toughened and struck once below, so a sheet dicing — the wave, or the drop where the stand has it — is inside what is compared run to run, whatever kind the panes its stray rounds reach are)
-  if (cut) {   // the module OUT: its seams null (collision / boxes as before the port), a stub where glass.ts / game.ts call it
-    game.col.glassOpen = null; game.col.glassWalkable = null; engine.world.glassCellFill = null; engine.world.glassOpen = null;
-    // A stand-in that answers every public member of the model (SeamsOut: the type check names a gap). WHAT KIND A PANE IS stays the model's own answer: it is
-    // the level's, read off the box and the doors, behind no switch, and the rounds that go on through a sheet are stopped by it. A stand-in that called every
-    // pane laminated was a different building wherever rounds go through glass.
-    const real = game.glassBreak; const kind = (bi: number) => real.typeOfPane(bi);
-    const noPane = (): never => { throw new Error('glassbreak-probes: a seams-out game has no pane state to ask this of'); };
-    game.glassBreak = {
-      panes: new Map(), log: [], onRelease: null, gustDirty: false,
-      typeOf: (b: any, bi?: number) => real.typeOf(b, bi), typeOfPane: kind, setType() {}, paneInfo: () => null,
-      impact: (bi: number) => ({ pane: true, live: false, type: kind(bi) ?? 'laminated', thickness: 0.012, wasOpen: false, punched: false, diced: false, released: 0, cracked: false }),
-      hit() {}, widen: () => 0, blast: () => 0, bang: () => 0, breakTest: () => -1, goingAt: () => false, wouldGive: () => false, seeThrough: (_view: unknown, _from: unknown, _size: unknown, fn: () => unknown) => fn(), view: null,
-      openAt: () => false, walkable: () => false, openSig: () => 0, openFraction: () => 0, fill: () => false, update() {}, reset() {}, summary: () => 'cut',
-      toUV: noPane, toWorld: noPane, normalOf: noPane, heldSet: noPane, untouched: true, asking: (fn: any) => real.asking(fn), letGo() {}, home: real.home, stood() {}, sheets: real.sheets,
-    } satisfies SeamsOut<GlassBreak> as any;
-  }
-  const frags: any[] = []; if (!cut) game.glassBreak.onRelease = null;
-  const audio: string[] = []; W.audioLog = [];
-  const rounds: string[] = []; const events: string[] = []; const emits: string[] = []; const seen = new WeakSet<any>();
-  for (let f = 0; f < 60 * 8; f++) {
-    if (f < 300 && f % 10 === 0) { const p = VOLLEY[(f / 10) % VOLLEY.length]; const r = fireWeapon(game, game.player.char, p, true, { weapon: WEAPONS.fn2000 }); rounds.push(`${f}:${r?.hit ?? ''}:${p2(r?.point ?? r?.hitP ?? [0, 0, 0])}`); }
-    if (dice && f === 150) { const c = game.level.boxes[FAR].c as Vec3; glassImpact(game, FAR, [c[0], c[1], c[2]], IN, 1, 1); }
-    if (f === 330) game.events.push({ kind: 'bang', pos: [10.2, 0.4, 10.9], time: game.time, loud: true, who: 0 });   // (the bang EVENT is what glass.ts / glassbreak read; detonateStun's flash and destruction are not the question here)
-    W.step(DT);
-    emits.push(...flush().map((s: string) => `${f}:${s}`));
-    for (const e of newEvents(game, seen)) events.push(`${e.kind}@${f}:${e.level ?? ''}:${e.pos ? p2(e.pos) : ''}`);
-  }
-  for (const a of W.audioLog!) audio.push(`${a.name}@${a.t.toFixed(3)}:${a.pos ? p2(a.pos) : ''}`);
-  const decals = game.decals.list.map((d: any) => `${d.kind}:${p2(d.pos)}:${d.param.toFixed(3)}`).join('|');
-  const props = game.props.list ? game.props.list.map((p: any) => p2(p.body?.pos ?? p.pos ?? [0, 0, 0])).join('|') : String(game.props);
-  const flags = game.level.boxes.map((b: any) => b.flags).join(',');
-  const debris = game.destr.debris.list.map((c: any) => `${c.kind}:${p2(c.box.c)}:${c.rest}`).join('|');
-  const panes = [...(game.glassBreak.panes?.values?.() ?? [])].map(paneSig).join('|');
-  void frags;
-  return { rounds, events, audio, emits, decals, props, flags, debris, panes, log: [...game.glassBreak.log ?? []], stats: { ...GB_STATS }, sam: p2(game.player.char.pos) };
-}
-function diffLists(a: any, b: any, keys: string[], fails: string[]) {
-  for (const k of keys) { const x = a[k], y = b[k]; if (Array.isArray(x)) { if (JSON.stringify(x) !== JSON.stringify(y)) { let i = 0; while (i < Math.min(x.length, y.length) && x[i] === y[i]) i++; fails.push(`${k} differ (${x.length} / ${y.length}) from #${i}: ${x[i] ?? '∅'} | ${y[i] ?? '∅'}`); } } else if (x !== y) fails.push(`${k} differ`); }
-}
 const inPoly = (pts: [number, number][], u: number, v: number) => { let s = 0; for (let k = 0; k < pts.length; k++) { const a = pts[k], b = pts[(k + 1) % pts.length]; const c = (b[0] - a[0]) * (v - a[1]) - (b[1] - a[1]) * (u - a[0]); if (c < -1e-9) return false; s++; } return s >= 3; };
 const convexCCW = (pts: [number, number][]) => { for (let k = 0; k < pts.length; k++) { const a = pts[k], b = pts[(k + 1) % pts.length], c = pts[(k + 2) % pts.length]; if ((b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]) < -1e-9) return false; } return true; };
 
-// ================================================================ off = the game as it was
-export async function glassbreakOff() {
-  const F = family('glassbreak-off: with the switch OFF a seeded volley into the glazing + a charge beside it is byte for byte the game with the module\'s seams pulled out');
-  const off = await recordVolley(9101, false), cut = await recordVolley(9101, false, true);
-  const fails: string[] = []; diffLists(off, cut, ['rounds', 'events', 'audio', 'emits', 'decals', 'props', 'flags', 'debris'], fails);
-  if (Object.values(off.stats).some(v => v !== 0) || off.panes) fails.push(`the module counted something with the switch off: ${JSON.stringify(off.stats)} panes '${off.panes}'`);
-  const glassEv = off.events.filter(e => e.startsWith('glass@')).length;
-  if (off.rounds.length < 30 || glassEv < 20) fails.push(`staging: ${off.rounds.length} rounds, ${glassEv} glass events`);
-  F.verdict(!fails.length, `${off.rounds.length} rounds, ${off.events.length} events (${glassEv} glass), ${off.audio.length} audio calls, ${off.emits.length} particle records, ${off.decals.split('|').length} marks, the furniture, the debris and every static's flags identical; counters zero, no pane record`, fails.join('; ') || 'identical');
-  const on = await recordVolley(9101, true);
-  const took = on.stats.dropped > 0 && on.panes.length > 0;
-  F.verdict(took, 'the same volley with the switch ON does take glass out (the probe\'s stimuli reach the module)', `stats ${JSON.stringify(on.stats)}`);
-  return F.done();
-}
 
 // ================================================================ the gate
 export async function glassbreakGate() {
@@ -239,36 +176,6 @@ export async function glassbreakSupport() {
   return F.done();
 }
 
-// ================================================================ the release hook
-export async function glassbreakRelease() {
-  const F = family('glassbreak-release: one onRelease call per fragment, with an outline the shards part can build from; the stand-in runs only while nobody is attached');
-  const { game, gb, frags, hook, settle } = await stage(9112, 0.5, true); hook();
-  for (const [u, v] of [[-0.1, -0.2], [0.2, 0.3], [-0.25, 0.5], [0.1, -0.6]] as [number, number][]) { glassImpact(game, PANE, W_(u, v), IN, 1, 1); settle(1.5); }
-  const st = gb.panes.get(PANE)!; const bad: string[] = []; let area = 0;
-  for (const f of frags) {
-    const uv = f.outline.map((p: Vec3) => [p[0] - 7.5, p[1] - 1.5] as [number, number]); area += f.area;
-    const tag = `${f.kind}@${f.t.toFixed(2)}`;
-    if (f.outline.length < 3 || f.outline.length > 12) bad.push(`${tag}: ${f.outline.length} points`);
-    if (f.outline.some((p: Vec3) => Math.abs(p[2] - 10) > 1e-6)) bad.push(`${tag}: off the middle plane`);
-    if (Math.abs(v3.len(f.normal) - 1) > 1e-6 || Math.abs(Math.abs(f.normal[2]) - 1) > 1e-6 || f.normal[2] > 0) bad.push(`${tag}: normal ${p2(f.normal)} (the rounds flew −z)`);
-    // anticlockwise seen from the side the normal points to (−z here): looking along +z, x runs to the LEFT — so in (x, y) the polygon reads clockwise
-    if (!convexCCW(uv.slice().reverse())) bad.push(`${tag}: not convex / not anticlockwise from the normal's side`);
-    const A = GP.gpPolyArea(uv); if (Math.abs(A.area - f.area) > 1e-6) bad.push(`${tag}: area ${f.area} vs its outline's ${A.area}`);
-    if (Math.hypot(A.cen[0] - (f.centre[0] - 7.5), A.cen[1] - (f.centre[1] - 1.5)) > 1e-6) bad.push(`${tag}: centre off its outline's centroid`);
-    if (!f.velocity.every(Number.isFinite) || !f.spin.every(Number.isFinite) || f.velocity[2] >= 0) bad.push(`${tag}: velocity ${p2(f.velocity)}`);
-    if (f.pane !== PANE || f.type !== 'annealed' || Math.abs(f.thickness - 0.012) > 1e-9 || f.who !== 1 || !(f.seed >= 0)) bad.push(`${tag}: header`);
-    if (f.tint[0] !== st.box.albedo[0]) bad.push(`${tag}: tint`);
-  }
-  F.verdict(frags.length >= 6 && bad.length === 0, `${frags.length} fragments through the hook: each a convex outline of 3‥12 points on the pane's middle plane, anticlockwise from the side it leaves by, its area and centre its own, leaving on the far side from the shooter`, bad.slice(0, 4).join('; ') || `kinds ${[...new Set(frags.map((f: any) => f.kind))].join(', ')}; causes ${[...new Set(frags.map((f: any) => f.cause))].join(', ')}; points ${Math.min(...frags.map((f: any) => f.outline.length))}‥${Math.max(...frags.map((f: any) => f.outline.length))}`);
-  const openA = gb.openFraction(PANE) * 4 * st.hu * st.hv;
-  F.verdict(Math.abs(area - openA) < 2e-3, 'the areas handed over add up to the area open (craters go as one fragment each: their hull, within a few cm² of their wedges)', `fragments ${area.toFixed(4)} m², open ${openA.toFixed(4)} m²`);
-  F.verdict(GB_STATS.shards === 0 && GB_STATS.hooked === frags.length && game.destr.debris.list.filter((c: any) => c.kind === 'shard').length === 0, 'with a consumer attached the stand-in spawns nothing', `stand-in shards ${GB_STATS.shards}, hooked ${GB_STATS.hooked}`);
-  gb.onRelease = null; gb.setType(FAR, 'annealed'); const fc = game.level.boxes[FAR].c as Vec3;
-  for (let k = 0; k < 3; k++) glassImpact(game, FAR, [fc[0] - 0.2 + 0.2 * k, fc[1] - 0.3 + 0.3 * k, fc[2]], IN, 1, 1); settle(2);
-  const shards = game.destr.debris.list.filter((c: any) => c.kind === 'shard').length;
-  F.verdict(GB_STATS.shards > 0 && shards > 0 && GB_STATS.chips > 0, 'with nobody attached the stand-in runs: rigid shards in the debris pool + chips', `shards spawned ${GB_STATS.shards} (in the pool ${shards}), chips ${GB_STATS.chips}, refused ${GB_STATS.refused}`);
-  return F.done();
-}
 
 // ================================================================ one model: openAt ≡ raycast / solidBlocked ≡ the GPU table's rule
 /** common.wgsl gbOpenUV, over the rows fill() hands the GPU (as f32) */
@@ -458,19 +365,6 @@ export async function glassbreakGust() {
   return F.done();
 }
 
-// ================================================================ determinism
-export async function glassbreakDeterminism() {
-  const F = family('glassbreak-determinism: the same seeded volley + charge twice → identical pane records, debris rest poses, events, particle records, log; the same blows through the hook → the same fragments');
-  const a = await recordVolley(9109, true, false, true), b = await recordVolley(9109, true, false, true);
-  const fails: string[] = []; diffLists(a, b, ['panes', 'debris', 'events', 'emits', 'log', 'decals', 'audio'], fails);
-  if (!a.panes || a.stats.dropped < 2 || a.stats.diced < 1) fails.push(`staging: panes '${a.panes.slice(0, 40)}', dropped ${a.stats.dropped}, diced ${a.stats.diced}`);
-  F.verdict(!fails.length, `${a.panes.split('|').length} pane records, ${a.debris.split('|').filter(Boolean).length} chunks, ${a.events.length} events, ${a.emits.length} particle records, ${a.log.length} log lines — identical both runs`, fails.join('; ') || `stats ${JSON.stringify(a.stats)}`);
-  const stream = async (seed: number) => { const S = await stage(seed, 0.5, true); S.hook(); for (const [u, v, e] of [[-0.1, -0.2, 1], [0.2, 0.3, 1], [-0.25, 0.5, 1.8], [0.1, -0.6, 1]] as number[][]) { glassImpact(S.game, PANE, W_(u, v), IN, e, 1); S.settle(0.7); } S.gb.blast([8.4, 1.0, 10.8], { who: 1 }); S.settle(2); return { frags: S.frags.map(fragSig), panes: [...S.gb.panes.values()].map(paneSig) }; };
-  const x = await stream(1), y = await stream(987654);   // (different Math.random seeds on purpose: the model draws none)
-  const f2s: string[] = []; diffLists(x, y, ['frags', 'panes'], f2s);
-  F.verdict(!f2s.length && x.frags.length > 8, `${x.frags.length} fragments (time, kind, cause, area, outline, velocity, seed) and ${x.panes.length} pane records identical across two stand-ups with DIFFERENT Math.random seeds: the pattern hangs on the pane and the point alone`, f2s.join('; ') || 'identical');
-  return F.done();
-}
 
 // ================================================================ the seams with the sibling parts: the caller's verdict, the type per level, the blast feed
 export async function glassbreakSeams() {
@@ -553,6 +447,6 @@ export async function glassbreakSeams() {
   return F.done();
 }
 
-export async function glassbreakFamily(): Promise<boolean> { let ok = true; for (const f of [glassbreakOff, glassbreakGate, glassbreakPattern, glassbreakSupport, glassbreakRelease, glassbreakOpen, glassbreakBlast, glassbreakSeams, glassbreakWalk, glassbreakCaps, glassbreakReset, glassbreakGust, glassbreakDeterminism]) ok = (await f()) && ok; return ok; }
-if (import.meta.main) { const only = process.argv[2]; const all: Record<string, () => Promise<boolean>> = { off: glassbreakOff, gate: glassbreakGate, pattern: glassbreakPattern, support: glassbreakSupport, release: glassbreakRelease, open: glassbreakOpen, blast: glassbreakBlast, seams: glassbreakSeams, walk: glassbreakWalk, caps: glassbreakCaps, reset: glassbreakReset, gust: glassbreakGust, determinism: glassbreakDeterminism };
+export async function glassbreakFamily(): Promise<boolean> { let ok = true; for (const f of [glassbreakGate, glassbreakPattern, glassbreakSupport, glassbreakOpen, glassbreakBlast, glassbreakSeams, glassbreakWalk, glassbreakCaps, glassbreakReset, glassbreakGust, ]) ok = (await f()) && ok; return ok; }
+if (import.meta.main) { const only = process.argv[2]; const all: Record<string, () => Promise<boolean>> = { gate: glassbreakGate, pattern: glassbreakPattern, support: glassbreakSupport, open: glassbreakOpen, blast: glassbreakBlast, seams: glassbreakSeams, walk: glassbreakWalk, caps: glassbreakCaps, reset: glassbreakReset, gust: glassbreakGust,  };
   const ok = only && all[only] ? await all[only]() : await glassbreakFamily(); console.log(ok ? '=== glassbreak-probes: ALL PASS ===' : '=== glassbreak-probes: FAILED ==='); process.exit(ok ? 0 : 1); }

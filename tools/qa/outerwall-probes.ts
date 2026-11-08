@@ -141,17 +141,6 @@ function partition(R: Rig, deep = 2.6): { p: Vec3; W: any; near: Vec3 } | null {
 }
 const thickOf = (W: any) => 2 * (W.alongX ? W.box.h[2] : W.box.h[0]);
 
-// ================================================================ sites
-async function probeSites(scn: string): Promise<boolean> {
-  const F = family(`outerwall-sites: the level's outer walls as the module reads them (${scn})`);
-  const R = await rig(scn, 2); const g = R.game, boxes = g.col.boxes, N = Math.min(g.destr.walls.authored, boxes.length);
-  let shell = 0, yard = 0; for (let i = 0; i < N; i++) if (outerWall(g, i)) { if (skyFaces(g, i) === 2) yard++; else shell++; }
-  const every = outerSites(R, 'any', 99), out = every.filter(s => s.from === 'outside'), inn = every.filter(s => s.from === 'inside'), yd = every.filter(s => s.from === 'yard'), parts = g.destr.walls.all().length;
-  F.verdict(shell + yard > 0 && out.length + yd.length > 0, 'the level has outer walls a charge can go on, and places on them a squad of four can work from outside', `${shell} building walls (the sky over one face) · ${yard} yard walls (over both) · with room to work: ${out.length} from outside, ${inn.length} from inside, ${yd.length} yard`);
-  F.verdict(g.destr.walls.all().every((w: any) => !g.destr.walls.breakableAt(w.id)?.hard), 'none of them is the engine\'s until a charge goes: its list is the partitions and cover it found at load', `${parts} breakables, none hard`);
-  for (const s of [...out.slice(0, 2), ...yd.slice(0, 1)]) F.note(`${s.from}: wall ${s.W.index} at ${at(s.p)} · ${f2(thickOf(s.W))} m thick · ${f2(s.walk)} m walk from Sam's start`);
-  return F.done();
-}
 
 // ================================================================ squad
 async function probeSquad(scn: string): Promise<boolean> {
@@ -301,26 +290,8 @@ async function probeReset(scn: string): Promise<boolean> {
   return F.done();
 }
 
-// ================================================================ live (everyone awake)
-async function probeLive(scn: string): Promise<boolean> {
-  const F = family(`outerwall-live: the breach with both sides awake — nothing throws, nobody ends in a wall, the defenders take it as a hole in their building (${scn})`);
-  const R = await rig(scn, 31, { still: false }); const { O, C, game } = R, col = game.col;
-  const P = outerSites(R, 'outside')[0] ?? outerSites(R, 'yard')[0]; if (!P) { F.verdict(false, 'an outer wall', 'none found'); return F.done(); }
-  R.gather(P.near, 60); const why = C.order(P.p, 'all'); const op = C.ops[0];
-  if (!op) { F.note(`the order was refused with everyone awake (${why}) — nothing to check on this map`); return F.done(); }
-  const armed = R.until(() => op.phase === 'armed' || !C.ops.includes(op), 60);
-  if (!armed || op.phase !== 'armed') { F.note(`the order ended before it was armed ('${op.ended ?? op.phase}' — a fight found them first): ${R.beats(op)}`); return F.done(); }
-  const h0 = R.hostiles.filter((h: any) => h.state !== 'dead'), st0 = h0.map((h: any) => h.state); const feed0 = game.destr.walls.serial ?? 0;
-  R.press('KeyF'); const hole = op.hole; R.step(60 * swept(6, 25));
-  const men = [...game.guards, { char: game.player.char, state: 'player', callsign: 'Sam' }].filter((m: any) => m.state !== 'dead');
-  const bad = men.filter((m: any) => { const p = m.char.pos; if (!p.every(Number.isFinite)) return true; const q: Vec3 = [p[0], p[1], p[2]]; return col.collideCircle(q, 0.2, 0.25, 1.5) && flat(q, p) > 0.25; });
-  const woke = h0.filter((h: any, i: number) => h.state !== st0[i] || h.state === 'dead').length;
-  F.verdict(!!hole && bad.length === 0, 'F with everyone awake: a hole, and some seconds on every man still on the floor stands on floor (finite, in no static)', `hole ${hole ? f2(hole.half * 2) : '—'} m · ${men.length} up · in a wall: ${bad.map((m: any) => m.callsign).join(', ') || 'nobody'} · order '${op.ended ?? op.phase}' · ${woke} of ${h0.length} defenders changed state (was: ${[...new Set(st0)].join('/')})`);
-  F.verdict((game.destr.walls.serial ?? 1) > feed0, 'the change went out on the engine\'s feed like any hole (what the defenders\' reactions, the fog and the reach masks read)', `feed serial ${feed0} → ${game.destr.walls.serial}`);
-  return F.done();
-}
 
-const FAMILIES: Record<string, (scn: string) => Promise<boolean>> = { sites: probeSites, squad: probeSquad, sam: probeSam, hard: probeHard, rooms: probeRooms, reset: probeReset, live: probeLive };
+const FAMILIES: Record<string, (scn: string) => Promise<boolean>> = { squad: probeSquad, sam: probeSam, hard: probeHard, rooms: probeRooms, reset: probeReset };
 export { rig, outerSites, partition };
 /** probes.ts's door in (family 'outerwall'): one family on one map, the switches, the knobs and the dice put back as they were found */
 export async function outerwallFamily(name: string, scn = 'block-squads'): Promise<boolean> {

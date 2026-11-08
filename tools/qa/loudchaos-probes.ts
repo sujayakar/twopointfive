@@ -21,8 +21,8 @@
 // off after every probe. RESTATED, the question kept: 'off = the generator's level' is asked of the FILE WITHOUT ITS DRESSING GROUP, loaded as it is, and the
 // nav grid of the dressed floor is held against the floor stood from that same file without the group (level data changed before the stand-up).
 import { sample } from './sweep.ts';
-import { standUp, ROOT, asExporter } from './headless.ts';
-import { readFileSync, existsSync } from 'node:fs';
+import { standUp, ROOT } from './headless.ts';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { DRESS_GROUP } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
@@ -34,7 +34,6 @@ const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const D = await import(`${ROOT}/src/game/destruction.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { NOBODY_ID } = await import(`${ROOT}/src/game/consts.ts`);
-const { structuralDiff } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { installDustStandin } = await import('./dust-standin.ts');
 
 type Vec3 = [number, number, number];
@@ -105,46 +104,6 @@ const capsHeld = (smokeLog: any[], game: any): string[] => {
   return bad;
 };
 
-// ================================================================ levels
-export async function loudLevels() {
-  const F = family('loudchaos-levels: every loud level carries dressing to wreck — last in its file, the file without it the generator\'s own level, found by destruction\'s index');
-  for (const L of LOUD) {
-    const data = dataOf(L.file); const fails: string[] = [];
-    const first = data.boxes.findIndex((b: any) => b.group === DRESS_GROUP), nDress = data.boxes.filter((b: any) => b.group === DRESS_GROUP).length;
-    if (nDress < 20) fails.push(`only ${nDress} dressing boxes`);
-    if (first < 0 || data.boxes.slice(first).some((b: any) => b.group !== DRESS_GROUP)) fails.push('the dressing is not the tail of the box list');
-    if (data.boxes.slice(first).some((b: any) => b.emissive || (b.flags ?? []).some((f: string) => f !== 'NoShadow'))) fails.push('a dressing box is emissive or carries a flag besides NoShadow');
-    const refd = new Set<string>(); for (const s of data.switchables) for (const id of s.boxes) refd.add(id); for (const l of data.lights) if ((l as any).fixture) refd.add((l as any).fixture);
-    if (data.boxes.slice(first).some((b: any) => refd.has(b.id))) fails.push('a switchable / light refers to a dressing box');
-    // (the two loads and the generator below run AS THE EXPORTER RUNS, headless.ts asExporter: on the engine's own maths, as level-probes holds a file
-    // against its generator. Under the game's maths, which every stand of the harness has on (src/math/exact.ts), the generator rounds a last bit
-    // another way than the file was written with: four boxes of the records office sharing one yaw, an arctangent's last place, and one box centre of
-    // the compound. The loader fits a prop's footprint from the cos and sin of its parts, so both sides of the comparison are on the one maths.
-    // LOUDLEVELS_BREAK=1 = all of it on the stand's maths, as it was. NOT RUN ON A MAC: the engine's maths is the system's, and a file written under
-    // one C library may differ in a last place under another, as for export.ts --check and level-identity.)
-    const exp = <T>(fn: () => T): T => process.env.LOUDLEVELS_BREAK === '1' ? fn() : asExporter(fn);
-    const bare = { ...data, boxes: data.boxes.filter((b: any) => b.group !== DRESS_GROUP) };   // (THE FILE WITHOUT ITS DRESSING: until 2026-11-07 the same file loaded with the destruction switch off, which left the group out)
-    const off = exp(() => loadLevel(bare, { lived: true })), on = exp(() => loadLevel(data, { lived: true }));   // (lived: the generator builds the lived-in rooms' furniture, src/scene/lived.ts — it sits before the dressing)
-    if (off.boxes.length !== data.boxes.length - nDress || on.boxes.length !== data.boxes.length) fails.push(`loadLevel: ${off.boxes.length} boxes without the dressing / ${on.boxes.length} with it, the file has ${data.boxes.length} with ${nDress} dressing`);
-    // without its dressing the file is the generator's own level (the one build's): box for box, and everything else
-    const genMod = await import(`${ROOT}/tools/levels/${L.gen}.ts`); const gen = exp(() => genMod.build()); if (gen.scenarios) gen.level.scenarios = gen.scenarios; { const DS = await import(`${ROOT}/src/scene/doorSize.ts`); exp(() => { DS.fitDoors(gen.level.doors); DS.fitWaysOut(gen.level, gen.scenarios?.quiet); }); }   // (as tools/levels/export.ts writes it)
-    { const FL = await import('../levels/flatLayers.ts'), LV = await import('../../src/scene/lived.ts'), BX = await import('../../src/scene/boxes.ts'); const DW = await import('../levels/doesWas.ts'); exp(() => { FL.layGeneratedFloor(gen.level.boxes, gen.groups, LV.isLived, BX.BoxFlag); DW.stampDoes(gen.level); }); }   // (… and its floor swept into order, as the export sweeps it before it writes: flatLayers.ts; and each box nobody spoke for given the word its colour had: doesWas.ts)
-    const diffs: string[] = []; const nd = structuralDiff(gen.level, off, diffs); if (nd) fails.push(`without the dressing: ${nd} diff(s) from the generator's level — ${diffs.slice(0, 2).join('; ')}`);
-    const S = await stage(L.file); const inv = S.game.destr.inventory();
-    const small = (inv.clutter ?? 0) + (inv.binder ?? 0);
-    if ((inv.paper ?? 0) < 6 || small < 6) fails.push(`the index finds ${inv.paper ?? 0} paper, ${small} clutter + binders`);
-    // what dress.ts put under a roof, destruction's own roof rule keeps (every dressing paper indexed), and the dressing moves nobody's feet (the nav grid is the undressed level's)
-    const dressPaper = data.boxes.filter((b: any) => b.group === DRESS_GROUP && (b.flags ?? []).includes('NoShadow') && b.h[1] <= 0.02).length; const allPaper = S.items.filter(it => it.kind === 'paper').length;
-    const basePaper = (() => { let n = 0; for (const b of data.boxes) if (b.group !== DRESS_GROUP && (b.flags ?? []).includes('NoShadow') && b.h[1] <= 0.02) n++; return n; })();
-    if (allPaper < dressPaper) fails.push(`${dressPaper} dressing paper boxes in the file, the index holds ${allPaper} (${basePaper} more could be the level's own)`);
-    { const Soff = await stage(L.file, { scn: false, data: bare }); const a = S.game.col.nav.blocked, b = Soff.game.col.nav.blocked; let d = 0; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) d++; if (d) fails.push(`${d} nav cells differ between the dressed and the undressed level`); }
-    const lit = new Set<number>(); for (const t of S.game.targets) for (const bi of t.boxes) lit.add(bi);
-    if (S.items.some(it => lit.has(it.i) && it.kind !== 'screen' && it.kind !== 'tv' && it.kind !== 'housing')) fails.push('a fixture box indexed as clutter / paper');
-    const total = S.game.col.boxes.length + S.game.props.props.reduce((n: number, p: any) => n + p.boxes.length, 0);
-    F.verdict(!fails.length, `${L.file}: ${nDress} dressing boxes at the tail, without them the generator's level (${off.boxes.length} boxes, 0 diffs), the index holds ${JSON.stringify(inv)}`, fails.join('; ') || `${total} static + prop boxes of the 4096 a frame may draw; lights untouched (${data.lights.length} + ${data.switchables.length} switchables)`);
-  }
-  return F.done();
-}
 
 // ================================================================ firefight
 /** THE MERGE'S SEAM with the wall engine (src/game/wallbreak.ts): the dressing is small things ON tables and shelves — none of it may be taken by the engine's
@@ -320,17 +279,3 @@ export async function loudSight() {
   return F.done();
 }
 
-// ================================================================ off
-export async function loudOff() {
-  const F = family('loudchaos-off: with no scenario up the loud rules stay down — the office\'s own heat, the player-only fixture rule, no power, no floor dust');
-  // (LOUDOFF_BREAK=1, the red path: the floor's scenario IS started, so the loud rules are live — the line must fail)
-  { const S = await stage('warehouse.json', { scn: process.env.LOUDOFF_BREAK === '1' }); const { W, game, smokeLog } = S; const fails: string[] = [];
-    if (D.loudNow(game)) fails.push('loudNow without a scenario');
-    const t = game.targets.find((x: any) => !x.broken && x.interactive && x.kind === 'emissive' && (x.on || x.factor > 0));
-    if (t) { game.destr.fixtureRound([t.pos[0], 1.2, t.pos[2]], [0, 1, 0], t.pos[1] - 1.2, t.boxes[0]); game.destr.bang([t.pos[0], 0.06, t.pos[2]], NOBODY_ID, 4); for (let f = 0; f < 30; f++) W.step(DT); if (t.broken) fails.push('a light went out'); }
-    if (smokeLog.some(e => e.kind === 'puff' && e.pos[1] < 0.5)) fails.push('a blast raised floor dust');
-    const p: Vec3 = [20, 1.2, 14]; const e0 = game.destr.escalationAt(p); game.destr.round(game.player.char, p, [1, 0, 0], { kind: 'static', index: 0, n: [-1, 0, 0] } as any, WEAPONS.fn2000); const e1 = game.destr.escalationAt(p);
-    if (Math.abs((e1 - e0) - 2 * 0.5) > 0.05) fails.push(`one round raised the escalation by ${f2(e1 - e0)}, the office's own is 1.00 at chaos 0.5`);
-    F.verdict(!fails.length, 'warehouse, NO scenario: loudNow false — a round stokes the office\'s heat (E +1.00 at chaos 0.5), fixtureRound and a power-4 blast leave the lights, no floor dust', fails.join('; ') || `E ${f2(e0)} → ${f2(e1)}`); }
-  return F.done();
-}

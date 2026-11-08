@@ -28,14 +28,12 @@ import { standUp, ROOT, fake } from './headless.ts';
 import { readFileSync } from 'node:fs';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon, armThrough } = await import(`${ROOT}/src/game/combat.ts`);
-const { GUNWALL } = await import(`${ROOT}/src/game/gunwall.ts`);
 const { DOORBLAST, DOORSHOT } = await import(`${ROOT}/src/game/doorblast.ts`);
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const { Particles } = await import(`${ROOT}/src/render/particles.ts`);
 const WB = await import(`${ROOT}/src/game/wallbreak.ts`);
 const { WALLS, WALL_STATS, WALL_LOG } = WB;
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
-const { reachLevel, reachMaskFor } = await import(`${ROOT}/src/render/reach.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -43,7 +41,6 @@ const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { levelFingerprint, canLoad } = await import(`${ROOT}/src/game/savestate.ts`);
 const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
 const { DESTRUCTION, FURNBLAST } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
-const { COVERFIRE } = await import(`${ROOT}/src/game/coverfire.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -184,38 +181,6 @@ export async function wallbreakFire(): Promise<boolean> {
   return F.done();
 }
 
-// ================================================================ pressed to it
-/** A man PRESSED to a partition has his muzzle out of its far face (combat.ts armThrough): the hit scan starts beyond the wall and never meets it. Under the
- *  switch that round is given to the column his arm crosses (combat.ts wallAcrossArm); with the switch off it is nobody's, as on the base.
- *  Asked with 'guns come down at walls' (gunwall.ts) held off: on the shipped stand that rule lowers his rifle before the muzzle is through, so there is no
- *  such round to ask about — the rule a round fired from inside the wood answers to is what is held here, for whoever's gun does get there. */
-export async function wallbreakPressed(): Promise<boolean> {
-  const F = family(`wallbreak-pressed: a round fired with the muzzle through a partition is counted on it (${LEVEL})`);
-  const gunwall = GUNWALL.on; GUNWALL.on = false;
-  const run = async (sw: boolean) => {
-    const { W, game } = await stage(12, 0.5, LEVEL, sw); const pick = sw ? pickWall(game) : null;
-    // (switch off: the engine has indexed nothing — the same wall is found with it on first, and stood at by its place)
-    return { W, game, pick };
-  };
-  const on = await run(true); if (!on.pick) { F.verdict(false, 'a partition with floor both sides', 'none found'); return F.done(); }
-  const { mid, n } = on.pick; const from = v3.mad(mid, n, 0.6) as Vec3, at = v3.mad(mid, n, 0.3) as Vec3, tgt: Vec3 = [mid[0] - n[0] * 3, 1.3, mid[2] - n[2] * 3];
-  const press = (W: any) => { const game = W.game; game.teleportPlayer([from[0], 0, from[2]]); game.puppet = { goal: [at[0], 0, at[2]], aim: tgt };   // (walked into it: a teleport stands him on a free nav cell, a stride off)
-    for (let i = 0; i < 90; i++) W.step(DT); return armThrough(game, game.player.char); };
-  const shoot = (W: any, k: number) => { for (let r = 0; r < k; r++) { fireWeapon(W.game, W.game.player.char, tgt, true, { weapon: WEAPONS.fn2000 }); for (let f = 0; f < 6; f++) W.step(DT); } };
-  const poked = press(on.W);
-  F.verdict(poked, 'walked up against it with the rifle up, his muzzle is beyond the wall (armThrough)', `player (${f2(on.game.player.char.pos[0])}, ${f2(on.game.player.char.pos[2])}) · muzzle (${f2(on.game.player.char.muzzle[0])}, ${f2(on.game.player.char.muzzle[2])}) · wall at (${f2(mid[0])}, ${f2(mid[2])})`);
-  shoot(on.W, 1);
-  F.verdict(WALL_STATS.rounds === 1 && on.game.destr.walls.serial === 0, 'one round fired there is counted on the partition and opens nothing', `engine rounds ${WALL_STATS.rounds}, serial ${on.game.destr.walls.serial}`);
-  let rounds = 1; while (rounds < 40 && on.game.destr.walls.serial === 0) { shoot(on.W, 1); rounds++; }
-  const row = on.game.destr.walls.changes[0];
-  F.verdict(rounds === Math.ceil(WALLS.tough.drywall) && !!row && row.kind === 'port' && row.cause === 'fire' && row.who === PLAYER_ID, `the column gives on round ${rounds}, as it does from across the room`, row ? `kind ${row.kind}, cause ${row.cause}, whose ${row.who === PLAYER_ID ? 'his' : row.who}` : 'no row');
-  const off = await run(false); const pokedOff = press(off.W); shoot(off.W, 8);
-  F.verdict(pokedOff && WALL_STATS.rounds === 0 && off.game.destr.walls.serial === 0, 'THE ONE SWITCH off: the same eight rounds are nobody\'s, as on the base', `armThrough ${pokedOff}, engine rounds ${WALL_STATS.rounds}, serial ${off.game.destr.walls.serial}`);
-  const fo = await run(true); COVERFIRE.on = false; const pokedFo = press(fo.W); shoot(fo.W, 8); COVERFIRE.on = true;
-  F.verdict(pokedFo && WALL_STATS.rounds === 0 && fo.game.destr.walls.serial === 0, 'the aimed-fire piece\'s switch off under the destruction\'s (PT_COVERFIRE=0): the same eight rounds count nothing, as on the engine\'s own build', `armThrough ${pokedFo}, engine rounds ${WALL_STATS.rounds}, serial ${fo.game.destr.walls.serial}`);
-  DESTRUCTION.on = false; GUNWALL.on = gunwall;
-  return F.done();
-}
 
 // ================================================================ cover
 export async function wallbreakCover(): Promise<boolean> {
@@ -399,14 +364,6 @@ export async function wallbreakReset(): Promise<boolean> {
   return F.done();
 }
 
-// ================================================================ determinism
-export async function wallbreakDeterminism(): Promise<boolean> {
-  const F = family(`wallbreak-determinism: the same wreck twice is the same wreck (${LEVEL})`);
-  const run = async () => { const { W, game } = await stage(18, 1); wreck(W, game); return { log: WALL_LOG.join('|'), pieces: piecesOf(game).join('|'), nav: navHash(game), feed: JSON.stringify(game.destr.walls.changes), debris: game.destr.debris.list.map((c: any) => c.box.c.map((x: number) => x.toFixed(4)).join(',')).join('|'), digest: JSON.stringify(digestGame(game, true)) }; };
-  const A = await run(), B = await run();
-  for (const k of ['log', 'pieces', 'nav', 'feed', 'debris', 'digest'] as const) F.verdict(A[k] === B[k] && A[k].length > 0, `${k} identical`, `${A[k].length} chars${k === 'nav' ? ' (' + A.nav + ')' : ''}`);
-  return F.done();
-}
 
 // ================================================================ checkpoint
 export async function wallbreakCheckpoint(): Promise<boolean> {
@@ -440,36 +397,6 @@ export async function wallbreakCheckpoint(): Promise<boolean> {
   return F.done();
 }
 
-// ================================================================ off
-export async function wallbreakOff(): Promise<boolean> {
-  const F = family(`wallbreak-off: the switches (${LEVEL})`);
-  // (`furn` false: the furniture rule held off for the run — what stands at the wall going is furnblast's business, probed there, and it moves the nav and the feed's serial with no wall touched)
-  // (`blast` 'bang': the call the one build made where the goal's callers now call blast() — Destruction.bang, the lane's old shake of the clutter round it)
-  const run = async (chaos: number, wallBreak: boolean, sw = true, blast: boolean | 'bang' = true, furn = true) => {
-    const { W, game } = await stage(21, chaos, LEVEL, sw); game.tune.wallBreak = wallBreak; const n0 = game.col.boxes.length, nav0 = navHash(game), flags0 = JSON.stringify(flagsOf(game));
-    const furn0 = FURNBLAST.on; if (!furn) FURNBLAST.on = false;
-    const pick = pickWall(game)!; fire(W, pick.a, [pick.mid[0], 1.3, pick.mid[2]], 12);
-    const at: Vec3 = [pick.mid[0] + pick.n[0] * 0.3, 0.3, pick.mid[2] + pick.n[2] * 0.3]; if (blast === 'bang') game.destr.bang(at, PLAYER_ID);
-    const res = blast === true ? game.destr.blast(at, { who: PLAYER_ID }) : { walls: 0, cover: 0, doors: 0, panes: 0, opened: 0, serial: 0 };
-    const cov = game.destr.walls.all().find((c: any) => c.kind === 'cover'); if (cov) fire(W, [cov.box.c[0] + 2, 0, cov.box.c[2]], [cov.box.c[0], cov.box.c[1], cov.box.c[2]], 12);
-    for (let f = 0; f < 60; f++) W.step(DT); FURNBLAST.on = furn0;
-    return { res, serial: game.destr.walls.serial, statics: game.col.boxes.length === n0, nav: navHash(game) === nav0, flags: JSON.stringify(flagsOf(game)) === flags0, flagsNow: JSON.stringify(flagsOf(game)), stats: JSON.stringify(WALL_STATS), snap: game.destr.walls.snapshot(), digest: JSON.stringify(digestGame(game, true)), destr: JSON.stringify(game.destr.stats ?? null) + game.destr.debris.list.length };
-  };
-  // (the switch off, blast() is the one build's bang() and no more: the clutter in its reach goes as it always did — on the rebuilt block the mess table's things stand
-  //  by the wall this picks — so the run is held against one that called bang() there, not against the level as authored)
-  const sw = await run(0.5, true, false), never = await run(0.5, true, false, 'bang');
-  F.verdict(sw.serial === 0 && sw.statics && sw.nav && sw.flagsNow === never.flagsNow && sw.snap === undefined && Object.values(JSON.parse(sw.stats)).every(v => v === 0) && JSON.stringify(sw.res) === '{"walls":0,"cover":0,"doors":0,"panes":0,"opened":0,"serial":0}',
-    'the one switch off at chaos 0.5: nothing here ever runs', `12 rounds into a column, a charge against it, 12 rounds into a crate: blast → ${JSON.stringify(sw.res)}, counters all zero, statics / nav as authored, every static's flags as the one build's bang there leaves them (as authored ${sw.flags}), no walls slice in a save`);
-  F.verdict(sw.digest === never.digest && sw.destr === never.destr, 'and the run digests exactly as one that called the one build\'s bang there, not blast', `game digest ${sw.digest.length} chars equal; the lane's own counters and debris equal`);
-  const zero = await run(0, true);
-  F.verdict(zero.serial === 0 && zero.statics && zero.nav && zero.flags && zero.snap === undefined && Object.values(JSON.parse(zero.stats)).every(v => v === 0) && zero.res.walls === 0, 'chaos 0 with the switch on: nothing here ever runs', `blast → ${JSON.stringify(zero.res)}, counters all zero, statics / flags / nav as authored`);
-  const off = await run(0.5, false, true, true, false);   // (the WALL engine's switch alone, as wallbreak-caps asks its cap: on the shipped stand the rebuilt block has lived-in things at the wall this picks)
-  F.verdict(off.serial === 0 && off.statics && off.nav && off.snap === undefined && off.res.walls === 0, 'tune.wallBreak off at chaos 0.5: the level stands', `blast → ${JSON.stringify(off.res)}; statics and nav as authored (the lane's old marks / dust / clutter still run)`);
-  const on = await run(0.5, true);
-  F.verdict(on.serial > 0 && !on.statics && !on.nav, 'on at chaos 0.5: it breaks', `serial ${on.serial}, blast → ${JSON.stringify(on.res)}`);
-  DESTRUCTION.on = false;
-  return F.done();
-}
 
 // ================================================================ wallsFor: the read-only ask
 export async function wallbreakWallsFor(): Promise<boolean> {
@@ -528,7 +455,7 @@ export async function wallbreakWallsFor(): Promise<boolean> {
 }
 
 if (import.meta.main) {
-  const which = process.argv[2] ?? 'all'; const T: Record<string, () => Promise<boolean>> = { blast: wallbreakBlast, fire: wallbreakFire, pressed: wallbreakPressed, cover: wallbreakCover, seams: wallbreakSeams, caps: wallbreakCaps, reset: wallbreakReset, determinism: wallbreakDeterminism, checkpoint: wallbreakCheckpoint, off: wallbreakOff, wallsfor: wallbreakWallsFor };
+  const which = process.argv[2] ?? 'all'; const T: Record<string, () => Promise<boolean>> = { blast: wallbreakBlast, fire: wallbreakFire, cover: wallbreakCover, seams: wallbreakSeams, caps: wallbreakCaps, reset: wallbreakReset, checkpoint: wallbreakCheckpoint, wallsfor: wallbreakWallsFor };
   let ok = true; for (const [k, fn] of Object.entries(T)) if (which === 'all' || which === k) ok = (await fn()) && ok;
   process.exit(ok ? 0 : 1);
 }

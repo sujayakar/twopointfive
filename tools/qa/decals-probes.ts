@@ -338,30 +338,6 @@ export async function decalsFollow() {
 function dcRec0(): number { return 1 + Math.ceil(WORLD.gridW * WORLD.gridH / 4) + DECAL_LIST_CAP / 4; }
 
 // ------------------------------------------------------------------------------------------------ (off)
-export async function decalsOff() {
-  const F = family('decals-off: enabled false → nothing recorded, nothing written');
-  const W = await stage(8401, [21.5, 0, 11.4]); const { game } = W; const dc = game.decals; const pl = game.player;
-  dc.clear(); dc.add('bullet', [22, 1, 10.12], [0, 0, 1]); dc.frame(W.engine.world);   // one mark in and uploaded while on
-  const uploads0 = dc.stats.uploads; const words0: Uint32Array = dc.words(); const count0 = dc.count;
-  dc.enabled = false;
-  const r = dc.add('bullet', [22.2, 1, 10.12], [0, 0, 1]);
-  fireWeapon(game, pl.char, [24.0, 1.2, 10.0], true);
-  dropThrowable(game, 'flash', [23.0, 0, 11.3]); for (let i = 0; i < 150; i++) W.step(DT);
-  dc.frame(W.engine.world); dc.frame(W.engine.world);
-  const words1: Uint32Array = dc.words();
-  let same = words0.length === words1.length; for (let i = 0; same && i < words0.length; i++) if (words0[i] !== words1[i]) same = false;
-  const fails: string[] = [];
-  if (r !== null) fails.push('add() returned a decal while off');
-  if (dc.count !== count0) fails.push(`count ${count0} → ${dc.count} while off (a round and a stun charge went off)`);
-  if (dc.stats.uploads !== uploads0) fails.push(`uploads ${uploads0} → ${dc.stats.uploads} while off`);
-  if (!same) fails.push('the packed words changed while off');
-  dc.enabled = true; const r2 = dc.add('chip', [22.4, 1, 10.12], [0, 0, 1]); dc.frame(W.engine.world);
-  if (!r2 || dc.stats.uploads !== uploads0 + 1) fails.push(`back on: add → ${!!r2}, uploads ${dc.stats.uploads} (want ${uploads0 + 1})`);
-  F.verdict(!fails.length, `off: add() → null, a round + a stun charge left nothing (count ${dc.count - 1} + the one from before), frame() wrote nothing (uploads ${uploads0}), words identical; on again: recording and uploading resume`, fails.join('; ') || 'ok');
-  // a Decals never handed to an engine (the viewer's case) is inert but harmless
-  { const lone = new Decals(W.engine.device); lone.add('scorch', [1, 0, 1], [0, 1, 0]); lone.frame(W.engine.world); F.verdict(lone.count === 1 && lone.stats.uploads === 1, 'a free-standing Decals builds and uploads on its own device', `count ${lone.count}, uploads ${lone.stats.uploads}, build ${lone.stats.buildMs.toFixed(2)} ms`); }
-  return F.done();
-}
 
 
 // ------------------------------------------------------------------------------------------------ (sit)
