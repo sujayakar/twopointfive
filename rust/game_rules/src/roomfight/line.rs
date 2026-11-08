@@ -26,10 +26,6 @@ pub(super) fn line_by(f: RoomFightFriendInLine) -> OpLineBy {
     match f { RoomFightFriendInLine::Guard(x) => OpLineBy::Guard(x), RoomFightFriendInLine::Player => OpLineBy::Player }
 }
 
-pub(super) fn clear_by(f: RoomFightFriendInLine) -> crate::clearline::LeadsBy {
-    match f { RoomFightFriendInLine::Guard(x) => crate::clearline::LeadsBy::Guard(x), RoomFightFriendInLine::Player => crate::clearline::LeadsBy::Player }
-}
-
 /// Is this body within the clearance it is owed of the line from → to (the `hit` of roomfight.ts friendInLine)
 pub(super) fn line_hit(g: &mut Game, ch: CharId, mate: bool, from: V3, dx: f64, dz: f64, l2: f64, l: f64, t_max: f64, sam_still: bool) -> bool {
     let pos = g.ch[ch].pos;
