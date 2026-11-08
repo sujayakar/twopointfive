@@ -6,13 +6,11 @@
 //   standRecipe(recipe)  THE game a server or a client plays: stood from the recipe the way a replay's re-run stands a tape's (tools/qa/rerun.ts, a tape of no
 //                        steps), every seat refereed. A recipe without the networked tables, or one whose mission does not come up here, is refused. ONE a
 //                        process: the stand writes this process's knob tables and module state.
-//   buildName()          the build this checkout is: its commit, or '' with uncommitted changes (as tools/build.ts names a build)
 // The server stands its own game from the recipe too, never from the fresh one: every machine comes to its game by the same door.
 import { resolve } from 'node:path';
-import { appendFileSync } from 'node:fs';
-import type { Recipe, Outcome } from '../../src/net/wire.ts';
+import type { Recipe } from '../../src/net/recipe.ts';
 import type { Headless } from '../qa/headless.ts';
-import type { PlayerCmd } from '../../src/game/cmd.ts';
+import { wordsKept, type Stood } from './stood.ts';
 import type { RunTape } from '../../src/replay/format.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
@@ -31,12 +29,6 @@ function layWhy(dst: Record<string, unknown>, src: Record<string, unknown>, path
     else if (a !== null && kind(a) !== kind(b)) return `${at} is a ${kind(a)}, not a ${kind(b)}`; }   // (a knob that stands at null takes a value: K.assignDeep)
   return '';
 }
-/** the build this checkout is: its commit, or '' when it has uncommitted changes (those are no commit's build) or is no checkout */
-export function buildName(): string {
-  try { const git = (...a: string[]) => { const r = Bun.spawnSync(['git', ...a], { cwd: ROOT }); if (!r.success) throw new Error('git'); return new TextDecoder().decode(r.stdout).trim(); };
-    return git('status', '--porcelain') ? '' : git('rev-parse', '--short=12', 'HEAD'); } catch { return ''; }
-}
-
 /** A LEVEL FILE NAMED BY AN ADDRESS IS A NAME, never a path: the address comes from whoever asked for the game (a lobby, a server's recipe), and what it
  *  names is read off this machine's disk → why not ('' = it is one of levels/) */
 export function levelWhy(file: string | undefined): string { return file === undefined || /^[A-Za-z0-9][A-Za-z0-9_-]*\.json$/.test(file) ? '' : `levelFile=${file.slice(0, 60)} is not the name of a level file`; }
@@ -48,7 +40,7 @@ export async function freshRecipe(setup: Setup): Promise<Recipe> {
   { const why = levelWhy(levelFile); if (why) throw new Error(`the setup's address: ${why}`); }
   const P = await import(`${ROOT}/src/host/profile.ts`), K = await import(`${ROOT}/src/game/knobs.ts`);
   const { standUp } = await import('../qa/headless.ts'), { levelOf } = await import('../qa/rerun.ts');
-  const { activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`), { recipeOf } = await import(`${ROOT}/src/game/runtape.ts`), { NET_TABLES } = await import(`${ROOT}/src/net/wire.ts`);
+  const { activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`), { recipeOf } = await import(`${ROOT}/src/game/runtape.ts`), { NET_TABLES } = await import(`${ROOT}/src/net/recipe.ts`);
   P.shippedBoot(); P.pageSwitches(q);
   const reg = K.knobsNamed() as Record<string, Record<string, unknown>>, asked = setup.tables ?? {};
   if (!plain(asked)) throw new Error('a setup\'s tables are an object of knob tables');
@@ -64,28 +56,12 @@ export async function freshRecipe(setup: Setup): Promise<Recipe> {
   return { ...recipeOf(W.game), search: setup.search, ...(levelFile ? { levelFile } : {}), stand: 'page' };
 }
 
-export interface Stood {
-  W: Headless; warnings: string[];
-  /** one tick on the seats' records (src/net/step.ts), the state word folded after it */
-  step(cmds: PlayerCmd[]): void;
-  /** a run of steps between which the caller reads nothing of `W.game` begins / ends (src/net/step.ts netQuiet): the copy this process holds is brought
-   *  up to the game as the run ends, and `ended()` and anything read off `W.game` are of that moment */
-  quiet(on: boolean): void;
-  /** the chained state word after the last tick (src/net/step.ts netWord) */
-  word(): string;
-  /** how the mission ended, by the game's own verdict (game/verdict.ts): null while it is being played */
-  ended(): Outcome | null;
-  /** the wider word after the last word tick (src/net/step.ts netWatch): null before the first, and where the host has no whole words */
-  watch(): string | null;
-  /** the game that steps makes its start NOW (the host's `startNow`), so that the first tick costs a tick. Called once by whoever stood the game, after
-   *  the last thing it sets on it before play (a client: the seat it shows) */
-  begin(): void;
-  ticks: number;
-}
+/** a game stood from a recipe, with the copy of it this process keeps */
+export interface StoodCopy extends Stood { W: Headless }
 
-export async function standRecipe(recipe: Recipe): Promise<Stood> {
+export async function standRecipe(recipe: Recipe): Promise<StoodCopy> {
   process.env.RH_QUIET = '1';   // (the host's quiet run is asked for by name, tools/blitz/rust-host.ts quietBegin: a networked game's machines step in them)
-  const { recipeWhy } = await import(`${ROOT}/src/net/wire.ts`);
+  const { recipeWhy, fromWire } = await import(`${ROOT}/src/net/recipe.ts`);
   { const why = recipeWhy(recipe) || levelWhy((recipe as { levelFile?: string }).levelFile); if (why) throw new Error(`no networked game can be stood from this recipe: ${why}`); }   // (…a recipe a server sent names its level the same way)
   const { rerun } = await import('../qa/rerun.ts');
   const { TAPE_VERSION } = await import(`${ROOT}/src/replay/format.ts`);
@@ -101,16 +77,16 @@ export async function standRecipe(recipe: Recipe): Promise<Stood> {
   const R = await rerun(F as never, { toN: 0, scan: false, dress: true, draws: false });
   if (R.refuse || !R.W) throw new Error(`the game could not be stood from its recipe: ${R.refuse}`);
   const W = R.W, g = W.game;
-  const { netStep, netStand, netWord, netWatch, netQuiet, netWhole, wordTick, NET_WORD_SEED } = await import(`${ROOT}/src/net/step.ts`), { activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
+  const { netStep, netStand, netWord, netWatch, netQuiet, netWhole, netAhead } = await import(`${ROOT}/src/net/step.ts`), { wordTick, NET_WORD_SEED } = await import(`${ROOT}/src/net/words.ts`), { activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   if (activeScenario(g) !== recipe.scenario) throw new Error(`the recipe's mission (${recipe.scenario}) did not come up here (${activeScenario(g) ?? 'none'} is up): ${(R.report?.warnings ?? []).find((w: string) => w.includes('did not start')) ?? 'another build or level than the recipe\'s'}`);
   netStand(g);
-  // (MP_WORDS=<a file's path up to its last dot>: this process writes the whole game's words after every word tick to `<that>.<pid>.words`, a line a tick
-  //  with the parts' names first, for two machines' files to be held to each other: tools/mp/words-diff.ts)
-  const WORDS = process.env.MP_WORDS ? `${process.env.MP_WORDS}.${process.pid}.words` : ''; let named = false;
-  const keep = (): void => { const A = netWhole(g); if (!A) return; if (!named) { named = true; appendFileSync(WORDS, `names ${A.names.join(' ')}\n`); } appendFileSync(WORDS, `${out.ticks} ${A.words.map((x: number) => x.toString(36)).join(' ')}\n`); };
+  const keep = wordsKept();
   let word: number = NET_WORD_SEED, watch: string | null = null;
-  const out: Stood = { W, warnings: R.report?.warnings ?? [], ticks: 0,
-    step(cmds) { netStep(g, W.engine, cmds); word = netWord(g, word); out.ticks++; if (wordTick(out.ticks - 1)) { watch = netWatch(g); if (WORDS) keep(); } },
+  let ticks = 0;
+  const out: StoodCopy = { W, seats: g.seats.length, warnings: R.report?.warnings ?? [], get ticks() { return ticks; },
+    step(cmds) { netStep(g, W.engine, cmds.map(fromWire)); word = netWord(g, word); ticks++; if (wordTick(ticks - 1)) { watch = netWatch(g); const A = keep && netWhole(g); if (A) keep!(ticks, A); } },
+    show(seat) { g.localSeat = g.seats[seat]; },
+    ahead: (seat, cmds) => netAhead(g, g.seats[seat], cmds),
     quiet: on => netQuiet(g, on), watch: () => watch,
     begin: () => { (g as unknown as { rustHost?: { startNow?(): void } }).rustHost?.startNow?.(); },
     word: () => word.toString(36), ended: () => { const V = g.verdict.result; return V ? { won: V.won, end: V.word, why: V.why } : null; } };
