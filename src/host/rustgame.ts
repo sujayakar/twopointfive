@@ -32,6 +32,7 @@
 //
 // Every special case here is marked STAND-IN with its reason and where it belongs.
 import { FaceError, fetchFace } from './face';
+import type { DeskFace } from '../view/desk';
 import { simAdopt, type SimExports } from '../sim/sim';
 import { BoxMirror } from '../scene/boxMirror';
 import { PUT_BACKS } from '../math/side';
@@ -283,6 +284,8 @@ export function rustSettledLine(): string {
   if (R.said !== n) { R.said = n; console.info(`rust=1: ${line}`); }
   return line;
 }
+/** the module the page has booted, as the cards' desk asks it */
+export function rustFace(): { exports: DeskFace; memory: WebAssembly.Memory } { if (!X || !MEM) throw new Error('rustFace before rustBoot'); return { exports: X as unknown as DeskFace, memory: MEM }; }
 /** THE MODULE, fetched and compiled off the page's thread (Chrome compiles nothing over 8 MB on it), started, and handed to src/sim as the simulation's
  *  one instance. Before anything has asked src/sim for its module. Throws in plain words where there is no module to fetch. */
 export async function rustBoot(): Promise<void> {

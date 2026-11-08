@@ -5,9 +5,16 @@ import { initDifficulty } from '../../src/game/difficulty';
 import { OFFLIST_UI } from '../../src/ui/missions';
 import { kitBoot } from '../../src/ui/kitBoot';
 import { openStartPage, startPage } from '../../src/ui/startpage';
+import { Desk, desk, setDesk, type DeskFace } from '../../src/view/desk';
+import { Commands } from '../../src/draw/commands';
+import { machineBefore } from '../../src/host/machine';
 
 const q = new URLSearchParams(location.search);
 keysBoot(q); pageSwitches(q); OFFLIST_UI.on = true; kitBoot(); initDifficulty(q);
+{ const { instance } = await WebAssembly.instantiate(await (await fetch('/game_face.wasm')).arrayBuffer(), { env: { face_roll: () => 0 } });
+  const X = instance.exports as unknown as DeskFace & { memory: WebAssembly.Memory }, C = new Commands();
+  setDesk(new Desk(X, X.memory, (key, text) => { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); }));
+  machineBefore(q, '', C); desk().do(C); }
 document.getElementById('menu')?.classList.remove('on');
 openStartPage();
 Object.assign(window, { __cards: { page: startPage, open: openStartPage } });
