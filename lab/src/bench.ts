@@ -6,6 +6,7 @@
 // fireflies in the reference do not speak for it. The run's picture has a fingerprint: the same build, card and seed give the same one.
 import { Watch } from './watch';
 import { LEGS } from './tour';
+import { truthStage } from './stages/path';
 import type { Lab, Method } from './lab';
 import type { View } from './shot';
 export interface Score { view: string; method: string; ms: number; bias: number; noise: number; error: number; hash: string; passes: Record<string, number> }
@@ -130,4 +131,17 @@ export async function refFloor(lab: Lab, ref: Method, w: number, h: number, path
   const idle = () => lab.gpu.device.queue.onSubmittedWorkDone(), kinds = await kindsOf(lab, w, h), pics: Float32Array[] = []; await lab.use(ref);
   for (const seed of [0, 77]) { lab.seed = seed; ref.reset?.(lab); lab.frameNo = 0; for (let i = 0; i < paths; i++) { lab.draw(); if (i % 4 === 3) await idle(); } pics.push(soft(await picture(lab, ref), w, h)); } lab.seed = 0;
   const [p, t] = pics as [Float32Array, Float32Array]; let mean = 0; for (const x of t) mean += x; const fl = mean / t.length * 0.02 + 1e-5, v = new Float32Array(w * h); for (let i = 0; i < v.length; i++) { const o = i * 3; v[i] = Math.min(100, 100 * (Math.abs(p[o]! - t[o]!) + Math.abs(p[o + 1]! - t[o + 1]!) + Math.abs(p[o + 2]! - t[o + 2]!)) / (t[o]! + t[o + 1]! + t[o + 2]! + 3 * fl)) * Math.SQRT1_2; } return byKind(v, kinds);
+}
+
+/** THE LIGHT TABLE BY ITSELF: entries in use, each one's light against the truth at its own point. Means, by where and which way it faces */
+export async function tableTruth(lab: Lab, m: Method, n = 8192, paths = 1200): Promise<string> {
+  const idle = () => lab.gpu.device.queue.onSubmittedWorkDone(); await lab.use(m); lab.frameNo = 0; for (let i = 0; i < 500; i++) { lab.draw(); if (i % 4 === 3) await idle(); }
+  const cells = new Float32Array(await lab.readBuffer('cells')), norms = new Uint32Array(await lab.readBuffer('norms')), keys = new Uint32Array(await lab.readBuffer('keys')), ok: number[] = []; for (let i = 0; i < keys.length; i++) { const a = i * 8; if (keys[i] && cells[a + 3]! > 60 && norms[i] !== 0x80010003 && Math.abs(cells[a + 4]!) < 13 && Math.abs(cells[a + 6]!) < 9 && cells[a + 5]! > -0.2 && cells[a + 5]! < 7.2) ok.push(i); }
+  ok.sort((a, b) => keys[a]! - keys[b]!); const pick = ok.filter((_, i) => i % Math.max(1, Math.floor(ok.length / n)) === 0).slice(0, n), oct = (p: number) => { const x = (p & 0xffff) / 65535 * 2 - 1, z = (p >>> 16) / 65535 * 2 - 1, y = 1 - Math.abs(x) - Math.abs(z); let a = x, b = z; if (y < 0) { a = (1 - Math.abs(z)) * Math.sign(x || 1); b = (1 - Math.abs(x)) * Math.sign(z || 1); } const l = Math.hypot(a, y, b) || 1; return [a / l, y / l, b / l]; };
+  const at = new Float32Array(pick.length * 8); pick.forEach((s, i) => { at.set([cells[s * 8 + 4]!, cells[s * 8 + 5]!, cells[s * 8 + 6]!, 0, ...oct(norms[s]! & 0xfffffffe), 0], i * 8); }); const st = truthStage(lab, pick.length); await lab.graph.build([...lab.methods.get(m.name)!.stages, st]); lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('truthAt')!, 0, at);
+  for (let k = 0; k < paths; k++) { lab.uniform('truthK', new Uint32Array([pick.length, k, 0, 0])); const e = lab.gpu.device.createCommandEncoder(); lab.graph.run(e, [st]); lab.gpu.device.queue.submit([e.finish()]); if (k % 8 === 7) await idle(); }
+  const t = new Float32Array(await lab.readBuffer('truth')), rooms: [string, number[]][] = [['orange', [4, -8, 12, 0, 0, 3.2]], ['green', [4, 0, 12, 8, 0, 3.2]], ['blue', [-12, -8, -4, 0, 0, 3.2]], ['gallery', [-12, 0, -4, 8, 0, 3.2]], ['atrium', [-4, -8, 4, 8, 0, 3.2]], ['studio', [-12, -8, -4, -2.2, 3.4, 6.6]], ['lounge', [-12, 1, -4, 8, 3.4, 6.6]], ['all', [-99, -99, 99, 99, -99, 99]]], lines: string[] = [];
+  for (const [name, [x0, z0, x1, z1, y0, y1]] of rooms as [string, [number, number, number, number, number, number]][]) { const acc: Record<string, number[]> = {}; pick.forEach((s, i) => { const x = at[i * 8]!, y = at[i * 8 + 1]!, z = at[i * 8 + 2]!; if (x < x0 || x > x1 || z < z0 || z > z1 || y < y0 - 0.1 || y > y1) return; const ny = at[i * 8 + 5]!, f = ny > 0.7 ? 'up' : ny < -0.7 ? 'down' : 'side', c = t[i * 8 + 3]!, T = (0.2126 * t[i * 8]! + 0.7152 * t[i * 8 + 1]! + 0.0722 * t[i * 8 + 2]!) / c, C = 0.2126 * cells[s * 8]! + 0.7152 * cells[s * 8 + 1]! + 0.0722 * cells[s * 8 + 2]!; for (const k of ['all', f]) { const a = acc[k] ??= [0, 0, 0, 0, 0, 0]; a[0]! += C; a[1]! += T; a[2]!++; a[3]! += cells[s * 8 + 7]!; a[4]! += t[i * 8 + 4]! / c; a[5]! += Math.abs(C - T); } });
+    lines.push(`${name.padEnd(8)} ${Object.entries(acc).map(([k, a]) => `${k} ${a[2]}: table/truth ${(a[0]! / a[1]!).toFixed(3)}, off each ${(100 * a[5]! / a[1]!).toFixed(1)} %, sun ${(a[3]! / a[2]!).toFixed(3)} vs ${(a[4]! / a[2]!).toFixed(3)}`).join(' | ')}`); }
+  return `${ok.length} entries in use, ${pick.length} judged, ${paths} paths\n` + lines.join('\n');
 }

@@ -1,0 +1,5 @@
+[
+ {"w": 960, "h": 540, "tick": 600, "name": "ground day", "dist": 34, "hour": 15.0, "cut": 2.55, "look": [0, 0.6, 0], "doors": 0.8},
+ {"w": 960, "h": 540, "tick": 600, "name": "ground night", "dist": 34, "hour": 21.5, "cut": 2.55, "look": [0, 0.6, 0], "doors": 0.8},
+ {"w": 960, "h": 540, "tick": 600, "name": "upper day", "dist": 36, "hour": 15.0, "cut": 5.95, "look": [-4, 3.4, -1], "doors": 0.8}
+]
