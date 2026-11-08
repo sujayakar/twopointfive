@@ -1386,7 +1386,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   spot the level marks `wired: true` (scenarios.ts `QuietSpot.wired`, docs/level-format.md *Scenarios*: the holder is on a network or an alarm — today `quiet-relay`'s middle rack, and Training 1's trunk, whose last step is the man who comes to look). The
   take's own clunk is still in the hearing model, so a man near enough to hear it still comes; a man questioned says 'somebody's been sent to look' only where somebody was. The solo-night quiet tallies in this file were played with the errand on every take (the vault's are the rule's own since a re-play on 10-12; lights-out's 240
   runs are the same run for run either way: its pair is out of the gate 6.5 s after the take). `bun run tools/qa/takecheck-check.ts` (`probes.ts takecheck`, in families `quiet` and `missions`; both
-  stands; `TAKECHECK_BREAK=1` must fail). The Missions list draws GROUPS (`scenarios.ts MISSION_GROUPS`, `ui/missions.ts groupOf / groupHeads`: training · raids · strongholds · on the clock · quiet alone ·
+  stands; `TAKECHECK_BREAK=1` must fail). The Missions list draws GROUPS (the desk's `start_list` `GROUPS`, `group_of`: training · raids · strongholds · on the clock · quiet alone ·
   quiet as two — every mission under exactly one, eight at most; a row that names none: quiet by its team, a rescue 'clock', else 'raids'). Levels built for it: `bazaar.json`, `police-post.json` (alone; rows `bazaar-quiet`, `police-post-quiet`), `quiet-yard.json` (the test yard, alone and as two). QA: `probes.ts quiet` (seven; `quiet-fixes` = the review of the join), `tools/qa/quiet-check.ts` (also red on two men under one name: `CALLSIGNS` holds seven), `solo-night.ts --level <f> --quiet [pin] [--squad 1] [--exit <way out's name>] [--ghost]`; the missions gate plays quiet rows
   with solo-night (`missions-gate.ts`: eight seeds a row run by name, two inside `probes.ts missions-shipped` so a family stays under gate.sh's cap — `MISSIONS_QUIET_SEEDS=1-8` there plays the eight —, `--quiet-seeds`, each line saying how many of the level's deals they were; the ghost goes round a man standing in its way where the floor has another way, else stands off up to a minute for him to walk on).
 - **A quiet level built for two** (`levels/lights-out.json` ← `tools/levels/lights-out.ts`, on the shared walled yard `train-ground.ts`, one file; row `lights-out-two`
@@ -2425,12 +2425,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and nothing in the table moved: the rows, levels, scripts, scripted players, page runs and checks stay, each still opens by its own address, and
   `?offlist=0` draws them on the lists again where they stood ("for now" is his word). THE LIST READS 'The tunnel, from above', 'The fuel stop, alone',
   'The ledger', 'The truck park, as two'. A won lesson's end card leads to the next lesson THE LISTS DRAW (`ui/verdictNext.ts nextLessonOf` asks
-  `listedMissions`, in the table's order): the tunnel now leads to the fuel stop and the fuel stop to the ledger; a cut lesson is nobody's next, and one
+  the desk's `start`, in the table's order): the tunnel now leads to the fuel stop and the fuel stop to the ledger; a cut lesson is nobody's next, and one
   played by its own address leads to the listed lesson after it (the tactics mission still to the ledger). The ledger's `scene` line no longer names "the
   post", which was the tactics mission's: "The people who hit the convoy were paid through a money changer's shop in town". NO SWITCH of its own: the list
-  is data, and the next-lesson rule follows `OFFLIST_UI` (ON in the page, OFF in the module and so in every harness; off = every lesson leads to the next
-  row of the table, as before). CHECK `tools/qa/offlist-check.ts` (probe `offlist`, 10 lines): its cut list names the two rows, and two new lines hold the
-  chain of next lessons against what `listedMissions` draws, on and off; `OFFLIST_BREAK=1` fails the first of them with the lists' own lines.
+  is data, and the next-lesson rule follows what the desk draws (`?offlist=0` = every lesson leads to the next row of the table, as before). CHECK: `rust/game_run/tests/desk.rs` (the cut rows, `offlist=0`); `offlist-check.ts` went with the page's list, 2026-11-08.
   `tools/qa/kitview-page.cjs` reads a row's cut from its whole line now (both new rows say it after their level). RUN on this change: `offlist-check`
   both ways, `writing-check`, `lesson-check`, `rails-check` on both stands, the `ui` gate, the `missions` gate (two reds there, `defuse` and
   `missions-shipped`'s compound row, are red on the unchanged build head too). ON THE REAL PAGE (headless Chromium, the software adapter, the DOM read, no
