@@ -43,6 +43,8 @@ const HELD: u32 = 4;
 
 #[derive(Default)]
 pub struct Lights {
+    /// drawn with the fog off: each as it is
+    pub bared: bool,
     /// as they are drawn
     pub rows: Vec<Light>,
     now: Vec<Light>,
@@ -61,8 +63,8 @@ impl Lights {
         if !again { core::mem::swap(&mut self.now, &mut self.before); }
         self.now.clear();
         let l = &g.engine.lights;
-        for &id in &l.lights { self.now.push(row(g, id, false)); }
-        for &id in &l.ir { self.now.push(row(g, id, true)); }
+        for &id in &l.lights { self.now.push(row(g, id, false, self.bared)); }
+        for &id in &l.ir { self.now.push(row(g, id, true, self.bared)); }
         // (a flash that went out before any frame showed it is shown by the next, if that comes within a hitch's worth of ticks)
         let spent: Vec<Light> = self.before.iter().filter(|b| self.unseen.iter().any(|u| u.0 == b.key && u.1 < HELD) && b.age >= b.ttl && !self.now.iter().any(|n| n.key == b.key)).copied().collect();
         if !again {
@@ -99,7 +101,7 @@ impl Lights {
     }
 }
 
-fn row(g: &Game, id: LightId, ir: bool) -> Light {
+fn row(g: &Game, id: LightId, ir: bool, bared: bool) -> Light {
     let l = &g.tab.light[id];
     let f3 = |v: [f64; 3]| v.map(|x| x as f32);
     let hand = l.group == "flashlights";
@@ -113,7 +115,7 @@ fn row(g: &Game, id: LightId, ir: bool) -> Light {
         pos: f3(l.pos), dir: f3(l.dir), color: f3(l.color),
         intensity: l.intensity as f32, peak: l.peak_intensity as f32, range: l.range as f32, inner: l.inner_deg as f32, outer: l.outer_deg as f32, radius: l.radius as f32,
         volumetric: l.volumetric as f32, flicker: l.flicker as f32, ttl: l.ttl as f32, age: l.age as f32,
-        fog: if ir { 0.0 } else { game::render_lights::light_set_fog_class(g, id) as f32 },
-        ghost: l.fog_ghost.unwrap_or(0.0) as f32,
+        fog: if ir || bared { 0.0 } else { game::render_lights::light_set_fog_class(g, id) as f32 },
+        ghost: if bared { 0.0 } else { l.fog_ghost.unwrap_or(0.0) as f32 },
     }
 }

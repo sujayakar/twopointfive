@@ -53,18 +53,18 @@ section! {
 }
 
 /// `want`: every fire's row, and the table where there is one
-pub fn fill(g: &Game, out: &mut Vec<Fire>, table: &mut Vec<FireTable>) {
+pub fn fill(g: &Game, out: &mut Vec<Fire>, table: &mut Vec<FireTable>, bared: bool) {
     table.clear();
     let time = g.time;
     for (ix, &t) in g.targets.iter().filter(|&&t| is_fire(g, t)).enumerate() {
         let l = g.tab.sim_lightshome_fixture[t].light.unwrap();
         let (lamp, lit) = (&g.tab.light[l], burns(g, t));
         // (out, and nobody on the team saw it go out: where the team does not see, the fog's picture has its lamp lit still and its flame on it)
-        if !lit && !(lamp.fog_ghost.unwrap_or(0.0) > 0.0) { continue; }
+        if !lit && (bared || !(lamp.fog_ghost.unwrap_or(0.0) > 0.0)) { continue; }
         let (mouth, seed) = (mouth_of(g, t), fire_seed(g, t));
         let w = flame_wind(g, mouth.pos);
         out.push(Fire {
-            ix: ix as u32, lit: lit as u32, fog: if !lit { 2 } else if lamp.fog == Some(1.0) { 1 } else { 0 }, seed: seed as f32,
+            ix: ix as u32, lit: lit as u32, fog: if !lit { 2 } else if lamp.fog == Some(1.0) && !bared { 1 } else { 0 }, seed: seed as f32,
             pos: mouth.pos.map(|x| x as f32), r: mouth.r as f32, bed: (mouth.lid * g.k.fire.bed_r) as f32, h: g.k.fire.height as f32, heat: if lit { heat_of(g, t) as f32 } else { 1.0 },
             time: (time % 4096.0) as f32, flick: fire_flicker(g, seed, time) as f32, wind: w.wind.map(|x| x as f32), blows: w.wv.map(|x| x as f32),
         });
