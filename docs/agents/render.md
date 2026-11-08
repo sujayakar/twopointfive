@@ -453,7 +453,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   presets, and the auto ladder moved the rule under a mission whenever it stepped between medium and low. WHAT: every preset's `rc` row is the one grid; low and verylow
   keep the old one as `rcCoarse`, and `rcGridOf(preset, one)` is the only reader (the preset put on, the grids parked at boot, the cost model: `presetCost(p, oneGrid)`,
   `costTable`, `plan(…, oneGrid)`), so off = the grids AND the ladder's prices as they were. With it on no preset step rebuilds or swaps the cache, and nothing is parked
-  at boot. No `FROZEN_HOLDS` row and no journal line: nothing in a step reads it (the meter reaches the game through `Game.sensors`, and the headless stand-in has no cache).
+  at boot. No `FROZEN_HOLDS` row and no journal line: nothing in a step reads it.
   MEASURED on the software adapter (the pair mission at night, the meter asked at 11 fixed points at 0.8 m and 1.5 m, ten drawn frames, one run each; E, then the HUD's
   LIGHT): in the gap between the containers verylow 0.015 / 0.018 (LIGHT 0) on the coarse grid, 0.046 / 0.057 (13) on the one grid, high 0.049 / 0.063 (15); behind the
   low wall at 0.8 m 0.045 → 0.103 against high's 0.113; the road in shadow LIGHT 0 → 9 (high 9); the partner's start 0 → 6 (high 7); points in the moon 46 to 48 on all
@@ -471,7 +471,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   so it still crosses grids; that edit was not run. Page tools that pin `?quality=verylow` on the software adapter now trace the finer cache too.
 - **One smoke pressure solve at every preset** (10-23; `settings.oneSmokeSolve`, on in the page and the workbench, `?onesolve=0` = each preset's own `rbIters` as it was:
   ultra 5, high 4, medium, low and verylow 3; no Tab row beside the solver's own 'pressure: rb pairs' slider; render-side, so no game table, no journal line, no
-  `FROZEN_HOLDS` row: the headless stands solve no smoke on a GPU). WHY: a sight line through smoke (`game/sensors.ts` → `probe.wgsl` kind 1) is the optical depth of the
+  `FROZEN_HOLDS` row: the headless stands solve no smoke on a GPU). WHY: a sight line through smoke (`probe.wgsl` kind 1) was the optical depth of the
   SOLVER's density, and the pressure pairs decide how a plume rolls and spreads. With the pairs a preset row, the cloud that hides a man had another shape at medium than at
   high, and the auto ladder changed it under a fight each time it stepped: a game rule reading the graphics setting, as the meter's cache grid was. Every preset now runs high's
   4 (`rbItersOf(preset, one)` in ui/quality.ts, asked where a preset is applied). PRICE, by reading only: one pair more (two dispatches over the live bricks) a solver step
@@ -1852,7 +1852,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   hour's own sun; it then stands against the cloud, the sky still follows it), Moon / Moon height / Moon bearing = `window.__moon.set({ k, elev,
   bearing })` (`main.ts weatherHourHooks`: the level's steady directional light; `?moon=k,elev,bearing` sets it at boot). A row is greyed while its light
   is not up. THE MOON AND PLAY: the sun's strength is carried by a checkpoint and the journal (the hour's record) and the meter's CPU stand-in reads it
-  (`hourLight`); the moon's is NOT carried, and `guards.ts lightEstimateAt` skips every directional light but the hour's sun, so a raised moon moves the
+  ; the moon's is NOT carried, so a raised moon moves the
   picture and the GPU's meter and not the headless stand-in or the team's light rules. A moon worth playing under needs that stand-in to count it (the
   sun's one segment test is the model) and a level's own number: a rule of the game, for a switch of its own.
 - **THE LOOK PANEL'S CLARITY ROW** (`render/gbuffer.ts setLook`; the maintainer on his GPU, 10-25: "it does feel a bit too "high frequency" for me, like
