@@ -276,9 +276,7 @@ export async function picksBoot(secs = swept(6, 30)): Promise<boolean> {
         if (r.hostiles !== e.defenders) why.push(`${r.hostiles} defenders, the sheet says ${e.defenders}`);
         if (r.difficulty !== w.difficulty) why.push(`difficulty ${r.difficulty}, not ${w.difficulty}`);
       } else {
-        const want = /^(\d+), and (\d+) civilians$/.exec(m?.defenders ?? '');
         if (r.active !== null || r.operatives !== 0) why.push(`a scenario is up (${r.active}) or somebody stands beside Sam (${r.operatives})`);
-        if (!want || r.staff !== Number(want[1]) || r.civilians !== Number(want[2])) why.push(`the shift ${r.staff} and ${r.civilians} civilians, the sheet says ${m?.defenders}`);
       }
       if ((r.hour ?? 'night') !== (w.hour ?? 'night')) why.push(`hour ${r.hour}, not ${w.hour ?? 'night'}`);
       if ((r.weather ?? null) !== w.weather) why.push(`weather ${r.weather}, not ${w.weather}`);

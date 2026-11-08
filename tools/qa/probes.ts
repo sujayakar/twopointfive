@@ -1,8 +1,8 @@
 // Directed headless probes for things the soak surfaced — each stands the full game up (headless.ts), stages one situation exactly, steps it, and prints
 // what happened, so a finding comes with a deterministic repro instead of a seed + frame.
-//   bun run tools/qa/probes.ts <probe | family | all | all-quick | repros | selftest | list> [n] [--verbose] [--print] [--write]
-//   ('all' = every asserting probe, hours; 'all-quick' = the union of the gate lists a lane runs before handing back — perf · player (incl. selector) · doors · qrf · checkpoints ·
-//    journal · ui + every identity card + the rebuild's families (room clear, threshold, silent, lines of fire, door walk, kit, missions, depot, registry, the two stands, the fold of the settled switch rows), `sh tools/qa/gate.sh all-quick`; 'repros' = the informational who-does-what tables with no expectation to assert (motion) — NO VERDICT by design, kept out of 'all'; 'selftest' = the runner's own red / green paths; 'list' prints the index below, exit 0.
+//   bun run tools/qa/probes.ts <probe | family | all | all-quick | | selftest | list> [n] [--verbose] [--print] [--write]
+//   ('all' = every asserting probe; 'all-quick' = those that cost little, under five minutes on four cores: costs.json; 'selftest' = the runner's own red / green
+//    paths; 'list' prints the names, exit 0.
 //    'player' = the player-side PASS/FAIL set: the wall-clip family minus its doors sweep, wall-snap minus its grid sweep, selector, world-edge, teleport-cancel,
 //    crush, controls-behind, no-mag-pickup, kit-slots, whistle-keys, aim-snap; 'wall-clip' = all five wall-clip probes, under 45 CPU seconds each (a sample: QA_SWEEP=all, tools/qa/sweep.ts, for the brute force): every way the player's 0.42 m circle could end up
 //    inside / beyond a static; 'wall-snap' = the back-to-the-wall (Q) family incl. the grid sweep; 'doors' = the alert-man-at-a-doorway PASS/FAIL set: aim-door,
@@ -32,11 +32,12 @@ const DT = 1 / 60;
 /** Every name any dispatch line below answers to ('all' and the family names included) — filled by on() as the file evaluates, so an unknown argv[2] is known to be
  *  unknown by the end of it. */
 const KNOWN = new Set<string>(['all', 'all-quick']);
-/** 'all-quick' = the union of the gate lists a lane is told to run before handing back (CLAUDE.md: perf · player (incl. selector) · doors · qrf · checkpoints · journal · ui + every identity
- *  card) — some twenty minutes where 'all' is hours; a dispatch line rides it when any of its names is one of these families / probes. `sh tools/qa/gate.sh all-quick` is the one-word gate. */
-const QUICK = new Set(['perf', 'player', 'doors', 'qrf', 'checkpoints', 'journal', 'ui', 'fold', 'decals-identity', 'destruction-identity', 'level-identity', 'director-scheduler',
-  'roomclear', 'threshold', 'silent', 'doorpath', 'kit', 'missions', 'depot', 'registry', 'shipped', 'close', 'heldclicks', 'farsight', 'farcalm', 'look', 'kitanim', 'hands', 'roomfit', 'words', 'workthings', 'handwork', 'wand', 'owncharge', 'workstow', 'squadnet', 'gunslots', 'gunroles', 'gunlook', 'kittree', 'bigslot', 'noshield', 'takedown', 'stealthpose', 'sticky', 'holds']);   // (… and, second line, the REBUILD's families: the room clear, the threshold, the silent order, lines of fire, the door walk, the kit, the missions list with its as-shipped gate, the two levels with a run of their own, and the two-stands check; + close: the close-in mode near a guard, on in the page; + words: the dialogue pass's lint, the hostages' voice)
-// (first line: + glass-break's switch-off identity and the Director's idle identity, landed after the list froze — wave-4 review)
+/** 'all-quick' = EVERY PROBE THAT COSTS LITTLE: those whose CPU seconds in tools/qa/costs.json (a whole run's reading, written by `probes.ts all --costs`) are at
+ *  most QA_QUICK_SECS (default 8; a probe with no reading is not in it). Under five minutes on four cores at the default, one to a dozen probes of nearly
+ *  every family. `sh tools/qa/gate.sh all-quick` is the one-word gate. (Until 2026-11-08 it was a list of families kept by hand, half an hour long.) */
+const COSTS_FILE = `${import.meta.dir}/costs.json`, COSTS: Record<string, number> = JSON.parse(await Bun.file(COSTS_FILE).text());
+const QUICK_SECS = ((v: string | undefined): number => { if (!v) return 8; if (!/^\d+$/.test(v)) throw new Error(`QA_QUICK_SECS=${v}: want a whole number of CPU seconds`); return +v; })(process.env.QA_QUICK_SECS);
+const quick = (name: string): boolean => name in COSTS && COSTS[name] <= QUICK_SECS;
 /** The probes that failed this invocation (by name), the count run, and how many of those produced anything checkable (a boolean, a PASS / FAIL line, a banner). */
 /** QA_FOLD_ONLY=<probe,probe…> beside the word that lays the fold (tools/qa/fold.ts, FOR ONE CHECK AT A TIME): the named probes alone run folded */
 const FOLD_ONLY = process.env.QA_FOLD_ONLY ? new Set(process.env.QA_FOLD_ONLY.split(',').map(x => x.trim()).filter(Boolean)) : null, FOLD_MET = new Set<string>();
@@ -56,7 +57,7 @@ const FAILED: string[] = []; let RAN = 0, CHECKED = 0; const RAN_NAMES: string[]
 // answers hung on the order of the run all the same. QA_PROBE_CAP=<seconds> (default 600; 0 = none) stops a probe that runs longer, with everything it
 // started: it is red, and said so.
 const CHILD: string | null = process.env.QA_PROBE_CHILD || null; delete process.env.QA_PROBE_CHILD;   // (not handed on: a probe that starts a runner of its own starts a whole one)
-const QUEUE: string[] = [], CHILD_TAG = new Map<string, string>(), SECS = new Map<string, number>();
+const QUEUE: string[] = [], CHILD_TAG = new Map<string, string>(), SECS = new Map<string, number>(), CPU = new Map<string, number>();
 const RESULT_MARK = '@@probe ';
 /** QA_JOBS (1 or more) and QA_PROBE_CAP (seconds; 0 = no cap), read as the runner starts so that a mistyped one stops it before anything runs. A run that
  *  WRITES files of the repository (`--write`: the journal's fixture is re-filed by one probe and replayed by the next) is one probe at a time, in order. */
@@ -67,7 +68,7 @@ const here = (): boolean => CHILD === null && !QUEUE.length;
 const LIVE = new Set<number>();   // the children running now, each the leader of a process group of its own
 const stopGroup = (pid: number, sig: 'SIGTERM' | 'SIGKILL'): void => { try { process.kill(-pid, sig); } catch { /* gone already */ } };
 if (CHILD === null) for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => { for (const pid of LIVE) stopGroup(pid, 'SIGKILL'); process.exit(sig === 'SIGINT' ? 130 : 143); });   // (a runner stopped by hand or by a gate's cap takes its probes with it)
-interface ChildResult { name: string; ok: boolean; checked: boolean; tag: string; secs: number; out: string; met: string[] }
+interface ChildResult { name: string; ok: boolean; checked: boolean; tag: string; secs: number; cpu: number | null; out: string; met: string[] }
 async function runChild(name: string): Promise<ChildResult> {
   // (what is one runner's own does not ride to another: the fold's log, whose child would say nothing of its own refused writes — tools/qa/fold.ts foldSpeaker — and the plain verdicts' speaker)
   const env: Record<string, string | undefined> = { ...process.env, QA_PROBE_CHILD: name }; delete env.QA_FOLD_LOG; delete env.QA_FOLD_LOG_OWNER; delete env.QA_VERDICTS_BY;
@@ -81,21 +82,21 @@ async function runChild(name: string): Promise<ChildResult> {
   const code = await new Promise<number | null>(done => { c.on('close', (k: number | null) => done(k)); c.on('error', () => done(null)); });
   if (timer) clearTimeout(timer); if (c.pid) { LIVE.delete(c.pid); stopGroup(c.pid, 'SIGKILL'); }   // (…and nothing the probe started outlives it)
   const lines = (out + err).split('\n'), at = lines.findLastIndex(l => l.startsWith(RESULT_MARK));
-  let r: { ok: boolean; checked: boolean; tag: string; met: string[] } | null = null; if (at >= 0) { try { r = JSON.parse(lines[at].slice(RESULT_MARK.length)); } catch { /* said below */ } lines.splice(at, 1); }
+  let r: { ok: boolean; checked: boolean; tag: string; met: string[]; cpu: number } | null = null; if (at >= 0) { try { r = JSON.parse(lines[at].slice(RESULT_MARK.length)); } catch { /* said below */ } lines.splice(at, 1); }
   let text = lines.join('\n').replace(/\n+$/, '');
   if (capped) text += `\n- FAIL — ${name}: stopped at the cap of ${CAP} s (QA_PROBE_CAP): a probe that long is cut down or split, not waited for`;
   else if (!r) text += `\n- FAIL — ${name}: its process ended (exit ${code}) without a result: it crashed or was killed`;
   else if (r.ok && code !== 0) text += `\n- FAIL — ${name}: its lines passed and its process then ended with exit ${code}`;
-  return { name, ok: !capped && !!r && r.ok && code === 0, checked: capped || !r || r.checked, tag: capped ? ` [OVER THE CAP: ${CAP} s]` : r?.tag ?? '', secs: (performance.now() - t0) / 1000, out: text, met: r?.met ?? [] };
+  return { name, ok: !capped && !!r && r.ok && code === 0, checked: capped || !r || r.checked, tag: capped ? ` [OVER THE CAP: ${CAP} s]` : r?.tag ?? '', secs: (performance.now() - t0) / 1000, cpu: capped ? null : r?.cpu ?? null, out: text, met: r?.met ?? [] };
 }
 async function runQueue(): Promise<void> {
   const done: ChildResult[] = new Array(QUEUE.length); let next = 0, said = 0;
   const say = () => { while (said < QUEUE.length && done[said]) { const d = done[said++]; rawLog(`\n# ${d.name} · ${d.secs.toFixed(1)} s${d.ok ? '' : ' · RED'}`); if (d.out) rawLog(d.out);
-    RAN++; RAN_NAMES.push(d.name); SECS.set(d.name, d.secs); for (const n of d.met) FOLD_MET.add(n); if (d.checked) { CHECKED++; RAN_CHECKED.add(d.name); } if (!d.ok && !FAILED.includes(d.name)) FAILED.push(d.name); if (d.tag) CHILD_TAG.set(d.name, d.tag); } };
+    RAN++; RAN_NAMES.push(d.name); SECS.set(d.name, d.secs); if (d.cpu !== null) CPU.set(d.name, d.cpu); for (const n of d.met) FOLD_MET.add(n); if (d.checked) { CHECKED++; RAN_CHECKED.add(d.name); } if (!d.ok && !FAILED.includes(d.name)) FAILED.push(d.name); if (d.tag) CHILD_TAG.set(d.name, d.tag); } };
   await Promise.all(Array.from({ length: Math.min(JOBS, QUEUE.length) }, async () => { for (;;) { const i = next++; if (i >= QUEUE.length) return; done[i] = await runChild(QUEUE[i]); say(); } }));
 }
 /** The dispatch condition: registers `names` as known and says whether this invocation (`which`) is one of them. List 'all' explicitly where 'all' should run it; 'all-quick' follows QUICK. */
-function on(...names: string[]): boolean { for (const n of names) KNOWN.add(n); return names.includes(which) || (which === 'all-quick' && names.some(n => QUICK.has(n))); }
+function on(...names: string[]): boolean { for (const n of names) KNOWN.add(n); return names.includes(which) || (which === 'all-quick' && names.some(quick)); }
 /** The FAIL / PASS line shapes the probe files print (and gate.sh counts): a family banner with FAIL in it, a '- FAIL —' case line, a two-space '  FAIL …' check
  *  line (editor / level probes), an 'error:' line; PASS likewise. */
 const FAIL_LINE = /^(=== .*\bFAIL|- FAIL\b|  FAIL |error:|!! FAIL)/, PASS_LINE = /^(- PASS\b|  PASS |=== .*\b(ALL|all) PASS)/;
@@ -134,6 +135,7 @@ console.error = (...args: unknown[]) => { const said = tapDepth ? scan(args) : [
  *  next probe of the same process — an identity digest silently depending on the previous family's leftovers), with the cut-pieces switch, the plain night's card
  *  and the loud card first in the table. */
 async function run(name: string, fn: () => unknown, standOf = name): Promise<boolean> {   // (standOf: the probe whose stand it runs on — its own, but for selftest-holds)
+  if (CHILD === null && which === 'all-quick' && !quick(name)) return true;   // (a line rides all-quick by any of its names; a probe by its own cost)
   if (CHILD !== null ? name !== CHILD : name !== which) { if (CHILD === null && !QUEUE.includes(name)) QUEUE.push(name); return true; }   // (a family's probe: a child's to run — EVERY PROBE RUNS IN A PROCESS OF ITS OWN, above)
   const t0 = performance.now(); RAN++; RAN_NAMES.push(name); (globalThis as any).__probeNow = name; process.env.RH_PROBE = name;   /* (read by tools/blitz/rust-host.ts, which probe stood a game: its trace, RH_TRACE, and its table of which game a check is stood on, TPS_GAME=table; the environment's copy is for a probe that runs as a child) */ const f0 = tapFails, p0 = tapPasses; tapDepth++;
   const mine: Sides = { failOn: 0, failOff: 0, passOn: 0, passOff: 0, rows: new Map() }, outer = sides; sides = mine; FOLDM.foldOtherSideClear();
@@ -3370,12 +3372,16 @@ if (which === 'list') {   // `probes.ts list`: the name index (grouped by name P
 } else if (CHILD !== null) {   // a family's child: its one probe ran above (or the word asked for never reaches it), and the result is one line for the runner that started it
   if (process.exitCode && !FAILED.length) FAILED.push('(a probe set the exit code itself)');
   if (!RAN) console.log(`- FAIL — ${CHILD}: no line of the runner runs a probe of that name under '${which}'`);
-  rawLog(RESULT_MARK + JSON.stringify({ ok: RAN > 0 && !FAILED.length, checked: !RAN || RAN_CHECKED.has(CHILD) || CHECKED > 0, tag: sideTag(CHILD), met: [...FOLD_MET] }));
+  const spent = process.cpuUsage(); rawLog(RESULT_MARK + JSON.stringify({ cpu: Math.round((spent.user + spent.system) / 1e5) / 10, ok: RAN > 0 && !FAILED.length, checked: !RAN || RAN_CHECKED.has(CHILD) || CHECKED > 0, tag: sideTag(CHILD), met: [...FOLD_MET] }));
   process.exitCode = RAN > 0 && !FAILED.length ? 0 : 1;
 } else {
   const wall0 = performance.now(); if (QUEUE.length) await runQueue();
   if (process.exitCode && !FAILED.length) FAILED.push('(a probe set the exit code itself)');   // a module that flags failure without printing a line for it still fails the run
   console.log(`\n=== probes.ts ${which}: ${FAILED.length ? `${FAILED.length} FAIL — ${FAILED.join(', ')}` : CHECKED ? 'ALL PASS' : 'NO VERDICT (nothing it ran printed a check)'} · ${RAN} probe${RAN === 1 ? '' : 's'} run ===`);
+  if (process.argv.includes('--costs') && CPU.size) {   // (a whole run writes the file anew, so that a probe that is gone leaves it; a part of one only adds to it. A probe's own process is counted, not what it starts: a probe that is a script, or starts games of its own, is given its wall time)
+    const was = which === 'all' ? {} : COSTS, now: Record<string, number> = { ...was }; for (const [n, t] of CPU) now[n] = Math.round(t < (SECS.get(n) ?? 0) / 4 ? SECS.get(n)! : t);
+    await Bun.write(COSTS_FILE, JSON.stringify(Object.fromEntries(Object.entries(now).sort(([x], [y]) => x < y ? -1 : 1)), null, 0).replace(/,/g, ',\n') + '\n');
+    console.log(`  costs.json: ${Object.keys(now).length} probes`); }
   if (RAN > 1) { const slow = [...SECS].sort((a, b) => b[1] - a[1]).slice(0, 5);   // (what the run cost, and where: a probe nobody can wait for gets cut down)
     console.log(`  ${[...SECS.values()].reduce((x, y) => x + y, 0).toFixed(0)} s of probes in ${((performance.now() - wall0) / 1000).toFixed(0)} s of wall · slowest: ${slow.map(([n, t]) => `${n} ${t.toFixed(0)} s`).join(' · ')}`); }
   { // THE REDS AGAINST THE LIST (tools/qa/expected-red.ts): which of this run's red PROBES are old and explained, which are NEW, and which listed red came back green.
