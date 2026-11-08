@@ -398,7 +398,8 @@ fn drop_kept(k: u32) { KEPT.with(|v| if let Some(x) = v.borrow_mut().get_mut((k 
 #[no_mangle]
 pub unsafe extern "C" fn face_commands(h: u32, p: *const u8, n: usize) -> u32 {
     let b = super::bytes(p, n);
-    match super::with(h, |x| game_run::command::apply(&mut x.g, b)) { Ok(()) => 1, Err(why) => { super::out(why.into_bytes()); 0 } }
+    // (a restart done between two ticks: the picture of the game before it is not blended into this one's)
+    match super::with(h, |x| { let done = game_run::command::apply(&mut x.g, b); if x.g.restart_cut { x.drawn.cut(); } done }) { Ok(()) => 1, Err(why) => { super::out(why.into_bytes()); 0 } }
 }
 
 thread_local! {
