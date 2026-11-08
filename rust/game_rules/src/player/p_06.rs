@@ -776,7 +776,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
             }
         }
     }
-    if crate::samstun::sam_blind(g, None) > 0.5 {
+    if crate::samstun::sam_blind(g, &crate::seats::here(g), None) > 0.5 {
         g.aim_guard = None;
         g.aim_target = None;
         g.aim_snap = None;
