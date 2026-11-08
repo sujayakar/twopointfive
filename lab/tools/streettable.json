@@ -1,0 +1,46 @@
+[
+ {
+  "name": "k1-street",
+  "w": 960,
+  "h": 540,
+  "dist": 27,
+  "look": [
+   0.5,
+   1,
+   -1.0
+  ],
+  "yaw": 0.5,
+  "pitch": 0.72,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300
+ },
+ {
+  "name": "k7-quiet",
+  "w": 960,
+  "h": 540,
+  "dist": 26,
+  "look": [
+   0.5,
+   1,
+   -1.5
+  ],
+  "yaw": 0.5,
+  "pitch": 0.72,
+  "hour": 23.4,
+  "cut": 2.5,
+  "tick": 300,
+  "groups": {
+   "store": 0,
+   "coolers": 0.2,
+   "signs": 0,
+   "vending": 0.35,
+   "lanterns": 0,
+   "noodle": 0,
+   "street": 0,
+   "alley": 0.5,
+   "back": 0.6,
+   "signal": 1
+  }
+ }
+]
