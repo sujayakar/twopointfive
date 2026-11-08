@@ -219,7 +219,7 @@ async function fight() {
     check(h.ring && big.ring && ringMoved <= 1.5 && big.ring[2] > h.ring[2] * 1.05 === bigZ > s.zoom * 1.05, `fight screen ${W}×${H}: the ring is over the same point of the picture at the largest step (${bigZ}) as at none`,
       h.ring && big.ring ? `ring at ${h.ring.slice(0, 2).map(Math.round)} then ${big.ring.slice(0, 2).map(Math.round)} (${ringMoved.toFixed(2)} px apart), ${h.ring[2].toFixed(1)} then ${big.ring[2].toFixed(1)} px wide · cursor ${h.mouse.map(Math.round)}` : `no ring (${JSON.stringify(h.ring)} ${JSON.stringify(big.ring)})`);
     await still(page, `fight-${W}x${H}.png`);
-    await page.evaluate(() => { window.__menu.openRun ? window.__menu.openRun() : window.__menu.open('pause'); }); await page.waitForTimeout(300);
+    await page.evaluate(() => { window.__menu.run = true; window.__menu.open('pause'); }); await page.waitForTimeout(300);
     await still(page, `pause-${W}x${H}.png`);
     const cutAll = await page.evaluate(CUT, '#menu'); if (!asWas) asWas = new Set(cutAll.map(key));
     const cutPause = cutAll.filter(c => !asWas.has(key(c)));

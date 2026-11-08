@@ -15,11 +15,9 @@
 import { saveSandbox } from '../game/sandbox';
 import { gearText } from '../game/gear';
 import { menuTheme } from './theme';
-import { TABKEY, tabChoices, tabNow, setTabKey, tabSettle, tabKept, tabLoad } from './tabkey';
 import { WALLSNAP } from '../game/wallsnap';
 import { CMDRING } from '../game/cmdring';
 import { findMeRows } from './findme';
-import { shaderRows } from './shaderrows';
 import { cloudRows } from './cloudrows';
 import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
 import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys, slotNow, camCap, capNow } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
@@ -191,16 +189,16 @@ const CSS = `
 `;
 
 interface Row { el: HTMLElement; label: string; desc: () => string; left(): void; right(): void; press(): void }
-interface Screen { root: HTMLElement; tab: OptionsTab; sel: number; rows: Row[]; paint: () => void; onClose?: () => void; onTab?: () => void; had: HTMLElement | null }
+interface Screen { root: HTMLElement; tab: OptionsTab; sel: number; rows: Row[]; paint: () => void; onClose?: () => void; had: HTMLElement | null }
 let deps: OptionsDeps | null = null, open: Screen | null = null;
 /** the Brightness slider's own doing: the factor it has turned the exposure by, and the value it last wrote (the mission writes its own for its hour: then Reset has nothing of the slider's left to undo) */
 let turned = 1, wrote: number | null = null;
 
 function el(tag: string, cls?: string, text?: string) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
-function kept(): { vol?: Partial<typeof VOLUME_DEFAULTS>; hints?: boolean; tab?: string; tabPicked?: boolean; wallpress?: boolean; cmdhint?: boolean } { try { const v = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); return v && typeof v === 'object' ? v : {}; } catch { return {}; } }
+function kept(): { vol?: Partial<typeof VOLUME_DEFAULTS>; hints?: boolean; wallpress?: boolean; cmdhint?: boolean } { try { const v = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); return v && typeof v === 'object' ? v : {}; } catch { return {}; } }
 /** a page held silent (`?mute`, or the automation profile's kept flag: main.ts pins the master bus at 0 there): that 0 is the rig's, never the player's level */
 function muted(): boolean { try { return new URLSearchParams(globalThis.location?.search ?? '').has('mute') || globalThis.localStorage?.getItem('twopointsix.testMute') === '1'; } catch { return false; } }
-function keep() { if (!deps) return; try { const v = deps.audio.volume, master = muted() ? kept().vol?.master ?? VOLUME_DEFAULTS.master : v.master; globalThis.localStorage?.setItem(LS, JSON.stringify({ vol: { master, sfx: v.sfx, ambience: v.ambience, music: v.music }, hints: deps.overlay.showLightDots, ...tabKept(), ...(pressKept !== null ? { wallpress: pressKept } : {}), ...(hintKept !== null ? { cmdhint: hintKept } : {}) })); } catch { /* no store */ } }
+function keep() { if (!deps) return; try { const v = deps.audio.volume, master = muted() ? kept().vol?.master ?? VOLUME_DEFAULTS.master : v.master; globalThis.localStorage?.setItem(LS, JSON.stringify({ vol: { master, sfx: v.sfx, ambience: v.ambience, music: v.music }, hints: deps.overlay.showLightDots, ...(pressKept !== null ? { wallpress: pressKept } : {}), ...(hintKept !== null ? { cmdhint: hintKept } : {}) })); } catch { /* no store */ } }
 /** the wall taken without Q (game/wallsnap.ts `press`): what this machine has kept (null = never chosen: the build's own), and whether this visit's `?wallpress=` chose */
 let pressKept: boolean | null = null, pressUrl = false;
 /** the order's mark at the cursor before the key (game/cmdring.ts `hint`): what this machine has kept (null = never chosen: off), and whether this visit's `?cmdhint` chose */
@@ -218,7 +216,6 @@ export function setOptionsDeps(d: OptionsDeps | null) {
   hintKept = typeof k.cmdhint === 'boolean' ? k.cmdhint : null; try { const q = new URLSearchParams(globalThis.location?.search ?? ''); hintUrl = q.has('cmdhint') || q.has('nocmdhint'); } catch { hintUrl = false; }
   if (hintKept !== null && !hintUrl) CMDRING.hint = hintKept;   // (a `?cmdhint` visit holds its own)
   if (pressKept !== null && !pressUrl) WALLSNAP.press = pressKept;   // (a `?wallpress=` visit holds its own, and is never written as this machine's choice)
-  tabLoad(k);   // (what Tab does, on trial: ui/tabkey.ts — a `?tab=` visit holds its own; where nobody has chosen, the page's first choice)
   if (open) render(open);
 }
 export function optionsOpen() { return !!open; }
@@ -232,15 +229,15 @@ export function closeOptions() {
   const m = document.getElementById('menu'); if (m?.classList.contains('on') && !m.hasAttribute?.('inert') && !m.contains?.(document.activeElement)) (m.querySelector?.('.actions .btn:not(:disabled)') as HTMLElement | null)?.focus?.();
 }
 /** the screen, on `tab` (GRAPHICS unless the page is still booting: then CONTROLS, the one tab with nothing to wait for) */
-export function openOptions(o: { tab?: OptionsTab; onClose?: () => void; onTab?: () => void } = {}) {
+export function openOptions(o: { tab?: OptionsTab; onClose?: () => void } = {}) {
   if (typeof document === 'undefined') return;
   menuTheme(); styles();
   let root = document.getElementById('options') as HTMLElement | null;
   if (!root) { root = el('div'); root.id = 'options'; root.setAttribute('tabindex', '-1');
     root.addEventListener?.('mousedown', (e: Event) => e.stopPropagation()); root.addEventListener?.('contextmenu', (e: Event) => e.preventDefault());
     (document.body ?? document.documentElement)?.appendChild?.(root); }
-  if (open) { open.tab = o.tab ?? open.tab; open.sel = 0; if (o.onClose) open.onClose = o.onClose; if (o.onTab) open.onTab = o.onTab; render(open); return; }
-  const S: Screen = { root, tab: o.tab ?? (deps ? 'graphics' : 'controls'), sel: 0, rows: [], paint: () => {}, onClose: o.onClose, onTab: o.onTab, had: (document.activeElement as HTMLElement | null) ?? null };
+  if (open) { open.tab = o.tab ?? open.tab; open.sel = 0; if (o.onClose) open.onClose = o.onClose; render(open); return; }
+  const S: Screen = { root, tab: o.tab ?? (deps ? 'graphics' : 'controls'), sel: 0, rows: [], paint: () => {}, onClose: o.onClose, had: (document.activeElement as HTMLElement | null) ?? null };
   open = S;
   document.getElementById('menu')?.setAttribute?.('inert', '');
   const over = !!document.getElementById('menu')?.classList.contains('paused');   // (over a paused run the frame shows through: Brightness and the tier are judged against it)
@@ -301,7 +298,7 @@ function render(S: Screen) {
   if (S.tab !== 'controls') keyStop();   // (a cap waiting for its key is let go by another tab; the Controls list drawn again under it keeps it waiting)
   if (S.tab === 'controls') { controls(body, { rows: S.rows, paints, select: i => { S.sel = i; S.paint(); }, paint: () => S.paint() }); if (KEYMAP.on) reset = () => { keyStop(); resetKeys(); }; }
   else if (!deps) { if (S.tab === 'graphics' && TEXTSIZE.on) { sec(body, 'Display'); textRow(); }
-    if (S.tab === 'graphics') { const shaderReset = shaderRows({ sec, flip }, body); reset = () => { if (TEXTSIZE.on) setTextStep(null); shaderReset(); }; }   // (ui/shaderrows.ts: they need no renderer, and a long wait here is what they are for)
+    if (S.tab === 'graphics') reset = () => { if (TEXTSIZE.on) setTextStep(null); };
     const w = el('div', 'op-wait'); w.appendChild(el('b', '', 'Still starting up')); w.appendChild(document.createTextNode('The renderer is compiling its shaders. These settings will open the moment it\'s ready, and the controls are on the last tab in the meantime.')); body.appendChild(w); }
   else if (S.tab === 'graphics') {
     const { engine, quality } = deps, G = engine.settings;
@@ -319,9 +316,8 @@ function render(S: Screen) {
     textRow();
     const ro = (globalThis as unknown as { __readout?: { on: boolean; set(v: boolean): void } }).__readout;
     if (ro) flip(body, 'Show frame rate', () => ro.on, v => ro.set(v), 'Show the readout in the top-left corner, with the frame rate, the GPU\'s milliseconds per pass, the counts, your light meter and each character\'s state.');
-    const shaderReset = shaderRows({ sec, flip }, body);   // (ui/shaderrows.ts: the shader compiling rows on trial, each the next load's)
     const search = globalThis.location?.search ?? '';
-    reset = () => { shaderReset(); if (TEXTSIZE.on) setTextStep(null); if (wrote === G.exposure && turned > 0) G.exposure /= turned; turned = 1; wrote = null; ro?.set(false); if (!visitTier(search)) quality.setAuto(); quality.visit(search); };   // (the defaults, then the address's own words by their one reader, ui/quality.ts visit: Auto, unless the address names a tier (that tier is put on, with no setAuto under it: auto can start from the tier the page stands on, the address's, and would write it as this machine's pick); and with `?adapt=0` nothing adapting again)
+    reset = () => { if (TEXTSIZE.on) setTextStep(null); if (wrote === G.exposure && turned > 0) G.exposure /= turned; turned = 1; wrote = null; ro?.set(false); if (!visitTier(search)) quality.setAuto(); quality.visit(search); };   // (the defaults, then the address's own words by their one reader, ui/quality.ts visit: Auto, unless the address names a tier (that tier is put on, with no setAuto under it: auto can start from the tier the page stands on, the address's, and would write it as this machine's pick); and with `?adapt=0` nothing adapting again)
   } else if (S.tab === 'audio') {
     const { audio } = deps, V = audio.volume, pct = (v: number) => `${Math.round(v * 100)} %`;
     const bus = (k: keyof typeof VOLUME_DEFAULTS, label: string, d: string) => range(body, label, 0, 1, 0.05, () => V[k], v => { V[k] = v; audio.setVolumes(); keep(); }, pct, d);
@@ -338,15 +334,13 @@ function render(S: Screen) {
       'The game saves a checkpoint by itself when the mission moves on, when you first enter a room, when you hide a body, and after every minute and a half of quiet play. It never saves while anyone is onto you. Press Enter when you\'re down to load the newest one.');
     flip(body, 'Interaction hints', () => overlay.showLightDots, v => { overlay.showLightDots = v; keep(); }, `Show faint dots on what ${capNow('Space')} and right-click can act on, like lights, doors and bodies.`);
     if (WALLSNAP.on) flip(body, 'Walk into a wall to take it', () => WALLSNAP.press, v => { WALLSNAP.press = v; pressKept = v; pressUrl = false; keep(); }, wallWay() === 'key' ? keyText('Keep holding a move key into a wall to put your back to it. Q does the same either way.') : cmdOnQ() ? 'Keep holding a move key into a wall to put your back to it. When this is off, the wall hold needs a key from Controls.' : 'Keep holding a move key into a wall to put your back to it. When this is off, press Q instead.');   // (Q the squad's command key — host/keymap.ts qCmd: the wall hold never falls back to it)
-    const tabOpts = tabChoices(true);   // (the first choice reads 'Nothing more' and every line says so: ui/tabkey.ts)
-    seg(body, 'Tab key', tabOpts, () => tabNow(), v => { setTabKey(v); TABKEY.kept = v; TABKEY.picked = true; TABKEY.url = false; keep(); }, () => tabOpts.find(c => c.v === tabNow())?.line ?? '');
-    const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — twelve rows on trial, kept by host/findme.ts)
+    const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — rows on trial, kept by host/findme.ts)
     cloudRows({ sec, flip, seg }, body);   // (ui/cloudrows.ts: a hosted build's two rows — sharing, and the settings link; nothing on a build with no backend)
     sec(body, 'Cheats');
     flip(body, 'God mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'Enemies still see you and shoot you, but hits don\'t hurt. This is saved on this machine.', ['On', 'Off']);
     flip(body, 'Enemies don\'t think', () => !game.aiEnabled, v => { game.aiEnabled = !v; saveSandbox(game, 'noAi'); }, 'Everybody stays where they are, and nobody patrols, hears or sees. This is saved on this machine.', ['On', 'Off']);
     flip(body, 'Unlimited ammunition', () => game.infiniteAmmo, v => { game.infiniteAmmo = v; saveSandbox(game, 'ammo'); }, gearText('Bottomless magazines, canisters, ring airfoils and wall charges. This is saved on this machine.'), ['On', 'Off']);
-    reset = () => { game.saves.setEnabled(true); overlay.showLightDots = true; WALLSNAP.press = true; pressKept = null; pressUrl = false; CMDRING.hint = false; hintKept = null; hintUrl = false; TABKEY.kept = 'off'; TABKEY.picked = false; TABKEY.url = false; tabSettle(); keep(); findReset();
+    reset = () => { game.saves.setEnabled(true); overlay.showLightDots = true; WALLSNAP.press = true; pressKept = null; pressUrl = false; CMDRING.hint = false; hintKept = null; hintUrl = false; keep(); findReset();
       if (game.godMode) { game.godMode = false; saveSandbox(game, 'god'); } if (!game.aiEnabled) { game.aiEnabled = true; saveSandbox(game, 'noAi'); } if (game.infiniteAmmo) { game.infiniteAmmo = false; saveSandbox(game, 'ammo'); } };
   }
   if (reset) { const run = reset, b = el('button', 'op-btn', 'Reset to defaults') as HTMLButtonElement; b.dataset.act = 'reset'; b.onclick = () => { run(); S.paint(); }; foot.appendChild(b); }
@@ -363,17 +357,6 @@ function render(S: Screen) {
   S.paint();
 }
 
-/** the row Tab adds to the list while it is on trial (ui/tabkey.ts): under the group it belongs to, after the key it doubles where it doubles one */
-function tabRow(): { group: string; after?: string; row: [string[], string, string?] } | null {
-  const on = 'on trial: Options, Game, Tab key';
-  switch (tabNow()) {
-    case 'who': return { group: 'Squad', after: 'T', row: [['Tab'], 'Who takes the next order, as T', on] };
-    case 'run': return { group: 'Game', after: 'Esc', row: [['Tab'], 'Pause on the run so far, and back', on] };
-    case 'keys': return { group: 'Game', after: 'Esc', row: [['Tab'], 'Pause on this list of keys, and back', on] };
-    case 'brief': return { group: 'Game', after: 'Esc', row: [['Tab'], 'Pause on your objectives and your squad, and back', 'Options, Game, Tab key'] };
-    default: return null;
-  }
-}
 /** the walk-in as it will stand once the boot is over (game/wallsnap.ts `press`): before the Menu is made this machine's kept choice is not on the table yet
  *  (setOptionsDeps), and the boot card and the keyboard both ask before that */
 export function walkInNow(): boolean {
@@ -398,11 +381,9 @@ function controls(body: HTMLElement, host: KeyHost) {
   // (ui/keybinds.ts: a cap of a key the player may move is its button, the words beside it name the keys as they are bound; a click off a waiting cap lets it go)
   const seen = new Set<string>(); if (KEYMAP.on) cols.classList.add('rebind');
   body.addEventListener?.('mousedown', (e: Event) => { if (keyWaiting() && !(e.target as HTMLElement | null)?.closest?.('.op-key')) { keyStop(); host.paint(); } });
-  const tab = tabRow();
   for (const g of KEYS) {
     const box = el('div', 'op-kgroup'); box.appendChild(el('div', 'op-sec', g.group));
-    const back: typeof g.rows = g.group === 'Game' ? g.rows.flatMap(r => r[0][0] === 'Esc' ? [r, [['Tab'], 'Back out of a list'] as typeof r] : [r]) : g.rows;   // (game/backkey.ts: the key Esc gave up)
-    const tabbed = tab && tab.group === g.group ? back.flatMap(r => r[0][0] === tab.after && r[1] !== 'Back out of a list' ? [r, tab.row] : [r]) : back;
+    const tabbed: typeof g.rows = g.group === 'Game' ? g.rows.flatMap(r => r[0][0] === 'Esc' ? [r, [['Tab'], 'Pause on your objectives and your squad, and back'] as typeof r, [['Tab'], 'Back out of a list'] as typeof r] : [r]) : g.rows;   // (the objectives card; game/backkey.ts: the key Esc gave up)
     const geared = tabbed.flatMap(r => r[1] === PACE_WHAT ? [] : r[1] === 'Crouch' ? [[r[0], r[1], 'slower and quiet'] as typeof r] : [r]);   // (game/player.ts TWOGEARS: the wheel is nobody's pace, the crouch is the sneak)
     const low = sprintSmall(), paced = !low ? geared : geared.map(r => r[1] === SPRINT_WHAT ? [r[0], r[1], low] as typeof r : r);   // (CROUCHRUN: Shift is not only the sprint)
     const rows = !slotNow() ? paced : g.group === 'Kit' ? [SLOT_ROW, ...paced] : paced.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
@@ -449,8 +430,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
       case 'ArrowLeft': case 'KeyA': S.rows[S.sel]?.left(); eat(); return;
       case 'ArrowRight': case 'KeyD': S.rows[S.sel]?.right(); eat(); return;
       case 'Enter': case 'NumpadEnter': case 'Space': if (onBtn) { e.stopImmediatePropagation(); return; } if (!e.repeat) S.rows[S.sel]?.press(); eat(); return;   // (on Back / Reset / a tab the key is that button's)
-      case 'Tab': if (S.onTab) { const back = S.onTab; if (!e.repeat) { closeOptions(); back(); } eat(); return; }   // (the screen Tab itself opened — ui/tabkey.ts 'keys' — goes away on Tab)
-        e.stopImmediatePropagation(); return;   // (the browser's own walk over Back and Reset; never the game's key)
+      case 'Tab': e.stopImmediatePropagation(); return;   // (the browser's own walk over Back and Reset; never the game's key)
       default: if (/^F\d{1,2}$/.test(e.code)) return;   // (the recorders' keys — F7 replay, F8 sweep, F9 — work with the screen up, as they do over a pause card)
         e.stopImmediatePropagation();   // (nothing else under the screen hears a key while it is up; the rest keep their browser defaults)
     }
