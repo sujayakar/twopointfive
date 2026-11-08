@@ -56,8 +56,8 @@ Pick a mission, pick who comes and what they carry, deploy. Every key is also li
 |---|---|
 | `/replay` | scrub a saved replay on a map and leave notes on it |
 | `/?bench`, or Extras ▸ Benchmark on the title | hands off, about seven minutes: three floors played by the game itself (night snow, a block with the lights out, a storm), then every quality level and heavy feature timed on your machine. It ends on a short text to copy (your GPU, load times, frames a second) with no file saved. A build with a backend also sends the numbers to the developer, which you can turn off in Options; a build with none sends nothing |
-| `bun run tools/qa/probes.ts list` | the headless checks: the whole game runs without a GPU, about a second per simulated minute |
-| `sh tools/qa/gate.sh all-quick` | the wide set, slow |
+| `cargo test -p game_start` (in `rust/`) | the game's rules, asked of the game itself |
+| `bun run tools/qa/checks.ts` | the picture's code, the page, the menus, the sounds and the level files, without a GPU |
 | `bun run qa` | typecheck, every mission played to its end, a tour and a soak |
 
 `bun run typecheck` and `bun run qa` expect a TypeScript compiler unpacked at `vendor/typescript`, which is not in the repo.

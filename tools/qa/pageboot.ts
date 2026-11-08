@@ -1,16 +1,14 @@
 // THE PAGE'S BOOT OVER A RECORDING STAND-IN DEVICE: every shader text the page hands the browser, and every pipeline it asks for, with no browser. One boot for
 // every tool that reads the page's shader texts (shaderinline-check sizes them, shaderfold-check reads the fold off them, wgsl-dump writes them out for a
 // browser's compiler), so the three cannot come to boot different pages.
-// The boot is main.ts's own order: the Engine's pipelines, the smoke solver's, the Game stood on that Engine, the Game's own GPU modules (mesh shadows,
-// particles, the light probe, the skinned raster), the programs asked for ahead of their first use (engine.ts warmFirstUse: the fog of war's). In front of it, what main.ts writes before it builds
-// the Engine on a plain address: cut boxes on, round things on the GPU with them, the glass fracture, and the dust's own look (in the march's text).
+// The boot is drawpage.ts's own order: the Engine's pipelines, the smoke solver's, the particles, the men's mesh and its tree, the programs asked for ahead of
+// their first use (engine.ts warmFirstUse). No game is stood. In front of it, what the page writes before it builds the Engine: cut boxes on, the glass fracture, the dust's own look.
 // THE SETTINGS are the switches a page is opened under, each a different set of texts since the fold of constant switches (gpu/wgslTrim.ts SHADER_FOLD):
 //   title   the page as it opens (the look is the picture: its layers and the walls' two sides are in every setting)
 //   snow    a snow level in its weather: every switch a LEVEL raises (the weather kinds, lying snow and its look rows)
 //   nowalls   the page as it opens with the walls' row down (`?look=walls:0`): the WALL_SIDES=false texts, which no other setting compiles
 // ONE BOOT A PROCESS: the switches are module state, so a tool that wants two settings runs itself once for each (`--setting`).
-// The stand is the caller's: TPS_PROFILE is read as the game's modules load, so a tool that wants the page's own texts sets it before it calls pageBoot.
-import { ROOT, fake, loadCharacter } from './headless.ts';
+import { ROOT, characterSet, fake } from './here.ts';
 export type Stage = 'compute' | 'vertex' | 'fragment';
 export interface Mod { label: string; code: string }
 export interface Asked { label: string; stages: { stage: Stage; mod: number; entry: string | undefined }[] }
@@ -30,7 +28,8 @@ export async function pageBoot(setting: string): Promise<Booted> {
   if (!(setting in SETTINGS)) throw new Error(`pageBoot: no setting '${setting}'`);
   const { Engine } = await import(`${ROOT}/src/engine.ts`);
   const { SmokeSystem } = await import(`${ROOT}/src/smoke/smoke.ts`);
-  const { standGame } = await import(`${ROOT}/src/host/standup.ts`);
+  const { Particles } = await import(`${ROOT}/src/render/particles.ts`), { CharacterRenderer } = await import(`${ROOT}/src/anim/characters.ts`), { MeshShadows } = await import(`${ROOT}/src/render/meshShadows.ts`), { LOOK } = await import(`${ROOT}/src/scene/look.ts`);
+  LOOK.on = true;
   const { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`);
     const FR = await import(`${ROOT}/src/render/frame.ts`) as Record<string, any>;
   const { DUST_DRAW } = await import(`${ROOT}/src/smoke/dustTint.ts`);
@@ -62,8 +61,10 @@ export async function pageBoot(setting: string): Promise<Booted> {
       const engineInit = engine.init({ sharp: true, gbaa: true });
       const smoke = new SmokeSystem(engine); engine.setSmoke(smoke.binding);
       const smokeInit = smoke.init();
-      const { game } = await standGame(engine, { ch: await loadCharacter(), smoke, seed: 1 });
-      await Promise.all([engineInit, smokeInit, game.meshShadows.init(), engine.particles?.init(), game.probe.init?.(), engine.gbuffer.prepareSkin(game.chars.jointsFormat)]);
+      engine.setParticles(new Particles(engine.device, engine.sceneLayout));
+      const ch = await characterSet(), chars = new CharacterRenderer(engine.device, ch), shadows = new MeshShadows(engine.device, ch, chars.jointMats, chars.charInsts);
+      engine.skin = chars; engine.setMeshShadows(shadows);
+      await Promise.all([engineInit, smokeInit, engine.particles.init(), engine.gbuffer.needLook(), shadows.init(), engine.gbuffer.prepareSkin(chars.jointsFormat)]);
       engine.warmFirstUse(); await new Promise(r => setTimeout(r, 0));   // (main.ts, after the boot's freeze: the programs a pass used to make at its first use — the fog of war's — are asked for behind the start)
       return true;
     })());
