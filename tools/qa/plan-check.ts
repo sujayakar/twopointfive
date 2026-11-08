@@ -7,12 +7,13 @@
 import { standUp, ROOT } from './headless.ts';
 
 const FP: any = await import(`${ROOT}/src/game/floorplan.ts`);
+const PF: any = await import(`${ROOT}/src/ui/planfloor.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
-const { PLAN, planTag } = FP;
-// the plan is asked as the page asks it: with the asker's own store of kept legs, one a game (floorplan.ts PlanKept) — never the game's
-const stores = new WeakMap<object, unknown>();
-const floorPlan = (g: any) => { let k = stores.get(g); if (!k) stores.set(g, k = FP.planKept()); return FP.floorPlan(g, k); };
+const { PLAN } = FP;
+// the plan is read as the page reads it (ui/planfloor.ts plansToDraw over `view.plan`, its own store of kept legs); here a man is found by his id and a door by its name
+const floorPlan = (g: any) => { if (!g.view.plan) throw new Error('no plan in the view: a check with nothing to read holds nothing'); const P = PF.plansToDraw(g)[0].P, by = (id: number) => g.guards.find((m: any) => m.char.id === id);
+  return { ...P, men: P.men.map((m: any) => ({ ...m, gd: by(m.man) })), who: P.who.map((w: any) => ({ ...w, gd: by(w.man) })), throws: P.throws.map((t: any) => ({ ...t, gd: by(t.man) })), doors: P.doors.map((d: any) => ({ ...d, door: d.door ? g.doors.byName(d.door) : null })) }; };
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -29,10 +30,7 @@ async function rig(seed: number, ask: boolean, squad = 4) {
   Object.assign(NIGHTBREACH, { squad: squad0 });
   const R = { W, game, O, why, asked: 0,
     get team(): any[] { return O.squad(); },
-    step(n = 1) { for (let i = 0; i < n; i++) { game.player.visibility = 0.05; W.step(DT); if (ask) {   // asked twice: as he walks, and with his own path set aside for the ask, so the nav grid is asked for his way and a leg is kept
-      floorPlan(game); const T: any[] = O.squad(), pg = T.map(m => m.pathGoal);
-      try { for (const m of T) m.pathGoal = null; floorPlan(game); } finally { T.forEach((m, i) => { m.pathGoal = pg[i]; }); }
-      R.asked += 2; } } },
+    step(n = 1) { for (let i = 0; i < n; i++) { game.player.visibility = 0.05; W.step(DT); if (ask) { floorPlan(game); R.asked += 1; } } },
     until(pred: () => boolean, secs: number) { for (let i = 0; i < secs * 60 && !pred(); i++) R.step(); return pred(); },
   };
   R.step(30);
@@ -61,7 +59,6 @@ export async function planCheck(): Promise<boolean> {
 async function planLines(): Promise<boolean> {
   console.log("plan-check: the squad's plan drawn on the floor");
   // 0. the tag
-  line(planTag('Red Two') === 'R2' && planTag('Blue One') === 'B1' && planTag('Kestrel') === 'K' && planTag('') === '', 'tags', `'Red Two' → ${planTag('Red Two')} · 'Blue One' → ${planTag('Blue One')} · 'Kestrel' → ${planTag('Kestrel')}`);
 
   const R = await rig(3, false), g = R.game, O = R.O, team = R.team;
   const hostiles = g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead').length;
@@ -80,6 +77,13 @@ async function planLines(): Promise<boolean> {
     const up = (q: number[]) => [q[0], 0.6, q[2]];
     const walls = men.reduce((n, m) => n + m.path.slice(1).filter((q: number[], i: number) => g.col.solidBlocked(up(m.path[i]), up(q))).length, 0);
     line(men.length > 0 && straight && finite && walls === 0, 'each way is a real walk, through no wall', `${men.map(m => `${m.tag}: ${f1(len(m.path))} m for ${f1(dist(m.gd.char.pos, m.mark))} m straight`).join(' · ')} · ${walls} legs through something solid`);
+    // with his own path set aside: the floor's search (game.ask.way) for each leg, the answer kept by the picture and asking it writes nothing
+    { const H = g.ask, way0 = H.way; let asked = 0; H.way = (x: any, y: any, n: number) => { asked++; return way0(x, y, n); };
+      try { const W0: any[] = g.view.plan.own.men, hash0 = g.stateWords?.().parts?.join(','); const forced = W0.map((m: any) => PF.wayOf(g, m.man, { ...m.way, own: null })), first = asked, again = W0.map((m: any) => PF.wayOf(g, m.man, { ...m.way, own: null }));
+        const real = forced.every((w: any[], i: number) => w.length >= 2 && dist(w[w.length - 1], W0[i].mark) < 0.06 && w.slice(1).every((q: number[], k: number) => !g.col.solidBlocked(up(w[k]), up(q))));
+        const same = forced.every((w: any[], i: number) => JSON.stringify(w) === JSON.stringify(again[i]));
+        line(W0.length === 4 && first >= 4 && asked === first && real && same && hash0 === g.stateWords?.().parts?.join(','), 'a man with no path of his own: the floor is asked, the answer kept, nothing written', `${first} legs asked of the floor, ${asked - first} more on a second ask · each a real walk to his mark: ${real}`);
+      } finally { H.way = way0; } }
     const tags = new Set(men.map(m => m.tag)), tones = men.map(m => m.tone);
     line(tags.size === 4 && tones.filter(t => t === 'red').length === 2 && tones.filter(t => t === 'blue').length === 2, 'who: a tag a man, a colour a pair', men.map(m => `${m.tag}:${m.tone}`).join(' '));
     line(men.length > 0 && men.every(m => m.age < 0.5 && m.aim !== null), 'a fresh order is young, and says what he will watch', men.map(m => `${m.tag} age ${m.age.toFixed(2)} aim ${m.aim === null ? '—' : m.aim.toFixed(2)}`).join(' · '));

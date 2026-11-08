@@ -9,7 +9,6 @@ import type { Bot } from '../lesson-run';
 import { CLOSE } from '../../../src/game/close';
 import { WORK } from '../../../src/game/workthings';
 import { RAILS } from '../../../src/game/rails';
-import { floorPlan } from '../../../src/game/floorplan';
 import { TP } from '../../levels/tut-pair';
 import { locked } from '../../../src/view/seatview.ts';
 
@@ -93,8 +92,8 @@ function waitSet(B: Bot, gd: any) {
   calm(B, n0, `while the partner worked round to ${gd.callsign}`);
 }
 
-/** the word's key as the floor plan marks it by a man of the pair who waits on it (game/floorplan.ts: the overlay draws exactly this list) */
-const pairKey = (B: Bot) => floorPlan(B.g).doors.filter(d => d.why === 'pair');
+/** the word's key as the floor plan marks it by a man of the pair who waits on it (`view.plan`: the overlay draws exactly this list); a check with no view fails */
+const pairKey = (B: Bot) => { const P = B.g.view.plan; if (!P) B.fail('no plan in the view'); return P!.own.doors.filter((d: any) => d.why === 'pair'); };
 
 export const steps: Record<string, (B: Bot) => void> = {
   // (the mission's lines name the right button for the man in his arm: close.ts heldClicks, on in the page and held off on the frozen stand — raised here with
@@ -109,7 +108,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (locked(B.g.view, 'word') && pairKey(B).length) B.fail('the word\'s key is marked by the partner while the lesson still holds the word shut');
     waitSet(B, A); },
   word: B => { const A = man(B, 'pickup'), n0 = seen(B);
-    { const K = pairKey(B); if (K.length !== 1 || !K[0].ready || !K[0].now) B.fail(`the partner is set and the word is taught, and its key is not marked ready by him (${K.length} mark(s)${K[0] ? `, ready ${K[0].ready}, now ${K[0].now}` : ''})`);
+    { const K = pairKey(B); if (K.length !== 1 || K[0].cap !== 'lit' || !K[0].now) B.fail(`the partner is set and the word is taught, and its key is not marked ready by him (${K.length} mark(s)${K[0] ? `, ready ${K[0].ready}, now ${K[0].now}` : ''})`);
       B.say('  the word\'s key is marked by the partner, ready'); }
     B.wait(REACT); B.press('KeyF');
     if (!B.until(() => A.state === 'dead', 15)) B.fail(`the word was given and ${A.callsign} is still up (${doing(B.g, mate(B))})`);

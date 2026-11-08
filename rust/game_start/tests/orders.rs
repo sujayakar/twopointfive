@@ -75,7 +75,7 @@ fn the_shell_shown_is_the_shell_given() {
         let carrier = *p.mates().iter().min_by(|a, b| dist(p.at(**a), at).partial_cmp(&dist(p.at(**b), at)).unwrap()).unwrap();
         game::squad40::squad40_stage(&mut p.g, &[(carrier, 2.0)]);
         p.run(0.5);
-        let preview = |p: &mut Play| game::squad40::squad40_plans(&mut p.g).into_iter().filter(|x| x.preview == Some(true)).count();
+        let preview = |p: &mut Play| p.view().throws.iter().filter(|x| x.preview).count();
         // too near: shown as refused, refused as shown
         let me = p.at(carrier);
         let i = lit(&mut p, [me[0] + 3.0, me[1]]);

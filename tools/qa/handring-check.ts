@@ -41,7 +41,7 @@ export async function handRingCheck(): Promise<boolean> {
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
   console.log(`\n=== handring: his own actions are a ring that stays${BRK ? ' (the rule and the board\'s layer off: must fail)' : ONE ? ` (HANDRING.${ONE} off, the rest on: its block must fail)` : ''} ===`);
   const { HANDRING } = await import(`${ROOT}/src/game/handring.ts`); const { HANDSLOT } = await import(`${ROOT}/src/game/handslot.ts`); const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
-  const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`); const { handRingView } = await import(`${ROOT}/src/game/interact.ts`);
+  const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`); const handRingView = (g: any) => g.view.hand;
   const { WHISTLE_STATS, WHISTLE } = await import(`${ROOT}/src/game/whistle.ts`); const { BACKKEY } = await import(`${ROOT}/src/game/backkey.ts`);
   const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`); const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
   const K = await import(`${ROOT}/src/host/keymap.ts`); const { TWOGEARS } = await import(`${ROOT}/src/game/player.ts`);

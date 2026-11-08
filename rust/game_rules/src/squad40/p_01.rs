@@ -405,27 +405,3 @@ pub fn squad40_tick(g: &mut crate::game::Game) {
         crate::orders::squad_orders_voice(g, crate::orders::OrderNoteFn::Squad40);
     }
 }
-
-/// `of` of squad40Plans
-fn plan_of(g: &Game, a: &Shot, preview: Option<bool>) -> Squad40Plan {
-    let p = g.ch[g.gd[a.gd].ch].pos;
-    Squad40Plan { gd: a.gd, from: [p[0], 0.0, p[2]], points: a.sol.points.clone(), land: a.burst, kind: Squad40PlanKind::Shell, preview, walk: None }
-}
-
-/// WHAT THE PICTURE DRAWS: for a man turning to his shot until it goes, and a preview for the highlighted row while its page is up. Reads only. (squad40.ts squad40Plans)
-pub fn squad40_plans(g: &mut crate::game::Game) -> Vec<crate::squad40::Squad40Plan> {
-    let mut out: Vec<Squad40Plan> = Vec::new();
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
-    let keys = match g.m.squad40.states.get(key) { Some(s) => s.turns.keys(), None => return out };
-    for k in keys {
-        let (w_gd, wa, fired_t, shot) = { let w = g.m.squad40.states.get(key).unwrap().turns.get(k).unwrap(); (w.gd, w.a, w.fired_t, w.shot.clone()) };
-        if fired_t < 0.0 && g.gd[w_gd].state != crate::game::GuardState::Dead && crate::orders::squad_orders_of(g, &crate::seats::here(g), w_gd) == wa {
-            out.push(plan_of(g, &shot, None));
-        }
-    }
-    let seat = crate::seats::here(g);
-    if let (Some((men, at)), Some(p)) = (lit(g, &seat), g.m.squad40.states.get(key).and_then(|s| s.plan.as_ref())) {
-        if let (Some(a), None, true) = (&p.shot, &p.no, p.at == at && p.men == men) { out.push(plan_of(g, a, Some(true))); }
-    }
-    out
-}

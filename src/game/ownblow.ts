@@ -14,7 +14,7 @@
 //   · THE SQUAD'S KEY (doortools.ts blowKey) NO LONGER BLOWS IT, and no longer stops at it: a press with only his own charge set goes on to whoever
 //     else reads the key (the drill, a rescue's entry), as with no charge set. The key is still the word: a charge the squad set and left to his call
 //     is the key's, and so is HIS charge while the squad works its door or its wall (stood off behind it, stacked on it): one press, it goes with
-//     them. `keyIs` on each tool says which; the floor plan's bars (floorplan.ts waitsOnKey) read the same.
+//     them. `keyIs` on each tool says which; the floor plan's bars (rust view/plan.rs waits_on_key) read the same.
 //   · The words that named the key for his own charge (the door's line, the row's hint, the message when it is set, the squad block's note) name the
 //     interaction key.
 //

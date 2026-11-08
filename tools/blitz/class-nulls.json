@@ -226,7 +226,6 @@
 "squad::Clearing":["drill","cur","b"],
 "squad::RoomClear":["nextDoor","restA","restB","b"],
 "squadthrow::LentBack":["post","face"],
-"squadthrow::SquadThrowKept":["caught","scratch","duck"],
 "squadthrow::State":["shown","scratch"],
 "squadthrow::StateCaught":["who"],
 "squadthrow::StateKeptValue":["th","line"],

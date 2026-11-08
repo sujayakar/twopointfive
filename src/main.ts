@@ -63,7 +63,7 @@ import { SHARDS, SHARD_STATS, shardsLive } from './game/shards';
 import lightingCommonSrc from './render/shaders/lighting_common.wgsl' with { type: 'text' };
 import { setDaylight, isDaylight } from './game/lighting';
 import { Game } from './game/game';
-import { SQUADTHROW, SQUADTHROW_STATS, squadThrowPlan, squadThrowPlans } from './game/squadthrow';
+import { SQUADTHROW, SQUADTHROW_STATS, squadThrowPlan } from './game/squadthrow';
 import { AUTOPILOT, AUTOPILOT_STATS, autoPick } from './game/autopilot';
 import { thinIs, thinAirOf } from './game/thinline';
 import { floorAt } from './game/floor';
@@ -109,12 +109,11 @@ import { GEAR } from './game/gear';
 import { civPanic, setCivilians, CIV, CIV_STATS, CIV_LOG, civSpots, checkCivSpots } from './game/civilians';
 import { Attract } from './game/attract';
 import { startFromQuery, quitScenario, runningScenario, plainFog, refusalWords, teamOf } from './game/scenarioRun';
-import { missionLive } from './game/mission';
 import { sideOf } from './game/orders';   // (in game/game.ts's cycle, loaded above: no load order moves)
 import { LIGHTSWITCH, LIGHTSWITCH_STATS, wallSwitches, switchLit } from './game/lightswitch';
 import { CARLAMPS, CARLAMPS_STATS, VEHICLE_GROUP } from './game/carlamps';
 import { CLEANRESTART, CLEANRESTART_STATS } from './game/cleanrestart';
-import { SQUAD40, SQUAD40_STATS, SQUAD40_LOG, squad40Left, squad40Brought, squad40Of, squad40Plans, squad40Stage, squad40Summary } from './game/squad40';
+import { SQUAD40, SQUAD40_STATS, SQUAD40_LOG, squad40Left, squad40Brought, squad40Of, squad40Stage, squad40Summary } from './game/squad40';
 import { squadSmokeStage } from './game/squadsmoke';   // (the same: game/kit.ts has loaded it)
 import { checkQuiet } from './game/quiet';
 import { LESSON_STATS, checkLesson } from './game/lesson';
@@ -766,7 +765,7 @@ async function main() {
   // is playing a replay's tape (?playtape): that is not a visit anybody played.
   const cloud = kitViewOn || tape ? null : cloudBoot(q, { sid: replaykey.session, store: replaykey.keeper ? keptStore() : null, build: () => replaykey.commit,
     machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz).now,
-    facts: () => ({ scenario: runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? '', stage: game.mission.stage, live: missionLive(game) && !menu.isOpen && !brief?.held && !document.hidden, stats: game.mission.stats as unknown as Record<string, unknown>, preset: quality.current, scale: engine.settings.renderScale, auto: quality.auto, sharp: !!engine.settings.sharpDirect, shed: quality.shed, res: [engine.width, engine.height], out: [gpu.canvas.width, gpu.canvas.height], hz: quality.displayHzPin || quality.displayHz,
+    facts: () => ({ scenario: runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? '', stage: game.mission.stage, live: game.view.live && !menu.isOpen && !brief?.held && !document.hidden, stats: game.mission.stats as unknown as Record<string, unknown>, preset: quality.current, scale: engine.settings.renderScale, auto: quality.auto, sharp: !!engine.settings.sharpDirect, shed: quality.shed, res: [engine.width, engine.height], out: [gpu.canvas.width, gpu.canvas.height], hz: quality.displayHzPin || quality.displayHz,
       over: (R => R && { kind: R.kind, won: R.won, word: R.word, why: R.why, secs: R.secs, approach: R.approach, void: R.void, clean: R.clean, lost: R.lost, of: R.of, foesDown: R.foes.down, foesOf: R.foes.of, ...(R.hostages ? { hostagesAlive: R.hostages.alive, hostagesOf: R.hostages.of } : {}) })(game.verdict.result) }),
     // (the GPU for the visit's record, and the pass times the engine's timer already holds: the records read them, nothing new is measured — cloud/telemetry.ts)
     gpu: () => { const L = gpu.device.limits; return { timestamps: gpu.hasTimestamps, format: gpu.format, features: [...gpu.device.features].sort(), limits: { texture2d: L.maxTextureDimension2D, buffer: L.maxBufferSize, storageBinding: L.maxStorageBufferBindingSize, computeInvocations: L.maxComputeInvocationsPerWorkgroup } }; },
@@ -841,7 +840,7 @@ async function main() {
       if (!kitView) attract.tick(rawDt);   // (never under ?kitview: the world runs there with no card up) idle seconds on the start card → the attract programme (its opening veil on the wall clock, then live; and off again the moment it may not run)
       step(dt);
       if ((away || room > 0) && behind.drawn !== drawnLast) { drawnLast = behind.drawn; const w = pace.sent(performance.now()), end = () => pace.done(w, performance.now(), away && engine.timer.enabled ? engine.timer.unionMs(GPU_RENDER_PASSES) : 0); gpu.device.queue.onSubmittedWorkDone().then(end, end); }   // (waiting for the GPU, and giving way: the queue's word that this frame's work is done is what lets a later one begin, and a window giving way waits after it by the GPU's own timing of a frame where there is one. Asked only of a frame that drew: a card that hides the picture hands the GPU nothing. A queue that fails has said so too, and a lost device has its own card)
-      perfrec.frame(rawDt, fpsSm); if (cloud) { cloud.frame(rawDt, missionLive(game) && !menu.isOpen && !brief?.held && !document.hidden && !rested, endStage(offBooks ? '' : game.mission.stage, offBooks ? null : game.verdict.result), cloudGpuMs, gpu.device.queue); cloudGpuMs = NaN; } perfsweep.tick(); bench.tick(rawDt); if (handsHeld && !bench.active) handsOff(); if (perfNoteT > 0) perfNoteT -= rawDt;
+      perfrec.frame(rawDt, fpsSm); if (cloud) { cloud.frame(rawDt, game.view.live && !menu.isOpen && !brief?.held && !document.hidden && !rested, endStage(offBooks ? '' : game.mission.stage, offBooks ? null : game.verdict.result), cloudGpuMs, gpu.device.queue); cloudGpuMs = NaN; } perfsweep.tick(); bench.tick(rawDt); if (handsHeld && !bench.active) handsOff(); if (perfNoteT > 0) perfNoteT -= rawDt;
       requestAnimationFrame(frame);
     } catch (e) { console.error(e); replaykey.crashed(e); fatalOnce('The frame loop threw and has been stopped:', e); }   // no re-arm: stepping on with broken state would only bury this message under a cascade (scripted __runFrames still works for poking at it)
   }
@@ -1288,11 +1287,11 @@ function squadFlagsAndHooks(q: URLSearchParams, engine: Engine, game: Game) {
   (window as any).__picture = { knobs: PICTURE, stats: PICTURE_STATS, summary: () => pictureSummary(game), views: () => pictureViews(game), ideas: (i: number) => ideasOf(game, game.guards[i]).map(I => ({ who: I.who === 'player' ? -1 : game.guards.indexOf(I.who), at: I.at, age: game.time - I.t, how: I.how, lost: I.lost })), tell: (i: number, who: number, at: [number, number, number], age = 0) => pictureTell(game, game.guards[i], who < 0 ? 'player' : game.guards[who], at, age) };   // each man's own picture of the fight (game/picture.ts): .knobs / .stats / .summary() / .views() = what the floor view draws / .ideas(i) = guard i's ideas / .tell(i, who, at, age) = hand guard i an idea (tests)
   (window as any).__runner = { knobs: RUNNER, stats: RUNNER_STATS, of: (i: number) => runnerOf(game.guards[i]), break: (i: number) => runnerBreak(game, game.guards[i]) };   // drops it and runs (game/runner.ts): .knobs / .stats / .of(i) = guard i's run, null when he has none / .break(i) = break guard i into it (tests)
   (window as any).__autopilot = { knobs: AUTOPILOT, stats: AUTOPILOT_STATS, pick: (at: [number, number, number]) => autoPick(game, game.orders.targetAt(at)) };
-  (window as any).__squadthrow = { knobs: SQUADTHROW, stats: SQUADTHROW_STATS, plans: () => squadThrowPlans(game), plan: (at: [number, number, number], kind: 'frag' | 'stun', who: 'all' | 'red' | 'blue' = 'all') => squadThrowPlan(game, game.orders.men(who), at, kind, true) };   // teammates' throws on order (game/squadthrow.ts): .plans() = what the overlay draws (who, his walk, the arc), .plan(at, kind) = who would throw there and from where
+  (window as any).__squadthrow = { knobs: SQUADTHROW, stats: SQUADTHROW_STATS, plans: () => game.view.throws, plan: (at: [number, number, number], kind: 'frag' | 'stun', who: 'all' | 'red' | 'blue' = 'all') => squadThrowPlan(game, game.orders.men(who), at, kind, true) };   // teammates' throws on order (game/squadthrow.ts): .plans() = what the overlay draws (who, his walk, the arc), .plan(at, kind) = who would throw there and from where
   (window as any).__lightswitch = { knobs: LIGHTSWITCH, stats: LIGHTSWITCH_STATS, list: () => wallSwitches(game), lit: (i: number) => { const sw = wallSwitches(game)[i]; return sw ? switchLit(sw) : null; } };   // a room's wall switches (game/lightswitch.ts): tools/qa/lightswitch-page.cjs reads the plates and works one through the page's own Space
   (window as any).__carlamps = { knobs: CARLAMPS, stats: CARLAMPS_STATS, list: () => game.targets.filter(t => t.group === VEHICLE_GROUP) };   // a parked vehicle's lamps as light targets (game/carlamps.ts): what the level gave and how many a round has met
   (window as any).__cleanrestart = { knobs: CLEANRESTART, stats: CLEANRESTART_STATS };   // a restart gives a clean level (game/cleanrestart.ts): tools/qa/cleanrestart-page.cjs reads what a restart did
-  (window as any).__squad40 = { knobs: SQUAD40, stats: SQUAD40_STATS, log: SQUAD40_LOG, left: () => squad40Left(game), brought: () => squad40Brought(game), of: (i: number) => squad40Of(game, game.orders.squad()[i]), plans: () => squad40Plans(game), summary: () => squad40Summary(game),
+  (window as any).__squad40 = { knobs: SQUAD40, stats: SQUAD40_STATS, log: SQUAD40_LOG, left: () => squad40Left(game), brought: () => squad40Brought(game), of: (i: number) => squad40Of(game, game.orders.squad()[i]), plans: () => game.view.throws.filter(t => t.kind === 'shell'), summary: () => squad40Summary(game),
     stage: (rounds: number[]) => squad40Stage(game, game.orders.squad().map((gd, i) => [gd, rounds[i] ?? 0] as const)) };   // a teammate's 40 mm grenade on order (game/squad40.ts)
   (window as any).__fight = game.fight;   // the room fight (game/roomfight.ts): .summary() / .log / .stats / .knobs / .skill (FIGHT_SKILL) / .watchOf(guard) / .teamSees(guard)
   (window as any).__rescue = game.rescue;   // ?rescue: the HOSTAGE RESCUE playtest (game/rescue.ts) — .start() / .stop() / .restage() / .press() (= F) / .orderDoor() / .callOff() / .entry / .knobs / .state / .summary() / .log
