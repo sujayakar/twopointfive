@@ -56,16 +56,16 @@ export async function readTexture(g: Gpu, t: GPUTexture): Promise<{ data: ArrayB
 
 /** GPU time of each pass, a few frames late; nothing where the browser gives no timestamps */
 export class Timer {
-  readonly ms = new Map<string, number>(); last = new Map<string, number>();
+  readonly ms = new Map<string, number>(); last = new Map<string, number>(); /** first stamp to last, ms: where passes overlap their sum says too much */ span = 0; on = true;
   private set: GPUQuerySet | null = null; private resolve!: GPUBuffer; private reads: GPUBuffer[] = []; private names: string[] = [];
-  constructor(private g: Gpu, private max = 48) {
+  constructor(private g: Gpu, private max = 112) {
     if (!g.timestamps) return;
     this.set = g.device.createQuerySet({ type: 'timestamp', count: max * 2 });
     this.resolve = g.device.createBuffer({ size: max * 16, usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC });
   }
   begin() { this.names = []; }
   pass(name: string): GPUComputePassTimestampWrites | undefined {
-    if (!this.set || this.names.length >= this.max) return undefined;
+    if (!this.set || !this.on || this.names.length >= this.max) return undefined;
     const i = this.names.push(name) - 1;
     return { querySet: this.set, beginningOfPassWriteIndex: i * 2, endOfPassWriteIndex: i * 2 + 1 };
   }
@@ -76,8 +76,9 @@ export class Timer {
     return () => r.mapAsync(GPUMapMode.READ, 0, n * 16).then(() => {
       const t = new BigUint64Array(r.getMappedRange(0, n * 16)), sum = new Map<string, number>();
       for (let i = 0; i < n; i++) sum.set(names[i]!, (sum.get(names[i]!) ?? 0) + Number(t[i * 2 + 1]! - t[i * 2]!) / 1e6);
+      { let a = t[0]!, b = t[1]!; for (let i = 0; i < n; i++) { if (t[i * 2]! < a) a = t[i * 2]!; if (t[i * 2 + 1]! > b) b = t[i * 2 + 1]!; } const s = Number(b - a) / 1e6; if (s > 0 && s < 1000) this.span = s; }
       this.last = sum; for (const k of [...this.ms.keys()]) if (!sum.has(k)) this.ms.delete(k);
-      for (const [k, v] of sum) this.ms.set(k, v < 0 || v > 1000 ? 0 : (this.ms.get(k) ?? v) * 0.9 + v * 0.1);
+      for (const [k, v] of sum) this.ms.set(k, v < 0 || v > 1000 ? 0 : (this.ms.get(k) ?? v) * 0.8 + v * 0.2);
       r.unmap(); this.reads.push(r);
     }).catch(() => {});
   }

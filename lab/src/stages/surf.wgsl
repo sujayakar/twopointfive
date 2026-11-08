@@ -2,6 +2,10 @@
 fn moved(k: u32, x: vec3f) -> vec3f {                              // where this point of a moving piece was last frame
   if (k < frame.piece0.z) { return x; } let l = toLocal(k, x); let o = (k - frame.piece0.z) * 4u; return past[o].xyz + past[o + 1u].xyz * l.x + past[o + 2u].xyz * l.y + past[o + 3u].xyz * l.z;
 }
+fn movedLeaf(i: u32, x: vec3f) -> vec3f {
+  let I = &insts[i]; let l = vec3f(dot((*I).r0.xyz, x) + (*I).r0.w, dot((*I).r1.xyz, x) + (*I).r1.w, dot((*I).r2.xyz, x) + (*I).r2.w); let a = pastLeaves[i * 3u]; let b = pastLeaves[i * 3u + 1u]; let c = pastLeaves[i * 3u + 2u];
+  let d = l - vec3f(a.w, b.w, c.w); return (a.xyz * d.x + b.xyz * d.y + c.xyz * d.z) / max(dot(a.xyz, a.xyz), 1e-12);
+}
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   let dim = vec2u(frame.size.xy); if (id.x >= dim.x || id.y >= dim.y) { return; }
   let rd = pxRay(id.xy); let ro = frame.camPos.xyz; let px = length(frame.camUp.xyz) * 2.0 / frame.size.w;
@@ -24,7 +28,7 @@ fn moved(k: u32, x: vec3f) -> vec3f {                              // where this
   }
   var r0 = ro; if (wetT > 0.0) { wetLen = h.t - wetT; let b = refract(rd, wetN, 0.75); r0 = ro + (b - rd) * wetLen * 0.55; }     // seen through water: what is drawn there shifts; where it is does not
   var s = surfaceAt(r0, rd, h, px * h.t); s = wetFilm(s, px * h.t); s.x = ro + rd * h.t; if (dot(s.n, -rd) < 0.03) { s.n = normalize(s.n - rd * (0.05 - dot(s.n, -rd))); }
-  let was = select(s.x, moved(h.piece, s.x), (h.piece & LEAF_HIT) == 0u); let q = projectPrev(was); let now = project(s.x);
+  var was = s.x; if ((h.piece & LEAF_HIT) == 0u) { was = moved(h.piece, s.x); } else { was = movedLeaf(h.piece & 0x7fffffffu, s.x); } let q = projectPrev(was); let now = project(s.x);
   if (wetLen > 0.0) { front.w = bitcast<u32>(wetLen); }
   textureStore(outSurf, id.xy, packPx(h.t, s)); textureStore(outAux, id.xy, vec4f(q.xy - now.xy, wetLen, select(0.0, 1.0, (s.flags & MOVES) != 0u)));
   textureStore(outEmit, id.xy, vec4f(s.glow, 0.0)); textureStore(outFront, id.xy, front);

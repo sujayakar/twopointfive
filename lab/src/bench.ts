@@ -52,17 +52,17 @@ export async function poison(lab: Lab, m: Method): Promise<{ frames: number; apa
 
 /** the same run every time: the tour's ticks from the first, at a fixed size. Mean GPU time of each pass, and the picture's fingerprint at four ticks */
 export async function run(lab: Lab, m: Method, ticks: number, script: (lab: Lab) => void, say: (t: string, done: number) => void, show?: (e: GPUCommandEncoder, result: GPUTexture) => void): Promise<string> {
-  await lab.use(m); lab.frameNo = 0; const sum = new Map<string, number>(), marks: string[] = []; let n = 0, worst = 0;
+  await lab.use(m); lab.frameNo = 0; const sum = new Map<string, number>(), marks: string[] = []; let n = 0, worst = 0, span = 0;
   for (let i = 1; i <= ticks; i++) {
-    script(lab); lab.step(); lab.draw(show); await lab.gpu.device.queue.onSubmittedWorkDone(); if (show && i % 10 === 0) say(`tick ${i} of ${ticks}`, i / ticks); if (i > 60) { n++; let t = 0; for (const [k, v] of lab.graph.timer.last) { sum.set(k, (sum.get(k) ?? 0) + v); t += v; } worst = Math.max(worst, t); }
+    script(lab); lab.step(); lab.draw(show); await lab.gpu.device.queue.onSubmittedWorkDone(); if (show && i % 10 === 0) say(`tick ${i} of ${ticks}`, i / ticks); if (i > 60) { n++; let t = 0; for (const [k, v] of lab.graph.timer.last) { sum.set(k, (sum.get(k) ?? 0) + v); t += v; } worst = Math.max(worst, t); span += lab.graph.timer.span; }
     if (i % Math.floor(ticks / 4) === 0) { marks.push(fnv(await picture(lab, m))); }
   }
   // the same frames with the GPU never left idle (three in flight, nothing shown): what a frame truly costs, where clocks drop between frames or passes overlap
-  const legs: string[] = []; for (const [k, l] of LEGS.entries()) {
+  const legs: string[] = []; lab.graph.timer.on = false; for (const [k, l] of LEGS.entries()) {
     const c = lab.camera; lab.level = l.level; lab.cut = lab.wantCut = lab.building.levels[l.level]!.cut; Object.assign(c.want, { look: [...l.look], dist: l.dist }); c.snap(); say(`back to back ${k + 1} of ${LEGS.length}`, 1);
     let t0 = 0; const N = Math.min(150, ticks), warm = N >> 2, flying: Promise<undefined>[] = []; for (let i = 0; i < N; i++) { if (i === warm) { await Promise.all(flying.splice(0)); t0 = performance.now(); } lab.step(); lab.draw(); flying.push(lab.gpu.device.queue.onSubmittedWorkDone()); if (flying.length > 2) await flying.shift(); } await Promise.all(flying); legs.push(`${l.name} ${((performance.now() - t0) / (N - warm)).toFixed(2)}`);
   }
-  const total = [...sum.values()].reduce((a, b) => a + b, 0) / Math.max(1, n); return `${lab.gpu.info}\n${lab.graph.render.join('x')} to ${lab.graph.output.join('x')}, ${ticks} ticks\nGPU mean ${total.toFixed(2)} ms, worst ${worst.toFixed(2)} (one frame at a time)\nback to back, ms a frame: ${legs.join(', ')}\n${[...sum].sort((a, b) => b[1] - a[1]).map(([k, v]) => k.padEnd(16) + (v / n).toFixed(3)).join('\n')}\npicture ${marks.join(' ')}`;
+  lab.graph.timer.on = true; const total = [...sum.values()].reduce((a, b) => a + b, 0) / Math.max(1, n); return `${lab.gpu.info}\n${lab.graph.render.join('x')} to ${lab.graph.output.join('x')}, ${ticks} ticks\nGPU mean ${total.toFixed(2)} ms, worst ${worst.toFixed(2)} (passes summed, one frame at a time); first to last ${(span / Math.max(1, n)).toFixed(2)}\nback to back, ms a frame: ${legs.join(', ')}\n${[...sum].sort((a, b) => b[1] - a[1]).map(([k, v]) => k.padEnd(16) + (v / n).toFixed(3)).join('\n')}\npicture ${marks.join(' ')}`;
 }
 
 /** every signal's fingerprint at each of the first ticks of the fixed run: where two runs first part is what does not repeat */

@@ -1,0 +1,12 @@
+[
+ {"name": "roof", "dist": 50, "hour": 16.0, "w": 640, "h": 360, "samples": 160, "method": "realtime", "tick": 600},
+ {"name": "garden", "dist": 24, "hour": 14.0, "look": [8, 4, 1.5], "pitch": 0.7, "w": 640, "h": 360, "samples": 160, "method": "realtime", "tick": 600},
+ {"name": "upper", "dist": 36, "hour": 15.0, "cut": 5.95, "look": [-4, 3.4, -1], "doors": 0.8, "w": 640, "h": 360, "samples": 160, "method": "realtime", "tick": 600},
+ {"name": "ground day", "dist": 34, "hour": 15.0, "cut": 2.55, "look": [0, 0.6, 0], "doors": 0.8, "w": 640, "h": 360, "samples": 160, "method": "realtime", "tick": 600},
+ {"name": "ground night", "dist": 34, "hour": 21.5, "cut": 2.55, "look": [0, 0.6, 0], "doors": 0.8, "w": 640, "h": 360, "samples": 160, "method": "realtime", "tick": 600},
+ {"name": "dusk", "dist": 56, "hour": 18.3, "yaw": 0.9, "pitch": 0.62, "w": 640, "h": 360, "samples": 160, "method": "realtime", "tick": 600},
+ {"name": "dawn", "dist": 60, "hour": 7.0, "yaw": 0.3, "pitch": 0.6, "w": 640, "h": 360, "samples": 160, "method": "realtime", "tick": 600},
+ {"name": "night", "dist": 56, "hour": 22.0, "yaw": 0.9, "pitch": 0.62, "w": 640, "h": 360, "samples": 160, "method": "realtime", "tick": 600},
+ {"name": "rain night", "dist": 40, "hour": 21.0, "rain": 1, "w": 640, "h": 360, "samples": 160, "method": "realtime", "tick": 600},
+ {"name": "noon", "dist": 46, "hour": 12.5, "w": 640, "h": 360, "samples": 160, "method": "realtime", "tick": 600}
+]

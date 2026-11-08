@@ -1,12 +1,14 @@
 // HISTORY, for any signal: last frame's answer for this surface, checked, held to what this frame says nearby, and mixed by how many stand behind it.
 // const DIV = the signal's grid over the render grid; CAP = frames; SPREAD = how far (sigmas) history may stand off; NARROW = 1 for a mirror's image
-@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
-  let dim = textureDimensions(outH); if (id.x >= dim.x || id.y >= dim.y) { return; }
-  let rdim = vec2f(frame.size.xy); let full = min(id.xy * u32(DIV), vec2u(rdim) - 1u); let rd = pxRay(full); let p = unpackPx(textureLoad(surf, full, 0), rd); let c = textureLoad(cur, id.xy, 0);
+var<workgroup> tile: array<vec4f, 144>;                            // this group's 8 × 8 and two round it
+@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u, @builtin(local_invocation_id) lid: vec3u, @builtin(local_invocation_index) li: u32) {
+  let dim = textureDimensions(outH); let t0 = vec2i(id.xy) - vec2i(lid.xy) - 2; for (var i = li; i < 144u; i += 64u) { tile[i] = textureLoad(cur, clamp(t0 + vec2i(i32(i % 12u), i32(i / 12u)), vec2i(0), vec2i(dim) - 1), 0); } workgroupBarrier();
+  if (id.x >= dim.x || id.y >= dim.y) { return; }
+  let rdim = vec2f(frame.size.xy); let full = min(id.xy * u32(DIV), vec2u(rdim) - 1u); let rd = pxRay(full); let p = unpackPx(textureLoad(surf, full, 0), rd); let at = (lid.y + 2u) * 12u + lid.x + 2u; let c = tile[at];
   if (p.sky && NARROW == 0) { textureStore(outH, id.xy, c); textureStore(outM, id.xy, vec4f(0.0)); return; }
   if (NARROW == 1 && c.a < 0.0) { textureStore(outH, id.xy, c); textureStore(outM, id.xy, vec4f(0.0)); return; }
   var m1 = vec4f(0.0); var m2 = vec4f(0.0); var wn = 0.0; let R = 2;
-  for (var y = -R; y <= R; y++) { for (var x = -R; x <= R; x++) { let q = clamp(vec2i(id.xy) + vec2i(x, y), vec2i(0), vec2i(dim) - 1); let v = textureLoad(cur, q, 0); if (NARROW == 1 && v.a < 0.0) { continue; } m1 += v; m2 += v * v; wn += 1.0; } }
+  for (var y = -R; y <= R; y++) { for (var x = -R; x <= R; x++) { let v = tile[u32(i32(at) + y * 12 + x)]; if (NARROW == 1 && v.a < 0.0) { continue; } m1 += v; m2 += v * v; wn += 1.0; } }
   m1 /= wn; let sd = sqrt(max(m2 / wn - m1 * m1, vec4f(0.0)));
   let aux = textureLoad(auxT, full, 0); var uv = (vec2f(full) + 0.5) / rdim + aux.xy; var x0 = p.x; let fr = textureLoad(frontT, full, 0); var checkT = p.t; var front = false;
   if (NARROW == 1) {                                               // a mirror's image moves as if it stood behind the surface

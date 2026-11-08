@@ -111,20 +111,22 @@ export class Graph {
     this.stages = stages; this.groups.clear();
   }
   run(enc: GPUCommandEncoder, stages = this.stages) {
+    let open: GPUComputePassEncoder | null = null; const shut = () => { open?.end(); open = null; };   // stages share a pass where none is timed on its own: a pass is not free
     for (const s of stages) {
       if (s.when && !s.when()) continue;
-      const own = this.drawn.get(s); if (own) { own(enc, this); continue; }
+      const own = this.drawn.get(s); if (own) { shut(); own(enc, this); continue; }
       const b = this.built.get(s); if (!b) continue;
       const res = b.names.map(([n, kind]) => kind === 'b' ? { buffer: this.buffers.get(n) ?? fail('no buffer ' + n) } : this.view(n));
       const key = s.name + ':' + this.id(s) + ':' + res.map(r => this.id('buffer' in r ? r.buffer : r)).join(',');
       let group = this.groups.get(key);
       if (!group) this.groups.set(key, group = this.g.device.createBindGroup({ layout: b.layout, entries: res.map((resource, binding) => ({ binding, resource: resource as GPUBindingResource })) }));
-      const p = enc.beginComputePass({ label: s.name, timestampWrites: this.timer.pass(s.name) });
+      const stamp = this.timer.pass(s.name); if (stamp) shut(); const p: GPUComputePassEncoder = (open as GPUComputePassEncoder | null) ?? (open = enc.beginComputePass({ label: s.name, ...(stamp ? { timestampWrites: stamp } : {}) }));
       p.setPipeline(b.pipe); p.setBindGroup(0, this.shared.group()); p.setBindGroup(1, group);
       if (typeof s.over === 'object' && !Array.isArray(s.over) && 'groups' in s.over) p.dispatchWorkgroups(...s.over.groups());
       else { const [w, h] = this.px(s.over), [gx, gy] = s.wg ?? [8, 8]; p.dispatchWorkgroups(Math.ceil(w / gx), Math.ceil(h / gy)); }
-      p.end(); this.watch?.after(enc, s);
+      if (stamp || this.watch) { shut(); this.watch?.after(enc, s); }
     }
+    shut();
   }
   /** this frame becomes last frame */
   flip() { this.parity ^= 1; }
