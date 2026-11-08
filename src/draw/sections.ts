@@ -1,11 +1,11 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 2958026896;
+export const LAYOUT = 754900818;
 /** what a host may ask for: what is made together is asked for together */
-export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, all = 1023 }
+export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, all = 2047 }
 /** each section's place in the table the module answers with */
-export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, rims = 30, fires = 31, fireTable = 32, count = 33 }
+export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, rims = 30, fires = 31, fireTable = 32, decals = 33, decalKeys = 34, decalHead = 35, count = 36 }
 
 /** the fog: one row */
 export const enum Fog {
@@ -713,6 +713,32 @@ export const enum FireTable {
   soot = 60,
   /** words a row */
   row = 63,
+}
+
+/** who a record is, in the same order: the id of what made it (its tick; the arm in the top byte and its place among that tick's) */
+export const enum DecalKey {
+  /** u32 */
+  tick = 0,
+  /** u32 */
+  made = 1,
+  /** words a row */
+  row = 2,
+}
+
+/** what the page is told of the marks' buffer this frame: one row */
+export const enum DecalHead {
+  /** u32: a word of it moved: send it */
+  moved = 0,
+  /** u32: marks in the list, and of them drawn this frame */
+  count = 1,
+  /** u32 */
+  drawn = 2,
+  /** u32: entries of the cells' lists, and left out of them by their caps */
+  listed = 3,
+  /** u32 */
+  dropped = 4,
+  /** words a row */
+  row = 5,
 }
 
 /** what a box may say it is made of, by its number in Rust */

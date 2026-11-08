@@ -43,11 +43,16 @@ pub fn apply_dust_look(g: &mut crate::game::Game) {
 /// THE dust emit: the site's numbers times the table; the count rounded, never below 1 where a site asked for any. (particleFx.ts emitDust)
 pub fn emit_dust(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) -> f64 {
     if !gpu_fx(g) { return 0.0; }
+    match dust_asked(g, count, o) { Some((n, o)) => crate::render_particles::particles_emit(g, crate::render_particles::PKind::Dust, pos, dir, n, o), None => 0.0 }
+}
+
+/// How many puffs a site's asking for `count` comes to, and its numbers, by the table; none = no dust at all.
+pub fn dust_asked(g: &crate::game::Game, count: f64, o: crate::render_particles::EmitOpts) -> Option<(f64, crate::render_particles::EmitOpts)> {
     let k = g.m.particle_fx.dust;
     let n = dust_count(k.count, count);
-    if n <= 0.0 { return 0.0; }
-    if dust_shipped(&k) { return crate::render_particles::particles_emit(g, crate::render_particles::PKind::Dust, pos, dir, n, o); }
-    crate::render_particles::particles_emit(g, crate::render_particles::PKind::Dust, pos, dir, n, Emit {
+    if n <= 0.0 { return None; }
+    if dust_shipped(&k) { return Some((n, o)); }
+    Some((n, Emit {
         size: o.size * k.size,
         life: o.life * k.life,
         speed: o.speed * k.speed,
@@ -55,7 +60,7 @@ pub fn emit_dust(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64, o: cra
         pos_jit: o.pos_jit.map(|x| x * k.spread),
         vadd: o.vadd.map(|v| v3::scale(v, k.speed)),
         ..o
-    })
+    }))
 }
 
 /// How many puffs: × 0 = none anywhere; any other factor keeps at least one where a site asked for some.

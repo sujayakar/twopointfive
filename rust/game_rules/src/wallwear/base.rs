@@ -4,10 +4,12 @@
 use crate::{ids::*, js::*, Quat, V3};
 #[allow(unused_imports)]
 use alloc::{string::String, vec::Vec};
+use crate::out_events::*;
+use crate::render_decals::{mark_asked, Ask};
 
 
 /// (src/game/wallwear.ts:58 WallWear.round)
-pub fn wall_wear_round(g: &mut crate::game::Game, box_: BoxId, surf: crate::scene_materials::Surf, key: f64, counted: f64, frac: f64, hit_p: V3, dir: V3) { g.out.push(crate::out_events::OutEvent::WallWearRound(crate::out_events::OutWallWearRound { box_: box_, surf: surf, key: key, counted: counted, frac: frac, hit_p: hit_p, dir: dir })); }
+pub fn wall_wear_round(g: &mut crate::game::Game, box_: BoxId, surf: crate::scene_materials::Surf, key: f64, counted: f64, frac: f64, hit_p: V3, dir: V3) { let e = OutWallWearRound { box_, surf, key, counted, frac, hit_p, dir }; let ours = g.engine.particles.as_ref().is_some_and(|p| p.ours); mark_asked(g, Ask::Round(e.clone(), ours)); g.out.push(OutEvent::WallWearRound(e)); }
 
 /// (src/game/wallwear.ts:88 WallWear.reset)
-pub fn wall_wear_reset(g: &mut crate::game::Game) { g.out.push(crate::out_events::OutEvent::WallWearReset); }
+pub fn wall_wear_reset(g: &mut crate::game::Game) { mark_asked(g, Ask::Reset); g.out.push(OutEvent::WallWearReset); }
