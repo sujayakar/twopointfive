@@ -109,6 +109,7 @@ export async function gunhandWhistleCheck(): Promise<boolean> {
       gd.state = 'patrol'; gd.awareness = 0; gd.lastKnown = null; gd.reactT = 0; gd.searchT = 0; gd.task = null; gd.bodyDuty = null; gd.path = []; gd.pathGoal = null; gd.hold = true; gd.pinned = false; gd.dazzledUntil = -1;
       c.update(0); c.update(DT); for (let i = 0; i < 3; i++) W.step(DT);
       if (!BREAK) W.input.pressed.add('KeyV'); W.step(DT);
+      g.playerInvisible = true;   // (Sam stands under a corridor panel: the whistle answered, it is the answer that is asked, not whether he is then seen)
       let got = 0, lUp = -Infinity, rUp = Infinity, lens = 0, off = 0, thumb = 0, carry = '', upper = '';
       for (let i = 0; i < 90; i++) { W.step(DT); const out: any[] = []; CB.handProps(g, out); if (i < 60) continue;
         const t = torchOf(out.filter(b => (b.owner & 0xff) === (c.id & 0xff))); carry = GU.handCarry(gd); upper = c.anim.upper; if (!t) continue; got++;
