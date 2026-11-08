@@ -338,7 +338,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and `scenarios.roomClear.wallCharges` (wall charges of its own, whatever the cards carry: nobody is issued one). The listing's row for a mission
   says the sizes it offers, whether the cards can be changed there, the level's own kit, its locked and steel doors against the two door charges a
   squad is issued (no hammer or shotgun opens steel, and only a team of three or four as issued is lent a big-slot tool: `KITDEAL.more`, menus.md), whether frags can be ordered at all (never with a hostage,
-  the man a snatch came for or a civilian in the blast: `squadthrow.ts`), and whether the Team & kit picture has a place for each way in
+  a civilian in the blast: `squadthrow.ts`), and whether the Team & kit picture has a place for each way in
   (`scenarios.kitView.ways`). A listing, not a gate: it always exits 0.
 - **THE LEVEL SKILL AND ITS ONE COMMAND** (10-18; tools and a list only: no switch, no game code, no level file touched). The maintainer, on a Team & kit
   screen where the blue pair carried a rifle and nothing else: "as issued still has blue team pretty empty" · "i think we should make something like a level

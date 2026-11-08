@@ -50,13 +50,6 @@ pub(crate) fn ended(g: &crate::game::Game) -> Option<(bool, &'static str, String
     if roomclear {
         use crate::roomclear::RoomClearEnd as E;
         let end = g.room_clear.end;
-        if crate::snatch::snatch_active(g) {
-            return match g.snatch.end {
-                Some(crate::snatch::SnatchEnd::Won) => Some((true, "TAKEN ALIVE", g.snatch.why.clone())),
-                Some(crate::snatch::SnatchEnd::Lost) => Some((false, if g.snatch.lost == Some(crate::snatch::SnatchLost::Gone) { "GOT AWAY" } else { "DEAD" }, g.snatch.why.clone())),
-                None => if end == Some(E::Wiped) { Some((false, "WIPED", g.room_clear.end_why.clone())) } else { None },
-            };
-        }
         if defuse {
             let d = g.defuse.end;
             if d == Some(crate::defuse::DefuseEnd::Safe) && end == Some(E::Taken) { return Some((true, "DEFUSED", g.room_clear.end_why.clone())); }   // (defuse.ts Defuse.won)

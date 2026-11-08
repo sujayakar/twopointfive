@@ -99,18 +99,6 @@ pub fn hostage_lines() -> Vec<String> {
     out
 }
 
-/// Every line of the man a snatch is for; snatch.ts asks it of a line about to be said. (dialogue.ts snatchLines)
-pub fn snatch_lines() -> Vec<String> {
-    let l = crate::dialogue::snatch_lines_table();
-    let mut out = l.running;
-    out.extend(l.cornered);
-    out.extend(l.hands_up);
-    out.extend(l.tied);
-    out.extend(l.held);
-    out.extend(l.dry);
-    out
-}
-
 /// What a new row holds: next is -1, which AmbientState::zeroed() is not. (dialogue.ts:2002)
 fn ambient_fresh() -> AmbientState {
     AmbientState { next: -1.0, run: None, played: JsMap::new(), count: 0.0 }
@@ -326,8 +314,6 @@ mod tests {
         assert_eq!((got.len(), fnv(&got)), (171, 0xafb2f0666b466e78));
         let got = hostage_lines();
         assert_eq!((got.len(), fnv(&got)), (32, 0x4f3202ed4c2bf9b2));
-        let got = snatch_lines();
-        assert_eq!((got.len(), fnv(&got)), (16, 0x2939817da6025187));
     }
 
     #[test]

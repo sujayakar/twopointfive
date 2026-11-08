@@ -1902,26 +1902,6 @@ export type HostageMoment = Exclude<keyof typeof HOSTAGE_LINES, 'team'>;
 /** every hostage line and the team's word to them (dialogue-probes: lengths, the blocklist, nothing of the office's civilians in it) */
 export function hostageLines(): string[] { return Object.values(HOSTAGE_LINES).flat(); }
 
-// ---------------------------------------------------------------- THE MAN A SNATCH IS FOR (game/snatch.ts `voice`, said through civilians.ts civSay / civilianAnswer).
-// He is a civilian's record too, and until these he spoke the office's late worker ("I do the ACCOUNTS —", "…get a grip, {name}."): wrong for the man the team
-// came for. Calm he says nothing; frightened, what he says is by what he is doing. The team is 'they' / 'you' to him; nothing of the office's in it.
-export const SNATCH_LINES = {
-  /** the first loud thing has reached him and he is running for a way out */
-  running: ["They're here — they're HERE —", 'Not me — not ME —', 'Out — get me OUT —'],
-  /** gone to ground with no way out left, hands not up */
-  cornered: ['Stay back — stay BACK —', "I've nothing for you — nothing —", '— no, no, no —'],
-  /** his hands on his head, a man of the team on him or just gone */
-  handsUp: ["don't shoot! don't shoot!", "All right — all RIGHT — they're up —", "I'm not armed — look — nothing —"],
-  /** tied where he gave up */
-  tied: ["You've the wrong man —", "I'm not fighting you — easy —", 'They will come for me. You know that.'],
-  /** in Sam's arm, the first press */
-  held: ["All right — I'm not fighting — all right —", 'Easy — I have no gun — nothing —'],
-  /** and every press after: he gives nothing */
-  dry: ['I say nothing to you.', 'Ask whoever sent you.'],
-};
-/** every line of his (the say sites pass one of these through as it is) */
-export function snatchLines(): string[] { return Object.values(SNATCH_LINES).flat(); }
-
 interface AmbientState { next: number; run: AmbientRun | null; played: Map<string, number>; count: number; }
 const ambientByGame = new SideMap<object, AmbientState>('dialogue.ambientByGame');
 export function ambientState(g: Game): AmbientState { let S = ambientByGame.get(g); if (!S) { S = { next: -1, run: null, played: new Map(), count: 0 }; ambientByGame.set(g, S); } return S; }

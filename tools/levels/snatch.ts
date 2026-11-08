@@ -1,12 +1,10 @@
-// THE SNATCH: a mud-brick house in a walled yard, held by five men around ONE unarmed man the team has to take ALIVE (src/game/snatch.ts — the overlay on
-// this level's room clear; the block `scenarios.snatch` below is what switches it on). The idea the level is built for: the moment the floor goes loud he
-// runs for the nearest way out, and his wing has two doors to the open air — the back door (north) and his own side door (east) — which both lead round to
-// ONE back gate in the yard's north-east corner. Go in the front with everybody and he is through that gate before the first room is taken; put a pair on the
-// back gate first and he meets rifles whichever door he came out of, and gives up.
+// THE HOUSE IN THE WALLED YARD: a mud-brick house held by eight men, a plain room clear. It was the snatch's level, and that mission is out, so no row of the
+// list opens it. His wing has two doors to the open air, the back door (north) and the side door (east), and both lead round to ONE back gate in the yard's
+// north-east corner, with a dark hut and two men on it.
 //
 //        x 7        12        18   20        26        32
 //   z 3  ┌──────────────────────────────────────────────┐
-//        │  back alley                               ░░░│ back gate (east wall, z 4.5‥6) → the way out
+//        │  back alley                               ░░░│ back gate (east wall, z 4.5‥6)
 //   z 8  │         ┌──────back─┬────────────────┐       │
 //        │         │ back room │   HIS ROOM   side      │      his ─ the door between the back room and his room
 //   z 13 │         ├─back_room─┴───┬────────────┤  side │      back_room ─ main room | back room
@@ -19,7 +17,7 @@
 // Built from the 2010s kit (src/scene/gwotKit.ts): flat colours, boxes only. Regenerate: bun run tools/levels/export.ts snatch
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { LevelScenarios, Rect, ResponseData } from '../../src/scene/scenarios';
+import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
 import { officeKit, type GeneratorTrace } from '../../src/scene/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART } from '../../src/scene/gwotKit';
@@ -29,29 +27,10 @@ import { livedTail } from './livedKit';
 import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'snatch';
-export const NOTES = 'The snatch: a house in a walled yard, eight men around one unarmed man to take alive; two doors of his wing lead to one back gate, and a dark hut with two men in it stands on that gate. Regenerate: bun run tools/levels/export.ts snatch';
+export const NOTES = 'A house in a walled yard, eight men, a room clear; two doors of the far wing lead to one back gate, and a dark hut with two men in it stands on that gate. Regenerate: bun run tools/levels/export.ts snatch';
 /** the kit's palette goes into the file's `materials` (tools/levels/export.ts) */
 export const MATERIALS = GWOT_MATERIALS;
 
-/** scenarios.response (game/qrf.ts, tools/qa/response-check.ts): WHO COMES WHEN THE HOUSE GOES LOUD. It answers the snatch that ends in the van and nothing
- *  else (qrf.ts raid: with game/snatchout.ts off the level is as it was, and nobody comes). Any man of the house who hears the gunfire and lives six seconds
- *  calls; they come by the yard's own two gates — the back gate he runs for, or up the outside of the wall to the front gate, where the team's van stands —
- *  never the one a man of the team is standing at. Two men: the floor's budget of figures has room for no more beside eight in the house (a call for
- *  the maintainer: a bigger party means fewer men in the rooms). */
-export const RESPONSE: ResponseData = {
-  why: 'The man the team came for keeps the village below in guns, and the house has a radio: gunfire any of its men lives to report brings the village\'s own guard up the hill to one of the yard\'s two gates, to take him back before he is driven off. The house silenced inside six seconds, or the man in the van before they are up, and they find nobody.',
-  site: 'the house', at: 'at the house', team: 'the village guard', tag: 'VILLAGE', men: [2, 2], eta: [20, 40],
-  raid: {},
-  ways: [
-    { name: 'the back gate', coming: 'coming in by the back gate', clear: 'nobody in the back gate',
-      muster: [[36.5, 0, 5.25], [36.5, 0, 4.2], [36.5, 0, 6.3], [37.6, 0, 5.25]],
-      entry: [[30.4, 0, 5.2], [29.4, 0, 4.4], [29.2, 0, 5.7], [28.2, 0, 5.0]], entryFace: [-Math.PI / 2, -Math.PI / 2 + 0.8, -Math.PI / 2 - 0.8, -Math.PI / 2] },
-    { name: 'the front gate', coming: 'coming round the wall to the front gate', clear: 'nobody outside the front gate',
-      muster: [[36.2, 0, 25.6], [36.2, 0, 24.6], [36.2, 0, 26.6], [37.3, 0, 25.6]],
-      entry: [[24.8, 0, 25.2], [25.8, 0, 24.5], [25.8, 0, 26.1], [26.8, 0, 25.2]], entryFace: [-Math.PI / 2, -Math.PI / 2 + 0.8, -Math.PI / 2 - 0.8, -Math.PI / 2] },
-  ],
-  sweep: [{ name: 'his room', pos: [22.0, 0, 10.6] }, { name: 'the courtyard', pos: [16.0, 0, 20.4] }, { name: 'the front gate', pos: [16.0, 0, 24.4] }],
-};
 
 export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
   const trace: GeneratorTrace = { groups: [] };
@@ -73,7 +52,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   slab(11.9, H, 7.9, 26.1, H + 0.2, 18.1, P.mudLight, { flags: BoxFlag.NoPrimary, rough: 0.95 });
   slab(28.86, H, 6.46, 31.9, H + 0.2, 10.54, P.mudLight, { flags: BoxFlag.NoPrimary, rough: 0.95 });
 
-  // ---- the yard wall (2.4 m, coped): the south gate the team comes in by, the back gate he runs for ----
+  // ---- the yard wall (2.4 m, coped): the south gate the team comes in by, the back gate ----
   grp('walls.yard');
   G.yardWallX(3, 6.88, 32.12);                                                                             // north
   G.yardWallX(23, 6.88, 32.12, 'mud', [{ a: 14.5, b: 17.5, y0: 0, y1: 2.4 }]);                             // south, the vehicle gate
@@ -139,7 +118,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('outside');
   G.bush(4.6, 20.4); G.bush(35.2, 21.0, 1.2); G.bush(3.6, 6.2, 0.9); G.bush(24.0, 1.4, 1.1); G.rubble(35.4, 9.2, 1.0, 8, 'block');
   G.hesco(11.6, 24.4, 2, 0); G.jersey(21.4, 25.6, 1, 0.4);
-  G.van(10.2, 26.5, Math.PI, 'truckTan');                                                                  // the team's own van, tail to the track it came up: where he is put (scenarios.snatch.van)
+  G.van(10.2, 26.5, Math.PI, 'truckTan');                                                                  // the team's own van, tail to the track it came up
 
   // ---- lights: a bulb in the rooms the guards use, his lantern, a floodlight over the courtyard, the moon; the side yard is lit by the generator's lamp; the back alley, the hut and the back gate behind it are dark ----
   grp('lights');
@@ -175,8 +154,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // night's fire by the bed the watch sleeps on, the generator's fuel and what it drips, a bike against the wall, the drip line under the washing, bricks
   // fallen at a wall's foot, the stain where the yard's water runs out under the wall. Every piece is the kit's own, by name. Solids are few and stand
   // against a wall or beside a kept thing, off every door's line and off his two ways to the back gate; everything in the back alley, on the track and
-  // outside the wall is paint on the ground or low enough to walk over, so the way he runs, the way he is led back to the van and the way the village
-  // guard comes in are as they were.
+  // outside the wall is paint on the ground or low enough to walk over, so nothing out there stops a man's walk.
   { const T = livedTail(K.props, grp), place = T.room;
     place('courtyard');
     G.hearth(27.9, 19.7, 0.3);                                                                // last night's fire, by the rope bed and the chair
@@ -227,7 +205,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const FRONT: Vec3 = [16.0, 1.1, 17.9], MB_S: Vec3 = [14.6, 1.1, 13.1], MB_N: Vec3 = [14.6, 1.1, 12.9], MK: Vec3 = [20.1, 1.1, 15.6];
   const BACK_D: Vec3 = [17.0, 1.1, 8.1], HIS_W: Vec3 = [17.9, 1.1, 10.6], HIS_E: Vec3 = [18.1, 1.1, 10.6], SIDE: Vec3 = [25.9, 1.1, 10.6], HUT_D: Vec3 = [30.4, 1.1, 6.7];
   const scenarios: LevelScenarios = {
-    // THE ROOM CLEAR the snatch runs over: four rooms and the gate hut, eight men. No breach plan on this level, so the structure says where the team starts (outside the south gate).
+    // THE ROOM CLEAR: four rooms and the gate hut, eight men. No breach plan on this level, so the structure says where the team starts (outside the south gate).
     roomClear: {
       name: 'the house', maxMen: 8,
       team: { sam: [16, 0, 25.4], samYaw: Math.PI, ops: [[15, 0, 26.3], [17, 0, 26.3], [15, 0, 27.2], [17, 0, 27.2]], opsYaw: Math.PI },
@@ -265,12 +243,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
           ] },
       ],
     },
-    // THE MAN (game/snatch.ts): he keeps to his room while the floor is quiet; the back gate is his way out, the front gate the long one through the team
-    snatch: {
-      man: { name: 'Daoud', pos: [23.2, 0, 10.7], face: -HALF, tint: [0.66, 0.62, 0.52], tint2: [0.3, 0.27, 0.22], points: [[23.2, 0, 10.7], [20.6, 0, 11.6]], wait: [45, 20] },
-      exits: [{ name: 'the back gate', pos: [33.4, 0, 5.25] }, { name: 'the front gate', pos: [16, 0, 24.6] }],
-      van: { name: 'the van', pos: [13.4, 0, 26.5] },
-    },
     places: { areas: [
       { name: 'the courtyard', bounds: { x0: 7.2, x1: 31.8, z0: 18.2, z1: 22.8 } }, { name: 'the back alley', bounds: { x0: 7.2, x1: 26, z0: 3.2, z1: 7.8 } },
       { name: 'the side yard', bounds: { x0: 26.2, x1: 31.8, z0: 3.2, z1: 18.2 } }, { name: 'the wash yard', bounds: { x0: 7.2, x1: 11.8, z0: 7.8, z1: 18.2 } },
@@ -293,7 +265,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // wand, a bang or a frag on order all stood idle), so the way is the door the gate leads to: the house's front door across the courtyard. What stands in
   // the camera's way is worked out and sunk by the plan.
   scenarios.kitView = { ways: [{ door: 'front' }] };
-  scenarios.response = RESPONSE;
   return { level, scenarios, groups: trace.groups, surfaces };
 }
 function norm(v: Vec3): Vec3 { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; }

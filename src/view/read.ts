@@ -17,8 +17,8 @@ class In { p = 0; dv: DataView; constructor(readonly b: Uint8Array) { this.dv = 
   word<T>(W: readonly T[], of: string): T { const k = this.uint16(); if (k >= W.length) throw new Error(`the view: no such word of ${of} (${k})`); return W[k]; } }
 const DEC = new TextDecoder();
 
-export type MissionOf = 'stages' | 'script' | 'lesson' | 'defuse' | 'snatch' | 'roomclear' | 'rescue' | 'nightbreach';
-const MissionOfWords: readonly MissionOf[] = ['stages', 'script', 'lesson', 'defuse', 'snatch', 'roomclear', 'rescue', 'nightbreach'];
+export type MissionOf = 'stages' | 'script' | 'lesson' | 'defuse' | 'roomclear' | 'rescue' | 'nightbreach';
+const MissionOfWords: readonly MissionOf[] = ['stages', 'script', 'lesson', 'defuse', 'roomclear', 'rescue', 'nightbreach'];
 function readMissionOfIn(I: In): MissionOf { return I.word(MissionOfWords, 'MissionOf'); }
 export interface MissionView { of: MissionOf; text: string; pos: Vec3 | null }
 function readMissionViewIn(I: In): MissionView { return { of: readMissionOfIn(I), text: I.str(), pos: I.bool() ? [I.float64(), I.float64(), I.float64()] : null }; }

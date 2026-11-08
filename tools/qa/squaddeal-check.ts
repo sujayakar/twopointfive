@@ -21,7 +21,7 @@
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 /** the listed missions whose level file names no squads (the office's own structure too: room-clear-pair has no file) */
-const ROWS = ['depot-four', 'records-pair', 'killhouse-four', 'hall-four', 'floodlit-four', 'defuse-four', 'snatch-four', 'room-clear-pair'];
+const ROWS = ['depot-four', 'records-pair', 'killhouse-four', 'hall-four', 'floodlit-four', 'defuse-four', 'room-clear-pair'];
 const FILE_WINS = 'warehouse-four', LEAD_S = 1.5;
 
 
