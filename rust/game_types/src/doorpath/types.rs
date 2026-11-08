@@ -92,8 +92,6 @@ pub struct DoorPath {
     pub walks: JsMap<GuardId, crate::doorpath::Walk>,
     pub last_of: JsMap<DoorOpId, crate::doorpath::DoorPathLastOfValue>,
     pub stats: crate::doorpath::DoorPathStats,
-    pub low: JsSet<GuardId>,
-    pub lent: Vec<crate::doorpath::DoorPathLentItem>,
 }
 impl DoorPath {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
@@ -101,9 +99,7 @@ impl DoorPath {
         DoorPath {
             walks: JsMap::new(),
             last_of: JsMap::new(),
-            stats: crate::doorpath::DoorPathStats { sent: 0.0, walked: 0.0, round: 0.0, no_round: 0.0, no_lane: 0.0, late: 0.0, held_s: 0.0, capped: 0.0, yields: 0.0, gave_up: 0.0, taken: 0.0, relaid: 0.0, turned: 0.0, moved: 0.0, wait_s: 0.0, nav: 0.0, gun_s: 0.0, guns: 0.0, gun_ahead: 0.0, stepped: 0.0 },
-            low: JsSet::new(),
-            lent: Vec::new(),
+            stats: crate::doorpath::DoorPathStats { sent: 0.0, walked: 0.0, round: 0.0, no_round: 0.0, no_lane: 0.0, late: 0.0, held_s: 0.0, capped: 0.0, yields: 0.0, gave_up: 0.0, taken: 0.0, relaid: 0.0, turned: 0.0, moved: 0.0, wait_s: 0.0, nav: 0.0, stepped: 0.0 },
         }
     }
 }
@@ -147,9 +143,6 @@ pub struct DoorPathStats {
     pub moved: f64,
     pub wait_s: f64,
     pub nav: f64,
-    pub gun_s: f64,
-    pub guns: f64,
-    pub gun_ahead: f64,
     pub stepped: f64,
 }
 impl DoorPathStats {
@@ -172,39 +165,11 @@ impl DoorPathStats {
             moved: 0.0,
             wait_s: 0.0,
             nav: 0.0,
-            gun_s: 0.0,
-            guns: 0.0,
-            gun_ahead: 0.0,
             stepped: 0.0,
         }
     }
 }
 impl Default for DoorPathStats { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/doorpath.ts:124 DoorPath.lent, src/game/doorpath.ts:124)
-#[derive(Clone, Copy, Debug)]
-pub struct DoorPathLentItem {
-    pub gd: GuardId,
-    pub s: u32,
-    pub mine: V3,
-    pub aim_at: Option<V3>,
-    pub face: Option<f64>,
-    pub strafe: Option<bool>,
-}
-impl DoorPathLentItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorPathLentItem {
-            gd: GuardId(0),
-            s: 0,
-            mine: [0.0; 3],
-            aim_at: None,
-            face: None,
-            strafe: None,
-        }
-    }
-}
-impl Default for DoorPathLentItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doorpath.ts:195 roundLeaves ->, src/game/doorpath.ts:195)
 #[derive(Clone, Debug)]
