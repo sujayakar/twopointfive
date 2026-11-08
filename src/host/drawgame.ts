@@ -12,8 +12,8 @@ export interface Start { level: Uint8Array; words: string; mannequin: Uint8Array
 
 /** `face_start`'s flags: the rows that dress the picture are up · the game works its own senses out */
 const DRESS = 1, SENSES = 2;
-/** `face_step`'s: the box world listed · the lights' envelopes · a rails level's view · the save controller */
-const LISTED = 1, LIGHTS = 2, VIEW = 4, SAVES = 8;
+/** `face_step`'s: the lights' envelopes · a rails level's view · the save controller */
+const LIGHTS = 2, VIEW = 4, SAVES = 8;
 
 /** the calls a lost game may still be asked, or is stood again by */
 const STILL = new Set(['face_alloc', 'face_free', 'face_out_ptr', 'face_out_len', 'face_panic_ptr', 'face_panic_len', 'face_panic_clear', 'face_mem', 'face_recover', 'face_recover_what', 'face_drop', 'face_start']);
@@ -88,7 +88,7 @@ export class DrawGame {
     if (this.commands.length) this.handed(this.commands.take(), (p, m) => { if (!this.X.face_commands(this.h, p, m)) throw new Error(this.answer()); });
     const n = this.enc.encodeInto(keys, new Uint8Array(this.memory.buffer, this.keys, DrawGame.KEYS)).written;
     this.X.face_hand(this.h, 0, this.hand, HAND.count * 8, this.keys, n);
-    this.X.face_step(this.h, dt, LISTED | LIGHTS | VIEW | SAVES);
+    this.X.face_step(this.h, dt, LIGHTS | VIEW | SAVES);
     this.ticks++;
     const t1 = performance.now();
     this.draw();

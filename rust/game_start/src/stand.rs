@@ -108,7 +108,7 @@ pub fn host_new(g: &mut Game) -> Host {
     g.tab.camera[cam].target = g.level.player_spawn;
     g.tab.camera[cam].aspect = canvas.width / canvas.height;
     game::camera::follow_camera_rebuild(g, cam);
-    game::host_api::b_01::host_world_upload(g);
+    game::scene_boxes::box_world_listed(g);
     // (the host's camera and keys are handed to the game here, once, as standGame hands a TypeScript host's: game.ts hostCam)
     g.host_cam = Some(cam);
     g.host_input = Some(input);
@@ -192,7 +192,7 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
 }
 
 /// ONE FRAME OF A HOST WITH NO PICTURE (headless.ts `step`): the game's update on the host's Input and camera, the camera after the man, the lights'
-/// envelopes, the box world listed again, the Input's frame ended. Answers WHAT THE STEP TOLD ITS HOST (tools/blitz/OUT-EVENTS.md: the sounds to
+/// envelopes, the Input's frame ended. Answers WHAT THE STEP TOLD ITS HOST (tools/blitz/OUT-EVENTS.md: the sounds to
 /// play, the marks to draw, the lines said): the list is a step's output and the host drains it, or it grows for the life of the game.
 pub fn frame(g: &mut Game, h: &Host, dt: f64) -> Vec<game::out_events::OutEvent> {
     game::game::game_update(g, dt, h.input, h.cam, h.canvas);
@@ -202,7 +202,6 @@ pub fn frame(g: &mut Game, h: &Host, dt: f64) -> Vec<game::out_events::OutEvent>
     game::camera::follow_camera_update(g, h.cam, dt, follow, aim);
     let now = g.time;
     game::render_lights::light_set_update(g, dt, now);
-    game::host_api::b_01::host_world_upload(g);
     game::input::input_end_frame(g, h.input);
     core::mem::take(&mut g.out)
 }
