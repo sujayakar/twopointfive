@@ -40,7 +40,7 @@ export function hashCache(): CachePart {
   const groups = { groups: (): [number, number, number] => [SLOTS / 64 / 8, 8, 1] }, lin = (t: string) => t.replaceAll('let s = id.x;', `let s = id.x + id.y * ${SLOTS / 8}u;`);
   const claimS: Stage = { name: 'cache claim', over: groups, buffers: { ...bind, norms: ['norms', 'array<u32>', 'read_write'], hits: ['hits', 'array<vec4u>', 'read'], fresh: ['fresh', 'array<vec4f>', 'read_write'] }, code: cacheLib + lin(claim) };
   const keep: Stage = { name: 'cache keep', over: groups, code: '', async make() { return (enc, g) => { if (keep.when && !keep.when()) return; enc.copyBufferToBuffer(g.buffers.get('fresh')!, 0, g.buffers.get('cells')!, 0, SLOTS * 32); }; } };
-  const updateS: Stage = { name: 'cache', over: groups, buffers: { ...bind, norms: ['norms', 'array<u32>', 'read'], fresh: ['fresh', 'array<vec4f>', 'read_write'], ...CHANGES }, code: signals + cacheLib + bounceLib + lin(update) };
+  const updateS: Stage = { name: 'cache', over: { groups: () => [SLOTS / 1024, 1, 1] }, buffers: { ...bind, norms: ['norms', 'array<u32>', 'read'], fresh: ['fresh', 'array<vec4f>', 'read_write'], ...CHANGES }, code: signals + cacheLib + bounceLib + update };
   let at: [number, number] = [0, 0]; const warmS: Stage = { name: 'cache warm', over: { groups: () => [Math.ceil((at[1] - at[0]) / 64), 1, 1] }, buffers: { ...bind, hits: ['hits', 'array<vec4u>', 'read'], warmAt: ['warmAt', 'vec4u', 'uniform'] }, code: cacheLib + warm };
   const again = (k: number): Stage => ({ ...updateS, name: 'cache', when: () => (part.rush ?? 0) > k, code: updateS.code.replace('rngKey(key, 91u)', `rngKey(key, ${92 + k}u)`) });
   const part: CachePart = {

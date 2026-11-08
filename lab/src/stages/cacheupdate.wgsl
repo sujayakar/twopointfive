@@ -1,13 +1,21 @@
 /** the one way light gets into an entry */
 fn cachePut(s: u32, E: vec3f, n: f32, x: vec3f, sun: f32) { let a = finite4(vec4f(E, n), 1e4); fresh[2u * s] = vec4f(max(a.rgb, vec3f(0.0)), a.w); fresh[2u * s + 1u] = vec4f(x, clamp(finite(sun, 1.0), 0.0, 1.0)); }
 // LIGHT ON SURFACES, one more sample an entry: the sun, one lamp, and one ray to see what else is out there, read from the table as it stands.
-@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) {
-  let s = id.x; if (s >= SLOTS) { return; } if (norms[s] == 0u) { return; }
-  var a = cells[2u * s]; var b = cells[2u * s + 1u]; let x0 = b.xyz; if (all(x0 == vec3f(0.0))) { return; }   // (founded this frame: its point is not in cells yet)
-  let st = steady(x0);
+//   Each group looks over a thousand slots, lists the few whose turn it is, then works through the list: rays of neighbours in the list keep all its lanes busy.
+var<workgroup> todo: array<u32, 1024>; var<workgroup> many: atomic<u32>;
+fn itsTurn(s: u32) -> bool {
+  if (norms[s] == 0u) { return false; } let x0 = cells[2u * s + 1u].xyz; if (all(x0 == vec3f(0.0))) { return false; }   // (founded this frame: its point is not in cells yet)
+  let w = cells[2u * s].w; if (w > 24.0 && steady(x0) > 0.9) { let m = select(3u, 7u, w > 60.0); return (atomicLoad(&keys[s]) & m) == (frame.counts.z & m); } return true;
+}
+@compute @workgroup_size(64) fn main(@builtin(workgroup_id) g: vec3u, @builtin(local_invocation_index) li: u32) {
+  if (li == 0u) { atomicStore(&many, 0u); } workgroupBarrier();
+  for (var i = 0u; i < 16u; i++) { let s = g.x * 1024u + i * 64u + li; if (itsTurn(s)) { todo[atomicAdd(&many, 1u)] = s; } }
+  workgroupBarrier(); let n = atomicLoad(&many); for (var i = li; i < n; i += 64u) { oneMore(todo[i]); }
+}
+fn oneMore(s: u32) {
+  var a = cells[2u * s]; var b = cells[2u * s + 1u]; let x0 = b.xyz; let st = steady(x0); let key = atomicLoad(&keys[s]);
   if (changes.all.y > 0.5) { a.w = min(a.w, 1.0); }
   if (bad4(a) || bad(b.w)) { a = vec4f(0.0); b.w = 0.0; }
-  let key = atomicLoad(&keys[s]); if (a.w > 24.0 && st > 0.9) { let m = select(3u, 7u, a.w > 60.0); if ((key & m) != (frame.counts.z & m)) { return; } }
   rngKey(key, 91u); let every = norms[s] == EVERY_WAY; let n = select(octUnpack(norms[s] & 0xfffffffeu), vec3f(0.0), every); fineLeaves = false;
   // a little about its point, so that a cell is the mean of its patch
   let bs = basis(select(n, vec3f(0.0, 1.0, 0.0), every)); let x = x0 + n * 0.012;
