@@ -39,9 +39,15 @@ section! {
         pub target: [f32; 3],
         /// what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it
         pub locks: u32,
-        /// what the game is set to, for a screen that sets it: 1 hits do nothing to him · 2 the men think · 4 unlimited ammunition · 8 it saves by itself · 16 the wall hold's feel ·
-        /// 32 walking into a wall takes it · 64 the command key tapped twice calls the squad in
-        pub set: u32,
+        /// what the game is set to, for a screen that sets it: hits do nothing to him, the men think, unlimited ammunition, it saves by itself, the wall hold's feel, walking into a wall takes
+        /// it, the command key tapped twice calls the squad in
+        pub god: u32,
+        pub thinks: u32,
+        pub ammo: u32,
+        pub autosave: u32,
+        pub wall_feel: u32,
+        pub wall_press: u32,
+        pub fall_in: u32,
         /// the run's end card is due: 1 it was lost, 2 won (0: not yet)
         pub ended: u32,
         /// night vision's amount, and how hard he has just been hit
@@ -71,7 +77,8 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
         }
     }
     r.ended = ended(g);
-    r.set = [g.god_mode, g.ai_enabled, g.infinite_ammo, g.saves.enabled, g.k.wallsnap.on, g.k.wallsnap.press, game::orders::squad_orders_twice_on(g)].iter().enumerate().fold(0, |s, (i, &on)| s | (on as u32) << i);
+    (r.god, r.thinks, r.ammo, r.autosave) = (g.god_mode as u32, g.ai_enabled as u32, g.infinite_ammo as u32, g.saves.enabled as u32);
+    (r.wall_feel, r.wall_press, r.fall_in) = (g.k.wallsnap.on as u32, g.k.wallsnap.press as u32, game::orders::squad_orders_twice_on(g) as u32);
     r.locks = game::rails::rails_locks(g, "camera") as u32 | (game::rails::rails_locks(g, "zoom") as u32) << 1;
     out.push(View {
         tick: crate::tick(g),

@@ -11,6 +11,10 @@ export function sandboxKept(): Partial<Record<SandboxKey, boolean>> {
 }
 /** keep one of the three (the others as they are kept: a show that forces one for its length is no choice of the machine's) */
 export function keepSandbox(key: SandboxKey, on: boolean): void { try { localStorage.setItem(SANDBOX_LS, JSON.stringify({ ...sandboxKept(), [key]: on })); } catch { /* no store */ } }
+/** AUTOSAVE, kept beside it: on until it is switched off */
+const AUTOSAVE_LS = 'twopointsix.autosave';
+export function autosaveKept(): boolean { try { return localStorage.getItem(AUTOSAVE_LS) !== '0'; } catch { return true; } }
+export function keepAutosave(on: boolean): void { try { localStorage.setItem(AUTOSAVE_LS, on ? '1' : '0'); } catch { /* no store */ } }
 /** put what is kept on a game; one console line when anything is, so no page runs with nobody thinking silently */
 export function loadSandbox(game: { godMode: boolean; aiEnabled: boolean; infiniteAmmo: boolean }, announce = true): void {
   const j = sandboxKept();
