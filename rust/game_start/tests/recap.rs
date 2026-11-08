@@ -246,6 +246,7 @@ fn a_burst_is_named_and_a_stun_can_is_not() {
     for seed in SEEDS {
         let mut p = stood(seed, 1, YARD_FAR, VICTIM, EAST);
         let (a, _) = pair(&p);
+        p.order("hold", p.at(a), game::orders::Who::All);   // (he stays: fallen in, he is on his way out of the room as it lands)
         let at = p.at(a);
         p.frag_lands([at[0] + 0.6, at[1]]);
         p.until(8.0, |p| p.state(a) == game::game::GuardState::Dead).expect("a burst at his feet puts him down");
