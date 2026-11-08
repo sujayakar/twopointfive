@@ -257,6 +257,11 @@ export function typedInto(t: EventTarget | null): boolean { const el = t as { ta
 export const camKey = (): string | null => KEYMAP.camSpace && gameCode('Space') === '' ? 'Space' : null;
 /** …and its name on a list of keys */
 export const camCap = (): string => camKey() ? 'Space' : 'Ctrl';
+/** a line with its keys by their codes in brackets, as the Rust game words a lesson's, each key as it is bound now through `key` and the words between through
+ *  `word`. A key's name never goes through keyText: "Space" read as words is the action's key, and the camera's key is the Space bar */
+export const keysInLine = (line: string, key: (cap: string) => string, word: (t: string) => string): string => line.split(/(\[[^\]]+\])/).map(t => !/^\[[^\]]+\]$/.test(t) ? word(t) : t === '[X]' && KEYMAP.qOnly ? `Hold ${key(keyCap('B'))}` : key(t === '[Ctrl]' ? camCap() : keyCap(t.slice(1, -1)))).join('');
+/** …as plain words (the objective's row and Tab's card) */
+export const capsPlain = (s: string): string => keysInLine(s, c => c, t => keyText(t));
 /** a line of words with the keys it names as they are bound now. `all` = the line is a list of keys (the Controls list's key column): the walk keys and the
  *  digits are keys there too. Handed back untouched, the same string, while nothing is rebound */
 export function keyText(s: string, all = false): string {

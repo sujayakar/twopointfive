@@ -19,6 +19,7 @@ import type { Vec3 } from '../math/vec';
 import { whistleReadyIn } from './whistle';
 import './close';
 import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
+import { locked, offered } from '../view/seatview';
 
 /** every row a door can have (player.ts buildInteractables, the tools' rows with it), and those of them an OPEN leaf can: a mission's frame that
  *  offers none of them has no row for that door at any distance. (One that offers some may still have none for this door — a steel one, a lock it
@@ -46,7 +47,7 @@ export function emptyThing(g: Game): { it: Interactable; d: number; why: string 
     if (!PRESS_THINGS.has(it.kind)) continue;
     const D = it.door, r = D ? (d >= Doors.USE_REACH ? 2 : pl.sprinting ? 1 : 0) : it.inReach ? 0 : 3;   // (a door's reach is its distance and his feet: its `inReach` is also the big tool's, from where a stack stands)
     if (r === 3) { other = Math.min(other, d); continue; }
-    const why = r === 0 ? (it.framed ? EMPTY_WHY.held : D ? EMPTY_WHY.no : '') : !(D!.isClosed() ? SHUT_ROWS : OPEN_ROWS).some(v => g.rails.offers(v)) ? EMPTY_WHY.held : r === 1 ? EMPTY_WHY.run : EMPTY_WHY.far;
+    const why = r === 0 ? (it.framed ? EMPTY_WHY.held : D ? EMPTY_WHY.no : '') : !(D!.isClosed() ? SHUT_ROWS : OPEN_ROWS).some(v => offered(g.view, v)) ? EMPTY_WHY.held : r === 1 ? EMPTY_WHY.run : EMPTY_WHY.far;
     if (!why) { other = Math.min(other, d); continue; }   // (in reach with no row and no frame to blame — a wounded man)
     if (r > rank || (r === rank && best && d >= best.d)) continue;
     if (r === 2 ? walled(it.pos) && walled(D!.frameCentre) : r === 1 && g.doors.lockedOut(D!, p, pl.keys)) continue;
@@ -104,7 +105,7 @@ const STATE_OFF: readonly string[] = ['switch', 'breaker'];
 /** THE WHISTLE'S WEDGE (handring.ts): the ring's last one, wherever the rows leave it free — no row of the list (nothing that reads the rows or the
  *  highlight meets it), so never what a tap does */
 const WHISTLE_WEDGE = 'whistle', WHISTLE_CAPTION = 'whistle — one guard will come to look';
-const whistleWedge = (g: Game) => { if (!ringStays(g) || g.player.down || g.player.takedown || g.rails?.locks('whistle')) return false;   // (rails.ts: a tutorial mission that has not taught the whistle has no wedge for it)
+const whistleWedge = (g: Game) => { if (!ringStays(g) || g.player.down || g.player.takedown || locked(g.view, 'whistle')) return false;   // (rails.ts: a tutorial mission that has not taught the whistle has no wedge for it)
   let n = 0; for (const r of g.nearby) if (r.kind !== 'cancel') n++; return n < CMDRING.wedges; };
 const ringStays = (g: Game) => !g.puppet && HANDRING.on;
 /** What Sam's own ring shows this frame (null: none — cmdring.ts CMDRING.hands): where it is, how much larger than its px (ringZoom), the lit wedge (0: the

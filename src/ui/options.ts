@@ -25,6 +25,7 @@ import { keyCapEl, keyCapture, keyStop, keyWaiting, type KeyHost } from './keybi
 import { VOLUME_DEFAULTS } from '../audio/audio';   // (the mixer's levels on a fresh page: what Reset puts back)
 import type { MenuDeps } from './menu';
 import { visitTier, type QualityName } from './quality';
+import { locked } from '../view/seatview';
 
 export type OptionsTab = 'graphics' | 'audio' | 'game' | 'controls';
 export type OptionsDeps = Pick<MenuDeps, 'engine' | 'game' | 'quality' | 'audio' | 'overlay'>;
@@ -73,7 +74,7 @@ export function squadRows(rows: KeyRow[], only: boolean, goals: boolean, twice =
 }
 /** what the Controls list is built from that can change under it (a key given or taken, a rule ticked in the debugger): the list is built once */
 /** is the key tapped twice 'fall in' in the game that is up (off on a tutorial mission until a step lists it: game/rails.ts `twice`) */
-const twiceNow = () => CMDRING.twice && !deps?.game.rails?.locks('twice');
+const twiceNow = () => CMDRING.twice && !(deps && locked(deps.game.view, 'twice'));
 const listNow = () => `${whoRowGone()} ${twiceNow()}`;
 const PACE_WHAT = 'Walking pace', SPRINT_WHAT = 'Sprint';
 /** the sprint's row while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN): what the same key does crouched, and that it is heard
