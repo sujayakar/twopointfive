@@ -30,14 +30,6 @@ pub fn sam_laser_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     if let Some(r) = crate::combat::laser_reach(g, c, None, Some(true)) { crate::combat::beam_boxes(g, r.from, r.dir, r.l, out, r.dot, Some(true), Some(true)); }
 }
 
-/// The infrared lines the players really have on, for a viewer's picture through a tube the run's own picture did not have: the very rule a step draws them by, asked as
-/// if the picture were the tube's.   (combat.ts irBeams)
-pub fn ir_beams(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    let was = g.m.irlaser.view_tube.replace(true);
-    for s in g.seats.clone() { crate::seats::with_seat(g, s, &mut |g| sam_laser_boxes(g, out)); }
-    g.m.irlaser.view_tube = was;
-}
-
 /// The mark "this box is an infrared line the step drew for its own tube": the set beside the boxes that a picture with the tube off leaves out by
 /// (`ir_made`). It goes when the box's row is freed (`ir_forget`).   (irlaser.ts:78 irNote)
 pub fn ir_note(g: &mut crate::game::Game, b: AnyBoxId) -> AnyBoxId { g.m.irlaser.ir_made.add(b); b }
