@@ -64,21 +64,34 @@ fn the_missions_line_is_the_one_that_is_up_and_as_things_stand() {
 }
 
 /// A GAME OF TWO: each player's HUD is told about HIM, whoever's things stand on the game. A FAILURE MEANS: the second machine is told the first player's
-/// marker or key (the place of a charge is the nearest to the man who is shown it; a run that is lost asks for another key of a man who is down).
+/// room, his man or his line.
 #[test]
 fn in_a_game_of_two_each_hud_is_told_about_its_own_man() {
     for seed in SEEDS {
-        let mut p = Play::level("defuse.json", true, &Opts { seed, seats: 2, ..Default::default() });
+        let mut p = Play::level("office.json", true, &Opts { seed, seats: 2, ..Default::default() });
         p.frame();
-        let charges: Vec<[f64; 2]> = p.charges();
-        assert!(charges.len() >= 2, "seed {}: the level has two charges: {:?}", seed, charges);
-        // CONTROL: both men on their marks, side by side: one nearest charge, one marker
-        let at = |v: game::view::TickView| { let m = v.mission.expect("a mission is up"); assert_eq!(m.of, MissionOf::Defuse, "{:?}", m); let x = m.pos.expect("a live charge has a place"); [x[0], x[2]] };
-        assert_eq!(at(p.view_of(0)), at(p.view_of(1)), "seed {}: side by side they are shown the same charge", seed);
-        // each beside another charge
-        let (a, b) = (charges[0], charges[1]);
-        p.seat_stands(0, a); p.seat_stands(1, b);
-        assert_eq!(at(p.view_of(0)), a, "seed {}: the first is shown the charge beside him", seed);
-        assert_eq!(at(p.view_of(1)), b, "seed {}: the second is shown the charge beside HIM", seed);
+        // CONTROL: both men on their marks, side by side: one room
+        assert_eq!(p.view_of(0).place, p.view_of(1).place, "seed {}: side by side they are told the same room", seed);
+        assert_ne!(p.view_of(0).me, p.view_of(1).me, "seed {}: each is told his own man", seed);
+        let names = game::dialogue::place_rects(&p.g);
+        let spots: Vec<[f64; 2]> = names.iter().map(|r| [(r.x0 + r.x1) / 2.0, (r.z0 + r.z1) / 2.0]).collect();
+        let a = spots[0];
+        p.seat_stands(0, a);
+        let room_a = p.view_of(0).place;
+        let b = spots.iter().copied().find(|&at| { p.seat_stands(1, at); p.view_of(1).place != room_a }).unwrap_or_else(|| panic!("seed {}: the level has one room", seed));
+        p.seat_stands(1, b);
+        let room_b = p.view_of(1).place;
+        assert_eq!(p.view_of(0).place, room_a, "seed {}: the first is told the room he stands in", seed);
+        // the two change places, and each view follows its own man
+        p.seat_stands(0, b); p.seat_stands(1, a);
+        assert_eq!(p.view_of(0).place, room_b, "seed {}: the first is told the room he stands in now", seed);
+        assert_eq!(p.view_of(1).place, room_a, "seed {}: the second is told the room HE stands in now", seed);
+        // the mission's line is his too: a room clear wiped with the second man down tells him one key and the first another
+        p.seat_goes_down(1);
+        p.g.room_clear.end = Some(game::roomclear::RoomClearEnd::Wiped);
+        let line = |v: game::view::TickView| v.mission.expect("a mission is up").text;
+        let (first, second) = (line(p.view_of(0)), line(p.view_of(1)));
+        assert!(first.contains("shift+enter"), "seed {}: the first, still up: {}", seed, first);
+        assert!(second.contains("enter") && !second.contains("shift+enter"), "seed {}: the second, down: {}", seed, second);
     }
 }

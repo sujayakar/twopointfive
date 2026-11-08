@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 // SAM THROWS A BREAKER WHICHEVER WAY IT FACES (src/game/workthings.ts WORK.samFace, asked by player.ts for his own row and by lighting.ts for his OCP).
 // His row at the mains panel asked for a clear line to a point a hand's width toward -z of the panel's mark: right where the panel hangs facing that way or
-// along a wall that runs that way, and inside the wall where it hangs facing the other way (the two charges, the glasshouse, the mousehole, the yards and
+// along a wall that runs that way, and inside the wall where it hangs facing the other way (the two workshops, the glasshouse, the mousehole, the yards and
 // four of the tutorials), where he was never offered the row and only the squad's order could throw it.
 //   bun run tools/qa/samface-check.ts
-// Lines: front (stood in front of the two charges' panel: the row is offered, and his key throws the mains) · asitwas (a panel that faces the old way: the row is offered).
+// Lines: front (stood in front of the two workshops' panel: the row is offered, and his key throws the mains) · asitwas (a panel that faces the old way: the row is offered).
 // `probes.ts samface` (in family `squadorders`) runs it. Exit 0 = every line passed, 1 = a line failed.
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
@@ -37,7 +37,7 @@ async function stage(file: string) {
   return { W, g, run, n, at, rowAt };
 }
 
-console.log('samface-front — the two charges, stood in front of the panel');
+console.log('samface-front — the two workshops, stood in front of the panel');
 { const { g, run, n, at, rowAt } = await stage('defuse.json');
   line(n[2] === 1, `the panel hangs facing the other way from the office's (its face looks along ${n[0] ? 'x' : 'z'} ${n[0] + n[2] > 0 ? '+' : '-'})`);
   line(rowAt(at(0.6)), 'in front of it: his row is offered');

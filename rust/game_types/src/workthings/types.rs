@@ -11,7 +11,6 @@ pub struct WorkThing {
     pub n: V3,
     pub stand: Option<V3>,
     pub name: String,
-    pub dev: Option<f64>,
 }
 impl WorkThing {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -22,7 +21,6 @@ impl WorkThing {
             n: [0.0; 3],
             stand: None,
             name: String::new(),
-            dev: None,
         }
     }
 }
@@ -32,14 +30,12 @@ impl Default for WorkThing { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum WorkThingKind {
     Breaker,
-    Device,
     Objective,
 }
 impl WorkThingKind {
     pub const fn as_str(self) -> &'static str {
         match self {
             WorkThingKind::Breaker => "breaker",
-            WorkThingKind::Device => "device",
             WorkThingKind::Objective => "objective",
         }
     }
@@ -97,7 +93,6 @@ pub enum WorkVerb {
     Drive,
     BreakerOff,
     BreakerOn,
-    Defuse,
 }
 impl WorkVerb {
     pub const fn as_str(self) -> &'static str {
@@ -105,7 +100,6 @@ impl WorkVerb {
             WorkVerb::Drive => "drive",
             WorkVerb::BreakerOff => "breakerOff",
             WorkVerb::BreakerOn => "breakerOn",
-            WorkVerb::Defuse => "defuse",
         }
     }
 }
@@ -300,23 +294,6 @@ pub enum WorkThingsIssue {
     Text(String),
     Arm1(()),
 }
-
-/// (TypeScript: inline at src/game/workthings.ts:346 onDevice ->, src/game/workthings.ts:346)
-#[derive(Clone, Copy, Debug)]
-pub struct WorkThingsOnDevice {
-    pub gd: GuardId,
-    pub on: bool,
-}
-impl WorkThingsOnDevice {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WorkThingsOnDevice {
-            gd: GuardId(0),
-            on: false,
-        }
-    }
-}
-impl Default for WorkThingsOnDevice { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/workthings.ts:357 workNear ->, src/game/workthings.ts:357)
 #[derive(Clone, Debug)]
