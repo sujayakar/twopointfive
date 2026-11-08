@@ -1,7 +1,7 @@
-//! THE GAME'S OWN SMOKE ON A COARSE GRID — what `SENSE.grid` puts where the blobs stood (src/game/sense.ts): the smoke the SENSES see through, as density in
+//! THE GAME'S OWN SMOKE ON A COARSE GRID: the smoke the SENSES see through, as density in
 //! half-metre cells held in bricks (a brick is 2 m square in plan and 4 m high: floor to ceiling), stepped ten times a second. It is fed by the very emitters
 //! the picture's solver is handed and knows nothing else of that solver: no velocity and no pressure, and of the wind only a drift under the open sky
-//! (`K.wind`, where sense.ts SENSE.drift says). What it has that the blobs had not is THE WALLS:
+//! (`K.wind`). What it has is THE WALLS:
 //! smoke passes from a cell to its neighbour only where nothing solid and no leaf stands between their centres, so a canister fills the room it is in, goes
 //! out by the open door and stops at the shut one.
 //!
@@ -411,7 +411,7 @@ pub struct K {
     pub rise: f64,
     pub rise_rate: f64,
     pub gone: f64,
-    /// THE WIND the smoke drifts by under the open sky, m/s along x and z (sense.ts SENSE.drift; 0 and 0 = still air, and no statement of the drift
+    /// THE WIND the smoke drifts by under the open sky, m/s along x and z (0 and 0 = still air, and no statement of the drift
     /// is reached: the step as it was). What share of it a square metre of the plan has is in `WIND`, written by the host before the step.
     pub wind_x: f64,
     pub wind_z: f64,
