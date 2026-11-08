@@ -52,10 +52,10 @@ pub(super) fn assign_card(m: &mut MemberKit, c: &crate::scene_scenarios::IssueCa
 pub fn kit_issued_page(g: &mut crate::game::Game, on: Option<bool>) { g.m.kit.issued_page = on.unwrap_or(true); }
 
 /// The page of a lesson says so: its stagings wear the issue.   (kit.ts kitLessonPage)
-pub fn kit_lesson_page(g: &mut crate::game::Game, on: bool) { g.m.kit.lesson_row = if on { Some(KitModLessonRow::default()) } else { None }; }
+pub fn kit_lesson_page(g: &mut crate::game::Game, on: bool) { g.m.kit.lesson_page = on; }
 
 /// Every staging on this page wears the issue cards.   (kit.ts pageIssued)
-pub fn page_issued(g: &crate::game::Game) -> bool { g.m.kit.issued_page || g.m.kit.lesson_row.is_some() }
+pub fn page_issued(g: &crate::game::Game) -> bool { g.m.kit.issued_page || g.m.kit.lesson_page }
 
 /// The level's block names a card for you: nothing is handed over it.   (kit.ts kitIssueWhole)
 pub fn kit_issue_whole(g: &crate::game::Game, members: Option<&JsMap<String, crate::scene_scenarios::IssueCard>>) -> bool {
