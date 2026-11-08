@@ -130,8 +130,8 @@ line).
     answer "You can’t play co-op here because this page isn’t connected to the game service." and the title stays usable, as before the card.
     A HOSTED SERVER NEEDS NO COMPILER: from a fresh copy of the tree, with no cargo on the machine and an empty home, `tools/mp/server.ts` stood a
     two-seat game on the checked-in module (taken by the hash of its sources) and played two scripted clients; its memory peaked at 615 MB (the hosted
-    image is bun alone with 2 GB). `tools/blitz/coop-check.ts` on the kept two-seat games: ALL PASS (a seat's pair through a locked door in 3.5 s and
-    4.5 s where the TypeScript game took 9.3 s and 10 s; 16 men on the barracks).
+    image is bun alone with 2 GB). A seat's pair was through a locked door in 3.5 s and 4.5 s where the TypeScript game
+    took 9.3 s and 10 s; 16 men on the barracks.
 - **What travels is the input timeline, never the state** (`src/net/wire.ts`). The game plays one fight to the bit from its recipe and its seats' records
   (`docs/agents/replays.md`: the game's own maths, the senses on the CPU, the input record, a record from anyone), so the server decides which record each
   seat's tick ran on, tells every client, and sends a state word (`src/net/step.ts netWord`, chained: the game's own words) every `NET.wordEvery` ticks as the alarm. A NETWORKED
@@ -520,8 +520,9 @@ line).
   runs on the first seat's record) fails `walk`, `orders` and `ahead`. `ahead` holds BOTH looks, the Rust rule a tool's call crosses to and the
   TypeScript body the page runs: each lands to the bit over 46 records (a walk, a sprint, a crouch walk, a coast) in a game with no teammates on the
   floor; with the four there a teammate steps into his way and both looks are 7 cm out, which is the correction the look ahead allows. The three kinds
-  of fault below are mended in the Rust game (a seat's tools keep to its men; budgets count the seats); `tools/blitz/coop-check.ts`, restated on kept
-  two-seat runs, holds them from the commit that brings those runs.
+  of fault below are mended in the Rust game (a seat's tools keep to its men; budgets count the seats); `rust/game_start/tests/coop.rs` holds them (`cargo
+  test --test coop` there): each player's pair through a locked door, shown red with the mend taken out; no more men than the picture draws; a burst and
+  one player's goggles part no two machines.
 - **A game of two that is still read as a game of one: THE KNOWN SEAT FAULTS** (2026-11-05; found when `seats-check`'s `fight` threw on the page's
   stand at step 1557, the belief rule; NONE MENDED: `src/game` is frozen until the Rust swap, and each is a line of the port's notes,
   rebuild/rust-sim/port/blitz/after-swap.md). Three classes, all old (10-16 to 11-02).
