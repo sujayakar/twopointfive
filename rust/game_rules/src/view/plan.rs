@@ -111,7 +111,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
         for &gd in squad.iter() {
             let Some(a) = crate::orders::squad_orders_of(g, seat, gd) else { continue };
             let a = &g.tab.orders_assignment[a];
-            if alive(g, gd) && a.order == "stack" && a.post.is_some() && a.there.starts_with("stacked") {
+            if alive(g, gd) && crate::orders::rows::id_is(&a.order, crate::orders::Is::Stacks) && a.post.is_some() && a.there.starts_with("stacked") {
                 if let Some(d) = a.door { put(&mut by, d, &[gd], WaitWhy::Stack, addr.contains(&gd)); }
             }
         }

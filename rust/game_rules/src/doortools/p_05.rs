@@ -213,7 +213,7 @@ pub fn door_tools_stacks_of(g: &crate::game::Game, seat: &crate::seats::SeatRef,
         }
         let A = &g.tab.orders_assignment[a];
         let (Some(door), Some(post)) = (A.door, A.post) else { continue };
-        if !(A.order == "stack" && A.there.starts_with("stacked")) {
+        if !(crate::orders::rows::id_is(&A.order, crate::orders::Is::Stacks) && A.there.starts_with("stacked")) {
             continue;
         }
         let sam = sam_pos(g, seat);

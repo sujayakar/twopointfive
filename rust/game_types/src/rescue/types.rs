@@ -546,15 +546,12 @@ impl Default for RescueObjective { fn default() -> Self { Self::zeroed() } }
 pub struct RescueMod {
     /// (src/game/rescue.ts:150 applied)
     pub applied: Option<crate::scene_scenarios::TeamStart>,
-    /// (src/game/rescue.ts:161 DOOR_ORDERS)
-    pub door_orders: JsSet<String>,
 }
 impl RescueMod {
     pub fn blank() -> Self {
         RescueMod {
             // (the team's start the knob table holds as it is made: a start whose level names another writes its own over the knobs)
             applied: { let k = crate::knobs::page_rescue(); Some(crate::scene_scenarios::TeamStart { sam: k.sam_at, sam_yaw: k.sam_yaw, ops: Some(k.ops_at.to_vec()), ops_yaw: None }) },
-            door_orders: { let mut s = JsSet::new(); for w in ["openClear", "bangClear", "charge", "outside", "threshold"] { s.add(String::from(w)); } s },
         }
     }
 }

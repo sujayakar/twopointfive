@@ -1,13 +1,14 @@
 //! OPEN AND CLEAR: open it and go in, or from a held threshold go in with no bang.
 use crate::game::Game;
 use crate::ids::*;
-use crate::orders::rows::Row;
+use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use crate::doortools::DoorToolsCanThresholdThenWhat as What;
 use crate::doortools::DoorToolsEntryVerb as Verb;
 use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
+    is: &[Is::LiftsFire, Is::Enters],
     only: Some(crate::doortools::row_held_or_all),
     valid: Some(valid),
     ..Row::new("openClear", label, issue)
