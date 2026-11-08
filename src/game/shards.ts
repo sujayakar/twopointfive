@@ -176,7 +176,6 @@ export class GlassShards {
   private paneMem = new Map<number, { hits: number; sites: number; t: number; cause: 'hit' | 'blast'; dicedT: number }>();
   private crunchN = 0;
   log: string[] = [];
-  private hooked = false; private wasLive = false;
 
   constructor(private g: Game) {
     g.destr.debris.glass = { take: (box, v, w, who) => this.take(box, v, w, who), landed: (c, speed) => this.landed(c, speed), rested: (c) => this.rested(c), gone: (c) => this.gone(c), dress: () => SHARDS.byFall };
@@ -254,7 +253,7 @@ export class GlassShards {
    *  pool — the pool hands each here first (debris.ts spawn), and the box is read back as the fragment it stands for. undefined = not ours (the model is not live, or the
    *  fracture hook is doing the handing over): the pool spawns it as it always did. */
   private take(box: Box, v: Vec3, w: Vec3, who: number): Chunk | null | undefined {
-    if (this.hooked || !shardsLive(this.g)) return undefined;
+    if (!shardsLive(this.g)) return undefined;
     const f = fragmentOfBox(box, v, w, who, u32(Math.imul(++this.serial, 0x9E3779B1) ^ Math.imul(Math.round(box.c[0] * 1000), 73856093) ^ Math.imul(Math.round(box.c[1] * 1000), 19349663) ^ Math.imul(Math.round(box.c[2] * 1000), 83492791)));
     // what the box cannot say, read off the pane it came from (read-only): its glass type, and what made this cell let go — a blow that landed on the pane within
     // the last moments (a round: its hit count rose; a blast: it gained crack sites without a hit), else it is a tongue that lost its support
@@ -549,7 +548,6 @@ export class GlassShards {
 
   // ---------------------------------------------------------------- per frame
   update(_dt: number): void { return goneWithTick('GlassShards.update') as any; }
-  private onRelease = (f: GlassFragmentLike) => { this.release(f); };
   /** a restart / the level reset: nothing pending, no litter (the plates went with the debris pool, the particles with the particle system's clear) */
   reset() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('GlassShards.reset', this, []); if (__r !== RUST_PASS) return __r as any; } } this.clear(); this.log.length = 0; this.serial = 0; this.crunchN = 0; }
   /** Game.clearAftermath(): the particles and the moving debris have just been wiped (a showcase starting, a tour cut) — nothing of ours is still owed a sound, a hearing
@@ -560,7 +558,7 @@ export class GlassShards {
   private note(s: string) { this.log.push(`${this.g.time.toFixed(2)} ${s}`); if (this.log.length > 60) this.log.shift(); }
   summary(): string {
     const s = SHARD_STATS, cells = this.g.falls.cells(); let lit = 0; for (const c of cells) lit += c[2];
-    return `${shardsLive(this.g) ? 'live' : 'inert'}${this.hooked ? ' (release hook)' : ''} · ${s.fragments} fragments → ${s.plates} plates (${this.plateCount} now, ${s.breaks} broke, ${s.crumbled} crumbled, ${s.platesRefused} refused) + ${s.born} particles in ${s.emits} emits (~${this.liveEst} live of ${SHARDS.liveCap}, ${s.trimmed} trimmed) · ${s.sounds} sounds, ${s.events} heard, ${s.crunches} crunches · litter ${(lit * 1e4).toFixed(0)} cm² in ${cells.length} cells`;
+    return `${shardsLive(this.g) ? 'live' : 'inert'} · ${s.fragments} fragments → ${s.plates} plates (${this.plateCount} now, ${s.breaks} broke, ${s.crumbled} crumbled, ${s.platesRefused} refused) + ${s.born} particles in ${s.emits} emits (~${this.liveEst} live of ${SHARDS.liveCap}, ${s.trimmed} trimmed) · ${s.sounds} sounds, ${s.events} heard, ${s.crunches} crunches · litter ${(lit * 1e4).toFixed(0)} cm² in ${cells.length} cells`;
   }
 
   // ---------------------------------------------------------------- helpers

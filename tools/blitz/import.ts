@@ -74,7 +74,6 @@ const INVERSE: Record<string, Inverse> = {
   'scene_collision::StaticCollision.pane_rule': skipField, 'scene_collision::StaticCollision.pane_rows': skipField, 'scene_collision::StaticCollision.glass_walkable': skipField, 'scene_collision::StaticCollision.fire_pass': skipField,   // (set up with the level)
   'destruction::Destruction.blast_listeners': skipField, 'destruction::RateCap.n': skipField, 'anim_skeleton::SkeletonInstance.rig': skipField, 'scene_level_load::SceneLevelLoadMod.level_names': skipField,
   'scene_boxes::BoxWorld.glass_open': skipField,   // (set up with the level)
-  'glassbreak::GlassBreak.on_release': (o, v, c) => { o.onRelease = v ? c.g.shards.onRelease : null; },
   'nightbreach::NightBreach.bang_by': (o, v) => { o.bangBy = v ? v.view.doorTools : null; },
   // a cut is a new array. A count that moved says so; the array's numbers came in place just before, in this row. The seat's mark is the host's own unless Rust has taken the cut itself (a restart on its side)
   'camera::FollowCamera.desired_serial': (o, v) => { const r = LENS.get(o); if (!r) { LENS.set(o, { arr: o.desired, n: v }); return; } if (r.n !== v) { o.desired = [o.desired[0], o.desired[1], o.desired[2]]; r.n = v; } r.arr = o.desired; },
