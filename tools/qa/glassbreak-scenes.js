@@ -5,8 +5,7 @@
 //                                                            //   shards → docs/shots/gb_proof_* (corridor side pre / hit / fallen / settled, the room side, the carpet + lino)
 //     await __gbs.tongue()                                   // five rounds in a row along the pane's foot: the cells go and the tongue above follows (support) → gb_tongue_*
 //     await __gbs.cost({ frames: 60, rounds: 3 })            // serialized union / compS / gbuffer medians, interleaved: no pane holed vs three panes holed on screen (same view, same boot)
-//     await __gbs.validate()                                 // this boot's presets × debug views 0/1/3/10 with three panes holed: GPU validation scopes + uncaptured errors (run on a
-//                                                            //   ?glassbreak boot AND a ?glassbreak=0 boot: the switch is a compile-time const)
+//     await __gbs.validate()                                 // this boot's presets × debug views 0/1/3/10 with three panes holed: GPU validation scopes + uncaptured errors (the const is always up, so one boot)
 //     await __gbs.identityHash()                             // the deterministic still with the conference glazing + a crack star ON SCREEN (FNV of the readback): flag-off vs main
 // Every scene puts chaos back, resets glass / destruction and clears particles when it is done. Deterministic staging (Math.random seeded per scene).
 await (async () => {   // (top-level await: `await import('/qa/glassbreak-scenes.js')` resolves only once __gbs exists — the nested harness imports are awaited inside)

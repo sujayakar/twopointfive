@@ -123,7 +123,7 @@ export const GLASSBREAK_DEFAULTS = { breakE: { ...GLASSBREAK.breakE }, hangArea:
 /** the tuning rounds' knobs the panel keeps beside the first four (each 0‥1) */
 type GbTune = { glassBreak?: boolean };
 /** the one gate every entry point takes first: the switch on AND destruction's contract (chaos 0 / the tour = the game byte for byte) */
-export function glassBreakLive(g: Game): boolean { return GLASSFX.on && !!(g.tune as GbTune).glassBreak && chaosOf(g) > 0 && g.engine.glassFracture !== false; }   // (a host whose renderer has no port of the per-piece rule — the native engine today — says glassFracture false: the model stays inert there rather than open holes the picture does not show)
+export function glassBreakLive(g: Game): boolean { return GLASSFX.on && !!(g.tune as GbTune).glassBreak && chaosOf(g) > 0; }   // (what a host's shaders draw is not asked: a rule of play is the same on every host)
 
 // ---------------------------------------------------------------- the two seams (rebuild/glass/fracture.md)
 /** what impact() answers — the penetration part reads it and decides what the round does next */

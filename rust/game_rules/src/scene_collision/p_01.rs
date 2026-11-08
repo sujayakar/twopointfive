@@ -118,9 +118,7 @@ pub fn line_box(g: &mut crate::game::Game, a: V3, rd: V3, b: BoxId) -> Option<cr
     if has_cut && crate::scene_boxes::cut_met(g, b.into()) {
         let cut = seam_box(g, b).cut.clone().unwrap();
         let ([ox, oy, oz], [dx, dy, dz]) = (s.o, s.d);
-        if !crate::scene_cut::cut_clip(g, &cut, ox, oy, oz, dx, dy, dz, t0, t1) { return None; }
-        t0 = g.m.scene_cut.cut_clip.t0;
-        t1 = g.m.scene_cut.cut_clip.t1;
+        (t0, t1) = crate::scene_cut::cut_clip(&cut, ox, oy, oz, dx, dy, dz, t0, t1)?;
         let mut k = 0;
         while k < cut.len() && (k as f64) < crate::scene_cut::MAX_CUT_PLANES {
             let c = &cut[k];

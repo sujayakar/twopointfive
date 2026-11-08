@@ -5,7 +5,6 @@ use crate::io::*; use crate::ids::*; use crate::js::*; use crate::{Quat, V3}; us
 pub static mut HOST_ROLL: Option<fn() -> f64> = None;
 fn die_of(given: bool) -> impl FnMut(&mut crate::game::Game) -> f64 { move |g| { if given { if let Some(f) = unsafe { HOST_ROLL } { return f(); } } crate::math_dice::sim_random(g) } }
 pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let known = crate::id_tables::id_tables(g); let mut i = R::measured(args, &known); let mut o = W::new(); match f {
-0 => { let a1: Vec<crate::scene_cut::CutPlane> = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let a4: f64 = Io::r(&mut i); let a5: f64 = Io::r(&mut i); let a6: f64 = Io::r(&mut i); let a7: f64 = Io::r(&mut i); let a8: f64 = Io::r(&mut i); let a9: f64 = Io::r(&mut i); let r = crate::scene_cut::cut_clip(g, &a1, a2, a3, a4, a5, a6, a7, a8, a9); r.w(&mut o);  }
 1 => { let a1: Vec<f64> = Io::r(&mut i); let a2: String = Io::r(&mut i); let a3: crate::scene_stuff::SayPaintSaid = Io::r(&mut i); crate::scene_stuff::say_paint(g, &a1, &a2, a3);  }
 2 => { let a1: crate::scene_stuff::BoxStuff = Io::r(&mut i); let a2: [f64; 3] = Io::r(&mut i); let a3: Option<crate::scene_stuff::MadeOfFinish> = Io::r(&mut i); let r = crate::scene_stuff::made_of(g, a1, a2, a3); r.w(&mut o);  }
 3 => { let a1: V3 = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: AnyBoxId = Io::r(&mut i); let a4: f64 = Io::r(&mut i); let r = crate::scene_boxes::ray_box(g, a1, a2, a3, a4); r.w(&mut o);  }

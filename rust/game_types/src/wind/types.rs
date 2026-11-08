@@ -115,27 +115,11 @@ impl WindSourceKind {
     }
 }
 
-/// (TypeScript: PoolList, src/game/wind.ts:113)
-#[derive(Clone, Debug)]
-pub struct PoolList {
-    pub list: Vec<WindWindSourceId>,
-}
-impl PoolList {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
-    pub fn blank() -> Self {
-        PoolList {
-            list: Vec::new(),
-        }
-    }
-}
-impl Default for PoolList { fn default() -> Self { Self::blank() } }
-
 /// (TypeScript: Wind, src/game/wind.ts:118)
 #[derive(Clone, Debug)]
 pub struct Wind {
     pub all: Vec<WindWindSourceId>,
     pub active: Vec<WindWindSourceId>,
-    pub to_pool: crate::wind::PoolList,
     pub storm: WindWindSourceId,
     pub lv_roofs: Option<Vec<Vec<f64>>>,
     pub annexed: Vec<DoorId>,
@@ -147,7 +131,6 @@ impl Wind {
         Wind {
             all: Vec::new(),
             active: Vec::new(),
-            to_pool: crate::wind::PoolList::blank(),
             storm: WindWindSourceId(0),
             lv_roofs: None,
             annexed: Vec::new(),
@@ -189,11 +172,9 @@ impl WindMod {
 pub struct WindStats {
     pub frames: i32,
     pub active: i32,
-    pub to_particles: i32,
     pub to_smoke: i32,
     pub door_gusts: i32,
     pub storm_frames: i32,
-    pub at_calls: i32,
 }
 
 /// (src/game/wind.ts:37 WIND_FIELD: a table nothing writes)
@@ -219,9 +200,6 @@ pub fn scratch_q() -> V3 { [0.0, 0.0, 0.0] }
 
 /// (src/game/wind.ts:116 SCRATCH_W: a table nothing writes)
 pub fn scratch_w() -> V3 { [0.0, 0.0, 0.0] }
-
-/// (src/game/wind.ts:308 KNOBS0: a table nothing writes)
-pub fn knobs0() -> [f64; 3] { [0.35, 2.0, 0.15] }
 
 /// (src/game/wind.ts:309 UNIT_X: a table nothing writes)
 pub fn unit_x() -> V3 { [1.0, 0.0, 0.0] }

@@ -4,7 +4,7 @@
 // module ships — a GLASSFX in the caller's environment is dropped, it would make that line true by construction), chaos at the page's own default, the scenario
 // started through the page's own start (game/scenarioRun.ts startFromQuery). Then, for one pane of each kind the level holds: one rifle round, a burst, and what
 // the three models say — the fracture's record of the pane, rounds counted through it, fragments handed to the falling-glass model. Then the same shots with the
-// master switch off (as the page has it under ?glassfx=0: the parts still on): nothing may be live, no pane may hold a record, no round may cross.
+// master switch off (the stand word GLASSFX=off: the parts still on): nothing may be live, no pane may hold a record, no round may cross.
 //
 //   bun run tools/qa/glass-levels.ts [--scn id,id]        exit 0 = every level PASS, 1 = a FAIL line, 2 = an unknown scenario id (the known ones listed; nothing ran)
 import { readFileSync } from 'node:fs';
@@ -109,7 +109,7 @@ for (const [file, E] of byLevel) {
       const ok = r.rec && (r.kind === 'laminated' ? a.sites > 0 && a.openFraction === 0 : r.kind === 'tempered' ? (o.gone || o.openFraction > 0.5) : a.sites > 0 && a.openFraction > 0) && r.crossed > 0 && (r.kind === 'laminated' || r.fragments > 0);   // (toughened: the whole sheet dices on the first round; float: the burst opens it; laminated: a web that never opens)
       verdict(ok, `${r.kind} pane ${r.bi}: one rifle round, then twelve`, `after one: open ${o.openFraction.toFixed(2)} gone ${o.gone} sites ${o.sites} · after twelve: open ${a.openFraction.toFixed(2)} walkable ${a.walkable} sites ${a.sites} · rounds through ${r.crossed} · fragments to the falling-glass model ${r.fragments}`);
     }
-    // ---- the master switch off, the parts still on (the page under ?glassfx=0)
+    // ---- the master switch off, the parts still on
     const O = await stage(E, false);
     const live = glassBreakLive(O.g) || glassPenLive(O.g) || shardsLive(O.g);
     const RO = await quiet(() => shootAll(O, 12));
