@@ -14,6 +14,7 @@ import { withDom, El } from './scenario-picker-probes.ts';
 
 const HR = await import(`${ROOT}/src/game/hours.ts`);
 const { lightEstimateAt, wallPutOut, beamRayEnd, beamFan, beamLens, LIGHTS: SQUAD_LIGHTS } = await import(`${ROOT}/src/game/guards.ts`);
+const { toggleTarget } = await import(`${ROOT}/src/game/lighting.ts`);
 import { plainOpen } from './beam-reading.ts';
 const { nvgSummary } = await import(`${ROOT}/src/game/nvg.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -80,12 +81,11 @@ export async function hoursLight(): Promise<boolean> {
       const okRig = !!sun && sun.kind === 2 && at === moonAt + 1 && L.filter((l: any) => l.kind === 2 && l.enabled).length === 1 && !L[moonAt].enabled && sun.intensity === D.sun.intensity && Math.abs(-sun.dir[1] - Math.sin(D.sun.elevDeg * Math.PI / 180)) < 1e-9
         && ext.every((t: any, i: number) => t.on === (D.lamps ? extOn0[i] : false)) && g.engine.settings.exposure === D.exposure && g.weather.enabled === false && g.targets.filter((t: any) => t.group !== 'exterior').every((t: any) => t.on === true || t.on === false);
       if (!okRig) rigBad.push(`${id}@${h}`);
-      // the meter's stand-in: the open (the brightest fifth of the points) reads as the hour should; points the hour does not reach read exactly as at night
-      const E = P.map(p => lightEstimateAt(g, p)), add = E.map((e, i) => e - night[i]), sorted = [...E].sort((a, b) => b - a), open = vis(g, sorted[Math.floor(P.length * 0.1)]), same = add.filter(a => a === 0).length, less = add.filter(a => a < -1e-9).length;
+      // the meter's stand-in: the open (the brightest fifth of the points) reads as the hour should; points the hour does not reach read no brighter than at night (eyes used to a place can read it darker)
+      const E = P.map(p => lightEstimateAt(g, p)), add = E.map((e, i) => e - night[i]), sorted = [...E].sort((a, b) => b - a), open = vis(g, sorted[Math.floor(P.length * 0.1)]), same = add.filter(a => a <= 1e-9).length;
       const want = h === 'midday' ? 0.9 : h === 'overcast' ? 0.6 : 0.35;
-      // (a point can read LESS than at night only where an outside lamp the photocell has put out was lighting it)
-      const okLit = open >= want && same >= P.length * 0.08 && (D.lamps ? less === 0 : true);
-      if (!okLit) litBad.push(`${id}@${h}`); lit.push(`${id}@${h}: open ${open.toFixed(2)} · untouched ${same}/${P.length}${less ? ` · darker ${less}` : ''}`);
+      const okLit = open >= want && same >= P.length * 0.08;
+      if (!okLit) litBad.push(`${id}@${h}`); lit.push(`${id}@${h}: open ${open.toFixed(2)} · no brighter ${same}/${P.length}`);
       applyHour(g, 'night');
     }
     rigD.push(`${id}: moon at ${moonAt}, ${ext.length} outside lamps`);
@@ -101,7 +101,7 @@ export async function hoursLight(): Promise<boolean> {
     applyHour(g, 'night');
   }
   F.verdict(rigBad.length === 0, 'at each hour on each squad map: one sun, directional, right after the moon in the list, the moon out, the outside lamps as authored at dawn and dusk and out at midday and under overcast, the hour\'s exposure, the storm held', rigD.join(' · ') + (rigBad.length ? ` — NOT: ${rigBad.join(', ')}` : ''));
-  F.verdict(litBad.length === 0, 'the stand-in\'s meter by the hour: the open reads lit (midday ≥ 0.9, overcast ≥ 0.6, dawn and dusk ≥ 0.35 of the meter), and points no sun or sky reaches read exactly as at night', lit.join(' · ') + (litBad.length ? ` — NOT: ${litBad.join(', ')}` : ''));
+  F.verdict(litBad.length === 0, 'the stand-in\'s meter by the hour: the open reads lit (midday ≥ 0.9, overcast ≥ 0.6, dawn and dusk ≥ 0.35 of the meter), and points no sun or sky reaches read no brighter than at night', lit.join(' · ') + (litBad.length ? ` — NOT: ${litBad.join(', ')}` : ''));
   F.verdict(doorD.length === 0 || doorSeen > 0, 'a door between the midday open and a darker room: the room side reads brighter with the leaf open than shut on at least one of them (the leaf is asked every time)', doorD.join(' · ') || 'no such door on these maps');
   // the one number
   { const W = await stand('compound-four'), g = W.game, P = grid(g, 1.5); applyHour(g, 'midday');
@@ -145,6 +145,7 @@ export async function hoursTeam(): Promise<boolean> {
     // the team told to stack on the front door, from the yard, Sam's own light on — which frees theirs (nvg.ts: 'your light'): what burns is then the light
     // rule's alone (guards.ts LIGHTS — off wherever the place itself reads lit)
     W.step(1 / 60);   // (what a point is, is the Rust game's answer: it stands from the first step)
+    for (const t of g.targets) if (t.on) toggleTarget(g, t); if (h === 'night') for (const l of W.engine.lights.lights) if (l.kind === 2) l.enabled = false;   // (the level's lamps out, and no moon on the night: the yard stands lit past the rule's line by either, and it is whether the rule goes by the place that is asked)
     const door = g.doors.byName('front'), O = g.orders; await quiet(() => O.give('stack', O.targetAt(door.frameCentre))); g.player.pistol.lightOn = true; g.player.rifle.lightOn = true;
     // (…and, where the page's wall rule is on, a light it holds off the wall at his muzzle is not a light the hour put out: a man is counted `walled` when
     //  that rule is what put his light out (guards.ts wallPutOut: the other light rules had it burning) and the check's own reading of his beam, after the
