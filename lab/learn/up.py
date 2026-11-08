@@ -33,7 +33,7 @@ def step(p, hist, hn, ctl=None):
     a = ((p['prox'] ** 2 + .02).clamp(0, 1) / (n * torch.exp(trust) + 1)).clamp(min=.02); o = torch.where(p['inside'], hc + (cur - hc) * a, cur); n = torch.where(p['inside'], (n + p['prox']).clamp(max=40), torch.full_like(n, .5)); return o, n.clamp(min=.5)
 def feats(p, hist, hn):
     hy, n = past(p, hist, hn); m, s = p['mean'], p['sd']; e = lambda x: torch.log1p(x.clamp(min=0) * 8); mv = p['px'].norm(dim=1, keepdim=True)
-    return F.avg_pool2d(torch.cat([e(m[:, :1]), m[:, 1:3], e(s[:, :1]), e((hy[:, :1] - m[:, :1]).abs()), ((hy[:, :1] - m[:, :1]) / (s[:, :1] + .02 * m[:, :1].abs() + 1e-3) * .2).clamp(-3, 3), hy[:, 1:3] - m[:, 1:3], e(hy[:, :1]), (mv * .25).clamp(max=3), n / 28, p['inside'].float()], 1), 4)
+    return F.avg_pool2d(torch.cat([e(m[:, :1]), m[:, 1:3], e(s[:, :1]), e((hy[:, :1] - m[:, :1]).abs()), ((hy[:, :1] - m[:, :1]) / (s[:, :1] + .02 * m[:, :1].abs() + 1e-3) * .2).clamp(-3, 3), hy[:, 1:3] - m[:, 1:3], e(hy[:, :1]), (mv * .25).clamp(max=3), n / 28, p['inside'].float()], 1)[..., 1::2, 1::2], 2)      # (four of a patch's sixteen pixels, as the shader looks)
 class Const(torch.nn.Module):               # the best that four numbers alone could do: what a network must beat
     def __init__(s): super().__init__(); s.k = torch.nn.Parameter(torch.zeros(1, 4, 1, 1))
     def forward(s, f): return (torch.tanh(s.k) * 1.5).expand(f.shape[0], 4, f.shape[2], f.shape[3])
@@ -79,4 +79,4 @@ def learn(net, minutes, lr, tag):
 cst = learn(Const().to(dev), 1.5, 3e-2, 'constants'); print('constants', (torch.tanh(cst.k) * 1.5).flatten().tolist()); show('best constants, seen  ', score(cst, train)); show('best constants, unseen', score(cst, test))
 net = learn(Net().to(dev), MIN, 2e-3, 'network')
 show('learned, seen  ', score(net, train)); show('learned, unseen', score(net, test)); sd = {k: v.detach().cpu().numpy().astype(np.float32) for k, v in net.state_dict().items()}
-json.dump({k: v.flatten().round(5).tolist() for k, v in sd.items()}, open(OUT + '/up.json', 'w')); print('weights', sum(v.size for v in sd.values()), 'steps', it)
+json.dump({k: v.flatten().round(5).tolist() for k, v in sd.items()}, open(OUT + '/up.json', 'w')); print('weights', sum(v.size for v in sd.values()))
