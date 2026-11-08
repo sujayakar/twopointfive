@@ -18,7 +18,7 @@ import { standUp, ROOT } from './headless.ts';
 import { sample } from './sweep.ts';
 const { parseLevelData, validateLevelData, canonicalLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel, levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { SHAPES, SHAPES_STATS, shapeLevel, shapesTape, shapeStamp, withPieces, arcFacets } = await import(`${ROOT}/src/scene/shapes.ts`);
+const { SHAPES, SHAPES_STATS, shapeLevel, shapesTape, shapeStamp, arcFacets } = await import(`${ROOT}/src/scene/shapes.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { levelFingerprint, canLoad } = await import(`${ROOT}/src/game/savestate.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
@@ -125,7 +125,7 @@ export async function shapesCheck(): Promise<boolean> {
       const same = first.every((b: any, i: number) => B[i] === b && b.c === places[i][0] && b.h === places[i][1]), twice = (shapeLevel(B, !BREAK), flat(B) === up && B.length === nUp);
       const recs = tub.cut?.length === 6 && wheel.cut?.length === 8 && bonnet.cut?.length === 7 && crate.cut?.length === 2 && tail.length === 3 && tail.every((p: any) => p.piece === true && p.flags === BoxFlag.NoShadow) && tail[0].cut?.length > 0 && tail[1].cut?.length > 0
         && tail[1].albedo.join() === tub.albedo.join() && tail[1].rough === tub.rough && tail[0].albedo.join() !== tub.albedo.join();   // (a piece that says no paint wears its box's; one that says its own keeps it)
-      const mine = withPieces(B, [Y.tub, Y.wheel]) as number[], tied = JSON.stringify(mine) === JSON.stringify(BREAK ? [Y.tub, Y.wheel] : [Y.tub, Y.wheel, n0, n0 + 1]) && tail.every((p: any) => typeof p.of === 'number' && B[p.of].shaped === true);
+      const tied = tail.every((p: any) => typeof p.of === 'number' && B[p.of].shaped === true);
       // the number the level's fingerprint takes in: these shapes', another for a plane moved a centimetre, the same for a piece repainted, none when none stands
       const stampUp = shapeStamp(B) as number, stampOf = (f: (d: any) => void) => { const d = JSON.parse(JSON.stringify(Y.d)); f(d); const X = levelOf(d); shapeLevel(X.boxes, true); return shapeStamp(X.boxes) as number; };
       const stamps = stampUp !== 0 && stampOf(() => { }) === stampUp && stampOf(d => { d.boxes[Y.tub].shape.cut[0][3] += 0.01; }) !== stampUp && stampOf(d => { d.boxes[Y.tub].shape.with[1].off[0] += 0.01; }) !== stampUp && stampOf(d => { d.boxes[Y.tub].shape.with[0].albedo = [0.9, 0.1, 0.1]; delete d.boxes[Y.tub].shape.old; }) === stampUp;

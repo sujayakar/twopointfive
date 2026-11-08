@@ -75,7 +75,7 @@ if (ONLY.has('title')) await withPage(9363, async c => { const url = `${AT}/?${w
   const n = await play(c, [{ n: 240, keys: ['KeyW'] }, { n: 60, keys: ['KeyQ'] }, { n: Math.max(60, Math.min(FRAMES, 1200) - 300) }]);
   const after = await c.eval(state); verdict(`the title, Play, Deploy (${to.replace(AT, '')})`, c, before, after, n); await census(c, `the title to play ${paused}`, n); });
 
-// ---- the Team & kit page's own small game (`?kitview`, src/host/kitView.ts): a game only a page stands. It loads, its own loop runs for a while, no error.
+// ---- the Team & kit picture (`?kitview`: the page at '/' opens draw.html with the same words): a game only a page stands. It loads, its own loop runs for a while, no error.
 if (ONLY.has('kit')) await withPage(9371, async c => { const url = `${AT}/?${word('kitview&quality=verylow&mute')}`;
   try { await c.open(url, 120000); await new Promise(r => setTimeout(r, 20000)); } catch (e) { c.errors.push(String(e)); }
   const fatal = await c.eval<string | null>(`document.querySelector('.fatal, #fatal')?.textContent?.slice(0, 300) || null`).catch(() => 'the page did not answer');

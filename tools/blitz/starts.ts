@@ -12,7 +12,7 @@
 // WHAT A ROW IS: the words of an address (`search`), and for a few rows a deed after the first second (`then`): the pause card's restart, a quit to the
 // title and a second start in the same process, a checkpoint taken and put back. THE MIRROR: the lines of src/main.ts that a start runs before and after
 // the game is built, in their order, as far as they touch the simulation (the picture's words are left out: no row of the picture reaches a rule).
-// NOT HERE: the Team & kit page's own small game (`?kitview`, src/host/kitView.ts), which only a page can stand: tools/blitz/delete-page.ts.
+// NOT HERE: the Team & kit picture (`?kitview`), which the Rust game stands: rust/game_start/tests/kit_levels.rs.
 import { readFileSync, writeFileSync, existsSync, appendFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
