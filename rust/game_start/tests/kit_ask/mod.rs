@@ -61,6 +61,9 @@ pub trait KitAsk {
     fn no_wits(&mut self);
     /// A man put on his post where he stands.
     fn man_posted(&mut self, gd: GuardId);
+    /// A big tool in Sam's big slot; and a teammate's card's.
+    fn sam_carries(&mut self, tool: game::kit::BigKit);
+    fn man_carries(&mut self, gd: GuardId, tool: game::kit::BigKit);
     /// A man let off his post, free to go.
     fn man_let_off_his_post(&mut self, gd: GuardId);
     /// A man calm again: nothing known, nobody to look for.
@@ -157,6 +160,34 @@ pub trait KitAsk {
     fn corridor_side(&self, d: DoorId) -> f64;
     /// a place `along` metres along a door's wall from the middle of its leaf and `off` metres out on that face
     fn off_the_door(&self, d: DoorId, side: f64, along: f64, off: f64) -> [f64; 2];
+    /// how long the hold's gun waits between two rounds, by what the hold says; the rounds in his pistol
+    fn pistol_rounds(&self) -> f64;
+    /// where the light of his gun stands, and how wide the emitter is; his gun shoulder
+    fn gun_light(&self) -> ([f64; 3], f64, bool);
+    /// his gun shoulder, in the world
+    fn sam_shoulder(&self) -> [f64; 3];
+    /// is there anything solid between these two points
+    fn solid_between(&mut self, a: [f64; 3], b: [f64; 3]) -> bool;
+    /// how lit a place is to the light estimate
+    fn light_at(&mut self, at: [f64; 3]) -> f64;
+    /// has the wall at his muzzle put this man's light out
+    fn wall_has_his_light(&self, gd: GuardId) -> bool;
+    /// is his muzzle down for a wall
+    fn muzzle_down(&self, gd: GuardId) -> bool;
+    /// the wall switch of the room at this place of the plan, if the level has one
+    fn switch_near(&mut self, at: [f64; 2]) -> Option<game::lightswitch::WallSwitch>;
+    /// is the room's light on, by its switch
+    fn switch_on(&self, sw: &game::lightswitch::WallSwitch) -> bool;
+    /// every row of the orders table: its id, its digit, whether a key of its own carries it
+    fn order_keys(&self) -> Vec<(String, Option<f64>, bool)>;
+    /// the name each door is said by, as the level stands
+    fn door_names(&self) -> Vec<String>;
+    /// what the big tools have done so far: Sam's blows, his shells; a teammate's blows, doors he has hammered
+    fn big_counts(&self) -> (i32, i32, i32, i32);
+    /// is a man's own gun in his hands (no tool out on a sling)
+    fn own_gun_up(&self, gd: GuardId) -> bool;
+    /// how many blows the frame asks of the hammer
+    fn frame_blows(&self) -> f64;
     /// is he on a knee off a boot
     fn on_a_knee(&self, gd: GuardId) -> bool;
     /// has a man's belief in a door come to a boot on its way
@@ -274,6 +305,8 @@ impl KitAsk for Play {
     fn camera_square(&mut self) { let c = self.host.cam; self.g.tab.camera[c].yaw = 0.0; game::camera::follow_camera_rebuild(&mut self.g, c); }
     fn no_wits(&mut self) { self.g.ai_enabled = false; }
     fn man_posted(&mut self, gd: GuardId) { let m = &mut self.g.gd[gd]; (m.hold, m.pinned) = (true, true); }
+    fn sam_carries(&mut self, tool: game::kit::BigKit) { let pl = self.g.player; self.g.pl[pl].big_kit = tool; }
+    fn man_carries(&mut self, gd: GuardId, tool: game::kit::BigKit) { if let Some(mut e) = self.g.m.kit.man_of.get(gd).cloned() { e.kit.big = tool; self.g.m.kit.man_of.set(gd, e); } }
     fn man_let_off_his_post(&mut self, gd: GuardId) { let m = &mut self.g.gd[gd]; (m.hold, m.pinned) = (false, false); }
     fn man_calmed(&mut self, gd: GuardId) {
         let m = &mut self.g.gd[gd];
@@ -392,6 +425,27 @@ impl KitAsk for Play {
     fn burst_at(&self) -> Option<[f64; 2]> { self.g.m.frag.frag_log.last().map(|r| [r.at[0], r.at[2]]) }
     fn corridor_side(&self, d: DoorId) -> f64 { let at = game::doortools::door_pt(&self.g, d, 0.4, 1.0, 1.0, None); if at[2] < self.g.dr[d].frame_centre[2] { 1.0 } else { -1.0 } }
     fn off_the_door(&self, d: DoorId, side: f64, along: f64, off: f64) -> [f64; 2] { let at = game::doortools::door_pt(&self.g, d, self.g.dr[d].def.width / 2.0 + along, off, side, None); [at[0], at[2]] }
+    fn pistol_rounds(&self) -> f64 { game::weapons::firearm_rounds_ready(&self.g, self.g.pl[self.g.player].pistol) }
+    fn gun_light(&self) -> ([f64; 3], f64, bool) { let l = self.g.pl[self.g.player].light; let t = &self.g.tab.light[l]; (t.pos, t.radius, t.enabled) }
+    fn sam_shoulder(&self) -> [f64; 3] { let c = self.g.pl[self.g.player].ch; self.g.ch[c].bones.get(game::character::Bone::UpperArmR).copied().expect("he has a shoulder") }
+    fn solid_between(&mut self, a: [f64; 3], b: [f64; 3]) -> bool {
+        let (d, l) = ([b[0] - a[0], b[1] - a[1], b[2] - a[2]], ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2) + (b[2] - a[2]).powi(2)).sqrt());
+        game::scene_collision::raycast(&mut self.g, a, [d[0] / l, d[1] / l, d[2] / l], l).is_some()
+    }
+    fn light_at(&mut self, at: [f64; 3]) -> f64 { game::guards::light_estimate_at(&mut self.g, at, None, None, None) }
+    fn wall_has_his_light(&self, gd: GuardId) -> bool { self.g.m.guards.wall_seen.get(gd).map_or(false, |w| w.dark) }
+    fn muzzle_down(&self, gd: GuardId) -> bool { self.g.gd[gd].muzzle_down }
+    fn switch_near(&mut self, at: [f64; 2]) -> Option<game::lightswitch::WallSwitch> {
+        let mut v = game::lightswitch::wall_switches(&mut self.g);
+        v.sort_by(|a, b| { let d = |s: &game::lightswitch::WallSwitch| (s.stand[0] - at[0]).hypot(s.stand[2] - at[1]); d(a).partial_cmp(&d(b)).unwrap() });
+        v.into_iter().next()
+    }
+    fn switch_on(&self, sw: &game::lightswitch::WallSwitch) -> bool { game::lightswitch::switch_lit(&self.g, sw) }
+    fn order_keys(&self) -> Vec<(String, Option<f64>, bool)> { self.g.tab.orders_order_def.iter().map(|(_, r)| (r.id.clone(), r.key, r.hot_key.is_some())).collect() }
+    fn door_names(&self) -> Vec<String> { self.g.doors.list.iter().filter_map(|&d| game::doornames::door_said_name(&self.g, d)).collect() }
+    fn big_counts(&self) -> (i32, i32, i32, i32) { let b = &self.g.stats.bigkit; (b.sam_blows, b.sam_shells, b.mate_blows, b.mate_hammered) }
+    fn own_gun_up(&self, gd: GuardId) -> bool { self.g.gd[gd].slung.as_ref().map_or(true, |s| !s.out) && self.g.ch[self.g.gd[gd].ch].anim.big_tool.is_none() }
+    fn frame_blows(&self) -> f64 { self.g.k.bigslot.swings }
     fn on_a_knee(&self, gd: GuardId) -> bool { self.g.gd[gd].door_down_until > self.g.time }
     fn walking_to_boot(&self, gd: GuardId) -> bool { self.g.m.doorforce.states.as_ref().and_then(|s| s.men.get(gd)).and_then(|m| m.kick.as_ref()).map_or(false, |k| k.phase == game::doorforce::KickPhase::Walk) }
     fn on_a_door(&self, gd: GuardId) -> bool { self.g.m.doorforce.states.as_ref().and_then(|s| s.men.get(gd)).map_or(false, |m| m.on.is_some()) }
