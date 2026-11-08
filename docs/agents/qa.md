@@ -44,7 +44,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   it). A plain night or a quiet mission alone stood on the shipped stand has the page's `?solo` Sam (one of each can, one round: `kit.ts kitSoloStand`, asked by `standGame` and `startFromQuery`; frozen = as built, nothing written) — and the PAGE's plain night is that Sam whichever way it was started: main.ts asks `kitSoloIf` for `?solo` and for a page with no mission, show or quiet run in its URL, so the card's own Start no longer hands him the eleven things (`PORT=<dev server> node tools/qa/start-kit-page.cjs`: Start and `?solo` carry the same, after a restart too). What shipped still is not: the player (a scripted commander who cannot be hurt), the GPU's light meter and smoke lines (headless = the CPU stand-in), localStorage, V8.
   STILL ON THE OLD FIVE ROWS and calling it 'shipped' / 'the page': kit-cells.ts, snap-probes.ts `PAGE` (framecost.ts's shipped arms and frame-spikes.ts `--ship` stand on `TPS_PROFILE=shipped` now; the five-row arm is kept there as `shipped5` / `pair5` / `--ship5`).
 - **One knob registry** (`src/game/knobs.ts knobRegistry()` — built lazily: the import cycle): every module knob table by name. The session journal (`JOURNAL_KNOBS` = the subset a
-  recording carries), `playthrough.ts --set` and its put-back, the probe runner's copy / put-back round every probe (`knobsCopy / knobsBack`, in place, every depth; it also puts back `KIT_SOLO.on`, which is in no table) and the page's
+  recording carries), `playthrough.ts --set` and its put-back, the probe runner's copy / put-back round every probe (`knobsCopy / knobsBack`, in place, every depth; a game's own `stood` and `soloCard` are no knobs, and a tool's write to them reaches a Rust game only where that host scans for tools' writes, not on a co-op machine) and the page's
   `__knobs` all read it. A new table = one line there; `bun run tools/qa/knobs-check.ts` holds the round trip and is red on an exported table with an `on` switch that is neither registered nor on that file's `UNREGISTERED` list with its reason (six today: four look tables, the kit's two).
   (Added 10-13, the switches goal's step c28ba4fb:) A TABLE THE PAGE'S BOOT WRITES — any `NAME.key = …` in `host/profile.ts pageSwitches` — differs between the page and the stand a
   replay is stood on, so it is carried by a recording (its name at the END of `JOURNAL_KNOBS`) or excused on knobs-check's `PAGE_ONLY` list with how a replay gets it or why it need
@@ -1430,6 +1430,46 @@ but synthetic writes still work.
   what is the host's (`src/game/rollback.ts HOST_FIELDS`) has the two fields too: it is a second list beside the wire's (`tools/wire/wire.ts
   HOSTS_OWN`), in the TypeScript's names and with another rule (what a snapshot leaves alone, against what no state word reads), and the two are
   not made one here.
+- **A mission's address is read in two places, and a host that starts a game from one reads it in both** (2026-11-07; `src/host/standup.ts`
+  `addressBeforeGame(q)` and `startAtAddress(game, q)` / `soloOfAddress`; in Rust `scenario_run::address_before_game` and `start_at_address`, called
+  by `rust/game_start stand.rs`). BEFORE THE GAME IS MADE: the mission row's own hour and weather onto the words, the weather the game is BORN in
+  and the visit's hour, which `standGame` lays over the level: both into the game's own record ((3) below). OF THE STOOD GAME: `?noweather` (the level's own storm
+  off), the mission staged (`startFromQuery`), then the solo card's question (`?solo`, or nothing staged and no quiet mission: the player's own card). The page did this by
+  hand in `main.ts` and still calls the two halves apart (its hooks and a recipe's tables stand between them); **the harness takes the address at the
+  stand: `standUp({ address })`, then `W.start()`.** THE OLDER ROAD, which every tool was on and most still are: `standUp()` stands a PLAIN game
+  (the level's own storm, the solo night's card put on its player by a flag only the harness raises, `KIT_SOLO.stand`, which such a game holds as `Game.stood.soloStand`), and `startFromQuery`
+  afterwards changes the weather's kind, takes the card's flag down and stages the mission. The same mission on the two roads differs at its start
+  in: the order list (one more row on the older road, pushed by the solo card's door-tool setup, so every later order id is one on), the kit's
+  issue record (`issued_player.slot` pistol where the address gives rifle), the door tools (charges 0 and the solo night's keys, left standing
+  under a squad's mission), `weather.fits`, and the dust in the rooms as the picture is handed it. A page and a co-op server differed in exactly
+  these.
+  ON THE ADDRESS NOW: the start tables (`tools/blitz/start.ts`, the Rust start with it), the two-seat stand (`seats-run.ts standTwo`: `seats.ts`,
+  `thrice`, `show-seat-check`), a page's tape in `tools/qa/rerun.ts` and so EVERY co-op machine (`tools/mp/stand.ts standRecipe`, `freshRecipe`),
+  the play-through (`playthrough.ts`: `--set WEATHER.kind` goes onto the address), `tools/blitz/starts.ts`, `picks-probes --boot`. NOT YET:
+  every other tool that calls `startFromQuery` on a game stood plain (about 160 files); when the last is moved, `kitSoloStand`, `KIT_SOLO.stand`
+  and the late `setKind` in `startFromQuery` go.
+  WHAT WHOEVER WRITES A TOOL NEEDS TO KNOW. (1) The floor is still the caller's: `level`, or the bundled office; the address's `levelFile` is not
+  loaded by the stand, and a level built for snow handed apart from an address that does not name it is refused with the word to add. (2) An hour
+  or a weather a tool wrote into `HOUR` / `WEATHER_BOOT` by hand before the stand-up (`PT_HOUR`, a check's own) is put onto an address that names
+  none, so the hand-set value plays as it did. (3) THE ADDRESS IS READ INTO THE RECORD THE GAME IS MADE WITH: `Game.stood` (`src/game/stood.ts`; in Rust `game::StoodWith`), set once at the stand: the weather it is born in and whether that is locked, the hour, its sun and its storm, and whether it is a harness game stood plain. The rules read that. `WEATHER_BOOT`, `HOUR` and `KIT_SOLO` are PICKS, what a page, a menu or a tool chose before any game exists: no rule reads them, the bridge does not carry them, and a game stood with nothing said for it takes them as they stand (`stoodOfPick`). So nothing of the process is written by a stand-up or put back after one, a page and a headless host hold the same record for the same mission (it is locked on both), and a tool that wants to change one on a game already stood writes that game's `stood`. The solo night's card is the game's too: `Game.soloCard`. A tool's write to a game's `stood` or `soloCard` is carried to a Rust game only where that host scans for tools' writes: not on a co-op machine. (4) The two switches the address's reader reads (`ROWSET.on`, `SNOW.on`) are pinned by the run's own words before it reads them
+  (`standup.ts pinSnow`, `pinRowset`: the lines standGame runs). (5) A tape made on a page from before the row's own hour and weather has that rule
+  off before the stand, and the recipe's tables are laid again between the staging and the solo card's question (`rerun.ts`, as the page's player
+  has them). (6) NOT NEW, AND STILL SO: every other module table is the process's, so two games alive in one process share what a stand-up writes there, and a
+  game whose start is made late takes such a table as the last game left it. (7) STILL THE PAGE'S ALONE, so three tutorial rows (the lessons that
+  play the issue kit) and anything kept on a machine stand off the page on every other host: the lesson's kit line (`kitLessonPage`), the kit
+  the machine keeps, the difficulty, the look's place and cast, the page's own switches.
+  THE CHECKS: `bun run tools/blitz/start-levels.ts` and `--seats 2` hold the Rust start to this one mission by mission; `--again` holds a second
+  start in one process to the first; `tools/qa/rowset-check.ts` reads the order of the address's reader off its source (`ROWSET_ORDER_BREAK=1`
+  must fail its last line).
+  READ 2026-11-07 (the module built from these sources; a 4-core cloud box): IT MOVES NO PLAY. Against the
+  tree before it: `thrice` and `thrice --one` one digest each, the same as before; `night-breach` seed 1 the same on every tick; the six packed
+  fuzz runs THE PLAY IS THE SAME; the play-through on depot-four, records-pair, compound-four and rescue-registry, seeds 1 to 4, sixteen results
+  the same to the letter. What moves is the START'S RECORDS on the hosts that came onto the address: 24 squad missions by 24 paths each (orders
+  18, door tools 5, kit 1; 193 with two seats, where each seat's order ids move), four quiet pairs by 50 (order ids, the wall charge's), tut-kit,
+  tut-squad and tut-queue by their weather being born once. `weather.ts`'s own-storm rule lost a word the picture had put in it
+  (`docs/agents/weather.md`). NOBODY HAS SEEN any of this on a GPU, and nobody has played a mission on it by hand. A page was run by script on the
+  software adapter, a co-op client of its own server on the depot in a downpour, 2,882 ticks and no error (before the records were the game's own:
+  it then still differed from a headless watcher in those three rows).
 - **A game stood up has done with the last one: `standUp` asks for a full collection first** (2026-11-05; `tools/qa/headless.ts STANDUP_COLLECTS`; the
   harness only, nothing of the game). FOUND by the merge: the workers of `bang-tally.ts` (the `flashweight` family's tally, missions back to back in one
   process) grew about 1.6 GB a minute on the page's stand and two died at a 12 GB limit; old, on every build looked at. Reproduced here: one worker from
