@@ -362,7 +362,7 @@ pub fn foot_of(g: &crate::game::Game, y0: f64) -> f64 {
 /// A TICK SHUTS AND THE COPY STANDS: its debts are paid, so that whoever asks before the next tick asks it of the game shared (`ask::WorldAsk`). A writer that
 /// cannot say what it writes (a tool's write by path, a state read in) puts it down first (`unstand`).
 pub fn tick_shut(g: &mut crate::game::Game) {
-    if standing(g) { stands(g); }
+    if standing(g) { stands(g); crate::scene_box_mirror::box_mirror_things(g); }
 }
 /// does a copy of the boxes stand that is this game's and of this moment (it may owe a debt, which the next question pays)
 pub fn standing(g: &Game) -> bool { g.col.mirror.live && g.col.mirror.stood != 0 && g.col.mirror.stood == sim::world::world_read(g.sim).stood }
@@ -448,7 +448,7 @@ pub fn gather_ask(g: &mut crate::game::Game, x0: f64, z0: f64, x1: f64, z1: f64,
 }
 
 /// TWIN: the module's gather, its list read into `out`. (collision.ts StaticCollision.gatherHere)
-pub fn gather_here(g: &mut crate::game::Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
+pub fn gather_here(g: &crate::game::Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
     let w = slot(g);
     let n = sim::collide::gather(w, x0, z0, x1, z1, y0, y1, out.len());
     let list = &sim::world::asking(w).list;
@@ -1265,6 +1265,20 @@ pub fn ray_shared(g: &Game, over: &Over, ro: V3, rd: V3, tmax: f64) -> Option<cr
     let k = lent(g, over, |v| sim::lines::ray_over(slot(g), v, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, pane_word(g) != 0, &mut out));
     if k < 0 { return None; }   // (a ray that is no number meets nothing here: a host asks it of a camera or a cursor, and the game is not to fall for it)
     Some(Raycast { t: out[0], index: k as f64, n: [out[1], out[2], out[3]] })
+}
+/// (ask::WorldAsk's leaf: one across a→b; with `need`, one carrying those flags)
+pub fn leaf_shared(g: &Game, a: V3, b: V3, need: Option<f64>) -> bool {
+    let len = m::hyp3(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+    if !(len >= 1e-4) || !(len < 1e6) { return false; }
+    let set = own_set(g);
+    set >= 0 && sim::lines::leaves_blocked(slot(g), a[0], a[1], a[2], b[0], b[1], b[2], len, js::to_u32(need.unwrap_or(0.0)), set)
+}
+/// (ask::WorldAsk's furniture: the nearest part met, of a copy that has every write of the furniture; one that could not take them all, or owes one, meets nothing)
+pub fn things_shared(g: &Game, ro: V3, rd: V3, tmax: f64) -> Option<(f64, V3)> {
+    if !g.col.mirror.things_ok || g.col.mirror.things_at != g.m.scene_box_mirror.things.n { return None; }
+    let mut out = [0.0; 5];
+    let k = sim::lines::ray_things(slot(g), ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, &mut out);
+    if k < 0 { None } else { Some((out[0], [out[1], out[2], out[3]])) }
 }
 /// (ask::WorldAsk's path of sound: no route is remembered and none is looked up. A place that is no number, or no place of this world, is heard from nowhere: a host asks
 /// it of a sound and a listener of its own, and the game is not to fall for it)

@@ -9359,7 +9359,10 @@
 "view::TickView.radio",
 "view::TickView.bubbles",
 "view::TickView.me",
-"view::TickView.place"
+"view::TickView.place",
+"view::TickView.marks",
+"view::TickView.aim",
+"view::TickView.worn"
 ],
 "pageTick": [
 "aim::AimState.bearing_rate",

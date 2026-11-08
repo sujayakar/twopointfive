@@ -161,7 +161,7 @@ import * as breathMod from './game/snowBreath';
 import * as destrMod from './game/destruction';
 import * as windMod from './game/wind';
 import { DOZE, DOZE_STATS, DOZE_LOG, dozeOf, dozeSummary, dozeAsleep, dozeAt } from './game/doze';
-import { CLOSE, CLOSE_STATS, CLOSE_LOG, closeAt, closeWindows, closeMarks, closeSeat, closeUnseat, closeSeated, closeSummary, closeMode } from './game/close';
+import { CLOSE, CLOSE_STATS, CLOSE_LOG, closeAt, closeWindows, closeSeat, closeUnseat, closeSeated, closeSummary, closeMode } from './game/close';
 import * as mothsMod from './game/moths';
 import * as saveMod from './game/savestate';
 import { PICTURE, PICTURE_STATS, pictureSummary, pictureViews, pictureTell, ideasOf } from './game/picture';
@@ -1479,7 +1479,7 @@ function destructionWeatherFlagsAndHooks(engine: Engine, game: Game) {
   (window as any).__close = {
     knobs: CLOSE, stats: CLOSE_STATS, log: CLOSE_LOG,
     at: (i: number, p?: Vec3) => { const o = closeAt(game, game.guards[i], p ?? game.player.char.pos); return { kind: o.win?.kind ?? null, id: o.win?.id ?? null, dist: o.dist, bearingDeg: o.bearing * 180 / Math.PI, inReach: o.inReach, clear: o.clear, grab: o.grab, strike: o.strike, can: o.can, why: o.why }; },
-    windows: (i: number) => closeWindows(game, game.guards[i]), marks: () => closeMarks(game).map(m => ({ who: m.guard.callsign, id: m.id, kind: m.kind, state: m.state, label: m.label, pts: m.pts.length, alpha: m.alpha })),
+    windows: (i: number) => closeWindows(game, game.guards[i]),
     seat: (i: number, at?: Vec3, face?: number) => closeSeat(game, game.guards[i], at, face), unseat: (i: number) => closeUnseat(game, game.guards[i]), seated: (i: number) => closeSeated(game, game.guards[i]),
     mode: () => closeMode(game)?.callsign ?? null,
     summary: () => closeSummary(game),

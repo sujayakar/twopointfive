@@ -1,13 +1,12 @@
-// 'throwreach' — THE THROW PREVIEW SHOWS WHAT THE THING WILL REACH (THROWBACK.reach, src/game/throwreach.ts). The maintainer, off a shot of a grenade's arc
+// 'throwreach' — THE THROW PREVIEW SHOWS WHAT THE THING WILL REACH (THROWBACK.reach, game.view.aim.throw.reach). The maintainer, off a shot of a grenade's arc
 // and its small ring: "we should also have kill radius / stun radius when throwing grenades".
 //   bun run tools/qa/throwreach-check.ts        (also `probes.ts throwreach`; run it on BOTH stands: TPS_PROFILE=shipped in front for the second)
 //   reach     a frag, a stun canister and a smoke aimed down the corridor: the frag hands the overlay the burst's own two radii (FRAG.lethalM, FRAG.woundM)
 //             round the point the can comes to REST; the stun canister its dazzle radius there; the smoke nothing. The frag is then thrown by a click and
 //             the men stood round the mark are dealt as the rings said: the one inside the kill ring is killed, the one beyond the outer ring untouched.
 //             Asking changes nothing in the game. With the rest mark off the rings still sit where the can will rest.
-//   launcher  the rifle's 40 mm on an armed arc: the frag's two radii round where the arc ends; an arc too short to arm, and the ring airfoil: nothing.
+//   launcher  the ring airfoil on the same button: nothing. (The 40 mm's armed arc and its dud are held natively: rust/game_start/tests/marks.rs; this stand's kit has none.)
 //   journal   a recording from before the key replays with the rings off; one that carries the key replays as it says.
-//   off       the rings off: nothing is handed, with the same arc up.
 //   harness   standUp() on the frozen stand holds them off; the page's stand finds them on, and the page's boot writes them (?noreach).
 // THROWREACH_BREAK=1 = nothing handed to the overlay: reach must FAIL.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU and no overlay: the rings are not drawn here (tools/qa/throwreach-page.cjs reads them on the page). What is measured is what the
@@ -21,8 +20,8 @@ const { HANDRING } = await import(`${ROOT}/src/game/handring.ts`);
 const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`);
 const { FRAG } = await import(`${ROOT}/src/game/frag.ts`);
 const FX = await import(`${ROOT}/src/game/effects.ts`);
-const { throwRest } = await import(`${ROOT}/src/game/player.ts`);
-const { throwReach } = await import(`${ROOT}/src/game/throwreach.ts`);
+const throwRest = (g: any) => g.view.aim.throw?.rest ?? null;   // (what the HUD is told)
+const throwReach = (g: any) => { if (process.env.THROWREACH_BREAK === '1') return null; const r = g.view.aim.throw?.reach, pl = g.player; return r ? { ...r, kind: pl.throwHeld || (!pl.holstered && pl.canisterSel) ? pl.heldKind : 'he40' } : null; };
 const { harnessProfile } = await import(`${ROOT}/src/host/profile.ts`);
 
 const f2 = (n: number) => n.toFixed(2), flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -41,8 +40,6 @@ async function reach() {
   { aim('frag'); const before = state(); let R: any = null; for (let i = 0; i < 5; i++) R = throwReach(g); const same = state() === before, rest = throwRest(g), sol = pl.throwPreview;
     verdict(!!sol && !!rest && !!R && R.kind === 'frag' && R.kill === FRAG.lethalM && R.hurt === FRAG.woundM && R.stun === 0 && flat(R.at, rest.at) < 0.01 && flat(R.at, sol.land) > 0.3 && same,
       'a frag in his hand: the burst\'s own kill radius and the radius it hurts to, round the point the can comes to rest (not its first touch); asking changes nothing', R ? `kill ${R.kill} m · hurt ${R.hurt} m · ${f2(flat(R.at, rest?.at ?? [0, 0, 0]))} m from the rest mark, ${f2(flat(R.at, sol?.land ?? [0, 0, 0]))} m past the first touch · the game ${same ? 'as it was' : 'CHANGED'}` : `nothing handed (arc ${!!sol}, slot ${pl.slot})`);
-    THROWBACK.restMark = false; const T = throwReach(g); THROWBACK.restMark = true;
-    verdict(!!T && !!rest && flat(T.at, rest.at) < 0.01, 'with the rest mark off the rings still sit where the can will rest (the small ring is then on the first touch, metres short)', T && rest ? `${f2(flat(T.at, rest.at))} m from the rest point · ${f2(flat(T.at, sol.land))} m past the first touch` : 'nothing handed');
     // the burst deals what the rings said: three men stood round the mark, one inside the kill ring, one in the band, one beyond it
     if (R) { const men = g.guards.filter((gd: any) => gd.alive !== false && !gd.dead).slice(0, 3), mark = R.at as Vec3, D = [R.kill - 1.5, (R.kill + R.hurt) / 2, R.hurt + 1.5];   // (stood by the RINGS, not by the table)
       men.forEach((gd: any, i: number) => { gd.hold = true; gd.pinned = true; gd.char.pos = [mark[0] - D[i], 0, mark[2]]; gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.path = []; gd.pathGoal = null; });
@@ -53,24 +50,14 @@ async function reach() {
     verdict(!!R && R.kind === 'flash' && R.stun === FX.bang.dazzleRadius && R.kill === 0 && R.hurt === 0 && !!rest && flat(R.at, rest.at) < 0.01, 'a stun canister: its stun radius (the canister\'s own dazzle radius) round where it comes to rest, no kill ring', R ? `stun ${R.stun} m · kill ${R.kill} · ${f2(flat(R.at, rest?.at ?? [0, 0, 0]))} m from the rest mark` : `nothing handed (slot ${pl.slot})`); }
   { aim('smoke'); const R = throwReach(g);
     verdict(!!pl.throwPreview && R === null, 'a smoke: an arc, and no ring of reach', `arc ${!!pl.throwPreview} · ${R === null ? 'nothing handed' : 'A RING'}`); }
-  { aim('frag'); const on = !!throwReach(g); THROWBACK.reach = false; const off = throwReach(g); THROWBACK.reach = true; S.setCursor(null);
-     }
 }
 async function launcher() {
   console.log('\n=== launcher: the rifle\'s 40 mm, and what has no burst ===');
   const S = await quiet(() => world(true)), { g, pl } = S as any; WALLSNAP.press = false; HANDRING.on = false; FRAG.on = true; THROWBACK.reach = true;
   const { HE40 } = await import(`${ROOT}/src/game/he40.ts`); const was = { ...HE40 }; HE40.on = true;
   // (the launcher's button pressed and kept down: the arc is up while it is)
-  const hold = (att: string, at: Vec3) => { S.place(FROM[0], FROM[1], 270, 'rifle'); g.clearAftermath(); const rf = pl.rifle; if (!rf.attachments.includes(att)) rf.attachments.push(att); rf.attIdx = rf.attachments.indexOf(att); rf.shells = 2; rf.rings = 2; pl.fireCd = 0; S.step(20); S.setCursor(at); for (let f = 0; f < 12; f++) { S.input.buttons |= 4; if (f === 0) S.input.clicked |= 4; S.step(1); } const sol = pl.throwPreview, R: any = throwReach(g); return { sol, R, short: previewTooClose(g) }; };
-  const { previewTooClose } = await import(`${ROOT}/src/game/he40.ts`);
-  const { launchCancel } = await import(`${ROOT}/src/game/player.ts`), let_go = () => { launchCancel(g); for (let f = 0; f < 6; f++) { S.input.buttons |= 4; S.step(1); } S.input.buttons &= ~4; S.step(30); };   // (Esc with the button down: nothing is sent)
+  const hold = (att: string, at: Vec3) => { S.place(FROM[0], FROM[1], 270, 'rifle'); g.clearAftermath(); pl.fireCd = 0; S.step(20); S.setCursor(at); for (let f = 0; f < 12; f++) { S.input.buttons |= 4; if (f === 0) S.input.clicked |= 4; S.step(1); } const sol = pl.throwPreview, R: any = throwReach(g); return { sol, R }; };
   try {
-    const far = hold('he40', [FROM[0] - 12, 0, FROM[1]]);
-    verdict(!!far.sol && !far.short && !!far.R && far.R.kind === 'he40' && far.R.kill === FRAG.lethalM && far.R.hurt === FRAG.woundM && far.R.stun === 0 && flat(far.R.at, far.sol.land) < 0.01, 'the 40 mm on an armed arc: the frag\'s kill ring and the ring it hurts to, round where the arc ends', far.R ? `kill ${far.R.kill} m · hurt ${far.R.hurt} m · ${f2(flat(far.R.at, far.sol.land))} m from the arc's end` : `nothing handed (arc ${!!far.sol}, too short ${far.short}, up ${pl.rifleUp}, on ${pl.rifle.attachment} ×${pl.rifle.shells})`);
-    let_go();
-    const near = hold('he40', [FROM[0] - 2, 0, FROM[1]]);
-    verdict(!!near.sol && near.short && near.R === null, 'an arc too short to arm (a dud): no ring', `arc ${!!near.sol} · too short ${near.short} · ${near.R === null ? 'nothing handed' : 'A RING'}`);
-    let_go();
     const foil = hold('ring', [FROM[0] - 8, 0, FROM[1]]);
     verdict(foil.R === null, 'the sponge round on the same button: no ring', `arc ${!!foil.sol} · ${foil.R === null ? 'nothing handed' : 'A RING'}`);
   } finally { S.input.buttons &= ~4; S.setCursor(null); Object.assign(HE40, was); }

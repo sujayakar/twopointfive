@@ -85,7 +85,6 @@ src/game/spotted.ts:*	decides	squad status words	the "spotted" mode is worked ou
 src/game/stalk.ts:*	decides	squad status words	whether the stalk can go and what it waits on are worked out again on the copy
 src/game/samstun.ts:*	decides	squad status words	whether Sam is blind or staggered is worked out again on the copy
 src/game/nvg.ts:*	decides	squad status words	whether goggles are worn is worked out again on the copy
-src/game/bigkit.ts:*	decides	squad status words	what big kit a man carries is worked out again on the copy
 src/game/weapons.ts:*	decides	squad status words	"reloading" and "ready" are worked out again on the copy
 src/game/quiet.ts:*	decides	mission switches	a quiet mission's rule switches (silent, sneak, spotted, pairs) live in TypeScript's module tables: the first line of Game.update hands them to this game, and the Rust game gets them through the knob tables, not from its own mission
 src/game/teams.ts:*	decides	mission switches	"staff against operatives" is a TypeScript module switch set with the quiet mission's

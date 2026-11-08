@@ -41,7 +41,6 @@
 // No dice, no camera, nothing read off the renderer. State: Player.kick.tool (a committed beat: savestate.ts refuses a save while a kick runs) and
 // Guard.slung (on the man: the frame after a load slingTick finds him with no lock to shoot and gives him his own gun back).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
-import { manById } from './seats';
 import { v3, type Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
@@ -56,6 +55,7 @@ import { bigRebound, KIT, type Character } from './character';
 import { KITANIM, kitInHand, kitSlingFront } from './kitanim';
 import './handwork';
 import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
+import { wornBy } from '../view/seatview';
 
 /** counted since the page (or the harness) stood up — the check's and the panel's */
 export const BIG_STATS = { samShells: 0, samShot: 0, samBlows: 0, samHammered: 0, drawn: 0, slung: 0, mateBlows: 0, mateHammered: 0, /** BIGSLOT.moves: a teammate's hammer off his back · put back · you walked onto a place beside a frame · of those, by the hinge jamb or off a man's shoulder */ hammersOut: 0, hammersIn: 0, samWalks: 0, samOther: 0 };
@@ -185,12 +185,7 @@ export const bigSide = (d: Door, p: readonly number[]): 1 | -1 => (offOf(d, p as
 
 // ------------------------------------------------------------ carried where it can be seen (BIGSLOT.moves)
 /** the big slot's tool a man carries, for the drawer (combat.ts handProps → rigProps.ts): null with the moves off, on a show's puppet, or with nothing carried */
-export function bigCarried(g: Game, c: { id: number }): 'hammer' | 'shotgun' | null {
-  if (!BIGSLOT.on || !BIGSLOT.moves) return null;
-  { const pl = manById(g, c.id); if (pl) { const k = pl.bigKit; return k === 'hammer' || k === 'shotgun' ? k : null; } }
-  const gd = g.guards.find(m => m.char.id === c.id); if (!gd) return null;
-  const k = kitBig(gd); return k === 'hammer' || k === 'shotgun' ? k : null;
-}
+export function bigCarried(g: Game, c: { id: number }): 'hammer' | 'shotgun' | null { return wornBy(g.view, c.id)?.big ?? null; }
 
 // ------------------------------------------------------------ a teammate
 /** he carries the hammer in his big slot (kit.ts: a staged teammate's card) */
