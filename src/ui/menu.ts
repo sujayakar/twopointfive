@@ -7,7 +7,7 @@
 // the down card (Restart): the rating word and score, the numbers, the badges, the floor map with his path and the pins, the timeline. While any of them is
 // open main.ts freezes the simulation and keeps rendering the frozen frame underneath. Plain DOM, styled in index.html (#menu…) with ui/theme.ts's tokens.
 import { kitSolo } from '../game/kit';   // (the mission list's solo night off the start card: your card, on this game)
-export { loadSandbox } from '../game/sandbox';
+export { loadSandbox } from '../host/sandbox';
 import { Engine } from '../engine';
 import { Game } from '../game/game';
 import { renderDebrief } from './debrief';
@@ -21,7 +21,9 @@ import { quitSearch } from '../scene/scenarioList';
 import { openList, openStartPage, startPageWanted, startPageFromQuery } from './startpage';
 import { menuTheme } from './theme';
 import { keyText, typedInto } from '../host/keymap';
-import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions } from './options';
+import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions, type OptionsGame } from './options';
+import { CMDRING } from '../game/cmdring';
+import { WALLSNAP } from '../game/wallsnap';
 import { cloudNote } from './cloudnote';
 import { COOP } from '../net/lobby';
 import { coopRows } from './coop';
@@ -129,6 +131,18 @@ export interface MenuDeps { engine: Engine; game: Game; quality: Quality; audio:
    *  replay key is made after the menu; null or absent: no viewer page or no buffer, and the end card has no Replay button */
   replay?: () => (() => void) | null; }
 
+/** what Options sets of this page's game (ui/options.ts) */
+function settingsOf(game: Game, overlay: Overlay): OptionsGame {
+  return {
+    get autosave() { return game.saves.enabled; }, set autosave(v) { game.saves.setEnabled(v); },
+    get god() { return game.godMode; }, set god(v) { game.godMode = v; },
+    get thinks() { return game.aiEnabled; }, set thinks(v) { game.aiEnabled = v; },
+    get ammo() { return game.infiniteAmmo; }, set ammo(v) { game.infiniteAmmo = v; },
+    get wallFeel() { return WALLSNAP.on; }, get wallPress() { return WALLSNAP.press; }, set wallPress(v) { WALLSNAP.press = v; },
+    get fallIn() { return CMDRING.twice && !game.rails?.locks('twice'); },
+    get hints() { return overlay.showLightDots; }, set hints(v) { overlay.showLightDots = v; },
+  };
+}
 export class Menu {
   private root: HTMLElement; private body!: HTMLElement; private run = false;   // (run: the pause card's 'Run so far' is open beside its menu)
   mode: 'start' | 'pause' | 'debrief' | 'closed' = 'closed';
@@ -137,7 +151,7 @@ export class Menu {
     this.root = document.getElementById('menu')!;
     this.root.addEventListener('mousedown', e => e.stopPropagation());      // clicks in the menu never reach the game canvas
     this.root.addEventListener('contextmenu', e => e.preventDefault());
-    setOptionsDeps({ engine: d.engine, game: d.game, quality: d.quality, audio: d.audio, overlay: d.overlay });   // (ui/options.ts: the boot is over — its Graphics, Audio and Game tabs come alive, and what this machine kept is applied)
+    setOptionsDeps({ engine: d.engine, quality: d.quality, audio: d.audio, game: settingsOf(d.game, d.overlay) });   // (ui/options.ts: the boot is over — its Graphics, Audio and Game tabs come alive, and what this machine kept is applied)
   }
   /** main.ts hands the scenario hooks over once the scenario is started (after this card is constructed) */
   setScenario(s: MenuDeps['scenario']) { this.d.scenario = s; }

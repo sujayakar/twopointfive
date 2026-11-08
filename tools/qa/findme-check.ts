@@ -1,4 +1,4 @@
-// FINDING YOUR OWN MAN, AND THE CAMERA UNDER THE HAND — the check behind src/host/findme.ts, src/ui/findme.ts and src/render/outline.ts (settings in Options > Game, every one
+// FINDING YOUR OWN MAN, AND THE CAMERA UNDER THE HAND — the check behind src/host/findme.ts, src/ui/findmeviz.ts and src/render/outline.ts (settings in Options > Game, every one
 // starting where the game stood before it had them but the outline and the camera's two, which the PAGE starts at the maintainer's own).
 //   bun run tools/qa/findme-check.ts        (also `probes.ts findme`; the same on both stands)
 // Headless: the whole Game under stepFrame, the loop the page runs, with nothing drawn; where the HUD would draw the ring is asked of findMeRing itself, and
@@ -29,7 +29,7 @@ export async function findmeCheck(): Promise<boolean> {
   const { mulberry32: seeded } = await import(`${ROOT}/src/math/dice.ts`);
   const F = await import(`${ROOT}/src/host/findme.ts`) as typeof import('../../src/host/findme.ts');
   const { OutlinePass, makeOutlineFrame, makeOutlineMan, outlineBox, outlineBoxes, outlineRadius, OUTLINE, OUTLINE_MEN } = await import(`${ROOT}/src/render/outline.ts`) as typeof import('../../src/render/outline.ts');
-  const { findMeRing, findMeOutline } = await import(`${ROOT}/src/ui/findme.ts`) as typeof import('../../src/ui/findme.ts');
+  const { findMeRing, findMeOutline } = await import(`${ROOT}/src/ui/findmeviz.ts`) as typeof import('../../src/ui/findmeviz.ts');
   const { FINDME, FINDME_START, findMeRead } = F;
   const BREAK = process.env.FINDME_BREAK === '1';
   const set: typeof F.setFindMe = BREAK ? () => {} : F.setFindMe;

@@ -155,6 +155,12 @@ export function keysBoot(q: URLSearchParams) {
   KEYMAP.on = q.get('keybinds') !== '0'; KEYMAP.qFree = q.get('qfree') !== '0'; KEYMAP.qCmd = !q.has('bkey'); KEYMAP.setFree = q.get('slotsetup') !== '0'; KEYMAP.camSpace = q.get('camspace') !== '0'; KEYMAP.pinchOnly = q.get('pinchonly') !== '0'; KEYMAP.qOnly = q.get('qonly') !== '0' && q.get('qring') !== '0'; KEYMAP.letGo = q.get('menuletters') !== '0';
   try { const v = JSON.parse((globalThis as any).localStorage?.getItem(LS) ?? 'null'); if (v && typeof v === 'object') adopt(v); } catch { /* no store */ }
 }
+/** A PAGE THAT PLAYS THE GAME: the keys as its rules have them (empty hands a slot, his own actions a ring, a gun's key its setup, the orders all on their ring), and the wall hold's row with
+ *  no key while walking into a wall takes it */
+export function gameKeysBoot(q: URLSearchParams, walkIn: () => boolean) {
+  KEYMAP.slotWhen = KEYMAP.handWhen = KEYMAP.setWhen = KEYMAP.onlyWhen = () => true; KEYMAP.throwWhen = () => false; KEYMAP.freeWhen = walkIn;
+  keysBoot(q);
+}
 /** take a kept table: only what is whole is taken (a row we have, a key that may be one, no key twice); anything else leaves that row as built */
 function adopt(v: Record<string, unknown>) {
   bound.clear(); const taken = new Set<string>();

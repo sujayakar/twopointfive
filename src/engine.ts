@@ -92,7 +92,7 @@ export class Engine {
   fireLook: number[] | null = null;
   /** which of the frame's boxes are thin lines (a laser's beam, a tracer's streak) and which of those the air shows, with its bead; null = none said (the host's word) */
   beams: { is(b: Box): boolean; airOf(b: Box): Box | null | undefined; /** the boxes to look among (absent = the frame's own) */ list?: Box[] } | null = null;
-  /** the outline in the dark (render/outline.ts): the host's frame for it, null = never asked. Written by the host once a frame (ui/findme.ts findMeOutline);
+  /** the outline in the dark (render/outline.ts): the host's frame for it, null = never asked. Written by the host once a frame (ui/findmeviz.ts findMeOutline);
    *  render() adds the box on the picture its own camera gives and the exposure */
   outline: OutlineFrame | null = null;
   /** … its SIGHT TABLE (render/fogofwar.ts FogSight — the scene group's binding 11; dispatched at the head of a frame only while the game asks for the full

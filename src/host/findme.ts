@@ -1,5 +1,5 @@
-// FINDING YOUR OWN MAN ON THE SCREEN, and how the camera answers the hand (Options > Game; ui/findme.ts draws the ring, hands the renderer the outline's frame and
-// builds the rows). With all of them as they start the game is as it stood before it had them on both of the harness's stands: the ring and the outline start
+// FINDING YOUR OWN MAN ON THE SCREEN, and how the camera answers the hand (Options > Game; ui/findmeviz.ts draws the ring, hands the renderer the outline's frame and
+// ui/findme.ts builds the rows). With all of them as they start the game is as it stood before it had them on both of the harness's stands: the ring and the outline start
 // off and the camera's two start as the camera was. (THE PAGE, since 2026-10-26, starts the outline ON, the aim pan at none and the turn the other way:
 // FINDME_TUNED and findMeStarts, below; the module and the frozen stand are as this says.)
 //   pan      how far the view leans from the man toward the aim point, as a share of the follow camera's own lead (FollowCamera.aimLead as it was built):

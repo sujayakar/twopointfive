@@ -1,4 +1,4 @@
-// TWO PLAYERS, TWO TEAMS TO THE EYE (game/seats.ts seatTone, playerName; ui/findme.ts findMeOutline; ui/planfloor.ts plansToDraw; game/verdict.ts): in a game
+// TWO PLAYERS, TWO TEAMS TO THE EYE (game/seats.ts seatTone, playerName; ui/findmeviz.ts findMeOutline; ui/planfloor.ts plansToDraw; game/verdict.ts): in a game
 // of two seats, does each player's page show the WHOLE team — every man rimmed, in the colour that says whose he is, the same on both screens — the other
 // player's squad's plan on the floor, fainter than its own, and the two players told apart by number? The maintainer, 11-03, from his first game of two:
 // "no outlines for the other player character (maybe we should have yellow + red team and then purple + blue team)", "seeing your teammates squad path
@@ -35,7 +35,7 @@ const { stateHash } = await import(`${ROOT}/src/game/rollback.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const SE = await import(`${ROOT}/src/game/seats.ts`) as typeof import('../../src/game/seats.ts');
 const F = await import(`${ROOT}/src/host/findme.ts`) as typeof import('../../src/host/findme.ts');
-const { findMeOutline } = await import(`${ROOT}/src/ui/findme.ts`) as typeof import('../../src/ui/findme.ts');
+const { findMeOutline } = await import(`${ROOT}/src/ui/findmeviz.ts`) as typeof import('../../src/ui/findmeviz.ts');
 const { makeOutlineFrame } = await import(`${ROOT}/src/render/outline.ts`) as typeof import('../../src/render/outline.ts');
 const PF = await import(`${ROOT}/src/ui/planfloor.ts`) as typeof import('../../src/ui/planfloor.ts');
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`) as typeof import('../../src/game/doortools.ts');
