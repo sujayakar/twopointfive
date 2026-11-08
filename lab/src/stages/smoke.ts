@@ -1,101 +1,144 @@
-// Smoke, as stages: shut faces, move, push, make incompressible, light, hand over to rays.
+// Smoke, as stages: page in and out, shut faces, move, push, balance, light, hand over to rays.
 import type { Lab } from '../lab';
 import type { Graph, Stage } from '../graph';
 import type { V3 } from '../math';
 import head from './smoke.wgsl' with { type: 'text' };
 import signals from '../wgsl/signals.wgsl' with { type: 'text' };
-export const SMOKE = { n: [128, 40, 96] as const, h: 0.2, at: [-12.8, 0, -9.6] as const, rounds: 14 };
-const CELLS = SMOKE.n[0] * SMOKE.n[1] * SMOKE.n[2], OVER = { groups: (): [number, number, number] => [SMOKE.n[0] / 8, SMOKE.n[1] / 4, SMOKE.n[2] / 4] };
-const cell = `@compute @workgroup_size(8, 4, 4) fn main(@builtin(global_invocation_id) id: vec3u) { let c = vec3i(id); let i = ix(c);`;
+export const SMOKE = { slots: 3072, pages: [50, 20, 36] as const, pairs: 6, atlas: [160, 160, 120] as const };
+const CELLS = SMOKE.slots * 512, WORDS = 134320 + 3072;
+const ONE = { groups: (): [number, number, number] => [SMOKE.slots / 64, 1, 1] }, BRICK = { groups: (): [number, number, number] => [64, SMOKE.slots / 64, 1] };
+/** a group a live brick: s its slot, b its brick */
+const perBrick = (body: string, n = 256, extra = '') => `${extra}
+@compute @workgroup_size(${n}) fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_index) li: u32) {
+  let at = wg.x + wg.y * 64u; let live = at < M[M_N + 1u]; let s = select(0u, M[M_LIVE + at], live); let b = brickOf(select(0u, M[M_BRICK + s] - 1u, live)); ${body}
+}`;
+const FETCH = `
+/** where a cell near brick s lies (c from −8 to 15), or none */
+fn cell(s: u32, c: vec3i) -> u32 { let b = ((c + 8) >> vec3u(3u)) - 1; if (all(b == vec3i(0))) { return s * 512u + local(c); } let n = M[M_NBR + s * 27u + u32(b.x + 1 + 3 * (b.y + 1) + 9 * (b.z + 1))]; if (n == NONE) { return NONE; } return n * 512u + local(c & vec3i(7)); }
+fn unpackV(v: vec2u) -> vec4f { return vec4f(unpack2x16float(v.x), unpack2x16float(v.y)); }
+fn packV(v: vec4f) -> vec2u { let q = finite4(v, 60000.0); return vec2u(pack2x16float(q.xy), pack2x16float(q.zw)); }`;
 const SHUT = `
-/** is the way from c one step along axis a (s = ±1) shut? The grid's own edge is open */
-fn shut(c: vec3i, a: u32, s: i32) -> bool { var q = c; if (s < 0) { q[a] -= 1; } if (any(q < vec3i(0)) || any(q >= N)) { return false; } return ((faces[ix(q)] >> (3u + a)) & 1u) != 0u; }`;
-const facesCode = `
-struct Box { r0: vec4f, r1: vec4f, r2: vec4f, half: vec4f };
-fn cuts(b: Box, a: vec3f, e: vec3f) -> bool { let o = vec3f(dot(b.r0.xyz, a) + b.r0.w, dot(b.r1.xyz, a) + b.r1.w, dot(b.r2.xyz, a) + b.r2.w); let d = vec3f(dot(b.r0.xyz, e), dot(b.r1.xyz, e), dot(b.r2.xyz, e)); let inv = 1.0 / select(d, vec3f(1e-9), abs(d) < vec3f(1e-9)); let h = b.half.xyz + 0.02; let p = (-h - o) * inv; let q = (h - o) * inv; return max(max3(min(p, q)), 0.0) <= min(min3(max(p, q)), 1.0); }
-${cell}
-  var f = faces[i] & 7u; let x = mid(c); fineLeaves = false; noLeaves = true;
-  if (smokeK.y > 0.5) { f = 0u; for (var a = 0u; a < 3u; a++) { var d = vec3f(0.0); d[a] = 1.0; let h = nearest(x, d, 0.0, H, 0x4000u | WATER, 1e9); if ((h.piece != NOTHING && (h.piece & LEAF_HIT) == 0u) || h.gt < H) { f |= 1u << a; } } }
-  var g = f; for (var k = 0u; k < u32(smokeK.z); k++) { for (var a = 0u; a < 3u; a++) { var e = vec3f(0.0); e[a] = H; if (cuts(doors[k], x, e)) { g |= 1u << a; } } }
-  faces[i] = f | (g << 3u);
+/** is the way from cell i along axis a (s = ±1) shut? */
+fn shut(i: u32, a: u32, s: i32) -> bool { return ((W[i] >> (6u + a + select(0u, 3u, s < 0))) & 1u) != 0u; }`;
+const GROW = `
+fn want(b: vec3i, tick: u32) {
+  if (!inPage(b)) { return; } let i = brickIx(b); let p = atomicLoad(&M[M_PAGE + i]); if (p != 0u && p != NONE) { atomicStore(&M[M_STAMP + p - 1u], tick); return; } if (p == NONE) { return; }
+  let r = atomicCompareExchangeWeak(&M[M_PAGE + i], 0u, NONE); if (!r.exchanged) { return; }
+  let n = atomicSub(&M[M_N], 1u); if (n == 0u || n > SLOTS_S) { atomicAdd(&M[M_N], 1u); atomicStore(&M[M_PAGE + i], 0u); return; }
+  let s = atomicLoad(&M[M_FREE + n - 1u]); atomicStore(&M[M_BRICK + s], i + 1u); atomicStore(&M[M_STAMP + s], tick); atomicStore(&M[M_DENSE + s], 0u); atomicStore(&M[M_BORN + s], 1u); atomicStore(&M[M_PAGE + i], s + 1u);
 }`;
-const moveCode = SHUT + `
-/** what stands at c + d (d in cells, each under one): the eight cells round it, and none that is behind a wall */
-fn gatherAt(c: vec3i, d0: vec3f) -> vec4f { let d = clamp(d0, vec3f(-0.999), vec3f(0.999)); let s = vec3i(select(vec3f(-1.0), vec3f(1.0), d > vec3f(0.0))); let w = abs(d); var acc = vec4f(0.0); gHeat = 0.0;
-  for (var k = 0u; k < 8u; k++) { var q = c; var wt = 1.0; for (var a = 0u; a < 3u; a++) { let on = ((k >> a) & 1u) == 1u; wt *= select(1.0 - w[a], w[a], on); if (on && !shut(q, a, s[a])) { q[a] += s[a]; } } if (wt <= 0.0 || !inside(q)) { continue; } let j = ix(q); acc += a0[j] * wt; gHeat += h0[j] * wt; } return acc; }
-var<private> gHeat: f32;
-${cell}
-  let dt = smokeK.x; let v = a0[i].xyz; let here = gatherAt(c, -v * (dt / H)); b0[i] = vec4f(here.xyz, here.w * exp(-dt / 70.0)); h1[i] = gHeat * exp(-dt / 2.5);
-}`;
-const pushCode = SHUT + `
-fn vel(c: vec3i, o: vec3i, me: vec3f) -> vec3f { let q = c + o; if (!inside(q)) { return me; } return b0[ix(q)].xyz; }
-fn curl(c: vec3i) -> vec3f { if (!inside(c)) { return vec3f(0.0); } let m = b0[ix(c)].xyz; let x = vel(c, vec3i(1, 0, 0), m) - vel(c, vec3i(-1, 0, 0), m); let y = vel(c, vec3i(0, 1, 0), m) - vel(c, vec3i(0, -1, 0), m); let z = vel(c, vec3i(0, 0, 1), m) - vel(c, vec3i(0, 0, -1), m); return vec3f(y.z - z.y, z.x - x.z, x.y - y.x) / (2.0 * H); }
-${cell}
-  let dt = smokeK.x; var s = b0[i]; var heat = h1[i]; let x = mid(c); var v = s.xyz;
-  // swirls that a coarse grid would lose are spun up again where there is smoke
-  if (s.w > 0.003) { let w = curl(c); let g = vec3f(length(curl(c + vec3i(1, 0, 0))) - length(curl(c - vec3i(1, 0, 0))), length(curl(c + vec3i(0, 1, 0))) - length(curl(c - vec3i(0, 1, 0))), length(curl(c + vec3i(0, 0, 1))) - length(curl(c - vec3i(0, 0, 1)))); let l = length(g); if (l > 1e-4) { v += cross(g / l, w) * (dt * 0.9 * H * 2.0); } }
-  v.y += dt * (heat * 1.5 - s.w * 0.03);
-  // the open air carries it off
-  let out = select(0.0, 1.0, openAir(x)); let wind = vec3f(cos(frame.weather.w), 0.0, sin(frame.weather.w)) * 1.1; v = mix(v, wind, out * (1.0 - exp(-dt * 1.2))); s.w *= 1.0 - out * (1.0 - exp(-dt * 0.05)); v *= exp(-dt * 0.10);
-  for (var k = 0u; k < u32(smokeK.w); k++) { let e = sources[k * 2u]; let f = sources[k * 2u + 1u]; let d = x - e.xyz; let r = length(d); if (r < e.w) { let q = 1.0 - r / e.w; let sp = hash33(vec3f(vec2f(c.xz), floor(frame.misc.x * 12.0) + f32(k))) - 0.5; s.w = min(s.w + f.x * q * dt, 9.0); heat = min(heat + f.y * q * dt, 2.5); v += (normalize(d + vec3f(0.0, 0.12, 0.0)) * 5.0 + sp * 9.0) * (q * dt * f.z); } }
-  let sp = length(v); v *= min(1.0, (0.9 * H / dt) / max(sp, 1e-4)); a0[i] = vec4f(v, s.w); h0[i] = heat;
-}`;
-const FACE = SHUT + `
-/** the velocity through c's far face along a */
-fn face(c: vec3i, a: u32) -> f32 { var q = c; q[a] += 1; if (c[a] < 0) { return a0[ix(q)][a]; } if (q[a] >= N[a]) { return a0[ix(c)][a]; } if (shut(c, a, 1)) { return 0.0; } return 0.5 * (a0[ix(c)][a] + a0[ix(q)][a]); }`;
-const divCode = FACE + cell + ` var d = 0.0; for (var a = 0u; a < 3u; a++) { var q = c; q[a] -= 1; d += face(c, a) - face(q, a); }
-  // a canister makes room for what it makes: it pushes the air before it
-  for (var k = 0u; k < u32(smokeK.w); k++) { let e = sources[k * 2u]; let l = distance(mid(c), e.xyz); if (l < e.w) { d -= sources[k * 2u + 1u].w * (1.0 - l / e.w); } }
-  div[i] = d; press[i] *= 0.8; }`;
-const solveCode = SHUT + `
-@compute @workgroup_size(8, 4, 4) fn main(@builtin(global_invocation_id) id: vec3u) { var c = vec3i(id); c.x = c.x * 2 + ((c.y + c.z + PARITY) & 1); let i = ix(c); var s = 0.0; var n = 0.0;
-  for (var a = 0u; a < 3u; a++) { for (var k = -1; k < 2; k += 2) { if (shut(c, a, k)) { continue; } n += 1.0; var q = c; q[a] += k; if (inside(q)) { s += press[ix(q)]; } } } if (n > 0.0) { let p = (s - div[i]) / n; press[i] = mix(press[i], p, 1.55); } }`;
-const freeCode = FACE + `
-fn pr(c: vec3i) -> f32 { if (!inside(c)) { return 0.0; } return press[ix(c)]; }
-fn freed(c: vec3i, a: u32) -> f32 { if (inside(c)) { if (shut(c, a, 1)) { return 0.0; } } var q = c; q[a] += 1; return face(c, a) - (pr(q) - pr(c)); }
-${cell} let was = a0[i]; var v = vec3f(0.0); for (var a = 0u; a < 3u; a++) { var q = c; q[a] -= 1; var sh = 0.0; if (shut(c, a, -1)) { sh = 1.0; } let near = select(freed(q, a), 0.0, sh > 0.5); let d = 0.5 * (freed(c, a) + near) - 0.5 * (face(c, a) + select(face(q, a), 0.0, sh > 0.5)); v[a] = was[a] + d; if (sh > 0.5 && shut(c, a, 1)) { v[a] = 0.0; } else if (sh > 0.5) { v[a] = max(v[a], 0.0) * 0.5 + 0.5 * freed(c, a); } else if (shut(c, a, 1)) { v[a] = min(v[a], 0.0) * 0.5 + 0.5 * near; } } b0[i] = vec4f(v, was.w); }`;
-const lightCode = `
-${cell}
-  let s = b0[i]; let was = glow[i]; if (s.w < 0.004) { glow[i] = vec4f(0.0); return; }
-  rngKey(i, 61u); fineLeaves = false; byReach = true; let x = mid(c) + (vec3f(rnd(), rnd(), rnd()) - 0.5) * H; var L = vec3f(0.0); var d = vec3f(0.0); var far = 400.0;
+const emitCode = GROW + `
+@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) { let tick = u32(smokeK.y); if (id.x >= u32(smokeK.w)) { return; } let e = sources[id.x * 2u]; let r = e.w + 0.2; let a = vec3i(floor((e.xyz - r - AT) / (8.0 * H))); let z = vec3i(floor((e.xyz + r - AT) / (8.0 * H))); for (var k = a.z; k <= z.z; k++) { for (var j = a.y; j <= z.y; j++) { for (var i = a.x; i <= z.x; i++) { want(vec3i(i, j, k), tick); } } } }`;
+const spreadCode = GROW + `
+@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) { let s = id.x; let tick = u32(smokeK.y); if (s >= SLOTS_S) { return; } let bi = atomicLoad(&M[M_BRICK + s]); if (bi == 0u) { return; } let d = bitcast<f32>(atomicLoad(&M[M_DENSE + s])); if (d < 0.004) { return; } let b = brickOf(bi - 1u); atomicStore(&M[M_STAMP + s], tick); for (var k = 0; k < 27; k++) { let o = vec3i(k % 3, (k / 3) % 3, k / 9) - 1; if (d < 0.05 && dot(o, o) > 1) { continue; } want(b + o, tick); } }`;
+const freeCode = `
+@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) { let s = id.x; let tick = u32(smokeK.y); if (s >= SLOTS_S) { return; } let bi = atomicLoad(&M[M_BRICK + s]); if (bi == 0u) { return; } if (tick - atomicLoad(&M[M_STAMP + s]) > 16u) { atomicStore(&M[M_PAGE + bi - 1u], 0u); atomicStore(&M[M_BRICK + s], 0u); let n = atomicAdd(&M[M_N], 1u); atomicStore(&M[M_FREE + n], s); return; } let n = atomicAdd(&M[M_N + 1u], 1u); atomicStore(&M[M_LIVE + n], s); }`;
+const linkCode = `
+@compute @workgroup_size(64) fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_index) li: u32) { let at = wg.x + wg.y * 64u; if (at >= M[M_N + 1u] || li >= 27u) { return; } let s = M[M_LIVE + at]; let b = brickOf(M[M_BRICK + s] - 1u); let q = b + vec3i(i32(li) % 3, (i32(li) / 3) % 3, i32(li) / 9) - 1; var n = NONE; if (inPage(q)) { let p = M[M_PAGE + brickIx(q)]; if (p != 0u && p != NONE) { n = p - 1u; } } M[M_NBR + s * 27u + li] = n; }`;
+const facesCode = perBrick(`
+  let born = live && M[M_BORN + s] != 0u; let x0 = mid(b, vec3i(0)) - 0.5 * H; fineLeaves = false;
+  for (var k = li; k < 512u; k += 256u) { let c = cellOf(k); let i = s * 512u + k; var f = 0u; if (live) { f = W[i] & 63u; }
+    if (born) { f = 0u; let x = mid(b, c); for (var a = 0u; a < 6u; a++) { if (a > 2u && c[a - 3u] != 0) { continue; } var d = vec3f(0.0); d[a % 3u] = select(1.0, -1.0, a > 2u); let h = nearest(x, d, 0.0, H, 0x4000u | WATER, 1e9); if ((h.piece != 0xffffffffu && (h.piece & LEAF_HIT) == 0u) || h.gt < H) { f |= 1u << a; } } Va[i] = vec2u(0u); Vb[i] = vec2u(0u); Q[i] = 0.0; Q[i + HALF] = 0.0; }
+    sh[k] = f; }
+  workgroupBarrier();
+  for (var k = li; k < 512u; k += 256u) { let c = cellOf(k); let i = s * 512u + k; if (!live) { continue; } var f = sh[k]; if (born) { for (var a = 0u; a < 3u; a++) { if (c[a] > 0) { var q = c; q[a] -= 1; if ((sh[local(q)] & (1u << a)) != 0u) { f |= 8u << a; } } } } var g = f; let x = mid(b, c);
+    for (var n = 0u; n < u32(smokeK.z); n++) { let m = doors[n]; let cx = -vec3f(dot(vec3f(m.r0.x, m.r1.x, m.r2.x), vec3f(m.r0.w, m.r1.w, m.r2.w)), dot(vec3f(m.r0.y, m.r1.y, m.r2.y), vec3f(m.r0.w, m.r1.w, m.r2.w)), dot(vec3f(m.r0.z, m.r1.z, m.r2.z), vec3f(m.r0.w, m.r1.w, m.r2.w))); if (distance(cx, x0 + 4.0 * H) > length(m.half.xyz) + 8.0 * H) { continue; } for (var a = 0u; a < 6u; a++) { var e = vec3f(0.0); e[a % 3u] = select(H, -H, a > 2u); if (cuts(m, x, e)) { g |= 1u << a; } } }
+    W[i] = f | (g << 6u); }
+`, 256, `struct Box { r0: vec4f, r1: vec4f, r2: vec4f, half: vec4f };
+var<workgroup> sh: array<u32, 512>; const HALF = SLOTS_S * 512u;
+fn cuts(b: Box, a: vec3f, e: vec3f) -> bool { let o = vec3f(dot(b.r0.xyz, a) + b.r0.w, dot(b.r1.xyz, a) + b.r1.w, dot(b.r2.xyz, a) + b.r2.w); let d = vec3f(dot(b.r0.xyz, e), dot(b.r1.xyz, e), dot(b.r2.xyz, e)); let inv = 1.0 / select(d, vec3f(1e-9), abs(d) < vec3f(1e-9)); let h = b.half.xyz + 0.01; let p = (-h - o) * inv; let q = (h - o) * inv; return max(max3(min(p, q)), 0.0) <= min(min3(max(p, q)), 1.0); }`);
+const moveCode = FETCH + SHUT + perBrick(`
+  if (!live) { return; } let dt = smokeK.x;
+  for (var k = li; k < 512u; k += 256u) { let c0 = cellOf(k); let i0 = s * 512u + k; let v = unpackV(Va[i0]).xyz;
+    // back along the way it came, a cell at a time, and not through what is shut
+    var d = clamp(-v * (dt / H), vec3f(-3.5), vec3f(3.5)); let n = max(1.0, ceil(max3(abs(d)))); let st = d / n; var c = c0; var f = vec3f(0.0); var i = i0;
+    for (var q = 0.0; q < n; q += 1.0) { f += st; for (var a = 0u; a < 3u; a++) { let g = select(-1, 1, f[a] > 0.0); if (abs(f[a]) > 0.5) { var t = c; t[a] += g; let j = cell(s, t); if (shut(i, a, g) || j == NONE) { f[a] = f32(g) * 0.5; } else { c = t; i = j; f[a] -= f32(g); } } } }
+    var acc = vec4f(0.0); var ht = 0.0; let sg = vec3i(select(vec3f(-1.0), vec3f(1.0), f > vec3f(0.0))); let w = abs(f); var lo = 1e9; var hi = -1e9;
+    for (var q = 0u; q < 8u; q++) { var t = c; var j = i; var wt = 1.0; for (var a = 0u; a < 3u; a++) { let on = ((q >> a) & 1u) == 1u; wt *= select(1.0 - w[a], w[a], on); if (on && j != NONE) { if (!shut(j, a, sg[a])) { t[a] += sg[a]; j = cell(s, t); } } } if (j == NONE) { lo = min(lo, 0.0); continue; } let e = unpackV(Va[j]); lo = min(lo, e.w); hi = max(hi, e.w); acc += e * wt; ht += Q[j + FROM] * wt; }
+    Vb[i0] = packV(acc); Q[i0 + TO] = ht * exp(-dt / 2.5); }
+`, 256, `const HALF = SLOTS_S * 512u;`);
+const pushCode = FETCH + SHUT + perBrick(`
+  if (!live) { return; } let dt = smokeK.x;
+  for (var k = li; k < 512u; k += 256u) { let c = cellOf(k); let i = s * 512u + k; var e = unpackV(Vb[i]); var heat = Q[i + TO]; let x = mid(b, c); var v = e.xyz;
+    if (e.w > 0.01) { let w = curl(s, c); let g = vec3f(length(curl(s, c + vec3i(1, 0, 0))) - length(curl(s, c - vec3i(1, 0, 0))), length(curl(s, c + vec3i(0, 1, 0))) - length(curl(s, c - vec3i(0, 1, 0))), length(curl(s, c + vec3i(0, 0, 1))) - length(curl(s, c - vec3i(0, 0, 1)))); let l = length(g); if (l > 1e-4) { v += cross(g / l, w) * (dt * 4.0 * H); } }
+    v.y += dt * (heat * 1.6 - e.w * 0.03); let out = select(0.0, 1.0, openAir(x)); let gust = 0.6 + 0.5 * vnoise(x.xz * 0.35 - vec2f(cos(frame.weather.w), sin(frame.weather.w)) * frame.misc.x * 0.6); let wind = vec3f(cos(frame.weather.w), 0.0, sin(frame.weather.w)) * (1.2 * gust); v = mix(v, wind, out * (1.0 - exp(-dt * 0.9))); e.w *= exp(-dt * (0.013 + out * 0.14)); v *= exp(-dt * 0.2);
+    for (var n = 0u; n < u32(smokeK.w); n++) { let a = sources[n * 2u]; let f = sources[n * 2u + 1u]; let d = x - a.xyz; let r = length(d); if (r < a.w) { let q = 1.0 - r / a.w; let sp = hash33(vec3f(floor(x * 9.0)) + floor(frame.misc.x * 20.0)) - 0.5; e.w = min(e.w + f.x * q * dt, 11.0); heat = min(heat + f.y * q * dt, 2.5); v += (normalize(d + vec3f(0.0, 0.1, 0.0)) * 3.0 + sp * 7.0) * (q * dt * f.z); } }
+    v *= min(1.0, (3.4 * H / dt) / max(length(v), 1e-4)); if (e.w < 0.002) { e.w = 0.0; } Va[i] = packV(vec4f(v, e.w)); Q[i + TO] = heat; }
+`, 256, `const HALF = SLOTS_S * 512u;
+fn vel(s: u32, c: vec3i) -> vec3f { let i = cell(s, c); if (i == NONE) { return vec3f(0.0); } return unpackV(Vb[i]).xyz; }
+fn curl(s: u32, c: vec3i) -> vec3f { let x = vel(s, c + vec3i(1, 0, 0)) - vel(s, c - vec3i(1, 0, 0)); let y = vel(s, c + vec3i(0, 1, 0)) - vel(s, c - vec3i(0, 1, 0)); let z = vel(s, c + vec3i(0, 0, 1)) - vel(s, c - vec3i(0, 0, 1)); return vec3f(y.z - z.y, z.x - x.z, x.y - y.x) / (2.0 * H); }`);
+const FACE = FETCH + SHUT + `
+/** the velocity through a cell's face along a, its far side (g = 1) or near (−1) */
+fn face(s: u32, c: vec3i, i: u32, a: u32, g: i32) -> f32 { if (shut(i, a, g)) { return 0.0; } var q = c; q[a] += g; let j = cell(s, q); let me = unpackV(Va[i])[a]; if (j == NONE) { return me; } return 0.5 * (me + unpackV(Va[j])[a]); }`;
+const divCode = FACE + perBrick(`
+  if (!live) { return; } for (var k = li; k < 512u; k += 256u) { let c = cellOf(k); let i = s * 512u + k; var d = 0.0; for (var a = 0u; a < 3u; a++) { d += face(s, c, i, a, 1) - face(s, c, i, a, -1); }
+    let x = mid(b, c); for (var n = 0u; n < u32(smokeK.w); n++) { let e = sources[n * 2u]; let l = distance(x, e.xyz); if (l < e.w) { d -= sources[n * 2u + 1u].w * H * (1.0 - l / e.w); } }
+    P[i + HALF] = d; if (M[M_BORN + s] != 0u) { P[i] = 0.0; } }
+`, 256, `const HALF = SLOTS_S * 512u;`);
+const solveCode = FETCH + SHUT + perBrick(`
+  if (!live) { return; } let k = li; var c = vec3i(0, i32(k >> 2u) & 7, i32(k >> 5u)); c.x = i32(k & 3u) * 2 + ((c.y + c.z + PARITY) & 1); let i = s * 512u + local(c); var t = 0.0; var n = 0.0;
+  for (var a = 0u; a < 3u; a++) { for (var g = -1; g < 2; g += 2) { if (shut(i, a, g)) { continue; } n += 1.0; var q = c; q[a] += g; let j = cell(s, q); if (j != NONE) { t += P[j]; } } } if (n > 0.0) { P[i] = mix(P[i], (t - P[i + HALF]) / n, 1.6); }
+`, 256, `const HALF = SLOTS_S * 512u;`);
+const freedCode = FACE + perBrick(`
+  if (!live) { return; } var dense = 0.0; for (var k = li; k < 512u; k += 256u) { let c = cellOf(k); let i = s * 512u + k; let was = unpackV(Va[i]); var v = was.xyz; let p = P[i];
+    for (var a = 0u; a < 3u; a++) { var up = 0.0; var dn = 0.0; let su = shut(i, a, 1); let sd = shut(i, a, -1); var q = c; q[a] += 1; if (!su) { let j = cell(s, q); up = select(0.0, P[j], j != NONE) - p; } q[a] -= 2; if (!sd) { let j = cell(s, q); dn = p - select(0.0, P[j], j != NONE); } if (su && sd) { v[a] = 0.0; } else if (su) { v[a] = min(v[a] - dn, 0.0); } else if (sd) { v[a] = max(v[a] - up, 0.0); } else { v[a] -= 0.5 * (up + dn); } }
+    dense = max(dense, was.w); Vb[i] = packV(vec4f(v, was.w)); }
+  sh[li] = dense; workgroupBarrier(); if (li == 0u) { var m = 0.0; for (var k = 0u; k < 256u; k++) { m = max(m, sh[k]); } D[s] = m; }
+`.replace('if (!live) { return; } var dense', 'var dense').replace('for (var k = li; k < 512u', 'for (var k = select(512u, li, live); k < 512u').replace('if (li == 0u) {', 'if (li == 0u && live) {'), 256, `const HALF = SLOTS_S * 512u; var<workgroup> sh: array<f32, 256>;`);
+const doneCode = `@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) { let s = id.x; if (s >= SLOTS_S || M[M_BRICK + s] == 0u) { return; } M[M_DENSE + s] = bitcast<u32>(D[s]); M[M_BORN + s] = 0u; }`;
+/** light: a point for every eight cells. The sun, one lamp and one way to look; what it finds is kept and mixed */
+const lightCode = FETCH + perBrick(`
+  if (!live) { return; } let g = vec3i(i32(li & 3u), i32((li >> 2u) & 3u), i32(li >> 4u)); let gi = s * 64u + li; var d0 = 0.0; for (var k = 0u; k < 8u; k++) { d0 += unpackV(Vb[s * 512u + local(g * 2 + vec3i(i32(k & 1u), i32((k >> 1u) & 1u), i32(k >> 2u)))]).w; } d0 *= 0.125; let was = unpackV(G[gi]); if (d0 < 0.003) { G[gi] = vec2u(0u); return; }
+  rngKey(brickIx(b) * 64u + li, 61u); fineLeaves = false; byReach = true; let x = mid(b, g * 2) + vec3f(rnd(), rnd(), rnd()) * H; var L = vec3f(0.0); var d = vec3f(0.0); var far = 400.0;
   for (var k = 0u; k < 2u; k++) { var e = vec3f(0.0); if (k == 0u) { if (max3(frame.sunE.xyz) <= 0.0) { continue; } d = coneDir(frame.sunDir.xyz, frame.sunDir.w, rnd2()); e = frame.sunE.xyz; far = 400.0; } else { let l = drawLamp(x, vec3f(0.0)); if (l.x < 0.0) { continue; } let q = aimLamp(u32(l.x), x, rnd2()); d = q.dir; far = q.dist - 0.03; e = min(q.E * l.y, vec3f(200.0)); } if (max3(e) <= 0.0) { continue; } L += e * visible(x, d, 1e-3, far) * (1.0 / (4.0 * PI)); }
   let u = rnd2(); let z = u.x * 2.0 - 1.0; let r = sqrt(max(1.0 - z * z, 0.0)); d = vec3f(r * cos(6.2832 * u.y), z, r * sin(6.2832 * u.y)); let h = nearest(x, d, 1e-3, 80.0, 0u, 1e9); let sm = smokeSeen(x, d, h.t); var B = vec3f(0.0);
-  if (h.piece == NOTHING) { B = skyLod(d, 5.0); } else { let q = surfaceMean(x, d, h); let leaf = (h.piece & LEAF_HIT) != 0u; let own = !leaf && (pieces[h.piece].lamp & 255u) != 255u; B = select(q.glow, vec3f(0.0), own) + sentBack(q, leaf, rnd2(), d); }
-  L += min(B * h.thru * sm.a + sm.rgb, vec3f(40.0)); let st = steady(x); let m = min(was.w + 1.0, mix(4.0, 22.0, st)); let o = finite4(vec4f(mix(was.rgb, L, 1.0 / m), m), 1e4); glow[i] = o;
-}`;
-const packCode = `
-${cell} let s = b0[i]; let o = glow[i]; pack[i] = vec2u(pack2x16float(o.rg), pack2x16float(vec2f(o.b, select(0.0, s.w, s.w > 0.001)))); if (s.w < 0.004) { return; } let b = u32(c.x / 8 + 16 * (c.y / 8 + 5 * (c.z / 8))); atomicOr(&occ[b >> 5u], 1u << (b & 31u)); }`;
+  if (h.piece == 0xffffffffu) { B = skyLod(d, 5.0); } else { let q = surfaceMean(x, d, h); let leaf = (h.piece & LEAF_HIT) != 0u; let own = !leaf && (pieces[h.piece].lamp & 255u) != 255u; B = select(q.glow, vec3f(0.0), own) + sentBack(q, leaf, rnd2(), d); }
+  L += min(B * h.thru * sm.a + sm.rgb, vec3f(40.0)); let m = min(was.w + 1.0, mix(4.0, 24.0, steady(x))); G[gi] = packV(vec4f(mix(was.rgb, min(L, vec3f(200.0)), 1.0 / m), m));
+`, 64);
+const publishCode = FETCH + perBrick(`
+  if (!live) { return; } let blk = vec3i(i32(s & 15u), i32((s >> 4u) & 15u), i32(s >> 8u)) * 10;
+  for (var k = li; k < 1000u; k += 256u) { let t = vec3i(i32(k % 10u), i32((k / 10u) % 10u), i32(k / 100u)); let c = t - 1; let q = clamp(c, vec3i(0), vec3i(7)); let o = c - q; let i = s * 512u + local(q); var d = 0.0; var open = true; for (var a = 0u; a < 3u; a++) { if (o[a] != 0 && ((W[i] >> (6u + a + select(0u, 3u, o[a] < 0))) & 1u) != 0u) { open = false; } } if (open) { let j = cell(s, c); if (j != NONE) { d = unpackV(Vb[j]).w; } }
+    let p = clamp((vec3f(c) + 0.5) * 0.5 - 0.5, vec3f(0.0), vec3f(2.999)); let g0 = vec3i(p); let f = p - vec3f(g0); var L = vec3f(0.0); var ws = 0.0; for (var n = 0u; n < 8u; n++) { let m = vec3i(i32(n & 1u), i32((n >> 1u) & 1u), i32(n >> 2u)); let g = g0 + m; let e = unpackV(G[s * 64u + u32(g.x + 4 * (g.y + 4 * g.z))]); if (e.w <= 0.0) { continue; } let w = select(1.0 - f.x, f.x, m.x == 1) * select(1.0 - f.y, f.y, m.y == 1) * select(1.0 - f.z, f.z, m.z == 1) + 1e-3; L += e.rgb * w; ws += w; }
+    textureStore(atlas, blk + t, vec4f(L / max(ws, 1e-3), d)); }
+`);
+const pageCode = `@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) { let i = id.x; if (i >= PAGES) { return; } var p = M[M_PAGE + i]; if (p == NONE) { p = 0u; } if (p != 0u) { if (bitcast<f32>(M[M_DENSE + p - 1u]) < 0.002) { p = 0u; } } textureStore(page, brickOf(i), vec4u(p)); }`;
 export class Smoke {
-  on = false; sources: { at: V3; born: number; last: number; rate: number }[] = []; private lastTick = -1; private doorKey = ''; private init = true; dt = 0; private faceNow = false;
+  on = false; sources: { at: V3; born: number; last: number; rate: number }[] = []; private lastTick = -1; private doorKey = ''; dt = 0; private faceNow = true; private fresh = true; private steps = 0; private flip = 0;
   constructor(private lab: Lab) {}
   /** a canister where it lies: it burns for `last` seconds */
-  drop(at: V3, last = 14, rate = 1) { this.on = true; this.sources.push({ at: [at[0], Math.max(at[1], 0.1) + 0.18, at[2]], born: this.lab.tick, last, rate }); if (this.sources.length > 8) this.sources.shift(); }
-  clear() { this.sources = []; const d = this.lab.gpu.device, g = this.lab.graph; for (const n of ['smokeA', 'smokeB', 'smokeHeatA', 'smokeHeatB', 'smokePress', 'smokeGlow', 'smokePack']) { const b = g.buffers.get(n); if (b) { const e = d.createCommandEncoder(); e.clearBuffer(b); d.queue.submit([e.finish()]); } } const e = d.createCommandEncoder(); const p = g.buffers.get('smokePack'); if (p) this.copy(e); e.clearBuffer(this.lab.scene.smokeOcc); d.queue.submit([e.finish()]); this.on = false; }
-  copy(e: GPUCommandEncoder) { e.copyBufferToTexture({ buffer: this.lab.graph.buffers.get('smokePack')!, bytesPerRow: SMOKE.n[0] * 8, rowsPerImage: SMOKE.n[1] }, { texture: this.lab.scene.smokeTex }, [...SMOKE.n]); e.copyBufferToBuffer(this.lab.graph.buffers.get('smokeOcc')!, 0, this.lab.scene.smokeOcc, 0, 128); }
+  drop(at: V3, last = 14, rate = 1) { this.on = true; this.sources.push({ at: [at[0], Math.max(at[1], 0.05) + 0.14, at[2]], born: this.lab.tick, last, rate }); if (this.sources.length > 10) this.sources.shift(); }
+  clear() { this.sources = []; this.fresh = true; }
+  get burning() { return this.sources.some(q => this.lab.tick - q.born < q.last * 60 + 1200); }
   frame() {
-    const lab = this.lab; if (!this.on) { this.dt = 0; return; } const d = Math.max(0, Math.min(4, lab.tick - this.lastTick)); this.dt = this.lastTick < 0 ? 1 / 60 : d / 60; this.lastTick = lab.tick;
-    const key = lab.building.doors.map(x => x.open.toFixed(3)).join(); this.faceNow = this.init || key !== this.doorKey; this.doorKey = key;
+    const lab = this.lab, steam = lab.steam > 0 ? lab.building.world.plumes : []; if (steam.length) this.on = true; if (!this.on) { this.dt = 0; return; } const d = Math.max(0, Math.min(3, lab.tick - this.lastTick)); this.dt = this.lastTick < 0 ? 1 / 60 : d / 60; this.lastTick = lab.tick; if (this.dt <= 0 && !this.fresh) return; this.steps++; this.flip ^= 1;
+    if (this.fresh) { this.fresh = false; const m = new Uint32Array(WORDS); for (let i = 0; i < SMOKE.slots; i++) m[128160 + i] = SMOKE.slots - 1 - i; m[134304] = SMOKE.slots; lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('smokeM')!, 0, m); this.dt = this.dt || 1 / 60; }
+    else lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('smokeM')!, (134304 + 1) * 4, new Uint32Array([0]));
+    const key = lab.building.doors.map(x => x.open.toFixed(3)).join(); this.faceNow = key !== this.doorKey; this.doorKey = key; void this.faceNow;
     const boxes = lab.building.doors.map(x => x.leaf[0]!), f = new Float32Array(16 * 16); boxes.slice(0, 16).forEach((p, i) => { for (let k = 0; k < 3; k++) { const r = p.rot[k]!; f.set([r[0], r[1], r[2], -(r[0] * p.at[0] + r[1] * p.at[1] + r[2] * p.at[2])], i * 16 + k * 4); } f.set(p.half, i * 16 + 12); }); lab.uniform('smokeDoors', f);
-    const s = new Float32Array(64), live = this.sources.filter(q => lab.tick - q.born < q.last * 60); live.forEach((q, i) => { const age = (lab.tick - q.born) / 60, k = Math.min(1, age / 0.6) * Math.min(1, (q.last - age) / 2); s.set([...q.at, 0.5, 170 * q.rate * k, 1.1 * k, 0.9 * k, 3.4 * q.rate * k], i * 8); }); lab.uniform('smokeSources', s);
-    lab.uniform('smokeK', new Float32Array([this.dt, this.init ? 1 : 0, boxes.length, live.length])); this.init = false;
+    const s = new Float32Array(16 * 8); let n = 0; for (const q of this.sources) { const age = (lab.tick - q.born) / 60; if (age > q.last || n >= 10) continue; const k = Math.min(1, age / 0.5) * Math.min(1, (q.last - age) / 2); s.set([...q.at, 0.34, 210 * q.rate * k, 1.3 * k, 1.0 * k, 24 * q.rate * k], n++ * 8); }
+    for (const p of steam) { if (n >= 16) break; const k = 0.75 + 0.25 * Math.sin(lab.tick * 0.11 + p.at[0]) * Math.sin(lab.tick * 0.043 + p.at[2]); s.set([p.at[0], p.at[1], p.at[2], p.r, 7 * p.k * k, 5.0, 0.35, 3 * k], n++ * 8); } lab.uniform('smokeSources', s);
+    lab.uniform('smokeK', new Float32Array([this.dt, this.steps, boxes.length, n]));
   }
   stages(g: Graph, cacheBind: NonNullable<Stage['buffers']>, cacheLib: string, bounceLib: string): Stage[] {
-    const lab = this.lab, B = (n: string, bytes: number) => lab.buffer(n, bytes, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); B('smokeA', CELLS * 16); B('smokeB', CELLS * 16); B('smokeHeatA', CELLS * 4); B('smokeHeatB', CELLS * 4); B('smokeFaces', CELLS * 4); B('smokePress', CELLS * 4); B('smokeDiv', CELLS * 4); B('smokeGlow', CELLS * 16); B('smokePack', CELLS * 8); B('smokeOcc', 128);
-    lab.uniform('smokeK', new Float32Array(4)); lab.uniform('smokeDoors', new Float32Array(256)); lab.uniform('smokeSources', new Float32Array(64)); lab.uniform('changes', new Float32Array(36));
-    const go = () => this.on && this.dt > 0, faces: NonNullable<Stage['buffers']> = { faces: ['smokeFaces', 'array<u32>', 'read'] }, K: NonNullable<Stage['buffers']> = { smokeK: ['smokeK', 'vec4f', 'uniform'] }, rw = (n: string, t = 'array<vec4f>'): [string, string, 'read_write'] => [n, t, 'read_write'], ro = (n: string, t = 'array<vec4f>'): [string, string, 'read'] => [n, t, 'read'];
-    const S = (name: string, code: string, buffers: NonNullable<Stage['buffers']>, over: Stage['over'] = OVER, consts?: Record<string, number>): Stage => ({ name, over, code: head + code, buffers, when: go, ...(consts ? { consts } : {}) });
-    const half = { groups: (): [number, number, number] => [SMOKE.n[0] / 16, SMOKE.n[1] / 4, SMOKE.n[2] / 4] };
+    const lab = this.lab, B = (n: string, bytes: number) => lab.buffer(n, bytes, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); B('smokeM', WORDS * 4); B('smokeA', CELLS * 8); B('smokeB', CELLS * 8); B('smokeQ', CELLS * 8); B('smokeP', CELLS * 8); B('smokeW', CELLS * 4); B('smokeG', SMOKE.slots * 64 * 8); B('smokeD', SMOKE.slots * 4);
+    lab.uniform('smokeK', new Float32Array(4)); lab.uniform('smokeDoors', new Float32Array(256)); lab.uniform('smokeSources', new Float32Array(128)); lab.uniform('changes', new Float32Array(36)); g.bind('smokeAtlas', lab.scene.smokeTex); g.bind('smokePage', lab.scene.smokePage);
+    const go = () => this.on && this.dt > 0, K: NonNullable<Stage['buffers']> = { smokeK: ['smokeK', 'vec4f', 'uniform'], sources: ['smokeSources', 'array<vec4f, 32>', 'uniform'] }, rw = (n: string, t: string): [string, string, 'read_write'] => [n, t, 'read_write'], ro = (n: string, t: string): [string, string, 'read'] => [n, t, 'read'];
+    const MA = { M: rw('smokeM', 'array<atomic<u32>>') }, MR = { M: ro('smokeM', 'array<u32>') }, MW = { M: rw('smokeM', 'array<u32>') }, V2 = 'array<vec2u>', F = 'array<f32>', U = 'array<u32>';
+    const S = (name: string, code: string, buffers: NonNullable<Stage['buffers']>, over: Stage['over'] = BRICK, consts?: Record<string, number>): Stage => ({ name, over, code: head + code, buffers, when: go, ...(consts ? { consts } : {}) });
+    const half = SMOKE.slots * 512, twice = (name: string, code: string, buffers: NonNullable<Stage['buffers']>): Stage[] => [0, 1].map(k => ({ ...S(name, code, buffers, BRICK, { FROM: k ? half : 0, TO: k ? 0 : half }), when: () => go() && this.flip === k }));
     return [
-      { ...S('smoke faces', facesCode, { faces: rw('smokeFaces', 'array<u32>'), ...K, doors: ['smokeDoors', 'array<Box, 16>', 'uniform'] }), when: () => go() && this.faceNow },
-      S('smoke move', moveCode, { a0: ro('smokeA'), h0: ro('smokeHeatA', 'array<f32>'), b0: rw('smokeB'), h1: rw('smokeHeatB', 'array<f32>'), ...faces, ...K }),
-      S('smoke push', pushCode, { b0: ro('smokeB'), h1: ro('smokeHeatB', 'array<f32>'), a0: rw('smokeA'), h0: rw('smokeHeatA', 'array<f32>'), ...faces, ...K, sources: ['smokeSources', 'array<vec4f, 16>', 'uniform'] }),
-      S('smoke press', divCode, { a0: ro('smokeA'), div: rw('smokeDiv', 'array<f32>'), press: rw('smokePress', 'array<f32>'), ...faces, ...K, sources: ['smokeSources', 'array<vec4f, 16>', 'uniform'] }),
-      ...Array.from({ length: SMOKE.rounds * 2 }, (_, i) => S('smoke press', solveCode, { div: ro('smokeDiv', 'array<f32>'), press: rw('smokePress', 'array<f32>'), ...faces }, half, { PARITY: i & 1 })),
-      S('smoke free', freeCode, { a0: ro('smokeA'), press: ro('smokePress', 'array<f32>'), b0: rw('smokeB'), ...faces }),
-      { name: 'smoke clear', over: OVER, code: '', async make() { return enc => { if (go()) enc.clearBuffer(g.buffers.get('smokeOcc')!); }; } },
-      { ...S('smoke light', '', {}), code: signals + cacheLib + bounceLib + head + lightCode, buffers: { ...cacheBind, b0: ro('smokeB'), glow: rw('smokeGlow'), changes: ['changes', 'Changes', 'uniform'] } },
-      S('smoke pack', packCode, { b0: ro('smokeB'), glow: ro('smokeGlow'), pack: rw('smokePack', 'array<vec2u>'), occ: rw('smokeOcc', 'array<atomic<u32>>') }),
-      { name: 'smoke hand', over: OVER, code: '', async make() { return (enc: GPUCommandEncoder) => { if (go()) { enc.copyBufferToBuffer(g.buffers.get('smokeB')!, 0, g.buffers.get('smokeA')!, 0, CELLS * 16); lab.smoke.copy(enc); } }; } },
+      S('smoke page', emitCode, { ...MA, ...K }, { groups: () => [1, 1, 1] }), S('smoke page', spreadCode, { ...MA, smokeK: K.smokeK! }, ONE), S('smoke page', freeCode, { ...MA, smokeK: K.smokeK! }, ONE), S('smoke page', linkCode, MW),
+      S('smoke faces', facesCode, { ...MR, W: rw('smokeW', U), Va: rw('smokeA', V2), Vb: rw('smokeB', V2), Q: rw('smokeQ', F), smokeK: K.smokeK!, doors: ['smokeDoors', 'array<Box, 16>', 'uniform'] }),
+      ...twice('smoke move', moveCode, { ...MR, W: ro('smokeW', U), Va: ro('smokeA', V2), Vb: rw('smokeB', V2), Q: rw('smokeQ', F), smokeK: K.smokeK! }),
+      ...twice('smoke push', pushCode, { ...MR, W: ro('smokeW', U), Vb: ro('smokeB', V2), Va: rw('smokeA', V2), Q: rw('smokeQ', F), ...K }),
+      S('smoke press', divCode, { ...MR, W: ro('smokeW', U), Va: ro('smokeA', V2), P: rw('smokeP', F), ...K }),
+      ...Array.from({ length: SMOKE.pairs * 2 }, (_, i) => S('smoke press', solveCode, { ...MR, W: ro('smokeW', U), P: rw('smokeP', F) }, BRICK, { PARITY: i & 1 })),
+      S('smoke free', freedCode, { ...MR, W: ro('smokeW', U), Va: ro('smokeA', V2), P: ro('smokeP', F), Vb: rw('smokeB', V2), D: rw('smokeD', F) }),
+      S('smoke page', doneCode, { ...MW, D: ro('smokeD', F) }, ONE),
+      { ...S('smoke light', '', {}), code: signals + cacheLib + bounceLib + head + lightCode, buffers: { ...cacheBind, ...MR, Vb: ro('smokeB', V2), G: rw('smokeG', V2), changes: ['changes', 'Changes', 'uniform'] } },
+      { ...S('smoke show', publishCode, { ...MR, W: ro('smokeW', U), Vb: ro('smokeB', V2), G: ro('smokeG', V2) }), writes: { atlas: 'smokeAtlas' }, alone: true },
+      { ...S('smoke show', pageCode, MR, { groups: () => [Math.ceil(36000 / 64), 1, 1] }), writes: { page: 'smokePage' }, alone: true },
+      { name: 'smoke keep', over: BRICK, code: '', async make() { return enc => { if (go()) enc.copyBufferToBuffer(g.buffers.get('smokeB')!, 0, g.buffers.get('smokeA')!, 0, CELLS * 8); }; } },
     ];
   }
 }

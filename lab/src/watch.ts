@@ -25,7 +25,7 @@ export class Watch {
   async init() { this.pipes = await Promise.all([true, false].map((tex, i) => this.g.g.device.createComputePipelineAsync({ label: 'watch', layout: this.g.g.device.createPipelineLayout({ bindGroupLayouts: [this.layouts[i]!] }), compute: { module: this.g.g.device.createShaderModule({ code: code(tex) }), entryPoint: 'main' } }))) as [GPUComputePipeline, GPUComputePipeline]; return this; }
   after(enc: GPUCommandEncoder, s: Stage) {
     if (this.seen.length === 0) enc.clearBuffer(this.found);
-    for (const n of Object.values(s.writes ?? {})) { const t = this.g.texture(n); if (t.format.includes('float') || t.format.includes('norm')) this.look(enc, s.name, n, 0, this.g.view(n), t.width, t.width * t.height); }
+    for (const n of Object.values(s.writes ?? {})) { const t = this.g.texture(n); if (t.dimension === '3d') continue; if (t.format.includes('float') || t.format.includes('norm')) this.look(enc, s.name, n, 0, this.g.view(n), t.width, t.width * t.height); }
     for (const [b, type, access] of Object.values(s.buffers ?? {})) if (access === 'read_write' && /^array<(vec4f|f32)/.test(type)) { const q = this.g.buffers.get(b)!; this.look(enc, s.name, b, 1, { buffer: q }, 0, q.size / 4); }
   }
   private look(enc: GPUCommandEncoder, stage: string, what: string, kind: 0 | 1, resource: GPUBindingResource, width: number, n: number) {

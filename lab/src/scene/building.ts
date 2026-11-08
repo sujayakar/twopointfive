@@ -1,4 +1,5 @@
 // THE BUILDING: white outside, one strong color a room inside, a garden and a pool on the terrace, doors that swing.
+import { plan } from './nav';
 import { settle, freeEdges } from './faces';
 import { type V3, type Rot, rotY, rotX, rotZ, compose, apply, add, mul, sub, norm, rng, smooth } from '../math';
 import { World, F, type Piece, type Mark, taper } from './world';
@@ -227,7 +228,7 @@ export function makeBuilding(): Building {
   for (const [x, z] of [[4.35, -1.0], [4.35, 1.9]] as number[][]) { const lamp = w.lamp({ kind: 'sphere', at: [x! + 0.12, FL + 2.3, z!], u: [0.09, 0, 0], v: [0, 0, 0], radiance: [60, 42, 22], name: 'terrace', on: 1, night: true }); w.ellipsoid([x! + 0.12, FL + 2.3, z!], [0.09, 0.09, 0.09], M.glow!, { tint: [1, 0.84, 0.6], lamp, seed: 600, flags: F.CUT | F.GLOW | F.NOSHADOW }); }
 
   // ---------------------------------------------------------------- people
-  const who = (color: V3, pace: number, torch: boolean, stops: Stop[]) => people.push(new Person(w, stops, pace, color, people.length, { torch }));
+  const who = (color: V3, pace: number, torch: boolean, stops: Stop[]) => people.push(new Person(w, plan(w.pieces, stops), pace, color, people.length, { torch }));
   who(C.orange as V3, 1.25, true, [{ at: [-1.5, 0.02, 6.9] }, { at: [2.4, 0.02, 2.6] }, { at: [2.1, 0.02, -4.2], wait: 2.6, face: 2.2 }, { at: [-2.9, 0.02, -6.2] }, { at: [-3.2, 0.02, 1.0], wait: 2.2, face: -1.5 }]);
   who(C.orange as V3, 1.05, true, [{ at: [5.0, FL + 0.05, 1.45] }, { at: [9.0, FL + 0.05, 1.5], wait: 3.0, face: 0.2 }, { at: [9.45, FL + 0.05, 0.2] }, { at: [9.4, FL + 0.05, -1.35], wait: 2.2, face: 2.9 }, { at: [4.9, FL + 0.05, -1.4] }, { at: [4.75, FL + 0.05, 0.2] }]);
   who(C.teal as V3, 1.45, true, [{ at: [-14, 0, 6] }, { at: [-14, 0, 11.4] }, { at: [-4, 0, 11.6] }, { at: [2.5, 0, 11.4], wait: 2.4, face: 2.9 }, { at: [-4, 0, 11.0] }, { at: [-13.4, 0, 10.6] }, { at: [-14.2, 0, -2], wait: 2, face: 1.4 }]);

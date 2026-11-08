@@ -42,8 +42,8 @@ struct Mark { at: vec2f, size: vec2f, uv: vec4f, color: vec3f, face: u32 };
 @group(0) @binding(12) var causticTex: texture_2d<f32>;
 @group(0) @binding(13) var repSamp: sampler;
 @group(0) @binding(14) var lampTex: texture_3d<f32>;
-@group(0) @binding(15) var smokeTex: texture_3d<f32>;       // light scattered per unit, and how much smoke per metre
-@group(0) @binding(16) var<uniform> smokeOcc: array<vec4u, 8>;   // which blocks of eight cells hold any
+@group(0) @binding(15) var smokeTex: texture_3d<f32>;       // the pool's bricks, each with a cell of its neighbours round it: light scattered per unit, and how much smoke per metre
+@group(0) @binding(16) var smokePage: texture_3d<u32>;      // which of them stands where (+ 1)
 
 const GLASS = 256u; const WATER = 512u; const CUT = 1024u; const GLOW = 2048u; const NOSHADOW = 4096u; const QUAD = 8192u; const MOVES = 16384u; const FAR = 32768u; const OPEN = 0x10000000u; const OPEN_FLOOR = 3.5;
 const NOTHING = 0xffffffffu; const LEAF_HIT = 0x80000000u;
@@ -227,19 +227,20 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
 }
 
 // ================================================================ smoke
-const SM_AT = vec3f(-12.8, 0.0, -9.6); const SM_SIZE = vec3f(25.6, 8.0, 19.2);
-fn smokeAny() -> bool { var m = vec4u(0u); for (var i = 0u; i < 8u; i++) { m |= smokeOcc[i]; } return any(m != vec4u(0u)); }
-fn smokeBlock(x: vec3f) -> bool { let c = vec3i(floor((x - SM_AT) / 1.6)); if (any(c < vec3i(0)) || any(c >= vec3i(16, 5, 12))) { return false; } let b = u32(c.x + 16 * (c.y + 5 * c.z)); return ((smokeOcc[b >> 7u][(b >> 5u) & 3u] >> (b & 31u)) & 1u) != 0u; }
-fn smokeAt(x: vec3f) -> vec4f { return textureSampleLevel(smokeTex, linSamp, (x - SM_AT) / SM_SIZE, 0.0); }
+const SM_AT = vec3f(-16.0, -0.16, -11.52); const SM_SIZE = vec3f(32.0, 12.8, 23.04); const SM_BRICK = 0.64;
+fn smokeSlot(x: vec3f) -> u32 { let c = vec3i(floor((x - SM_AT) / SM_BRICK)); if (any(c < vec3i(0)) || any(c >= vec3i(50, 20, 36))) { return 0u; } return textureLoad(smokePage, c, 0).x; }
+fn smokeBlock(x: vec3f) -> bool { return smokeSlot(x) != 0u; }
+fn smokeIn(p: u32, x: vec3f) -> vec4f { let s = p - 1u; let l = fract((x - SM_AT) / SM_BRICK) * 8.0; return textureSampleLevel(smokeTex, linSamp, (vec3f(f32(s & 15u), f32((s >> 4u) & 15u), f32(s >> 8u)) * 10.0 + 1.0 + l) / vec3f(160.0, 160.0, 120.0), 0.0); }
+fn smokeAt(x: vec3f) -> vec4f { let p = smokeSlot(x); if (p == 0u) { return vec4f(0.0); } return smokeIn(p, x); }
 /** where a ray is in the grid */
 fn smokeSpan(ro: vec3f, rd: vec3f, t1: f32) -> vec2f { let inv = safeInv(rd); let a = (SM_AT - ro) * inv; let b = (SM_AT + SM_SIZE - ro) * inv; return vec2f(max(max3(min(a, b)), 0.0), min(min3(max(a, b)), t1)); }
 /** what a ray that is blurred anyway sees of it on its way to t1: light, and how much gets through. Six looks */
 fn smokeSeen(ro: vec3f, rd: vec3f, t1: f32) -> vec4f {
   if (frame.misc2.x < 0.5) { return vec4f(0.0, 0.0, 0.0, 1.0); } let s = smokeSpan(ro, rd, t1); if (s.y <= s.x) { return vec4f(0.0, 0.0, 0.0, 1.0); } let dt = (s.y - s.x) / 6.0; var T = 1.0; var L = vec3f(0.0);
-  for (var i = 0u; i < 6u; i++) { let x = ro + rd * (s.x + dt * (f32(i) + 0.5)); if (!smokeBlock(x)) { continue; } let v = smokeAt(x); let e = exp(-v.w * dt); L += v.rgb * (T * (1.0 - e)); T *= e; } return vec4f(L, T);
+  for (var i = 0u; i < 6u; i++) { let x = ro + rd * (s.x + dt * (f32(i) + 0.5)); let p = smokeSlot(x); if (p == 0u) { continue; } let v = smokeIn(p, x); let e = exp(-v.w * dt); L += v.rgb * (T * (1.0 - e)); T *= e; } return vec4f(L, T);
 }
 fn smokeThrough(ro: vec3f, rd: vec3f, t1: f32) -> f32 {
-  if (frame.misc2.x < 0.5) { return 1.0; } let s = smokeSpan(ro, rd, t1); if (s.y <= s.x) { return 1.0; } let dt = (s.y - s.x) / 8.0; var a = 0.0; for (var i = 0u; i < 8u; i++) { let x = ro + rd * (s.x + dt * (f32(i) + 0.5)); if (smokeBlock(x)) { a += smokeAt(x).w; } } return exp(-a * dt);
+  if (frame.misc2.x < 0.5) { return 1.0; } let s = smokeSpan(ro, rd, t1); if (s.y <= s.x) { return 1.0; } let dt = (s.y - s.x) / 8.0; var a = 0.0; for (var i = 0u; i < 8u; i++) { let x = ro + rd * (s.x + dt * (f32(i) + 0.5)); let p = smokeSlot(x); if (p != 0u) { a += smokeIn(p, x).w; } } return exp(-a * dt);
 }
 /** the camera's ray through a point of the picture (0‥1, y down) */
 fn camRay(uv: vec2f) -> vec3f { let p = uv * 2.0 - 1.0; return normalize(frame.camFwd.xyz + frame.camRight.xyz * p.x - frame.camUp.xyz * p.y); }
