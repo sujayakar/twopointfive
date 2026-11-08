@@ -163,6 +163,9 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     // (it goes home to the block with the rest of the moving state, in `settle`: until then it draws off its own word)
     g.dice = Some(game::math_dice::sim_dice_new(o.seed as f64));
     g.col.boxes = loaded.boxes.clone();   // (`level.boxes`, which the constructor reads as the collision's list)
+    // (the picture told the level's own night, as every host's stand tells it: standGame's line)
+    g.engine.settings.sky_zenith = g.level.sky.zenith;
+    g.engine.settings.sky_horizon = g.level.sky.horizon;
     game::game::game_new(&mut g, rig, Some(game::game::GameNewOpts { seats: Some(o.seats as f64) }));
     settle(&mut g);
     // A GAME STOOD WITH NO ADDRESS is the harness's plain stand (standGame with `harness`): the solo night's card goes on at the stand, by the

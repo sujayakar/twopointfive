@@ -37,19 +37,16 @@ export const GLASS = {
 /** THE ONE SWITCH over everything that makes glass more than a starred wall (rebuild/glass/tuning.md): panes that crack and come apart (glassbreak.ts, its own
  *  switch tune.glassBreak), rounds that go on through a sheet (glasspen.ts, GLASSPEN.on) and the glass that falls (shards.ts, tune.glassShards). ON as shipped;
  *  off = every one of them answers on its first line and the game is the one before any of it, run digest for run digest — whatever the parts' own switches say
- *  (they stay for A/B: ?glassbreak=0, ?glasspen=0, their Tab rows). `?glassfx=0|1` for a visit, env GLASSFX=on|off under bun, Tab ▸ Destruction ▸ Glass keeps the
- *  choice per machine. The QA harness leaves this up and stands the PARTS at off (src/host/standup.ts: every frozen digest was recorded with a pane a starred
- *  wall) unless the run says GLASSFX=on. The fracture's picture is a boot-time shader const (main.ts reads glassFxBoot()), so a flip SHOWS after a reload. */
+ *  (they stay for A/B: ?glasspen=0, their Tab rows). Env GLASSFX=on|off under bun. The page's row is settled on, and its word is gone: the Rust game breaks a pane whatever
+ *  a page's copy says, and the shader const that draws it is always up (main.ts). The QA harness leaves this up and stands the PARTS at off (src/host/standup.ts: every frozen digest was recorded with a pane a starred
+ *  wall) unless the run says GLASSFX=on. */
 export const GLASS_DEFAULTS = { crackGap: GLASS.crackGap, liveGap: GLASS.liveGap };
 export const GLASSFX = { on: true };
 let fxForced: boolean | null = null;
 const FX_OFF = /^(0|off|false|no)$/i;
-try { const q = new URLSearchParams(location.search); if (q.has('glassfx')) GLASSFX.on = fxForced = !FX_OFF.test(q.get('glassfx') ?? ''); } catch { /* no page */ }
 try { const e = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.GLASSFX; if (e) GLASSFX.on = fxForced = !FX_OFF.test(e); } catch { /* */ }
-/** what a URL / env word said for this run (null: nothing, so on) */
+/** what an env word said for this run (null: nothing, so on) */
 export function glassFxForced(): boolean | null { return fxForced; }
-/** main.ts, before a Game or an Engine exists: the switch as this boot will have it */
-export function glassFxBoot(): boolean { return GLASSFX.on; }
 
 /** per-Game glass bookkeeping (a WeakMap, like the whistle's: nothing on Game itself but the hooks) */
 interface GlassState { panes: number[]; seen: WeakSet<object>; hits: number; lastHitT: number; log: string[]; crackAt: number; }
@@ -143,7 +140,7 @@ export function glassImpact(g: Game, pane: number, point: Vec3, dir: Vec3 | null
   const radius = GLASS.rMin + (GLASS.rMax - GLASS.rMin) * u;
   const ang = w * Math.PI * 2; const up: Vec3 = [0, 1, 0]; const side = v3.normalize(v3.cross(up, n));
   const tangent: Vec3 = v3.add(v3.scale(side, Math.cos(ang)), v3.scale(up, Math.sin(ang)));   // the star's orientation in the pane's plane
-  if (!res.live || !res.cracked || g.engine.glassFracture !== true) g.decals.add('glassHit', pos, n, radius, { tangent, seed: (seed >>> 8) & 0xfff, pane, param: cause === 'bang' ? 0.6 : 1 });   // (a blow the fracture model filed draws its own cracks from its site — composite gbCracks: a second, unrelated star over them would be a lie; a blow that only fed an old star, toughened glass that has not yet gone, and a page whose shaders were compiled without the cracks keep the star)
+  if (!res.live || !res.cracked) g.decals.add('glassHit', pos, n, radius, { tangent, seed: (seed >>> 8) & 0xfff, pane, param: cause === 'bang' ? 0.6 : 1 });   // (a blow the fracture model filed draws its own cracks from its site, wherever anything is drawn: a second, unrelated star over them would be a lie. A blow that only fed an old star, toughened glass that has not yet gone and every shot with the model off keep theirs)
   S.hits++; S.lastHitT = g.time;
   S.log.push(`${g.time.toFixed(1)}s pane ${pane} ${cause === 'bang' ? 'starred by a blast' : 'hit'}${who ? ` (who ${who})` : ''} r ${radius.toFixed(2)}`); if (S.log.length > 24) S.log.shift();
   if (quiet) return res;

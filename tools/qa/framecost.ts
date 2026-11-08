@@ -87,7 +87,7 @@ const ARMS: Record<string, Arm> = {
   // shipped with ONE thing put back off (shipped minus this = what it costs): the pin's own word, which holds under the shipped stand too (profile.ts pinned())
   nocast: { env: { ...SHIPPED_ENV, TPS_CAST: '' }, set: SHIPPED_SET, words: 'shipped, but the mannequin instead of the cast' },
   nomoves: { env: { ...SHIPPED_ENV, TPS_MOVES: '0', TPS_TURN: '0' }, set: SHIPPED_SET, words: 'shipped, but the motion pass and the turn weight off' },
-  noglass: { env: { ...SHIPPED_ENV, GLASSFX: 'off' }, set: SHIPPED_SET, words: 'shipped, but the glass switch off (the page under ?glassfx=0)' },
+  noglass: { env: { ...SHIPPED_ENV, GLASSFX: 'off' }, set: SHIPPED_SET, words: 'shipped, but the glass switch off (the stand word GLASSFX=off)' },
   nofrags: { env: SHIPPED_ENV, set: { FRAG: { defenders: false } }, words: 'shipped, but no defenders\' frags' },
   nodestr: { env: { ...SHIPPED_ENV, PT_DESTR: '0', SOAK_DESTR: '0' }, set: SHIPPED_SET, words: 'shipped, but destruction off (the page under ?nodestruction)' },
   pair: { env: { ...SHIPPED_ENV, PAIR: '1' }, set: {}, runner: 'pair', words: 'two person stealth (pair-sneak.ts arm `pair`, PAIR=1) on the shipped stand' },

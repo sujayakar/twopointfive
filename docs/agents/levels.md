@@ -677,7 +677,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `?cutprograms=boot`) a shadow, a bounce, a reflection, the light meter's ray and a smoke sight line
   meet a round up to 3.53 % of its radius further out at the prism's twelve corners (1 cm on a drum of 0.29 m), which is where the picture's
   own surface is; the calm set still meets the cylinder, so a drum's shadow edge can step by that much on the frame the sets swap. No
-  simulation code reads either set. SWITCH: `?roundexact=1` (`roundConfig.exact`, read at boot before the first pipeline) writes the
+  simulation code reads either set. A SWITCH THAT WAS (gone, as the line above says): `?roundexact=1` (`roundConfig.exact`, read at boot before the first pipeline) wrote the
   cylinder's test into the cut set as well, as it was: a picture comparison, and more than the newer software adapter runs. It is a shader
   const like `?cutprograms`, so it has no stand's row and no knob (headless, no shader runs: both stands are the same by digest with or
   without it). CHECK: `round-check` line 9, both stands (`ROUND_BREAK=1` fails it: the prism packed at 0.9 of the radius): `isectBox` +

@@ -130,9 +130,8 @@ pub fn box_world_new(g: &crate::game::Game, device: crate::Opaque, max_boxes: Op
     let s = USAGE_STORAGE + USAGE_COPY_DST;
     w.geo_buf = crate::gpu_device::make_buffer(device, max_boxes * GEO_STRIDE * 4.0, s + USAGE_COPY_SRC, Some("boxGeo"));
     w.cut_on = true;
-    w.ground_on = g.m.scene_ground_field.ground_ray_config.on;
     w.cut_data = vec![0.0; n * crate::scene_cut::CUT_STRIDE as usize * 4];
-    let mat_bytes = max_boxes * MAT_STRIDE * 4.0 + crate::scene_markings::MARK_TABLE_ROWS * 16.0 + GB_ROWS * 16.0 + crate::scene_air_grid::air_rows() * 16.0 + max_boxes * crate::scene_cut::CUT_STRIDE * 16.0 + (if w.ground_on { crate::scene_ground_field::gh_rows() * 16.0 } else { 0.0 });
+    let mat_bytes = max_boxes * MAT_STRIDE * 4.0 + crate::scene_markings::MARK_TABLE_ROWS * 16.0 + GB_ROWS * 16.0 + crate::scene_air_grid::air_rows() * 16.0 + max_boxes * crate::scene_cut::CUT_STRIDE * 16.0;
     w.mat_buf = crate::gpu_device::make_buffer(device, mat_bytes, s + USAGE_COPY_SRC, Some("boxMat"));
     if wd.grid_w + wd.grid_h > 96.0 { panic!("trace grid: the DDA in common.wgsl caps a ray at 96 cell visits; W + H must stay <= 96 for that cap to be unreachable"); }
     if max_boxes > 65536.0 || max_boxes * wd.grid_w * wd.grid_h >= 16777216.0 { panic!("trace grid: packed items keep the box index in 16 bits and cell starts in 24"); }

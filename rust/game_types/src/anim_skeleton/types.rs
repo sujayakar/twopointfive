@@ -99,7 +99,8 @@ impl Default for PoseSet { fn default() -> Self { Self::blank() } }
 #[derive(Clone, Debug)]
 pub struct ClipSide {
     pub lines: Vec<u8>,
-    pub at: f64,
+    /// what the clip store (rust/sim/src/clips.rs) knows this clip by: folded from the clip alone, so the same on every host. On no wire and in no file: it is worked out again where it is 0.
+    pub word: u32,
     pub need: f64,
 }
 impl ClipSide {
@@ -107,7 +108,7 @@ impl ClipSide {
     pub fn zeroed() -> Self {
         ClipSide {
             lines: Vec::new(),
-            at: 0.0,
+            word: 0,
             need: 0.0,
         }
     }

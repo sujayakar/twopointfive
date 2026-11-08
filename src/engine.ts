@@ -80,7 +80,6 @@ export class Engine {
   sceneLayout: GPUBindGroupLayout;
   sceneBG: GPUBindGroup | null = null;
   frameBuf: GPUBuffer; frameData = new ArrayBuffer(FRAME_BYTES);
-  /** HostApi.glassFracture: the shaders this page compiled draw the fracture model (the boot-time prelude const) */ readonly glassFracture: boolean = glassBreakConfig.on;
   /** SHARP DIRECT this frame (settings.sharpDirect ∧ TAAU ∧ no debug view ∧ internal ≠ output — resize decides), the OUTPUT frame block (the same bytes with screen = the output size: frame.ts writeFrameOut)
    *  and its scene group, group 0 of every pass that runs at the output size then */
   sharpOn = false; frameBufOut: GPUBuffer; frameDataOut = new ArrayBuffer(FRAME_BYTES); sceneBGOut: GPUBindGroup | null = null;
