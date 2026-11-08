@@ -449,7 +449,7 @@ async function darkCross(o: { lights: boolean; path: 'front' | 'side'; torch: bo
   const pl = g.player, c = pl.char; pl.slot = 'pistol'; pl.holstered = true; pl.pistol.lightOn = false; pl.nvOn = false;
   { const dw = g.doors.byName('breakroom_w'); if (dw) { dw.angle = 0; dw.vel = 0; dw.latched = true; dw.closing = false; } }   // the room's west door shut for the walk: the shipped stand's one-way leaves (doors.ts oneWay) open this one INTO the room, across Sam's start on the front path — teleported into its sweep he knocks it shut, and that slam (a 'door' event, 0.58, two metres off) is what the man then hears. Shut on both stands, so both walk the same room
   const [A, B, C] = g.guards; for (const [i, gd] of [B, C].entries()) { gd.hold = true; gd.pinned = true; gd.char.pos = [-40, 0, -40 - i]; gd.heardUpTo = 1e12; }
-  const mx = 31.2, mz = 16.0, yaw = 0, d = 1.2; const put = () => { A.char.pos[0] = mx; A.char.pos[2] = mz; A.char.bodyYaw = A.char.aimYaw = yaw; if (!o.torch) A.flashlight.enabled = false; };
+  const mx = 31.2, mz = 16.0, yaw = 0, d = 1.2; const put = () => { A.char.pos[0] = mx; A.char.pos[2] = mz; A.char.bodyYaw = A.char.aimYaw = yaw; if (!o.torch) A.lightDeadUntil = 1e9; };
   A.hold = true; A.pinned = true; A.state = 'patrol'; A.awareness = 0; A.wait = 1e6; put();
   const fx = Math.sin(yaw), fz = Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
   const P = (s: number): Vec3 => o.path === 'side' ? [mx + rx * d - fx * s, 0, mz + rz * d - fz * s] : [mx + fx * d + rx * s, 0, mz + fz * d + rz * s];

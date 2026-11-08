@@ -58,9 +58,9 @@ export async function sameStartCheck(only: string[] = [], verbose = false): Prom
     // ---- 1 + 2: on — the same floor on two dice, and after a restart of each
     const moved: string[] = [], restartMoved: string[] = [];
     for (const R of rows) {
-      const A = await stage(R, 7), B = await stage(R, 8);
+      const A = await stage(R, 7), A2 = await again(A.g), A3 = await again(A.g);   // (a page has one Game: a standing Game restarts before the next is stood, whose start takes the mission's terms over)
+      const B = await stage(R, 8), B2 = await again(B.g);
       if (A.sig !== B.sig) moved.push(`${R.id} (${diff(A.sig, B.sig)})`);
-      const A2 = await again(A.g), A3 = await again(A.g), B2 = await again(B.g);
       if (A2 !== A.sig || A3 !== A.sig || B2 !== A.sig) restartMoved.push(`${R.id} (${diff(A.sig, A2 !== A.sig ? A2 : A3 !== A.sig ? A3 : B2)})`);
       if (verbose) console.log(`  ${R.id}: on ${A.sig === B.sig ? 'same' : 'MOVED'} · restart ${A2 === A.sig && A3 === A.sig ? 'same' : 'MOVED'}`);
     }
