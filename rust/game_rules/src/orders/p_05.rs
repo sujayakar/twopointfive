@@ -14,25 +14,12 @@ fn yaw_to(a: V3, b: V3) -> f64 { v3::yaw_to(a, b) }
 
 // ------------------------------------------------------------ what a stored function became
 
-/// (pairorders.ts:232 the 'watch him' row's `tick`: his gun stays on the man he was told to watch, while he sees him)
-fn pair_watch_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
-    let h = match g.tab.orders_assignment[a].foe { Some(h) => h, None => return };
-    if g.gd[h].state == crate::game::GuardState::Dead || !g.guards.contains(&h) { crate::pairorders::pair_orders_stand(g, gd, "holding", None); return; }
-    if !crate::pairorders::pair_orders_sees(g, gd, h) { return; }   // (behind something: the gun stays on where he last saw him)
-    let (c, p) = (g.ch[g.gd[h].ch].pos, g.ch[g.gd[gd].ch].pos);
-    let aa = &mut g.tab.orders_assignment[a];
-    if let Some(w) = &mut aa.watch { w[0] = c[0]; w[2] = c[2]; }
-    aa.face = Some(yaw_to(p, c));
-}
 
 /// `d.tick?.(S, gd, A)`: each arm is the closure of the row that holds it. It may rewrite his Assignment or re-assign him. (orders.ts:1393)
 pub fn order_tick(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, a: OrdersAssignmentId) {
     let tick = match g.tab.orders_order_def[d].tick { Some(t) => t, None => return };
     match tick {
         OrderTick::Row(r) => if let Some(f) = r.tick { f(g, gd, a) },
-        OrderTick::PairTake => crate::pairorders::pair_orders_take_tick(g, gd, a),
-        OrderTick::PairWatch => pair_watch_tick(g, gd, a),
-        OrderTick::PairDark => crate::pairorders::pair_orders_dark_tick(g, gd, a),
     }
 }
 
