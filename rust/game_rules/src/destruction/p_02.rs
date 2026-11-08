@@ -572,7 +572,10 @@ pub fn destruction_hide(g: &mut crate::game::Game, d: &crate::destruction::Destr
             seam_box(g, s).flags = or_bits(sf, bits);
         }
     }
-    crate::scene_collision::wrote(g);
+    match (d.mate, d.kind) {
+        (Some(mate), DKind::Housing) => crate::scene_collision::wrote_rows(g, &[d.i, mate]),
+        _ => crate::scene_collision::wrote_rows(g, &[d.i]),
+    }
     let (c, h) = { let x = seam_box(g, b); (x.c, x.h) };
     crate::smoke_types::smoke_system_like_obstacles_changed(g, c, m::hyp3(h[0], h[1], h[2]) + 0.6);
 }

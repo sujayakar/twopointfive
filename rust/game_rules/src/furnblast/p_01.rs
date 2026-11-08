@@ -409,7 +409,7 @@ fn break_static_in(g: &mut Game, i: f64, ghost: bool, at: V3, shatter: bool, kk:
         return false;
     }
     let f = seam_box(g, b).flags;
-    g.destr.furn.hidden.set(Num(i), f); seam_box(g, b).flags = (js::to_i32(f) | js::to_i32(HIDE)) as f64; crate::scene_collision::wrote(g); g.stats.furnblast.statics += 1;
+    g.destr.furn.hidden.set(Num(i), f); seam_box(g, b).flags = (js::to_i32(f) | js::to_i32(HIDE)) as f64; crate::scene_collision::wrote_rows(g, &[i]); g.stats.furnblast.statics += 1;
     crate::destruction::destruction_break_fixture_box(g, i);
     if ghost { return false; }   // (a drawn-only sheet or placard: it just goes)
     if snow_paint(g, b) {   // lying snow: a spray from where the blast met it, never rigid pieces

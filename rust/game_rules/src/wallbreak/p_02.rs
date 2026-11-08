@@ -330,7 +330,8 @@ pub fn wall_break_fall(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::A
     let flags = seam_box(g, b).flags;
     g.destr.walls.hidden.set(crate::Num(j), flags);
     seam_box(g, b).flags = with_bits(flags, HIDE);
-    wall_break_bump(g);
+    g.engine.world.geom_serial += 1.0;
+    crate::scene_collision::wrote_rows(g, &[j]);
     let c = seam_box(g, b).c;
     crate::smoke_types::smoke_system_like_obstacles_changed(g, c, m::hyp3(h[0], h[1], h[2]) + 0.6);
     rects.push([a.x0, a.z0, a.x1, a.z1]);
@@ -398,14 +399,15 @@ pub fn wall_break_plan_blast(g: &mut crate::game::Game, at: V3, opts: crate::wal
     let as_item = |p: WallBreakPlanOfItem| WallBreakPlanBlastItem { b: p.b, cells: p.cells, d: p.d };
     if own.is_empty() { return wall_break_plan_of(g, at, opts, r).into_iter().map(as_item).collect(); }
     // (the boards stand in no line of the plan: hidden as the engine hides a static, and put back)
+    let rows: Vec<f64> = own.to_vec();
     let own: Vec<BoxId> = own.iter().map(|&j| box_at(g, j)).collect();
     let mut was: Vec<f64> = Vec::new();
     for &b in &own { was.push(seam_box(g, b).flags); }
     for k in 0..own.len() { seam_box(g, own[k]).flags = with_bits(was[k], HIDE); }
-    crate::scene_collision::wrote(g);
+    crate::scene_collision::wrote_rows(g, &rows);
     let plan = wall_break_plan_of(g, at, opts, r);
     for k in 0..own.len() { seam_box(g, own[k]).flags = was[k]; }
-    crate::scene_collision::wrote(g);
+    crate::scene_collision::wrote_rows(g, &rows);
     plan.into_iter().map(as_item).collect()
 }
 

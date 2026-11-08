@@ -391,7 +391,7 @@ pub fn wall_break_rebuild(g: &mut crate::game::Game, b: WallbreakBreakableId) ->
         seam_box(g, bx).flags = flags0;
         for k in 0..g.tab.wallbreak_breakable[b].live as usize { let s = g.tab.wallbreak_breakable[b].slots[k]; let p = at(g, s); hide_box(g, p); }
         g.tab.wallbreak_breakable[b].live = 0.0;
-        wall_break_bump(g);
+        wall_break_bump_own(g, b);
         return true;
     }
     let rects = if n_open == cells { Vec::new() } else { wall_break_pieces(g, b, None) };
@@ -456,8 +456,17 @@ pub fn wall_break_rebuild(g: &mut crate::game::Game, b: WallbreakBreakableId) ->
     for k in rects.len() + studs.len()..g.tab.wallbreak_breakable[b].slots.len() { let s = g.tab.wallbreak_breakable[b].slots[k]; let p = at(g, s); hide_box(g, p); }
     g.tab.wallbreak_breakable[b].live = (rects.len() + studs.len()) as f64;
     seam_box(g, bx).flags = (js::to_i32(flags0) | js::to_i32(HIDE)) as f64;
-    wall_break_bump(g);
+    wall_break_bump_own(g, b);
     true
+}
+
+/// `wall_break_bump` for what one breakable wrote: its own static and its slots, and the rest of the level's statics are not looked at.
+fn wall_break_bump_own(g: &mut crate::game::Game, b: WallbreakBreakableId) {
+    g.engine.world.geom_serial += 1.0;
+    let r = &g.tab.wallbreak_breakable[b];
+    let mut rows = r.slots.clone();
+    rows.push(r.id);
+    crate::scene_collision::wrote_rows(g, &rows);
 }
 
 /// The picture's static tables are stale, and the boxes were written in place: say so. (WallBreak.bump)

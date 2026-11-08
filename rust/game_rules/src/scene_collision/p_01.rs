@@ -420,6 +420,11 @@ pub fn wrote(g: &mut crate::game::Game) {
     crate::scene_box_mirror::box_mirror_wrote(g);
 }
 
+/// these statics, by their places in the list, were written inside a tick: the next question pays only for them
+pub fn wrote_rows(g: &mut crate::game::Game, rows: &[f64]) {
+    crate::scene_box_mirror::box_mirror_wrote_rows(g, rows);
+}
+
 /// a question the picture asks: no sound's route kept. The query stamps it swaps in the TypeScript are the twins' scratch, and the module's here. (collision.ts StaticCollision.aside)
 pub fn aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, own: &mut crate::scene_collision::AsideOwn, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     let asked = g.col.sound.asking;

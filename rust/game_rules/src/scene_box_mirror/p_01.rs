@@ -352,6 +352,8 @@ pub fn box_mirror_open(g: &mut crate::game::Game, boxes: &[BoxId], cells: &[Vec<
     x.own = Some(leaves.to_vec());
     x.owes = false;
     x.owed = 0.0;
+    x.wrote_all = false;
+    x.wrote_rows.clear();
     x.row_lines = lines;
     x.row_rays = rays;
     x.row_circles = circles;
@@ -391,6 +393,8 @@ pub fn box_mirror_shut(g: &mut crate::game::Game) {
     x.circles = false;
     x.owes = false;
     x.owed = 0.0;
+    x.wrote_all = false;
+    x.wrote_rows.clear();
     x.own = None;
     x.walk = None;
     x.glass = None;
@@ -451,8 +455,30 @@ pub fn box_mirror_grid(g: &mut crate::game::Game, cells: &[Vec<f64>], tilted_at:
 /// Every static against its row; a row that differs (or every row, `all`) written again.   (boxMirror.ts BoxMirror.statics)
 pub fn box_mirror_statics(g: &mut crate::game::Game, boxes: &[BoxId], all: bool) {
     let n = boxes.len();
-    let s = g.sim;
     let grid = !all && g.col.mirror.grid_over;
+    let was = statics_length(g, n, grid);
+    for i in 0..n {
+        static_row(g, boxes[i], i, all || i >= was, grid);
+    }
+}
+
+/// The rows written since the last question, and the rows the list grew by: no other row is looked at.
+fn box_mirror_statics_some(g: &mut crate::game::Game, boxes: &[BoxId], rows: &[f64]) {
+    let n = boxes.len();
+    let grid = g.col.mirror.grid_over;
+    let was = statics_length(g, n, grid);
+    for &r in rows {
+        let i = r as usize;
+        if i < n && i < was { static_row(g, boxes[i], i, false, grid); }
+    }
+    for i in was..n {
+        static_row(g, boxes[i], i, true, grid);
+    }
+}
+
+/// The list is `n` long now: the rows past it let go. How long it was.
+fn statics_length(g: &mut crate::game::Game, n: usize, grid: bool) -> usize {
+    let s = g.sim;
     let was = g.col.mirror.boxes as usize;
     for i in n..was {
         let r = g.col.mirror.cut_of[i];
@@ -465,45 +491,48 @@ pub fn box_mirror_statics(g: &mut crate::game::Game, boxes: &[BoxId], all: bool)
         }
     }
     g.col.mirror.boxes = n as f64;
-    for i in 0..n {
-        let b = boxes[i];
-        let kind = kind_at_copy(g, b, i, true);
-        if !all && i < was && static_same(g, s, i, b, kind) {
-            continue;
-        }
-        if grid {
-            box_mirror_grid_dirty(g, &world_read(s).rec, (i * REC_) as f64);
-            let (c, h) = {
-                let x = seam_box(g, b);
-                (x.c, x.h)
-            };
-            let e = h[0] + h[1] + h[2];
-            sim::grid_dirty(s, c[0] - e, c[2] - e, c[0] + e, c[2] + e);
-        }
-        let mut row = g.col.mirror.cut_of[i];
-        if (kind as u32) & K_CUT_ != 0 {
-            if row < 0 {
-                let x = &mut g.col.mirror;
-                row = if let Some(r) = x.cut_free.pop() {
-                    r as i32
-                } else if x.cut_next < x.caps.cuts {
-                    x.cut_next += 1.0;
-                    (x.cut_next - 1.0) as i32
-                } else {
-                    -1
-                };
-                if row < 0 {
-                    let cap = g.col.mirror.caps.cuts;
-                    box_mirror_outgrown(g, "cut and shaped statics", cap + 1.0, cap);
-                }
-                g.col.mirror.cut_of[i] = row;
-            }
-        } else if row >= 0 {
-            g.col.mirror.cut_free.push(row as f64);
-            g.col.mirror.cut_of[i] = -1;
-        }
-        static_put(g, s, i, b, kind, row as f64);
+    was
+}
+
+/// One static against its row, and written again if it differs or `fresh`.
+fn static_row(g: &mut crate::game::Game, b: BoxId, i: usize, fresh: bool, grid: bool) {
+    let s = g.sim;
+    let kind = kind_at_copy(g, b, i, true);
+    if !fresh && static_same(g, s, i, b, kind) {
+        return;
     }
+    if grid {
+        box_mirror_grid_dirty(g, &world_read(s).rec, (i * REC_) as f64);
+        let (c, h) = {
+            let x = seam_box(g, b);
+            (x.c, x.h)
+        };
+        let e = h[0] + h[1] + h[2];
+        sim::grid_dirty(s, c[0] - e, c[2] - e, c[0] + e, c[2] + e);
+    }
+    let mut row = g.col.mirror.cut_of[i];
+    if (kind as u32) & K_CUT_ != 0 {
+        if row < 0 {
+            let x = &mut g.col.mirror;
+            row = if let Some(r) = x.cut_free.pop() {
+                r as i32
+            } else if x.cut_next < x.caps.cuts {
+                x.cut_next += 1.0;
+                (x.cut_next - 1.0) as i32
+            } else {
+                -1
+            };
+            if row < 0 {
+                let cap = g.col.mirror.caps.cuts;
+                box_mirror_outgrown(g, "cut and shaped statics", cap + 1.0, cap);
+            }
+            g.col.mirror.cut_of[i] = row;
+        }
+    } else if row >= 0 {
+        g.col.mirror.cut_free.push(row as f64);
+        g.col.mirror.cut_of[i] = -1;
+    }
+    static_put(g, s, i, b, kind, row as f64);
 }
 
 /// The plan's rectangle round row `o` as the module has it, said to the smoke's grid.   (boxMirror.ts BoxMirror.gridDirty)
@@ -526,9 +555,18 @@ pub fn box_mirror_grid_drop(g: &mut crate::game::Game) {
     g.col.mirror.grid_over = false;
 }
 
-/// A static was written inside the tick: the next question compares them again.   (boxMirror.ts BoxMirror.wrote)
+/// A static was written inside the tick and the writer cannot say which: the next question compares them all.   (boxMirror.ts BoxMirror.wrote)
 pub fn box_mirror_wrote(g: &mut crate::game::Game) {
     if g.col.mirror.live {
+        g.col.mirror.wrote_all = true;
+        box_mirror_debt(g, OWE_BOXES);
+    }
+}
+
+/// These statics, by their places in the list, were written inside the tick: the next question pays only for them.
+pub fn box_mirror_wrote_rows(g: &mut crate::game::Game, rows: &[f64]) {
+    if g.col.mirror.live {
+        g.col.mirror.wrote_rows.extend_from_slice(rows);
         box_mirror_debt(g, OWE_BOXES);
     }
 }
@@ -589,6 +627,8 @@ pub fn box_mirror_again(g: &mut crate::game::Game, boxes: &[BoxId], walk: Option
     let owed = (g.col.mirror.owed as u32) | (if g.col.mirror.glass_busy > 0.0 { OWE_GLASS_ } else { 0 });
     g.col.mirror.owes = false;
     g.col.mirror.owed = 0.0;
+    let all = core::mem::take(&mut g.col.mirror.wrote_all);
+    let rows = core::mem::take(&mut g.col.mirror.wrote_rows);
     if !g.col.mirror.live {
         return;
     }
@@ -607,7 +647,7 @@ pub fn box_mirror_again(g: &mut crate::game::Game, boxes: &[BoxId], walk: Option
             g.col.cells = cells;
             g.col.tilted_at = tilted;
         }
-        box_mirror_statics(g, boxes, false);
+        if all { box_mirror_statics(g, boxes, false); } else { box_mirror_statics_some(g, boxes, &rows); }
         sim::world_shape(g.sim, w as u32, h as u32, cs, boxes.len() as u32, g.col.mirror.n_tilted as u32);
     }
     if owed & OWE_GLASS_ != 0 {
@@ -628,7 +668,7 @@ pub fn box_mirror_again(g: &mut crate::game::Game, boxes: &[BoxId], walk: Option
 /// The grid was written: the same debt, and the compare that pays it copies the cells again first.   (boxMirror.ts BoxMirror.wroteGrid)
 pub fn box_mirror_wrote_grid(g: &mut crate::game::Game) {
     g.col.mirror.cells_wrote = true;
-    box_mirror_wrote(g);
+    box_mirror_wrote_rows(g, &[]);   // (the list's own new rows, or the ones it lost: the compare finds them by its length)
 }
 
 /// The panes' rows for the copy's lines and rays: they stand in the game's block, the rule's own; nothing is copied. With no glass hung, no row stands.   (boxMirror.ts BoxMirror.panes)

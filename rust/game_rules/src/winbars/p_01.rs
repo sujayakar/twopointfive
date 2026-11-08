@@ -85,7 +85,7 @@ pub fn bar_meet(g: &mut crate::game::Game, index: f64, t: f64, at: V3, dir: V3) 
     let flags = seam_box(g, b).flags;
     let m = BarMet { index, t, at, dir, flags };
     seam_box(g, b).flags = bor(flags, HIDE);
-    crate::scene_collision::wrote(g);
+    crate::scene_collision::wrote_rows(g, &[index]);
     state_of(g).met.push(m);
     m
 }
@@ -100,7 +100,8 @@ pub fn bars_unmeet(g: &mut crate::game::Game) {
         let b = box_at(g, m.index);
         seam_box(g, b).flags = m.flags;
     }
-    crate::scene_collision::wrote(g);
+    let rows: Vec<f64> = met.iter().map(|m| m.index).collect();
+    crate::scene_collision::wrote_rows(g, &rows);
     state_of(g).met.clear();
 }
 
@@ -112,7 +113,8 @@ pub fn bars_settle(g: &mut crate::game::Game, met: &[crate::winbars::BarMet], t_
         let b = box_at(g, m.index);
         seam_box(g, b).flags = m.flags;
     }
-    crate::scene_collision::wrote(g);
+    let rows: Vec<f64> = met.iter().map(|m| m.index).collect();
+    crate::scene_collision::wrote_rows(g, &rows);
     for m in met {
         if m.t > t_hit + 1e-6 {
             g.stats.winbars.spared += 1;

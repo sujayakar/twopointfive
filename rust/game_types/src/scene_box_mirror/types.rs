@@ -200,6 +200,10 @@ pub struct BoxMirror {
     pub copy: f64,
     pub grid_over: bool,
     pub cells_wrote: bool,
+    /// a static was written and its writer cannot say which: the next question compares them all
+    pub wrote_all: bool,
+    /// the statics written since the last question, by their places in the list: the next question looks at these and no other
+    pub wrote_rows: Vec<f64>,
     pub grid_of: Option<crate::scene_box_mirror::BoxMirrorGridOf>,
     pub used: f64,
     pub caps: crate::scene_box_mirror::BoxMirrorCaps,
@@ -261,6 +265,8 @@ impl BoxMirror {
             copy: 0.0,
             grid_over: false,
             cells_wrote: true,
+            wrote_all: false,
+            wrote_rows: Vec::new(),
             grid_of: None,
             used: 0.0,
             caps: crate::scene_box_mirror::BoxMirrorCaps { boxes: 0.0, leaves: 0.0, cuts: 0.0, panes: 0.0, cells: 0.0, items: 0.0, tilted: 0.0, things: 0.0, glass: 0.0, view: 0.0 },
