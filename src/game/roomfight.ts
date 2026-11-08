@@ -601,12 +601,12 @@ export class RoomFight {
   private tickMove(D: Def, dt: number): void { return goneWithTick('RoomFight.tickMove') as any; }
 
   /** a friend — Sam, or another living operative — within a body's breadth of the line from → to (and a metre past it), wider for one on the move */
-  friendInLine(from: Vec3, to: Vec3, self: Guard, samStill = false): 'player' | Guard | null {   // (samStill: asked AS IF the player stood still where he is — clearline.ts's question, never the fire gate's)
+  friendInLine(from: Vec3, to: Vec3, self: Guard): 'player' | Guard | null {
     const g = this.g; const dx = to[0] - from[0], dz = to[2] - from[2]; const L2 = dx * dx + dz * dz; if (L2 < 0.0025) return null;
     const L = Math.sqrt(L2), tMax = 1 + 1.0 / L;
     const hit = (ch: Character, mate: boolean): boolean => {
       const h = ch.bones.hips ?? ch.pos; const tr = ((h[0] - from[0]) * dx + (h[2] - from[2]) * dz) / L2, t = clamp(tr, 0, tMax);
-      const sam = !mate && !!manOf(g, ch), pace = samStill && sam ? 0 : Math.hypot(ch.vel[0], ch.vel[2]), wide = 0.45 + Math.min(0.5, 0.3 * (ROOMFIGHT.samTravel && sam ? Math.min(pace, this.samSpeedOf(ch)) : pace)), clear = mate ? closeLane(wide, tr, L) : ROOMFIGHT.samBehind && tr > 1 ? Math.min(wide, 0.3 + 0.2 * (tr - 1) * L) : ROOMFIGHT.samBeside ? (tr <= 0 ? 0 : Math.min(wide, 0.3 + tr * L)) : wide;   // (the narrow lane at arm's length is between the team's own men: the player BETWEEN a gun and its man is owed the whole lane, always — standing PAST the man he is owed his own body's breadth and a fifth of how far past, samBehind)
+      const sam = !mate && !!manOf(g, ch), pace = Math.hypot(ch.vel[0], ch.vel[2]), wide = 0.45 + Math.min(0.5, 0.3 * (ROOMFIGHT.samTravel && sam ? Math.min(pace, this.samSpeedOf(ch)) : pace)), clear = mate ? closeLane(wide, tr, L) : ROOMFIGHT.samBehind && tr > 1 ? Math.min(wide, 0.3 + 0.2 * (tr - 1) * L) : ROOMFIGHT.samBeside ? (tr <= 0 ? 0 : Math.min(wide, 0.3 + tr * L)) : wide;   // (the narrow lane at arm's length is between the team's own men: the player BETWEEN a gun and its man is owed the whole lane, always — standing PAST the man he is owed his own body's breadth and a fifth of how far past, samBehind)
       return Math.hypot(from[0] + dx * t - h[0], from[2] + dz * t - h[2]) < clear;
     };
     for (const pl of men(g)) if (!pl.down && hit(pl.char, false)) return 'player';
