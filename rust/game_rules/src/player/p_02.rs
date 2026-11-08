@@ -286,14 +286,14 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     g.pl[pl].equip_t = m::max(0.0, g.pl[pl].equip_t - dt);
     g.pl[pl].noise *= m::exp(-2.2 * dt);
     crate::samstun::sam_stun_pose(g);
-    if g.pl[pl].holding.is_some() && crate::samstun::sam_staggered(g, None) { free_held(g, crate::player::FreeHeldWhy::Shot); }
+    if g.pl[pl].holding.is_some() && crate::samstun::sam_staggered(g, &crate::seats::here(g), None) { free_held(g, crate::player::FreeHeldWhy::Shot); }
     crate::whistle::whistle_key(g, input);
     crate::gunwall::gun_wall_stance(g, c, false);
     crate::gunwall::gun_wall_pose(g, c);
     let beat_has_him = g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some() || g.pl[pl].coding.is_some();
     if g.pl[pl].wanding.is_some() { nv_key(g, Some(input), dt); }
     else if beat_has_him { nv_key(g, None, dt); }
-    if beat_has_him || g.pl[pl].holding.is_some() || crate::handwork::sam_work(g).is_some() || crate::samstun::sam_staggered(g, None) { g.pl[pl].kit_owed = -1.0; }
+    if beat_has_him || g.pl[pl].holding.is_some() || crate::handwork::sam_work(g).is_some() || crate::samstun::sam_staggered(g, &crate::seats::here(g), None) { g.pl[pl].kit_owed = -1.0; }
     if g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some() || g.pl[pl].coding.is_some() { crate::kitanim::kit_tick(g, None); }
     if g.pl[pl].takedown.is_some() {
         update_takedown(g, dt);
@@ -454,8 +454,8 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         }
     }
     if g.pl[pl].dragging.is_none() && (g.pl[pl].haul.is_some() || g.ch[c].anim.haul.is_some()) { g.pl[pl].haul = None; g.ch[c].anim.haul = None; }
-    let stunned = crate::samstun::sam_staggered(g, None);
-    let rooted = crate::samstun::sam_rooted(g, None);
+    let stunned = crate::samstun::sam_staggered(g, &crate::seats::here(g), None);
+    let rooted = crate::samstun::sam_rooted(g, &crate::seats::here(g), None);
     let own_move = !rooted && (mx != 0.0 || mz != 0.0);
     let mut hands_walk = false;
     {
@@ -502,7 +502,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     g.pl[pl].aim_held = false;
     let gun_up = crate::game::player_pistol_up(g, pl);
     let rifle_up = crate::game::player_rifle_up(g, pl);
-    let aiming = gun_raised(g, pl, None, None) && !g.pl[pl].sprinting && g.pl[pl].dragging.is_none() && !crate::hands::door_move_lowers(g)
+    let aiming = gun_raised(g, pl, None, None) && !g.pl[pl].sprinting && g.pl[pl].dragging.is_none() && !crate::hands::door_move_lowers(g, &crate::seats::here(g))
         && !(g.pl[pl].wall.map_or(false, |w| w.kind == Some(crate::player::WallHoldKind::Stack)) && !stack_up(g, dt, input));
     if let Some(dragged) = g.pl[pl].dragging {
         // dragging: the ragdoll's ankles pinned at his hands, facing its hips; torn out of his hands if it wedges

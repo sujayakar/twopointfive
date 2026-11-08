@@ -45,7 +45,7 @@ pub fn door_man(g: &mut Game, who: f64) -> f64 {
     if let Some(seat) = crate::seats::view_of_id(g, who) {
         // a player's man: over his own seat's view
         let (folded, until) = crate::seats::with_seat(g, seat, &mut |g: &mut Game| {
-            (crate::samstun::sam_staggered(g, None), g.pl[g.player].stagger_until)
+            (crate::samstun::sam_staggered(g, &crate::seats::here(g), None), g.pl[g.player].stagger_until)
         });
         let braced = if g.puppet.is_some() {
             braced_bit | held_bit

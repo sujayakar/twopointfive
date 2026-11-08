@@ -587,10 +587,10 @@ pub fn work_things_note(g: &mut crate::game::Game, gd: GuardId, what: &str) {
 }
 
 /// One line for a probe. (workthings.ts WorkThings.summary)
-pub fn work_things_summary(g: &crate::game::Game) -> String {
+pub fn work_things_summary(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> String {
     let th = work_things_things(g, &crate::seats::here(g));
     let mut n = 0;
-    for gd in g.work.jobs.keys() {
+    for gd in seat.work.jobs.keys() {
         if work_things_working(g, &crate::seats::here(g), gd) { n += 1; }
     }
     let parts: Vec<String> = th.iter().map(|x| format!("{}{}", x.name, if x.stand.is_some() { "" } else { " (no place to stand)" })).collect();

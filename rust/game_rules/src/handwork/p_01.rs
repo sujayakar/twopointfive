@@ -194,7 +194,7 @@ pub fn sam_work(g: &mut crate::game::Game) -> Option<crate::handwork::SamWork> {
     }
     if let Some(j) = crate::wallcharge::wall_charge_sam_job(g) { return Some(SamWork { kind: SamWorkKind::Wall, p: j.p, n: j.n, at: Some(j.at) }); }
     if let Some(d) = crate::doortools::door_tools_sam_job(g, &crate::seats::here(g)) { return Some(SamWork { kind: SamWorkKind::Door, p: d.p, n: d.n, at: Some(d.at) }); }
-    if let Some(s) = crate::lightswitch::switch_hand(g) { return Some(SamWork { kind: SamWorkKind::Switch, p: s.p, n: s.n, at: None }); }
+    if let Some(s) = crate::lightswitch::switch_hand(g, &crate::seats::here(g)) { return Some(SamWork { kind: SamWorkKind::Switch, p: s.p, n: s.n, at: None }); }
     None
 }
 
@@ -219,7 +219,7 @@ pub fn breaker_tick(g: &mut crate::game::Game, dt: f64) {
         || g.pl[pl].holding.is_some()
         || g.pl[pl].takedown.is_some()
         || g.pl[pl].dragging.is_some()
-        || crate::samstun::sam_staggered(g, None)
+        || crate::samstun::sam_staggered(g, &crate::seats::here(g), None)
         || v3::dist_xz(bp, g.ch[c].pos) > 1.6
         || (crate::sim_lightshome::mains_active(g) && crate::sim_lightshome::mains_permanent(g))
     {

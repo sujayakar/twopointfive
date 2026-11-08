@@ -106,7 +106,7 @@ fn set_flag_true(g: &mut Game, r: DirectorRunId, n: &str) {
 /// `q.inside(v, who)` of a volume the frame or the vars hold
 fn inside(g: &mut Game, r: DirectorRunId, v: &Option<crate::director::VolumeRef>, who: crate::director::DirectorInsideVolumeWho) -> bool {
     let id = &v.as_ref().unwrap().id;
-    crate::director::director_inside_volume(g, r, id, &who)
+    crate::director::director_inside_volume(g, &crate::seats::here(g), r, id, &who)
 }
 
 /// `yield c.wait(secs)`'s condition

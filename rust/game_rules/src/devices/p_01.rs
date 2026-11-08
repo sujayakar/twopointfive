@@ -511,10 +511,10 @@ pub fn pad_door_name(g: &crate::game::Game, k: &crate::devices::KeypadRt) -> Str
     if name == "server_manager" { String::from("side door") } else { format!("{} door", name.replace('_', " ")) }
 }
 /// Is `d` a keypad door locked against the player where he stands, and does he know its code.   (devices.ts padState)
-pub fn pad_state(g: &crate::game::Game, d: DoorId, from: V3) -> Option<crate::devices::PadState> {
+pub fn pad_state(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, from: V3) -> Option<crate::devices::PadState> {
     let pad = devices_pad_of(g, d)?;
     if !crate::doors::doors_locked_out(g, d, from, None) { return None; }
-    let pl = g.player;
+    let pl = seat.player;
     let known = g.pl[pl].codes.has(g.dr[d].lock_id.clone());
     Some(PadState { pad, known })
 }
@@ -522,7 +522,7 @@ pub fn pad_state(g: &crate::game::Game, d: DoorId, from: V3) -> Option<crate::de
 pub fn start_coding(g: &mut crate::game::Game, d: DoorId) -> bool {
     let pl = g.player;
     let here = g.ch[g.pl[pl].ch].pos;
-    let st = pad_state(g, d, here);
+    let st = pad_state(g, &crate::seats::here(g), d, here);
     let p = &mut g.pl[pl];
     match st {
         Some(s) if s.known && p.coding.is_none() && !p.down => {}

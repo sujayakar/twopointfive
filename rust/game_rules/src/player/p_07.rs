@@ -294,7 +294,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             let mut it = mark(crate::game::InteractableKind::Door, dp, String::new(), String::from(if reach { "" } else { "step closer" }), reach, false);
             it.door = Some(d);
             let mut verbs: Vec<crate::game::Interactable> = Vec::new();
-            let pad = crate::devices::pad_state(g, d, p);
+            let pad = crate::devices::pad_state(g, &crate::seats::here(g), d, p);
             if let Some(pad) = pad {
                 it.line1 = if g.pl[pl].coding == Some(d) {
                     String::from("door · keypad · keying it in")
@@ -396,7 +396,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
                 let far = if can && !reach && g.pl[pl].holding.is_none() { crate::bigkit::sam_big_far(g, d, p) } else { None };
                 let tool = match far {
                     Some(t) => Some(t == crate::bigkit::SamBigFar::Shotgun),
-                    None => if reach && can { crate::bigkit::sam_big(g, d, Some(p)).map(|t| t == crate::bigkit::SamBig::Shotgun) } else { None },
+                    None => if reach && can { crate::bigkit::sam_big(g, &crate::seats::here(g), d, Some(p)).map(|t| t == crate::bigkit::SamBig::Shotgun) } else { None },
                 };
                 if far.is_some() { it.in_reach = true; }
                 if let Some(shotgun) = tool {
