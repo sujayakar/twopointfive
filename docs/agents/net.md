@@ -31,6 +31,10 @@ line).
     `NET_BREAK=1` fails). READ in Chromium in software against `tools/mp/server.ts` and a bot: 69 of 69 words of the whole game over 2,078 ticks. A player's picked name stands over the game's own word for his seat on
     the cards (`host/myname.ts shownAs`). Not seen on
     a GPU, nor played by two.
+  - **The page check is the new page's** (`tools/qa/mpclient-page.cjs`, 2026-11-08; `lobby-page.cjs` too): moved, ready, same fight, every part, its own man, ahead (a drawn frame has him where the look has
+    him), sleeps, the debugger's Network page (on this page since then: `host/debugger.ts`). Three and a half minutes on the 4 core box, one seat and `--seats 2`. FOUND BY IT: on the SECOND player's page two parts
+    are not the server's, the state word holding throughout: `weather` (its `cam_yaw`, the shown seat's, which pans a thunder) and `tab.frame_boxes` (a tracer's and a beam's width in the shown view's pixels).
+    Both are a host's own in the game's record; `every part` with `--seats 2` is red until they leave it.
   - NOT DONE: Host game through the control plane with this setup; a kit the host keeps rides `commands`
     already (machineBefore's own), nobody sends one yet.
 - **CO-OP IS ON THE RUST GAME** (2026-11-07). The TypeScript tick is deleted; the game server, the scripted clients and the page in a game step the Rust
