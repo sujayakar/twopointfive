@@ -86,7 +86,7 @@
 //      behind every teammate's back is not drawn, a leaf that moves behind them is remembered where it stood, the floor there is dimmed — the picture shows which
 //      flanks the team is watching. In the picture the wedge's edge comes in over FOG.coneSoftDeg (and the near field's over FOG.coneNearSoftM); the men are in
 //      or out on the cone's own line. Standard never raises the row: every eye all round, as it was.
-//   6b. ONLY THE PLAYER'S OWN EYES (FOG.own — an OPTION, off; the Tab row is kept per machine (teamfeel.ts), ?fogown / ?fogown=0 for a visit; his next lines:
+//   6b. ONLY THE PLAYER'S OWN EYES (FOG.own — an OPTION, off; ?fogown / ?fogown=0 for a visit; his next lines:
 //      'and maybe you should only see what your character does, not even your teammates' · 'we can make it an option and see how it feels'): the teammates are
 //      no eyes — what they see and he does not is out of the picture. On any level of difficulty (with the cone: his own cone alone; without: all round him
 //      alone). Hard ships with the team's eyes shared (the picture then shows the flanks nobody watches, which is the Door Kickers read).
@@ -157,7 +157,7 @@ export const FOG = {
   /** … and over this many metres outward from the near field's rim */
   coneNearSoftM: 0.6,
   /** ONLY THE PLAYER'S OWN EYES lift the fog: the teammates are no eyes (false = the team's sight is shared, as it was). An option on any level of difficulty:
-   *  the Tab row is kept per machine (teamfeel.ts), ?fogown / ?fogown=0 for a visit */
+   *  ?fogown / ?fogown=0 for a visit */
   own: false,
   /** THE TEAM CALLS WHAT THE CONE HIDES (only while `cone` or `own` is up): a teammate with eyes on an enemy the player's own eye has not, or with a step in his
    *  ears from a man nobody sees, says where — a bubble over him and a row on the radio strip. false = nobody says anything */
@@ -337,7 +337,7 @@ export const FOG_EYES_ON = 7, FOG_EYES_WAS = 5;
 /** FOG.eyes as the count the game uses, the one clamp the list, the address and the checks share: from five (as it was) to the room the renderer has
  *  (render/fogofwar.ts FOG_EYES); a row that is no number is five */
 export function fogEyeCount(v: number): number { return Number.isNaN(v) ? FOG_EYES_WAS : Math.max(FOG_EYES_WAS, Math.min(FOG_EYES, Math.floor(v))); }
-/** ?fogown / ?fogown=0 · ?fogcalls=0 — the two options for a visit, over the kept rows (the Game's constructor, right after teamfeel.ts has read those back;
+/** ?fogown / ?fogown=0 · ?fogcalls=0 — the two options for a visit, (the Game's constructor;
  *  no page — the harness — nothing) */
 export function fogFlags() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('fogFlags', undefined, []); if (__r !== RUST_PASS) return __r as any; } } try { const q = new URLSearchParams(location.search); if (q.has('fogown')) FOG.own = q.get('fogown') !== '0'; if (q.has('fogcalls')) FOG.calls = q.get('fogcalls') !== '0';
   if (q.has('fogflat')) { const v = parseFloat(q.get('fogflat') ?? ''); FOG.flat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_FLAT_ON; } if (q.has('foglit')) { const v = parseFloat(q.get('foglit') ?? ''); FOG.lit = Number.isFinite(v) ? Math.min(4, Math.max(0, v)) : FOG_LIT_ON; } if (q.has('fogfull')) FOG.full = q.get('fogfull') !== '0'; if (q.has('fogair')) FOG.air = q.get('fogair') !== '0'; if (q.has('fogours')) FOG.ours = q.get('fogours') !== '0'; if (q.has('fogthin')) FOG.thin = q.get('fogthin') !== '0'; if (q.has('fogkept')) FOG.kept = q.get('fogkept') !== '0'; if (q.has('fogfiled')) FOG.filed = q.get('fogfiled') !== '0'; if (q.has('fogtracks')) FOG.tracks = q.get('fogtracks') !== '0'; if (q.has('fogmates')) FOG.mates = q.get('fogmates') !== '0'; if (q.has('fogeyes')) { const v = parseInt(q.get('fogeyes') ?? '', 10); FOG.eyes = v === 0 ? FOG_EYES_WAS : !Number.isFinite(v) || v === 1 ? FOG_EYES_ON : fogEyeCount(v); } if (q.has('fogdesat')) { const v = parseFloat(q.get('fogdesat') ?? ''); FOG.desat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_DESAT_WAS; } if (q.has('fogedge')) { const v = parseFloat(q.get('fogedge') ?? ''); FOG.edge = Number.isFinite(v) ? Math.min(1.5, Math.max(0, v)) : FOG_EDGE_ON; } if (q.has('fogthings')) FOG.things = q.get('fogthings') !== '0'; if (q.has('squaddoors')) FOG.squadDoors = q.get('squaddoors') !== '0'; if (q.has('squadfire')) FOG.squadFire = q.get('squadfire') !== '0'; if (q.has('fogdesat')) FOG_PAGE.desat = FOG.desat; if (q.has('fogedge')) FOG_PAGE.edge = FOG.edge; if (q.has('fogair')) FOG_PAGE.air = FOG.air; if (q.has('fogkept')) FOG_PAGE.kept = FOG.kept; } catch { /* no page */ } }
@@ -757,8 +757,6 @@ export class FogOfWar {
   doorHeld(d: Door): boolean { const r = this.doorRecs.get(d); return !!r && this.active && FOG.doors && Math.abs(d.angle - r.shown) > DOOR_EPS; }
   /** the angle the picture has this door at */
   doorShown(d: Door): number { const r = this.doorRecs.get(d); return r && this.active && FOG.doors ? r.shown : d.angle; }
-  /** the door a box in the picture's list is the remembered leaf of (the order menu's cursor: a leaf as drawn is that door), or null */
-  doorOfBox(box: Box): Door | null { for (const [d, r] of this.doorRecs) if (r.ghost && r.ghost[0] === box) return d; return null; }
 
   // ---------------------------------------------------------------- 4f · the fog lit as the team last knew it
   /** HAS THE TEAM A LOOK AT FIXTURE t this frame: an eye has the floor under it (the mask's own test), or — inside its field — a line to the fixture itself (a

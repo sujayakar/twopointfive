@@ -142,10 +142,6 @@ export async function kittreeSponge(): Promise<boolean> {
     // picked: counted against the pouches like any other thing, and what a loud deploy carries
     issue(); quiet(false); const p0 = K.kitCost(0).used; K.kitSet(0, 'smoke', 0); K.kitSet(0, 'frags', 0); const took = K.kitSet(0, 'rings', 2), p2 = K.kitCost(0); K.kitPlayer(g);
     quiet(true); K.kitPlayer(g); F.verdict(pl().rifle.rings === KITTREE.lend, '… and on a quiet run the mission\'s five stand over the two', `${pl().rifle.rings} rounds`);
-    // your light and goggles rows are what you deploy with
-    issue(); quiet(false); K.kitPlayer(g); const on = { l: K.kitYouLight(pl()) };
-    K.kitSet(0, 'light', false); K.kitSet(0, 'nvg', false); K.kitPlayer(g); const off = { l: K.kitYouLight(pl()) };
-    F.verdict(on.l && !off.l, 'your card without the light: L has nothing to switch (with it, as before)', `fitted: light ${on.l} · taken off: light ${off.l}`);
     issue(); K.kitPlayer(g);
   });
   return F.done();

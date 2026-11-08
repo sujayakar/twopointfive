@@ -229,7 +229,6 @@ if (import.meta.main && pinned('PT_POP')) EVICT.on = process.env.PT_POP === '1';
 if (process.env.PT_FURN === '0') FURNBLAST.on = false;   // PT_FURN=0 (with PT_DESTR=1): charges leave the furniture standing (the page's ?nofurnblast) — the A/B of game/furnblast.ts
 if (process.env.PT_STUNLIGHTS === 'old') { const L = (await import(`${ROOT}/src/game/destruction.ts`)).CHAOS.loud; L.stunFixtureM = L.fixtureBlastM; L.stunPanels = true; }   // PT_STUNLIGHTS=old: a stun charge puts the lights out like a blast again (destruction.ts CHAOS.loud.stunFixtureM / stunPanels at their old values) — the build before that rule, by digest
 const { installDustStandin } = await import('./dust-standin.ts');
-const { feelTables } = await import(`${ROOT}/src/game/teamfeel.ts`);
 const { openFloor } = await import(`${ROOT}/src/game/doortools.ts`);
 const { knobRegistry, knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);   // THE list of knob tables: what --set reaches and what a run puts back
 const { DOORSTAY } = await import(`${ROOT}/src/game/doors.ts`);   // (doors stay where they are left: --set '{"DOORSTAY":{"on":false}}' = every leaf with its closer, as before the switch)
@@ -606,7 +605,7 @@ class Tally {
   private lastOf(m: any): EntryRec | null { for (let i = this.entries.length - 1; i >= 0; i--) if (this.entries[i].men0.includes(m)) return this.entries[i]; return null; }
   private heldOf(op: any): number | undefined { for (const b of op.beats) { const m = /^held ([\d.]+) s/.exec(b.what); if (m) return parseFloat(m[1]); } return undefined; }
   tick(team: any[], hostiles: any[]) {
-    const g = this.g, D = g.doorTools, t = g.time, nav = g.col.nav, K = feelTables().DOORTOOLS;
+    const g = this.g, D = g.doorTools, t = g.time, nav = g.col.nav, K = knobRegistry().DOORTOOLS;
     // a door order begun
     for (const op of D.ops) { if (this.seen.has(op)) continue; this.seen.add(op);
       const d = op.door, th = d.def.closedDir, c = d.frameCentre, b = -op.side * 1.2, inPt: Vec3 = [c[0] - Math.sin(th) * b, 0, c[2] + Math.cos(th) * b];
@@ -941,7 +940,7 @@ function followUp(P: Player, d: any) {
   P.wait(REACT); op = mine();
   if (!op) { P.say(`(the hold on ${d.def.name} ended before he spoke)`); P.told.push('ended first'); return; }
   if (op.phase !== 'thr') { P.say(`(nothing to tell ${d.def.name}: the order is at '${op.phase}', not holding on the jambs)`); P.told.push('not holding'); return; }
-  const K = feelTables().DOORTOOLS, SR = op.search; let unseen = Infinity;
+  const K = knobRegistry().DOORTOOLS, SR = op.search; let unseen = Infinity;
   if (SR) { unseen = 0; for (let i = 0; i < SR.pts.length; i++) if (!SR.looked[i] && !op.thr.banged?.[i]) unseen++; }
   const t = P.O.targetAt(d.frameCentre); let what: 'bang' | 'step' = TELL === 'bang' || TELL === 'step' ? TELL : unseen >= K.thrPocket ? 'bang' : 'step';
   let why = P.D.thresholdThen(what, P.up, t); P.orders++;

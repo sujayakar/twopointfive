@@ -50,10 +50,74 @@
  {
   "path": "Frame ▸ Quality & resolution",
   "kind": "toggle",
+  "label": "fixed 60 Hz game step",
+  "title": "the game stepped in whole 1/60 s ticks whatever the display's rate (host/loop.ts FIXEDSTEP; ON in the page, ?fixedstep=0 = off): the same simulation on a 60, a 120 and a 144 Hz display — groundwork for two-player co-op. Off = one update a frame on the frame's own time, as before. A script's __runFrames always names its own dt",
+  "def": true,
+  "extra": ""
+ },
+ {
+  "path": "Frame ▸ Quality & resolution",
+  "kind": "toggle",
+  "label": "draw between ticks",
+  "title": "with the fixed step: a frame that falls between two game ticks is drawn at the blend of them (host/tween.ts TWEEN; ON in the page, ?tween=0 = off) — doors, props, debris, what the men carry, the men, carried lights and the camera (it steps with the tick too); sparks, tracers and laser lines are drawn as the last tick left them. The picture stands a constant part of a tick behind the game: none on a 60 Hz display, half a tick at 120 Hz, never more than one. Off = every frame draws the last tick: off 60 Hz the men and the camera move at 60 a second whatever the display draws",
+  "def": true,
+  "extra": ""
+ },
+ {
+  "path": "Frame ▸ Quality & resolution",
+  "kind": "toggle",
   "label": "ladder: climb on GPU headroom",
   "title": "with adaptive resolution on: over 1-s windows in which the frame rate held the display rate AND the compute passes' GPU UNION stayed under 60 % of a 60-fps budget, three windows running, the ladder takes ONE step up — the render scale by 0.05 past the tier's start up to 0.95 (1.0 with sharp direct off), then (union under 65 %) the gather ⅓ → ½ res, then the volumetrics ¼ → ½ — at most one climb per 4 s; a window over 80 % of the budget or under 55 fps with a climb standing undoes the newest step at once and holds that rung off for a minute. Under auto a cheaper preset goes up a PRESET first; the climb spends what is left at the top. Needs GPU timestamp queries (it never acts without). Off = the ladder exactly as it was",
   "def": false,
   "extra": ""
+ },
+ {
+  "path": "Frame ▸ Quality & resolution",
+  "kind": "select",
+  "label": "ladder: frame rate to hold",
+  "title": "the ONE target the quality ladder works to (also ?aim=asnow|60|90|120|display, ?aim=0 = asnow; needs adaptive resolution on). AS NOW: aims at a 60 Hz budget, spends GPU headroom on resolution and cuts only under 45 fps. HOLD N: the same climb against N's own GPU budget, but two 1-s windows under N (or the GPU over its band) cut the resolution straight to what the cost model says holds N — then the preset under auto — and pixels come back only on measured headroom. Never aims past the rate this display has been seen to show; a page paced by something other than the GPU is left alone. Trades resolution for frame rate. HOLD 60 is the default; AS NOW = the ladder before the aim",
+  "def": false,
+  "extra": "as now / hold 60 / hold 90 / hold 120 / hold the display rate"
+ },
+ {
+  "path": "Frame ▸ Quality & resolution",
+  "kind": "text",
+  "label": "",
+  "title": "",
+  "def": false,
+  "extra": "aim ▸ hold 0 fps (display seen at 0 Hz) · gpu ∪ budget 0 ms "
+ },
+ {
+  "path": "Frame ▸ Quality & resolution",
+  "kind": "toggle",
+  "label": "ladder: leave a paced page alone",
+  "title": "AS NOW only (also ?ladderpaced=0). A page something else holds to a low frame rate — the browser's energy saver, a power mode, a slow display — is not helped by fewer pixels. ON: a slow frame more than twice its GPU work is never cut; a cut that bought no frame rate is taken straight back (preset too); and a resolution left low is given back as far as it provably costs nothing. OFF = the rule as it was: any slow page with the GPU union over 11 ms is cut, down to the floor.",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Frame ▸ Quality & resolution",
+  "kind": "toggle",
+  "label": "ladder: an aim leaves a held page alone",
+  "title": "UNDER AN AIM (hold 60 and up; also ?ladderheld=0). The same check as the row above, for the default ladder: on a page the browser holds to a low frame rate (energy saver on a low battery) the GPU clocks down and reads long, and fewer pixels buy no frame rate. ON: a slow frame far longer than its GPU work takes a test cut; if the frame is no shorter there the pixels come straight back and that rate is remembered as the page's pace (if it is shorter, the cut was real and stays). At the pace nothing is cut for the size of the GPU time and a resolution left low comes back a step at a time, each step checked. The pace is tested again every couple of minutes (a few seconds low). OFF = an aim as it was.",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Frame ▸ Quality & resolution",
+  "kind": "toggle",
+  "label": "ladder: auto drops sharp direct before pixels",
+  "title": "AUTO only (also ?laddershed=0). Sharp direct draws the geometry, the direct light and the composite at the full output size, so its cost does not shrink when the resolution does. ON: where auto would cut the resolution under the preset's own, or give the preset up, it turns sharp direct off first and the picture keeps its size; it stays off across auto's preset changes and comes back when the GPU time priced with it fits again (no sooner than a minute, longer each time it has to go again). OFF = the ladder as it was. A pinned preset keeps sharp direct either way.",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Frame ▸ Quality & resolution",
+  "kind": "text",
+  "label": "",
+  "title": "",
+  "def": false,
+  "extra": "shed ▸ sharp direct off · not back for 0 s · it cost 0 ms he"
  },
  {
   "path": "Frame ▸ Quality & resolution",
@@ -384,6 +448,41 @@
   "extra": ""
  },
  {
+  "path": "Frame ▸ Hour",
+  "kind": "select",
+  "label": "hour",
+  "title": "the level at another hour: a sun in the moon's place, the sky, haze and exposure of that hour, the outside lamps on a photocell (out at midday and under overcast), the night's storm held off. Night = the level exactly as it was made. The same pick as ?hour= and the mission sheet's Hour row; the AI's light meter reads the same sun and sky.",
+  "def": false,
+  "extra": "Dawn / Midday / Grey day / Dusk / Night"
+ },
+ {
+  "path": "Frame ▸ Hour",
+  "kind": "slider",
+  "label": "sun strength",
+  "min": 0,
+  "max": 1,
+  "step": 0.05,
+  "title": "the hour's sun at this share of its own strength (1) — the one number a cloud dims: the picture's light and the light meter's stand-in read the same value. Moved by hand it STAYS where it is put, whatever the weather (the button below hands it back). Nothing at night.",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Frame ▸ Hour",
+  "kind": "buttons",
+  "label": "sun",
+  "title": "",
+  "def": false,
+  "extra": "[back to the weather's cloud — a sun strength set by hand, handed back: under a picked weather the sun stands where its cloud puts it, with none at the hour's own]"
+ },
+ {
+  "path": "Frame ▸ Hour",
+  "kind": "text",
+  "label": "",
+  "title": "",
+  "def": false,
+  "extra": "night (the level as authored)"
+ },
+ {
   "path": "Frame ▸ Look",
   "kind": "slider",
   "label": "exposure",
@@ -457,6 +556,17 @@
   "max": 1,
   "step": 0.01,
   "title": "0 = white phosphor (P45, modern), 1 = classic green (P43); default 0.09 = white with a touch of green",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Frame ▸ Look",
+  "kind": "slider",
+  "label": "night vision eyepiece edge",
+  "min": 0,
+  "max": 1,
+  "step": 0.05,
+  "title": "the dark oval round the goggles' picture: 0 = none (default), 1 = the oval as it was (?nvoval=1)",
   "def": false,
   "extra": ""
  },
@@ -542,6 +652,33 @@
   "max": 8,
   "step": 1,
   "title": "THE HYBRID ESTIMATOR: every light a character CARRIES (owner byte ≠ 0: the guards' torches, the player's rail / gun light, muzzle flashes, tracer heads) bypasses the reservoirs at the pixels it reaches and gets the old leader treatment every frame — the two strongest at the pixel take K stratified emitter samples each, shaded exactly, any further ones one tail ray a class; static lights (owner 0) keep ReSTIR. A carried light moves every frame, so its reservoir history and the shadow client's ratio history are let go wherever the cone sweeps and the pool was shaded from one or two fresh rays: noisy pools, ragged edges, rims. The presets tier K (ultra 8 · high 4 · medium 4 · low 3 · verylow 2); 0 = off, the transient stratum exactly as it was (docs/internal/direct-quality.md)",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Direct light ▸ Estimator — ReSTIR DI",
+  "kind": "toggle",
+  "label": "TRADE: held rays stop at 2 if agreed",
+  "title": "a carried light's first two stratified rays that agree (both lit, both blocked) stand for all K: 2 rays instead of K inside the cone and behind walls, the full K where they differ. Cost: its wide penumbrae harden a little and grain more (a pixel 90 % lit reads about 94 %), and an occluder thinner than the lens spread can be missed by both rays. Needs K above 2.",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Direct light ▸ Estimator — ReSTIR DI",
+  "kind": "toggle",
+  "label": "TRADE: settled pixels re-trace 1 in 2",
+  "title": "a reservoir sample that is fully lit, with most of its memory and no penumbra measured at the pixel last frame, is re-traced on alternate frames only (the fresh candidates still look every frame). Cost: a shadow arriving on a settled lit pixel can show a frame late along its leading edge.",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Direct light ▸ Estimator — ReSTIR DI",
+  "kind": "slider",
+  "label": "TRADE: dim class",
+  "min": 0,
+  "max": 0.5,
+  "step": 0.01,
+  "title": "share of the pixel's light; 0 = off. An emitter class (sharp / broad) under this share of the pixel's live unshadowed light takes one shadow ray a frame (re-trace and fresh alternate) and no second penumbra ray. Cost: grain in that class, worst where the bright class is itself in shadow. Try 0.05.",
   "def": false,
   "extra": ""
  },
@@ -759,6 +896,14 @@
  },
  {
   "path": "Direct light ▸ Shadow rays & penumbra filter",
+  "kind": "toggle",
+  "label": "shadow history",
+  "title": "the shadow denoiser's temporal reuse: each class's shadow ratio is carried from frame to frame (reprojected, depth-validated, clamped to this frame's neighbourhood). Off = history-free shadows, for inspection",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Direct light ▸ Shadow rays & penumbra filter",
   "kind": "slider",
   "label": "penumbra filter cap (px)",
   "min": 2,
@@ -776,17 +921,6 @@
   "max": 0.1,
   "step": 0.001,
   "title": "W/m² (unshadowed): at cascade interval hits a light dimmer than this gets no shadow ray and is dropped — raises bounce-lighting cost/accuracy trade (default 0.006)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Shadow rays & penumbra filter",
-  "kind": "slider",
-  "label": "torch emitter radius (m)",
-  "min": 0,
-  "max": 0.15,
-  "step": 0.005,
-  "title": "size of the flashlight front for shadow purposes (guards; the rail light uses 0.7×). A real bezel is ~1.5-2 cm → crisp shadows; larger = penumbrae that widen with distance",
   "def": false,
   "extra": ""
  },
@@ -823,7 +957,7 @@
   "extra": ""
  },
  {
-  "path": "Direct light ▸ Culling — lossless A/Bs",
+  "path": "Direct light ▸ Culling",
   "kind": "toggle",
   "label": "light reach masks",
   "title": "each static interior light carries a CPU-built mask of the level cells it can possibly reach past full-height walls (reach.ts); a walled-off light is skipped at a pixel instead of stealing a leader slot from the room's own dim lights (the dark break room's hard coloured arcs) — off = every light competes everywhere, for A/B",
@@ -831,7 +965,7 @@
   "extra": ""
  },
  {
-  "path": "Direct light ▸ Culling — lossless A/Bs",
+  "path": "Direct light ▸ Culling",
   "kind": "text",
   "label": "",
   "title": "",
@@ -946,6 +1080,14 @@
   "path": "Direct light ▸ Lights (level)",
   "kind": "buttons",
   "label": "breakroom (4)",
+  "title": "",
+  "def": false,
+  "extra": "[on] [off]"
+ },
+ {
+  "path": "Direct light ▸ Lights (level)",
+  "kind": "buttons",
+  "label": "vehicle (8)",
   "title": "",
   "def": false,
   "extra": "[on] [off]"
@@ -1109,30 +1251,6 @@
   "title": "Does nothing while Materials ▸ RT reflections is on (ultra / high / medium): that pass replaces it. Traced glossy reflections on the polished floors (lobby stone, corridor + break-room lino — BoxFlag.Gloss): the final gather spends ONE extra mirror ray per gloss texel (view direction reflected about the floor, jittered over a 2.5° cone), shades what it hits like a gather hit plus the fixture's own glow (lit panels, screens, beacon domes, windows onto the sky, a torch spot on the wall), weights it by Schlick Fresnel on the view angle (F0 0.04 → ~0.045 from up here) × 0.85, runs it through its own half-res history + one blur pass and adds it in composite AFTER the diffuse terms (never × albedo). Costs about one trace + one shadow ray per gloss texel at gather res (shows in \"gather\") and two half-res filter dispatches (in \"temporal\"). Off = nothing stored, filtered or read: bit-identical (frame flag 2097152; debug view \"specular\" shows the term alone)",
   "def": false,
   "extra": ""
- },
- {
-  "path": "Indirect light ▸ GI in motion",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "gi in motion ▸ gather-grid GI · young rays off"
- },
- {
-  "path": "Indirect light ▸ GI in motion",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ ULTRA: gather resampling (ReSTIR GI)",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "resampling ▸ off (the plain 4-ray gather)"
  },
  {
   "path": "Indirect light ▸ Radiance cache (probe volume)",
@@ -1332,12 +1450,146 @@
   "extra": ""
  },
  {
+  "path": "Volumetrics ▸ Smoke pool",
+  "kind": "text",
+  "label": "",
+  "title": "",
+  "def": false,
+  "extra": "bricks 0/0 (peak 0) · stepped 0, waiting 0 · gun gas 0 (held"
+ },
+ {
+  "path": "Volumetrics ▸ Smoke pool",
+  "kind": "select",
+  "label": "calm: wait, frames",
+  "title": "the longest a brick whose air is slow waits between steps (it then takes the time it missed); how slow is the CALM row below (cells crossed in the wait). 1 = every brick every frame",
+  "def": false,
+  "extra": "1 / 2 / 4"
+ },
+ {
+  "path": "Volumetrics ▸ Smoke pool",
+  "kind": "slider",
+  "label": "calm: far, cells",
+  "min": 0,
+  "max": 4,
+  "step": 0.25,
+  "title": "the CALM row's allowance for bricks far from where the camera looks (past \"view: near m\"); 0 = no laxer than in sight",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Volumetrics ▸ Smoke pool",
+  "kind": "toggle",
+  "label": "reads hop over clear air",
+  "title": "shadow rays and the view march skip stretches the page says hold nothing; same samples either way. Off (as it ships: it bought no time on the Mac) = asked brick by brick",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Volumetrics ▸ Smoke pool",
+  "kind": "slider",
+  "label": "fresh smoke share",
+  "min": 0,
+  "max": 0.4,
+  "step": 0.05,
+  "title": "the share of the pool thin old smoke may never take: as the pool fills its last 2 × this, haze is refused bricks, keeps less air round it and fades sooner, so a can just thrown stands up. 0 = first come",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Volumetrics ▸ Smoke pool",
+  "kind": "slider",
+  "label": "gun gas: fade /s",
+  "min": 0,
+  "max": 8,
+  "step": 0.5,
+  "title": "thin smoke on the fine lattice (gun gas) fades this much faster, always: the crisp gas at the muzzle is untouched, the haze it spreads into gives its bricks back. 0 = a magazine on AUTO takes two thirds of the pool and hangs as a veil",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Volumetrics ▸ Smoke pool",
+  "kind": "slider",
+  "label": "gun gas: pool share",
+  "min": 0.05,
+  "max": 1,
+  "step": 0.05,
+  "title": "what the fine lattice may hold of the pool when canister smoke wants the rest (it has more while nobody else does): haze is refused bricks from 0.7 of it, everything but a muzzle at all of it. 1 = no share",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Volumetrics ▸ Smoke pool",
+  "kind": "slider",
+  "label": "view: bias",
+  "min": 0,
+  "max": 1,
+  "step": 0.25,
+  "title": "far from where the camera looks the pool's ceiling starts sooner and bites harder; 0 = one ceiling everywhere",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Volumetrics ▸ Smoke pool",
+  "kind": "slider",
+  "label": "view: near m",
+  "min": 4,
+  "max": 30,
+  "step": 1,
+  "title": "inside this of the look-at point smoke is near; far is full at twice it",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Volumetrics ▸ Smoke pool",
+  "kind": "slider",
+  "label": "ceiling from fill",
+  "min": 0.2,
+  "max": 0.9,
+  "step": 0.05,
+  "title": "the share of the pool from which thin smoke everywhere starts to fade faster (full at 0.95)",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Volumetrics ▸ Smoke pool",
+  "kind": "slider",
+  "label": "air round smoke",
+  "min": 1,
+  "max": 8,
+  "step": 1,
+  "title": "cells of clear air simulated round the smoke (8 = all 26 neighbour bricks)",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Volumetrics ▸ Smoke pool",
+  "kind": "slider",
+  "label": "idle brick, steps",
+  "min": 8,
+  "max": 60,
+  "step": 1,
+  "title": "steps a brick nothing needs is held before its slot goes back (never under 8 while bricks may wait)",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Volumetrics ▸ Smoke pool",
+  "kind": "slider",
+  "label": "whole pool from",
+  "min": 0,
+  "max": 1.05,
+  "step": 0.05,
+  "title": "read only while the solver goes by the GPU-written count (?smokeindirect=1, a software adapter, the F8 row while it is flipped): the share of the pool stepping from which the whole pool is dispatched instead; over 1 = never. A page on a real card opens on the whole pool and does not read this",
+  "def": false,
+  "extra": ""
+ },
+ {
   "path": "Volumetrics ▸ Smoke solver",
   "kind": "text",
   "label": "",
   "title": "",
   "def": false,
-  "extra": "domains live 0/0 (0 sitting this frame out; periods 0) · emi"
+  "extra": "bricks 0 (0 sitting this frame out) · scalar 0 · render 0 · "
  },
  {
   "path": "Volumetrics ▸ Smoke solver",
@@ -1368,14 +1620,6 @@
   "title": "",
   "def": false,
   "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Smoke solver",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "bricks active 0/0 · scalar 0 · vel 0 · render 0 · vmax 0 m/s"
  },
  {
   "path": "Volumetrics ▸ Smoke solver",
@@ -1550,22 +1794,11 @@
  {
   "path": "Volumetrics ▸ Smoke solver",
   "kind": "slider",
-  "label": "wind x",
-  "min": -1,
-  "max": 1,
-  "step": 0.02,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Smoke solver",
-  "kind": "slider",
-  "label": "wind z",
-  "min": -1,
-  "max": 1,
-  "step": 0.02,
-  "title": "",
+  "label": "curl round a moving body ×",
+  "min": 0,
+  "max": 8,
+  "step": 0.25,
+  "title": "THE LOOK PAGE, with its Stirred smoke row up: how many times MORE the solver keeps an eddy turning right round a man who is moving through smoke (0 = no more than anywhere else). Nothing anywhere else",
   "def": false,
   "extra": ""
  },
@@ -1644,7 +1877,7 @@
   "path": "Materials ▸ RT reflections",
   "kind": "select",
   "label": "· RT target divisor",
-  "title": "the reflection target's resolution: full internal res, half (ultra / high) or a third (medium); composite takes one bilinear fetch of it masked by the pixel's own roughness. Re-makes the reflection targets (pooled; their histories resampled)",
+  "title": "the reflection target's resolution: full internal res, half (ultra / high) or a third (medium); composite blends the four texels round a pixel for the mirror and nine for the lamps' highlights, each by how like its own surface the pixel's is, and fades both by the finish's roughness about the pixel. Re-makes the reflection targets (pooled; their histories resampled)",
   "def": false,
   "extra": "÷1 (full res) / ÷2 (half) / ÷3 (third)"
  },
@@ -1666,7 +1899,7 @@
   "min": 0.1,
   "max": 0.8,
   "step": 0.01,
-  "title": "finishes rougher than this get no ray and no term; the term fades out over the 0.12 under it so the cutoff never bands (0.45 high: floors, screens, metal; 0.55 ultra: + laminate and varnished wood; 0.35 medium: floors, screens, steel)",
+  "title": "finishes rougher than this get no ray of the mirror; the mirror fades out over the 0.12 under it so the cutoff never bands (0.45 high: floors, screens, metal; 0.55 ultra: + laminate and varnished wood; 0.35 medium: floors, screens, steel). The lamps' highlights do not go by this: they are drawn on every finish up to 0.5 and fade out to 0.75, on every preset",
   "def": false,
   "extra": ""
  },
@@ -1706,6 +1939,41 @@
  {
   "path": "Materials ▸ RT reflections",
   "kind": "slider",
+  "label": "· wet ground break-up",
+  "min": 0,
+  "max": 1,
+  "step": 0.1,
+  "title": "wet ground is pools in the low spots and damp aggregate between them (detail.wgsl wetGround: roughness +0.04 in a pool, +0.15 on the stone, so the reflection is patchy — bright in the pools, dull between); 0 = one even film of water, the wet lot as it was (?nowetbreak)",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Materials ▸ RT reflections",
+  "kind": "toggle",
+  "label": "· lasers & tracers in reflections",
+  "title": "a weapon laser's beam (either band, when it is drawn at all) and a tracer's streak show in the ray-traced reflections: the nearest 8 handed to the reflection pass as line segments, their mirror image analytic (reflect.wgsl beamImage; its strength is BEAM_REFL_MIN there); picture only — off = the pass as it was (?nobeamreflect)",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Materials ▸ RT reflections",
+  "kind": "toggle",
+  "label": "· squad lasers as light in the air",
+  "title": "the squad's weapon lasers are drawn as light scattered in the air: a thin line, faint in clear air and brighter in haze, smoke and rain, a dot that blooms where it lands, a glint at the emitter. off (?nobeamair) = the opaque glowing boxes as they were. picture only",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Materials ▸ RT reflections",
+  "kind": "toggle",
+  "label": "· wet ground mirrors the men",
+  "title": "on wet ground the ray-traced reflections take the share the simpler gloss of the low presets always had, so a lit man shows in the wet under him; a laser drawn as light in the air mirrors by that same share. Off = as it was",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Materials ▸ RT reflections",
+  "kind": "slider",
   "label": "· RT strength",
   "min": 0,
   "max": 2,
@@ -1721,7 +1989,7 @@
   "min": 0,
   "max": 2,
   "step": 0.05,
-  "title": "× the GGX image of the point / spot lenses and (on rough receivers) the lit panels on every finish under the cutoff — the primary-hit specular response to the level's lights: a torch swung across the lino is a gliding elongated highlight, the street lamp a streak in the wet lot (1 = physical; 0 = the traced term only)",
+  "title": "× the GGX image of the point / spot lenses, (on rough receivers) the lit panels and, on the look's page, the sun or the moon, on every finish under the cutoff — the primary-hit specular response to the level's lights: a torch swung across the lino is a gliding elongated highlight, the street lamp a streak in the wet lot (1 = physical; 0 = the traced term only)",
   "def": false,
   "extra": ""
  },
@@ -1743,6 +2011,22 @@
   "title": "physically-explainable wear at the primary hit (gbuffer.wgsl detailSurface — no image textures, no painted noise): worn paths on the polished floors where the shift walks and at every threshold (rougher, a touch duller — the level's traffic map, render/wear.ts), grime in the band the mop misses along every wall foot, scuffed skirting on the bottom hand-width of walls and cabinets, dust on tops above eye level (rougher, greyer, thinner at the edges), bare bright metal rubbed through within 2 cm of a metal edge. Written into the g-buffer's albedo / roughness / metalness, so direct light, the bounce, the reflections and their highlights all answer to it. 0 = the g-buffer exactly as it was; 0.35 = lived-in; 1 = as far as it goes (?detail=)",
   "def": false,
   "extra": ""
+ },
+ {
+  "path": "Materials ▸ Characters (materials per slot)",
+  "kind": "toggle",
+  "label": "character materials",
+  "title": "each man shaded per material SLOT (skin, two cloths, webbing, boot, helmet, dark metal, rubber, lens, a marking) out of a table per side — operators one dark issue with hard kit that takes a highlight and their pair's colour as a band, defenders each in his own shirt, trousers and head, soft and dusty — with creases / ridges from the mesh's own curvature and the ground's dust up from the sole; bounce light and reflections see one colour per body part. Off = the two tints, the frame as it was. With the shipped mannequin the slots are a STAND-IN dealt by joint (?charmats); a mesh whose materials are named after the slots turns this on by itself (?nocharmats holds it off)",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Materials ▸ Characters (materials per slot)",
+  "kind": "text",
+  "label": "",
+  "title": "",
+  "def": false,
+  "extra": "off (two tints) · slots from the mesh's materials · slot sha"
  },
  {
   "path": "Denoiser ▸ Core",
@@ -1862,6 +2146,14 @@
   "extra": ""
  },
  {
+  "path": "Denoiser ▸ Shadow client",
+  "kind": "toggle",
+  "label": "shadow: hidden lights stay hidden",
+  "title": "a carried torch behind a wall is in the unshadowed light but in nobody's shadow rays; on = a tap or a history taken under another amount of that light is read as the light it stands for, off = ratios averaged across the hidden cone draw it faintly on the far side (?noleakfix)",
+  "def": false,
+  "extra": ""
+ },
+ {
   "path": "Denoiser ▸ Diffuse (GI) client",
   "kind": "slider",
   "label": "gi: à-trous iterations",
@@ -1950,7 +2242,7 @@
   "extra": ""
  },
  {
-  "path": "Denoiser ▸ Specular client",
+  "path": "Denoiser ▸ Specular client (glass / gloss field)",
   "kind": "slider",
   "label": "spec: à-trous iterations",
   "min": 1,
@@ -1961,7 +2253,7 @@
   "extra": ""
  },
  {
-  "path": "Denoiser ▸ Specular client",
+  "path": "Denoiser ▸ Specular client (glass / gloss field)",
   "kind": "slider",
   "label": "spec: history cap (frames)",
   "min": 0,
@@ -1972,7 +2264,7 @@
   "extra": ""
  },
  {
-  "path": "Denoiser ▸ Specular client",
+  "path": "Denoiser ▸ Specular client (glass / gloss field)",
   "kind": "slider",
   "label": "spec: clamp k (σ)",
   "min": 0.25,
@@ -2019,12 +2311,12 @@
   "path": "Renderer fx ▸ Glass (the picture)",
   "kind": "toggle",
   "label": "glass panes",
-  "title": "the level's glazing (in the office: conference partition, manager sidelight, every exterior window) as glass: what stands behind a pane is drawn as always (the pane is in no raster and no traced ray meets it) and composite lays over it the pane's tint (albedo^depth ÷ cos), a traced mirror image × Schlick Fresnel (n 1.5: 4 % square-on, most of it edge-on) through the gloss floors' specular texture + history + blur pass, the analytic glint of small emitters, and a dust glow where light lands ON the glass; the direct pass tints light that crossed a pane. Men see through it and do not hear through it. What a round or a blast does to a pane is not this switch: Destruction ▸ Glass breaking (the cracks, the pieces, rounds passing through). OFF = no pane list at all: every glass box is an empty opening (the level as it was) — the CPU side (feet, sound, the crack stars) stays. Costs a slab test per listed pane per pixel in composite, ~3 rays per glass texel at gather res. (frame flag 268435456; ?noglass boots it off)",
+  "title": "the level's glazing (in the office: conference partition, manager sidelight, every exterior window) as glass: what stands behind a pane is drawn as always (the pane is in no raster and no traced ray meets it) and composite lays over it the pane's tint (albedo^depth ÷ cos), a traced mirror image × Schlick Fresnel (n 1.5: 4 % square-on, most of it edge-on) through the gloss floors' specular texture + history + blur pass, the analytic glint of small emitters, and a dust glow where light lands ON the glass; the direct pass tints light that crossed a pane. Men see through it and do not hear through it. What a round or a blast does to a pane is not this switch: that is glass breaking (the cracks, the pieces, rounds passing through). OFF = no pane list at all: every glass box is an empty opening (the level as it was) — the CPU side (feet, sound, the crack stars) stays. Costs a slab test per listed pane per pixel in composite, ~3 rays per glass texel at gather res. (frame flag 268435456; ?noglass boots it off)",
   "def": false,
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Glass",
+  "path": "Renderer fx ▸ Glass (the picture)",
   "kind": "slider",
   "label": "reflection strength",
   "min": 0,
@@ -2035,7 +2327,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Glass",
+  "path": "Renderer fx ▸ Glass (the picture)",
   "kind": "slider",
   "label": "tint depth",
   "min": 0,
@@ -2046,7 +2338,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Glass",
+  "path": "Renderer fx ▸ Glass (the picture)",
   "kind": "slider",
   "label": "dust glow",
   "min": 0,
@@ -2057,7 +2349,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Glass",
+  "path": "Renderer fx ▸ Glass (the picture)",
   "kind": "toggle",
   "label": "refraction",
   "title": "the view ray BENDS through every glass box by Snell's law — into the glass at the face it meets, across the box to the face it leaves by (a face past the critical angle mirrors it back inside instead), out again — and what shows through is read where the bent ray comes out behind the glass (screen space: the picture already shaded there; nothing nearer than the glass is ever read, the sky keeps the pixel's own). The tint deepens by Beer–Lambert with the glass actually crossed, a box's authored tint read as its transmittance square through its own thickness: a 12 mm pane square-on is tinted exactly as before and shifts nothing you can see, a graze shifts a pixel or two and tints by the slanting path, the water-cooler bottle (30 cm of it) bends the cabinet edge behind it by centimetres and reads denser toward its rims. One law for every Glass box, evaluated only on glass pixels (≈ +0.05 ms with the glazing filling the view). OFF = the old tint rule (albedo^(depth ÷ cos)) and the read under the pixel, byte for byte (?norefract boots it off)",
@@ -2065,7 +2357,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Glass",
+  "path": "Renderer fx ▸ Glass (the picture)",
   "kind": "slider",
   "label": "index of refraction",
   "min": 1,
@@ -2076,7 +2368,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Glass",
+  "path": "Renderer fx ▸ Glass (the picture)",
   "kind": "buttons",
   "label": "panes",
   "title": "",
@@ -2084,7 +2376,7 @@
   "extra": "[crack test — star the pane under the cursor (or the nearest within 4 m of the aim point) as a round would: a hole, a frosted collar and a crack star ON the glass — the floor hears it; the decals ▸ clear button (or a restart) wipes them]"
  },
  {
-  "path": "Renderer fx ▸ Glass",
+  "path": "Renderer fx ▸ Glass (the picture)",
   "kind": "text",
   "label": "",
   "title": "",
@@ -2108,7 +2400,7 @@
   "extra": "[spray test pattern — every kind the shader draws, on what the player is facing / standing on right now] [+100 random — a realistic mix (holes, chips, the odd scorch) shot from random points inside the building at random walls — for the cost measurement] [clear decals]"
  },
  {
-  "path": "Renderer fx ▸ Decals (EXP)",
+  "path": "Renderer fx ▸ Decals",
   "kind": "text",
   "label": "",
   "title": "",
@@ -2116,7 +2408,7 @@
   "extra": "decals 0/512 · drawn 0 · cell entries 0 · busiest cell 0/48 "
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "toggle",
   "label": "GPU particles",
   "title": "sparks, debris chips, dust puffs and spent casings simulated in one compute pass (collide with the trace grid, lit by the light buffer + three shadow rays + the radiance cache) and splatted into the HDR target after the composite. Off = the CPU box sparks of game/sparks.ts exactly as they were and none of the new impact debris / dust / brass (?noparticles at boot)",
@@ -2124,7 +2416,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "text",
   "label": "",
   "title": "",
@@ -2132,7 +2424,7 @@
   "extra": "ON · alive 0 (asleep 0) · windows 0 short / 0 long · born 0/"
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "CAP: births per frame",
   "min": 32,
@@ -2143,7 +2435,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "text",
   "label": "",
   "title": "",
@@ -2151,7 +2443,7 @@
   "extra": "queue: 0 waiting (peak 0) · shed 0 stale sparks · cap 0/f"
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "buttons",
   "label": "burst test at cursor",
   "title": "",
@@ -2159,7 +2451,7 @@
   "extra": "[sparks] [debris] [dust] [casings] [bang]"
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "toggle",
   "label": "shadow rays (3 strongest lights)",
   "title": "each lit particle scores every light unshadowed through the reach masks, traces a shadow ray toward the three strongest and credits the rest at 35 %; off = all unshadowed and whole (for measuring what the rays cost)",
@@ -2167,7 +2459,15 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
+  "kind": "toggle",
+  "label": "sparks bounce off surfaces",
+  "title": "a stun grenade's or a charge's sparks (every GPU spark) come back off walls, floor, ceiling and furniture — a hashed share of their speed, thrown a little off the mirror line — and none starts its life behind a wall it was born beside (the two spark sliders below still set how lively); off = as it was: a dull touch and an unswept first frame (?nosparkbounce)",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Renderer fx ▸ Particles",
   "kind": "toggle",
   "label": "collide with geometry",
   "title": "a traceClosest through the trace grid from where it was to where it is going: bounce / rest / die; off = ballistic through everything (measuring)",
@@ -2175,7 +2475,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "toggle",
   "label": "fogged by volumetrics",
   "title": "the splat is dimmed by the volumetric transmittance in front of it (T of the surface behind, raised to its share of the distance) and gets the in-scatter back",
@@ -2183,7 +2483,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "toggle",
   "label": "draw (measurement)",
   "title": "off = everything is still simulated, nothing is splatted: A/B the frame time to price the draw",
@@ -2191,7 +2491,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "toggle",
   "label": "time the draw (unreliable)",
   "title": "timestamp the splat's render pass as pdraw — render-pass timings on Metal span the drawable wait and feed the HUD total / auto quality: measurement only, leave off",
@@ -2199,7 +2499,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "spark: gravity",
   "min": 0,
@@ -2210,7 +2510,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "spark: drag /s",
   "min": 0,
@@ -2221,7 +2521,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "spark: restitution",
   "min": 0,
@@ -2232,7 +2532,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "spark: tangential keep",
   "min": 0,
@@ -2243,7 +2543,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "spark: hold",
   "min": 0,
@@ -2254,7 +2554,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "spark: shutter ms",
   "min": 1,
@@ -2265,7 +2565,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "spark: brightness ×",
   "min": 0.1,
@@ -2276,7 +2576,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "debris: gravity",
   "min": 0,
@@ -2287,7 +2587,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "debris: drag /s",
   "min": 0,
@@ -2298,7 +2598,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "debris: restitution",
   "min": 0,
@@ -2309,7 +2609,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "debris: tangential keep",
   "min": 0,
@@ -2320,7 +2620,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "debris: sleep below m/s",
   "min": 0,
@@ -2331,7 +2631,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "debris: fade s",
   "min": 0.2,
@@ -2342,7 +2642,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "debris: shutter ms",
   "min": 0,
@@ -2353,7 +2653,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "dust: gravity",
   "min": 0,
@@ -2364,7 +2664,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "dust: drag /s",
   "min": 0,
@@ -2381,7 +2681,7 @@
   "min": 0,
   "max": 6,
   "step": 0.1,
-  "title": "radius grows by this factor over its life (the same value as Effects ▸ Dust puffs ▸ dust: growth ×, which also keeps it: an edit here is not saved)",
+  "title": "radius grows by this factor over its life (an edit here is not saved)",
   "def": true,
   "extra": ""
  },
@@ -2392,12 +2692,12 @@
   "min": 0,
   "max": 1,
   "step": 0.02,
-  "title": "peak opacity of a puff at its centre (the same value as Effects ▸ Dust puffs ▸ dust: opacity, which also keeps it: an edit here is not saved)",
+  "title": "peak opacity of a puff at its centre (an edit here is not saved)",
   "def": true,
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "casing: gravity",
   "min": 0,
@@ -2408,7 +2708,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "casing: drag /s",
   "min": 0,
@@ -2419,7 +2719,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "casing: restitution",
   "min": 0,
@@ -2430,7 +2730,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "casing: tangential keep",
   "min": 0,
@@ -2441,7 +2741,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "casing: sleep below m/s",
   "min": 0,
@@ -2452,7 +2752,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "casing: fade s",
   "min": 0.2,
@@ -2463,7 +2763,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "casing: shutter ms",
   "min": 0,
@@ -2474,7 +2774,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "sheet: gravity",
   "min": 0,
@@ -2518,7 +2818,51 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
+  "kind": "slider",
+  "label": "shard: gravity",
+  "min": 0,
+  "max": 30,
+  "step": 0.1,
+  "title": "",
+  "def": true,
+  "extra": ""
+ },
+ {
+  "path": "Renderer fx ▸ Particles",
+  "kind": "slider",
+  "label": "shard: drag /s",
+  "min": 0,
+  "max": 8,
+  "step": 0.05,
+  "title": "",
+  "def": true,
+  "extra": ""
+ },
+ {
+  "path": "Renderer fx ▸ Particles",
+  "kind": "slider",
+  "label": "shard: restitution",
+  "min": 0,
+  "max": 0.9,
+  "step": 0.01,
+  "title": "normal speed kept on a bounce",
+  "def": true,
+  "extra": ""
+ },
+ {
+  "path": "Renderer fx ▸ Particles",
+  "kind": "slider",
+  "label": "shard: tangential keep",
+  "min": 0,
+  "max": 1,
+  "step": 0.01,
+  "title": "sliding speed kept on a bounce",
+  "def": true,
+  "extra": ""
+ },
+ {
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "impact ×rifle",
   "min": 0.5,
@@ -2529,7 +2873,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "chip size mm",
   "min": 4,
@@ -2540,7 +2884,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "chip life s",
   "min": 2,
@@ -2551,7 +2895,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "dust puff size cm",
   "min": 2,
@@ -2562,7 +2906,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "bang sparks",
   "min": 0,
@@ -2573,7 +2917,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "bang dust ring",
   "min": 0,
@@ -2584,7 +2928,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "casing life s",
   "min": 2,
@@ -2595,7 +2939,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "casing tink gain",
   "min": 0,
@@ -2606,7 +2950,7 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "buttons",
   "label": "pool",
   "title": "",
@@ -2687,7 +3031,7 @@
   "label": "",
   "title": "",
   "def": false,
-  "extra": "73 lists · 110 records · 1304 table rows · 113 marked boxes "
+  "extra": "82 lists · 120 records · 1415 table rows · 122 marked boxes "
  },
  {
   "path": "Renderer fx ▸ SDF character rig",
@@ -2722,7 +3066,7 @@
   "extra": ""
  },
  {
-  "path": "Weather & wind ▸ Storm",
+  "path": "Weather & wind ▸ Weather",
   "kind": "slider",
   "label": "storm intensity",
   "min": 0,
@@ -2733,7 +3077,7 @@
   "extra": ""
  },
  {
-  "path": "Weather & wind ▸ Storm",
+  "path": "Weather & wind ▸ Weather",
   "kind": "slider",
   "label": "rain rate",
   "min": 0,
@@ -2744,7 +3088,7 @@
   "extra": ""
  },
  {
-  "path": "Weather & wind ▸ Storm",
+  "path": "Weather & wind ▸ Weather",
   "kind": "slider",
   "label": "wind x (m/s)",
   "min": -4,
@@ -2755,7 +3099,7 @@
   "extra": ""
  },
  {
-  "path": "Weather & wind ▸ Storm",
+  "path": "Weather & wind ▸ Weather",
   "kind": "slider",
   "label": "wind z (m/s)",
   "min": -4,
@@ -2774,7 +3118,15 @@
   "extra": ""
  },
  {
-  "path": "Weather & wind ▸ Storm",
+  "path": "Weather & wind ▸ Weather",
+  "kind": "buttons",
+  "label": "weather kind (reloads)",
+  "title": "",
+  "def": false,
+  "extra": "[as it is] [clear] [overcast] [rain] [downpour] [fog] [dust]"
+ },
+ {
+  "path": "Weather & wind ▸ Weather",
   "kind": "buttons",
   "label": "lightning",
   "title": "",
@@ -2782,7 +3134,7 @@
   "extra": "[strike now] [close one (0.4 km)] [far (3.5 km)] [from the south]"
  },
  {
-  "path": "Weather & wind ▸ Storm",
+  "path": "Weather & wind ▸ Weather",
   "kind": "text",
   "label": "",
   "title": "",
@@ -3011,6 +3363,17 @@
   "max": 5,
   "step": 0.02,
   "title": "a tap landing on something this much NEARER the eye than the drop (the player's head beside the streak) is not behind it: the centre sample stands in (default 0.3)",
+  "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Weather & wind ▸ Rain — particles",
+  "kind": "slider",
+  "label": "p-rain: refraction: paint from beside",
+  "min": 0,
+  "max": 1,
+  "step": 0.05,
+  "title": "How much of the picture a read taken BESIDE a streak keeps. 1 = all of it (as it was: rain beside a striped tent came up striped). 0 = its light only: no colour of its own, its brightness half way to what is straight behind, each pixel of the streak reading another spot (default 0)",
   "def": false,
   "extra": ""
  },
@@ -3517,662 +3880,7 @@
   "label": "",
   "title": "",
   "def": false,
-  "extra": "wet ▸ rain 0.00 · Sam 0.00/0.00 · Kowalski 0.00/0.00 · Novak"
- },
- {
-  "path": "Effects ▸ Spawn & counts",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "sparks live 0/96 · smoke emitters 0 (room for 64)"
- },
- {
-  "path": "Effects ▸ Spawn & counts",
-  "kind": "buttons",
-  "label": "at cursor",
-  "title": "",
-  "def": false,
-  "extra": "[stun can] [smoke can] [+2 stun / +4 smoke]"
- },
- {
-  "path": "Effects ▸ Dust puffs",
-  "kind": "slider",
-  "label": "dust: count ×",
-  "min": 0,
-  "max": 4,
-  "step": 0.05,
-  "title": "how many puffs each site emits, × what it asks for (a drywall hit asks for 6, a stun charge's column 10, a kicked door 9…); 0 = no GPU dust at all (the smoke solver's real dust puffs on destruction are a different thing: the Destruction page)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Dust puffs",
-  "kind": "slider",
-  "label": "dust: size ×",
-  "min": 0.25,
-  "max": 4,
-  "step": 0.05,
-  "title": "each puff's starting diameter × the site's (impact puffs 9 cm, gypsum bursts 13, the stun column 22); it still grows by the growth factor below over its life",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Dust puffs",
-  "kind": "slider",
-  "label": "dust: life ×",
-  "min": 0.25,
-  "max": 4,
-  "step": 0.05,
-  "title": "how long a puff hangs × the site's seconds (impacts 1.3 s, bursts 1.4–1.8, the stun column 2)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Dust puffs",
-  "kind": "slider",
-  "label": "dust: speed ×",
-  "min": 0,
-  "max": 3,
-  "step": 0.05,
-  "title": "× the speed a puff leaves the surface with (and the shove along the normal); drag stops it within a few frames either way — this is how far out it gets",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Dust puffs",
-  "kind": "slider",
-  "label": "dust: rise ×",
-  "min": 0,
-  "max": 4,
-  "step": 0.05,
-  "title": "× each site's upward drift (lift): 0 = it stays where it burst, 2 = it climbs like warm smoke; sinking sites (a dropped tile's powder) sink faster by as much",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Dust puffs",
-  "kind": "slider",
-  "label": "dust: spread ×",
-  "min": 0,
-  "max": 4,
-  "step": 0.05,
-  "title": "× the positional scatter of a burst's puffs about the hit (one blob ↔ a loose cloud)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Dust puffs",
-  "kind": "slider",
-  "label": "dust: opacity",
-  "min": 0,
-  "max": 1,
-  "step": 0.02,
-  "title": "peak opacity at a puff's centre when it appears (it thins quadratically to nothing over its life)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Dust puffs",
-  "kind": "slider",
-  "label": "dust: growth ×",
-  "min": 0,
-  "max": 6,
-  "step": 0.1,
-  "title": "a puff's radius grows by this factor over its life (2.2: it doubles and a bit as it thins)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Dust puffs",
-  "kind": "slider",
-  "label": "dust: fade-in s",
-  "min": 0,
-  "max": 0.5,
-  "step": 0.01,
-  "title": "seconds from nothing to full opacity (0.06 = it is just there; 0.3 = it blooms out of the hit)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Dust puffs",
-  "kind": "slider",
-  "label": "dust: edge softness ×",
-  "min": 0.2,
-  "max": 4,
-  "step": 0.05,
-  "title": "× the depth-softening range where a puff meets the wall / floor / desk it sits against (higher = it fades into surfaces instead of cutting them)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Dust puffs",
-  "kind": "slider",
-  "label": "dust: scatter toward eye",
-  "min": 0,
-  "max": 1,
-  "step": 0.02,
-  "title": "the share of a beam crossing the puff that it scatters toward the camera whatever side the light is on (0.5 shipped; lower = puffs read dark unless front-lit, higher = they glow in any beam)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Dust puffs",
-  "kind": "slider",
-  "label": "dust: ambient ×",
-  "min": 0,
-  "max": 3,
-  "step": 0.05,
-  "title": "× the radiance cache's ambient on a puff (what makes gypsum dust show pale in a dim corridor at all); 0 = lit by direct light only",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Dust puffs",
-  "kind": "buttons",
-  "label": "test at cursor",
-  "title": "",
-  "def": false,
-  "extra": "[puff] [drywall burst ×3 — the destruction lane's escalated gypsum burst (chips + puffs) three times across the cursor, as sustained fire into a partition makes it] [stun dust — the stun charge's effects at the cursor: the spark shower, the dust RING along the floor and the column over it] [defaults — the same as this section's ↺]"
- },
- {
-  "path": "Effects ▸ Dust puffs",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "GPU particles off: the CPU box sparks path has no dust"
- },
- {
-  "path": "Effects ▸ Muzzle (shot)",
-  "kind": "slider",
-  "label": "shot light power",
-  "min": 0,
-  "max": 400,
-  "step": 5,
-  "title": "peak intensity of the warm muzzle light (× the weapon's own muzzleFx.lightGain, × suppressedGain for a suppressed gun)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Muzzle (shot)",
-  "kind": "slider",
-  "label": "shot light s",
-  "min": 0.02,
-  "max": 0.3,
-  "step": 0.01,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Muzzle (shot)",
-  "kind": "slider",
-  "label": "shot jet density /s",
-  "min": 0,
-  "max": 120,
-  "step": 1,
-  "title": "bore jet; the two side ports carry portFraction of it",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Muzzle (shot)",
-  "kind": "slider",
-  "label": "shot jet heat /s",
-  "min": 0,
-  "max": 400,
-  "step": 5,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Muzzle (shot)",
-  "kind": "slider",
-  "label": "shot wisp density /s",
-  "min": 0,
-  "max": 30,
-  "step": 0.5,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Muzzle (shot)",
-  "kind": "slider",
-  "label": "shot wisp heat /s",
-  "min": 0,
-  "max": 150,
-  "step": 1,
-  "title": "buoyancy: what makes the thread climb off the barrel on its own",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Muzzle (shot)",
-  "kind": "slider",
-  "label": "shot sparks",
-  "min": 0,
-  "max": 48,
-  "step": 1,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Muzzle (shot)",
-  "kind": "slider",
-  "label": "shot spark speed m/s",
-  "min": 2,
-  "max": 40,
-  "step": 0.5,
-  "title": "streak length = speed × shutter",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Muzzle (shot)",
-  "kind": "slider",
-  "label": "shot spark cone rad",
-  "min": 0.05,
-  "max": 1.2,
-  "step": 0.01,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Muzzle (shot)",
-  "kind": "slider",
-  "label": "shot spark life s",
-  "min": 0.03,
-  "max": 0.6,
-  "step": 0.01,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Muzzle (shot)",
-  "kind": "toggle",
-  "label": "ejection-port curl",
-  "title": "the small second wisp the shipped look had (not in the reference set)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ CPU sparks (game/sparks.ts)",
-  "kind": "slider",
-  "label": "spark gravity",
-  "min": 0,
-  "max": 30,
-  "step": 0.5,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ CPU sparks (game/sparks.ts)",
-  "kind": "slider",
-  "label": "spark drag /s",
-  "min": 0,
-  "max": 6,
-  "step": 0.1,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ CPU sparks (game/sparks.ts)",
-  "kind": "slider",
-  "label": "spark brightness ×",
-  "min": 0.1,
-  "max": 8,
-  "step": 0.1,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ CPU sparks (game/sparks.ts)",
-  "kind": "slider",
-  "label": "spark hold (frac of life)",
-  "min": 0,
-  "max": 0.9,
-  "step": 0.02,
-  "title": "fraction of its life a spark stays white-hot before fading orange → red",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ CPU sparks (game/sparks.ts)",
-  "kind": "slider",
-  "label": "spark streak thickness mm",
-  "min": 2,
-  "max": 30,
-  "step": 1,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ CPU sparks (game/sparks.ts)",
-  "kind": "slider",
-  "label": "spark shutter ms",
-  "min": 2,
-  "max": 50,
-  "step": 1,
-  "title": "how much motion one streak shows",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Stun charge",
-  "kind": "slider",
-  "label": "stun light power",
-  "min": 0,
-  "max": 3000,
-  "step": 20,
-  "title": "white transient point light, history-free: safe to make absurd",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Stun charge",
-  "kind": "slider",
-  "label": "stun light s",
-  "min": 0.03,
-  "max": 0.5,
-  "step": 0.01,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Stun charge",
-  "kind": "slider",
-  "label": "stun density ×",
-  "min": 0,
-  "max": 4,
-  "step": 0.05,
-  "title": "multiplies the jets, body vents, wisp and trails (base numbers in effects.ts)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Stun charge",
-  "kind": "slider",
-  "label": "stun heat ×",
-  "min": 0,
-  "max": 3,
-  "step": 0.05,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Stun charge",
-  "kind": "slider",
-  "label": "stun sparks",
-  "min": 0,
-  "max": 96,
-  "step": 1,
-  "title": "the CPU box sparks. With GPU particles on only the first 'stun smoke trails' of them fly (they carry the smoke); the fragments you see are Renderer fx ▸ Particles ▸ bang sparks",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Stun charge",
-  "kind": "slider",
-  "label": "stun smoke trails",
-  "min": 0,
-  "max": 20,
-  "step": 1,
-  "title": "smoke emitters riding the first N sparks (charged against the solver's 32 emitter slots)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Stun charge",
-  "kind": "slider",
-  "label": "stun fuse s",
-  "min": 0.2,
-  "max": 4,
-  "step": 0.1,
-  "title": "from first contact with the floor / a prop. Outside a squad mission's room fight only (the night game); in one: Squad ▸ Kit ▸ bang ▸ your fuse s",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Stun charge",
-  "kind": "slider",
-  "label": "dazzle radius m",
-  "min": 0,
-  "max": 16,
-  "step": 0.5,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Stun charge",
-  "kind": "slider",
-  "label": "dazzle seconds",
-  "min": 0,
-  "max": 10,
-  "step": 0.25,
-  "title": "the night game's dazzle. In a squad mission's room fight the flashbang is Squad ▸ Kit ▸ flashbang ▸ blinds and folds a room and its rows",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Stun charge",
-  "kind": "toggle",
-  "label": "dazzle guards",
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Box sparks look (effects.ts sparks)",
-  "kind": "slider",
-  "label": "spark brightness ×",
-  "min": 0,
-  "max": 8,
-  "step": 0.1,
-  "title": "× 25 HDR at white heat; the bloom does the glow (the same value as Effects ▸ CPU sparks ▸ spark brightness ×)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Box sparks look (effects.ts sparks)",
-  "kind": "slider",
-  "label": "spark thickness cm",
-  "min": 0.3,
-  "max": 4,
-  "step": 0.1,
-  "title": "(the same value as Effects ▸ CPU sparks ▸ spark streak thickness mm)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Box sparks look (effects.ts sparks)",
-  "kind": "slider",
-  "label": "spark gravity",
-  "min": 0,
-  "max": 40,
-  "step": 0.5,
-  "title": "(the same value as Effects ▸ CPU sparks ▸ spark gravity)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Box sparks look (effects.ts sparks)",
-  "kind": "slider",
-  "label": "spark drag /s",
-  "min": 0,
-  "max": 8,
-  "step": 0.05,
-  "title": "(the same value as Effects ▸ CPU sparks ▸ spark drag /s)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Box sparks look (effects.ts sparks)",
-  "kind": "toggle",
-  "label": "sparks hit geometry",
-  "title": "ray cast fast sparks against walls / props / doors; off = floor only",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Tracers",
-  "kind": "slider",
-  "label": "tracer speed m/s",
-  "min": 40,
-  "max": 900,
-  "step": 10,
-  "title": "how fast the streak's head travels muzzle → impact (the round itself is hitscan): 280 = a 20 m corridor in four or five frames; a real 5.45 tracer does 880 and would be gone in one",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Tracers",
-  "kind": "slider",
-  "label": "tracer shutter ms",
-  "min": 2,
-  "max": 40,
-  "step": 1,
-  "title": "streak length = speed × shutter (11 ms ≈ 3 m at 280 m/s), never longer than the distance flown so far",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Tracers",
-  "kind": "slider",
-  "label": "tracer thickness mm",
-  "min": 4,
-  "max": 60,
-  "step": 1,
-  "title": "widened to about a pixel (and dimmed by as much) when the camera is far, like the lasers",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Tracers",
-  "kind": "slider",
-  "label": "tracer emissive",
-  "min": 0,
-  "max": 300,
-  "step": 5,
-  "title": "× the row colour = HDR radiance of the streak (60 → [60, 25, 7] orange); the bloom does the glow",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Tracers",
-  "kind": "slider",
-  "label": "tracer head light",
-  "min": 0,
-  "max": 40,
-  "step": 0.5,
-  "title": "intensity of the small transient point light riding the head (a muzzle flash is 90–150): the warm wash on the wall it passes and the haze it crosses. 0 = streak only",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Tracers",
-  "kind": "slider",
-  "label": "tracer light range m",
-  "min": 1,
-  "max": 10,
-  "step": 0.5,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Tracers",
-  "kind": "slider",
-  "label": "tracer ember glow",
-  "min": 0,
-  "max": 20,
-  "step": 0.5,
-  "title": "the 60 ms glow where a tracer stops in geometry (plus a few sparks: tracer ember sparks)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Tracers",
-  "kind": "slider",
-  "label": "tracer ember sparks",
-  "min": 0,
-  "max": 12,
-  "step": 1,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Tracers",
-  "kind": "slider",
-  "label": "tracer lights max",
-  "min": 0,
-  "max": 12,
-  "step": 1,
-  "title": "how many streaks in flight carry a head light at once (the LightSet holds 64 lights, the level's rows first; muzzle flashes share the rest)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Smoke can: floor vent (A/B) & solver sources",
-  "kind": "toggle",
-  "label": "smoke can = floor vent (A/B)",
-  "title": "ON: the cold directional jet along the throw (effects.ts `vent`: the three sliders below). OFF (shipped): the upward canister jet + plume, driven by Volumetrics ▸ Smoke solver ▸ the canister rows. The Sandbox page's 'smoke at cursor' button always uses the upward one",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Vent canister & solver sources",
-  "kind": "slider",
-  "label": "vent density /s",
-  "min": 0,
-  "max": 80,
-  "step": 1,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Vent canister & solver sources",
-  "kind": "slider",
-  "label": "vent jet m/s",
-  "min": 0,
-  "max": 8,
-  "step": 0.1,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Vent canister & solver sources",
-  "kind": "slider",
-  "label": "vent radius m",
-  "min": 0.1,
-  "max": 0.6,
-  "step": 0.01,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Effects ▸ Vent canister & solver sources",
-  "kind": "toggle",
-  "label": "expansion sources",
-  "title": "solver: honour emitters' `expand` (pressure-driven divergence + density volume correction). Off = jets only, for A/B",
-  "def": false,
-  "extra": ""
+  "extra": "wet ▸ rain 0.00 · Player 0.00/0.00 · Kowalski 0.00/0.00 · No"
  },
  {
   "path": "Sandbox ▸ Sandbox",
@@ -4195,14 +3903,6 @@
   "kind": "toggle",
   "label": "god mode",
   "title": "guards still see and shoot you, but hits do no damage",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Sandbox",
-  "kind": "toggle",
-  "label": "muzzle discipline (hostage)",
-  "title": "while you hold a living man, nobody who can see it fires — weapons up on you, talking, working round you, but not one round until he is out of your arm (choked out, whipped, shot, loose), and then only after a beat. Off = the old rule: a man who gets round to your back fires down the flank line (A/B)",
   "def": false,
   "extra": ""
  },
@@ -4239,1095 +3939,111 @@
   "extra": ""
  },
  {
-  "path": "Sandbox ▸ Detection & movement",
-  "kind": "slider",
-  "label": "detection rate",
-  "min": 0.2,
-  "max": 5,
-  "step": 0.1,
-  "title": "",
-  "def": false,
+  "path": "Missions ▸ Difficulty (loud scenarios)",
+  "kind": "toggle",
+  "label": "hard defenders",
+  "title": "THE difficulty switch for the loud squad missions (also on the mission sheet). Off = STANDARD: the defenders exactly as they were. On = HARD: the harder defenders' and the dig-in rows both on at hard's numbers (their shipped rows plus stand to, stand and fight and far rooms by one door, but the room's keeper does not dig in) — defenders near a room you have hit come at it together and round by a second door, the men of a room farther off as one by one door, call it on their radio first, stand and fight where they meet you out of it, and fall back to fight again; heard before your first entry they report it, wait, and all come when a room is hit; the man left to keep a room slips out by another door when you reach his. Few barricade: a defender shuts, wedges and covers his door only when he hears a fight he has no way into. No hit points, aim or dice change. Hard also narrows your own team's fog of war to cones (Missions ▸ Fog of war ▸ 'fog of war ▸ HARD: eyes are cones'). Restart the scenario after flipping it. Levels: standard · hard.",
+  "def": true,
   "extra": ""
  },
  {
-  "path": "Sandbox ▸ Detection & movement",
+  "path": "Missions ▸ Difficulty (loud scenarios)",
+  "kind": "text",
+  "label": "",
+  "title": "",
+  "def": false,
+  "extra": "standard: the usual defenders"
+ },
+ {
+  "path": "Missions ▸ Enemy nerve",
   "kind": "select",
-  "label": "a light OCP'd out: calm men…",
-  "title": "what a CALM man (awareness under the suspicious line) does when a fixture before his eyes dims out under the OCP: glance = crane his head at it, mutter about the wiring, awareness +0.18 capped under 0.3 — nobody walks over, nobody radios (with his back to it he misses it unless it was the light he stands in); investigate = the old rule: awareness 0.4 and over he comes to the dark patch. A fixture SHOT dark, or a man already on edge, always takes the old rule; a camera or a laser blinded by the OCP files nothing either way. Kept per machine",
+  "label": "training",
+  "title": "who is GREEN and who is STEADY (it moves when a man breaks and how he copes, never his health, his aim or his reactions). by difficulty = the squad's own key in the level, else standard: the first man of each squad is its steady leader and the rest are green; hard: every man steady but the last of a squad of three or more (no squads: the men of a room are a squad; the night staff by temperament: the nervy ones are green). all green / leader and green / all trained = that for every squad, whatever the level and the difficulty. The response team is always steady. A man inside a sequence keeps the training he went into it with. Also ?training=green|mixed|trained",
   "def": false,
-  "extra": "glance / investigate"
+  "extra": "by difficulty / all green / leader and green / all trained / none (an old recording)"
  },
  {
-  "path": "Sandbox ▸ Detection & movement",
-  "kind": "slider",
-  "label": "visibility floor E",
-  "min": 0.005,
-  "max": 0.2,
-  "step": 0.005,
-  "title": "irradiance at the player that reads as fully hidden (0%)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Detection & movement",
-  "kind": "slider",
-  "label": "visibility slope",
-  "min": 0.05,
-  "max": 0.5,
-  "step": 0.01,
-  "title": "visibility = slope · ln(E / floor)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Detection & movement",
-  "kind": "slider",
-  "label": "guard walk m/s",
-  "min": 0.5,
-  "max": 2.5,
-  "step": 0.05,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Detection & movement",
-  "kind": "slider",
-  "label": "player walk m/s",
-  "min": 0.5,
-  "max": 3,
-  "step": 0.05,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Detection & movement",
-  "kind": "slider",
-  "label": "player sprint m/s",
-  "min": 3,
-  "max": 7,
-  "step": 0.1,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Detection & movement",
-  "kind": "slider",
-  "label": "player crouch m/s",
-  "min": 0.5,
-  "max": 2.5,
-  "step": 0.05,
-  "title": "crouch-walk top speed (guards patrol at guard walk m/s = 1.15): remembered on this machine; the wheel pace scales it down from here",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Detection & movement",
-  "kind": "toggle",
-  "label": "floor materials (steps)",
-  "title": "footsteps take the floor they land on into account — one map (game/floor.ts) for the mixer, the guards' ears and the SOUND meter: carpet ×0.6 (crouched on carpet you are inaudible), lino ×1 (the corridor, the reference), stone ×1.1, the server room's raised floor ×1.05, asphalt ×0.9, grass ×0.45. Off = every floor behaves as lino (A/B)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Detection & movement",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "underfoot: carpet · steps ×0.6 · soft sample"
- },
- {
-  "path": "Sandbox ▸ Detection & movement",
-  "kind": "slider",
-  "label": "anim walk speed",
-  "min": 0.8,
-  "max": 2.5,
-  "step": 0.05,
-  "title": "ground speed at which the walk cycle plays at 1× (foot-slide tuning)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Detection & movement",
-  "kind": "slider",
-  "label": "anim jog speed",
-  "min": 2,
-  "max": 5,
-  "step": 0.05,
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Stealth ▸ Detection & movement",
-  "kind": "buttons",
-  "label": "guards",
-  "title": "",
-  "def": false,
-  "extra": "[reset] [alert all — every living man hostile to you knows where you stand (teammates are left alone)] [calm all — every living man hostile to you back to calm (teammates are left alone)]"
- },
- {
-  "path": "Sandbox ▸ Bodies by light",
-  "kind": "toggle",
-  "label": "bodies found by light (dark hides a body)",
-  "title": "a colleague lying in a man's view is FOUND only when the light where he lies reads high enough on the same meter your own visibility is (the renderer's irradiance at the body; a torch beam on it — the finder's own included — a lit doorway, the panel over him), or he is inside a couple of metres of it (he all but trips on it), and never through a plume thick enough to hide a standing man. So a body left in a dark office stays unfound until somebody's torch sweeps it; one under the corridor panels is called in on sight, as before. Off = range, cone and line of sight alone: found in the pitch dark at twelve metres (the old rule)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Bodies by light",
-  "kind": "slider",
-  "label": "bodies ▸ lit bar (meter 0‥1)",
-  "min": 0.05,
-  "max": 0.8,
-  "step": 0.01,
-  "title": "the meter reading at the body at or above which it is plain from \"far\" and beyond — 0.22 ≈ the fringe of a corridor panel's pool; a torch squarely on it reads 0.7+, open floor between two panels at night ~0.35, a dark office 0. Higher = darker corners keep their secrets from further off",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Bodies by light",
-  "kind": "slider",
-  "label": "bodies ▸ any light inside m",
-  "min": 0.5,
-  "max": 5,
-  "step": 0.1,
-  "title": "inside this he finds a body at his feet in no light at all; from here out to \"far\" the bar eases up to the lit bar",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Bodies by light",
-  "kind": "slider",
-  "label": "bodies ▸ full bar from m",
-  "min": 1,
-  "max": 12,
-  "step": 0.5,
-  "title": "the distance from which the full lit bar applies",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Bodies by light",
-  "kind": "buttons",
-  "label": "bodies",
-  "title": "",
-  "def": false,
-  "extra": "[defaults — the switch on, the bar back to the shipped values, and the copy kept on this machine dropped]"
- },
- {
-  "path": "Sandbox ▸ Bodies by light",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "bodies by light ▸ on · bar 0.22 from 5 m (any light inside 2"
- },
- {
-  "path": "Player & weapons ▸ Weapons & rifles",
+  "path": "Missions ▸ Enemy nerve",
   "kind": "select",
-  "label": "patrol guards' rifles",
-  "title": "who carries the AKS-74U-style carbine instead of torch + sidearm — its weapon light on the handguard is his torch (the light is where the muzzle points), calm he carries it low across the front, hunting he shoulders it, and seen he fires it in short bursts: 2–4 rounds at 600 rpm, the first aimed like a pistol round and each after it wider, 0.9–1.6 s between bursts, thirty to a box and 2.6 s changing it (the empty hits the floor); one round still drops you, like his. Dying, the whole rifle tumbles out of his hands, its light dying on the floor. none = the floor as it was; re-dealt live. Only the level's own patrolling staff (the night shift, a quiet mission's guards; 'Reyes' = the man of that callsign): a squad mission's defenders carry what they were staged with",
+  "label": "nerve",
+  "title": "every shock a man takes × 1.4 (brittle) / 1 (normal) / 0.7 (steady): how readily the whole garrison is rattled. Also ?nerve=brittle|steady",
   "def": false,
-  "extra": "none / Reyes / all"
+  "extra": "brittle / normal / steady"
  },
  {
-  "path": "Sandbox ▸ Weapons & rifles",
-  "kind": "slider",
-  "label": "Five-seveN report (1 = a shot)",
-  "min": 0.2,
-  "max": 1,
-  "step": 0.05,
-  "title": "how the floor hears the suppressed pistol: below 1 it is an odd noise — a guard within ~7 m × this ÷ 0.6 of open air (far less through a shut door) comes for a look, nobody calls a shot; 1 = unmistakable gunfire, the whole floor on alert (what the FN2000 always is)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Weapons & rifles",
-  "kind": "slider",
-  "label": "FN2000 report (1 = a shot)",
-  "min": 0.2,
-  "max": 1,
-  "step": 0.05,
-  "title": "the rifle: 1 by design — a 5.56, suppressed or not, cracks past supersonic and reads as gunfire anywhere on the floor",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Weapons & rifles",
-  "kind": "toggle",
-  "label": "rifles: opening burst goes wide",
-  "title": "a rifleman's FIRST burst at you from ten metres or more is laid the better part of a metre beside you — into the partition, the jamb, the wall you are using — not on you: what trained men do (fix, then work round), and your warning that the next one is aimed. Off = every burst aimed from the first (A/B)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Weapons & rifles",
+  "path": "Missions ▸ Enemy nerve",
   "kind": "text",
   "label": "",
   "title": "",
   "def": false,
-  "extra": "rifles ▸ nobody carries one (none)"
+  "extra": "men ▸ S g S"
  },
  {
-  "path": "Sandbox ▸ Weapons & rifles",
-  "kind": "toggle",
-  "label": "rifles: tracers",
-  "title": "every third round out of the carbine and the last three of its box are tracers: a streak that travels muzzle → impact over four or five frames with a small warm light riding its head (watch the wall it passes and the haze it crosses), an ember where it stops in geometry — three lit in a row and he is about to change the box. The round itself is what it always was (hitscan); pistols carry none. Numbers: Effects ▸ tracer rows / effects.ts tracerFx. Off = no streaks, no lights (A/B)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Weapons & rifles",
+  "path": "Missions ▸ Enemy nerve",
   "kind": "text",
   "label": "",
   "title": "",
   "def": false,
-  "extra": "tracers ▸ 0 in flight (0 lit) · 0 fired"
+  "extra": "morale ▸ every man steady"
  },
  {
-  "path": "Sandbox ▸ Weapons & rifles",
-  "kind": "buttons",
-  "label": "FN2000",
-  "title": "",
-  "def": false,
-  "extra": "[refill rings + magazines — sandbox: five rings again and 30+1 with two spare thirties (rings are otherwise spent for good — nothing on the floor comes back)] [attachment (2 again) — what the right button fires with the rifle up: RING (the airfoil) ⇄ 40 MM (the grenade) — the rifle's own slot digit pressed again does the same]"
- },
- {
-  "path": "Sandbox ▸ Weapons & rifles",
+  "path": "Missions ▸ Enemy nerve",
   "kind": "text",
   "label": "",
   "title": "",
   "def": false,
-  "extra": "rings ▸ 5 left · attachment none (2 again with the rifle up;"
+  "extra": "runner ▸ nobody has run"
  },
  {
-  "path": "Player & weapons ▸ Weapons & rifles",
-  "kind": "toggle",
-  "label": "suppression (rounds past a man)",
-  "title": "one scalar per man, the player included, raised by every round that passes within ~2 m of his chest or strikes within ~2.5 m of it (off the segment the round actually flew — no line of sight asked, nothing inferred from anybody's state) and halving every 1.1 s. Guards: ≥ 0.3 he flinches, says so, fires wider and later and stops sprinting into it; ≥ 0.6 his head goes down — crouched behind what he stands at, gun low, no round — for a second or so and until it eases; 4 s of that and he shifts to cover off your line. Two rounds into the jamb beside a man ≈ pinned. The player: his own rounds open up (± ~2° at full). Off = the number is still worked out and shown below, nobody reacts to it (A/B)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Weapons & rifles",
+  "path": "Missions ▸ Enemy nerve",
   "kind": "text",
   "label": "",
   "title": "",
   "def": false,
-  "extra": "suppression ▸ Sam 0.00 · Kowalski 0.00"
+  "extra": "dark door ▸ nobody stopped"
  },
  {
-  "path": "Sandbox ▸ Aim (settle model)",
-  "kind": "toggle",
-  "label": "aim settles (guards + you)",
-  "title": "both sides take time to line a shot up: a guard's first round waits for ~0.7 s of track on you after his reaction beat and his early rounds go wide (× up to \"unsettled\" below), a target crossing his view costs him, his own feet cost him more — closing on you he brakes to a standstill for each shot; your ring is your cone: it blooms while you move and after a sprint, tightens as you hold still on a man, starts again on a new man. Off = every round exactly what it was (their rows, you dead-on) — the A/B seam",
-  "def": true,
-  "extra": ""
+  "path": "Missions ▸ Enemy nerve",
+  "kind": "text",
+  "label": "",
+  "title": "",
+  "def": false,
+  "extra": "net ▸ every man answered"
  },
  {
-  "path": "Sandbox ▸ Aim (settle model)",
+  "path": "Sandbox ▸ Stress: extra enemies",
   "kind": "slider",
-  "label": "aim ▸ guards: settle s",
-  "min": 0.2,
-  "max": 3,
-  "step": 0.05,
-  "title": "seconds from nothing to fully lined up (track 0 → 1) with eyes on you and the gun on you, at 8 m and beyond — nearer you fill his sights and it goes quicker in proportion (a quarter of it at arm's length); the first round waits for \"first shot at\" × this",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Aim (settle model)",
-  "kind": "slider",
-  "label": "aim ▸ guards: first shot at",
-  "min": 0,
-  "max": 1,
-  "step": 0.05,
-  "title": "the first-shot gate: no round under this much track (0 = fire the moment the gun is round, as before; a burst is gated at its start)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Aim (settle model)",
-  "kind": "slider",
-  "label": "aim ▸ guards: unsettled ×",
+  "label": "extra enemies",
   "min": 1,
-  "max": 6,
-  "step": 0.1,
-  "title": "× his row's cone at track 0, easing to ×1 at track 1: how wide the rounds of a man who has only just found you go",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Aim (settle model)",
-  "kind": "slider",
-  "label": "aim ▸ guards: crossing target",
-  "min": 0,
-  "max": 0.5,
-  "step": 0.01,
-  "title": "rad of cone per rad/s of YOUR bearing sweeping across him (capped 0.26): sprinting across his front 8 m off ≈ 0.6 rad/s; running straight at him ≈ 0 — that is easy for him",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Aim (settle model)",
-  "kind": "slider",
-  "label": "aim ▸ guards: own movement",
-  "min": 0,
-  "max": 0.3,
-  "step": 0.01,
-  "title": "rad of cone per m/s of his own feet (the chase is 2.7 m/s: nothing aimed leaves a running man)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Aim (settle model)",
-  "kind": "slider",
-  "label": "aim ▸ guards: stop to shoot m/s",
-  "min": 0,
-  "max": 3,
-  "step": 0.05,
-  "title": "moving faster than this his track cannot pass 0.5 (under the gate): he plants to shoot — closing on you inside 14 m he brakes for each round and runs on after it",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Aim (settle model)",
-  "kind": "slider",
-  "label": "aim ▸ you: settle s",
-  "min": 0.2,
-  "max": 3,
-  "step": 0.05,
-  "title": "seconds for your ring to tighten fully on a man (or a point) 8 m off once you hold still — quicker nearer, as for them; a sprint knocks it back to 0.3, walking holds it at 0.7, crouched it settles ×1.15 quicker; a new man under the reticle starts it again",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Aim (settle model)",
-  "kind": "slider",
-  "label": "aim ▸ you: unsettled ×",
-  "min": 1,
-  "max": 6,
-  "step": 0.1,
-  "title": "× your hands' own cone (0.012 rad standing / 0.008 crouched, settled) at track 0",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Aim (settle model)",
-  "kind": "slider",
-  "label": "aim ▸ you: crossing target",
-  "min": 0,
-  "max": 0.5,
-  "step": 0.01,
-  "title": "rad of cone per rad/s of the man under your reticle crossing your view (capped 0.16)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Aim (settle model)",
-  "kind": "slider",
-  "label": "aim ▸ you: own movement",
-  "min": 0,
-  "max": 0.3,
-  "step": 0.01,
-  "title": "rad of cone per m/s of your own feet: the walk's 1.55 m/s ≈ +0.12 (a torso at 8 m half the time), the wheel's creep a third of that, a sprint stop blooms and drains inside half a second",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Aim (settle model)",
-  "kind": "buttons",
-  "label": "aim",
-  "title": "",
-  "def": false,
-  "extra": "[defaults — every aim knob back to the shipped value, and the copy kept on this machine dropped]"
- },
- {
-  "path": "Sandbox ▸ Aim (settle model)",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "aim ▸ you: track 0.00 · cone 0.026 (hands 0.012 ×2.20 + cros"
- },
- {
-  "path": "Sandbox ▸ Whistle (V)",
-  "kind": "slider",
-  "label": "whistle ▸ level (sound meter)",
-  "min": 0.1,
-  "max": 1,
-  "step": 0.05,
-  "title": "the hearing-model level a whistle (V) puts on the SOUND meter and stamps on its event — a crouched step on lino is ~0.2, a walk 0.33, the suppressed pistol 0.6. What it does to the guards is the reach below, not this",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Whistle (V)",
-  "kind": "slider",
-  "label": "whistle ▸ reach, m of open air",
-  "min": 2,
-  "max": 16,
-  "step": 0.5,
-  "title": "how far a whistle carries to a guard along the SAME propagation everything else uses: this many metres straight through the air, × 0.72 of it round a corner (in through the doorway), × 0.32 through a shut door, × 0.9 over a partition — a quarter further on an alarmed floor. The nearest calm man inside it comes over for a look (torch in hand, nothing on the radio); the others who heard turn their heads; a hunting man takes it as a fix on you",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Whistle (V)",
-  "kind": "slider",
-  "label": "whistle ▸ cooldown s",
-  "min": 0.5,
-  "max": 6,
-  "step": 0.25,
-  "title": "seconds before V sounds again",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Whistle (V)",
-  "kind": "slider",
-  "label": "whistle ▸ twice window s",
-  "min": 5,
-  "max": 180,
-  "step": 5,
-  "title": "the same man answering a SECOND whistle inside this many seconds stops taking looks and searches the place properly — gun out, the corners round where it came from — still without a word on the net unless he finds you",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Whistle (V)",
-  "kind": "buttons",
-  "label": "whistle",
-  "title": "",
-  "def": false,
-  "extra": "[defaults — the four whistle knobs back to the shipped values, and the copy kept on this machine dropped]"
- },
- {
-  "path": "Sandbox ▸ Whistle (V)",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "whistle ▸ ready (V) · 0 blown"
- },
- {
-  "path": "Sandbox ▸ Pursuit tactics",
-  "kind": "toggle",
-  "label": "pursuit tactics (flank / lone angle / kill-zone doors)",
-  "title": "two or more alert men on one fix FLANK it: a presser stops short kneeling at his last corner, a flanker is sent the long way round to come in ≥ 90° from the other side (\"moving round\" / \"set\" / \"go go go\" on the net), else a second presser three metres behind; a LONE man on an armed intruder takes the nearest corner that sees the fix and calls it in instead of charging; a doorway a colleague went down in under someone's eyes (or was found in, or rounds came through) is a KILL ZONE for that side — paths go round it, and a man who must take it stacks on the jamb, radios it, waits for a second man, puts a charge in if he has one else slices the pie, and crosses fast. Off = the old chase, byte for byte (tools/qa tactics-identity)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Pursuit tactics",
-  "kind": "slider",
-  "label": "tactics ▸ flank wait s",
-  "min": 1,
-  "max": 20,
-  "step": 0.5,
-  "title": "how long the presser kneels at his corner for a flanker who is getting NOWHERE before he pushes alone (a flank still being run round he waits for regardless — the pincer is the point)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Pursuit tactics",
-  "kind": "slider",
-  "label": "tactics ▸ lone wait s",
-  "min": 1,
-  "max": 30,
-  "step": 0.5,
-  "title": "how long a man alone on an armed intruder holds his corner after calling it in before going on by himself — at a walk (a second man up sooner and the two are dealt roles)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Pursuit tactics",
-  "kind": "slider",
-  "label": "tactics ▸ door danger s",
-  "min": 5,
-  "max": 90,
+  "max": 15,
   "step": 1,
-  "title": "how long a doorway stays a kill zone for a side after a man of theirs dropped in it in view, was found in it, or took rounds through it (banged and entered clears it at once; entered, within six seconds)",
-  "def": true,
+  "title": "How many more hostile men the button stands. They are ordinary defenders (held on a spot, gun on a door); under a room clear they are dealt to its rooms and count for it. Only as many as the character budget takes are stood: sixteen characters all told, bodies included — on The block (you + four + eight) that is three more.",
+  "def": false,
   "extra": ""
  },
  {
-  "path": "Sandbox ▸ Pursuit tactics",
-  "kind": "slider",
-  "label": "tactics ▸ door wait s",
-  "min": 1,
-  "max": 20,
-  "step": 0.5,
-  "title": "how long the man stacked on a kill-zone doorway waits for the second man his call fetched before he slices it and goes in alone",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Pursuit tactics",
+  "path": "Sandbox ▸ Stress: extra enemies",
   "kind": "buttons",
-  "label": "tactics",
+  "label": "stand",
   "title": "",
   "def": false,
-  "extra": "[defaults — the four clocks back to the shipped values, and the copy kept on this machine dropped]"
+  "extra": "[stand them now — stand that many more enemies on this floor now (a restart takes them away again)] [keep them (every restart) — the same count stood again after every restart of the scenario, as ?extra=N on the URL does] [off — stop standing them: the next restart stages the scenario as it ships]"
  },
  {
-  "path": "Sandbox ▸ Pursuit tactics",
+  "path": "Sandbox ▸ Stress: extra enemies",
   "kind": "text",
   "label": "",
   "title": "",
   "def": false,
-  "extra": ""
+  "extra": "3 enemies up (0 extra) · 0 teammates · 6 of 16 characters (b"
  },
  {
-  "path": "Sandbox ▸ Needs (breaks off the route)",
-  "kind": "toggle",
-  "label": "needs (coffee / smoke / water / a stretch off the route)",
-  "title": "every man on nights carries two or three slow needs dealt off his name — a coffee at the break-room counter, a smoke outside the fire exit, water at the cooler, a lap of the lobby — that fill while he is calm on his route. A full one takes him off it from the waiting waypoint nearest the place, ONE man at a time and only on a calm floor, and he TELLS you first: twenty seconds out he checks his watch and glances the way he will go, at twelve he says so to the colleague in earshot (who grumbles back) or over the net, at five he rubs his neck and turns — then walks at patrol pace, stays a fixed spell (below), walks back to the same waypoint, \"right, where was I\". A noise, a body, an errand, the floor going up: broken off where he stands, not resumed. Off = the patrol exactly as it was (tools/qa needs-identity)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Needs (breaks off the route)",
-  "kind": "slider",
-  "label": "needs ▸ fill rate ×",
-  "min": 0.25,
-  "max": 12,
-  "step": 0.25,
-  "title": "× how fast every need fills (1 = a coffee in 6–9 min of calm patrol, a smoke 8–12, water 6–10, the stretch 5–7 — each man his own inside the window; a fresh man starts 30–70 % along, so the first goes two to four minutes into a quiet run)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Needs (breaks off the route)",
-  "kind": "slider",
-  "label": "needs ▸ men away at once",
-  "min": 0,
-  "max": 3,
-  "step": 1,
-  "title": "how many may be off their routes at the same time, floor-wide, telegraphing included (1: the floor is short-staffed, and one gap at a time keeps it legible; 0 = nobody ever goes, the needs still fill)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Needs (breaks off the route)",
-  "kind": "slider",
-  "label": "needs ▸ telegraph s",
-  "min": 8,
-  "max": 40,
-  "step": 1,
-  "title": "seconds from the watch check to the first step (he says it at twelve to go, rubs his neck and turns at five — those two ride inside this)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Stealth ▸ Needs (breaks off the route)",
-  "kind": "slider",
-  "label": "needs ▸ coffee dwell s",
-  "min": 5,
-  "max": 90,
-  "step": 1,
-  "title": "seconds stood at the level's coffee place — in the office the break-room counter (the walk there and back is his route's own: ~8 s each way from the corridor's east end, ~12 from the cubicles' south-east corner, ~6 from the break room)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Stealth ▸ Needs (breaks off the route)",
-  "kind": "slider",
-  "label": "needs ▸ smoke dwell s",
-  "min": 5,
-  "max": 120,
-  "step": 1,
-  "title": "seconds stood at the level's smoking place — in the office outside the fire exit, the leaf sprung shut behind him (~15 s each way from the corridor's east end or the cubicles' corner)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Stealth ▸ Needs (breaks off the route)",
-  "kind": "slider",
-  "label": "needs ▸ water dwell s",
-  "min": 3,
-  "max": 60,
-  "step": 1,
-  "title": "seconds at the level's water place — in the office the cooler in the cubicle farm's south-east corner (~14 s each way from the corridor's east end, ~12 from the break room)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Stealth ▸ Needs (breaks off the route)",
-  "kind": "buttons",
-  "label": "needs",
-  "title": "",
-  "def": false,
-  "extra": "[send staff man 1 for a coffee — test: the level's patrolling staff man 1 (the office: Kowalski) gets the full telegraph from wherever he stands right now — watch check + glance, the word to whoever is in earshot (or the net) at twelve seconds, neck rub + turn at five — then walks to the level's coffee place, stands his dwell, walks back to the waypoint he was on. Only a calm man on a calm floor goes (the note says why not)] [send staff man 2 for a coffee — test: the level's patrolling staff man 2 (the office: Novak) gets the full telegraph from wherever he stands right now — watch check + glance, the word to whoever is in earshot (or the net) at twelve seconds, neck rub + turn at five — then walks to the level's coffee place, stands his dwell, walks back to the waypoint he was on. Only a calm man on a calm floor goes (the note says why not)] [send staff man 3 for a coffee — test: the level's patrolling staff man 3 (the office: Reyes) gets the full telegraph from wherever he stands right now — watch check + glance, the word to whoever is in earshot (or the net) at twelve seconds, neck rub + turn at five — then walks to the level's coffee place, stands his dwell, walks back to the waypoint he was on. Only a calm man on a calm floor goes (the note says why not)] [nearest → his fullest need — test: the living man nearest you is sent on whichever of HIS needs is fullest (a smoker out the fire door, a stretch round the lobby…)] [defaults — the switch back on, rate / men away / telegraph / dwells back to the shipped values, and the copy kept on this machine dropped]"
- },
- {
-  "path": "Sandbox ▸ Needs (breaks off the route)",
+  "path": "Sandbox ▸ Stress: extra enemies",
   "kind": "text",
   "label": "",
   "title": "",
   "def": false,
-  "extra": "needs ▸ nobody dealt yet · slot 0/1"
- },
- {
-  "path": "Stealth ▸ Civilians",
-  "kind": "toggle",
-  "label": "civilians (the level's own night people)",
-  "title": "the level's own civilians on the floor (the bazaar and the quiet yard have one each, most levels none). In the office: Marta cleans the cubicles and the corridor's south side (wiping, emptying the bins), Owen works late at a lit desk in the farm (sits typing, fetches his printing, stands at the south windows). They see you with the guards' own eye test and YOUR light meter (less keen, and narrower with their heads down over a desk or a bin), hear what the guards hear the way they hear it. A glimpse: she stops and looks. Seen plainly / a body / your gun out / a shot or a charge or a scream in earshot: a frozen beat, a scream the floor can hear, and she RUNS — to the nearest living calm guard, else a phone (reception, the break-room wall set), else out of the building — and TELLS: the man takes it as a fix (walks it; searches it weapon out and radios it for an armed man or a body, the floor a step up), the phone puts control on the net and sends the nearest calm man. Then she cowers in a corner. From behind you can grab one like a guard: ask what she knows, tell her to stay down and quiet (lets her go; she tells nobody unless a guard walks onto her), or put her out — a civilian on the floor costs you dear on the card. Off = nobody but the shift (today's floor byte for byte). Kept per machine.",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Civilians",
-  "kind": "toggle",
-  "label": "civilians ▸ a dead civilian fails the mission",
-  "title": "Chaos Theory fails some missions for a civilian killed by your hand; here by default it PRICES it instead (−40, 'civilian casualty' on the card, control's fury on the net once they find her, the floor locked down). On: the run ends where you stand — mission failed, Enter restarts. A knockout (−10) never fails it. Kept per machine.",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Stealth ▸ Civilians",
-  "kind": "buttons",
-  "label": "civilians",
-  "title": "",
-  "def": false,
-  "extra": "[panic civilian 1 now — test: the level's first civilian (the office: Marta, the cleaner) is frightened where she stands as if she had seen you where YOU stand — the frozen beat, the scream (the men in earshot turn toward you), the run to the nearest guard / phone / door, the telling, the cowering] [send civilian 1 to a phone — test: the first civilian runs for the nearest phone (the office: reception, or the break-room wall set) and rings you in from where you stand — six seconds on the line, then control puts it out to all callsigns and sends the nearest calm man] [panic civilian 2 now — test: the level's second civilian (the office: Owen, the late worker), likewise] [off / on (fresh) — both back on their first marks, calm, whatever state they were in (a knocked-out one gets up: it is a reset, not a wake)]"
- },
- {
-  "path": "Sandbox ▸ Civilians",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "civilians ▸ Marta WORK wipe @wp0 (10 s) aw 0.00 | Owen WORK "
- },
- {
-  "path": "Stealth ▸ Dialogue, alarm & clearing",
-  "kind": "buttons",
-  "label": "dialogue",
-  "title": "",
-  "def": false,
-  "extra": "[interrogate nearest guard — test: one exchange with the living guard nearest you (within 2 m, never a teammate), without the grab: he answers from his own state — what he personally saw / heard of you, how rattled he is, his temperament — one stage per press (reaction → pressure → the one useful thing he could know, or his refusal → nothing left). In play this is the held man's 'question' row; the line below is the engine's read of him (src/game/dialogue.ts — every line a draft placeholder)]"
- },
- {
-  "path": "Sandbox ▸ Dialogue, alarm & clearing",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "dialogue ▸ Kowalski (steady) · cell none·low·steady · A 0.00"
- },
- {
-  "path": "Sandbox ▸ Dialogue, alarm & clearing",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "alarm level: calm"
- },
- {
-  "path": "Sandbox ▸ Dialogue, alarm & clearing",
-  "kind": "buttons",
-  "label": "alarm level",
-  "title": "",
-  "def": false,
-  "extra": "[raise — one step up by hand, as if an alarm had just found nobody: calm → heightened (pistols out on patrol) → lockdown (pair + post, doors pulled to, the pair clears the rooms nearest the last fix)] [stand down — straight back to calm: torches out, own routes, a clear in progress called off (the men keep whatever suspicion they have)]"
- },
- {
-  "path": "Sandbox ▸ Dialogue, alarm & clearing",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Stealth ▸ Dialogue, alarm & clearing",
-  "kind": "buttons",
-  "label": "room clearing",
-  "title": "",
-  "def": false,
-  "extra": "[clear nearest room now — test (a level with clear plans: the office family): puts the alarm fix where the player stands and locks the floor down (or re-plans the running lockdown) — the pair walks over, stacks on that room's door, opens it hard, hooks in to their corners, sweeps, calls it and moves to the next nearest; a shot, a sighting, a bump or a creak breaks it off into the normal alert AI]"
- },
- {
-  "path": "Stealth ▸ Dialogue, alarm & clearing",
-  "kind": "slider",
-  "label": "rooms per clear (0 = auto)",
-  "min": 0,
-  "max": 5,
-  "step": 1,
-  "title": "0 = by what raised the lockdown: a body found → the 3 rooms nearest him, an alarm that came to nothing → the 2 nearest the last fix; 1‥5 = exactly that many. Kicked-in / picked doors' rooms jump the queue; a room called clear in the last minute of the same lockdown is skipped unless the new fix is inside it (applies to the next clear). Only on a level with clear plans (the office family)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Dialogue, alarm & clearing",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ QRF (going loud)",
-  "kind": "toggle",
-  "label": "QRF when you go loud",
-  "title": "a locked-down floor (ALARM II) that has HEARD your gunfire — a report at gunfire level in a living guard's ears: the FN2000 always, the suppressed Five-seveN never — or has found two of its men down calls the response team: control answers with an ETA on the radio, calls it again at thirty and ten seconds (boots on the west stairs through the door), and a four-man element comes in the west stair door and clears toward the last fix as one unit — file, stack, bang, flow, call, next room — fighting as the guards do the moment one of them sees you, re-forming when they lose you. Carbines, weapon lights, a stun charge each, steadier hands, short beats; they never stand down and there is one wave a night. Off = nobody ever comes (the A/B)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Stealth ▸ QRF (office night: the response to gunfire)",
-  "kind": "slider",
-  "label": "QRF ▸ ETA s",
-  "min": 15,
-  "max": 180,
-  "step": 5,
-  "title": "seconds from the request to the stair door going (the telegraph: control's answer, thirty seconds, ten seconds). A level whose file gives its own range deals inside that instead: the line under these rows says what this level gets; 'call QRF now' always uses this row",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Stealth ▸ QRF (office night: the response to gunfire)",
-  "kind": "slider",
-  "label": "QRF ▸ men",
-  "min": 2,
-  "max": 4,
-  "step": 1,
-  "title": "men in the element (capped by the renderer's eight-character shadow budget: the player + the three staff + four is exactly it). A level whose file gives its own range deals inside that instead; 'call QRF now' always uses this row",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ QRF (going loud)",
-  "kind": "toggle",
-  "label": "QRF ▸ perimeter tier",
-  "title": "past the response team — one of them killed, three men down on the floor, or a running gunfight with them on it — control locks the COMPOUND down: the lot's lamps all come up and men take posts outside the exits (the fire exit, the break room's outside door…) covering the doors from outside with their lights, pinned there: walking out of the fire exit is walking into their arcs (smoke, their lamp, or them). Spawned if the character budget has room; on this floor it has none, so the element's rear pair peels off and jogs out through the doors. Once a night; off = the lamps and the men stay as they are",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ QRF (going loud)",
-  "kind": "slider",
-  "label": "QRF ▸ perimeter ETA s",
-  "min": 10,
-  "max": 120,
-  "step": 5,
-  "title": "control's promise for the outside posts (they set when the men are actually on them, or when this and ten seconds have gone)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ QRF (going loud)",
-  "kind": "slider",
-  "label": "QRF ▸ perimeter men",
-  "min": 2,
-  "max": 4,
-  "step": 1,
-  "title": "men wanted on the outside posts (fire exit, break-room door, lobby front, south lot — in that order); what the budget cannot spawn is peeled off the element, always leaving two inside",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ QRF (going loud)",
-  "kind": "buttons",
-  "label": "QRF",
-  "title": "",
-  "def": false,
-  "extra": "[call QRF now — test: request the response team now whatever the floor knows (the whole telegraph and entry play from here; ETA above)] [perimeter now — test: lock the compound down now — lamps up, men to the outside posts (peeled off the element if it is on the floor, else spawned if the budget allows)] [stand down (reset) — sandbox: take the whole response back out of the world — men despawned, state idle, the wave unspent (a restart does the same)]"
- },
- {
-  "path": "Sandbox ▸ QRF (going loud)",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "QRF ▸ idle · bodies found 0 · alarm 0"
- },
- {
-  "path": "Sandbox ▸ Devices (cameras · keypads · lasers)",
-  "kind": "toggle",
-  "label": "devices ▸ cameras + beams sense",
-  "title": "off = the cameras still pan and glow and the beams still burn, but nothing they see or feel reaches the radio (keypads stay keypads)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Devices (cameras · keypads · lasers)",
-  "kind": "toggle",
-  "label": "devices ▸ tripwires",
-  "title": "the laser beams report a break (off = decoration)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Devices (cameras · keypads · lasers)",
-  "kind": "slider",
-  "label": "devices ▸ camera: suspicion after lit-s",
-  "min": 0.2,
-  "max": 4,
-  "step": 0.1,
-  "title": "lit-seconds of you in a camera's picture before control radios \"movement in …\" and the nearest calm man is sent to look — a plainly lit man close to fills a second per second, half-lit at the edge of its reach a fifth of that, dark never (your light meter IS its exposure)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Devices (cameras · keypads · lasers)",
-  "kind": "slider",
-  "label": "devices ▸ camera: alarm after lit-s",
-  "min": 0.5,
-  "max": 8,
-  "step": 0.1,
-  "title": "lit-seconds held in view before control calls it as him and the floor goes up a step (everyone gets the fix)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Devices (cameras · keypads · lasers)",
-  "kind": "toggle",
-  "label": "devices ▸ camera cones in the haze",
-  "title": "each live camera throws a faint red spot down its axis so its picture reads in the haze — one light slot per camera",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Stealth ▸ Devices (cameras · keypads · lasers)",
-  "kind": "buttons",
-  "label": "devices",
-  "title": "",
-  "def": false,
-  "extra": "[all codes — sandbox: you know every keypad's code (as if every man had talked)] [forget codes — sandbox: back to knowing none] [defaults — the device knobs back to the shipped values, and the copy kept on this machine dropped (the same as this section's ↺)]"
- },
- {
-  "path": "Sandbox ▸ Devices (cameras · keypads · lasers)",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "devices ▸ cam_corridor idle 0.00s · cam_server idle 0.00s · "
- },
- {
-  "path": "Player & weapons ▸ Player, doors & props",
-  "kind": "buttons",
-  "label": "player",
-  "title": "",
-  "def": false,
-  "extra": "[teleport to cursor] [refill ammo]"
- },
- {
-  "path": "Player & weapons ▸ Player, doors & props",
-  "kind": "buttons",
-  "label": "door locks",
-  "title": "",
-  "def": false,
-  "extra": "[relock (as authored) — every door the level authored locked is locked again on its key face, kicked keeps mended, pick progress gone (leaves stay where they are)] [unlock all]"
- },
- {
-  "path": "Sandbox ▸ Player, doors & props",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "server: locked · manager: locked · storage: locked · server_"
- },
- {
-  "path": "Sandbox ▸ Player, doors & props",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "props 61 · awake 0 · solver 0.00 ms"
- },
- {
-  "path": "Sandbox ▸ Player, doors & props",
-  "kind": "toggle",
-  "label": "prop physics",
-  "title": "chairs / cartons / bins / plants get shoved by characters, bullets, canisters and door leaves (and guards hear it); off = frozen where they stand, still solid",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Player, doors & props",
-  "kind": "slider",
-  "label": "prop friction ×",
-  "min": 0.2,
-  "max": 3,
-  "step": 0.05,
-  "title": "ground friction multiplier: low = chairs roll across the room, high = everything stops dead",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Player, doors & props",
-  "kind": "buttons",
-  "label": "props",
-  "title": "",
-  "def": false,
-  "extra": "[reset] [scatter — random shove on every prop (solver smoke test)]"
- },
- {
-  "path": "Sandbox ▸ Player, doors & props",
-  "kind": "select",
-  "label": "camera follows",
-  "title": "",
-  "def": false,
-  "extra": "player / guard 0 (corridor) / guard 1 (cubicles) / guard 2 (lobby_break)"
- },
- {
-  "path": "Destruction ▸ Chaos",
-  "kind": "slider",
-  "label": "chaos (destruction under sustained fire)",
-  "min": 0,
-  "max": 1,
-  "step": 0.05,
-  "title": "ONE knob for what a burst does to the room beyond the hole and the puff it always left: rounds pour heat into a 2 m grid (2 s memory) and a hit's escalation = heat × 2 × this. 0 = the game exactly as it was. 0.5 (default): the first round dents metal / shreds fabric / cracks a screen and scatters a paper stack it passes; the second in two seconds raises dust the guards' eyes and the torch beams really see (the smoke solver) and bigger splinters / gypsum / fluff; three-plus a second sweep mugs, phones and binders off the desk (a monitor off its stand on a direct hit) as rigid debris the floor HEARS land; held for two seconds — or one stun charge — a ceiling tile lets go overhead. 1 = twice as readily, knock-offs thrown harder (the kinetic-mode seed). Every path is capped whatever this says (rows below); nothing of it runs under the tour. 0 also makes wall breaking, wall charges and glass breaking inert (their sections say so)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Destruction ▸ Chaos",
-  "kind": "slider",
-  "label": "chaos ▸ dust puffs into the smoke /s",
-  "min": 0,
-  "max": 20,
-  "step": 1,
-  "title": "cap on impact dust clouds injected into the smoke solver per second (also ≤ 2 a frame and only while the solver's emitter budget has slack); 0 = particles-only dust",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Destruction ▸ Chaos",
-  "kind": "slider",
-  "label": "chaos ▸ paper stacks scattered /s",
-  "min": 0,
-  "max": 20,
-  "step": 1,
-  "title": "cap on paper stacks turned into sheet particles per second (each ~26 leaves; the stack comes back when the level resets)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Destruction ▸ Chaos",
-  "kind": "slider",
-  "label": "chaos ▸ knock-offs /s",
-  "min": 0,
-  "max": 12,
-  "step": 1,
-  "title": "cap on desk clutter / monitor housings knocked off per second; the rigid pool itself holds settings.debrisCap chunks (64 ultra + high, 32 below) — over it a break-off becomes a chip burst",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Destruction ▸ Chaos",
-  "kind": "slider",
-  "label": "chaos ▸ ceiling tiles per encounter",
-  "min": 0,
-  "max": 24,
-  "step": 1,
-  "title": "tiles that may drop before the level resets (one per 0.6 m square, ≥ 2.2 s apart)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Destruction ▸ Chaos",
-  "kind": "slider",
-  "label": "chaos ▸ debris pool (tier cap)",
-  "min": 4,
-  "max": 64,
-  "step": 4,
-  "title": "settings.debrisCap: the rigid-debris pool — the image-quality program's budget is ≤ 64 tumbling casters at ultra / high, ≤ 32 below (the preset sets it; this row is the A/B)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Destruction ▸ Impulses (what already lies about)",
-  "kind": "toggle",
-  "label": "chaos ▸ impulses kick the litter",
-  "title": "what already lies about is pushed again by what happens next: a stun charge throws the settled leaves within a couple of metres back up to flutter down (through an open doorway, not through the partition) and shoves the chunks it knocked off before; a round landing beside paper scoots it; a body hitting the floor, a boot through a door, a desk knocking into the wall twitch what lies within a stride. One record each to the GPU particles (≤ 16 a frame) and the debris pool; nothing on frames without any. Off = the destruction lane exactly as it was",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Destruction ▸ Impulses (what already lies about)",
-  "kind": "slider",
-  "label": "chaos ▸ impulse: bang strength (m/s)",
-  "min": 0,
-  "max": 12,
-  "step": 0.5,
-  "title": "the Δv a leaf right under a stun charge gets, out along the floor (falls off linearly to nothing at the radius: 3 with lift 2 throws the leaves within a metre a metre up and a stride off, hops the ones at two metres a hand high, shivers the ones at three and a half); × 1‥1.5 from chaos 0.5 to 1",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Destruction ▸ Impulses (what already lies about)",
-  "kind": "slider",
-  "label": "chaos ▸ impulse: bang radius (m)",
-  "min": 1,
-  "max": 8,
-  "step": 0.5,
-  "title": "how far from the charge anything is pushed at all",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Destruction ▸ Impulses (what already lies about)",
-  "kind": "slider",
-  "label": "chaos ▸ impulse: bang lift",
-  "min": 0,
-  "max": 4,
-  "step": 0.1,
-  "title": "the upward share added to the outward push (2 = twice as much up as out: they LIFT, then flutter down near where they lay)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Destruction ▸ Impulses (what already lies about)",
-  "kind": "slider",
-  "label": "chaos ▸ impulse: round strength (m/s)",
-  "min": 0,
-  "max": 4,
-  "step": 0.1,
-  "title": "the Δv the leaf right beside a bullet strike gets (radius 0.6 m, half of it up, biased along the round's travel over the surface): 1.5 hops it a few centimetres and scoots it a span",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Destruction ▸ Impulses (what already lies about)",
-  "kind": "slider",
-  "label": "chaos ▸ impulse: thud strength (m/s)",
-  "min": 0,
-  "max": 3,
-  "step": 0.1,
-  "title": "body falls, door kicks, furniture knocks: the push on what lies within a metre (subtle on purpose)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Destruction ▸ Tests",
-  "kind": "buttons",
-  "label": "chaos",
-  "title": "",
-  "def": false,
-  "extra": "[bang at cursor — test: a stun charge's worth of destruction where the cursor is (no flash, no dazzle) — the desk cleared, papers up in a ring, the tile above down, dust off the ceiling, the litter about it thrown up again] [kick litter at cursor — test: the charge's IMPULSE alone where the cursor is — no heat, nothing converted or knocked off: only what already lies about goes up] [reset destruction — every scattered stack / knocked-off thing / dead screen back as authored, debris and heat gone (a restart does the same)] [defaults — the knob and the caps back to the shipped values, and the copy kept on this machine dropped (the same as the ↺ on Destruction ▸ Chaos)]"
- },
- {
-  "path": "Destruction ▸ Tests",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "chaos 0.00 (impulses off) · heat max 0.0 · debris 0/64 (0 mo"
- },
- {
-  "path": "Destruction ▸ Glass",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "glass breaking off ▸ 0 panes touched · 0 impacts · 0 cells o"
+  "extra": "last staging: none yet"
  },
  {
   "path": "Audio ▸ Mixer",
@@ -5352,6 +4068,14 @@
   "title": "",
   "def": false,
   "extra": ""
+ },
+ {
+  "path": "Audio ▸ Mixer",
+  "kind": "select",
+  "label": "piece",
+  "title": "which piece of the score is playing (audio/pieces.ts): picked here it comes in at the next bar line; left alone each level plays the two written down for it (audio/setlist.ts; ?shuffle = dealt from a shuffled bag, ?onetheme = the theme alone)",
+  "def": false,
+  "extra": "Theme / Night Shift / Paper Walls / Dead Freight / Undertow / Glass Rain / Cold Storage / Wire Act"
  },
  {
   "path": "Audio ▸ Mixer",

@@ -109,13 +109,8 @@ export const GLASSPEN_STATS = { crossed: 0, spent: 0, viaHole: 0, viaArm: 0, sho
 // the harness's stand-up respects (src/host/standup.ts puts an unforced switch at off: every frozen digest was recorded with rounds stopping in glass)
 let forced = false;
 const OFF_WORD = /^(0|off|false|no)$/i;
-let forcedFoes = false;
-try { const q = new URLSearchParams(location.search); if (q.has('glasspen')) { GLASSPEN.on = !OFF_WORD.test(q.get('glasspen') ?? ''); forced = true; } if (q.has('glassfoes')) { GLASSPEN.foesThrough = !OFF_WORD.test(q.get('glassfoes') ?? ''); forcedFoes = true; } } catch { /* no page */ }
+try { const q = new URLSearchParams(location.search); if (q.has('glasspen')) { GLASSPEN.on = !OFF_WORD.test(q.get('glasspen') ?? ''); forced = true; } if (q.has('glassfoes')) { GLASSPEN.foesThrough = !OFF_WORD.test(q.get('glassfoes') ?? ''); } } catch { /* no page */ }
 try { const e = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.GLASSPEN; if (e) { GLASSPEN.on = !OFF_WORD.test(e); forced = true; } } catch { /* */ }
-const LS_KEY = 'twopointsix.glasspen';
-/** Game constructor: the switch kept per machine (the panel's row saves it); a URL / env word wins for the visit */
-export function loadGlassPen() { try { const raw = localStorage.getItem(LS_KEY); if (!raw) return; const o = JSON.parse(raw); if (!forced && typeof o.on === 'boolean') GLASSPEN.on = o.on; if (!forcedFoes && typeof o.foesThrough === 'boolean') GLASSPEN.foesThrough = o.foesThrough; } catch { /* no storage / bad JSON: the default */ } }
-export function saveGlassPen() { try { localStorage.setItem(LS_KEY, JSON.stringify({ on: GLASSPEN.on, foesThrough: GLASSPEN.foesThrough })); } catch { /* */ } }
 /** src/host/standup.ts, the harness's stand-up: off unless the run asked for it by name */
 export function glassPenHarness() { if (!forced) GLASSPEN.on = false; }
 

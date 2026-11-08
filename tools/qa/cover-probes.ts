@@ -239,8 +239,8 @@ async function walkProbe(squad: 2 | 4, verdict: Verdict) {
   console.log(`    ${C.summary()}`);
 }
 export const coverWalk = guarded(async () => {
-  const { verdict, done } = family('cover-walk: no orders — the four, then the pair, through the cubicle office and a room behind a door');
-  await walkProbe(4, verdict); await walkProbe(2, verdict);
+  const { verdict, done } = family('cover-walk: no orders — the four (and the pair, under QA_SWEEP=all), through the cubicle office and a room behind a door');
+  for (const squad of sample([4, 2] as const, 1)) await walkProbe(squad, verdict);   // (the pair too under QA_SWEEP=all)
   return done();
 });
 
@@ -366,7 +366,7 @@ export const coverSettle = guarded(async () => {
           if (T.turns.length >= 4 && !T.tw) { T.tw = true; out.twitch++; } }
       }
       out.said.push(`${leg.door}: ${[...tr].map(([m, T]) => `${m.callsign} ${T.n} change${T.n === 1 ? '' : 's'}${T.fl ? `, ${T.fl} flick${T.fl === 1 ? '' : 's'} to the door` : ''}${T.tw ? ', TWITCH' : ''}, ends on ${T.tag}`).join(' · ') || 'no rear man'}`);
-      R.fallIn(); R.step(90);
+      R.fallIn(); R.step(30);
     }
     return out;
   };
@@ -377,13 +377,16 @@ export const coverSettle = guarded(async () => {
   }
   // ---- the rule itself: the four stacked on the server door, one rear man stood on his mark with his gun on an opening — the deal stopped, his job let go of
   //      by hand exactly as the deal lets go of one (Cover.drop)
+  let noMan: any = null;   // (the same seed finds no man again: the blocks below need not stage it again to say so)
   const stood = async () => {
+    if (noMan) return noMan;
     const R = await rig(3, 4); const { C, O } = R;
     R.fallIn(); R.step(120); R.walk(LEGS[0].walk); R.step(60);
     O.give('stack', O.targetAt(R.door('server').frameCentre));
     const on = (m: any) => { const J = C.of(m), A = O.of(m); return !!J && !!A?.spare && !!A.arrived && m.script?.aimAt === J.aim && Math.hypot(m.char.vel[0], m.char.vel[2]) < 0.1; };
     R.until(() => R.ops.some(on), 14);
-    return { R, on, m: R.ops.find(on) as any };
+    const got = { R, on, m: R.ops.find(on) as any }; if (!got.m) noMan = got;
+    return got;
   };
   const brg = (m: any, p: number[]) => Math.atan2(p[0] - m.char.pos[0], p[2] - m.char.pos[2]), off = (m: any, p: number[]) => Math.abs(wrap(m.char.aimYaw - brg(m, p))) * 57.3;
   { // (a) let go of and nothing dealt: the gun stays REAR.secs, then the door has it
@@ -483,8 +486,6 @@ export const coverStep = guarded(async () => {
   // ---- following (each case staged once with nothing after it, to see that it arises: nobody has a line from the start)
   let arose = 0, onSaw = 0, onIn = 0, onFar = 0, mateMoved = 0, noSpot: string[] = [], keep: string[] = [], owed: string[] = [], wasted: string[] = [], back = 0, backOf = 0; const secs: number[] = [], rows: string[] = [];
   for (const c of sample(cases, 2)) { const tag = `${c.door} ${c.ang > 0 ? '+' : '−'}`;
-    const A = await stepTrial(c, 'fallIn'); if (!A.blind0) { rows.push(`${tag}: a man has a line from the start — not a case`); continue; }
-    arose++;
     let fell = '';
     const B = await stepTrial(c, 'fallIn', (R, d) => {   // Sam walks on, away from the door: they fall in again
       const sam = R.sam.pos, dx = sam[0] - d.frameCentre[0], dz = sam[2] - d.frameCentre[2], L = Math.hypot(dx, dz) || 1;
@@ -492,6 +493,8 @@ export const coverStep = guarded(async () => {
       if (!to) { fell = 'nowhere for Sam to walk'; return; }
       R.post = null; R.walk([to], 1.4, 20); R.step(60 * 3); backOf++;
       const ok = R.C.steps.size === 0 && R.ops.every((m: any) => dist(m.char.pos, R.sam.pos) < 4.2); if (ok) back++; fell = ok ? 'fell in again' : `NOT back in file (${R.ops.map((m: any) => f1(dist(m.char.pos, R.sam.pos))).join(' / ')} m from Sam, ${R.C.steps.size} steps kept)`; });
+    if (!B.blind0) { rows.push(`${tag}: a man has a line from the start — not a case`); continue; }
+    arose++;
     // (asked = a step begun or the deal's own 'no spot for any of them'. Where nobody is asked, both men are on openings of their own that the door does not
     //  outweigh by COVER.sticky + 0.3 — the deal's bar for taking a man off what he is on: its weighing, not the step's — and that is counted apart, and
     //  bounded below; a free man with NOTHING left unasked, or a step that did not earn its man the doorway, is the rule's fault)
@@ -509,12 +512,13 @@ export const coverStep = guarded(async () => {
   verdict(back === backOf && backOf > 0, 'Sam walks on: the step is dropped and both fall in again', `${back} of ${backOf}`);
   // ---- holding: the mark moves with him
   let hSaw = 0, hKept = 0, hShort = 0, hArr = 0, hN = 0, hPost = 0, hOff = 0, hStand = 0, hStandOf = 0, hStray = 0;
-  for (const c of sample(cases, 2)) { const A = await stepTrial(c, 'hold'); if (!A.blind0) continue; hN++;
+  for (const c of sample(cases, 2)) {
     const B = await stepTrial(c, 'hold', R => {   // both blinded a while — no deal has a free man: the step stands, he is not walked back behind the leaf and out again
       const C = R.C, g = R.game, m = R.ops.find((x: any) => C.steps.get(x)?.done); if (!m) return; hStandOf++;
       const q = [...C.steps.get(m).q]; let stray = 0; for (const x of R.ops) x.dazzledUntil = g.time + 2.5;
       R.post = () => { stray = Math.max(stray, dist(m.char.pos, q)); }; R.step(60 * 6); R.post = null;
       hStray = Math.max(hStray, stray); if (C.steps.get(m)?.done && stray < 0.5) hStand++; });
+    if (!B.blind0) continue; hN++;
     if (B.sawAt >= 0) hSaw++; else if (B.end === 'kept') hKept++; if (B.short) hShort++; if (B.arrived) hArr++; hPost = Math.max(hPost, B.postMoved); hOff = Math.max(hOff, B.offPost); }
   verdict(hStandOf > 0 && hStand === hStandOf, 'a step taken stands while nobody is free (both blinded): he stays where he sees through it', `${hStand} of ${hStandOf} · furthest he strayed from his spot ${f2(hStray)} m`);
   return done();

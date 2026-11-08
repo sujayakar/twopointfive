@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- seam: what skeleton 5 still cannot say (see notes.md)
 /// `b.…` for any box: a box's row. Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`.
 /// When the table comes this body is the one line `&mut g.<table>[b]`; every read and write of a box in this file goes through here.
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
+fn seam_box<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 // ---------------------------------------------------------------- small private helpers
 fn max3(h: V3) -> f64 { m::max_n(&[h[0], h[1], h[2]]) }
@@ -25,7 +25,7 @@ fn surf_mat_of_word(s: &str) -> Option<Mat> {
     None
 }
 /// matOf(kind, box) for a box of the world
-fn mat_of_box(g: &mut Game, kind: crate::debris::ChunkKind, b: BoxId) -> Mat {
+fn mat_of_box(g: &mut Game, kind: crate::debris::ChunkKind, b: AnyBoxId) -> Mat {
     let box_ = MatOfBox { does: seam_box(g, b).does.map(|w| String::from(w.as_str())) };
     mat_of(g, kind, &box_)
 }
@@ -42,12 +42,12 @@ fn axes_by_size(h: V3) -> [usize; 3] {
     js::sort_by(&mut ax, |i, j| h[*i] - h[*j]);
     ax
 }
-fn word_of_box(g: &mut Game, b: BoxId) -> crate::scene_boxes::WordOf {
+fn word_of_box(g: &mut Game, b: AnyBoxId) -> crate::scene_boxes::WordOf {
     let (stuff, does) = (seam_box(g, b).stuff, seam_box(g, b).does);
     crate::scene_boxes::word_of(crate::scene_boxes::WordOfB { stuff, does })
 }
 /// what a box is inside: what it says it is made of (inside_of)
-fn inside_of_box(g: &mut Game, b: BoxId, mat: Mat) -> Inside { inside_of(seam_box(g, b).stuff, mat) }
+fn inside_of_box(g: &mut Game, b: AnyBoxId, mat: Mat) -> Inside { inside_of(seam_box(g, b).stuff, mat) }
 fn cut_len(cut: &Option<Vec<crate::scene_cut::CutPlane>>) -> i32 { cut.as_ref().map_or(0, |c| c.len() as i32) }
 /// the key of a chunk's second drawn box (breakTable.ts:581,603)
 fn mate_mkey(g: &Game, c: DebrisChunkId) -> f64 {
@@ -104,7 +104,7 @@ pub fn breaks_share(g: &crate::game::Game) -> crate::break_table::BreaksShare {
 
 // ---------------------------------------------------------------- the pool's hooks
 /// The level and puff of a thrown piece's landing. (breakTable.ts Breaks.lands)
-pub fn breaks_lands(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: BoxId, speed: f64) -> crate::break_table::BreaksLands {
+pub fn breaks_lands(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: AnyBoxId, speed: f64) -> crate::break_table::BreaksLands {
     if kind == crate::debris::ChunkKind::Shard { return BreaksLands { level: 0.0, dust: 0.0 }; }
     let mat = mat_of_box(g, kind, box_);
     let row = break_row(mat);
@@ -443,7 +443,7 @@ pub fn breaks_outline(g: &mut crate::game::Game, m: crate::break_table::Mat, row
 }
 
 /// A loose box somebody else owns takes the outline its material's row gives; keyed, none of the table's dice. (breakTable.ts Breaks.shapeLoose)
-pub fn breaks_shape_loose(g: &mut crate::game::Game, b: BoxId, surf: &str, key: f64) -> bool {
+pub fn breaks_shape_loose(g: &mut crate::game::Game, b: AnyBoxId, surf: &str, key: f64) -> bool {
     if seam_box(g, b).cut.is_some() { return false; }
     let Some(mat) = surf_mat_of_word(surf) else { return false };
     if mat == Mat::Metal { return false; }
@@ -643,7 +643,7 @@ pub fn breaks_shed_cell(g: &mut crate::game::Game, surf: crate::scene_materials:
     let cells = row.cell.len() as f64;
     let n = m::min_n(&[m::max(0.0, budget.chunks), cells, budget.per.unwrap_or(cells)]);
     let k0 = if n < cells && cells > 1.0 && breaks_hash(g) < 0.5 { 1 } else { 0 };
-    let word = word_of_box(g, cell);
+    let word = word_of_box(g, cell.into());
     let inside = inside_of(word.stuff, mat);
     let core_tint = g.k.breaks.core_tint;
     let tinted = breaks_tint(g, inside, paint, core_tint);
@@ -736,7 +736,7 @@ pub fn breaks_heap(g: &mut crate::game::Game, surf: crate::scene_materials::Surf
     let mut dealt = 0.0;
     let wall_h = seam_box(g, wall).h;
     let face = m::min(wall_h[0], wall_h[2]);
-    let word = word_of_box(g, wall);
+    let word = word_of_box(g, wall.into());
     let inside = inside_of(word.stuff, mat);
     let core_tint = g.k.breaks.core_tint;
     let tinted = breaks_tint(g, inside, paint, core_tint);
@@ -798,7 +798,7 @@ pub fn breaks_heap(g: &mut crate::game::Game, surf: crate::scene_materials::Surf
 /// What the wall `b` is inside, for a lane that holds what it does as the Surf's word.
 pub fn breaks_inside(g: &mut crate::game::Game, surf: &str, b: BoxId) -> crate::break_table::Inside {
     let mat = surf_mat_of_word(surf).unwrap_or(Mat::Masonry);
-    inside_of_box(g, b, mat)
+    inside_of_box(g, b.into(), mat)
 }
 
 /// The colour a standing piece's ragged end shows. (breakTable.ts Breaks.endCore)
@@ -871,7 +871,7 @@ pub fn breaks_ragged(g: &mut crate::game::Game, b: &crate::break_table::CellGrid
 /// The studs of a holed plasterboard partition, read off the cells alone. (breakTable.ts Breaks.studs)
 pub fn breaks_studs(g: &mut crate::game::Game, b: &crate::break_table::CellGrid) -> Vec<crate::break_table::BreaksStudsItem> {
     if b.ny < 2.0 || mat_of_surf(b.surf) != Mat::Plasterboard || b.n_open == Some(0.0) { return Vec::new(); }
-    if !inside_of_box(g, b.box_, Mat::Plasterboard).framed { return Vec::new(); }
+    if !inside_of_box(g, b.box_.into(), Mat::Plasterboard).framed { return Vec::new(); }
     let k_ = g.k.breaks.stud;
     let box_h = seam_box(g, b.box_).h;
     let along_x = b.nx > 1.0 || (b.nz == 1.0 && box_h[0] >= box_h[2]);
@@ -923,7 +923,7 @@ mod tests {
         let box_ = BoxId::from_ix(n);
         *seam_box(g, box_) = b;
         let mut c = crate::debris::Chunk::zeroed();
-        c.box_ = box_;
+        c.box_ = box_.into();
         c.age = age;
         g.tab.debris_chunk.push(c)
     }

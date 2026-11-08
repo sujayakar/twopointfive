@@ -58,8 +58,9 @@ type Inverse = (o: any, v: any, c: Ctx) => void;
 const skipField: Inverse = () => {};
 /** the fields whose expression is no assignment. Each says how the value gets back, or why it need not: read `skipField` as "the export works this out from what is carried, or it is set up once and never changes" */
 const INVERSE: Record<string, Inverse> = {
-  // (a cast's ring stands as its maker gave it: a tick never changes it)
-  'orders::OtherCast.ring': () => {},
+  // (another cast of the squad's orders is two answers: which keys it holds, '*' on the wire for every one, and whose men are its own, the response team's
+  // (Rust's squad_orders_mine says the same). The Rust game makes the cast as the team comes to a door, so nothing on this side gave it either)
+  'orders::OtherCast.ring': (o, v, c) => { o.ring = v.has('*') ? { has: () => true } : v; o.mine ??= (gd: unknown) => [...c.g.qrf?.men ?? []].includes(gd); },
   // (the row of `nearby` he is on, the object itself: a reader asks `nearby.includes(hover)`. Rust keeps a copy, which is that row by its place and what it is)
   'game::Game.hover': (o, v, c) => { c.fix.push(() => { o.hover = v ? (o.nearby as any[]).find(r => r.kind === v.kind && r.verb === v.verb && r.pos?.[0] === v.pos?.[0] && r.pos?.[2] === v.pos?.[2]) ?? v : null; }); },
   // (a yes or no on Rust's side, and the seat's camera on the puppet's, which the page sets and no read of the tick's finds. As a yes it would be a value that takes no field: `w.cam.peekOffset = null` throws)
@@ -73,7 +74,6 @@ const INVERSE: Record<string, Inverse> = {
   'scene_collision::StaticCollision.pane_rule': skipField, 'scene_collision::StaticCollision.pane_rows': skipField, 'scene_collision::StaticCollision.glass_walkable': skipField, 'scene_collision::StaticCollision.fire_pass': skipField,   // (set up with the level)
   'destruction::Destruction.blast_listeners': skipField, 'destruction::RateCap.n': skipField, 'anim_skeleton::SkeletonInstance.rig': skipField, 'scene_level_load::SceneLevelLoadMod.level_names': skipField,
   'scene_boxes::BoxWorld.glass_open': skipField,   // (set up with the level)
-  'glassbreak::GlassBreak.on_release': (o, v, c) => { o.onRelease = v ? c.g.shards.onRelease : null; },
   'nightbreach::NightBreach.bang_by': (o, v) => { o.bangBy = v ? v.view.doorTools : null; },
   // a cut is a new array. A count that moved says so; the array's numbers came in place just before, in this row. The seat's mark is the host's own unless Rust has taken the cut itself (a restart on its side)
   'camera::FollowCamera.desired_serial': (o, v) => { const r = LENS.get(o); if (!r) { LENS.set(o, { arr: o.desired, n: v }); return; } if (r.n !== v) { o.desired = [o.desired[0], o.desired[1], o.desired[2]]; r.n = v; } r.arr = o.desired; },
@@ -205,7 +205,7 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
     throw new Error(`import: no reader for ${n.k}`);
   }
   const readN = (n: N): number => { switch (n.k) { case 'f32': { const v = dv.getFloat32(I.p, true); I.p += 4; return v; } case 'f64': { const v = dv.getFloat64(I.p, true); I.p += 8; return v; } default: return read(n, 0); } };
-  function readId(n: N, cur: any): any { const v = dv.getUint32(I.p, true); I.p += 4; if (v === 0xffffffff) return cur && typeof cur === 'object' ? null : cur; if (typeof cur === 'number') return v; const e = SCHEMA.idExpr[n.id]; const viaExpr = e && cur && typeof cur === 'object' ? compiledExpr(e)(cur, g, B) : undefined; if (typeof viaExpr === 'number') { if (viaExpr === v) return cur; const k = `id ${n.id} at ${curQ}`; R.noWay.set(k, (R.noWay.get(k) ?? 0) + 1); return cur; } const L = BK.listOf(n.id); if (v >= L.length) { const k = `id ${n.id} past its table`; R.noWay.set(k, (R.noWay.get(k) ?? 0) + 1); return cur; } return L[v]; }
+  function readId(n: N, cur: any): any { const v = dv.getUint32(I.p, true); I.p += 4; if (v === 0xffffffff) return cur && typeof cur === 'object' ? null : cur; if (typeof cur === 'number') return v; const e = SCHEMA.idExpr[n.id]; const viaExpr = e && cur && typeof cur === 'object' ? compiledExpr(e)(cur, g, B) : undefined; if (typeof viaExpr === 'number') { if (viaExpr === v) return cur; const k = `id ${n.id} at ${curQ}`; R.noWay.set(k, (R.noWay.get(k) ?? 0) + 1); return cur; } const L = BK.listOf(n.id); if (v >= L.length || L[v] === undefined) { const k = `id ${n.id} past its table`; R.noWay.set(k, (R.noWay.get(k) ?? 0) + 1); return cur; } return L[v]; }
   const firstKey = (m: any): unknown => { if (m instanceof Map || m instanceof Set) { for (const k of m instanceof Map ? m.keys() : m) return k; return undefined; } return keysIn(m)[0]; };
   function keyOf(K: N, curMap: any): any { if (K.k === 'u32') { const v = dv.getUint32(I.p, true); I.p += 4; const first = firstKey(curMap); if (first && typeof first === 'object') return objOfSerial(c, v); if (isSide(curMap)) return objOfSerial(c, v); return v; }
     if (K.k === 'id' && K.id === 'PlayerId') { const row = readId(K, undefined); if (isSeatTable(curMap)) { for (const s of g.seats ?? []) if (s.view?.player === row) return s.view; return g; }   /* (a seat's table: keyed by the view the TypeScript asks by, whatever the table holds yet) */ for (const k of keysIn(curMap)) if (k && typeof k === 'object' && (k as any).player === row) return k; return row; }

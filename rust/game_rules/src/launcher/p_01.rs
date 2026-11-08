@@ -374,7 +374,7 @@ pub fn stagger_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, shooter: C
 }
 
 /// Rings in flight as boxes: under the issue kit (GEAR.on, settled) the sponge round nose first along its flight, rolling about it. The tick's gathering of dynamic boxes calls this. (launcher.ts ringBoxes)
-pub fn ring_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn ring_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     // (skeleton 5.2: sponge_boxes takes g, so the walk reads each ring's numbers out first; making a box cannot change the rings)
     let rings: Vec<(V3, V3, f64)> = g.rings.iter().map(|r| (r.pos, r.vel, r.spin)).collect();
     struct R { pos: V3, vel: V3, spin: f64 }

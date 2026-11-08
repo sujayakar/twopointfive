@@ -39,7 +39,9 @@ pub fn stand_handed(b: &[u8], o: &StartOpts, commands: &mut dyn FnMut(&mut game:
     let assets = Assets { mannequin: GltfFile { text: text(2), bin: Some(p[3]) }, cast: some(4), cast_look: some(5) };
     let link = if p[1].is_empty() { None } else { Some(String::from(text(1))) };
     // (the knob tables are read whole or not at all: bytes left over are another layout's, and a game stood on half-read knobs is no host's game)
-    stand_with(&data, assets, &StartOpts { link, ..o.clone() }, &mut |g| {
+    // (a host that handed its knob tables, or the commands that wrote them, read its address onto them itself, with whatever it keeps, so the address's difficulty is not laid
+    //  over them; one that handed neither has not)
+    stand_with(&data, assets, &StartOpts { link, difficulty: p[6].is_empty() && p[7].is_empty(), ..o.clone() }, &mut |g| {
         if !p[6].is_empty() {
             let mut r = game::io::R::new(p[6]);
             g.k.ri(&mut r);   // (read over the page's own: a row the bridge does not carry stays the page's)

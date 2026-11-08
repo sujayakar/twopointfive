@@ -45,7 +45,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   looked at and empty = not in the picture; unkeyed one-frame boxes (a tracer's streak among them) only where seen; a long thing counts as seen where its middle or either end is (`thingSeen`: it is rigid); what
   men carry, leaves, wall devices and the moths pass (`thingKeyOf` = −1; a broken fixture's body — fixtureBreak.ts's six `hang` boxes — is one thing, each piece that came off it a thing by itself, seen where it lies); the first 30 updates of an encounter
   (or after the switch comes on) take the floor as it stands. IT REWRITES THE LIST IN PLACE (the headless harness re-points `world.dynamics` at `game.dynBoxes` every frame), so
-  a reader of `g.dynBoxes` after drawCharacters sees the picture's list (`Game.dynRaw` = the game's own count before the rewrite, which edgeLook.ts budgets by), and so does
+  a reader of `g.dynBoxes` after drawCharacters sees the picture's list (`Game.dynRaw` = the game's own count before the rewrite, on the TypeScript game; the Rust game budgets a broken wall by `scene_boxes::FRAME_BOXES`), and so does
   `BoxWorld.raycast`: the cursor's ray lands on the thing as drawn (1 of 26 shipped Standard run digests moves — Sam's yaw for twelve seconds of block-squads:1 — off = the base
   26 of 26), a decal on a remembered thing is hidden while it is remembered, and a tripwire's DRAWN beam ends on a remembered box — its SENSOR does not: while the fog runs the sensor's reach (devices.ts `LaserRt.sense`) is asked of the statics, the leaves where they stand and the props, not of this list (devices sense under the fog only on a quiet mission's rung or a solo `?fow`; never in a team scenario). In a checkpoint since 10-24 for furniture (`FOG.filed`, its own bullet below: held and left-out pieces are filed and no opening half second follows a load; items and rubble still re-prime). `FOG.flat` (0 = off = ships;
   `?fogflat[=0.2]`, Tab ▸ 'fog of war ▸ own light') = the radiance half: fogofwar.wgsl takes the G-buffer albedo (group 1 binding 5) and an unseen pixel is that paint under one
@@ -269,7 +269,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   one test. LASER tripwires: `bodyBreaks` (capsules vs the beam) for Sam / the hauled body, item flight segments; staff never trip. Cameras + emitters are
   `LightTarget` kind `'device'` (OCP / a round / the mains via lighting.ts `factor`; `alive()`); everything drawn as dynamic boxes (`deviceBoxes`, the beam via
   combat.ts `beamBoxes`). Live play only (`sensing`: aiEnabled, !quietUtility, tune.devices) — under the tour they pan and glow, silent. Knobs `tune.devices /
-  lasers / cameraSuspicionSecs / cameraAlarmSecs / deviceCones` (Tab ▸ Sandbox, persisted `twopointsix.devices`). The office: three cameras, `pad_side` on the
+  lasers / cameraSuspicionSecs / cameraAlarmSecs / deviceCones` (Tab ▸ Sandbox). The office: three cameras, `pad_side` on the
   server room's SIDE door (the front door keeps key / pick / kick — guard-key, dialogue and debrief probes are frozen on it), a shin beam across the corridor at
   x 14.5, a chest beam across the storage doorway (corridor face — a beam ENDS at the first solid thing in it, leaves included, for the picture and the sensor alike). QA: `probes.ts devices` (camera / keypad / laser / editor / vision — the last a frozen digest of the guards' own canSee
   off main), the soak's device invariants; editor tools C / K / J + `__ed.device`.
@@ -444,7 +444,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   slam lifts his awareness past 0.47 or he alerts; other calm hearers glance (`whistlePatrolTick` cranes `lookYawExtra` 1.5 s); alert / search men take it as
   a fix (lastKnown, no bark). The same man answering again within `twiceWindow` (60 s) → `'search'` round the point (`TWICE_LINES`). Per-man memory in a
   WeakMap (`whistleMem(gd)`), `WHISTLE_STATS` / `WHISTLE_LOG` for QA, `whistleSummary` on the panel; knobs level / reachK / cooldown / twiceWindow in Tab ▸
-  Sandbox, kept per machine (`saveWhistle`, localStorage `twopointsix.whistle`). QA: `probes.ts whistle` (reach open / far / shut vs open door with the
+  Sandbox. QA: `probes.ts whistle` (reach open / far / shut vs open door with the
   propagation's numbers, nearest-only, twice, cooldown, alert cue, meter, torch kept, invisible), soak stimulus `whistle` (`--whistle-per-min`, 0 = the old schedule).
 - **The whistle's answer, torch up in the hand that holds it** (GUN HAND, `src/game/gunhand.ts` `GUNHAND.on` + key `whistle`; `character.ts` `torchUpLayer`,
   the torch branch of `inHandWord`). THE FAULT: upper `'torch'` plays the library's `Idle_Torch_Loop`, keyed for a torch in the LEFT hand — an empty left fist

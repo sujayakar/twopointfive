@@ -55,9 +55,20 @@ class Book { constructor(readonly game: object) {} /** rows of each table the Ru
   first = new Map<object, string>();
   /** poses that have no place in the pool, in the order first met: their floats go at the end of the bytes */
   loose = new Map<object, number>();
-  idOf(id: string, o: object): number { let M = this.ids.get(id); if (!M) { M = new Map(); this.ids.set(id, M); this.lists.set(id, []); } let i = M.get(o); if (i === undefined) { i = M.size; M.set(o, i); this.lists.get(id)!.push(o); this.first.set(o, AT); const was = ROW_BOOK.get(o); ROW_BOOK.set(o, was === undefined || was === this ? this : null); } return i; }
-  listOf(id: string): object[] { return this.lists.get(id) ?? []; }
+  /** an ID of either of two tables (schema `mixes`, io.rs AnyBoxId): the row of the second table if it has this object, else of the first */
+  idOf(id: string, o: object): number { const mix = SCHEMA.mixes?.[id]; if (mix) { const f = this.ids.get(mix[1])?.get(o); return f !== undefined ? 2 * f + 1 : 2 * this.idOf(mix[0], o); } if (this.ofTheOther(id, o)) return PAST_ANY; let M = this.ids.get(id); if (!M) { M = new Map(); this.ids.set(id, M); this.lists.set(id, []); } let i = M.get(o); if (i === undefined) { i = M.size; M.set(o, i); this.lists.get(id)!.push(o); this.first.set(o, AT); const was = ROW_BOOK.get(o); ROW_BOOK.set(o, was === undefined || was === this ? this : null); } return i; }
+  /** a row of the other table of a mix, asked for by this table's ID: a row of neither Rust can read, and never a new row of this table */
+  private ofTheOther(id: string, o: object): boolean { for (const m of Object.values<string[]>(SCHEMA.mixes ?? {})) { const k = m.indexOf(id); if (k >= 0 && this.ids.get(m[1 - k])?.has(o)) return true; } return false; }
+  /** is this number, as `idOf` answered it, past what the Rust game has? */
+  past(id: string, i: number): boolean { const mix = SCHEMA.mixes?.[id]; if (mix) return this.past(mix[i & 1], i >>> 1); return i >= (this.known?.get(id) ?? (i === PAST_ANY ? 0 : Infinity)); }
+  /** has the Rust game this object as a row of this table, or of either table of a mix? */
+  hasRow(id: string, o: object): boolean { const mix = SCHEMA.mixes?.[id]; if (mix) return this.hasRow(mix[0], o) || this.hasRow(mix[1], o); const i = this.ids.get(id)?.get(o); return i !== undefined && i < (this.known?.get(id) ?? Infinity); }
+  /** a mix's list has each table's rows at the numbers the wire gives them: the first's at the even places, the second's at the odd. Filled as the two grow */
+  private mixed = new Map<string, { a: object[]; n: [number, number] }>();
+  listOf(id: string): object[] { const mix = SCHEMA.mixes?.[id]; if (!mix) return this.lists.get(id) ?? []; let m = this.mixed.get(id); if (!m) this.mixed.set(id, m = { a: [], n: [0, 0] }); for (let k = 0; k < 2; k++) { const L = this.listOf(mix[k]); while (m.n[k] < L.length) { m.a[2 * m.n[k] + k] = L[m.n[k]]; m.n[k]++; } } return m.a; }
   serialOf(o: object): number { let s = this.serial.get(o); if (s === undefined) { s = this.rustDeals ? this.ownSerial++ : this.nextSerial++; this.serial.set(o, s); this.serials.set(o, s); } return s; } }
+/** what `idOf` answers for an object of the wrong table: past every table */
+const PAST_ANY = 0x7fffffff;
 const BOOKS = new WeakMap<object, Book>();
 // ---- A WEAK TABLE LISTS THE KEYS OF THE GAME BEING WALKED. `liveKeys()` is every key alive in the process, whichever game's, so a second game of a process would be walked with the first game's men, routes and players as rows of its own, a table of one thing's own row would give the first game's (`K[0]`), and an apply that puts a table's keys in the Rust game's order would strike every other game's off the list. Every walk of a game by the bridge goes through `forGame`: while it runs a table lists only that game's keys, the keys a walk from the game reaches. A start finds them (`startExport`): the game is exported with every table listing only the keys the walk has numbered so far (and the game and its views), again until an export numbers no key it had left out; what the book then holds is the game's, the book is put back as it was, and the start's own export lists exactly those. After a start: those keys, and a key first seen since (a thing made in play) unless a start left it out or it is in another game's book. Outside the walks `liveKeys()` is as it was
 type KeyMode = { kind: 'reach' } | { kind: 'exact' | 'own'; mine: WeakSet<object>; not?: WeakSet<object> };
@@ -166,7 +177,7 @@ function wr(n: Node, v: any, o: Out): void {
     case 'tup': { if (!Array.isArray(v)) { miss('not a tuple', v); zero(n, o); return; } n.of.forEach((x: Node, i: number) => wr(x, v[i], o)); return; }
     case 'map': { const E = keysOf(v); if (!E) { miss('not a map', v); o.u32(0); return; } const K = n.K.k === 'id' && n.K.id === 'PlayerId' && isWeak(v) ? E.keys.filter(seated) : E.keys; o.u32(K.length); for (const k of K) { wKey(n.K, k, o); wr(n.V, E.get(k), o); } return; }
     case 'set': { const E = keysOf(v); if (!E) { miss('not a set', v); o.u32(0); return; } o.u32(E.keys.length); for (const k of E.keys) wKey(n.K, k, o); return; }
-    case 'id': { if (v && typeof v === 'object') { const e = SCHEMA.idExpr[n.id]; if (e) { const r = compiled(e)(v, G, B); if (typeof r === 'number') { if (r >= (BK.known?.get(n.id) ?? Infinity) && r !== 0xffffffff) { PAST.n++; PAST.id = n.id; } o.u32(r); return; } } const i = BK.idOf(n.id, v); if (i >= (BK.known?.get(n.id) ?? Infinity)) { PAST.n++; PAST.id = n.id; } o.u32(i); return; } if (typeof v === 'number') { o.u32(v); return; } throw new Error(`export: ${AT}: no object for ${n.id} (found ${String(v)})`); }
+    case 'id': { if (v && typeof v === 'object') { const e = SCHEMA.idExpr[n.id]; if (e) { const r = compiled(e)(v, G, B); if (typeof r === 'number') { if (r >= (BK.known?.get(n.id) ?? Infinity) && r !== 0xffffffff) { PAST.n++; PAST.id = n.id; } o.u32(r); return; } } const i = BK.idOf(n.id, v); if (BK.past(n.id, i)) { PAST.n++; PAST.id = n.id; } o.u32(i); return; } if (typeof v === 'number') { o.u32(v); return; } throw new Error(`export: ${AT}: no object for ${n.id} (found ${String(v)})`); }
     case 'type': return wType(n, v, o);
   }
   throw new Error(`bridge: no writer for ${n.k}`);

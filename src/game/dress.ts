@@ -18,7 +18,6 @@ export const DRESS = {
   wake: true,       // men wading through smoke push the solver's smoke (the picture's smoke; the CPU's own smoke is not pushed)
   men: true,        // the men handed to the renderer: skin instances, materials, shadow proxies (game.ts drawMen; what each WEARS is still dealt: his kit is placed off it)
   cues: true,       // the defenders' cues read off the settled frame for the player (cues.ts)
-  recap: true,      // every death explains itself (deathrecap.ts): reads only
   blastFeel: true,  // a wall charge going off: dust ring, soot, the camera's kick written for the render (blastFeel.ts)
   fixtures: true,   // a fixture that broke: its tray, its glass, the arcing lead (fixtureBreak.ts)
   fx: true,         // the short-lived drawn boxes (a muzzle flash's card, a chip): their time to live

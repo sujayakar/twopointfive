@@ -30,6 +30,9 @@
 //!                                      until the next call. Once a tick.
 //!   face_frame(h, a, x, y, z) -> p     A FRAME IS DRAWN, `a` of the way from the tick before to the last (1 = where the last left everything), looking at
 //!                                      x y z: the rows that move stand there, and the table again
+//!   face_saves(h)                      this run's saves as a card lays them out, at face_out: the mission's clock (f64), the key of the one to go back to (text), how many,
+//!                                      then each: its key and label (text), 1 by hand and 2 regretted (u32), the clock it was made at and which came after which (f64)
+//!   face_knobs(h)                      every knob a person may turn, at face_out: its name's length (its top bit: a yes or no), the name, what it is turned to (f64)
 //!   face_draw_name(h, i)               a name that crosses by its number (a sound's), at face_out
 //!   face_draw_look(h, p, n)                 what the page says of its look (game_draw::LOOK numbers), once and when it changes
 //!   face_draw_layout() -> stamp        the stamp of the sections' declarations (and their text at face_out): a page whose offsets are of another is refused
@@ -198,6 +201,8 @@ pub unsafe extern "C" fn face_hand(h: u32, seat: usize, p: *const f64, pn: usize
         // (the host's own camera, as the hand has it: what a rule asks of the host's view, and where one writes to it)
         if let (true, Some(c)) = (x.g.seats[seat] == game::game::game_host_seat(&x.g), x.g.host_cam) {
             x.drawn.desired = v[56];
+            // (where the view looks: what is gathered round it, gusts and embers, follows it and not the man)
+            x.g.engine.view_focus = Some(cmd.view.target);
             let (c, v) = (&mut x.g.tab.camera[c], &cmd.view);
             (c.target, c.pos, c.forward) = (v.target, v.pos, v.forward);
             (c.yaw, c.pitch, c.distance, c.desired_distance, c.fov, c.aspect) = (v.yaw, v.pitch, v.distance, x.drawn.desired, v.fov, v.aspect);
@@ -223,6 +228,41 @@ pub unsafe extern "C" fn face_draw_look(h: u32, p: *const f64, n: usize) {
     if n != game_draw::LOOK { panic!("face_draw_look: {} numbers, and a look is {}", n, game_draw::LOOK); }
     let v = std::slice::from_raw_parts(p, n);
     super::with(h, |k| k.drawn.look(v));
+}
+#[no_mangle]
+pub extern "C" fn face_saves(h: u32) {
+    let b = super::with_ref(h, |x| {
+        let g = &x.g;
+        let mut b = Vec::new();
+        let text = |b: &mut Vec<u8>, s: &str| { b.extend_from_slice(&(s.len() as u32).to_le_bytes()); b.extend_from_slice(s.as_bytes()); };
+        b.extend_from_slice(&g.mission.stats.elapsed.to_le_bytes());
+        let offer = game::savestate::checkpoints_newest(g, Some(true), Some(g.mission.stats.elapsed)).filter(|i| game::savestate::checkpoints_is_this_run(g, i));
+        text(&mut b, offer.as_ref().map_or("", |i| i.key.as_str()));
+        let rows = game::savestate::control::timeline(g);
+        b.extend_from_slice(&(rows.len() as u32).to_le_bytes());
+        for r in rows {
+            text(&mut b, &r.key);
+            text(&mut b, &r.label);
+            b.extend_from_slice(&((r.slot == game::savestate::SlotInfoSlot::Manual) as u32 | (r.regret.is_some() as u32) << 1).to_le_bytes());
+            b.extend_from_slice(&r.mission_t.to_le_bytes());
+            b.extend_from_slice(&r.saved_at.to_le_bytes());
+        }
+        b
+    });
+    super::out(b);
+}
+#[no_mangle]
+pub extern "C" fn face_knobs(h: u32) {
+    let b = super::with(h, |x| {
+        let mut b = Vec::new();
+        for (name, yes, v) in game_run::knobs::all(&x.g) {
+            b.extend_from_slice(&(name.len() as u32 | (yes as u32) << 31).to_le_bytes());
+            b.extend_from_slice(name.as_bytes());
+            b.extend_from_slice(&v.to_le_bytes());
+        }
+        b
+    });
+    super::out(b);
 }
 #[no_mangle]
 pub extern "C" fn face_draw_name(h: u32, i: usize) {

@@ -15,7 +15,7 @@ const stare = (h: any, to: number[]) => { const c = h.char;
   gaze.set(c, [to[0], 0, to[2]]); };
 
 async function walk(quiet: boolean, keep: boolean, seed: number) {
-  const R = await Run.start('roomclear=10&squad=1', seed, { sneak: quiet, set: { COVER: { backKeep: keep } } }); R.stopOnNotice = false;
+  const R = await Run.start('roomclear=10&squad=1', seed, { sneak: quiet, lean: true, set: { COVER: { backKeep: keep } } }); R.stopOnNotice = false;
   if (quiet) squadUp(R);
   else { if (!R.order(R.onSelf(), ['Digit3'], 'fallIn')) { const why = R.g.orders.give('fallIn', { kind: 'none', at: [R.pos[0], 0, R.pos[2]] }); if (why) throw new Error(`fall in refused — ${why}`); } R.wait(0.8); }
   for (const h of R.hostiles) stare(h, [h.char.pos[0] - 6, 0, h.char.pos[2] + 1]);

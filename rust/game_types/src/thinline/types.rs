@@ -26,9 +26,9 @@ impl Default for Thin { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct ThinlineMod {
     /// (src/game/thinline.ts:12 THIN)
-    pub thin: JsMap<BoxId, crate::thinline::Thin>,
+    pub thin: JsMap<AnyBoxId, crate::thinline::Thin>,
     /// (src/game/thinline.ts:14 AIR)
-    pub air: JsMap<BoxId, Option<BoxId>>,
+    pub air: JsMap<AnyBoxId, Option<AnyBoxId>>,
 }
 impl ThinlineMod {
     pub fn blank() -> Self {

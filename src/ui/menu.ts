@@ -27,7 +27,8 @@ import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions 
 import { cloudNote } from './cloudnote';
 import { COOP } from '../net/lobby';
 import { coopRows } from './coop';
-import { pageSay } from '../view/pagesaid';
+import type { SlotInfo } from '../game/savestate';
+import { button, checkpointButton, el, saveStrip, walkMenu, type Press, type RunSaves } from './runcard';
 
 /** the title screen's line under the wordmark */
 const TITLE_LINE = 'Squad tactics and stealth. Every light, shadow and wisp of smoke is live.';
@@ -250,10 +251,12 @@ export class Menu {
   /** 'Restart from checkpoint (40 s ago)' for the newest stored checkpoint (this run's for choice), or null when there is none / no loader is wired: loads it
    *  through main.ts (any show stopped, the camera snapped) and closes the card; a refusal goes on the message line and re-renders the card. `armed`: the down
    *  card's half-second guard against the tap that raised it. */
-  private checkpointButton(cls = '', armed: () => boolean = () => true): HTMLElement | null {
+  private checkpointButton(cls = '', armed: () => boolean = () => true): HTMLElement | null { const run = this.saves(); return run && checkpointButton(run, this.press(armed), cls); }
+  private press(armed: () => boolean): Press { return { armed, gone: () => this.close(), again: () => this.render() }; }
+  /** this run's saves as a card asks of them (ui/runcard.ts) */
+  private saves(): RunSaves | null {
     const g = this.d.game, load = this.d.loadCheckpoint; if (!load) return null;
-    const info = this.checkpointInfo(); if (!info) return null;
-    return button(`Restart from checkpoint (${g.saves.ageWords(g, info)})`, () => { if (!armed()) return; const why = load(info.key); if (why) { pageSay(`checkpoint: ${why}`); this.render(); return; } this.close(); }, cls);
+    return { elapsed: () => g.mission.stats.elapsed, timeline: () => g.saves.timeline(), offer: () => this.checkpointInfo(), age: row => g.saves.ageWords(g, row as SlotInfo), picture: row => g.saves.pictureOf(row as SlotInfo), load, due: () => this.mode === 'pause' && !!this.d.saveDue?.() };
   }
   /** 'Quit to scenarios' (the pause card and the down card while a scenario is up): the scenario stopped and the start card's picker back (main.ts) */
   private quitButton(armed: () => boolean = () => true): HTMLElement { return button('Quit to scenarios', () => { if (!armed()) return; this.d.stopTour?.(); this.d.scenario?.quit(); }, 'quit'); }
@@ -271,34 +274,8 @@ export class Menu {
     if (scn && !scn.saves) return n && g.saves.isThisRun(n) ? n : null;   // (a scenario with a team: no file is written there and a solo run's is refused — but this run's own saves, kept in memory, are offered)
     return n;
   }   // (savestate.ts offer: an earlier run's slot only if this game would load it)
-  /** THE STRIP (savestate.ts SAVETIMELINE): this run's saves in the order they were made, each a tile — its picture, how long ago, a mark on the ones made by
-   *  hand, a regretted autosave dimmed. A click, or Enter on the tile the arrows (A D too) have walked to, goes back to it. Null with the switch off, no loader,
-   *  or fewer than two saves (one save is the button above it) unless one is asked for on this card. */
-  private saveStrip(armed: () => boolean = () => true): HTMLElement | null {
-    const g = this.d.game, load = this.d.loadCheckpoint; if (!load) return null;
-    const due = this.mode === 'pause' && !!this.d.saveDue?.();   // (a save asked for on this card: its tile stands where the save will, empty until play goes on and writes it)
-    const line = g.saves.timeline(); if (line.length < 2 && !due) return null;
-    const now = g.mission.stats.elapsed, offered = this.checkpointInfo();
-    const strip = el('div', 'saves'); strip.setAttribute('role', 'group'); strip.setAttribute('aria-label', 'saves of this run');
-    const tiles = line.map(info => {
-      const t = el('button', 'tile' + (info.slot === 'manual' ? ' hand' : '') + (info.regret ? ' regret' : '') + (info.missionT > now + 0.5 ? ' ahead' : '')) as HTMLButtonElement; t.type = 'button';
-      const pic = g.saves.pictureOf(info); if (pic) t.style.backgroundImage = `url("${pic}")`; t.dataset.save = `${info.key}@${info.savedAt}`;
-      const age = el('span', 'age'); age.textContent = tileAge(now - info.missionT); t.appendChild(age);
-      if (info.slot === 'manual') t.appendChild(el('i'));
-      t.title = info.label || (info.slot === 'manual' ? 'by hand' : 'autosave'); t.setAttribute('aria-label', `${info.slot === 'manual' ? 'saved by hand' : 'autosave'}, ${g.saves.ageWords(g, info)}`);
-      t.tabIndex = -1;
-      t.onclick = () => { if (!armed()) return; const why = load(info.key); if (why) { pageSay(`checkpoint: ${why}`); this.render(); return; } this.close(); };
-      strip.appendChild(t); return t;
-    });
-    if (due) { const t = el('div', 'tile hand due'); t.appendChild(el('i')); t.setAttribute('aria-label', 'a save by hand, written as play goes on'); strip.insertBefore(t, tiles[line.findIndex(x => x.missionT > now + 0.5)] ?? null); }   // (before the saves a load has left ahead of this moment)
-    if (!tiles.length) return strip;
-    let cur = Math.max(0, offered ? line.findIndex(x => x.key === offered.key) : line.length - 1); tiles[cur].tabIndex = 0;   // (one stop for W S and Tab: the tile the button above would load)
-    strip.addEventListener('keydown', e => {
-      const d = e.code === 'ArrowLeft' || e.code === 'KeyA' ? -1 : e.code === 'ArrowRight' || e.code === 'KeyD' ? 1 : 0; if (!d || e.ctrlKey || e.metaKey || e.altKey) return;
-      tiles[cur].tabIndex = -1; cur = Math.max(0, Math.min(tiles.length - 1, cur + d)); tiles[cur].tabIndex = 0; tiles[cur].focus(); e.preventDefault(); e.stopPropagation();
-    });
-    return strip;
-  }
+  /** this run's saves laid out in time (ui/runcard.ts) */
+  private saveStrip(armed: () => boolean = () => true): HTMLElement | null { const run = this.saves(); return run && saveStrip(run, this.press(armed)); }
 
   /** a save's picture came after its tile was laid (main.ts takes it a frame or a few after the save, host/savepic.ts): the tile on the card, if one is up, takes it — nothing is laid again */
   pictureCame(info: { key: string; savedAt: number }, url: string) {
@@ -312,17 +289,8 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
   if (e.code === 'Tab' && (tabNow() === 'run' || tabNow() === 'keys')) { const m = document.getElementById('menu'); if (m?.classList.contains('on') && m.classList.contains('paused') && !m.hasAttribute('inert')) e.preventDefault(); return; }   // (Tab is the game's key on the pause card then, not the browser's walk over its buttons: main.ts tabKey)
   if (e.code === 'Escape' && (titleExtras || titleCoop)) { const m = document.getElementById('menu'); if (e.timeStamp >= titleShownAt && m?.classList.contains('on') && m.classList.contains('title') && !m.hasAttribute('inert')) { (m.querySelector('.actions .xback') as HTMLElement | null)?.click(); e.preventDefault(); } return; }   // (Esc on the title's EXTRAS or CO-OP page = back to its main menu; the title itself has nothing to back out of)
   if (e.code === 'Space' && !e.repeat && titleExtras) { const a = document.activeElement as HTMLElement | null; if (a?.classList?.contains('xrow') && document.getElementById('menu')?.contains(a)) { a.click(); e.preventDefault(); } return; }   // (a row of EXTRAS is a link, and Space does not follow a link: here it does, as it presses every other entry of this menu)
-  const d = e.code === 'KeyW' || e.code === 'ArrowUp' ? -1 : e.code === 'KeyS' || e.code === 'ArrowDown' ? 1 : 0; if (!d || e.ctrlKey || e.metaKey || e.altKey) return;
-  const m = document.getElementById('menu'); if (!m || !m.classList.contains('on') || !(m.classList.contains('title') || m.classList.contains('paused')) || m.hasAttribute('inert')) return;
-  const a = document.activeElement as HTMLElement | null; if (a && a !== document.body && !m.contains(a)) return;
-  if (typedInto(a) && e.code.startsWith('Key')) return;   // (a letter typed into a field is the field's: the arrows still walk)
-  const bs = [...m.querySelectorAll('.actions .btn:not(:disabled), .actions input[type="text"]:not([data-walk="off"]), .actions .saves .tile[tabindex="0"]')] as HTMLElement[]; if (!bs.length) return;   // (the strip of saves is one stop: its own arrows walk it)
-  const i = a ? bs.indexOf(a) : -1; bs[i < 0 ? (d > 0 ? 0 : bs.length - 1) : (i + d + bs.length) % bs.length].focus(); e.preventDefault();
+  walkMenu(e, typedInto);
 }, { capture: true });
 
 // ---- tiny DOM helpers (menu-local styling lives in index.html)
 function esc(t: string) { return t.replace(/[&<>"]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&quot;'); }
-/** a save's age on its tile: '40 s', '3 min' — '+40 s' for one AHEAD of the clock (a later save of this run, after going back past it) */
-function tileAge(d: number): string { const a = Math.abs(d), w = a < 90 ? `${Math.round(a)} s` : `${Math.round(a / 60)} min`; return d < -0.5 ? `+${w}` : w; }
-function el(tag: string, cls?: string) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
-function button(text: string, run: () => void, cls = '') { const b = el('button', 'btn ' + cls) as HTMLButtonElement; b.textContent = text; b.onclick = run; return b; }

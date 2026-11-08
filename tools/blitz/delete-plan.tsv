@@ -6595,7 +6595,6 @@ kept+guard	5	src/game/chronicle.ts	chronDown		killGuard names it (src/game/comba
 deleted	4	src/game/chronicle.ts	chronBodyFound		
 kept+guard	5	src/game/chronicle.ts	chronHit		blastRaw names it (src/game/frag.ts:411)
 kept+guard	1	src/game/chronicle.ts	chronDoor		fireShell names it (src/game/shotgun.ts:119)
-kept+guard	1	src/game/chronicle.ts	chronCheckpoint	183	the census was seen to run as TypeScript while the Rust game stepped (tools/blitz/delete-census.json)
 kept	9	src/game/chronicle.ts	runCounts	2	the census was seen to run as TypeScript while the Rust game stepped (tools/blitz/delete-census.json)
 kept	1	src/game/chronicle.ts	blankCounts		tools/qa/debrief-probes.ts reads it off a module it loads by a written path (tools/qa/debrief-probes.ts:19)
 kept	23	src/game/chronicle.ts	stealthScore	2	the census was seen to run as TypeScript while the Rust game stepped (tools/blitz/delete-census.json)

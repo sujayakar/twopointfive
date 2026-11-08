@@ -2138,10 +2138,13 @@ pub fn open_sig(g: usize) -> i32 {
 }
 /// glassbreak.ts openAt: is the point where a piece of static `bi` has fallen out
 pub fn open_at(g: usize, bi: u32, x: f64, y: f64, z: f64) -> bool {
-    let p = pn(g);
+    let p = &state_read(g).panes;
+    if p.used == 0 {
+        return false;
+    }
     match p.row_of(bi) {
         Some(ri) => {
-            let r = p.row(ri);
+            let r = p.row_read(ri);
             let (u, v) = to_uv(r, x, y, z);
             open_uv(r, u, v)
         }

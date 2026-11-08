@@ -44,7 +44,7 @@ pub fn lamp_struck(g: &mut crate::game::Game, pos: V3, boxes: &[Option<BoxId>], 
 fn ray_grown(g: &mut crate::game::Game, ro: V3, rd: V3, b: BoxId, h: V3, tmax: f64) -> bool {
     let (_, own) = seam_box_c_h(g, b);
     seam_box_set_h(g, b, h);
-    let hit = crate::scene_boxes::ray_box(g, ro, rd, b, tmax).is_some();
+    let hit = crate::scene_boxes::ray_box(g, ro, rd, b.into(), tmax).is_some();
     seam_box_set_h(g, b, own);
     hit
 }

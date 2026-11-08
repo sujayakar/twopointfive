@@ -136,3 +136,36 @@ fn the_fogs_section_says_what_the_game_has() {
         assert_eq!((f.on, f.count), (0, 0), "seed {s}: the fog is off and the section says on");
     }
 }
+
+/// THE RULE: a teammate near a door brings its leaf up to date only if he has a line to it: a wall between keeps the picture's old leaf with him a
+/// metre and a half from the door's middle, inside the rule's reach, and with him in the room it moves. (The old check's own wall may not have reached the game's lines.)
+/// A FAILURE MEANS: a door behind a wall is drawn where it really stands because a man is near it.
+#[test]
+fn a_wall_stops_a_teammate_bringing_a_leaf_up_to_date() {
+    use game_start::scene::{Axis, Scene};
+    for (at, sees) in [([17.3, 16.6], false), ([18.7, 16.6], false), ([17.0, 15.0], true)] {
+        let mut s = Scene::new("leaf");
+        s.room("west", 10.0, 10.0, 18.0, 16.0).room("east", 18.0, 10.0, 26.0, 16.0);
+        s.door("west-yard", Axis::X, 16.0, 11.4).door("east-yard", Axis::X, 16.0, 21.4).door("between", Axis::Z, 18.0, 14.8);
+        s.bulb(14.0, 13.0).bulb(22.0, 13.0).moon();
+        s.team([30.0, 26.0], std::f64::consts::PI, &[[29.0, 27.0], [31.0, 27.0], [29.0, 26.0], [31.0, 26.0]]);
+        s.defender("west", [12.25, 12.25], "west-yard").defender("east", [24.25, 12.25], "east-yard");
+        let mut p = Play::scene(&s, &Opts { seed: 1, ..Default::default() });
+        p.g.god_mode = true;
+        p.g.fog_of_war.on = true;
+        p.run(0.5);
+        p.drop_all_but(&[]);
+        p.run(0.3);
+        let d = game::doors::doors_by_name(&p.g, "between").unwrap();
+        let turn = game::doors::door_swing(&mut p.g, d) * 1.2;
+        let far = p.sam_at();
+        let men = p.mates();
+        let put = |p: &mut Play| for (i, &m) in men.iter().enumerate() { let c = p.g.gd[m].ch; p.g.ch[c].pos = if i == 0 { [at[0], 0.0, at[1]] } else { [far[0] + i as f64, 0.0, far[1] + 1.0] }; };
+        for _ in 0..30 { put(&mut p); p.frame(); }
+        game::doors::door_set_latched(&mut p.g, d, false);
+        game::doors::door_set_angle(&mut p.g, d, turn);
+        for _ in 0..12 { put(&mut p); p.frame(); game::doors::door_set_angle(&mut p.g, d, turn); }
+        let shown = game::fogofwar::fog_of_war_door_shown(&mut p.g, d);
+        assert_eq!(shown.abs() > 0.5, sees, "a man at {at:?}: the picture has the leaf at {shown:.2}, it stands at {turn:.2}");
+    }
+}

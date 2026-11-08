@@ -50,6 +50,7 @@
 //!   face_export(h)                            the whole state (`io::export`) at face_out
 //!   face_verdict(h) -> 0 | 1 | 2              how the mission ended, off the record the game's tick latches: 0 not yet, 1 lost, 2 won (then the record as lines at face_out)
 //!   face_tick_view(h)                         what a HUD is told of the game as its last tick left it (a TickView at face_out); a read, nothing kept
+//!   face_debrief_view(h)                      what the end card shows of the run (a DebriefView at face_out); a read, nothing kept
 //!   face_line(h, what, a…, b…) -> 0 | 1 · face_ray(h, o…, d…, max) -> 0 | 1 · face_hear(h, s…, d…)
 //!                                             the box world asked of the game shared: the camera's, the sound's, the cursor's questions; nothing is kept
 //!   face_die_n(h) -> f64 · face_time(h) -> f64 · face_rows(h) -> usize
@@ -112,7 +113,7 @@ fn with<R>(h: u32, f: impl FnOnce(&mut Held) -> R) -> R {
 }
 /// a call that may write what it does not say (a write by path, a state read in, a rule called from outside a tick, which may stage a level): the box world's copy is put
 /// down first, and the next question or tick proves it from nothing
-fn with_unsaid<R>(h: u32, f: impl FnOnce(&mut Held) -> R) -> R { with(h, |x| { game::scene_collision::unstand(&mut x.g); f(x) }) }
+fn with_unsaid<R>(h: u32, f: impl FnOnce(&mut Held) -> R) -> R { with(h, |x| { game::scene_collision::unstand(&mut x.g); let r = f(x); game::scene_collision::unstand(&mut x.g); r }) }
 /// a call that only reads the game: what it is handed is shared, so the compiler holds it to that
 fn with_ref<R>(h: u32, f: impl FnOnce(&Held) -> R) -> R { with(h, |x| f(x)) }
 fn out(b: Vec<u8>) { OUT.with(|o| *o.borrow_mut() = b); }
@@ -156,6 +157,12 @@ pub extern "C" fn face_tick_view(h: u32) {
     use game::io::Io;
     out(with_ref(h, |x| { let g = &x.g; let mut o = game::io::W::new(); game::view::tick_view(g, &game::seats::seat(g, g.local_seat.unwrap_or(g.seat))).w(&mut o); o.b }));
 }
+/// what the end card shows of the run (a DebriefView at face_out): asked once, as the card opens; a read, nothing kept
+#[no_mangle]
+pub extern "C" fn face_debrief_view(h: u32) {
+    use game::io::Io;
+    out(with_ref(h, |x| { let g = &x.g; let mut o = game::io::W::new(); game::view::debrief_view(g, &game::seats::seat(g, g.local_seat.unwrap_or(g.seat))).w(&mut o); o.b }))
+}
 // ---- the box world, asked of the game shared (game::ask::WorldAsk): the host's camera, its sound, its cursor. The copy stands from a tick's end; where a writer put it
 // down the first question stands it again, and no question proves it for itself
 fn asked<R>(h: u32, f: impl FnOnce(game::ask::WorldAsk) -> R) -> R {
@@ -189,6 +196,35 @@ pub extern "C" fn face_hear(h: u32, sx: f64, sy: f64, sz: f64, dx: f64, dy: f64,
     WAYS.with(|w| *w.borrow_mut() = k);
     let how = if p.direct { 2.0 } else { 0.0 } + if p.routed { 1.0 } else { 0.0 };
     out([p.path_len, p.via[0], p.via[1], p.via[2], p.apparent[0], p.apparent[1], p.apparent[2], p.muffle, p.carry, how].iter().flat_map(|v| v.to_le_bytes()).collect());
+}
+/// WHAT A HUD IS TOLD of what the cursor is on (`view::cursor_view`), about a seat by its place in the game's list (−1: the one this machine shows): a `CursorView`'s
+/// bytes at face_out. `p` = 36 doubles the host has as it draws: the cursor (x y), the picture it is in (w h), the camera's view and projection, and their
+/// inverse. Nothing of the game is written (the box world's copy is stood where a writer put it down).
+/// # Safety
+/// `p` names 288 bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_cursor_view(h: u32, seat: i32, p: *const u8) {
+    use game::io::Io;
+    let b = bytes(p, 36 * 8);
+    let n = |i: usize| f64::from_le_bytes(b[i * 8..i * 8 + 8].try_into().unwrap());
+    let m16 = |at: usize| -> [f32; 16] { std::array::from_fn(|i| n(at + i) as f32) };
+    let now = game::view::HostNow { mouse: [n(0), n(1)], client: [n(2), n(3)], view_proj: m16(4), inv_view_proj: m16(20) };
+    out(pointed(h, seat, |g, s| { let mut o = game::io::W::new(); game::view::cursor_view(g, s, &now).w(&mut o); o.b }));
+}
+/// what a point of the world is, as an order would be about it (`orders::target_at`), for that seat: an `Under`'s bytes at face_out
+#[no_mangle]
+pub extern "C" fn face_under(h: u32, seat: i32, x: f64, y: f64, z: f64) {
+    use game::io::Io;
+    out(pointed(h, seat, |g, s| { let mut o = game::io::W::new(); game::view::under(g, &game::orders::target_at(g, s, [x, y, z], &mut Vec::new())).w(&mut o); o.b }));
+}
+/// a question of a point or a cursor, for a seat, of the game shared
+fn pointed(h: u32, seat: i32, f: impl FnOnce(&Game, &game::seats::SeatRef) -> Vec<u8>) -> Vec<u8> {
+    with(h, |x| {
+        if game::ask::WorldAsk::try_of(&x.g).is_err() { game::scene_collision::stands(&mut x.g); }
+        let g: &Game = &x.g;
+        let s = if seat >= 0 && (seat as usize) < g.seats.len() { g.seats[seat as usize] } else { g.local_seat.unwrap_or(g.seat) };
+        f(g, &game::seats::seat(g, s))
+    })
 }
 /// THE GENERATION OF THE BRIDGE this module was built with (io::LAYOUT, and `layout` in schema.json): a host refuses a module of another generation.
 #[no_mangle]
@@ -454,7 +490,7 @@ pub extern "C" fn face_time(h: u32) -> f64 {
 }
 #[no_mangle]
 pub extern "C" fn face_rows(h: u32) -> usize {
-    with(h, |x| x.g.tab.boxes.len())
+    with(h, |x| x.g.tab.boxes.len() + x.g.tab.frame_boxes.len())
 }
 #[no_mangle]
 pub extern "C" fn face_parts() -> usize {

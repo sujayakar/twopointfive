@@ -1,5 +1,5 @@
 // THE LEVELS TABLE (rust/game_start/LEVELS.md): every row of the mission list, started by the Rust start and held to the TypeScript start.
-//   bun run tools/blitz/start-levels.ts [--seats 2] [--frames N] [--only id,id] [--write] [--keep DIR] [--at-once N] [--again]
+//   bun run tools/blitz/start-levels.ts [--seats 2] [--frames N] [--only id,id] [--write] [--keep DIR] [--at-once N] [--again] [--words '&hard']
 // For each mission (scene/scenarioList.ts ALL_MISSIONS, read through `start.ts --missions`):
 //   1. does the Rust start carry the file the page loads for it whole (`start --lacks`)? If not, the row says what it lacks;
 //   2. if it does, `start.sh --mission <id> --frames N`: the two starts' states path by path, then both stepped in Rust for N frames with an idle
@@ -9,6 +9,8 @@
 // The table is printed; `--write` also writes it to rust/game_start/LEVELS.md, between the two marks of that count of seats. Each mission's state
 // files are kept under rust/game_start/target/start-levels/<seats>/<id>/ (`--keep DIR` = elsewhere). A row is GREEN when no path is unknown at
 // the start or as the frames end and the two games never part. Exit 0 no row red · 1 a row is · 3 the tool could not run · 64 a wrong word.
+// `--words '&hard'`: every mission's link with those words on its end, on both sides (start.sh --words), in a folder of its own: a table of that, never written over the
+// table of the list as it stands. So every mission's hard start is held to the TypeScript's path by path, the knob tables and the difficulty module's own record with it.
 // `--again`: ANOTHER TABLE, of the TypeScript start alone: is a SECOND start in one process the first? Each mission is stood, stepped `--frames`
 // frames with an idle hand (by the Rust game: the module must be built, tools/blitz/face-build.ts --profile play), then the mission before it on
 // the list is stood and stepped as long in the same process, then the mission is stood again, and the two starts are held to each other: rust/sim's
@@ -23,7 +25,10 @@ const ROOT = resolve(import.meta.dir, '../..');
 const say = (s = '') => process.stdout.write(s + '\n');
 const argv = process.argv.slice(2), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const FRAMES = +arg('--frames', '300'), SEATS = +arg('--seats', '1'), AT_ONCE = Math.max(1, +arg('--at-once', '3')), ONLY = arg('--only', '').split(',').filter(Boolean), WRITE = argv.includes('--write'), AGAIN = argv.includes('--again');
-const KEEP = resolve(arg('--keep', resolve(ROOT, 'rust/game_start/target/start-levels')), `${AGAIN ? 'again-' : ''}seats${SEATS}`);   // (this checkout's own: two checkouts' runs never share a state file)
+const WORDS = arg('--words', '');
+const KEEP = resolve(arg('--keep', resolve(ROOT, 'rust/game_start/target/start-levels')), `${AGAIN ? 'again-' : ''}seats${SEATS}${WORDS ? `-words${WORDS.replace(/[^a-z0-9]+/gi, '-')}${Bun.hash(WORDS).toString(36)}` : ''}`);   // (this checkout's own: two checkouts' runs never share a state file)
+if (WORDS && WRITE) { say('start-levels: --write with --words would write the table of the words over the table of the list'); process.exit(64); }
+if (WORDS && AGAIN) { say('start-levels: --again holds a start to itself on the list as it stands: no --words'); process.exit(64); }
 if (WRITE && AGAIN) { say('start-levels: --again prints its table and writes none'); process.exit(64); }
 if (WRITE && ONLY.length) { say('start-levels: --write with --only would write a table of some rows'); process.exit(64); }
 if (SEATS !== 1 && SEATS !== 2) { say('start-levels: --seats 1 or 2'); process.exit(64); }
@@ -50,7 +55,7 @@ async function rowOf(m: typeof missions[number]): Promise<Row> {
   row.lacks = lk[2] ?? '';
   if (lk[1] !== 'carried') { row.ended = 'no'; return row; }
   const out = resolve(KEEP, m.id); mkdirSync(out, { recursive: true });
-  const r = await runLater('bash', ['tools/blitz/start.sh', '--mission', m.id, ...(SEATS > 1 ? ['--seats', String(SEATS)] : []), '--frames', String(FRAMES), '--no-build', '--show', '4', '--out', out]);
+  const r = await runLater('bash', ['tools/blitz/start.sh', '--mission', m.id, ...(SEATS > 1 ? ['--seats', String(SEATS)] : []), ...(WORDS ? ['--words', WORDS] : []), '--frames', String(FRAMES), '--no-build', '--show', '4', '--out', out]);
   const lines = r.out.split('\n');
   const refusal = lines.find(l => /^start\.ts: the game refused/.test(l));
   if (refusal) { row.ended = 'refused'; row.lacks = [`the game refuses it for ${SEATS} players (${refusal.replace(/^start\.ts: the game refused the \w+: /, '')})`, row.lacks].filter(Boolean).join(' · '); return row; }
@@ -129,7 +134,7 @@ const table = [
   ...rows.map(r => `| \`${r.id}\`${r.listed ? '' : ' (off the list)'} | \`${r.file}\` | ${r.ended === 'refused' ? 'not for this many players' : r.ended} | ${cell(r.start)} | ${cell(r.beside)} | ${cell(r.end)} | ${cell(r.lacks)} |`),
 ].join('\n');
 const green = rows.filter(r => r.ended === 'yes').length, refused = rows.filter(r => r.ended === 'refused').length, red = rows.length - green - refused;
-const head = `${green} of ${rows.length - refused} missions${SEATS > 1 ? ` the game stages for ${SEATS} players` : ''} start in Rust equal to the TypeScript start (die seed 20942, ${FRAMES} frames${SEATS > 1 ? `, ${SEATS} seats` : ''})${refused ? `; ${refused} the game refuses for ${SEATS} players` : ''}.`;
+const head = `${green} of ${rows.length - refused} missions${SEATS > 1 ? ` the game stages for ${SEATS} players` : ''} start in Rust equal to the TypeScript start (die seed 20942, ${FRAMES} frames${SEATS > 1 ? `, ${SEATS} seats` : ''}${WORDS ? `, with the words ${WORDS} on every link` : ''})${refused ? `; ${refused} the game refuses for ${SEATS} players` : ''}.`;
 say(); say(head);
 if (WRITE) {
   const file = resolve(ROOT, 'rust/game_start/LEVELS.md'), text = readFileSync(file, 'utf8'), mark = SEATS > 1 ? `table seats=${SEATS}` : 'table', A = `<!-- ${mark} -->`, B = `<!-- /${mark} -->`;

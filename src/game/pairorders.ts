@@ -149,14 +149,7 @@ export class PairOrders {
   private seated = false; private goSeated = false; private handsWas = false;
   constructor(private g: Game) {
     const S = g.orders; flags();
-    S.people = {
-      near: at => { if (!this.up) return null; let best: Guard | null = null, bd = PAIR.pickM;
-        for (const h of g.guards) { if (!this.isFoe(h)) continue; const d = flat(h.char.pos, at); if (d < bd) { bd = d; best = h; } }
-        return best ? { gd: best, d: bd } : null; },
-      ray: (ro, rd, max) => { if (!this.up) return null; let best: Guard | null = null, bt = max;
-        for (const h of g.guards) { if (!this.isFoe(h)) continue; const t = h.char.rayHit(ro, rd, bt); if (t >= 0 && t < bt) { bt = t; best = h; } }
-        return best; },
-    };
+    S.people = {};   // (a man of the other side is offered: the Rust game's question of a point and of the cursor asks)
     S.notes.push(() => { if (!this.seated) return []; const W = this.waiting();
       return W.length ? [{ key: 'F', text: `mark · ${W.map(([gd, J]) => J.watcher ? `${gd.callsign} takes ${nameOf(J.foe)} anyway (${nameOf(J.watcher)} is watching)` : `${gd.callsign} takes ${nameOf(J.foe)}${J.set ? '' : ' (not set)'}`).join(' · ')}` }] : []; });
   }

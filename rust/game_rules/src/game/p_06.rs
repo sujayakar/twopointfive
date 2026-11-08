@@ -210,6 +210,8 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::game::game_draw_characters(g, &all, statured);
     crate::smokebreak::update_smoke_break(g, dt);
     crate::game::game_light_meter(g, dt);
+    // (every seat's list of things its men can work, before anybody's orders are read: what a point or a cursor is on is asked of it, inside a tick and between two)
+    for &s in &seats { in_seat(g, s, |g| crate::workthings::work_things_keep(g)); }
     for &s in &seats {
         let pl = crate::cmd::seat_man(g, s);
         g.pl[pl].hit_flash = m::max(0.0, g.pl[pl].hit_flash - dt * 3.0);
@@ -419,7 +421,7 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
     //  keeps no list of them and no row's time is stepped)
     if g.m.dress.dress.fx {
         let mut i = g.fx.len();
-        while i > 0 { i -= 1; out.push(g.fx[i].box_); g.fx[i].ttl -= dt; if g.fx[i].ttl <= 0.0 { let gone = g.fx.remove(i); crate::scene_boxes::box_let_go(g, gone.box_); } }
+        while i > 0 { i -= 1; out.push(g.fx[i].box_.into()); g.fx[i].ttl -= dt; if g.fx[i].ttl <= 0.0 { let gone = g.fx.remove(i); crate::scene_boxes::box_let_go(g, gone.box_); } }
     } else { for gone in core::mem::take(&mut g.fx) { crate::scene_boxes::box_let_go(g, gone.box_); } }
     // (A ROW OF `g.fx` IS THE ONLY HOLDER OF ITS BOX: the TypeScript drops the object with the row. Here the box is a row of the table, so as the fx row
     //  goes its box joins the frame's rows, and the host's next listing frees it once it is on no list: boxes_frame_reset. Most fx rows live one frame
@@ -445,7 +447,6 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
 /// characters → what each man wears (the renderer's own half is the picture's), and the frame's dynamic boxes handed to the world   (game.ts drawCharacters)
 pub fn game_draw_characters(g: &mut crate::game::Game, all: &[CharId], statured: bool) {
     game_draw_men(g, all, statured, Some(false));   // (DRESS.men down: dress.ts, "what each WEARS is still dealt")
-    g.dyn_raw = g.dyn_boxes.len() as f64;
     let mut list = core::mem::take(&mut g.dyn_boxes);
     crate::fogofwar::picture::keep_raw(g, &list);
     let dynamics = crate::fogofwar::fog_of_war_things(g, &mut list);

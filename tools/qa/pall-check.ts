@@ -20,7 +20,7 @@ import { samSets } from './charge-rig.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const BREAK = process.env.PALL_BREAK === '1';
-const { CHAOS, PALL_STATS, resetChaosKnobs } = await import(`${ROOT}/src/game/destruction.ts`);
+const { CHAOS, PALL_STATS } = await import(`${ROOT}/src/game/destruction.ts`);
 const { WALLCHARGE, wallAt, wallPt } = await import(`${ROOT}/src/game/wallcharge.ts`);
 const { blast: fragBlast, FRAG } = await import(`${ROOT}/src/game/frag.ts`);
 const { fireShell, HE40, HE40_STATS } = await import(`${ROOT}/src/game/he40.ts`);
@@ -165,7 +165,6 @@ export async function pallCheck(): Promise<boolean> {
     { const S = await quiet(() => floor({ chaos: 0 })), s0 = stats(); await quiet(async () => { burst(S, 'frag'); }); const a = split(S.emits).pall.length, pa = since(s0).palls;
       const S3 = await quiet(() => floor()), s3 = stats(); S3.g.destr.showChaos = 0.8; await quiet(async () => { burst(S3, 'frag'); }); const c = split(S3.emits).pall.length, pc = since(s3).palls;
       verdict(a === 0 && pa === 0 && c === 0 && pc === 0, 'chaos 0, or a level script\'s show running on its own chaos (its cameras keep the picture they were set on): no pall', `chaos 0: ${a} emitters, ${pa} palls · a show at 0.8: ${c}, ${pc}`);
-      K.wall.density = 99; resetChaosKnobs(S3.g); const back = K.wall.density === density0;
        }
   } finally { console.log = log; K.wall.density = density0; Math.random = rnd0; }
   console.log(`=== pall: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);

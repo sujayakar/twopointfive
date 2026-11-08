@@ -70,12 +70,7 @@ export const CUES = {
    *  of this table's: digin.ts DIGIN.shoutM, the one the defenders' own shouted cues are heard by. */
   overheard: false, overheardGap: 4,
 };
-export const CUES_DEFAULTS: typeof CUES = JSON.parse(JSON.stringify(CUES));
-const LS = 'twopointsix.cues';
-/** the panel's three rows are kept per machine (a scenario pick is a page load); `?nocues` / `?cues` set the switch for the visit */
-const KEPT = ['on', 'squelch', 'stillSecs'] as const;
-export function saveCues() { try { const o: Record<string, unknown> = {}; for (const k of KEPT) if (CUES[k] !== CUES_DEFAULTS[k]) o[k] = CUES[k]; if (Object.keys(o).length) globalThis.localStorage?.setItem(LS, JSON.stringify(o)); else globalThis.localStorage?.removeItem(LS); } catch { /* no store */ } }
-try { const o = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); if (o) for (const k of KEPT) if (typeof o[k] === typeof CUES[k]) (CUES as Record<string, unknown>)[k] = o[k]; } catch { /* no store, or not ours */ }
+/** `?nocues` / `?cues` set the switch for the visit */
 try { const q = new URLSearchParams(location.search); if (q.has('cues')) CUES.on = q.get('cues') !== '0'; if (q.has('nocues')) CUES.on = false; } catch { /* no page (the harness) */ }
 
 /** THE RANKING of the lines the defenders already had: a radio line's class by its words, first match (what a player would most want to know first —

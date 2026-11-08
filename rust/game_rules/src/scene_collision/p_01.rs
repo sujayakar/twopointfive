@@ -115,7 +115,7 @@ pub fn line_box(g: &mut crate::game::Game, a: V3, rd: V3, b: BoxId) -> Option<cr
         return Some(LineBox { t0: s.t0, t1: s.t1, depth: s.depth });
     }
     let (mut t0, mut t1, mut depth) = (s.t0, s.t1, s.depth);
-    if has_cut && crate::scene_boxes::cut_met(g, b) {
+    if has_cut && crate::scene_boxes::cut_met(g, b.into()) {
         let cut = seam_box(g, b).cut.clone().unwrap();
         let ([ox, oy, oz], [dx, dy, dz]) = (s.o, s.d);
         if !crate::scene_cut::cut_clip(g, &cut, ox, oy, oz, dx, dy, dz, t0, t1) { return None; }
@@ -641,21 +641,6 @@ pub fn segment_blocked_dynamic_ask(g: &mut crate::game::Game, a: V3, b: V3, need
     set >= 0 && sim::lines::leaves_blocked(slot(g), a[0], a[1], a[2], b[0], b[1], b[2], len, js::to_u32(need), set)
 }
 
-/// the furniture as the copy reads it: every thing by its id, and the ones in the level in the furniture's own order (the TypeScript hands PropSystem itself; here `P` is always g.props)
-fn furniture(g: &mut Game) -> crate::scene_box_mirror::Furniture {
-    fn things(g: &mut Game, ids: &[PropId]) -> Vec<crate::scene_box_mirror::FurnitureThing> {
-        let mut out = Vec::with_capacity(ids.len());
-        for &p in ids {
-            let (id, radius, boxes) = { let r = &g.tab.props_prop[p]; (r.id, r.radius, r.boxes.clone()) };
-            let (x, z, yaw) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p), crate::props::prop_yaw(g, p));
-            out.push(crate::scene_box_mirror::FurnitureThing { id, x, z, yaw, radius, boxes });
-        }
-        out
-    }
-    let (all, props) = (g.props.all.clone(), g.props.props.clone());
-    crate::scene_box_mirror::Furniture { all: things(g, &all), props: things(g, &props) }
-}
-
 /// the furniture's ray: the nearest part met; inner None = nothing met, outer None = the module cannot answer it now. (collision.ts StaticCollision.thingsRay)
 pub fn things_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<Option<crate::scene_collision::ThingsRay>> {
     let r = if alone(g) {
@@ -672,15 +657,14 @@ pub fn things_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Optio
 pub fn things_ask(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<Option<crate::scene_collision::ThingsAsk>> {
     ready(g);
     if !standing(g) { return None; }
-    let p = furniture(g);
-    if !crate::scene_box_mirror::box_mirror_things(g, &p) { return None; }
+    if !crate::scene_box_mirror::box_mirror_things(g) { return None; }
     let mut out = [0.0; 5];
     let k = sim::lines::ray_things(slot(g), ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, &mut out);
     if k < 0 { return Some(None); }
     let at = out[sim::lines::RAY_PART];
-    let box_ = match crate::scene_box_mirror::box_mirror_thing_box(g, &p, at) {
+    let box_ = match crate::scene_box_mirror::box_mirror_thing_box(g, at) {
         Some(b) => b,
-        None => panic!("the Rust module's ray into the furniture met part {} of its list, which is no part of the furniture as it stands ({} things)", js::num_str(at), p.props.len()),
+        None => panic!("the Rust module's ray into the furniture met part {} of its list, which is no part of the furniture as it stands ({} things)", js::num_str(at), g.props.props.len()),
     };
     Some(Some(ThingsAsk { row: k as f64, t: out[0], n: [out[1], out[2], out[3]], box_ }))
 }
@@ -742,9 +726,9 @@ pub fn dynamic_hit(g: &mut crate::game::Game, a: V3, r0: f64, r1: f64, r2: f64, 
         i += 1;
         let (flags, c, h, tilted, round, cut) = { let x = seam_box(g, db); (x.flags, x.c, x.h, x.rot.is_some(), x.round == Some(true), x.cut.is_some()) };
         if ((js::to_i32(flags) & need) as f64) != need_flags { continue; }
-        if tilted || round || (cut && crate::scene_boxes::cut_met(g, db)) {
+        if tilted || round || (cut && crate::scene_boxes::cut_met(g, db.into())) {
             if seg_clear(g, a0, a1, a2, r0, r1, r2, len, db, SEG_PAD) { continue; }
-            if let Some(hit) = crate::scene_boxes::ray_box(g, a, [r0, r1, r2], db, len) {
+            if let Some(hit) = crate::scene_boxes::ray_box(g, a, [r0, r1, r2], db.into(), len) {
                 if hit.t >= 0.0 { return true; }
             }
             continue;

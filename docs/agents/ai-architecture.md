@@ -265,6 +265,31 @@ they share with the player's team from the start is `Assignment`, the limits and
   (local prediction). The arbiter is not the only door to a body: ACT takes `&World` and one `&mut Body`.
 - A rule of the world that says "the player is close, seen, down" means any player's man or each, never the first.
 
+## 6b. The map: which file holds what
+
+Under `rust/game_rules/src/`. One man's frame, in the order it runs (`guards/frame.rs update_guard`):
+
+| what | where | to add one |
+|---|---|---|
+| what takes him whole, before he senses: a live grenade, broke and ran, shaken, startled | `control/{frag,runner,morale,startle}.rs`, the list in `control/mod.rs` | a file and a line of `rules!` |
+| his own script (an order, a drill, a mission's staging) | `squad/` (`run_guard_script`), `gd.script` | |
+| what he senses, a file a sense: his ears, his eyes on his man, where his man went, a colleague on the floor, the man he trails, a kicked lock | `guards/senses/{hearing,foe,lead,body,leader,lock}.rs`, in order in `senses/mod.rs` | a file and its line in `perceive`; a kind of sound is a function of `hearing.rs` |
+| where a man looks, for every eye | `guards/p_04.rs look_of`, which is `fogofwar::gaze_of` | |
+| how alert he is | `guards/frame.rs alertness`; every write of awareness, state and fix through `mind.rs` | |
+| what takes him in his fight: head down under fire | `control/duck.rs`, asked at the top of `alert` | a file and a line of `rules!` |
+| what he does, by his state | `guards/behave/{patrol,suspicious,alert,search}.rs` | his state's file |
+| the looks laid over his aim | `guards/looks.rs` | a line of `LOOKS` |
+| his pose, his light, his footfall | `guards/frame.rs pose` | |
+| whose man he is (fifteen taskers, strongest first) | `game_types/src/owner/types.rs`, `owner/` | a line of `taskers!` |
+| what a rule may ask of a man (enemy, blind, staggered, held, in contact, still) | `control/man.rs` | a function |
+| why he is doing that | `control::control_line`, `mind::why`, `owner::who` | |
+
+The squad's side: an order is `orders/rows/<name>.rs` and a line of `rows!`; a throw is `squadthrow/plan.rs`; who is
+asked about which player's seat is a `SeatRef` (`seats/seat_ref.rs`). What the team knows under the fog is
+`fogofwar/p_02.rs`, what the picture shows of it `fogofwar/picture.rs`. The room fight is `roomfight/{defender,
+operative,rooms,line,fight}.rs`: a man who holds a room, a squad man in the fight (his frame is a dozen named parts),
+the rooms, who is in the line of a round, the whole.
+
 ## 7. Add a reaction, an order, a behaviour
 
 **A reaction**: something happens to an enemy and it takes him for a while (a grenade lands by him, a blast shakes
@@ -342,7 +367,9 @@ had a man), and what it does where it acts is for the mission tallies to judge.
 state: `rust/game_rules/src/guards/behave/{patrol,suspicious,alert,search}.rs`, each one function from what he
 senses (`Sensed`, settled before it is asked and written by no behaviour) to what he does (`Acts`: how fast his legs
 go, what his hands have up, where he aims, how low, gun lowered, slicing), which the pose reads and no behaviour
-does. `guards/p_07.rs` is the frame round them: incapable, lent, perceive, alertness, behave, pose.
+does. `guards/frame.rs` is the frame round them: incapable, lent, senses, alertness, behave, pose. What he senses is a
+file a sense (`guards/senses/`: his eyes on his man, where his man went, a colleague on the floor, the man he trails,
+a kicked lock), and the looks some module lays over his aim are a list (`guards/looks.rs`, a line a look).
 
 **What is NOT one file and one line today**, plainly. A new STATE of a man is an arm of `GuardState`, which many
 modules read, and one of `behave::act`. The room fight's defenders and operatives are still their own module, in no

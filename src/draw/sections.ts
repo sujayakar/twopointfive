@@ -1,9 +1,11 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 4118852677;
-/** each section's place: in the table the module answers with, and its bit in what a host asks for */
-export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, count = 30 }
+export const LAYOUT = 2958026896;
+/** what a host may ask for: what is made together is asked for together */
+export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, all = 1023 }
+/** each section's place in the table the module answers with */
+export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, rims = 30, fires = 31, fireTable = 32, count = 33 }
 
 /** the fog: one row */
 export const enum Fog {
@@ -113,12 +115,14 @@ export const enum View {
   target = 35,
   /** u32: what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it */
   locks = 38,
+  /** u32: the run's end card is due: 1 it was lost, 2 won (0: not yet) */
+  ended = 39,
   /** f32: night vision's amount, and how hard he has just been hit */
-  night = 39,
+  night = 40,
   /** f32 */
-  hit = 40,
+  hit = 41,
   /** words a row */
-  row = 41,
+  row = 42,
 }
 
 /** the sky: one row */
@@ -635,6 +639,80 @@ export const enum Heard {
   rain = 1,
   /** words a row */
   row = 2,
+}
+
+/** a man of the team: the first row is the shown player's own */
+export const enum Rim {
+  /** u32 */
+  id = 0,
+  /** u32: 0 the first player's, 1 the red pair's, 2 the blue pair's, 3 the second player's */
+  hue = 1,
+  /** u32: he is on his feet */
+  up = 2,
+  /** f32 */
+  light = 3,
+  /** f32 × 3 */
+  at = 4,
+  /** words a row */
+  row = 7,
+}
+
+/** a fire that burns, or that the fog's picture has burning still */
+export const enum Fire {
+  /** u32: its place among the level's fires, which is who it is */
+  ix = 0,
+  /** u32: it burns (else it is out, and only the fog's picture has it) */
+  lit = 1,
+  /** u32: its class under the fog: 0 drawn anywhere · 1 only where the team sees · 2 only where it does not */
+  fog = 2,
+  /** f32: its own number 0‥1 off where it stands */
+  seed = 3,
+  /** f32 × 3: its mouth and how wide: the middle of the glowing box's top, the flame's radius, the bed of coals' */
+  pos = 4,
+  /** f32 */
+  r = 7,
+  /** f32 */
+  bed = 8,
+  /** f32: how high a calm flame stands, how hot it burns, the clock it is drawn at, how its lamp stands to the authored one */
+  h = 9,
+  /** f32 */
+  heat = 10,
+  /** f32 */
+  time = 11,
+  /** f32 */
+  flick = 12,
+  /** f32 × 2: what leans the flame (capped), and the air at it as it blows */
+  wind = 13,
+  /** f32 × 3 */
+  blows = 15,
+  /** words a row */
+  row = 18,
+}
+
+/** the numbers every fire is drawn by: one row, on a level that has a fire */
+export const enum FireTable {
+  /** f32 × 16: fire.wgsl FireLook, in its order */
+  look = 0,
+  /** f32: how far off the view a flame is drawn, how many, the flame's height and how far the wind leans it */
+  drawR = 16,
+  /** f32 */
+  max = 17,
+  /** f32 */
+  height = 18,
+  /** f32 */
+  tall = 19,
+  /** f32 */
+  lean = 20,
+  /** f32 × 12: its smoke: on, up, radius, cells, density, temp, speed, push, jitter, every, view_r, lean */
+  smoke = 21,
+  /** f32 × 13: the flame as gas: on, up, radius, cells, density, temp, speed, push, jitter, every, view_r, keep, ease */
+  gas = 33,
+  /** f32 × 14: one column: up, radius, density, soot_ease, puff_every, puff_secs, puff_up, puff_radius, puff_off, puff_density, puff_temp, puff_speed, puff_push, puff_expand */
+  column = 46,
+  /** f32 × 3 */
+  soot = 60,
+  /** words a row */
+  row = 63,
 }
 
 /** what a box may say it is made of, by its number in Rust */

@@ -23,7 +23,7 @@ import { ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const DLG = await import(`${ROOT}/src/game/dialogue.ts`);
-const CHR = await import(`${ROOT}/src/game/chronicle.ts`);
+const CHR = await import(`${ROOT}/src/game/rooms.ts`);
 const { CUES } = await import(`${ROOT}/src/game/cues.ts`);
 
 const argv = process.argv.slice(2), flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };

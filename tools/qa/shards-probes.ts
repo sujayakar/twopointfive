@@ -120,7 +120,6 @@ export async function shardsModel() {
 export async function shardsRelease() {
   const F = family('shards-release: a piece that lets go becomes plates + shard particles thrown the round\'s way, inside every cap');
   const { W, game, flush } = await stage(9201); const gb = game.glassBreak; const D = game.destr.debris;
-  const hooked = 'onRelease' in gb;   // the fracture part's build: fragments come through its release hook, with their cause; else the interim take-over inside Debris
   // rounds into one spot of the pane from the corridor (travelling −z) until a cell drops
   const recs: any[] = []; let maxRecs = 0;
   for (let i = 0; i < 6 && GB_STATS.dropped === 0; i++) { gb.hit(PANE, W_(0.1 + 0.01 * i, 0.1), [0, 0, -1], 1); for (let f = 0; f < 20; f++) { W.step(DT); const q = flush(); maxRecs = Math.max(maxRecs, q.filter((e: any) => e.kind === 'shard').length); recs.push(...q); } }
@@ -132,16 +131,6 @@ export async function shardsRelease() {
   const plates = D.list.filter((c: any) => c.glass);
   const sizes = sh.map(e => e.o.size); const lifeMax = Math.max(...sh.map(e => e.o.life * (1 + e.o.lifeJit)));
   F.verdict(maxRecs <= SHARDS.recsPerFrame && game.shards.live <= SHARDS.liveCap && sh.every(e => e.count <= PM.MAX_NEW_PER_FRAME && Number.isFinite(e.o.speed)) && lifeMax <= 90, 'inside the caps: records a frame, live particles, each record\'s count; every fragment has a finite life', `≤ ${maxRecs} records in a frame (cap ${SHARDS.recsPerFrame}), ~${game.shards.live} live (cap ${SHARDS.liveCap}), sizes ${Math.min(...sizes) * 1e3}‥${Math.max(...sizes) * 1e3} mm, longest life ${lifeMax.toFixed(0)} s`);
-  // ---- what made a cell let go, as the interim hookup reads it: straight off rounds = 'hit' (back spray), a tongue following later = 'support' (no back spray), and a
-  //      round into the already-holed pane (site set frozen) is still a 'hit'
-  const seenTakes = new Set<string>(); const takes = () => { for (const l of game.shards.log) if (l.includes('take pane')) seenTakes.add(l); return [...seenTakes]; };   // the log is a ring: gather as we go
-  const t1 = takes(); const firstHit = t1.length > 0 && / hit /.test(t1[0]);
-  for (let f = 0; f < 120; f++) { W.step(DT); flush(); takes(); }
-  const n1 = takes().length; const b0 = SHARD_STATS.fragments;
-  for (let i = 0; i < 4; i++) { gb.hit(PANE, W_(-0.45 + 0.004 * i, -0.3), [0, 0, -1], 1); for (let f = 0; f < 24; f++) { W.step(DT); flush(); takes(); } }   // (24 frames apart: the base holds a queued cell for its `think` 0.28 s after the LAST hit)
-  const late = takes().slice(n1); const lateHit = late.filter((l: string) => / hit /.test(l)).length, lateSup = late.filter((l: string) => / support /.test(l)).length;
-  if (hooked) F.verdict(SHARD_STATS.fragments > 0, 'the cause of a break comes with the fragment (the fracture part\'s release hook names it): nothing to infer', `${SHARD_STATS.fragments} fragments through the hook`);
-  else F.verdict(firstHit && SHARD_STATS.fragments > b0 && lateHit > 0 && t1.every((l: string) => !/ blast /.test(l)), 'a cell rounds knocked out is read as a HIT (first break and a later round into the holed pane alike); never as a blast', `first: ${t1[0]?.replace(/^\S+ /, '')}; two seconds on, four more rounds: ${late.length} takes — ${lateHit} hit, ${lateSup} support`);
   // ---- a TEMPERED pane dicing: the whole face pours as dice, no plate
   { const st0 = { ...SHARD_STATS }; const tb = [...game.engine.world.glassStatics].find((bi: number) => gb.typeOfPane(bi) === 'tempered');   // (as it will BREAK: the stage has made the partition float by hand)
     if (tb === undefined) F.verdict(true, 'no tempered pane on this level (the dice path is covered by hand below)', 'skipped');

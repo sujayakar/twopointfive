@@ -454,7 +454,7 @@ pub fn dud_hits_character(g: &mut crate::game::Game, r: crate::he40::Shell, c_2:
 }
 
 /// Rounds in flight as boxes: the stubby body and its gold nose along the line of flight. Picture only; nothing in the tick calls it. (he40.ts shellBoxes)
-pub fn shell_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn shell_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let flag = crate::scene_boxes::box_flag();
     let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
     let item = crate::throwables::shell_item();
@@ -484,7 +484,7 @@ pub fn shell_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
             flags: Some(flags),
             ..Default::default()
         });
-        out.push(body);
+        out.push(body.into());
         let nose = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
             c: v3::mad(r.pos, z, 0.031),
             h: [0.021, 0.021, 0.02],
@@ -494,7 +494,7 @@ pub fn shell_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
             flags: Some(flags),
             ..Default::default()
         });
-        out.push(nose);
+        out.push(nose.into());
     }
 }
 
