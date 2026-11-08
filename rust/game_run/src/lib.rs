@@ -357,8 +357,18 @@ pub fn follow(g: &mut game::game::Game) {
 
 /// the tick, a record a seat (a game of one seat: `game_step`, which is `stepSeats(dt, [record])`)
 pub fn step_seats(g: &mut game::game::Game, dt: f64, cmds: &[game::cmd::PlayerCmd]) {
-    if cmds.len() == 1 { game::game::game_step(g, dt, &cmds[0]); } else { game::game::game_step_seats(g, dt, cmds); }
+    if cmds.len() == 1 { step(g, dt, &cmds[0]); } else { game::game::game_step_seats(g, dt, cmds); }
 }
 
 /// the tick of a game of one seat
-pub fn step(g: &mut game::game::Game, dt: f64, cmd: &game::cmd::PlayerCmd) { game::game::game_step(g, dt, cmd); }
+pub fn step(g: &mut game::game::Game, dt: f64, cmd: &game::cmd::PlayerCmd) {
+    // (the Team & kit picture holds its game round the tick; every other game is the tick alone)
+    if g.kit_stage.is_some() {
+        let mut staged = cmd.clone();
+        game::kitstage::before(g, &mut staged);
+        game::game::game_step(g, dt, &staged);
+        game::kitstage::after(g, dt);
+        return;
+    }
+    game::game::game_step(g, dt, cmd);
+}

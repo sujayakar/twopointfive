@@ -57,6 +57,8 @@ section! {
         /// night vision's amount, and how hard he has just been hit
         pub night: f32,
         pub hit: f32,
+        /// this game is the Team & kit picture: 1 staged, 2 nothing to stage (0: it is no picture)
+        pub kit: u32,
     }
 }
 
@@ -100,6 +102,7 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
         cut: f3(cam.desired),
         night: g.pl[pl].nv_amount as f32,
         hit: g.pl[pl].hit_flash as f32,
+        kit: g.kit_stage.as_ref().map_or(0, |k| if k.none { 2 } else { 1 }),
         ..r
     });
 }
