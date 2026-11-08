@@ -438,8 +438,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     }
     let stalk = {
         let (lmb, lmb_hit) = (input_lmb(g, input), input_lmb_hit(g, input));
-        let stick = None;
-        crate::stalk::stalk_step(g, lmb, lmb_hit, mx != 0.0 || mz != 0.0, stick, Some(crate::stalk::StalkKeys { mx, mz, dt }))
+        crate::stalk::stalk_step(g, lmb, lmb_hit, mx != 0.0 || mz != 0.0, Some(crate::stalk::StalkKeys { mx, mz, dt }))
     };
     if let Some(st) = stalk { mx = st.mx; mz = st.mz; g.pl[pl].crouch = true; }
     if g.puppet.is_some() {

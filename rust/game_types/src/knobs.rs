@@ -3061,9 +3061,6 @@ pub struct StalkK {
     pub heft_fwd: f64,
     pub heft_lead: f64,
     pub heft_pole: V3,
-    pub drag: bool,
-    pub drag_dead: f64,
-    pub drag_full: f64,
     pub orbit: bool,
     pub orbit_k: f64,
     pub orbit_edge: f64,
@@ -3144,9 +3141,6 @@ impl StalkK {
             heft_fwd: 0.0,
             heft_lead: 0.0,
             heft_pole: [0.0; 3],
-            drag: false,
-            drag_dead: 0.0,
-            drag_full: 0.0,
             orbit: false,
             orbit_k: 0.0,
             orbit_edge: 0.0,
@@ -3747,11 +3741,6 @@ pub struct DoorpathK {
     pub cap: f64,
     pub move_m: f64,
     pub apart_m: f64,
-    pub gun: bool,
-    pub gun_m: f64,
-    pub gun_ajar: f64,
-    pub gun_lead: f64,
-    pub gun_side: f64,
     pub body_m: f64,
     pub body_off: f64,
     pub body_move: f64,
@@ -3772,11 +3761,6 @@ impl DoorpathK {
             cap: 0.0,
             move_m: 0.0,
             apart_m: 0.0,
-            gun: false,
-            gun_m: 0.0,
-            gun_ajar: 0.0,
-            gun_lead: 0.0,
-            gun_side: 0.0,
             body_m: 0.0,
             body_off: 0.0,
             body_move: 0.0,
@@ -12836,7 +12820,7 @@ pub fn page_watch() -> WatchK {
 }
 
 pub fn page_stalk() -> StalkK {
-    crate::knobs::StalkK { on: true, only: true, cursor_m: 1.1, begin_cos: -0.25, out_cos: -0.05, station_m: 0.55, grab_m: 0.95, pace: 1.6, close_min: 0.3, close_k: 0.6, ease_up: 4.0, ease_down: 9.0, tell: true, reach_from: 2.9, reach: 1.0, rise_from: 2.3, rise_by: 1.05, rise: 0.7, catch_secs: 0.3, catch_m: 0.75, catch_long: 1.1, turn_in: true, catch_stride: 1.5, yank: 0.28, yank_room: 0.4, yank_with: true, corner: true, corner_m: 1.35, corner_deg: 110.0, jolt: 0.6, jolt_face: 50.0, jolt_secs: 0.6, jolt_at_once: false, corner_show: true, corner_see: 3.2, corner_reach: [0.25, 0.55], corner_coil: 0.3, corner_rise: 0.24, key: true, key_m: 0.8, low: true, low_from: 2.6, low_by: 1.1, low_k: 0.35, low_drop: 0.06, low_back: 0.03, low_lean: 6.0, low_hands: 1.0, low_spring: 18.0, low_wind: 0.12, wide: true, wide_out: 0.1, wide_down: 0.32, wide_fwd: 0.24, wide_lead: 0.07, wide_by: 0.35, wide_pole: [0.45, 0.15, -0.88], heft: true, heft_twist: 20.0, heft_swing: 0.11, heft_side: 0.04, heft_lean: 4.0, heft_dip: 0.02, heft_surge: 1.0, heft_out: 0.18, heft_down: 0.4, heft_fwd: -0.2, heft_lead: 0.0, heft_pole: [0.6, 0.0, -0.8], drag: false, drag_dead: 14.0, drag_full: 140.0, orbit: true, orbit_k: 3.0, orbit_edge: 0.05, orbit_snap: 0.3, low_begin_m: 4.2, low_out_m: 5.0 }
+    crate::knobs::StalkK { on: true, only: true, cursor_m: 1.1, begin_cos: -0.25, out_cos: -0.05, station_m: 0.55, grab_m: 0.95, pace: 1.6, close_min: 0.3, close_k: 0.6, ease_up: 4.0, ease_down: 9.0, tell: true, reach_from: 2.9, reach: 1.0, rise_from: 2.3, rise_by: 1.05, rise: 0.7, catch_secs: 0.3, catch_m: 0.75, catch_long: 1.1, turn_in: true, catch_stride: 1.5, yank: 0.28, yank_room: 0.4, yank_with: true, corner: true, corner_m: 1.35, corner_deg: 110.0, jolt: 0.6, jolt_face: 50.0, jolt_secs: 0.6, jolt_at_once: false, corner_show: true, corner_see: 3.2, corner_reach: [0.25, 0.55], corner_coil: 0.3, corner_rise: 0.24, key: true, key_m: 0.8, low: true, low_from: 2.6, low_by: 1.1, low_k: 0.35, low_drop: 0.06, low_back: 0.03, low_lean: 6.0, low_hands: 1.0, low_spring: 18.0, low_wind: 0.12, wide: true, wide_out: 0.1, wide_down: 0.32, wide_fwd: 0.24, wide_lead: 0.07, wide_by: 0.35, wide_pole: [0.45, 0.15, -0.88], heft: true, heft_twist: 20.0, heft_swing: 0.11, heft_side: 0.04, heft_lean: 4.0, heft_dip: 0.02, heft_surge: 1.0, heft_out: 0.18, heft_down: 0.4, heft_fwd: -0.2, heft_lead: 0.0, heft_pole: [0.6, 0.0, -0.8], orbit: true, orbit_k: 3.0, orbit_edge: 0.05, orbit_snap: 0.3, low_begin_m: 4.2, low_out_m: 5.0 }
 }
 
 pub fn page_overhear() -> OverhearK {
@@ -12876,7 +12860,7 @@ pub fn page_wound() -> WoundK {
 }
 
 pub fn page_doorpath() -> DoorpathK {
-    crate::knobs::DoorpathK { on: true, at: 0.52, out_m: 0.7, in_m: 0.7, look: 0.5, leaf_clear: 0.45, tip_m: 0.75, gap_m: 0.0, short_m: 0.6, cap: 2.5, move_m: 0.0, apart_m: 0.7, gun: false, gun_m: 0.95, gun_ajar: 0.12, gun_lead: 0.3, gun_side: 0.15, body_m: 0.0, body_off: 0.6, body_move: 1.2 }
+    crate::knobs::DoorpathK { on: true, at: 0.52, out_m: 0.7, in_m: 0.7, look: 0.5, leaf_clear: 0.45, tip_m: 0.75, gap_m: 0.0, short_m: 0.6, cap: 2.5, move_m: 0.0, apart_m: 0.7, body_m: 0.0, body_off: 0.6, body_move: 1.2 }
 }
 
 pub fn page_walls() -> WallsK {

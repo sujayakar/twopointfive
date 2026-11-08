@@ -160,7 +160,6 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
         i += 1;
     }
     crate::picture::picture_tick(g, dt);
-    crate::doorpath::door_path_after(g);
     crate::doorforce::door_force_tick(g, dt);
     crate::coverfire::coverfire_tick(g, dt);
     crate::civilians::update_civilians(g, dt);
