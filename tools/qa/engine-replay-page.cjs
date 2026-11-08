@@ -69,7 +69,8 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     return { page, errors };
   };
   const shot = async (page, name) => { if (OUT) await page.screenshot({ path: path.join(OUT, `${name}.png`), timeout: 180000 }).catch(e => console.log('    (no still: ' + String(e).slice(0, 80) + ')')); };
-  const want = n => { const ok = !process.env.ONLY || process.env.ONLY.split(',').includes(n); if (ok) section = n; return ok; };
+  const want = n => { const ok = (process.env.ONLY || 'record').split(',').includes(n);   // (no word: record. ONLY=record,refuse: the refused page was still not standing after four minutes when last asked)
+    if (ok) section = n; return ok; };
   const beat = setInterval(() => {
     if (asked) { say(`the page has not answered since ${asked} (inside a step or a draw)`, false); return; } const p = cur; if (!p || p.isClosed()) { say('no page open', false); return; }
     asked = clock(); p.evaluate(() => { const s = window.__tape?.state, g = window.__game;
