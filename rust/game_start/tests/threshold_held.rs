@@ -175,7 +175,7 @@ fn a_pair_works_a_held_room_from_its_jambs() {
         let a0 = p.leaf_angle(d);
         let (mut on_the_move, mut inside, mut steps) = (None, 0, false);
         for _ in 0..50 * 60 {
-            if p.up(foe) { p.pin_man(foe, spot, yaw_to(spot, at), GuardState::Alert, 1.0); p.blinded(foe); }
+            if p.up(foe) { p.pin_man(foe, spot, yaw_to(spot, at), GuardState::Alert, 1.0); p.blind_now(foe); }
             p.frame();
             if on_the_move.is_none() && (p.leaf_angle(d) - a0).abs() > 0.02 { on_the_move = Some(p.men().iter().map(|&m| (m, p.along(d, p.at(m)), p.off(d, p.at(m), side))).collect::<Vec<_>>()); }
             for m in p.men() { if p.off(d, p.at(m), side) < 0.0 { inside += 1; } }

@@ -20,14 +20,14 @@ fn rounds_through(s: u32, out: bool) -> (usize, usize, usize) {
     let spot = [at[0] + 1.6, 15.2];
     p.pin_man(foe, spot, 0.0, GuardState::Alert, 1.0);
     let men = p.men();
-    for _ in 0..30 * 60 { p.pin_man(foe, spot, 0.0, GuardState::Alert, 1.0); p.blinded(foe); p.frame(); if men.iter().all(|&m| p.arrived(m)) { break; } }
+    for _ in 0..30 * 60 { p.pin_man(foe, spot, 0.0, GuardState::Alert, 1.0); p.blind_now(foe); p.frame(); if men.iter().all(|&m| p.arrived(m)) { break; } }
     p.leaf_stays(d);
     p.leaf_put_open(d, 1.5);
-    for _ in 0..14 * 60 { p.pin_man(foe, spot, 0.0, GuardState::Alert, 1.0); p.blinded(foe); p.frame(); }
+    for _ in 0..14 * 60 { p.pin_man(foe, spot, 0.0, GuardState::Alert, 1.0); p.blind_now(foe); p.frame(); }
     let (mut on_it, mut asked, mut turned) = (0, 0, 0);
     let c = p.frame_at(d);
     let to = if out { [c[0] + (c[0] - spot[0]) * 5.0, c[1] + (c[1] - spot[1]) * 5.0] } else { [12.0, 11.0] };
-    let shoot = |p: &mut Play, f: usize| { p.pin_man(foe, spot, yaw_to(spot, to), GuardState::Alert, 1.0); p.blinded(foe); if f % 30 == 0 { p.round_from(foe, [to[0], 1.2, to[1]]); } p.frame(); };
+    let shoot = |p: &mut Play, f: usize| { p.pin_man(foe, spot, yaw_to(spot, to), GuardState::Alert, 1.0); p.blind_now(foe); if f % 30 == 0 { p.round_from(foe, [to[0], 1.2, to[1]]); } p.frame(); };
     let was: Vec<f64> = men.iter().map(|&m| off_by(p.gun_yaw(m), yaw_to(p.at(m), c))).collect();
     for f in 0..60 { shoot(&mut p, f); }
     let off_in_a_second: Vec<f64> = men.iter().map(|&m| off_by(p.gun_yaw(m), yaw_to(p.at(m), c))).collect();
