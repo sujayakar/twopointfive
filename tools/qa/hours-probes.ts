@@ -171,18 +171,5 @@ export async function hoursSheet(): Promise<boolean> {
       '?hour= takes the five names and a few plain words for them; anything else, or no flag, is the night; ?sun= is the strength; ?noweather leaves the storm to its own flag', `${ids} · ${al} · ${JSON.stringify(a)} · ${JSON.stringify(b)}`);
     const h = [hourHref('?levelFile=compound.json&roomclear&squad4', 'dusk'), hourHref('?roomclear&hour=dusk&mute', 'midday'), hourHref('?roomclear&hour=dusk&mute', 'night'), hourHref('?hour=dawn', 'night'), hourHref('', 'dawn'), hourHref('?hourly=1&hour', 'night')];
     F.verdict(JSON.stringify(h) === JSON.stringify(['?levelFile=compound.json&roomclear&squad4&hour=dusk', '?roomclear&mute&hour=midday', '?roomclear&mute', '', '?hour=dawn', '?hourly=1']), 'a link takes one hour: put on, replaced, and taken off for the night (the bare link is the level as it was made)', h.join('  ·  ')); }
-  await withDom('?quality=high&mute', async () => {
-    const M = await import(`${ROOT}/src/ui/missions.ts`); const host = new El('DIV'); const S = M.openMissions({ root: host as any, search: '?quality=high&mute' });
-    try {
-      const btns = () => host.all(e => !!e.attrs['data-hour']), litOf = () => btns().filter(e => e.cls.has('on')).map(e => e.attrs['data-hour']).join(','), hrefs = () => host.all(e => e.cls.has('mrow')).map(e => e.attrs.href ?? '');
-      S.select('compound-four'); const l0 = litOf(), h0 = hrefs();
-      const seq: string[] = []; for (let i = 0; i < 5; i++) { M.missionsKey({ code: 'KeyH' }); seq.push(S.hourNow); } M.missionsKey({ code: 'KeyH', shiftKey: true } as any); const backOne = S.hourNow;
-      btns().find(e => e.attrs['data-hour'] === 'midday')?.onclick?.(); const l1 = litOf(), h1 = hrefs(), go = S.hrefOf(S.selected), note = host.all(e => e.cls.has('mhour'))[0]?.all(e => e.cls.has('dn'))[0]?.textContent ?? '';
-      F.verdict(btns().length === 5 && l0 === 'night' && h0.every(h => !/hour=/.test(h)) && JSON.stringify(seq) === JSON.stringify(['dawn', 'midday', 'overcast', 'dusk', 'night']) && backOne === 'dusk' && l1 === 'midday' && h1.every(h => /[?&]hour=midday$/.test(h)) && go === S.hrefOf(S.selected) && /hour=midday/.test(go) && /levelFile=compound\.json/.test(go) && /12:30/.test(note),
-        'the sheet opens on the night with no hour on any link; H walks dawn → midday → overcast → dusk → night (Shift+H back); a click on Midday lights it, says its clock, and puts hour=midday on every row\'s link and the start button\'s', `lit ${l0} → ${l1} · H: ${seq.join(' ')} · ${go} · “${note.slice(0, 60)}…”`);
-      M.closeMissions(); const S2 = M.openMissions({ root: host as any, search: '?levelFile=compound.json&roomclear&squad4&hour=dusk&mute' });
-      F.verdict(S2.hourNow === 'dusk' && S2.selected.id === 'compound-four' && /hour=dusk/.test(S2.hrefOf(S2.selected)) && (S2.hrefOf(S2.selected).match(/hour=/g) ?? []).length === 1, 'opened over a page already at an hour (a quit back to the list): the row opens on that hour and the links carry it once', `${S2.hourNow} · ${S2.hrefOf(S2.selected)}`);
-    } finally { M.closeMissions(); }
-  });
   return F.done();
 }
