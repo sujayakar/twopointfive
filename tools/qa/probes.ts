@@ -3266,7 +3266,7 @@ if (KNOWN.has(which) && which.startsWith('review-') && which !== 'review-b') her
 // and a blast per level inside the caps, fixtures under anybody's fire, the one sight rule, no scenario = the loud rules down
 { const lf = async (name: string, fn: string) => { if (on(name, 'loudchaos', 'all', 'loudchaos-all')) await run(name, async () => await ((await import('./loudchaos-probes.ts')) as any)[fn]()); };
   await lf('loudchaos-dressing', 'loudDressing'); await lf('loudchaos-firefight', 'loudFirefight'); await lf('loudchaos-blast', 'loudBlast'); await lf('loudchaos-fixtures', 'loudFixtures');
-  await lf('loudchaos-sight', 'loudSight'); }
+  }
 // ---------------------------------------------------------------- destruction (STATUS stage 3b, destruction-probes.ts): 'destruction' = the family — the sheet reference model, the caps, dust into the smoke,
 // dying screens, what the floor hears, reset, chaos-0 identity, determinism, a short loud soak's bounds (also under 'weapons': the identity card is that family's business too)
 { const df = async (name: string, fn: string, alsoWeapons = false) => { if (on(name, 'destruction', 'all', ...(alsoWeapons ? ['weapons'] : []))) await run(name, async () => ((await import('./destruction-probes.ts')) as any)[fn]()); };
@@ -3334,7 +3334,6 @@ for (const [name, file, ...fams] of [
   ['lookgrade', 'lookgrade-check.ts', 'look', 'render'],
   ['lookunits', 'lookunits-check.ts', 'look', 'render'],
   ['menustills', 'menustills-check.ts', 'menus'],
-  ['moonlight', 'moonlight-check.ts', 'fog'],
   ['nogpu', 'nogpu-check.ts', 'shaders'],
   ['palette', 'palette-check.ts', 'level'],
   ['parse', 'parse-check.ts', 'tools'],

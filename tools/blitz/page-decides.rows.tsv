@@ -67,7 +67,6 @@ src/game/camera.ts:*	host	the Rust host	the host's camera: its ease, zoom, kick 
 src/host/loop.ts:*	host	the Rust host	the frame's loop: the Input's rows cleared, the camera stepped	2
 tools/blitz/out-dispatch.ts:*	host	the Rust host	the out events' dispatcher: what the tick told the host is made as today's calls on the page's objects (sound, particles, decals, smoke)	1
 src/game/savestate.ts:*	host	saves	the save controller's rhythm and shelf (saves and replays are not this list's)	15
-src/game/sensors.ts:*	host	saves	the recorder's sensor stream	2
 src/game/rollback.ts:*	host	saves	snapshots for the networked page and the recorder	5
 src/game/replaybuf.ts:*	host	saves	the replay buffer's own cursor	9
 src/game/runtape.ts:*	host	saves	the run tape's own cursor	8

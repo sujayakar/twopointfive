@@ -51,8 +51,8 @@ Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`
 - **`src/game` is one runtime import cycle.** No top-level statement may USE another game module's export (a module-level table or
   `new X()` built from one breaks only in the page's bundle). Build such tables lazily; boot a new module once in the page.
   The one exception is a leaf of the cycle, a file with type-only imports (`owner.ts`): it has always evaluated first.
-- **One model for presentation and AI.** What the AI senses is what the picture shows (light, smoke, sound paths). A GPU value reaches
-  game code only through a named `Game.sensors` query with a headless stand-in.
+- **One model for presentation and AI.** What the AI senses is what the picture shows (light, smoke, sound paths). No GPU value reaches
+  game code: the Rust game senses for itself.
 - **Player-facing rules.** Show, not tell. No digit above 5 on a menu. No compass words on the HUD or in a door's name. Never harder
   by hit points. Teammates walk at the player's pace, slow down to let him catch up, and run only for a reason (`teampace.ts`). Level and effects numbers tuned in the viewer are authored data.
 - **Git.** Work on your own branch; never push to `main` (it moves only by a PR the maintainer merges); no force-push; never
@@ -128,7 +128,7 @@ happened when; the live queue is outside the repo.
 - `render.md` — judging renderer output, GPU timing traps, quality presets and the ladder, caps, froxels, ReSTIR, TAAU, sharp direct,
   the gather, the denoiser, the smoke solver, effects numbers, prototype branches (longer renderer bullets:
   `docs/internal/claude-md-renderer-systems.md`).
-- `replays.md` — the `Sensors` seam, the game's own die, the fixed step, the input record, F7 replays, the
+- `replays.md` — the game's own die, the fixed step, the input record, F7 replays, the
   engine replay player, kept runs and the dump.
 - `net.md` — networked play: the wire (inputs, never state), the server's input rule, the server and client cores, the game server
   process and its environment, the page as a client (`?net=`), the lobby (host or join a co-op game, `?join=`), their checks.
