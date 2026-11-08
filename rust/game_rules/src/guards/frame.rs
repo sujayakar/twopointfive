@@ -48,6 +48,10 @@ fn run_lent_script(g: &mut Game, gd: GuardId, lent: crate::game::GuardScript, dt
     core::mem::replace(&mut g.gd[gd].script, own)
 }
 
+/// a gun this far spent is low, and is changed once nobody has been seen and no shot heard for this long
+const LOW_AT: f64 = 0.7;
+const LOW_QUIET_SECS: f64 = 4.0;
+
 /// ONE MAN'S FRAME, part by part. Each part is a function below, in this order.   (guards.ts updateGuard)
 ///   incapable   dead or held: nothing below runs
 ///   sense       his ears and eyes (senses/), whoever has his body
@@ -127,10 +131,15 @@ fn incapable(g: &mut Game, gd: GuardId, dt: f64) -> bool {
 
 /// HIS HANDS: a change of magazine he has begun goes on, whoever has his legs and whatever he sees. It waits only while he has no hand for it: he is
 /// reeling, a hostage is in his arms, or his hands are between two guns or on a job. (Dead, or in somebody's arm, he never gets here.)
+/// And he begins one by himself with nobody in front of him: at once where his gun is empty, and once it has been quiet a while where it is low. In a fight what he does about his gun is the
+/// fight's (his sidearm, the change there and then).
 fn hands(g: &mut Game, gd: GuardId, dt: f64) {
-    if !crate::control::man::changing_magazine(g, gd) { return; }
-    if crate::control::man::staggered(g, gd) || crate::control::man::in_a_standoff(g, gd) || crate::gunslots::side_locked(g, gd) { return; }
-    tick_reload_beat(g, gd, dt);
+    use crate::control::man;
+    if man::staggered(g, gd) || man::in_a_standoff(g, gd) || crate::gunslots::side_locked(g, gd) { return; }
+    if man::changing_magazine(g, gd) { tick_reload_beat(g, gd, dt); return; }
+    let spent = man::gun_spent(g, gd);
+    let wants = spent >= 1.0 || (spent >= LOW_AT && man::quiet_for(g, gd, LOW_QUIET_SECS));
+    if wants && !man::hands_at_work(g, gd) && !man::has_a_man_in_front(g, gd) { begin_reload(g, gd); }
 }
 
 /// A rule of the body list has him, or his own script: his body follows it and nothing else of his frame runs.
