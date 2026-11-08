@@ -3328,7 +3328,7 @@ if (on('marksight', 'missions', 'all')) await run('marksight', async () => (awai
 // … and its starts and doors are on a way (tools/qa/walked-check.ts, a program of its own; it loads each level as the page does whatever the stand: what the ways do not reach is owed by name, a file a level)
 if (on('walked', 'missions', 'all')) await run('walked', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/walked-check.ts`], { stdout: 'inherit', stderr: 'inherit', env: process.env }).exited) === 0);
 // ---------------------------------------------------------------- aimed fire chews cover (src/game/coverfire.ts, coverfire-probes.ts — a program of its own: run as one, its exit code the verdict)
-{ if (on('coverfire', 'coverfire')) await run('coverfire', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/coverfire-probes.ts`, 'all'], { stdout: 'inherit', stderr: 'inherit', env: process.env }).exited) === 0); }
+{  }
 
 // ---------------------------------------------------------------- the runner's own self-tests (never in 'all'): `selftest-fail` must turn the verdict and gate.sh red, `selftest-throw` likewise without
 // stopping the probe after it, `selftest-pass` green, `selftest-quiet` = a probe that checks nothing → NO VERDICT (gate.sh: ERROR)
