@@ -480,7 +480,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       },
     },
   };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest; picture only): the front door the team came in by, from the
+  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest; picture only): the front door the team came in by, from the
   // street side (`ref`: the rescue starts them 4.6 m INSIDE it, and from in there the picture looks out). Everything else is measured: the stack falls on the blank
   // wall north of the door, the lobby's two-light window just past its last man.
   scenarios.kitView = { ways: [{ door: 'front', ref: [1, 18.75] }] };

@@ -5,9 +5,9 @@ import { cloudFatal, cloudUrl } from './cloud';
 import { FATAL } from '../gpu/device';
 import { cloudNote } from '../ui/cloudnote';
 
-export function tellRedCards(mute: () => boolean): void {
+export function tellRedCards(mute?: () => boolean): void {
   FATAL.tell = (r, card) => {
-    if (mute()) return;
+    if (mute?.()) return;
     const q = new URLSearchParams(location.search); if (!cloudUrl(q)) return;
     const data = { ...(r.where ? { where: r.where } : {}), ...(r.adapter ? { adapter: r.adapter } : {}), ...(r.data !== undefined ? { facts: r.data } : {}) };
     const say = (build?: string): void => {

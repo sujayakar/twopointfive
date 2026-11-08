@@ -509,7 +509,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     },
   };
   // the open floor's names (src/game/dialogue.ts: a held room is its own name; these are for everywhere a held room is not)
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): both ways are the level's own. The main gate has no leaf
+  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): both ways are the level's own. The main gate has no leaf
   // (its two are chained back on the inside of the wall), and a picture anchored on the opening had nothing for the kit that works a leaf — the hammer, the
   // shotgun, a door charge, the wand, a bang or a frag on order all stood idle there. So the first way is the first door the team meets through that gate:
   // the first hut's door on the yard (`a_s`), which plans with nothing in the camera's way. The second is the back gate's leaf in the east wall.
