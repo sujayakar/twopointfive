@@ -158,3 +158,27 @@ fn in_a_game_of_two_a_throw_is_told_to_the_seat_whose_man_it_is() {
         }
     }
 }
+
+/// THE RULE: a frag refused for who is in it says WHO: hostages, or a civilian; and floor with nobody unarmed on it is refused to nobody. The man in the room is each in turn.
+/// A FAILURE MEANS: the squad names the wrong people, or throws on them. The control is the same spot with him nobody's.
+#[test]
+fn a_frag_refused_for_who_is_in_it_says_who() {
+    for seed in SEEDS {
+        let (s, _, _) = yard(seed);
+        let mut p = Play::scene(&s, &Opts { seed, ..Default::default() });
+        p.sam_unhurt();
+        p.run(0.1);
+        let man = p.defender_at([11.25, 11.25]);
+        let at = p.at(man);
+        let spot = [at[0], 0.0, at[1]];
+        let mut says = |hostages: Vec<_>, civilians: Vec<_>| {
+            p.g.rescue.hostages = hostages;
+            p.g.civilians = civilians;
+            game::squadthrow::squad_frag_catches(&mut p.g, spot, spot, None, Some(false), None, None)
+        };
+        assert_eq!(says(vec![], vec![]), None, "seed {seed}: nobody unarmed");
+        assert_eq!(says(vec![], vec![man]).as_deref(), Some("a civilian is in it. no frag."), "seed {seed}");
+        assert_eq!(says(vec![man], vec![]).as_deref(), Some("hostages. no frag."), "seed {seed}");
+        assert_eq!(says(vec![man], vec![man]).as_deref(), Some("hostages. no frag."), "seed {seed}: a hostage is said first");
+    }
+}
