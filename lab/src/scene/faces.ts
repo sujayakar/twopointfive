@@ -29,3 +29,19 @@ export function settle(pieces: Piece[]): number {
   }
   return faceFights(pieces).length;
 }
+
+/** Which of a box's twelve edges stand free: nothing beside them in either face's plane, nor across the corner. Edge c·4 + i + 2j runs along axis c; i, j say which side of the next two axes */
+export function freeEdges(pieces: Piece[]): Map<Piece, number> {
+  const G = 2, grid = new Map<string, Piece[]>(), key = (x: number, y: number, z: number) => `${Math.floor(x / G)},${Math.floor(y / G)},${Math.floor(z / G)}`, big: Piece[] = [], out = new Map<Piece, number>();
+  for (const p of pieces) { const e = [0, 1, 2].map(k => Math.abs(p.rot[0][k]!) * p.half[0] + Math.abs(p.rot[1][k]!) * p.half[1] + Math.abs(p.rot[2][k]!) * p.half[2]); if (Math.max(...e) > 24) { big.push(p); continue; } for (let x = Math.floor((p.at[0] - e[0]!) / G); x <= Math.floor((p.at[0] + e[0]!) / G); x++) for (let y = Math.floor((p.at[1] - e[1]!) / G); y <= Math.floor((p.at[1] + e[1]!) / G); y++) for (let z = Math.floor((p.at[2] - e[2]!) / G); z <= Math.floor((p.at[2] + e[2]!) / G); z++) { const k = `${x},${y},${z}`; let l = grid.get(k); if (!l) grid.set(k, l = []); l.push(p); } }
+  const inside = (p: Piece, x: V3) => { const d = sub(x, p.at); for (let k = 0; k < 3; k++) if (Math.abs(dot(d, p.rot[k]!)) > p.half[k]! + 1e-4) return false; return true; }, taken = (x: V3, not: Piece) => { for (const p of grid.get(key(...x)) ?? []) if (p !== not && inside(p, x)) return true; for (const p of big) if (p !== not && inside(p, x)) return true; return false; }, D = 0.006;
+  for (const p of pieces) {
+    if (p.quad || p.planes?.length) continue; let mask = 0;
+    for (let c = 0; c < 3; c++) { const A = (c + 1) % 3, B = (c + 2) % 3; if (Math.min(p.half[A]!, p.half[B]!) < 0.004) continue; for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
+      const sa = i ? 1 : -1, sb = j ? 1 : -1, na = mul(p.rot[A]!, sa), nb = mul(p.rot[B]!, sb), mid = add(add(p.at, mul(na, p.half[A]!)), mul(nb, p.half[B]!)); let free = 0; const N = 7;
+      for (let t = 0; t < N; t++) { const x = add(mid, mul(p.rot[c]!, p.half[c]! * ((t + 0.5) / N * 2 - 1))); if (!taken(add(x, add(mul(na, D), mul(nb, -D))), p) && !taken(add(x, add(mul(na, -D), mul(nb, D))), p) && !taken(add(x, add(mul(na, D), mul(nb, D))), p)) free++; }
+      if (free >= N - 2) mask |= 1 << (c * 4 + i + 2 * j); } }
+    if (mask) out.set(p, mask);
+  }
+  return out;
+}

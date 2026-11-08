@@ -29,6 +29,7 @@ export class SceneGpu {
     // bits of packed leaves must survive: copied as words
     { const u = new Uint32Array(ex.buffer); let o = 0; for (const p of packed) { u.set(new Uint32Array(p.data), o); o += p.data.byteLength / 4; } }
     this.extra = buffer(g, 'extra', ex, S);
+    this.sigma = world.clusters.map(c => { let a = 0; for (const l of c.leaves) if (!l.wood) a += l.size * l.size * 4 * (c.kind === 1 ? 0.06 : 0.46) * (2 / 3); return Math.max(1, Math.min(63, Math.round(16 * (c.kind === 1 ? 1.3 : 0.5 * a / 4.19 * 0.75)))); });
     // ---- nodes: standing ×8, clusters ×8, moving ×8, instances ×8
     const perMoving = Math.max(1, this.maxMoving * 2), perInst = Math.max(1, this.maxInst * 2); const rest = bs[0]!.perOctant * 8; let n = rest + bs[1]!.perOctant * 8; let leaf = 0;
     for (const p of packed) { this.clusterAt.push({ node: n, per: p.bvh.perOctant, leaf }); n += p.bvh.perOctant * 8; leaf += p.data.byteLength / 32; }
@@ -58,6 +59,8 @@ export class SceneGpu {
   private instData!: Float32Array<ArrayBuffer>;
   /** the leaf clusters' frames at the last frame drawn: three rows each */
   instWas = new Float32Array(0); private keepInst() { for (let i = 0; i < this.maxInst; i++) this.instWas.set(this.instData.subarray(i * 16, i * 16 + 12), i * 12); }
+  /** each cluster's density as a medium, in sixteenths */
+  private sigma: number[] = [];
   private listData!: Uint32Array<ArrayBuffer>; private box!: Float32Array;
   /** what the raster draws this frame, as ranges of lists: plain boxes, boxes whose true surface is found a pixel at a time, the same two for what is clear; leaf clusters; all of them, for the sun */
   readonly draws: Record<'plain' | 'fancy' | 'clear' | 'clearFancy', [number, number]> = { plain: [0, 0], fancy: [0, 0], clear: [0, 0], clearFancy: [0, 0] }; readonly sunDraws: { first: number; count: number; leaves: number }[] = [];
@@ -70,8 +73,8 @@ export class SceneGpu {
     const m = this.world.moving; if (this.moveTree) this.moveTree.order.forEach((src, i) => { const p = m[src]!, hy = Math.abs(p.rot[0][1]) * p.half[0] + Math.abs(p.rot[1][1]) * p.half[1] + Math.abs(p.rot[2][1]) * p.half[2]; put(p, this.piece0[2] + i, p.at[0], p.at[1], p.at[2], Math.hypot(...p.half), hy); });
     const D = this.listData; let o = 0; for (const k of ['plain', 'fancy', 'clear', 'clearFancy'] as const) { this.draws[k] = [o, L[k]!.length]; D.set(L[k]!, o); o += L[k]!.length; }
     this.leafDraws.length = this.sunDraws.length = 0; const wld = this.world, order = this.instTree?.order ?? [];
-    for (const kind of [0, 1]) { const all: number[] = [], near: number[] = []; order.forEach((src, i) => { const n = wld.instances[src]!; if (wld.clusters[n.cluster]!.kind !== kind) return; all.push(i); const a = this.posed[src]!.at, e = n.scale * (kind ? 2.1 : 1.22); if (a[1] - e < cut && seen(a[0], a[1], a[2], e)) near.push(i); });
-      const leaves = Math.max(0, ...wld.clusters.filter(q => q.kind === kind).map(q => q.leaves.length)); this.leafDraws.push({ first: o, count: near.length, leaves }); D.set(near, o); o += near.length; this.sunDraws.push({ first: o, count: all.length, leaves }); D.set(all, o); o += all.length; }
+    for (const leaves of new Set(wld.clusters.map(c => c.leaves.length))) { const all: number[] = [], near: number[] = []; order.forEach((src, i) => { const n = wld.instances[src]!, c = wld.clusters[n.cluster]!; if (c.leaves.length !== leaves) return; all.push(i); const a = this.posed[src]!.at, e = n.scale * (c.kind ? 2.1 : 1.22); if ((n.open || a[1] - e < cut) && seen(a[0], a[1], a[2], e)) near.push(i); });
+      this.leafDraws.push({ first: o, count: near.length, leaves }); D.set(near, o); o += near.length; this.sunDraws.push({ first: o, count: all.length, leaves }); D.set(all, o); o += all.length; }
     this.g.device.queue.writeBuffer(this.lists, 0, D, 0, o);
   }
   private posed: { at: V3; rot: Piece['rot'] }[] = [];
@@ -90,7 +93,7 @@ export class SceneGpu {
       const posed = this.posed = w.instances.map(i => swayed(i, t, wind)), bd = (k: number) => { const i = w.instances[k]!, tuft = w.clusters[i.cluster]!.kind === 1, e = i.scale * (tuft ? 2.1 : 1.22), a = posed[k]!.at; return { mn: [a[0] - e, a[1] - (tuft ? 0.1 : e), a[2] - e], mx: [a[0] + e, a[1] + e, a[2] + e] } as never; };
       if (!this.instTree) this.instTree = buildBvh(w.instances.map((_, k) => bd(k)), 1, 1); else refitBvh(this.instTree, bd); const b = this.instTree;
       const f = this.instData, u = new Uint32Array(f.buffer), first = this.instWas.length === 0; if (!first) this.keepInst(); const q = (x: number) => Math.max(0, Math.min(255, Math.round(x * 255)));
-      b.order.forEach((src, i) => { const n = w.instances[src]!, p = posed[src]!, o = i * 16, k = 1 / n.scale, c = this.clusterAt[n.cluster]!; for (let a = 0; a < 3; a++) { const r = p.rot[a]!; f[o + a * 4] = r[0] * k; f[o + a * 4 + 1] = r[1] * k; f[o + a * 4 + 2] = r[2] * k; f[o + a * 4 + 3] = -(r[0] * p.at[0] + r[1] * p.at[1] + r[2] * p.at[2]) * k; } u[o + 12] = c.node; u[o + 13] = c.per; u[o + 14] = c.leaf; u[o + 15] = (q(n.tint[0]) | (q(n.tint[1]) << 8) | (q(n.tint[2]) << 16)) >>> 0; });
+      b.order.forEach((src, i) => { const n = w.instances[src]!, p = posed[src]!, o = i * 16, k = 1 / n.scale, c = this.clusterAt[n.cluster]!; for (let a = 0; a < 3; a++) { const r = p.rot[a]!; f[o + a * 4] = r[0] * k; f[o + a * 4 + 1] = r[1] * k; f[o + a * 4 + 2] = r[2] * k; f[o + a * 4 + 3] = -(r[0] * p.at[0] + r[1] * p.at[1] + r[2] * p.at[2]) * k; } u[o + 12] = c.node; u[o + 13] = c.per; u[o + 14] = c.leaf; u[o + 15] = (q(n.tint[0]) | (q(n.tint[1]) << 8) | (q(n.tint[2]) << 16) | (n.open ? 1 << 24 : 0) | (w.clusters[n.cluster]!.kind === 1 ? 1 << 25 : 0) | (this.sigma[n.cluster]! << 26)) >>> 0; });
       if (first) { this.instWas = new Float32Array(this.maxInst * 12); this.keepInst(); } d.queue.writeBuffer(this.insts, 0, f); this.per[3] = b.perOctant; d.queue.writeBuffer(this.nodes, this.node0[3] * 32, b.nodes);
     }
     return slots;

@@ -17,10 +17,10 @@ export interface Mark { face: number; at: [number, number]; size: [number, numbe
 export interface Lamp { kind: 'rect' | 'sphere' | 'spot'; at: V3; u: V3; v: V3; radiance: V3; cos?: number; name: string; on: number; night?: boolean; n?: V3 }
 /** where the sky comes in: a rectangle, its normal pointing in */
 export interface Opening { at: V3; u: V3; v: V3; n: V3 }
-export interface Leaf { at: V3; n: V3; t: V3; size: number; tone: number }
+export interface Leaf { at: V3; n: V3; t: V3; size: number; tone: number; wood?: boolean }
 export interface Cluster { leaves: Leaf[]; kind: number }
 /** one leaf cluster somewhere: world = at + rot · scale · local */
-export interface Instance { cluster: number; at: V3; rot: Rot; scale: number; base: V3; sway: number; phase: number; tint: V3 }
+export interface Instance { cluster: number; at: V3; rot: Rot; scale: number; base: V3; sway: number; phase: number; tint: V3; /** out of doors: the section leaves it whole */ open?: boolean }
 
 export class World {
   pieces: Piece[] = []; moving: Piece[] = []; lamps: Lamp[] = []; openings: Opening[] = []; clusters: Cluster[] = []; instances: Instance[] = []; plumes: { at: V3; r: number; h: number; k: number }[] = [];
@@ -62,7 +62,7 @@ export function packPiece(p: Piece, f: Float32Array, u: Uint32Array, o: number, 
 export function packCluster(c: Cluster): { bvh: Bvh; data: ArrayBuffer } {
   const b = c.leaves.map(l => { const e = l.size; return { mn: [l.at[0] - e, l.at[1] - e, l.at[2] - e], mx: [l.at[0] + e, l.at[1] + e, l.at[2] + e] } as Bounds; });
   const bvh = buildBvh(b, 3), data = new ArrayBuffer(c.leaves.length * 32), f = new Float32Array(data), u = new Uint32Array(data);
-  bvh.order.forEach((src, i) => { const l = c.leaves[src]!, o = i * 8; f.set(l.at, o); f[o + 3] = l.size; u[o + 4] = oct(l.n); u[o + 5] = oct(l.t); f[o + 6] = l.tone; u[o + 7] = c.kind; });
+  bvh.order.forEach((src, i) => { const l = c.leaves[src]!, o = i * 8; f.set(l.at, o); f[o + 3] = l.size; u[o + 4] = oct(l.n); u[o + 5] = oct(l.t); f[o + 6] = l.tone; u[o + 7] = l.wood ? 2 : c.kind; });
   return { bvh, data };
 }
 function oct(n: V3): number { const s = Math.abs(n[0]) + Math.abs(n[1]) + Math.abs(n[2]); let x = n[0] / s, y = n[2] / s; if (n[1] < 0) { const a = (1 - Math.abs(y)) * Math.sign(x || 1), b = (1 - Math.abs(x)) * Math.sign(y || 1); x = a; y = b; } const q = (v: number) => Math.round((v * 0.5 + 0.5) * 65535) & 0xffff; return (q(x) | (q(y) << 16)) >>> 0; }

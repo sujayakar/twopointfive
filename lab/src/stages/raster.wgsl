@@ -19,11 +19,11 @@ fn leafVertex(vi: u32, at: u32, inst: u32) -> V {
   var o: V; o.p = vec4f(0.0, 0.0, -1.0, 1.0); o.w = vec3f(0.0); let I = &insts[inst]; let leaf = (*I).leaf + at; o.id = 0x80000000u | (inst << 13u) | at;
   let a = extra[leaf * 2u]; let b = bitcast<vec4u>(extra[leaf * 2u + 1u]); let n = octUnpack(b.x); let t = octUnpack(b.y); let s = cross(n, t);
   let q = array<vec2f, 10>(vec2f(-1.0, 0.0), vec2f(-0.42, -1.0), vec2f(-0.42, 1.0), vec2f(0.38, -1.0), vec2f(0.38, 1.0), vec2f(1.0, 0.0), vec2f(-0.8, -0.8), vec2f(0.8, -0.8), vec2f(-0.8, 0.8), vec2f(0.8, 0.8))[vi];
-  let w = select(0.46, 0.06, b.w == 1u) * select((1.0 - q.x * q.x) * (1.0 + 0.35 * q.x), 1.0, vi > 5u); let l = a.xyz + t * (q.x * a.w) + s * (q.y * w * a.w);
+  let w = leafWide(b.w) * select((1.0 - q.x * q.x) * (1.0 + 0.35 * q.x), 1.0, vi > 5u); let l = a.xyz + t * (q.x * a.w) + s * (q.y * w * a.w);
   // local → world: the rows are the inverse, scaled
   let k = dot((*I).r0.xyz, (*I).r0.xyz); let d = l - vec3f((*I).r0.w, (*I).r1.w, (*I).r2.w); o.w = ((*I).r0.xyz * d.x + (*I).r1.xyz * d.y + (*I).r2.xyz * d.z) / k; return o;
 }
-@vertex fn vsLeaf(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> V { var v = leafVertex(vi % 6u, vi / 6u, lists[ii]); if (v.w.y < frame.misc.y) { v.p = clipOf(v.w); } return v; }
+@vertex fn vsLeaf(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> V { var v = leafVertex(vi % 6u, vi / 6u, lists[ii]); if (v.w.y < frame.misc.y || (insts[lists[ii]].tint & 0x1000000u) != 0u) { v.p = clipOf(v.w); } return v; }
 @fragment fn fsLeaf(v: V) -> @location(0) u32 { return v.id; }
 /** the leaves again, as the sun sees them: four corners each, of the same area */
 @vertex fn vsSun(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> @builtin(position) vec4f { let v = leafVertex(6u + (vi & 3u), vi >> 2u, lists[ii]); let q = sunMap(v.w); return vec4f(q.xy * 2.0 - 1.0, q.z, 1.0); }

@@ -18,7 +18,7 @@ fn hg(mu: f32, g: f32) -> f32 { return (1.0 - g * g) / (4.0 * PI * pow(1.0 + g *
   let dim = textureDimensions(outA); if (id.x >= dim.x || id.y >= dim.y) { return; }
   let full = min(id.xy * 2u, vec2u(frame.size.xy) - 1u); let rd = pxRay(full); let t1 = min(bitcast<f32>(textureLoad(surf, full, 0).x), 260.0); let ro = frame.camPos.xyz; fineLeaves = false; rngInit(id.xy, 41u);
   let j = blue2(id.xy, 9u); let j2 = blue2(id.xy, 13u); let mu = dot(rd, frame.sunDir.xyz); let amb = skyLod(vec3f(0.0, 1.0, 0.0), 6.0); let tc = clamp(max(0.0, (10.5 - ro.y) / min(rd.y, -1e-3)), 0.0, t1 * 0.999);
-  var L = vec3f(0.0); var tau = airAt(ro + rd * tc * 0.6) * tc; { let e = exp(-tau); L += (1.0 - e) * (frame.sunE.xyz * hg(mu, 0.55) + amb * 0.25); }
+  var seen = vec2f(1e-6 * t1, 1e-6); var L = vec3f(0.0); var tau = airAt(ro + rd * tc * 0.6) * tc; { let e = exp(-tau); L += (1.0 - e) * (frame.sunE.xyz * hg(mu, 0.55) + amb * 0.25); }
   // what the steps are: (place, scattering x length)
   var st: array<vec4f, 12>; var n = 0u;
   for (var i = 0u; i < 3u; i++) { let dt = (t1 - tc) / 3.0; let t = tc + dt * (f32(i) + fract(j.x + f32(i) * 0.618)); let s = airAt(ro + rd * t) * dt; if (s > 1e-6) { st[n] = vec4f(ro + rd * t, s); n++; } }
@@ -30,12 +30,13 @@ fn hg(mu: f32, g: f32) -> f32 { return (1.0 - g * g) / (4.0 * PI * pow(1.0 + g *
     let x = st[i].xyz; var V = vec3f(0.0); let room = roomAir(x);
     if (max3(frame.sunE.xyz) > 0.0) { V = frame.sunE.xyz * lum(visible(x, coneDir(frame.sunDir.xyz, frame.sunDir.w, vec2f(j.y, 0.5)), 1e-3, 120.0)) * hg(mu, 0.5); }
     let c = cacheRead(vec3f(x.x, floor(x.y / 3.4) * 3.4 + select(0.02, 0.0, room < 0.5), x.z), vec3f(0.0, 1.0, 0.0), vec2f(0.5)); let near = select(amb * 0.25, c.E * (1.0 / (4.0 * PI)) * 0.5, room > 0.5 && c.n > 0.0);
-    let e = exp(-st[i].w); L += exp(-tau) * (1.0 - e) * (V + near); tau += st[i].w;
+    let e = exp(-st[i].w); let part = exp(-tau) * (1.0 - e); seen += vec2f(dot(x - ro, rd), 1.0) * part; L += part * (V + near); tau += st[i].w;
   }
   // beams: one lamp a pixel, drawn by how near the ray passes it, and one point drawn by its nearness along the ray
   { var W = 0.0; var pick = -1; var w0 = 0.0; var u = j2.y; for (var i = 0u; i < frame.counts.x; i++) { if (lamps[i].kind == 0u || lamps[i].on <= 0.0 || lamps[i].at.y > frame.misc.y) { continue; } let d = lamps[i].at - ro; let b = clamp(dot(d, rd), 0.0, t1); let D = max(length(d - rd * b), 0.15); if (D > lamps[i].reach * 0.7) { continue; } var w = lum(lamps[i].radiance) * lamps[i].area * lamps[i].area / D; if (lamps[i].kind == 2u) { let c = dot(normalize(ro + rd * b - lamps[i].at), lamps[i].n); w *= 0.05 + smoothstep(0.2, 0.95, c); } W += w; let q = w / W; if (u < q) { pick = i32(i); w0 = w; u = u / q; } else { u = (u - q) / (1.0 - q); } }
     if (pick >= 0) { let l = &lamps[u32(pick)]; let d = (*l).at - ro; let b = dot(d, rd); let D = max(length(d - rd * b), 0.12); let ta = max(0.0, b - 9.0); let tb = min(t1, b + 9.0);
       if (tb > ta) { let a0 = atan((ta - b) / D); let a1 = atan((tb - b) / D); let t = b + D * tan(mix(a0, a1, fract(j2.x + 0.37))); let pdf = D / ((a1 - a0) * (D * D + (t - b) * (t - b))); let x = ro + rd * t; let s = select(0.0, airAt(x) + 0.006 + steamAt(x), x.y < frame.misc.y); let a = aimLamp(u32(pick), x, vec2f(0.5));
         if (max3(a.E) > 0.0) { let V = lum(visible(x, a.dir, 1e-3, a.dist - 0.1)); L += min(a.E * V * (s * hg(dot(rd, a.dir), 0.35) / pdf * W / w0), vec3f(6.0)); } } } }
+  textureStore(outD, id.xy, vec4f(seen.x / seen.y, seen.y, 0.0, 0.0));       // (how far off what is seen of the air is: its history moves as that does, not as what stands behind it)
   textureStore(outA, id.xy, vec4f(L, exp(-tau)));
 }

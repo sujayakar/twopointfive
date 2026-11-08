@@ -7,7 +7,12 @@ fn fbm(p: vec2f) -> f32 { return 0.5 * vnoise(p) + 0.25 * vnoise(p * 2.03 + 7.1)
 fn gridLine(p: vec2f, cell: vec2f) -> f32 { let q = abs(fract(p / cell + 0.5) - 0.5) * cell; return min(q.x, q.y); }
 fn band(d: f32, w: f32, fp: f32) -> f32 { return 1.0 - smoothstep(w - fp * 0.5, w + fp * 0.5 + 1e-4, d); }
 /** the height of a material's relief, metres: what is cut into it by rule, and two sizes of unevenness */
-fn relief(kind: u32, p: vec2f, s: f32) -> f32 {
+/** how much of a detail that repeats `freq` times a metre a pixel fp metres wide can show: none of it once two no longer fit */
+fn shows(freq: f32, fp: f32) -> f32 { return 1.0 - smoothstep(0.18, 0.5, freq * fp); }
+/** upholstery: soft channels a hand wide with a seam between, over a loose weave */
+const CHANNEL = 0.13;
+fn channel(p: vec2f) -> f32 { return abs(sin(p.x * (PI / CHANNEL))); }
+fn relief(kind: u32, p: vec2f, s: f32, fp: f32) -> f32 {
   var a = vec4f(55.0, 55.0, 0.00022, 130.0); var h = 0.0; var b = 0.0001;      // (the coarse noise's frequency x, y, its height, the fine one's frequency)
   switch (kind) {
     case 1u: { a = vec4f(9.0, 9.0, 0.0016, 120.0); b = 0.0004; let g = gridLine(p, vec2f(2.4, 1.2)); let c = abs(fract(p / vec2f(2.4, 1.2)) - 0.5) * vec2f(2.4, 1.2) - vec2f(0.8, 0.3); h = -0.008 * band(g, 0.006, 0.004) - 0.010 * band(length(c), 0.018, 0.006); }
@@ -15,23 +20,28 @@ fn relief(kind: u32, p: vec2f, s: f32) -> f32 {
     case 3u: { a = vec4f(1.7, 1.7, 0.0004, 60.0); b = 0.00005; h = -0.003 * band(gridLine(p, vec2f(s)), 0.003, 0.003); }
     case 5u: { a = vec4f(5.0, 5.0, 0.0012, 60.0); b = 0.0004; h = 0.004 * band(gridLine(p, vec2f(1.5, 60.0)), 0.02, 0.02); }
     case 6u: { a = vec4f(3.0, 60.0, 0.0008, 90.0); b = 0.0001; h = -0.006 * band(abs(fract(p.y / 0.14) - 0.5) * 0.14, 0.004, 0.003); }
-    case 10u: { b = 0.0; h = 0.0005 * sin(p.x * 900.0) * sin(p.y * 900.0); }
+    case 10u: { a = vec4f(34.0, 34.0, 0.0012, 90.0); b = 0.0; h = 0.014 * sqrt(channel(p)) * shows(1.0 / CHANNEL, fp); }
+    case 21u: { a = vec4f(9.0, 9.0, 0.006, 60.0); b = 0.0; }
     case 11u: { a = vec4f(14.0, 14.0, 0.0011, 90.0); b = 0.0003; }
     case 13u: { a = vec4f(12.0, 12.0, 0.02, 60.0); b = 0.004; }
     case 15u: { a = vec4f(26.0, 5.0, 0.012, 60.0); b = 0.002; }
     case 16u: { a = vec4f(38.0, 38.0, 0.006, 90.0); b = 0.003; }
     default: {}
   }
-  return h + a.z * (0.65 * vnoise(p * a.xy) + 0.35 * vnoise(p * a.xy * 2.7 + 5.0)) + b * vnoise(p * a.w);
+  let f = max(a.x, a.y); return h + a.z * (0.65 * shows(f, fp) * vnoise(p * a.xy) + 0.35 * shows(f * 2.7, fp) * vnoise(p * a.xy * 2.7 + 5.0)) + b * shows(a.w, fp) * vnoise(p * a.w);
 }
 /** a leaf sends on less than it gets, both sides together, whatever its tint asks: else a crown of them would light itself */
 fn leafKeeps(all: vec3f) -> f32 { return min(1.0, 0.88 / max(max3(all), 1e-3)); }
 fn leafSurf(h: Hit, x: vec3f, rd: vec3f) -> Surf {
   let I = &insts[h.piece & 0x7fffffffu]; if (h.code == NOTHING) { var q: Surf; let t = unpackTint((*I).tint); q.x = x; q.ng = -rd; q.n = -rd; q.albedo = t * t; q.through = t * t * vec3f(0.9, 1.1, 0.35) * 0.85; let k = leafKeeps(q.albedo + q.through); q.albedo *= k; q.through *= k; q.rough = 1.0; q.f0 = 0.0; q.kind = 14u; q.piece = h.piece; q.flags = MOVES; return q; }
   let b = bitcast<vec4u>(extra[h.code * 2u + 1u]); let ln = octUnpack(b.x);
-  var n = normalize((*I).r0.xyz * ln.x + (*I).r1.xyz * ln.y + (*I).r2.xyz * ln.z); if (dot(n, rd) > 0.0) { n = -n; }
-  var s: Surf; s.x = x; s.ng = n; s.n = n; let t = unpackTint((*I).tint); let tone = bitcast<f32>(b.z);
-  s.albedo = t * t * mix(0.62, 1.25, tone) * select(1.0, 0.7, b.w == 1u); s.through = s.albedo * vec3f(0.95, 1.15, 0.35) * select(0.85, 0.5, b.w == 1u); { let k = leafKeeps(s.albedo + s.through); s.albedo *= k; s.through *= k; } s.rough = 0.45; s.f0 = 0.035; s.metal = 0.0; s.glow = vec3f(0.0); s.kind = select(14u, 20u, b.w == 1u); s.piece = h.piece; s.flags = MOVES; return s;
+  // where on the leaf: u along the rib, v across. It is folded along the rib and curls toward the tip
+  let la = extra[h.code * 2u]; let tl = octUnpack(b.y); let sl = cross(ln, tl); let lr = vec3f(dot((*I).r0.xyz, x) + (*I).r0.w, dot((*I).r1.xyz, x) + (*I).r1.w, dot((*I).r2.xyz, x) + (*I).r2.w) - la.xyz; let u = clamp(dot(lr, tl) / la.w, -1.0, 1.0); let v = dot(lr, sl) / la.w;
+  let shape = select(0.0, 1.0, b.w == 0u); let lf = ln + (sl * clamp(v * 7.0, -0.34, 0.34) + tl * (0.30 * u)) * shape;
+  var g = normalize((*I).r0.xyz * ln.x + (*I).r1.xyz * ln.y + (*I).r2.xyz * ln.z); var n = normalize((*I).r0.xyz * lf.x + (*I).r1.xyz * lf.y + (*I).r2.xyz * lf.z); if (dot(g, rd) > 0.0) { g = -g; n = -n; } if (dot(n, rd) > -0.05) { n = normalize(n - rd * (dot(n, rd) + 0.1)); }
+  var s: Surf; s.x = x; s.ng = g; s.n = n; let t = unpackTint((*I).tint); let tone = bitcast<f32>(b.z);
+  if (b.w == 2u) { s.albedo = vec3f(0.16, 0.115, 0.075) * mix(0.7, 1.2, tone); s.through = vec3f(0.0); s.rough = 0.85; s.f0 = 0.03; s.metal = 0.0; s.glow = vec3f(0.0); s.kind = 15u; s.piece = h.piece; s.flags = MOVES; return s; }
+  s.albedo = t * t * mix(0.58, 1.28, tone) * select(1.0, 0.7, b.w == 1u) * mix(1.0, 0.86 + 0.14 * u + 0.4 * (1.0 - smoothstep(0.012, 0.035, abs(v))), shape); s.through = s.albedo * vec3f(0.95, 1.15, 0.35) * select(0.85, 0.5, b.w == 1u); { let k = leafKeeps(s.albedo + s.through); s.albedo *= k; s.through *= k; } s.rough = 0.40; s.f0 = 0.04; s.metal = 0.0; s.glow = vec3f(0.0); s.kind = select(14u, 20u, b.w == 1u); s.piece = h.piece; s.flags = MOVES; return s;
 }
 fn localNormal(k: u32, code: u32, lp: vec3f) -> vec3f {
   if (code < 6u) { var n = vec3f(0.0); n[code >> 1u] = select(-1.0, 1.0, (code & 1u) == 1u); return n; }
@@ -52,7 +62,7 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
   var base = m.base * tint2; s.rough = m.rough; s.metal = m.metal; s.f0 = m.f0;
   let on = select(1.0, lamps[(*p).lamp & 63u].on, ((*p).lamp & 255u) != 255u);
   s.glow = vec3f(0.0); if (m.glow > 0.0) { s.glow = m.base * tint2 * (f32((*p).lamp >> 8u) * 0.1 * on); }   // (a glowing piece's seed is its brightness, in tenths)
-  if (fp > 0.25) { s.albedo = base; if (m.kind == 7u) { s.albedo = mix(m.base, m.b2, 0.4); } return s; }
+  if (fp > 0.25) { s.albedo = base; if (m.kind == 7u) { s.albedo = mix(m.base, m.b2, 0.4); if (abs(s.ng.y) < 0.5) { s.glow = vec3f(0.96, 0.80, 0.57) * (frame.knobs.w * 0.063); } } return s; }     // (a tower's lit windows, all together: a fifth of them, on half of the wall)
   // where on the face, in metres: laid by the world, or in the piece's own frame if it moves
   let moves = (s.flags & MOVES) != 0u; let an = abs(select(s.ng, ln, moves)); let q = select(x, lp, moves);
   var T = vec3f(1.0, 0.0, 0.0); var Bt = vec3f(0.0, 0.0, 1.0); var uv = q.xz;
@@ -75,7 +85,8 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
     case 7u: { // a tower across the street: floors of windows, some of them lit
       if (an.y < 0.5) { let cw = vec2f(1.6, 3.2); let c = floor(uv / cw + seed); let f = fract(uv / cw + seed); let win = band(abs(f.x - 0.5), 0.40, fp / 1.6) * band(abs(f.y - 0.52), 0.33, fp / 3.2); base = mix(m.base * tint2, m.b2, win); s.rough = mix(0.8, 0.08, win); let r = hash33(vec3f(c, seed)); let lit = step(0.80, r.x); let warm = mix(vec3f(1.0, 0.74, 0.42), vec3f(0.82, 0.92, 1.0), step(0.75, r.y)); s.glow = warm * (win * lit * frame.knobs.w * (0.25 + 0.9 * r.z) * mix(1.0, 0.35, step(0.6, r.y) * step(f.y, 0.5))); }
       else { base *= 0.85 + 0.2 * nA; } }
-    case 10u: { base *= 0.85 + 0.15 * sin(uv.x * 900.0) * sin(uv.y * 900.0) * fade + 0.1 * (nB - 0.5); }
+    case 10u: { let w = vnoise(uv * 34.0) - 0.5; base *= (0.94 + 0.22 * w * shows(34.0, fp) + 0.10 * (nB - 0.5)) * (1.0 - 0.42 * (1.0 - smoothstep(0.0, 0.22, channel(uv))) * shows(1.0 / CHANNEL, fp)); }
+    case 21u: { base *= 0.95 + 0.1 * nB; }
     case 11u: { base *= (0.95 + 0.07 * nA) * (1.0 - 0.08 * foot * nC); }
     case 12u: { let g = gridLine(uv, vec2f(0.12)); s.glow *= mix(1.0, 0.86, band(g, 0.004, fp)); }
     case 13u, 15u, 16u: { base *= 0.6 + 0.7 * nB; }
@@ -83,9 +94,18 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
     default: { base *= 0.97 + 0.05 * nA; }
   }
   if (fade > 0.0 && h.code != CODE_QUAD) {
-    let e = max(0.0016, fp * 0.6); var hh = vec3f(0.0); for (var i = 0u; i < 3u; i++) { hh[i] = relief(m.kind, uv + vec2f(select(0.0, e, i == 1u), select(0.0, e, i == 2u)), m.scale); }
+    let e = max(0.0016, fp * 0.6); var hh = vec3f(0.0); for (var i = 0u; i < 3u; i++) { hh[i] = relief(m.kind, uv + vec2f(select(0.0, e, i == 1u), select(0.0, e, i == 2u)), m.scale, fp); }
     var tw = T; var bw = Bt; if (moves) { tw = toWorld(k, T); bw = toWorld(k, Bt); }
     let g = clamp(vec2f(hh.y - hh.x, hh.z - hh.x) / e, vec2f(-0.9), vec2f(0.9)) * fade; s.n = normalize(s.ng - tw * g.x - bw * g.y);
+  }
+  // BEVELS: near an edge that stands free the normal bends to the next face's, over a hand's-breadth of pixels at most. Which edges stand free was found once
+  if (h.code < 6u) {
+    let a = h.code >> 1u; let hf = (*p).half; let sg = select(vec3u(0u), vec3u(1u), lp > vec3f(0.0)); var bend = vec3f(0.0);
+    for (var k2 = 1u; k2 < 3u; k2++) {
+      let b = (a + k2) % 3u; let c = 3u - a - b; let i1 = sg[(c + 1u) % 3u]; let i2 = sg[(c + 2u) % 3u]; if ((((*p).flags >> (16u + c * 4u + i1 + 2u * i2)) & 1u) == 0u) { continue; }
+      let w = min(max(0.010, fp * 0.9), 0.22 * min(hf[b], hf[a])); let d = hf[b] - abs(lp[b]); if (d < w) { let t = 1.0 - d / w; bend[b] = select(-1.0, 1.0, sg[b] == 1u) * t * t; }
+    }
+    if (any(bend != vec3f(0.0))) { s.n = normalize(s.n + toWorld(k, bend)); }
   }
   // what is painted on it
   let nm = ((*p).mat >> 8u) & 15u; let m0 = (*p).mat >> 12u;
@@ -150,6 +170,8 @@ fn lampE(i: u32, x: vec3f, n: vec3f) -> vec3f {
   for (var k = 0u; k < m; k++) { let a = normalize(v[k]); let e = normalize(v[select(k + 1u, 0u, k + 1u == m)]); let c = cross(a, e); let sl = length(c); s += c.z * select(1.0, atan2(sl, dot(a, e)) / sl, sl > 1e-5); }
   return (*l).radiance * ((*l).on * abs(s) * 0.5 * win);
 }
+/** how much of a lamp's image in a coat is the formula's (with a ray to see if it is there); the rest is for mirror rays to find. Rough coats would only find a small lamp by luck */
+fn byFormula(rough: f32) -> f32 { return smoothstep(0.12, 0.24, rough); }
 /** a lamp seen in a coat: by the point of it nearest the mirror direction */
 fn lampCoat(i: u32, s: Surf, V: vec3f) -> vec3f {
   let l = &lamps[i]; if ((*l).on <= 0.0) { return vec3f(0.0); } let d0 = (*l).at - s.x; if (length(d0) > (*l).reach) { return vec3f(0.0); } var u = vec2f(0.5); let R = reflect(-V, s.n); var widen = 0.0;

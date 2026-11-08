@@ -109,13 +109,15 @@ fn boxHit(n: ptr<storage, Node, read>, ro: vec3f, inv: vec3f, tmin: f32, tmax: f
 }
 fn octant(d: vec3f) -> u32 { return select(0u, 1u, d.x < 0.0) | select(0u, 2u, d.y < 0.0) | select(0u, 4u, d.z < 0.0); }
 fn safeInv(d: vec3f) -> vec3f { return 1.0 / select(d, vec3f(1e-12), abs(d) < vec3f(1e-12)); }
+/** how wide to how long: a leaf, a blade of grass, a twig */
+fn leafWide(kind: u32) -> f32 { return select(select(0.46, 0.06, kind == 1u), 0.022, kind == 2u); }
 /** a leaf: a pointed oval, seen from both sides */
 fn meetLeaf(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> f32 {
   let a = extra[k * 2u]; let b = bitcast<vec4u>(extra[k * 2u + 1u]);
   let n = octUnpack(b.x); let den = dot(n, rd); if (abs(den) < 1e-6) { return -1.0; }
   let t = dot(a.xyz - ro, n) / den; if (t <= tmin || t >= tmax) { return -1.0; }
   let x = ro + rd * t - a.xyz; let tl = octUnpack(b.y); let u = dot(x, tl) / a.w; let v = dot(x, cross(n, tl)) / a.w;
-  let w = select(0.46, 0.06, b.w == 1u) * (1.0 - u * u) * (1.0 + 0.35 * u);
+  let w = leafWide(b.w) * (1.0 - u * u) * (1.0 + 0.35 * u);
   return select(-1.0, t, abs(u) < 1.0 && abs(v) < w);
 }
 
@@ -123,7 +125,7 @@ fn meetLeaf(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> f32 {
 fn sunMap(x: vec3f) -> vec3f { let b = basis(frame.sunDir.xyz); let d = x - vec3f(4.0, 4.0, 0.0); return vec3f(dot(d, b[0]) / 30.0 + 0.5, dot(d, b[1]) / 30.0 + 0.5, dot(d, frame.sunDir.xyz) / 80.0 + 0.5); }
 /** leaves one by one, or as a ball of them: a medium. Rays from what the camera sees take them one by one; the rest do not need to */
 var<private> fineLeaves: bool = true; var<private> noLeaves: bool = false;
-const TUFT_SIGMA = 1.3; const BALL_SIGMA = 0.80;                                            // per unit of the ball's radius, with the clumping a ball of leaves has (three quarters of its even density)
+// (a ball's density is its own: half its leaves' area over its size, less for how they clump; with the instance's tint)
 fn ballStay(o: vec3f, d: vec3f, tmin: f32, tmax: f32) -> vec2f { let a = dot(d, d); let b = dot(o, d); let c = dot(o, o) - 1.0; let q = b * b - a * c; if (q <= 0.0) { return vec2f(1.0, 0.0); } let s = sqrt(q); return vec2f(max((-b - s) / a, tmin), min((-b + s) / a, tmax)); }
 /** NEAREST: what is out there. `cut` < 1e8 is the camera's section; `skip` = flags a ray does not meet. Glass is passed, and what it lets through is in thru */
 fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) -> Hit {
@@ -154,16 +156,16 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
       if (!boxHit(n, ro, inv, tmin, best)) { i = (*n).skip; continue; }
       let lf = (*n).leaf;
       if ((lf & 15u) != 0u) {
-        let k = lf >> 4u; let I = &insts[k];
+        let k = lf >> 4u; let I = &insts[k]; let lc = select(cut, 1e9, ((*I).tint & 0x1000000u) != 0u);      // (what grows out of doors the section leaves whole)
         let o = vec3f(dot((*I).r0.xyz, ro) + (*I).r0.w, dot((*I).r1.xyz, ro) + (*I).r1.w, dot((*I).r2.xyz, ro) + (*I).r2.w);
         let d = vec3f(dot((*I).r0.xyz, rd), dot((*I).r1.xyz, rd), dot((*I).r2.xyz, rd));      // (scaled: t is the world's)
-        if (!fineLeaves) { let tuft = (*I).per < 300u; let bd = select(d, d / 0.85, tuft); let st = ballStay(select(o, (o - vec3f(0.0, 0.8, 0.0)) / 0.85, tuft), bd, tmin, best); let t = st.x - log(1.0 - rnd()) / (select(BALL_SIGMA, TUFT_SIGMA, tuft) * length(bd)); if (st.y > st.x && t < st.y && ro.y + rd.y * t < cut) { best = t; id = LEAF_HIT | k; code = NOTHING; } i++; continue; }
+        if (!fineLeaves) { let tuft = ((*I).tint & 0x2000000u) != 0u; let sigma = f32((*I).tint >> 26u) / 16.0; let bd = select(d, d / 0.85, tuft); let st = ballStay(select(o, (o - vec3f(0.0, 0.8, 0.0)) / 0.85, tuft), bd, tmin, best); let t = st.x - log(1.0 - rnd()) / (sigma * length(bd)); if (st.y > st.x && t < st.y && ro.y + rd.y * t < lc) { best = t; id = LEAF_HIT | k; code = NOTHING; } i++; continue; }
         let inv2 = safeInv(d); let q0 = (*I).node + octant(d) * (*I).per; var q = 0u; let qn = (*I).per;
         while (q < qn) {
           let m = &nodes[q0 + q];
           if (!boxHit(m, o, inv2, tmin, best)) { q = (*m).skip; continue; }
           let l2 = (*m).leaf; let c2 = l2 & 15u;
-          for (var j = 0u; j < c2; j++) { let w = (*I).leaf + (l2 >> 4u) + j; let t = meetLeaf(w, o, d, tmin, best); if (t > 0.0 && ro.y + rd.y * t < cut) { best = t; id = LEAF_HIT | k; code = w; } }
+          for (var j = 0u; j < c2; j++) { let w = (*I).leaf + (l2 >> 4u) + j; let t = meetLeaf(w, o, d, tmin, best); if (t > 0.0 && ro.y + rd.y * t < lc) { best = t; id = LEAF_HIT | k; code = w; } }
           q++;
         }
       }
@@ -203,7 +205,7 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
         let k = lf >> 4u; let I = &insts[k];
         let o = vec3f(dot((*I).r0.xyz, ro) + (*I).r0.w, dot((*I).r1.xyz, ro) + (*I).r1.w, dot((*I).r2.xyz, ro) + (*I).r2.w);
         let d = vec3f(dot((*I).r0.xyz, rd), dot((*I).r1.xyz, rd), dot((*I).r2.xyz, rd));
-        if (!fineLeaves) { let tuft = (*I).per < 300u; let bd = select(d, d / 0.85, tuft); let st = ballStay(select(o, (o - vec3f(0.0, 0.8, 0.0)) / 0.85, tuft), bd, tmin, tmax); if (st.y > st.x) { T *= exp(-vec3f(1.0, 0.86, 1.1) * select(BALL_SIGMA, TUFT_SIGMA, tuft) * (st.y - st.x) * length(bd)); if (T.y < 0.02) { return vec3f(0.0); } } i++; continue; }
+        if (!fineLeaves) { let tuft = ((*I).tint & 0x2000000u) != 0u; let sigma = f32((*I).tint >> 26u) / 16.0; let bd = select(d, d / 0.85, tuft); let st = ballStay(select(o, (o - vec3f(0.0, 0.8, 0.0)) / 0.85, tuft), bd, tmin, tmax); if (st.y > st.x) { T *= exp(-vec3f(1.0, 0.86, 1.1) * sigma * (st.y - st.x) * length(bd)); if (T.y < 0.02) { return vec3f(0.0); } } i++; continue; }
         let inv2 = safeInv(d); let q0 = (*I).node + octant(d) * (*I).per; var q = 0u; let qn = (*I).per;
         while (q < qn) {
           let m = &nodes[q0 + q];

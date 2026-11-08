@@ -7,17 +7,17 @@ fn varOf(q: vec2i) -> vec2f { let m = textureLoad(mom, q, 0); var v = max(m.y - 
   var vm = vec2f(0.0); var wv = 0.0; for (var y = -1; y <= 1; y++) { for (var x = -1; x <= 1; x++) { let q = clamp(p0 + vec2i(x, y), vec2i(0), dim - 1); let w = f32((2 - abs(x)) * (2 - abs(y))); vm += varOf(q) * w; wv += w; } } vm /= wv;
   let m0 = textureLoad(mom, p0, 0); let n = m0.z; let sg = sqrt(vm.x) * SHARE / sqrt(max(n * 0.5, 1.0)) + 1e-3 + 0.012 * lum(c.rgb);
   let young = 1.0 - smoothstep(1.0, 10.0, n);
-  var acc = c; var ws = 1.0; var wf = vec4f(1.0); let sf = sqrt(max(c * (1.0 - c), vec4f(0.0))) * 2.2 / sqrt(max(n, 1.0)) + vec4f(0.012) + vec4f(0.35 * young); let l0 = lum(c.rgb); let fr = textureLoad(frontT, full, 0).x != 0u;
+  var acc = c; var ws = 1.0; var wf = vec4f(1.0); let sf = sqrt(max(c * (1.0 - c), vec4f(0.0))) * 2.2 / sqrt(max(n, 1.0)) + vec4f(0.012) + vec4f(0.35 * young); let l0 = lum(c.rgb); let fr = LAYER == 1;
   var reach = 1.0; if (NARROW == 1) { var rough = p.rough; if (fr) { rough = 0.02; } let lobe = rough * rough * 1.6 * c.a / max(p.t + c.a, 0.1) * frame.size.y / (2.0 * length(frame.camUp.xyz) * f32(DIV)); reach = lobe * (0.6 + young) + 1.5 * young; if (reach < 0.6 * f32(STRIDE)) { textureStore(outB, id.xy, c); return; } }
   for (var y = -1; y <= 1; y++) { for (var x = -1; x <= 1; x++) {
     if (x == 0 && y == 0) { continue; } let q = p0 + vec2i(x, y) * STRIDE; if (any(q < vec2i(0)) || any(q >= dim)) { continue; }
-    let fq = min(q * DIV, rdim - 1); let s = unpackPx(textureLoad(surf, fq, 0), pxRay(vec2u(fq))); if (s.sky && NARROW == 0) { continue; } let v = textureLoad(src, q, 0); if (NARROW == 1) { if (v.a < 0.0 || (textureLoad(frontT, fq, 0).x != 0u) != fr) { continue; } }
+    let fq = min(q * DIV, rdim - 1); let s = unpackPx(textureLoad(surf, fq, 0), pxRay(vec2u(fq))); if (s.sky && NARROW == 0) { continue; } let v = textureLoad(src, q, 0); if (NARROW == 1) { if (v.a < 0.0) { continue; } }
     var w = f32((2 - abs(x)) * (2 - abs(y))) * 0.25;
     if (!(NARROW == 1 && fr)) { if (p.leaf || s.leaf) { w *= select(0.0, 1.0, p.leaf == s.leaf) * exp(-abs(s.t - p.t) * 4.0) * 0.8; } else { w *= pow(sat(dot(s.n, p.n)), select(24.0, 64.0, NARROW == 1)) * exp(-abs(dot(s.x - p.x, p.ng)) / (0.0012 * p.t * f32(DIV) + 0.01)); } }
     if (NARROW == 1) { w *= exp(-abs(s.rough - p.rough) * 16.0); }
     if (KIND == 1) { let wq = w * exp(-abs(v - c) / sf); acc += v * wq; wf += wq; continue; }
     let wl = w * exp(-abs(lum(v.rgb) - l0) / sg); acc += vec4f(v.rgb * wl, 0.0); ws += wl;
   } }
-  var o = vec4f(acc.rgb / ws, c.a); if (KIND == 1) { o = acc / wf; }
+  var o = vec4f(acc.rgb / ws, c.a); if (KIND == 1) { o = acc / wf; if (p.leaf) { o.a = c.a; } }     // (the sun between leaves is fine, and nearly free of noise: it is left sharp)
   textureStore(outB, id.xy, o);
 }

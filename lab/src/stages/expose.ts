@@ -33,7 +33,7 @@ fn sum(i: u32, v: vec2f) -> vec2f { workgroupBarrier(); s[i] = v; workgroupBarri
 @compute @workgroup_size(256) fn main(@builtin(local_invocation_index) i: u32) {
   // the mean of the stops, more at the middle; and the mean of what is not far over that, so that a lit street outside does not speak for the rooms
   let n = textureDimensions(src); var l: array<vec2f, 24>; var a = vec2f(0.0);
-  for (var j = 0u; j < 24u; j++) { let t = i * 24u + j; let p = vec2f(f32(t % 96u) + 0.5, f32(t / 96u) + 0.5) / vec2f(96.0, 64.0); let q = (p - 0.5) * 1.6; l[j] = vec2f(log2(clamp(strong(textureLoad(src, vec2u(p * vec2f(n)), 0).xyz), 1e-4, 1e3)), exp(-dot(q, q) * 2.2)); a += vec2f(l[j].x, 1.0) * l[j].y; }
+  for (var j = 0u; j < 24u; j++) { let t = i * 24u + j; let p = vec2f(f32(t % 96u) + 0.5, f32(t / 96u) + 0.5) / vec2f(96.0, 64.0); let pin = k.y > 0.0; var q = (p - select(vec2f(0.5), k.yz, pin)) * select(1.6, 5.0, pin); l[j] = vec2f(log2(clamp(strong(textureLoad(src, vec2u(p * vec2f(n)), 0).xyz), 1e-4, 1e3)), exp(-dot(q, q) * 2.2)); a += vec2f(l[j].x, 1.0) * l[j].y; }
   let t = sum(i, a); let mean = t.x / t.y; a = vec2f(0.0); for (var j = 0u; j < 24u; j++) { a += vec2f(l[j].x, 1.0) * (l[j].y / (1.0 + exp((l[j].x - mean - 0.8) * 2.5))); }
   let u = sum(i, a); if (i == 0u) { let now = finite(0.5 * (mean + u.x / max(u.y, 1e-6)), 30.0) - k.x; let was = finite(e[0], 30.0); e[0] = mix(was, now, select(0.05, 1.0, e[1] != 1.0 || k.w > 0.0)); e[1] = 1.0; e[2] = mean; }
 }` },
@@ -43,4 +43,4 @@ fn sum(i: u32, v: vec2f) -> vec2f { workgroupBarrier(); s[i] = v; workgroupBarri
   ];
 }
 /** stops added in all, snap */
-export const exposeKnobs = (lab: Lab, bias: number, snap: boolean) => lab.uniform('exposeK', new Float32Array([bias, 0, 0, snap ? 1 : 0]));
+export const exposeKnobs = (lab: Lab, bias: number, snap: boolean) => { const at = lab.eyeAt(), uv = at && lab.project(at); lab.uniform('exposeK', new Float32Array([bias, uv ? Math.max(0.02, Math.min(0.98, uv[0])) : 0, uv ? Math.max(0.02, Math.min(0.98, uv[1])) : 0, snap ? 1 : 0])); };

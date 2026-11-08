@@ -13,6 +13,7 @@ import sceneCode from './wgsl/scene.wgsl' with { type: 'text' };
 import surfaceCode from './wgsl/surface.wgsl' with { type: 'text' };
 import wavesCode from './wgsl/waves.wgsl' with { type: 'text' };
 import { Water } from './water';
+import { Near } from './scene/near';
 import { mapLamps, lampMapCode } from './lampmap';
 
 export const TICK = 1 / 60;
@@ -22,14 +23,18 @@ export class Lab {
   gpu!: Gpu; graph!: Graph; scene!: SceneGpu; sky!: Sky; water!: Water; camera = new Camera(); building!: Building;
   tick = 0; frameNo = 0; seed = 0; hour = 15.2; hourNow!: Hour; level = 0; cut = 1e9; wantCut = 1e9; knobs = [0, 0, 0, 0]; lampsMode: 'auto' | 'on' | 'off' = 'auto'; wind: V3 = norm([1, 0, 0.35]); exposure = 0; paused = false;
   private prev: ReturnType<Camera['frame']> | null = null; prevAt = new Map<Piece, { at: V3; rot: Piece['rot'] }>(); slots = new Map<Piece, number>(); jitter: [number, number] = [0, 0]; private prevJitter: [number, number] = [0, 0];
-  methods = new Map<string, { m: Method; stages: Stage[] }>(); current = ''; doorsAuto = false; torch: { on: boolean; at: V3; dir: V3 } | null = null; jittered = true; haze = 1; rain = 0; rainNow = 0; wet = 0; steam = 1; lampGroup: Record<string, number> = {};
+  methods = new Map<string, { m: Method; stages: Stage[] }>(); current = ''; doorsAuto = false; torch: { on: boolean; at: V3; dir: V3 } | null = null; jittered = true; haze = 1; rain = 0; rainNow = 0; wet = 0; steam = 1; lampGroup: Record<string, number> = {}; readonly lampOff = new Set<number>();
   async open(canvas: HTMLCanvasElement | null) {
-    this.gpu = await openGpu(canvas); this.building = makeBuilding(); this.sky = new Sky(this.gpu); await this.sky.init();
+    this.gpu = await openGpu(canvas); this.building = makeBuilding(); this.near = new Near(this.building.world.pieces); this.leaves = this.building.doors.flatMap(d => d.leaf); this.sky = new Sky(this.gpu); await this.sky.init();
     this.water = new Water(this.gpu); await this.water.init(); this.scene = new SceneGpu(this.gpu, this.building.world, this.sky.tex, this.water.tex);
     this.graph = new Graph(this.gpu, () => math + '\n' + sceneCode + '\n' + wavesCode + '\n' + lampMapCode + '\n' + surfaceCode + '\n', { layout: this.scene.layout, group: this.scene.group });
     this.pose(); for (const p of this.building.world.moving) this.prevAt.set(p, { at: p.at, rot: p.rot });
   }
-  private mapped = false;
+  private near!: Near; private leaves: Piece[] = []; private mapped = false;
+  /** where the eye that the picture is exposed for looks: a point of the world, or a person (by number); null = the middle of the picture */
+  eye: V3 | number | null = null;
+  eyeAt(): V3 | null { return typeof this.eye === 'number' ? ((p: V3): V3 => [p[0], p[1] + 1.4, p[2]])(this.building.people[this.eye]!.pos) : this.eye; }
+  project(x: V3): [number, number] | null { const c = this.camera.frame(this.graph.output[0] / this.graph.output[1]), v: V3 = [x[0] - c.pos[0], x[1] - c.pos[1], x[2] - c.pos[2]], d = (a: ArrayLike<number>) => v[0] * a[0]! + v[1] * a[1]! + v[2] * a[2]!, q = (a: ArrayLike<number>) => a[0]! ** 2 + a[1]! ** 2 + a[2]! ** 2, z = d(c.fwd); if (z < 0.1) return null; return [d(c.right) / q(c.right) / z * 0.5 + 0.5, 0.5 - d(c.up) / q(c.up) / z * 0.5]; }
   async use(m: Method) {
     if (!this.mapped) { this.mapped = true; this.send(); this.prev = null; await mapLamps(this); }
     if (!this.methods.has(m.name)) { m.signals(this.graph, this); await m.prepare?.(this); const stages = m.stages(this); await this.graph.build(stages); this.methods.set(m.name, { m, stages }); }
@@ -51,8 +56,8 @@ export class Lab {
   pose() {
     const b = this.building, t = this.tick * TICK, on = this.scene?.lampOn; for (const d of b.doors) poseDoor(d);
     const h = hourOf(this.hour, 0.85, this.rainNow), dark = this.lampsMode === 'on' ? 1 : this.lampsMode === 'off' ? 0 : h.night, inside = this.lampsMode === 'auto' ? Math.max(dark, 0.45) : dark; this.hourNow = h;
-    b.world.lamps.forEach((l, i) => { if (on && l.kind !== 'spot') on[i] = l.on * (l.name === 'terrace' || l.name === 'pool' ? dark : l.name === 'blue' ? Math.max(inside, 0.9) : inside) * (this.lampGroup[l.name] ?? 1); });
-    for (const p of b.people) if (p.torch >= 0) { const l = b.world.lamps[p.torch]!; l.at = p.torchAt; l.v = p.torchDir; if (on) on[p.torch] = h.night > 0.5 ? 1 : 0; } void t;
+    b.world.lamps.forEach((l, i) => { if (on && l.kind !== 'spot') on[i] = l.on * (l.name === 'terrace' || l.name === 'pool' ? dark : l.name === 'blue' ? Math.max(inside, 0.9) : inside) * (this.lampGroup[l.name] ?? 1) * (this.lampOff.has(i) ? 0 : 1); });
+    for (const p of b.people) if (p.torch >= 0) { const l = b.world.lamps[p.torch]!; const chest: V3 = [p.pos[0], p.pos[1] + 1.25, p.pos[2]], to: V3 = [p.torchAt[0] - chest[0], p.torchAt[1] - chest[1], p.torchAt[2] - chest[2]], len = Math.hypot(...to) || 1, dir: V3 = [to[0] / len, to[1] / len, to[2] / len], r = this.near.reach(chest, dir, len + 0.06, this.leaves) - 0.06; l.at = r < len ? [chest[0] + dir[0] * r, chest[1] + dir[1] * r, chest[2] + dir[2] * r] : p.torchAt; l.v = p.torchDir; if (on) on[p.torch] = h.night > 0.5 && !this.lampOff.has(p.torch) ? 1 : 0; } void t;
   }
   /** the frame's numbers to the GPU */
   private send() {
