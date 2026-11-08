@@ -395,19 +395,6 @@ pub fn stand_room(g: &mut crate::game::Game, d: RoomfightDefId, known: &[V3]) ->
     Some(StandRoom { room, id })
 }
 
-/// or the post one of them was staged on, standing empty (laststand.ts homeRoom)
-pub fn home_room(g: &mut crate::game::Game, d: RoomfightDefId, known: &[V3]) -> Option<crate::laststand::HomeRoom> {
-    let gd = g.tab.roomfight_def[d].gd;
-    let id = g.m.laststand.states.as_ref().and_then(|st| st.post.get(gd).cloned()).filter(|s| !s.is_empty())?;
-    let def = g.room_clear.rooms.iter().find(|r| r.def.id == id).map(|r| r.def.clone())?;
-    let c: V3 = [(def.bounds.x0 + def.bounds.x1) / 2.0, 0.0, (def.bounds.z0 + def.bounds.z1) / 2.0];
-    let anchor = crate::roomfight::room_fight_free_near(g, c).unwrap_or(c);
-    let room = crate::roomfight::room_fight_room_at(g, anchor)?;
-    if g.tab.roomfight_room[room].entries.is_empty() || where_(g, anchor).id.as_deref() != Some(def.id.as_str()) { return None; }
-    if crate::digin::dig_in_entered(g, room) || known.iter().any(|&q| in_room(g, Some(room), q)) { return None; }
-    Some(HomeRoom { room, id: def.id, anchor })
-}
-
 /// one of the fit asks the net who is still up; every other man up gets his beat to answer (laststand.ts startCheck)
 pub fn start_check(g: &mut crate::game::Game) {
     let men = up_defs(g);
