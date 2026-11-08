@@ -408,7 +408,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'COVER.rearRead': 'TPS_REARREAD=1',
   'COVER.backTurn': 'TPS_BACKTURN=1',
   'UNDERFOOT.on': 'TPS_UNDERFOOT=1',
-  'ROUND.on': 'TPS_ROUND=1',
   'SHAPES.on': 'TPS_SHAPES=1',
   'COATFINISH.on': 'TPS_COATFINISH=1 (a picture only)',
   'SOLIDGLASS.on': 'TPS_SOLIDGLASS=1 (a picture only)',

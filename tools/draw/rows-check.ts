@@ -14,7 +14,7 @@ import { lookNumbers } from '../../src/draw/look';
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`), { roundConfig } = await import(`${ROOT}/src/scene/round.ts`), { lookConfig } = await import(`${ROOT}/src/render/frame.ts`), { lookWordOf, lookCoreOf } = await import(`${ROOT}/src/render/gbuffer.ts`), { COATFINISH, SOLIDGLASS } = await import(`${ROOT}/src/scene/stuff.ts`);
+const { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`), { lookConfig } = await import(`${ROOT}/src/render/frame.ts`), { lookWordOf, lookCoreOf } = await import(`${ROOT}/src/render/gbuffer.ts`), { COATFINISH, SOLIDGLASS } = await import(`${ROOT}/src/scene/stuff.ts`);
 const { DRESS } = await import(`${ROOT}/src/game/dress.ts`), { lookDoors } = await import(`${ROOT}/src/scene/lookTidy.ts`), { LOOK_DOORS } = await import(`${ROOT}/src/scene/look.ts`);
 
 const LEVELS = process.argv.slice(2).length ? process.argv.slice(2) : ['office', 'compound', 'pass', 'glasshouse', 'depot', 'mousehole'];
@@ -34,7 +34,7 @@ function differ(a: Uint32Array, at: number, b: Uint32Array, bt: number, rows: nu
 const GEO = ['cx', 'cy', 'cz', 'turn', 'hx', 'hy', 'hz', 'flags'], MAT = ['r', 'g', 'b', 'cutHeight', 'er', 'eg', 'eb', 'finish', 'qx', 'qy', 'qz', 'qw', 'r2', 'g2', 'b2', 'gain'];
 
 // (the picture's rules as a page has them)
-cutConfig.on = true; roundConfig.gpu = true; lookConfig.on = true; COATFINISH.on = true; SOLIDGLASS.on = true;
+cutConfig.on = true; lookConfig.on = true; COATFINISH.on = true; SOLIDGLASS.on = true;
 
 for (const L of LEVELS) { const [name, query] = L.split(':');
   const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', `${name}.json`), 'utf8'))), seed: 3 }));

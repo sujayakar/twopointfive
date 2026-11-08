@@ -83,7 +83,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   /** a run of conduit on a wall's south face from x0 to x1 at height y, a clip every metre and a half; `drop` = a branch down to that height at x1 (the kit's
    *  piece, standing: scene/officeGen.ts conduit) */
   const conduitS = (x0: number, x1: number, y: number, zFace: number, drop?: number) => K.conduit('x', zFace, x0, x1, 1, y, COAT.albedo, STEEL.albedo, drop, 0, true);
-  /** a round thing standing up: the kit's pipe (four slabs, which the game stands up as one round: scene/round.ts), standing */
+  /** a round thing standing up: the kit's pipe, solid: one round box (scene/round.ts), standing */
   const round = (x: number, z: number, y0: number, y1: number, r: number, p: Paint) => K.pipe(x, z, y0, y1, r, p.albedo, [], true);
   /** a skin on a wall's south face: a band of another stuff a finger proud of it (a plinth, a steel band, a door's plate), and a louvre: the kit's band
    *  and vent, standing (the face is given, so the wall has no thickness to add) */

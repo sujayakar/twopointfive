@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "name": "test-rooms",
   "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/test-rooms.ts build → tools/levels/export.ts", "notes": "A tiny test level for the scenario probes: three rooms off one hall and a lobby, built from the office kit. Regenerate: bun run tools/levels/export.ts test-rooms" },
   "floors": [
