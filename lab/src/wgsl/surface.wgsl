@@ -247,9 +247,14 @@ fn smithV(a: f32, nv: f32, nl: f32) -> f32 { let a2 = a * a; return 0.5 / (nl * 
 fn fresnel(f0: vec3f, c: f32) -> vec3f { let u = 1.0 - sat(c); let u2 = u * u; return f0 + (1.0 - f0) * (u2 * u2 * u); }
 fn coatF0(s: Surf) -> vec3f { return mix(vec3f(s.f0), s.albedo, s.metal); }
 fn matteOf(s: Surf) -> vec3f { return s.albedo * (1.0 - s.metal); }
-/** how rough a matte is, in the small: what makes a full moon flat and plaster not go dark toward its edge (Oren and Nayar's facets, Fujii's form, next to Lambert = 1) */
+/** how rough a matte is, in the small: what keeps plaster from going dark toward its edge. Facets in the Oren and Nayar way with nothing lost between them (the form of
+ *  Portsmouth, Kutz and Hill), next to an even matte = 1 */
 fn matteRough(kind: u32) -> f32 { switch (kind) { case 1u, 22u: { return 0.55; } case 11u, 5u: { return 0.4; } case 10u, 21u: { return 0.65; } case 13u, 15u, 16u: { return 0.7; } default: { return 0.0; } } }
-fn roughMatte(kind: u32, alb: vec3f, n: vec3f, V: vec3f, L: vec3f) -> vec3f { let g = matteRough(kind); if (g <= 0.0) { return vec3f(1.0); } let nl = max(dot(n, L), 1e-3); let nv = max(dot(n, V), 1e-3); let s = dot(L, V) - nl * nv; let t = select(1.0, max(nl, nv), s > 0.0); let a = 1.0 / (1.0 + (0.5 - 2.0 / (3.0 * PI)) * g); return vec3f(a * (1.0 + g * s / t)) + alb * (g * a * 0.12); }
+fn facetE(mu: f32, g: f32) -> f32 { let m = 1.0 - mu; return (1.0 + g * m * (0.0571085289 + m * (0.491881867 + m * (-0.332181442 + m * 0.0714429953)))) / (1.0 + 0.287793409 * g); }
+fn roughMatte(kind: u32, alb: vec3f, n: vec3f, V: vec3f, L: vec3f) -> vec3f {
+  let g = matteRough(kind); if (g <= 0.0) { return vec3f(1.0); } let nl = clamp(dot(n, L), 1e-3, 1.0); let nv = clamp(dot(n, V), 1e-3, 1.0); let s = dot(L, V) - nl * nv; let st = select(s, s / max(nl, nv), s > 0.0); let af = 1.0 / (1.0 + 0.287793409 * g);
+  let avg = af * (1.0 + 0.072488213 * g); let ms = alb * avg / (vec3f(1.0) - alb * (1.0 - avg)); return vec3f(af * (1.0 + g * st)) + ms * (max(1.0 - facetE(nv, g), 1e-4) * max(1.0 - facetE(nl, g), 1e-4) / max(1.0 - avg, 1e-4));
+}
 /** a facet the eye can see (Heitz), in the normal's frame */
 fn visibleNormal(v: vec3f, a: f32, u: vec2f) -> vec3f {
   let vh = normalize(vec3f(a * v.x, a * v.y, v.z)); let l2 = vh.x * vh.x + vh.y * vh.y; var t1 = vec3f(1.0, 0.0, 0.0); if (l2 > 1e-7) { t1 = vec3f(-vh.y, vh.x, 0.0) * inverseSqrt(l2); }

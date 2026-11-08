@@ -50,24 +50,6 @@
   "still": true
  },
  {
-  "name": "s2-later",
-  "go": true,
-  "w": 1600,
-  "h": 900,
-  "dist": 30,
-  "hour": 21.5,
-  "cut": 2.55,
-  "look": [
-   2,
-   0.6,
-   -1
-  ],
-  "samples": 400,
-  "run": true,
-  "method": "realtime",
-  "scale": 0.8
- },
- {
   "name": "s3-day",
   "w": 1600,
   "h": 900,
