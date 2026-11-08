@@ -59,14 +59,12 @@ export const DARKFOE = {
   litAt: 0.3, lookM: 12, stepM: 2, fanRad: 0.3, seeShare: 0.34, askSecs: 0.25,
   onSecs: 0.6, onJitter: 2.5, offSecs: 15, offJitter: 0.4, holdSecs: 2,
   /** a mate's lamp coming on in his plain view within `lampM` is the word */
-  byLamp: true, lampM: 16,
+  lampM: 16,
   /** true = a man who is only SUSPICIOUS (heard something, has found nobody) has the word too, as the first cut had it; off, the lamp waits until he is alerted */
   suspect: false,
   /** a man with no light walks to where he can see */
   seek: true, blindSecs: 3, seekM: 10, walkM: 12, edgeM: 3, stumbleK: 0.75, againSecs: 20, moves: 2, quietSecs: 4, calmSecs: 6,
   roam: false,   // true = he may leave his room for it, by its doorways (the lean as first put: "stumble around to somewhere with light"); false = only inside the room he defends
-  /** he stops at the dark edge of the light (floor still dark, lit floor in plain view) where there is one in reach; false = the nearest floor he can see from, lit or not */
-  edge: true,
 };
 export const DARKFOE_STATS = { asks: 0, clicksOn: 0, clicksOff: 0, walks: 0, toMate: 0, noSpot: 0 };
 

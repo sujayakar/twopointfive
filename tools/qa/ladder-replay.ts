@@ -27,6 +27,7 @@ const store = new Map<string, string>();
 G.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, String(v)); }, removeItem: (k: string) => { store.delete(k); } };
 G.document = { hidden: false }; G.window = { devicePixelRatio: 2, __testVisible: true };
 const { Quality } = await import('../../src/ui/quality.ts');
+const { smokeLookStep } = await import('../../src/render/smokeLook.ts');   // the march's step as the page marches it: the preset's row in proportion to the look table
 const { defaultRcConfig } = await import('../../src/render/rc.ts');
 const defaults = (await import('../../src/engine.ts')).defaultSettings as unknown as () => Record<string, any>;
 
@@ -58,7 +59,7 @@ function mkQuality(w: Win, preset: QualityName, auto: boolean, settings: Record<
   store.clear();
   const E = mkEngine(w, {}); const q: any = new Quality(E as never, { params: { rbIters: 4 } } as never);
   q.auto = auto; q.apply(preset); q.adaptive = true; q.climbAllowed = true; q.calib = { ...q.calib, done: true };
-  for (const k of ['renderScale', 'gatherThird', 'volQuarter', 'ladderClimb', 'capClimb', 'ladderPaced', 'ladderHeld', 'oneCacheGrid', 'taau', 'sharpDirect', 'rcHalfRate', 'maxInternalHeight']) if (k in settings) E.settings[k] = settings[k];
+  for (const k of ['renderScale', 'gatherThird', 'volQuarter', 'ladderClimb', 'ladderPaced', 'ladderHeld', 'oneCacheGrid', 'taau', 'sharpDirect', 'rcHalfRate', 'maxInternalHeight']) if (k in settings) E.settings[k] = settings[k];
   E.settings.ladderShed = settings.ladderShed === true;   // (SHARP SHED only where a machine or a take says so: every case and every take from before the switch runs the ladder as it was)
   if (shed0 && auto && E.settings.ladderShed && !E.settings.sharpDirect) q.shed = true;   // (a take begun with the shed standing, PerfDump.shedAtStart: the ladder knows sharp direct is its own to bring back)
   E.settings.ladderAim = aim; q.displayHzPin = hz; q.cooldown = 0; q.lastChange = '';
@@ -498,7 +499,7 @@ function selftest(): boolean {
     check(under.every(n => { const S = put(n).S; return S.volQuarter === false && S.volSteps === H.volSteps && S.volStepVoxels === H.volStepVoxels && S.volShadowEvery === H.volShadowEvery; }) && H.volQuarter === false && H.volLightCap === 4,
       `medium and low march as high does, the pass at half size with its steps, shadow refresh and step length: ${under.map(n => `${n} ${row(put(n).S)}`).join(' · ')} (high: ${row(H)})`);
     check(under.every(n => put(n).S.volLightCap === 2), `… with two lights a step where high has four: ${under.map(n => `${n} ${put(n).S.volLightCap}`).join(' · ')}`);
-    check(V.volQuarter === true && V.volSteps === 8 && V.volLightCap === 2 && V.volStepVoxels === 2, `verylow, the floor, keeps its own small rows: ${row(V)}`);
+    check(V.volQuarter === true && V.volSteps === 8 && V.volLightCap === 2 && PRESETS.verylow.caps.volStep === 2 && PRESETS.high.caps.volStep === 1.5 && V.volStepVoxels === smokeLookStep(2) && V.volStepVoxels > H.volStepVoxels, `verylow, the floor, keeps its own small rows: ${row(V)}`);
     { const T = costTable(true); check(Math.abs(T.medium.passes.volumetrics - T.high.passes.volumetrics) < 1e-9 && Math.abs(T.low.passes.volumetrics - T.high.passes.volumetrics) < 1e-9 && T.verylow.passes.volumetrics < T.low.passes.volumetrics && !('volFroxel' in T.high.passes),
       `the ladder prices the one march a pixel alike on high, medium and low (${T.high.passes.volumetrics.toFixed(2)} model-ms), less on verylow (${T.verylow.passes.volumetrics.toFixed(2)}), and no froxel term is left in any rung's fixed part`); }
     check([H, V, ...under.map(n => put(n).S)].every(S => S.volLightCap >= 1), 'every rung has a light cap: the march has no path without one');

@@ -126,7 +126,7 @@ export async function kitPoolAgree(): Promise<boolean> {
         const E = (SCENARIOS as any[]).find(e => e.id === id), rows: string[] = []; let ok = true;
         for (let n = 0; n <= 4; n++) {
           const want = K.kitPool(n);
-          const shown = await withDom('', async () => { const host = new El('BODY') as any, S = UI.openLoadout(E, { host, squad: n, deploy: () => {} }); const p = S.pool(), words = host.all((x: El) => x.cls.has('lo-pool'))[0]?.textContent ?? '', size = S.squad; S.back(); return { p, words, size }; });
+          const shown = await withDom('', async () => { const host = new El('BODY') as any, S = UI.openLoadout(E, { search: '', host, squad: n, deploy: () => {} }); const p = S.pool(), words = host.all((x: El) => x.cls.has('lo-pool'))[0]?.textContent ?? '', size = S.squad; S.back(); return { p, words, size }; });
           const S = await stageOf(id, 0, 0x51c4, n); S.g.doorTools.sync(); const men = teamOf(S.g).length, run = { b: S.g.doorTools.bangs, c: S.g.doorTools.charges, f: S.g.doorTools.frags };
           S.restart(); S.g.doorTools.sync(); const again = { b: S.g.doorTools.bangs, c: S.g.doorTools.charges, f: S.g.doorTools.frags };
           const good = shown.size === n && men === n && (n === 0 ? shown.words === '' : shown.p.bangs === want.bangs && shown.p.charges === want.charges && run.b === want.bangs && run.c === want.charges && again.b === run.b && again.c === run.c && shown.p.frags === want.frags && run.f === want.frags && again.f === run.f && shown.words === `Squad carries · ${run.b} stun · ${run.c} charge${run.c === 1 ? '' : 's'} · ${run.f} frag${run.f === 1 ? '' : 's'}`);
@@ -270,11 +270,10 @@ export async function kitCard(): Promise<boolean> {
       // a held key (repeat) and a digit do nothing
       const before = JSON.stringify(KIT.members); const rep = keyEv('d'); rep.repeat = true; c1.key(rep); for (const d of ['1', '5', '6', '9']) c1.key(keyEv(d));
       F.verdict(JSON.stringify(KIT.members) === before, 'a key held down (auto-repeat) changes nothing, and no digit is read', 'D held, then 1 5 6 9: the table as it was');
-      // the sets: three buttons a click presses; and reachable by the keys (S down past the last row, Enter)
-      const sets = byCls(hosts[3], 'kc-set'); sets.find(b => b.attrs['data-set'] === 'quiet')!.onclick?.(); const setQ = K.kitPresetOf(3), selQ = byCls(hosts[3], 'kc-set').find(b => b.attrs['data-set'] === 'quiet')!.cls.has('on');
-      const c4 = cards[4]; c4.focus(); for (let n = 0; n < K.kitRows(4).length; n++) c4.key(keyEv('s')); const onSets = c4.at(); c4.key(keyEv('d')); c4.key(keyEv('d')); c4.key(keyEv('Enter')); const setL = K.kitPresetOf(4); c4.key(keyEv('a')); c4.key(keyEv(' ')); const setQ4 = K.kitPresetOf(4); c4.key(keyEv('a')); c4.key(keyEv('Enter'));
-      F.verdict(sets.length === 3 && setQ === 'quiet' && selQ && onSets === K.kitRows(4).length && setL === 'loud' && setQ4 === 'quiet' && K.kitPresetOf(4) === 'issued' && valOf(3, 'weapon') === 'pistol',
-        'the sets are three buttons under the rows: a click presses one (and it shows as the card\'s set); by the keys, S past the last row, A / D to pick, Enter or Space to press', `teammate 3 by click: ${setQ} · teammate 4 by keys: ${setL}, then ${setQ4}, then issued`);
+      // the reset: one button a click presses; reachable by the keys (S down past the last row, Enter)
+      K.kitPreset(3, 'quiet'); cards[3].refresh(); byCls(hosts[3], 'kc-set').find(b => b.attrs['data-set'] === 'issued')!.onclick?.(); const setQ = K.kitPresetOf(3);
+      const c4 = cards[4]; K.kitPreset(4, 'loud'); c4.refresh(); c4.focus(); for (let n = 0; n < K.kitRows(4).length; n++) c4.key(keyEv('s')); const onSets = c4.at(); c4.key(keyEv('Enter')); const setI = K.kitPresetOf(4);
+      F.verdict(byCls(hosts[3], 'kc-set').length === 1 && setQ === 'issued' && onSets === K.kitRows(4).length && setI === 'issued', 'the one set is the reset, a button under the rows: a click presses it; by the keys, S past the last row and Enter', `teammate 3 by click: ${setQ} · teammate 4 by keys: ${setI}`);
       const esc = c4.key(keyEv('Escape')), handled = c4.key(keyEv('q'));
       F.verdict(esc === false && handled === false, 'Esc and a key that is not the card\'s are left for the page', `Esc handled: ${esc} · 'q' handled: ${handled}`);
       // refresh: the table changed from outside (the loadout screen's own 'all quiet' button, say)

@@ -2644,28 +2644,7 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("rescueflush.busy_secs", offset_of!(Knobs, rescueflush.busy_secs), false),
     ("rescueflush.smoke_k", offset_of!(Knobs, rescueflush.smoke_k), false),
     ("rescueflush.at_door_m", offset_of!(Knobs, rescueflush.at_door_m), false),
-    ("snatchout.marker_m", offset_of!(Knobs, snatchout.marker_m), false),
-    ("snatchout.reach_m", offset_of!(Knobs, snatchout.reach_m), false),
-    ("snatchout.gap_m", offset_of!(Knobs, snatchout.gap_m), false),
-    ("snatchout.send_m", offset_of!(Knobs, snatchout.send_m), false),
-    ("snatchout.send_him_m", offset_of!(Knobs, snatchout.send_him_m), false),
-    ("snatchout.in_m", offset_of!(Knobs, snatchout.in_m), false),
-    ("snatchout.carry_m", offset_of!(Knobs, snatchout.carry_m), false),
-    ("snatchout.trail_m", offset_of!(Knobs, snatchout.trail_m), false),
-    ("snatchout.close_m", offset_of!(Knobs, snatchout.close_m), false),
-    ("snatchout.turn_secs", offset_of!(Knobs, snatchout.turn_secs), false),
-    ("snatchout.lane_m", offset_of!(Knobs, snatchout.lane_m), false),
-    ("snatchout.off_m", offset_of!(Knobs, snatchout.off_m), false),
-    ("snatchout.spot_m", offset_of!(Knobs, snatchout.spot_m), false),
     ("posemath.singles", offset_of!(Knobs, posemath.singles), true),
-    ("sense.cpu", offset_of!(Knobs, sense.cpu), true),
-    ("sense.grid", offset_of!(Knobs, sense.grid), true),
-    ("sense.bounce", offset_of!(Knobs, sense.bounce), true),
-    ("sense.drift", offset_of!(Knobs, sense.drift), true),
-    ("sense.moon", offset_of!(Knobs, sense.moon), true),
-    ("sense.glow.albedo", offset_of!(Knobs, sense.glow.albedo), false),
-    ("sense.glow.share", offset_of!(Knobs, sense.glow.share), false),
-    ("sense.glow.passes", offset_of!(Knobs, sense.glow.passes), false),
     ("sense.glow.sweep", offset_of!(Knobs, sense.glow.sweep), false),
     ("sense.smoke.sigma", offset_of!(Knobs, sense.smoke.sigma), false),
     ("sense.smoke.decay", offset_of!(Knobs, sense.smoke.decay), false),
@@ -3035,11 +3014,9 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("roomfight.door_look_secs", offset_of!(Knobs, roomfight.door_look_secs), false),
     ("roomfight.door_shot_m", offset_of!(Knobs, roomfight.door_shot_m), false),
     ("roomfight.hold_short_secs", offset_of!(Knobs, roomfight.hold_short_secs), false),
-    ("roomfight.pairs", offset_of!(Knobs, roomfight.pairs), false),
     ("roomfight.move_engage_m", offset_of!(Knobs, roomfight.move_engage_m), false),
     ("roomfight.lamp", offset_of!(Knobs, roomfight.lamp), false),
     ("roomfight.preaim_deg", offset_of!(Knobs, roomfight.preaim_deg), false),
-    ("roomfight.sights_deg", offset_of!(Knobs, roomfight.sights_deg), false),
     ("orders.refresh_secs", offset_of!(Knobs, orders.refresh_secs), false),
     ("orders.door_pick_m", offset_of!(Knobs, orders.door_pick_m), false),
     ("orders.self_m", offset_of!(Knobs, orders.self_m), false),
@@ -3593,13 +3570,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("nightbreach.squad", offset_of!(Knobs, nightbreach.squad), false),
     ("roomclear.seed", offset_of!(Knobs, roomclear.seed), false),
     ("roomclear.way", offset_of!(Knobs, roomclear.way), false),
-    ("snatch.give_up_m", offset_of!(Knobs, snatch.give_up_m), false),
-    ("snatch.halt_m", offset_of!(Knobs, snatch.halt_m), false),
-    ("snatch.see_m", offset_of!(Knobs, snatch.see_m), false),
-    ("snatch.see_rate", offset_of!(Knobs, snatch.see_rate), false),
-    ("snatch.cuff_m", offset_of!(Knobs, snatch.cuff_m), false),
-    ("snatch.cuff_secs", offset_of!(Knobs, snatch.cuff_secs), false),
-    ("snatch.bolt_secs", offset_of!(Knobs, snatch.bolt_secs), false),
     ("defuse.work_secs", offset_of!(Knobs, defuse.work_secs), false),
     ("defuse.reach", offset_of!(Knobs, defuse.reach), false),
     ("defuse.marker_m", offset_of!(Knobs, defuse.marker_m), false),
@@ -6002,28 +5972,7 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.rescueflush.busy_secs;
     let _: &f64 = &k.rescueflush.smoke_k;
     let _: &f64 = &k.rescueflush.at_door_m;
-    let _: &f64 = &k.snatchout.marker_m;
-    let _: &f64 = &k.snatchout.reach_m;
-    let _: &f64 = &k.snatchout.gap_m;
-    let _: &f64 = &k.snatchout.send_m;
-    let _: &f64 = &k.snatchout.send_him_m;
-    let _: &f64 = &k.snatchout.in_m;
-    let _: &f64 = &k.snatchout.carry_m;
-    let _: &f64 = &k.snatchout.trail_m;
-    let _: &f64 = &k.snatchout.close_m;
-    let _: &f64 = &k.snatchout.turn_secs;
-    let _: &f64 = &k.snatchout.lane_m;
-    let _: &f64 = &k.snatchout.off_m;
-    let _: &f64 = &k.snatchout.spot_m;
     let _: &bool = &k.posemath.singles;
-    let _: &bool = &k.sense.cpu;
-    let _: &bool = &k.sense.grid;
-    let _: &bool = &k.sense.bounce;
-    let _: &bool = &k.sense.drift;
-    let _: &bool = &k.sense.moon;
-    let _: &f64 = &k.sense.glow.albedo;
-    let _: &f64 = &k.sense.glow.share;
-    let _: &f64 = &k.sense.glow.passes;
     let _: &f64 = &k.sense.glow.sweep;
     let _: &f64 = &k.sense.smoke.sigma;
     let _: &f64 = &k.sense.smoke.decay;
@@ -6391,11 +6340,9 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.roomfight.door_look_secs;
     let _: &f64 = &k.roomfight.door_shot_m;
     let _: &f64 = &k.roomfight.hold_short_secs;
-    let _: &f64 = &k.roomfight.pairs;
     let _: &f64 = &k.roomfight.move_engage_m;
     let _: &f64 = &k.roomfight.lamp;
     let _: &f64 = &k.roomfight.preaim_deg;
-    let _: &f64 = &k.roomfight.sights_deg;
     let _: &f64 = &k.orders.refresh_secs;
     let _: &f64 = &k.orders.door_pick_m;
     let _: &f64 = &k.orders.self_m;
@@ -6924,13 +6871,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.nightbreach.squad;
     let _: &f64 = &k.roomclear.seed;
     let _: &f64 = &k.roomclear.way;
-    let _: &f64 = &k.snatch.give_up_m;
-    let _: &f64 = &k.snatch.halt_m;
-    let _: &f64 = &k.snatch.see_m;
-    let _: &f64 = &k.snatch.see_rate;
-    let _: &f64 = &k.snatch.cuff_m;
-    let _: &f64 = &k.snatch.cuff_secs;
-    let _: &f64 = &k.snatch.bolt_secs;
     let _: &f64 = &k.defuse.work_secs;
     let _: &f64 = &k.defuse.reach;
     let _: &f64 = &k.defuse.marker_m;

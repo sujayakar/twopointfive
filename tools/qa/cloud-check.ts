@@ -728,13 +728,13 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
 // ---- prefs
 { const A = memStore({ 'twopointsix.options': '{"vol":{"master":0.4}}', 'twopointsix.keys': '{"grab":"KeyG"}', 'twopointsix.findme': '{"rim":1}', 'twopointsix.quality': 'high', 'twopointsix.autoPreset': 'low', 'twopointsix.textsize': '2',
     'twopointsix.cloud.pid': PID2, 'twopointsix.save.auto.0': '{"big":1}', 'twopointsix.editorLevel': '{}', 'twopointsix.kept.shelfSent': '4', 'other.site': 'x', 'twopointsix.huge': 'x'.repeat(70000) });
-  const B = memStore({ 'twopointsix.options': '{"old":1}', 'twopointsix.sneak': '{"on":false}', 'twopointsix.quality': 'verylow', 'twopointsix.save.auto.0': '{"theirs":1}' });
+  const B = memStore({ 'twopointsix.options': '{"old":1}', 'twopointsix.wet': '{"on":false}', 'twopointsix.quality': 'verylow', 'twopointsix.save.auto.0': '{"theirs":1}' });
   const PA = new PrefSync(W, A, { pid: PID2 }), PB = new PrefSync(W, B, { pid: PID2 });
   await PA.look(); const puts = PA.stats.puts; await PA.look(); await PA.look();
   const kept = JSON.parse((await W.query('prefs:get', { pid: PID2 })).data);
   check(puts === 1 && PA.stats.puts === 1 && same(Object.keys(kept), ['twopointsix.findme', 'twopointsix.keys', 'twopointsix.options']), `prefs: the settings go up once and not again until one changes — and only settings (${Object.keys(kept).length} keys: no machine pick, no save, no id, nothing of another site)`);
   const changed = await PB.take();
-  check(changed && same(prefsNow(B), prefsNow(A)) && B.getItem('twopointsix.sneak') === null && B.getItem('twopointsix.quality') === 'verylow' && B.getItem('twopointsix.save.auto.0') === '{"theirs":1}', 'prefs: a browser handed the id opens with them — its own stray settings gone, its machine pick and its saves untouched');
+  check(changed && same(prefsNow(B), prefsNow(A)) && B.getItem('twopointsix.wet') === null && B.getItem('twopointsix.quality') === 'verylow' && B.getItem('twopointsix.save.auto.0') === '{"theirs":1}', 'prefs: a browser handed the id opens with them — its own stray settings gone, its machine pick and its saves untouched');
   A.setItem('twopointsix.options', '{"vol":{"master":0.9}}'); A.removeItem('twopointsix.keys'); await PA.look();
   const again = await PB.take(), none = await PB.take();
   check(PA.stats.puts === 2 && again && !none && B.getItem('twopointsix.options') === '{"vol":{"master":0.9}}' && B.getItem('twopointsix.keys') === null, 'prefs: a setting changed and one removed in the first browser are so in the second, and taking twice changes nothing');

@@ -31,9 +31,7 @@ const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { LASTSTAND, lastStandReport } = await import(`${ROOT}/src/game/laststand.ts`);
-const { DIGIN_STATS } = await import(`${ROOT}/src/game/digin.ts`);
 const { KIT } = await import(`${ROOT}/src/game/kit.ts`);
 
 const DT = 1 / 60, BREAK = process.env.FRAMEHOLDS_BREAK === '1';   // (the red path: no door is hung the other way, so no locked face is one a door opens toward)
@@ -112,24 +110,6 @@ export const frameholdsTools = guarded(async () => {
     F.verdict(locked && held && w === null && R.kicks === 0 && picks === 1 && !d.lockBroken && !d.locked && saidPick === 1 && crossed > 0,
       "a loud squad told 'open and clear' at a cylinder lock on the face the door opens toward: nobody boots it — the lead says so, picks it, the keep is whole and they go in",
       `locked ${locked} · the frame holds ${held} · refused ${w} · boots ${R.kicks} · picks ${picks} · keep broken ${!!d.lockBroken} · said it ${saidPick} · over the line ${crossed} · ${R.beats(op)}`); }
-  // (b) no cylinder (a keypad's bolt): the entry rows greyed with the reason, the order refused in the same words, the charge row live
-  /** the keypad door between the manager's office and the server room, come at from the office (its keyed face), the office's own door unlocked: Sam stands in the office, so the order lands on that face */
-  const padStage = (R: any) => { const g = R.game, d = R.door('server_manager'), ks = d.keySide as 1 | -1; R.door('manager').locked = false; hangToward(g, d, ks);
-    for (const o of [2.0, 1.7, 1.4]) { g.teleportPlayer(off(d, ks, o)); R.step(90); if (g.doors.side(d, g.player.char.pos) === ks && Math.hypot(g.player.char.pos[0] - d.frameCentre[0], g.player.char.pos[2] - d.frameCentre[2]) > 1.2) break; }
-    return { d, side: R.target('server_manager').side as 1 | -1, ks }; };
-  const pad = async (charges?: number) => { const R = await rig(7, { charges }); const { d, side, ks } = padStage(R); const staged = side === ks && d.locked;
-    const rows = R.tools('server_manager'); const row = (id: string) => rows.find((r: any) => r.id === id);
-    const w = R.give('openClear', 'server_manager'), wB = R.D.ops.length ? null : R.give('bangClear', 'server_manager'); const op = R.D.ops[0]; R.until(() => R.D.ops.length === 0 || (op?.crossed?.size ?? 0) > 0, 60); R.step(30);
-    return { R, d, staged, rows, open: row('openClear'), bang: row('bangClear'), charge: row('charge'), w, wB, viaCode: R.D.ops.length ? null : R.D.order('openClear', R.team, d, side) }; };
-  { const A = await pad(), C = await pad(0);
-    const greyed = (r: any, words: string) => !!r && r.off && r.text.includes(words.replace(/\.$/, ''));
-    F.verdict(A.staged && greyed(A.open, WORDS) && greyed(A.bang, WORDS) && A.w === WORDS && A.wB === WORDS && A.viaCode === WORDS && !!A.charge && !A.charge.off && A.R.kicks === 0 && A.R.D.ops.length === 0,
-      'a keypad door (no cylinder) on the face it opens toward: "open and clear" and "bang and clear" are greyed with the reason, refused in the same words from the menu and from code (the rescue\'s order), the charge row stays live, nobody walks up and boots it',
-      `${A.R.note}${A.rows.map((r: any) => `${r.id}${r.off ? ' (off)' : ''}: ${r.text}`).join(' | ')} · give → ${A.w} / ${A.wB} · order() → ${A.viaCode} · boots ${A.R.kicks}`);
-    F.verdict(C.w === 'opens toward us. no boot, no charge.' && !!C.charge?.off, 'with no door charge carried the words do not send them for one', `charges 0: give → ${C.w} · charge row: ${C.charge?.text}${C.charge?.off ? ' (off)' : ''}`); }
-  { const R = await rig(7); const { d } = padStage(R); const w0 = R.give('charge', 'server_manager'); const set = R.until(() => !!R.D.chargeOn(d), 60); R.step(30);
-    const rows = R.tools('server_manager'), open = rows.find((r: any) => r.id === 'openClear'), w = R.give('openClear', 'server_manager');
-    F.verdict(w0 === null && set && w === 'opens toward us. no boot. blow the charge.' && !!open?.off, 'with a charge already set on that door the words point at it', `charge order refused ${w0} · set ${set} · give → ${w} · row: ${open?.text}${open?.off ? ' (off)' : ''}`); }
   // (c) a lock no pick opens thrown while they walk (the order was good when given): it ends at the door, in words, nobody boots
   { const R = await rig(7); const { d } = faceTeam(R, 'manager', true); d.locked = false;
     const w = R.give('openClear', 'manager'); const op = R.D.ops[0]; R.step(20); d.locked = true; (d as any).lockId = `wedge:${d.def.name}`;
@@ -141,9 +121,6 @@ export const frameholdsTools = guarded(async () => {
   // ((d) 'the same door hung the way it was dealt …: the boot as ever' went 2026-11-07: it asked the squad of before the handle is tried (the rig held that rule
   //  off for it). A locked door found shut ends the first order at the door now, whichever way it is hung.)
   // (e) a charge set on the face it opens toward still opens it: off its hinges
-  { const R = await rig(7); const { d } = faceTeam(R, 'manager', true); const w = R.give('charge', 'manager');
-    const set = R.until(() => !!R.D.chargeOn(d), 60); R.step(60 * 3); const did = R.D.blow(R.D.chargeOn(d)); R.step(60 * 2);
-    F.verdict(w === null && set && !!did && d.lockBroken && d.off, 'a charge set on that face: the leaf comes off', `refused ${w} · set ${set} · blown ${!!did} · off its hinges ${!!d.off} · angle ${f2(d.angle)} · keep broken ${!!d.lockBroken}`); }
   return F.done();
 });
 

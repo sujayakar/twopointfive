@@ -1,7 +1,7 @@
 // THE PAGE THAT DRAWS A GAME IT DOES NOT HOLD (draw.html; `?draw=1` on the game's page). The game is the Rust module's (host/drawgame.ts): started from the
 // level's file and the address's words, handed what the player did, stepped, and drawn from what each tick leaves to be drawn (src/draw). Nothing this
 // page's bundle holds is the game's TypeScript: tools/draw/ban.ts stops the build on an import of it.
-import { initGpu, showFatal, showFatalError, pipelineProgress } from '../gpu/device';
+import { initGpu, laterIdle, pipeQueue, showFatal, showFatalError, pipelineProgress } from '../gpu/device';
 import { Engine } from '../engine';
 import { SmokeSystem } from '../smoke/smoke';
 import { Quality } from '../ui/quality';
@@ -12,7 +12,6 @@ import { charSlots, meshAuthored } from '../render/charMaterials';
 import { MeshShadows } from '../render/meshShadows';
 import { fitRig, fitRigCast } from '../render/sdfrig';
 import { cutConfig, initCutSwitch } from '../scene/cut';
-import { roundConfig } from '../scene/round';
 import { CAST_FILE, CAST_FILE_LOOK, castUrlFor, loadCharacterSet } from '../anim/gltf';
 import { CharacterRenderer } from '../anim/characters';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
@@ -34,8 +33,10 @@ import { lostCard } from './lostcard';
 import { PauseCard } from '../ui/pausecard';
 import { agoWords, type RunSaves } from '../ui/runcard';
 import { camKey, keysBoot } from './keymap';
-import { Section, Sky, View } from '../draw/sections';
+import { Heard, Section, Sky, View } from '../draw/sections';
 import { AudioEngine } from '../audio/audio';
+import { setlistOfQuery } from '../audio/setlist';
+import { MUSIC } from '../audio/pieces';
 import { askOf } from '../draw/ask';
 import { rimsFrom } from '../draw/rims';
 import { makeOutlineFrame } from '../render/outline';
@@ -90,7 +91,7 @@ async function main(): Promise<void> {
   lookConfig.kept = lookKeptOf(D.f[sky() + Sky.kept] < 0 ? undefined : D.f[sky() + Sky.kept], q.get('kept'));
   weatherKindConfig.on = true; snowConfig.on = D.u[sky() + Sky.snowLevel] !== 0;
   if (snowConfig.on) { snowLookOfQuery(q); snowLookConfig.surface = SNOW_LOOK.on; snowLookConfig.wisps = SNOW_LOOK.wisps; snowLookConfig.tracks = SNOW_LOOK.on && SNOW_LOOK.tracks; snowLookConfig.glow = SNOW_LOOK.on && SNOW_LOOK.glow; snowLookConfig.sparkle = SNOW_LOOK.on && SNOW_LOOK.sparkle; snowLookConfig.under = SNOW_LOOK.under; snowLookConfig.grains = SNOW_LOOK.grains || SNOW_LOOK.oneAir; }
-  glassBreakConfig.on = true; initCutSwitch(); roundConfig.gpu = cutConfig.on;
+  glassBreakConfig.on = true; initCutSwitch();
   COATFINISH.on = true; SOLIDGLASS.on = true;
 
   const gpu = await initGpu(canvas, { retry: true });   // (the module's game has stood by now)
@@ -109,7 +110,7 @@ async function main(): Promise<void> {
   { const fit = fitRig(ch); engine.setRigFit(ch.cast ? { ...fit, byOwner: men.fits } : fit); if (ch.cast) fitRigCast(ch); }
   game.look(lookNumbers(engine.settings, engine.world, !!ch.cast)); game.frame(1, [20, 0, 14]); engine.world.upload();   // (every stuff the level is made of is known from here: its maps are made with the programs)
   await Promise.all([engine.init({ sharp: true }), smoke.init(), engine.particles!.init(), engine.gbuffer.needLook(), shadows.init(), engine.gbuffer.prepareSkin(chars.jointsFormat)]);
-  pipelineProgress.onChange = null; engine.warmFirstUse();
+  pipelineProgress.onChange = null; pipeQueue.settle(); engine.warmFirstUse();
   const quality = new Quality(engine, smoke); quality.visit(location.search);
   lookSync();
   lookConfig.exposure = () => { const h = HOURS_OF[D.u[sky() + Sky.hour]]; return h === 'night' ? null : hourExposure(h, D.f[sky() + Sky.hourSun]); };
@@ -118,6 +119,7 @@ async function main(): Promise<void> {
   { const eye: [number, number] = [0, 0]; lookConfig.eyeAt = () => { const o = view() + View.at; eye[0] = D.f[o]; eye[1] = D.f[o + 2]; return eye; }; }
   const gaps = doorways(D); { const lines = gaps.map(d => [d.hinge[0], d.hinge[1], d.hinge[0] + Math.cos(d.closedDir) * d.width, d.hinge[1] + Math.sin(d.closedDir) * d.width] as [number, number, number, number]); lookConfig.doorGaps = () => lines; }
   const fog = makeFogFrame(), ask = askOf(game), audio = new AudioEngine(ask), events = new DrawEvents(D, engine.particles, smoke, audio, i => game.nameOf(i));
+  MUSIC.pieces = MUSIC.byLevel = MUSIC.theirs = true; audio.scoreSet = setlistOfQuery(location.search); let run = -1;   // (the level's own music, as tense as those who are against him)
   if (q.has('mute')) { audio.volume.master = 0; audio.start = () => { /* silent */ }; }
   for (const ev of ['pointerdown', 'keydown'] as const) window.addEventListener(ev, () => audio.start(), { capture: true });   // (a browser's sound begins with a hand on the page)
   engine.fogFrame = fog; const rims = engine.outline = makeOutlineFrame(); engine.beams = world.beams;
@@ -191,12 +193,13 @@ async function main(): Promise<void> {
     // (the run's end card, once each time one is due; a restart or a load is another end to come)
     { const e = D.u[view() + View.ended]; if (e !== ended) { ended = e; if (e) onEnded(); } }
     D.fresh();
-    skyFrom(engine, D); fogFrom(fog, D); rimsFrom(rims, D, dt); weather.frame(cam); dustFrom(engine.particles!, D);
+    skyFrom(engine, D); fogFrom(fog, D); rimsFrom(rims, D); weather.frame(cam); dustFrom(engine.particles!, D);
     { const o = view(); engine.settings.nvAmount = D.f[o + View.night]; engine.settings.hitFlash = D.f[o + View.hit]; }
     game.look(lookNumbers(engine.settings, engine.world, !!ch.cast));
     const t1 = performance.now();
     if (!drawn) { input.endFrame(); return; }
-    { const o = view() + View.at; ear[0] = D.f[o]; ear[1] = D.f[o + 1] + 1.6; ear[2] = D.f[o + 2]; audio.setListener(ear, cam.forward); audio.update(dt, time); }
+    { const o = view() + View.at; ear[0] = D.f[o]; ear[1] = D.f[o + 1] + 1.6; ear[2] = D.f[o + 2]; audio.setListener(ear, cam.forward); audio.update(dt, time);
+      D.fresh(); const h = D.at[Section.heard]; if (audio.music) { audio.music.intensity = D.f[h + Heard.tension]; if (D.u[h + Heard.run] !== run) audio.music.mission(); } run = D.u[h + Heard.run]; }
     smoke.update(dt);
     const a = ticks === undefined ? lag.at(acc * FIXEDSTEP.hz) : 1, pose = pair.at(a, cam);
     if (pose) cam.drawIn(pose);
@@ -246,5 +249,6 @@ async function main(): Promise<void> {
   Object.assign(window, { __draw: { game, engine, world, audio, pause, cam, input, quality, told, fog, weather, smoke, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last') => { for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } } } });
   requestAnimationFrame(loop);
 }
-const ready = main(); (window as unknown as { __ready: Promise<void> }).__ready = ready;
+// (a tool waits for the programs made behind the start too: until then a pass draws its stand-in, and the fog of war is the lit one)
+const ready = main(); (window as unknown as { __ready: Promise<void> }).__ready = ready.then(() => laterIdle());
 ready.catch(e => { console.error(e); if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message); else showFatalError(e); });

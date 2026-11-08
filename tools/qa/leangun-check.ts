@@ -1,4 +1,4 @@
-// 'leangun' — A RIFLE BESIDE A JAMB FIRES, OR THE RING SAYS IT CANNOT (WALLSNAP.leanGun, player.ts stackLean · GUNWALL.mark, player.ts gunShut). The
+// 'leangun' — A RIFLE BESIDE A JAMB FIRES, OR THE RING SAYS IT CANNOT (WALLSNAP.leanGun, player.ts stackLean · GUNWALL.mark, game.view.aim: player::gun_shut). The
 // maintainer, off the solo tutorial mission: "shooting the sentry doesn't work since the rifle is on the right hand side and the bullets are hitting the
 // doorframe?" Stacked on a wall, the cursor round its end steps him out — 0.6 m, measured for his eyes. The rifle rides a hand's width to his right: round an
 // end on that side his head was clear, the reticle had the man, and the rifle lay IN the jamb — every round stopped in the wood at the muzzle (combat.ts
@@ -22,7 +22,7 @@ import { world } from './wallsnap-probes.ts';
 import type { Vec3 } from '../../src/math/vec.ts';
 
 const { WALLSNAP, LEAN_GUN_M } = await import(`${ROOT}/src/game/wallsnap.ts`);
-const { gunShut } = await import(`${ROOT}/src/game/player.ts`);
+const gunShut = (g: any): boolean => g.view.aim.ring?.shut ?? g.view.aim.dot?.shut ?? false;   // (what the HUD is told)
 const { armThrough } = await import(`${ROOT}/src/game/combat.ts`);
 const J: any = await import(`${ROOT}/src/game/journal.ts`);
 

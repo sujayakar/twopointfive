@@ -418,6 +418,23 @@ pub fn fog_of_war_fired_on(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// Left out of the picture this frame; false for everybody while the fog is off.   (fogofwar.ts FogOfWar.hidden)
 #[doc(hidden)] pub fn fog_of_war_hidden__body(g: &crate::game::Game, gd: GuardId) -> bool { fog_of_war_hides(g, gd) }
+/// The last sightings: each living enemy out of the picture now, and in it recently enough: where he stood, and how long ago. Nobody's AI reads it. (fogofwar.ts FogOfWar.lastSeen)
+pub fn fog_of_war_last_seen(g: &crate::game::Game) -> Vec<crate::view::SeenMark> {
+    let told = match crate::told::told_now(g) { crate::told::ToldRung::Guided => m::max(0.0, g.k.told.guided), crate::told::ToldRung::Standard => m::max(0.0, g.k.told.standard), _ => 0.0 };
+    let secs = if g.k.fog.last_seen > 0.0 { g.k.fog.last_seen } else { told };
+    let wand = g.k.wand.on && g.k.wand.mark_secs > 0.0;
+    let mut out = Vec::new();
+    if !fog_of_war_active(g) || !(secs > 0.0 || wand) { return out; }
+    for &gd in g.guards.iter() {
+        if g.gd[gd].state == crate::game::GuardState::Dead || !crate::teams::is_hostile(g, g.gd[gd].team, crate::teams::Team::Player) || !fog_of_war_hides(g, gd) { continue; }
+        let Some(r) = g.fog_of_war.recs.get(gd) else { continue };
+        let Some(at) = r.at else { continue };
+        let age = g.time - r.t;
+        let life = if wand && r.wand_t.map_or(false, |w| m::abs(r.t - w) < 0.5) { m::max(secs, g.k.wand.mark_secs) } else { secs };
+        if age >= 0.0 && age < life { out.push(crate::view::SeenMark { man: g.ch[g.gd[gd].ch].id, at, age, life }); }
+    }
+    out
+}
 /// does the team not see this man (asked of the game shared: no tool's tap is told)
 pub fn fog_of_war_hides(g: &crate::game::Game, gd: GuardId) -> bool {
     g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(g.gd[gd].ch)

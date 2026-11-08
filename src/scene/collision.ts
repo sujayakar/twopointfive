@@ -696,17 +696,12 @@ export class StaticCollision {
    *  gives (0 under a roof … 1 in the open) and by its rise with height (`low` of it at the ground, `gain` more by `fullAt` metres up), and
    *  spreads of its own by less there (`K.inWind` of its spread where the wind blows whole). None, or a plan of more squares than the table holds: still air, the step as it was. */
   gridStep(st: SimState, pending: readonly number[], n: number, K: { decay: number; spread: number; rise: number; riseRate: number; gone: number; inWind: number },
-    glow: { K: { albedo: number; share: number; passes: number; sweep: number }; lamps: (col: StaticCollision) => LampRows | boolean } | null = null,
     wind: GridWind | null = null): boolean {
     const M = this.ready();
     const mine = !M.live;
     if (mine) { if (simWhyNot()) return false; M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, false, false, false); if (!M.live) return false; }
     try {
       const set = M.leaves(this.dynamicBoxes); if (set === -2) return false;
-      // (THE LIGHT THAT COMES ROUND, rust/sim/src/glow.rs: the step sweeps it from the level's steady lamps: its rows, read where they stand, and
-      // the lamps of nobody's fixture, which `glow.lamps` writes as for a question about the light and answers with the rows' word (true: no rows,
-      // the written lamps are all). False = more written lamps than a question carries: the field stands as it was.)
-      let lamps = -1, R: LampRows | null = null; if (glow) { M.lampN = 0; this.lampsOver(); const said = glow.lamps(this); if (said) { lamps = M.lampN; R = said === true ? null : said; } }
       // (the emitters go in the scratch, written last: the step takes them once it knows a grid stands here, so one that does nothing has taken none.
       // A step carries as many as the scratch holds, 170, the LATEST of them: the grid's own list holds 64, and `pending` is kept to that many by
       // whoever fills it, sense.ts SmokeGrid.emit)
@@ -717,8 +712,7 @@ export class StaticCollision {
         const nx = 2 * Math.ceil(this.W * this.cs / 2), nz = 2 * Math.ceil(this.H * this.cs / 2);
         if (nx * nz <= M.windCap) { for (let z = 0, o = M.wind; z < nz; z++) for (let i = 0; i < nx; i++) m[o++] = wind.share(i + 0.5, z + 0.5); wx = wind.x; wz = wind.z; low = wind.low; gain = wind.gain; fullAt = wind.fullAt; }
       }
-      const G = glow?.K, lg = R ? R.st.bind() : 0, g = st.bind();   // (the rows' block first: light.rs, as a question's)
-      return x.grid_step(g, st.stamp, M.slot, M.gridCopy(), set, n, e / 6, K.decay, K.spread, K.rise, K.riseRate, K.gone, lamps, G ? G.albedo : 0, G ? G.share : 0, G ? G.passes : 0, G ? G.sweep : 0, wx, wz, low, gain, fullAt, K.inWind, lg, R ? R.leave : 0, rowsHow(R)) !== -1;
+      return x.grid_step(st.bind(), st.stamp, M.slot, M.gridCopy(), set, n, e / 6, K.decay, K.spread, K.rise, K.riseRate, K.gone, wx, wz, low, gain, fullAt, K.inWind) !== -1;
     } finally { if (mine) M.shut(); }
   }
   /** segmentBlocked as this file answers it (and the whole of it wherever the module does not: outside a tick, with RUST.lines off) */

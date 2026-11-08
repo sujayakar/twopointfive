@@ -1,12 +1,12 @@
-// HOW MANY ARE INSIDE IS A MYSTERY, AND THE LARGE MAP IS LEFT BY A CLICK BESIDE IT — ON THE REAL PAGE (ui/missions.ts MYSTERY `?mystery=0`,
+// HOW MANY ARE INSIDE IS A MYSTERY, AND THE LARGE MAP IS LEFT BY A CLICK BESIDE IT — ON THE REAL PAGE (no cell on ui/missions.ts, ui/kitBrief.ts or ui/loadbrief.ts;
 // ui/kitBrief.ts KITBRIEF.outside `?mapout=0`). The maintainer, 10-23: "clicking outside the map should close it. we should also remove all defender counts
 // from the menus, etc., it should be a mystery!"
 // Headless Chromium with no WebGPU adapter (the start page and a mission's load page are plain DOM, live from the first tick), REAL keys and clicks:
 //   · the Team & kit step, the Mission step behind it and the mission's load page draw no Defenders cell, and none of their words says a head count;
 //   · the map opened large is put back by a click anywhere off it, and that click does nothing else (the team size under it is as it was, the step is
 //     still the kit step); a click ON the large map and M put it back as before;
-//   · `?mapout=0`: a click beside the large map leaves it up (as it was); `?mystery=0`: the cells are back, a count past five as a word.
-//   node tools/qa/mystery-page.cjs [outDir]      env: PORT (the dev server's, default 5199) · SIZES · MYSTERY_BREAK=1 (both switches off on every page: must FAIL)
+//   · `?mapout=0`: a click beside the large map leaves it up (as it was).
+//   node tools/qa/mystery-page.cjs [outDir]      env: PORT (the dev server's, default 5199) · SIZES · MYSTERY_BREAK=1 (`?mapout=0` on every page: must FAIL)
 // PASS / FAIL lines, exit 1 on a FAIL or a page error. The tables' half (every row, pick line and Hard sentence): tools/qa/mystery-check.ts.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs');
@@ -15,7 +15,7 @@ const outDir = process.argv[2] || '';
 const PORT = process.env.PORT || 5199;
 const SIZES = (process.env.SIZES || '1440x900,1000x673').split(',').map(s => s.split('x').map(Number));
 const BREAK = process.env.MYSTERY_BREAK === '1';
-const OFF = BREAK ? '&mystery=0&mapout=0' : '';
+const OFF = BREAK ? '&mapout=0' : '';
 const MISSIONS = ['compound-four', 'rescue-registry', 'warehouse-four', 'solo-night'];
 // (a number put on the enemy: tools/qa/mystery-check.ts countsIn has the same nouns)
 const NUM = '(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\\d+)';
@@ -91,8 +91,6 @@ const beside = page => page.evaluate(() => { const m = document.querySelector('.
       await page.mouse.click((s.map.l + s.map.r) / 2, (s.map.t + s.map.b) / 2); await page.waitForTimeout(350); const u = await read(page); const o = await beside(page);
       await page.mouse.click(o.x, o.y); await page.waitForTimeout(350); const still = await read(page);
       check(u.big && (o.on ? still.sig !== u.sig : still.big), `${at}: ?mapout=0: a click beside the large map is the step's, as it was`, `opened ${u.big} · clicked ${o.on ? `the step's "${o.on}"` : 'bare ground'} · large after ${still.big} · the step ${still.sig === u.sig ? 'as it was' : 'took it'}`);
-      await open('loadout=compound-four', '&mystery=0'); const k = await read(page); await page.keyboard.press('Escape'); await page.waitForTimeout(400); const mi = await read(page);
-      check(cells(k).join() === 'Defenders eleven' && cells(mi).join() === 'Defenders 11', `${at}: ?mystery=0: the cells are back as they were (the kit step's a word past five)`, `kit: ${cells(k).join() || 'none'} · mission: ${cells(mi).join() || 'none'}`);
     }
     await ctx.close();
   }

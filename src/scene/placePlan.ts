@@ -4,7 +4,7 @@
 // a guard senses through a door must come from the same openings the picture draws). Until 11-04 this lived in render/placeField.ts, beside the GPU field
 // that is solved on it; that file keeps the field, its buffer and Sam's eye, and reads the plan from here.
 // WHO READS IT: render/placeField.ts (the light of a place, the look's exposure), render/wallSides.ts (which side of a wall a point is on), scene/openings.ts
-// (where a place is open to the sky), scene/geoTry.ts by main.ts (a yard wall has the sky on both hands), and the checks of each.
+// (where a place is open to the sky), and the checks of each.
 // PLACE holds the plan's numbers AND the field's solve numbers in one table, as it always did (a tool hands one table of both: tools/qa/place-field-page.cjs
 // --place); the solve's are read by render/placeField.ts alone.
 import { Box, BoxFlag, type PlanBox } from './boxes';
@@ -166,8 +166,7 @@ export function placeMask(statics: readonly Box[], dynamics: readonly Box[], out
   for (let k = 0; k < W * H; k++) if (out[k] !== 255) out[k] = (door[k] ? 1 : 2) | (roof[k] ? 0 : 4) | (door[k] ? deg[k] << 3 : 0);
   return out;
 }
-/** "is this spot free floor under the open sky?" on the plan of a list of boxes as they stand, for a rule that asks before the world is filled (scene/geoTry.ts:
- *  a yard wall is a wall with the sky on both hands). Off the map is the open air. */
+/** "is this spot free floor under the open sky?" on the plan of a list of boxes as they stand, for a rule that asks before the world is filled. Off the map is the open air. */
 export function skyPlan(statics: readonly Box[]): (x: number, z: number) => boolean {
   const m = placeMask(statics, []);
   return (x, z) => { const i = Math.floor((x - WORLD.rcMin[0]) * PLACE_RES), j = Math.floor((z - WORLD.rcMin[2]) * PLACE_RES); if (i < 0 || j < 0 || i >= PLACE_W || j >= PLACE_H) return true; const v = m[j * PLACE_W + i]; return v !== 255 && (v & 4) !== 0; };

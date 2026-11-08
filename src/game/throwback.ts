@@ -14,11 +14,11 @@
 export const THROWBACK = {
   /** a kick, a pick, the wand, hands at work, the keypad or a takedown beginning inside a throw's wind-up gives the can back instead of holding it */
   on: false,
-  /** THE THROW PREVIEW MARKS WHERE THE CAN COMES TO REST, not only where it first touches down (player.ts throwRest, overlay.ts: the ring goes to the rest
+  /** THE THROW PREVIEW MARKS WHERE THE CAN COMES TO REST, not only where it first touches down (game.view.aim.throw, overlay.ts: the ring goes to the rest
    *  point, a small tick stays on the touchdown, the floor between them is dotted). The overlay's: nothing in the game reads it. Off here; the page turns
    *  it on (?norestmark = the ring on the first touch, as it was). The journal carries it as it finds it: a replay draws the mark its recording had */
   restMark: false,
-  /** THE THROW PREVIEW SHOWS WHAT THE THING WILL REACH (throwreach.ts throwReach, overlay.ts: a frag's kill ring and the fainter ring it hurts to, a stun
+  /** THE THROW PREVIEW SHOWS WHAT THE THING WILL REACH (game.view.aim.throw.reach, overlay.ts: a frag's kill ring and the fainter ring it hurts to, a stun
    *  canister's stun ring, the launcher grenade's two — flat on the floor round where it ends). The overlay's: nothing in the game reads it. Off here; the
    *  page turns it on (?noreach = the arc and its small ring alone, as it was). A recording from before the key replays with it off (journal.ts applyKnobs) */
   reach: false,

@@ -600,7 +600,7 @@ pub fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: b
 }
 
 /// the eyes' seam: where his aim goes this frame, None = his own.   (darkdoor.ts darkDoorLook)
-pub fn dark_door_look(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
+pub fn dark_door_look(g: &crate::game::Game, gd: GuardId) -> Option<V3> {
     let (act, door, t) = match g.m.darkdoor.state_of.get(gd) { Some(s) => (s.act, s.door, s.t), None => return None };
     if (act != DarkDoorAct::Balk && act != DarkDoorAct::Solo) || crate::owner::has(g, gd, crate::owner::by::LAST_MAN) { return None; }
     let d = door_at(g, door)?;

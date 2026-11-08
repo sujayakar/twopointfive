@@ -61,7 +61,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     line(errors.length === 0, 'no page error on the loud screen', errors.join(' | ') || 'none'); await page.close(); }
 
   // ── off
-  if (part('off')) { await ctx.clearCookies(); const { page, errors } = await open(`loadout=${MISSION}&nokitstealth&kitdense=0`, true);   // (the store's loud card is as it was planted: nothing above wrote it)
+  if (part('off')) { await ctx.clearCookies(); const { page, errors } = await open(`loadout=${MISSION}&nokitstealth`, true);   // (the store's loud card is as it was planted: nothing above wrote it)
     const e = await read(page); await shot(page, 'kitstealth-off');
     line(!!e.tiles.cams?.lent && /mission/i.test(e.tiles.cams.val) && !e.card.rings && !e.card.cams && !e.card.wand && e.card.frags === 1, 'UNDER ?nokitstealth the tiles are the mission\'s again and the card carries none of it (the build before)', say(e));
     line(errors.length === 0, 'no page error under ?nokitstealth', errors.join(' | ') || 'none'); await page.close(); }

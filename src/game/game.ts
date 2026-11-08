@@ -27,13 +27,14 @@ import { statureOf, drawnJoints, drawnCapsules, drawnFit, drawnBoxes } from './s
 import { Decals } from '../render/decals';
 import { buildWearMap } from '../render/wear';
 import { buildSnowField, snowCfgRows, type SnowField } from '../render/snowField';
-import { groundRayConfig, packGroundField } from '../scene/groundField';
 import { makeSnowTracks, updateSnowTracks, clearSnowTracks, formSnowTracks, TRACK_RES, type SnowTracks } from './snowTracks';
 import { updateSnowMarks, clearSnowMarks } from './snowMarks';
 import { snowBogAt, snowBogMay, snowBogKinds } from './snowBog';
 import { attachSnowBlast, clearSnowBlast, stepSnowDigs } from './snowBlast';
 import { SNOW_LOOK, snowLevel, WEATHER_PRESETS } from './weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
+import { LOOK } from '../scene/look';   // (a leaf: no imports)
+import { leafRowOf, paintLeaves } from '../scene/leafPaint';
 import { SmokeSystemLike } from '../smoke/types';
 import { Box, BoxFlag } from '../scene/boxes';
 import { markStats, markWorldRect, AREA_LIT_MARKS, MARKING_TEXEL } from '../scene/markings';
@@ -44,8 +45,8 @@ import { AimWeight } from './aimweight';
 import type { Ring } from './launcher';
 import type { Shell } from './he40';
 import './he40';
-import { glassSummary, crackTest, resetGlass, loadGlassFx } from './glass';
-import { glassPenLive, shotPasses, resetGlassPen, loadGlassPen, GLASSPEN_HOOKS } from './glasspen';
+import { glassSummary, crackTest, resetGlass } from './glass';
+import { glassPenLive, shotPasses, resetGlassPen, GLASSPEN_HOOKS } from './glasspen';
 import { bootBars, resetBars } from './winbars';
 import type { WeaponId, RifleAttachment } from './weapons';
 import { Doors, Door, DoorEvent, DoorContact, FLOOR_KEY } from './doors';
@@ -60,7 +61,7 @@ import * as fx from './effects';
 import { Sparks } from './sparks';
 import { Tracers } from './tracers';
 import { Particles } from '../render/particles';
-import { sparkSink, kickDustFx, lockSplinterFx, clearParticleFx, loadDust, applyDustLook } from './particleFx';
+import { sparkSink, kickDustFx, lockSplinterFx, clearParticleFx, applyDustLook } from './particleFx';
 import { Weather } from './weather';
 import { stoodOfPick, type StoodWith } from './stood';
 import { wetInstance, wetKnobs, wetLineRow, wetSummary, clearWetPrints } from './wet';
@@ -96,7 +97,7 @@ import './netquiet';
 import './samstun';
 import './sprintdoor';
 import './deathrecap';
-import { loadBodyLight, bodyLightSummary, groundFresh } from './guards';
+import { bodyLightSummary, groundFresh } from './guards';
 import { CpuSmoke } from './sense';
 import { DRESS } from './dress';
 import { say, resetGuards, tension, escalationSummary, raiseEscalation, standDownEscalation, clearingSummary, clearQueueSummary, forceClear } from './guards';
@@ -120,8 +121,7 @@ import './handwork';
 import { throwCount, toggleDrag, teleportPlayer, settleSpot, freeHeld, takeKey, pickHover } from './player';
 import type { WallHold, Hold } from './player';
 import { escapeInteract, backableInteract } from './interact';
-import { slotSetupOpen, slotSetupShut } from './slotsetup';
-import { loadTactics, tacticsSummary, tacticsReset } from './tactics';
+import { tacticsSummary, tacticsReset } from './tactics';
 import { lanesReset } from './lanes';
 import { pictureReset } from './picture';
 import './darkfoe';
@@ -129,7 +129,6 @@ import { powerOutReset } from './powerout';
 import { rescueCheckReset } from './rescuecheck';
 import { dozeReset } from './doze';
 import { wallReactReset } from './wallreact';
-import { loadTeamFeel } from './teamfeel';
 import './nvg';
 import { irFlags } from './irlight';
 import './silent';
@@ -137,7 +136,7 @@ import { holdFireReset } from './holdfire';
 import './spotted';
 import './handleside';
 import './doorway';
-import { loadNeeds, needsSummary } from './needs';
+import { needsSummary } from './needs';
 import { Director } from './director';
 import { NightBreach } from './nightbreach';
 import { QuietMission } from './quiet';
@@ -146,7 +145,6 @@ import { Rails } from './rails';
 import { Par } from './par';
 import type { LostMan } from './deathrecap';
 import { Verdict } from './verdict';
-import { Snatch } from './snatch';
 import { Defuse } from './defuse';
 import { RoomClearScenario } from './roomclear';
 import { SquadOrders } from './orders';
@@ -167,6 +165,8 @@ import './squadthrow';
 import './squad40';
 import { PairOrders } from './pairorders';
 import { pairUpApply } from './pairup';
+import { qrfAddressWord } from './qrf';
+import { CHAOS } from './destruction';
 import { WallCharge } from './wallcharge';
 import { WorkThings } from './workthings';
 import { DoorPath } from './doorpath';
@@ -186,13 +186,13 @@ import type { DialoguePick } from './dialogue';
 import { Sup, suppressionSummary } from './suppression';
 import { conditionSummary } from './condition';
 import { AimState, aimSummary } from './aim';
-import { Qrf, resetQrf, loadQrfTune } from './qrf';
+import { Qrf, resetQrf } from './qrf';
 import { openingStart } from './opening';
 import { Checkpoints } from './savestate';
 import { Sensors } from './sensors';
 import type { ProbeLike } from './sensors';
-import { Devices, loadDeviceTune, learnCode, DEVICE_TUNE_DEFAULTS } from './devices';
-import { Destruction, loadChaos } from './destruction';
+import { Devices, learnCode, DEVICE_TUNE_DEFAULTS } from './devices';
+import { Destruction } from './destruction';
 import './fixtureBreak';   // the look of a fixture breaking and hanging broken (picture only)
 import { coverfireReset } from './coverfire';
 import { doorForceReset } from './doorforce';
@@ -201,9 +201,9 @@ import { attachAir, airResend } from './airSim';
 import { AirDust } from './airDust';
 import { Moths } from './moths';
 import { WetGround } from './wetGround';
-import { GlassBreak, loadGlassBreak } from './glassbreak';
+import { GlassBreak } from './glassbreak';
 import { flatPanel, levelOver, stoodOver } from './levelfit';
-import { GlassShards, loadShards } from './shards';
+import { GlassShards } from './shards';
 import { kitFresh } from './kit';
 import type { BigKit } from './kit';
 import type { KitWorn } from './kitload';
@@ -774,15 +774,14 @@ export class Game {
     if (on) attachSnowBlast(this);   // (a blast over lying snow marks it: snowBlast.ts hears the destruction engine's feed — once an engine, asked each frame)
     const key = (on ? 1 : 0) | (tracks ? 2 : 0); if (key === this.snowLookWas) return;
     this.snowLookWas = key;
-    this.snowField = on ? (this.snowField ?? buildSnowField(this.level, { wind: WEATHER_PRESETS.snow.wind, roll: groundRayConfig.on ? groundRayConfig.roll : 0 })) : null;
+    this.snowField = on ? (this.snowField ?? buildSnowField(this.level, { wind: WEATHER_PRESETS.snow.wind })) : null;
     this.snowTracks = tracks && this.snowField ? (this.snowTracks ?? makeSnowTracks()) : null;
     this.engine.gbuffer?.setSnowField?.(this.snowField, snowCfgRows(this.snowField, this.snowTracks ? TRACK_RES : 0));
-    if (groundRayConfig.on) this.engine.world.setGroundField(packGroundField(this.snowField));   // (ground that rays can see, a trial: scene/groundField.ts — the look's page only)
     this.engine.gbuffer?.setSnowTracks?.(this.snowTracks);
   }
   /** once a frame, after everybody is posed: this frame's footfalls pressed into the snow, and what changed handed to the g-buffer */
   private stepSnowTracks(dt: number) {
-    const dug = this.snowField ? stepSnowDigs(this, dt) : null; if (dug) { this.engine.gbuffer?.setSnowFieldRect?.(this.snowField!, dug); if (groundRayConfig.on) this.engine.world.setGroundField(packGroundField(this.snowField)); }   // (a blast dug a hill out: snowBlast.ts)
+    const dug = this.snowField ? stepSnowDigs(this, dt) : null; if (dug) { this.engine.gbuffer?.setSnowFieldRect?.(this.snowField!, dug); }   // (a blast dug a hill out: snowBlast.ts)
     const T = this.snowTracks; if (!T || !this.snowField) return;
     updateSnowTracks(this, T, this.snowField, dt);
     if (SNOW_LOOK.marks) updateSnowMarks(this, T, this.snowField, dt);   // … and every thing that moved over the snow marks it (snowMarks.ts)
@@ -986,8 +985,6 @@ export class Game {
   recap: { lostLive: LostMan[]; allDown: boolean } = { lostLive: [], allDown: false };
   /** how the run went, said once it is over (verdict.ts): reads only — the end card's record */
   verdict!: Verdict;
-  /** the man a snatch level's team must take alive (snatch.ts): inert without the level's scenarios.snatch block */
-  snatch!: Snatch;
   /** a defuse mission's charges and their one clock (defuse.ts): an overlay on a room clear; inert on a level without a scenarios.defuse block */
   defuse!: Defuse;
   /** the room clear (roomclear.ts; ?roomclear / native --roomclear / __roomclear): the night breach on a structure of four held rooms, with per-room cleared state
@@ -1037,13 +1034,13 @@ export class Game {
     teams: true,                // sides for the AI (teams.ts / guards.ts spawnUnit · engage — the 'Breach' showcase's operatives clearing a room of hostiles): on by default because with no unit spawned nothing of it runs — the staff's foe is Sam by construction and every seeded QA run is byte for byte the game it was (tools/qa teams-identity); off = spawnUnit refuses, so no unit can ever exist: the kill switch, not an A/B
     needs: true,                // needs-driven patrol variation (needs.ts, STATUS E12 c): each man on nights carries two or three slow needs — coffee, a smoke, water, a stretch — that take him off his route for a fixed, telegraphed spell (watch check + glance 20 s out, said to his partner or the net at 12, neck rub + turn at 5, then the walk, the dwell, the walk back, 'right, where was I'); one man away at a time, calm floor only, broken off by anything that reaches him. Its numbers: NEEDS in needs.ts / Tab ▸ Sandbox ▸ needs rows (kept per machine with this switch). Off = the patrol exactly as it was (tools/qa needs-identity)
     tactics: true, flankWait: 6, loneWait: 8, doorDanger: 25, doorWait: 6,
-    chaos: 0.5,                 // DESTRUCTION (destruction.ts): 0 = the game byte for byte as it was; up to 1 = how readily sustained fire scatters paper, raises dust, knocks things off desks and drops ceiling tiles — every path capped whatever it says (kept per machine: loadChaos)
+    chaos: 0.5,                 // DESTRUCTION (destruction.ts): 0 = the game byte for byte as it was; up to 1 = how readily sustained fire scatters paper, raises dust, knocks things off desks and drops ceiling tiles — every path capped whatever it says
     wind: 1,                    // WIND (wind.ts): the master 0‥1 on every source of moving air — the vents, the storm outdoors, the gust through an open exterior door — that the particles and the smoke solver both take; 0 = still air, the game byte for byte as it was (kept per machine with the wind rows: loadWind; tools/qa wind-identity)
     moths: true,                // MOTHS (moths.ts): moths round the lit sodium lamps at night (kept with the wind rows)
-    glassBreak: true,           // GLASS BREAKING (glassbreak.ts): panes crack and come apart where the rounds went — on (under glass.ts GLASSFX, the one switch over all of it; the QA harness stands it off: src/host/standup.ts); kept per machine with its knobs (loadGlassBreak); the GPU side follows at boot (main.ts → the prelude const), so a change wants a page reload to show
-    glassShards: true,          // BROKEN GLASS AS SHARDS (shards.ts): what a released fragment becomes — plates + shard particles + landing sounds + litter underfoot; only ever acts while glass breaking is live, so with glassBreak off it changes nothing; off = the base's rigid shard boxes; kept per machine (loadShards)
+    glassBreak: true,           // GLASS BREAKING (glassbreak.ts): panes crack and come apart where the rounds went — on (under glass.ts GLASSFX, the one switch over all of it; the QA harness stands it off: src/host/standup.ts); the GPU side follows at boot (main.ts → the prelude const), so a change wants a page reload to show
+    glassShards: true,          // BROKEN GLASS AS SHARDS (shards.ts): what a released fragment becomes — plates + shard particles + landing sounds + litter underfoot; only ever acts while glass breaking is live, so with glassBreak off it changes nothing; off = the base's rigid shard boxes
     wallBreak: true,            // WALL BREAKING (wallbreak.ts): partitions holed / ported and cover chewed away under rounds and blasts — live only with THE ONE SWITCH on (destructionSwitch.ts) and chaos > 0
-    debrisImpulses: true,       // DESTRUCTION: what already lies about is kicked again by what happens next — a stun charge throws the settled leaves back up, a round beside them scoots them, a body / boot / shoved desk twitches them (destruction.ts impulses → the GPU particles + the debris pool); off = the lane before it, byte for byte (kept with chaos)   // pursuit tactics (tactics.ts, STATUS E12 a+b): two men on one fix flank it — a presser stops short at his last corner, a flanker comes round from ≥ 90° the other way, 'set' / 'go' on the net — a lone man on an armed intruder holds an angle and calls it in instead of charging, and a doorway a colleague went down in (or rounds came through) is a kill zone nobody walks into: paths go round it, else stack, call, wait for a second man, bang or slice the pie, cross fast. flankWait: the presser's patience at his corner; loneWait: the lone man's; doorDanger: how long a doorway stays a kill zone; doorWait: how long the man on the jamb waits for his second. The four are kept per machine (loadTactics); off = the chase exactly as it was (tools/qa tactics-identity)
+    debrisImpulses: true,       // DESTRUCTION: what already lies about is kicked again by what happens next — a stun charge throws the settled leaves back up, a round beside them scoots them, a body / boot / shoved desk twitches them (destruction.ts impulses → the GPU particles + the debris pool); off = the lane before it, byte for byte (kept with chaos)   // pursuit tactics (tactics.ts, STATUS E12 a+b): two men on one fix flank it — a presser stops short at his last corner, a flanker comes round from ≥ 90° the other way, 'set' / 'go' on the net — a lone man on an armed intruder holds an angle and calls it in instead of charging, and a doorway a colleague went down in (or rounds came through) is a kill zone nobody walks into: paths go round it, else stack, call, wait for a second man, bang or slice the pie, cross fast. flankWait: the presser's patience at his corner; loneWait: the lone man's; doorDanger: how long a doorway stays a kill zone; doorWait: how long the man on the jamb waits for his second. off = the chase exactly as it was (tools/qa tactics-identity)
     // the response to going loud (game/qrf.ts, Tab ▸ Sandbox ▸ QRF rows — remembered per machine): qrf = the response team comes at all; qrfEta = seconds from the request to
     // the stair door going (called on the radio at the request, at thirty and at ten); qrfSize = men in the element (2‥4, capped by the renderer's character budget);
     // perimeter = the second tier — the compound locked down round him — at all; perimeterEta = its telegraph; perimeterSize = men on the outside posts (2‥4, spawned
@@ -1057,7 +1054,7 @@ export class Game {
     // the shift: today's game byte for byte); civilianKillFails = a civilian killed by Sam's hand fails the mission there and then (off: it costs him forty points, a
     // 'civilian casualty' on the card and control's fury on the net — Chaos Theory fails some missions for it, this one prices it)
     civilians: true, civilianKillFails: false,
-    // bodies found by the LIGHT on them (guards.ts bodyInView / bodyLit — review A6.2, Chaos Theory's rule; Tab ▸ Sandbox row, remembered per machine with its numbers: loadBodyLight): a body in view
+    // bodies found by the LIGHT on them (guards.ts bodyInView / bodyLit — review A6.2, Chaos Theory's rule; : a body in view
     // is found only when the light where it lies reads high enough on the meter's own scale (or he is inside two metres of it), and not through a plume; off = range, cone and line alone, as before
     bodyLight: true,
     // the level-design devices (game/devices.ts, Tab ▸ Sandbox ▸ devices rows — remembered per machine): devices = cameras and tripwires sense at all (off = they are
@@ -1071,19 +1068,11 @@ export class Game {
     { const over = levelOver(level); if (over) throw new Error(over); }   // (levelfit.ts: a level the pools cannot hold is not loaded, said before anything of it is built)
     this.seats = seatsStand(this, opts.seats ?? 1); this.localSeat = this.seats[0];   // (seats.ts: before anything is built over a seat's view; one seat = the Game is its own seat's view and nothing below differs)
     const first = this.seats[0].view;   // (the first seat's view: this Game, in a game of one)
-    try { const v = parseFloat(localStorage.getItem('twopointsix.playerCrouch') ?? ''); if (isFinite(v) && v >= 0.3 && v <= 3) this.tune.playerCrouch = v; } catch {}   // the panel's crouch-speed slider is remembered per machine
-    loadQrfTune(this);   // …and so are the response team's knobs (qrf.ts: on/off, ETA, size, the perimeter tier's)
-    loadTactics(this.tune);   // the pursuit tactics' four knobs, kept per machine like the aim rows (tactics.ts)
-    leversFog(loadTeamFeel); fogFlags(); irFlags();           // …and the room fight's feel rules a player has changed in the panel (teamfeel.ts: before the squad's systems read them)
-    loadNeeds(this.tune);     // …and the needs' switch + fairness knobs (needs.ts)
-    loadChaos(this.tune);     // …and the destruction lane's chaos knob (destruction.ts)
-    loadWind(this.tune);      // …and the wind's master + rows (wind.ts; the moths' switch rides with it)
-    loadGlassFx(); loadGlassBreak(this.tune);   // …and the glass-breaking switch + knobs (glassbreak.ts)
-    loadShards(this.tune);       // …and the shards' (shards.ts)
-    loadDust();               // …and the dust puffs' emit / look table (particleFx.ts DUST / DUST_LOOK; the look goes onto the particle kind once the system exists, below)
-    loadDeviceTune(this);   // …and the devices' (devices.ts: on/off, the beams', the cameras' two thresholds, the cones)
-    loadCivTune(this);      // …and the civilians' (civilians.ts: on/off, whether a dead civilian fails the mission)
-    loadBodyLight(this.tune);   // …and the bodies-by-light switch with its bar (guards.ts)
+    qrfAddressWord(this);   // (?qrfsquad=0: qrf.ts)
+    leversFog(); fogFlags(); irFlags();           // (before the squad's systems read them)
+    this.tune.chaos = CHAOS.def;
+    loadWind(this.tune);      // this machine's wind (wind.ts, the Weather page's rows; the moths' switch rides with it)
+    loadCivTune(this);      // (?nocivilians: civilians.ts)
     // (the FN2000 is always in the kit now — no per-machine loadout memory; Game.fn2000 / setLoadout stay for the harness)
     this.col = new StaticCollision(level.boxes, levelNameOf(level));
     if (engine.gbuffer?.setWearMap) { const wm = buildWearMap(level, this.col.nav, lookConfig.longFoot > 0, lookConfig.walked > 0); engine.gbuffer.setWearMap(wm.data, wm.w, wm.h); }   // the detail layer's traffic map (render/wear.ts: the routes over the nav grid + the thresholds, the walls' feet) — the harness's engine stand-in has no g-buffer to hand it to
@@ -1181,6 +1170,7 @@ export class Game {
     engine.reach?.boot(level.doors.map(d => ({ hinge: d.hinge, closedDir: d.closedDir, width: d.width })), this.reachInterior);
     // doors: leaves are dynamic occluders for sight / sound / projectiles (collision layer)
     this.doors = new Doors(level.doors.map(d => ({ ...d, albedo: d.exterior ? [0.2, 0.22, 0.25] as Vec3 : undefined })), (e) => this.onDoorEvent(e), this.sim);
+    if (LOOK.on) paintLeaves(this.doors.list, engine.world.statics, leafRowOf(levelNameOf(level)));   // (a level's leaves wear its paint from their first moment: scene/leafPaint.ts)
     this.props.doorways = this.doors.list.map(d => ({ cx: d.frameCentre[0], cz: d.frameCentre[2], ux: Math.cos(d.def.closedDir), uz: Math.sin(d.def.closedDir), half: d.def.width / 2 - 0.02 }));   // (a door frame guides shoved furniture through: props.ts doorways — half the air between the frame's stops)
     nameDoors(level, dialogue.isOffice(level), this.doors.list);   // what a door with a shorthand id is CALLED, by the rooms it joins (doornames.ts; read only while the dialogue pass is on)
     this.doorDeals = dealSwings(level, this.doors, this.col.nav, this.col);   // the side each leaf opens into (doors.ts DOORWAY; doorswing.ts: into the room it serves) — geometry only, no dice
@@ -1208,7 +1198,7 @@ export class Game {
     { const n = level.mission.rack.index; this.rackTargets = this.targets.filter(t => t.name === `rack${n}_leds` || t.name === `rack${n}_glow`); }   // what goes dark when the drive comes out (level.ts "server room")
     this.destr = new Destruction(this);   // the destructible statics indexed by shape (paper stacks, screens + housings, desk clutter) — after the targets and devices exist: a lit screen dies through its target
     this.glassBreak = new GlassBreak(this);   // glass breaking (glassbreak.ts): attaches its cell-table / open-cell / walkable hooks to the world and the collision; its shards go into destr's debris pool — inert until tune.glassBreak
-    loadGlassPen(); this.col.glassPen = { live: () => glassPenLive(this), passes: (a, rd, panes, energy) => shotPasses(this, a, rd, panes, energy) };   // rounds through glass (glasspen.ts): the line of FIRE asks the round's own toll at each pane — behind GLASSPEN.on (off: shotBlocked is the solid walk it was)
+    this.col.glassPen = { live: () => glassPenLive(this), passes: (a, rd, panes, energy) => shotPasses(this, a, rd, panes, energy) };   // rounds through glass (glasspen.ts): the line of FIRE asks the round's own toll at each pane — behind GLASSPEN.on (off: shotBlocked is the solid walk it was)
     bootBars(this);   // a window's bar breaks from one round (winbars.ts): the line of fire's own question and the blasts' call list — nothing while WINBARS.on is off
     this.shards = new GlassShards(this);      // broken glass after it lets go (shards.ts): takes the debris pool's glass door (and the fracture model's release hook where there is one) — inert until glass breaking is live
     GLASSPEN_HOOKS.crossed = (g, x, who) => { g.shards.crossed(x, who); };   // a round THROUGH a sheet: the exit jet off its far face (shards.ts crossed; nothing unless the falling-glass model is live)
@@ -1223,7 +1213,6 @@ export class Game {
     this.verdict = new Verdict(this);           // the run's verdict (verdict.ts): reads only, said once at the run's end
     this.rails = new Rails(this);               // a tutorial mission's frame (rails.ts): inert unless the level's lesson carries a rails record
     this.lesson = new Lesson(this);             // a training lesson's steps (lesson.ts): inert on a level without a scenarios.lesson block
-    this.snatch = new Snatch(this);             // the man to take alive (snatch.ts): inert on a level without a scenarios.snatch block
     this.defuse = new Defuse(this);             // a defuse mission's charges (defuse.ts): inert on a level without a scenarios.defuse block
     this.nightBreach = new NightBreach(this);   // the night breach playtest (nightbreach.ts): inert until started
     this.roomClear = new RoomClearScenario(this);   // the room clear (roomclear.ts): the same playtest on a four-room structure — inert until started
@@ -1560,7 +1549,7 @@ export class Game {
   private menAll: Character[] = []; private menStatured = false; private menBare = false; private fogHeld: { dyn: Box[]; on: boolean } | null = null;
   /** A VIEWER'S PICTURE WITHOUT THE FOG OF WAR (replay/engineplay.ts's 'Fog' switch; only where `fogOfWar.viewer` was raised, so never in play): call right before
    *  a draw, BETWEEN two steps, and `fogBack()` right after it. With `want` the renderer is handed everybody — the men the fog leaves out after the men it draws —,
-   *  the frame's boxes as they stood before the fog cut them, what the left-out men carry, and no fog pass; the HUD's `hidden()` / `lastSeen()` answer for an open
+   *  the frame's boxes as they stood before the fog cut them, what the left-out men carry, and no fog pass; the HUD's `hidden()` and its marks answer for an open
    *  floor meanwhile. Nothing a step reads is written: `fogBack()` hands the CPU's rays the step's own list again (the cursor's ray walks the packed list); the
    *  skin instances and shadow proxies stay the lifted draw's until the next step or draw deals them again (the GPU's alone: no step reads them).
    *  `tube` (the replay's 'NV' switch; null = the run's own): the picture's night vision is the viewer's for this draw, so the INFRARED laser lines — boxes a step
@@ -1639,9 +1628,9 @@ export class Game {
     this.player.nearSel = i; pickHover(this); return true;
   }
   /** Esc, before the pause menu gets it (main.ts): the open selector backs out / a running sustained verb stops. True = used here, no menu this press. */
-  escape(): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.escape', this, []); if (__r !== RUST_PASS) return __r as any; } } return this.orders.escape() || launchCancel(this) || escapeInteract(this) || slotSetupShut(this); }   // (the squad's command menu backs out first: orders.ts)
+  escape(): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.escape', this, []); if (__r !== RUST_PASS) return __r as any; } } return this.orders.escape() || launchCancel(this) || escapeInteract(this); }   // (the squad's command menu backs out first: orders.ts)
   /** is there anything the back key would back out of right now (backkey.ts; asked by the page before Tab's trial choice gets the key) */
-  backable(): boolean { return !!this.orders.menu || !!this.player.launchHeld || backableInteract(this) || slotSetupOpen(this); }   // (…and the open setup of the gun in his hands: slotsetup.ts)
+  backable(): boolean { return !!this.orders.menu || !!this.player.launchHeld || backableInteract(this) || !!this.view.kit.setup; }   // (…and the open setup of the gun in his hands)
   /** The light meter's mapping, irradiance (W/m², max over the axes as the probe reports it) → 0‥1 visibility: 0 at or below visFloor, 1 by visFloor·e^(1/visSlope).
    *  One mapping for the meter on Sam and for a searcher judging how dark a hiding place is (guards.ts): dark for the one is dark for the other. */
   visibilityOf(E: number): number { return clamp(this.tune.visSlope * Math.log(Math.max(E, 1e-5) / this.tune.visFloor), 0, 1); }

@@ -913,7 +913,7 @@ pub fn rescue_flow_line(g: &crate::game::Game) -> String {
 }
 
 /// (rescueflow.ts RescueFlow.summary)
-pub fn rescue_flow_summary(g: &mut crate::game::Game) -> String {
+pub fn rescue_flow_summary(g: &crate::game::Game) -> String {
     if g.rescue.flow.known.is_empty() {
         return String::from("flow: not staged");
     }

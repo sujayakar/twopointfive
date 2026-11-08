@@ -81,6 +81,7 @@ export async function drawOrderCheck(): Promise<boolean> {
   { // THE ORDER IS MADE AGAIN WHEN IT SHOULD BE, AND ONLY THEN. A tall box that waits for a low earlier one (office): each change to the low box that frees the tall
     // one must show in the list the same frame, as an order made fresh would have it; paint and the flags the order does not read must make nothing
     const W = W0, w = W.game.engine.world, B = w.all as any[], ff: string[] = [], did: string[] = []; const read = () => { const n = w.statics.length as number; return Array.from((w.visible as Uint32Array).subarray(0, w.visibleCount)).filter(v => v < n); };
+    W.step(DT);   // (the office game was stood first and the other levels stepped since: its first step takes the whole state again, which would undo a write made before it)
     if (BRK) { w.drawRankN = -1; W.step(DT); }   // (the swap above is forgotten: these lines ask about making the order again, not about the swap)
     if (!pair0) ff.push('the office has no tall box waiting for a low earlier one to ask with');
     else { const [lo, hi] = pair0, b = B[lo], keep = { c: b.c, h: b.h, yaw: b.yaw, rot: b.rot, flags: b.flags, cutHeight: b.cutHeight }; const base = read(), at0 = base.indexOf(hi);

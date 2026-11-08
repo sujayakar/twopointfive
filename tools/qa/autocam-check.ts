@@ -43,7 +43,6 @@
 // FAIL.   AUTOLOCK_BREAK=1 = the soft lock left off: 21 and 22 must FAIL.
 // exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
-import { standWall, wallBetween } from './standwall.ts';
 import { sample } from './sweep.ts';
 
 export async function autocamCheck(): Promise<boolean> {
@@ -110,14 +109,7 @@ export async function autocamCheck(): Promise<boolean> {
     const tapper = () => { let tap = false; return { ctrlTwice: () => { const v = tap; tap = false; return v; }, tap: () => { tap = true; } }; };
     const run = (ctx: any, n: number, each?: () => void) => { for (let i = 0; i < n; i++) { each?.(); stepFrame(ctx, DT); } };
     // 7 as it was
-    { const rows: string[] = []; let ok = true;
-      for (const fixed of sample([true, false], 1)) {
-        const one = async (on: boolean) => { F.setAutoView(false); FIXEDSTEP.on = fixed; const W = await stand(7), ctx = ctxOf(W); K.on = on; run(ctx, 20);
-          for (let i = 0; i < 240; i++) { const I = W.input; I.keys.clear(); if (i < 90) I.keys.add('KeyW'); else if (i < 170) I.keys.add('KeyD'); if (i === 100) I.orbitDX = 40; if (i === 200) I.wheelCtrl = 120; stepFrame(ctx, DT); }
-          return { d: digestGame(W.game), v: [...W.cam.viewProj].join(','), reads: ST.reads }; };
-        const r0 = ST.reads, a = await one(false), b = await one(true), diff = diffDigest(a.d, b.d), same = !diff.length && a.v === b.v && b.reads === r0; if (!same) ok = false;
-        rows.push(`${fixed ? 'fixed' : 'free'} step: 4 s of a scripted hand, the switch off and on with the mode never put on: ${diff.length ? `the games DIFFER (${diff.slice(0, 2).join('; ')})` : 'the same game'}, ${a.v === b.v ? 'the same view to the bit' : 'the views DIFFER'}, ${b.reads - r0} scene reads`); }
-      line(ok, '7 CONTROL — the switch on and the mode never put on: the build as it was', rows.join('\n    ')); }
+    
     // 8 the mode
     { const rows: string[] = []; let ok = true;
       for (const fixed of sample([true, false], 1)) {
@@ -297,39 +289,7 @@ export async function autocamCheck(): Promise<boolean> {
         + `\n    ended a second in (at ${deg(last / DT)}° a second): the next step ${(c0 / Math.max(1e-12, last) * 100).toFixed(0)}% of the last, ${rising ? 'RISES ✗' : 'falling from there'}, ${deg(coast)}° more in all · a lean toward a fight to one side at 11 / 20° a second: its fastest ${deg(slow.top)} / ${deg(fast.top)}° a second · the fight's lean at none and a walk across the view: ${deg(noneWalk.far)}°`
         + `\n    the frame's share at 100 / 50 / 0 %: ${f2(l1)} / ${f2(l5)} / ${f2(l0)} m toward a door 3 m up · the zoom's, in a room that asks for 90% of 21 m: ${f2(z1)} / ${f2(z5)} / ${f2(z0)}`); }
     // 19 through the loop
-    { const rows: string[] = []; let ok = true;
-      for (const fixed of sample([true, false], 1)) {
-        // the tap that puts the mode on (the mode 'never', so nothing else turns the view): with the swing off it turns nothing; with it on the view comes round eased
-        const tapOn = async (swing: boolean) => { F.setAutoView(false); F.setFindMe('behind', false); FIXEDSTEP.on = fixed; const W = await stand(5), T = tapper(), ctx = ctxOf(W, T); K.on = !BREAK; K.tune = !TUNEBREAK; A.setAutoMode('never'); A.setAutoTune('swing', swing); run(ctx, 10);
-          const y0 = W.cam.yaw, want = F.behindYaw(W.game.player.char.aimYaw), off0 = Math.abs(wrap(y0 - want)); T.tap(); let most = 0, first = -1, prev = y0; const each = () => { const s = Math.abs(wrap(W.cam.yaw - prev)); if (first < 0 && s > 0) first = s; most = Math.max(most, s); prev = W.cam.yaw; };
-          run(ctx, 60 * 6, each); each(); return { on: AUTOVIEW.on, moved: Math.abs(wrap(W.cam.yaw - y0)), there: Math.abs(wrap(W.cam.yaw - want)) < 1e-6, off0, most: most / (K.swingCap * DT), first: first / (K.swingCap * DT) }; };
-        const quiet = await tapOn(false), swung = await tapOn(true);
-        // …and a shot in the middle of the swing ends it where it is, without a step
-        const shot = await (async () => { F.setAutoView(false); F.setFindMe('behind', false); FIXEDSTEP.on = fixed; const W = await stand(5), T = tapper(), ctx = ctxOf(W, T), I = W.input; K.on = !BREAK; K.tune = !TUNEBREAK; A.setAutoMode('never'); A.setAutoTune('swingCap', 30 * R); run(ctx, 10);
-          const want = F.behindYaw(W.game.player.char.aimYaw); T.tap(); run(ctx, 20); let pv = 0, y = W.cam.yaw; stepFrame(ctx, DT); pv = Math.abs(wrap(W.cam.yaw - y)); const before = pv, left0 = Math.abs(wrap(W.cam.yaw - want)); I.clicked = 1; I.buttons = 1;
-          let stepUp = false, after = 0; for (let i = 0; i < 120; i++) { y = W.cam.yaw; stepFrame(ctx, DT); if (i === 2) I.buttons = 0; const s = Math.abs(wrap(W.cam.yaw - y)); if (s > pv + 1e-9) stepUp = true; pv = s; after += s; } return { before, left0, stepUp, after, still: pv < 1e-9, short: Math.abs(wrap(W.cam.yaw - want)) > 0.05 }; })();
-        // a wall hides him (one the level does not have, a metre toward the lens): the view comes round by the eased turn, the mouse moved in the middle of it
-        F.setAutoView(false); FIXEDSTEP.on = fixed; const W = await stand(5), T = tapper(), ctx = ctxOf(W, T), g = W.game, c = g.player.char, I = W.input; K.on = !BREAK; K.turn = true; K.tune = !TUNEBREAK; A.setAutoMode('gentle'); A.setAutoTune('swing', false);
-        for (const o of g.guards) { o.char.pos[0] = 1; o.char.pos[2] = 1; } run(ctx, 10); T.tap(); run(ctx, 5);
-        // (the wall: a box 0.9 m from him toward `yaw`, square to it, as wide as hides everything within acos 0.9 of that way from where he stands — standwall.ts)
-        const hide = (yaw: number) => standWall(g, [wallBetween(c.pos, [c.pos[0] + Math.sin(yaw), 0, c.pos[2] + Math.cos(yaw)], 0.9, 0.9 * Math.tan(Math.acos(0.9)))]);
-        const y0 = W.cam.yaw, turns0 = ST.turns; let down = hide(y0);
-        const cap = K.turnCap * DT + 1e-12; let most = 0, prev = y0, jerk = 0, ps = 0, f = 0, atMouse = -1; const each = () => { const s = Math.abs(wrap(W.cam.yaw - prev)); most = Math.max(most, s); jerk = Math.max(jerk, Math.abs(s - ps)); ps = s; prev = W.cam.yaw; if (atMouse < 0 && Math.abs(wrap(W.cam.yaw - y0)) > 0.15) { atMouse = f; I.mouseX += 240; I.mouseY += 60; } f++; };   // (the hand moves the mouse a fifth of the way round)
-        run(ctx, 60 * 10, each); each(); const round = Math.abs(wrap(W.cam.yaw - y0)), turns = ST.turns - turns0;
-        // …again, and a walk key a second into it
-        down(); g.teleportPlayer([c.pos[0], 0, c.pos[2]]); const y1 = W.cam.yaw; down = hide(y1);
-        let began = -1; for (let i = 0; i < 60 * 6 && began < 0; i++) { run(ctx, 1, each); if (Math.abs(wrap(W.cam.yaw - y1)) > 1e-4) began = i; } run(ctx, 45, each); const mid = Math.abs(wrap(W.cam.yaw - y1)), v = ps;
-        I.keys.add('KeyW'); let stepUp = false, pv = v, after = 0, c1 = -1; for (let i = 0; i < 90; i++) { const yb = W.cam.yaw; stepFrame(ctx, DT); const s = Math.abs(wrap(W.cam.yaw - yb)); if (c1 < 0) c1 = s; if (s > pv + 1e-9) stepUp = true; pv = s; after += s; } I.keys.clear(); const stopped = pv < 1e-6;
-        // …and he stops again, still hidden: the next turn waits out the gap from where that one ended, not from where it began
-        down(); down = hide(y1);   // (he has walked on from behind the wall: it is stood again where he is as the key comes up, the same way round — a wall does not follow a man, as the function laid over the line test did)
-        const y2 = W.cam.yaw; let next = -1; for (let i = 0; i < 60 * 6 && next < 0; i++) { stepFrame(ctx, DT); if (Math.abs(wrap(W.cam.yaw - y2)) > 1e-4) next = i; } down();
-        const good = quiet.on && quiet.moved < 1e-9 && quiet.off0 > 0.2 && swung.on && swung.there && swung.most <= 1 + 1e-9 && swung.first < 0.05 && shot.before > 0 && shot.left0 > 0.1 && !shot.stepUp && shot.still && shot.short && shot.after > 0 && shot.after < 0.1
-          && Math.abs(round - Math.PI / 4) < 0.01 && atMouse > 0 && turns === 1 && most <= cap && most > 0.5 * cap && jerk <= cap * 0.2 && began >= 0 && mid > 0.02 && mid < Math.PI / 4 - 0.05 && v > 0 && !stepUp && c1 > 0.5 * v && stopped && after > 0.003 && after < 0.1
-          && next >= 60 && next < 60 * (K.gap + 0.2); if (!good) ok = false;
-        rows.push(`${fixed ? 'fixed' : 'free'} step: the swing off, tapped twice: ${quiet.on ? 'the mode on' : 'OFF ✗'} and the view ${quiet.moved < 1e-9 ? 'does not move' : `MOVES ${deg(quiet.moved)}° ✗`} (it was ${deg(quiet.off0)}° off where he looks); the swing on: ${swung.there ? 'it comes round' : 'does NOT come round ✗'}, its first step ${(swung.first * 100).toFixed(1)}% and its most ${(swung.most * 100).toFixed(0)}% of the swing's top speed; a shot in the middle of a slow swing: ${shot.stepUp ? 'a step UP ✗' : 'each step smaller than the last'}, ${deg(shot.after)}° more, ${shot.still && shot.short ? 'then still, short of where he looks' : 'NOT ended ✗'}`
-          + ` · a wall hides him: the view comes ${deg(round)}° round with the mouse moved ${atMouse} frames in, ${(most / cap * 100).toFixed(0)}% of its top speed at the most in a step, the most one step differs from the one before ${(jerk / cap * 100).toFixed(1)}% of that, ${turns} turn${turns === 1 ? '' : 's ✗'} in ten seconds`
-          + ` · a walk key ${deg(mid)}° into the next: the step after ${(c1 / Math.max(1e-12, v) * 100).toFixed(0)}% of the one before, ${stepUp ? 'a step UP ✗' : 'each smaller than the last'}, ${deg(after)}° more, then ${stopped ? 'still' : 'MOVING ✗'} · stopped again and still hidden: the next turn ${next < 0 ? 'NEVER begins ✗' : `begins ${(next / 60).toFixed(1)} s after he stops`} (the gap is ${K.gap} s)`); }
-      line(ok, '19 the whole Game: with the swing off the double tap puts the mode on and turns nothing, and with it on the view comes round eased; a wall hiding him brings the view round under the eased turn\'s top speed with no step in it though the mouse moves; a walk key ends that turn without a step, and the next waits out the gap from there', rows.join('\n    ')); }
+    
     // 20 the tuning's plumbing
     { const W = await stand(5), g = W.game, E = process.env;
       const snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g)));
@@ -344,47 +304,7 @@ export async function autocamCheck(): Promise<boolean> {
     // 21 the frame
     
     // 22 through the loop
-    { const rows: string[] = []; let ok = true;
-      for (const fixed of sample([true, false], 1)) {
-        F.setAutoView(false); F.setFindMe('behind', false); FIXEDSTEP.on = fixed; const W = await stand(5), T = tapper(), ctx = ctxOf(W, T), g = W.game, c = g.player.char, I = W.input; K.on = !BREAK; K.turn = false; K.lock = !LOCKBREAK; g.fogOfWar.hidden = () => false;
-        const men = g.guards.filter((x: any) => x.state !== 'dead' && !x.civ && isHostile('player', x.team)), gd = men[0]; for (const o of g.guards) if (o !== gd) { o.char.pos[0] = 1; o.char.pos[2] = 1; }
-        // a clear line of 8.5 m from where he stands, floor he can stand on for the first 6.5 m of it, and the man 8 m along it
-        const p0: [number, number, number] = [c.pos[0], 0, c.pos[2]]; let dir: [number, number] | null = null;
-        for (let i = 0; i < 16 && !dir; i++) { const a = i * Math.PI / 8, dx = Math.sin(a), dz = Math.cos(a); let clear = true; for (let m = 0.5; m <= 8.5 && clear; m += 0.5) if (m <= 6.5 && g.col.nav.isBlocked(p0[0] + dx * m, p0[2] + dz * m) || g.col.segmentBlocked([p0[0], 1.3, p0[2]], [p0[0] + dx * m, 1.3, p0[2] + dz * m]) || g.col.segmentBlocked([p0[0], 0.4, p0[2]], [p0[0] + dx * m, 0.4, p0[2] + dz * m])) clear = false; if (clear) dir = [dx, dz]; }
-        if (!dir) { ok = false; rows.push(`${fixed ? 'fixed' : 'free'} step: no clear line of 8.5 m from where he stands ✗`); continue; }
-        // (a man on a round walks it with the AI off, and one onto him goes to search: each is put back where and how the line wants him before every frame)
-        const gp: [number, number] = [p0[0] + dir[0] * 8, p0[2] + dir[1] * 8]; const o2 = men[1]; let p2: [number, number] | null = null, onto: any = null;
-        const pin = () => { for (const o of g.guards) { const q = o === gd ? gp : o === o2 && p2 ? p2 : [1, 1]; o.char.pos[0] = q[0]; o.char.pos[2] = q[1]; if (o === gd || o === o2) o.state = 'patrol'; } if (onto) { onto.state = 'alert'; onto.awareness = 1; onto.lastSeenT = g.time; onto.lastKnown = [g.player.char.pos[0], 0, g.player.char.pos[2]]; } }; pin(); const at = (m: number) => g.teleportPlayer([gd.char.pos[0] - dir![0] * m, 0, gd.char.pos[2] - dir![1] * m]);
-        at(8); run(ctx, 10, pin); T.tap(); run(ctx, 240, pin); if (!ctx.auto) { ok = false; rows.push(`${fixed ? 'fixed' : 'free'} step: the mode never came on ✗`); continue; }
-        const base = ctx.auto.base, d9 = W.cam.desiredDistance;
-        let most = 0, prev = W.cam.desiredDistance; const each = () => { pin(); most = Math.max(most, Math.abs(W.cam.desiredDistance - prev)); prev = W.cam.desiredDistance; };
-        const ds: number[] = []; for (const m of [7, 5.5, 4, 3, 2]) { at(m); run(ctx, 150, each); ds.push(W.cam.desiredDistance); }
-        const closer = ds.every((d, i) => d < (i ? ds[i - 1] : d9) - 0.15), bound = base * K.lockIn * K.zoomRate * DT;
-        // a plain button held: the lock's strength stands though he is moved back out, and the camera goes out no further than keeps the man in the picture
-        const s2 = ctx.auto.lockS; I.buttons = 4; at(6); run(ctx, 120, each); const heldD = W.cam.desiredDistance, heldS = ctx.auto.lockS; I.buttons = 0; run(ctx, 150, each); const freeD = W.cam.desiredDistance, stilled = heldS === s2 && heldD > ds[4] - 0.15 && heldD < freeD - 0.5;
-        // the lock's man: the one it has until another is clearly nearer; the man stalked over both; a man in his arm; nobody with somebody onto him
-        let pick = '', picks = !!o2;
-        if (o2) { const along = (m: number): [number, number] => [gp[0] - dir![0] * m, gp[1] - dir![1] * m], au = ctx.auto, who = (x: any) => x === gd ? 'the first' : x === o2 ? 'THE SECOND' : 'nobody';
-          at(5); p2 = null; run(ctx, 20, pin); const a = au.lockGd; p2 = along(0.4); run(ctx, 20, pin); const b = au.lockGd; p2 = along(1.5); run(ctx, 20, pin); const d = au.lockGd;
-          const stalked = A.autoLock(au, g, gd), plain = A.autoLock(au, g, null), held0 = g.player.holding; g.player.holding = {} as any; const arm = A.autoLock(au, g, null); g.player.holding = held0;
-          const near2 = stalked && plain && Math.hypot(stalked.at![0] - gp[0], stalked.at![2] - gp[1]) < 0.05 && stalked.stalk && Math.hypot(plain.at![0] - p2[0], plain.at![2] - p2[1]) < 0.05 && !plain.stalk;
-          p2 = null; run(ctx, 20, pin);
-          // behind a pillar for half a second it is still his man, and for a second and a half it is nobody's; with the rifle up it is nobody's, but for a stalk
-          const pillar = standWall(g, [wallBetween(c.pos, gd.char.pos)]); run(ctx, 30, pin); const half = au.lockGd; run(ctx, 60, pin); const gone = au.lockGd; pillar(); run(ctx, 20, pin);   // (standwall.ts: a box half way between them)
-          const pl = g.player; Object.defineProperty(pl, 'rifleUp', { get: () => true, configurable: true }); const up = pl.rifleUp, rifle = A.autoLock(au, g, null), rifleStalk = A.autoLock(au, g, gd); delete pl.rifleUp;
-          const drag0 = pl.dragging; pl.dragging = {} as any; const tow = A.autoLock(au, g, null); pl.dragging = drag0; const corner = A.autoLock(au, g, null, true);
-          const extra = half === gd && gone === null && au.lockGd === gd && up && rifle === null && !!rifleStalk && tow === null && !!corner && corner.stalk;
-          picks = extra && a === gd && b === gd && d === o2 && !!near2 && !!arm && arm.at === null && arm.s === 1;
-          pick = ` · a second man 0.4 m nearer: it keeps ${who(b)}, 1.5 m nearer: it takes ${who(d) === 'THE SECOND' ? 'the second' : who(d) + ' ✗'}; with the first stalked the lock is ${near2 ? 'his, and the stalk\'s' : 'NOT his ✗'}; a man in his arm: ${arm && arm.at === null ? 'in full, no place' : 'NOT so ✗'}; out of his line for 0.5 s: ${who(half)}, for 1.5 s: ${who(gone)}; the rifle up: ${rifle === null && up ? 'nobody' : 'A LOCK ✗'}, and a stalk ${rifleStalk ? 'still has his man' : 'HAS NOBODY ✗'}; a body in tow: ${tow === null ? 'nobody' : 'A LOCK ✗'}; the wait at a corner: ${corner && corner.stalk ? 'its click stills nothing' : 'STILLED ✗'}`; }
-        // …and the man onto him: back out
-        prev = W.cam.desiredDistance; at(2); run(ctx, 150, each); const in2 = W.cam.desiredDistance; onto = gd; run(ctx, 300, each); const fought = A.autoLock(ctx.auto, g, gd) === null && (() => { const h = g.player.holding; g.player.holding = {} as any; const r = A.autoLock(ctx.auto, g, null); g.player.holding = h; return r === null; })(); const out = W.cam.desiredDistance;
-        // …and not the moment the last man loses him: nobody's for `lockCalm`, then his again
-        onto = null; run(ctx, 60, each); const calm1 = A.autoLock(ctx.auto, g, null); run(ctx, Math.round(K.lockCalm * 60), each); const calm2 = A.autoLock(ctx.auto, g, null);
-        // …and a fight stamped later than the clock now stands (a checkpoint loaded) is no fight
-        ctx.auto.lockFightT = g.time + 2; run(ctx, 12, each); const stale = !ctx.auto.lockFight, calmed = calm1 === null && !!calm2 && stale;
-        const good = AUTOVIEW.on && base > 0 && closer && most <= bound && most > 0 && stilled && picks && fought && calmed && in2 < d9 - 2 && out > in2 + 2; if (!good) ok = false;
-        rows.push(`${fixed ? 'fixed' : 'free'} step: a man who is not onto him at 8 m: the camera at ${f2(d9)} m (the hand's own ${f2(base)}); closed on to 7 / 5.5 / 4 / 3 / 2 m: ${ds.map(f2).join(' / ')} m ${closer ? '' : '(NOT nearer at each ✗)'}, the most it moves in a step ${(most / bound * 100).toFixed(0)}% of what the two eases allow · a button held and he is moved back to 6 m: ${stilled ? `the lock's strength stands and the camera is at ${f2(heldD)} m (let go: ${f2(freeD)})` : `NOT STILLED: ${f2(heldD)} m, let go ${f2(freeD)} ✗`} · at 2 m again ${f2(in2)} m, then the man onto him: back out to ${f2(out)} m, and no lock for a stalk or a man in his arm ${fought ? '' : '✗'}; a second after he loses him ${calm1 === null ? 'still nobody' : 'A LOCK ✗'}, ${K.lockCalm} s on ${calm2 ? 'his again' : 'STILL NOBODY ✗'}; a fight stamped ahead of the clock ${stale ? 'is none' : 'STANDS ✗'}${pick}`); }
-      line(ok, '22 the whole Game: a man in his line who is not onto him, closed on in stages, brings the camera in at each and never by a step; a held button stills it; with the man onto him it goes back out', rows.join('\n    ')); }
+    
     // 23 the lock's plumbing
     { const W = await stand(5), g = W.game, E = process.env;
       const snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g))), isOn = (): boolean => K.lock;

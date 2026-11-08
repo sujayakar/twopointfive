@@ -39,7 +39,7 @@ const { SNOWBLAST: BLAST0 } = await import(`${ROOT}/src/game/snowBlast.ts`);
 const { SNOWBREATH: BREATH0, BREATHSTEAM: STEAM0 } = await import(`${ROOT}/src/game/snowBreath.ts`);
 const { SNOWFX: FX0, SNOWWISPS: WISPS0, SNOWGRAINS: GRAINS0 } = await import(`${ROOT}/src/game/snowFx.ts`);
 
-const args = process.argv.slice(2), ticksAt = args.indexOf('--ticks'), TICKS = ticksAt >= 0 ? Number(args[ticksAt + 1]) : 240, LEVELS = args.filter((a, i) => !a.startsWith('--') && i !== ticksAt + 1);
+const args = process.argv.slice(2), ticksAt = args.indexOf('--ticks'), TICKS = ticksAt >= 0 ? Number(args[ticksAt + 1]) : 300, LEVELS = args.filter((a, i) => !a.startsWith('--') && i !== ticksAt + 1);
 const BREAK = process.env.WEATHER_BREAK === '1' ? 0.5 : 0, DT = 1 / 60;
 let fails = 0;
 const line = (ok: boolean, what: string, detail = '') => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${detail ? `\n    ${detail}` : ''}`); };

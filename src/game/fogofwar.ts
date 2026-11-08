@@ -86,7 +86,7 @@
 //      behind every teammate's back is not drawn, a leaf that moves behind them is remembered where it stood, the floor there is dimmed — the picture shows which
 //      flanks the team is watching. In the picture the wedge's edge comes in over FOG.coneSoftDeg (and the near field's over FOG.coneNearSoftM); the men are in
 //      or out on the cone's own line. Standard never raises the row: every eye all round, as it was.
-//   6b. ONLY THE PLAYER'S OWN EYES (FOG.own — an OPTION, off; the Tab row is kept per machine (teamfeel.ts), ?fogown / ?fogown=0 for a visit; his next lines:
+//   6b. ONLY THE PLAYER'S OWN EYES (FOG.own — an OPTION, off; ?fogown / ?fogown=0 for a visit; his next lines:
 //      'and maybe you should only see what your character does, not even your teammates' · 'we can make it an option and see how it feels'): the teammates are
 //      no eyes — what they see and he does not is out of the picture. On any level of difficulty (with the cone: his own cone alone; without: all round him
 //      alone). Hard ships with the team's eyes shared (the picture then shows the flanks nobody watches, which is the Door Kickers read).
@@ -125,11 +125,10 @@ import { placeName } from './dialogue';
 import type { Door } from './doors';
 import { type Box, BoxFlag, MKEY, copyBox } from '../scene/boxes';
 import { type FogFrame, makeFogFrame, FOG_EYES, FOG_LIGHTS } from '../render/fogofwar';
-import { WAND, WAND_STATS, wandEye } from './wand';
+import { WAND_STATS, wandEye } from './wand';
 import { mateWandEye, mateWandEyes } from './wandorder';
 import { peekEye } from './peeksight';
 import { STICKY_STATS, stickyEyes } from './stickycam';
-import { toldLastSeen } from './told';   // (called inside lastSeen() only)
 import { runnerNobody } from './runner';   // (asked inside a tick only: false with its switch off)
 import { gpuFx } from './particleFx';   // (called inside begin() / done() / hush() only)
 import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
@@ -157,7 +156,7 @@ export const FOG = {
   /** … and over this many metres outward from the near field's rim */
   coneNearSoftM: 0.6,
   /** ONLY THE PLAYER'S OWN EYES lift the fog: the teammates are no eyes (false = the team's sight is shared, as it was). An option on any level of difficulty:
-   *  the Tab row is kept per machine (teamfeel.ts), ?fogown / ?fogown=0 for a visit */
+   *  ?fogown / ?fogown=0 for a visit */
   own: false,
   /** THE TEAM CALLS WHAT THE CONE HIDES (only while `cone` or `own` is up): a teammate with eyes on an enemy the player's own eye has not, or with a step in his
    *  ears from a man nobody sees, says where — a bubble over him and a row on the radio strip. false = nobody says anything */
@@ -296,7 +295,7 @@ export const FOG = {
   /** … a lamp that would add less than this, as displayed, at a pixel is not traced (one under twice it is faded in: no line where a lamp's reach ends) */
   litCut: 0.006,
   /** WHERE HE WAS LAST SEEN: a living enemy who has gone out of the team's sight keeps a fading '?' on the spot he was last seen at for this many seconds
-   *  (the HUD's alone: lastSeen() below — nothing in the game reads it). 0 (as it ships) = the 'you're told' lever decides (told.ts: a few seconds on
+   *  (the HUD's alone: the Rust game's fog_of_war_last_seen, game.view.marks.seen — nothing in the game reads it). 0 (as it ships) = the 'you're told' lever decides (told.ts: a few seconds on
    *  Standard, longer on Guided, none on Bare or with that lever off, which is no mark, as it was); turned up, this is the seconds on every rung */
   lastSeen: 0,
 };
@@ -337,7 +336,7 @@ export const FOG_EYES_ON = 7, FOG_EYES_WAS = 5;
 /** FOG.eyes as the count the game uses, the one clamp the list, the address and the checks share: from five (as it was) to the room the renderer has
  *  (render/fogofwar.ts FOG_EYES); a row that is no number is five */
 export function fogEyeCount(v: number): number { return Number.isNaN(v) ? FOG_EYES_WAS : Math.max(FOG_EYES_WAS, Math.min(FOG_EYES, Math.floor(v))); }
-/** ?fogown / ?fogown=0 · ?fogcalls=0 — the two options for a visit, over the kept rows (the Game's constructor, right after teamfeel.ts has read those back;
+/** ?fogown / ?fogown=0 · ?fogcalls=0 — the two options for a visit, (the Game's constructor;
  *  no page — the harness — nothing) */
 export function fogFlags() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('fogFlags', undefined, []); if (__r !== RUST_PASS) return __r as any; } } try { const q = new URLSearchParams(location.search); if (q.has('fogown')) FOG.own = q.get('fogown') !== '0'; if (q.has('fogcalls')) FOG.calls = q.get('fogcalls') !== '0';
   if (q.has('fogflat')) { const v = parseFloat(q.get('fogflat') ?? ''); FOG.flat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_FLAT_ON; } if (q.has('foglit')) { const v = parseFloat(q.get('foglit') ?? ''); FOG.lit = Number.isFinite(v) ? Math.min(4, Math.max(0, v)) : FOG_LIT_ON; } if (q.has('fogfull')) FOG.full = q.get('fogfull') !== '0'; if (q.has('fogair')) FOG.air = q.get('fogair') !== '0'; if (q.has('fogours')) FOG.ours = q.get('fogours') !== '0'; if (q.has('fogthin')) FOG.thin = q.get('fogthin') !== '0'; if (q.has('fogkept')) FOG.kept = q.get('fogkept') !== '0'; if (q.has('fogfiled')) FOG.filed = q.get('fogfiled') !== '0'; if (q.has('fogtracks')) FOG.tracks = q.get('fogtracks') !== '0'; if (q.has('fogmates')) FOG.mates = q.get('fogmates') !== '0'; if (q.has('fogeyes')) { const v = parseInt(q.get('fogeyes') ?? '', 10); FOG.eyes = v === 0 ? FOG_EYES_WAS : !Number.isFinite(v) || v === 1 ? FOG_EYES_ON : fogEyeCount(v); } if (q.has('fogdesat')) { const v = parseFloat(q.get('fogdesat') ?? ''); FOG.desat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_DESAT_WAS; } if (q.has('fogedge')) { const v = parseFloat(q.get('fogedge') ?? ''); FOG.edge = Number.isFinite(v) ? Math.min(1.5, Math.max(0, v)) : FOG_EDGE_ON; } if (q.has('fogthings')) FOG.things = q.get('fogthings') !== '0'; if (q.has('squaddoors')) FOG.squadDoors = q.get('squaddoors') !== '0'; if (q.has('squadfire')) FOG.squadFire = q.get('squadfire') !== '0'; if (q.has('fogdesat')) FOG_PAGE.desat = FOG.desat; if (q.has('fogedge')) FOG_PAGE.edge = FOG.edge; if (q.has('fogair')) FOG_PAGE.air = FOG.air; if (q.has('fogkept')) FOG_PAGE.kept = FOG.kept; } catch { /* no page */ } }
@@ -464,7 +463,7 @@ export class FogOfWar {
   private frameNo = 0; private asked = new Map<string, number>(); private pending: { key: string; a: Vec3; b: Vec3 }[] = []; private turn = 0;
   /** A VIEWER'S PICTURE WITHOUT THE FOG (the engine replay's 'Fog' switch, replay/engineplay.ts → Game.fogLift / fogBack): `viewer` is raised by whoever may ask
    *  for one — never by play — and then each frame's list is also kept as it stood before the rules above cut it (`raw()`); `bared` is up only while that picture
-   *  and its HUD are drawn, between two steps, and makes `hidden()` / `lastSeen()` answer as if nobody were left out. No step reads either: a run is the same run. */
+   *  and its HUD are drawn, between two steps, and makes `hidden()` answer as if nobody were left out (the HUD takes the same word, overlay.ts `bare`). No step reads either: a run is the same run. */
   viewer = false; bared = false;
   /** fog frames left to put the picture under the page's own fog look (FOG_PAGE) — THE ENGINE REPLAY'S CALL, made as it takes the frame and after every table
    *  of the tape's it lays over FOG (replay/engineplay.ts): a few frames, so that word is the last; after them the Tab rows are the viewer's to move. Never
@@ -1008,18 +1007,6 @@ export class FogOfWar {
   }
   /** is the squad shooting at him: a teammate's aimed round went at him inside FOG.squadFireSecs (false while the rule is off) */
   firedOn(gd: Guard): boolean { if (!FOG.squadFire) return false; const t = this.firedAt.get(gd); return t !== undefined && this.fireClock - t < FOG.squadFireSecs; }
-  /** THE LAST SIGHTINGS (FOG.lastSeen seconds of them, or at 0 the seconds of told.ts's rung; none while both are 0 or the fog stands aside): each living enemy who is out of the picture now and was
-   *  in it that recently — where he stood when last seen, and how long ago. The HUD marks each with a '?' that fades (ui/overlay.ts); nobody's AI reads it. */
-  lastSeen(): { gd: Guard; at: Vec3; age: number; life: number }[] {
-    const secs = FOG.lastSeen > 0 ? FOG.lastSeen : toldLastSeen();   // (the debugger's row, turned up, is the mark's seconds whatever the lever says; at 0 the 'you're told' lever decides — told.ts: its seconds on Guided and Standard, 0 on Bare and with that lever off, which is FOG.lastSeen alone, as it was)
-    const out: { gd: Guard; at: Vec3; age: number; life: number }[] = []; if (!this.active || this.bared || !(secs > 0 || (WAND.on && WAND.markSecs > 0))) return out;
-    for (const gd of this.g.guards) { if (gd.state === 'dead' || !isHostile(gd.team, 'player') || !this.hiddenChars.has(gd.char)) continue;
-      const r = this.recs.get(gd); if (!r || !r.at) continue; const age = this.g.time - r.t;
-      // (a man the wand's lens had when he was last seen keeps his mark WAND.markSecs — what a look under a door leaves its owner with; anybody else FOG.lastSeen, as ever)
-      const life = WAND.on && r.wandT !== undefined && Math.abs(r.t - r.wandT) < 0.5 ? Math.max(secs, WAND.markSecs) : secs;
-      if (age >= 0 && age < life) out.push({ gd, at: r.at, age, life }); }
-    return out;
-  }
   /** left out of the picture this frame (what combat.ts handProps, the HUD's markers and the bubbles ask) — false for everybody while it is off */
   hidden(gd: Guard): boolean { if (RUST_SURFACE?.tapFiring('FogOfWar.hidden')) return RUST_SURFACE.tapAnswer() as any; return !this.bared && this.hiddenChars.size > 0 && this.hiddenChars.has(gd.char); }
   /** this frame's things that are the team's own rubble on its first way down · the ones the picture has since taken at rest (things()) */

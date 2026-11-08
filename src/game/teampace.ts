@@ -48,7 +48,7 @@ export const TEAMPACE = {
   /** a follower off his place closes at up to this × the player's walk (at 1 a file strings out behind a walking player: nobody closes on a man at his own pace) */
   followK: 1.3,
   /** followers run while the player sprints; `behindM`: how far off his place a man starts to */
-  follow: true, behindM: 1.0,
+  behindM: 1.0,
   /** a man who lost his man this long ago still moves at the fight's pace (s) */
   fightSecs: 2,
   /** … and a man a grenade took off his place goes back to it at the fight's pace, this long after he stopped running from it (s; 0 = at the walk) */

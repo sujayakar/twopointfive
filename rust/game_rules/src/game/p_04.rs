@@ -245,6 +245,7 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
         thickness: None,
     }).collect();
     g.doors = crate::doors::doors_new(g, &door_defs, &mut game_on_door_event);
+    crate::doors::paint_leaves(g);   // (a level's leaves wear its paint from their first moment: doors/paint.rs)
     let list: Vec<DoorId> = g.doors.list.clone();
     g.props.doorways = list.iter().map(|&d| {
         let (cc, dir, width) = (g.dr[d].frame_centre, g.dr[d].def.closed_dir, g.dr[d].def.width);
@@ -286,7 +287,6 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     g.quiet = crate::quiet::quiet_mission_new(g);
     g.rails = crate::rails::rails_new(g);
     g.lesson = crate::lesson::lesson_new(g);
-    g.snatch = crate::snatch::snatch_new(g);
     g.defuse = crate::defuse::defuse_new(g);
     g.night_breach = crate::nightbreach::night_breach_new(g);
     g.room_clear = crate::roomclear::room_clear_scenario_new(g);

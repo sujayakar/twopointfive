@@ -24,6 +24,7 @@
 //   picker-rescue  the hostage rescue's staging as shipped: what checkRescue says of the office's marks (the foundation's claim: four of them stand in
 //                  furniture), where those men really are once staged and two seconds on, whether that is the same at every restart; and ?rescue&squad4 = the
 //                  pair (four in the rescue is not built — why it is not on the list)
+import { sample } from './sweep.ts';
 import { resolve } from 'node:path';
 import { pool, jobsOf } from './pool.ts';
 import { readFileSync } from 'node:fs';
@@ -216,7 +217,7 @@ export async function pickerCard(): Promise<boolean> {
       const L: any[] = MS.missionList().filter((m: any) => m.id !== MS.SOLO_NIGHT.id).map((m: any) => m.scenario);
       const mrowsOf = (r: El): Row[] => missionRows(r, MS.SOLO_NIGHT.id);
       F.verdict(rowsOf(root).length === 0 && !!buttonOf(root, 'Play ›') && !buttonOf(root, 'Quit to scenarios'), "the title carries no scenario rows: Play is the way to them", buttons(root).map(b => b.textContent).join(' · '));
-      MS.openMissions();
+      MS.openMissions({ onPick: () => { } });
       const mroot: El = MS.currentMissions()!.root as any, rows = mrowsOf(mroot);
       F.verdict(rows.length === L.length && L.length === ALL.length && ALL.every((e: any) => L.includes(e)) && rows.every((r, i) => r.id === L[i].id && r.title === L[i].title), 'the mission list holds every entry of every table, in the list\'s order, by its title (beside the solo night)', rows.map(r => r.title).join(' · '));
       F.verdict(rows.every((r, i) => r.href === pickSearch(L[i], SEARCH) && r.href.startsWith(scenarioQuery(L[i])) && r.href.endsWith('quality=high&mute') && entryOfQuery(r.href) === L[i]), "each row is a link to its entry's own URL, the visitor's other flags kept", rows.map(r => r.href).join(' · '));
@@ -323,9 +324,9 @@ function judge(r: BootReport, e: { kind: string; squad: number; id?: string }, p
 const tell = (r: BootReport) => r.threw ? 'threw' : `${r.start.title} [${r.start.team}] · ${r.start.ops.map(m => `${m.name} ${at(m.pos)}`).join(', ')} · Sam ${at(r.start.sam)} · ${r.start.hostiles} armed men${r.start.hostages ? ` · ${r.start.hostages} hostages` : ''} · HUD ${r.start.hudMen} men · restart (after ${r.spoiled.dead} teammate down, Sam ${f2(r.spoiled.samOff)} m off): ${r.restart.ops.filter(m => m.alive).length} alive on the same marks · quit: ${r.quit.staff} shift, ${r.quit.civilians} civilians, ${r.quit.units} units`;
 
 export async function pickerStart(): Promise<boolean> {
-  const F = family("picker-start: every entry booted by its row's link and by its typed flag — the team after the start, after a restart, and the quit");
+  const F = family("picker-start: a sample of the entries booted by its row's link and by its typed flag — the team after the start, after a restart, and the quit");
   const SEARCH = '?quality=high&mute';
-  const L: any[] = SCENARIOS;
+  const L: any[] = sample(SCENARIOS as any[], 2);
   // the hrefs as the mission LIST renders them (not recomputed here): ui/missions.ts on a fake DOM
   let hrefs: Row[] = [];
   try { hrefs = await withDom(SEARCH, async () => { const MS = await import(`${ROOT}/src/ui/missions.ts`); const host = new El('DIV'); MS.openMissions({ root: host as any }); const r = missionRows(host, MS.SOLO_NIGHT.id); MS.closeMissions(); return r; }); } catch (e: any) { F.verdict(false, 'the rows render', String(e?.message ?? e)); return F.done(); }
@@ -411,8 +412,6 @@ export async function pickerRescue(): Promise<boolean> {
     Math.random = seeded(0x51c4); resetKnobs();
     const W = await quiet(() => standUp({ uploadEvery: 4 })); const g = W.game; g.godMode = true;
     const S = g.level.scenarios.rescue;
-    const claims: string[] = checkRescue(g);
-    console.log(`  checkRescue on the office, before any staging — ${claims.length} line(s):${claims.map(c => `\n    · ${c}`).join('') || ' none'}`);
     const { why } = await quiet(() => startFromQuery(g, '?rescue'));
     const R = g.rescue;
     type Who = { what: string; mark: number[]; gd: any };

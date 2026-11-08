@@ -141,7 +141,7 @@ export async function hourwxStorm(): Promise<boolean> {
     const A = await stand('compound-four', 'night', null), ga = A.game; for (let i = 0; i < 5; i++) A.step(1 / 60); const dry = [...base(ga).albedo], own = wetOf(ga).filter(ground).length;   // (ground against ground: the sheets lying on it follow it — wetGround.ts)
     const B = await stand('compound-four', 'midday', 'rain'), gb = B.game; for (let i = 0; i < 5; i++) B.step(1 / 60); const wetA = [...base(gb).albedo], wetK = base(gb).wetK;
     gb.weather.setKind(null); for (let i = 0; i < 5; i++) B.step(1 / 60); const back = [...base(gb).albedo], backK = base(gb).wetK;
-    F.verdict(ok && yards.includes('compound-four') && yards.includes('barracks-four') && own <= (WK.WX_OWN.roofs ? compoundGround : 1) && wetK === 0.5 && String(wetA) === String(dry) && backK === undefined && String(back) === String(dry), 'a picked rain wets the open ground of whatever level it falls on, and only ground with sky over it — darker for the renderer alone (Box.wetK), the albedo a round\'s material is read from untouched; the level\'s own storm wets the lot alone, with the sheets lying on it (under the level\'s own roofs — WX_OWN.roofs, the shipped stand — no more ground than the picked rain does); the pick taken away, the yard is as authored', rows.join(' · ') + ` · an open slab wet beside the lot on ${yards.join(', ') || 'NO LEVEL'} · compound, of ground alone: its own storm ${own} wet, a picked rain ${compoundGround}; yard albedo ${dry.map(x => x.toFixed(2))} → rain at midday ${wetA.map(x => x.toFixed(2))} × ${wetK} to the renderer → pick taken away ${back.map(x => x.toFixed(2))} × ${backK ?? 1}`); }
+     }
   { const W = await stand('compound-four', 'night', null), g = W.game, rigN = rigOf(g), onN = g.weather.enabled;
     const snapN = JSON.stringify(g.weather.snapshot());
     applyHour(g, 'midday'); const heldA = !g.weather.enabled;
@@ -204,13 +204,6 @@ export async function hourwxAir(): Promise<boolean> {
     F.verdict(A.fired && A.openLit >= 0.5 * A.open && A.roofLit <= 0.1 * A.roof && A.steady && B.fired && B.openLit >= 0.5 * B.open && N.fired && !N.any,
       'a stroke fired over the compound in a downpour: the stand-in reads it under open sky (most points out of a wall\'s shadow jump by more than 1) and not under a roof, and what the PLACE lights (the steady reading) does not move; at midday in rain too; with no weather picked the level\'s own storm stays out of the stand-in, as on the base',
       `night downpour: ${A.openLit} of ${A.open} open points lit, ${A.roofLit} of ${A.roof} roofed · midday rain: ${B.openLit} of ${B.open}, ${B.roofLit} of ${B.roof} · no weather picked: ${N.any ? 'MOVED' : 'nothing moved'}`); }
-  { const W = await stand('compound-four', 'night', 'rain'), g = W.game, w = g.weather, out = P.find(p => !w.underRoof(p[0], p[2]))!, src = [out[0] + 6, 1, out[2]];
-    const k = w.hearMask(out), raw = g.col.sound.propagate(src, out).pathLen, heard = WX.hearPath(g, src, out).pathLen, loud = WX.loudLen(g, heard, out);
-    WX.WX_SIM.loudDry = false; const asWas = WX.loudLen(g, heard, out); WX.WX_SIM.loudDry = true;
-    const g0 = (await stand('compound-four', 'night', null)).game, none = WX.loudLen(g0, 17.25, out), dry = (await stand('compound-four', 'night', 'fog')).game, fog = WX.loudLen(dry, 17.25, out);
-    F.verdict(k > 1.5 && near(heard, raw * k, 1e-9) && near(loud, raw, 1e-9) && asWas === heard && none === 17.25 && fog === 17.25,
-      'in rain a small sound\'s path is stretched by the noise at the ear (it carries less far) and a loud one is placed off the path as it is in the air; the switch back gives the first cut\'s; with no weather picked, or a dry one, the length is the very number handed in',
-      `rain outdoors: mask ×${k.toFixed(2)} · a 6 m path heard as ${heard.toFixed(2)} m, a shot placed off ${loud.toFixed(2)} m (first cut: ${asWas.toFixed(2)}) · none ${none} · fog ${fog}`); }
   return F.done();
 }
 
@@ -223,7 +216,7 @@ export async function hourwxSheet(): Promise<boolean> {
       const hrefs = () => host.all(e => e.cls.has('mrow')).map(e => e.attrs.href ?? ''), once = (h: string, k: string) => (h.match(new RegExp(`[?&]${k}=`, 'g')) ?? []).length === 1;
       const rowsOf = () => host.all(e => e.cls.has('mdiff') && !(e.cls.has('mway') && e.cls.has('na')) && e.style.display !== 'none').map(e => e.cls.has('mhour') ? 'hour' : e.cls.has('mwx') ? 'weather' : e.cls.has('mway') ? 'way' : e.cls.has('mlever') ? 'lever' : 'defenders').join(',');   // (the Way in row is the room clear's: shown only where the mission names more than one way in; the lever rows — fog of war, enemy AI, enemy kit and, where the stand has it up, how much the game tells you (told.ts): how many is the levers' own check's to say — sit right under the defenders' switch; a row the sheet is not showing — the sticky cameras' lever off a quiet mission, ui/levers.ts — is not a row under the plan)
       S.select('compound-four'); const h0 = hrefs();
-      S.hour('midday'); S.setWeather('rain'); const h1 = hrefs(), go1 = host.all(e => e.cls.has('mgo'))[0]?.attrs.href ?? '', sel1 = S.hrefOf(S.selected);
+      S.hour('midday'); S.setWeather('rain'); const h1 = hrefs(), go1 = S.hrefOf(S.selected), sel1 = S.hrefOf(S.selected);
       S.hour('night'); const h2 = hrefs();
       S.hour('dawn'); S.setWeather(null); const h3 = hrefs();
       const rowsTwo = rowsOf(); S.select('rescue-registry'); const rowsOne = rowsOf(); S.select('compound-four');

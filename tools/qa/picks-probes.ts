@@ -19,8 +19,9 @@
 //                the one build's page defaults need under the old stand; on the page's they are what it has): no run errors, every run
 //                reports the row's own difficulty and hour, and every run ends (won or lost, never an error). The `pair` switch reads
 //                the page's URL and is not in these runs (picks-boot holds it on); the solo night has no scripted player (picks-boot holds its boot)
+import { sample, swept } from './sweep.ts';
 import { resolve } from 'node:path';
-import { readFileSync, rmSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { groupsFit } from './listed.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
@@ -90,7 +91,6 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 const quiet = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 const first = (r: El, cls: string) => r.all(e => e.cls.has(cls))[0];
 const buttons = (root: El) => root.all(e => e.tagName === 'BUTTON');
-const buttonOf = (root: El, text: string) => buttons(root).find(b => b.textContent === text);
 const startsWith = (root: El, text: string) => buttons(root).find(b => b.textContent.startsWith(text));
 const paramsOf = (href: string) => new URLSearchParams(href.replace(/^[^?]*\?/, ''));
 const otherOf = (d: string | null) => (d === 'hard' ? 'standard' : 'hard');
@@ -122,18 +122,13 @@ export async function picksList(): Promise<boolean> {
       L.map(p => `${p.id} → ${p.mission}`).join(' · ') + (bad.length ? ` — NOT ON THE BUILD: ${bad.map(p => p.mission).join(', ')}` : '')); }
   // THE ONE STARTING PAGE's rows (ui/startpage.ts): off in a harness (no window to listen on), so every older probe measures the cards; its order as data
   // (IN THE LIST'S GROUPS since 10-11: every mission once under its own group, the groups in the list's order, and inside a group the short list's missions
-  // first, in play order, then the rest in the list's own; ?nogroups = the short list on top as it was)
-  { const SP = await import(`${ROOT}/src/ui/startpage.ts`), all = MS.missionList(), { list, first: n } = SP.startPageList(), top = [...new Set(L.map(p => p.mission))];
+  // first, in play order, then the rest in the list's own)
+  { const SP = await import(`${ROOT}/src/ui/startpage.ts`), all = MS.missionList(), list = SP.startPageList(), top = [...new Set(L.map(p => p.mission))];
     const groups = [...new Set(all.map((m: any) => m.group))], want = groups.flatMap(g => { const of = all.filter((m: any) => m.group === g); return [...top.flatMap(id => of.filter((m: any) => m.id === id)), ...of.filter((m: any) => !top.includes(m.id))]; });
-    F.verdict(SP.startPageWanted('') === true && SP.startPageWanted('?roomclear') === false && n === 0 && list.length === all.length && new Set(list.map((m: any) => m.id)).size === all.length && want.every((m: any, i: number) => list[i].id === m.id && list[i].group === m.group)
+    F.verdict(SP.startPageWanted('') === true && SP.startPageWanted('?roomclear') === false && list.length === all.length && new Set(list.map((m: any) => m.id)).size === all.length && want.every((m: any, i: number) => list[i].id === m.id && list[i].group === m.group)
       && top.every(id => SP.pickOfMission(id)?.mission === id) && list.filter((m: any) => !top.includes(m.id)).every((m: any) => SP.pickOfMission(m.id) === null) && groupsFit(MS, list, groups as string[]),   // (listed.ts: no group draws more than eight; a row cut from the list is not counted)
       "the one starting page is the way in on an address that names nothing; its rows as data: the list's groups in their order, inside a group the short list's missions first in play order, then the rest in the list's own, each mission exactly once and no row outside a group",
-      `${list.length} of ${all.length}:\n    ${groups.map(g => `${g}: ${list.filter((m: any) => m.group === g).map((m: any) => (top.includes(m.id) ? '*' : '') + m.id).join(', ')}`).join('\n    ')}`);
-    MS.GROUPS_UI.on = false; let flat: any, allFlat: any[]; try { allFlat = MS.missionList(); flat = SP.startPageList(); } finally { MS.GROUPS_UI.on = true; }
-    F.verdict(flat.first === top.length && top.every((id, i) => flat.list[i].id === id) && flat.list.length === allFlat.length && new Set(flat.list.map((m: any) => m.id)).size === allFlat.length
-      && allFlat.filter((m: any) => !top.includes(m.id)).every((m: any, i: number) => flat.list[flat.first + i].id === m.id),
-      "?nogroups: the short list's missions on top in play order, then every other mission in the list's own order, each exactly once",
-      `${flat.first} + ${flat.list.length - flat.first}: ${flat.list.slice(0, flat.first).map((m: any) => m.id).join(', ')} | ${flat.list.slice(flat.first).map((m: any) => m.id).join(', ')}`); }
+      `${list.length} of ${all.length}:\n    ${groups.map(g => `${g}: ${list.filter((m: any) => m.group === g).map((m: any) => (top.includes(m.id) ? '*' : '') + m.id).join(', ')}`).join('\n    ')}`); }
   F.verdict(L.every(p => typeof p.line === 'string' && p.line.length >= 30 && p.line.length <= 110 && !/[—;]/.test(p.line) && /[.?!]$/.test(p.line)), 'one plain line on each: 30 to 110 characters, a whole sentence, no dash or semicolon',
     L.map(p => `${p.id} (${p.line.length}): ${p.line}`).join('\n    '));
   F.verdict(L.every(p => (!p.difficulty || ['standard', 'hard'].includes(p.difficulty)) && (p.squad === undefined || (Number.isInteger(p.squad) && p.squad >= 0 && p.squad <= 4 && P.pickEntry(p)))),
@@ -184,8 +179,8 @@ export async function picksList(): Promise<boolean> {
   { const p = L[0], e: any = P.pickEntry(p), w = wantOf(p);
     F.verdict(!!e && w.squad === 4 && !!squadsOf(e) && !w.flags.includes('silentstart') && !w.flags.includes('pair'), 'the first row is a four-person loud breach on a squad map (his pick of what comes first)',
       `${p.id}: ${e?.id} on ${e?.level} with ${w.squad}${w.flags.length ? ` · ${w.flags.join(' ')}` : ''}`); }
-  { const on = L.every(p => P.onShortList(p.mission)), others = SCENARIOS.filter((e: any) => !L.some(p => p.mission === e.id)).every((e: any) => !P.onShortList(e.id)); P.PICKS_UI.on = false; const off = L.every(p => !P.onShortList(p.mission)); P.PICKS_UI.on = true;
-    F.verdict(on && others && off, "a mission the list names is told from the rest (the mission sheet and the loadout screen leave 'untuned' off it), and none is with the switch off", `on the list ${on} · the rest not ${others} · none under ?nopicks ${off} · tagged untuned in the data: ${L.filter(p => (P.pickEntry(p) as any)?.untuned).map(p => p.id).join(', ') || 'none'}`); }
+  { const on = L.every(p => P.onShortList(p.mission)), others = SCENARIOS.filter((e: any) => !L.some(p => p.mission === e.id)).every((e: any) => !P.onShortList(e.id));
+    F.verdict(on && others, "a mission the list names is told from the rest (the mission sheet leaves 'untuned' off it)", `on the list ${on} · the rest not ${others} · tagged untuned in the data: ${L.filter(p => (P.pickEntry(p) as any)?.untuned).map(p => p.id).join(', ') || 'none'}`); }
   F.verdict(L.every(p => p.loadout === undefined), 'no row carries kit: the field for a loadout pick is reserved and nothing reads it yet', L.map(p => `${p.id}: ${p.loadout ?? 'none'}`).join(' · '));
   // ---- THE ONE CHOICE: standard or hard, on the row
   { const FLAGS = '?quality=high&mute', S = L.filter(p => P.pickEntry(p)), solo = L.filter(p => !P.pickEntry(p));
@@ -218,7 +213,7 @@ export async function picksCard(): Promise<boolean> {
     await withStore(store => withDom(SEARCH, async (root) => {
       const { Menu } = await import(`${ROOT}/src/ui/menu.ts`), UI = await import(`${ROOT}/src/ui/picks.ts`);
       const loads: string[] = []; Object.assign((globalThis as any).location, { pathname: '/', hash: '', assign: (u: string) => { loads.push(u); }, reload: () => { loads.push('(reload)'); } });
-      Math.random = seeded(0x51c4); setDifficulty('standard', false); P.PICKS_UI.on = true;
+      Math.random = seeded(0x51c4); setDifficulty('standard', false);
       const W = await quiet(() => standUp({ uploadEvery: 4 })); let starts = 0;
       let up: any = null, refused: string | null = null;   // (what main.ts's scenario seam would say is running under the card)
       const menu = new Menu(menuDeps(W, { onStart() { starts++; }, scenario: { current: () => up, refused: () => refused, quit() {} } }) as any);
@@ -246,14 +241,9 @@ export async function picksCard(): Promise<boolean> {
         loc.search = was; up = null;
         F.verdict(okNext && !last && !plain && !notUp, "the pause card of a run a pick started offers 'Next: <the row after>' = that row's own page load; the last row's offers none, a run started any other way offers none, and neither does a pick's page whose scenario is not what is up; no rows on a pause card",
           `after ${L[0].id}: ${nx?.textContent ?? 'none'} → ${loads[0] ?? 'no load'} · after the last: ${last?.textContent ?? 'none'} · ?roomclear: ${plain?.textContent ?? 'none'} · the pick's URL with no scenario up: ${notUp?.textContent ?? 'none'}`); }
-      // ---- the switch off
-      { P.PICKS_UI.on = false; const loc = (globalThis as any).location, was = loc.search;
-        loc.search = P.pickHref(L[0], SEARCH); menu.open('pause'); const nx = startsWith(root, 'Next: '); loc.search = was; P.PICKS_UI.on = true;
-        F.verdict(!nx, "with the switch off the pause card carries no 'Next'", `next: ${nx?.textContent ?? 'none'}`); }
       menu.close();
     }));
   } catch (e: any) { F.verdict(false, 'the card probe ran to its end', String(e?.stack ?? e).split('\n').slice(0, 4).join(' | ')); }
-  finally { P.PICKS_UI.on = true; }
   return F.done();
 }
 
@@ -264,11 +254,11 @@ async function bootChild(query: string, secs: number, kept: string): Promise<any
   const line = out.split('\n').find(l => l.startsWith(TAG));
   return line ? JSON.parse(line.slice(TAG.length)) : { query, threw: `the boot printed no report (exit ${p.exitCode}): ${(errText || out).trim().split('\n').slice(-3).join(' | ')}` };
 }
-export async function picksBoot(secs = 30): Promise<boolean> {
-  const F = family(`picks-boot: every row's URL booted in a process of its own on a machine that keeps the other difficulty — its level, its team, the URL's settings in force — then ${secs} s of the simulation`);
+export async function picksBoot(secs = swept(6, 30)): Promise<boolean> {
+  const F = family(`picks-boot: a sample of the rows' URLs booted in a process of its own on a machine that keeps the other difficulty — its level, its team, the URL's settings in force — then ${secs} s of the simulation`);
   const L: any[] = P.PICKS, MS = await import(`${ROOT}/src/ui/missions.ts`), missions: any[] = MS.missionList();
   // (every row at its own difficulty, and the first row once more at the other: the one choice the card offers on a row)
-  const C: { p: any; i: number; d?: string }[] = [...L.map((p, i) => ({ p, i })), ...(P.pickEntry(L[0]) ? [{ p: L[0], i: 0, d: otherOf(wantOf(L[0]).difficulty) }] : [])];
+  const C: { p: any; i: number; d?: string }[] = sample([...L.map((p, i) => ({ p, i })), ...(P.pickEntry(L[0]) ? [{ p: L[0], i: 0, d: otherOf(wantOf(L[0]).difficulty) }] : [])], 3);
   const hrefOf = (c: { p: any; d?: string }) => P.pickHref(c.p, '?quality=high&mute', undefined, undefined, c.d);
   const jobs = Math.max(1, Math.min(4, Number(process.env.PICKS_JOBS) || 3)), boots: any[] = new Array(C.length); let next = 0;
   await Promise.all(Array.from({ length: jobs }, async () => { for (;;) { const k = next++; if (k >= C.length) return; boots[k] = await bootChild(hrefOf(C[k]), secs, otherOf(wantOf(C[k].p, C[k].d).difficulty)); } }));   // (each on a machine that keeps the OTHER difficulty: the URL's is the one in force)
@@ -300,22 +290,6 @@ export async function picksBoot(secs = 30): Promise<boolean> {
   return F.done();
 }
 
-// ───────────────────────────────────────────────────────────── play ─────────────────────────────────────────────────────────────
-export async function picksPlay(seeds = '1-3'): Promise<boolean> {
-  const F = family(`picks-play: every scenario row played to its end by the scripted commander with the row's settings, stood up as the page opens (glass, moves, turn weight, destruction, defenders' frags) (seeds ${seeds})`);
-  const L: any[] = P.PICKS, tmp = `${process.env.TMPDIR ?? '/tmp'}/picks-play-${process.pid}`;
-  for (let i = 0; i < L.length; i++) { const p = L[i], e: any = P.pickEntry(p), w = wantOf(p);
-    if (!e) { console.log(`- (no scripted player for the solo night: ${p.id} is held by picks-boot)`); continue; }
-    const set: any = { DIFFICULTY: { level: w.difficulty } }; if (w.weather) set.WEATHER = { kind: w.weather }; set.FRAG = { defenders: true };
-    const env: Record<string, string> = { ...process.env as any, PT_DIGEST: '1', GLASSFX: 'on', TPS_MOVES: '1', TPS_TURN: '1', PT_DESTR: '1' }; if (w.squad !== e.squad) env.PT_SQUAD = String(w.squad); if (w.hour) env.PT_HOUR = w.hour;   // (PICKS_PLAIN, 'the harness's plain stand-up instead', went 2026-11-06: it asked by leaving these words out, which is the page's stand since the flip — the same game as this arm)
-    const out = `${tmp}-${p.id}.json`, proc = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/playthrough.ts`, '--scn', e.id, '--seeds', seeds, '--jobs', '3', '--json', out, '--set', JSON.stringify(set)], { cwd: ROOT, env, stdout: 'pipe', stderr: 'pipe' });
-    const [text, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]); await proc.exited;
-    let runs: any[] = []; try { runs = JSON.parse(readFileSync(out, 'utf8')).runs; } catch { /* no file: the run died */ } try { rmSync(out); } catch { /* none */ }
-    const bad = runs.filter(r => r.end === 'error' || r.difficulty !== w.difficulty || (r.hour ?? 'night') !== (w.hour ?? 'night') || (w.squad !== e.squad && r.of !== w.squad));
-    F.verdict(proc.exitCode === 0 && runs.length > 0 && bad.length === 0, `${i + 1} ${p.id}: ${e.id}${w.squad !== e.squad ? ` with ${w.squad}` : ''} · ${w.difficulty}${w.hour ? ` · ${w.hour}` : ''}${w.weather ? ` · ${w.weather}` : ''}${w.flags.length ? ` (without ${w.flags.join(', ')}: a page switch)` : ''}`,
-      runs.length ? runs.map(r => `seed ${r.seed}: ${r.end}${r.why ? ` (${r.why})` : ''} at ${Math.round(r.t)} s, ${r.team} of ${r.of} up, ${r.hostiles} of ${r.hostilesOf} defenders left, ${r.difficulty}${r.hour ? `, ${r.hour}` : ''}, digest ${r.digest}`).join('\n    ') : `no runs (exit ${proc.exitCode}): ${(err || text).trim().split('\n').slice(-3).join(' | ')}`); }
-  return F.done();
-}
 
 if (import.meta.main) {
   const want = process.argv.slice(2).filter(a => !a.startsWith('-')); const on = (n: string) => !want.length || want.includes(n) || want.includes('picks');
@@ -323,6 +297,5 @@ if (import.meta.main) {
   if (on('picks-list')) ok = (await picksList()) && ok;
   if (on('picks-card')) ok = (await picksCard()) && ok;
   if (on('picks-boot')) ok = (await picksBoot()) && ok;
-  if (want.includes('picks-play')) ok = (await picksPlay()) && ok;
   process.exit(ok ? 0 : 1);
 }

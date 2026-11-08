@@ -66,7 +66,7 @@ const KNOWN: Record<string, Record<string, Row>> = {
   'game/charLook.ts': { charMats: [1, 'PICTURE: the men\'s materials'] },
   'game/particleFx.ts': { gpuParticles: [1, 'PICTURE: whether the particle pass exists'] },
   'game/snowFx.ts': { '(all)': [7, 'PICTURE: the flakes that are drawn (the particle rain\'s own settings: count, radius, how it answers a blast)'] },
-  'game/rainFx.ts': { '(all)': [9, 'PICTURE: the drops that are drawn (the particle rain\'s own settings)'] },
+  'game/rainFx.ts': { '(all)': [10, 'PICTURE: the drops that are drawn (the particle rain\'s own settings; the tenth, warmRainFx: the first played frame finds the drops already falling, only where the picture has them)'] },
   'game/airSim.ts': { airSim: [1, 'TO JUDGE (2026-11-05): whether the air field runs; AIR_SIM decides what play reads of it'] },
 };
 /** the simulation's ground, as tools/qa/rollback-check.ts's static pass has it */

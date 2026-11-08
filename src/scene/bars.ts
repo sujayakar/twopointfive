@@ -49,9 +49,9 @@ function inOpening(a: Box, boxes: readonly Box[]): boolean {
 }
 /** is `a` a window's bar among `boxes` (the rule above)? */
 export function isBar(a: Box, boxes: readonly Box[]): boolean { return slim(a) && inOpening(a, boxes); }
-/** every static's bar mark off (host/standup.ts, before round.ts roundLevel looks for its plain slabs on a level stood up a second time) */
+/** every static's bar mark off (host/standup.ts, on a level stood up a second time) */
 export function barClear(boxes: Box[]): void { for (const b of boxes) b.flags &= ~BoxFlag.Bar; }
-/** A LEVEL'S WINDOW BARS, as it is stood up (host/standup.ts populateHost, after round.ts roundLevel): every static's mark is taken off, then put on the ones
+/** A LEVEL'S WINDOW BARS, as it is stood up (host/standup.ts populateHost): every static's mark is taken off, then put on the ones
  *  the rule names. Idempotent. Marked whether or not WINBARS.on is up — the mark is read only by that rule, and only while it is (so a recording's tables,
  *  laid over the knobs after its level stands, still decide). Returns how many are marked. */
 export function barLevel(boxes: Box[]): number {

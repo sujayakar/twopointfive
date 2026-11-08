@@ -225,7 +225,7 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
     if g.pl[p].holstered && has(&a, "use") && rails_offers(g, "grab") && !rails_shuts(g, "stalk") { buttons |= 1; }
     if menu_up || hand_up { buttons |= 1; }
     if hand_up { buttons |= 4; }
-    let setup = if crate::slotsetup::slot_setup_left(g, &crate::seats::here(g)) > 0.03 { g.pl[p].setup.clone() } else { None };
+    let setup = if crate::slotsetup::slot_setup_open(g, &crate::seats::here(g)) { g.pl[p].setup.clone() } else { None };
     let rows = match &setup { Some(s) => crate::slotsetup::setup_rows(g, p, s.gun), None => Vec::new() };
     let hand_key = has(&a, "use") && !hand_up && g.puppet.is_none() && !g.pl[p].down && g.pl[p].takedown.is_none() && g.orders.cmd_ring.is_none() && g.orders.menu.is_none() && {
         let ik = String::from(crate::consts::INTERACT_KEY);

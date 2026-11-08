@@ -620,7 +620,7 @@ pub fn destruction_burst(g: &mut crate::game::Game, hit_p: V3, dir: V3, n: V3, s
 
 /// A cold short cloud of dust into the smoke solver at `p`. Returns whether it went.   (destruction.ts dustPuff)
 pub fn destruction_dust_puff(g: &mut crate::game::Game, p: V3, n: V3, scale: f64, surf: crate::scene_materials::Surf) -> bool {
-    if g.destr.puffs_this_frame >= g.k.chaos.puffs_per_frame || crate::smoke_types::smoke_system_like_budget(g).unwrap_or(8.0) < 4.0 || !destruction_take(g, DestructionTakeK::Puff) {
+    if g.destr.puffs_this_frame >= g.k.chaos.puffs_per_frame || crate::smoke_types::smoke_system_like_budget(g) < 4.0 || !destruction_take(g, DestructionTakeK::Puff) {
         g.stats.destruction.destr_puffs_refused += 1;
         return false;
     }
@@ -661,7 +661,7 @@ pub fn destruction_pall_hash(g: &crate::game::Game, at: V3, k: f64) -> f64 {
 #[doc(hidden)] pub fn destruction_pall_emit__body(g: &mut crate::game::Game, r: crate::destruction::DestructionPallEmitR, from: V3, pos: V3, dir: V3, j: f64, tint: V3, gain: Option<f64>) -> bool {
     let gain = gain.unwrap_or(1.0);
     let k = g.k.chaos.pall;
-    if crate::smoke_types::smoke_system_like_budget(g).unwrap_or(64.0) < k.slack {
+    if crate::smoke_types::smoke_system_like_budget(g) < k.slack {
         g.stats.destruction.pall_starved += 1;
         return false;
     }

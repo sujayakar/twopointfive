@@ -47,19 +47,12 @@ pub fn track(g: &mut crate::game::Game) {
     if dt < 0.0 || dt > 1.0 || stray {
         s.off += s.trail.len() as f64;
         s.trail.clear();
-        s.amb = 0.0;
     }
-    let chest = g.ch[c].bones.get(crate::character::Bone::Chest).copied().unwrap_or([p[0], 1.2, p[2]]);
-    let head = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or([p[0], 1.6, p[2]]);
-    let id = g.ch[c].id;
-    let cpu = cpu_lit(g, chest, head, Some(&mut |_g: &mut Game, o: f64| o == id), Some(false));
-    let visibility = g.pl[g.player].visibility;
     let max = m::ceil(g.k.sneak.trail_m / 0.4);
     let s = g.m.sneak.states.as_mut().unwrap();
-    s.amb = m::min(m::max(0.0, visibility - cpu - 0.05), s.amb + 0.5 * m::max(0.0, m::min(dt, 0.1)));
     let far_enough = match s.trail.last() { Some(last) => flat(last.p, p) >= 0.4, None => true };
     if far_enough {
-        s.trail.push(Crumb { p: [p[0], 0.0, p[2]], t: -1e9, lit: 0.0, low: true, amb: s.amb, cpu0: cpu });
+        s.trail.push(Crumb { p: [p[0], 0.0, p[2]], t: -1e9, lit: 0.0, low: true });
     }
     let len = s.trail.len() as f64;
     if len > max {
@@ -85,12 +78,11 @@ pub fn sneak_tick(g: &mut crate::game::Game) -> bool {
                 s.live = false;
                 s.trail.clear();
                 s.men = JsMap::new();
-                s.amb = 0.0;
             }
         }
         return false;
     }
-    let s = g.m.sneak.states.get_or_insert_with(|| State { trail: Vec::new(), off: 0.0, t: -1e9, men: JsMap::new(), live: true, amb: 0.0 });
+    let s = g.m.sneak.states.get_or_insert_with(|| State { trail: Vec::new(), off: 0.0, t: -1e9, men: JsMap::new(), live: true });
     s.live = true;
     track(g);
     true
@@ -185,17 +177,16 @@ fn in_line(g: &mut Game, w: &Way, t: &mut [Crumb], k: i64, lo: bool) -> bool {
     let v = lit(g);
     v >= g.k.sneak.lit_at
 }
-/// A spot's light to a man on it: the CPU's estimate plus the extra Sam's meter read on the crumb he is at.
-fn lit_spot(g: &mut Game, c: Crumb, q: V3, lo: bool) -> f64 {
+/// A spot's light to a man on it.
+fn lit_spot(g: &mut Game, q: V3, lo: bool) -> f64 {
     let y = if lo { low_y() } else { up_y() };
-    let cpu = cpu_lit(g, [q[0], y[0], q[2]], [q[0], y[1], q[2]], None, None);
-    m::min(1.0, cpu + c.amb * (if c.cpu0 > 0.03 { m::min(1.0, cpu / c.cpu0) } else { 1.0 }))
+    cpu_lit(g, [q[0], y[0], q[2]], [q[0], y[1], q[2]], None, None)
 }
 fn unseen_at(g: &mut Game, w: &Way, t: &[Crumb], q: V3, lo: bool) -> bool {
     let c = t[w.i as usize];
     let mut l = -1.0;
     let mut lit = |g: &mut Game| {
-        if l < 0.0 { l = lit_spot(g, c, q, lo); }
+        if l < 0.0 { l = lit_spot(g, q, lo); }
         l
     };
     let pc = stand_in(q, lo);

@@ -154,14 +154,14 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
   check(reads.length === hit.length && hit.length <= 1 && lines.length >= 4, '10 picture only: in the game\'s code a box\'s word is READ in at most one place, what a round\'s hit looks like (particleFx.ts saidSurf: sparks, chips, the mark), and otherwise only said outright or copied from a thing to what is made of it (a prop\'s part to its box, a wall to its pieces, a named colour to a gun\'s part); no rule of a round, a charge, a blast or a man\'s senses asks it',
     `${lines.length} lines in ${files} · ${reads.length} read it${reads.length > hit.length ? `: ${reads.map(l => l.slice(0, 90)).join(' | ')}` : hit.length ? ' (the hit\'s picture)' : ' (the hit picture\'s rule is not in this build)'}`); }
 
-// 11. A DOOR'S LEAF IS MADE OF WHAT ITS PAINT IS (scene/lookTidy.ts lookDoors): every outside leaf in the level's accent paint is paint and every inside one in
+// 11. A DOOR'S LEAF IS MADE OF WHAT ITS PAINT IS (scene/leafPaint.ts paintLeaves): every outside leaf in the level's accent paint is paint and every inside one in
 //     the palette's wood is wood, whatever shade the leaf's own name gave it; a level's row of bare numbers says nothing unless it says a word for that side
-{ const { lookDoors } = await import(`${ROOT}/src/scene/lookTidy.ts`), { LOOK_DOORS } = await import(`${ROOT}/src/scene/look.ts`);
+{ const { paintLeaves } = await import(`${ROOT}/src/scene/leafPaint.ts`), { LOOK_DOORS } = await import(`${ROOT}/src/scene/look.ts`);
   const wears = [makeBox({ c: [0, 1, 0], h: [1, 1, 0.1], albedo: GWOT_PALETTE.paintBlue })];
   const leaves = (n: number) => Array.from({ length: n }, (_, i) => ({ def: { name: `door ${i}`, exterior: i % 2 === 0, steel: i === 1 }, box: makeBox({ c: [i, 1, 0], h: [0.45, 1, 0.03], albedo: [0.3, 0.3, 0.3], stuff: 'veneer' }) }));
   const of = (D: ReturnType<typeof leaves>, f: (d: ReturnType<typeof leaves>[number]) => boolean) => [...new Set(D.filter(f).map(d => d.box.stuff ?? 'plain'))].sort().join('/');
   const own = leaves(40), bare = leaves(40), sided = leaves(40), one = leaves(40);
-  lookDoors(own, wears); lookDoors(bare, wears, { out: [0.6, 0.42, 0.04] }); lookDoors(sided, wears, LOOK_DOORS['records.json']); lookDoors(one, wears, LOOK_DOORS['white-roof.json']);
+  paintLeaves(own, wears); paintLeaves(bare, wears, { out: [0.6, 0.42, 0.04] }); paintLeaves(sided, wears, LOOK_DOORS['records.json']); paintLeaves(one, wears, LOOK_DOORS['white-roof.json']);
   const out = (d: { def: { exterior?: boolean; steel?: boolean } }) => !!d.def.exterior, inn = (d: { def: { exterior?: boolean; steel?: boolean } }) => !d.def.exterior && !d.def.steel;
   const shades = new Set(own.filter(out).map(d => d.box.albedo[2].toFixed(4))).size;
   check(of(own, out) === 'paint' && of(own, inn) === 'plain/wood' && shades > 10 && own[1].box.stuff === 'veneer' && of(bare, out) === 'plain' && of(bare, inn) === 'plain/wood'
@@ -173,18 +173,16 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
 //     the look page's hand-built trials until 11-05 and are the kit's now, laid by the pass's generator): every box they make in a paint somebody named
 //     says that paint's stuff, and so does every piece of TRIM that wears a named paint of its own (a log's pale end is wood, a pipe's bore metal: a
 //     shape's piece is of its box's stuff unless it says another). Asked of the generator, where a paint is still the row somebody named
-{ const { build } = await import(`${ROOT}/tools/levels/pass.ts`), { dressLorry } = await import(`${ROOT}/src/scene/lorryTry.ts`);
+{ const { build } = await import(`${ROOT}/tools/levels/pass.ts`);
   const KW = process.env.KITWORDS_BREAK === '1', said12 = (p: any) => KW ? undefined : p.stuff;   // (the break word: trim read as if no piece of it said a word)
   const g = build(), B = g.level.boxes as any[], mine = B.filter((_, i) => g.groups[i] === 'front' || g.groups[i] === 'yard'), named = (a: any) => { const w = paintOf(a)?.stuff; return w !== undefined && w !== 'plain'; };
   const silent = mine.filter(b => named(b.albedo) && b.stuff === undefined), trim = mine.flatMap(b => (b.shape?.with ?? []) as any[]).filter(p => p.albedo), trimSilent = trim.filter(p => named(p.albedo) && said12(p) === undefined);
   // (THE PIPES ARE ASKED WHERE THEY STAND: the pass laid them until 11-05 and the showroom still does; a pipe's bore is the one piece of trim that says metal)
   const hall = ((await import(`${ROOT}/tools/levels/library-hall.ts`)).build().level.boxes as any[]).flatMap(b => (b.shape?.with ?? []) as any[]).filter(p => p.albedo), hallSilent = hall.filter(p => named(p.albedo) && said12(p) === undefined);
   const said = mine.filter(b => b.stuff !== undefined).length, words = new Set(mine.map(b => b.stuff ?? 'plain')), trimWords = new Set(trim.map(p => said12(p) ?? 'plain')), hallWords = new Set(hall.map(p => said12(p) ?? 'plain'));
-  const lorry = dressLorry(loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/pass.json`, 'utf8')), { lived: true, dressing: true }) as any);
-  // (the lorry's trial makes nothing since the level's lorry says its own shapes, scene/carShapes.ts: lorryTry.ts dressLorry stands down)
-  check(mine.length > 120 && silent.length === 0 && trimSilent.length === 0 && said > 0.75 * mine.length && ['wood', 'paint', 'mud wall', 'cloth', 'metal'].every(w => words.has(w)) && ['wood', 'cloth'].every(w => trimWords.has(w)) && hallSilent.length === 0 && ['wood', 'metal'].every(w => hallWords.has(w)) && lorry === 0,
-    '12 a house front\'s and a yard\'s pieces say their words: on the pass every box the kit\'s wall-face and yard pieces make in a named paint says what that paint is made of (wood, paint, mud wall, cloth and metal among them), and every piece of trim in a named paint of its own says that paint\'s (a log\'s end wood, a rolled blanket\'s ties cloth), and so does the showroom\'s trim (a pipe\'s bore metal: the pipes stand there); the lorry\'s trial stands down, the level\'s lorry saying its own shapes',
-    `the pass's front and yard: ${mine.length} boxes, ${said} say a word (${[...words].sort().join(', ')}), ${silent.length} in a named paint and silent · their trim in a paint of its own: ${trim.length} pieces (${[...trimWords].sort().join(', ')}), ${trimSilent.length} silent · the showroom's trim: ${hall.length} pieces (${[...hallWords].sort().join(', ')}), ${hallSilent.length} silent · the lorry's trial made ${lorry}`); }
+  check(mine.length > 120 && silent.length === 0 && trimSilent.length === 0 && said > 0.75 * mine.length && ['wood', 'paint', 'mud wall', 'cloth', 'metal'].every(w => words.has(w)) && ['wood', 'cloth'].every(w => trimWords.has(w)) && hallSilent.length === 0 && ['wood', 'metal'].every(w => hallWords.has(w)),
+    '12 a house front\'s and a yard\'s pieces say their words: on the pass every box the kit\'s wall-face and yard pieces make in a named paint says what that paint is made of (wood, paint, mud wall, cloth and metal among them), and every piece of trim in a named paint of its own says that paint\'s (a log\'s end wood, a rolled blanket\'s ties cloth), and so does the showroom\'s trim (a pipe\'s bore metal: the pipes stand there)',
+    `the pass's front and yard: ${mine.length} boxes, ${said} say a word (${[...words].sort().join(', ')}), ${silent.length} in a named paint and silent · their trim in a paint of its own: ${trim.length} pieces (${[...trimWords].sort().join(', ')}), ${trimSilent.length} silent · the showroom's trim: ${hall.length} pieces (${[...hallWords].sort().join(', ')}), ${hallSilent.length} silent`); }
 
 // (13, 'the editor keeps a paint's word', went with the level editor.)
 

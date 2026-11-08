@@ -235,7 +235,7 @@ export async function dealScreen(): Promise<boolean> {
       await withDom('?quality=high&mute', async () => {
         G.localStorage = memStore(); G.location.pathname = '/'; G.location.hash = ''; G.location.assign = () => { }; G.location.reload = () => { };
         const M = await import(`${ROOT}/src/ui/missions.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`);
-        const SEARCH = '?quality=high&mute', list: any[] = M.missionList(), pickWas = M.MISSIONS.onPick, up: any[] = []; M.MISSIONS.onPick = null;
+        const SEARCH = '?quality=high&mute', list: any[] = M.missionList(), up: any[] = [];
         try {
           const read = () => {
             K.KIT.on = true; K.SLOTS.on = true; K.BIGSLOT.on = true; K.kitLoad(null, ''); K.kitTeam(4); K.kitReset();
@@ -251,7 +251,7 @@ export async function dealScreen(): Promise<boolean> {
           F.verdict(on.pouch.every(p => /^pouches [1-4] \/ 4$/.test(p)) && /3 stun · 2 charges · 2 frags/.test(on.pool), 'THE PASS, FOUR, AS ISSUED: every teammate on the roster has something in his pouches, and the squad\'s line reads three stun, two charges, two frags', `pouches ${on.pouch.join(' · ')} · ${on.pool}${B}`);
           F.verdict(on.changed.length === 0 && /as issued/i.test(on.kit) && on.rowsChanged.length === 0, 'no worn card is marked as changed, the squad kit row still lights As issued, and Blue One\'s own card has no tile marked', `marked changed: ${on.changed.map(i => NAMES[i]).join(', ') || 'nobody'} · lit: ${on.kit} · Blue One's card: ${on.card} · tiles marked: ${on.rowsChanged.join(', ') || 'none'}${B}`);
           F.verdict(BROKEN || (/hammer/i.test(on.big) && on.changed.length === 0 && on.rowsChanged.length === 0 && on.rows4Changed.length === 0 && /as issued/i.test(on.kit)), 'A TOOL EACH PAIR ON THE SCREEN: Blue Two\'s Big slot tile reads the hammer, no tile of his or of Blue One\'s and no man is marked changed, and As issued is still lit', `Blue Two's big slot: '${on.big}' · marked: ${on.changed.map(i => NAMES[i]).join(', ') || 'nobody'}, tiles ${[...on.rowsChanged, ...on.rows4Changed].join(', ') || 'none'} · lit: ${on.kit} · pouches ${on.pouch.join(' · ')}${B}`);
-        } finally { for (const L of up) try { L.close?.(); } catch { /* a screen already closed */ } M.MISSIONS.onPick = pickWas; }
+        } finally { for (const L of up) try { L.close?.(); } catch { /* a screen already closed */ } }
       });
     } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
     finally { if (hadLS) G.localStorage = prevLS; else delete G.localStorage; }

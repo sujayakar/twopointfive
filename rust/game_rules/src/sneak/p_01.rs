@@ -170,22 +170,22 @@ pub fn eyes_for(g: &crate::game::Game, gd: GuardId) -> Vec<GuardId> {
     out
 }
 
-/// The meter's own curve over the CPU's direct-light estimate at two points, the brighter. (sneak.ts cpuLit)
+/// How lit two points are, the brighter, on the meter's own curve. (sneak.ts cpuLit)
 pub fn cpu_lit(g: &mut crate::game::Game, a: V3, b: V3, own: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady: Option<bool>) -> f64 {
     let steady = steady.unwrap_or(true);
     let mut own = own;
     let at_a = match own.as_mut() {
-        Some(f) => crate::guards::light_estimate_at(g, a, Some(&mut **f), Some(steady), None, None, None),
-        None => crate::guards::light_estimate_at(g, a, None, Some(steady), None, None, None),
+        Some(f) => crate::guards::light_estimate_at(g, a, Some(&mut **f), Some(steady), None),
+        None => crate::guards::light_estimate_at(g, a, None, Some(steady), None),
     };
     let at_b = match own.as_mut() {
-        Some(f) => crate::guards::light_estimate_at(g, b, Some(&mut **f), Some(steady), None, None, None),
-        None => crate::guards::light_estimate_at(g, b, None, Some(steady), None, None, None),
+        Some(f) => crate::guards::light_estimate_at(g, b, Some(&mut **f), Some(steady), None),
+        None => crate::guards::light_estimate_at(g, b, None, Some(steady), None),
     };
     crate::game::game_visibility_of(g, m::max(at_a, at_b))
 }
 
-/// How lit a step is to a man low or upright on it, plus Sam's meter's extra there; read at most twice a second per crumb. (sneak.ts litAt)
+/// How lit a step is to a man low or upright on it; read at most twice a second per crumb. (sneak.ts litAt)
 pub fn lit_at(g: &mut crate::game::Game, c_2: &mut crate::sneak::Crumb, low: bool) -> f64 {
     if c_2.low == low && g.time - c_2.t < 0.4 && g.time >= c_2.t { return c_2.lit; }
     let p = c_2.p;
@@ -193,7 +193,7 @@ pub fn lit_at(g: &mut crate::game::Game, c_2: &mut crate::sneak::Crumb, low: boo
     let cpu = cpu_lit(g, [p[0], y[0], p[2]], [p[0], y[1], p[2]], None, None);
     c_2.t = g.time;
     c_2.low = low;
-    c_2.lit = m::min(1.0, cpu + c_2.amb * (if c_2.cpu0 > 0.03 { m::min(1.0, cpu / c_2.cpu0) } else { 1.0 }));
+    c_2.lit = cpu;
     c_2.lit
 }
 
@@ -359,18 +359,8 @@ pub fn sneak_walk(g: &mut crate::game::Game, gd: GuardId, low: bool, habit: Opti
         men.push(SneakWalkMan { h, x: e.pos[0], z: e.pos[2], open: crate::guards::Eye { half_deg: 180.0, near_deg: 180.0, ..e }, looks, line: JsMap::new() });
     }
     let reach = g.k.guard_eye.range + 0.5;
-    // SNEAK.stalkAmbient (settled on): what his own meter shows over the estimate of where he stands is on the way ahead too.
-    let c = g.gd[gd].ch;
-    let p = g.ch[c].pos;
-    let chest = match g.ch[c].bones.get(crate::character::Bone::Chest) { Some(&b) => b, None => [p[0], 1.2, p[2]] };
-    let head = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(&b) => b, None => [p[0], 1.6, p[2]] };
-    let cpu0 = cpu_lit(g, chest, head, None, Some(false));
-    let visibility = g.gd[gd].visibility;
-    let irradiance = g.gd[gd].irradiance;
-    let amb = m::max(0.0, m::min(visibility, crate::game::game_visibility_of(g, irradiance)) - cpu0 - 0.05);
-    let open0 = amb > 0.0 && !crate::weather::weather_under_roof(g, p[0], p[2]);
     let card = crate::kitload::load_seen(g, &crate::seats::here(g), crate::kitload::LoadSeenWho::Guard(gd));
-    SneakWalk { by: None, gd, low, keen, card, reach, amb, cpu0, open0, men, roofs: JsMap::new(), memo: JsMap::new() }
+    SneakWalk { by: None, gd, low, keen, card, reach, men, memo: JsMap::new() }
 }
 
 /// (sneak.ts sneakWalk, look)
@@ -392,24 +382,8 @@ fn kept_of(g: &mut Game, h: GuardId, low: bool, x: f64, z: f64) {
     };
     if stale { g.m.sneak.kept_lines.set(h, SneakModKeptLinesValue { x, z, t: now, low, map: JsMap::new() }); }
 }
-/// (sneak.ts sneakWalk, cell)
-fn walk_cell(x: f64, z: f64) -> f64 { m::floor(x / 0.25) + 4096.0 * m::floor(z / 0.25) }
-/// (sneak.ts sneakWalk, roofed)
-fn walk_roofed(g: &mut Game, w: &mut SneakWalk, x: f64, z: f64) -> bool {
-    let k = num_key(walk_cell(x, z));
-    if let Some(&r) = w.roofs.get(k) { return r; }
-    let r = crate::weather::weather_under_roof(g, x, z);
-    w.roofs.set(k, r);
-    r
-}
 /// (sneak.ts sneakWalk, litOf)
-fn walk_lit_of(g: &mut Game, w: &mut SneakWalk, x: f64, z: f64, age: Option<f64>) -> f64 {
-    let v = lit_cell(g, x, z, w.low, age);
-    if w.amb > 0.0 {
-        let all = (w.open0 && !walk_roofed(g, w, x, z)) || w.cpu0 <= 0.03;
-        m::min(1.0, v + w.amb * (if all { 1.0 } else { m::min(1.0, v / w.cpu0) }))
-    } else { v }
-}
+fn walk_lit_of(g: &mut Game, w: &mut SneakWalk, x: f64, z: f64, age: Option<f64>) -> f64 { lit_cell(g, x, z, w.low, age) }
 /// The cheap part first (reach, and the cone in plan with a little slack), then the eye test's own cone. (sneak.ts sneakWalk, inCone)
 fn walk_in_cone(g: &mut Game, mm: &SneakWalkMan, reach: f64, k: usize, wider: bool, x: f64, z: f64, pc: &Target) -> bool {
     let l = mm.looks[k];
@@ -420,6 +394,8 @@ fn walk_in_cone(g: &mut Game, mm: &SneakWalkMan, reach: f64, k: usize, wider: bo
     if d > reach || (d > 0.3 && (dx * l.lx + dz * l.lz) / d <= m::cos(m::min(180.0, (if d < e.near_m + 0.5 { e.near_deg } else { e.half_deg }) + 4.0) * DEG)) { return false; }
     ask(g, e, pc, true).in_cone
 }
+/// (sneak.ts sneakWalk, cell)
+fn walk_cell(x: f64, z: f64) -> f64 { m::floor(x / 0.25) + 4096.0 * m::floor(z / 0.25) }
 /// The line from a defender to a man on this floor, asked once per defender per quarter-metre: its length, or −1. (sneak.ts sneakWalk, line)
 fn walk_line(g: &mut Game, w: &mut SneakWalk, q: usize, x: f64, z: f64, pc: &Target, fresh: bool) -> f64 {
     let key = num_key(walk_cell(x, z));

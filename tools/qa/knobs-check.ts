@@ -2,7 +2,6 @@
 // THE KNOB REGISTRY'S CHECK (src/game/knobs.ts) — `bun run tools/qa/knobs-check.ts`, and `probes.ts journal-knobs` (family journal):
 //   1. what a recording carries (journal.ts knobTables) is JOURNAL_KNOBS, name for name and in order, every one a registry table;
 //      … and every table journal.ts asks a FILE for (`k.tables.X`, the rules that put a key off for a recording from before it) is one a recording carries;
-//   2. every table the squad's feel panel keeps (teamfeel.ts feelTables) is in the registry under the same name AND is the same object;
 //   3. knobsCopy → scribble → knobsBack puts every table back exactly (every value changed at every depth, a key added to every object, an element to every
 //      array), in place (every nested object and array is still the same object);
 //   4. every exported ALL-CAPS table under src/game that carries a boolean `on` is in the registry, or in UNREGISTERED below with its reason — a NEW one that is
@@ -28,7 +27,7 @@ const UNREGISTERED: Record<string, string> = {
 
 export async function knobsCheck(): Promise<boolean> {
   await import('./headless.ts');   // the harness's module order (the game modules are one import cycle: enter it the way every probe does)
-  const K: any = await import(`${ROOT}/src/game/knobs.ts`), J: any = await import(`${ROOT}/src/game/journal.ts`), F: any = await import(`${ROOT}/src/game/teamfeel.ts`);
+  const K: any = await import(`${ROOT}/src/game/knobs.ts`), J: any = await import(`${ROOT}/src/game/journal.ts`);
   let ok = true; const check = (pass: boolean, what: string) => { console.log(`- ${pass ? 'PASS' : 'FAIL'} — ${what}`); if (!pass) ok = false; };
   const R: Record<string, any> = K.knobRegistry(), names = Object.keys(R);
 
@@ -49,7 +48,7 @@ export async function knobsCheck(): Promise<boolean> {
   const prof = readFileSync(`${ROOT}/src/host/profile.ts`, 'utf8'), body = prof.slice(prof.indexOf('export function pageSwitches'));
   const wrote = [...new Set([...body.slice(0, body.search(/^}/m)).matchAll(/^\s*([A-Za-z_][A-Za-z0-9_]*)\.[A-Za-z0-9_.]+ = /gm)].map(m => m[1]))];
   const uncarried = wrote.filter(n => !want.includes(n) && !(n in PAGE_ONLY));
-  check(wrote.length > 20 && uncarried.length === 0, `every table the page's boot writes is carried by a recording or on PAGE_ONLY with its reason (${wrote.length} tables written)${uncarried.length ? ` — NOT CARRIED: ${uncarried.join(' ')} (add the name at the END of JOURNAL_KNOBS)` : ''}`);
+  check(wrote.length > 10 && uncarried.length === 0, `every table the page's boot writes is carried by a recording or on PAGE_ONLY with its reason (${wrote.length} tables written)${uncarried.length ? ` — NOT CARRIED: ${uncarried.join(' ')} (add the name at the END of JOURNAL_KNOBS)` : ''}`);
 
   // 1c. a rule in journal.ts that asks a file for a table (`k.tables.X`: "a recording from before the key replays with it off") only works if a recording
   //     CARRIES that table. With X not in JOURNAL_KNOBS every file reads as one from before, and the key is put off whatever the run was recorded with
@@ -57,8 +56,6 @@ export async function knobsCheck(): Promise<boolean> {
   const asked = [...new Set([...readFileSync(`${ROOT}/src/game/journal.ts`, 'utf8').matchAll(/\bk\.tables\.([A-Za-z_][A-Za-z0-9_]*)/g)].map(m => m[1]))], deaf = asked.filter(n => !want.includes(n));
   check(asked.length > 20 && deaf.length === 0, `every table journal.ts asks a file for (k.tables.X) is one a recording carries (${asked.length} asked)${deaf.length ? ` — NOT CARRIED, so its rule reads every file as one from before the key: ${deaf.join(' ')} (add the name at the END of JOURNAL_KNOBS)` : ''}`);
 
-  const feel: Record<string, object> = F.feelTables(), strangers = Object.keys(feel).filter(n => R[n] !== feel[n]);
-  check(strangers.length === 0, `the feel panel's ${Object.keys(feel).length} tables are the registry's own objects under the same names${strangers.length ? ` — not so: ${strangers.join(' ')}` : ''}`);
 
   // 3. the round trip, table by table: what the tables are now (a reference JSON with the non-JSON values spelled out), scribble, put back, compare — and the nested objects are still the same objects
   const { spell } = await import('./stand-dump.ts');

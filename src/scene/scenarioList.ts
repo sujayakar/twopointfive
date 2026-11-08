@@ -8,7 +8,7 @@
 // Types and pure functions: nothing here imports the game (but game/loadout.ts — itself types and pure functions, importing nothing at run time: keep it so) or
 // touches the DOM.
 import { scenarioQuery, type ScenarioEntry } from './scenarios';
-import { squadOfQuery, sizeWords, sizeTag, type SquadSize } from '../game/loadout';   // (pure: the loadout's size, its words and its query key — nothing of the game)
+import { squadOfQuery, sizeWords, sizeTag, type SquadSize } from './squadsize';   // (pure: the loadout's size, its words and its query key — nothing of the game)
 import { HELD_PAGE_WORDS, PRICE_ASK_WORDS, RUN_PAGE_WORDS, heldPage } from '../host/runpage';   // (a leaf: the words of a run's page)
 
 // THE LIST'S GROUPS (scenarios.ts MISSION_GROUPS, ui/missions.ts groupOf): a row may name its own; without one a quiet mission is 'quiet alone' / 'quiet as
@@ -62,9 +62,6 @@ export const SCENARIOS: ScenarioEntry[] = [
     blurb: 'Three hostages are behind two doors, and you\'ll want to hit both at once. There\'s no time to clear the four rooms you pass, so cover them.' },
   // NEW IDEAS: small missions, each built on one idea (group 'ideas'), each on a level made for it. The group is drawn in this table's order: the order to play them in
   // ---- new ideas, one a mission (group 'ideas'): a room clear with one overlay module keyed on a block of the level file
-  { id: 'snatch-four', title: 'The snatch', kind: 'roomclear', squad: 4, level: 'snatch.json', group: 'clock', untuned: true, offList: true,
-    place: 'A small walled house, four rooms, a hut on the back gate', lean: 'loud', defenders: 8,
-    blurb: 'Take one unarmed man alive and walk him out to your van. He\'ll run for the back gate at the first shot or the moment he sees you.' },   // (the van: how a snatch ends since game/snatchout.ts; with that switch off the house taken is still the end and the van only stands there)
   // ONE IDEA (group 'ideas'): two timed charges on one clock (game/defuse.ts, the level's scenarios.defuse block), a wing apart, each workshop with a door
   // from its wing and a back door from outside. The blurb is the premise, not the answer (how to split is the player's to find). Four only (`only`): the mission IS two pairs' worth of work.
   { id: 'defuse-four', title: 'The two charges', kind: 'roomclear', squad: 4, level: 'defuse.json', group: 'clock', untuned: true, offList: true,

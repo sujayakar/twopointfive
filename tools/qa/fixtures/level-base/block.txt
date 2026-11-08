@@ -1,3 +1,4 @@
 # 11-05, the west window of the flat at x 4 has its shutters folded back on the wall and split wood stacked under it (the kit's shutters and splitWood)
 # every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
-afdddef63e47ab0289355a68ab3f6220d0418749
+# version 2: a round thing is one box, the file converted by tools/levels/round-convert.ts: no box moved
+2b45860f95226e69ab6f137962394068460b6494

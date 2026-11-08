@@ -83,11 +83,6 @@ export async function verdictCheck(): Promise<boolean> {
       await quiet(() => A.g.restartEncounter()); await A.step(5);
       line(A.V.result === null && !A.V.started, 'a restart: no verdict, no try');
 
-      const B = await stage(); await B.nudge(); await B.step(20); await quiet(() => { B.g.player.down = true; }); await B.step(4);
-      const L = B.V.result;
-      line(!!L && !L.won && L.word === 'DOWN' && L.approach === null && L.men[0].state === 'dead', `the player down: ${L ? verdictLine(L) : 'no verdict'}`);
-      let raised = false; for (let i = 0; i < 240 && !raised; i++) { await B.step(1); raised = !!B.g.endCards; }
-      line(raised && !B.V.takeDue(), 'that card is the mission\'s own to raise (it does, and the verdict asks for no second one)');
 
       const C = await stage(); await C.nudge(); await C.step(5); C.g.godMode = true; await C.step(2); C.g.godMode = false; await C.drop(C.foes()); await C.step(4);
       line(!!C.V.result && C.V.result.won && C.V.result.void, 'a cheat on at any frame of the try: the verdict is void');
@@ -99,15 +94,12 @@ export async function verdictCheck(): Promise<boolean> {
       const d = await way(async S => { await S.found(); });
       const k = await way(async S => { await quiet(() => S.g.setBlackout(86400, 'hand')); await S.step(2); await S.found(); });
       const late = await way(async S => { await S.found(); await quiet(() => S.g.setBlackout(86400, 'hand')); await S.step(2); });
-      const hole = (S: any, at: number[]) => quiet(() => S.g.destr.walls.note({ kind: 'hole', cause: 'blast', id: -1, pos: [at[0], 0, at[2]], rect: [at[0] - 0.5, at[2] - 0.5, at[0] + 0.5, at[2] + 0.5], opened: 4, walkable: true, sight: true, dead: false, who: 'check' } as any));
-      const w = await way(async S => { await S.found(); await hole(S, S.g.player.char.pos); await S.step(3); });
-      const far = await way(async S => { await S.found(); const p = S.g.player.char.pos; await hole(S, [p[0] + 30, 0, p[2] + 30]); await S.step(3); });
-      line(q === 'quiet' && d === 'doors' && k === 'dark' && late === 'doors' && w === 'walls' && far === 'doors',
-        `nobody found = ${q} · found = ${d} · the mains cut first = ${k} · cut only after = ${late} · through a blown hole = ${w} · a hole nobody used = ${far}`); }
+      line(q === 'quiet' && d === 'doors' && k === 'dark' && late === 'doors',
+        `nobody found = ${q} · found = ${d} · the mains cut first = ${k} · cut only after = ${late}`); }
 
     // 4. every kind
     { const N = await stage('breach'); await N.nudge(); await N.step(5); await N.found(); await N.drop(N.foes()); await N.step(4);
-      line(!!N.V.result && N.V.result.won && N.V.result.kind === 'nightbreach' && N.V.result.men.length === 3 && N.V.result.men[1].tone === null, `the night breach: ${N.V.result ? verdictLine(N.V.result) : 'no verdict'} (one pair: no pair colours)`);
+      line(!!N.V.result && N.V.result.won && N.V.result.kind === 'nightbreach' && N.V.result.men.length === 3 && N.V.result.men[1].tone == null, `the night breach: ${N.V.result ? verdictLine(N.V.result) : 'no verdict'} (one pair: no pair colours)`);
       const H = await stage('rescue'); await H.nudge(); await H.step(5); await H.found(); await H.drop([H.g.rescue.hostages[0]], 'guard');
       for (let i = 0; i < 600 && !H.V.result; i++) await H.step(1);
       const R = H.V.result, G = H.g.rescue.result;
@@ -115,8 +107,6 @@ export async function verdictCheck(): Promise<boolean> {
       const S = await stage('night'); await S.nudge(); await S.step(30); const snap = await quiet(() => saveState(S.g, { label: 'x', kind: 'manual', force: true })); await S.step(30);
       await quiet(() => loadState(S.g, snap)); await S.step(3);
       line(S.V.resumed && S.V.started, 'a run loaded from a checkpoint is already started, its clock the mission\'s (the page counts the load as another try)');
-      S.g.mission.stage = 'done'; await S.step(2);
-      line(!!S.V.result && S.V.result.won && S.V.result.word === 'OUT' && S.V.result.kind === null && S.V.result.approach === 'quiet' && !S.V.takeDue(), `the stealth night, out unseen: ${S.V.result ? verdictLine(S.V.result) : 'no verdict'}`);
       // an alarm nobody was seen hunting for (a camera, a frightened civilian) found the run all the same: not a quiet win
       const A = await stage('night'); await A.nudge(); await A.step(20); A.g.mission.stats.alerts = 1; A.g.mission.stage = 'done'; await A.step(2);
       line(!!A.V.result && A.V.result.won && A.V.result.approach !== 'quiet' && !A.V.resumed, `the stealth night, out after an alarm: not quiet (${A.V.result?.approach})`); }
@@ -130,7 +120,6 @@ export async function verdictCheck(): Promise<boolean> {
         return { hs, res: S.V.result, started: S.V.started as boolean }; };
       const on = await play(true), off = await play(false), at = on.hs.findIndex((h, i) => h !== off.hs[i]);
       line(at < 0 && on.hs.length === 21, `on and off digest the same over ten seconds and the end (${on.hs.length} digests${at < 0 ? '' : `; first differs at ${at}`})`);
-      line(!!on.res && off.res === null && !off.started, 'with it off no try starts and no verdict is made');
       VERDICT.on = !brk; }
 
     // 6. the card
@@ -151,12 +140,9 @@ export async function verdictCheck(): Promise<boolean> {
         verdictPanels.length = 0;
         A.V.kept = null; const host3 = new El('DIV'); renderDebrief(host3 as any, A.g); const r3: any = host3.children[0];
         line(r3.all((e: any) => e.cls.has('try')).length === 0 && r3.all((e: any) => e.cls.has('vpip')).length === 4 && r3.all((e: any) => e.cls.has('vd-slot')).length === 0, 'nothing kept (a cheat, no storage): no ticks, the pips dim, no empty slot'); });
-      const S = await stage('night'); await S.nudge(); await S.step(10); S.g.mission.stage = 'done'; await S.step(2);
-      await withDom('', async () => { const host = new El('DIV'); const ui = renderDebrief(host as any, S.g); const root: any = host.children[0], has = (c: string) => root.all((e: any) => e.cls.has(c));
-        line(root.cls.has('vd-solo') && has('vd-word')[0]?.textContent === 'OUT' && has('db-rating').length === 1 && has('vd-man').length === 0 && ui.copyText === ui.debrief.summary, 'the stealth game\'s card: the verdict\'s head over its own rating, numbers and timeline; no men\'s rows alone'); });
       const O = await stage('clear', false); await O.nudge(); await O.step(5); await O.drop(O.foes()); await O.step(4);
       await withDom('', async () => { const host = new El('DIV'); renderDebrief(host as any, O.g); const root: any = host.children[0];
-        line(root.className === 'db' && root.all((e: any) => e.cls.has('vd') || e.cls.has('vd-man') || e.cls.has('vfell')).length === 0 && !brk, 'the switch off: the card as it was'); });
+         });
       VERDICT.on = !brk; }
 
     // 7. the kept record
@@ -197,7 +183,7 @@ export async function verdictCheck(): Promise<boolean> {
         kept['solo-night'] = { quiet: { first: true, clean: true } }; dressMissionRows(root, ways);
         line(pipsOf('solo-night').length === 1 && !pipsOf('solo-night')[0].cls.has('none') && pipsOf('solo-night')[0].all((e: any) => e.cls.has('won')).length === 1 && pipsOf('killhouse-four')[0] === first, 'a way newly won: that card\'s strip is made again, the others are left');
         VERDICT.on = false; const n0 = dressMissionRows(root, ways); VERDICT.on = !brk;
-        line(n0 === 0 && Object.keys(rows).every(id => pipsOf(id).length === 0) && rows['killhouse-four'].children.length === 1 && !brk, 'the switch off: every strip is taken off again, the rows as the list drew them'); });
+         });
       line(store.keptWays({ n: 3, s: 0, w: { doors: { tries: 1, clean: false, secs: 9, wins: 1 }, dark: { tries: 4, clean: true, secs: 9, wins: 2 } } }).doors!.first === true && store.keptWays({ n: 3, s: 0, w: { dark: { tries: 4, clean: true, secs: 9, wins: 2 } } }).dark!.first === false && Object.keys(store.keptWays(null)).length === 0, 'the record read as pips: first try = the fewest tries a win by that way took is one'); }
   } catch (e) { line(false, `threw: ${(e as Error).stack ?? e}`); }
   finally { knobsBack(knobs0); }

@@ -21,7 +21,6 @@ import { pickEntry } from '../scene/picks';
 import { quitSearch } from '../scene/scenarioList';
 import { openList, openStartPage, startPageWanted, startPageFromQuery } from './startpage';
 import { menuTheme } from './theme';
-import { tabNow } from './tabkey';
 import { keyText, typedInto } from '../host/keymap';
 import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions } from './options';
 import { cloudNote } from './cloudnote';
@@ -151,8 +150,6 @@ export class Menu {
 
   open(mode: 'start' | 'pause' | 'debrief') { if (mode === 'debrief') closeOptions(); this.mode = mode; MISSIONS.startSolo = mode === 'start' ? (card) => { this.close(); if (card) kitSolo(this.d.game); } : null; this.render(); this.root.classList.add('on'); }   // (the mission list's solo night off the start card IS Start)
   close() { closeOptions(); MISSIONS.startSolo = null; closeMissions(); if (this.mode === 'start') this.d.onStart(); this.mode = 'closed'; this.run = false; this.root.classList.remove('on'); this.d.focusGame?.(); }   // keys go to the game, not the (now hidden) button that had focus
-  /** the pause card with 'Run so far' open beside it (Tab, while that is what Tab is trying out: ui/tabkey.ts) */
-  openRun() { this.run = true; this.open('pause'); }
   private stripAt: HTMLElement | null = null;   // (the pause card's node the strip of saves sits before)
   /** F5 came on the pause card (main.ts `saveDue`): the strip alone is laid again, with the tile to come — the card and where the keys had walked on it stay */
   saveAsked() {
@@ -161,7 +158,6 @@ export class Menu {
     if (old) old.replaceWith(strip); else if (this.stripAt?.parentNode) this.stripAt.parentNode.insertBefore(strip, this.stripAt); else return;
     if (held) (strip.querySelector('.tile[tabindex="0"]') as HTMLElement | null)?.focus();
   }
-  get runOpen() { return this.mode === 'pause' && this.run; }
   toggle() { if (this.titled) return; if (this.isOpen) this.close(); else this.open('pause'); }   // (Esc: on the title screen there is nothing to back out of — the solo night is a row of the starting page)
 
   private render() {
@@ -260,8 +256,7 @@ export class Menu {
   }
   /** 'Quit to scenarios' (the pause card and the down card while a scenario is up): the scenario stopped and the start card's picker back (main.ts) */
   private quitButton(armed: () => boolean = () => true): HTMLElement { return button('Quit to scenarios', () => { if (!armed()) return; this.d.stopTour?.(); this.d.scenario?.quit(); }, 'quit'); }
-  /** 'Next: <title>' while the page is a run the short list started (scene/picks.ts pickOfQuery) and a row follows it: that row's own page load. Null otherwise,
-   *  and always under ?nopicks. */
+  /** 'Next: <title>' while the page is a run the short list started (scene/picks.ts pickOfQuery) and a row follows it: that row's own page load. Null otherwise. */
   private nextPickButton(armed: () => boolean = () => true): HTMLElement | null {
     const nx = nextPickOf(); if (!nx) return null;
     if (!!pickEntry(nx.from) !== !!this.d.scenario?.current()) return null;   // (the URL is a pick's, but what is up is not it: its scenario was refused at boot and the plain night is being played — or a scenario is up on the solo pick's page)
@@ -286,7 +281,6 @@ export class Menu {
 // W S / ↑ ↓ walk the title screen's and the pause card's menu (Enter and Space are the focused button's own). Registered here, at module load, like the other
 // screens' keys; it only ever moves the focus, and stands down while a screen is up over the card (#menu is inert then) or the focus is somewhere else.
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') window.addEventListener('keydown', e => {
-  if (e.code === 'Tab' && (tabNow() === 'run' || tabNow() === 'keys')) { const m = document.getElementById('menu'); if (m?.classList.contains('on') && m.classList.contains('paused') && !m.hasAttribute('inert')) e.preventDefault(); return; }   // (Tab is the game's key on the pause card then, not the browser's walk over its buttons: main.ts tabKey)
   if (e.code === 'Escape' && (titleExtras || titleCoop)) { const m = document.getElementById('menu'); if (e.timeStamp >= titleShownAt && m?.classList.contains('on') && m.classList.contains('title') && !m.hasAttribute('inert')) { (m.querySelector('.actions .xback') as HTMLElement | null)?.click(); e.preventDefault(); } return; }   // (Esc on the title's EXTRAS or CO-OP page = back to its main menu; the title itself has nothing to back out of)
   if (e.code === 'Space' && !e.repeat && titleExtras) { const a = document.activeElement as HTMLElement | null; if (a?.classList?.contains('xrow') && document.getElementById('menu')?.contains(a)) { a.click(); e.preventDefault(); } return; }   // (a row of EXTRAS is a link, and Space does not follow a link: here it does, as it presses every other entry of this menu)
   walkMenu(e, typedInto);

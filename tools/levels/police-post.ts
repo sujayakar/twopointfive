@@ -90,7 +90,7 @@ import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from '../../src/scen
 import type { SurfacesData } from '../../src/scene/levelData';
 import type { LevelScenarios, QuietData, Rect, ResponseData } from '../../src/scene/scenarios';
 import { officeKit, normalize3, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, roundSlabs, GWOT_PALETTE, GWOT_MATERIALS, GW_PART, type GwotMat } from '../../src/scene/gwotKit';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART, type GwotMat } from '../../src/scene/gwotKit';
 import type { MarkFace, MarkPal } from '../../src/scene/markings';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
@@ -536,8 +536,8 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     /** a small thing standing on a surface whose top is y */
     const thing = (x: number, z: number, y: number, hx: number, hy: number, hz: number, m: GwotMat, yaw = 0) => add({ c: [x, y + hy, z], h: [hx, hy, hz], yaw, ...M[m] });
     const glass = (x: number, z: number, y: number) => thing(x, z, y, 0.022, 0.035, 0.022, 'tin');
-    /** a round thing standing: the kit's own slabs (gwotKit.ts roundSlabs: under 0.2 m two squares 45° apart, from 0.2 m the octagon the round rule finds) */
-    const rnd = (x: number, z: number, y0: number, y1: number, r: number, m: GwotMat) => roundSlabs(r).forEach(s => W(x, z, y0, y1 - s.drop, s.hx, s.hz, M[m], {}, s.yaw));
+    /** a round thing standing, the kit's */
+    const rnd = (x: number, z: number, y0: number, y1: number, r: number, m: GwotMat) => G.round(W, x, z, y0, y1, r, M[m], {}, {});
     const floor = (x: number, z: number, w: number, d: number, m: GwotMat, yaw = 0, y = 0.012) => G.patch(x, z, w, d, m, yaw, y);
     /** PROP (bin): a bucket */
     const bucket = (x: number, z: number, m: GwotMat = 'tin') => K.prop('bin', x, z, 0, 2, [{ off: [0, 0.14, 0], h: [0.11, 0.14, 0.11], yaw: 0, albedo: M[m].albedo }, { off: [0, 0.14, 0], h: [0.11, 0.138, 0.11], yaw: QTR, albedo: M[m].albedo }], [0.12, 0.12]);

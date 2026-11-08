@@ -21,7 +21,7 @@ Every line checked against the code at 527a92a. The build is THE PAGE IN THE BRO
 
 <!-- was CLAUDE.md lines 240–243 -->
 - **Where the families live** (`src/game/`): SQUAD = orders.ts, pairorders.ts, silent.ts, unseen.ts, sneak.ts, spotted.ts, pairup.ts, squadsmoke.ts, squadthrow.ts, squad40.ts, shutdoor.ts, cover.ts, cleared.ts, roomread.ts, roomfit.ts, stackroom.ts, rearwatch.ts, entrypoints.ts,
-  floorseen.ts, teamfeel.ts (the Tab rows), kit.ts + loadout.ts + slots.json, nvg.ts, irlaser.ts · DOORS = doors.ts, doortools.ts, doorpath.ts, doorway.ts, doorswing.ts, handleside.ts,
+  floorseen.ts, kit.ts + loadout.ts + slots.json, nvg.ts, irlaser.ts · DOORS = doors.ts, doortools.ts, doorpath.ts, doorway.ts, doorswing.ts, handleside.ts,
   doorblast.ts, shutdoor.ts · ROOM FIGHT (both sides of a room clear) = roomfight.ts, digin.ts, pressure.ts, laststand.ts, buddy.ts, enemysquads.ts, cues.ts, difficulty.ts, coverfire.ts,
   clearline.ts · GEAR = frag.ts, he40.ts, shotgun.ts, wallcharge.ts · DESTRUCTION = destruction.ts, destructionSwitch.ts, wallbreak.ts, wallreact.ts, furnblast.ts, glassbreak.ts, glasspen.ts, shards.ts.
 
@@ -59,7 +59,7 @@ Every line checked against the code at 527a92a. The build is THE PAGE IN THE BRO
   places beside the frame, the walk, the beat's clock and its tail — the pose is character.ts `bigTool`, the prop rigProps.ts `bigBoxes`; the card rule is kit.ts `BIGSLOT`) ·
   lightswitch.ts (a room's lights have a switch on the wall by its door: the plates found from the level, Sam's row, a defender who puts a room back —
   `docs/agents/stealth.md`, 'Wall switches') ·
-  scene/round.ts (round things are round: the kit's four-slab octagons made one round box as a level is stood up, for the picture, every ray and
+  scene/round.ts (round things are round: a level file says a box is one, for the picture, every ray and
   what walks against it — `docs/agents/levels.md`, 'Round things are round') ·
   carlamps.ts (a parked vehicle's head and tail lamps found in the level's boxes and made light targets a round breaks, lit or not —
   `docs/agents/stealth.md`, 'A parked vehicle's lamps') ·

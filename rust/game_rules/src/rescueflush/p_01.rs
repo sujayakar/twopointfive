@@ -41,9 +41,7 @@ pub fn rescue_flush_line(g: &mut crate::game::Game, by: GuardId, v: GuardId) -> 
     let e: V3 = [pb[0], 1.5, pb[2]];
     let c = match g.ch[cv].bones.get(crate::character::Bone::Chest) { Some(p) => *p, None => v3::add(pv, [0.0, 0.6, 0.0]) };
     if crate::scene_collision::shot_blocked(g, e, c, None, None) { return f64::INFINITY; }
-    let key = format!("rescueS{}_{}", g.ch[cb].id, g.ch[cv].id);
-    let t = crate::sensors::sensors_segment(g, &key, e, c, None);
-    match t { Some(t) if t < g.k.rescueflush.smoke_k => f64::INFINITY, _ => d }
+    if crate::sense::smoke_between(g, e, c) < g.k.rescueflush.smoke_k { f64::INFINITY } else { d }
 }
 
 /// His nearest line on any of `alive`, or Infinity when he cannot hold a gun on anybody. (the closure `has` of ts:94)
@@ -105,7 +103,7 @@ fn free(g: &mut Game, h: GuardId, b: Option<crate::scene_level::BreachPlanBounds
 }
 
 /// One way a man could go: goal, marks on the way, where he walks now, the door it takes him to. (the map of ts:164)
-fn way_of(g: &mut Game, goal: Goal, alive: &[GuardId], room: V3) -> (Goal, Vec<V3>, Option<V3>, Option<V3>) {
+fn way_of(g: &Game, goal: Goal, alive: &[GuardId], room: V3) -> (Goal, Vec<V3>, Option<V3>, Option<V3>) {
     let via = if goal == Goal::Side { crate::rescue::rescue_side_way(g) } else { Vec::new() };
     let at = match via.first() { Some(p) => Some(*p), None => rescue_flush_point_of(g, goal, alive) };
     let door = if goal == Goal::Side { via.last().copied() } else if goal == Goal::Room { Some(room) } else { at };

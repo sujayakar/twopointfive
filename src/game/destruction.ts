@@ -1,6 +1,6 @@
 // DESTRUCTION (STATUS stage 3b — "a bit more destruction when going full auto with the FN2000 … stress test how much chaos we could do (Control!)", under
 // the STEALTH-FIRST / LOW-VELOCITY principle and the no-unbounded-per-frame-work rule): what a burst of fire does to the office beyond the hole and the puff
-// it always left. Everything here hangs off ONE knob, `tune.chaos` 0‥1 (default 0.5, Tab ▸ Sandbox ▸ chaos rows, kept per machine): 0 = the game byte
+// it always left. Everything here hangs off ONE knob, `tune.chaos` 0‥1 (default 0.5): 0 = the game byte
 // for byte as it was — every hook below returns on its first line — and everything above 0 is BOUNDED: fixed pools, per-second caps, graceful demotion.
 //
 // The model. Rounds (anybody's) and stun charges pour HEAT into a coarse 2 m grid that decays with a 2 s time constant; a hit's ESCALATION E = heat × 2 ×
@@ -63,7 +63,7 @@ import './civilians';   // (kicked rubble: who is on his feet)
 import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 // ------------------------------------------------------------------ knobs
-/** The lane's numbers (Tab ▸ Sandbox ▸ chaos rows edit the first block live; persisted with the switch: twopointsix.chaos). */
+/** The lane's numbers. */
 export const CHAOS = {
   def: 0.5,
   heatTau: 2.0,          // s: the beaten-zone memory
@@ -151,8 +151,6 @@ export const CHAOS = {
 export const PALL_STATS = { palls: 0, emitters: 0, refused: 0, starved: 0, shut: 0, dust: 0 };
 /** the eight ways an emitter of a pall looks for something solid near it (x, z) */
 const PALL_DIRS: [number, number][] = [[1, 0], [0.7071, 0.7071], [0, 1], [-0.7071, 0.7071], [-1, 0], [-0.7071, -0.7071], [0, -1], [0.7071, -0.7071]];
-export const CHAOS_DEFAULTS = JSON.parse(JSON.stringify(CHAOS)) as typeof CHAOS;
-const LS_KEY = 'twopointsix.chaos';
 type ChaosTune = { chaos?: number; debrisImpulses?: boolean };
 /** the knob as the systems read it: 0 under the tour (the showcase is choreographed round the office as authored), else tune.chaos clamped — UNLESS a showcase PROGRAM of
  *  the level script has set its own for its length (director.ts c.chaos → Destruction.showChaos: the day showcase's loud minute runs at 0.8 whatever the player keeps,
@@ -163,14 +161,6 @@ export function chaosOf(g: Game): number { const s = g.destr?.showChaos; if (s !
  *  own tuning and its player-only fixture rule whatever the switch says. (What is STRUCTURAL — the dressing, 'indoors' = under a roof — follows the switch alone.) */
 export function loudNow(g: Game): boolean { return DESTRUCTION.on && !!(g.roomClear?.active || g.nightBreach?.active || g.rescue?.active); }
 export function impulsesOn(g: Game): boolean { return chaosOf(g) > 0 && (g.tune as ChaosTune).debrisImpulses !== false; }
-export function loadChaos(tune: ChaosTune) {
-  tune.chaos = CHAOS.def;
-  try { const raw = localStorage.getItem(LS_KEY); if (!raw) return; const o = JSON.parse(raw); if (typeof o.chaos === 'number' && isFinite(o.chaos)) tune.chaos = Math.max(0, Math.min(1, o.chaos)); if (typeof o.debrisImpulses === 'boolean') tune.debrisImpulses = o.debrisImpulses; for (const k of ['puffsPerSec', 'papersPerSec', 'knocksPerSec', 'tilesPerEncounter'] as const) if (typeof o[k] === 'number' && isFinite(o[k])) CHAOS[k] = o[k];
-    const I = CHAOS.imp, oi = o.imp; if (oi && typeof oi === 'object') { for (const k of ['strength', 'radius', 'up'] as const) if (typeof oi.bang?.[k] === 'number' && isFinite(oi.bang[k])) I.bang[k] = oi.bang[k]; if (typeof oi.impact?.strength === 'number' && isFinite(oi.impact.strength)) I.impact.strength = oi.impact.strength; if (typeof oi.thud?.strength === 'number' && isFinite(oi.thud.strength)) I.thud.strength = oi.thud.strength; } } catch { /* no storage (bun) / junk */ }
-}
-export function saveChaos(g: Game) { try { const t = g.tune as ChaosTune; const I = CHAOS.imp; localStorage.setItem(LS_KEY, JSON.stringify({ chaos: t.chaos ?? CHAOS.def, debrisImpulses: t.debrisImpulses !== false, puffsPerSec: CHAOS.puffsPerSec, papersPerSec: CHAOS.papersPerSec, knocksPerSec: CHAOS.knocksPerSec, tilesPerEncounter: CHAOS.tilesPerEncounter, imp: { bang: { strength: I.bang.strength, radius: I.bang.radius, up: I.bang.up }, impact: { strength: I.impact.strength }, thud: { strength: I.thud.strength } } })); } catch { /* */ } }
-export function resetChaosKnobs(g: Game) { const { on, solver } = CHAOS.pall, mess = CHAOS.mess.on; Object.assign(CHAOS, JSON.parse(JSON.stringify(CHAOS_DEFAULTS))); CHAOS.pall.on = on; CHAOS.pall.solver = solver; CHAOS.mess.on = mess;   // (the pall's switch is the page's, not a tuning: ↺ puts its numbers back and leaves the rule as the page opened)
-  const t = g.tune as ChaosTune; t.chaos = CHAOS.def; t.debrisImpulses = true; try { localStorage.removeItem(LS_KEY); } catch { /* */ } }
 /** the impulses' strength scale off the knob: 1 up to chaos 0.5, rising to CHAOS.imp.chaosK at chaos 1 (the knock-offs' vK, gentler) */
 export function impK(chaos: number): number { return chaos <= 0.5 ? 1 : 1 + (CHAOS.imp.chaosK - 1) * (chaos - 0.5) * 2; }
 

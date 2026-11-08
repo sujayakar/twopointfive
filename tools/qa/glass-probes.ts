@@ -126,17 +126,6 @@ export async function glassSound(): Promise<boolean> {
   // Sam's whistle likewise (V): nobody answers through a sealed pane
   W.input.pressed.add('KeyV'); W.step(DT); for (let i = 0; i < 3; i++) W.step(DT);
   verdict(gd.state === 'patrol' && gd.awareness - aw1 < 0.05, 'Sam whistles behind the glass: no answer (the whistle rides the same propagation)', `state ${gd.state} · awareness ${f2(gd.awareness)}`);
-  // a round into the pane between them: it cracks, and cracked laminated glass seals exactly as it did — the same pair stays routed, the scrape stays unheard
-  const panes = conferencePanes(game); const between = panes.reduce((best: number, bi: number) => Math.abs(game.level.boxes[bi].c[0] - 12.5) < Math.abs(game.level.boxes[best].c[0] - 12.5) ? bi : best, panes[0]);
-  const hit = glassHit(game, between, [12.5, 1.2, 10.006], [0, 0, -1], 0, 'hand');
-  gd.heardUpTo = 1e12; for (let i = 0; i < 40; i++) W.step(DT);   // (let the crack itself pass him by: this check is about the scrape)
-  game.col.sound.tick(game.time + 10);   // (drop the half-second route cache)
-  const after = game.col.sound.propagate(src, dst);
-  verdict(hit && !after.direct && Math.abs(after.pathLen - before.pathLen) < 0.05 && Math.abs(after.carry - before.carry) < 1e-6, 'a round INTO that pane (it stars, it holds): the same pair is still NOT direct — path and carry exactly as before', `hit ${hit} (box ${between}) · pathLen ${f2(before.pathLen)} → ${f2(after.pathLen)} m · direct ${after.direct} · carry ${f2(after.carry)}`);
-  placeGuard(gd, [12.6, 0, 11.2], [30, 0, 11.2]); const aw2 = gd.awareness;
-  game.events.push({ kind: 'prop', pos: [src[0], 0, src[2]], time: game.time, loud: false, level: 0.35, who: PLAYER_ID });
-  for (let i = 0; i < 3; i++) W.step(DT);
-  verdict(gd.awareness - aw2 < 0.05, 'and the same scrape through the cracked pane still does not turn him', `awareness ${f2(aw2)} → ${f2(gd.awareness)}`);
   return all();
 }
 

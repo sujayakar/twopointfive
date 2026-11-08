@@ -177,7 +177,7 @@ if (!names.length || names.includes('tut-road')) { console.log('\n=== lesson-che
         verdict(K.SLOTS.on && held(A.g) === '4/2/2/3' && held(P.g) === '1/1/1/0', 'under the pouches rule a lesson\'s player carries what a Player is built with (4 smoke, 2 stun, 2 frags, 3 rounds of 40 mm: the kit lesson throws more than one can), while the same start off a lesson\'s page carries the kept card\'s counts',
           `smoke/stun/frag/40 mm — on its page ${held(A.g)} · off a lesson's page (the kept card: no rifle, one of each) ${held(P.g)}`); }
       // another mission's loadout over the lesson: the kept cards, a change kept — and the lesson restarted under it is still the issue kit
-      const S = UI.openLoadout(other, { host: new El('BODY') as any, deploy: () => { } });
+      const S = UI.openLoadout(other, { search: '', host: new El('BODY') as any, deploy: () => { } });
       const shown = K.KIT.members[0].weapon, cards = !!S.card, stepped = K.kitTry(0, 'suit', 1).ok, suit = K.KIT.members[0].suit, written = kept().weapon === 'pistol' && kept().suit === suit && suit !== 'issued';
       const tint0 = JSON.stringify(A.g.player.char.tint);
       await quiet(() => { A.g.restartEncounter(); if (!A.g.lesson.data) startFromQuery(A.g, scenarioQuery(alone)); for (let i = 0; i < 3; i++) A.W.step(1 / 60); });

@@ -169,7 +169,7 @@ impl Scene {
         touching.iter().map(|&i| (i, touching.iter().find(|&&j| j != i).map(|&j| self.rooms[j].id.clone()).unwrap_or_else(|| String::from("outside")))).collect()
     }
 
-    /// THE SCENE AS A LEVEL FILE'S VALUE (docs/level-format.md, version 1).
+    /// THE SCENE AS A LEVEL FILE'S VALUE (docs/level-format.md, version 2).
     pub fn level(&self) -> Json {
         let K = sizes();
         let (WORLD, KIT_H, DOOR_HEAD, LEAF_W, LEAF_H) = (K.world, K.ceiling, K.head, K.leaf_w, K.leaf_h);
@@ -246,7 +246,7 @@ impl Scene {
         let area = self.rooms.first().map(|r| [r.x0, r.x1, r.z0, r.z1]).unwrap_or([0.0, 1.0, 0.0, 1.0]);
         let rect = |r: [f64; 4]| obj(vec![("x0", n(r[0])), ("x1", n(r[1])), ("z0", n(r[2])), ("z1", n(r[3]))]);
         let mut top = vec![
-            ("version", n(1.0)), ("name", s(&self.name)),
+            ("version", n(2.0)), ("name", s(&self.name)),
             ("meta", obj(vec![("bounds", obj(vec![("min", nums(&[0.0, -0.25, 0.0])), ("max", nums(&[WORLD[0], 8.0, WORLD[1]]))])), ("generator", s("rust/game_start scene.rs")), ("notes", s("A scene a test wrote: a level file like any other."))])),
             ("floors", arr(vec![obj(vec![("id", s("f0")), ("name", s("ground floor")), ("y", n(0.0)), ("ceiling", n(KIT_H))])])),
             ("materials", obj(vec![

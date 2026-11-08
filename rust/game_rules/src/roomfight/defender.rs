@@ -33,7 +33,7 @@ pub(super) fn cover_pt(g: &mut Game, d: RoomfightDefId) {
 }
 
 /// `DIGIN.on || squadsLive(g) || hasHim(gd, OWN.stand)`
-pub(super) fn digs_in(g: &mut Game, gd: GuardId) -> bool { g.k.digin.on || crate::enemysquads::squads_live(g) || crate::owner::has(g, gd, crate::owner::by::STAND) }
+pub(super) fn digs_in(g: &Game, gd: GuardId) -> bool { g.k.digin.on || crate::enemysquads::squads_live(g) || crate::owner::has(g, gd, crate::owner::by::STAND) }
 
 /// (roomfight.ts adopt)
 pub fn room_fight_adopt(g: &mut crate::game::Game, gd: GuardId) -> RoomfightDefId {

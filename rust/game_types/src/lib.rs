@@ -220,7 +220,6 @@ pub mod render_meshbvh { pub mod types; pub use types::*; }
 pub mod render_particles { pub mod types; pub use types::*; }
 pub mod render_passes { pub mod types; pub use types::*; }
 pub mod render_place_field { pub mod types; pub use types::*; }
-pub mod render_probe { pub mod types; pub use types::*; }
 pub mod render_reach { pub mod types; pub use types::*; }
 pub mod render_reach_keep { pub mod types; pub use types::*; }
 pub mod render_sdfrig { pub mod types; pub use types::*; }
@@ -264,7 +263,6 @@ pub mod scene_marking_defaults { pub mod types; pub use types::*; }
 pub mod scene_markings { pub mod types; pub use types::*; }
 pub mod scene_materials { pub mod types; pub use types::*; }
 pub mod scene_place_plan { pub mod types; pub use types::*; }
-pub mod scene_round { pub mod types; pub use types::*; }
 pub mod scene_scenario_list { pub mod types; pub use types::*; }
 pub mod scene_scenarios { pub mod types; pub use types::*; }
 pub mod scene_shapes { pub mod types; pub use types::*; }
@@ -307,8 +305,6 @@ pub mod slotsetup { pub mod types; pub use types::*; }
 pub mod smoke_smoke_grid { pub mod types; pub use types::*; }
 pub mod smoke_types { pub mod types; pub use types::*; }
 pub mod smokebreak { pub mod types; pub use types::*; }
-pub mod snatch { pub mod types; pub use types::*; }
-pub mod snatchout { pub mod types; pub use types::*; }
 pub mod sneak { pub mod types; pub use types::*; }
 pub mod snow_blast { pub mod types; pub use types::*; }
 pub mod snow_bog { pub mod types; pub use types::*; }

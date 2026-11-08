@@ -58,9 +58,17 @@ pub fn pulls(g: &mut crate::game::Game) -> Vec<[f64; 2]> {
 /// distance on the floor (doze.ts flat)
 pub fn flat(a: &[f64], x: f64, z: f64) -> f64 { m::hyp2(a[0] - x, a[2] - z) }
 /// which way a man in this chair faces (doze.ts chairFace)
-pub fn chair_face(g: &mut crate::game::Game, p: PropId) -> f64 {
+pub fn chair_face(g: &crate::game::Game, p: PropId) -> f64 {
     let y = crate::props::prop_yaw(g, p);
     m::atan2(-m::sin(y), -m::cos(y))
+}
+/// the mark over a man at rest ('': none): a 'z' that grows with each breath asleep; at his screen, a note until something has reached him. (doze.ts dozeMark)
+pub fn doze_mark(g: &crate::game::Game, gd: GuardId) -> &'static str {
+    let Some(d) = g.m.doze.rec.get(gd) else { return "" };
+    if d.phase == Phase::Work { return if g.gd[gd].awareness > 0.05 { "" } else { "♪" }; }
+    if d.phase != Phase::Asleep { return ""; }
+    let b = js::rem(d.t, g.k.doze.breath_secs) / g.k.doze.breath_secs;
+    if b < 1.0 / 3.0 { "z" } else if b < 2.0 / 3.0 { "zZ" } else { "zZz" }
 }
 /// the run is one a man may doze in (doze.ts live)
 pub fn live(g: &mut crate::game::Game) -> bool {
@@ -530,7 +538,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
     }
 }
 /// where the man who shoved the chair stands: a player, else a guard, else the sleeper himself (doze.ts:265)
-fn shover_at(g: &mut Game, ch: PropId, c: CharId) -> V3 {
+fn shover_at(g: &Game, ch: PropId, c: CharId) -> V3 {
     let who = crate::props::prop_last_who(g, ch);
     if let Some(pl) = crate::seats::man_by_id(g, who) { return g.ch[g.pl[pl].ch].pos; }
     for &x in g.guards.iter() {
@@ -545,7 +553,7 @@ pub fn face_light(g: &mut crate::game::Game, gd: GuardId, head: V3) -> f64 {
     let me = g.ch[g.gd[gd].ch].id;
     let team = g.gd[gd].team;
     let mut skip = move |g: &mut Game, owner: f64| -> bool { owner == me || own_side_owns(g, owner, team) };
-    let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), None, None, Some(crate::sim_lightshome::row_bit().screen));
+    let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), Some(crate::sim_lightshome::row_bit().screen));
     crate::game::game_visibility_of(g, est)
 }
 /// a man of this team carries the lamp with this owner (doze.ts:307, 314)
@@ -575,7 +583,7 @@ pub fn lamp_on(g: &mut crate::game::Game, gd: GuardId, head: V3) -> V3 {
 }
 
 /// a man on his way down into, in, or just up out of his chair is no contact for the furniture (doze.ts dozeInChair)
-pub fn doze_in_chair(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn doze_in_chair(g: &crate::game::Game, gd: GuardId) -> bool {
     let Some(d) = g.m.doze.rec.get(gd).copied() else { return false };
     let Some(ch) = d.chair else { return false };
     if seated(d) || d.phase == Phase::Up { return true; }
