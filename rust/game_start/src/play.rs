@@ -453,6 +453,16 @@ impl Play {
     /// has he had his man in his eyes within the last `secs` seconds
     pub fn saw_within(&self, gd: GuardId, secs: f64) -> bool { game::control::man::saw_his_man_within(&self.g, gd, secs) }
 
+    /// where the open ways are, within `reach` of a man of the squad, onto floor nobody of it has been on, and whether a gun of it is on each
+    pub fn watched(&mut self, reach: f64) -> Vec<([f64; 2], bool)> { game::cover::cover_watched(&mut self.g, reach).into_iter().map(|(o, on)| { let a = self.g.tab.cover_opening[o].at; ([a[0], a[2]], on) }).collect() }
+
+    /// how far a man's gun is off a place, in degrees
+    pub fn gun_off(&self, gd: GuardId, at: [f64; 2]) -> f64 {
+        let (q, yaw) = (self.at(gd), self.g.ch[self.g.gd[gd].ch].aim_yaw);
+        let turn = yaw - (at[0] - q[0]).atan2(at[1] - q[1]);
+        ((turn + std::f64::consts::PI).rem_euclid(std::f64::consts::TAU) - std::f64::consts::PI).abs().to_degrees()
+    }
+
     /// The spot the rounds past him have sent him to, while he is on his way or about to go (the suppression rule's cover spot); `None`: not sent.
     pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.gd[gd].sup.cover.map(|p| [p[0], p[2]]) }
 
