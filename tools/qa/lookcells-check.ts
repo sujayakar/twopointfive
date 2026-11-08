@@ -8,7 +8,7 @@
 // at every texel centre of a map on the lattices the materials use, at seeded scattered points and on cell edges. Two points within a rounding of the
 // same distance could in principle be told apart differently by a square than by a root; none is met here, and if a new lattice ever meets one this goes
 // red. It does not make the maps: that they came out byte for byte the same was compared once, layer by layer, when the table went in.
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 export async function lookCellsCheck(): Promise<boolean> {
   const BRK = process.env.LOOKCELLS_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };

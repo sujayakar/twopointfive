@@ -15,7 +15,7 @@
 // costs. What the picture looks like is the page's to show; it was drawn on the software adapter only (docs/agents/render.md, THE HUE SPLIT ASKS THE BELIEF).
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 export async function hueSplitCheck(): Promise<boolean> {
   const BRK = process.env.HUESPLIT_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };

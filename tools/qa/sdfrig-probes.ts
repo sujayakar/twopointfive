@@ -5,7 +5,7 @@
 //                   owner + albedo bits untouched, padding records left alone, the cull sphere fitted and holding every cone, idempotent, and rig = null (no fit attached) leaves the
 //                   list as written
 //   bun run tools/qa/probes.ts sdfrig
-import { ROOT, fake } from './headless.ts';
+import { ROOT, fake } from './here.ts';
 
 const { loadGltfCharacter } = await import(`${ROOT}/src/anim/gltf.ts`);
 const { fitRig, rigTable, RIG_SLOTS, RIG_SLOT_NAMES, RB_QUANT, RIG_KPAD, RIG_OVERRIDES } = await import(`${ROOT}/src/render/sdfrig.ts`);

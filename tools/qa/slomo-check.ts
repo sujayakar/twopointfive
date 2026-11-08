@@ -9,7 +9,7 @@
 //   bun run tools/qa/slomo-check.ts          exit 0 = all pass · 1 = a line failed
 // The player itself (the men drawn between two steps, a tape played slow and then to its end) is the real page's: engine-replay-page.cjs `between`; the bar
 // and its keys are that tool's `slow` and probes.ts cardreplay.
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 const { TAPE_SPEEDS: SPEEDS, paceFrame, slowBlend } = await import(`${ROOT}/src/replay/engineplay.ts`) as { TAPE_SPEEDS: number[]; paceFrame: (owed: number, wall: number, speed: number, f: number, ticks: number, tAt: ArrayLike<number>) => { n: number; owed: number }; slowBlend: (owed: number, next: number) => number };
 let bad = 0; const line = (ok: boolean, label: string, detail = '') => { if (!ok) bad++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}${detail ? '  — ' + detail : ''}`); };
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }

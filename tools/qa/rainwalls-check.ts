@@ -11,7 +11,7 @@
 // page's to show (tools/qa/weather-look.cjs).
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 export async function rainWallsCheck(): Promise<boolean> {
   const BRK = process.env.RAINWALLS_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };

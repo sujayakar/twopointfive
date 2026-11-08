@@ -9,7 +9,7 @@
 import { readFileSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 
 type Kernel = { setting?: string; module: string; entry: string; set: string; pipelines: string[]; pasted: number; cut?: number; budgetKB: number | null };   // (cut: the cut test's text in it, which the size tool counts apart from the kernel's row)
 type Sizes = { modules: { label: string; h: string }[]; kernels: Kernel[] };

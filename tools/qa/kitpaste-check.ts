@@ -17,7 +17,7 @@
 // Nothing here looks at the page: the buttons, the keys and the roster's marks are tools/qa/kitpaste-page.cjs's.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 
 const K = await import(`${ROOT}/src/game/kit.ts`);

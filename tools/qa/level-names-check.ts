@@ -15,7 +15,7 @@
 // exit 0 = every level's names are its own · 1 = one is not, or NO VERDICT (no level: the check looked at nothing) · 2 = bad flags
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const DLG = await import(`${ROOT}/src/game/dialogue.ts`);

@@ -15,7 +15,7 @@
 // show. Never seen on a GPU.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 type V3 = [number, number, number];
 export async function portalCheck(): Promise<boolean> {
   const BRK = process.env.PORTAL_BREAK === '1'; let all = true;   // (PORTALDEEP_BREAK=1, PORTALRIMS_BREAK=1 and PORTALBANDS_BREAK=1, read where the light's sum is mirrored below: the light is its whole rectangle, as it was, or has a rim at both ends whatever stands there, or is the mean of eight points, and the line on the hole's sides or on its rims must fail)
