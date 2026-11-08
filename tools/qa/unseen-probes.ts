@@ -3,6 +3,7 @@
 // teammates did: posture, pace, lights, the round held, the place on his wall — and that nothing moves when Sam never sneaks or the switch is off.
 // Exit 1 on any FAIL.
 import { ROOT } from './headless.ts';
+import { sample } from './sweep.ts';
 import { Run } from './pairsneak.ts';
 const U: any = await import(`${ROOT}/src/game/unseen.ts`);
 const { TWOGEARS } = (await import(`${ROOT}/src/game/player.ts`)) as any;
@@ -14,7 +15,7 @@ let fails = 0;
 const check = (ok: boolean, what: string) => { console.log(`${ok ? '- PASS —' : '- FAIL —'} ${what}`); if (!ok) fails++; return ok; };
 const reset = () => { Object.assign(U.UNSEEN, JSON.parse(JSON.stringify(U.UNSEEN_DEFAULTS))); for (const k of Object.keys(U.UNSEEN_STATS)) U.UNSEEN_STATS[k] = 0; U.UNSEEN_LOG.length = 0; };
 async function stand(query: string, level?: string, set: Record<string, unknown> = {}): Promise<Run> {
-  const R = await Run.start(query, 1, { hard: true, level }); R.stopOnNotice = false; R.cap = 600;
+  const R = await Run.start(query, 1, { hard: true, level, lean: true, digest: true }); R.stopOnNotice = false; R.cap = 600;
   WS.WALLSNAP.press = false;   // (the walks here are driven at their goals and run along walls: the shipped stand's hold-without-a-key, wallsnap.ts `press`, would take a wall hold on an upright walk, and a wall hold is sneaking — `wallbeat-check` asks about that meeting)
   HF.HOLDFIRE.on = false;   // (this file asks about the SNEAK's own hold: the unfound squad's hold, holdfire.ts, which the shipped stand raises, would hold the same rounds with UNSEEN.hold off)
   reset(); Object.assign(U.UNSEEN, { on: true }, set);   // (after the stand-up: the frozen stand holds the switch off — src/host/standup.ts)
@@ -180,7 +181,9 @@ const CHECKS: Record<string, (tag: string, q: string, lv?: string) => Promise<vo
 const wanted = (c: string, tag: string, lv?: string) => ((c !== 'hold' && c !== 'entry') || !lv) && (c !== 'idle' || tag === 'pair · office' || tag === 'four · records');   // (the break room is the office's; two arms of the identity are enough)
 if (want === 'all') {   // every check in a process of its own: a game stood up after another in one process is not the game stood up first (module state the harness does not reset)
   const jobs = Object.keys(CHECKS).flatMap(c => ARMS.filter(([tag, , lv]) => (!only || tag.includes(only)) && wanted(c, tag, lv)).map(([tag]) => [c, tag]));
-  const outs = await Promise.all(jobs.map(async ([c, tag], i) => { await new Promise(r => setTimeout(r, (i % 3) * 50)); const p = Bun.spawn(['bun', 'run', import.meta.path, c, tag], { stdout: 'pipe', stderr: 'pipe', env: process.env }); const out = await new Response(p.stdout).text(); return { out, code: await p.exited }; }));
+  // (two children at a time and two of the cases on an ordinary run, tools/qa/sweep.ts: each child stands a whole game, and fourteen at once filled the box's memory. QA_SWEEP=all for every case)
+  const todo = sample(jobs, 2), outs: { out: string; code: number }[] = []; let next = 0;
+  await Promise.all([0, 1].map(async () => { while (next < todo.length) { const i = next++, [c, tag] = todo[i]; outs[i] = await (async () => { const p = Bun.spawn(['bun', 'run', import.meta.path, c, tag], { stdout: 'pipe', stderr: 'pipe', env: process.env }); const out = await new Response(p.stdout).text(); return { out, code: await p.exited }; })(); } }));
   for (const o of outs) { process.stdout.write(o.out.split('\n').filter(l => /^(==|- (PASS|FAIL)|   )/.test(l)).join('\n') + '\n'); fails += (o.out.match(/^- FAIL/gm) ?? []).length + (o.code !== 0 && !/^- FAIL/m.test(o.out) ? 1 : 0); }
 } else {
   const run = CHECKS[want]; if (!run) { console.log(`unknown check '${want}' — one of: ${Object.keys(CHECKS).join(', ')}, all`); process.exit(2); }

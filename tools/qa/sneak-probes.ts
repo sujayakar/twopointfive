@@ -49,25 +49,15 @@ const at = (p: number[]) => `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`;
 
 /** the pair stood up on the office's room clear (placement 10: two men in the break room, three behind locked doors), squadded up and silent */
 async function rig(dice: number, sneak: boolean, set: Record<string, unknown> = {}): Promise<Run> {
-  reset(); const R = await Run.start('roomclear=10&squad=1', dice, { sneak, set: Object.keys(set).length ? { SNEAK: set } : undefined });
-  R.stopOnNotice = false; squadUp(R); if (sneak) leanStep(R); return R;
+  reset(); const R = await Run.start('roomclear=10&squad=1', dice, { sneak, lean: sneak, set: Object.keys(set).length ? { SNEAK: set } : undefined });
+  R.stopOnNotice = false; squadUp(R); if (sneak) stareEachFrame(R); return R;
 }
-/** Run.step as these probes need it: Sam's keys, his meter every sixth frame (it asks the game's light twice), the gazes written (see `stare`). Left out, being
- *  four fifths of a probe's CPU for tallies nothing here reads: the run's watcher, which asks the game's eyes ten times a frame, and its digest. */
-function leanStep(R: Run) { const g = R.g, I = R.I, c = () => g.player.char; let k = 0; (R as any).watch = () => { };
-  (R as any).step = (n = 1) => { for (let i = 0; i < n; i++) {
-    for (const code of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) I.keys.delete(code);
-    const goal = R.goal;
-    if (goal && !g.player.down) { const dx = goal[0] - R.pos[0], dz = goal[2] - R.pos[2], d = Math.hypot(dx, dz);
-      if (d > 0.12) { const { fwd, right } = R.cam.planarBasis(), a = (dx * fwd[0] + dz * fwd[2]) / d, b = (dx * right[0] + dz * right[2]) / d, T = 0.3827; if (a > T) I.keys.add('KeyW'); if (a < -T) I.keys.add('KeyS'); if (b > T) I.keys.add('KeyD'); if (b < -T) I.keys.add('KeyA'); } }
-    if (k++ % 6 === 0) { const b = c().bones, pc = b.chest ?? [c().pos[0], 1.2, c().pos[2]], ph = b.head ?? [c().pos[0], 1.6, c().pos[2]], own = (o: number) => o === PLAYER_ID; g.player.visibility = g.visibilityOf(Math.max(GDM.lightEstimateAt(g, pc, own), GDM.lightEstimateAt(g, ph, own))); }
-    for (const h of R.hostiles) { const t = gaze.get(h.char); if (!t || h.state === 'dead') continue; const y = Math.atan2(t[0] - h.char.pos[0], t[2] - h.char.pos[2]); h.char.aimYaw = h.char.bodyYaw = y; if ('headYaw' in h.char) h.char.headYaw = y; }
-    R.W.step(DT); R.t += DT; (R as any).watch();
-    if (g.player.down) throw new Error('Sam is down'); if (R.t >= R.cap) throw new Error('time cap'); } }; }
+/** the gazes written every frame (see `stare`), on a lean run */
+const stareEachFrame = (R: Run) => { R.beforeFrame = () => { for (const h of R.hostiles) { const t = gaze.get(h.char); if (!t || h.state === 'dead') continue; const y = Math.atan2(t[0] - h.char.pos[0], t[2] - h.char.pos[2]); h.char.aimYaw = h.char.bodyYaw = y; if ('headYaw' in h.char) h.char.headYaw = y; } }; };
 /** from now on, what the partner is seen for: the one tally of the watcher's that these probes read, asked of the two men in the break room alone (the other
  *  three are behind locked doors). Returns the tally as it stands, to read a difference from. */
 const watchEyes = (R: Run): number => {
-  (R as any).watch = () => { const m = R.mate; if (!m) return;
+  R.watch = () => { const m = R.mate; if (!m) return;
     for (const h of R.hostiles.slice(0, 2)) { if (h.state === 'dead') continue; const v = GDM.canSeeChar(R.g, h, m.char, false); if (v?.visible && GDM.sightGainOn(R.g, h, m, v.dist) > 0.05) R.mateSeenS += DT; } };
   return R.mateSeenS; };
 /** what a walk made of the partner: seconds moving low / upright, his top speed, the most his feet were off Sam's trail, his pace against Sam's while both moved */
