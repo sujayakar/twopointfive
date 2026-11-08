@@ -53,8 +53,11 @@ pub struct StartOpts {
     /// picture has for eyes. Off = the page's own stand, where the renderer's light meter answers; on a host with no renderer nothing does, and
     /// every man is in the dark for good (the harness's TPS_CPUSENSE=1 TPS_MOONLIGHT=1)
     pub cpu_senses: bool,
+    /// read the difficulty off `link` (`&hard`, `&enemyai=hard`: `scenario_run::difficulty_of_address`). A host that hands its knob tables has read its own address, and what it
+    /// keeps, onto them, and has laid its recipe over that: such a start says false, or the address's words would be laid over what the host decided
+    pub difficulty: bool,
 }
-impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, link: None, dress: false, cpu_senses: false } } }
+impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, link: None, dress: false, cpu_senses: false, difficulty: true } } }
 
 /// THE HOST'S OWN HALF of a stood game: the Input a hand writes, the camera that follows, the canvas's size (headless.ts standUp: `input`, `cam`, `canvas`).
 #[derive(Clone, Copy, Debug)]
@@ -137,9 +140,12 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     let mut g = Box::new(Game::blank());
     before(&mut g);
     // THE ADDRESS, BEFORE THE GAME IS MADE, as every host that starts a game from one reads it (src/host/standup.ts addressBeforeGame): the row's
-    // own hour and weather onto its words, the weather the game is born in
+    // own hour and weather onto its words, the weather the game is born in, and the difficulty it asks for
     let mut address = o.link.as_deref().map(game::query::Query::parse);
-    if let Some(q) = address.as_mut() { game::scenario_run::address_before_game(&mut g, q); }
+    if let Some(q) = address.as_mut() {
+        game::scenario_run::address_before_game(&mut g, q);
+        if o.difficulty { game::scenario_run::difficulty_of_address(&mut g, q); }   // (over `before`'s tables where a host handed none of its own: StartOpts.difficulty)
+    }
     born(o.slot);
     g.sim = o.slot;
     // (a host that draws dresses the men for the place its address names: the page's own cast is picked by the same rule)

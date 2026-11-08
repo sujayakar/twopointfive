@@ -178,6 +178,9 @@ import { DEBRIS } from '../game/destructionSwitch';
 import { FollowCamera } from '../game/camera';
 import { Input } from '../game/input';
 import { pinned } from './profile';
+import { difficultyAsked, difficultyLay } from '../game/difficulty';
+import { LESSON_MISSIONS } from '../scene/scenarioList';
+import { lessonGroup } from '../scene/scenarios';
 import { newDice, useDice } from '../math/dice';
 import { v3 } from '../math/vec';
 
@@ -229,6 +232,14 @@ export function addressBeforeGame(q: URLSearchParams): StoodWith {
   const asked = weatherAsked(q), weather = snowLevelOfQuery(q) ? 'snow' : asked;   // (a level BUILT FOR SNOW is in snow whatever ?weather= said: weatherKinds.ts SNOW_LEVELS; ?snow=0 = not so)
   const hour = hourAsked(q);
   return { weather, locked: true, hour: hour.id, sun: hour.sun, sunGiven: hour.sunGiven, dry: hour.dry, soloStand: false };
+}
+/** …AND THE DIFFICULTY IT ASKS FOR (difficulty.ts difficultyAsked), before the game is made, as a page reads it: a Training lesson's address reads no lever, as its page
+ *  doesn't. It is the address's alone: no host but a page keeps a level. The tables it writes are knob tables, the process's in the TypeScript (the Rust start writes its game's
+ *  own: scenario_run::difficulty_of_address), so in the harness an address that names a level leaves the tables on it, as a tool's own setDifficulty does, and one that names
+ *  none leaves them as they stand. What it writes names no game, so it runs here and not on a Rust game an older stand left alive (tools/blitz/surface.ts hostOf). */
+export function difficultyOfAddress(q: URLSearchParams): void {
+  const a = difficultyAsked(q, lessonGroup(LESSON_MISSIONS.find(e => e.level === q.get('levelFile'))?.group));
+  if (a) difficultyLay(a);
 }
 /** THE TWO SWITCHES THE ADDRESS'S READER READS, pinned by a harness run's own words (`TPS_SNOW`, `TPS_ROWSET`: profile.ts pinned). standGame pins them as it
  *  stands a harness game; a harness that reads an address before the game is made pins them first, by these same two lines (tools/qa/headless.ts). */
