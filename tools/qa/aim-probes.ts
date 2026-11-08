@@ -29,7 +29,7 @@ const { v3, DEG, wrapAngle, lerp } = await import(`${ROOT}/src/math/vec.ts`);
 const { updateAim } = await import(`${ROOT}/src/game/player.ts`);
 const { resetChase, playerGroundVel } = await import(`${ROOT}/src/game/guards.ts`);
 const Aim = await import(`${ROOT}/src/game/aim.ts`);
-const { AIM, trackGuard, trackPlayer, aimReady, guardRound, handsCone, aimBrake, playerAim, samAim, guardAcquired, noteBore, boreFouled, AIM_DEBUG } = Aim;
+const { AIM, trackGuard, trackPlayer, aimReady, guardRound, handsCone, aimBrake, samAim, noteBore, boreFouled, AIM_DEBUG } = Aim;
 const { STARTLE, STARTLE_STATS } = await import(`${ROOT}/src/game/startle.ts`);
 /** what the startle holds a man's first round by, from first sight (startle.ts: the beat, then the draw — no round leaves him in either).
  *  AIMFIRST_BREAK=1, the red path: a second more than the rule says — aim-first's two lines must fail. */

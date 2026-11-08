@@ -350,12 +350,16 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
     a.track = m::min(cap, a.track + rate * dt);
 }
 
+/// He has you lined up: his track is past the aim model's first-shot gate. (aim.ts guardAcquired)
+pub fn guard_acquired(g: &crate::game::Game, gd: GuardId) -> bool {
+    g.tune.aim_model && g.gd[gd].state == crate::game::GuardState::Alert && g.gd[gd].aim.track >= g.k.aim.guard.acquire_min - 1e-9
+}
+
 /// Sam's cone under the model and his track: nothing with the model off or under the puppet. (aim.ts playerAim)
-pub fn player_aim(g: &mut crate::game::Game) -> crate::aim::PlayerAim {
+pub fn player_aim(g: &crate::game::Game, pl: PlayerId) -> crate::aim::PlayerAim {
     if !g.tune.aim_model || g.puppet.is_some() {
         return crate::aim::PlayerAim { spread: 0.0, track: 1.0, base: 0.0, settle: 1.0, tgt: 0.0, own: 0.0 };
     }
-    let pl = g.player;
     let p = g.k.aim.player;
     let c = g.pl[pl].ch;
     let base = if g.pl[pl].crouch { p.base_crouch } else { p.base_stand };
@@ -364,9 +368,7 @@ pub fn player_aim(g: &mut crate::game::Game) -> crate::aim::PlayerAim {
     let tgt = m::min(p.target_move_cap, g.pl[pl].aim.bearing_rate * p.target_move_k);
     let c_vel = g.ch[c].vel;
     let on_cost = move_cost(g);
-    let a = core::mem::take(&mut g.pl[pl].aim);
-    let own = feet_of(g, &a, &c_vel, p.steady_pace, on_cost) * p.shooter_move_k;
-    g.pl[pl].aim = a;
+    let own = feet_of(g, &g.pl[pl].aim, &c_vel, p.steady_pace, on_cost) * p.shooter_move_k;
     // AIM_HOOKS.playerExternalK as player.ts:258 sets it at load, the only value it ever holds.
     let k = if crate::game::player_braced(g, pl) { g.k.rifle_spread.brace_k } else { 1.0 };
     let kk = if k.is_finite() { m::max(0.0, k) } else { 1.0 };
@@ -378,11 +380,11 @@ pub fn player_aim(g: &mut crate::game::Game) -> crate::aim::PlayerAim {
 
 /// The one term Sam's fire sites add to their spread; stamps `last_shot`. (aim.ts samAim)
 pub fn sam_aim(g: &mut crate::game::Game) -> f64 {
-    let r = player_aim(g);
+    let pl = g.player;
+    let r = player_aim(g, pl);
     if !g.tune.aim_model || g.puppet.is_some() {
         return 0.0;
     }
-    let pl = g.player;
     let v = g.ch[g.pl[pl].ch].vel;
     let now = g.time;
     g.pl[pl].aim.last_shot = Some(crate::aim::AimStateLastShot { t: now, track: r.track, spread: r.spread, speed: m::hyp2(v[0], v[2]), gated: false, hands: r.base, settle: r.settle, tgt: r.tgt, own: r.own });

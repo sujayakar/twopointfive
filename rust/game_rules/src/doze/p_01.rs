@@ -62,6 +62,14 @@ pub fn chair_face(g: &mut crate::game::Game, p: PropId) -> f64 {
     let y = crate::props::prop_yaw(g, p);
     m::atan2(-m::sin(y), -m::cos(y))
 }
+/// the mark over a man at rest ('': none): a 'z' that grows with each breath asleep; at his screen, a note until something has reached him. (doze.ts dozeMark)
+pub fn doze_mark(g: &crate::game::Game, gd: GuardId) -> &'static str {
+    let Some(d) = g.m.doze.rec.get(gd) else { return "" };
+    if d.phase == Phase::Work { return if g.gd[gd].awareness > 0.05 { "" } else { "♪" }; }
+    if d.phase != Phase::Asleep { return ""; }
+    let b = js::rem(d.t, g.k.doze.breath_secs) / g.k.doze.breath_secs;
+    if b < 1.0 / 3.0 { "z" } else if b < 2.0 / 3.0 { "zZ" } else { "zZz" }
+}
 /// the run is one a man may doze in (doze.ts live)
 pub fn live(g: &mut crate::game::Game) -> bool {
     g.ai_enabled && !g.quiet_utility && !g.touring && !g.puppet.is_some() && !g.pl[g.player].down

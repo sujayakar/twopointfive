@@ -34,8 +34,6 @@
 //   close-offer       closeAt from staged spots: 180° / 120° / ±77° / 30° / 0° at 0.7 m and 1.5 m — kind, inReach, grab, strike, can, why; sprinting; an alert man
 //                     (strike only); a wall between
 //   close-rows        the rows a real frame builds for an alert man in reach (the other rows' wording named the knife: out)
-//   close-marks       closeMarks is off on the page (CLOSE.marks, settled off): nothing is handed to the overlay. (Until 2026-11-07 the probe then turned the row on
-//                     and asked the picture: four windows, the precision claim on a 4 cm grid, a wall's cut. The page has no such picture: those lines are out.)
 //   close-seat        closeSeat: down inside a second and a half, the sitting clip, kept on his mark; up the frame he is anything but calm; refusals; the right button and
 //                     Space on a seated man from beyond the standing reach; a restart leaves nobody seated
 //   close-duo         the two-person game (pairup.ts PAIRUP.on, one partner, silent, 'fall in' — the pair family's own stand, pairup-probes.ts `rig`): the
@@ -50,7 +48,7 @@ import { tapVerb } from './verbs.ts';
 const IK = 'Space';
 const { v3, wrapAngle } = await import(`${ROOT}/src/math/vec.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
-const { CLOSE, CLOSE_STATS, closeWindows, closeAt, closeMarks, closeSummary, closeSeat, closeSeated, CLOSE_DEFAULTS, closeMode, closeNearK, closeSubject } = await import(`${ROOT}/src/game/close.ts`);
+const { CLOSE, CLOSE_STATS, closeWindows, closeAt, closeSummary, closeSeat, closeSeated, CLOSE_DEFAULTS, closeMode, closeNearK, closeSubject } = await import(`${ROOT}/src/game/close.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
 const { TWOGEARS } = await import(`${ROOT}/src/game/player.ts`);
 const { KITANIM } = await import(`${ROOT}/src/game/kitanim.ts`);
@@ -524,14 +522,6 @@ export async function closeDark(): Promise<boolean> {
   return allPass;
 }
 
-// ================================================================ (6) the picture
-export async function closeMarksProbe(): Promise<boolean> {
-  console.log('\n=== close-marks: the windows as floor polygons are off on the page — nothing is handed to the overlay ===');
-  allPass = true; const S = await stage(1106, { ai: false }), { g } = S;
-  { samAt(S, 180, 1.5); const shipped = closeMarks(g).length; verdict(CLOSE_DEFAULTS.marks === false && CLOSE.marks === false && shipped === 0, 'the floor marks are OFF (CLOSE.marks false): nothing is handed to the overlay', `CLOSE_DEFAULTS.marks ${CLOSE_DEFAULTS.marks} · CLOSE.marks ${CLOSE.marks} · ${shipped} marks 1.5 m behind him`); }
-  return allPass;
-}
-
 // ================================================================ (8) the seat
 export async function closeSeatProbe(): Promise<boolean> {
   console.log('\n=== close-seat: a calm staff man sat down on a mark — the clip, the hold flag, up the moment he is not calm; the click and Space over the chair; a restart ===');
@@ -657,7 +647,7 @@ export async function closeDuo(): Promise<boolean> {
 }
 
 /** the whole card (`bun run tools/qa/close-probes.ts`): true = every probe passed */
-export const CLOSE_PROBES = [['close-mode', closeModeProbe], ['close-tell', closeTell], ['close-melee', closeMelee], ['close-grab', closeGrab], ['close-held', closeHeld], ['close-dark', closeDark], ['close-windows', closeWindowsProbe], ['close-offer', closeOffer], ['close-rows', closeRowsProbe], ['close-marks', closeMarksProbe], ['close-seat', closeSeatProbe], ['close-duo', closeDuo]] as const;
+export const CLOSE_PROBES = [['close-mode', closeModeProbe], ['close-tell', closeTell], ['close-melee', closeMelee], ['close-grab', closeGrab], ['close-held', closeHeld], ['close-dark', closeDark], ['close-windows', closeWindowsProbe], ['close-offer', closeOffer], ['close-rows', closeRowsProbe], ['close-seat', closeSeatProbe], ['close-duo', closeDuo]] as const;
 async function closeAll(want: readonly string[]): Promise<boolean | null> {
   const t0 = performance.now(), timed = Object.fromEntries(CLOSE_PROBES.map(([name, fn]) => [name, async (): Promise<boolean> => { const t = performance.now(); try { return await fn(); } finally { if (VERBOSE) console.log(`  (${name}: ${((performance.now() - t) / 1000).toFixed(1)} s)`); } }]));
   const ok = await asProbes(timed, want);

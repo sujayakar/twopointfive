@@ -273,7 +273,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 386 => { let a1: Option<crate::interact::EmptyThing> = Io::r(&mut i); let r = crate::interact::empty_word(g, a1.as_ref()); r.w(&mut o);  }
 387 => {  let r = crate::interact::cancel_sustained(g); r.w(&mut o);  }
 389 => { let a1: f64 = Io::r(&mut i); let a2: V3 = Io::r(&mut i); crate::samstun::stagger_player(g, a1, a2);  }
-390 => {  let r = crate::stalk::stalk_wait(g); r.w(&mut o);  }
 391 => { let a1: GuardId = Io::r(&mut i); let r = crate::stalk::stalk_key_can(g, a1); r.w(&mut o);  }
 392 => { let a1: Vec<f64> = Io::r(&mut i); crate::tapstep::tap_hears(g, &a1);  }
 393 => { let a1: f64 = Io::r(&mut i); let r = crate::darkdoor::dark_room(g, a1); r.w(&mut o);  }
@@ -399,9 +398,7 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 601 => { let mut a1: crate::player::Legs = Io::r(&mut i); let r = crate::player::crouch_key(g, &mut a1); r.w(&mut o); a1.w(&mut o); }
 603 => {  let r = crate::player::can_wall_snap(g); r.w(&mut o);  }
 605 => {  crate::player::release_wall(g);  }
-606 => {  let r = crate::player::throw_rest(g); r.w(&mut o);  }
 607 => {  let r = crate::player::launch_cancel(g); r.w(&mut o);  }
-608 => {  let r = crate::player::gun_shut(g); r.w(&mut o);  }
 609 => { let a1: GuardId = Io::r(&mut i); let a2: Option<crate::close::CloseKind> = Io::r(&mut i); let a3: Option<bool> = Io::r(&mut i); let a4: Option<bool> = Io::r(&mut i); crate::player::start_takedown(g, a1, a2, a3, a4);  }
 611 => { let a1: GuardId = Io::r(&mut i); let a2: Option<crate::close::CloseKind> = Io::r(&mut i); crate::player::start_grab(g, a1, a2);  }
 613 => {  crate::player::ease_off_hold(g);  }
@@ -421,7 +418,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 629 => { let a1: V3 = Io::r(&mut i); crate::player::teleport_player(g, a1);  }
 630 => { let a1: GuardId = Io::r(&mut i); let a2: Vec<f64> = Io::r(&mut i); let r = crate::close::close_at(g, a1, &a2); r.w(&mut o);  }
 631 => {  crate::close::close_tick(g);  }
-632 => {  let r = crate::close::close_marks(g); r.w(&mut o);  }
 633 => { let a1: GuardId = Io::r(&mut i); let a2: Option<Vec<f64>> = Io::r(&mut i); let a3: Option<f64> = Io::r(&mut i); let r = crate::close::close_seat(g, a1, a2.as_deref(), a3); r.w(&mut o);  }
 634 => { let a1: GuardId = Io::r(&mut i); let a2: Option<bool> = Io::r(&mut i); crate::close::close_unseat(g, a1, a2);  }
 635 => { let a1: GuardId = Io::r(&mut i); let a2: Option<crate::close::CloseKind> = Io::r(&mut i); let a3: bool = Io::r(&mut i); let a4: Option<crate::takedown::TakeFallHow> = Io::r(&mut i); crate::takedown::take_fall(g, a1, a2, a3, a4);  }

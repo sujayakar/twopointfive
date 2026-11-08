@@ -71,6 +71,12 @@ pub fn snow_bog_at(g: &mut crate::game::Game, x: f64, y: f64, z: f64) -> f64 {
     })
 }
 
+/// …asked of the game shared: the table of the snow as the last thing to touch the ground of this level left it (none has yet: no bog)
+pub fn snow_bog_shared(g: &Game, x: f64, y: f64, z: f64) -> f64 {
+    if !snow_bog_may(g) || g.col.mirror.snow_len < 0.0 { return 0.0; }
+    ::sim::snow::bog_at(g.sim, g.col.mirror.slot as usize, x, y, z)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

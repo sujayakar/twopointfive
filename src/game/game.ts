@@ -1546,7 +1546,7 @@ export class Game {
   private menAll: Character[] = []; private menStatured = false; private menBare = false; private fogHeld: { dyn: Box[]; on: boolean } | null = null;
   /** A VIEWER'S PICTURE WITHOUT THE FOG OF WAR (replay/engineplay.ts's 'Fog' switch; only where `fogOfWar.viewer` was raised, so never in play): call right before
    *  a draw, BETWEEN two steps, and `fogBack()` right after it. With `want` the renderer is handed everybody — the men the fog leaves out after the men it draws —,
-   *  the frame's boxes as they stood before the fog cut them, what the left-out men carry, and no fog pass; the HUD's `hidden()` / `lastSeen()` answer for an open
+   *  the frame's boxes as they stood before the fog cut them, what the left-out men carry, and no fog pass; the HUD's `hidden()` and its marks answer for an open
    *  floor meanwhile. Nothing a step reads is written: `fogBack()` hands the CPU's rays the step's own list again (the cursor's ray walks the packed list); the
    *  skin instances and shadow proxies stay the lifted draw's until the next step or draw deals them again (the GPU's alone: no step reads them).
    *  `tube` (the replay's 'NV' switch; null = the run's own): the picture's night vision is the viewer's for this draw, so the INFRARED laser lines — boxes a step

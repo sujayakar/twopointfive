@@ -147,52 +147,6 @@ impl State {
 }
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: CloseMark, src/game/close.ts:386)
-#[derive(Clone, Debug)]
-pub struct CloseMark {
-    pub guard: GuardId,
-    pub id: crate::close::CloseId,
-    pub kind: crate::close::CloseKind,
-    pub pts: Vec<V3>,
-    pub label_at: V3,
-    pub label: String,
-    pub state: crate::close::CloseMarkState,
-    pub alpha: f64,
-}
-impl CloseMark {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CloseMark {
-            guard: GuardId(0),
-            id: crate::close::CloseId::Behind,
-            kind: crate::close::CloseKind::Behind,
-            pts: Vec::new(),
-            label_at: [0.0; 3],
-            label: String::new(),
-            state: crate::close::CloseMarkState::Shut,
-            alpha: 0.0,
-        }
-    }
-}
-impl Default for CloseMark { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum CloseMarkState {
-    Shut,
-    Open,
-    In,
-}
-impl CloseMarkState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CloseMarkState::Shut => "shut",
-            CloseMarkState::Open => "open",
-            CloseMarkState::In => "in",
-        }
-    }
-}
-
 /// (TypeScript: inline at src/game/close.ts:140 CLOSE_LOG, src/game/close.ts:140)
 #[derive(Clone, Debug)]
 pub struct CloseModCLOSELOGItem {
