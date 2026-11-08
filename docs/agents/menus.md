@@ -939,6 +939,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `bun run tools/qa/verdict-lessons.ts [name …]` (the scripted player of `lesson-run.ts` plays each of the seven to its end, input only; the run must end WON with a card due;
   ~1.5 min; `VERDICT_BREAK=1` must fail), `node tools/qa/verdict-look.cjs <dir> lesson` (the real page, software adapter: lesson 6 taken, the card up by itself, no pips, no
   ticks, nothing kept, `Next: 7 · …` first and focused, its link the next row's). Never seen on a GPU; never played by a person to the card.
+- **Four missions are back on the list** (2026-11-08, his "can we bring back records office, block, warehouse, and kill house?"): `records-pair` (Raids), `block-four` and `warehouse-four` (Strongholds) and
+  `killhouse-four` (On the clock) lose `offList` in both tables (`scene/scenarioList.ts`; `rust/game_types/src/scene_scenario_list/types.rs`, which is kept by hand). The list draws seventeen levels on eighteen
+  rows, and the solo night. The short list (`PICKS`) is not touched. The records office's and the warehouse's ways in are named without a bearing, as the sheet draws them. The kill house's clock and medals
+  (`par`) never left. The bullet below is the cut as it was made: of its sixteen, these four are back and two (`snatch-four`, `defuse-four`) have no row left. CHECK: `rust/game_run/tests/desk.rs` (a drawn row is no cut row, six groups, eight rows a group at most).
 - **The list draws his thirteen** (2026-11-07, doing his "Keep my 13" of 2026-11-05): `tut-road`, `tut-team`, `tut-kit`, `tut-queue`; `pass-four`, `compound-four`, `rescue-consulate`, `depot-four`,
   `mousehole-four`; the office's `room-clear-pair` and `hostage-rescue`; `vault-quiet`, `bazaar-quiet`, `lights-out-two`; and the solo night. The other sixteen carry `offList: true`: `tut-quiet`, `tut-pair`,
   `records-pair`, `block-four`, `warehouse-four`, `barracks-four`, `rescue-registry`, `snatch-four`, `defuse-four`, `floodlit-four`, `killhouse-four`, `hall-four`, `glasshouse-four`, `police-post-quiet`,
