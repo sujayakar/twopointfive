@@ -30,7 +30,7 @@ export const BREAK_WORDS: readonly string[] = Object.keys(process.env).filter(k 
 if (BREAK_WORDS.length && process.env.QA_BREAK_SAID !== BREAK_WORDS.join(' ')) console.error(`BREAK WORD${BREAK_WORDS.length > 1 ? 'S' : ''} SET: ${BREAK_WORDS.join(' ')}. A check that reads ${BREAK_WORDS.length > 1 ? 'one' : 'it'} plays its red path and must fail.`);
 if (BREAK_WORDS.length) process.env.QA_BREAK_SAID = BREAK_WORDS.join(' ');
 /** THE WORDS A HELD ROW IS RAISED BY: the first WORD=value of each row's note in src/host/profile.ts FROZEN_HOLDS, once each (a row whose note names no word
- *  of its own has none). What tools/qa/stand-bisect.ts searches over, and what a row of tools/qa/expected-red.ts may name. */
+ *  of its own has none). What tools/qa/stand-bisect.ts searches over. */
 export function heldWords(holds: Record<string, string>): string[] {
   const words: string[] = [];
   for (const note of Object.values(holds)) { const w = wordOf(note); if (w && !words.includes(w)) words.push(w); }

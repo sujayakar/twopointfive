@@ -3,8 +3,8 @@
 # breach-run for a day — review 08-10 #2/#4). Counts check lines in BOTH shapes the probe files print ('- PASS — …' and the two-space '  PASS …' of the
 # editor / level probes). A family is RED when any FAIL / error line appears, probes.ts exits non-zero (1 = a probe failed, 2 = unknown family — nothing
 # ran), or it printed neither a verdict line nor a single counted check (an ERROR: a green made of nothing). Exit 0 all green, 1 any red, 2 if the only
-# red was an unknown family name.  Usage: tools/qa/gate.sh fam1 fam2 …   (GATE_TIMEOUT=secs overrides the 1500 s cap per family; `all-quick` = the union of
-# the gate lists lanes are told to run, see probes.ts)
+# red was an unknown family name.  Usage: tools/qa/gate.sh fam1 fam2 …   (GATE_TIMEOUT=secs overrides the 1500 s cap per family; `all-quick` = every
+# probe that costs little, see probes.ts)
 # The per-family time cap wants a timeout(1) binary — GNU coreutils' `timeout` or Homebrew's `gtimeout`; a stock macOS has neither and the gate used to die on
 # its first line there. With neither on the PATH a perl alarm stands in (exit 142 on the cap instead of 124), and failing that the family runs uncapped, said so.
 cap=${GATE_TIMEOUT:-1500}
@@ -25,7 +25,7 @@ for fam in "$@"; do
     echo "  $fam · *** ERROR: unknown probe family '$fam' (probes.ts exit 2 — nothing ran) ***"; printf '%s\n' "$out" | grep -E "^error:" | head -2 | cut -c1-260 | sed 's/^/      /'
     [ $rc -eq 0 ] && rc=2; continue
   fi
-  printf '%s\n' "$out" | grep -E "^  the reds (against the list|are not read against the list)|^    \(the rows were last read on |^    (EXPECTED RED|NEW RED|GREEN AGAIN) |^  BREAK WORDS? " | cut -c1-240 | sed "s/^/  $fam ·/"   # (probes.ts's table of this run's reds against tools/qa/expected-red.ts: old and explained / NEW / green again — for the reader; red stays red)
+  printf '%s\n' "$out" | grep -E "^  the reds (against the list|are not read against the list)|^    (EXPECTED RED|NEW RED|GREEN AGAIN) |^  BREAK WORDS? " | cut -c1-240 | sed "s/^/  $fam ·/"   # (probes.ts's table of this run's reds against tools/qa/expected-red.ts: old and explained / NEW / green again — for the reader; red stays red)
   printf '%s\n' "$out" | grep -E "^THE SETTLED ROWS(' FOLD IS| ARE) " | sort -u | sed "s/^/  $fam · /"   # (tools/qa/fold.ts: the run was folded, or asked to be on the old stand; whole, it names rows)
   nfold=$(printf '%s\n' "$out" | grep -cE '^  \{"fold":.*"(refused":\[\{|lost":\[)'); [ "$nfold" -gt 0 ] && echo "  $fam · $nfold fold line(s) with a refused write or a lost hold: read them in the run's own output (probes.ts $fam)"
   if [ $st -eq 124 ] || [ $st -eq 142 ]; then echo "  $fam · *** ERROR: the family hit the ${cap} s time cap (exit $st) ***"; fi

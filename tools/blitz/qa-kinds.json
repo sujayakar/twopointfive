@@ -515,7 +515,6 @@
 "gunfire-table",
 "hud-look",
 "keeppage",
-"kit-stores",
 "kitnoise",
 "leaf-round",
 "lens",
@@ -566,7 +565,12 @@
 "sweep-ir",
 "tools",
 "tut-team",
-"tween"
+"tween",
+"dust-look",
+"shaderinline",
+"snowpuffs",
+"stores",
+"view"
 ],
 "probes": {
 "standdie": "i",
