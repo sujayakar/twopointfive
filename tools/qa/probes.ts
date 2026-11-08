@@ -62,6 +62,7 @@ const FAILED: string[] = []; let RAN = 0, CHECKED = 0; const RAN_NAMES: string[]
 const CHILD: string | null = process.env.QA_PROBE_CHILD || null; delete process.env.QA_PROBE_CHILD;   // (not handed on: a probe that starts a runner of its own starts a whole one)
 const QUEUE: string[] = [], CHILD_TAG = new Map<string, string>(), SECS = new Map<string, number>(), CPU = new Map<string, number>();
 const RESULT_MARK = '@@probe ';
+let scriptCpu = 0;   // (CPU seconds of the scripts this process ran: a probe asked by its own name gives its whole cost, `--costs`)
 /** QA_JOBS (1 or more) and QA_PROBE_CAP (seconds; 0 = no cap), read as the runner starts so that a mistyped one stops it before anything runs. A run that
  *  WRITES files of the repository (`--write`: the journal's fixture is re-filed by one probe and replayed by the next) is one probe at a time, in order. */
 const envNum = (k: string, d: number, min: number): number => { const v = process.env[k]; if (v === undefined || v === '') return d; if (!/^\d+$/.test(v) || +v < min || +v > 2_000_000) throw new Error(`${k}=${v}: want a whole number from ${min} to 2000000`); return +v; };
@@ -3115,7 +3116,6 @@ if (on('director-scheduler', 'director', 'all')) await run('director-scheduler',
   if (on('cast-beam', 'cast', 'lasers', 'all')) { ran = true; await run('cast-beam', async () => ((await import('./cast-probes.ts')) as any).castBeam()); }   // (also with the lasers: the draw it asks is combat.ts laserBoxes)
   if (ran) here() && familyBanner('cast', (await import('./cast-probes.ts')).castFailures()); }
 /** A stand-alone QA script run as a child (its process.exit stays its own): every line echoed through console.log so run() and gate.sh count its check lines; a non-zero exit is a FAIL line. */
-let scriptCpu = 0;   // (CPU seconds of the scripts this process ran: a probe asked by its own name gives its whole cost, `--costs`)
 async function runScript(file: string, args: string[] = []): Promise<boolean> {
   const p = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/${file}`, ...args], { stdout: 'pipe', stderr: 'pipe', env: process.env });
   const [out, err] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text()]); const code = await p.exited;
