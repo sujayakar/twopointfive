@@ -34,8 +34,8 @@ fn last_order(g: &Game) -> Option<u32> {
 }
 
 /// Is the team in more than one pair.   (seats.ts teamPaired)
-fn team_paired(g: &Game) -> bool {
-    if crate::seats::one_book(g) { return crate::orders::squad_orders_paired(g, &crate::seats::here(g)); }
+pub fn team_paired(g: &Game, seat: &crate::seats::SeatRef) -> bool {
+    if crate::seats::one_book(g) { return crate::orders::squad_orders_paired(g, seat); }
     let (mut red, mut blue) = (false, false);
     for &gd in g.guards.iter() {
         if g.gd[gd].team != crate::teams::Team::Operative { continue; }
@@ -89,7 +89,7 @@ fn roster(g: &mut Game) {
         let name = crate::seats::player_name(g, pl);
         g.verdict.tracks.set(crate::Num(id), track(id, name, Some(tone), true, None));
     }
-    let paired = team_paired(g);
+    let paired = team_paired(g, &crate::seats::here(g));
     for gd in crate::scenario_run::team_of(g) {
         let id = g.ch[g.gd[gd].ch].id;
         if g.verdict.tracks.has(crate::Num(id)) { continue; }

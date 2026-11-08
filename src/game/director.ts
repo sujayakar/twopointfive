@@ -274,7 +274,7 @@ export interface DirectorApi {
 }
 /** the character budget a script's spawn is held to on a tutorial mission (rails.ts): every character the engine skins — Sam, the four and eleven more —
  *  since a beat's men come on top of the men the staging dealt. Anywhere else: none (spawnUnit's own eight) */
-function liftedBudget(g: Game): number | undefined { return g.rails?.live ? 16 : undefined; }
+function liftedBudget(g: Game): number | undefined { return g.view.lesson?.rails ? 16 : undefined; }
 /** the module shape of a level script: levels/<name>.script.ts `const script: LevelScriptFn = D => { … }; export default script;` */
 export type LevelScriptFn = (D: DirectorApi) => void;
 
@@ -469,7 +469,7 @@ export class Director {
   blocksSave(): string | null { const R = this.run; return R && !R.ended ? `the level script's program '${R.name}' is running` : null; }
   get running(): string | null { const R = this.run; return R && !R.ended ? R.name : null; }
   /** a tutorial mission's own program is running (roomfight.ts, lanes.ts: a man of the floor's roster that it has in hand is left to it until it lets him go) */
-  get lessonRuns(): boolean { const R = this.run; return !!R && !R.ended && !!this.g.rails?.live; }
+  get lessonRuns(): boolean { const R = this.run; return !!R && !R.ended && !!this.g.view.lesson?.rails; }
   /** frag.ts: the level's script put the defenders' own grenades off (`D.systems.theirFrags(false)`): for the level, whatever program is or is not running */
   get theirFragsOff(): boolean { return this.armed && this.manifest?.systems.theirFrags === false; }
   get objective(): { text: string; pos: Vec3 | null } | null { return this.run && !this.run.ended ? this.run.objective : null; }

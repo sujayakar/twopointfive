@@ -66,7 +66,7 @@ const stood = async (say: string) => { const rows: string[] = []; let bad = 0;
     const why = await live(seed, (W, g) => {
       const marks: number[][] = L.scenarios.roomClear.team.ops, full = g.player.hitsLeft;
       for (let i = 0; i < SECS * 60; i++) { W.step(1 / 60); for (const m of g.guards) if (m.unit && m.team === 'operative' && g.rails.isSpared(m) && !knees.some(k => k.startsWith(m.callsign))) knees.push(`${m.callsign} at ${g.time.toFixed(1)} s (${m.char.pos[0].toFixed(1)}, ${m.char.pos[2].toFixed(1)})`); }
-      hits = full - g.player.hitsLeft; down = !!g.player.down; step = g.lesson.step?.id ?? '';
+      hits = full - g.player.hitsLeft; down = !!g.player.down; step = g.view.lesson?.id ?? '';
       posts = g.guards.filter((x: any) => POSTS.some(([n]) => n === x.callsign) && x.state !== 'dead').length;
       const men = g.guards.filter((x: any) => x.unit && x.team === 'operative' && x.state !== 'dead');
       const away = men.filter((m: any) => !marks.some(k => Math.hypot(m.char.pos[0] - k[0], m.char.pos[2] - k[2]) < 1.0)); off = 4 - men.length + away.length;

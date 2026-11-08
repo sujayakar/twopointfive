@@ -21,7 +21,8 @@ fn lit(p: &mut Play, at: [f64; 2]) -> bool {
 
 /// What the picture shows of the lit row.
 fn shown(p: &mut Play) -> Option<Throw> {
-    game::squadthrow::squad_throw_plans(&mut p.g, None).into_iter().find(|x| x.preview == Some(true)).map(|x| (x.gd, x.walk.as_ref().map(|_| flat(x.from)), flat(x.land)))
+    let v = game::view::throws_view(&p.g, &game::seats::here(&p.g));
+    v.into_iter().find(|x| x.preview).map(|x| (*p.g.guards.iter().find(|&&gd| p.id_of(gd) == x.man).unwrap(), x.walk.as_ref().map(|_| flat(x.from)), flat(x.land)))
 }
 
 /// the walks to a throw under way, by man: the spot asked for and the spot he walks to

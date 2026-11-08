@@ -41,7 +41,7 @@ export async function ringflatCheck(): Promise<boolean> {
     const up = (t: any) => { away(); if (!aim(t)) return false; input.keys.add(KEY); input.pressed.add(KEY); step(HOLD); return !!O.cmdRing; };
     const press = (d: number) => { input.pressed.add(`Digit${d}`); step(); };
     const give = () => { input.keys.delete(KEY); step(); };
-    const view = () => O.ringView(), texts = () => (view()?.wedges ?? []).map((w: any) => `${w.key}:${w.text}${w.off ? ' (off)' : ''}`);
+    const view = () => O.g.view.ring, texts = () => (view()?.wedges ?? []).map((w: any) => `${w.key}:${w.text}${w.off ? ' (off)' : ''}`);
     const ids = () => { const M = O.menu; return M ? M.rows.map((d: any) => d.id) : []; };
     const tail = () => O.log[O.log.length - 1];
     // targets

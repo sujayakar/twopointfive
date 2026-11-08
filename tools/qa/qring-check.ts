@@ -110,7 +110,7 @@ export async function qringCheck(): Promise<boolean> {
 
     // (3) the key kept down: the plainer hold, then the key up leaves the ring there
     { R.aim(spot); const n0 = O.log.length; R.down(CMDRING.holdSecs + 0.05); const early = !!O.cmdRing; R.step(frames(CMDRING.stayHoldSecs - CMDRING.holdSecs) + 2); const up = !!O.cmdRing, lit = O.cmdRing?.lit;
-      R.up(); const left = !!O.cmdRing && !!O.menu, free = O.cmdRing?.free === true; R.step(60); const still = !!O.cmdRing, told = O.log.length - n0, V = O.ringView();
+      R.up(); const left = !!O.cmdRing && !!O.menu, free = O.cmdRing?.free === true; R.step(60); const still = !!O.cmdRing, told = O.log.length - n0, V = O.g.view.ring;
       line(!early && up && lit === 1 && left && free && still && told === 0 && !!V && V.wedges.every((x: any) => x.key >= 1 && x.key <= 5), 'the key kept down: no ring at the old hold, the ring at the plainer one; the key up in its middle leaves it up, and nobody has been told anything',
         `at ${(CMDRING.holdSecs + 0.05).toFixed(2)} s: ${early ? 'up' : 'not up'} · at ${(CMDRING.stayHoldSecs + 0.1).toFixed(2)} s: ${up ? 'up' : 'not up'}, lit ${lit} · the key up: ${left ? 'still up' : 'gone'}, free ${free} · a second on: ${still ? 'still up' : 'gone'} · order book +${told} · wedges ${(V?.wedges ?? []).map((x: any) => x.key).join('')}`);
       // (4) … a digit gives its wedge at once, and is not his weapon slot

@@ -1,43 +1,62 @@
-// The squad's plan drawn on the floor (game/floorplan.ts says WHAT; this file draws it): per man of ours with a mark — the dotted way he will walk, a ring
+// The squad's plan drawn on the floor (`view.plan` says WHAT; this file draws it): per man of ours with a mark — the dotted way he will walk, a ring
 // where he will stand with his two-letter tag, a fan for what he watches, a thin line to the door he is on — in his pair's colour (the HUD's green for a
 // squad with no pairs), and a ring at the feet of each man an open order menu goes to (and a gold one at the feet of whoever's menu it is). Floor geometry projected through the camera into the overlay's SVG,
 // under the close-in windows and the throw arc; drawn through walls (it is our own plan). Something waiting on the player's key has a bar across its
 // doorway (along its wall's foot), and the key on the one the key would send now. No words but that key and the tags.
-// A GAME OF SEVERAL PLAYERS (game/seats.ts): the other players' squads' plans are drawn too, by the same code off each one's own orders (`plansToDraw`),
-// FAINTER (`PLAN.others`) — all but a throw, whose arc and reach are as strong on every page: where a frag lands is everybody's to know. The maintainer,
-// 11-03, playing two seats: "seeing your teammates squad path overlays (but probably fainter than yours) would be great".
+// A GAME OF SEVERAL PLAYERS: the other players' squads' plans are drawn too (`plan.others`), FAINTER (`PLAN.others`) — all but a throw, whose arc and reach are as strong
+// on every page: where a frag lands is everybody's to know. The maintainer, 11-03, playing two seats: "seeing your teammates squad path overlays (but probably fainter than yours) would be great".
+// THE WAY A MAN WILL WALK IS THE ONE THING WORKED OUT HERE, and it is a search: his own path if the view has one for this order, else `game.ask.way` for each leg, the answer kept by the
+// page's clock (`PLAN.reaskSecs`), never by the game.
 // index.html `.plan …` is the look; `PLAN.on` false (`?noplan`) = the group stays empty. An attribute is written only when it changes.
-import type { Game, Guard } from '../game/game';
+import type { Game } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
-import { floorPlan, PLAN, capOf, type FloorPlan, type PlanDoor, type PlanKept, type PlanLeg } from '../game/floorplan';
+import { PLAN } from '../game/floorplan';
+import type { PlanMan, PlanWay, SeatPlan } from '../view/read';
+import type { WorldAsk } from '../view/worldask';
 
 const NS = 'http://www.w3.org/2000/svg';
 const Y = 0.04;          // just off the floor
 const RING_N = 48, FAN_N = 5;   // (a ring is a floor circle through the camera: enough points that no corner shows at any zoom)
 const NEAR_W = 0.5;      // a point this near the camera's own plane (or behind it) is not drawn: its projection is anywhere
 const TAG_DROP = 15;     // px: a standing man's tag sits under his ring, clear of his body
-/** each man's kept legs (game/floorplan.ts PlanKept): the PICTURE'S own — a game drawn and the same game not
- *  drawn hold the same state */
-const keptLegs = new WeakMap<Guard, PlanLeg[]>();
-const keptOf: PlanKept[] = [];
-/** a seat's own store (the legs are a man's, and a man is one seat's; the throw page's is whoever asks) */
-const keptFor = (seat: number): PlanKept => keptOf[seat] ??= { get: gd => keptLegs.get(gd), set: (gd, L) => keptLegs.set(gd, L) };
-/** the same wait in two plans (a door's, or a wall's two ends) */
-const sameWait = (a: PlanDoor, b: PlanDoor): boolean => (!!a.door && a.door === b.door) || (Math.abs(a.a[0] - b.a[0]) + Math.abs(a.a[2] - b.a[2]) + Math.abs(a.b[0] - b.b[0]) + Math.abs(a.b[2] - b.b[2]) < 0.02);
-/** THE PLANS A FRAME DRAWS, the page's own seat's first and whole, at `k` 1; then, in a game of several players, each other seat's as another's
- *  (floorplan.ts PlanFor: asked of that seat's view, on a store of its own) at `k` PLAN.others. A wait both plans list — the drill's door is the
- *  world's, and two squads can stack on one door — is on the page ONCE, as the seat's own, with its key. Asked by the check too */
-export function plansToDraw(game: Game): { P: FloorPlan; k: number }[] {
-  const me = game.hostSeat(), mine = floorPlan(me.view, keptFor(me.index)), out = [{ P: mine, k: 1 }];
-  if (game.seats.length === 1 || !(PLAN.others > 0)) return out;
-  const reading = !!me.view.orders.menu;
-  for (const s of game.seats) if (s !== me) {
-    const P = floorPlan(s.view, keptFor(s.index), { own: false, reading });
-    P.doors = P.doors.filter(d => !mine.doors.some(o => sameWait(o, d)));
-    out.push({ P, k: PLAN.others });
+const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
+/** the floor's answer for one leg of a man's way, kept PLAN.reaskSecs: the PICTURE'S own, a game drawn and the same game not drawn hold the same state */
+interface PlanLeg { key: string; t: number; pts: Vec3[] | null; /** where the leg was asked from */ from: Vec3 }
+const kept = new WeakMap<Game, Map<number, PlanLeg[]>>();
+function leg(game: Game, ask: WorldAsk, man: number, k: number, a: Vec3, b: Vec3): PlanLeg {
+  let G = kept.get(game); if (!G) kept.set(game, G = new Map());
+  let L = G.get(man); if (!L) G.set(man, L = []);
+  const key = `${b[0].toFixed(1)},${b[2].toFixed(1)}`, c = L[k], dt = c ? game.time - c.t : -1;
+  // (dt < 0: the clock went back on a load · asked from somewhere else: an answer from a time line a restore left behind, the store being the picture's)
+  if (c && c.key === key && dt >= 0 && dt < PLAN.reaskSecs && flat(a, c.from) < 2.5) return c;
+  return L[k] = { key, t: game.time, pts: ask.way(a, b, 3000), from: [a[0], 0, a[2]] };   // (null: the floor has no way, nothing is drawn, never a line through a wall)
+}
+/** the way an order walks a man from where he stands to his mark: his feet, then every corner, then the mark — empty where the floor has none */
+export function wayOf(game: Game, man: number, W: PlanWay): Vec3[] {
+  const p = W.from, stops = W.stops, out: Vec3[] = [[p[0], 0, p[2]]];
+  const add = (q: Vec3) => { const l = out[out.length - 1]; if (flat(l, q) > 0.05) out.push([q[0], 0, q[2]]); };
+  if (W.own) for (const q of W.own) add(q);
+  else {
+    const first = leg(game, game.ask, man, 0, p, stops[0]), pts = first.pts; if (!pts) return [];
+    // an answer kept from a stride ago starts behind him: from the end of the leg he is nearest on — looked for over its first two metres only, never 'the
+    // corner nearest him' of its first six (a way that doubles back passes near him again further on: the corners between were skipped and the line cut the wall)
+    let k = 0, best = Infinity, arc = 0, a = first.from;
+    for (let i = 0; i < pts.length && arc <= 2; i++) { const b = pts[i], dx = b[0] - a[0], dz = b[2] - a[2], l2 = dx * dx + dz * dz, u = l2 > 1e-9 ? Math.min(1, Math.max(0, ((p[0] - a[0]) * dx + (p[2] - a[2]) * dz) / l2)) : 0, d = Math.hypot(p[0] - a[0] - dx * u, p[2] - a[2] - dz * u); if (d < best - 1e-6) { best = d; k = i; } arc += Math.sqrt(l2); a = b; }
+    for (let i = k < pts.length - 1 && flat(p, pts[k]) < 0.3 ? k + 1 : k; i < pts.length; i++) add(pts[i]);
   }
+  add(stops[0]);
+  for (let k = 1; k < stops.length; k++) { const pts = leg(game, game.ask, man, k, stops[k - 1], stops[k]).pts; if (!pts) return []; for (const q of pts) add(q); add(stops[k]); }
   return out;
+}
+/** a man as the frame draws him: `path` his way (empty: he is on it, the fight has him off his order, or the floor has no way) */
+export type DrawnMan = PlanMan & { path: Vec3[] };
+export type DrawnPlan = Omit<SeatPlan, 'men'> & { men: DrawnMan[] };
+const drawn = (game: Game, P: SeatPlan): DrawnPlan => ({ ...P, men: P.men.map(m => ({ ...m, path: m.way ? wayOf(game, m.man, m.way) : [] })) });
+/** THE PLANS A FRAME DRAWS, the page's own seat's first and whole, at `k` 1; then each other player's at `k` PLAN.others. Asked by the checks too */
+export function plansToDraw(game: Game): { P: DrawnPlan; k: number }[] {
+  const V = game.view.plan; if (!V) return [];
+  return [{ P: drawn(game, V.own), k: 1 }, ...(PLAN.others > 0 ? V.others.map(P => ({ P: drawn(game, P), k: PLAN.others })) : [])];
 }
 
 interface ManEls { g: SVGGElement; way: SVGPathElement; mark: SVGPolygonElement; fan: SVGPolygonElement; sight: SVGLineElement; feet: SVGPolygonElement; tag: SVGTextElement }
@@ -162,7 +181,7 @@ export class PlanFloor {
         const E = this.throwEls(nt++); this.show(E.g, true);
         this.put(E.g, 'class', T.tone ? `t-${T.tone}` : ''); this.put(E.g, 'opacity', T.preview ? '0.60' : '0.95');   // (never fainter for being another's: see the head)
         const poly = (e: SVGPolygonElement, s: string | null) => { this.show(e, !!s); if (s) this.put(e, 'points', s); };
-        const p = T.gd.char.pos, walking = T.walk.length > 1;
+        const p = game.guards.find(m => m.char.id === T.man)?.char.pos ?? T.from, walking = T.walk.length > 1 && (T.preview || !P.men.some(m => m.man === T.man && m.path.length > 1));   // (ordered: his way is already his order's)
         poly(E.who, ring(p, PLAN.ringM * 1.35));
         const dw = walking ? way(T.walk, false) : ''; this.show(E.walk, !!dw); if (dw) this.put(E.walk, 'd', dw);
         poly(E.spot, walking ? ring(T.from, PLAN.ringM) : null);
@@ -176,10 +195,10 @@ export class PlanFloor {
       // the key alone, a step ahead of him — a bar there crossed the cap and read as a key struck out)
       for (const dr of P.doors) {
         const a = px(dr.a[0], dr.a[2]), b = px(dr.b[0], dr.b[2]); if (!a || !b) continue;
-        const E = this.doorEls(nd++), c = capOf(dr); this.show(E.g, true); this.put(E.g, 'opacity', dim.toFixed(2));
+        const E = this.doorEls(nd++), c = dr.cap; this.show(E.g, true); this.put(E.g, 'opacity', dim.toFixed(2));
         this.put(E.g, 'class', `pdoor w-${dr.why}${dr.tone ? ` t-${dr.tone}` : ''}${dr.now ? ' now' : ''}${c === 'lit' ? ' lit live' : c === 'dark' ? ' lit' : ''}`);
         this.show(E.bar, dr.why !== 'pair'); this.put(E.bar, 'x1', f1(a[0])); this.put(E.bar, 'y1', f1(a[1])); this.put(E.bar, 'x2', f1(b[0])); this.put(E.bar, 'y2', f1(b[1]));
-        const cap = c !== 'none', mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+        const cap = c !== 'none' && !!dr.key, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
         this.show(E.cap, cap); this.show(E.key, cap);
         if (cap) { this.put(E.cap, 'x', f1(mx - 7.5)); this.put(E.cap, 'y', f1(my - 7.5)); this.put(E.key, 'x', f1(mx)); this.put(E.key, 'y', f1(my)); this.put(E.key, 'text', dr.key!); }
       }

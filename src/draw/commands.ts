@@ -45,4 +45,6 @@ export class Commands extends Writer {
   quietFog(rung: string): void { this.u32(19); this.text(rung); }
   /** the cameras a quiet mission hands out, as this machine keeps them */
   quietCams(on: number): void { this.u32(20); this.u32(on); }
+  /** encounter back */
+  aside(on: number, x: number, z: number): void { this.u32(21); this.u32(on); this.f64(x); this.f64(z); }
 }

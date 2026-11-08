@@ -33,7 +33,7 @@
 //
 // WHAT IS WHOSE. The ring IS the order menu (orders.ts `menu`), opened and picked through that file's own `open` / `turn` / `pick` — so every row, refusal
 // and reason is the menu's — with `SquadOrders.cmdRing` beside it saying where it was opened and which wedge is lit; `ringInput` (orders.ts) reads the keys,
-// ahead of the menu's own input, and `ringView` hands the picture to ui/cmdring.ts. A wedge is a row on a digit, 1 to `wedges`; a row on a letter of its own
+// ahead of the menu's own input, and `view.ring` hands the picture to ui/cmdring.ts. A wedge is a row on a digit, 1 to `wedges`; a row on a letter of its own
 // (the throw page, 'go') is not drawn on the ring yet. 'Wait for my word' is not the ring's: an order from it goes at once.
 //
 // IT STAYS UP WITHOUT THE KEY (`stay`, on in the page since 10-22; the maintainer: "longer press for Q opens up squad, doesn't require holding it"): a
@@ -205,17 +205,12 @@ export interface RingState { ax: number; ay: number; z: number; t0: number; lit:
   at?: Vec3; ox?: number; oy?: number; mx?: number; my?: number;
   /** (ringWant `shapes`) the cursor has been off every wedge's shape since the ring last changed under it: on a shape now, it lights it */ clear?: boolean;
   /** (interact.ts, a ring on its thing) the wedge the hand last put the cursor on: a ring that slides under a resting cursor points at no other */ pt?: number }
-/** what a ring shows (orders.ts ringView, interact.ts handRingView → ui/cmdring.ts): where, how much larger than its px, the lit wedge, whose colour, the
+/** what a ring shows (`view.ring`, `view.hand` → ui/cmdring.ts): where, how much larger than its px, the lit wedge, whose colour, the
  *  words under it, and the wedge on each digit */
 export interface RingView { x: number; y: number; zoom: number; lit: number; tone: string | undefined; caption: string; wedges: { key: number; text: string; off: boolean; opens: boolean }[] }
 /** how much larger than CMDRING's px a ring stands in a view this size (1 up to `ref`) */
 export function ringZoom(w: number, h: number): number { return Math.max(1, Math.min(w / CMDRING.ref[0], h / CMDRING.ref[1])); }
 
-/** (CMDRING.pin) the ring put back over its place — `sx, sy`: where that place is in the view now — whole inside the view's edge, as it was opened */
-export function ringPin(R: RingState, sx: number, sy: number, w: number, h: number): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('ringPin', undefined, [R, sx, sy, w, h]); if (__r !== RUST_PASS) return __r as any; } }
-  const C = CMDRING, cl = (v: number, m: number, max: number) => max > 2 * m ? Math.max(m, Math.min(max - m, v)) : v;
-  R.ax = cl(sx + (R.ox ?? 0), C.edgeX * R.z, w); R.ay = cl(sy + (R.oy ?? 0), C.edgeY * R.z, h);
-}
 /** The wedge this frame asks for (0: none): a digit's own — which disarms the cursor — else the one the cursor is out of the ring's middle toward, once
  *  the key has been down `tapSecs` and the cursor has been in the middle since the ring last changed under it (a page, a digit, a man, new rows).
  *  `lone`: the digit of the ring's one row where it has one and is drawn as a pill (ringlone.ts loneKey; 0 = the wheel) — the cursor on that pill's

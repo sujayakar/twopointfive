@@ -470,54 +470,6 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
     g.stats.squadthrow.walked += 1;
 }
 
-/// WHAT THE PICTURE DRAWS, and what a module drawing the squad's plan may read: one entry per throw on its way, and the highlighted row's preview. (squadthrow.ts squadThrowPlans)
-pub fn squad_throw_plans(g: &crate::game::Game, _v: Option<&mut crate::squadthrow::SquadThrowKept>) -> Vec<crate::squadthrow::SquadThrowPlan> {
-    let mut out = Vec::new();
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
-    if !g.m.squadthrow.states.has(key) || !g.k.squadthrow.on {
-        return out;
-    }
-    for gd in g.m.squadthrow.states.get(key).unwrap().walks.keys() {
-        let w = g.m.squadthrow.states.get(key).unwrap().walks.get(gd).unwrap();
-        let (thrown_t, w_gd, w_a) = (w.thrown_t, w.gd, w.a);
-        if thrown_t >= 0.0 || g.gd[w_gd].state == crate::game::GuardState::Dead || crate::orders::squad_orders_of(g, &crate::seats::here(g), w_gd) != w_a || !g.guards.contains(&w_gd) {
-            continue;
-        }
-        let p = g.ch[g.gd[w_gd].ch].pos;
-        let w = g.m.squadthrow.states.get(key).unwrap().walks.get(gd).unwrap();
-        let l = &w.line;
-        let (mut bi, mut bd) = (0usize, f64::INFINITY);
-        for i in 0..l.len() {
-            let d = v3::dist_xz(l[i], p);
-            if d < bd {
-                bd = d;
-                bi = i;
-            }
-        }
-        let walk = if v3::dist_xz(p, w.post) > 0.4 {
-            let mut way = vec![v3::copy(p)];
-            if bi + 1 < l.len() {
-                way.extend_from_slice(&l[bi + 1..]);
-            }
-            way.push(w.post);
-            Some(way)
-        } else {
-            None
-        };
-        out.push(SquadThrowPlan { gd: w_gd, from: w.post, points: w.arc.sol.points.clone(), land: w.arc.rest, kind: w.kind, preview: None, walk });
-    }
-    let asked = lit(g, &crate::seats::here(g)).map(|(_, at, kind)| (at, kind));
-    if let Some((at, kind)) = asked {
-        // (the highlighted row's own plan, as the menu last had it: the picture works nothing out)
-        if let Some(p) = g.m.squadthrow.states.get(key).and_then(|s| s.plans.get(kind)) {
-            if let (Some(th), None, true) = (&p.thrower, &p.refuse, v3::dist_xz(p.at, at) < 1e-6) {
-                out.push(SquadThrowPlan { gd: th.gd, from: th.post.unwrap_or(g.ch[g.gd[th.gd].ch].pos), points: th.sol.points.clone(), land: th.rest, kind, preview: Some(true), walk: p.walk.clone() });
-            }
-        }
-    }
-    out
-}
-
 /// The row that opens the page and the page's two: made, not yet on the menu. (squadthrow.ts rows)
 pub fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
     use crate::orders::rows;

@@ -18,7 +18,6 @@ pub fn ps_roomclear_CheckSquadsS(s: &crate::roomclear::CheckSquadsS, o: &mut W) 
 pub fn ps_roomclear_CheckStructureS(s: &crate::roomclear::CheckStructureS, o: &mut W) { s.rooms.w(o); s.team.w(o); s.starts.w(o); s.squads.w(o); }
 pub fn ps_squadsmoke_SquadArcTo(s: &crate::squadsmoke::SquadArcTo, o: &mut W) { ps_throwables_ThrowSolution(&s.sol, o); }
 pub fn ps_squadsmoke_SquadSmokeThrower(s: &crate::squadsmoke::SquadSmokeThrower, o: &mut W) { ps_throwables_ThrowSolution(&s.sol, o); }
-pub fn ps_squadthrow_SquadThrowKept(s: &crate::squadthrow::SquadThrowKept, o: &mut W) { s.kept.w(o); s.caught.w(o); s.scratch.w(o); s.duck.w(o); }
 pub fn ps_squadthrow_SquadThrower2(s: &crate::squadthrow::SquadThrower2, o: &mut W) { ps_throwables_ThrowSolution(&s.sol, o); }
 pub fn ps_stackroom_StackRoomProbe(s: &crate::stackroom::StackRoomProbe, o: &mut W) { s.floor.w(o); }
 pub fn ps_throwables_ThrowablesSpawnOpts(s: &crate::throwables::ThrowablesSpawnOpts, o: &mut W) { s.pos.w(o); s.vel.w(o); s.yaw.w(o); s.spin.w(o); s.settled.w(o); s.fuse.w(o); s.fired.w(o); s.life.w(o); s.tumble.w(o); s.tumble_rate.w(o); s.emit_t.w(o); s.bounces.w(o); s.heading.w(o); s.on.w(o); s.carried.w(o); }
@@ -1095,7 +1094,6 @@ pub fn pa_roomclear_CheckSquadsS(s: &crate::roomclear::CheckSquadsS, o: &mut W) 
 pub fn pa_roomclear_CheckStructureS(s: &crate::roomclear::CheckStructureS, o: &mut W) { s.rooms.w(o); s.team.w(o); s.starts.w(o); s.squads.w(o); }
 pub fn pa_squadsmoke_SquadArcTo(s: &crate::squadsmoke::SquadArcTo, o: &mut W) { pa_throwables_ThrowSolution(&s.sol, o); }
 pub fn pa_squadsmoke_SquadSmokeThrower(s: &crate::squadsmoke::SquadSmokeThrower, o: &mut W) { pa_throwables_ThrowSolution(&s.sol, o); }
-pub fn pa_squadthrow_SquadThrowKept(s: &crate::squadthrow::SquadThrowKept, o: &mut W) { s.kept.w(o); s.caught.w(o); s.scratch.w(o); s.duck.w(o); }
 pub fn pa_squadthrow_SquadThrower2(s: &crate::squadthrow::SquadThrower2, o: &mut W) { pa_throwables_ThrowSolution(&s.sol, o); }
 pub fn pa_stackroom_StackRoomProbe(s: &crate::stackroom::StackRoomProbe, o: &mut W) { s.floor.w(o); }
 pub fn pa_throwables_ThrowablesSpawnOpts(s: &crate::throwables::ThrowablesSpawnOpts, o: &mut W) { s.pos.w(o); s.vel.w(o); s.yaw.w(o); s.spin.w(o); s.settled.w(o); s.fuse.w(o); s.fired.w(o); s.life.w(o); s.tumble.w(o); s.tumble_rate.w(o); s.emit_t.w(o); s.bounces.w(o); s.heading.w(o); s.on.w(o); s.carried.w(o); }
@@ -2256,7 +2254,7 @@ pub fn pa_scene_scenarios_KitViewLightOverPorchFixture(s: &crate::scene_scenario
 pub fn pa_scene_level_data_ShapePieceData(s: &crate::scene_level_data::ShapePieceData, o: &mut W) { s.arc.w(o); }
 pub fn pa_fogofwar_FogPicture(s: &crate::fogofwar::FogPicture, o: &mut W) { pa_fogofwar_FogOfWarFullStats(&s.full_stats, o); s.viewer.w(o); s.raw_list.w(o); s.raw_at.w(o); s.face_recs.w(o); }
 pub fn pa_par_Par(s: &crate::par::Par, o: &mut W) { s.live.w(o); s.run.w(o); s.marks.w(o); s.fired0.w(o); s.t0.w(o); s.res.w(o); }
-pub fn pa_view_TickView(s: &crate::view::TickView, o: &mut W) { s.radio.w(o); s.bubbles.w(o); s.me.w(o); s.place.w(o); s.kit.w(o); s.marks.w(o); s.aim.w(o); s.worn.w(o); s.squad.w(o); s.corner.w(o); }
+pub fn pa_view_TickView(s: &crate::view::TickView, o: &mut W) { s.radio.w(o); s.bubbles.w(o); s.me.w(o); s.place.w(o); s.kit.w(o); s.marks.w(o); s.aim.w(o); s.worn.w(o); s.squad.w(o); s.corner.w(o); s.lesson.w(o); s.throws.w(o); s.ring.w(o); s.hand.w(o); s.empty.w(o); s.plan.w(o); s.live.w(o); s.quiet.w(o); }
 pub fn pa_verdict_RunVerdictFoes(s: &crate::verdict::RunVerdictFoes, o: &mut W) { s.down.w(o); s.of.w(o); s.fell.w(o); }
 pub fn pa_verdict_RunVerdictHostages(s: &crate::verdict::RunVerdictHostages, o: &mut W) { s.alive.w(o); s.of.w(o); }
 pub fn pa_verdict_VerdictMan(s: &crate::verdict::VerdictMan, o: &mut W) { s.id.w(o); s.name.w(o); s.tone.w(o); s.human.w(o); s.state.w(o); s.down_at.w(o); s.down_room.w(o); s.down_by.w(o); s.down_pos.w(o); s.drops.w(o); s.path.w(o); }
@@ -2279,7 +2277,6 @@ pub fn pm_roomclear_CheckSquadsS(s: &crate::roomclear::CheckSquadsS, o: &mut W, 
 pub fn pm_roomclear_CheckStructureS(s: &crate::roomclear::CheckStructureS, o: &mut W, c: &mut Vec<u32>) { s.rooms.w(o); c.push(o.b.len() as u32); s.team.w(o); c.push(o.b.len() as u32); s.starts.w(o); c.push(o.b.len() as u32); s.squads.w(o); c.push(o.b.len() as u32); }
 pub fn pm_squadsmoke_SquadArcTo(s: &crate::squadsmoke::SquadArcTo, o: &mut W, c: &mut Vec<u32>) { pm_throwables_ThrowSolution(&s.sol, o, c); }
 pub fn pm_squadsmoke_SquadSmokeThrower(s: &crate::squadsmoke::SquadSmokeThrower, o: &mut W, c: &mut Vec<u32>) { pm_throwables_ThrowSolution(&s.sol, o, c); }
-pub fn pm_squadthrow_SquadThrowKept(s: &crate::squadthrow::SquadThrowKept, o: &mut W, c: &mut Vec<u32>) { s.kept.w(o); c.push(o.b.len() as u32); if o.wide { s.caught.w(o); } c.push(o.b.len() as u32); if o.wide { s.scratch.w(o); } c.push(o.b.len() as u32); if o.wide { s.duck.w(o); } c.push(o.b.len() as u32); }
 pub fn pm_squadthrow_SquadThrower2(s: &crate::squadthrow::SquadThrower2, o: &mut W, c: &mut Vec<u32>) { pm_throwables_ThrowSolution(&s.sol, o, c); }
 pub fn pm_stackroom_StackRoomProbe(s: &crate::stackroom::StackRoomProbe, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.floor.w(o); } c.push(o.b.len() as u32); }
 pub fn pm_throwables_ThrowablesSpawnOpts(s: &crate::throwables::ThrowablesSpawnOpts, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.pos.w(o); } c.push(o.b.len() as u32); if o.wide { s.vel.w(o); } c.push(o.b.len() as u32); if o.wide { s.yaw.w(o); } c.push(o.b.len() as u32); if o.wide { s.spin.w(o); } c.push(o.b.len() as u32); if o.wide { s.settled.w(o); } c.push(o.b.len() as u32); if o.wide { s.fuse.w(o); } c.push(o.b.len() as u32); if o.wide { s.fired.w(o); } c.push(o.b.len() as u32); if o.wide { s.life.w(o); } c.push(o.b.len() as u32); if o.wide { s.tumble.w(o); } c.push(o.b.len() as u32); if o.wide { s.tumble_rate.w(o); } c.push(o.b.len() as u32); if o.wide { s.emit_t.w(o); } c.push(o.b.len() as u32); if o.wide { s.bounces.w(o); } c.push(o.b.len() as u32); if o.wide { s.heading.w(o); } c.push(o.b.len() as u32); if o.wide { s.on.w(o); } c.push(o.b.len() as u32); if o.wide { s.carried.w(o); } c.push(o.b.len() as u32); }

@@ -9173,7 +9173,15 @@
 "view::TickView.aim",
 "view::TickView.worn",
 "view::TickView.squad",
-"view::TickView.corner"
+"view::TickView.corner",
+"view::TickView.lesson",
+"view::TickView.throws",
+"view::TickView.ring",
+"view::TickView.hand",
+"view::TickView.empty",
+"view::TickView.plan",
+"view::TickView.live",
+"view::TickView.quiet"
 ],
 "pageTick": [
 "aim::AimState.bearing_rate",
