@@ -64,10 +64,7 @@ pub fn hash01(x: f64) -> f64 {
 pub fn debris_new(g: &crate::game::Game) -> crate::debris::Debris { crate::debris::Debris::blank() }
 
 /// The pool's size on this tier; 64 without one.   (debris.ts Debris.cap)
-pub fn debris_cap(g: &crate::game::Game) -> f64 {
-    let c = g.engine.settings.debris_cap;
-    m::max(4.0, m::floor(c))
-}
+pub const DEBRIS_CAP: f64 = 64.0;
 
 /// Thrown and not yet down; a piece a boot slid is not counted.   (debris.ts Debris.moving)
 pub fn debris_moving(g: &crate::game::Game) -> f64 {
@@ -128,7 +125,7 @@ pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKin
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
     let told = told.unwrap_or(false);
     if !g.m.dress.dress.debris { g.destr.debris.stats.refused += 1.0; return None; }
-    while (g.destr.debris.list.len() as f64) >= debris_cap(g) {
+    while (g.destr.debris.list.len() as f64) >= DEBRIS_CAP {
         let list = g.destr.debris.list.clone();
         let mut ok = |g: &mut Game, c: DebrisChunkId| evictable(g, c);
         let i = crate::break_table::breaks_pick(g, &list, &mut ok);

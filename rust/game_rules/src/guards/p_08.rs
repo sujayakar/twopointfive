@@ -616,7 +616,7 @@ pub fn attach_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
     if let Some(from) = held {
         if g.tab.light[fl].enabled {
             let lens = g.tab.light[fl].pos;
-            let radius = g.engine.settings.flashlight_radius;
+            let radius = FLASHLIGHT_RADIUS;
             let to = crate::lighting::lens_clear(g, from, lens, radius, Some(fl));
             g.tab.light[fl].pos = to;
         }
@@ -712,7 +712,7 @@ pub fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Optio
     }
     if g.tab.light[fl].enabled && crate::doze::doze_dark(g, gd) { g.tab.light[fl].enabled = false; }
     let (peak, inner, outer) = (g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
-    let radius = g.engine.settings.flashlight_radius;
+    let radius = FLASHLIGHT_RADIUS;
     let row = &mut g.tab.light[fl];
     row.peak_intensity = peak;
     row.intensity = peak;
