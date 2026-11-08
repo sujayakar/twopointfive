@@ -170,7 +170,7 @@ fn a_floor_that_knows_does_not_send_for_the_mains() {
     let posts: Vec<[f64; 2]> = men.iter().map(|&m| p.at(m)).collect();
     p.gunfire_reached(men[0]);
     p.mains_pulled();
-    if let Some(t) = p.always(7.0, |p| men.iter().zip(&posts).all(|(&m, q)| dist(p.at(m), *q) < 1.2 || !p.powerout_sent().contains(&m))) { panic!("the floor already knows and a man was sent at {t:.2} s: {:?}", p.powerout_line()); }
+    if let Some(t) = p.always(12.0, |p| men.iter().zip(&posts).all(|(&m, q)| dist(p.at(m), *q) < 1.2 || !p.powerout_sent().contains(&m))) { panic!("the floor already knows and a man was sent at {t:.2} s: {:?}", p.powerout_line()); }
     assert!(p.powerout_sent().is_empty(), "the floor already knows and {:?} went", p.powerout_sent());
 }
 
