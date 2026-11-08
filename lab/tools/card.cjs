@@ -1,4 +1,6 @@
-// Stills and per-pass times on whatever GPU this machine has: node lab/tools/card.cjs <views.json> → $OUT/<name>.jpg and $OUT/times.json
+// On whatever GPU this machine has:
+//   node lab/tools/card.cjs <views.json>                      stills and per-pass times → $OUT/<name>.jpg, times.json
+//   node lab/tools/card.cjs <views.json> --bench realtime,raw  methods against the reference → $OUT/bench.json
 const { execSync } = require('child_process'), fs = require('fs'), path = require('path'), http = require('http');
 let chromium; for (const p of ['/opt/node-tools/node_modules/playwright', 'playwright-core', 'playwright']) { try { chromium = require(p).chromium; break; } catch { } }
 const LAB = path.resolve(__dirname, '..'), OUT = path.resolve(process.env.OUT || 'out'), SITE = path.join(OUT, 'site'); fs.mkdirSync(SITE, { recursive: true });
@@ -10,6 +12,7 @@ execSync(`bun build src/shot.ts --outfile "${SITE}/shot.js" --target browser --l
   await p.goto(`http://localhost:${port}/shot.html`); await p.waitForFunction('window.shots');
   const t0 = Date.now(); console.log('open', await p.evaluate(async () => { window.S = await window.shots(); return JSON.stringify({ gpu: window.S.lab.gpu.info, stamps: window.S.lab.gpu.timestamps, ...window.S.counts }); }), Date.now() - t0, 'ms');
   const times = {};
+  if (process.argv.includes('--bench')) { const names = (process.argv[process.argv.indexOf('--bench') + 1] || 'realtime').split(','); const s = await p.evaluate(async ([v, n]) => { try { return await window.S.bench(v, n, { reference: 600, settle: 90, mean: 24 }); } catch (e) { return String(e.stack || e); } }, [views, names]); if (typeof s === 'string') { console.log('FAILED', s.slice(0, 1500)); process.exit(1); } for (const x of s) console.log(x.view.padEnd(18), x.method.padEnd(12), `${x.ms.toFixed(2)} ms  bias ${(x.bias * 100).toFixed(2)} %  noise ${(x.noise * 100).toFixed(2)} %  error ${(x.error * 100).toFixed(2)} %  ${x.hash}`); fs.writeFileSync(path.join(OUT, 'bench.json'), JSON.stringify(s, null, 1)); process.exit(0); }
   for (const v of views) { const t1 = Date.now(); const r = await p.evaluate(async v => { try { return await window.S.shot(v); } catch (e) { return { err: String(e.stack || e) }; } }, { ...v, jpeg: true }); if (r.err) { console.log(v.name, 'FAILED', r.err.slice(0, 1500)); continue; }
     fs.writeFileSync(path.join(OUT, v.name + '.jpg'), Buffer.from(r.png.split(',')[1], 'base64')); times[v.name] = { wall: +r.ms.toFixed(2), sum: r.sum, render: r.render, gpu: r.gpu }; console.log(v.name, `wall ${r.ms.toFixed(1)} ms a frame, stamps ${r.sum} ms, ${r.render}`, (Date.now() - t1) / 1000, 's'); }
   fs.writeFileSync(path.join(OUT, 'times.json'), JSON.stringify(times, null, 1)); fs.rmSync(SITE, { recursive: true, force: true }); await b.close(); s.close(); process.exit(0);

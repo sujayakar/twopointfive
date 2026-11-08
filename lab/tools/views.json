@@ -1,12 +1,15 @@
 [
- {"name":"01-city","w":1920,"h":1080,"scale":0.75,"samples":90,"run":true,"method":"realtime","dist":74,"hour":16.0,"tick":600},
- {"name":"03-garden","w":1920,"h":1080,"scale":0.75,"samples":90,"run":true,"method":"realtime","dist":22,"hour":14.0,"look":[8,4,1.5],"pitch":0.70,"tick":600},
- {"name":"04-ground-day","w":1920,"h":1080,"scale":0.75,"samples":90,"run":true,"method":"realtime","dist":44,"hour":15.0,"cut":2.55,"look":[0,0.6,0],"doors":0.8,"tick":600},
- {"name":"06-upper-day","w":1920,"h":1080,"scale":0.75,"samples":90,"run":true,"method":"realtime","dist":40,"hour":10.5,"cut":5.95,"look":[-3,3.4,0],"doors":0.6,"tick":600},
- {"name":"08-night-ground","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":42,"hour":21.5,"cut":2.55,"look":[0,0.6,0],"doors":0.9,"tick":600},
- {"name":"10-dusk","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":56,"hour":18.3,"yaw":0.9,"pitch":0.62,"tick":600},
- {"name":"12-low","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":36,"hour":8.2,"yaw":2.4,"pitch":0.42,"look":[4,3.5,0],"tick":600},
- {"name":"30-person","w":1280,"h":720,"scale":1,"samples":60,"run":true,"method":"realtime","dist":7,"hour":13.0,"person":2,"pitch":0.45,"yaw":0.3,"tick":600},
- {"name":"31-person","w":1280,"h":720,"scale":1,"samples":60,"run":true,"method":"realtime","dist":7,"hour":21.5,"person":0,"cut":2.55,"pitch":0.6,"tick":600},
- {"name":"32-person","w":1280,"h":720,"scale":1,"samples":60,"run":true,"method":"realtime","dist":9,"hour":15.0,"person":4,"cut":2.55,"pitch":0.6,"yaw":2.2,"tick":700}
+ {"name":"30-person","w":1280,"h":720,"scale":1,"samples":60,"run":true,"method":"realtime","dist":7,"hour":13.0,"person":2,"pitch":0.45,"yaw":2.3,"tick":560},
+ {"name":"31-person","w":1280,"h":720,"scale":1,"samples":60,"run":true,"method":"realtime","dist":9,"hour":21.5,"person":0,"cut":2.55,"pitch":0.75,"yaw":0.6,"tick":700},
+ {"name":"32-person","w":1280,"h":720,"scale":1,"samples":60,"run":true,"method":"realtime","dist":9,"hour":15.0,"person":4,"cut":2.55,"pitch":0.7,"yaw":2.2,"tick":860},
+ {"name":"40-door-0","w":1280,"h":720,"scale":1,"samples":120,"run":true,"method":"realtime","dist":26,"hour":14.6,"cut":2.55,"look":[3,0.6,-2.5],"doors":0,"tick":1000,"groups":{"orange":0,"atrium":0}},
+ {"name":"41-door-20","w":1280,"h":720,"scale":1,"samples":20,"run":true,"go":true,"method":"realtime","dist":26,"hour":14.6,"cut":2.55,"look":[3,0.6,-2.5],"want":1,"groups":{"orange":0,"atrium":0}},
+ {"name":"42-door-60","w":1280,"h":720,"scale":1,"samples":40,"run":true,"go":true,"method":"realtime","dist":26,"hour":14.6,"cut":2.55,"look":[3,0.6,-2.5],"groups":{"orange":0,"atrium":0}},
+ {"name":"43-door-160","w":1280,"h":720,"scale":1,"samples":100,"run":true,"go":true,"method":"realtime","dist":26,"hour":14.6,"cut":2.55,"look":[3,0.6,-2.5],"groups":{"orange":0,"atrium":0}},
+ {"name":"50-dawn","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":60,"hour":6.6,"yaw":-0.5,"pitch":0.5,"tick":1400},
+ {"name":"51-noon","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":60,"hour":12.5,"tick":1600},
+ {"name":"52-gold","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":60,"hour":17.4,"yaw":0.2,"pitch":0.55,"tick":1800},
+ {"name":"53-night","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":54,"hour":22.5,"yaw":1.0,"pitch":0.6,"tick":2000},
+ {"name":"54-studio","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":24,"hour":9.5,"cut":5.95,"look":[-7,3.4,-2],"doors":0.6,"tick":2200},
+ {"name":"55-atrium","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":22,"hour":13.5,"cut":2.55,"look":[0,0.6,1],"doors":0.6,"tick":2400}
 ]

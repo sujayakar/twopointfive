@@ -15,6 +15,9 @@ fn srgb(c: vec3f) -> vec3f { return select(1.055 * pow(max(c, vec3f(0.0)), vec3f
 fn lum(c: vec3f) -> f32 { return dot(c, vec3f(0.2126, 0.7152, 0.0722)); }
 @fragment fn fs(v: V) -> @location(0) vec4f {
   let n = vec2f(textureDimensions(src)); var c = max(textureLoad(src, min(vec2i(v.uv * n), vec2i(n) - 1), 0).xyz, vec3f(0.0)); if (k[1].x > 0.0) { return vec4f(srgb(clamp(c * k[1].y, vec3f(0.0), vec3f(1.0))), 1.0); }
+  { // sharpen by what the neighbours allow: no ringing past the brightest and darkest of them
+    let q = min(vec2i(v.uv * n), vec2i(n) - 1); let hi = vec2i(n) - 1; let a = textureLoad(src, clamp(q + vec2i(0, -1), vec2i(0), hi), 0).xyz; let b = textureLoad(src, clamp(q + vec2i(0, 1), vec2i(0), hi), 0).xyz; let d = textureLoad(src, clamp(q + vec2i(-1, 0), vec2i(0), hi), 0).xyz; let f = textureLoad(src, clamp(q + vec2i(1, 0), vec2i(0), hi), 0).xyz;
+    let la = lum(a); let lb = lum(b); let ld = lum(d); let lf = lum(f); let lc = lum(c); let mn = min(min(la, lb), min(min(ld, lf), lc)); let mx = max(max(la, lb), max(max(ld, lf), lc)); let w = -k[1].z * sqrt(clamp(min(mn, 2.0 * lc) / max(mx, 1e-5), 0.0, 1.0)); c = max((c + (a + b + d + f) * w) / (1.0 + 4.0 * w), vec3f(0.0)); }
   c = mix(c, textureSampleLevel(glow, sm, v.uv, 0.0).xyz, k[0].z) * e[0] * exp2(k[0].x);
   { // the fused picture is a quarter the size: fit what it does to brightness over the texels round this pixel, and do that here
     let d = vec2f(textureDimensions(fuse)); let p = v.uv * d - 0.5; let b = vec2i(floor(p + 0.5)); let hi = vec2i(d) - 1; var m = vec4f(0.0); var mm = 0.0; var ws = 0.0;
@@ -29,8 +32,8 @@ fn lum(c: vec3f) -> f32 { return dot(c, vec3f(0.2126, 0.7152, 0.0722)); }
   /** before the frame: the knobs the exposure stages read */
   set(lab: Lab, snap = false) { exposeKnobs(lab, this.bias, this.lift, this.hold, snap); }
   /** `pre` = the method's prefix for its glow and fused levels; `plain` = show a signal as it is */
-  run(e: GPUCommandEncoder, lab: Lab, src: GPUTexture, to: GPUTextureView, format: GPUTextureFormat, pre: string, o: { plain?: number; grain?: number } = {}) {
-    const d = this.g.device; d.queue.writeBuffer(this.knob, 0, new Float32Array([this.bias, lab.frameNo, 0.06, o.grain ?? 0.6, o.plain ? 1 : 0, o.plain ?? 1, 0, 0]));
+  run(e: GPUCommandEncoder, lab: Lab, src: GPUTexture, to: GPUTextureView, format: GPUTextureFormat, pre: string, o: { plain?: number; grain?: number; sharpen?: number } = {}) {
+    const d = this.g.device; d.queue.writeBuffer(this.knob, 0, new Float32Array([this.bias, lab.frameNo, 0.06, o.grain ?? 0.6, o.plain ? 1 : 0, o.plain ?? 1, o.sharpen ?? 0.12, 0]));
     let pipe = this.pipes.get(format); if (!pipe) this.pipes.set(format, pipe = d.createRenderPipeline({ layout: 'auto', vertex: { module: this.mod, entryPoint: 'vs' }, fragment: { module: this.mod, entryPoint: 'fs', targets: [{ format }] } }));
     const t = (n: string) => ({ resource: (o.plain ? this.dummy : lab.graph.texture(n)).createView() }), p = e.beginRenderPass({ colorAttachments: [{ view: to, loadOp: 'clear', storeOp: 'store' }] }); p.setPipeline(pipe);
     p.setBindGroup(0, d.createBindGroup({ layout: pipe.getBindGroupLayout(0), entries: [{ binding: 0, resource: src.createView() }, { binding: 1, resource: { buffer: lab.graph.buffers.get('exposure')! } }, { binding: 2, resource: { buffer: this.knob } }, { binding: 3, ...t(pre + 'Glow3') }, { binding: 4, resource: this.sampler }, { binding: 5, ...t(pre + 'Fuse0') }] })); p.draw(3); p.end();
