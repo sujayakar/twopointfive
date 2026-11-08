@@ -1,7 +1,7 @@
 {
   "version": 2,
   "name": "defuse-gwot",
-  "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/defuse-gwot.ts build → tools/levels/export.ts", "notes": "The two charges: a defuse mission's own level. Two wings off one hall, a timed charge on the bench in the far room of each, one clock for both. Kit pieces only. Regenerate: bun run tools/levels/export.ts defuse — IN THE DEFAULT LOOK (2010s GWOT: tools/levels/gwotSkin.ts): the same boxes repainted, decals added; what a man collides with, hides behind or sees through is the plain file's." },
+  "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/defuse-gwot.ts build → tools/levels/export.ts", "notes": "A room clear in a low house: two wings off one hall, a workshop in the far room of each. Kit pieces only. Regenerate: bun run tools/levels/export.ts defuse — IN THE DEFAULT LOOK (2010s GWOT: tools/levels/gwotSkin.ts): the same boxes repainted, decals added; what a man collides with, hides behind or sees through is the plain file's." },
   "floors": [
     { "id": "f0", "name": "ground floor", "y": 0, "ceiling": 3 }
   ],
@@ -580,14 +580,6 @@
     "places": {
       "areas": [
         { "name": "hall", "bounds": { "x0": 6.12, "x1": 33.88, "z0": 13.06, "z1": 16.88 } }
-      ]
-    },
-    "defuse": {
-      "secs": 75,
-      "workSecs": 6,
-      "devices": [
-        { "id": "one", "name": "charge 1", "pos": [8.5, 0.84, 7.6499999999999995], "n": [0, 1] },
-        { "id": "two", "name": "charge 2", "pos": [31.5, 0.84, 7.6499999999999995], "n": [0, 1] }
       ]
     },
     "kitView": {

@@ -50,7 +50,6 @@ pub mod darkdoor;
 pub mod darkfoe;
 pub mod deathrecap;
 pub mod debris;
-pub mod defuse;
 pub mod destruction;
 pub mod destruction_switch;
 pub mod devices;

@@ -248,7 +248,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 347 => { let a1: String = Io::r(&mut i); let a2: bool = Io::r(&mut i); let r = crate::quietfog::quiet_fog_href(g, &a1, a2); r.w(&mut o);  }
 348 => {  crate::quietfog::quiet_fog_end(g);  }
 349 => {  crate::par::par_tick(g);  }
-365 => { let a1: Option<crate::defuse::DefuseSnap> = Io::r(&mut i); crate::defuse::defuse_restore(g, a1.as_ref());  }
 366 => { let a1: GuardId = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: Option<crate::wounds::WoundDownZone> = Io::r(&mut i); crate::wounds::wound_down(g, a1, a2, a3);  }
 367 => { let a1: f64 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let r = crate::calmtorch::place_light(g, a1, a2); r.w(&mut o);  }
 368 => { let a1: f64 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: Option<f64> = Io::r(&mut i); let r = crate::calmtorch::work_lit(g, a1, a2, a3); r.w(&mut o);  }

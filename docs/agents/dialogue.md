@@ -30,7 +30,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   player lines. A new row or line about this can takes the word of the place it stands in. `tools/qa/squadthrow-check.ts` asserts the rows' text. Never seen on a GPU; nobody has
   played the renamed rows.
 - **The end card's verdict is one or two words in capitals, never a sentence** (`src/game/verdict.ts`; the card and its switch are the 'Every run ends on a verdict' bullet in menus.md):
-  won — CLEAR · RESCUED · TAKEN ALIVE · DEFUSED · OUT (a solo mission walked out of); lost — DOWN (every player down; the why is 'by <who>') · WIPED (the team) · DEAD (the man who was
+  won — CLEAR · RESCUED · OUT (a solo mission walked out of); lost — DOWN (every player down; the why is 'by <who>') · WIPED (the team) · DEAD (the man who was
   to be taken alive) · GOT AWAY (he left the floor) · LOST (the hostages) · BLOWN (the charge went off) · FAILED (a mission stage failed). The why under it is the mission's own end
   line (`roomclear.endWhy`, `rescue.result.why`), not a new sentence. Small words: the tag 'cheats' (a cheat was on: nothing is kept of the try), the count rows
   'defenders' and 'hostages' — the game's own nouns (never 'enemies', 'tangos', 'civilians' for a hostage). A new end takes a word of this kind: what happened, in the past, no verb

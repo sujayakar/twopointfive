@@ -615,8 +615,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
         crate::wallcharge::wall_charge_rows(g, p, busy, row_cb!(crate::wallcharge::WallChargeRowsRowOver), offer_cb!(list, things));
         crate::rescueend::rescue_end_rows_2(g, p, busy, row_cb!(crate::rescueend::RescueEndRows2RowOver), offer_cb!(list, things));
         let setting = crate::wallcharge::wall_charge_setting(g, &crate::seats::here(g));
-        crate::defuse::defuse_rows(g, p, busy || setting, row_cb!(crate::defuse::DefuseRowsRowOver), offer_cb!(list, things));
-        let working = setting || crate::defuse::defuse_working(g);
+        let working = setting;
         crate::stickycam::sticky_rows(g, pl, busy || working, row_cb!(crate::stickycam::StickyRowsRowOver), offer_cb!(list, things));
         crate::lightswitch::switch_rows(g, pl, busy || working, row_cb!(crate::lightswitch::SwitchRowsRowOver), offer_cb!(list, things));
         // ---- the rows: the running verb alone (or a status while the feet are committed), else the top MAX_NEAR verbs of the things in reach by what matters
@@ -654,8 +653,6 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             rows = vec![running(&base, crate::game::Verb::Charge, "setting the charge… — Space or a step breaks it off", Some(progress))];
         } else if crate::wallcharge::wall_charge_setting(g, &crate::seats::here(g)) {
             rows = vec![crate::wallcharge::wall_charge_running_row(g, &mut running_cb)];
-        } else if crate::defuse::defuse_working(g) {
-            rows = vec![crate::defuse::defuse_running_row(g, &mut running_cb)];
         } else if g.pl[pl].takedown.is_none() {
             let priority = interact_priority();
             js::sort_by(&mut things, |a, b| interact_cmp(g, p, &priority, &list[a.0], &list[b.0]));
