@@ -5,7 +5,7 @@ back, WebSockets, CPU senses on the server. What is built so far is the server, 
 and a page is opened with `?net=`: a page without that word is the build as it was (the loop's `tick` seam is absent, `netFromUrl` returns on its first
 line).
 
-- **A GAME ON THE MODULE ALONE** (2026-11-08, for the page that draws: `draw.html`). The server and the scripted client can stand and step the game with no
+- **A GAME ON THE MODULE ALONE** (2026-11-08, for the page that draws). The server and the scripted client can stand and step the game with no
   TypeScript game beside it (`tools/mp/modstand.ts`): the setup record says `knobs: {stand: 'module', commands}` (or `MP_STAND=module`), the welcome
   carries a START (`src/net/start.ts`: the level's file, the address's words, the die, the seats, the host's `machineBefore` commands as base64) in place of
   the recipe, and every machine hands it the game's own start (`face_start`, dressed). The module's doors are `rust/game_face/src/net.rs`: `face_networked`
@@ -23,7 +23,7 @@ line).
     turning, the other at nothing; and `a_look_ahead_is_where_the_game_then_has_him`). KNOWN: `g.wind.to_pool` (the gusts the picture's particles take)
     follows the host's view and is in the wider word's `wind`; nothing of a tick reads it. A level with more jets than the pool near one view and not the
     other's would count there, never in the alarm: it wants to be the drawing's own list.
-  - **The page that draws** (`draw.html?net=`; `src/host/drawnet.ts`): the welcome's start stood as it is said, at the game's own address; a page tick samples the hand, sends it as a record, walks, and
+  - **The page that draws** (`?net=`; `src/host/drawnet.ts`): the welcome's start stood as it is said, at the game's own address; a page tick samples the hand, sends it as a record, walks, and
     draws. His own man is moved as one body where the look ahead has him (`rust/game_draw/src/lead.rs`: bones, proxies, what he wears, the lights in his hands, his rim), a page tick with nothing confirmed
     holds what moves where it stands (`face_draw_hold`), several ticks in one are blended over them all (`face_draw_over`), ticks nobody sees are not drawn. A card takes the hands off and the game goes on;
     Restart, a save and a load are refused in words; the title has Co-op (`ui/coop.ts` with no game under it; a hosted game's setup carries `stand: 'module'` and this machine's settings but the kit). Check:

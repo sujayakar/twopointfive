@@ -1,4 +1,4 @@
-// THE PAGE THAT DRAWS A GAME IT DOES NOT HOLD (draw.html; `?draw=1` on the game's page). The game is the Rust module's (host/drawgame.ts): started from the
+// THE GAME'S PAGE (index.html), which draws a game it does not hold. The game is the Rust module's (host/drawgame.ts): started from the
 // level's file and the address's words, handed what the player did, stepped, and drawn from what each tick leaves to be drawn (src/draw). Nothing this
 // page's bundle holds is the game's TypeScript: tools/draw/ban.ts stops the build on an import of it.
 import { kitPicture } from './kitguard';   // (FIRST: in the Team & kit picture's window it makes the stores read-only before any module below reads or writes one)
@@ -6,8 +6,8 @@ import { PIPE_QUEUE, gpuStory, initGpu, laterIdle, pipeQueue, showFatal, showFat
 import { Engine } from '../engine';
 import { SmokeSystem } from '../smoke/smoke';
 import { Quality } from '../ui/quality';
-import { glassBreakConfig, lookConfig, snowConfig, snowLookConfig, wallSidesConfig, weatherKindConfig } from '../render/frame';
-import { lookAmounts, lookParts, lookSync } from '../render/gbuffer';
+import { glassBreakConfig, lookConfig, snowConfig, snowLookConfig, weatherKindConfig } from '../render/frame';
+import { lookParts, lookSync, nextTask } from '../render/gbuffer';
 import { hourExposure } from '../render/photometry';
 import { charSlots, meshAuthored } from '../render/charMaterials';
 import { MeshShadows } from '../render/meshShadows';
@@ -25,8 +25,7 @@ import { CameraPair, Lag } from './between';
 import { FINDTUNED, bindFindMe, ctrlTurn, findMeStarts } from './findme';
 import { fetchFace } from './face';
 import { machineAfter, machineBefore } from './machine';
-import { EVENPACE, FLIGHT_PAGE, pacer, pageRoom, rateMeter } from './pace';
-import { PLAN_PACE } from '../render/planPace';
+import { EVENPACE, pacer, pageRoom, rateMeter } from './pace';
 import { RENDER_PASSES } from '../gpu/timer';
 import { DrawGame, GameLost } from './drawgame';
 import { debuggerPanel } from './debugger';
@@ -67,7 +66,7 @@ import * as boot from '../ui/boot';
 import { BENCH_RUN_KEY, benchBegin, benchSceneWaits } from '../ui/benchrun';
 import { priceLevelsPage } from '../ui/pricerun';
 import { urlFlagsOnEngine } from './engineflags';
-import { pictureMakes, pictureOpens, pictureWords } from './pictureopens';
+import { pictureKeepsPace, pictureMakes, pictureOpens, pictureSolves, pictureWords } from './pictureopens';
 import { FRAMECAP, watchTextures } from '../render/framecap';
 import { SavePics } from './savepics';
 import { Readout } from '../ui/readout';
@@ -117,6 +116,8 @@ import { WeatherPicture } from '../picture/weather';
 import { SNOW_LOOK, snowLookOfQuery } from '../picture/snow/look';
 import type { Vec3 } from '../math/vec';
 
+/** ticks played and thrown away before the first */
+const WARM = 36;
 const LOW_PITCH = 24 * Math.PI / 180, HIGH_PITCH = 55 * Math.PI / 180;
 const bytesOf = async (url: string): Promise<Uint8Array> => { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`); return new Uint8Array(await r.arrayBuffer()); };
 /** the level's file */
@@ -186,7 +187,7 @@ async function main(): Promise<void> {
   const D = game.drawn, sky = () => D.at[Section.sky], view = () => D.at[Section.view];
 
   // ---- the picture's constants: what the shaders are compiled with is said before any of them is
-  pictureWords(q); wallSidesConfig.on = lookAmounts.walls > 0;
+  pictureWords(q);
   lookConfig.kept = lookKeptOf(D.f[sky() + Sky.kept] < 0 ? undefined : D.f[sky() + Sky.kept], q.get('kept'));
   weatherKindConfig.on = true; snowConfig.on = D.u[sky() + Sky.snowLevel] !== 0;
   if (snowConfig.on) { snowLookOfQuery(q); snowLookConfig.surface = SNOW_LOOK.on; snowLookConfig.wisps = SNOW_LOOK.wisps; snowLookConfig.tracks = SNOW_LOOK.on && SNOW_LOOK.tracks; snowLookConfig.glow = SNOW_LOOK.on && SNOW_LOOK.glow; snowLookConfig.sparkle = SNOW_LOOK.on && SNOW_LOOK.sparkle; snowLookConfig.under = SNOW_LOOK.under; snowLookConfig.grains = SNOW_LOOK.grains || SNOW_LOOK.oneAir; }
@@ -201,7 +202,7 @@ async function main(): Promise<void> {
   if (FRAMECAP.on) watchTextures(gpu.device);   // (a frame capture knows every texture made from here on)
   boot.span('gpu', tGpu); boot.mark('gpu'); startCallClock(gpu.device);
   let world!: DrawWorld; const engine = new Engine(gpu, undefined, d => world = new DrawWorld(d, D)), smoke = new SmokeSystem(engine);
-  urlFlagsOnEngine(engine);
+  urlFlagsOnEngine(engine); pictureSolves(q, engine, smoke);
   engine.setParticles(new Particles(engine.device, engine.sceneLayout));
   engine.setSmoke(smoke.binding); engine.afterSubmit.push(() => smoke.afterSubmit());
   const decals = new DrawDecals(engine.device, D); engine.setDecals(decals); trafficFrom(engine.gbuffer, D);
@@ -217,7 +218,13 @@ async function main(): Promise<void> {
   game.look(lookNumbers(engine.settings, engine.world, !!ch.cast)); game.frame(1, [20, 0, 14]); engine.world.upload();   // (every stuff the level is made of is known from here: its maps are made with the programs)
   const tPipe = performance.now();
   const group = (name: string): void => { boot.span('pipelines_' + name, tPipe); }, timed = <T>(name: string, p: Promise<T>): Promise<T> => p.then(v => { group(name); return v; });
-  await Promise.all([engine.init({ ...pictureMakes(q), onGroup: group }), timed('smoke', smoke.init()), timed('particles', engine.particles!.init()), timed('materials', engine.gbuffer.needLook()), timed('meshShadows', shadows.init()), timed('skin', engine.gbuffer.prepareSkin(chars.jointsFormat))]);
+  const made = Promise.all([engine.init({ ...pictureMakes(q), onGroup: group }), timed('smoke', smoke.init()), timed('particles', engine.particles!.init()), timed('materials', engine.gbuffer.needLook()), timed('meshShadows', shadows.init()), timed('skin', engine.gbuffer.prepareSkin(chars.jointsFormat))]);
+  made.catch(() => { /* awaited below */ });
+  // (while the programs compile: the ticks a run begins with, still, walking and firing)
+  if (!play && !net && !kitPicture && !title) { const eye = new FollowCamera(), o = view() + View.follow, none = new Set<string>(), walk = new Set(['KeyW']), w = Math.max(1, canvas.clientWidth), h = Math.max(1, canvas.clientHeight);
+    eye.target = [D.f[o], D.f[o + 1], D.f[o + 2]]; eye.aspect = w / h; eye.rebuild();
+    await game.warm(WARM, (N, i) => sampleHand(N, { keys: i >= WARM / 3 ? walk : none, pressed: none, buttons: i >= WARM * 2 / 3 ? 1 : 0, clicked: 0, wheel: 0, mouseX: w * 0.6, mouseY: h * 0.4 }, eye, canvas), nextTask); }
+  await made;
   boot.span('pipelines', tPipe); boot.mark('pipelines'); boot.freezePipelines(); keptFreeze(); gpuStory.stage = 'while setting up'; pipelineProgress.onChange = null; pipeQueue.settle(); engine.warmFirstUse();
   const quality = new Quality(engine, smoke); quality.visit(location.search); pictureOpens(q, engine, quality); quality.onCalibrated = refreshOptions; (window as unknown as { __quality: Quality }).__quality = quality;
   lookSync();
@@ -345,6 +352,7 @@ async function main(): Promise<void> {
   };
   const kit = kitPicture ? new KitPage(canvas, game.commands) : null;
   /** one drawn frame: `dt` seconds of the display's, in whole ticks (`drawn` false: a script's, stepped and not drawn) */
+  let beat = -1;   // (the display's own time for this frame, s; -1 = not known)
   const frame = (dt: number, ticks?: number, drawn = true): void => {
     if (freeCam) { freeCam.frame(dt); bar?.paint(); }
     if (ticks === undefined) pageKeys(); else hud?.tabShow(false);
@@ -353,7 +361,7 @@ async function main(): Promise<void> {
     const wall = dt; dt *= played.pace; if (freeCam && played.paused) { posed(); pair.cut(); }
     const still = ticks === undefined && !net && stopped(); if (still) dt = 0;   // (the world holds still under a card: what only the picture moves with it)
     time += dt;
-    const t0 = performance.now(), plan = ticks !== undefined ? { ticks, acc, drift } : still ? { ticks: 0, acc, drift } : planTicks(acc, dt, FIXEDSTEP, drift); acc = plan.acc; drift = plan.drift;
+    const t0 = performance.now(), plan = ticks !== undefined ? { ticks, acc, drift } : still ? { ticks: 0, acc, drift } : planTicks(acc, ticks === undefined && beat >= 0 ? beat * ((window as unknown as { __timeScale?: number }).__timeScale ?? 1) * played.pace : dt, FIXEDSTEP, drift); acc = plan.acc; drift = plan.drift;
     const locks = D.u[view() + View.locks];
     if (input.wheelCtrl) { if (!still && !(locks & 2)) cam.zoom(input.wheelCtrl); input.wheelCtrl = 0; }
     if (input.orbitDX && plan.ticks && !(locks & 1)) cam.rotate(ctrlTurn(input.orbitDX));   // (in a frame's first tick: the next tick's hand looks the way it left the view)
@@ -393,28 +401,35 @@ async function main(): Promise<void> {
   // THE PAGE'S PACE (host/pace.ts): a frame is not begun while two are still with the GPU, and a fast display's frames between the ladder's are passed over. A tab
   // nobody sees is not drawn; the time it was away is not the game's
   const pace = pacer(), rate = rateMeter(), rendered = [...RENDER_PASSES]; let resolved = -1, gpuMs = NaN;
-  EVENPACE.on = true; EVENPACE.flight = FLIGHT_PAGE; PLAN_PACE.on = true;
-  document.addEventListener('visibilitychange', () => { last = performance.now(); pace.reset(); rate.reset(); });
+  pictureKeepsPace(q);
+  /** is somebody at this window? A kept page is asked of the tab's own (a top that refused once is not asked again) */
+  let topAsks = true; const attended = (): boolean => { const t = (window as unknown as { __testFocus?: unknown }).__testFocus; if (typeof t === 'boolean') return t; if (topAsks) try { return (window.top ?? window).document.hasFocus(); } catch { topAsks = false; } return true; };
+  let gave = 0, stamp = -1;
+  /** what was not played is not the game's time, and no gap of the display's */
+  const afresh = (): void => { last = performance.now(); stamp = -1; pace.reset(); rate.reset(); };
+  document.addEventListener('visibilitychange', afresh);
   /** a game lost to a panic stands again, and nothing of the lost one's last frame goes with it */
   let backAt = -1e9;
   const standAgain = (newest: boolean): string | null => {
     const label = game.recover(newest); if (label === null) return null;
     input.keys.clear(); input.buttons = 0; input.endFrame(); acc = 0; drift = 0;
     cam.kickOut(); cam.drawOut(); if (pause.up) pause.close(); paused = false; thaw = false; input.lockExcept = null; stood = 0; anew(); lens(); cam.rebuild();
-    backAt = newest ? game.ticks : -1e9; last = performance.now(); requestAnimationFrame(loop);
+    backAt = newest ? game.ticks : -1e9; afresh(); requestAnimationFrame(loop);
     return label;
   };
   const loop = (ts: number): void => {
     try {
-      const room = pageRoom({ calibrating: quality.calibrating, measuring: measure.active });
-      if (kit?.rests || held || document.hidden) { last = performance.now(); pace.reset(); rate.reset(); requestAnimationFrame(loop); return; }
-      if (pace.skip(ts, kit ? 60 : !quality.calibrating && !measure.active && (quality.adaptive || quality.auto) ? quality.bands.target : 0, false, room)) { requestAnimationFrame(loop); return; }
+      const room = pageRoom({ calibrating: quality.calibrating, measuring: measure.active }), away = EVENPACE.giveway && !kit && !quality.calibrating && !measure.active && !measure.rec.recording && !attended();
+      if (kit?.rests || held || document.hidden) { afresh(); requestAnimationFrame(loop); return; }
+      if (pace.skip(ts, kit ? 60 : !quality.calibrating && !measure.active && (quality.adaptive || quality.auto) ? quality.bands.target : 0, away, room)) { requestAnimationFrame(loop); return; }
       const now = performance.now(), raw = (now - last) / 1000; last = now; told.fps = rate.push(now);
+      // (a tick is owed by the display's own frames, which are steadier than a clock read in one; a window that gave way is no measure of the machine)
+      beat = stamp >= 0 && ts > stamp ? Math.min(1 / 20, (ts - stamp) / 1000) : -1; stamp = ts; const rested = pace.gave !== gave; gave = pace.gave;
       if (quality.early) quality.remeasure();
       if (quality.calibrating) { if (measure.calibrates(engine)) quality.calibrateTick(raw); }
-      else if (raw < 0.5 && !stopped() && !measure.active) { const fresh = engine.timer.resolved !== resolved; resolved = engine.timer.resolved; gpuMs = !engine.timer.enabled ? 0 : fresh ? engine.timer.unionMs(rendered) : NaN; quality.sample(raw, gpuMs); }
-      measure.begins(); cloud?.begins(); reel.frame(raw); frame(Math.min(1 / 20, raw) * ((window as unknown as { __timeScale?: number }).__timeScale ?? 1), undefined, !unseen()); measure.timed(told.update, told.render); cloud?.drawn(raw, gpuMs); gpuMs = NaN; measure.drawn(raw, told.fps);
-      if (room > 0) { const w = pace.sent(performance.now()), end = (): void => pace.done(w, performance.now(), 0); gpu.device.queue.onSubmittedWorkDone().then(end, end); }
+      else if (raw < 0.5 && !rested && !stopped() && !measure.active) { const fresh = engine.timer.resolved !== resolved; resolved = engine.timer.resolved; gpuMs = !engine.timer.enabled ? 0 : fresh ? engine.timer.unionMs(rendered) : NaN; quality.sample(raw, gpuMs); }
+      measure.begins(); cloud?.begins(); reel.frame(raw); frame(Math.min(1 / 20, raw) * ((window as unknown as { __timeScale?: number }).__timeScale ?? 1), undefined, !unseen()); measure.timed(told.update, told.render); cloud?.drawn(raw, gpuMs, rested); gpuMs = NaN; measure.drawn(raw, told.fps);
+      if (away || room > 0) { const w = pace.sent(performance.now()), end = (): void => pace.done(w, performance.now(), away && engine.timer.enabled ? engine.timer.unionMs(rendered) : 0); gpu.device.queue.onSubmittedWorkDone().then(end, end); }
       requestAnimationFrame(loop);
     } catch (e) {
       // (lost to a panic: the picture stands as it was, and the card says what Enter puts back)
@@ -433,7 +448,7 @@ async function main(): Promise<void> {
     // (Escape: Tab's card goes, or a field of the debugger's is let go, and that is the press's whole job)
     away: () => { const field = inPanel(); if (hud?.tabUp) hud.tabShow(false); else if (field && !pause.up) { field.dataset.esc = '1'; field.blur(); delete field.dataset.esc; } else return false; input.pressed.delete('Escape'); return true; },
     save: () => { if (optionsOpen() || missionsBusy() || !input.saveKey?.()) return false; if (net) { net.door.pass(NO_SAVE); return false; } game.commands.save(); return asked = game.saves().hand; },
-    turned: up => { paused = up; if (up) { game.commands.letGo(); hud?.tabShow(false); } else { thaw = true; asked = false; } input.keys.clear(); input.buttons = 0; input.endFrame(); input.lockExcept = up ? new Set() : null; last = performance.now(); } });
+    turned: up => { paused = up; if (up) { game.commands.letGo(); hud?.tabShow(false); } else { thaw = true; asked = false; } input.keys.clear(); input.buttons = 0; input.endFrame(); input.lockExcept = up ? new Set() : null; afresh(); } });
   onEnded = () => { if (!kit && !play && !ownPage(q)) pause.end(); };   // (a run's page has no end card: the next is its own)
   const cloud = kitPicture || play ? null : drawCloud(q, { sid, store: !unkept && keeps(q) ? keptStore() : null, gpu, engine, quality, game, measure, mission: desk().brief(location.search).title || (q.get('levelFile') ?? ''), offBooks: ownPage(q) || !!net, live: () => !title && !stopped() && !document.hidden && game.view().live, still: () => stopped() || measure.sweep.active });
   if (play && freeCam) { const named = q.get(PLAYTAPE) ?? '', mine = keptName(named), notes = mine ? await keptNotes(named) : [];
@@ -446,15 +461,15 @@ async function main(): Promise<void> {
   const drawTitle = (): void => { const root = document.getElementById('menu')!, c = document.createElement('div'); c.className = 'card'; root.textContent = ''; root.classList.add('on', 'title'); root.appendChild(c); titleScreen(c, { note: cloudNote, shows: { bench: () => { bencher.begin(); return true; } }, cheats: () => cheatWords(settings), closed: moved => { if (title && moved) drawTitle(); } }); };
   if (net) { net.ready(); coopInvite(net.door, q); }
   if (title) { drawTitle(); if (missionsReopenAsked() && !startPage()) openStartPage(); }
-  else if (brief) startWaits(brief, { drawn: () => told.frames, measuring: () => quality.calibrating, settling: on => { settling = on; }, settled: () => { boot.mark('settled'); }, run: () => { input.keys.clear(); input.buttons = 0; input.endFrame(); thaw = true; audio.start(); input.focusGame(); last = performance.now(); } });
+  else if (brief) startWaits(brief, { drawn: () => told.frames, measuring: () => quality.calibrating, settling: on => { settling = on; }, settled: () => { boot.mark('settled'); }, run: () => { input.keys.clear(); input.buttons = 0; input.endFrame(); thaw = true; audio.start(); input.focusGame(); afresh(); } });
   else card.off();
   loading.style.display = 'none'; debuggerPanel({ game, engine, smoke, cam, quality, input, chars: ch, marks: decals, over: hud, net, card: e => !pause.up && !!hud?.overlay.cardUp && hud.overlay.cardKey(e), hud: () => ({ fps: told.fps, union: engine.timer.unionMs(rendered) }) });
   // (for a tool: the page's parts, and frames stepped by hand)
   const steps = (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last'): void => { if (title || brief?.up) { title = false; reel.poke(); brief?.off(); card.off(); } for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } };
-  Object.assign(window, { __draw: { game, hud, played: play ? played : null, seesAs, get watched() { return watched; }, books, kit, measure, reel, pics, engine, world, audio, pause, cam, input, quality, told, fog, weather, smoke, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: steps } });
+  Object.assign(window, { __draw: { game, hud, played: play ? played : null, seesAs, get watched() { return watched; }, books, kit, measure, reel, pics, engine, world, audio, pause, cam, input, quality, told, fog, weather, smoke, get held() { return held; }, set held(v: boolean) { held = v; afresh(); }, run: steps } });
   // (…and by the names every page of the game has them under)
   const G = window as unknown as Record<string, unknown>; G.__engine = engine; G.__prewarmed = true; G.__timeScale = 1;
-  Object.defineProperty(window, '__pauseLoop', { configurable: true, get: () => held, set: (v: boolean) => { held = v; last = performance.now(); } });
+  Object.defineProperty(window, '__pauseLoop', { configurable: true, get: () => held, set: (v: boolean) => { held = v; afresh(); } });
   G.__runFrames = (n: number, _dt = 1 / 60, keys: string[] = [], draw: boolean | 'none' = true): void => steps(n, keys, draw === 'none' ? 'none' : draw ? 'all' : 'last');
   G.__game = { get time() { return game.time; }, get mission() { const t = game.tally(); return { stage: t.stage, alarmOn: t.alarm, stats: { alerts: t.alerts } }; } };
   G.__pace = () => ({ on: EVENPACE.on, hz: pace.hz, every: pace.every, skipped: pace.skipped, worked: pace.worked, target: quality.adaptive || quality.auto ? quality.bands.target : 0, fps: told.fps, flight: EVENPACE.flight, flying: pace.flying, held: pace.held, lost: pace.lost });

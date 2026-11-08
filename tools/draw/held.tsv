@@ -48,7 +48,6 @@ holder	tools/blitz/verdict-of.ts
 holder	tools/blitz/wasm-run.ts
 holder	tools/blitz/window-check.ts
 holder	tools/chars/look/dump_look.ts
-holder	tools/draw/gen.ts
 holder	tools/draw/look-check.ts
 holder	tools/draw/marks-check.ts
 holder	tools/draw/net-check.ts

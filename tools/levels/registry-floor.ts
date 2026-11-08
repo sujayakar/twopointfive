@@ -273,7 +273,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---------------- doors (closedDir 0: the leaf runs +x from the hinge, in a wall along x; π/2: +z, in a wall along z) ----------------
   const doors: LevelDoorDef[] = [
     { name: 'reading', hinge: [14.82, 10.0], closedDir: 0, width: 1.16, swing: 1 },   // the room's one door opens out into the gallery, like 'copy': a roamer posted in here cannot wedge it
-    { name: 'copy', hinge: [19.42, 10.0], closedDir: 0, width: 1.16, swing: 1 },   // opens out into the gallery: no wedge inside the room holds it (tools/qa/second-way-check.ts)
+    { name: 'copy', hinge: [19.42, 10.0], closedDir: 0, width: 1.16, swing: 1 },   // opens out into the gallery: no wedge inside the room holds it (rust/game_start levels second-way)
     { name: 'copy_hall', hinge: [24.0, 8.42], closedDir: Math.PI / 2, width: 1.16, angle: 1.3, closer: false },    // left standing open, into the copy room: whoever is in there sees the main door through it
     { name: 'office', hinge: [29.0, 5.42], closedDir: Math.PI / 2, width: 1.16, locked: true },                    // (keyed from the hall, as the office's manager's door is from its corridor)
     { name: 'office_side', hinge: [32.02, 12.8], closedDir: 0, width: 1.16 },

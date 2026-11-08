@@ -1747,4 +1747,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `scene/boxes.ts` and `scene/stuff.ts`, which leaves with the copy of the game. What a level may have at most is `scene/caps.ts` (held to the game's own room by `rust/sim/tests/level_caps.rs`), the
   dressing's group and switch `scene/dressing.ts`, a vehicle's lamps as the generators write them `scene/carLamps.ts`, the office's floor `scene/officeFloor.ts`, a gun's word `scene/weaponIds.ts`. A
   level's script is the game's (`game/levelScripts.ts`, by the level's name), not the loader's. Every generator's file is the same, byte for byte, and the validator's answers the same on 1,980
-  spoiled levels. STILL THE OLD GAME'S: the two questions the export asks of a written level (`second-way-check`, `marksight-check`).
+  spoiled levels.
+- **What a level owes is asked of the game itself** (2026-11-08; `rust/game_start/src/bin/levels.rs`, `cargo run --release --bin levels -- second-way|sight|walked|stacks [level …]` in
+  `rust/game_start`). The four questions `second-way-check`, `marksight-check`, `walked-check` and `stack-marks-check` asked of the old game's copy, and their rulings, word for word in its head;
+  counts in `tools/levels/counts/` (`--write` keeps them). The export asks second-way and sight of every level it writes (`LEVELASK=0` skips). A level's ways are the look's own
+  (`game_draw::traffic::ways`). COMPARED with the four on every level: second-way 15 levels, every room, man, wedge choice, the 142 wedged doors, the windows and the wall places the same; sight 305
+  men and walked 766 ways, 311 doors, 59 owed the same (walked now judges the starts of every listed mission's level, 48 for 30, none owed); stacks 5,068 marks and 1,156 faces the same. A whole run
+  of each is seconds. `LEVELS_BREAK=1` fails each.
