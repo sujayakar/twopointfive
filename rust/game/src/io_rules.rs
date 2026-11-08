@@ -20,11 +20,9 @@ pub fn ask(g: &mut crate::game::Game, kind: u32, row: u32, seat: u32, args: &[u8
         k => panic!("bridge: no question of kind {}", k),
     } assert!(i.p == args.len(), "bridge: {} bytes left over in a question of kind {}", args.len() - i.p, kind); o.b })
 }
-/// WHAT THE WALK CANNOT READ, DEALT BY KEY: every order row its functions by its id (`rows::by_id`), the 'go' row by which of its two the game has dealt, and the two questions a row's data holds as an enum.
-/// A row whose id is no line of the list stops the import, by name.
+/// WHAT THE WALK CANNOT READ, DEALT BY KEY: every order row its functions, by its id (`rows::by_id`). A row whose id is no line of the list stops the import, by name.
 pub fn deal_closures(g: &mut crate::game::Game) {
     use crate::orders::*;
-    let small = g.door_tools.go_key == Some(Some(String::from("small")));
     // (the block's voices, on a game handed over by a host that registers none: each reader answers for itself whether it has anything to say)
     for f in [OrderNoteFn::DoorToolsHud, OrderNoteFn::DoorToolsWord, OrderNoteFn::Pair, OrderNoteFn::SquadSmoke, OrderNoteFn::WallCharge, OrderNoteFn::Squad40, OrderNoteFn::SquadThrow] {
         crate::orders::squad_orders_voice(g, f);
@@ -32,14 +30,7 @@ pub fn deal_closures(g: &mut crate::game::Game) {
     }
     for id in g.tab.orders_order_def.ids().collect::<Vec<_>>() {
         let d = &mut g.tab.orders_order_def[id];
-        let r = match d.id.as_str() {
-            "go" => if small { &rows::gosmall::ORDER } else { &rows::gobig::ORDER },
-            other => rows::by_id(other).unwrap_or_else(|| panic!("the order {} has no functions: it is no line of orders/rows", other)),
-        };
-        d.row = r;
-        d.gone = match d.id.as_str() { "charge" => Some(OrderGone::DoorCharge), "bigClear" => Some(OrderGone::DoorBigClear), "wallCharge" => Some(OrderGone::WallRow), _ => None };
-        let when = match d.id.as_str() { "held" => Some(OrderWhen::DoorHeld), "shutDoor" => Some(OrderWhen::ShutDoor), "loud" => Some(OrderWhen::Loud), "pairDark" => Some(OrderWhen::PairDark), _ => None };
-        if let (Some(s), Some(w)) = (d.stands_in.as_mut(), when) { s.when = w; }
+        d.row = rows::by_id(&d.id).unwrap_or_else(|| panic!("the order {} has no functions: it is no line of orders/rows", d.id));
     }
 }
 /// WHAT A LEVEL SCRIPT IS IN AN IMPORTED GAME. A script is code, hung on the Level by the level's name, and its define pass keeps its locals in a closure the bridge cannot read. So the level's name says which script it is,

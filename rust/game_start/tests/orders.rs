@@ -111,8 +111,8 @@ fn with_no_shells_brought_the_order_is_not_on_the_menu() {
     }
 }
 
-/// THE RULE: every row on the menu's table holds the order of its own id, each order has one line of the list ('go' two, one a size of squad),
-/// and reading a game back deals every row what it was made with: its functions, whether it is gone from the ring and when it stands in.
+/// THE RULE: every row on the menu's table holds the order of its own id, each order has one line of the list,
+/// and reading a game back deals every row what it was made with.
 /// A FAILURE MEANS: a row was made from another order's `Row`, or the table in `deal_closures` has parted from what a row is registered with.
 #[test]
 fn every_row_holds_its_own_order_and_reading_a_game_back_deals_it_the_same() {
@@ -129,7 +129,7 @@ fn every_row_holds_its_own_order_and_reading_a_game_back_deals_it_the_same() {
     }
     for r in rows::ROWS {
         let same = rows::ROWS.iter().filter(|x| x.id == r.id).count();
-        assert_eq!(same, if r.id == "go" { 2 } else { 1 }, "{} lines of the list have the id {}", same, r.id);
+        assert_eq!(same, 1, "{} lines of the list have the id {}", same, r.id);
     }
     game::io::deal_closures(&mut p.g);
     assert_eq!(rows_now(&p), was, "reading a game back deals a row other than it was made with");

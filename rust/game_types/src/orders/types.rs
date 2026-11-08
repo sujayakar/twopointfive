@@ -3,21 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// OrderDef.standsIn.when: the row stands in for the other one now. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Copy, Debug)]
-pub enum OrderWhen {
-    ShutDoor,
-    Loud,
-    PairDark,
-    DoorHeld,
-}
-/// OrderDef.gone: the flat ring does not offer the row on this target at all. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Copy, Debug)]
-pub enum OrderGone {
-    DoorCharge,
-    DoorBigClear,
-    WallRow,
-}
 /// SquadOrders.notes: who has a line for the squad's HUD block, in the order they were pushed. Read only by `orders::squad_view` (rust/game_rules/src/orders/hud.rs).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum OrderNoteFn {
@@ -754,7 +739,6 @@ pub struct OrderDef {
     pub free: Option<bool>,
     pub head: Option<String>,
     pub stands_in: Option<crate::orders::OrderDefStandsIn>,
-    pub gone: Option<crate::orders::OrderGone>,
 }
 impl OrderDef {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -775,7 +759,6 @@ impl OrderDef {
             free: None,
             head: None,
             stands_in: None,
-            gone: None,
         }
     }
 }
@@ -792,14 +775,12 @@ pub enum OrderDefLabel {
 #[derive(Clone, Debug)]
 pub struct OrderDefStandsIn {
     pub for_: String,
-    pub when: crate::orders::OrderWhen,
 }
 impl OrderDefStandsIn {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         OrderDefStandsIn {
             for_: String::new(),
-            when: crate::orders::OrderWhen::ShutDoor,
         }
     }
 }
@@ -1941,6 +1922,10 @@ pub struct Row {
     pub only: Option<fn(&mut Game, &[GuardId], &OrderTarget) -> Vec<GuardId>>,
     pub valid: Option<fn(&mut Game, &OrderTarget, &[GuardId]) -> Result<(), Option<String>>>,
     pub issue: fn(&mut Game, &[GuardId], &OrderTarget, Option<&GiveOpts>) -> Option<String>,
+    /// the flat ring does not offer the row on this target at all
+    pub gone: Option<fn(&mut Game, &OrderTarget, &[GuardId]) -> bool>,
+    /// it stands in for the row its data names (`stands_in`) now
+    pub when: Option<fn(&mut Game, &OrderTarget, &[GuardId]) -> bool>,
     pub tick: Option<fn(&mut Game, GuardId, OrdersAssignmentId)>,
     pub frame: Option<fn(&mut Game)>,
 }
@@ -1948,7 +1933,7 @@ impl Row {
     /// An order with the three things every order has. The rest are `None` until its file says otherwise:
     /// `Row { frame: Some(frame), ..Row::new(ID, label, issue) }`.
     pub const fn new(id: &'static str, label: fn(&mut Game, &OrderTarget) -> String, issue: fn(&mut Game, &[GuardId], &OrderTarget, Option<&GiveOpts>) -> Option<String>) -> Row {
-        Row { id, label, can: None, only: None, valid: None, issue, tick: None, frame: None }
+        Row { id, label, can: None, only: None, valid: None, issue, gone: None, when: None, tick: None, frame: None }
     }
 }
 fn none_label(_g: &mut Game, _t: &OrderTarget) -> String { String::new() }
