@@ -188,12 +188,12 @@ export const pairupSwitch = guarded(async () => {
 async function feetRun(o: { lit: boolean; spotted: boolean; samLow?: boolean }) {
   const R = await rig({ up: true, parts: { spotted: o.spotted } }); const g = R.game, m = R.mate;
   const W = R.tango(2); R.only(W);
-  if (o.lit) { R.pin(W, { at: [8.5, 0, 11], yaw: EAST, state: 'suspicious', aw: 0.4, eyesOn: null }); g.teleportPlayer([15.2, 0, 11]); R.put(m, [14.5, 0, 11], EAST); }
+  if (o.lit) { R.pin(W, { at: [8.5, 0, 11], yaw: EAST, state: 'suspicious', aw: 0.4, eyesOn: null }); g.teleportPlayer([16.5, 0, 11]); R.put(m, [15.8, 0, 11], EAST); }   // (15.8: dark floor out of the man's line is in reach of it; at 14.5 every spot is lit and he holds still, by rule)
   else { R.pin(W, { at: [27, 0, 11], yaw: WEST, state: 'suspicious', aw: 0.4, eyesOn: null }); g.teleportPlayer([20.9, 0, 11]); R.put(m, [20.3, 0, 11], EAST); }
   fallIn(R); const samLow = o.samLow ? crouchKey(R) : false;
-  const rows: { f: number; what: string | null; spot: number[] | null; goal: number[] | null; speed: number; crouch: boolean; here: number[]; word: string | null; lit: number; trail: number }[] = [], trail: number[][] = [];
+  const rows: { f: number; what: string | null; spot: number[] | null; goal: number[] | null; speed: number; crouch: boolean; here: number[]; word: string | null; lit: number; trail: number; sam: number }[] = [], trail: number[][] = [];
   R.post = () => { const sp = SPM.spottedOf(m), w = written(m), s = g.player.char.pos; trail.push([s[0], 0, s[2]]);
-    rows.push({ f: R.frames, what: sp?.what ?? null, spot: sp?.spot ? [...sp.spot] : null, ...w, here: [m.char.pos[0], 0, m.char.pos[2]], word: sneakWordOf(g, m), lit: m.visibility, trail: w.goal ? Math.min(...trail.map(t => flat(t, w.goal!))) : NaN }); };
+    rows.push({ f: R.frames, what: sp?.what ?? null, spot: sp?.spot ? [...sp.spot] : null, ...w, here: [m.char.pos[0], 0, m.char.pos[2]], word: sneakWordOf(g, m), lit: m.visibility, sam: flat(s, m.char.pos), trail: w.goal ? Math.min(...trail.map(t => flat(t, w.goal!))) : NaN }); };
   // (lit: Sam stands a moment first. spotted.ts holds the partner still for `slipWait` after the man turned before it moves him off the line, and once Sam
   //  has walked on up the corridor every spot out of the man's line is in SAM's line to him: the slip has to be found while Sam still stands here)
   if (o.lit) R.step(Math.ceil(60 * (SPOTTED.slipWait + 0.6)));
@@ -204,7 +204,8 @@ export const pairupFeet = guarded(async () => {
   const { verdict, done } = family('pairup-feet: beside a suspicious man the partner\'s feet are spotted.ts\'s, not the sneak\'s — and he is low if either says low');
   // lit floor in the man's line: spotted slips him off it at its own pace; the sneak alone would stand him waiting on the trail
   { const on = await feetRun({ lit: true, spotted: true }), off = await feetRun({ lit: true, spotted: false });
-    const got = on.rows.filter(r => r.what && r.spot), bad = got.filter(r => !r.goal || flat(r.goal, r.spot!) > 0.01 || Math.abs(r.speed - (r.what === 'freeze' ? 0 : Math.min(1.2, SILENT.pace))) > 1e-6);
+    const got = on.rows.filter(r => r.what && r.spot), bad = got.filter(r => r.sam > 1.2 &&   /* (Sam walking into him: stepping out of his way comes first) */
+      ( !r.goal || flat(r.goal, r.spot!) > 0.01 || Math.abs(r.speed - (r.what === 'freeze' ? 0 : Math.min(1.2, SILENT.pace))) > 1e-6));
     const slips = got.filter(r => r.what === 'slip'), s0 = slips[0], lit0 = s0 ? on.rows.find(r => r.f === s0.f)!.lit : NaN;
     const waits = off.rows.filter(r => r.word === 'waiting on eyes'), w0 = waits[0], offTrail = off.rows.filter(r => !(r.trail < 1.6)).length;   // (his place in the file is 1.3 m back along it)
     const held = s0 ? got.filter(r => r.what === 'freeze' && r.f < s0.f).length : 0;   // (… and until `slipWait` is up he is held still on his own spot: that is spotted.ts's too)

@@ -61,6 +61,8 @@ const watchEyes = (R: Run): number => {
   R.watch = () => { const m = R.mate; if (!m) return;
     for (const h of R.hostiles.slice(0, 2)) { if (h.state === 'dead') continue; const v = GDM.canSeeChar(R.g, h, m.char, false); if (v?.visible && GDM.sightGainOn(R.g, h, m, v.dist) > 0.05) R.mateSeenS += DT; } };
   return R.mateSeenS; };
+/** Sam within 1.8 m of a shut door: a partner on lit floor stands out of its line then, off Sam's trail as meant */
+const atShutDoor = (R: Run): boolean => R.g.doors.list.some((d: any) => d.latched && flat(d.frameCentre, R.pos) < 1.8);
 /** what a walk made of the partner: seconds moving low / upright, his top speed, the most his feet were off Sam's trail, his pace against Sam's while both moved */
 function walkStats(R: Run, fn: () => void) {
   const m = R.mate, trail: number[][] = []; let low = 0, up = 0, top = 0, off = 0, stops = 0, wasMoving = false, lightOn = 0, gogglesDown = 0, n = 0;
@@ -68,7 +70,7 @@ function walkStats(R: Run, fn: () => void) {
   (R as any).step = (k = 1) => { for (let i = 0; i < k; i++) { step0(1); n++;
     const sp = Math.hypot(m.char.vel[0], m.char.vel[2]); top = Math.max(top, sp);
     if (!trail.length || flat(trail[trail.length - 1], R.pos) > 0.1) trail.push([R.pos[0], 0, R.pos[2]]);
-    const moving = sp > 0.3; if (moving) { if (m.char.anim.crouch > 0.5) low += 1 / 60; else up += 1 / 60; let d = 1e9; for (const q of trail) d = Math.min(d, flat(q, m.char.pos)); if (trail.length > 20) off = Math.max(off, d); }
+    const moving = sp > 0.3; if (moving) { if (m.char.anim.crouch > 0.5) low += 1 / 60; else up += 1 / 60; let d = 1e9; for (const q of trail) d = Math.min(d, flat(q, m.char.pos)); if (trail.length > 20 && !atShutDoor(R)) off = Math.max(off, d); }
     if (wasMoving && !moving && R.g.orders.samV > 0.5) stops++; wasMoving = moving;
     if (m.flashlight?.enabled) lightOn++; if (NVM.nvgDown(R.g, m)) gogglesDown++; } };
   try { fn(); } finally { (R as any).step = step0; }
