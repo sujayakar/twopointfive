@@ -156,15 +156,11 @@ fn knows_row(l: &Lane, gd: GuardId) -> bool {
 }
 
 /// An enemy he saw this close inside the last second: a fight already.   (lanes.ts closeFight)
-pub fn close_fight(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
+pub fn close_fight(g: &crate::game::Game, gd: GuardId) -> bool {
     if g.time - g.gd[gd].last_seen_t >= 1.0 {
         return false;
     }
-    let fc = match g.gd[gd].foe {
-        Some(crate::game::Foe::Player) => g.pl[seat.player].ch,
-        Some(crate::game::Foe::Guard(o)) => g.gd[o].ch,
-        None => return false,
-    };
+    let Some(fc) = crate::teams::foe_char(g, gd) else { return false };
     flat(g.ch[g.gd[gd].ch].pos, g.ch[fc].pos) < m::max(g.k.lanes.close_m, g.k.roomfight.move_engage_m)
 }
 
