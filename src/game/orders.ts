@@ -849,14 +849,9 @@ export class SquadOrders {
     if (q && mt) for (let d = 2; d <= CMDRING.wedges; d++) { const i = s.row[d]; if (i >= 0 && d !== s.more && this.labelOf(M.rows[i], mt) === q) { same[d] = i; s.row[d] = -1; } }
     return { ...s, same };
   }
-  /** The quick key's order on `t` for exactly these men (planmode.ts: a goal's men) — the squad's own choice there (autopilot.ts autoPick)
-   *  whether or not the quick key's switch is on. 'entry': it was the way in through a door they stand on, or the word · 'first': the target's first row ·
-   *  null: nothing was given (refused — a man has said why — or a charge left alone on its word). */
-  quickFor(men: Guard[], t: OrderTarget): 'first' | 'entry' | null { return goneWithTick('SquadOrders.quickFor') as any; }
-
   /** … for the open menu's first wedge: the quick key's words there — for a ring of a part of the squad (Menu.part) what THOSE men would do, as its
-   *  first wedge gives it (quickFor) */
-  private menuQuick(M: Menu): string | null { return M.part ? autoHint(this.g, M.target, autoPick(this.g, M.target, false, M.men)) : autoHint(this.g, M.target); }   // (quickFor asks the pick whether or not the quick key's switch is on: so do its words)
+   *  first wedge gives it (autopilot `quick`: one answer for all of them or a part) */
+  private menuQuick(M: Menu): string | null { return M.part ? autoHint(this.g, M.target, autoPick(this.g, M.target, false, M.men)) : autoHint(this.g, M.target); }
 
   /** a man's order goes: and with it the pin the fight seam put on him */
   private drop(gd: Guard) { this.asg.delete(gd); if (this.ours.delete(gd)) gd.pinned = false; }
