@@ -15,7 +15,6 @@ holder	tools/blitz/starts.ts
 holder	tools/blitz/surface.ts
 holder	tools/blitz/thrice.ts
 holder	tools/blitz/track.ts
-holder	tools/chars/look/dump_look.ts
 holder	tools/draw/look-check.ts
 holder	tools/draw/marks-check.ts
 holder	tools/draw/net-check.ts
