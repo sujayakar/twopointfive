@@ -19,8 +19,9 @@ bun run dev            # tools/serve.ts → http://localhost:5173 (game at /, re
 bun run build          # tools/build.ts → dist/
 bun run typecheck      # src/      ← before every commit (no vendor/typescript in a cloud checkout: a system `tsc --noEmit -p tsconfig.json`)
 bun run typecheck:qa   # tools/qa (its own tsconfig)
-bun run tools/qa/probes.ts <name|family|all-quick|list>   # exit 0 pass · 1 a probe failed · 2 unknown name
-sh tools/qa/gate.sh <family …>                            # the families a change touched; red on any FAIL or silent probe
+(cd rust && cargo test -p game_start)                     # the game's rules: rust/game_start/README.md says how to write one; no check of the game is written in TypeScript
+bun run tools/qa/checks.ts [group|name … --list]          # the picture, the shaders' texts, the page, the menus, the sounds, the level files: a minute
+bun run tools/qa/pages.ts [group|name …]                  # the real page in a browser on the software adapter, one script at a time
 bun run tools/qa/knobs-check.ts                           # after adding a knob table
 bun run tools/qa/rollback-check.ts --static               # after adding module state (a side table, a module `let`, a written container)
 bun run tools/sim/build.ts                                # after any change under rust/ → src/sim/built.ts, src/dress/built.ts; tools/qa/rust-check.ts is red on a stale one

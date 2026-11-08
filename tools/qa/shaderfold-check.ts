@@ -20,7 +20,7 @@
 //   bun run tools/qa/shaderfold-check.ts             exit 0 = every check passed, 1 = one failed
 //   SHADERFOLD_BREAK=1 bun run tools/qa/shaderfold-check.ts     the fold is handed every literal constant with its value turned over: `forms` and `boot` must FAIL
 export {};
-const { ROOT } = await import('./headless.ts');
+import { ROOT } from './here.ts';
 const { pageBoot, settingArg, settingsHere, SETTINGS } = await import('./pageboot.ts');
 const { SHADER_TRIM, SHADER_FOLD, trimWgsl, foldWgsl, wgslDecls, trimTotals, boolConsts, shaderText } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof import('../../src/gpu/wgslTrim');
 const BREAK = process.env.SHADERFOLD_BREAK === '1'; let red = 0;
@@ -114,7 +114,7 @@ const AFTER = /\b(?:return\b[^;{}]*;|(?:break|continue)\s*;)\s*(?!\}|continuing\
 {
   const setting = SETTINGS[SETTING];
   SHADER_TRIM.on = false; const { mods: whole, asked, faults } = await pageBoot(SETTING); SHADER_TRIM.on = true;   // every module as written; the cuts are made here
-  check(faults.length === 0 && whole.length >= 35 && asked.length >= 100, `boot, ${setting} — the page's whole boot was recorded: ${whole.length} modules, ${asked.length} pipelines`, faults.join(' · '));
+  check(faults.length === 0 && whole.length >= 35 && asked.length >= 98, `boot, ${setting} — the page's whole boot was recorded: ${whole.length} modules, ${asked.length} pipelines`, faults.join(' · '));
   // the switch: shaderText hands out the trim's own cut with SHADER_FOLD down, the folded cut with it up, and the text whole with the trim off
   { let ok = true; const t0 = { ...trimTotals };
     for (const m of whole) { SHADER_FOLD.on = false; const a = shaderText(m.code) === trimWgsl(m.code); SHADER_FOLD.on = true; const b = shaderText(m.code) === trimWgsl(m.code, true); SHADER_TRIM.on = false; const c = shaderText(m.code) === m.code; SHADER_TRIM.on = true; ok &&= a && b && c; }

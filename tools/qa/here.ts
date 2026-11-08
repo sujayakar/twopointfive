@@ -27,3 +27,14 @@ export function fake(name = 'gpu'): any {
     apply: () => fake(`${name}()`), construct: () => fake(`${name}#new`), set: () => true,
   });
 }
+
+/** the character as the page loads it: the mannequin's skeleton and clips, with the cast's meshes of the look that is on (or the one said) */
+export async function characterSet(look?: boolean): Promise<any> {
+  const { loadGltfCharacter, loadGltfCast, castFile } = await import(`${ROOT}/src/anim/gltf.ts`);
+  return loadGltfCast(`file://${ROOT}/public/assets/chars/${castFile(look)}`, await loadGltfCharacter(`file://${ROOT}/public/assets/ual/AnimationLibrary_Godot_Standard.gltf`));
+}
+/** a check file's own main: its parts run in order, exit 1 where one fails (a part answers false, or `fails` counts one) */
+export async function main(parts: readonly (() => unknown)[], fails: () => number = () => 0): Promise<never> {
+  let red = false; for (const p of parts) { const r = await p(); if (r === false) red = true; }
+  process.exit(red || fails() > 0 ? 1 : 0);
+}

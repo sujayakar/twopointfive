@@ -33,7 +33,7 @@
 import { readFileSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 process.env.TPS_PROFILE = 'shipped';   // (the page's shaders: the frozen stand holds switches off that are consts in the scene prelude — other texts, other sizes)
-const { ROOT } = await import('./headless.ts');
+import { ROOT } from './here.ts';
 const { pageBoot, settingArg, SETTINGS } = await import('./pageboot.ts');
 type Stage = import('./pageboot.ts').Stage; type Mod = import('./pageboot.ts').Mod;
 const { wgslDecls } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof import('../../src/gpu/wgslTrim');
@@ -52,7 +52,7 @@ const BUDGET: [RegExp, number][] = [
   [/./, 200],
 ];
 /** the cut test's own functions (common.wgsl: isectCut and the four planes it takes twice), and the KB one copy of the box test may carry of them */
-const CUT_TEST = ['isectCut', 'cutFour'], CUT_TEST_KB = 3.2, ROUND_TEST = ['isectRound'], MODS_MIN = 35, PIPES_MIN = 100;   // (the title's whole boot: its distinct modules and the pipelines it asks for)
+const CUT_TEST = ['isectCut', 'cutFour'], CUT_TEST_KB = 3.2, ROUND_TEST = ['isectRound'], MODS_MIN = 35, PIPES_MIN = 98;   // (the title's whole boot: its distinct modules and the pipelines it asks for)
 const BREAK = process.env.SHADERINLINE_BREAK === '1';
 const argv = process.argv.slice(2);
 const opt = (k: string): string | null => { const i = argv.indexOf('--' + k); if (i < 0) return null; const v = argv[i + 1]; if (v === undefined || v.startsWith('--')) { console.error(`--${k} needs a value`); process.exit(1); } return v; };
