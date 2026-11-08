@@ -1112,7 +1112,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   open and clear, bang and clear, and the threshold page's three (its opener on the tools page says '· on my word: ON') — read 'wait · …' and are given with `{ onWord: true }`; off again on every new menu; only on a door); the menu
   greys and words its rows for the MEN's face of the door (`Menu.menSide` ← `sideFor`, asked when the menu opens and again only when `Menu.sideKey` changes — the
   men, or one of them or Sam crossing to the door's other face — never on the `refreshSecs` re-read; the header says '· far side' when it is not Sam's); bang and
-  clear is refused with a teammate behind the door, like the charge; `orders.notes` may return keyed lines (`OrderNote`): the squad block shows '[F] go · red + blue
+  clear is refused with a teammate behind the door, like the charge; an order's `notes` (its `Row`) may return keyed lines (`Note`): the squad block shows '[F] go · red + blue
   waiting' or 'blue waiting · T, then F', 'word given · waiting for blue', and says 'F blows it' of a set charge only while F would.
   A cursor on a door picks it only where the camera can SEE the doorway (a wall in front hides its foot: point at the visible part, or turn the camera).
   QA: `probes.ts squadplay` (go / wait / try / side / key / off — every order a one-frame press, nothing held). (2026-11-07: the `squadplay` family is

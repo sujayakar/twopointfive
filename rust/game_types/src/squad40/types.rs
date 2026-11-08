@@ -177,7 +177,6 @@ pub struct State {
     pub brought: f64,
     pub last: JsMap<GuardId, f64>,
     pub turns: JsMap<GuardId, crate::squad40::Turn>,
-    pub noted: bool,
     pub shown: Option<crate::squad40::StateShown>,
     /// the shot the menu's lit row would give, as it was this frame (Rust's own: not on the wire)
     pub plan: Option<crate::squad40::ShellPlan>,
@@ -190,7 +189,6 @@ impl State {
             brought: 0.0,
             last: JsMap::new(),
             turns: JsMap::new(),
-            noted: false,
             shown: None,
             plan: None,
         }
