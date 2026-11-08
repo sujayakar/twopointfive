@@ -87,14 +87,11 @@ impl Default for SmokeSmokeGridModSmokeGridConfig { fn default() -> Self { Self:
 pub struct SmokeSmokeGridMod {
     /// (src/smoke/smokeGrid.ts:6 smokeGridConfig)
     pub smoke_grid_config: crate::smoke_smoke_grid::SmokeSmokeGridModSmokeGridConfig,
-    /// (src/smoke/smokeGrid.ts:18)
-    pub smoke_grid: crate::smoke_smoke_grid::SmokeGrid,
 }
 impl SmokeSmokeGridMod {
     pub fn blank() -> Self {
         SmokeSmokeGridMod {
             smoke_grid_config: crate::smoke_smoke_grid::SmokeSmokeGridModSmokeGridConfig { cap: 4096.0, voxel: [0.0625, 0.022], height: [crate::scene_world::world().max[1], 4.2], tile: [8.0, 10.0] },
-            smoke_grid: crate::smoke_smoke_grid::SmokeGrid::zeroed(),
         }
     }
 }

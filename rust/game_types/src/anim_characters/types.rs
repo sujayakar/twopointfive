@@ -6,15 +6,9 @@ use alloc::{string::String, vec::Vec};
 /// (TypeScript: CharacterRenderer, src/anim/characters.ts:20)
 #[derive(Clone, Debug)]
 pub struct CharacterRenderer {
-    pub vertex_buf: crate::Opaque,
-    pub joint_buf: crate::Opaque,
-    pub index_buf: crate::Opaque,
     pub index_count: f64,
     pub index_format: crate::anim_characters::CharacterRendererIndexFormat,
-    pub joint_mats: crate::Opaque,
-    pub char_insts: crate::Opaque,
     pub instance_count: f64,
-    pub slot_buf: crate::Opaque,
     pub char_mats: crate::Opaque,
     pub mat_data: Vec<f32>,
     pub mat_dirty: bool,
@@ -35,15 +29,9 @@ impl CharacterRenderer {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
     pub fn blank() -> Self {
         CharacterRenderer {
-            vertex_buf: crate::Opaque,
-            joint_buf: crate::Opaque,
-            index_buf: crate::Opaque,
             index_count: 0.0,
             index_format: crate::anim_characters::CharacterRendererIndexFormat::Uint32,
-            joint_mats: crate::Opaque,
-            char_insts: crate::Opaque,
             instance_count: 0.0,
-            slot_buf: crate::Opaque,
             char_mats: crate::Opaque,
             mat_data: alloc::vec![0.0; 1536],
             mat_dirty: true,

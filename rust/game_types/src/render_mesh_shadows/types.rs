@@ -8,14 +8,10 @@ use alloc::{string::String, vec::Vec};
 pub struct MeshShadows {
     pub bvh: crate::render_meshbvh::MeshBvh,
     pub digest: String,
-    pub buf: crate::Opaque,
     pub bytes: f64,
     pub tri_base: f64,
-    pub bg: crate::Opaque,
-    pub mod_: crate::Opaque,
     pub pl: crate::Opaque,
     pub device: crate::Opaque,
-    pub joint_mats: crate::Opaque,
 }
 impl MeshShadows {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
@@ -23,14 +19,10 @@ impl MeshShadows {
         MeshShadows {
             bvh: crate::render_meshbvh::MeshBvh::zeroed(),
             digest: String::new(),
-            buf: crate::Opaque,
             bytes: 0.0,
             tri_base: 0.0,
-            bg: crate::Opaque,
-            mod_: crate::Opaque,
             pl: crate::Opaque,
             device: crate::Opaque,
-            joint_mats: crate::Opaque,
         }
     }
 }
