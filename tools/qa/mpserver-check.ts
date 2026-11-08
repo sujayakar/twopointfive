@@ -3,6 +3,7 @@
 //   bun run tools/qa/mpserver-check.ts                    every line below
 //   MPSERVER_BREAK=1 bun run tools/qa/mpserver-check.ts   the red path: the seated client steps one record with another walk key than the server ran after tick 90 — the lines
 //                                                         that hold its state words against the server's must FAIL
+//   MP_STAND=module bun run tools/qa/mpserver-check.ts    every server and client of it on the game's module alone (tools/mp/modstand.ts)
 //   --setup '{"scenario":"?rescue","seed":3}'             another mission (default: the four-man room clear in the office, seed 7)
 // THE LINES:
 //   the rule      (no process) a seat's line decides a tick's record: its own in time · a held one with the edges off when none came · a late press lands on the
@@ -28,6 +29,8 @@
 //   wider word    those two clients also hold THE WIDER WORD against the server's on every word tick (src/net/step.ts netWatch: the whole game's words of
 //                 the parts on the list net/agreed.ts, which a client only counts and never takes for an alarm): both had it on every one. Under
 //                 MPSERVER_BREAK the first client's parts with its state word, and this line must FAIL too
+//   the module    a fifth server and two clients on the game's module alone: every state word, EVERY part of the game beside it, and the look ahead. Under
+//                 MPSERVER_BREAK the first client parts and this line must FAIL too
 //   worse way     the queue a worse connection is made of (src/net/delay.ts, with a die this check throws): all zero = straight through; under jitter nothing
 //                 passes the message in front of it; a lost message is late by a round trip and the resend's wait, and holds the ones behind it; a stall holds everything to its end,
 //                 what was on its way too, and one taken back is over at once; a handler that throws loses its own message and strands none behind it
@@ -55,7 +58,7 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 // ---- the rule, on its own
 {
-  const { SeatLine } = await import(`${ROOT}/src/net/timeline.ts`), W = await import(`${ROOT}/src/net/wire.ts`);
+  const { SeatLine } = await import(`${ROOT}/src/net/timeline.ts`), W = await import(`${ROOT}/src/net/wire.ts`), RC = await import(`${ROOT}/src/net/recipe.ts`);
   const rec = (k: string[], extra: object = {}) => ({ k, b: 0, m: [10, 20], s: [1280, 720, 1280, 720], v: [1, 0, 2, 0.5, 0.96, 21, 0.6, 16 / 9, 0], ...extra });
   const L = new SeatLine();
   L.put(0, rec(['KeyW'], { p: ['KeyW'] }), 0);
@@ -70,7 +73,7 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
   const far = (() => { const M = new SeatLine(); M.put(5 + W.NET.horizon + 1, rec(['KeyW']), 5); return M.got === 0; })();
   const wheel = (() => { const M = new SeatLine(); M.put(0, rec([], { w: -3 }), 1); M.put(1, rec([], { w: 3 }), 1); const t = M.take(1, true); return t.w === undefined && W.wireOk(t) && !W.wireOk({ ...rec([]), p: 5 }) && !W.wireOk({}) && !W.wireOk({ ...rec([]), v: [1, 2] }); })();
   const odd = { keys: ['KeyW'], pressed: ['KeyE'], buttons: 1, clicked: 1, wheel: -0, mx: 3.25, my: -0, w: 1280, h: 720, pw: 2560, ph: 1440, view: { vp: [], ivp: [], pos: [0, 0, 0], forward: [0, 0, 0], target: [1.1, -0, 2.2], yaw: -0, pitch: 0.1 + 0.2, distance: 21, fov: 0.6, aspect: 16 / 9, aimLead: 0.18 } };
-  const back = W.fromWire(W.netParse(W.netText(W.toWire(odd as never))) as never);
+  const back = RC.fromWire(W.netParse(W.netText(RC.toWire(odd as never))) as never);
   const bits = Object.is(back.my, -0) && Object.is(back.view.yaw, -0) && Object.is(back.view.target[1], -0) && back.view.pitch === 0.1 + 0.2 && back.mx === 3.25 && back.pressed.join() === 'KeyE' && back.clicked === 1 && Number.isNaN(back.view.vp[0]);
   line(own && held && late && idle && once && far && wheel && bits, `the rule: a tick runs on the seat's own record in time${own ? '' : ' (NO)'}, a held one with its edges off when none came${held ? '' : ' (NO)'}, a late press, click and wheel land on the next tick and once${late ? '' : ' (NO)'}, an empty seat holds nothing and keeps its view${idle ? '' : ' (NO)'}, a second record for a tick is not taken${once ? '' : ' (NO)'}, one past the horizon is not kept${far ? '' : ' (NO)'}, a late wheel turn and the tick's own add up${wheel ? '' : ' (NO)'}, a record crosses the wire to the bit${bits ? '' : ' (NO)'}`);
 }
@@ -91,7 +94,7 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
     const L = { conn, C, pump: () => { while (inbox.length) C.message(inbox.shift()!, now); C.walk(host, 1e9); } };
     links.push(L); C.hello(); L.pump(); return L;
   };
-  const cmd = { keys: ['KeyW'], pressed: [], buttons: 0, clicked: 0, wheel: 0, mx: 640, my: 360, w: 1280, h: 720, pw: 1280, ph: 720, view: { vp: [], ivp: [], pos: [0, 0, 0], forward: [0, 0, 0], target: [0, 0, 0], yaw: 0, pitch: 0.96, distance: 21, fov: 0.6, aspect: 16 / 9, aimLead: 0 } } as never;
+  const cmd = { k: ['KeyW'], b: 0, m: [640, 360], s: [1280, 720, 1280, 720], v: [0, 0, 0, 0, 0.96, 21, 0.6, 16 / 9, 0] } as never;
   let beats = 0;
   /** `ms` of the clock: the server advances every ms unless it is stalled, the seat beats at the rate unless its hands are off, everybody reads */
   const run = (ms: number, o: { beat?: boolean; server?: boolean } = {}) => { try { for (let i = 0; i < ms; i++) { now++; if (o.server !== false) S.advance(); for (const L of links) L.pump();
@@ -145,7 +148,7 @@ function knock(port: number, hello: object): Promise<string> {
 // the stand-in control plane: counts the heartbeats
 const beats: any[] = []; let gone = false;
 const control = Bun.serve({ port: 0, hostname: '127.0.0.1', async fetch(req: Request) { try { beats.push(await req.json()); } catch { /* not a heartbeat */ } return gone ? new Response('{"ok":false}', { status: 410 }) : new Response('{"ok":true}'); } });
-const PORT = 5400 + Math.floor(performance.now() * 7 + process.pid) % 400, PORT2 = PORT + 1, PORT3 = PORT + 2, PORT4 = PORT + 3;
+const PORT = 5400 + Math.floor(performance.now() * 7 + process.pid) % 400, PORT2 = PORT + 1, PORT3 = PORT + 2, PORT4 = PORT + 3, PORT5 = PORT + 4;
 const envOf = (port: number): Record<string, string> => ({ MP_PORT: String(port), MP_GAME: 'check', MP_SETUP: setupArg, MP_SEATKEYS: 'seat-one', MP_IDLE_S: '3', MP_SECRET: 'the-secret', MP_CONTROL: `http://127.0.0.1:${control.port}/beat` });
 
 const srv = spawn([process.execPath, 'run', 'tools/mp/server.ts'], envOf(PORT));
@@ -219,6 +222,25 @@ gone = false;   // (the stand-in control plane knows this game again)
   { const W = [one, two], said = (b: BotOut | null | undefined) => b ? `${b.watchOk ?? 0} of ${(b.watchOk ?? 0) + (b.watchOff ?? 0)}${b.watchOff ? ` (FIRST DIFFERENT after tick ${b.watchFirst})` : ''}` : 'no report';
     line(W.every(b => !!b && (b.watchOk ?? 0) > 0 && !b.watchOff), `wider word: the whole game's words of the parts every kind of host agrees on, watched beside the state word: the first client had the server's on ${said(one)} word ticks, the second on ${said(two)}`); }
   const c3 = await Promise.race([srv3.exited, sleep(12000).then(() => -1)]); if (c3 === -1) srv3.kill(); }
+
+// ---- the module: its own server and two clients on the game's module alone, with no TypeScript game and no recipe (tools/mp/modstand.ts), the host's difficulty handed over
+// as a command. The word beside the state word is of EVERY part of the game there
+{ const { Commands } = await import(`${ROOT}/src/draw/commands.ts`), { commandText } = await import(`${ROOT}/src/net/start.ts`);
+  const C = new Commands(); C.difficulty(1); const commands = commandText(C.take());
+  const N5 = 600, env5: Record<string, string> = { ...envOf(PORT5), MP_SETUP: JSON.stringify({ scenario: '?roomclear&squad4&seats=2', seed: 7, knobs: { stand: 'module', commands } }), MP_SEATKEYS: 'seat-one,seat-two' };
+  const srv5 = spawn([process.execPath, 'run', 'tools/mp/server.ts'], env5); const srv5Err = text(srv5.stderr); void text(srv5.stdout);
+  if (!await up(PORT5)) { srv5.kill(); console.log(`mpserver-check: the module's server did not come up: ${(await srv5Err).trim().split('\n').slice(-3).join(' / ')}`); process.exit(2); }
+  const [one, two] = await Promise.all([
+    bot(PORT5, ['--key', 'seat-one', '--ticks', String(N5), '--predict', '--lag', '60', '--jitter', '40', ...(BREAK ? ['--break'] : [])]),
+    bot(PORT5, ['--key', 'seat-two', '--ticks', String(N5), '--predict', ...(BREAK ? ['--no-ahead'] : [])])]);
+  // (the command is in the game: the same start stood here with it and without is two games)
+  const M = await import('../mp/modstand.ts'), start = M.freshStart({ search: '?roomclear&squad4&seats=2', seed: 7, commands }), idle = { k: [], b: 0, m: [640, 360], s: [1280, 720, 1280, 720], v: [0, 0, 0, 0, 0.96, 21, 0.6, 16 / 9, 0] };
+  const wordOf = async (s: typeof start): Promise<string> => { const G = await M.standStart(s); for (let i = 0; i < 30; i++) G.step([idle as never, idle as never]); return `${G.word()} ${G.watch()}`; };
+  const hard = await wordOf(start), again = await wordOf(start), plain = await wordOf({ ...start, commands: '' }), told = hard === again && hard !== plain;
+  const B = [one, two], wide = (b: BotOut | null) => b ? `${b.watchOk ?? 0} of ${(b.watchOk ?? 0) + (b.watchOff ?? 0)}` : 'no report', A = B.map(b => b?.ahead);
+  line(B.every(b => clean(b, N5) && (b!.watchOk ?? 0) >= N5 / 30 && !b!.watchOff && b!.moved > 1) && one!.word === two!.word && told && A.every(a => !!a && a.first >= 0 && a.first <= 1 && !a.firstMoved && a.n >= 20) && A.some(a => a!.clean >= 20) && A.every(a => a!.clean < 10 || a!.cleanExact >= a!.clean * AHEAD_EXACT),
+    `the module: a server and two clients with no TypeScript game, a hard room clear by the host's command${told ? '' : ' (THE COMMAND IS NOT IN THE GAME)'}: the first, 60 to 100 ms away, matched ${one?.wordsOk ?? 0} of ${N5 / 30} state words${one?.bad ? ` (FIRST DIFFERENT after tick ${one.bad.t})` : ''} and the second ${two?.wordsOk ?? 0}${two?.bad ? ` (FIRST DIFFERENT after tick ${two.bad.t})` : ''}; they end on ${one?.word}${one?.word === two?.word ? '' : ` and ${two?.word} (THEY DIFFER)`}; every part of the game was the server's on ${wide(one)} and ${wide(two)} word ticks; their men went ${one?.moved ?? 0} m and ${two?.moved ?? 0} m, and of ${A[0]?.clean ?? 0} and ${A[1]?.clean ?? 0} clean looks ahead ${A[0]?.cleanExact ?? 0} and ${A[1]?.cleanExact ?? 0} were right to a millimetre (stood in ${one?.stoodMs ?? '?'} ms, a tick ${one?.tickMs ?? '?'} ms here)`);
+  const c5 = await Promise.race([srv5.exited, sleep(12000).then(() => -1)]); if (c5 === -1) srv5.kill(); }
 
 // ---- a worse connection (src/net/delay.ts): the queue's own rules with a die this check throws, then a seat that plays over a bad one
 { const { onWay, wayOff } = await import('../../src/net/delay.ts');
