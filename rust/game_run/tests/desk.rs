@@ -1,7 +1,7 @@
 //! The desk as a page has it: asks by their bytes, answers read off the wire's shape.
 use game::io::{Io, R};
 use game::kit::{MemberKit, TrimId};
-use game::view::{CardRow, CardView, Pressed, Setting, SheetView, ShortView, StartView, TeamView};
+use game::view::{BriefView, CardRow, CardView, Pressed, Setting, SheetView, ShortView, StartView, TeamView};
 use game_run::command::apply;
 use game_run::desk::Desk;
 use game_run::kept;
@@ -448,4 +448,79 @@ fn the_team_works_out_its_own_link_from_the_list_with_the_size_on_it() {
     let c = card(&mut d, 0);
     assert_eq!(card_row(&c, "cams").idle, c.rows.iter().any(|r| r.field == "cams" && !r.none), "no fog: what only looks into it does nothing");
     assert!(row(&sheet(&mut d, "bazaar-quiet"), "cams").shown);
+}
+
+const BRIEF: u32 = 18;
+const SAME: u32 = 19;
+fn brief(d: &mut Desk, search: &str) -> BriefView { BriefView::r(&mut R::new(&d.ask(&worded(BRIEF, &[search])).expect("an ask the desk has"))) }
+fn same(d: &mut Desk, link: &str, page: &str) -> bool { u32::r(&mut R::new(&d.ask(&worded(SAME, &[link, page])).expect("an ask the desk has"))) != 0 }
+
+#[test]
+fn a_brief_is_the_row_its_address_starts_with_the_team_it_deploys() {
+    let mut d = Desk::new();
+    let rows = start(&mut d, "").rows;
+    for r in &rows {
+        let b = brief(&mut d, &r.link);
+        assert_eq!(b.id, r.id, "{}", r.link);
+        assert_eq!(b.title, r.title);
+        assert_eq!(b.team, r.team_words, "{}", r.link);
+        assert_eq!(b.level, r.level);
+    }
+    assert_eq!(brief(&mut d, "?solo").id, "solo-night");
+    assert_eq!(brief(&mut d, "?solo").team, "you, alone");
+    assert_eq!(brief(&mut d, "").id, "", "a plain page starts none");
+    assert_eq!(brief(&mut d, "?mute").id, "");
+    // (a row deployed at another size than its own is still that row, at that size)
+    let r = rows.iter().find(|r| r.kind == "roomclear" && r.squad == 4.0 && !r.link.contains("&squad=")).expect("a room clear of four");
+    let two = format!("{}&squad=2", r.link.replacen("squad4", "roomclear", 1));
+    let b = brief(&mut d, &two);
+    assert_eq!(b.level, r.level, "{two}");
+    assert_eq!(b.kind, "roomclear");
+    assert_eq!(b.team, "you + the pair", "{two}");
+    // (a level being built is played the moment it loads: no brief, whatever else the address says)
+    assert_eq!(brief(&mut d, &format!("{}&level=relief", r.link)).id, "");
+    assert_eq!(brief(&mut d, "?solo&level=relief").id, "");
+    // (a lesson has its scene and what it teaches; a way the address asks for is that way, and dealt marks none)
+    let lesson = rows.iter().find(|r| r.lesson).expect("a lesson");
+    let b = brief(&mut d, &lesson.link);
+    assert!(!b.scene.is_empty() && !b.teaches.is_empty(), "{}", lesson.id);
+    let ways = rows.iter().find(|r| r.ways.len() > 1).expect("a mission with two ways");
+    assert_eq!(brief(&mut d, &format!("{}&way=2", ways.link)).way, 2.0);
+    assert_eq!(brief(&mut d, &format!("{}&way=any", ways.link)).way, 0.0);
+    assert_eq!(brief(&mut d, &ways.link).way, 0.0);
+}
+
+#[test]
+fn a_link_needs_no_page_load_only_where_the_page_stands_what_it_starts() {
+    let mut d = Desk::new();
+    // (the solo night stands under the fog as it ships: off a plain page, that is a load of its own link)
+    assert!(!same(&mut d, "?solo&pick=solo", ""), "the night under the fog is a load of its own link");
+    assert!(same(&mut d, "?solo&pick=solo", "?solo"), "off the night's own page");
+    assert!(same(&mut d, "?solo&quietfog=off", ""), "the plain night off the plain page");
+    assert!(same(&mut d, "?solo&quietfog=off&hour=midday", "?hour=midday"), "at the hour the page stands at");
+    assert!(!same(&mut d, "?solo&quietfog=off&hour=midday", ""), "another hour is a load");
+    assert!(!same(&mut d, "?solo&quietfog=off&weather=rain", ""), "another weather is a load");
+    assert!(same(&mut d, "?solo&quietfog=off&weather=rain", "?weather=rain"));
+    assert!(!same(&mut d, "?solo&quietfog=off", "?roomclear"), "a page that stands a scenario stands another thing");
+}
+
+#[test]
+fn offlist_0_draws_every_row_of_the_table_and_a_visit_draws_a_cut_row_it_names() {
+    let mut d = Desk::new();
+    let all = start(&mut d, "?offlist=0").rows;
+    let drawn = start(&mut d, "").rows;
+    let cut = all.iter().find(|r| r.off_list).expect("a row cut from the lists");
+    assert!(!drawn.iter().any(|r| r.id == cut.id));
+    assert!(all.len() > drawn.len());
+    assert!(start(&mut d, &format!("?loadout={}", cut.id)).rows.iter().any(|r| r.id == cut.id));
+}
+
+#[test]
+fn no_group_draws_more_than_eight_rows_and_every_group_draws_one() {
+    let mut d = Desk::new();
+    let rows = start(&mut d, "").rows;
+    let mut groups: Vec<&str> = rows.iter().map(|r| r.group.as_str()).collect();
+    groups.dedup();
+    assert_eq!(groups.len(), 6, "every group once, in a run of its own: {groups:?}");
+    for g in groups { let n = rows.iter().filter(|r| r.group == g).count(); assert!((1..=8).contains(&n), "{g}: {n} rows"); }
 }

@@ -11,7 +11,7 @@ use game::loadout::entry_of;
 use game::query::{after_mark, Query};
 use game::scene_scenarios::IssueData;
 use game::start_list::{self, Sitting};
-use game::view::{CardView, KeptText, Pressed, SheetView, ShortView, StartView, TeamView};
+use game::view::{BriefView, CardView, KeptText, Pressed, SheetView, ShortView, StartView, TeamView};
 use game_start::json::{parse, Json};
 use game_start::read::FromJson;
 
@@ -191,4 +191,8 @@ asks! {
     16 Next { search: &str } -> ShortView = |d, search| d.list.short_view(&d.g, search);
     /// the address with everything that started something taken off
     17 Leave { search: &str } -> String = |_, search| game::scene_scenario_list::pick_quit_search(search);
+    /// what a page says of the mission its address starts while it loads (id empty: it starts none of the list)
+    18 Brief { search: &str } -> BriefView = |_, search| start_list::brief_of(search);
+    /// 1 where the link starts what a page at this address already stands, so that it needs no page load; else 0
+    19 Same { link: &str, page: &str } -> u32 = |d, link, page| start_list::same_start(&d.g, link, page) as u32;
 }

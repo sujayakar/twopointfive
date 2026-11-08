@@ -9,9 +9,10 @@ use crate::loadout::{self, entry_of, kit_as_issued, LoadoutEntry};
 use crate::query::{after_mark, Query};
 use crate::quietfog::{self, QuietRung};
 use crate::scene_scenario_list::{self as list, all_missions, Pick, SOLO_ID, SOLO_KEY, SCENARIO_KEYS};
+use crate::scenario_run;
 use crate::scene_scenarios::{MissionGroup, ScenarioEntry, ScenarioEntryKind};
 use crate::ui_missions::Lean;
-use crate::view::{KeptText, Setting, SettingChoice, SheetView, ShortView, StartRow, StartView};
+use crate::view::{BriefView, KeptText, Setting, SettingChoice, SheetView, ShortView, StartRow, StartView};
 use crate::weather_kinds::{self, WeatherKind};
 use alloc::{format, string::String, vec, vec::Vec};
 
@@ -100,6 +101,8 @@ fn mission_of(e: ScenarioEntry) -> Mission {
 /// What the level is called on the sheet.   (scenarioList.ts levelWords)
 fn level_words(file: &str) -> String { String::from(file.strip_suffix(".json").unwrap_or(file)) }
 
+fn lean_words(l: Lean) -> &'static str { match l { Lean::Quiet => "quiet", Lean::Loud => "loud", Lean::Either => "quiet or loud" } }
+
 fn group_rank(g: MissionGroup) -> usize { GROUPS.iter().position(|x| x.0 == g).unwrap_or(GROUPS.len()) }
 
 /// It runs and nobody has balanced it, and the short list does not name it.   (missions.ts unplayed)
@@ -134,8 +137,8 @@ pub fn mission_of_address(search: &str) -> String {
 }
 
 /// The rows a visit draws: the lists without the rows cut from them but the one it names, the short list's missions first in their groups, in play order.   (missions.ts listedMissions, startpage.ts startPageList)
-fn start_rows(keep: &str) -> Vec<Mission> {
-    let mut rows: Vec<Mission> = mission_list().into_iter().filter(|m| !m.entry.as_ref().is_some_and(|e| e.off_list == Some(true)) || m.id == keep).collect();
+fn start_rows(keep: &str, every: bool) -> Vec<Mission> {
+    let mut rows: Vec<Mission> = mission_list().into_iter().filter(|m| every || !m.entry.as_ref().is_some_and(|e| e.off_list == Some(true)) || m.id == keep).collect();
     let play_order = |m: &Mission| list::PICKS.iter().position(|p| p.mission == m.id).unwrap_or(list::PICKS.len());
     rows.sort_by_key(|m| (group_rank(m.group), play_order(m)));
     rows
@@ -313,13 +316,14 @@ impl Sitting {
         let q = Query::parse(&self.search);
         self.hour = match &self.hour_pick { Some((s, h)) if *s == self.search => *h, _ => hours::hour_id_of(q.get("hour")) };
         self.weather = match &self.weather_pick { Some((s, w)) if *s == self.search => *w, _ => weather_kinds::weather_of(&q) };
-        let rows = start_rows(&named_row(page));
+        // (`offlist=0`: every row of the table drawn, as before the cut)
+        let rows = start_rows(&named_row(page), Query::parse(page).get("offlist") == Some("0"));
         if let Some(m) = mission_of_query(&self.search, &rows) {
             let w = q.get("way").filter(|w| !w.is_empty());
             if let (Some(ways), true, true) = (m.ways(), w.is_some(), !self.ways.iter().any(|x| x.0 == m.id)) { self.ways.push((m.id.clone(), way_of_link(ways.len(), w))); }
         }
         let rows: Vec<StartRow> = rows.iter().map(|m| self.row_of(g, m)).collect();
-        StartView { rows, named: mission_of_query(page, &mission_list()).map_or(String::new(), |m| m.id.clone()), pick: list::pick_of_query(page).map_or(String::new(), |p| String::from(p.id)), playing: list::names_mission(page) }
+        StartView { rows, named: mission_of_query(page, &mission_list()).map_or(String::new(), |m| m.id.clone()), pick: list::pick_of_query(page).map_or(String::new(), |p| String::from(p.id)), playing: list::names_mission(page), first: String::from(list::PICKS[0].mission) }
     }
 
     fn row_of(&self, g: &mut Game, m: &Mission) -> StartRow {
@@ -337,7 +341,7 @@ impl Sitting {
             place: m.place.clone(),
             blurb: m.blurb.clone(),
             lean: String::from(m.lean.as_str()),
-            lean_words: String::from(match m.lean { Lean::Quiet => "quiet", Lean::Loud => "loud", Lean::Either => "quiet or loud" }),
+            lean_words: String::from(lean_words(m.lean)),
             level: String::from(m.level().unwrap_or("office.json")),
             level_words: m.level().map_or(String::from("office"), level_words),
             squad: m.squad,
@@ -501,7 +505,7 @@ const CAM_WORDS: &str = "The last one you put on a wall is one more eye in the f
 fn lever_rows(g: &mut Game, m: &Mission, link: &str, out: &mut Vec<Setting>) {
     let quiet = m.quiet_row();
     // (the fog of war is up on a room clear and a rescue; a lesson is taught on the level as it is, and reads no lever)
-    let fog_on = m.entry.is_some() && crate::scenario_run::fog_of_link(g, &Query::parse(after_mark(link)));
+    let fog_on = m.entry.is_some() && scenario_run::fog_of_link(g, &Query::parse(after_mark(link)));
     let structure = Sitting::structure_of(m);
     let shown = difficulty::levers_shown(g, Some(&structure));
     let cams_on = quiet && quietfog::quiet_cams(g);
@@ -545,4 +549,48 @@ pub fn short_link(id: &str, search: &str, hard: i32) -> String {
     let Some(p) = list::pick_by_id(id) else { return String::new() };
     let d = match hard { 0 => Some(Difficulty::Standard), 1 => Some(Difficulty::Hard), _ => None };
     list::pick_href(&p, search, d)
+}
+
+/// What a page says of the mission its address starts, while it loads: that mission's own row, the team as this address deploys it. A row deployed at a size no row of its kind has is the row of
+/// that kind on that level; nothing where the address names no mission of the list, or picks its level by `level=` (a level being built is played the moment it loads).   (loadbrief.ts briefOfQuery)
+pub fn brief_of(search: &str) -> BriefView {
+    let q = Query::parse(search);
+    if q.has("level") { return BriefView::default(); }
+    let spec = list::spec_of(&q);
+    let mut rows = vec![solo_night()];
+    rows.extend(all_missions().into_iter().map(mission_of));
+    let row = mission_of_query(search, &rows).or_else(|| {
+        let s = spec.as_ref()?;
+        let here = || rows.iter().filter(|m| m.entry.as_ref().is_some_and(|e| e.kind.as_str() == s.kind.as_str() && e.level.as_deref().unwrap_or("") == s.level.as_deref().unwrap_or("")));
+        here().find(|m| m.squad == s.squad).or_else(|| here().next())
+    });
+    let Some(m) = row else { return BriefView::default() };
+    let squad = spec.as_ref().map_or(0.0, |s| s.squad);
+    let e = m.entry.as_ref();
+    BriefView {
+        id: m.id.clone(),
+        title: m.title.clone(),
+        kind: String::from(m.kind_word()),
+        group_title: String::from(GROUPS.iter().find(|x| x.0 == m.group).map_or("", |x| x.1)),
+        place: m.place.clone(),
+        blurb: m.blurb.clone(),
+        lean_words: String::from(lean_words(m.lean)),
+        team: if squad != 0.0 { loadout::size_words(squad) } else { String::from("you, alone") },
+        level: String::from(m.level().unwrap_or("office.json")),
+        scene: e.and_then(|e| e.scene.clone()).unwrap_or_default(),
+        teaches: e.and_then(|e| e.teaches.clone()).unwrap_or_default(),
+        // (dealt is marked on no one way: the level's own)
+        way: crate::m::max(way_of_link(m.ways().map_or(0, |w| w.len()), q.get("way")), 0.0),
+    }
+}
+
+/// The link Deploy would load starts what a page at this address already stands: the plain night, at its hour, in its weather, in the same fog, with nothing else asked of the page. So the start
+/// is no page load.   (loadout.ts deploy, scenarioRun.ts sameFog)
+pub fn same_start(g: &Game, link: &str, page: &str) -> bool {
+    let (a, b) = (Query::parse(link), Query::parse(page));
+    let fog = |q: &Query| (scenario_run::fog_of_query(g, q), scenario_run::quiet_rung_of_query(g, q), scenario_run::quiet_cams_of_link(g, q));
+    hours::hour_id_of(a.get("hour")) == hours::hour_id_of(b.get("hour"))
+        && weather_kinds::weather_of(&a) == weather_kinds::weather_of(&b)
+        && !SCENARIO_KEYS.iter().any(|k| *k != SOLO_KEY && b.has(k))
+        && fog(&a) == fog(&b)
 }
