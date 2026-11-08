@@ -11,13 +11,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- dust: every puff goes through one table
 
 
-/// The shipped table back, the look onto the live system. Forgetting the kept copy is the host's. (particleFx.ts resetDust)
-pub fn reset_dust(g: &mut crate::game::Game) {
-    let t = crate::particle_fx::dust_defaults();
-    g.m.particle_fx.dust = crate::particle_fx::ParticleFxModDUST { count: t.emit.count, size: t.emit.size, life: t.emit.life, speed: t.emit.speed, rise: t.emit.rise, spread: t.emit.spread };
-    g.m.particle_fx.dust_look = crate::particle_fx::ParticleFxModDUSTLOOK { opacity: t.look.opacity, growth: t.look.growth, fade_in: t.look.fade_in, soft: t.look.soft, wrap: t.look.wrap, ambient: t.look.ambient };
-}
-
 /// THE dust emit: the site's numbers times the table; the count rounded, never below 1 where a site asked for any. (particleFx.ts emitDust)
 pub fn emit_dust(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) -> f64 {
     match dust_asked(g, count, o) { Some((n, o)) => crate::render_particles::particles_emit(g, crate::render_particles::PKind::Dust, pos, dir, n, o), None => 0.0 }

@@ -259,7 +259,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         }
         // the smoke: a short source on the solver, filed afresh every `every` s while the fire is near the view
         let b = g.k.fire.smoke;
-        if b.on && moved && d < b.view_r {
+        if moved && d < b.view_r {
             let slot = m::floor(time / b.every);
             let p = book(g);
             let n = p.n;
