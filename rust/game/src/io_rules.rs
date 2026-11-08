@@ -2,7 +2,7 @@
 use game_wire::io::*;
 use game_wire::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
-/// WHAT THE HOST ASKS OF AN ORDER ROW (bridge/ask.ts): the closures of a row in the TypeScript, each answered by the match over its arms. `kind` is ask.ts's; `args` is written by the schema. 0 to 7 only read; 8, 9 and 10 write, and the host applies again after them.
+/// WHAT THE HOST ASKS OF AN ORDER ROW (tools/blitz/ask.ts): the functions of a row, each called through its `Row`. `kind` is ask.ts's; `args` is written by the schema. 0 to 7 only read; 8, 9 and 10 write, and the host applies again after them.
 pub fn ask(g: &mut crate::game::Game, kind: u32, row: u32, seat: u32, args: &[u8]) -> Vec<u8> {
     use crate::orders::OrderTarget as T;
     let s = <SeatId as Id>::from_ix(seat as usize); let d = <OrdersOrderDefId as Id>::from_ix(row as usize);
@@ -21,24 +21,21 @@ pub fn ask(g: &mut crate::game::Game, kind: u32, row: u32, seat: u32, args: &[u8
         k => panic!("bridge: no question of kind {}", k),
     } assert!(i.p == args.len(), "bridge: {} bytes left over in a question of kind {}", args.len() - i.p, kind); o.b })
 }
-/// WHAT THE WALK CANNOT READ, DEALT BY KEY: every order row's closures by its id (the arms as the parts register them), the 'go' row by which of its two the game has dealt.
-/// A row with an id this does not know stands at its blank: export.ts names it in its report.
+/// WHAT THE WALK CANNOT READ, DEALT BY KEY: every order row its functions by its id (`rows::by_id`), the 'go' row by which of its two the game has dealt, and the two questions a row's data holds as an enum.
+/// A row whose id is no line of the list stops the import, by name.
 pub fn deal_closures(g: &mut crate::game::Game) {
     use crate::orders::*;
     let small = g.door_tools.go_key == Some(Some(String::from("small")));
     for id in g.tab.orders_order_def.ids().collect::<Vec<_>>() {
         let d = &mut g.tab.orders_order_def[id];
-        match d.id.as_str() {
-            "held" => { let data = d.clone(); *d = rows::def(rows::by_id("held").unwrap(), data); d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::DoorHeld; } }
-            "charge" => { let data = d.clone(); *d = rows::def(rows::by_id("charge").unwrap(), data); d.gone = Some(OrderGone::DoorCharge); }
-            "bigClear" => { let data = d.clone(); *d = rows::def(rows::by_id("bigClear").unwrap(), data); d.gone = Some(OrderGone::DoorBigClear); }
-            "shutDoor" => { let data = d.clone(); *d = rows::def(rows::by_id("shutDoor").unwrap(), data); d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::ShutDoor; } }
-            "wallCharge" => { let data = d.clone(); *d = rows::def(rows::by_id("wallCharge").unwrap(), data); d.gone = Some(OrderGone::WallRow); }
-            "loud" => { let data = d.clone(); *d = rows::def(rows::by_id("loud").unwrap(), data); d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::Loud; } }
-            "pairDark" => { let data = d.clone(); *d = rows::def(rows::by_id("pairDark").unwrap(), data); d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::PairDark; } }
-            "go" => { let data = d.clone(); *d = rows::def(if small { &rows::gosmall::ORDER } else { &rows::gobig::ORDER }, data); }
-            other => { let Some(r) = rows::by_id(other) else { panic!("the order {} has no closures: it is neither an arm here nor a line of orders/rows", other) }; let data = d.clone(); *d = rows::def(r, data); d.gone = None; }
-        }
+        let r = match d.id.as_str() {
+            "go" => if small { &rows::gosmall::ORDER } else { &rows::gobig::ORDER },
+            other => rows::by_id(other).unwrap_or_else(|| panic!("the order {} has no functions: it is no line of orders/rows", other)),
+        };
+        d.row = r;
+        d.gone = match d.id.as_str() { "charge" => Some(OrderGone::DoorCharge), "bigClear" => Some(OrderGone::DoorBigClear), "wallCharge" => Some(OrderGone::WallRow), _ => None };
+        let when = match d.id.as_str() { "held" => Some(OrderWhen::DoorHeld), "shutDoor" => Some(OrderWhen::ShutDoor), "loud" => Some(OrderWhen::Loud), "pairDark" => Some(OrderWhen::PairDark), _ => None };
+        if let (Some(s), Some(w)) = (d.stands_in.as_mut(), when) { s.when = w; }
     }
 }
 /// WHAT A LEVEL SCRIPT IS IN AN IMPORTED GAME. A script is code, hung on the Level by the level's name, and its define pass keeps its locals in a closure the bridge cannot read. So the level's name says which script it is,
