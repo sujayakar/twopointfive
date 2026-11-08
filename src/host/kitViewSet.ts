@@ -28,6 +28,7 @@
 // WHAT THIS CANNOT SEE: the page. That the set is DRAWN, that its doorway can be walked (a doorway is free floor on the nav grid only where its middle
 // falls near a 0.5 m cell's middle), and anything the child still reads off a level's own names are the wiring step's and tools/qa/kitview-plan.ts's rows.
 import type { LevelData, BoxData, DoorData, LightData } from '../scene/levelData';
+import { kitViewQuietKind } from './kitViewQuiet';
 import { kitAddLaid } from '../scene/levelData';   // (pure: the mark that lets the validator take this loader's `add.laid`, and nobody else's)
 import type { KitViewWay, KitViewSet, StructureData, TeamStart } from '../scene/scenarios';
 import type { Vec3 } from '../math/vec';
@@ -84,15 +85,7 @@ export function kitViewSetDress(q: URLSearchParams): { suit: 'quiet' | null; sli
   return kind === 'quiet' ? { suit: 'quiet', sling: 2 } : kind === 'solo' ? { suit: null, sling: 2 } : null;
 }
 
-/** WHICH QUIET KIND a mission's link is, by the reading the dress above has always used (it is that reading, moved here so that two callers cannot
- *  drift): 'quiet' — a quiet mission, alone or as two; 'solo' — a link that names NO mission (the solo night); null — a loud one (room clear, night
- *  breach, rescue, the four). Read off the LINK and never off the scenario that is up: a set way's picture is staged as a room clear
- *  (kitViewSetQuery strips `quiet` / `solo`), so `game.quiet.active` is false there. The quiet picture's switch (host/kitView.ts KIT_VIEW_QUIET)
- *  asks this. */
-export function kitViewQuietKind(q: URLSearchParams): 'quiet' | 'solo' | null {
-  const loud = ['roomclear', 'nightbreach', 'rescue'].some(k => q.has(k)), quiet = !loud && q.has('quiet'), none = !loud && !quiet && !q.has('squad4');
-  return quiet ? 'quiet' : none ? 'solo' : null;
-}
+export { kitViewQuietKind };
 
 /** LOOK TWINS: a set box's `material` may name alternatives, 'a|b|…' — the first the file's palette holds is the one it takes, so ONE block text serves a
  *  level's plain file and its look file (whose palette carries the look's names beside the plain ones). No '|': the box as it is, the same object. */

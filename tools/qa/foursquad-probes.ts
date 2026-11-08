@@ -276,7 +276,7 @@ export const foursquadClear = guarded(async () => {
   const SEEDS = sample([2, 5, 9], 1);
   const rows: string[] = []; let runs = 0, ended = 0, allIn = 0, cleared = 0, lost = 0, rounds = 0, ff: string[] = [], through: string[] = [], stuck: string[] = [], threw = '';
   for (const C of CASES) for (const seed of SEEDS) {
-    const R = await rig(seed, { door: C.door }); const { game: g, D, NB } = R; const men = NB.ops, d = R.door(C.door); runs++;
+    const R = await rig(seed, { door: C.door }); const { game: g, O, D, NB, RC } = R; const men = NB.ops, d = R.door(C.door); runs++;
     // (three of these doors are locked, and the lead TRIES a door nobody knew was locked: the order ends there, 'found shut' — DOORTOOLS.testDoor, settled,
     // held by doortest-check.ts. Until 2026-11-07 this wrote the rule off so the entry booted the door and went on; that write was refused.)
     const room = R.room(C.room);
@@ -324,7 +324,7 @@ export const foursquadClear = guarded(async () => {
 // ---------------------------------------------------------------- the F drill
 export const foursquadDrill = guarded(async () => {
   const { verdict, done } = family('foursquad-drill: F\'s breach is the red pair\'s; blue is not owned by it');
-  const R = await rig(4, { stage: 'nb' }); const { game: g, O, NB } = R; const [r1, b1, b2] = NB.ops;
+  const R = await rig(4, { stage: 'nb' }); const { game: g, O, NB } = R; const [r1, r2, b1, b2] = NB.ops;
   verdict(R.why === null && NB.ops.length === 4 && NB.hostiles.length === 3 && 1 + g.guards.length === 8, 'the night breach alone with four: Sam, four teammates, three defenders', `start ${R.why} · ${names(NB.ops)} · ${1 + g.guards.length} characters`);
   R.input.pressed.add('KeyF'); R.step(); R.step(60);
   const own = NB.ops.map((x: any) => O.owners.some((o: any) => o.owns(x)));

@@ -28,13 +28,13 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const read = () => page.evaluate(() => { const g = window.__game, O = g.orders, el = document.getElementById('railprompt'), by = {}, watch = {};
     for (const m of O.men('all')) { const A = O.of(m); if (A?.order === 'stack' && A.door) (by[A.door.def.name] ??= []).push(m.callsign); if (A?.order === 'cover' && A.watch) (watch[`${A.watch[0].toFixed(1)},${A.watch[2].toFixed(1)}`] ??= []).push(m.callsign); }
     const M = O.menu;
-    return { i: g.lesson.i, id: g.lesson.step?.id ?? null, at: g.lesson.step?.at ?? null, line: el?.querySelector('.line')?.textContent ?? '', keys: [...(el?.querySelectorAll('kbd') ?? [])].map(k => k.textContent), note: el?.querySelector('.note')?.textContent ?? '',
-      up: !!el && getComputedStyle(el).display !== 'none', fatal: document.getElementById('fatal')?.textContent || '', rails: g.rails.live, sum: g.rails.summary(), script: !!g.director.running,
+    return { i: g.lesson.i, id: g.view.lesson?.id ?? null, at: g.level.scenarios.lesson?.steps[g.lesson.i]?.at ?? null, line: el?.querySelector('.line')?.textContent ?? '', keys: [...(el?.querySelectorAll('kbd') ?? [])].map(k => k.textContent), note: el?.querySelector('.note')?.textContent ?? '',
+      up: !!el && getComputedStyle(el).display !== 'none', fatal: document.getElementById('fatal')?.textContent || '', rails: !!g.view.lesson?.rails, sum: (g.view.lesson?.rails?.open ?? []).join(' '), script: !!g.director.running,
       pos: [+g.player.char.pos[0].toFixed(1), +g.player.char.pos[2].toFixed(1)], mates: g.guards.filter(x => x.team === 'operative' && x.state !== 'dead').length, men: g.guards.filter(x => x.team === 'hostile' && x.state !== 'dead').length,
       plan: !!O.plan?.up, by, watch, following: O.men('all').filter(m => { const A = O.of(m); return !A || A.post === null; }).length, ops: g.doorTools.ops.map(o => `${o.kind} ${o.door.def.name}`), orders: O.log.length,
       ring: M ? { part: !!M.part, flat: !!M.flat, men: (M.men ?? []).map(m => m.callsign), rows: M.rows.map(r => r.id) } : null,
-      markOn: (() => { const p = g.lesson.step?.at; if (!p) return null; const v = document.getElementById('view').getBoundingClientRect(), sc = window.__cam.project(p, v.width, v.height, 1); return sc[0] > 20 && sc[0] < v.width - 20 && sc[1] > 20 && sc[1] < v.height - 20; })(),
-      over: !!g.lesson.finished, end: g.roomClear?.end ?? null, t: +g.time.toFixed(1) }; });
+      markOn: (() => { const p = g.level.scenarios.lesson?.steps[g.lesson.i]?.at; if (!p) return null; const v = document.getElementById('view').getBoundingClientRect(), sc = window.__cam.project(p, v.width, v.height, 1); return sc[0] > 20 && sc[0] < v.width - 20 && sc[1] > 20 && sc[1] < v.height - 20; })(),
+      over: !!g.view.lesson?.finished, end: g.roomClear?.end ?? null, t: +g.time.toFixed(1) }; });
   const point = async w => { const s = await page.evaluate(p => { const c = document.getElementById('view'), r = c.getBoundingClientRect(), [x, y] = window.__cam.project(p, r.width, r.height, 1); return { x: r.left + x, y: r.top + y }; }, w); await page.mouse.move(s.x, s.y); await run(2); };
   const self = async () => point(await page.evaluate(() => [...window.__game.player.char.pos]));
   const tap = async k => { await page.keyboard.down(k); await run(3); await page.keyboard.up(k); await run(3); };

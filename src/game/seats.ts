@@ -151,7 +151,7 @@ export function seatOfMan(g: Game, pl: Player): Seat { for (const s of g.seats) 
  *  yellow + red team and then purple + blue team"; "at least have numbers for players"). A player's own man has his SEAT's tone: the first seat's is
  *  the one the game of one always had ('you': the rim's yellow, the debrief's bright row), the second's purple, and round again. The squad of four is
  *  dealt a pair a seat (dealSeats), and a teammate keeps his pair's tone, so two seats read as a yellow man with the red pair and a purple man with the
- *  blue pair. Whoever colours a player's man asks `seatTone` (the rim: ui/findme.ts; the debrief's rows and map: verdict.ts); whoever names him asks
+ *  blue pair. Whoever colours a player's man asks `seatTone` (the rim: ui/findmeviz.ts; the debrief's rows and map: verdict.ts); whoever names him asks
  *  `playerName`: 'Player' in a game of one, as ever, and his seat counted from one in a game of several */
 export type SeatTone = 'you' | 'purple';
 export const SEAT_TONES: readonly SeatTone[] = ['you', 'purple'];

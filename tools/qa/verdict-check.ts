@@ -174,7 +174,8 @@ export async function verdictCheck(): Promise<boolean> {
       line(store.tryStarted('a|b') === 0 && store.recordOf('a|b').n === 0, 'with nowhere to keep it (headless) nothing is counted'); }
 
     // 8. a mission's card on the start page
-    { const { withDom, El } = await import('./scenario-picker-probes.ts'), { dressMissionRows, rowEarns } = await import(`${ROOT}/src/ui/verdictRows.ts`);
+    { const { withDom, El } = await import('./scenario-picker-probes.ts'), { dressMissionRows, rowEarns } = await import(`${ROOT}/src/ui/verdictRows.ts`), { setDesk } = await import(`${ROOT}/src/view/desk.ts`);
+      setDesk({ start: () => ({ rows: ['killhouse-four', 'solo-night', 'tut-quiet', 'bazaar-quiet'].map(id => ({ id, lesson: id.startsWith('tut-') })) }) } as any);   // (the desk's rows, stood in for: which rows are lessons is the module's)
       const P: any = El.prototype;   // (the checks' fake element has no removeChild / replaceChild: the two the dresser needs, for this check only)
       P.removeChild ??= function (this: any, c: any) { this.children = this.children.filter((x: any) => x !== c); return c; };
       P.replaceChild ??= function (this: any, n: any, o: any) { this.children = this.children.map((x: any) => x === o ? n : x); n.parentElement = this; return o; };

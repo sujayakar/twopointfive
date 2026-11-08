@@ -188,7 +188,7 @@ export const pairsGo = guarded(async () => {
     verdict(thr === 0 && ff === 0, 'two pairs converging in one room: no teammate down to a teammate, no round fired through one', `through ${thr} · fratricide ${ff}`); }
   // ---- (c) tools given `onWord`: a bang at the north door, a quiet open at the west door
   { const SEEDS = sample([2, 5, 9], 1); const rows: string[] = []; let waited = 0, ordered = 0, noted = 0, lost = 0, thr = 0, ff = 0, inAll = 0;
-    for (const seed of SEEDS) { const R = await rig(seed, CORRIDOR, { tag: 'go-bang' }); const { D } = R;
+    for (const seed of SEEDS) { const R = await rig(seed, CORRIDOR, { tag: 'go-bang' }); const { O, D } = R;
       const w1 = R.give('bangClear', 'breakroom_n', 'red', { onWord: true }), w2 = R.give('openClear', 'breakroom_w', 'blue', { onWord: true });
       const ready = R.until(() => D.ops.length === 2 && D.ops.every((o: any) => o.phase === 'ready'), 45); R.step(180);
       const still = D.ops.length === 2 && D.ops.every((o: any) => o.phase === 'ready'), notes = notesOf(D.g).filter((s: string) => s.includes('on your word'));

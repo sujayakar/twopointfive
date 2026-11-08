@@ -244,7 +244,7 @@ export const ordersFallIn = guarded(async () => {
   const path: number[][] = [[sam.pos[0], 0, sam.pos[2]]]; let noPath = '';
   for (const p of legs) { const leg = g.col.nav.findPath(path[path.length - 1], p); if (!leg) { noPath = `no nav path to ${at(p)}`; break; } for (const q of leg) path.push([q[0], 0, q[2]]); path.push(p); }
   let seg = 0, t = 0; const SPEED = 1.55; let walked = 0;
-  const worst = [0, 0], sum = [0, 0]; let frames = 0, far4 = 0; let nOpenedAt = NaN, firstManNorthAt = NaN;
+  const worst = [0, 0], sum = [0, 0]; let frames = 0, far4 = 0; const nAngle: number[] = []; let nOpenedAt = NaN, firstManNorthAt = NaN;
   // Where doors open one way (as the page has it) Sam walks the path on his own feet: the walk keys turned onto the next point of the path each frame, his reticle 4 m ahead of him.
   const feet = !!DOORWAY.oneWay; let lastAt = [...sam.pos];
   R.pre = feet ? () => {
@@ -347,7 +347,7 @@ export const ordersSeams = guarded(async () => {
 
 export const ordersEdges = guarded(async () => {
   const { verdict, done } = family('orders-edges: what cannot be done is refused aloud, and the men keep clear of Sam');
-  const R = await rig(11); const { game: g, O } = R; const [b1, b2] = O.squad(); const men = [b1, b2]; const sam = g.player.char;
+  const R = await rig(11); const { game: g, O, NB, input } = R; const [b1, b2] = O.squad(); const men = [b1, b2]; const sam = g.player.char;
   const def = (id: string) => O.defs.find((d: any) => d.id === id);
   R.step(30);
   // (a) a floor spot no path leads to (found by scanning the nav grid — called directly: the cursor cannot be put on a spot chosen this way)

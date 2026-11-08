@@ -219,7 +219,7 @@ function cancelReloads(pl: Player) { pl.pistol.cancelReload(); pl.rifle.cancelRe
 export function legsOwn(g: Game): boolean {
   const pl = g.player;
   return !(pl.down || pl.takedown || pl.holding || pl.kick || pl.picking || pl.wanding || pl.coding || pl.wall || pl.dragging || pl.haul || pl.doorMove || g.puppet || g.touring
-    || samWork(g) || (STALK.on && stalkOn(g)) || g.rails?.allowed());   // (rails.ts: a lesson's gate takes keys out of the tick)
+    || samWork(g) || (STALK.on && stalkOn(g)) || g.view.lesson?.rails);   // (rails.ts: a lesson's gate takes keys out of the tick)
 }
 /** THE TOP PACE OF A WALK OF HIS OWN this tick, before a tap step, a creep or a door in his hand have their say: by what his legs are doing (`m`: the
  *  player's own flags in the tick; a look ahead's scratch flags — walkahead.ts) and what his card weighs. One working for both. */
@@ -441,7 +441,7 @@ const wsPend = new SideMap<Player, { t: number; at: number; blocked: boolean }>(
  *  there the wall is his as he arrives and the row is there from the hold; a body's row, and any row in the crouched dash, is in reach and has the long
  *  wait.) The hold it takes carries the keys of that run (WallHold.ran): while they are held as they were, Shift is not a way off it (wallRanOn). */
 const wsPress = new SideMap<Player, { t: number; at: number; n: Vec3 | null; dx: number; dz: number; held: boolean; until: number }>('player.wsPress');
-/** the things that stand where they are and are worked by hand (the wall press's touch; interact.ts emptyThing: what an empty tap can be beside) */
+/** the things that stand where they are and are worked by hand (the wall press's touch; the view's `empty`: what an empty tap can be beside) */
 export const PRESS_THINGS: ReadonlySet<string> = new Set(['door', 'switch', 'breaker', 'objective', 'cam', 'body']);
 
 // ---- the hold in a checkpoint (savestate.ts SaveState.wallHold, under SAVETIMELINE.holds). No file held a hold before the wall could be taken by walking: a

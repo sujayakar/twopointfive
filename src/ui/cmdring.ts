@@ -1,14 +1,14 @@
-// The orders ring at the cursor (game/cmdring.ts says WHEN, orders.ts `ringView` says WHAT; this file draws it): a wedge a digit, clockwise from the top,
+// The orders ring at the cursor (the Rust game's menu says WHEN and WHAT, `view.ring`; this file draws it): a wedge a digit, clockwise from the top,
 // the lit one filled, a greyed one for a row that cannot be given now, its words outside it, the middle left open so what is pointed at shows through.
-// Under it, small, who the order goes to and what the ring was opened on. Sam's own ring (Space, CMDRING.hands — interact.ts `handRingView`) is the same
+// Under it, small, who the order goes to and what the ring was opened on. Sam's own ring (Space, `view.hand`) is the same
 // drawing in his own colour, the thing's name under it. A ring with ONE row draws it as a pill beside a small ring round the middle (game/ringlone.ts).
 // index.html `.cmdring …` is the look. Nothing is built until there is something to show; an attribute is written only when it changes.
 // The layer is zoomed with the page's words (ui/textsize.ts): a place in the view's px is divided by that factor, and the ring is drawn at the game's own
 // (cmdring.ts ringZoom), so the wedge under the cursor is the wedge the game lights.
 import type { Game } from '../game/game';
 import type { FollowCamera } from '../game/camera';
-import { CMDRING, ringPin, type RingState, type RingView } from '../game/cmdring';
-import { handRingView } from '../game/interact';
+import { CMDRING, type RingView } from '../game/cmdring';
+import type { RingPin } from '../view/read';
 import { RING_BOX, RING_HOLE, RING_RIM, lonePill, loneWedge, wedgeMid, wedgeWords, type LonePill, type RingPlace } from '../game/ringlone';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -75,17 +75,18 @@ class RingDraw {
 export class CmdRingViz {
   private orders: RingDraw; private hands: RingDraw;   // the squad's ring, and Sam's own (CMDRING.hands)
   constructor(private svg: SVGSVGElement) { this.orders = new RingDraw(svg); this.hands = new RingDraw(svg); }
-  /** A ring that stays on its point (CMDRING.pin), where THIS picture's camera puts it, in the view's px: the game's own place for it (RingState.ax / ay) was
-   *  worked out before the tick's camera step, and a ring drawn there swims a few px against the floor while the view moves. null = the game's place stands */
-  private pinned(R: RingState | null, cam: FollowCamera, w: number, h: number, tz: number): [number, number] | null {
-    if (!R?.at) return null;
+  /** A ring that stays on its point, where THIS picture's camera puts it, in the view's px: the game's own place for it was worked out before the tick's camera step, and a ring
+   *  drawn there swims a few px against the floor while the view moves. null = the game's place stands */
+  private pinned(R: RingPin | null, cam: FollowCamera, w: number, h: number, tz: number): [number, number] | null {
+    if (!R) return null;
     const [sx, sy, front] = cam.project(R.at, w * tz, h * tz); if (!front) return null;
-    const c = { ...R }; ringPin(c, sx, sy, w * tz, h * tz); return [c.ax, c.ay];
+    const cl = (v: number, m: number, max: number) => max > 2 * m ? Math.max(m, Math.min(max - m, v)) : v;
+    return [cl(sx + R.ox, R.edgeX, w * tz), cl(sy + R.oy, R.edgeY, h * tz)];
   }
   /** `w`, `h`: the layer's own size · `tz`: the factor it is zoomed by (ui/textsize.ts) */
   update(game: Game, cam: FollowCamera, w: number, h: number, tz: number) {
-    const V0 = game.orders.ringView(), P = V0 ? this.pinned(game.orders.cmdRing, cam, w, h, tz) : null, V = V0 && P ? { ...V0, x: P[0], y: P[1] } : V0;
-    const H0 = game.player.sel.ring ? handRingView(game) : null, HP = H0 ? this.pinned(game.player.sel.ring, cam, w, h, tz) : null, H = H0 && HP ? { ...H0, x: HP[0], y: HP[1] } : H0;   // (his own ring on its thing: handring.ts onThing)
+    const R0 = game.view.ring, P = R0 ? this.pinned(R0.pin, cam, w, h, tz) : null, V: RingView | null = R0 ? { x: P ? P[0] : R0.x, y: P ? P[1] : R0.y, zoom: R0.zoom, lit: R0.lit, tone: R0.tone ?? undefined, caption: R0.caption, wedges: R0.wedges } : null;
+    const H0 = game.view.hand, HP = H0 ? this.pinned(H0.pin, cam, w, h, tz) : null, H: RingView | null = H0 ? { x: HP ? HP[0] : H0.x, y: HP ? HP[1] : H0.y, zoom: H0.zoom, lit: H0.lit, tone: 'hands', caption: '', wedges: H0.wedges } : null;   // (his own ring on its thing)
     this.orders.draw(V, tz); this.hands.draw(H, tz); this.clear(V, H, tz);
     const D = this.discs; D.length = 0; for (const R of [V, H]) if (R) D.push(R.x / tz, R.y / tz, R1 * R.zoom / tz);
   }

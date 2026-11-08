@@ -164,7 +164,7 @@ export function attentionMarks(g: Game): AttentionMark[] {
 
 /** THE THREAD'S WAY (ATTENTION.way; the maintainer, 10-22, of a thread drawn through a hut's wall: "weird that the line here is a straight line, not a pathed
  *  one. i'd expected pathed from squad commands"). For a man WALKING to the place: his feet, every corner of the way he will take, the place — his own nav
- *  path from where he is on it when it is the walk to this place, else the nav grid's answer (kept `wayReask` s; floorplan.ts wayOf is the squad's same
+ *  path from where he is on it when it is the walk to this place, else the nav grid's answer (kept `wayReask` s; ui/planfloor.ts wayOf is the squad's same
  *  picture). Straight (his feet, the place) for a man who only looks — a turned head, a lent hold, a man standing at the thing — and where the floor has no
  *  way at all. PICTURE ONLY: asked by the overlay, read by nothing in the update, and it WRITES NOTHING OF THE GAME'S — the kept answer lives with whoever
  *  draws (`kept`: the overlay's own table in ui/attentionviz.ts, a check's own Map), never in a side table here, so a game drawn and the same game not drawn

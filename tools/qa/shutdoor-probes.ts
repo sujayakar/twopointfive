@@ -24,7 +24,7 @@
 import { listedOf, menuKey } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { listen } from './heard.ts';
-import { leftKey } from './order-keys.ts';
+import { leftKey, toolsRow4 } from './order-keys.ts';
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
@@ -266,7 +266,7 @@ export const shutdoorWho = guarded(async () => {
 // ---------------------------------------------------------------- back to the file
 export const shutdoorFile = guarded(async () => {
   const { verdict, done } = family(`shutdoor-file: a man taken from fall in goes back into the file, and shuts it from Sam's side`);
-  { const x = await oneShut(11, 'breakroom_w', WEST, SAM_W, { fallIn: true }); const { R, man } = x;
+  { const x = await oneShut(11, 'breakroom_w', WEST, SAM_W, { fallIn: true }); const { R, O, man } = x;
     const was = man ? x.before[R.ops.indexOf(man)] : null; R.step(60 * 2);
     verdict(x.why === null && !!man && was?.order === 'fallIn' && was.post === null && x.latched && x.after?.order === 'fallIn' && x.after.post === null && SHUTDOOR_STATS.toFile === 1 && SHUTDOOR_STATS.stayed === 0,
       'the four on fall in, the order given: the man who shut it is on fall in again', `${man?.callsign}: ${was?.order} → ${SHUT_ID} → ${x.after?.order} · latched ${x.latched} in ${f2(x.secs)} s · toFile ${SHUTDOOR_STATS.toFile} · stayed ${SHUTDOOR_STATS.stayed}`);

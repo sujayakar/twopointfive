@@ -1,5 +1,5 @@
 // The 'blastfeel' probes (src/game/blastFeel.ts — what a wall charge going off sounds like, throws about and does to the camera), run as their own program or as
-// probes.ts family 'blastfeel':   bun run tools/qa/blastfeel-probes.ts [--scn block-squads]
+// probes.ts family 'blastfeel':   bun run tools/qa/blastfeel-probes.ts [--scn block-four]
 // Headless = the Proxy device: nothing is drawn or heard. What can be held here: WHICH sounds would play and when (headless.ts W.audioLog), what is handed to the
 // particle system (a recording stand-in for render/particles.ts Particles), what is written to the camera — and that none of it is play:
 //   (report)   the squad sets a charge, Sam blows it: 'wallCrack' + 'wallThump' at the blast's place as late as sound takes to reach Sam, 'wallDebris' a tenth of a
@@ -47,7 +47,7 @@ async function blast(scn: string, on: boolean, kick = 1, secs = 5) {
   return { R, game, wall, log, recs, kicks, pic, t0, ear, bang, digest: hashDigest(digestGame(game, true)) };
 }
 
-export async function blastfeelFamily(scn = 'block-squads'): Promise<boolean> {
+export async function blastfeelFamily(scn = 'block-four'): Promise<boolean> {
   const keep = { on: FEEL.on, kick: FEEL.kick }, rnd = Math.random;
   try {
     const F = family(`blastfeel: a wall charge's report, its wave in particles, the camera's kick — and none of it play (${scn})`);
@@ -80,6 +80,6 @@ export async function blastfeelFamily(scn = 'block-squads'): Promise<boolean> {
 }
 
 if (import.meta.main) {
-  const i = process.argv.indexOf('--scn'); const ok = await blastfeelFamily(i >= 0 ? process.argv[i + 1] : 'block-squads');
+  const i = process.argv.indexOf('--scn'); const ok = await blastfeelFamily(i >= 0 ? process.argv[i + 1] : 'block-four');
   console.log(`\n=== blastfeel-probes: ${ok ? 'ALL PASS' : 'FAILED'} ===`); process.exit(ok ? 0 : 1);
 }

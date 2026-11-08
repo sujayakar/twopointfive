@@ -39,25 +39,26 @@ export async function squadthrowWalkCheck(): Promise<boolean> {
   const walked = (R: any, at: number[], kind: 'frag' | 'stun', key: string) => {
     const { game, O } = R, D = game.doorTools, item = kind === 'frag' ? 'frag' : 'flash', id = kind === 'frag' ? FRAG_THERE : STUN_THERE, count = () => kind === 'frag' ? D.frags : D.bangs;
     const n0 = count(), log0 = SQUADTHROW_LOG.length, lines0 = R.lines.length;
-    const rows = R.pageAt(at), row = rows[kind === 'frag' ? 0 : 1], pre = ST.squadThrowPlans(game);
+    const rows = R.pageAt(at), row = rows[kind === 'frag' ? 0 : 1], pre = game.view.throws;
+    if (!game.view.plan) throw new Error('no view: this check has nothing to read');
     R.press(key); R.step(2);
     const man = R.team.find((m: any) => O.of(m)?.order === id), home = man ? [...man.char.pos] : [0, 0, 0], post = man ? [...O.of(man).post] : [0, 0, 0];
-    const live = ST.squadThrowPlans(game), early = R.items(item).length, spentEarly = n0 - count(), saidGo = R.lines.slice(lines0).some((l: any) => /moving to throw/.test(l.text));
+    const live = game.view.throws, early = R.items(item).length, spentEarly = n0 - count(), saidGo = R.lines.slice(lines0).some((l: any) => /moving to throw/.test(l.text));
     let maxV = 0; const thrown = R.until(() => { if (man) maxV = Math.max(maxV, Math.hypot(man.char.vel[0], man.char.vel[2])); return SQUADTHROW_LOG.length > log0; }, 25);
-    const L = SQUADTHROW_LOG[SQUADTHROW_LOG.length - 1], from = thrown ? dist(L.from, post) : NaN, after = ST.squadThrowPlans(game).length, spent = n0 - count();
+    const L = SQUADTHROW_LOG[SQUADTHROW_LOG.length - 1], from = thrown ? dist(L.from, post) : NaN, after = game.view.throws.length, spent = n0 - count();
     const said = R.lines.slice(lines0).map((l: any) => `${l.who}: ${l.text}`).join(' / '), end = man ? [...man.char.pos] : [0, 0, 0];
     return { rows, row, pre, man, home, post, live, early, spentEarly, saidGo, thrown, L, from, after, spent, maxV, id, item, said, end };
   };
   try {
     // ───────────── 1 · the walk, the frag, back to his hold ─────────────
     await guard('walk and frag', async () => {
-      const R = await rig(11, true), { O } = R, c = spots(R, 'frag')[0];
+      const R = await rig(11, true), { game, O } = R, c = spots(R, 'frag')[0];
       if (!c) { verdict(false, 'a spot nobody has a throw to and one man can walk to a throw for', `none found on the office with the four holding at ${R.team.map((m: any) => p2(m.char.pos)).join(' ')}`); return; }
       const w = walked(R, c.at, 'frag', 'Digit1'), m = w.man;
       verdict(!!w.row && !w.row.off && /^frag there · 2 left/.test(w.row.text) && w.pre.length === 1 && w.pre[0].preview === true && (w.pre[0].walk?.length ?? 0) > 1 && w.pre[0].points.length > 2,
         'a spot nobody has a throw to from where he stands: the frag row is live, and the page shows one plan — who, his walk, the arc — before anything is ordered',
-        `spot ${p2(c.at)} · row '${w.row?.text}'${w.row?.off ? ' (off)' : ''} · preview ${w.pre.length} (${w.pre[0]?.gd?.callsign}, walk ${w.pre[0]?.walk?.length ?? 0} pts, arc ${w.pre[0]?.points?.length ?? 0} pts)`);
-      verdict(!!m && w.saidGo && w.early === 0 && w.spentEarly === 0 && w.live.length === 1 && !w.live[0].preview && w.live[0].gd === m && dist(w.live[0].from, w.post) < 0.05 && dist(w.home, w.post) > 1,
+        `spot ${p2(c.at)} · row '${w.row?.text}'${w.row?.off ? ' (off)' : ''} · preview ${w.pre.length} (${w.pre[0]?.man}, walk ${w.pre[0]?.walk?.length ?? 0} pts, arc ${w.pre[0]?.points?.length ?? 0} pts)`);
+      verdict(!!m && w.saidGo && w.early === 0 && w.spentEarly === 0 && w.live.length === 1 && !w.live[0].preview && w.live[0].man === m.char.id && dist(w.live[0].from, w.post) < 0.05 && dist(w.home, w.post) > 1,
         '1 gives it: one man is walked to the floor he has a throw from under the row\'s own id, he says so, nothing has left a hand and nothing is spent, and the picture carries his walk',
         `${m?.callsign} from ${p2(w.home)} to ${p2(w.post)} (${f1(dist(w.home, w.post))} m) · said: ${w.saidGo} · items ${w.early} · spent ${w.spentEarly} · live plans ${w.live.length} (${w.live[0]?.gd?.callsign}${w.live[0]?.preview ? ', preview' : ''}, from ${w.live[0] ? p2(w.live[0].from) : '—'}, walk ${w.live[0]?.walk?.length ?? 0} pts)`);
       verdict(w.thrown && w.from < 0.7 && w.spent === 1 && dist(w.L.rest, c.at) < 1.3 && w.after === 0 && w.maxV <= 2.3,
@@ -89,9 +90,9 @@ export async function squadthrowWalkCheck(): Promise<boolean> {
       R.pageAt(c.at); R.press('Digit1'); R.step(20);
       const m = R.team.find((x: any) => O.of(x)?.order === FRAG_THERE), n0 = R.items('frag').length;
       O.give('hold', O.targetAt(game.player.char.pos)); R.step(60 * 6);
-      verdict(!!m && O.of(m)?.order === 'hold' && R.items('frag').length === n0 && D.frags === 2 && ST.squadThrowPlans(game).length === 0,
+      verdict(!!m && O.of(m)?.order === 'hold' && R.items('frag').length === n0 && D.frags === 2 && game.view.throws.length === 0,
         'told to hold while he walks: the throw is off — nothing thrown, nothing spent, nothing drawn',
-        `${m?.callsign} order '${m ? O.of(m)?.order : '—'}' · frags ${D.frags} · plans ${ST.squadThrowPlans(game).length}`);
+        `${m?.callsign} order '${m ? O.of(m)?.order : '—'}' · frags ${D.frags} · plans ${game.view.throws.length}`);
     });
   } finally {
     const { frag, squad, random, ...knobs } = kept; Object.assign(SQUADTHROW, knobs); FRAG.on = frag; NIGHTBREACH.squad = squad; Math.random = random;

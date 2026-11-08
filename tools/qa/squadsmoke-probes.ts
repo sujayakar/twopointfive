@@ -20,12 +20,13 @@ import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each p
 
 const K: any = await import(`${ROOT}/src/game/kit.ts`);
 /** slots.json as shipped (no squad limit since v7), and the same table with the squad limit it had through v6: the trade lines are held on that one */
-const SHIPPED = JSON.parse(readFileSync(resolve(ROOT, 'src/game/slots.json'), 'utf8'));
+const SHIPPED = JSON.parse(readFileSync(resolve(ROOT, 'src/game/slots.json'), 'utf8')), LIMIT7 = { ...SHIPPED, squad: { pouches: 7 } };
 const SM: any = await import(`${ROOT}/src/game/squadsmoke.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const SLM: any = await import(`${ROOT}/src/game/silent.ts`);
+const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { KIT, KIT_LS } = K, { SQUADSMOKE, SMOKE_ORDER } = SM;
 
 const DT = 1 / 60;

@@ -76,8 +76,9 @@
 // refuses such a file too rather than pour it over a living man), a body (a man's or a civilian's) still falling, a man scripted or the lockdown pair clearing
 // rooms (unless `force`, which files them as searching men and drops the drill), Sam mid-action (unless `force`, which lets go of everything the way a teleport
 // does — in the FILE, never in the running game: saving is read-only).
+import { NO_VIEW } from '../view/seatview';
 import { SideMap, rollbackVar, wallClock, HostOwned } from '../math/side';
-import { loadSandbox } from './sandbox';
+import { autosaveKept, keepAutosave, loadSandbox } from '../host/sandbox';
 import { hostileTo } from './teams';
 import { Vec3, v3, quat, clamp } from '../math/vec';
 import { Game, Guard, Player, KIT_ORDER } from './game';
@@ -90,7 +91,6 @@ import type { BigKit } from './kit';
 import { KITLOAD, type KitWorn } from './kitload';
 import type { QuietSnap } from './quiet';
 import type { FogSnap } from './fogofwar';
-import { quietWords } from './quiet';   // (called inside functions only: src/game is one import cycle)
 import type { LessonSnap } from './lesson';
 import { woundRestore, type Wound } from './wounds';
 import type { GameEvent, LightTarget, MissionStage, Mission, SlotKind, ThrowKind, Witness, GuardState, DownKind, DownBy, GuardTask } from './game';
@@ -104,7 +104,6 @@ import { RAG_COUNT } from './ragdoll';
 import { Chronicle, MAX_EVENTS } from './chronicle';
 import { roomOf } from './rooms';
 import type { ChronEvent, ChronCounts, ChronKind, ChronData } from './chronicle';
-import { missionLive } from './mission';
 import { attachFlashlight, rollcallState, escalationOf, forgetGuardClocks } from './guards';
 import { forgetSuppressionClocks } from './suppression';
 import { glassState } from './glass';
@@ -363,7 +362,7 @@ export const SAVETIMELINE = {
   picPx: 256, picQ: 0.6,
 };
 const KEY_PREFIX = 'twopointsix.save.';
-const KEY_INDEX = KEY_PREFIX + 'index', KEY_MANUAL = KEY_PREFIX + 'manual', KEY_AUTO = (i: number) => `${KEY_PREFIX}auto.${i}`, KEY_AUTOSAVE_ON = 'twopointsix.autosave';
+const KEY_INDEX = KEY_PREFIX + 'index', KEY_MANUAL = KEY_PREFIX + 'manual', KEY_AUTO = (i: number) => `${KEY_PREFIX}auto.${i}`;
 /** SAVETIMELINE: the ring of saves by hand (its first is the one slot the build always had), a slot's picture, a save kept in memory */
 const KEY_HAND = (i: number) => i === 0 ? KEY_MANUAL : `${KEY_MANUAL}.${i}`, KEY_PIC = (key: string) => `${KEY_PREFIX}pic.${key.slice(KEY_PREFIX.length)}`, KEY_MEM = (slot: 'auto' | 'manual', i: number) => `${KEY_PREFIX}mem.${slot}.${i}`;
 
@@ -600,7 +599,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     events: g.events.map(e => ({ kind: e.kind, pos: c3(e.pos), time: e.time, loud: e.loud, level: e.level, id: e.id, who: e.who, weapon: e.weapon, from: e.from ? c3(e.from) : undefined, to: e.to ? c3(e.to) : undefined, announced: e.announced, cause: e.cause, ...(e.ears ? { ears: [c3(e.ears[0]), c3(e.ears[1])] as [Vec3, Vec3] } : {}), ...(e.swAt ? { swAt: c3(e.swAt) } : {}) })),
     messages: g.messages.map(m => ({ text: m.text, t: m.t })),
     rollcall: { nextAt: R.nextAt, stage: R.stage, t0: R.t0, caller: gi(R.caller), missing: gi(R.missing), answered: R.answered, checks: R.checks },
-    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), lanes: lanesSnapshot(g), walls: g.destr?.walls?.snapshot(), furn: g.destr?.furn?.snapshot(), bars: barsSnapshot(g), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, ...(air ? { air } : {}), ...(g.quiet?.active ? { quiet: g.quiet.snapshot()! } : {}), ...(g.lesson?.data ? { lesson: g.lesson.snapshot() } : {}), qrf: { loudT: g.qrf?.loudT ?? -1e9, ...(RESPONSE.on ? { word: responseWordSnapshot(g) } : {}) },
+    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), lanes: lanesSnapshot(g), walls: g.destr?.walls?.snapshot(), furn: g.destr?.furn?.snapshot(), bars: barsSnapshot(g), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, ...(air ? { air } : {}), ...(g.quiet?.active ? { quiet: g.quiet.snapshot()! } : {}), ...(g.level.scenarios?.lesson ? { lesson: g.lesson.snapshot() } : {}), qrf: { loudT: g.qrf?.loudT ?? -1e9, ...(RESPONSE.on ? { word: responseWordSnapshot(g) } : {}) },
     civilians: civiliansSnapshot(g),
     decals, ...(glassPenSnapshot(g) ? { glassPen: glassPenSnapshot(g) } : null),
     ...(dz ? { doze: dz } : null),   // (who dozes in which chair and who was woken — doze.ts; no key with its switch off)
@@ -676,7 +675,7 @@ export function loadState(g: Game, s: SaveState, opts: { label?: string } = {}) 
 function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number, opts: { label?: string }) {
   g.time = fin(s.time, g.time); g.eventSeq = s.eventSeq | 0; g.fxSeed = s.fxSeed | 0; g.ocpCooldown = fin(s.ocpCooldown); g.calledIn = !!s.calledIn; g.stoodDown = !!s.stoodDown; g.lightHome.in(LIGHT_IN.fix, null, fin(s.breakerFixT)); g.lastStingT = fin(s.lastStingT, -100);
   g.aiEnabled = s.flags.aiEnabled !== false; g.godMode = !!s.flags.godMode; g.infiniteAmmo = !!s.flags.infiniteAmmo; g.playerInvisible = !!s.flags.playerInvisible;
-  loadSandbox(g, false);   // …then THIS MACHINE's start-card preference wins over the file's three sandbox flags (game/sandbox.ts; headless it is a no-op, so save∘load stays the identity on the file — probes checkpoint-identity)
+  loadSandbox(g, false);   // …then THIS MACHINE's start-card preference wins over the file's three sandbox flags (host/sandbox.ts; headless it is a no-op, so save∘load stays the identity on the file — probes checkpoint-identity)
   g.spectate = -1;
   // ---- items (before the men: their dropped torches point in here)
   const propsById = g.props.all;
@@ -921,9 +920,9 @@ export class Checkpoints {
   private hand = false; private due: string | null = null;
   constructor(store?: SaveStore) { wallClock(this, 'runId');   // (a run's name is made of the clock and a serial: never compared between two plays)
     this.store = store ?? (typeof localStorage !== 'undefined' ? localStore : memoryStore());
-    try { if (typeof localStorage !== 'undefined' && localStorage.getItem(KEY_AUTOSAVE_ON) === '0') this.enabled = false; } catch { /* */ }
+    if (!autosaveKept()) this.enabled = false;
   }
-  setEnabled(on: boolean) { this.enabled = !!on; try { if (typeof localStorage !== 'undefined') localStorage.setItem(KEY_AUTOSAVE_ON, on ? '1' : '0'); } catch { /* */ } }
+  setEnabled(on: boolean) { this.enabled = !!on; keepAutosave(this.enabled); }
   /** into the store — false when it would not take it, or threw (a store of the host's own may: the game goes on without the save) */
   private put(key: string, val: string): boolean { try { return this.store.set(key, val); } catch { return false; } }
   private note(g: Game, what: string) { this.log.push({ t: g.time, what }); if (this.log.length > 40) this.log.splice(0, this.log.length - 40); }
@@ -963,8 +962,8 @@ export class Checkpoints {
     this.pending = { why, label, at: g.time }; this.note(g, `request: ${why} (${label})`);
   }
   /** The autosave gate proper: null = an autosave may be written this frame, else why not (the panel line says). */
-  gate(g: Game): string | null {
-    if (!missionLive(g)) return 'not a live run';
+  gate(g: Game, live = g.view.live): string | null {
+    if (!live) return 'not a live run';
     if (!g.aiEnabled) return 'AI off';
     const hard = SAVETIMELINE.on && squadUp(g) ? canSnap(g) : canSave(g, false); if (hard) return hard;   // (a team on the floor: the save is kept in memory, and what a file refuses of hands and the air is in it)
     for (const x of g.guards) { if (x.state === 'dead') continue; if (x.state === 'alert' || x.state === 'search') return `${x.callsign} is ${x.state}`; if (x.awareness > CKPT.awareMax) return `${x.callsign} at awareness ${x.awareness.toFixed(2)}`; }
@@ -978,7 +977,7 @@ export class Checkpoints {
     if (m !== this.missionRef) { this.missionRef = m; this.stageRef = m.stage; this.runId = newRunId(); this.visited = new Set([roomHere(g)]); this.roomRef = roomHere(g); this.quietT = 0; this.pending = null; this.bodyFrom = null; this.dragRef = null; this.lastSaveT = -1e9; this.shelf.clear(); this.prime(g); this.hand = false; this.due = null; }   // (a save in memory is of ONE run: the objects it would be written back into are gone with it; and the run's base is taken — SAVETIMELINE.base)
     // what the keys asked for inside this step, now that the frame is whole: F5's save, and a bare Enter once down onto a save in memory
     if (this.due) { const key = this.due; this.due = null; this.hand = false; const why = this.loadMem(g, key); if (why) pageSay(`checkpoint: ${why}`); return; }
-    if (g.rails?.live) {   // a tutorial mission (rails.ts): its checkpoints are authored — the triggers below, the every-step request and the save by hand all stand down
+    if (g.view.lesson?.rails) {   // a tutorial mission (rails.ts): its checkpoints are authored — the triggers below, the every-step request and the save by hand all stand down
       this.pending = null; this.hand = false;
       if (this.authored) { const label = this.authored; this.authored = null;
         // (the level's program is stopped for the take and started again by the frame on the next tick, with this step's cue: a beat is a function half run, which
@@ -995,10 +994,12 @@ export class Checkpoints {
       else { const al = g.guards.find(x => x.state === 'alert' && (SAVETIMELINE.on ? hostileTo(x, 'player') : !x.unit)); const why = al ? `${al.callsign} alert ${(g.time - this.lastAuto.t).toFixed(0)} s after` : g.alarm.episode ? 'an alarm straight after' : pl.down ? 'down straight after' : null;   // (a mission's defenders are units too: under SAVETIMELINE the man who counts is one against him, not one who is no unit)
         if (why && (al || g.alarm.episode)) { this.markRegret(g, this.lastAuto.key, why); this.lastAuto = null; } }
     }
-    if (!missionLive(g)) { this.pending = null; return; }
+    // (no view yet, before a host's first start or under an audit: nothing is known of the run, and a request waits)
+    const V = g.view, live = V.live;
+    if (!live) { if (V !== NO_VIEW) this.pending = null; return; }
     if (!this.enabled) this.pending = null;
     // (1) the mission moved on
-    if (m.stage !== this.stageRef) { const was = this.stageRef; this.stageRef = m.stage; if (STAGE_RANK[m.stage] > STAGE_RANK[was] && m.stage !== 'done') { const W = quietWords(g); this.request(g, 'stage', m.stage === 'drive' ? (W ? `${W.place} reached` : 'server room reached') : m.stage === 'exfil' ? (W ? `${W.bare} taken` : 'the drive is out') : m.stage); } }   // (a quiet mission: the level's own words for its room and its thing — quiet.ts)
+    if (m.stage !== this.stageRef) { const was = this.stageRef; this.stageRef = m.stage; if (STAGE_RANK[m.stage] > STAGE_RANK[was] && m.stage !== 'done') { const W = V.quiet; this.request(g, 'stage', m.stage === 'drive' ? (W ? `${W.place} reached` : 'server room reached') : m.stage === 'exfil' ? (W ? `${W.bare} taken` : 'the drive is out') : m.stage); } }   // (a quiet mission: the level's own words for its room and its thing — quiet.ts)
     // (2) a room region entered for the first time this run
     const room = roomHere(g);
     if (this.roomRef === null) { this.roomRef = room; this.visited.add(room); }
@@ -1007,7 +1008,7 @@ export class Checkpoints {
     if (pl.dragging && pl.dragging !== this.dragRef) { this.dragRef = pl.dragging; const b = pl.dragging.char.ragdoll; this.bodyFrom = b ? [b.x[0], 0, b.x[2]] : v3.copy(pl.char.pos); }
     if (!pl.dragging && this.dragRef) { const body = this.dragRef as Guard; this.dragRef = null; const b = body.char.ragdoll; const at: Vec3 = b ? [b.x[0], 0, b.x[2]] : pl.char.pos; if (this.bodyFrom && v3.distXZ(at, this.bodyFrom) >= CKPT.bodyHideM) this.request(g, 'body', `${body.callsign}'s body moved`); this.bodyFrom = null; }
     // (4) quiet play: the clock runs while the gates would pass, and asks every quietSecs of it
-    const blocked = this.gate(g);
+    const blocked = this.gate(g, live);
     if (!blocked) { this.quietT += dt; if (this.quietT >= CKPT.quietSecs) { this.quietT = 0; this.request(g, 'quiet', `${CKPT.quietSecs} s undetected`); } }
     // the pending request against the gates
     const P = this.pending; if (!P) return;

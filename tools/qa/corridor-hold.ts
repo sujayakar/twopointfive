@@ -1,6 +1,6 @@
 // A HELD CORRIDOR — what the defenders do about a lane that has cost them (the maintainer, 10-11: "enemies do seem to run into held corridors a bit too
 // eagerly, especially when they've already taken fire. was pretty easy to just hold a hallway and pick them off").
-//   TPS_PROFILE=shipped bun run tools/qa/corridor-hold.ts [--scn block-four,block-squads] [--seeds 1-6] [--secs 150] [--level hard|standard]
+//   TPS_PROFILE=shipped bun run tools/qa/corridor-hold.ts [--scn block-four,compound-four] [--seeds 1-6] [--secs 150] [--level hard|standard]
 //                                                         [--set '{"LANES":{"on":false}}'] [--trace] [--json f] [--noise 12]
 //                                                         [--sam x,z --shoot [--leave S:x,z]]
 // One run: the mission staged as the page stages it, the team told to HOLD where it starts (every start of a squad level looks down an approach; `block-four`, rebuilt 10-13 as one stay-put squad a room, draws nobody to it), Sam
@@ -41,7 +41,7 @@ const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const argv = import.meta.main ? process.argv.slice(2) : [], flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 const FLAGS = ['--scn', '--seeds', '--secs', '--level', '--set', '--trace', '--json', '--noise', '--mem', '--near', '--quiet', '--nohit', '--sam', '--shoot', '--leave'];
 for (const a of argv) if (a.startsWith('--') && !FLAGS.includes(a)) { console.error(`unknown flag ${a} (${FLAGS.join(' ')})`); process.exit(2); }
-const scns = (flag('--scn') ?? 'block-four,block-squads').split(','), SECS = Number(flag('--secs') ?? 150), LEVEL = (flag('--level') ?? 'hard') as 'hard' | 'standard';
+const scns = (flag('--scn') ?? 'block-four,compound-four').split(','), SECS = Number(flag('--secs') ?? 150), LEVEL = (flag('--level') ?? 'hard') as 'hard' | 'standard';
 const seeds: number[] = []; for (const part of (flag('--seeds') ?? '1-4').split(',')) { const m = /^(\d+)(?:-(\d+))?$/.exec(part); if (!m) { console.error(`bad --seeds ${part}`); process.exit(2); } for (let s = +m[1]; s <= +(m[2] ?? m[1]); s++) seeds.push(s); }
 const SET = flag('--set') ? JSON.parse(flag('--set')!) as Record<string, Record<string, unknown>> : {}, TRACE = argv.includes('--trace'), NOHIT = argv.includes('--nohit'), QUIET = argv.includes('--quiet');
 const SAM = flag('--sam') ? flag('--sam')!.split(',').map(Number) as [number, number] : null, SHOOT = argv.includes('--shoot');

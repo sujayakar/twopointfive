@@ -155,7 +155,7 @@ const free = (g: Game): boolean => hands(g) && !shut(g);
  *  nothing that asks whether he could — the row's hint, the pose that tells — says he can. IT IS THE CLICK THAT IS TAKEN, NOT THE GRAB: the row's key
  *  still grabs a man he has walked up behind, with the stalk's own step in (`stalkKeyCan` asks `hands`), and where the click was the one way to a man
  *  the row is back (`stalkClickOnly`) */
-const shut = (g: Game): boolean => !!g.rails?.shuts('stalk');
+const shut = (g: Game): boolean => !!g.view.lesson?.rails?.stalkShut;
 /** the gate game.ts puts on a grab, so nothing is handed over that it would refuse: not folded by a blast, no hand on a breaker's lever */
 const able = (g: Game): boolean => !samStaggered(g) && !g.player.breakerMove;
 /** why this man cannot be stalked from `p` right now, or null when he can (`begin`: the stricter test a press must pass — the rear arc itself) */

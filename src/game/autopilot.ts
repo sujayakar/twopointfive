@@ -21,7 +21,7 @@
 // Nothing fits: the first choice is given all the same, so a man says why in the row's own words. It never throws a frag, never goes through a wall,
 // never sends a second element to a second door: those need the player's intent and are the menu's.
 //
-// THE PLAN IT SHOWS: a quick-key order's row in the order book is stamped `auto`, and floorplan.ts draws its men for `showSecs` where the menu's own
+// THE PLAN IT SHOWS: a quick-key order's row in the order book is stamped `auto`, and the plan (`view.plan`) draws its men for `showSecs` where the menu's own
 // order has PLAN.freshSecs — the player did not pick the entry, so he is given longer to read it. `replan`: the squad's own change of plan with nobody
 // asking (doortools.ts haltAt: a door found shut — they stop and stack on it) is drawn the same way (SquadOrders.shows; the module says so the frame it
 // re-assigns them). THE HUD'S B LINE (autoHint) is the squad's FIRST choice in the row's own words, asked every frame, so it runs no path search and

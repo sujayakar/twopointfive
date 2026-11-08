@@ -1,5 +1,5 @@
 // A teammate paces himself on the player (game/teampace.ts TEAMPACE.pacing; teamWalkOf, asked by teamCap for every leg a teammate's legs are capped on).
-//   bun run tools/qa/pacing-check.ts [--verbose]      (probes.ts pacing, in family squadorders)
+//   bun run tools/qa/pacing-check.ts [--verbose]      (probes.ts pacing, in family squadorders; PACING_BREAK=1 must FAIL)
 // From the maintainer's play on pass-four: the squad split for two wall charges, and the second pair "walk[ed] very slowly to it" — the team's flat walk,
 // four fifths of his own, 22 s over the 22 m from the start. His rule: "if you're walking with the squad but behind them, they slow down to let you
 // catch up (and match your speed when you're ahead of them?)" — "and then we remove the static 0.8 multiplier".
@@ -19,9 +19,10 @@
 import { ROOT } from './headless.ts';
 import { guarded, family } from './thresholdmenu-probes.ts';
 const { rig } = (await import('./outerwall-probes.ts')) as any;
+const { PACE } = await import(`${ROOT}/src/game/guards.ts`);
 const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
 const { WALLCHARGE, WALL_ORDER } = await import(`${ROOT}/src/game/wallcharge.ts`);
-const { TEAMPACE } = await import(`${ROOT}/src/game/teampace.ts`);
+const { TEAMPACE, teamCap } = await import(`${ROOT}/src/game/teampace.ts`);
 /** the flat share of the player's walk, off the table */
 const teamWalk = (g: any): number => g.tune.playerWalk * TEAMPACE.k;
 const VERBOSE = process.argv.includes('--verbose');

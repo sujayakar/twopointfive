@@ -16,6 +16,7 @@ pub fn tick_view(g: &Game, seat: &crate::seats::SeatRef) -> TickView {
     let me = &g.ch[g.pl[seat.player].ch];
     TickView {
         mission: crate::mission::objective(g, seat),
+        lesson: crate::lesson::lesson_view(g, seat),
         radio: crate::cues::radio_rows(g),
         bubbles: crate::cues::bubbles_view(g, seat),
         me: me.id,
@@ -26,11 +27,15 @@ pub fn tick_view(g: &Game, seat: &crate::seats::SeatRef) -> TickView {
         worn: worn_view(g),
         squad: crate::orders::squad_view(g, seat),
         corner: crate::doortools::door_tools_corner_notes(g, seat),
+        throws: throws_view(g, seat),
+        ring: ring_view(g, seat),
+        hand: hand_ring_view(g, seat),
+        empty: empty_view(g, seat),
+        plan: plan_view(g, seat),
+        live: crate::mission::mission_live(g),
+        quiet: crate::quiet::quiet_words(g).map(|q| QuietView { place: q.place, holder: q.holder, thing: q.thing, outs: q.outs, bare: q.bare }),
     }
 }
-
-/// does `tick_view` ask the box world for this seat: only a set charge of its own has a line to one (who would it catch), and then the copy of the boxes must stand
-pub fn asks_the_boxes(g: &Game, seat: &crate::seats::SeatRef) -> bool { !seat.door_tools.set.is_empty() || !seat.wall_charge.set.is_empty() }
 
 /// what the game itself has of a host's now: a seat's cursor and camera as its last step left them (the tick's own questions of the cursor)
 pub fn host_now(g: &Game, input: crate::ids::InputId, cam: crate::ids::CameraId, canvas: crate::host_hud::View) -> HostNow {

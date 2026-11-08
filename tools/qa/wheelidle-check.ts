@@ -16,6 +16,8 @@ import { standUp, ROOT } from './headless.ts';
 const { CMDRING, CMDRING_STATS } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
+const { applyKnobs, knobsSnapshot } = await import(`${ROOT}/src/game/journal.ts`);
+const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
 const BREAK = process.env.WHEELIDLE_BREAK === '1';
 /** the recording's scroll: [ticks after its first record, the wheel that tick] (0.37 s of a trackpad, 266 px in all) */
 const SCROLL: [number, number][] = [[0, -1], [2, -5], [3, -8], [4, -10], [5, -11], [6, -18], [7, -18], [8, -9], [9, -33], [10, -20], [11, -9], [13, -40], [14, -7], [16, -33], [17, -10], [18, -10], [19, -4], [20, -8], [21, -8], [22, -4]];
@@ -28,7 +30,7 @@ export async function wheelidleCheck(): Promise<boolean> {
   try {
     Object.assign(NIGHTBREACH, { squad: 4 });
     const W: any = await standUp(), g = W.game, O = g.orders, input = W.input, DT = 1 / 60;
-    if (!K.on) K.on = true;   // (a stand with no ring: the ring as it was built, up while its key is down)
+    const stood = !!K.wheelIdle, ringStood = !!K.on; if (!K.on) K.on = true;   // (a stand with no ring: the ring as it was built, up while its key is down)
     g.godMode = true; g.roomClear.start(3);
     const step = (n = 1) => { for (let i = 0; i < n; i++) W.step(DT); };
     step(120);
@@ -52,6 +54,21 @@ export async function wheelidleCheck(): Promise<boolean> {
       line(upA && typeof pace0 === 'number' && pace0 === pace1, '2. the scroll is not his walking pace either: his pace is as it was', `his pace ${pace0} → ${pace1}`);
       away(); const took = tap();
       line(took.length === team().length && team().length === 4 && O.who === 'all', '3. the ring put away and the key tapped: the order goes to all four', `the order went to ${took.length} of ${team().length} (${took.join(', ') || 'nobody'}) · who: ${O.who}`); }
+    // 4
+    home();
+    { const upB = up(), k = 2, man = O.squad()[k]; W.cursorAt([man.char.pos[0], man.char.pos[1], man.char.pos[2]]); step();
+      input.clicked |= 1; input.buttons |= 1; step(); input.buttons &= ~1; step(4); const his = O.who, seen = scroll(), after = O.who;
+       }
+    // 5
+    K.wheelIdle = false; home();
+    { const upC = up(), seen = scroll(); away(); const kept = O.who, took = tap(), path = seen.filter((w, i) => i === 0 || w !== seen[i - 1]);
+       }
+    home();
+    // 6
+    { K.wheelIdle = true; const snap = JSON.parse(JSON.stringify(knobsSnapshot(g))), old = JSON.parse(JSON.stringify(snap)); delete old.tables.CMDRING.wheelIdle;
+      applyKnobs(g, old); const before = K.wheelIdle; applyKnobs(g, snap); const on = K.wheelIdle;
+      const shipped = String(process.env.TPS_PROFILE ?? '') === 'shipped', row = FROZEN_HOLDS['CMDRING.wheelIdle'];
+       }
   } finally { knobsBack(knobs0); Object.assign(NIGHTBREACH, { squad: squad0 }); }
 
   console.log(fails ? `=== wheelidle-check: ${fails} FAIL ===` : '=== wheelidle-check: ALL PASS ===');

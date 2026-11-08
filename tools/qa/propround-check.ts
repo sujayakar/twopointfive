@@ -13,6 +13,7 @@ import { ROOT } from './headless.ts';
 import { guarded, family } from './thresholdmenu-probes.ts';
 const { rig } = (await import('./outerwall-probes.ts')) as any;
 const { propPenalty } = await import(`${ROOT}/src/game/orders.ts`);
+const VERBOSE = process.argv.includes('--verbose');
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 
 const CHAIR = [22.76, 0, 10.12], FROM = [22.55, 0, 9.04], FRONT = [23.25, 0, 10.9], BEYOND = [22.46, 0, 12.13];   // (where the replay had the chair and the man who walked through it; the floor in front of the door he was making for; the room beyond it)

@@ -17,6 +17,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT, standUp } from './headless.ts';
 const RM: any = await import(`${ROOT}/src/game/roomfight.ts`);
+const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);

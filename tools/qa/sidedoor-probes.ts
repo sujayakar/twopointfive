@@ -144,7 +144,7 @@ export const sidedoorFeet = guarded(async () => {
   verdict(!threw, 'nothing threw', threw || `${ran} runs of ${CASES.length} cases`);
   verdict(ok, 'from the server room every row is offered and taken; the entries end \'in\' with every man they sent across the frame line and nobody left in the opening; the charge is blown with nobody in its backblast; the threshold is held with nobody in until told; clear from outside stays outside', rows.join('\n    '));
   // from the manager's office: jamb floor on that face, and the keypad's lock is on it — the boot
-  { const R = await rig(3, { blind: ['server'] }); const { D } = R; const d = R.door(DOOR); R.empty('manager'); R.place(OFFICE);
+  { const R = await rig(3, { blind: ['server'] }); const { O, D } = R; const d = R.door(DOOR); R.empty('manager'); R.place(OFFICE);
     const lines: string[] = []; { const say = R.game.say.bind(R.game); R.game.say = (gd: any, text: string, ...r: any[]) => { lines.push(text); return say(gd, text, ...r); }; }
     const why = R.give('openClear', DOOR); R.step(2); const op = D.ops.find((o: any) => o.door === d); R.until(() => !D.ops.includes(op), 70); R.step(60);
     const sent = op ? [...op.pod.keys()] : [], kicked = !!op?.beats.some((b: any) => /kick/.test(b.what)) || d.lockBroken;

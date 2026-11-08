@@ -6445,15 +6445,11 @@
 "squad40::Squad40Stats.staged",
 "squad40::Squad40Stats.turned",
 "squad40::State.brought",
-"squad40::State.kept",
 "squad40::State.last",
 "squad40::State.noted",
 "squad40::State.rounds",
 "squad40::State.shown",
 "squad40::State.turns",
-"squad40::StateKeptValue.a",
-"squad40::StateKeptValue.key",
-"squad40::StateKeptValue.who",
 "squad40::StateShown.t",
 "squad40::StateShown.text",
 "squad40::Turn.at",
@@ -7849,19 +7845,19 @@
 },
 {
 "key": "OrderDef.can",
-"why": "its type holds what the bridge cannot read: Option<crate::orders::OrderCan>"
+"why": "the order's own function: the host asks the row (tools/blitz/ask.ts)"
 },
 {
 "key": "OrderDef.label",
-"why": "its type holds what the bridge cannot read: crate::orders::OrderLabel"
+"why": "the order's own function: the host asks the row (tools/blitz/ask.ts)"
 },
 {
 "key": "OrderDef.standsIn.when",
-"why": "its type holds what the bridge cannot read: crate::orders::OrderWhen"
+"why": "the order's own function: the host asks the row (tools/blitz/ask.ts)"
 },
 {
 "key": "OrderDef.valid",
-"why": "its type holds what the bridge cannot read: Option<crate::orders::OrderValid>"
+"why": "the order's own function: the host asks the row (tools/blitz/ask.ts)"
 },
 {
 "key": "OrderTarget.kind",
@@ -9177,7 +9173,15 @@
 "view::TickView.aim",
 "view::TickView.worn",
 "view::TickView.squad",
-"view::TickView.corner"
+"view::TickView.corner",
+"view::TickView.lesson",
+"view::TickView.throws",
+"view::TickView.ring",
+"view::TickView.hand",
+"view::TickView.empty",
+"view::TickView.plan",
+"view::TickView.live",
+"view::TickView.quiet"
 ],
 "pageTick": [
 "aim::AimState.bearing_rate",

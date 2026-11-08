@@ -77,3 +77,73 @@ fn a_fight_leaves_no_row_twice() {
         assert_eq!(twice(&rows), Vec::<String>::new(), "seed {s}: the table holds a row twice ({} rows; {})", rows.len(), p.roll());
     }
 }
+
+/// THE RULE: a digit is the first row's that has it. On a wall the fifth is the wall's own; the floor's own fifth row stays on the menu after it, the same row of the table, and
+/// opening the menu adds none.
+/// A FAILURE MEANS: a row is being copied to take its digit off (before: `silent` twice in the table, once with its digit and once without).
+#[test]
+fn a_walls_menu_copies_no_row() {
+    for s in SEEDS {
+        let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: s, ..Default::default() });
+        p.sam_unhurt();
+        p.run(0.1);
+        game::wallcharge::wall_charge_raise_carried(&mut p.g, 2.0);
+        p.sam_put([14.6, 15.2]);
+        p.run(0.5);
+        let (rows, menu) = (p.menu_rows(), p.menu());
+        assert_eq!(twice(&rows), Vec::<String>::new(), "seed {s}: the staging holds a row twice");
+        for _ in 0..2 {
+            let t = game::orders::squad_orders_target_at(&mut p.g, [12.06, 0.0, 13.78]);
+            assert!(matches!(&t, game::orders::OrderTarget::Floor(f) if f.wall.is_some()), "seed {s}: the staging is wrong: the point is on no wall");
+            let up: Vec<_> = game::orders::squad_orders_rows_for(&p.g, &game::seats::here(&p.g), &t, None, None);
+            let fifth: Vec<String> = up.iter().filter(|&&d| p.g.tab.orders_order_def[d].key == Some(5.0)).map(|&d| p.g.tab.orders_order_def[d].id.clone()).collect();
+            assert!(fifth.len() > 1 && fifth[0].starts_with("wall"), "seed {s}: the rows with the fifth digit: {fifth:?}, the wall's first");
+            for d in &up { assert!(p.g.orders.defs.contains(d), "seed {s}: a row of the wall's menu is no row of the squad's"); }
+            p.run(0.3);
+        }
+        assert_eq!((p.menu_rows(), p.menu()), (rows, menu), "seed {s}: opening a wall's menu changed the table");
+    }
+}
+
+/// THE RULE: the quick key's words on the panel are the row its press gives, for what that seat's cursor is on; none while a menu is up.
+/// A FAILURE MEANS: the panel and the press have gone back to asking apart.
+#[test]
+fn the_quick_keys_words_are_the_order_it_gives() {
+    for s in SEEDS {
+        let mut p = yard(s);
+        p.run(1.0);
+        let (mut said, mut none) = (Vec::new(), 0);
+        for at in [[13.4, 16.0], [21.4, 16.0], [16.0, 24.0], [20.0, 22.0]] {
+            p.point_at(at);
+            p.run(0.2);
+            let Some(words) = p.g.orders.shown.quick.clone() else { none += 1; continue };
+            let n = p.g.orders.log.len();
+            let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
+            game::orders::squad_orders_quick_give(&mut p.g, &t);
+            assert!(p.g.orders.log.len() > n, "seed {s}: '{words}' is on the panel at {at:?} and the key gives nothing");
+            let id = p.g.orders.log.last().unwrap().order.clone();
+            let d = p.g.orders.defs.iter().copied().find(|&d| p.g.tab.orders_order_def[d].id == id).unwrap();
+            let row = game::orders::squad_orders_label_of(&mut p.g, d, &t);
+            assert_eq!(row, words, "seed {s}: the panel says '{words}' and the key gave '{id}'");
+            said.push(words);
+        }
+        assert!(said.len() >= 3, "seed {s}: the panel said {said:?}, and nothing on {none} of four");
+        let t = game::orders::squad_orders_target_at(&mut p.g, [16.0, 0.0, 24.0]);
+        game::orders::squad_orders_open(&mut p.g, Some(&t), None, None);
+        p.run(0.1);
+        assert_eq!(p.g.orders.shown.quick, None, "seed {s}: a menu is up");
+    }
+}
+
+/// THE RULE: two players' panels are two: each seat keeps the words for its own cursor, whichever seat stands.
+#[test]
+fn each_seat_keeps_its_own_quick_words() {
+    for s in SEEDS {
+        let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: s, seats: 2, ..Default::default() });
+        p.run(1.0);
+        let (a, b) = (p.g.seats[0], p.g.seats[1]);
+        let g = &*p.g;
+        let (sa, sb) = (game::seats::seat(g, a).orders.shown.clone(), game::seats::seat(g, b).orders.shown.clone());
+        assert!(sa.quick.is_some() && sb.quick.is_some(), "seed {s}: {sa:?} and {sb:?}");
+    }
+}

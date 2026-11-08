@@ -155,6 +155,12 @@ export function keysBoot(q: URLSearchParams) {
   KEYMAP.on = q.get('keybinds') !== '0'; KEYMAP.qFree = q.get('qfree') !== '0'; KEYMAP.qCmd = !q.has('bkey'); KEYMAP.setFree = q.get('slotsetup') !== '0'; KEYMAP.camSpace = q.get('camspace') !== '0'; KEYMAP.pinchOnly = q.get('pinchonly') !== '0'; KEYMAP.qOnly = q.get('qonly') !== '0' && q.get('qring') !== '0'; KEYMAP.letGo = q.get('menuletters') !== '0';
   try { const v = JSON.parse((globalThis as any).localStorage?.getItem(LS) ?? 'null'); if (v && typeof v === 'object') adopt(v); } catch { /* no store */ }
 }
+/** A PAGE THAT PLAYS THE GAME: the keys as its rules have them (empty hands a slot, his own actions a ring, a gun's key its setup, the orders all on their ring), and the wall hold's row with
+ *  no key while walking into a wall takes it */
+export function gameKeysBoot(q: URLSearchParams, walkIn: () => boolean) {
+  KEYMAP.slotWhen = KEYMAP.handWhen = KEYMAP.setWhen = KEYMAP.onlyWhen = () => true; KEYMAP.throwWhen = () => false; KEYMAP.freeWhen = walkIn;
+  keysBoot(q);
+}
 /** take a kept table: only what is whole is taken (a row we have, a key that may be one, no key twice); anything else leaves that row as built */
 function adopt(v: Record<string, unknown>) {
   bound.clear(); const taken = new Set<string>();
@@ -248,15 +254,20 @@ export function actOfCap(cap: string): KeyAct | null { return byCap.get(cap.toLo
 export function keyCap(cap: string): string { fresh(); if (!map) return cap; const a = byCap.get(cap.toLowerCase()); if (!a || same(keysNow(a), a.codes)) return cap; const now = capNow(a.id); return cap === cap.toUpperCase() && cap !== cap.toLowerCase() ? now.toUpperCase() : now; }
 /** THE HIDDEN TEXT BOX IS NO FIELD. In somebody else's frame (the playable artifact) game/input.ts keeps the keys in a text box nobody sees, told by this
  *  label; a key aimed at it is a key of the game's. `typedInto` is the test a key's listener makes of its target: an input, a select, a text area or
- *  editable text he types in, and never that box (game/input.ts's own `typingTarget`, for a listener that cannot see its box). (host/findme.ts and replay/engineplay.ts spell the same test themselves.) */
+ *  editable text he types in, and never that box (game/input.ts's own `typingTarget`, for a listener that cannot see its box). (replay/engineplay.ts spells the same test itself.) */
 export const SINK_LABEL = 'game input';
 export function typedInto(t: EventTarget | null): boolean { const el = t as { tagName?: string; isContentEditable?: boolean; getAttribute?(k: string): string | null } | null; return !!el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName ?? '') && el.getAttribute?.('aria-label') !== SINK_LABEL || !!el.isContentEditable); }
-/** THE CAMERA'S KEY (game/input.ts: held, the mouse turns the view and the wheel zooms; host/findme.ts: tapped twice): the Space bar while the board leaves
+/** THE CAMERA'S KEY (game/input.ts: held, the mouse turns the view and the wheel zooms): the Space bar while the board leaves
  *  it spare — his own actions are a ring on E (`HAND_SLOT`) and he put no row on Space himself — else null: it is Ctrl, as it always was. It is no row: it
  *  cannot be moved, and its cap is drawn plain (a line of words that says Space means the action's key, wherever that is) */
 export const camKey = (): string | null => KEYMAP.camSpace && gameCode('Space') === '' ? 'Space' : null;
 /** …and its name on a list of keys */
 export const camCap = (): string => camKey() ? 'Space' : 'Ctrl';
+/** a line with its keys by their codes in brackets, as the Rust game words a lesson's, each key as it is bound now through `key` and the words between through
+ *  `word`. A key's name never goes through keyText: "Space" read as words is the action's key, and the camera's key is the Space bar */
+export const keysInLine = (line: string, key: (cap: string) => string, word: (t: string) => string): string => line.split(/(\[[^\]]+\])/).map(t => !/^\[[^\]]+\]$/.test(t) ? word(t) : t === '[X]' && KEYMAP.qOnly ? `Hold ${key(keyCap('B'))}` : key(t === '[Ctrl]' ? camCap() : keyCap(t.slice(1, -1)))).join('');
+/** …as plain words (the objective's row and Tab's card) */
+export const capsPlain = (s: string): string => keysInLine(s, c => c, t => keyText(t));
 /** a line of words with the keys it names as they are bound now. `all` = the line is a list of keys (the Controls list's key column): the walk keys and the
  *  digits are keys there too. Handed back untouched, the same string, while nothing is rebound */
 export function keyText(s: string, all = false): string {

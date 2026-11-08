@@ -1,8 +1,5 @@
 // THE LOAD BRIEF (src/ui/loadbrief.ts, LOADBRIEF): what a mission's page shows while it loads, held headless.
 //   bun run tools/qa/probes.ts loadbrief          (or this file; LOADBRIEF_BREAK=1 must FAIL — the switch is left down where the check raises it)
-//   words    every row of the mission list, Training lessons and the solo night with it: the address the list gives the row reads back as THAT row's brief —
-//            its id, title, place and one line, the heading it sits under, the team as the row stages it; a row deployed at another size is still that row,
-//            with the team as deployed; a plain address, the old cards' address and a combination no row is on have no brief
 //   screen   the brief on a fake DOM: with the switch off there is none; on, it is up at once with the mission's words and Start / Controls / Back and no
 //            list of keys; the boot's status line fills the block by its 'N / M'; a press while it boots is kept and the run starts the moment it is live,
 //            once; live and unpressed it holds, then Enter starts it, once; a key of the game's pressed under it is not passed on; Esc is a page load of the
@@ -40,31 +37,16 @@ export async function loadbriefCheck(): Promise<boolean> {
   let fails = 0;
   const line = (ok: boolean, text: string) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${text}`); };
   // (imported with no window in the room, as every other headless tool imports them: a module that reads `window` once at its load reads the harness's answer)
-  const { LOADBRIEF, loadBrief, briefOfQuery } = await import(`${ROOT}/src/ui/loadbrief.ts`);
-  const { missionList, missionHref, teamWordsOf } = await import(`${ROOT}/src/ui/missions.ts`);
-  const { MISSION_GROUPS } = await import(`${ROOT}/src/scene/scenarios.ts`);
+  const { LOADBRIEF, loadBrief } = await import(`${ROOT}/src/ui/loadbrief.ts`);
+  const { setDesk } = await import(`${ROOT}/src/view/desk.ts`);
   const { quitSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+  // (what the brief says of an address is the module's: rust/game_run/tests/desk.rs. Here a desk stood in says it, for the depot's four and the solo night)
+  const said = (search: string) => { const q = new URLSearchParams(search), depot = q.get('levelFile') === 'depot.json'; return { id: depot ? 'depot-four' : q.has('solo') ? 'solo-night' : '', title: depot ? 'The depot' : 'Solo night', kind: depot ? 'roomclear' : 'solo', groupTitle: 'Raids', place: 'The depot', blurb: 'The job in one line.', leanWords: 'loud', team: 'you + four', level: depot ? 'depot.json' : 'office.json', scene: '', teaches: [], way: q.get('way') === '2' ? 2 : 0 }; };
+  setDesk({ brief: said, leave: quitSearch } as any);
+  LOADBRIEF.options = { open() { }, close() { }, up: () => false };   // (the options layer is the page's to hand over)
   const { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`);
   const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
   const was = LOADBRIEF.on;
-
-  // ---- words
-  { const list = missionList(), bad: string[] = [];
-    for (const m of list) {
-      const W = briefOfQuery(missionHref(m, '')); const head = MISSION_GROUPS.find((g: any) => g.id === m.group)?.title;
-      if (!W || W.mission.id !== m.id || W.mission.title !== m.title || W.mission.place !== m.place || W.mission.blurb !== m.blurb || !m.blurb || !m.place || !head || W.group !== head || W.team !== teamWordsOf(m)) bad.push(`${m.id} → ${W ? W.mission.id : 'none'}`);
-    }
-    const kinds = new Set(list.map((m: any) => m.scenario?.kind ?? 'solo')), lessons = list.filter((m: any) => m.group === 'tutorial').length;
-    line(!bad.length && list.length >= 30 && kinds.size === 5 && lessons >= 5, `words: each of the list's ${list.length} rows (${[...kinds].join(', ')}; ${lessons} tutorial missions) reads back from its own address as its own brief — title, place, its line, its heading, its team${bad.length ? ` — NOT: ${bad.slice(0, 5).join(' · ')}` : ''}`);
-    const at = (q: string) => briefOfQuery(q);
-    const two = at('?levelFile=depot.json&roomclear&squad=2'), keep = at('?levelFile=depot.json&roomclear&squad4&mute&quality=low&seed=7');
-    line(two?.mission.id === 'depot-four' && two.team === teamWordsOf({ squad: 2 }) && keep?.mission.id === 'depot-four' && keep.team === teamWordsOf({ squad: 4 }),
-      `words: a row deployed at another size is still that row, with the team as deployed (${two?.mission.id}, ${two?.team}); a visitor's own flags change nothing`);
-    line(at('') === null && at('?quality=low&mute') === null && at('?levelFile=no-such-level.json&roomclear') === null && at('?solo')?.mission.id === 'solo-night' && at('?solo&levelFile=depot.json&roomclear')?.mission.id !== 'solo-night',
-      'words: a plain address, the old cards\' and a level no row is on have no brief; ?solo alone is the solo night');
-    line(at('?level=relief&roomclear&squad4') === null && at('?level=relief&nightbreach') === null && at('?level=relief&solo') === null && at('?nightbreach')?.mission.id === 'night-breach',
-      'words: a level the address picks by ?level= (the office as it was) has no brief — the list\'s words are not said over another level');
-  }
 
   // ---- screen
   const G = globalThis as any, saved: Record<string, PropertyDescriptor | undefined> = {};
@@ -87,7 +69,7 @@ export async function loadbriefCheck(): Promise<boolean> {
     // (1) pressed while it boots
     let started = 0; const B1 = loadBrief(Q), root1 = doc.getElementById('brief');
     const text = root1?.textContent ?? '', go1 = root1?.find(cls('bgo')) ?? null, fill = go1?.find(e => e.tag === 'I') ?? null;
-    line(!!B1 && !!root1 && root1.parent === app && cls('on')(root1) && root1.getAttribute('data-mission') === 'depot-four' && /The depot/.test(text) && text.includes(B1.words.mission.place) && text.includes(B1.words.mission.blurb) && /Start/.test(text) && /Controls/.test(text) && /Back/.test(text)
+    line(!!B1 && !!root1 && root1.parent === app && cls('on')(root1) && root1.getAttribute('data-mission') === 'depot-four' && /The depot/.test(text) && text.includes(B1.words.place) && text.includes(B1.words.blurb) && /Start/.test(text) && /Controls/.test(text) && /Back/.test(text)
       && !root1.find(cls('controls')) && !/W A S D|Shift sprint/.test(text) && !!doc.getElementById('brief-style') && winL.filter(l => l.ev === 'keydown').length === 1,
       'screen: on, the brief is up at once in a layer of its own — the mission\'s title, place and line, Start, Controls, Back — and no list of keys');
     B1?.status('compiling shaders 40 / 97 …'); const w40 = fill?.style.width, s40 = root1?.find(cls('bstatus'))?.textContent; B1?.status('97 shaders ready — setting up'); const w100 = fill?.style.width;
@@ -146,7 +128,7 @@ export async function loadbriefCheck(): Promise<boolean> {
   { const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
     const flag = /LOADBRIEF\.on = q\.get\('loadbrief'\) !== '0';/.test(main);
     const made = /const brief = [^\n;]*q\.has\('paused'\)[^\n;]*\? null : loadBrief\(location\.search\);/.test(main) && /const card = brief \?\? bootCard\(\)/.test(main);
-    const go = /b\.live\(/.test(main) && /brief && briefGo\) briefSettle\(brief\)/.test(main) && /const briefGo = [^\n;]*!automated/.test(main);
+    const go = /startWaits\(b, /.test(main) && /brief && briefGo\) briefSettle\(brief\)/.test(main) && /const briefGo = [^\n;]*!automated/.test(main);
     const hold = /frozen: \(\) => \([^\n]*briefHolds\(\)/.test(main) && /const briefHolds = [^\n]*automated \|\| scripted[^\n]*brief\.off\(\)/.test(main);
     line(flag && made && go && hold, `wiring: main.ts still has the brief's places after whatever was merged round them — the switch by its URL flag, a brief only for a page somebody sits at, the world held behind a live one, dropped for a script (${[flag, made, go, hold].map(x => x ? 'y' : 'N').join('')})`);
   }

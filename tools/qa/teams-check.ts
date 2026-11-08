@@ -1,4 +1,4 @@
-// TWO PLAYERS, TWO TEAMS TO THE EYE (game/seats.ts seatTone, playerName; ui/findme.ts findMeOutline; ui/planfloor.ts plansToDraw; game/verdict.ts): in a game
+// TWO PLAYERS, TWO TEAMS TO THE EYE (game/seats.ts seatTone, playerName; ui/findmeviz.ts findMeOutline; ui/planfloor.ts plansToDraw; game/verdict.ts): in a game
 // of two seats, does each player's page show the WHOLE team — every man rimmed, in the colour that says whose he is, the same on both screens — the other
 // player's squad's plan on the floor, fainter than its own, and the two players told apart by number? The maintainer, 11-03, from his first game of two:
 // "no outlines for the other player character (maybe we should have yellow + red team and then purple + blue team)", "seeing your teammates squad path
@@ -35,7 +35,7 @@ const { stateHash } = await import(`${ROOT}/src/game/rollback.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const SE = await import(`${ROOT}/src/game/seats.ts`) as typeof import('../../src/game/seats.ts');
 const F = await import(`${ROOT}/src/host/findme.ts`) as typeof import('../../src/host/findme.ts');
-const { findMeOutline } = await import(`${ROOT}/src/ui/findme.ts`) as typeof import('../../src/ui/findme.ts');
+const { findMeOutline } = await import(`${ROOT}/src/ui/findmeviz.ts`) as typeof import('../../src/ui/findmeviz.ts');
 const { makeOutlineFrame } = await import(`${ROOT}/src/render/outline.ts`) as typeof import('../../src/render/outline.ts');
 const PF = await import(`${ROOT}/src/ui/planfloor.ts`) as typeof import('../../src/ui/planfloor.ts');
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`) as typeof import('../../src/game/doortools.ts');
@@ -100,10 +100,10 @@ try {
   // ---- plans · faint
   // (a floor spot some way off that the seat's own order book takes: the first one it does not refuse)
   const send = (v: any): string => { const O = v.orders, s = v.player.char.pos; let why = 'no floor found';
-    for (let d = 6; d <= 12; d += 2) for (let k = 0; k < 16; k++) { const y = k * Math.PI / 8, p = [s[0] + Math.sin(y) * d + 0.25, 0, s[2] + Math.cos(y) * d + 0.25], t = O.targetAt(p); if (t.kind !== 'floor') continue; why = O.give('move', t, 'all') || ''; if (!why) return ''; }
+    for (let d = 6; d <= 12; d += 2) for (let k = 0; k < 16; k++) { const y = k * Math.PI / 8, p = [s[0] + Math.sin(y) * d + 0.25, 0, s[2] + Math.cos(y) * d + 0.25], t = O.targetAt(p); if (t.kind !== 'floor') continue; why = g.rustHost.asks.give(O, 'move', t, 'all') || ''; if (!why) return ''; }
     return why; };
   const why1 = send(v1); for (let i = 0; i < 6; i++) W.step(DT);
-  const mine = (v: any) => new Set(v.orders.squad().map((gd: any) => gd.char.id)), ids = (P: any) => (P.men as any[]).map(m => m.gd.char.id);
+  const mine = (v: any) => new Set(v.orders.squad().map((gd: any) => gd.char.id)), ids = (P: any) => (P.men as any[]).map(m => m.man);
   show(0); const L0 = PF.plansToDraw(g), own0 = L0[0], oth0 = L0[1], seen0 = drawn(g);
   show(1); const L1 = PF.plansToDraw(g), own1 = L1[0], oth1 = L1[1], seen1 = drawn(g);
   const his = mine(v1), listed = oth0 ? ids(oth0.P) : [], walked = oth0 ? (oth0.P.men as any[]).filter(m => m.path.length > 1).length : 0, tones = oth0 ? (oth0.P.men as any[]).map(m => m.tone) : [];
@@ -130,12 +130,12 @@ try {
     let w0 = 'no door', w1 = 'no door', at: any = null;
     for (const x of door) { w0 = v0.orders.give('stack', x.t, 'all') || ''; if (w0) continue; w1 = v1.orders.give('stack', v1.orders.targetAt(x.d.frameCentre), 'all') || ''; at = x.d; break; }
     let both2 = false, n0 = -1, n1 = -1, keyed = false, bare = false;
-    const lists = (v: any) => (FP.floorPlan(v).doors as any[]).some(d => d.door === at);
-    for (let i = 0; i < 60 * 25 && !both2; i++) { W.step(DT); if (i % 20 === 19) both2 = lists(v0) && lists(v1); }
-    if (both2) { show(0); const L = PF.plansToDraw(g), all2 = L.flatMap(x => x.P.doors).filter((d: any) => d.door === at); n0 = all2.length; keyed = L[0].P.doors.some((d: any) => d.door === at && !!d.key);
+    const lists = (k: number) => { show(k); return (g.view.plan?.own.doors ?? []).some((d: any) => d.door === at.def.name); };
+    for (let i = 0; i < 60 * 25 && !both2; i++) { W.step(DT); if (i % 20 === 19) both2 = lists(0) && lists(1); }
+    if (both2) { show(0); const L = PF.plansToDraw(g), all2 = L.flatMap(x => x.P.doors).filter((d: any) => d.door === at.def.name); n0 = all2.length; keyed = L[0].P.doors.some((d: any) => d.door === at.def.name && !!d.key);
       // …and a wait that is another's alone: the first seat's men called off, the second's still on the door
       v0.orders.give('fallIn', v0.orders.targetAt(p0.char.pos), 'all'); for (let i = 0; i < 90; i++) W.step(DT);
-      const M = PF.plansToDraw(g), theirs = (M[1]?.P.doors ?? []).filter((d: any) => d.door === at); n1 = M.flatMap(x => x.P.doors).filter((d: any) => d.door === at).length; bare = theirs.length === 1 && theirs[0].key === null && theirs[0].now === false; }
+      const M = PF.plansToDraw(g), theirs = (M[1]?.P.doors ?? []).filter((d: any) => d.door === at.def.name); n1 = M.flatMap(x => x.P.doors).filter((d: any) => d.door === at.def.name).length; bare = theirs.length === 1 && theirs[0].key === null && theirs[0].now === false; }
     say(two && both2 && n0 === 1 && keyed && n1 === 1 && bare, 'once: a door both squads wait on is on a page once, as its own with the key; another\'s alone has no key',
       `stack on one door: ${w0 || 'given'}, ${w1 || 'given'} · both plans list it ${both2} · on the first seat's page ${n0} time${n0 === 1 ? '' : 's'}, with its key ${keyed} · the first seat's men called off: ${n1} time${n1 === 1 ? '' : 's'}, as another's with no key ${bare}`); DOORTOOLS.wordSmall = small0; }
 
@@ -176,7 +176,8 @@ try {
   // (the orders given above are the game's own and move its word: what is held is the asking — every way this file asks, from both seats, with plans up)
   const ask = () => { findMeOutline(makeOutlineFrame(), g); PF.plansToDraw(g); drawn(g); };
   send(v0); send(v1); for (let i = 0; i < 6; i++) W.step(DT);
-  dark(); show(0); const h0 = stateHash(g); show(1); ask(); show(0); ask(); const h1 = stateHash(g);
+  const rustWords = (): string => JSON.stringify((g as any).stateWords().parts);   // (the game's state is the Rust game's: the puppet's own hash moves with what it was last sent)
+  dark(); show(0); const h0 = rustWords(); show(1); ask(); show(0); ask(); const h1 = rustWords();
   say(h0 === h1 && typeof h0 === 'string' && h0.length > 0, 'pure: rims filled, plans listed and the overlay drawn from both seats leave the game\'s state word where it was', `${h0 === h1 ? 'equal' : 'MOVED'}`);
 } finally { F.FINDTUNED.on = tuned; F.findMeStarts(); Object.assign(F.FINDME, found); PLAN.on = plan0.on; PLAN.menuOnly = plan0.menuOnly; PLAN.others = plan0.others; TONES.length = 0; TONES.push(...tones0); }
 console.log(all ? '\nteams: ALL PASS' : '\nteams: FAIL');

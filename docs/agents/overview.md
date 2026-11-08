@@ -243,7 +243,7 @@ Wherever this file still says 'the native host / overlay / engine', '.metal' or 
   (the rows of the boxes there are, the tables behind them, the cut rows of the boxes that are cut or round, the visible words, every other buffer as far as it was
   last written); `RELIST_BREAK=1` hands every 7th drawn tick the list alone and must fail. ALL PASS on `mousehole-four`, `hostage-rescue`, `block-squads`, `compound-four`,
   `pass-four` (seed 1 each) on the shipped stand and on the first two on the frozen one; the red path fails both of its runs. The checks that model the page's loop
-  (`fixedstep-check`, `tween-check`, `autocam-check`, `findme-check`, `tabback`) list between ticks as the page does and pass; `replayfog-check` passes on the fog's
+  (`fixedstep-check`, `tween-check`, `findme-check`, `tabback`) list between ticks as the page does and pass; `replayfog-check` passes on the fog's
   hand-back.
   Measured at a net tick's cadence (`tickcost.ts --each`, the list made after EVERY update; with `--list`, by relist), 38 634 ticks, each pair the same run to the
   bit, against the build before any of it: under bun the list 0.68 → 0.03 ms and the whole tick (update + list) 4.05 → 3.31 ms

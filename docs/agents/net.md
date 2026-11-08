@@ -390,7 +390,7 @@ line).
   looked at. OPEN: a seat claimed at the door is held until the game is over (no `games:leave`: a friend who opens the link and closes the tab keeps
   the seat, and only that tab can come back to it); a restart is still either player's record; a full game's address pasted into a third tab watches,
   as any keyless `?net=` address does; the scenario's 400 characters need the control plane's functions deployed again.
-- **Two players, two teams to the eye** (2026-11-03; `src/game/seats.ts seatTone` / `playerName`, `src/ui/findme.ts findMeOutline`, `src/game/floorplan.ts
+- **Two players, two teams to the eye** (2026-11-03; `src/game/seats.ts seatTone` / `playerName`, `src/ui/findmeviz.ts findMeOutline`, `src/game/floorplan.ts
   PlanFor` / `PLAN.others`, `src/ui/planfloor.ts plansToDraw`, `src/game/verdict.ts roster`, `src/game/deathrecap.ts manOf`). The maintainer, from the
   first game of two anybody played (two windows, his own GPU): "works on my m4! overall looks great. no outlines for the other player character (maybe
   we should have yellow + red team and then purple + blue team)", "seeing your teammates squad path overlays (but probably fainter than yours) would be

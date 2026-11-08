@@ -26,7 +26,7 @@ const ext = (b: { h: Vec3; yaw: number }): [number, number] => { const ac = Math
  *  stages its scenario. The one list: export.ts dresses by it, tools/qa/loudchaos-probes.ts checks by it. */
 export const LOUD_LEVELS: { gen: string; file: string; q: string }[] = [
   { gen: 'records', file: 'records.json', q: 'roomclear=1' }, { gen: 'depot', file: 'depot.json', q: 'roomclear=1&squad4' }, { gen: 'block', file: 'block.json', q: 'roomclear=1&squad4' },
-  { gen: 'blocksquads', file: 'block-squads.json', q: 'roomclear=1&squad4' }, { gen: 'warehouse', file: 'warehouse.json', q: 'roomclear=1&squad4' }, { gen: 'compound', file: 'compound.json', q: 'roomclear=1&squad4' },
+  { gen: 'warehouse', file: 'warehouse.json', q: 'roomclear=1&squad4' }, { gen: 'compound', file: 'compound.json', q: 'roomclear=1&squad4' },
   { gen: 'barracks', file: 'barracks.json', q: 'roomclear=1&squad4' }, { gen: 'registry', file: 'registry.json', q: 'rescue' },
   { gen: 'consulate', file: 'consulate.json', q: 'rescue&squad=4' },
 ];

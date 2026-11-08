@@ -492,30 +492,6 @@ impl StateKeptValue {
 }
 impl Default for StateKeptValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SquadThrowKept, src/game/squadthrow.ts:138)
-#[derive(Clone, Debug)]
-pub struct SquadThrowKept {
-    pub kept: JsMap<String, crate::squadthrow::StateKeptValue>,
-    pub caught: Option<crate::squadthrow::StateCaught>,
-    pub scratch: Option<crate::squadthrow::Scratch>,
-    pub col: crate::scene_collision::AsideOwn,
-    pub orders: crate::orders::SquadOrdersAskAsideOwn,
-    pub duck: Option<crate::squadthrow::SquadThrowKeptDuck>,
-}
-impl SquadThrowKept {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadThrowKept {
-            kept: JsMap::new(),
-            caught: None,
-            scratch: None,
-            col: crate::scene_collision::AsideOwn::zeroed(),
-            orders: crate::orders::SquadOrdersAskAsideOwn::zeroed(),
-            duck: None,
-        }
-    }
-}
-impl Default for SquadThrowKept { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at quiet SquadThrowKept.col, src/game/squadthrow.ts:138)
 #[derive(Clone, Copy, Debug)]
@@ -666,32 +642,6 @@ impl LobLim {
 }
 impl Default for LobLim { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SquadThrowPlan, src/game/squadthrow.ts:518)
-#[derive(Clone, Debug)]
-pub struct SquadThrowPlan {
-    pub gd: GuardId,
-    pub from: V3,
-    pub points: Vec<V3>,
-    pub land: V3,
-    pub kind: crate::squadthrow::SquadThrowKind,
-    pub preview: Option<bool>,
-    pub walk: Option<Vec<V3>>,
-}
-impl SquadThrowPlan {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadThrowPlan {
-            gd: GuardId(0),
-            from: [0.0; 3],
-            points: Vec::new(),
-            land: [0.0; 3],
-            kind: crate::squadthrow::SquadThrowKind::Frag,
-            preview: None,
-            walk: None,
-        }
-    }
-}
-impl Default for SquadThrowPlan { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/squadthrow.ts:159 SQUADTHROW_LOG, src/game/squadthrow.ts:159)
 #[derive(Clone, Debug)]

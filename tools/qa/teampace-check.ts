@@ -11,7 +11,7 @@ import { guarded, family } from './thresholdmenu-probes.ts';
 const { rig } = (await import('./outerwall-probes.ts')) as any;
 const { TEAMPACE, TEAMPACE_STATS } = await import(`${ROOT}/src/game/teampace.ts`);
 const { loadPaceOn } = await import(`${ROOT}/src/game/kitload.ts`);
-const SCN = 'room-clear-four';
+const VERBOSE = process.argv.includes('--verbose'), SCN = 'room-clear-four';
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : '—');
 /** the scenario stood up with the other side far off the floor, the four fallen in on the player where the scenario put him */
@@ -38,6 +38,7 @@ async function stand() {
   const card = (m: any) => loadPaceOn(g, m) as number;
   return { R, g, home, far, len, go, card, men: () => R.up as any[] };
 }
+type Stand = Awaited<ReturnType<typeof stand>>;
 
 export const teampaceCheck = guarded(async () => {
   const F = family('teampace: teammates are slower than the player, and run only for a reason');
