@@ -40,7 +40,7 @@
 //             (doors.ts Door.pos), leaves swinging: a read between two ticks writes nothing of the game either
 //   refuses   a mission written round one commander (the hostage rescue) refuses a game of two, in words
 // NOT HELD HERE ANY MORE (2026-11-07): the count of asks of the Game for "the player" inside a tick (the TypeScript tick's, gone with it). The three
-// kinds of fault a game of two had (docs/agents/net.md, the known seat faults) are the Rust game's to hold: tools/blitz/coop-check.ts.
+// kinds of fault a game of two had (docs/agents/net.md, the known seat faults) are the Rust game's to hold: rust/game_start/tests/coop.rs.
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { SEAT_ASKS, SEAT_TABLES, men, seatsOfSearch } = await import(`${ROOT}/src/game/seats.ts`);

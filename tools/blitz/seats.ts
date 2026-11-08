@@ -4,7 +4,7 @@
 //   bun run --preload ./tools/blitz/expose.ts tools/blitz/seats.ts <two-roomclear|two-nightbreach|two-compound>:<seed> --out DIR [--ticks N] [--keep "…"] [--every N] [--open "…"] [--asks]
 // Run by run.sh for a name `two-*`. The games (seats-run.ts's own): two-roomclear = `roomclear&squad4` on the page's floor (40 s), two-nightbreach =
 // `nightbreach` (30 s), two-compound = `roomclear&squad4` on levels/compound.json (30 s).
-// THE CO-OP CHECK'S GAMES (coop-check.ts reads what they leave; blitz/coop-needs.md, needs 12 and 13):
+// THREE GAMES FOR TWO RULES (blitz/coop-needs.md, needs 12 and 13; rust/game_start/tests/coop.rs holds them now):
 //   two-lock0 | two-lock1   the page's floor, the hands idle: that seat's pair is given `stack` on the locked server door before tick 2 and `openClear` before
 //                           tick 961, through the seat's own order book (a line of gives.txt ending `seat<N>`, which the runner gives as that seat)
 //   two-full                the room clear on the barracks, 17 men as stood up, the scripted fight for 120 s. THE TYPESCRIPT'S PICTURE IS GIVEN ROOM here, a
