@@ -1,7 +1,8 @@
-// WHAT THE NEW PAGE DRAWS OF THE AIR, THE WIND AND THE FIRES IS WHAT THE COPY OF THE GAME DREW. One Rust game under the headless host; on one tick both sides answer, and the numbers
-// are compared: the fires' records, the wind's lists, the air's map. It goes when the TypeScript copy does: it is how the two are held together while both stand.
+// WHAT THE NEW PAGE DRAWS OF THE WEATHER, THE AIR AND THE FIRES IS WHAT THE COPY OF THE GAME DREW. One Rust game under the headless host; on one tick both sides answer, and the numbers
+// are compared: the fires' records, the wind's lists, the air's map, what is outdoors and the drip lines. It goes when the TypeScript copy does: it is how the two are held together while both stand.
 //   TPS_PROFILE=shipped tools/blitz/rust.sh rust bun run tools/draw/weather-check.ts [--ticks N] [level[:query]…]
-// (The air's map may part by three cells in a thousand: a box's edge that lies exactly on a cell's middle falls either way by a float's rounding, and the page holds floats.)
+// (Two parts may part by a little, and why. The drip lines, by a few in a hundred: the picture's straight-down rays do not hold a cut box's shape, so what drips off a car's bonnet
+// differs. The air's map, by three cells in a thousand: a box's edge that lies exactly on a cell's middle falls either way by a float's rounding, and the page holds floats.)
 //   WEATHER_BREAK=1 …    the rows are read half a metre off: it must fail
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -11,6 +12,9 @@ import { Air, Fire, FireTable, Section, Want, Wind } from '../../src/draw/sectio
 import { Drawn } from '../../src/draw/drawn';
 import { DrawWorld } from '../../src/draw/world';
 import { AirMap } from '../../src/picture/air';
+import { dripWalk, Roofs } from '../../src/picture/rain';
+import { PlanRays } from '../../src/picture/planRays';
+import { PRAIN, RAIN_FX } from '../../src/picture/rain';
 import { AIR_SIM as PIC_AIR } from '../../src/picture/air';
 
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -18,6 +22,7 @@ const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { fireDraws, FIRE } = await import(`${ROOT}/src/game/fire.ts`);
 const { airMask, AIR_SIM } = await import(`${ROOT}/src/game/airSim.ts`);
+const { rainDripPoints, PRAIN: PRAIN0, RAIN_FX: RAIN_FX0 } = await import(`${ROOT}/src/game/rainFx.ts`);
 
 const args = process.argv.slice(2), ticksAt = args.indexOf('--ticks'), TICKS = ticksAt >= 0 ? Number(args[ticksAt + 1]) : 240, LEVELS = args.filter((a, i) => !a.startsWith('--') && i !== ticksAt + 1);
 const BREAK = process.env.WEATHER_BREAK === '1' ? 0.5 : 0, DT = 1 / 60;
@@ -28,7 +33,7 @@ const near = (a: number, b: number, k = 4e-6) => Math.abs(a - b) <= k * Math.max
 
 // THE TABLES THAT ARE TWO WHILE BOTH PAGES STAND: the picture's copy is the old file's, number for number
 { const same = (a: any, b: any, keys?: string[]) => (keys ?? Object.keys(b)).filter(k => k in a && JSON.stringify(a[k]) !== JSON.stringify(b[k]));
-  const off = [['AIR_SIM', same(AIR_SIM, PIC_AIR, Object.keys(PIC_AIR))]].filter(x => x[1].length);
+  const off = [['PRAIN', same(PRAIN0, PRAIN)], ['RAIN_FX', same(RAIN_FX0, RAIN_FX)], ['AIR_SIM', same(AIR_SIM, PIC_AIR, Object.keys(PIC_AIR))]].filter(x => x[1].length);
   line(off.length === 0, 'the picture\'s tables are the old files\'', JSON.stringify(off)); }
 
 for (const L of LEVELS.length ? LEVELS : ['pass', 'compound:weather=downpour&roomclear&squad4', 'office']) { const [name, query] = L.split(':');
@@ -36,7 +41,7 @@ for (const L of LEVELS.length ? LEVELS : ['pass', 'compound:weather=downpour&roo
   const why = (await quiet(() => startFromQuery(W.game, `?levelFile=${name}.json&${query ?? 'roomclear&squad4'}`)) as any)?.why; if (why) { line(false, `${name}: the start was refused`, why); continue; }
   const g = W.game, E = g.engine, world = E.world, G = g as any, seen = new Map<string, [number, string]>(); let D: Drawn = null as never, Page: DrawWorld = null as never;   // (Page: the statics as the page holds them, of the rows alone)
   const bad = (k: string, w: string) => { const e = seen.get(k); if (e) e[0]++; else seen.set(k, [1, w]); };
-  let fires = 0, winds = 0;
+  let fires = 0, winds = 0, drips = 0;
   for (let t = 0; t < TICKS; t++) {
     if (t === 30) W.input?.keys?.add?.('KeyW');
     if (t === 60 || t === 150) g.dropThrowable('frag', [g.player.char.pos[0] + 3, 0, g.player.char.pos[2] + 1]);
@@ -66,11 +71,16 @@ for (const L of LEVELS.length ? LEVELS : ['pass', 'compound:weather=downpour&roo
     // ---- the air's map, of the same statics, the panes and the leaves as the rows say them
     if (name !== 'pass') { const was = AIR_SIM.on; AIR_SIM.on = true;   // (the pass's banks are told with the snow)
       const M = airMask(g), P = new AirMap(D, Page.statics); P.redraw(); AIR_SIM.on = was; let diff = 0, first = ''; for (let i = 0; i < M.mask.length; i++) if (M.mask[i] !== P.mask[i]) { diff++; first ||= `cell ${i % M.w}, ${Math.floor(i / M.w)}: copy ${M.mask[i]} rows ${P.mask[i]}`; } if (diff > M.mask.length * 0.003) bad('air.map', `tick ${t}: ${diff} cells; ${first}`); }
+    // ---- what is outdoors, and the drip lines off the statics
+    { const R = new Roofs(D); R.from();
+      for (let x = 1; x < 40; x += 3) for (let z = 1; z < 28; z += 3) if (R.under(x + 0.3, z + 0.7) !== g.weather.underRoof(x + 0.3, z + 0.7)) bad('roofs.under', `tick ${t}: (${x}, ${z}) copy ${g.weather.underRoof(x + 0.3, z + 0.7)}`);
+      if (t === TICKS - 1 && E.settings.particleRain !== false) { const a = rainDripPoints(g), job: any = { boxes: 0, serial: 0, left: Infinity, hold: 0, bi: 0, ei: 0, k: 0, paid: false, out: [], rays: new PlanRays(Page.statics) }; dripWalk(Page.statics, job, R.outdoors); drips = a.length; if (Math.abs(a.length - job.out.length) > Math.max(3, a.length * 0.08)) { const has = (q: any) => job.out.some((d: any) => Math.hypot(d.pos[0] - q.pos[0], d.pos[1] - q.pos[1], d.pos[2] - q.pos[2]) < 1e-3), lost = a.filter((q: any) => !has(q)); bad('rain.drips', `copy ${a.length} lines, picture ${job.out.length}, lost ${lost.length}; first ${lost.slice(0, 4).map((q: any) => `${q.pos.map((v: number) => v.toFixed(2))} box ${q.box} ${world.statics[q.box].c}`)}`); } } }
   }
-  console.log(`  ${name}: at most ${fires} fires, ${winds} sources`);
+  console.log(`  ${name}: at most ${fires} fires, ${winds} sources, ${drips} drip points`);
   if (name === 'pass' && !fires) bad('floor.fires', 'no fire was compared');
   if (!winds) bad('floor.winds', 'no wind was compared');
-  line(seen.size === 0, `${name}: fires, winds, air are the copy's over ${TICKS} ticks`, [...seen].map(([k, [c, w]]) => `${k} × ${c} (${w})`).join('\n    '));
+  if (!drips) bad('floor.drips', 'no drip line was compared');
+  line(seen.size === 0, `${name}: fires, winds, air, roofs, drips are the copy's over ${TICKS} ticks`, [...seen].map(([k, [c, w]]) => `${k} × ${c} (${w})`).join('\n    '));
 }
 console.log(fails ? `=== weather rows: ${fails} FAILED ===` : '=== weather rows: ALL PASS ===');
 process.exit(fails ? 1 : 0);
