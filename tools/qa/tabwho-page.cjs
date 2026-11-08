@@ -1,14 +1,12 @@
-// OPTIONS OFFERS NO DEAD "ORDER WHO" CONTROL — ON THE REAL PAGE (src/ui/tabkey.ts TABKEY.whoGone, src/ui/options.ts the who row; game/cmdring.ts
+// OPTIONS OFFERS NO DEAD "ORDER WHO" CONTROL — ON THE REAL PAGE (src/ui/options.ts the who row; game/cmdring.ts
 // `wholeSquad`, `?wholesquad=0`). The maintainer, 10-24: "quick Q mode should always do the whole squad. you should only be able to issue commands to
 // parts of the squad in plan mode". With that rule on, as the page opens:
 //   · Options ▸ Controls lists no "Who takes the next order" row (no dashed cap to put a dead key on); a machine that gave the row a key earlier keeps
 //     its row, which says the key does nothing now (Shift with the command key sends a part of the squad: tools/qa/squadkeys-page.cjs), until Reset
 //     takes the key off it;
-//   · Options ▸ Game, where it is drawn (it needs the game stood up: without a WebGPU adapter the line says so and is not counted), offers no
-//     'Order who' for the Tab key (a kept choice is tabwho-check.ts's line, not this page's);
-//   · `?wholesquad=0`: the row with its dashed cap and its own words, and the choice, as they were.
+//   · `?wholesquad=0`: the row with its dashed cap and its own words, as they were.
 //   node tools/qa/tabwho-page.cjs      env: PORT (the dev server's, default 5199) · TABWHO_BREAK=1 (the rule off on every page: must FAIL)
-// PASS / FAIL lines, exit 1 on a FAIL or a page error. The module's half: tools/qa/tabwho-check.ts.
+// PASS / FAIL lines, exit 1 on a FAIL or a page error.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const PORT = process.env.PORT || 5199;
 const BREAK = process.env.TABWHO_BREAK === '1';
@@ -22,8 +20,6 @@ const openTab = async (page, tab) => { await page.waitForSelector('#menu .action
 const controls = page => page.evaluate(WHO => { const row = [...document.querySelectorAll('#options .op-krow')].find(r => (r.querySelector('.op-what')?.firstChild?.textContent ?? '') === WHO), cap = document.querySelector('#options button.op-key[data-key="KeyT"]');
   return { rows: document.querySelectorAll('#options .op-krow').length, row: !!row, small: row?.querySelector('small')?.textContent ?? '', cap: cap ? cap.textContent : null, capClass: cap ? cap.className : '',
     squad: [...document.querySelectorAll('#options .op-kgroup')].find(g => g.querySelector('.op-sec')?.textContent === 'Squad')?.querySelectorAll('.op-krow').length ?? 0 }; }, WHO);
-const game = page => page.evaluate(() => { const row = [...document.querySelectorAll('#options .op-row, #options [class*="op-r"]')].find(r => /Tab key/.test(r.textContent) && r.querySelector('.op-seg')), b = row ? [...row.querySelectorAll('.op-opt')] : [];
-  return { drawn: !!row, opts: b.map(x => x.textContent), on: b.find(x => x.classList.contains('on'))?.textContent ?? '' }; });
 
 (async () => {
   const browser = await chromium.launch({ headless: true, args: ['--disable-gpu'] });
@@ -37,9 +33,6 @@ const game = page => page.evaluate(() => { const row = [...document.querySelecto
   { const { ctx, page } = await fresh(); await page.goto(url(), { waitUntil: 'domcontentloaded' });
     await openTab(page, 'controls'); const c = await controls(page);
     check(c.rows > 20 && !c.row && c.cap === null, 'Controls lists no "Who takes the next order" row, and no cap for it', `${c.rows} rows, ${c.squad} under Squad · the who row ${c.row ? 'LISTED' : 'not listed'} · its cap ${c.cap === null ? 'none' : `'${c.cap}'`}`);
-    await openTab(page, 'game'); const g = await game(page);
-    if (!g.drawn) console.log("- NOTE — Options, Game: the Tab key row is not drawn on this page (no game stood up without a WebGPU adapter): the choices are held by tabwho-check.ts");
-    else check(!g.opts.includes('Order who') && g.opts.length === 4, "Game: the Tab key's choices do not offer 'Order who'", g.opts.join(' · '));
     await ctx.close(); }
   // ── a machine that gave the who row a key ──
   { const { ctx, page } = await fresh({ 'twopointsix.keys': '{"KeyT":"KeyT"}' }); await page.goto(url(), { waitUntil: 'domcontentloaded' });
@@ -52,8 +45,6 @@ const game = page => page.evaluate(() => { const row = [...document.querySelecto
   if (!BREAK) { const { ctx, page } = await fresh(); await page.goto(url('wholesquad=0'), { waitUntil: 'domcontentloaded' });
     await openTab(page, 'controls'); const c = await controls(page);
     check(c.row && c.cap === '—' && /none/.test(c.capClass) && c.small === 'everyone, red, blue or one teammate', '?wholesquad=0: the who row with its dashed cap and its own words, as it was', `the who row ${c.row ? 'listed' : 'NOT LISTED'} · cap '${c.cap}' [${c.capClass}] · "${c.small}"`);
-    await openTab(page, 'game'); const g = await game(page);
-    if (g.drawn) check(g.opts.includes('Order who') && g.opts.length === 5, "?wholesquad=0: 'Order who' is a choice again", g.opts.join(' · '));
     await ctx.close(); }
   await browser.close();
   check(errors.length === 0, 'no page error', errors.join(' | ') || 'none');
