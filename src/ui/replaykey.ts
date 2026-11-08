@@ -4,6 +4,7 @@
 // VIEWER (replay.html) on it in this window. A crash of the page (main.ts's fatal card) saves one by itself, and is filed in the buffer as a line at its moment. Off: ?noreplay for a visit, or localStorage
 // `twopointsix.replay` = '0' (__replay.on = false writes it) — then no buffer is made and the Game's tap stays null: the build as it was.
 // Its own key listener, as F8's: a replay must save from the pause card, the down card and a frozen frame alike.
+import { sessionId } from '../host/session';
 import type { Game } from '../game/game';
 import { reportWarning } from '../cloud/report';
 import { typedInto } from '../host/keymap';
@@ -283,9 +284,4 @@ export function engineUrl(id: number, file: ReplayFile): string | null {
   const at = Math.min(T.ticks, Math.max(seen, taped));
   const now = new URLSearchParams(location.search), visit = visitPairs(now).filter(([k]) => k !== 'paused').map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join('');
   return new URL(`index.html?playtape=${id}${at > 0 ? `&at=${at}` : ''}${visit}`, document.baseURI).href;
-}
-/** a name for this page visit: when it began, and enough dice that two tabs opened in one second differ */
-function sessionId(): string {
-  let r = ''; try { const a = new Uint32Array(1); crypto.getRandomValues(a); r = a[0].toString(36); } catch { r = Math.floor(Math.random() * 0xffffffff).toString(36); }
-  return `${new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15)}-${r}`;
 }

@@ -53,10 +53,11 @@ export class Measure {
   calibrates(engine: Engine): boolean { const b = this.bench; return !b || (!b.timing && !(b.active && engine.standsIn)); }
   /** a display frame begins */
   begins(): void { this.rec.cpuFrameStart = performance.now(); }
-  /** … and has been drawn */
-  drawn(dt: number, fps: number, update: number, render: number): void {
-    this.rec.cpuUpdate = update; this.rec.cpuRender = render;
-    if (FRAMECAP.on) this.cap.frame(performance.now() - render, render);
+  /** … its halves are timed */
+  timed(update: number, render: number): void { this.rec.cpuUpdate = update; this.rec.cpuRender = render; }
+  /** … and it has been drawn: what the tools themselves do of it */
+  drawn(dt: number, fps: number): void {
+    if (FRAMECAP.on) this.cap.frame(performance.now() - this.rec.cpuRender, this.rec.cpuRender);
     this.rec.frame(dt, fps); this.sweep.tick(); this.bench?.tick(dt); this.after?.();
   }
 }
