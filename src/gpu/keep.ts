@@ -198,6 +198,8 @@ export function makeKeeper(open: () => Promise<Opened>, build: string, shellMs =
     L.heard.length = 0; L.waits.clear(); L.lost = NEVER; L.tell = () => { /* over */ };
     // (whatever the load put over the device's or the queue's own methods goes now: the view holds nothing of a page that is gone)
     for (const own of L.own) for (const k of Reflect.ownKeys(own)) { try { delete own[k]; } catch { /* */ } }
+    // (…and a page that is gone hands the queue nothing: a boot still on its way when its frame was taken away goes on to its next wait, over buffers destroyed above)
+    for (const k of ['submit', 'writeBuffer', 'writeTexture', 'copyExternalImageToTexture']) try { L.own[1][k] = NOT; } catch { /* */ }
     if (live.get(L.seat) === L) live.delete(L.seat);
   };
   /** the seat's lease and those of every seat under it: a picture inside a page goes with its page */
