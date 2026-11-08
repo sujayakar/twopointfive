@@ -222,7 +222,7 @@ export async function musicCheck(): Promise<boolean> {
         for (const e of L.ALL_MISSIONS) { const k = S.setlistKey(L.pickSearch(e)), r = S.setlistNames(k.level, k.kind);
           if (k.level !== L.levelWords(e) || k.kind !== e.kind) why.push(`${e.id} is read as ${k.level}:${k.kind}`); else if (!r.own) why.push(`${e.id} (${k.level}) has no row`); else leads.add(r.names[0]); }
         { const k = S.setlistKey('?solo'); if (k.level !== 'office' || k.kind !== null || S.setlistNames(k.level, k.kind).names !== S.SETLISTS.office) why.push('the solo night is not the office row'); }
-        if (S.setlistKey('?roomclear&levelFile=records-gwot.json').level !== 'records') why.push("a level's look file is not read as the level");
+        if (S.setlistKey('?roomclear&levelFile=records.json').level !== 'records') why.push("a level's file is not read as the level");
         if (S.setlistNames('no-such-level', 'quiet').own || S.setlistOf('no-such-level').length < 2) why.push('a level with no row has no music');
         { const k = S.setlistKey('?roomclear&levelFile=office-t20.json'); if (S.setlistNames(k.level, k.kind).key !== 'office:roomclear') why.push('a file of the office family is not read as the office'); }
         for (const odd of ['constructor', 'toString', '__proto__']) { let got = ''; try { const r = S.setlistNames(odd, 'quiet'); got = r.own || S.setlistOf(odd).length !== 2 ? 'a row' : ''; } catch (e) { got = String(e); } if (got) why.push(`a level named ${odd}: ${got}`); }   // (the level's name comes off a URL)
@@ -260,12 +260,12 @@ export async function musicCheck(): Promise<boolean> {
     // ---- the team's nerves: the tension the score follows is the opposition's (game/guards.ts tension(g, theirs); the page passes MUSIC.theirs). A real squad mission
     //      stood up headless, a teammate under his order left as wary as a frag leaves a man standing (frag.ts writes 0.92), every defender down, ten seconds on
     { const { standUp } = await import('./headless.ts'), L: any = await import(`${ROOT}/src/scene/scenarioList.ts`), SC: any = await import(`${ROOT}/src/scene/scenarios.ts`), SR: any = await import(`${ROOT}/src/game/scenarioRun.ts`);
-      const CB: any = await import(`${ROOT}/src/game/combat.ts`), LV: any = await import(`${ROOT}/src/scene/levelData.ts`), LL: any = await import(`${ROOT}/src/scene/levelLoad.ts`), LK: any = await import(`${ROOT}/src/scene/look.ts`), BREAK = process.env.MUSIC_BREAK === '1';
+      const CB: any = await import(`${ROOT}/src/game/combat.ts`), LV: any = await import(`${ROOT}/src/scene/levelData.ts`), LL: any = await import(`${ROOT}/src/scene/levelLoad.ts`), BREAK = process.env.MUSIC_BREAK === '1';
       const say = console.log, warn = console.warn, err = console.error; const why: string[] = []; let told = '';
       const REST: any = (await import(`${ROOT}/src/game/condition.ts`).catch(() => null))?.CONDITION ?? null, rest0 = REST ? { on: REST.on, ownCalm: REST.ownCalm } : null;   // (a second rule on the same reading, where the tree has it: a teammate at rest does not count. Held off for the as-it-was readings below, read alone beside them)
       try {
         console.log = console.warn = console.error = () => { }; Math.random = mulberry32(7);
-        const E = L.SCENARIOS.find((e: { id: string }) => e.id === 'records-pair'), looked = Bun.file(`${ROOT}/levels/${LK.lookLevelFile(E.level)}`), file = await looked.exists() ? looked : Bun.file(`${ROOT}/levels/${E.level}`);   // (the file the page plays on this stand: scene/look.ts)
+        const E = L.SCENARIOS.find((e: { id: string }) => e.id === 'records-pair'), file = Bun.file(`${ROOT}/levels/${E.level}`);   // (the file the page plays on this stand: scene/look.ts)
         const W: any = await standUp({ uploadEvery: 4, level: LL.loadLevel(LV.parseLevelData(await file.text())) }), g = W.game;
         g.godMode = true; g.playerInvisible = true; const refused = SR.startFromQuery(g, new URLSearchParams(SC.scenarioQuery(E))).why; if (refused) why.push(`the records office would not start: ${refused}`);
         const step = (secs: number) => { for (let i = 0; i < secs * 60; i++) { g.player.visibility = 0.05; W.step(1 / 60); } }, on = (v: boolean) => g.tension(v && !BREAK) as number;   // (the red path: nobody passes the switch)

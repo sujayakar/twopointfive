@@ -1,14 +1,14 @@
 #!/usr/bin/env bun
-// THE DEFAULT LOOK'S CHECK (src/scene/look.ts) — `bun run tools/qa/look-check.ts`: a level's file in the look is the plain file in other clothes, and nothing else.
-// For every pair in LOOK_LEVELS:
-//   1. both files are what their generators give now (tools/levels/export.ts --check);
-//   2. every box of the plain file is in the look's file at the same place in the list, with the same centre, size, yaw, flags and group — only its paint
+// THE DEFAULT LOOK'S CHECK (src/scene/look.ts) — `bun run tools/qa/look-check.ts`: a level's file is its floor in other clothes, and nothing else.
+// For every level built as a floor and a skin (tools/levels/<name>-floor.ts and <name>.ts; the floor's file is made here, tools/levels/floors.ts):
+//   1. the level's file is what its generator gives now (tools/levels/export.ts --check);
+//   2. every box of the floor is in the level's file at the same place in the list, with the same centre, size, yaw, flags and group — only its paint
 //      (albedo, rough, metal) may differ; every box the look adds comes after them, is in the group 'look', is a NoShadow decal (no ray and no collision
 //      query ever returns one) and starts at the floor (so game/wallbreak.ts, which lets drawn-only things that hang off a broken thing fall, never asks it);
 //   3. every box DOES the same thing in both (src/scene/materials.ts, Box.does: its own word, else its material row's, else the default row), whatever
 //      it is painted — all a round, a charge, a blast or the destruction index reads of a material;
 //   4. props: same kind, place, yaw, mass and parts — only a part's paint may differ;
-//   5. everything else in the file (lights, switchables, doors, routes, devices, marks, plans, scenarios, surfaces, sky …) is the plain file's, key for key.
+//   5. everything else in the file (lights, switchables, doors, routes, devices, marks, plans, scenarios, surfaces, sky …) is the floor's, key for key.
 //   6. the game stood up on each: the destruction's three indexes (destruction.ts paper / screens / clutter, wallbreak.ts walls + cover, furnblast.ts groups — all
 //      found by SHAPE and by what a box does) list the same boxes in both; and the lot's slab says the same word, so it is the same wet;
 // And the palette itself: no two rows of it are one colour, and no level outside the look carries one.
@@ -18,7 +18,7 @@ import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 export async function lookCheck(): Promise<boolean> {
 await import('./headless.ts');   // (the game modules are one import cycle: enter it the way every probe does)
-const { LOOK_LEVELS } = await import(`${ROOT}/src/scene/look.ts`);
+const { floorLevels, floorFiles } = await import(`${ROOT}/tools/levels/floors.ts`);
 const { GWOT_PALETTE, SNOW_PALETTE, lookPaintOf } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
 const { DOES_DEFAULT, doesOfWord } = await import(`${ROOT}/src/scene/materials.ts`);
 /** what a box or a part of a file does: its own word, else its material row's, else the default row (as the loader writes it onto the box) */
@@ -53,7 +53,7 @@ const PAINT = new Set(['albedo', 'material', 'rough', 'metal', 'stuff', 'does'])
   for (const [m, a] of [...Object.entries(GWOT_PALETTE), ...Object.entries(SNOW_PALETTE)] as [string, number[]][]) { const k = a.join(','), o = seen.get(k); if (o && o !== m) clash++; seen.set(k, m); }
   check(clash === 0, `the palette: ${seen.size} paints, no two of them one colour (${clash} clashes): a level file names a box's paint by its numbers`);
   // (a level BUILT in the kit carries the palette on purpose — its generator imports the kit; any other level carrying one of its colours does so by accident)
-  const lookFiles = new Set<string>(Object.values(LOOK_LEVELS as Record<string, string>)); let strays: string[] = [], built: string[] = [];
+  const lookFiles = new Set<string>(floorLevels().map((n: string) => `${n}.json`)); let strays: string[] = [], built: string[] = [];
   // (built in the kit = its generator imports the kit, or imports a generator beside it that does: the training yards share tools/levels/train-ground.ts)
   const KIT = /gwotKit|gwotSkin|gwotPalette/;
   const inKit = (f: string): boolean => {
@@ -67,11 +67,13 @@ const PAINT = new Set(['albedo', 'material', 'rough', 'metal', 'stuff', 'does'])
   check(strays.length === 0, `no level outside the look carries one of its colours${strays.length ? ` — ${strays.join(', ')}` : ''} (the picture asks a level whether it wears the look by its paints: scene/lookTidy.ts; built in the kit, on purpose: ${built.map(x => x.split(' ')[0]).join(', ') || 'none'})`);
 }
 
-for (const [plain, look] of Object.entries(LOOK_LEVELS as Record<string, string>)) {
-  console.log(`\n${plain} ↔ ${look}`);
-  { const gen = genOf(plain) ?? plain.replace(/\.json$/, '');
-    const p = Bun.spawnSync(['bun', 'run', resolve(ROOT, 'tools/levels/export.ts'), gen, '--check'], { cwd: ROOT, env: process.env });   // (the exporter checks a level's file in the look with it)
-    check(p.exitCode === 0 && p.stdout.toString().includes(look), `levels/${plain} and levels/${look} are what their generators give now (export ${gen} --check: exit ${p.exitCode})`); }
+const floorOf = floorFiles();
+for (const gen of floorLevels() as string[]) {
+  const plain = floorOf(gen), look = `${gen}.json`;
+  console.log(`\n${gen}: its floor ↔ ${look}`);
+  {
+    const p = Bun.spawnSync(['bun', 'run', resolve(ROOT, 'tools/levels/export.ts'), gen, '--check'], { cwd: ROOT, env: process.env });   // 
+    check(p.exitCode === 0 && p.stdout.toString().includes(look), `levels/${look} is what its generator gives now (export ${gen} --check: exit ${p.exitCode})`); }
   const A = J(plain), B = J(look); const nA = A.boxes.length;
   let moved = 0, repainted = 0, reclassed: string[] = [];
   for (let i = 0; i < nA; i++) {
@@ -87,8 +89,8 @@ for (const [plain, look] of Object.entries(LOOK_LEVELS as Record<string, string>
     if (!paint) continue;
     const pa = albedoOf(a, A.materials), pb = albedoOf(b, B.materials); if (same(pa, pb)) continue; repainted++;
   }
-  check(moved === 0, `every one of the plain file's ${nA} boxes is in the look's file at the same index with the same centre, size, yaw, flags, group and markings (${moved} differ in more than paint)`);
-  check(reclassed.length === 0, `${repainted} boxes wear another paint, and every box of the ${nA} does the same thing in both files to a round, a charge and a blast (the same word of the table of materials)${reclassed.length ? ` — not so: ${reclassed.slice(0, 4).join(' · ')}` : ''}`);
+  check(moved === 0, `every one of the floor's ${nA} boxes is in the level's file at the same index with the same centre, size, yaw, flags, group and markings (${moved} differ in more than paint)`);
+  check(reclassed.length === 0, `${repainted} boxes wear another paint, and every box of the ${nA} does the same thing on the floor and in the file to a round, a charge and a blast (the same word of the table of materials)${reclassed.length ? ` — not so: ${reclassed.slice(0, 4).join(' · ')}` : ''}`);
   const extra = B.boxes.slice(nA), badExtra = extra.filter((b: any) => b.group !== 'look' || !same(b.flags, ['NoShadow']));
   check(badExtra.length === 0, `the look adds ${extra.length} boxes after them, every one a NoShadow decal in the group 'look'${badExtra.length ? ` — not so: ${badExtra.slice(0, 3).map((b: any) => b.id).join(' ')}` : ''}`);
   { const off = extra.filter((b: any) => b.c[1] - b.h[1] > 0.06);   // (game/wallbreak.ts judges a drawn-only static that is OFF the floor when what it touches breaks — it falls, as debris with a sound; one that starts at the floor is never asked)
@@ -111,7 +113,7 @@ for (const [plain, look] of Object.entries(LOOK_LEVELS as Record<string, string>
       check(wa === wb, `the lot's slab (${A.boxes[i].id}) says the same word in both, so the storm wets it the same (${wa}: ${doesOfWord(wa).surf} to a round dry, ${wet(wa)} soaked · ${wb})`); } }
   { let metalOff = 0; for (let i = 0; i < nA; i++) { const a = A.boxes[i], b = B.boxes[i]; if (a.c[1] - a.h[1] <= 0.1 && a.c[1] + a.h[1] >= 2.2 && !same(a.metal ?? A.materials[a.material]?.metal ?? false, b.metal ?? B.materials[b.material]?.metal ?? false)) metalOff++; }
     check(metalOff === 0, `no full-height box changed its metal flag (${metalOff} did)`); }
-  check(off.length === 0, `everything else is the plain file's, key for key (${rest.join(' ')})${off.length ? ` — differs: ${off.join(' ')}` : ''}`);
+  check(off.length === 0, `everything else is the floor's, key for key (${rest.join(' ')})${off.length ? ` — differs: ${off.join(' ')}` : ''}`);
 }
 return ok;
 }

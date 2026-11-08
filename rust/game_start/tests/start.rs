@@ -66,7 +66,7 @@ fn what_a_level_file_says_is_on_the_floor() {
     p.run(1.0);
     drop(p);
     // the long hall in the look's dress: drums and tyres, each one round box in the file and on the floor
-    let p = Play::level("hall-gwot.json", false, &plain);
+    let p = Play::level("hall.json", false, &plain);
     let f = p.floor();
     assert!(f.round > 0 && f.boxes == 435, "the long hall's round things (and no box added or lost for them): {:?}", f);
     drop(p);
@@ -93,7 +93,7 @@ fn every_level_file_is_read_whole_and_a_stranger_is_refused() {
         assert!(lacks.is_empty(), "{} is not carried whole: {:?}", name, lacks);
         n += 1;
     }
-    assert!(n >= 40, "levels/ holds the game's level files ({} read)", n);
+    assert!(n >= 30, "levels/ holds the game's level files ({} read)", n);
     // a file from a later reader, and a record with a member the game's type has no field for
     let mut later = json::parse(&files::level_text("kit-yard.json")).unwrap();
     if let json::Json::Obj(m, _) = &mut later {

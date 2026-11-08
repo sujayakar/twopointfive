@@ -509,7 +509,7 @@ export function knobRegistry(): Record<string, object> {
     SQUADNET,
     TAKEDOWN,
     STEALTHPOSE,
-    // the default look (scene/look.ts): which FILE a level with a second file is loaded from, and the men's kit — look only (no run differs by it), here so a stand's dump and the page's __knobs say which look it was
+    // the default look (scene/look.ts): the men's kit — look only (no run differs by it), here so a stand's dump and the page's __knobs say which look it was
     LOOK,
     // more music than the one theme (audio/pieces.ts): whether the score deals its newer pieces, and the two times the deal reads — the listener's ears only (no rule
     // reads it, a replay holds no sound), here so a stand's dump and the page's __knobs say which score it was

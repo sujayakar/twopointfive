@@ -1,4 +1,6 @@
+# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
 # every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
 # the look's stand-ins wear their rows' own numbers: colours only, at most 0.0024 a channel
 # version 2: a round thing is one box, the file converted by tools/levels/round-convert.ts: no box moved
-d506d8d9a0572060cb838573fddc00227a7cabeb
+# one file a level: this is the file the page played, under its own name
+e4b3f0adf4ddc0b941409da55d5ee10ad98b99a1

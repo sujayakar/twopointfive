@@ -3,7 +3,7 @@
 // things about its boxes that no other check holds. The floor itself (structure, nav, size, the scripted runs) is tools/qa/map-check.ts's, which --run runs.
 // Read off the level FILES and the tables: no game is stood up, nothing is played.
 //   bun run tools/qa/level-needs.ts [name …] [--run] [--jobs 4] [--skip need,…] [--quiet] [--md out.md] [--json out.json]
-//     name      levels to ask (levels/<name>.json; a look twin `<name>-gwot.json` is asked with its plain file, never by itself); none = every level file
+//     name      levels to ask (levels/<name>.json); none = every level file
 //     --run     also run the level's OWN checks as they stand (export --check, map-check --no-runs, level-lint, door-size, second-way-check, marksight-check, walked-check, lived-check,
 //               kitview-plan, level-names-check, floor-order-check, quiet-check, lesson-check), each a line with its exit code, `--jobs` at a time
 //     --skip    needs left out (their names below): to see the exit code of the rest while one is red everywhere
@@ -24,13 +24,13 @@
 //               squads; a NOTE while it is `untuned`
 //   music       audio/setlist.ts has the level's two pieces (the game's own lookup, by level and by kind)
 //   picture     each row's mission picture is on disk and in the stills list
-//   kit picture the Team & kit picture's block is in the file (a lesson's is data only: not asked), and a look twin carries the same block to the byte
-//   look        the look twin and scene/look.ts agree; a loud level with neither a twin nor the look's own kit is a NOTE (it plays in the plain look alone)
+//   kit picture the Team & kit picture's block is in the file (a lesson's is data only: not asked)
+//   look        a loud level whose generator does not wear the look is a NOTE (it plays in plain paint)
 //   lived       the rooms the level names have things standing in them (lived-in things, the generator's own furniture, loose props); a NOTE names the
 //               bare ones. A count, not a judgement: whether a room has a use and a face is the eye's
 //   floor       a NOTE where the file has no footstep map of its own (it is walked on the office's rectangles, or a quiet level on lino throughout)
 //   ground      a NOTE when 40 m² or more of ground in one piece has nothing on it: no paint that reads against its own, no rubble or kerb, within
-//               1.5 m (bareGround below; the six biggest pieces, each with a square of its own; the look twin's too). Measured from the file's boxes
+//               1.5 m (bareGround below; the six biggest pieces, each with a square of its own). Measured from the file's boxes
 //               and paints: a guide for the eye, which has the last word
 //   leak        a NOTE where a thing of mirror metal stands against a wall with a lamp behind it that outweighs its own room's light: a traced reflection
 //               of a face that close to a wall reads the light cache through the wall, and bare metal shows it whole (leakReads below; the rooms and
@@ -50,8 +50,8 @@
 //               level's. Bare = no pouch filled and nothing in the big slot.
 //               NOTES for what the issue is for on this floor: locked and steel doors against the door charges issued, frags issued where a frag on
 //               order is refused (a hostage, a man to take), a quiet mission's partner kitted as issued for a loud one
-//   response    a level has a response team only where its file says so (scenarios.response, game/qrf.ts). With the block: its `why` is a sentence, a look
-//               twin carries the same block, and a row of the level is one the block answers (a NOTE if none). Without: the level is in NOBODY_COMES
+//   response    a level has a response team only where its file says so (scenarios.response, game/qrf.ts). With the block: its `why` is a sentence,
+//               and a row of the level is one the block answers (a NOTE if none). Without: the level is in NOBODY_COMES
 //               below with its reason, or it has not answered (a NOTE). In both is a FAIL. Not asked of a lesson. The block against the built floor,
 //               and a call played through, are tools/qa/response-check.ts's
 //   said        docs/agents names the level (its file, its generator or a row's id) — that a write-up is THERE, not that it is good
@@ -61,7 +61,6 @@ import { ROOT } from './headless.ts';
 import { fitPropFootprint } from '../../src/scene/levelLoad.ts';
 const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { setlistNames } = await import(`${ROOT}/src/audio/setlist.ts`);
-const { LOOK_LEVELS } = await import(`${ROOT}/src/scene/look.ts`);
 const { squadChoices, rosterOf } = await import(`${ROOT}/src/game/loadout.ts`);
 const { kitDefault, kitWorn, kitCost, kitTeam, kitLoad, bigOf, SLOTS, KIT_MEMBERS } = await import(`${ROOT}/src/game/kit.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
@@ -107,8 +106,6 @@ const COVER = { below: 0.3, half: 0.45, pad: 0.06 };
 const f2 = (v: number) => v.toFixed(2);
 const has = (b: Box, f: string) => !!b.flags?.includes(f);
 const inside = (r: Bounds, x: number, z: number) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
-const plainOf = (name: string) => name.replace(/-gwot$/, '');
-const onDisk = (name: string) => existsSync(resolve(ROOT, 'levels', `${name}.json`));
 const FILES = new Map<string, LevelFile>();
 const read = (name: string): LevelFile => { let L = FILES.get(name); if (!L) FILES.set(name, L = JSON.parse(readFileSync(resolve(ROOT, 'levels', `${name}.json`), 'utf8')) as LevelFile); return L; };
 export const rowsOf = (name: string): Row[] => (ALL_MISSIONS as Row[]).filter(e => (e.level ?? 'office.json') === `${name}.json`);
@@ -381,8 +378,8 @@ function roomsOf(L: LevelFile): { name: string; bounds: Bounds }[] {
   return out.filter((r, i) => out.findIndex(o => o.name === r.name) === i);
 }
 
-/** every need, asked of one level (`twin`: its look file, where it has one) */
-export function ask(name: string, L: LevelFile, twin: LevelFile | null, rows: Row[], T: Tables): Line[] {
+/** every need, asked of one level */
+export function ask(name: string, L: LevelFile, rows: Row[], T: Tables): Line[] {
   const out: Line[] = [], say = (need: string, ok: boolean | 'note', text: string) => out.push({ need, mark: ok === 'note' ? 'NOTE' : ok ? 'PASS' : 'FAIL', text });
   const S = L.scenarios ?? {}, lesson = !!S.lesson, loud = rows.some(e => e.kind === 'roomclear' || e.kind === 'rescue') && !lesson, gen = generatorOf(L), genThere = !!gen && existsSync(resolve(ROOT, gen));
   // ---- generator
@@ -411,13 +408,10 @@ export function ask(name: string, L: LevelFile, twin: LevelFile | null, rows: Ro
   if (rows.length && !lesson) {
     const own = S.kitView !== undefined;
     say('kit picture', own, own ? 'the file carries a kitView block' : 'no scenarios.kitView: Team & kit shows an empty column where the picture would be');
-    if (twin && own) { const same = JSON.stringify(twin.scenarios?.kitView) === JSON.stringify(S.kitView); say('kit picture', same, same ? 'the look twin carries the same block' : 'the look twin\'s kitView block is not the plain file\'s'); }
   }
-  // ---- the look twin
-  { const listed = (LOOK_LEVELS as Record<string, string>)[`${name}.json`], there = onDisk(`${name}-gwot`);
-    if (listed || there) say('look', !!listed && there, listed && there ? `${listed} is listed in scene/look.ts and on disk` : listed ? `${listed} is listed in scene/look.ts and not on disk` : `levels/${name}-gwot.json is on disk and not in scene/look.ts LOOK_LEVELS: never loaded`);
-    else if (loud && name !== 'office') { const kit = genThere && /gwotKit/.test(readFileSync(resolve(ROOT, gen!), 'utf8'));
-      say('look', kit ? true : 'note', kit ? 'built on the look\'s own kit: one file' : 'a loud level with no look twin, not built on the look\'s kit: it plays in the plain look alone'); } }
+  // ---- the look
+  if (loud && name !== 'office' && genThere) { const kit = /gwotKit|gwotSkin/.test(readFileSync(resolve(ROOT, gen!), 'utf8'));
+    say('look', kit ? true : 'note', kit ? 'its generator wears the look' : 'a loud level whose generator does not wear the look: it plays in plain paint'); }
   // ---- lived-in rooms: a room with fewer than three things standing in it is bare (a `lived` thing, the generator's own furniture, a loose prop)
   { const rooms = roomsOf(L), n = (r: Bounds) => L.boxes.filter(b => inside(r, b.c[0], b.c[2]) && b.c[1] + b.h[1] > BARE.top && b.c[1] - b.h[1] < BARE.under && !STRUCTURE.test(b.group ?? '')).length + (L.props ?? []).filter(p => inside(r, p.x, p.z)).length;
     const bare = rooms.filter(r => n(r.bounds) < BARE.things).map(r => r.name);
@@ -427,32 +421,30 @@ export function ask(name: string, L: LevelFile, twin: LevelFile | null, rows: Ro
   if (rows.length && name !== 'office') { const own = L.surfaces !== undefined, R = roofBand(L), near = (v: number, w: number) => Math.abs(v - w) < 0.3;
     const shell = R.length > 0 && Math.min(...R.map(b => b.c[0] - b.h[0])) < OFFICE.x0 + 0.3 && near(Math.max(...R.map(b => b.c[0] + b.h[0])), OFFICE.x1) && near(Math.min(...R.map(b => b.c[2] - b.h[2])), OFFICE.z0) && near(Math.max(...R.map(b => b.c[2] + b.h[2])), OFFICE.z1);
     say('floor', own ? true : 'note', own ? 'its own footstep map' : `no \`surfaces\` block: ${S.quiet ? 'every step is on lino, the yard\'s too' : shell ? 'built in the office\'s shell and walked on the office\'s footstep map: right only where its rooms lie as the office\'s do' : 'walked on the office\'s footstep map, and the building is not where the office\'s is: its carpet, lino and stone fall where they fall'}`); }
-  // ---- the ground: stretches with nothing on them, the look twin's too (its ground is its own)
-  for (const [who, F] of [['', L], ['look twin: ', twin]] as const) { if (!F) continue;
+  // ---- the ground: stretches with nothing on them
+  { const F = L;
     const all = bareGround(F, startsOf([F.scenarios, (F as { mission?: unknown }).mission])), within = all.filter(s => !s.margin), big = within.filter(s => s.area >= GROUND.big), rim = all.filter(s => s.margin).reduce((a, s) => a + s.area, 0);
     const at = (s: Stretch) => `${Math.floor(s.area)} m² of ${s.mat} at [${s.x.toFixed(1)}, ${s.z.toFixed(1)}]`, edge = rim >= GROUND.big ? `; ${Math.round(rim)} m² more is bare outside the place (past its walls, or along the world's edge with no start on it)` : '';
-    say('ground', big.length ? 'note' : true, who + (big.length ? `${big.length} stretch${big.length > 1 ? 'es' : ''} of ${GROUND.big} m² or more of ground with nothing on ${big.length > 1 ? 'them' : 'it'} (no paint that reads against its own, no rubble or kerb, within ${GROUND.reach} m): ${big.slice(0, GROUND.list).map(at).join('; ')}${big.length > GROUND.list ? ` and ${big.length - GROUND.list} more` : ''}${edge}`
+    say('ground', big.length ? 'note' : true, (big.length ? `${big.length} stretch${big.length > 1 ? 'es' : ''} of ${GROUND.big} m² or more of ground with nothing on ${big.length > 1 ? 'them' : 'it'} (no paint that reads against its own, no rubble or kerb, within ${GROUND.reach} m): ${big.slice(0, GROUND.list).map(at).join('; ')}${big.length > GROUND.list ? ` and ${big.length - GROUND.list} more` : ''}${edge}`
       : `no ${GROUND.big} m² of ground is one bare sheet (the largest: ${within.length ? at(within[0]) : `under ${GROUND.least} m²`})${edge}`)); }
   // ---- light read through a wall: the count, and the mirror metal where the far lamp outweighs the room's own
-  { const own = leakLine(L), other = twin ? leakLine(twin) : null;
-    say('leak', own.note ? 'note' : true, own.text); if (other && other.text !== own.text) say('leak', other.note ? 'note' : true, 'look twin: ' + other.text); }
+  { const own = leakLine(L);
+    say('leak', own.note ? 'note' : true, own.text); }
   // ---- two lights that face each other across the same ground
   { const day = rows.length > 0 && rows.every(e => e.hour && e.hour !== 'night' && !HOURS[e.hour]?.lamps), hours = [...new Set(rows.map(e => e.hour))].join(' and ');
     const line = (F: LevelFile) => { const pairs = facingLights(F); return { note: pairs.length > 0, text: pairs.length ? `${pairs.length} pair${pairs.length === 1 ? '' : 's'} of spot lights of like strength face each other across the same ground, so each fills the other's shadows: ${pairs.map(p => `${p.a} and ${p.b} (${p.apart.toFixed(0)} m apart${p.photocell && day ? `; both on the photocell, so out at ${hours}, the hour ${rows.map(e => e.id).join(', ')} plays at and a link to the level opens at (the row's hour is written over the link): only the file's own night, ?rowset=0, has them lit` : ''})`).join('; ')}` : 'no two spot lights of like strength face each other across the same ground' }; };
-    const own = line(L), other = twin ? line(twin) : null;
-    say('key', own.note ? 'note' : true, own.text); if (other && other.text !== own.text) say('key', other.note ? 'note' : true, 'look twin: ' + other.text); }
+    const own = line(L);
+    say('key', own.note ? 'note' : true, own.text); }
   // ---- lamps and the moon
-  for (const [who, F] of [['', L], ['look twin: ', twin]] as const) { if (!F) continue;
-    const lamps = lampsOutside(F); if (who && !lamps.length) continue;
-    say('lamps', lamps.length ? 'note' : true, who + (lamps.length ? `under open sky and not on the photocell (group exterior), so lit at midday; right only for a lamp the mission switches itself: ${lamps.join(', ')}` : 'every lamp under open sky is on the photocell')); }
+  { const lamps = lampsOutside(L);
+    say('lamps', lamps.length ? 'note' : true, (lamps.length ? `under open sky and not on the photocell (group exterior), so lit at midday; right only for a lamp the mission switches itself: ${lamps.join(', ')}` : 'every lamp under open sky is on the photocell')); }
   { const moons = L.lights.filter(l => l.kind === 'dir');
     say('moon', moons.length === 1 && moons[0].group === 'exterior', moons.length === 1 ? moons[0].group === 'exterior' ? `one moon ('${moons[0].id}')` : `the moon '${moons[0].id}' is in group ${moons[0].group ?? 'none'}, not exterior` : `${moons.length} directional lights: the hour's sun wants one moon to stand in for`); }
-  // ---- doorways and roofs, the look twin's too (its decals are its own)
-  for (const [who, F] of [['', L], ['look twin: ', twin]] as const) { if (!F) continue;
-    const across = decalsAcross(F), R = roofs(F);
-    if (!who || across.length) say('doorway', !across.length, who + (across.length ? across.join('; ') : `no wall decal crosses any of ${F.doors.length} doorways`));
-    if (!who || R.drawn.length) say('roof', !R.drawn.length, who + (R.drawn.length ? `a drawn slab at ceiling height hides what is under it: ${R.drawn.join('; ')}` : `${R.n} ceiling slabs, each seen through`));
-    if (!who && R.n > 4) say('roof', 'note', `${R.n} slabs at ceiling height: the rain reads the four biggest`); }
+  // ---- doorways and roofs
+  { const F = L, across = decalsAcross(F), R = roofs(F);
+    say('doorway', !across.length, across.length ? across.join('; ') : `no wall decal crosses any of ${F.doors.length} doorways`);
+    say('roof', !R.drawn.length, (R.drawn.length ? `a drawn slab at ceiling height hides what is under it: ${R.drawn.join('; ')}` : `${R.n} ceiling slabs, each seen through`));
+    if (R.n > 4) say('roof', 'note', `${R.n} slabs at ceiling height: the rain reads the four biggest`); }
   // ---- the kit as issued
   const mates = (e: Row) => (squadChoices(e) as { n: number; ok: boolean }[]).some(c => c.ok && c.n > 0);   // (false: a row played alone, no teammate to ask)
   for (const e of rows) { if (!mates(e)) continue;
@@ -475,8 +467,7 @@ export function ask(name: string, L: LevelFile, twin: LevelFile | null, rows: Ro
       // (game/qrf.ts live(): a raid block is called only inside a squad's clear that is no rescue; any other only outside every squad mission — the office's plain night is no row)
       if (!(raid ? rows.some(e => e.kind === 'nightbreach' || e.kind === 'roomclear') : name === 'office' || rows.some(e => e.kind === 'quiet')))
         say('response', 'note', `the block answers ${raid ? 'a squad\'s room clear' : 'a quiet night gone loud'} and no row of this level is one (${rows.map(e => `${e.id}: ${e.kind}`).join(', ')}): nobody would ever be called`);
-      if (twin) { const same = JSON.stringify(twin.scenarios?.response) === JSON.stringify(R); say('response', same, same ? 'the look twin carries the same block' : 'the look twin\'s response block is not the plain file\'s'); } }
-    else if (twin?.scenarios?.response) say('response', false, 'the look twin carries a response block and the plain file none');
+ }
     else say('response', none !== undefined ? true : 'note', none !== undefined ? `nobody comes here, on purpose: ${none}` : `no scenarios.response block, and ${name} is not in NOBODY_COMES (tools/qa/level-needs.ts): say whether a team comes here, or that nobody does on purpose`); }
   // ---- named in the write-ups
   if (rows.length) { const words = [`${name}.json`, `tools/levels/${name}.ts`, ...rows.map(e => e.id)], hit = words.find(w => new RegExp(`(^|[^\\w-])${w.replace(/[.\\/]/g, '\\$&')}($|[^\\w-])`, 'm').test(T.docs));
@@ -485,21 +476,20 @@ export function ask(name: string, L: LevelFile, twin: LevelFile | null, rows: Ro
 }
 
 /** THE LEVEL'S OWN CHECKS, as they stand in the tree. `some`: the command for these levels (null = none of them is this check's); `all`: the check's own
- *  no-name run, used when every level is asked (it reads every file, the look twins too); `each`: one run a level. */
+ *  no-name run, used when every level is asked (it reads every file); `each`: one run a level. */
 interface Own { name: string; some(levels: string[]): string[] | null; all?: string[]; each?: boolean }
-const twins = (l: string[], as: (n: string) => string) => l.flatMap(n => onDisk(`${n}-gwot`) ? [as(n), as(`${n}-gwot`)] : [as(n)]);
 const OWN: Own[] = [
   { name: 'export --check', each: true, some: ([n]) => { const g = generatorOf(read(n)); return n === 'office' ? ['tools/level-export.ts', '--check'] : g && /^tools\/levels\/[\w-]+\.ts$/.test(g) && existsSync(resolve(ROOT, g)) ? ['tools/levels/export.ts', g.slice(13, -3), '--check'] : null; } },
   { name: 'map-check', each: true, some: ([n]) => { const S = n === 'office' ? { roomClear: {} } : read(n).scenarios ?? {}; return rowsOf(n).length && (S.roomClear || S.quiet) ? ['tools/qa/map-check.ts', n, '--no-runs'] : null; } },   // (a map with a room clear or a quiet block: a rescue alone is not map-check's)
-  { name: 'level-lint', some: l => ['tools/qa/level-lint.ts', ...twins(l, n => `levels/${n}.json`), '--quiet'] },
-  { name: 'door-size', all: ['tools/qa/door-size.ts'], some: l => ['tools/qa/door-size.ts', ...twins(l, n => n)] },
-  { name: 'second-way-check', all: ['tools/qa/second-way-check.ts'], some: l => { const f = l.filter(n => rowsOf(n).some(e => e.kind !== 'quiet')); return f.length ? ['tools/qa/second-way-check.ts', ...twins(f, n => `${n}.json`)] : null; } },
-  { name: 'marksight-check', all: ['tools/qa/marksight-check.ts'], some: l => ['tools/qa/marksight-check.ts', ...twins(l, n => n)] },   // (a level that stands no man with something to watch is named NOT JUDGED and passes)
-  { name: 'walked-check', all: ['tools/qa/walked-check.ts'], some: l => ['tools/qa/walked-check.ts', ...l] },   // (a look twin stands on its plain file's floor: the plain file is asked)
-  { name: 'lived-check', all: ['tools/qa/lived-check.ts', '--quiet'], some: l => ['tools/qa/lived-check.ts', ...twins(l, n => n), '--quiet'] },
+  { name: 'level-lint', some: l => ['tools/qa/level-lint.ts', ...l.map(n => `levels/${n}.json`), '--quiet'] },
+  { name: 'door-size', all: ['tools/qa/door-size.ts'], some: l => ['tools/qa/door-size.ts', ...l.map(n => n)] },
+  { name: 'second-way-check', all: ['tools/qa/second-way-check.ts'], some: l => { const f = l.filter(n => rowsOf(n).some(e => e.kind !== 'quiet')); return f.length ? ['tools/qa/second-way-check.ts', ...f.map(n => `${n}.json`)] : null; } },
+  { name: 'marksight-check', all: ['tools/qa/marksight-check.ts'], some: l => ['tools/qa/marksight-check.ts', ...l.map(n => n)] },   // (a level that stands no man with something to watch is named NOT JUDGED and passes)
+  { name: 'walked-check', all: ['tools/qa/walked-check.ts'], some: l => ['tools/qa/walked-check.ts', ...l] },
+  { name: 'lived-check', all: ['tools/qa/lived-check.ts', '--quiet'], some: l => ['tools/qa/lived-check.ts', ...l.map(n => n), '--quiet'] },
   { name: 'kitview-plan', all: ['tools/qa/kitview-plan.ts', '--quiet'], some: l => ['tools/qa/kitview-plan.ts', ...l, '--quiet'] },
   { name: 'level-names-check', all: ['tools/qa/level-names-check.ts', '--no-play'], some: l => { const f = l.filter(n => !/^office/.test(n) && Object.keys(read(n).scenarios ?? {}).length); return f.length ? ['tools/qa/level-names-check.ts', '--levels', f.join(','), '--no-play'] : null; } },
-  { name: 'floor-order-check', all: ['tools/qa/floor-order-check.ts'], some: l => ['tools/qa/floor-order-check.ts', ...twins(l, n => `${n}.json`)] },
+  { name: 'floor-order-check', all: ['tools/qa/floor-order-check.ts'], some: l => ['tools/qa/floor-order-check.ts', ...l.map(n => `${n}.json`)] },
   { name: 'quiet-check', all: ['tools/qa/quiet-check.ts'], some: l => { const f = l.filter(n => read(n).scenarios?.quiet); return f.length ? ['tools/qa/quiet-check.ts', ...f.map(n => `${n}.json`)] : null; } },
   { name: 'lesson-check', all: ['tools/qa/lesson-check.ts'], some: l => { const f = l.filter(n => read(n).scenarios?.lesson); return f.length ? ['tools/qa/lesson-check.ts', ...f] : null; } },
 ];
@@ -523,9 +513,9 @@ if (import.meta.main) {
   const MD = val('--md'), JSON_OUT = val('--json'), QUIET = flag('--quiet'), RUN = flag('--run'), JOBS = Number(val('--jobs') ?? 4) || 4, BREAK = process.env.NEEDS_BREAK === '1';
   const SKIP = (val('--skip') ?? '').split(',').map(s => s.trim()).filter(Boolean);
   for (const s of SKIP) if (!(NEEDS as readonly string[]).includes(s)) { console.error(`no need called '${s}' (${NEEDS.join(', ')})`); process.exit(2); }
-  const names = argv.filter((a, i) => !a.startsWith('--') && !VALUED.includes(argv[i - 1])).map(a => plainOf(a.replace(/^levels\//, '').replace(/\.json$/, '')));
+  const names = argv.filter((a, i) => !a.startsWith('--') && !VALUED.includes(argv[i - 1])).map(a => a.replace(/^levels\//, '').replace(/\.json$/, ''));
   const files = readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')).map(f => f.slice(0, -5)).sort();
-  const every = files.filter(f => !f.endsWith('-gwot')), todo = names.length ? [...new Set(names)] : every;
+  const every = files, todo = names.length ? [...new Set(names)] : every;
   for (const n of Object.keys(NOBODY_COMES)) if (!every.includes(n) || !rowsOf(n).length) { console.error(`NOBODY_COMES names '${n}', which is no level with a mission row: take the line out`); process.exit(1); }
   for (const n of todo) if (!files.includes(n)) { console.error(`no level file levels/${n}.json`); process.exit(2); }
   const menu = resolve(ROOT, 'public/assets/menu'), docsDir = resolve(ROOT, 'docs/agents'), stills = JSON.parse(readFileSync(resolve(menu, 'stills.json'), 'utf8')).stills as Record<string, unknown>;
@@ -534,7 +524,6 @@ if (import.meta.main) {
   const T: Tables = { music: (level, kind) => setlistNames(level, kind).own, still: id => Object.hasOwn(stills, id), picture: id => existsSync(resolve(menu, `${id}.jpg`)),
     cards: (n, block) => { const was = kitTeam(); kitTeam(n); try { return (kitWorn(n, Array.from({ length: KIT_MEMBERS }, (_, j) => ({ ...kitDefault(j), ...(block[String(j)] ?? {}) }))) as Card[]).map(m => ({ ...m })); } finally { kitTeam(was); } },
     docs: readdirSync(docsDir).filter(f => f.endsWith('.md')).map(f => readFileSync(resolve(docsDir, f), 'utf8')).join('\n') };
-  const twinOf = (n: string) => files.includes(`${n}-gwot`) ? read(`${n}-gwot`) : null;
   console.log(`# what a level needs — ${BREAK ? 'the red path' : `${todo.length} level${todo.length > 1 ? 's' : ''}`}, the ${harnessProfile()} stand${SKIP.length ? ` (not asked: ${SKIP.join(', ')})` : ''}`);
 
   if (BREAK) {
@@ -552,10 +541,10 @@ if (import.meta.main) {
     const row: Row = { ...e, id: 'planted-row', place: undefined, blurb: 'short', defenders: 12, ways: ['one', 'two', 'three'], squads: !e.squads, only: undefined };
     const bareCard = { bangs: 0, charges: 0, smoke: 0, frags: 0, walls: 0, shells: 0, big: 'none' };   // (the kit's gap is PLANTED, whatever the issue table gives: every man's card emptied)
     const planted: Tables = { music: () => false, still: () => false, picture: () => false, docs: '', cards: () => Array.from({ length: KIT_MEMBERS }, (_, j) => ({ ...kitDefault(j), ...bareCard })) };
-    const lines = ask(name, L, null, [row], planted);
-    // (the response need's reds want a block: the same level again with a `why` of one word, under the name of a level NOBODY_COMES holds, beside a look twin whose block is another's)
+    const lines = ask(name, L, [row], planted);
+    // (the response need's reds want a block: the same level again with a `why` of one word, under the name of a level NOBODY_COMES holds)
     const blocked = structuredClone(L), other = structuredClone(L); blocked.scenarios!.response = { why: 'because', team: 'the planted team', raid: {} }; other.scenarios!.response = { why: 'because', team: 'another team' };
-    const blockLines = [...ask('vault', blocked, other, [{ ...row, kind: 'quiet' }], planted), ...ask(name, other, blocked, [row], planted)].filter(l => l.need === 'response' && l.mark !== 'PASS');
+    const blockLines = [...ask('vault', blocked, [{ ...row, kind: 'quiet' }], planted), ...ask(name, other, [row], planted)].filter(l => l.need === 'response' && l.mark !== 'PASS');
     // (the ground's measure, on sheets made here: the world's slab with one thing laid over it every 2.5 m, or cut in 1 m strips of two paints)
     const made = (over: Partial<Box> | null, strips?: [string, string]): LevelFile => ({ lights: [], doors: [],
       materials: { dust: { albedo: [0.2, 0.15, 0.09] }, damp: { albedo: [0.08, 0.05, 0.03] }, wet: { albedo: [0.2, 0.15, 0.09], rough: 0.4 }, gravel: { albedo: [0.19, 0.145, 0.09] } },
@@ -628,7 +617,7 @@ if (import.meta.main) {
       faces(flood(5, 1, turned(-30)), flood(15, -1, turned(110))) && 'a flood that looks 70 degrees off the line to the one facing it was named', faces(flood(5, 1, turned(70)), flood(15, -1, turned(210))) && 'a flood facing one that looks 70 degrees off the line to it was named',
       !faces(flood(5, 1, turned(20)), flood(15, -1, turned(170))) && 'two floods a little off the line between them were not named',
       faces(flood(5, 1), flood(15, -1, { kind: 'point' })) && 'a flood facing a bulb was named', faces(flood(5, 1), { ...flood(15, -1), dir: [-0.1, -1, 0] }) && 'a flood facing a light that looks straight down was named'].filter(Boolean) as string[]) missed.push(`key (${m})`);
-    for (const says of ['is not a sentence', 'is not the plain file', 'one of the two is stale', 'a squad\'s room clear and no row', 'a quiet night gone loud and no row']) if (!blockLines.some(l => l.text.includes(says))) missed.push(`response ('${says}')`);
+    for (const says of ['is not a sentence', 'one of the two is stale', 'a squad\'s room clear and no row', 'a quiet night gone loud and no row']) if (!blockLines.some(l => l.text.includes(says))) missed.push(`response ('${says}')`);
     for (const l of [...lines, ...blockLines]) if (l.mark !== 'PASS') console.log(`- ${l.mark} — ${name} (planted) · ${l.need}: ${l.text}`);
     for (const m of missed) console.log(`- MISSED — a planted gap was not found: ${m}`);
     console.log(missed.length ? `\nthe red path is GREEN on ${missed.length} planted gap(s): this tool cannot see them` : `\nall the gaps planted in ${Object.keys(WANT).length} needs were found (exit 1, as the red path must)`);
@@ -637,7 +626,7 @@ if (import.meta.main) {
 
   const table: Record<string, Line[]> = {}; let fails = 0, notes = 0;
   for (const name of todo) {
-    const lines = ask(name, read(name), twinOf(name), rowsOf(name), T).filter(l => !SKIP.includes(l.need)); table[name] = lines;
+    const lines = ask(name, read(name), rowsOf(name), T).filter(l => !SKIP.includes(l.need)); table[name] = lines;
     for (const l of lines) { if (l.mark === 'FAIL') fails++; if (l.mark === 'NOTE') notes++; if (!QUIET || l.mark !== 'PASS') console.log(`- ${l.mark} — ${name} · ${l.need}: ${l.text}`); }
   }
   if (RUN) { const lines = await runOwn(todo, !names.length, JOBS); table['(own checks)'] = lines;
