@@ -105,10 +105,8 @@ pub fn tip_of(g: &crate::game::Game, c_2: CharId) -> Option<V3> {
     Some([h[0] + d[0] * k.tip_out, h[1] + d[1] * k.tip_out + k.tip_up, h[2] + d[2] * k.tip_out])
 }
 
-/// The host's book, made on first asking. No rule reads it.   (smokebreak.ts:110)
-fn book(g: &mut Game) -> &mut SmokeShown {
-    g.engine.host_books.get_or_insert_with(crate::host_api::HostBooks::default).smoke_break.get_or_insert_with(|| SmokeShown { men: JsMap::new(), threads: 0.0 })
-}
+/// s: how long a thread's source lives, and how often he files the next
+const THREAD_EVERY: f64 = 1.0;
 
 /// `g.smoke.emit`: the real body (a `look` source: nothing to the game's own smoke), then the event for the host's solver.
 fn smoke_emit(g: &mut Game, e: &crate::smoke_types::SmokeEmitter) {
@@ -149,23 +147,21 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
         t.draws += 1.0;
     }
     if hidden {
-        // (nothing live shows in the fog: the lights are the meter's and stay, the smoke is the picture's. The source asks whether he is seen and lets go; filed again when he is)
-        if let Some(h) = book(g).men.get_mut(crate::Num(id)) { h.thread = false; }
-        return;
+        return; // (nothing live shows in the fog: the lights are the meter's and stay, the smoke is the picture's)
     }
     let k = g.k.smokebreak;
-    let mut h = *book(g).men.get(crate::Num(id)).unwrap();
-    // the thread off the end: one source that rides his hand for as long as he smokes
-    if let (false, Some(tip), true) = (h.thread, tip, mn.t >= k.flame_at + k.flame) {
-        let b = k.thread;
-        smoke_emit(g, &crate::smoke_types::SmokeEmitter {
-            pos: tip, dir: [0.0, 1.0, 0.0], speed: b.speed, radius: b.radius, min_voxels: Some(b.cells), density: b.density, temperature: b.temp, ttl: 600.0, age: 0.0,
-            kind: crate::smoke_types::SmokeEmitterKind::Breath, push: Some(b.push), jitter: Some(b.jitter), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Fine),
-            confined: Some(true), look: Some(true), track_vel: Some(true), tint: Some(k.color), track: Some(crate::effects::Track::Cigarette { by: c }),
-            ..crate::smoke_types::SmokeEmitter::zeroed()
-        });
-        book(g).threads += 1.0;
-        h.thread = true;
+    // the thread off the end: a short source that rides his hand, filed afresh every second he smokes and is seen (a fire's smoke is filed the same way). Nothing
+    // has to know whether the host's solver still has it: whatever it dropped comes back by itself
+    if let (Some(tip), true) = (tip, mn.t >= k.flame_at + k.flame) {
+        if m::floor(mn.t / THREAD_EVERY) != m::floor((mn.t - dt) / THREAD_EVERY) {
+            let b = k.thread;
+            smoke_emit(g, &crate::smoke_types::SmokeEmitter {
+                pos: tip, dir: [0.0, 1.0, 0.0], speed: b.speed, radius: b.radius, min_voxels: Some(b.cells), density: b.density, temperature: b.temp, ttl: THREAD_EVERY, age: 0.0,
+                kind: crate::smoke_types::SmokeEmitterKind::Breath, push: Some(b.push), jitter: Some(b.jitter), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Fine),
+                confined: Some(true), look: Some(true), track_vel: Some(true), tint: Some(k.color), track: Some(crate::effects::Track::Cigarette { by: c }),
+                ..crate::smoke_types::SmokeEmitter::zeroed()
+            });
+        }
     }
     // what he breathes out: after the lighting and after every draw, as the hand comes down
     let due = if js::truthy(was.up) && !js::truthy(now.up) { mn.t } else { -1.0 };
@@ -177,7 +173,6 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
         if mn.t >= out_at {
             mn.out_at = None;
             t.breaths += 1.0;
-            // the first answer of the `at` of smokebreak.ts:149, which cannot be anything but a place here. The later ones are the solver's: no arm in `effects::Track`, notes.md, Out.
             let b = k.breath;
             let a = mouth_of(g, c);
             let v = g.ch[c].vel;
@@ -190,7 +185,6 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
             });
         }
     }
-    book(g).men.set(crate::Num(id), h);
 }
 
 /// Once a frame, after the characters are posed: each told man's clock, hand and lights, and what the host shows of his smoke.   (smokebreak.ts updateSmokeBreak)
@@ -226,8 +220,6 @@ pub fn update_smoke_break(g: &mut crate::game::Game, dt: f64) {
                     x.live = false;
                 }
             }
-            let id = g.ch[c].id;
-            book(g).men.delete(crate::Num(id));
             if had.is_some() && !script_smokes(g, gd) {
                 g.m.smokebreak.states.as_mut().unwrap().men.delete(c); // (told again later, he lights another)
             }
@@ -242,8 +234,6 @@ pub fn update_smoke_break(g: &mut crate::game::Game, dt: f64) {
         };
         mn.live = true;
         men += 1.0;
-        let id = g.ch[c].id;
-        book(g).men.get_or_insert_with(crate::Num(id), || SmokeShownMenValue { thread: false });
         smoke_one(g, gd, c, dt, &mut mn, &mut t);
         g.m.smokebreak.states.as_mut().unwrap().men.set(c, mn);
     }

@@ -288,7 +288,6 @@ WHAT STILL DIFFERS, each with its cause:
 - a stun's smoke trails are 10 where the other page has 12, and a holed wall's puffs a few more: both ask the host's solver for its budget, and
   the tick has no answer of the host's.
 - a smoke can's and its vent's source does not ride the can while it rolls (no arm for an item in the Rust `Track`).
-- a man's cigarette has no thread of smoke off its end (`smokebreak seam_thread_track` answers nothing: no arm for a hand in the Rust `Track`).
 
 WHAT A SMOKE SOURCE RIDES. A source that hangs on a thing that moves is asked every frame where that thing is now (`SmokeEmitter.track`, read in
 `src/smoke/smoke.ts update`): that one question is the whole rule, and nothing else places such a source. The tick names the thing (`effects::Track`:

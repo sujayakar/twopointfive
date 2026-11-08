@@ -188,6 +188,8 @@ export class SmokeSystem implements SmokeSystemLike {
   private levelOf(e: { lattice?: 'fine' | 'coarse'; kind?: string }): number { return (e.lattice ?? (e.kind === 'canister' ? 'coarse' : 'fine')) === 'coarse' ? 0 : 1; }
   emit(e: SmokeEmitter) {
     if (!this.params.enabled || this.params.frozen) return;
+    if (e.look && !this.drawing()) return;   // (a look source is the picture's: nothing to draw it, nothing to file)
+    if (e.fire && this.engine.settings.fireSmoke === false) return;   // (the graphics preset that sheds a fire's smoke, ui/quality.ts: the tick says it, this takes it or not)
     const level = this.levelOf(e), voxel = this.grid.levels[level].voxel;
     const radius = e.minVoxels ? Math.max(e.radius, e.minVoxels * voxel) : e.radius;
     this.emitters.push({ ...e, radius, pos: v3.copy(e.pos), dir: v3.normalize(e.dir), level });
@@ -234,11 +236,11 @@ export class SmokeSystem implements SmokeSystemLike {
    *  the somke". A round used to be a row of soft shoves 7 cm across (a cell and a bit) for one step, which moved nothing anyone could see. It is ONE LINE now (`push`
    *  with `line`): the air within about `radius` of the path is brought up to `speed` along it, once (smoke.wgsl: never slowed, never turned, the same whatever the
    *  frame's length), and a long thin jet is nearly free of divergence, so the pressure step leaves it standing: it drags smoke after the round out of the far side
-   *  of a plume and clear air in at the near side, and its edges roll up. `push` = how flat the jet's top is (4 = full speed out to 1.18 radii). speed 0 = the dots.
+   *  of a plume and clear air in at the near side, and its edges roll up. `push` = how flat the jet's top is (4 = full speed out to 1.18 radii). speed 0, the look's Stirred smoke row at 0 or ?look=old: no wake.
    *  The line stands two radii inside each end of the round's leg, so its round ends do not shove the air behind what the round hit or came out of. */
   readonly wake = { speed: 9, radius: 0.12, push: 4 };
   round(from: Vec3, dir: Vec3, len: number): boolean {
-    const W = this.wake; if (!(W.speed > 0) || !lookConfig.on || !(lookConfig.stir > 0)) return false;   // (the look's Stirred smoke row; ?look=old: no line)
+    const W = this.wake; if (!(W.speed > 0) || !(lookConfig.stir > 0)) return false;   // (the look's Stirred smoke row)
     const half = len / 2 - 2 * W.radius;
     if (half > 0.025) this.push({ pos: v3.mad(from, dir, len / 2), dir, speed: W.speed, radius: W.radius, line: half, push: W.push });
     return true;
