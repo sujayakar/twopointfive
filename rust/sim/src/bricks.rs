@@ -21,7 +21,7 @@
 
 use crate::lines;
 use crate::maths::{exp, hypot3};
-use crate::state::{state, GAMES};
+use crate::state::{state, state_read, GAMES};
 use crate::world::{js_max, js_min, world, ASK_HOST, K_ROT, LEAF_SETS, MAX_LEAVES, REC, R_C, R_H, R_KIND};
 use core::mem::size_of;
 use prim::floor;
@@ -41,14 +41,15 @@ pub const MAX_EMIT: usize = 64;
 pub const EMIT: usize = 7;
 /// the head: emitters live · steps taken · the plan in bricks, x then z (0 = no step has been taken on any level yet) · THE BOOK OF THE SMOKE, two
 /// sums in unit·m³ that thin at the cells' own rate, so that at every step what the cells hold + what was given back = what was let out: all that was let
-/// out · what thin bricks held when they were given back, and what the wind carried over the plan's edge (K.wind)
-pub const HEAD: usize = 6;
+/// out · what thin bricks held when they were given back, and what the wind carried over the plan's edge (K.wind) · seconds owed toward the next step · a word of nothing (a block is whole vectors long)
+pub const HEAD: usize = 8;
 const H_EMIT: usize = 0;
 pub const H_STEPS: usize = 1;
 const H_NBX: usize = 2;
 const H_NBZ: usize = 3;
 pub const H_OUT: usize = 4;
 pub const H_GIVEN: usize = 5;
+const H_CLOCK: usize = 6;
 pub const O_EMIT: usize = HEAD;
 /// which brick is where: its place in plan, x then z, EACH PLUS ONE (0 = the slot is free: a row of zeros is an empty grid)
 pub const O_KEYS: usize = O_EMIT + MAX_EMIT * EMIT;
@@ -322,7 +323,7 @@ pub fn reset(g: usize, home: bool) {
 pub fn empty(g: usize) {
     let mut gr = grid(g);
     for h in 0..HEAD {
-        if h != H_NBX && h != H_NBZ {
+        if h != H_NBX && h != H_NBZ && h != H_CLOCK {
             gr.st[h] = 0.0;
         }
     }
@@ -409,44 +410,75 @@ fn shares(share: &[f64; MAX_GLOW], wide: usize, gx: usize, gz: usize, x: usize, 
     let sz = if z + 1 < BX || south { unit(share[(gz + z + 1) / 2 * wide + (gx + x) / 2]) } else { s };
     (s, sx, sz)
 }
-/// LET OUT: an emitter joins the list. When the list is full the one with the least still to let out gives way, and that may be the newcomer.
-fn emit(g: &mut Grid, x: f64, y: f64, z: f64, radius: f64, rate: f64, ttl: f64) {
+/// LET OUT: an emitter joins the list of the game in slot `g` (where, how wide, what it lets out a second, for how long). When the list is full the one
+/// with the least still to let out gives way, and that may be the newcomer.
+pub fn emit(g: usize, x: f64, y: f64, z: f64, radius: f64, rate: f64, ttl: f64) {
     // (an emitter that is no number lets nothing out, and must not sit in the list as one)
     if !(x - x == 0.0 && y - y == 0.0 && z - z == 0.0 && radius >= 0.0 && radius < 1e6 && rate > 0.0 && ttl > 0.0 && rate * ttl < 1e12) {
         return;
     }
-    let n = js_min(g.st[H_EMIT], MAX_EMIT as f64) as usize;
+    let p = &mut state(g).smoke;
+    if p.live == 0 {
+        return;
+    }
+    let st = &mut p.st;
+    let n = emitters(st);
     let mut at = n;
     if n >= MAX_EMIT {
         let left = |st: &[f64; LEN], i: usize| st[O_EMIT + i * EMIT + 3] * js_max(0.0, st[O_EMIT + i * EMIT + 4] - st[O_EMIT + i * EMIT + 5]);
         let mut k = 0;
         for i in 1..n {
-            if left(g.st, i) < left(g.st, k) {
+            if left(st, i) < left(st, k) {
                 k = i;
             }
         }
-        if left(g.st, k) >= rate * ttl {
+        if left(st, k) >= rate * ttl {
             return;
         }
         at = k;
     } else {
-        g.st[H_EMIT] = (n + 1) as f64;
+        st[H_EMIT] = (n + 1) as f64;
     }
     let o = O_EMIT + at * EMIT;
-    g.st[o] = x;
-    g.st[o + 1] = y;
-    g.st[o + 2] = z;
-    g.st[o + 3] = rate;
-    g.st[o + 4] = ttl;
-    g.st[o + 5] = 0.0;
-    g.st[o + 6] = radius;
+    st[o] = x;
+    st[o + 1] = y;
+    st[o + 2] = z;
+    st[o + 3] = rate;
+    st[o + 4] = ttl;
+    st[o + 5] = 0.0;
+    st[o + 6] = radius;
+}
+fn emitters(st: &[f64; LEN]) -> usize {
+    js_min(st[H_EMIT], MAX_EMIT as f64) as usize
+}
+/// how many emitters are letting out in the game in slot `g`
+pub fn emitting(g: usize) -> usize {
+    emitters(&state_read(g).smoke.st)
+}
+/// is there smoke in the game in slot `g`: an emitter, or a brick standing
+pub fn smoky(g: usize) -> bool {
+    emitting(g) > 0 || state_read(g).smoke.live as usize > ROW + O_RHO * 8
+}
+/// `dt` SECONDS OF THE GAME in slot `g` → how many steps have come due: four at most (a game that stood still does not owe a hundred)
+pub fn beat(g: usize, dt: f64) -> u32 {
+    let p = &mut state(g).smoke;
+    if p.live == 0 || !(dt > 0.0) {
+        return 0;
+    }
+    let mut left = p.st[H_CLOCK] + dt;
+    let mut n = 0;
+    while left >= SUB && n < 4 {
+        left -= SUB;
+        n += 1;
+    }
+    p.st[H_CLOCK] = if left >= SUB { 0.0 } else { left };
+    n
 }
 
 /// `n` STEPS of a tenth of a second each of the grid of the game in slot `g` (its block's `stamp`), over the copy `copy` of box world `w` as it stands
-/// and the leaves of list `set`; the emitters handed over since the last step (`emits`: x y z, how wide, what it lets out a second, for how long, six
-/// doubles each) join the list first. 0, or ASK_HOST = no grid stands on this level (its plan is larger than a grid can be), or the game has none: the
-/// state is as it was, and no emitter was taken.
-pub fn step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, emits: &[f64], k: &K, glow: Option<&crate::glow::K>) -> u32 {
+/// and the leaves of list `set`. 0, or ASK_HOST = no grid stands on this level (its plan is larger than a grid can be), or the game has none: the
+/// state is as it was.
+pub fn step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, k: &K, glow: Option<&crate::glow::K>) -> u32 {
     let o = world(w);
     let (mx, mz) = (o.w as f64 * o.cs, o.h as f64 * o.cs);
     let (nbx, nbz) = (-floor(-mx / SIDE), -floor(-mz / SIDE));
@@ -466,9 +498,6 @@ pub fn step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, emits: 
         g.nbx = nbx as usize;
         g.nbz = nbz as usize;
         g.remake();
-    }
-    for e in emits.chunks_exact(6) {
-        emit(&mut g, e[0], e[1], e[2], e[3], e[4], e[5]);
     }
     for _ in 0..n {
         substep(w, set, &mut g, k);
@@ -516,7 +545,7 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
 
     // 1. the emitters let out, each up the column it stands under (from its own foot to the top of its plume: its width, and the rise the blobs had),
     //    and the spent ones leave the list
-    let n = js_min(g.st[H_EMIT], MAX_EMIT as f64) as usize;
+    let n = emitters(g.st);
     let mut kept = 0;
     for i in 0..n {
         let o = O_EMIT + i * EMIT;
@@ -832,7 +861,7 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
                 })
             })
         });
-        for i in 0..js_min(g.st[H_EMIT], MAX_EMIT as f64) as usize {
+        for i in 0..emitters(g.st) {
             let o = O_EMIT + i * EMIT;
             let (ex, ez) = (floor(g.st[o] / SIDE) - bx as f64, floor(g.st[o + 2] / SIDE) - bz as f64);
             fed |= ex >= -1.0 && ex <= 1.0 && ez >= -1.0 && ez <= 1.0;

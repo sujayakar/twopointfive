@@ -553,7 +553,7 @@ pub fn face_light(g: &mut crate::game::Game, gd: GuardId, head: V3) -> f64 {
     let me = g.ch[g.gd[gd].ch].id;
     let team = g.gd[gd].team;
     let mut skip = move |g: &mut Game, owner: f64| -> bool { owner == me || own_side_owns(g, owner, team) };
-    let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), None, None, Some(crate::sim_lightshome::row_bit().screen));
+    let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), Some(crate::sim_lightshome::row_bit().screen));
     crate::game::game_visibility_of(g, est)
 }
 /// a man of this team carries the lamp with this owner (doze.ts:307, 314)

@@ -25,7 +25,7 @@ fn a_host_that_hands_its_tables_keeps_them() {
     let link = format!("{}&hard", LINK);
     let handed = |tables: &[u8], commands: &[u8]| pack(&[level.as_bytes(), link.as_bytes(), a.mannequin.text.as_bytes(), a.mannequin.bin.unwrap(), a.cast.map_or(&b""[..], |c| c.text.as_bytes()), a.cast_look.map_or(&b""[..], |c| c.text.as_bytes()), tables, commands]);
     // (slot 1: this stand holds no `Play`, whose games stand in slot 0)
-    let o = StartOpts { seed: 1, slot: 1, cpu_senses: true, ..Default::default() };
+    let o = StartOpts { seed: 1, slot: 1, ..Default::default() };
     let s = stand_handed(&handed(&w.b, b""), &o, &mut |_, _| {});
     assert_eq!(difficulty_now(&s.game), DifficultyNow::Standard, "the host's tables have both switches off, which read as standard, and the word did not put them on hard");
     assert!(!s.game.k.pressure.on && !s.game.k.digin.on && !s.game.k.fog.cone, "the host's tables stand");

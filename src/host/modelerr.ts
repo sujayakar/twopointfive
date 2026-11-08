@@ -1,32 +1,28 @@
 // HOW FAR THE GAME'S OWN SENSES ARE FROM THE PICTURE (the page's `?modelerr`; headless, tools/qa/modelerr.ts). A development tool: nothing of it is made
 // without the word, and the game never reads it.
 //
-// The senses can be worked out by the game itself (game/sense.ts SENSE.cpu: the light estimate, the smoke as blobs or on the coarse grid) where the page
-// reads them off the renderer (the probe: render/probe.ts). The two are MODELS OF ONE WORLD and are never slaved to each other, so something has to say how
-// far apart they stand. This does: it walks one scripted plan over the level that is open, and at every sample asks the SAME question of both.
-//   light   a point at chest or head height: the probe's meter there (W/m², its best axis) beside the estimate (guards.ts lightEstimateAt)
-//   smoke   a level sight line near a canister the plan sets off, at each height of the plan (`EYES`) and at fixed ages of the smoke: the probe's
-//           transmittance along it beside each smoke model's
-// and reports the spread of the difference a model, in the units the game decides by: the light meter's own 0‥1 scale (Game.visibilityOf) and the share of
+// The game works its senses out for itself (game/sense.ts, rust/game_rules/src/sense): the light on a point and the smoke along a line are numbers of the
+// simulation, and nobody has ever seen them. What a player sees is the picture. The two are MODELS OF ONE WORLD, so something has to say how far apart
+// they stand. This does: it walks one scripted plan over the level that is open, and at every sample asks the SAME question of both.
+//   light   a point at chest or head height: what reaches it in the picture (the probe: render/probe.ts; W/m², its best axis) beside the game's
+//   smoke   a level sight line near a canister the plan sets off, at each height of the plan (`EYES`) and at fixed ages of the smoke: the share of light
+//           the picture lets through along it beside the game's
+// and reports the spread of the difference, in the units the game decides by: the light meter's own 0‥1 scale (Game.visibilityOf) and the share of
 // light a line lets through. Beside each spread, how often model and picture fall on OPPOSITE SIDES OF A DECISION (lit or dark for a man standing there,
 // hidden by the plume or not): that is what changes a fight.
 //
 // THE PLAN IS THE LEVEL'S OWN: stations are picked from its free floor by one rule (the farthest from those already picked), the points round a station by
-// another, and the models are stepped on a fixed sixtieth whatever the page's frame rate. A REPORT KEEPS ITS QUESTIONS (every station, point, line and
-// age) beside the picture's answers, so a report made on a GPU judges the models as they are LATER, with no GPU: a walk is handed the report and asks
+// another, and the plan's clock is the game's own seconds. A REPORT KEEPS ITS QUESTIONS (every station, point, line and
+// age) beside the picture's answers, so a report made on a GPU judges the game as it is LATER, with no GPU: a walk is handed the report and asks
 // its questions again, whatever a plan deals today (`ModelErr`'s `again`), on a stand where they look out on the world they did (its `look` word).
 //
-// A MODEL IS A ROW of `MODELS`: a new one (a light model with bounce) is a row here and a row of `BUDGET`, and everything below carries it.
 // The plan stands the player at each station (the picture is at its best round the camera), unseen and unhurt, with the AI held still, so that nothing
 // moves a door or a lamp between the page and the headless run; the three flags are put back as they were when the plan ends. It is not made on a page
 // that plays a tape or a networked game: it moves the player and lets smoke out, and neither of those is that page's to do.
 import type { Game } from '../game/game';
 import type { Vec3 } from '../math/vec';
-import type { SmokeEmitter } from '../smoke/types';
-import { CpuSmoke, SmokeGrid, SENSE, GRID, type LightField } from '../game/sense';
-import { lightEstimateAt, steadyLamps, LIGHTS } from '../game/guards';
-import { moonForget } from '../game/hours';
-import { smokeParams } from '../game/combat';
+import { senseTool } from '../game/sense';
+import { LIGHTS } from '../game/guards';
 import { saveFile, type SavedKind } from './savefile';
 import { pageSay } from '../view/pagesaid';
 
@@ -55,8 +51,7 @@ export const PLANS: Record<string, Plan> = {
 /** under this share of light a plume hides a standing man (guards.ts canSee's own line) */
 export const HIDES = 0.3;
 
-/** one question, and what each side said: `pic` the picture (null: never asked, or no answer came), `m` a value a model (null: that model does not stand
- *  here). A light sample has its point `p`; a smoke one its line `a` → `b` (level: `a[1]` is its height) and the age `t` of the smoke. `o` = UNDER THE OPEN SKY (game/weather.ts
+/** one question, and what each side said: `pic` the picture (null: never asked, or no answer came), `m` the game's, under the question's name. A light sample has its point `p`; a smoke one its line `a` → `b` (level: `a[1]` is its height) and the age `t` of the smoke. `o` = UNDER THE OPEN SKY (game/weather.ts
  *  underRoof, the footprints the rain and the wind go by): the light point; for a line, the place its canister stands or either of its ends (a line
  *  is 'under a roof' only when all three are, so that part is the smoke of a room and nothing else) — 1 open, 0 under a roof, absent in a report from
  *  before the walk said (the first GPU run was the two apart: close under a roof, far off under the sky) */
@@ -86,50 +81,29 @@ export interface Report {
   samples: Sample[];
 }
 
-// ---- the models: what each is asked, by kind
-type LightOf = (r: ModelErr, p: Vec3, skip: (owner: number) => boolean) => number | null;
-type SmokeOf = (r: ModelErr, a: Vec3, b: Vec3) => number | null;
-export const MODELS: { name: string; kind: 'light' | 'smoke'; light?: LightOf; smoke?: SmokeOf }[] = [
-  { name: 'estimate', kind: 'light', light: (r, p, skip) => lightEstimateAt(r.g, p, skip, false, null, false) },
-  { name: 'lit', kind: 'light', light: (r, p, skip) => r.lit && r.lit.grid.stands ? lightEstimateAt(r.g, p, skip, false, r.lit, false) : null },
-  { name: 'moonlit', kind: 'light', light: (r, p, skip) => r.lit && r.lit.grid.stands ? lightEstimateAt(r.g, p, skip, false, r.lit, true) : null },   // (the whole light model: the light that comes round and the moon — sense.ts SENSE.bounce and SENSE.moon)
-  { name: 'blobs', kind: 'smoke', smoke: (r, a, b) => r.blobs.blobsAlong(r.g.col, a, b) },
-  { name: 'grid', kind: 'smoke', smoke: (r, a, b) => { const G = r.grid.grid; if (!G) return null; const t = G.along(a, b); return t === -1 ? null : t; } },
-  { name: 'adrift', kind: 'smoke', smoke: (r, a, b) => { const G = r.adrift.grid ?? r.grid.grid; if (!G) return null; const t = G.along(a, b); return t === -1 ? null : t; } },   // (the grid with the weather's wind in it — sense.ts SENSE.drift: the same smoke as `grid` wherever no wind blows, and where none blows on the level at all it is `grid`'s own: a walk then holds one block of the module's four the fewer)
-];
+// ---- the two questions
+export const MODELS: { name: string; kind: 'light' | 'smoke' }[] = [{ name: 'light', kind: 'light' }, { name: 'smoke', kind: 'smoke' }];
 /** THE BUDGET a model: the most its error may be at the middle and at the 95th percentile (light: on the meter's 0‥1 scale; smoke: as a share of light)
  *  and the largest share of samples on which it may decide the other way from the picture. A model with no row is reported and not judged. The numbers
  *  are a measured run's with room over them, and docs/agents/rust.md says which run (the model against the picture): they are a bound on getting WORSE,
  *  not a claim that this much is good. Which run each row is from: below. */
 export interface Budget { p50: number; p95: number; flips: number }
-/** A ROW IS A MODEL, OR A MODEL IN A PART (`estimate:roof`, `grid:sky@1.5` — `partsOf`: the light under a roof or the sky, the sight lines there at
+/** A ROW IS A QUESTION, OR A QUESTION IN A PART (`light:roof`, `smoke:sky@1.5` — `partsOf`: the light under a roof or the sky, the sight lines there at
  *  one height): a report whose samples say where they stand is judged a part at a time by the rows of that part, and its whole is said and not
  *  judged; a report that does not say is judged whole by the plain rows.
  *  THE PARTS' ROWS ARE FROM THE FIRST RUN ON A GPU (tools/qa/fixtures/modelerr/office-full-metal.json: the office at night, Apple Metal, 2026-11-04), with
- *  room over them. Under the sky the rows of `estimate` and `lit` are wide because neither has the moon (`moonlit` has: sense.ts SENSE.moon), and of the smoke only `adrift` has a row: the picture
- *  showed no smoke there at eye height, the grid in still air stands tall over the canister, and the maintainer's call is that the picture stays (the
- *  row's own note says how little it bounds). EVERY LINE OF THAT RUN IS AT 1.5 m, SO EVERY SMOKE ROW IS OF THAT HEIGHT: the lines at a crouching man's
- *  eye and low over the floor (`EYES`) have no row, and are said and not judged, until a walk that asks them is run on a GPU.
- *  THE SMOKE ROWS UNDER A ROOF ARE PROVISIONAL: that run's 25 s lines are not counted (it is a
- *  version 1 report), so no picture of a room's smoke at 25 s has been measured, and a walk that waits counts that age against these rows: they are
- *  to be set again from the first report such a walk makes on a GPU. The plain rows are the software adapter's (one station, Very low), for its
- *  report alone, which does not say where its samples stand. */
+ *  room over them. EVERY LINE OF THAT RUN IS AT 1.5 m, SO EVERY SMOKE ROW IS OF THAT HEIGHT: the lines at a crouching man's eye and low over the floor
+ *  (`EYES`) have no row, and are said and not judged, until a walk that asks them is run on a GPU.
+ *  THE SMOKE ROW UNDER A ROOF IS PROVISIONAL: that run's 25 s lines are not counted (it is a version 1 report), so no picture of a room's smoke at 25 s
+ *  has been measured: it is to be set again from the first report a walk that waits makes on a GPU. The plain rows are the software adapter's (one
+ *  station, Very low), for its report alone, which does not say where its samples stand. */
 export const BUDGET: Record<string, Budget> = {
-  estimate: { p50: 0.08, p95: 0.15, flips: 0.1 },
-  lit: { p50: 0.05, p95: 0.15, flips: 0.1 },
-  blobs: { p50: 0.25, p95: 1, flips: 0.45 },
-  grid: { p50: 0.08, p95: 1, flips: 0.32 },
-  moonlit: { p50: 0.04, p95: 0.12, flips: 0.05 },           // (the software report's light with the models as they are: 0.013, 0.055 and none)
-  'estimate:roof': { p50: 0.1, p95: 0.2, flips: 0.08 },     // (measured 0.076, 0.145 and 4.5 %)
-  'lit:roof': { p50: 0.05, p95: 0.2, flips: 0.06 },         // (0.029, 0.136 and 2.3 %)
-  'blobs:roof@1.5': { p50: 0.05, p95: 1, flips: 0.17 },     // (0.009, 0.903 and 13.9 %: ages 3, 8 and 15 s)
-  'grid:roof@1.5': { p50: 0.05, p95: 0.75, flips: 0.15 },   // (0.019, 0.526 and 10.3 %)
-  'adrift:roof@1.5': { p50: 0.05, p95: 0.75, flips: 0.15 }, // (the grid's own row: under a roof no wind blows and the two are one smoke, so it goes red the day the drift leaks indoors)
-  'adrift:sky@1.5': { p50: 0.05, p95: 0.4, flips: 0.06 },   // (0.000, 0.250 and 2.7 % on 443 lines, where the grid in still air has 0.883, 1.000 and 64.8 %. WHAT IT BOUNDS IS LITTLE: out of doors the picture's smoke stays under a standing eye, so the row says only that the grid's does too. Smoke gone altogether, or blown the wrong way, would pass it: that is tools/qa/smokedrift-check.ts's to catch, until the lower lines of the plan have a picture and a row of their own)
-  'estimate:sky': { p50: 0.4, p95: 0.65, flips: 0.48 },     // (0.355, 0.594 and 42.0 %: no moon in the estimate)
-  'lit:sky': { p50: 0.4, p95: 0.65, flips: 0.48 },          // (the same: the light that comes round does not reach under the sky either)
-  'moonlit:roof': { p50: 0.05, p95: 0.17, flips: 0.04 },    // (THE WHOLE LIGHT MODEL, against that run's picture with the models as they are: 0.027, 0.113 and 1.1 %)
-  'moonlit:sky': { p50: 0.04, p95: 0.28, flips: 0.04 },     // (0.010, 0.214 and 1.1 %: what is left is the edge of the building's shadow, soft in the picture and hard here)
+  light: { p50: 0.04, p95: 0.12, flips: 0.05 },           // (measured 0.013, 0.055 and none)
+  smoke: { p50: 0.08, p95: 1, flips: 0.32 },
+  'light:roof': { p50: 0.05, p95: 0.17, flips: 0.04 },    // (0.027, 0.113 and 1.1 %)
+  'light:sky': { p50: 0.04, p95: 0.28, flips: 0.04 },     // (0.010, 0.214 and 1.1 %: what is left is the edge of the building's shadow, soft in the picture and hard here)
+  'smoke:roof@1.5': { p50: 0.05, p95: 0.75, flips: 0.15 }, // (0.019, 0.526 and 10.3 %: ages 3, 8 and 15 s)
+  'smoke:sky@1.5': { p50: 0.05, p95: 0.4, flips: 0.06 },  // (0.000, 0.250 and 2.7 % on 443 lines. What it bounds is little: out of doors the picture's smoke stays under a standing eye)
 };
 /** the heights a report's sight lines are at, highest first: what its own lines say (a report of the first walks says 1.5 and no more) */
 export function eyesOf(R: Report): number[] { const hs = new Set<number>(); for (const s of R.samples) if (s.k === 'smoke') hs.add(s.a![1]); return [...hs].sort((a, b) => b - a); }
@@ -325,10 +299,6 @@ function byTurns(heights: [Vec3, Vec3][][]): [Vec3, Vec3][] {
 interface Ask { key: string; sample: Sample; line: boolean; frames: number; asked: boolean }
 /** ONE WALK OF A PLAN. `frame()` once after each update of the game; `done` when the report is whole. */
 export class ModelErr {
-  /** the smoke as each model has it, fed the plan's own canisters (the game's own stays as it is, whatever SENSE says) */
-  blobs = new CpuSmoke(); grid = new CpuSmoke(); adrift = new CpuSmoke();
-  /** the light model's own field (sense.ts SENSE.bounce), stepped from the first tick of the walk and never fed smoke: the light is read before the canister */
-  lit: LightField | null = null;
   report: Report; done = false;
   private stations: Vec3[]; private at = -1; private phase: 'settle' | 'gap' | 'smoke' | 'end' = 'settle'; private left = 0; private age = 0; private ageAt = 0;
   private was: { unseen: boolean; god: boolean; ai: boolean };
@@ -345,23 +315,17 @@ export class ModelErr {
    *  is then `planAgain(again)`: the report's ages and its settle). Nothing is dealt, so what a plan would deal today does not matter. The caller
    *  says whether its questions look out here on the world they did (`lookOf` against `Report.look`) */
   constructor(readonly g: Game, readonly plan: Plan, planName: string, scene: string, readonly picture: boolean, private readonly again: Report | null = null) {
-    this.grid.grid = SmokeGrid.make(); if (g.wind.stormDrift()) this.adrift.grid = SmokeGrid.make(); this.was = { unseen: g.playerInvisible, god: g.godMode, ai: g.aiEnabled };
-    // (the light model's field as it stands once it has swept the plan and come to rest: two sweeps' worth of steps at once, so that the walk reads its
-    // light when it always did; a game's own field has been stepping since the level loaded)
-    { const own = new CpuSmoke(); own.grid = SmokeGrid.make(); if (own.grid) this.lit = own as LightField; }
-    if (this.lit) for (let n = 0; n < 2 * SENSE.glow.sweep; n += 4) this.lit.grid.step(g.col, 4 * GRID.step, col => steadyLamps(g, col));
+    this.was = { unseen: g.playerInvisible, god: g.godMode, ai: g.aiEnabled };
     this.stations = again ? again.stations : stationsOf(g, plan.stations); this.seen = g.time;
     this.report = { v: 2, plan: planName, scene, world: '', stations: this.stations, asked: plan, picture, meter: { slope: g.tune.visSlope, floor: g.tune.visFloor, litAt: LIGHTS.litAt }, unanswered: 0, samples: [] };
-    if (!this.stations.length) { this.done = true; this.release(); this.report.world = worldOf(this.report, g.col.boxes.length); this.report.look = lookOf(g, this.report); } else this.next();
+    if (!this.stations.length) { this.done = true; this.report.world = worldOf(this.report, g.col.boxes.length); this.report.look = lookOf(g, this.report); } else this.next();
   }
   get station(): number { return this.at; }
-  /** the walk is over: its grids give back the blocks they stood in (sense.ts SmokeGrid.free: each held one of the module's slots) */
-  private release(): void { this.grid.grid?.free(); this.grid.grid = null; this.adrift.grid?.free(); this.adrift.grid = null; if (this.lit) { this.lit.grid.free(); this.lit = null; } if (!SENSE.moon) moonForget(this.g); }   // (…and what the row `moonlit` had the game keep of its night, where the game itself reads no moon: the game is left as it was found)
   private hold(): void { const g = this.g; g.playerInvisible = true; g.godMode = true; g.aiEnabled = false; }
   private next(): void {
     this.at++; if (this.at >= this.stations.length) { this.phase = 'end'; return; }
     const g = this.g, s = this.stations[this.at];
-    g.smoke.clearAll?.(); this.blobs.clear(); this.grid.clear(); this.adrift.clear();
+    senseTool(g, 3, []);
     g.teleportPlayer([s[0], 0, s[2]]);
     const Q = this.again, here = (x: Sample) => x.s === this.at;
     if (Q) { this.pts = Q.samples.filter(x => x.k === 'light' && here(x)).map(x => x.p!); this.lines = Q.samples.filter(x => x.k === 'smoke' && here(x) && x.t === this.plan.ages[0]).map(x => [x.a!, x.b!]); }   // (every age asks the same lines in the same order: the first age's are the station's)
@@ -371,28 +335,25 @@ export class ModelErr {
   private ask(sample: Sample, line: boolean): void { this.report.samples.push(sample); if (this.picture) this.asks.push({ key: `modelerr:${this.keyN++}`, sample, line, frames: 0, asked: false }); }
   /** a sixtieth of the plan */
   private tick(): void {
-    const g = this.g, me = g.player.char.id, skip = (o: number) => o === me;
+    const g = this.g;
     if (this.move) { this.move = false; this.next(); if (this.phase === 'end') return; }   // (the tick after the last age: the very place in the plan's clock the walk always moved at, less the wait in `frame`)
-    this.lit?.grid.step(g.col, TICK, col => steadyLamps(g, col));
     if (this.phase === 'settle') {
       if (this.left-- > 0) return;
-      for (const p of this.pts) { const m: Record<string, number | null> = {}; for (const M of MODELS) if (M.light) m[M.name] = M.light(this, p, skip); this.ask({ k: 'light', s: this.at, p, o: this.open(p[0], p[2]), pic: null, m }, false); }
+      const lit = senseTool(g, 0, [g.player.char.id, ...this.pts.flat()]); this.pts.forEach((p, i) => this.ask({ k: 'light', s: this.at, p, o: this.open(p[0], p[2]), pic: null, m: { light: lit[i] ?? null } }, false));
       this.phase = 'gap'; this.left = GAP; return;   // (the picture reads its light before there is any smoke in it: the canister waits half a second)
     }
     if (this.phase === 'gap') {
       if (this.left-- > 0) return;
-      const s = this.stations[this.at], P = smokeParams(g) ?? { canisterDuration: 32, canisterDensity: 95, canisterRadius: 0.2, canisterTemp: 1.6, canisterSpeed: 1.9 };
-      const e: SmokeEmitter = { pos: [s[0], 0.1, s[2]], dir: [0, 1, 0], speed: P.canisterSpeed, radius: P.canisterRadius, density: P.canisterDensity, temperature: P.canisterTemp, ttl: P.canisterDuration, age: 0, kind: 'canister' };
-      g.smoke.emit(e); this.blobs.emit(e); this.grid.emit(e); this.adrift.emit(e);
+      const s = this.stations[this.at]; senseTool(g, 2, [s[0], 0.1, s[2]]);
       this.phase = 'smoke'; this.age = 0; this.ageAt = 0; return;
     }
     if (this.phase !== 'smoke') return;
-    this.blobs.step(TICK); this.grid.step(TICK); this.grid.grid?.step(g.col, TICK); this.adrift.step(TICK); this.adrift.grid?.step(g.col, TICK, null, () => g.wind.stormDrift()); this.age++;
+    this.age++;
     const t = this.plan.ages[this.ageAt];
     if (this.age < Math.round(t / TICK)) return;
     const st = this.stations[this.at], can = this.open(st[0], st[2]);
-    for (const [a, b] of this.lines) { const m: Record<string, number | null> = {}; for (const M of MODELS) if (M.smoke) m[M.name] = M.smoke(this, a, b);
-      this.ask({ k: 'smoke', s: this.at, a, b, t, o: can || this.open(a[0], a[2]) || this.open(b[0], b[2]) ? 1 : 0, pic: null, m }, true); }
+    const clear = senseTool(g, 1, this.lines.flat(2));
+    this.lines.forEach(([a, b], i) => this.ask({ k: 'smoke', s: this.at, a, b, t, o: can || this.open(a[0], a[2]) || this.open(b[0], b[2]) ? 1 : 0, pic: null, m: { smoke: clear[i] ?? null } }, true));
     if (++this.ageAt >= this.plan.ages.length) this.move = true;
   }
   /** once a frame of the game, after its update: the plan moves by the game's own seconds, and the picture is asked what is owed and read what has come */
@@ -400,7 +361,7 @@ export class ModelErr {
     if (this.done) return;
     const g = this.g; this.hold();
     this.owed += g.time - this.seen; this.seen = g.time;
-    { let n = 0; while (this.owed >= TICK - 1e-9 && n++ < 6 && this.phase !== 'end') { if (this.changes && this.asks.length) { this.owed = 0; break; }   // (the plan's clock stands while the picture answers: the models are not stepped past the questions either)
+    { let n = 0; while (this.owed >= TICK - 1e-9 && n++ < 6 && this.phase !== 'end') { if (this.changes && this.asks.length) { this.owed = 0; break; }   // (the plan's clock stands while the picture answers)
         this.owed -= TICK; this.tick(); } if (this.owed > 6 * TICK) this.owed = 6 * TICK; }
     // the picture: what has been answered is read, and as many of the rest are asked as the probe has places for after the game's own (eight are left to it)
     const P = g.probe as Game['probe'] & { room?: number }; let room = Math.max(0, (P.room ?? 64) - 8);
@@ -410,7 +371,7 @@ export class ModelErr {
       else if (q.frames > 120) { this.report.unanswered++; this.asks.splice(i, 1); } }
     for (const q of this.asks) { if (room <= 0) break; if (q.asked && q.frames % 4) continue;   // (an ask the probe let go of for a higher rank is asked again every fourth frame until it is answered)
       const s = q.sample; if (q.line) P.querySegment(q.key, s.a!, s.b!, 3); else P.query(q.key, s.p!, g.player.char.id, 3); q.asked = true; room--; }
-    if (this.at >= this.stations.length && !this.asks.length) { this.done = true; this.release(); this.report.world = worldOf(this.report, g.col.boxes.length); this.report.look = lookOf(g, this.report); g.playerInvisible = this.was.unseen; g.godMode = this.was.god; g.aiEnabled = this.was.ai; }   // (the game is handed back as it was found)
+    if (this.at >= this.stations.length && !this.asks.length) { this.done = true; this.report.world = worldOf(this.report, g.col.boxes.length); this.report.look = lookOf(g, this.report); g.playerInvisible = this.was.unseen; g.godMode = this.was.god; g.aiEnabled = this.was.ai; }   // (the game is handed back as it was found)
   }
 }
 
@@ -433,8 +394,7 @@ function say(lines: string[], at: 'top' | 'bottom' = 'top'): HTMLElement { const
 /** the report as lines a person reads */
 export function reportText(R: Report): string[] {
   const v = judge(R), out = [`The game's own senses against the picture · ${R.scene || 'the plain page'} · plan ${R.plan} · ${R.stations.length} stations · ${R.samples.length} samples${R.unanswered ? ` · ${R.unanswered} never answered` : ''}`, ...(R.picture ? v.lines : [])];
-  if (!R.picture) { const two = spreadOf(R, 'blobs').find(s => s.model === 'grid'); if (two && two.n) out.push(`grid against blobs: ${two.n} lines · off by ${two.p50.toFixed(3)} at the middle, ${two.p95.toFixed(3)} at the 95th · decides the other way on ${(two.flips * 100).toFixed(1)}%`); }
-  out.push(!R.picture ? 'No picture was asked: nothing is judged.' : !v.judged ? 'No model has a budget row and enough samples: nothing is judged.' : v.ok ? 'Every judged model is inside its budget.' : 'A MODEL IS PAST ITS BUDGET.');
+  out.push(!R.picture ? 'No picture was asked: nothing is judged.' : !v.judged ? 'No question has a budget row and enough samples: nothing is judged.' : v.ok ? 'Every judged question is inside its budget.' : 'A QUESTION IS PAST ITS BUDGET.');
   return out;
 }
 /** ONCE A PAGE FRAME, after the game's step: a return on its first line without the word */

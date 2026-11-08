@@ -126,7 +126,6 @@ pub fn reset_civilians(g: &mut crate::game::Game) {
         }
     }
     for cv in g.civilians.clone() {
-        forget_meter(g, cv);
         let c = g.gd[cv].ch;
         crate::sim_men_store::man_leaves(g, c);
     }

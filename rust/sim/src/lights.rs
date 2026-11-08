@@ -150,7 +150,7 @@ pub struct Lights {
     pub g: [f64; ROWS],
     pub b: [f64; ROWS],
     pub intensity: [f64; ROWS],
-    // ---- … its steady self, where R_STEADY is up: what who asks what the PLACE lights takes (a fire's)
+    // ---- … its steady self, where R_STEADY is up: what who asks what the PLACE lights takes (a fire's, a bad tube's)
     pub sx: [f64; ROWS],
     pub sy: [f64; ROWS],
     pub sz: [f64; ROWS],
@@ -282,6 +282,20 @@ fn back(l: &mut Lights, time: f64) {
 fn burn(l: &mut Lights, r: usize, on: bool, intensity: f64) {
     l.intensity[r] = intensity;
     l.row_bits[r] = (l.row_bits[r] & !R_ON) | if on { R_ON } else { 0 };
+}
+/// a bad tube's dip, a blink at a time, and what is left of it in one
+const DIP: f64 = 0.15;
+fn dip(time: f64) -> bool {
+    sin(time * 3.1) + sin(time * 7.3 + 2.0) * 0.6 > 1.15 && sin(time * 90.0) > 0.0
+}
+/// a bad tube's steady self: the tube without its dips, for who asks what the place lights
+fn tube(l: &mut Lights, r: usize, time: f64) {
+    if l.bits[l.row_target[r] as usize] & T_FLICKER == 0 {
+        return;
+    }
+    (l.sx[r], l.sy[r], l.sz[r], l.s_radius[r]) = (l.x[r], l.y[r], l.z[r], l.radius[r]);
+    l.s_intensity[r] = if dip(time) { l.intensity[r] / DIP } else { l.intensity[r] };
+    l.row_bits[r] |= R_STEADY;
 }
 
 /// EVERY EVENT FROM OUTSIDE. `t` is the fixture (an index of the columns), where the kind has one. The answer is the kind's own: IN_TRIP 0 = refused (the
@@ -460,11 +474,8 @@ pub fn step(g: usize, time: f64, dt: f64, near: bool, fumble: f64, es: f64) -> u
         if f > 0.0 && b & T_MAINS != 0 {
             f *= if active(l) { 0.0 } else { supply(time, l.restored_at + l.stagger[t]) };
         }
-        if f > 0.0 && b & T_FLICKER != 0 {
-            let s = sin(time * 3.1) + sin(time * 7.3 + 2.0) * 0.6;
-            if s > 1.15 {
-                f *= if sin(time * 90.0) > 0.0 { 0.15 } else { 1.0 };
-            }
+        if f > 0.0 && b & T_FLICKER != 0 && dip(time) {
+            f *= DIP;
         }
         l.factor[t] = f;
     }
@@ -475,10 +486,12 @@ pub fn step(g: usize, time: f64, dt: f64, near: bool, fumble: f64, es: f64) -> u
             let f = l.factor[t];
             let i = l.base[t] * f;
             burn(l, r, f > 0.001, i);
+            tube(l, r, time);
         } else if role == R_AREA {
             let f = l.factor[l.row_target[r] as usize];
             let i = l.row_base[r] * f * es;
             burn(l, r, f > 0.001, i);
+            tube(l, r, time);
         }
     }
     ev

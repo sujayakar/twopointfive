@@ -58,7 +58,7 @@ fn off_line(p: V3, a: V3, mouth: V3) -> f64 {
 }
 /// the place's own steady light at q is enough to be seen by
 fn lit_at(g: &mut Game, q: V3) -> bool {
-    let e = crate::guards::light_estimate_at(g, [q[0], 1.2, q[2]], Some(&mut |_g: &mut Game, _o: f64| true), Some(true), None, None, None);
+    let e = crate::guards::light_estimate_at(g, [q[0], 1.2, q[2]], Some(&mut |_g: &mut Game, _o: f64| true), Some(true), None);
     crate::game::game_visibility_of(g, e) >= g.k.lights.lit_at
 }
 /// the way on foot to q that does not cross T: its length, or none
