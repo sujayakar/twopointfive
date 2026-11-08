@@ -8,11 +8,11 @@
 //   the squad's order menu (X on the floor, a room clear with four) · the open Space list (Space held at a shut door) · a running verb (the leaf being eased)
 //   (the launcher's held arc is not asked: its rounds are staged on the copy, which is never sent).
 // THEN THE PAUSE with the rule on, under stepFrame (host/loop.ts, the loop main.ts runs) with the card up for some frames and Space let go under it: the first
-// tick after the card, and only it, holds the one-tick code 'Paused'; the Space list is shut and its row is not done; the order menu is still up. The same
+// tick after the card, and only it, holds the one-tick code 'Paused'; the Space list is shut and its row is not done; the order ring goes down with nothing given. The same
 // keys given to a fresh game tick by tick (what a recording holds and a replay does) end the same way.
 // A headless run cannot press the page's keys: main.ts's lines (Esc's press taken out of the frame, no back-out on it, Tab's trial waiting its turn) are held
 // by their source text here, and looked at on the real page apart.
-import { menuKey } from './squadwords';
+import { ringUp, ringDown } from './squadwords';
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 type V = [number, number, number];
@@ -47,13 +47,13 @@ export async function tabBackCheck(): Promise<boolean> {
     // ---- the squad's order menu: a room clear with four, X on the floor ahead
     const squad = async () => quiet(async () => { const W: any = await standUp({ seed: 33 }); const g = W.game; g.godMode = true;
       const why = startFromQuery(g, new URLSearchParams('roomclear&squad4')).why; for (let i = 0; i < 20; i++) { g.player.visibility = 0.05; W.step(DT); }
-      const p = g.player.char.pos, at: V = [p[0] + 1.5, 0, p[2] + 0.5]; W.cursorAt(at); menuKey(g.orders); W.step(DT); W.cursorAt(at); W.step(DT);
+      const p = g.player.char.pos, at: V = [p[0] + 1.5, 0, p[2] + 0.5]; W.cursorAt(at); ringUp(W.input, { step: (n = 1) => { for (let i = 0; i < n; i++) W.step(DT); } }); W.cursorAt(at); W.step(DT);
       return { W, g, O: g.orders, why, at }; });
     { const A = await squad(), upA = !!A.O.menu, ableA = A.g.backable(); await quiet(() => { A.W.cursorAt(A.at); key(A.W, TAB, 2); }); const goneA = !A.O.menu, ableAfter = A.g.backable();
       verdict(A.why === null && upA && goneA && ableA && !ableAfter,
         'the order menu: Tab closes it', `up ${upA} → gone on Tab ${goneA} · something to back out of before ${ableA}, after ${ableAfter}`); }
 
-    // ---- the pause: the first tick after the card holds 'Paused'; a held list and a held arc are let go unsent in it; the order menu stays
+    // ---- the pause: the first tick after the card holds 'Paused'; a held list and a held arc are let go unsent in it; the order ring goes down
     { const { stepFrame } = await import(`${ROOT}/src/host/loop.ts`);
       const under = (W: any, st: { frozen: boolean; seen: number; esc: number }) => { const g = W.game, up = g.update;
         g.update = function (this: any, dt: number, input: any, ...a: unknown[]) { if (input.pressed.has('Paused')) st.seen++; if (input.pressed.has('Escape')) st.esc++; return up.call(this, dt, input, ...a); };
@@ -68,7 +68,7 @@ export async function tabBackCheck(): Promise<boolean> {
       const T = await quiet(async () => { const { W, d, pl } = await door(); W.input.keys.add(IK); W.input.pressed.add(IK); for (let i = 0; i < 30 && !pl.sel.open; i++) W.step(DT); const open = !!pl.sel.open, a0 = d.angle;
         W.input.keys.delete(IK); W.input.pressed.add('Paused'); W.step(DT); const shut = !pl.sel.open; for (let i = 0; i < 30; i++) W.step(DT); return { back: W.game.view.look.back as string, open, shut, did: Math.abs(d.angle - a0) > 0.02 || !!pl.easing || !!pl.picking }; });
       const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), never = !/game\.escape\(\)/.test(main), takes = /input\.pressed\.delete\('Escape'\); menu\.toggle\(\);/.test(main), trial = /input\.hit\('Tab'\) && !\(!frozen && game\.backable\(\)\)/.test(main);
-      verdict(up0 && up1 && stA.seen === 1 && L.open && L.under0 && L.shut && !L.did && stL.seen === 1 && stL.esc === 0 && T.open && T.shut && !T.did && never && takes && trial && T.back === 'Tab',
+      verdict(up0 && !up1 && stA.seen === 1 && L.open && L.under0 && L.shut && !L.did && stL.seen === 1 && stL.esc === 0 && T.open && T.shut && !T.did && never && takes && trial && T.back === 'Tab',
         'the pause is the pause and nothing else: the first tick after the card holds \'Paused\' once, a Space list held as the card came up is shut with its row not done (and the same keys given tick by tick, as a replay gives them, end the same), the order menu is still up, and main.ts takes Esc\'s press out of the frame and never backs out on it',
         `order menu up ${up0} → after the card ${up1}, ticks holding 'Paused' ${stA.seen} · Space list open ${L.open}, still open under the card ${L.under0} → shut on the first tick back ${L.shut}, anything done ${L.did}, ticks holding 'Paused' ${stL.seen} · the same keys tick by tick: shut ${T.shut}, anything done ${T.did} · main.ts: no back-out on Esc ${never}, the press leaves the frame ${takes}, Tab's trial waits its turn ${trial} · the hint rows name ${T.back}`); }
 

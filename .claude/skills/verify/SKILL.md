@@ -60,7 +60,7 @@ Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable b
   `window.__res`, return immediately, then poll `window.__res` in a second call (a `setTimeout` poll is fine there).
 - `__quality`
   (`.apply('verylow'|'low'|'medium'|'high')`, `.sample(dt)`), `__audio` (`.stats`).
-- Squad hooks: `__orders` (`.open(target?)`, `.pick(i?)`, `.give(id, target?, who?)`, `.close()`, `.menu`, `.who`, `.cycleWho()`,
+- Squad hooks: `__orders` (`.pick(i?)`, `.give(id, target?, who?)`, `.menu`, `.who`,
   `.log`), `__roomclear` / `__nightbreach` / `__rescue` (`.start()`, `.stop()`, `.restage()`, `.state`,
   `.summary()`, `.log`), `__scenarios` (`.list`, `.current()`, `.pick(id)`, `.quit()`), `__picks` (`.list`, `.current()`, `.href(id)`).
 - Clean captures without the HUD: run `bun run tools/shot-server.ts` (needs to bind :5174 → outside the sandbox), then
@@ -98,10 +98,9 @@ Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable b
   `?squad=N` (0‥4 teammates), `?nightbreach`, `?rescue`, plus `&levelFile=<name>.json` for a level of its own (records, depot,
   block, warehouse, compound, barracks, registry). After `await __ready` check `__scenarios.current()`,
   `__roomclear.state` / `__nightbreach.state` / `__rescue.state`, and that the team stands (`__roomclear.team`).
-- **Orders menu**: aim the cursor at a door / a spot on the floor (`__mouse`), press `X` (one-frame `__input.pressed.add('KeyX')`
-  inside a `__runFrames` step, or `__orders.open()`), read `__orders.menu` (rows listed for that target; greyed rows carry the
-  reason), give a row with its digit (1 = the target's own order: move there / stack up, 2 = cover, 3 = fall in, 4 = hold,
-  5 on a door = 'door tools ▸', a page of its own) or `__orders.pick(i)`; then step frames and watch `__orders.log` and the men
+- **Orders ring**: aim the cursor at a door / a spot on the floor (`__mouse`), keep the squad's key down past its hold (`__runFrames(20, 1/60, ['KeyB'])`,
+  the first of them with `__input.pressed.add('KeyB')`), read `__orders.menu` (rows listed for that target; greyed rows carry the
+  reason), give a row by its wedge's digit (`__game.view.ring.wedges`; the last is 'more') or `__orders.pick(i)`; then step frames and watch `__orders.log` and the men
   walk. No row is ever on a digit above 5. While the menu is up the digits are not Sam's weapon slots.
 - **Off switches worth knowing when a boot fails or a run looks different**: `?nodestruction`, `?glassfx=0`, `?mannequin`,
   `?noslots`, `?nodoorpath`, `?radiocheck=0` (each takes one shipped-on feature back out). A headless tool stands the game up

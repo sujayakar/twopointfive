@@ -26,6 +26,7 @@
 //   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
+import { ringDown } from './squadwords';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -77,14 +78,14 @@ export async function rig(on: boolean, more: Record<string, unknown> = {}, squad
     /** … a wedge of it given by its digit — the first, or the one whose words fit — and every key let go (its words; null: no such wedge, the ring put away) */
     wedge(w: number | RegExp): string | null { const V = O.g.view.ring, x = (V?.wedges ?? []).find((y: any) => typeof w === 'number' ? y.key === w : w.test(y.text));
       if (!x) { R.away(); return null; } I.pressed.add(`Digit${x.key}`); R.step(); I.keys.clear(); R.step(4); if (O.cmdRing) R.away(); return x.text; },
-    away() { I.keys.clear(); O.cmdRing = null; O.close(); R.step(4); },
+    away() { I.keys.clear(); ringDown(I); R.step(4); },
     /** all four sent to stack on that door (true: they stand on their marks) */
     stackAll(d: any): boolean { O.give('stack', O.forMen({ kind: 'door', at: [d.frameCentre[0], 0, d.frameCentre[2]], door: d, side: 1 }, O.men('all')), 'all'); return R.until(() => R.onStack(d).length === O.men('all').length && R.set(R.onStack(d)), 40); },
     /** who is on that door by a plain stack, and whether they all stand on their marks */
     onStack(d: any): any[] { return O.men('all').filter((m: any) => O.of(m)?.order === 'stack' && O.of(m)?.door === d); },
     set(men: any[]) { return men.length > 0 && men.every((m: any) => O.of(m)?.arrived); },
     /** everything put away and the men back round Sam */
-    home() { I.keys.clear(); I.buttons = 0; O.cmdRing = null; O.close(); O.who = 'all';
+    home() { I.keys.clear(); I.buttons = 0; ringDown(I); R.step(); O.who = 'all';
       O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); R.until(() => D.ops.length === 0, 40); R.until(() => O.men('all').every((m: any) => flat(m.char.pos, g.player.char.pos) < 5), 30); R.step(30); },
     /** the men covering, by the point each watches */
     watches(): Map<string, string[]> { const out = new Map<string, string[]>(); for (const m of O.men('all')) { const A = O.of(m); if (A?.order !== 'cover' || !A.watch) continue; const k = `${A.watch[0].toFixed(1)},${A.watch[2].toFixed(1)}`; out.set(k, [...(out.get(k) ?? []), m.callsign]); } return out; },
@@ -144,7 +145,7 @@ export async function goalsCheck(): Promise<boolean> {
     // 7
     R.home();
     { const g0 = PM.PLAN_STATS.goals, n0 = O.log.length, onA = R.onDoor(A); R.I.keys.add('ShiftLeft'); R.I.keys.add(K.key); R.I.pressed.add(K.key); const ring = R.until(() => !!O.cmdRing, 1.5), whole = !O.menu?.part;
-      R.I.keys.clear(); O.cmdRing = null; O.close(); R.step(4); const asked = PM.PLAN_STATS.goals - g0, gave = O.log.length - n0;
+      R.I.keys.clear(); ringDown(R.I); R.step(4); const asked = PM.PLAN_STATS.goals - g0, gave = O.log.length - n0;
       line(onA && ring && whole && asked === 0 && gave === 0, '7. Shift + the key KEPT DOWN with nobody on anything is still everyone\'s ring: it comes up, and no goal is added by it',
         `the ring ${ring ? 'up' : 'NOT up'} · goals added ${asked} · orders given ${gave}`); }
     // 10 (the ring for a part: the switches as this run has them)

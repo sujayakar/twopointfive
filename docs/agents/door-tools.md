@@ -130,8 +130,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   while ANY addressed man holds that door (`heldPlain`; all of them under `thrHeldAll`) rows 1 / 2 of the same page read 'go in and clear · no bang' /
   'bang, then go in · N left' (= `thresholdThen('step' | 'bang')`, given to the men who hold: `only`; with 'wait for my word' on they keep the jambs and the
   word then does what the row said — `thenOnWord`, `Threshold.wordStep`: F after row 1 steps in with no can), F is still the word (with `PLANLAY.on`, the page, a row picked with 'wait for my word' on is first LAID — squad.md 'X is where the plan is laid' — and F sends it; from there it is this), and a can asked for at a held door is ONE can (`thrCans`). So an older 'X, 5, 4, then 1 or 2'
-  path in this file is the switch OFF; every older threshold probe runs on the frozen stand and is unchanged. `bun run tools/qa/doortest-check.ts`
-  (`probes.ts doortest`, in family `doortools`; both stands; `DOORTEST_BREAK=1` must fail). Never seen on a GPU or played by anybody.
+  path in this file is the switch OFF; every older threshold probe runs on the frozen stand and is unchanged. (`doortest-check.ts` read the listed menu's pages and is gone). Never seen on a GPU or played by anybody.
 - **Jamb men slice a doorway before they call it held; a man on a cut leans** (the maintainer's tape and note, 10-18: the pair told to 'clear from
   outside' stood on its two diagonals, said "holding on the door" with 21 of 47 cells unseen and a man dead centre 2.5 m in, in the wedge neither diagonal
   shows, and was shot stepping in; "men should try to pie from the outside as much as they can before considering their job done", and "some element of

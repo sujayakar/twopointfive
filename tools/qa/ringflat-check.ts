@@ -10,6 +10,7 @@
 //      'more', the posture row last; a wedge of the first ring gives its entry.
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
+import { ringDown } from './squadwords';
 
 const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { AUTOPILOT } = await import(`${ROOT}/src/game/autopilot.ts`);
@@ -32,7 +33,7 @@ export async function ringflatCheck(): Promise<boolean> {
     const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; W.step(DT); } };
     step(30); for (const m of O.squad()) m.god = true;
     const sam = g.player.char.pos, HOLD = Math.ceil(K.stayHoldSecs * 60) + 2;
-    const away = () => { input.keys.delete(KEY); O.cmdRing = null; O.close(); input.pressed.add('Escape'); step(2); if (O.cmdRing) { input.pressed.add('Escape'); step(2); } };
+    const away = () => { ringDown(input); step(2); if (O.cmdRing) { input.pressed.add('Escape'); step(2); } };
     /** the cursor where the squad's key reads that target */
     const aim = (t: any): boolean => { if (t.kind === 'door') { const c = t.door.frameCentre, th = t.door.def.closedDir, nx = -Math.sin(th), nz = Math.cos(th);
         for (const y of [c[1], 0.05, 1.0, 1.8]) for (const k of [0, 0.35, -0.35]) { W.cursorAt([c[0] + nx * k, y, c[2] + nz * k]); step(2); const h = O.hover(); if (h?.kind === 'door' && h.door === t.door) return true; } return false; }

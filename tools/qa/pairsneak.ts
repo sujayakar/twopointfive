@@ -16,7 +16,7 @@
 // with Sam through the route and the partner back at his shoulder (within `joinM` inside `joinSecs`: a partner who is never seen because he never came is 'left').
 // WHAT IT IS NOT: no GPU (no bounce light, no smoke, no picture); one plan per route; nobody shoots and nobody is taken down (those are the orders' and the
 // compromise parts' — this is the walk).
-import { menuKey, sneakWordOf } from './squadwords';
+import { ringUp, ringDown, sneakWordOf } from './squadwords';
 import { writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { standUp, ROOT } from './headless.ts';
@@ -189,7 +189,7 @@ export class Run {
   /** the order menu by presses: the cursor on the target, X, the row's digit(s). The row is checked by id: a menu whose digit means something else is a failed order. */
   order(target: () => void, digits: string[], id: string): boolean {
     const O = this.g.orders, n0 = O.log.length;
-    target(); this.step(); (menuKey(O), this.step()); this.step();
+    target(); this.step(); ringUp(this.I, this); this.step();
     if (!O.menu) { this.say(`order ${id}: the menu did not open`); return false; }
     const M0 = O.menu, seen = `rows ${M0.rows.map((d: any) => `${d.key ?? '·'} ${d.id}`).join(', ')}`;
     for (const d of digits) { target(); this.press(d); this.step(); }

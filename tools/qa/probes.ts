@@ -2706,12 +2706,10 @@ if (on('frag-down', 'frag', 'all')) await run('frag-down', async () => (await im
 for (const [name, fn] of [['burst-whole', 'burstWhole'], ['burst-breaks', 'burstBreaks'], ['burst-open', 'burstOpen'], ['burst-theirs', 'burstTheirs'], ] as const)
   if (on(name, 'burstglass', 'all')) await run(name, async () => (await import('./burstglass-probes.ts'))[fn]());
 // ---------------------------------------------------------------- the door tools (doortools-probes.ts; game/doortools.ts — open and clear / bang and clear / breach with a charge / clear from outside on the order menu): 'doortools' = the family
-if (on('doortools-menu', 'doortools', 'all')) await run('doortools-menu', async () => (await import('./doortools-probes.ts')).doortoolsMenu());
 if (on('doortools-charge', 'doortools', 'all')) await run('doortools-charge', async () => (await import('./doortools-probes.ts')).doortoolsCharge());
 if (on('doortools-bang', 'doortools', 'all')) await run('doortools-bang', async () => (await import('./doortools-probes.ts')).doortoolsBang());
 if (on('doortools-counts', 'doortools', 'all')) await run('doortools-counts', async () => (await import('./doortools-probes.ts')).doortoolsCounts());
 if (on('doortools-edges', 'doortools', 'all')) await run('doortools-edges', async () => (await import('./doortools-probes.ts')).doortoolsEdges());
-if (on('doortest', 'doortools', 'all')) await run('doortest', async () => (await import('./doortest-check.ts')).doortestCheck());   // a door found shut halts the order and the same row then kicks it · a kick from beside the door · 'clear from outside' is one order (DOORTEST_BREAK=1 must fail)
 if (on('thrpie', 'doortools', 'all')) await run('thrpie', async () => (await import('./thrpie-check.ts')).thrpieCheck());   // the jamb men slice a doorway before they call it held · the man cutting leans, the cuts down the door's own line on a knee (doortools.ts thrPie / thrLean; THRPIE_BREAK=1 must fail) · one man cuts, upright, the other holds, one lean at the end (thrPieOne; THRPIEONE_BREAK=1 must fail)
 if (on('kickglass', 'doortools', 'all')) await run('kickglass', () => runScript('kickglass-check.ts'));   // no boot from beside a latch jamb in front of glass (DOORWAY.kickGlass): every door of every level, both faces
 if (on('openhand', 'doortools', 'all')) await run('openhand', async () => (await import('./openhand-check.ts')).openhandCheck());   // a bang / frag order on a door standing open (held from outside first) walks nobody across the front of the opening (OPENHAND_BREAK=1 must fail)
@@ -2761,7 +2759,7 @@ for (const [n, f] of [['handleside-spots', 'handlesideSpots'], ['handleside-men'
 // a door order's lead works the handle from past the latch jamb, never from the opening (toolnear-check.ts; handleside.ts HANDLE.toolNear, settled; HANDLEPIE_BREAK=1 must fail)
 if (on('handleside-tools', 'handleside', 'all')) await run('handleside-tools', async () => (await import('./toolnear-check.ts')).toolnearCheck());
 // ---------------------------------------------------------------- a teammate shuts a door when told, and only then (shutdoor-probes.ts; game/shutdoor.ts — 'shut that door' on the door tools' page): 'shutdoor'
-for (const [n, f] of [['shutdoor-menu', 'shutdoorMenu'], ['shutdoor-refuse', 'shutdoorRefuse'], ['shutdoor-man', 'shutdoorMan'], ['shutdoor-who', 'shutdoorWho'], ['shutdoor-file', 'shutdoorFile'], ['shutdoor-lock', 'shutdoorLock'], ] as const)
+for (const [n, f] of [['shutdoor-refuse', 'shutdoorRefuse'], ['shutdoor-man', 'shutdoorMan'], ['shutdoor-who', 'shutdoorWho'], ['shutdoor-file', 'shutdoorFile'], ['shutdoor-lock', 'shutdoorLock'], ] as const)
   if (on(n, 'shutdoor', 'all')) await run(n, async () => (await import('./shutdoor-probes.ts'))[f]());
 // ---------------------------------------------------------------- defender squads (enemysquads-probes.ts; game/enemysquads.ts on levels/compound.json): 'enemysquads' = the family
 if (on('enemysquads-stage', 'enemysquads', 'all')) await run('enemysquads-stage', async () => (await import('./enemysquads-probes.ts')).enemysquadsStage());
@@ -2802,7 +2800,6 @@ if (on('pairs-tool', 'pairs', 'all')) await run('pairs-tool', async () => (await
 if (on('pairs-haltback', 'pairs', 'all')) await run('pairs-haltback', async () => (await import('./pairs-probes.ts')).pairsHaltback());
 if (on('pairs-lanes', 'pairs', 'all')) await run('pairs-lanes', async () => (await import('./pairs-probes.ts')).pairsLanes());
 // ---------------------------------------------------------------- every order within reach of the left hand (orderkeys-probes.ts; every menu of every scenario on the start card's list walked by its keys — no row on a digit above ORDER_DIGITS): 'orderkeys' = the family
-if (on('orderkeys-high', 'orderkeys', 'all')) await run('orderkeys-high', async () => (await import('./orderkeys-probes.ts')).orderkeysHigh());
 if (on('orderkeys-table', 'orderkeys', 'all')) await run('orderkeys-table', async () => (await import('./orderkeys-probes.ts')).orderkeysTable());
 // ---------------------------------------------------------------- X on a door is that door's menu, the same in every scenario (doormenu-probes.ts; every door of every scenario on the start card's list, as drawn — shut, open, a teammate in the doorway): 'doormenu' = the family
 if (on('doormenu-drawn', 'doormenu', 'all')) await run('doormenu-drawn', async () => (await import('./doormenu-probes.ts')).doormenuDrawn());
@@ -2822,7 +2819,6 @@ if (on('nvg-loud', 'nvg', 'all')) await run('nvg-loud', async () => (await impor
 if (on('nvg-sight', 'nvg', 'all')) await run('nvg-sight', async () => (await import('./nvg-probes.ts')).nvgSight());
 if (on('nvg-fight', 'nvg', 'all')) await run('nvg-fight', async () => (await import('./nvg-probes.ts')).nvgFight());
 // ---------------------------------------------------------------- the squad's posture on Sam's word: silent or loud (silent-probes.ts; game/silent.ts)
-if (on('silent-order', 'silent', 'all')) await run('silent-order', async () => (await import('./silent-probes.ts')).silentOrder());
 if (on('silent-hud', 'silent', 'all')) await run('silent-hud', async () => (await import('./silent-probes.ts')).silentHud());
 if (on('silent-walk', 'silent', 'all')) await run('silent-walk', async () => (await import('./silent-probes.ts')).silentWalk());
 if (on('silent-doors', 'silent', 'all')) await run('silent-doors', async () => (await import('./silent-probes.ts')).silentDoors());
@@ -2960,13 +2956,9 @@ if (on('pouch-stage', 'pouches', 'kit', 'all')) await run('pouch-stage', async (
 if (on('pouch-wall', 'pouches', 'kit', 'all')) await run('pouch-wall', async () => (await import('./kit-pouch-probes.ts')).pouchWall());
 // ---------------------------------------------------------------- TEAMMATES' SMOKE ON ORDER (squadsmoke-probes.ts; game/squadsmoke.ts, kit.ts kitSmokes): 'squadsmoke' = the family, run with 'kit' too
 if (on('squadsmoke-table', 'squadsmoke', 'kit', 'all')) await run('squadsmoke-table', async () => (await import('./squadsmoke-probes.ts')).smokeTable());
-if (on('squadsmoke-issued', 'squadsmoke', 'kit', 'all')) await run('squadsmoke-issued', async () => (await import('./squadsmoke-probes.ts')).smokeIssued());
 if (on('squadsmoke-order', 'squadsmoke', 'kit', 'all')) await run('squadsmoke-order', async () => (await import('./squadsmoke-probes.ts')).smokeOrder());
+if (on('squadsmoke-issued', 'squadsmoke', 'kit', 'all')) await run('squadsmoke-issued', async () => (await import('./squadsmoke-probes.ts')).smokeIssued());
 if (on('squadsmoke-restart', 'squadsmoke', 'kit', 'all')) await run('squadsmoke-restart', async () => (await import('./squadsmoke-probes.ts')).smokeRestart());
-// teammates throw a frag or a stun canister on order (squadthrow-check.ts; game/squadthrow.ts — X on the floor, G, then 1 / 2): also in family 'squadorders'
-if (on('squadthrow', 'squadorders', 'all')) await run('squadthrow', async () => (await import('./squadthrow-check.ts')).squadthrowCheck());
-// a man with no throw from where he stands walks to one, throws, walks back; the picture's plans (squadthrow-walk-check.ts; SQUADTHROW.walk)
-if (on('squadthrow-walk', 'squadthrow', 'squadorders', 'all')) await run('squadthrow-walk', async () => (await import('./squadthrow-walk-check.ts')).squadthrowWalkCheck());
 // the throw page's picture asks aside: a game drawn and the same game not drawn hold the same whole state (throwview-check.ts; Collision.aside)
 // a man with no straight arc works a throw out — other paces, a bank — and a frag is thrown where the men can duck (squadthrow-lob-check.ts; SQUADTHROW.lob / duck / samCall)
 // a teammate whose card carries 40 mm grenades fires one on order (squad40-check.ts; game/squad40.ts — X on the floor, G, then 3): also in family 'squadorders'

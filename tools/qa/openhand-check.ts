@@ -31,7 +31,7 @@ async function play(E: any, spot: { door: string; sam: number[] }, lone = false)
   if (!(await quiet(() => R.place(spot.sam, d)))) return { held: false, open: false, given: false, lead: '', crossed: [], hands: '', marks: '', thrown: false, inside: null, went: false, lost: 0, beats: [], why: `X does not open on ${spot.door}` };
   let side = g.orders.targetUnder(R.input, R.W.cam, R.W.canvas).side as 1 | -1; let men0 = R.team.filter((m: any) => m.state !== 'dead');
   const ops = () => R.D.ops.filter((o: any) => o.door === d);
-  await quiet(() => { R.openX(); R.digit(5); R.digit(4); });
+  await quiet(() => { R.openX(); const t = R.O.menu?.target; R.press('Escape'); R.O.give('thresholdHold', t); R.step(2); });
   const held = await quiet(() => R.until(() => ops().some((o: any) => o.kind === 'threshold' && o.phase === 'thr'), 45)); await quiet(() => R.step(150));
   const hand = (p: number[]) => offOf(d, p, side) <= 0 ? 0 : alongOf(d, p) >= W + 0.3 ? 1 : alongOf(d, p) <= -0.3 ? -1 : 0;
   // (lone: the man on the HINGE hand is left alone on the door — the others lost — so the order's one man is dealt with nobody else's jamb to read)
@@ -40,7 +40,7 @@ async function play(E: any, spot: { door: string; sam: number[] }, lone = false)
   const hands = men0.map((m: any) => `${m.callsign} ${hand(m.char.pos) > 0 ? 'far' : hand(m.char.pos) < 0 ? 'near' : 'front'} ${fmt(m.char.pos)}`).join(' · ');
   if (R.D.frags < 1) R.D.frags = 1;
   const open = stackViewOpen(d);   // (does the leaf stand open as the order is given: a door found locked is a shut door, and a walk past a shut leaf is nobody's fault)
-  await quiet(() => { R.openX(); R.digit(5); if (!BREAK) { R.press(FRAG.orderKey); R.step(2); } });   // (OPENHAND_BREAK: the order is never given)
+  await quiet(() => { R.openX(); const t = R.O.menu?.target; R.press('Escape'); if (!BREAK) { R.O.give('fragClear', t); R.step(2); } });   // (OPENHAND_BREAK: the order is never given)
   const op = ops().find((o: any) => o.kind === 'bangClear'), given = !!op; if (op) side = op.side;   // (the face the order really works)
   const crossed = new Set<string>(); let thrown = false, insideBurst: boolean | null = null;
   const front = (m: any) => { const a = alongOf(d, m.char.pos), o = offOf(d, m.char.pos, side); return a > 0.05 && a < W - 0.05 && o > 0.1 && o < 3; };

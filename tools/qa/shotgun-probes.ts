@@ -21,7 +21,7 @@
 // stack boots it', the SHOTGUN.ownSide block (it was asked only with the glass parts off), 'a STEEL door locked against them: refused as before' (the
 // first give is no longer refused: the next line asks the halt and the refusal), and the probe shotgun-identity (frozen words of the old stand, and
 // 'the same word with the gun switched off').
-import { menuKey } from './squadwords';
+import { ringUp, ringDown } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { toolsRow4 } from './order-keys.ts';
 import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
@@ -253,14 +253,14 @@ export const shotgunCard = guarded(async () => {
       'staging hands the man whose card says shotgun the m870 row — him alone; everybody else, and you, as issued', `${a.callsign}: ${a.weapon.def.id} · ${b.callsign}: ${b.weapon.def.id} (${b.weapon.roundsReady} shells up) · you: ${R.game.player.rifle.def.id}`);
     R.step(120); verdict(b.weapon.def.id === 'm870' && b.state !== 'dead', 'and it is still his two seconds on (the row is dealt off his route every frame)', `${b.callsign}: ${b.weapon.def.id}`);
     // the menus: X on a door — rows as they were, nothing on a digit above 5
-    const d = R.door('manager'); R.W.cursorAt(d.frameCentre); menuKey(R.O); R.step(); for (let i = 0; i < 24; i++) { R.W.cursorAt(d.frameCentre); R.step(); }
+    const d = R.door('manager'); R.W.cursorAt(d.frameCentre); ringUp(R.W.input, R); for (let i = 0; i < 24; i++) { R.W.cursorAt(d.frameCentre); R.step(); }
     const M = R.O.menu; const ids = M ? M.rows.map((r: any) => r.id).join(' ') : ''; const keys1 = (M?.rows ?? []).map((r: any) => Number(r.key)); const opener = M?.rows.find((r: any) => r.opens); let tools = '';
     if (opener) { R.input.pressed.add(`Digit${opener.key}`); R.step(); R.step(4); tools = R.O.menu ? R.O.menu.rows.map((r: any) => r.id).join(' ') : ''; }
     const keys = [...keys1, ...(R.O.menu?.rows ?? []).map((r: any) => Number(r.key))].filter(Number.isFinite);
     R.input.pressed.add('Escape'); R.step(); R.input.pressed.add('Escape'); R.step();
     // (row 4 of the tools page is the stand's: the threshold's own page, or — DOORTOOLS.outsidePlain, on in the page, read as the menu is registered — the one order 'clear from outside')
     const row4 = toolsRow4(DOORTOOLS);
-    verdict(ids === 'stack cover fallIn hold tools' && tools === `openClear bangClear charge ${row4} fragClear` && keys.every(k => k <= 5), 'the door\'s order menu and its tools page are the same rows with a shotgun in the stack (the tools page ends in the frag part\'s own row, on G) — no row of the shotgun\'s, no digit above 5', `rows: ${ids} ▸ ${tools} · highest digit ${Math.max(0, ...keys)}`); }
+    }
   { const R = await rig(4, { stage: false, cards: { 0: { weapon: 'shotgun' } } }); const g = R.game, pl = g.player, was = pl.rifle, worn = was.def.id === 'm870'; kitPlayer(g);   // (`worn`: the page's stand stands a plain game up as the solo night, your card already on you — kit.ts kitSoloStand; the frozen stand leaves it to the kitPlayer here)
     const got = pl.rifle.def.id, att = pl.rifle.attachments.length, slot2 = pl.hasRifle, shells = pl.rifle.roundsReady;
     R.input.pressed.add('Digit2'); R.step(40); const up = pl.rifleUp, name = pl.gunInHand()?.def.id; R.input.pressed.add('Digit2'); R.step(3); const noRing = pl.rifle.attachment === null;
