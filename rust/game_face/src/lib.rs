@@ -325,7 +325,7 @@ pub extern "C" fn face_blank() -> u32 {
 }
 #[no_mangle]
 pub extern "C" fn face_drop(h: u32) {
-    page::shelf_off(h, |_| true);
+    page::shelf_off(h);
     GAMES.with(|v| if let Some(x) = v.borrow_mut().get_mut((h as usize).wrapping_sub(1)) { *x = None; });
 }
 #[no_mangle]
@@ -472,7 +472,7 @@ pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
         let mut said = String::new();
         for (k, l) in core::mem::take(&mut x.after) { if let Some(t) = game_run::write_after(&mut x.g, k, &l) { said.push_str(&t); said.push('\n'); } }
         if flags & VIEW != 0 { game_run::view(&mut x.g); }
-        if flags & SAVES != 0 { page::saves(h, x, dt); }
+        if flags & SAVES != 0 { page::saves(h, x, dt); } else { page::restart_turn(h, x); }
         said
     });
     out(said.into_bytes());

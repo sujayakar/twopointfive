@@ -399,22 +399,21 @@ pub fn game_clean_slate(g: &mut crate::game::Game) {
     crate::wind::wind_fresh(g);
 }
 
-/// The player's restart: restartEncounter, the camera cut to the fresh man, the host told to start the picture's histories from nothing.   (game.ts restart)
+/// The player's restart, from outside a step: the run's first step stands again with what an evening keeps (savestate/control.rs). In a step it is asked for, and made as the step ends.
 pub fn game_restart(g: &mut crate::game::Game, said: Option<&str>) {
-    game_restart_encounter(g);
-    if let Some(s) = said { if !s.is_empty() { crate::game::game_msg(g, s); } }   // (after it: restartEncounter takes the old encounter's lines off the HUD)
-    if !g.touring && !crate::director::director_showing(g) && g.spectate < 0.0 {
-        let seats = g.seats.clone();
-        for s in seats {
-            let lens = g.tab.cmd_seat[s].cam;
-            let p = crate::seats::with_seat(g, s, &mut |g| game_follow_pos(g, None));
-            cut_lens(g, lens, p);
-        }
-        g.restart_cut = true;
-        g.stats.cleanrestart.cuts += 1;
+    crate::savestate::control::restart(g, said);
+}
+
+/// Every view is cut to its fresh man, unless a show or a spectator has the camera.
+pub fn game_cut_to_men(g: &mut crate::game::Game) {
+    if g.touring || crate::director::director_showing(g) || g.spectate >= 0.0 { return; }
+    let seats = g.seats.clone();
+    for s in seats {
+        let lens = g.tab.cmd_seat[s].cam;
+        let p = crate::seats::with_seat(g, s, &mut |g| game_follow_pos(g, None));
+        cut_lens(g, lens, p);
     }
-    crate::host_api::host_api_restart_picture(g, "level restarted");
-    g.stats.cleanrestart.pictures += 1;
+    g.stats.cleanrestart.cuts += 1;
 }
 
 /// Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored.   (game.ts restartEncounter)

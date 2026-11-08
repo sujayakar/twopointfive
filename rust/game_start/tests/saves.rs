@@ -1,32 +1,18 @@
 //! THE SAVE CONTROLLER (game::savestate::control), for a host that keeps games in memory. Here the host keeps a clone of the game and its block, as the page's
 //! module does, and puts one back.
-use game::game::Game;
 use game::savestate::control::{self, Do};
 use game_start::play::{Opts, Play};
-use std::collections::BTreeMap;
 
-struct Host { p: Play, kept: BTreeMap<String, (Box<Game>, Vec<u8>)>, saved: Vec<String>, said: Vec<String>, backs: usize }
-fn block(slot: usize) -> Vec<u8> { unsafe { std::slice::from_raw_parts(sim::state::addr(slot) as *const u8, std::mem::size_of::<sim::state::State>()).to_vec() } }
+struct Host { p: Play, saved: Vec<String>, said: Vec<String>, backs: usize }
 
 impl Host {
-    fn office(seed: u32) -> Host { Host { p: Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, ..Default::default() }), kept: BTreeMap::new(), saved: Vec::new(), said: Vec::new(), backs: 0 } }
+    fn office(seed: u32) -> Host { Host { p: Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, ..Default::default() }), saved: Vec::new(), said: Vec::new(), backs: 0 } }
     fn frame(&mut self) {
         self.p.frame();
-        match control::tick(&mut self.p.g, 1.0 / 60.0) {
-            Some(Do::Keep { key, .. }) => { self.kept.insert(key.clone(), (self.p.g.clone(), block(self.p.g.sim))); self.saved.push(key); }
-            Some(Do::Back { key }) => {
-                let was = control::abandoned(&self.p.g);
-                let (g, b) = &self.kept[&key];
-                unsafe { std::ptr::copy_nonoverlapping(b.as_ptr(), sim::state::addr(self.p.g.sim) as *mut u8, b.len()); }
-                self.p.g = g.clone();
-                game::scene_collision::unstand(&mut self.p.g);
-                game::scene_collision::stands(&mut self.p.g);
-                let told = control::put_back(&mut self.p.g, &key, was);
-                self.said.push(told);
-                self.backs += 1;
-            }
-            Some(Do::Say(words)) => self.said.push(words),
-            None => {}
+        for t in self.p.told.drain(..) {
+            if let Some(key) = t.kept { self.saved.push(key); }
+            if t.back { self.backs += 1; }
+            if let Some(words) = t.said { self.said.push(words); }
         }
     }
     fn run(&mut self, secs: f64) { for _ in 0..(secs * 60.0) as usize { self.frame(); } }

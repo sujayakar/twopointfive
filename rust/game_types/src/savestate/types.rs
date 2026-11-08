@@ -1493,6 +1493,12 @@ pub struct Checkpoints {
     pub hand: bool,
     pub due: Option<String>,
     pub authored: Option<String>,
+    /// a step asked for the mission over, in these words, as a load in a step asks
+    pub again: Option<String>,
+    /// …and it was made as the step ended: for a host that takes the game whole
+    pub made_again: bool,
+    /// which stand this game is of, under which the control holds what it keeps (0: none yet)
+    pub stood: u32,
 }
 impl Checkpoints {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
@@ -1520,6 +1526,9 @@ impl Checkpoints {
             hand: false,
             due: None,
             authored: None,
+            again: None,
+            made_again: false,
+            stood: 0,
         }
     }
 }

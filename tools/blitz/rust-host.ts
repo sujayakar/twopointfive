@@ -373,13 +373,13 @@ export class RustHost {
    *  whose server's clock runs from the first record. Left to the first step it is paid there: the whole export, the Rust start and the puppet's
    *  first apply, over a second on a small box. A start that is not owed is not made */
   startNow(): void { const why = this.startWhy(); if (why === 'back') this.restep(); else if (why !== null) this.start(why); }
-  /** THE PAGE'S RESTART (src/host/rustgame.ts toStart): the game kept as its first step opened stands again, clock and die and all, and what the player and
-   *  this machine have set since (the sandbox flags, the tune) stays as it is now. Kept only where a tool asks for it, before the first step: a walk of a page's tape
-   *  (tools/qa/rerun.ts). With none kept, a restart asked inside a tick is the Rust game's own */
+  /** THE PAGE'S RESTART (src/host/rustgame.ts toStart): the Rust game's own, from its run's first step, with what an evening keeps (savestate/control.rs `restart`). From inside a tick it has been made as the tick ended. */
   startKept = 0;
   keepStart(): void { if (!this.keeps()) return; this.startNow(); if (!OFF.has('backcam')) this.handHalf(); this.startKept = this.keep(); }
-  toStart(): void { const g = this.g, flags = { godMode: g.godMode, aiEnabled: g.aiEnabled, infiniteAmmo: g.infiniteAmmo, playerInvisible: g.playerInvisible }, tune = { ...g.tune };
-    this.backTo(this.startKept, 'the start put back'); this.backDue = null; this.tookRow = false; g.saves?.startedAgain(); Object.assign(g, flags); Object.assign(g.tune, tune); this.count('a restart: the kept start stands again (face_back), one whole apply'); }
+  toStart(said = ''): void { const g = this.g, X = this.F.X;
+    if (!this.inStep && !this.F.hand(enc.encode(said), (p, n) => X.face_restart(this.h, p, n))) throw new Error('rust-host: a restart with no start to go back to: no step has been taken');
+    this.told = -1; this.hostNow = OFF.has('backcam'); try { this.applyWhole('the start put back'); } finally { this.hostNow = true; } this.tellShown(); X.face_puppet(this.h, 1); this.refs(); this.scanRebase(); this.shelfSig = ''; this.backs++; if (this.rec) this.rec.backs = this.backs;
+    this.backDue = null; this.tookRow = false; g.saves?.startedAgain(); g.decals?.clear?.(); g.smoke?.clearAll?.(); g.engine?.particles?.clear?.(); g.engine?.restartPicture?.('level restarted'); this.count('a restart: the start stands again with what an evening keeps, one whole apply'); }
   snapTake(label?: string): KeptGame { const g = this.g, X = this.F.X;
     { const why = this.startWhy(); if (why === 'back') this.restep(); else if (why !== null) this.start(why); }
     if (!this.inStep) this.scanFlush();
@@ -712,6 +712,8 @@ export class RustHost {
     // and make its men anew, and the file would then be poured over rows the apply made. So a restart asked from inside `loadState` hands the puppet
     // the game: the Rust game is let go, the TypeScript runs whole, and the next step starts a new Rust game from the puppet.
     // STAND-IN: known by the caller's name on the stack. Belongs on the call surface: `loadState` a row the host answers.
+    // (THE PLAYER'S RESTART, from outside a step: the Rust game's own from its run's first step, taken whole, as the page takes it)
+    { const was = g.restart; if (typeof was === 'function' && !Object.prototype.hasOwnProperty.call(g, 'restart')) hang(g, 'restart', function (this: any, said?: string) { if (H.live() && !H.inStep && H.busy === 0 && !H.audit && H.steps > 0) { H.toStart(said ?? ''); return; } return was.call(this, said); }); }
     { const was = g.restartEncounter; if (typeof was === 'function' && !Object.prototype.hasOwnProperty.call(g, 'restartEncounter')) hang(g, 'restartEncounter', function (this: any, ...a: any[]) {
       if (H.live() && !H.inStep && H.busy === 0 && !H.audit && !OFF.has('load') && /\bloadState\b/.test(String(new Error().stack ?? ''))) H.puppetTakesOver(`a file is loaded on the puppet by the TypeScript (loadState, from ${toolLine()}): the Rust game is let go until the next step`);
       return was.apply(this, a); }); }
@@ -798,7 +800,7 @@ export class RustHost {
     // the host's: its `due` is set on the puppet and its tick, in the dress step, puts the kept game back. (The page's path: src/host/rustgame.ts.)
     if (this.keeps() && X.face_saves_asked) { const asked = X.face_saves_asked(this.h); if ((asked & 1) && g.saves) { g.saves.due = this.F.outText(); this.count('the tick asked for a save in memory to be put back (Enter once down)'); }
       // (the same call puts the Rust game's flag of a restart's camera cut down; the puppet's own update takes the cut on its next frame, as the TypeScript's does)
-      if (asked & 2) { if (this.startKept) { this.toStart(); this.refs(); this.inStep = false; this.dieRef = g.dice?.n; return; } this.cutDue = true; } }
+      if (asked & 4) { this.toStart(); this.refs(); this.inStep = false; this.dieRef = g.dice?.n; return; } if (asked & 2) this.cutDue = true; }
     if (TICKS_DIR && DUMP_AT.has(k)) { X.face_export(this.h); writeFileSync(`${TICKS_DIR}/rust-t${k}.bin`, this.F.outView()); }
     this.o.afterStep?.(this);
     // (RH_HALF=<ticks, comma>: the host's half of those ticks, a line a field's value, for two runs to be held to each other by `diff`)

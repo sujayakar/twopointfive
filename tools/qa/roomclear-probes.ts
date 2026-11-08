@@ -287,7 +287,7 @@ export const roomclearRestart = guarded(async () => {
   const old = [...NB.ops, ...NB.hostiles]; const endWas = RC.end, clearedWas = R.cleared();
   const check = (label: string, n: number) => {
     const pl = g.player;
-    const fresh = NB.ops.length === 2 && NB.hostiles.length === 5 && [...NB.ops, ...NB.hostiles].every((x: any) => !old.includes(x) && g.guards.includes(x) && x.state !== 'dead');
+    const fresh = NB.ops.length === 2 && NB.hostiles.length === 5 && [...NB.ops, ...NB.hostiles].every((x: any) => g.guards.includes(x) && x.state !== 'dead');
     const marks = NB.hostiles.every((h: any, i: number) => dist(h.char.pos, RC.placement[i].pos) < 0.4) && NB.ops.every((o: any, i: number) => dist(o.char.pos, P.from[i]) < 0.4);
     const rooms = RC.rooms.length === 4 && RC.rooms.every((r: any) => !r.cleared && r.defenders.length === r.def.garrison && r.defenders.every((h: any) => NB.hostiles.includes(h) && RC.roomAt(h.char.pos) === r.def.id));
     const doors = DOORS.every(id => { const d = g.doors.byName(id); return Math.abs(d.angle) < 0.02 && d.latched && !d.lockBroken && d.locked === R.before.doors[id]; });
@@ -295,11 +295,11 @@ export const roomclearRestart = guarded(async () => {
       label, `${RC.summary()} · fresh cast ${fresh} · on the dealt marks ${marks} ('${sig(RC.placement)}') · rooms held ${rooms} · doors shut ${doors} · guards ${g.guards.length} · Sam ${pl.down ? 'DOWN' : 'up'} @${pl.char.pos.map(f2)}`);
   };
   W.input.keys.add('ShiftLeft'); W.input.pressed.add('Enter'); R.step(); W.input.keys.delete('ShiftLeft'); R.step(2);
-  check(`Shift+Enter after two rooms cleared (${clearedWas}), a door kicked in (${wasOpen}) and Sam down (end '${endWas}') → the structure staged again: fresh cast, every room held, no end, doors shut, locks back`, 2);
+  check(`Shift+Enter after two rooms cleared (${clearedWas}), a door kicked in (${wasOpen}) and Sam down (end '${endWas}') → the structure as the mission's first step had it: every man up, every room held, no end, doors shut, locks back`, 1);
   verdict(wasOpen && endWas === 'wiped' && clearedWas === 'storage,server', 'and that was a real change: two rooms had been cleared, the door stood kicked in, the run had ended wiped', `cleared ${clearedWas} · the door open ${wasOpen} · end '${endWas}'`);
   old.splice(0, old.length, ...NB.ops, ...NB.hostiles); R.drop('manager');
   g.restartEncounter(); R.step(2);
-  check('a bare restartEncounter() (the down card, the menus) → staged again', 3);
+  check('a bare restartEncounter() (the down card, the menus) → staged again', 2);
   ROOMCLEAR.seed = 9; RC.restage(); R.step(2);
   const knob = RC.seed === 9 && RC.attempt === 1 && JSON.stringify(RC.placement) === JSON.stringify(placeDefenders(9, 1)); const n0 = NB.staged;
   const again = RC.start(4); R.step(2); const byStart = again === null && RC.seed === 4 && RC.attempt === 1 && NB.staged === n0 + 1 && JSON.stringify(RC.placement) === JSON.stringify(placeDefenders(4, 1));

@@ -271,23 +271,23 @@ export const nightbreachRestart = guarded(async () => {
   W.input.keys.add('ShiftLeft'); W.input.pressed.add('Enter'); R.step(); W.input.keys.delete('ShiftLeft'); R.step(2);
   const check = (label: string, n: number) => {
     const pl = g.player; const door = g.doors.byName(P.door);
-    const fresh = NB.ops.length === 2 && NB.hostiles.length === 3 && [...NB.ops, ...NB.hostiles].every((x: any) => !old.includes(x) && g.guards.includes(x) && x.state !== 'dead');
+    const fresh = NB.ops.length === 2 && NB.hostiles.length === 3 && [...NB.ops, ...NB.hostiles].every((x: any) => g.guards.includes(x) && x.state !== 'dead');
     const marks = NB.ops.every((o: any, i: number) => dist(o.char.pos, P.from[i]) < 0.4) && NB.hostiles.every((h: any, i: number) => dist(h.char.pos, P.hostiles[i].pos) < 0.4);
     verdict(NB.active && NB.state === 'staged' && NB.staged === n && fresh && marks && g.guards.length === 5 && Math.abs(door.angle) < 0.02 && dist(pl.char.pos, NIGHTBREACH.samAt) < 0.4 && pl.slot === 'rifle' && !pl.holstered && !pl.down && NB.blindRounds === 0,
       label, `${NB.summary()} · fresh cast ${fresh} on marks ${marks} · guards ${g.guards.length} · door ${f2(door.angle)} · Sam @${pl.char.pos.map(f2)} ${pl.slot}/${pl.holstered ? 'holstered' : 'up'} · blind rounds ${NB.blindRounds}`);
   };
-  check(`Shift+Enter mid-entry (state '${mid}') → staged again on the next frame: fresh cast on the marks, door shut, Sam back with the rifle up`, 2);
+  check(`Shift+Enter mid-entry (state '${mid}') → as the mission's first step had it on the next frame: every man up on the marks, door shut, Sam back with the rifle up`, 1);
   R.step(120);
   verdict(NB.state === 'staged' && isNaN(R.beat('go')), 'the orders are back to none: the fresh pair waits', `state ${NB.state} · go beat ${f2(R.beat('go'))}`);
   old.splice(0, old.length, ...NB.ops, ...NB.hostiles);
   g.restartEncounter(); R.step(2);
-  check('a bare restartEncounter() (the down card, the menus) → staged again', 3);
+  check('a bare restartEncounter() (the down card, the menus) → staged again', 2);
   { // a bare resetGuards (the panel's reset, a console) with the charge in the air: answered with a FULL restart — nothing of the old run left to go off
     old.splice(0, old.length, ...NB.ops, ...NB.hostiles);
     R.press(); R.until(() => NB.state === 'set', 30); R.press(); R.until(() => !isNaN(R.beat('toss')), 20);
     const inAir = itemsOf(g).filter((it: any) => it.kind === 'flash').length;
     g.resetGuards(); R.step(2);
-    check(`resetGuards() with the charge in the air (${inAir} can) → a full restart, staged again`, 4);
+    check(`resetGuards() with the charge in the air (${inAir} can) → a full restart, staged again`, 3);
     verdict(inAir > 0 && itemsOf(g).length === 0, 'and the old run\'s charge is gone with it', `items on the floor / in the air: ${itemsOf(g).length}`); }
   R.press(); const set = R.until(() => NB.state === 'set', 30); R.press(); const ended = R.until(() => NB.drill.phase === 'done', 45);
   verdict(set && ended && (NB.state === 'clear' || NB.state === 'failed') && NB.blindRounds > 0 && !R.bad, 'and it plays through again from the restage, to the room taken or the team down (the default is a fight: either is an end)', NB.summary());

@@ -646,25 +646,21 @@ function pokes(S: Held): void {
   // (the pause card letting go of the launcher's held button, host/loop.ts; `face_poke` 4 where the write by path has no way)
   if (S.launch !== null && (G.player?.launchHeld ?? null) === null) { if (!send(S, [G.player, ['launchHeld'], null])) { X!.face_poke(S.h, 4, 0); RUST_GAME.pokes++; } S.launch = null; }
 }
-/** THE PLAYER'S RESTART: the game kept as the first step opened stands again (`face_back`, one whole apply), the controller begins a new run, the host
- *  forgets what it drew and played of the try that ended (the hook a save put back calls: host/putback.ts, main.ts), and the picture starts over.
- *  WHY NOT THE TYPESCRIPT'S `restartEncounter` ON THE PUPPET, OR THE RUST GAME'S OWN `game_restart`: both make the player's man anew (game.ts:1496
- *  `new Player`), and a man made on the Rust side has no object the page can draw (the importer has no hook that gives a new Character its rig, its parts
- *  and its row of the men's columns: tools/blitz/IMPORT.md, "A new man"), while the TypeScript's own lines, run on a puppet after play, meet values the
- *  filtered apply made with their listed fields only. WHAT IS LOST BY IT: the TypeScript's restart keeps the clock and the die's place and deals a quiet
- *  mission afresh; this one is the same deal again, from the same die. Belongs in the Rust game (`game_restart`), once a new man has his hook. */
+/** THE PLAYER'S RESTART: the Rust game's own, from its run's first step with what an evening keeps (savestate/control.rs `restart`), then one whole apply, a new run on the
+ *  controller, and the host forgets what it drew and played of the try that ended (the hook a save put back calls: host/putback.ts, main.ts), and the picture starts over.
+ *  From inside a tick it has been made as the tick ended. */
 function toStart(S: Held, said?: string): void {
   const g = S.g, G = g as unknown as Record<string, any>;
-  // WHAT IS NOT THE START'S TO TAKE BACK: the switches the player and this machine set on the game since (god mode, the AI, unlimited ammunition, the
-  // tune's rows, the furniture's friction, the fog's switch): the TypeScript's restart leaves them as they are now, and so does a load (savestate.ts
-  // loadMem). Seen on the page: god mode ticked, the pause card's restart, and the next frag killed him. They are read here, written back on the
-  // puppet after the start stands, and sent to the Rust game by the write by path (`pokes`).
-  const mine = watched(g).filter(w => w[0] === g && w[1][0] !== 'engine');
-  stoodAgain(S, S.startKept);
+  revive(S);   // (stopped by a panic: the game of the trapped call is gone, and a new one stands for the start to be put back over)
+  S.told = -1;
+  if (!S.inStep) { pokes(S); if (!call('face_restart', () => hand(enc.encode(''), (p, n) => X!.face_restart(S.h, p, n)))) throw new Error('rust=1: a restart with no start to go back to: no step has been taken'); }
+  grown(g);
+  S.shelfSig = '';   // (the kept game's own `g.saves` is the shelf as it was handed over before that save: the shelf as it stands is handed over again)
+  whole(S);
+  RUST_GAME.backs++;
   G.saves?.startedAgain();   // (a fresh run: a new name, an empty shelf, its triggers from nothing)
+  G.decals?.clear?.();   // (the marks of the try that ended: the host's list holds them, and no step says so now)
   apply(S, true); sweep(S);   // (what the filtered export last sent was forgotten with the game that stood: the long list again, the HUD's lines as the start had them)
-  for (const [, path, v] of mine) { let o: any = g; for (let i = 0; i < path.length - 1 && o; i++) o = o[path[i]]; if (o && !Object.is(o[path[path.length - 1]], v)) o[path[path.length - 1]] = v; }
-  pokes(S);
   if (said) pageSay(said);
   try { G.saves?.onPutBack?.({ key: '', slot: 'auto', n: 0, label: 'the start', kind: 'auto', savedAt: 0, missionT: 0, stage: String(G.mission?.stage ?? ''), runId: '', bytes: 0, mem: true }); } catch (e) { RUST_GAME.outThrew['restart.host'] ??= String((e as Error)?.stack ?? e).slice(0, 600); }
   G.engine?.restartPicture?.('level restarted');
@@ -802,9 +798,9 @@ function stepOne(S: Held, dt: number, cmds: readonly PlayerCmd[]): void {
     grown(g);
     const tStep = performance.now() - t;
     // WHAT THE TICK ASKED OF THE SAVE CONTROLLER (player.ts:493, Enter once down or with Shift): a save in memory to go back to as this update ends
-    // (the controller's `due`), or the player's restart, which the Rust game has just made by its own rule and the page cannot follow (`toStart`)
+    // (the controller's `due`), or the player's restart, which the Rust game has just made and the page takes whole (`toStart`)
     { const asked = X!.face_saves_asked(S.h);
-      if (asked & 2) { toStart(S); RUST_GAME.ticks++; return; }
+      if (asked & 4) { toStart(S); RUST_GAME.ticks++; return; }
       if ((asked & 1) && G.saves) G.saves.due = outText(); }
     // A QUIET RUN (`rustQuiet`): nothing goes to the puppet until the run ends
     if (S.quiet) { S.owed++; S.quietDt += dt; RUST_GAME.sum.host += tHost; RUST_GAME.sum.step += tStep; RUST_GAME.ticks++; RUST_GAME.quiet.ticks++; return; }

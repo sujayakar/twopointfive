@@ -54,6 +54,7 @@ pub fn start(state: &[u8], block: &[u8], slot: usize) -> (Box<game::game::Game>,
     game::io::set_slot(&mut g, slot);
     // (the level's script and its define pass are the import's own now: io::deal_scripts)
     if let Some(sc) = g.level.script { said.push(format!("the level's script, as the import dealt it: {:?}", sc)); }
+    game::savestate::control::stood(&mut g);   // (a copy of it kept now is of this stand)
     (g, said)
 }
 
@@ -306,12 +307,7 @@ pub fn write_after(g: &mut game::game::Game, k: usize, l: &str) -> Option<String
 /// HOST STEP: the host saved, and says so. The autosave controller is the host's, and its one write into the game is the chronicle's row, the tick's last
 /// thing. On a tutorial mission the checkpoint is an authored one: the save controller stops the level's program for the take and has the frame start it
 /// again on the next tick (savestate.ts:991); the answer is whether it did.
-pub fn checkpoint(g: &mut game::game::Game, label: &str) -> bool {
-    let mut stopped = false;
-    if game::rails::rails_live(g) { if let Some(r) = g.director.run { if !g.tab.director_run[r].ended { game::director::director_stop(g, Some(false)); game::rails::rails_resume(g); stopped = true; } } }
-    let _ = game::chronicle::chron_checkpoint(g, game::chronicle::ChronCheckpointWhat::Save, Some(label));
-    stopped
-}
+pub fn checkpoint(g: &mut game::game::Game, label: &str) -> bool { game::savestate::control::checkpoint(g, label) }
 
 /// HOST STEP AFTER THE TICK (game.ts hostAfter): a tutorial mission staged again opens on its first view, set with the host's camera; a return on its
 /// first line off a rails level. The host's camera is the row the game was handed at its stand (`host_cam`).
