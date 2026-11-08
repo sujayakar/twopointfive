@@ -127,20 +127,13 @@ pub fn breaker_errand(g: &mut crate::game::Game) -> Option<crate::workthings::Br
 
 /// Makes the row and registers it on the orders' menu. (workthings.ts WorkThings.constructor)
 pub fn work_things_new(g: &mut crate::game::Game) -> crate::workthings::WorkThings {
-    let def = crate::orders::OrderDef {
-        id: String::from(WORK_ORDER),
+    let def = crate::orders::rows::def(&crate::orders::rows::work::ORDER, crate::orders::OrderDef {
         key: Some(1.0),
-        label: crate::orders::OrderLabel::Work,
         targets: vec![crate::orders::TargetKind::Floor],
         listed: Some(Vec::new()),
         ack: Some(vec![String::from("on it."), String::from("moving.")]),
-        can: Some(crate::orders::OrderCan::Work),
-        only: Some(crate::orders::OrderOnly::Work),
-        valid: Some(crate::orders::OrderValid::Work),
-        issue: crate::orders::OrderIssue::Work,
-        tick: Some(crate::orders::OrderTick::Work),
         ..crate::orders::OrderDef::zeroed()
-    };
+    });
     let row = crate::orders::squad_orders_row(g, def);
     crate::orders::squad_orders_register(g, row, None);
     WorkThings { row, ..WorkThings::blank() }
