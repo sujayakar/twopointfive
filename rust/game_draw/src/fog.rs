@@ -62,7 +62,8 @@ section! {
 
 pub fn fill(g: &Game, out: &mut Vec<Fog>, bared: bool) {
     out.push(Fog::ZERO);
-    if bared || !fogofwar::fog_of_war_active(g) { return; }
+    // (the Team & kit picture's wand row has the fog on for the game alone: the picture has none)
+    if bared || !fogofwar::fog_of_war_active(g) || g.kit_stage.is_some() { return; }
     let (f, k) = (out.last_mut().unwrap(), &g.k.fog);
     f.on = 1;
     f.dim = k.dim as f32;

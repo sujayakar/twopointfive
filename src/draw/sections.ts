@@ -1,7 +1,7 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 769345667;
+export const LAYOUT = 4217857405;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
@@ -143,8 +143,10 @@ export const enum View {
   hit = 51,
   /** u32: this game is the Team & kit picture: 1 staged, 2 nothing to stage (0: it is no picture) */
   kit = 52,
+  /** u32: the Team & kit picture asks for a copy of the last picture over what it is about to stage again: moves each time; answered by a command */
+  veil = 53,
   /** words a row */
-  row = 53,
+  row = 54,
 }
 
 /** the sky: one row */

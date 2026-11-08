@@ -494,6 +494,15 @@ pub fn emit(g: usize, x: f64, y: f64, z: f64, radius: f64, rate: f64, ttl: f64) 
     st[o + 5] = 0.0;
     st[o + 6] = radius;
 }
+/// SHUT: every emitter of the game in slot `g` has let out its last; what is in the air stays
+pub fn shut(g: usize) {
+    let st = &mut state(g).smoke.st;
+    let n = emitters(st);
+    for i in 0..n {
+        let o = O_EMIT + i * EMIT;
+        st[o + 4] = st[o + 5];
+    }
+}
 fn emitters(st: &[f64; LEN]) -> usize {
     js_min(st[H_EMIT], MAX_EMIT as f64) as usize
 }

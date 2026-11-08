@@ -63,6 +63,8 @@ section! {
         pub hit: f32,
         /// this game is the Team & kit picture: 1 staged, 2 nothing to stage (0: it is no picture)
         pub kit: u32,
+        /// the Team & kit picture asks for a copy of the last picture over what it is about to stage again: moves each time; answered by a command
+        pub veil: u32,
     }
 }
 
@@ -87,8 +89,12 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
             (r.yaw, r.pitch, r.distance) = (c.yaw as f32, c.pitch as f32, c.desired_distance as f32);
         }
     }
-    r.ended = ended(g);
-    { let (begun, over) = game::verdict::run_on(g); r.run = begun as u32 | (over as u32) << 1; }
+    // (the Team & kit picture is nobody's run: no end card, no verdict, no books)
+    if g.kit_stage.is_none() {
+        r.ended = ended(g);
+        let (begun, over) = game::verdict::run_on(g);
+        r.run = begun as u32 | (over as u32) << 1;
+    }
     r.saves = (g.saves.stats.autosaves + g.saves.stats.manual) as u32;
     (r.god, r.thinks, r.ammo, r.autosave) = (g.god_mode as u32, g.ai_enabled as u32, g.infinite_ammo as u32, g.saves.enabled as u32);
     r.labels = g.show_debug as u32;
@@ -110,6 +116,7 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
         night: g.pl[pl].nv_amount as f32,
         hit: g.pl[pl].hit_flash as f32,
         kit: g.kit_stage.as_ref().map_or(0, |k| if k.none { 2 } else { 1 }),
+        veil: g.kit_stage.as_ref().map_or(0, |k| k.veil),
         ..r
     });
 }
