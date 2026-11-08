@@ -347,14 +347,6 @@ pub extern "C" fn layer_act_pose(g: usize, at: usize, at_b: usize, at_rest: usiz
     layers::act_pose(g, at, at_b, at_rest)
 }
 #[no_mangle]
-pub extern "C" fn layer_wound_body(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
-    layers::wound_body(g, at, at_b, at_rest)
-}
-#[no_mangle]
-pub extern "C" fn layer_wound_limbs(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
-    layers::wound_limbs(g, at, at_b, at_rest)
-}
-#[no_mangle]
 pub extern "C" fn layer_long_arms(g: usize, at: usize, at_b: usize, at_aim: usize, at_rest: usize) -> u32 {
     layers::long_arms(g, at, at_b, at_aim, at_rest)
 }

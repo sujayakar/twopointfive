@@ -717,7 +717,7 @@ function longTuck(t: number[], gunWall: number): void {
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
 /** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs `ANIM.<name>.…`; game/rustknobs.ts
  *  looks a path up here or in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT, LONG_PIVOT, LONG_PULL_MAX, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK, RIG, REACH, HAND, SMOKEARM, STEALTH, BLOW, TAKEN, KNIFE_BLOW, READY_RATE, READY_REACH, READY_AZ, READY_UP, READY_BARE, WORK, BIGMOVE, BIGRIG, THROW_DUR, THROW_RELEASE, TOSS_TOP, TOSS_LOW, TOSS_HANG, SWIV_REF_R, SWIV_REF_L }; }
+export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, LONG_PIVOT, LONG_PULL_MAX, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK, RIG, REACH, HAND, SMOKEARM, STEALTH, BLOW, TAKEN, KNIFE_BLOW, READY_RATE, READY_REACH, READY_AZ, READY_UP, READY_BARE, WORK, BIGMOVE, BIGRIG, THROW_DUR, THROW_RELEASE, TOSS_TOP, TOSS_LOW, TOSS_HANG, SWIV_REF_R, SWIV_REF_L }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -809,15 +809,6 @@ export interface ReloadBeat { dur: number; out?: number; in_?: number; rack?: nu
   /** the beat is taken as it stands, none of the magazine change's floors (gunreload.ts shellPlan: a tube gun's reload made for the shells that go in — one
    *  shell is home 0.36 s after the hand gets there, and its own stations keep the hand's path in order) */
   exact?: boolean }
-/** WOUNDS (game/wounds.ts): the two poses a man down and out of the fight is played in. `clip` = the library clip whose way down it is; `rate` = its speed;
- *  `hold` = the stretch of the clip (s) he is held in, breathed across at `breath` rad/s; `in` = s the layer takes over the graph; `head` = degrees his chin
- *  comes toward his chest once he is down (on his back: his head up off the floor, looking at it). */
-export const WOUND_POSE: Record<'knee' | 'back', { clip: string; rate: number; hold: [number, number]; breath: number; in: number; head: number }> = {
-  knee: { clip: 'Fixing_Kneeling', rate: 1.15, hold: [0.86, 1.0], breath: 1.6, in: 0.14, head: 14 },
-  back: { clip: 'Death01', rate: 1, hold: [1.42, 1.54], breath: 1.3, in: 0.12, head: 44 },
-};
-/** where a wounded man's hand presses his ribs: off the lower chest joint, trunk frame [across to his left, up, forward] — on a man doubled over a knee this is the flank under the gun arm */
-const WOUND_AT: Vec3 = [-0.05, 0.03, 0.15];
 /** The second pass's numbers (MOVES.reload / bound / clutch / entry). Points on the gun are in the GUN's frame off the trigger hand's wrist, as rigProps draws the
  *  weapon (x the figure's left, y up out of the receiver, z along the bore), and are the support hand's WRIST: `mag` = the hand round the magazine where it stands
  *  in the well, `strip` = with it clear of the gun, `handle` → `pull` = the charging handle taken and drawn. `box` = the short carbine (the curved box ahead of the
@@ -1576,15 +1567,6 @@ export class CharacterAnimator {
   /** DOZING (game/doze.ts — read only inside the action clip's layer, so nothing of it runs for a figure that has no `act`): how far a seated man has nodded off,
    *  0‥1 asked, eased here (slow down, quick up): the upper back rounds, the chin comes down onto the chest and a little to one side, and it all rides a slow breath. */
   slump = 0; private slumpW = 0;
-  /** WOUNDS (game/wounds.ts — nothing of it runs for a figure that has never been given one): a man DOWN AND OUT OF THE FIGHT, played off the library's own clips.
-   *  `pose` 'knee' = he sinks onto one knee, doubled over (Fixing_Kneeling's way down, held there) · 'back' = his leg goes and he ends on his back with a knee
-   *  drawn up (Death01's fall, held short of its flat end — a dead man is the ragdoll's, never this). `at` = where the support hand presses: the ribs (the cast
-   *  goal's hand to the ribs, at WOUND_AT) or the thigh. `settled` = start him already down (a checkpoint's man). Cleared → the graph has him back at once. */
-  wound: { pose: 'knee' | 'back'; at: 'ribs' | 'thigh'; settled?: boolean; clock?: number } | null = null;
-  private wdT = 0; private wdW = 0; private wdClip: Clip | null = null; private wdPose = '';
-  /** the layer's own clock, s since he started down (a checkpoint files it: his breath comes back where it was) */
-  get woundClock(): number { return this.wdT; }
-  get woundDown(): number { const wd = this.wound; if (!wd || !this.wdClip) return 0; const K = WOUND_POSE[wd.pose]; return clamp(this.wdT * K.rate / K.hold[0], 0, 1); }
   /** the action layer's clock, its eased weight, and the clip it last resolved (kept through the fade-out after `act` is cleared) */
   private actT = 0; private actW = 0; private actClip: Clip | null = null; private actName = ''; private actOut = 0.35;
   /** output: the action layer's weight this frame (0 = none of it in the pose) — the probes read it */
@@ -1618,7 +1600,7 @@ export class CharacterAnimator {
   reloadBack = false; bound: 0 | 1 | 2 = 0; clutch = 0; dip = 0;
   /** A MAN'S CONDITION (condition.ts deals these every frame; all at rest with its switch off, and then nothing reads them). `hurt` 0‥1: a blast reached him and
    *  he is still up — the hunch he keeps, the short heavy step, the hand back at his ribs when the gun is out of his shoulder; `hurtSide`: the side he favours
-   *  (1 = his left). `shaken` 0‥1: fire on him — head down between the shoulders. `foldToo`: the clutch's fold is his whatever the wounds switch says. */
+   *  (1 = his left). `shaken` 0‥1: fire on him — head down between the shoulders. `foldToo`: the clutch's fold is his. */
   hurt = 0; hurtSide: 1 | -1 = -1; shaken = 0; foldToo = false;
   /** the long gun in his hands is fed by a box MAGAZINE (every row but a tube-fed shotgun, whose shells go in one at a time): false = no magazine change is mimed */
   reloadMag = true;
@@ -2107,7 +2089,7 @@ export class CharacterAnimator {
   /** IN HAND (inhand.ts): nothing but the aim or the carry has the gun arm this frame — no hold, errand, swap, one-shot or look-only move over it. Character.inHandPass
    *  turns a pistol's or a torch's hand only then (and eases out otherwise): it does not fight a pose that has somewhere else to put that hand */
   get gunArmOwn(): boolean {
-    return !(this.holdPose || this.heldPose || this.haul || this.lockpick || this.act || this.wound || this.kit !== null || this.sw.shown || this.hideHeldItem || this.throwT >= 0 || this.strikeT >= 0
+    return !(this.holdPose || this.heldPose || this.haul || this.lockpick || this.act || this.kit !== null || this.sw.shown || this.hideHeldItem || this.throwT >= 0 || this.strikeT >= 0
       || this.hitT >= 0 || this.reloadT >= 0 || this.sigT >= 0 || this.tellT >= 0 || this.mvBusy || this.mvs.tsT >= 0);
   }
   /** seconds into the throw, −1 when not throwing (THROW_RELEASE is the instant the hand lets go) */
@@ -2454,7 +2436,7 @@ export class CharacterAnimator {
       const gunW = clamp(this.upperW.relaxed + this.upperW.aim + this.upperW.torch + wCarry, 0, 1);
       this.watchLayer(dt, busy ? 0 : 1 - clamp(this.upperW.aim, 0, 1), 1 - Math.max(clamp(this.upperW.aim, 0, 1), wCarry), 1 - gunW, y, -p * 0.35);
     } else { this.watchShown.w = 0; this.watchShown.yaw = 0; this.watchShown.slip = 0; this.watchShown.lean = 1; }
-    if (this.stealth || this.sp) this.stealthLayer(dt, wHd > 0.003 || wHe > 0.003 || wLp > 0.003 || wHl > 0.003 || kt >= 0 || this.throwT >= 0 || this.reloadT >= 0 || this.sigT >= 0 || this.tellT >= 0 || this.hitT >= 0 || this.strikeT >= 0 || this.bw !== null || this.tk !== null || this.clutch > 0 || this.bound !== 0 || this.mvBusy || this.mvs.tsT >= 0 || this.mvs.armL > 0 || wSt * wl > 0.003 || wWallArms > 0.003 || this.longGun || wLg > 0.003 || this.kit !== null || !!this.nv?.hand || !!this.act || !!this.wound || !!this.dazzle || this.wk.fed || this.wk.shown > 0.003 || this.dp.wL.x > 0.003 || this.dp.wR.x > 0.003 || this.rx.w.x > 0.003 || this.upperW.relaxed + this.upperW.aim + this.upperW.torch + wCarry > 0.003, crouchPose, crouchPose > 0.001 ? this.crWalk / crouchPose : 0, y, -p * 0.35);   // STEALTH POSES (stealthpose.ts): Sam's hands-empty crouch — over the crouch and the close-in carriage, under the ready tell; out, eased, for anything else that has his arms
+    if (this.stealth || this.sp) this.stealthLayer(dt, wHd > 0.003 || wHe > 0.003 || wLp > 0.003 || wHl > 0.003 || kt >= 0 || this.throwT >= 0 || this.reloadT >= 0 || this.sigT >= 0 || this.tellT >= 0 || this.hitT >= 0 || this.strikeT >= 0 || this.bw !== null || this.tk !== null || this.clutch > 0 || this.bound !== 0 || this.mvBusy || this.mvs.tsT >= 0 || this.mvs.armL > 0 || wSt * wl > 0.003 || wWallArms > 0.003 || this.longGun || wLg > 0.003 || this.kit !== null || !!this.nv?.hand || !!this.act || !!this.dazzle || this.wk.fed || this.wk.shown > 0.003 || this.dp.wL.x > 0.003 || this.dp.wR.x > 0.003 || this.rx.w.x > 0.003 || this.upperW.relaxed + this.upperW.aim + this.upperW.torch + wCarry > 0.003, crouchPose, crouchPose > 0.001 ? this.crWalk / crouchPose : 0, y, -p * 0.35);   // STEALTH POSES (stealthpose.ts): Sam's hands-empty crouch — over the crouch and the close-in carriage, under the ready tell; out, eased, for anything else that has his arms
     if (this.bw) this.blowLegs(this.bw);   // (a takedown's own move stands him into the man: the lunge's rear foot drawn in, the knees near straight)
     if (this.ready || this.readyW > 0 || this.rcT > 0) {   // the ready pose (Sam in an open hands-on window): over the carries and the aim clip — 'grabGun' takes the support hand OFF a pistol that is up, so the aim does not veto it — under the one-shots below; stood down, eased, by whatever has the arms: a hold either way, lock work, the kick, a throw, the strike itself, a flinch, a reload, a signal, a tell, a MOVES reaction or toss
       const held = wHd > 0.003 || wHe > 0.003 || wLp > 0.003 || kt >= 0 || this.throwT >= 0 || this.hitT >= 0 || this.reloadT >= 0 || this.sigT >= 0 || this.tellT >= 0 || this.mvHands || this.mvs.tsT >= 0;   // (what has the arms, the blow apart)
@@ -2473,7 +2455,7 @@ export class CharacterAnimator {
     }
     this.catchFix();
     if (this.kit) {   // KIT: the right hand's errand between what was in it and what will be — over the carries, the aim and the close-in poses; dropped by whatever else takes the arms (a body in both hands among them: hands.ts); NOT by the wall hold — its arms are the pose the errand starts from and ends on
-      if (this.holdPose || this.heldPose || this.haul || this.lockpick || kt >= 0 || this.throwT >= 0 || this.strikeT >= 0 || this.hitT >= 0 || this.mvHands || this.mvs.tsT >= 0 || this.act || this.wound) this.kitCancel();
+      if (this.holdPose || this.heldPose || this.haul || this.lockpick || kt >= 0 || this.throwT >= 0 || this.strikeT >= 0 || this.hitT >= 0 || this.mvHands || this.mvs.tsT >= 0 || this.act) this.kitCancel();
       else this.kitLayer(dt, y, -p * 0.35);
     } else if (this.kitHold !== undefined) this.kitCancel();
     this.kitGunFree = 0;
@@ -2534,7 +2516,6 @@ export class CharacterAnimator {
     if (this.armsPre && wAct > 0) blendPose(this.armsPre, this.pB, wAct, null, this.armsPre);   // (the action clip goes over the pose under the arms too: pB still holds its sample)
     // ---- MOVES: a crouched man's toes stay out of the floor (toesUp): the foot joint alone, the ankle where everything above left it
     if (MOVES.on > 0.5 && crouchPose > 0.003) this.toesUp(crouchPose);
-    if (this.wound || this.wdW > 0) { wAct = Math.max(wAct, this.woundLayer(dt)); this.armsPre = null; }   // WOUNDS (game/wounds.ts): a man down and out of the fight — over everything, like an action clip; never looked at for a man who has no wound
     // ---- MOVES: the hand pass (HAND) — last of all, finger and thumb joints only: an empty hand no layer has shaped is a relaxed hand, not the clips' fist. What
     //      holds a gun keeps its grip: the pistol's two hands (the idle / aim clips, the carries built from them), the long gun's, the torch's fist
     if (MOVES.on > 0.5) {
@@ -2544,10 +2525,10 @@ export class CharacterAnimator {
     }
     // ---- KIT: the goggles flipped by hand (the left arm, over everything: it is asked only of a free hand, and gives the arm up the frame something takes it) or by a nod (the head joint alone, a pitch in his gaze's own upright plane)
     if (this.nv) this.nvLayer(dt, wHd < 0.05 && wHe < 0.05 && wLp < 0.05 && wHl < 0.05 && wLg < 0.05 && wWallArms < 0.05 && wAct <= 0 && wStrike <= 0 && kt < 0 && this.throwT < 0 && this.reloadT < 0 && this.hitT < 0 && this.tellT < 0
-      && this.upperW.aim < 0.3 && !this.kit && !this.ready && !this.wound && !this.dazzle && !this.mvBusy && this.mvs.armL <= 0 && this.mvs.tsT < 0 && this.dp.wL.x < 0.05 && !this.wk.fed && this.wk.shown < 0.05);
+      && this.upperW.aim < 0.3 && !this.kit && !this.ready && !this.dazzle && !this.mvBusy && this.mvs.armL <= 0 && this.mvs.tsT < 0 && this.dp.wL.x < 0.05 && !this.wk.fed && this.wk.shown < 0.05);
     // ---- A SMOKE (game/smokebreak.ts): the left hand up to the mouth and down again, asked only of a free hand as the goggles' flip is — never looked at for a figure nobody told to smoke
     if (this.smoke !== null || this.smokeArm > 0) this.smokeLayer(dt, !this.nv && wHd < 0.05 && wHe < 0.05 && wLp < 0.05 && wHl < 0.05 && wLg < 0.05 && wWallArms < 0.05 && wAct <= 0 && wStrike <= 0 && kt < 0 && this.throwT < 0 && this.reloadT < 0 && this.hitT < 0 && this.tellT < 0
-      && this.upperW.aim < 0.3 && !this.kit && !this.ready && !this.wound && !this.dazzle && !this.mvBusy && this.mvs.armL <= 0 && this.mvs.tsT < 0 && this.dp.wL.x < 0.05 && !this.wk.fed && this.wk.shown < 0.05);   // (dp.wL: the hand that goes out to a leaf he walks into is the door's; wk: a hand at work on a thing is the work's — handwork.ts)
+      && this.upperW.aim < 0.3 && !this.kit && !this.ready && !this.dazzle && !this.mvBusy && this.mvs.armL <= 0 && this.mvs.tsT < 0 && this.dp.wL.x < 0.05 && !this.wk.fed && this.wk.shown < 0.05);   // (dp.wL: the hand that goes out to a leaf he walks into is the door's; wk: a hand at work on a thing is the work's — handwork.ts)
     const nod = this.nvNod, nodIn = !!this.sp && STEALTHPOSE.nod; this.nvA = nod;   // (a goggle nod: tipped onto the head here — but where the look under a door is drawn the LOOK poses it, after its own look at the gap, which measured the head with the nod on and took it back out: the goggles swung on a still head. STEALTHPOSE.nod off = that, as it was)
     if (nod !== 0 && !nodIn) this.nvTip(this.pA, nod);
     if (this.sp) { this.stealthPicture(dt); const pic = this.sp.picOn ? this.sp.pic : null; if (pic) this.pA.copy(pic); else if (nod !== 0 && nodIn) { this.nvA = this.sp.nodUp ? nodLift(nod) : nod; this.nvTip(this.pA, this.nvA); } }   // (a lift begun in the look ends a lift, though he is out of the look by then. STEALTH POSES: the look under a door — the pose itself, so `bones`, the capsules, his gaze, a ragdoll's seed and what is bolted to him all go down with what is drawn)
@@ -2606,44 +2587,6 @@ export class CharacterAnimator {
   private actPoseAsk(g: number, clip: Clip, w: number, dt: number) {
     const m = f64(), o = POSE_BENCH.args; m[o] = w; m[o + 1] = clipNo(clip, this.pA.numNodes); m[o + 2] = this.actT; m[o + 3] = this.actLoop ? 1 : 0; m[o + 4] = dt; m[o + 5] = this.slump;
     colsToBench(CharacterAnimator.actCols, this); layerRan(POSE_BENCH.x!.layer_act_pose(g, this.pA.at, this.pB.at, this.rest.at), this.fk); colsFromBench(CharacterAnimator.actCols, this);
-  }
-  /** The wounded man's pose over the finished pA (see `wound`): the clip's own way down at its rate, then a slow breath back and forth across the hold window
-   *  (never on to the clip's end), blended over every node; once he is most of the way down the support hand goes to the wound and — on his back — his head comes
-   *  up off the floor to look at it. Returns the weight it used. pB is free scratch here, as for the action clip. */
-  private woundLayer(dt: number): number {
-    const wd = this.wound; if (!wd) { this.wdW = 0; this.wdT = 0; this.wdClip = null; this.wdPose = ''; return 0; }
-    const K = WOUND_POSE[wd.pose];
-    if (this.wdPose !== wd.pose) { this.wdPose = wd.pose; this.wdClip = this.ch.clips.get(K.clip) ?? null; this.wdT = wd.settled ? Math.max(K.hold[0] / K.rate, wd.clock ?? K.hold[0] / K.rate + 1) : 0; if (wd.settled) this.wdW = 1; }
-    const clip = this.wdClip; if (!clip) return 0;
-    this.wdT += dt; this.wdW = Math.min(1, this.wdW + dt / K.in);
-    const t = this.wdT * K.rate, tt = t < K.hold[0] ? t : lerp(K.hold[0], K.hold[1], 0.5 - 0.5 * Math.cos((t - K.hold[0]) / K.rate * K.breath));
-    const x = this.wdW, w = x * x * (3 - 2 * x);
-    const down = smoothstep(K.hold[0] * 0.5, K.hold[0], t) * w;
-    this.woundBody(clip, tt, w, down, K.head);
-    if (down > 0.003) this.woundLimbs(down, wd);
-    return w;
-  }
-  /** the wound's clip over the pose at weight `w` and, `down` far enough, the head up to look at it (the clocks above are the animator's; the limbs follow) */
-  private woundBody(clip: Clip, tt: number, w: number, down: number, head: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs wound_body)
-    this.woundBodyAsk(g, clip, tt, w, down, head);
-    if (LAYERS.watch) LAYERS.watch('woundBody', this.pA, this.fk, null);
-  }
-  private woundBodyAsk(g: number, clip: Clip, tt: number, w: number, down: number, head: number) {
-    const m = f64(), o = POSE_BENCH.args; m[o] = w; m[o + 1] = clipNo(clip, this.pA.numNodes); m[o + 2] = tt; m[o + 3] = down; m[o + 4] = head;
-    layerRan(POSE_BENCH.x!.layer_wound_body(g, this.pA.at, this.pB.at, this.rest.at), this.fk);
-  }
-  /** the limbs the clip does not pose as a hurt man's: the support hand pressed to the wound — the ribs under the gun arm (WOUND_AT) or the top of the
-   *  near thigh — and, on his back, that leg's knee drawn up off the floor and the gun hand in on his belly instead of flung out behind his head */
-  private woundLimbs(w: number, wd: { pose: 'knee' | 'back'; at: 'ribs' | 'thigh' }) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs wound_limbs)
-    this.woundLimbsAsk(g, w, wd);
-    if (LAYERS.watch) LAYERS.watch('woundLimbs', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this));
-  }
-  private woundLimbsAsk(g: number, w: number, wd: { pose: 'knee' | 'back'; at: 'ribs' | 'thigh' }) {
-    const m = f64(), o = POSE_BENCH.args, F = this.handFix; m[o] = w; m[o + 1] = wd.pose === 'back' ? 1 : 0; m[o + 2] = wd.at === 'ribs' ? 1 : 0;
-    for (let sd = 0; sd < 2; sd++) for (let i = 0; i < 4; i++) m[o + 3 + sd * 4 + i] = F[sd][i];
-    this.handsAsk(() => POSE_BENCH.x!.layer_wound_limbs(g, this.pA.at, this.pB.at, this.rest.at));
   }
 
   // ================================================================ MOVES (the loud demo's motion pass — see MOVES / MV)
@@ -4135,7 +4078,7 @@ export class CharacterAnimator {
     if (this.hdBusy || this.hdW.x <= 0.003) return this.hdBusy;
     this.hdBusy = this.upper !== I.upper || this.longGun !== I.long || this.crouchTarget !== I.crouch || this.carry !== I.carry
       || this.shootT >= 0 || this.reloadT >= 0 || this.throwT >= 0 || this.strikeT >= 0 || this.hitT >= 0 || this.kickT >= 0 || this.sigT >= 0 || this.bw !== null || this.kit !== null
-      || this.lockpick || !!this.haul || !!this.work || !!this.doorPush || this.stance !== 'none' || !!this.ready || this.creep || !!this.wound || !!this.act;
+      || this.lockpick || !!this.haul || !!this.work || !!this.doorPush || this.stance !== 'none' || !!this.ready || this.creep || !!this.act;
     return this.hdBusy;
   }
 
@@ -4362,7 +4305,7 @@ export class Character extends ManCols {
   update(dt: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Character.update', this, [dt]); if (__r !== RUST_PASS) return __r as any; } } const lent = stageOpen(this.anim.poses); try { this.updateStanding(dt); } finally { if (lent) stageShut(this.anim.poses); } }
   private updateStanding(dt: number) {
     if (this.ragdoll) { this.updateRagdoll(dt); return; }
-    if (this.turn.on && TURN.on > 0.5 && dt > 0 && !this.anim.wound) this.turnWeigh(dt);
+    if (this.turn.on && TURN.on > 0.5 && dt > 0) this.turnWeigh(dt);
     else {   // not weighed — or a dt-0 bake: a RE-BAKE in place (game.ts updateProps, a frozen clock: his yaws untouched since they were handed back, or put back to the wish by turnBegin and not rewritten) keeps his turn going; a staging (yaws rewritten, or moved) takes them as written and the next frame starts from them
       const T = this.tn;
       if (T && dt <= 0 && this.turn.on && TURN.on > 0.5 && (this.bodyYaw === T.body || this.bodyYaw === T.ib) && (this.aimYaw === T.aim || this.aimYaw === T.ia) && hyp2(this.pos[0] - T.x, this.pos[2] - T.z) <= TURN.jump) { this.bodyYaw = T.body; this.aimYaw = T.aim; }
