@@ -289,6 +289,8 @@ export class DrawGame {
   turn(name: string, value: number): void { this.turned.set(name, value); this.commands.knob(name, value); }
   turnAgain(): void { for (const [name, value] of this.turned) this.commands.knob(name, value); for (const [name, word] of this.picked) this.commands.act(name, 0, word); }
   private picked = new Map<string, string>();
+  /** what the panel and this machine have turned and picked, by name: what a play record says */
+  get turnedNow(): Record<string, number | string> { return { ...Object.fromEntries(this.turned), ...Object.fromEntries(this.picked) }; }
   /** one of the panel's picks, for the visit: a restart or a load stands a game that has another, and this is picked again */
   pick(name: string, word: string): void { this.picked.set(name, word); this.commands.act(name, 0, word); }
   /** a name that crosses by its number */

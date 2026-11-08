@@ -14,11 +14,12 @@ const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${
   await page.goto(`http://localhost:${PORT}/?paused&quality=verylow&mute&seed=5&levelFile=compound.json&roomclear&qtwice=0&knob.sneak.seen_rate=0.125`, { timeout: 300000 });
   await page.evaluate(() => window.__ready);
   const r = await page.evaluate(() => { const d = window.__draw, G = d.game, rows = G.shown(), now0 = [...G.shownNow()], at = rows.findIndex(x => x.name === 'tune.flash_intensity'), chip = rows.findIndex(x => x.name === 'pfx.chip_size');
-    const K = () => new Map(G.knobs().map(k => [k.name, k.value])), k0 = K(); G.turn(rows[at].name, 123); G.turn(rows[chip].name, 0.02); G.tell(); d.run(2, [], 'last'); const now1 = [...G.shownNow()];
+    const K = () => new Map(G.knobs().map(k => [k.name, k.value])), k0 = K(); G.turn(rows[at].name, 123); G.turn(rows[chip].name, 0.02); G.tell(); d.run(2, [], 'last'); const now1 = [...G.shownNow()]; const said = G.turnedNow;
     const P = window.__panel, sliders = [...P.root.querySelectorAll('input[type=range]')].length, names = [...P.root.querySelectorAll('.row')].map(x => x.textContent).filter(t => /torch \/ unit light|p-rain:/.test(t)).length;
-    return { n: rows.length, sections: [...new Set(rows.map(x => x.section))], before: now0[at], torch: now1[at], chipShown: now1[chip], twice: k0.get('cmdring.twice'), seen: k0.get('sneak.seen_rate'), halfOn: k0.get('cmdring.goal_half'), sliders, names }; });
+    return { n: rows.length, sections: [...new Set(rows.map(x => x.section))], before: now0[at], torch: now1[at], chipShown: now1[chip], said, twice: k0.get('cmdring.twice'), seen: k0.get('sneak.seen_rate'), halfOn: k0.get('cmdring.goal_half'), sliders, names }; });
   check(r.n >= 38 && r.sections.length >= 5, 'the module lists the rows', { n: r.n, sections: r.sections });
   check(r.torch === 123 && r.before !== 123, 'a row turned reads back', { before: r.before, after: r.torch });
+  check(r.said['tune.flash_intensity'] === 123, 'a play record is told what was turned', r.said);
   check(r.chipShown === 20, 'a row shows its number at its scale: a chip of 0.02 m is 20 mm', r.chipShown);
   check(r.twice === 0, '?qtwice=0 put the double tap off before the game was made', r.twice);
   check(r.seen === 0.125, '?knob.<name>=<number> turned that knob', r.seen);
