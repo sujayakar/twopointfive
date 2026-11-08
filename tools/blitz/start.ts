@@ -2,6 +2,7 @@
 //   bun run --preload ./tools/blitz/expose.ts tools/blitz/start.ts <level file> --out DIR [--seed N] [--seats 2] [--scenario roomclear|nightbreach|rescue|quiet [--squad N] [--deal N] | --link '?words']
 //   bun run --preload ./tools/blitz/expose.ts tools/blitz/start.ts --mission <id> --out DIR [--seed N]     a row of the mission list, as a click on it starts it
 //   bun run --preload ./tools/blitz/expose.ts tools/blitz/start.ts --missions                              the list's rows: id, the file the page loads, the link
+//   --words '&hard' on a start from a mission or a link: those words go on the end of its link, and into DIR/mission.txt, so that the Rust start is handed them too
 // Stands the level headless on the page's stand through the one stand-up (src/host/standup.ts standGame), with the game's own die seeded BEFORE the Game is
 // made (the men's construction dice are its first draws), every dressing row down (a host that draws nothing), `sim.settle` called, and writes into DIR:
 //   c1.bin   the whole state, as the first tick would open
@@ -24,6 +25,7 @@ import { resolve } from 'node:path';
 const argv = process.argv.slice(2), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const say = (s = '') => process.stdout.write(s + '\n');
 const outDir = arg('--out', ''), SEED = +arg('--seed', '20942'), SEATS = +arg('--seats', '1'), SCN = arg('--scenario', ''), MISSION = arg('--mission', '');
+const WORDS = arg('--words', '');
 let file = argv[0], spec: any = null, LINK = arg('--link', ''), BETWEEN: { id: string; file: string; link: string }[] = [];
 if (STAND !== 'shipped') { say(`start.ts: the stand is '${STAND}': the Rust start is the page's, so this compare is too`); process.exit(64); }
 if (MISSION || argv.includes('--missions')) {
@@ -34,8 +36,9 @@ if (MISSION || argv.includes('--missions')) {
   const e = ALL_MISSIONS.find((m: any) => m.id === MISSION); if (!e) { say(`start.ts: no mission '${MISSION}' (start.ts --missions lists them)`); process.exit(64); }
   const r = row(e); file = r.file; LINK = r.link;
   for (const id of arg('--between', '').split(',').filter(Boolean)) { const b = ALL_MISSIONS.find((m: any) => m.id === id); if (!b) { say(`start.ts: no mission '${id}' to stand between`); process.exit(64); } BETWEEN.push({ id, ...row(b) }); }
+  LINK += WORDS;
   if (outDir) { mkdirSync(outDir, { recursive: true }); writeFileSync(`${outDir}/mission.txt`, `${file}\n${LINK}\n`); }
-}
+} else if (WORDS) { if (!LINK) { say('start.ts: --words go on the end of a link: --mission or --link'); process.exit(64); } LINK += WORDS; }
 if (!file || (file.startsWith('--') && !MISSION) || !outDir) { say("start.ts <level file> --out DIR [--seed N] [--scenario <kind> [--squad N] [--deal N]] · start.ts --mission <id> --out DIR · start.ts --missions"); process.exit(64); }
 mkdirSync(outDir, { recursive: true });
 const { exportGame } = await import('./host.ts');

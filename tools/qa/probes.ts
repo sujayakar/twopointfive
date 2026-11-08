@@ -2949,6 +2949,7 @@ if (on('picks-boot', 'picks', 'all')) await run('picks-boot', async () => (await
 if (on('levers-rules', 'levers', 'ui', 'all')) await run('levers-rules', async () => (await import('./levers-probes.ts')).leversRules());
 if (on('levers-screens', 'levers', 'ui', 'all')) await run('levers-screens', async () => (await import('./levers-probes.ts')).leversScreens());
 if (on('levers-run', 'levers', 'all')) await run('levers-run', async () => (await import('./levers-probes.ts')).leversRun());   // (a minute or two: sixteen runs of the scripted commander)
+if (on('levers-address', 'levers', 'all')) await run('levers-address', async () => (await import('./levers-probes.ts')).leversAddress());   // (a mission's address names the difficulty, and the harness's addressed stand reads it where a page does)
 // ---------------------------------------------------------------- THE HOUR (hours-probes.ts; src/game/hours.ts): 'hours' = the family — night is no record (every hour laid over each squad
 // map and taken off leaves the rig as found), the sun / lamps / meter stand-in by the hour, a restart and a checkpoint keep it, the squad's lights and goggles follow it, ?hour= and the sheet's row
 if (on('hours-night', 'hours', 'all')) await run('hours-night', async () => (await import('./hours-probes.ts')).hoursNight());
