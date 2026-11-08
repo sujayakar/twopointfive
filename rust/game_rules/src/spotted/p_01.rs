@@ -33,7 +33,7 @@ fn open_to(g: &mut Game, p: V3, h: GuardId) -> bool {
 fn shot_from(g: &mut Game, gd: GuardId, q: &[f64], hp: V3) -> bool {
     if !(shot_line(g, q, &hp, 1.2) || shot_line(g, q, &hp, 1.6)) { return false; }
     let chest: V3 = [hp[0], 1.2, hp[2]];
-    crate::roomfight::room_fight_friend_in_line(g, [q[0], 1.4, q[2]], chest, gd, None).is_none()
+    crate::roomfight::room_fight_friend_in_line(g, [q[0], 1.4, q[2]], chest, gd).is_none()
 }
 /// a new man's row (spotted.ts:330)
 fn new_man(t: f64) -> crate::spotted::Man {

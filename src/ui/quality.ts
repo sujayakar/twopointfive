@@ -396,8 +396,8 @@ const pageHidden = () => document.hidden && !window.__testVisible;
  *  words (ui/options.ts). Nothing is written as the machine's choice. WITH THE LADDER OFF THE PAGE HAS NO FRAME RATE TO HOLD, so outside a benchmark the even
  *  pace has no target either and the page draws every frame the display offers (main.ts hands the pacer the ladder's target only while the ladder is on): a
  *  pinned tier with the row off always did. A benchmark carries the word from scene to scene (ui/benchrun.ts CARRIED) and its card says, from its own
- *  lines, whether the size was held (ui/bench.ts sizeNote). THE KIT VIEW'S FRAME does not take the word (ui/kitView.ts leaves it off the frame's address):
- *  that page is always pinned to a tier, its own pacer counts on the ladder cutting its size (host/kitView.ts), and it has no row to put it back. */
+ *  lines, whether the size was held (ui/bench.ts sizeNote). THE KIT PICTURE'S FRAME does not take the word (ui/kitView.ts leaves it off the frame's address):
+ *  that page is always pinned to a tier and has no row to put the ladder back. */
 /** the tier an address names for the visit (`?quality=<tier>`), or null: the one reading of that word, for the ladder (Quality.visit) and for Options' Reset */
 export const visitTier = (search: string): QualityName | null => { const q = new URLSearchParams(search).get('quality'); return q && (QUALITY_NAMES as string[]).includes(q) ? q as QualityName : null; };
 export const visitAdaptive = (search: string): boolean => { const v = new URLSearchParams(search).get('adapt'); return !(v === '0' || v === 'off' || v === 'false'); };

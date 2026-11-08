@@ -44,8 +44,6 @@ section! {
         pub lean: f32,
         /// its smoke: on, up, radius, cells, density, temp, speed, push, jitter, every, view_r, lean
         pub smoke: [f32; 12],
-        /// the flame as gas: on, up, radius, cells, density, temp, speed, push, jitter, every, view_r, keep, ease
-        pub gas: [f32; 13],
         /// one column: up, radius, density, soot_ease, puff_every, puff_secs, puff_up, puff_radius, puff_off, puff_density, puff_temp, puff_speed, puff_push, puff_expand
         pub column: [f32; 14],
         pub soot: [f32; 3],
@@ -74,13 +72,12 @@ pub fn fill(g: &Game, out: &mut Vec<Fire>, table: &mut Vec<FireTable>, bared: bo
 
 fn numbers(g: &Game) -> FireTable {
     let (k, c) = (&g.k.fire, fire_look_smoke());
-    let (l, s, a) = (&k.look, &k.smoke, &k.gas);
+    let (l, s) = (&k.look, &k.smoke);
     let on = |b: bool| if b { 1.0 } else { 0.0 };
     let mut r = FireTable::ZERO;
-    r.look = [l.gain, l.core, l.sigma, l.speed, l.tall, l.torn, l.plume, l.shimmer, l.soot, l.breathe, a.ref_, a.lo, l.react, l.lean, l.steps, 0.0].map(|x| x as f32);
+    r.look = [l.gain, l.core, l.sigma, l.speed, l.tall, l.torn, l.plume, l.shimmer, l.soot, l.breathe, 0.0, 0.0, l.react, l.lean, l.steps, 0.0].map(|x| x as f32);
     (r.draw_r, r.max, r.height, r.tall, r.lean) = (k.draw_r as f32, m::max(0.0, m::min(4.0, m::floor(k.max))) as f32, k.height as f32, l.tall as f32, l.lean as f32);
     r.smoke = [on(s.on), s.up, s.radius, s.cells, s.density, s.temp, s.speed, s.push, s.jitter, s.every, s.view_r, s.lean].map(|x| x as f32);
-    r.gas = [on(a.on), a.up, a.radius, a.cells, a.density, a.temp, a.speed, a.push, a.jitter, a.every, a.view_r, a.keep, a.ease].map(|x| x as f32);
     r.column = [c.up, c.radius, c.density, c.soot_ease, c.puff_every, c.puff_secs, c.puff_up, c.puff_radius, c.puff_off, c.puff_density, c.puff_temp, c.puff_speed, c.puff_push, c.puff_expand].map(|x| x as f32);
     r.soot = c.soot.map(|x| x as f32);
     r

@@ -222,7 +222,7 @@ fn asking_writes_nothing_with_a_ring_up() {
             for k in 0..120 {
                 if k == 30 { let key = p.g.k.cmdring.key.clone(); p.point_at(door); p.key_down(&key); }
                 p.frame();
-                if ask { let v = p.view(); assert!(v.plan.is_some()); }
+                if ask { let v = p.view(); assert!(!v.plan.own.men.is_empty(), "seed {seed}: the plan on the floor has nobody"); }
                 if k % 30 == 29 { out.push(p.words()); }
             }
             out
@@ -278,7 +278,7 @@ fn his_own_ring_is_told_of_the_rows_in_reach() {
     }
 }
 
-fn plan(p: &Play, seat: usize) -> PlanView { p.view_of(seat).plan.expect("the plan") }
+fn plan(p: &Play, seat: usize) -> PlanView { p.view_of(seat).plan }
 
 /// THE RULE: an order just given shows who goes and where, and goes out; with the menu up it stands; what waits on the key is listed on its door, and the key is lit only with the men set.
 /// A FAILURE MEANS: the floor shows a plan the squad does not have. The control is the plan before any order, with nothing in it.

@@ -27,14 +27,14 @@ pub(super) fn line_by(f: RoomFightFriendInLine) -> OpLineBy {
 }
 
 /// Is this body within the clearance it is owed of the line from → to (the `hit` of roomfight.ts friendInLine)
-pub(super) fn line_hit(g: &mut Game, ch: CharId, mate: bool, from: V3, dx: f64, dz: f64, l2: f64, l: f64, t_max: f64, sam_still: bool) -> bool {
+pub(super) fn line_hit(g: &mut Game, ch: CharId, mate: bool, from: V3, dx: f64, dz: f64, l2: f64, l: f64, t_max: f64) -> bool {
     let pos = g.ch[ch].pos;
     let vel = g.ch[ch].vel;
     let h = match g.ch[ch].bones.get(crate::character::Bone::Hips) { Some(b) => *b, None => pos };
     let tr = ((h[0] - from[0]) * dx + (h[2] - from[2]) * dz) / l2;
     let t = v3::clamp(tr, 0.0, t_max);
     let sam = !mate && crate::seats::man_of(g, Some(ch)).is_some();
-    let pace = if sam_still && sam { 0.0 } else { m::hyp2(vel[0], vel[2]) };
+    let pace = m::hyp2(vel[0], vel[2]);
     let moving = if sam { m::min(pace, room_fight_sam_speed_of(g, ch)) } else { pace };
     let wide = 0.45 + m::min(0.5, 0.3 * moving);
     let clear = if mate {
@@ -50,8 +50,7 @@ pub(super) fn line_hit(g: &mut Game, ch: CharId, mate: bool, from: V3, dx: f64, 
 }
 
 /// A friend, Sam or another living operative, within a body's breadth of the line from → to and a metre past it, wider for one on the move. (roomfight.ts friendInLine)
-pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, self_: GuardId, sam_still: Option<bool>) -> Option<crate::roomfight::RoomFightFriendInLine> {
-    let sam_still = sam_still.unwrap_or(false);
+pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, self_: GuardId) -> Option<crate::roomfight::RoomFightFriendInLine> {
     let dx = to[0] - from[0];
     let dz = to[2] - from[2];
     let l2 = dx * dx + dz * dz;
@@ -61,7 +60,7 @@ pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, se
     for pl in crate::seats::men(g) {
         if g.pl[pl].down { continue; }
         let ch = g.pl[pl].ch;
-        if line_hit(g, ch, false, from, dx, dz, l2, l, t_max, sam_still) { return Some(RoomFightFriendInLine::Player); }
+        if line_hit(g, ch, false, from, dx, dz, l2, l, t_max) { return Some(RoomFightFriendInLine::Player); }
     }
     let mine = g.gd[self_].team;
     let mut i = 0;
@@ -73,7 +72,7 @@ pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, se
         let theirs = g.gd[o].team;
         if crate::teams::is_hostile(g, mine, theirs) { continue; }
         let mate = theirs == crate::teams::Team::Operative && g.gd[o].unit.is_some();
-        if line_hit(g, ch, mate, from, dx, dz, l2, l, t_max, sam_still) { return Some(RoomFightFriendInLine::Guard(o)); }
+        if line_hit(g, ch, mate, from, dx, dz, l2, l, t_max) { return Some(RoomFightFriendInLine::Guard(o)); }
     }
     None
 }
@@ -83,7 +82,7 @@ pub fn room_fight_sam_in_line(g: &mut crate::game::Game, o: RoomfightOpId, to: V
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
     let from = shoulder_of(g, c);
-    if !matches!(room_fight_friend_in_line(g, from, to, gd, None), Some(RoomFightFriendInLine::Player)) { return false; }
+    if !matches!(room_fight_friend_in_line(g, from, to, gd), Some(RoomFightFriendInLine::Player)) { return false; }
     g.gd[gd].muzzle_down = true;
     g.gd[gd].muzzle_clear_t = 0.0;
     true

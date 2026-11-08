@@ -157,7 +157,7 @@ export interface Box {
   shaped?: boolean;
   /** this static is a PIECE of a shape (BoxShape.with): added after the level's own boxes by shapeLevel, taken away by it; never in a level file's list.
    *  TRIM: drawn and nothing else (it stands NoShadow, so no ray, eye or body meets it); `of` = the number of the box that says it, which it follows out of
-   *  the picture (shapes.ts withPieces) */
+   *  the picture */
   piece?: boolean;
   of?: number;
   /** DRESSING (CPU only): drawn and lit like any box, and PICTURE ONLY for the CPU's world ray, exactly as a look piece is (BoxWorld.raycast) — a cursor, an
@@ -382,7 +382,7 @@ export class BoxWorld {
   // packed before (the geo / mat arrays are written only by this class); anything else — a hidden static, a dimmed fixture, a moved editor box, a replaced Box object with other
   // values — is repacked on the spot. Writers need raise no flag: the compare IS the truth (~25 field reads a box, a few µs for the office). What is not per box is an EPOCH:
   // the marking table's state (a list registered / repacked / the table reset) and the markings switch — `packEpoch` bumps and every static repacks. Bytes: identical by
-  // construction (the pack is a pure function of the shadowed inputs), proven by tools/cpu-frame/tables-hash.ts against the pre-lane recording.
+  // construction (the pack is a pure function of the shadowed inputs).
   private static readonly SS = 24;   // shadow floats per static: c0 c1 c2 yaw h0 h1 h2 flags owner a0 a1 a2 e0 e1 e2 cutHeight matWord markGain hasRot r0 r1 r2 r3 marksLen
   private statShadow = new Float64Array(0);
   private statShadowMarks: (MarkingDef[] | undefined)[] = [];
@@ -411,7 +411,7 @@ export class BoxWorld {
   // a static hidden by destruction and restored later is findable; a pane IS a hit unless the caller skips Glass), padded RAY_PAD each side so a face on a cell line is in
   // both cells. The per-box test (rayBox with the running best as tmax) is unchanged, so a hit's t and normal are the same bits; the candidate SET is what shrank. The one
   // rule the brute force had that a walk does not is 'first index wins a tie', kept explicitly (r.t === best && i < bi). Rebuilt by list() when a static's SHAPE changed
-  // (rgShape: its centre, half-sizes or turn — a changed colour or wetness leaves it standing) or the count did; tools/cpu-frame/raycast-diff.ts is the differential proof (10⁵ random + axis-aligned rays: hit index, t and normal identical).
+  // (rgShape: its centre, half-sizes or turn — a changed colour or wetness leaves it standing) or the count did.
   static readonly RAY_PAD = 1e-3;
   private rgStart = new Uint32Array(WORLD.gridW * WORLD.gridH + 1); private rgItems = new Uint32Array(4096); private rgGlobals: number[] = [];
   private rgN = -1;   // statics the ray grid covers (= the static prefix of `all` at its build; −1 = never built)

@@ -1454,7 +1454,7 @@ fn begin(g: &mut Game, st: &mut KitStage, f0: &'static str) {
     if beats(f, man.is_some()).is_none() { f = "weapon"; }
     let q_row = if st.quiet { quiet_beats(f, man.is_some()) } else { None };
     let c = match man { Some(x) => g.gd[x].ch, None => g.pl[g.player].ch };
-    let (home, yaw) = match man { Some(x) => home_of(g, st, x), None => (st.sam, st.sam_yaw) };
+    let (home, yaw) = match man { Some(x) => home_of(g, st, x), None => (st.sam, super::walk::faces(st, st.sam)) };
     let now = g.time;
     let table = beats(f, man.is_some()).unwrap();
     let mut b = Beat {
@@ -1531,7 +1531,8 @@ fn tidy(g: &mut Game, st: &mut KitStage) {
     if !st.a.cost_t.is_nan() { g.puppet = Some(GamePuppet { aim: Some(at(st, [0.0, 0.0, QK.cost.aim_y])), ..GamePuppet::zeroed() }); }
     else if (!b_some || b_man.is_some()) && !b_team {
         // (his walk would stop theirs, so the men first. At a wall left open: only the men it has yet to wait for, `swap_secs` at most: then he is walked home by the same wait)
-        let men_first = !b_some && actor(g, st).is_none() && away(g, st) && (!st.hole || (!st.a.hole_men.is_empty() && (st.a.home_t.is_nan() || now - st.a.home_t < K.swap_secs)));
+        // (and never under the man whose card just opened: he is on his way past him)
+        let men_first = !b_some && walk::arriving(g, st) || !b_some && actor(g, st).is_none() && away(g, st) && (!st.hole || (!st.a.hole_men.is_empty() && (st.a.home_t.is_nan() || now - st.a.home_t < K.swap_secs)));
         if flat(p, st.sam) > K.on_slot + slack && !men_first { sam_goes(g, st.sam); }
         else if g.puppet.is_some() { g.puppet = None; }
     }

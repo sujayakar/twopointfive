@@ -2429,7 +2429,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   played by its own address leads to the listed lesson after it (the tactics mission still to the ledger). The ledger's `scene` line no longer names "the
   post", which was the tactics mission's: "The people who hit the convoy were paid through a money changer's shop in town". NO SWITCH of its own: the list
   is data, and the next-lesson rule follows what the desk draws (`?offlist=0` = every lesson leads to the next row of the table, as before). CHECK: `rust/game_run/tests/desk.rs` (the cut rows, `offlist=0`); `offlist-check.ts` went with the page's list, 2026-11-08.
-  `tools/qa/kitview-page.cjs` reads a row's cut from its whole line now (both new rows say it after their level). RUN on this change: `offlist-check`
+  RUN on this change: `offlist-check`
   both ways, `writing-check`, `lesson-check`, `rails-check` on both stands, the `ui` gate, the `missions` gate (two reds there, `defuse` and
   `missions-shipped`'s compound row, are red on the unchanged build head too). ON THE REAL PAGE (headless Chromium, the software adapter, the DOM read, no
   picture): the title's Play draws four tutorial cards in that order, `?offlist=0` six, the ledger's load card reads its new line, and
@@ -2592,6 +2592,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   walk the pair with a walk key still down puts the mode up and him on his knee, 20 lines pass and the page has no error; with `URL_ADD='&planwalk=0'`
   that one line fails. NOT DONE: nobody has played it or seen it on a GPU; the scripted player of mission 2 stands still for the pair, so its runs do
   not pass through this rule.
+- **The cigarette has no book (2026-11-07).** The tick asks the solver nothing: a smoking man who is seen files a short source that rides his hand every second, and whatever the solver lost comes back by itself. No save, restart or dropped source has to be told. What follows is how it was before.
 - **The cigarette's book is the host's (2026-10-23; `smokebreak.ts SmokeShown`, `engine.hostBooks.smokeBreak`).** A man's row in the smoke break's table kept
   `thread` (his thread's source is on the smoke solver) and `left` / `gap` (puffs still to file), and the counts `threads` and `records`: all of it written by
   `g.smoke.drawing()` and by whether the host has a particle pool. So the solver's word was in the game's state: two games that differed only in their
@@ -2780,16 +2781,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     the front door; walk round behind the hall, where the gunner's back and the back door are on the picture (a step's eye shows him); Shift + the
     key on the back door; the word. The script holds the gun on the front door until a door moves: with a stack on each it is on the wrong one
     (`levels/tut-queue.script.ts`, beat `gun`). (3) TWO GATES: the key on himself calls all four back (fall in ends every goal: men he has called
-    are on nothing, so the next goal is half the squad's since `CMDRING.goalHalf`, squad.md; everybody's with `?goalhalf=0`); walk out to the yard; `gateA` Shift + the key on a spot by the road gate turns one pair (all four with `?goalhalf=0`)
-    to watch it from where they stand; `gateB` THE WHEEL FOR A PART: Shift and the key KEPT DOWN by the back gate open the ring for the pair a tap
-    would have sent, and its second wedge (`cover`) turns that pair to the back gate while the other stays on the road gate; then men come by
+    are on nothing, so the next goal is half the squad's since `CMDRING.goalHalf`, squad.md; everybody's with `?goalhalf=0`); walk out to the yard; `gateA` THE WHEEL FOR A PART: Shift and the key KEPT DOWN by the road gate open the ring for the pair a tap
+    would have sent (since 11-08 a tap on a spot sends men to stand on it, and watching a spot is the wheel's: squad.md), and its second wedge (`cover`) turns that pair to the gate; `gateB` the same keys by the back
+    gate for the others, with no card, while the first pair stays on the road gate. The frame's `ringPart` gives these steps the wheel only with Shift down; then men come by
     both gates at once (beat `gates`) and each pair has its gate first. Five cards, each on the step that needs it.
   - **NO DEAD END.** Every step of the two door fights is also done by its room being taken, whoever took it. The yard's steps have nothing to
-    take until the last one's cue, so they are put right by lines. THE WRONG WHEEL on `gateB`: the key kept down with NO Shift is the wheel of
-    the mission before, for everyone, the ring's line is the same, and its second wedge turns all four to the back gate with nobody left on the
-    road. `gateB` therefore passes on two men at the back gate whoever watches the road, and the step after it, `split`, asks for a Shift tap by
-    the road gate again, which parts a pair off the four. With a pair on each gate as `gateB` ends, `split` is done as it comes up and its line
-    is never read (the scripted player's `idleOk`). Found by review: before `split` that hand left him with a line he could repeat for ever.
+    take until the last one's cue, so these steps are made so that they cannot stick. The key kept down with NO Shift is a tap there (`ringPart`): no ring, nothing given, and the note says to keep both down, so
+    all four can no more come to one gate by the wheel. EACH STEP ENDS ON THE GATE IT NAMES, by one man, so no press leaves him with a line he cannot finish (11-08). `split` asks for the road gate again where nobody watches it, as after the tap on himself at `gateB`, and is done as it comes up where it is still watched (the scripted player's `idleOk`). Stray Shift taps on the way out
+    leave men standing about: the part is half of the biggest group, so after two the wheel is for one man, who may be refused from where he stands ("no line from here."), and the tap on himself puts it right; after four nobody is free, no ring goes up and the squad says so, and THE TAP ON HIMSELF, which `noTap` never stops, calls them back
+    and both steps then pass. A wrong wedge [1] sends that part to stand by the gate and the step stays. `tutqueue-check` line 9 plays all of these.
   - **THE FRAME** (`rails.ts`, with the frame's owner's yes): a new action `goal`, no key of its own and no field in the level's record. A lesson
     has goals from the step that lists `goal`; until then the gate takes Shift out of the tick with the key, so the pair is the plain key
     (`planmode.ts goalsOn` asks `rails.locks('goal')` in place of `rails.live`). A lesson that never lists it plays as before. On a step that
@@ -2805,28 +2805,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     raise them by hand after each stand-up and put them back. With no lesson listing `goal`, `goalsOn` answers what it answered before on
     every level (the frame not live, or `goal` locked), and the frame's own switch (`RAILS.on`) is over all of it. With `?goals=0` the pair on
     the goal's step is the plain key (the gate lets Shift through only where `CMDRING.goals` is on to take it), plan mode never comes up, and
-    the mission cannot be finished by its lines: it needs the rule it teaches, and no line of the page says so. With `?goalring=0` the key kept down is everyone's wheel and `split` puts it right.
-  - **CHECKS.** `bun run tools/qa/tutqueue-check.ts` (probe `tutqueue`, family missions; nine lines: he is on the floor with the four and the goal
+    the mission cannot be finished by its lines: it needs the rule it teaches, and no line of the page says so. (`?goalring=0` is a settled row: a write to it is refused.)
+  - **CHECKS.** `bun run tools/qa/tutqueue-check.ts` (probe `tutqueue`, family missions; thirteen lines: he is on the floor with the four and the goal
     is not his yet; before its step Shift + the key is the plain key; from its step a whole pair parts off; the word is shut until both stacks
     stand and one press starts an entry on each door; from every ring he walks to the next two marks are on the picture at 1600 × 1000 and at
     1000 × 673; every step of the two door fights has its room-taken way out; nothing in it is plan mode's; the yard: every man has a line to both spots from where the
-    file leaves him, a Shift tap on the wheel's step gives nothing, the ring is a whole pair's with the step's own line, its wedge turns them;
-    and, in a second game, the wrong hand in the yard: after a stray Shift tap the first gate's line still parts a pair to it, the wheel for
-    everyone turns all four to the second gate, `split` comes up, and a Shift tap by the road gate leaves a whole pair on each).
+    file leaves him, at each gate a Shift tap and the key kept down alone give nothing, the ring is a whole pair's with the step's own line, its wedge turns them;
+    and, in four more games under `QA_SWEEP=all`, the wrong hand in the yard: two stray Shift taps; four, nobody free, and the tap on himself; a wrong wedge [1]: the gates pass after each; the tap on himself at `gateB`, the line's wheel, `split`'s line and the fight to its end).
     `TUTQUEUE_BREAK=1` (no step gives `goal`) fails lines 3, 4, 8 and 9 on both stands. `tools/qa/rails-check.ts` has three lines for it: the goal's step
     (as written; no step lists it; the frame off), which `RAILGOAL_BREAK=1` (the lesson's own list gives `goal` from the first tick) fails; the
     goal rule off on the goal's own step (the plain key, plan mode down), which `RAILS_BREAK=1` fails with the first; and the fault for a goal
     with no sprint. rails-check ALL PASS on both stands. `lesson-gate.ts tut-queue` 6 of 6 (the scripted player 14 of 14, and as the
     page ships on four dice at a reader's pace, 175 s). `goals-check` on both stands (its fake frame has `locks`). `lived-check`, `round-check`
     (24 round things, the plan floor's), `carlamps-check` and `level-needs tut-queue --run` carry its rows.
-  - **MEASURED.** The scripted player on the page's stand, seeds 1 to 8: 14 of 14 steps in 106 to 110 s of play; both guardroom doors opened
+  - **MEASURED.** The scripted player on the page's stand, seeds 1 to 8 (on 10-26, with the 14 steps it then had): every step in 106 to 110 s of play; both guardroom doors opened
     0.0 s apart and the hall's 0.4 s apart on every seed, nobody dazzled by the team's own entry, no teammate put on a knee in the hall; the
-    gates split 4, then 2 + 2. The gates with only one of them watched (staged in a harness script, two seeds): four teammates put on a knee and
+    gates part two men and two by the wheel. The gates with only one of them watched (staged in a harness script, two seeds): four teammates put on a knee and
     22 s to clear, against none and 3 s with both watched. A pair MOVED to the barrier by the wheel's first wedge does not face the gate and
-    its men are slow to answer (11 s): the line asks for the second wedge for that reason. The wrong wheel played by the scripted player
-    (`TUTQUEUE_PLAIN=1`, one seed): all four to the back gate, `split` up, a Shift tap by the road gate, and the mission won.
+    its men are slow to answer (11 s): the line asks for the second wedge for that reason. The plain hold played by the scripted player
+    (`TUTQUEUE_PLAIN=1`, one seed): at each gate no ring, nothing given and the note, and the mission won.
   - **THE REAL PAGE** (`PORT=<port> node tools/qa/tut-queue-page.cjs`: headless Chromium, the software adapter, stepped, nothing drawn, every
-    input a DOM key or mouse event; the player cannot be hit there unless `GOD=0`): 26 of 26 lines, from the Tutorial group's row and the opening
+    input a DOM key or mouse event; the player cannot be hit there unless `GOD=0`): 31 of 31 lines on 11-08, from the Tutorial group's row and the opening
     card to the end at 101 s of play, every one of the five cards met and closed with Enter, the lines' keys drawn as key caps (Q for the squad's
     key), no page error. The hand walks round the hall's end to the yard; the way through the hall is the scripted player's.
   - **KNOWN, NOT DONE.** (a) A second tap of the key on a door the squad stands on still sends them in while the word is locked, by a plain
@@ -2839,9 +2838,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     the squad in the hall's doorway. (d) Nothing shows who took a goal apart from the ring's name line. (e) The level's two floodlights are both
     out at dusk (the plan floor's; `level-needs` NOTE key). (f) From the goal's step on, a tap of the key made at a sprint is a goal for a part
     of the squad, as on every mission (Shift is down), so "stack your whole squad" pressed on the run sends a pair; pressed again at a walk it
-    sends all four. (g) A Shift tap on each gate in turn leaves a pair on each and `gateB` is then done as it comes up, its card shown and the
-    wheel never opened. (h) Four Shift taps on four different things leave four men on four goals with nobody to give: the yard's lines then ask
-    for a pair nobody has, and only the key on himself (line 9 of the mission) frees them. NOBODY HAS played it; no picture was looked at; never seen on a GPU.
+    sends all four. (g) A Shift tap by a gate gives nothing since 11-08 (`noTap`). (h) Four Shift taps on the way out leave four men on four spots with nobody to give: the wheel says so, and only
+    the key on himself frees them, which is not on the line (`tutqueue-check` line 9). NOBODY HAS played it; no picture was looked at; never seen on a GPU.
   - **No interaction row is drawn on the relay post (2026-10-29).** Its lesson never gives the interaction key, and it had no `rails.rows` list, so a
     row was offered beside every thing a hand can work for a key the frame takes out of the tick. Seen headless as the page ships, Sam stood in reach of
     the breaker box: the row `breakerOff` ("throw it — kill the lights"). `WORK.samFace` (the breaker's row whichever way its panel faces) made that one

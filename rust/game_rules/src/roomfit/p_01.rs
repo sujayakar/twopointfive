@@ -420,7 +420,7 @@ pub fn fit_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     if g.time < f_next_t || !g.tab.orders_assignment[a].arrived { return; }
     let next_t = g.time + k.again_secs;
     g.tab.orders_assignment[a].fit.as_mut().unwrap().next_t = next_t;
-    // what the weights hang on: the rooms known, the leaves, who else holds a deal: nothing of it changed, nothing to weigh
+    // what the weights hang on: the rooms known, the ways there are (a hole is one), the leaves, who else holds a deal: nothing of it changed, nothing to weigh
     let mut mates: Vec<(V3, Option<String>)> = Vec::new();
     for man in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
         if man == gd { continue; }
@@ -429,7 +429,7 @@ pub fn fit_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
         if let (Some(fit), Some(pos)) = (row.fit.as_ref(), row.post) { mates.push((pos, fit.key.clone())); }
     }
     let keys: Vec<&str> = mates.iter().map(|o| o.1.as_deref().unwrap_or("-")).collect();
-    let mut sig = alloc::format!("{}|{}|", js::num_str(g.cleared.known), keys.join(","));
+    let mut sig = alloc::format!("{}|{}|{}|", js::num_str(g.cleared.known), g.cover.openings.len(), keys.join(","));
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
         if crate::doors::door_off(g, d) {

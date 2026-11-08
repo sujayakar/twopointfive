@@ -38,33 +38,18 @@ fn rank(r: Perceive) -> i32 {
 }
 
 
-/// The senses updateGuard would have run for a man the runner drives: what they came to this frame. (squad.ts perceive)
-pub fn perceive(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) -> Option<crate::squad::Perceive> {
-    crate::seats::standing_for(g, gd, &mut |g| perceive_here(g, gd, dt, before))
+/// What a man of the pair made of the frame: his ears and eyes are his own (guards/senses); somebody he has walked into and a colleague on the floor are here. (squad.ts perceive)
+pub fn perceive(g: &mut crate::game::Game, gd: GuardId, before: f64) -> Option<crate::squad::Perceive> {
+    crate::seats::standing_for(g, gd, &mut |g| perceive_here(g, gd, before))
 }
-fn perceive_here(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) -> Option<crate::squad::Perceive> {
-    crate::guards::hearing_check(g, gd, None, None, None);
-    let vis = crate::guards::can_see(g, gd);
-    let mut seen = false;
+fn perceive_here(g: &mut crate::game::Game, gd: GuardId, before: f64) -> Option<crate::squad::Perceive> {
     let pc = g.pl[g.player].ch;
-    if vis.visible {
-        let rate = crate::guards::sight_gain(g, gd, vis.dist);
-        if rate > 0.05 {
-            { let to = v3::clamp(g.gd[gd].awareness + rate * dt, 0.0, 1.0); crate::mind::set(g, gd, to, "squad"); }
-            let pp = v3::copy(g.ch[pc].pos);
-            crate::mind::fix(g, gd, Some(pp), "squad");
-            seen = rate > 0.25;
-            if seen { g.gd[gd].last_seen_t = g.time; }
-        }
-    }
-    g.gd[gd].saw_player_this_frame = seen;
     let pp = g.ch[pc].pos;
     let gp = g.ch[g.gd[gd].ch].pos;
     if !g.pl[g.player].down && !g.player_invisible && m::hyp2(pp[0] - gp[0], pp[2] - gp[2]) < 0.62 {
         crate::mind::set(g, gd, 1.0, "squad");
         crate::mind::fix(g, gd, Some(v3::copy(pp)), "squad");
         g.gd[gd].last_seen_t = g.time;
-        seen = true;
     }
     if g.gd[gd].awareness > g.gd[gd].witness.peak_awareness { g.gd[gd].witness.peak_awareness = g.gd[gd].awareness; }
     if g.time - g.gd[gd].saw_body_t > 20.0 && g.gd[gd].awareness < 0.85 {
@@ -76,7 +61,6 @@ fn perceive_here(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) -
             return Some(Perceive::Body);
         }
     }
-    if !seen { let to = m::max(0.0, g.gd[gd].awareness - dt * 0.06); crate::mind::set(g, gd, to, "squad"); }
     let aw = g.gd[gd].awareness;
     if aw >= 0.85 { Some(Perceive::Alert) } else if aw >= SUSPECT && aw > before { Some(Perceive::Suspicious) } else { None }
 }
@@ -173,7 +157,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     let men = clearing_men(g);
     for (i, &gd) in men.iter().enumerate() {
         let before = cl!(g).aw[i];
-        let r = perceive(g, gd, dt, before);
+        let r = perceive(g, gd, before);
         cl!(g).aw[i] = g.gd[gd].awareness;
         if let Some(r) = r {
             if worst.map_or(true, |w| rank(r) > rank(w)) { worst = Some(r); }

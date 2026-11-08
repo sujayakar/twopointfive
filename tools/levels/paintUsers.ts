@@ -10,7 +10,7 @@ export function* paintUsers(d: Data): Generator<{ o: Paints; where: string; kind
   for (const [name, T] of Object.entries(K?.sets ?? {})) for (let i = 0; i < T.boxes.length; i++) yield { o: T.boxes[i], where: `kitView.sets.${name}.boxes[${i}]`, kind: 'set' };
   for (let w = 0; w < (K?.ways ?? []).length; w++) { const add = K!.ways![w].add?.boxes ?? []; for (let i = 0; i < add.length; i++) yield { o: add[i], where: `kitView.ways[${w}].add.boxes[${i}]`, kind: 'set' }; }
 }
-/** the row a paint user wears: its `material`, or for a gear screen's box that names alternatives ('look|plain') the first the file has (host/kitViewSet.ts) */
+/** the row a paint user wears: its `material`, or for a gear screen's box that names alternatives ('look|plain') the first the file has (rust/game_start/src/kit_set.rs) */
 export const rowOf = (d: Data, o: Paints): string | undefined => o.material === undefined ? undefined : !o.material.includes('|') ? o.material : o.material.split('|').find(m => Object.hasOwn(d.materials, m)) ?? o.material.split('|')[0];
 /** a file from before says nothing in its rows */
 export const fromBefore = (d: Data): boolean => !Object.values(d.materials).some(m => m.stuff !== undefined);

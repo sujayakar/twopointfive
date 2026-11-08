@@ -576,7 +576,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and 568 frames, both stands). NO CLIP shows a kill from a hold: the pose is our own, off the knife from behind. Seen only as stick-figure strips on the software path
   (`--move grab-kill,choke-beats,grab-choke`), never on a GPU, never played; the viewer's hold page has the phase (`kill`) with both halves shown.
 - **Stealth poses = the crouch, the creep and the look under a door posed against the reference** (`src/game/stealthpose.ts` = the table `STEALTHPOSE`, a LEAF nothing of the
-  game is imported into; `src/game/stealthfeed.ts stealthFeed(g)` = the feed, called from player.ts; `character.ts stealthLayer / stealthPicture`, numbers `STEALTH`;
+  game is imported into; `character.ts stealthLayer / stealthPicture`, numbers `STEALTH`;
   `STEALTHPOSE.on` — ON in the page, `?nostealthpose` = every pose as it was; OFF in the module and on the frozen stand, `TPS_STEALTHPOSE=1`; a `FROZEN_HOLDS` row, in the knob
   registry and a journal's tables, a recording from before the table replays with it off; halves `idle / walk / rise / creep / cable` + `nod` (below); Tab ▸ Player & weapons ▸ 'Stealth poses
   (crouch, creep, the look under a door)'). The maintainer, 10-12, on a fourth clip of Chaos Theory: "we should use all these videos as references for our stealthy animations"
@@ -661,8 +661,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   both stands: Space to the lens through 1.63 s → 0.42 s (hands on it at 0.12 s there), a teammate from on his mark 1.52 s → 0.42 s. QA: `bun run tools/qa/wand-check.ts quick`
   (`probes.ts wand-quick`, family `wand`; both stands; `WANDQUICK_BREAK=1` must fail): off = the feed and the ring on every frame of the row, two log lines; on = through inside
   the animation's time, more than a second sooner, the same time to hands-on as before, no ring on any frame, one log line; a teammate's the same; the stands' row and a
-  recording's tables both ways. wand-look reads the wait as the keys stand; wand-mate's two fed-again lines still hold the 1.5 s on both stands. The kit picture's page check
-  (`tools/qa/kitview-page.cjs`) reads the wait off the page's own table and holds the key off for its one pick-half-way-through-the-feed line. On the real page (software
+  recording's tables both ways. wand-look reads the wait as the keys stand; wand-mate's two fed-again lines still hold the 1.5 s on both stands. On the real page (software
   adapter) `ONLY=play node tools/qa/wand-page.cjs` times it: the lens through 24 frames after the Space, no ring on the row and no bar in the panel on any of them; `ONLY=slow`
   is the same page under `?nowandquick`, the 1.5 s feed with its ring. Never seen on a GPU and never
   played by anybody: whether the lens coming up as the squat lands reads right is a call for an eye (the two sliders are there for it).

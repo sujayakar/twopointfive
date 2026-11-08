@@ -31,7 +31,7 @@ pub fn long_tuck(t: &mut Vec<f64>, gun_wall: f64) {
     t[c.fwd as usize] -= v3::clamp(gun_wall - 1.0, 0.0, 1.0) * wall.over;
 }
 
-/// Is the stagger's fold up: `too` is the figure's own foldToo; while MOVES.fold is 0 the wounds switch raises it too. (character.ts foldOn)
+/// Is the stagger's fold up: `too` is the figure's own foldToo. (character.ts foldOn)
 pub fn fold_on(g: &Game, too: Option<bool>) -> bool {
     let too = too.unwrap_or(false);
     g.k.moves.clutch > 0.5 && (g.k.moves.fold > 0.5 || (g.k.moves.fold == 0.0 && too))

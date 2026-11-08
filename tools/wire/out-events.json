@@ -253,7 +253,7 @@
 "sig": "pub fn particles_emit(g: &mut crate::game::Game, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts, ours: bool)",
 "bodyFile": "render_particles/b_01.rs",
 "mode": "push",
-"armCode": "{ const P = g.engine.particles; if (!P) return; const was = P.ours; P.ours = e.ours; try { P.emit(e.kind, e.pos, e.dir, e.count, e.o); } finally { P.ours = was; } }"
+"armCode": "{ const P = g.engine.particles; if (!P || (e.o.ember !== undefined && g.farForAFire(e.pos))) return; const was = P.ours; P.ours = e.ours; try { P.emit(e.kind, e.pos, e.dir, e.count, e.o); } finally { P.ours = was; } }"
 },
 {
 "call": "Particles.impulse",
@@ -303,6 +303,7 @@
 "sig": "pub fn particles_set_heat(g: &mut crate::game::Game, srcs: &[crate::smoke_types::WindGpuSource])",
 "bodyFile": "render_particles/b_01.rs",
 "mode": "body",
+"armCode": "{ g.engine.particles?.setHeat?.(e.srcs.filter((s: any) => !g.farForAFire(s.pos))); }",
 "answer": null
 },
 {
@@ -361,25 +362,6 @@
 "armCode": "{ if (e.e.track) e.e.track = trackOf(g, e.e.track); g.smoke?.emit?.(e.e); }"
 },
 {
-"call": "SmokeSystemLike.keepHot",
-"rust": "crate::smoke_types::smoke_system_like_keep_hot",
-"sites": 3,
-"ts": "keepHot",
-"of": "SmokeSystemLike",
-"file": "src/smoke/types.ts",
-"why": "this",
-"params": [
-{
-"ts": "heat",
-"rust": "heat"
-}
-],
-"sig": "pub fn smoke_system_like_keep_hot(g: &mut crate::game::Game, heat: f64)",
-"bodyFile": "smoke_types/b_01.rs",
-"mode": "body",
-"answer": null
-},
-{
 "call": "SmokeSystemLike.obstaclesChanged",
 "rust": "crate::smoke_types::smoke_system_like_obstacles_changed",
 "sites": 8,
@@ -419,6 +401,33 @@
 "sig": "pub fn smoke_system_like_push(g: &mut crate::game::Game, p: crate::smoke_types::SmokePush)",
 "bodyFile": "smoke_types/b_01.rs",
 "mode": "body",
+"answer": null
+},
+{
+"call": "SmokeSystemLike.round",
+"rust": "crate::smoke_types::smoke_system_like_round",
+"sites": 2,
+"ts": "round",
+"of": "SmokeSystemLike",
+"file": "src/smoke/types.ts",
+"why": "this",
+"params": [
+{
+"ts": "from",
+"rust": "from"
+},
+{
+"ts": "dir",
+"rust": "dir"
+},
+{
+"ts": "len",
+"rust": "len"
+}
+],
+"sig": "pub fn smoke_system_like_round(g: &mut crate::game::Game, from: V3, dir: V3, len: f64)",
+"bodyFile": "smoke_types/base.rs",
+"mode": "push",
 "answer": null
 },
 {
@@ -680,7 +689,7 @@
 "why": "state propSeen",
 "params": [],
 "sig": "pub fn clear_snow_marks(g: &mut crate::game::Game)",
-"bodyFile": "snow_marks/b_01.rs",
+"bodyFile": "snow_marks/base.rs",
 "mode": "body",
 "answer": null
 },
@@ -699,7 +708,7 @@
 }
 ],
 "sig": "pub fn clear_snow_tracks(g: &mut crate::game::Game, t: &mut crate::snow_tracks::SnowTracks)",
-"bodyFile": "snow_tracks/b_01.rs",
+"bodyFile": "snow_tracks/base.rs",
 "mode": "body",
 "answer": null
 },
@@ -1168,27 +1177,6 @@
 "body": "crate::sense::smoke_budget(g)"
 },
 {
-"call": "SmokeSystemLike.drawing",
-"rust": "crate::smoke_types::smoke_system_like_drawing",
-"sites": 2,
-"why": "answers a value (bool)",
-"body": "false"
-},
-{
-"call": "SmokeSystemLike.inSmokeDomain",
-"rust": "crate::smoke_types::smoke_system_like_in_smoke_domain",
-"sites": 1,
-"why": "answers a value (bool)",
-"body": "false"
-},
-{
-"call": "SmokeSystemLike.round",
-"rust": "crate::smoke_types::smoke_system_like_round",
-"sites": 3,
-"why": "answers a value (bool)",
-"body": "false"
-},
-{
 "call": "SquadOrders.hover",
 "rust": "crate::orders::squad_orders_hover",
 "sites": 1,
@@ -1648,13 +1636,6 @@
 "rust": "crate::rustknobs::knobs_to_rust",
 "sites": 1,
 "why": "no Rust body"
-},
-{
-"call": "smokebreak#smokeShown",
-"rust": "crate::smokebreak::smoke_shown",
-"sites": 3,
-"why": "answers a value (Option<crate::smokebreak::SmokeShown2>)",
-"body": "let s = g.engine.host_books.as_ref()?.smoke_break.as_ref()?; Some(SmokeShown2 { "
 },
 {
 "call": "snowField#snowLayBare",

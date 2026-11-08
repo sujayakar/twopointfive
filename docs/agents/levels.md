@@ -453,7 +453,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the shield's own step (issue cards are read as written). On build ba34118, both stands: 488 PASS, no FAIL, 65 NOTE; `KITDEAL_BREAK=1` 22 FAIL;
   `NEEDS_BREAK=1` exits 1.
 - **The level skill says where a Team & kit picture stands** (10-18; the skill's words only). Since every way of a `scenarios.kitView` block must anchor on
-  a door that is not steel (`docs/level-format.md`; `kitview-plan.ts` section C fails any other, `kitview-work.cjs` holds the page to it), the skill's kit
+  a door that is not steel (`docs/level-format.md`; `kitview-plan.ts` section C fails any other), the skill's kit
   picture item says so, with what to write where a mission's own way in is a gate, a gap or a wall. `--run` already runs `kitview-plan` for a level, so the
   level command is red on such a way with no change to it. On build d2ec4b7, both stands: 488 PASS, no FAIL, 65 NOTE.
 - **The level skill says how a check holds a file against its generator** (10-18; the skill's words only). The skill's "a check of its own" item now says
@@ -974,7 +974,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   ray and the game's own module meet the shaped solid. A PIECE IS TRIM: drawn and nothing else. It says no flags and stands `NoShadow` (cut away with
   its box where the box is), so no ray, eye or body meets it, and its own record follows the picture's cut-pieces switch; what must stop a round or a
   man is a box of the level, which may say a shape of its own. It knows its box (`Box.of`) and follows it out of the picture where a level box is
-  hidden by its number (`shapes.ts withPieces`: a thing a round takes in `destruction.ts hide`, a kit view's hidden boxes in `host/kitView.ts`), and it
+  hidden by its number (a thing a round takes in `destruction.ts hide`), and it
   is never an item of its own to `destruction.ts`. WHAT WALKS MEETS THE PLAIN
   LEVEL, BY CONSTRUCTION: a shaped box is pushed against as its uncut box, which is the plain one, and a piece is met by nobody; `thinLevel` and
   `barLevel`, which mark boxes by their size as a level is stood up, read the plain boxes (`plainLevel` before them, `shapeLevel` after). So to the
@@ -1157,13 +1157,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   where no scenario stands a team); 393 doors, 84 OWED in 30 files (inner doors nobody's shortest way uses, the block 10 of 16; and the lone outer door of three showrooms).
   `WALKED_BREAK=1` asks the ways with no routes and no scenarios: red, every start and 209 doors, 40 levels (the five it cannot bite are named). THE LIST IS THE WORK LEFT: a
   `scenarios.walked` row to a door gives it a way (`docs/level-format.md`), or the rule learns to walk to every door (the look task's function).
-  THE OVERLAY: `bun run tools/levels/walked-overlay.ts <level …> [--out dir] [--px 24]` (the same level, ways and starts as the check's; a look twin
-  asked by name is drawn with its own flat things over its plain file's ways) writes a picture of the level from above (the walk grid, every flat
-  thing lying on the ground in its group's colour, the ways as lines by kind, doors, starts) and a table a group: boxes, square metres, how much of it
-  lies on a lane, and how much of the lanes lies under it, both by area. No list of what a hand-laid path is: a level's groups say (the pass:
-  `snow.paths` 53 % on a lane and under 13 % of the lanes, `snow.cleared` 45 %, `snow.ruts` 8 %; the block's look: 213 flat things, 26 %). It is for
-  deciding, band by band, what the lanes can replace. NO HAND-LAID PATH IS RETIRED BY THIS STEP: the lanes are the look page's only, and the first
-  pair on a real card read the derived lane too weak beside the bands (the dress goal's rule: retire no band until its lane alone reads as clearly).
+  NO HAND-LAID PATH IS RETIRED BY THIS STEP: the lanes are the look page's only, and the first pair on a real card read the derived lane too weak beside the bands (the dress goal's
+  rule: retire no band until its lane alone reads as clearly). The overlay that drew the two over each other (`walked-overlay.ts`) went with the old game's walk grid, 2026-11-08.
 - **The pass's dressing is the kit's: what is done to a wall's face, round things that lie, and a window's two forms** (the library, 2026-11-05; no
   switch: kit pieces and the level files that lay them, on every stand; the shapes among them are the shape rule's, `SHAPES`). The maintainer, of
   dressing the levels: "I'd love for us to have a library of objects, materials, etc. that we reuse across them". The pass's house front and its yard's
@@ -1748,3 +1743,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stands: `stuff`, `rollback-check --static`, `hitstuff` (its break path fails 5), `marksight`, `lived`, `lookmaps`, `walked` (no `--write`),
   `probes.ts kept` and `materials`, `wallfurn`, `wayround`, `look-check`, `coatfinish`, `glassreal`, `kit-stores`, `does-check`, `does-audit`; the
   senses' error tool on the office on the page's stand; every export's `--check`. NOT SEEN: a rack, a keyboard or a hit on one, on a GPU.
+- **A level is made with no game loaded** (2026-11-08). `tools/levels`, `tools/level-export.ts` and `tools/levels-api.ts` import nothing of `src/game` or `src/sim` but the call surface's guard in
+  `scene/boxes.ts` and `scene/stuff.ts`, which leaves with the copy of the game. What a level may have at most is `scene/caps.ts` (held to the game's own room by `rust/sim/tests/level_caps.rs`), the
+  dressing's group and switch `scene/dressing.ts`, a vehicle's lamps as the generators write them `scene/carLamps.ts`, the office's floor `scene/officeFloor.ts`, a gun's word `scene/weaponIds.ts`. A
+  level's script is the game's (`game/levelScripts.ts`, by the level's name), not the loader's. Every generator's file is the same, byte for byte, and the validator's answers the same on 1,980
+  spoiled levels. STILL THE OLD GAME'S: the two questions the export asks of a written level (`second-way-check`, `marksight-check`).

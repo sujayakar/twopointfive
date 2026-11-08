@@ -220,8 +220,7 @@ if (argOf('--dump') !== null) {   // this tree, the environment's row
   { const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
     check(/\n  window\.__started = true;\n  void laterIdle\(\)\.then\(\(\) => \{ [^\n]*readyResolve\(\); \}\);/.test(main) && !/\n\s*readyResolve\(\);/.test(main),
       'main.ts raises `__started` when the start card is live and resolves `__ready` only once the later set is in');
-    check(/\n  if \(kitViewOn\) PIPE_QUEUE\.later = false;[^\n]*\n  const engine = new Engine\(gpu\);/.test(main),
-      'the Team & kit picture lowers the later lane before it builds its engine: it has no stand-in to show'); }
+  }
 }
 console.log(red ? `\nshaderrows-check: ${red} FAILED` : '\nshaderrows-check: all passed');
 process.exit(red ? 1 : 0);

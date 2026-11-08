@@ -15,7 +15,7 @@ import os, re, sys
 from bodies import bodies
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rust', 'game_rules', 'src')
-FIELDS = ['frag', 'runner', 'morale', 'startle', 'stand', 'squad_leg', 'squad_word', 'last_man', 'lane', 'press', 'walk', 'breaker', 'buddy', 'needs', 'squad']
+FIELDS = ['frag', 'runner', 'morale', 'startle', 'squad_leg', 'squad_word', 'last_man', 'lane', 'press', 'walk', 'breaker', 'needs', 'squad']
 BY = 'crate::owner::by::'
 LET = re.compile(r'^( *)let (\w+) = crate::owner::own\(\);\n', re.M)
 

@@ -15,6 +15,8 @@ use game::smoke_types::{SmokeEmitterLattice, SmokeEmitterMode, SmokePush, SmokeP
 const NONE: f32 = f32::NAN;
 fn opt(v: Option<f64>) -> f32 { v.map_or(NONE, |x| x as f32) }
 fn f3(v: [f64; 3]) -> [f32; 3] { v.map(|x| x as f32) }
+/// `speed` m/s along `dir`, which says where and need not be a unit (a fire's leans with the wind): the solver takes the same two apart
+fn along(dir: [f64; 3], speed: f64) -> [f32; 3] { let n = (dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]).sqrt(); f3(if n > 0.0 { dir.map(|d| d / n * speed) } else { [0.0; 3] }) }
 
 event! {
     /// particles thrown
@@ -83,7 +85,7 @@ event! {
         pub push: u32,
         /// what it rides, if anything (`anchors`; 0: it stays)
         pub anchor: u32,
-        /// 1 the picture's alone · 2 gone when what it rides is · 4 its ride's direction is the smoke's velocity
+        /// 1 the picture's alone · 2 gone when what it rides is · 4 its ride's direction is the smoke's velocity · 8 the men see through it too · 16 a fire's, for the preset that sheds those
         pub says: u32,
         pub lattice: u32,
         pub pos: [f32; 3],
@@ -210,7 +212,7 @@ impl Events {
 
     fn one(&mut self, tick: u32, g: &Game, e: &E) {
         match e {
-            E::ParticlesEmit(e) => self.emit(tick, e),
+            E::ParticlesEmit(e) => if e.o.ember.is_none() || !crate::far_for_a_fire(g, e.pos) { self.emit(tick, e) },
             E::ParticlesImpulse(e) => {
                 let serial = self.kicks.len() as u32;
                 let o = e.o.as_ref();
@@ -234,6 +236,7 @@ impl Events {
             }
             E::GameAudioLikeRain(e) => self.rain = e.level as f32,
             E::SmokeSystemLikePush(e) => self.push(tick, &e.p),
+            E::SmokeSystemLikeRound(e) => { let serial = self.pushes.len() as u32; self.pushes.push(AirPush { tick, serial, shape: 5, pos: f3(e.from), vel: f3(e.dir), dir: f3(e.dir), radius: 0.0, len: e.len as f32, hard: NONE, expand: NONE, ttl: 0.0, lattice: 0 }); }
             E::SmokeSystemLikeEmit(e) => {
                 let e = &e.e;
                 let lattice = match e.lattice { Some(SmokeEmitterLattice::Fine) => 1, Some(SmokeEmitterLattice::Coarse) => 2, None => 0 };
@@ -242,13 +245,13 @@ impl Events {
                 let push = if air {
                     let serial = self.pushes.len() as u32;
                     let burst = matches!(e.mode, Some(SmokeEmitterMode::Burst));
-                    self.pushes.push(AirPush { tick, serial, shape: if burst { 4 } else { 3 }, pos: f3(e.pos), vel: f3(e.dir.map(|d| d * e.speed)), dir: f3(e.dir), radius: e.radius as f32, len: 0.0, hard: opt(e.push), expand: opt(e.expand), ttl: e.ttl as f32, lattice });
+                    self.pushes.push(AirPush { tick, serial, shape: if burst { 4 } else { 3 }, pos: f3(e.pos), vel: along(e.dir, e.speed), dir: f3(e.dir), radius: e.radius as f32, len: 0.0, hard: opt(e.push), expand: opt(e.expand), ttl: e.ttl as f32, lattice });
                     serial + 1
                 } else { 0 };
                 let anchor = match &e.track { None => 0, Some(t) => { self.keys += 1; self.rides.push((self.keys, t.clone(), g.time + e.ttl)); self.keys } };
                 let serial = self.sources.len() as u32;
                 self.sources.push(SmokeSource {
-                    tick, serial, kind: e.kind as u32, push, anchor, says: (e.look == Some(true)) as u32 | (e.confined == Some(true)) as u32 * 2 | (e.track_vel == Some(true)) as u32 * 4 | (e.held == Some(true)) as u32 * 8, lattice,
+                    tick, serial, kind: e.kind as u32, push, anchor, says: (e.look == Some(true)) as u32 | (e.confined == Some(true)) as u32 * 2 | (e.track_vel == Some(true)) as u32 * 4 | (e.held == Some(true)) as u32 * 8 | (e.fire == Some(true)) as u32 * 16, lattice,
                     pos: f3(e.pos), radius: e.radius as f32, density: e.density as f32, heat: e.temperature as f32, ttl: e.ttl as f32, age: e.age as f32,
                     attack: opt(e.attack), jitter: opt(e.jitter), prio: opt(e.prio), min_cells: opt(e.min_voxels), tint: e.tint.map_or([NONE; 3], f3),
                 });
@@ -270,7 +273,7 @@ impl Events {
     fn push(&mut self, tick: u32, p: &SmokePush) {
         let serial = self.pushes.len() as u32;
         let (shape, len) = match (p.line, p.body) { (Some(l), _) if l > 0.0 => (1, l), (_, Some(b)) => (2, b), _ => (0, 0.0) };
-        self.pushes.push(AirPush { tick, serial, shape, pos: f3(p.pos), vel: f3(p.dir.map(|d| d * p.speed)), dir: f3(p.dir), radius: p.radius as f32, len: len as f32, hard: opt(p.push), expand: NONE, ttl: 0.0, lattice: match p.lattice { Some(SmokePushLattice::Fine) => 1, Some(SmokePushLattice::Coarse) => 2, None => 0 } });
+        self.pushes.push(AirPush { tick, serial, shape, pos: f3(p.pos), vel: along(p.dir, p.speed), dir: f3(p.dir), radius: p.radius as f32, len: len as f32, hard: opt(p.push), expand: NONE, ttl: 0.0, lattice: match p.lattice { Some(SmokePushLattice::Fine) => 1, Some(SmokePushLattice::Coarse) => 2, None => 0 } });
     }
 }
 

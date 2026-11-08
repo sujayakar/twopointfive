@@ -1,5 +1,5 @@
 // WHO HAS THIS MAN: THE ONE RECORD. Four columns of the men's table (src/sim/men/schema.ts) and nothing else writes them:
-//   owner   a word of claims, a bit a rule. A man is held by more than one rule at once all the time (his squad and a lane, a press and a last stand), so the word is every rule
+//   owner   a word of claims, a bit a rule. A man is held by more than one rule at once all the time (his squad and a lane, a press and the last man), so the word is every rule
 //           that has a hand on him, and the highest bit set is the rule that HAS him.
 //   rank    that top bit's place (1 the weakest; 0 nobody).
 //   reason  which of the top rule's reasons it gave (an index into its `why`).
@@ -24,7 +24,6 @@ const RULES = [
   { name: 'morale', why: ['a blast has him ducked or broken'] },
   { name: 'startle', why: ['caught alone at first sight, running for cover'] },
   // WHO MAY MOVE HIM OFF HIS POST
-  { name: 'stand', why: ['one of the last stand: in its room, on his way to it, or told to hold where he is'] },
   { name: 'squadLeg', why: ['his squad has sent him, or is about to'] },
   { name: 'squadWord', why: ['his squad has heard and not yet said what it does, or has him going round or looking'] },
   { name: 'lastMan', why: ['the last man up, at his act'] },
@@ -32,7 +31,6 @@ const RULES = [
   { name: 'press', why: ['the press has him, or he stays to keep the room it leaves'] },
   { name: 'walk', why: ['walking to the post of a mate who does not answer, nothing learned of the team by it'] },
   { name: 'breaker', why: ['out for the lights, or waiting to be sent'] },
-  { name: 'buddy', why: ['a colleague is on his way to him, or the two have just paired up'] },
   { name: 'needs', why: ['off for a coffee, a smoke, some water or a stretch'] },
   { name: 'squad', why: ['at rest, his squad\'s call'] },
 ] as const;

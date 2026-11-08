@@ -15,14 +15,11 @@ export const LOOK = {
   suit: true,
 };
 
-/** THE SUIT FOR A PICTURE: a host that stages men for a picture and not for play (the Team & kit picture stands a quiet mission's team at a way in staged as a room
- *  clear — host/kitView.ts — while the card says the suit as issued) says which mission the men are DRESSED for, whatever is staged: 'quiet' = Sam and the staged
- *  team in the suit, null = no mission (Sam alone in it, as on the plain night). Undefined — as it is everywhere unless a host says otherwise — = the scenario that
- *  is up decides, as ever (game/cast.ts sneakSuit reads this first). Not a knob and in no table: one window's host says it for its own picture. Under LOOK.on and
- *  LOOK.suit like the suit itself; the rifle's black furniture follows the suit (combat.ts), where the rifle hangs does not (kitanim.ts KIT.sling). Looks only. */
+/** WHICH MISSION THE MEN ARE DRESSED FOR, where it is not the scenario that is up: the Rust game's `scene_look.suit_asked` (a picture staged as a room clear for a quiet mission, rust/game_start/src/kit_stage.rs
+ *  dress), carried to this name by the state bridge as any module's word is (tools/blitz/schema.json). 'quiet' = Sam and the staged team in the suit, null = no mission (Sam alone in it), undefined = the scenario
+ *  decides (game/cast.ts sneakSuit reads this first). Nothing on this page writes it. Looks only. */
 let suitAsked: 'quiet' | null | undefined;
-export function setSuitAs(k: 'quiet' | null | undefined) { suitAsked = k; }
-/** the mission a host asked the men to be dressed for (undefined: none asked — the game's own scenario decides) */
+/** the mission asked for (undefined: none asked — the game's own scenario decides) */
 export function suitAs(): 'quiet' | null | undefined { return suitAsked; }
 
 /** THE MEN'S DRESS FOLLOWS THE PLACE (the maintainer, 10-10: "middle eastern enemies also don't make sense for the office level"): the look's cast and colour
@@ -91,7 +88,7 @@ export function lookTrialsKept(q: URLSearchParams): string[] {
   let cut: string | null = null; try { cut = localStorage.getItem('twopointsix.cutboxes'); } catch { /* no store: on */ }   // (the cut boxes' own switch: scene/cut.ts initCutSwitch)
   return cut === '0' && !q.has('cutboxes') && !q.has('nocutboxes') ? ['cutboxes=0'] : []; }
 /** the other words the page reads once, at boot, into its shader text and its level (main.ts, scene/cut.ts: the look's geometry is cut boxes) */
-const LOOK_PAGE_WORDS: ReadonlySet<string> = new Set(['firefit', 'longfoot', 'walked', 'firesnow', 'firesoot', 'emberfog', 'cutboxes', 'nocutboxes', 'smokelook', 'nosunglint', 'glintpick', 'holedepth', 'kept', 'lookworkers']);
+const LOOK_PAGE_WORDS: ReadonlySet<string> = new Set(['longfoot', 'walked', 'firesnow', 'firesoot', 'emberfog', 'cutboxes', 'nocutboxes', 'smokelook', 'nosunglint', 'glintpick', 'holedepth', 'kept', 'lookworkers']);
 /** a word of an address, decoded, is the look page's own */
 export function lookPageWord(k: string, v: string): boolean { return k === 'look' ? lookRow(v) : LOOK_PAGE_WORDS.has(k); }
 /** HOW KEPT THE PLACE IS, for the frame (render/frame.ts lookConfig.kept → look.wgsl lookKept): the address's `&kept=<0‥1>` for the visit, else the level's

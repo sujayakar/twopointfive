@@ -254,10 +254,7 @@ Wherever this file still says 'the native host / overlay / engine', '.metal' or 
   colour times wetness, emissive, marks, flags …), which on a level with weather or a fire is nearly every tick (The pass: 5 540 rebuilds in 5 616 ticks, about
   0.1 ms each; the compound: 429 in 8 060). The list keeps its own shadow of the statics' shapes (12 doubles each: centre, yaw, half-sizes, the rotation) and
   rebuilds the grid when one differs or the count did; the pack's shadow is the pack's alone again (which static's rows and which half of the trace grid go up).
-  The same run to the bit (a grid built from the same footprints is the same grid). Check: `bun run tools/cpu-frame/raycast-diff.ts` ends by re-shaping four statics
-  in place (moved, resized, turned, rotated; the count unchanged, as `wallbreak.ts` holing a holed wall does), asks that `relist()` rebuilt the grid once, compares
-  rays aimed at the four with the brute force, then changes only their look and asks that nothing was rebuilt; `RAYGRID_BREAK=1` keeps the rebuild from happening and
-  must exit 1. NOT DONE: the trace grid's static half and the statics' rows for the GPU still go up whole on any static's change, so on such a level every drawn
+  The same run to the bit (a grid built from the same footprints is the same grid). NOT DONE: the trace grid's static half and the statics' rows for the GPU still go up whole on any static's change, so on such a level every drawn
   frame re-sends them (the pack's side; not measured in a browser).
 - **One model for presentation and AI.** Guards' vision uses the player's GPU light-meter irradiance and marches
   sight lines through the smoke density field; hearing uses the same propagation (`collision.ts` SoundPaths) the

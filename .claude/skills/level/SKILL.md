@@ -94,8 +94,7 @@ did not.
   people walk through the level, its logic, leading the player". The look's page wears the floor where the level is walked
   (`src/scene/ways.ts`), so a start no way leaves from, or a door no way crosses or ends at, tells no story. Give it one
   with a `scenarios.walked` row (from a named thing to a named thing: a door is one). **check** `bun run
-  tools/qa/walked-check.ts <name>` (what is owed is held by name in the level's count file); `bun run
-  tools/levels/walked-overlay.ts <name>` draws the ways over what is laid by hand on the ground.
+  tools/qa/walked-check.ts <name>` (what is owed is held by name in the level's count file).
 - **A defender sees what he watches.** The dress goal's rule: "a window a mark watches through, or a covered lane crosses,
   stays see-through"; the maintainer: "we don't want them to feel dumb". Dress such a window with the kit's OPEN form
   (`gwotKit` `boards`, `shutters`, `windowBlanket` take `'shut'` or `'open'`), and stand no cover in a mark's line. **seen**
@@ -426,8 +425,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   which side the picture is taken from), or a set with a door in the wall the stack stands on. **seen** "some demos still
   don't really do anything": a hammer, a shotgun, a charge or the wand picked on a span or a steel door played the gun's
   row, and the picture stood still. **check** `kit picture`; `bun run tools/qa/kitview-plan.ts <name>` (fails a way that
-  anchors anywhere else); the page by `PORT=<dev server> LEVEL=<name> node tools/qa/kitview-levels.cjs`, and every pick
-  doing its work by `PORT=<dev server> LEVEL=<name> node tools/qa/kitview-work.cjs`.
+  anchors anywhere else); the game standing on it by `cargo test --test kit_levels` in `rust/game_start`.
 
 ## 8. What the player reads
 

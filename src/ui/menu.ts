@@ -12,6 +12,7 @@ export { bootCard } from './title';
 import { Engine } from '../engine';
 import { Game } from '../game/game';
 import { renderDebrief } from './debrief';
+import { runEndOf } from '../host/gameend';
 import { Quality } from './quality';
 import { AudioEngine } from '../audio/audio';
 import { Overlay } from './overlay';
@@ -130,7 +131,7 @@ export class Menu {
     side.appendChild(actions);
     const foot = el('div', 'foot'); foot.textContent = 'Esc resumes · W S choose'; side.appendChild(foot);
     this.body = el('div', 'body');
-    if (this.run) { card.classList.add('wide'); card.appendChild(this.body); renderDebrief(this.body, this.d.game); }   // the debrief of the run as it stands (nothing to press but 'copy summary': Resume / Restart are the card's own)
+    if (this.run) { card.classList.add('wide'); card.appendChild(this.body); renderDebrief(this.body, runEndOf(this.d.game)); }   // the debrief of the run as it stands (nothing to press but 'copy summary': Resume / Restart are the card's own)
     setTimeout(() => { if (!missionsBusy() && !optionsOpen()) resume.focus(); }, 0);
   }
   /** the URL named a scenario and its start() said no: the reason, where the player is looking */
@@ -157,7 +158,7 @@ export class Menu {
     { const nx = this.nextPickButton(() => performance.now() - shown >= 500); if (nx) actions.push(nx); }
     { const view = this.d.replay?.() ?? null; if (view) { const b = button('Replay', () => { if (performance.now() - shown >= 500) view(); }, 'replay'); b.title = 'watch this run again in the game'; actions.push(b); } }   // (the maintainer: "would be nice to be able to open the replay immediately here")
     this.body = el('div', 'body'); card.appendChild(this.body);
-    renderDebrief(this.body, g, actions);
+    renderDebrief(this.body, runEndOf(g), actions);
     const foot = el('div', 'foot'); foot.textContent = keyText(down ? (ck && mine ? 'Press Enter to go back to the checkpoint · press Shift+Enter to restart the mission · press Esc to close this' : 'Press Esc to close this · press Enter or Shift+Enter to restart') : 'Press Esc to keep playing · press Shift+Enter to restart any time · Esc ▸ Run so far shows this for a run in progress'); card.appendChild(foot);
     setTimeout(() => (lead ?? (ck && mine ? ck : primary)).focus(), 0);
   }

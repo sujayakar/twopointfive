@@ -20,7 +20,7 @@
 //     sums like (x0 + x1) / 2, and the identity gate (tools/qa/level-probes.ts) is bit-for-bit.
 //   - versioned: `version` is bumped on any breaking change; the loader refuses versions it does not know.
 import type { Vec3, Quat } from '../math/vec';
-import type { WeaponId } from '../game/weapons';   // type only (erased): what a route may hand its man
+import type { WeaponId } from './weaponIds';
 import type { RoomClearPlan, BreachPlan, CivilianTask } from './level';
 import type { LevelScenarios } from './scenarios';
 import { SQUAD_MAX_MEN, QUIET_MAX_ROUTES } from './scenarios';
@@ -30,9 +30,7 @@ import { MarkingDef, MAX_MARKS_PER_BOX, MARKING_TEXEL, markingErrors } from './m
 import { shapeErrors, formOf, type ShapeForm } from './shapes';
 import { BOX_STUFFS, boxStuffOk } from './stuff';
 import { DOES_WORDS, doesWordOk } from './materials';
-import { DOOR_CAP } from '../sim/doorshome';
-import { PROP_CAP, PROP_PARTS } from '../sim/propshome';
-import { LIGHT_CAPS } from '../sim/lightshome';
+import { DOOR_CAP, LIGHT_CAPS, PROP_CAP, PROP_PARTS } from './caps';
 export type { MarkingDef } from './markings';
 
 export const LEVEL_DATA_VERSION = 2 as const;
@@ -293,13 +291,6 @@ const isUnit2 = (v: unknown): boolean => Array.isArray(v) && v.length === 2 && i
 /** the keys of a squad record and of its `arrive` (scene/scenarios.ts SquadData — the rest of a scenario block is carried as written; a squad's refs are checked) */
 const SQUAD_KEYS = ['id', 'name', 'rooms', 'rally', 'barricade', 'mayLeave', 'training', 'arrive'] as const, SQUAD_ARRIVE_KEYS = ['door', 'spawn', 'men'] as const;
 const isRect = (r: any): boolean => !!r && isNum(r.x0) && isNum(r.x1) && isNum(r.z0) && isNum(r.z1) && r.x0 <= r.x1 && r.z0 <= r.z1;
-
-/** `add.laid` IS THE LOADER'S WORD ALONE (scenarios.kitView.ways[*].add — the Team & kit picture's own pieces): `laid: true` tells the validator the records
- *  are IN the level, so it asks that their ids are the level's and gives them no box / light rule of their own. Written in a FILE it passed off any of the
- *  level's own boxes as an added piece (shown, never sunk for the camera, judged by nothing). So the word counts only on an `add` object the picture's
- *  loader made and handed here (src/host/kitViewSet.ts kitViewAddLevel → kitAddLaid): by identity — nothing a file's text, or a copy of the data, can say. */
-const KIT_ADD_LAID = new WeakSet<object>();
-export function kitAddLaid<T extends object>(add: T): T { KIT_ADD_LAID.add(add); return add; }
 
 /** Every structural / referential / range problem in `d`, one line each ('' = valid). Cheap enough to run at every boot (loadLevel does). It checks the
  *  SCHEMA — shapes, finiteness, unique ids, that every id reference resolves, enum values, array arities the drills index blind — not level DESIGN
@@ -792,16 +783,16 @@ export function validateLevelData(d: LevelData): string[] {
             for (const n of NUMS) if (c[n] !== undefined && !(Number.isInteger(c[n]) && c[n] >= 0 && c[n] <= 9)) err(`${cw}.${n}`, 'a whole number 0‥9'); }
         }
       }
-      if (S.kitView !== undefined) {   // (scene/scenarios.ts KitViewData: the start page's picture of the team at the way-in door — src/host/kitView.ts; whether a slot is free floor is asked of the built level by tools/qa/kitview-page.cjs)
+      if (S.kitView !== undefined) {   // (scene/scenarios.ts KitViewData: the Team & kit picture of the team at the way-in door, rust/game_rules/src/kitstage; whether a place is free floor is the planner's to say, tools/qa/kitview-plan.ts)
         const K = S.kitView, w = 'scenarios.kitView', nWays = isObj(S.roomClear) && S.roomClear.team !== undefined ? 1 + (Array.isArray(S.roomClear.starts) ? S.roomClear.starts.length : 0) : 1;
         if (!isObj(K)) err(w, 'must be an object');
         else {
           known(w, K, ['ways', 'sets']);
           // (A PICTURE'S BOX — a set's, a way's `add`: the level format's own record. LOOK TWINS: one block serves the plain file and its look file — the box's
-          //  `material` may be alternatives 'a|b', the first the file's palette holds: src/host/kitViewSet.ts kitSetPaint)
+          //  `material` may be alternatives 'a|b', the first the file's palette holds: rust/game_start/src/kit_set.rs set_paint)
           const kvPaint = (b: any) => { const alt = isStr(b.material) && b.material.includes('|') ? b.material.split('|').find((m: string) => Object.prototype.hasOwnProperty.call(mats, m)) : undefined; return alt !== undefined ? { ...b, material: alt } : b; };
           const kvBox = (bw: string, b: any) => { if (!isObj(b) || !isStr(b.id) || !isVec(b.c) || !isVec(b.h)) { err(bw, 'a box: id, c, h'); return; } known(bw, b, KEYS.box); paintOk(bw, kvPaint(b)); stuffOk(bw, b); roundRule(bw, b); if (b.shape !== undefined) err(bw, 'a kit view box says no shape'); };
-          // (BESPOKE SETS — scenarios.ts KitViewSet: the shapes only; what stands where is src/host/kitViewPlan.ts's to measure, tools/qa/kitview-plan.ts)
+          // (BESPOKE SETS — scenarios.ts KitViewSet: the shapes only; what stands where is rust/game_start/src/kit_plan.rs's to measure, tools/qa/kitview-plan.ts)
           const sets: Record<string, any> = isObj(K.sets) ? K.sets : {}; if (K.sets !== undefined && !isObj(K.sets)) err(`${w}.sets`, 'must be an object of sets by name');
           for (const [name, T] of Object.entries(sets)) { const tw = `${w}.sets.${name}`; if (!isObj(T)) { err(tw, 'must be an object'); continue; }
             known(tw, T, ['boxes', 'doors', 'lights', 'ref']); if (!isVec(T.ref, 2)) err(`${tw}.ref`, '[x, z]: a point on the team\'s side of the anchor');
@@ -813,19 +804,17 @@ export function validateLevelData(d: LevelData): string[] {
           ways.forEach((y: any, i) => { const yw = `${w}.ways[${i}]`; if (!isObj(y)) return;
             known(yw, y, ['door', 'side', 'pin', 'slots', 'light', 'hide', 'hideMore', 'hidePaint', 'roomLights', 'span', 'kind', 'set', 'ref', 'hand', 'slotGap', 'wall', 'lane', 'out', 'inside', 'pane', 'show', 'indoors', 'keepLights', 'dayLights', 'litInside', 'add']);
             // (A PIECE OR A LAMP MORE on a level's own way — scenarios.ts KitViewWay.add: the shapes, and ids new to THE LEVEL'S OWN records — two ways may write
-            //  the same id, for one way alone is ever laid in (src/host/kitViewSet.ts kitViewAddLevel), and what a way that says `laid` laid in is not the
-            //  level's own. Then, where the shapes hold and the records are not laid in (those are the level's by then, judged above), EACH RECORD GETS THE
+            //  the same id, for one way alone is ever laid in (rust/game_start/src/kit_set.rs add_level). Then, where the shapes hold, EACH RECORD GETS THE
             //  LEVEL FORMAT'S OWN RULE — a box's, a light's, the one loadLevel refuses a level by: a lamp with no kind / dir / color / range, a box with a
             //  flag nobody knows or a yaw that is no number is said HERE, under this block's name, and never first at the picture's boot)
-            if (y.add !== undefined) { const aw = `${yw}.add`, n0 = errs.length; if (!isObj(y.add)) err(aw, 'must be an object: { boxes?, lamps? }'); else { known(aw, y.add, ['boxes', 'lamps', 'laid']); if (y.add.laid !== undefined && !KIT_ADD_LAID.has(y.add)) err(`${aw}.laid`, 'never written in a file (the picture\'s loader says it of the level it laid the records into: src/host/kitViewSet.ts kitViewAddLevel)'); else if (y.add.laid !== undefined && typeof y.add.laid !== 'boolean') err(`${aw}.laid`, 'true or false (the loader\'s word: the records are in the level already)');
+            if (y.add !== undefined) { const aw = `${yw}.add`, n0 = errs.length; if (!isObj(y.add)) err(aw, 'must be an object: { boxes?, lamps? }'); else { known(aw, y.add, ['boxes', 'lamps']);
               if (y.set !== undefined) err(aw, 'a way on a set adds nothing: the set is the place for its boxes and lamps');
-              const laidIn = (k: 'boxes' | 'lamps') => new Set<string>(ways.flatMap((z: any) => isObj(z) && isObj(z.add) && z.add.laid === true && Array.isArray(z.add[k]) ? z.add[k].map((o: any) => o?.id) : []));
-              for (const [k, own] of [['boxes', d.boxes], ['lamps', d.lights]] as const) { const list = y.add[k]; if (list === undefined) continue;
+                            for (const [k, own] of [['boxes', d.boxes], ['lamps', d.lights]] as const) { const list = y.add[k]; if (list === undefined) continue;
                 if (!Array.isArray(list)) { err(`${aw}.${k}`, `a list of the level format's own ${k === 'boxes' ? 'boxes' : 'lights'}`); continue; }
-                const laid = y.add.laid === true, others = laid ? null : laidIn(k), ids = new Set<string>((Array.isArray(own) ? own : []).map((o: any) => o?.id).filter((id: any) => !others?.has(id)));
+                const ids = new Set<string>((Array.isArray(own) ? own : []).map((o: any) => o?.id));
                 list.forEach((o: any, j: number) => { const ow = `${aw}.${k}[${j}]`; if (k === 'boxes') { if (!isObj(o) || !isStr(o.id) || !isVec(o.c) || !isVec(o.h)) { err(ow, 'a box: id, c, h'); return; } } else if (!isObj(o) || !isStr(o.id) || !isVec(o.pos) || !isStr(o.group)) { err(ow, 'a lamp: the level format\'s light (id, kind, pos, group, …)'); return; }
-                  if (laid ? !ids.has(o.id) : ids.has(o.id)) err(`${ow}.id`, laid ? `'${o.id}' is said to be laid in and is no ${k === 'boxes' ? 'box' : 'light'} of the level` : `'${o.id}' is already ${k === 'boxes' ? 'a box' : 'a light'} of the level or of this \`add\``); if (!laid) ids.add(o.id); }); }
-              if (errs.length === n0 && y.add.laid !== true) { const mine = new Set<string>((y.add.boxes ?? []).map((o: any) => o.id));
+                  if (ids.has(o.id)) err(`${ow}.id`, `'${o.id}' is already ${k === 'boxes' ? 'a box' : 'a light'} of the level or of this \`add\``); ids.add(o.id); }); }
+              if (errs.length === n0) { const mine = new Set<string>((y.add.boxes ?? []).map((o: any) => o.id));
                 (y.add.boxes ?? []).forEach((o: any, j: number) => boxRule(`${aw}.boxes[${j}] '${show(o.id)}'`, kvPaint(o)));
                 (y.add.lamps ?? []).forEach((o: any, j: number) => lightOk(`${aw}.lamps[${j}] '${show(o.id)}'`, o, mine)); } } }
             // (the anchor: a door of the level — of the way's set, where it names one — or a span, never both)
@@ -978,9 +967,9 @@ export function floorUsers(d: LevelData, floorId: string): FloorUser[] {
 }
 
 /** JSON.parse + validate; throws with every problem listed.
- *  `kitView: 'drop'` (the page loading a level TO PLAY: main.ts bootLevel without ?kitview) — the Team & kit picture's block (`scenarios.kitView`: its ways, its
+ *  `kitView: 'drop'` (the page loading a level TO PLAY: main.ts bootLevel) — the Team & kit picture's block (`scenarios.kitView`: its ways, its
  *  bespoke sets) is no part of the mission, so a mistake in it does not refuse the level: the block is left out of what is returned, said once on the console.
- *  Every tool and the `?kitview` page itself parse without it: there a bad block is an error like any other. */
+ *  Every tool parses without it: there a bad block is an error like any other. */
 export function parseLevelData(text: string, opts: { kitView?: 'drop' } = {}): LevelData {
   const d = JSON.parse(text) as LevelData; let errs = validateLevelData(d);
   if (opts.kitView === 'drop') { const kv = errs.filter(e => e.startsWith('scenarios.kitView'));
