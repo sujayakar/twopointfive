@@ -76,7 +76,7 @@ pub fn squad40_stage(g: &mut crate::game::Game, carried: &[(GuardId, f64)]) {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     if g.m.squad40.states.get(key).is_none() {
         if !js::truthy(n) { return; }
-        g.m.squad40.states.set(key, State { rounds: JsMap::new(), brought: 0.0, last: JsMap::new(), turns: JsMap::new(), noted: false, shown: None, kept: JsMap::new() });
+        g.m.squad40.states.set(key, State { rounds: JsMap::new(), brought: 0.0, last: JsMap::new(), turns: JsMap::new(), noted: false, shown: None, plan: None });
     }
     let s = g.m.squad40.states.get_mut(key).unwrap();
     s.rounds = rounds;
@@ -84,7 +84,6 @@ pub fn squad40_stage(g: &mut crate::game::Game, carried: &[(GuardId, f64)]) {
     s.last = JsMap::new();
     s.turns = JsMap::new();
     s.shown = None;
-    s.kept.clear();
     g.stats.squad40.staged += 1;
 }
 
@@ -172,11 +171,6 @@ pub fn caught(g: &mut crate::game::Game, a: &crate::squad40::Shot, at: V3) -> Op
     crate::squadthrow::squad_frag_catches(g, a.burst, at, Some(moved), Some(true), Some(false), Some(&burst))
 }
 
-/// `q` of plan's key: a place on a quarter-metre grid
-fn grid_key(p: V3) -> String {
-    format!("{},{}", js::num_str(m::round(p[0] * 4.0)), js::num_str(m::round(p[2] * 4.0)))
-}
-
 /// `ready` of plan: a launcher in a free hand, not turning already, the tube closed on his last round
 fn ready(g: &mut Game, gd: GuardId) -> bool {
     if !tube_up(g, gd) || !crate::squadsmoke::squad_hand_free(g, gd) || crate::squadthrow::hands_at_work(g, gd) { return false; }
@@ -188,53 +182,12 @@ fn ready(g: &mut Game, gd: GuardId) -> bool {
     !turning && !(g.time >= t && g.time - t < g.k.launcher40.cd)
 }
 
-/// the key plan's kept answers are good for: the spot, the men asked, and everybody of ours
-fn plan_key(g: &mut Game, men: &[GuardId], at: V3) -> String {
-    let mut ms: Vec<String> = Vec::with_capacity(men.len());
-    for &man in men {
-        let c = g.gd[man].ch;
-        let (id, pos) = (g.ch[c].id, g.ch[c].pos);
-        let on = if gun_on(g, &crate::seats::here(g), man, at) { 1 } else { 0 };
-        let rd = if ready(g, man) { 1 } else { 0 };
-        let key = crate::seats::view_key(g, &crate::seats::here(g));
-        let rounds = g.m.squad40.states.get(key).and_then(|s| s.rounds.get(man).copied()).unwrap_or(0.0);
-        ms.push(format!("{}:{},{}{}{}", js::num_str(id), grid_key(pos), on, rd, js::num_str(rounds)));
-    }
-    let me = if g.pl[g.player].down { String::new() } else { grid_key(g.ch[g.pl[g.player].ch].pos) };
-    let ours: Vec<String> = g.guards.iter().map(|&m| if g.gd[m].team == crate::teams::Team::Operative { grid_key(g.ch[g.gd[m].ch].pos) } else { String::new() }).collect();
-    format!("{},{}|{}|{}|{}", js::to_fixed(at[0], 2), js::to_fixed(at[2], 2), ms.join(";"), me, ours.join(";"))
-}
-
-/// `keep` of plan: an asker's answer kept with its key, and handed on
-fn keep(g: &mut Game, asker: Option<Asker>, key: String, a: StateKeptValueA, who: Option<String>) -> Plan {
-    if let Some(k) = asker {
-        let (t, row) = (g.time, crate::seats::view_key(g, &crate::seats::here(g)));
-        if let Some(s) = g.m.squad40.states.get_mut(row) {
-            s.kept.set(k, StateKeptValue { key, t, a: a.clone(), who: who.clone() });
-        }
-    }
-    match a {
-        StateKeptValueA::Text(x) => Plan::Text(x),
-        StateKeptValueA::Shot(x) => Plan::Arm1(PlanArm1 { a: x, who }),
-    }
-}
-
-/// THE SHOT AS IT WOULD BE ORDERED NOW: the man of `men` who would fire it, one whose gun is on the spot first, then the nearest; else why nobody has one. (squad40.ts plan)
-pub fn plan(g: &mut crate::game::Game, men: &[GuardId], at: V3, asker: Option<crate::squad40::Asker>) -> crate::squad40::Plan {
+/// THE SHOT AS IT WOULD BE ORDERED NOW: the man of `men` who would fire it, one whose gun is on the spot first, then the nearest; else why nobody has one. Asked each time,
+/// by the row, the picture (`follow`) and the order. (squad40.ts plan)
+pub fn plan(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> crate::squad40::ShellPlan {
+    let of = |shot: Option<Shot>, no: Option<String>| ShellPlan { at, men: men.to_vec(), shot, no };
     let row = crate::seats::view_key(g, &crate::seats::here(g));
-    if g.m.squad40.states.get(row).is_none() || squad40_left(g, &crate::seats::here(g)) <= 0.0 { return Plan::Text(String::from(none)); }
-    let key = plan_key(g, men, at);
-    if let Some(k) = asker {
-        let now = g.time;
-        if let Some(c) = g.m.squad40.states.get(row).and_then(|s| s.kept.get(k)) {
-            if c.key == key && now >= c.t && now - c.t < 0.3 {
-                return match &c.a {
-                    StateKeptValueA::Text(x) => Plan::Text(x.clone()),
-                    StateKeptValueA::Shot(x) => Plan::Arm1(PlanArm1 { a: x.clone(), who: c.who.clone() }),
-                };
-            }
-        }
-    }
+    if g.m.squad40.states.get(row).is_none() || squad40_left(g, &crate::seats::here(g)) <= 0.0 { return of(None, Some(String::from(none))); }
     let bb = bodies(g);
     let (mut any, mut asked, mut close) = (false, false, false);
     let mut dirty: Option<(Shot, String)> = None;
@@ -260,11 +213,27 @@ pub fn plan(g: &mut crate::game::Game, men: &[GuardId], at: V3, asker: Option<cr
             if dirty.is_none() { dirty = Some((a, who)); }
             continue;
         }
-        return keep(g, asker, key, StateKeptValueA::Shot(a), None);
+        return of(Some(a), None);
     }
-    if let Some((a, who)) = dirty { return keep(g, asker, key, StateKeptValueA::Shot(a), Some(who)); }
+    if let Some((a, who)) = dirty { return of(Some(a), Some(who)); }
     let text: &str = if !any { crate::words::wg(g, &"nobody's carrying one.", &"none with them.") } else if !asked { "not ready." } else if close { "too close to arm." } else { "no shot from here." };
-    keep(g, asker, key, StateKeptValueA::Text(String::from(text)), None)
+    of(None, Some(String::from(text)))
+}
+
+/// the shell's row lit on the open menu: the men it is asked of, and the spot
+pub fn lit(g: &Game, seat: &crate::seats::SeatRef) -> Option<(Vec<GuardId>, V3)> {
+    let mn = seat.orders.menu.as_ref()?;
+    let crate::orders::OrderTarget::Floor(t) = &mn.target else { return None };
+    if !(mn.sel >= 0.0) || g.tab.orders_order_def[*mn.rows.get(mn.sel as usize)?].id != SHELL_THERE { return None; }
+    Some((mn.men.clone(), t.at))
+}
+
+/// once a frame with a menu up: the lit row's shot as it is now, for whoever draws it
+fn follow(g: &mut Game) {
+    let seat = crate::seats::here(g);
+    let (key, asked) = (crate::seats::view_key(g, &seat), lit(g, &seat));
+    let now = asked.map(|(men, at)| plan(g, &men, at));
+    if let Some(s) = g.m.squad40.states.get_mut(key) { s.plan = now; }
 }
 
 /// the round leaves his tube; `pl` is the row of `states` it is counted on. (squad40.ts fire)
@@ -275,7 +244,6 @@ pub fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &crate::squad40::Shot, a
     let left = s.rounds.get(gd).copied().unwrap_or(0.0);
     s.rounds.set(gd, m::max(0.0, left - 1.0));
     s.last.set(gd, now);
-    s.kept.clear();
     let c = g.gd[gd].ch;
     crate::he40::fire_shell(g, c, a.from, a.to);
     crate::character::anim_fire(g, c);
@@ -355,10 +323,10 @@ pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
 /// the order's `issue` (orders/rows/shell40.rs): a refusal's words, or None (the floor as it stands NOW: nothing is spent on a refusal)
 pub fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
     let at = at_of(t);
-    let a = match plan(g, men, at, None) {
-        Plan::Text(x) => { g.stats.squad40.refused += 1; return Some(x); }
-        Plan::Arm1(PlanArm1 { who: Some(who), .. }) => { g.stats.squad40.refused += 1; return Some(who); }
-        Plan::Arm1(PlanArm1 { a, who: None }) => a,
+    let a = match plan(g, men, at) {
+        ShellPlan { no: Some(why), .. } => { g.stats.squad40.refused += 1; return Some(why); }
+        ShellPlan { shot: Some(a), .. } => a,
+        ShellPlan { shot: None, no: None, .. } => return None,
     };
     let gd = a.gd;
     let c = g.gd[gd].ch;
@@ -384,7 +352,6 @@ pub fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) 
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let s = g.m.squad40.states.get_mut(key).unwrap();
     s.turns.set(gd, w);
-    s.kept.clear();
     None
 }
 
@@ -427,7 +394,7 @@ pub fn squad40_tick(g: &mut crate::game::Game) {
     let brought = g.m.squad40.states.get(key).unwrap().brought;
     let has = def_listed(g, &crate::seats::here(g), SHELL_THERE);
     let want = brought > 0.0 && def_listed(g, &crate::seats::here(g), crate::squadthrow::THROW_OPEN);
-    if has == want { return; }
+    if has == want { follow(g); return; }
     if g.orders.menu.is_some() { crate::orders::squad_orders_close(g); }
     if !want { crate::orders::rows::unlist(g, &crate::orders::rows::shell40::ORDER); return; }
     list(g);
@@ -456,30 +423,9 @@ pub fn squad40_plans(g: &mut crate::game::Game) -> Vec<crate::squad40::Squad40Pl
             out.push(plan_of(g, &shot, None));
         }
     }
-    let asked = match &g.orders.menu {
-        Some(m) => match &m.target {
-            crate::orders::OrderTarget::Floor(f) if m.sel >= 0.0 && m.rows.get(m.sel as usize).map_or(false, |d| g.tab.orders_order_def[*d].id == SHELL_THERE) => Some((m.men.clone(), f.at)),
-            _ => None,
-        },
-        None => None,
-    };
-    if let Some((men, at)) = asked {
-        if let Plan::Arm1(a) = plan(g, &men, at, None) {
-            if a.who.is_none() { out.push(plan_of(g, &a.a, Some(true))); }
-        }
+    let seat = crate::seats::here(g);
+    if let (Some((men, at)), Some(p)) = (lit(g, &seat), g.m.squad40.states.get(key).and_then(|s| s.plan.as_ref())) {
+        if let (Some(a), None, true) = (&p.shot, &p.no, p.at == at && p.men == men) { out.push(plan_of(g, a, Some(true))); }
     }
     out
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_grid_key_prints_as_the_typescripts_template() {
-        // (`${Math.round(x)}` prints -0 as "0", and Math.round takes a half up)
-        assert_eq!(grid_key([-0.1, 0.0, 0.125]), "0,1");
-        assert_eq!(grid_key([-0.125, 0.0, -0.13]), "0,-1");
-        assert_eq!(grid_key([2.5, 0.0, -3.0]), "10,-12");
-    }
 }

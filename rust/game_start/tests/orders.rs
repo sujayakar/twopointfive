@@ -53,6 +53,50 @@ fn a_shell_ordered_onto_open_ground_is_fired_by_the_man_who_carries_them() {
     }
 }
 
+/// The throws' page opened on `at` with the shell's row lit.
+fn lit(p: &mut Play, at: [f64; 2]) -> f64 {
+    let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
+    assert!(game::orders::squad_orders_open(&mut p.g, Some(&t), None, None));
+    game::orders::squad_orders_turn(&mut p.g, Some(game::squadthrow::THROW_PAGE), None);
+    let rows = p.g.orders.menu.as_ref().unwrap().rows.clone();
+    let i = rows.iter().position(|&d| p.g.tab.orders_order_def[d].id == "shellThere").expect("the shell's row is on the page") as f64;
+    p.g.orders.menu.as_mut().unwrap().sel = i;
+    i
+}
+fn shown(p: &Play) -> Option<game::squad40::ShellPlan> { p.g.m.squad40.states.get(p.g.player).and_then(|s| s.plan.clone()) }
+
+/// THE RULE: what the menu shows of a shell is what its press gives: the man, and where it goes off. A spot too near to arm is refused in the words shown, and nothing is drawn of it.
+/// A FAILURE MEANS: the picture, the row and the order have gone back to asking for themselves.
+#[test]
+fn the_shell_shown_is_the_shell_given() {
+    for s in SEEDS {
+        let mut p = Play::scene(&yard(), &seed(s));
+        let at = spot(s);
+        let carrier = *p.mates().iter().min_by(|a, b| dist(p.at(**a), at).partial_cmp(&dist(p.at(**b), at)).unwrap()).unwrap();
+        game::squad40::squad40_stage(&mut p.g, &[(carrier, 2.0)]);
+        p.run(0.5);
+        let preview = |p: &mut Play| game::squad40::squad40_plans(&mut p.g).into_iter().filter(|x| x.preview == Some(true)).count();
+        // too near: shown as refused, refused as shown
+        let me = p.at(carrier);
+        let i = lit(&mut p, [me[0] + 3.0, me[1]]);
+        p.run(0.2);
+        let why = shown(&p).and_then(|x| x.no).unwrap_or_else(|| panic!("seed {s}: a shell 3 m off is shown as one that may be fired"));
+        assert_eq!(preview(&mut p), 0, "seed {s}: a refused shell is drawn");
+        assert_eq!(game::orders::squad_orders_pick(&mut p.g, Some(i)), Some(why), "seed {s}: refused in other words than were shown");
+        p.run(0.2);
+        // the open ground: the man and the burst
+        let i = lit(&mut p, at);
+        p.run(0.2);
+        let was = shown(&p).and_then(|x| x.shot).unwrap_or_else(|| panic!("seed {s}: no shell is shown"));
+        assert_eq!((was.gd, preview(&mut p)), (carrier, 1), "seed {s}");
+        assert_eq!(game::orders::squad_orders_pick(&mut p.g, Some(i)), None, "seed {s}: shown, and refused");
+        p.until(6.0, |p| left(p) == 1.0).unwrap_or_else(|| panic!("seed {s}: no shell was fired"));
+        let log = p.g.m.squad40.squad40_log.last().unwrap();
+        assert!(dist([log.burst[0], log.burst[2]], [was.burst[0], was.burst[2]]) < 0.5, "seed {s}: shown at {:?}, fired to {:?}", was.burst, log.burst);
+        assert!(shown(&p).is_none(), "seed {s}: no menu is up and a shell is still shown");
+    }
+}
+
 /// THE CONTROL: the same squad and the same spot, with no shells brought. The order is not on the menu and the menu's own call refuses it.
 #[test]
 fn with_no_shells_brought_the_order_is_not_on_the_menu() {
