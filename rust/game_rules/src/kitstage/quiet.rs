@@ -18,20 +18,20 @@ fn smooth(u: f64) -> f64 { let x = clamp(u, 0.0, 1.0); x * x * (3.0 - 2.0 * x) }
 fn lamp_up(g: &Game, st: &KitStage) -> bool {
     st.pool.map_or(false, |p| home::fixture_on(g, p) && !home::fixture_broken(g, p) && home::fixture_disabled_until(g, p) < g.time && g.tab.sim_lightshome_fixture[p].light.is_some())
 }
-fn gun_def(g: &Game) -> crate::weapons::WeaponId { let pl = g.player; g.fa[if g.pl[pl].slot == SlotKind::Rifle { g.pl[pl].rifle } else { g.pl[pl].pistol }].def }
-fn in_hand(g: &Game) -> bool { matches!(g.pl[g.player].slot, SlotKind::Pistol | SlotKind::Rifle) }
-fn draw_key(g: &Game) -> &'static str { if g.pl[g.player].slot == SlotKind::Rifle { "Digit2" } else { "Digit1" } }
+fn gun_def(g: &Game, seat: &crate::seats::SeatRef) -> crate::weapons::WeaponId { let pl = seat.player; g.fa[if g.pl[pl].slot == SlotKind::Rifle { g.pl[pl].rifle } else { g.pl[pl].pistol }].def }
+fn in_hand(g: &Game, seat: &crate::seats::SeatRef) -> bool { matches!(g.pl[seat.player].slot, SlotKind::Pistol | SlotKind::Rifle) }
+fn draw_key(g: &Game, seat: &crate::seats::SeatRef) -> &'static str { if g.pl[seat.player].slot == SlotKind::Rifle { "Digit2" } else { "Digit1" } }
 
 /// HIS SUPPRESSED GUN PUTS THE LAMP OUT: from the crouch the gun comes out, he rises on the lamp, one round (the game's own: the lamp is a target of its list), and the pool dies. The dark is held: the fill lifts and he walks through where the pool was. Then the room is staged again. Refused where there is no lamp burning or the gun is not suppressed.
 pub(super) fn gun_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
     if b.man.is_some() { return Err(String::from("the lamp is Sam's to shoot")); }
     if !st.quiet || !lamp_up(g, st) { return Err(String::from("no lamp burning to put out")); }
-    if !in_hand(g) { return Err(String::from("no gun in his hand")); }
-    if !g.m.weapons.weapons.get(gun_def(g)).map_or(false, |d| d.suppressed) { return Err(String::from("not a suppressed gun")); }
+    if !in_hand(g, &crate::seats::here(g)) { return Err(String::from("no gun in his hand")); }
+    if !g.m.weapons.weapons.get(gun_def(g, &crate::seats::here(g))).map_or(false, |d| d.suppressed) { return Err(String::from("not a suppressed gun")); }
     to(g, b, "draw");
     b.h_to = 1.1;
     sam_stand(g, st);
-    if g.pl[g.player].holstered { press(st, draw_key(g)); }
+    if g.pl[g.player].holstered { press(st, draw_key(g, &crate::seats::here(g))); }
     if QK.cut && st.a.lead_was.is_none() { st.a.lead_was = Some(g.m.fixture_break.fixlook.on); g.m.fixture_break.fixlook.on = false; }
     Ok(())
 }
@@ -155,11 +155,11 @@ pub(super) fn lean_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
 pub(super) fn light_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
     if b.man.is_some() { return Err(String::from("Sam's")); }
     if !st.quiet || (st.walled && !st.hole) { return Err(String::from("no door to cross")); }
-    if !in_hand(g) { return Err(String::from("no gun in his hand")); }
+    if !in_hand(g, &crate::seats::here(g)) { return Err(String::from("no gun in his hand")); }
     to(g, b, "draw");
     b.h_to = QK.light.aim_y;
     sam_stand(g, st);
-    if g.pl[g.player].holstered { press(st, draw_key(g)); }
+    if g.pl[g.player].holstered { press(st, draw_key(g, &crate::seats::here(g))); }
     Ok(())
 }
 pub(super) fn light_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {

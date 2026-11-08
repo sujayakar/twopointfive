@@ -134,5 +134,4 @@ src/cloud/*	hand	the cloud	the backend's client	2
 src/main.ts:main › refreshFrozenStill*	host	the Rust host	the page holds its own keys up while it draws a frozen picture again (an update of no time): its input, put back after, and no state of the game	1
 src/draw/*	host	the page that draws	the new page's own plumbing: it hands the module's bytes on and asks it, and holds no game	6
 src/host/drawgame.ts:*	host	the page that draws	the new page's own plumbing: it steps the module and reads what it is told, and holds no game	6
-src/ui/sweepSnow.ts:*	picture	weather and ground	the snow the picture sweeps: the picture's own	2
 src/ui/panel.ts:*	hand	the developer's hand	a panel's row, for the hand that presses it	1
