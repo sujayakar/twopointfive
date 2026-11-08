@@ -180,12 +180,10 @@ fn the_buffer_is_as_the_shader_reads_it() {
     assert_eq!(d.marks.head[0].moved, 1);
 }
 
-/// A charge on the office's partition (tests/wallcharge.rs has the place), on a game with a particle system, as a page's has.
+/// A charge on the office's partition (tests/wallcharge.rs has the place), as on any host.
 fn a_charge_set(seed: u32) -> (Play, game::ids::WallChargeId) {
     let mut p = office(seed);
     p.sam_unhurt();
-    p.g.engine.particles = Some(game::render_particles::Particles { collide: true, spark_bounce: true, ..game::render_particles::Particles::blank() });
-    p.g.engine.settings.gpu_particles = true;
     p.g.m.dress.dress.blast_feel = true;
     p.run(0.1);
     game::wallcharge::wall_charge_raise_carried(&mut p.g, 2.0);

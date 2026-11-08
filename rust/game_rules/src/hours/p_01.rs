@@ -191,7 +191,7 @@ pub fn under_weather(g: &mut crate::game::Game) {
     let r = d.sun.radius + (m::max(d.sun.radius, SOFT_RADIUS) - d.sun.radius) * soft;
     if r != g.tab.light[sun].radius {
         g.tab.light[sun].radius = r;
-        if g.engine.reach.is_some() { crate::render_reach_keep::reach_keep_sun(g, sun, r); }
+        crate::render_reach_keep::reach_keep_sun(g, sun, r);
     }
     g.engine.settings.sky_zenith = greyed(d.sky.zenith, soft, Some(sky_k));
     g.engine.settings.sky_horizon = greyed(d.sky.horizon, soft, Some(sky_k));
@@ -280,7 +280,8 @@ pub fn put_in(g: &mut crate::game::Game, def: &crate::hours::HourDef, from: Opti
         to_sun, casters, box_, cells: JsMap::new(), fine: JsMap::new(), dome: None, at: None,
     });
     under_weather(g);
-    if g.engine.reach.is_some() { let r = g.tab.light[sun].radius; crate::render_reach_keep::reach_keep_sun(g, sun, r); }
+    let r = g.tab.light[sun].radius;
+    crate::render_reach_keep::reach_keep_sun(g, sun, r);
     lamps_out(g);
 }
 

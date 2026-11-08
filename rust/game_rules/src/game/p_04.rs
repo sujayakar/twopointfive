@@ -37,7 +37,6 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     crate::guards::load_body_light(g);
     let name = crate::scene_level_load::level_name_of(g);
     g.col = crate::scene_collision::new(g, &ids, name.as_deref());
-    crate::particle_fx::apply_dust_look(g);   // the dust LOOK table onto the kind the host attached, whether or not the switch is on yet; no system = nothing to do (game.ts:1108)
     let (men, fn2000) = (g.men, g.fn2000);
     let spawn = level.player_spawn;
     g.player = crate::game::player_new(g, men, ch, spawn, Some(fn2000), None);   // (first.player: g.seat is seats[0] all through the constructor)
@@ -220,10 +219,8 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     let statics: Vec<BoxId> = g.engine.world.statics.clone();
     let interior = crate::render_reach::build_interior_cells(g, &statics);
     g.reach_interior = Some(interior.clone());
-    if g.engine.reach.is_some() {
-        let reach_doors: Vec<crate::render_reach::ReachDoor> = level.doors.iter().map(|d| crate::render_reach::ReachDoor { hinge: d.hinge, closed_dir: d.closed_dir, width: d.width }).collect();
-        crate::render_reach_keep::reach_keep_boot(g, &reach_doors, &interior);
-    }
+    let reach_doors: Vec<crate::render_reach::ReachDoor> = level.doors.iter().map(|d| crate::render_reach::ReachDoor { hinge: d.hinge, closed_dir: d.closed_dir, width: d.width }).collect();
+    crate::render_reach_keep::reach_keep_boot(g, &reach_doors, &interior);
     // doors: leaves are dynamic occluders for sight / sound / projectiles
     let door_defs: Vec<crate::doors::DoorDef> = level.doors.iter().map(|d| crate::doors::DoorDef {
         name: d.name.clone(),

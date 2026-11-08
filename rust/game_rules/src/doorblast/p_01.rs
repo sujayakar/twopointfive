@@ -316,33 +316,31 @@ pub fn leaf_round(g: &mut crate::game::Game, index: f64, who: f64, hit_p: V3, di
     }
     if share > 0.5 {
         // past half its toll: every round takes splinters out of its far face
-        if crate::particle_fx::gpu_fx(g) {
-            let l = js::or(m::hyp3(dir[0], dir[1], dir[2]), 1.0);
-            let thick = g.dr[d].thick;
-            let (shed, speed) = (g.k.doorshot.shed, g.k.doorshot.chip_v[1]);
-            let albedo = seam_box(g, b).albedo;
-            let pos: V3 = [hit_p[0] + dir[0] / l * (thick + 0.02), hit_p[1], hit_p[2] + dir[2] / l * (thick + 0.02)];
-            crate::render_particles::particles_emit(
-                g,
-                crate::render_particles::PKind::Debris,
-                pos,
-                [dir[0] / l, dir[1] / l, dir[2] / l],
-                m::round(shed * m::min(1.0, share)),
-                crate::render_particles::EmitOpts {
-                    speed,
-                    speed_jit: Some(0.7),
-                    spread: Some(0.9),
-                    life: 16.0,
-                    life_jit: Some(0.3),
-                    size: 0.006,
-                    size_jit: Some(0.6),
-                    aspect: Some(3.0),
-                    color: Some(v3::copy(albedo)),
-                    owner: Some(who),
-                    ..Default::default()
-                },
-            );
-        }
+        let l = js::or(m::hyp3(dir[0], dir[1], dir[2]), 1.0);
+        let thick = g.dr[d].thick;
+        let (shed, speed) = (g.k.doorshot.shed, g.k.doorshot.chip_v[1]);
+        let albedo = seam_box(g, b).albedo;
+        let pos: V3 = [hit_p[0] + dir[0] / l * (thick + 0.02), hit_p[1], hit_p[2] + dir[2] / l * (thick + 0.02)];
+        crate::render_particles::particles_emit(
+            g,
+            crate::render_particles::PKind::Debris,
+            pos,
+            [dir[0] / l, dir[1] / l, dir[2] / l],
+            m::round(shed * m::min(1.0, share)),
+            crate::render_particles::EmitOpts {
+                speed,
+                speed_jit: Some(0.7),
+                spread: Some(0.9),
+                life: 16.0,
+                life_jit: Some(0.3),
+                size: 0.006,
+                size_jit: Some(0.6),
+                aspect: Some(3.0),
+                color: Some(v3::copy(albedo)),
+                owner: Some(who),
+                ..Default::default()
+            },
+        );
     }
 }
 
@@ -414,7 +412,6 @@ pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Opt
     let mut rail: Option<[f64; 4]> = None;
     let mut rail_x = 0.0;
     let mut k = 100.0;
-    let p_fx = crate::particle_fx::gpu_fx(g);
     let land = crate::furnblast::furn_break_row(crate::scene_materials::BreakClass::Wood).land;
     for i in 0..xs.len() - 1 {
         let ys = cuts(seed, m::max(1.0, kk.lengths), 20.0 + (i as f64) * 8.0, kk.uneven);
@@ -471,7 +468,7 @@ pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Opt
                 }
                 None => {
                     g.stats.doorblast.doorshot_demoted += 1;
-                    if p_fx {
+                    {
                         crate::render_particles::particles_emit(
                             g,
                             crate::render_particles::PKind::Debris,
@@ -497,7 +494,7 @@ pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Opt
             }
         }
     }
-    if p_fx {
+    {
         crate::render_particles::particles_emit(
             g,
             crate::render_particles::PKind::Debris,

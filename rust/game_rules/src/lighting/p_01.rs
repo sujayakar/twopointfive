@@ -466,9 +466,7 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
             sun,
             blackout,
         };
-        if g.engine.reach.is_some() {
-            crate::render_reach_keep::reach_keep_dir(g, st.sun, None);
-        }
+        crate::render_reach_keep::reach_keep_dir(g, st.sun, None);
         let mut i = 0;
         while i < g.targets.len() {
             let t = g.targets[i];

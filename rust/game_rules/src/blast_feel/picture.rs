@@ -43,7 +43,6 @@ fn later(g: &mut Game, secs: f64, what: What) {
 
 /// the fat slow sparks in the hole
 fn sparks(g: &mut Game, ways: &[Way], open: bool, count: &[f64], speed: &[f64], life: f64, size: f64, jit: f64) {
-    if !crate::particle_fx::gpu_fx(g) { return; }
     for w in ways {
         let i = if open { w.k } else { 0 };
         emit(g, PKind::Spark, w.from, v3::normalize([w.d[0], 0.15, w.d[2]]), count[i], EmitOpts { shape: Some(EmitShape::Cone), speed: speed[i], speed_jit: Some(0.7), spread: Some(1.25), life, life_jit: Some(0.5), size, size_jit: Some(0.5), pos_jit: Some(jit), ..EmitOpts::zeroed() });
@@ -69,7 +68,7 @@ pub fn feel_starts(g: &mut Game, wall: &crate::wallcharge::WallSpot) {
     { let from = crate::wallcharge::wall_pt(g, wall, 0.0, 0.14, Some(h)); ways.push(Way { from, d: n, k: 1 }); }
     let b = &f.fire;
     sparks(g, &ways, open, &b.core.count, &b.core.speed, b.core.life, b.core.size, 0.2);
-    if crate::particle_fx::gpu_fx(g) { for w in &ways {
+    { for w in &ways {
         let i = if open { w.k } else { 0 };
         let c = &b.chunks;
         emit(g, PKind::Debris, w.from, v3::normalize([w.d[0], 0.35, w.d[2]]), c.count[i], EmitOpts { shape: Some(EmitShape::Cone), speed: c.speed[i], speed_jit: Some(0.6), spread: Some(0.95), life: c.life, life_jit: Some(0.3), size: c.size, size_jit: Some(0.6), aspect: Some(1.7), pos_jit: Some(0.25), color: Some(c.color), ..EmitOpts::zeroed() });
@@ -100,7 +99,7 @@ pub fn feel_starts(g: &mut Game, wall: &crate::wallcharge::WallSpot) {
 }
 
 fn push(g: &mut Game, i: usize, blast: usize) {
-    if !crate::particle_fx::gpu_fx(g) || !crate::destruction::impulses_on(g) { return; }
+    if !crate::destruction::impulses_on(g) { return; }
     let (row, up) = (g.m.blast_feel.feel.push[i], g.m.blast_feel.feel.push_up);
     let faces = stages(g).faces[blast].clone();
     for f in &faces {
@@ -111,7 +110,6 @@ fn push(g: &mut Game, i: usize, blast: usize) {
 
 /// one stage of THE DUST RING: on each face, a puff or three in every sector the wave can still reach (a sector a wall stops stays stopped)
 fn ring(g: &mut Game, k: u32, blast: usize) {
-    if !crate::particle_fx::gpu_fx(g) { return; }
     let r = g.m.blast_feel.feel.ring;
     let (at, fr) = (r.r0 + k as f64 * r.step, 1.0 - k as f64 / r.stages);
     let n = stages(g).faces[blast].len();
@@ -154,7 +152,7 @@ pub fn feel_stages(g: &mut Game) {
         let what = stages(g).queue.remove(i).what;
         match what {
             What::Roll(ways, open) => sparks(g, &ways, open, &f.fire.roll.count, &f.fire.roll.speed, f.fire.roll.life, f.fire.roll.size, 0.28),
-            What::Soot(k, ways, open) => if crate::particle_fx::gpu_fx(g) {
+            What::Soot(k, ways, open) => {
                 let s = &f.fire.soot[k];
                 for w in &ways {
                     let n = if open { w.k } else { 0 };
@@ -163,7 +161,7 @@ pub fn feel_stages(g: &mut Game) {
             },
             What::Ring(k, blast) => ring(g, k, blast),
             What::Push(k, blast) => push(g, k, blast),
-            What::Ceil(at) => if crate::particle_fx::gpu_fx(g) {
+            What::Ceil(at) => {
                 let c = &f.ceil;
                 emit(g, PKind::Dust, at, [0.0, -1.0, 0.0], c.puffs, EmitOpts { shape: Some(EmitShape::Puff), speed: 0.9, speed_jit: Some(0.5), lift: Some(-0.6), life: 1.7, life_jit: Some(0.3), size: 0.13, size_jit: Some(0.35), pos_jit: Some(0.12), color: Some(c.color), ..EmitOpts::zeroed() });
                 emit(g, PKind::Debris, at, [0.0, -1.0, 0.0], c.crumbs, EmitOpts { shape: Some(EmitShape::Cone), speed: 0.8, speed_jit: Some(0.8), spread: Some(0.9), life: 14.0, life_jit: Some(0.3), size: 0.012, size_jit: Some(0.6), pos_jit: Some(0.1), color: Some(c.color), ..EmitOpts::zeroed() });

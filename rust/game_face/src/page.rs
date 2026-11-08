@@ -104,12 +104,7 @@ pub unsafe extern "C" fn face_start(p: *const u8, n: usize, slot: i32, seed: u32
     let slot = if slot < 0 { match super::free_slot() { Some(s) => s, None => return 0 } } else { slot as usize };
     if slot >= sim::state::GAMES { return 0; }
     let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, cpu_senses: flags & 2 != 0, ..Default::default() };
-    let mut stood = game_start::handed::stand_handed(super::bytes(p, n), &o, &mut |g, b| if let Err(why) = game_run::command::apply(g, b) { panic!("face_start: {why}") });
-    // (a host that draws has a particle pool, and keeps the lights' reach: the tick asks only whether they are there)
-    if o.dress {
-        stood.game.engine.particles = Some(game::render_particles::Particles { collide: true, spark_bounce: true, ..game::render_particles::Particles::blank() });
-        stood.game.engine.reach = Some(game::render_reach_keep::ReachKeep::blank());
-    }
+    let stood = game_start::handed::stand_handed(super::bytes(p, n), &o, &mut |g, b| if let Err(why) = game_run::command::apply(g, b) { panic!("face_start: {why}") });
     let h = super::put(super::Held::new(stood.game));
     crate::memo::forget(h);
     h

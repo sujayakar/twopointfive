@@ -165,7 +165,6 @@ pub fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f6
         dx /= l;
         dz /= l;
     }
-    let p = crate::particle_fx::gpu_fx(g);
     let hit_u = v3::clamp((at[1] - y0) / h, 0.0, 1.0);
     let tab = crate::scene_boxes::box_flag();
     let mut k = 100.0;
@@ -206,13 +205,13 @@ pub fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f6
             crate::break_table::breaks_dress(g, c);
         } else {
             g.stats.winbars.demoted += 1;
-            if p {
+            {
                 let o = crate::render_particles::EmitOpts { speed: 2.2, speed_jit: Some(0.7), spread: Some(1.1), life: 18.0, life_jit: Some(0.3), size: 0.006, size_jit: Some(0.6), aspect: Some(3.0), color: Some(v3::copy(albedo)), owner: Some(who), ..Default::default() };
                 crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, fc, v3::normalize([v[0], m::max(0.3, v[1]), v[2]]), 10.0, o);
             }
         }
     }
-    if p {
+    {
         let o = crate::render_particles::EmitOpts { speed: k_.chip_v, speed_jit: Some(0.7), spread: Some(1.0), life: 18.0, life_jit: Some(0.3), size: 0.007, size_jit: Some(0.6), aspect: Some(4.0), color: Some(v3::copy(albedo)), owner: Some(who), ..Default::default() };
         crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, [bc[0], v3::clamp(at[1], y0, y0 + h), bc[2]], v3::normalize([dx, 0.25, dz]), k_.chips, o);
     }
