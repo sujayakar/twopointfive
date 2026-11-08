@@ -89,9 +89,6 @@ fn seam_box_flags(g: &Game, b: AnyBoxId) -> f64 { g.tab[b].flags }
 /// Some: refused, in those words
 fn seam_arm_issue(g: &mut Game, arm: &OrderIssue, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
     match arm {
-        OrderIssue::PairTake { mode } => crate::pairorders::p_01::take_issue(g, *mode, men, t),
-        OrderIssue::PairWatch => crate::pairorders::p_01::watch_issue(g, men, t),
-        OrderIssue::PairDark => crate::pairorders::p_01::dark_issue(g, men, t),
         _ => unreachable!("order_issue answers this arm itself"),
     }
 }
@@ -103,16 +100,6 @@ pub fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
     match arm {
         OrderLabel::Text { text } => text,
         OrderLabel::Row(r) => (r.label)(g, t),
-        OrderLabel::PairGo => {
-            let waiting = crate::pairorders::pair_orders_waiting(g);
-            if waiting.is_empty() { return String::from("mark"); }
-            let mut parts: Vec<String> = Vec::with_capacity(waiting.len());
-            for (gd, j) in &waiting {
-                let foe = crate::pairorders::name_of(g, j.foe);
-                parts.push(format!("{} takes {}{}", g.gd[*gd].callsign, foe, if j.watcher.is_some() { " anyway" } else { "" }));
-            }
-            format!("mark · {}", parts.join(" · "))
-        }
     }
 }
 /// `d.can(S, gd, t)`, the match over OrderCan: None he can, or the row has no `can`; Some the word he says (orders.ts:850, :868)
@@ -121,30 +108,6 @@ pub fn order_can(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, t:
     let at = at_of(t);
     match arm {
         OrderCan::Row(r) => match r.can { Some(f) => f(g, gd, t), None => None },
-        OrderCan::PairTake => {
-            let OrderTarget::Foe(x) = t else {
-                let (now, was) = (String::from("nobody there."), String::from("no man there."));
-                return Some(crate::words::wg(g, &now, &was));
-            };
-            let to = crate::pairorders::pair_orders_behind(g, x.foe);
-            let spot = squad_orders_free_spot(g, &crate::seats::here(g), to).unwrap_or(to);
-            if !crate::pairorders::pair_orders_back_open(g, x.foe, spot) || !crate::pairorders::pair_orders_rear(g, x.foe, spot, Some(true)) {
-                let (now, was) = (String::from("no room behind him."), String::from("no room at his back."));
-                return Some(crate::words::wg(g, &now, &was));
-            }
-            let stage = crate::pairorders::pair_orders_stage(g, x.foe);
-            squad_orders_reach(g, gd, stage)
-        }
-        OrderCan::PairWatch => match t {
-            OrderTarget::Foe(x) if crate::pairorders::pair_orders_sees(g, gd, x.foe) => None,
-            _ => Some(String::from("no line from here.")),
-        },
-        OrderCan::PairDark => {
-            let dark = crate::pairorders::pair_orders_dark_spot(g, at);
-            let w = squad_orders_reach(g, gd, dark.unwrap_or(at));
-            if w.is_some() { return w; }
-            if dark.is_some() { None } else { Some(String::from("no dark spot there.")) }
-        }
     }
 }
 /// `d.only(S, men, t)`, the match over OrderOnly. A row with no `only`: men, as a copy (orders.ts:865, :1006)
@@ -153,18 +116,6 @@ pub fn order_only(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId
     let at = at_of(t);
     match arm {
         OrderOnly::Row(r) => match r.only { Some(f) => f(g, men, t), None => men.to_vec() },
-        OrderOnly::PairTake => {
-            let OrderTarget::Foe(x) = t else { return Vec::new() };
-            let to = crate::pairorders::pair_orders_stage(g, x.foe);
-            let mut out: Vec<GuardId> = Vec::new();
-            for &gd in men { if squad_orders_reach(g, gd, to).is_none() { out.push(gd); } }
-            let there = g.ch[g.gd[x.foe].ch].pos;
-            let rows: &Game = &*g;
-            js::sort_by(&mut out, |&a, &b| v3::dist_xz(rows.ch[rows.gd[a].ch].pos, there) - v3::dist_xz(rows.ch[rows.gd[b].ch].pos, there));
-            out.truncate(1);
-            out
-        }
-        OrderOnly::PairGo => crate::pairorders::pair_orders_waiting(g).into_iter().map(|(gd, _)| gd).collect(),
     }
 }
 /// `d.valid(S, t, men)`, the match over OrderValid: Ok true, or the row has no `valid`; Err(None) false, whyNot's 'not here.'; Err(Some) the word (orders.ts:852)
@@ -173,28 +124,6 @@ pub fn order_valid(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
     let at = at_of(t);
     match arm {
         OrderValid::Row(r) => match r.valid { Some(f) => f(g, t, men), None => Ok(()) },
-        OrderValid::PairTake => {
-            let OrderTarget::Foe(x) = t else { return Err(None) };
-            if let Some(w) = crate::pairorders::pair_orders_gone(g, x.foe) { return Err(Some(w)); }
-            if crate::pairorders::pair_orders_noticed(g, x.foe) {
-                let (now, was) = (String::from("he's fighting. can't grab him."), String::from("he's fighting. no hands."));
-                return Err(Some(crate::words::wg(g, &now, &was)));
-            }
-            if crate::pairorders::pair_orders_caught(g) {
-                let (now, was) = (String::from("they're onto us. can't grab him."), String::from("they're onto us. no hands."));
-                return Err(Some(crate::words::wg(g, &now, &was)));
-            }
-            Ok(())
-        }
-        OrderValid::PairWatch => {
-            let OrderTarget::Foe(x) = t else { return Err(None) };
-            rows::plain_valid(crate::pairorders::pair_orders_gone(g, x.foe))
-        }
-        OrderValid::PairGo => {
-            if !crate::pairorders::pair_orders_waiting(g).is_empty() { return Ok(()); }
-            let (now, was) = (String::from("nobody's waiting on your mark."), String::from("nobody is waiting on your mark."));
-            Err(Some(crate::words::wg(g, &now, &was)))
-        }
     }
 }
 /// `d.issue(S, men, t, opts)`, the match over OrderIssue: Some is the refusal, the string the closure returned (orders.ts:877)
@@ -202,7 +131,6 @@ pub fn order_issue(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardI
     let arm = g.tab.orders_order_def[d].issue.clone();
     match arm {
         OrderIssue::Nothing => None,
-        OrderIssue::PairGo => { crate::pairorders::pair_orders_mark(g, Some(crate::pairorders::PairOrdersMarkBy::Row)); None }
         OrderIssue::Row(r) => (r.issue)(g, men, t, o),
         arm => seam_arm_issue(g, &arm, men, t, o),
     }
