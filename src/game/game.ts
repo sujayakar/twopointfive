@@ -170,7 +170,7 @@ import { WallCharge } from './wallcharge';
 import { WorkThings } from './workthings';
 import { DoorPath } from './doorpath';
 import { registerShutDoor } from './shutdoor';
-import { spawnCivilians, resetCivilians, civilianAnswer, civiliansSummary, loadCivTune } from './civilians';
+import { spawnCivilians, resetCivilians, civilianAnswer, civiliansSummary } from './civilians';
 import type { Civ } from './civilians';
 import { updateTargets } from './lighting';
 import { LightHome, LIGHT_IN, type Fixture } from '../sim/lightshome';
@@ -1067,7 +1067,6 @@ export class Game {
     leversFog(); fogFlags(); irFlags();           // (before the squad's systems read them)
     this.tune.chaos = CHAOS.def;
     loadWind(this.tune);      // this machine's wind (wind.ts, the Weather page's rows; the moths' switch rides with it)
-    loadCivTune(this);      // (?nocivilians: civilians.ts)
     // (the FN2000 is always in the kit now — no per-machine loadout memory; Game.fn2000 / setLoadout stay for the harness)
     this.col = new StaticCollision(level.boxes, levelNameOf(level));
     if (engine.gbuffer?.setWearMap) { const wm = buildWearMap(level, this.col.nav, lookConfig.longFoot > 0, lookConfig.walked > 0); engine.gbuffer.setWearMap(wm.data, wm.w, wm.h); }   // the detail layer's traffic map (render/wear.ts: the routes over the nav grid + the thresholds, the walls' feet) — the harness's engine stand-in has no g-buffer to hand it to

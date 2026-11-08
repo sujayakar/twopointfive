@@ -629,9 +629,6 @@ function hearScream(g: Game, gd: Guard) {
 
 
 // ================================================================ persistence (one key per machine: the switch and the fail rule)
-export function loadCivTune(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('loadCivTune', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
-  try { if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('nocivilians')) g.tune.civilians = false; } catch { /* no location (the harness) */ }   // ?nocivilians: nobody but the shift from boot — the frame and the floor byte for byte as before them
-}
 /** the switch flipped live (Tab panel / console): off = they leave the floor this frame (a held / dragged one let go of first); on = fresh ones on their marks */
 export function setCivilians(g: Game, on: boolean) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('setCivilians', undefined, [g, on]); if (__r !== RUST_PASS) return __r as any; } } g.tune.civilians = on; resetCivilians(g); }
 
