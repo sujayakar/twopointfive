@@ -1,10 +1,10 @@
 // THE WRITING GUIDE'S CHECK (the agents' index, "Writing for the player"; docs/agents/writing.md): the text a player reads, held to the patterns the guide
 // rules out. It reads what is DATA: every level's lesson block (the big line, its other lines, the after lines, the cards) and every mission row (blurb,
 // opening scene, the "You will learn" rows, the row's `only` line).
-// A LESSON'S LINE IS READ AS THE PLAYER READS IT: a line or a card names a move by a token (`{grab him}`, game/lesson.ts TOKENS) and the build writes the
+// A LESSON'S LINE IS READ AS THE PLAYER READS IT: a line or a card names a move by a token (`{grab him}`, tools/qa/lessonwords.ts) and the build writes the
 // token out by the keys it has, so each is put through `lessonLine` as the page stands and the sentence that comes out is held to the rules. The four tokens
 // are written out of 'him' on their own as well, so a token no level uses yet is read too.
-//   bun run tools/qa/writing-check.ts [--list]      (also `probes.ts writing`, in families ui and words; no stand: nothing of the game runs)
+//   bun run tools/qa/writing-check.ts [--list]      (nothing of the game runs)
 //   key      a key is pressed by "you": no key cap followed by a colon ("[B]: stack up"), no sentence of a line or a card that opens on a key cap
 //            ("[B] on the door"; `[X]` is drawn "Hold Q" and may open one)
 //   colon    no colon in a lesson's line or card: ideas are joined with words (a mission row may keep a colon that opens a list)
@@ -22,6 +22,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { LESSON_TOKENS, tokenLine } from './lessonwords.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 type Kind = 'line' | 'card' | 'title' | 'row' | 'teach';
@@ -67,7 +68,7 @@ function lessonTexts(name: string, L: any): Text[] {
   return out;
 }
 
-/** a list of texts with every line and card replaced by what is written out of it (game/lesson.ts tokenLine; a title, a row and a list entry are shown as written) */
+/** a list of texts with every line and card replaced by what is written out of it (lessonwords.ts tokenLine; a title, a row and a list entry are shown as written) */
 const asRead = (lessonLine: (s: string) => string, T: Text[]): Text[] => T.map(t => t.kind !== 'line' && t.kind !== 'card' ? t : { ...t, text: lessonLine(t.text) });
 
 /** the sentences the guide was written from, and their rewrites */
@@ -88,7 +89,7 @@ export async function writingCheck(): Promise<boolean> {
   console.log(`\n=== writing: the text a player reads, by the guide${BREAK ? ' — WRITING_BREAK: the old sentences are read as a level\'s' : ''} ===`);
   let all = true; const line = (ok: boolean, label: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); };
   const { ALL_MISSIONS, TUTORIAL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
-  const lessonMod = await import(`${ROOT}/src/game/lesson.ts`), asPage = (t: string): string => lessonMod.tokenLine(t, false, true), W: (s: string) => string = BREAK ? (t: string) => asPage(t).replace(/press \[Space\] to grab/gi, '[Space]: grab') : asPage;
+  const asPage = (t: string): string => tokenLine(t, false, true), W: (s: string) => string = BREAK ? (t: string) => asPage(t).replace(/press \[Space\] to grab/gi, '[Space]: grab') : asPage;
 
   // ---- the lessons
   const texts: Text[] = []; const levels = readdirSync(join(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')).sort(); let lessons = 0;
@@ -102,10 +103,11 @@ export async function writingCheck(): Promise<boolean> {
       [R.n ? R.text : '', ...brace.slice(0, 6).map(t => `${t.where}: a brace is left in what the player reads ("${t.text.slice(0, 70)}")`)].filter(Boolean).join('\n    ')); }
 
   // ---- the tokens' own words: each of the four, of 'him', small and capital
-  { const names: string[] = lessonMod.LESSON_TOKENS, cap = (n: string) => n.charAt(0).toUpperCase() + n.slice(1);
+  { const names = LESSON_TOKENS, cap = (n: string) => n.charAt(0).toUpperCase() + n.slice(1);
     const T: Text[] = names.flatMap(n => [`When he stops, ${`{${n}}`}`, `{${cap(n)}}`].map(text => ({ where: `token {${n}}`, kind: 'line' as Kind, text, lesson: true })));
     const read = asRead(W, T), R = report(read), left = read.filter(t => /[{}]/.test(t.text));
-     }
+    line(names.length >= 4 && R.n === 0 && !left.length, `the words the ${names.length} lesson tokens write out hold to the guide (${read.length} sentences)`,
+      [R.n ? R.text : '', ...left.map(t => `${t.where}: a brace is left in it ("${t.text}")`)].filter(Boolean).join('\n    ')); }
 
   // ---- the mission rows
   { const rows: Text[] = []; const tut = new Set((TUTORIAL_MISSIONS as any[]).map(e => e.id));
