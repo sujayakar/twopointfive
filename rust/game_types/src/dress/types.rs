@@ -11,7 +11,6 @@ pub struct DressModDRESS {
     pub snow: bool,
     pub rain: bool,
     pub wet_ground: bool,
-    pub fires: bool,
     pub wake: bool,
     pub men: bool,
     pub cues: bool,
@@ -31,7 +30,6 @@ impl DressModDRESS {
             snow: false,
             rain: false,
             wet_ground: false,
-            fires: false,
             wake: false,
             men: false,
             cues: false,
@@ -55,7 +53,7 @@ pub struct DressMod {
 impl DressMod {
     pub fn blank() -> Self {
         DressMod {
-            dress: crate::dress::DressModDRESS { air: true, moths: true, snow: true, rain: true, wet_ground: true, fires: true, wake: true, men: true, cues: true, blast_feel: true, fixtures: true, fx: true, stature: true, net: true, wind: true },
+            dress: crate::dress::DressModDRESS { air: true, moths: true, snow: true, rain: true, wet_ground: true, wake: true, men: true, cues: true, blast_feel: true, fixtures: true, fx: true, stature: true, net: true, wind: true },
         }
     }
 }

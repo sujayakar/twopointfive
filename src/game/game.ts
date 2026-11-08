@@ -27,6 +27,7 @@ import { statureOf, drawnJoints, drawnCapsules, drawnFit, drawnBoxes } from './s
 import { Decals } from '../render/decals';
 import { buildWearMap } from '../render/wear';
 import { buildSnowField, snowCfgRows, type SnowField } from '../render/snowField';
+import { gunHoldStats } from './gunhold';
 import { makeSnowTracks, updateSnowTracks, clearSnowTracks, formSnowTracks, TRACK_RES, type SnowTracks } from './snowTracks';
 import { updateSnowMarks, clearSnowMarks } from './snowMarks';
 import { snowBogAt, snowBogMay, snowBogKinds } from './snowBog';
@@ -1074,6 +1075,8 @@ export class Game {
     this.decals = new Decals(engine.device); engine.setDecals?.(this.decals);   // (the QA harness's engine stand-in has no renderer to hand it to: the list still fills, nothing draws)
     if (engine.settings && engine.settings.decals === false) this.decals.enabled = false;
     this.weather = new Weather(this);
+    dialogue.recentStands(this);
+    gunHoldStats(this);   // (the counters stand from the start, on every host: a HUD's asking must not be what makes them, or a page's record differs from a server's)
     first.player.light = engine.lights.add(railLightDef(PLAYER_ID, this.tune.playerLight));
     // light targets from analytic lights + switchables
     // contactor groups restrike one after another when the mains return: stagger by order of first appearance

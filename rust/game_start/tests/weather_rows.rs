@@ -39,11 +39,23 @@ fn the_winds_are_whole_every_tick() {
     assert!(d.winds.active.iter().any(|w| w.kind == 1), "the storm blows on the pass");
 }
 
+/// THE RULE: a particle pool is handed the wind round the view and the storm last, made of the standing game. No record holds that list.
+#[test]
+fn the_pool_is_handed_the_storm() {
+    let mut p = pass(4);
+    p.g.m.dress.dress.wind = true;
+    let mut d = Drawn::default();
+    for _ in 0..30 { p.frame(); }
+    d.take(&p.g, ALL);
+    assert!(!d.winds.gusts.is_empty() && d.winds.gusts.len() <= game::smoke_types::WIND_GPU_MAX as usize, "{} rows", d.winds.gusts.len());
+    assert_eq!(d.winds.gusts.last().unwrap().kind, 1, "the storm goes last");
+}
+
 /// THE RULE: a fire's hot air is told on the ticks the rule files it, and what a restart clears is said in one row of that tick.
 #[test]
 fn heat_and_what_goes_are_told() {
     let mut p = pass(5);
-    (p.g.m.dress.dress.wind, p.g.m.dress.dress.fires) = (true, true);
+    p.g.m.dress.dress.wind = true;
     let (mut d, mut hot) = (Drawn::default(), false);
     let t = (0..p.g.targets.len()).map(|i| p.g.targets[i]).find(|&t| game::fire::is_fire(&p.g, t)).expect("the pass has a brazier");
     p.g.engine.view_focus = Some(game::fire::mouth_of(&p.g, t).pos);

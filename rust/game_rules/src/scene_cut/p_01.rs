@@ -284,14 +284,9 @@ pub fn cut_prism(axis: f64, half_t: f64, poly: &[[f64; 2]]) -> crate::scene_cut:
     CutPrism { off, h, cut: r.cut, dropped: r.dropped, empty: r.empty }
 }
 
-/// THE CPU CLIP every ray / segment test shares: [t0, t1] of the local line o + t·d cut down by the record; the answer in `g.m.scene_cut.cut_clip`, false = nothing left (and it is not written).   (cut.ts cutClip)
-pub fn cut_clip(g: &mut crate::game::Game, cut: &[crate::scene_cut::CutPlane], ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64, t0: f64, t1: f64) -> bool {
-    let Some((t0, t1, k)) = cut_clip_of(cut, ox, oy, oz, dx, dy, dz, t0, t1) else { return false };
-    let out = &mut g.m.scene_cut.cut_clip;
-    out.t0 = t0;
-    out.t1 = t1;
-    out.k = k;
-    true
+/// THE CPU CLIP every ray / segment test shares: [t0, t1] of the local line o + t·d cut down by the record; None = nothing left.   (cut.ts cutClip)
+pub fn cut_clip(cut: &[crate::scene_cut::CutPlane], ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64, t0: f64, t1: f64) -> Option<(f64, f64)> {
+    cut_clip_of(cut, ox, oy, oz, dx, dy, dz, t0, t1).map(|(t0, t1, _)| (t0, t1))
 }
 /// …the interval left and the plane it is entered by (−1 none); None = nothing is left
 pub fn cut_clip_of(cut: &[crate::scene_cut::CutPlane], ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64, t0: f64, t1: f64) -> Option<(f64, f64, f64)> {
@@ -459,24 +454,20 @@ mod tests {
     }
     #[test]
     fn the_clip_keeps_its_old_answer_on_false() {
-        let mut g = Game::blank();
+        // the numbers were recorded on the TypeScript's kept record, which a false answer left as it stood: so the test keeps the last answer the same way
         let w = wedge();
         let mut v = Vec::new();
-        let mut run = |g: &mut Game, r: bool| {
-            let c = g.m.scene_cut.cut_clip;
-            v.extend_from_slice(&[if r { 1.0 } else { 0.0 }, c.t0, c.t1, c.k]);
+        let mut was = (0.0, 0.0, -1.0);
+        let mut run = |r: Option<(f64, f64, f64)>| {
+            if let Some(c) = r { was = c; }
+            v.extend_from_slice(&[if r.is_some() { 1.0 } else { 0.0 }, was.0, was.1, was.2]);
         };
-        let r = cut_clip(&mut g, &w, -3.0, 0.1, 0.2, 1.0, 0.1, 0.05, -1.0, 5.0);
-        run(&mut g, r);
-        let r = cut_clip(&mut g, &w, 3.0, 3.0, 0.2, -1.0, -1.0, 0.0, 0.0, 9.0);
-        run(&mut g, r);
-        let r = cut_clip(&mut g, &w, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0, 9.0);
-        run(&mut g, r);
+        run(cut_clip_of(&w, -3.0, 0.1, 0.2, 1.0, 0.1, 0.05, -1.0, 5.0));
+        run(cut_clip_of(&w, 3.0, 3.0, 0.2, -1.0, -1.0, 0.0, 0.0, 9.0));
+        run(cut_clip_of(&w, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0, 9.0));
         let stop = [pl([0.0, 0.0, 0.0], 1.0), w[0]];
-        let r = cut_clip(&mut g, &stop, 5.0, 5.0, 5.0, 1.0, 0.0, 0.0, 0.0, 2.0);
-        run(&mut g, r);
-        let r = cut_clip(&mut g, &w, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.5, 0.6);
-        run(&mut g, r);
+        run(cut_clip_of(&stop, 5.0, 5.0, 5.0, 1.0, 0.0, 0.0, 0.0, 2.0));
+        run(cut_clip_of(&w, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.5, 0.6));
         same("CLIP", v, CLIP);
     }
 }

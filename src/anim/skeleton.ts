@@ -245,7 +245,7 @@ function sideOf(clip: Clip): ClipSide {
   c = { lines: l, at: -2, need: tr.reduce((m, t) => Math.max(m, t.node + 1), 0) }; CLIP_SIDE.set(clip, c); return c;
 }
 function clipIn(x: SimExports, clip: Clip): ClipSide {
-  const c = sideOf(clip); if (c.at !== -2) return c;
+  const c = sideOf(clip); if (c.at !== -2 && c.at !== undefined) return c;   // (a row the Rust game's apply made has no `at`: this module's own number, which no game carries)
   c.at = -1;
   if (clip.tracks.length === 0 || !clip.tracks.every(t => t.times.length > 0 && t.values.length === t.times.length * (t.path === 1 ? 4 : 3))) return c;
   if (!x.clip_begin(clip.duration, clip.tracks.length)) return c;

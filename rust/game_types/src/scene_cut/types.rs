@@ -58,25 +58,6 @@ impl CutGlass {
 }
 impl Default for CutGlass { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/cut.ts:234 CUT_CLIP, src/scene/cut.ts:234)
-#[derive(Clone, Copy, Debug)]
-pub struct SceneCutModCUTCLIP {
-    pub t0: f64,
-    pub t1: f64,
-    pub k: f64,
-}
-impl SceneCutModCUTCLIP {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SceneCutModCUTCLIP {
-            t0: 0.0,
-            t1: 0.0,
-            k: 0.0,
-        }
-    }
-}
-impl Default for SceneCutModCUTCLIP { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/scene/cut.ts:141 cutBounds ->, src/scene/cut.ts:141)
 #[derive(Clone, Copy, Debug)]
 pub struct CutBounds {
@@ -135,20 +116,6 @@ impl CutPrism {
     }
 }
 impl Default for CutPrism { fn default() -> Self { Self::zeroed() } }
-
-/// the state this module keeps at its top level
-#[derive(Clone, Debug)]
-pub struct SceneCutMod {
-    /// (src/scene/cut.ts:234 CUT_CLIP)
-    pub cut_clip: crate::scene_cut::SceneCutModCUTCLIP,
-}
-impl SceneCutMod {
-    pub fn blank() -> Self {
-        SceneCutMod {
-            cut_clip: crate::scene_cut::SceneCutModCUTCLIP { t0: 0.0, t1: 0.0, k: -1.0 },
-        }
-    }
-}
 
 /// (src/scene/cut.ts:21 MAX_CUT_PLANES)
 pub const MAX_CUT_PLANES: f64 = 8.0;

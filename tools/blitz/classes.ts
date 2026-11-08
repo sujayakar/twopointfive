@@ -174,7 +174,6 @@ export const classTable = (): Record<string, { prototype: object }> => { nameCla
   "anim_skeleton::SkeletonInstance": (m1 as any).SkeletonInstance,
   "character::Spring": (m8 as any).Spring,
   "destruction::RateCap": (m16 as any).RateCap,
-  "wind::PoolList": (m61 as any).PoolList,
   "game::AsideOwn": (m27 as any).AsideOwn,
   "par::Par": (m77 as any).Par,
   "verdict::Verdict": (m75 as any).Verdict,
