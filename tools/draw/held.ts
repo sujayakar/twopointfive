@@ -9,6 +9,7 @@
 //   bun run tools/draw/held.ts --holders [kind or path]  the holders themselves (a check, a tool): what each reaches, and what nothing but it holds
 //   bun run tools/draw/held.ts --doors <kind or path>  the left files those holders name themselves: by how many of them, and how many lines they would let go of with that door shut
 //   bun run tools/draw/held.ts --without <path,…>  what goes free with those files or folders gone, and who still names one of them (a car's worth, before it is cut)
+//   bun run tools/draw/held.ts --stays         the files the pages that stay are built from, a line a file (tools/draw/unused.ts reads it)
 //   bun run tools/draw/held.ts --tsv <out>     a row a left file: lines, who holds it
 // What it cannot see: a name put together at run time (`${n}.ts`), a folder read whole, a file of src that is not TypeScript. The type checks (src's and tools/qa's) see what it calls free wrongly.
 // (vendor/typescript, or TS_LIB=<path to typescript.js>)
@@ -106,6 +107,7 @@ if (who !== undefined) {
   for (const x of R) console.log(`${String(x.only).padStart(6)} lines nothing else holds · reaches ${String(x.all).padStart(3)} files, ${String(x.at).padStart(6)} lines · names ${x.direct}  ${x.r} (${lines.get(x.r)} lines)`);
   console.log(`${R.length} holders, ${loc(R.map(x => x.r))} lines of their own`); process.exit(0);
 }
+if (flag('--stays')) { console.log([...stays].sort().join('\n')); process.exit(0); }
 const tsv = opt('--tsv'); if (tsv === '') stop('--tsv wants a file'); if (tsv) writeFileSync(tsv, ['file\tlines\theld by\tnamed by', ...[...left].sort().map(f => [f, lines.get(f), kinds.get(f)?.join(', ') ?? '', every.filter(x => names.get(x)!.has(f)).length].join('\t'))].join('\n') + '\n');
 
 const src = every.filter(f => f.startsWith('src/') || f.startsWith('levels/'));
