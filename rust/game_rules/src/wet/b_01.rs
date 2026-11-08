@@ -117,7 +117,6 @@ const DRIP_FROM: [crate::character::Bone; 5] = [crate::character::Bone::HandL, c
 
 /// One drop off him: from a hand, the chin or the hem of the jacket. With no particle system nothing moves, as in the TypeScript. (src/game/wet.ts:129 drip)
 pub fn drip(g: &mut crate::game::Game, c_2: CharId) {
-    if !crate::particle_fx::gpu_fx(g) { return; }
     let n = g.m.wet.drip_n;
     g.m.wet.drip_n = n + 1.0;
     let k = DRIP_FROM[js::rem(n, 5.0) as usize];

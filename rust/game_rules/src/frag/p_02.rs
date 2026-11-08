@@ -190,15 +190,12 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
     let side = if js::truthy(spec.who) { crate::teams::team_of_id(g, spec.who) } else { crate::teams::Team::Guard };
     let mine = crate::seats::is_man_id(g, spec.who);
     if spec.fx != Some(false) {
-        let gpu = crate::particle_fx::gpu_fx(g);
         let seed = g.fx_seed;
         g.fx_seed += 1.0;
-        let o = if gpu {
-            let (bang, flags) = (crate::effects::bang(), crate::effects::flags());
-            Some(crate::effects::SpawnBurstO { spark_count: Some(m::min(bang.spark_count, if flags.trails { bang.trail_count } else { 0.0 })) })
-        } else { None };
-        let l = crate::effects::spawn_burst(g, from, seed, o);
-        if gpu { crate::particle_fx::bang_fx(g, from); }
+        let (bang, flags) = (crate::effects::bang(), crate::effects::flags());
+        let o = crate::effects::SpawnBurstO { spark_count: Some(m::min(bang.spark_count, if flags.trails { bang.trail_count } else { 0.0 })) };
+        let l = crate::effects::spawn_burst(g, from, seed, Some(o));
+        crate::particle_fx::bang_fx(g, from);
         let flash = crate::render_lights::light_set_flash(g, l.pos, [1.0, 0.74, 0.42], l.intensity * 0.7, l.range, l.ttl, 0.0);
         let light = crate::fogofwar::fog_of_war_light_by(g, flash, Some(spec.who));
         if let Some(r) = l.radius { if js::truthy(r) { g.tab.light[light].radius = r; } }

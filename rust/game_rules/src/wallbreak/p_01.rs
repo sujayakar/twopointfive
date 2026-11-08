@@ -513,7 +513,7 @@ pub fn wall_break_open_cells(g: &mut crate::game::Game, b: WallbreakBreakableId,
         while k < ch.len() { if ch[k + 1] == 0.0 { opened.push(ch[k]); } k += 2; }
     }
     // the lights' reach masks are the picture's: told where, and how long the blast's own frame may be spared the reading (wallbreak.ts:413)
-    if b_kind == BKind::Wall && g.engine.reach.is_some() {
+    if b_kind == BKind::Wall {
         let pace = &g.m.destruction_switch.blast_pace;
         let hold = if pace.on { pace.reach_hold } else { -1.0 };
         crate::render_reach_keep::reach_keep_changed(g, Some([x0, z0, x1, z1]), Some(hold));

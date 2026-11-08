@@ -290,11 +290,9 @@ fn blast_sparks_of(g: &mut crate::game::Game, at: V3) -> bool {
         if near(p, at, 0.06) { wall = Some(w); break; }
     }
     let b = blast();
-    // (the pool's own two switches, `sparkBounce` and `collide`: the host's, handed over with which of its objects exist)
-    let bounces = g.engine.particles.as_ref().map_or(false, |p| p.spark_bounce && p.collide);
     // STAND-IN: the frame step doorChargeAt leads the leaf by is the host's last (`engine.lastDt`), which is not on the bridge's engine list: the
     // fixed step's 1/60 stands for it. Belongs in the bridge's host half.
-    let door = if wall.is_none() && b.door && bounces { door_charge_at(g, at, m::min(0.1, 1.0 / 60.0)) } else { None };
+    let door = if wall.is_none() && b.door { door_charge_at(g, at, m::min(0.1, 1.0 / 60.0)) } else { None };
     if wall.is_none() && door.is_none() && !(b.stun && can_at(g, at)) { return false; }
     state_mut(g).first = true;
     if let Some(w) = wall { wall_blast(g, key, &w); }

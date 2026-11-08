@@ -233,7 +233,6 @@ export function hostRowsText(g: any): string { const bk: any = BOOKS.get(g)!; re
 export function hostHalfParts(g: any, cmds: readonly any[]): [string, any][] { const bk = BOOKS.get(g)!, P: [string, any][] = [['u32', cmds.length]]; for (const c of cmds) P.push(['crate::cmd::PlayerCmd', c]);
   for (const [id, ty] of [['CameraId', 'crate::camera::FollowCamera'], ['InputId', 'crate::input::Input']]) { const L: any[] = bk.listOf(id); P.push(['u32', L.length]); for (const row of L) P.push([ty, row]); }
   { const L: any[] = bk.listOf('SeatId'); P.push(['u32', L.length]); for (const s of L) P.push(['u32', seatMark(s)]); }
-  { const E = g.engine, Pt = E?.particles; P.push(['u32', (Pt ? 1 : 0) | (E?.reach ? 2 : 0) | (Pt?.collide ? 4 : 0) | (Pt?.sparkBounce ? 8 : 0)]); }
   return P; }
 export const hostHalf = (g: any, knobs: Record<string, unknown>, cmds: readonly any[]): Uint8Array => exportPart(g, knobs, hostHalfParts(g, cmds));
 /** a field of the game by its Rust path (['m', 'dialogue', 'room_rects']): its schema type and its value now */
