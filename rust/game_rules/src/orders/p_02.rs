@@ -9,15 +9,6 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------ small words
 
-/// `t.at`, whichever kind of target it is
-fn target_pos(t: &OrderTarget) -> V3 {
-    match t {
-        OrderTarget::Floor(x) => x.at,
-        OrderTarget::Door(x) => x.at,
-        OrderTarget::None(x) => x.at,
-        OrderTarget::Foe(x) => x.at,
-    }
-}
 /// `a === b` of two `Who`s (ring.indexOf)
 fn same_who(a: Who, b: Who) -> bool {
     match (a, b) {

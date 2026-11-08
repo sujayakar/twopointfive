@@ -1,4 +1,4 @@
-// THE MENU'S QUESTIONS (blitz/skeleton/CHANGES-14.md): an order row in the Rust game is data, an arm for each closure with its body behind `order_can` and the like. So on a puppet every row's closures, and the squad's posture,
+// THE MENU'S QUESTIONS (blitz/skeleton/CHANGES-14.md): an order row in the Rust game is data and a `Row` of functions (rust/game_rules/src/orders/rows/), called by `order_can` and the like. So on a puppet every row's closures, and the squad's posture,
 // are these: each asks the Rust game by the row's ID and what it asked holds the target as bytes by the schema. No TypeScript registration runs on the puppet, and the menu has one source of truth.
 //   const asks = installAsks(g, knobs, ask, reapply);   ask = (kind, row, seat, bytes) => bytes (the face's face_ask, io::ask); reapply = what the host does after a question that writes
 //   asks.after();                                       after every apply: a row or a posture the apply made gets its closures

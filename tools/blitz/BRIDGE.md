@@ -76,7 +76,7 @@ A level script: `io::deal_scripts`, at the end of each import, finds the script 
 An order row's closures on a puppet: see `ask.ts`. They ask the Rust game by the row's ID, so no registration runs twice.
 
 
-The walk carries a closure set up once, where it can name the arm: `pane_rule`, `pane_rows`, `glass_walkable`, `fire_pass`, the blast listeners, the wall-change listeners, each rate cap's `n`. `io::deal_closures` runs at the end of an import and deals every order row its closures by `def.id`, from a table in `hand2.cjs` (`ROWS`) written from the parts' own registrations. `report()` names any row that table lacks. `go` takes the arm of `door_tools.go_key`.
+The walk carries a closure set up once, where it can name the arm: `pane_rule`, `pane_rows`, `glass_walkable`, `fire_pass`, the blast listeners, the wall-change listeners, each rate cap's `n`. `io::deal_closures` runs at the end of an import and deals every order row its functions by `def.id`, from the list of `orders/rows` (`rows::by_id`); a row on no line of the list stops the import, by name. `go` takes the row `door_tools.go_key` says.
 
 Closures made mid-flight stand at their blank after an import: a thrown can's `on_bounce`, a blow's `live`, a fall's `release`, `Threshold.out`, `Later.then`. `SquadOrders.notes` does too: it is the HUD's. So compare from the start of a mission and step both games; do not import into the middle of a fight and expect those to resume.
 
