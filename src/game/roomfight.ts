@@ -59,7 +59,6 @@ import { digInReset } from './digin';
 import './wallreact';
 import { squadRally } from './enemysquads';
 import { PRESSURE, pressStop, run as pressRun } from './pressure';
-import { buddyStop } from './buddy';
 import './pairorders';
 import './workthings';
 import './spotted';
@@ -413,7 +412,7 @@ export class RoomFight {
   short(gd: Guard): boolean { if (!LIGHTS.litMan || !this.live) return false; const O = this.opOf(gd); return !!O && this.g.time - O.shortT >= 0 && this.g.time - O.shortT < 0.25; }
 
   private stop() {
-    pressStop(this.g); buddyStop(this.g); lastStandStop(this.g);
+    pressStop(this.g); lastStandStop(this.g);
     for (const O of this.ops) { this.restore(O); this.handBack(O); }
     for (const D of this.defs) {   // every man as this module found him: a mover's script ended (nobody is left walking on legs nothing watches), the pin it put on taken off
       if (D.mode === 'move' && D.gd.script && D.gd.state !== 'dead') endGuardScript(D.gd, 'alert');

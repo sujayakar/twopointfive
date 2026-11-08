@@ -23,7 +23,6 @@ pub use game_rules::blast_feel;
 pub use game_rules::blast_look;
 pub use game_rules::breach;
 pub use game_rules::break_table;
-pub use game_rules::buddy;
 pub use game_rules::calmtorch;
 pub use game_rules::camera;
 pub use game_rules::carlamps;

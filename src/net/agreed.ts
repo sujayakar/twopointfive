@@ -22,7 +22,7 @@ export const NET_AGREED: readonly string[] = [
   'm.picture', 'm.destruction_switch', 'm.dress', 'm.wallbreak', 'm.furnblast', 'm.doorblast', 'm.fire', 'm.winbars', 'm.destruction', 'm.wind',
   'm.glasspen', 'm.doorway', 'm.nightbreach', 'm.handleside', 'm.doornames', 'm.runner', 'm.netquietfeed', 'm.netquiet', 'm.laststand', 'm.stackroom',
   'm.rearwatch', 'm.coverfire', 'm.wallreact', 'm.tactics', 'm.lanes', 'm.digin', 'm.pressure', 'm.difficulty', 'm.stickycam', 'm.quietfog',
-  'm.calmtorch', 'm.buddy', 'm.powerout', 'm.darkfoe', 'm.whistle', 'm.attention', 'm.doze', 'm.needs', 'm.gunwall', 'm.lightswitch', 'm.stalk',
+  'm.calmtorch', 'm.powerout', 'm.darkfoe', 'm.whistle', 'm.attention', 'm.doze', 'm.needs', 'm.gunwall', 'm.lightswitch', 'm.stalk',
   'm.darkdoor', 'm.startle', 'm.flinch', 'm.rescue', 'm.rescuecheck', 'm.seenwalk', 'm.he40', 'm.samlook', 'm.irlight', 'm.nvg',
   'm.irlaser', 'm.unseen', 'm.squadsmoke', 'm.squad40', 'm.squadthrow', 'm.kitanim', 'm.smokebreak', 'm.showwhy', 'm.cmd',
   'm.fireline', 'm.doorforce', 'm.glassbreak', 'm.glass', 'm.wallpen', 'm.suppression', 'm.enemysquads', 'm.morale', 'm.doortools', 'm.shotgun',
