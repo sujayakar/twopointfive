@@ -39,7 +39,7 @@ BY_HAND = {
     # each man sent to a squad's fight comes after his own delay
     ('enemysquads', 'contact', 'pick', 1): WHO + '::Man(gd)',
     # a squad thinks before it decides: the squad's own
-    ('enemysquads', 'tick_news', 'pick', 1): WHO + '::Group(q.0)',
+    ('enemysquads', 'tick_news', 'pick', 1): WHO + '::Squad(q)',
 }
 FN = re.compile(r'^\s*(?:pub(?:\([a-z]+\))? )?fn (\w+)(?:<[^>]*>)?\((.*)$')
 TYPES = (('Def', 'RoomfightDefId'), ('Op', 'RoomfightOpId'), ('Man', 'GuardId'), ('Body', 'CharId'))

@@ -40,25 +40,6 @@ fn own_spots_of(sc: &crate::scene_scenarios::LevelScenarios) -> crate::civilians
 }
 
 
-/// Runs `fn_` with a private seeded die in the game die's place, so a civilian's construction moves the game's stream by no draw.   (civilians.ts withDice)
-fn with_dice_on<T>(g: &mut Game, seed: f64, fn_: &mut dyn FnMut(&mut Game) -> T) -> T {
-    let private = crate::math_dice::mulberry32(seed);
-    let stood = g.dice;
-    let block = &mut ::sim::state::state(g.sim).dice;
-    let (word, count) = (block.s, block.n);
-    block.s = private.s;
-    block.n = private.n;
-    let mut stand_in = crate::math_dice::sim_dice_new(seed);
-    stand_in.home = stood.and_then(|d| d.home);
-    g.dice = Some(stand_in);
-    let out = fn_(g);
-    g.dice = stood;
-    let block = &mut ::sim::state::state(g.sim).dice;
-    block.s = word;
-    block.n = count;
-    out
-}
-
 /// One line of what happened to her, kept on the record, the last few only.   (civilians.ts log)
 pub fn log(g: &mut crate::game::Game, gd: GuardId, what: &str) {
     let line = format!("{} {}", js::to_fixed(g.time, 1), what);
@@ -164,9 +145,8 @@ pub fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::Civili
         team: Some(crate::teams::Team::Civilian),
     };
     let tint = v3::copy(def.tint);
-    let seed = crate::math_dice::hash_str(&format!("civ:{}:{}", def.name, i));
     let (men, rig) = (g.men, g.rig);
-    let gd = with_dice_on(g, seed, &mut |g: &mut Game| crate::game::guard_new(g, men, rig, id, route, -1, fl, tint, Some(&look)));
+    let gd = crate::game::guard_new(g, men, rig, id, route, -1, fl, tint, Some(&look));
     g.gd[gd].foe = None;
     g.gd[gd].drawn = false;
     g.gd[gd].heard_up_to = g.event_seq;

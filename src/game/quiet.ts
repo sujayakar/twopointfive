@@ -211,7 +211,7 @@ export class QuietMission {
   // ---------------------------------------------------------------- inside
   private note(s: string) { this.log.push(`${this.g.time.toFixed(2)} ${s}`); if (this.log.length > 60) this.log.splice(0, 30); }
   private dealOne(Q: QuietData): QuietDeal {
-    if (this.pin === null && SAMESTART.on) { simRandom(); simRandom(); simRandom(); return { start: 0, spot: 0, patrol: Q.patrols?.length ? 0 : -1 }; }   // (samestart.ts: a mission that names no pin is the first of each of its lists, on every load and every restart; the three draws are made all the same, so the run rolls the stream it would with the switch off)
+    if (this.pin === null && SAMESTART.on) return { start: 0, spot: 0, patrol: Q.patrols?.length ? 0 : -1 };   // (samestart.ts: a mission that names no pin is the first of each of its lists, on every load and every restart, and nothing is drawn)
     const r = this.pin === null ? simRandom : mulberry32((this.pin | 0) ^ 0x51ed270b);
     const pick = (n: number) => Math.min(n - 1, Math.floor(r() * n));
     // (three draws whatever the lists' lengths: a list grown by one does not shift the others' draws)

@@ -208,7 +208,7 @@ import type { KitWorn } from './kitload';
 import './kitload';   // (asked inside the frame only)
 import type { Wound } from './wounds';
 import { buildInteriorCells } from '../render/reach';
-import { simRandom, useDice } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { simDraw, simRandom, useDice } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import type { SimDice } from '../math/dice';
 import type { PoseSet } from '../anim/skeleton';
 import { SimState } from '../sim/state';   // (below the game: no part of src/game's import cycle)
@@ -676,7 +676,7 @@ export class Guard extends GuardCols {
   /** the aim-settle model (aim.ts): his track on Sam (0‥1 — no round under AIM.guard.acquireMin of it, his cone × up to unsettledK short of 1), Sam's bearing
    *  rate across him, whether he is braking for a shot, the last round's numbers. guards.ts trackGuard feeds it once a frame; the three fire sites read it. */
   aim = new AimState();
-  reactT = 0; searchT = 0; lookPhase = simRandom() * 10;
+  reactT = 0; searchT = 0; lookPhase = simDraw('game::guard_new#1') * 10;
   speed = 0; flashlight: RtLight; sweep = 0; beamDir: Vec3 = [0, -0.3, 1];
   stepPhase = 0; heardUpTo = -1; smokeTrans = 1; lightDeadUntil = -1; diedAt = -1;
   /** a teammate's breaching shotgun out of his big slot and in his hands for a lock (bigkit.ts gunUp / gunDown): the gun he put down for it, to take up again */
@@ -1096,7 +1096,7 @@ export class Game {
     first.player.light = engine.lights.add(railLightDef(PLAYER_ID, this.tune.playerLight));
     // light targets from analytic lights + switchables
     // contactor groups restrike one after another when the mains return: stagger by order of first appearance
-    const groupStagger = new Map<string, number>(); const staggerOf = (grp: string) => { if (!groupStagger.has(grp)) groupStagger.set(grp, groupStagger.size * 0.45 + simRandom() * 0.5); return groupStagger.get(grp)!; };
+    const groupStagger = new Map<string, number>(); const staggerOf = (grp: string) => { if (!groupStagger.has(grp)) groupStagger.set(grp, groupStagger.size * 0.45 + simDraw('game::stagger_of#1') * 0.5); return groupStagger.get(grp)!; };
     const lightDefs = new Map(level.lights.map(d => [d.name, d]));
     for (const l of engine.lights.lights) {
       if (l.ttl >= 0 || l.kind === 2 || l.group === 'player' || l.group === 'flashlights') continue;
