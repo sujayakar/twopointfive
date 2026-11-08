@@ -12650,5 +12650,27 @@
 "sim_propshome::PropStoreO": "where a column of the block lies: addresses, not state",
 "weapons::Firearm.def": "the gun's own row of the weapons table: made with the gun",
 "wind::WindSource.name": "a wind's name: made with the wind"
+},
+"pageWrites": {
+"anim_characters::CharacterRenderer": "the renderer's own counts of what it drew",
+"camera::FollowCamera": "the page's own camera, which the game is handed with the host's half of each tick",
+"chronicle::ChronCounts.saves": "the save controller's line after a load; the Rust game makes its own (face_loaded)",
+"cmd::Seat.mark": "how far this page's camera has followed its seat's cuts",
+"fogofwar::FogOfWarThingStats.tests": "a count of questions asked: the old page's snow marks ask the fog (snowMarks.ts), and nothing plays by it",
+"game::AsideOwn.lens": "the look ahead's own (host/ahead.ts): never handed over",
+"game::Game.cmd_buf": "the page's buffer for the record it samples its player into",
+"game::Game.local_seat": "which seat this page is: turned while a start is exported, and told the game by face_show_seat",
+"game::Game.snow_look_was": "the picture's: which snow look was last made",
+"game::Game.view_proj": "the page's own camera's matrix, handed over with the host's half",
+"orders::SquadOrders.posture": "a posture an apply made is given its questions (rustgame.ts after): the same object",
+"orders::SquadOrders.tap_was": "the save controller's line after a load; the Rust game makes its own (face_loaded)",
+"orders::SquadOrdersView": "the page's own camera, canvas and keys, as the menu has them",
+"render_lights::RtLight.glass_mask": "the renderer's, worked out as a frame is drawn",
+"render_lights::RtLight.slot": "the renderer's, dealt as a frame is drawn",
+"scene_boxes::Box.aniso": "a wet box as the old page draws it (wet.ts WetGround.follow): a dress step's, sent nowhere",
+"scene_boxes::Box.flags": "a wet box as the old page draws it (wet.ts WetGround.follow): a dress step's, sent nowhere",
+"scene_boxes::Box.rough": "a wet box as the old page draws it (wet.ts WetGround.follow): a dress step's, sent nowhere",
+"scene_boxes::Box.wet_k": "a wet box as the old page draws it (wet.ts WetGround.follow): a dress step's, sent nowhere",
+"scene_collision::StaticCollision.dynamic_boxes": "the HUD's 'too close' asks with no door leaves in the list and puts them back as it answers (wallcharge.ts noLeaves): goes when the HUD is told it"
 }
 }
