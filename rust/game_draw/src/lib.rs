@@ -71,6 +71,7 @@ macro_rules! sections {
 
 pub mod boxes;
 pub mod doorways;
+pub mod dust;
 pub mod events;
 pub mod fires;
 pub mod fog;
@@ -80,10 +81,11 @@ pub mod men;
 pub mod resets;
 pub mod rims;
 pub mod sky;
+pub mod traffic;
 pub mod view;
 pub mod winds;
 
-groups! { fog view sky boxes lights men doorways rims events fires decals air }
+groups! { fog view sky boxes lights men doorways rims events fires decals air level_look }
 
 sections! {
     fog: fog::Fog = fog;
@@ -132,6 +134,8 @@ sections! {
     door_boxes: boxes::Leaf = winds.leaves;
     open_panes: boxes::Word = winds.open;
     resets: resets::Reset = resets;
+    traffic: boxes::Word = traffic.words;
+    dust: dust::DustLook = dust;
 }
 
 /// the numbers of a page's look (src/draw/look.ts writes them in this order): the boxes', then the men's
@@ -149,6 +153,8 @@ pub struct Drawn {
     pub doorways: Vec<doorways::Doorway>,
     pub events: events::Events,
     pub marks: marks::Marks,
+    pub traffic: traffic::Traffic,
+    pub dust: Vec<dust::DustLook>,
     pub rims: Vec<rims::Rim>,
     tick: Option<u32>,
     stood: u32,
@@ -178,6 +184,7 @@ impl Drawn {
         if want & want::men != 0 { self.men.take(g, again && self.had & want::men != 0); }
         if want & want::rims != 0 { self.rims.clear(); rims::fill(g, &mut self.rims); }
         if want & want::events != 0 { self.events.take(g); resets::fill(g, &mut self.resets); }
+        if want & want::level_look != 0 { self.dust.clear(); dust::fill(g, &mut self.dust); self.traffic.take(g); }
         if want & want::fires != 0 { self.fires.clear(); fires::fill(g, &mut self.fires, &mut self.fire_table); }
         if want & want::air != 0 { self.winds.take(g, again && self.had & want::air != 0); }
         self.had = if again { self.had | want } else { want };

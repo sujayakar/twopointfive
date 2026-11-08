@@ -191,7 +191,7 @@ impl Events {
         self.heard.push(Heard { time: g.time as f32, rain: self.rain });
         self.rolls.clear();
         for r in &g.rolls { self.rolls.push(Roll { voice: r.voice as u32, at: [r.x as f32, r.z as f32], hard: r.k as f32 }); }
-        // (what the marks threw this tick)
+        // (what the marks and the feels threw this tick)
         if let Some(s) = game::render_decals::mark_set(g) { for e in &s.thrown { self.one(tick, g, e); } }
         self.anchors.clear();
         let mut rides = core::mem::take(&mut self.rides);
