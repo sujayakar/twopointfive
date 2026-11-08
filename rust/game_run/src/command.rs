@@ -114,4 +114,10 @@ commands! {
         if on == 0 { game::game::game_restart(g, None); }
         else { game::game::game_clear_aftermath(g); game::game::game_teleport_player(g, [x, 0.0, z]); }
     };
+    /// the kit picture: the team's cards (as Kit's text) and how many come (under 0: as it stands), staged again
+    30 KitStageCards { kept: &str, size: i32 } = |g, kept, size| { crate::kept::read_picture(g, kept); game::kitstage::cards(g, size); };
+    /// whose card is open (0 the player) and the row under its highlight
+    31 KitStageOpen { who: u32, field: &str } = |g, who, field| game::kitstage::open(g, who, field);
+    /// where the picture's men should sit in the view (kitView.ts `frame`): aspect, then cx cy h w man; hung 1: door left right keep; column 1: top bottom
+    32 KitStageFrame { aspect: f64, cx: f64, cy: f64, h: f64, w: f64, man: f64, hung: u32, door: f64, left: f64, right: f64, keep: f64, column: u32, top: f64, bottom: f64 } = |g, aspect, cx, cy, h, w, man, hung, door, left, right, keep, column, top, bottom| game::kitstage::frame(g, aspect, game::kitstage::frame_ask(cx, cy, h, w, man, if hung != 0 { Some([door, left, right, keep]) } else { None }, if column != 0 { Some([top, bottom]) } else { None }));
 }

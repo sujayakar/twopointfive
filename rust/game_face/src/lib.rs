@@ -456,7 +456,7 @@ pub const SAVES: u32 = 8;
 #[no_mangle]
 pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
     let said = with(h, |x| {
-        if let Some(cmds) = x.cmds.take() { game::game::game_step_seats(&mut x.g, dt, &cmds); } else {
+        if let Some(cmds) = x.cmds.take() { if x.g.kit_stage.is_some() { game_run::step_seats(&mut x.g, dt, &cmds); } else { game::game::game_step_seats(&mut x.g, dt, &cmds); } } else {
             let cmd = x.cmd.take().or_else(|| x.g.cmd_buf.clone()).expect("face_step: no record of the tick's input (face_host or face_host_half hands one over, or the state carries one in Game.cmd_buf)");
             game_run::step(&mut x.g, dt, &cmd);
         }

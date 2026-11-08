@@ -55,6 +55,13 @@ pub fn read(g: &mut Game, text: &str) {
     }
 }
 
+/// THE CARDS OF THE KIT PICTURE: read as `read` reads them, but as the picture's own: the player's card is his own, whatever is kept beside it. `text` is the cards as they are kept, or their list alone.
+pub fn read_picture(g: &mut Game, text: &str) {
+    let j = parse(text).unwrap_or(Json::Null);
+    let members = if j.get("members").is_null() { &j } else { j.get("members") };
+    read(g, &format!("{{\"v\":2,\"own\":true,\"stealth\":true,\"members\":{}}}", game_start::json::to_line(members)));
+}
+
 fn text(s: &str) -> String {
     let mut o = String::from("\"");
     for c in s.chars() {
