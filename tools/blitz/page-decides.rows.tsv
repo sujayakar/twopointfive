@@ -8,8 +8,6 @@ src/game/director.ts:*	moving	the Director	its host fields (the camera and Input
 # ---- decides: the records the page keeps and the lines it says
 src/game/par.ts:Par.best*	picture	the picture's feel	this machine's words about its best time, handed in by the page for the result as it shows it (the browser's store is a machine's own)	1
 src/game/par.ts:*	decides	HUD mission lines	what the page reads of the clock (armed, started, the result) is asked of the copy; the row with the clock on it is the Rust game's own (par_objective, in the view)
-src/game/deathrecap.ts:*	decides	debrief	the dress step runs recapTick on the copy: who fell, who saw it and when the recap is due are kept in a record only TypeScript has
-src/game/chronicle.ts:*	decides	debrief	the debrief reads the chronicle through TypeScript's own counts and words, and the save controller adds its checkpoint row on the copy
 src/game/lesson.ts:*	decides	lesson conditions	a lesson's step, its line and whether it is over are worked out again on the copy (the camera and the HUD ask Lesson.step each frame)
 src/game/rails.ts:*	decides	lesson conditions	what a tutorial's rails allow, offer and teach is worked out again on the copy each frame (its key locks wait for the host's half to be redrawn)
 src/game/cues.ts:Cues.aside	decides	debrief	the death recap's witness files his word on the copy: it goes when the recap is the tick's (its aside is a bubble of the cues' own, and the view tells it with the rest)
