@@ -32,7 +32,7 @@ fn issue_names_you(g: &Game) -> bool {
     kit_issue_whole(g, members.as_ref())
 }
 /// `const { loaded, ...card } = c; Object.assign(m, card)`: the fields a level's block names
-fn assign_card(m: &mut MemberKit, c: &crate::scene_scenarios::IssueCard) {
+pub(super) fn assign_card(m: &mut MemberKit, c: &crate::scene_scenarios::IssueCard) {
     if let Some(x) = c.weapon { m.weapon = x; }
     if let Some(x) = c.suppressed { m.suppressed = x; }
     if let Some(x) = c.light { m.light = x; }
