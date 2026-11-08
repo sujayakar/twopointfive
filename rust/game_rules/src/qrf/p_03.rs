@@ -483,7 +483,7 @@ pub fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId) {
         g.gd[man].react_t = react;
         g.gd[man].fire_cd = m::max(g.gd[man].fire_cd, 0.35);
         g.gd[man].search_t = 0.0;
-        g.gd[man].foe = Some(g.gd[seer].foe.unwrap_or(crate::game::Foe::Player));
+        crate::mind::foe(g, man, Some(g.gd[seer].foe.unwrap_or(crate::game::Foe::Player)), "qrf");
         crate::guards::reset_chase(g, man);
         g.gd[man].witness.alerted_by = Some(if is_seer { crate::game::WitnessAlertedBy::Sight } else { crate::game::WitnessAlertedBy::Radio });
         g.gd[man].witness.alert_t = g.time;
