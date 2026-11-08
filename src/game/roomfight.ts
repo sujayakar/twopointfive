@@ -541,8 +541,7 @@ export class RoomFight {
   private breakOff(D: Def) {
     const g = this.g, gd = D.gd, c = gd.char, nav = g.col.nav; const threat = this.threatOf(D);
     D.movedAt = g.time;
-    const stays = hasHim(D.gd, OWN.stand);   // (laststand.ts, default off: a man of the last stand gives his room up through no door — cover inside it)
-    const rp = stays ? null : squadRally(g, gd, threat);   // enemysquads.ts: his squad's rally point in another of its rooms, when he can get there (no squads: null on its first line)
+    const rp = squadRally(g, gd, threat);   // enemysquads.ts: his squad's rally point in another of its rooms, when he can get there (no squads: null on its first line)
     if (rp) {
       pressRun(g, D, rp, null, 0.3);   // (pressure.ts's leg on a script: the move this file's own fall-back makes, with no door behind him to hold)
       this.stats.fellBack++; this.note(gd, 'falls back to his squad\'s rally point'); g.say(gd, 'fall back — back to the others!');
@@ -562,7 +561,7 @@ export class RoomFight {
       return L > 18 || toward || flat(q, spot) > 0.8 ? null : L;
     };
     const here = ask ? ask(c.pos) : 0;
-    (stays || gd.staysInRooms ? [] : D.room?.entries ?? []).forEach((e, i) => {   // (a squad whose men stay in its rooms gives none up through a door: cover)
+    (gd.staysInRooms ? [] : D.room?.entries ?? []).forEach((e, i) => {   // (a squad whose men stay in its rooms gives none up through a door: cover)
       if (D.ev[i] > 0.3 || flat(e.at, threat) < 3 || e.door.def.steel || g.doors.lockedOut(e.door, c.pos)) return;
       // a spot beyond the door, off its line (to either side of the opening) so the doorway is his to shoot into and not to stand in
       const F = frameOf(e.door); let spot: Vec3 | null = null, safe: Vec3 | null = null;

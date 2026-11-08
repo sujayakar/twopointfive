@@ -230,7 +230,7 @@ fn look_free(g: &mut Game, d: RoomfightDefId, p: V3) -> bool {
     if !alive(g, d) || g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Hold || state_of(g).of.has(d) { return false; }
     let gd = g.tab.roomfight_def[d].gd;
     if g.gd[gd].held.is_some() || g.tab.roomfight_def[d].rally_at == f64::INFINITY || crate::control::man::blind(g, gd) || crate::control::man::staggered(g, gd) { return false; }
-    if state_of(g).outs.iter().any(|o| o.def == d) || crate::owner::has(g, gd, crate::owner::by::STAND) || crate::owner::has(g, gd, crate::owner::by::SQUAD) { return false; }
+    if state_of(g).outs.iter().any(|o| o.def == d) || crate::owner::has(g, gd, crate::owner::by::SQUAD) { return false; }
     let ph = crate::digin::dig_in_phase(g, gd);   // (on his way to cover or at a door with a wedge: busy. Set on his door, he has done getting ready)
     if ph != "idle" && ph != "set" { return false; }
     !crate::lanes::lane_bars(g, gd, Some(p)) && !crate::lanes::lane_known_at(g, gd, Some(p))

@@ -612,7 +612,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`carry` of them by id, no dice; shipped 1 = every man, since every carbine is drawn with a light; Tab select none / half / all) burns the same weapon light
   every unit has after `onSecs` (+ id jitter), off after `offSecs` of a lit view, never twice in `holdSecs`: ONE seam, `guards.ts poseFlashlight` →
   `darkFoeLit(g, gd)`. It lights him and the room for the player, the meter reads it: that trade is the point. A man who carries NONE (`seek`): only an alert
-  or searching defender the room fight has merely holding (`darkFoeKept` = null: not dug in, not his squad's, no lane, no press, not the captor / last stand,
+  or searching defender the room fight has merely holding (`darkFoeKept` = null: not dug in, not his squad's, no lane, no press, not the captor,
   nobody seen for `quietSecs`, no shot for `calmSecs`) walks, at `stumbleK` of the investigate pace, to the nearest floor IN HIS ROOM he can see from (the dark
   edge of the light first, `edge`), by the room fight's own 'move' leg; `roam` (off) lets him out by a doorway. Exports for neighbours: `darkFoeBlind(g, gd)`,
   `carriesDarkLamp(gd)`, `darkFoeLit(g, gd)`, `darkFoeKept`, `darkFoeOf`, `darkFoeSnapshot / Restore`. Tab ▸ Sandbox ▸ Detection & movement: the toggle, the
