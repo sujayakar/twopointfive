@@ -13,6 +13,7 @@ Rust uses needs nothing here. This folder is only about what the page reads of t
 - `wire.ts unsent` says why a field the page reads is not sent (`fields.json` `unsent`). `tools/qa/readtrap-page.cjs` traps every field off the page's list on a
   running page and names the reader of each one it reads: a read with no reason there, of a field the page does not write itself, is a fault.
 - `wire.ts gen` writes these files and no others: `rust/game/src/puppet.rs`, `rust/game/src/state_words.rs`, `rust/game/src/id_tables.rs`,
+  `tools/blitz/class-nulls.json` (which fields of a thing the apply makes are null till they are sent something: `nulls.ts`, off the TypeScript declarations),
   `tools/blitz/puppet-apply.ts`, `src/view/read.ts` (from the `view::` types; an ID in one is refused),
   `tools/blitz/puppet-lists.json`, `tools/blitz/out-dispatch.ts`, the `layout` in `schema.json` and the one `LAYOUT` line at the end of
   `rust/game/src/io.rs`.
