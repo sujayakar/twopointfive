@@ -161,6 +161,56 @@ pub trait StealthAsk {
     fn sam_goes_to_step(&mut self, at: [f64; 2]) -> bool;
     /// is the follower on that man's walk, as the rule asks it
     fn follower_on_walk(&mut self, b: GuardId, man: GuardId, to_a_sound: bool) -> bool;
+    /// a man out of it: held where he is, blind and deaf
+    fn parked(&mut self, gd: GuardId);
+    /// a man let go of the pin a test held him by, free again from here on, eyes and ears open
+    fn let_go(&mut self, gd: GuardId);
+    /// a round goes `off` metres past this man's chest, from `from` metres in front of him to six behind, by this shooter's hand
+    fn round_past(&mut self, shooter: game::ids::CharId, man: GuardId, off: f64, from: f64);
+    /// how much of the duck he shows
+    fn duck(&self, gd: GuardId) -> f64;
+    /// has the start hold of him
+    fn startled(&mut self, gd: GuardId) -> bool;
+    /// is his gun up
+    fn gun_up(&self, gd: GuardId) -> bool;
+    /// a civilian's state
+    fn civ(&self, gd: GuardId) -> game::civilians::Civ;
+    /// asleep in his chair
+    fn asleep(&self, gd: GuardId) -> bool;
+    /// is he in the chair
+    fn seated(&self, gd: GuardId) -> bool;
+    /// one of Sam's footfalls at a place, at a level
+    fn footfall(&mut self, at: [f64; 2], level: f64);
+    /// the trip a man is on
+    fn trip(&mut self, gd: GuardId) -> Option<game::needs::Trip>;
+    /// alert on a place with no sight of anybody, free to move
+    fn alert_on_fix(&mut self, gd: GuardId, fix: [f64; 2]);
+    /// the plans of the pursuit: (members, each member's kind and bearing, the phase)
+    fn pursuit(&self) -> Vec<(Vec<(GuardId, game::tactics::RoleKind, f64)>, game::tactics::PlanPhase)>;
+    /// is this door marked dangerous for his side
+    fn door_dangerous(&mut self, name: &str, team: game::teams::Team) -> bool;
+    /// the phase of the door drill a man is in
+    fn at_the_gate(&self, gd: GuardId) -> Option<game::tactics::GatePhase>;
+    /// a squad's events so far: what, and when
+    fn squad_events(&self, name: &str) -> Vec<(game::enemysquads::SquadEventWhat, f64)>;
+    /// how a man's run stands: (he has run at all, its phase word)
+    fn run_of(&self, gd: GuardId) -> Option<game::runner::Run>;
+    /// the camera's rest: on a wall, and how high
+    fn last_cam(&self) -> ([f64; 3], f64, bool);
+    /// a staggered man
+    fn staggered(&self, gd: GuardId) -> bool;
+    /// a loud report nobody can place, at Sam's boots
+    fn loud_report(&mut self);
+    /// a squad's men and what it has sent
+    fn squad_men(&self, name: &str) -> (Vec<GuardId>, usize);
+    /// the squads' names
+    fn squad_names(&self) -> Vec<String>;
+    /// does this place lie in that room of that squad
+    fn in_squad_rooms(&self, name: &str, at: [f64; 2]) -> bool;
+    /// the wand's jobs: (the man, the door he was ordered to)
+    fn wand_jobs(&self) -> Vec<GuardId>;
+    /// the eyes that are teammates' lenses
+    fn mates_lenses(&mut self) -> usize;
 }
 
 impl StealthAsk for Play {
@@ -370,6 +420,94 @@ impl StealthAsk for Play {
     fn follower_on_walk(&mut self, b: GuardId, man: GuardId, to_a_sound: bool) -> bool {
         if to_a_sound { game::sneak::sneak_coming(&mut self.g, b, man) } else { game::workthings::work_coming(&mut self.g, b, man) }
     }
+    fn parked(&mut self, gd: GuardId) {
+        let h = &mut self.g.gd[gd];
+        h.hold = true;
+        h.pinned = true;
+        h.dazzled_until = 1e9;
+        h.heard_up_to = 1e12;
+    }
+    fn let_go(&mut self, gd: GuardId) {
+        let seq = self.g.event_seq;
+        let h = &mut self.g.gd[gd];
+        h.hold = false;
+        h.pinned = false;
+        h.dazzled_until = -1.0;
+        h.heard_up_to = seq;
+    }
+    fn round_past(&mut self, shooter: game::ids::CharId, man: GuardId, off: f64, from: f64) {
+        let c = self.g.gd[man].ch;
+        let (at, y) = (self.g.ch[c].pos, self.g.ch[c].body_yaw);
+        let (fx, fz) = (y.sin(), y.cos());
+        let (sx, sz) = (-fz, fx);
+        let h = 1.1 + at[1];
+        game::suppression::note_round(&mut self.g, shooter, [at[0] + fx * from + sx * off, h, at[2] + fz * from + sz * off], [at[0] - fx * 6.0 + sx * off, h, at[2] - fz * 6.0 + sz * off], None);
+    }
+    fn duck(&self, gd: GuardId) -> f64 { let m = &self.g.ch[self.g.gd[gd].ch].anim.mvs; if m.fl_t >= 0.0 { m.fl_k_to } else { 0.0 } }
+    fn startled(&mut self, gd: GuardId) -> bool { game::startle::startled(&mut self.g, gd) }
+    fn gun_up(&self, gd: GuardId) -> bool { self.g.ch[self.g.gd[gd].ch].anim.upper == game::character::UpperMode::Aim }
+    fn civ(&self, gd: GuardId) -> game::civilians::Civ { self.g.cv[self.g.gd[gd].civ.expect("a civilian")].clone() }
+    fn asleep(&self, gd: GuardId) -> bool { game::doze::doze_asleep(&self.g, gd) }
+    fn seated(&self, gd: GuardId) -> bool { game::close::close_seated(&self.g, gd) }
+    fn footfall(&mut self, at: [f64; 2], level: f64) {
+        let (time, serial) = (self.g.time, self.g.serial());
+        self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Step, pos: [at[0], 0.0, at[1]], time, loud: false, level: Some(level), serial, ..game::game::GameEvent::zeroed() });
+    }
+    fn trip(&mut self, gd: GuardId) -> Option<game::needs::Trip> { game::needs::mem(&mut self.g, gd).trip.clone() }
+    fn alert_on_fix(&mut self, gd: GuardId, fix: [f64; 2]) {
+        self.let_go(gd);
+        let h = &mut self.g.gd[gd];
+        h.state = game::game::GuardState::Alert;
+        h.awareness = 1.0;
+        h.react_t = 0.0;
+        h.fire_cd = 0.5;
+        h.last_known = Some([fix[0], 0.0, fix[1]]);
+        h.last_seen_t = -100.0;
+        h.sight_t = -100.0;
+        h.search_t = 0.0;
+        h.task = None;
+        h.script = None;
+    }
+    fn pursuit(&self) -> Vec<(Vec<(GuardId, game::tactics::RoleKind, f64)>, game::tactics::PlanPhase)> {
+        game::tactics::plans_of(&self.g).into_iter().map(|id| {
+            let plan = &self.g.tab.tactics_plan[id];
+            (plan.members.iter().map(|&m| { let r = &self.g.tab.tactics_role[*plan.roles.get(m).expect("a role")]; (m, r.kind, r.bearing) }).collect(), plan.phase)
+        }).collect()
+    }
+    fn door_dangerous(&mut self, name: &str, team: game::teams::Team) -> bool { let d = game::doors::doors_by_name(&self.g, name).expect("the door"); game::tactics::danger_at(&mut self.g, d, team).is_some() }
+    fn at_the_gate(&self, gd: GuardId) -> Option<game::tactics::GatePhase> { self.g.m.tactics.states.as_ref().and_then(|s| s.gates.get(gd).map(|g| g.phase)) }
+    fn squad_events(&self, name: &str) -> Vec<(game::enemysquads::SquadEventWhat, f64)> {
+        let st = self.g.m.enemysquads.states.as_ref().expect("the level's squads");
+        let q = st.squads.iter().copied().find(|&q| self.g.tab.enemysquads_squad[q].name == name).unwrap_or_else(|| panic!("no squad {name}"));
+        self.g.tab.enemysquads_squad[q].events.iter().map(|e| (e.what, e.t)).collect()
+    }
+    fn run_of(&self, gd: GuardId) -> Option<game::runner::Run> { self.g.m.runner.state_of.get(gd).cloned() }
+    fn last_cam(&self) -> ([f64; 3], f64, bool) { let pl = &self.g.pl[self.g.player]; let c = *pl.cams.last().expect("a camera out"); let r = &self.g.tab.stickycam_sticky_cam[c]; (r.pos, r.si, r.vel.is_none()) }
+    fn staggered(&self, gd: GuardId) -> bool { self.g.time < self.g.gd[gd].stagger_until }
+    fn loud_report(&mut self) {
+        let (at, time, serial, who) = (self.g.ch[self.g.pl[self.g.player].ch].pos, self.g.time, self.g.serial(), self.g.ch[self.g.pl[self.g.player].ch].id);
+        self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [at[0], 0.0, at[2]], time, loud: true, level: Some(1.0), who: Some(who), serial, ..game::game::GameEvent::zeroed() });
+    }
+    fn squad_men(&self, name: &str) -> (Vec<GuardId>, usize) {
+        let st = self.g.m.enemysquads.states.as_ref().expect("the level's squads");
+        let q = st.squads.iter().copied().find(|&q| self.g.tab.enemysquads_squad[q].name == name).unwrap_or_else(|| panic!("no squad {name}"));
+        let r = &self.g.tab.enemysquads_squad[q];
+        (r.men.clone(), r.sent.len())
+    }
+    fn squad_names(&self) -> Vec<String> {
+        let st = self.g.m.enemysquads.states.as_ref().expect("the level's squads");
+        st.squads.iter().map(|&q| self.g.tab.enemysquads_squad[q].name.clone()).collect()
+    }
+    fn in_squad_rooms(&self, name: &str, at: [f64; 2]) -> bool {
+        let st = self.g.m.enemysquads.states.as_ref().expect("the level's squads");
+        let q = st.squads.iter().copied().find(|&q| self.g.tab.enemysquads_squad[q].name == name).unwrap_or_else(|| panic!("no squad {name}"));
+        self.g.tab.enemysquads_squad[q].rooms.iter().any(|r| { let b = &r.bounds; at[0] >= b.x0 && at[0] <= b.x1 && at[1] >= b.z0 && at[1] <= b.z1 })
+    }
+    fn wand_jobs(&self) -> Vec<GuardId> {
+        let k = game::seats::view_key(&self.g, &game::seats::here(&self.g));
+        self.g.m.wandorder.states.get(k).map_or(Vec::new(), |st| st.jobs.keys())
+    }
+    fn mates_lenses(&mut self) -> usize { game::wandorder::mate_wand_eyes(&mut self.g).len() }
     fn pair_silent(&mut self) {
         self.g.k.silent.on = true;
         self.g.k.sneak.on = true;
