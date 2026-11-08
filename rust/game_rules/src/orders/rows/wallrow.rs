@@ -8,6 +8,7 @@ use alloc::{format, string::String, vec, vec::Vec};
 pub const ORDER: Row = Row {
     can: Some(can),
     valid: Some(valid),
+    gone: Some(gone),
     ..Row::new(crate::wallcharge::WALL_ORDER, label, issue)
 };
 
@@ -38,4 +39,9 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
         crate::wallcharge::WallChargeIssue::Text(w) => Some(w),
         crate::wallcharge::WallChargeIssue::Arm1(()) => None,
     }
+}
+
+/// none were brought, and none is on it
+fn gone(g: &mut Game, t: &OrderTarget, _men: &[GuardId]) -> bool {
+    g.wall_charge.brought == Some(0.0) && crate::wallcharge::wall_charge_charge_on_target(g, &crate::seats::here(g), t).is_none()
 }
