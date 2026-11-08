@@ -157,6 +157,9 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
 pub fn address_before_game(g: &mut crate::game::Game, q: &mut crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> {
     if q.has("nolook") || q.get_all("look").any(|v| matches!(v, "plain" | "0" | "off")) { g.k.look.on = false; }   // (scene/look.ts lookOfQuery: the look's switch, which the leaves' paint and the cast read as the game is made)
     crate::rowset::row_settings(g, q);
+    // (a Training level's stagings wear what its lesson asks: kit.ts kitLessonPage)
+    let lesson = lesson_of_address(q).map(|e| crate::kit::KitLessonPageRow { packs: e.packs.map(|p| crate::kit::KitLessonPageRowPacks { frags: p.frags }) });
+    crate::kit::kit_lesson_page(g, lesson);
     // (weatherKinds.ts weatherAsked, then snowLevelOfQuery: a level built for snow is in snow whatever the address said)
     let snow = q.get("levelFile").and_then(|f| f.strip_suffix(".json")).map_or(false, |n| crate::weather_kinds::snow_level(g, Some(n)));
     let kind = if snow { Some(crate::weather_kinds::WeatherKind::Snow) } else { crate::weather_kinds::weather_of(q) };
@@ -166,11 +169,16 @@ pub fn address_before_game(g: &mut crate::game::Game, q: &mut crate::query::Quer
     kind
 }
 
+/// the Training row whose level an address boots
+fn lesson_of_address(q: &crate::query::Query) -> Option<crate::scene_scenarios::ScenarioEntry> {
+    let file = q.get("levelFile")?;
+    crate::scene_scenario_list::lesson_missions().into_iter().find(|e| e.level.as_deref() == Some(file) && e.group == Some(crate::scene_scenarios::MissionGroup::Tutorial))
+}
+
 /// …AND THE DIFFICULTY IT ASKS FOR, before the game is made, on the blank game's own knob tables, as a page reads it: a Training lesson's address reads no lever, as its page
 /// doesn't. It is the address's alone: no host but a page keeps a level.   (src/host/standup.ts difficultyOfAddress)
 pub fn difficulty_of_address(g: &mut crate::game::Game, q: &crate::query::Query) {
-    let file = q.get("levelFile");
-    let plain = crate::scene_scenario_list::lesson_missions().iter().any(|e| file.is_some() && e.level.as_deref() == file && e.group == Some(crate::scene_scenarios::MissionGroup::Tutorial));
+    let plain = lesson_of_address(q).is_some();
     if let Some(a) = crate::difficulty::difficulty_asked(g, q, plain) { crate::difficulty::difficulty_lay(g, &a); }
 }
 
@@ -180,12 +188,8 @@ pub fn start_at_address(g: &mut crate::game::Game, q: &crate::query::Query) -> c
     // (?noweather: the level's own storm off from the start, as the page puts it off once its game is stood)
     if q.has("noweather") { crate::weather::weather_set_enabled_2(g, false); }
     let r = start_from_query(g, &StartFromQuerySearch::URLSearchParams(q.clone()));
-    // (a Training level is left as it stands: no host but the page says the lesson's page yet, standup.ts startAtAddress)
-    let lesson = g.level.scenarios.as_ref().and_then(|s| s.lesson.as_ref()).map_or(false, |l| !l.steps.is_empty());
-    if !lesson {
-        let solo = q.has("solo") || !g.quiet.active;
-        crate::kit::kit_solo_if(g, solo);
-    }
+    let solo = q.has("solo") || !g.quiet.active;
+    crate::kit::kit_solo_if(g, solo);
     r
 }
 
