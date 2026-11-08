@@ -17,6 +17,14 @@ section! {
         /// the hour that is up (0 night, 1 dawn, 2 midday, 3 overcast, 4 dusk) and how strong its sun is in the open
         pub hour: u32,
         pub hour_sun: f32,
+        /// the cover of the weather that is picked (under 0: none is), and the share of the hour's own sun that comes through
+        pub cover: f32,
+        pub sun_share: f32,
+        /// the level's moon: 0 it has none, 1 it has, 2 it is up; its strength, its height and bearing in degrees
+        pub moon: u32,
+        pub moon_k: f32,
+        pub moon_elev: f32,
+        pub moon_bearing: f32,
         /// snow lies on this level
         pub snow_level: u32,
         /// the level's own sky, how kept the place is (under 0: it does not say) and its marks' texel (0: the usual)
@@ -55,6 +63,12 @@ pub fn fill(g: &Game, out: &mut Vec<Sky>) {
     r.gloss = s.gloss as u32;
     r.hour = match game::hours::hour_of(g) { HourId::Night => 0, HourId::Dawn => 1, HourId::Midday => 2, HourId::Overcast => 3, HourId::Dusk => 4 };
     r.hour_sun = g.m.hours.states.as_ref().map_or(0.0, |st| st.def.sun.intensity as f32);
+    r.cover = game::hours::turns::cover(g).unwrap_or(-1.0) as f32;
+    r.sun_share = game::hours::sun_strength(g) as f32;
+    if let Some(l) = game::hours::turns::moon(g) {
+        let (row, (elev, bearing)) = (&g.tab.light[l], game::hours::turns::moon_at(g, l));
+        (r.moon, r.moon_k, r.moon_elev, r.moon_bearing) = (1 + row.enabled as u32, row.peak_intensity as f32, elev as f32, bearing as f32);
+    }
     r.snow_level = game::weather_kinds::snow_level(g, game::scene_level_load::level_name_of(g).as_deref()) as u32;
     r.own_zenith = f3(g.level.sky.zenith);
     r.own_horizon = f3(g.level.sky.horizon);

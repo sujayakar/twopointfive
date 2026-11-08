@@ -33,8 +33,13 @@ import { debuggerPanel } from './debugger';
 import { lostCard } from './lostcard';
 import { Reel } from './reel';
 import { Measure } from './measure';
+import { oneAirFlip, wispMotesFlip } from '../ui/sweepSnow';
 import { drawBench } from './drawbench';
 import { DrawHud } from './drawhud';
+import { DrawPlay } from './drawplay';
+import { tapeAddress, tapeAsked } from './tapepage';
+import { buildName } from './buildname';
+import { HandTape } from '../replay/handtape';
 import { drawCloud } from './drawcloud';
 import { cloudAdopt } from '../cloud/cloud';
 import { tellRedCards } from '../cloud/redcards';
@@ -83,7 +88,7 @@ import { DrawDecals } from '../draw/marks';
 import { dustFrom, trafficFrom } from '../draw/levellook';
 import { DrawWorld } from '../draw/world';
 import { lookNumbers } from '../draw/look';
-import { sampleHand } from '../draw/hand';
+import { HAND, sampleHand } from '../draw/hand';
 import { HOURS_OF, skyFrom } from '../draw/sky';
 import { fogFrom } from '../draw/fog';
 import { smokeFrom } from '../draw/smoke';
@@ -105,7 +110,8 @@ async function main(): Promise<void> {
   // THE KEPT PAGE (gpu/keep.ts): the tab's own page keeps the GPU device and shows the game in a frame of this address, so a mission's start compiles nothing this visit has compiled
   const keep = keepPageBoot(q, ownPage(q), kitPicture); if (keep.role === 'shell' || keep.role === 'leave') { boot.stopRafProbe(); return; }
   if (!kitPicture && await cloudAdopt(q)) return;   // (a browser handed another's id takes it and its settings before a key is read, then loads once more without the word)
-  { const to = pickRedirect(location.search); if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }
+  const tape = kitPicture ? null : await tapeAsked(q); if (tape) { const to = tapeAddress(tape, q); if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }   // (a tape plays at its run's own address)
+  { const to = tape ? null : pickRedirect(location.search); if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }
   const canvas = document.getElementById('view') as HTMLCanvasElement;
   // (the Team & kit picture has no HUD)
   if (kitPicture) for (const el of document.getElementById('app')!.children) if (!['view', 'panel', 'lcol', 'veil', 'loading', 'menu', 'missions', 'fatal'].includes(el.id)) (el as HTMLElement).style.display = 'none';
@@ -121,7 +127,7 @@ async function main(): Promise<void> {
   // ---- the game
   const tBoot = performance.now();
   const chP = loadCharacterSet(at('assets/ual/AnimationLibrary_Godot_Standard.gltf'), castUrlFor(location.search, document.baseURI)); chP.then(() => boot.span('gltf', tBoot), () => { /* awaited below */ });
-  const tFiles = performance.now(), filesP = Promise.all([levelBytes(name).then(b => { boot.span('level', tFiles); return b; }), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.gltf')), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.bin')), bytesOf(at(`assets/chars/${CAST_FILE}`)), bytesOf(at(`assets/chars/${CAST_FILE_LOOK}`))]); filesP.catch(() => { /* awaited below */ });
+  const tFiles = performance.now(), filesP = Promise.all([tape ? new Uint8Array(0) : levelBytes(name).then(b => { boot.span('level', tFiles); return b; }), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.gltf')), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.bin')), bytesOf(at(`assets/chars/${CAST_FILE}`)), bytesOf(at(`assets/chars/${CAST_FILE_LOOK}`))]); filesP.catch(() => { /* awaited below */ });
   boot.expose();
   const face = await fetchFace(say, () => { throw new Error('the game asked a die the page never hands in'); });
   // THE DESK: the cards before a game ask the module, and what a press keeps goes in this machine's store, where the next page's start reads it
@@ -131,15 +137,22 @@ async function main(): Promise<void> {
   LOADBRIEF.on = q.get('loadbrief') !== '0'; settleOfQuery(q);
   LOADBRIEF.options = { open: () => openOptions({ tab: 'controls' }), close: closeOptions, up: optionsOpen };
   watchMissionRows();   // (each mission's card shows the ways this machine has won it)
-  let title = !kitPicture && startPageWanted(); const brief = kitPicture || q.has('paused') || runPage(q) ? null : loadBrief(location.search), card = kitPicture ? { status: () => { /* nobody reads it */ }, off: () => { /* */ } } : brief ?? bootCard();
+  let title = !kitPicture && !tape && startPageWanted(); const brief = kitPicture || tape || q.has('paused') || runPage(q) ? null : loadBrief(location.search), card = kitPicture ? { status: () => { /* nobody reads it */ }, off: () => { /* */ } } : brief ?? bootCard();
   loading.textContent = ''; say = line => card.status(line);
   const [level, mannequin, mannequinBin, cast, castLook] = await filesP;
   say('starting the game …');
   boot.mark('module'); const tGame = performance.now();
   const game = new DrawGame(face), seed = Number(q.get('seed') ?? NaN);
-  machineBefore(q, name, game.commands);
-  game.start({ level, words: location.search, mannequin, mannequinBin, cast, castLook, seed: Number.isFinite(seed) ? seed >>> 0 : crypto.getRandomValues(new Uint32Array(1))[0] });
-  machineAfter(game.commands, !benchSceneWaits() && !heldPage(q));
+  const unkept = kitPicture || !!tape || ownPage(q);   // (what this machine keeps of the runs played: a page that plays a run of its own is nobody's)
+  const play = tape ? new DrawPlay(game, tape) : null;
+  if (play) play.start({ mannequin, mannequinBin, cast, castLook });
+  else {
+    // (the run's tape: not of a title's floor, which nobody plays, nor of a page that measures)
+    if (!title && !unkept && !q.has('noreplay')) game.tape = new HandTape(HAND.count);
+    machineBefore(q, name, game.commands);
+    game.start({ level, words: location.search, mannequin, mannequinBin, cast, castLook, seed: Number.isFinite(seed) ? seed >>> 0 : crypto.getRandomValues(new Uint32Array(1))[0], named: { level: name, build: game.tape ? await buildName() : '' } });
+    machineAfter(game.commands, !benchSceneWaits() && !heldPage(q));
+  }
   game.tell();   // (the title and Options read what is kept before the first step)
   boot.span('gameCtor', tGame); boot.mark('game');
   const D = game.drawn, sky = () => D.at[Section.sky], view = () => D.at[Section.view];
@@ -187,7 +200,7 @@ async function main(): Promise<void> {
   const fog = makeFogFrame(), ask = askOf(game), audio = new AudioEngine(ask), events = new DrawEvents(D, engine.particles, smoke, audio, i => game.nameOf(i));
   MUSIC.pieces = MUSIC.byLevel = MUSIC.theirs = true; audio.scoreSet = setlistOfQuery(location.search); let run = -1;   // (the level's own music, as tense as those who are against him)
   if (q.has('mute')) { audio.volume.master = 0; audio.start = () => { /* silent */ }; }
-  const hud = kitPicture ? null : new DrawHud(game, ask); if (hud && q.get('cards') === '0') hud.overlay.cards = false;
+  const hud = kitPicture ? null : new DrawHud(game, ask); if (hud && (play || q.get('cards') === '0')) hud.overlay.cards = false;   // (a run being played again waits for nobody)
   const settings = settingsOf(game, hud?.overlay); setOptionsDeps({ engine, quality, audio, game: settings });   // (what this machine keeps of the volumes and the wall hold is put on them)
   for (const ev of ['pointerdown', 'keydown'] as const) window.addEventListener(ev, () => audio.start(), { capture: true });   // (a browser's sound begins with a hand on the page)
   engine.fogFrame = fog; const rims = engine.outline = makeOutlineFrame(); engine.beams = world.beams;
@@ -211,7 +224,7 @@ async function main(): Promise<void> {
     { const t = D.u[o + View.turned]; if (t & 8) three(cam.target, o + View.target); if (t & 1) cam.yaw = D.f[o + View.yaw]; if (t & 2) cam.pitch = D.f[o + View.pitch]; if (t & 4) cam.distance = cam.desiredDistance = D.f[o + View.distance]; }
     if (cuts < 0) { three(cam.target, o + View.follow); cuts = n; } else if (n !== cuts) { cuts = n; three(cam.target, o + View.cut); }
   };
-  const books = new RunBooks(), unkept = kitPicture || ownPage(q);   // (what this machine keeps of the runs played: a page that plays a run of its own is nobody's)
+  const books = new RunBooks();   // (what this machine keeps of the runs played: a page that plays a run of its own is nobody's)
   /** the game is another than the one last drawn (a restart, a load): what the picture and the sound carry over from frame to frame starts over, before anything of the new one is played */
   const anew = (): void => {
     const o = view(), first = stood < 0; stood = D.u[o + View.stood]; if (first) return;
@@ -232,11 +245,28 @@ async function main(): Promise<void> {
   const ofRun = (save: string): string => `${D.u[D.at[Section.heard] + Heard.run]}:${save}`, nameOf = (r: { key: string; savedAt: number }): string => `${r.key}@${r.savedAt}`;
   const pictures = new Map<string, string>(), pics = new SavePics<string>(gpu, canvas, () => 256, () => 0.6, (key, url) => { pictures.set(key, url); if (key === ofRun(key.slice(key.indexOf(':') + 1))) pause.pictured(key.slice(key.indexOf(':') + 1), url); }, e => console.warn('save picture:', e)); let saves = 0;
   let time = 0, acc = 0, drift = 0, paused = false, settling = false, thaw = false, owed = false, ended = 0, onEnded = (): void => { /* no card is made yet */ };
+  // ---- a tape being played: what a bar over it turns
+  const played = { paused: q.has('paused'), pace: 1, /** the run's own view, or this page's */ own: false, to: -1, get at() { return play?.at ?? 0; }, get total() { return play?.total ?? 0; }, get ends() { return play?.ends ?? ''; }, get parted() { return play?.parted ?? null; }, get lost() { return play?.lost ?? null; }, seek(t: number): void { played.to = Math.max(0, Math.min(played.total, Math.round(t))); } };
+  /** the view as the hand of the next tick had it; false = the page follows him itself */
+  const posed = (): boolean => {
+    const n = played.own ? null : play?.next; if (!n) return false;
+    cam.target[0] = n[HAND.target]; cam.target[1] = n[HAND.target + 1]; cam.target[2] = n[HAND.target + 2]; cam.yaw = n[HAND.yaw]; cam.pitch = n[HAND.pitch]; cam.distance = n[HAND.distance]; cam.desiredDistance = n[HAND.desired]; cam.fov = n[HAND.fov];
+    cam.rebuild(); return true;
+  };
+  posed();
+  /** a place on the tape asked for: played to unseen, some of it a frame; true = it is there, and the picture is of it */
+  const sought = (): boolean => {
+    if (!play || played.to < 0) return true;
+    if (!play.seek(played.to, 24)) return false;
+    played.to = -1; if (game.lost) return false; anew(); lens(); posed(); pair.cut(); acc = 0; drift = 0; return true;
+  };
+  /** the walk was lost to a panic: the picture stands as it was, and any place before it can be gone back to */
+  const lostWalk = (): void => { console.error(play!.lost!.message); readout.say(`${play!.ends === play!.lost!.message ? 'the run stopped here when it was played' : 'the replay stopped here'}: ${play!.lost!.words.split('\n')[0]}`); };
   const tick = (dt: number): void => {
     if (thaw) { thaw = false; input.pressed.add('Paused'); input.pressed.add('Thawed'); }   // (the first tick after a card is told: what was held when it came up is let go unsent, in the tick)
     owed = false;   // (a card asked for another game, and this tick stands it, whatever else holds the world still)
-    const keys = sampleHand(game.numbersOf(), input, cam, canvas);
-    game.step(dt, keys);
+    if (play) { if (!play.tick()) { played.paused = true; if (game.lost) lostWalk(); return; } }
+    else game.step(dt, sampleHand(game.numbersOf(), input, cam, canvas));
     if (D.u[view() + View.stood] !== stood) anew();
     weather.told();
     events.from();
@@ -248,15 +278,16 @@ async function main(): Promise<void> {
     if (spectating) cam.autoYaw(dt, follow, ask.blocked);
     cam.easeYaw(dt, spectating);
     if (!cam.pin) cam.pitch += ((spectating && cam.desiredDistance < 12 ? LOW_PITCH : HIGH_PITCH) - cam.pitch) * Math.min(1, dt * 3);
-    cam.step(dt, follow, spectating || reeled ? null : three(aim, o + View.aim));
+    if (!posed()) cam.step(dt, follow, spectating || reeled ? null : three(aim, o + View.aim));
     pair.capture(cam);
     weather.tick(dt, cam);
     { const n = D.u[o + View.saves]; if (n !== saves) { saves = n; const rows = game.saves().rows, all = new Set(rows.map(r => ofRun(nameOf(r)))); for (const k of pictures.keys()) if (!all.has(k)) pictures.delete(k); const newest = rows.reduce<typeof rows[number] | null>((a, r) => a && a.savedAt > r.savedAt ? a : r, null); if (newest && !pictures.has(ofRun(nameOf(newest)))) pics.want(ofRun(nameOf(newest))); } }
     told.tick = game.ms.step; told.draw = game.ms.draw;
   };
   const measure = new Measure({ gpu, engine, smoke, quality, cam, input, canvas, game, marks: () => decals.count, blocked: mine => quality.calibrating ? 'auto quality is still measuring this machine' : (title || brief?.held) && !mine ? 'start a run first' : null, say: words => readout.say(words) });
+  { const s = weather.snow?.fx.swept; if (s) { measure.sweep.oneAir = () => oneAirFlip(s); measure.sweep.wispMotes = () => wispMotesFlip(s); } }
   /** the world holds still: a card, the title, a mission not yet started */
-  const stopped = (): boolean => paused || measure.freezing || title && !reel.live || !!brief?.held || !!hud?.holds && !owed;
+  const stopped = (): boolean => paused || !!play && played.paused || measure.freezing || title && !reel.live || !!brief?.held || !!hud?.holds && !owed;
   /** the page's own keys, ahead of the tick: a press that is one of them is nobody else's (a frame with no tick keeps the presses for the next) */
   const pageKeys = (): void => {
     if (!hud) return;
@@ -272,6 +303,9 @@ async function main(): Promise<void> {
   /** one drawn frame: `dt` seconds of the display's, in whole ticks (`drawn` false: a script's, stepped and not drawn) */
   const frame = (dt: number, ticks?: number, drawn = true): void => {
     if (ticks === undefined) pageKeys(); else hud?.tabShow(false);
+    if (!sought()) return;
+    if (play && game.lost) { input.endFrame(); return; }
+    dt *= played.pace;
     const still = ticks === undefined && stopped(); if (still) dt = 0;   // (the world holds still under a card: what only the picture moves with it)
     time += dt;
     const t0 = performance.now(), plan = ticks !== undefined ? { ticks, acc, drift } : still ? { ticks: 0, acc, drift } : planTicks(acc, dt, FIXEDSTEP, drift); acc = plan.acc; drift = plan.drift;
@@ -345,13 +379,13 @@ async function main(): Promise<void> {
   const runSaves: RunSaves = { elapsed: () => game.saves().elapsed, timeline: () => game.saves().rows, offer: () => { const s = game.saves(); return s.rows.find(r => r.key === s.offer) ?? null; }, age: row => agoWords(game.saves().elapsed - row.missionT), picture: row => pictures.get(ofRun(nameOf(row))) ?? null, load: key => { game.commands.load(key); owed = true; return null; }, due: () => asked };
   let asked = false;   // (a save by hand asked for on the card that is up)
   const inPanel = (): HTMLElement | null => { const a = document.activeElement; return (a instanceof HTMLInputElement || a instanceof HTMLSelectElement) && a.closest('#panel') ? a : null; };
-  const pause = new PauseCard({ title: desk().brief(location.search).title || name.replace(/\.json$/, ''), saves: runSaves, verdict: () => game.verdict(), may: () => !game.lost && !title && !brief?.up && !measure.bench?.active, restart: () => { game.commands.restart('restarted'); owed = true; }, quit: () => { reopenMissionsAfterLoad(); location.assign(location.pathname + desk().leave(location.search) + location.hash); }, 
+  const pause = new PauseCard({ title: desk().brief(location.search).title || name.replace(/\.json$/, ''), saves: runSaves, verdict: () => game.verdict(), may: () => !game.lost && !title && !play && !brief?.up && !measure.bench?.active, restart: () => { game.commands.restart('restarted'); owed = true; }, quit: () => { reopenMissionsAfterLoad(); location.assign(location.pathname + desk().leave(location.search) + location.hash); }, 
     // (Escape: Tab's card goes, or a field of the debugger's is let go, and that is the press's whole job)
     away: () => { const field = inPanel(); if (hud?.tabUp) hud.tabShow(false); else if (field && !pause.up) { field.dataset.esc = '1'; field.blur(); delete field.dataset.esc; } else return false; input.pressed.delete('Escape'); return true; },
     save: () => { if (optionsOpen() || missionsBusy() || !input.saveKey?.()) return false; game.commands.save(); return asked = game.saves().hand; },
     turned: up => { paused = up; if (up) { game.commands.letGo(); hud?.tabShow(false); } else { thaw = true; asked = false; } input.keys.clear(); input.buttons = 0; input.endFrame(); input.lockExcept = up ? new Set() : null; last = performance.now(); } });
-  onEnded = () => { if (!kit && !ownPage(q)) pause.end(); };   // (a run's page has no end card: the next is its own)
-  const cloud = kitPicture ? null : drawCloud(q, { gpu, engine, quality, game, measure, mission: desk().brief(location.search).title || (q.get('levelFile') ?? ''), offBooks: ownPage(q), live: () => !title && !stopped() && !document.hidden && game.view().live, still: () => stopped() || measure.sweep.active });
+  onEnded = () => { if (!kit && !play && !ownPage(q)) pause.end(); };   // (a run's page has no end card: the next is its own)
+  const cloud = kitPicture || play ? null : drawCloud(q, { gpu, engine, quality, game, measure, mission: desk().brief(location.search).title || (q.get('levelFile') ?? ''), offBooks: ownPage(q), live: () => !title && !stopped() && !document.hidden && game.view().live, still: () => stopped() || measure.sweep.active });
   const bencher = drawBench({ idle: capMs => cloud ? cloud.cloud.filesIdle(capMs) : Promise.resolve(true), gpu, engine, smoke, quality, input, game, settings, measure, say: words => readout.say(words) }); bencher.go(); if (refused) readout.say(`benchmark not now: ${refused}`);
   // ---- the title stays up over its floor, live; a mission's run begins when the player starts it
   const drawTitle = (): void => { const root = document.getElementById('menu')!, c = document.createElement('div'); c.className = 'card'; root.textContent = ''; root.classList.add('on', 'title'); root.appendChild(c); titleScreen(c, { note: cloudNote, shows: { bench: () => { bencher.begin(); return true; } }, cheats: () => cheatWords(settings), closed: moved => { if (title && moved) drawTitle(); } }); };
@@ -361,7 +395,7 @@ async function main(): Promise<void> {
   loading.style.display = 'none'; debuggerPanel({ game, engine, smoke, cam, quality, input, chars: ch, marks: decals, over: hud, card: e => !pause.up && !!hud?.overlay.cardUp && hud.overlay.cardKey(e), hud: () => ({ fps: told.fps, union: engine.timer.unionMs(rendered) }) });
   // (for a tool: the page's parts, and frames stepped by hand)
   const steps = (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last'): void => { if (title || brief?.up) { title = false; reel.poke(); brief?.off(); card.off(); } for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } };
-  Object.assign(window, { __draw: { game, hud, books, kit, measure, reel, pics, engine, world, audio, pause, cam, input, quality, told, fog, weather, smoke, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: steps } });
+  Object.assign(window, { __draw: { game, hud, played: play ? played : null, books, kit, measure, reel, pics, engine, world, audio, pause, cam, input, quality, told, fog, weather, smoke, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: steps } });
   // (…and by the names every page of the game has them under)
   const G = window as unknown as Record<string, unknown>; G.__engine = engine; G.__prewarmed = true; G.__timeScale = 1;
   Object.defineProperty(window, '__pauseLoop', { configurable: true, get: () => held, set: (v: boolean) => { held = v; last = performance.now(); } });
