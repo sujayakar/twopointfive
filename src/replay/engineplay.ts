@@ -43,23 +43,23 @@
 //
 // Nothing here is read by the game: no table, no knob, no state a step reads. The page without ?playtape never calls into this file past `tapeFromUrl`'s first line.
 import { drawHud } from '../host/hudsource';
-import type { ReplayFile, ReplayNote, RunTape, Decoded } from './format';
+import type { ReplayFile, ReplayNote, RunTape, Decoded } from '../tape/format';
 import { reportWarning } from '../cloud/report';
-import { PLAYER_NAME, backToGame, checkReplay, clock, decode, isErrorMark, replayBlob, sampleAt, tapeWhy } from './format';
-import type { LineMark, MapFit, MapMan, MapScene } from './minimap';
-import { drawFloor, drawLine, drawScene, mapFit, mapSize, mapToWorld, MAP_RING } from './minimap';
+import { PLAYER_NAME, backToGame, checkReplay, clock, decode, isErrorMark, replayBlob, sampleAt, tapeWhy } from '../tape/format';
+import type { LineMark, MapFit, MapMan, MapScene } from '../tape/minimap';
+import { drawFloor, drawLine, drawScene, mapFit, mapSize, mapToWorld, MAP_RING } from '../tape/minimap';
 import { TapeWalk } from './tapewalk';
 import { RecipeStand, layFlags, put, plain, type Plain } from './recipestand';
-import { shelfGet, shelfList, shelfNotes, shelfPut } from './shelf';
+import { shelfGet, shelfList, shelfNotes, shelfPut } from '../tape/shelf';
 import { viewerUrl } from '../ui/replaykey';
 import { PLAYTAPE, SAYS_OFF, SENDING_WORDS, recipeSearch, visitPairs } from '../tape/address';
 import { cloudCarries, cloudFile, cloudNotes, cloudSendsFiles } from '../cloud/cloud';
-import { keptStore } from './keptui';
+import { keptStore } from '../tape/keptui';
 import { TEXT_EVENT, rectZoom, textZoom } from '../ui/textsize';
-import { FollowCamera } from '../game/camera';
+import { FollowCamera } from '../host/camera';
 import type { Vec3 } from '../math/vec';
 import { clamp, DEG } from '../math/vec';
-import { Input } from '../game/input';
+import { Input } from '../host/input';
 import type { Game } from '../game/game';
 import type { LoopCtx } from '../host/loop';
 import type { Tween, TweenCam } from '../host/tween';
@@ -389,7 +389,7 @@ export class TapePlay {
       this.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, u, v, turn: e.button !== 0 || e.shiftKey || e.ctrlKey, level: e.ctrlKey && !e.shiftKey, ctrl: e.ctrlKey, left: e.button === 0, moved: false, from: this.view(), grab: null }; });
     const up = (e: PointerEvent): void => { const D = this.drag; if (!D || e.pointerId !== D.id) return; this.drag = null; if (D.moved) { this.dragged = D.left; try { cv.releasePointerCapture(D.id); } catch { /* */ } cv.style.cursor = ''; } };
     cv.addEventListener('pointermove', e => { const D = this.drag;
-      if (!D) { if (e.ctrlKey && !e.buttons && e.movementX && this.tape && !this.noting) this.take().yaw += ctrlTurn(e.movementX); return; }   // (Ctrl + the mouse with no button turns the view, as it orbits the camera in play: game/input.ts orbitDX × host/loop.ts's 0.006, the way round his 'Turn direction' row says)
+      if (!D) { if (e.ctrlKey && !e.buttons && e.movementX && this.tape && !this.noting) this.take().yaw += ctrlTurn(e.movementX); return; }   // (Ctrl + the mouse with no button turns the view, as it orbits the camera in play: host/input.ts orbitDX × host/loop.ts's 0.006, the way round his 'Turn direction' row says)
       if (e.pointerId !== D.id) return; if (!e.buttons) { up(e); return; }   // (no button down: the press ended somewhere this canvas did not hear of)
       const dx = e.clientX - D.x, dy = e.clientY - D.y;
       if (!D.moved) { if (Math.hypot(dx, dy) < DRAG_PX) return; D.moved = true; D.from = this.view(); D.grab = D.turn ? null : this.floorAt(D.from, D.u, D.v); try { cv.setPointerCapture(D.id); } catch { /* */ } cv.style.cursor = 'grabbing'; }
@@ -511,7 +511,7 @@ export class TapePlay {
     if (e.target === this.ui?.field) { if (e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); this.noteClose(true); } else if (e.code === 'Escape') { e.preventDefault(); this.noteClose(false); } e.stopImmediatePropagation(); return; }
     if (e.metaKey || e.ctrlKey || e.altKey) this.held.clear();   // (a key let go under Cmd sends no keyup on a Mac: no slide outlives a chord)
     if (e.metaKey || e.ctrlKey || e.altKey || /^F\d+$/.test(e.code)) return;
-    // (the game's own hidden key sink — game/input.ts: a framed page focuses it on a press of the picture — is not a field somebody types in)
+    // (the game's own hidden key sink — host/input.ts: a framed page focuses it on a press of the picture — is not a field somebody types in)
     const t = e.target as HTMLElement | null; if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || (t.tagName === 'TEXTAREA' && t.getAttribute('aria-label') !== 'game input'))) return;
     e.stopImmediatePropagation(); if (!this.tape || !this.ui) return;   // (before the page stands the keys do nothing)
     if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) { if (this.playing) this.pause(); else this.play(); } }

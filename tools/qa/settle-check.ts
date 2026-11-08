@@ -1,5 +1,5 @@
 // THE START WAITS FOR THE PICTURE (src/ui/settle.ts SETTLE): a mission's brief holds its START until every shader is in, the frames behind it have been drawn
-// with them and auto quality has made its pick. What is checked here is the rule itself on a clock the check moves by hand, and that main.ts still has its
+// with them and auto quality has made its pick. What is checked here is the rule itself on a clock the check moves by hand, and that drawpage.ts still has its
 // places; the brief's own held state is in tools/qa/loadbrief-check.ts and the queue's rush in tools/qa/pipequeue-check.ts. What a real page looks like at its
 // start is not something a check sees: never seen on a GPU from here.
 //   bun run tools/qa/settle-check.ts                  exit 0 = every line passed, 1 = one failed
@@ -14,7 +14,7 @@ const F = 1 / 60, IN = { out: 0, measuring: false }, OUT = { out: 3, measuring: 
 /** `n` display frames, each drawn, under `f`: how many steps it took to answer true (-1 = it never did) */
 const run = (S: Settle, n: number, f: { out: number; measuring: boolean }, dt = F, drawn = 1): number => { for (let i = 1; i <= n; i++) if (S.step(dt, drawn, f)) return i; return -1; };
 
-line(SETTLE.on === false, 'the switch is off in the module: the page raises it (main.ts), a tool that stands a brief on a fake DOM gets the brief as it was');
+line(SETTLE.on === false, 'the switch is off in the module: the page raises it, a tool that stands a brief on a fake DOM gets the brief as it was');
 { const S = new Settle();
   line(run(S, 600, OUT) === -1 && !S.picture && S.frames === 0, `programs still compiling: ten seconds of drawn frames and the start is not live, nor has the picture's turn begun (${S.waited.toFixed(1)} s waited)`);
   const a = run(S, SETTLE.frames + 30, MEASURING);
@@ -35,16 +35,15 @@ line(SETTLE.on === false, 'the switch is off in the module: the page raises it (
   line(a === -1 && b === SETTLE.frames, `a compile that never comes back does not keep the mission shut: after ${SETTLE.programSecs} s the picture has its turn and the start goes live (${b} frames on)`); }
 
 // ---- wiring (the page's own entry, read as text: the harness never runs it)
-{ const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), brief = readFileSync(`${ROOT}/src/ui/loadbrief.ts`, 'utf8'), wait = readFileSync(`${ROOT}/src/ui/startwait.ts`, 'utf8'), draw = readFileSync(`${ROOT}/src/host/drawpage.ts`, 'utf8');
-  const flag = /SETTLE\.on = v === null \? navigator\.webdriver !== true : v !== '0';/.test(wait) && [main, draw].every(p => /settleOfQuery\(q\);/.test(p));
-  const road = /else if \(brief && briefGo\) briefSettle\(brief\);/.test(main) && /briefSettle = [^\n]*=> startWaits\(b, /.test(main) && /startWaits\(brief, /.test(draw) && [main, draw].every(p => !/brief\.live\(/.test(p));
-  const waits = /b\.hold\(\); pipeQueue\.rush\(true\);/.test(wait) && /out = P\.total - P\.done \+ laterProgress\.pending/.test(wait) && [main, draw].every(p => /measuring: \(\) => quality\.calibrating/.test(p));
+{ const brief = readFileSync(`${ROOT}/src/ui/loadbrief.ts`, 'utf8'), wait = readFileSync(`${ROOT}/src/ui/startwait.ts`, 'utf8'), draw = readFileSync(`${ROOT}/src/host/drawpage.ts`, 'utf8');
+  const flag = /SETTLE\.on = v === null \? navigator\.webdriver !== true : v !== '0';/.test(wait) && /settleOfQuery\(q\);/.test(draw);
+  const road = /startWaits\(brief, /.test(draw) && !/brief\.live\(/.test(draw);
+  const waits = /b\.hold\(\); pipeQueue\.rush\(true\);/.test(wait) && /out = P\.total - P\.done \+ laterProgress\.pending/.test(wait) && /measuring: \(\) => quality\.calibrating/.test(draw);
   const ends = /const end = \(\): void => \{ o\.settling\(false\); pipeQueue\.rush\(false\);/.test(wait) && /if \(done\) \{ end\(\); o\.settled\(\); b\.live\(o\.run\); return; \}/.test(wait) && /if \(!b\.held\) \{ end\(\); return; \}/.test(wait);
-  const drawn = /quality\.measuring \|\| settling \|\|/.test(main) && /o\.settling\(S\.picture\);/.test(wait) && /quality\.measuring \|\|/.test(draw) && [main, draw].every(p => /settling: on => \{ settling = on; \}/.test(p));
+  const drawn = /o\.settling\(S\.picture\);/.test(wait) && /quality\.measuring \|\|/.test(draw) && /settling: on => \{ settling = on; \}/.test(draw);
   const away = /const back = \(\): void => \{ last = performance\.now\(\); \};/.test(wait) && /addEventListener\('visibilitychange', back\)/.test(wait);
   const held = /get held\(\) \{ return up && \(live \|\| holding\); \}/.test(brief) && /hold\(\) \{ if \(up && !live\) holding = true; \}/.test(brief);
-  const records = (main.match(/game\.view\.live && !menu\.isOpen && !brief\?\.held && !document\.hidden/g) ?? []).length === 2;
-  line(flag && road && waits && ends && drawn && away && held && records, `wiring: both pages raise the switch where a person sits, a mission's brief goes live by this road alone, it waits on every pipeline asked for, the later set and the second set and on auto quality's pick, the picture's frames are drawn, a tab's time away is not counted, the queue's rush ends with it, the brief holds the world meanwhile, and a visit's records do not count the frames behind it as play (${[flag, road, waits, ends, drawn, away, held, records].map(x => x ? 'y' : 'N').join('')})`); }
+  line(flag && road && waits && ends && drawn && away && held, `wiring: the page raises the switch where a person sits, a mission's brief goes live by this road alone, it waits on every pipeline asked for, the later set and the second set and on auto quality's pick, the picture's frames are drawn, a tab's time away is not counted, the queue's rush ends with it, and the brief holds the world meanwhile (${[flag, road, waits, ends, drawn, away, held].map(x => x ? 'y' : 'N').join('')})`); }
 
 console.log(`=== settle: ${red ? `${red} FAILED` : 'ALL PASS'} ===`);
 process.exit(red ? 1 : 0);

@@ -10,7 +10,7 @@
 //
 // STATE: none. PLAN_STATS is a tally for the checks.
 import type { Guard } from './game';
-import type { Input } from './input';
+import type { Input } from '../host/input';
 import type { OrderTarget, SquadOrders } from './orders';
 import { CMDRING } from './cmdring';
 import { crossToRust } from './crossing';

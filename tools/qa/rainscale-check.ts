@@ -10,7 +10,7 @@
 // texel at the ground grows. A change to those lines that this file can no longer lift is a red line here, not a silent pass. What the picture looks like is
 // the page's to show (tools/qa/weather-look.cjs).
 import { readFileSync } from 'node:fs';
-import { ROOT } from './headless.ts';
+import { ROOT, main } from './here.ts';
 export async function rainScaleCheck(): Promise<boolean> {
   const BRK = process.env.RAINSCALE_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
@@ -50,9 +50,11 @@ export async function rainScaleCheck(): Promise<boolean> {
   // (4) the switch
   { const F = await import(`${ROOT}/src/render/frame.ts`) as any, was = F.rainScaleConfig.on; let onT = '', offT = '';
     try { F.rainScaleConfig.on = true; onT = F.scenePrelude(); F.rainScaleConfig.on = false; offT = F.scenePrelude(); } finally { F.rainScaleConfig.on = was; }
-    const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
+    const main = readFileSync(`${ROOT}/src/host/pictureopens.ts`, 'utf8');
     verdict(was === true && /const RAIN_SCALE: bool = true;/.test(onT) && /const RAIN_SCALE: bool = false;/.test(offT) && /q\.has\('norainscale'\)\) rainScaleConfig\.on = false;/.test(main) && /RAIN_SCALE && w > SPLASH_W/.test(fn),
       'the prelude carries the constant, on as the page boots, and ?norainscale lowers it before the shaders are built', `on at import ${was} · in the prelude on ${/const RAIN_SCALE: bool = true;/.test(onT)}, off ${/const RAIN_SCALE: bool = false;/.test(offT)} · the page's flag ${/norainscale/.test(main)}`); }
   console.log(`=== rainscale: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }
+
+if (import.meta.main) await main([rainScaleCheck]);

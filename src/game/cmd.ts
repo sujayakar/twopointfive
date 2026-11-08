@@ -17,8 +17,8 @@
 // Not here yet (the plan's later steps): picks resolved without the seat's view at all.
 import type { Vec3 } from '../math/vec';
 import type { View } from '../host/hud';
-import { Input } from './input';
-import { FollowCamera } from './camera';
+import { Input } from '../host/input';
+import { FollowCamera } from '../host/camera';
 import type { Game } from './game';
 import { RUST_PASS, RUST_SURFACE } from './crossing';
 import { numWord, wordNum } from '../net/numtext';

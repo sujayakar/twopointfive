@@ -11,7 +11,7 @@
 //   bun run tools/draw/held.ts --without <path,…>  what goes free with those files or folders gone, and who still names one of them (a car's worth, before it is cut)
 //   bun run tools/draw/held.ts --tsv <out>     a row a left file: lines, who holds it
 //   bun run tools/draw/held.ts --pin [--moved old=new,…]  write tools/draw/held.tsv: the left files, what stays, and the tools that hold a left file. The left and the holders only shrink: a name
-//                                              not in it yet is refused, but for a file that stayed when it was pinned (a page let go of it) and one said to have moved
+//                                              not in it yet is refused, but for a file that stayed when it was pinned (a page let go of it), a tool that holds only such, and one said to have moved
 //   bun run tools/draw/held.ts --check         exit 1 where a left file or a holder is not in the pinned list (a new file of the old game, a new check or tool that reaches it)
 // What it cannot see: a name put together at run time (`${n}.ts`), a folder read whole, a file of src that is not TypeScript. The type checks (src's and tools/qa's) see what it calls free wrongly.
 // (vendor/typescript, or TS_LIB=<path to typescript.js>)
@@ -129,7 +129,7 @@ if (without !== undefined) {
 
 const rows = [...[...left].map(f => `left\t${f}`), ...[...held.keys()].filter(r => r.startsWith('tools/')).map(r => `holder\t${r}`)], pinned = existsSync(PIN) ? new Set(readFileSync(PIN, 'utf8').split('\n').filter(l => l && !l.startsWith('#'))) : null;
 for (const m of (opt('--moved') ?? '').split(',').filter(Boolean)) { const [a, b] = m.split('='); if (!b || !pinned || there.has(a) || !there.has(b)) stop(`--moved ${m}: the first is still there, or the second is not`); for (const k of ['left', 'holder', 'stays']) if (pinned!.has(`${k}\t${a}`)) pinned!.add(`${k}\t${b}`); }
-const grown = pinned ? rows.filter(r => !pinned.has(r) && !(r.startsWith('left\t') && pinned.has(`stays\t${r.slice(5)}`))) : [];
+const stood = (f: string) => !!pinned?.has(`stays\t${f}`), grown = pinned ? rows.filter(r => { const [k, f] = r.split('\t'); return !pinned.has(r) && !(k === 'left' ? stood(f) : [...held.get(f)!].every(stood)); }) : [];
 if (flag('--pin')) {
   for (const r of grown) console.log(`  REFUSED, not in the pinned list: ${r.replace('\t', ' ')}`); if (grown.length) process.exit(1);
   const all = [...rows, ...[...stays].map(f => `stays\t${f}`)].sort(); writeFileSync(PIN, `# what is left of the game that was TypeScript's, the tools that hold some of it, and what the pages that stay are built from (tools/draw/held.ts --pin). The first two only shrink\n${all.join('\n')}\n`); console.log(`  pinned: ${left.size} left, ${rows.length - left.size} holders, ${stays.size} that stay`);

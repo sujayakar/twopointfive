@@ -6,7 +6,7 @@
 //   · one of the page's own keys (Enter, Tab, the arrows …): the cap shakes its head and goes on waiting; the F row stays the browser's and the recorders'
 // A redraw of the list under a waiting cap (the boot ending under the screen) leaves it waiting: the new cap of the same row takes the wait over.
 // A cap that is not as built is marked; Reset (the screen's own button) puts every one back. The words beside a cap, the HUD and the start card's list follow
-// through host/keymap.ts keyText / keyCap. Nothing here is the game's: the rebind lives at the keyboard (game/input.ts).
+// through host/keymap.ts keyText / keyCap. Nothing here is the game's: the rebind lives at the keyboard (host/input.ts).
 import { KEYMAP, actOfCap, bindKey, unbindKey, capNow, keysOf, keyBuilt } from '../host/keymap';
 
 /** what the options screen hands a cap: its list of rows the keys walk (W S), and a repaint */

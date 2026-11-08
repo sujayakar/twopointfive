@@ -14,7 +14,7 @@
 // page's to show.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 export async function highlightsCheck(): Promise<boolean> {
   const BRK = process.env.HIGHLIGHTS_BREAK === '1', PB = process.env.PORTALMIRROR_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
@@ -57,7 +57,7 @@ export async function highlightsCheck(): Promise<boolean> {
   const { highlightConfig, scenePrelude } = await import(`${ROOT}/src/render/frame.ts`);
   const was = highlightConfig.reach; let k1: string | undefined, k0: string | undefined; const word = (v: number) => { highlightConfig.reach = v; return /const RT_HI_REACH: f32 = ([0-9.]+);/.exec(scenePrelude())?.[1]; };
   try { k1 = word(1); k0 = word(0); } finally { highlightConfig.reach = was; }
-  const mainTs = src('main.ts'), at = mainTs.indexOf("if (q.get('hireach') === '0') highlightConfig.reach = 0;"), eng = mainTs.indexOf('const engine = new Engine('), wiredWord = at > 0 && eng > at && /VISIT_FLAGS = \[[^\]]*'hireach'/.test(src('tape/address.ts'));
+  const pageTs = src('host/drawpage.ts'), at = pageTs.indexOf('pictureWords(q)'), eng = pageTs.indexOf('engine = new Engine('), wiredWord = src('host/pictureopens.ts').includes("if (q.get('hireach') === '0') highlightConfig.reach = 0;") && at > 0 && eng > at && /VISIT_FLAGS = \[[^\]]*'hireach'/.test(src('tape/address.ts'));
   const REACH = BRK ? 0 : was, hiFade = (maxR: number): [number, number] => [maxR - 0.12 + (P0 - (maxR - 0.12)) * REACH, maxR + 0.001 + (P1 - (maxR + 0.001)) * REACH];   // (rtHiFade, written again)
   const D = (r: number) => 1 / (Math.PI * Math.pow(Math.max(r * r, 0.0009), 2));
   const [lo, hi] = hiFade(HI), peak = 0.04 * D(hi) * 0.25, paint = 0.5 / Math.PI;   // a lamp's highlight at its peak, seen and lit square on, on a paint of F0 0.04 (D ∕ 4), against what a paint of albedo 0.5 sends back of the same light

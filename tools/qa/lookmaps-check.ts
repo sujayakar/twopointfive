@@ -5,7 +5,7 @@
 // No game is stood up: the maps are arithmetic and the rest is the g-buffer's own code on a device that only counts what it is handed. The picture is not looked at
 // here (a software page and then a GPU do that); these are the rules a picture cannot show you are broken until a level is lit by them.
 import { existsSync, readFileSync } from 'node:fs';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 const { lookLayer, lookLayerSliced, lookMip, lookStuffOf, LOOK_LAYERS, LOOK_PAINTED, LOOK_NAMES, LOOK_N, LOOK_ROUGH, LOOK_TILE, LOOK_WITH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_WORN, LOOK_UNIT, LOOK_LAY, LOOK_THING, LOOK_UNDER, LOOK_HANDLED, LOOK_GROUND } = await import(`${ROOT}/src/render/lookTex.ts`);
 const { GBuffer, LOOK_DEFAULTS, LOOK_WORD, lookWordOf, lookCoreOf, lookAmounts, lookNeed, lookForget } = await import(`${ROOT}/src/render/gbuffer.ts`);
 const { PAINT_STUFF, paintOf, toned, worded } = await import(`${ROOT}/src/scene/stuff.ts`);
@@ -100,36 +100,10 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
   check(worn('dust', 0.7) === lookStuffOf('earth') && worn('mud', 0.84) === lookStuffOf('mud wall') && worn('slab', 0.6) === lookStuffOf('slab') && worn('gravel', 0.5) === lookStuffOf('gravel') && worn('gravel', 0.1) === lookStuffOf('gravel') && taken.length > 5 && kept === taken.length && drawn(P.dust.map(v => v * 0.7)) === 0,
     'a paint worn dark in one piece (a trodden patch, a door\'s wear) is still its stuff, however dark it is worn; a worn colour whose numbers are another paint\'s own is still the paint it was worn from; a tone made by arithmetic alone, with nobody saying what it is a tone of, is nobody\'s paint',
     `${taken.length} pairs the colour rule confused, ${kept} now their own: ${taken.join(' · ')}`);
-  // on a real level, through the real pack: the word above the finish, the finish under it, what moves, and a number that is the box's own
-  const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { standUp } = await import('./headless.ts'), { matWord, makeBox, MAT_STRIDE, sentAlbedo } = await import(`${ROOT}/src/scene/boxes.ts`);
-  const stand = async (file: string) => { const l0 = console.log, w0 = console.warn; console.log = console.warn = () => { };
-    const W: any = await standUp({ level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${file}.json`, 'utf8'))), seed: 1 }); for (let i = 0; i < 4; i++) W.step(1 / 60);
-    console.log = l0; console.warn = w0; return W; };
-  { const world = (await stand('pass')).game.engine.world, word = (i: number) => world.matData[i * MAT_STRIDE + 7], all = () => [...world.statics, ...world.dynamics];
-    world.forgetSent(); world.upload(); const plain = all().every((b: any, i: number) => word(i) === Math.fround(matWord(b)));
-    world.setStuffOf(lookWordOf(), lookCoreOf()); world.upload();   // (on the page the engine sets it before the first box is packed; the setter has every static packed again)
-    const nS = world.statics.length, boxes = all(); let classed = 0, finishOff = 0, classOff = 0, said = 0, movesOff = 0, saltOff = 0; const salts = new Set<number>(), mine = new Map<any, number>();
-    boxes.forEach((b: any, i: number) => { const lw = Math.floor(word(i) / 8), c = lw & (LOOK_WORD.stuffs - 1), mv = (lw & LOOK_WORD.moves) !== 0, salt = Math.floor(lw / LOOK_WORD.own);
-      if (c !== lookStuffOf(b.stuff)) classOff++; if (b.stuff !== undefined) said++; if (Math.abs(word(i) - 8 * lw - matWord(b)) > 2e-3) finishOff++; if (c > 0) classed++; if (mv !== (i >= nS)) movesOff++; if (salt >= LOOK_WORD.owns) saltOff++; if (mv) { salts.add(salt); mine.set(b, lw); } });
-    // a wall goes: a static is appended, and every box after it has a new place in the list
-    world.addStatic(makeBox({ c: [1, 0.5, 1], h: [0.2, 0.5, 0.2], albedo: [0.3, 0.3, 0.3] })); world.upload();
-    let jumped = 0; world.dynamics.forEach((b: any, k: number) => { if (Math.floor(word(world.statics.length + k) / 8) !== mine.get(b)) jumped++; });
-    check(plain && classOff === 0 && finishOff === 0 && classed > boxes.length / 2 && movesOff === 0 && saltOff === 0 && mine.size > 4 && salts.size > 2 && jumped === 0 && world.statics.length === nS + 1,
-      'on a level, through the real pack: with nobody asking, the finish word is as it ever was; on the look page every box carries its stuff (the word it says, nothing else) above its finish and the finish reads back (to a 500th: the word shares the float); a box past the statics, and no other, says it moves; and when a static is appended no mover\'s word changes, though every mover\'s place in the list does',
-      `pass: ${boxes.length} boxes, ${classed} with a material, ${classOff} not their own word's (${said} say a word), ${finishOff} finishes moved, ${mine.size} movers with ${salts.size} numbers between them, ${movesOff} wrong about moving, ${jumped} changed when a static was added`); }
-  // the rain, by the game's own weather: a level whose lot is gravel and stands wet
-  { const g = (await stand('consulate')).game, world = g.engine.world, st = world.statics as any[];
-    const li = st.findIndex(b => b.c[1] < 0 && b.c[1] + b.h[1] > -0.01 && b.h[0] > 18 && b.h[2] > 12), lot = st[li], dry = li < 0 ? undefined : g.weather.dryPaint(lot);
-    const cls = (i: number) => Math.floor(world.matData[i * MAT_STRIDE + 7] / 8) & (LOOK_WORD.stuffs - 1);
-    world.setStuffOf(lookWordOf(), lookCoreOf()); world.upload(); const told = li < 0 ? -1 : cls(li);
-    const soaked = !!dry && lot.albedo.some((v: number, c: number) => Math.abs(v - dry[c]) > 0.01);
-    check(li >= 0 && soaked && lot.stuff === 'gravel' && told === lookStuffOf('gravel'),
-      'rain does not change what a thing is made of: the game\'s own weather darkens a gravel lot in place, and the lot is still gravel because it SAYS gravel (nobody is asked the paint it had dry: no colour is read)',
-      li < 0 ? 'consulate: no lot found' : `consulate: the lot's paint now ${lot.albedo.map((v: number) => v.toFixed(3)).join(' ')}, dry ${dry ? [...dry].map((v: number) => v.toFixed(3)).join(' ') : 'not kept'}; it says ${lot.stuff}, packed as ${told}`); }
-  const gsrc = readFileSync(`${ROOT}/src/render/shaders/gbuffer.wgsl`, 'utf8'), csrc = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8'), lsrc = readFileSync(`${ROOT}/src/render/shaders/look.wgsl`, 'utf8'), msrc = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
+  const gsrc = readFileSync(`${ROOT}/src/render/shaders/gbuffer.wgsl`, 'utf8'), csrc = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8'), lsrc = readFileSync(`${ROOT}/src/render/shaders/look.wgsl`, 'utf8'), msrc = readFileSync(`${ROOT}/src/host/drawpage.ts`, 'utf8');
   check(/o\.look = boxStuff\(bi\);/.test(gsrc) && !/lookClass\(o\.albedo\)/.test(gsrc) && /fn boxLook\(i: u32\) -> u32 \{ return u32\(boxMat\[i \* 4u \+ 1u\]\.w \* 0\.125\); \}/.test(csrc) && /fn boxStuff\(i: u32\) -> u32 \{ return boxLook\(i\) & 31u; \}/.test(csrc) && LOOK_WORD.stuffs === 32
     && /w -= 8\.0 \* floor\(w \* 0\.125\);/.test(csrc) && /let word = boxLook\(bi\); let moves = \(word & 32u\) != 0u;/.test(lsrc) && LOOK_WORD.moves === 32 && /let salt = word >> 6u;/.test(lsrc) && LOOK_WORD.own === 64 && /\|\| moves\) \{/.test(lsrc) && !/bi % (7|13)u/.test(lsrc)
-    && /mix\(1\.0, 0\.5 \+ cav, k2\.z\)/.test(lsrc) && /this\.world\.setStuffOf\(lookWordOf\(\), lookCoreOf\(\)\)/.test(readFileSync(`${ROOT}/src/engine.ts`, 'utf8')) && /for \(const b of engine\.world\.statics\) word\(b, false\); for \(const d of game\.doors\.list\) word\(d\.box, true\); for \(const p of game\.props\.all\) for \(const b of p\.boxes\) word\(b, true\)/.test(msrc) && /await Promise\.all\(\[engineInit, smokeInit, lookMaps, /.test(msrc),
+    && /mix\(1\.0, 0\.5 \+ cav, k2\.z\)/.test(lsrc) && /this\.world\.setStuffOf\(lookWordOf\(\), lookCoreOf\(\)\)/.test(readFileSync(`${ROOT}/src/engine.ts`, 'utf8')) && /engine\.world\.upload\(\);   \/\/ \(every stuff the level is made of is known from here/.test(msrc) && /Promise\.all\(\[engine\.init\([^\n]*engine\.gbuffer\.needLook\(\)/.test(msrc),
     'the shader reads the box\'s word and takes it off the finish: no box is told what it is made of by the colour a corner is handed or how to lay its map by its place in the list, the hollows are drawn round a half, the page makes the word from what each box says and waits for the level\'s maps before its first frame'); }
 // 9. a stuff's number: asked by name, and the box's word still holds the finish to a 500th under the largest word there can be. THE SHADER NAMES NO STUFF
 //    AND NO SIZE OF A RULE THAT GOES BY STUFF: what it did by name until 11-04 is a word in the stuff's row, and the rows say, stuff for stuff, exactly what

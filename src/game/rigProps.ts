@@ -11,7 +11,7 @@ import { longModel, pistolModel, type LongModel, type PistolModel, type ModelCol
 import { reloadShow, reloadHandBoxes } from './gunreload';   // (called inside the box builders only: what a reload under way shows on a model)
 import type { GunModelId, WeaponId } from './weapons';
 import { drawnAs, paintOf } from '../scene/stuff';   // (no game module: the table of what a paint is made of)
-import { GEAR } from './gear';   // (a leaf — read only inside the box builders: which rifle and which goggles are DRAWN)
+import { GEAR } from '../host/gear';   // (a leaf — read only inside the box builders: which rifle and which goggles are DRAWN)
 import { packOf, sideBind, sideSkinned, sidePitch, sidePitched, chestJoint, type SidePlace } from './packside';   // (a leaf — called inside the box builders only: a long thing at the side of the pack he wears)
 import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 

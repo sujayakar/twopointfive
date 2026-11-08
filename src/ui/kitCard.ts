@@ -182,7 +182,7 @@ const POUCH_TIP = 'his breaching tools and throwables go in these. A grenade-siz
 const POUCH_TIP_BIG = 'each pouch holds one grenade-sized thing, and the big slot holds one big thing like a shotgun, a hammer or a wall charge';
 const UP = new Set(['KeyW', 'ArrowUp', 'w', 'W']), DOWN = new Set(['KeyS', 'ArrowDown', 's', 'S']), LEFT = new Set(['KeyA', 'ArrowLeft', 'a', 'A']), RIGHT = new Set(['KeyD', 'ArrowRight', 'd', 'D']);
 const OK = new Set(['Enter', 'NumpadEnter', 'Space', ' ', 'Spacebar']), BACK = new Set(['Escape', 'Esc']);
-/** by the key's PLACE on the board where the event says it (game/input.ts reads e.code: W A S D are where they are on any layout), else by its name */
+/** by the key's PLACE on the board where the event says it (host/input.ts reads e.code: W A S D are where they are on any layout), else by its name */
 const is = (set: Set<string>, e: KeyLike) => set.has(e.code || e.key);
 /** events a card has already been handed (a host that calls key(e) AND lets the event reach the card's own listener: taken once) */
 const seen = new WeakSet<object>();

@@ -1,4 +1,4 @@
-// EVERY RUN KEPT, ON THE REAL PAGE, AND ONE OF THEM HANDED OVER (src/replay/keeper.ts, keepstore.ts, keptui.ts; tools/qa/replaykeep-probes.ts holds the same
+// EVERY RUN KEPT, ON THE REAL PAGE, AND ONE OF THEM HANDED OVER (src/tape/keeper.ts, keepstore.ts, keptui.ts; tools/qa/replaykeep-probes.ts holds the same
 // headless): headless Chromium on the software WebGPU adapter (tools/qa/page-look.cjs's recipe), one browser profile, three page loads and the replay page —
 //   1. a mission page is played with no key pressed: the page's own timer files its tape in this browser's storage, piece by piece
 //   2. the page is LEFT for another mission (no beat due): what was played up to the last step is there afterwards, and its row says its page has gone

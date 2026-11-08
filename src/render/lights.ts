@@ -1,9 +1,26 @@
 // Runtime analytic light list → GPU buffer (struct Light in common.wgsl, 64 B each).
 import { Vec3, v3, DEG } from '../math/vec';
 import { makeBuffer } from '../gpu/device';
-import type { LightDef } from '../scene/level';
 import { REACH_ROW_WORDS, REACH_ALL } from './reach';
 import { lightDayK } from './photometry';
+
+/** a light as a level's own list holds it (scene/level.ts takes it from here) */
+export interface LightDef {
+  kind: 'point' | 'spot' | 'dir';
+  pos: Vec3; dir: Vec3;
+  color: Vec3;         // linear rgb, multiplied by intensity
+  intensity: number;   // point/spot: candela-ish; dir: irradiance (lux-ish)
+  range: number;
+  innerDeg: number; outerDeg: number;
+  name: string;
+  group: string;       // for UI toggles / OCP ("ceiling", "exterior", "desk", ...)
+  mains?: boolean;     // fed from the building breaker (default true) — false for street lighting etc.
+  broad?: boolean;     // wide soft emitter → the direct pass's 'broad' denoise class (street lamps; area lights derived from fixtures set it themselves)
+  fixtureBox?: number; // index of the emissive box representing the fixture (glow card)
+  enabled: boolean;
+  volumetric: number;  // 0..1 haze scattering multiplier for beams
+  radius?: number;     // physical emitter size (m) → penumbra width; for 'dir' lights the angular radius in radians
+}
 
 export interface RtLight {
   name: string; group: string;

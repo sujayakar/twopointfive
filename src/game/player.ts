@@ -4,8 +4,8 @@
 import { SideMap } from '../math/side';
 import type { View } from '../host/hud';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp } from '../math/vec';
-import { Input } from './input';
-import { FollowCamera } from './camera';
+import { Input } from '../host/input';
+import { FollowCamera } from '../host/camera';
 import { Doors, Door, DOORWAY } from './doors';
 import './ragdoll';
 import { ThrowSolution } from './throwables';
@@ -31,7 +31,7 @@ import './weapons';
 import './stickycam';
 import './lightswitch';
 import './weapons';
-import { ringTag } from './gear';   // (a leaf: the kit's names as issued, applied to the lines that name it)
+import { ringTag } from '../host/gear';   // (a leaf: the kit's names as issued, applied to the lines that name it)
 import { AIM_HOOKS } from './aim';
 import './aimcost';
 import './lighting';

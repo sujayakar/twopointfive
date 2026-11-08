@@ -49,7 +49,7 @@ import { GP_MAX_SITES, GP_FRAGS_PER_SITE, GP_MAX_SECTORS, GP_BANDS, type GpSite,
 import { sim as simX, f64, u32, type SimExports } from '../sim/sim';
 import { type SimState, simPart, P_PANES } from '../sim/state';
 import { knobsToRust, RUST_KNOBS } from './rustknobs';
-import { SHARD } from './shardModel';
+import { SHARD } from '../render/shardModel';
 import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 export type GlassType = 'annealed' | 'tempered' | 'laminated';

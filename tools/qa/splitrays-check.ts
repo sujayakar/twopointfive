@@ -9,7 +9,7 @@
 import { readFileSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 
 type Kernel = { setting?: string; module: string; entry: string; set: string; pipelines: string[]; pasted: number; cut?: number; budgetKB: number | null };   // (cut: the cut test's text in it, which the size tool counts apart from the kernel's row)
 type Sizes = { modules: { label: string; h: string }[]; kernels: Kernel[] };
@@ -54,9 +54,9 @@ export async function splitraysCheck(): Promise<boolean> {
     try { RP.reportForget(); RP.reportSink((r: any) => { heard.push(r); }); splitRefused('one'); splitRefused('the grid 640×360 needs a 12 MB buffer', { grid: '640×360', MB: 12 }); splitRefused('the grid 1280×720 needs a 48 MB buffer', { grid: '1280×720', MB: 48 });
       RP.reportSink(() => { throw new Error('the listener broke'); }); splitRefused('three'); }
     catch { threw = true; } finally { console.error = was; RP.reportForget(); }
-    const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), own = readFileSync(`${ROOT}/src/render/gatherSplit.ts`, 'utf8'), refuse = /refuse = \(why: string\) => \{[^\n]*\n\s*splitRefused\(`The gather's points buffer: the gather grid [^\n]*the bounce light is not drawn[^\n]*,\n\s*\{ grid: [^\n]*MB[^\n]*why \}\);/.test(passes);
-    line(!threw && said.join() === 'one,the grid 640×360 needs a 12 MB buffer,the grid 1280×720 needs a 48 MB buffer,three' && heard.length === 3 && heard[1] === heard[2] && heard[1].where === 'gpu.splitrays.buffer' && heard[1].data?.grid === '640×360' && refuse && !/console\.error\(`The gather's points buffer/.test(passes) && !/SPLIT_SAID/.test(main) && /reportError\('gpu\.splitrays\.buffer', line, data\)/.test(own),
-      'a refused points\' buffer is said on the console word for word and to the one reporter (src/cloud/report.ts) under its own place, the grid and the size beside it; the same refusal at another window size is the report it already was (one error for a machine), a listener that throws loses nothing, passes.ts refuses through it, and main.ts has no hook of its own for it',
+    const own = readFileSync(`${ROOT}/src/render/gatherSplit.ts`, 'utf8'), refuse = /refuse = \(why: string\) => \{[^\n]*\n\s*splitRefused\(`The gather's points buffer: the gather grid [^\n]*the bounce light is not drawn[^\n]*,\n\s*\{ grid: [^\n]*MB[^\n]*why \}\);/.test(passes);
+    line(!threw && said.join() === 'one,the grid 640×360 needs a 12 MB buffer,the grid 1280×720 needs a 48 MB buffer,three' && heard.length === 3 && heard[1] === heard[2] && heard[1].where === 'gpu.splitrays.buffer' && heard[1].data?.grid === '640×360' && refuse && !/console\.error\(`The gather's points buffer/.test(passes) && /reportError\('gpu\.splitrays\.buffer', line, data\)/.test(own),
+      'a refused points\' buffer is said on the console word for word and to the one reporter (src/cloud/report.ts) under its own place, the grid and the size beside it; the same refusal at another window size is the report it already was (one error for a machine), a listener that throws loses nothing, and passes.ts refuses through it',
       `console: ${said.join(' · ')} · reports: ${heard.length} (${new Set(heard).size} made) · passes.ts ${refuse ? 'refuses through it' : 'does NOT'}`); }
 
   // ---- what a load compiles (the size tool, a run of its own)

@@ -3,7 +3,3 @@ preload = ["./tools/blitz/preload.ts"]
 
 [loader]
 ".wgsl" = "text"
-
-# the page's way to the state bridge under ?rust=1 (tools/blitz/page-plugin.ts): the dev server bundles the pages with it, as tools/build.ts does
-[serve.static]
-plugins = ["./tools/blitz/page-plugin.ts"]

@@ -5,7 +5,7 @@
 // A file may carry a sidecar `<name>.lint.json` = { allow: { code: { ids: [...] | "*", reason } } } for legitimately odd authored things.
 import { resolve } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 
 const { lintLevel, formatLint } = await import(`${ROOT}/src/scene/lint.ts`);
 const { validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);

@@ -94,4 +94,4 @@ WGSL has no include; `scenePrelude()` (frame.ts:49) becomes `worldConsts + decl 
 
 Core pass (steps 0-6): about 7-8 hours including soaks; every step is independently committable and only step 3 must be sequenced against branches touching `src/game/game.ts`.
 
-Key files: `src/game/game.ts`, `src/render/shaders/common.wgsl`, `src/render/frame.ts`, `src/game/demo.ts`, `src/game/input.ts`, `src/game/throwables.ts`, `src/smoke/smoke.ts`, `src/main.ts`, `src/ui/overlay.ts`, `src/ui/bubbles.ts`.
+Key files: `src/game/game.ts`, `src/render/shaders/common.wgsl`, `src/render/frame.ts`, `src/game/demo.ts`, `src/host/input.ts`, `src/game/throwables.ts`, `src/smoke/smoke.ts`, `src/main.ts`, `src/ui/overlay.ts`, `src/ui/bubbles.ts`.

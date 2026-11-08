@@ -1,6 +1,6 @@
 // THE PAGE THAT HOLDS A GAME, AS WHAT A HUD IS HANDED (view/hud.ts): the record its host keeps, the men as they are drawn, what the page says of itself. Its one place: so the HUD reads nothing else of the game.
 import type { Character } from '../game/character';
-import type { FollowCamera } from '../game/camera';
+import type { FollowCamera } from './camera';
 import type { Game } from '../game/game';
 import { CKPT } from '../game/savestate';
 import { men } from '../game/seats';

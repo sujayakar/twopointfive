@@ -1,9 +1,9 @@
 // THE MEASURING TOOLS, on a page that draws a game it does not hold: F9 records frames (ui/perfrec.ts), F8 prices the layers one at a time over a held world (Shift+F8: left running;
 // ui/perfsweep.ts), F6 captures a frame (host/capture.ts). What they read of the game is its tally (DrawGame.tally).
 import type { Engine } from '../engine';
-import type { FollowCamera } from '../game/camera';
+import type { FollowCamera } from './camera';
 import type { Gpu } from '../gpu/device';
-import type { Input } from '../game/input';
+import type { Input } from './input';
 import type { SmokeSystem } from '../smoke/smoke';
 import type { Quality } from '../ui/quality';
 import type { DrawGame } from './drawgame';

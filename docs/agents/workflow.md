@@ -82,7 +82,7 @@ preferences, etc." No accounts; nothing multiplayer.
   `npx convex run`, or the dashboard. A visit is its browser's: another id cannot write into it or ask what is kept of it.
 - **The page's side** = `src/cloud/` (no game code imported; `main.ts` boots it once after the replay key and calls `cloud.frame(rawDt, live, stage, gpuMs)`: numbers, no object a frame):
   `cloud.ts` (the address, who the browser is, whether it sends, the boot, `window.__cloud`), `tapes.ts` (`TapeSync`: a SYNC of the kept
-  tapes' store — it only reads `rows · head · bodies` of `src/replay/keepstore.ts`, newest visit first, a round every 20 s; a visit whose
+  tapes' store — it only reads `rows · head · bodies` of `src/tape/keepstore.ts`, newest visit first, a round every 20 s; a visit whose
   page closed is finished by the next page that opens), `telemetry.ts` (`visit` · `run` · `perf` once a minute of LIVE play · `error` ·
   `end`; nothing else, no key pressed), `prefs.ts` (the browser's `twopointsix.*` localStorage keys as a map, bar the machine's own — the
   quality tier, text size — saves, the editor's and this family's keys). `src/ui/cloudrows.ts` = two rows on Options ▸ Game, on a build
@@ -140,7 +140,7 @@ preferences, etc." No accounts; nothing multiplayer.
   replay has gone up under it yet.
 - **What a round costs the page** (`TapeSync`, every 20 s; raised by the kept replays' owner 10-26, who has chased single stutter frames):
   it reads only the pieces numbered past what went (`KeptStore.piecesFrom(sid, from)`, a read-only range read added to
-  `src/replay/keepstore.ts` for this), sends a packed piece as the bytes the store holds — it is NOT unpacked — and does not read a visit
+  `src/tape/keepstore.ts` for this), sends a packed piece as the bytes the store holds — it is NOT unpacked — and does not read a visit
   whose row has not moved since a round sent all of it. A call is at most 512 KB (`TAPESYNC.call`), turned to base64 by the engine's own
   `Uint8Array.toBase64` or `btoa`. The note of how far a visit has gone is THE NEXT PIECE NUMBER (the store's key, and the backend's
   `have`), not a count of bodies: a store with a hole (a piece it refused) and a visit begun again under its name go up right
@@ -355,7 +355,7 @@ preferences, etc." No accounts; nothing multiplayer.
   such a page apart from the visits ("0 visits · 1 other page"), says "on a page that is not a visit: replay" under the group, and
   reads a browser's machine off a visit somebody played where it has one. TWO PLACES NOW SAY A RESULT, not only a throw: the viewer's
   `replay.viewer.send` where the sending answered 'failed', and `replay.viewer.notes.write` where a kept visit's write answered false
-  (neither call ever rejects). THE SHELF SAYS ITS OWN FAILURES (`src/replay/shelf.ts`, by its owner's word): the catches that come
+  (neither call ever rejects). THE SHELF SAYS ITS OWN FAILURES (`src/tape/shelf.ts`, by its owner's word): the catches that come
   after a good open are real failures and report as warnings, each handing on what it handed on before, `replay.shelf.put` (null),
   `replay.shelf.notes` (false), `replay.shelf.list` (an empty list, both lists) and `replay.shelf.get` (null); a browser with no
   IndexedDB returns before them and stays silent, as do the open's own catch, the close and the last tidy-up. STILL REPORTING TO NOBODY: the sound pages, the editor and the workbench (developer pages). Check: `cloud-check`,
@@ -474,7 +474,7 @@ preferences, etc." No accounts; nothing multiplayer.
 - **Notes on a replay go up too** (10-27: with the hand-over file leaving the page, what it alone carried needs a road). The notes
   written on a kept visit in the viewer, and the F7 shelf's saved windows with theirs, are lines in the backend's `notes` table
   (`cloud/convex/notes.ts`; a line per browser and key, `visit:<sid>` or `f7:<session>:<savedAt>`, written over when it changes), in
-  the hand-over format's own shapes (`{k:'notes'}`, `{k:'f7'}`: `replay/kept.ts`). `src/cloud/notes.ts` (`NoteSync`) is a sync of
+  the hand-over format's own shapes (`{k:'notes'}`, `{k:'f7'}`: `tape/kept.ts`). `src/cloud/notes.ts` (`NoteSync`) is a sync of
   what the browser holds: a round every 30 s reads the kept rows and the shelf and sends a line only where its text differs from the
   one that last went (marks in `twopointsix.cloud.notes`); notes taken off again go as a line with none. A saved window whose visit is
   NOT kept in this browser (its trace is in no tape) goes up whole, once, as a saved file of kind `f7`. THE SWITCH IS THE TAPES'
@@ -488,7 +488,7 @@ preferences, etc." No accounts; nothing multiplayer.
   appends the lines to the hand-over file it writes, after the visits, each behind a line break (a cut tape's last bytes may not end
   a line), so `tools/qa/replay-dump.ts` reads them as it always did; `--no-notes` is not a word, a backend from before the table is
   read without them. `cloud-check` family `notes` (six lines; the red path marks a line as sent that never went). NEVER RUN against
-  the real service; nothing calls the page's shelf under a real browser in a check (the shelf's two reads are `replay/shelf.ts`'s own).
+  the real service; nothing calls the page's shelf under a real browser in a check (the shelf's two reads are `tape/shelf.ts`'s own).
 - **A local build has a local backend** (the maintainer, 10-27: "we can make the local build use a local convex deployment").
   `bun run dev` sets `TPS_LOCAL_CLOUD=1`; `tools/serve.ts` then calls `tools/cloud/local.ts` `localCloud()`, which runs
   `convex dev --tail-logs disable` in `cloud/` (Convex's own backend on this machine; it pushes `cloud/convex/` and keeps pushing as

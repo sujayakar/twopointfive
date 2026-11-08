@@ -1,6 +1,6 @@
 // THE HUD of a page that draws a game it does not hold: what the module tells the shown seat (view/read.ts), laid over the men as the rows place them; Tab's card; and what the save controller says.
 import { Section, View } from '../draw/sections';
-import type { FollowCamera } from '../game/camera';
+import type { FollowCamera } from './camera';
 import { Bubbles } from '../ui/bubbles';
 import { Overlay } from '../ui/overlay';
 import { tabCardHtml, tabCardOf } from '../ui/tabcard';

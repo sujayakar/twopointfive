@@ -4,7 +4,7 @@
 // machine keeps: `tables` before the level is loaded, before and after the game is stood and round the mission's staging (each a plain overwrite), `env` before
 // the game is built and before every step, `stood` once the game exists, `tune` at the first step. tools/qa/rerun.ts does the same headless: keep the two in step.
 // Nothing here is read by the game.
-import type { RunTape } from './format';
+import type { RunTape } from '../tape/format';
 import type { Game } from '../game/game';
 import * as J from '../game/journal';
 import * as K from '../game/knobs';

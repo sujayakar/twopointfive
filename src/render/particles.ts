@@ -5,7 +5,7 @@
 // HDR target after the composite (shaders/particles_draw.wgsl), where the bloom picks the hot ones up. What lives here: the pool layout, the two rings and
 // their live windows (only those are simulated / drawn: nothing alive = no dispatch, no draw), the per-kind numbers the panel edits, the emit API, the
 // IMPULSE API (game events — a stun charge, a round beside settled litter, a thump on the floor — kicking and waking live particles: ≤ MAX_IMPULSES records
-// a frame in the same block's tail, uploaded only on frames that carry any, applied by the update kernel; game/sheetModel.ts is the reference of what one
+// a frame in the same block's tail, uploaded only on frames that carry any, applied by the update kernel; render/sheetModel.ts is the reference of what one
 // does), the stats read back from the pool header. Deterministic: every random draw on the GPU hashes (emit / impulse serial, particle index) — no Math.random on the path.
 //
 // Bindings, against this adapter's budget (10 storage buffers a stage on Chrome/Metal; the scene group already holds 8 in compute / fragment):
@@ -16,8 +16,8 @@
 import { makeBuffer, makeShader, computePipelineAsync, renderPipelineAsync } from '../gpu/device';
 import { Vec3 } from '../math/vec';
 import { scenePrelude, glassBreakConfig } from './frame';
-import { SHEET, IMP_RESPONSE, type ImpulseResponse } from '../game/sheetModel';
-import { SHARD, SHARD_IMP } from '../game/shardModel';
+import { SHEET, IMP_RESPONSE, type ImpulseResponse } from './sheetModel';
+import { SHARD, SHARD_IMP } from './shardModel';
 import type { WindGpuSource } from '../smoke/types';
 import { WIND_GPU_MAX } from '../smoke/types';
 import lightingCommon from './shaders/lighting_common.wgsl' with { type: 'text' };
@@ -75,7 +75,7 @@ export const RAIN_LOOK_DEFAULTS: Readonly<RainLook> = Object.freeze({ iso: 1, fw
  *  its life. brightOrOpacity: SPARK = brightness × (× 25 HDR at white heat, meant to clip); DUST = peak opacity; others unused (1).
  *  DUST reads its physics-free slots as LOOK (game/particleFx.ts DUST_LOOK, Tab ▸ Effects ▸ Dust puffs): restitution = the share of a crossing beam scattered toward the eye (0.5),
  *  keep = × the cache's ambient on it (1), sleepV = fade-in seconds (0.06), holdOrFade = × the edge feather / depth softening (1) — the values the kernels had as literals.
- *  SHEET reads the eight slots as game/sheetModel.ts SHEET: gravity · drag = KT (along-slip) · restitution = KN_LIN · keep = KN_Q (through-slip drag × airspeed) ·
+ *  SHEET reads the eight slots as render/sheetModel.ts SHEET: gravity · drag = KT (along-slip) · restitution = KN_LIN · keep = KN_Q (through-slip drag × airspeed) ·
  *  sleepV · holdOrFade = fade s · shutterOrGrowth = FLUT (flutter torque gain) · brightOrOpacity = TRANS (light through the back face).
  *  RAIN reads them as: gravity · drag (toward the AIR's velocity: terminal fall = gravity ÷ drag = 9 m/s, the lattice's RAIN_V) · restitution = TAAU reactivity × (particles_draw.wgsl) ·
  *  keep = splash crown radius m · sleepV = splash seconds · holdOrFade = streak fade-in s (born under the top of the slab, not popped) · shutterOrGrowth = streak shutter s · brightOrOpacity = radiance ×. */
@@ -87,7 +87,7 @@ export const KIND_DEFAULTS: Record<PKind, KindParams> = {
   casing: { gravity: 9.8, drag: 0.45, restitution: 0.42, keep: 0.72, sleepV: 0.4, holdOrFade: 4.0,  shutterOrGrowth: 0.008, brightOrOpacity: 1 },
   sheet:  { gravity: SHEET.gravity, drag: SHEET.KT, restitution: SHEET.KN_LIN, keep: SHEET.KN_Q, sleepV: SHEET.sleepV, holdOrFade: SHEET.fade, shutterOrGrowth: SHEET.FLUT, brightOrOpacity: SHEET.TRANS },
   rain:   { gravity: 9.8, drag: 9.8 / 9.0, restitution: 6, keep: 0.06, sleepV: 0.2, holdOrFade: 0.09, shutterOrGrowth: 1 / 30, brightOrOpacity: 1 },   // (restitution = the reactivity ×, mirrored from settings.particleRainReact by game/rainFx.ts; brightOrOpacity likewise from particleRainBright)
-  shard:  { gravity: SHARD.gravity, drag: SHARD.drag, restitution: SHARD.restitution, keep: SHARD.keep, sleepV: SHARD.sleepV, holdOrFade: SHARD.fade, shutterOrGrowth: SHARD.ROUGH, brightOrOpacity: SHARD.SCATTER },   // a fragment of a broken pane (game/shards.ts; game/shardModel.ts is the reference): drag = 1/s at the reference centimetre, shutterOrGrowth = the glint lobe's roughness, brightOrOpacity = the body's diffuse scatter
+  shard:  { gravity: SHARD.gravity, drag: SHARD.drag, restitution: SHARD.restitution, keep: SHARD.keep, sleepV: SHARD.sleepV, holdOrFade: SHARD.fade, shutterOrGrowth: SHARD.ROUGH, brightOrOpacity: SHARD.SCATTER },   // a fragment of a broken pane (game/shards.ts; render/shardModel.ts is the reference): drag = 1/s at the reference centimetre, shutterOrGrowth = the glint lobe's roughness, brightOrOpacity = the body's diffuse scatter
 };
 
 export type EmitShape = 'cone' | 'burst' | 'ring' | 'puff' | 'rainDisc';
@@ -106,7 +106,7 @@ export interface EmitOpts { shape?: EmitShape; speed: number; spread?: number; l
    *  spark flies and falls, and cools slowly through orange to a red that dies. It rides the colour word's top byte like `steam` (shaders: `emberIs`); left out = a spark as it always was */
   ember?: number; }
 interface EmitRec { kind: PKind; pos: Vec3; dir: Vec3; count: number; o: EmitOpts; seed: number; /** filed while Particles.ours was up */ ours?: boolean; /** frames this record has waited in the queue past the one it was queued for (the birth cap) */ waited: number; }
-/** One impulse's numbers (particles_common.wgsl ImpulseRec; game/sheetModel.ts is the reference of what it does): `up` = upward share added to the radial push (default 0),
+/** One impulse's numbers (particles_common.wgsl ImpulseRec; render/sheetModel.ts is the reference of what it does): `up` = upward share added to the radial push (default 0),
  *  `bias` = a direction folded in with its weight as its length (default none), `kinds` = which kinds respond (default every kind but sparks), `occlude` + `eye` = gate
  *  each particle further than half a metre by one any-hit ray from `eye` (default the impulse's position) — a wall between a charge and the litter behind it stops it. */
 export interface ImpulseOpts { up?: number; bias?: Vec3; kinds?: readonly PKind[]; occlude?: boolean; eye?: Vec3; /** the caller's own seed: the impulses' serial is then left where it was (as EmitOpts.seed) */ seed?: number; }
@@ -163,7 +163,7 @@ export class Particles {
   fog = true;
   /** the splat runs at all (measurement: off = simulate but draw nothing, to price the draw by frame-time A/B — render-pass timestamps are unreliable on Metal) */
   drawEnabled = true;
-  /** live per-kind IMPULSE response (game/sheetModel.ts IMP_RESPONSE; the panel edits these, written into the block's ki rows every frame) */
+  /** live per-kind IMPULSE response (render/sheetModel.ts IMP_RESPONSE; the panel edits these, written into the block's ki rows every frame) */
   impulseResponse: Record<PKind, ImpulseResponse> = { spark: { ...IMP_RESPONSE.spark }, debris: { ...IMP_RESPONSE.debris }, dust: { ...IMP_RESPONSE.dust }, casing: { ...IMP_RESPONSE.casing }, sheet: { ...IMP_RESPONSE.sheet }, rain: { ...IMP_RESPONSE.rain }, shard: { ...SHARD_IMP } };
   /** impulses gate particles further than half a metre by their occlusion ray when the record asks (measurement: off = every record applied unoccluded, to price the rays) */
   impulseOcclusion = true;
@@ -289,7 +289,7 @@ export class Particles {
     return count;
   }
   /** Queue an IMPULSE for the next frame: every live particle of `o.kinds` (default all but sparks) within `radius` of `pos` gets Δv = strength × its kind's gain ×
-   *  (1 − d/radius) along (radial + o.up·ŷ + o.bias), and resting ones kicked hard enough WAKE (game/sheetModel.ts is the reference; particles.wgsl applyImpulses
+   *  (1 − d/radius) along (radial + o.up·ŷ + o.bias), and resting ones kicked hard enough WAKE (render/sheetModel.ts is the reference; particles.wgsl applyImpulses
    *  flies it). Bounded: at most MAX_IMPULSES a frame — past that this one is merged into the nearest queued within IMPULSE_MERGE_M (strengths summed up to
    *  IMPULSE_MERGE_CAP × the stronger, the wider radius, both kind sets, either one's occlusion, the stronger one's centre) or, none being near, the weakest of
    *  the seventeen is dropped. Deterministic (the seed counts off the impulses' own serial); allocates nothing. Returns false only for a degenerate record

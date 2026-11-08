@@ -1,6 +1,6 @@
 // THE DEVELOPER'S PICTURES OVER THE HUD, kept on the page that holds a game: one man's picture of the fight (ui/pictureviz.ts, an AI's beliefs) and the wind's field (ui/windviz.ts, its sources). Each reads what only
 // the game's TypeScript holds and neither is a thing a player is shown, so neither is part of the HUD: a page with no game has neither.
-import type { FollowCamera } from '../game/camera';
+import type { FollowCamera } from '../host/camera';
 import type { Game } from '../game/game';
 import type { View } from '../host/hud';
 import { PictureViz } from './pictureviz';

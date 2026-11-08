@@ -37,7 +37,7 @@ export async function lay(W: any): Promise<void> {
   const g = W.game, rng = mulberry(seed * 104729 + 977), K = Number(process.env.QA_PERTURB_RATE ?? 1), FROM = Number(process.env.QA_PERTURB_FROM ?? 120);
   const only = new Set((process.env.QA_PERTURB_ONLY ?? '').split(',').filter(Boolean)), skip = new Set((process.env.QA_PERTURB_SKIP ?? '').split(',').filter(Boolean));
   const kinds = Object.keys(RATES).filter(k => !skip.has(k) && (!only.size || only.has(k)));
-  const word = process.env.TPS_GAME_BY ?? process.env.TPS_GAME ?? 'none', dir = process.env.RH_TICKS ?? '', file = dir ? `${dir}/${word}.log` : '';
+  const word = process.env.TPS_GAME ?? 'rust', dir = process.env.RH_TICKS ?? '', file = dir ? `${dir}/${word}.log` : '';
   if (file) writeFileSync(file, '');
   let n = 0; const saved: string[] = [];
   const say = (s: string) => { const line = `  [seed ${seed}] ${g.time.toFixed(2)}s f${n} ${s}`; if (file) appendFileSync(file, line + '\n'); else console.log(line); };

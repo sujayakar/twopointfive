@@ -1,6 +1,6 @@
 // CO-OP ON THE PAGE: host a game or join one (the door, the words and the control plane's calls are net/lobby.ts; the page once it is in a game is
 // host/drawnet.ts). Four small things, each where a player would look:
-//   the title's CO-OP row    (ui/menu.ts hands this file its column of buttons: `coopRows`) — a field for the player's name (host/names.ts: kept by
+//   the title's CO-OP row    (ui/title.ts hands this file its column of buttons: `coopRows`) — a field for the player's name (host/names.ts: kept by
 //                            the browser, shown to the other player), 'Host a game', and a field for a code with 'Join'
 //   hosting                  the ONE STARTING PAGE in its co-op dress (ui/startpage.ts `coop`): the missions two can play, the setup rail as ever, no kit step
 //                            (both players play the kit as issued today), and its block makes the game instead of loading the mission (`host`)
@@ -95,7 +95,7 @@ async function host(search: string, m: Mission): Promise<void> {
   const why = await enter(L, made.code, say); if (why) fail(why);
 }
 
-// ---- the title's CO-OP page: the title's own column of buttons, filled by this file (ui/menu.ts puts the row there and takes the column back on `back`)
+// ---- the title's CO-OP page: the title's own column of buttons, filled by this file (ui/title.ts puts the row there and takes the column back on `back`)
 let styled = false;
 function styles(): void {
   if (styled || typeof document === 'undefined') return; styled = true;
@@ -130,7 +130,7 @@ export function coopRows(actions: HTMLElement, back: () => void, focus = true): 
   // YOUR NAME (host/names.ts): what the other player's page calls this one, kept by this browser as it is typed; empty = his number
   const who = el('div', 'xhead', 'Your name'), name = el('input', 'cocode coname') as HTMLInputElement;
   name.type = 'text'; name.placeholder = 'Player'; name.maxLength = NET.nameMax; name.autocomplete = 'off'; name.spellcheck = false; name.setAttribute('aria-label', 'Your name'); name.dataset.coop = 'name';
-  name.dataset.walk = 'off';   // (not a stop of the title's W / S walk, ui/menu.ts: a walk that ended here would type its next step into the name. The mouse and Tab reach it)
+  name.dataset.walk = 'off';   // (not a stop of the title's W / S walk, ui/title.ts: a walk that ended here would type its next step into the name. The mouse and Tab reach it)
   name.value = PAGE.name ?? myName();
   name.addEventListener('input', () => { PAGE.name = name.value; setMyName(name.value); });
   name.addEventListener('change', () => { name.value = setMyName(name.value); PAGE.name = null; });   // (as kept, once he is done typing: a space at the end is his to type meanwhile)
@@ -147,7 +147,7 @@ export function coopRows(actions: HTMLElement, back: () => void, focus = true): 
   code.addEventListener('input', () => { const c = codeTyped(code.value); if (c !== code.value) code.value = c; PAGE.code = c; if (!PAGE.busy) tell(''); });
   code.addEventListener('keydown', e => { if (e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); join(); } if (e.code !== 'Escape' && e.code !== 'Tab') e.stopPropagation(); });   // (a letter typed here is the code's, nobody else's key)
   row.append(code, joinBtn);
-  const backBtn = btn('‹ Main menu', back, 'xback');   // (Esc is the title's own: ui/menu.ts presses this button)
+  const backBtn = btn('‹ Main menu', back, 'xback');   // (Esc is the title's own: ui/title.ts presses this button)
   actions.append(who, name, hostBtn, head, row, note, backBtn);
   if (focus) hostBtn.focus(); else if (PAGE.typing) { const f = PAGE.typing === 'name' ? name : code; f.focus(); f.setSelectionRange(f.value.length, f.value.length); }   // (the title drawn again under a player who is typing: he goes on typing)
   code.addEventListener('focus', () => { PAGE.typing = 'code'; }); code.addEventListener('blur', () => { if (code.isConnected) PAGE.typing = ''; });

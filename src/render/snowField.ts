@@ -13,7 +13,6 @@
 // Every edge in it is soft and wanders (value noise, seeded by position: the same level bakes the same field) — no straight line of the file survives as one.
 // The g-buffer shades the ground and every snow-painted box off it (snow.wgsl snowBox / fsSnow). PICTURE ONLY: nothing in the simulation reads the field, and
 // the men's light is measured as it always was. A pure function of the level; built by game.ts beside the traffic map, only on a snow level with the switch on.
-import type { Level } from '../scene/level';
 import type { Box } from '../scene/boxes';
 import { BoxFlag } from '../scene/boxes';
 import { WORLD } from '../scene/world';
@@ -102,7 +101,7 @@ function toHalf(v: number): number {
 }
 
 /** `breakIt`: the check's break word — the hills are left a finger UNDER their boxes (the boxes then stand out of the surface, as rectangles) */
-export function buildSnowField(level: Level, opts: { wind?: readonly [number, number]; breakIt?: boolean } = {}): SnowField | null {
+export function buildSnowField(level: { boxes: Box[] }, opts: { wind?: readonly [number, number]; breakIt?: boolean } = {}): SnowField | null {
   const boxes = level.boxes;
   const w = Math.round(WORLD.gridW * WORLD.gridCell * SNOW_RES), h = Math.round(WORLD.gridH * WORLD.gridCell * SNOW_RES);
   const ox = WORLD.min[0], oz = WORLD.min[2]; const N = w * h;

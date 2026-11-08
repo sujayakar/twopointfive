@@ -1,27 +1,41 @@
-// THE PAGE THAT DRAWS HOLDS NO GAME: src/host/drawpage.ts, the start page and the load brief (the cards before a game: the desk answers them) and everything they import, at any depth, import none of the
-// game's TypeScript (src/game, src/sim, the animator, the bridge). Types do not count: they are no part of the bundle. `bun run build` runs this first.
-//   bun run tools/draw/ban.ts      exit 0 · 1 and each import that breaks it, with the road to it
+// THE PAGE THAT DRAWS NAMES NOTHING OF THE GAME: src/host/drawpage.ts, the start page and the load brief (the cards before a game: the desk answers them) and everything they name, at any depth,
+// name none of the game's TypeScript (src/game, src/sim, the animator, the bridge, the old page's files), not even as a type: a static import, an export-from, an import type (`import('…').X`) and a dynamic import
+// all count and are followed, as the TypeScript scanner reads them. `bun run build` runs this first. No TypeScript on this machine (a hosted build; vendor/typescript or TS_LIB=<path to typescript.js>): only what the
+// bundle runs is followed, and it says so.
+//   bun run tools/draw/ban.ts      exit 0 · 1 and each name that breaks it, with the road to it
+//   BAN_BREAK=1 bun run tools/draw/ban.ts     the red path: one name of each kind planted in the page, in memory: exit 1 with all four named (2: no TypeScript here to see a type with, 3: it missed one)
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dir, '../..'), ENTRIES = ['src/host/drawpage.ts', 'src/ui/startpage.ts', 'src/ui/loadbrief.ts'].map(f => join(ROOT, f));
-const BANNED = /^(src\/(game|sim|replay)\/|src\/anim\/skeleton\.ts$|src\/host\/(rustgame|rustdress|standup|profile|loop|tween|ahead)\.ts$|tools\/)|^tps-bridge\//;
-/** leaves that stand in those folders and hold nothing of the game: each goes to a folder of its own when src/game does */
-const LEAVES = new Set(['src/game/gear.ts', 'src/game/camera.ts', 'src/game/input.ts', 'src/game/crossing.ts', 'src/game/sheetModel.ts', 'src/game/shardModel.ts',
-  // (the replays this browser keeps, as files: no game)
-  'src/replay/shelf.ts', 'src/replay/format.ts', 'src/replay/kept.ts', 'src/replay/keptui.ts', 'src/replay/keepstore.ts', 'src/replay/keeper.ts', 'src/replay/minimap.ts']);
+const BANNED = /^(src\/(game|sim|replay)\/|src\/anim\/skeleton\.ts$|src\/host\/(rustgame|rustdress|standup|profile|loop|tween|ahead|handsoff)\.ts$|src\/main\.ts$|src\/net\/recipe\.ts$|src\/scene\/(collision|boxMirror|level|levelData|levelLoad|levelScripts)\.ts$|levels\/.*\.ts$|tools\/)|^tps-bridge\//;
+const BREAK = process.env.BAN_BREAK === '1', PLANT = "\nimport type { Game } from '../game/game';\nexport type { Skeleton } from '../anim/skeleton';\ntype Planted = import('../sim/sim').Sim;\nvoid import('../host/profile');\n", PLANTED = 4;
+const TS_LIB = process.env.TS_LIB ?? join(ROOT, 'vendor/typescript/lib/typescript.js'), ts: any = existsSync(TS_LIB) ? ((m: any) => m.default ?? m)(await import(TS_LIB)) : null;
+if (!ts) { console.log(`draw ban: no TypeScript at ${TS_LIB}: what the bundle runs is followed, and no type`); if (BREAK) process.exit(2); }
+const scan = new Bun.Transpiler({ loader: 'ts' });
+/** every module a file names */
+function named(f: string, text: string): string[] {
+  if (!ts) return scan.scanImports(text).map(i => i.path);
+  const out: string[] = [], walk = (n: any): void => {
+    if ((ts.isImportDeclaration(n) || ts.isExportDeclaration(n)) && n.moduleSpecifier) out.push(n.moduleSpecifier.text);
+    else if (ts.isImportEqualsDeclaration(n) && ts.isExternalModuleReference(n.moduleReference)) out.push(n.moduleReference.expression.text);
+    else if (ts.isImportTypeNode(n) && ts.isLiteralTypeNode(n.argument)) out.push(n.argument.literal.text);
+    else if (ts.isCallExpression(n) && n.expression.kind === ts.SyntaxKind.ImportKeyword && ts.isStringLiteralLike(n.arguments[0])) out.push(n.arguments[0].text);
+    ts.forEachChild(n, walk); };
+  walk(ts.createSourceFile(f, text, ts.ScriptTarget.Latest, true)); return out; }
 
-const scan = new Bun.Transpiler({ loader: 'ts' }), from = new Map<string, string>(), queue = [...ENTRIES], bad: string[] = [];
+const from = new Map<string, string>(), queue = [...ENTRIES], bad: string[] = [];
 const rel = (p: string) => p.startsWith(ROOT) ? p.slice(ROOT.length + 1) : p;
 for (const e of ENTRIES) from.set(e, '');
 const road = (p: string): string => { const r: string[] = []; for (let x: string | undefined = p; x; x = from.get(x)) r.unshift(rel(x)); return r.join(' > '); };
-while (queue.length) { const f = queue.shift()!;
-  for (const i of scan.scanImports(readFileSync(f, 'utf8'))) {
-    if (/\.(wgsl|json|txt|css)$/.test(i.path)) continue;
-    const p = i.path.startsWith('.') ? [resolve(dirname(f), i.path), resolve(dirname(f), `${i.path}.ts`), resolve(dirname(f), i.path, 'index.ts')].find(x => /\.ts$/.test(x) && existsSync(x)) : undefined, name = p ? rel(p) : i.path;
-    if (BANNED.test(name) && !LEAVES.has(name)) { bad.push(`${name}\n    ${road(f)}`); continue; }
+while (queue.length) { const f = queue.shift()!, text = readFileSync(f, 'utf8') + (BREAK && f === ENTRIES[0] ? PLANT : '');
+  for (const path of new Set(named(f, text))) {
+    if (/\.(wgsl|json|txt|css)$/.test(path)) continue;
+    const p = path.startsWith('.') ? [resolve(dirname(f), path), resolve(dirname(f), `${path}.ts`), resolve(dirname(f), path, 'index.ts')].find(x => /\.ts$/.test(x) && existsSync(x)) : undefined, name = p ? rel(p) : path;
+    if (BANNED.test(name)) { bad.push(`${name}\n    ${road(f)}`); continue; }
     if (p && !from.has(p)) { from.set(p, f); queue.push(p); }
   } }
 for (const b of bad) console.log(`draw ban: ${b}`);
-console.log(bad.length ? `draw ban: ${bad.length} imports of the game under the page that draws` : `draw ban: ${from.size} files under the page that draws, none of them the game's`);
+console.log(bad.length ? `draw ban: ${bad.length} names of the game under the page that draws` : `draw ban: ${from.size} files under the page that draws, none of them the game's`);
+if (BREAK && bad.length < PLANTED) { console.log(`draw ban: the red path planted ${PLANTED} names and ${bad.length} were seen`); process.exit(3); }
 process.exit(bad.length ? 1 : 0);
