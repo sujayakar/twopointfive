@@ -128,10 +128,12 @@ fn a_stealth_mission_stands_its_card_for_yours_and_leaving_puts_yours_back() {
     assert_eq!(row(&c, "rings").n, 5.0, "the stealth card carries the launcher's rounds");
     assert_eq!(row(&c, "primary").icon, "rifle");
     assert_eq!(members(&d)[0].trim, TrimId::Red, "your colours go with you");
-    assert_eq!(p.kept[0].text, kept_before, "what is kept is your own card");
+    assert!(p.kept.is_empty(), "a mission asked for changes no kept card");
+    assert_eq!(kept::write(&mut d.g), kept_before, "what is kept is your own card");
     let p = press(&mut d, &DONE.to_le_bytes());
     assert_eq!(written(&d), yours);
-    assert_eq!(p.kept[0].text, kept_before);
+    assert!(p.kept.is_empty());
+    assert_eq!(kept::write(&mut d.g), kept_before);
 }
 
 #[test]
