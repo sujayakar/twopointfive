@@ -222,6 +222,66 @@ pub trait KitAsk {
     fn stacks_on_his_walk(&self, gd: GuardId) -> bool;
     /// holds a stack's jamb: the door's, and never an opening's
     fn stacks_at_the_jamb(&self, gd: GuardId) -> bool;
+    /// a man rounds pass through
+    fn man_cannot_fall(&mut self, gd: GuardId);
+    /// the men dealt a grenade of their own, once the floor's book is opened
+    fn frag_carriers(&self) -> Vec<GuardId>;
+    /// the floor's defenders, the men who may carry one; and the rule that deals them: one in this many, at most this many
+    fn frag_deal(&self) -> (usize, f64, f64);
+    /// the fuse and the wind-up of a defender's own grenade
+    fn their_frag(&self) -> (f64, f64);
+    /// a grenade in play: its fuse left
+    fn live_frag_fuse(&self) -> Option<f64>;
+    /// where he would go, reading the grenade's cue
+    fn frag_step_off(&mut self) -> Option<[f64; 2]>;
+    /// is he down
+    fn sam_down(&self) -> bool;
+    /// the sidearm's table: inside how many metres he goes to it, how long his hands are busy, how long with nobody in front before it goes back
+    fn side_table(&self) -> (f64, f64, f64);
+    /// a man's gun in his hands is a pistol
+    fn pistol_in_hand(&self, gd: GuardId) -> bool;
+    /// the sidearm has been drawn over the long gun
+    fn side_out(&self, gd: GuardId) -> bool;
+    /// the long gun hangs on its sling, whichever it is
+    fn long_gun_hung(&self, gd: GuardId) -> bool;
+    /// the man's hands are between guns
+    fn hands_busy(&self, gd: GuardId) -> bool;
+    /// rounds ready in the gun in his hands
+    fn rounds_ready(&self, gd: GuardId) -> f64;
+    /// is the gun in his hands full
+    fn gun_full(&self, gd: GuardId) -> bool;
+    /// a man's magazine change, seconds, for the gun in his hands
+    fn reload_secs(&self, gd: GuardId) -> f64;
+    /// the game's own call when a man runs dry on a man that far off: true if the sidearm came out
+    fn goes_to_his_sidearm(&mut self, gd: GuardId, dist: f64) -> bool;
+    /// the game's own call for a man in front of him this frame
+    fn man_in_front_of(&mut self, gd: GuardId);
+    /// sidearms drawn, sidearms put back, since the game stood
+    fn sidearm_counts(&self) -> (i32, i32);
+    /// his gun has nothing in it at all, chamber or magazine
+    fn gun_dry(&mut self, gd: GuardId);
+    /// the tube is the 40 mm, not the ring
+    fn forty_up(&self) -> bool;
+    /// rounds of the 40 mm in the air, in the tube, how far one flies before it arms
+    fn forty(&self) -> (usize, f64, f64);
+    /// the 40 mm's duds lying on the floor
+    fn forty_duds(&self) -> usize;
+    /// how the last round ended: armed, flown, did it end on a man
+    fn forty_end(&self) -> Option<(bool, f64, bool)>;
+    /// how many rounds of the 40 mm have ended
+    fn forty_ends(&self) -> usize;
+    /// where on a man the round is aimed
+    fn chest(&self, gd: GuardId) -> [f64; 3];
+    /// reports of blasts so far, and the last with who was in it
+    fn blasts(&self) -> usize;
+    /// did he go down by the last blast, and was Sam in it
+    fn burst_took(&self, gd: GuardId) -> (bool, bool);
+    /// gunfire events in the game's list, and blast events
+    fn gunfire_and_bangs(&self) -> (usize, usize);
+    /// he has folded from a blow and not got up
+    fn folded_by_a_blow(&self, gd: GuardId) -> bool;
+    /// the tube of his rifle holds shells for the 40 mm
+    fn sam_issued_the_forty(&mut self);
     /// is he on a knee off a boot
     fn on_a_knee(&self, gd: GuardId) -> bool;
     /// has a man's belief in a door come to a boot on its way
@@ -511,6 +571,42 @@ impl KitAsk for Play {
     fn deal_secs(&self) -> f64 { self.g.k.cover.deal_secs }
     fn stacks_on_his_walk(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).is_some_and(|a| game::cover::cover_walk_only(&self.g, gd, a)) }
     fn stacks_at_the_jamb(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).is_some_and(|a| { let r = &self.g.tab.orders_assignment[a]; r.order == "stack" && r.spare != Some(true) }) }
+    fn man_cannot_fall(&mut self, gd: GuardId) { self.g.gd[gd].god = true; }
+    fn frag_carriers(&self) -> Vec<GuardId> { self.g.m.frag.def_books.as_ref().map_or(Vec::new(), |b| b.carriers.iter().map(|c| c.gd).collect()) }
+    fn frag_deal(&self) -> (usize, f64, f64) { (game::frag::defenders_of(&self.g).len(), self.g.k.frag.def_share, self.g.k.frag.def_max) }
+    fn their_frag(&self) -> (f64, f64) { (self.g.k.frag.def_fuse, self.g.k.frag.def_wind) }
+    fn live_frag_fuse(&self) -> Option<f64> { self.g.items.items.iter().copied().find(|&i| game::throwables::item_kind(&self.g, i) == game::throwables::ItemKind::Frag).map(|i| game::throwables::item_fuse(&self.g, i)) }
+    fn frag_step_off(&mut self) -> Option<[f64; 2]> { game::frag::frag_step_off(&mut self.g, None).map(|p| [p[0], p[2]]) }
+    fn sam_down(&self) -> bool { self.g.pl[self.g.player].down }
+    fn side_table(&self) -> (f64, f64, f64) { let k = &self.g.k.gunslots; (k.near, k.out, k.lull) }
+    fn pistol_in_hand(&self, gd: GuardId) -> bool { let d = self.g.fa[self.g.gd[gd].weapon].def; self.g.m.weapons.weapons.get(d).unwrap().cls == game::weapons::WeaponClass::Pistol }
+    fn side_out(&self, gd: GuardId) -> bool { self.g.gd[gd].second.is_some_and(|s| s.out) }
+    fn long_gun_hung(&self, gd: GuardId) -> bool { game::gunslots::side_hung(&self.g, gd).is_some() }
+    fn hands_busy(&self, gd: GuardId) -> bool { game::gunslots::side_locked(&self.g, gd) }
+    fn rounds_ready(&self, gd: GuardId) -> f64 { game::weapons::firearm_rounds_ready(&self.g, self.g.gd[gd].weapon) }
+    fn gun_full(&self, gd: GuardId) -> bool { let w = self.g.gd[gd].weapon; game::weapons::firearm_rounds_ready(&self.g, w) >= self.g.m.weapons.weapons.get(self.g.fa[w].def).unwrap().mag_capacity }
+    fn reload_secs(&self, gd: GuardId) -> f64 { let d = self.g.fa[self.g.gd[gd].weapon].def; self.g.m.weapons.weapons.get(d).unwrap().reload.dur }
+    fn goes_to_his_sidearm(&mut self, gd: GuardId, dist: f64) -> bool { game::gunslots::side_out(&mut self.g, gd, dist) }
+    fn man_in_front_of(&mut self, gd: GuardId) { game::gunslots::side_seen(&mut self.g, gd); }
+    fn sidearm_counts(&self) -> (i32, i32) { (self.g.stats.gunslots.out, self.g.stats.gunslots.back) }
+    fn gun_dry(&mut self, gd: GuardId) { let w = self.g.gd[gd].weapon; self.g.fa[w].chamber = 0.0; self.g.fa[w].mag = Some(0.0); }
+    fn forty_up(&self) -> bool { game::weapons::rifle_attachment(&self.g, self.g.pl[self.g.player].rifle) == Some(game::weapons::RifleAttachment::He40) }
+    fn forty(&self) -> (usize, f64, f64) { (self.g.shells.len(), self.g.fa[self.g.pl[self.g.player].rifle].shells, self.g.k.he40.arm_m) }
+    fn forty_duds(&self) -> usize { self.g.items.items.iter().filter(|&&i| game::throwables::item_kind(&self.g, i) == game::throwables::ItemKind::Shell).count() }
+    fn forty_end(&self) -> Option<(bool, f64, bool)> { self.g.m.he40.he40_log.last().map(|e| (e.armed, e.flown, e.met == game::he40::ShellEndMet::Man)) }
+    fn forty_ends(&self) -> usize { self.g.m.he40.he40_log.len() }
+    fn chest(&self, gd: GuardId) -> [f64; 3] { let c = self.g.gd[gd].ch; self.g.ch[c].bones.get(game::character::Bone::Chest).copied().unwrap_or([self.g.ch[c].pos[0], 1.2, self.g.ch[c].pos[2]]) }
+    fn blasts(&self) -> usize { self.g.m.frag.frag_log.len() }
+    fn burst_took(&self, gd: GuardId) -> (bool, bool) {
+        let id = self.id_of(gd);
+        self.g.m.frag.frag_log.last().map_or((false, false), |r| (r.hits.iter().any(|h| h.id == id && h.result == game::frag::BlastResult::Killed), r.player.is_some()))
+    }
+    fn gunfire_and_bangs(&self) -> (usize, usize) {
+        use game::director::EventKind as K;
+        (self.g.events.iter().filter(|e| e.kind == K::Shot || e.kind == K::GuardShot).count(), self.g.events.iter().filter(|e| e.kind == K::Bang).count())
+    }
+    fn folded_by_a_blow(&self, gd: GuardId) -> bool { self.g.gd[gd].stagger_until > self.g.time }
+    fn sam_issued_the_forty(&mut self) { let r = self.g.pl[self.g.player].rifle; self.g.fa[r].shells = 3.0; }
     fn on_a_knee(&self, gd: GuardId) -> bool { self.g.gd[gd].door_down_until > self.g.time }
     fn walking_to_boot(&self, gd: GuardId) -> bool { self.g.m.doorforce.states.as_ref().and_then(|s| s.men.get(gd)).and_then(|m| m.kick.as_ref()).map_or(false, |k| k.phase == game::doorforce::KickPhase::Walk) }
     fn on_a_door(&self, gd: GuardId) -> bool { self.g.m.doorforce.states.as_ref().and_then(|s| s.men.get(gd)).map_or(false, |m| m.on.is_some()) }
