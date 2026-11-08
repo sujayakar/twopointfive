@@ -17,9 +17,9 @@ import type { WireCmd } from './wire';
 /** a man's place and the way his gun points */
 export interface Stand { pos: ArrayLike<number>; yaw: number }
 /** WHERE A SEAT'S MAN WOULD BE AFTER RECORDS THE GAME HAS NOT HAD, as the game answers it (game/walkahead.ts, the module's face_ahead), writing nothing: the man · is
- *  he down · where the game has him, his aim, and the normal of a wall he holds (x z) · are his legs his own this tick · where the records take him, his
+ *  he down · where the game has him, his aim, the normal of a wall he holds (x z) and how near the nearest other body stands (m) · are his legs his own this tick · where the records take him, his
  *  aim there, what his seat's camera would follow with him there, the point the newest record aims at · his place after each record */
-export interface Ahead { id: number; down: boolean; at: [number, number, number]; yaw: number; wall: [number, number] | null; free: boolean; pos: [number, number, number]; aimYaw: number; follow: [number, number, number]; aim: [number, number, number] | null; path: ArrayLike<number>[] }
+export interface Ahead { id: number; down: boolean; at: [number, number, number]; yaw: number; wall: [number, number] | null; near: number; free: boolean; pos: [number, number, number]; aimYaw: number; follow: [number, number, number]; aim: [number, number, number] | null; path: ArrayLike<number>[] }
 
 /** `on`: the switch — off here as every switch is, raised by a networked page (page.ts netFromUrl; `?netpredict=0` leaves it off) and by the scripted
  *  client's `--predict`. Off = his own man is drawn where the game has him. `max`: the most records a look ahead plays. `ease`: what

@@ -16,6 +16,9 @@ line).
   230 MB. The recipe road stays for the page with a TypeScript game and goes with it.
   - **src/net knows no game**: `wire`, `client`, `server`, `timeline`, `foresee`, `delay`, `words`, `modgame`, `start`, `address` import nothing of `src/game`
     (hosts are handed WIRE records). What the old page alone needs is `recipe.ts` (PlayerCmd to and from the wire), `step.ts` and `page.ts`.
+  - **The door** (`src/net/door.ts`): the page's half that knows no game, for both pages: the address's words, the seat's key, the socket and the connection made worse,
+    the hello to the welcome or the words that refuse it, how fast confirmed ticks are walked (`NetDoor.walk`, round them the host's `far` and `run`),
+    the look ahead, `state()`, the line the player is shown. A page stands the game, hands `step / word / watch` in, and draws.
   - **What a machine looks at parts nothing** (`rust/game_start/tests/coop.rs where_a_machine_looks…`: one machine looks at the pass's fire with its camera
     turning, the other at nothing; and `a_look_ahead_is_where_the_game_then_has_him`). KNOWN: `g.wind.to_pool` (the gusts the picture's particles take)
     follows the host's view and is in the wider word's `wind`; nothing of a tick reads it. A level with more jets than the pool near one view and not the
@@ -300,7 +303,7 @@ line).
   lead; the outline and the weapon light riding with him; crouched under the tap step and stalking, where he is not ahead and answers a round trip
   late; `?netlag` by eye. NEXT, if the feel asks for it: the copy walking a crouched man (the tap step's rhythm), teammates carried along by their
   velocity in the copy, his muzzle flash and shot sound shown early.
-- **A worse connection on purpose: the debugger's Network page** (2026-11-02; `src/ui/netrows.ts` the rows, `src/net/page.ts NETWAY` the page's
+- **A worse connection on purpose: the debugger's Network page** (2026-11-02; `src/ui/netrows.ts` the rows, `src/net/door.ts NETWAY` the page's
   numbers, `src/net/delay.ts` what they do). WHY: the maintainer, about to try co-op on two laptops on one home network: "can you add something to the
   debug panel to simulate different network conditions?". Two machines on one good network see none of what a real connection does. WHAT: on a page
   that is a client of a networked game (and on no other: `main.ts` makes the page only then) the debugger has a Network page, last on the rail. Rows:

@@ -35,7 +35,7 @@ const num = (k: string, d: number): number => { const v = E[k]; if (v === undefi
 const port = num('MP_PORT', 5300), hostname = E.MP_HOST ?? '127.0.0.1';
 
 /** the setup record (see the head) */
-let asked: { recipe?: Recipe; scenario?: unknown; seed?: unknown; knobs?: Record<string, unknown>; start?: NetStart; seatKeys?: unknown; build?: unknown; game?: unknown };
+let asked: { recipe?: Recipe; scenario?: unknown; seed?: unknown; knobs?: unknown; start?: NetStart; seatKeys?: unknown; build?: unknown; game?: unknown };
 try { asked = JSON.parse(E.MP_SETUP ?? ''); if (!asked || typeof asked !== 'object') throw new Error('not a record'); } catch { console.error('server.ts: MP_SETUP is not a setup record as JSON (want {"scenario":"?roomclear&squad4","seed":7,"seatKeys":["k0"]} or {"recipe":{…}})'); process.exit(2); }
 const game = E.MP_GAME ?? (typeof asked.game === 'string' ? asked.game : 'local'), build = E.MP_BUILD ?? (typeof asked.build === 'string' ? asked.build : buildName());
 
@@ -50,13 +50,17 @@ async function recipeOfSetup(setup: { search: string; seed: number; tables?: Rec
 
 let stood: Stood, recipe: Recipe | undefined, start: NetStart | undefined;
 try {
-  const { stand = E.MP_STAND ?? 'recipe', commands = '', ...tables } = (asked.knobs ?? {}) as { stand?: string; commands?: string };
+  const knobs: unknown = asked.knobs ?? {}; if (typeof knobs !== 'object' || knobs === null || Array.isArray(knobs)) throw new Error('the setup\'s knobs are not an object');
+  const { stand = E.MP_STAND ?? 'recipe', commands, ...tables } = knobs as { stand?: unknown; commands?: unknown };
+  if (stand !== 'module' && stand !== 'recipe') throw new Error(`a game stands on the module or from a recipe, not on ${JSON.stringify(stand)}`);
   if (asked.start || (stand === 'module' && !asked.recipe)) {
     const M = await import('./modstand.ts');
     if (Object.keys(tables).length) throw new Error('a game on the module takes its host\'s settings as commands, not as knob tables');
+    if (commands !== undefined && typeof commands !== 'string') throw new Error('the setup\'s commands are not bytes');
     start = asked.start ?? M.freshStart({ search: String(asked.scenario ?? ''), seed: Number(asked.seed), commands });
     stood = await M.standStart(start);
   } else {
+    if (commands !== undefined) throw new Error('a game stood from a recipe takes its host\'s settings as knob tables, not as commands');
     recipe = asked.recipe ?? await recipeOfSetup({ search: String(asked.scenario ?? ''), seed: Number(asked.seed), ...(asked.knobs ? { tables } : {}) });
     stood = await (await import('./stand.ts')).standRecipe(recipe);
   }

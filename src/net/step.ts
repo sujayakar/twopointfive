@@ -6,6 +6,7 @@ import type { Game } from '../game/game';
 import type { PlayerCmd, Seat } from '../game/cmd';
 import { dressAll } from '../game/dress';   // (called inside netStand only)
 import { walkAhead } from '../game/walkahead';   // (called inside netAhead only: src/game is one import cycle)
+import { legsOwn } from '../game/player';
 import { NET, type WireCmd } from './wire';
 import { fromWire } from './recipe';
 import type { Ahead } from './foresee';
@@ -62,7 +63,10 @@ export function netQuiet(g: Game, on: boolean): void { (g as unknown as Stepper)
  *  chunk and a glass plate are rows of the game's box table; a storm's wind source). So the stand does not leave it to how a host happened to be stood */
 export function netStand(g: Game): void { for (const s of g.seats) s.remote = true; dressAll(true); }
 /** where a seat's man would be after records the game has not had, off a host's own copy of the game (foresee.ts) */
-export function netAhead(seat: Seat, cmds: readonly WireCmd[]): Ahead {
-  const pl = seat.view.player, ch = pl.char, path: [number, number, number][] = [], three = (p: ArrayLike<number>): [number, number, number] => [p[0], p[1], p[2]], now = walkAhead(seat, cmds.map(fromWire), 1 / NET.hz, path as never);
-  return { id: ch.id, down: pl.down, at: three(ch.pos), yaw: ch.aimYaw, wall: pl.wall ? [pl.wall.n[0], pl.wall.n[2]] : null, free: now.free, pos: three(now.pos), aimYaw: now.aimYaw, follow: three(now.follow), aim: now.aim ? three(now.aim) : null, path };
+export function netAhead(g: Game, seat: Seat, cmds: readonly WireCmd[]): Ahead {
+  const v = seat.view, pl = v.player, ch = pl.char, path: [number, number, number][] = [], three = (p: ArrayLike<number>): [number, number, number] => [p[0], p[1], p[2]];
+  let near = Infinity; for (const c of [...g.guards.map(x => x.char), ...g.civilians.map(x => x.char), ...g.seats.map(x => x.view.player.char)]) if (c !== ch) near = Math.min(near, Math.hypot(c.pos[0] - ch.pos[0], c.pos[2] - ch.pos[2]));
+  // (no record: where the copy has him, and the game that steps is not asked)
+  const now = cmds.length ? walkAhead(seat, cmds.map(fromWire), 1 / NET.hz, path as never) : { free: legsOwn(v), pos: ch.pos, aimYaw: ch.aimYaw, follow: v.followPos(), aim: v.aimPoint };
+  return { id: ch.id, down: pl.down, at: three(ch.pos), yaw: ch.aimYaw, wall: pl.wall ? [pl.wall.n[0], pl.wall.n[2]] : null, near, free: now.free, pos: three(now.pos), aimYaw: now.aimYaw, follow: three(now.follow), aim: now.aim ? three(now.aim) : null, path };
 }

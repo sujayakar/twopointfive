@@ -8,7 +8,7 @@
 //!                                      own camera is not moved by it. Of a seat that has both, what was handed last is stepped.
 //!   face_ahead(h, seat, p, n, keys, kn)    WHERE THE SEAT'S MAN WOULD BE after records the game has not had (game::walkahead), at face_out as `AHEAD` numbers and
 //!                                      then his place after each record. `p`: the records' numbers, one after another; their keys' text the same way, a line
-//!                                      feed between two. No record: where the game has him. No word of the state is written.
+//!                                      feed between two. No record: where the game has him. Nothing a tick reads is written.
 use game::cmd::{PlayerCmd, PlayerCmdView};
 
 /// the numbers of a record: buttons clicked wheel, cursor x y, the view's size in CSS pixels and in its own, the look-at, yaw pitch distance, field of view, aspect, how
@@ -48,14 +48,17 @@ pub extern "C" fn face_networked(h: u32) {
 pub unsafe extern "C" fn face_record(h: u32, seat: usize, p: *const f64, n: usize, keys: *const u8, kn: usize) {
     let mut r = records(p, n, keys, kn);
     assert!(r.len() == 1, "face_record: {} records, and a tick has one", r.len());
-    super::with(h, |x| x.hand_over(seat, r.remove(0)));
+    // (asked inside and refused outside the call that holds the game: a seat it has not got loses the call and not the game)
+    let known = super::with(h, |x| { let known = seat < x.g.seats.len(); if known { x.hand_over(seat, r.remove(0)); } known });
+    assert!(known, "face_record: the game has no seat {}", seat);
 }
 /// # Safety
 /// `p`, `n` and `keys`, `kn` name bytes the host wrote into memory from face_alloc.
 #[no_mangle]
 pub unsafe extern "C" fn face_ahead(h: u32, seat: usize, p: *const f64, n: usize, keys: *const u8, kn: usize) {
     let r = records(p, n, keys, kn);
-    super::out(super::with(h, |x| {
+    let a = super::with(h, |x| {
+        if seat >= x.g.seats.len() { return None; }
         // (it asks of the box world: its copy stands, as for any question between two ticks)
         if game::ask::WorldAsk::try_of(&x.g).is_err() { game::scene_collision::stands(&mut x.g); }
         game::scene_box_mirror::box_mirror_things(&mut x.g);
@@ -67,12 +70,15 @@ pub unsafe extern "C" fn face_ahead(h: u32, seat: usize, p: *const f64, n: usize
         let (pl, yes) = (&g.pl[here.player], |b: bool| if b { 1.0 } else { 0.0 });
         let c = &g.ch[pl.ch];
         let wall = pl.wall.as_ref().map(|w| w.n);
+        let others = g.guards.iter().chain(g.civilians.iter()).map(|&gd| g.gd[gd].ch).chain(g.seats.iter().map(|&s| g.pl[game::seats::seat(g, s).player].ch));
+        let near = others.filter(|&o| o != pl.ch).map(|o| { let p = g.ch[o].pos; game::m::hyp2(p[0] - c.pos[0], p[2] - c.pos[2]) }).fold(f64::INFINITY, f64::min);
         let mut o: Vec<f64> = vec![c.id, yes(pl.down), c.pos[0], c.pos[1], c.pos[2], c.aim_yaw];
-        o.extend([yes(wall.is_some()), wall.map_or(0.0, |n| n[0]), wall.map_or(0.0, |n| n[2])]);
+        o.extend([yes(wall.is_some()), wall.map_or(0.0, |n| n[0]), wall.map_or(0.0, |n| n[2]), near]);
         o.extend([yes(a.free), a.pos[0], a.pos[1], a.pos[2], a.aim_yaw, a.follow[0], a.follow[1], a.follow[2]]);
         let at = a.aim.unwrap_or([0.0; 3]);
         o.extend([yes(a.aim.is_some()), at[0], at[1], at[2]]);
         path.iter().for_each(|p| o.extend(p));
-        o.iter().flat_map(|f| f.to_le_bytes()).collect()
-    }));
+        Some(o.iter().flat_map(|f| f.to_le_bytes()).collect())
+    });
+    super::out(a.unwrap_or_else(|| panic!("face_ahead: the game has no seat {}", seat)));
 }

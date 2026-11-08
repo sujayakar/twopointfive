@@ -86,8 +86,7 @@ export async function standRecipe(recipe: Recipe): Promise<StoodCopy> {
   const out: StoodCopy = { W, seats: g.seats.length, warnings: R.report?.warnings ?? [], get ticks() { return ticks; },
     step(cmds) { netStep(g, W.engine, cmds.map(fromWire)); word = netWord(g, word); ticks++; if (wordTick(ticks - 1)) { watch = netWatch(g); const A = keep && netWhole(g); if (A) keep!(ticks, A); } },
     show(seat) { g.localSeat = g.seats[seat]; },
-    ahead: (seat, cmds) => netAhead(g.seats[seat], cmds),
-    near(seat) { const me = g.seats[seat].view.player.char, p = me.pos; let d = Infinity; for (const c of [...g.guards.map((x: any) => x.char), ...(g.civilians ?? []).map((x: any) => x.char), ...g.seats.map((x: any) => x.view.player.char)]) if (c !== me) d = Math.min(d, Math.hypot(c.pos[0] - p[0], c.pos[2] - p[2])); return d; },
+    ahead: (seat, cmds) => netAhead(g, g.seats[seat], cmds),
     quiet: on => netQuiet(g, on), watch: () => watch,
     begin: () => { (g as unknown as { rustHost?: { startNow?(): void } }).rustHost?.startNow?.(); },
     word: () => word.toString(36), ended: () => { const V = g.verdict.result; return V ? { won: V.won, end: V.word, why: V.why } : null; } };

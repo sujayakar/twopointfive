@@ -22,8 +22,6 @@ export interface Stood {
   show(seat: number): void;
   /** where a seat's man would be after records the game has not had; with none, where the game has him */
   ahead(seat: number, cmds: WireCmd[]): Ahead;
-  /** how near the nearest other body drawn stands to a seat's man (m) */
-  near(seat: number): number;
 }
 
 /** MP_WORDS=<a file's path up to its last dot>: this process writes the whole game's words after every word tick to `<that>.<pid>.words`, a line a tick with

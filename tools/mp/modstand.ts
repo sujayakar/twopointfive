@@ -9,9 +9,6 @@ import { commandBytes, startWhy, type NetStart } from '../../src/net/start.ts';
 import { NetGame, type NetFace } from '../../src/net/modgame.ts';
 import { wordTick } from '../../src/net/words.ts';
 import { LOOK, lookLevelFile, lookOfQuery } from '../../src/scene/look.ts';
-import { specOfQuery } from '../../src/scene/scenarioList.ts';
-import { Drawn, type DrawFace } from '../../src/draw/drawn.ts';
-import { Man, Section, Want } from '../../src/draw/sections.ts';
 import { characterFiles, pack } from '../blitz/start-pack.ts';
 import { faceHere } from '../blitz/face-build.ts';
 import { wordsKept, type Stood } from './stood.ts';
@@ -22,7 +19,6 @@ const ROOT = resolve(import.meta.dir, '../..');
 export interface StartSetup { search: string; seed: number; commands?: string }
 export function freshStart(setup: StartSetup): NetStart {
   const q = new URLSearchParams(setup.search), named = q.get('levelFile') ?? 'office.json';
-  if (!specOfQuery(q)) throw new Error(`the address ${setup.search} names no mission`);
   LOOK.on = lookOfQuery(q);
   const look = lookLevelFile(named), start: NetStart = { file: named, words: setup.search, seed: setup.seed, seats: Number(q.get('seats') ?? 1), commands: setup.commands ?? '' };
   const why = startWhy(start); if (why) throw new Error(`the setup: ${why}`);
@@ -30,35 +26,37 @@ export function freshStart(setup: StartSetup): NetStart {
   return start;
 }
 
-interface StartFace extends NetFace, DrawFace { face_start(p: number, n: number, slot: number, seed: number, seats: number, flags: number): number; face_reserve(n: number): void; face_show_seat(h: number, seat: number): void; face_panic_ptr(): number; face_panic_len(): number }
+interface StartFace extends NetFace { face_start(p: number, n: number, slot: number, seed: number, seats: number, flags: number): number; face_reserve(n: number): void; face_show_seat(h: number, seat: number): void; face_panic_ptr(): number; face_panic_len(): number }
 /** `face_start`'s: the rows that dress the picture are up, on a page and so on every machine of a game */
 const DRESS = 1;
 let MODULE: WebAssembly.Module | null = null;
+
+/** every call of the face: a trap (a panic, the stack run out) is thrown as the panic's words */
+function guarded(raw: Record<string, unknown>, memory: WebAssembly.Memory): StartFace {
+  const out: Record<string, unknown> = {}, R = raw as unknown as StartFace;
+  for (const k of Object.keys(raw)) { const f = raw[k]; out[k] = typeof f !== 'function' || !k.startsWith('face_') ? f : (...a: unknown[]): unknown => {
+    try { return f(...a); } catch (e) { if (!(e instanceof WebAssembly.RuntimeError) && !(e instanceof RangeError)) throw e;
+      let words = ''; try { words = new TextDecoder().decode(new Uint8Array(memory.buffer, R.face_panic_ptr() >>> 0, R.face_panic_len() >>> 0)); } catch { /* the trap's own words, then */ }
+      throw new Error(`the game stopped in ${k}: ${words || (e as Error).message}`); } }; }
+  return out as unknown as StartFace;
+}
 
 export async function standStart(start: NetStart): Promise<Stood> {
   const why = startWhy(start); if (why) throw new Error(`no networked game can be stood from this start: ${why}`);
   const level = resolve(ROOT, 'levels', start.file); if (!existsSync(level)) throw new Error(`${start.file} is not a level of this build`);
   if (!MODULE) { const file = faceHere(); if (!file) throw new Error('the game\'s module is not built and the checked-in one is of other sources (bun run tools/blitz/face-build.ts)'); MODULE = new WebAssembly.Module(new Uint8Array(readFileSync(file))); }
-  const exports = new WebAssembly.Instance(MODULE, { env: { face_roll: () => { throw new Error('the game asked its host for a roll'); } } }).exports, X = exports as unknown as StartFace, memory = exports.memory as WebAssembly.Memory;
+  const raw = new WebAssembly.Instance(MODULE, { env: { face_roll: () => { throw new Error('the game asked its host for a roll'); } } }).exports as Record<string, unknown>, memory = raw.memory as WebAssembly.Memory, X = guarded(raw, memory);
   const bytes = pack([readFileSync(level), new TextEncoder().encode(start.words), ...characterFiles(ROOT), new Uint8Array(0), commandBytes(start)]);
   const p = X.face_alloc(bytes.length) >>> 0; new Uint8Array(memory.buffer, p, bytes.length).set(bytes);
-  let h = 0;
-  try { h = X.face_start(p, bytes.length, -1, start.seed, start.seats, DRESS) >>> 0; }
-  catch (e) { throw new Error(`the game could not be stood from its start: ${new TextDecoder().decode(new Uint8Array(memory.buffer, X.face_panic_ptr() >>> 0, X.face_panic_len() >>> 0)) || (e as Error).message}`); }
+  const h = X.face_start(p, bytes.length, -1, start.seed, start.seats, DRESS) >>> 0;
   X.face_free(p, bytes.length); X.face_reserve(64 * 1048576);
   const game = new NetGame(X, memory, h), keep = wordsKept();
   game.clear();
-  const drawn = new Drawn(X, memory, Want.men);
   return {
     seats: start.seats, warnings: [], get ticks() { return game.ticks; },
     step(cmds: WireCmd[]) { game.step(cmds); game.clear(); if (keep && wordTick(game.ticks - 1)) keep(game.ticks, game.whole(true)); },
     quiet() { /* nothing of the game is kept beside it */ }, begin() { /* it stands */ }, show: seat => X.face_show_seat(h, seat),
     word: () => game.word(), watch: () => game.watch(), ended: () => game.ended(),
     ahead: (seat, cmds) => game.ahead(seat, cmds),
-    near(seat) {
-      const me = game.ahead(seat, []); drawn.take(h); let d = Infinity;
-      for (let i = 0, o = drawn.at[Section.men]; i < drawn.n[Section.men]; i++, o += Man.row) if (drawn.u[o + Man.id] !== me.id) d = Math.min(d, Math.hypot(drawn.f[o + Man.feet] - me.at[0], drawn.f[o + Man.feet + 2] - me.at[2]));
-      return d;
-    },
   };
 }

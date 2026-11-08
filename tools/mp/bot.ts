@@ -97,7 +97,7 @@ function met(S: Stood, ran: number[]): void {   // (after a walk: the game has r
   //  kick, a door, a hit that drops him begun INSIDE the look is the game's to say, and the walk ahead plays none of it), and nobody stands within APART
   //  of him — the walk ahead holds everybody else where the tick has them, so a teammate at his shoulder moves him as no look could know. Such a look is
   //  right to the bar; any other is a correction, eased on the page, and is counted in the whole alone)
-  const near = S.near(seatN());
+  const near = me.near;
   if (heldBy[t] === (heldBy[was.heard - 1] ?? 0) && lostBy[t] === (lostBy[was.from - 1] ?? 0) && near > APART) { seen.clean++; seen.cleanSum += e; if (e < 0.001) seen.cleanExact++;
     if (WHY && e > 0.001) console.error(`why ${JSON.stringify({ t, mm: Math.round(e * 1000), from: was.from, heard: was.heard, near: +near.toFixed(2), at: p, want })}`);
     if (e > seen.cleanMax) { seen.cleanMax = e; seen.worst = { t, mm: Math.round(e * 1000), records: t + 1 - was.from, near: +near.toFixed(2) }; } }
