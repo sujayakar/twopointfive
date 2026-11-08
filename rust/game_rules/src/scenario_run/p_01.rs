@@ -155,7 +155,6 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
 /// address's for the life of a game this start stands, as a page's is), and the visit's hour (`?hour=`, `?sun=`), which the stand lays over the level. A Weather born in its kind lays its roofs, its wet ground and its wind once; a host that stood the level's
 /// own storm first and changed the kind afterwards had another box table than a page.   (src/host/standup.ts addressBeforeGame)
 pub fn address_before_game(g: &mut crate::game::Game, q: &mut crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> {
-    if q.has("nolook") || q.get_all("look").any(|v| matches!(v, "plain" | "0" | "off")) { g.k.look.on = false; }   // (scene/look.ts lookOfQuery: the look's switch, which the leaves' paint and the cast read as the game is made)
     crate::rowset::row_settings(g, q);
     // (weatherKinds.ts weatherAsked, then snowLevelOfQuery: a level built for snow is in snow whatever the address said)
     let snow = q.get("levelFile").and_then(|f| f.strip_suffix(".json")).map_or(false, |n| crate::weather_kinds::snow_level(g, Some(n)));

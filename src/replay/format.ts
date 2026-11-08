@@ -163,10 +163,15 @@ export interface ReplayFile {
   rerun?: RunTape | { dead: string; tick: number };
 }
 
+/** a level had a second file until each came to have one: a tape on `hall-gwot.json`, or on the plain file because its address asked for it, has no game to walk through */
+const tapeOldFile = (T: RunTape): boolean => {
+  const q = new URLSearchParams(T.recipe.search ?? '');
+  return /-gwot\.json$/.test(T.recipe.levelFile ?? '') || q.has('nolook') || ['plain', '0', 'off'].includes(q.get('look') ?? '');
+};
 /** why a replay's run cannot be walked through a game, as a sentence with no stop ('' = it can): asked by every reader that would (the page's player and the roads
  *  to it, tools/qa/rerun.ts). The map viewer draws any file: its samples are the recording itself. */
 export function tapeWhy(F: ReplayFile | null): string {
-  const T = F?.rerun, why = !T ? 'it was saved without a record of the controls' : 'dead' in T ? T.dead : T.v !== TAPE_VERSION ? 'a different version of the game saved it' : '';
+  const T = F?.rerun, why = !T ? 'it was saved without a record of the controls' : 'dead' in T ? T.dead : T.v !== TAPE_VERSION ? 'a different version of the game saved it' : tapeOldFile(T) ? 'it was recorded on a level file that has since been replaced' : '';
   return why && `This replay can't be played in the game because ${why}`;
 }
 

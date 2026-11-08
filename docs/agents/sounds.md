@@ -157,7 +157,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the game running under it (the room's impulse is ~6 ms of main thread on the first click); the levels above are Chromium's renderer on the software stack.
 - **The level's own music (10-15)** (the maintainer: "we should curate the music for each level, not do it randomly"; `src/audio/setlist.ts SETLISTS`, `pieces.ts MUSIC.byLevel`:
   ON in the page, `?shuffle` = the shuffled bag as it was; OFF in the module and on the frozen stand, raised with the pieces by the one word `TPS_MUSIC=1`; its `FROZEN_HOLDS`
-  row; `shuffle` is one of engineplay's this-visit words). THE TABLE is keyed by level file name (`office` = the bundled level; `<level>-gwot.json` is the same level) and,
+  row; `shuffle` is one of engineplay's this-visit words). THE TABLE is keyed by level file name (`office` = the bundled level) and,
   before that, `<level>:<kind>` (the office holds four kinds of mission: the solo night, the night breach, the room clear and the rescue each have a row). A row is two piece
   NAMES in playing order: the first opens the level when play begins (off the menu's theme, or on a page that loads straight in), the second takes over after `MUSIC.minutes`
   at a calm phrase end (twice that in a fight), then back. The theme is

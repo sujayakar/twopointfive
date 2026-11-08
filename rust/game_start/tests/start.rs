@@ -66,7 +66,7 @@ fn what_a_level_file_says_is_on_the_floor() {
     p.run(1.0);
     drop(p);
     // the long hall in the look's dress: drums and tyres, each one round box in the file and on the floor
-    let p = Play::level("hall-gwot.json", false, &plain);
+    let p = Play::level("hall.json", false, &plain);
     let f = p.floor();
     assert!(f.round > 0 && f.boxes == 435, "the long hall's round things (and no box added or lost for them): {:?}", f);
     drop(p);

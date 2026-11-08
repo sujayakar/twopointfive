@@ -88,7 +88,7 @@ async function host(search: string, m: Mission): Promise<void> {
   const K = keptLevers() as Record<string, string | undefined>, kept = leversNow().flatMap(l => { const v = K[l.key]; return v === undefined ? [] : [[l.param, v] as [string, string]]; });
   // (the mission's address is the starting page's link, which carries this VISIT's words along — a picture's quality, a muted mixer, where it sends: those
   // are this window's, not the game's, and the second player's page must not take them from the recipe)
-  const own = new URLSearchParams([...new URLSearchParams(search.replace(/^[^?]*\?/, ''))].filter(([k, v]) => !visitWord(k, v) && !SENDING_WORDS.includes(k) && k !== 'seed' && k !== 'player'));   // (by pair: the dress's `look=plain` is the game's level and goes to the second player, a look page's row is this window's)
+  const own = new URLSearchParams([...new URLSearchParams(search.replace(/^[^?]*\?/, ''))].filter(([k]) => !visitWord(k) && !SENDING_WORDS.includes(k) && k !== 'seed' && k !== 'player'));
   let made: GameView; try { made = await L.make(coopScenario('?' + own.toString(), kept)); } catch (e) { return fail(lobbyWhy(e, 'host')); }
   const why = await enter(L, made.code, say); if (why) fail(why);
 }

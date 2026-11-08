@@ -7,4 +7,4 @@ Write one only when a level's own part (everything but its lived things) was cha
 
     git hash-object -w levels/<name>.json > tools/qa/fixtures/level-base/<name>.txt
 
-A line that starts with `#` says what changed. A look twin (`<name>-gwot.json`) has its own file or none.
+A line that starts with `#` says what changed.

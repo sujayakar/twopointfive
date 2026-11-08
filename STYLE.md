@@ -112,7 +112,7 @@ stoves, crates, tyres, generators, pickups, lanterns). What makes a level is wha
 | records | a district land office | surveyors' magenta, on the ground only |
 | consulate | a town-house consulate | plum carpet bound in brass |
 
-Other levels have a skin of their own (`tools/levels/*-gwot.ts`) or are built straight from the kit
+Other levels have a skin of their own (`tools/levels/<name>.ts` over `<name>-floor.ts`) or are built straight from the kit
 (`src/scene/gwotKit.ts`). No two places share an accent or a family of ground marks.
 
 ![The block: green dado, cover plates in the floor](public/assets/menu/block-four.jpg)
@@ -204,5 +204,5 @@ Each of these was tried or asked about and turned down; do not bring one back wi
 Three things the code holds you to (`bun run tools/qa/probes.ts look`, `cast-look`):
 
 - **The game reads paint.** Rounds, blasts and debris classify a box by its colour. A 2010s paint comes from `src/scene/gwotPalette.ts` and stands in for the office paint it replaced; do not invent colours on a level.
-- **A skin changes paint only.** A level's 2010s file is the plain file box for box, plus flat decals that start at the floor.
+- **A skin changes paint only.** A level's file is its floor box for box, plus flat decals that start at the floor.
 - **Slot names are the contract with the meshes.** A character's material names are the slots above; a new mesh keeps them (`src/render/charMaterials.ts`).

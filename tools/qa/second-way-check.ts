@@ -250,7 +250,7 @@ if (import.meta.main) {
   const badFlag = args.filter(a => a.startsWith('--') && !FLAGS.includes(a)), badLevel = levels.filter(f => !existsSync(resolve(dir, f)));
   if (badFlag.length || badLevel.length) {
     if (badFlag.length) console.error(`second-way-check: unknown flag ${badFlag.join(' ')} — the flags are ${FLAGS.join(' ')}`);
-    if (badLevel.length) console.error(`second-way-check: no such level ${badLevel.join(' ')} — levels/ has ${readdirSync(dir).filter(f => f.endsWith('.json') && !f.includes('-gwot')).join(' ')}`);
+    if (badLevel.length) console.error(`second-way-check: no such level ${badLevel.join(' ')} — levels/ has ${readdirSync(dir).filter(f => f.endsWith('.json')).join(' ')}`);
     process.exit(2);
   }
   const r = await secondWay({ levels, walls: args.includes('--walls'), nolists: args.includes('--nolists'), verbose: args.includes('--verbose'), list: args.includes('--list') });

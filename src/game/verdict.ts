@@ -27,7 +27,6 @@
 import type { Game } from './game';
 import { activeScenario, runningScenario } from './scenarioRun';
 import { levelNameOf } from '../scene/levelLoad';   // (asked inside rowFile only)
-import { LOOK_LEVELS } from '../scene/look';   // (a table of file names: read inside rowFile only)
 
 export const VERDICT = {
   on: true,
@@ -42,12 +41,10 @@ export const VERDICT = {
 };
 
 /** The file a mission row names for the level this game stands on (null: the bundled office, which rows name by naming none). The game is not told the
- *  page's `levelFile`, so it is read back off the level's own name: `<name>.json`, or the file whose look that is (scene/look.ts LOOK_LEVELS: the page
- *  loads `barracks-gwot.json` for the row on `barracks.json`). `probes.ts debrief-loud` holds every row's file and its look's file to this. */
+ *  page's `levelFile`, so it is read back off the level's own name: `<name>.json`. `probes.ts debrief-loud` holds every row's file to this. */
 export function rowFile(g: Game): string | null {
   const name = levelNameOf(g.level); if (!name || name === 'office') return null;
-  const file = `${name}.json`; for (const k in LOOK_LEVELS) if (LOOK_LEVELS[k] === file) return k;
-  return file;
+  return `${name}.json`;
 }
 /** The mission that is up is the STEALTH GAME'S kind (a quiet mission: the one kind whose card carries the rating beside a verdict) on a row of the list
  *  that LEANS LOUD (scene/scenarios.ts `lean`: the mission sheet's 'Approach'), asked while VERDICT.loudCard is up. The stealth game's rating prices every

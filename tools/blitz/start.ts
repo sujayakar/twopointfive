@@ -10,7 +10,7 @@
 // With `--scenario` the mission is started by the game's own `startScenario` (a spec of that kind, `--squad` teammates, `--deal` its seed) before the
 // state is taken; with `--link '?words'` it is started AS THE PAGE STARTS A MISSION, by the game's own `startFromQuery` on those words of an
 // address (the row's own hour and weather, the fog of war, a quiet mission's rung and cameras, then the mission). `--mission <id>` is a row of the
-// mission list (scene/scenarioList.ts): the level file the page loads for it (the look's, scene/look.ts lookLevelFile) and the link a click on the
+// mission list (scene/scenarioList.ts): the level file the page loads for it and the link a click on the
 // row loads (scenarios.ts scenarioQuery), both written to DIR/mission.txt for the Rust side. No tick is run.
 // `--again [--played N] [--between <id>]`: the same start made a second time in this process, after N frames of the first game (and, with
 // `--between a,b`, after the first of those missions the game stands was stood and played N frames too): again.bin, again-s.bin.
@@ -29,9 +29,9 @@ const WORDS = arg('--words', '');
 let file = argv[0], spec: any = null, LINK = arg('--link', ''), BETWEEN: { id: string; file: string; link: string }[] = [];
 if (STAND !== 'shipped') { say(`start.ts: the stand is '${STAND}': the Rust start is the page's, so this compare is too`); process.exit(64); }
 if (MISSION || argv.includes('--missions')) {
-  const { ROOT } = await import('../qa/headless.ts');   // (the page's stand on the switches: the look decides which file of a level the page loads)
-  const { ALL_MISSIONS } = await import('../../src/scene/scenarioList.ts'), { scenarioQuery } = await import('../../src/scene/scenarios.ts'), { lookLevelFile } = await import('../../src/scene/look.ts');
-  const row = (e: any) => { const look = e.level ? lookLevelFile(e.level) : ''; return { id: e.id, file: !e.level ? 'office.json' : existsSync(resolve(ROOT, 'levels', look)) ? look : e.level, link: scenarioQuery(e), listed: !e.offList }; };
+  const { ROOT } = await import('../qa/headless.ts');   // (the page's stand on the switches)
+  const { ALL_MISSIONS } = await import('../../src/scene/scenarioList.ts'), { scenarioQuery } = await import('../../src/scene/scenarios.ts');
+  const row = (e: any) => { return { id: e.id, file: e.level ?? 'office.json', link: scenarioQuery(e), listed: !e.offList }; };
   if (!MISSION) { for (const e of ALL_MISSIONS) { const r = row(e); say(`${r.id}\t${r.file}\t${r.link}\t${r.listed ? 'listed' : 'off the list'}`); } process.exit(0); }
   const e = ALL_MISSIONS.find((m: any) => m.id === MISSION); if (!e) { say(`start.ts: no mission '${MISSION}' (start.ts --missions lists them)`); process.exit(64); }
   const r = row(e); file = r.file; LINK = r.link;

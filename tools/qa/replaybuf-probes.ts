@@ -129,6 +129,8 @@ console.log('\n=== replay buffer ===');
     const R = await rerun(file, { toN: N }), same = !!R.W && hashDigest(digestGame(R.W.game, true)) === dEnd, off = (R.W?.game as any)?.saves?.enabled === false;
     check(!R.refuse && !!R.report && R.report.compared > 100 && !R.report.drift && same && off, `tape: its walk is the run again, to the digest at step ${N}, its autosave as taped${R.refuse ? ` — REFUSED: ${R.refuse}` : ` (${R.report?.compared} trace samples, worst ${R.report?.worst?.metres?.toFixed(3)} m, drift ${R.report?.drift ? 'YES' : 'none'}, digest ${same ? 'equal' : 'DIFFERS'})`}`);
     const other = (rr: unknown) => rerun({ ...file, rerun: rr } as any), ended = await other({ dead: 'a scenario was started or quit from a menu', tick: 12 }), v1 = await other({ ...file.rerun, v: 1 });
+    const onFile = (o: object) => other({ ...file.rerun, recipe: { ...file.rerun?.recipe, ...o } }), second = await onFile({ levelFile: '/levels/hall-gwot.json' }), plainFile = await onFile({ search: '?look=plain' });
+    check(/level file that has since been replaced/.test(second.refuse) && /level file that has since been replaced/.test(plainFile.refuse), `tape: one on a level file that has gone is refused in words (${second.refuse.slice(0, 110)}…)`);
     check(file.rerun?.v === F.TAPE_VERSION && F.tapeWhy(file) === '' && /from a menu \(step 12\)/.test(ended.refuse) && /a different version of the game/.test(v1.refuse), `tape: one that ended and one of another version are refused in words (${ended.refuse.slice(0, 110)}… · ${v1.refuse.slice(0, 90)}…)`);
   } finally { SS.SAVETIMELINE.on = was; } }
 
