@@ -146,7 +146,6 @@ pub fn game_reset_guards(g: &mut crate::game::Game) {
     crate::seats::each_seat(g, &mut |v: &mut Game| {
         crate::close::close_reset(v);
         crate::stalk::stalk_reset(v);
-        crate::tapstep::tap_reset(v);
     });
     crate::roomfight::room_fight_reset(g);
     crate::cover::cover_reset(g);

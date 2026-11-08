@@ -23,7 +23,7 @@ export const NET_AGREED: readonly string[] = [
   'm.glasspen', 'm.doorway', 'm.nightbreach', 'm.handleside', 'm.doornames', 'm.runner', 'm.netquietfeed', 'm.netquiet', 'm.laststand', 'm.stackroom',
   'm.rearwatch', 'm.coverfire', 'm.wallreact', 'm.tactics', 'm.lanes', 'm.digin', 'm.pressure', 'm.difficulty', 'm.stickycam', 'm.quietfog',
   'm.calmtorch', 'm.buddy', 'm.powerout', 'm.darkfoe', 'm.whistle', 'm.attention', 'm.doze', 'm.needs', 'm.gunwall', 'm.lightswitch', 'm.stalk',
-  'm.tapstep', 'm.darkdoor', 'm.startle', 'm.flinch', 'm.rescue', 'm.rescuecheck', 'm.seenwalk', 'm.he40', 'm.samlook', 'm.irlight', 'm.nvg',
+  'm.darkdoor', 'm.startle', 'm.flinch', 'm.rescue', 'm.rescuecheck', 'm.seenwalk', 'm.he40', 'm.samlook', 'm.irlight', 'm.nvg',
   'm.irlaser', 'm.clearline', 'm.unseen', 'm.squadsmoke', 'm.squad40', 'm.squadthrow', 'm.kitanim', 'm.smokebreak', 'm.showwhy', 'm.cmd',
   'm.fireline', 'm.doorforce', 'm.glassbreak', 'm.glass', 'm.wallpen', 'm.suppression', 'm.enemysquads', 'm.morale', 'm.doortools', 'm.shotgun',
   'm.player', 'm.close', 'm.takedown', 'm.spotted', 'm.pairorders', 'm.pairup', 'm.sneak', 'm.silent', 'm.combat', 'm.scene_level_load', 'm.snow_bog',
