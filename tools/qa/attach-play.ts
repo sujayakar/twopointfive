@@ -71,7 +71,7 @@ if (process.env.ATTACH_HOOK) {
     const one: string[] = [];
     if (a.reloading) one.push('reload'); if (a.inThrow) one.push('throw'); if (a.mvs?.tsT >= 0) one.push('toss'); else if (a.mvs?.armL > 0.003 && !a.dazzle) one.push('armL');   // (MOVES: the support hand's own toss of a can · anything else that pass has the left arm for)
      if (a.sw?.t >= 0) one.push('swap'); if (a.kitBusy) one.push('kit'); if (a.nvBusy) one.push('nv');
-    if (a.doorPush) one.push('door'); if (a.holdPose || rec?.held) one.push('hold'); if (a.haul) one.push('haul'); if (a.wound) one.push('wound'); if (a.sigT >= 0) one.push('signal');
+    if (a.doorPush) one.push('door'); if (a.holdPose || rec?.held) one.push('hold'); if (a.haul) one.push('haul'); if (a.sigT >= 0) one.push('signal');
     if (a.wk?.last || a.wk?.shown > 0.003) one.push('work'); if (a.rx?.w?.x > 0.003) one.push('radio'); if (a.lockpick) one.push('lock'); if (a.bigTool) { const B = a.bigTool; one.push(B.t < B.equip ? 'bigOut' : B.end >= 0 && B.t >= B.end ? 'bigBack' : 'big'); }   // (the big slot's tool: on its way off his back · in his fists · on its way back) if (a.shootT >= 0) one.push('shot');
     if (a.dazzle) one.push('dazzle'); if (a.clutch > 0.003) one.push('clutch'); if (a.strikeT >= 0) one.push('strike'); if (a.kickT >= 0) one.push('kick'); if (a.hitT >= 0) one.push('hit'); if (a.tellT >= 0) one.push('tell');
     if (pistol && a.upperW && a.upperW.aim > 0.003 && a.upperW.aim < 0.97) one.push('aimRise');
