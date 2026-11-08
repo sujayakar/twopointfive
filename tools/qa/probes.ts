@@ -2919,11 +2919,7 @@ if (on('picker-rescue', 'picker', 'all')) await run('picker-rescue', async () =>
 // ---------------------------------------------------------------- THE MISSION LIST, the level select (missions-probes.ts; ui/missions.ts off ui/menu.ts's cards): 'missions' = the family — the list as data
 // (the solo night + every SCENARIOS row, each to its own URL and back), the real screen on a fake DOM (rows, the sheet, the keys, a pick = a load of the row's own URL, the onPick seam, Esc),
 // every mission's URL booted in a process of its own (it starts as that row with the team and the defenders its sheet says)
-if (on('missions-list', 'missions', 'all')) await run('missions-list', async () => (await import('./missions-probes.ts')).missionsList());
-if (on('missions-screen', 'missions', 'all')) await run('missions-screen', async () => (await import('./missions-probes.ts')).missionsScreen());
 if (on('missions-start', 'missions', 'all')) await run('missions-start', async () => (await import('./missions-probes.ts')).missionsStart());
-if (on('offlist', 'missions', 'all')) await run('offlist', async () => (await import('./offlist-check.ts')).offlistCheck());   // the rows cut from the mission list (scene/scenarios.ts offList; ui/missions.ts OFFLIST_UI, on in the page, ?offlist=0 off): drawn on no list, each still read back from its own address and drawn once for a visit that names it; OFFLIST_BREAK=1 must fail
-if (on('unplayed', 'missions', 'all')) await run('unplayed', async () => (await import('./unplayed-check.ts')).unplayedCheck());   // the unplayed rows stand apart (ui/missions.ts unplayedClass; unplayed-check.ts: a group's untuned rows off the short list come last, drawn quieter, the first under a break — cards and list on the fake DOM; UNPLAYED_BREAK=1 must fail)
 // ---------------------------------------------------------------- THE QUIET MISSION on any level (quiet-probes.ts; game/quiet.ts, scene/scenarios.ts QuietData): 'quiet' = the family — the block in the
 // level file and against its built floor, a start alone (the deal, the roster, the level's own words, the stop), the run to its end by each way out, the run with one partner under the pair
 // rules, checkpoints carrying the deal, and the office-only places (errands, phones, the response team, the weather) the level's own or off
@@ -2934,12 +2930,10 @@ for (const [name, fn] of [['quiet-data', 'quietData'], ['quiet-start', 'quietSta
 // (each row's URL carries its mission, team, difficulty, hour, weather and switches; ?pick= answers once; a quit takes them off), the real Menu on a fake DOM (the rows, a click = a load, the 'next'
 // on a pause card, the switch off = no row), every row's URL booted in a process of its own with the page's start-up order (the settings in force) and thirty seconds of play
 if (on('picks-list', 'picks', 'all')) await run('picks-list', async () => (await import('./picks-probes.ts')).picksList());
-if (on('picks-card', 'picks', 'all')) await run('picks-card', async () => (await import('./picks-probes.ts')).picksCard());
 if (on('picks-boot', 'picks', 'all')) await run('picks-boot', async () => (await import('./picks-probes.ts')).picksBoot());
 // ---------------------------------------------------------------- THE DIFFICULTY LEVERS (levers-probes.ts; game/difficulty.ts LEVERS, ui/levers.ts): 'levers' = the family — the rules (a level puts
 // every lever on its rung; a lever moved alone writes its own rows; kept per machine, the URL over it; links), the rows on the mission sheet and the loadout on a fake DOM, and the levers in a run
 if (on('levers-rules', 'levers', 'ui', 'all')) await run('levers-rules', async () => (await import('./levers-probes.ts')).leversRules());
-if (on('levers-screens', 'levers', 'ui', 'all')) await run('levers-screens', async () => (await import('./levers-probes.ts')).leversScreens());
 if (on('levers-run', 'levers', 'all')) await run('levers-run', async () => (await import('./levers-probes.ts')).leversRun());   // (a minute or two: sixteen runs of the scripted commander)
 if (on('levers-address', 'levers', 'all')) await run('levers-address', async () => (await import('./levers-probes.ts')).leversAddress());   // (a mission's address names the difficulty, and the harness's addressed stand reads it where a page does)
 // ---------------------------------------------------------------- THE HOUR (hours-probes.ts; src/game/hours.ts): 'hours' = the family — night is no record (every hour laid over each squad
@@ -3241,7 +3235,6 @@ if (on('hourwx-storm', 'hourwx', 'all')) await run('hourwx-storm', async () => (
 if (on('hourwx-save', 'hourwx', 'all')) await run('hourwx-save', async () => (await import('./hour-weather-probes.ts')).hourwxSave());
 if (on('hourwx-query', 'hourwx', 'all')) await run('hourwx-query', async () => (await import('./hour-weather-probes.ts')).hourwxQuery());
 if (on('hourwx-air', 'hourwx', 'all')) await run('hourwx-air', async () => (await import('./hour-weather-probes.ts')).hourwxAir());
-if (on('hourwx-sheet', 'hourwx', 'all')) await run('hourwx-sheet', async () => (await import('./hour-weather-probes.ts')).hourwxSheet());
 // ---------------------------------------------------------------- character materials (charmats-probes.ts — a man shaded per material slot): 'charmats' = the family
 if (on('charmats-slots', 'charmats', 'all')) await run('charmats-slots', async () => (await import('./charmats-probes.ts')).charmatsSlots());
 if (on('charmats-tables', 'charmats', 'all')) await run('charmats-tables', async () => (await import('./charmats-probes.ts')).charmatsTables());
