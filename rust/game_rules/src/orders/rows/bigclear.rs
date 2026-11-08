@@ -46,7 +46,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
 }
 
 /// an open door, or a steel one
-fn gone(g: &mut Game, t: &OrderTarget, _men: &[GuardId]) -> bool {
+fn gone(g: &Game, seat: &crate::seats::SeatRef, t: &OrderTarget, _men: &[GuardId]) -> bool {
     let OrderTarget::Door(x) = t else { return false };
     crate::doortools::is_open(g, x.door) || on(g.dr[x.door].def.steel)
 }

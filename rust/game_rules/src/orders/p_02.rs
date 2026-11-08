@@ -455,13 +455,12 @@ fn new_row(g: &mut Game, def: OrderDef) -> OrdersOrderDefId { g.tab.orders_order
 
 /// THE ROWS OF A MENU THAT CAME OFF THE WIRE, which carries the table and each menu's list but not whose the rest of the rows are: a game read from
 /// bytes finds its own again. Of an id, the row on this menu; else the first that no other seat has, counting the seats in order, since a
-/// start makes its rows seat after seat. The wall tools' digitless copies are nobody's.
+/// start makes its rows seat after seat.
 fn adopt_rows(g: &mut Game) {
-    let copies: Vec<OrdersOrderDefId> = g.m.wallcharge.stand_ins.keys().into_iter().filter_map(|k| g.m.wallcharge.stand_ins.get(k).copied()).collect();
     let mut ids: Vec<String> = Vec::new();
-    for (d, r) in g.tab.orders_order_def.iter() { if !copies.contains(&d) && !ids.contains(&r.id) { ids.push(r.id.clone()); } }
+    for (_, r) in g.tab.orders_order_def.iter() { if !ids.contains(&r.id) { ids.push(r.id.clone()); } }
     for id in ids {
-        let rows: Vec<OrdersOrderDefId> = g.tab.orders_order_def.iter().filter(|(d, r)| r.id == id && !copies.contains(d)).map(|(d, _)| d).collect();
+        let rows: Vec<OrdersOrderDefId> = g.tab.orders_order_def.iter().filter(|(_, r)| r.id == id).map(|(d, _)| d).collect();
         let mut left = rows.clone();
         let mine: Option<OrdersOrderDefId> = rows.iter().copied().find(|d| g.orders.defs.contains(d));
         let mut ahead = 0;   // (the seats before this one that have none of it listed: each takes the next)

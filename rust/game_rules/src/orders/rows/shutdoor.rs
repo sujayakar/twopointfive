@@ -34,7 +34,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
 }
 
 /// in the charge's place while the door stands open with no charge on it
-fn when(g: &mut Game, t: &OrderTarget, _men: &[GuardId]) -> bool {
+fn when(g: &Game, seat: &crate::seats::SeatRef, t: &OrderTarget, _men: &[GuardId]) -> bool {
     let OrderTarget::Door(x) = t else { return false };
-    crate::shutdoor::stands_open(g, x.door) && crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door).is_none()
+    crate::shutdoor::stands_open(g, x.door) && crate::doortools::door_tools_charge_on(g, seat, x.door).is_none()
 }

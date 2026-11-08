@@ -1,4 +1,4 @@
-//! A SEAT IS A VALUE (rust/game_rules/src/seats/seat_ref.rs). A function that holds the game shared and depends on the seat takes a `SeatRef`,
+//! A SEAT IS A VALUE (rust/game_types/src/seats/seat_ref.rs). A function that holds the game shared and depends on the seat takes a `SeatRef`,
 //! so it can be asked about ANY seat of a game nobody may write to: not only the one that happens to stand on it.
 //!
 //! Before readers took a seat, the only way to ask about the second player's seat was to stand it on the game (`with_seat`, which writes

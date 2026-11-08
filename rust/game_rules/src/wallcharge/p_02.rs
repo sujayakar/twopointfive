@@ -65,19 +65,6 @@ pub fn wall_charge_sync(g: &mut crate::game::Game) -> bool {
     live
 }
 
-/// A row the wall's fifth has taken the digit of: itself, digitless, one stand-in a row. (wallcharge.ts undigit)
-pub fn wall_charge_undigit(g: &mut crate::game::Game, d: OrdersOrderDefId) -> OrdersOrderDefId {
-    let mut row = g.tab.orders_order_def[d].clone();
-    row.key = None;
-    if let Some(x) = g.m.wallcharge.stand_ins.get(d).copied() {
-        g.tab.orders_order_def[x] = row;
-        return x;
-    }
-    let x = g.tab.orders_order_def.push(row);   // (a second row of the same id ON PURPOSE: made once a row, kept in stand_ins, written in place above)
-    g.m.wallcharge.stand_ins.set(d, x);
-    x
-}
-
 /// Puts the rows on the menu as the mode says. (wallcharge.ts seat)
 pub fn wall_charge_seat(g: &mut crate::game::Game) {
     crate::orders::squad_orders_unregister(g, WALL_PAGE);
