@@ -19,7 +19,7 @@ fn leafVertex(vi: u32, at: u32, inst: u32) -> V {
   var o: V; o.p = vec4f(0.0, 0.0, -1.0, 1.0); o.w = vec3f(0.0); let I = &insts[inst]; let leaf = (*I).leaf + at; o.id = 0x80000000u | (inst << 13u) | at;
   let a = extra[leaf * 2u]; let b = bitcast<vec4u>(extra[leaf * 2u + 1u]); let n = octUnpack(b.x); let t = octUnpack(b.y); let s = cross(n, t);
   let q = array<vec2f, 10>(vec2f(-1.0, 0.0), vec2f(-0.42, -1.0), vec2f(-0.42, 1.0), vec2f(0.38, -1.0), vec2f(0.38, 1.0), vec2f(1.0, 0.0), vec2f(-0.8, -0.8), vec2f(0.8, -0.8), vec2f(-0.8, 0.8), vec2f(0.8, 0.8))[vi];
-  let w = leafWide(b.w) * select((1.0 - q.x * q.x) * (1.0 + 0.35 * q.x), 1.0, vi > 5u); let l = a.xyz + t * (q.x * a.w) + s * (q.y * w * a.w);
+  let w = leafWide(b.w & 255u) * select((1.0 - q.x * q.x) * (1.0 + 0.35 * q.x), 1.0, vi > 5u); let l = a.xyz + t * (q.x * a.w) + s * (q.y * w * a.w);
   // local → world: the rows are the inverse, scaled
   let k = dot((*I).r0.xyz, (*I).r0.xyz); let d = l - vec3f((*I).r0.w, (*I).r1.w, (*I).r2.w); o.w = ((*I).r0.xyz * d.x + (*I).r1.xyz * d.y + (*I).r2.xyz * d.z) / k; return o;
 }

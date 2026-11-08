@@ -8,7 +8,6 @@ var<workgroup> tile: array<vec4f, 144>;                            // this group
   if (id.x >= dim.x || id.y >= dim.y) { return; }
   let rdim = vec2f(frame.size.xy); let full = min(id.xy * u32(DIV), vec2u(rdim) - 1u); let rd = pxRay(full); let p = unpackPx(textureLoad(surf, full, 0), rd); let at = (lid.y + 2u) * 12u + lid.x + 2u; let c = tile[at];
   if (p.sky && NARROW == 0 && airAt2(vec2u(id.xy)) <= 0.0) { textureStore(outH, id.xy, c); textureStore(outM, id.xy, vec4f(0.0)); return; }
-  if (LEAVES == 1 && !p.leaf) { textureStore(outH, id.xy, vec4f(0.0)); textureStore(outM, id.xy, vec4f(0.0)); return; }
   if (NARROW == 1 && c.a < 0.0) { textureStore(outH, id.xy, c); textureStore(outM, id.xy, vec4f(0.0)); return; }
   var m1 = vec4f(0.0); var m2 = vec4f(0.0); var wn = 0.0; var wv = vec4f(0.0); let R = 2;
   for (var y = -R; y <= R; y++) { for (var x = -R; x <= R; x++) { let v = tile[u32(i32(at) + y * 12 + x)]; if (NARROW == 1 && v.a < 0.0) { continue; } let k = said(v); m1 += v * k; m2 += v * v * k; wv += k; wn += 1.0; } }
@@ -31,7 +30,7 @@ var<workgroup> tile: array<vec4f, 144>;                            // this group
   }
   var n = 0.0; var o = c1; var mom = vec4f(lum(c1.rgb), lum(c1.rgb) * lum(c1.rgb), 0.0, 0.0); if (NARROW == 0) { mom.w = c.a * c.a; }
   if (ws > 0.02) {
-    h = select(c, h / max(hw, vec4f(1e-6)), hw > vec4f(1e-6)); mo /= ws; let st = steady(p.x); let cap = mix(3.0, CAP_NOW, st) * select(1.0, 0.5, aux.w > 0.5 && !p.leaf); n = min(mo.z, cap - 1.0);
+    h = select(c, h / max(hw, vec4f(1e-6)), hw > vec4f(1e-6)); mo /= ws; let st = steady(p.x); let cap = mix(3.0, CAP_NOW, st) * select(1.0, 0.5, aux.w > 0.5 || p.leaf); n = min(mo.z, cap - 1.0);
     var se = sd; if (KIND == 1) { let q = (clamp(m1, vec4f(0.0), vec4f(1.0)) * wv + 1.0) / (wv + 2.0); let doubt = sqrt(q * (1.0 - q)); se = vec4f(max(sd.xyz, doubt.xyz), sd.w + 0.04); }
  
     let e = se * (mix(SPREAD, 4.5, dull) * @tune.leash) + abs(m1) * mix(0.04, 0.25, dull) + 1e-4; let hc = clamp(h, m1 - e, m1 + e); let moved = select(length((hc - h).rgb) / (length(e.rgb) + 1e-4), length((hc - h).xyw) / (length(e.xyw) + 1e-4), KIND == 1); n *= 1.0 / (1.0 + moved * 0.35);

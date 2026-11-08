@@ -93,7 +93,7 @@ export class Smoke {
       ...Array.from({ length: SMOKE.rounds * 2 }, (_, i) => S('smoke press', solveCode, { div: ro('smokeDiv', 'array<f32>'), press: rw('smokePress', 'array<f32>'), ...faces }, half, { PARITY: i & 1 })),
       S('smoke free', freeCode, { a0: ro('smokeA'), press: ro('smokePress', 'array<f32>'), b0: rw('smokeB'), ...faces }),
       { name: 'smoke clear', over: OVER, code: '', async make() { return enc => { if (go()) enc.clearBuffer(g.buffers.get('smokeOcc')!); }; } },
-      { ...S('smoke light', '', {}), reads: { sunLeaves: 'sunLeaves' }, code: signals + cacheLib + bounceLib + head + lightCode, buffers: { ...cacheBind, b0: ro('smokeB'), glow: rw('smokeGlow'), changes: ['changes', 'Changes', 'uniform'] } },
+      { ...S('smoke light', '', {}), code: signals + cacheLib + bounceLib + head + lightCode, buffers: { ...cacheBind, b0: ro('smokeB'), glow: rw('smokeGlow'), changes: ['changes', 'Changes', 'uniform'] } },
       S('smoke pack', packCode, { b0: ro('smokeB'), glow: ro('smokeGlow'), pack: rw('smokePack', 'array<vec2u>'), occ: rw('smokeOcc', 'array<atomic<u32>>') }),
       { name: 'smoke hand', over: OVER, code: '', async make() { return (enc: GPUCommandEncoder) => { if (go()) { enc.copyBufferToBuffer(g.buffers.get('smokeB')!, 0, g.buffers.get('smokeA')!, 0, CELLS * 16); lab.smoke.copy(enc); } }; } },
     ];

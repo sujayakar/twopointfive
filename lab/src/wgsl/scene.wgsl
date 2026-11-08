@@ -120,7 +120,7 @@ fn meetLeaf(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> f32 {
   let n = octUnpack(b.x); let den = dot(n, rd); if (abs(den) < 1e-6) { return -1.0; }
   let t = dot(a.xyz - ro, n) / den; if (t <= tmin || t >= tmax) { return -1.0; }
   let x = ro + rd * t - a.xyz; let tl = octUnpack(b.y); let u = dot(x, tl) / a.w; let v = dot(x, cross(n, tl)) / a.w;
-  let w = leafWide(b.w) * (1.0 - u * u) * (1.0 + 0.35 * u);
+  let w = leafWide(b.w & 255u) * (1.0 - u * u) * (1.0 + 0.35 * u);
   return select(-1.0, t, abs(u) < 1.0 && abs(v) < w);
 }
 

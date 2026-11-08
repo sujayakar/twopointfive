@@ -60,11 +60,22 @@ export function packPiece(p: Piece, f: Float32Array, u: Uint32Array, o: number, 
   u[o + 21] = (q(t[0]) | (q(t[1]) << 8) | (q(t[2]) << 16)) >>> 0;
   u[o + 22] = planeAt >>> 0; u[o + 23] = (((p.lamp ?? -1) & 0xff) | ((p.seed ?? 0) << 8)) >>> 0;
 }
+/** HOW OPEN each side of each leaf is, next to the fog its cluster is to a bounce: what its own neighbours keep from it, which no fog can tell. Found once */
+export function ownShade(c: Cluster): [number, number][] {
+  const L = c.leaves, n = L.length, far = 0.9, dirs: V3[] = [], K = 14; for (let i = 0; i < K; i++) { const u = (i + 0.5) / K, a = i * 2.39996, s = Math.sqrt(u); dirs.push([s * Math.cos(a), s * Math.sin(a), Math.sqrt(1 - u)]); }
+  const wide = (l: Leaf) => l.wood ? 0.022 : c.kind === 1 ? 0.06 : 0.46, side = L.map(l => cross(l.n, l.t)); let area = 0; for (const l of L) if (!l.wood) area += l.size * l.size * 4 * wide(l) * (2 / 3); const sigma = c.kind === 1 ? 1.3 : 0.5 * area / 4.19 * 0.75;
+  return L.map((l, i) => { const out: [number, number] = [1, 1]; for (let f = 0; f < 2; f++) { const z = mul(l.n, f ? -1 : 1), x = l.t, y = side[i]!; let seen = 0, fog = 0;
+    for (const d0 of dirs) { const d: V3 = [x[0] * d0[0] + y[0] * d0[1] + z[0] * d0[2], x[1] * d0[0] + y[1] * d0[1] + z[1] * d0[2], x[2] * d0[0] + y[2] * d0[1] + z[2] * d0[2]], o = add(l.at, mul(z, 0.012)); let open = 1;
+      for (let j = 0; j < n; j++) { if (j === i) continue; const m = L[j]!, e: V3 = [m.at[0] - o[0], m.at[1] - o[1], m.at[2] - o[2]], b = e[0] * d[0] + e[1] * d[1] + e[2] * d[2]; if (b < -m.size || b > far + m.size) continue; const r2 = e[0] * e[0] + e[1] * e[1] + e[2] * e[2] - b * b; if (r2 > m.size * m.size) continue;
+        const den = m.n[0] * d[0] + m.n[1] * d[1] + m.n[2] * d[2]; if (Math.abs(den) < 1e-5) continue; const t = (m.n[0] * e[0] + m.n[1] * e[1] + m.n[2] * e[2]) / den; if (t < 1e-3 || t > far) continue; const q: V3 = [o[0] + d[0] * t - m.at[0], o[1] + d[1] * t - m.at[1], o[2] + d[2] * t - m.at[2]], u = (q[0] * m.t[0] + q[1] * m.t[1] + q[2] * m.t[2]) / m.size; if (Math.abs(u) >= 1) continue; const s = side[j]!, v = (q[0] * s[0] + q[1] * s[1] + q[2] * s[2]) / m.size; if (Math.abs(v) < wide(m) * (1 - u * u) * (1 + 0.35 * u)) { open = 0; break; } }
+      seen += open; const bb = o[0] * d[0] + o[1] * d[1] + o[2] * d[2], cc = o[0] * o[0] + o[1] * o[1] + o[2] * o[2] - 1, h = bb * bb - cc; fog += h > 0 ? Math.exp(-sigma * Math.min(far, Math.max(0, -bb + Math.sqrt(h)))) : 1; }
+    out[f] = Math.max(0.04, Math.min(1, seen / Math.max(fog, 1e-3))); } return out; });
+}
 /** leaves as the shaders read them: centre + size, normal and long axis packed, tone */
 export function packCluster(c: Cluster): { bvh: Bvh; data: ArrayBuffer } {
   const b = c.leaves.map(l => { const e = l.size; return { mn: [l.at[0] - e, l.at[1] - e, l.at[2] - e], mx: [l.at[0] + e, l.at[1] + e, l.at[2] + e] } as Bounds; });
-  const bvh = buildBvh(b, 3), data = new ArrayBuffer(c.leaves.length * 32), f = new Float32Array(data), u = new Uint32Array(data);
-  bvh.order.forEach((src, i) => { const l = c.leaves[src]!, o = i * 8; f.set(l.at, o); f[o + 3] = l.size; u[o + 4] = oct(l.n); u[o + 5] = oct(l.t); f[o + 6] = l.tone; u[o + 7] = l.wood ? 2 : c.kind; });
+  const ao = ownShade(c), bvh = buildBvh(b, 3), data = new ArrayBuffer(c.leaves.length * 32), f = new Float32Array(data), u = new Uint32Array(data);
+  bvh.order.forEach((src, i) => { const l = c.leaves[src]!, o = i * 8; f.set(l.at, o); f[o + 3] = l.size; u[o + 4] = oct(l.n); u[o + 5] = oct(l.t); f[o + 6] = l.tone; const a = ao[src]!; u[o + 7] = (l.wood ? 2 : c.kind) | (Math.round(a[0] * 255) << 8) | (Math.round(a[1] * 255) << 16); });
   return { bvh, data };
 }
 function oct(n: V3): number { const s = Math.abs(n[0]) + Math.abs(n[1]) + Math.abs(n[2]); let x = n[0] / s, y = n[2] / s; if (n[1] < 0) { const a = (1 - Math.abs(y)) * Math.sign(x || 1), b = (1 - Math.abs(x)) * Math.sign(y || 1); x = a; y = b; } const q = (v: number) => Math.round((v * 0.5 + 0.5) * 65535) & 0xffff; return (q(x) | (q(y) << 16)) >>> 0; }
