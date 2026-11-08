@@ -1,84 +1,72 @@
-// THE LOADOUT SCREEN (sortie prep, after a mission is picked and before the page load that starts it — the maintainer, 10-07: "a "loadout" screen or something like that
+// THE KIT STEP OF THE ONE STARTING PAGE (ui/startpage.ts mounts it in the mission list's sheet; the maintainer, 10-07: "a "loadout" screen or something like that
 // for picking how many squad members you want … think like mgsv did!"): you and a slot per teammate, how many come — none to four — and DEPLOY, which loads the
 // mission's own URL with the size on it (game/loadout.ts squadSearch: at the mission's own size it is the URL its row always loaded). The size, its rules, its
-// words and its store are game/loadout.ts's; this file is the DOM and the keys. Plain DOM in an overlay of its own (#loadout, over the start card's #menu), its
-// styles injected here, so nothing of the card is re-rendered under it and index.html is not touched.
+// words and its store are game/loadout.ts's; this file is the DOM and the keys. THE SOLO NIGHT comes through here too (kind 'solo': the team row is greyed at solo,
+// your own card is the only one) and Deploy loads `?solo`, where main.ts puts your card on the plain night's player (game/kit.ts kitSolo).
 //
-// THE FLOW (wireMissions below, called once by main.ts): the mission list (ui/missions.ts) ▸ a pick opens THIS screen for that mission (the list closes
-// first; MISSIONS.onPick) ▸ Deploy loads the mission's URL — the list's own href, so the sheet's Standard | Hard rides along — with the size on it. Back / Esc
-// reopens the list on the same row. THE SOLO NIGHT comes through here too (kind 'solo': the team row is greyed at solo, your own card is the only one) and
-// Deploy loads `?solo`, where main.ts puts your card on the plain night's player (game/kit.ts kitSolo).
-//
-// WHAT IS ON IT, top to bottom: the mission · TEAM (the size) · the five member slots, each with its man's kit in a line — one of those who come is PICKED ·
+// WHAT IS ON IT, top to bottom: TEAM (the size) · the five member slots, each with its man's kit in a line — one of those who come is PICKED ·
 // the picked member's KIT AND UNIFORM CARD (src/ui/kitCard.ts memberCard, the table is src/game/kit.ts), mounted in the one `[data-member="i"]` host under the
 // slots (0 = you, 1‥4 = the teammates in staging order — game/loadout.ts rosterOf — which is KIT.members' order) · what the squad carries between them (stun
-// canisters and door charges: kit.ts kitPool(size), the very number the run's staging sets) · Back and Deploy.
+// canisters and door charges: kit.ts kitPool(size), the very number the run's staging sets) · Deploy.
 //
 // CONTROLS (his rules: no held keys, no digit above 5): the mouse for everything (a click on a filled slot picks that man, on an empty one brings the team up
 // to him, on a card's arrows and sets as the card says) · W S / ↑ ↓ move between rows: team → members → down through the picked man's card → the buttons ·
-// A D / ← → change the highlighted row (the team size; which member; a card row's value; which button) · Enter / Space press (on the members row: into his
-// card; in the card: the row's next value, or the picked set; elsewhere Deploy, unless Back is the highlighted button) · Esc back one screen, from anywhere.
+// A D / ← → change the highlighted row (the team size; which member; a card row's value) · Enter / Space press (on the members row: into his
+// card; in the card: the row's next value, or the reset; elsewhere Deploy) · Esc back to the rows, from anywhere.
 // C copies the picked man's kit and V pastes the copied kit onto him, from any row (ui/kitCard.ts KIT_CLIP; Ctrl / Cmd with either is the same press while
 // no text on the page is selected and no text field has the keys): pick a man, C, step along the roster, V on each. A man who wears the copied kit
 // carries its mark on his chip. The two go by the letter on the key (kitCard.ts clipKey), the rest of the screen's keys by their place.
-// While it is open every key is this screen's: the listener below is registered when this module loads — before main.ts's own — so Esc backs out of the screen
-// instead of closing the start card under it; the card never listens for itself here (it is handed its keys: card.key).
-//
-// SEAMS: `loadoutHooks.memberCard` is the card's maker (the real one unless a probe swaps it; null = no cards, as under ?nokit); a SQUAD-WIDE ROW (one more
-// thing the whole squad starts with — the silent order's 'start silent', say) appends its `.lo-row` to `screen.squadRows` (the empty box under the team row),
-// splices a LoadoutRow into `screen.rows` after the squad-wide rows already there (index 1, or 2 under the Squad kit row) and calls `screen.paint()`. The screen's own first squad-wide row is the SQUAD KIT (under the
-// pouches rule, kit.ts): a button for the issued kit and one for each of the cost table's named loadouts this build can carry — one press puts it on all
-// five cards, colours kept (by the keys: A D move the pick along the row, Enter puts it on); the lit one is what the cards are now (none: a mix of your own).
+// While the page's keys are on it every key is this screen's: the listener below is registered when this module loads, before main.ts's own; the card never
+// listens for itself here (it is handed its keys: card.key). The screen's first squad-wide row is the SQUAD KIT (under the pouches rule, kit.ts): a button for the
+// issued kit and one for each of the cost table's named loadouts this build can carry — one press puts it on all five cards, colours kept (by the keys: A D move
+// the pick along the row, Enter puts it on); the lit one is what the cards are now (none: a mix of your own).
 import type { ScenarioEntry } from '../scene/scenarios';
-import { lessonGroup } from '../scene/scenarios';
-import { pickSearch, levelWords, SCENARIO_KEYS } from '../scene/scenarioList';
-import { MISSIONS, SOLO_NIGHT, SOLO_KEY, unplayed, missionHref, openMissions, closeMissions, issuedWalls, issuedKit, type IssuedKit, type Mission } from './missions';
-import { difficultyHref, leversHref, leversMixed, leversLine, structureOfLevel, fogOffNow } from '../game/difficulty';
-import { leverRows, leversOpenOn, type LeverRowsUi } from './levers';
-import { fogOfQuery, fogOfLink, quietCamsOfLink, sameFog } from '../game/scenarioRun';
+import { SCENARIO_KEYS } from '../scene/scenarioList';
+import { MISSIONS, SOLO_KEY, issuedWalls, issuedKit, type IssuedKit, type Mission } from './missions';
+import { leversHref, fogOffNow } from '../game/difficulty';
+import { fogOfQuery, quietCamsOfLink, sameFog } from '../game/scenarioRun';
 import { quietFogHref, quietFogRow, quietFogAside, soloFogRow } from '../game/quietfog';
 import { STICKY } from '../game/stickycam';   // (read inside the screen only: what a quiet mission hands you — lentNow)
 import { WAND } from '../game/wand';         // (likewise)
 import { hourLive, hourIdOf } from '../game/hours';
 import { weatherOfSearch } from '../game/weatherKinds';
 import { squadChoices, squadSearch, startSize, storeSquad, rosterOf, sizeWords, kitAsIssued, lessonNote, issueNote, type SquadSize, type SquadChoice, type LoadoutKind } from '../game/loadout';
-import { KIT, SLOTS, SUITS, bigOf, kitPacks, kitDefault, type MemberKit, kitGun, kitRowCan, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitMission, kitIssueWhole, kitPool, kitRingsLent, kitStealthHand, kitStealthOn, kitRows, kitShown, kitSmokes, kitTeam, kitTreeOn, kitWalls, kitWords, kitWorn, squadCost } from '../game/kit';
-import { memberCard, tintCss, clipWorn, clipKey, gunCanOf, KIT_CAN, KIT_CLIP, KIT_LENT, type MemberCard, type MemberCardOpts } from './kitCard';
+import { KIT, SLOTS, bigOf, kitPacks, kitDefault, type MemberKit, kitGun, kitRowCan, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitMission, kitIssueWhole, kitPool, kitRingsLent, kitStealthHand, kitStealthOn, kitRows, kitShown, kitSmokes, kitTeam, kitWalls, kitWords, kitWorn, squadCost } from '../game/kit';
+import { memberCard, clipWorn, clipKey, type MemberCard } from './kitCard';
 import { menuTheme } from './theme';
 import { typedInto } from '../host/keymap';
-import { KITDENSE } from './kitDense';
 import { gunIcon, kitIcon } from './kitIcons';
 import { WEAPONS, type WeaponId } from '../game/weapons';
 /** the roster card's silhouette for the gun a man's card puts in his hands (kit.ts kitGun: a sidearm, the shotgun, else the rifle) */
 const gunIconOf = (id: WeaponId): string => { const c = WEAPONS[id].cls; return c === 'pistol' ? 'pistol' : c === 'shotgun' ? 'shotgun' : 'rifle'; };   // (by its row's class: a row added to the table needs nothing here)
 /** a roster chip's drawings (the one page): beside whatever he carries a COUNT of, these rows; and the rows whose drawing is a narrow thing, cut to a square board so a line of them starts flush */
-/** a roster gun wears its can: the card's one answer (kitCard gunCanOf) — or, where the card has the two gun rows, that row's own (a pick that cannot take one is drawn bare) */
-const rowCan = (i: number, m: MemberKit, f: string): boolean => (kitRows(i).some(r => r.field === 'primary') ? KIT_CAN.on && kitRowCan(i, m, f) : gunCanOf(i, m));
-const CHIP_SHOWS = new Set(['weapon', 'primary', 'wand', 'big']), CHIP_NARROW = new Set(['smoke', 'bangs', 'frags', 'shells']);
+const CHIP_SHOWS = new Set(['primary', 'wand', 'big']), CHIP_NARROW = new Set(['smoke', 'bangs', 'frags', 'shells']);
 const CHIP_GAP = 0.65, CHIP_IN = 0.18, CHIP_DIGIT = 0.46;   // a chip's icon row in icon heights: between two things, between a drawing and its count, one digit (startpage.ts's em values for the same)
 
 /** what the screen preps: a scenario's row (scene/scenarios.ts ScenarioEntry fits as it is), or the solo night (`kind: 'solo'`, squad 0) */
 export interface LoadoutEntry { id: string; title: string; kind: LoadoutKind; squad: number; level?: string; blurb?: string; untuned?: boolean; group?: string; packs?: { frags?: number } }
 export interface LoadoutOpts {
-  /** Esc / Back (after the screen has closed itself) */
+  /** Esc (after the screen has closed itself) */
   back?: () => void;
-  /** Deploy, instead of the page load: the query string to load and the size (the probes; a host that loads its own way) */
+  /** Deploy, instead of the page load: the query string to load and the size (the co-op dress; the probes) */
   deploy?: (search: string, n: SquadSize) => void;
-  /** the mission's own query string, with whatever else should ride along (absent: pickSearch(entry, location.search) at this machine's difficulty) */
-  search?: string;
-  /** the size to open on (absent: `?squad=N` on the page, else what was deployed last on this mission, else its own) */
+  /** the mission's own query string, with whatever else should ride along */
+  search: string;
+  /** the size to open on (absent: what was deployed last on this mission, else its own) */
   squad?: SquadSize;
-  /** where the overlay is put (absent: document.body) */
-  host?: HTMLElement;
-  /** MOUNTED INSIDE ANOTHER SCREEN (ui/startpage.ts: in the mission list's sheet; needs `host`): the list under it is not closed, the focus is not taken
-   *  or given back, and the screen takes a key only while `keys()` says the keys are its own */
-  embedded?: { keys(): boolean; /** a key, before any row of the screen has it: true = it was the host's (the one starting page's map sheet — ui/kitBrief.ts) */ key?(code: string, repeat: boolean): boolean;
-    /** a key the highlighted row did not take, before the screen's own Enter / Esc / W A S D: true = it was the host's (the one starting page's walkthrough — ui/kitGuide.ts: an open pop-up's Esc is the card's first) */ rest?(code: string, repeat: boolean): boolean };
+  /** where the screen is put (ui/startpage.ts: in the mission list's sheet) */
+  host: HTMLElement;
+  /** the keys are the screen's right now: it takes a key only while this says so */
+  keys(): boolean;
+  /** a key, before any row of the screen has it: true = it was the host's (the map sheet — ui/kitBrief.ts) */
+  key?(code: string, repeat: boolean): boolean;
+  /** a key the highlighted row did not take, before the screen's own Enter / Esc / W A S D: true = it was the host's (the walkthrough — ui/kitGuide.ts: an open pop-up's Esc is the card's first) */
+  rest?(code: string, repeat: boolean): boolean;
   /** Deploy is about to load `search` with `n` teammates (told before the load or `deploy`; nothing is replaced) */
   onDeploy?: (search: string, n: SquadSize) => void;
   /** told at the end of every paint (the one starting page's picture of the team follows it: ui/kitView.ts) */
   onPaint?: (s: LoadoutScreen) => void;
-  /** the words on the block that deploys (absent: 'Deploy' and the team's size). A host that deploys its own way says what its way is (ui/coop.ts) */
+  /** the words on the block that deploys (absent: 'Deploy' and the team's size). The co-op dress says what its way is (ui/coop.ts) */
   deployWords?: string;
 }
 /** one keyboard row of the screen: the element that takes the highlight, and what A D and Enter do on it (absent: nothing / Deploy). A row with keys of its
@@ -86,8 +74,8 @@ export interface LoadoutOpts {
  *  it (`enter`: +1 from above, −1 from below). */
 export interface LoadoutRow { el: HTMLElement; change?: (dir: 1 | -1) => void; confirm?: () => void; key?: (code: string, repeat: boolean) => boolean; enter?: (dir: 1 | -1) => void }
 export interface LoadoutScreen { readonly entry: LoadoutEntry; readonly root: HTMLElement; readonly squad: SquadSize; readonly open: boolean; rows: LoadoutRow[]; sel: number;
-  /** the picked member (0 = you, 1‥squad), his card (null: no cards), and the box a squad-wide row is appended to */
-  readonly member: number; readonly card: MemberCard | null; readonly squadRows: HTMLElement;
+  /** the picked member (0 = you, 1‥squad) and his card (null: no cards) */
+  readonly member: number; readonly card: MemberCard | null;
   /** the kit the picked member will be staged with: his kept card, or the issue card (with a mission's own fields over it) where the mission hands the kit out */
   worn(): MemberKit;
   /** the NAMED kit that is on (the Kit row's lit one — kit.ts kitLoadoutOf): '' = a mix of the player's own, or a screen with no such row */
@@ -95,29 +83,24 @@ export interface LoadoutScreen { readonly entry: LoadoutEntry; readonly root: HT
   setSquad(n: SquadSize): boolean; /** gone, with no word to anybody (Back's callback not called) */ close(): void; step(dir: 1 | -1): void; move(dir: 1 | -1): void; pick(i: number): void; pool(): { bangs: number; charges: number }; deploy(): void; back(): void; paint(): void; search(): string; key(code: string, repeat?: boolean): boolean }
 /** the rows of a card whose thing only looks into the fog of war: the optical wand (game/wand.ts) and the sticky cameras (game/stickycam.ts) */
 const FOG_KIT: readonly string[] = ['wand', 'cams'];
-/** the member card's maker (ui/kitCard.ts memberCard; a probe may swap it, null = no cards): fills the `[data-member]` host with member i's card */
-export const loadoutHooks: { memberCard: ((host: HTMLElement, i: number, opts?: MemberCardOpts) => MemberCard | void) | null } = { memberCard };
 
-const KIND_WORDS: Record<LoadoutKind, string> = { nightbreach: 'night breach', roomclear: 'room clear', rescue: 'hostage rescue', quiet: 'quiet mission', solo: 'solo night' };
 const PAIR_WORDS: Record<string, string> = { red: 'red pair', blue: 'blue pair' };
 let current: LoadoutScreen | null = null;
-/** the screen up is mounted inside another (LoadoutOpts.embedded): whether the keys are its own right now (null: a screen of its own — always) */
+/** whether the keys are the screen's own right now (LoadoutOpts.keys) */
 let currentKeys: (() => boolean) | null = null;
 /** the screen that is up (null: none) */
 export function loadoutOpen(): LoadoutScreen | null { return current; }
-/** the screen that is up goes, silently: nobody's Back is called (the mission list opening over it, the boot card going, the start card closing) */
-export function closeLoadout() { current?.close(); }
 
 function el(tag: string, cls?: string, text?: string) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 
-/** Open the loadout screen for a mission. One at a time: a screen already up is closed first. */
-export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): LoadoutScreen {
-  closeLoadout(); if (!opts.embedded) closeMissions();   // (one screen at a time over the card: this one. Silently — the old screen's Back would reopen the list under the new one)
+/** Open the kit step for a mission. One at a time: a screen already up is closed first, silently. */
+export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts): LoadoutScreen {
+  current?.close();
   injectStyle();
   const choices = squadChoices(entry);
   const own = choices.find(c => c.own)?.n ?? 2;
   const pageSearch = typeof location !== 'undefined' ? location.search ?? '' : '';
-  const base = opts.search ?? (entry.kind === 'solo' ? missionHref(SOLO_NIGHT, pageSearch) : quietFogAside(() => difficultyHref(pickSearch(entry as ScenarioEntry, pageSearch))));
+  const base = opts.search;
   const asked = opts.squad;   // (a row's click opens on what this machine deployed that mission with last, else its own size: the page's own ?squad=N is another run's)
   let squad: SquadSize = asked !== null && asked !== undefined && choices[asked].ok ? asked : startSize(entry);
   if (!choices[squad].ok) squad = (choices.find(c => c.ok)?.n ?? own) as SquadSize;
@@ -125,24 +108,11 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
 
   const root = el('div', 'lo'); root.id = 'loadout'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', `Loadout: ${entry.title}`);
   const shell = el('div', 'lo-card'); root.appendChild(shell);
-  const card = el('div', 'lo-body'); shell.appendChild(card);   // (the rows: on a window too short for them THEY scroll — Back, Deploy and the key line under them never do)
-  // the mission
-  const head = el('div', 'lo-head');
-  head.appendChild(el('div', 'lo-eyebrow', 'Sortie prep'));
-  const title = el('div', 'lo-title', entry.title); head.appendChild(title);
-  const tags = el('div', 'lo-tags');
-  tags.appendChild(el('span', 'lo-tag', KIND_WORDS[entry.kind])); tags.appendChild(el('span', 'lo-tag level', levelWords(entry)));
-  if (unplayed(entry)) tags.appendChild(el('span', 'lo-tag untuned', 'untuned'));   // (not on a mission the short list names — scene/picks.ts; ?nopicks = as it was)
-  head.appendChild(tags);
-  if (entry.blurb) head.appendChild(el('div', 'lo-blurb', entry.blurb));
-  card.appendChild(head);
-  // the team size: a stepper and a button per size
+  const card = el('div', 'lo-body'); shell.appendChild(card);   // (the rows)
+  // the team size: a button per size
   const teamRow = el('div', 'lo-row lo-team'); teamRow.setAttribute('data-row', 'squad');
-  teamRow.appendChild(el('div', 'lo-label', 'Team'));
-  const less = el('button', 'lo-step', '◀') as HTMLButtonElement; less.type = 'button'; less.title = 'one fewer (A / ←)'; less.setAttribute('data-step', '-1');
   const words = el('div', 'lo-words');
-  const more = el('button', 'lo-step', '▶') as HTMLButtonElement; more.type = 'button'; more.title = 'one more (D / →)'; more.setAttribute('data-step', '1');
-  teamRow.append(less, words, more);
+  teamRow.append(words);
   const sizes = el('div', 'lo-sizes'); const sizeBtns: HTMLButtonElement[] = [];
   for (const c of choices) {
     const b = el('button', 'lo-size', c.n === 0 ? 'solo' : `+${c.n}`) as HTMLButtonElement; b.type = 'button'; b.setAttribute('data-squad', String(c.n));
@@ -153,12 +123,6 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   }
   teamRow.appendChild(sizes);
   card.appendChild(teamRow);
-  // THE DIFFICULTY LEVERS (ui/levers.ts, game/difficulty.ts LEVERS — the maintainer, 10-10: 'let's actually unbundle difficulty a bit'): what standard / hard
-  // is made of, each its own to move before the run — fog of war (three rungs), the enemy's AI, the enemy's kit. One line of buttons under the mission's head,
-  // by the mouse (the keys' rows are the team's and the kit's, as they were); the level the screen was opened on stands under them (leversOpenOn) and a
-  // moved lever is kept on this machine. Not on a Training lesson (played as issued); on the solo night only the fog's, and only where it has one (QUIETFOG.solo).
-  let levers: LeverRowsUi | null = null, leversBack: (touched: boolean) => void = () => { /* nothing to put back */ };
-  const leverNote = el('div', 'lo-levnote');
   const quietRow = entry.kind === 'solo' ? soloFogRow() : quietFogRow(entry as ScenarioEntry);   // (a quiet mission may be played under the fog — game/quietfog.ts: the fog lever is live on its screen with a bottom rung of its own, off, and lit where a quiet mission starts — QUIETFOG.def — until it is moved; the solo night with it where QUIETFOG.solo is up: its link is read as a quiet row's)
   // NO FOG OF WAR ON THIS MISSION AS IT WOULD DEPLOY NOW (a quiet mission or the solo night with the fog lever at its bottom rung; the solo night always with QUIETFOG.solo down): the kit that only looks into
   // the fog — FOG_KIT — does nothing there, and a tile that carries one says so itself (ui/kitCard.ts `idle`). Asked live: the lever is on this screen.
@@ -182,18 +146,10 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   const lentNow = (f: string): number => (f === 'frags' ? (member === 0 ? packFrags : 0) : member !== 0 || (kitStealthOn() && cardsOn()) || kitIssueWhole(missionKit) /* (a mission's own card for you: nothing is handed over it — kit.ts ISSUE.whole) */ ? 0 : f === 'rings' ? kitRingsLent(stealthKind, KIT.members[0]) : !FOG_KIT.includes(f) ? 0 : f === 'cams' ? lentOf().cams : lentOf().wand);
   const lookSig = () => `${noFog()}|${lentNow('cams')}|${lentNow('wand')}|${lentNow('rings')}|${stealthKind && kitStealthOn() ? `${lentOf().n}|${lentOf().wand}` : ''}`;
   let fogWas = '';   // (set where the first card is mounted: `member` is not there yet)
-  const paintLevers = () => { if (!levers) return; levers.paint(key => (key === 'fog' || key === 'told' ? quietRow || fogOfLink(new URLSearchParams(base.replace(/^[^?]*\?/, ''))) : entry.kind !== 'quiet' && entry.kind !== 'solo'), entry.kind === 'roomclear' ? structureOfLevel(entry.level) : '', quietRow);   // (the fog lever where the mission has a fog of war — game/scenarioRun.ts; the defenders' two not on a quiet mission, whose shift is the level's own)
-    leverNote.textContent = entry.kind === 'quiet' || entry.kind === 'solo' ? '' : quietFogAside(() => leversMixed() ? `Your own mix, kept on this machine: ${leversLine()}.` : ''); };   // (the kept mix is the squad levers': none of it acts on a quiet mission or the solo night, and its fog word would read against the quiet fog's row just above)
-  if ((entry.kind !== 'solo' || quietRow) && !lessonGroup(entry.group) && !opts.embedded) {   // (mounted inside the one starting page — ui/startpage.ts — the sheet over it carries the rows: ui/missions.ts; the solo night under the fog has the fog's lever, its other two stay greyed: the shift is the level's own)
-    leversBack = leversOpenOn(base);
-    const box = el('div', 'lo-levers'); box.setAttribute('data-row', 'levers');
-    levers = leverRows(box, { row: 'lo-lever', label: 'lo-levl', btn: 'lo-levb', note: 'lo-levn' }, () => S.paint());
-    card.appendChild(box); card.appendChild(leverNote);
-  }
-  const squadRows = el('div', 'lo-squadrows'); card.appendChild(squadRows);   // (EMPTY: where a squad-wide row goes — the head comment's SEAMS)
+  const squadRows = el('div', 'lo-squadrows'); card.appendChild(squadRows);
   // the squad kit: one press puts a whole loadout of the cost table on the cards (kit.ts kitLoadouts — as issued first)
-  const kitsRow = el('div', 'lo-row lo-kits'); kitsRow.setAttribute('data-row', 'squadkit'); const oneList = kitTreeOn();   // (game/kittree.ts: the one list of named kits — shown, and live, for a man alone too: a card has no sets of its own but the reset)
-  kitsRow.appendChild(el('div', 'lo-label', oneList ? 'Kit' : 'Squad kit')); if (oneList) kitsRow.classList.add('lo-kits-one');
+  const kitsRow = el('div', 'lo-row lo-kits'); kitsRow.setAttribute('data-row', 'squadkit');   // (the one list of named kits — shown, and live, for a man alone too: a card has no sets of its own but the reset)
+  kitsRow.appendChild(el('div', 'lo-label', 'Kit')); kitsRow.classList.add('lo-kits-one');
   const kitBtns: { id: string; b: HTMLButtonElement }[] = []; let kitPick = 0;   // (by the keys: A D move the pick along the row, Enter puts it on — a whole squad's kit is not changed by a stray D)
   let issuedOnly = kitAsIssued(entry);   // (a Training row: played with the kit as issued whatever this machine keeps — no cards, no squad kit row, and a line saying so; game/loadout.ts)
   // …and a mission whose LEVEL FILE issues its own kit (scenarios.issue → game/kit.ts kitIssue: the run wears the issue cards with the mission's fields over them, whatever
@@ -203,12 +159,12 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   const issueOf = (i: number) => { const c = missionKit?.[String(i)]; if (!c) return ''; const n = (k: string) => (typeof c[k] === 'number' && (c[k] as number) > 0 ? c[k] as number : 0), pl = (k: number, w: string) => (k ? `${k} ${w}${k === 1 ? '' : 's'}` : '');
     return [typeof c.weapon === 'string' ? c.weapon : '', n('bangs') ? `${n('bangs')} stun` : '', pl(n('charges'), 'charge'), pl(n('frags'), 'frag'), n('smoke') ? `${n('smoke')} smoke` : '', pl(n('walls'), 'wall charge'), pl(n('shells'), 'shell'), pl(n('rings'), 'sponge round'), pl(n('cams'), 'sticky camera'), c.wand === true ? 'optical wand' : ''].filter(Boolean).join(' · '); };
   const issueWho = () => { const R = rosterOf(squad), who: string[] = []; for (let i = 0; i <= squad; i++) { const c = missionKit?.[String(i)]; if (!c) continue; const what = c.weapon === 'shotgun' ? 'the shotgun' : ''; if (what) who.push(`${i === 0 ? 'you carry' : `${R[i - 1].name} carries`} ${what}`); } return who.join(', '); };
-  const squadKits = () => (loadoutHooks.memberCard && KIT.on && SLOTS.on && (entry.kind !== 'solo' || oneList) && !issuedOnly ? kitLoadouts() : []);
-  const alone = () => (oneList && !squad ? 0 : undefined);   // (a man going alone: the row is HIS kit — the kits that differ on his card, put on his card alone; kit.ts)
+  const squadKits = () => (KIT.on && SLOTS.on && !issuedOnly ? kitLoadouts() : []);
+  const alone = () => (!squad ? 0 : undefined);   // (a man going alone: the row is HIS kit — the kits that differ on his card, put on his card alone; kit.ts)
   const putKit = (id: string) => { const why = kitLoadout(id, alone()); mountCard(true); drawSlots(); S.paint(); if (why) { note.textContent = why; note.className = 'lo-note off'; } };
   for (const L of squadKits()) {
     const b = el('button', 'lo-set', L.name) as HTMLButtonElement; b.type = 'button'; b.setAttribute('data-kit', L.id); b.title = L.id === 'issued' ? 'give everyone their issued kit (colors kept)' : `put the ${L.name} loadout on all five cards (colors kept)`;
-    b.onclick = () => { if (!squad && !oneList) return; S.sel = Math.max(0, S.rows.findIndex(r => r.el === kitsRow)); kitPick = kitBtns.findIndex(k => k.id === L.id); putKit(L.id); };
+    b.onclick = () => { S.sel = Math.max(0, S.rows.findIndex(r => r.el === kitsRow)); kitPick = kitBtns.findIndex(k => k.id === L.id); putKit(L.id); };
     kitBtns.push({ id: L.id, b }); kitsRow.appendChild(b);
   }
   const kitsOwn = el('div', 'lo-kits-own'); kitsRow.appendChild(kitsOwn);
@@ -223,16 +179,12 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   // the members: you and four slots; under them the picked member's kit and uniform card
   const slots = el('div', 'lo-slots'); slots.setAttribute('data-row', 'members'); card.appendChild(slots);
   const kitHost = el('div', 'lo-kit'); kitHost.setAttribute('data-row', 'kit'); card.appendChild(kitHost);
-  const cardsOn = () => !!loadoutHooks.memberCard && KIT.on && !issuedOnly;
+  const cardsOn = () => KIT.on && !issuedOnly;
   let member = 0, kitCard: MemberCard | null = null;
-  // the buttons
+  // the block that deploys
   const btnRow = el('div', 'lo-row lo-actions'); btnRow.setAttribute('data-row', 'actions');
-  const backBtn = el('button', 'lo-btn', 'Back') as HTMLButtonElement; backBtn.type = 'button'; backBtn.setAttribute('data-act', 'back');
   const goBtn = el('button', 'lo-btn primary', 'Deploy') as HTMLButtonElement; goBtn.type = 'button'; goBtn.setAttribute('data-act', 'deploy');
-  btnRow.append(backBtn, goBtn); shell.appendChild(btnRow);
-  const footWords = () => (cardsOn() ? `W S move · A D change · Enter press (in a card) or deploy · ${KIT_CLIP.on ? 'C copy a kit · V paste · ' : ''}Esc back · kit is kept on this machine${SLOTS.on ? '' : (SLOTS.ok ? ' · pouches rule off (?noslots): every row is free' : ' · pouches rule off (the cost table was refused — see the console): every row is free')}` : 'W S move · A D change · Enter deploy · Esc back');
-  const foot = el('div', 'lo-foot', footWords()); shell.appendChild(foot);
-  let onBack = false;   // which button the buttons row's highlight is on
+  btnRow.append(goBtn); shell.appendChild(btnRow);
   let keyed = false;    // inside a key press (paint scrolls the highlighted row into sight only then)
 
   const nameOf = (i: number) => { const man = i === 0 ? null : rosterOf(squad)[i - 1]; return { title: i === 0 ? 'You' : man?.name ?? 'Empty', sub: i === 0 ? 'point man' : man ? (squad > 2 ? PAIR_WORDS[man.pair] : squad === 2 ? 'the pair' : 'with you') : 'stays behind' }; };
@@ -243,16 +195,15 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
     for (let i = 0; i <= 4; i++) {
       const man = i === 0 ? null : R[i - 1] ?? null, here = i === 0 || !!man, pair = man?.pair ?? (i === 0 ? 'you' : all[i - 1].pair), N = nameOf(i);
       const s = el('div', `lo-slot ${here ? 'in' : 'out'} p-${here ? pair : 'none'}`); s.setAttribute('data-slot', String(i));
-      const fig = el('div', 'lo-fig'); fig.innerHTML = FIGURE; s.appendChild(fig);
       const name = el('div', 'lo-name', N.title); s.appendChild(name);
       s.appendChild(el('div', 'lo-role', N.sub));
       if (here && cardsOn()) {   // his kit in a line, and his suit on the figure (kit.ts: the table the card under the slots changes)
-        const m = kitShown(i); if (m.suit !== 'issued') fig.style.color = tintCss(SUITS[m.suit].tint);
-        name.classList.toggle('changed', kitChanged(i)); { const g = el('div', 'lo-gun'); g.innerHTML = gunIcon(gunIconOf(kitGun(m)), rowCan(i, m, m.weapon === 'pistol' ? 'secondary' : 'primary'), kitGun(m)); s.appendChild(g); } s.appendChild(el('div', 'lo-sum', kitWords(i)));
+        const m = kitShown(i);
+        name.classList.toggle('changed', kitChanged(i)); { const g = el('div', 'lo-gun'); g.innerHTML = gunIcon(gunIconOf(kitGun(m)), kitRowCan(i, m, m.weapon === 'pistol' ? 'secondary' : 'primary'), kitGun(m)); s.appendChild(g); } s.appendChild(el('div', 'lo-sum', kitWords(i)));
         { const ics = el('div', 'lo-ics'), K = m as unknown as Record<string, unknown>;   // (the same kit as drawings: the one page shows these in place of the words)
           let wide = 0;
           for (const r of kitRows(i)) { const f = r.field === 'primary' && m.weapon === 'pistol' ? 'secondary' : r.field;   // (no long gun brought: his sidearm is the gun the chip draws)
-            const v = r.field === 'big' ? (bigOf(m) === 'none' ? null : bigOf(m)) : K[f]; if (v === 0 || v === false || v == null || v === 'none' || !(typeof v === 'number' || CHIP_SHOWS.has(r.field))) continue; const I = kitIcon(f, v, (f === 'weapon' || f === 'primary' || f === 'secondary') && rowCan(i, m, f)); if (!I.svg) continue;   // (what differs from man to man: his gun, what he carries a count of, the wand)
+            const v = r.field === 'big' ? (bigOf(m) === 'none' ? null : bigOf(m)) : K[f]; if (v === 0 || v === false || v == null || v === 'none' || !(typeof v === 'number' || CHIP_SHOWS.has(r.field))) continue; const I = kitIcon(f, v, (f === 'primary' || f === 'secondary') && kitRowCan(i, m, f)); if (!I.svg) continue;   // (what differs from man to man: his gun, what he carries a count of, the wand)
             const narrow = CHIP_NARROW.has(r.field), c = el('span', narrow ? 'lo-ic n' : 'lo-ic'); c.innerHTML = narrow ? I.svg.replace('viewBox="0 0 64 32"', 'viewBox="16 0 32 32"') : I.svg; c.title = r.label; if (typeof v === 'number') c.appendChild(el('b', undefined, String(v)));
             wide += (ics.childElementCount ? CHIP_GAP : 0) + (narrow ? 1 : 2) + (typeof v === 'number' ? CHIP_IN + CHIP_DIGIT * String(v).length : 0); ics.appendChild(c); }
           widest = Math.max(widest, wide); s.appendChild(ics); }
@@ -278,7 +229,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
     if (!cardsOn()) { kitMission(null); return; }   // (no card to change: the staging wears the issue with the mission's kit handed over it, as it was)
     try {
       syncHand(); fogWas = lookSig();
-      kitCard = loadoutHooks.memberCard!(kitHost, member, { name: nameOf(member), idle: f => FOG_KIT.includes(f) && noFog(), lent: lentNow, dense: KITDENSE.on && !!opts.embedded, floor: () => btnRow.getBoundingClientRect?.().top ?? 0,   // (the dense card — ui/kitDense.ts — is the one starting page's: the older screen of its own keeps its list; its pop-ups end over this screen's foot)
+      kitCard = memberCard(kitHost, member, { name: nameOf(member), idle: f => FOG_KIT.includes(f) && noFog(), lent: lentNow, floor: () => btnRow.getBoundingClientRect?.().top ?? 0,   // (its pop-ups end over this screen's foot)
         onChange: () => { fogWas = lookSig(); drawSlots(); S.paint(); },   // (the card has just drawn itself with what the change moved — his gun, say, and with it the cameras he is handed: no second draw for it)
         onCopy: () => drawSlots(),   // (the roster's marks move to whoever wears the copied kit; no card changed, so nothing is painted or told on)
         onSelect: () => opts.onPaint?.(S),   // (ui/kitView.ts: the picture plays the highlighted tile's thing — told of a move, which changes no value)
@@ -289,10 +240,10 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   const stepTo = (dir: 1 | -1): SquadSize | null => { for (let n = squad + dir; n >= 0 && n <= 4; n += dir) if (choices[n].ok) return n as SquadSize; return null; };
 
   const S: LoadoutScreen = {
-    entry, root, rows: [], sel: 0, squadRows,
+    entry, root, rows: [], sel: 0,
     get squad() { return squad; }, get open() { return open; }, get member() { return member; }, get card() { return kitCard; }, get kitName() { return kitBtns.length > 1 ? kitLoadoutOf(alone()) ?? '' : ''; },
     worn() { const card = (j: number) => { const k = missionKit?.[String(j)]; return k ? { ...kitDefault(j), ...k } as MemberKit : issuedOnly || !KIT.on || !KIT.members[j] ? kitDefault(j) : KIT.members[j]; }, w = (missionKit || issuedOnly || !KIT.on ? kitWorn(squad, KIT.members.map((_c, j) => card(j))) : kitWorn(squad))[member];   // (as the staging will have him: kit.ts KITDEAL shares a named kit out over three or four)
-      const cams = KIT_LENT.on ? lentNow('cams') : 0, wand = KIT_LENT.on && lentNow('wand') > 0;   // (… and what the mission hands him over it: the man drawn beside the card carries what the tile says he will have)
+      const cams = lentNow('cams'), wand = lentNow('wand') > 0;   // (… and what the mission hands him over it: the man drawn beside the card carries what the tile says he will have)
       return cams > w.cams || (wand && !w.wand) ? { ...w, cams: Math.max(w.cams, cams), wand: w.wand || wand } : w; },
     setSquad(n) { const c: SquadChoice | undefined = choices[n]; if (!c || !c.ok) { note.textContent = c?.note ?? ''; note.className = 'lo-note off'; return false; } const was = squad; squad = n; if (was !== n) { kitTeam(n); const same = member <= n; member = Math.min(member, n); mountCard(same); drawSlots(); } S.paint(); return true; },
     step(dir) { const n = stepTo(dir); if (n !== null) S.setSquad(n); },
@@ -324,28 +275,26 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
       words.textContent = sizeWords(squad);
       const said = c.note || (c.own ? 'This mission\'s own team.' : ''); note.textContent = missionKit ? issueNote(said, issueWho()) : issuedOnly ? lessonNote(said) : said; note.className = 'lo-note';
       sizeBtns.forEach((b, n) => { b.classList.toggle('on', n === squad); b.classList.toggle('own', choices[n].own); b.setAttribute('aria-pressed', n === squad ? 'true' : 'false'); });
-      less.disabled = stepTo(-1) === null; more.disabled = stepTo(1) === null;
       const sq = cardsOn() ? squadCost() : null; squadP.textContent = squad && sq ? `Squad pouches ${sq.used} / ${sq.total}` : '';
       const P = kitPool(squad), own = kitWalls(squad), W = Math.max(own, issued), sm = kitSmokes(squad), walls = W ? `${W} wall charge${W === 1 ? '' : 's'}${issued > own ? ' (issued for this mission)' : ''}` : '';
       pool.textContent = issuedOnly ? (missionKit && issued ? `${squad ? 'Squad carries' : 'You carry'} · ${issued} wall charge${issued === 1 ? '' : 's'} (issued for this mission)` : '') : squad ? `Squad carries · ${P.bangs} stun · ${P.charges} charge${P.charges === 1 ? '' : 's'} · ${P.frags} frag${P.frags === 1 ? '' : 's'}${walls ? ` · ${walls}` : ''}${sm ? ` · ${sm} smoke` : ''}` : issued ? `You carry · ${walls}` : '';   // (smoke: named only when a card carries one — squadsmoke.ts)
       if (kitBtns.length > 1) { const now = kitLoadoutOf(alone()), mine = alone() === undefined ? null : new Set(kitLoadouts(0).map(l => l.id)); if (mine && !mine.has(kitBtns[kitPick].id)) kitPick = 0;
-        kitBtns.forEach((k, n) => { k.b.style.display = mine && !mine.has(k.id) ? 'none' : ''; k.b.classList.toggle('on', k.id === now); k.b.classList.toggle('pick', n === kitPick && (squad > 0 || oneList)); k.b.setAttribute('aria-pressed', k.id === now ? 'true' : 'false'); k.b.disabled = !squad && !oneList; }); kitsOwn.textContent = !squad && !oneList ? 'you\'re going alone, so there\'s no squad to equip' : now ? '' : 'a mix of your own'; }
-      paintLevers();
+        kitBtns.forEach((k, n) => { k.b.style.display = mine && !mine.has(k.id) ? 'none' : ''; k.b.classList.toggle('on', k.id === now); k.b.classList.toggle('pick', n === kitPick); k.b.setAttribute('aria-pressed', k.id === now ? 'true' : 'false'); }); kitsOwn.textContent = now ? '' : 'a mix of your own'; }
       { const nf = lookSig(); if (nf !== fogWas) { fogWas = nf; if (cardsOn()) { syncHand(); drawSlots(); } kitCard?.refresh(); } }   // (the optical wand and the sticky cameras look into the fog of war: on a mission without one a tile that carries one says 'no use here' — the card's own `idle` — and it can still be carried; the fog lever moved = the card drawn again)
       S.rows.forEach((r, i) => r.el.classList.toggle('sel', i === S.sel));
       if (keyed) { if (S.sel === 0) (card as unknown as { scrollTop: number }).scrollTop = 0; (S.rows[S.sel]?.el as unknown as { scrollIntoView?: (o: unknown) => void } | undefined)?.scrollIntoView?.({ block: 'nearest' }); }   // (a short window scrolls the rows: the highlighted row is kept in sight, the first row with the mission's head over it — by the KEYS only: a click's focus that scrolled the rows moved the button from under the cursor and lost the click)
       if (kitCard) { if (S.rows[S.sel]?.el === kitHost) kitCard.focus(); else kitCard.blur(); }   // (the card's own highlight shows only while the keys are in it)
-      backBtn.classList.toggle('sel', S.rows[S.sel]?.el === btnRow && onBack); goBtn.classList.toggle('sel', S.rows[S.sel]?.el === btnRow && !onBack);
+      goBtn.classList.toggle('sel', S.rows[S.sel]?.el === btnRow);
       goBtn.textContent = opts.deployWords ?? `Deploy · ${sizeWords(squad)}`;
       opts.onPaint?.(S);
     },
     key(code, repeat = false) { if (!open) return false; keyed = true; try { return keys(code, repeat); } finally { keyed = false; } },
   };
   const keys = (code: string, repeat: boolean): boolean => {
-      if (code && opts.embedded?.key?.(code, repeat)) return true;
+      if (code && opts.key?.(code, repeat)) return true;
       const row = S.rows[S.sel];
       if (row?.key?.(code, repeat)) return true;
-      if (code && opts.embedded?.rest?.(code, repeat)) return true;
+      if (code && opts.rest?.(code, repeat)) return true;
       if (repeat && (code === 'Enter' || code === 'NumpadEnter' || code === 'Space' || code === 'Escape')) return true;   // (a held Enter or Esc acts once)
       switch (code) {
         case 'KeyW': case 'ArrowUp': S.move(-1); return true;
@@ -354,21 +303,20 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
         case 'KeyD': case 'ArrowRight': row?.change?.(1); return true;
         case 'Enter': case 'NumpadEnter': case 'Space': if (row?.confirm) row.confirm(); else S.deploy(); return true;
         case 'Escape': S.back(); return true;
-        case 'KeyC': if (KIT_CLIP.on && !repeat) kitCard?.copy?.(); return true;    // (copy / paste the picked man's kit from any row: ui/kitCard.ts — ?.: a probe's own card has neither)
-        case 'KeyV': if (KIT_CLIP.on && !repeat) kitCard?.paste?.(); return true;
+        case 'KeyC': if (!repeat) kitCard?.copy?.(); return true;    // (copy / paste the picked man's kit from any row: ui/kitCard.ts — ?.: a probe's own card has neither)
+        case 'KeyV': if (!repeat) kitCard?.paste?.(); return true;
       }
       return false;
   };
   const rowsNow = (): LoadoutRow[] => [
     { el: teamRow, change: dir => S.step(dir) },
-    ...(kitBtns.length > 1 && !missionKit ? [{ el: kitsRow, change: (dir: 1 | -1) => { if (!squad && !oneList) return; const mine = alone() === undefined ? null : new Set(kitLoadouts(0).map(l => l.id)); for (let k = kitPick + dir; k >= 0 && k < kitBtns.length; k += dir) if (!mine || mine.has(kitBtns[k].id)) { kitPick = k; break; } S.paint(); }, confirm: () => { if (squad || oneList) putKit(kitBtns[kitPick].id); },
+    ...(kitBtns.length > 1 && !missionKit ? [{ el: kitsRow, change: (dir: 1 | -1) => { const mine = alone() === undefined ? null : new Set(kitLoadouts(0).map(l => l.id)); for (let k = kitPick + dir; k >= 0 && k < kitBtns.length; k += dir) if (!mine || mine.has(kitBtns[k].id)) { kitPick = k; break; } S.paint(); }, confirm: () => putKit(kitBtns[kitPick].id),
       enter: () => { const at = kitBtns.findIndex(k => k.id === kitLoadoutOf(alone())); if (at >= 0) kitPick = at; } }] as LoadoutRow[] : []),
     ...(cardsOn() ? [
       { el: slots, change: (dir: 1 | -1) => S.pick(member + dir), confirm: () => S.move(1) },
       { el: kitHost, key: (code: string, repeat: boolean) => kitCard?.key({ key: code, code, repeat }) ?? false, enter: (dir: 1 | -1) => kitCard?.go(dir > 0 ? 0 : 99) },
     ] as LoadoutRow[] : []),
-    { el: btnRow, change: dir => { onBack = dir < 0 && !opts.embedded; S.paint(); },   // (mounted inside another screen there is no Back button to step onto: Esc is the way back)
-      confirm: () => (onBack ? S.back() : S.deploy()) },
+    { el: btnRow },
   ];
   S.rows = rowsNow();
   if (!issuedOnly && entry.level) void issuedKit(entry.level).then(K => {
@@ -376,44 +324,31 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
     const at = S.rows[S.sel]?.el; missionKit = K; issuedOnly = true;   // (the cards a staging will put on)
     (kitsRow as unknown as { remove?: () => void }).remove?.();
     S.rows = rowsNow(); S.sel = Math.max(0, S.rows.findIndex(r => r.el === at));
-    foot.textContent = footWords(); mountCard(); drawSlots(); S.paint();
+    mountCard(); drawSlots(); S.paint();
   });
-  less.onclick = () => { S.sel = 0; S.step(-1); }; more.onclick = () => { S.sel = 0; S.step(1); };
-  backBtn.onclick = () => S.back(); goBtn.onclick = () => S.deploy();
+  goBtn.onclick = () => S.deploy();
   function close() {
     if (!open) return; open = false; if (current === S) current = null; kitCard?.destroy(); kitCard = null; kitMission(null);   // (…and the table's first card is the loud one again: a staging asks for itself)
-    leversBack(!!levers?.touched);   // (a screen opened on a link's own level and closed with no lever pressed leaves this machine's level as it found it)
     const p = root.parentElement as any; if (p?.removeChild) p.removeChild(root); else if (p?.children) { const k = p.children.indexOf(root); if (k >= 0) p.children.splice(k, 1); }
-    under?.removeAttribute?.('inert'); if (!opts.embedded) try { had?.focus?.(); } catch { /* gone */ }   // (the focus goes back where it was — the card's Missions button — BEFORE Back reopens the list, which remembers it in turn)
   }
-  // the card under the screen is inert while it is up (Tab, Space and Enter cannot reach its buttons), and the focus is the screen's
-  const had = typeof document !== 'undefined' ? (document as { activeElement?: Element | null }).activeElement as HTMLElement | null | undefined : null;
-  const under = opts.host || typeof document === 'undefined' ? null : document.getElementById('menu') as HTMLElement | null;
   root.addEventListener?.('mousedown', (e: Event) => { e.stopPropagation(); const t = e.target as HTMLElement | null; if (!t?.closest?.('button, .kc')) e.preventDefault(); });   // (never the game canvas's click; and a click on bare card keeps the keys where they were — in a kit card, say)
   root.addEventListener?.('contextmenu', (e: Event) => e.preventDefault());
 
   kitTeam(squad);   // (kit.ts: the squad's pouches are counted over the teammates who come — and a team bigger than the cards were cut for is brought back inside them)
   mountCard(); drawSlots(); S.paint();
-  (opts.host ?? document.body).appendChild(root);
-  current = S; currentKeys = opts.embedded?.keys ?? null;
-  under?.setAttribute?.('inert', ''); root.setAttribute('tabindex', '-1'); if (!opts.embedded) if (!kitCard || S.rows[S.sel]?.el !== kitHost) try { (root as { focus?: (o?: unknown) => void }).focus?.({ preventScroll: true }); } catch { /* a fake element */ }
+  opts.host.appendChild(root);
+  current = S; currentKeys = opts.keys;
+  root.setAttribute('tabindex', '-1');
   return S;
 }
 
 /** a mission of the list as this screen takes it: its scenario's row, or the solo night's stand-in */
 export function entryOfMission(m: Mission): LoadoutEntry { return m.scenario ?? { id: m.id, title: m.title, kind: 'solo', squad: 0, blurb: m.blurb }; }
-/** the loadout screen for a mission of the list. `href`: the list's own link for it (absent: worked out from the page). Back reopens the list on its row. */
-export function loadoutForMission(m: Mission, href?: string, opts: LoadoutOpts = {}): LoadoutScreen {
-  return openLoadout(entryOfMission(m), { search: href, back: () => { openMissions({ select: m.id, ...(href !== undefined ? { hour: hourIdOf(new URLSearchParams(href).get('hour')) } : {}) }); }, ...opts });
-}
-/** ONE FLOW (main.ts, once): a pick on the mission list opens this screen instead of loading the row; the list's button says so. */
-export function wireMissions() { MISSIONS.onPick = (m, href) => { loadoutForMission(m, href); }; MISSIONS.pickLabel = 'Loadout ›'; MISSIONS.next = { isOpen: () => !!current, close: closeLoadout }; }
-
-// every key is the screen's while it is up (registered at module load: ahead of main.ts's Esc — which would close the start card under it — and of the game's Input)
+// every key is the screen's while it has them (registered at module load: ahead of main.ts's Esc — which would close the start card under it — and of the game's Input)
 const eaten = new Set<string>();
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
   window.addEventListener('keydown', e => {
-    const S = current; if (!S || !S.open || (currentKeys && !currentKeys())) return;
+    const S = current; if (!S || !S.open || !currentKeys?.()) return;
     const chord = e.ctrlKey || e.metaKey, clip = e.altKey || (chord && e.shiftKey) || !S.card ? null : clipKey(e);   // (C or V by the letter on the key — kitCard.ts — bare or with Ctrl / Cmd: the kit's copy and paste)
     if (chord && clip) { const t = e.target as { tagName?: string; isContentEditable?: boolean } | null;   // (… the chord only while it is not the browser's own: no text field has the keys, no text on the page is selected)
       if (typedInto(e.target) || t?.isContentEditable || String(window.getSelection?.() ?? '')) return; }   // (the hidden text box of a framed page is no field: host/keymap.ts)
@@ -429,27 +364,15 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
 
 /** a roster chip's mark for a man who wears the copied kit (ui/kitCard.ts clipWorn): two sheets, one over the other */
 const CLIP_MARK = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5.5 5.5V2.8h7.7v7.7h-2.7"/><rect x="2.8" y="5.5" width="7.7" height="7.7"/></svg>';
-/** a standing figure for a slot: head, shoulders, long gun — one path, coloured by the slot's pair (currentColor) */
-const FIGURE = '<svg viewBox="0 0 40 64" width="40" height="64" aria-hidden="true"><circle cx="20" cy="9" r="6.5" fill="currentColor"/><path d="M8 26c0-6 5-9 12-9s12 3 12 9v16h-5v20h-5V44h-4v18h-5V42H8z" fill="currentColor"/><rect x="4" y="30" width="26" height="3" rx="1" fill="currentColor" opacity=".55" transform="rotate(-24 17 31)"/></svg>';
-
 const STYLE = `
 #loadout { position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 45%, rgba(var(--m-base-rgb),0.86), rgba(var(--m-base-rgb),0.96) 75%); color: var(--m-text); font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; }
 #loadout .lo-card { box-sizing: border-box; width: min(1040px, calc(100% - 32px)); max-height: calc(100% - 16px); display: flex; flex-direction: column; overflow: hidden; padding: 14px 0 10px; background: rgba(var(--m-panel-rgb),0.9); border: 1px solid rgba(var(--m-edge),0.35); border-radius: 6px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
-#loadout .lo-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 28px 8px; border-bottom: 1px solid rgba(var(--m-edge),0.14); }   /* the rows scroll here on a short window; Back, Deploy and the key line sit under it and never scroll */
-#loadout .lo-eyebrow { font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--m-accent); }
-#loadout .lo-title { font: 300 30px/1.1 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; letter-spacing: 0.04em; color: var(--m-bright); margin: 4px 0 6px; }
-#loadout .lo-tags { display: flex; gap: 6px; flex-wrap: wrap; }
-#loadout .lo-tag { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; padding: 1px 6px; border-radius: 2px; border: 1px solid rgba(var(--m-edge),0.45); color: var(--m-btn-text); white-space: nowrap; }
-#loadout .lo-tag.level { border-color: rgba(150,190,240,0.55); color: #b9d2f3; }
-#loadout .lo-tag.untuned { border-style: dashed; border-color: rgba(200,200,200,0.4); color: var(--m-soft); }
-#loadout .lo-blurb { margin-top: 6px; color: var(--m-soft); max-width: 64ch; }
+#loadout .lo-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 28px 8px; border-bottom: 1px solid rgba(var(--m-edge),0.14); }   
 #loadout .lo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; padding: 7px 10px; border: 1px solid transparent; border-radius: 4px; }
 #loadout .lo-row.sel { border-color: rgba(var(--m-accent-rgb),0.55); background: rgba(var(--m-btn-rgb),0.45); }
 #loadout .lo-label { flex: 0 0 auto; font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--m-accent); margin-right: 6px; }
 #loadout .lo-words { flex: 0 0 148px; text-align: center; font-size: 18px; letter-spacing: 0.04em; color: var(--m-bright); }
 #loadout button { font: inherit; cursor: pointer; }
-#loadout .lo-step { width: 30px; height: 30px; padding: 0; color: var(--m-btn-text); background: rgba(var(--m-btn-rgb),0.7); border: 1px solid rgba(var(--m-edge),0.45); border-radius: 3px; }
-#loadout .lo-step:disabled { opacity: 0.3; cursor: default; }
 #loadout .lo-sizes { display: flex; gap: 6px; margin-left: auto; }
 #loadout .lo-size { min-width: 46px; padding: 5px 8px; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--m-btn-text); background: rgba(var(--m-btn-rgb),0.55); border: 1px solid rgba(var(--m-edge),0.3); border-radius: 2px; }
 #loadout .lo-size.own { border-style: double; border-width: 3px; padding: 3px 6px; }
@@ -457,24 +380,12 @@ const STYLE = `
 #loadout .lo-set { padding: 5px 8px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--m-btn-text); background: rgba(var(--m-btn-rgb),0.55); border: 1px solid rgba(var(--m-edge),0.3); border-radius: 2px; }
 #loadout .lo-set.on { color: var(--m-on-accent); background: var(--m-accent-hi); border-color: var(--m-accent-hi); }
 #loadout .lo-kits.sel .lo-set.pick { box-shadow: 0 0 0 1px var(--m-bright); }
-#loadout .lo-set:disabled { opacity: 0.4; cursor: default; }
 #loadout .lo-set:hover:not(.on):not(:disabled) { border-color: var(--m-accent-hi); background: rgba(var(--m-hover-rgb),0.8); }
 #loadout .lo-kits-own { font-size: 11px; color: var(--m-soft); font-style: italic; }
 #loadout .lo-kits-own:empty { display: none; }
-#loadout .lo-levers { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 22px; margin: 8px 10px 0; }   /* the difficulty levers (ui/levers.ts): one line under the head */
-#loadout .lo-lever { display: flex; align-items: center; gap: 6px; }
-#loadout .lo-levl { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--m-dim); margin-right: 2px; }
-#loadout .lo-lever.moved .lo-levl { color: #f3d79a; }   /* moved off its level's rung by hand */
-#loadout .lo-lever.na { opacity: 0.45; }
-#loadout .lo-levb { padding: 5px 8px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--m-btn-text); background: rgba(var(--m-btn-rgb),0.55); border: 1px solid rgba(var(--m-edge),0.3); border-radius: 2px; }   /* (the Squad kit buttons' look under a class of its own: .lo-set is how the kit row's buttons are found) */
-#loadout .lo-levb.on { color: var(--m-on-accent); background: var(--m-accent-hi); border-color: var(--m-accent-hi); }
-#loadout .lo-levb:hover:not(.on) { border-color: var(--m-accent-hi); background: rgba(var(--m-hover-rgb),0.8); }
-#loadout .lo-levn { display: none; }   /* (what a rung does is its button's title here: the mission sheet has the room for the words) */
-#loadout .lo-levnote { margin: 4px 10px 0; font-size: 11px; color: #c9b98a; font-style: italic; }
-#loadout .lo-levnote:empty { display: none; }
 #loadout .lo-size.on { color: var(--m-on-accent); background: var(--m-accent-hi); border-color: var(--m-accent-hi); }
 #loadout .lo-size.off { opacity: 0.35; cursor: not-allowed; text-decoration: line-through; }
-#loadout .lo-step:hover:not(:disabled), #loadout .lo-size:hover:not(.on):not(.off), #loadout .lo-btn:hover { border-color: var(--m-accent-hi); background: rgba(var(--m-hover-rgb),0.8); }
+#loadout .lo-size:hover:not(.on):not(.off), #loadout .lo-btn:hover { border-color: var(--m-accent-hi); background: rgba(var(--m-hover-rgb),0.8); }
 #loadout .lo-noteline { display: flex; align-items: baseline; gap: 16px; margin: 6px 10px 0; }
 #loadout .lo-note { flex: 1 1 auto; min-height: 1.45em; font-size: 12px; color: var(--m-soft); }
 #loadout .lo-note.off { color: #e8b46a; }
@@ -494,9 +405,6 @@ const STYLE = `
 #loadout .lo-slot.out:hover, #loadout .lo-slot.in:hover { border-color: rgba(var(--m-accent-rgb),0.6); }
 #loadout .lo-slot.out:hover { color: var(--m-dim); }
 #loadout .lo-slot.pick { border-color: var(--m-accent-hi); background: rgba(var(--m-sel-rgb),0.8); box-shadow: 0 0 0 1px rgba(var(--m-accent-rgb),0.25); }
-#loadout .lo-fig { grid-row: 1 / span 2; height: 38px; }
-#loadout .lo-fig svg { width: 24px; height: 38px; }
-#loadout .lo-slot.out .lo-fig { opacity: 0.45; }
 #loadout .lo-name { align-self: end; font-size: 14px; font-weight: 600; letter-spacing: 0.04em; color: var(--m-bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #loadout .lo-name.changed::after { content: ' •'; color: #f3d79a; }
 #loadout .lo-slot.out .lo-name { color: var(--m-faint); font-weight: 400; }
@@ -521,11 +429,10 @@ const STYLE = `
 #loadout .lo-btn.primary { min-width: 220px; background: var(--m-accent); color: var(--m-on-accent); border-color: var(--m-accent); font-weight: 600; }
 #loadout .lo-btn.primary:hover { background: var(--m-accent-hi); }
 #loadout .lo-btn.sel { outline: 2px solid var(--m-bright); outline-offset: 2px; }
-#loadout .lo-foot { flex: 0 0 auto; margin: 4px 28px 0; font: 11px ui-monospace, Menlo, monospace; color: var(--m-faint); letter-spacing: 0.06em; }
 /* THE ROSTER AND THE KIT TABLE: each man a card with his gun on it, the picked man's kit as tiles — a silhouette, the thing's name, how many — in columns */
 #loadout .lo-label { font: 700 12px/1 var(--m-head); letter-spacing: 0.22em; }
 #loadout .lo-words { font: 700 20px/1 var(--m-head); letter-spacing: 0.08em; text-transform: uppercase; }
-#loadout .lo-set, #loadout .lo-levb, #loadout .lo-size { font: 600 12px/1.4 var(--m-head); letter-spacing: 0.12em; border-radius: 0; }
+#loadout .lo-set, #loadout .lo-size { font: 600 12px/1.4 var(--m-head); letter-spacing: 0.12em; border-radius: 0; }
 #loadout .lo-set.on { background: var(--m-accent); border-color: var(--m-accent); }
 #loadout .lo-slots { gap: 8px; }
 #loadout .lo-slot { padding: 8px 10px 9px; border-radius: 0; border-top-width: 5px; background: rgba(var(--m-panel2-rgb),0.8); }
@@ -560,7 +467,7 @@ const STYLE = `
 #loadout .lo-kit .kc-note { grid-column: 2; margin-top: 3px; font-size: 11px; line-height: 1.3; min-height: 0; }
 #loadout .lo-kit .kc-sets { margin: 0; padding: 0; gap: 6px; }
 #loadout .lo-kit .kc-set, #loadout .lo-kit .kc-clip { font: 600 12px/1.4 var(--m-head); letter-spacing: 0.12em; border-radius: 0; }
-#loadout .lo-kit .kc-set.on, #loadout .lo-kit .kc-clip.on { background: var(--m-accent); border-color: var(--m-accent); }
+#loadout .lo-kit .kc-clip.on { background: var(--m-accent); border-color: var(--m-accent); }
 #missions.one #loadout .lo-kit .kc-clip { min-width: 0; padding: 7px 13px 6px; font: 600 12px/1.3 var(--m-head); letter-spacing: 0.12em; text-transform: uppercase; color: var(--m-soft); background: none; border: 0; border-radius: 0; box-shadow: none; }
 #missions.one #loadout .lo-kit .kc-clip:hover:not(.on):not(.off) { color: var(--m-bright); background: rgba(var(--m-edge),0.1); border: 0; }
 #missions.one #loadout .lo-kit .kc-clip.on { color: var(--m-bright); background: none; box-shadow: inset 0 -2px 0 var(--m-soft); }

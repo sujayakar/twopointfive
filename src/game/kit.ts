@@ -793,7 +793,7 @@ const suitRow: KitRow = { field: 'suit', label: 'Suit', values: ['issued', ...Ob
 const trimRow: KitRow = { field: 'trim', label: 'Trim', values: ['issued', ...Object.keys(TRIMS)], word: v => v === 'issued' ? 'as issued' : TRIMS[v as Exclude<TrimId, 'issued'>].label, note: m => m.trim === 'issued' ? 'the pair colour on a four (red, blue)' : 'the joints: how you tell him from above' };
 /** your guns row in the card's words · what the shotgun changes in a run, in a line (yours and a teammate's) */
 const YOU_GUNS: Record<KitWeapon, string> = { rifle: 'FN2000 + Five-seveN', pistol: 'Five-seveN only', shotgun: 'M870 shotgun + Five-seveN' };
-/** …and where the card shows the suppressor (ui/kitCard.ts KIT_CAN): the pistol carried alone is named for what it is — the one gun the floor does not hear as
+/** …and where the card shows the suppressor (ui/kitCard.ts): the pistol carried alone is named for what it is — the one gun the floor does not hear as
  *  gunfire. The rifle's line stays as it is: suppressed too (its can is drawn), and heard as gunfire all the same. */
 const YOU_GUNS_CAN: Partial<Record<KitWeapon, string>> = { pistol: 'Suppressed Five-seveN' };
 export function youGunsCan(v: KitValue): string | null { const w = YOU_GUNS_CAN[v as KitWeapon]; return w ? gearText(w) : null; }

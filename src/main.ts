@@ -8,13 +8,12 @@ import { CMDRING } from './game/cmdring';   // (a prototype: with the orders rin
 import { TABKEY, tabFromQuery, tabSettle, tabNow } from './ui/tabkey';
 import { tabCardOf, tabCardHtml } from './ui/tabcard';
 import { bootTextSize } from './ui/textsize';
-import { wireMissions } from './ui/loadout';
 import { modelErrAsked, modelErrBoot, modelErrFrame, sceneOf } from './host/modelerr';
 import { kitFresh, kitShow, kitPlayer, kitGun, kitLessonPage, kitLoad, kitRows, KIT, SUITS, TRIMS } from './game/kit';
 import { kitBoot } from './ui/kitBoot';
-import { missionsBusy, reopenMissionsAfterLoad, openMissionsIfAsked, OFFLIST_UI } from './ui/missions';
+import { missionsBusy, reopenMissionsAfterLoad, missionsReopenAsked, OFFLIST_UI } from './ui/missions';
 import { startPage, startPageWanted, openStartPage, openList } from './ui/startpage';
-import { PICKS, PICKS_UI, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
+import { PICKS, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
 import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, laterIdle, laterProgress, PIPE_QUEUE, FATAL } from './gpu/device';
 import { shaderRowsOn } from './ui/shaderrows';
 import * as boot from './ui/boot';
@@ -123,7 +122,7 @@ import { watchMissionRows } from './ui/verdictRows';
 import { SOLO_ID } from './scene/picks';
 import { SNATCH, checkSnatch } from './game/snatch';
 import { SNATCHOUT } from './game/snatchout';
-import { SCENARIOS, ALL_MISSIONS, LESSON_MISSIONS, pickSearch, quitSearch } from './scene/scenarioList';
+import { SCENARIOS, ALL_MISSIONS, LESSON_MISSIONS, pickSearch } from './scene/scenarioList';
 import { lessonGroup } from './scene/scenarios';
 import { DOORWAY } from './game/doors';
 import { HANDLE, HANDLE_STATS } from './game/handleside';
@@ -223,8 +222,8 @@ async function main() {
   (window as any).__keys = keymap;   // …and its hook from the same moment: the Controls screen is up before the boot is over, and a check of it asks the table (tools/qa/keybinds-page.cjs)
   bootTextSize(q, kitViewOn);   // the page's words at the window's size, the browser's zoom keys the game's (ui/textsize.ts; ?textsize=0 = the page as it was) — before anything is drawn
   // `?pick=<id | place>` alone (scene/picks.ts): a link to a row of the short list that stays right when the row's settings change — answered with ONE replace to
-  // the row's own URL before anything boots (that URL names its mission, so it is never answered twice). Off under ?nopicks.
-  { const to = PICKS_UI.on ? pickRedirect(location.search) : null; if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }
+  // the row's own URL before anything boots (that URL names its mission, so it is never answered twice).
+  { const to = pickRedirect(location.search); if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }
   // `?bench` (ui/benchrun.ts): the benchmark asked for on the address — the way in for a machine nobody here can sit at. Its first scene is a mission's own page, so the
   // page goes there BEFORE anything boots: that scene's load is then this machine's first, and it is the one the report times. Never in ?kitview's own window.
   let benchRefused: string | null = null;
@@ -249,7 +248,6 @@ async function main() {
   OFFLIST_UI.on = q.get('offlist') !== '0';   // the rows cut from the mission list are drawn on no list (ui/missions.ts listedMissions; ?offlist=0 = every row drawn, as before the cut)
   LOADBRIEF.on = q.get('loadbrief') !== '0';   // a mission's page loads behind that mission's brief and waits for the player's Start (ui/loadbrief.ts; ?loadbrief=0 = the boot card and the straight start, as before)
   { const v = q.get('settle'), w = Number(q.get('settlewait')); SETTLE.on = v === null ? navigator.webdriver !== true : v !== '0'; if (v && /^\d+$/.test(v) && +v > 1) SETTLE.frames = +v; if (w > 0) SETTLE.programSecs = w; }   // the brief's START is live when the picture behind it is ready: every shader in, the first frames drawn, auto quality's pick made (ui/settle.ts). On where a person sits; ?settle=0 = live the moment the level stands, as before; ?settle=1 = on for a page a script drives too, a number over 1 = that many frames and ?settlewait=N = that many seconds for the programs (a page tool on a slow adapter)
-  wireMissions();   // one flow: a pick on the mission list is the loadout screen, whose Deploy is the page load (ui/loadout.ts)
   kitBoot();   // each member's kit and uniform read from this machine's store (ui/kitBoot.ts, game/kit.ts)
   const lessonRow = LESSON_MISSIONS.find(e => e.level === q.get('levelFile')) ?? null; kitLessonPage(lessonRow && lessonGroup(lessonRow.group) ? lessonRow : null);   // …but a TRAINING level is played with the kit AS ISSUED (game/loadout.ts kitAsIssued): the page names its lesson's row (kit.ts kitLessonPage) and every staging on it puts the issue cards on the men — all but the one lesson he packs for (kit.ts ISSUE.picked), whose stagings wear the kept cards —, since a lesson's steps ask for the issue kit's own things (a card with no rifle left 'press 2' a step that could never pass; your own four counts stay what a Player is built with — the kit lesson throws more than the one of each the pouches rule issues). The table and the store stay this machine's: the lesson neither wears nor writes the kept cards, and the loadout screen opened from this page for ANOTHER mission shows and keeps them
   recipeTables();
@@ -595,7 +593,7 @@ async function main() {
     refused: () => booted.spec && booted.why && !runningScenario(game, levelFileQ) ? refusalWords(booted.spec, booted.why) : null,
     quit: () => {
       if (!runningScenario(game, levelFileQ)) return;   // (the cards only offer it with a scenario up; the console hook gets the same rule)
-      const pick = PICKS_UI.on ? pickOfQuery(location.search) : null, next = PICKS_UI.on ? pickQuitSearch(location.search) : quitSearch(location.search); booted.why = null;   // (pickQuitSearch off a pick's page = quitSearch, less a row's name left on the URL)
+      const pick = pickOfQuery(location.search), next = pickQuitSearch(location.search); booted.why = null;   // (pickQuitSearch off a pick's page = quitSearch, less a row's name left on the URL)
       if (net) { net.close(); location.assign(location.pathname + netLeave(next) + location.hash); return; }   // (a networked game is left by leaving its page: the seat is let go, the address loses the game's words)
       if (pick || q.has('levelFile')) { reopenMissionsAfterLoad(); location.assign(location.pathname + next + location.hash); return; }
       attract.poke();
@@ -606,7 +604,7 @@ async function main() {
     },
   };
   menu.setScenario(scenario);
-  (window as any).__picks = { ui: PICKS_UI, list: PICKS, current: () => pickOfQuery(location.search), href: (id: string) => { const p = PICKS.find(x => x.id === id); return p ? pickHref(p, location.search) : null; }, silent: () => ({ start: SILENT.start, squad: squadSilent(game) }), difficulty: () => difficultyNow() };   // the short list (scene/picks.ts): the table, the row this page is, a row's URL, the team's posture (?silentstart) and the difficulty in force
+  (window as any).__picks = { list: PICKS, current: () => pickOfQuery(location.search), href: (id: string) => { const p = PICKS.find(x => x.id === id); return p ? pickHref(p, location.search) : null; }, silent: () => ({ start: SILENT.start, squad: squadSilent(game) }), difficulty: () => difficultyNow() };   // the short list (scene/picks.ts): the table, the row this page is, a row's URL, the team's posture (?silentstart) and the difficulty in force
   (window as any).__scenarios = { list: SCENARIOS, all: ALL_MISSIONS, current: scenario.current, quit: scenario.quit, pick: (id: string) => { const e = ALL_MISSIONS.find(x => x.id === id); if (e) { const to = location.pathname + pickSearch(e, location.search) + location.hash; if (to === location.pathname + location.search + location.hash) location.reload(); else location.assign(to); } return !!e; } };   // the picker for the console / automation: .list, .current(), .pick(id) (a page load), .quit()
   (window as any).__quiet = { get on() { return game.quiet.active; }, get deal() { return game.quiet.deal; }, get ops() { return game.quiet.ops; }, summary: () => game.quiet.summary(), log: game.quiet.log, check: () => checkQuiet(game), restage: () => game.quiet.restage() };   // the quiet mission (game/quiet.ts): what this run was dealt, the level's block against its floor
   (window as any).__snatch = { knobs: SNATCH, get man() { return game.snatch.man; }, get end() { return game.snatch.end; }, get log() { return game.snatch.log; }, summary: () => game.snatch.summary(), check: () => checkSnatch(game), out: SNATCHOUT, get exfil() { return game.snatch.out; } };
@@ -1078,7 +1076,7 @@ async function main() {
   // THE FIRST PLAYED FRAME IS AN ORDINARY ONE, ON EVERY ROAD STRAIGHT TO PLAY (a mission's card, a benchmark's address): the Rust game is started, its apply and its tick run once here, before the loop's first frame, and not where the first frame would pay for them (host/rustgame.ts rustWarm). Not behind the title (a pick is a page load, and an idle title's attract stages by name first), a show, a networked game's machine (it starts by its server's clock) or a replay (it stands from its tape). ?rustwarm=0: the first frame pays.
   if (!openStartCard && !net && !tape && q.get('rustwarm') !== '0') rustGame?.rustWarm({ input, cam, canvas });
   if (openStartCard) { brief?.off(); menu.open('start');
-    if (openMissionsIfAsked() && !startPage()) openStartPage();   // (ui/startpage.ts: the one page was put up by the boot card — `?loadout=` included; left on the list across a load: the page again)
+    if (missionsReopenAsked() && !startPage()) openStartPage();   // (ui/startpage.ts: the one page was put up by the boot card — `?loadout=` included; left on the list across a load: the page again)
   } else if (brief && briefGo) briefSettle(brief); else card.off();
   loading.style.display = 'none';   // (the backdrop went before the first frame in the old boot too; the card is over the canvas until Start, and ?paused / a script that only __shot()s must not keep it)
   boot.mark('interactive'); boot.span('toInteractive', 0, performance.now()); gpuStory.stage = '';
