@@ -1754,3 +1754,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`game_draw::traffic::ways`). COMPARED with the four on every level: second-way 15 levels, every room, man, wedge choice, the 142 wedged doors, the windows and the wall places the same; sight 305
   men and walked 766 ways, 311 doors, 59 owed the same (walked now judges the starts of every listed mission's level, 48 for 30, none owed); stacks 5,068 marks and 1,156 faces the same. A whole run
   of each is seconds. `LEVELS_BREAK=1` fails each.
+- **The office's rescue stands its second roamer in the cubicles** (2026-11-08, A CHANGE OF PLAY: the office's rescue alone). His mark, (7.2, 6.4), was in the corner of the conference table, and he was
+  pushed half a metre out of it on the first frame. It is (19.5, 13.4) now, watching the cubicles' first doorway off the corridor. NOT BACK IN THE CONFERENCE ROOM: with his mark on its floor the room
+  has a man at home and one door he can wedge, and `levels second-way office` is red (a shut cell had hidden it). A man goes back there when the room has a second way in: a walk-through pane in its
+  glass is the mend the hall and the kill house have. Nobody has played it.
