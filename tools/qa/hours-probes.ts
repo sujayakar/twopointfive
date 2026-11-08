@@ -31,7 +31,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 const quiet = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 /** the loud squad maps (scene/scenarioList.ts ids → their level files) */
-export const SQUAD_MAPS = ['compound-four', 'block-squads', 'barracks-four', 'warehouse-four'];
+export const SQUAD_MAPS = ['compound-four', 'barracks-four', 'warehouse-four'];
 const entryOf = (id: string) => SCENARIOS.find((e: any) => e.id === id);
 const levelOf = (file: string) => loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')));
 async function stand(id: string, seed = 7): Promise<any> { Math.random = seeded(seed); HOUR.id = 'night'; HOUR.sun = 1; HOUR.dry = true; return quiet(() => standUp({ level: levelOf(entryOf(id).level) })); }

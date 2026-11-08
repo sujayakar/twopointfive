@@ -44,7 +44,7 @@ let ok = true; const check = (pass: boolean, what: string) => { console.log(`- $
 const J = (f: string) => JSON.parse(readFileSync(resolve(ROOT, 'levels', f), 'utf8'));
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 const albedoOf = (b: any, mats: any): number[] => b.albedo ?? mats[b.material]?.albedo;
-/** the generator of a level file, by name: tools/levels/<stem>.ts, or the stem without its dashes (block-squads.json is tools/levels/blocksquads.ts) */
+/** the generator of a level file, by name: tools/levels/<stem>.ts, or the stem without its dashes */
 const genOf = (file: string): string | undefined => { const stem = file.replace(/\.json$/, ''); return [stem, stem.replace(/-/g, '')].find(n => existsSync(resolve(ROOT, 'tools/levels', `${n}.ts`))); };
 const PAINT = new Set(['albedo', 'material', 'rough', 'metal', 'stuff', 'does']);   // (what a box says it is made of is part of its paint: the skin drops it with the paint it repaints. `does` is NOT, and is held equal below: but a file writes it on the box or leaves it to the box's row, and the two files name different rows)
 

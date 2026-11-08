@@ -15,7 +15,7 @@ import { resolve } from 'node:path';
 import { sample, swept } from './sweep.ts';
 const ROOT = resolve(import.meta.dir, '../..');
 type Vec3 = [number, number, number];
-const LEVELS = ['office', 'records', 'depot', 'block', 'block-squads', 'warehouse', 'compound', 'barracks', 'registry', 'consulate', 'bazaar', 'police-post'];
+const LEVELS = ['office', 'records', 'depot', 'block', 'warehouse', 'compound', 'barracks', 'registry', 'consulate', 'bazaar', 'police-post'];
 
 export async function blastholeCheck(names: string[] = sample(LEVELS, 1), opts: { max?: number; verbose?: boolean; sheet?: boolean } = { max: swept(25, 0) }): Promise<boolean> {
   const { standUp } = await import('./headless.ts');

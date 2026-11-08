@@ -49,7 +49,7 @@ export function placeOfQuery(q: URLSearchParams): boolean {
  *  same generator) */
 export const LOOK_LEVELS: Readonly<Record<string, string>> = {
   'compound.json': 'compound-gwot.json', 'barracks.json': 'barracks-gwot.json', 'warehouse.json': 'warehouse-gwot.json', 'depot.json': 'depot-gwot.json',
-  'registry.json': 'registry-gwot.json', 'block.json': 'block-gwot.json', 'block-squads.json': 'block-squads-gwot.json', 'records.json': 'records-gwot.json',
+  'registry.json': 'registry-gwot.json', 'block.json': 'block-gwot.json', 'records.json': 'records-gwot.json',
   'consulate.json': 'consulate-gwot.json', 'defuse.json': 'defuse-gwot.json', 'floodlit.json': 'floodlit-gwot.json', 'mousehole.json': 'mousehole-gwot.json',
   'killhouse.json': 'killhouse-gwot.json', 'hall.json': 'hall-gwot.json',
 };
@@ -62,7 +62,7 @@ export const LOOK_LEVELS: Readonly<Record<string, string>> = {
 export type LookDoorStuff = BoxStuff | { out?: BoxStuff; in?: BoxStuff };
 export const LOOK_DOORS: Readonly<Record<string, { out: readonly [number, number, number]; in?: readonly [number, number, number]; stuff?: LookDoorStuff }>> = {
   'white-roof.json': { out: [0.88, 0.24, 0.03], in: [0.74, 0.74, 0.73], stuff: 'enamel' },   // the look study's roof: orange gloss outside, white inside, kept
-  'block.json': { out: [0.22, 0.4, 0.1] }, 'block-squads.json': { out: [0.22, 0.4, 0.1] },   // the telephone exchange: pistachio gloss
+  'block.json': { out: [0.22, 0.4, 0.1] },   // the telephone exchange: pistachio gloss
   'warehouse.json': { out: [0.6, 0.42, 0.04], stuff: { out: 'paint' } },         // the customs shed: safety yellow
   'registry.json': { out: [0.1, 0.1, 0.105], stuff: { out: 'paint' } },          // the records office: black lacquer
   'records.json': { out: [0.2, 0.2, 0.22], in: [0.47, 0.36, 0.22], stuff: { in: 'wood' } },   // the land office: grey paint outside, pale poplar inside
