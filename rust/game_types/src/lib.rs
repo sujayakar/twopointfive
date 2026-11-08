@@ -51,7 +51,6 @@ pub mod blast_feel { pub mod types; pub use types::*; }
 pub mod blast_look { pub mod types; pub use types::*; }
 pub mod breach { pub mod types; pub use types::*; }
 pub mod break_table { pub mod types; pub use types::*; }
-pub mod buddy { pub mod types; pub use types::*; }
 pub mod calmtorch { pub mod types; pub use types::*; }
 pub mod camera { pub mod types; pub use types::*; }
 pub mod carlamps { pub mod types; pub use types::*; }

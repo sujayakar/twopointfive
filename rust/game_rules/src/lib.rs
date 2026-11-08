@@ -23,7 +23,6 @@ pub mod blast_feel;
 pub mod blast_look;
 pub mod breach;
 pub mod break_table;
-pub mod buddy;
 pub mod calmtorch;
 pub mod camera;
 pub mod carlamps;

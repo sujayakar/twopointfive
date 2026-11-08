@@ -43,7 +43,6 @@ const CUM: any = await import(`${ROOT}/src/game/cues.ts`).catch(() => null);   /
 const SLM: any = await import(`${ROOT}/src/game/silent.ts`).catch(() => null);   // (null in a checkout from before the module)
 const ILM: any = await import(`${ROOT}/src/game/irlight.ts`).catch(() => null);   // (the infrared light on the goggles: null in a checkout from before the module)
 const CVM: any = await import(`${ROOT}/src/game/cover.ts`);
-const BDM: any = await import(`${ROOT}/src/game/buddy.ts`).catch(() => null);   // (null in a checkout from before the lone defender's radio call)
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 
@@ -57,7 +56,7 @@ const f1 = (x: number) => (Number.isFinite(x) ? x.toFixed(1) : '—');
 const TABLES: Record<string, any> = {};
 { const put = (k: string, t: any) => { if (t && typeof t === 'object') TABLES[k] = t; };
   put('operative', RFM.FIGHT_SKILL?.operative); put('hostile', RFM.FIGHT_SKILL?.hostile); put('ROOMFIGHT', RFM.ROOMFIGHT); put('BLIND', NBM.BLIND); put('NIGHTBREACH', NBM.NIGHTBREACH);
-  put('DOORTOOLS', DTM.DOORTOOLS); put('ORDERS', ORM.ORDERS); put('bang', FXM.bang); put('FLASH', CBM.FLASH); put('PACE', GDM.PACE); put('LIGHTS', GDM.LIGHTS); put('NVG', NVM.NVG); put('IR', IRM?.IR); put('IRLIGHT', ILM?.IRLIGHT); put('ENTRY', EPM.ENTRY); put('REAR', CVM.REAR); put('COVER', CVM.COVER); put('CUES', CUM?.CUES); put('BUDDY', BDM?.BUDDY); put('SILENT', SLM?.SILENT); put('DOORMANNERS', DWM?.DOORMANNERS); }
+  put('DOORTOOLS', DTM.DOORTOOLS); put('ORDERS', ORM.ORDERS); put('bang', FXM.bang); put('FLASH', CBM.FLASH); put('PACE', GDM.PACE); put('LIGHTS', GDM.LIGHTS); put('NVG', NVM.NVG); put('IR', IRM?.IR); put('IRLIGHT', ILM?.IRLIGHT); put('ENTRY', EPM.ENTRY); put('REAR', CVM.REAR); put('COVER', CVM.COVER); put('CUES', CUM?.CUES); put('SILENT', SLM?.SILENT); put('DOORMANNERS', DWM?.DOORMANNERS); }
 const DEFAULTS: Record<string, any> = Object.fromEntries(Object.entries(TABLES).map(([k, t]) => [k, clone(t)]));
 let SET: Record<string, Record<string, unknown>> = {};
 /** knob overrides every later stage() applies over the defaults (the --set flag; a probe's red path) — {} = the build's own */
