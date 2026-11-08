@@ -2,7 +2,7 @@
 // address's words win over what is kept, for the visit.
 import type { Commands } from '../draw/commands';
 import { KIT_KEPT } from '../view/desk';
-import { sandboxKept } from './sandbox';
+import { autosaveKept, sandboxKept } from './sandbox';
 
 /** the levers' keys and the address's word for each (game/difficulty.ts) */
 const LEVERS: readonly (readonly [string, string])[] = [['fog', 'fog'], ['ai', 'enemyai'], ['kit', 'enemykit'], ['told', 'told']];
@@ -26,13 +26,11 @@ export function machineBefore(q: URLSearchParams, level: string, C: Commands): v
   if (q.has('pressure')) C.pressure(q.get('pressure') !== '0' ? 1 : 0);
   if (q.has('fogcone')) C.fogCone(q.get('fogcone') !== '0' ? 1 : 0);
 }
-const AUTOSAVE_KEPT = 'twopointsix.autosave';
-export function keepAutosave(on: boolean): void { try { localStorage.setItem(AUTOSAVE_KEPT, on ? '1' : '0'); } catch { /* no store */ } }
 /** once it stands */
 export function machineAfter(C: Commands): void {
   const s = sandboxKept();
   if (s.god) C.god(1);
   if (s.noAi) C.ai(0);
   if (s.ammo) C.ammo(1);
-  if (kept(AUTOSAVE_KEPT) === '0') C.autosave(0);
+  if (!autosaveKept()) C.autosave(0);
 }

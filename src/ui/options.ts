@@ -338,7 +338,7 @@ function render(S: Screen) {
     sec(body, 'Cheats');
     flip(body, 'God mode', () => game.god, v => { game.god = v; keepSandbox('god', v); }, 'Enemies still see you and shoot you, but hits don\'t hurt. This is saved on this machine.', ['On', 'Off']);
     flip(body, 'Enemies don\'t think', () => !game.thinks, v => { game.thinks = !v; keepSandbox('noAi', v); }, 'Everybody stays where they are, and nobody patrols, hears or sees. This is saved on this machine.', ['On', 'Off']);
-    flip(body, 'Unlimited ammunition', () => game.ammo, v => { game.ammo = v; keepSandbox('ammo', v); }, 'Bottomless magazines, canisters, sponge rounds and wall charges. This is saved on this machine.', ['On', 'Off']);
+    flip(body, 'Unlimited ammunition', () => game.ammo, v => { game.ammo = v; keepSandbox('ammo', v); }, 'Bottomless magazines, canisters, 40 mm sponge rounds and wall charges. This is saved on this machine.', ['On', 'Off']);
     reset = () => { game.autosave = true; game.hints = true; game.wallPress = true; pressKept = null; pressUrl = false; keep(); findReset();
       if (game.god) { game.god = false; keepSandbox('god', false); } if (!game.thinks) { game.thinks = true; keepSandbox('noAi', false); } if (game.ammo) { game.ammo = false; keepSandbox('ammo', false); } };
   }
