@@ -264,43 +264,6 @@ export class Particles {
           { format: 'r8unorm', blend: { color: { srcFactor: 'one', dstFactor: 'one', operation: 'max' }, alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'max' } }, writeMask: GPUColorWrite.RED }] },   // the REACTIVE mask for the TAAU resolve (render/passes.ts react): how much of this pixel is a thing with no history — max over everything splatted here
         primitive: { topology: 'triangle-list' } }) ]);
   }
-  /** Dev / measurement hook (tools/qa/trace-lab.js via main.ts __hotCommon): rebuild the two SIM kernels (emit + update — the ones that trace) from the CURRENT scene prelude + the bundled
-   *  particle sources exactly as the constructor concatenates them, so a traversal variant under test reaches the particles' collision / lighting rays too. The splat is untouched. Both or
-   *  neither: the old pipelines stay on an error. */
-  async hotSwapSim(): Promise<{ ok: boolean; messages: string[] }> {
-    const d = this.device; const pre = scenePrelude() + lightingCommon + particlesCommon + windFieldSrc; const off = pre.split('\n').length - 1;
-    const mod = d.createShaderModule({ code: pre + particlesSrc, label: 'particles-hot' });
-    const info = await mod.getCompilationInfo();
-    const messages = info.messages.map(m => `${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`);
-    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    [this.pEmit, this.pUpdate] = await Promise.all([
-      d.createComputePipelineAsync({ label: 'particlesEmit-hot', layout: this.simLay, compute: { module: mod, entryPoint: 'emit' } }),
-      d.createComputePipelineAsync({ label: 'particlesUpdate-hot', layout: this.simLay, compute: { module: mod, entryPoint: 'update' } }) ]);
-    this.simMod = mod;
-    return { ok: true, messages };
-  }
-  /** Dev hook (main.ts __hotRain): rebuild ALL THREE pipelines from particle sources handed in (particles_common / particles / particles_draw as they are on disk) with the live preludes —
-   *  the rain look's kernels and splat swapped under a staged storm without a reboot. All or nothing: the old pipelines stay on any error. */
-  async hotSwapAll(commonSrc: string, simSrc: string, drawSrc: string, refractSrc: string = refractCommon, placeSrc: string = placeCommonSrc): Promise<{ ok: boolean; messages: string[] }> {
-    const d = this.device; const preS = scenePrelude() + lightingCommon + commonSrc + windFieldSrc; const preD = scenePrelude() + commonSrc + refractSrc + placeSrc;
-    const offS = preS.split('\n').length - 1, offD = preD.split('\n').length - 1;
-    const modS = d.createShaderModule({ code: preS + simSrc, label: 'particles-hot' }); const modD = d.createShaderModule({ code: preD + drawSrc, label: 'particlesDraw-hot' });
-    const [iS, iD] = await Promise.all([modS.getCompilationInfo(), modD.getCompilationInfo()]);
-    const messages = [...iS.messages.map(m => `sim ${m.type} ${m.lineNum - offS}:${m.linePos} ${m.message}`), ...iD.messages.map(m => `draw ${m.type} ${m.lineNum - offD}:${m.linePos} ${m.message}`)];
-    if (iS.messages.some(m => m.type === 'error') || iD.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    const [pE, pU, pD] = await Promise.all([
-      d.createComputePipelineAsync({ label: 'particlesEmit-hot', layout: this.simLay, compute: { module: modS, entryPoint: 'emit' } }),
-      d.createComputePipelineAsync({ label: 'particlesUpdate-hot', layout: this.simLay, compute: { module: modS, entryPoint: 'update' } }),
-      d.createRenderPipelineAsync(this.drawDesc(modD, 'particlesDraw-hot')) ]);
-    this.pEmit = pE; this.pUpdate = pU; this.pDraw = pD; this.simMod = modS; this.drawMod = modD;
-    return { ok: true, messages };
-  }
-  /** the splat's descriptor over a rebuilt module (hotSwapAll): init()'s targets and blends */
-  private drawDesc(mod: GPUShaderModule, label: string): GPURenderPipelineDescriptor {
-    return { label, layout: this.drawLay, vertex: { module: mod, entryPoint: 'vs' },
-      fragment: { module: mod, entryPoint: 'fs', targets: [{ format: 'rgba16float', blend: { color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' }, alpha: { srcFactor: 'zero', dstFactor: 'one', operation: 'add' } } },
-        { format: 'r8unorm', blend: { color: { srcFactor: 'one', dstFactor: 'one', operation: 'max' }, alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'max' } }, writeMask: GPUColorWrite.RED }] }, primitive: { topology: 'triangle-list' } };
-  }
 
   // ------------------------------------------------------------------ emit API (game code; deterministic — the seed counts off this object's own serial)
   /** WHAT IS FILED NOW IS THE TEAM'S OWN DOING (game/fogofwar.ts FOG.ours, set round an effect by FogOfWar.begin / done): the record's bit 18 → PB_OURS on each
