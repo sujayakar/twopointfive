@@ -47,7 +47,6 @@ pub mod single;
 pub mod skeleton;
 pub mod items;
 pub mod slabs;
-pub mod smoke;
 pub mod snow;
 pub mod state;
 pub mod weather;
@@ -838,7 +837,7 @@ pub extern "C" fn falls_cap(what: u32) -> usize {
     }
 }
 
-// ---- the senses (sight.rs, light.rs, smoke.rs, hear.rs, nav.rs): what a man sees, how lit he is, what the smoke hides, how a sound reaches him
+// ---- the senses (sight.rs, light.rs, bricks.rs, hear.rs, nav.rs): what a man sees, how lit he is, what the smoke hides, how a sound reaches him
 /// the scratch, for an answer of more than one number (one thread, and nothing else holds it across a call)
 #[inline(always)]
 fn scratch() -> &'static mut [f64; SCRATCH_LEN] {
@@ -849,49 +848,9 @@ fn scratch() -> &'static mut [f64; SCRATCH_LEN] {
 pub extern "C" fn sight_contact(w: usize, set: i32, through: u32, q: u32, e0: f64, e1: f64, e2: f64, l0: f64, l1: f64, l2: f64, range: f64, half_deg: f64, near_m: f64, near_deg: f64, v_half_deg: f64, c0: f64, c1: f64, c2: f64, h0: f64, h1: f64, h2: f64) -> u32 {
     sight::contact(w, set, through, q, [e0, e1, e2], [l0, l1, l2], range, half_deg, near_m, near_deg, v_half_deg, [c0, c1, c2], [h0, h1, h2], &mut scratch()[0])
 }
-/// where a question's lamps are written (light::LAMP doubles a lamp), and how many it can carry
-#[no_mangle]
-pub extern "C" fn light_lamps() -> usize {
-    light::lamps_addr()
-}
 #[no_mangle]
 pub extern "C" fn light_cap() -> usize {
     light::MAX_LAMPS
-}
-/// what a question says of the level's rows (light.rs Rows), from the three numbers the host hands over: the slot of the block whose lights' part
-/// holds them, the bits it leaves out (lights.rs R_*), and `how` (1: the rows are read at all · 2: a row's steady self is taken · 4: this is the
-/// question's last part)
-fn light_rows(lg: usize, leave: u32, how: u32) -> Option<light::Rows> {
-    if how & 1 != 0 && lg < state::GAMES {
-        Some(light::Rows { g: lg, leave, steady: how & 2 != 0, exposure: 1.0 })
-    } else {
-        None
-    }
-}
-/// guards.ts lightEstimateAt's lamps: the first `n` written and the level's rows (`lg`, `leave`, `how`: light_rows), as one list in the engine's order:
-/// the six faces → scratch 0‥5 · 0xffffffff = ask the TypeScript. `more` ≠ 0: a later PART of the question the call before began (the faces and the
-/// place among the rows are kept in light.rs from part to part and gone on from, not begun again).
-/// `sigma` > 0: each lamp is dimmed by the smoke of the coarse grid of the game in slot `g`, whose block's stamp is `stamp` (bricks.rs; `stands` = 0:
-/// no grid stands there), and where the grid cannot answer by the first `nb` blobs written (smoke.rs) under `spread`, `widest`, `rise`, `rise_rate`;
-/// 0: none of those is read
-#[no_mangle]
-pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64, sigma: f64, g: usize, stamp: f64, stands: u32, more: u32, nb: usize, spread: f64, widest: f64, rise: f64, rise_rate: f64, lg: usize, leave: u32, how: u32) -> u32 {
-    let shade = light::Shade { sigma, g, stamp, stands: stands != 0, nb, k: [spread, widest, rise, rise_rate] };
-    light::asked(w, set, n, [p0, p1, p2], &shade, more != 0, light_rows(lg, leave, how), how & 4 != 0, &mut scratch()[..6])
-}
-/// where a question's blobs are written (smoke::BLOB doubles a blob), and how many it can carry
-#[no_mangle]
-pub extern "C" fn smoke_blobs() -> usize {
-    smoke::blobs_addr()
-}
-#[no_mangle]
-pub extern "C" fn smoke_cap() -> usize {
-    smoke::MAX_BLOBS
-}
-/// sense.ts CpuSmoke.trans over the first `n` blobs written: the transmittance → scratch 0 · 0xffffffff = ask the TypeScript
-#[no_mangle]
-pub extern "C" fn smoke_trans(w: usize, set: i32, n: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, sigma: f64, spread: f64, widest: f64, rise: f64, rise_rate: f64) -> u32 {
-    smoke::trans(w, set, n, [a0, a1, a2], [b0, b1, b2], sigma, spread, widest, rise, rise_rate, &mut scratch()[0])
 }
 /// the nav grid's tables: 0 the shut cells (a byte a cell, written by the host before it asks) · 1 a way's waypoints (x z a point) · 2 the cells a
 /// priced search asks the price of · 3 the prices (a double a cell)
@@ -960,47 +919,14 @@ pub extern "C" fn hear_route(w: usize, set: i32, ask: u32, seal: u32, gw: usize,
 pub extern "C" fn grid_reset(g: usize, home: u32) {
     bricks::reset(g, home != 0)
 }
-/// no smoke anywhere in the grid of the game in slot `g` (the plan and the light that comes round stay)
-#[no_mangle]
-pub extern "C" fn grid_clear(g: usize) {
-    bricks::empty(g)
-}
 /// a static of box world `w` was written inside this rectangle of the plan: the faces near it are asked again at the next step
 #[no_mangle]
 pub extern "C" fn grid_dirty(w: usize, x0: f64, z0: f64, x1: f64, z1: f64) {
     bricks::dirty(w, x0, z0, x1, z1)
 }
-/// `n` steps of a tenth of a second under the model's numbers, over the copy as it stands and the leaves of list `set`: 0 · 0xffffffff = no grid stands
-/// on this level, and nothing was done. `emits`: that many emitters join the list first, written in the scratch from its start, six doubles each
-/// (where, how wide in metres, what it lets out a second in unit·m³, for how long). `wind_x`, `wind_z` not both 0 = the smoke under the open sky drifts by that
-/// vector (m/s), by the shares of it written at `grid_wind` and its rise with height (`wind_low` of it at the ground, `wind_gain` more by
-/// `wind_full_at` metres up); there the smoke keeps `wind_keep` of its own spread
-#[no_mangle]
-pub extern "C" fn grid_step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, emits: usize, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64, wind_x: f64, wind_z: f64, wind_low: f64, wind_gain: f64, wind_full_at: f64, wind_keep: f64) -> u32 {
-    // (a wind that is no number, or whose rise with height is none, is still air: the block is the game's state, and what is no number spreads)
-    let real = |v: f64| v - v == 0.0;
-    let windy = real(wind_x) && real(wind_z) && real(wind_low) && real(wind_gain) && real(wind_full_at) && real(wind_keep) && wind_low >= 0.0 && wind_gain >= 0.0 && wind_full_at > 0.0;
-    let (wind_x, wind_z) = if windy { (wind_x, wind_z) } else { (0.0, 0.0) };
-    let k = bricks::K { decay, spread, rise, rise_rate, gone, wind_x, wind_z, wind_low, wind_gain, wind_full_at, wind_keep };
-    for e in scratch()[..if emits > SCRATCH_LEN / 6 { SCRATCH_LEN / 6 * 6 } else { emits * 6 }].chunks_exact(6) {
-        bricks::emit(g, e[0], e[1], e[2], e[3], e[4], e[5]);
-    }
-    bricks::step(g, stamp, w, copy, set, n, &k, None)
-}
-/// where the host writes the wind's share of each square metre of the plan before a step that has wind (bricks.rs WIND: `grid_wind_cap` doubles, row
-/// by row, twice the plan's bricks to a row)
-#[no_mangle]
-pub extern "C" fn grid_wind() -> *mut f64 {
-    bricks::wind_addr()
-}
 #[no_mangle]
 pub extern "C" fn grid_wind_cap() -> usize {
     bricks::MAX_GLOW
-}
-/// how much of the light along a → b comes through the grid's smoke (1 = clear air)
-#[no_mangle]
-pub extern "C" fn grid_trans(g: usize, stamp: f64, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, sigma: f64) -> f64 {
-    bricks::trans(g, stamp, [a0, a1, a2], [b0, b1, b2], sigma)
 }
 
 // ---- WHAT A PANE OF GLASS IS TO PLAY (panes.rs, pen.rs): the state in the game's block, the rule, a round's toll. A rule's call names its game, its world, the leaves

@@ -544,7 +544,7 @@ export class StaticCollision {
   /** IS THE LINE TEST THIS CLASS'S OWN: a check that puts its own `segmentBlocked` or `solidBlocked` over one instance is asking for ITS lines, which the
    *  module does not walk — and a sense is answered from the module's own lines, so on such a world a sense is a mistake by name (`sense`) */
   private get ownLines(): boolean { return this.segmentBlocked === StaticCollision.prototype.segmentBlocked && this.solidBlocked === StaticCollision.prototype.solidBlocked; }
-  // ---- THE SENSES (rust/sim/src/sight.rs, light.rs, smoke.rs, hear.rs, nav.rs, fog.rs). Each is a whole question of the game's — an eye on a man, the
+  // ---- THE SENSES (rust/sim/src/sight.rs, light.rs, hear.rs, nav.rs, fog.rs). Each is a whole question of the game's — an eye on a man, the
   // lamps on a point, the smoke along a line, a sound's way, a way across the floor, which of a team's eyes have a line — asked once, and each is THE
   // MODULE'S ALONE: nothing in TypeScript answers one. So nothing here hands a question back. What the module cannot take is never content (a level is
   // held to the copy's tables as it loads, game/levelfit.ts; a question's lamps go in parts; the floor is the build's) but a mistake of the asker's, and

@@ -23,7 +23,7 @@
 "edge_look::EdgeLook":{"plain":{"last":0}},
 "fogofwar::FogOfWar":{"plain":{"bared":false,"lampN":0,"lookFrames":0,"rawAt":-1,"turn":0,"viewer":false},
 "lists":["lampPick","pending","rawList"]},
-"game::Game":{"plain":{"dynRaw":0,"fogHeld":null,"menBare":false,"menStatured":true,"replayTap":null,"smokeOwned":null},
+"game::Game":{"plain":{"dynRaw":0,"fogHeld":null,"menBare":false,"menStatured":true,"replayTap":null},
 "typed":{"reachInterior":["Uint8Array",1120],"viewProj":["Float32Array",16]}},
 "game::GameRigFitOfValue":{"plain":{"ms":0,"pad":0,"verts":32194},
 "typed":{"r0":["Float32Array",15],"r1":["Float32Array",15]}},

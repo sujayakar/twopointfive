@@ -196,11 +196,6 @@ pub fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<
     true
 }
 
-/// A skip_owner that leaves out every lamp with an owner. (guards.ts CARRIED)
-pub fn carried() -> bool {
-    true
-}
-
 /// The lamps the light that comes round is swept from: writes the few of nobody's fixture and answers with how the rows are read. Bool(false) = more of those than the module's table holds. (guards.ts steadyLamps)
 pub fn steady_lamps(g: &mut crate::game::Game) -> crate::guards::SteadyLamps {
     if !write_lamps(g, None, Some(&mut |_g: &mut Game, _owner: f64| true), true) { return crate::guards::SteadyLamps::Bool(false); }
