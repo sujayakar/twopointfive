@@ -143,7 +143,6 @@ import { Rails } from './rails';
 import { Par } from './par';
 import type { LostMan } from './deathrecap';
 import { Verdict } from './verdict';
-import { Defuse } from './defuse';
 import { RoomClearScenario } from './roomclear';
 import { SquadOrders } from './orders';
 import { leversFog } from './difficulty';   // (called in the constructor only: the fog lever's rung over the kept feel rows)
@@ -255,7 +254,7 @@ export interface Interactable { kind: 'light' | 'door' | 'body' | 'guard' | 'obj
  *  push / ease (silent, sustained), an open one's pull, a lock's pick (sustained) / kick / rattle (the handle tried, crouched), a keyed lock's unlock; the grab
  *  of a man from behind; the held man's question / choke (sustained) / pistol-whip (sustained); a body's drag / drop; the rack's drive (sustained); the mains
  *  thrown / re-armed by hand; and the selector's own cancel. */
-export type Verb = 'push' | 'pull' | 'ease' | 'unlock' | 'pick' | 'kick' | 'rattle' | 'code' | 'nocode' | 'wand' | 'breach' | 'hammer' | 'grab' | 'question' | 'choke' | 'whip' | 'comply' | 'drag' | 'drop' | 'drive' | 'breakerOff' | 'breakerOn' | 'charge' | 'blow' | 'defuse' | 'takeCam' | 'lightsOff' | 'lightsOn' | 'lead' | 'stay' | 'cancel';   // lightsOff / lightsOn: a room's wall switch (lightswitch.ts);   // lead / stay: a rescue's hostage told to get up and follow, or to stay where she stands (rescueend.ts);   // takeCam: a stuck sticky camera of his own taken back onto the launcher (stickycam.ts);   // comply: a held CIVILIAN told to get down and stay quiet — lets her go, cowering (civilians.ts);   // code / nocode: a keypad door's pad — the code entered (sustained, devices.ts) / the pad tried without one (a deny beep)
+export type Verb = 'push' | 'pull' | 'ease' | 'unlock' | 'pick' | 'kick' | 'rattle' | 'code' | 'nocode' | 'wand' | 'breach' | 'hammer' | 'grab' | 'question' | 'choke' | 'whip' | 'comply' | 'drag' | 'drop' | 'drive' | 'breakerOff' | 'breakerOn' | 'charge' | 'blow' | 'takeCam' | 'lightsOff' | 'lightsOn' | 'lead' | 'stay' | 'cancel';   // lightsOff / lightsOn: a room's wall switch (lightswitch.ts);   // lead / stay: a rescue's hostage told to get up and follow, or to stay where she stands (rescueend.ts);   // takeCam: a stuck sticky camera of his own taken back onto the launcher (stickycam.ts);   // comply: a held CIVILIAN told to get down and stay quiet — lets her go, cowering (civilians.ts);   // code / nocode: a keypad door's pad — the code entered (sustained, devices.ts) / the pad tried without one (a deny beep)
 
 // ---------------------------------------------------------------- mission
 /** The one mission thread: insert (the spawn) → reach the server room → pull the drive from one rack (F, a few seconds within reach) → out through the
@@ -983,8 +982,6 @@ export class Game {
   recap: { lostLive: LostMan[]; allDown: boolean } = { lostLive: [], allDown: false };
   /** how the run went, said once it is over (verdict.ts): reads only — the end card's record */
   verdict!: Verdict;
-  /** a defuse mission's charges and their one clock (defuse.ts): an overlay on a room clear; inert on a level without a scenarios.defuse block */
-  defuse!: Defuse;
   /** the room clear (roomclear.ts; ?roomclear / native --roomclear / __roomclear): the night breach on a structure of four held rooms, with per-room cleared state
    *  and two ends. Off until its start(); ticked right after the night breach */
   roomClear!: RoomClearScenario;
@@ -1210,7 +1207,6 @@ export class Game {
     this.verdict = new Verdict(this);           // the run's verdict (verdict.ts): reads only, said once at the run's end
     this.rails = new Rails(this);               // a tutorial mission's frame (rails.ts): inert unless the level's lesson carries a rails record
     this.lesson = new Lesson(this);             // a training lesson's steps (lesson.ts): inert on a level without a scenarios.lesson block
-    this.defuse = new Defuse(this);             // a defuse mission's charges (defuse.ts): inert on a level without a scenarios.defuse block
     this.nightBreach = new NightBreach(this);   // the night breach playtest (nightbreach.ts): inert until started
     this.roomClear = new RoomClearScenario(this);   // the room clear (roomclear.ts): the same playtest on a four-room structure — inert until started
     for (const s of this.seats) s.view.orders = new SquadOrders(s.view);   // (a seat's own: its menu, its men's orders — seats.ts)

@@ -171,7 +171,6 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::par::par_tick(g);   // (right after the mission's update: this tick's orders and the room clear's end are in)
     crate::lesson::lesson_tick(g, dt);
     crate::rails::rails_tick(g, dt);
-    crate::defuse::defuse_tick(g, dt);
     crate::game::game_update_props(g, dt);
     crate::destruction::destruction_update(g, dt);
     crate::air_dust::air_dust_update(g, dt);

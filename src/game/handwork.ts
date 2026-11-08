@@ -73,7 +73,7 @@ export const samHand = (g: Game): 0 | undefined => samWorkHand(g) ? undefined : 
 
 
 // ---------------------------------------------------------------- Sam's plants: the breaker, the drive, a wall charge
-export interface SamWork { kind: 'breaker' | 'drive' | 'wall' | 'door' | 'defuse' | 'switch'; p: Vec3; n: Vec3; /** where the verb's owner thinks he stands (the wall charge breaks off if he shifts from it): kept on him as he is walked in */ at?: Vec3 }
+export interface SamWork { kind: 'breaker' | 'drive' | 'wall' | 'door' | 'switch'; p: Vec3; n: Vec3; /** where the verb's owner thinks he stands (the wall charge breaks off if he shifts from it): kept on him as he is walked in */ at?: Vec3 }
 /** the face of the breaker panel toward a man: the panel box's thin axis when it has one, else the axis nearest him */
 function breakerFace(g: Game, from: Vec3): { p: Vec3; n: Vec3 } {
   const B = g.level.breaker, b: Box | undefined = g.engine.world.statics[B.boxes[0]];
@@ -97,7 +97,6 @@ export function samWork(g: Game): SamWork | null {
   if (g.mission.stage === 'drive' && g.mission.driveT >= 0) return { kind: 'drive', ...rackFace(g, p) };
   const J = g.wallCharge?.samJob; if (J) return { kind: 'wall', p: J.p, n: J.n, at: J.at };
   const D = g.doorTools?.samJob; if (D) return { kind: 'door', p: D.p, n: D.n, at: D.at };   // (a door charge by hand: owncharge.ts)
-  const C = g.defuse?.samJob; if (C) return { kind: 'defuse', p: C.p, n: C.n, at: C.at };   // (a timed charge on its bench: defuse.ts, only on a level that carries them)
   const S = switchHand(g); if (S) return { kind: 'switch', ...S };   // (a room's wall switch: handring.ts `turn` — the lights went on the press, he is turned to the plate for his hand's move)
   return null;
 }

@@ -50,7 +50,6 @@ pub use game_rules::darkdoor;
 pub use game_rules::darkfoe;
 pub use game_rules::deathrecap;
 pub use game_rules::debris;
-pub use game_rules::defuse;
 pub use game_rules::destruction;
 pub use game_rules::destruction_switch;
 pub use game_rules::devices;

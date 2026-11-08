@@ -736,7 +736,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   level's answer: the convoy escort, 2 or 3, by the main gate or the back gate) and `records` (a night desk with a telephone in the front office, 'the
   first room on a quiet floor': the night patrol, 2, off the street or round the back lane). LEFT WITHOUT, ON PURPOSE: the office's three squad missions
   (its block answers a quiet night; they stay as tuned), block-squads / warehouse / compound / barracks (at eleven: nobody is left to come), registry and
-  consulate (the hostage clock is the pressure), defuse / killhouse (each has its own clock), floodlit / mousehole / glasshouse (one idea each,
+  consulate (the hostage clock is the pressure), killhouse (it has its own clock), floodlit / mousehole / glasshouse (one idea each,
   and it is not this), pass (a snowed-in road). `block` (a telephone exchange, eight men) and `hall` (a police barracks wing) would suit one and have
   none yet: the maintainer's call. WHAT THE TEAM DOES: as on a quiet level, on the net's word — in a raid the net is the men at the set and the team itself (what another
   defender knows reaches control only by being told to a man at the set: `PICTURE`'s tell); with

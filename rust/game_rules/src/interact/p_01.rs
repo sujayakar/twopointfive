@@ -119,7 +119,6 @@ pub fn running_verb(g: &Game, seat: &crate::seats::SeatRef) -> String {
     if g.pl[pl].breaker_move.is_some() { return String::from("breaker"); }
     if let Some(c) = &g.pl[pl].charging { let d = c.door; return format!("charge:{}", g.dr[d].def.name); }
     if crate::wallcharge::wall_charge_setting(g, seat) { return String::from("charge:wall"); }
-    if crate::defuse::defuse_working(g) { return String::from("defuse"); }
     String::new()
 }
 
@@ -139,7 +138,6 @@ pub fn cancel_sustained(g: &mut Game) -> bool {
     if g.mission.drive_t >= 0.0 { crate::mission::cancel_drive(g); return true; }
     if crate::doortools::door_tools_cancel_sam(g) { return true; }
     if crate::wallcharge::wall_charge_cancel(g) { return true; }
-    if crate::defuse::defuse_cancel(g) { return true; }
     false
 }
 

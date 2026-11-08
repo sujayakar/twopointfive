@@ -259,18 +259,6 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   there is no way to play the level untimed (`?nopar` is gone). Set
   the bars from measured runs (`tools/qa/ships.ts --scn <row> --seeds 1-24 --json f`: each run's `par` = secs, lost, total, medal). Today:
   `levels/killhouse.json`. Check: `bun run tools/qa/par-check.ts` (`probes.ts par`).
-- `defuse` — TIMED CHARGES on one clock over this level's room clear (`game/defuse.ts`, `Game.defuse`; `levels/defuse.json`, row `defuse-four` 'The two
-  charges', `group: 'clock'`): `{ secs, workSecs?, devices: [{ id, name, pos, n }], blast?: { lethalM?, woundM?, radius?, power? } }`. `secs` = the one
-  clock, counted from the team's first move or first order and shown in the objective row; a device is a small box on a face — `pos` its centre, `n` the unit
-  [x, z] normal out of the face a man works it from, `name` what the row and the order call it ('charge 1': a name the level itself shows, never a compass
-  word — the HUD has none). A charge is made safe by `workSecs` seconds (absent: `DEFUSE.workSecs`) at it — Sam's own Space row 'make it safe', or a teammate
-  sent through the squad's work order (`game/workthings.ts`, thing kind `'device'`: X on it, 1). The clock at zero sets off every charge still live through
-  `frag.ts blast()` with the block's radii (absent: `DEFUSE`'s) — a real blast in that room — and the mission is FAILED, and stays so if the house is taken
-  afterwards; won = every charge safe AND the room clear taken. The level needs a `roomClear` block; a level without `defuse` is the room clear alone
-  (`DEFUSE.on` false = the same on this level, by digest).
-  Checks: `bun run tools/qa/defuse-check.ts` (`probes.ts defuse`; `DEFUSE_BREAK=1` must fail), `TPS_PROFILE=shipped bun run tools/qa/defuse-run.ts
-  [--arm split|whole|split-back|whole-back|sam|both|backs|all] [--seeds 1-24] [--secs 100 --clocks 60,75,90]` (a scripted commander: two pairs at once
-  against the whole squad to one charge then the other, by the wings or by the workshops' back doors, and the player's own hands on one).
 - `issue` — a KIT ISSUED BY THE LEVEL (`game/kit.ts kitIssue`): `{ members: { '<place>': { …card fields } } }`, place `'0'` = the player, `'1'`‥`'4'` the
   teammates in roster order; each entry lists only the fields that differ from the issue card (`weapon` rifle | pistol | shotgun, `suppressed`, `light`,
   `nvg`, and the counts `bangs charges smoke frags walls shells`, whole numbers 0‥9; `charges walls` on your own card (`'0'`) are read only where your own charges are switched on, `shells` is
