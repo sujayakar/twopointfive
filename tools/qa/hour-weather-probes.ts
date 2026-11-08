@@ -216,7 +216,7 @@ export async function hourwxSheet(): Promise<boolean> {
       const hrefs = () => host.all(e => e.cls.has('mrow')).map(e => e.attrs.href ?? ''), once = (h: string, k: string) => (h.match(new RegExp(`[?&]${k}=`, 'g')) ?? []).length === 1;
       const rowsOf = () => host.all(e => e.cls.has('mdiff') && !(e.cls.has('mway') && e.cls.has('na')) && e.style.display !== 'none').map(e => e.cls.has('mhour') ? 'hour' : e.cls.has('mwx') ? 'weather' : e.cls.has('mway') ? 'way' : e.cls.has('mlever') ? 'lever' : 'defenders').join(',');   // (the Way in row is the room clear's: shown only where the mission names more than one way in; the lever rows — fog of war, enemy AI, enemy kit and, where the stand has it up, how much the game tells you (told.ts): how many is the levers' own check's to say — sit right under the defenders' switch; a row the sheet is not showing — the sticky cameras' lever off a quiet mission, ui/levers.ts — is not a row under the plan)
       S.select('compound-four'); const h0 = hrefs();
-      S.hour('midday'); S.setWeather('rain'); const h1 = hrefs(), go1 = host.all(e => e.cls.has('mgo'))[0]?.attrs.href ?? '', sel1 = S.hrefOf(S.selected);
+      S.hour('midday'); S.setWeather('rain'); const h1 = hrefs(), go1 = S.hrefOf(S.selected), sel1 = S.hrefOf(S.selected);
       S.hour('night'); const h2 = hrefs();
       S.hour('dawn'); S.setWeather(null); const h3 = hrefs();
       const rowsTwo = rowsOf(); S.select('rescue-registry'); const rowsOne = rowsOf(); S.select('compound-four');
