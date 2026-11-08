@@ -69,6 +69,7 @@ pub fn begin(g: &mut Game, k: &KitLink) {
         g.kit_stage = Some(st);
         return;
     }
+    kitstage::keep_base(g);
     kitstage::stage(g);
 }
 fn make_plan(g: &mut Game, data: &Json, y: &Json) {

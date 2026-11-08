@@ -100,9 +100,14 @@ pub struct FrameAsk {
 /// A room's lamp the quiet picture dimmed, as the mission had it
 #[derive(Clone, Copy, Debug)]
 pub struct LampAs { pub t: FixtureId, pub intensity: f64, pub emissive: V3 }
-/// A light the staging turned up or down, at the intensity the game had it
+/// A light the staging turned, and the intensity it is held at
 #[derive(Clone, Copy, Debug)]
 pub struct LightAs { pub light: LightId, pub intensity: f64 }
+
+/// The mission as its start left it, before anything of it was staged: the game's own value, its block, and the stage as it then was
+#[derive(Clone)]
+pub struct Base(pub alloc::sync::Arc<(alloc::boxed::Box<crate::game::Game>, Vec<u8>, KitStage)>);
+impl core::fmt::Debug for Base { fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result { f.write_str("Base") } }
 
 /// THE KIT PICTURE'S STAGE: all a host keeps to hold a game as the picture of the team at its way in. No rule of the game reads it.
 #[derive(Clone, Debug, Default)]
@@ -115,12 +120,10 @@ pub struct KitStage {
     pub order: Vec<GuardId>, pub spots: Vec<V2>, pub yaws: Vec<f64>, pub sam: V2, pub sam_yaw: f64, pub mate: Option<(V2, f64)>, pub foot: V3, pub sent: Vec<GuardId>,
     /// the lights it hung and the porch lamp's box
     pub porch: Option<LightId>, pub fill: Option<LightId>, pub inside: Option<LightId>, pub fixture: Option<BoxId>,
-    /// the lights it dimmed, the moon's, the moon's colour and the sky as they were
-    pub dimmed: Vec<LightAs>, pub moon: Option<LightAs>, pub moon_color: Option<V3>, pub sky: Option<(V3, V3)>,
     /// what the staging wrote each time, so that the tick cannot move them: the moon, the fill, Sam's mark and his aim's point on the wall, the sky
-    pub moon_at: Option<f64>, pub fill_at: f64, pub sam_on: bool, pub sam_intensity: f64, pub sam_inner: f64, pub sam_outer: f64, pub sam_volumetric: f64, pub sam_aim: V3, pub sky_at: Option<(V3, V3)>,
-    /// THE QUIET PICTURE: it is staged · the pool lamp as a fixture of the game's, for the game's life · on the list now · the lamps put out · the lamps dimmed and as they were · the slabs drawn · the share the room burns at
-    pub quiet: bool, pub pool_kept: Option<FixtureId>, pub pool: Option<FixtureId>, pub out: Vec<String>, pub lit_in: Vec<FixtureId>, pub lamp_as: Vec<LampAs>, pub roofs: Vec<BoxId>, pub share: f64,
+    pub moon_at: Option<LightAs>, pub fill_at: f64, pub sam_on: bool, pub sam_intensity: f64, pub sam_inner: f64, pub sam_outer: f64, pub sam_volumetric: f64, pub sam_aim: V3, pub sky_at: Option<(V3, V3)>,
+    /// THE QUIET PICTURE: it is staged · the pool lamp as a fixture of the game's · the lamps put out · the lamps dimmed, and as they were · the share the room burns at
+    pub quiet: bool, pub pool: Option<FixtureId>, pub out: Vec<String>, pub lit_in: Vec<LampAs>, pub share: f64,
     /// where the camera is framed: the plan's pin as it was asked · the anchor's two ends · the places · the stack falls right of the anchor · the anchor's framed height · the fixture and Sam for one subject
     pub look: V3, pub yaw: f64, pub pitch: f64, pub dist: f64, pub doorway: Vec<V2>, pub stand: Vec<V2>, pub hand_right: bool, pub top_y: f64, pub fit: Option<(V3, V2)>,
     /// the page's ask, and its view's aspect (0: as the camera has it) · the pin worked out
@@ -133,4 +136,6 @@ pub struct KitStage {
     pub sunk: Vec<usize>, pub roused_men: u32, pub roused_alarms: u32,
     /// nothing to stage
     pub none: bool,
+    /// what every staging starts from
+    pub base: Option<Base>,
 }
