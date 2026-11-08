@@ -84,7 +84,7 @@ export interface LoopCtx {
   attract: AttractLike | null;
   hud: HudLike | null;
   bubbles: BubblesLike | null;
-  /** the developer's pictures over the HUD (ui/devhud.ts): none on a page without them */
+  /** the developer's pictures over the HUD: none on a page without them */
   dev?: { update(game: Game, cam: FollowCamera, view: View): void } | null;
   /** the accumulated clock (main.ts's timeAcc): stepFrame adds dt to it first thing; render / lights / audio take it */
   time: number;

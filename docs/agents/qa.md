@@ -78,8 +78,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `bun run build`, all exit 0; (3) DETERMINISM, SHORT: `bun run tools/blitz/thrice.ts` (three games of one process, one digest at the start and at each of
   40 seconds); (4) ONE QUICK MISSION: `PT_DIGEST=1 bun run tools/qa/playthrough.ts --scn night-breach --seeds 1 --json out.json` ends with no error or
   panic and its end, second and men up are the named head's, or the sender names the move. ONLY a change to what the page does at boot (the host, the
-  loader, `src/main.ts`) adds, up to a ceiling of fifteen minutes, one mission stood and played 45 s under real keys in headless Chromium
-  (`PORT=<port> node tools/blitz/page-walk.cjs`). A red is placed by one run on the named head: the same red there is old, a new one goes back to its
+  loader) adds, up to a ceiling of fifteen minutes, one mission stood and played under real keys in headless Chromium (tools/qa/pages.ts). A red is placed by one run on the named head: the same red there is old, a new one goes back to its
   sender. A read with a memory kill beside it, a time cap or a lost browser is spoiled and is read again, not called. EVERYTHING ELSE IS ASYNC, after the
   name, and its reds are fixed forward by their owners and told, never hidden: the page as it opens and the other page checks, the read trap over a few missions (`tools/qa/readtrap-page.cjs`: a field the page reads that is neither on its list nor in `tools/wire/fields.json` `unsent`), its twin (`tools/qa/writetrap-page.cjs`: a word of the block or a field the page writes outside a call of the module, with no reason in `pageWrites`; `--seats2` the page in a two-player game), the 84 mission tallies
   (seeds 1 to 4) against the named head, the check families read as a list of reds by kind (not a bar), tour, soak, the two-seat run and the co-op

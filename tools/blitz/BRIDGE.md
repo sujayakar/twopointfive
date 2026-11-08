@@ -7,8 +7,6 @@ A whole game as bytes, the same from the TypeScript and from Rust, so the two ca
 - `schema.json`: every type the walk reaches, in the order of `types.rs`'s fields.
 - `export.ts`: `exportGame(g, knobRegistry())` gives a `Uint8Array`, and `report()` says what did not fit. It never writes to the game.
 - `expose.ts`: a preload that gives the walk a window on each module's private variables. Without it, only what side.ts registers is read. A tool's only, never in the page.
-- `paths.ts`: `decode(bytes)` gives (path, bits, module) with real names (`g.gd[3].last_known[0]`). `diff(a, b)` gives every path that differs, grouped by the module that declares the field. As a command: `bun run tools/blitz/paths.ts a.bin b.bin`.
-- `bridge-check.ts`: the bridge alone, on a live game.
 - `rust/game/src/io.rs`: `io::export(&Game) -> Vec<u8>`, `io::import(&[u8]) -> Game`, and `io::import_into(&mut Game, &[u8])`, which keeps what the walk does not carry as that game has it.
 
 ## Running it
@@ -16,11 +14,9 @@ A whole game as bytes, the same from the TypeScript and from Rust, so the two ca
 Copy the TypeScript files and `schema.json` to `tools/blitz/`, then:
 
 ```
-bun run --preload ./tools/blitz/expose.ts tools/blitz/bridge-check.ts --play room-clear-four:1:2400 --out x.bin
 BRIDGE_BLOB=x.bin cargo test --lib bridge_round_trip      # in the crate
 ```
 
-`--play scenario:seed:frame` stops a real play-through at that frame. `--query` and `--ticks` stand a level up and step it with no input. `--seats 2` is a co-op game.
 
 ## The bytes
 
