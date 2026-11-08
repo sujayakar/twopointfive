@@ -27,7 +27,7 @@ const GROUPS: [(MissionGroup, &str, &str); 6] = [
     (MissionGroup::Tutorial, "Tutorial", "The game, a mission at a time"),
     (MissionGroup::Raids, "Raids", "Small buildings, up to seven defenders"),
     (MissionGroup::Strongholds, "Strongholds", "Eight to eleven defenders"),
-    (MissionGroup::Clock, "On the clock", "A hostage, a runner, a charge or a par time"),
+    (MissionGroup::Clock, "On the clock", "A hostage or a par time"),
     (MissionGroup::QuietAlone, "Quiet, alone", "Light, noise and cameras"),
     (MissionGroup::QuietTwo, "Quiet, as two", "You and one partner, silent from the start"),
 ];
