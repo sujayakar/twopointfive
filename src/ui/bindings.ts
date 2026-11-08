@@ -7,7 +7,7 @@
 import { rowWeather, rowOfQuery } from '../game/rowset';
 import { WEATHER_KINDS, weatherSearch, type WeatherKind } from '../game/weatherKinds';
 import { charMatsSummary, resetCharMats } from '../render/charMaterials';
-import { saveSandbox } from '../game/sandbox';
+import { keepSandbox } from '../host/sandbox';
 import { HOUR_IDS, hourLabel, hourOf, applyHour, hourSummary, sunStrength, setSunStrength, sunToCloud } from '../game/hours';
 import { Engine, FrameFlags } from '../engine';
 import { Game } from '../game/game';
@@ -622,9 +622,9 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     { text: 'teleport to cursor', run: () => game.teleportPlayer(game.aimPoint) },
     { text: 'spectate next', run: () => { game.spectate = game.spectate + 1 >= game.guards.length ? -1 : game.spectate + 1; pageSay(game.spectate < 0 ? 'camera: player' : `camera: ${game.guards[game.spectate]?.callsign ?? `man ${game.spectate}`}`); }, title: 'cycle the camera through every man on the floor (teammates included) and back to the player' },
   ]);
-  panel.toggleBox(gp, 'guard AI', () => game.aiEnabled, v => { game.aiEnabled = v; saveSandbox(game, 'noAi'); });
-  panel.toggleBox(gp, 'god mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'guards still see and shoot you, but hits do no damage');
-  panel.toggleBox(gp, 'unlimited ammo', () => game.infiniteAmmo, v => { game.infiniteAmmo = v; saveSandbox(game, 'ammo'); }, 'bottomless magazine: rounds still cycle (cadence, reload animation if you press R) but the count never drops; cans, ring airfoils and wall charges do not run out either');
+  panel.toggleBox(gp, 'guard AI', () => game.aiEnabled, v => { game.aiEnabled = v; keepSandbox('noAi', !v); });
+  panel.toggleBox(gp, 'god mode', () => game.godMode, v => { game.godMode = v; keepSandbox('god', v); }, 'guards still see and shoot you, but hits do no damage');
+  panel.toggleBox(gp, 'unlimited ammo', () => game.infiniteAmmo, v => { game.infiniteAmmo = v; keepSandbox('ammo', v); }, 'bottomless magazine: rounds still cycle (cadence, reload animation if you press R) but the count never drops; cans, ring airfoils and wall charges do not run out either');
   panel.buttons(gp, 'encounter', [{ text: 'restart (Shift+Enter)', run: () => game.restart() }]);
   panel.toggleBox(gp, 'show AI debug labels', () => game.showDebug, v => { game.showDebug = v; }, 'state / awareness tags over the guards');
   panel.toggleBox(gp, 'light fixture dots', () => overlay.showLightDots, v => { overlay.showLightDots = v; });

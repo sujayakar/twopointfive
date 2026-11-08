@@ -77,7 +77,7 @@
 // rooms (unless `force`, which files them as searching men and drops the drill), Sam mid-action (unless `force`, which lets go of everything the way a teleport
 // does — in the FILE, never in the running game: saving is read-only).
 import { SideMap, rollbackVar, wallClock, HostOwned } from '../math/side';
-import { loadSandbox } from './sandbox';
+import { loadSandbox } from '../host/sandbox';
 import { hostileTo } from './teams';
 import { Vec3, v3, quat, clamp } from '../math/vec';
 import { Game, Guard, Player, KIT_ORDER } from './game';
@@ -676,7 +676,7 @@ export function loadState(g: Game, s: SaveState, opts: { label?: string } = {}) 
 function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number, opts: { label?: string }) {
   g.time = fin(s.time, g.time); g.eventSeq = s.eventSeq | 0; g.fxSeed = s.fxSeed | 0; g.ocpCooldown = fin(s.ocpCooldown); g.calledIn = !!s.calledIn; g.stoodDown = !!s.stoodDown; g.lightHome.in(LIGHT_IN.fix, null, fin(s.breakerFixT)); g.lastStingT = fin(s.lastStingT, -100);
   g.aiEnabled = s.flags.aiEnabled !== false; g.godMode = !!s.flags.godMode; g.infiniteAmmo = !!s.flags.infiniteAmmo; g.playerInvisible = !!s.flags.playerInvisible;
-  loadSandbox(g, false);   // …then THIS MACHINE's start-card preference wins over the file's three sandbox flags (game/sandbox.ts; headless it is a no-op, so save∘load stays the identity on the file — probes checkpoint-identity)
+  loadSandbox(g, false);   // …then THIS MACHINE's start-card preference wins over the file's three sandbox flags (host/sandbox.ts; headless it is a no-op, so save∘load stays the identity on the file — probes checkpoint-identity)
   g.spectate = -1;
   // ---- items (before the men: their dropped torches point in here)
   const propsById = g.props.all;

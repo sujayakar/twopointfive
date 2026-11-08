@@ -1,4 +1,4 @@
-// THE OUTLINE IN THE DARK (render/outline.ts), from its section: how wide and in what ink is host/findme.ts OUTLINE_LOOK's, how strong the picture says (the section's `up` and `light` are read by nobody here).
+// THE OUTLINE IN THE DARK (render/outline.ts), from its section: how wide and in what ink is host/findme.ts OUTLINE_LOOK's, how strong the picture says.
 import { FINDME, OUTLINE_LOOK, outlineInk, type OutlineHue } from '../host/findme';
 import { makeOutlineMan, type OutlineFrame, type OutlineMan } from '../render/outline';
 import type { Drawn } from './drawn';

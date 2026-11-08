@@ -12,8 +12,8 @@ import { readCursorView, readDebriefView, readTickView, type CursorView, type De
 /** what a start is handed beside the level (rust/game_start/src/handed.rs PARTS) */
 export interface Start { level: Uint8Array; words: string; mannequin: Uint8Array; mannequinBin: Uint8Array; cast: Uint8Array; castLook: Uint8Array; seed: number; seats?: number }
 
-/** `face_start`'s flags: the rows that dress the picture are up · the game works its own senses out */
-const DRESS = 1, SENSES = 2;
+/** `face_start`'s: the rows that dress the picture are up */
+const DRESS = 1;
 /** `face_step`'s: the lights' envelopes · a rails level's view · the save controller */
 const LIGHTS = 2, VIEW = 4, SAVES = 8;
 
@@ -74,7 +74,7 @@ export class DrawGame {
     d.setUint32(0, parts.length, true);
     for (const p of parts) { d.setUint32(q, p.length, true); b.set(p, q + 4); q += 4 + p.length; }
     if (this.h) { this.X.face_drop(this.h); this.h = 0; }
-    try { this.h = this.X.face_start(at, n, -1, o.seed, o.seats ?? 1, DRESS | SENSES); } finally { this.X.face_free(at, n); }
+    try { this.h = this.X.face_start(at, n, -1, o.seed, o.seats ?? 1, DRESS); } finally { this.X.face_free(at, n); }
     if (!this.h) throw new FaceError('no room for another game in this module');
     this.ticks = 0; this.said = null;
     // (room asked for and given back: the allocator keeps it, and a step seldom has to grow the memory)
@@ -87,7 +87,7 @@ export class DrawGame {
   /** ONE TICK on the hand as it stands: `keys` = the codes held, a line feed, the codes that went down */
   step(dt: number, keys: string): void {
     const t0 = performance.now();
-    if (this.commands.length) this.handed(this.commands.take(), (p, m) => { if (!this.X.face_commands(this.h, p, m)) throw new Error(this.answer()); });
+    this.order();
     const n = this.enc.encodeInto(keys, new Uint8Array(this.memory.buffer, this.keys, DrawGame.KEYS)).written;
     this.X.face_hand(this.h, 0, this.hand, HAND.count * 8, this.keys, n);
     this.X.face_step(this.h, dt, LIGHTS | VIEW | SAVES);
@@ -97,6 +97,9 @@ export class DrawGame {
     this.X.face_out_clear(this.h);   // (what the tick told its host is in its sections now)
     this.ms.step = t1 - t0; this.ms.draw = performance.now() - t1;
   }
+  private order(): void { if (this.commands.length) this.handed(this.commands.take(), (p, m) => { if (!this.X.face_commands(this.h, p, m)) throw new Error(this.answer()); }); }
+  /** what has been commanded is done now, between two ticks, and what it changed is there to be read: the next step would do the same things first */
+  tell(): void { this.order(); this.draw(); }
   /** A FRAME IS DRAWN, `a` of the way from the tick before to the last */
   frame(a: number, focus: ArrayLike<number>): void { this.drawn.frame(this.h, a, focus); }
   /** what this page says of its look, when it is another than it last said */
