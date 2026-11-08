@@ -3,7 +3,7 @@
 import type { Vec3 } from '../math/vec';
 import { BUILDING } from './floor';   // (a leaf: the office building's footprint — everything outside it is the grounds: the car park south and east, the verge north and west)
 import type { Level } from '../scene/level';
-import { isOffice, levelRects, ownPlace } from './dialogue';
+import { isOffice, ownPlace } from './dialogue';
 
 /** The floor's rooms as the debrief names them: nominal partition lines of the one office level (scene/level.ts — the corridor z 10‥12.2 across the building,
  *  four rooms north of it, three south; the walls themselves are 12 / 24 cm about these lines, which a name does not care about). First match wins. Kept here,
@@ -18,10 +18,6 @@ export const ROOMS: { name: string; x0: number; x1: number; z0: number; z1: numb
   { name: 'cubicles', x0: 12, x1: 28, z0: 12.2, z1: 24 },
   { name: 'break room', x0: 28, x1: 36, z0: 12.2, z1: 24 },
 ];
-/** … and the rooms of the level a run is on, for the debrief's map: the office's table above, or another level's own names (none: no labels) */
-export function roomsOf(level: Level): { name: string; x0: number; x1: number; z0: number; z1: number }[] {
-  return isOffice(level) ? ROOMS : (levelRects(level) ?? []).map(r => ({ name: r.name.replace(/^the /, ''), x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 }));
-}
 /** The room a floor point is in, by name; outside the building the side of it ('south lot' — the car park along the facade — 'east side' with the fire exit and
  *  the dumpster, 'north side', 'west side'). `level` = the level the point is on: off the office it is named by that level's own data ('front hall'; the nearest
  *  named place for a point in none; 'building' on a level that names nothing) — without it, the office's table (the autosave's regions, which only need a partition). */

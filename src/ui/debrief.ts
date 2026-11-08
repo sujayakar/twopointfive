@@ -8,8 +8,8 @@ import { gearText } from '../game/gear';
 import type { Game } from '../game/game';
 import { mountRecap } from './recap';
 import { quietWords } from '../game/quiet';
-import { indoors, roomOf } from '../game/rooms';
-import type { Debrief, DebriefRow, DebriefRoom, DeathRecap } from '../view/debriefview';
+import { indoors } from '../game/rooms';
+import type { Debrief, DebriefRow, DeathRecap } from '../view/debriefview';
 import { verdictLine, type RunVerdict } from '../game/verdict';
 import { verdictHead, verdictMen, verdictSlot, verdictPanels, squadVerdict, fellWords, namedMen } from './verdictCard';
 
@@ -108,7 +108,7 @@ export function renderDebrief(into: HTMLElement, game: Game, actions: HTMLElemen
   for (const e of W.rows) { const row = el('div', `ev k-${e.kind}${e.down ? ' down' : ''}`); const t = el('i'); t.textContent = fmtMMSS(e.t); const r = el('u'); r.textContent = e.room; const x = el('span'); x.textContent = e.text; row.append(t, r, x); tl.appendChild(row); }
   // map + legend
   if (!recapIn) mountRecap(right, game, recapNow);   // every death explains itself (ui/recap.ts): who shot whom, from where — nothing while the run is still on. Over the map unless the verdict's slot took it
-  right.appendChild(buildMap(game, W.rows, W.rooms, W.path, V));
+  right.appendChild(buildMap(game, W.rows, W.path, V));
   const legend = el('div', 'db-legend');
   const seenLabels = new Set<string>();
   for (const k of Object.keys(PIN)) { const p = PIN[k]!; if (seenLabels.has(p.label)) continue; seenLabels.add(p.label); const s = el('span', `lg ${p.cls}`); const g = el('i'); g.textContent = p.glyph; s.append(g, ` ${p.label}`); legend.appendChild(s); }
@@ -120,8 +120,8 @@ export function renderDebrief(into: HTMLElement, game: Game, actions: HTMLElemen
 
 /** The floor map: a canvas at the nav grid's resolution (walkable cells light — lighter indoors — blocked dark, so walls read as lines and doorways as gaps), the
  *  path as a polyline coloured by the clock (teal early → amber late; a jump longer than PATH_GAP_M is left as a gap), spawn / rack / exit marks; over it, one
- *  absolutely-placed glyph per pinned event (its timeline row as the tooltip), and the room under the cursor as the box's own tooltip. */
-function buildMap(game: Game, events: DebriefRow[], rooms: DebriefRoom[], P: ArrayLike<number>, V: RunVerdict | null = null): HTMLElement {
+ *  absolutely-placed glyph per pinned event (its timeline row as the tooltip). No room is named on it. */
+function buildMap(game: Game, events: DebriefRow[], P: ArrayLike<number>, V: RunVerdict | null = null): HTMLElement {
   const box = el('div', 'db-map'); const nav = game.col.nav; const W = nav.W, H = nav.H, cell = nav.cell;
   const wx = W * cell, wz = H * cell;   // world extent covered (40 × 28 m)
   const px = Math.max(2, Math.floor(MAP_MAX_W / W));   // canvas px per nav cell
@@ -136,9 +136,6 @@ function buildMap(game: Game, events: DebriefRow[], rooms: DebriefRoom[], P: Arr
       ctx.fillStyle = blocked ? (indoors(p) ? '#1c1a16' : '#100f0c') : indoors(p) ? 'rgba(214,200,170,0.2)' : 'rgba(214,200,170,0.07)';
       ctx.fillRect(x * px, z * px, px, px);
     }
-    // room names, faint, centred in each room
-    ctx.font = `${Math.max(8, px * 1.8)}px ui-monospace, Menlo, monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(214,210,200,0.34)';
-    for (const r of rooms) ctx.fillText(r.label, ((r.x0 + r.x1) / 2 / cell) * px, ((r.z0 + r.z1) / 2 / cell) * px);
     // the team's paths under a verdict: every man's in his own colour (a squad's mission: the player's too — the clock-coloured line below is the stealth game's)
     if (V) { const squad = squadVerdict(V); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       if (squad) { ctx.fillStyle = 'rgba(255,156,132,0.75)'; const r = Math.max(1.5, px * 0.45); for (let i = 0; i + 1 < V.foes.fell.length; i += 2) ctx.fillRect(V.foes.fell[i] / cell * px - r, V.foes.fell[i + 1] / cell * px - r, r * 2, r * 2); }   // where each defender fell: a small square
@@ -167,9 +164,7 @@ function buildMap(game: Game, events: DebriefRow[], rooms: DebriefRoom[], P: Arr
   else { const ex = game.doors.byName(M.exfilDoor)?.frameCentre; if (ex) mark('⇥', 'exit', ex[0], ex[2], 'the fire exit'); }
   for (const e of events) { const p = pinnedRow(e); if (!p) continue; const pin = el('i', `pin ${p.cls}`); pin.textContent = p.glyph; pin.title = `${fmtMMSS(e.t)} · ${e.room} · ${e.text}`; place(pin, e.pos[0], e.pos[2]); }
   if (V) for (const m of namedMen(game, V)) { if (!m.downPos || (m.human && !squadVerdict(V))) continue; const x = el('i', `vfell t-${m.tone ?? 'mate'}`); x.textContent = m.state === 'dead' ? '✕' : m.state === 'wounded' ? '✚' : 'z'; x.title = fellWords(m); place(x, m.downPos[0], m.downPos[1]); }   // (where each man of the team fell; not a `mark`: the three marks are the level's)
-  // the room under the cursor
   box.title = 'the floor';
-  (box as any).onmousemove = (ev: MouseEvent) => { const r = cv.getBoundingClientRect?.(); if (!r || !r.width) return; const x = (ev.clientX - r.left) / r.width * wx, z = (ev.clientY - r.top) / r.height * wz; if (x >= 0 && z >= 0 && x < wx && z < wz) box.title = roomOf([x, 0, z], game.level); };
   return box;
 }
 /** teal at the start of the run through green to amber at its end */
