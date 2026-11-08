@@ -420,7 +420,7 @@ export class Engine {
   private initP: Promise<void> | null = null;
   /** SOME PASS IS DRAWING WITH A STAND-IN WHILE ITS OWN PROGRAM COMPILES (gpu/device.ts laterProgress): a pipeline the boot left for later is not in yet,
    *  so this frame's picture and its GPU times are the stand-ins', not the settings' own. False again once every one asked for has landed or failed (a failed one keeps its
-   *  stand-in for good: nothing more will change). Always false with the row 'Start on first frame shaders' off. */
+   *  stand-in for good: nothing more will change). Always false with the first-frame start off. */
   get standsIn(): boolean { return laterProgress.pending > 0; }
   /** construct + init in one await (the viewer, the editor, tools) */
   static async create(gpu: Gpu, opts: { sharp?: boolean; gbaa?: boolean; rcCfg?: RcConfig; onGroup?: (name: string) => void } = {}): Promise<Engine> {
