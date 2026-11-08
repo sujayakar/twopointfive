@@ -1,4 +1,4 @@
-// WHAT TAB SHOWS (ui/tabkey.ts 'brief'): a card over a paused game with the objective in full and the squad — each teammate, what he is doing and what
+// WHAT TAB SHOWS: a card over a paused game with the objective in full and the squad — each teammate, what he is doing and what
 // he carries, then what the squad carries between them. The maintainer, 10-23: "if you don't have a menu open, tab opens up an
 // objectives modal that also has your squad equipment?". It is the home of what the corner panel no longer says (ui/corner.ts: the line per man, loud
 // or quiet, the counts). Every word on it is one the game already makes (the objective's line, orders.ts statusOf and the block's notes, kit.ts

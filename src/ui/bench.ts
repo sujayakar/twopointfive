@@ -172,7 +172,7 @@ export function benchReport(r: BenchResult): string {
   const L: string[] = [], M = r.machine, row = (k: string, v: string) => L.push(k.padEnd(10) + v);
   L.push(`twopointsix benchmark · ${r.at.slice(0, 16).replace('T', ' ')} UTC${r.commit ? ` · build ${r.commit.slice(0, 8)}` : ''}${r.set ? ` · scenes ${r.set}` : ''}`);
   row('address', r.query || '(no flags)');
-  if (r.rows) row('shaders', r.rows.length ? `on: ${r.rows.map(shaderRowLabel).join(', ')}` : 'no Shaders row is on (Options, Graphics)');   // (a row can be on from Options with nothing on the address, so the address alone does not say)
+  if (r.rows) row('shaders', r.rows.length ? `on: ${r.rows.map(shaderRowLabel).join(', ')}` : 'no Shaders row is on');   // (a row can be on from Options with nothing on the address, so the address alone does not say)
   row('GPU', `${M.webgl || M.webgpu}${M.fallback ? ' · SOFTWARE RENDERING (no GPU in use)' : ''}`);
   if (M.webgl) row('', `WebGPU says: ${M.webgpu}`);
   row('browser', [M.browser, M.os].filter(Boolean).join(' · ') || M.userAgent);
