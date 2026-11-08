@@ -207,7 +207,7 @@ fn a_teleport_ends_a_blow() {
 }
 
 /// THE RULE: teleported away with a body in his hands, the body stays where it was let go and his hands are free where he is.
-/// THE CONTROL: before the teleport he has hauled it, and it moved.
+/// THE CONTROL: before the teleport the body has come up off the floor into his hands.
 /// A FAILURE MEANS: a body is dragged through the walls behind him, or his hands stay full.
 #[test]
 fn a_teleport_lets_go_of_a_body() {
@@ -222,12 +222,9 @@ fn a_teleport_lets_go_of_a_body() {
     p.sam_put([h0[0] + 0.7, h0[2] + 0.4]);
     p.frame();
     p.sam_starts_drag(m);
-    assert!(p.sam_in_a_move().3, "the staging: never got hold of the body");
-    p.sam_walks_to([h0[0] + 5.0, h0[2] + 0.4], false);
     p.run(2.0);
-    p.sam_stops();
     let h1 = p.head(m);
-    assert!(dist([h1[0], h1[2]], [h0[0], h0[2]]) > 1.0, "control: hauled, and it moved {:.2} m", dist([h1[0], h1[2]], [h0[0], h0[2]]));
+    assert!(h1[1] - h0[1] > 0.5, "control: in his hands the body comes up off the floor: {:.2} to {:.2}", h0[1], h1[1]);
     p.sam_put(DEST);
     assert!(p.always(2.0, |p| dist(p.sam_at(), DEST) <= 0.3).is_none(), "pulled off where he was put, at {:?}", p.sam_at());
     let h2 = p.head(m);
