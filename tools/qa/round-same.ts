@@ -20,14 +20,10 @@ async function dump(out: string) {
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
-  const { kitViewSetLevel } = await import(`${ROOT}/src/host/kitViewSet.ts`);
   const hush = console.log; console.log = () => { };
   const all: Dump = {};
   for (const file of readdirSync(`${ROOT}/levels`).filter(f => f.endsWith('.json') && !f.includes('.lint')).sort()) {
-    const data0 = parseLevelData(readFileSync(`${ROOT}/levels/${file}`, 'utf8'));
-    // (a kit view's set stands up as a level of its own: asked as the page stands it)
-    const sets = (data0.scenarios?.kitView?.ways ?? []).flatMap((w: { set?: string }, i: number) => w.set ? [i] : []) as number[];
-    for (const [name, data] of [[file, data0], ...sets.map(i => [`${file} set ${i}`, kitViewSetLevel(data0, i)])] as [string, any][]) {
+    { const name = file, data: any = parseLevelData(readFileSync(`${ROOT}/levels/${file}`, 'utf8'));
     const W = await standUp({ level: loadLevel(data), seed: 1 }), L = W.game.level;
     const n = L.boxes.length, isSpeck = (b: any) => !!b.was && !b.round && !!(b.flags & BoxFlag.NoPrimary) && b.h[0] === SPECK;
     // a box's place in the list with the specks out of it, and where a speck's index goes: its round's first box

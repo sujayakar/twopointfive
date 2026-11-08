@@ -278,7 +278,7 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
         //  row and no other bar, and while it was read as today's every mark and test of such a lesson went unheld. Until 10-22 it was, and said so)
         if (LN && LW) { if (LN.rails && LW.rails) LW.rails = readFree(LN.rails, LW.rails, LESSON_FREE.rails, moved); was.scenarios.lesson = readFree(LN, LW, LESSON_FREE.lesson, moved);
           if (moved.v) console.log(`  (${moved.v} of the lesson's words and lists are not ${base}'s: the lesson's own, read from today's file and not held to the base)`); }
-        // (THE GEAR SCREEN'S BLOCK — scenarios.kitView, src/host/kitView.ts: the start page's picture of the team at the way in, per level. Picture only: no rule of
+        // (THE GEAR SCREEN'S BLOCK — scenarios.kitView, rust/game_rules/src/kitstage: the Team & kit picture of the team at the way in, per level. Picture only: no rule of
         //  the game reads it, a bespoke set's boxes are never in the level, and furniture cannot change a key of it — so a level given its picture, or a picture
         //  re-tuned, is not 'a step that changed the level's own part' and takes NO new base revision (levels are staged on branches side by side: each would have
         //  appended to BASE_REVS). The base's block is read as today's and said so; every OTHER key of `scenarios` is still held, and tools/qa/kitview-plan.ts

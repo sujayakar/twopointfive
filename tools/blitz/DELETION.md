@@ -166,7 +166,7 @@ By the root at the end of the first chain of references found (a function many r
 | the bridge | 6 | 35 |
 | the module | 6 | 6 |
 
-The files that root the most:
+The files that root the most (as the run found them: `src/host/kitView.ts` has gone since, and a row of `delete-plan.tsv` that names it says what kept a function on that day, not today):
 
 | file | functions | lines |
 |---|---|---|
