@@ -1,12 +1,11 @@
 // AN EVEN PACE ON A FAST DISPLAY, AND A FRAME RATE READOUT THAT IS TRUE — the check on src/host/pace.ts (EVENPACE) and its place in the page's frame loop.
-//   bun run tools/qa/pace-check.ts            (and again with TPS_PROFILE=shipped in front: the switch's two stands)
+//   bun run tools/qa/pace-check.ts
 //   EVENPACE_BREAK=1 bun run tools/qa/pace-check.ts   must FAIL: the pacer passes over a frame that came on time, and the readout is the last frame's own rate
 //   GIVEWAY_BREAK=1 bun run tools/qa/pace-check.ts    must FAIL: a window nobody is at draws as a focused one does (the give-way rule off), so it takes the whole GPU
 //   FLIGHT_BREAK=1 bun run tools/qa/pace-check.ts     must FAIL: nothing waits for the GPU (the rule off), so frames pile up behind it without end
 // What it does, with no page and no display: plays frame stamps through the pacer as a display would hand them over (120, 144, 240 and 60 Hz, a wobble on the
 // stamps, frames the browser held back, frames in pairs from the first one, a window moved to a slower display and back) and reads which were worked and what
-// rate the pacer read off them; plays the gaps of a real recording through the readout; reads the wiring off the page's source as text; stands a game up and
-// reads the switch on this stand.
+// rate the pacer read off them; plays the gaps of a real recording through the readout; reads the wiring off the page's source as text.
 // What it cannot say: that a fast display's picture is even. Nobody here has one, and a headless browser's display runs at 60, where no frame is passed over.
 // Giving way (EVENPACE.giveway) is played the same way: a GPU that takes so long over a frame, the queue's word coming back when it is done, the focus going
 // and coming back. What it cannot say there: that a second window of a real browser on a real GPU starts beside the first (docs/agents/render.md has what
@@ -15,21 +14,16 @@
 // finishes, the even pace untouched where the work fits it. What it cannot say: how late a real browser's queue answers, which is what the rule's cost on a
 // real machine hangs on (the maintainer's own try of the look page's trial on a 120 Hz laptop is the only word on that).
 // exit 0 = all pass · 1 = one failed
-import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { readFileSync } from 'node:fs';
-import { ROOT, standUp } from './headless';
+import { ROOT } from './here.ts';
 import { EVENPACE, FLIGHT_PAGE, pacer, pageRoom, paceEvery, periodOf, rateMeter } from '../../src/host/pace';
 
 const BREAK = process.env.EVENPACE_BREAK === '1', GIVE_BREAK = process.env.GIVEWAY_BREAK === '1', FLIGHT_BREAK = process.env.FLIGHT_BREAK === '1';
 let failed = 0;
 const check = (ok: boolean, what: string) => { if (!ok) failed++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}`); };
-const shipped = process.env.TPS_PROFILE === 'shipped';
 
-// 0. the switch on this stand: off on the frozen one and in the module, on where the page's own boot ran (the shipped stand)
-{ const log = console.log; console.log = () => {}; try { await standUp({ seed: 1 }); } finally { console.log = log; }
-  check(EVENPACE.on === shipped, `the switch on the ${shipped ? 'shipped' : 'frozen'} stand is ${shipped ? 'on' : 'off'} (${EVENPACE.on})`);
-  check(EVENPACE.giveway === shipped, `giving way on the ${shipped ? 'shipped' : 'frozen'} stand is ${shipped ? 'on' : 'off'} (${EVENPACE.giveway})`);
-  check(FLIGHT_PAGE === 2 && EVENPACE.flight === (shipped ? FLIGHT_PAGE : 0), `waiting for the GPU on the ${shipped ? 'shipped' : 'frozen'} stand is ${shipped ? `on, the page's ${FLIGHT_PAGE} frames with it at the most` : 'off'} (${EVENPACE.flight})`); }
+// 0. the switches in the module, before anyone has put them up: off, and the page's own boot raises them (line 10 and line 29 read that off its source)
+check(EVENPACE.on === false && EVENPACE.giveway === false && EVENPACE.flight === 0 && FLIGHT_PAGE === 2, `in the module the even pace is off (${EVENPACE.on}), giving way is off (${EVENPACE.giveway}), and nothing waits for the GPU (${EVENPACE.flight}); the page's frames with the GPU at the most are ${FLIGHT_PAGE}`);
 
 EVENPACE.on = true; EVENPACE.giveway = !GIVE_BREAK; EVENPACE.flight = FLIGHT_BREAK ? 0 : FLIGHT_PAGE;
 if (BREAK) { EVENPACE.slack = -0.2; EVENPACE.window = 0; }   // (the break: a frame is 'early' until a fifth of a display frame AFTER it was due, so the one that came on time is passed over; and the readout's window holds one frame)

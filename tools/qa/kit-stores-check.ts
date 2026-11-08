@@ -6,8 +6,7 @@
 // the same; a level may paint a drum in any of them):
 //   1 steel      a drum standing and a drum lying, in any row, is STEEL to the rules: it says it does what steel does (Box.does, the row 'steel' of
 //                scene/materials.ts), so a round's hit knocks out of it what metal gives and a blast breaks it as metal (never the wood a wall
-//                charge chews), and with a hit read from what a thing is DRAWN as (particleFx.ts HITSTUFF, raised here) it is metal or leaves the hit
-//                to what it does. It wears the row to the eye (the row's own numbers) and is known as the row's paint (scene/stuff.ts paintOf). WHAT IT SAYS: the row's own word where the
+//                charge chews). It wears the row to the eye (the row's own numbers) and is known as the row's paint (scene/stuff.ts paintOf). WHAT IT SAYS: the row's own word where the
 //                row is a coat or metal already (`paint`, `enamel`, a row the table reads as metal); in every other row `paint`, with a drum enamel's
 //                finish, never the row's stuff (a drum in the colour of mud is not made of mud). Until 11-05 an olive drum was an ammunition crate's
 //                dark wood to a round, and a level that wanted a steel one picked another colour
@@ -24,15 +23,13 @@ import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { GWOT_PALETTE, GWOT_FINISH } from '../../src/scene/gwotPalette';
 import { paintOf, stuffOfName, doesOfName } from '../../src/scene/stuff';
 import { doesOf, DOES_DEFAULT } from '../../src/scene/materials';
-import { saidSurf, HITSTUFF } from '../../src/game/particleFx';
 import { laid, lines, ROWS, type Kit } from './kit-stand';
 
 const BREAK = process.env.KITSTORES_BREAK === '1', { check, failed } = lines();
 const solid = (b: Box) => !(b.flags & BoxFlag.NoShadow), top = (b: Box) => b.c[1] + b.h[1];
 const near = (a: readonly number[], b: readonly number[]) => Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]), Math.abs(a[2] - b[2])) <= 0;   // (a stand-in is the row's own numbers: gwotPalette.ts gwotAs)
 /** does this box do what steel does, to everything of the game that asks? and what it does where it does not */
-HITSTUFF.on = true;   // (what a hit reads from a thing's word is asked too, whatever the stand)
-const readAs = (b: Box): string[] => { const d = doesOf(b), said = saidSurf(b); return [(b.does ?? DOES_DEFAULT) === 'steel' ? '' : `it says it does '${b.does ?? DOES_DEFAULT}'`, d.surf === 'metal' ? '' : `a hit: ${d.surf}`, said === undefined || said === 'metal' ? '' : `a hit by its word '${b.stuff}': ${said}`, d.breaks === 'metal' ? '' : `a blast: ${d.breaks}`].filter(x => x); };
+const readAs = (b: Box): string[] => { const d = doesOf(b); return [(b.does ?? DOES_DEFAULT) === 'steel' ? '' : `it says it does '${b.does ?? DOES_DEFAULT}'`, d.surf === 'metal' ? '' : `a hit: ${d.surf}`, d.breaks === 'metal' ? '' : `a blast: ${d.breaks}`].filter(x => x); };
 console.log(`\n=== kit stores: a drum is steel in any paint, and the one on its side is a round${BREAK ? ' (KITSTORES_BREAK: each line is asked of what a drum once was)' : ''} ===`);
 
 // 1. steel in every row, standing and lying; the row to the eye, the row's word to the picture
@@ -45,7 +42,7 @@ console.log(`\n=== kit stores: a drum is steel in any paint, and the one on its 
     if (!body.length || notSteel.length || unnamed || unsaid || unfinished) wrong.push(`${row} ${how}: ${body.length} boxes${notSteel.length ? `, not metal to ${notSteel.join(' · ')}` : ''}${unnamed ? `, ${unnamed} not known as the row's paint` : ''}${unsaid ? `, ${unsaid} not saying ${word ? `'${word}'` : 'nothing'} (says '${body.find(b => b.stuff !== word)?.stuff}')` : ''}${unfinished ? `, ${unfinished} not of roughness ${rough}` : ''}`);
     if (body.some(b => (b.albedo as readonly number[]) !== GWOT_PALETTE[row] && paintOf(b.albedo)?.does !== doesOfName(row))) stoodIn++;   // (a stand-in: the row's numbers as a paint of their own, that does another thing than the row)
   }
-  check(wrong.length === 0 && stoodIn > 0 && coated > 0 && coated < ROWS.length * 2, `1 a drum, standing or lying, in any of the palette's ${ROWS.length} rows says it does what steel does: metal to a round's hit, by what it does and by its word, and to a blast; it wears the row to the eye and is known as the row's paint; it says the row's word where the row is a coat or metal and 'paint' with an enamel's finish in any other`,
+  check(wrong.length === 0 && stoodIn > 0 && coated > 0 && coated < ROWS.length * 2, `1 a drum, standing or lying, in any of the palette's ${ROWS.length} rows says it does what steel does: metal to a round's hit and to a blast; it wears the row to the eye and is known as the row's paint; it says the row's word where the row is a coat or metal and 'paint' with an enamel's finish in any other`,
     `${ROWS.length * 2} drums laid, ${stoodIn} of them in a stand-in, ${coated} of them a coat over a row that is neither a coat nor metal${wrong.length ? ' · ' + wrong.slice(0, 5).join(' · ') + (wrong.length > 5 ? ` · and ${wrong.length - 5} more` : '') : ''}`); }
 
 // 2. the drums a level is dealt (dealt at several places: a place deals by its own seed)

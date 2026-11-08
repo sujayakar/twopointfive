@@ -13,8 +13,8 @@
 //                        stretches the lobe along the axis it is told to
 //   materials-arealight  the analytic stand-in for a panel on a rough finish (centre direction, lobe widened by r / 2d, no renormalisation) against a quadrature
 //                        of the true GGX integral over a 1.2 × 0.6 panel: peak within −35 % / +60 % for rough 0.3‥0.45 — the choice reflect.wgsl rtGlints documents
-//   materials-wear       the detail layer's traffic map (render/wear.ts) on the office: deterministic, the corridor route worn and a wall's inside not, every
-//                        threshold stamped, the wall-proximity channel 1 at a wall's foot and 0 mid-room, the size the shader's mapping assumes
+//   materials-wear       the traffic map's band along the foot of a wall (render/wear.ts): deterministic, 1 at a wall's foot and 0 mid-room, the size the shader's
+//                        mapping assumes, and the look's page's strip along a long face (WEARFOOT_BREAK=1: must fail). The ways walked are not asked: the game's walk grid is Rust's
 //   bun run tools/qa/probes.ts materials       (each prints PASS / FAIL lines and an '=== name: ALL PASS | N FAIL ===' verdict; probes.ts sets the exit code)
 import { ROOT, fake, main } from './here.ts';
 import { mkdtempSync, writeFileSync } from 'node:fs';
@@ -46,9 +46,8 @@ function decodeFinish(w: number) { w -= 8 * Math.floor(w / 8);   // (on the look
 export async function materialsFinish() {
   console.log('\n=== materials-finish: the finish through the level file, the loader both ways, the validator, the GPU word ===');
   const D = OFFICE_DATA; const mats = D.materials;
-  // THE FILE CARRIES THE OFFICE'S LIVED TIER (its hand pass's drawn-only things at the tail: scene/lived.ts), which a stand may load without. This probe holds
-  // the FILE against what the loader makes of it, so it loads the whole file on every stand (as level-probes.ts does): loaded as the frozen stand loads it,
-  // the round trip below compared 845 boxes with 783
+  // THE FILE CARRIES THE OFFICE'S LIVED TIER (its hand pass's drawn-only things at the tail: scene/lived.ts). This probe holds the FILE against what the loader
+  // makes of it, so it loads the whole file: loaded without that tier, the round trip below compared 845 boxes with 783
   const load = (d: Parameters<typeof loadLevel>[0]) => loadLevel(d, { lived: true });
   const withRough = Object.entries(mats).filter(([, m]: any) => m.rough !== undefined).length;
   verdict(withRough >= 20 && mats.lino?.rough === 0.22 && mats.stone?.rough === 0.15 && mats.metal?.metal === true && mats.metal?.rough === 0.28 && mats.screenOff?.rough === 0.08 && mats.carpet?.rough >= 0.9,
@@ -260,28 +259,19 @@ export async function materialsArealight() {
   done('materials-arealight');
 }
 
-// ------------------------------------------------------------------------------------------------------------------------------------------------ the traffic map
+// ------------------------------------------------------------------------------------------------------------------------------------------------ the foot of a wall
 /** the office's wall band as every page has it, summed byte by byte (render/wear.ts bandByOccupancy): moved only on purpose */
 const WALL_BAND_SUM = 3450058653;
 export async function materialsWear() {
-  console.log('\n=== materials-wear: the detail layer\'s traffic map on the office (render/wear.ts) ===');
+  console.log('\n=== materials-wear: the band along the foot of a wall, on the office and on a made-up floor (render/wear.ts) ===');
   const { buildWearMap, WEAR_RES } = await import(`${ROOT}/src/render/wear.ts`);
-  const { StaticCollision } = await import(`${ROOT}/src/scene/collision.ts`);
   const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
-  const level = buildLevel(); const col = new StaticCollision(level.boxes);
-  const t0 = performance.now(); const A = buildWearMap(level, col.nav); const ms = performance.now() - t0; const B = buildWearMap(level, col.nav);
+  const level = buildLevel();
+  const t0 = performance.now(); const A = buildWearMap(level, null); const ms = performance.now() - t0; const B = buildWearMap(level, null);   // (no walk grid: the ways walked are not asked here)
   verdict(A.w === WORLD.gridW * WORLD.gridCell * WEAR_RES && A.h === WORLD.gridH * WORLD.gridCell * WEAR_RES && A.data.length === A.w * A.h * 2, `${A.w}×${A.h} texels, 2 bytes each = the world's ${WORLD.gridW}×${WORLD.gridH} m grid at ${WEAR_RES}/m (detail.wgsl maps wp.xz through WORLD_MIN / GRID_W·H / GRID_CELL)`, `${A.data.length} B in ${ms.toFixed(0)} ms`);
   let same = A.data.length === B.data.length; for (let i = 0; same && i < A.data.length; i++) if (A.data[i] !== B.data[i]) same = false;
   verdict(same, 'deterministic: two builds are byte-identical (nothing random — the same level draws the same wear)');
   const at = (x: number, z: number, ch: 0 | 1) => { const tx = Math.floor((x - WORLD.min[0]) * WEAR_RES), tz = Math.floor((z - WORLD.min[2]) * WEAR_RES); return A.data[(tz * A.w + tx) * 2 + ch] / 255; };
-  // traffic: the corridor route's own waypoints are worn; the middle of a wall / outside the fence is not; every door's threshold is stamped
-  const route = level.routes.find((r: any) => r.name === 'corridor') ?? level.routes[0];
-  const onRoute = route.points.map((p: any) => at(p[0], p[2], 0));
-  verdict(onRoute.every((v: number) => v > 0.5), `traffic > 0.5 at every waypoint of route '${route.name}' (a man stands and turns there every lap)`, onRoute.map((v: number) => v.toFixed(2)).join(' · '));
-  const quiet = [at(0.5, 0.5, 0), at(39.5, 0.6, 0), at(5.0, 4.05, 0)];   // the world's NW corner, its NE corner, inside the north wall
-  verdict(quiet.every(v => v < 0.08), 'traffic ≈ 0 where nobody can walk (the world\'s corners, inside a wall)', quiet.map(v => v.toFixed(2)).join(' · '));
-  const doors = level.doors.map((d: any) => { const cx = d.hinge[0] + Math.cos(d.closedDir) * d.width * 0.5, cz = d.hinge[1] + Math.sin(d.closedDir) * d.width * 0.5; return { name: d.name, v: at(cx, cz, 0) }; });
-  verdict(doors.every((d: any) => d.v > 0.6), `every threshold worn (traffic > 0.6 at all ${doors.length} frame centres)`, doors.map((d: any) => `${d.name} ${d.v.toFixed(2)}`).join(' · '));
   // wall proximity: 1 at the corridor's north wall foot, 0 in the middle of the lobby / the corridor
   const wallFoot = at(17.0, 10.06, 1), midLobby = at(8.0, 20.0, 1), midCorr = at(17.0, 11.1, 1);
   verdict(wallFoot > 0.7 && midLobby < 0.05 && midCorr < 0.05, 'wall proximity: high at the corridor\'s wall foot, ≈ 0 mid-lobby and mid-corridor (GRIME_REACH 16 cm)', `wall foot ${wallFoot.toFixed(2)} · mid-lobby ${midLobby.toFixed(2)} · mid-corridor ${midCorr.toFixed(2)}`);
@@ -332,8 +322,8 @@ export async function materialsWear() {
       && corner === 0 && cornerWall > 0.5 && slab === 0 && least > 0.3,
       'on the look\'s page the band is a strip along a long face: whole at a wall, beside a crate pushed against it and along a board leant on it; along a front of piers and a sill laid along x, along z or at a yaw, with nothing round the crate against its sill, in its doorway or at the short pier past it; a 10 cm wall at any of 24 yaws keeps it; a short wall has part of it; a block and a row of four crates have it along their long sides and not at their ends, whichever way the row lies; a table leg, a thin post, a pier, a crate, two crates, a crate against a wall, a crate touching the kit\'s corner pillar and a slab 3° off true beside a wall have none',
       `wall ${f2(wall)} · beside the leant crate ${f2(beside)} · along the board ${f2(board)} · fronts (least / crate / doorway / pier past) ${fr.map(f => `${f2(f.least)} ${f2(f.crate)} ${f2(f.door)} ${f2(f.past)}`).join(' | ')} · rows (least along / ends) ${rw.map(r => `${f2(r.least)} ${f2(r.end)}`).join(' | ')} · least along a turned wall ${f2(least)} (at ${leastAt}°) · 1.6 m wall ${f2(short)} · block side ${f2(blockSide)} end ${f2(blockEnd)} · corner pillar's crate ${f2(corner)}, its wall ${f2(cornerWall)} · tilted slab ${f2(slab)} · leg, post, pier, crate, two crates, leant crate: ${f2(none)}`); }
-  let worn = 0, grimy = 0; const n = A.w * A.h; for (let i = 0; i < n; i++) { if (A.data[i * 2] > 128) worn++; if (A.data[i * 2 + 1] > 128) grimy++; }
-  verdict(worn / n > 0.01 && worn / n < 0.25 && grimy / n > 0.02 && grimy / n < 0.35, 'coverage is a minority of the floor: worn (> ½) 1–25 %, grime band (> ½) 2–35 %', `worn ${(100 * worn / n).toFixed(1)} % · grime ${(100 * grimy / n).toFixed(1)} %`);
+  let grimy = 0; const n = A.w * A.h; for (let i = 0; i < n; i++) if (A.data[i * 2 + 1] > 128) grimy++;
+  verdict(grimy / n > 0.02 && grimy / n < 0.35, 'the grime band (> ½) is a minority of the floor, 2–35 %', `grime ${(100 * grimy / n).toFixed(1)} %`);
   done('materials-wear');
 }
 
