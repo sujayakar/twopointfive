@@ -29,7 +29,7 @@ struct SP {
   viewX: f32, viewZ: f32, viewR: f32, viewBias: f32,              // where the camera looks (floor plan) and how far round it counts as seen: past viewR, rising to full at 2 viewR, the pool's ceiling comes sooner and harder (farOf); bias 0 = one ceiling for all
   calmCells: f32, farCells: f32, calmMax: u32, dtCap: f32,        // WHO STEPS (buildList): cells a brick's fastest air may cross between two of its steps, in sight / out of sight; the longest wait in frames (1 = every brick every frame, 2, 4); the most time one step integrates
   bend: f32, snap: f32, fineDecay: f32, fineShare: f32,           // THE GAME'S SMOKE (below): how fast the coarse lattice is bent toward it (0 = not) · 1 = at once · THE FINE LATTICE LETS GO below
-  fineEps: f32, fineHeat: f32, fineRing: u32, pad43: f32,
+  fineEps: f32, fineHeat: f32, fineRing: u32, pull: f32,          // pull: how hard smoke is drawn toward where the game has more of it (THE GAME'S SMOKE)
   levels: array<Level, 2>,
   dirty: array<vec4f, 16>,                                        // ≤ 8 boxes (lo, hi) whose obstacles changed since the last step
   windBound: array<vec4f, 8>,                                     // per wind source: bounding sphere (w < 0 = the storm: everywhere)
@@ -56,11 +56,12 @@ const M_COUNT: u32 = 0u; const M_EPS: u32 = 1u; const M_DECAY: u32 = 2u; const M
 const M_LIST: u32 = 16u;              // every live brick
 const M_STEP: u32 = M_LIST + CAP;     // the ones that step this frame (buildList)
 const M_META: u32 = M_STEP + CAP;
-const MS: u32 = 40u;
+const MS: u32 = 42u;
 const K_COORD: u32 = 0u; const K_FLAGS: u32 = 1u; const K_VMAX: u32 = 2u; const K_EM0: u32 = 3u; const K_EM1: u32 = 4u; const K_WIND: u32 = 5u; const K_BOX: u32 = 6u; const K_OPEN: u32 = 7u; const K_NBR: u32 = 8u;
 const K_ACC: u32 = 35u; const K_DT: u32 = 36u; const K_PER: u32 = 37u;   // time owed since its last step · the time this step integrates · the frames it may wait (1, 2, 4)
 const K_DMAX: u32 = 38u;   // its densest cell as its last step left it (injectDecay)
 const K_MEAN: u32 = 39u;   // how much of the game's own smoke is in it, on average over its air (publish)
+const K_PULL: u32 = 40u;   // which way it is drawn toward where the game has more (injectDecay, for the next step's forces): x y, z as 4 × f16
 const F_SCALAR: u32 = 1u; const F_RENDER: u32 = 2u; const F_NEW: u32 = 4u; const F_ACT: u32 = 8u; const F_KIND: u32 = 16u; const F_KINDS: u32 = 32u; const F_TINT: u32 = 64u; const F_WALL: u32 = 128u;   // F_WALL: its middle is in something solid · F_KIND: some cell's K word is not 0 · F_KINDS: mine or a neighbour's is, or such a source is on me: the kind is carried here this step · F_TINT: some cell is tinted
 
 const V_VEL0: u32 = 0u; const V_VEL1: u32 = CAP * 512u; const V_CURL: u32 = CAP * 1024u;
@@ -76,7 +77,8 @@ const MAX_TRACE: f32 = 14.0;   // cells a backtrace may span: two bricks less th
 // grid's cells (the page hands them over as they lie: rust/game_draw/src/smoke.rs) · C = the mean over a brick's air (K_MEAN): A COARSE BRICK IS ONE CELL OF THE GRID, half a metre, so C is one sum a brick
 // · P = the correction spread over the brick's cells, shaded into the bricks next door where the grid says the way is open, so nothing is drawn of the half metres. Everything finer than a brick is left alone.
 //   · HOW FAST goes by how much it matters to an eye: `bend` × the difference in what a line of sight through it hides. Two opaque clouds are one, a haze is mended slowly, a cloud one side lacks at once.
-//   · TOO MUCH is thinned where it stands; TOO LITTLE is thickened where it stands, and where there is none it comes up out of the air in wisps (bendTo).
+//   · IT GOES THERE FIRST: smoke is drawn toward where the game has more of it (`pull`, along the difference's gradient; K_PULL), so a cloud rolls out to where it should be and what is left to mend is little.
+//   · TOO MUCH is thinned where it stands, its thin parts first; TOO LITTLE is thickened where it stands, its thick parts first, so billows stay billows; where there is none it comes up out of the air in wisps (bendTo).
 //   · ONLY THE GAME'S SMOKE is measured and bent. A source the game does not hold (a breath, a fire's plume, gun gas) says so in the first byte of its K word, and that share of a cell is nobody's here.
 //   · what the grid holds that has no brick gets one (markBent), so a game put back grows its cloud again; a picture that was let go takes it whole (`snap`).
 const M_BENT: u32 = M_META + CAP * MS;   // (+ 0: the grid's plan in its own bricks, along x · + 1: along z)
@@ -166,7 +168,7 @@ fn ensureBrick(l: u32, b: vec3i, st: f32) {
       if (n <= keepFree || n > CAP) { atomicAdd(&A[C_FREE], 1u); atomicStore(&A[A_PAGE + pi], 0u); atomicAdd(&A[C_FAIL], 1u); return; }
       let slot = atomicLoad(&A[A_FREE + n - 1u]);
       let m = metaOf(slot);
-      M[m + K_COORD] = packCoord(l, b); M[m + K_FLAGS] = F_NEW; M[m + K_VMAX] = 0u; M[m + K_BOX] = 0u; M[m + K_ACC] = 0u; M[m + K_PER] = 1u; M[m + K_DMAX] = 0u; M[m + K_MEAN] = 0u;
+      M[m + K_COORD] = packCoord(l, b); M[m + K_FLAGS] = F_NEW; M[m + K_VMAX] = 0u; M[m + K_BOX] = 0u; M[m + K_ACC] = 0u; M[m + K_PER] = 1u; M[m + K_DMAX] = 0u; M[m + K_MEAN] = 0u; M[m + K_PULL] = 0u; M[m + K_PULL + 1u] = 0u;
       atomicStore(&A[A_STAMP + slot], sp.stepNo);
       atomicStore(&A[A_PAGE + pi], slot + 1u);
       atomicAdd(&A[C_ALLOC], 1u);
@@ -637,12 +639,14 @@ fn forces(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: 
   let slot = openBrick(wid.x, li);
   if (slot == NONE) { return; }
   let k = brickOf(slot); let windMask = M[k.m + K_WIND];
+  var pull = vec3f(0.0); if (k.l == 0u && sp.bend > 0.0) { pull = sp.pull * vec3f(unpack2x16float(M[k.m + K_PULL]), unpack2x16float(M[k.m + K_PULL + 1u]).x); }
   for (var z = 0; z < 8; z += 4) {
     let c = vec3i(lid) + vec3i(0, 0, z); let cell = cidx(c); let i = slot * 512u + cell;
     if ((bitsOf(slot, cell) & 1u) != 0u) { V[V_VEL0 + i] = vec2u(0u); continue; }
     var u = unV(V[V_VEL1 + i]).xyz;
     let dT = unpack2x16float(S[S_DEN0 + i]);
     u.y += (sp.buoyancy * dT.y - sp.weight * dT.x) * k.dt;
+    u += pull * (1.0 - bentThrough(0.1 * dT.x)) * k.dt;   // (only where there is smoke to go: clear air is not blown about)
     let Pw = worldP(k, c);
     // CURLS WHERE A BODY STIRS (sp.stirConf; 0 = one strength everywhere): the confinement that keeps an eddy turning is stronger right round a moving body, falling
     // to the plain strength by three of its radii, so what he sheds rolls up while he is there and the smoke the wind pushes along a wall is as smooth as it was
@@ -803,6 +807,8 @@ var<workgroup> wgHas: array<f32, 27>;
 var<workgroup> wgWays: array<u32, 27>;
 var<workgroup> wgCorners: array<u32, 8>;
 fn bentIx(o: vec3i) -> u32 { return u32((o.x + 1) + 3 * (o.y + 1) + 9 * (o.z + 1)); }
+/** how much more of a line of sight the game hides there than is drawn */
+fn bentOff(o: vec3i) -> f32 { let i = bentIx(o); return bentThrough(wgHas[i]) - bentThrough(max(wgWant[i], 0.0)); }
 /** is the way from the brick at o to the one beyond it along axis a (toward s) open */
 fn bentWay(o: vec3i, a: u32, s: i32) -> bool { var at = o; if (s < 0) { at[a] -= 1; } return (wgWays[bentIx(at)] & (1u << a)) != 0u; }
 /** the corners an eighth (its signs) is shaded between: those it can be gone to from the brick's own middle, round the corners of two or three open ways; where that middle is solid, whichever are not */
@@ -837,10 +843,11 @@ fn bentHere(c: vec3i) -> vec2f {
 fn bendTo(g: f32, h: vec2f, P: vec3f, dt: f32) -> f32 {
   let a = select(1.0 - exp(-sp.bend * abs(bentThrough(h.x) - bentThrough(h.y)) * dt), 1.0, sp.snap > 0.0);
   let d = h.x - h.y;
-  if (d <= 0.0) { return g * max(1.0 + a * d / max(h.y, 1e-6), 0.0); }
-  let q = P * 5.0 + vec3f(0.0, -sp.time * 0.7, sp.time * 0.3);
-  let wisp = 1.0 + sin(q.x + 1.7 * sin(q.y)) * sin(q.z + 1.3 * sin(q.x * 1.6));
-  return g * (1.0 + a * d / h.x) + a * d * (1.0 - h.y / h.x) * wisp;
+  let thick = 2.0 * g / max(g + h.y, 1e-6);   // (1 where a cell holds what the brick does, toward 2 in its billows, 0 in its gaps)
+  if (d <= 0.0) { return g * max(1.0 + a * d / max(h.y, 1e-6) * (2.0 - thick), 0.0); }
+  let q = P * 4.0 + vec3f(0.0, -sp.time * 0.7, sp.time * 0.3);
+  let n = sin(q.x + 1.7 * sin(q.y * 1.3)) * sin(q.z + 1.3 * sin(q.x * 1.6)); let wisp = 3.2 * max(n, 0.0) + 0.2;
+  return g * (1.0 + a * d / h.x * thick) + a * d * (1.0 - h.y / h.x) * wisp;
 }
 var<workgroup> wgLo: array<atomic<i32>, 3>;
 var<workgroup> wgHi: array<atomic<i32>, 3>;
@@ -862,6 +869,18 @@ fn injectDecay(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) 
     wgWant[li] = y; wgHas[li] = m; wgWays[li] = bentOpen(r);
   }
   workgroupBarrier();
+  if (bent && li == 32u) {   // (which way the difference grows, along each axis by the ways that are open)
+    var pull = vec3f(0.0); let off = bentOff(vec3i(0));
+    if (wgWant[13] >= 0.0) {
+      for (var a = 0u; a < 3u; a++) {
+        var o = vec3i(0); o[a] = 1; var sum = 0.0; var n = 0.0;
+        if (wgWant[bentIx(o)] >= 0.0 && bentWay(vec3i(0), a, 1)) { sum += bentOff(o) - off; n += 1.0; }
+        if (wgWant[bentIx(-o)] >= 0.0 && bentWay(vec3i(0), a, -1)) { sum += off - bentOff(-o); n += 1.0; }
+        if (n > 0.0) { pull[a] = sum / n / (8.0 * k.h); }
+      }
+    }
+    M[k.m + K_PULL] = pack2x16float(pull.xy); M[k.m + K_PULL + 1u] = pack2x16float(vec2f(pull.z, 0.0));
+  }
   if (bent && li < 8u) { wgCorners[li] = bentCorners(select(vec3i(-1), vec3i(1), vec3<bool>((li & 1u) != 0u, (li & 2u) != 0u, (li & 4u) != 0u))); }
   workgroupBarrier();
   var eps = bitcast<f32>(M[M_EPS]); var extra = bitcast<f32>(M[M_DECAY]); let thin0 = bitcast<f32>(M[M_THIN]); var thin = thin0; let open = M[k.m + K_OPEN];
