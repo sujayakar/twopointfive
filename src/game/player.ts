@@ -255,7 +255,7 @@ export function sprintStance(g: Game, m: Legs, wantSprint: boolean, stalk: boole
   m.dash = dashes && wantSprint && m.crouch && !m.dragging && !stalk;   // (CROUCHRUN: Shift in a crouch stays down and goes quickly)
 }
 /** ONE STRIDE: his pace taken up or let go, his place moved by it, the walls and then the men he meets given their say. `tap` / `stalk`: the step or the creep
- *  that has his legs this tick (tapstep.ts, stalk.ts) — null for a plain walk. `now`: the clock the tick runs at. */
+ *  that has his legs this tick (stalk.ts) — null for a plain walk. `now`: the clock the tick runs at. */
 export function strideStep(g: Game, m: Legs, mx: number, mz: number, ml: number, tap: { speed: number } | null, stalk: { pace: number; keep?: boolean } | null, dt: number, now = g.time): void {
   const c = m.char;
   let maxSpeed = freePace(g, m, ml);

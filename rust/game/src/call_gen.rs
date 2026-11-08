@@ -268,7 +268,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 387 => {  let r = crate::interact::cancel_sustained(g); r.w(&mut o);  }
 389 => { let a1: f64 = Io::r(&mut i); let a2: V3 = Io::r(&mut i); crate::samstun::stagger_player(g, a1, a2);  }
 391 => { let a1: GuardId = Io::r(&mut i); let r = crate::stalk::stalk_key_can(g, a1); r.w(&mut o);  }
-392 => { let a1: Vec<f64> = Io::r(&mut i); crate::tapstep::tap_hears(g, &a1);  }
 393 => { let a1: f64 = Io::r(&mut i); let r = crate::darkdoor::dark_room(g, a1); r.w(&mut o);  }
 394 => { let a1: GuardId = Io::r(&mut i); let r = crate::darkdoor::dark_door_green(g, a1); r.w(&mut o);  }
 395 => { let a1: GuardId = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: Option<f64> = Io::r(&mut i); let a4: Option<bool> = Io::r(&mut i); let r = crate::startle::give_startle(g, a1, a2, a3, a4); r.w(&mut o);  }

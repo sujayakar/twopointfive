@@ -35,7 +35,6 @@ import { civilianSeated } from './civilians';
 import type { ReadyKind } from './character';
 import './handwork';
 import './stalk';
-import './tapstep';
 import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 const DEGR = Math.PI / 180;
