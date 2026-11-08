@@ -27,7 +27,7 @@ const t0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - t0) / 1000
         const r = await p.evaluate(async () => {
           const wait = ms => new Promise(r => setTimeout(r, ms)), E = window.__engine, T = E.timer, gpu = [], page = [], own = window.__draw ? window.__draw.told : null; await wait(8000);
           const until = performance.now() + 12000; let last = -1; while (performance.now() < until) { if (T.resolved !== last) { last = T.resolved; const ms = T.unionMs(); if (ms > 0) gpu.push(ms); } if (own) page.push(own.update + own.render + own.hud); else if (window.__perfrec) page.push(window.__perfrec.cpuUpdate + window.__perfrec.cpuRender); await new Promise(r => requestAnimationFrame(r)); }
-          const mid = a => a.length ? a.sort((x, y) => x - y)[a.length >> 1] : NaN, boot = window.__boot && (window.__boot.marks || window.__boot.summary && window.__boot.summary().marks);
+          const mid = a => a.length ? a.sort((x, y) => x - y)[a.length >> 1] : NaN, boot = (() => { try { const s = window.__boot && (window.__boot.summary ? window.__boot.summary() : window.__boot); return s && JSON.parse(JSON.stringify(s)); } catch { return null; } })();
           return { gpu: mid(gpu), page: mid(page), n: page.length, heap: performance.memory ? performance.memory.usedJSHeapSize / 1048576 : NaN, wasm: window.__draw ? window.__draw.game.memory.buffer.byteLength / 1048576 : NaN, boot, res: `${E.width}x${E.height} of ${E.outWidth}x${E.outHeight}` };
         });
         rows.push({ name, side, ...r, errors: errors.length }); log(name, side, JSON.stringify(r).slice(0, 500), errors.slice(0, 2).join(' | '));
@@ -35,18 +35,24 @@ const t0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - t0) / 1000
         // (every tick drawn at the end of it, the way a person's page draws one: what accumulates over frames has the same frames)
         const r = await p.evaluate(async ([ticks, frames]) => {
           const E = window.__engine, cam = window.__draw ? window.__draw.cam : window.__cam; window.__runFrames(ticks, 1 / 60, [], 'none'); for (let i = 0; i < frames; i++) { window.__runFrames(1, 1 / 60, [], true); await E.device.queue.onSubmittedWorkDone(); }
-          const men = window.__draw ? window.__draw.game.map().men.map(m => [m.x, m.z]) : [window.__game.player.char, ...window.__game.guards.map(g => g.char), ...window.__game.civilians.map(g => g.char)].map(c => [Math.round(c.pos[0] * 100) / 100, Math.round(c.pos[2] * 100) / 100]);
+          const men = window.__draw ? (window.__draw.game.map ? window.__draw.game.map().men.map(m => [m.x, m.z]) : []) : [window.__game.player.char, ...window.__game.guards.map(g => g.char), ...window.__game.civilians.map(g => g.char)].map(c => [Math.round(c.pos[0] * 100) / 100, Math.round(c.pos[2] * 100) / 100]);
           E.render(cam, 5, 1 / 60, false); const f = await E.readbackFrame(); let o = ''; const B = 0x8000; for (let i = 0; i < f.data.length; i += B) o += String.fromCharCode.apply(null, f.data.subarray(i, i + B));
           return { w: f.w, h: f.h, bgra: f.bgra, b: btoa(o), men, cam: { t: [...cam.target], yaw: cam.yaw, pitch: cam.pitch, d: cam.distance, fov: cam.fov }, set: { exposure: E.settings.exposure, res: `${E.width}x${E.height}` }, hud: ['equip', 'interact', 'objective', 'log', 'meters'].map(id => `${id}: ${(document.getElementById(id).innerText || '').replace(/\s+/g, ' ')}`) };
         }, [TICKS, FRAMES]);
-        pair[side] = r; writeFileSync(`${OUT}/${name}-${side}.raw.json`, JSON.stringify(r)); log(name, side, r.w, r.h, JSON.stringify(r.cam), errors.slice(0, 3).join(' | '));
+        pair[side] = r; log(name, side, r.w, r.h, JSON.stringify(r.cam), errors.slice(0, 3).join(' | '));
       }
       await ctx.close();
     }
     if (pair.old && pair.new) {
       const a = Buffer.from(pair.old.b, 'base64'), b = Buffer.from(pair.new.b, 'base64'); let sum = 0, over = 0, n = 0, worst = 0; const cell = {};
       for (let i = 0; i < Math.min(a.length, b.length); i += 4) { const d = (Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2])) / 3; sum += d; n++; if (d > 24) { over++; const x = (i / 4) % pair.old.w, y = Math.floor(i / 4 / pair.old.w), k = `${Math.floor(x / pair.old.w * 8)},${Math.floor(y / pair.old.h * 6)}`; cell[k] = (cell[k] || 0) + 1; } worst = Math.max(worst, d); }
-      const moved = pair.old.men.filter((m, i) => !pair.new.men[i] || Math.hypot(m[0] - pair.new.men[i][0], m[1] - pair.new.men[i][1]) > 0.02).length;
+      // the two and what is between them, as one picture: the game's page, draw.html, and four times the difference
+      { const pic = await (await browser.newContext()).newPage(); const url = await pic.evaluate(async ([o, n, w, h, bgra]) => {
+          const px = s => { const t = atob(s), u = new Uint8ClampedArray(t.length); for (let i = 0; i < t.length; i++) u[i] = t.charCodeAt(i); if (bgra) for (let i = 0; i < u.length; i += 4) { const x = u[i]; u[i] = u[i + 2]; u[i + 2] = x; } for (let i = 3; i < u.length; i += 4) u[i] = 255; return u; };
+          const a = px(o), b = px(n), d = new Uint8ClampedArray(a.length); for (let i = 0; i < a.length; i++) d[i] = i % 4 === 3 ? 255 : Math.abs(a[i] - b[i]) * 4;
+          const c = document.createElement('canvas'); c.width = w * 3; c.height = h; const x = c.getContext('2d'); [a, b, d].forEach((p, k) => x.putImageData(new ImageData(p, w, h), k * w, 0)); return c.toDataURL('image/jpeg', 0.88);
+        }, [pair.old.b, pair.new.b, pair.old.w, pair.old.h, pair.old.bgra]); writeFileSync(`${OUT}/${name}.jpg`, Buffer.from(url.split(',')[1], 'base64')); await pic.context().close(); }
+      const moved = !pair.new.men.length ? -1 : pair.old.men.filter((m, i) => !pair.new.men[i] || Math.hypot(m[0] - pair.new.men[i][0], m[1] - pair.new.men[i][1]) > 0.02).length;
       const row = { name, mean: +(sum / n).toFixed(2), over24: +(100 * over / n).toFixed(2), worst: +worst.toFixed(0), men: `${pair.old.men.length}/${pair.new.men.length}`, menApart: moved, camApart: +Math.hypot(...pair.old.cam.t.map((v, i) => v - pair.new.cam.t[i])).toFixed(4), hud: pair.old.hud.every((h, i) => h === pair.new.hud[i]), where: Object.entries(cell).sort((x, y) => y[1] - x[1]).slice(0, 6).map(([k, v]) => `${k}:${v}`).join(' ') };
       rows.push(row); log(JSON.stringify(row)); if (!row.hud) pair.old.hud.forEach((h, i) => { if (h !== pair.new.hud[i]) log(`  old ${h}\n  new ${pair.new.hud[i]}`); });
     }
