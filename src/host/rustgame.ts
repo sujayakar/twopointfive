@@ -39,7 +39,6 @@ import { PUT_BACKS } from '../math/side';
 import { knobRegistry } from '../game/knobs';
 import { knobsToRust } from '../game/rustknobs';
 import { SETTLED, settledAt } from './settled';
-import { DC } from '../sim/doorshome';
 import { SNAPS, levelFingerprint, type SlotInfo } from '../game/savestate';
 import type { Snapshot } from '../game/rollback';
 import type { Game } from '../game/game';
@@ -521,11 +520,6 @@ function after(S: Held): void {
   const PF = RUST_GAME.prof; let tp = PF.on ? performance.now() : 0;
   S.asks?.after();
   if (PF.on) { const n = performance.now(); PF.asks += n - tp; tp = n; }
-  // STAND-IN: A DOOR'S KEPT CENTRE is the Rust step's, in two halves: the angle it was made for and its x and z are columns of the block (sim/doorshome.ts
-  // posAngle, posX, posZ), the array `Door.posAt` an object's field that is on neither list of the filtered export. Nothing here reads the array; it is
-  // made from the columns after an apply, for a puppet that is handed over whole. Belongs in the filtered export (`doors::Door.pos_at`).
-  for (const dr of (G.doors?.list ?? []) as Record<string, any>[]) { const x = dr.g(DC.posX), z = dr.g(DC.posZ), at = dr.posAt; if (!Number.isNaN(dr.g(DC.posAngle)) && (at[0] !== x || at[2] !== z)) dr.posAt = [x, 1.0, z]; }
-  if (PF.on) { const n = performance.now(); PF.doors += n - tp; tp = n; }
   S.watch = watched(g); S.launch = G.player?.launchHeld ?? null;   // (what the page's panels write, as the Rust game has it now: what differs by the next step, the page wrote)
   S.putBacks = PUT_BACKS.n;   // (the apply counts itself as a put-back, for the box world's copy: any other count by the next step is a snapshot somebody put back)
   S.loads = G.chronicle?.counts?.loads | 0;   // (…and a checkpoint read from a file counts itself here: savestate.ts loadState)

@@ -794,7 +794,7 @@ pub const MAN_CALM: f64 = 16.0;
 pub const MAN_HELD: f64 = 32.0;
 
 /// (src/game/doors.ts:294 DRIVE_COLS: a table nothing writes)
-pub fn drive_cols() -> Vec<f64> { alloc::vec![37.0, 38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0, 45.0, 46.0, 47.0] }
+pub fn drive_cols() -> Vec<f64> { alloc::vec![34.0, 35.0, 36.0, 37.0, 38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0] }
 
 /// (src/game/doors.ts:486 SHOVE_RATE)
 pub const SHOVE_RATE: f64 = 7.2;
