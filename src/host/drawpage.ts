@@ -1,7 +1,8 @@
 // THE PAGE THAT DRAWS A GAME IT DOES NOT HOLD (draw.html; `?draw=1` on the game's page). The game is the Rust module's (host/drawgame.ts): started from the
 // level's file and the address's words, handed what the player did, stepped, and drawn from what each tick leaves to be drawn (src/draw). Nothing this
 // page's bundle holds is the game's TypeScript: tools/draw/ban.ts stops the build on an import of it.
-import { initGpu, laterIdle, pipeQueue, showFatal, showFatalError, pipelineProgress } from '../gpu/device';
+import { kitPicture } from './kitguard';   // (FIRST: in the Team & kit picture's window it makes the stores read-only before any module below reads or writes one)
+import { PIPE_QUEUE, initGpu, laterIdle, pipeQueue, showFatal, showFatalError, pipelineProgress } from '../gpu/device';
 import { Engine } from '../engine';
 import { SmokeSystem } from '../smoke/smoke';
 import { Quality } from '../ui/quality';
@@ -52,7 +53,7 @@ import { missionsBusy, missionsReopenAsked, reopenMissionsAfterLoad } from '../u
 import { openStartPage, startPage, startPageWanted } from '../ui/startpage';
 import { RunBooks } from '../ui/runBooks';
 import { watchMissionRows } from '../ui/verdictRows';
-import { KIT_VIEW } from '../ui/kitView';
+import { KitPage, kitNone } from './kitpage';
 import { Desk, desk, setDesk, type DeskFace } from '../view/desk';
 import { Commands } from '../draw/commands';
 import { pickRedirect } from '../scene/picks';
@@ -95,7 +96,7 @@ async function levelBytes(name: string): Promise<Uint8Array> {
 async function main(): Promise<void> {
   const q = new URLSearchParams(location.search), loading = document.getElementById('loading')!; let say = (line: string): void => { loading.textContent = line; };
   // THE KEPT PAGE (gpu/keep.ts): the tab's own page keeps the GPU device and shows the game in a frame of this address, so a mission's start compiles nothing this visit has compiled
-  const keep = keepPageBoot(q, ownPage(q)); if (keep.role === 'shell' || keep.role === 'leave') { boot.stopRafProbe(); return; }
+  const keep = keepPageBoot(q, ownPage(q), kitPicture); if (keep.role === 'shell' || keep.role === 'leave') { boot.stopRafProbe(); return; }
   { const to = pickRedirect(location.search); if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }
   const canvas = document.getElementById('view') as HTMLCanvasElement;
   // (of the page's markup, what this page drives: the rest of the HUD comes as it is told of the game)
@@ -103,7 +104,7 @@ async function main(): Promise<void> {
   // (the benchmark asked for on the address goes to its first scene's page before anything boots; so does the pricing run)
   let refused: string | null = null; if (q.has('bench') && !q.has(BENCH_RUN_KEY)) { refused = benchBegin(false); if (refused === null) return; console.info(`benchmark: ${refused}`); }
   if (priceLevelsPage(q)) return;
-  gameKeysBoot(q, walkInNow); bootTextSize(q);
+  gameKeysBoot(q, walkInNow); bootTextSize(q, kitPicture);
   LOOK.on = lookOfQuery(q); setLookPlace(placeOfQuery(q));
   const name = /^[\w.-]+\.json$/.test(q.get('levelFile') ?? '') ? q.get('levelFile')! : 'office.json', at = (p: string) => new URL(p, document.baseURI).href;
 
@@ -120,9 +121,8 @@ async function main(): Promise<void> {
   // (an address that plays a mission comes up on that mission's brief, one that plays nothing on the title; either is live from here, and the game is made behind it)
   LOADBRIEF.on = q.get('loadbrief') !== '0'; settleOfQuery(q);
   LOADBRIEF.options = { open: () => openOptions({ tab: 'controls' }), close: closeOptions, up: optionsOpen };
-  KIT_VIEW.page = new URL('./', document.baseURI).pathname;   // (the Team & kit picture is the game's page in a frame)
   watchMissionRows();   // (each mission's card shows the ways this machine has won it)
-  let title = startPageWanted(); const brief = q.has('paused') || runPage(q) ? null : loadBrief(location.search), card = brief ?? bootCard();
+  let title = !kitPicture && startPageWanted(); const brief = kitPicture || q.has('paused') || runPage(q) ? null : loadBrief(location.search), card = kitPicture ? { status: () => { /* nobody reads it */ }, off: () => { /* */ } } : brief ?? bootCard();
   loading.textContent = ''; say = line => card.status(line);
   const [level, mannequin, mannequinBin, cast, castLook] = await filesP;
   say('starting the game …');
@@ -143,8 +143,10 @@ async function main(): Promise<void> {
   glassBreakConfig.on = true; initCutSwitch();
   COATFINISH.on = true; SOLIDGLASS.on = true;
 
+  if (kitPicture) PIPE_QUEUE.later = false;   // (the picture waits for every program: it is shown once, and nothing of it may change as one comes)
   const tGpu = performance.now();
-  const gpu = await initGpu(canvas, { retry: !(q.has('bench') || runPage(q) || navigator.webdriver === true), canvasRead: true, keeper: keep.keeper, seat: keep.seat });   // (the module's game has stood by now)
+  const gpu = await initGpu(canvas, { retry: !(kitPicture || q.has('bench') || runPage(q) || navigator.webdriver === true), canvasRead: !kitPicture, keeper: keep.keeper, seat: keep.seat });   // (the module's game has stood by now)
+  if (kitPicture) void gpu.device.lost.then(kitNone);
   if (q.get('framecap') === '0') FRAMECAP.on = false;
   if (FRAMECAP.on) watchTextures(gpu.device);   // (a frame capture knows every texture made from here on)
   boot.span('gpu', tGpu); boot.mark('gpu');
@@ -199,7 +201,7 @@ async function main(): Promise<void> {
     { const t = D.u[o + View.turned]; if (t & 8) three(cam.target, o + View.target); if (t & 1) cam.yaw = D.f[o + View.yaw]; if (t & 2) cam.pitch = D.f[o + View.pitch]; if (t & 4) cam.distance = cam.desiredDistance = D.f[o + View.distance]; }
     if (cuts < 0) { three(cam.target, o + View.follow); cuts = n; } else if (n !== cuts) { cuts = n; three(cam.target, o + View.cut); }
   };
-  const books = new RunBooks(), unkept = ownPage(q);   // (what this machine keeps of the runs played: a page that plays a run of its own is nobody's)
+  const books = new RunBooks(), unkept = kitPicture || ownPage(q);   // (what this machine keeps of the runs played: a page that plays a run of its own is nobody's)
   /** the game is another than the one last drawn (a restart, a load): what the picture and the sound carry over from frame to frame starts over, before anything of the new one is played */
   const anew = (): void => {
     const o = view(), first = stood < 0; stood = D.u[o + View.stood]; if (first) return;
@@ -244,6 +246,7 @@ async function main(): Promise<void> {
   const measure = new Measure({ gpu, engine, smoke, quality, cam, input, canvas, game, marks: () => decals.count, blocked: mine => quality.calibrating ? 'auto quality is still measuring this machine' : (title || brief?.held) && !mine ? 'start a run first' : null, say: words => readout.say(words) });
   /** the world holds still: a card, the title, a mission not yet started */
   const stopped = (): boolean => paused || measure.freezing || title && !reel.live || !!brief?.held;
+  const kit = kitPicture ? new KitPage(canvas, game.commands) : null;
   /** one drawn frame: `dt` seconds of the display's, in whole ticks (`drawn` false: a script's, stepped and not drawn) */
   const frame = (dt: number, ticks?: number, drawn = true): void => {
     const still = ticks === undefined && stopped(); if (still) dt = 0;   // (the world holds still under a card: what only the picture moves with it)
@@ -252,7 +255,7 @@ async function main(): Promise<void> {
     const locks = D.u[view() + View.locks];
     if (input.wheelCtrl) { if (!still && !(locks & 2)) cam.zoom(input.wheelCtrl); input.wheelCtrl = 0; }
     if (input.orbitDX && plan.ticks && !(locks & 1)) cam.rotate(ctrlTurn(input.orbitDX));   // (in a frame's first tick: the next tick's hand looks the way it left the view)
-    cam.frame();
+    cam.frame(); kit?.before(Math.max(1, canvas.clientWidth) / Math.max(1, canvas.clientHeight));
     for (let i = 0; i < plan.ticks; i++) { if (i) input.endTick(); tick(1 / FIXEDSTEP.hz); }
     // (what this machine keeps of the run: its try as it begins, its end before the card of it)
     { const on = D.u[view() + View.run]; if (!unkept && books.due((on & 1) !== 0, (on & 2) !== 0)) books.tell(game.run()); }
@@ -273,6 +276,7 @@ async function main(): Promise<void> {
     if (pose) cam.drawIn(pose);
     game.frame(a, cam.focus); lights.from(); men.from(engine.device.queue); reach.from(); world.from();
     cam.kickIn(); try { engine.render(cam, time, dt, true); } finally { cam.kickOut(); cam.drawOut(); }
+    kit?.after(D.u[view() + View.kit]);
     if (plan.ticks) input.endFrame(); else if (still) { input.endFrame(); thaw = true; }   // (pressed over a held world: nobody's, and the first tick after it is told)
     told.update = t1 - t0; told.render = performance.now() - t1; told.frames++;
     if (told.frames === 1) { boot.span('firstFrameCpu', t1); boot.mark('firstSubmit'); gpu.device.queue.onSubmittedWorkDone().then(() => { boot.span('firstFrameGpu', t1); boot.mark('gpuReady'); }, () => { /* the device went */ }); }
@@ -299,8 +303,8 @@ async function main(): Promise<void> {
   const loop = (ts: number): void => {
     try {
       const room = pageRoom({ calibrating: quality.calibrating, measuring: measure.active, kitView: false });
-      if (held || document.hidden) { last = performance.now(); pace.reset(); rate.reset(); requestAnimationFrame(loop); return; }
-      if (pace.skip(ts, !quality.calibrating && !measure.active && (quality.adaptive || quality.auto) ? quality.bands.target : 0, false, room)) { requestAnimationFrame(loop); return; }
+      if (kit?.rests || held || document.hidden) { last = performance.now(); pace.reset(); rate.reset(); requestAnimationFrame(loop); return; }
+      if (pace.skip(ts, kit ? 60 : !quality.calibrating && !measure.active && (quality.adaptive || quality.auto) ? quality.bands.target : 0, false, room)) { requestAnimationFrame(loop); return; }
       const now = performance.now(), raw = (now - last) / 1000; last = now; told.fps = rate.push(now);
       if (quality.early) quality.remeasure();
       if (quality.calibrating) { if (measure.calibrates(engine)) quality.calibrateTick(raw); }
@@ -310,13 +314,14 @@ async function main(): Promise<void> {
       requestAnimationFrame(loop);
     } catch (e) {
       // (lost to a panic: the picture stands as it was, and the card says what Enter puts back)
+      if (kit) { console.error(e); kit.none(); return; }
       if (e instanceof GameLost) { lostCard(document.getElementById('app')!, e, { kept: () => game.kept(), back: standAgain }, e.tick - backAt < 120); return; }
       console.error(e); showFatal(`The frame loop threw and has been stopped:\n\n${(e as Error)?.stack ?? e}`); }
   };
   // ---- the pause card: the world holds still under it
   const runSaves: RunSaves = { elapsed: () => game.saves().elapsed, timeline: () => game.saves().rows, offer: () => { const s = game.saves(); return s.rows.find(r => r.key === s.offer) ?? null; }, age: row => agoWords(game.saves().elapsed - row.missionT), picture: row => pictures.get(ofRun(nameOf(row))) ?? null, load: key => { game.commands.load(key); return null; }, due: () => false };
   const pause = new PauseCard({ title: desk().brief(location.search).title || name.replace(/\.json$/, ''), saves: runSaves, verdict: () => game.verdict(), may: () => !game.lost && !title && !brief?.up && !measure.bench?.active, restart: () => game.commands.restart('restarted'), quit: () => { reopenMissionsAfterLoad(); location.assign(location.pathname + desk().leave(location.search) + location.hash); }, turned: up => { paused = up; if (up) game.commands.letGo(); else thaw = true; input.keys.clear(); input.buttons = 0; input.endFrame(); input.lockExcept = up ? new Set() : null; last = performance.now(); } });
-  onEnded = () => { if (!ownPage(q)) pause.end(); };   // (a run's page has no end card: the next is its own)
+  onEnded = () => { if (!kit && !ownPage(q)) pause.end(); };   // (a run's page has no end card: the next is its own)
   const bencher = drawBench({ gpu, engine, smoke, quality, input, game, settings, measure, say: words => readout.say(words) }); bencher.go(); if (refused) readout.say(`benchmark not now: ${refused}`);
   // ---- the title stays up over its floor, live; a mission's run begins when the player starts it
   const drawTitle = (): void => { const root = document.getElementById('menu')!, c = document.createElement('div'); c.className = 'card'; root.textContent = ''; root.classList.add('on', 'title'); root.appendChild(c); titleScreen(c, { shows: { bench: () => { bencher.begin(); return true; } }, cheats: () => cheatWords(settings), closed: moved => { if (title && moved) drawTitle(); } }); };
@@ -326,7 +331,7 @@ async function main(): Promise<void> {
   loading.style.display = 'none'; debuggerPanel({ game, engine, smoke, cam, quality, input, chars: ch, marks: decals, hud: () => ({ fps: told.fps, union: engine.timer.unionMs(rendered) }) });
   // (for a tool: the page's parts, and frames stepped by hand)
   const steps = (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last'): void => { if (title || brief?.up) { title = false; reel.poke(); brief?.off(); card.off(); } for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } };
-  Object.assign(window, { __draw: { game, books, measure, reel, pics, engine, world, audio, pause, cam, input, quality, told, fog, weather, smoke, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: steps } });
+  Object.assign(window, { __draw: { game, books, kit, measure, reel, pics, engine, world, audio, pause, cam, input, quality, told, fog, weather, smoke, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: steps } });
   // (…and by the names every page of the game has them under)
   const G = window as unknown as Record<string, unknown>; G.__engine = engine; G.__prewarmed = true; G.__timeScale = 1;
   Object.defineProperty(window, '__pauseLoop', { configurable: true, get: () => held, set: (v: boolean) => { held = v; last = performance.now(); } });
@@ -339,4 +344,4 @@ async function main(): Promise<void> {
 }
 // (a tool waits for the programs made behind the start too: until then a pass draws its stand-in, and the fog of war is the lit one)
 const ready = main(); (window as unknown as { __ready: Promise<void> }).__ready = ready.then(() => laterIdle());
-ready.catch(e => { console.error(e); if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message); else showFatalError(e); });
+ready.catch(e => { console.error(e); if (kitPicture) kitNone(); if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message); else showFatalError(e); });
