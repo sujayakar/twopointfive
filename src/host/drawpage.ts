@@ -84,6 +84,7 @@ import { RunBooks } from '../ui/runBooks';
 import { watchMissionRows } from '../ui/verdictRows';
 import { KitPage, kitNone } from './kitpage';
 import { Desk, desk, setDesk, type DeskFace } from '../view/desk';
+import type { BriefView } from '../view/read';
 import { Commands } from '../draw/commands';
 import { pickRedirect } from '../scene/picks';
 import { nextPickOf } from '../ui/picks';
@@ -429,7 +430,7 @@ async function main(): Promise<void> {
   const kept0 = game.tape && keeps(q) ? new RunKeep({ sid, tape: () => game.tape ?? game.ended, on: () => !!game.tape, head: () => ({ level: { file: name, scenario: desk().brief(location.search).title || '' }, seed, ...(built ? { commit: built } : {}) }),
     over: () => !game.lost && (D.u[view() + View.run] & 2) !== 0, live: () => !title && !stopped() && !game.lost && game.view().live, began: () => (game.tape ?? game.ended)?.began ?? 0, say: words => readout.say(words), ended: () => { void cloud?.cloud.tapes?.round(); } }) : null;
   const inPanel = (): HTMLElement | null => { const a = document.activeElement; return (a instanceof HTMLInputElement || a instanceof HTMLSelectElement) && a.closest('#panel') ? a : null; };
-  const pause = new PauseCard({ title: desk().brief(location.search).title || name.replace(/\.json$/, ''), saves: runSaves, end: () => drawEnd(game, books), lesson: () => nextLessonOf(game.run().mission), pick: () => { const p = nextPickOf(); return p && p.scenario === (game.run().mission !== '') ? p : null; }, may: () => !game.lost && !title && !play && !brief?.up && !measure.bench?.active, restart: () => { if (net) net.door.pass('You can\u2019t restart a co-op game from here.'); else { game.commands.restart('restarted'); owed = true; } }, replay: () => kept0?.whole ? () => kept0.watch() : null, quit: () => { reopenMissionsAfterLoad(); location.assign(location.pathname + desk().leave(net ? netLeave(location.search) : location.search) + location.hash); }, 
+  const pause = new PauseCard({ title: ((b: BriefView) => b.title ? `${b.title}${b.team ? ` · ${b.team}` : ''}` : name.replace(/\.json$/, ''))(desk().brief(location.search)), saves: runSaves, end: () => drawEnd(game, books), lesson: () => nextLessonOf(game.run().mission), pick: () => { const p = nextPickOf(); return p && p.scenario === (game.run().mission !== '') ? p : null; }, may: () => !game.lost && !title && !play && !brief?.up && !measure.bench?.active, restart: () => { if (net) net.door.pass('You can\u2019t restart a co-op game from here.'); else { game.commands.restart('restarted'); owed = true; } }, replay: () => kept0?.whole ? () => kept0.watch() : null, quit: () => { reopenMissionsAfterLoad(); location.assign(location.pathname + desk().leave(net ? netLeave(location.search) : location.search) + location.hash); }, 
     // (Escape: Tab's card goes, or a field of the debugger's is let go, and that is the press's whole job)
     away: () => { const field = inPanel(); if (hud?.tabUp) hud.tabShow(false); else if (field && !pause.up) { field.dataset.esc = '1'; field.blur(); delete field.dataset.esc; } else return false; input.pressed.delete('Escape'); return true; },
     save: () => { if (optionsOpen() || missionsBusy() || !input.saveKey?.()) return false; if (net) { net.door.pass(NO_SAVE); return false; } game.commands.save(); return asked = game.saves().hand; },

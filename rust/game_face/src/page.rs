@@ -199,11 +199,18 @@ pub extern "C" fn face_hands_said(h: u32) {
 pub extern "C" fn face_hands_trace(h: u32) { let s = super::with(h, |x| x.hands.as_ref().map_or(String::new(), |p| p.1.trace())); super::out(s.into_bytes()); }
 #[no_mangle]
 pub extern "C" fn face_draw(h: u32, want: u32) -> *const u32 {
-    super::with(h, |x| { x.drawn.take(&x.g, want); x.drawn.table().as_ptr() })
+    super::with(h, |x| { watch(x); x.drawn.take(&x.g, want); x.drawn.table().as_ptr() })
+}
+/// what a viewer's picture shows that the game lists nowhere is made of it, and the world's copy, which was asked, is proven again by whoever asks next
+fn watch(x: &mut super::Held) {
+    let watches = x.drawn.watches();
+    if watches { game::scene_collision::stands(&mut x.g); }
+    x.drawn.watch(&x.g);
+    if watches { game::scene_collision::unstand(&mut x.g); }
 }
 #[no_mangle]
 pub extern "C" fn face_draw_over(h: u32, want: u32) -> *const u32 {
-    super::with(h, |x| { x.drawn.over(&x.g, want); x.drawn.table().as_ptr() })
+    super::with(h, |x| { watch(x); x.drawn.over(&x.g, want); x.drawn.table().as_ptr() })
 }
 #[no_mangle]
 pub extern "C" fn face_frame(h: u32, a: f64, x: f64, y: f64, z: f64) -> *const u32 {
