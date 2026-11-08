@@ -5,7 +5,7 @@ use crate::ids::*;
 #[cfg(test)] use sim::dice::Dice;
 
 /// A KEYED DRAW for the simulation: uniform in [0, 1), a fixed function of the game's seed, the `site` that asks, the man it is about (`who`: 0
-/// for nobody, else a body's id + 1), the tick, and how many times this site has drawn for him this tick. The block's die is still stepped
+/// for nobody, else `man`), the tick, and how many times this site has drawn for him this tick. The block's die is still stepped
 /// once a draw, so its count goes on witnessing how many draws a run made; its value is not used.
 pub fn draw(g: &mut Game, site: &'static str, who: u32) -> f64 {
     let old = crate::math_dice::sim_random(g);
@@ -29,28 +29,31 @@ pub enum Who {
     /// a defender or an operative, by his row of the room fight
     Def(RoomfightDefId),
     Op(RoomfightOpId),
-    /// a group that decides as one (a squad), by its number
-    Group(u32),
+    /// a group that decides as one: an enemy squad
+    Squad(EnemysquadsSquadId),
 }
 impl Who {
-    /// the word a draw is keyed by: 0 for nobody, a body's id + 1 for a man however he was named, a group's number apart from both
+    /// the word a draw is keyed by: 0 for nobody, `man` for a man however he was named, a squad's, off its name, apart from both
     pub fn word(self, g: &Game) -> u32 {
         match self {
             Who::World => 0,
-            Who::Man(gd) => g.gd[gd].ch.0 + 1,
-            Who::Body(c) => c.0 + 1,
-            Who::Def(d) => g.gd[g.tab.roomfight_def[d].gd].ch.0 + 1,
-            Who::Op(o) => g.gd[g.tab.roomfight_op[o].gd].ch.0 + 1,
-            Who::Group(n) => 0x4000_0000 | n,
+            Who::Man(gd) => man(g, g.gd[gd].ch),
+            Who::Body(c) => man(g, c),
+            Who::Def(d) => man(g, g.gd[g.tab.roomfight_def[d].gd].ch),
+            Who::Op(o) => man(g, g.gd[g.tab.roomfight_op[o].gd].ch),
+            Who::Squad(q) => 0x4000_0000 | (site_word(&g.tab.enemysquads_squad[q].name) as u32 & 0x3fff_ffff),
         }
     }
 }
+/// A MAN'S NUMBER: the id he was dealt as he was put on the floor (the owner byte of what he wears), never his row. A row is where a machine keeps him: a
+/// game read from a file, or stood by another host, may keep the same man in another.
+fn man(g: &Game, c: CharId) -> u32 { crate::js::to_u32(g.ch[c].id) + 1 }
 /// a keyed draw about whoever the caller says
 pub fn draw_for(g: &mut Game, site: &'static str, who: Who) -> f64 { let w = who.word(g); draw(g, site, w) }
 /// a keyed draw about a man of the floor
-pub fn draw_of(g: &mut Game, site: &'static str, gd: GuardId) -> f64 { let who = g.gd[gd].ch.0 + 1; draw(g, site, who) }
+pub fn draw_of(g: &mut Game, site: &'static str, gd: GuardId) -> f64 { let who = man(g, g.gd[gd].ch); draw(g, site, who) }
 /// …about a body
-pub fn draw_body(g: &mut Game, site: &'static str, c: CharId) -> f64 { draw(g, site, c.0 + 1) }
+pub fn draw_body(g: &mut Game, site: &'static str, c: CharId) -> f64 { let who = man(g, c); draw(g, site, who) }
 /// …about a defender, by his row of the room fight
 pub fn draw_def(g: &mut Game, site: &'static str, d: RoomfightDefId) -> f64 { let gd = g.tab.roomfight_def[d].gd; draw_of(g, site, gd) }
 /// …about an operative, by his row of the room fight
@@ -115,7 +118,7 @@ mod tests {
     fn a_man_is_one_man_however_the_caller_named_him() {
         let mut g = alloc::boxed::Box::new(Game::blank());
         let mut body = crate::character::Character::blank();
-        body.pos = [0.0, 0.0, 0.0];
+        body.id = 21.0;
         g.ch.push(crate::character::Character::blank());
         let c = g.ch.push(body);
         let mut man = crate::game::Guard::blank();
@@ -123,8 +126,16 @@ mod tests {
         let gd = g.gd.push(man);
         assert_eq!(Who::Man(gd).word(&g), Who::Body(c).word(&g));
         assert_eq!(Who::World.word(&g), 0);
-        // a group's number is never a body's
-        assert_ne!(Who::Group(c.0 + 1).word(&g), Who::Body(c).word(&g));
-        assert_ne!(Who::Group(0).word(&g), Who::World.word(&g));
+        // …and he is the same man in another row
+        let mut again = crate::character::Character::blank();
+        again.id = 21.0;
+        let c2 = g.ch.push(again);
+        assert_eq!(Who::Body(c2).word(&g), Who::Body(c).word(&g));
+        // a squad's number is never a body's, and is its name's
+        let mut q = crate::enemysquads::Squad::zeroed();
+        q.name = alloc::string::String::from("the yard");
+        let (q1, q2) = (g.tab.enemysquads_squad.push(q.clone()), g.tab.enemysquads_squad.push(q));
+        assert_eq!(Who::Squad(q1).word(&g), Who::Squad(q2).word(&g));
+        assert!(Who::Squad(q1).word(&g) >= 0x4000_0000 && Who::Body(c).word(&g) < 0x4000_0000);
     }
 }
