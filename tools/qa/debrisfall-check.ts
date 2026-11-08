@@ -53,14 +53,14 @@ const log = console.log, warn = console.warn, err = console.error; const hush = 
 /** the warehouse's office (tools/qa/furnblast-probes.ts OFFICE): the wall between the corridor and it runs along z = 17 */
 const CHARGE: Vec3 = [8.0, 0.9, 16.9], CHARGE2: Vec3 = [9.6, 0.9, 16.9], SAM: Vec3 = [8.0, 0, 14.6];
 const TILES: Vec3[] = [[6.4, 0, 15.2], [9.4, 0, 15.4], [7.2, 0, 18.6], [9.0, 0, 19.4]];
-interface Opts { dress: boolean; cap?: number; noPool?: boolean; row?: boolean }
+interface Opts { dress: boolean; noPool?: boolean; row?: boolean }
 interface Rec { smokes: string[]; tiles: number; apart: number[]; late: number[]; events: string[]; waiting: number; digest: string; dg: unknown; bits: number[]; partsAt: Record<string, number>[]; asked: number; took: number; refused: number; told: number; chunkLandings: number; there: number; peakWaiting: number }
 /** the scene stood up, and frame `f` of it as a function a check can call again */
 async function stage(seed: number, o: Opts) {
   Math.random = seeded(seed);
   const W: any = await standUp({ uploadEvery: 1, dress: true, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'warehouse.json'), 'utf8')), {}) }), game = W.game, engine = W.engine;
   DESTRUCTION.on = true; FURNBLAST.on = true; S.RUST.falls = !!o.row; DEBRIS.dress = o.dress; DRESS.debris = !o.noPool;   // (a stand-up puts every switch where its stand has it: set after)
-  engine.particles = new Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true; if (o.cap) engine.settings.debrisCap = o.cap;
+  engine.particles = new Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true;
   game.godMode = true; game.tune.chaos = 0.5;
   for (let i = 0; i < 5; i++) W.step(DT);
   game.teleportPlayer(SAM); game.player.char.bodyYaw = game.player.char.aimYaw = 0; game.player.slot = 'rifle'; game.player.holstered = false; game.player.crouch = false;
@@ -111,10 +111,10 @@ function parts(a: Rec, b: Rec): string {
 export async function debrisfallCheck(): Promise<boolean> {
   fails = 0;
   console.log(`the debris pool as dressing · profile ${process.env.TPS_PROFILE ?? 'frozen'}${BREAK ? ' · DEBRISFALL_BREAK=1 (the red path)' : ''}`);
-  const POOLS: [string, Opts][] = [['the pool at 32', { dress: true, cap: 32 }], ['the pool at 4', { dress: true, cap: 4 }], ['no pool (the dressing row down)', { dress: true, noPool: true }]];
+  const POOLS: [string, Opts][] = [['no pool (the dressing row down)', { dress: true, noPool: true }]];
 
   // ---- tells
-  const on = await play(1, { dress: true, cap: 64 }), off = await play(1, { dress: false, cap: 64 });
+  const on = await play(1, { dress: true }), off = await play(1, { dress: false });
   const med = (v: number[]) => v.length ? [...v].sort((a, b) => a - b)[v.length >> 1] : NaN, worst = (v: number[]) => v.reduce((m, x) => Math.max(m, Math.abs(x)), 0), lateAbs = on.late.map(Math.abs);
   verdict(on.asked > 20 && on.told > 10 && on.took > 10 && on.events.length >= on.told - on.waiting && on.events.length > 10 && off.told === 0 && off.peakWaiting === 0 && on.tiles >= 3 && on.apart.length > 10 && med(on.apart) < LAND_NEAR && med(lateAbs) < LAND_SOON,
     `tells: with the rule on, pieces are thrown, the simulation puts a landing in the falls for each that comes down hard enough, the floor is told of those, and half of them are within ${LAND_NEAR} m and ${LAND_SOON} s of their own chunk's knock`,
@@ -122,7 +122,7 @@ export async function debrisfallCheck(): Promise<boolean> {
 
   // ---- again: the clock put back by a load
   if (!BREAK) { const was = { dress: DEBRIS.dress, row: S.RUST.falls, on: DESTRUCTION.on, furn: FURNBLAST.on }; hush(true); let line = '', ok = false;
-    try { const { game, frame } = await stage(1, { dress: true, cap: 64 }), seen = new WeakSet<object>(), count = () => { let n = 0; for (const e of game.events) { if (seen.has(e)) continue; seen.add(e); if (e.kind === 'prop') n++; } return n; };
+    try { const { game, frame } = await stage(1, { dress: true }), seen = new WeakSet<object>(), count = () => { let n = 0; for (const e of game.events) { if (seen.has(e)) continue; seen.add(e); if (e.kind === 'prop') n++; } return n; };
       for (let f = 0; f < 10; f++) frame(f); count();
       const save = SV.saveState(game, { force: true }), t0 = game.time; let first = 0, again = 0;
       for (let f = 10; f < 400; f++) { frame(f); first += count(); }
@@ -144,7 +144,7 @@ export async function debrisfallCheck(): Promise<boolean> {
   // ---- turned: the switch turned with pieces in the air
   if (!BREAK) { const was = { dress: DEBRIS.dress, row: S.RUST.falls, on: DESTRUCTION.on, furn: FURNBLAST.on };
     const air = async (from: boolean, turn: boolean): Promise<string[]> => { hush(true); const ev: string[] = [];
-      try { const { W, game, frame } = await stage(1, { dress: from, cap: 64 }), seen = new WeakSet<object>();
+      try { const { W, game, frame } = await stage(1, { dress: from }), seen = new WeakSet<object>();
         for (let f = 0; f < 200; f++) { if (f === 30 && turn) DEBRIS.dress = !from; if (f < 30) frame(f); else W.step(DT);   // (past tick 30 nothing new is thrown: only what the first charge threw comes down)
           for (const e of game.events) { if (seen.has(e)) continue; seen.add(e); if (e.kind === 'prop') ev.push(`${f}:${e.level}:${e.pos.map((x: number) => x.toFixed(6)).join(',')}:${e.who}`); } }
       } finally { hush(false); DEBRIS.dress = was.dress; S.RUST.falls = was.row; DESTRUCTION.on = was.on; FURNBLAST.on = was.furn; }
@@ -154,12 +154,12 @@ export async function debrisfallCheck(): Promise<boolean> {
       `on, then off at tick 30: the floor told ${onOff.length} times (${onRef.length} with the switch left on, ${late(onRef)} of them after the turn) · off, then on: ${offOn.length} (${offRef.length} with it left off, ${late(offRef)} after)`); }
 
   // ---- module
-  if (!BREAK) { const r = await play(1, { dress: true, cap: 64, row: true }), d = parts(on, r);
+  if (!BREAK) { const r = await play(1, { dress: true, row: true }), d = parts(on, r);
     verdict(!d && r.there > 20 && on.there === 0, 'module: with the rule on, the scene with RUST.falls on is the scene with it off, and the rules were the module\'s', `${d || 'the same game after every tick'} · ${r.there} rules taken in the module (${on.there} without the row)`); }
 
   // ---- snapshot: the pieces' landings in the module, taken and put back while pieces are in the air
   if (!BREAK) { const RB: any = await import(`${ROOT}/src/game/rollback.ts`), was = { dress: DEBRIS.dress, row: S.RUST.falls, on: DESTRUCTION.on, furn: FURNBLAST.on }; hush(true); let line = '', ok = false;
-    try { const { game, frame } = await stage(1, { dress: true, cap: 64, row: true }); let f = 0; for (; f < 303 || (f < 360 && game.falls.waitingIn(FH.FALL_PIECES) < 3); f++) frame(f);   // (the second charge's pieces: the level's own autosave — whose slot a put back does not take off the shelf, tools/qa/rollback-check.ts — is behind it by then)
+    try { const { game, frame } = await stage(1, { dress: true, row: true }); let f = 0; for (; f < 303 || (f < 360 && game.falls.waitingIn(FH.FALL_PIECES) < 3); f++) frame(f);   // (the second charge's pieces: the level's own autosave — whose slot a put back does not take off the shelf, tools/qa/rollback-check.ts — is behind it by then)
       const snap = RB.takeSnapshot(game), h0 = RB.stateHash(game), waiting = game.falls.waitingIn(FH.FALL_PIECES), home = !!game.falls.home, first: string[] = [], at = f;
       for (let k = 0; k < 200; k++) { frame(f + k); first.push(RB.stateHash(game)); }
       RB.restoreSnapshot(snap); const stood = RB.stateHash(game) === h0 && game.falls.waitingIn(FH.FALL_PIECES) === waiting && !!game.falls.home;
@@ -171,7 +171,7 @@ export async function debrisfallCheck(): Promise<boolean> {
 
   // ---- tallies
   if (!BREAK) { const lines: string[] = []; let ok = true;
-    for (let s = 1; s <= SEEDS; s++) { const a = s === 1 ? off : await play(s, { dress: false, cap: 64 }), b = s === 1 ? on : await play(s, { dress: true, cap: 64 }), c = await play(s, { dress: false, cap: 32 });
+    for (let s = 1; s <= SEEDS; s++) { const a = s === 1 ? off : await play(s, { dress: false }), b = s === 1 ? on : await play(s, { dress: true }), c = await play(s, { dress: false });
       if (!(a.asked > 0 && b.asked > 0 && a.events.length > 0 && b.events.length > 0)) ok = false;
       const row = (r: Rec) => `${r.asked} pieces asked for, ${r.took} chunks (${r.refused} refused), the floor told ${r.events.length} times`;
       lines.push(`seed ${s}: off at 64: ${row(a)} · off at 32: ${row(c)} · on: ${row(b)}`); }

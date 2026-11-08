@@ -130,8 +130,7 @@ export interface PlanThrow { gd: Guard; tag: string; tone: Tone | null; kind: 'f
 /** `you`: the feet of the one whose order menu is up (the SEAT's own man: ringed gold, the element the whole squad answers to), null with no menu */
 /** an order LAID for the word (planlay.ts), nobody moving yet: its men's feet and the way each would walk to it, the door's two jambs or the spot, the
  *  key that sends the plan, and how strongly to draw it (1 in the order mode; with the menu down, an order just laid, going out with its age) */
-export interface PlanLaid { tone: Tone | null; feet: Vec3[]; ways: Vec3[][]; at: Vec3 | null; a: Vec3 | null; b: Vec3 | null; key: string; k: number }
-export interface FloorPlan { men: PlanMan[]; who: PlanWho[]; you: Vec3 | null; doors: PlanDoor[]; throws: PlanThrow[]; laid: PlanLaid[]; /** the SEAT is reading the plan (its order menu is up, or `PLAN.menuOnly` is off): false = `men` holds only orders just given, to be faded out with their age */ mode: boolean }
+export interface FloorPlan { men: PlanMan[]; who: PlanWho[]; you: Vec3 | null; doors: PlanDoor[]; throws: PlanThrow[]; /** the SEAT is reading the plan (its order menu is up, or `PLAN.menuOnly` is off): false = `men` holds only orders just given, to be faded out with their age */ mode: boolean }
 /** HOW A DOOR'S KEY CAP IS DRAWN (ui/planfloor.ts): 'none' no cap · 'plate' on its plate (PLAN.keyLit off: only the door the key would send now) ·
  *  'dark' it waits on the key, and its men are still on their way or the press would not send it · 'lit' they stand there and the press sends them */
 export function capOf(dr: PlanDoor): 'none' | 'plate' | 'dark' | 'lit' {
@@ -269,7 +268,7 @@ function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null)
 /** The squad's plan as it stands this frame, for the overlay. Empty with the switch off, with no squad on the floor, and under any show.
  *  `kept` = the asker's own store (PlanKept); with none, nothing is kept past this one ask and every leg is asked of the grid afresh. */
 export function floorPlan(g: Game, kept: PlanKept = planKept(), who: PlanFor = MINE): FloorPlan {
-  const out: FloorPlan = { men: [], who: [], you: null, doors: [], throws: [], laid: [], mode: true };
+  const out: FloorPlan = { men: [], who: [], you: null, doors: [], throws: [], mode: true };
   const S = g.orders; if (!PLAN.on || !S.active) return out;
   // outside the order mode: only what the order book was just told (its log: who, when) — a module's own re-assign of a man stamps him anew and is not that
   const mode = out.mode = !PLAN.menuOnly || !!S.menu || who.reading, given = new Map<string, number>();   // (the SEAT's menu: see the head; or the looker's own: PlanFor)

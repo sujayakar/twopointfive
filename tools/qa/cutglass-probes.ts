@@ -150,27 +150,6 @@ export async function cutglassBreak() {
   return F.done();
 }
 
-// ================================================================ leaving the pool
-export async function cutglassGone() {
-  const F = family('cutglass-gone: a plate the pool drops goes as grains of its own glass');
-  const a = await (async () => {
-    const { W, game, engine, flush } = await stage(9303); const D = game.destr.debris; const S = game.shards; resetStats();
-    const sq: [number, number][] = [[-0.12, -0.1], [0.14, -0.08], [0.1, 0.12], [-0.1, 0.09]];
-    for (let i = 0; i < 4; i++) S.release({ pane: -1, type: 'annealed', kind: 'piece', outline: sq.map(p => [OPEN[0] + i * 0.7 + p[0], 0.3 + p[1], OPEN[2]]), centre: [OPEN[0] + i * 0.7, 0.3, OPEN[2]], normal: [0, 0, 1], thickness: 0.006, area: polyArea(sq), velocity: [0, 0, 0.3], spin: [1, 0, 0], tint: [0.5, 0.8, 0.6], grain: 0, cause: 'support', who: 1, seed: 700 + i });
-    for (let f = 0; f < 300; f++) { W.step(DT); flush(); }
-    const glass0 = D.list.filter((c: any) => c.glass); const rest0 = glass0.filter((c: any) => c.rest).length; const where = glass0.map((c: any) => c.box.c.slice());
-    engine.settings.debrisCap = Math.max(4, D.list.length);   // the pool is now exactly full
-    const cr0 = SHARD_STATS.crumbled; const recs: any[] = [];
-    for (let i = 0; i < 2; i++) { D.spawn('clutter', makeBox({ c: [OPEN[0] - 2 - i, 1.0, OPEN[2]], h: [0.05, 0.05, 0.05], yaw: 0, albedo: [0.3, 0.3, 0.3], flags: BoxFlag.Dynamic }), [0, 0, 0], [0, 0, 0], 1); recs.push(...flush().filter((e: any) => e.kind === 'shard')); }
-    const gone = glass0.length - D.list.filter((c: any) => c.glass).length;
-    const near = recs.filter(e => where.some((p: Vec3) => Math.hypot(e.pos[0] - p[0], e.pos[2] - p[2]) < 0.05)); const tinted = recs.every(e => Math.abs(e.o.color[0] - 0.5) < 1e-9 && Math.abs(e.o.color[1] - 0.8) < 1e-9);
-    return { n: glass0.length, rest0, gone, recs: recs.length, born: recs.reduce((a, e) => a + e.count, 0), near: near.length, tinted, crumbled: SHARD_STATS.crumbled - cr0, len: D.list.length, cap: D.cap(), evicted: D.stats.evicted };
-  })();
-  F.verdict(a.n >= 4 && a.rest0 === a.n && a.gone === 2 && a.recs === 2 && a.near === 2 && a.tinted && a.born >= 6 && a.crumbled === 2 && a.len <= a.cap,
-    'each plate evicted at rest leaves a record of grains where it lay, in its own tint; the pool stays at its cap', `${a.n} plates at rest, pool full (${a.len}/${a.cap}); 2 chunks spawned → ${a.gone} plates evicted → ${a.recs} records, ${a.born} grains, ${a.near} at a plate's place`);
-  return F.done();
-}
-
 // ================================================================ the seeded volley, for determinism
 const VOLLEY = [[7.4, 1.3, 10], [7.42, 1.31, 10], [6.3, 1.0, 10], [7.9, 0.7, 10], [8.8, 1.5, 10], [6.6, 1.6, 10], [7.1, 0.5, 10], [8.9, 1.52, 10], [9.3, 0.9, 10], [7.6, 1.9, 10]];
 // ================================================================ the look

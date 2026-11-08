@@ -304,13 +304,12 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   });
   panel.text(dl, restirLine);
   // shadow rays + the penumbra filter: the temporal switch and width cap the denoiser reads, the emitter size, the cascade threshold
-  const shd = panel.section('Shadow rays & penumbra filter', { open: false, summary: () => `history ${S.directHistory ? 'on' : 'off'} · cap ${S.directBlurCap} px · torch r ${(S.flashlightRadius * 100).toFixed(1)} cm` });
+  const shd = panel.section('Shadow rays & penumbra filter', { open: false, summary: () => `history ${S.directHistory ? 'on' : 'off'} · cap ${S.directBlurCap} px` });
   panel.toggleBox(shd, 'shadow history', () => S.directHistory, v => { S.directHistory = v; }, 'the shadow denoiser\'s temporal reuse: each class\'s shadow ratio is carried from frame to frame (reprojected, depth-validated, clamped to this frame\'s neighbourhood). Off = history-free shadows, for inspection');
   panel.slider(shd, 'penumbra filter cap (px)', 2, 32, 1, () => S.directBlurCap, v => { S.directBlurCap = v; }, 'upper bound on the PCSS-derived filter radius');
   adv(() => {
     panel.slider(shd, 'cascade hit light threshold', 0.001, 0.1, 0.001, () => S.secMinE, v => { S.secMinE = v; }, 'W/m² (unshadowed): at cascade interval hits a light dimmer than this gets no shadow ray and is dropped — raises bounce-lighting cost/accuracy trade (default 0.006)');
   });
-  panel.slider(shd, 'torch emitter radius (m)', 0, 0.15, 0.005, () => S.flashlightRadius, v => { S.flashlightRadius = v; }, 'size of the flashlight front for shadow purposes (guards; the rail light uses 0.7×). A real bezel is ~1.5-2 cm → crisp shadows; larger = penumbrae that widen with distance');
   flag(shd, 'denoiser', FrameFlags.SoftShadow, 'master switch for temporal + spatial (off = raw samples, for inspection)');
   // characters in the shadow rays: the mesh walk (ultra: every ray, high: near receivers)
   const msh = panel.section('Character shadows (mesh)', { open: false, summary: () => S.meshShadows ? (engine.meshShadowsOn ? `mesh live${S.meshShadowsNear ? ' · near receivers only' : ' · every ray'}` : 'wanted, not live') : 'round-cone proxies' });
@@ -1169,6 +1168,9 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
       { k: 'fuse', label: 'bang ▸ your fuse s', title: 'your can\'s fuse after landing (s) — your own thrown canister in a scenario (the night game keeps its longer fuse)' },
     ]);
     tf = TF.move;
+    feelRows('ROOMFIGHT', [
+      { k: 'letGo', label: 'team ▸ masked man s', title: 'lets a masked man go (s) — held off a man this long for a friend in his line with nowhere to step, a teammate turns to an enemy who is shooting from somewhere else. 0 = never: he stays on the man he cannot shoot' },
+    ]);
     feelRows('PACE', [
       { k: 'on', label: 'team ▸ pace cap', title: 'a teammate\'s legs stop at the top pace below whoever asks — the fight AI\'s chase, a drill, an order — and he comes up to speed gradually. Off = no cap and no lean (an order\'s own legs still ask for the three \'pace ▸ …\' rows further down this section: raise those too for the old sprinting file)' },
       { k: 'max', label: 'team ▸ top pace', title: 'top pace (m/s) — you walk at 1.55 and sprint at 4.7; 2.2 keeps up with a walk and is left by a sprint. An order asks for at most its own pace (the three \'pace ▸ …\' rows further down this section), so above those this only frees the fight AI\'s chase' },
@@ -1868,10 +1870,9 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     knobRows(panel, ch, CHAOS as unknown as KnobTable, CHAOS_DEFAULTS as unknown as KnobTable, chaosSave, [
       { k: 'puffsPerSec', label: 'chaos ▸ dust puffs into the smoke /s', min: 0, max: 20, step: 1, title: 'cap on impact dust clouds injected into the smoke solver per second (also ≤ 2 a frame and only while the solver\'s emitter budget has slack); 0 = particles-only dust' },
       { k: 'papersPerSec', label: 'chaos ▸ paper stacks scattered /s', min: 0, max: 20, step: 1, title: 'cap on paper stacks turned into sheet particles per second (each ~26 leaves; the stack comes back when the level resets)' },
-      { k: 'knocksPerSec', label: 'chaos ▸ knock-offs /s', min: 0, max: 12, step: 1, title: 'cap on desk clutter / monitor housings knocked off per second; the rigid pool itself holds settings.debrisCap chunks (64 ultra + high, 32 below) — over it a break-off becomes a chip burst' },
+      { k: 'knocksPerSec', label: 'chaos ▸ knock-offs /s', min: 0, max: 12, step: 1, title: 'cap on desk clutter / monitor housings knocked off per second; the rigid pool itself holds 64 chunks — over it a break-off becomes a chip burst' },
       { k: 'tilesPerEncounter', label: 'chaos ▸ ceiling tiles per encounter', min: 0, max: 24, step: 1, title: 'tiles that may drop before the level resets (one per 0.6 m square, ≥ 2.2 s apart)' },
     ]);
-    panel.slider(ch, 'chaos ▸ debris pool (tier cap)', 4, 64, 4, () => S.debrisCap, (v: number) => { S.debrisCap = v; }, 'settings.debrisCap: the rigid-debris pool — the image-quality program\'s budget is ≤ 64 tumbling casters at ultra / high, ≤ 32 below (the preset sets it; this row is the A/B)');
     const im = panel.section('Impulses (what already lies about)', { open: false, summary: () => CT.debrisImpulses !== false ? `on · bang ${CHAOS.imp.bang.strength} m/s r ${CHAOS.imp.bang.radius} · round ${CHAOS.imp.impact.strength} · thud ${CHAOS.imp.thud.strength}` : 'off' });
     panel.toggleBox(im, 'chaos ▸ impulses kick the litter', () => CT.debrisImpulses !== false, keep((v: boolean) => { CT.debrisImpulses = v; }), 'what already lies about is pushed again by what happens next: a stun charge throws the settled leaves within a couple of metres back up to flutter down (through an open doorway, not through the partition) and shoves the chunks it knocked off before; a round landing beside paper scoots it; a body hitting the floor, a boot through a door, a desk knocking into the wall twitch what lies within a stride. One record each to the GPU particles (≤ 16 a frame) and the debris pool; nothing on frames without any. Off = the destruction lane exactly as it was');
     knobRows(panel, im, CHAOS as unknown as KnobTable, CHAOS_DEFAULTS as unknown as KnobTable, chaosSave, [

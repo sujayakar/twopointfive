@@ -1032,7 +1032,7 @@ but synthetic writes still work.
   (`?look=plain&look=…`: the scenes are the set's dressed levels). NEVER PLAYED TO ITS CARD, and never on a GPU. A reload in the middle is a plain mission page (the page marks the record before it plays); `?bench` on the address
   goes to the first scene BEFORE the game boots (`main()`'s first lines, a `replace`: that load is the machine's first and the one the report's `load` line
   times, and Back does not ask again), the row is a second load and the report says so. EACH SCENE IS PLAYED BY THE HANDS-OFF PLAYER (`HandsOff`, the page
-  twin of `command-tally.ts`'s hand `b`): W A S D along the nav path, the cursor on a door, the quick key B (stack, then B again when the men have arrived),
+  twin of the removed tally's hand `b`): W A S D along the nav path, the cursor on a door, the quick key B (stack, then B again when the men have arrived),
   the rifle on whoever the fog shows on a clear line after a rolled beat, then a hunt for whoever is left; all of it written onto the host `Input` in the
   loop's `beforeTick`, before the tick samples the command, so the game is played by its own keys and its own AI on both sides. Sam cannot go down while it
   plays (`godMode`, put back after; a scene's page does not read the machine's own sandbox row since 2026-11-02 — `benchSceneWaits`, asked before the mission is staged: with

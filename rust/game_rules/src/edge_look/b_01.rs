@@ -489,7 +489,7 @@ pub fn edge_look_shed(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike
         else if blast { hy *= e.blast.flake_k; }
         // THE CUT SWITCH, a blast's heap off a wall: a few big SLABS of the wall's own sheet lying flat, and of the chunks a good share much smaller
         let mut slab = false;
-        if let (true, true, Some(f), false, false) = (true, blast, f, wood, soft) {
+        if let (true, Some(f), false, false) = (blast, f, wood, soft) {
             let cls = hh(33.0, i);
             if cls < ch.slabs { slab = true; hx = ch.slab[0] + (ch.slab[1] - ch.slab[0]) * hh(15.0, i); hz = hx * (0.45 + 0.5 * hh(16.0, i)); hy = m::min(ch.slab_t, m::max(0.012, f.t * 0.45)); }
             else if lump && cls > 1.0 - ch.smalls { let k = ch.small[0] + (ch.small[1] - ch.small[0]) * hh(34.0, i); hx *= k; hz *= k; hy *= k; }

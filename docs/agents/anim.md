@@ -101,25 +101,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   not carry it; the MOVES hand pass keeps no straight trigger finger on the fist round the handle, and the reload arm (`mvArms`) does not play over either tool. `null` = the layer is not run: every other pose is bit for bit the build
   before's. Look at it with `bun run tools/qa/bigmoves-strip.ts --out <dir>` (front / side / top stick strips with the prop boxes; always pass `--out`). FIRST-PASS numbers,
   placed headless: never in the viewer, never on a GPU; finger curls pop; his own gun pops to its place.
-- **Wounds: a round does not always kill** (`src/game/wounds.ts`; `WOUND.on` DEFAULT OFF — `?wounds` / `?nowounds`, harness `TPS_WOUNDS=1` (host/standup.ts pins it from the env on every
-  standUp: a probe sets `WOUND.on` after staging), soak `--wounds on|off`; off = `roundDoes`'s first line answers 'shot' and the game is what it was, digest for digest). WHERE THE ROUND
-  LANDED decides, as geometry off his bones on the frame it arrives (`hitZone`: the stretch of the round's line `WOUND.lead` before / `WOUND.depth` after it enters his hit column,
-  against the neck → crown line, the trunk line hips → spine → chest → neck and each leg): within `WOUND.head` 12.5 cm of the head line or `WOUND.centre` 10.5 cm of the trunk line =
-  DEAD (killGuard as ever); else a leg nearer than the trunk = WOUNDED 'leg', else WOUNDED 'side'. **No counter, no hit points, nothing a second round adds up** — a second flank round
-  on a wounded man changes nothing, one through the head or the middle finishes him (`finishWounded`: ragdoll, 'shot', by the player a kill on the card in place of the knockout).
-  A WOUNDED man is DOWN AND OUT OF THE FIGHT: combat.ts `fireWeapon` → `roundDoes(…)` → `killGuard(…, 'wounded', by, line, zone)` keeps every book it keeps for a man out cold
-  (`state 'dead'`, `downKind 'wounded'`, so `isBreathing`: no target for anybody's AI, no orders, his side counts him lost, found and called in) but calls `woundDown` in place of the
-  ragdoll: `Guard.wound {zone, pose, t}`, `char.alive` stays true, gun dropped, `anim.wound` = character.ts's `woundLayer` (`WOUND_POSE`: 'knee' = a kneeling clip held and breathed
-  across, 'back' = a fall clip stopped short — a leg hit from in front with `WOUND.backRoom` clear behind — + `woundLimbs`: the support hand IK'd to the ribs (`WOUND_AT`) or the
-  thigh, on his back a knee drawn up). AI rounds skip dead-state men, so only the PLAYER's rounds find him (rayHit answers for an `alive` man): the reticle takes him only with the
-  cursor within `WOUNDED_SNAP_PX` 26 px of his chest and never from a living man. Never applies to: civilians, a held man / hostage shot, showcases, Sam (his vest's older rule), any
-  way down that is not a round (a blast that should wound calls killGuard with 'wounded' itself). What differs from a man out cold is what is SEEN and SAID: '✚' not 'zz', the squad
-  roster's `wounded`, 'shot — down wounded' on the debrief (a knockout in the counts), teammates' "X's hit — breathing" / "he's hit — down, gun's out of it" (roomfight.ts, text only),
-  a finder's 'shot, still breathing'. In a doorway he is a weak door contact (game.ts; a leaf that moves him asks the walls after — at the body it shoved, then at his feet, ≤ 0.25 m a frame, bones re-baked). Nobody keeps off him (a circle in a doorway would
-  shut a room). Checkpoints carry `wound` + the layer's clock (`woundRestore`); a plain save waits while he is still sinking. `turnDrop()` = TURN let go of as he goes down.
-  `WOUND` is in journal.ts's knob tables, `WOUND_STATS` beside it is not; `Guard.wound` is NOT in the digest. `__wounds` {on, knobs, stats, men()}, `__killGuard(i, 'wounded', zone, dir)`.
-  QA: `probes.ts wounds` (zone / off / state / both / again / save / play; `WOUNDS_BREAK=1 … wounds-zone` must fail), strips `wounded-knee / wounded-leg / wounded-back`,
-  playthrough.ts `RunOut.wounds`. The clutch (MOVES second pass) can also HOLD A FOLD: `MOVES.fold` (trunk + head for as long as `anim.clutch` is up, a spring in `mvPost` — so not arms-only) is **0 = up with the wounds switch and only with it** (`character.ts FOLD_WITH.on`, which wounds.ts points at `WOUND.on`; wounds off, a staggered man's trunk is the base's frame for frame — `moves-kept` holds it), 1 = on by itself (`?fold`), -1 = never (`?fold=0`).
+- **Wounds (`WOUND.on`) are shelved** (2026-11-07, his list, to pick up later): settled off and folded out of the game, with their page word, hook and checks. A round kills or knocks out as before. The last commit with them is the parent of the commit that settled them.
 - **A man's condition on the figure** (`character.ts MV2.hurt / MV2.shaken`, the animator's `hurt`, `hurtSide`, `shaken`, `foldToo`; dealt every frame
   for the player, his men and the defenders alike by `condition.ts conditionPose` from `Game.dealWeapons`, nothing under a showcase; all inside the
   MOVES pass, so none of it on the frozen stand or with `?nomoves`). HURT (`mvPost`): a hunch he keeps (`pitch` 11°, head 9°, pelvis 2.5 cm), a lean
