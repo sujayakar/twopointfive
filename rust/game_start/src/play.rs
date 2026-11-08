@@ -446,6 +446,11 @@ impl Play {
     /// has he no hand for his gun: reeling, in somebody's arm, a hostage in his own, his hands on a job
     pub fn no_hand_for_it(&self, gd: GuardId) -> bool { use game::control::man::*; staggered(&self.g, gd) || held(&self.g, gd) || in_a_standoff(&self.g, gd) || game::gunslots::side_locked(&self.g, gd) }
 
+    /// how many rounds he has heard fired, of those that mean anything to him
+    pub fn shots_heard(&self, gd: GuardId) -> f64 { self.g.gd[gd].witness.heard.shots }
+    /// has he had his man in his eyes within the last `secs` seconds
+    pub fn saw_within(&self, gd: GuardId, secs: f64) -> bool { game::control::man::saw_his_man_within(&self.g, gd, secs) }
+
     /// The spot the rounds past him have sent him to, while he is on his way or about to go (the suppression rule's cover spot); `None`: not sent.
     pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.gd[gd].sup.cover.map(|p| [p[0], p[2]]) }
 
