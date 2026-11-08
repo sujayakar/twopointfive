@@ -12,7 +12,6 @@
 // exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU: a pace is a number, a footfall an event's level, a bar a width on a fake element. Nobody has seen or played any of this.
 import { standUp, ROOT } from './headless.ts';
-import { El, withDom } from './scenario-picker-probes.ts';
 
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const L = await import(`${ROOT}/src/game/kitload.ts`);
@@ -129,10 +128,6 @@ export async function kitloadYou(): Promise<boolean> {
     const gain = (you: Record<string, unknown>, d: number) => { K.KIT.members[0] = card(0, you); K.kitPlayer(g); g.player.visibility = 0.6; gd.smokeTrans = 1; return Gd.sightGain(g, gd, d) as number; };
     const far = [gain(YOU.light, 6), gain(YOU.issued, 6), gain(YOU.heavy, 6)], near = [gain(YOU.light, 1), gain(YOU.issued, 1), gain(YOU.heavy, 1)];
     F.verdict(near[0] === near[1] && near[1] === near[2] && near[0] > far[2], 'at his elbow (1 m) the point-blank floor is whole: the same whatever you carry', `light ${f3(near[0])} · issued ${f3(near[1])} · heavy ${f3(near[2])}`);
-  });
-  return F.done();
-}
-
   });
   return F.done();
 }
