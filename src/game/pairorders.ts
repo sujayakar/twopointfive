@@ -142,8 +142,8 @@ export class PairOrders {
   private ways = new SideMap<Guard, { to: Vec3; path: Vec3[]; t: number }>();
   private goSeated = false; private handsWas = false;
   constructor(private g: Game) {
-    const S = g.orders; flags();
-    S.people = {};   // (a man of the other side is offered: the Rust game's question of a point and of the cursor asks)
+    flags();
+    for (const s of g.seats) s.view.orders.people = {};   // (a man of the other side is offered: the Rust game's question of a point and of the cursor asks)
   }
 
   // ------------------------------------------------------------ who, what

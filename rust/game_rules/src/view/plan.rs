@@ -150,7 +150,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
         }
     }
     // the quiet pair's mark: the first reader of the key. The key a step ahead of each man who waits, on his gun's line: nothing of the man he waits on. A lesson that still holds the word shut lists no mark
-    let marked = crate::pairorders::pair_orders_waiting(g);
+    let marked = crate::pairorders::pair_orders_waiting(g, seat);
     let pair_first = up && !marked.is_empty();
     if !crate::rails::rails_locks(g, "word") {
         for (gd, j) in marked.iter() {
