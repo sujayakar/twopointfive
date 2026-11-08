@@ -1533,6 +1533,8 @@ pub struct Player {
     pub visibility: f64,
     pub irradiance: f64,
     pub hit_flash: f64,
+    /// his hands were on a man last frame (the partner's word goes as they first are)
+    pub pair_hands_was: bool,
     pub stagger_until: f64,
     pub dazzled_until: f64,
     pub dazzled_at: Option<V3>,
@@ -1643,6 +1645,7 @@ impl Player {
             visibility: 0.0,
             irradiance: 0.0,
             hit_flash: 0.0,
+            pair_hands_was: false,
             stagger_until: -1.0,
             dazzled_until: -1.0,
             dazzled_at: None,
