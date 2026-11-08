@@ -263,16 +263,23 @@ function fightLine(name: string, q: string, secs: number, F: { ticks: number; do
     F.err ? `after ${F.ticks} ticks: ${F.err}` : `${F.ticks} ticks · ${F.met} of 2 players set down facing an enemy · ${F.hurt} men down in it, ${F.down} of them the other side's`);
 }
 const NONE = () => ({ ticks: 0, down: 0, hurt: 0, err: 'did not run', words: [] as string[], looks: 0, wrote: [] as string[], swung: 0, met: 0 });
-/** a fight in a fresh process (the head of this file's `--fight`) */
-const apart = (q: string, secs: number, ahead = false, seed = 9, level: string | null = null): ReturnType<typeof NONE> => {
-  const r = Bun.spawnSync([process.execPath, 'run', import.meta.path, '--fight', JSON.stringify([q, secs, ahead, seed, level])], { env: process.env, stdout: 'pipe', stderr: 'pipe' });
-  const out = new TextDecoder().decode(r.stdout), l = out.split('\n').find(x => x.startsWith('SEATSFIGHT '));
-  return l ? JSON.parse(l.slice(11)) : { ...NONE(), err: `the fight's process said nothing (exit ${r.exitCode}): ${new TextDecoder().decode(r.stderr).trim().split('\n').slice(-2).join(' | ').slice(0, 300)}` }; };
-for (const [q, secs] of [['roomclear&squad4', 40], ['nightbreach', 30]] as const) {
-  const F = apart(q, secs);
+/** a fight in a fresh process (the head of this file's `--fight`). Nothing of a fight is asked of the clock, so as many run beside each other as the machine
+ *  has cores to spare, in the order they were asked for: each reads the same, and the six of them take the time of the longest two */
+let free = Math.max(1, Math.min(3, navigator.hardwareConcurrency - 1)); const waiting: (() => void)[] = [];
+const apart = async (q: string, secs: number, ahead = false, seed = 9, level: string | null = null): Promise<ReturnType<typeof NONE>> => {
+  if (free > 0) free--; else await new Promise<void>(go => waiting.push(go));
+  const r = Bun.spawn([process.execPath, 'run', import.meta.path, '--fight', JSON.stringify([q, secs, ahead, seed, level])], { env: process.env, stdout: 'pipe', stderr: 'pipe' });
+  const [out, err, code] = await Promise.all([new Response(r.stdout).text(), new Response(r.stderr).text(), r.exited]); const next = waiting.shift(); if (next) next(); else free++;
+  const l = out.split('\n').find(x => x.startsWith('SEATSFIGHT '));
+  return l ? JSON.parse(l.slice(11)) : { ...NONE(), err: `the fight's process said nothing (exit ${code}): ${err.trim().split('\n').slice(-2).join(' | ').slice(0, 300)}` }; };
+// (the longest are asked for first)
+const LONG = ([['roomclear&squad4', 150, 5, null], ['roomclear&squad4', 150, 3, 'compound']] as const).map(([q, secs, seed, level]) => ({ q, secs, seed, level, fight: apart(q, secs, false, seed, level) }));
+const SHORT = ([['roomclear&squad4', 40], ['nightbreach', 30]] as const).map(([q, secs]) => ({ q, secs, twin: apart(q, secs, true), fight: apart(q, secs) }));
+for (const { q, secs, twin, fight } of SHORT) {
+  const F = await fight;
   fightLine('fight', q, secs, F);
   // ---- twin   (the same fight again in a fresh process, a look ahead for both seats before every tick)
-  { const T = apart(q, secs, true);
+  { const T = await twin;
     let part = -1; for (let k = 0; k < Math.max(F.words.length, T.words.length); k++) if (F.words[k] !== T.words[k]) { part = k; break; }
     verdict(!F.err && !T.err && F.words.length === secs && part < 0 && T.looks > 0 && !T.wrote.length && T.swung > 0, `twin (${q}): the fight with a look ahead for both seats every tick is the same game, and a look writes nothing`,
       T.err ? `after ${T.ticks} ticks: ${T.err}` : (part < 0 ? `${T.words.length} seconds, the game's word the same at each` : `THE GAMES PART in second ${part + 1}`)
@@ -281,11 +288,11 @@ for (const [q, secs] of [['roomclear&squad4', 40], ['nightbreach', 30]] as const
           : ` · ${T.looks} pairs of looks held by the whole game's state words: none changed a part but the scratch a look leaves (${[...LOOK_SCRATCH].join(', ')})`)); }
 }
 // ---- long   (two and a half minutes each, on another die and on another floor)
-for (const [q, secs, seed, level] of [['roomclear&squad4', 150, 5, null], ['roomclear&squad4', 150, 3, 'compound']] as const) {
-  const F = apart(q, secs, false, seed, level);
+for (const { q, secs, seed, level, fight } of LONG) {
+  const F = await fight;
   fightLine('long', `${q}, ${level ?? 'the page\'s own floor'}, die ${seed}`, secs, F);
 }
-// ---- tables   (over everything above: the script, the firefights)
+// ---- tables   (over the script above: the firefights are processes of their own)
 { const seen = [...VIEW_KEYS.seen].sort(), odd = seen.filter((n: string) => !SEAT_TABLES.includes(n)), raw = [...VIEW_KEYS.raw].filter((n: string) => SEAT_TABLES.includes(n)).sort();
   verdict(odd.length === 0 && raw.length === 0 && seen.length > 0, "tables: a table keyed by the game is a seat's (asked under a view) or the world's (asked under the Game), never both",
     `${seen.length} asked under a view, each listed as a seat's: ${seen.join(', ') || 'none'}${odd.length ? ` · NOT A SEAT'S, ASKED UNDER A VIEW: ${odd.join(', ')}` : ''}${raw.length ? ` · A SEAT'S, ASKED UNDER THE GAME: ${raw.join(', ')}` : ''} · ${VIEW_KEYS.raw.size} asked under the Game`); }
