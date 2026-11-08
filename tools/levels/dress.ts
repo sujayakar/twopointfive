@@ -2,7 +2,7 @@
 // paper stacks, mugs, phones, box files and dark monitors on the tables and counters a generator already stood up, binder runs on its shelf boards, files on its
 // cabinets. No new look: every piece is one the office already has (scene/levelKit.ts papers / monitor, officeGen's desk clutter), no light, no switchable, nothing
 // at floor level, nothing outdoors, nothing where the generator already put a thing. tools/levels/export.ts calls dressLevel() after build() and files the boxes
-// LAST under the editor group DRESS_GROUP; scene/levelLoad.ts leaves that group out with the destruction switch off (game/destructionSwitch.ts), so the level a
+// LAST under the editor group DRESS_GROUP; scene/levelLoad.ts leaves that group out with the destruction switch off (scene/dressing.ts), so the level a
 // generator returns — and every index in it — is untouched by any of this.
 // Deterministic: every choice is a hash of the surface's own centre (never Math.random); a generator that moves a desk moves its dressing with it.
 import type { Vec3 } from '../../src/math/vec';
@@ -10,7 +10,7 @@ import { Box, BoxFlag, makeBox } from '../../src/scene/boxes';
 import { PHONE_BLACK, madeOf, worded } from '../../src/scene/stuff';
 import type { Level } from '../../src/scene/level';
 import * as MD from '../../src/scene/markingDefaults';
-import { DRESS_GROUP } from '../../src/game/destructionSwitch';
+import { DRESS_GROUP } from '../../src/scene/dressing';
 
 const SCREEN_OFF: Vec3 = [0.02, 0.02, 0.025], BLACK: Vec3 = [0.04, 0.04, 0.045];   // (the kit's screenOff / black paints: the export names them by colour, finish and all)
 const MUGS: Vec3[] = [[0.82, 0.82, 0.8], [0.15, 0.2, 0.35], [0.55, 0.12, 0.1], [0.2, 0.2, 0.21]];

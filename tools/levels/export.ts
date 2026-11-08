@@ -28,7 +28,7 @@ const { level, scenarios, groups, surfaces } = gen.build();
   fitDoors(level.doors);   // every leaf the real door of its slot (doorSize.ts — a generator that frames a COPY of a def leaves the level's own unfitted)
   fitWaysOut(level, scenarios?.quiet); }   // … and a way out that names a door goes through the door as fitted
 // DRESSING (tools/levels/dress.ts): the loud levels get things to wreck, appended LAST under their own group — which the loader leaves out with the destruction switch off
-// (game/destructionSwitch.ts), so the switch is raised here for the reload check below: the file must reproduce the DRESSED level.
+// (scene/dressing.ts), so the switch is raised here for the reload check below: the file must reproduce the DRESSED level.
 // LIVED-IN ROOMS (src/scene/lived.ts): what furnishes a room — boxes in group 'lived.<room>', props / lights / fixtures named 'lived.…' — is left out by the loader with
 // its switch off, and off must be the level as it was. So: the lived things are the TAIL of each of the generator's lists (nothing kept comes after one, so no kept
 // index moves and a fixture's box references stay true), nothing kept names a lived box, and the dressing below is dealt as if they were not there (the same
@@ -55,7 +55,7 @@ const dressBare = (dressLevel: (l: unknown, g: string[]) => { added: number; sur
   if (hit.length) throw new Error(`lived things stand in the dressing (${hit.length}): ${hit.slice(0, 6).join(' · ')} — the dressing is dealt as if the furniture were not there; move them off the surfaces it dresses`);
   return st; };
 const nGen = level.boxes.length;   // (the generator's own boxes + its lived things: what follows is the dressing)
-{ const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`); DESTRUCTION.on = true;
+{ const { DESTRUCTION } = await import(`${ROOT}/src/scene/dressing.ts`); DESTRUCTION.on = true;
   const { dressLevel, LOUD_LEVELS } = await import('./dress.ts');
   if (LOUD_LEVELS.some((l: { gen: string }) => l.gen === name) && !argv.includes('--bare')) { const st = dressBare(dressLevel); console.log(`dressing: ${st.added} boxes on ${st.surfaces} surfaces — ${Object.entries(st.by).map(([k, n]) => `${n} ${k}`).join(', ')}`); } }   // (surfaces: the footstep map — game/floor.ts; a generator that gives none gets the office's)
 if (groups.length !== level.boxes.length) throw new Error(`trace: ${groups.length} groups for ${level.boxes.length} boxes`);

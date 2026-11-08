@@ -34,6 +34,7 @@ import { snowBogAt, snowBogMay, snowBogKinds } from './snowBog';
 import { attachSnowBlast, clearSnowBlast, stepSnowDigs } from './snowBlast';
 import { SNOW_LOOK, snowLevel, WEATHER_PRESETS } from './weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
+import { LEVEL_SCRIPTS } from './levelScripts';
 import { LOOK } from '../scene/look';   // (a leaf: no imports)
 import { leafRowOf, paintLeaves } from '../scene/leafPaint';
 import { SmokeSystemLike } from '../smoke/types';
@@ -1216,7 +1217,7 @@ export class Game {
     for (const s of this.seats) s.view.wallCharge = new WallCharge(s.view);     // (after the door tools: it spends their charges)
     for (const s of this.seats) registerShutDoor(s.view);                     // (after the door tools: 'shut that door' stands in for their charge row on a door that stands open)
     standMen(this);   // (seats.ts: a second seat's man and his light, made last — a game of one makes nothing here)
-    this.director = new Director(this, level.script ?? null);   // the level's script: its define pass run and linted against this level here (nothing of the world touched); programs start on demand
+    this.director = new Director(this, LEVEL_SCRIPTS[levelNameOf(level) ?? ''] ?? null);   // the level's script (levelScripts.ts): its define pass run and linted against this level here (nothing of the world touched); programs start on demand
     this.glassBreak.stood();   // (which glass each pane is, settled as the level stands)
     { const over = stoodOver(this, this.col.mirror.tables); if (over) throw new Error(over); }   // (levelfit.ts: the game as it stands, against every table and pool that holds it — one over is not a game)
   }

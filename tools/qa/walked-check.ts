@@ -40,7 +40,7 @@ type V3 = number[];
 const nameOf = (file: string): string => file.replace(/\.json$/, '');
 
 /** A LEVEL AS THE PAGE WALKS IT: its file loaded with the lived rooms and the dressing in, the office with its script, the walk grid of its boxes (the
- *  one the page's own reader is handed: game.ts gives buildWearMap `col.nav`) and its ways. tools/levels/walked-overlay.ts draws the same.
+ *  one the page's own reader is handed: game.ts gives buildWearMap `col.nav`) and its ways.
  *  `bare` = the red path's: no routes, no scenarios */
 export function pageWays(name: string, bare = false) {
   { const data = parseLevelData(readFileSync(`${ROOT}/levels/${name}.json`, 'utf8')), level: any = loadLevel(data, { lived: true, dressing: true });

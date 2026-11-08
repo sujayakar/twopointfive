@@ -19,8 +19,6 @@ holder	tools/blitz/hostflags-check.ts
 holder	tools/blitz/import-check.ts
 holder	tools/blitz/import.ts
 holder	tools/blitz/keep-check.ts
-holder	tools/blitz/kitplan-diff.ts
-holder	tools/blitz/kitstage-diff.ts
 holder	tools/blitz/made-null-check.ts
 holder	tools/blitz/made-row-check.ts
 holder	tools/blitz/mission.ts
@@ -45,6 +43,7 @@ holder	tools/blitz/surface.ts
 holder	tools/blitz/thrice.ts
 holder	tools/blitz/timeline.ts
 holder	tools/blitz/track-check.ts
+holder	tools/blitz/track.ts
 holder	tools/blitz/verdict-of.ts
 holder	tools/blitz/wasm-run.ts
 holder	tools/blitz/window-check.ts
@@ -115,7 +114,6 @@ holder	tools/levels/tut-quiet.ts
 holder	tools/levels/tut-road.ts
 holder	tools/levels/tut-team.ts
 holder	tools/levels/vault.ts
-holder	tools/levels/walked-overlay.ts
 holder	tools/levels/warehouse-floor.ts
 holder	tools/levels/warehouse.ts
 holder	tools/levels/white-roof.ts
@@ -226,7 +224,6 @@ holder	tools/qa/doorshots-check.ts
 holder	tools/qa/doorsolid-check.ts
 holder	tools/qa/doorstay-probes.ts
 holder	tools/qa/doorstun-check.ts
-holder	tools/qa/doortest-check.ts
 holder	tools/qa/doorthrow-check.ts
 holder	tools/qa/doortools-probes.ts
 holder	tools/qa/doze-check.ts
@@ -606,8 +603,7 @@ holder	tools/qa/squaddeal-check.ts
 holder	tools/qa/squaddoors-check.ts
 holder	tools/qa/squadnet-check.ts
 holder	tools/qa/squadsmoke-probes.ts
-holder	tools/qa/squadthrow-check.ts
-holder	tools/qa/squadthrow-walk-check.ts
+holder	tools/qa/squadwords.ts
 holder	tools/qa/stack-marks-check.ts
 holder	tools/qa/stackline-tally.ts
 holder	tools/qa/stackline-watch.ts
@@ -738,6 +734,7 @@ holder	tools/sim/men.ts
 holder	tools/wire/back-check.ts
 holder	tools/wire/class-defaults.ts
 holder	tools/wire/cost.ts
+holder	tools/wire/wire.ts
 left	levels/office.scenarios.ts
 left	levels/tut-kit.script.ts
 left	levels/tut-pair.script.ts
@@ -829,7 +826,6 @@ left	src/game/friendlyfire.ts
 left	src/game/friends.ts
 left	src/game/furnblast.ts
 left	src/game/game.ts
-left	src/game/gear.ts
 left	src/game/glass.ts
 left	src/game/glassPattern.ts
 left	src/game/glassbreak.ts
@@ -865,6 +861,7 @@ left	src/game/lanes.ts
 left	src/game/laststand.ts
 left	src/game/launcher.ts
 left	src/game/lesson.ts
+left	src/game/levelScripts.ts
 left	src/game/levelfit.ts
 left	src/game/lighting.ts
 left	src/game/lightswitch.ts
@@ -1005,14 +1002,12 @@ left	src/game/workthings.ts
 left	src/host/ahead.ts
 left	src/host/api.ts
 left	src/host/endcard.ts
+left	src/host/gameend.ts
 left	src/host/gamesnow.ts
 left	src/host/gpuEnums.ts
 left	src/host/handsoff.ts
 left	src/host/held.ts
 left	src/host/hudsource.ts
-left	src/host/kitView.ts
-left	src/host/kitViewPlan.ts
-left	src/host/kitViewSet.ts
 left	src/host/loop.ts
 left	src/host/modelerr.ts
 left	src/host/names.ts
@@ -1036,7 +1031,6 @@ left	src/net/step.ts
 left	src/net/timeline.ts
 left	src/render/probe.ts
 left	src/replay/engineplay.ts
-left	src/replay/minimap.ts
 left	src/replay/recipestand.ts
 left	src/replay/soundfilm.ts
 left	src/replay/soundlanes.ts
@@ -1045,23 +1039,27 @@ left	src/replay/tapewalk.ts
 left	src/replay/viewer.ts
 left	src/scene/bars.ts
 left	src/scene/boxMirror.ts
+left	src/scene/caps.ts
+left	src/scene/carLamps.ts
 left	src/scene/carShapes.ts
 left	src/scene/collision.ts
 left	src/scene/doorSize.ts
+left	src/scene/dressing.ts
 left	src/scene/gwotKit.ts
 left	src/scene/leafPaint.ts
 left	src/scene/level.ts
 left	src/scene/levelData.ts
 left	src/scene/levelKit.ts
 left	src/scene/levelLoad.ts
-left	src/scene/levelScripts.ts
 left	src/scene/library.ts
 left	src/scene/lint.ts
 left	src/scene/lived.ts
 left	src/scene/lookTidy.ts
 left	src/scene/markingDefaults.ts
+left	src/scene/officeFloor.ts
 left	src/scene/officeGen.ts
 left	src/scene/thin.ts
+left	src/scene/weaponIds.ts
 left	src/sim/built.ts
 left	src/sim/colstore.ts
 left	src/sim/dicehome.ts
@@ -1080,7 +1078,6 @@ left	src/sim/state.ts
 left	src/sim/weatherhome.ts
 left	src/ui/bindings.ts
 left	src/ui/capture.ts
-left	src/ui/debrief.ts
 left	src/ui/devhud.ts
 left	src/ui/domshot.ts
 left	src/ui/findmeviz.ts
@@ -1088,12 +1085,8 @@ left	src/ui/kitBoot.ts
 left	src/ui/menu.ts
 left	src/ui/netrows.ts
 left	src/ui/pictureviz.ts
-left	src/ui/recap.ts
 left	src/ui/replaykey.ts
-left	src/ui/verdictCard.ts
-left	src/ui/verdictNext.ts
 left	src/ui/windviz.ts
-left	src/view/debriefview.ts
 stays	src/anim/characters.ts
 stays	src/anim/gltf.ts
 stays	src/audio/acoustic.ts
@@ -1146,6 +1139,7 @@ stays	src/draw/writer.ts
 stays	src/engine.ts
 stays	src/game/camera.ts
 stays	src/game/crossing.ts
+stays	src/game/gear.ts
 stays	src/game/input.ts
 stays	src/game/shardModel.ts
 stays	src/game/sheetModel.ts
@@ -1161,6 +1155,7 @@ stays	src/host/capture.ts
 stays	src/host/debugger.ts
 stays	src/host/drawbench.ts
 stays	src/host/drawcloud.ts
+stays	src/host/drawend.ts
 stays	src/host/drawgame.ts
 stays	src/host/drawhud.ts
 stays	src/host/drawnet.ts
@@ -1181,6 +1176,7 @@ stays	src/host/machine.ts
 stays	src/host/measure.ts
 stays	src/host/myname.ts
 stays	src/host/pace.ts
+stays	src/host/pictureopens.ts
 stays	src/host/reel.ts
 stays	src/host/runpage.ts
 stays	src/host/sandbox.ts
@@ -1264,6 +1260,7 @@ stays	src/replay/keeper.ts
 stays	src/replay/keepstore.ts
 stays	src/replay/kept.ts
 stays	src/replay/keptui.ts
+stays	src/replay/minimap.ts
 stays	src/replay/shelf.ts
 stays	src/scene/airGrid.ts
 stays	src/scene/boxes.ts
@@ -1298,6 +1295,7 @@ stays	src/tape/bar.ts
 stays	src/tape/freecam.ts
 stays	src/tape/handtape.ts
 stays	src/tape/keep.ts
+stays	src/tape/map.ts
 stays	src/tape/pace.ts
 stays	src/tape/run.ts
 stays	src/ui/attentionviz.ts
@@ -1311,6 +1309,7 @@ stays	src/ui/cloudrows.ts
 stays	src/ui/cmdring.ts
 stays	src/ui/coop.ts
 stays	src/ui/corner.ts
+stays	src/ui/debrief.ts
 stays	src/ui/findme.ts
 stays	src/ui/findring.ts
 stays	src/ui/graphicspanel.ts
@@ -1344,6 +1343,7 @@ stays	src/ui/quality.ts
 stays	src/ui/railcard.ts
 stays	src/ui/railclear.ts
 stays	src/ui/readout.ts
+stays	src/ui/recap.ts
 stays	src/ui/ringlone.ts
 stays	src/ui/runBooks.ts
 stays	src/ui/runcard.ts
@@ -1358,13 +1358,17 @@ stays	src/ui/tabcard.ts
 stays	src/ui/textsize.ts
 stays	src/ui/theme.ts
 stays	src/ui/title.ts
+stays	src/ui/verdictCard.ts
+stays	src/ui/verdictNext.ts
 stays	src/ui/verdictPips.ts
 stays	src/ui/verdictRows.ts
 stays	src/ui/verdictStore.ts
 stays	src/view/cursor.ts
+stays	src/view/debriefview.ts
 stays	src/view/desk.ts
 stays	src/view/hud.ts
 stays	src/view/pagesaid.ts
 stays	src/view/read.ts
+stays	src/view/runend.ts
 stays	src/view/seatview.ts
 stays	src/view/worldask.ts

@@ -20,9 +20,10 @@
 import type { Vec3 } from '../math/vec';
 import type { Level } from './level';
 import type { LevelScenarios, Rect, TeamStart } from './scenarios';
-import type { NavGrid } from './collision';
 import { WORLD } from './world';
 
+/** a level's walk grid, as its ways are traced over it */
+export interface WalkGrid { cell: number; W: number; H: number; blocked: ArrayLike<number>; findPath(a: Vec3, b: Vec3, iterations: number): Vec3[] | null }
 /** a way the author adds (the level file's `scenarios.walked`): from a named thing to a named thing (the head of this file says what a name is); `weight` = how many ways it counts as (absent: one) */
 export interface WayHint { from: string; to: string; weight?: number }
 export interface Ways {
@@ -40,7 +41,7 @@ export const doorMid = (d: { hinge: readonly [number, number]; closedDir: number
 const PATH_ITER = 6000, STEP = 0.2;   // (the search's bound, as every asker of the grid has it; a way is laid on the cells every 20 cm of its length)
 
 /** `opts.hints`: the author's ways, where they are not the level's own (absent: `scenarios.walked`) */
-export function levelWays(level: Level, scenarios: LevelScenarios | undefined, nav: NavGrid | null, opts: { hints?: readonly WayHint[] } = {}): Ways {
+export function levelWays(level: Level, scenarios: LevelScenarios | undefined, nav: WalkGrid | null, opts: { hints?: readonly WayHint[] } = {}): Ways {
   const cell = nav?.cell ?? 0.5, w = nav?.W ?? Math.round(WORLD.gridW * WORLD.gridCell / cell), h = nav?.H ?? Math.round(WORLD.gridH * WORLD.gridCell / cell);
   const out: Ways = { x0: 0, z0: 0, cell, w, h, patrol: new Float32Array(w * h), team: new Float32Array(w * h), doors: new Float32Array(w * h), hint: new Float32Array(w * h), paths: [], unknown: [], lost: 0 };
   const mark = new Int32Array(w * h); let gen = 0;
