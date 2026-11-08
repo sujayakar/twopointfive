@@ -469,13 +469,6 @@ pub fn lane_exposed(g: &mut crate::game::Game, gd: GuardId) -> bool {
     lane_on(g, p, gd).is_some()
 }
 
-/// A magazine change this rule starts for a man behind his corner and counts down itself. (lanes.ts laneReload)
-pub fn lane_reload(g: &mut crate::game::Game, gd: GuardId) {
-    crate::guards::start_reload_beat(g, gd);
-    let t = g.gd[gd].reload_t;
-    s(g).reloads.set(gd, t);
-}
-
 /// A new state, the counters kept; every man this file had is let go of first. (lanes.ts lanesReset)
 pub fn lanes_reset(g: &mut crate::game::Game) {
     let Some(stats) = g.m.lanes.states.as_ref().map(|st| st.stats) else { return };

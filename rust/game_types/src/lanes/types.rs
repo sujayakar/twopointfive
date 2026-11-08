@@ -296,7 +296,6 @@ pub struct State {
     pub tick_t: f64,
     pub stats: crate::lanes::StateStats,
     pub peek: JsMap<GuardId, crate::lanes::Peek>,
-    pub reloads: JsMap<GuardId, f64>,
     pub frag_no: JsMap<GuardId, crate::lanes::StateFragNoValue>,
     pub near: Vec<crate::lanes::StateNearItem>,
 }
@@ -329,7 +328,6 @@ impl State {
             tick_t: 0.0,
             stats: crate::lanes::StateStats::zeroed(),
             peek: JsMap::new(),
-            reloads: JsMap::new(),
             frag_no: JsMap::new(),
             near: Vec::new(),
         }

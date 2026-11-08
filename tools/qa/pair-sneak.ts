@@ -93,15 +93,11 @@ async function one(scn: string, seed: number, arm: Arm, cap: number, verbose: bo
   hush(); const { why } = startFromQuery(g, new URLSearchParams(q)); unhush(); if (why) throw new Error(`start refused — ${why}`);
   const pl = g.player;   // (the start stands a fresh Player: taken after it)
   // PS_MOON=1: a stand-in for the moonlight the headless light estimate leaves out (guards.ts lightEstimateAt skips directional lights; the page's meter has
-  // them). The goggles' own rule for where it falls (nvg.ts nvgPlaceLight): wherever the sky its way is open. Added to Sam's meter and to every
-  // unit's (through the game's lightQuery / lightAt hooks), so a man in a moonlit yard is as visible here as the page's meter would have him. Sight only.
+  // them). The goggles' own rule for where it falls (nvg.ts nvgPlaceLight): wherever the sky its way is open. Added to Sam's meter. Sight only.
   const MOON = process.env.PS_MOON === '1';
   const moonAt = (P: number[]): number => { let E = 0; for (const l of g.engine.lights.lights) { if (l.kind !== 2 || !l.enabled || l.intensity <= 0 || l.transient || l.ttl >= 0) continue;
     if (!g.col.segmentBlocked(P, [P[0] - l.dir[0] * 60, P[1] - l.dir[1] * 60, P[2] - l.dir[2] * 60])) E += (0.2126 * l.color[0] + 0.7152 * l.color[1] + 0.0722 * l.color[2]) * l.intensity * Math.max(Math.abs(l.dir[0]), Math.abs(l.dir[1]), Math.abs(l.dir[2])); } return E; };   // (× the best of the meter's six normals, as the page's meter reads a directional light)
   const openSky = (p: number[]): boolean => { let clear = 0; for (const [dx, dz] of [[0, 0], [0.3, 0], [-0.3, 0], [0, 0.3], [0, -0.3]]) if (!g.col.solidBlocked([p[0] + dx, 1.8, p[2] + dz], [p[0] + dx, 14, p[2] + dz])) clear++; return clear >= 3; };   // (pair-sneak-sky.ts's own test)
-  if (MOON) { const Q = new Map<string, number[]>(), q0 = g.lightQuery, a0 = g.lightAt;
-    g.lightQuery = (key: string, pos: any, skip?: number) => { if (/^unit[CH]/.test(key)) Q.set(key, [pos[0], pos[1], pos[2]]); q0(key, pos, skip); };
-    g.lightAt = (key: string) => { const P = Q.get(key); return P ? lightEstimateAt(g, P as any) + moonAt(P) : a0(key); }; }
 
   // ───────────────────────────── the run's books
   let t = 0; const trace: string[] = [];

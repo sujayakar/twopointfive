@@ -8,7 +8,6 @@ use alloc::{string::String, vec::Vec};
 pub struct State {
     pub brought: f64,
     pub cans: f64,
-    pub noted: bool,
     pub last: JsMap<GuardId, f64>,
 }
 impl State {
@@ -17,7 +16,6 @@ impl State {
         State {
             brought: 0.0,
             cans: 0.0,
-            noted: false,
             last: JsMap::new(),
         }
     }
@@ -150,6 +148,3 @@ pub struct SquadsmokeStats {
 
 /// (src/game/squadsmoke.ts:39 SQUADSMOKE: a table nothing writes)
 pub fn squadsmoke() -> crate::squadsmoke::SQUADSMOKE { crate::squadsmoke::SQUADSMOKE { order_key: String::from("KeyH"), speed: 9.0, near_m: 1.0, floor_m: 0.035, clear_h: alloc::vec![0.07, 0.3], roll_k: 0.061, hand_ahead: 0.35, hand_up: 1.3, head_drop: 0.3, again_secs: 1.2 } }
-
-/// (src/game/squadsmoke.ts:55 SMOKE_ORDER)
-pub const SMOKE_ORDER: &str = "smokeThere";

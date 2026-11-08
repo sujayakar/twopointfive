@@ -60,36 +60,10 @@ export function loudRow(g: Game): boolean {
   return run?.kind === 'quiet' && run.entry?.lean === 'loud';
 }
 
-/** the way a run was won, read off the run */
-export type Approach = 'doors' | 'walls' | 'dark' | 'quiet';
-export type ManState = 'up' | 'out' | 'dead';
-export type ManTone = 'you' | 'purple' | 'red' | 'blue' | null;
-
-/** one man of the team at the run's end. Times are seconds from the try's start; `path` is x, z, t triples sampled as he walked. */
-export interface VerdictMan {
-  id: number; name: string; tone: ManTone; human: boolean;
-  state: ManState; downAt: number; downRoom: string; downBy: string; downPos: [number, number] | null;
-  drops: number[]; path: number[];
-}
-export interface RunVerdict {
-  kind: ReturnType<typeof activeScenario>;
-  won: boolean; word: string; why: string;
-  /** seconds from the try's start to the end */
-  secs: number;
-  approach: Approach | null;
-  /** a cheat was on during the try: nothing of it is kept */
-  void: boolean;
-  /** nobody of the team was lost */
-  clean: boolean;
-  men: VerdictMan[]; lost: number; of: number;
-  /** the defenders: how many went down of how many, and where (x, z pairs) */
-  foes: { down: number; of: number; fell: number[] };
-  hostages: { alive: number; of: number } | null;
-  /** where the team started (the map's mark) */
-  start: [number, number];
-}
-/** the page's note to the card: which try of the streak this was (0 = not a counted try), the ways won on this mission so far */
-export interface KeptNote { streak: number; fresh: boolean; gold: boolean; ways: Partial<Record<Approach, { first: boolean; clean: boolean }>>; /** a Training lesson's run: nothing is kept of it and the card grades nothing — no ways, no tries */ lesson?: boolean }
+import { clock, verdictLine } from '../view/runend';
+export { clock, verdictLine };
+import type { Approach, KeptNote, ManState, ManTone, RunVerdict, VerdictMan } from '../view/runend';
+export type { Approach, KeptNote, ManState, ManTone, RunVerdict, VerdictMan } from '../view/runend';
 
 /** THE VERDICT ON A PUPPET IS A READER. The Rust game works the verdict out in its own tick and latches it (rust/game/src/verdict/p_01.rs: the first end
  *  of a run stays); what the page reads of the record is applied onto this object every tick: the run it is of (the mission record), the try's start,
@@ -131,16 +105,3 @@ export class Verdict {
   summary(): string { const R = this.result; return R ? verdictLine(R, this.kept) : this.started ? `try running · ${clock(this.secs)}` : 'not started'; }
 }
 
-/** m:ss */
-export function clock(s: number): string { const t = Math.max(0, Math.floor(s)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; }
-/** the verdict as one line (the copy button, a console read-out) */
-export function verdictLine(R: RunVerdict, kept: KeptNote | null = null): string {
-  const parts = [`${R.word} ${clock(R.secs)}`];
-  if (R.approach && !kept?.lesson) parts.push(R.approach);
-  if (R.of > 1) parts.push(`${R.of - R.lost} of ${R.of} up`);
-  if (R.foes.of) parts.push(`${R.foes.down} of ${R.foes.of} defenders down`);
-  if (R.hostages) parts.push(`${R.hostages.alive} of ${R.hostages.of} hostages alive`);
-  if (kept?.streak) parts.push(`try ${kept.streak}`);
-  if (R.void) parts.push('cheats on: not kept');
-  return parts.join(' · ');
-}

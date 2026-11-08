@@ -35,8 +35,7 @@
 // THE GAP BETWEEN THE SIDES is FIGHT_SKILL: one row a side, the same keys. Lethality is not in it (a round that finds a man drops him, both ways); what differs is
 // how soon a man starts on a target, how soon he is settled, how wide the unsettled rounds go, whether he holds his angle, and what a bang does to him.
 //
-// What is asked of the renderer goes through Game.sensors (the smoke between each operative / defender pair in reach, ≤ ROOMFIGHT.pairs segments a frame, keys
-// 'fightS<a>_<b>'); headless nothing answers and the air is clear. guards.ts reads it back through pairSmoke() for every AI-on-AI sight test.
+// The smoke between each operative / defender pair in reach is the game's own (rust/game_rules/src/sense). guards.ts reads it through pairSmoke() for every AI-on-AI sight test.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
 import { men, manOf } from './seats';
 import { SideSet } from '../math/side';
@@ -293,7 +292,7 @@ interface Op {
   stepT: number; stepBy: { by: Guard; t: number; at: Vec3 } | null;
   /** ROOMFIGHT.doorEars: the door an enemy's hand has just opened where he heard it and has a line to its doorway — who worked it, when, the doorway point he looks at */
   doorBy: { by: Guard; t: number; at: Vec3; door: Door } | null;
-  funnelT: number; lineT: number; /** who the round was last held for, and when (showwhy.ts reads it: the fire gate's own answer, lane or cone) */ lineBy: Guard | 'player' | null; lineAt: number; /** seconds on his man with his gun in a wall (gunwall.ts) */ wallT: number; stepUntil: number; reloadUntil: number; saidT: number;
+  funnelT: number; lineT: number; /** who the round was last held for, and when (showwhy.ts reads it: the fire gate's own answer, lane or cone) */ lineBy: Guard | 'player' | null; lineAt: number; /** seconds on his man with his gun in a wall (gunwall.ts) */ wallT: number; stepUntil: number; saidT: number;
   rounds: number; heldForFriend: number; heldForLine: number; blockT: number;
   /** the feet his hands still remember (aimcost.ts `feetHold`; only fed under AIMCOST.move) */
   feetSm?: number;
@@ -420,7 +419,6 @@ export class RoomFight {
       D.gd.pinned = D.pinned0;
     }
     for (const x of [...this.defs.map(d => d.gd), ...this.ops.map(o => o.gd)]) x.skill = null;
-    for (const k of this.trans.keys()) this.g.sensors.forget(k);
     this.live = false; this.defs = []; this.ops = []; this.trans.clear(); this.called.clear(); this.downCalled.clear(); this.blindRounds = 0; this.hotT = -100; this.reports = [];
     digInReset(this.g);                                    // digin.ts: wedged doors get their own locks back (nothing to do, and nothing done, unless a room dug in)
   }

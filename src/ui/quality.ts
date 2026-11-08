@@ -247,7 +247,7 @@ export const PRESETS: Record<QualityName, Preset> = {
   verylow: { restir: { rays: 2, spatial: 1, history: 20, held: 2, motionMin: 1.0, motionTaps: 6 }, rt: RT_OFF, dn: { shIters: 2, shCap: 8, giIters: 2, giCap: 8, spIters: 1 }, iq: IQ_C3J, scale: 0.5,  taau: { phases: 16, clipGamma: 1.25, sharpen: 0.5 }, maxH: 600,  volSteps: 8,  rc: { nx: 40, ny: 4, nz: 28 }, rcCoarse: { nx: 32, ny: 3, nz: 22 }, smokeOwn: true, cascades: 4, rbIters: 3, mesh: false, cards: false, lossy: { gatherThird: true, rcHalfRate: false, volQuarter: true, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 4, 8] }, caps: { volK: 2, volEvery: 2, volStep: 2.0, births: 128, rain: 800 } },
 };
 /** ONE SMOKE SOLVE (settings.oneSmokeSolve, default on, `?onesolve=0`; off = each preset's own `rbIters`, as it was: ultra 5, high 4, the rest 3). A sight line through smoke
- *  (a defender's eye to the player, the room fight's pairs, a camera's: game/sensors.ts → render/shaders/probe.wgsl kind 1) is the optical depth of the SOLVER's density along the
+ *  (a defender's eye to the player, the room fight's pairs, a camera's) was the optical depth of the SOLVER's density along the
  *  line. The red/black pairs of the pressure solve decide how well the velocity field is projected each step, so how a plume rolls and spreads: with the pairs a preset row, the
  *  cloud that hides a man had a different shape at medium than at high, and the auto ladder changed it under a fight each time it stepped. A game rule that read the graphics
  *  setting, as the light meter's cache grid was (ONE CACHE GRID below). One count for every preset, high's: the cloud drawn at ultra is no longer finer than the one sight reads

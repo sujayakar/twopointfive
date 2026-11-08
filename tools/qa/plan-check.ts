@@ -8,11 +8,12 @@ import { standUp, ROOT } from './headless.ts';
 
 const FP: any = await import(`${ROOT}/src/game/floorplan.ts`);
 const PF: any = await import(`${ROOT}/src/ui/planfloor.ts`);
+const { hudSource } = await import(`${ROOT}/src/host/hudsource.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { PLAN } = FP;
 // the plan is read as the page reads it (ui/planfloor.ts plansToDraw over `view.plan`, its own store of kept legs); here a man is found by his id and a door by its name
-const floorPlan = (g: any) => { if (!g.view.plan) throw new Error('no plan in the view: a check with nothing to read holds nothing'); const P = PF.plansToDraw(g)[0].P, by = (id: number) => g.guards.find((m: any) => m.char.id === id);
+const floorPlan = (g: any) => { if (!g.view.plan) throw new Error('no plan in the view: a check with nothing to read holds nothing'); const P = PF.plansToDraw(hudSource(g))[0].P, by = (id: number) => g.guards.find((m: any) => m.char.id === id);
   return { ...P, men: P.men.map((m: any) => ({ ...m, gd: by(m.man) })), who: P.who.map((w: any) => ({ ...w, gd: by(w.man) })), throws: P.throws.map((t: any) => ({ ...t, gd: by(t.man) })), doors: P.doors.map((d: any) => ({ ...d, door: d.door ? g.doors.byName(d.door) : null })) }; };
 
 const DT = 1 / 60;
@@ -79,7 +80,7 @@ async function planLines(): Promise<boolean> {
     line(men.length > 0 && straight && finite && walls === 0, 'each way is a real walk, through no wall', `${men.map(m => `${m.tag}: ${f1(len(m.path))} m for ${f1(dist(m.gd.char.pos, m.mark))} m straight`).join(' · ')} · ${walls} legs through something solid`);
     // with his own path set aside: the floor's search (game.ask.way) for each leg, the answer kept by the picture and asking it writes nothing
     { const H = g.ask, way0 = H.way; let asked = 0; H.way = (x: any, y: any, n: number) => { asked++; return way0(x, y, n); };
-      try { const W0: any[] = g.view.plan.own.men, hash0 = g.stateWords?.().parts?.join(','); const forced = W0.map((m: any) => PF.wayOf(g, m.man, { ...m.way, own: null })), first = asked, again = W0.map((m: any) => PF.wayOf(g, m.man, { ...m.way, own: null }));
+      try { const W0: any[] = g.view.plan.own.men, hash0 = g.stateWords?.().parts?.join(','); const forced = W0.map((m: any) => PF.wayOf(hudSource(g), g.view.look.plan.reaskSecs, m.man, { ...m.way, own: null })), first = asked, again = W0.map((m: any) => PF.wayOf(hudSource(g), g.view.look.plan.reaskSecs, m.man, { ...m.way, own: null }));
         const real = forced.every((w: any[], i: number) => w.length >= 2 && dist(w[w.length - 1], W0[i].mark) < 0.06 && w.slice(1).every((q: number[], k: number) => !g.col.solidBlocked(up(w[k]), up(q))));
         const same = forced.every((w: any[], i: number) => JSON.stringify(w) === JSON.stringify(again[i]));
         line(W0.length === 4 && first >= 4 && asked === first && real && same && hash0 === g.stateWords?.().parts?.join(','), 'a man with no path of his own: the floor is asked, the answer kept, nothing written', `${first} legs asked of the floor, ${asked - first} more on a second ask · each a real walk to his mark: ${real}`);

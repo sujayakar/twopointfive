@@ -10,8 +10,8 @@
 // are named in docs/agents/net.md. A name the module no longer has is passed over (netWatch), so a part renamed there falls off until the list is made again.
 export const NET_AGREED: readonly string[] = [
 // <list>
-  'snow_field', 'snow_tracks', 'snow_look_was', 'rig_fits', 'rig_fit_of', 'guards', 'civilians', 'targets', 'events', 'sensors', 'cpu_smoke',
-  'smoke_owned', 'search_probe_n', 'time', 'dice', 'light_home', 'pose_sets', 'falls', 'ai_enabled', 'god_mode', 'infinite_ammo', 'show_debug',
+  'snow_field', 'snow_tracks', 'snow_look_was', 'rig_fits', 'rig_fit_of', 'guards', 'civilians', 'targets', 'events',
+  'search_probe_n', 'time', 'dice', 'light_home', 'pose_sets', 'falls', 'ai_enabled', 'god_mode', 'infinite_ammo', 'show_debug',
   'spectate', 'player_invisible', 'rings', 'shells', 'fn2000', 'doors', 'door_deals', 'props', 'reach_interior', 'touring', 'tmp_v', 'called_in',
   'stood_down', 'escalation', 'escalation_t', 'alarm', 'clearing', 'clear_rooms', 'cleared_at', 'beacons', 'items', 'tracers', 'fx_seed',
   'ocp_cooldown', 'last_sting_t', 'event_seq', 'messages', 'mission', 'qrf', 'devices', 'air_dust', 'moths', 'glass_break', 'shards', 'director',

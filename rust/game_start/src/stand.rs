@@ -163,6 +163,9 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     // (it goes home to the block with the rest of the moving state, in `settle`: until then it draws off its own word)
     g.dice = Some(game::math_dice::sim_dice_new(o.seed as f64));
     g.col.boxes = loaded.boxes.clone();   // (`level.boxes`, which the constructor reads as the collision's list)
+    // (the picture told the level's own night, as every host's stand tells it: standGame's line)
+    g.engine.settings.sky_zenith = g.level.sky.zenith;
+    g.engine.settings.sky_horizon = g.level.sky.horizon;
     game::game::game_new(&mut g, rig, Some(game::game::GameNewOpts { seats: Some(o.seats as f64) }));
     settle(&mut g);
     // A GAME STOOD WITH NO ADDRESS is the harness's plain stand (standGame with `harness`): the solo night's card goes on at the stand, by the
@@ -186,6 +189,8 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
         if let Some(why) = game::scenario_run::start_scenario(&mut g, spec) { panic!("the game refused the {}: {}", spec.kind.as_str(), why); }
         settle(&mut g);   // (the men the mission made: their poses go home as a tick's opening would take them)
     }
+    // (what the light under a roof is worked out from is made behind the loading, and not in the first step, whichever host stands it)
+    game::scene_collision::light_ready(&mut g);
     Stood { game: g, host, level: loaded, rig }
 }
 
@@ -198,8 +203,6 @@ pub fn frame(g: &mut Game, h: &Host, dt: f64) -> Vec<game::out_events::OutEvent>
     let (follow, aim) = game::seats::with_seat(g, me, &mut |g| (game::game::game_follow_pos(g, None), g.aim_point));
     let aim = if g.spectate >= 0.0 { None } else { Some(aim) };
     game::camera::follow_camera_update(g, h.cam, dt, follow, aim);
-    let now = g.time;
-    game::render_lights::light_set_update(g, dt, now);
     game::input::input_end_frame(g, h.input);
     core::mem::take(&mut g.out)
 }

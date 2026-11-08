@@ -1,12 +1,12 @@
 //! FALL IN: "fall in". The men take places in the file behind Sam.
 use crate::game::Game;
 use crate::ids::*;
-use crate::orders::rows::Row;
+use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use crate::{js, m, v3};
 use alloc::{format, string::String, vec, vec::Vec};
 
-pub const ORDER: Row = Row::new("fallIn", label, issue);
+pub const ORDER: Row = Row { is: &[Is::Follows, Is::Resumed], ..Row::new("fallIn", label, issue) };
 
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("fall in") }
 
@@ -38,7 +38,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
         while taken.contains(&k) { k += 1.0; }
         taken.push(k);
         let a = SquadOrdersAssignA {
-            order: String::from("fallIn"), post: None, follow: Some(k), face: None,
+            order: String::from(ORDER.id), post: None, follow: Some(k), face: None,
             stance: Some(crate::character::Stance::LowReady), upper: Some(crate::character::UpperMode::None),
             going: String::from("falling in"), there: String::from("with you"),
             ..Default::default()

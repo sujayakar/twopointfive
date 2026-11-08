@@ -57,7 +57,6 @@ import './character';
 import { fleeMates } from './frag';
 
 import './samstun';
-import { workHand } from './workthings';
 
 import './squad40';   // (called inside a row's label only)
 import { crossToRust } from './crossing';
@@ -115,15 +114,6 @@ export const THROWPLAN_STATS = { sims: 0 };
 export const SQUADTHROW_STATS = { thrown: 0, frags: 0, stuns: 0, refused: 0, walks: 0, walked: 0, gaveUp: 0, searches: 0, arcs: 0, ducks: 0, cells: 0 };
 /** every one thrown on the order, newest last (QA; capped) */
 export const SQUADTHROW_LOG: { t: number; kind: SquadThrowKind; who: string; from: Vec3; at: Vec3; land: Vec3; rest: Vec3 }[] = [];
-
-/** his hands are on something else: he is the man setting a charge on a door or a wall, the man on the handle / the boot of a door order, he has a hand on
- *  a thing he was sent to work, or he is changing a magazine — another man throws, or nobody does (squad40.ts asks it of the man with the launcher) */
-export function handsAtWork(g: Game, gd: Guard): boolean {
-  if (g.doorTools.ops.some(o => o.lead === gd && (o.phase === 'place' || o.phase === 'kick'))) return true;
-  if (g.wallCharge.ops.some(o => o.lead === gd && o.phase === 'place')) return true;
-  if (workHand(g, gd.char)) return true;
-  const O = g.fight.opOf(gd); return gd.reloadT > 0 || (!!O && O.reloadUntil > g.time);
-}
 
 /** the man of `men` who would throw it, with his throw: the nearest to the spot with a hand free and an arc that brings the thing to rest on it (null: none) */
 export function squadThrower(g: Game, men: Guard[], at: Vec3, kind: SquadThrowKind): { gd: Guard; from: Vec3; sol: ThrowSolution; rest: Vec3 } | null { return crossToRust('squadThrower', undefined, [g, men, at, kind]) as any; }

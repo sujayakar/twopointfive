@@ -35,13 +35,10 @@
 //! the step
 //!   face_step(h, dt, flags)                   ONE TICK, and what tools/blitz/BRIDGE.md says a host calls round it, in its order:
 //!                                             `game_step` with the record face_host took (or the game's own `cmd_buf` where none was taken) ·
-//!                                             the autosave's rows face_hostwrite kept · flag 2 `LIGHTS`: the lights' update (a flash's envelope and
-//!                                             its retirement, which the next tick reads) · flag 4 `VIEW`: the host's view of a level on rails · flag 8 `SAVES`: the
+//!                                             the autosave's rows face_hostwrite kept · flag 4 `VIEW`: the host's view of a level on rails · flag 8 `SAVES`: the
 //!                                             save controller's turn (page.rs `saves`).
-//!                                             A host that plays calls this one thing a tick with LIGHTS and VIEW up. A host that compares the block
-//!                                             with the TypeScript's leaves them down, compares, and calls face_lights and face_view: the
-//!                                             TypeScript's hashes are taken before its host's half.
-//!   face_lights(h, dt) · face_view(h) · face_checkpoint(h, label, n)
+//!                                             A host that plays calls this one thing a tick with VIEW up. A flash's envelope is the tick's own last line.
+//!   face_view(h) · face_checkpoint(h, label, n)
 //!                                             the same by name, for a host that calls them itself (face_checkpoint when it has saved)
 //!
 //! reading back
@@ -49,8 +46,11 @@
 //!   face_verdict(h) -> 0 | 1 | 2              how the mission ended, off the record the game's tick latches: 0 not yet, 1 lost, 2 won (then the record as lines at face_out)
 //!   face_tick_view(h)                         what a HUD is told of the game as its last tick left it (a TickView at face_out); a read: no word of the state is written, and a copy of the boxes a writer put down is stood first
 //!   face_debrief_view(h)                      what the end card shows of the run (a DebriefView at face_out); a read, nothing kept
+//!   face_end(h)                               what an end card is drawn from beside its debrief, as JSON (end.rs): how the run ended with every man of it, the course's par, the map's floor and marks
+//!   face_floor(h) · face_map(h)               a map of the run, as JSON (map.rs): the floor, and who and what stands on it now
 //!   face_run_view(h)                          what a machine keeps of the run (a RunView at face_out); a read, nothing kept
 //!   face_line(h, what, a…, b…) -> 0 | 1 · face_ray(h, o…, d…, max) -> 0 | 1 · face_hear(h, s…, d…) · face_way(h, ax, az, bx, bz, iters) -> corners | -1
+//!   · face_light(h, p…, steady, leave, owners) -> f64
 //!                                             the box world asked of the game shared: the camera's, the sound's, the cursor's questions; nothing is kept
 //!   face_die_n(h) -> f64 · face_time(h) -> f64 · face_rows(h) -> usize
 //!                                             the die's count of draws (in the game's block), the game's clock, the rows of the box table
@@ -60,7 +60,10 @@
 //!                                             place (rust/sim's own `state_addr` / `state_len` / `state_part` say the same of the whole block)
 //!   face_part_hashes(slot) -> p               13 words: each part's hash as tools/blitz/mission.ts takes it (its words up to the last not zero)
 use std::cell::{Cell, RefCell};
+mod end;
+mod map;
 mod memo;
+mod moment;
 mod page;
 mod harness;
 mod desk;
@@ -80,9 +83,11 @@ struct Held {
     drawn: game_draw::Drawn,
     /// the seat nobody's hands are on, and who plays it
     hands: Option<(usize, game_run::hands_off::HandsOff)>,
+    /// what the save controller has said to the player, until the host asks
+    said: Vec<String>,
 }
 impl Held {
-    fn new(g: Box<Game>) -> Held { Held { g, cmd: None, cmds: None, after: Vec::new(), drawn: Default::default(), hands: None } }
+    fn new(g: Box<Game>) -> Held { Held { g, cmd: None, cmds: None, after: Vec::new(), drawn: Default::default(), hands: None, said: Vec::new() } }
     /// a seat's record for the next step; a seat nobody hands one is as it last was, with nothing pressed
     fn hand_over(&mut self, seat: usize, cmd: game::cmd::PlayerCmd) {
         let still = |s: game::ids::SeatId| { let c = self.g.tab.cmd_seat[s].cmd.as_ref().unwrap_or(&cmd); game::cmd::PlayerCmd { keys: Vec::new(), pressed: Vec::new(), buttons: 0.0, clicked: 0.0, wheel: 0.0, ..c.clone() } };
@@ -122,6 +127,10 @@ fn with<R>(h: u32, f: impl FnOnce(&mut Held) -> R) -> R {
     let r = f(&mut g);
     GAMES.with(|v| v.borrow_mut()[h as usize - 1] = Some(g));
     r
+}
+/// the game of a number that was lost to a panic is `f`'s again
+fn stand_if_lost(h: u32, f: impl FnOnce() -> Box<Game>) {
+    if GAMES.with(|v| v.borrow().get((h as usize).wrapping_sub(1)).is_some_and(|x| x.is_none())) { let g = f(); GAMES.with(|v| v.borrow_mut()[h as usize - 1] = Some(Held::new(g))); }
 }
 /// a call that may write what it does not say (a write by path, a state read in, a rule called from outside a tick, which may stage a level): the box world's copy is put
 /// down first, and the next question or tick proves it from nothing
@@ -168,8 +177,10 @@ pub extern "C" fn face_tally(h: u32) {
     let s = with_ref(h, |x| {
         let g = &x.g;
         let men: Vec<String> = g.guards.iter().map(|&gd| { let m = &g.gd[gd]; format!("[\"{}\",{}]", m.state.as_str(), g.tab.light[m.flashlight].enabled as u32) }).collect();
-        let s = &g.saves.stats;
-        format!("{{\"men\":[{}],\"qrf\":\"{}\",\"escalation\":{},\"autosaves\":{},\"manual\":{},\"loads\":{},\"stage\":\"{}\",\"alarm\":{},\"alerts\":{},\"clear\":{}}}", men.join(","), g.qrf.state.as_str(), g.escalation, s.autosaves, s.manual, s.loads, g.mission.stage.as_str(), g.mission.alarm_on, g.mission.stats.alerts, game::roomclear::room_clear_scenario_active(g))
+        let (s, m) = (&g.saves.stats, &g.mission.stats);
+        let word = |w: Option<&str>| w.map_or(String::from("null"), |w| format!("\"{}\"", w.replace('\\', "").replace('"', "")));
+        format!("{{\"men\":[{}],\"qrf\":\"{}\",\"escalation\":{},\"autosaves\":{},\"manual\":{},\"loads\":{},\"stage\":\"{}\",\"alarm\":{},\"alerts\":{},\"clear\":{},\"kind\":{},\"stats\":{{\"elapsed\":{},\"alerts\":{},\"spotted\":{},\"bodies\":{},\"shots\":{},\"kills\":{},\"knockouts\":{},\"keys\":{},\"blackout\":{},\"sandbox\":{},\"qrf\":{},\"qrfAt\":{},\"qrfWho\":{}}}}}", men.join(","), g.qrf.state.as_str(), g.escalation, s.autosaves, s.manual, s.loads, g.mission.stage.as_str(), g.mission.alarm_on, g.mission.stats.alerts, game::roomclear::room_clear_scenario_active(g),
+            word(g.verdict.res.as_ref().and_then(|r| r.kind).map(|k| k.as_str())), m.elapsed, m.alerts, m.spotted, m.bodies, m.shots, m.kills, m.knockouts, m.keys, m.blackout, m.sandbox, m.qrf, m.qrf_at, word(m.qrf_who.as_deref()))
     });
     out(s.into_bytes());
 }
@@ -215,6 +226,14 @@ pub extern "C" fn face_ray(h: u32, ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, 
     let Some(r) = asked(h, |w| w.ray([ox, oy, oz], [dx, dy, dz], max)) else { return 0 };
     out([r.t, r.n[0], r.n[1], r.n[2], r.index].iter().flat_map(|v| v.to_le_bytes()).collect());
     1
+}
+/// the light that stands on a point (game::sense::light_asked): `p`, `n` name the owners whose carried lamps are left out, as doubles. Nothing is kept and no apply follows.
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_light(h: u32, x: f64, y: f64, z: f64, steady: u32, leave: f64, p: *const u8, n: usize) -> f64 {
+    let owners: Vec<f64> = bytes(p, n).chunks_exact(8).map(|b| f64::from_le_bytes(b.try_into().unwrap())).collect();
+    with(h, |w| game::sense::light_asked(&mut w.g, [x, y, z], &owners, steady != 0, leave))
 }
 /// how a sound at `s` reaches a listener at `d`: at face_out ten doubles: how far it comes, through where (x y z), from where it seems to come (x y z), how muffled (0 1),
 /// how much of it carries, and 2 direct + 1 routed. A way round is searched for once a tick between the same two places of the floor; the game remembers none of it.
@@ -326,6 +345,7 @@ pub extern "C" fn face_blank() -> u32 {
 #[no_mangle]
 pub extern "C" fn face_drop(h: u32) {
     page::shelf_off(h, |_| true);
+    moment::off(h);
     GAMES.with(|v| if let Some(x) = v.borrow_mut().get_mut((h as usize).wrapping_sub(1)) { *x = None; });
 }
 #[no_mangle]
@@ -337,7 +357,7 @@ pub extern "C" fn face_slot(h: u32) -> usize {
 #[no_mangle]
 pub unsafe extern "C" fn face_import_into(h: u32, p: *const u8, n: usize) {
     let b = bytes(p, n);
-    with_unsaid(h, |x| game::io::import_into(&mut x.g, b));
+    with_unsaid(h, |x| { game::io::import_into(&mut x.g, b); game::kit::kit_words_again(&mut x.g); });
 }
 
 /// # Safety
@@ -460,7 +480,6 @@ pub extern "C" fn face_meter(h: u32, v: f64) {
 }
 
 // ---- the step
-pub const LIGHTS: u32 = 2;
 pub const VIEW: u32 = 4;
 pub const SAVES: u32 = 8;
 #[no_mangle]
@@ -472,7 +491,6 @@ pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
         }
         let mut said = String::new();
         for (k, l) in core::mem::take(&mut x.after) { if let Some(t) = game_run::write_after(&mut x.g, k, &l) { said.push_str(&t); said.push('\n'); } }
-        if flags & LIGHTS != 0 { game_run::lights(&mut x.g, dt); }
         if flags & VIEW != 0 { game_run::view(&mut x.g); }
         if flags & SAVES != 0 { page::saves(h, x, dt); }
         said
@@ -482,10 +500,6 @@ pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
 #[no_mangle]
 pub extern "C" fn face_view(h: u32) {
     with(h, |x| game_run::view(&mut x.g));
-}
-#[no_mangle]
-pub extern "C" fn face_lights(h: u32, dt: f64) {
-    with(h, |x| game_run::lights(&mut x.g, dt));
 }
 /// # Safety
 /// `p`, `n` name bytes the host wrote into memory from face_alloc.

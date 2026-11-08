@@ -15,7 +15,7 @@ import { RainPicture, Roofs } from './rain';
 import { SnowPicture } from './snow/snow';
 import { skyFrom } from '../draw/sky';
 
-const LEVEL = 1, SMOKE = 2;
+const LEVEL = 1, SMOKE = 2, CANS = 32;
 
 export class WeatherPicture {
   readonly winds: DrawWinds; readonly air: AirPicture; readonly fire: FirePicture; readonly rain: RainPicture; readonly roofs: Roofs; readonly snow: SnowPicture | null;
@@ -37,6 +37,7 @@ export class WeatherPicture {
     if (D.n[Section.resets]) { const o = D.at[Section.resets], id = D.u[o + Reset.tick]; if (id !== this.said) { const w = D.u[o + Reset.what];
       if (w & LEVEL) { this.E.restartPicture('level restarted'); this.P?.clear(); this.cut(); }
       if (w & SMOKE) this.smoke.clearAll();
+      if (w & CANS) this.smoke.shutCans();
       this.snow?.reset(w); this.said = id; } }
   }
   /** a tick has run, the camera that follows it stepped */

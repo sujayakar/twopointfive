@@ -436,10 +436,7 @@ pub fn door_force(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<cra
     g.ch[c].vel = [0.0, 0.0, 0.0];
     g.gd[gd].fire_cd -= dt;
     let held = DoorForce { aim, move_: 0.0 };
-    if g.gd[gd].reload_t >= 0.0 {
-        crate::guards::tick_reload_beat(g, gd, dt);
-        return Some(held);
-    }
+    if crate::control::man::changing_magazine(g, gd) { return Some(held); }
     if to.is_none() { return Some(held); }
     let st = stand!(g, gd);
     if st.n >= kf.rounds { st.n = 0.0; st.fired_t = time; st.next = time + kf.gap_secs; }   // these rounds are through: he listens

@@ -584,26 +584,61 @@ pub fn side_of<'g>(g: &'g mut crate::game::Game, clip: ClipId) -> &'g mut crate:
         for t in tr {
             need = m::max(need, t.node + 1.0);
         }
-        g.m.anim_skeleton.clip_side.set(clip, ClipSide { lines: l, at: -2.0, need });
+        g.m.anim_skeleton.clip_side.set(clip, ClipSide { lines: l, word: 0, need });
+    }
+    // (the word goes by no file and no wire, being worked out from the clip again whenever it is wanted: a game read from a file comes back without it)
+    if g.m.anim_skeleton.clip_side.get(clip).unwrap().word == 0 {
+        let word = clip_word(&g.tab.clip[clip]);
+        if let Some(at) = ::sim::clips::find(word) {
+            if !clip_is_as_held(&g.tab.clip[clip], at) { panic!("posing: the clip \"{}\" has the word of another clip the store holds (rust/sim/src/clips.rs): the word wants more bits", g.tab.clip[clip].name); }
+        }
+        g.m.anim_skeleton.clip_side.get_mut(clip).unwrap().word = word;
     }
     g.m.anim_skeleton.clip_side.get_mut(clip).unwrap()
 }
 
-/// clipIn's work, answering the two numbers its callers read and not a copy of the side's lines: (at, need).
+/// clipIn's work, answering the two numbers its callers read: where the clip stands in the store, and the nodes it needs. Where it stands is asked of the store
+/// each time: it is the process's, first come first served, so a game keeps none of it. −1: the store does not take it.
 fn clip_place(g: &mut crate::game::Game, clip: ClipId) -> (f64, f64) {
-    {
-        let c = side_of(g, clip);
-        if c.at != -2.0 {
-            return (c.at, c.need);
+    let c = side_of(g, clip);
+    let (word, need) = (c.word, c.need);
+    if let Some(at) = ::sim::clips::find(word) {
+        return (at as f64, need);
+    }
+    if ::sim::clips::refused(word) { return (-1.0, need); }
+    let at = clip_write(&g.tab.clip[clip]).unwrap_or(-1.0);
+    if at < 0.0 { ::sim::clips::refuse(word); }
+    (at, need)
+}
+
+/// The word the store knows a clip by, off the game's own copy: the same fold over the same numbers, so nothing has to be written to find it.
+fn clip_word(clip: &crate::anim_gltf::Clip) -> u32 {
+    let mut f = ::sim::clips::Fold::new(clip.duration);
+    for t in &clip.tracks {
+        let (out, comps) = ::sim::clips::shape_of(t.node as usize, t.path as u32);
+        f.shape(t.times.len() as u32, out, comps, t.step);
+    }
+    for t in &clip.tracks {
+        for v in t.times.iter().chain(t.values.iter()) {
+            f.single(*v as f64);
         }
-        c.at = -1.0;
     }
-    let at = clip_write(&g.tab.clip[clip]);
-    let c = g.m.anim_skeleton.clip_side.get_mut(clip).unwrap();
-    if let Some(at) = at {
-        c.at = at;
+    f.word()
+}
+
+/// A word is only a hash: the clip held under it is compared whole, once for each game that comes to it, as `clips::end` compares a clip written again.
+fn clip_is_as_held(clip: &crate::anim_gltf::Clip, at: usize) -> bool {
+    let tb = ::sim::clips::table_read();
+    let held = &tb.clips[at];
+    if held.duration.to_bits() != clip.duration.to_bits() || held.tracks as usize != clip.tracks.len() {
+        return false;
     }
-    (c.at, c.need)
+    clip.tracks.iter().enumerate().all(|(k, t)| {
+        let x = &tb.tracks[held.track0 as usize + k];
+        let (out, comps) = ::sim::clips::shape_of(t.node as usize, t.path as u32);
+        x.keys as usize == t.times.len() && x.out == out && x.comps == comps && x.step == t.step
+            && t.times.iter().chain(t.values.iter()).enumerate().all(|(i, v)| ::sim::single::get(&tb.pool, x.at as usize + i).to_bits() == (*v as f64).to_bits())
+    })
 }
 
 /// The tracks of a clip into rust/sim/src/clips.rs. None: not asked of the module at all, its number stays −1.
@@ -1555,7 +1590,7 @@ mod tests {
         });
         let c = side_of(&mut g, clip);
         assert_eq!(c.lines, vec![0, 1, 0, 2]);
-        assert_eq!(c.at, -2.0);
+        assert_ne!(c.word, 0);
         assert_eq!(c.need, 5.0);
     }
 

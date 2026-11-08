@@ -151,6 +151,3 @@ pub fn unseen_defaults() -> crate::knobs::UnseenK { crate::knobs::page_unseen() 
 
 /// (src/game/unseen.ts:108 WALLBEAT_BREAK)
 pub const WALLBEAT_BREAK: bool = false;
-
-/// (src/game/unseen.ts:169 POSTED: a table nothing writes)
-pub fn posted() -> Vec<String> { alloc::vec![String::from("move"), String::from("cover")] }

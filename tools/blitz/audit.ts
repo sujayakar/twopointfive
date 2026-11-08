@@ -122,6 +122,5 @@ export function withCutsOf(b: Uint8Array, a: Uint8Array): Uint8Array { const A =
 // (… and what `Game.update`'s hostAfter sets after every step and the tick sets again as it opens: the seat's live matrix, the menu's view of the host's own
 // Input and camera)
 export const HOST_Q = (x: { q: string; path: string }) => x.path.startsWith('g.cmd_buf') || /^g\.tab\.(camera|input)\b/.test(x.path) || x.q === 'orders::SquadOrdersView.input' || x.q === 'orders::SquadOrdersView.cam' || x.q === 'game::Game.view_proj' || x.q === 'cmd::Seat.mark';
-// NOT A WRITE: an identity serial (the two sides number objects apart by design: schema.serial), a clip's place in the Rust game's own table (the export
-// writes a constant for it), `Player.kit_was` (the apply leaves the puppet's at nothing where the Rust game holds one: seen on tut-solo every tick), and the counts of collision and sense asks (collision.ts ANYTIME, SENSED: counters of the module that was asked, read by no rule)
+// NOT A WRITE: an identity serial (the two sides number objects apart by design: schema.serial), `Player.kit_was` (the apply leaves the puppet's at nothing where the Rust game holds one: seen on tut-solo every tick), and the counts of collision and sense asks (collision.ts ANYTIME, SENSED: counters of the module that was asked, read by no rule)
 export const OWN_Q = (x: { q: string; path: string }) => !!SCHEMA.serial?.[x.q] || !!SCHEMA.scratch?.[x.q] || x.q === 'tail' || /^scene_collision::SceneCollisionMod(ANYTIME|SENSED)\./.test(x.q);

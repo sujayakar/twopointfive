@@ -20,7 +20,7 @@ function hudText(game: any): string {
   const mkEl = (tag: string): any => { const el: any = { tag, className: '', kids: [] as any[], text: '', style: {}, title: '', appendChild(c: any) { el.kids.push(c); return c; } }; Object.defineProperty(el, 'textContent', { get() { return el.text + el.kids.map((k: any) => k.textContent).join(''); }, set(v: string) { el.text = v ?? ''; el.kids = []; } }); return el; };
   const ser = (el: any): string => `${el.tag}${el.className.trim() ? '.' + el.className.trim().split(/\s+/).join('.') : ''}${el.style.height ? `[${el.style.height}]` : ''}${el.text ? `{${el.text}}` : ''}${el.kids.length ? `(${el.kids.map(ser).join(' ')})` : ''}`;
   const G = globalThis as any, had = 'document' in G, prev = G.document; G.document = { createElement: (t: string) => mkEl(t) };
-  try { const ctx = { equip: mkEl('div'), equipKey: '' }; (Overlay.prototype as any).updateEquip.call(ctx, game); return ctx.equip.kids.map(ser).join(' | '); }
+  try { const ctx = { equip: mkEl('div'), equipKey: '' }; (Overlay.prototype as any).updateEquip.call(ctx, game.view.kit); return ctx.equip.kids.map(ser).join(' | '); }
   finally { if (had) G.document = prev; else delete G.document; }
 }
 const DT = 1 / 60, AHEAD: [number, number, number] = [15, 1.2, 11.5];

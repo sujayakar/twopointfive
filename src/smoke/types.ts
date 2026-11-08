@@ -25,7 +25,7 @@ export interface SmokeEmitter {
   anchor?: Vec3;        // (nothing in the page reads it: where the old box solver centred a fresh box)
   minVoxels?: number;   // floor the radius at this many voxels of whatever lattice it lands on (a splat under one cell deposits ~nothing, and flickers)
   look?: boolean;       // LOOK ONLY, and nobody's to count: never against `budget` (what a blast may still hang off its sparks is not such a source's to change), nothing to the game's
-                        // own smoke (game/sense.ts CpuSmoke), and the first cut when a step holds more emitters than it packs — under every `prio`
+                        // own smoke (rust/game_rules/src/sense), and the first cut when a step holds more emitters than it packs — under every `prio`
   held?: boolean;       // the game's own smoke holds what it lets out (rust/game_rules/src/sense): the drawn smoke of it is bent toward that (smoke.wgsl THE GAME'S SMOKE)
   trackVel?: boolean;   // its track()'s `dir` is the gas's VELOCITY (m/s), taken turn by turn, heading and speed both: a source on a mouth that turns and walks
   tint?: Vec3;          // LOOK ONLY (game/dustLook.ts): the scattering colour of what this emitter raises — it rides with the smoke per cell, which is drawn tinted toward it and with the dust
@@ -79,6 +79,8 @@ export interface SmokeSystemLike {
   drawing?(): boolean;
   /** drop every emitter and all the smoke (encounter restart: a 30 s canister must not keep venting into the next one) */
   clearAll?(): void;
+  /** every can venting stops venting now, what it has let out left in the air (the game's `SmokeCansShut`) */
+  shutCans?(): void;
   /** something solid within r of c stopped being solid (or came back): the bricks there re-bake their obstacle field — the destruction lane hiding a static it knocked off */
   obstaclesChanged?(c: Vec3, r: number): void;
   /** this frame's WIND (game/wind.ts, called once a frame at the end of Game.update; an empty list = still air): the solver's forces step relaxes the air of every

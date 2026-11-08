@@ -38,9 +38,8 @@ import { civiliansShown } from '../game/civilians';
 export const DRESS_MS = { last: {} as Record<string, number>, sum: {} as Record<string, number>, n: 0, threw: {} as Record<string, string> };
 export interface SideList { list: unknown[]; of: unknown; base: number }
 
-/** THE WIND'S HAND-OVER (wind.ts `update`, its last lines): the sources that blow go to the smoke's solver, and the ones the tick picked for the
- *  particles (the jets near the view, then the storm) to the particle pool. Both lists are the Rust tick's, as the host put them on the puppet
- *  (the filtered export); nothing is chosen here. */
+/** THE WIND'S HAND-OVER the sources that blow go to the smoke's solver, as the Rust tick left them on the puppet, and the particle pool is handed what
+ *  `Wind.forParticles` makes of the standing game: the jets near the view, then the storm. It is the host's list, so it is made here and no record holds it. */
 function windOut(g: Game): void {
   const W = g.wind as unknown as { active: unknown[]; forParticles: unknown[] }, P = gpuFx(g), Sm = g.smoke as unknown as { setWind?: (a: unknown[], relax: number) => void };
   P?.setWind(W.forParticles as never, [WIND.sheetWake, WIND.sheetKick, WIND.debrisK]);

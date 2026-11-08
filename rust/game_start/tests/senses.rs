@@ -295,3 +295,89 @@ fn a_fire_fights_wisps_leave_room_for_dust() {
     p.run(1.5);
     assert_eq!(game::smoke_types::smoke_system_like_budget(&p.g), room, "a source that is spent gives its room back");
 }
+
+/// every word of the game's state, a word a part: the game's own parts, then rust/sim's block
+fn words(p: &mut Play) -> Vec<u32> {
+    let (mut w, mut words) = (game::io::W::new(), Vec::new());
+    game::state_words::state_words(&mut p.g, &mut w, &mut words);
+    words.extend(game_start::block::part_hashes(0));
+    words
+}
+
+/// A FAILURE MEANS: asking what light stands on a point changes the game. A page's throw preview asks it for a block of floor at a time, whenever a menu is up, and the host
+/// takes no state back after it (src/view/worldask.ts `light`): a question that writes would part two machines of one game, and a replay from its run.
+#[test]
+fn asking_the_light_writes_nothing() {
+    for seed in [1u32, 2, 3] {
+        let run = |ask: bool| -> Vec<Vec<u32>> {
+            let mut p = Play::level("killhouse.json", true, &Opts { seed, ..Default::default() });
+            let mut out = Vec::new();
+            for s in 0..8 {
+                if s == 3 { let at = p.sam_at(); can(&mut p, [at[0], 0.2, at[1]], 2.0); }
+                for _ in 0..60 {
+                    p.frame();
+                    if !ask { continue; }
+                    let at = p.sam_at();
+                    for (i, d) in [[0.0, 0.0], [2.0, 1.0], [-3.0, 2.0], [40.0, 40.0]].into_iter().enumerate() {
+                        let q = [at[0] + d[0], 1.0, at[1] + d[1]];
+                        let owner = [p.g.ch[p.g.pl[p.g.player].ch].id as f64];
+                        assert!(game::sense::light_asked(&mut p.g, q, if i % 3 == 0 { &owner } else { &[] }, i % 2 == 0, if i == 3 { 1.0 } else { 0.0 }).is_finite());
+                    }
+                }
+                out.push(words(&mut p));
+            }
+            out
+        };
+        let (never, always) = (run(false), run(true));
+        for (s, (a, b)) in never.iter().zip(always.iter()).enumerate() {
+            let parts: Vec<usize> = (0..a.len()).filter(|&i| a[i] != b[i]).collect();
+            assert!(parts.is_empty(), "seed {}: after {} s the asked game differs in parts {:?}", seed, s + 1, parts);
+        }
+    }
+}
+
+/// A FAILURE MEANS: the light asked when the box world's copy does not stand answers something else, or moves the game, or dies. A host reaches this whenever no tick has
+/// run since its copy was put down: a state read in, a page's write by path, a rule called from outside a tick. The copy that question stands is not the game's state, so
+/// the asked game runs on word for word with the one whose copy was stood first. Controls: each way of losing the copy is first seen refused, and a lit and a dark place answer apart.
+#[test]
+fn the_light_is_the_same_when_the_copy_had_to_be_stood() {
+    use game::ask::WorldAsk;
+    let losses: [(&str, fn(&mut game::game::Game)); 2] = [
+        ("put down", |g| game::scene_collision::unstand(g)),
+        ("owing a write", |g| game::scene_collision::wrote(g)),
+    ];
+    for seed in [1u32, 2, 3] {
+        for (how, lose) in losses {
+            // `lost` false: the copy is stood again before the questions, so every one of them finds it standing
+            let run = |lost: bool| -> (Vec<u64>, Vec<Vec<u32>>) {
+                let mut p = Play::level("killhouse.json", true, &Opts { seed, ..Default::default() });
+                p.run(1.0);
+                let (at, owner) = (p.sam_at(), p.g.ch[p.g.pl[p.g.player].ch].id as f64);
+                let mut answers = Vec::new();
+                for (i, d) in [[0.0, 0.0], [2.0, 1.0], [-3.0, 2.0], [40.0, 40.0]].into_iter().enumerate() {
+                    lose(&mut p.g);
+                    if lost {
+                        assert!(WorldAsk::try_of(&p.g).is_err(), "seed {seed}, {how}: the staging is wrong, the copy still answers");
+                    } else {
+                        game::scene_collision::stands(&mut p.g);
+                        assert!(WorldAsk::try_of(&p.g).is_ok(), "seed {seed}, {how}: the control's copy stands");
+                    }
+                    let q = [at[0] + d[0], 1.0, at[1] + d[1]];
+                    let owners: &[f64] = if i % 3 == 0 { &[owner] } else { &[] };
+                    answers.push(game::sense::light_asked(&mut p.g, q, owners, i % 2 == 0, if i == 3 { 1.0 } else { 0.0 }).to_bits());
+                    assert!(WorldAsk::try_of(&p.g).is_ok(), "seed {seed}, {how}: the question left no copy for the next");
+                }
+                let mut after = Vec::new();
+                for _ in 0..2 { p.run(1.0); after.push(words(&mut p)); }
+                (answers, after)
+            };
+            let (control, lost) = (run(false), run(true));
+            assert!(control.0.iter().any(|v| *v != control.0[0]), "seed {seed}, {how}: every place answers alike: the question holds nothing");
+            assert_eq!(control.0, lost.0, "seed {seed}, {how}: the answers (their bits) differ");
+            for (s, (a, b)) in control.1.iter().zip(lost.1.iter()).enumerate() {
+                let parts: Vec<usize> = (0..a.len()).filter(|&i| a[i] != b[i]).collect();
+                assert!(parts.is_empty(), "seed {seed}, {how}: {} s on, the asked game differs in parts {:?}", s + 1, parts);
+            }
+        }
+    }
+}

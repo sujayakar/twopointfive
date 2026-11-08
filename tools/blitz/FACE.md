@@ -48,7 +48,7 @@ Before frame boxes, on the dev build: hostage-rescue:1 (3,119 ticks, `poses` at 
 natively; not run again since.
 
 Also run on room-clear-four:1: `--two` (two games from the one start in slots 0 and 1, stepped one after the other every tick: both in step for 3,006
-ticks); `--one-call` (the lights' update and the host's view inside `face_step`: in step, and the `lights` part does not differ, the update
+ticks); `--one-call` (the host's view inside `face_step`: in step, and the `lights` part does not differ, the update
 writes none of the block). Before frame boxes, the red paths (the driver's orders left out: parts at tick 628 in `props`; one hash of `post.txt` altered:
 parts at that tick; exit 1 both).
 
@@ -64,7 +64,7 @@ All C ABI; a pointer and a length are `usize`, a handle a `u32`. The head of `ru
 | a panic | `face_panic_ptr()` `face_panic_len()` `face_panic_clear()`: the last panic's words with file and line. The module aborts on a panic, so the host catches a trap and reads the words; the game of that call is gone, the others stand |
 | a game | `face_new(state, n, block, bn) -> h` (`io::import` + the block copied into the first free slot; 0 = no slot) · `face_lesson(h, p, n)` · `face_blank() -> h` · `face_drop(h)` · `face_slot(h)` · `face_import_into(h, p, n)` |
 | the host's half | `face_host(h, p, n, first)` (one `h<k>.bin`) · `face_give(h, k, line)` · `face_hostwrite(h, k, line)` · `face_meter(h, v)` |
-| the step | `face_step(h, dt, flags)`: `game_step`, the autosave's rows kept by `face_hostwrite`, flag 2 the lights' update, flag 4 the host's view of a level on rails. One call a tick for a host that plays · by name: `face_lights(h, dt)` `face_view(h)` `face_checkpoint(h, label, n)` |
+| the step | `face_step(h, dt, flags)`: `game_step`, the autosave's rows kept by `face_hostwrite`, flag 4 the host's view of a level on rails (a flash's envelope is the tick's own last line). One call a tick for a host that plays · by name: `face_view(h)` `face_checkpoint(h, label, n)` |
 | reading back | `face_export(h)` (`io::export` at `face_out`) · `face_die_n(h)` · `face_time(h)` · `face_rows(h)` · `face_parts()` `face_part_name(i)` `face_part(name, n) -> i` `face_part_addr(slot, i)` `face_part_len(i)` `face_part_hashes(slot) -> p` |
 | `rust/sim`'s own | all 272 of the shipped module's exports, same names, kinds and parameter counts (`sim_abi` 34, `state_layout`, `state_len` 3,248,912, 4 slots, 13 parts all equal) |
 
@@ -90,7 +90,7 @@ round the call, two runs each (they agree to the second digit).
 
 | the tick, ms | mean | worst | how |
 |---|---|---|---|
-| wasm dev | 1.37 | 23 (tick 1) | `face_step` alone (the tick; the lights' update and the host's view are called by name outside the clock, as the native runner does) |
+| wasm dev | 1.37 | 23 (tick 1) | `face_step` alone (the tick; as measured then, the lights' update and the host's view were called by name outside the clock, as the native runner does) |
 | wasm release | 1.23 | 31 to 34 (tick 1) | the same |
 | wasm small | 1.25 | 21 to 22 (tick 1) | the same |
 | wasm release, one call a tick | 1.21 | 31 (tick 1) | `face_step` with the lights and the view inside |

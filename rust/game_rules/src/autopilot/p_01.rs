@@ -15,7 +15,7 @@ pub fn in_sight(g: &crate::game::Game, o: GuardId) -> bool {
 /// The entries the squad would take on a door it is stacked on, first choice first. AUTOPILOT.plain is settled on: the key never picks a tool.   (autopilot.ts autoEntries)
 pub fn auto_entries(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: crate::orders::OrderTargetDoor, shut: Option<bool>) -> crate::autopilot::AutoEntries {
     let why = if crate::silent::squad_silent(g, seat) { crate::autopilot::AutoPickWhy::Silent } else { crate::autopilot::AutoPickWhy::Known };
-    crate::autopilot::AutoEntries { ids: vec![String::from("openClear")], why, kept: None }
+    crate::autopilot::AutoEntries { ids: vec![String::from(crate::orders::rows::openclear::ORDER.id)], why, kept: None }
 }
 
 /// `S.defs.find(x => x.id === id)`
@@ -49,7 +49,7 @@ pub fn auto_pick(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate:
         return if crate::doortools::door_tools_word_pending(g, &crate::seats::here(g), c) {
             AutoPick { id: None, men: None, word: false, why: AutoPickWhy::Pending, t: t.clone(), kept: None }
         } else {
-            AutoPick { id: Some(String::from("charge")), men: None, word: false, why: AutoPickWhy::Blow, t: t.clone(), kept: None }
+            AutoPick { id: Some(String::from(crate::orders::rows::charge::ORDER.id)), men: None, word: false, why: AutoPickWhy::Blow, t: t.clone(), kept: None }
         };
     };
     if w.kind == crate::doortools::DoorToolsWaitsOnKind::Word {
@@ -58,7 +58,7 @@ pub fn auto_pick(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate:
         }
         // (the pair has no word but a held threshold's: its own set charge is blown by the row)
         return if crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), door).is_some() {
-            AutoPick { id: Some(String::from("charge")), men: Some(w.men), word: false, why: AutoPickWhy::Blow, t: t.clone(), kept: None }
+            AutoPick { id: Some(String::from(crate::orders::rows::charge::ORDER.id)), men: Some(w.men), word: false, why: AutoPickWhy::Blow, t: t.clone(), kept: None }
         } else {
             first(g, seat, t)
         };
@@ -67,7 +67,7 @@ pub fn auto_pick(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate:
     // AUTOPILOT.restack is settled on: on their marks it is 'stack up' again, answered and not walked, but for the two cases below it
     if w.men.len() < r.len() { return first(g, seat, t); }
     if crate::orders::squad_orders_big(g, &crate::seats::here(g)) || !crate::doortools::door_tools_stack_waits(g, &crate::seats::here(g), &w.men).is_empty() {
-        return AutoPick { id: Some(String::from("stack")), men: Some(w.men), word: false, why: AutoPickWhy::Set, t: t.clone(), kept: None };
+        return AutoPick { id: Some(String::from(crate::orders::rows::stack::ORDER.id)), men: Some(w.men), word: false, why: AutoPickWhy::Set, t: t.clone(), kept: None };
     }
     // the men's own face of the door, off the marks they stand on: no path search to find it
     let a = match w.men.first().copied() { Some(m) => crate::orders::squad_orders_of(g, &crate::seats::here(g), m), None => None };
@@ -91,7 +91,7 @@ pub fn auto_quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> 
     if p.why == AutoPickWhy::Set {
         let lines = crate::autopilot::restack_lines();
         let men = p.men.as_deref().unwrap_or(&[]);
-        crate::orders::squad_orders_again(g, "stack", t, men, &lines);
+        crate::orders::squad_orders_again(g, crate::orders::rows::stack::ORDER.id, t, men, &lines);
         g.stats.autopilot.again += 1;
         return true;
     }
@@ -101,7 +101,7 @@ pub fn auto_quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> 
         no = if crate::orders::squad_orders_big(g, &crate::seats::here(g)) {
             let none = crate::orders::OrderTarget::None(crate::orders::OrderTargetNone { at: [at[0], 0.0, at[2]], man: None });
             let opts = crate::orders::GiveOpts { men: p.men.clone(), ack: None, on_word: None };
-            crate::orders::squad_orders_give(g, "go", Some(&none), None, Some(&opts))
+            crate::orders::squad_orders_give(g, crate::orders::rows::go::ORDER.id, Some(&none), None, Some(&opts))
         } else {
             let who = g.orders.who;
             crate::doortools::door_tools_go(g, Some(who))
@@ -128,9 +128,9 @@ pub fn auto_quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> 
         g.stats.autopilot.first += 1;
     } else if p.why == AutoPickWhy::Blow {
         g.stats.autopilot.blow += 1;
-    } else if id == Some("bangClear") {
+    } else if id == Some(crate::orders::rows::bangclear::ORDER.id) {
         g.stats.autopilot.bang += 1;
-    } else if id == Some("charge") {
+    } else if id == Some(crate::orders::rows::charge::ORDER.id) {
         g.stats.autopilot.charge += 1;
     } else {
         g.stats.autopilot.open += 1;
@@ -148,8 +148,8 @@ pub fn auto_hint(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, p: O
             &own
         }
     };
-    if p.word && !crate::orders::squad_orders_big(g, &crate::seats::here(g)) { return Some(String::from("go")); }
-    let id = if p.word { Some("go") } else { p.id.as_deref() };
+    if p.word && !crate::orders::squad_orders_big(g, &crate::seats::here(g)) { return Some(String::from(crate::orders::rows::go::ORDER.id)); }
+    let id = if p.word { Some(crate::orders::rows::go::ORDER.id) } else { p.id.as_deref() };
     let d = match id { Some(id) => def_of(g, &crate::seats::here(g), id), None => None };
     d.map(|d| crate::orders::squad_orders_label_of(g, d, &p.t))
 }

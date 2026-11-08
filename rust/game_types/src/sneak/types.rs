@@ -524,9 +524,6 @@ pub fn lines_now() -> crate::sneak::LINESNOW { crate::sneak::LINESNOW { wait: cr
 /// (src/game/sneak.ts:195 DEG)
 pub const DEG: f64 = 0.017453292519943295;
 
-/// (src/game/sneak.ts:217 POSTED: a table nothing writes)
-pub fn posted() -> Vec<String> { alloc::vec![String::from("move"), String::from("cover")] }
-
 /// (src/game/sneak.ts:251 LOW_Y: a table nothing writes)
 pub fn low_y() -> Vec<f64> { alloc::vec![0.81, 0.98] }
 

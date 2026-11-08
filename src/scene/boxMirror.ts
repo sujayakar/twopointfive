@@ -54,8 +54,6 @@ const PLANE = 4, CUT_ROW = MAX_CUT_PLANES * PLANE;
 /** who holds each of the module's worlds, and a count that says who stepped last (the host's: which game has which table is no part of any game) */
 const HELD: (BoxMirror | null)[] = [];
 const CLOCK = { n: 0 };
-/** the copies made afresh in this process, counted: a copy's number (`gridDrop`) is no other copy's */
-const COPIES = { n: 0 };
 /** how many times a leaf has been written (the host's count; a copy of the leaves is good while it stands where it stood when the copy was made) */
 export const LEAVES = { n: 0 };
 /** A LEAF WAS WRITTEN — said by the three places that write one: a door placing its leaf (game/doors.ts Door.place), a door putting its leaf back whole
@@ -102,14 +100,12 @@ export function mirrorsShut(): void { for (const h of HELD) if (h) h.shut(); }
  *  bit 16 up (SoundSeal, Glass, Thin, Bar: the CPU's own). The rest of the low byte says how a box is DRAWN (Gloss comes and goes with the rain) and the second
  *  byte whose it is: a write to those is no news here. A question asked by any other flag is answered by the TypeScript (collision.ts). */
 export const MIRRORED = (2 | 8 | ~0xffff) >>> 0;
-/** THE NUMBERS THE HOST SHARES WITH THE SENSES' RUST, under the names they have there (light.rs LAMP: doubles a lamp of a question's own, MAX_LAMPS: such lamps a part of a
- *  question carries · smoke.rs BLOB: doubles a blob, MAX_BLOBS: the blobs its table holds, which is the most a game keeps — sense.ts CpuSmoke.emit ·
- *  hear.rs: what the straight lines said, and the way round · sight.rs: the question's bits and the answer's). tools/qa/rust-check.ts reads the Rust
+/** THE NUMBERS THE HOST SHARES WITH THE SENSES' RUST, under the names they have there (hear.rs: what the straight lines said, and the way round · sight.rs: the question's bits and the answer's). tools/qa/rust-check.ts reads the Rust
  *  sources and is red where one of them is another number there. */
 /** …and what a search across the floor answers that is no count of waypoints (rust/sim/src/nav.rs; the same check reads them): no way · the host's own
  *  search · the search waits for the prices it has listed (find_priced) */
 export const NAV = { NO_WAY: -1, ASK_HOST: -2, NEED: -3 } as const;
-export const FACE = { LAMP: 16, MAX_LAMPS: 256, BLOB: 6, MAX_BLOBS: 64, GRAZE_A: 1, GRAZE_B: 2, OVER: 4, FAR: 8, WALLED: 16, SEALED: 0, ROUTED: 1, ROUTED_DOOR: 3, Q_LENS: 1, Q_UNSEEN: 2, Q_SMOKED: 4, A_VISIBLE: 1, A_IN_CONE: 2 } as const;
+export const FACE = { GRAZE_A: 1, GRAZE_B: 2, OVER: 4, FAR: 8, WALLED: 16, SEALED: 0, ROUTED: 1, ROUTED_DOOR: 3, Q_LENS: 1, Q_UNSEEN: 2, Q_SMOKED: 4, A_VISIBLE: 1, A_IN_CONE: 2 } as const;
 const kindOf = (b: Box, cutOn: boolean): number => (b.rot ? K_ROT : 0) | (b.round === true ? K_ROUND : 0) | (b.cut !== undefined && (cutOn || shapeCut(b)) && b.cut.length > 0 ? K_CUT : 0);   // (boxes.ts cutMet: a shape's record whatever the cut-pieces switch says; a piece of trim's only with that switch, as the picture)
 /** a walker's rule for a pane (collision.ts glassWalkable), or none */
 type Walk = ((bi: number) => boolean) | null;
@@ -173,18 +169,11 @@ export class BoxMirror extends HostOwned {
   eyes = 0;
   /** where a pushed circle ends (an index into the doubles), and the statics a gather listed (into the words) with how many it can list */
   pt = 0; list = 0; listCap = 0;
-  /** the module's scratch (an index into the doubles), and the tables a sense's question is written to: the lamps and the blobs (into the doubles, and how
-   *  many each holds), the nav grid's shut cells (into the bytes, and how many cells of floor a search holds: nav.rs MAX_FLOOR) and a way's waypoints (into the doubles). One set a process: each is scratch
+  /** the module's scratch (an index into the doubles), and the tables a sense's question is written to: the nav grid's shut cells (into the bytes, and how many cells of floor a search holds: nav.rs MAX_FLOOR) and a way's waypoints (into the doubles). One set a process: each is scratch
    *  of the one question that wrote it. */
-  scratch = 0; scratchLen = 0; lamps = 0; lampCap = 0; blobs = 0; blobCap = 0; wind = 0; windCap = 0; navShut = 0; navCap = 0; way = 0; navWant = 0; navPrice = 0;
-  /** one question's lamps and blobs as they are written (collision.ts lampsBegin … lampsOn, blobsBegin … blobsAlong): the leaves' list to ask with, how many so far */
-  lampSet = -2; lampN = 0; blobSet = -2; blobN = 0;
+  scratch = 0; scratchLen = 0; navShut = 0; navCap = 0; way = 0; navWant = 0; navPrice = 0;
   /** what a rule that asks its own lines hands them (collision.ts ruleOpen): which list of leaves, which pane rule */
   ruleSet = -1; rulePanes = 0;
-  /** WHAT A SMOKE GRID THAT STEPS OVER THIS COPY GOES BY (rust/sim/src/bricks.rs; game/sense.ts SmokeGrid): the copy's NUMBER, given anew whenever every
-   *  row of it is written afresh (the world newly this game's, another maths, a snapshot put back), so a grid whose faces were asked of an earlier copy
-   *  asks them all again; and whether a grid has stepped over this one (`gridCopy`), from when on a row that is written is said to it (`grid_dirty`). */
-  private copy = 0; private gridOver = false;
   private cellsWrote = true;
   /** the grid of the tick that is open, for the compare a question owes after the grid was written inside it (`again`): the box world's own arrays, held for the
    *  length of the tick and let go as it shuts */
@@ -214,7 +203,7 @@ export class BoxMirror extends HostOwned {
     c.tilted = x.world_cap(T_TILTED); this.listCap = x.world_cap(T_LIST); c.things = x.world_cap(T_THING); c.glass = x.world_cap(T_GLASS); c.view = x.world_cap(T_VIEW);
     if (c.glass !== PANE_CAP || c.view !== PANE_CAP) throw new Error(`the Rust module holds ${c.glass} broken panes and a view of ${c.view}: src/scene/boxMirror.ts says ${PANE_CAP} of each`);
     if (c.leaves !== PROP_PARTS || c.things !== PROP_CAP) throw new Error(`the Rust module's copy lists ${c.leaves} leaves and ${c.things} things of furniture: src/sim/propshome.ts says ${PROP_PARTS} boxes and ${PROP_CAP} things`);
-    this.scratch = x.sim_scratch() / 8; this.scratchLen = x.sim_scratch_len(); this.lamps = x.light_lamps() / 8; this.lampCap = x.light_cap(); this.blobs = x.smoke_blobs() / 8; this.blobCap = x.smoke_cap(); this.wind = x.grid_wind() / 8; this.windCap = x.grid_wind_cap();
+    this.scratch = x.sim_scratch() / 8; this.scratchLen = x.sim_scratch_len();
     this.navShut = x.nav_addr(0); this.navCap = x.nav_cap(0); this.way = x.nav_addr(1) / 8; this.navWant = x.nav_addr(2) / 4; this.navPrice = x.nav_addr(3) / 8;
     this.cutOf = new Int32Array(c.boxes).fill(-1);
     if (!HELD.length) for (let i = x.world_cap(T_WORLDS); i > 0; i--) HELD.push(null);
@@ -242,7 +231,7 @@ export class BoxMirror extends HostOwned {
     this.walk = walk; this.glass = glass;
     const fresh = this.take(), all = fresh || this.epoch !== mathsEpoch || this.putBacks !== PUT_BACKS.n;   // (another maths in Math's place: every cos and sin kept here was the other's)
     this.epoch = mathsEpoch; this.putBacks = PUT_BACKS.n;
-    if (all) { this.sheetsIn = null; this.cutOf.fill(-1); this.cutFree.length = 0; this.cutNext = 0; this.boxes = 0; this.gridDrop(); this.thingsAll = true; this.snowLen = -1;   // (…and it is another copy to a smoke grid: every face is asked again)
+    if (all) { this.sheetsIn = null; this.cutOf.fill(-1); this.cutFree.length = 0; this.cutNext = 0; this.boxes = 0; this.thingsAll = true; this.snowLen = -1;   // (…and it is another copy to a smoke grid: every face is asked again)
       u32().fill(0, this.glassOf, this.glassOf + this.caps.boxes); this.glassN = 0; this.glassBis.length = 0; }   // (whose broken panes these rows were is not known: none stands)
     if (all || this.cellsWrote) { this.cellsWrote = false; this.grid(cells, tiltedAt, W, H, boxes.length); }
     this.statics(boxes, all);
@@ -283,27 +272,17 @@ export class BoxMirror extends HostOwned {
   /** every static against its row; a row that differs (or every row, `all`) written again */
   private statics(boxes: Box[], all: boolean): void {
     const n = boxes.length, m = f64(), fl = u32(), cutOn = cutConfig.on, f0 = this.flags, cut0 = this.cut, cutOf = this.cutOf, walk = this.walk;
-    // (the smoke grid keeps which faces between its cells are open: where a row is written, or goes, the faces round where it stood and where it stands
-    //  are asked again — nothing to say when every row is written, for then the grid's faces are all unknown already)
-    const grid = !all && this.gridOver;
-    for (let i = n; i < this.boxes; i++) { if (cutOf[i] >= 0) { this.cutFree.push(cutOf[i]); cutOf[i] = -1; } if (grid) this.gridDirty(m, this.rec + i * REC); }   // (the list was cut back: its records are free again)
+    for (let i = n; i < this.boxes; i++) { if (cutOf[i] >= 0) { this.cutFree.push(cutOf[i]); cutOf[i] = -1; } }   // (the list was cut back: its records are free again)
     const was = this.boxes; this.boxes = n;
     for (let i = 0, o = this.rec; i < n; i++, o += REC) {
       const b = boxes[i], kind = kindAt(b, i, cutOn, walk);
       if (!all && i < was && same(m, fl, o, f0 + i, b, kind, cut0)) continue;   // (a row past the list as it was is no row of this list's, whatever was left written there: a wall taken off the end and put back is written, and said to the grid)
-      if (grid) { this.gridDirty(m, o); const c = b.c, h = b.h, e = h[0] + h[1] + h[2]; this.x.grid_dirty(this.slot, c[0] - e, c[2] - e, c[0] + e, c[2] + e); }
       let row = cutOf[i];
       if (kind & K_CUT) { if (row < 0) { row = this.cutFree.length ? this.cutFree.pop()! : this.cutNext < this.caps.cuts ? this.cutNext++ : -1; if (row < 0) this.outgrown('cut and shaped statics', this.caps.cuts + 1, this.caps.cuts); cutOf[i] = row; } }
       else if (row >= 0) { this.cutFree.push(row); cutOf[i] = -1; }
       put(m, fl, o, f0 + i, b, kind, cut0, row);
     }
   }
-  /** the plan's rectangle round row `o` as the module has it (its three half sides together: its reach in plan whichever way it is turned) */
-  private gridDirty(m: Float64Array, o: number): void { const e = m[o + 3] + m[o + 4] + m[o + 5]; this.x.grid_dirty(this.slot, m[o] - e, m[o + 2] - e, m[o] + e, m[o + 2] + e); }
-  /** THE COPY'S NUMBER, for a step of a smoke grid over it (collision.ts gridStep): from here on a row that is written is said to the grid */
-  gridCopy(): number { this.gridOver = true; return this.copy; }
-  /** this is another copy to a smoke grid: one that steps over it next knows no face and remembers no leaf (and nothing is said to a grid until one does) */
-  gridDrop(): void { this.copy = ++COPIES.n; this.gridOver = false; }
 
   /** A STATIC WAS WRITTEN INSIDE THE TICK (its shape, its flags, its cut; a pane a walker now goes through): the module is asked nothing more until the statics
    *  have been compared again — which the next question does (`again`), so a blast that writes forty boxes pays for one compare, and one nobody asks after

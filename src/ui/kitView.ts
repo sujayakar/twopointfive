@@ -185,7 +185,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
         const tier = (window as unknown as { __quality?: { current?: unknown } }).__quality?.current;   // (drawn at the tier this page stands at: no calibration of its own beside this one)
         const raw = ask.search.replace(/^[^?]*\?/, '').split('&').filter(w => !/^(adapt|draw)(=|$)/.test(w)).join('&');   // (the visit's `adapt` word stays behind: this frame is pinned to a tier, so the word would switch its whole ladder off, and its pacer counts on the ladder — ui/quality.ts visit; `draw` would send it to a page that draws no kit)
         f.addEventListener('error', () => { if (frame === f) fail(k); });
-        f.src = `${location.pathname}?${raw ? raw + '&' : ''}kitview&mute&noreplay${KIT_VIEW.acts ? '' : '&stillkit'}${KIT_VIEW.quiet || q.has('kitloud') ? '' : '&kitloud'}${typeof tier === 'string' && !q.has('quality') ? '&quality=' + encodeURIComponent(tier) : ''}`;
+        f.src = `${new URL('draw.html', document.baseURI).pathname}?${raw ? raw + '&' : ''}kitview&mute&noreplay${KIT_VIEW.acts ? '' : '&stillkit'}${KIT_VIEW.quiet || q.has('kitloud') ? '' : '&kitloud'}${typeof tier === 'string' && !q.has('quality') ? '&quality=' + encodeURIComponent(tier) : ''}`;
         body.appendChild(f); place();
       } else { const now = kitNow(ask.squad);   // (the LEADING edge: the first change goes now; what follows inside kitMs is one more message at its end)
         if (now !== sent && now !== want) { if (due) want = now; else { kit(); due = setTimeout(() => { due = 0; if (want) kit(); }, KIT_VIEW.kitMs); } } }

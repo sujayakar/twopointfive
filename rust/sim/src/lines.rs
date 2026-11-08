@@ -609,7 +609,7 @@ pub fn blocked_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1: 
     s.panes as i32
 }
 
-// ---- a line asked from inside the module (the senses: sight.rs, light.rs, smoke.rs, hear.rs, nav.rs), from its two ends
+// ---- a line asked from inside the module (the senses: sight.rs, light.rs, hear.rs, nav.rs), from its two ends
 /// A LINE'S LENGTH as the game works it out — or what a line answers with no walk at all: nothing is between two points that are one (Some(false)), and a
 /// length that is no length of this world's is the host's to judge (None).
 #[inline]

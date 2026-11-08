@@ -510,7 +510,7 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
                 } else if t >= stagger_until {
                     owe(r, LINE_HURT, Why::Hurt, t + k.owed_for);
                 }
-            } else if g.tab.orders_assignment[a].order == "fallIn"
+            } else if crate::orders::rows::is(g, a, crate::orders::Is::Follows)
                 && (lag_n as f64) < k.lag_max
                 && t >= lag_t
                 && g.pl[pl].sprinting

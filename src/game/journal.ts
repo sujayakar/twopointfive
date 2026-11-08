@@ -49,8 +49,6 @@ export interface EnvSnap { emissiveScale: number; markings: boolean; particlesOn
   /** recorded under the game page's HUD (main.ts). The HUD used to null an expired speech bubble on its speaker after each update, and a replay of such a
    *  file did the same; it writes nothing of the game now (a line is over when its time is), and the field only says where the file was made */
   hud: boolean;
-  /** HostApi.glassFracture where the recording's engine said either way (the page: were its shaders compiled with the fracture's cracks; native: false): glass.ts files a pane's star decal — which the digest counts — only where the renderer does NOT draw the fracture's own cracks, so a replay must stand on the same answer. Absent = the engine did not say (the headless stub; every file from before the new glass) */
-  glassFracture?: boolean;
   /** scene/cut.ts cutConfig.on as the recording ran (absent = off): rayBox / lineBox answer a box's CUT solid only under it — the harness raises it before its BoxWorld exists */
   cutBoxes?: boolean;
   canister: { canisterDuration: number; canisterDensity: number; canisterRadius: number; canisterTemp: number; canisterSpeed: number } | null; stagger: Record<string, number>;
@@ -62,10 +60,10 @@ export interface KnobsSnap { tune: Record<string, unknown>; flags: { godMode: bo
 // ================================================================================================================================ env / knobs (both directions)
 export function envSnapshot(g: Game): EnvSnap {
   const S = g.engine.settings as unknown as Record<string, unknown>; const num = (k: string, d: number) => typeof S[k] === 'number' && Number.isFinite(S[k] as number) ? S[k] as number : d;
-  const E = g.engine as unknown as { particles?: unknown; glassFracture?: unknown; settings: { gpuParticles?: boolean } };
+  const E = g.engine as unknown as { particles?: unknown; settings: { gpuParticles?: boolean } };
   const P = (g.smoke as { params?: Record<string, number> }).params;
   const stagger: Record<string, number> = {}; for (const t of g.targets) stagger[t.name] = t.stagger;
-  return { emissiveScale: num('emissiveScale', 1), markings: S.markings !== false, particlesOn: !!(E.particles && E.settings.gpuParticles), hud: false, ...(typeof E.glassFracture === 'boolean' ? { glassFracture: E.glassFracture } : {}),
+  return { emissiveScale: num('emissiveScale', 1), markings: S.markings !== false, particlesOn: !!(E.particles && E.settings.gpuParticles), hud: false,
     canister: P ? { canisterDuration: P.canisterDuration, canisterDensity: P.canisterDensity, canisterRadius: P.canisterRadius, canisterTemp: P.canisterTemp, canisterSpeed: P.canisterSpeed } : null, stagger, ...(DESTRUCTION.on ? { destruction: { on: true } } : {}), ...(LIVED.on ? { lived: true } : {}), ...(cutConfig.on ? { cutBoxes: true } : {}) };
 }
 /** the settings half of an env, onto an engine's settings BEFORE the Game is built on it (the marking lights are registered in the constructor) */
@@ -80,7 +78,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   assignDeep(g.tune as unknown as Record<string, unknown>, k.tune);
   if (typeof k.tune.qrfSquad !== 'boolean') g.tune.qrfSquad = false;   // (a recording from before the response team took a room by the squad's own code — no such key in its tune: its element ran its own drill)
   g.godMode = !!k.flags.godMode; g.aiEnabled = k.flags.aiEnabled !== false; g.infiniteAmmo = !!k.flags.infiniteAmmo; g.playerInvisible = !!k.flags.playerInvisible; if (typeof k.flags.fn2000 === 'boolean' && g.fn2000 !== k.flags.fn2000) g.setLoadout(k.flags.fn2000);
-  if (g.fogOfWar) g.fogOfWar.on = !!k.flags.fog;   // (the fog of war asks the sensors and bends say() / the reticle: a recording made under it replays under it — a file from before it has no flag = off)
+  if (g.fogOfWar) g.fogOfWar.on = !!k.flags.fog;   // (the fog of war bends say() / the reticle: a recording made under it replays under it — a file from before it has no flag = off)
   if (g.saves && typeof k.flags.autosave === 'boolean') g.saves.enabled = k.flags.autosave;   // (the field, not setEnabled: nothing to persist on a replay's machine)
   if (!k.tables.ENV) envAsBuilt();   // (a recording from before the game had numbers of its own for the scene's exposure and the tube's gain, env.ts: it was made on the picture's defaults, which are the build's — whatever a recipe or a --set left in the table)
   if ((k.tables.HARD as { sweep?: boolean } | undefined)?.sweep !== true) PRESSURE.sweep = false;   // (a recording from before hard's defenders went to look — it carries no HARD row, or one with no such key — replays with every man holding where the noise left him. The switch lives on HARD: PRESSURE is hard's copy of it and no recording carries that table, so the copy is only ever taken DOWN here; a recording that has the row on replays on the difficulty of the page it is played on, as every HARD row does)

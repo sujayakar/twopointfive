@@ -75,6 +75,8 @@ pub mod dust;
 pub mod events;
 pub mod fires;
 pub mod fog;
+pub mod lead;
+pub mod watched;
 pub mod lights;
 pub mod marks;
 pub mod men;
@@ -167,6 +169,7 @@ pub struct Drawn {
     pub dust: Vec<dust::DustLook>,
     pub rims: Vec<rims::Rim>,
     tick: Option<u32>,
+    run: Option<u32>,
     stood: u32,
     /// the distance the host's camera was on its way to as the step was handed it
     pub desired: f64,
@@ -179,25 +182,35 @@ pub struct Drawn {
     pub resets: Vec<resets::Reset>,
     pub snow: snow::Snow,
     pub smoke: smoke::Smoke,
+    /// the host's own man, where he is drawn ahead of the tick
+    pub lead: lead::Lead,
+    /// the picture is a tube's, whatever the run's was
+    tube: Option<bool>,
+    watched: Vec<(game::scene_boxes::Box, bool)>,
 }
 impl Drawn {
     /// A TICK HAS RUN: the sections of `want`, made again from the game as it stands
-    pub fn take(&mut self, g: &Game, want: u32) {
+    pub fn take(&mut self, g: &Game, want: u32) { self.taken(g, want, false) }
+    /// …of several a host steps before it draws a frame, one after the first: what moves is blended over them all
+    pub fn over(&mut self, g: &Game, want: u32) { self.taken(g, want, true) }
+    fn taken(&mut self, g: &Game, want: u32, over: bool) {
+        // (another run of the mission is another game, whoever began it)
+        if self.run.replace(g.mission.serial).is_some_and(|r| r != g.mission.serial) { self.cut(); }
         self.want = want;
         // (the same tick asked again, or asked for other sections, is packed again and is no step between two)
         let now = tick(g);
         let again = self.tick == Some(now);
         self.tick = Some(now);
-        if want & want::fog != 0 { self.fog.clear(); fog::fill(g, &mut self.fog); }
+        if want & want::fog != 0 { self.fog.clear(); fog::fill(g, &mut self.fog, self.men.bared); }
         if want & want::view != 0 { self.view.clear(); view::fill(g, self.stood, self.desired, &mut self.view); }
         if want & want::sky != 0 { self.sky.clear(); sky::fill(g, &mut self.sky); }
-        if want & want::boxes != 0 { let night = g.pl[game::seats::host_man(g)].nv_amount > 0.5; self.boxes.take(g, night, again && self.had & want::boxes != 0); }
+        if want & want::boxes != 0 { let night = self.tube.unwrap_or(g.pl[game::seats::host_man(g)].nv_amount > 0.5); self.boxes.take(g, night, over || again && self.had & want::boxes != 0, &self.watched); }
         if want & want::lights != 0 { self.lights.take(g, again && self.had & want::lights != 0); }
-        if want & want::men != 0 { self.men.take(g, again && self.had & want::men != 0); }
-        if want & want::rims != 0 { self.rims.clear(); rims::fill(g, &mut self.rims); }
+        if want & want::men != 0 { self.men.take(g, over || again && self.had & want::men != 0); }
+        if want & want::rims != 0 { rims::fill(g, &mut self.rims); }
         if want & want::events != 0 { self.events.take(g); resets::fill(g, &mut self.resets); }
         if want & want::level_look != 0 { self.dust.clear(); dust::fill(g, &mut self.dust); self.traffic.take(g); }
-        if want & want::fires != 0 { self.fires.clear(); fires::fill(g, &mut self.fires, &mut self.fire_table); }
+        if want & want::fires != 0 { self.fires.clear(); fires::fill(g, &mut self.fires, &mut self.fire_table, self.men.bared); }
         if want & want::air != 0 { self.winds.take(g, again && self.had & want::air != 0); }
         if want & want::snow != 0 { self.snow.take(g); }
         if want & want::smoke != 0 { self.smoke.take(g); }
@@ -206,13 +219,28 @@ impl Drawn {
     }
     /// A FRAME IS DRAWN, `a` of the way from the tick before to the last (1 = the last as it is), looking at `focus`
     pub fn frame(&mut self, g: &Game, a: f64, focus: [f64; 3]) {
-        if self.want & want::boxes != 0 { self.boxes.frame(g, a, focus); }
+        let lead = self.lead.at(a);
+        if self.want & want::boxes != 0 { self.boxes.frame(g, a, focus, lead.as_ref()); }
         if self.want & want::lights != 0 { self.lights.frame(a); }
         if self.want & want::men != 0 { self.men.frame(a); }
+        if let Some(by) = &lead {
+            if self.want & want::rims != 0 { rims::fill(g, &mut self.rims); }
+            self.lights.lead(by);
+            self.men.lead(by);
+            for r in &mut self.rims { if r.id == by.id { r.at = by.pt32(r.at); } }
+        }
         if self.want & want::decals != 0 { self.marks.frame(g, &self.boxes); }
     }
+    /// does this picture show what no list of the game's holds (watched.rs)
+    pub fn watches(&self) -> bool { self.men.bared || self.tube == Some(true) }
+    /// …that, of the game as it stands: before a take
+    pub fn watch(&mut self, g: &Game) { self.watched = if self.watches() { watched::boxes(g, self.men.bared && game::fogofwar::fog_of_war_active(g), self.tube == Some(true)) } else { Vec::new() }; }
+    /// A VIEWER'S OWN PICTURE of a run: with the fog off it, or through a tube the run's was not (nothing said: as the run had it)
+    pub fn view_as(&mut self, bared: bool, tube: Option<bool>) { self.tube = tube; self.boxes.bare(bared); self.men.bared = bared; self.lights.bared = bared; }
+    /// a host's tick came and the game was not stepped (a networked host with nothing confirmed): what moves stands where the last tick left it, and is blended from there
+    pub fn hold(&mut self) { self.boxes.hold(); self.lights.hold(); self.men.hold(); }
     /// the game is another than the one last drawn (a start, a game put back, another seat): nothing is drawn through it
-    pub fn cut(&mut self) { self.boxes.cut(); self.lights.cut(); self.men.cut(); self.events.cut(); self.marks.cut(); self.smoke.cut(); self.tick = None; self.stood += 1; }
+    pub fn cut(&mut self) { self.boxes.cut(); self.lights.cut(); self.men.cut(); self.events.cut(); self.marks.cut(); self.smoke.cut(); self.lead.rest(); self.tick = None; self.stood += 1; }
     /// what the page says of its look
     pub fn look(&mut self, v: &[f64]) { let (boxes, men) = v.split_at(boxes::LOOK); self.boxes.set_look(boxes::Look::read(boxes)); self.men.swaps = core::array::from_fn(|i| men[i] as u32); }
     pub fn table(&mut self) -> &[u32] {

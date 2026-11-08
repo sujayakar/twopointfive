@@ -18,17 +18,16 @@
 // (tools/qa wind-identity). Knobs WIND below (Tab ▸ Weather ▸ wind rows, kept per machine with the master: localStorage twopointsix.wind).
 import { Vec3, v3 } from '../math/vec';
 import { hashStr } from '../math/dice';
-import { HostOwned } from '../math/side';
 import type { Game } from './game';
 import type { Door } from './doors';
 import type { VentDef } from '../scene/level';
 import { VENT_DEFAULTS } from '../scene/levelData';
-import type { WindGpuSource } from '../smoke/types';
+import { WIND_GPU_MAX, type WindGpuSource } from '../smoke/types';
+import { hyp2 } from '../math/hyp';
 import { INTERIOR, ANNEX } from './weather';
 import { WX_OWN } from './weatherKinds';
 import { isDaylight } from './lighting';
 import { gpuFx } from './particleFx';
-import type { GridWind } from '../scene/collision';
 import { sim, f64 } from '../sim/sim';
 import { WX_WATCH, wxScratch } from '../sim/weatherhome';
 import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
@@ -104,10 +103,9 @@ function ventDue(v: VentDef, t: number): boolean {
 }
 export interface WindSource extends WindGpuSource { why: WindWhy; base: number; on: number; gust: number; seed: number; vent?: VentDef; door?: Door; }
 /** counters for the probes / panel */
-export const WIND_STATS = { frames: 0, active: 0, toParticles: 0, toSmoke: 0, doorGusts: 0, stormFrames: 0, atCalls: 0 };
+export const WIND_STATS = { frames: 0, active: 0, toSmoke: 0, doorGusts: 0, stormFrames: 0, atCalls: 0 };
 const DEG = Math.PI / 180;
 
-export class PoolList extends HostOwned { readonly list: WindSource[] = []; }
 /** `at` and `stormShare`'s working vectors: written and read inside one call, so nothing of the game's — they were fields of the Wind, where whoever asked last
  *  (the particle pool's path, the panel's probe at the cursor) left his numbers in the game's state */
 const SCRATCH_P: Vec3 = [0, 0, 0], SCRATCH_Q: Vec3 = [0, 0, 0], SCRATCH_W: Vec3 = [0, 0, 0];
@@ -115,11 +113,17 @@ const SCRATCH_P: Vec3 = [0, 0, 0], SCRATCH_Q: Vec3 = [0, 0, 0], SCRATCH_W: Vec3 
 export class Wind {
   /** every source the level can have (vents, one storm, one per exterior door), built once; `active` = the ones blowing this frame (speed > 0), rebuilt in place each update */
   readonly all: WindSource[] = []; readonly active: WindSource[] = [];
-  /** what went to the particles this frame (nearest the view first, ≤ WIND_GPU_MAX) — the solver gets `active` and culls it itself. THE HOST'S, not the game's
-   *  (math/side.ts HostOwned): it is filled only where a particle pool is, by distance from where the view looks, and rebuilt every frame — so no snapshot or
-   *  state hash holds it, and a game with a pool and one without are one state */
-  private readonly toPool = new PoolList();
-  get forParticles(): WindSource[] { return this.toPool.list; }
+  /** what goes to the particles this frame (the jets nearest the view, then the storm; ≤ WIND_GPU_MAX). THE HOST'S, not the game's: it needs a particle pool and where the view looks,
+   *  so it is made of the standing game where it is asked (src/host/rustdress.ts, the wind's panel), and no game's record holds it. rust/game_draw/src/winds.rs `for_particles` is the
+   *  same rule, for the page that holds no game. tools/draw/weather-check.ts holds the two together. */
+  get forParticles(): WindSource[] {
+    const g = this.g; if (windOf(g) <= 0) return [];
+    const f = (g.engine as { viewFocus?: Vec3 }).viewFocus ?? g.player.char.pos, W = g.weather, sx = W ? W.wind[0] * WIND.stormK : 0, sz = W ? W.wind[1] * WIND.stormK : 0, storm = this.blows(true) && hyp2(sx, sz) >= 0.05;
+    const pool = this.active.filter(s => s.kind === 'jet' && v3.dist(s.bound.c, f) < WIND.nearM + s.bound.r), most = WIND_GPU_MAX - (storm ? 1 : 0);
+    if (pool.length > most) { pool.sort((a, b) => v3.dist(a.bound.c, f) - v3.dist(b.bound.c, f)); pool.length = most; }
+    if (storm && this.storm.speed > 0) pool.push(this.storm);
+    return pool;
+  }
   private storm: WindSource;
   /** the level's own roofs as the weather last told them (reroof; null = the office's two) — what the storm record's `roofs` is while WX_OWN.wind is on */
   private lvRoofs: readonly (readonly number[])[] | null = null;
@@ -195,20 +199,6 @@ export class Wind {
     if (roofs) stormVelRoofs(UNIT_X, roofs, p, q); else stormVel(UNIT_X, s.interior!, s.annex!, p, q);
     return Math.max(0, Math.min(1, q[0] / WIND_FIELD.stormLow));
   }
-  /** THE WIND THE GAME'S OWN SMOKE DRIFTS BY (sense.ts SENSE.drift; rust/sim/src/bricks.rs 3b), or null in still air: the weather's vector as the game
-   *  holds it, by `stormWind`'s test of whether the weather blows at all, `stormShare` for where, and the storm field's own rise with height (`low` of
-   *  it at the ground, `gain` more by `fullAt` metres up). It is the game's, so none of a machine's own wind settings is in it (the master,
-   *  `WIND.storm`, `WIND.stormK`, the weather's own on / off: what a player turns down is his picture), and no gust: one vector, from what a
-   *  snapshot carries, the same on every machine that plays the game. */
-  stormDrift(): GridWind | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Wind.stormDrift', this, []); if (__r !== RUST_PASS) return __r as any; } }
-    const W = this.g.weather; if (!this.blows(false)) return null;
-    const x = W.wind[0], z = W.wind[1]; if (x === 0 && z === 0) return null;
-    // (the footprints as the weather's roofs and the switch give them NOW, not as the storm's record last had them: that record is refreshed by the
-    //  frame's dressing step, `update`, which a host with the wind turned down or no picture does not take. Made for the asker and let go: no function
-    //  is kept on the game)
-    const roofs = this.fieldRoofs();
-    return { x, z, low: WIND_FIELD.stormLow, gain: WIND_FIELD.stormGain, fullAt: WIND_FIELD.stormFullAt, share: (px, pz) => this.shareUnder(px, pz, roofs) };
-  }
   /** DOES THE WEATHER BLOW AT ALL: at night or in a picked kind (which blows by day and in the dry too: weather.ts), and rain or a storm running. The
    *  one test, for the picture's storm (`stormWind`, which adds a machine's own wind settings) and the game's drift alike. `session`: …and the
    *  weather's own switch is up — `?noweather`, the panel's box: the SESSION's (weather.ts restore), so the picture asks it and the game's drift
@@ -221,7 +211,7 @@ export class Wind {
   /** the storm's wind vector when it should be felt (weather on, night, the storm knob up, rain or storm actually running, a real speed) — null otherwise; glassbreak's gusts through shot-out panes ask the same question (one test) */
   stormWind(): Vec3 | null { if (RUST_SURFACE?.tapFiring('Wind.stormWind')) return RUST_SURFACE.tapAnswer() as any; return goneWithTick('Wind.stormWind') as any; }
 
-  /** Once a frame (game.ts, after the weather and the doors): every source's speed for this frame, the active list, and the hand-off to both GPU consumers. */
+  /** Once a frame (game.ts, after the weather and the doors): every source's speed for this frame, the active list, and the hand-off to the smoke. Which of them a particle pool is handed is the host's: `forParticles`. */
   update(dt: number): void { return crossToRust('Wind.update', this, [dt]) as any; }
 
   /** The air's velocity at p this frame (m/s): the sum over every active source — what the GPU consumers evaluate, on the CPU (the moths, the panel, the probes). */

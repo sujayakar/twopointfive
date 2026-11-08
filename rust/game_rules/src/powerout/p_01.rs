@@ -204,11 +204,6 @@ pub fn floor_watched(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     best
 }
 
-/// every carried lamp is left out of the reading. (powerout.ts carried)
-pub fn carried() -> bool {
-    true
-}
-
 /// why a defender is not free to go (None = he is): calm, on a post the room fight gave him, and nobody else's. (powerout.ts powerOutKept)
 pub fn power_out_kept(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<String> {
     let gd = g.tab.roomfight_def[d].gd;

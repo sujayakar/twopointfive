@@ -5,7 +5,7 @@ import type { Quality } from './quality';
 import { RENDER_PASSES } from '../gpu/timer';
 
 const LS = 'twopointsix.readout', EVERY = 10, RENDERED = [...RENDER_PASSES];
-export interface ReadoutSource { engine: Engine; smoke: SmokeSystem; quality: Quality; adapter: string; men(): number; told: { fps: number; tick: number; draw: number; update: number; render: number } }
+export interface ReadoutSource { engine: Engine; smoke: SmokeSystem; quality: Quality; adapter: string; men(): number; told: { fps: number; tick: number; draw: number; update: number; render: number; hud: number } }
 export class Readout {
   on = false;
   private n = 0; private gpu = 0; private read = -1; private el = document.getElementById('hud')!;
@@ -29,9 +29,9 @@ export class Readout {
     const lines = [this.s.adapter, ...(said ? [said] : []),
       row('res', `${E.width}×${E.height} ×${E.settings.renderScale.toFixed(2)}${E.settings.taau ? ` → ${E.outWidth}×${E.outHeight} taau${E.sharpOn ? ' sharp' : ''}` : ''}`),
       row('quality', `${quality.label}${quality.adaptive ? ' +adapt' : ''}`), row('fps', told.fps.toFixed(0)), row('gpu ms', ms(this.gpu)),
-      row('page ms', `${ms(told.update + told.render)} · tick ${ms(told.tick)} · rows ${ms(told.draw)} · draw ${ms(told.render)}`)];
+      row('page ms', `${ms(told.update + told.render + told.hud)} · tick ${ms(told.tick)} · rows ${ms(told.draw)} · draw ${ms(told.render)} · hud ${ms(told.hud)}`)];
     for (const [k, v] of t.results) if (!RENDER_PASSES.includes(k) && t.ranThisFrame(k)) lines.push(row(`  ${k}`, ms(v)));
-    lines.push(row('boxes', String(E.world.all.length)), row('men', String(this.s.men())), row('lights', String(E.lights.activeCount)), row('smoke', `${smoke.stats.pool}/${smoke.grid.cap} bricks · ${smoke.stats.stepped} stepped`), row('rc rays', `${(E.rc.stats.intervals / 1e6).toFixed(2)}M`), row('view', `exp ${E.settings.exposure.toFixed(2)}`));
+    lines.push(row('boxes', String(E.world.statics.length + E.world.dynamics.length)), row('men', String(this.s.men())), row('lights', String(E.lights.activeCount)), row('smoke', `${smoke.stats.pool}/${smoke.grid.cap} bricks · ${smoke.stats.stepped} stepped`), row('rc rays', `${(E.rc.stats.intervals / 1e6).toFixed(2)}M`), row('view', `exp ${E.settings.exposure.toFixed(2)}`));
     this.el.textContent = lines.join('\n');
   }
 }

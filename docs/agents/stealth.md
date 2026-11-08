@@ -489,7 +489,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   turned: state 'patrol') has no sum: the hold breaks when his awareness itself is at `breakGain`, with no line. NOT A FOOL: each taking inside `memorySecs`
   60 of the last is × `wearK` 0.6 as long and he says so ('again?' in place of the 'huh?': guards.ts asks `attentionAgain`), the `spent`-th (3rd) is a
   search of the place; things inside `sameSecs` 2.5 of each other are ONE happening (a canister's bounces, a dragged body's scrape) and get one taking however
-  long they go on; a whistle keeps whistle.ts's own 'twice'. SHOWN (`attentionMarks` → `src/ui/attentionviz.ts`, the overlay's `#traj`): a dotted amber
+  long they go on; a whistle keeps whistle.ts's own 'twice'. SHOWN (`view.attention` → `src/ui/attentionviz.ts`, the overlay's `#traj`): a dotted amber
   thread from the man to the place and a ring there that runs down like a clock once he is at it, part-spent from the start when worn, flickering for the
   last beat; nothing of a man the fog of war hides; no word, no number. FOR OTHER FILES: `attentionLend(g, gd, at, { ears?, noises? })` called every frame a
   standing claim holds (a man at a lit screen, headphones = the lender's two numbers): the same narrowing and mark, a real thing takes it over, and a man a
@@ -1724,9 +1724,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   scene as a contact sheet with numpy and Pillow alone (a small z-buffer rasteriser: from the side, the game camera's pitch from behind and from in front,
   from above); it reads `pose-mesh.ts` / `ready-pose-probes.ts` PLYs too. `pose-mesh-render.py` (Blender) is the better picture where there is one. No light,
   no cloth, no camera framing: it is the mesh the page skins at the poses the game reaches.
-- **The attention thread runs the way he will walk** (`ATTENTION.way`, attention.ts `attentionWay`, drawn by ui/attentionviz.ts `threadPoints`; the maintainer,
+- **The attention thread runs the way he will walk** (`ATTENTION.way`, `view.attention`, drawn by ui/attentionviz.ts `attentionWay`, `threadPoints`; the maintainer,
   10-22, off the stealth tutorial mission, of a thread drawn from a man in a hut straight through its wall: "weird that the line here is a straight line, not a
-  pathed one. i'd expected pathed from squad commands"). For a man WALKING to the place (`AttentionMark.walking`: a `go` hold not yet at the thing) the dotted
+  pathed one. i'd expected pathed from squad commands"). For a man WALKING to the place (`AttentionLine.walking`: a `go` hold not yet at the thing) the dotted
   thread is his feet, every corner of his way, the place: his own nav path from where he is on it when it is the walk to this place, else the nav grid's answer
   kept `wayReask` 0.5 s (the first frames, before he has a path). A man who only LOOKS (a turned head, a lent hold, a man standing at the thing) and a place the
   floor has no way to keep the straight thread. PICTURE ONLY, so it is ON in the module and on BOTH stands, no `FROZEN_HOLDS` row: nothing in the update reads

@@ -547,18 +547,6 @@ pub const EYE_STAND: f64 = 1.55;
 /// (src/game/fogofwar.ts:406 EYE_CROUCH)
 pub const EYE_CROUCH: f64 = 0.95;
 
-/// (src/game/fogofwar.ts:409 SMOKE_ASKS)
-pub const SMOKE_ASKS: f64 = 6.0;
-
-/// (src/game/fogofwar.ts:409 SMOKE_EYES)
-pub const SMOKE_EYES: f64 = 2.0;
-
-/// (src/game/fogofwar.ts:411 SMOKE_FRESH)
-pub const SMOKE_FRESH: f64 = 8.0;
-
-/// (src/game/fogofwar.ts:411 SMOKE_KEEP)
-pub const SMOKE_KEEP: f64 = 30.0;
-
 /// (src/game/fogofwar.ts:412 DEG)
 pub const DEG: f64 = 0.017453292519943295;
 

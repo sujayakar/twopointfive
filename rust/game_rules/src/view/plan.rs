@@ -111,7 +111,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
         for &gd in squad.iter() {
             let Some(a) = crate::orders::squad_orders_of(g, seat, gd) else { continue };
             let a = &g.tab.orders_assignment[a];
-            if alive(g, gd) && a.order == "stack" && a.post.is_some() && a.there.starts_with("stacked") {
+            if alive(g, gd) && crate::orders::rows::id_is(&a.order, crate::orders::Is::Stacks) && a.post.is_some() && a.there.starts_with("stacked") {
                 if let Some(d) = a.door { put(&mut by, d, &[gd], WaitWhy::Stack, addr.contains(&gd)); }
             }
         }
@@ -295,7 +295,7 @@ fn seat_plan(g: &Game, seat: &SeatRef, who: For) -> SeatPlan {
         let fit_watch = a.fit.as_ref().and_then(|f| f.watch);
         let raw = a.watch.or(fit_watch);
         let on_door = raw.is_some_and(|w| a.door.is_some_and(|d| flat(w, g.dr[d].frame_centre) < 1.5));
-        let told = raw.filter(|&w| a.foe.is_none() && (on_door || Some(w) == fit_watch || a.order == "cover" || a.order == "move" || a.order == "hold"));
+        let told = raw.filter(|&w| a.foe.is_none() && (on_door || Some(w) == fit_watch || a.order == crate::orders::rows::cover::ORDER.id || a.order == crate::orders::rows::movethere::ORDER.id || a.order == crate::orders::rows::hold::ORDER.id));
         let (mut aim, mut watch): (Option<f64>, Option<V3>) = (None, None);
         if there {
             aim = Some(c.aim_yaw);

@@ -262,7 +262,7 @@ pub fn quiet_mission_tick(g: &mut crate::game::Game, cam: Option<CameraId>) {
     g.quiet.fall_in = false;
     let at = g.ch[g.pl[g.player].ch].pos;
     let target = crate::orders::squad_orders_target_at(g, at);
-    let why = crate::orders::squad_orders_give(g, "fallIn", Some(&target), Some(crate::orders::Who::All), None);
+    let why = crate::orders::squad_orders_give(g, crate::orders::rows::fallin::ORDER.id, Some(&target), Some(crate::orders::Who::All), None);
     match why {
         Some(w) => quiet_mission_note(g, &format!("fall in refused: {}", w)),
         None => quiet_mission_note(g, "partner following"),

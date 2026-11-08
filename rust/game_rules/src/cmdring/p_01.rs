@@ -181,7 +181,7 @@ pub fn flat_seats(g: &crate::game::Game, rows: &[crate::cmdring::FlatRow], kind:
 fn flat_seats_of(wedges: f64, rows: &[FlatRow], kind: &str, word_key: &str, lead: f64) -> FlatSeats {
     let w = wedges as usize;
     let mut row: Vec<f64> = vec![-1.0; w + 1];
-    let (flat_top, flat_left) = (crate::cmdring::flat_top(), crate::cmdring::flat_left());
+    let (flat_top, flat_left) = (flat_top(), flat_left());
     let top = flat_top.get(String::from(kind));
     let left = flat_left.get(String::from(kind));
     let mut rest: Vec<f64> = Vec::new();
@@ -267,6 +267,24 @@ pub fn ring_latch(r: &mut crate::cmdring::RingState, key_down: bool, key_hit: bo
 pub fn wedge_at(dx: f64, dy: f64, n: f64) -> f64 {
     let k = m::round(m::atan2(dx, -dy) / (2.0 * m::PI / n));
     js::rem(js::rem(k, n) + n, n) + 1.0
+}
+
+/// each kind of target's rows that hold a place at the top of the flat ring, by the place   (cmdring.ts:276 FLAT_TOP)
+fn flat_top() -> JsMap<String, JsMap<String, f64>> {
+    let place = |rows: &[(&str, f64)]| { let mut t = JsMap::new(); for &(id, at) in rows { t.set(String::from(id), at); } t };
+    let mut t = JsMap::new();
+    t.set(String::from("floor"), place(&[(crate::orders::rows::cover::ORDER.id, 2.0), (crate::orders::rows::fallin::ORDER.id, 3.0), (crate::orders::rows::hold::ORDER.id, 4.0)]));
+    t.set(String::from("door"), place(&[(crate::orders::rows::cover::ORDER.id, 2.0), (crate::orders::rows::openclear::ORDER.id, 3.0), (crate::orders::rows::bangclear::ORDER.id, 4.0)]));
+    t.set(String::from("none"), place(&[(crate::orders::rows::fallin::ORDER.id, 3.0), (crate::orders::rows::hold::ORDER.id, 4.0)]));
+    t.set(String::from("foe"), JsMap::new());
+    t
+}
+
+/// each kind of target's rows that go last   (cmdring.ts:279 FLAT_LEFT)
+fn flat_left() -> JsMap<String, Vec<String>> {
+    let mut t = JsMap::new();
+    t.set(String::from("door"), alloc::vec![String::from(crate::orders::rows::fallin::ORDER.id), String::from(crate::orders::rows::hold::ORDER.id)]);
+    t
 }
 
 #[cfg(test)]

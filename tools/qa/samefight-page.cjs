@@ -52,8 +52,8 @@ const picked = (arg('runs') || 'compound').split(',').filter(Boolean);
       }
       inp.buttons = 0; C.stop();
       const file = window.__replay.file('samefight'), reg = window.__knobs.registry();
-      return { fatal: document.getElementById('fatal')?.textContent || '', parts: C.parts, sam: C.sam, words: C.words, steps: C.steps, file, seed: g.dice ? g.dice.seed : null, exact: window.__sim.exact(), sense: reg.SENSE ? reg.SENSE.cpu : undefined,
-        gpuReads: g.sensors.stats.reads, fixed: g.seat.fixed, fixedCmds: g.seat.fixedCmds, checked: reg.CMDCHECK && reg.CMDCHECK.on, events: g.events.length - before.events, down: before.up - g.guards.filter(x => x.state !== 'dead').length, men: g.guards.length, time: g.time, playerUp: g.player.char.health > 0 };
+      return { fatal: document.getElementById('fatal')?.textContent || '', parts: C.parts, sam: C.sam, words: C.words, steps: C.steps, file, seed: g.dice ? g.dice.seed : null, exact: window.__sim.exact(),
+        fixed: g.seat.fixed, fixedCmds: g.seat.fixedCmds, checked: reg.CMDCHECK && reg.CMDCHECK.on, events: g.events.length - before.events, down: before.up - g.guards.filter(x => x.state !== 'dead').length, men: g.guards.length, time: g.time, playerUp: g.player.char.health > 0 };
     }, { script: SCRIPT, every: DRAW }).catch(e => ({ fatal: String(e && e.stack || e).slice(0, 600) }));
     await page.close();
     const secs = ((Date.now() - t0) / 1000).toFixed(0);
