@@ -758,8 +758,7 @@ and hands it back (game.ts `fogLift`, `fogBack`). The Rust translation of that p
 deleted, with the five fields only it used. One fault found and NOT mended, for whoever owns what the page
 shows: the page never raises `viewer` on the Rust game, so the Rust tick keeps no list of the frame as it stood
 before the fog cut it, and a replay watched with the fog off cannot be showing what the fog cut. The cure is one
-write by path of `['fog_picture', 'viewer']` where the page raises its own (`replay/engineplay.ts`,
-`host/kitView.ts`); `picture::keep_raw` and the wire's `raw_list` and `raw_at` are there for it.
+write by path of `['fog_picture', 'viewer']` where the page raises its own (`replay/engineplay.ts`); `picture::keep_raw` and the wire's `raw_list` and `raw_at` are there for it.
 
 **How it was done.** Three commits. The code cut with every field in place: `hold check`, 120 of 120 runs the
 same in every part. The Rust lift deleted, and then the ten fields moved by a program
