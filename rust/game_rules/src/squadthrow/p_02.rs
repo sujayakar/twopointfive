@@ -176,7 +176,7 @@ pub fn squad_lend(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Guard
     let p = g.ch[c].pos;
     let was = crate::orders::squad_orders_of(g, seat, gd);
     let back = match was {
-        Some(a) if resumed().iter().any(|r| *r == g.tab.orders_assignment[a].order) => {
+        Some(a) if crate::orders::rows::is(g, a, crate::orders::Is::Resumed) => {
             let w = g.tab.orders_assignment[a].clone();
             Some(LentBack {
                 order: w.order,
@@ -233,7 +233,7 @@ pub fn squad_hand_back(g: &mut crate::game::Game, w: &mut crate::squadthrow::Len
         return;
     }
     crate::orders::squad_orders_new_group(g);
-    if b.as_ref().map_or(false, |b| b.order == "fallIn") {
+    if b.as_ref().map_or(false, |b| crate::orders::rows::id_is(&b.order, crate::orders::Is::Follows)) {
         let d = g.orders.defs.iter().copied().find(|d| g.tab.orders_order_def[*d].id == "fallIn");
         if let Some(d) = d {
             crate::orders::order_issue(g, d, &[gd], &w.t, None);
@@ -242,7 +242,7 @@ pub fn squad_hand_back(g: &mut crate::game::Game, w: &mut crate::squadthrow::Len
     }
     let mut stale = false;
     if let Some(b) = &b {
-        if b.order != "hold" && !w.mates.is_empty() {
+        if !crate::orders::rows::id_is(&b.order, crate::orders::Is::Holds) && !w.mates.is_empty() {
             let mut any = false;
             for m in w.mates.iter().copied() {
                 if g.gd[m].state != crate::game::GuardState::Dead {
@@ -258,7 +258,7 @@ pub fn squad_hand_back(g: &mut crate::game::Game, w: &mut crate::squadthrow::Len
         }
     }
     if let Some(b) = b {
-        if b.order != "fallIn" && !stale {
+        if !crate::orders::rows::id_is(&b.order, crate::orders::Is::Follows) && !stale {
             let post = Some(b.post.unwrap_or_else(|| v3::copy(w.home)));
             let face = Some(b.face.unwrap_or(w.home_yaw));
             let mut a = back_as!(b, crate::orders::SquadOrdersAssignA);

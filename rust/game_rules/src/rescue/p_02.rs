@@ -134,7 +134,7 @@ fn posted(g: &Game, seat: &crate::seats::SeatRef, o: GuardId) -> bool {
 fn posted_cover(g: &Game, seat: &crate::seats::SeatRef, o: GuardId) -> bool {
     if !posted(g, seat, o) { return false; }
     let a = crate::orders::squad_orders_of(g, seat, o).unwrap();
-    g.tab.orders_assignment[a].order == "cover"
+    crate::orders::rows::is(g, a, crate::orders::Is::Covers)
 }
 /// The man of `l` in the room nearest the side door. (rescue.ts Rescue.pick, its `near`)
 fn near(g: &Game, l: &[GuardId], sb: Option<crate::scene_scenarios::Rect>, sd: DoorId) -> Option<GuardId> {
@@ -954,7 +954,7 @@ pub fn rescue_search(g: &mut crate::game::Game) {
         let stands = match a {
             Some(a) => {
                 let row = &g.tab.orders_assignment[a];
-                alive(g, o) && g.m.rescue.door_orders.has(row.order.clone()) && match row.post { Some(post) => !(flat(p, post) > 0.6), None => false }
+                alive(g, o) && crate::orders::rows::id_is(&row.order, crate::orders::Is::Enters) && match row.post { Some(post) => !(flat(p, post) > 0.6), None => false }
                     && in_rect(p, b) && !g.door_tools.ops.iter().any(|&x| g.tab.doortools_door_op[x].men.contains(&o))
             }
             None => false,

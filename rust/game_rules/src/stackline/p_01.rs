@@ -34,7 +34,7 @@ pub fn stack_line_pace(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignme
     let on_mark = g.k.stackline.on_mark;
     let (shy, post) = {
         let row = &g.tab.orders_assignment[a];
-        if row.order != "stack" { return None; }
+        if !crate::orders::rows::id_is(&row.order, crate::orders::Is::Stacks) { return None; }
         let Some(shy) = row.shy else { return None; };
         if row.door != Some(shy) { return None; }
         let Some(post) = row.post else { return None; };

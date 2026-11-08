@@ -1,11 +1,12 @@
 //! MOVE THERE, HOLD IN THE DARK: it stands in move's place while the squad is silent. The job and its state are the module `pairorders`.
 use crate::game::Game;
 use crate::ids::*;
-use crate::orders::rows::Row;
+use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
+    is: &[Is::Pair],
     can: Some(can),
     tick: Some(crate::pairorders::pair_orders_dark_tick),
     when: Some(when),

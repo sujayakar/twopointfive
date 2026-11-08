@@ -352,9 +352,3 @@ pub struct PairordersStats {
 
 /// (src/game/pairorders.ts:110 STEADY_BREAK)
 pub const STEADY_BREAK: bool = false;
-
-/// (src/game/pairorders.ts:123 ROWS: a table nothing writes)
-pub fn rows() -> Vec<String> { alloc::vec![String::from("pairMark"), String::from("pairWatch"), String::from("pairTake"), String::from("pairDark"), String::from("pairGo")] }
-
-/// (src/game/pairorders.ts:124 TAKES: a table nothing writes)
-pub fn takes() -> Vec<String> { alloc::vec![String::from("pairMark"), String::from("pairTake")] }

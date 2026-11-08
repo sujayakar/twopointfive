@@ -1,12 +1,12 @@
 //! FALL IN: "fall in". The men take places in the file behind Sam.
 use crate::game::Game;
 use crate::ids::*;
-use crate::orders::rows::Row;
+use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use crate::{js, m, v3};
 use alloc::{format, string::String, vec, vec::Vec};
 
-pub const ORDER: Row = Row::new("fallIn", label, issue);
+pub const ORDER: Row = Row { is: &[Is::Follows, Is::Resumed], ..Row::new("fallIn", label, issue) };
 
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("fall in") }
 
