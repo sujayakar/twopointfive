@@ -667,4 +667,4 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`replay.html`) lists them with the rest and opens them there. READ ONE: `tools/draw/walk.ts <tape | kept lines>` walks it with no page; `replay-dump.ts` writes a hand-over's as `<visit>.tape`.
   CHECKS: `tools/draw/tape-check.ts` (every mission, a hands-off player and a hand that does anything, with saves, a load and a restart, walked by a module that is asked nothing to the same
   die, parts and whole state; `TAPE_BREAK=1`), `keep-check.ts` (`KEEP_BREAK=1`), `walk-check.ts` and the page's, `tape-page.cjs`. MEASURED: 17 to 348 KB a minute packed, 500 to 2,000 ticks a
-  second unseen in bun. NOT THERE YET: the fog off and the night vision of the picture's own, the map, a Send button, the sounds' lanes. Never seen on a GPU, never played by a person.
+  second unseen in bun. `map.ts` is its map (`face_floor`, `face_map`), Fog (F) and NV (V) are the picture's own (`face_draw_as`). NOT THERE YET: a Send button, the sounds' lanes, the rounds and orders on the line. Never seen on a GPU, never played by a person.
