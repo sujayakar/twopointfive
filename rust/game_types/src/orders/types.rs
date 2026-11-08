@@ -1923,9 +1923,9 @@ pub struct Row {
     pub valid: Option<fn(&mut Game, &OrderTarget, &[GuardId]) -> Result<(), Option<String>>>,
     pub issue: fn(&mut Game, &[GuardId], &OrderTarget, Option<&GiveOpts>) -> Option<String>,
     /// the flat ring does not offer the row on this target at all
-    pub gone: Option<fn(&mut Game, &OrderTarget, &[GuardId]) -> bool>,
+    pub gone: Option<fn(&Game, &crate::seats::SeatRef, &OrderTarget, &[GuardId]) -> bool>,
     /// it stands in for the row its data names (`stands_in`) now
-    pub when: Option<fn(&mut Game, &OrderTarget, &[GuardId]) -> bool>,
+    pub when: Option<fn(&Game, &crate::seats::SeatRef, &OrderTarget, &[GuardId]) -> bool>,
     pub tick: Option<fn(&mut Game, GuardId, OrdersAssignmentId)>,
     pub frame: Option<fn(&mut Game)>,
 }

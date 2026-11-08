@@ -274,7 +274,7 @@ pub mod script_tut_queue { pub mod types; pub use types::*; }
 pub mod script_tut_quiet { pub mod types; pub use types::*; }
 pub mod script_tut_road { pub mod types; pub use types::*; }
 pub mod script_tut_team { pub mod types; pub use types::*; }
-pub mod seats { pub mod types; pub use types::*; }
+pub mod seats { pub mod types; pub use types::*; pub mod seat_ref; pub use seat_ref::*; }
 pub mod seenwalk { pub mod types; pub use types::*; }
 pub mod sense { pub mod types; pub use types::*; }
 pub mod sensors { pub mod types; pub use types::*; }
