@@ -8,7 +8,6 @@ import type { MarkingDef } from './markings';
 import type { LevelData, SurfacesData } from './levelData';
 import { loadLevel } from './levelLoad';
 import officeData from '../../levels/office.json' with { type: 'json' };
-import officeReliefData from '../../levels/office-relief.json' with { type: 'json' };   // the office BEFORE the markings lane's demotion pass: main's boxes exactly (tools/level-export.ts --relief) — ?level=relief boots on it for the ray-cost A/B and the identity hashes
 import type { WeaponId } from '../game/weapons';   // (type only: what a route may hand its man — erased at runtime, so the scene layer still loads below the game's)
 import type { LevelScriptFn } from '../game/director';   // (type only, likewise: the level's script is a plain function handed to game/director.ts)
 import type { LevelScenarios } from './scenarios';
@@ -201,7 +200,6 @@ export interface Level {
  *  the breach's scratch routes), so nothing may be shared between two boots. The JSON is imported, not fetched — Bun inlines it into the bundle, so the
  *  playable Artifact and the headless harness both get it with no extra asset. */
 export function buildLevel(): Level {
-  if (typeof location !== 'undefined' && new URLSearchParams(location.search).get('level') === 'relief') return loadLevel(OFFICE_RELIEF_DATA);   // ?level=relief: the pre-demotion office (main's geometry, no markings)
   return loadLevel(OFFICE_DATA);
 }
 /** attach a level SCRIPT to a Level. The script is CODE, not level data: it rides on the Level as a non-enumerable property, so everything that walks the Level's keys as data
@@ -209,7 +207,5 @@ export function buildLevel(): Level {
 export function withScript(level: Level, script: LevelScriptFn): Level { Object.defineProperty(level, 'script', { value: script, enumerable: false, writable: true, configurable: true }); return level; }
 /** the office's level data as bundled (read-only: loadLevel copies everything it hands out) */
 export const OFFICE_DATA: LevelData = officeData as unknown as LevelData;
-/** the office as it was before the markings lane demoted face relief to markings (levels/office-relief.json — regenerated beside office.json; main's boxes exactly, digest-identical to main's file) */
-export const OFFICE_RELIEF_DATA: LevelData = officeReliefData as unknown as LevelData;
 
 export { DEG };
