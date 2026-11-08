@@ -2429,7 +2429,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   played by its own address leads to the listed lesson after it (the tactics mission still to the ledger). The ledger's `scene` line no longer names "the
   post", which was the tactics mission's: "The people who hit the convoy were paid through a money changer's shop in town". NO SWITCH of its own: the list
   is data, and the next-lesson rule follows what the desk draws (`?offlist=0` = every lesson leads to the next row of the table, as before). CHECK: `rust/game_run/tests/desk.rs` (the cut rows, `offlist=0`); `offlist-check.ts` went with the page's list, 2026-11-08.
-  `tools/qa/kitview-page.cjs` reads a row's cut from its whole line now (both new rows say it after their level). RUN on this change: `offlist-check`
+  RUN on this change: `offlist-check`
   both ways, `writing-check`, `lesson-check`, `rails-check` on both stands, the `ui` gate, the `missions` gate (two reds there, `defuse` and
   `missions-shipped`'s compound row, are red on the unchanged build head too). ON THE REAL PAGE (headless Chromium, the software adapter, the DOM read, no
   picture): the title's Play draws four tutorial cards in that order, `?offlist=0` six, the ledger's load card reads its new line, and

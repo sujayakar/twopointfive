@@ -545,7 +545,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   now CUT: no `src/game/shield.ts`, no `SHIELD` knob table, no `TPS_SHIELD` word or `FROZEN_HOLDS` row, no `?shield`, no Tab row; `MemberKit` has no `shield` field and the big slot
   offers empty · breaching shotgun · dynamic hammer · wall charge; slots.json v10 has no shield tool and no 'Shield and shotgun' squad kit; a round, a blast and a defender's aim
   no longer ask about a plate (combat.ts, frag.ts, guards.ts), a stack is dealt by the plain rule (doortools.ts, orders.ts: no shield man put first), the figure has no plate
-  layer (`character.ts`), the Team & kit door picture draws none (`host/kitView.ts`). NO SWITCH: every stand is the build as it was with the
+  layer (`character.ts`), the Team & kit door picture draws none (`rust/game_rules/src/kitstage`). NO SWITCH: every stand is the build as it was with the
   shield off, so the shipped stand's digests are unmoved and the frozen stand's move only where a shield was staged (the long hall; the kit probes that planted one). WHAT OLD
   DATA DOES: a stored or pasted card that says `shield` is a card without one — `kitSanitize` takes only what a row offers, and the next change of a row writes the store without
   the word; a save never named one; a level whose issue card says `shield` is REFUSED with the reason in words (`scene/levelData.ts`: 'the ballistic shield is out of the game:
@@ -591,7 +591,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   a replay's cast row ('Player', `src/replay/format.ts PLAYER_NAME`), the debugger's hover text, the showcase captions, the viewer's and the editor's sheets. No switch:
   it is a word, not a rule (no digest carries his name; `?oldwords` lines say player too). CODE still says Sam and a new string must not: identifiers, level keys
   (`team.sam`, `samYaw`), the dialogue speaker key `'sam'`, CSS classes, probe names (`sup-sam`), comments, these notes' older bullets, and three values no screen shows
-  (`doortools.ts SAM_BY`, `wallcharge.ts` a set charge's `by`, `kitView.ts` the scan rows' name). Old files: a saved defuse row and a kept replay's cast row read back
+  (`doortools.ts SAM_BY`, `wallcharge.ts` a set charge's `by`). Old files: a saved defuse row and a kept replay's cast row read back
   as Player (`defuse.ts restore`, `format.ts decode`); an old replay's LOG lines keep the old word. Checks that match the strings follow (`roomclear-ends`,
   `verdict-check`, `deathrecap-check`, `defuse-check`, `roomkeep-check`, `teams-player`, `verdict-look.cjs`; 12 panel-inventory rows reworded with `--reword`).
   Headless only, both stands; the title, the kit page and a room clear's down line read off the real page on the software adapter. Never seen on a GPU.
@@ -624,7 +624,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   your card's (the next bullet). No checkpoint slice: a floor with a spawned unit on it takes no
   checkpoint (`savestate.ts canSave`), and every teammate is one.
   UI: the two rows are drawn as their class of gun (`ui/kitIcons.ts` by `pickIcon`: the same three drawings; no long gun = an empty board), wear the can by
-  `CardRow.can`, carry their own noise mark (`CardRow.noise`), and the kit view plays the gun's demo for either (`host/kitView.ts TILES`).
+  `CardRow.can`, carry their own noise mark (`CardRow.noise`), and the kit picture plays the gun's row for either (`rust/game_rules/src/kitstage/acts.rs`).
   Check: `bun run tools/qa/gunslots-check.ts` (families `gunslots-card -mate -fight -guns -off` in `probes.ts`, in `all-quick`), ALL PASS on both stands;
   `GUNSLOTS_BREAK=1` fails every family. Probes written against the one gun row (`bigslot- kitpaste- kitlent- kitcan- sticky-`) run with the
   switch held off (`tools/qa/holds.ts GUN_ROW_AS_IT_WAS`); the card family has its own paste, set, issue-card and old-row verdicts under it. `gunslots-fight` is the measure: two teammates with a round each and three men five metres in front of them —
@@ -779,7 +779,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   PLAYED: whether 0.36 s a shell reads right, and whether the trigger breaking off is wanted, are the maintainer's.
 - **A restart gives a clean level** (`CLEANRESTART`, `src/game/cleanrestart.ts`, 10-19; the maintainer, from a play test: "after resetting a level …
   the lights kind of flicker on in engine. Like, we should reset the level to a clean state"). ONE switch: ON in the page (`?cleanrestart=0` = the
-  restart as it was; OFF in the kit picture's own window, `?kitview`, which restages on every kit message under its own dissolve), OFF in the module and
+  restart as it was), OFF in the module and
   on the frozen stand (`TPS_CLEANRESTART=1`); a `FROZEN_HOLDS` row; in the knob registry and the journal (a recording from before the table replays its
   restarts as they were). WHAT THE FLICKER WAS: `restartEncounter` put a blacked-out level's mains back through `endBlackout`, the breaker's own road —
   `restoredAt = now`, so every fitting on the supply played its restrike for 1.2 s, each contactor group a beat after the last, the beacons turned for
@@ -884,7 +884,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   line) reads 'its gun's key again, then 3'; and Training 4's four lines that named Z, L or '2 again' — a lesson step may carry `setupLine`, the
   line shown while the switch is on (`scenarios.ts LessonStep`, `lesson.ts lineOf`; `line` is the build before, so the frozen stand's lessons
   read as they did). Every such line puts 'press', 'then' or 'key' before a digit, which is what `host/keymap.ts`'s text rule needs to name the
-  key a rebound slot is on. The kit screen's preview hands its rifle the load it shows (`host/kitView.ts tube`), where it pressed 2 until it came. ONE SWITCH for all of it: ON in the page (`?slotsetup=0` = 2 again steps the load, Z and L are keys, the
+  key a rebound slot is on. The kit picture hands its rifle the load it shows (`rust/game_rules/src/kitstage/acts.rs`). ONE SWITCH for all of it: ON in the page (`?slotsetup=0` = 2 again steps the load, Z and L are keys, the
   column as it was), OFF in the module and on the frozen stand (`TPS_SLOTSETUP=1`), `FROZEN_HOLDS['SLOTSETUP.on']`; a registered knob table, in
   `JOURNAL_KNOBS` (a recording from before the table replays with it off); Tab ▸ 'Gun setup (its key again)': the switch, 'seconds it stays up
   unused', 'stays up after a pick'. CHECKS: `tools/qa/slotsetup-check.ts` (`probes.ts slotsetup`, family `kit`; `SLOTSETUP_BREAK=1` must fail) —

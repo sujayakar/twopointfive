@@ -453,7 +453,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the shield's own step (issue cards are read as written). On build ba34118, both stands: 488 PASS, no FAIL, 65 NOTE; `KITDEAL_BREAK=1` 22 FAIL;
   `NEEDS_BREAK=1` exits 1.
 - **The level skill says where a Team & kit picture stands** (10-18; the skill's words only). Since every way of a `scenarios.kitView` block must anchor on
-  a door that is not steel (`docs/level-format.md`; `kitview-plan.ts` section C fails any other, `kitview-work.cjs` holds the page to it), the skill's kit
+  a door that is not steel (`docs/level-format.md`; `kitview-plan.ts` section C fails any other), the skill's kit
   picture item says so, with what to write where a mission's own way in is a gate, a gap or a wall. `--run` already runs `kitview-plan` for a level, so the
   level command is red on such a way with no change to it. On build d2ec4b7, both stands: 488 PASS, no FAIL, 65 NOTE.
 - **The level skill says how a check holds a file against its generator** (10-18; the skill's words only). The skill's "a check of its own" item now says
@@ -974,7 +974,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   ray and the game's own module meet the shaped solid. A PIECE IS TRIM: drawn and nothing else. It says no flags and stands `NoShadow` (cut away with
   its box where the box is), so no ray, eye or body meets it, and its own record follows the picture's cut-pieces switch; what must stop a round or a
   man is a box of the level, which may say a shape of its own. It knows its box (`Box.of`) and follows it out of the picture where a level box is
-  hidden by its number (`shapes.ts withPieces`: a thing a round takes in `destruction.ts hide`, a kit view's hidden boxes in `host/kitView.ts`), and it
+  hidden by its number (a thing a round takes in `destruction.ts hide`), and it
   is never an item of its own to `destruction.ts`. WHAT WALKS MEETS THE PLAIN
   LEVEL, BY CONSTRUCTION: a shaped box is pushed against as its uncut box, which is the plain one, and a piece is met by nobody; `thinLevel` and
   `barLevel`, which mark boxes by their size as a level is stood up, read the plain boxes (`plainLevel` before them, `shapeLevel` after). So to the
