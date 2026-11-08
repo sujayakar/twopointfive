@@ -265,6 +265,51 @@ pub trait DoorsAsk {
     fn team_pace(&self) -> f64;
     /// Sam can be hurt again
     fn sam_hurtable(&mut self);
+    /// is the door locked as it stands
+    fn door_locked_now(&self, d: DoorId) -> bool;
+    /// the man whose hands are on a lock
+    fn hands_on_lock(&self) -> Option<GuardId>;
+    /// how many times a line with these words was said, and whether every one went over the net
+    fn said_count(&self, words: &str) -> (usize, bool);
+    /// is the silent squad compromised
+    fn compromised(&self) -> bool;
+    /// a pinned man let go where he stands, his head his own again
+    fn let_go(&mut self, m: GuardId);
+    /// Sam's arm settled round a man, from behind him
+    fn sam_holds(&mut self, m: GuardId) -> bool;
+    /// is a man in a standoff with a pair, and has he a clean line
+    fn in_standoff(&self, m: GuardId) -> Option<bool>;
+    /// the man he saw held
+    fn saw_held(&self, m: GuardId) -> Option<String>;
+    /// how far the floor has been raised
+    fn escalation(&self) -> f64;
+    /// the choke chosen on the row, and the key tapped
+    fn choke_him(&mut self);
+    /// a point in every room of the level, as the middle-most floor of the room, with its room's cells
+    fn room_points(&mut self) -> Vec<(f64, [f64; 2])>;
+    /// the marks a 'move there' would deal `n` men at `at`, come from `from`: where each stands and what his gun is on
+    fn fit_marks(&mut self, at: [f64; 2], from: [f64; 2], n: f64) -> Option<Vec<([f64; 2], Option<[f64; 2]>, f64)>>;
+    /// the marks a plain line abreast would be
+    fn line_marks(&mut self, at: [f64; 2], from: [f64; 2], n: f64) -> Vec<[f64; 2]>;
+    /// is a mark in a door's frame or on floor nobody can stand on
+    fn no_place_to_stand(&mut self, at: [f64; 2]) -> bool;
+    /// how far the eye sees along a bearing, up to `most`
+    fn run_along(&mut self, at: [f64; 2], yaw: f64, most: f64) -> f64;
+    /// the marks of a charge's stand-off
+    fn standoff_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]>;
+    /// the threshold as a mission's own order gives it, to go on in by itself
+    fn threshold_given(&mut self, at: [f64; 2]);
+    /// a threshold's two jamb men, and is the door called held
+    fn thr_jamb(&self, op: DoorOpId) -> Vec<GuardId>;
+    fn thr_told(&self, op: DoorOpId) -> bool;
+    /// the cuts he was given: how many, the one he is on, its place, his cuts done
+    fn cut_of(&self, op: DoorOpId, m: GuardId) -> Option<(usize, usize, [f64; 2], bool)>;
+    /// is his script leaning him, how low he is, how far his head is past his hips along a line
+    fn leaning(&self, m: GuardId) -> bool;
+    fn knee_of(&self, m: GuardId) -> f64;
+    fn head_past_hips(&self, m: GuardId, along: [f64; 2]) -> f64;
+    /// nothing of a blast takes the squad, for a rule about where they go and not who it kills
+    fn men_spared(&mut self);
     /// a blast of a frag's tearing reach at a place, by the doors' own call: the doors it took off
     fn blast_tears(&mut self, at: [f64; 2]) -> Vec<DoorId>;
     /// how wide Sam's line of fire is reckoned `along` metres down it, either side of its middle
@@ -531,6 +576,71 @@ impl DoorsAsk for Play {
     fn key_face(&self, d: DoorId) -> f64 { self.g.dr[d].key_side }
     fn team_pace(&self) -> f64 { self.g.k.pace.max }
     fn sam_hurtable(&mut self) { self.g.god_mode = false; }
+    fn door_locked_now(&self, d: DoorId) -> bool { game::doors::door_locked(&self.g, d) }
+    fn hands_on_lock(&self) -> Option<GuardId> { self.men().into_iter().find(|&m| self.g.ch[self.g.gd[m].ch].anim.lockpick) }
+    fn said_count(&self, words: &str) -> (usize, bool) { let l: Vec<_> = self.said.iter().filter(|l| l.text.contains(words)).collect(); (l.len(), l.iter().all(|x| x.radio)) }
+    fn compromised(&self) -> bool { game::silent::silent_compromised(&self.g, &game::seats::here(&self.g)) }
+    fn let_go(&mut self, m: GuardId) { let h = &mut self.g.gd[m]; (h.hold, h.pinned) = (false, false); }
+    fn sam_holds(&mut self, m: GuardId) -> bool {
+        game::player::start_grab(&mut self.g, m, None);
+        self.until(2.5, |p| p.g.pl[p.g.player].holding.as_ref().map_or(false, |h| h.phase == game::character::HoldPhase::Held)).is_some()
+    }
+    fn in_standoff(&self, m: GuardId) -> Option<bool> { self.g.gd[m].standoff.map(|s| self.g.tab.guards_standoff[s].line_open) }
+    fn saw_held(&self, m: GuardId) -> Option<String> { self.g.gd[m].witness.saw_held.as_ref().map(|w| w.who.clone()) }
+    fn escalation(&self) -> f64 { self.g.escalation as f64 }
+    fn choke_him(&mut self) { assert!(game::game::game_select_verb(&mut self.g, game::game::InteractableKind::Held, Some(game::game::Verb::Choke)), "no choke on the row"); self.tap("Space"); }
+    fn room_points(&mut self) -> Vec<(f64, [f64; 2])> {
+        use std::collections::BTreeMap;
+        let (cs, w, h) = (self.g.col.nav.cell, self.g.col.nav.w as usize, self.g.col.nav.h as usize);
+        let mut sum: BTreeMap<i64, (f64, f64, f64)> = BTreeMap::new();
+        let mut rows = Vec::new();
+        for z in 0..h { for x in 0..w {
+            let q = [(x as f64 + 0.5) * cs, (z as f64 + 0.5) * cs];
+            let r = game::cleared::cleared_rooms_room_at(&mut self.g, [q[0], 0.0, q[1]]);
+            if r == 0.0 { continue; }
+            let e = sum.entry(r as i64).or_insert((0.0, 0.0, 0.0));
+            (e.0, e.1, e.2) = (e.0 + q[0], e.1 + q[1], e.2 + 1.0);
+            rows.push((r as i64, q));
+        } }
+        sum.into_iter().filter(|(_, e)| e.2 >= 12.0).map(|(r, e)| {
+            let mid = [e.0 / e.2, e.1 / e.2];
+            let best = rows.iter().filter(|x| x.0 == r).min_by(|a, b| game_start::play::dist(a.1, mid).partial_cmp(&game_start::play::dist(b.1, mid)).unwrap()).unwrap().1;
+            (r as f64, best)
+        }).collect()
+    }
+    fn fit_marks(&mut self, at: [f64; 2], from: [f64; 2], n: f64) -> Option<Vec<([f64; 2], Option<[f64; 2]>, f64)>> {
+        let front = if game_start::play::dist(from, at) > 0.3 { yaw_to(from, at) } else { 0.0 };
+        let f = game::roomfit::fit_spots(&mut self.g, [at[0], 0.0, at[1]], n, front, [from[0], 0.0, from[1]], None, None)?;
+        Some(f.iter().map(|m| ([m.pos[0], m.pos[2]], m.watch.map(|w| [w[0], w[2]]), m.face)).collect())
+    }
+    fn line_marks(&mut self, at: [f64; 2], from: [f64; 2], n: f64) -> Vec<[f64; 2]> {
+        let front = if game_start::play::dist(from, at) > 0.3 { yaw_to(from, at) } else { 0.0 };
+        game::orders::squad_orders_spots_at(&mut self.g, [at[0], 0.0, at[1]], front, n).iter().map(|p| [p[0], p[2]]).collect()
+    }
+    fn no_place_to_stand(&mut self, at: [f64; 2]) -> bool { game::doorway::doorway_in_way(&self.g, [at[0], 0.0, at[1]]) || game::scene_collision::nav_grid_is_blocked(&self.g, at[0], at[1]) }
+    fn run_along(&mut self, at: [f64; 2], yaw: f64, most: f64) -> f64 { game::scene_collision::raycast(&mut self.g, [at[0], 1.55, at[1]], [yaw.sin(), 0.0, yaw.cos()], most).map_or(most, |h| h.t) }
+    fn standoff_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]> {
+        game::doortools::door_tools_standoff_posts(&mut self.g, d, side, men.len() as f64, Some(men)).unwrap_or_default().iter().map(|p| [p.pos[0], p.pos[2]]).collect()
+    }
+    fn threshold_given(&mut self, at: [f64; 2]) {
+        let (men, t) = (self.men(), game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]));
+        assert!(!matches!(game::doortools::door_tools_threshold(&mut self.g, &men, &t, None, Some(false)), game::doortools::DoorToolsThreshold::Text(_)), "the threshold was refused");
+    }
+    fn thr_jamb(&self, op: DoorOpId) -> Vec<GuardId> { self.g.tab.doortools_door_op[op].thr.as_ref().map_or(Vec::new(), |t| t.jamb.clone()) }
+    fn thr_told(&self, op: DoorOpId) -> bool { self.g.tab.doortools_door_op[op].thr.as_ref().map_or(false, |t| t.told) }
+    fn cut_of(&self, op: DoorOpId, m: GuardId) -> Option<(usize, usize, [f64; 2], bool)> {
+        let s = self.g.tab.doortools_door_op[op].slice.get(m)?;
+        let i = s.i as usize;
+        let at = s.pts.get(i).map_or([0.0, 0.0], |q| [q[0], q[2]]);
+        Some((s.pts.len(), i, at, s.pie.as_ref().map_or(false, |x| x.fin)))
+    }
+    fn leaning(&self, m: GuardId) -> bool { self.g.gd[m].script.as_ref().map_or(false, |s| s.lean.map_or(false, |l| l != 0.0)) }
+    fn knee_of(&self, m: GuardId) -> f64 { self.g.ch[self.g.gd[m].ch].anim.crouch }
+    fn head_past_hips(&self, m: GuardId, along: [f64; 2]) -> f64 {
+        let b = &self.g.ch[self.g.gd[m].ch].bones;
+        match (b.get(game::character::Bone::Head), b.get(game::character::Bone::Hips)) { (Some(h), Some(q)) => (h[0] - q[0]) * along[0] + (h[2] - q[2]) * along[1], _ => 0.0 }
+    }
+    fn men_spared(&mut self) { for m in self.mates() { self.g.gd[m].god = true; } }
     fn blast_tears(&mut self, at: [f64; 2]) -> Vec<DoorId> { let r = self.g.k.doorblast.tear_m.frag; game::doors::doors_blast(&mut self.g, [at[0], 1.0, at[1]], r, -1.0) }
     fn lane_half(&self, along: f64) -> f64 { let (ff, fl) = (&self.g.k.friendlyfire, &self.g.k.fireline); ff.body_m + fl.clear_m + along * ff.cone_k * fl.spread }
     fn sam_rounds(&self) -> f64 { self.g.fa[self.g.pl[self.g.player].rifle].shots_fired }
