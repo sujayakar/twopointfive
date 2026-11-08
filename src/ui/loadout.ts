@@ -80,8 +80,6 @@ export interface LoadoutScreen { readonly entry: Mission; readonly root: HTMLEle
 let current: LoadoutScreen | null = null;
 /** whether the keys are the screen's own right now (LoadoutOpts.keys) */
 let currentKeys: (() => boolean) | null = null;
-/** the screen that is up (null: none) */
-export function loadoutOpen(): LoadoutScreen | null { return current; }
 
 function el(tag: string, cls?: string, text?: string) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 
