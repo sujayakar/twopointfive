@@ -64,6 +64,7 @@ use std::cell::{Cell, RefCell};
 mod memo;
 mod page;
 mod harness;
+mod desk;
 
 type Game = game::game::Game;
 /// a game and what the host has handed over for its next step

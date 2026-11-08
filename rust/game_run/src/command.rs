@@ -8,6 +8,7 @@ use game::savestate::control as saves;
 /// bytes being read
 pub struct Bytes<'a> { b: &'a [u8], at: usize }
 impl<'a> Bytes<'a> {
+    pub fn of(b: &'a [u8]) -> Bytes<'a> { Bytes { b, at: 0 } }
     fn take(&mut self, n: usize) -> &'a [u8] { let r = &self.b[self.at..self.at + n]; self.at += n; r }
 }
 pub trait Field<'a>: Sized { fn read(b: &mut Bytes<'a>) -> Self; }
@@ -20,7 +21,7 @@ macro_rules! commands {
     ($($(#[$m:meta])* $i:literal $name:ident { $($f:ident: $t:ty),* } = $do:expr;)*) => {
         /// the list in `b`, done to the game in its order; a number no command has ends it, and says so
         pub fn apply(g: &mut Game, b: &[u8]) -> Result<(), String> {
-            let mut r = Bytes { b, at: 0 };
+            let mut r = Bytes::of(b);
             while r.at < b.len() {
                 match u32::read(&mut r) {
                     $($i => { $(let $f = <$t as Field>::read(&mut r);)* let f: fn(&mut Game, $($t),*) = $do; f(g, $($f),*); })*
@@ -73,4 +74,6 @@ commands! {
     16 FogCone { on: u32 } = |g, on| game::difficulty::set_cone_visit(g, Some(on != 0));
     /// one knob, by its name (knobs.rs); a name no knob has is nothing
     17 Knob { name: &str, value: f64 } = |g, name, value| { let _ = crate::knobs::set(g, name, value); };
+    /// the cards as the player's machine keeps them (before a game is made: what its men are staged in)
+    18 Kit { kept: &str } = |g, kept| crate::kept::read(g, kept);
 }

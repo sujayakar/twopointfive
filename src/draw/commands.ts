@@ -39,4 +39,6 @@ export class Commands extends Writer {
   fogCone(on: number): void { this.u32(16); this.u32(on); }
   /** one knob, by its name (knobs.rs); a name no knob has is nothing */
   knob(name: string, value: number): void { this.u32(17); this.text(name); this.f64(value); }
+  /** the cards as the player's machine keeps them (before a game is made: what its men are staged in) */
+  kit(kept: string): void { this.u32(18); this.text(kept); }
 }

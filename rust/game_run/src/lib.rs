@@ -11,6 +11,8 @@
 //!   the tick `step`
 //!   after    `write_after` (each line of hostwrites.txt for this tick) · the compare (`part_hashes`) · `lights` · `view` · `follow`
 pub mod command;
+pub mod desk;
+pub mod kept;
 pub mod knobs;
 mod knobs_list;
 use game::ids::Id;
