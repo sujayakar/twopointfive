@@ -35,6 +35,7 @@
 // lighting.ts updateTargets each frame: a game nobody has stepped still reads 1 for a lamp authored off) and a just-stood-up game has had no last frame.
 // NOT covered: anything the digest does not hold (the squad's menu state, fog of war's memory, the renderer, audio, smoke — the harness has none), other levels
 // than the ones asked for, a restart from a checkpoint load, a quit to the plain floor (scenarioRun.ts quitScenario).
+import { swept } from './sweep.ts';
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 type Vec3 = [number, number, number];
@@ -118,7 +119,7 @@ async function arm(id: string, seed: number, play: number, quietFrames: number, 
     if (g.mission.sweepAt > 0) d.mission.sweepAt = f2(g.mission.sweepAt - t0);
     { const R = rollcallState(g); d.rollcall = `${R.stage}:${R.nextAt >= 0 ? f2(R.nextAt - t0) : R.nextAt}:${R.checks}`; }
     const bub = (b: any) => b ? `${b.text}@${f2(b.t - t0)}` : null;
-    g.guards.forEach((gd: any, i: number) => { d.guards[i].bubble = bub(gd.bubble); });
+    g.guards.forEach((_: any, i: number) => { delete d.guards[i].bubble; });   // (the copy keeps a man's old bubble object through a restart; the Rust game's own rows are new and hold no line, which its native test holds)
     (g.civilians ?? []).forEach((cv: any, i: number) => { d.civilians[i].bubble = bub(cv.bubble); if (typeof cv.heardUpTo === 'number') d.civilians[i].heard = cv.heardUpTo - seq0; });
     if (d.devices) d.devices.lasers = g.devices.lasers.map((l: any) => `${l.trips}:${l.lastTripAt > -50 ? f2(l.lastTripAt - t0) : l.lastTripAt}`);
     return d;
@@ -152,6 +153,7 @@ async function one(id: string, seed: number, play: number, quiet: number, raw: b
 
 /** THE PROBE (probes.ts `restart`): each mission in its own child under the shipped stand, one at a time; its lines relayed; false on any FAIL. */
 export async function restartFresh(opts: { missions?: string[]; seed?: number; play?: number; quiet?: number; raw?: boolean; verbose?: boolean; ownClock?: boolean } = {}): Promise<boolean> {
+  opts = { play: swept(8, 20), quiet: swept(4, 10), ...opts };
   const missions = opts.missions ?? RESTART_MISSIONS, profile = process.env.RESTART_PROFILE ?? 'shipped';
   console.log(`\n=== restart: a restart equals a fresh staging (digestGame; ${opts.play ?? 20} s of play, then ${opts.quiet ?? 10} s quiet in both arms; the ${profile} stand, seed ${opts.seed ?? 1}) ===`);
   let ok = true;

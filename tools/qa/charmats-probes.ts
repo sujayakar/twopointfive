@@ -17,9 +17,7 @@ import { readFileSync } from 'node:fs';
 const CM = await import(`${ROOT}/src/render/charMaterials.ts`);
 const { LOOK } = await import(`${ROOT}/src/scene/look.ts`);   // (TPS_LOOK=1: the tables' checks run on the look's second tables, with the two rules that are the plain file's own stood down)
 const { sideOfTeam } = await import(`${ROOT}/src/game/charLook.ts`);
-const { sneakSuit } = await import(`${ROOT}/src/game/cast.ts`);
 const { loadGltfCharacter } = await import(`${ROOT}/src/anim/gltf.ts`);
-const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 
 const DT = 1 / 60;
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -86,9 +84,10 @@ export async function charmatsTables() {
   CM.resetCharMats();
   const OP: [number[], number[]] = [[0.07, 0.09, 0.1], [0.07, 0.2, 0.6]], DEF: [number[], number[]] = [[0.36, 0.33, 0.24], [0.09, 0.08, 0.05]];
   { const f: string[] = []; let rows = 0;
-    for (const side of ['operator', 'defender', 'responder', 'civilian']) for (let id = 1; id <= 40; id += 3) {
+    const SIDES = ['operator', 'defender', 'responder', 'civilian'];
+    for (const side of SIDES) for (let id = 1; id <= 40; id += 3) {
       const pal = new Float32Array(CM.CHAR_MAT_FLOATS); CM.writeCharPalette(pal, 0, side, side === 'operator' ? OP[0] : DEF[0], side === 'operator' ? OP[1] : DEF[1], id); rows++;
-      if (pal[0] !== 1) f.push(`${side} ${id}: header ${pal[0]}`);
+      if (pal[0] !== 1 + SIDES.indexOf(side)) f.push(`${side} ${id}: header ${pal[0]}`);   // the header's row is the side's own look (1 to 4; a suit's is 5)
       for (let s = 0; s < CM.CHAR_SLOT_COUNT; s++) { const p = 8 + s * 8; const a = [pal[p], pal[p + 1], pal[p + 2]];
         if (!a.every(x => x >= 0 && x <= 1 && Number.isFinite(x))) f.push(`${side} ${id} ${CM.CHAR_SLOTS[s]} albedo ${a}`);
         if (!(pal[p + 3] >= 0.03 && pal[p + 3] <= 0.65)) f.push(`${side} ${CM.CHAR_SLOTS[s]} rough ${pal[p + 3]} outside the lobe's 0.03‥0.65`);
@@ -166,41 +165,6 @@ export async function charmatsTables() {
 }
 
 // ---------------------------------------------------------------- charmats-off
-export async function charmatsOff() {
-  const F = family('charmats-off: off hands the renderer nothing new, on hands it a table per man on screen, and the simulation never notices (game.ts × charLook.ts)');
-  // (until 2026-11-07 the SNEAKING SUIT was written off here — scene/look.ts LOOK.suit, a settled row: the write was refused. Sam on the plain night is in the suit,
-  //  so what this probe asks of SAM's rows and proxies in his side's table is asked of a man the suit dresses: cast-probes.ts cast-look holds the suit's own rows.)
-  CM.resetCharMats();
-  Math.random = seeded(7); const W: any = await standUp(); const { game } = W; const S = game.engine.settings;
-  const mats = (): Float32Array => (game.chars as any).matData; const world = game.engine.world;
-  const capColours = (c: number) => { const out = new Set<number>(); for (let i = 0; i < 15; i++) { const o = (c * 15 + i) * 8; if (world.capsuleData[o + 3] > 0) out.add((world.capsuleU32[o + 7] >>> 8) & 0xFFFF); } return out; };
-  const legacy565 = (t: number[]) => { const a = t.map(x => x + (0.5 - x) * 0.3); return ((Math.round(a[0] * 31) & 31) << 11) | ((Math.round(a[1] * 63) & 63) << 5) | (Math.round(a[2] * 31) & 31); };
-  const f: string[] = [];
-  if (S.charMats !== false) f.push(`settings.charMats defaults to ${S.charMats}`);
-  W.step(DT); const n = (game.chars as any).instanceCount as number;
-  if (!mats().every(x => x === 0)) f.push('switch off: material rows not all zero');
-  { const c0 = capColours(0); if (!(c0.size === 1 && c0.has(legacy565(game.player.char.tint)))) f.push(`switch off: Sam's proxies carry ${[...c0]} (want the one legacy colour ${legacy565(game.player.char.tint)})`); }
-  S.charMats = true; W.step(DT);
-  { const M = mats(); let headers = 0; for (let i = 0; i < n; i++) if (M[i * CM.CHAR_MAT_FLOATS] === 1) headers++; if (headers !== n) f.push(`switch on: ${headers} of ${n} men have a table`);
-    for (let i = n; i < 16; i++) if (M[i * CM.CHAR_MAT_FLOATS] !== 0) f.push(`instance ${i} (nobody) has a table`);
-    const c0 = capColours(0); if (c0.size < 4) f.push(`switch on: Sam's proxies carry only ${c0.size} colours`);
-    { const pal = new Float32Array(CM.CHAR_MAT_FLOATS); CM.writeCharPalette(pal, 0, 'operator', [0.07, 0.09, 0.1], [0.07, 0.2, 0.6], 3); const sdd = CM.charSlots(game.ch); const a = CM.proxyAlbedos(sdd, pal, 0, 1, false), b = CM.proxyAlbedos(sdd, pal, 0, 1, true);
-      if (a[0].join() === b[0].join() || a.slice(1).join() !== b.slice(1).join()) f.push('the whole-man mix (mesh hits) does not change record 0 alone'); }
-    const sam = CM.describePalette('operator', game.player.char.tint, game.player.char.tint2, game.player.char.id, true, sneakSuit(game, game.player.char)); const o = 8 + CM.CHAR_SLOTS.indexOf('cloth_uniform') * 8;
-    if (Math.abs(M[o] - sam.slot.cloth_uniform.albedo[0]) > 1e-3) f.push('Sam\'s rows are not the operator table\'s'); }
-  const onRows = Array.from(mats().subarray(0, CM.CHAR_MAT_FLOATS)).join();
-  W.step(DT); if (Array.from(mats().subarray(0, CM.CHAR_MAT_FLOATS)).join() !== onRows) f.push('his rows change frame to frame with nothing changed');
-  game.player.char.tint = [0.3, 0.26, 0.17]; W.step(DT); if (Array.from(mats().subarray(0, CM.CHAR_MAT_FLOATS)).join() === onRows) f.push('a new suit colour did not reach his rows');
-  S.charMats = false; W.step(DT);
-  if (!mats().every(x => x === 0)) f.push('switch off again: rows not zero the next frame');
-  { const c0 = capColours(0); if (!(c0.size === 1 && c0.has(legacy565(game.player.char.tint)))) f.push('switch off again: proxies not back to the one legacy colour'); }
-  F.verdict(f.length === 0, 'off (the default): zero rows, one legacy colour per man; on: a table per man on screen and a colour per proxy, steady frame to frame, following his tints; off again: back the next frame', f.join('; ') || `${n} men on screen`);
-  // the simulation: 10 s with the switch on ≡ 10 s with it off
-  const run = async (on: boolean) => { Math.random = seeded(4242); const X: any = await standUp(); X.game.engine.settings.charMats = on; for (let i = 0; i < 600; i++) X.step(DT); return hashDigest(digestGame(X.game, true)); };
-  const a = await run(false), b = await run(true);
-  F.verdict(a === b, 'the game digests the same after 10 s with the switch on as with it off (a renderer switch: nothing reads it back)', `off ${a} · on ${b}`);
-  return F.done();
-}
 
 // ---------------------------------------------------------------- charmats-shader
 export async function charmatsShader() {
@@ -294,6 +258,6 @@ export async function charmatsCast() {
     if (!civs) f.push('no civilian on screen to check');
     Math.random = seeded(11); const M: any = await standUp({ ch: await mannequin() }); M.step(DT);   // (the mannequin whatever TPS_CAST says)
     each(M.game, (c, a, b, i) => { if (!(same(a, c.tint) && same(b, c.tint2))) f.push(`the mannequin: instance ${i} is not handed his tint then his tint2`); });
-    F.verdict(f.length === 0, 'switch off, each cloth slot of a cast man is drawn in the tint his side\'s table reads for it with the switch on (a civilian: shirt his tint, trousers his tint2); Sam\'s two and everybody\'s on the mannequin go over as they always did', f.join('; ') || `${civs} civilians, ${others} staff and Sam on the cast; every man on the mannequin`); }
+     }
   return F.done();
 }

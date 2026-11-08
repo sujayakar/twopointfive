@@ -15,9 +15,10 @@
 // Nothing here is a picture, and nothing here is the level's own: the caller says where the thing is, how wide, and which boxes are it.
 import { ROOT, type Vec3 } from './headless.ts';
 const { BoxFlag, BoxWorld } = await import(`${ROOT}/src/scene/boxes.ts`);
+const { UNDERFOOT, FEET_Y, BAKE_Y } = await import(`${ROOT}/src/scene/collision.ts`);
 
-/** the thing: its middle, its radius and half height as the REFERENCE has them (the level's own numbers and round.ts's circle with the octagon's area, written
- *  out by the caller), and which of the world's boxes are it (a round box and its three specks, or the kit's four slabs) */
+/** the thing: its middle, its radius and half height as the REFERENCE has them (the level's own numbers, written
+ *  out by the caller), and which of the world's boxes are it (a round box, or an octagon of four slabs) */
 export interface RoundThing { c: Vec3; R: number; hy: number; own(i: number): boolean }
 export interface RoundAnswers {
   /** sides asked */ sides: number;
@@ -70,7 +71,7 @@ const PILE_PLAY = 0.05;
 
 /** Ask the three questions of `col` about `thing`, from SIDES directions evenly round it. */
 export function probeRound(col: any, thing: RoundThing, ask: RoundAsk = {}): RoundAnswers {
-  const N = SIDES, r = BODY, feet = ask.feet ?? 0.2, head = ask.head ?? 1.5, stops = col.footOf(feet) as number, { c, R, hy } = thing, y = c[1];
+  const N = SIDES, r = BODY, feet = ask.feet ?? 0.2, head = ask.head ?? 1.5, stops = (UNDERFOOT.on && feet >= FEET_Y && feet < BAKE_Y ? BAKE_Y : feet) as number, { c, R, hy } = thing, y = c[1];
   // everything else that stands within reach of any question asked here: the world's boxes but never a hidden one, and every door leaf laid over them
   const reach = R + r + SHOT_FROM[1] + 0.2, others: any[] = [];
   const take = (b: any) => { if (footprintGap(b, c[0], c[2], c[0], c[2]) < reach) others.push(b); };

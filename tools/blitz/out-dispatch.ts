@@ -2,10 +2,9 @@
 import { trackOf } from './track';
 import '../../src/game/game';
 import { WEAPONS } from '../../src/game/weapons';
-import { recapRound } from '../../src/game/deathrecap';
 import { messBurst, messOpened, messWall, messEvicted } from '../../src/game/floormess';
 import { bangScorch, bulletMark, chipMark, kickScuff } from '../../src/game/marks';
-import { clearSnowBlast } from '../../src/game/snowBlast';
+import { clearSnowBlast, snowBlastAt } from '../../src/game/snowBlast';
 import { clearSnowMarks } from '../../src/game/snowMarks';
 import { clearSnowTracks } from '../../src/game/snowTracks';
 
@@ -30,7 +29,6 @@ export const OUT: Record<string, (g: any, e: any) => void> = {
   ParticlesImpulse: (g, e) => { g.engine.particles?.impulse?.(e.pos, e.radius, e.strength, e.o); },
   ParticlesSetHeat: (g, e) => { g.engine.particles?.setHeat?.(e.srcs); },
   ReachKeepChanged: (g, e) => { g.engine.reach?.changed?.(e.rect ?? null, e.hold); },
-  SessionRecorderCut: (g, e) => { g.journal?.cut?.(e.why, e.lost); },
   SmokeSystemLikeClearAll: (g, e) => { g.smoke?.clearAll?.(); },
   SmokeSystemLikeEmit: (g, e) => { if (e.e.track) e.e.track = trackOf(g, e.e.track); g.smoke?.emit?.(e.e); },
   SmokeSystemLikeKeepHot: (g, e) => { g.smoke?.keepHot?.(e.heat); },
@@ -38,7 +36,6 @@ export const OUT: Record<string, (g: any, e: any) => void> = {
   SmokeSystemLikePush: (g, e) => { g.smoke?.push?.(e.p); },
   WallWearReset: (g, e) => { g.destr.walls.wear?.reset?.(); },
   WallWearRound: (g, e) => { g.destr.walls.wear?.round?.(g, e.box_, e.surf, e.key, e.counted, e.frac, e.hitP, e.dir); },
-  RecapRound: (g, e) => { recapRound(g, e.victim, e.wasDown, e.shooter, e.muzzle, e.hit, WEAPONS[e.def], e.blind); },
   MessBurst: (g, e) => { messBurst(g, e.at, e.size); },
   MessOpened: (g, e) => { messOpened(g, e.rect); },
   MessWall: (g, e) => { messWall(g, e.p, e.n, e.thick, e.through); },
@@ -53,6 +50,7 @@ export const OUT: Record<string, (g: any, e: any) => void> = {
   WallFeel: (g, e) => { OUT_HOST.wallFeel?.(g, e.at); },
   MessEvicted: (g, e) => { messEvicted(g, e.c, e.h, e.yaw, e.rot, e.mat, e.kind); },
   EndCard: (g, e) => { OUT_HOST.endCard?.(g); },
+  SnowBlast: (g, e) => { snowBlastAt(g, e.at, e.radius); },
 };
 /** after an apply: every event of the step, in the order the rules made them */
 export function dispatchOut(g: any, events: { arm: string; e: any }[]): void { for (const { arm, e } of events) OUT[arm](g, e); }

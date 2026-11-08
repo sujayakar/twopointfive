@@ -51,7 +51,7 @@ pub fn in_opening(g: &crate::game::Game, d: DoorId, p: V3, half: Option<f64>) ->
 }
 
 /// `p` where `d`'s leaf swings: inside its arc between its stops, off the opening's own strip.   (doorway.ts inSweep)
-pub fn in_sweep(g: &mut crate::game::Game, d: DoorId, p: V3) -> bool {
+pub fn in_sweep(g: &crate::game::Game, d: DoorId, p: V3) -> bool {
     if crate::doors::door_off(g, d) { return false; }
     let r = rel(g, d, p);
     if r.along >= -0.05 && r.along <= r.f.w + 0.05 && m::abs(r.perp) <= g.k.doormanners.half { return false; }
@@ -61,7 +61,7 @@ pub fn in_sweep(g: &mut crate::game::Game, d: DoorId, p: V3) -> bool {
 }
 
 /// STAND: is `p` no place to stand about: in some frame's strip, or where its leaf swings.   (doorway.ts doorwayStand)
-pub fn doorway_stand(g: &mut crate::game::Game, p: V3) -> bool {
+pub fn doorway_stand(g: &crate::game::Game, p: V3) -> bool {
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
         if flat(p, g.dr[d].frame_centre) > g.dr[d].def.width + 1.0 { continue; }
@@ -156,7 +156,7 @@ pub fn doorway_off_lane(g: &mut crate::game::Game, p: V3, from: V3, k: f64, take
 }
 
 /// Is the place at (along, perp) of `d`'s frame behind its open leaf.   (doorway.ts behindLeaf)
-pub fn behind_leaf(g: &mut crate::game::Game, d: DoorId, along: f64, perp: f64) -> bool {
+pub fn behind_leaf(g: &crate::game::Game, d: DoorId, along: f64, perp: f64) -> bool {
     if crate::doors::door_off(g, d) { return false; }
     let w = g.dr[d].def.width;
     let angle = crate::doors::door_angle(g, d);
@@ -215,9 +215,6 @@ pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     }
     false
 }
-
-/// STAND: is the file's switch on: settled, always.   (doorway.ts doorwayFile)
-pub fn doorway_file(g: &crate::game::Game) -> bool { true }
 
 /// The first frame his walk goes through within `reach`.   (doorway.ts doorAhead)
 pub fn door_ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::doorway::DoorAhead> {

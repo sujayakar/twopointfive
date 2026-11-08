@@ -410,7 +410,7 @@ pub fn prop_way(g: &crate::game::Game, from: V3, plain: &[V3], round: Option<&[V
 }
 
 /// The cells about every movable thing made dear, for a teammate only. None: `pen` itself, untouched (guards.ts:1491 `round !== pen`), and the one search is the search it was.   (orders.ts propPenalty)
-pub fn prop_penalty(g: &mut crate::game::Game, gd: GuardId, pen: Option<&crate::lanes::LanePenalty>) -> Option<crate::orders::PropPenalty> {
+pub fn prop_penalty(g: &crate::game::Game, gd: GuardId, pen: Option<&crate::lanes::LanePenalty>) -> Option<crate::orders::PropPenalty> {
     if g.gd[gd].team != crate::teams::Team::Operative || g.props.props.is_empty() { return None; }
     let mut i = 0;
     while i < g.orders.owners.len() {
@@ -502,7 +502,7 @@ pub fn off_line(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
 }
 
 /// Which face of the door's frame a point is on (+1 = the CCW side of the closed leaf).   (orders.ts sideOf)
-pub fn side_of(g: &mut crate::game::Game, d: DoorId, p: V3) -> f64 {
+pub fn side_of(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
     let (th, h) = (g.dr[d].def.closed_dir, g.dr[d].def.hinge);
     if m::cos(th) * (p[2] - h[1]) - m::sin(th) * (p[0] - h[0]) >= 0.0 { 1.0 } else { -1.0 }
 }

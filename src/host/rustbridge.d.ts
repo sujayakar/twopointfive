@@ -6,6 +6,9 @@ declare module 'tps-bridge/export' {
   export function hostHalf(g: any, knobs: Record<string, unknown>, cmds: readonly any[]): Uint8Array;
   export function shownSeat(g: any): number;
   export function bookOf(g: object): any;
+  export function parse(ty: string): any;
+  export const compiledExpr: (expr: string) => (o: any, g: any, B: any) => any;
+  export function helpersOf(g: any, knobs: Record<string, unknown>): any;
   export function report(): Map<string, { n: number; eg: string }>;
 }
 declare module 'tps-bridge/import' {
@@ -41,6 +44,5 @@ declare module 'tps-bridge/ask' {
 }
 declare module 'tps-bridge/surface' {
   export function surfaceHost(H: { g: any; knobs: Record<string, unknown>; surfaceOpen(): boolean; surfaceDispatching(): boolean; surfaceCall(row: number, bytes: Uint8Array, view?: number): Uint8Array } | null, gone?: unknown): void;
-  export function readRecord(g: object, type: string, bytes: Uint8Array): any;
   export function crossing(key: string, self: unknown, args: unknown[]): unknown;
 }

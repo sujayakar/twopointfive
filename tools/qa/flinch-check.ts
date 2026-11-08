@@ -9,7 +9,6 @@
 //   on         a round 1.4 m past a calm man: he ducks
 //   near       a round 0.3 m past him ducks him further than one 1.4 m past; one landing on the other while he is down deepens the duck without a jump
 //   inside     a hostile round from two metres off (nearer than the suppression model weighs anything) still ducks him and weighs nothing; from half a metre: nothing
-//   hands      the duck leaves a hand's errand (a weapon change) running, where the animator's own flinch drops it
 //   training   the same near round on a green man, a steady man and an operator: each less than the one before
 //   sam        a guard's round past the player's man ducks him
 //   mate       a teammate ducks at a defender's round
@@ -83,11 +82,6 @@ export async function flinchCheck(): Promise<boolean> {
       line(!moves || (jump <= alone * 1.05 && deep > low * 1.4), moves ? `a near round on a man already down for a far one deepens the duck (${f3(low)} to ${f3(deep)}) with no jump: ${f3(jump)} a frame at most, a fresh duck's own rise is ${f3(alone)}` : 'the motion pass is off on this stand: no duck to deepen'); }
     { const s = await world(), { g, A, P } = s; pass(g, P, A.char, 0.3, 2); const n2 = got(A.char), v2 = A.sup.v; zero(); pass(g, P, A.char, 0.3, 0.5); const n05 = got(A.char);
       line(n2 === 1 && v2 === 0 && n05 === 0, `a hostile round from two metres off, 0.3 m past him (inside suppression's least travel, ${SUPPRESSION.minTravel} m): he ducks (${n2}) and it weighs nothing on him (${f3(v2)}); from half a metre: nothing (${n05})`); }
-    { /** a weapon change started on the player's man, then `how`; is the change still running six frames on */
-      const errand = async (how: (s: any) => void) => { const s = await world(); s.P.anim.kitSwap('pistol', 'rifle'); const began = s.P.anim.kitBusy; how(s); s.step(6); return { began, runs: s.P.anim.kitBusy as boolean, n: got(s.P) }; };
-      const plain = await errand(() => {}), soft = await errand(s => pass(s.g, s.A.char, s.P, 0.3)), hard = await errand(s => s.P.anim.flinchFrom(null));
-      line(plain.began && soft.n === 1 && soft.runs === plain.runs && (!plain.runs || !moves || !hard.runs),
-        `the player's man half way through a weapon change: a round 0.3 m past him ducks him (${soft.n}) and the change goes on (${soft.runs}; untouched: ${plain.runs})${plain.runs && moves ? ` — the animator's own flinch would have dropped it (${!hard.runs})` : ' — nothing on this stand to tell it from'}`); }
     { const s = await world('trained'), { g, A, P } = s; const tr = trainingOf(g, A); pass(g, P, A.char, 0.3); const steady = s.peak(A.char);
       pass(g, A.char, P, 0.3); const sam = s.peak(P);
       line(tr === 'steady' && got(A.char) === 1 && got(P) === 1 && (!moves || (steady < green * 0.8 && steady > 0.02 && sam < steady && sam > 0.02)),

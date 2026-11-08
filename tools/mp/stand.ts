@@ -47,20 +47,17 @@ export async function freshRecipe(setup: Setup): Promise<Recipe> {
   { const why = levelWhy(levelFile); if (why) throw new Error(`the setup's address: ${why}`); }
   const P = await import(`${ROOT}/src/host/profile.ts`), K = await import(`${ROOT}/src/game/knobs.ts`);
   const { standUp } = await import('../qa/headless.ts'), { levelOf } = await import('../qa/rerun.ts');
-  const { startFromQuery, activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`), { recipeOf } = await import(`${ROOT}/src/game/runtape.ts`), { NET_TABLES } = await import(`${ROOT}/src/net/wire.ts`);
+  const { activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`), { recipeOf } = await import(`${ROOT}/src/game/runtape.ts`), { NET_TABLES } = await import(`${ROOT}/src/net/wire.ts`);
   P.shippedBoot(); P.pageSwitches(q);
-  // (…and the DIFFICULTY the address asks for, with its levers, as the page reads them at boot — main.ts: a host's Hard is the server's Hard. This process
-  // keeps nothing, so only the address speaks)
-  { const D = await import(`${ROOT}/src/game/difficulty.ts`), S = await import(`${ROOT}/src/scene/scenarios.ts`), L = await import(`${ROOT}/src/scene/scenarioList.ts`); D.initDifficulty(q, S.lessonGroup(L.LESSON_MISSIONS.find((e: { level?: string }) => e.level === q.get('levelFile'))?.group)); }
   const reg = K.knobsNamed() as Record<string, Record<string, unknown>>, asked = setup.tables ?? {};
   if (!plain(asked)) throw new Error('a setup\'s tables are an object of knob tables');
   for (const [name, t] of Object.entries(asked)) { const why = !Object.hasOwn(reg, name) ? `${name} is not a knob table of this build` : !plain(t) ? `${name} is not a table` : layWhy(reg[name], t, name); if (why) throw new Error(`the setup's tables: ${why}`); }
   const tables = () => { for (const src of [asked, NET_TABLES as Record<string, Record<string, unknown>>]) for (const [name, t] of Object.entries(src)) K.assignDeep(reg[name], t); };
   tables();
   const level = levelFile ? await levelOf(levelFile) : undefined;
-  const W = await standUp({ seed: setup.seed >>> 0, search: setup.search, dress: true, ...(level ? { level } : {}) });   // (`search`: how many seats — src/game/seats.ts seatsOfSearch)
+  const W = await standUp({ seed: setup.seed >>> 0, address: setup.search, tables, dress: true, ...(level ? { level } : {}) });   // (the address is the stand's from its first line, as the page's is: what a page reads of it before the game is made — the weather the game is born in, the difficulty, a host's Hard being the server's Hard — and how many seats, src/game/seats.ts seatsOfSearch. `tables`: the setup's and the networked game's over what the address wrote)
   tables();
-  const r = startFromQuery(W.game, setup.search); if (r.why) throw new Error(`the mission did not start: ${r.why}`);
+  const r = W.start(); if (r.why) throw new Error(`the mission did not start: ${r.why}`);
   if (!activeScenario(W.game)) throw new Error(`the address ${setup.search} names no mission`);
   tables();
   return { ...recipeOf(W.game), search: setup.search, ...(levelFile ? { levelFile } : {}), stand: 'page' };

@@ -161,7 +161,7 @@ pub fn under_weather(g: &mut crate::game::Game) {
     if !kind && crate::weather::weather_enabled(g) {
         if was_off {
             crate::weather::weather_set_enabled_2(g, false);
-        } else if g.m.hours.hour.dry {
+        } else if g.stood.dry {
             if hour_row(g).storm.is_none() {
                 let storm = crate::weather::weather_snapshot(g);
                 hour_row(g).storm = Some(storm);
@@ -234,9 +234,9 @@ pub fn apply_hour(g: &mut crate::game::Game, id_2: crate::hours::HourId) -> bool
 pub fn put_in(g: &mut crate::game::Game, def: &crate::hours::HourDef, from: Option<&crate::hours::HourState>) {
     let to_sun = to_sun_of(def);
     let kind = crate::weather::weather_kind(g).is_some();
-    let hour = g.m.hours.hour;
-    let sun_k = match from { Some(f) => f.sun_k, None => v3::clamp(hour.sun, 0.0, 1.0) };
-    let given = match from { Some(f) => f.given, None => hour.sun_given || hour.sun != 1.0 };
+    let stood = g.stood;
+    let sun_k = match from { Some(f) => f.sun_k, None => v3::clamp(stood.sun, 0.0, 1.0) };
+    let given = match from { Some(f) => f.given, None => stood.sun_given || stood.sun != 1.0 };
     let was_off = if kind { match from { Some(f) => f.was_off, None => false } } else { !crate::weather::weather_enabled(g) };
     let sky = HourStateSky { zenith: v3::copy(g.engine.settings.sky_zenith), horizon: v3::copy(g.engine.settings.sky_horizon) };
     let haze = g.engine.settings.haze_density;
@@ -452,6 +452,50 @@ pub fn moon_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
 
 /// The light from the sky at P, by the hour or by the night: its one directional light where P has a line to it, and the ambient of P's cell. (hours.ts skyLight)
 pub fn sky_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
+    sun_light(g, p, acc);
+    dome_light(g, p, acc);
+}
+
+/// What the sky's one directional light puts on a face turned to it.
+fn sun_of(g: &Game, st: &Sky) -> f64 {
+    match st.sun {
+        Some(sun) if g.tab.light[sun].enabled && g.tab.light[sun].intensity > 0.0 => lum(g.tab.light[sun].color) * g.tab.light[sun].intensity,
+        _ => 0.0,
+    }
+}
+
+/// The sky as the light under a roof is worked out from it (sim/glow.rs).
+pub fn sky_now(g: &crate::game::Game) -> ::sim::glow::Sky {
+    let st = sky_in_force(g);
+    ::sim::glow::Sky { to_sun: st.to_sun, sun: sun_of(g, &st), zenith: sky_lum(g, 1.0, st.dome), horizon: sky_lum(g, 0.0, st.dome) }
+}
+
+/// THE HOUR'S EXPOSURE against a night's (1): what a lamp's real strength is multiplied by to stand beside the hour's sun and sky, which are the real ones
+/// times it already. By the light (lux) the hour's sun stands for, of which its authored strength is the picture. (render/photometry.ts hourExposure)
+pub fn exposure(g: &crate::game::Game) -> f64 {
+    let Some(st) = &g.m.hours.states else { return 1.0 };
+    let lux = match st.def.id { HourId::Dawn => 600.0, HourId::Midday => 100000.0, HourId::Overcast => 3800.0, HourId::Dusk => 500.0, HourId::Night => return 1.0 };
+    if st.def.sun.intensity > 0.0 { m::min(1.0, st.def.sun.intensity * 3.3 / lux) } else { 1.0 }
+}
+
+/// The sky's one directional light on P's six faces, where P has a line to it.
+pub fn sun_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
+    let st = sky_in_force(g);
+    let i_sun = sun_of(g, &st);
+    if i_sun <= 0.002 { return; }
+    reach_fresh(g, st.to_sun);
+    let t = reach_of(g.m.hours.reach.box_, p, st.to_sun);
+    if t <= 0.05 || !crate::scene_collision::segment_blocked(g, p, v3::mad(p, st.to_sun, t), None, None, None) {
+        let n6 = n6();
+        for k in 0..6 {
+            let cs = v3::dot(n6[k], st.to_sun);
+            if cs > 0.0 { acc[k] += i_sun * cs; }
+        }
+    }
+}
+
+/// The ambient of P's cell on P's six faces: the sky's dome and the ground, as far as P's cell sees them.
+pub fn dome_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
     let st = sky_in_force(g);
     // (a line first: the copy is brought up to date by the question, and what is kept is of the copy)
     let ix = m::floor(p[0] / CELL);
@@ -459,21 +503,7 @@ pub fn sky_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
     let c: V3 = [(ix + 0.5) * CELL, CELL_Y, (iz + 0.5) * CELL];
     let cut_off = crate::scene_collision::segment_blocked(g, p, c, None, None, None);
     reach_fresh(g, st.to_sun);
-    let box_ = g.m.hours.reach.box_;
-    let i_sun = match st.sun {
-        Some(sun) if g.tab.light[sun].enabled && g.tab.light[sun].intensity > 0.0 => lum(g.tab.light[sun].color) * g.tab.light[sun].intensity,
-        _ => 0.0,
-    };
-    if i_sun > 0.002 {
-        let t = reach_of(box_, p, st.to_sun);
-        if t <= 0.05 || !crate::scene_collision::segment_blocked(g, p, v3::mad(p, st.to_sun, t), None, None, None) {
-            let n6 = n6();
-            for k in 0..6 {
-                let cs = v3::dot(n6[k], st.to_sun);
-                if cs > 0.0 { acc[k] += i_sun * cs; }
-            }
-        }
-    }
+    let i_sun = sun_of(g, &st);
     // the cell's rays stand for P while nothing is between P and the point they were asked from: else the quarter-cell's, else P's own, unkept
     let mut from = c;
     let open: Vec<Open> = if !cut_off {
@@ -509,7 +539,7 @@ pub fn sky_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
         if let Some(leaves) = &leaves {
             let mut hit = false;
             for &db in leaves.iter() {
-                if let Some(h) = crate::scene_boxes::ray_box(g, from, r.d, db, o.len) {
+                if let Some(h) = crate::scene_boxes::ray_box(g, from, r.d, db.into(), o.len) {
                     if h.t >= 0.0 { hit = true; break; }
                 }
             }

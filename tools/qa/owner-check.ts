@@ -31,7 +31,7 @@ const GONE = ['runnerOwns', 'moraleOwns', 'lastStandMan', 'lastStandOwns', 'squa
   'runnerFled', 'squadStaysIn', 'squadHolds', 'laneWarns', 'powerOutMan', 'silentHolds', 'pairHolds', 'spottedHolds', 'silentGlassHolds', 'silentOnMan', 'holdFireOnMan', 'silentMan', 'unseenMan', 'gunHoldKeeps', 'gunHoldRuns', 'darkFoeCarries',
   'noShoveMan', 'onLitMan', 'seatHas', 'doorwayHeld', 'handleHeld', 'startleHolds', 'rearHolds', 'startleMan'];
 /** the switches the shipped game leaves down, up: what the runs cannot show otherwise */
-const ALL_ON = { LASTSTAND: { regroup: true }, BUDDY: { on: true }, PRESSURE: { on: true }, DIGIN: { on: true } };
+const ALL_ON = { PRESSURE: { on: true }, DIGIN: { on: true } };
 
 { const names: string[] = O.ownerRanks(), bits = names.map(n => O.OWN[n] as number);
   const down = bits.every((b, i) => i === 0 || b < bits[i - 1]), one = bits.every(b => b > 0 && (b & (b - 1)) === 0);
@@ -84,7 +84,7 @@ async function arm(label: string, set: object): Promise<void> {
     `${todo.length} runs, ${ticks} ticks · ${bad} disagreements${first.length ? `\n    ${first.join('\n    ')}` : ''}${lost.length ? `\n    no count: ${lost.join('\n    ')}` : ''}\n    ${rules.map(row).join('\n    ')}${never.length ? `\n    never held in these runs: ${never.join(', ')}` : ''}`);
 }
 await arm('as the stand has them', {});
-if (!process.env.OWNER_SCN || process.env.OWNER_ALLON) await arm('with last stand, buddy, pressure and dig-in up', ALL_ON);
+if (!process.env.OWNER_SCN || process.env.OWNER_ALLON) await arm('with pressure and dig-in up', ALL_ON);
 
 /** what the audit's preload wrote (tools/qa/owner-audit.ts): a line a process that stepped a game under it, summed. Throws where no process wrote one. */
 type Audit = { ticks: number; bad: number; first: string[]; reads: Record<string, [number, number]>; held: Record<string, number> };

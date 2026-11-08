@@ -389,7 +389,7 @@ pub fn pose_copy(g: &mut crate::game::Game, this: crate::anim_skeleton::Pose, sr
 }
 
 /// Node i's rotation.   (skeleton.ts Pose.rot)
-pub fn pose_rot(g: &mut crate::game::Game, this: crate::anim_skeleton::Pose, i: f64) -> Quat {
+pub fn pose_rot(g: &crate::game::Game, this: crate::anim_skeleton::Pose, i: f64) -> Quat {
     let n_ = rows_of(this);
     let o = ((3 * n_) as isize + i as isize) as usize;
     let d = cols_of_read(g, this);
@@ -411,7 +411,7 @@ pub fn pose_set_rot(g: &mut crate::game::Game, this: crate::anim_skeleton::Pose,
 }
 
 /// Node i's origin.   (skeleton.ts Pose.pos)
-pub fn pose_pos(g: &mut crate::game::Game, this: crate::anim_skeleton::Pose, i: f64) -> V3 {
+pub fn pose_pos(g: &crate::game::Game, this: crate::anim_skeleton::Pose, i: f64) -> V3 {
     let n_ = rows_of(this);
     let i = i as isize;
     let d = cols_of_read(g, this);
@@ -965,7 +965,7 @@ pub fn skeleton_instance_new(g: &crate::game::Game, ch: RigId) -> crate::anim_sk
 }
 
 /// Model-space matrices of all nodes from a local pose, with model-space twists and per-node overrides, then the skinning matrices.   (skeleton.ts SkeletonInstance.update)
-pub fn skeleton_instance_update(g: &mut crate::game::Game, this: &mut crate::anim_skeleton::SkeletonInstance, pose: crate::anim_skeleton::Pose, world: &crate::v3::m4::Mat4, twists: Option<&[crate::anim_skeleton::TwistSpec]>, overrides: Option<&[Option<crate::anim_skeleton::NodeOverride>]>) {
+pub fn skeleton_instance_update(g: &crate::game::Game, this: &mut crate::anim_skeleton::SkeletonInstance, pose: crate::anim_skeleton::Pose, world: &crate::v3::m4::Mat4, twists: Option<&[crate::anim_skeleton::TwistSpec]>, overrides: Option<&[Option<crate::anim_skeleton::NodeOverride>]>) {
     let d = cols_of_read(g, pose);
     let rig = &g.tab.rig[this.rig];
     let n_ = rows_of(pose);

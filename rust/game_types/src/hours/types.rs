@@ -271,32 +271,9 @@ impl NIGHT {
 }
 impl Default for NIGHT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/hours.ts:86 HOUR, src/game/hours.ts:86)
-#[derive(Clone, Copy, Debug)]
-pub struct HoursModHOUR {
-    pub id: crate::hours::HourId,
-    pub sun: f64,
-    pub sun_given: bool,
-    pub dry: bool,
-}
-impl HoursModHOUR {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoursModHOUR {
-            id: crate::hours::HourId::Overcast,
-            sun: 0.0,
-            sun_given: false,
-            dry: false,
-        }
-    }
-}
-impl Default for HoursModHOUR { fn default() -> Self { Self::zeroed() } }
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct HoursMod {
-    /// (src/game/hours.ts:86 HOUR)
-    pub hour: crate::hours::HoursModHOUR,
     /// (src/game/hours.ts:140 states)
     pub states: Option<crate::hours::HourState>,
     pub reach: crate::hours::SkyReach,
@@ -304,7 +281,6 @@ pub struct HoursMod {
 impl HoursMod {
     pub fn blank() -> Self {
         HoursMod {
-            hour: crate::hours::HoursModHOUR { id: crate::hours::HourId::Night, sun: 1.0, sun_given: false, dry: true },
             states: None,
             reach: crate::hours::SkyReach::blank(),
         }

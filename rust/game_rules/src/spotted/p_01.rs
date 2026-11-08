@@ -95,6 +95,20 @@ pub fn spotted_mode(g: &mut crate::game::Game, gd: GuardId) -> crate::spotted::S
     match g.m.spotted.men.get(gd) { Some(r) => r.mode, None => crate::spotted::SpottedMode::Calm }
 }
 
+/// the squad line's word while a silent squad is not yet compromised: any man caught, else any man wary; None: nothing to add (spotted.ts spottedWord)
+pub fn spotted_word(g: &mut crate::game::Game) -> Option<&'static str> {
+    if !g.k.spotted.on { return None; }
+    let mut wary = false;
+    for gd in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
+        match spotted_mode(g, gd) {
+            crate::spotted::SpottedMode::Caught => return Some("SILENT · contact"),
+            crate::spotted::SpottedMode::Wary => wary = true,
+            crate::spotted::SpottedMode::Calm => {}
+        }
+    }
+    wary.then_some("SILENT · low")
+}
+
 /// the alert man who has them, while this teammate is caught (spotted.ts spottedBy)
 pub fn spotted_by(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let row = g.m.spotted.men.get(gd).map(|r| (r.mode, r.by));

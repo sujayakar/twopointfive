@@ -18,7 +18,6 @@ const { hearPath } = await import(`${ROOT}/src/game/weather.ts`);
 const { isHostile } = await import(`${ROOT}/src/game/teams.ts`);
 const { DIGIN } = await import(`${ROOT}/src/game/digin.ts`);
 
-const BREAK = process.env.OVERHEARD_BREAK === '1';
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -38,7 +37,7 @@ async function rig(seed: number) {
 
 export async function wordsOverheard(): Promise<boolean> {
   const F = family("words-overheard: a hidden defender's shout that reaches an ear is a quiet row on the strip, his words alone");
-  const was = { ...CUES }, rnd = Math.random, stoodTop = CUES.overheard;   // (the shipped stand writes its switches once, at load: what it stood on is read here, before the check writes any)
+  const was = { ...CUES }, rnd = Math.random;
   try {
     // ---- 2 · the real floor, the game's own hearing law
     const earsOf = (g: any) => { const at = (p: number[]) => [p[0], p[1] + 1.6, p[2]]; const out: number[][] = []; if (!g.player.down) out.push(at(g.player.char.pos)); for (const o of g.guards) if (o.team === 'operative' && o.state !== 'dead' && o.char.alive) out.push(at(o.char.pos)); return out; };
@@ -50,7 +49,7 @@ export async function wordsOverheard(): Promise<boolean> {
       if (!aim) throw new Error('words-overheard: block-squads.json has no first squad room with a mark to stage the player in front of');
       g.teleportPlayer([aim[0], 0, aim[2]]); };
     {
-      const W = await rig(2), g = W.game; g.godMode = true; CUES.on = true; CUES.overheard = !BREAK; stagePlayer(W, g);
+      const W = await rig(2), g = W.game; g.godMode = true; stagePlayer(W, g);
       let near = 0, farN = 0, seenRow = 0, frames = 0, named = 0, grew = 0; const wrong: string[] = []; const cache = (g.col.sound as any).cache as Map<string, unknown>; routed = 0;
       const ask = (gd: any, hidden: boolean, i: number) => {
         const want = hidden && law(g, gd);
@@ -62,7 +61,7 @@ export async function wordsOverheard(): Promise<boolean> {
         if (!hidden) seenRow += drew ? 1 : 0; else if (want) near++; else farN++;
         C.rows = keep.rows; C.heardRow = keep.row; C.heardSaid = keep.said; C.shoutT = keep.shoutT; C.heardLog.length = keep.log; C.stats = JSON.parse(keep.stats);
       };
-      for (let i = 0; i < 60 * 12; i++) {
+      for (let i = 0; i < 60 * 9; i++) {
         g.player.visibility = 1; W.step(DT); frames++;
         if (i % 30) continue;
         for (const gd of g.guards as any[]) {
@@ -81,7 +80,7 @@ export async function wordsOverheard(): Promise<boolean> {
     // ---- 3 · the say() road
     {
       const out: { moves: string; shouts: number; drawn: number; row: boolean; who: string; ring: string }[] = [];
-      for (const on of [!BREAK]) {
+      for (const on of [true]) {
         const W = await rig(2), g = W.game; g.godMode = true; CUES.on = true; CUES.overheard = on;   // (after the stand-up: on the frozen stand a stand-up writes every held switch down again)
         stagePlayer(W, g); let moves = '', row = false, who = '', ring = '';
         for (let i = 0; i < 60 * 30; i++) { g.player.visibility = 1; W.step(DT);

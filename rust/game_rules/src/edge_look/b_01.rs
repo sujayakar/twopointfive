@@ -26,11 +26,11 @@ pub fn break_like(g: &Game, b: WallbreakBreakableId) -> BreakLike {
     BreakLike { id: r.id, kind: r.kind, surf: String::from(r.surf.as_str()), box_: r.box_, nx: r.nx, ny: r.ny, nz: r.nz, yb: r.yb.clone(), open: r.open.clone() }
 }
 
-/// What the frame's box list can still take of a picture-only lane's boxes. Never None here: a Rust game has its box world. (src/game/edgeLook.ts:82 frameRoom)
-pub fn frame_room(g: &crate::game::Game, mine: f64, slack: f64, now: Option<f64>) -> Option<f64> {
+/// What the frame's box list can take of a picture-only lane's boxes: the table, less the level's boxes, less what the frame keeps for its own (`FRAME_BOXES`, or
+/// `now`: what a lane has seen on the list as it stands), less `slack`. (src/game/edgeLook.ts:82 frameRoom, which took last frame's count: a host's)
+pub fn frame_room(g: &crate::game::Game, slack: f64, now: Option<f64>) -> f64 {
     let w = &g.engine.world;
-    let used = match now { Some(n) => n, None => m::max(0.0, m::max(g.dyn_raw, g.dyn_boxes.len() as f64) - mine) };
-    Some(w.max_boxes - w.statics.len() as f64 - used - slack)
+    w.max_boxes - w.statics.len() as f64 - now.unwrap_or(crate::scene_boxes::FRAME_BOXES) - slack
 }
 
 /// Cells of a wall just opened: the look's one hook. (src/game/edgeLook.ts:104 EdgeLook.opened)
@@ -99,15 +99,14 @@ pub fn edge_look_clear(g: &mut crate::game::Game) {
     let e = core::mem::replace(&mut g.destr.edge_look, EdgeLook::blank());
     for l in e.decor.values() { for &b in l { crate::scene_boxes::box_let_go(g, b); } }
     for r in e.rubble.iter() { crate::scene_boxes::box_let_go(g, r.box_); }
-    // (`room` and `last` are not put back by the TypeScript's clear: kept)
-    g.destr.edge_look.room = e.room; g.destr.edge_look.last = e.last;
+    // (`room` is not put back by the TypeScript's clear: kept)
+    g.destr.edge_look.room = e.room;
     let s = &mut g.stats.edge_look; s.decor = 0; s.rubble = 0; s.flying = 0;
 }
 
 /// Once a frame: the frame's room, a wall dressed or a few cells shed, the fragments in flight moved. (src/game/edgeLook.ts:127 EdgeLook.update)
 pub fn edge_look_update(g: &mut crate::game::Game, dt: f64) {
-    let (last, slack) = (g.destr.edge_look.last, g.m.edge_look.edge.box_slack);
-    if let Some(r) = frame_room(g, last, slack, None) { g.destr.edge_look.room = r; }
+    g.destr.edge_look.room = frame_room(g, g.m.edge_look.edge.box_slack, None);
     if !g.destr.edge_look.held {
         if !g.destr.edge_look.dirty.is_empty() { edge_look_flush(g); }
         else if !g.destr.edge_look.todo.is_empty() {
@@ -125,11 +124,11 @@ pub fn edge_look_update(g: &mut crate::game::Game, dt: f64) {
         if r.t >= r.t_2 { continue; }
         r.t = m::min(r.t_2, r.t + dt);
         let s = r.t / r.t_2;
-        let bx = &mut g.tab.boxes[r.box_];
+        let bx = &mut g.tab.frame_boxes[r.box_];
         bx.c[0] = r.p0[0] + (r.p1[0] - r.p0[0]) * s; bx.c[2] = r.p0[2] + (r.p1[2] - r.p0[2]) * s;
         bx.c[1] = if s >= 1.0 { r.p1[1] } else { m::max(r.p1[1], r.p0[1] + r.vy * r.t - 4.9 * r.t * r.t) };
         bx.rot = Some(if s >= 1.0 { r.q1 } else { quat::slerp(r.q0, r.q1, s * s) });
-        if s < 1.0 { fl += 1.0; }
+        if s < 1.0 { fl += 1.0; } else { let y = crate::debris::debris_rubble_height(g, r.box_.into(), r.p1[1]); g.tab.frame_boxes[r.box_].c[1] = y; }
         g.destr.edge_look.rubble[i].t = r.t;
     }
     g.destr.edge_look.flying = fl; g.stats.edge_look.flying = fl as i32;
@@ -145,13 +144,13 @@ pub fn edge_look_feet(g: &mut crate::game::Game, men: &[crate::debris::FootMan],
         let foot = match r.foot {
             Some(f) => f,
             None => {
-                let (c, mkey) = { let b = &g.tab.boxes[r.box_]; (b.c, b.mkey) };
+                let (c, mkey) = { let b = &g.tab.frame_boxes[r.box_]; (b.c, b.mkey) };
                 let mut near = false;
                 for mn in men { if m::abs(mn.pos[0] - c[0]) < 1.5 && m::abs(mn.pos[2] - c[2]) < 1.5 { near = true; break; } }
                 if !near { continue; }
                 // (its own height once a boot lays it flat: as shed the heap's flakes are staggered, so no two overlapping tops lie in one plane)
                 let lift = 0.0007 * ((js::to_i32(mkey.unwrap_or(0.0)) & 0x7fffff) % 11) as f64;
-                let f = crate::debris::debris_loose(g, r.box_, Some(lift));
+                let f = crate::debris::debris_loose(g, r.box_.into(), Some(lift));
                 g.destr.edge_look.rubble[i].foot = Some(f);
                 f
             }
@@ -163,13 +162,15 @@ pub fn edge_look_feet(g: &mut crate::game::Game, men: &[crate::debris::FootMan],
     crate::debris::debris_feet(g, men, k, Some(&list), Some(&mut book));
     g.destr.edge_look.foot_book = book;
     let no_shadow = js::to_i32(crate::scene_boxes::box_flag().no_shadow);
-    for &c in list.iter() {
+    let frame = js::to_i32(m::floor(g.time * 60.0));
+    for (i, &c) in list.iter().enumerate() {
         let slid = !g.tab.debris_chunk[c].rest;
         crate::debris::debris_foot_step(g, c, dt);
+        if !slid && (frame + i as i32) & 31 == 0 { crate::debris::debris_resettle(g, c); }
         // a slab that casts a shadow and was slid to a tripwire's beam casts none from here on (shed()'s rule, kept true under the boots)
         let bx = g.tab.debris_chunk[c].box_;
-        let (flags, bc, bh) = { let b = &g.tab.boxes[bx]; (js::to_i32(b.flags), b.c, b.h) };
-        if slid && flags & no_shadow == 0 && edge_look_in_beam(g, bc, m::max(bh[0], bh[2])) { g.tab.boxes[bx].flags = (flags | no_shadow) as f64; }
+        let (flags, bc, bh) = { let b = &g.tab[bx]; (js::to_i32(b.flags), b.c, b.h) };
+        if slid && flags & no_shadow == 0 && edge_look_in_beam(g, bc, m::max(bh[0], bh[2])) { g.tab[bx].flags = (flags | no_shadow) as f64; }
     }
 }
 
@@ -184,14 +185,13 @@ pub fn edge_look_flush(g: &mut crate::game::Game) {
 }
 
 /// This lane's pieces into the frame's dynamic list (after the lane's debris). (src/game/edgeLook.ts:169 EdgeLook.boxes)
-pub fn edge_look_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn edge_look_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     if g.destr.edge_look.held { g.destr.edge_look.held = false; } else { edge_look_flush(g); }   // (a wall that opened this frame is dressed on the next: `dress`)
-    let e = &mut g.destr.edge_look;
+    let e = &g.destr.edge_look;
     let (room, mut n) = (e.room, 0.0);
-    for l in e.decor.values() { for &b in l { if n >= room { break; } out.push(b); n += 1.0; } }
+    for l in e.decor.values() { for &b in l { if n >= room { break; } out.push(b.into()); n += 1.0; } }
     let mut i = e.rubble.len();
-    while i > 0 && n < room { i -= 1; out.push(e.rubble[i].box_); n += 1.0; }   // (newest first: what a short frame drops is the oldest litter)
-    e.last = n;
+    while i > 0 && n < room { i -= 1; out.push(e.rubble[i].box_.into()); n += 1.0; }   // (newest first: what a short frame drops is the oldest litter)
 }
 
 // ---------------------------------------------------------------- the standing pieces of one wall
@@ -206,6 +206,8 @@ struct Lay {
     f: Frame, id: f64, fc: V3, f_yaw: f64, f_rough: Option<f64>,
     out: Vec<Bx>, cap: f64, capped: i32, key: i32,
     paint: V3, core: V3, bl: Option<Vec<[f64; 2]>>, rim: f64, real: bool,
+    /// what the wall says it is, and whether a frame shows in a hole in it
+    stuff: Option<crate::scene_stuff::BoxStuff>, does: Option<crate::scene_materials::DoesWord>, framed: bool,
 }
 impl Lay {
     fn h(&self, a: f64, b2: f64, c: f64) -> f64 {
@@ -229,7 +231,14 @@ impl Lay {
         crate::scene_boxes::make_box_value(&crate::scene_boxes::MakeBoxP {
             c: at_c(self.fc, f, u, y, v), h: [a, hb, ht], yaw: Some(self.f_yaw), rot: Some(quat::from_basis(e1, e2, e3)), albedo: Some(albedo),
             flags: Some((js::to_i32(fl.dynamic) | (if solid { 0 } else { js::to_i32(fl.no_shadow) })) as f64), name: Some(String::from("edge")),
-            mkey: Some(MKEY_LOOK + (key & 0x7fffff) as f64), rough: self.f_rough, ..Default::default() })
+            mkey: Some(MKEY_LOOK + (key & 0x7fffff) as f64), rough: self.f_rough, stuff: self.stuff, does: self.does, ..Default::default() })
+    }
+    /// A plate of what the wall is built on, which is not the wall: a wall that stands by itself shows none.
+    fn frame(&mut self, u: f64, y: f64, v: f64, a: f64, hb: f64, ht: f64, th: f64, albedo: V3, key: i32) {
+        if !self.framed { return; }
+        let mut p = self.plate(u, y, v, a, hb, ht, th, albedo, key, false);
+        p.stuff = None; p.does = None;
+        self.push(p);
     }
     /// A RAGGED EDGE as one broken line: control points standing d out of the straight cut, each stretch between two of them one plate (edgeLook.ts:212)
     #[allow(clippy::too_many_arguments)]
@@ -278,16 +287,17 @@ pub fn edge_look_rebuild(g: &mut crate::game::Game, b: &crate::edge_look::BreakL
     let f = edge_look_frame(g, b);
     let (n, w, t) = (f.n, f.w, f.t);
     let e = g.m.edge_look.edge;
-    let real = crate::scene_cut::cut_boxes_on(g);   // the cut switch: the full-thickness coat and the lintel cast the shadow they draw
     let ni = n as i64;
     let open = |k: i64, iy: i64| -> bool { k >= 0 && k < ni && b.open.get(((iy as f64 * b.nz + (if f.along_x { 0.0 } else { k as f64 })) * b.nx + (if f.along_x { k as f64 } else { 0.0 })) as usize) == Some(&1) };
     let gone = |k: i64, iy: i64| -> bool { k < 0 || k >= ni || open(k, iy) };   // (nothing of THIS wall to bury a plate in: open, or past the wall's end)
     let edge_u = |k: i64| -> f64 { -f.l / 2.0 + w * k as f64 };   // the boundary on the low side of column k
     let (paint, fc, f_yaw, f_rough) = { let x = &g.tab.boxes[b.box_]; (x.albedo, x.c, x.yaw, x.rough) };
-    let core_c = v3::lerp3(paint, core(), 0.82);
+    let inside = crate::break_table::breaks_inside(g, &b.surf, b.box_);
+    let core_c = v3::lerp3(paint, crate::break_table::core_of(inside, paint), 0.82);
+    let (stuff, does) = { let x = &g.tab.boxes[b.box_]; (x.stuff, x.does) };
     let frame_c: V3 = if b.surf == "wood" { v3::scale(paint, 0.8) } else { steel() };   // what the wall is framed with
     let mut l = Lay { f, id: b.id, fc, f_yaw, f_rough, out: Vec::new(), cap: e.per_wall, capped: 0, key: (js::to_i32(b.id) & 0x3fff) << 9,
-        paint, core: core_c, bl: g.destr.edge_look.blasted.get(crate::Num(b.id)).cloned(), rim: e.scorch.rim, real };
+        paint, core: core_c, bl: g.destr.edge_look.blasted.get(crate::Num(b.id)).cloned(), rim: e.scorch.rim, real: true, stuff, does, framed: inside.framed };
     // standing wall of this level past column j going `s` (m, a little short of it; 0 = open there, or the wall's end)
     let past = |mut j: i64, s: i64, iy: i64| -> f64 { let mut c = 0.0; while !gone(j, iy) && c < 2.0 { c += 1.0; j += s; } c * w * 0.88 };
     // standing wall behind an edge at level iy, from column ke away from the opening (m, a little short of it)
@@ -306,8 +316,7 @@ pub fn edge_look_rebuild(g: &mut crate::game::Game, b: &crate::edge_look::BreakL
             if l.h(kf, 160.0, sf + 2.0) < 0.7 {
                 let hgt = 0.16 + 0.3 * l.h(kf, 161.0, sf + 2.0); let th = sf * (0.25 + 0.5 * l.h(kf, 162.0, sf + 2.0)); let ub2 = ue + sf * (0.02 + 0.06 * l.h(kf, 163.0, sf + 2.0));
                 let v = (l.h(kf, 164.0, 0.0) - 0.5) * t; let key = l.next_key();
-                let p = l.plate(ub2 + m::sin(th) * hgt / 2.0, m::max(f.y0, 0.0) + m::cos(th) * hgt / 2.0, v, 0.018, hgt / 2.0, 0.018, -th, frame_c, key, false);
-                l.push(p);
+                l.frame(ub2 + m::sin(th) * hgt / 2.0, m::max(f.y0, 0.0) + m::cos(th) * hgt / 2.0, v, 0.018, hgt / 2.0, 0.018, -th, frame_c, key);
             }
         }
     }
@@ -328,7 +337,7 @@ pub fn edge_look_rebuild(g: &mut crate::game::Game, b: &crate::edge_look::BreakL
             for j in k..=k1 {
                 let xa = if j == k && !gone(j - 1, 1) { 0.02 } else { 0.0 }; let xb = if j == k1 && !gone(j + 1, 1) { 0.02 } else { 0.0 }; let uc = edge_u(j) + w / 2.0;
                 let col = l.tone(paint, uc); let key = l.next_key();
-                let p = l.plate(uc + (xb - xa) / 2.0, (y_l + top) / 2.0, 0.0, (w + xa + xb) / 2.0, (top - y_l) / 2.0, t - 0.0035, 0.0, col, key, real);
+                let p = l.plate(uc + (xb - xa) / 2.0, (y_l + top) / 2.0, 0.0, (w + xa + xb) / 2.0, (top - y_l) / 2.0, t - 0.0035, 0.0, col, key, true);
                 l.push(p);
             }
             let r = m::min(if is_hole { e.sill_hole } else { e.sill_port }, lin * 0.7);
@@ -353,16 +362,14 @@ pub fn edge_look_rebuild(g: &mut crate::game::Game, b: &crate::edge_look::BreakL
         else if !is_hole {
             let xa = if k > 0 { 0.03 } else { 0.0 }; let xb = if k1 < ni - 1 { 0.03 } else { 0.0 };
             let col = l.tone(frame_c, (ua + ub) / 2.0); let key = l.next_key();
-            let p = l.plate((ua + ub + xb - xa) / 2.0, ty, 0.0, (run_w + xa + xb) / 2.0, 0.018, tt, 0.0, col, key, false);
-            l.push(p);
+            l.frame((ua + ub + xb - xa) / 2.0, ty, 0.0, (run_w + xa + xb) / 2.0, 0.018, tt, 0.0, col, key);
         } else {
             for (ke, ue, s) in [(k - 1, ua, 1i64), (k1 + 1, ub, -1i64)] {
                 if ke < 0 || ke >= ni { continue; }
                 let (kef, sf) = (ke as f64, s as f64);
                 let len = m::min(0.7, run_w * (0.2 + 0.2 * l.h(kef, 31.0, sf + 2.0))); let phi = 0.3 + 0.7 * l.h(kef, 32.0, sf + 2.0);
                 let v = (l.h(kef, 33.0, 0.0) - 0.5) * t * 0.6; let col = l.tone(frame_c, ue); let key = l.next_key();
-                let p = l.plate(ue + sf * (len / 2.0) * m::cos(phi), ty - (len / 2.0) * m::sin(phi), v, len / 2.0, 0.016, tt, -sf * phi, col, key, false);
-                l.push(p);
+                l.frame(ue + sf * (len / 2.0) * m::cos(phi), ty - (len / 2.0) * m::sin(phi), v, len / 2.0, 0.016, tt, -sf * phi, col, key);
             }
         }
         // per column of a port: what still hangs from the top, a stud fire left standing
@@ -386,18 +393,15 @@ pub fn edge_look_rebuild(g: &mut crate::game::Game, b: &crate::edge_look::BreakL
                 let us = u0 + w * (0.25 + 0.5 * l.h(jf, 151.0, 0.0)); let snap = is_hole || l.h(jf, 152.0, 0.0) < 0.5; let hs = 0.018;
                 if !snap {
                     let th = (l.h(jf, 153.0, 0.0) - 0.5) * 0.06; let key = l.next_key();
-                    let p = l.plate(us, (f.y_sill + f.y_top) / 2.0, 0.0, hs, span / 2.0, hs, th, frame_c, key, false);
-                    l.push(p);
+                    l.frame(us, (f.y_sill + f.y_top) / 2.0, 0.0, hs, span / 2.0, hs, th, frame_c, key);
                 } else {
                     let lo = span * (0.2 + 0.25 * l.h(jf, 154.0, 0.0)); let hi = span * (0.1 + 0.16 * l.h(jf, 155.0, 0.0));
                     let t1 = (l.h(jf, 156.0, 0.0) - 0.5) * 0.5; let t2 = (l.h(jf, 157.0, 0.0) - 0.5) * 0.6;
                     let key = l.next_key();
-                    let p = l.plate(us - m::sin(t1) * lo / 2.0, f.y_sill + m::cos(t1) * lo / 2.0 - 0.01, 0.0, hs, lo / 2.0, hs, t1, frame_c, key, false);
-                    l.push(p);
+                    l.frame(us - m::sin(t1) * lo / 2.0, f.y_sill + m::cos(t1) * lo / 2.0 - 0.01, 0.0, hs, lo / 2.0, hs, t1, frame_c, key);
                     if !is_hole {
                         let key = l.next_key();
-                        let p = l.plate(us + m::sin(t2) * hi / 2.0, y_l - m::cos(t2) * hi / 2.0 + (if has_lin { 0.02 } else { -0.03 }), 0.0, hs, hi / 2.0, hs, t2, frame_c, key, false);
-                        l.push(p);
+                        l.frame(us + m::sin(t2) * hi / 2.0, y_l - m::cos(t2) * hi / 2.0 + (if has_lin { 0.02 } else { -0.03 }), 0.0, hs, hi / 2.0, hs, t2, frame_c, key);
                     }
                 }
             }
@@ -407,7 +411,7 @@ pub fn edge_look_rebuild(g: &mut crate::game::Game, b: &crate::edge_look::BreakL
     // (re-set = the newest: over the level's cap it is the wall dressed longest ago that goes bare)
     if let Some(old) = g.destr.edge_look.decor.delete(crate::Num(b.id)) { for x in old { crate::scene_boxes::box_let_go(g, x); } }
     if !l.out.is_empty() {
-        let rows: Vec<BoxId> = l.out.into_iter().map(|x| crate::scene_boxes::box_kept(g, x)).collect();
+        let rows: Vec<FrameBoxId> = l.out.into_iter().map(|x| crate::scene_boxes::box_kept(g, x)).collect();
         g.destr.edge_look.decor.set(crate::Num(b.id), rows);
     }
     let mut total = 0.0; for x in g.destr.edge_look.decor.values() { total += x.len() as f64; }
@@ -436,7 +440,10 @@ pub fn edge_look_in_beam(g: &crate::game::Game, p: V3, r: f64) -> bool {
 /// What one opened cell leaves at the foot: fragments at rest positions hashed off the cell, flying there from the cell unless quiet. (src/game/edgeLook.ts:332 EdgeLook.shed)
 pub fn edge_look_shed(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike, f: Option<crate::edge_look::Frame>, c_2: f64, dir: Option<V3>, quiet: bool, blast: bool) {
     let c = c_2;
-    let (bc, bh, byaw, paint) = { let x = &g.tab.boxes[b.box_]; (x.c, x.h, x.yaw, x.albedo) };
+    let (bc, bh, byaw, paint, stuff, does) = { let x = &g.tab.boxes[b.box_]; (x.c, x.h, x.yaw, x.albedo, x.stuff, x.does) };
+    let inside = crate::break_table::breaks_inside(g, &b.surf, b.box_);
+    let core_c = v3::lerp3(paint, crate::break_table::core_of(inside, paint), 0.82);
+    let facing = inside.facing.unwrap_or(core_c);
     let (ix, iz, iy) = (js::rem(c, b.nx), js::rem(m::floor(c / b.nx), b.nz), m::floor(c / (b.nx * b.nz)));
     let id = b.id;
     let hh = |a: f64, k: f64| -> f64 {
@@ -461,7 +468,6 @@ pub fn edge_look_shed(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike
     let wood = b.surf == "wood"; let soft = b.surf == "cardboard" || b.surf == "fabric";
     let reach = if blast { e.throw_blast } else { e.throw_fire };
     let sill_up = f.is_some() && iy == 1.0 && b.open.get((c - b.nx * b.nz) as usize) == Some(&0);
-    let cut = crate::scene_cut::cut_boxes_on(g);
     let fl = crate::scene_boxes::box_flag();
     let no_shadow = js::to_i32(fl.no_shadow);
     let ch = e.cut_heap;
@@ -491,7 +497,7 @@ pub fn edge_look_shed(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike
         else if blast { hy *= e.blast.flake_k; }
         // THE CUT SWITCH, a blast's heap off a wall: a few big SLABS of the wall's own sheet lying flat, and of the chunks a good share much smaller
         let mut slab = false;
-        if let (true, true, Some(f), false, false) = (cut, blast, f, wood, soft) {
+        if let (true, Some(f), false, false) = (blast, f, wood, soft) {
             let cls = hh(33.0, i);
             if cls < ch.slabs { slab = true; hx = ch.slab[0] + (ch.slab[1] - ch.slab[0]) * hh(15.0, i); hz = hx * (0.45 + 0.5 * hh(16.0, i)); hy = m::min(ch.slab_t, m::max(0.012, f.t * 0.45)); }
             else if lump && cls > 1.0 - ch.smalls { let k = ch.small[0] + (ch.small[1] - ch.small[0]) * hh(34.0, i); hx *= k; hz *= k; hy *= k; }
@@ -508,24 +514,24 @@ pub fn edge_look_shed(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike
         let mut p1: V3 = [px, y1, pz];
         let tone = hh(20.0, i);
         let mut col: V3 = match f {
-            Some(_) => if tone < 0.45 { paint } else if tone < 0.8 { v3::lerp3(paint, core(), 0.82) } else if tone < 0.92 { paper() } else { v3::scale(paint, 0.55) },
+            Some(_) => if tone < 0.45 { paint } else if tone < 0.8 { core_c } else if tone < 0.92 { facing } else { v3::scale(paint, 0.55) },
             None => v3::scale(paint, if soft { 0.75 + 0.3 * tone } else { 0.7 + 0.45 * tone }),
         };
         let soot = if blast { if d < 0.7 { 0.4 + 0.5 * hh(21.0, i) } else { 0.75 + 0.25 * hh(21.0, i) } } else { 1.0 };
         if blast { col = v3::scale(col, soot); }
-        if cut && blast && f.is_some() { col = v3::scale(col, 1.0 - ch.tone * hh(35.0, i)); }   // (each piece its own tone inside the material)
+        if blast && f.is_some() { col = v3::scale(col, 1.0 - ch.tone * hh(35.0, i)); }   // (each piece its own tone inside the material)
         g.destr.edge_look.serial = serial + 1.0;
-        let bv = crate::scene_boxes::make_box_value(&crate::scene_boxes::MakeBoxP { c: p1, h: [hx, hy, hz], rot: Some(q1), albedo: Some(col),
+        let bv = crate::scene_boxes::make_box_value(&crate::scene_boxes::MakeBoxP { c: p1, h: [hx, hy, hz], rot: Some(q1), albedo: Some(col), stuff, does,
             flags: Some((js::to_i32(fl.dynamic) | no_shadow) as f64), name: Some(String::from("rubble")),
             mkey: Some(MKEY_LOOK + 8388608.0 + (js::to_i32(serial) & 0x7fffff) as f64), ..Default::default() });
         let bx = crate::scene_boxes::box_kept(g, bv);
         // the cut switch: its outline by its material's row (breakTable.ts); a big piece casts its shadow
-        if cut && crate::break_table::breaks_shape_loose(g, bx, &b.surf, (id * 4096.0 + c) * 32.0 + i) {
-            p1 = g.tab.boxes[bx].c;
-            if m::max(hx, hz) >= 0.15 && !edge_look_in_beam(g, p1, m::max(hx, hz)) { let x = &mut g.tab.boxes[bx]; x.flags = (js::to_i32(x.flags) & !no_shadow) as f64; }
+        if crate::break_table::breaks_shape_loose(g, bx.into(), &b.surf, (id * 4096.0 + c) * 32.0 + i) {
+            p1 = g.tab.frame_boxes[bx].c;
+            if m::max(hx, hz) >= 0.15 && !edge_look_in_beam(g, p1, m::max(hx, hz)) { let x = &mut g.tab.frame_boxes[bx]; x.flags = (js::to_i32(x.flags) & !no_shadow) as f64; }
             // its broken faces: the material's core, sooted with the piece, a little of the paper's brown in some, no two the same white
-            if let (true, true, Some(cc)) = (blast, f.is_some(), g.tab.boxes[bx].cut_core) {
-                g.tab.boxes[bx].cut_core = Some(v3::scale(v3::lerp3(cc, paper(), ch.core_paper * hh(36.0, i)), soot * (1.0 - ch.core_tone * hh(37.0, i))));
+            if let (true, true, Some(cc)) = (blast, f.is_some(), g.tab.frame_boxes[bx].cut_core) {
+                g.tab.frame_boxes[bx].cut_core = Some(v3::scale(v3::lerp3(cc, inside.facing.unwrap_or(cc), ch.core_paper * hh(36.0, i)), soot * (1.0 - ch.core_tone * hh(37.0, i))));
             }
         }
         let mut r = Rubble { box_: bx, t: 1.0, t_2: 1.0, p0: p1, p1, vy: 0.0, q0: q1, q1, foot: None };
@@ -536,7 +542,7 @@ pub fn edge_look_shed(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike
             r.t_2 = (up + m::sqrt(up * up + 19.6 * m::max(0.02, y_s - y1))) / 9.8 + 0.03 * i * (if blast { 0.3 } else { 1.0 });
             r.vy = (y1 - y_s + 4.9 * r.t_2 * r.t_2) / r.t_2; r.t = 0.0;
             r.q0 = quat::normalize(quat::mul(quat::axis_angle(v3::normalize([hh(24.0, i) - 0.5, hh(25.0, i) - 0.5, hh(26.0, i) - 0.5]), 2.0 + 5.0 * hh(27.0, i)), q1));
-            let x = &mut g.tab.boxes[bx]; x.c = r.p0; x.rot = Some(r.q0);
+            let x = &mut g.tab.frame_boxes[bx]; x.c = r.p0; x.rot = Some(r.q0);
             g.destr.edge_look.flying += 1.0;
         }
         g.destr.edge_look.rubble.push(r); g.stats.edge_look.shed += 1;
@@ -544,11 +550,10 @@ pub fn edge_look_shed(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike
     }
 }
 
-/// One soot mark, tagged as the picture's. The answer is `None` here: the TypeScript's only use of it is a count for the checks, not kept. (edgeLook.ts:406-409,423)
+/// One soot mark, the picture's alone. (edgeLook.ts:406-409,423)
 fn soot(g: &mut crate::game::Game, pos: V3, normal: V3, size: f64, param: f64) {
     let opts = crate::render_decals::DecalOpts { param: Some(param), look: Some(true), ..Default::default() };
-    let d = crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Scorch, pos, normal, Some(size), Some(opts));
-    crate::look_decals::look_decal(g, d.as_ref());
+    crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Scorch, pos, normal, Some(size), Some(opts));
 }
 
 /// Soot round a blast's gap: where along the wall the charge opened it (the edge pieces there are sooted), then both faces of the wall about the opening, the floor at its foot, the rim of what still stands. (src/game/edgeLook.ts:398 EdgeLook.scorch)

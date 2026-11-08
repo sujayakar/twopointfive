@@ -119,6 +119,6 @@ pub fn moths_update(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// The moths' boxes into the frame's dynamic list (only the ones about). (src/game/moths.ts:100 Moths.boxes)
-pub fn moths_boxes(g: &crate::game::Game, out: &mut Vec<BoxId>) {
-    for mo in g.moths.moths.iter() { if mo.shown > 0.01 { out.push(mo.box_); } }
+pub fn moths_boxes(g: &crate::game::Game, out: &mut Vec<AnyBoxId>) {
+    for mo in g.moths.moths.iter() { if mo.shown > 0.01 { out.push(mo.box_.into()); } }
 }

@@ -353,7 +353,7 @@ pub fn game_set_loadout(g: &mut crate::game::Game, with_rifle: bool) {
 }
 
 /// Was this fixture's switch on in the level as authored.   (game.ts authoredOn)
-pub fn game_authored_on(g: &mut crate::game::Game, t: FixtureId) -> bool { crate::sim_lightshome::fixture_authored(g, t) }
+pub fn game_authored_on(g: &crate::game::Game, t: FixtureId) -> bool { crate::sim_lightshome::fixture_authored(g, t) }
 
 /// The lights' rows stood on the list as it is: as the level is built, and again when a fixture is hung after that.   (game.ts standLights)
 pub fn game_stand_lights(g: &mut crate::game::Game) {
@@ -380,13 +380,9 @@ pub fn game_reset_level_state(g: &mut crate::game::Game) {
     crate::glassbreak::glass_break_reset(g);   // (before the destruction's: the walls' nav re-bake in there must see whole panes)
     crate::destruction::destruction_reset(g);
     crate::shards::glass_shards_reset(g);
-    crate::wet::clear_wet_prints(g);
     crate::snow_blast::clear_snow_blast(g);
     crate::snow_marks::clear_snow_marks(g);
-    if let Some(mut t) = g.snow_tracks.take() {   // (the stub takes g and the tracks inside it: out of g for the call)
-        crate::snow_tracks::clear_snow_tracks(g, &t);
-        g.snow_tracks = Some(t);
-    }
+    g.out.push(crate::out_events::OutEvent::ClearSnowTracks);   // (the prints are the picture's: the game says they go, on a level with them or not)
     crate::hours::hour_after_reset(g);
     crate::air_dust::air_dust_reset(g);
 }
@@ -429,7 +425,6 @@ pub fn game_restart(g: &mut crate::game::Game, said: Option<&str>) {
 
 /// Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored.   (game.ts restartEncounter)
 pub fn game_restart_encounter(g: &mut crate::game::Game) {
-    crate::journal::session_recorder_cut(g, "the encounter was staged again", None);   // (game.ts:1490, first of all; `lost` left to its default)
     crate::math_dice::use_dice(g);
     crate::quiet::quiet_mission_current(g);
     g.stats.cleanrestart.restarts += 1;
@@ -544,7 +539,6 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
         }
     }
     crate::director::director_inject_input(g, input);
-    game_host_before(g, input);
     let into = g.cmd_buf.take();
     let c = crate::seats::with_seat(g, me, &mut |g| crate::cmd::sample_cmd(g, input, cam, canvas, into.as_ref()));
     g.cmd_buf = Some(c.clone());
@@ -559,11 +553,6 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
         game_step_seats(g, dt, &cmds);
     }
     game_host_after(g, input, cam, canvas);
-}
-
-/// What the host's input is told before a step: a held press's cursor is followed off the view only while the creep reads the mouse as a stick.   (game.ts hostBefore)
-pub fn game_host_before(g: &mut crate::game::Game, input: InputId) {
-    g.tab.input[input].drag_off = g.k.stalk.drag;
 }
 
 /// What the tick hands back for the camera of the seat this host shows, and that seat's live view put back.   (game.ts hostAfter)
@@ -591,10 +580,9 @@ pub fn game_host_seat(g: &crate::game::Game) -> SeatId { g.local_seat.unwrap_or(
 
 /// The world asked aside: `fn_` leaves nothing on the game's scratch.   (game.ts aside)
 pub fn game_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    // (a fresh table each ask: game::AsideOwn kept only the lens. An empty table is a clean one, boxes.ts rayAside, collision.ts aside)
-    let mut ray_own = crate::scene_boxes::BoxWorldRayAsideOwn::zeroed();
+    // (a fresh table each ask: game::AsideOwn kept only the lens. An empty table is a clean one, collision.ts aside)
     let mut col_own = crate::scene_collision::AsideOwn::zeroed();
-    crate::scene_boxes::box_world_ray_aside(g, &mut ray_own, &mut |g| crate::scene_collision::aside(g, &mut col_own, &mut *fn_))
+    crate::scene_collision::aside(g, &mut col_own, fn_)
 }
 
 /// A lens of the host's to put a record's view on while it asks aside (cmd.ts loadLens): scratch, in no snapshot.   (game.ts asideLens)

@@ -108,7 +108,7 @@ pub fn silent_step(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
 }
 
 /// his weapon light or torch is held off   (silent.ts silentDark)
-pub fn silent_dark(g: &mut crate::game::Game, gd: GuardId) -> bool { if under_silence(g, gd) { true } else { crate::unseen::unseen_dark(g, gd) } }
+pub fn silent_dark(g: &mut crate::game::Game, gd: GuardId) -> bool { if under_silence(g, gd) { true } else { false } }
 
 /// his line goes over the net   (silent.ts silentHush)
 pub fn silent_hush(g: &mut crate::game::Game, gd: GuardId) -> bool { if under_silence(g, gd) { true } else { crate::unseen::unseen_hush(g, gd) } }
@@ -283,7 +283,7 @@ pub fn seat(g: &mut crate::game::Game) {
 pub fn posture_word(g: &mut crate::game::Game) -> Option<String> {
     if !crate::orders::squad_orders_active(g, &crate::seats::here(g)) { return None; }
     if squad_silent(g, &crate::seats::here(g)) {
-        return Some(String::from(if silent_compromised(g, &crate::seats::here(g)) { "SILENT · compromised" } else { "SILENT" }));
+        return Some(String::from(if silent_compromised(g, &crate::seats::here(g)) { "SILENT · compromised" } else { crate::spotted::spotted_word(g).unwrap_or("SILENT") }));
     }
     let w = crate::unseen::unseen_word(g);
     Some(loud_word(w.as_deref()))

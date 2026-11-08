@@ -38,7 +38,7 @@
 // walls' own tune.wallBreak, never under a show) at chaos > 0. Off — either of them — the rows are not registered, no target carries a wall, Sam's list has
 // no wall row, input() and tick() return on their first line: the build is its base. Nothing here draws from Math.random.
 //
-// SEAMS (one line each, in files this module does not own): orders.ts targetAt (wallTarget: a floor target under a wall carries it), rowsFor (wallRows),
+// SEAMS (one line each, in files this module does not own): rust/game_rules/src/orders target_at (a floor target under a wall carries it), rowsFor (wallRows),
 // hoverWords ('that wall') and OrderTarget's floor variant (`wall?`); game.ts the field, its construction after the door tools, input() ahead of the door
 // tools' and tick() after theirs, Interactable's kind 'wall' and Verb 'charge'; player.ts buildInteractables (wallChargeRows) and INTERACT_PRIORITY.wall.
 // NOT here: a charge on a door (doortools.ts, and the doors goal's own blast), the frag (the gear goal), what either side makes of a hole afterwards.
@@ -117,8 +117,6 @@ export const WALLCHARGE = {
    *  teammates up 147 → 176, aim-snap flags 831 → 546. `hole` stays OFF: 24 block seeds, 37 teammates up with it against 48 without (and as first
    *  shipped, hole dealt before the doors and both taken together at the end: 11 up of 96 on the warehouse against 17 with neither). */
   hole: false, doors: true,
-  /** with `hole` / `doors` on: they are taken up once the room is theirs (the entry's last act), not on the way in */
-  holdLate: true,
   /** THE TRADE: what one wall charge takes out of the squad's breaching bag (doortools.ts DoorTools.charges, 2 a run): 2 = the whole bag, so a run is one wall OR
    *  two doors, chosen at the wall — the row is offered only while the bag holds it, and all of it comes back if the charge comes off the wall unblown.
    *  1 = a wall costs what a door costs (the build before this knob, by digest) */
@@ -129,7 +127,7 @@ export const WALLCHARGE = {
   carried: null as number | null,
   /** … and each man takes his up by himself, once HE has been on his point `holdSecs` with his gun on the room (false: all of them together, when the last
    *  man is on his — a mate held up in the hole left every door of the room unwatched until he was through) */
-  holdEach: true, holdSecs: 1.5,
+  holdSecs: 1.5,
   /** m: no door is given to a man whose line to it passes this near a mate's point inside (he would hold it with a friend down his muzzle) */
   mateLine: 0.6,
   /** m: none of this order's marks is in a DOORWAY — a stand-off post or the setter's spot within `offFrame` of a door frame's centre is passed over for
@@ -309,13 +307,6 @@ export function skyFaces(g: Game, index: number): number { { const __s = RUST_SU
     for (const off of SKY_OFF) for (const t of SKY_ALONG) { const d = sg * (ht + off), p: Vec3 = alongX ? [b.c[0] + t * hu, 1.5, b.c[2] + d] : [b.c[0] + d, 1.5, b.c[2] + t * hu]; if (!g.col.solidBlocked(p, [p[0], SKY_TOP, p[2]], 0.02)) sky++; }
     if (sky * 2 > SKY_OFF.length * SKY_ALONG.length) n++; }
   memo.set(index, n); return n;
-}
-/** `fn` asked aside (a question of the picture's — orders.ts hover): what it adds to the game's memo of sky faces is taken out again, so a wall is in it only
- *  once the simulation has asked of it (the answer is the same: the asker pays for it again) */
-export function skyAside<T>(g: Game, fn: () => T): T {
-  const memo = skyMemo.get(g.col), n = memo ? memo.size : 0;
-  try { return fn(); }
-  finally { const now = skyMemo.get(g.col); if (!memo) { if (now) skyMemo.delete(g.col); } else if (now === memo && memo.size > n) { let i = 0; for (const k of [...memo.keys()]) if (i++ >= n) memo.delete(k); } }
 }
 /** IS STRUCTURE STATIC `index` AN OUTER WALL A CHARGE CUTS (WALLCHARGE.outer; wallAt has already found it a full-height unrotated wall in a wall's stuff):
  *  not steel, no thicker than outerThick, at least outerMinLen long, something the engine can take on (wallbreak.ts adoptable: it lights nothing, carries no

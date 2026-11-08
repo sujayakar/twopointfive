@@ -188,7 +188,6 @@ fn man_down(g: &mut Game, hit_guard: GuardId, sg: Option<GuardId>, shooter: Char
     use crate::game::{DownBy, DownKind, GuardState};
     use crate::wounds::RoundDoes;
     let was_up = g.gd[hit_guard].state != GuardState::Dead;
-    if was_up && g.gd[hit_guard].civ.is_some() { crate::snatch::snatch_round_on(g, hit_guard, sg); }
     let team = g.gd[hit_guard].team;
     let foe = match sg { Some(s) => { let st = g.gd[s].team; crate::teams::is_hostile(g, st, team) } None => false };
     let sign = g.gd[hit_guard].callsign.clone();
@@ -283,7 +282,7 @@ fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
 }
 
 /// `live` of the real-hit search: a target a round can put out.
-fn lamp_live(g: &mut Game, t: FixtureId) -> bool {
+fn lamp_live(g: &Game, t: FixtureId) -> bool {
     !(crate::sim_lightshome::fixture_broken(g, t)
         || !g.tab.sim_lightshome_fixture[t].interactive
         || crate::sim_lightshome::fixture_factor(g, t) <= 0.0 && !crate::sim_lightshome::fixture_on(g, t) && !crate::carlamps::lamp_glass(g, t)
@@ -341,7 +340,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     if lead {
         let card = crate::effects::muzzle_card();
         let bf = crate::scene_boxes::box_flag();
-        let b = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+        let b = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP {
             c: v3::mad(muzzle, dir, mf.card_ahead),
             h: mf.card_half,
             yaw: Some(v3::yaw_of(dir)),

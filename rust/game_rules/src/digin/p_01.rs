@@ -585,7 +585,7 @@ pub fn wedge(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, r: &mut crat
 }
 
 /// May this door be wedged. (digin.ts wedgeable)
-pub fn wedgeable(g: &mut Game, d: DoorId) -> bool {
+pub fn wedgeable(g: &Game, d: DoorId) -> bool {
     !g.dr[d].def.steel.unwrap_or(false)
         && !crate::doors::door_locked(g, d)
         && !crate::doors::door_lock_broken(g, d)
@@ -630,7 +630,7 @@ pub fn hand_on(g: &mut Game, d: RoomfightDefId, m: &mut crate::digin::Man, d_2: 
 }
 
 /// …and stays on it: true = still waiting for the latch. A man with furniture to wedge it with stays while the leaf is still coming home: from wide open that takes about five seconds, and it can be wedged only once it latches. His clock is for a leaf a body has stopped, and for a man who only came to shut it, whose pull finishes without him.
-pub fn hand_waits(g: &mut Game, d: RoomfightDefId, m: &mut crate::digin::Man, d_2: DoorId) -> bool {
+pub fn hand_waits(g: &Game, d: RoomfightDefId, m: &crate::digin::Man, d_2: DoorId) -> bool {
     !crate::doors::door_latched(g, d_2) && (g.time <= m.until || (m.brace >= 0.0 && m.prop.is_some() && crate::doors::doors_coming_home(g, d_2)))
 }
 

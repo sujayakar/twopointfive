@@ -101,8 +101,6 @@ const chronMod = await import(`${ROOT}/src/game/chronicle.ts`).catch(() => null)
 const WEAPON_TRACER: Set<string> = new Set(Object.values(WEAPONS as Record<string, any>).filter(d => d.tracer).map(d => d.id));   // rows whose rounds may trace (the carbine and its data-only cousins)
 const SUP_POOL: Set<string> = new Set([...suppressionLines(), 'he\'s got us pinned!', 'they\'ve got us pinned!']); const SUP_RECOVER: Set<string> = new Set(suppressionLines('recover'));   // (lane R3: the suppression barks, counted as a smell; the hard man's 'that all you've got?' is the one line said once it has drained)
 const STAGGER_POOL: Set<string> = new Set(staggerLines());   // (lane R5: the yelp of a man a ring airfoil doubled over)
-/** wounds (game/wounds.ts): --wounds on|off */
-const woundMod = await import(`${ROOT}/src/game/wounds.ts`);
 /** glass (E3: rounds star panes, panes never break) — absent on a tree from before it: the stimulus is not dealt and the invariant holds nothing */
 const glassMod2 = await import(`${ROOT}/src/game/glass.ts`).catch(() => null);
 /** checkpoints (game/savestate.ts, STATUS G5) — absent on a tree from before it: no autosave to watch, --checkpoint-at does nothing */
@@ -151,7 +149,6 @@ const CIV_RATE = Math.max(0, Number(arg('civ-rate', '1')) || 0);   // × the civ
 const NEEDS_RATE = arg('needs-rate', '1');   // the needs (needs.ts): × every man's fill rate for the run — '1' = as shipped (a first trip two to four minutes into a quiet stretch), '6' leans on it (a man over his line every minute or so; the send-for-a-need stimulus is dealt too), 'off' = tune.needs false (the A/B: the patrol as it was); the needs invariants below watch either way
 const CHECKPOINT_AT = Number(arg('checkpoint-at', '-1'));   // checkpoints (game/savestate.ts): −1 = nothing of it beyond the autosaves the game writes by itself (watched by the invariants); N = at that sim-minute the encounter is SAVED (forced) and LOADED back into the same game on the spot, thirty seconds on the same file is loaded a second time, and everything after is the loaded world under every invariant — plus the 'load-newest-checkpoint' stimulus (an autosave slot loaded mid-run now and then) is dealt
 const CHAOS_ARG = arg('chaos', '0.5');   // destruction (destruction.ts): tune.chaos for the run — the harness stands the game up at 0 (the game as it was), the SOAK runs the shipped default 0.5 unless told; 'K' 0‥1 (`--loud-at 1 --chaos 1` leans on it: the loud burst + the firefight it draws + the response team's carbines wreck the corridor and the cubicles); the destruction invariants below watch either way
-const WOUNDS_ARG = /^(on|1|true)$/.test(arg('wounds', String(process.env.TPS_WOUNDS ?? '') === '1' ? 'on' : 'off')) ? 'on' : 'off';   // wounds (src/game/wounds.ts WOUND.on): 'off' (as shipped: every round that finds a man kills him) | 'on' (where it lands decides: dead, or down wounded) — the wounded-man invariants below run either way
 const BODY_LIGHT_ARG = arg('body-light', 'on');   // bodies found by the light on them (guards.ts bodyLit, tune.bodyLight — review A6.2): 'on' (as shipped) | 'off' (range / cone / line alone, the old rule) — the same seed both ways is the A/B; the smells count bodies down vs FOUND either way
 const TACTICS_ARG = arg('tactics', 'on');   // pursuit tactics: 'on' (the default: tune.tactics as shipped) | 'off' (pinned off for the run — the A/B: the same seed with and without them)   // pursuit tactics (tactics.ts, the kill-zone doorway): the 'kill-in-doorway' stimulus's rate — a living man stood in a doorway and struck down there, as often as not under a colleague's eyes turned onto him first (`--doorway-kills-per-min 3` leans on the gate: stack, call, summon, slice / bang, cross; 0 = the schedule byte for byte as it was)   // Sam's low whistle (whistle.ts): the 'whistle' stimulus's rate — V pressed at random moments, mostly from a few metres behind a living man, now and then twice running (`--whistle-per-min 6` leans on it; 0 = no whistles and the schedule byte for byte as it was)
 const DT = 1 / HZ;
@@ -208,7 +205,6 @@ async function runSeed(seed: number): Promise<SeedReport> {
   if (process.env.SOAK_DIFFICULTY) (await import(`${ROOT}/src/game/difficulty.ts`)).setDifficulty(process.env.SOAK_DIFFICULTY as any, false);   // SOAK_DIFFICULTY=hard: the player's difficulty laid once the game is stood, before its first tick (the stand lays Standard itself; tools/blitz/fuzz.sh --hard)
   if (CARBINES !== 'none') game.tune.carbineGuards = CARBINES;
   if (TACTICS_ARG === 'off') game.tune.tactics = false;   // (--tactics off: the chase as it was, for an A/B against the same seed)
-  woundMod.WOUND.on = WOUNDS_ARG === 'on';
   game.tune.bodyLight = BODY_LIGHT_ARG !== 'off';        // (--body-light off: bodies found in the dark as before, for the A/B against the same seed)
   if (NEEDS_RATE === 'off') game.tune.needs = false; else if (needsMod && Number(NEEDS_RATE) > 0) needsMod.NEEDS.rateK = Number(NEEDS_RATE);   // (--needs-rate: off / ×K)
   if (civMod && CIVILIANS_ARG === 'off') civMod.setCivilians(game, false);   // (--civilians off: nobody but the shift)
@@ -471,7 +467,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
       return `stage ${m.stage} (nothing to do)`;
     } },
     { name: 'ai-toggle', perMin: 0.1, run: () => { game.aiEnabled = false; aiOffUntil = game.time + rr(1, 8); return `off for ${(aiOffUntil - game.time).toFixed(1)}s`; } },
-    { name: 'tour-blip', perMin: 0.1, when: () => !tour, run: () => {   // what Demo.start / stop do to the game, minus the beats
+    { name: 'tour-blip', perMin: 0.1, when: () => !tour, run: () => {   // what a show's start and stop do to the game, minus the beats
       const saved = { ai: game.aiEnabled, god: game.godMode, invisible: game.playerInvisible, pos: v3.copy(game.player.char.pos) };
       game.quietUtility = true; game.clearAftermath(); releaseKeys(); cursorDoor = null;
       if (game.player.down) { game.restartEncounter(); teleportedThisFrame = true; missionRef = game.mission; stageIdx = 0; } else game.resetGuards();
@@ -1144,7 +1140,6 @@ async function runSeed(seed: number): Promise<SeedReport> {
       if (gd.wound) {
         if (gd.state !== 'dead' || gd.downKind !== 'wounded' || c.ragdoll || !c.alive || !c.anim.wound) violate('wounded-bad-state', name, `${name} wounded but state ${gd.state} downKind ${gd.downKind} ragdoll ${!!c.ragdoll} alive ${c.alive} pose ${!!c.anim.wound}`);
         if (gd.script || gd.held || gd.speed !== 0 || game.time < gd.staggerUntil) violate('wounded-busy', name, `${name} wounded but script ${!!gd.script} held ${!!gd.held} speed ${gd.speed}`);
-        if (WOUNDS_ARG !== 'on') violate('wounded-switch-off', name, `${name} went down wounded with the switch off`);
       } else if (gd.downKind === 'wounded' || c.anim.wound) violate('wounded-no-record', name, `${name} downKind ${gd.downKind} / a wound pose without the record`);
       if (gd.state !== 'dead' && gd.leader && (gd.leader === gd || (gd.leader.state === 'dead' && (gd.leader.found || game.alarm.episode)) || !game.guards.includes(gd.leader)))   /* a leader nobody knows is dead keeps the role by design (superviseLockdown) */ { leaderBad++; if (leaderBad >= 2) violate('bad-leader', name, `follower ${name}'s leader is ${gd.leader === gd ? 'himself' : gd.leader.state === 'dead' ? 'dead' : 'not in the guard list'} for ${leaderBad} frames (esc ${game.escalation}, quiet ${game.quietUtility})`); }
       if (gd.held && (gd.leader || gd.post) && game.escalation >= 2 && !game.quietUtility) { heldRole++; if (heldRole >= 2) violate('held-role', name, `${name} is in Sam's arm yet still ${gd.leader ? `paired to ${routeName(gd.leader)}${gd.leader.state === 'dead' ? ' (dead)' : ''}` : `holding the ${gd.post.name}`} for ${heldRole} frames — a held man holds no lockdown role (guards.ts superviseLockdown)`); }   // (one frame's grace: a grab dealt by direct call lands after the frame's superviseLockdown)

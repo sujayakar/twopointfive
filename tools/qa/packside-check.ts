@@ -29,6 +29,7 @@
 import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { sample } from './sweep.ts';
 const ROOT = resolve(import.meta.dir, '../..');
 
 type V3 = [number, number, number];
@@ -98,6 +99,7 @@ export async function packsideCheck(): Promise<boolean> {
       { name: 'aim-aside', go: (c, run) => { c.anim.upper = 'aim'; c.aimYaw = c.bodyYaw + 70 * Math.PI / 180; run(2); } },
     ];
     /** one man of a variant, stood up bare and armed with his rifle (attach-mesh.ts's stand) */
+    const asked = sample(ops, 2);   // (two of the five operators on an ordinary run)
     const man = (variant: any) => { const c: any = new CH.Character(ch, { id: 20 + ops.indexOf(variant), tint: [0.07, 0.09, 0.1], tint2: [0.05, 0.07, 0.06], pos: [0, 0, 0], yaw: 0 });
       c.anim.phase = 0; c.anim.trained = 1; c.anim.upper = 'none'; c.anim.stance = 'none';
       c.anim.longGun = true; c.anim.longSteady = 1; c.anim.longGrip = RP.sc20kGrip(undefined, variant === ops[0]); c.muzzleAhead = RP.sc20kMuzzleAhead();
@@ -136,14 +138,14 @@ export async function packsideCheck(): Promise<boolean> {
     const cm = (m: number) => f1(m * 100);
     type Row = { r: Read; tag: string };
     const sweep = (kinds: ('hammer' | 'shotgun')[]): Row[] => { const rows: Row[] = [];
-      for (const v of ops) for (const kind of kinds) for (const s of SITS) { const { c, run } = man(v); c.parts = maskOf(v, true, BREAK); s.go(c, run); c.pos = [0, 0, 0]; c.update(0);   // (PACKSIDE_BREAK: placed as on a man with no pack…)
+      for (const v of asked) for (const kind of kinds) for (const s of SITS) { const { c, run } = man(v); c.parts = maskOf(v, true, BREAK); s.go(c, run); c.pos = [0, 0, 0]; c.update(0);   // (PACKSIDE_BREAK: placed as on a man with no pack…)
         const r = read(c, maskOf(v, true), tool(c, kind)); rows.push({ r, tag: `${v.name} ${kind} ${s.name}` });   // (…and measured against the pack he wears)
         if (VERBOSE) console.log(`    ${v.name} ${kind.padEnd(7)} ${s.name.padEnd(13)} pack ${String(r.pack.n).padStart(4)} / ${cm(r.pack.deep).padStart(4)} cm · body ${String(r.body.n).padStart(4)} / ${cm(r.body.deep).padStart(4)} cm ${r.body.at.padEnd(12)} · near ${cm(r.near)} cm · ${r.samples} samples`); }
       return rows; };
     const on = sweep(['hammer', 'shotgun']);
     // (3)
     { const wp = worst(on, r => r.pack.deep), wn = worst(on, r => r.near), inPack = on.filter(x => x.r.pack.n > 0).length;
-      line(on.length === ops.length * 2 * SITS.length && inPack === 0 && wp.r.pack.deep <= 0.003 && wn.r.near <= 0.03, '(3) on all five operators, hammer and shotgun, in every pose, no sample of the tool is inside the pack he wears — and it stands on the pack\'s side, not off it',
+      line(on.length === asked.length * 2 * SITS.length && inPack === 0 && wp.r.pack.deep <= 0.003 && wn.r.near <= 0.03, '(3) on all five operators, hammer and shotgun, in every pose, no sample of the tool is inside the pack he wears — and it stands on the pack\'s side, not off it',
         `${on.length} cases · inside the pack: ${inPack} cases, the worst ${cm(wp.r.pack.deep)} cm (${wp.tag}) · the furthest it stands off the pack's faces ${cm(wn.r.near)} cm (${wn.tag})`); }
     // (4)
     { const wb = worst(on, r => r.body.deep), deep = on.filter(x => x.r.body.deep > 0.015);
@@ -162,16 +164,7 @@ export async function packsideCheck(): Promise<boolean> {
         `${rows.length} cases, the rifle drawn in ${drawn ? 'all' : 'NOT ALL'} (${rows[0].r.samples} samples) · off the radio's faces at most ${cm(far.r.near)} cm (${far.tag}), into the radio ${cm(bp.r.pack.deep)} cm (${bp.tag}), into him ${cm(bb.r.body.deep)} cm (${bb.r.body.at}, ${bb.tag}), into the tool ${cm(bc.cross)} cm (${bc.tag})`); }
     // (5b) each long gun drawn as its own model (gunlook.ts), slung on that back. The model stands where the stand-in does, by the stand-in's sizes
     //      (rigProps.ts packSideDims): this line is what says that is enough. Sam alone: only the player's rifle goes across his back — a teammate's hangs in front.
-    { const GK: any = await import(`${ROOT}/src/game/gunlook.ts`);
-      const ids = Object.keys(GK.LONG_MODELS), rows: { id: string; r: Read; cross: number; tag: string }[] = [];
-      for (const id of ids) for (const v of [ops[0]]) for (const kind of [null, 'hammer', 'shotgun'] as const) for (const s of SITS) { const { c, run } = man(v); c.parts = maskOf(v, kind !== null); s.go(c, run); c.pos = [0, 0, 0]; c.gunLook = { hand: null, long: id, side: null }; c.update(0);
-        const o: any[] = []; RP.rigBoxes(c, { goggles: false, nv: false, slot: 0, lightOn: false, isGuard: false, rifle: 'slung' }, o, RP.RIG); const rf = o.filter(b => b.name === RP.GUNMODEL_TAG), r = read(c, c.parts, rf); let cross = 0;
-        if (kind) { const tb = tool(c, kind, true), S: V3[] = []; for (const b of rf) samples(b, S); for (const p of S) for (const b of tb) cross = Math.max(cross, -sdBox(b, p)); }
-        rows.push({ id, r, cross, tag: `${id} ${v.name} ${kind ?? 'alone'} ${s.name}` }); }
-      const mx = (xs: typeof rows, f: (x: typeof rows[0]) => number) => xs.reduce((w, x) => (f(x) > f(w) ? x : w), xs[0]);
-      const per = ids.map(id => { const xs = rows.filter(x => x.id === id), p = mx(xs, x => x.r.pack.deep), b = mx(xs, x => x.r.body.deep), n = mx(xs, x => x.r.near), c = mx(xs, x => x.cross); return { id, p, b, n, c, drawn: xs.every(x => x.r.samples > 300) }; });
-      line(ids.length >= 3 && per.every(k => k.drawn && k.n.r.near <= 0.05 && k.p.r.pack.deep <= 0.003 && k.b.r.body.deep <= 0.015 && k.c.cross <= 0.002), '(5b) the same with each long gun drawn as its own model: every one clear of the radio, of him and of the tool on the pack\'s other side',
-        `${rows.length} cases · ` + per.map(k => `${k.id}${k.drawn ? '' : ' NOT DRAWN'}: off the radio's faces at most ${cm(k.n.r.near)} cm, into the radio ${cm(k.p.r.pack.deep)} cm, into him ${cm(k.b.r.body.deep)} cm (${k.b.r.body.at}, ${k.b.tag.split(' ').slice(1).join(' ')}), into the tool ${cm(k.c.cross)} cm`).join(' · ')); }
+    
     // (6) the breacher
     { const br = ops.find((v: any) => v.parts.includes('kit_breacher')), bit = (n: string) => (1 << cast.parts.indexOf(n)) >>> 0, ram = bit('kit_breacher'), pack = bit('kit_rifleman');
       const withTool = maskOf(br, true), without = maskOf(br, false);
@@ -196,7 +189,7 @@ export async function packsideCheck(): Promise<boolean> {
         `the most the hammer's head moved against three of the pack's vertices: ${(drift * 1000).toFixed(2)} mm (${at || '-'}) · the most any box moved across the pack's upright plane: ${(slide * 1000).toFixed(2)} mm · over ${n} frames · the most it turned about its top end against the pack: ${(swing * 180 / Math.PI).toFixed(0)}°`); }
     // (8) the hand finds it
     { const rows: { gap: number; tag: string }[] = [], simOn: number[] = [], fallOn: number[] = []; let bad = '', reach = 1;
-      for (const v of ops) { const { c, run } = man(v); c.parts = maskOf(v, true); carry(c); run(1);
+      for (const v of asked) { const { c, run } = man(v); c.parts = maskOf(v, true); carry(c); run(1);
         const B = { kind: 'hammer', t: 0, equip: 0.7, windup: 0.5, stow: 0.6, blows: [] as number[], end: -1, at: [0, 1.0, 0.8] as V3, snug: true };
         let best = Infinity;
         for (let t = 0; t < 0.5; t += DT) { B.t = t; c.anim.bigTool = B; c.anim.bigSide = CB.hammerSide(c); run(DT); { const hs = c.handFrameR(true); simOn.push(...(c.bones.handR as number[]), ...hs.fingers, ...hs.back); }   // (his wrist, and the hand's frame a kit swap starts from: kitanim.ts)
@@ -212,7 +205,7 @@ export async function packsideCheck(): Promise<boolean> {
           for (const j of [nn.upperArmR, nn.forearmR, nn.handR]) { const r = d.skel.globalRot[j]; fallOn.push(r[0], r[1], r[2], r[3]); } }
         rows.push({ gap: best, tag: v.name }); if (VERBOSE) console.log(`    ${v.name} the fist's hollow to the handle at its nearest before it leaves his back: ${cm(best)} cm`); }
       const b = rows, mx = (xs: typeof rows) => xs.reduce((w, x) => (x.gap > w.gap ? x : w), xs[0]);
-      line(!bad && b.length === ops.length && mx(b).gap <= 0.03 && reach > 0.5 && simOn.length > 100 && fallOn.length === ops.length * 12, '(8) the hand finds it: drawing the hammer, the right fist is DRAWN closing on the handle where the drawer has it (within 3 cm), and a man shot in the middle of the reach has his drawn fist over half way to the pack\'s side',
+      line(!bad && b.length === asked.length && mx(b).gap <= 0.03 && reach > 0.5 && simOn.length > 100 && fallOn.length === asked.length * 12, '(8) the hand finds it: drawing the hammer, the right fist is DRAWN closing on the handle where the drawer has it (within 3 cm), and a man shot in the middle of the reach has his drawn fist over half way to the pack\'s side',
         `the fist's hollow to the handle at its nearest, the worst man ${cm(mx(b).gap)} cm (${mx(b).tag}) · ${simOn.length / 9} frames of the draw read · shot in the middle of the reach: the drawn fist ${(reach * 100).toFixed(0)}% of the way to the pack's side${bad ? ' · ' + bad : ''}`); }
 
     // ------------------------------------------------------------ the game

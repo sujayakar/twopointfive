@@ -13,6 +13,7 @@
 //       it — a hundred-odd: corners behind chairs, the planter, between a parked car and the fence — gets the man planted and 4 s: he must walk off (nearly)
 //       every one, may be snapped off the last few (counted, named), and must be left standing on none.
 import { standUp, ROOT } from './headless.ts';
+import { sample } from './sweep.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { startGrab } = await import(`${ROOT}/src/game/player.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
@@ -200,7 +201,8 @@ export async function unstick() {
     }
     const A = game.guards[1]; game.guards.filter((x: any) => x !== A).forEach((o: any, i: number) => park(o, i));
     let walked = 0, snapped = 0, stuck = 0, worstPen = 0; const offT: number[] = []; const notes: string[] = [];
-    for (const { p: s, fix } of spots) {
+    const asked = sample(spots, 12);   // (every spot under QA_SWEEP=all)
+    for (const { p: s, fix } of asked) {
       place(A, s, 0); A.state = 'suspicious'; A.awareness = 0.5; A.reactT = 0; A.searchT = 0; A.wait = 0; A.hold = false; A.heardUpTo = 1e12; A.stallRef = null; A.stuckT = 0; A.lastKnown = v3.copy(fix);
       const snapsS = UNSTICK.snaps; let offAt = -1, snapD = 0, prev = v3.copy(s), maxPen = 0;
       for (let i = 1; i <= 240; i++) {
@@ -219,10 +221,10 @@ export async function unstick() {
     const fails: string[] = [];
     if (spots.length < 40) fails.push(`only ${spots.length} stranded-and-standable spots found — the sweep is not looking at the floor it thinks it is`);
     if (stuck > 0) fails.push(`${stuck} spot(s) he never got off`);
-    if (walked < 0.9 * spots.length) fails.push(`walked off only ${walked}/${spots.length} — the rest were snaps (${snapped}): the leg test is refusing walks that work`);
+    if (walked < 0.9 * asked.length) fails.push(`walked off only ${walked}/${asked.length} — the rest were snaps (${snapped}): the leg test is refusing walks that work`);
     if (worstPen > 0.12) fails.push(`pushed ${f3(worstPen)} m into static geometry on some leg`);
     const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — (d) the floor: ${spots.length} stranded cells with a standable spot and a reachable fix; walked off ${walked} (off the blocked cell in ${offT.length ? `${f2(offT[0])}‥${f2(offT[offT.length - 1])} s, median ${f2(offT[offT.length >> 1])}` : '-'} s), snapped ${snapped}, left standing ${stuck}; worst brush with the statics ${f3(worstPen)} m${notes.length ? '\n    · ' + notes.join('\n    · ') : ''}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
+    console.log(`- ${ok ? 'PASS' : 'FAIL'} — (d) the floor: ${spots.length} stranded cells with a standable spot and a reachable fix, ${asked.length} of them asked; walked off ${walked} (off the blocked cell in ${offT.length ? `${f2(offT[0])}‥${f2(offT[offT.length - 1])} s, median ${f2(offT[offT.length >> 1])}` : '-'} s), snapped ${snapped}, left standing ${stuck}; worst brush with the statics ${f3(worstPen)} m${notes.length ? '\n    · ' + notes.join('\n    · ') : ''}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
 
   console.log(`    (un-stick totals this probe: legs +${UNSTICK.legs - legs0}, snaps +${UNSTICK.snaps - snaps0})`);

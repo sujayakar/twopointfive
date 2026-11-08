@@ -8,12 +8,12 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A door the wand goes under: shut home, on its hinges, not the steel fire door. (wand.ts wandFits)
-pub fn wand_fits(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn wand_fits(g: &crate::game::Game, d: DoorId) -> bool {
     !crate::doors::door_off(g, d) && m::abs(crate::doors::door_angle(g, d)) < g.k.wand.shut_rad && g.dr[d].def.steel != Some(true)
 }
 
 /// Is 'look under it' on this door's rows for this player. (wand.ts wandOffered)
-pub fn wand_offered(g: &mut crate::game::Game, pl: PlayerId, d: DoorId) -> bool {
+pub fn wand_offered(g: &crate::game::Game, pl: PlayerId, d: DoorId) -> bool {
     g.pl[pl].wand && crate::fogofwar::fog_of_war_active(g) && wand_fits(g, d)
 }
 
@@ -39,7 +39,7 @@ pub fn wand_pan_max(g: &crate::game::Game) -> f64 {
 }
 
 /// Where the lens is and the way it faces square on: the leaf's middle, `pastM` out of the face he is NOT on. (wand.ts wandLens)
-pub fn wand_lens(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::wand::WandLens {
+pub fn wand_lens(g: &crate::game::Game, d: DoorId, side: f64) -> crate::wand::WandLens {
     let u = crate::doors::door_dir(g, d);
     lens_at(g.dr[d].def.hinge, u, g.dr[d].def.width * 0.5, side, g.k.wand.past_m, g.k.wand.eye_y)
 }
@@ -72,7 +72,7 @@ fn turned(pan: f64, l: crate::wand::WandLens, aim: V3, max: f64, pan_rate: f64, 
 }
 
 /// The lens as one of the fog's eyes, or None while nobody is looking. (wand.ts wandEye)
-pub fn wand_eye(g: &mut crate::game::Game) -> Option<crate::fogofwar::FogEye> {
+pub fn wand_eye(g: &crate::game::Game) -> Option<crate::fogofwar::FogEye> {
     let pl = g.player;
     let w = g.pl[pl].wanding?;
     if !w.live || g.pl[pl].down { return None; }

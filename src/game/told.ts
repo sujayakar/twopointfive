@@ -46,7 +46,5 @@ const isRung = (v: unknown): v is ToldRung => TOLD_RUNGS.includes(v as ToldRung)
 export const toldNow = (): ToldRung => (TOLD.on ? (isRung(TOLD.rung) ? TOLD.rung : 'standard') : 'bare');
 /** is a sign that belongs to `rung` and to every easier one shown now? ('standard': on Standard and Guided; 'guided': on Guided alone) */
 export const toldAtLeast = (rung: ToldRung): boolean => TOLD_RUNGS.indexOf(toldNow()) <= TOLD_RUNGS.indexOf(rung);
-/** seconds an enemy's last-seen mark stays, by the rung (0 = none) */
-export function toldLastSeen(): number { const r = toldNow(); return r === 'guided' ? Math.max(0, TOLD.guided) : r === 'standard' ? Math.max(0, TOLD.standard) : 0; }
 /** the level's own rung: Standard on standard, Bare on hard */
 export const toldOfLevel = (level: 'standard' | 'hard'): ToldRung => (level === 'hard' ? 'bare' : 'standard');

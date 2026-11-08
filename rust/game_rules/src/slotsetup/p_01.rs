@@ -95,13 +95,35 @@ pub fn slot_setup_open(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> b
     Some(s.gun) == setup_gun(g, pl) && g.time - s.seen <= STALE
 }
 
-/// how much of its time the open setup has left: 1 with no clock on it, 0 = not up (slotsetup.ts slotSetupLeft)
-pub fn slot_setup_left(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
-    let pl = seat.player;
-    if g.pl[pl].setup.is_none() || !slot_setup_open(g, seat) {
-        return 0.0;
-    }
-    1.0
+/// the HUD's words for a load on the launcher and how many of it are left
+pub fn load_word(load: crate::weapons::RifleAttachment, left: f64, on: bool) -> crate::view::KitWord {
+    use crate::weapons::RifleAttachment as A;
+    let name = match load { A::Ring => crate::gear::ring_tag(), A::He40 => crate::gear::shell_tag(), A::Cam => "CAM" };
+    crate::view::KitWord { text: alloc::format!("{} ×{}", name, left), on, out: left <= 0.0 }
+}
+
+/// the setup that is open, as the HUD shows it; None: none is
+pub fn setup_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::view::KitSetup> {
+    if !slot_setup_open(g, seat) { return None; }
+    let gun = setup_gun(g, seat.player)?;
+    let word = |text: &str, on: bool| crate::view::KitWord { text: String::from(text), on, out: false };
+    let rows = setup_rows(g, seat.player, gun).iter().map(|r| {
+        let words = match r.kind {
+            SetupKind::Mode => r.opts.iter().map(|o| word(&o.id.to_uppercase(), o.on)).collect(),
+            SetupKind::Load => g.fa[g.pl[seat.player].rifle].attachments.iter().zip(r.opts.iter()).map(|(a, o)| load_word(*a, o.left.unwrap_or(0.0), o.on)).collect(),
+            SetupKind::Light => vec![word("LIGHT", r.opts.iter().any(|o| o.id == "on" && o.on))],
+        };
+        crate::view::KitSetupRow { key: digit_code(r.key as i32), words }
+    }).collect();
+    Some(crate::view::KitSetup { rows, back: String::from(if g.k.backkey.tab { "TAB" } else { "ESC" }) })
+}
+
+/// the keys the setup would take if pressed now: the gun in his hands' own digit and, while it is open, its rows' (slotsetup.ts slotSetupTakes)
+pub fn setup_takes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<String> {
+    let Some(gun) = setup_gun(g, seat.player) else { return Vec::new() };
+    let mut keys = vec![digit_code(slot_digit(gun))];
+    if slot_setup_open(g, seat) { keys.extend(setup_rows(g, seat.player, gun).iter().map(|r| digit_code(r.key as i32))); }
+    keys
 }
 
 /// Esc with the back key's rule off: shut it, and say whether there was one to shut (slotsetup.ts slotSetupShut)
@@ -112,11 +134,6 @@ pub fn slot_setup_shut(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
     g.pl[pl].setup = None;
     true
-}
-
-/// the presses that put the next load on the launcher, in words (slotsetup.ts loadKeys)
-pub fn load_keys(g: &crate::game::Game) -> String {
-    String::from("press 2, then 2")
 }
 
 /// presses of the launcher's own step from the load that is up to the next one he has any of; 0: none but the one up (slotsetup.ts loadSteps)

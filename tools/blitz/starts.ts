@@ -51,21 +51,19 @@ if (has('--one')) { const id = opt('--one')!, row = ROWS.find(r => r.id === id);
   try {
     const q = new URLSearchParams(row.search);
     const { standUp } = await import(`${ROOT}/tools/qa/headless.ts`);   // (the page's stand: profile.ts shippedBoot has run its `pageSwitches` of no word)
-    const { pageSwitches } = await import(`${ROOT}/src/host/profile.ts`), { LESSON_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), { lessonGroup } = await import(`${ROOT}/src/scene/scenarios.ts`), { kitLessonPage, kitSoloIf } = await import(`${ROOT}/src/game/kit.ts`);
-    const { initDifficulty } = await import(`${ROOT}/src/game/difficulty.ts`), { rowSettings } = await import(`${ROOT}/src/game/rowset.ts`), { initWeather, snowLevelOfQuery, WEATHER_BOOT } = await import(`${ROOT}/src/game/weatherKinds.ts`), { initHour } = await import(`${ROOT}/src/game/hours.ts`);
-    const { startFromQuery, quitScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`), { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+    const { pageSwitches } = await import(`${ROOT}/src/host/profile.ts`), { LESSON_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), { lessonGroup } = await import(`${ROOT}/src/scene/scenarios.ts`), { kitLessonPage } = await import(`${ROOT}/src/game/kit.ts`);
+    const { initDifficulty } = await import(`${ROOT}/src/game/difficulty.ts`);
+    const { quitScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`), { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
     const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync((f => existsSync(f) ? f : resolve(ROOT, 'levels', file))(resolve(ROOT, 'levels', lookLevelFile(file))), 'utf8')); return loadLevel(data); };
     // BEFORE THE GAME EXISTS, in main.ts's order
     pageSwitches(q);
     const lessonRow = LESSON_MISSIONS.find((e: any) => e.level === q.get('levelFile')) ?? null; kitLessonPage(lessonRow && lessonGroup(lessonRow.group) ? lessonRow : null);
     initDifficulty(q, lessonGroup(lessonRow?.group));
-    rowSettings(q);
-    initWeather(q); if (snowLevelOfQuery(q)) WEATHER_BOOT.kind = 'snow';
-    initHour(q);
+    // (the row's own hour and weather, the weather the game is born in and the visit's hour: the stand reads them off the address before the game is made, headless.ts `address`)
     const file = q.get('levelFile'), level = file && /^[\w.-]+\.json$/.test(file) ? levelOfFile(file) : undefined;
     // THE ONE STAND-UP, then the scenario the address names, then the plain night's own card
-    const W = await standUp({ uploadEvery: 4, ...(level ? { level } : {}), search: row.search ? `?${row.search}` : '' }); g = W.game;
-    const second = (): string | null => { const b = startFromQuery(g, q); kitSoloIf(g, q.has('solo') || !g.quiet.active); return b.spec && b.why ? String(b.why) : null; };
+    const W = await standUp({ uploadEvery: 4, ...(level ? { level } : {}), address: q, search: row.search ? `?${row.search}` : '' }); g = W.game;
+    const second = (): string | null => { const b = W.start(); return b.spec && b.why ? String(b.why) : null; };
     out.refused = second();
     const step = (n: number) => { for (let i = 0; i < n; i++) { W.step(1 / 60); out.ticks++; } };
     step(60);

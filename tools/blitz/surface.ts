@@ -25,13 +25,13 @@ export const surfaceHost = (H: SurfaceHost | null, gone?: SurfaceHost) => { if (
 const gameOf = (o: any): SurfaceHost | null => { if (!o || typeof o !== 'object') return null; const x = o[RAW] ?? o; if (x.rustSurface) return x.rustSurface; const part = PART_OF.get(x) ?? (x.g && PART_OF.get(x.g)); if (part) return part; const row = gameOfRow(x); return row ? PART_OF.get(row) ?? null : null; };
 /** a list handed in is its first member's */
 const hostOf = (self: any, args: any[]): SurfaceHost | null => { const H = gameOf(self); if (H) return H; for (const a of args) { const A = gameOf(Array.isArray(a) ? a[0] : a); if (A) return A; } return null; };
-class In { p = 0; strict = false; dv: DataView; constructor(readonly b: Uint8Array) { this.dv = new DataView(b.buffer, b.byteOffset, b.byteLength); } }
+class In { p = 0; dv: DataView; constructor(readonly b: Uint8Array) { this.dv = new DataView(b.buffer, b.byteOffset, b.byteLength); } }
 function val(n: any, I: In, bk: any): any { const dv = I.dv; switch (n.k) {
   case 'f64': { const v = dv.getFloat64(I.p, true); I.p += 8; return v; } case 'f32': { const v = dv.getFloat32(I.p, true); I.p += 4; return v; }
   case 'bool': return I.b[I.p++] !== 0; case 'u8': return I.b[I.p++]; case 'i8': { const v = dv.getInt8(I.p); I.p += 1; return v; } case 'u16': { const v = dv.getUint16(I.p, true); I.p += 2; return v; } case 'i16': { const v = dv.getInt16(I.p, true); I.p += 2; return v; }
   case 'u32': case 'usize': { const v = dv.getUint32(I.p, true); I.p += 4; return v; } case 'i32': { const v = dv.getInt32(I.p, true); I.p += 4; return v; } case 'u64': case 'i64': { const v = dv.getFloat64(I.p, true); I.p += 8; return v; }
   case 'str': { const L = dv.getUint32(I.p, true); I.p += 4; const s = DEC.decode(I.b.subarray(I.p, I.p + L)); I.p += L; return s; } case 'unit': return undefined;
-  case 'id': { const v = dv.getUint32(I.p, true); I.p += 4; if (v === 0xffffffff) return null; const o = bk.listOf(n.id)[v]; if (o === undefined && I.strict) throw new Error(`the bridge: ${n.id} ${v} is no row of this page's game (it has ${bk.listOf(n.id).length})`); return o ?? null; }
+  case 'id': { const v = dv.getUint32(I.p, true); I.p += 4; return v === 0xffffffff ? null : bk.listOf(n.id)[v] ?? null; }
   case 'opt': return I.b[I.p++] ? val(n.of, I, bk) : null;
   case 'vec': { const L = dv.getUint32(I.p, true); I.p += 4; const a: any[] = []; for (let i = 0; i < L; i++) a.push(val(n.of, I, bk)); return a; }
   case 'arr': { const a: any[] = []; for (let i = 0; i < n.n; i++) a.push(val(n.of, I, bk)); return a; } case 'tup': return n.of.map((x: any) => val(x, I, bk));
@@ -46,16 +46,13 @@ function val(n: any, I: In, bk: any): any { const dv = I.dv; switch (n.k) {
 const ROWS: any[] = []; for (const r of (CALLS as any).rows) ROWS[r.id] = r;
 /** A SEAT'S VIEW AMONG THE ARGUMENTS SAYS WHOSE THE CALL IS. In the TypeScript a rule handed a view read "the player" through it; the Rust game keeps those fields on Game for whichever seat stands there, so the call runs under that seat. By what the value is, for every row (a one-seat game's Game is no view: -1, the game as it stands) */
 function viewSeat(self: any, args: any[]): number { for (const a of [self, self?.g, ...args]) if (a && typeof a === 'object' && a[RAW] && a.seat) return a.seat.index; return -1; }
-/** A RECORD THE RUST GAME HANDED OVER, read by the table (a `view::TickView`): every id is this page's own object, and an id it has no row for is a throw
- *  that names it, never a hole in what the HUD is told */
-export function readRecord(g: object, type: string, bytes: Uint8Array): any { const I = new In(bytes); I.strict = true; const r = val(parse(type), I, bookOf(g)); if (I.p !== bytes.length) throw new Error(`the bridge: ${type} is ${bytes.length} bytes and ${I.p} were read`); return r; }
 function call(row: number, self: any, args: any[]): any { const H = hostOf(self, args); if (!H) { passed(ROWS[row].key, 'noHost'); return PASS; } if (H.surfaceDispatching()) return undefined; if (!H.surfaceOpen()) { passed(ROWS[row].key, 'closed'); return PASS; }
   // A DIE THE CALLER HANDS IN (`rnd`): the game's own is no argument at all. A tool's own is asked as the Rust function asks it, by the face's import `face_roll`
   const C = ROWS[row], g = H.g, parts: [string, unknown][] = []; let die: (() => number) | null = null; for (const a of C.args) { if (a.ty === 'rnd') { const f = args[a.from]; die = typeof f === 'function' && f !== simRandom ? f : null; parts.push(['bool', die !== null]); continue; } parts.push([a.ty, a.from === 'this' ? self : args[a.from]]); }
   // AN ID THE FUNCTION DOES NOT TAKE AS OPTIONAL, AND NOTHING THERE: the TypeScript would throw on it, so this throws; in Rust it would be a panic, and the game lost
   for (const [ty, v] of parts) if ((v === null || v === undefined) && parse(ty).k === 'id') throw new TypeError(`${C.key}: an argument of type ${ty} is ${v}`);
   // A ROW THE RUST GAME HAS NOT GOT (a tour's own RoomClear, made in TypeScript since the last start): the TypeScript runs, on its own row
-  { const bk0 = bookOf(g); for (const [ty, v] of parts) { const n = parse(ty); if (n.k === 'id' && bk0 && !((bk0.ids.get(n.id)?.get(v as object) ?? Infinity) < ((bk0 as any).known?.get(n.id) ?? Infinity))) { passed(C.key, 'noRow'); H.count?.(`passed, a row Rust has not got: ${C.key}`); return PASS; } } }
+  { const bk0 = bookOf(g); for (const [ty, v] of parts) { const n = parse(ty); if (n.k === 'id' && bk0 && !bk0.hasRow(n.id, v as object)) { passed(C.key, 'noRow'); H.count?.(`passed, a row Rust has not got: ${C.key}`); return PASS; } } }
   // …AND ONE INSIDE AN ARGUMENT (an optional id, a list of them, a field of a struct handed in): the rule above sees only an argument that IS an id. The
   // bytes are written first and the exporter counts every id it wrote for a row the Rust game has not got (export.ts PAST): a door gate made by hand
   // on the puppet and handed to `DoorTools.order` went over as gate 0 of a table of none, and the Rust body indexed past it

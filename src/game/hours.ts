@@ -4,9 +4,9 @@
 // bounce and the reflections read, the haze, the exposure the picture is taken at, and which of the place's own lights burn. `night` is no record at all: the
 // level exactly as it is, every byte and every dice draw (tools/qa `probes.ts hours` holds it).
 //
-//   ?hour=dawn | midday | overcast | dusk | night        the page (main.ts → initHour); the mission sheet's Hour row puts it on the link it loads (ui/missions.ts)
+//   ?hour=dawn | midday | overcast | dusk | night        the page (host/standup.ts addressBeforeGame → hourAsked); the mission sheet's Hour row puts it on the link it loads (ui/missions.ts)
 //   applyHour(g, id)                                      live, both ways, any number of times (Tab ▸ Frame ▸ Hour; `__hour.set('dusk')`)
-//   HOUR.sun 0‥1 / setSunStrength(g, k)                   THE ONE NUMBER for whoever has clouds: the sun's strength on the picture AND in the meter's stand-in
+//   Game.stood.sun 0‥1 / setSunStrength(g, k)                   THE ONE NUMBER for whoever has clouds: the sun's strength on the picture AND in the meter's stand-in
 //
 // WHAT AN HOUR DOES, all of it reversible (applyHour(g, 'night') puts back exactly what it found — the light list, every switch, the sky, the storm):
 //   · the level's moon out, the hour's sun in at the moon's place in the light list (never last: a loud minute's flashes must not push it past the 64 a frame draws)
@@ -14,7 +14,7 @@
 //   · THE FIXTURES. Outside lamps (group 'exterior': the sodium heads) are on a photocell — they burn at dawn and dusk as authored and are OUT at midday and on
 //     an overcast afternoon. Everything indoors is left as authored at every hour: a windowless room is as dark at noon as at midnight and the men who use a room
 //     leave its light on. (Re-made after every restart: game.ts resetLevelState → hourAfterReset.)
-//   · the night's STORM held off (HOUR.dry — its own switch, put back with the night). A weather PICKED for the level (weather.ts `kind`) is not the night's
+//   · the night's STORM held off (Game.stood.dry — its own switch, put back with the night). A weather PICKED for the level (weather.ts `kind`) is not the night's
 //     storm: it runs at every hour, and its cloud dims this sun (THE WEATHER OVER THE HOUR, below).
 //
 // ONE MODEL. What an AI eye makes of a man is the light ON him. In the page that is the renderer's own meter (render/probe.ts: shadowed direct light — the sun is
@@ -81,8 +81,9 @@ export function hourLabel(id: HourId): string { return id === 'night' ? NIGHT.la
 export function hourClock(id: HourId): string { return id === 'night' ? NIGHT.clock : HOURS[id].clock; }
 export function hourWords(id: HourId): string { return id === 'night' ? NIGHT.words : HOURS[id].words; }
 
-/** THE VISIT'S CHOICE (the page's ?hour=, the harness's PT_HOUR): what standGame lays over the level it stands up. `sun` is the one number a weather dims under
- *  cloud (1 = the hour's own sun; picture and meter stand-in alike). `dry`: hold the night's storm off while an hour other than night is in. */
+/** THE VISIT'S PICK (the page's ?hour=, the harness's PT_HOUR): what a game stood with nothing said for it is stood at (stood.ts stoodOfPick), and what a page's screens
+ *  ask. No rule reads it and the bridge does not carry it: a game's own is Game.stood. `sun` is the one number a weather dims under cloud (1 = the hour's own sun; picture and
+ *  meter stand-in alike). `dry`: hold the night's storm off while an hour other than night is in. */
 export const HOUR: { id: HourId; sun: number; /** `sun` was SET for the visit (?sun=, PT_SUN): it stands whatever cloud a picked weather brings; not set = the cloud dims the sun (THE WEATHER OVER THE HOUR, below) */ sunGiven: boolean; dry: boolean; /** the page's running game's hour, for screens that hold no Game (main.ts sets it; the mission sheet's no-load shortcut asks) */ live: (() => HourId) | null } = { id: 'night', sun: 1, sunGiven: false, dry: true, live: null };
 /** the hour the page is standing at right now: the running game's where a page has one (a checkpoint or the panel may have moved it off the visit's), else the visit's */
 export function hourLive(): HourId { return HOUR.live?.() ?? HOUR.id; }
@@ -90,11 +91,10 @@ export function hourLive(): HourId { return HOUR.live?.() ?? HOUR.id; }
 const ALIAS: Record<string, HourId> = { day: 'midday', noon: 'midday', afternoon: 'overcast', sunrise: 'dawn', sunset: 'dusk', evening: 'dusk' };
 /** a word → an hour ('' / unknown = night) */
 export function hourIdOf(v: unknown): HourId { const s = typeof v === 'string' ? v.toLowerCase() : ''; return (HOUR_IDS as string[]).includes(s) ? s as HourId : Object.hasOwn(ALIAS, s) ? ALIAS[s] : 'night'; }
-/** main.ts, before the stand-up: ?hour=<id> (and ?sun=0‥1, the sun's strength) for this visit — nothing is stored: with no flag the level is its own night */
-export function initHour(q: URLSearchParams) {
-  HOUR.id = hourIdOf(q.get('hour'));
-  const s = q.get('sun'); if (s !== null && Number.isFinite(parseFloat(s))) { HOUR.sun = clamp(parseFloat(s), 0, 1); HOUR.sunGiven = true; }
-  if (q.has('noweather')) HOUR.dry = false;   // (the storm is already off for the visit by its own flag: nothing of it to hold, nothing to bring back with the night)
+/** what an address asks of the hour: ?hour=<id> (and ?sun=0‥1, the sun's strength) for this visit, written nowhere (host/standup.ts addressBeforeGame): with no flag the level is its own night */
+export function hourAsked(q: URLSearchParams): { id: HourId; sun: number; sunGiven: boolean; dry: boolean } {
+  const s = q.get('sun'), said = s !== null && Number.isFinite(parseFloat(s));
+  return { id: hourIdOf(q.get('hour')), sun: said ? clamp(parseFloat(s), 0, 1) : 1, sunGiven: said, dry: !q.has('noweather') };   // (dry false: the storm is already off for the visit by its own flag, nothing of it to hold, nothing to bring back with the night)
 }
 /** the hour off a query handed to a RUNNING game (scenarioRun.ts startFromQuery — the harness's way in: a tool that passes 'hour=midday&sun=0.5' beside the scenario's
  *  own flags); no `hour` key = nothing touched, so a start from a plain scenario query leaves the visit's hour where the stand-up put it */
@@ -182,7 +182,7 @@ export function setSunStrength(g: Game, k: number, given = true) { { const __s =
 
 // ================================================================================================================================ the weather over the hour
 // A PICKED WEATHER (weather.ts `kind`: ?weather=, the sheet's Weather row) and an hour are chosen apart and meet here, in three rules:
-//   · THE STORM. A picked weather always runs — rain at midday rains. With none picked the hour keeps the level's own night storm off (HOUR.dry), as before.
+//   · THE STORM. A picked weather always runs — rain at midday rains. With none picked the hour keeps the level's own night storm off (Game.stood.dry), as before.
 //   · CLOUD → THE LIGHT. Weather.cloud c (0‥1) takes light off the GROUND and moves what is left from the sun to the sky — Kasten & Czeplak's two fits (1980):
 //       all of it, on open ground      G(c) = G(0) · (1 − 0.75 c^3.4)        cloudSun      clear 1.00 · dust 0.99 · fog 0.78 · overcast 0.48 · rain 0.37 · downpour 0.25
 //       the sky's share of it          d(c) = d0 + (1 − d0) · c²                           (d0 = the hour's own share under its own sky, off its own numbers)
@@ -226,7 +226,7 @@ export function cloudTotal(d: HourDef, c: number): number { const ch = d.cloud ?
 function underWeather(g: Game, st: HourState) {
   const W = g.weather, kind = W?.kind ?? null, d = st.def, S = g.engine.settings;
   // the level's own storm: held off while no weather is picked (kept as it stood, to come back with the night); a picked weather is on and stays on
-  if (!kind && W?.enabled) { if (st.wasOff) W.setEnabled(false); else if (HOUR.dry) { st.storm ??= W.snapshot(); W.setEnabled(false); } }
+  if (!kind && W?.enabled) { if (st.wasOff) W.setEnabled(false); else if (g.stood.dry) { st.storm ??= W.snapshot(); W.setEnabled(false); } }
   const c = kind ? W!.cloud : 0, [sunK, skyK] = cloudLight(d, c), soft = Math.max(0, cloudSoft(c) - cloudSoft(d.cloud ?? 0));
   if (!st.given) st.sunK = sunK;
   // the fog's veil glows with the frame's sky horizon (common.wgsl wxFogApply) — which the cloud has just BRIGHTENED (fog at midday: sky ×1.97 while the light on
@@ -260,7 +260,7 @@ export function applyHour(g: Game, id: HourId): boolean { { const __s = RUST_SUR
 }
 function putIn(g: Game, def: HourDef, from?: HourState) {
   const S = g.engine.settings, L = g.engine.lights, toSun = toSunOf(def), W = g.weather, kind = !!W?.kind;
-  const st: HourState = { def, toSun, sunK: from ? from.sunK : clamp(HOUR.sun, 0, 1), given: from ? from.given : HOUR.sunGiven || HOUR.sun !== 1, soft: 0, skyK: 1,
+  const st: HourState = { def, toSun, sunK: from ? from.sunK : clamp(g.stood.sun, 0, 1), given: from ? from.given : g.stood.sunGiven || g.stood.sun !== 1, soft: 0, skyK: 1,
     wasOff: kind ? from?.wasOff ?? false : !!W && !W.enabled, moons: [], lamps: new Map(), sky: { zenith: v3.copy(S.skyZenith), horizon: v3.copy(S.skyHorizon) }, haze: S.hazeDensity, exposure: S.exposure, storm: kind ? from?.storm ?? null : null, casters: castersOf(g),
     sun: null as unknown as RtLight, box: boxOf(g), cells: new Map(), fine: new Map(), dome: null };
   // the moon out (every steady directional light of the level: it has no switch of its own), the sun in where the moon stood

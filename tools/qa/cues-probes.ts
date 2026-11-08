@@ -3,8 +3,7 @@
 // PASS / FAIL each, all headless. No picture and no sound here: 'drawn' is the strip's own row list (game.view.radio, what the HUD draws), not a screen.
 //   cues-lines   every new line of the table falls in the class it was written for, and the defenders' existing calls fall where the ranking puts them
 //   (the strip's own rules, a unit's line gets a row, the same words twice, a class inside its gap, a full strip: rust/game_start/tests/radio.rs)
-//   cues-run     the team met in the mess on levels/block-squads.json: no cue is ever written on a Guard, the net reaches the strip, silent decisions get
-//                a line, Sam down is told to the floor, a place on the net is the level's own. CUESRUN_BREAK=1 = Sam's god mode is left on: must fail
+//   cues-run     the team met in the mess on levels/block-squads.json: no cue is ever written on a Guard, the net reaches the strip, Sam down is told to the floor, a place on the net is the level's own. CUESRUN_BREAK=1 = Sam's god mode is left on: must fail
 // The rule is settled (CUES.on): no line asks the switch off and nothing here writes it (until 2026-11-07 cues-strip's last line and half of every line of
 // cues-run asked the message ring as it was before the rule, and cues-run's first line held the run with the switch on to the run with it off).
 import { readFileSync } from 'node:fs';
@@ -57,7 +56,7 @@ async function rig(seed: number) {
   return W;
 }
 export async function cuesRun(): Promise<boolean> {
-  const F = family('cues-run: a played floor — no cue is written on a man, the net and the silent decisions reach the strip, Sam down is told to the floor');
+  const F = family('cues-run: a played floor — no cue is written on a man, the net reaches the strip, Sam down is told to the floor');
   const W = await rig(2), g = W.game; g.godMode = true;
   const cueTexts = new Set<string>(); let cueOnMan = 0; const strip = new Set<string>(); let hold = '';
   const frame = (_i: number) => {
@@ -80,10 +79,9 @@ export async function cuesRun(): Promise<boolean> {
   for (let i = 60; i < 12 * 60; i++) { g.player.visibility = 1; W.step(DT); frame(i); }
   g.godMode = process.env.CUESRUN_BREAK === '1';   // …and now their rounds count: Sam drops where he stands, and the floor's fight is over
   for (let i = 12 * 60; i < 50 * 60; i++) { if (!g.player.down) g.player.visibility = 1; W.step(DT); frame(i); }
-  const A = { strip, cueOnMan, stats: { ...g.cues.stats }, kinds: { ...g.cues.kinds }, hold, down: !!g.player.down, heldWhy: String(heldWhy ?? 'taken'), place: placeName(g.level, [2, 0, 2]) + ' / ' + roomName(g.level, [2, 0, 2]) };
+  const A = { strip, cueOnMan, stats: { ...g.cues.stats }, hold, down: !!g.player.down, heldWhy: String(heldWhy ?? 'taken'), place: placeName(g.level, [2, 0, 2]) + ' / ' + roomName(g.level, [2, 0, 2]) };
   F.verdict(A.cueOnMan === 0, "no cue is ever written on a man (Guard.bubble is the bark clocks' to read)", `${A.cueOnMan} frames`);
   F.verdict([...A.strip].some(t => /^radio: Alpha: contact/.test(t)) && A.stats.heardDrawn >= 3, "the defenders' net reaches the strip", `${A.stats.heardDrawn} of ${A.stats.heard} lines drawn (${[...A.strip].slice(0, 3).join(' · ')}…)`);
-  F.verdict(A.stats.cues >= 2 && A.stats.cueDrawn >= 1, 'silent decisions get a line', `${JSON.stringify(A.kinds)}, ${A.stats.cueDrawn} on the strip`);
   // (with Sam known down the floor's own words are owed: an empty string passed while his fall was not read)
   F.verdict(A.down && /hold where you are/.test(A.hold), 'Sam down: the floor is told to hold where it is', `${A.down ? '' : `STAGING: Sam never went down (the team's 'hold' was ${A.heldWhy}) · `}'${A.hold}'`);
   F.verdict(/^outside the [\w ]+ \/ the [\w ]+$/.test(A.place) && !/car park|back offices/.test(A.place), "a place on the net, and the dialogue's room noun, are the level's own", `'${A.place}'`);

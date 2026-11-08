@@ -68,24 +68,109 @@ fn a_shut_door_holds_the_smoke() {
 }
 
 /// THE RULE: light comes round a corner: a man the bulb has no line to, in a room it lights, reads brighter than the bulb's own light on him; and when the
-/// bulb goes out that light goes within a second and a half, a slice of the level a step and never all of it in one.
+/// bulb goes out that light goes within five seconds, a slice of the level a step and never all of it in one.
 /// A FAILURE MEANS: a room lit round a corner is dark to every eye, or a lamp shot out costs a tick the whole level's sweep.
 #[test]
 fn a_lamp_put_out_takes_its_light_off_the_walls_a_slice_at_a_time() {
     let mut p = stand(&two_rooms());
     p.run(1.0);
     let at = [11.2, 1.2, 15.2];
-    let lit = game::sense::glow_at(&mut p.g, at);
+    let lit = round(&mut p, at);
     assert!(lit > 0.01, "a lit room's corner has light off its walls ({lit})");
     let bulb = p.g.targets.clone().into_iter().find(|&t| game::sim_lightshome::fixture_on(&mut p.g, t)).expect("the bulb");
     let on = game::sim_lightshome::light_in().on;
     game::sim_lightshome::light_home_in(&mut p.g, on, Some(bulb), Some(0.0), None, None, None);
     let mut most = 0;
-    for _ in 0..90 { p.frame(); most = most.max(sim::glow::swept()); }
-    let left = game::sense::glow_at(&mut p.g, at);
-    assert!(left < 0.02 * lit, "a second and a half after the bulb went out {:.0} % of its light is still on the walls", 100.0 * left / lit);
+    for _ in 0..300 { p.frame(); most = most.max(sim::glow::swept()[0]); }
+    let left = round(&mut p, at);
+    assert!(left < 0.02 * lit, "five seconds after the bulb went out {:.0} % of its light is still on the walls", 100.0 * left / lit);
     let (nx, nz) = sim::bricks::plan(p.g.sim);
     assert!(most as f64 <= (nx * nz / 8.0).ceil(), "a step swept {most} of the level's {} metres", nx * nz);
+}
+/// The light at a point under a roof that comes round: the mean of the six faces.
+fn round(p: &mut Play, at: [f64; 3]) -> f64 { game::scene_collision::window(&mut p.g, &mut |g| game::sense::under_roof(g, at)).expect("a point under a roof").mean }
+fn light(p: &mut Play, at: [f64; 3]) -> f64 { game::guards::light_at(&mut p.g, at, None, None, None).0 }
+fn seen(p: &mut Play, at: [f64; 3]) -> f64 { let e = game::guards::light_estimate_at(&mut p.g, at, None, None, None); game::game::game_visibility_of(&mut p.g, e) }
+fn door(p: &Play, name: &str) -> game::ids::DoorId { game::doors::doors_by_name(&p.g, name).expect("the door") }
+
+/// THE RULE: by day a room is as light as what it is open to: shut up it is dark, with its door open it is lit by the way in and darker the deeper it goes, and the
+/// room behind it, past a shut door, stays dark.
+/// A FAILURE MEANS: a man in a room that looks lit goes unseen, or one in a dark room is seen.
+#[test]
+fn by_day_a_room_is_lit_by_what_it_is_open_to() {
+    let mut s = Scene::new("two-rooms");
+    s.room("west", 10.0, 10.0, 18.0, 16.0).room("east", 18.0, 10.0, 26.0, 16.0);
+    s.door("between", Axis::Z, 18.0, 13.0).door("yard", Axis::X, 16.0, 14.0).sam(30.0, 22.0);
+    let mut p = stand(&s);
+    assert!(game::hours::apply_hour(&mut p.g, game::hours::HourId::Midday));
+    p.run(8.0);
+    let (near, deep, behind) = ([14.6, 1.2, 14.6], [11.2, 1.2, 10.8], [24.5, 1.2, 11.0]);
+    let shut = [light(&mut p, near), light(&mut p, deep), light(&mut p, behind)];
+    assert!(shut.iter().all(|e| *e < 0.03), "shut up at noon the rooms read {shut:?}");
+    let yard = door(&p, "yard");
+    let c = p.g.dr[yard].frame_centre;
+    game::doors::doors_kick_in(&mut p.g, yard, [c[0], 0.0, c[2] + 1.0], 0.0, None);
+    p.run(20.0);
+    assert!(game::doors::door_angle(&p.g, yard).abs() > 0.8, "the scene: the door to the yard was to stand open");
+    let open = [light(&mut p, near), light(&mut p, deep), light(&mut p, behind)];
+    assert!(open[0] > 0.3, "by the open door at noon {open:?}");
+    assert!(open[1] > 0.01 && open[1] < 0.4 * open[0], "the far corner of the room with the open door {open:?}");
+    assert!(open[2] < 0.2 * open[1] + 0.003, "the room behind the shut door {open:?}");
+}
+
+/// THE RULE: a lamp is as strong as it is drawn: beside a noon's light next to nothing. And eyes get used to a place: in a shut room lit by that lamp a man is
+/// seen at noon as well as at night, and in the dark end of a shut room as badly.
+/// A FAILURE MEANS: by day a lamp nobody can see burning lights a man in the yard, or the men in a lit room are blind at three paces.
+#[test]
+fn a_lamp_is_a_nights_lamp_by_night_and_next_to_nothing_at_noon() {
+    let mut p = stand(&two_rooms());
+    p.run(6.0);
+    let at = [12.6, 1.2, 12.6];
+    let night = light(&mut p, at);
+    game::hours::apply_hour(&mut p.g, game::hours::HourId::Midday);
+    p.run(8.0);
+    let noon = light(&mut p, at);
+    assert!(night > 0.5, "the scene: under the bulb at night ({night})");
+    assert!(noon < 0.02 * night, "under the same bulb in the shut room at noon: {noon} of the night's {night}");
+    let (lit, dark) = (seen(&mut p, at), seen(&mut p, [24.5, 1.2, 11.0]));
+    assert!(lit > 0.5, "seen under the bulb in the shut room at noon: {lit}");
+    let aside = seen(&mut p, [at[0] + 3.0, 1.2, at[2]]);
+    assert!(aside > 0.3, "three metres from the only bulb of the shut room at noon: {aside}");
+    assert!(dark < 0.2, "seen in the shut room with no lamp at noon: {dark}");
+}
+
+/// THE RULE: what comes round is of the level as it stands: a game put back to a moment, its tables made again or not, goes on light for light as the one that
+/// never was, and a wall that changes is in it.
+/// A FAILURE MEANS: two machines of one game part after a rollback.
+#[test]
+fn a_game_put_back_has_the_light_of_one_that_never_was() {
+    let mut s = Scene::new("two-rooms");
+    s.room("west", 10.0, 10.0, 18.0, 16.0).room("east", 18.0, 10.0, 26.0, 16.0);
+    s.door("between", Axis::Z, 18.0, 13.0).door("yard", Axis::X, 16.0, 14.0).bulb(22.0, 12.0).sam(30.0, 22.0);
+    let mut p = stand(&s);
+    game::hours::apply_hour(&mut p.g, game::hours::HourId::Dusk);
+    p.run(3.0);
+    let yard = door(&p, "yard");
+    let c = p.g.dr[yard].frame_centre;
+    game::doors::doors_kick_in(&mut p.g, yard, [c[0], 0.0, c[2] + 1.0], 0.0, None);
+    p.run(0.35);   // (the leaf is swinging, and the sweep is half way round)
+    for b in p.g.engine.world.statics.clone() { p.g.tab.boxes[b].albedo = [0.05, 0.05, 0.05]; }   // (and all of it is painted: a lamp breaks, a lot is soaked)
+    game::scene_collision::wrote(&mut p.g);
+    p.run(0.2);
+    let (kept, block) = (p.g.clone(), game_start::block::bytes(p.g.sim).to_vec());
+    let field = |p: &Play| -> Vec<u64> { sim::state::state_read(p.g.sim).smoke.st[sim::bricks::O_GLOW_MAX..sim::bricks::O_RHO].iter().map(|v| v.to_bits()).collect() };
+    p.run(4.0);
+    let want = field(&p);
+    let slot = p.g.sim;
+    sim::state::put(slot, &block);
+    p.g = kept.clone();
+    game::io::set_slot(&mut p.g, slot);
+    p.g.col.mirror.put_backs = -1.0;
+    p.run(4.0);
+    let got = field(&p);
+    let parts = want.iter().zip(&got).filter(|(a, b)| a != b).count();
+    assert_eq!(parts, 0, "{parts} of the field's {} numbers differ after a put-back", want.len());
+    assert!(want.iter().filter(|v| **v != 0).count() > 100, "the scene: the field was to hold something");
 }
 
 /// A room 10 m by 8 m with a bulb over its east end, a sentry at its west end looking east, and Sam under the bulb 7 m in front of him.

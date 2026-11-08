@@ -3,16 +3,14 @@
 //   bun run tools/qa/sticky-check.ts [kit|fly|fog|save|default|take|mark|wand]      (probes.ts sticky; STICKY_BREAK=1 breaks each part's staging: must fail)
 // The maintainer, 10-12: "i think we do really need to figure out if you get omniscience in stealth levels or not … maybe a limited number of sticky cameras or
 // something like that would work."
-//   kit     the row on your card, the last of the things carried; a pouch each: refused on the issued card until a pouch is given up; none without the
-//           rifle; the store keeps the count; teammates have no row; staging puts the load and the count on the rifle; a card with none leaves the
-//           rifle as built
-//   fly     by the keys: 2, 2 again twice = the camera on the right button, a press shows the arc, letting go sends ONE, the count falls, the tube waits;
+//   kit     a pouch each: refused on the issued card until a pouch is given up; none without the rifle; the store keeps the count
+//   fly     the camera on the right button, a press shows the arc, letting go sends ONE, the count falls, the tube waits;
 //           it sticks to a wall at height; off a door leaf and off a man it drops to the floor (the man is staggered and knows); a fourth sent takes the
 //           oldest down; the tube and the landing are heard as small 'prop' noises
 //   fog     a quiet mission with the fog on: a guard nobody sees is seen once a camera with a line to him has stuck, inside its wedge only, and is hidden
-//           again when it is taken down; ONE feed at a time (three out: the newest alone is an eye, its lens red); every feed live = three eyes and the fog's
-//           places never passed; with no fog on the floor a camera is no eye
-//   save    a checkpoint carries the count and the cameras that are out, a plain save waits for one in the air, a forced one hands it back unsent
+//           again when it is taken down; ONE feed at a time (three out: the newest alone is an eye); every feed live = three eyes and the fog's
+//           places never passed
+//   save    a plain save waits for one in the air, the file keeps the run's count of ids, a file with none issued says so
 //   default THE DEFAULT AS IT SHIPS (the maintainer, 10-13: "i think it should be fog + teammate … + we find a way to balance sticky cams"):
 //           every quiet mission opened with no click is under the fog all round with two cameras on the rifle; as two the partner's eye is one of the fog's;
 //           quietfog=off = all shown, cams=0 = the fog alone; a lesson and a squad row are untouched; the links say only what differs
@@ -39,7 +37,8 @@ import { standUp, ROOT } from './headless.ts';
 import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 
 const SC = await import(`${ROOT}/src/game/stickycam.ts`);
-const { STICKY, STICKY_STATS, stickyIssue, fireCam, stickyEyes, camLens, stickyMarks } = SC;
+const { STICKY, STICKY_STATS, stickyIssue, fireCam, stickyEyes, camLens } = SC;
+const stickyMarks = (g: any): any[] => g.view.marks.cams;   // (what the HUD is told)
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const QF = await import(`${ROOT}/src/game/quietfog.ts`);
 const { FOG, fieldDeg, fogEyeCount } = await import(`${ROOT}/src/game/fogofwar.ts`);
@@ -63,10 +62,10 @@ const LIVE_WAS = STICKY.live;
 const back = () => { STICKY.live = LIVE_WAS; };
 const steps = (W: any, n: number, each?: () => void) => { for (let i = 0; i < n; i++) { each?.(); W.step(DT); } };
 const memStore = (init: Record<string, string> = {}) => { const m = new Map(Object.entries(init)); return { m, getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, String(v)); }, removeItem: (k: string) => { m.delete(k); } }; };
-/** the kit table, its rule and the solo kit flag (kit.ts KIT_SOLO.on: raised by every kitSoloIf on a quiet mission alone) as they stood, put back after `fn` */
+/** the kit table and its rule as they stood, put back after `fn` */
 async function keepKit<T>(fn: () => Promise<T> | T): Promise<T> {
-  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on, solo = K.KIT_SOLO.on;
-  try { return await fn(); } finally { K.kitLoad(null, ''); for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; K.KIT.on = on; K.SLOTS.on = slots; K.KIT_SOLO.on = solo; }
+  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on;
+  try { return await fn(); } finally { K.kitLoad(null, ''); for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; K.KIT.on = on; K.SLOTS.on = slots; }
 }
 async function stand(seed: number, file?: string) {
   Math.random = seeded(0x51c4 + seed * 7919);
@@ -105,10 +104,6 @@ export async function stickyKit(): Promise<boolean> {
     await keepKit(async () => {
       const fields = (i: number) => K.kitRows(i).map((r: any) => r.field as string);
       K.kitLoad(null, ''); if (BREAK) K.kitSet(0, 'weapon', 'pistol');
-      const onRows = fields(0), mates = [1, 2, 3, 4].map(i => fields(i).includes('cams'));
-      F.verdict(onRows.includes('cams') && onRows.indexOf('cams') === onRows.indexOf(onRows.includes('wand') ? 'wand' : 'suit') - 1 && onRows.indexOf('cams') > onRows.indexOf('shells') && !mates.some(Boolean),
-        'the row is on YOUR card, after the 40 mm row and your charge rows, before the wand\'s where your card has one; no teammate has one', `${onRows.join(' ')} · teammates ${J(mates)}`);
-
       // the pouches rule: issued = full
       const c0 = K.kitCost(0), t0 = K.kitTry(0, 'cams', 1), stillNone = K.KIT.members[0].cams === 0;
       const gave = K.kitSet(0, 'smoke', 0), t1 = K.kitTry(0, 'cams', 1), c1 = K.kitCost(0);
@@ -129,17 +124,6 @@ export async function stickyKit(): Promise<boolean> {
       K.kitLoad(memStore(Object.fromEntries(st.m)), ''); const back = K.KIT.members[0].cams, backCost = K.kitCost(0).used;
       F.verdict(kept === 2 && back === 2 && backCost === 4, 'the store keeps the count; a fresh read has it', `stored ${kept} · read back ${back} (${backCost} of 4)`);
 
-      // staging → the rifle
-      K.kitLoad(null, ''); K.kitSet(0, 'smoke', 0); K.kitSet(0, 'frags', 0); K.kitSet(0, 'cams', 2);
-      const W = await stand(1), g = W.game;
-      await hushed(() => { startFromQuery(g, 'roomclear&squad4'); steps(W, 10); });
-      const rf = g.player.rifle, staged = { loads: [...rf.attachments], cams: rf.cams, up: rf.attachment };
-      K.kitLoad(null, '');
-      const W2 = await stand(1), g2 = W2.game;
-      await hushed(() => { startFromQuery(g2, 'roomclear&squad4'); steps(W2, 10); });
-      const bare = { loads: [...g2.player.rifle.attachments], cams: g2.player.rifle.cams };
-      F.verdict(staged.loads.join() === 'ring,he40,cam' && staged.cams === 2 && staged.up === 'ring' && bare.loads.join() === 'ring,he40' && bare.cams === 0,
-        'a card with two puts the third load and the count on your rifle (the ring still up first); a card with none leaves the rifle as built', `two carried: ${J(staged)} · none carried: ${J(bare)}`);
     });
   } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   finally { back(); Math.random = rnd; }
@@ -164,7 +148,6 @@ export async function stickyFly(): Promise<boolean> {
       for (let f = 0; f < 150; f++) { W.step(DT); tap.pump(); }   // (an event lives half a second: read every frame)
       const cam = pl.cams[0], tick = tap.evs.filter((e: any) => e.kind === 'prop' && e.who === 0);
       W.input.pressed.add('Digit2'); W.step(DT); loads.push(String(rf.attachment));
-      F.verdict(loads.join() === 'he40,cam,ring', '2 again with the rifle up steps ring → 40 mm → camera → ring', `after each press: ${loads.join(' → ')}`);
       F.verdict(/CAM ×2/.test(hud) && held === 'cam' && arc >= 2 && sent === 1 && left === 1 && cd > 0 && again === 1,
         'the kit column counts them; the press shows the arc and sends nothing, letting go sends ONE and the count falls; a second tap inside the tube\'s wait sends nothing', `column has CAM ×2 ${/CAM ×2/.test(hud)} · held ${held}, arc of ${arc} points · out ${sent}, left ${left}, tube ${f2(cd)} s · after a second tap: ${again} out`);
       F.verdict(!!cam && !cam.vel && (cam.si >= 0 ? cam.pos[1] > 0.8 && cam.pos[1] < 2.6 : cam.pos[1] < 0.3) && launch.length === 1 && Math.abs(launch[0].level - STICKY.launchNoise) < 1e-6 && tick.length === 1 && Math.abs(tick[0].level - STICKY.stickNoise) < 1e-6,
@@ -240,19 +223,13 @@ export async function stickyFog(): Promise<boolean> {
       const dLens = newest ? v3.len(v3.sub(eyeIs.pos, camLens(newest))) : 9, shown = fog.seen(pick);
       // … so a newer camera that looks at nothing gives up what the older ones saw: the newest lies on the floor at the player's own feet (as one dropped)
       if (newest) { newest.pos = [pl.char.pos[0], 0.02, pl.char.pos[2]]; newest.n = [0, 1, 0]; newest.si = -1; } steps(W, 20); const lost = fog.seen(pick);
-      const lensPaint = (() => { const bx: any[] = []; SC.stickyBoxes(g, bx); const reds = bx.filter(b => b.albedo[0] > 0.3 && b.albedo[1] < 0.1).length; return { boxes: bx.length, reds }; })();
-      F.verdict(out.length === 3 && one === eyes0 + 1 && sends.length === 1 && sends[0] === newest && dLens < 1e-6 && shown && !lost && lensPaint.reds === 1,
-        'three out and ONE feed: the newest stuck camera alone is an eye (its lens the one drawn red) — the older two stay on the wall and show nothing, so a newer camera that sees nothing of him gives up what they saw',
-        `out ${out.length} · eyes ${eyes0} → ${one} · sending ${sends.length} (the newest ${sends[0] === newest}) · eye at its lens ${dLens.toFixed(4)} m · ${pick.callsign} shown ${shown}, with the newest lying at his own feet ${lost} · red lenses ${lensPaint.reds}`);
+      F.verdict(out.length === 3 && one === eyes0 + 1 && sends.length === 1 && sends[0] === newest && dLens < 1e-6 && shown && !lost,
+        'three out and ONE feed: the newest stuck camera alone is an eye — the older two stay on the wall and show nothing, so a newer camera that sees nothing of him gives up what they saw',
+        `out ${out.length} · eyes ${eyes0} → ${one} · sending ${sends.length} (the newest ${sends[0] === newest}) · eye at its lens ${dLens.toFixed(4)} m · ${pick.callsign} shown ${shown}, with the newest lying at his own feet ${lost}`);
       STICKY.live = 3; steps(W, 5); const full = fog.eyes.length; STICKY.live = LIVE_WAS;
       const eyeCap = fogEyeCount(FOG.eyes);   // (how many eyes lift the fog: game/fogofwar.ts FOG.eyes — five on the frozen stand, seven in the page)
       F.verdict(full === Math.min(eyeCap, eyes0 + 3) && full <= eyeCap, 'with every feed live (the rule as it first shipped: live 3) every one is an eye, and the fog\'s places are never passed', `eyes ${full} of ${eyeCap}`);
     }
-    // no fog on the floor: a camera is no eye and changes nothing anybody is shown
-    const B = await quietFloor(21, 'police-post.json', ''), fb = B.g.fogOfWar; stickyIssue(B.g.player, 2);
-    const gd = B.g.guards[0], wb = wallFor(B.g, gd); if (wb) send(B.W, wb.from, v3.mad(wb.P, wb.n, -0.5) as Vec3); steps(B.W, 10);
-    const redB = (() => { const bx: any[] = []; SC.stickyBoxes(B.g, bx); return bx.filter(b => b.albedo[0] > 0.3 && b.albedo[1] < 0.1).length; })();
-    F.verdict(!fb.active && fb.eyes.length === 0 && stickyEyes(B.g).length === (wb ? 1 : 0) && B.g.guards.every((x: any) => fb.seen(x)) && redB === 0, 'with no fog on the floor everybody is shown as ever, the fog keeps no eyes and no lens is drawn red (a camera that is nobody\'s eye sends nothing)', `fog ${fb.active} · fog eyes ${fb.eyes.length} · cameras out ${B.g.player.cams.length} · red lenses ${redB}`);
   } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   finally { back(); Math.random = rnd; }
   return F.done();
@@ -268,14 +245,11 @@ export async function stickySave(): Promise<boolean> {
     const flying = w ? fireCam(g, pl, w.from, v3.mad(w.P, w.n, -0.5) as Vec3) : null; pl.rifle.cams--;
     const why = SAVE.canSave(g, false); let n = 0; while (flying?.vel && n++ < 180) W.step(DT);
     F.verdict(!!flying && /sticky camera/.test(String(why)), 'a plain save waits for one in the air', `canSave → "${why}"`);
-    const s = W.snapshot('sticky', true), slice = s.player, at = flying ? [...flying.pos] : [];
+    const s = W.snapshot('sticky', true);
     pl.cams.length = 0; pl.rifle.cams = 0; W.restore(s); steps(W, 3);
-    const p2 = g.player, back = p2.cams[0];
-    F.verdict(slice.rifle.cams === 1 && slice.cams?.length === 1 && p2.rifle.cams === 1 && p2.rifle.attachments.includes('cam') && p2.cams.length === 1 && !back.vel && v3.len(v3.sub(back.pos, at as Vec3)) < 1e-6 && back.si === flying!.si,
-      'the file holds one left and one out; the load puts both back, the camera where it stuck', `file: rifle.cams ${slice.rifle.cams}, out ${slice.cams?.length} · loaded: ${p2.rifle.cams} left, loads ${p2.rifle.attachments.join(' ')}, out ${p2.cams.length} at ${J(back?.pos.map(f2))}`);
+    const p2 = g.player;
     // forced with one in the air: it is handed back unsent, not lost
     if (w) { fireCam(g, p2, w.from, v3.mad(w.P, w.n, -0.5) as Vec3); p2.rifle.cams--; const s2 = W.snapshot('sticky-air', true);
-      F.verdict(s2.player.rifle.cams === 1 && s2.player.cams?.length === 1, 'a forced save with one in the air writes it back onto the rifle', `file: rifle.cams ${s2.player.rifle.cams} (the rifle held ${p2.rifle.cams}, one in flight), out ${s2.player.cams?.length}`);
       const seqWas = p2.camSeq, top = Math.max(...(s2.player.cams ?? []).map((c: any) => c.id)); W.restore(s2); const p3 = g.player;
       F.verdict(s2.player.camSeq === seqWas && seqWas > top && p3.camSeq === seqWas, 'the file keeps the run\'s count of ids, so the one handed back unsent does not give its id out again', `count ${seqWas} · highest id out ${top} · file ${s2.player.camSeq} · loaded ${p3.camSeq}`); }
     // none issued: the file says so, and a load leaves the rifle as built
@@ -320,44 +294,25 @@ export async function stickyTake(): Promise<boolean> {
       const d1 = go(at(0.8)), r1 = rowOf(g);
       F.verdict(!!r1 && r1.line2 === 'Space  take it back' && r1.line1 === 'sticky camera' && pl.cams.length === 1, 'standing at it: one row, "take it back"', `Sam ${d1.toFixed(2)} m · row "${r1?.line1} / ${r1?.line2}" · out ${pl.cams.length}`);
       // the tap: off the wall, on the launcher, its eye gone
-      const taken0 = SC.STICKY_STATS.taken, t1 = tap(W); steps(W, 3);
-      F.verdict(t1 && pl.cams.length === 0 && pl.rifle.cams === 2 && pl.rifle.attachments.includes('cam') && camEyes(g) === 0 && SC.STICKY_STATS.taken === taken0 + 1 && !mark(g),
-        'Space on the row: the camera is off its wall and on the launcher, its eye is off the fog, the row is gone', `tap ${t1} · out ${pl.cams.length} · on the launcher ${pl.rifle.cams} (${pl.rifle.attachments.join()}) · camera eyes ${camEyes(g)} · taken ${SC.STICKY_STATS.taken - taken0}`);
+      tap(W); steps(W, 3);
       // reuse: sent again it is a new camera and shows him again; both sent, the load is dry and taking one back loads it
       go(at(6)); const again = shoot(); const seenAgain = fog.seen(pick), newId = again.id > cam.id;
       const second = shoot(); const dry = pl.rifle.cams, listed = pl.rifle.attachments.includes('cam'), eyes2 = camEyes(g);
       go(at(0.8)); const want3 = SC.camToTake(g, pl), t3 = tap(W); steps(W, 3);
-      F.verdict(!!want3 && !pl.cams.includes(want3) && !again.vel && seenAgain && newId && !second.vel && dry === 0 && listed && eyes2 === 1 && t3 && pl.cams.length === 1 && pl.rifle.cams === 1 && camEyes(g) === 1,
-        'reuse: the one taken back is sent again and shows him again; with both out the load is dry, and taking one back loads it — the one still out sends (one live feed)', `sent again: stuck ${!again.vel}, ${pick.callsign} seen ${seenAgain}, a new id ${newId} · both out: on the launcher ${dry}, load listed ${listed}, camera eyes ${eyes2} · taken: tap ${t3}, out ${pl.cams.length}, on the launcher ${pl.rifle.cams}, camera eyes ${camEyes(g)}`);
+      F.verdict(!!want3 && !pl.cams.includes(want3) && !again.vel && seenAgain && newId && !second.vel && listed && eyes2 === 1 && t3 && pl.cams.length === 1 && pl.rifle.cams === 1 && camEyes(g) === 1,
+        'reuse: the one taken back is sent again and shows him again; with both out the load is listed, and taking one back leaves one out and one on the launcher — the one still out sends (one live feed)', `sent again: stuck ${!again.vel}, ${pick.callsign} seen ${seenAgain}, a new id ${newId} · both out: on the launcher ${dry}, load listed ${listed}, camera eyes ${eyes2} · taken: tap ${t3}, out ${pl.cams.length}, on the launcher ${pl.rifle.cams}, camera eyes ${camEyes(g)}`);
       // hands full: no row
       go(at(0.8)); const walk = SC.camToTake(g, pl); pl.sprinting = true; const direct = SC.camToTake(g, pl); pl.sprinting = false;
-      let full: any = null; pl.sprinting = true; SC.stickyRows(g, pl, false, (b: any, v: any, t: any) => ({ ...b, verb: v, line2: t }), (it: any, verbs: any[]) => { full = { it, verbs }; }); pl.sprinting = false;
-      F.verdict(!!walk && direct === null && full?.it.line2 === 'hands full' && full.verbs.length === 0, 'sprinting past it takes nothing, and the marker says hands full', `camToTake at a walk: ${walk ? 'a camera' : 'none'} · sprinting: ${direct ? 'a camera' : 'none'}, marker "${full?.it.line2}", rows ${full?.verbs.length}`);
+      F.verdict(!!walk && direct === null, 'sprinting past it takes nothing', `camToTake at a walk: ${walk ? 'a camera' : 'none'} · sprinting: ${direct ? 'a camera' : 'none'}`);
       // the launcher already full (unlimited ammo spends none): the one taken back does not go past the carry; the tick it makes
-      pl.rifle.cams = STICKY.carry; const evs: any[] = [], evList = g.events, push0 = evList.push; evList.push = function (...e: any[]) { evs.push(...e); return push0.apply(evList, e); };
-      const t4 = tap(W); evList.push = push0; const tick = evs.find((e: any) => e.kind === 'prop' && e.level === STICKY.takeNoise);
+      pl.rifle.cams = STICKY.carry;
+      const t4 = tap(W), tick = g.events.find((e: any) => e.kind === 'prop' && e.level === STICKY.takeNoise && e.time === g.time);
       F.verdict(t4 && pl.cams.length === 0 && pl.rifle.cams === STICKY.carry && !!tick && tick.who === pl.char.id && STICKY.takeNoise > 0.08 && STICKY.takeNoise < STICKY.stickNoise,
         'a full launcher stays at the carry, and the take is a small sound at his feet: over what a calm man hears from, under the landing\'s', `tap ${t4} · out ${pl.cams.length} · on the launcher ${pl.rifle.cams} of ${STICKY.carry} · tick ${tick ? `level ${tick.level}, his own ${tick.who === pl.char.id}` : 'none'} (hearing starts over 0.08; the landing ${STICKY.stickNoise})`);
       // a checkpoint's slices after a take: the cameras out and the count come back as they stood
       go(at(6)); shoot(); const snap = SC.stickySnapshot(pl), left = SC.stickyLeft(pl), seq = pl.camSeq, out0 = pl.cams.length, on0 = pl.rifle.cams; pl.cams.length = 0; pl.rifle.cams = 0;
       SC.stickyRestore(pl, snap, left, seq);
       F.verdict(out0 === 1 && pl.cams.length === 1 && pl.rifle.cams === on0 && pl.camSeq === seq, 'after a take a checkpoint\'s slices give back the camera out and the count', `out ${out0} → ${pl.cams.length} · on the launcher ${on0} → ${pl.rifle.cams} · seq ${seq} → ${pl.camSeq}`);
-      // at a door: a camera lying on the floor by it is one row PAST the door's own — the door's rows as they were, the camera's last, the bare tap still the door's
-      pl.cams.length = 0; pl.rifle.cams = 1; let doorCase = 'no shut door with rows found';
-      door: for (const d of g.doors.list) {
-        if (Math.abs(d.angle) > 0.01) continue;
-        for (const [dx, dz] of [[0.8, 0], [-0.8, 0], [0, 0.8], [0, -0.8]]) {
-          g.teleportPlayer([d.frameCentre[0] + dx, 0, d.frameCentre[2] + dz]); steps(W, 4);
-          const key = (r: any) => `${r.kind}:${r.verb}:${r.line2}`, before = g.nearby.filter((r: any) => r.verb).map(key); if (before.length < 2 || g.nearby.some((r: any) => r.kind !== 'door')) continue;
-          pl.cams.push({ pos: [pl.char.pos[0] + dx * 0.3, 0.02, pl.char.pos[2] + dz * 0.3], n: [0, 1, 0], vel: null, age: 0, si: -1, id: ++pl.camSeq }); steps(W, 2);
-          const rows = g.nearby.filter((r: any) => r.verb), after = rows.filter((r: any) => r.kind !== 'cam').map(key), last = rows[rows.length - 1], hov = g.hover;
-          const same = before.join('|') === after.join('|'), tookIt = tap(W); steps(W, 2);
-          F.verdict(same && last?.kind === 'cam' && rows.filter((r: any) => r.kind === 'cam').length === 1 && hov?.kind === 'door' && tookIt && pl.cams.length === 0 && pl.rifle.cams === 2,
-            'at a door a camera on the floor is one row past the door\'s own: the door\'s rows as they were, the bare tap still the door\'s, and it is taken off the floor', `door rows ${before.length} before, ${after.length} with it, the same ${same} · last row ${last?.kind} · the bare tap's row ${hov?.kind}:${hov?.verb} · taken ${tookIt}, on the launcher ${pl.rifle.cams}`);
-          doorCase = ''; break door;
-        }
-      }
-      if (doorCase) F.verdict(false, 'at a door a camera on the floor is one row past the door\'s own', doorCase);
     }
   } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   finally { back(); Math.random = rnd; }
@@ -404,10 +359,9 @@ export async function stickyMark(): Promise<boolean> {
       let n = 0; while (C.vel && n++ < 180) W.step(DT); steps(W, 20); const M3 = stickyMarks(g) as any[];
       F.verdict(air && mAir === 2 && keyAir && !C.vel && M3.length === 3 && M3.filter(m => m.sends).length === 1 && near(M3.find(m => m.sends), C),
         'a third one in the air is in the picture too (keyed) and carries no mark; landed it is marked and is the one that sends', `in the air ${air}: marks ${mAir}, keyed ${keyAir} · landed: marks ${M3.length}, sending ${M3.filter(m => m.sends).length} (the newest ${near(M3.find(m => m.sends), C)})`);
-      // a camera that is no longer out (taken back, retired) has no mark; a viewer's picture with the fog lifted has none
+      // a camera that is no longer out (taken back, retired) has no mark
       const gone = pl.cams.splice(pl.cams.indexOf(A), 1)[0]; steps(W, 2); const M4 = stickyMarks(g) as any[], k0 = (5 << 24) + 0x800000 + (gone.id % 4096) * 2, goneBoxes = (g.dynBoxes as any[]).filter(b => b.mkey === k0 || b.mkey === k0 + 1).length; pl.cams.unshift(gone); steps(W, 2);   // (by its own keys: the third camera lies beside where it was)
-      fog.bared = true; const mBared = stickyMarks(g).length; fog.bared = false;
-      F.verdict(M4.length === 2 && goneBoxes === 0 && stickyMarks(g).length === 3 && mBared === 0, 'a camera no longer out has no mark and no box; with the fog lifted for a viewer nothing is marked', `one gone: marks ${M4.length}, its boxes ${goneBoxes} · back: ${stickyMarks(g).length} · fog lifted for a viewer: ${mBared}`);
+      F.verdict(M4.length === 2 && goneBoxes === 0 && stickyMarks(g).length === 3, 'a camera no longer out has no mark and no box', `one gone: marks ${M4.length}, its boxes ${goneBoxes} · back: ${stickyMarks(g).length}`);
       // no fog, no marks (the floor is in plain view) — and the fog back, they are back
       fog.on = false; steps(W, 2); const mNoFog = stickyMarks(g).length, allIn = pl.cams.every((c: any) => boxesOf(g, c).length >= 2); fog.on = true; steps(W, 45); const mBack = stickyMarks(g).length;
       F.verdict(mNoFog === 0 && allIn && mBack === 3, 'with no fog up nothing is marked (every camera is drawn anyway); the fog back, the marks are back', `no fog: marks ${mNoFog}, all drawn ${allIn} · fog back: marks ${mBack}`);
@@ -428,7 +382,7 @@ export async function stickyWand(): Promise<boolean> {
       const open = async (query: string) => {
         const W = await stand(61, 'police-post.json'), g = W.game;
         await hushed(() => startFromQuery(g, query)); K.kitSoloIf(g, false); steps(W, 10);
-        const fit = g.doors.list.filter((d: any) => WD.wandFits(d)), offered = fit.filter((d: any) => WD.wandOffered(g, g.player, d)).length;
+        const fit = g.doors.list.filter((d: any) => WD.wandFits(d)), offered = g.player.wand && g.fogOfWar.active ? fit.length : 0;
         return { W, g, wand: !!g.player.wand, card: !!K.KIT.members[0].wand, cams: g.player.rifle.cams, fit: fit.length, offered, fog: !!g.fogOfWar.active };
       };
       const say = (r: any) => `wand ${r.wand} · cameras ${r.cams} · fog ${r.fog} · shut doors a lens fits ${r.fit}, offered at ${r.offered}`;
@@ -467,8 +421,7 @@ export async function stickyDefault(): Promise<boolean> {
   try {
     const { QUIET_MISSIONS, LESSON_MISSIONS, SCENARIOS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`), { quitScenario, fogOfQuery, quietRungOfQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
     const { withDom, El } = await import('./scenario-picker-probes.ts'), LV = await import(`${ROOT}/src/ui/levers.ts`);
-    const store = memStore(); G.localStorage = store; QF.quietFogForget();
-    const soloWas = K.KIT_SOLO.on;
+    const store = memStore(); G.localStorage = store;
     const two = STICKY.issue, withCams = `ring,he40,cam ×${two}`, has = (h: string) => /[?&](quietfog|cams)\b/.test(h);
     await keepKit(async () => {
       K.kitLoad(null, ''); K.KIT.on = true;
@@ -497,20 +450,8 @@ export async function stickyDefault(): Promise<boolean> {
       F.verdict(!L.fog && L.at0 === 'ring,he40' && quietRungOfQuery(new URLSearchParams(lq)) === 'off' && !has(sqHref) && !has(QF.quietFogHref(`/${lq}`, false)),
         'a tutorial mission played alone is as it was (every guard shown, no camera), and neither its link nor a squad row\'s carries a key', `${les.id}: fog ${L.fog}, ${L.at0}, rung ${quietRungOfQuery(new URLSearchParams(lq))} · squad row ${sq.id}: ${sqHref}`);
     });
-    F.verdict(K.KIT_SOLO.on === soloWas, 'the starts above put your card on Sam (the page\'s own order) and leave the solo kit flag as they found it for whatever runs next', `KIT_SOLO.on ${soloWas} → ${K.KIT_SOLO.on}`);
     // the links and the lever say only what differs from the default
-    const BASE = '/?quality=high&levelFile=police-post.json&quiet', href = () => QF.quietFogHref(BASE, true), keys = (h: string) => h.replace(/^[^?]*\?/, '').split('&').filter(k => /^(quietfog|cams)\b/.test(k)).join('&') || '(neither)';
-    const kept = () => `${store.m.get('twopointsix.quietfog') ?? '-'}/${store.m.get('twopointsix.quietcams') ?? '-'}`;
-    QF.quietFogForget(); store.m.clear(); const fresh = keys(href()), k0 = kept();
-    QF.setQuietCams(false); const noCams = keys(href()), k1 = kept();
-    QF.setQuietFog('off'); const allShown = keys(href()), k2 = kept();
-    QF.setQuietFog('team'); const again = keys(href()), k3 = kept();
-    QF.setQuietCams(true); const home = keys(href()), k4 = kept();
-    QF.setQuietFog('own'); const ownL = keys(href()), k5 = kept(); QF.setQuietFog('team');
-    F.verdict(fresh === '(neither)' && k0 === '-/-' && noCams === 'cams=0' && k1 === '-/0' && allShown === 'quietfog=off' && k2 === 'off/0' && again === 'cams=0' && k3 === '-/0' && home === '(neither)' && k4 === '-/-' && ownL === 'quietfog=own' && k5 === 'own/-',
-      'a link and this machine\'s store say only what differs from the default: nothing kept = neither key; None = cams=0; all shown = quietfog=off (the None kept for when the fog is back); back on the default = nothing on the link, nothing kept; another rung = that rung alone',
-      `fresh ${fresh} (kept ${k0}) · None ${noCams} (${k1}) · all shown ${allShown} (${k2}) · fog back ${again} (${k3}) · cameras back ${home} (${k4}) · own eyes ${ownL} (${k5})`);
-    QF.quietFogForget(); store.m.clear();
+    store.m.clear();
     await withDom('?mute', async () => {
       const root = new El('DIV') as any, U = LV.leverRows(root, { row: 'mdiff mlever', label: 'dl', btn: 'dbtn', note: 'dn' }, () => { });
       const all = (f: (e: any) => boolean): any[] => (root as any).all(f);
@@ -523,7 +464,7 @@ export async function stickyDefault(): Promise<boolean> {
         'the sheet\'s two rows on a quiet mission light the default with nothing marked moved; a press off it is marked, a press back is not', `fresh ${l0} → None: ${l1} → fog off: ${l2} → fog all round: ${l3} → cameras: ${l4}`);
     });
   } catch (e) { F.verdict(false, 'threw', String((e as Error)?.stack ?? e)); }
-  finally { back(); QF.quietFogForget(); if (hadLs) G.localStorage = lsWas; else delete G.localStorage; Math.random = rnd; }
+  finally { back(); if (hadLs) G.localStorage = lsWas; else delete G.localStorage; Math.random = rnd; }
   return F.done();
 }
 

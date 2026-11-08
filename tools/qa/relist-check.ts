@@ -32,7 +32,7 @@ async function arm(which: string, scn: string, seed: number) {
     b.set(src, off);
   };
   const cutRows = (w: any, b: Uint8Array, base: number): Uint8Array[] => { const out: Uint8Array[] = [];
-    for (let i = 0; i < w.all.length; i++) { const x = w.all[i]; if ((w.cutOn && x.cut !== undefined && x.cut.length > 0) || (w.roundOn && x.round === true)) out.push(b.subarray(base + i * CUT_STRIDE * 16, base + (i + 1) * CUT_STRIDE * 16)); } return out; };
+    for (let i = 0; i < w.all.length; i++) { const x = w.all[i]; if ((w.cutOn && x.cut !== undefined && x.cut.length > 0) || (w.cutOn && x.round === true)) out.push(b.subarray(base + i * CUT_STRIDE * 16, base + (i + 1) * CUT_STRIDE * 16)); } return out; };
   let h: number = RAW_BITS_SEED, ticks = 0, packed = true, wrapped: any = null, frames = 0, undrawn = 0; let pic = 0n; const marks: string[] = [];
   const hash = (Bun as unknown as { hash: (d: Uint8Array, seed?: bigint) => bigint }).hash;
   const update = Game.prototype.update;

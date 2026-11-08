@@ -8,7 +8,7 @@
 // camera pinned for the still (its head comments say how; a mission with no recipe there keeps a picture composed by tools/menu-art.ts). Nothing here draws the
 // game. A picture is one run's moment, not the visit's deal — who stands where differs — so the menu marks nothing on it (the way in is marked on the map sheet
 // beside the list).
-// WHERE THE FILES DID NOT COME (the one-file build, a mission added since the pictures were made) every call answers null and the caller draws what it drew
+// WHERE THE FILES DID NOT COME (a mission added since the pictures were made) every call answers null and the caller draws what it drew
 // before: the menu's own model of the place (ui/planArt.ts).
 interface Manifest { v: number; stills: Record<string, unknown> }
 export interface StillPic { img: HTMLImageElement }
@@ -17,14 +17,13 @@ let manifest: Promise<Manifest | null> | null = null;
 const pics = new Map<string, Promise<StillPic | null>>();
 const at = (file: string) => new URL(`assets/menu/${file}`, document.baseURI).href;   // (beside the page, as the cast's files are: the build is served from a folder)
 
-/** the list of pictures. A list that is not there (404, the one-file build, no DOM) is the answer for the page's life; a server that did not answer or a
+/** the list of pictures. A list that is not there (404, no DOM) is the answer for the page's life; a server that did not answer or a
  *  5xx is NOT an answer — it is forgotten, so the next ask (the Play page opened again) fetches again instead of every card staying on its drawn plan */
 function manifestOf(): Promise<Manifest | null> {
   return manifest ??= (async () => {
     const later = () => { manifest = null; return null; };
     try {
       if (typeof fetch !== 'function' || typeof document === 'undefined' || typeof Image === 'undefined') return null;
-      if (document.querySelector?.('meta[name="tps-one-page"]') && !document.querySelector?.('script[data-pack="assets/menu/stills.json"]')) return null;   // (a one-file page has no folder beside it: nothing is asked for — unless it carries the pictures in itself, as tools/build-one.ts packs them: host/onefile.ts answers the asks below)
     } catch { return null; }
     let r: Response;
     try { r = await fetch(at('stills.json')); } catch { return later(); }

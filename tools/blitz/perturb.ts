@@ -17,7 +17,7 @@
 // room code for it (`tune.qrfSquad`), four men fourteen seconds out, the alarm's place put on one of the team, `requestQrf(g, 'panel')`), and the alarm's
 // place put on one of the team again every twenty seconds while they are out: two casts of the door tools on one floor.
 // A level with no response team of its own refuses the call (the compound and the warehouse have none; the depot, the records office, the bazaar, the
-// crossing, the police post and the snatch have): the line then says `called (false)` and `no-team`.
+// crossing and the police post have): the line then says `called (false)` and `no-team`.
 // QA_PERTURB_GOD=player|squad|all: the sandbox row's god mode held on (`game.godMode`: the player is not hit), and / or the net a showcase cast wears put on
 // every living man of the team (`guard.god`: rounds and fragments pass through him), from the first perturbed tick and again on whoever a restart or a
 // load brings: a run that lasts, with the team's deaths, the player's, or neither.

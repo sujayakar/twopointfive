@@ -6,6 +6,7 @@ import type { Game } from '../game/game';
 import type { PlayerCmd } from '../game/cmd';
 import { dressAll } from '../game/dress';   // (called inside netStand only)
 import { NET } from './wire';
+import { SIM_PARTS } from '../sim/state';
 import { NET_AGREED } from './agreed';
 
 /** the two things of a host's engine a tick's end touches (the page's engine, the headless stand-in) */
@@ -39,8 +40,12 @@ export function netWord(g: Game, from: number): number {
 }
 /** THE WHOLE GAME'S WORDS as they stand, with the parts' names: for whoever asks WHICH part two machines disagree on (tools/mp/words-diff.ts, a check).
  *  They are NOT the alarm: a page and a game server do not agree on every part yet (docs/agents/net.md: the picture's own carried in the game's
- *  record, rows numbered differently). The parts every kind of host does agree on are folded into the wider word, watched: netWatch below. */
-export function netWhole(g: Game): { names: string[]; words: number[] } | null { const S = g as unknown as Stepper, A = S.wholeWords?.(); return A ? { names: S.wholeNames?.() ?? [], words: Array.from(A) } : null; }
+ *  record, rows numbered differently). The parts every kind of host does agree on are folded into the wider word, watched: netWatch below. After them
+ *  the ALARM'S OWN, as `block.<part>` (the block is not in the whole game's words): when the alarm fires, these files say which of its parts it was. */
+export function netWhole(g: Game): { names: string[]; words: number[] } | null {
+  const S = g as unknown as Stepper, A = S.wholeWords?.(), B = S.stateWords?.(); if (!A) return null;
+  return { names: [...S.wholeNames?.() ?? [], 'block.die', ...SIM_PARTS.map(p => `block.${p}`)], words: [...Array.from(A), B?.die ?? 0, ...SIM_PARTS.map((_, i) => B?.parts[i] ?? 0)] };
+}
 /** THE WIDER WORD, WATCHED: the whole game's words of the parts on the one list of parts every kind of host has agreed on (net/agreed.ts), folded into
  *  one word, by NAME (a part the module has not got is passed over; two machines of one build pass over the same). Not chained: each word tick's stands
  *  alone, so a tick that differs is one tick counted. The server sends it beside the state word; a client holds its own against it and COUNTS

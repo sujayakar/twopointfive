@@ -1,35 +1,29 @@
 // THE SQUAD'S PLAN DRAWN ON THE FLOOR (src/game/floorplan.ts → src/ui/planfloor.ts): what the overlay is handed, checked without a picture.
 //   bun run tools/qa/plan-check.ts            (also `probes.ts plan`)
-//   TPS_PROFILE=shipped bun run tools/qa/plan-check.ts      — the same lines on the page's stand
 // PASS / FAIL each, all headless: the room clear on the office with its squad of four, the defenders left alive on the floor (the plan must list none of
-// them). What is checked is `floorPlan(g)`: who is listed, the way from each man's feet to his mark, the mark, the fan, the menu's rings, the switch —
-// and that asking for the plan every frame leaves the run's digest where it was.
-// PLAN_BREAK=1 = the switch left off and the same lines asked: they must fail.   exit 0 = all hold · 1 = one does not
-// PLANKEPT_BREAK=1 = the asked run also searches on the nav grid's own tables, as the plan did before its kept legs were the asker's: line 9 must fail.
+// them). What is checked is `floorPlan(g)` on the Rust game's state: who is listed just after an order, the way from each man's feet to his mark, the menu's rings, the
+// key's bar on a door, and the order mode (`menuOnly`, settled on).
+//   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
 
 const FP: any = await import(`${ROOT}/src/game/floorplan.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
-const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
-const { PLAN, planTag, capOf } = FP;
+const { PLAN, planTag } = FP;
 // the plan is asked as the page asks it: with the asker's own store of kept legs, one a game (floorplan.ts PlanKept) — never the game's
 const stores = new WeakMap<object, unknown>();
 const floorPlan = (g: any) => { let k = stores.get(g); if (!k) stores.set(g, k = FP.planKept()); return FP.floorPlan(g, k); };
-const { stateHash } = await import(`${ROOT}/src/game/rollback.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const f1 = (x: number) => (Number.isFinite(x) ? x.toFixed(1) : '—');
 const len = (p: number[][]) => { let s = 0; for (let i = 1; i < p.length; i++) s += dist(p[i - 1], p[i]); return s; };
-const BREAK = process.env.PLAN_BREAK === '1', LITBREAK = process.env.KEYLIT_BREAK === '1', KEPTBREAK = process.env.PLANKEPT_BREAK === '1';   // (KEYLIT_BREAK=1 = PLAN.keyLit left off: line 6b' must fail)
 
 async function rig(seed: number, ask: boolean, squad = 4) {
   const squad0 = NIGHTBREACH.squad; Object.assign(NIGHTBREACH, { squad });
   Math.random = seeded(seed);
   const W: any = await standUp(); const game = W.game, O = game.orders;
-  PLAN.on = !BREAK; PLAN.menuOnly = false;   // (lines 1‥10 ask the plan as it is drawn with the menu up; 11‥16 run under the page's own `menuOnly`; 17 is the rule itself)
   game.godMode = true;
   const why = game.roomClear.start(seed);
   Object.assign(NIGHTBREACH, { squad: squad0 });
@@ -38,7 +32,6 @@ async function rig(seed: number, ask: boolean, squad = 4) {
     step(n = 1) { for (let i = 0; i < n; i++) { game.player.visibility = 0.05; W.step(DT); if (ask) {   // asked twice: as he walks, and with his own path set aside for the ask, so the nav grid is asked for his way and a leg is kept
       floorPlan(game); const T: any[] = O.squad(), pg = T.map(m => m.pathGoal);
       try { for (const m of T) m.pathGoal = null; floorPlan(game); } finally { T.forEach((m, i) => { m.pathGoal = pg[i]; }); }
-      if (KEPTBREAK && T[0]) game.col.nav.findPath(T[0].char.pos, game.player.char.pos, 3000);   // (the search on the grid's own tables, as the plan asked before)
       R.asked += 2; } } },
     until(pred: () => boolean, secs: number) { for (let i = 0; i < secs * 60 && !pred(); i++) R.step(); return pred(); },
   };
@@ -58,16 +51,15 @@ function farFloor(R: any): number[] | null {
   return best;
 }
 
-let fails = 0, menuOnly0 = true;   // (the page's own `PLAN.menuOnly`, put back after the lines that turn it)
+let fails = 0;
 const line = (ok: boolean, name: string, detail: string) => { if (!ok) fails++; console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} — ${detail}`); };
 
 export async function planCheck(): Promise<boolean> {
   fails = 0;
-  menuOnly0 = PLAN.menuOnly;
-  try { return await planLines(); } finally { PLAN.menuOnly = menuOnly0; }
+  return await planLines();
 }
 async function planLines(): Promise<boolean> {
-  console.log(`plan-check: the squad's plan drawn on the floor${BREAK ? '  (PLAN_BREAK: the switch left off — these must fail)' : ''}`);
+  console.log("plan-check: the squad's plan drawn on the floor");
   // 0. the tag
   line(planTag('Red Two') === 'R2' && planTag('Blue One') === 'B1' && planTag('Kestrel') === 'K' && planTag('') === '', 'tags', `'Red Two' → ${planTag('Red Two')} · 'Blue One' → ${planTag('Blue One')} · 'Kestrel' → ${planTag('Kestrel')}`);
 
@@ -105,41 +97,6 @@ async function planLines(): Promise<boolean> {
     const onOwn = walking.filter(m => m.gd.pathGoal && m.gd.pathI < m.gd.path.length).length;
     line(shorter && onOwn > 0 && walking.every(m => dist(m.path[0], m.gd.char.pos) < 0.15), 'the way shortens from his feet as he walks, on his own nav path', `before ${before.map(f1).join(' ')} m · 1.5 s on ${after.map(f1).join(' ')} m · ${onOwn} of ${walking.length} on their own nav path`);
   }
-  // 3. on their marks: no way, the mark under him, the fan along his gun
-  {
-    const got = R.until(() => (floorPlan(g).men as any[]).length === 4 && (floorPlan(g).men as any[]).every(m => m.there || BREAK), 40);
-    R.step(30);
-    const men: any[] = floorPlan(g).men;
-    const ok = got && men.length === 4 && men.every(m => m.there && m.path.length === 0 && dist(m.mark, m.gd.char.pos) < 1.2 && m.aim !== null && Math.abs(m.aim - m.gd.char.aimYaw) < 1e-9);
-    line(ok, 'standing: the mark and his gun\'s fan stay, the way is gone', men.map(m => `${m.tag} ${f1(dist(m.mark, m.gd.char.pos))} m off his mark`).join(' · ') || 'nobody listed');
-  }
-  // 4. the fight has a man: his mark alone
-  {
-    const m0 = team[0], A = O.of(m0), y0 = A?.yieldT;
-    if (A) A.yieldT = g.time;
-    const pm = (floorPlan(g).men as any[]).find(m => m.gd === m0);
-    if (A) A.yieldT = y0;
-    line(!!pm && pm.held && !pm.there && pm.path.length === 0 && pm.aim === null, 'a man the fight has: his mark alone', pm ? `${pm.tag} held ${pm.held} way ${pm.path.length} aim ${pm.aim}` : 'not listed');
-  }
-  // 4b. nothing of an enemy: a mark taken from a man the team cannot see is not listed; a watch on a sensed place is never drawn; the fight's point dims
-  {
-    const m0 = team[0], A = O.of(m0), foe = g.guards.find((x: any) => x.team === 'hostile' && x.state !== 'dead');
-    const fp = foe.char.pos, seen0 = g.fogOfWar.seen;
-    const keep = { foe: A.foe, watch: A.watch, order: A.order, door: A.door, fit: A.fit };
-    A.foe = foe; g.fogOfWar.seen = (x: any) => x !== foe;
-    const hid = !(floorPlan(g).men as any[]).some(m => m.gd === m0);
-    g.fogOfWar.seen = () => true; A.watch = [fp[0], 0, fp[2]];
-    const pm1 = (floorPlan(g).men as any[]).find(m => m.gd === m0);
-    g.fogOfWar.seen = seen0; A.foe = keep.foe;
-    A.order = 'openClear'; A.door = null; A.fit = undefined; A.watch = [fp[0], 0, fp[2]];   // (a door tool's 'threat first' writes a sensed place)
-    const pm2 = (floorPlan(g).men as any[]).find(m => m.gd === m0);
-    Object.assign(A, keep);
-    const onFoe = (floorPlan(g).men as any[]).filter(m => g.guards.some((x: any) => x.team === 'hostile' && x.state !== 'dead' && ((m.watch && dist(m.watch, x.char.pos) < 1) || dist(m.mark, x.char.pos) < 0.5))).length;
-    line(hid && !!pm1 && pm1.watch === null && !!pm2 && pm2.watch === null && onFoe === 0, 'nothing of an enemy: no mark from an unseen man, no line to a sensed one', `mark from an unseen man listed: ${!hid} · watch on a seen foe: ${pm1?.watch ? 'DRAWN' : 'none'} · on a sensed place: ${pm2?.watch ? 'DRAWN' : 'none'} · marks or lines on a defender now: ${onFoe}`);
-    const sc = m0.script, o0 = sc?.over; if (sc) sc.over = { aimAt: [fp[0], 1, fp[2]], face: null };
-    const pm3 = (floorPlan(g).men as any[]).find(m => m.gd === m0); if (sc) sc.over = o0;
-    line(!!sc && !!pm3 && pm3.held && pm3.there, 'a man the room fight has on somebody: dim, his mark kept', pm3 ? `${pm3.tag} held ${pm3.held} there ${pm3.there}` : 'not listed');
-  }
   // 5. the menu's rings
   {
     O.close(); const none = floorPlan(g).who.length, you0 = floorPlan(g).you;
@@ -172,21 +129,7 @@ async function planLines(): Promise<boolean> {
     const jamb = one ? dist(one.a, one.b) : 0, mid = one ? [(one.a[0] + one.b[0]) / 2, 0, (one.a[2] + one.b[2]) / 2] : [0, 0, 0];
     line(d0.length === 1 && d1.length === 1 && one.why === 'stack' && one.key === 'F' && one.now && one.tone === 'gold' && Math.abs(jamb - one.door.def.width) < 1e-6 && dist(mid, one.door.frameCentre) < 0.01,
       'a stacked door waits on the word: one bar, the key on it', d1.length ? `${d1.length} door · ${one.why} · key ${one.key} · ${one.tone} · bar ${f1(jamb)} m across its doorway` : 'no door listed');
-    // 6b'. the key's cap says whether it is live (PLAN.keyLit): dark while the men still walk to the stack, lit once every one stands on it; dark again for
-    // a press that would not send them (Sam down)
-    { const kl = PLAN.keyLit; PLAN.keyLit = !LITBREAK; R.until(() => !!floorPlan(g).doors[0]?.ready, 10); const one = floorPlan(g).doors[0]; const walk = d0[0] ? capOf(d0[0]) : 'no door', stood = one ? capOf(one) : 'no door';
-      g.player.down = true; const dn = floorPlan(g).doors[0], downCap = dn ? capOf(dn) : 'no door'; g.player.down = false;
-      PLAN.keyLit = false; const offWalk = d0[0] ? capOf(d0[0]) : 'no door', offStood = one ? capOf(one) : 'no door'; PLAN.keyLit = kl;
-      line(walk === 'dark' && d0[0]?.ready === false && stood === 'lit' && one?.ready === true && downCap === 'dark' && offWalk === 'plate' && offStood === 'plate',
-        'the key on the door: dark while they walk to it, lit once they all stand on it, dark for a press that would send nobody; with the switch off, the plate either way',
-        `walking: ${walk} · stood: ${stood} · Sam down: ${downCap} · the switch off: ${offWalk} / ${offStood}`); }
-    const kw = PLAN.word; PLAN.word = false; const none = floorPlan(g).doors.length; PLAN.word = kw;
-    const went = T.go('all'); R.step(3);
-    const d2: any[] = floorPlan(g).doors;
-    line(went === null && d2.length === 0 && none === 0, 'the word given, the bar is gone', `go() → ${went === null ? 'went' : `'${went}'`} · ${d2.length} door listed after · ${none} with the part off`);
-    // (the other way round: nothing listed ⇒ nothing waits)
-    const again = T.go('all');
-    line(typeof again === 'string', 'nothing marked, nothing waits', `go() again → ${again === null ? 'something WENT' : `'${again}'`}`);
+    R.W.input.pressed.add('KeyF'); R.step(3);   // (the word: on to the next lines with nothing waiting)
   }
   // 6c. a tool given on the word to one pair: marked in that pair's colour; the key only while orders go to them
   {
@@ -225,24 +168,7 @@ async function planLines(): Promise<boolean> {
   {
     const w = O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); R.step(5);
     const P = floorPlan(g);
-    line(!w && P.men.length === 0 && !BREAK, 'fall in: a follower has no mark, nothing drawn', w ? `refused: ${w}` : `${P.men.length} listed`);
-  }
-  // 8. the switch
-  {
-    O.give('hold', O.targetAt(g.player.char.pos), 'all'); R.step(60);
-    const onN = floorPlan(g).men.length; const k = PLAN.on; PLAN.on = false; const offN = floorPlan(g).men.length + floorPlan(g).who.length; PLAN.on = k;
-    line(onN === 4 && offN === 0, 'the switch off lists nothing', `on ${onN} men · off ${offN}`);
-  }
-  // 9. asking every frame moves nothing: two runs of one seed, one asked each frame and one never
-  {
-    const run = async (ask: boolean) => {
-      const Q = await rig(7, ask); const sp = farFloor(Q);
-      if (sp) Q.O.give('move', Q.O.targetAt(sp), 'all'); Q.step(60 * 6);
-      Q.O.give('fallIn', Q.O.targetAt(Q.game.player.char.pos), 'all'); Q.step(60 * 3);
-      return { d: JSON.stringify(digestGame(Q.game, true)), h: stateHash(Q.game, true, true) as string, asked: Q.asked };
-    };
-    const a = await run(false), b = await run(true);
-    line(a.d === b.d && a.h === b.h && b.asked > 1000 && !BREAK, 'asked every frame, the run is the same, and so is its whole state (the kept legs are the asker\'s)', `digest ${a.d === b.d ? 'equal' : 'DIFFERS'} · whole state ${a.h === b.h ? 'equal' : 'DIFFERS'} · asked ${b.asked} times against ${a.asked}`);
+    line(!w && P.men.length === 0, 'fall in: a follower has no mark, nothing drawn', w ? `refused: ${w}` : `${P.men.length} listed`);
   }
   // 10. the pair's room clear drill: F stacks them, and the door it will go through then carries the key
   {
@@ -254,86 +180,9 @@ async function planLines(): Promise<boolean> {
     line(before === 0 && set && ds.length === 1 && d.why === 'drill' && d.key === 'F' && d.now && d.door === NB.drill?.door && NB.state !== 'set' && floorPlan(Q.game).doors.every((x: any) => x.why !== 'drill'),
       'the drill stacked: its door carries the key, and the key sends it', `state ${set ? 'set' : NB.state} · ${ds.map(x => `${x.why} · key ${x.key} · now ${x.now}`).join(' | ') || 'no door'} · after F: ${NB.state}`);
   }
-  PLAN.menuOnly = menuOnly0;
-  // 11‥14. a teammate's throw (squadthrow.ts's own reader, folded in): the throw page's offer, the part's switch, the ordered throw until it leaves his hand
-  {
-    const ST: any = await import(`${ROOT}/src/game/squadthrow.ts`), { FRAG } = await import(`${ROOT}/src/game/frag.ts`), { rig: throwRig } = await import('./squadthrow-check.ts');
-    const kept = { st: { ...ST.SQUADTHROW }, frag: FRAG.on, squad: NIGHTBREACH.squad, throws: PLAN.throws, on: PLAN.on, random: Math.random };
-    try {
-      const R: any = await throwRig(11, true, { walk: true }); PLAN.on = !BREAK; PLAN.throws = true;
-      const game = R.game, team: any[] = R.team; let c: { at: number[]; d: number } | null = null;
-      // a spot nobody has a throw to from where he stands and one man has after a walk: the longest such walk
-      for (let x = 2.25; x <= 38; x += 1) for (let z = 2.25; z <= 26; z += 1) {
-        const t = R.O.targetAt([x, 0, z]); if (t.kind !== 'floor' || dist(t.at, [x, 0, z]) > 0.3 || ST.squadThrower(game, team, t.at, 'frag')) continue;
-        const th = ST.squadThrowPlan(game, team, t.at, 'frag', true); if (!th?.post || ST.squadFragCatches(game, th.rest, t.at)) continue;
-        const d = dist(th.gd.char.pos, th.post); if (!c || d > c.d) c = { at: t.at, d };
-      }
-      if (!c) line(false, 'a teammate\'s throw: a spot one man must walk to throw at', 'none found on the office with the four holding');
-      else {
-        R.pageAt(c.at);
-        const pre: any[] = floorPlan(game).throws, src: any[] = ST.squadThrowPlans(game), t = pre[0];
-        line(pre.length === 1 && src.length === 1 && t.preview && team.includes(t.gd) && t.tag === planTag(t.gd.callsign) && t.walk.length > 1 && dist(t.walk[t.walk.length - 1], t.from) < 0.6 && t.arc.length > 2 && dist(t.arc[t.arc.length - 1], t.land) < 0.11 && dist(t.land, src[0].land) < 0.01 && t.reach === FRAG.lethalM && FP.planDrawsThrows(),
-          'the throw page up: one offered throw is listed — who, his walk, the arc, where it rests, a frag\'s reach', t ? `${t.tag} · walk ${f1(len(t.walk))} m in ${t.walk.length} points · arc ${t.arc.length} points, ending ${f1(dist(t.arc[t.arc.length - 1], t.land))} m from the ring (the reader's own: ${f1(dist(src[0].points[src[0].points.length - 1], src[0].land))} m) · reach ${f1(t.reach)} m · the reader gave ${src.length}` : `listed ${pre.length} · the reader gave ${src.length}`);
-        PLAN.throws = false; const offN = floorPlan(game).throws.length, hands = !FP.planDrawsThrows(); PLAN.throws = true;
-        line(pre.length === 1 && offN === 0 && hands, 'that part switched off lists no throw, and the neighbour\'s own picture is let draw again', `on ${pre.length} · off ${offN} · planDrawsThrows ${!hands}`);
-        const log0 = ST.SQUADTHROW_LOG.length; R.press('Digit1'); R.step(2);
-        const live: any = floorPlan(game), th = live.throws[0], man = th && live.men.find((m: any) => m.gd === th.gd), own = live.throws.every((x: any) => team.includes(x.gd));
-        line(live.throws.length === 1 && !th.preview && own && th.arc.length > 2 && ((!!man && man.path.length > 1 && th.walk.length === 0) || (!(man && man.path.length > 1) && th.walk.length > 1)),
-          'ordered: the throw stays listed, his walk drawn once (his order\'s own way, else the throw\'s)', th ? `${th.tag} · his order's way ${man ? man.path.length : 0} points · the throw's walk ${th.walk.length} points · arc ${th.arc.length}` : `listed ${live.throws.length}`);
-        const thrown = R.until(() => ST.SQUADTHROW_LOG.length > log0, 25); R.step(2);
-        const after = floorPlan(game).throws.length;
-        line(thrown && after === 0, 'the thing out of his hand: nothing of the throw is left listed', `thrown ${thrown} · listed after ${after}`);
-      }
-    } catch (e) { line(false, 'a teammate\'s throw: the lines threw', e instanceof Error ? (e.stack ?? e.message).split('\n').slice(0, 3).join(' · ') : String(e)); }
-    finally { Object.assign(ST.SQUADTHROW, kept.st); FRAG.on = kept.frag; NIGHTBREACH.squad = kept.squad; PLAN.throws = kept.throws; PLAN.on = kept.on; Math.random = kept.random; }
-  }
-  // 15. the rescue's quiet start: the first F stacks them on the hostage room; while they hold for the second its door carries the key, and the key sends it
-  {
-    const { RESCUE } = await import(`${ROOT}/src/game/rescue.ts`), { rig: rescueRig } = await import('./rescue-probes.ts');
-    const kept = { rescue: { ...RESCUE }, on: PLAN.on, random: Math.random };
-    try {
-      const T: any = await rescueRig(13, { start: 'quiet', doorMan: 'inside', roamers: 0 }); PLAN.on = !BREAK;
-      const game = T.game, RS = game.rescue; T.secs(0.3);
-      const before = floorPlan(game).doors.length;
-      T.press('KeyF'); const onWay: any[] = (T.secs(0.5), floorPlan(game).doors);
-      const set = T.secs(25, () => !!RS.entry && !isNaN(RS.entry.setT)); T.secs(0.5);
-      const doors: any[] = RS.entry ? RS.entry.ops.filter((e: any) => e.ended === null).map((e: any) => e.op.door) : [], ds: any[] = floorPlan(game).doors;
-      const held = !!RS.entry && !RS.entry.gate.go, barred = ds.length === doors.length && ds.length > 0 && ds.every(d => doors.includes(d.door) && d.key === 'F' && d.now);
-      game.player.down = true; const downNow = (floorPlan(game).doors as any[]).some(d => d.now); game.player.down = false;
-      T.press('KeyF'); T.secs(0.2);
-      const went = !!RS.entry?.gate.go, after = floorPlan(game).doors.length;
-      line(before === 0 && onWay.length > 0 && set && held && barred && !downNow && went && after === 0, 'the rescue\'s quiet start: the stacked door carries the key, and the key sends it',
-        `before ${before} · on their way ${onWay.length} · set ${set} · ${ds.map(d => `${d.why} · key ${d.key} · now ${d.now}`).join(' | ') || 'no door'} of ${doors.length} · Sam down: ${downNow ? 'STILL now' : 'none now'} · after F: gate ${went ? 'open' : 'SHUT'}, ${after} listed`);
-    } catch (e) { line(false, 'the rescue\'s quiet start: the lines threw', e instanceof Error ? (e.stack ?? e.message).split('\n').slice(0, 3).join(' · ') : String(e)); }
-    finally { Object.assign(RESCUE, kept.rescue); PLAN.on = kept.on; Math.random = kept.random; }
-  }
-  // 16. the quiet pair's mark: a man waiting on it has a bar a step ahead of him with the key, the key is his before any door's, and it goes with the mark
-  {
-    const { PAIR } = await import(`${ROOT}/src/game/pairorders.ts`), { SILENT } = await import(`${ROOT}/src/game/silent.ts`), { scene } = await import('./pair-probes.ts');
-    const kept = { pair: { ...PAIR }, silent: { ...SILENT }, squad: NIGHTBREACH.squad, on: PLAN.on, random: Math.random };
-    try {
-      const { R, foe, mate }: any = await scene(); PLAN.on = !BREAK;
-      const game = R.game, P = R.P, before = floorPlan(game).doors.length;
-      R.O.give('pairMark', R.foe(foe)); R.step(1);
-      // (the cap before he is set: dark, as a door's is while its men are on their way — and no mark at all while a lesson holds the word shut)
-      const early: any = (floorPlan(game).doors as any[]).find(x => x.why === 'pair'), earlyCap = early ? capOf(early) : 'no mark', locks0 = game.rails.locks;
-      let shut = -1; game.rails.locks = (a: string) => a === 'word'; try { shut = (floorPlan(game).doors as any[]).filter(x => x.why === 'pair').length; } finally { game.rails.locks = locks0; }
-      const set = R.until(() => !!P.jobOf(mate)?.set, 30); R.step(2);
-      const ds: any[] = floorPlan(game).doors, d = ds[0], off = d ? dist([(d.a[0] + d.b[0]) / 2, 0, (d.a[2] + d.b[2]) / 2], mate.char.pos) : NaN;
-      const fx = Math.sin(mate.char.aimYaw), fz = Math.cos(mate.char.aimYaw), ahead = d ? ((d.a[0] + d.b[0]) / 2 - mate.char.pos[0]) * fx + ((d.a[2] + d.b[2]) / 2 - mate.char.pos[2]) * fz : NaN;
-      game.player.down = true; const downNow = (floorPlan(game).doors as any[]).some(x => x.now); game.player.down = false;
-      R.press('KeyF'); R.step(2);
-      const J = P.jobOf(mate), went = !J || J.go, after = (floorPlan(game).doors as any[]).filter(x => x.why === 'pair').length;
-      line(before === 0 && set && ds.length === 1 && d.why === 'pair' && d.door === null && d.key === 'F' && d.now && off < 1 && ahead > 0.3 && !downNow && went && after === 0,
-        'the quiet pair\'s mark: the man waiting has the key a step ahead of him, and the key is the mark', `before ${before} · set ${set} · ${ds.map(x => `${x.why} · key ${x.key} · now ${x.now}`).join(' | ') || 'no mark'} · ${f1(off)} m from him, ${f1(ahead)} m ahead · Sam down: ${downNow ? 'STILL now' : 'none now'} · after F: ${went ? 'gone' : 'STILL waiting'}, ${after} listed`);
-      line(earlyCap === 'dark' && !!d && capOf(d) === 'lit' && shut === 0, 'the quiet pair\'s mark: its cap is dark until he is set, lit then, and a lesson that has not taught the word lists none',
-        `just ordered: ${earlyCap} · set: ${d ? capOf(d) : 'no mark'} · the word held shut by a lesson: ${shut} listed`);
-    } catch (e) { line(false, 'the quiet pair\'s mark: the lines threw', e instanceof Error ? (e.stack ?? e.message).split('\n').slice(0, 3).join(' · ') : String(e)); }
-    finally { Object.assign(PAIR, kept.pair); Object.assign(SILENT, kept.silent); NIGHTBREACH.squad = kept.squad; PLAN.on = kept.on; Math.random = kept.random; }
-  }
   // 17. only in the order mode (PLAN.menuOnly): normal play has no man's mark on the floor; an order just given shows and goes; the menu up shows what stands
   {
-    const Q = await rig(5, false), game = Q.game, QO = Q.O, sp = farFloor(Q); PLAN.menuOnly = true;
+    const Q = await rig(5, false), game = Q.game, QO = Q.O, sp = farFloor(Q);
     const n = () => floorPlan(game).men.length;
     const w = sp ? QO.give('move', QO.targetAt(sp), 'all') : 'no spot'; Q.step(5);
     const flash = n(), flashMode = floorPlan(game).mode;
@@ -345,28 +194,9 @@ async function planLines(): Promise<boolean> {
     QO.open(QO.targetAt(sp ?? game.player.char.pos)); Q.step(2);
     const up = n(), upMode = floorPlan(game).mode;
     QO.close(); Q.step(2);
-    const down = n(); PLAN.menuOnly = false; const always = n(); PLAN.menuOnly = true;
-    line(!w && flash === 4 && !flashMode && walking > 0 && quiet === 0 && reassigned === 0 && up === 4 && upMode && down === 0 && always === 4, 'only in the order mode: an order given shows and goes, normal play is clean, the menu up shows what stands',
-      w ? `refused: ${w}` : `just given ${flash} · ${f1(PLAN.freshSecs + 0.5)} s on ${quiet} listed with ${walking} still walking · a module's re-assign ${reassigned} · menu up ${up} · closed ${down} · the switch off ${always}`);
-    PLAN.menuOnly = menuOnly0;
-  }
-  // 18. a door held from outside: its key is dark until the men have called 'holding · on your word', then lit (PLAN.thrTold; THRTOLD_BREAK=1 = the
-  //     switch left off: this line must fail). Squad sense's finding, 10-23: pressed before that call the key cuts their slice of the room short.
-  if (!BREAK) {
-    const H = await rig(3, false), hg = H.game, HO = H.O, T = hg.doorTools, sam = hg.player.char.pos, told0 = PLAN.thrTold, lit0 = PLAN.keyLit; PLAN.keyLit = true; PLAN.thrTold = process.env.THRTOLD_BREAK !== '1';
-    const doors = [...hg.doors.list].sort((a: any, b: any) => dist(a.frameCentre, sam) - dist(b.frameCentre, sam)), tg = (d: any) => HO.targetAt([d.frameCentre[0], 0, d.frameCentre[2]]);
-    let got = 'no door took the order', early = '', late = '', toldAt = -1, setAt = -1;
-    for (const d of doors.slice(0, 6)) { const t = tg(d); if (t.kind !== 'door' || HO.give('thresholdHold', t, 'all')) continue;
-      const op = () => T.ops.find((o: any) => o.door === d && o.thr), mine = () => (floorPlan(hg).doors as any[]).find(x => x.door === d);
-      const feet = (o: any) => o.men.every((m: any) => { const A = HO.of(m); return !!A && (A.arrived || !A.post || dist(m.char.pos, A.post) < 0.5); });
-      H.until(() => { const o = op(); return !!o && o.phase === 'thr' && feet(o); }, 40); const o = op(); if (!o || o.phase !== 'thr' || !o.thr.hold) { got = `the hold never stood on ${d.def.name}`; break; }
-      setAt = hg.time; const m0 = mine(); early = m0 ? `${capOf(m0)}${o.thr.told ? ' (TOLD ALREADY)' : ''}` : 'no cap'; const wasTold = !!o.thr.told;
-      H.until(() => !!op()?.thr.told, 30); toldAt = hg.time; H.step(2); const m1 = mine(); late = m1 ? capOf(m1) : 'no cap';
-      got = `${d.def.name}: feet on the jambs, not yet called: ${early} · called ${(toldAt - setAt).toFixed(1)} s later: ${late}`;
-      line(!wasTold && !!op()?.thr.told && early === 'dark' && late === 'lit', 'a door held from outside: the key is dark until the men call that they are holding it, then lit', got); got = '';
-      break; }
-    if (got) line(false, 'a door held from outside: the key is dark until the men call that they are holding it, then lit', got);
-    PLAN.thrTold = told0; PLAN.keyLit = lit0;
+    const down = n();
+    line(!w && flash === 4 && !flashMode && walking > 0 && quiet === 0 && reassigned === 0 && up === 4 && upMode && down === 0, 'only in the order mode: an order given shows and goes, normal play is clean, the menu up shows what stands',
+      w ? `refused: ${w}` : `just given ${flash} · ${f1(PLAN.freshSecs + 0.5)} s on ${quiet} listed with ${walking} still walking · a module's re-assign ${reassigned} · menu up ${up} · closed ${down}`);
   }
   console.log(fails ? `plan-check: ${fails} FAIL` : 'plan-check: ALL PASS');
   return fails === 0;

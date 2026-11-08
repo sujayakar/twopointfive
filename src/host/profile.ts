@@ -29,7 +29,6 @@ import { DOORSHOT } from '../game/doorblast';
 import { DOORPATH } from '../game/doorpath';
 import { WALLSNAP, LEAN_GUN_M } from '../game/wallsnap';
 import { STALK } from '../game/stalk';
-import { TAPSTEP } from '../game/tapstep';
 import { CMDRING } from '../game/cmdring';
 import { SQUADTHROW } from '../game/squadthrow';
 import { moraleFromQuery } from '../game/morale';
@@ -117,8 +116,6 @@ export function pageSwitches(q: URLSearchParams): void {
   pageRows(q);   // which systems run in the Rust module (src/sim/sim.ts RUST): the rows of RUST_ON are ON in the page — pageRows below has the words
   netQuietFromQuery(q);   // the net goes quiet (game/netquiet.ts): a radio check nobody answers and a body found shake the men, the asker's calls get worse, a jumpy man's beam whips to a noise, and the last man backs to the spot his doors sit in one arc from and goes low: ON in the page; ?nonetquiet = the men as they were
   if (q.has('picture')) PICTURE.show = q.get('picture') === 'all' ? 'all' : 'cursor';   // (?picture = the floor shows the picture of the man under the cursor; ?picture=all = every teammate's ideas)
-  STALK.drag = q.get('stalkdrag') === '1' || (q.has('sneaklab') && q.get('stalkdrag') !== '0');   // …and the mouse as a stick from where the press on him was made (a prototype: up in the sneak lab and with ?stalkdrag=1, down in the plain page and on the frozen stand, so no FROZEN_HOLDS row)
-  TAPSTEP.on = q.get('tapstep') === '1' || (q.has('sneaklab') && q.get('tapstep') !== '0');   // …and crouched, the move keys are steps (game/tapstep.ts, a prototype: up in the sneak lab and with ?tapstep=1, down in the plain page and on the frozen stand, so no FROZEN_HOLDS row)
   CMDRING.hint = q.has('cmdhint') && !q.has('nocmdhint');   // …and the mark at the cursor before the key — a glyph beside it and an outline on the floor for what the key would order there (a picture only). A GAME SETTING, off unless chosen: Options ▸ Game keeps it on this machine (ui/options.ts); `?cmdhint` = on for this visit, with the ring or without
   CMDRING.goalHalf = q.get('goalhalf') !== '0';   // …and the first of them, with nothing going, sends half the squad (the pair nearer what the cursor is on) and leaves the rest with him (`?goalhalf=0` = with nothing going the goal is everyone's, as it was)
   CMDRING.twice = q.get('qtwice') !== '0';   // …and the key tapped twice on the same thing is 'fall in' for everyone, every goal gone with it; the first tap still gives its order as it comes up (`?qtwice=0` = the second tap is the key's order again, as it was)
@@ -226,10 +223,10 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'AUTOCAM.swayMove': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, no lean for the way he walks: host/autocam.ts AUTO_MODES)',
   'AUTOCAM.swayRate': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, the lean slower: host/autocam.ts AUTO_MODES)',
   'OWNBLOW.on': 'TPS_OWNBLOW=1',
-  'THROWBACK.restMark': 'none: the overlay reads it, nothing headless does',
-  'THROWBACK.reach': 'none: the overlay reads it, nothing headless does',
+  'THROWBACK.restMark': 'none: settled, the Rust view asks it no more',
+  'THROWBACK.reach': 'none: the Rust view reads it',
   'GUNWALL.on': 'TPS_GUNWALL=1',
-  'GUNWALL.mark': 'none: the overlay reads it, nothing headless does',
+  'GUNWALL.mark': 'none: settled, the Rust view asks it no more',
   'REARWATCH.on': 'TPS_REARWATCH=1',
   'STACKLINE.on': 'TPS_STACKLINE=1',
   'LANES.on': 'TPS_LANES=1',
@@ -318,7 +315,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'KITLOAD.on': 'TPS_KITLOAD=1',
   'RESCUECHECK.on': 'TPS_RESCUECHECK=1',
   'RESCUEEND.on': 'TPS_RESCUEEND=1',
-  'SNATCHOUT.on': 'TPS_SNATCHOUT=1',
   'RESCUEFLUSH.on': 'TPS_RESCUEFLUSH=1',
   'POSEMATH.singles': 'TPS_POSESINGLES=1',
   'CMDCHECK.on': 'TPS_CMDCHECK=1',
@@ -348,7 +344,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SLOTSETUP.on': 'TPS_SLOTSETUP=1',
   'SLOTSETUP.pop': 'TPS_SLOTSETUP=1',
   'SLOTSETUP.draw': 'TPS_SETUPDRAW=1 (acts only with the rule up: TPS_SLOTSETUP=1)',
-  'SLOTSETUP.mags': 'none: the box of what is in his hands reads it, nothing in the game does',
+  'SLOTSETUP.mags': 'none: nothing reads it',
   'GLASSREAL.drop': 'TPS_GLASSDROP=1 (acts only with the glass up: GLASSFX=on)',
   'GLASSREAL.place': 'TPS_GLASSPLACE=1 (acts only with the glass up: GLASSFX=on)',
   'AIMCOST.lamp': 'TPS_LAMPHIT=1',
@@ -400,14 +396,12 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'ORDERS.roundCap': 'TPS_ROUNDCAP=1',
   'ORDERS.sameWay': 'TPS_SAMEWAY=1',
   'ORDERS.trailDoors': 'TPS_TRAILDOORS=1',
-  'ORDERS.selfBody': 'TPS_SELFBODY=1',
   'PAIR.steady': 'TPS_PAIRSTEADY=1',
   'ROOMFIGHT.coverKeep': 'TPS_COVERKEEP=1',
   'ROOMFIGHT.doorShots': 'TPS_DOORSHOTS=1',
   'COVER.rearRead': 'TPS_REARREAD=1',
   'COVER.backTurn': 'TPS_BACKTURN=1',
   'UNDERFOOT.on': 'TPS_UNDERFOOT=1',
-  'ROUND.on': 'TPS_ROUND=1',
   'SHAPES.on': 'TPS_SHAPES=1',
   'COATFINISH.on': 'TPS_COATFINISH=1 (a picture only)',
   'SOLIDGLASS.on': 'TPS_SOLIDGLASS=1 (a picture only)',
@@ -510,7 +504,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'GUNHAND.on': 'TPS_GUNHAND=1',
   'INHAND.on': 'TPS_INHAND=1',
   'PACKSIDE.on': 'TPS_PACKSIDE=1',
-  'PLANLAY.on': 'TPS_PLANLAY=1',
   'STACKROOM.on': 'TPS_STACKROOM=1',
   'HANDLE.toolNear': 'TPS_TOOLNEAR=1',
   'HANDWORK.on': 'TPS_HANDWORK=1',

@@ -364,7 +364,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // THE CONSUL'S SUITE — north half his study (flag, globe, green leather, the red telephone), south half the sitting room (a hearth, tea, the blanket they sit on)
     P.room('suite');
     flag(35.45, 4.5, C.red, C.white, INK.baize);
-    P.at(29.5, 8.35, 0).box(0, 0, 0, 0.5, 0.45, 0.5, C.woodDark); for (let i = 0; i < 4; i++) P.at(29.5, 8.35, 0).box(0, 0.45, 0, 0.62, 0.5 - i * 0.003, 0.62 * Math.tan(Math.PI / 8), INK.cream, i * Q); P.at(29.5, 8.35, 0).box(0.04, 0.95, 0.02, 0.3, 0.012, 0.2, INK.baize, 0.5);
+    P.at(29.5, 8.35, 0).box(0, 0, 0, 0.5, 0.45, 0.5, C.woodDark); P.at(29.5, 8.35, 0).box(0, 0.45, 0, 2 * 0.31 * 1.026, 0.5, 2 * 0.31 * 1.026, INK.cream, 0, { round: true }); P.at(29.5, 8.35, 0).box(0.04, 0.95, 0.02, 0.3, 0.012, 0.2, INK.baize, 0.5);
     { const L = P.at(31.45, 4.6, 0); L.box(0, 0, 0.08, 2.2, 0.42, 0.7, C.plant); L.box(0, 0, -0.3, 2.2, 0.85, 0.18, C.plant); L.box(-1.02, 0.42, 0.08, 0.16, 0.2, 0.7, C.plant); L.box(1.02, 0.42, 0.08, 0.16, 0.2, 0.7, C.plant); }
     P.phone(34.3, 0.76, 6.18, 0, C.red); P.phone(34.0, 0.76, 6.18, 0);
     P.armchair(32.9, 7.55, 0, INK.baize); P.armchair(34.3, 7.55, 0, INK.baize);

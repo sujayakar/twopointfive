@@ -47,6 +47,7 @@ name = "game_run"
 version = "0.1.0"
 dependencies = [
  "game",
+ "game_start",
  "sim",
 ]
 

@@ -37,7 +37,7 @@ fn cans_row_read() -> KitRow {
 }
 
 /// `a === b` of two row values.
-fn same_value(a: &KitValue, b: &KitValue) -> bool {
+pub(super) fn same_value(a: &KitValue, b: &KitValue) -> bool {
     match (a, b) {
         (KitValue::Text(x), KitValue::Text(y)) => x == y,
         (KitValue::Num(x), KitValue::Num(y)) => x == y,
@@ -61,7 +61,7 @@ fn value_truthy(v: &KitValue) -> bool {
 }
 
 /// `String(v)`.
-fn value_text(v: &KitValue) -> String {
+pub(super) fn value_text(v: &KitValue) -> String {
     match v {
         KitValue::Text(s) => s.clone(),
         KitValue::Num(n) => js::num_str(*n),
@@ -99,7 +99,7 @@ fn amount_of(g: &mut Game, item: &str, m: &MemberKit) -> f64 {
 
 /// `row.word(v)` (kit.ts KitRow.word): the closures are gone from a row, and its field and the card's owner decide which one it was. A gun slot's is
 /// the tree's (kit.ts:916): KITTREE.on is settled on, and the two rows are only ever built with the big slot on.
-fn row_word(g: &Game, i: f64, r: &KitRow, v: &KitValue) -> String {
+pub fn row_word(g: &Game, i: f64, r: &KitRow, v: &KitValue) -> String {
     match r.field {
         KitField::Weapon if i == 0.0 => {
             let t = value_text(v);
@@ -137,7 +137,7 @@ fn row_word(g: &Game, i: f64, r: &KitRow, v: &KitValue) -> String {
 }
 
 /// `row.fixed?.(m)` (kit.ts:905): why a suppressor's row cannot be stepped, '' = it can. Only the tree's two suppressor rows have one.
-fn row_fixed(g: &Game, r: &KitRow, m: &MemberKit) -> String {
+pub fn row_fixed(g: &Game, r: &KitRow, m: &MemberKit) -> String {
     let slot = match r.field {
         KitField::SideCan => crate::gunslots::GunSlot::Secondary,
         KitField::Suppressed if tree_up(g) => crate::gunslots::GunSlot::Primary,
@@ -352,7 +352,7 @@ pub fn kit_rows(g: &mut crate::game::Game, i: f64) -> Vec<crate::kit::KitRow> {
     // (THE KEY AS THE TYPESCRIPT SPELLS IT, every part in its place (kit.ts:923): the map is carried over a start with the TypeScript's keys, and a key
     //  spelled shorter never met those rows, so the first ask after a start built each member's rows a second time under a second key)
     let (guns, tree, shells) = (guns_on(g), tree_up(g), mate_shells(g));
-    let key = alloc::format!("{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}", i, g.k.slots.on, wall_here(), true, true, true, true, g.k.bigslot.on, guns, tree, shells);
+    let key = alloc::format!("{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}", i, g.k.slots.on, true, true, true, true, true, g.k.bigslot.on, guns, tree, shells);
     if let Some(r) = g.m.kit.row_cache.get(key.clone()) { return r.clone(); }
     let r = build_rows(g, i);
     g.m.kit.row_cache.set(key, r.clone());

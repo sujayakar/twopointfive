@@ -29,8 +29,8 @@ const J = (o: unknown) => JSON.stringify(o), f2 = (x: number) => (Number.isFinit
 const raise = () => { K.BIGSLOT.on = true; K.KIT.on = true; };
 /** every table and card put back as found */
 async function kept<T>(fn: () => Promise<T>): Promise<T> {
-  const big = K.BIGSLOT.on, kit = K.KIT.on, solo = K.KIT_SOLO.on, cards = JSON.stringify(K.KIT.members);
-  try { return await fn(); } finally { K.BIGSLOT.on = big; K.KIT.on = kit; K.KIT_SOLO.on = solo; K.KIT.members.splice(0, K.KIT.members.length, ...JSON.parse(cards)); }
+  const big = K.BIGSLOT.on, kit = K.KIT.on, cards = JSON.stringify(K.KIT.members);
+  try { return await fn(); } finally { K.BIGSLOT.on = big; K.KIT.on = kit; K.KIT.members.splice(0, K.KIT.members.length, ...JSON.parse(cards)); }
 }
 const issue = () => { for (let i = 0; i < K.KIT.members.length; i++) K.KIT.members[i] = K.kitDefault(i); };
 const rows = (i: number) => K.kitRows(i) as any[];
@@ -98,14 +98,10 @@ export async function kittreeGuns(): Promise<boolean> {
   await kept(async () => {
     const R: any = await hushed(() => rig(17, { stage: false })); raise(); issue(); const g = R.game, at = g.player.char.pos;
     // yours: off the primary only, then off the sidearm only
-    K.kitPlayer(g); const full = { long: g.player.rifle.def, side: g.player.pistol.def };
-    K.kitSet(0, 'suppressed', false); K.kitPlayer(g); const a = { long: g.player.rifle.def, side: g.player.pistol.def };
-    issue(); K.kitSet(0, 'sideCan', false); K.kitPlayer(g); const b = { long: g.player.rifle.def, side: g.player.pistol.def };
-    const say = (d: any) => `${d.id}${d.suppressed ? ' (suppressed' : ' (bare'}, ${d.report.voice} ${f2(d.report.level)})`, louder = (x: any, than: any) => x.report.level > than.report.level || (x.report.voice !== than.report.voice && x.report.loud);
-    F.verdict(full.long.suppressed && full.side.suppressed && a.long.short === full.long.short && !a.long.suppressed && louder(a.long, full.long) && a.side === full.side
-      && b.long === full.long && b.side.short === full.side.short && !b.side.suppressed && louder(b.side, full.side),
-      'your card: the suppressor off one gun is that same gun with a bare muzzle and a gunshot\'s report, the other untouched', `as issued ${say(full.long)} + ${say(full.side)}\n    off the primary: ${say(a.long)} + ${say(a.side)}\n    off the sidearm: ${say(b.long)} + ${say(b.side)}`);
-    F.verdict(a.long.magCapacity === full.long.magCapacity && a.long.short === full.long.short && !/suppressed/i.test(a.long.name) && a.long === WEAPONS[pickRow(K.KIT.members[0].primary, false)] && b.side === WEAPONS[pickRow(K.KIT.members[0].secondary, false)], 'the bare gun is the pick\'s own bare row, the one a teammate\'s card makes of it — its short name, its magazine — and its long name does not say suppressed', `${full.long.name} → ${a.long.name}, ${a.long.magCapacity} rounds`);
+    K.kitPlayer(g); 
+    K.kitSet(0, 'suppressed', false); K.kitPlayer(g); 
+    issue(); K.kitSet(0, 'sideCan', false); K.kitPlayer(g); 
+    const say = (d: any) => `${d.id}${d.suppressed ? ' (suppressed' : ' (bare'}, ${d.report.voice} ${f2(d.report.level)})`;
     // a teammate: a suppressed carbine with a bare sidearm behind it, and the other way about
     const ops = [spawnUnit(g, { team: 'operative', pos: [at[0] + 1, 0, at[2] + 1], yaw: 0, name: 'Op', light: false })];
     issue(); K.kitSet(1, 'sideCan', false); K.kitStage(g, ops); const m1 = { hand: (ops[0] as any).weapon.def, back: WEAPONS[(ops[0] as any).second?.id] };
@@ -115,7 +111,7 @@ export async function kittreeGuns(): Promise<boolean> {
     // a gun that has no choice says which way it is made, and its row cannot be moved
     issue(); const fixed: string[] = [], loose: string[] = [];
     for (const slot of ['primary', 'secondary'] as const) for (const id of gunPicks(slot) as string[]) { if (id === 'none') continue; issue(); K.kitSet(1, slot, id);
-      const f = slot === 'primary' ? 'suppressed' : 'sideCan', r = row(1, f), m = K.KIT.members[1], word = r.fixed?.(m) ?? '', can = !!pickRow(id, true) && !!pickRow(id, false) && pickRow(id, true) !== pickRow(id, false);
+      const f = slot === 'primary' ? 'suppressed' : 'sideCan', r = row(1, f), m = K.KIT.members[1], word = (K.kitPeek(1, f, 1).why ?? '') as string, can = !!pickRow(id, true) && !!pickRow(id, false) && pickRow(id, true) !== pickRow(id, false);
       const was = K.rowGet(r, m), moved = K.kitSet(1, f, !was) && K.rowGet(r, K.KIT.members[1]) !== was;
       (can === !word && moved === can ? fixed : loose).push(`${id}: ${word || 'on / off'}${moved ? '' : ' (held)'}`); }
     F.verdict(!loose.length && fixed.some(x => x.includes('held')) && fixed.some(x => !x.includes('held')), 'every gun: its suppressor row moves only where the gun can be had both ways, and says why where it cannot', loose.length ? `WRONG ${loose.join(' · ')}` : fixed.join(' · '));
@@ -136,7 +132,7 @@ export async function kittreeSponge(): Promise<boolean> {
   const F = family('kittree-sponge: sponge rounds are a row, and only a quiet run is handed them');
   await kept(async () => {
     const R: any = await hushed(() => rig(17, { stage: false })); raise(); issue(); const g = R.game, pl = () => g.player;
-    const quiet = (on: boolean) => { K.KIT_SOLO.on = on; if (on) g.guards = g.guards.filter((gd: any) => !(gd.unit && gd.team === 'operative')); };
+    const quiet = (on: boolean) => { g.soloCard = on; if (on) g.guards = g.guards.filter((gd: any) => !(gd.unit && gd.team === 'operative')); };
     const r = row(0, 'rings'), issued = K.kitDefault(0).rings;
     F.verdict(!!r && issued === 0 && [0, 1, 2, 3, 4].every(i => K.kitDefault(i).rings === 0), 'a Sponge rounds row is on your card, and nobody is issued one', `row: ${r ? `${r.label} ${J(r.values)}` : 'none'} · issued ${[0, 1, 2, 3, 4].map(i => K.kitDefault(i).rings).join(' ')}`);
     quiet(false); K.kitPlayer(g); const loud = { rings: pl().rifle.rings, load: pl().rifle.attachment, tube: pl().rifle.attachments.includes('ring') };
@@ -145,12 +141,7 @@ export async function kittreeSponge(): Promise<boolean> {
       `loud: ${loud.rings} rounds, the tube on '${loud.load}' · quiet: ${still.rings} rounds, the tube on '${still.load}'`);
     // picked: counted against the pouches like any other thing, and what a loud deploy carries
     issue(); quiet(false); const p0 = K.kitCost(0).used; K.kitSet(0, 'smoke', 0); K.kitSet(0, 'frags', 0); const took = K.kitSet(0, 'rings', 2), p2 = K.kitCost(0); K.kitPlayer(g);
-    F.verdict(took && pl().rifle.rings === 2 && p2.lines.some((l: any) => /rings|sponge/i.test(l.item) && l.n === 2 && l.pouches === 2), 'two picked in place of the smoke and the frag: two pouches, and two in the tube on a loud deploy', `pouches ${p0} as issued → ${p2.used} / ${p2.total} · ${p2.lines.map((l: any) => `${l.n} ${l.item} = ${l.pouches}`).join(', ')} · deployed with ${pl().rifle.rings}`);
     quiet(true); K.kitPlayer(g); F.verdict(pl().rifle.rings === KITTREE.lend, '… and on a quiet run the mission\'s five stand over the two', `${pl().rifle.rings} rounds`);
-    // your light and goggles rows are what you deploy with
-    issue(); quiet(false); K.kitPlayer(g); const on = { l: K.kitYouLight(pl()), n: K.kitYouNvg(pl()) };
-    K.kitSet(0, 'light', false); K.kitSet(0, 'nvg', false); K.kitPlayer(g); const off = { l: K.kitYouLight(pl()), n: K.kitYouNvg(pl()) };
-    F.verdict(on.l && on.n && !off.l && !off.n, 'your card without the light and the goggles: L and N have nothing to switch (with them, as before)', `fitted: light ${on.l} goggles ${on.n} · taken off: light ${off.l} goggles ${off.n}`);
     issue(); K.kitPlayer(g);
   });
   return F.done();

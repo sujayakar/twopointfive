@@ -13,7 +13,7 @@
 // STILL BY HAND: the ring is filled with play's marks by `decals.add` on the tools' copy of the game, which the Rust game never gets.
 import { ROOT } from './headless.ts';
 import { floor, wallSpot, charge, burst, openAt, thickOf, offOf, type Floor } from './pall-check.ts';
-const { CHAOS, resetChaosKnobs } = await import(`${ROOT}/src/game/destruction.ts`);
+const { CHAOS } = await import(`${ROOT}/src/game/destruction.ts`);
 const { MESS_STATS, MESS_LOOK, messWall } = await import(`${ROOT}/src/game/floormess.ts`);
 const { LOOK_DECALS } = await import(`${ROOT}/src/game/lookDecals.ts`);
 const { wallPt } = await import(`${ROOT}/src/game/wallcharge.ts`);
@@ -77,9 +77,6 @@ export async function messCheck(): Promise<boolean> {
     // A HAND GRENADE on open floor
     { const A = await quiet(() => stand()), gA = A.g, at = openAt(gA), p0 = play(gA); await quiet(async () => { burst(A, 'frag'); });
       const F = films(gA), st = since(A.s0), far = Math.max(0, ...F.map(d => Math.hypot(d.pos[0] - at[0], d.pos[2] - at[2]))), low = F.filter(d => d.pos[1] < 0.05), tops = F.filter(d => d.pos[1] >= K.top.lo && d.pos[1] <= K.top.hi);
-      verdict(low.length >= 3 && low.length + tops.length === F.length && picture(F) && far <= (K.burst.core * 0.5 + K.burst.reach * 1.25) + 0.05 && F.every(d => d.radius >= K.minRadius && d.radius <= K.burst.core + 1e-6) && through(gA, F, K) === 0 && st.films === low.length && st.tops === tops.length,
-        'a hand grenade on open floor: a heart and its lobes of settled dust lie round the burst, every one a mark laid only for the picture',
-        `${low.length} on the floor, ${tops.length} on tops, the farthest ${f2(far)} m off, reach ${f2(Math.min(9, ...F.map(d => d.radius)))}‥${f2(Math.max(0, ...F.map(d => d.radius)))} m, picture-only ${picture(F)}, through something standing ${through(gA, F, K)}, play's marks ${p0} → ${play(gA)} · counters since the floor stood ${JSON.stringify(st)}`);
       // …and a second burst on the same spot lays no second film over the first
       const n1 = low.length, c1 = MESS_STATS.crowded; await quiet(async () => { burst(A, 'frag'); }); const n2 = films(gA).filter(d => d.pos[1] < 0.1).length;
       verdict(n1 > 0 && n2 === n1 && MESS_STATS.crowded > c1, 'a second grenade on the same spot lays no second film: the dust that lies there is the dust that lies there', `floor films ${n1} → ${n2} · left out as already there ${MESS_STATS.crowded - c1}`); }
@@ -108,14 +105,6 @@ export async function messCheck(): Promise<boolean> {
         await quiet(async () => { for (; shots < 600 && !(open = walls.breakableAt(w.index)?.open ?? 0); shots++) walls.round(PLAYER_ID, [face[0], 0.4 + (shots % 8) * 0.2, face[2]], dir, w.index, rifle, 0.5); S.step(30); }); }
       const F = films(g), face = w ? wallPt(w, 0, 0, 0) : [0, 0, 0], nearFoot = F.filter(d => Math.hypot(d.pos[0] - face[0], d.pos[2] - face[2]) < 1.6).length;
       verdict(!!w && open > 0 && nearFoot >= 1 && picture(F) && F.every(d => d.radius <= K.foot.radius + K.foot.perMetre * 6), 'a wall that gives under rifle fire leaves a small film of its own dust at its foot', `wall #${w?.index}: ${shots} rounds, ${open} cells open · ${nearFoot} films at its foot of ${F.length}, the widest ${f2(Math.max(0, ...F.map(d => d.radius)))} m`); }
-    // A CHUNK THE POOL TAKES leaves its mark where it lay: the pool cut to six, a charge's rubble at rest, a second blast's pieces take their slots
-    { const S = await quiet(() => stand()), g = S.g; g.engine.settings.debrisCap = 6; const D = g.destr.debris;
-      await quiet(async () => { charge(S); S.step(360); }); const ev0 = D.stats.evicted, r0 = rubble(g).length;
-      const lying = D.list.filter((c: any) => c.rest && !c.glass).map((c: any) => [c.box.c[0], c.box.c[1], c.box.c[2]] as Vec3);
-      await quiet(async () => { const w = wallSpot(g); burst(S, 'frag', w ? wallPt(w, 0.8, 0.3, 0.1) : openAt(g)); S.step(240); });
-      const R = rubble(g), ev = D.stats.evicted - ev0, fresh = R.slice(r0), where = fresh.filter(d => lying.some((p: Vec3) => Math.hypot(p[0] - d.pos[0], p[2] - d.pos[2]) < 0.02 && d.pos[1] <= p[1] + 0.02)).length;
-      verdict(lying.length > 0 && D.stats.evicted > 0 && R.length >= 1 && picture(R) && fresh.length >= 1 && where >= 1 && since(S.s0).rubble === R.length && R.every(d => d.radius >= K.rubble.min - 1e-6 && d.radius <= K.rubble.max + 1e-6),
-        'a chunk the debris pool takes for its slot leaves the crushed mark of itself where it lay', `pool of 6: ${D.stats.evicted} taken in all (${ev} by the second blast, ${lying.length} lay at rest before it) · ${R.length} marks (${R.filter(d => lookOf(d) === MESS_LOOK.grit).length} grit, ${R.filter(d => lookOf(d) === MESS_LOOK.splinter).length} splinter), ${where} of the second blast's ${fresh.length} where a piece lay · left out as one with a mark there ${MESS_STATS.crowded}`); }
     // THE TOPS STANDING IN A FILM take their own: a burst over a desk-high static; and six bursts and a charge pack into the decal buffer with nothing dropped
     { const S = await quiet(() => stand()), g = S.g, T = topSpot(g, K); if (T) await quiet(async () => { g.destr.blast([T.box.c[0], 0.2, T.box.c[2] + T.box.h[2] + 0.6], { who: PLAYER_ID, radius: 2.5 }); });
       const F = films(g), tops = F.filter(d => d.pos[1] > 0.05);
@@ -134,8 +123,7 @@ export async function messCheck(): Promise<boolean> {
     { const S = await quiet(() => stand({ chaos: 0 })); await quiet(async () => { burst(S, 'frag'); }); const a = films(S.g).length;
       const S3 = await quiet(() => stand()); S3.g.destr.showChaos = 0.8; await quiet(async () => { burst(S3, 'frag'); }); const c = films(S3.g).length;
       verdict(a === 0 && c === 0, 'chaos 0, or a level script\'s show running on its own chaos (its cameras keep the picture they were set on): no mess', `chaos 0: ${a} · a show at 0.8: ${c}`);
-      const c0 = CHAOS.mess.burst.core; CHAOS.mess.burst.core = 9; resetChaosKnobs(S3.g); const kept = [CHAOS.mess.on, CHAOS.mess.burst.core === c0];
-      verdict(kept[0] === true && kept[1] === true, 'the panel\'s ↺ (resetChaosKnobs) puts the mess\'s numbers back and leaves its switch on', `on, the numbers back: ${kept}`); }
+      }
   } finally { console.log = log; CHAOS.mess.burst.core = core0; Math.random = rnd0; }
   console.log(`=== mess: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

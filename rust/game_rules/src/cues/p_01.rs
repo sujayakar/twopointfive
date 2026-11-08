@@ -613,7 +613,7 @@ pub fn bubbles_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<
 // ---------------------------------------------------------------- the words
 
 /// A place as a line says it.   (cues.ts Cues.at)
-pub fn cues_at(g: &mut crate::game::Game, p: V3) -> crate::cues::CuesAt {
+pub fn cues_at(g: &crate::game::Game, p: V3) -> crate::cues::CuesAt {
     let n = crate::dialogue::place_name(g, p);
     let at = if n.starts_with("outside ") { n.clone() } else { alloc::format!("in {}", n) };
     CuesAt { the: n, at }
@@ -672,13 +672,13 @@ pub fn cues_kind_busy(g: &mut crate::game::Game, kind: crate::cues::CueKind) -> 
 }
 
 /// Can he speak for his squad?   (cues.ts Cues.fit)
-pub fn cues_fit(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn cues_fit(g: &crate::game::Game, gd: GuardId) -> bool {
     let t = g.time;
     g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && t >= g.gd[gd].dazzled_until && t >= g.gd[gd].stagger_until && !crate::runner::runner_mute(g, gd)
 }
 
 /// Who says a squad's word: the man the note names, else one holding, else the first fit.   (cues.ts Cues.squadVoice)
-pub fn cues_squad_voice(g: &mut crate::game::Game, name: &str, by: &str) -> Option<GuardId> {
+pub fn cues_squad_voice(g: &crate::game::Game, name: &str, by: &str) -> Option<GuardId> {
     let mut men = Vec::new();
     for m in crate::enemysquads::squad_men(g, name) {
         if cues_fit(g, m) { men.push(m); }
@@ -757,7 +757,7 @@ pub fn cues_tick(g: &mut crate::game::Game) {
             let drawn_again = !m_rally.is_nan() && !d_rally.is_nan() && d_rally > m_rally + 1.0;
             if !hold || t - noise_t > 6.0 {
                 cues_man(g, gd).ep = -1.0;
-            } else if !crate::owner::has_him(g, gd, crate::owner::own().squad) && !crate::owner::has_him(g, gd, crate::owner::own().press) && !crate::pressure::press_keeps_home(g, d, None) && sight > 3.0 && t - cues_man(g, gd).again_t > g.k.cues.again_secs && noise_at.is_some()
+            } else if !crate::owner::has(g, gd, crate::owner::by::SQUAD) && !crate::owner::has(g, gd, crate::owner::by::PRESS) && !crate::pressure::press_keeps_home(g, d, None) && sight > 3.0 && t - cues_man(g, gd).again_t > g.k.cues.again_secs && noise_at.is_some()
                 && (drawn_again || (d_rally.is_nan() && t - cues_man(g, gd).ep >= g.k.cues.stay_secs && t - noise_t < 1.5))
             {
                 let at = cues_at(g, noise_at.unwrap());

@@ -42,18 +42,12 @@ pub fn response_of(g: &crate::game::Game) -> Option<crate::scene_scenarios::Resp
 /// A squad's room clear under way on a level whose block carries `raid`.   (qrf.ts raid)
 pub fn raid(g: &crate::game::Game) -> bool {
     if !g.night_breach.active || g.rescue.active { return false; }
-    if !response_of(g).map_or(false, |r| r.raid.is_some()) { return false; }
-    let snatch_level = g.level.scenarios.as_ref().map_or(false, |s| s.snatch.is_some());
-    !snatch_level || crate::snatchout::snatch_out_on(g)
+    response_of(g).map_or(false, |r| r.raid.is_some())
 }
 
-/// The raid is over: the room clear ended, or on a snatch that ends in the van, the snatch did.   (qrf.ts raidOver)
+/// The raid is over: the room clear ended.   (qrf.ts raidOver)
 pub fn raid_over(g: &crate::game::Game) -> bool {
-    if crate::snatchout::snatch_out_ruled(g) {
-        g.snatch.end.is_some() || g.room_clear.end == Some(crate::roomclear::RoomClearEnd::Wiped)
-    } else {
-        g.room_clear.end.is_some()
-    }
+    g.room_clear.end.is_some()
 }
 
 /// The side the team stands on: the shift's, or in a raid the defenders'.   (qrf.ts sideOfTeam)
@@ -62,7 +56,7 @@ pub fn side_of_team(g: &crate::game::Game) -> crate::qrf::SideOfTeam {
 }
 
 /// A raid: the men who can call it in.   (qrf.ts callers)
-pub fn callers(g: &mut crate::game::Game) -> Vec<GuardId> {
+pub fn callers(g: &crate::game::Game) -> Vec<GuardId> {
     let id = response_of(g).and_then(|r| r.raid).and_then(|a| a.room).filter(|s| !s.is_empty());
     let of: Vec<GuardId> = match &id {
         Some(id) => match g.room_clear.rooms.iter().find(|r| r.def.id == *id) {
@@ -73,7 +67,7 @@ pub fn callers(g: &mut crate::game::Game) -> Vec<GuardId> {
     };
     let mut out = Vec::new();
     for x in of {
-        if g.gd[x].state != crate::game::GuardState::Dead && g.gd[x].held.is_none() && !crate::owner::has_him(g, x, crate::owner::own().runner) && g.guards.contains(&x) {
+        if g.gd[x].state != crate::game::GuardState::Dead && g.gd[x].held.is_none() && !crate::owner::has(g, x, crate::owner::by::RUNNER) && g.guards.contains(&x) {
             out.push(x);
         }
     }
@@ -81,7 +75,7 @@ pub fn callers(g: &mut crate::game::Game) -> Vec<GuardId> {
 }
 
 /// A raid: the caller who heard gunfire and has lived `callSecs` since.   (qrf.ts raidVoice)
-pub fn raid_voice(g: &mut crate::game::Game) -> Option<GuardId> {
+pub fn raid_voice(g: &crate::game::Game) -> Option<GuardId> {
     for x in callers(g) {
         let heard = g.qrf.heard_at.get(x).copied().unwrap_or(f64::INFINITY);
         if g.time - heard >= g.k.response.call_secs { return Some(x); }
@@ -471,9 +465,9 @@ pub fn best_fix(g: &crate::game::Game) -> Option<crate::qrf::BestFix> {
 }
 
 /// Is this man on the defenders' net?   (qrf.ts onTheirNet)
-pub fn on_their_net(g: &mut crate::game::Game, x: GuardId) -> bool {
+pub fn on_their_net(g: &crate::game::Game, x: GuardId) -> bool {
     let side = team_of(side_of_team(g));
-    if g.gd[x].team != side || g.gd[x].civ.is_some() || g.gd[x].state == crate::game::GuardState::Dead || g.gd[x].held.is_some() || crate::owner::has_him(g, x, crate::owner::own().runner) { return false; }
+    if g.gd[x].team != side || g.gd[x].civ.is_some() || g.gd[x].state == crate::game::GuardState::Dead || g.gd[x].held.is_some() || crate::owner::has(g, x, crate::owner::by::RUNNER) { return false; }
     !raid(g) || g.qrf.men.contains(&x) || callers(g).contains(&x)
 }
 
@@ -528,7 +522,7 @@ pub fn fix_of(g: &crate::game::Game) -> Option<crate::qrf::FixOf> {
 }
 
 /// The brief as control gives it with the ETA.   (qrf.ts brief)
-pub fn brief(g: &mut crate::game::Game) -> String {
+pub fn brief(g: &crate::game::Game) -> String {
     let w = net_word(g);
     let f = match fix_of(g) { Some(f) => f, None => return String::from("no word on where") };
     let age = g.time - f.t;

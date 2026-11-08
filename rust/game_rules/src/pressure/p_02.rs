@@ -126,8 +126,7 @@ pub fn stand_off_spot(g: &mut crate::game::Game, d: RoomfightDefId, t: Roomfight
             if tries >= STAND_OFF_TRIES || best.map_or(false, |b| k.d >= b.1) { break; }
             if k.ok == Some(false) || k.way == Some(None) || taken.iter().any(|q| flat(*q, k.p) < apart || off_line(k.p, *q, mouth) < lane || off_line(*q, k.p, mouth) < lane) { continue; }
             if k.ok.is_none() {
-                let energy = crate::glasspen::side_shot_energy(g, team);
-                k.ok = Some(!crate::scene_collision::shot_blocked(g, [k.p[0], 1.35, k.p[2]], mouth, Some(0.02), energy));
+                k.ok = Some(!crate::scene_collision::shot_blocked(g, [k.p[0], 1.35, k.p[2]], mouth, Some(0.02), None));
             }
             if k.ok != Some(true) { continue; }
             if dark {
@@ -435,9 +434,9 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
         && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
         && g.time - df(g, d).noise_t < g.k.pressure.memory_secs && g.time - g.gd[gd].last_seen_t > 3.0
         && g.time - state_of(g).done_at.get(d).copied().unwrap_or(-100.0) > again && !state_of(g).outs.iter().any(|o| o.def == d)
-        && !crate::owner::has_him(g, gd, crate::owner::own().stand)
+        && !crate::owner::has(g, gd, crate::owner::by::STAND)
         && !{ let n = df(g, d).noise_at; crate::lanes::lane_bars(g, gd, n) }
-        && !crate::owner::has_him(g, gd, crate::owner::own().squad)
+        && !crate::owner::has(g, gd, crate::owner::by::SQUAD)
         && !(g.k.digin.on && crate::digin::dig_in_stays(g, gd));
     // the last of them alive has no others to go to, and nobody on the net to call: he keeps his room
     let lone = last_alone(g, d);
@@ -990,7 +989,7 @@ pub fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
             !other
         }
         && !g.gd[gd].stays_in_rooms
-        && !crate::owner::has_him(g, gd, crate::owner::own().stand);
+        && !crate::owner::has(g, gd, crate::owner::by::STAND);
     if !ok { state_of(g).last.delete(d); return; }
     let r = room.unwrap();
     let mut why: Option<HookedWhy> = None;

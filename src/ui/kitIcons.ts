@@ -54,7 +54,7 @@ const OWN_GUN: Record<string, string> = {
   // Glock 18: the pistol, bare, with the long magazine standing out of the foot of its grip
   g18: '<g transform="translate(0 -5)">' + PISTOL + '</g><path d="M16.9 24.6h8l-1.9 6.8h-8z"/>' + dark('M16.6 24.6h8.3l-0.3 1.2h-8.3z', 0.45),
 };
-// (a gun that wears a suppressor is drawn with it — ui/kitCard.ts KIT_CAN: the can on the muzzle, one dark band where it screws on; no can fits the shotgun)
+// (a gun that wears a suppressor is drawn with it: the can on the muzzle, one dark band where it screws on; no can fits the shotgun)
 const GUN_CAN: Record<string, string> = {
   rifle: '<path d="M52.4 11.6h10a1.2 1.2 0 0 1 1.2 1.2v3.6a1.2 1.2 0 0 1-1.2 1.2H52.4z"/><path d="M54.2 11.6h1.2v6h-1.2z" fill="#0c0b09" opacity="0.5"/>',
   pistol: '<path d="M51 9.4h11.4a1.2 1.2 0 0 1 1.2 1.2v4.8a1.2 1.2 0 0 1-1.2 1.2H51z"/><path d="M52.8 9.4h1.2v7.2h-1.2z" fill="#0c0b09" opacity="0.5"/>',

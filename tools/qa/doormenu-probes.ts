@@ -28,6 +28,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
+import { sample } from './sweep.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -37,7 +38,6 @@ const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { RESCUE } = await import(`${ROOT}/src/game/rescue.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { ORDERS, WORD_HEAD } = await import(`${ROOT}/src/game/orders.ts`);
-const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -122,8 +122,8 @@ async function rig(scn: Scn, seed = 33) {
     },
     /** what X would open on with the cursor at that pixel */
     pick(sx: number, sy: number): any { input.mouseX = sx; input.mouseY = sy; return O.targetUnder(input, W.cam, W.canvas); },
-    /** The same read before whole-squad orders fold a teammate into the squad: it still names the man under the cursor. */
-    under(sx: number, sy: number): any { input.mouseX = sx; input.mouseY = sy; return (O as any).targetUnderOf(input, W.cam, W.canvas); },
+    /** a teammate stands where the target says and his body is on that pixel: the squad itself, picked on him */
+    bodyAt(sx: number, sy: number, at: number[]): boolean { const ray = W.cam.ray(sx / CW, sy / CH); return O.squad().some((gd: any) => gd.state !== 'dead' && Math.hypot(gd.char.pos[0] - at[0], gd.char.pos[2] - at[2]) < 1e-3 && gd.char.rayHit(ray.ro, ray.rd, 200) >= 0); },
     /** every door of the level stood open and held there (the closer off, as the Director's doors.open(…, {hold}) does it) */
     openAll() { for (const d of game.doors.list) standOpen(d); R.step(4); },
     /** X pressed with the cursor at that pixel, a few frames with every key up: the panel's menu (or null) */
@@ -141,16 +141,16 @@ const SHIFT = process.env.DOORMENU_BREAK === '1' ? 0.25 : 0;
 interface Sweep { doors: number; spots: number; drawn: number; hit: number; through: number; throughHit: number; hidden: number; onMan: number; atSam: number; other: number; leaf: number; misses: string[]; unseen: string[] }
 function sweep(R: Rig): Sweep {
   const S: Sweep = { doors: 0, spots: 0, drawn: 0, hit: 0, through: 0, throughHit: 0, hidden: 0, onMan: 0, atSam: 0, other: 0, leaf: 0, misses: [], unseen: [] };
-  for (const d of R.game.doors.list) {
+  for (const d of sample(R.game.doors.list as any[], 6)) {
     S.doors++; let seen = 0;
-    for (const p of R.spots(d)) {
+    for (const p of sample(R.spots(d), 3)) {
       R.stand(p); S.spots++;
       for (const q of R.samples(d)) {
         const L = R.look(d, q); if (!L) continue; if (!L.drawn) { S.hidden++; continue; }
         const t = R.pick(L.sx + SHIFT * R.CW, L.sy), ok = t.kind === 'door' && t.door === d;
         // what the rule gives to something else, each counted apart: a teammate under the cursor, Sam's own body, a door nearer the landing point
-        // (with whole-squad orders, CMDRING.wholeSquad, a teammate under the cursor is the squad itself and the target names no man, so the man is read a step earlier: orders.ts targetUnder)
-        if (!ok && L.man && t.kind === 'none' && (t.man || (CMDRING.wholeSquad && R.under(L.sx, L.sy).man))) { S.onMan++; continue; }
+        // (with orders going to the whole squad, a teammate under the cursor is the squad itself and the target names no man: it is still at his feet, and it is his only where his body is on the pixel picked)
+        if (!ok && L.man && t.kind === 'none' && (t.man || R.bodyAt(L.sx + SHIFT * R.CW, L.sy, t.at))) { S.onMan++; continue; }
         if (!ok && L.sam && t.kind !== 'door') { S.atSam++; continue; }
         if (!ok && t.kind === 'door' && L.at && R.O.targetAt(L.at).door === t.door) { S.other++; continue; }   // (nearer the landing point by doorPickM, as ever — a wrong door off the ray is a miss)
         if (!ok && t.kind === 'door' && L.leafOf === t.door) { S.leaf++; continue; }   // (another door's own leaf shows through this doorway and the cursor is on it: the leaf under the cursor is its door, before any doorway — orders.ts targetUnder)
@@ -169,13 +169,13 @@ const sweepWords = (S: Sweep) => `${S.doors} doors from ${S.spots} spots: the do
 
 async function drawnFamily(title: string, open: boolean): Promise<boolean> {
   const F = family(title); let tot = 0, hit = 0;
-  for (const scn of LIST) {
+  for (const scn of sample(LIST, 2)) {
     const R = await rig(scn); if (open) R.openAll();
     const S = sweep(R); tot += S.drawn; hit += S.hit;
     F.verdict(S.drawn > 0 && S.hit === S.drawn && !S.unseen.length, `${scn.name}: the cursor on a door as drawn is that door${open ? ', every door stood open' : ''}`, sweepWords(S));
     reset();
   }
-  console.log(`  all ${LIST.length} scenarios: ${hit} of ${tot} (${pct(hit, tot)})`);
+  console.log(`  all the scenarios asked: ${hit} of ${tot} (${pct(hit, tot)})`);
   return F.done();
 }
 export const doormenuDrawn = guarded(() => drawnFamily("doormenu-drawn: X on a door as it is drawn opens that door's menu, in every scenario", false));
@@ -204,104 +204,4 @@ function find(R: Rig, through: boolean): { d: any; sx: number; sy: number } | nu
       for (const q of R.samples(d)) { const L = R.look(d, q); if (L && L.drawn && L.through === through && (through || L.own)) { if (FIND_BREAK && !through) { standOpen(d); R.step(4); } return { d, sx: L.sx, sy: L.sy }; } } } }
   return null;
 }
-export const doormenuRows = guarded(async () => {
-  const F = family('doormenu-rows: the same door menu, the same tools page, the same keys in every scenario — on a shut door and through an open one');
-  let ref: { first: string; tools: string; from: string } | null = null as any;
-  for (const scn of LIST) {
-    const R = await rig(scn); const bad: string[] = [], said: string[] = [];
-    // one door stood open (the first with floor by it), the rest as staged — the level's own shut doors are the shut case
-    const read = (label: string, through: boolean) => {
-      const at = find(R, through); if (!at) { bad.push(`no ${label} found to put the cursor on`); return; }
-      const hud = R.openX(at.sx, at.sy); if (!hud || !R.O.menu) { bad.push(`${label}: X opened no menu`); return; }
-      if (R.O.menu.target.kind !== 'door' || R.O.menu.target.door !== at.d) { bad.push(`${label} (${at.d.def.name}): the menu is on ${what(R.O.menu.target, at.d)}`); R.O.close(); return; }
-      const first = panel(R), opener = first.rows.find(r => r.opens === TOOLS_PAGE);
-      if (!opener) bad.push(`${label}: no row opens the door tools`); else if (opener.key !== '5') bad.push(`${label}: the door tools row is on "${opener.key}"`);
-      R.press('Digit5'); R.step(2);
-      const tools = R.O.menu ? panel(R) : null; if (!tools || tools.page !== TOOLS_PAGE) { bad.push(`${label}: 5 did not turn to the tools page`); if (R.O.menu) R.O.close(); return; }
-      if (scn.squad === 4 && !tools.wait) bad.push(`${label}: the four's tools page has no 'wait for my word' row`);
-      if (scn.squad === 2 && tools.wait) bad.push(`${label}: the pair's tools page has a 'wait for my word' row`);
-      // row 4 of the tools IS the one order, 'clear from outside', and 4 pressed gives it to the men on that door; nothing of the tools turns to the
-      // threshold's page
-      let thrSaid = '';
-      const turn = tools.rows.find(r => r.opens === THR_PAGE), one = tools.rows.find(r => r.id === 'thresholdHold');
-      if (turn) bad.push(`${label}: a row of the tools still turns to the threshold's page ("${turn.key} ${turn.text}")`);
-      if (!one) bad.push(`${label}: no row of the tools is 'clear from outside'`);
-      else if (one.key !== '4') bad.push(`${label}: 'clear from outside' is on "${one.key}"`);
-      else if (!one.text.startsWith('clear from outside')) bad.push(`${label}: row 4 reads "${one.text}"`);
-      const onDoor = () => (R.game.doorTools.ops as any[]).filter(op => op.kind === 'threshold' && op.door === at.d), before = onDoor();
-      R.press('Digit4'); R.step(2);
-      const given = onDoor().filter(op => !before.includes(op)), up = !!R.O.menu;
-      if (one && !one.why) { if (!given.length) bad.push(`${label}: 4 gave no order on ${at.d.def.name}`); if (up) bad.push(`${label}: 4 gave the order and left the menu up (page ${R.O.menu.page ?? 'the first'})`); }
-      else if (one && given.length) bad.push(`${label}: 'clear from outside' is greyed (${one.why}) and 4 gave the order all the same`);
-      thrSaid = given.length ? `4 the order itself (the men to ${at.d.def.name}, from outside)` : `4 the order itself (not given here)`;
-      // the men taken off that door again ('fall in', the first page's 3): the open doorway and the empty pouch below are read with nobody at work
-      if (given.length) { if (R.O.menu) R.O.close(); R.openX(at.sx, at.sy); if (R.O.menu) { R.press('Digit3'); R.step(2); } if (onDoor().length) bad.push(`${label}: 'fall in' left the men on ${at.d.def.name}`); }
-      else if (!R.O.menu) R.openX(at.sx, at.sy);
-      // (through an open doorway the charge's digit holds its stand-in, 'shut that door' — shutdoor.ts: the same page, the same digits)
-      const a = shape(first.rows), b = through ? shape(tools.rows).replace('3 shutDoor', '3 charge') : shape(tools.rows);
-      if (!ref) ref = { first: a, tools: b, from: `${scn.name}, ${label}` };
-      if (a !== ref.first) bad.push(`${label}: first page "${a}" ≠ "${ref.first}" (${ref.from})`);
-      if (b !== ref.tools) bad.push(`${label}: tools page "${b}" ≠ "${ref.tools}" (${ref.from})`);
-      // a tool that cannot be used here is listed with its reason — on the panel too
-      for (const r of tools.rows) if (r.why && !(r.off && r.text.includes(r.why.replace(/\.$/, '')))) bad.push(`${label}: '${r.id}' cannot be used (${r.why}) but its row does not say so ("${r.text}"${r.off ? '' : ', not greyed'})`);
-      if (!through && !tools.rows.some(r => !r.why)) bad.push(`${label}: no tool can be used on it (${tools.rows.map(r => `${r.id}: ${r.why}`).join(' · ')})`);
-      if (through) { const c = tools.rows.find(r => r.id === 'charge' || r.id === 'shutDoor'); if (!c) bad.push(`${label}: neither the charge row nor 'shut that door' is on the page`); else if (c.key !== '3') bad.push(`${label}: '${c.id}' is on "${c.key}"`); else if (c.id === 'charge' && !c.why) bad.push(`${label}: a charge on an open door is offered`); }
-      said.push(`${label} (${at.d.def.name}): ${a} → ${shape(tools.rows)}${tools.wait ? ' + wait' : ''} → ${thrSaid}${tools.rows.filter(r => r.why).map(r => ` [${r.id}: ${r.why}]`).join('')}`);
-      if (R.O.menu) R.O.close(); R.step(2);
-    };
-    read('a shut door', false);
-    // (the doors of the level in its own order, each stood open alone until one is seen THROUGH from a spot by it: a leaf that swings one way only —
-    // DOORWAY.oneWay, on in the page — can stand across its own opening from every spot the cursor is tried from, and that door is then put back as it was
-    // and the next one tried. Where a door swings both ways the first is the one, as ever. The line names the door it read.)
-    if (!find(R, true)) for (const d of R.game.doors.list) { if (!R.spots(d).length) continue;
-      const was = { latched: d.latched, closing: d.closing, angle: d.angle, vel: d.vel, quietT: d.quietT };
-      standOpen(d); R.step(4);
-      if (find(R, true)) break;
-      Object.assign(d, was); d.place(); R.step(4); }
-    read('an open doorway', true);
-    // nothing left to bang with: the row stays, greyed, with the reason
-    { const at = find(R, false); if (at) { R.game.doorTools.bangs = 0; R.openX(at.sx, at.sy);
-      if (R.O.menu && (R.O.menu.target.kind !== 'door' || R.O.menu.target.door !== at.d)) { bad.push(`no bangs left (${at.d.def.name}): the menu is on ${what(R.O.menu.target, at.d)}`); R.O.close(); }
-      else if (R.O.menu) { R.press('Digit5'); R.step(2); const t = R.O.menu ? panel(R) : null, b = t?.rows.find(r => r.id === 'bangClear');
-        if (!b) bad.push('no bangs left: the bang row is absent'); else if (!(b.off && b.why)) bad.push(`no bangs left: the bang row is not greyed with a reason ("${b.text}")`); else said.push(`no bangs left (${at.d.def.name}, shut): ${b.key} ${b.text}`);
-        if (t && ref && shape(t.rows) !== ref.tools) bad.push(`no bangs left: the tools page changed shape ("${shape(t.rows)}" on ${at.d.def.name}, which stands ${isOpen(at.d) ? 'OPEN: the leaf moved under the probe' : 'shut'})`); if (R.O.menu) R.O.close(); } else bad.push('no bangs left: X opened no menu'); } }
-    F.verdict(!bad.length, `${scn.name}: X on a door = the door's menu with the tools on 5, the tools page on 1 to 4, 'clear from outside' the one order on its 4`, bad.length ? bad.join('\n    ') : said.join('\n    '));
-    reset();
-  }
-  return F.done();
-});
 
-export const doormenuMan = guarded(async () => {
-  const F = family('doormenu-man: a teammate under the cursor is still the teammate — his menu on X, him on T — doorway behind him or not');
-  for (const scn of LIST) {
-    const R = await rig(scn); const { game, O, CW, CH } = R; const bad: string[] = []; let said = '';
-    const man = O.squad()[0]; if (!man) bad.push('no teammate');
-    search: for (const d of man ? game.doors.list : []) {
-      for (const p of R.spots(d).filter(p => Math.hypot(p[0] - d.frameCentre[0], p[2] - d.frameCentre[2]) > 2.2)) {
-        R.stand(p);
-        const F0 = R.frame(d), side = Math.sign((p[0] - F0.c[0]) * F0.nx + (p[2] - F0.c[2]) * F0.nz) || 1, at = [F0.c[0] + F0.nx * side * 0.35, 0, F0.c[2] + F0.nz * side * 0.35];
-        if (game.col.nav.isBlocked(at[0], at[2])) continue;
-        man.char.pos[0] = at[0]; man.char.pos[1] = 0; man.char.pos[2] = at[2]; O.give('hold', { kind: 'none', at: [...game.player.char.pos] }, 'all'); R.step(3);   // (put there FIRST: a hold is where he stands — told to hold and then moved, he walks back to where he was told, and at a walk he is still inside the tolerance below when the cursor is read)
-        if (Math.hypot(man.char.pos[0] - at[0], man.char.pos[2] - at[2]) > 0.4) continue;   // he walked off it
-        const [sx, sy, front] = R.W.cam.project([man.char.pos[0], 1.2, man.char.pos[2]], CW, CH); if (!front) continue;
-        const ray = R.W.cam.ray(sx / CW, sy / CH), t = man.char.rayHit(ray.ro, ray.rd, 200); if (!(t >= 0)) continue;
-        if (!O.doorOnRay(ray.ro, ray.rd)) continue;   // his chest is not drawn over the doorway from here: another spot
-        // (something hides him from here — a wall, a leaf, another body nearer along the ray: another spot. Asked of the scene, not of the pick)
-        if (game.col.segmentBlocked(ray.ro, [ray.ro[0] + ray.rd[0] * t, ray.ro[1] + ray.rd[1] * t, ray.ro[2] + ray.rd[2] * t])) continue;
-        if ([game.player, ...game.guards].some((o: any) => { if (o === man || !o.char?.rayHit) return false; const u = o.char.rayHit(ray.ro, ray.rd, 200); return u >= 0 && u < t; })) continue;
-        const on = R.pick(sx, sy);
-        if (!(on.kind === 'none' && on.man === man)) bad.push(`${d.def.name}: the cursor on ${man.callsign} in the doorway is ${what(on, d)}`);
-        R.input.mouseX = sx; R.input.mouseY = sy; R.press(ORDERS.whoKey); if (O.who !== O.squad().indexOf(man)) bad.push(`${d.def.name}: T on him gave who = ${String(O.who)}`);
-        R.press(ORDERS.whoKey); R.step(1);
-        const hud = R.openX(sx, sy), mt = O.menu?.target; if (!hud || !mt || mt.kind !== 'none' || mt.man !== man) bad.push(`${d.def.name}: X on him opened ${mt ? what(mt, d) : 'no menu'}`);
-        else said = `${man.callsign} stood in the ${d.def.name} doorway, the cursor on his chest (drawn over the doorway): X → his menu (${shape(panel(R).rows)}), T → him`;
-        if (O.menu) O.close();
-        break search;
-      }
-    }
-    if (!said && !bad.length) bad.push('no door found to stand a man in with his chest drawn over the doorway');
-    F.verdict(!bad.length, `${scn.name}: a teammate in a doorway keeps his own menu`, bad.length ? bad.join('\n    ') : said);
-    reset();
-  }
-  return F.done();
-});

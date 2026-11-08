@@ -51,13 +51,13 @@ pub fn pair_orders_quiet(g: &Game, seat: &crate::seats::SeatRef) -> bool {
 }
 
 /// a man an order can be about: standing, on the other side from Sam, not in Sam's arm, and seen   (PairOrders.isFoe)
-pub fn pair_orders_is_foe(g: &mut Game, h: GuardId) -> bool {
+pub fn pair_orders_is_foe(g: &Game, h: GuardId) -> bool {
     let team = g.gd[h].team;
     g.gd[h].state != crate::game::GuardState::Dead
         && team != crate::teams::Team::Operative
         && crate::teams::is_hostile(g, crate::teams::Team::Player, team)
         && g.gd[h].held.is_none()
-        && !crate::fogofwar::fog_of_war_hidden(g, h)
+        && !crate::fogofwar::fog_of_war_hides(g, h)
 }
 
 /// he has noticed somebody: roused, searching, or his meter past the silent order's own `noticed`   (PairOrders.noticed)

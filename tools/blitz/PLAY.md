@@ -142,23 +142,6 @@ tables the Rust game keeps otherwise. `fuzz-dumps.ts` holds a pair with these ru
 game's kept clone has the saved moment's. A run that parts in the block's `panes` alone after a load is held again with the panes left out
 (`fuzz-diff.ts --but-panes`; exit 4).
 
-### Kept runs: the three games of two seats
-
-`tools/blitz/kept/two-lock0-9.tar.zst`, `two-lock1-9.tar.zst` and `two-full-3.tar.zst` are the games of two players that the co-op check plays
-(`coop-check.ts`: each seat's pair sent through a locked door; the barracks with every seat counted). Their records (the host's half of every tick and
-the orders given) were written by the TypeScript tick while it stood, and nothing can write them again, so they are kept whole: the records, the
-Rust game's own series (the die's count and a hash of each part of the block after every tick) and the run's `coop.json`. No start is kept: the
-start's bytes are bound to the wire, and `hold.sh` stands it again from this tree (`seats.ts --start-only`).
-
-```sh
-tools/blitz/hold.sh tools/blitz/kept                              # each: "the same over N ticks", exit 0
-HOLD_DIRS=DIR tools/blitz/hold.sh tools/blitz/kept                # … and leaves each run's folder in DIR, start and all
-rust/game_run/target/debug/mission DIR/two-lock0-9 1800 --keep 960,990,1020   # the Rust game's whole states at those ticks: DIR/two-lock0-9/n<k>.bin
-```
-
-The lock games' series is the Rust game's alone: the TypeScript's was another from ticks 1082 and 1056 on purpose, where a seat's door tools first
-kept to their own men. The barracks' is both games', in step for 7200 ticks.
-
 ### Kept runs: the fuzz with no TypeScript tick
 
 A run that is EQUAL by all three measures is worth keeping: its Rust side IS what the TypeScript tick did. Keep the folder's `cmd.txt` (the command),
@@ -461,7 +444,6 @@ have a probe on the Rust game by the table. They are not converted: the census a
 | `tour.ts --runs 1 --seed 1 --quiet` | 22 s PASS | 52 s, 9 FAIL | kind iii: the showcase's own Demo (src/game/demo.ts, host-side) calls rules and writes fields on the puppet between ticks; first: `stop2-hand` (Sam's hand never on the fire exit's leaf), then the takedown, the hold, the firefight, the room clear's drill. By the table (its row `ts`): PASS |
 | `soak.ts --seeds 1 --minutes 3 --quiet` | 34 s ALL PASS | 62 s, dies at 2.5 min | kind iii / iv-a: its stimuli call rules on the puppet: first `f2530 exception (stim:mission-step): Attempted to assign to readonly property` (player.ts:1107 `w.cam.peekOffset = null` under `teleportPlayer`: an object the apply left frozen), then `S.u` and `h.where` undefined (a `PoseSet.home` the apply left undefined, skeleton.ts:203), the last one uncaught. By the table (its row `ts`): ALL PASS |
 | `knobs-check.ts` | PASS | PASS | stands no game |
-| `tools/blitz/coop-check.ts` | 430 s, its 3 lines red as its header expects | | stands no game through the harness and reads no word |
 
 The gate's forms of the tour and the soak (`--runs 3`; three seeds, twelve minutes) were not run under `rust`: the short forms are not clean.
 
@@ -475,6 +457,14 @@ The gate's forms of the tour and the soak (`--runs 3`; three seeds, twelve minut
   the digest of every second, and with `--ticks` every tick, to the first game's: three games, one digest, each equal to the `ts` game on all 2,400
   ticks; `--weave` stands the later games together and steps them in turn. The modules' own logs and tallies (`destr_log`, `holdfire_log`, `scene_collision.sensed` …) are still a process's, on both sides: they grow from
   game to game and no rule reads them.
+
+- **A game's first start reads the modules' tops.** They are the process's: the next stand-up writes them for its own game and another game's step writes them with
+  its rows. So a game stood and not started takes its start before another game is stood or steps (`RustHost.startWaiting`). A LATER start (a mission begun again, a
+  checkpoint loaded) of a game that shares a process with another that steps still reads what that game left there: `--weave` does not cover it. From a stand-up to the
+  next start no call crosses to any game, as in the process's first stand: a stand asks about what a process shares (the cast's rig, in the book of the game that met it
+  first), and the answer's apply wrote the older game's rows over what the stand had just put back. After that start such a call still names the older game. Checks:
+  `thrice.ts --weave` (red under `RH_OFF=waiting`), `tools/blitz/stand-after.ts` (red under `RH_OFF=standing`). Under `--weave` three tallies (`g.stats.picture.lost`,
+  `doorway.held`, `netquiet.last`) read double in the later games: another game's apply moved the module's tally and the scan took that for a tool's write. No rule reads them.
 
 - **The slots.** rust/sim has four. A tool that stands a fifth game in one process (the probe runner stands hundreds) gets the slot of the game stepped
   longest ago: that game's puppet takes the whole state first, and if the tool steps it again it starts anew from its puppet.

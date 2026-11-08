@@ -832,7 +832,7 @@ pub fn hands_step(g: &mut crate::game::Game, own: bool, dt: f64) -> Option<[f64;
 }
 
 /// Does the door he is working bring his gun down off the cursor? (hands.ts doorMoveLowers)
-pub fn door_move_lowers(g: &mut crate::game::Game) -> bool {
+pub fn door_move_lowers(g: &crate::game::Game) -> bool {
     let pl = g.player;
     let c = g.pl[pl].ch;
     let Some(mv) = g.pl[pl].door_move else { return false };

@@ -23,7 +23,9 @@ fn place_dark(g: &mut Game, x: f64, z: f64) -> bool {
     crate::game::game_visibility_of(g, e) < g.k.lights.lit_at
 }
 
-/// is where he stands, what his gun is on, the man he has and the mark he is nearly at lit by the place itself (guards.ts litPlace)
+/// m: the emitter radius of a torch
+pub const FLASHLIGHT_RADIUS: f64 = 0.07;
+
 pub fn lit_place(g: &mut crate::game::Game, gd: GuardId, a: Option<OrdersAssignmentId>, tgt: Option<GuardId>, pt: Option<V3>) -> bool {
     let key = match (tgt, pt) {
         (Some(gd), _) => Some(LitSeenTgt::Man { gd }),
@@ -137,7 +139,7 @@ pub fn beam_ray_end(g: &mut crate::game::Game, o: V3, r: V3, m: f64) -> f64 {
 /// where a carried light will burn: at its lens `p`, or this side of the wall the lens is carried through from `held` (guards.ts burnsFrom)
 pub fn burns_from(g: &mut crate::game::Game, held: V3, p: V3) -> V3 {
     if crate::scene_collision::segment_blocked(g, held, p, None, None, None) {
-        let radius = g.engine.settings.flashlight_radius;
+        let radius = FLASHLIGHT_RADIUS;
         crate::lighting::lens_clear(g, held, p, radius, None)
     } else {
         p

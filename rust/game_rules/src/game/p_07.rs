@@ -54,9 +54,9 @@ pub fn game_light_meter(g: &mut crate::game::Game, dt: f64) {
 /// a seat's half of lightMeter, over its view: the light on its man, eased into his visibility   (game.ts meterRead)
 pub fn game_meter_read(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
-    let e = crate::guards::light_on(g, g.pl[pl].ch);
+    let [stands, e] = crate::guards::light_on(g, g.pl[pl].ch);
     if !e.is_finite() { return; }
-    g.pl[pl].irradiance = e;
+    g.pl[pl].irradiance = stands;
     let to = game_visibility_of(g, e);
     let was = g.pl[pl].visibility;
     g.pl[pl].visibility = if was.is_finite() { v3::damp(was, to, 6.0, dt) } else { to };
@@ -238,13 +238,13 @@ pub fn game_door_contact(g: &mut crate::game::Game) -> Option<crate::doors::Door
 }
 
 
-/// the row a click with empty hands is on: the first guard in reach who is no hostage and nobody the snatch has out (game.ts:2192)
+/// the row a click with empty hands is on: the first guard in reach who is no hostage (game.ts:2192)
 fn click_row(g: &Game, seat: &crate::seats::SeatRef) -> Option<Interactable> {
     let mut i = 0;
     while i < seat.nearby.len() {
         if seat.nearby[i].kind == InteractableKind::Guard && seat.nearby[i].in_reach {
             let taken = match seat.nearby[i].guard {
-                Some(gd) => crate::rescue::rescue_is_hostage(g, gd) || crate::snatchout::snatch_out_owns(g, gd),
+                Some(gd) => crate::rescue::rescue_is_hostage(g, gd),
                 None => false,
             };
             if !taken { return Some(seat.nearby[i].clone()); }

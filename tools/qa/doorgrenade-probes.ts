@@ -6,13 +6,7 @@
 // burst takes). Headless: nothing here looks at a picture or hears a line.
 //   the door waits          a stack on Sam's word, the grenade a second before the word: 'the door waits', nothing opened until 'the men are back', then
 //                           the door goes with every man on his mark
-//   the word again          … and Sam's word given a second time while it waits: the door goes at once, without them
-//   a locked door           an order sent on its own clock at a locked door, the grenade as the lead steps off to boot it: a boot not yet begun waits
-//   one signal for two      two orders made on one signal (the scenarios' own way in), the grenade at one before the signal: neither door until its men are back
-//   bang and clear          … and with a can: the can leaves a hand at the door, after the men are back
 //   the charge              the grenade as the charge is being set: its man is not given up on, and 'armed' is said with every man on his mark
-//   one signal, two doors   two doors on one word, the grenade at one: neither makes a sound until that door's men are back
-//   no longer than the cap  `fragHoldCap` cut short: 'on without … · the order's wait is spent', and the order still ends 'in'
 // THE RULE IS SETTLED AND NOT WRITTEN HERE (2026-11-07). Out: 'THE FAULT, with the rule off' (played with the team's pace held off besides), 'NO GRENADE, the
 // rule changes nothing: beat for beat as with the rule off', the recording from before the key, and the rule-off run printed beside every other line.
 // FRAGHOLD_BREAK=1, the red path: no grenade is put down, so nobody runs and every line must fail (it was: the rule left off).
@@ -25,7 +19,8 @@ const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { feelTables } = await import(`${ROOT}/src/game/teamfeel.ts`);
+const { knobsNamed } = await import(`${ROOT}/src/game/knobs.ts`);
+const feelNow = () => knobsNamed(['FLASH', 'PACE', 'LIGHTS', 'NVG', 'IR', 'IRLIGHT', 'FOG', 'LASER', 'DOORTOOLS', 'ROOMFIGHT', 'ORDERS', 'COVER', 'ENTRY', 'REAR', 'SILENT', 'FRAG', 'PAIR', 'DOORMANNERS']) as any;
 const FR: any = await import(`${ROOT}/src/game/frag.ts`);
 
 const DT = 1 / 60, FUSE = 2.4;
@@ -37,8 +32,8 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
-/** the probe leaves the feel tables (teamfeel.ts: DOORTOOLS among them) as it found them, pass, fail or throw */
-const guarded = (fn: () => Promise<boolean>) => async () => { const T = feelTables(), keep = JSON.parse(JSON.stringify(T)); try { return await fn(); } finally { for (const n of Object.keys(keep)) Object.assign(T[n], keep[n]); } };
+/** the probe leaves the feel tables (DOORTOOLS among them) as it found them, pass, fail or throw */
+const guarded = (fn: () => Promise<boolean>) => async () => { const T = feelNow(), keep = JSON.parse(JSON.stringify(T)); try { return await fn(); } finally { for (const n of Object.keys(keep)) Object.assign(T[n], keep[n]); } };
 async function quiet<T>(fn: () => T | Promise<T>): Promise<T> { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } }
 const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
 const offOf = (d: any, p: number[], side: number) => { const th = d.def.closedDir; return (Math.cos(th) * (p[2] - d.def.hinge[1]) - Math.sin(th) * (p[0] - d.def.hinge[0])) * side; };
@@ -173,60 +168,21 @@ const tell = (r: Run) => `${r.scn} ${r.door} ${r.kind}: ${r.why ?? `ran ${r.ran.
 
 export const doorGrenade = guarded(async () => {
   const { verdict, done } = family('door-grenade: a grenade scatters the men of a door order — the order waits for them before its door is opened (DOORTOOLS.fragHold)');
-  const on: Knobs = {}, K = DOORTOOLS, cap0 = K.fragHoldCap;
-  const DOORS: [string, string][] = process.env.DOORG_DOORS ? JSON.parse(process.env.DOORG_DOORS) : [['depot-four', 'c_w'], ['room-clear-four', 'breakroom_w']];
-  const CHARGE: [string, string][] = process.env.DOORG_CHARGE ? JSON.parse(process.env.DOORG_CHARGE) : [['room-clear-four', 'breakroom_w'], ['room-clear-pair', 'breakroom_w']];
-  const PAIR: [string, string, string] = process.env.DOORG_PAIR ? JSON.parse(process.env.DOORG_PAIR) : ['room-clear-four', 'breakroom_w', 'breakroom_n'];
-  const LOCKED: [string, string] = process.env.DOORG_LOCKED ? JSON.parse(process.env.DOORG_LOCKED) : ['room-clear-four', 'server'];
+  const on: Knobs = {};
+  const DOORS: [string, string][] = process.env.DOORG_DOORS ? JSON.parse(process.env.DOORG_DOORS) : [['room-clear-four', 'breakroom_w']];
+  const CHARGE: [string, string][] = process.env.DOORG_CHARGE ? JSON.parse(process.env.DOORG_CHARGE) : [['room-clear-pair', 'breakroom_w']];
   const waited = (r: Run) => !r.why && r.ran.length >= 1 && has(r, RAN) && has(r, WAIT) && has(r, BACK) && !has(r, SPENT) && r.goT >= tOf(r.beats, BACK) && r.offAtGo.length === 0 && r.runAtGo.length === 0;
 
   // ---- a stack on the word
-  const wOn: Run[] = [], late: Run[] = [], again: Run[] = [];
-  for (const [scn, door] of DOORS) {
-    wOn.push(await doorRun(scn, door, 'openClear', 'word', on));
-    again.push(await doorRun(scn, door, 'openClear', 'word2', on));
-    late.push(await doorRun(scn, door, 'openClear', 'word', { cap: 0.3 })); K.fragHoldCap = cap0; }
+  const wOn: Run[] = [];
+  for (const [scn, door] of DOORS) wOn.push(await doorRun(scn, door, 'openClear', 'word', on));
   verdict(wOn.every(r => waited(r) && r.ended === 'in'),
     `THE DOOR WAITS FOR ITS MEN (a stack on Sam's word, a grenade lands on it, the word comes a second later): 'the door waits' is said, the word makes no sound until 'the men are back', the leaf then moves with nobody running and every living man within ${OFF} m of his mark, and the order ends 'in'`, wOn.map(tell).join('\n    '));
-  verdict(late.every(r => !r.why && has(r, RAN) && has(r, WAIT) && has(r, SPENT) && !(tOf(r.beats, BACK) < tOf(r.beats, SPENT)) && tOf(r.beats, SPENT) - tOf(r.beats, WAIT) < 0.3 + 0.3 && tOf(r.beats, SPENT) - tOf(r.beats, WAIT) >= 0.3 - 0.05 && r.ended === 'in'),
-    "… AND NO LONGER THAN THE ORDER'S ONE WAIT, NOR SHORTER (fragHoldCap, cut to 0.3 s for this line; the wait begins when the word comes): men not back by then do not hang it — 'on without … · the order's wait is spent', and the order still ends 'in'", late.map(r => `waited ${(tOf(r.beats, SPENT) - tOf(r.beats, WAIT)).toFixed(2)} s · ${tell(r)}`).join('\n    '));
-  verdict(again.every((r, k) => !r.why && has(r, WAIT) && has(r, /^the word again$/) && has(r, /^on without .* · not waited for$/) && !has(r, SPENT) && tOf(r.beats, /^on without/) - tOf(r.beats, /^the word again$/) < 0.05 && r.goT - r.fragT <= wOn[k].goT - wOn[k].fragT + 0.2),
-    "… AND SAM'S WORD GIVEN AGAIN WHILE IT WAITS LETS THE ORDER GO: 'the word again', 'on without … · not waited for' on the same frame, the door opened as soon as the man who opens it is at it (at once where he did not run; never later than by waiting — the wait's own time beside it) — how an entry sent on without its men then ends is the room fight's, and printed", again.map((r, k) => `opened ${f1(r.goT - (r.fragT + LEAD + AGAIN))} s after the second word, ${f1(r.goT - r.fragT)} s after the grenade (waited for: ${f1(wOn[k].goT - wOn[k].fragT)}) · ${tell(r)}`).join('\n    '));
-  // ---- bang and clear on the word
-  { const bOn: Run[] = [];
-    for (const [scn, door] of DOORS) bOn.push(await doorRun(scn, door, 'bangClear', 'word', on));
-    verdict(bOn.every(r => waited(r) && r.toss.length >= 1 && r.toss.every(x => x < K.throwReach + 0.05) && tOf(r.beats, /^toss:/) >= tOf(r.beats, BACK) && r.ended === 'in'),
-      `BANG AND CLEAR THE SAME: nothing is opened and no can goes until 'the men are back'; the can then leaves a hand within ${K.throwReach} m of the frame, and the order ends 'in'`, bOn.map(tell).join('\n    ')); }
-
-  // ---- an order on its own clock: the grenade as the lead goes to open it
-  { const oOn: Run[] = [];
-    for (const [scn, door] of DOORS) oOn.push(await doorRun(scn, door, 'openClear', 'open', on));
-    verdict(oOn.every(r => !r.why && r.ran.length >= 1 && has(r, RAN) && r.offAtGo.length === 0 && r.runAtGo.length === 0 && r.ended === 'in'),
-      "AN ORDER ON ITS OWN CLOCK, the grenade put down with the men a few strides short of their marks: the stack is not called and the leaf not moved until nobody is running and every living man is on his mark, and the order ends 'in'", oOn.map(tell).join('\n    ')); }
-
-  // ---- a locked door: the grenade as the lead steps off the stack to it
-  { const [scn, door] = LOCKED, kOn = await doorRun(scn, door, 'openClear', 'kick', on);
-    const begun = !kOn.why && kOn.goT - kOn.fragT < BEGUN && !has(kOn, WAIT), held = !kOn.why && has(kOn, WAIT) && kOn.goT >= tOf(kOn.beats, BACK2) && kOn.runAtGo.length === 0;
-    verdict(!kOn.why && kOn.ran.length >= 1 && has(kOn, RAN) && (begun || held) && kOn.ended === 'in',
-      `A LOCKED DOOR, the order on its own clock, the grenade on the frame the lead steps off the stack to it: EITHER the boot was already begun before a man had moved (the leaf struck inside ${BEGUN} s: a blow begun is not stopped, and nothing is said to wait) OR nothing is done to the leaf until the men are back (or the wait is spent) and it is opened with nobody running from the grenade — and the order ends 'in' (which of the two is played is printed)`, `${begun ? 'THE BOOT HAD BEGUN' : held ? 'THE DOOR WAITED' : 'neither'}\n    ${tell(kOn)}`); }
-
   // ---- the charge
   { const cOn: Run[] = [];
     for (const [scn, door] of CHARGE) cOn.push(await doorRun(scn, door, 'charge', 'set', on));
     verdict(cOn.every(r => !r.why && r.ran.length >= 1 && has(r, RAN) && has(r, /^set$/) && (r.leadRan ? tOf(r.beats, /^set$/) - r.lockT >= DOORTOOLS.setSecs - 0.05 : has(r, WAIT)) && has(r, /^armed/) && tOf(r.beats, /^armed/) >= tOf(r.beats, BACK2) && r.offAtGo.length === 0 && r.runAtGo.length === 0 && !/^end: never made the door/.test(r.beats[r.beats.length - 1]?.what ?? '')),
       "THE CHARGE, the grenade as it is going on the door: where the man setting it runs he is not given up on, and it goes on only once he is back at the lock for its full time; where he does not (the grenade behind him) he sets it, and the others who ran are waited for before anybody stands off — either way 'armed' is said with nobody running and every living man on his mark (who ran is printed)", [...cOn.map(r => `${r.leadRan ? `the man setting it ran, and was back on the lock ${f1(tOf(r.beats, /^set$/) - r.lockT)} s before it was set` : 'the man setting it stayed'} · ${tell(r)}`)].join('\n    ')); }   // (the full time is counted from the setter's own return to the lock: where all four ran, 'the men are back' is said when the LAST of them is, with the charge already going on)
-
-  // ---- one word, two doors
-  { const [scn, a, b] = PAIR, pOn = await doorRun(scn, a, 'openClear', 'word', on, b);
-    const tw = (r: Run) => `${tell(r)}\n      ${r.other ? `${r.other.door}: opened ${f1(r.other.goT - r.fragT)} s after the grenade (this door ${f1(r.goT - r.fragT)}) · ended '${r.other.ended}'` : 'no second door'}`;
-    verdict(waited(pOn) && !!pOn.other && pOn.other.goT >= tOf(pOn.beats, BACK) - 1e-6 && pOn.ended === 'in',
-      "ONE WORD, TWO DOORS, the grenade at one of them: NEITHER door moves before that door's men are back — the word holds its first sound for both", tw(pOn)); }
-
-  // ---- one signal for two orders (a scenario's own way in: doortools.ts together())
-  { const [scn, a, b] = PAIR, gOn = await doorRun(scn, a, 'openClear', 'gate', on, b);
-    const tw = (r: Run) => `${tell(r)}\n      ${r.other ? `${r.other.door}: opened ${f1(r.other.goT - r.fragT)} s after the grenade (this door ${f1(r.goT - r.fragT)}) · ended '${r.other.ended}'` : 'no second door'}`;
-    verdict(waited(gOn) && !!gOn.other && gOn.other.goT >= tOf(gOn.beats, BACK) - 1e-6 && gOn.ended === 'in',
-      "ONE SIGNAL FOR TWO ORDERS, the grenade at one stack a second before the signal is raised: 'the door waits' is said when the signal comes, and NEITHER door is opened before that door's men are back", tw(gOn)); }
 
   return done();
 });

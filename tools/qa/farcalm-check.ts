@@ -10,7 +10,7 @@
 //   b  the edge   then the blackout's own bump (0.34), the meter a fifth of a second behind the dark: wary, and still no fix 5 s on
 //   c  the walk   the same edge with the man free to walk: he ends it where he stood
 //   d  the tip    Sam left standing lit at 20 m until the sight itself has him wary (meter 1 and 0.85): the first fix lands at the 'huh?' line, on Sam
-//   d2 watching   a man already wary (the blackout's bump, or a noise behind him) who goes on watching Sam lit at 20 m: his fix is Sam from `farFixAt`,
+//   d2 watching   a man already wary (the blackout's bump, or a noise 40 degrees off the line to Sam: his eyes go with his head, so a noise behind him would turn them off Sam) who goes on watching Sam lit at 20 m: his fix is Sam from `farFixAt`,
 //                 before he is alert — he turns and goes, he does not stand till CONTACT
 //   d3 again      over that line every glimpse counts: Sam dark for a moment and lit again 2 m on, the fix is on him again
 //   e  hunting    an alert man takes a far glimpse as his fix at once
@@ -65,11 +65,11 @@ export async function farcalmCheck(): Promise<boolean> {
     { const tip = (lit: number) => { calm(); sam(FAR, lit); let n = 0, awAtFix = -1; while (A.state === 'patrol' && n < 2400) { run(1, lit); n++; if (awAtFix < 0 && A.lastKnown) awAtFix = A.awareness; } return { n, tipped: A.state === 'suspicious', awAtFix, at: onSam(A.lastKnown), d: off(A.lastKnown) }; };
       const a = tip(1), b = tip(0.85);
       say([a, b].every(t => t.tipped && t.at && t.awAtFix >= 0.29) || BREAK, `d · the tip: lit at ${FAR} m the sight itself has him wary after ${f2(a.n / 60)} s (meter 1) / ${f2(b.n / 60)} s (0.85) — his first fix lands at awareness ${f2(a.awAtFix)} / ${f2(b.awAtFix)}, never under the 'huh?' line, and on Sam (${a.d} / ${b.d})`); }
-    // --- d2 · a wary man who goes on watching: his fix from `farFixAt`, before he is alert — from the blackout's bump (no fix) and from a noise elsewhere (its own fix)
+    // --- d2 · a wary man who goes on watching: his fix from `farFixAt`, before he is alert — from the blackout's bump (no fix) and from a noise 40° off the line to him (its own fix)
     { const watch = (noise: Vec3 | null) => { calm(); sam(FAR, 0.02); run(3, 0.02); calm(); A.state = 'suspicious'; A.awareness = noise ? 0.45 : BUMP; A.lastKnown = noise ? v3.copy(noise) : null; A.reactT = 0.5; sam(FAR, 1);
         let early = false, fixF = -1, awFix = 0, alertF = -1; for (let f = 1; f <= 600 && alertF < 0; f++) { const before = A.awareness; run(1, 1); if (fixF < 0 && onSam(A.lastKnown)) { fixF = f; awFix = A.awareness; if (before < FIX - 0.02) early = true; } if (A.state === 'alert') alertF = f; } return { early, fixF, awFix, alertF }; };
-      const dark = watch(null), heard = watch([AT[0] - 3, 0, AT[2]]);
-      say([dark, heard].every(w => w.fixF > 0 && !w.early && w.awFix >= FIX && (w.alertF < 0 || w.fixF < w.alertF)) && dark.fixF > 6, `d2 · watching: wary at ${BUMP} with no fix, Sam lit at ${FAR} m — nothing for ${f2(dark.fixF / 60)} s, then his fix is Sam (awareness ${f2(dark.awFix)}, the line ${FIX}), ${dark.alertF < 0 ? 'never alert' : f2((dark.alertF - dark.fixF) / 60) + ' s before he is alert'}; wary at 0.45 on a noise behind him: the noise's spot, then Sam after ${f2(heard.fixF / 60)} s`);
+      const dark = watch(null), heard = watch([AT[0] + 3 * Math.cos(40 * Math.PI / 180), 0, AT[2] + 3 * Math.sin(40 * Math.PI / 180)]);
+      say([dark, heard].every(w => w.fixF > 0 && !w.early && w.awFix >= FIX && (w.alertF < 0 || w.fixF < w.alertF)) && dark.fixF > 6, `d2 · watching: wary at ${BUMP} with no fix, Sam lit at ${FAR} m — nothing for ${f2(dark.fixF / 60)} s, then his fix is Sam (awareness ${f2(dark.awFix)}, the line ${FIX}), ${dark.alertF < 0 ? 'never alert' : f2((dark.alertF - dark.fixF) / 60) + ' s before he is alert'}; wary at 0.45 on a noise 40° off the line to Sam: the noise's spot, then Sam after ${f2(heard.fixF / 60)} s`);
       // …and once over the line every glimpse counts: Sam gone dark for a fifth of a second, lit again 2 m on
       calm(); A.state = 'suspicious'; A.awareness = FIX + 0.1; A.lastKnown = null; A.reactT = 0.5; sam(FAR, 1); run(3, 1); const first = onSam(A.lastKnown); run(12, 0.02); sam(FAR + 2, 1); run(3, 1);
       say(first && onSam(A.lastKnown), `d3 · again: over the line he takes the glimpse at once (${first}); Sam dark for 0.2 s and lit again 2 m on — the fix is on him again (${off(A.lastKnown)})`); }

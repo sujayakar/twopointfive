@@ -391,11 +391,6 @@ pub fn squad_orders_back_free(g: &crate::game::Game, seat: &crate::seats::SeatRe
     seat.orders.menu.is_none() && g.pl[seat.player].launch_held.is_none() && !crate::interact::hands_busy(g, seat)
 }
 
-/// What the key would open on, for a hint: CMDRING.bareHint draws none. (orders.ts hintView)
-pub fn squad_orders_hint_view(g: &crate::game::Game, kept: Option<&mut crate::orders::HoverKept>) -> Option<crate::orders::SquadOrdersHintView> {
-    None
-}
-
 /// The menu's own highlight follows the lit wedge. (orders.ts ringSel)
 pub fn squad_orders_ring_sel(g: &mut crate::game::Game) {
     let r = match (&g.orders.menu, g.orders.cmd_ring) {
@@ -506,21 +501,17 @@ pub fn squad_orders_all_in(g: &mut crate::game::Game) {
         if !fell_in { every = false; break; }
     }
     if every { return; }
-    g.orders.by_hand = true;
     squad_orders_give(g, "fallIn", Some(&t), None, Some(&opts_men(men, None)));
-    g.orders.by_hand = false;
 }
 
 /// The quick key's own order on `t`, given by hand: the entry the men pick, else the target's first row. (orders.ts quickGive)
 pub fn squad_orders_quick_give(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) {
-    g.orders.by_hand = true;
     if !crate::autopilot::auto_quick(g, t) {
         if let Some(d) = squad_orders_default_for(g, t) {
             let id = g.tab.orders_order_def[d].id.clone();
             squad_orders_give(g, &id, Some(t), None, None);
         }
     }
-    g.orders.by_hand = false;
 }
 
 /// The quick key's order on `t` for exactly these men. (orders.ts quickFor)
@@ -538,14 +529,12 @@ pub fn squad_orders_quick_for(g: &mut crate::game::Game, men: &[GuardId], t: &cr
         return None;
     }
     let here = at_sam(g, &crate::seats::here(g));
-    g.orders.by_hand = true;
     if a.word {
         squad_orders_give(g, "go", Some(&here), None, Some(&opts_men(to, None)));
     } else if text(&a.id) {
         let ack = crate::squadnet::why_words(g, &a).map(|w| w.ack);
         squad_orders_give(g, a.id.as_deref().unwrap(), Some(t), None, Some(&opts_men(to, ack)));
     }
-    g.orders.by_hand = false;
     if let Some(row) = g.orders.log.last_mut() {
         if Some(row.serial) != tail { row.auto = Some(true); }
     }
@@ -557,10 +546,8 @@ pub fn squad_orders_quick_for(g: &mut crate::game::Game, men: &[GuardId], t: &cr
 /// Those men cover toward `at` from where they stand (true: somebody took it). (orders.ts coverFor)
 pub fn squad_orders_cover_for(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> bool {
     let n = g.orders.group;
-    g.orders.by_hand = true;
     let t = OrderTarget::Floor(OrderTargetFloor { at, wall: None, thing: None, serial: 0 });
     squad_orders_give(g, "cover", Some(&t), None, Some(&opts_men(men.to_vec(), None)));
-    g.orders.by_hand = false;
     g.orders.group != n
 }
 
@@ -681,7 +668,6 @@ pub fn squad_orders_sync(g: &mut crate::game::Game) -> Vec<GuardId> {
         for gd in g.orders.asg.keys() {
             if !squad.contains(&gd) { squad_orders_drop(g, gd); }
         }
-        crate::planlay::lay_fresh(g);
     }
     let stands = match g.orders.who {
         Who::Num(k) => g.orders.roster.get(k as usize).map_or(true, |&gd| g.gd[gd].state != crate::game::GuardState::Dead),

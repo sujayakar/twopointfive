@@ -131,7 +131,7 @@ pub fn near_known_body(g: &crate::game::Game, p: V3, r: Option<f64>) -> Option<G
 }
 
 /// What a keyed door gives away: its keep kicked out, or standing unlocked. (guards.ts doorTamper)
-pub fn door_tamper(g: &mut crate::game::Game, d: DoorId) -> Option<crate::guards::DoorTamper> {
+pub fn door_tamper(g: &crate::game::Game, d: DoorId) -> Option<crate::guards::DoorTamper> {
     if !g.dr[d].def.locked.unwrap_or(false) { return None; }
     if crate::doors::door_lock_broken(g, d) { return Some(crate::guards::DoorTamper::Forced); }
     if !crate::doors::door_locked(g, d) { return Some(crate::guards::DoorTamper::Picked); }
@@ -410,7 +410,7 @@ pub fn lead_fix(g: &mut crate::game::Game, from: V3, vel: V3) -> V3 {
         let mut stop = crate::scene_collision::collide_circle(g, &mut q, 0.15, 0.25, 1.5, Some(1.0)) || crate::scene_collision::clamp_to_world(g, &mut q, 0.15);
         if !stop {
             for &b in shut.iter() {
-                if crate::scene_boxes::ray_box(g, prev, rd, b, sp * 0.05).is_some() { stop = true; break; }
+                if crate::scene_boxes::ray_box(g, prev, rd, b.into(), sp * 0.05).is_some() { stop = true; break; }
             }
         }
         if stop { break; }

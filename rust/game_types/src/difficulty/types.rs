@@ -11,6 +11,17 @@ pub enum SameOf {
     Digin { table: crate::knobs::DiginK },
 }
 
+/// what an address says of the difficulty (difficulty.ts DifficultyAsked): none where it says nothing. A start's reading of its words, held by no game, so never on the wire.
+#[derive(Clone, Debug, PartialEq)]
+pub struct DifficultyAsked {
+    pub level: Option<crate::difficulty::Difficulty>,
+    /// the levers it names, in `levers_now`'s order, each on a rung the build has
+    pub levers: Vec<(crate::difficulty::LeverKey, String)>,
+    pub digin: bool,
+    pub pressure: Option<bool>,
+    pub cone: Option<bool>,
+}
+
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Difficulty {

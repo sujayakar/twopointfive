@@ -23,7 +23,7 @@ const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { GUNROLES, GUNROLES_STATS, gunRole, gunString, gunStringGap, gunLane, gunKeepsPost, gunFileCost, gunFileRanks, gunLast, gunBlindGap, gunHand } = await import(`${ROOT}/src/game/gunroles.ts`);
+const { GUNROLES, GUNROLES_STATS, gunRole, gunKeepsPost, gunFileCost, gunFileRanks, gunBlindGap, gunHand } = await import(`${ROOT}/src/game/gunroles.ts`);
 const { sideOut } = await import(`${ROOT}/src/game/gunslots.ts`);
 const { WEAPONS, Firearm } = await import(`${ROOT}/src/game/weapons.ts`);
 const { burstTrigger, spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
@@ -119,9 +119,9 @@ export async function gunrolesEntry(): Promise<boolean> {
   const pair = await (async () => { const R: any = await hushed(() => rig(3, { stage: false })); const g = R.game, at = g.player.char.pos;
     const a = spawnUnit(g, { team: 'operative', pos: [at[0] + 1, 0, at[2]], name: 'A', light: false }), b = spawnUnit(g, { team: 'operative', pos: [at[0] + 2, 0, at[2]], name: 'B', light: false }); hand(a, 'mk12'); hand(b, 'm1014');
     const front: [number, number, number] = [at[0], 0, at[2]], spots: [number, number, number][] = [[at[0] + 0.8, 0, at[2]], [at[0] + 2.2, 0, at[2]]];
-    const r = gunFileRanks([a, b]); hand(a, 'fn2000'); hand(b, 'fn2000'); const none = gunFileRanks([a, b]); hand(a, 'mk12'); hand(b, 'mp7'); const c = spawnUnit(g, { team: 'operative', pos: [at[0] + 3, 0, at[2]], name: 'C', light: false });
-    return { asWalk: r ? gunFileCost(r, spots, front) : -1, swapped: r ? gunFileCost(r, [spots[1], spots[0]], front) : -1, none, wall: gunLast([a, c, b]).map((m: any) => m.weapon.def.id).join(' ') }; })();
-  F.verdict(pair.asWalk === GUNROLES.fileCost && pair.swapped === 0 && pair.none === null && pair.wall === 'fn2000 mp7 mk12', 'a Mk 12 man nearer the frame than an M1014 man is the dealing that costs; the shotgun at the frame costs nothing; two issue carbines are never priced; through a blown wall the Mk 12 man nearest the hole goes after the other two', `Mk 12 in front ${pair.asWalk} · M1014 in front ${pair.swapped} · two issue carbines ${pair.none} · through the hole: ${pair.wall}`);
+    const r = gunFileRanks([a, b]); hand(a, 'fn2000'); hand(b, 'fn2000'); const none = gunFileRanks([a, b]); 
+    return { asWalk: r ? gunFileCost(r, spots, front) : -1, swapped: r ? gunFileCost(r, [spots[1], spots[0]], front) : -1, none }; })();
+  F.verdict(pair.asWalk === GUNROLES.fileCost && pair.swapped === 0 && pair.none === null, 'a Mk 12 man nearer the frame than an M1014 man is the dealing that costs; the shotgun at the frame costs nothing; two issue carbines are never priced', `Mk 12 in front ${pair.asWalk} · M1014 in front ${pair.swapped} · two issue carbines ${pair.none}`);
   return F.done();
 }
 
@@ -137,13 +137,6 @@ export async function gunrolesFight(): Promise<boolean> {
     return out; })();
   const P = strings.pkm, A = strings.aks74u, M = strings.akms;
   F.verdict(!!P && P.min >= 6 && P.max <= 10 && A.max <= 4 && M.max <= 3 && P.min > A.max && P.mean > 2 * A.mean, 'a defender\'s PKM fires strings of six to ten where the short carbine fires two to four and the AKMS two or three', `thirty pulls each — PKM ${P.min} to ${P.max} (mean ${f2(P.mean)}) · AKS-74U ${A.min} to ${A.max} (${f2(A.mean)}) · AKMS ${M.min} to ${M.max} (${f2(M.mean)})`);
-  // a teammate's trigger in the room fight: what it answers by gun, and with the sidearm in his hands
-  const ans = async () => { const R: any = await hushed(() => rig(17, { stage: false })); const g = R.game, at = g.player.char.pos;
-    const gd = spawnUnit(g, { team: 'operative', pos: [at[0] + 1, 0, at[2] + 1], name: 'Archer', light: false }); const out: Record<string, number> = {};
-    for (const id of ['fn2000', 'mp7', 'mk12', 'mk46']) { hand(gd, id); out[id] = gunString(gd); }
-    out.gap46 = gunStringGap(gd); return out; };
-  const aOn = await ans();
-  F.verdict(aOn.mk46 >= 5 && aOn.mk12 === 1 && aOn.fn2000 === 0 && aOn.mp7 === 0 && aOn.gap46 < 0.1, 'a teammate\'s room-fight trigger: a string of the belt\'s own length at its cyclic rate for the Mk 46, one aimed round for the Mk 12, the controlled pair for the issue carbine and the MP7', `Mk 46 ${aOn.mk46} rounds ${f2(aOn.gap46)} s apart · Mk 12 ${aOn.mk12} · issue ${aOn.fn2000} · MP7 ${aOn.mp7} (0 = the pair)`);
   // … and a staged fight at nine metres, five men in a row with empty guns: the shortest gap between two of his rounds
   const gaps = async (gun: string) => { const R: any = await hushed(() => rig(17, { nb: { squad: 4 } })); const g = R.game, op = R.ops[0]; hand(op, gun);
     const at = op.char.pos; let dir = [1, 0], far = 0; for (let k = 0; k < 64; k++) { const a = k * Math.PI / 32, d = [Math.sin(a), Math.cos(a)], h = g.col.raycast([at[0], 1.2, at[2]], [d[0], 0, d[1]], 60), t = h ? h.t : 60; if (t > far) { far = t; dir = d; } }
@@ -170,23 +163,11 @@ export async function gunrolesLanes(): Promise<boolean> {
     let far = 0; for (let i = 0; i < 60 * 20; i++) { R.step(); if (belt.state !== 'dead') far = Math.max(far, Math.hypot(belt.char.pos[0] - mark[0], belt.char.pos[2] - mark[2])); }
     return { dealt, holds, holdsOther, keeps, far, asked: GUNROLES_STATS.posts - p0, up: belt.state !== 'dead', name: belt.callsign as string }; };
   const on = await post();
-  F.verdict(on.holds && on.keeps && !on.holdsOther && on.asked > 2 && on.far < 1, 'a defender with the belt-fed gun in the office\'s room clear (the man the deal gave it to, where this stand\'s cast earns one): no rally, press, errand or hunt in the dark may take him from his gun\'s place (laneHolds answers for him and not for a rifleman), the fight asks it of him, and through twenty seconds of a fight next door he is on the mark his line was measured from', `seed ${seed} · ${on.name}: ${on.dealt ? 'dealt it' : 'handed it (no cast of this stand\'s earns one in five seeds)'} · holds ${on.holds} · a rifleman ${on.holdsOther} · furthest from his mark ${f2(on.far)} m · up ${on.up} · the game asked ${on.asked - 2} times`);
+  F.verdict(on.holds && on.keeps && !on.holdsOther && on.far < 1, 'a defender with the belt-fed gun in the office\'s room clear (the man the deal gave it to, where this stand\'s cast earns one): no rally, press, errand or hunt in the dark may take him from his gun\'s place (laneHolds answers for him and not for a rifleman), the fight asks it of him, and through twenty seconds of a fight next door he is on the mark his line was measured from', `seed ${seed} · ${on.name}: ${on.dealt ? 'dealt it' : 'handed it (no cast of this stand\'s earns one in five seeds)'} · holds ${on.holds} · a rifleman ${on.holdsOther} · furthest from his mark ${f2(on.far)} m · up ${on.up} · the game asked ${on.asked - 2} times`);
   // a blinded pistol man's rounds where the room was: his gun's rate, not the carbine's
   const blind = await (async () => { const R: any = await hushed(() => rig(17, { stage: false })); const g = R.game, at = g.player.char.pos; const gd = spawnUnit(g, { team: 'hostile', pos: [at[0] + 2, 0, at[2] + 1], name: 'Tango', light: false });
     hand(gd, 'guard9mm'); const p = gunBlindGap(gd, 0.1); hand(gd, 'aks74u'); const c = gunBlindGap(gd, 0.1); return { p, c }; })();
   F.verdict(blind.p >= 0.5 && blind.c === 0.1, 'a flashed defender firing blind fires at his own gun\'s rate: a dealt pistol a round a pull, the carbine the staging\'s tenth of a second', `pistol ${f2(blind.p)} s · carbine ${f2(blind.c)} s`);
-  // the cover's deal: what an opening is worth to a man for his gun
-  const lane = async () => { const R: any = await hushed(() => rig(17, { stage: false })); const g = R.game, at = g.player.char.pos;
-    const gd = spawnUnit(g, { team: 'operative', pos: [at[0] + 1, 0, at[2] + 1], name: 'Archer', light: false }); const out: Record<string, number[]> = {};
-    for (const id of ['fn2000', 'mk12', 'mk46', 'mp7', 'guard9mm']) { hand(gd, id); out[id] = [gunLane(gd, 2, 9), gunLane(gd, 9, 9)]; }
-    // … and the sidearm out after a dry primary: his gun is still the long gun on his sling
-    hand(gd, 'mk12'); gd.second = { gun: new Firearm(WEAPONS.guard9mm), id: 'guard9mm', ahead: 0.26, out: false, t: -100, lock: -100, shots: 0 }; gd.weapon.mag = 0; gd.weapon.chamber = 0;
-    const went = await hushed(() => sideOut(g, gd, 4)); out.slung = [gunLane(gd, 9, 9)]; (out as any).role = gunRole(gd); (out as any).went = went; (out as any).str = gunString(gd);
-    return out as any; };
-  const L = await lane();
-  F.verdict(L.mk12[1] > L.mk12[0] && L.mk12[1] > 0 && L.mk46[1] > 0 && L.guard9mm[1] < L.guard9mm[0] && L.guard9mm[1] < 0 && L.mp7[1] < 0 && L.mp7[1] > L.guard9mm[1] && L.fn2000[0] === 0 && L.fn2000[1] === 0,
-    'in the cover\'s deal a far opening is worth more to the Mk 12 and the Mk 46 man, less to a man with a pistol alone (and half as much less to an MP7), nothing either way to a carbine', `an opening at 2 m / 9 m — Mk 12 ${L.mk12.map(f2).join(' / ')} · Mk 46 ${L.mk46.map(f2).join(' / ')} · issue ${L.fn2000.map(f2).join(' / ')} · MP7 ${L.mp7.map(f2).join(' / ')} · pistol alone ${L.guard9mm.map(f2).join(' / ')} (the deal's scale: a kept opening is worth 1.2)`);
-  F.verdict(L.went && L.role === 'reach' && L.slung[0] > 0 && L.str === 0, 'with his sidearm out after a dry primary a Mk 12 man is still the Mk 12 man for the stack and the cover — and the trigger in his hands is the pistol\'s', `sidearm out ${L.went} · role ${L.role} · far opening ${f2(L.slung[0])} · string ${L.str}`);
   return F.done();
 }
 

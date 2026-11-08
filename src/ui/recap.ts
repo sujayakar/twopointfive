@@ -10,11 +10,11 @@
  *  The clock is the display's (never the game's: the card is up over a stopped run), a picture at most every PAINT_MS; it sleeps while the card is put away and
  *  stops for good once the card is unbuilt. `__recap` on the window = the panel on the card now (`seek(k)` a moment as a still, `show(i)`, `take`).
  *
- *  `mountRecap(host, game)` is the whole face: it appends the panel to `host` and returns it, or returns null with nothing appended when there is nothing to
- *  show (the switch off, the run still on, nobody of ours down). `drawRecap` draws one moment `t` of a take; `recapMenAt` is where every man was then. */
+ *  `mountRecap(host, game, R)` is the whole face, R being the game's record as the card asked for it: it appends the panel to `host` and returns it, or returns null with nothing appended when there is nothing to
+ *  show (the run still on, nobody of ours down). `drawRecap` draws one moment `t` of a take; `recapMenAt` is where every man was then. */
 import type { Game } from '../game/game';
-import { deathRecapOf, MAN_STRIDE } from '../game/deathrecap';
-import type { RecapTake, RecapFrame, RecapMan, DeathRecap } from '../game/deathrecap';
+import { MAN_STRIDE } from '../view/debriefview';
+import type { RecapTake, RecapFrame, RecapMan, DeathRecap } from '../view/debriefview';
 import { mapOf } from '../game/replaybuf';
 import type { ReplayMap } from '../replay/format';
 import { gearText } from '../game/gear';
@@ -77,7 +77,7 @@ export function recapMenAt(T: RecapTake, t: number): RecapManAt[] {
  *  shrink the picture to hold all of it: his trail runs in from the edge), the muzzle — never less than MIN_HALF_M round the lost man. */
 export function recapFit(T: RecapTake, W: number, H: number): RecapFit {
   const d = T.death; let x0 = d.at[0], x1 = d.at[0], z0 = d.at[1], z1 = d.at[1];
-  const add = (p: [number, number] | null) => { if (!p) return; x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); };
+  const add = (p: [number, number] | null | undefined) => { if (!p) return; x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); };
   add(d.from); add(d.byAt);
   for (const f of T.frames) for (let i = 0; i < f.n; i++) { const id = f.men[i * MAN_STRIDE]; if (id === d.victim ? f.t <= d.t + 1e-6 : id === d.by && f.t >= d.t - LEAD_SECS) add([f.men[i * MAN_STRIDE + 1], f.men[i * MAN_STRIDE + 2]]); }
   x0 = Math.min(x0, d.at[0] - MIN_HALF_M); x1 = Math.max(x1, d.at[0] + MIN_HALF_M); z0 = Math.min(z0, d.at[1] - MIN_HALF_M); z1 = Math.max(z1, d.at[1] + MIN_HALF_M);
@@ -195,11 +195,11 @@ export function recapLabels(T: RecapTake, nameOf: NameOf = AS_KEPT): string[] {
 /** The take's clock as the playback runs it: from its first sample to its last, in seconds. */
 export function recapSpan(T: RecapTake): [number, number] { const a = T.frames[0]?.t ?? T.death.t, b = T.frames[T.frames.length - 1]?.t ?? T.death.t; return [Math.min(a, T.death.t), Math.max(b, T.death.t)]; }
 
-export function mountRecap(host: HTMLElement, game: Game): RecapUi | null {
+export function mountRecap(host: HTMLElement, game: Game, R: DeathRecap | null | undefined): RecapUi | null {
   const G = globalThis as any;
-  const R: DeathRecap | null = deathRecapOf(game); if (!R) { G.__recap = null; return null; }
+  if (!R) { G.__recap = null; return null; }
   const nameOf: NameOf = (id, was) => shownName(game, id, was);
-  const takes = R.takes.slice();   // as they stand now: while the player is down the record's own list is live, and a chip must keep showing the man it names
+  const takes = R.takes;
   const root = el('div', 'db-recap'); host.appendChild(root);
   const cv = el('canvas', 'db-recap-cv') as HTMLCanvasElement; root.appendChild(cv);
   let ctx: CanvasRenderingContext2D | null = null;

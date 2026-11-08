@@ -193,7 +193,6 @@ pub mod par { pub mod types; pub use types::*; }
 pub mod particle_fx { pub mod types; pub use types::*; }
 pub mod peeksight { pub mod types; pub use types::*; }
 pub mod picture { pub mod types; pub use types::*; }
-pub mod planlay { pub mod types; pub use types::*; }
 pub mod planmode { pub mod types; pub use types::*; }
 pub mod player { pub mod types; pub use types::*; }
 pub mod posehome { pub mod types; pub use types::*; }
@@ -264,7 +263,6 @@ pub mod scene_marking_defaults { pub mod types; pub use types::*; }
 pub mod scene_markings { pub mod types; pub use types::*; }
 pub mod scene_materials { pub mod types; pub use types::*; }
 pub mod scene_place_plan { pub mod types; pub use types::*; }
-pub mod scene_round { pub mod types; pub use types::*; }
 pub mod scene_scenario_list { pub mod types; pub use types::*; }
 pub mod scene_scenarios { pub mod types; pub use types::*; }
 pub mod scene_shapes { pub mod types; pub use types::*; }
@@ -276,9 +274,6 @@ pub mod script_tut_pair { pub mod types; pub use types::*; }
 pub mod script_tut_queue { pub mod types; pub use types::*; }
 pub mod script_tut_quiet { pub mod types; pub use types::*; }
 pub mod script_tut_road { pub mod types; pub use types::*; }
-pub mod script_tut_sky { pub mod types; pub use types::*; }
-pub mod script_tut_solo { pub mod types; pub use types::*; }
-pub mod script_tut_squad { pub mod types; pub use types::*; }
 pub mod script_tut_team { pub mod types; pub use types::*; }
 pub mod seats { pub mod types; pub use types::*; }
 pub mod seenwalk { pub mod types; pub use types::*; }
@@ -310,8 +305,6 @@ pub mod slotsetup { pub mod types; pub use types::*; }
 pub mod smoke_smoke_grid { pub mod types; pub use types::*; }
 pub mod smoke_types { pub mod types; pub use types::*; }
 pub mod smokebreak { pub mod types; pub use types::*; }
-pub mod snatch { pub mod types; pub use types::*; }
-pub mod snatchout { pub mod types; pub use types::*; }
 pub mod sneak { pub mod types; pub use types::*; }
 pub mod snow_blast { pub mod types; pub use types::*; }
 pub mod snow_bog { pub mod types; pub use types::*; }

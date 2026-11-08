@@ -92,7 +92,6 @@ import type { QuietSnap } from './quiet';
 import type { FogSnap } from './fogofwar';
 import { quietWords } from './quiet';   // (called inside functions only: src/game is one import cycle)
 import type { LessonSnap } from './lesson';
-import type { SnatchSnap } from './snatch';
 import type { DefuseSnap } from './defuse';
 import { woundRestore, type Wound } from './wounds';
 import type { GameEvent, LightTarget, MissionStage, Mission, SlotKind, ThrowKind, Witness, GuardState, DownKind, DownBy, GuardTask } from './game';
@@ -103,7 +102,8 @@ import type { Item, ItemKind } from './throwables';
 import { DOORWAY, driveOf, type DoorDrive } from './doors';
 import { slabSnapshot, slabRestore, type SlabSnap } from './doorblast';
 import { RAG_COUNT } from './ragdoll';
-import { Chronicle, chronCheckpoint, MAX_EVENTS } from './chronicle';
+import { Chronicle, MAX_EVENTS } from './chronicle';
+import { roomOf } from './rooms';
 import type { ChronEvent, ChronCounts, ChronKind, ChronData } from './chronicle';
 import { missionLive } from './mission';
 import { attachFlashlight, rollcallState, escalationOf, forgetGuardClocks } from './guards';
@@ -142,8 +142,6 @@ import type { TacticsSnap } from './tactics';
 import type { WallsSave } from './wallbreak';
 import type { FurnSave } from './furnblast';
 import { barsSnapshot, barsCheck, barsRestore, type BarsSave } from './winbars';
-import type { LaySnap } from './planlay';
-import { PLANLAY, laySnapshot, layRestore } from './planlay';
 import { ringRestore } from './cmdring';
 import { dialogueSnapshot, dialogueRestore, peekScript, forceScript, forcedScriptOf, hashStr } from './dialogue';
 import type { DialogueSnap } from './dialogue';
@@ -155,7 +153,6 @@ import { hourOf, hourIdOf, applyHour, setSunStrength, sunStrength, sunGiven, typ
 import type { DevicesSnap } from './devices';
 import type { DecalKind } from '../render/decals';
 import type { Box } from '../scene/boxes';
-import { authoredC, authoredH } from '../scene/round';   // (leaf helpers: a round thing's boxes as the level file has them)
 import { shapeStamp } from '../scene/shapes';   // (a leaf helper: a number of the shapes a level stands on)
 import { LOOK_DECALS, lookDecal } from './lookDecals';
 import { diceInUse } from '../math/dice';
@@ -250,11 +247,7 @@ export interface SaveState {
   quiet?: QuietSnap;
   /** a training lesson's place among its steps (lesson.ts LessonSnap) — absent off a lesson level or with the lesson switched off */
   lesson?: LessonSnap;
-  /** the plan laid for the word and the one kept for the next try — planlay.ts; absent with its switch off */
-  lay?: LaySnap;
   // (a file from the builds that had plan mode may carry a `plan` key — the men picked and the chains they were on: nothing reads it now, and the file loads without it)
-  /** a snatch level's man: hands up / tied / how it ended (snatch.ts SnatchSnap) — absent off a snatch level */
-  snatch?: SnatchSnap;
   /** a defuse mission's clock and charges (defuse.ts DefuseSnap) — absent off a level with the block */
   defuse?: DefuseSnap;
   player: PlayerSnap; guards: GuardSnap[]; items: ItemSnap[]; doors: DoorSnap[]; props: PropSnap[]; propsTime: number; targets: TargetSnap[];
@@ -394,7 +387,7 @@ export function levelFingerprint(g: Game): SaveState['level'] {
   const L = g.level, nBox = g.destr?.walls?.authored ?? L.boxes.length, st = shapeStamp(L.boxes, nBox);
   const cached = fpCache.get(L); if (cached && cached.st === st) return cached.fp;   // (nBox = the AUTHORED statics only: wall breaking appends pieces to the list at runtime — the level is still the level)
   let geo = 0x811c9dc5;   // + every static's centre and half-extents to the centimetre: a re-export that MOVES geometry under the same names and counts is another level to a checkpoint
-  for (let i = 0; i < nBox; i++) for (const v of [...authoredC(L.boxes[i]), ...authoredH(L.boxes[i])]) { geo ^= Math.round(v * 100) & 0xffffffff; geo = Math.imul(geo, 0x01000193) >>> 0; }
+  for (let i = 0; i < nBox; i++) for (const v of [...L.boxes[i].c, ...L.boxes[i].h]) { geo ^= Math.round(v * 100) & 0xffffffff; geo = Math.imul(geo, 0x01000193) >>> 0; }
   const s = `${nBox}|${L.doors.map(d => d.name).join(',')}|${L.routes.map(r => `${r.name}:${r.points.length}`).join(',')}|${g.targets.reduce((n, t) => n + (lampGlass(t) ? 0 : 1), 0)}|${L.props.length}|${geo.toString(16)}${st ? `|shapes:${st.toString(16)}` : ''}`;
   // (the count of light targets is the LEVEL's own: a vehicle's lamps — carlamps.ts — are made of the level's boxes by a rule that can be off, and a target is
   //  poured back by name, so a checkpoint or a recording from before that rule, or from a page with it off, is still this level's)
@@ -508,7 +501,6 @@ export interface SaveOpts { label?: string; kind?: SaveState['kind']; force?: bo
 export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
   const why = canSave(g, !!opts.force); if (why) throw new Error(`checkpoint refused: ${why}`);
   const label = opts.label ?? '', kind = opts.kind ?? 'manual';
-  if (kind !== 'harness') chronCheckpoint(g, 'save', label);   // (inside the mission's live gate: nothing under the tour — which cannot save anyway; a HARNESS snapshot is nobody's checkpoint: no row, the run it captures untouched)
   const pl = g.player, pc = pl.char;
   const forced: string[] = [];
   { const b = playerBusy(g); if (b) forced.push(b); if (g.clearing) forced.push('clearing drill'); for (const x of g.guards) if (x.script && x.state !== 'dead') forced.push(`${x.callsign} scripted`); }
@@ -612,7 +604,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     events: g.events.map(e => ({ kind: e.kind, pos: c3(e.pos), time: e.time, loud: e.loud, level: e.level, id: e.id, who: e.who, weapon: e.weapon, from: e.from ? c3(e.from) : undefined, to: e.to ? c3(e.to) : undefined, announced: e.announced, cause: e.cause, ...(e.ears ? { ears: [c3(e.ears[0]), c3(e.ears[1])] as [Vec3, Vec3] } : {}), ...(e.swAt ? { swAt: c3(e.swAt) } : {}) })),
     messages: g.messages.map(m => ({ text: m.text, t: m.t })),
     rollcall: { nextAt: R.nextAt, stage: R.stage, t0: R.t0, caller: gi(R.caller), missing: gi(R.missing), answered: R.answered, checks: R.checks },
-    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), lanes: lanesSnapshot(g), walls: g.destr?.walls?.snapshot(), furn: g.destr?.furn?.snapshot(), bars: barsSnapshot(g), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, ...(air ? { air } : {}), ...(g.quiet?.active ? { quiet: g.quiet.snapshot()! } : {}), ...(g.lesson?.data ? { lesson: g.lesson.snapshot() } : {}), ...(g.defuse?.active ? { defuse: g.defuse.snapshot() } : {}), ...(g.snatch?.active ? { snatch: g.snatch.snapshot() } : {}), ...(PLANLAY.on ? { lay: laySnapshot(g) } : {}), qrf: { loudT: g.qrf?.loudT ?? -1e9, ...(RESPONSE.on ? { word: responseWordSnapshot(g) } : {}) },
+    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), lanes: lanesSnapshot(g), walls: g.destr?.walls?.snapshot(), furn: g.destr?.furn?.snapshot(), bars: barsSnapshot(g), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, ...(air ? { air } : {}), ...(g.quiet?.active ? { quiet: g.quiet.snapshot()! } : {}), ...(g.lesson?.data ? { lesson: g.lesson.snapshot() } : {}), ...(g.defuse?.active ? { defuse: g.defuse.snapshot() } : {}), qrf: { loudT: g.qrf?.loudT ?? -1e9, ...(RESPONSE.on ? { word: responseWordSnapshot(g) } : {}) },
     civilians: civiliansSnapshot(g),
     decals, ...(glassPenSnapshot(g) ? { glassPen: glassPenSnapshot(g) } : null),
     ...(dz ? { doze: dz } : null),   // (who dozes in which chair and who was woken — doze.ts; no key with its switch off)
@@ -682,7 +674,7 @@ export function loadState(g: Game, s: SaveState, opts: { label?: string } = {}) 
   barsRestore(g, s.bars);             // the window bars a round or a blast took (winbars.ts), gone again before the walls settle round them — the order they went in
   g.destr?.walls?.restore(s.walls);   // the level first (holed walls, chewed cover: the statics re-cut, the nav grid re-baked) — everything below is placed in it
   g.destr?.furn?.restore(s.furn);     // …then the furniture a blast took: gone again, silently (its pieces are not filed — no debris is)
-  try { applyState(g, s, prevLoads, prevSaves, opts); g.lesson?.restore(s.lesson); g.defuse?.restore(s.defuse); g.snatch?.restore(s.snatch); if (PLANLAY.on) layRestore(g, s.lay); ringRestore(g); g.fogOfWar?.restore(s.fog); }   // (…and a training lesson's place among its steps, lesson.ts: after the mission slice — a file without it, made with the lesson off, leaves the lesson stood down for that run)
+  try { applyState(g, s, prevLoads, prevSaves, opts); g.lesson?.restore(s.lesson); g.defuse?.restore(s.defuse); ringRestore(g); g.fogOfWar?.restore(s.fog); }   // (…and a training lesson's place among its steps, lesson.ts: after the mission slice — a file without it, made with the lesson off, leaves the lesson stood down for that run)
   catch (e) { g.restartEncounter(); pageSay(`checkpoint failed to load (${(e as Error).message}) — encounter restarted`); throw e; }   // (a file broken past the checks: never a half-poured encounter — the fresh one, and the reason)
 }
 function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number, opts: { label?: string }) {
@@ -814,6 +806,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     for (const e of S.events ?? []) { if (C.events.length >= MAX_EVENTS) break; C.events.push({ t: fin(e.t), kind: e.kind as ChronKind, room: e.room, pos: c3(e.pos), data: { ...(e.data as ChronData) } }); }
     C.dropped = S.dropped | 0; Object.assign(C.counts, S.counts ?? {}); for (const q of S.questioned ?? []) C.questioned.add(q);
     C.counts.loads = Math.max(C.counts.loads | 0, prevLoads); C.counts.saves = Math.max(C.counts.saves | 0, prevSaves);
+    if (s.kind !== 'harness') C.counts.loads = (C.counts.loads | 0) + 1;   // (a file is loaded only by a tool, the page keeps its games in the module: what stands here is what the next Rust game starts from, and a load is the same try: `resumed`)
     const n = Math.min(S.pathN | 0, Math.floor((S.path?.length ?? 0) / 3), C.path.length / 3); for (let i = 0; i < n * 3; i++) C.path[i] = S.path[i]; C.pathN = n; C.pathEvery = fin(S.pathEvery, 0.5) || 0.5; C.pathNext = fin(S.pathNext);
     g.chronicle = C; }
   // ---- what was in the air, on the strip, in the men's heads
@@ -846,7 +839,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   updateTargets(g, 0);   // (every target's factor / light / emissive off the restored switches and blackout NOW: a checkpoint written in the dark loads dark on its first frame, not its second)
   updateFire(g, 0);      // (… and an open fire's lamp, its place and its coals as this clock has them: fire.ts)
   if (s.dice && g.dice) { g.dice.s = s.dice.s | 0; g.dice.n = fin(s.dice.n); g.dice.seed = fin(s.dice.seed) >>> 0; }   // the game's own die back where the file left it — LAST, after every construction draw the clean slate above made
-  if (s.kind !== 'harness') { chronCheckpoint(g, 'load', opts.label ?? s.label); pageSay(`checkpoint loaded${s.label ? ` — ${s.label}` : ''}`); }   // (a harness restore is staging, not a checkpoint the player loaded: no row, no line, no load on the card)
+  if (s.kind !== 'harness') { pageSay(`checkpoint loaded${s.label ? ` — ${s.label}` : ''}`); }   // (a harness restore is staging, not a checkpoint the player loaded: no row, no line, no load on the card)
 }
 /** a dynamic box's local point / direction into the world (the inverse of what decals.ts stores for an attached mark: yaw about +Y, then the centre) */
 function localToWorld(b: Box, p: V3, point: boolean): Vec3 {
@@ -868,23 +861,23 @@ export const localStore: SaveStore = {
 export function memoryStore(): SaveStore & { map: Map<string, string> } { const map = new Map<string, string>(); return { map, get: k => map.get(k) ?? null, set: (k, v) => { map.set(k, v); return true; }, remove: k => { map.delete(k); } }; }
 export interface SlotInfo { key: string; slot: 'manual' | 'auto'; n: number; label: string; kind: SaveState['kind']; savedAt: number; missionT: number; stage: string; runId: string; bytes: number; /** an autosave the floor came down on inside CKPT.regretSecs (why): offered only when nothing better is stored */ regret?: string; /** kept in memory, not in the store (SAVETIMELINE with a team on the floor): this run's, gone with the page */ mem?: true; }
 /** a save kept in memory: the whole game as rollback.ts took it, and its picture */
-interface MemSave { info: SlotInfo; snap: Snapshot; pic: string | null; /** the F10 recording it was made under (journal.ts `take`; 0 = none) */ take: number; }
-/** what a recording takes of the checkpoint store at its frame 0 and a replay's store is given (Checkpoints.tapeBegin / tapeSeed) */
-export interface TapeSlots { index: string | null; lastAuto: { key: string; t: number } | null; }
+interface MemSave { info: SlotInfo; snap: Snapshot; pic: string | null; }
 /** WHERE THE SAVES IN MEMORY STAND: on the host's shelf, in no snapshot. A snapshot walks everything the Game reaches and a restore writes it all back — a table
  *  of snapshots the Game could reach would be copied into the next one and rolled back by the last. So the shelf is a `HostOwned` (math/side.ts): never walked,
  *  never copied, never put back, never compared — not the simulation's state, and no state word reads it. */
 class MemShelf extends HostOwned {
   private m = new Map<string, MemSave>();
   /** the snapshot nearest the game as it stands — the last one taken, or the one last put back: what the next is taken since (SAVETIMELINE.since). It may have
-   *  left its ring: it is kept here until the next one is taken. null = the next save is a whole take (a new run, a file loaded, a recording begun). */
+   *  left its ring: it is kept here until the next one is taken. null = the next save is a whole take (a new run, a file loaded). */
   last: Snapshot | null = null;
   /** how many times the take's code was run for warmth alone (`Checkpoints.warm`; a page check reads it) */
   warmed = 0;
+  /** how many times a slot was written or the shelf emptied (runtape.ts: one that moved between two steps is a panel's hand, which no tape follows) */
+  changes = 0;
   get(key: string): MemSave | null { return this.m.get(key) ?? null; }
-  set(key: string, e: MemSave): void { this.m.set(key, e); }
+  set(key: string, e: MemSave): void { this.m.set(key, e); this.changes++; }
   all(): MemSave[] { return [...this.m.values()]; }
-  clear(): void { this.m.clear(); this.last = null; }
+  clear(): void { this.m.clear(); this.last = null; this.changes++; }
 }
 interface SlotIndex { v: number; next: number; slots: Record<string, SlotInfo>; }
 export interface SaveResult { ok: boolean; why?: string; info?: SlotInfo; bytes?: number; state?: SaveState; }
@@ -895,7 +888,7 @@ export interface SaveResult { ok: boolean; why?: string; info?: SlotInfo; bytes?
  *  the same slots, labels and rhythm. `own` up: every save is such a save in memory, a run alone included (no file of this module's is written or read: a
  *  file would be of the fields this Game holds, which are not the game), and no base is taken, since such a take is never one since another. As shipped:
  *  rollback.ts's two functions and `own` down, and nothing here differs. */
-export const SNAPS: { own: boolean; take: (g: Game, since?: Snapshot) => Snapshot; put: (s: Snapshot) => void } = { own: false, take: (g, since) => takeSnapshot(g, since), put: s => restoreSnapshot(s) };   // (named inside functions: nothing of rollback.ts is used as this module loads)
+export const SNAPS: { own: boolean; /** `label`: the checkpoint's row is the game's to write, under this name */ take: (g: Game, since?: Snapshot, label?: string) => Snapshot; put: (s: Snapshot) => void } = { own: false, take: (g, since) => takeSnapshot(g, since), put: s => restoreSnapshot(s) };   // (named inside functions: nothing of rollback.ts is used as this module loads)
 let runSerial = 0;
 rollbackVar('savestate.runSerial', () => runSerial, v => { runSerial = v; });
 /** the room the player stands in, for the autosave's 'first time in a room' trigger and its label: the game's word for it, the level's own name for the place */
@@ -915,7 +908,9 @@ export class Checkpoints {
   flash: { text: string; t: number } | null = null;
   /** the last few things that happened (panel / probes): saves, refusals, drops, loads */
   log: { t: number; what: string }[] = [];
-  stats = { requests: 0, autosaves: 0, manual: 0, harness: 0, loads: 0, dropped: 0, refused: 0, deferredFrames: 0, regretted: 0 };
+  stats = { requests: 0, autosaves: 0, manual: 0, harness: 0, loads: 0, restarts: 0, dropped: 0, refused: 0, deferredFrames: 0, regretted: 0 };
+  /** the slot the last load put back, where it was a save in memory (null: a file, or no load yet): what a run's tape can do again (runtape.ts) */
+  loadedKey: string | null = null;
   /** QA hook: every state written (autosave or not) is also handed here — the soak keeps them to reload from */
   onSaved: ((s: SaveState | null, info: SlotInfo | null) => void) | null = null;   // (s null: a save kept in memory has no file)
   private missionRef: object | null = null; private stageRef: MissionStage = 'infiltrate'; private roomRef: string | null = ''; private dragRef: object | null = null;
@@ -1030,7 +1025,6 @@ export class Checkpoints {
   write(g: Game, slot: 'auto' | 'manual' | 'harness', label = '', force = false): SaveResult {
     let s: SaveState;
     this.runId ||= newRunId();   // (a save before the first tick still belongs to a run the cards and the Enter path can match)
-    if (slot !== 'harness') g.journal.cut('a checkpoint was saved between frames');   // (off the panel, between two frames: on no tape, and the store is part of what an F10 recording replays on — journal.ts slotRead; inside an update, where every save of play is made, this does nothing)
     if (slot !== 'harness' && (SNAPS.own || (SAVETIMELINE.on && squadUp(g)))) return this.writeMem(g, slot, label);
     try { s = saveState(g, { label, kind: slot, force, runId: this.runId }); }
     catch (e) { const why = (e as Error).message.replace(/^checkpoint refused: /, ''); this.stats.refused++; this.note(g, `refused ${slot}: ${why}`); return { ok: false, why }; }
@@ -1044,7 +1038,7 @@ export class Checkpoints {
       let stored = this.put(key, json);
       if (!stored && SAVETIMELINE.on) { for (const k of Object.keys(idx.slots)) this.store.remove(KEY_PIC(k)); stored = this.put(key, json); }   // (a full store: a picture never costs a save — every one goes, and the save is tried again)
       if (!stored) { this.stats.refused++; this.note(g, `refused ${slot}: the store would not take ${(bytes / 1024).toFixed(0)} KB (${key.replace(KEY_PREFIX, '')})`); return { ok: false, why: 'the browser would not store it (quota / private window)', bytes, state: s }; }   // (nothing stored: no index entry pointing at a stale slot, no CHECKPOINT tag)
-      idx.slots[key] = info; if (slot === 'auto') idx.next = (n + 1) % ring; this.put(KEY_INDEX, JSON.stringify(idx)); g.journal.slotWrote(key);
+      idx.slots[key] = info; if (slot === 'auto') idx.next = (n + 1) % ring; this.put(KEY_INDEX, JSON.stringify(idx));
       if (SAVETIMELINE.on) this.picture?.(info);
     }
     if (slot === 'auto') { this.stats.autosaves++; this.flash = { text: 'CHECKPOINT', t: g.time }; this.lastAuto = { key: info!.key, t: g.time }; } else if (slot === 'manual') { this.stats.manual++; this.flash = { text: 'CHECKPOINT SAVED', t: g.time }; } else this.stats.harness++;
@@ -1096,7 +1090,6 @@ export class Checkpoints {
   /** SAVETIMELINE with a team on the floor: the game as it stands kept in memory, in its own two rings (this run's only) */
   private writeMem(g: Game, slot: 'auto' | 'manual', label: string, authored = false): SaveResult {
     const why = authored ? runNo(g, true, true) : canSnap(g); if (why) { this.stats.refused++; this.note(g, `refused ${slot}: ${why}`); return { ok: false, why }; }
-    chronCheckpoint(g, 'save', label);
     this.lastSaveT = g.time; this.quietT = 0;
     const ring = slot === 'auto' ? SAVETIMELINE.auto : SAVETIMELINE.manual; let n = 0, at = Infinity;
     for (let i = 0; i < ring; i++) { const e = this.shelf.get(KEY_MEM(slot, i)); if (!e) { n = i; break; } if (e.info.savedAt < at) { at = e.info.savedAt; n = i; } }
@@ -1104,8 +1097,8 @@ export class Checkpoints {
     const info: SlotInfo = { key, slot, n, label, kind: slot, savedAt: Date.now(), missionT: g.mission.stats.elapsed, stage: g.mission.stage, runId: this.runId, bytes: 0, mem: true };
     // (SAVETIMELINE.since: what has not changed since the last save in memory — or the one last put back — is shared with it, not copied again and not walked;
     //  rollback.ts walks the whole game again by itself when that snapshot's chain has grown stale)
-    const base = SAVETIMELINE.since ? this.shelf.last : null, snap = SNAPS.take(g, base ?? undefined); this.shelf.last = snap;
-    this.shelf.set(key, { info, snap, pic: null, take: g.journal.take });
+    const base = SAVETIMELINE.since ? this.shelf.last : null, snap = SNAPS.take(g, base ?? undefined, label); this.shelf.last = snap;
+    this.shelf.set(key, { info, snap, pic: null });
     if (slot === 'auto') { this.stats.autosaves++; this.flash = { text: 'CHECKPOINT', t: g.time }; this.lastAuto = { key, t: g.time }; } else { this.stats.manual++; this.flash = { text: 'CHECKPOINT SAVED', t: g.time }; }
     this.note(g, `${slot} → ${key.replace(KEY_PREFIX, '')}: ${label || '—'} (in memory)`);
     this.picture?.(info); this.onSaved?.(null, info);
@@ -1117,7 +1110,7 @@ export class Checkpoints {
     this.runId ||= newRunId();
     let n = 0, at = Infinity; for (let i = 0; i < SAVETIMELINE.manual; i++) { const e = this.shelf.get(KEY_MEM('manual', i)); if (!e) { n = i; break; } if (e.info.savedAt < at) { at = e.info.savedAt; n = i; } }
     const key = KEY_MEM('manual', n), info: SlotInfo = { key, slot: 'manual', n, label, kind: 'manual', savedAt: Date.now(), missionT, stage, runId: this.runId, bytes: 0, mem: true };
-    this.shelf.set(key, { info, snap, pic: null, take: g.journal.take }); this.note(g, `shelved → ${key.replace(KEY_PREFIX, '')}: ${label || '—'} (in memory)`);
+    this.shelf.set(key, { info, snap, pic: null }); this.note(g, `shelved → ${key.replace(KEY_PREFIX, '')}: ${label || '—'} (in memory)`);
     return info;
   }
   /** …and put back: every object of the game written as it stood (identities stand, the host is left as it is NOW — `onPutBack` is its turn). What the
@@ -1125,10 +1118,6 @@ export class Checkpoints {
   private loadMem(g: Game, key: string): string | null {
     const e = this.shelf.get(key); if (!e) return 'that checkpoint is gone';
     { const why = this.memNo(g, e); if (why) { this.note(g, `load refused: ${why}`); return why; } }
-    g.journal.cut('a checkpoint was loaded');   // (as a file's load, below: between frames it is on no tape)
-    // (inside an update — Enter once down — the load is that frame's own input and the recording runs on: the sensors' stream is the host's, sensors.ts, and
-    //  a replay puts back its own save of the same frame. A save from BEFORE the recording is in no replay's memory: the tape ends with this frame)
-    if (g.journal.recording && e.take !== g.journal.take) g.journal.cut('a save in memory from before the recording was loaded', true);
     // what is NOT the saved moment's to take back: the run's counts, the controller's books, and what the host and this machine set on the game since —
     // the autosave switch, the three hooks, the sandbox row, the tune rows (a file's load leaves all of these as they are NOW)
     const C = g.chronicle.counts, loads = C.loads, saves = C.saves, stats = { ...this.stats }, log = this.log.slice();
@@ -1143,8 +1132,8 @@ export class Checkpoints {
     Object.assign(this, host); Object.assign(g.tune, tune); Object.assign(g, flags); loadSandbox(g, false);
     g.chronicle.counts.loads = loads; g.chronicle.counts.saves = saves;
     this.pending = null; this.lastAuto = null; this.hand = false; this.due = null; this.lastSaveT = g.time;   // (a load counts as a save for the gap, as a file's does)
-    chronCheckpoint(g, 'load', e.info.label); pageSay(`checkpoint loaded${e.info.label ? ` — ${e.info.label}` : ''}`);
-    this.stats.loads++; this.flash = { text: 'CHECKPOINT LOADED', t: g.time }; this.note(g, `loaded ${key.replace(KEY_PREFIX, '')}: ${e.info.label || '—'} (from memory)`);
+    pageSay(`checkpoint loaded${e.info.label ? ` — ${e.info.label}` : ''}`);
+    this.stats.loads++; this.loadedKey = key; this.flash = { text: 'CHECKPOINT LOADED', t: g.time }; this.note(g, `loaded ${key.replace(KEY_PREFIX, '')}: ${e.info.label || '—'} (from memory)`);
     g.rails?.putBack();   // (a tutorial mission's program is functions half run, which no snapshot holds: rails.ts starts it again and sends the step's cue again)
     this.onPutBack?.(e.info);
     return null;
@@ -1166,32 +1155,21 @@ export class Checkpoints {
   }
   /** is this slot one of THIS run's (the cards word an earlier run's differently and never make it the default) */
   isThisRun(info: SlotInfo): boolean { return !!info && info.runId === this.runId; }
-  /** WHAT A RECORDING TAKES OF THE STORE at its frame 0 (journal.ts begin): the index as it stands (every row, any run's) and the autosave still inside its
-   *  regret window. The Enter once down reads both (`newest`, the regret mark) and the ring's next slot is the index's: a replay that began on an empty
-   *  store chose another checkpoint, or restarted, where the recording went back to one made before it. null rows = nothing stored. */
-  tapeBegin(): TapeSlots { const idx = this.index(); return { index: Object.keys(idx.slots).length || idx.next ? JSON.stringify(idx) : null, lastAuto: this.lastAuto ? { ...this.lastAuto } : null }; }
-  /** …and a replay's game is given, after its checkpoint is loaded (tools/qa/replay.ts): the rows, each over an EMPTY text (a row with nothing behind it is
-   *  dropped by `index`; an empty text reads as 'gone', which is what a slot nobody loaded is to the replay). The text of a slot the recording did load
-   *  comes with its frame (`tapeText`). */
-  tapeSeed(t: TapeSlots): void {
-    let idx: SlotIndex | null = null; try { idx = typeof t.index === 'string' ? JSON.parse(t.index) as SlotIndex : null; } catch { idx = null; }
-    if (idx && idx.slots && typeof idx.slots === 'object') { for (const k of Object.keys(idx.slots)) { if (!k.startsWith(KEY_PREFIX)) delete idx.slots[k]; else if (this.store.get(k) === null) this.store.set(k, ''); } this.store.set(KEY_INDEX, JSON.stringify(idx)); }
-    this.lastAuto = t.lastAuto && typeof t.lastAuto.key === 'string' && typeof t.lastAuto.t === 'number' ? { key: t.lastAuto.key, t: t.lastAuto.t } : null;
-  }
-  tapeText(key: string, text: string): void { if (key.startsWith(KEY_PREFIX) && key !== KEY_INDEX) this.store.set(key, text); }
   /** parse a stored slot (null: gone / corrupt) */
   read(key: string): SaveState | null { try { const raw = this.store.get(key); return raw ? JSON.parse(raw) as SaveState : null; } catch { return null; } }
   /** Load a stored slot (or a given state) into the game. Returns why not, or null on success. */
   load(g: Game, from: string | SaveState): string | null {
     if (typeof from === 'string' && this.shelf.get(from)) return this.loadMem(g, from);
     const s = typeof from === 'string' ? this.read(from) : from; if (!s) return 'that checkpoint is gone';
-    if (typeof from === 'string') g.journal.slotRead(from, () => this.store.get(from));   // (inside an update, a slot the recording did not write itself: its text goes on the tape)
     const why = canLoad(g, s); if (why) { this.note(g, `load refused: ${why}`); return why; }
-    g.journal.cut('a checkpoint was loaded');   // (a load off a card or the panel is between frames and on no tape: an F10 recording ends whole before it and a new one is asked for — journal.ts cut; Enter once down is inside an update and on the tape)
     try { loadState(g, s); } catch (e) { const w = (e as Error).message; this.note(g, `load failed: ${w}`); return w; }
-    this.stats.loads++; this.flash = { text: 'CHECKPOINT LOADED', t: g.time }; this.note(g, `loaded ${typeof from === 'string' ? from.replace(KEY_PREFIX, '') : 'a state'}: ${s.label || '—'}`);
+    this.stats.loads++; this.loadedKey = null; this.flash = { text: 'CHECKPOINT LOADED', t: g.time }; this.note(g, `loaded ${typeof from === 'string' ? from.replace(KEY_PREFIX, '') : 'a state'}: ${s.label || '—'}`);
     return null;
   }
+  /** THE HOST PUT THE RUN BACK TO ITS START (host/rustgame.ts toStart: the game kept as the first step opened stands again): a run of its own name, its shelf
+   *  empty and its triggers from nothing as the next tick ends, and counted: a restart moves the clock back as a load does, and is no load */
+  startedAgain(): void { this.missionRef = null; this.stats.restarts++; }
+  get shelfChanges(): number { return this.shelf.changes; }
   /** wipe every stored slot */
   clear() { const idx = this.index(); for (const k of Object.keys(idx.slots)) { this.store.remove(k); this.store.remove(KEY_PIC(k)); } for (let i = 0; i < Math.max(CKPT.autoSlots, SAVETIMELINE.auto); i++) { this.store.remove(KEY_AUTO(i)); this.store.remove(KEY_PIC(KEY_AUTO(i))); } for (let i = 0; i < Math.max(1, SAVETIMELINE.manual); i++) { this.store.remove(KEY_HAND(i)); this.store.remove(KEY_PIC(KEY_HAND(i))); } this.store.remove(KEY_INDEX); this.shelf.clear(); }   // (both rings at their full size whatever the switch says now, with or without an index that names them)
   /** the words for the cards: 'N s ago' off the mission clock for a checkpoint of this run, wall-clock age otherwise */
@@ -1203,7 +1181,6 @@ export class Checkpoints {
   importText(g: Game, text: string): SlotInfo | string {
     let s: SaveState; try { s = JSON.parse(text); } catch { return 'not JSON'; }
     const why = canLoad(g, s); if (why && !/show is running/.test(why)) return why;
-    g.journal.cut('a checkpoint was imported');   // (as a save off the panel: write)
     const idx = this.index(); const n = SAVETIMELINE.on ? this.handSlot(idx) : 0, key = KEY_HAND(n); if (SAVETIMELINE.on) this.store.remove(KEY_PIC(key));
     const info: SlotInfo = { key, slot: 'manual', n, label: s.label || 'imported', kind: s.kind, savedAt: Date.now(), missionT: s.missionT, stage: s.stage, runId: s.runId, bytes: text.length };   // (savedAt = the import: 'newest' — the panel's load / export default — is then this file, as its message says)
     if (!this.put(key, text)) return 'the browser would not store it (quota / private window)';

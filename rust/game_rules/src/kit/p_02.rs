@@ -72,9 +72,6 @@ fn table(g: &Game) -> SlotTable { g.k.slots.table.clone() }
 
 // ---------------------------------------------------------------- lines 384 to 460
 
-/// (kit.ts moreOn; KITDEAL.more settled on, the check's break word never set in the game)
-pub fn more_on(g: &crate::game::Game) -> bool { true }
-
 /// (kit.ts stealthOn; KITDEAL.stealth settled on)
 pub fn stealth_on(g: &crate::game::Game) -> bool { tree_up(g) }
 
@@ -259,20 +256,18 @@ pub fn deal(g: &mut crate::game::Game, cards: &[crate::kit::MemberKit], t: &crat
         }
         *dealt_mut(&mut out[to], k) += 1.0;
     }
-    if more_on(g) {
-        for &i in men.iter() {
-            let Some(it) = item(t, "bangs") else { continue; };
-            if js::truthy(load(&out, i)) || out[i].bangs >= it.max[i] || cost_of(g, &out[i], t) + price_of(g, Some(it)) > t.pouches[i] { continue; }
-            if let Some(sm) = it.squad_max { if squad_has_g(g, &out, "bangs", n) >= sm { continue; } }
-            out[i].bangs += 1.0;
-        }
+    for &i in men.iter() {
+        let Some(it) = item(t, "bangs") else { continue; };
+        if js::truthy(load(&out, i)) || out[i].bangs >= it.max[i] || cost_of(g, &out[i], t) + price_of(g, Some(it)) > t.pouches[i] { continue; }
+        if let Some(sm) = it.squad_max { if squad_has_g(g, &out, "bangs", n) >= sm { continue; } }
+        out[i].bangs += 1.0;
     }
     out
 }
 
 /// Five cards with the tools this team is lent (kit.ts lend)
 pub fn lend(g: &mut crate::game::Game, cards: &[crate::kit::MemberKit], t: &crate::kit::SlotTable, n: f64, of: &[crate::kit::MemberKit], mine: bool) -> Vec<crate::kit::MemberKit> {
-    if !more_on(g) || !big_is_on(g) || n < 3.0 || !lendable(g, of, mine) { return cards.to_vec(); }
+    if !big_is_on(g) || n < 3.0 || !lendable(g, of, mine) { return cards.to_vec(); }
     let mut out = cards.to_vec();
     for (at, tool) in deal_tool() {
         let i = at as usize;
@@ -344,7 +339,7 @@ pub fn on_worn<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, i: f64, f
     let t = table(g);
     let own = match &laid { None => true, Some(l) => illegal(g, l, &t, None).is_some() };
     let mut kept: Vec<MemberKit> = match laid { Some(l) if !own => l, _ => now };
-    if more_on(g) && big_is_on(g) {
+    if big_is_on(g) {
         let leaving = own && !g.m.kit.deal_own && !lendable(g, &was, true);
         let tools = deal_tool();
         for j in 0..kept.len() {
@@ -540,7 +535,7 @@ pub fn slot_max(g: &crate::game::Game, item: &str, i: f64, own: f64) -> f64 {
 /// The wall charge has a row on member i's card (kit.ts wallRow; OWNCHARGE.on settled on)
 pub fn wall_row(g: &crate::game::Game, i: f64) -> bool {
     let iu = i as usize;
-    rule_is_on(g) && wall_here() && max_or(&g.k.slots.table, "walls", iu, 0.0) > 0.0 && (!big_is_on(g) || big_slots(&g.k.slots.table, iu) > 0.0)
+    rule_is_on(g) && max_or(&g.k.slots.table, "walls", iu, 0.0) > 0.0 && (!big_is_on(g) || big_slots(&g.k.slots.table, iu) > 0.0)
 }
 
 /// Door charges have a row on member i's card (kit.ts chargeRow; OWNCHARGE.on settled on)

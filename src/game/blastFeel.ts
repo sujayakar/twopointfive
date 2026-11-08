@@ -78,13 +78,6 @@ export const FEEL = {
     chunks: { count: [28, 14], speed: [8, 5.5], life: 7, size: 0.05, color: [0.05, 0.046, 0.042] as Vec3 },
   },
 };
-const LS_KEY = 'twopointsix.blastfeel';
-let loaded = false;
-/** the kick's strength as this machine last left it (lazily, at the first tick: nothing here runs at import) */
-function loadFeel() { loaded = true; try { const s = typeof localStorage !== 'undefined' ? localStorage.getItem(LS_KEY) : null; if (s) { const k = Number(JSON.parse(s).kick); if (k >= 0 && k <= 2) FEEL.kick = k; } } catch { /* a profile without storage: the authored strength */ } }
-/** the kick's strength for the panel (read through here so the row shows this machine's copy before the first charge is set) */
-export function feelKick(): number { if (!loaded) loadFeel(); return FEEL.kick; }
-export function saveFeel() { try { localStorage.setItem(LS_KEY, JSON.stringify({ kick: FEEL.kick })); } catch { /* no storage: this session only */ } }
 
 interface Face { o: Vec3; d: Vec3; mask: number }
 interface Kick { t0: number; at: Vec3 }
@@ -136,7 +129,6 @@ function blastFeelTickRaw(g: Game, cam: FollowCamera | null) {
   if (!WC || !live(g)) { if (S0) { S0.seen.length = 0; S0.queue.length = 0; S0.kicks.length = 0; } if (cam?.kick) cam.kick = null; return; }
   if (!S0 && !WC.set.length) { if (cam?.kick) cam.kick = null; return; }   // (a kick left on the camera by another Game: not this one's to keep)
   const S = S0 ?? stateOf(g);
-  if (!loaded) loadFeel();
   if (g.time < S.last || (cam && S.list && S.list !== WC.set)) { S.queue.length = 0; S.kicks.length = 0; S.seen.length = 0; }   // (the clock went back — a load — or the charges' list is a new one — a restart, whose clock runs on: nothing of the old encounter's blast plays into this one)
   S.last = g.time; S.list = WC.set;
   S.seen.length = 0; for (const c of WC.set) S.seen.push(c);

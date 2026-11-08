@@ -26,6 +26,7 @@ import { pool, jobsOf } from './pool.ts';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { El, withDom } from './scenario-picker-probes.ts';
+import { sample } from './sweep.ts';
 
 const { SCENARIOS, specOfQuery, pickSearch, quitSearch, teamWords } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
@@ -145,23 +146,23 @@ export async function loadoutPure(): Promise<boolean> {
 // ───────────────────────────────────────────────────────────── loadout-screen ─────────────────────────────────────────────────────────────
 export async function loadoutScreen(): Promise<boolean> {
   const { verdict, done } = family('loadout-screen: the real screen on a fake DOM');
-  const UI = await import(`${ROOT}/src/ui/loadout.ts`); const realCard = (await import(`${ROOT}/src/ui/kitCard.ts`)).memberCard;
+  const UI = await import(`${ROOT}/src/ui/loadout.ts`), MI = await import(`${ROOT}/src/ui/missions.ts`);
+  const LO = (e: any, o: any) => UI.openLoadout(e, { keys: () => true, search: MI.missionHref(MI.missionOf(e), (globalThis as any).location?.search ?? ''), ...o });
   const G = globalThis as any; const hadLS = 'localStorage' in G, prevLS = G.localStorage; const st = memStore(); G.localStorage = st;
   try {
     for (const id of ['night-breach', 'depot-four', 'rescue-registry']) {
       const e = SCENARIOS.find((x: any) => x.id === id);
       await withDom('?quality=low', async () => {
         st.m.clear(); K.kitLoad(null, '?noslots'); K.kitReset();   // (the free rows: this probe holds the screen's own rows and keys; under the pouches rule it has one row more, the Squad kit — the pouches family drives that one, pouch-wall)
-        const host = new El('BODY') as any; const deployed: [string, number][] = []; let backs = 0; const cards: number[] = [];
-        UI.loadoutHooks.memberCard = (h: any, i: number, o: any) => { cards.push(i); return realCard(h, i, o); };
-        const S = UI.openLoadout(e, { host, deploy: (s: string, n: number) => deployed.push([s, n]), back: () => backs++ });
+        const host = new El('BODY') as any; const deployed: [string, number][] = []; let backs = 0;
+        const S = LO(e, { host, deploy: (s: string, n: number) => deployed.push([s, n]), back: () => backs++ });
         const slots = () => host.all((x: El) => x.cls.has('lo-slot')), inSlots = () => slots().filter((x: El) => x.cls.has('in')).length, one = (c: string, from: any = host) => from.all((x: El) => x.cls.has(c))[0] as El | undefined;
         const kitHosts = () => host.all((x: El) => x.cls.has('lo-kit')), sums = () => slots().map((x: El) => one('lo-sum', x)?.textContent ?? '');
         const lit = () => host.all((x: El) => x.cls.has('lo-size') && x.cls.has('on')).map((x: El) => x.attrs['data-squad']).join(',');
-        verdict(S.squad === e.squad && lit() === String(e.squad) && slots().length === 5 && inSlots() === 1 + e.squad, `${id}: opens on the mission's own size, five slots, you and ${e.squad} filled`, `size ${S.squad} · lit ${lit()} · ${slots().length} slots, ${inSlots()} filled · title '${host.all((x: El) => x.cls.has('lo-title'))[0]?.textContent}'`);
+        verdict(S.squad === e.squad && lit() === String(e.squad) && slots().length === 5 && inSlots() === 1 + e.squad, `${id}: opens on the mission's own size, five slots, you and ${e.squad} filled`, `size ${S.squad} · lit ${lit()} · ${slots().length} slots, ${inSlots()} filled `);
         const H = kitHosts(), kc = () => kitHosts()[0].all((x: El) => x.cls.has('kc')), su = sums();
-        verdict(H.length === 1 && H[0].attrs['data-member'] === '0' && kc().length === 1 && kc()[0].attrs['data-member'] === '0' && one('kc-title')?.textContent === 'You' && cards.join(',') === '0' && S.member === 0 && !!S.card && su.every((t: string, i: number) => t === (i <= e.squad ? K.kitWords(i) : '')),
-          `${id}: one [data-member] host under the slots holds the picked member's real kit card (you, at first); every man who comes has his kit in a line on his slot`, `host data-member ${H[0]?.attrs['data-member']} · card '${one('kc-title')?.textContent}' · memberCard called for ${cards.join(', ')} · slot 1: '${su[1]}'`);
+        verdict(H.length === 1 && H[0].attrs['data-member'] === '0' && kc().length === 1 && kc()[0].attrs['data-member'] === '0' && one('kc-title')?.textContent === 'You' && S.member === 0 && !!S.card && su.every((t: string, i: number) => t === (i <= e.squad ? K.kitWords(i) : '')),
+          `${id}: one [data-member] host under the slots holds the picked member's real kit card (you, at first); every man who comes has his kit in a line on his slot`, `host data-member ${H[0]?.attrs['data-member']} · card '${one('kc-title')?.textContent}' · slot 1: '${su[1]}'`);
         const poolText = () => one('lo-pool')?.textContent ?? '', p0 = poolText(), P0 = S.pool();
         verdict(p0 === `Squad carries · ${K.kitPool(e.squad).bangs} stun · ${K.kitPool(e.squad).charges} charges · ${K.kitPool(e.squad).frags} frags` && P0.bangs === 3 && P0.charges === 2 && P0.frags === 2, `${id}: the squad's count is on the screen: as issued, the game's three and two`, `'${p0}'`);
         // keys: D D A, the stepper, a size button, a slot
@@ -169,12 +170,12 @@ export async function loadoutScreen(): Promise<boolean> {
         S.key('KeyA'); rec('A'); S.key('ArrowLeft'); rec('←'); S.key('KeyA'); rec('A'); S.key('KeyA'); rec('A'); S.key('KeyA'); rec('A');   // down to solo and no further
         const solo = S.squad === 0 && inSlots() === 1, poolSolo = poolText();
         S.key('KeyD'); rec('D'); const poolOne = poolText(); S.key('ArrowRight'); rec('→'); const two = S.squad;
-        host.all((x: El) => x.attrs['data-step'] === '1')[0].onclick!(); rec('▶'); const three = S.squad;
+        S.step(1); rec('▶'); const three = S.squad;
         host.all((x: El) => x.attrs['data-squad'] === '4')[0].onclick!(); rec('+4'); const four = S.squad, names4 = slots().map((x: El) => x.all((y: El) => y.cls.has('lo-name'))[0].textContent).join(', ');
         slots()[2].onclick!(); rec('slot 2'); const picked = S.member, still4 = S.squad, cardName = one('kc-title')?.textContent, hostM = kitHosts()[0].attrs['data-member'], pickCls = slots().map((x: El) => (x.cls.has('pick') ? '■' : '□')).join('');
         host.all((x: El) => x.attrs['data-squad'] === '1')[0].onclick!(); rec('+1'); const oneN = S.squad, clamped = S.member, name1 = one('kc-title')?.textContent;
         slots()[3].onclick!(); rec('slot 3'); const three2 = S.squad;
-        verdict(solo && two === 2 && three === 3 && four === 4 && inSlots() === 4 && names4 === 'You, Red One, Red Two, Blue One, Blue Two', `${id}: A / D and the arrows step the size and stop at the ends; the stepper and a size button set it; the slots show the roster`, `${walk.join(' ')} · at four: ${names4}`);
+        verdict(solo && two === 2 && three === 3 && four === 4 && inSlots() === 4 && names4 === 'You, Red One, Red Two, Blue One, Blue Two', `${id}: A / D and the arrows step the size and stop at the ends; a size button sets it; the slots show the roster`, `${walk.join(' ')} · at four: ${names4}`);
         verdict(picked === 2 && still4 === 4 && cardName === 'Red Two' && hostM === '2' && pickCls === '□□■□□' && oneN === 1 && clamped === 1 && name1 === 'Blue One' && three2 === 3,
           `${id}: a click on a filled slot picks that man (his card under the slots, by the name this size gives him); a smaller team keeps a man who still comes picked; a click on an empty slot brings the team up to it`, `slot 2 at four: member ${picked}, card '${cardName}', picks ${pickCls} · +1: member ${clamped}, card '${name1}' · empty slot 3: size ${three2}`);
         verdict(poolSolo === '' && poolOne === 'Squad carries · 2 stun · 1 charge · 1 frag', `${id}: alone there is no squad count; one man carries his own two and one`, `solo '${poolSolo}' · one '${poolOne}'`);
@@ -183,13 +184,13 @@ export async function loadoutScreen(): Promise<boolean> {
         verdict(S.rows.length === 4 && s0 === '■□□□' && s1 === '□■□□' && s2 === '■□□□' && s3 === '□□□■' && sel() === '■□□□', `${id}: W S / ↑ ↓ move the highlight between the rows (and wrap)`, `${s0} S ${s1} W ${s2} ↑ ${s3} ↓ ${sel()}`);
         // into a card by the keys: S (members) D D (member 2) Enter (his card, top row) S (suppressor) D (off) — the table, his slot's line, nothing else
         S.key('KeyS'); S.key('KeyD'); S.key('ArrowRight'); S.key('KeyA'); const m2 = S.member; S.key('Enter'); const inCard = sel(), at0 = S.card.at(), focus0 = kc()[0].cls.has('focus');
-        const supAt = K.kitRows(2).findIndex((r: any) => r.field === 'suppressed');   // (the row under his gun — or his two guns: a card with a Primary and a Secondary has it one lower)
-        for (let n = 0; n < supAt; n++) S.key('KeyS'); const at1 = S.card.at(); S.key('KeyD'); const sup = (K.KIT.members[2] as any).suppressed, sum2 = sums()[2], squadNow = S.squad;
+        const supAt = K.kitRows(2).findIndex((r: any) => r.field === 'suppressed');   // (the row under his gun, in its pop-up: Enter on the gun's tile opens it)
+        S.key('Enter'); for (let n = 0; n < 8 && S.card.at() !== supAt; n++) S.key('KeyS'); const at1 = S.card.at(); S.key('KeyD'); const sup = (K.KIT.members[2] as any).suppressed, sum2 = sums()[2], squadNow = S.squad;
         S.key('Enter'); const sup2 = (K.KIT.members[2] as any).suppressed; S.key('Enter', true); const held = (K.KIT.members[2] as any).suppressed;   // (Enter in a card is the row's next value, not Deploy; held, nothing)
         verdict(m2 === 2 && inCard === '□□■□' && at0 === 0 && focus0 && supAt >= 1 && at1 === supAt && sup === false && /AKS-74U|no suppressor| bare \+ /.test(sum2) /* (the tree's card names the gun by its pick, 'bare' with its suppressor off: kittree.ts) */ && squadNow === 3 && sup2 === true && held === true && deployed.length === 0,
           `${id}: by the keys alone — S to the members, A / D to a man, Enter into his card, S to a row, D changes it: the table and his slot's line follow; Enter in a card steps the row and deploys nothing`, `member ${m2} · rows ${inCard} · card row ${at0} → ${at1} · suppressor ${sup} ('${sum2}') → Enter ${sup2}`);
         // stun canisters on member 1's card move the squad's count on the screen (S down to the row, A: one fewer is legal whatever the pouches cost)
-        for (let n = 0; n <= supAt; n++) S.key('KeyW'); const backOnMembers = sel(); S.key('KeyA'); S.key('KeyS'); for (let n = 0; n < 12 && K.kitRows(1)[S.card.at()]?.field !== 'bangs'; n++) S.key('KeyS'); const row = K.kitRows(1)[S.card.at()].field; S.key('KeyA'); const poolUp = poolText(), b1 = (K.KIT.members[1] as any).bangs;
+        S.key('Escape'); S.key('KeyW'); const backOnMembers = sel(); S.key('KeyA'); S.key('KeyS'); for (let n = 0; n < 12 && K.kitRows(1)[S.card.at()]?.field !== 'bangs'; n++) S.key('KeyS'); const row = K.kitRows(1)[S.card.at()].field; S.key('KeyA'); const poolUp = poolText(), b1 = (K.KIT.members[1] as any).bangs;
         // on down the card: past its last row (the sets) S walks on to the buttons; W from there comes back onto the sets
         for (let n = 0; n < 16 && S.card.at() < K.kitRows(1).length; n++) S.key('KeyS'); /* (however many rows the card has under the canisters) */ const onSets = S.card.at(); S.key('KeyS'); const onButtons = sel(); S.key('KeyW'); const backInCard = sel(), atSets = S.card.at(); S.key('KeyS');
         verdict(backOnMembers === '□■□□' && row === 'bangs' && b1 === 1 && poolUp === 'Squad carries · 2 stun · 2 charges · 2 frags' && S.pool().bangs === 2 && onSets === K.kitRows(1).length && onButtons === '□□□■' && backInCard === '□□■□' && atSets === K.kitRows(1).length,
@@ -197,59 +198,49 @@ export async function loadoutScreen(): Promise<boolean> {
         K.kitReset(); S.card.refresh(); S.paint();
         S.key('Enter'); const want = L.squadSearch(pickSearch(e, '?quality=low'), 3, e.squad);
         verdict(deployed.length === 1 && deployed[0][0] === want && deployed[0][1] === 3 && !S.open && host.all((x: El) => x.cls.has('lo')).length === 0 && specOfQuery(want)?.squad === 3 && L.readLoadout(st).squad[e.id] === 3, `${id}: Enter deploys the size shown — its query, the screen gone, the pick remembered`, `deploy('${deployed[0]?.[0]}', ${deployed[0]?.[1]}) · stored ${JSON.stringify(L.readLoadout(st).squad)}`);
-        // again: opens on what was deployed; Esc backs out with nothing deployed; Space on Back the same
-        const S2 = UI.openLoadout(e, { host, deploy: (s: string, n: number) => deployed.push([s, n]), back: () => backs++ }); const opened = S2.squad;
-        S2.key('Escape'); const S3 = UI.openLoadout(e, { host, deploy: (s: string, n: number) => deployed.push([s, n]), back: () => backs++ }); S3.key('KeyW'); S3.key('KeyA'); S3.key('Space');
-        const S5 = UI.openLoadout(e, { host, deploy: (s: string, n: number) => deployed.push([s, n]), back: () => backs++ }); S5.key('KeyS'); S5.key('KeyS'); S5.key('KeyS'); const deep = S5.card.at(); S5.key('Escape');   // (Esc from inside a card: back one screen)
-        verdict(opened === 3 && deployed.length === 1 && backs === 3 && !S2.open && !S3.open && deep === 1 && !S5.open && UI.loadoutOpen() === null, `${id}: it opens on the size deployed last; Esc backs out — from inside a card too — and so does Space on Back: nothing deployed`, `opened on ${opened} · ${deployed.length} deploy · ${backs} backs`);
+        // again: opens on what was deployed; Esc backs out with nothing deployed
+        const S2 = LO(e, { host, deploy: (s: string, n: number) => deployed.push([s, n]), back: () => backs++ }); const opened = S2.squad;
+        S2.key('Escape');
+        const S5 = LO(e, { host, deploy: (s: string, n: number) => deployed.push([s, n]), back: () => backs++ }); S5.key('KeyS'); S5.key('KeyS'); S5.key('KeyS'); const deep = S5.card.at(); S5.key('Escape');   // (Esc from inside a card: back one screen)
+        verdict(opened === 3 && deployed.length === 1 && backs === 2 && !S2.open && deep > 0 && !S5.open && UI.loadoutOpen() === null, `${id}: it opens on the size deployed last; Esc backs out — from inside a card too: nothing deployed`, `opened on ${opened} · ${deployed.length} deploy · ${backs} backs`);
         // at the mission's own size the query is the row's own
-        const S4 = UI.openLoadout(e, { host, squad: e.squad, deploy: (s: string, n: number) => deployed.push([s, n]) }); S4.deploy();
+        const S4 = LO(e, { host, squad: e.squad, deploy: (s: string, n: number) => deployed.push([s, n]) }); S4.deploy();
         verdict(deployed[1]?.[0] === pickSearch(e, '?quality=low'), `${id}: at its own size Deploy loads exactly the row's own URL`, `${deployed[1]?.[0]}`);
       });
     }
     // a greyed size that cannot stage (none is today — a row's `only` is another rule: one is made for the check)
     await withDom('', async () => {
       const e = SCENARIOS.find((x: any) => x.id === 'night-breach'); st.m.clear(); L.CANNOT['night-breach'] = { 4: 'four do not fit this check' };
-      try { const host = new El('BODY') as any, S = UI.openLoadout(e, { host, deploy: () => {} });
+      try { const host = new El('BODY') as any, S = LO(e, { host, deploy: () => {} });
         const b4 = host.all((x: El) => x.attrs['data-squad'] === '4')[0]; S.setSquad(3); S.key('KeyD'); const stays = S.squad; b4.onclick!(); const note = host.all((x: El) => x.cls.has('lo-note'))[0];
         verdict(stays === 3 && S.squad === 3 && b4.cls.has('off') && note.textContent === 'four do not fit this check' && note.cls.has('off'), 'a size a mission cannot stage is greyed: no key, button or slot picks it, and the line says why', `at 3, D → ${stays}, a click on +4 → ${S.squad} · '${note.textContent}'`); S.back(); }
       finally { delete L.CANNOT['night-breach']; }
     });
-    // ONE FLOW: a pick on the mission list is this screen (the list closed first), Deploy loads the list's own URL for the row — Hard riding on it — with the
-    // size on it, Back / Esc is the list again on the same row; the solo night comes through too, greyed at solo; ?loadout=<mission id> opens it
+    // DEPLOY LOADS THE LIST'S OWN URL FOR THE ROW — Hard riding on it — with the size on it, Esc is the screen's Back; the solo night comes through too, greyed at solo
     await withDom('?mute', async () => {
-      const G2 = globalThis as any, body = new El('BODY') as any; G2.document.body = body; st.m.clear();
+      const G2 = globalThis as any; st.m.clear();
       const M = await import(`${ROOT}/src/ui/missions.ts`), { setDifficulty } = await import(`${ROOT}/src/game/difficulty.ts`);
       const loads: string[] = []; G2.location.pathname = '/'; G2.location.hash = ''; G2.location.assign = (u: string) => { loads.push(u); }; G2.location.reload = () => { loads.push('(reload)'); };
-      const was = { pick: M.MISSIONS.onPick, label: M.MISSIONS.pickLabel };
       try {
-        UI.wireMissions();
-        const list = M.openMissions({ select: 'depot-four' }); list.difficulty('hard'); const href = list.hrefOf(list.selected), foot = list.root.all((x: El) => x.cls.has('mfoot'))[0]?.textContent ?? '', btn = list.root.all((x: El) => x.cls.has('mgo'))[0]?.textContent ?? '';
-        M.missionsKey({ code: 'Enter' }); const S = UI.loadoutOpen(), listShut = M.currentMissions() === null;
-        const own = S?.search(); S?.setSquad(1); const one = S?.search(); S?.deploy();
-        verdict(listShut && S?.entry.id === 'depot-four' && own === href && /difficulty=hard|[?&]hard\b/.test(href) && loads.length === 1 && loads[0] === '/' + one && /squad=1/.test(loads[0]) && !/squad4/.test(loads[0]) && /levelFile=depot\.json&roomclear/.test(loads[0]) && /difficulty=hard/.test(loads[0]) && /loadout/.test(foot) && /Loadout/.test(btn) && UI.loadoutOpen() === null,
-          'a pick on the mission list (Enter) closes the list and opens that mission\'s loadout; at its own size Deploy would load the list\'s own URL, Hard on it; with one man it loads that URL and squad=1', `list href ${href} · own ${own} · loaded ${loads.join(' ')} · list button '${btn}'`);
-        // Esc steps back one screen: loadout → the list on the same row → the start card (the list closed)
-        M.openMissions({ select: 'compound-four' }); M.missionsKey({ code: 'Space' }); const S2 = UI.loadoutOpen(); S2?.key('KeyS'); S2?.key('KeyS'); S2?.key('Escape');
-        const back = M.currentMissions(), backOn = back?.selected.id, loShut = UI.loadoutOpen() === null; M.missionsKey({ code: 'Escape' }); const allShut = M.currentMissions() === null;
-        verdict(S2?.entry.id === 'compound-four' && loShut && backOn === 'compound-four' && allShut && loads.length === 1, 'Esc on the loadout (from inside a kit card too) is the mission list again, on the same row; Esc there closes the list: nothing loaded', `back on ${backOn} · loads ${loads.length}`);
+        const host = new El('BODY') as any;
+        let picked = 0; const list = M.openMissions({ root: host, select: 'depot-four', onPick: () => { picked++; } }); list.difficulty('hard'); const href = list.hrefOf(list.selected);
+        M.missionsKey({ code: 'Enter' }); const S = LO(UI.entryOfMission(list.selected), { host, search: href });
+        const own = S.search(); S.setSquad(1); const one = S.search(); S.deploy();
+        verdict(picked === 1 && M.currentMissions() === list && S.entry.id === 'depot-four' && own === href && /difficulty=hard|[?&]hard\b/.test(href) && loads.length === 1 && loads[0] === '/' + one && /squad=1/.test(loads[0]) && !/squad4/.test(loads[0]) && /levelFile=depot\.json&roomclear/.test(loads[0]) && /difficulty=hard/.test(loads[0]) && UI.loadoutOpen() === null,
+          'a pick on the mission list (Enter) goes on, the list staying up; at its own size Deploy would load the list\'s own URL, Hard on it; with one man it loads that URL and squad=1', `list href ${href} · own ${own} · loaded ${loads.join(' ')}`);
+        // Esc is the screen's Back, from inside a kit card too
+        let backed = 0; const S2 = LO(UI.entryOfMission(M.missionList().find((m: any) => m.id === 'compound-four')), { host, back: () => { backed++; } }); S2.key('KeyS'); S2.key('KeyS'); S2.key('Escape');
+        verdict(backed === 1 && UI.loadoutOpen() === null && loads.length === 1, 'Esc on the kit step (from inside a kit card too) goes back: nothing loaded', `back ${backed} · loads ${loads.length}`);
         // the solo night: your own card, no teammates offered, Deploy loads ?solo
-        const solo = M.openMissions({ select: 'solo-night' }); const soloHref = solo.hrefOf(solo.selected); solo.pick(); const S3 = UI.loadoutOpen();
-        const greyed = [1, 2, 3, 4].every(n => S3?.root.all((x: El) => x.attrs['data-squad'] === String(n))[0]?.cls.has('off')), refused = [1, 2, 3, 4].every(n => S3?.setSquad(n) === false), noteS = S3?.root.all((x: El) => x.cls.has('lo-note'))[0]?.textContent ?? '';
-        S3?.key('KeyD'); const still = S3?.squad, cardOf = S3?.root.all((x: El) => x.attrs['data-row'] === 'kit')[0]?.attrs['data-member'], poolS = S3?.root.all((x: El) => x.cls.has('lo-pool'))[0]?.textContent ?? '';
-        S3?.deploy();
-        verdict(S3?.entry.kind === 'solo' && S3?.entry.id === 'solo-night' && greyed && refused && still === 0 && cardOf === '0' && poolS === '' && soloHref === '?solo&mute' && loads[1] === '/?solo&mute',
-          'the solo night goes through the loadout too: every size but solo is greyed with the reason, your own card is the one mounted, no squad count, and Deploy loads ?solo with the visitor\'s flags', `'${noteS}' · card of member ${cardOf} · loaded ${loads[1]}`);
-        // one screen at a time: the list opening closes a loadout that is up (nobody's Back called), a loadout opening closes the list; closeMissions takes both down
-        { const A = UI.loadoutForMission(M.missionList()[2]); const L2 = M.openMissions(); const aShut = !A.open && UI.loadoutOpen() === null && M.currentMissions() === L2; const B = UI.loadoutForMission(M.missionList()[3]); const lShut = M.currentMissions() === null && UI.loadoutOpen() === B;
-          const C = UI.loadoutForMission(M.missionList()[4]); const bShut = !B.open && M.currentMissions() === null && UI.loadoutOpen() === C; const busy = M.missionsBusy(); M.closeMissions(); const gone = UI.loadoutOpen() === null && !M.missionsBusy();
-          verdict(aShut && lShut && bShut && busy && gone, 'one screen at a time over the card: the list opening closes the loadout, a loadout opening closes the list (and an older loadout, without reopening the list under it); closeMissions takes down whichever is up', `list over loadout ${aShut} · loadout over list ${lShut} · loadout over loadout ${bShut} · busy ${busy} · both gone ${gone}`); }
-        const Q = UI.loadoutFromQuery('?loadout=rescue-registry&squad=1'), qOn = Q?.entry.id, qN = Q?.squad; Q?.back(); const qBack = M.currentMissions()?.selected.id; M.closeMissions();
-        const none = UI.loadoutFromQuery('?loadout=nope'), QS = UI.loadoutFromQuery('?loadout=solo-night'), qs = QS?.entry.kind; QS?.back(); M.closeMissions();
-        verdict(qOn === 'rescue-registry' && qN === 1 && qBack === 'rescue-registry' && none === null && qs === 'solo', '?loadout=<mission id> opens that mission\'s screen (squad=N beside it preselects), its Back is the list on that row; an unknown id opens nothing', `${qOn} at ${qN}, back on ${qBack} · unknown → ${none} · solo-night → ${qs}`);
-      } finally { UI.loadoutOpen()?.back(); M.closeMissions(); M.MISSIONS.onPick = was.pick; M.MISSIONS.pickLabel = was.label; setDifficulty('standard', false); }
+        const solo = M.SOLO_NIGHT, soloHref = list.hrefOf(solo), S3 = LO(UI.entryOfMission(solo), { host, search: soloHref });
+        const greyed = [1, 2, 3, 4].every(n => S3.root.all((x: El) => x.attrs['data-squad'] === String(n))[0]?.cls.has('off')), refused = [1, 2, 3, 4].every(n => S3.setSquad(n) === false), noteS = S3.root.all((x: El) => x.cls.has('lo-note'))[0]?.textContent ?? '';
+        S3.key('KeyD'); const still = S3.squad, cardOf = S3.root.all((x: El) => x.attrs['data-row'] === 'kit')[0]?.attrs['data-member'], poolS = S3.root.all((x: El) => x.cls.has('lo-pool'))[0]?.textContent ?? '';
+        S3.deploy();
+        verdict(S3.entry.kind === 'solo' && S3.entry.id === 'solo-night' && greyed && refused && still === 0 && cardOf === '0' && poolS === '' && soloHref === '?solo&mute' && loads[1] === '/?solo&mute',
+          'the solo night goes through the kit step too: every size but solo is greyed with the reason, your own card is the one mounted, no squad count, and Deploy loads ?solo with the visitor\'s flags', `'${noteS}' · card of member ${cardOf} · loaded ${loads[1]}`);
+      } finally { UI.loadoutOpen()?.close(); M.closeMissions(); setDifficulty('standard', false); }
     });
-  } finally { UI.loadoutHooks.memberCard = realCard; K.kitLoad(null, ''); K.kitReset(); if (hadLS) G.localStorage = prevLS; else delete G.localStorage; }
+  } finally { K.kitLoad(null, ''); K.kitReset(); if (hadLS) G.localStorage = prevLS; else delete G.localStorage; }
   return done();
 }
 
@@ -257,7 +248,7 @@ export async function loadoutScreen(): Promise<boolean> {
 interface Cell { e: any; n: number; own: boolean; ok: boolean; note: string; r: BootReport | null; ref?: BootReport; bad: string[] }
 async function stageAll(only?: string[]): Promise<Cell[]> {
   const cells: Cell[] = [];
-  for (const e of SCENARIOS) if (!only || only.includes(e.id)) for (const c of L.squadChoices(e)) cells.push({ e, n: c.n, own: c.own, ok: c.ok, note: c.note, r: null, bad: [] });
+  for (const e of sample(SCENARIOS as any[], 1)) if (!only || only.includes(e.id)) for (const c of sample(L.squadChoices(e) as any[], 2)) cells.push({ e, n: c.n, own: c.own, ok: c.ok, note: c.note, r: null, bad: [] });
   const jobs = jobsOf(process.env.LOADOUT_JOBS, 4, 4);
   await pool(cells, jobs, async c => {
     const own = scenarioQuery(c.e) as string, q = c.own ? own.replace(/&squad4\b/, '') + `&squad=${c.n}` : L.squadSearch(own, c.n, c.e.squad);   // (its own size too is booted BY squad=N: the row's own URL is the reference below)

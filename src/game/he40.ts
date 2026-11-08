@@ -73,8 +73,6 @@ export function shellSolve(g: Game, from: Vec3, target: Vec3, bodies: Character[
   }
   return sol;
 }
-/** the 40 mm is up, its arc is drawn, and the arc is too short to arm: the one test behind the reticle's word, the arc's colour and the log's line */
-export function previewTooClose(g: Game): boolean { const pl = g.player; return !!pl.throwPreview && pl.rifleUp && pl.rifle.attachment === 'he40' && !arcArmed(pl.throwPreview); }
 
 
 /** Let one round go from `from` at `target` off `shooter`'s launcher: in the air from this frame (Game.shells), the tube's thump, and the room hears it go. */

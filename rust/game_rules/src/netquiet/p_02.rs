@@ -23,8 +23,8 @@ fn look_from(s: V3, yaw: f64, eye: f64, eye_half: f64, arc: f64, eye_slack: f64)
 }
 
 /// What a man holding a room watches: the last man's arc, low on his spot; a whip's noise. (netquiet.ts netQuietLook)
-pub fn net_quiet_look(g: &mut crate::game::Game, gd: GuardId, pt: &mut V3) {
-    if !live(g) || netquiet_qa().broken { return; }
+pub fn net_quiet_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
+    if netquiet_qa().broken { return; }
     let Some(n) = g.m.netquiet.state_of.get(gd) else { return };
     let (low, look, whip_at) = (n.low, n.look, n.whip_at);
     let at = if low && look.is_some() {
@@ -39,7 +39,6 @@ pub fn net_quiet_look(g: &mut crate::game::Game, gd: GuardId, pt: &mut V3) {
 
 /// How he stands and where his gun goes: low on his spot he is crouched; a whipping man comes round to the noise. (netquiet.ts netQuietPose)
 pub fn net_quiet_pose(g: &mut crate::game::Game, gd: GuardId, dt: f64, eyes_on_foe: bool) -> Option<crate::netquiet::NetQuietPose> {
-    if !live(g) { return None; }
     let n = g.m.netquiet.state_of.get(gd)?;
     let (low, whip_at) = (n.low, n.whip_at);
     if low { return Some(crate::netquiet::NetQuietPose { aim: None, crouch: g.k.netquiet.crouch }); }

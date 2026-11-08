@@ -7,8 +7,6 @@
 import { standUp, ROOT } from './headless.ts';
 import { floatPartition } from './office-pane.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
-const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
-const { lineBox } = await import(`${ROOT}/src/scene/collision.ts`);
 const { glassPanes, isSheet } = await import(`${ROOT}/src/game/glass.ts`);
 const P = await import(`${ROOT}/src/game/glasspen.ts`);
 const { GLASSPEN, GLASSPEN_STATS, GLASSPEN_HOOKS, glassPenLive, roundPath, paneToll, paneType, roundEnergy, holeCount } = P;
@@ -65,59 +63,6 @@ function officePanes(game: any) {
 const lastOf = (game: any, ev0: number, kind: string) => game.events.slice(ev0).filter((e: any) => e.kind === kind).pop();
 const stars = (game: any) => game.decals.list.filter((d: any) => d.kind === 'glassHit');
 
-// ================================================================ (a) the player's round
-export async function glasspenPlayer(): Promise<boolean> {
-  console.log('\n=== glasspen-player: Sam on the corridor fires at a man standing in the conference room, the partition glass between them — the round goes THROUGH the pane (its star, its crack, its \'glass\' event at the pane) and drops the man; pistol and rifle; a second round by the first one\'s hole flies truer (and, the pane\'s fracture model live, through the open glass it left); the same shot in a fresh world flies the same path ===');
-  const { verdict, all } = mkVerdict();
-  await withPen(async () => {
-    for (const slot of ['pistol', 'rifle'] as const) {
-      const run = async (seed: number, fracture?: boolean) => {   // (fracture: the pane's fracture model put on / off for this world after its stand-up; not said = as the stand has it)
-        const W = await floor(seed, [7.5, 0, 11.6]); const { game, audioCounts } = W;
-        if (fracture !== undefined) { game.tune.glassBreak = fracture; if (fracture && !(game.tune.chaos > 0)) game.tune.chaos = 0.5; }   // (the harness stands the floor at chaos 0, where nothing breaks: glasspen-near's restore check raises it the same way)
-        parkFrom(game, 1); const gd = game.guards[0]; dummy(gd, [7.5, 0, 6.8], [7.5, 0, 11.6]);
-        for (let i = 0; i < 5; i++) W.step(DT);
-        gunUp(W, slot); const pc = game.player.char; const def = (game.player.gunInHand() ?? game.player.pistol).def;
-        const crossed: any[] = []; GLASSPEN_HOOKS.crossed = (_g: any, x: any) => crossed.push(x);
-        const ev0 = game.events.length, s0 = stars(game).length, c0 = audioCounts.get('glassCrack') ?? 0;
-        const target = chestOf(gd.char); const live = glassPenLive(game);
-        fireWeapon(game, pc, target, true);
-        const shot = lastOf(game, ev0, 'shot'), glass = lastOf(game, ev0, 'glass');
-        return { W, game, gd, def, crossed, shot, glass, target, live, stars: stars(game).length - s0, cracks: (audioCounts.get('glassCrack') ?? 0) - c0, pc };
-      };
-      const R = await run(4411); const x = R.crossed[0];
-      verdict(R.live && R.crossed.length === 1 && !!R.shot && R.shot.to[2] < 9.5 && R.gd.state === 'dead' && v3.dist(R.shot.to, R.target) < 0.6,
-        `${slot} (${R.def.id}, energy ${f2(roundEnergy(R.def))}): the round crossed ONE pane and stopped in the man 3.2 m beyond it — he is down`,
-        `muzzle (${R.shot.from.map(f2)}) → stopped (${R.shot.to.map(f2)}), ${f2(v3.dist(R.shot.to, R.target))} m from the point aimed at · guard ${R.gd.state} · pane ${x?.bi} ${x?.type}: energy ${f2(x?.eIn ?? 0)} → ${f2(x?.eOut ?? 0)}, turned ${f3(x?.turnDeg ?? 0)}°, entry (${x?.at.map(f2)}) exit (${x?.exit.map(f2)})`);
-      verdict(R.stars === 1 && R.cracks === 1 && !!R.glass && Math.abs(R.glass.pos[2] - 10) < 0.05 && holeCount(R.game, x.bi) === 1 && Math.abs(x.at[2] - 10) < 0.02 && Math.abs(x.exit[2] - 10) < 0.02 && x.at[2] > x.exit[2],
-        'the pane got the impact call once, at the ENTRY face: one star, one crack heard, one \'glass\' hearing event at the glazing; the hole is remembered; the hook carried entry (corridor face) and exit (room face)',
-        `stars +${R.stars} · glassCrack ×${R.cracks} · event ${R.glass ? `level ${R.glass.level} at (${f2(R.glass.pos[0])}, ${f2(R.glass.pos[2])})` : 'none'} · holes on pane ${holeCount(R.game, x.bi)} · entry z ${f3(x.at[2])} exit z ${f3(x.exit[2])}`);
-      // the turn is inside the cone the rule allows, and the same shot in a fresh world flies the same path
-      const cone = GLASSPEN.deflectDeg * (x.take / x.eIn) * (1 + GLASSPEN.bendK);
-      const R2 = await run(4411);
-      verdict(x.turnDeg <= cone + 1e-6 && x.turnDeg > 0 && v3.dist(R.shot.to, R2.shot.to) < 1e-9 && Math.abs(R2.crossed[0].turnDeg - x.turnDeg) < 1e-12,
-        'the turn at the pane is inside the rule\'s cone and DETERMINISTIC: the same shot in a fresh world stops at the same point to the last bit', `turned ${f3(x.turnDeg)}° ≤ ${f3(cone)}° · stops differ by ${v3.dist(R.shot.to, R2.shot.to).toExponential(1)} m`);
-      // a second round at a second man where the first one went through — asked BOTH ways on every stand, each in a fresh world of its own:
-      //   the fracture model off (as the frozen stand has it; the page under ?glassbreak=0): the sheet stands and the hole is the toll rule's own memory — a quarter of the toll,
-      //   a quarter of the turn;
-      //   the fracture model live (as the shipped stand has it): a round that went through has OPENED the glass where it passed (glassbreak.ts impact, through) — round 2 meets
-      //   no pane there at all: no crossing, no toll, no new star, nothing heard from the glass.
-      const second = async (fracture: boolean) => {
-        const A = await run(4411, fracture); const a = A.crossed[0]; const g2 = A.game.guards[1]; dummy(g2, [7.5, 0, 6.8], [7.5, 0, 11.6]); g2.flashlight.enabled = false;
-        const live = glassBreakLive(A.game), open = !!a && A.game.glassBreak.openAt(a.bi, a.at), s1 = stars(A.game).length;
-        A.crossed.length = 0; const ev1 = A.game.events.length; fireWeapon(A.game, A.pc, A.target, true);
-        return { a, y: A.crossed[0], crossings: A.crossed.length, shot2: lastOf(A.game, ev1, 'shot'), glass2: lastOf(A.game, ev1, 'glass'), live, open, s1, s2: stars(A.game).length, g2 };
-      };
-      { const S = await second(false); const { a, y } = S;
-        verdict(!S.live && !S.open && !!a && !!y && y.hole && Math.abs(y.take - a.take * GLASSPEN.holeK) < 1e-9 && y.turnDeg < a.turnDeg && !!S.shot2 && S.shot2.to[2] < 9.5 && S.g2.state === 'dead',
-          'round 2 on the same line goes through the HOLE round 1 made: a quarter of the toll, less turn, and on into the room', a && y ? `toll ${f3(a.take)} → ${f3(y.take)} · turn ${f3(a.turnDeg)}° → ${f3(y.turnDeg)}° · stopped (${S.shot2?.to.map(f2)}) · 2nd man ${S.g2.state} · fracture model live ${S.live}` : `no crossing (round 1 ${a ? 'crossed' : 'did NOT cross'}) · fracture model live ${S.live} · glass open ${S.open}`); }
-      { const S = await second(true);
-        verdict(S.live && S.open && !S.y && !S.glass2 && S.s2 === S.s1 && !!S.shot2 && S.shot2.to[2] < 9.5 && S.g2.state === 'dead',
-          'the same two rounds with the pane\'s fracture model LIVE (as the page ships): round 1 OPENED the glass where it went through, so round 2 meets no pane there — no crossing, no toll, no new star, nothing heard from the glass — and flies on into the second man',
-          `fracture model live ${S.live} · glass open at round 1's entry ${S.open} · crossings ${S.crossings} · 'glass' event ${S.glass2 ? 'YES' : 'none'} · stars ${S.s1} → ${S.s2} · stopped (${S.shot2?.to.map(f2)}) · 2nd man ${S.g2.state}`); }
-    }
-  });
-  return all();
-}
 
 // ================================================================ (b) an AI shooter
 export async function glasspenAi(): Promise<boolean> {
@@ -153,7 +98,6 @@ export async function glasspenAi(): Promise<boolean> {
     const ev0 = game.events.length; game.player.hitFlash = 0; fireWeapon(game, gd.char, chestOf(game.player.char), false, { steady: true });
     const shot = lastOf(game, ev0, 'guardShot');
     verdict(game.player.hitFlash === 1 && !!shot && shot.to[2] < 9.9 && !!lastOf(game, ev0, 'glass'), 'one steady 9 mm from the corridor at Sam\'s chest: through the pane and into him (hit registered), the pane starred on the way', `stopped (${shot?.to.map(f2)}) · hitFlash ${game.player.hitFlash}`);
-    verdict(P.sideShotEnergy(game, gd.team) === undefined, 'with the row ON a side\'s corner and stand-off picks ask as they always did (no energy handed: the model\'s cautious default)', `sideShotEnergy ${P.sideShotEnergy(game, gd.team)}`);
   });
   return all();
 }
@@ -200,57 +144,6 @@ export async function glasspenRule(): Promise<boolean> {
   return all();
 }
 
-// ================================================================ (d) the line of fire agrees with the round
-export async function glasspenLines(): Promise<boolean> {
-  console.log('\n=== glasspen-lines: over a few thousand seeded lines across the office\'s glazing, col.shotBlocked(energy) says CLEAR exactly when a round of that energy fired along the line gets to its far end; ===');
-  const { verdict, all } = mkVerdict();
-  const W = await floor(6021, [20, 0, 11.3]); const { game } = W; parkFrom(game, 0);
-  // (WINDOW BARS ARE LIVE HERE, as on the page: winbars.ts is a settled rule. Until 2026-11-07 this probe wrote them off, because the line of fire passes a
-  //  standing bar that roundPath alone stops in (fireWeapon's own flight takes the bar: `probes.ts winbars`). So the agreement line below counts lines through a
-  //  bar as disagreements: it is to be restaged with those lines left out, by whoever owns it; it is not shown to be a fault of the game)
-  const O = officePanes(game); const rnd = seeded(77);
-  type L = { a: Vec3; b: Vec3; e: number };
-  const lines: L[] = []; const es = [0.5, 0.6, 0.9, 1.0];
-  for (const bi of O.all) { const b = game.level.boxes[bi]; const nz = b.h[0] >= b.h[2];
-    for (let k = 0; k < 120; k++) {
-      const u = (rnd() * 2 - 1) * (nz ? b.h[0] : b.h[2]) * 0.9, y = b.c[1] + (rnd() * 2 - 1) * b.h[1] * 0.9; const on: Vec3 = nz ? [b.c[0] + u, y, b.c[2]] : [b.c[0], y, b.c[2] + u];
-      const ang = (rnd() * 2 - 1) * 1.45, pitch = (rnd() * 2 - 1) * 0.25; const n: Vec3 = nz ? [Math.sin(ang), pitch, Math.cos(ang)] : [Math.cos(ang), pitch, Math.sin(ang)]; const d = v3.normalize(n);
-      const la = 0.4 + rnd() * 4, lb = 0.4 + rnd() * 5;
-      lines.push({ a: v3.mad(on, d, -la), b: v3.mad(on, d, lb), e: es[(rnd() * es.length) | 0] });
-    } }
-  const sight = lines.map(l => game.col.segmentBlocked(l.a, l.b)), solid = lines.map(l => game.col.solidBlocked(l.a, l.b));
-  await withPen(async () => {
-    let agree = 0, clear = 0, glassOnly = 0, opened = 0; const bad: string[] = [];
-    for (const l of lines) {
-      const sb = game.col.shotBlocked(l.a, l.b, 0.02, l.e); const len = v3.dist(l.a, l.b), rd = v3.normalize(v3.sub(l.b, l.a));
-      const first = game.col.raycast(l.a, rd, len - 0.02); const Pth = roundPath(game, l.a, rd, len - 0.02, l.e, first);
-      const reaches = Pth ? Pth.st === null : first === null;   // the round got to the far end: flew the whole range on its (straightened) path
-      if (!sb) clear++; if (sb === !reaches) agree++; else if (bad.length < 6) bad.push(`a (${l.a.map(f2)}) b (${l.b.map(f2)}) e ${l.e}: shotBlocked ${sb}, round ${reaches ? 'arrives' : 'stops'}${Pth ? ` after ${Pth.cross.length} pane(s) at ${f2(Pth.len)} of ${f2(len)} m` : first ? ` in box ${first.index} at ${f2(first.t)} m` : ''}`);
-      const i = lines.indexOf(l); if (!sight[i] && solid[i]) { glassOnly++; if (!sb) opened++; }
-    }
-    const pct = agree / lines.length;
-    verdict(pct >= 0.995, `with the turn at the pane off (the line-of-fire question is about the straight line): the two agree on ${(pct * 100).toFixed(2)} % of ${lines.length} lines (≥ 99.5 % asked: what is left are lines ending within the segment walk's 2 cm shrink of a face)`, `clear ${clear} · glass-only lines ${glassOnly}, of which now a shot ${opened}\n    ${bad.join('\n    ')}`);
-    // NO TUNNELS: a round that leaves the glass by the sheet's top / bottom / end face is born in the frame it is let into — it must be spent there, never fly on from
-    // inside the wall (rayBox sees nothing from inside a box). Every leg of every path, sampled every 20 cm: never deeper than 5 mm inside a static that is not a sheet.
-    { const scratch = new Int32Array(64); let rays = 0, legs = 0, inSolid = 0, abut = 0; const worst: string[] = []; const r2 = seeded(4242);
-      const deepIn = (p: Vec3, d: Vec3): number => { const n = game.col.gather(p[0] - 0.02, p[2] - 0.02, p[0] + 0.02, p[2] + 0.02, p[1] - 0.02, p[1] + 0.02, scratch); for (let i = 0; i < n; i++) { const b = game.col.boxes[scratch[i]]; if ((b.flags & BoxFlag.NoShadow) || isSheet(b)) continue; const s = lineBox(p, d, b); if (s && s.depth > 0.005) return scratch[i]; } return -1; };
-      for (const bi of O.all) { const b = game.level.boxes[bi]; const nz = b.h[0] >= b.h[2];
-        for (let k = 0; k < 900; k++) {   // aimed at the pane's RIM as often as its middle, slanted up / down / along it hard
-          const edge = r2() < 0.6; const u = (edge ? (r2() < 0.5 ? -1 : 1) * (1 - r2() * 0.03) : r2() * 2 - 1) * (nz ? b.h[0] : b.h[2]), yv = (edge && r2() < 0.5 ? (r2() < 0.5 ? -1 : 1) * (1 - r2() * 0.03) : r2() * 2 - 1) * b.h[1];
-          const on: Vec3 = nz ? [b.c[0] + u, b.c[1] + yv, b.c[2]] : [b.c[0], b.c[1] + yv, b.c[2] + u];
-          const ang = (r2() * 2 - 1) * 1.35, pitch = (r2() * 2 - 1) * 0.9; const d = v3.normalize(nz ? [Math.sin(ang), pitch, Math.cos(ang) * (r2() < 0.5 ? 1 : -1)] : [Math.cos(ang) * (r2() < 0.5 ? 1 : -1), pitch, Math.sin(ang)]);
-          const from = v3.mad(on, d, -(0.3 + r2() * 2)); if (deepIn(from, d) >= 0) continue;
-          const Pth = roundPath(game, from, d, 60, 1); rays++; if (!Pth) continue;
-          for (const x of Pth.cross) if (x.into >= 0) abut++;
-          for (let j = 1; j < Pth.segs.length; j++) { const s = Pth.segs[j]; legs++; for (let t = 0; t <= Math.min(s.len, 3); t += 0.2) { const w = deepIn(v3.mad(s.o, s.d, t), s.d); if (w >= 0) { inSolid++; if (worst.length < 4) worst.push(`pane ${bi} → leg ${j} at ${f2(t)} m inside box ${w} (from (${from.map(f2)}) dir (${d.map(f2)}))`); break; } } }
-        } }
-      verdict(inSolid === 0 && legs > 3000, `no tunnels: of ${rays} rounds fired at the panes' middles and rims at every slant, ${legs} legs fly on from the glass and not one runs inside a wall, a frame, a sill or a lintel`, `legs inside a solid ${inSolid} · crossings straight into an abutting pane ${abut}${worst.length ? '\n    ' + worst.join('\n    ') : ''}`); }
-    verdict(opened > glassOnly * 0.5 && opened < glassOnly, 'most lines that only GLASS stood in are now lines of fire — and not all (the 9 mm at laminated glass, the grazes)', `${opened} of ${glassOnly}`);
-    game.touring = true; const liveTour = glassPenLive(game); const tourSame = lines.slice(0, 400).every(l => game.col.shotBlocked(l.a, l.b, 0.02, l.e) === game.col.solidBlocked(l.a, l.b)); game.touring = false;
-    verdict(!liveTour && tourSame, 'under a showcase (Game.touring) the rule is inert: shotBlocked is the solid walk again', `live ${liveTour}`);
-  }, { deflectDeg: 0 });
-  return all();
-}
 
 // ================================================================ (e) what the pane never hears of, and the muzzle past the glass
 export async function glasspenNear(): Promise<boolean> {

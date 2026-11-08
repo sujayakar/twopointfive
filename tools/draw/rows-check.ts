@@ -7,15 +7,15 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from '../qa/headless.ts';
 import { RustHost } from '../blitz/rust-host.ts';
-import { Section, Head, Geo, Mat, Cut, Word, Row4, Light, Man, Inst, Bones, Cap, STUFFS } from '../../src/draw/sections';
-import { ALL, Drawn } from '../../src/draw/drawn';
+import { Section, Want, Head, Geo, Mat, Cut, Word, Row4, Light, Man, Inst, Bones, Cap, STUFFS } from '../../src/draw/sections';
+import { Drawn } from '../../src/draw/drawn';
 import { lookNumbers } from '../../src/draw/look';
 
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`), { roundConfig } = await import(`${ROOT}/src/scene/round.ts`), { lookConfig } = await import(`${ROOT}/src/render/frame.ts`), { lookWordOf, lookCoreOf } = await import(`${ROOT}/src/render/gbuffer.ts`), { COATFINISH, SOLIDGLASS } = await import(`${ROOT}/src/scene/stuff.ts`);
-const { DRESS } = await import(`${ROOT}/src/game/dress.ts`);
+const { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`), { lookConfig } = await import(`${ROOT}/src/render/frame.ts`), { lookWordOf, lookCoreOf } = await import(`${ROOT}/src/render/gbuffer.ts`), { COATFINISH, SOLIDGLASS } = await import(`${ROOT}/src/scene/stuff.ts`);
+const { DRESS } = await import(`${ROOT}/src/game/dress.ts`), { lookDoors } = await import(`${ROOT}/src/scene/lookTidy.ts`), { LOOK_DOORS } = await import(`${ROOT}/src/scene/look.ts`);
 
 const LEVELS = process.argv.slice(2).length ? process.argv.slice(2) : ['office', 'compound', 'pass', 'glasshouse', 'depot', 'mousehole'];
 const BREAK = process.env.ROWS_BREAK === '1', DT = 1 / 60;
@@ -34,24 +34,26 @@ function differ(a: Uint32Array, at: number, b: Uint32Array, bt: number, rows: nu
 const GEO = ['cx', 'cy', 'cz', 'turn', 'hx', 'hy', 'hz', 'flags'], MAT = ['r', 'g', 'b', 'cutHeight', 'er', 'eg', 'eb', 'finish', 'qx', 'qy', 'qz', 'qw', 'r2', 'g2', 'b2', 'gain'];
 
 // (the picture's rules as a page has them)
-cutConfig.on = true; roundConfig.gpu = true; lookConfig.on = true; COATFINISH.on = true; SOLIDGLASS.on = true;
+cutConfig.on = true; lookConfig.on = true; COATFINISH.on = true; SOLIDGLASS.on = true;
 
 for (const L of LEVELS) { const [name, query] = L.split(':');
   const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', `${name}.json`), 'utf8'))), seed: 3 }));
   const why = (await quiet(() => startFromQuery(W.game, `?levelFile=${name}.json&${query ?? 'roomclear&squad4'}`)) as any)?.why; if (why) { line(false, `${name}: the start was refused`, why); continue; }
   const g = W.game, E = g.engine, world = E.world; const seen = new Map<string, [number, string]>(); let ticks = 0, boxes = 0, lights = 0, cuts = 0, panes = 0, marked = 0;
   let D: Drawn = null as never;
-  DRESS.men = true; world.setStuffOf(lookWordOf(), lookCoreOf());
+  DRESS.men = true; DRESS.wetGround = true; world.setStuffOf(lookWordOf(), lookCoreOf());
+  lookDoors(g.doors.list, world.statics, LOOK_DOORS[`${name.replace(/-gwot$/, '')}.json`]);   // (a page's leaves wear the level's paint: main.ts does this as a game stands)
   for (let t = 0; t < 420; t++) {
     if (t === 60 || t === 200) g.dropThrowable('frag', [g.player.char.pos[0] + 3, 0, g.player.char.pos[2] + 1]);
     g.godMode = true;
     await quiet(() => W.step(DT));
     const H: any = RustHost.last; if (!H) { line(false, `${name}: no Rust game stands`); break; }
-    if (t === 0) { const X = H.F.X; D = new Drawn(X, H.F.mem, ALL); const v = lookNumbers(E.settings, world, !!g.ch.cast); v[6] = v[7] = 0;   // (no line of light is taken out of the boxes)
+    if (t === 0) { const X = H.F.X; D = new Drawn(X, H.F.mem, Want.all); const v = lookNumbers(E.settings, world, !!g.ch.cast); v[6] = v[7] = 0;   // (no line of light is taken out of the boxes)
       const at = X.face_alloc(v.length * 8) >>> 0; new Float64Array(H.F.mem.buffer, at, v.length).set(v); X.face_draw_look(H.h, at, v.length); X.face_free(at, v.length * 8); continue; }
     D.take(H.h); D.frame(H.h, 1, [20, 0, 14]);   // (a frame each tick, as a page draws: the motion words are of the last)
     if (t % 7 && t > 20) continue;
     // the copy's pack
+    (g as any).wetGround.follow(g);   // (what the page's dress step does: the rain's dark on the ground)
     (g as any).drawMen([g.player.char, ...g.guards.map((x: any) => x.char)], false, false, true);
     world.glassFocus = [20, 0, 14];
     world.upload();

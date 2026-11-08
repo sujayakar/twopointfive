@@ -51,10 +51,10 @@ export class Attract {
     const man = () => g.guards[0];   // the corridor route: a torch walking a long straight hallway, into the server room and back
     return [
       { title: 'lobby', pos: [7.6, 0, 17.6], yaw: -22, dist: 19, dur: H },                 // the tour's opening framing, as the level is authored: panels off, the logo strip, the moon through both runs of glazing — and Sam's way in
-      { title: 'corridor', dur: H, dist: 12,                                                // the tour's 'Torches' framing: on the corridor man from behind, looking the way he is going (his heading at the cut; his facing if he is standing)
+      { title: 'corridor', dur: H, dist: 12,                                                // the torches framing: on the corridor man from behind, looking the way he is going (his heading at the cut; his facing if he is standing)
         pos: () => { const gd = man(); return gd ? v3.copy(gd.char.pos) : [20, 0, 11.1]; },
         yaw: () => { const gd = man(); if (!gd) return -60; const v = gd.char.vel, f = gd.char.forward(); const moving = Math.hypot(v[0], v[2]) > 0.3; return Math.atan2(-(moving ? v[0] : f[0]), -(moving ? v[2] : f[2])) / DEG; } },
-      { title: 'lot', pos: [15.5, 0, 25.6], yaw: -30, dist: 18, dur: H },                  // the tour's soft-shadow framing: the south lot under its sodium lamp, the cars, the bike, the bollards' long penumbrae, the lobby glazing lit from inside
+      { title: 'lot', pos: [15.5, 0, 25.6], yaw: -30, dist: 18, dur: H },                  // the soft-shadow framing: the south lot under its sodium lamp, the cars, the bike, the bollards' long penumbrae, the lobby glazing lit from inside
       { title: 'cubicles', pos: [23.0, 0, 19.4], yaw: -24, dist: 18, dur: H },             // the firefight's framing without the fight: partitions, rugs, the two live panels (one on the blink), the cubicle patrol's loop
       { title: 'conference', pos: [9.9, 0, 7.7], yaw: -30, dist: 13.5, dur: H },           // the room-clear's wide framing: the dark conference room, moon through its west window, the corridor man's beam raking through the glass wall as he passes
       { title: 'server room', pos: [18.5, 0, 8.4], yaw: -52, dist: 11, dur: H },           // the drive stop's framing: cold panel, the racks' green LEDs and their wash on the raised floor; the corridor route steps in here every lap

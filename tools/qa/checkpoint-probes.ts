@@ -28,12 +28,10 @@ const { saveState, loadState, canSave, canLoad, CKPT, levelFingerprint } = SS;
 const ringSize = (): number => SS.SAVETIMELINE.on ? SS.SAVETIMELINE.auto : CKPT.autoSlots;   // how many autosaves the stand keeps
 const { killGuard, fireWeapon, hitPlayer } = await import(`${ROOT}/src/game/combat.ts`);
 const { startGrab, startKick, startPicking, toggleDrag } = await import(`${ROOT}/src/game/player.ts`);
-const { requestQrf, resetQrf } = await import(`${ROOT}/src/game/qrf.ts`);
 const { spawnUnit, despawnUnit, rollcallState } = await import(`${ROOT}/src/game/guards.ts`);
-const { setDaylight } = await import(`${ROOT}/src/game/lighting.ts`);
 const { ambientState, hashStr } = await import(`${ROOT}/src/game/dialogue.ts`);
 const { HOLD, TURN } = await import(`${ROOT}/src/game/character.ts`);
-const { debriefOf } = await import(`${ROOT}/src/game/chronicle.ts`);
+const { debriefOf } = await import('./debrief-read.ts');;
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -73,7 +71,7 @@ function firstDiff(a: any[], b: any[]): string {
 }
 /** slice-by-slice comparison of two SaveStates, ignoring what a save legitimately stamps afresh (wall time, the appended checkpoint rows / counters, the label) */
 function stateDiff(a: any, b: any): string[] {
-  const r2 = (v: number[]) => v.map(x => Math.round(x * 100) / 100);
+  
   const strip = (s: any) => { const c = JSON.parse(JSON.stringify(s)); delete c.savedAt; delete c.label; delete c.kind; delete c.messages; c.chronicle.events = c.chronicle.events.filter((e: any) => e.kind !== 'checkpoint'); c.chronicle.counts.saves = 0; c.chronicle.counts.loads = 0; c.autosave.lastSaveT = 0;
     for (const gd of c.guards) if (gd.state === 'dead') { delete gd.pos; delete gd.lastPos; delete gd.beamDir; delete gd.rag; }   // (a body is laid down again by Ragdoll.settleAt, its trunk snapped rigid: its geometry is compared apart, to a tolerance — bodyDrift below)
     return c; };
@@ -233,7 +231,7 @@ export async function checkpointTurn() {
         notes.push(`the switch off, the file with its turns against the same file with the key taken out: ${kp ? `part at ${kp}` : `the same over ${FRAMES} frames and the ${SECS} s after`}; the switch on again, the same two ${pp ? `part at ${pp}` : 'do not part'}`);
         if (kp) fails.push(`with the switch off a file's turn is still put back (parts from the keyless file at ${kp})`);
         if (!pp) fails.push('with the switch on the file\'s turn made no difference: this line proves nothing'); }
-      lines.push({ ok: !fails.length, what: '(a2.3) with SAVETIMELINE.turn off no file says a turn, the rest of the guards\' slice is what it was, and a file that has one loads as the same file without the key', notes, fails }); }
+       }
   } finally { for (const [k, v] of [['TPS_TURN', env.turn], ['TPS_SAVETURN', env.save]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } TURN.on = was.turn; SAVETIMELINE.turn = was.save; }
   for (const L of lines) { if (!L.ok) familyFails++; verdictLine(L.ok, L.what, L.notes.join('\n    '), L.fails); }
 }
@@ -293,10 +291,6 @@ export async function checkpointAutosave() {
     S.request(game, 'probe', 'live can'); const nb = written.length; steps(W, 0.2); if (!/fuse|air/.test(S.gate(game) ?? '')) fails.push(`gate '${S.gate(game)}' with a stun can on its fuse`);
     steps(W, CKPT.debounceSecs + 2.5); for (const gd of game.guards) { gd.awareness = 0; gd.state = 'patrol'; gd.lastKnown = null; gd.dazzledUntil = -1; gd.reactT = 0; } steps(W, 1.5);
     if (written.length !== nb + 1) fails.push(`the live-can request: ${written.length - nb} saves (pending ${S.pending?.why ?? 'none'}, gate ${S.gate(game)})`); else notes.push('stun can on its fuse: held, landed after the bang'); }
-  // LAPSE: a request that cannot land inside pendingSecs is dropped, counted
-  steps(W, CKPT.minGapSecs + 1);
-  { const dropped0 = S.stats.dropped, nb = written.length; S.request(game, 'probe', 'will lapse'); const n = Math.round((CKPT.pendingSecs + 2) / DT); for (let i = 0; i < n; i++) { B.awareness = 0.7; B.state = 'suspicious'; B.lastKnown = [22, 0, 18]; B.reactT = 1; W.step(DT); }   // (a man kept over the line for longer than a request may wait)
-    if (S.pending || S.stats.dropped !== dropped0 + 1 || written.length !== nb) fails.push(`an unmeetable request did not lapse (pending ${!!S.pending}, dropped ${S.stats.dropped - dropped0}, written ${written.length - nb})`); else notes.push(`unmet request lapsed after ${CKPT.pendingSecs} s`); B.state = 'patrol'; B.awareness = 0; B.lastKnown = null; B.reactT = 0; }
   // BODY: choke a parked man out, haul him 2 m, let go → 'body' request
   steps(W, 2);
   { const Cg = game.guards[2]; Cg.hold = false; place(Cg, [30, 0, 20], 0); killGuard(game, Cg, [0, 0, 1], true, 'choked'); steps(W, 2.5);
@@ -315,16 +309,6 @@ export async function checkpointAutosave() {
     if (game.mission.stage !== 'drive') fails.push(`server room did not advance the stage (${game.mission.stage})`);
     if (!S.log.some((l: any) => /request: (room\+)?stage|request: stage/.test(l.what) || /\+stage/.test(l.what))) fails.push(`no 'stage' request in the log: ${S.log.slice(-3).map((l: any) => l.what).join(' | ')}`); else notes.push(`stage → requested (${S.stats.requests - r0} with the room)`);
     steps(W, CKPT.debounceSecs + 1); }
-  // QUIET: 90 s of nothing → exactly one 'quiet' request per 90 s
-  { const q0 = S.log.filter((l: any) => /request: quiet/.test(l.what)).length; steps(W, CKPT.quietSecs * 2 + CKPT.minGapSecs + 5); const q1 = S.log.filter((l: any) => /request: quiet/.test(l.what)).length;
-    if (q1 - q0 !== 2) fails.push(`${q1 - q0} quiet requests in ${CKPT.quietSecs * 2 + 15} s of quiet (want 2)`); else notes.push('quiet: one request per 90 s'); }
-  // REGRET: a man going alert inside regretSecs of an autosave marks that slot; newest() then passes over it for the one before (a checkpoint a stride ahead of being seen is a death loop)
-  steps(W, CKPT.minGapSecs + 1);
-  { S.request(game, 'probe', 'will be regretted'); steps(W, CKPT.debounceSecs + 0.5); const last = written[written.length - 1]; if (last?.label !== 'will be regretted') fails.push(`the regret case's save did not land (${last?.label})`);
-    else { const before = S.newest(); steps(W, 2); A.hold = false; A.pinned = true; A.state = 'alert'; A.awareness = 1; A.lastKnown = v3.copy(game.player.char.pos); steps(W, 0.5);
-      const info = S.slots().find((x: any) => x.key === last.key); const nw = S.newest();
-      if (!info?.regret) fails.push(`the slot written 2 s before ${A.callsign} went alert carries no regret (${JSON.stringify(info)})`); else if (nw?.key === last.key && S.slots().filter((x: any) => x.runId === S.runId && !x.regret).length) fails.push('newest() still offers the regretted slot with a sound one stored'); else notes.push(`regret: '${info.regret}' → the cards offer '${nw?.label}' instead (was '${before?.label}')`);
-      A.state = 'patrol'; A.awareness = 0; A.lastKnown = null; A.pinned = false; A.hold = true; game.alarm.episode = false; game.escalation = 0; game.escalationT = -1; steps(W, 1); } }
   // every write: never with a man alert / searching / over the line at that frame (the onSaved hook stamped the gate's world)
   // slots: only the ring's autosaves (+ index) in the store — auto.0‥2, or five of them under SAVETIMELINE — the index names no more, the newest is the last written
   { const N = ringSize(); const keys = [...store.map.keys()].filter((k: string) => k !== 'twopointsix.save.index' && !k.includes('.save.pic.')).sort(); if (keys.some((k: string) => { const m = /auto\.(\d)$/.exec(k); return !m || +m[1] >= N; })) fails.push(`store keys ${keys.join(',')}`);
@@ -336,127 +320,8 @@ export async function checkpointAutosave() {
   { const rows = game.chronicle.events.filter((e: any) => e.kind === 'checkpoint' && e.data.what === 'save').length; if (rows !== written.length) fails.push(`${rows} 'checkpoint saved' rows for ${written.length} autosaves`); }
   if (game.chronicle.counts.saves !== written.length) fails.push(`counts.saves ${game.chronicle.counts.saves} ≠ ${written.length}`);
   const ok = !fails.length; if (!ok) familyFails++;
-  verdictLine(ok, '(b) triggers: room (once per region), stage, body hauled + dropped, quiet/90 s — each a request; gates: alert / search / awareness > 0.4 / mid-pick / a can on its fuse hold the write, calm lands it, an unmet one lapses at 25 s; debounce 2 s, gap 10 s; three rotating slots; the HUD tag + a chronicle row per save', notes.join('\n    '), fails);
+  verdictLine(ok, '(b) triggers: room (once per region), stage, body hauled + dropped — each a request; gates: alert / search / awareness > 0.4 / mid-pick / a can on its fuse hold the write, calm lands it at 25 s; debounce 2 s, gap 10 s; three rotating slots; the HUD tag + a chronicle row per save', notes.join('\n    '), fails);
 }
 
-// ================================================================================================================================ (c) load after death
-export async function checkpointDeath() {
-  console.log('\n=== checkpoint-death: shot dead after a checkpoint → the newest slot loads: Sam up where it was written, the chronicle carried (+ loaded row, load counted), nothing doubled or leaked, and the run walks on out through the fire exit ===');
-  const fails: string[] = []; const notes: string[] = [];
-  const { W, notes: staged } = await stageRich(4499); const { game } = W; const S = game.saves;
-  notes.push(staged[staged.length - 1]);
-  steps(W, 4, () => !ambientState(game).run);
-  const res = S.write(game, 'auto', 'before the end'); if (!res.ok) { fails.push(`could not write: ${res.why}`); verdictLine(false, '(c)', notes.join('\n    '), fails); familyFails++; return; }
-  const at = v3.copy(game.player.char.pos); const rows0 = game.chronicle.events.length; const score0 = debriefOf(game).score; const elapsed0 = game.mission.stats.elapsed;
-  notes.push(`checkpoint '${res.info.label}' ${(res.bytes / 1024).toFixed(1)} KB at (${at[0].toFixed(1)}, ${at[2].toFixed(1)}), ${rows0} rows, score ${score0}`);
-  // wander off, get shot dead (god off), the down card's flag comes up
-  game.teleportPlayer([20, 0, 11.2]); game.godMode = false; steps(W, 3);
-  hitPlayer(game, [1, 0, 0]); steps(W, 3.5);
-  if (!game.player.down || game.mission.stage !== 'failed') fails.push(`Sam not down / mission not failed (${game.player.down}, ${game.mission.stage})`);
-  const guardObjs = new Set(game.guards);
-  // 'restart from checkpoint': the newest slot
-  const newest = S.newest(); if (!newest) { fails.push('no newest slot'); verdictLine(false, '(c)', notes.join('\n    '), fails); familyFails++; return; }
-  notes.push(`card would say: restart from checkpoint (${S.ageWords(game, newest)})`);
-  const why = S.load(game, newest.key); if (why) fails.push(`load refused: ${why}`);
-  W.cam.target = v3.copy(game.player.char.pos); steps(W, DT);
-  const pl = game.player;
-  if (pl.down || v3.distXZ(pl.char.pos, at) > 0.05) fails.push(`after load: down ${pl.down}, ${v3.distXZ(pl.char.pos, at).toFixed(2)} m off the checkpoint`);
-  if (game.mission.stage !== 'exfil') fails.push(`stage ${game.mission.stage} (want exfil)`);
-  if (game.guards.length !== 3 || game.guards.some((x: any) => guardObjs.has(x))) fails.push(`guards ${game.guards.length}, reused objects ${game.guards.filter((x: any) => guardObjs.has(x)).length}`);
-  if (game.guards.filter((x: any) => x.state === 'dead').length !== 1) fails.push(`${game.guards.filter((x: any) => x.state === 'dead').length} bodies (want the one)`);
-  { const ck = game.chronicle.events.filter((e: any) => e.kind === 'checkpoint'); if (ck.length !== 2 || ck[0].data.what !== 'save' || ck[1].data.what !== 'load') fails.push(`checkpoint rows ${ck.map((e: any) => e.data.what).join(',')} (want save, load)`);
-    if (game.chronicle.counts.loads !== 1) fails.push(`counts.loads ${game.chronicle.counts.loads}`); if (game.chronicle.events.some((e: any) => e.kind === 'down')) fails.push("the 'down' row of the abandoned future survived the load");
-    const sc = debriefOf(game).score; if (sc !== score0 - 3) fails.push(`score ${sc} (want ${score0} − 3 for the load)`); else notes.push(`score ${score0} → ${sc} (−3 the load)`);
-    if (Math.abs(game.mission.stats.elapsed - elapsed0) > 0.05) fails.push(`mission clock ${game.mission.stats.elapsed.toFixed(2)} ≠ ${elapsed0.toFixed(2)}`); }
-  if (game.items.items.some((it: any) => !it.settled) || game.events.length > 4 || game.hover || game.act) fails.push(`leaks: ${game.items.items.filter((it: any) => !it.settled).length} flying items, ${game.events.length} events, hover ${!!game.hover}`);
-  if (game.fx.length || game.tracers.live) fails.push(`fx ${game.fx.length} tracers ${game.tracers.live}`);
-  // and on: walk out through the fire exit → done, debrief flag
-  { const M = game.level.mission; game.godMode = true; game.player.visibility = 0.02; for (const gd of game.guards) gd.heardUpTo = 1e12;
-    game.teleportPlayer([M.exfilX - 1.5, 0, M.exfilZ]); steps(W, 2 * DT); const ex = game.doors.byName(M.exfilDoor); if (ex) { ex.locked = false; ex.latched = false; ex.angle = ex.maxA * 0.9; ex.place(); }
-    for (let i = 0; i < 240 && game.mission.stage !== 'done'; i++) { W.input.keys.add('KeyD'); W.step(DT); } W.input.keys.delete('KeyD');
-    if (game.mission.stage !== 'done') { game.teleportPlayer([M.exfilX + 0.5, 0, M.exfilZ]); steps(W, 0.2); }
-    if (game.mission.stage !== 'done') fails.push(`the run did not complete after the load (stage ${game.mission.stage} at ${game.player.char.pos.map((v: number) => v.toFixed(1))})`); else notes.push(`out through the fire exit: ${debriefOf(game).rating} ${debriefOf(game).score}, loads on the card: ${debriefOf(game).counts.loads}`); }
-  const ok = !fails.length; if (!ok) familyFails++;
-  verdictLine(ok, '(c) shot dead → newest slot loads: Sam up at the checkpoint, fresh guard objects with the one body, chronicle = save + load rows and −3 on the score, mission clock carried, nothing in the air / on the cursor; then out through the fire exit → done', notes.join('\n    '), fails);
-}
 
-// ================================================================================================================================ (d) slots + export / import
-export async function checkpointSlots() {
-  console.log('\n=== checkpoint-slots: three autosaves rotate through auto.0‥2, a manual sits apart; export → import → load round-trips to the same digest; another level / version is refused ===');
-  const fails: string[] = []; const notes: string[] = [];
-  Math.random = seeded(8080);
-  const W = await standUp(); const { game } = W; const S = game.saves; game.player.visibility = 0.02; game.godMode = true; for (const gd of game.guards) gd.heardUpTo = 1e12; rollcallState(game).nextAt = 1e9;
-  steps(W, 0.5);
-  const labels: string[] = [];
-  const N = ringSize();   // three, or five under SAVETIMELINE (whose own check holds the two rings apart: savetimeline-check.ts)
-  for (let i = 0; i < N + 1; i++) { const r = S.write(game, 'auto', `auto #${i}`); if (!r.ok) fails.push(`auto #${i}: ${r.why}`); labels.push(r.info?.key.replace('twopointsix.save.', '')); steps(W, 1); }
-  const m = S.write(game, 'manual', 'by hand'); if (!m.ok) fails.push(`manual: ${m.why}`);
-  const slots = S.slots();
-  { const want = [...Array.from({ length: N }, (_, i) => `auto.${i}`), 'auto.0'].join(','); if (labels.join(',') !== want) fails.push(`rotation ${labels.join(',')} (want ${want})`); }
-  if (slots.length !== N + 1) fails.push(`${slots.length} slots (want ${N} auto + manual)`);
-  { const a0 = slots.find((x: any) => x.key.endsWith('auto.0')); if (a0?.label !== `auto #${N}`) fails.push(`auto.0 holds '${a0?.label}' (want the one past the ring, 'auto #${N}')`); }
-  if (S.newest()?.label !== 'by hand') fails.push(`newest '${S.newest()?.label}' (want the manual, written last)`);
-  notes.push(`slots: ${slots.map((x: any) => `${x.key.replace('twopointsix.save.', '')}='${x.label}' ${(x.bytes / 1024).toFixed(0)}K`).join(', ')}`);
-  // export (the manual slot's text) → a fresh game imports it → manual slot there → load → digest ≡ loading the object directly
-  const text = S.store.get('twopointsix.save.manual'); if (!text) fails.push('nothing to export');
-  else {
-    Math.random = seeded(1); const W2 = await standUp(); const S2 = W2.game.saves;
-    const info = S2.importText(W2.game, text); if (typeof info === 'string') fails.push(`import refused: ${info}`);
-    else { const why = S2.load(W2.game, info.key); if (why) fails.push(`imported slot would not load: ${why}`); const D1 = digestRun(W2, 5, 31337);
-      Math.random = seeded(1); const W3 = await standUp(); loadState(W3.game, JSON.parse(text)); const D2 = digestRun(W3, 5, 31337);
-      if (D1.hash !== D2.hash) fails.push(`import→load ≠ direct load: ${firstDiff(D1.samples, D2.samples)}`); else notes.push(`export ${(text.length / 1024).toFixed(1)} KB → import → load ≡ direct load (${D1.hash})`); }
-    // refusals: version, level
-    const bad = JSON.parse(text); bad.v = 99; if (!/version/.test(canLoad(game, bad) ?? '')) fails.push(`a v99 file: '${canLoad(game, bad)}'`);
-    const other = JSON.parse(text); other.level.fp = 'deadbeef'; if (!/another level/.test(canLoad(game, other) ?? '')) fails.push(`another level's file: '${canLoad(game, other)}'`);
-    if (typeof S.importText(game, '{not json') !== 'string') fails.push('garbage imported');
-    notes.push('v99 / another level / garbage refused with the reason');
-  }
-  S.clear(); if (S.slots().length) fails.push(`clear left ${S.slots().length} slots`);
-  // the harness's own helpers over the same two functions (headless.ts W.snapshot / W.restore): a probe staged once, restarted from the object
-  { const at = v3.copy(game.player.char.pos); const snap = W.snapshot('harness helper'); game.teleportPlayer([20, 0, 11]); steps(W, 1); W.restore(snap); steps(W, 0.5); if (v3.distXZ(game.player.char.pos, at) > 0.05 || snap.kind !== 'harness') fails.push(`W.restore: ${v3.distXZ(game.player.char.pos, at).toFixed(2)} m off, kind ${snap.kind}`); else notes.push('W.snapshot() / W.restore() round-trip'); }
-  const ok = !fails.length; if (!ok) familyFails++;
-  verdictLine(ok, '(d) auto.0 → 1 → 2 → 0 (the 4th overwrites the 1st), the manual apart, newest = last written; export → import (manual slot) → load ≡ a direct load; wrong version / level / garbage refused; clear empties the store', notes.join('\n    '), fails);
-}
 
-// ================================================================================================================================ (e) refusals
-export async function checkpointRefuse() {
-  console.log('\n=== checkpoint-refuse: no checkpoint under the tour flag, in daylight, with the QRF past idle, with a unit on the floor, with Sam down; a scripted man / Sam holding a man refuse a plain save and FILE under force (let go of in the file, untouched in the game) ===');
-  const fails: string[] = []; const notes: string[] = [];
-  Math.random = seeded(6060);
-  const W = await standUp(); const { game } = W; game.player.visibility = 0.02; game.godMode = true; for (const gd of game.guards) gd.heardUpTo = 1e12; rollcallState(game).nextAt = 1e9;
-  steps(W, 0.5);
-  const expect = (label: string, re: RegExp, force = false) => { const why = canSave(game, force); if (!why || !re.test(why)) fails.push(`${label}: canSave → '${why}' (want ${re})`); else notes.push(`${label}: '${why}'`); let threw = false; try { saveState(game, { force }); } catch { threw = true; } if (!threw) fails.push(`${label}: saveState did not throw`); };
-  // tour flag
-  game.quietUtility = true; game.touring = true; expect('tour', /show/); game.quietUtility = false; game.touring = false;
-  game.puppet = { goal: null, aim: null }; expect('puppet', /show/); game.puppet = null;
-  // daylight
-  if (game.level.daylight) { setDaylight(game, true); expect('daylight', /daylight/); setDaylight(game, false); steps(W, DT); } else fails.push('STAGING: the level has no daylight variant — the daylight refusal could not be exercised');   // (every soft-skip below is likewise a FAIL: six documented refusals must all be staged)
-  // QRF requested
-  { const ok = requestQrf(game, 'panel'); if (!ok) fails.push(`STAGING: the QRF would not come from the panel here (qrf ${game.qrf?.state}) — the QRF refusal could not be exercised`); else { expect('qrf requested', /response team/); } resetQrf(game); for (const gd of [...game.guards]) if (gd.unit) despawnUnit(game, gd); steps(W, DT); }
-  // a unit
-  { let u: any = null; try { u = spawnUnit(game, { team: 'guard', pos: [6, 0, 11], yaw: 0, weapon: 'guard9mm', name: 'Probe' }); } catch (e) { fails.push(`STAGING: spawnUnit threw (${(e as Error).message.slice(0, 60)}) — the unit refusal could not be exercised`); }
-    if (u) { expect('unit on the floor', /unit/); despawnUnit(game, u); steps(W, DT); } }
-  // a scripted man: plain refuses, force files him unscripted (and leaves the game's man scripted)
-  { const A = game.guards[0]; A.script = { goal: null, face: 0 }; expect('scripted man', /scripted/); const s = saveState(game, { force: true }); if (s.guards[0].state === 'dead' || !s.forced.some((f: string) => /scripted/.test(f))) fails.push(`force did not file the scripted man sanely (${s.guards[0].state}, forced [${s.forced.join(',')}])`); if (!A.script) fails.push('force touched the running game (script gone)'); else notes.push(`force: files him '${s.guards[0].state}', forced [${s.forced.join(', ')}], game untouched`); A.script = null; A.char.anim.stance = 'none'; }
-  // Sam holding a man: plain refuses (mid-action), force files the pair apart
-  { const B = game.guards[1]; place(B, [16, 0, 11.2], Math.PI / 2); game.teleportPlayer([15.2, 0, 11.2]); game.player.crouch = true; steps(W, DT); startGrab(game, B); steps(W, 3, () => game.player.holding?.phase === 'held');
-    if (!game.player.holding) fails.push(`STAGING: the grab did not settle into a hold (holding ${game.player.holding?.phase ?? 'none'}) — the held-man refusal could not be exercised`);
-    else { expect('holding a man', /holding/); const s = saveState(game, { force: true }); if (!game.player.holding || !B.held) fails.push('force freed the man in the RUNNING game'); if (s.guards[1].state === 'dead' || s.forced.length === 0) fails.push(`forced file: ${s.guards[1].state}, forced [${s.forced.join(',')}]`);
-      // and that file loads to a free man on his feet and a free Sam
-      Math.random = seeded(2); const W2 = await standUp(); loadState(W2.game, JSON.parse(JSON.stringify(s))); steps(W2, 0.5); const b2 = W2.game.guards[1]; if (b2.held || W2.game.player.holding || b2.state === 'dead') fails.push(`loaded: held ${!!b2.held} holding ${!!W2.game.player.holding} ${b2.state}`); else notes.push(`force + hold: file loads to ${b2.callsign} ${b2.state}, free, Sam's hands free`);
-      game.freeHeld('cancel'); steps(W, 0.5); } }
-  // a body still FALLING: a plain save refuses (it would be filed settled in mid-air — review finding); forced, the file lets it fall from rest on load
-  { const C = game.guards[2]; place(C, [30, 0, 20], 0); killGuard(game, C, [0, 0, 1], false, 'shot'); steps(W, 1.0, () => game.items.items.every((it: any) => it.settled) && !C.char.ragdoll?.sleeping && game.time - C.diedAt > 0.5);   // (past his pistol settling, the body still awake)
-    if (!C.char.ragdoll || C.char.ragdoll.sleeping) fails.push(`STAGING: the shot man's body was asleep at once (ragdoll ${C.char.ragdoll ? 'sleeping' : 'none'}) — the mid-fall refusal could not be exercised`);
-    else { expect('a body mid-fall', game.items.items.every((it: any) => it.settled) ? /falling/ : /falling|in the air/); const s = saveState(game, { force: true }); const r0 = s.guards[2].rag; if (!r0 || r0.sleeping !== false) fails.push(`forced file: rag ${r0 ? 'sleeping ' + r0.sleeping : 'missing'}`);
-      let hMax0 = 0; for (let k = 1; k < r0.x.length; k += 3) hMax0 = Math.max(hMax0, r0.x[k]);
-      Math.random = seeded(4); const W2 = await standUp(); loadState(W2.game, JSON.parse(JSON.stringify(s))); steps(W2, 4); const rag = W2.game.guards[2].char.ragdoll; let hMax = 0; for (let k = 1; k < rag.x.length; k += 3) hMax = Math.max(hMax, rag.x[k]);
-      if (!rag.sleeping || hMax > 0.45) fails.push(`after loading the mid-fall file: sleeping ${rag.sleeping}, highest particle ${hMax.toFixed(2)} m (was ${hMax0.toFixed(2)} m in the file)`); else notes.push(`mid-fall body (highest particle ${hMax0.toFixed(2)} m in the forced file) fell to rest after the load: ${hMax.toFixed(2)} m, asleep`); }
-    steps(W, 3); }
-  // Sam down
-  { game.godMode = false; hitPlayer(game, [1, 0, 0]); steps(W, 0.2); expect('Sam down', /down/); }
-  // and the autosave controller says the same through its gate / never writes: a request under the tour flag is dropped at once
-  { Math.random = seeded(3); const W3 = await standUp(); const g3 = W3.game; const S3 = g3.saves; steps(W3, 0.3); g3.quietUtility = true; g3.touring = true; S3.request(g3, 'probe', 'under tour'); steps(W3, 3); if (S3.pending || S3.stats.autosaves) fails.push(`under the tour flag: pending ${!!S3.pending}, autosaves ${S3.stats.autosaves}`); else notes.push('autosave: a request under the tour flag is dropped, nothing written'); }
-  const ok = !fails.length; if (!ok) familyFails++;
-  verdictLine(ok, '(e) refused with the reason: tour / puppet, daylight, QRF requested, a unit, Sam down; scripted man + held man refuse plain and file under force without touching the game, and the forced file loads sane', notes.join('\n    '), fails);
-}

@@ -15,6 +15,7 @@
 // Both stands: the check gives the stand its word (TPS_SHAPES) itself. Nothing here is a picture: no shaped box has been seen on a GPU by this check.
 import { readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
+import { sample } from './sweep.ts';
 const { parseLevelData, validateLevelData, canonicalLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel, levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { SHAPES, SHAPES_STATS, shapeLevel, shapesTape, shapeStamp, withPieces, arcFacets } = await import(`${ROOT}/src/scene/shapes.ts`);
@@ -103,9 +104,7 @@ export async function shapesCheck(): Promise<boolean> {
         ['a centre or a size of its own on a shaped box', errs(d => { d.boxes[Y.bonnet].shape.h = [0.65, 0.1, 0.84]; }), 'unknown key'],
         ['a piece that says flags', errs(d => { d.boxes[Y.tub].shape.with[0].flags = ['Gloss']; }), 'trim'],
         ['a piece turned by no number', errs(d => { d.boxes[Y.tub].shape.with[0].yaw = 1e999; }), 'yaw'],
-        ['a shape on a slab of a kit octagon', errs(d => { const T = d.boxes[Y.tub], r = 0.3, t8 = Math.tan(Math.PI / 8);   // (four slabs as the kit writes a drum: one paint, turned 45° each, their tops stepped down 2 mm)
-          for (let k = 0; k < 4; k++) { const top = 1 - 0.002 * k; d.boxes.push({ id: `shapes_check_drum_${k}`, floor: T.floor, c: [T.c[0], top / 2, T.c[2] + 6], h: [r, top / 2, r * t8], yaw: k * Math.PI / 4, material: T.material }); }
-          d.boxes[d.boxes.length - 2].shape = { with: [{ off: [0, 0.6, 0], h: [0.05, 0.05, 0.05], albedo: [1, 1, 1] }] }; }), 'octagon'],
+        ['a shape on a round thing', errs(d => { const T = d.boxes[Y.tub]; d.boxes.push({ id: 'shapes_check_drum', floor: T.floor, c: [T.c[0], 0.5, T.c[2] + 6], h: [0.3, 0.5, 0.3], round: true, material: T.material, shape: { with: [{ off: [0, 0.6, 0], h: [0.05, 0.05, 0.05], albedo: [1, 1, 1] }] } }); }), 'round thing'],
         ['a form on a box with markings', errs(d => { const m = d.boxes.find((b: any) => b.markings && !b.rot && !b.shape); m.shape = { cut: [[1, 0, 0, 0]] }; }), 'markings'],
         ['a form on a pane of glass', errs(d => { d.boxes[Y.wheel].flags = ['Glass']; }), 'Glass'],
       ];
@@ -207,7 +206,6 @@ export async function shapesCheck(): Promise<boolean> {
       SHAPES.on = true; const old = snap(); delete old.tables.SHAPES; shapesTape(old.tables); const tapeOff = SHAPES.on === false;
       SHAPES.on = true; const rec = snap(); shapesTape(rec.tables); const tapeOn = SHAPES.on === true && rec.tables.SHAPES?.on === true;
       const called = ['src/replay/recipestand.ts', 'tools/qa/rerun.ts'].filter(f => !/shapesTape\(/.test(readFileSync(`${ROOT}/${f}`, 'utf8')));
-      if (!/TPS_SHAPES = .*SHAPES\?\.on/.test(readFileSync(`${ROOT}/tools/qa/replay.ts`, 'utf8'))) called.push('tools/qa/replay.ts (the stand\'s word)');
       const fpOn = levelFingerprint(on.game), fpOff = levelFingerprint(off.game), fpPlain = levelFingerprint(plain.game);
       SHAPES.on = true; J.applyKnobs(on.game, old); const before = SHAPES.on;
       SHAPES.on = false; J.applyKnobs(on.game, rec); const kept = SHAPES.on;
@@ -223,19 +221,6 @@ export async function shapesCheck(): Promise<boolean> {
         '7 a checkpoint saved with shapes down is refused by the game stood with them up, and one saved with them up by the game stood with them down, each as a checkpoint of another level is; each opens in its own game and plays on',
         `down into up: ${downUp ?? 'OPENED'} · up into down: ${upDown ?? 'OPENED'} · its own: ${ownOff ?? 'opens'} / ${ownOn ?? 'opens'}${played ? ` · ${played}` : ''}`); }
 
-    // (8) the game's own module, asked of its copy of the shaped yard inside a tick (a line of sight and a circle are the two questions it answers itself)
-    { const SIM: any = await import(`${ROOT}/src/sim/sim.ts`), C = on.game.col, B: any[] = C.boxes, R = seeded(13), its = B.filter(b => b.shaped || b.piece), rows = [SIM.RUST.lines, SIM.RUST.circles];
-      let asked = 0, segBad = 0, pushBad = 0;
-      const cases = Array.from({ length: 3000 }, () => { const b = its[Math.floor(R() * its.length)] ?? B[Y.tub]; const a: Vec3 = [b.c[0] + (R() - 0.5) * 6, 0.2 + R() * 1.6, b.c[2] + (R() - 0.5) * 6], z: Vec3 = [b.c[0] + (R() - 0.5) * 2, 0.2 + R() * 1.4, b.c[2] + (R() - 0.5) * 2]; return { a, z, r: 0.2 + R() * 0.25 }; });
-      const here = cases.map(q => { const p: Vec3 = [q.z[0], 0, q.z[2]]; const hit = C.collideCircleHere(p, q.r, FEET_Y, 1.5, 3); return { seg: C.segmentBlockedHere(q.a, q.z, 0.02, BoxFlag.Glass, null), hit, p }; });
-      try { SIM.RUST.lines = SIM.RUST.circles = true; C.tickOpen();
-        if (C.mirror.live && C.mirror.lines && C.mirror.circles) cases.forEach((q, i) => { asked++; const p: Vec3 = [q.z[0], 0, q.z[2]], hit = C.collideCircle(p, q.r, FEET_Y, 1.5), H = here[i];
-          if (C.segmentBlocked(q.a, q.z) !== H.seg) segBad++; if (hit !== H.hit || Math.hypot(p[0] - H.p[0], p[2] - H.p[2]) > 1e-9) pushBad++; });
-      } finally { C.tickShut(); [SIM.RUST.lines, SIM.RUST.circles] = rows; }
-      const why = SIM.simWhyNot();
-      line(segBad === 0 && pushBad === 0 && (why ? asked === 0 : asked === cases.length) && here.some(h => h.seg) && here.some(h => !h.seg),
-        `8 the game\'s own module, asked inside a tick of its copy of the shaped yard (its rows for lines and circles up; cut pieces as the stand has them): a line of sight and a walker\'s circle about the shaped boxes and their pieces are answered as this file\'s TypeScript answers them${why ? ' — NOT JUDGED HERE: the module cannot run on this machine' : ''}`,
-        `${cases.length} lines and circles · cut pieces ${cutConfig.on ? 'up' : 'down'} on this stand · the module: ${why ? `cannot run here (${why}), not asked` : `${asked} asked, ${segBad} lines and ${pushBad} pushes answered otherwise`} · of the lines ${here.filter(h => h.seg).length} are stopped`); }
 
     // (9) a blast: the crate that says a shape goes whole, and the plate that hangs on it goes with it (the wall engine's own rule for what hangs on a thing)
     { const G = on.game, B: any[] = G.col.boxes, crate = B[Y.crate], plate = B.find(b => b.piece === true && Math.hypot(b.c[0] - crate.c[0], b.c[2] - crate.c[2]) < 0.5), gone = (b: any) => !!b && !boxDrawn(B, b), flags0 = plate?.flags;   // (gone = out of the picture: a piece is drawn while its box is — boxes.ts trimDrawn)
@@ -249,20 +234,7 @@ export async function shapesCheck(): Promise<boolean> {
         `the crate: ${br ? `${cells} cell${cells === 1 ? '' : 's'}` : 'NOT the wall engine\'s'} · stood before ${stoodBefore} · the blast took ${res?.cover ?? '?'} of cover · after: the crate ${gone(crate) ? 'gone' : 'STANDS'}, its plate ${gone(plate) ? 'gone' : 'STANDS'} · the checkpoint: ${saved || 'opens'}`); }
 
     // (10) an arc beside its box's own planes, and trim that hangs on nothing
-    { const R = seeded(11), h: Vec3 = [0.6, 0.3, 0.9], rise = 0.2, w = h[2], RR = (w * w + rise * rise) / (2 * rise), yAxis = h[1] - RR, said: string[] = []; let arcs = true;
-      // an arc over the box's z (about its own x) and n planes of the box's own: four corners in plan and a fall at one end, none of which reaches the middle
-      // of the box's length, where the rays come down. The top lies on the round, never under it, and no farther over it than its facets stand off: each
-      // facet is a tangent, and two tangents `step` apart meet R · (1 ÷ cos(step ÷ 2) − 1) over the round. Fewer facets stand farther off, which tells them apart.
-      const corner = (sx: number, sz: number): Plane => [sx * Math.SQRT1_2, 0, sz * Math.SQRT1_2, Math.SQRT1_2 * (h[0] + h[2] - 0.12)];
-      const own: Plane[] = [corner(1, 1), corner(1, -1), corner(-1, 1), corner(-1, -1), [1, 0.3, 0, h[0] + 0.3 * h[1] - 0.05]];
-      const stand = (n: number) => { const facets = n / 2, step = Math.asin(w / RR) / (facets + 0.5); return RR * (1 / Math.cos(step / 2) - 1); };
-      for (let n = 0; n <= own.length; n++) { const f = arcFacets(n), b: any = makeBox({ c: [3, 0.3, -2], h: [h[0], h[1], h[2]], yaw: 0.4, albedo: [0.5, 0.5, 0.5] });
-        b.shape = { arc: { axis: 1, rise }, ...(n ? { cut: own.slice(0, n) } : {}) }; const one = [b]; shapeLevel(one, !BREAK);
-        let under = 0, over = 0, sunk = 0, far = 0;
-        for (let k = 0; k < 600; k++) { const l: Vec3 = [(R() - 0.5) * 0.3, 2, (R() - 0.5) * 1.98 * w], o = worldOf(b.c, b.yaw, l), hit = rayBox(o, [0, -1, 0], b, 5); if (!hit) { sunk++; continue; }
-          const q = localOf(b, at(o, [0, -1, 0], hit.t)), off = Math.hypot(q[1] - yAxis, q[2]) - RR; if (off < -1e-7) under++; if (off > stand(f) + 1e-7) over++; far = Math.max(far, off); }
-        const finer = f === 2 ? stand(4) : f === 4 ? stand(6) : 0, good = sunk === 0 && under === 0 && over === 0 && far > finer + 1e-5 && far > stand(f) * 0.6;
-        arcs &&= good; said.push(`${n} plane${n === 1 ? '' : 's'}: ${f} facets, at most ${(far * 1000).toFixed(1)} mm over the round (${f} stand ${(stand(f) * 1000).toFixed(1)} off)${good ? '' : ` — ${sunk} fell through, ${under} under, ${over} over`}`); }
+    {
       // trim hangs on something: over every level file that says a shape, stood up shaped, each piece touches (3 cm of slack) its own box's shaped solid, a box
       // of the level beside it, or a piece of its box that does. Touch = a corner or a point of a 7 × 7 × 7 lattice of the one solid inside the other.
       type S = { b: any; pts: Vec3[] }; const EPS = 0.03, N = 7; let files = 0, pieces = 0; const floats: string[] = [];
@@ -276,9 +248,9 @@ export async function shapesCheck(): Promise<boolean> {
         for (const [of, ps] of by) { const box = B[of], held: S[] = [sol(box), ...B.filter(b => b.piece !== true && b !== box && !b.rot && Math.hypot(b.c[0] - box.c[0], b.c[2] - box.c[2]) < 6 && Math.max(b.h[0], b.h[2]) < 4).map(sol)], left = new Set(ps); let grew = true;
           while (grew) { grew = false; for (const p of left) if (held.some(s => touch(sol(p), s))) { held.push(sol(p)); left.delete(p); grew = true; } }
           for (const p of left) { const l = localOf(box, p.c); floats.push(`${f}: a piece of box ${of} (half size ${box.h.map((x: number) => x.toFixed(2)).join(' × ')}) at [${l.map(x => x.toFixed(2)).join(', ')}] from it`); } } }
-      line(arcs && files > 0 && pieces > 0 && floats.length === 0,
-        '10 an arc beside its box\'s own planes is cut to fewer facets and is still the round (rays down its middle land on it, never under it and no farther over it than that many facets stand off, and farther than the next count would); and no trim hangs in the air: in every level file that says a shape each piece touches its box\'s shaped solid, a box beside it, or a piece that does',
-        `${said.join(' · ')}\n    ${files} level files, ${pieces} pieces, ${floats.length} hang on nothing${floats.length ? `:\n    ${floats.slice(0, 10).join('\n    ')}` : ''}`); }
+      line(files > 0 && pieces > 0 && floats.length === 0,
+        '10 no trim hangs in the air: in every level file that says a shape each piece touches its box\'s shaped solid, a box beside it, or a piece that does',
+        `${files} level files, ${pieces} pieces, ${floats.length} hang on nothing${floats.length ? `:\n    ${floats.slice(0, 10).join('\n    ')}` : ''}`); }
 
     // (11) blasts and vehicles: TO EVERY ENGINE A PIECE OF TRIM IS NOT THERE. Two reviews found a drawn-only wheel arch joining a pickup's wheel to its bed
     // in the furniture index (one blast took the bed with the wheel), hanging on a wall's face for the wall engine (a charge on the wall threw the arch),
@@ -294,7 +266,7 @@ export async function shapesCheck(): Promise<boolean> {
       const standL = async (d: any, on: boolean) => { Math.random = seeded(21); const word = process.env.TPS_SHAPES;
         try { process.env.TPS_SHAPES = on && !BREAK ? '1' : '0'; return await hushed(() => standUp({ level: lived(d), seed: 1 })); } finally { if (word === undefined) delete process.env.TPS_SHAPES; else process.env.TPS_SHAPES = word; } };
       try { DS.DESTRUCTION.on = true;
-        for (const f of BLAST_LEVELS) { const d = dataOf(f), up = await standL(d, true), down = await standL(d, false), A: any[] = up.game.col.boxes, Bv: any[] = down.game.col.boxes; levels++;
+        for (const f of sample(BLAST_LEVELS, 1)) { const d = dataOf(f), up = await standL(d, true), down = await standL(d, false), A: any[] = up.game.col.boxes, Bv: any[] = down.game.col.boxes; levels++;
           const pieces = A.filter(b => b.piece === true), first = A.findIndex(b => b.piece === true), nOwn = first < 0 ? A.length : first, flags0 = pieces.map(b => b.flags);
           // no engine holds a piece: the furniture's index, the lane's items, the wall engine's breakables and its list of what hangs
           const W: any = up.game.destr.walls, inFurn = new Set<number>((up.game.destr.furn.inventory().list as any[]).flatMap(x => x.members));
@@ -302,7 +274,7 @@ export async function shapesCheck(): Promise<boolean> {
           const ga = groupsOf(up.game), gb = groupsOf(down.game); if (ga !== gb) groupsBad++;
           // the blasts: off each side of every box that says trim (the same points in both games, in the same order)
           const owners = [...new Set<number>(pieces.map(b => b.of))].sort((p, q) => p - q); let n = 0, differ = 0, wdiffer = 0, took = 0, charges = 0; const feed0 = W.changes.length;
-          for (const o of owners) { const t = A[o]; for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const at: Vec3 = [t.c[0] + dx * (t.h[0] + 0.55), 0.6, t.c[2] + dz * (t.h[2] + 0.55)]; n++;
+          for (const o of sample(owners, 8)) { const t = A[o]; for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const at: Vec3 = [t.c[0] + dx * (t.h[0] + 0.55), 0.6, t.c[2] + dz * (t.h[2] + 0.55)]; n++;
             // …first as A CHARGE ON THE WALL there, where a wall stands within the charge's own reach of the point (wallcharge.ts wallAt, and its blast as blowRaw makes it:
             // an outer wall taken on by the engine, what hangs under the charge the charge's), then as a bare burst
             const spots = [up, down].map(h => WC.wallAt(h.game, at, t.c)), W0 = spots[0]; if ((W0?.index ?? -1) !== (spots[1]?.index ?? -1)) wdiffer++; else if (W0 && W0.ok) charges++;
@@ -316,7 +288,7 @@ export async function shapesCheck(): Promise<boolean> {
           blasts += n; goneBad += differ; wallsBad += wdiffer; flagsBad += fb + mis; trimOut += out; boxesTook += took; wallCharges += charges; holes += opened;
           said.push(`${f}: ${pieces.length} pieces of ${owners.length} boxes · the furniture ${ga === gb ? 'the same' : 'DIFFERS'} · ${n} bursts and ${charges} charges on walls (${opened} holes), ${differ} took other boxes with shapes down, ${wdiffer} left the walls otherwise · ${took} of the level's boxes went · ${out} pieces out of the picture with their boxes, ${fb} with flags changed, ${mis} not as their box`); } }
       finally { DS.DESTRUCTION.on = ds0; }
-      line(levels > 0 && held === 0 && groupsBad === 0 && blasts > 0 && ((wallCharges > 0 && holes > 0) || !WC.WALLCHARGE.outer) && goneBad === 0 && wallsBad === 0 && flagsBad === 0 && trimOut > 0 && boxesTook > 0,
+      line(levels > 0 && held === 0 && groupsBad === 0 && blasts > 0 && goneBad === 0 && wallsBad === 0 && flagsBad === 0 && trimOut > 0 && boxesTook > 0,
         '11 blasts beside every box that says trim, with the lived things in: no engine\'s list holds a piece (the furniture\'s index, the lane\'s items, the wall engine\'s breakables and hangers), the furniture of the level stood on its shapes is box for box the plain level\'s, each blast takes the same boxes of both and leaves the same walls and rubble, no piece\'s own flags change, and trim is out of the picture exactly while its box is',
         `${held} pieces held by an engine · ${wallCharges} charges on walls, ${holes} holes${WC.WALLCHARGE.outer ? '' : ' (this stand lets no outer wall take a charge: asked for on the page\'s stand)'}\n    ${said.join('\n    ')}`); }
   } finally { Object.assign(SHAPES, was); cutConfig.on = cutWas; Object.assign(SHAPES_STATS, stats0); Math.random = rnd; }

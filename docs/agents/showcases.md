@@ -9,30 +9,13 @@ showcases and make a new benchmark").** Gone for good, code deleted (git keeps i
 and the DAY showcase (program `'breach'`: `?breach`, `__breach`, the `Breach` facade, Extras ▸ Day showcase), with `levels/office.script.ts` (the only level script),
 `src/game/showkey.ts`, `ui/menu.ts SHOWCASE_BUTTONS`, main.ts `startNight` / `seekShow` / `quitShow` / `syncShowClass`, index.html `body.breaching`, and the checks that
 ran them (`probes.ts night`, `day`, `breach-run / -restore / -tour`, `director-breach-digest` and its two fixtures, `oneway-night`, `show-key-check.ts`). `?demo` and
-`?breach` are now plain flags nothing reads: the page opens on the title. What stays, and is described below: the old tour (`__demo`, `tools/qa/tour.ts`), `BreachDrill`
+`?breach` are now plain flags nothing reads: the page opens on the title. What stays, and is described below: `BreachDrill`
 (the night breach scenario runs it live), the daylight variant (`setDaylight`, `__daylight`), `plans.breach`, and the Director ENGINE with no program on any shipped level.
 The bullets below were cut down to what is still true; other area files still mention the shows in passing as history. THE BENCHMARK, which played the day showcase as
 its scene, plays three real floors instead (docs/agents/qa.md 'THE BENCHMARK'). Since the removal the page has been driven on the software adapter only
 (`tools/qa/bench-page.cjs`: the title, its Extras list with no showcase rows, three mission pages); never seen on a GPU.
 
 <!-- was CLAUDE.md lines 695–758 -->
-- **Showcase tour** (`src/game/demo.ts`; `__demo.start()` by console and `tools/qa/tour.ts` only — no key, card or URL flag starts it; P or Esc over it ends it to the start card): `Shot {dur,pos,yaw,yawTo,swing,dist,distFrom,caption,sub,enter,exit,
-  at,tick}`; beats drive the *real* player through `game.puppet` (goal/aim/crouch/walk/target/throwAt/fixtures) and
-  synthetic keys; cuts happen under `fade`; `Guard.hold`/`pinned` are scripted-only flags; `rearm()` must rack a
-  round (`chamber=1`); anything that resets guards calls `game.clearAftermath()` first; the hand-over stop calls
-  `restartEncounter()` which also restores authored light/door state (`resetLevelState`). Soak the whole tour
-  headlessly after edits (13 stops now, no errors, count `player.hitFlash` spikes — Sam must never be hit).
-  THE TOUR ON THE PAGE'S STAND (2026-11-06; `tools/qa/tour.ts`, the stand a tool has with no word). It had only ever been read on the old stand, and
-  read on the page's it was 0 of 3 at `stop2-wide`, `stop5-stun` and `stop7-thrown`. All three were the tool's own readings, none the game's: the fire
-  exit does swing wide and both canisters are thrown. (1) The swing was read as the most negative angle, and where doors open one way
-  (`DOORWAY.oneWay`) this leaf goes the positive way: it is now read on the side the leaf has to go (its own where doors open one way, away from his
-  push where they swing both). (2) A throw was read as the count at the cut, which is after the next stop's `rearm()` has topped him up to two and
-  one, and two and one is all the card of the page's stand deals him: it is now the count on the stop's last frame. MEASURED: 3 of 3 on the page's
-  stand and on the old one, two laps on one game 1 of 1, `--selftest` OK. `TOUR_BREAK=1` (the leaf held short of half a radian in stop 2, the
-  script's 4 and its click in the smoke stop eaten) says the three in every run on both stands and exits 1; it exits 3 where one of them is not said
-  (seen with `--abort-at 2`, which never reaches them). NOT REACHED by the break: every other stop's reads. Nobody plays the tour: no key, card or
-  address starts it. Guards can be
-  choreographed through `Guard.script` + `src/game/squad.ts` (runner, `order()`, `Sweep`, the `RoomClear` drill) instead of hold/pinned.
 - **The breach drill and the daylight variant** (`src/game/breach.ts BreachDrill`; it was the choreography of the removed DAY showcase and is now run live by the night breach scenario, `game/nightbreach.ts`, and offered to a level script as `drill.breach`). `lighting.ts
   setDaylight(g, on)` swaps `level.daylight` in (a kind-2 sun added to the LightSet, sky / haze / exposure swapped, `groupsOn/Off`, moon out) and
   back out bit for bit (state in a WeakMap; `isDaylight`); volumetrics.wgsl marches kind-2 lights through the haze UNDER the ceiling only
@@ -72,8 +55,7 @@ its scene, plays three real floors instead (docs/agents/qa.md 'THE BENCHMARK'). 
   What main.ts no longer does for a program: seek its chapters (`seekShow` is gone — the bar shows them, a click does nothing), or style a `lowerThird` (the flag is still on the
   frame; `body.breaching` is gone). QA: `probes.ts director` = `director-lint` (the shipped office carries no script and refuses a start by name; a bad script is reported and not
   armed) / `director-showcase-scan` / `director-scheduler` + idle identity, each on a script the probe stages itself; a level with no script = no programs = the game exactly.
-  Not checked by anything since the removal: a showcase program end to end, `drill.breach` under the Director. `src/game/demo.ts` (the old 13-stop tour) is unreachable from the
-  UI but still lapped by tools/qa/tour.ts. NOT yet: workbench Director mode / keyframes / scrub (M3), teams as data, saves inside a set piece.
+  Not checked by anything since the removal: a showcase program end to end, `drill.breach` under the Director. The old 13-stop tour (`demo.ts`, `tools/qa/tour.ts`) was removed 2026-11-07. NOT yet: workbench Director mode / keyframes / scrub (M3), teams as data, saves inside a set piece.
   **What the day showcase's loud half added to the Director** stays as verbs no shipped script calls (each default = as it was): `c.chaos(k | null)`
   (showcase-only; `Destruction.showChaos` read by `chaosOf` even under touring, nulled by the runtime at the end), `c.doors.kick(door, by, {leg})` / `kickSpot` (anim.kickDoor now, doors.ts
   kickIn on the impact frame — `Run.kicks`), `c.doors.open(d, angle?, {hold})` (hold = the closer off: quietT −3600 until a touch or Door.reset), `c.order(u, {aimAt: unit})` TRACKS the man

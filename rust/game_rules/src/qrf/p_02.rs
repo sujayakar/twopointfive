@@ -433,7 +433,7 @@ pub fn tick_men(g: &mut crate::game::Game, dt: f64) {
         Phase::File => phase_file(g, &el),
         Phase::Fan => if g.qrf.phase_t > ENTRY_HOLD { pick_target(g, &mut el, true); },
         Phase::Move => phase_move(g, &mut el, dt),
-        Phase::Stack => phase_stack(g, &mut el),
+        Phase::Stack => phase_stack(g, &el),
         Phase::Breach => phase_breach(g, &mut el),
         Phase::Bang => phase_bang(g, &el),
         Phase::Flow => phase_flow(g, &mut el),
@@ -804,7 +804,7 @@ pub fn sweep_next(g: &mut crate::game::Game, from: V3, fix: V3) -> Option<crate:
 }
 
 /// The list: the block's own `sweep`, or the quiet block's spots, a raid's quiet rooms and scenarios.places' areas by their middles.   (qrf.ts sweepPlaces)
-pub fn sweep_places(g: &mut crate::game::Game) -> Vec<crate::qrf::SweepPlacesItem> {
+pub fn sweep_places(g: &crate::game::Game) -> Vec<crate::qrf::SweepPlacesItem> {
     use crate::qrf::SweepPlacesItem;
     fn mid(b: &crate::scene_scenarios::Rect) -> V3 { [(b.x0 + b.x1) / 2.0, 0.0, (b.z0 + b.z1) / 2.0] }
     let mut out: Vec<SweepPlacesItem> = Vec::new();
@@ -823,7 +823,7 @@ pub fn sweep_places(g: &mut crate::game::Game) -> Vec<crate::qrf::SweepPlacesIte
         for r in &rooms {
             let mut held = false;
             for &h in &r.defenders {
-                if g.gd[h].state != crate::game::GuardState::Dead && !crate::owner::has_him(g, h, crate::owner::own().runner) { held = true; break; }
+                if g.gd[h].state != crate::game::GuardState::Dead && !crate::owner::has(g, h, crate::owner::by::RUNNER) { held = true; break; }
             }
             if !held { out.push(SweepPlacesItem { name: r.def.name.clone(), pos: mid(&r.def.bounds) }); }
         }

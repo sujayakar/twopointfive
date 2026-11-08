@@ -3,7 +3,7 @@
 // PASS / FAIL each, all headless. The switch (WORDS.on) is OFF on the frozen stand; each probe here raises it for itself and puts it back.
 //   words-lint      the tables the pass added: every hostage line inside a bubble's length, none on the originality blocklist, none shared with the office
 //                   civilians' table, every {other} line with a plain sibling in its pool; the whole of dialogue.ts's own lint still green with the switch on;
-//                   and a defender's four pools for a pistol in a hold, with the pick (gunhold.ts)
+//                   and a defender's four pools for a pistol in a hold (gunhold.ts)
 //   words-hostage   a staged rescue with the switch on, the team standing still: every word out of a hostage's mouth is a hostage's line and never a
 //                   civilian's; she pleads while he shouts, begs with his gun on her, the one beside her cries her name when she is shot; no message calls
 //                   anybody a cleaner; and with the captor dead and a man of the team in the room, one of them speaks and a teammate answers
@@ -28,7 +28,7 @@ async function staged(on: boolean, seed: number, knobs: Record<string, unknown>)
 function listen(T: any) {
   const said: { who: string; text: string; t: number }[] = [], msgs: string[] = [], last = new Map<any, any>(); let lastMsg: any = null;
   const tap = () => {
-    for (const h of [...T.R.hostages, ...T.R.ops, ...T.R.hostiles]) { const b = h.bubble; if (b && last.get(h) !== b) { last.set(h, b); said.push({ who: h.callsign, text: b.text, t: T.game.time }); } }
+    for (const h of [...T.R.hostages, ...T.R.ops, ...T.R.hostiles]) { const b = h.bubble; if (b && last.get(h) !== b.t) { last.set(h, b.t); said.push({ who: h.callsign, text: b.text, t: T.game.time }); } }
     const M = T.game.messages; const m = M[M.length - 1]; if (m && m !== lastMsg) { const i = lastMsg ? M.indexOf(lastMsg) : -1; for (const x of M.slice(i + 1)) msgs.push(x.text); lastMsg = m; }
   };
   return { said, msgs, secs(s: number, until?: () => boolean) { for (let i = 0; i < Math.round(s * 60); i++) { T.step(); tap(); if (until?.()) return true; } return false; } };
@@ -54,27 +54,23 @@ export const wordsLint = guarded(async () => {
   const bad = others.flatMap(([k, ls]) => ls.filter(t => (!/\bcontrol\b/.test(t) && fill(t).length > D.MAX_CHARS) || D.blockedPhrase(t))   // a line to or from control is the radio strip's, never a bubble
    .map(t => `${k}: '${t}'`));
   F.verdict(!bad.length && others.every(x => x[1].length > 0), 'the other tables\' lines fit a bubble and name nothing off the blocklist, switch on', bad.slice(0, 4).join(' · ') || others.map(x => `${x[0]} ${x[1].length}`).join(' · '));
-  // the pistol-hold rule's four moments in a defender's mouth (gunhold.ts GUNHOLD_DEFENDER_LINES): a pool each, a short bark with no token in it, none of it the staff's line, the man in the arm never
-  // called theirs (he can be a civilian), no office word, the errand round a 'coming round' row on their net and the 'gone' line neither 'stood down' nor 'fell back' — and the pick itself (gunHoldPool)
+  // the pistol-hold rule's four moments in a defender's mouth (gunhold.ts GUNHOLD_DEFENDER_LINES): a pool each, a short bark with no token in it, the man in the arm never
+  // called theirs (he can be a civilian), no office word, the errand round a 'coming round' row on their net and the 'gone' line neither 'stood down' nor 'fell back'
   const GM = await import(`${ROOT}/src/game/gunhold.ts`), GH: Record<string, string[]> = GM.GUNHOLD_DEFENDER_LINES, { cueClass } = await import(`${ROOT}/src/game/cues.ts`);
-  const kinds = ['gun', 'shot', 'round', 'gone'], foe: any = { unit: {}, team: 'hostile' }, qrf: any = { unit: {}, team: 'guard' }, staff: any = { team: 'guard' };
-  const staffLines = new Set<string>(kinds.flatMap(k => GM.gunHoldPool(staff, k)));
+  const kinds = ['gun', 'shot', 'round', 'gone'];
   const ghBad = kinds.flatMap(k => [...(GH[k].length ? [] : [`${k}: empty`]),
-    ...GH[k].filter(t => t.length > D.AIM_CHARS || /[{}]/.test(t) || D.blockedPhrase(t) || staffLines.has(t) || /\b(one of ours|our man|ours)\b/i.test(t) || /\b(corridor|lift|fourth floor|desks?|cleaning staff|security|server room|guards?)\b/i.test(t)
+    ...GH[k].filter(t => t.length > D.AIM_CHARS || /[{}]/.test(t) || D.blockedPhrase(t) || /\b(one of ours|our man|ours)\b/i.test(t) || /\b(corridor|lift|fourth floor|desks?|cleaning staff|security|server room|guards?)\b/i.test(t)
       || (k === 'round' && cueClass(t) !== 1) || (k === 'gone' && [2, 5].includes(cueClass(t)))).map(t => `${k}: '${t}'`)]);
-  { const NOW: Record<string, string> = GM.GUNHOLD_NOW, all = new Set<string>([...kinds.flatMap(k => GH[k]), ...staffLines]);   // the lines as they are said now (the writing guide): each stands for a line of a pool, fits a bubble, and is classed on the net as the old one was
-    const nowBad = Object.entries(NOW).filter(([was, now]) => !all.has(was) || now.length > D.AIM_CHARS || /[{}]/.test(now) || D.blockedPhrase(now) || cueClass(now) !== cueClass(was)).map(([was, now]) => `'${was}' → '${now}'`);
-    F.verdict(!nowBad.length, 'the pistol-hold lines as they are said now: each stands for a pool line, fits a bubble and keeps its class on the net', nowBad.join(' · ') || `${Object.keys(NOW).length} lines`); }
+  { const NOW: Record<string, string> = GM.GUNHOLD_NOW, all = new Set<string>(kinds.flatMap(k => GH[k]));   // the lines as they are said now (the writing guide): each that stands for a line of a defender's pool fits a bubble, and is classed on the net as the old one was
+    const nowBad = Object.entries(NOW).filter(([was, now]) => all.has(was) && (now.length > D.AIM_CHARS || /[{}]/.test(now) || D.blockedPhrase(now) || cueClass(now) !== cueClass(was))).map(([was, now]) => `'${was}' → '${now}'`);
+    F.verdict(!nowBad.length, 'the pistol-hold lines as they are said now: each fits a bubble and keeps its class on the net', nowBad.join(' · ') || `${Object.keys(NOW).length} lines`); }
   F.verdict(!ghBad.length, 'a defender has his own words for a pistol in a hold', ghBad.join(' · ') || kinds.map(k => `${k} ${GH[k].length}`).join(' · '));
-  const pickOn: boolean = await withWords(true, async () => kinds.every(k => GM.gunHoldPool(foe, k) === GH[k] && GM.gunHoldPool(qrf, k) !== GH[k] && GM.gunHoldPool(staff, k) !== GH[k]));
-  const pickOff: boolean = await withWords(false, async () => kinds.every(k => GM.gunHoldPool(foe, k) === GM.gunHoldPool(staff, k)));
-  F.verdict(pickOn && pickOff, 'only a defender draws from them, and only with the switch on', `switch on: defender own, response team and staff the staff\'s ${pickOn ? 'yes' : 'NO'} · switch off: defender the staff\'s ${pickOff ? 'yes' : 'NO'}`);
   return F.done();
 });
 
 export const wordsHostage = guarded(async () => withWords(true, async () => {
   const F = family('words-hostage: a hostage speaks as a hostage');
-  const K = { resolveSpread: 0, resolveSecs: 20, secondHostageSecs: 6 };
+  const K = { resolveSpread: 0, resolveSecs: 14, secondHostageSecs: 6 };
   const mine = new Set<string>(D.hostageLines()), civ = new Set<string>(D.civilianLines());
   const names = (R: any) => R.hostages.map((h: any) => h.civ.name);
   const isHers = (R: any, text: string) => mine.has(text) || names(R).some((n: string) => D.hostageLines().some((t: string) => t.replace(/\{other\}/g, n) === text));
@@ -96,7 +92,7 @@ export const wordsHostage = guarded(async () => withWords(true, async () => {
   }
   { // the captor dead, nobody of his in the room: they call out; a teammate in the room: one speaks, he answers
     const T = await staged(true, 21, { ...K, doorMan: 'corridor', roamers: 0 }), R = T.R, L = listen(T), cap = R.hostiles[0]; give(T, 'hold'); T.step(); L.secs(4);
-    killGuard(T.game, cap, [1, 0, 0], false, 'shot', 'player'); L.secs(24);
+    killGuard(T.game, cap, [1, 0, 0], false, 'shot', 'player'); L.secs(14);
     const hs = new Set(R.hostages.map((h: any) => h.callsign));
     const alone = L.said.filter(s => hs.has(s.who) && D.HOSTAGE_LINES.alone.includes(s.text));
     F.verdict(alone.length >= 1 && up(R.hostages) === 2, 'nobody of theirs left in the room and nobody come yet: they call out', alone.map(s => `'${s.text}'`).join(' · ') || 'nothing');
@@ -144,30 +140,24 @@ export const wordsRoutes = guarded(async () => withWords(true, async () => {
 }));
 
 /** THE LOG'S OWN ROWS (from a tape of the compound, after the squad-names pass): a teammate the player's own round drops is not 'guard down — dead', a line the log
- *  already carries is not filed a second time when its man is dropped mid-word, and five men roused by one shot do not fill the five-row log with one word. Each
- *  asked with the switch on and off: off, the rows are the build's. */
+ *  already carries is not filed a second time when its man is dropped mid-word, and five men roused by one shot do not fill the five-row log with one word.
+ *  (What a kill or a line says reaches the log on the next step: each list is read a step on.) */
 export const wordsLog = guarded(async () => {
   const F = family('words-log: the log names a teammate, files a line once, and takes one CONTACT a second');
-  const was = WORDS.on;
-  try {
-    for (const on of [true, false]) {
-      const T = await staged(on, 23, {}), g = T.game, R = T.R; const said: string[] = []; { const msg = g.msg.bind(g); g.msg = (t: string) => { said.push(t); msg(t); }; }
-      T.step(20);
-      const [a, b] = R.ops; let n = said.length;
-      killGuard(g, a, [1, 0, 0], false, 'shot', 'player'); const mine = said.slice(n); n = said.length;
-      killGuard(g, b, [1, 0, 0], false, 'shot', 'guard'); const own = said.slice(n);
-      const wantMine = on ? `${a.callsign} down — your round` : 'guard down — dead', wantOwn = on ? `${b.callsign} down — hit by his own side` : 'guard down — hit by his own side';
-      F.verdict(mine.includes(wantMine) && own.includes(wantOwn) && (!on || !said.some(t => /^guard down/.test(t))), `words ${on ? 'on' : 'off'}: a teammate dropped by the player's round, and one by his own side's, read ${on ? 'by name' : 'as they did'}`, `want '${wantMine}' · '${wantOwn}' — got ${[...mine, ...own].join(' | ')}`);
-      const hs = R.hostiles.filter((h: any) => h.state !== 'dead'); const h = hs[0]; n = said.length;
-      g.say(h, 'who is that?', true); killGuard(g, h, [1, 0, 0], false, 'shot', 'player');
-      const twice = said.slice(n).filter(t => t.endsWith('who is that?')).length;
-      F.verdict(twice === (on ? 1 : 2), `words ${on ? 'on' : 'off'}: a line already in the log, its man dropped mid-word, is there ${on ? 'once' : 'twice, as it was'}`, said.slice(n).join(' | '));
-      const rest = hs.slice(1); n = said.length; for (const x of rest) { x.bubble = null; x.standoff = null; x.state = 'patrol'; x.awareness = 1; }
-      T.step(1);
-      const rows = said.slice(n).filter(t => t.endsWith(': CONTACT!')).length, shouts = rest.filter((x: any) => x.bubble?.text === 'CONTACT!').length;
-      F.verdict(shouts >= 2 && rows === (on ? 1 : shouts), `words ${on ? 'on' : 'off'}: ${shouts} men roused on one frame all shout it, and the log takes ${on ? 'one row' : 'a row a man, as it did'}`, `${shouts} bubbles · ${rows} rows — ${said.slice(n).join(' | ')}`);
-    }
-  } finally { WORDS.on = was; }
+  const T = await staged(true, 23, {}), g = T.game, R = T.R; const said: string[] = []; { const msg = g.msg.bind(g); g.msg = (t: string) => { said.push(t); msg(t); }; }
+  T.step(20);
+  const [a, b] = R.ops; let n = said.length;
+  killGuard(g, a, [1, 0, 0], false, 'shot', 'player'); killGuard(g, b, [1, 0, 0], false, 'shot', 'guard'); T.step(1); const down = said.slice(n);
+  const wantMine = `${a.callsign} down — your round`, wantOwn = `${b.callsign} down — hit by his own side`;
+  F.verdict(down.includes(wantMine) && down.includes(wantOwn) && !said.some(t => /^guard down/.test(t)), 'a teammate dropped by the player\'s round, and one by his own side\'s, read by name', `want '${wantMine}' · '${wantOwn}' — got ${down.join(' | ')}`);
+  const hs = R.hostiles.filter((h: any) => h.state !== 'dead'); const h = hs[0]; n = said.length;
+  g.say(h, 'who is that?', true); killGuard(g, h, [1, 0, 0], false, 'shot', 'player'); T.step(1);
+  const twice = said.slice(n).filter(t => t.endsWith('who is that?')).length;
+  F.verdict(twice === 1, 'a line already in the log, its man dropped mid-word, is there once', said.slice(n).join(' | '));
+  const rest = hs.slice(1); n = said.length; for (const x of rest) { x.bubble = null; x.standoff = null; x.state = 'patrol'; x.awareness = 1; }
+  T.step(1);
+  const rows = said.slice(n).filter(t => t.endsWith(': CONTACT!')).length, shouts = rest.filter((x: any) => x.bubble?.text === 'CONTACT!').length;
+  F.verdict(shouts >= 2 && rows === 1, `${shouts} men roused on one frame all shout it, and the log takes one row`, `${shouts} bubbles · ${rows} rows — ${said.slice(n).join(' | ')}`);
   return F.done();
 });
 
@@ -201,98 +191,76 @@ export const wordsDoors = guarded(async () => withWords(true, async () => {
   return F.done();
 }));
 
-/** words-frag: the squad's refused frag says WHO is in it (squadthrow.ts `squadFragCatches`): a rescue's hostages are 'hostages', the man a snatch came for is named,
- *  anybody else unarmed is 'a civilian'; with the pass off all three are the one old line. Asked of the function itself on a staged rescue, the player and the
- *  team taken out of the question so only the unarmed are judged. WORDS_BREAK=1 expects the old line of the snatch's man with the pass on: must fail. */
+/** words-frag: the squad's refused frag says WHO is in it (squadthrow.ts `squadFragCatches`): a rescue's hostages are 'hostages',
+ *  anybody else unarmed is 'a civilian'. Asked of the function itself on a staged rescue, the player and the
+ *  team taken out of the question so only the unarmed are judged. WORDS_BREAK=1 expects the old line of a civilian with the pass on: must fail. */
 export const wordsFrag = guarded(async () => {
   const F = family('words-frag'), { squadFragCatches } = await import(`${ROOT}/src/game/squadthrow.ts`), OLD = 'hostages. no frag.';
   {
     const T = await staged(true, 3, {}), g = T.game, h = T.R.hostages.find((x: any) => x.state !== 'dead');
     F.verdict(!!h, 'a rescue staged with a living hostage', T.why ?? '');
     if (!h) return F.done();
-    const at: [number, number, number] = [h.char.pos[0], 0, h.char.pos[2]], name = h.civ?.name ?? 'our man';
+    const at: [number, number, number] = [h.char.pos[0], 0, h.char.pos[2]];
     const base = { player: { down: true, char: g.player.char }, guards: g.guards.filter((x: any) => x.team !== 'operative') };
     const as = (over: Record<string, unknown>) => Object.assign(Object.create(g), base, over);
     const cases: [string, any, string][] = [
-      ['a hostage', as({ snatch: { man: null }, civilians: [] }), OLD],
-      ['the man a snatch came for', as({ rescue: null, snatch: { man: h }, civilians: [] }), process.env.WORDS_BREAK ? OLD : `${name} is in it. no frag.`],
-      ['a civilian', as({ rescue: null, snatch: { man: null }, civilians: [h] }), 'a civilian is in it. no frag.'],
-      ['nobody unarmed', as({ rescue: null, snatch: { man: null }, civilians: [] }), 'null'],
+      ['a hostage', as({ civilians: [] }), OLD],
+      ['a civilian', as({ rescue: null, civilians: [h] }), process.env.WORDS_BREAK ? OLD : 'a civilian is in it. no frag.'],
+      ['nobody unarmed', as({ rescue: null, civilians: [] }), 'null'],
     ];
-    for (const on of [true, false]) for (const [who, G, want] of cases) {
-      const got = String(await withWords(on, async () => squadFragCatches(G, at, at))), exp = on || want === 'null' ? want : OLD;
-      F.verdict(got === exp, `${on ? 'pass on' : 'pass off'} · ${who}: '${exp}'`, got === exp ? '' : `said '${got}'`);
+    for (const [who, G, want] of cases) {
+      const got = String(squadFragCatches(G, at, at));
+      F.verdict(got === want, `${who}: '${want}'`, got === want ? '' : `said '${got}'`);
     }
-    F.verdict(!/hostage/i.test(`${name} is in it. no frag.`) && !/\b(north|south|east|west)\b/i.test(name), `the named line calls nobody a hostage ('${name} is in it. no frag.')`, '');
   }
   return F.done();
 });
 
-/** 'words-doornames' (game/doornames.ts authoredDoorNames, behind words.ts WORDS.doors — the page has it on, `?doornames=0` puts it off; off in the module
- *  and on the frozen stand, `TPS_DOORNAMES=1` raises it): a level says what its own doors are called where the rooms cannot (scenarios.doorNames), and no
+/** 'words-doornames' (game/doornames.ts authoredDoorNames, behind words.ts WORDS.doors, settled on): a level says what its own doors are called where the rooms cannot (scenarios.doorNames), and no
  *  door's name on the HUD carries a bearing. All headless, read off the name the squad's row reads (orders.ts doorWords): no row seen on a page.
- *    1 · the lookup on a made-up level: a written name is the door's name, wins over a made one, is nothing with the key down (the same doors, the key
- *        asked when a name is read), names no door that is not there; a made name beside it is told apart as if the door had always been called that
+ *    1 · the lookup on a made-up level: a written name is the door's name, wins over a made one, names no door that is not there; a made name beside it is told
+ *        apart as if the door had always been called that
  *    2 · every level file and the office: a written name says no bearing and begins with no 'the'; no two doors of a level are called the same
  *    3 · THE LIST OF WHAT IS OWED: the doors still called by a bearing are exactly DOORS_OWED below, door for door. A door that gets a name comes OFF the
  *        list in the same change (the line is red until it does), and no door not on it is ever called by one.
- *        `DOORNAMES_BREAK=1` reads the names with the key down: the office's two are owed again and the line must be red
  *    7, 8 · the same list for an exit or an area a screen prints, and for a door still called by its id's letters (PLACES_OWED, LETTERS_OWED below;
- *        under the break word both lists read as empty and both lines must be red)
- *    4 · the office stood up: the squad's row, a rear man's 'holding ·' and the response team's 'stack on …' say the one name with the key up, and what
- *        they said with it down
- *    5 · the two stands' row and word, and a recording from before the key */
+ *        under DOORNAMES_BREAK=1 both lists read as empty and the lines must be red)
+ *    4 · the office stood up: the squad's row, a rear man's 'holding ·' and the response team's 'stack on …' say the one name */
 const DOORS_OWED: Record<string, string> = {   // (10-19: NONE OWED. The 96 doors of 25 files that stood here are named in their levels' own generators — scenarios.doorNames; a door that
-  'sneak-lab.json': 'n_e n_w s_n s_w',   // (11-04: the sneak lab's own doors, in since 10-23 with this family red on both stands. Its generator hands on the yard's two names only
-                                           //  (tools/levels/sneak-lab.ts scenarios.doorNames); the row goes when it names these. A lab played alone: no order row reads them today)
 };                                              //  turns up called by a bearing goes red here until its level names it: `'<file>.json': 'id id'`, as the census prints it)
-/** THE SAME RULE FOR A PLACE A SCREEN PRINTS (line 7): a quiet mission's or a snatch's exit is on the objective's line and the debrief's map
- *  (quiet.ts brief `outs`, snatch.ts, ui/debrief.ts), an area's name is in the men's lines the strip prints and on the debrief's timeline (dialogue.ts roomName, chronicle.ts) — and the
- *  HUD has no compass. These are the level files' own words (scenarios.quiet.exits / .snatch.exits / .places.areas): each is renamed in its level's
+/** THE SAME RULE FOR A PLACE A SCREEN PRINTS (line 7): a quiet mission's exit is on the objective's line and the debrief's map
+ *  (quiet.ts brief `outs`, ui/debrief.ts), an area's name is in the men's lines the strip prints and on the debrief's timeline (dialogue.ts roomName, chronicle.ts) — and the
+ *  HUD has no compass. These are the level files' own words (scenarios.quiet.exits / .places.areas): each is renamed in its level's
  *  generator and comes OFF this list in the same change. `'<file>.json': "exit '<name>' · area '<name>'"`, as the census prints it. */
 const PLACES_OWED: Record<string, string> = {   // (10-19: NONE OWED. The 56 names of 20 files that stood here are renamed in their levels' own generators, each by what stands there —
 };                                               //  a gate by its door's written name, an area by its rooms; one that turns up named by a bearing goes red here until its level renames it)
 /** …AND FOR A DOOR STILL CALLED BY LETTERS (line 8): its id is its author's shorthand, no room names it and its level has written it no name, so the
  *  row reads the id's words ('p back door', 'n1 door'), or a name that says a word twice. A scenarios.doorNames row mends each. `'<file>.json': 'id id'`. */
 const LETTERS_OWED: Record<string, string> = {   // (10-19: NONE OWED. The 23 doors of 10 files that stood here have a written name in their levels' scenarios.doorNames)
-  'sneak-lab.json': 'n_e n_w nm s_n s_w',   // (11-04: the same five doors of the sneak lab, owed by the same generator)
 };
 export const wordsDoorNames = guarded(async () => {
   const F = family('words-doornames: a level names its own doors where the rooms cannot, and no door\'s name carries a bearing');
-  const N = await import(`${ROOT}/src/game/doornames.ts`), O = await import(`${ROOT}/src/game/orders.ts`), PR = await import(`${ROOT}/src/host/profile.ts`), JR = await import(`${ROOT}/src/game/journal.ts`);
-  const shipped = process.env.TPS_PROFILE === 'shipped', was = { ...WORDS };
+  const N = await import(`${ROOT}/src/game/doornames.ts`), O = await import(`${ROOT}/src/game/orders.ts`), was = { ...WORDS };
   const BEARING = /\b(?:north|south|east|west)|\b(?:N|S|E|W|NE|NW|SE|SW)\b/;   // (a bearing begun: 'northern', 'eastside', 'south-west'; or its letters)
   const bearing = (n: string) => BEARING.test(n) || /\b(?:north|south|east|west)/i.test(n);
   try {
-    // ---- 5 (first: before the check writes any switch) · the two stands' row, the word, and a recording from before the key
-    { const s = (await import(`${ROOT}/src/host/standEnv.ts`)).STAND_ENV as string[], word = process.env.TPS_DOORNAMES;
-      const W = await (await import('./headless.ts')).standUp({ uploadEvery: 4 }), stood = WORDS.doors, want = word !== undefined ? word === '1' : shipped;   // (what THIS stand-up left the key at)
-      const snap = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))); const had = 'doors' in snap.tables.WORDS;
-      WORDS.doors = true; const snapUp = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))); WORDS.doors = false; JR.applyKnobs(W.game, snapUp); const kept = WORDS.doors;
-      delete snap.tables.WORDS.doors; WORDS.doors = true; JR.applyKnobs(W.game, snap); const old = WORDS.doors;
-      F.verdict(s.includes('TPS_DOORNAMES') && PR.FROZEN_HOLDS['WORDS.doors'] === 'TPS_DOORNAMES=1' && had && old === false && kept === true && stood === want,
-        'the key is a row of the two stands\' list with its word, stands up on the shipped stand and down on the frozen one (its word either way), rides a recording\'s tables, and a recording from before the key replays with it down',
-        `STAND_ENV ${s.includes('TPS_DOORNAMES')} · FROZEN_HOLDS ${PR.FROZEN_HOLDS['WORDS.doors']} · stood up ${stood}, wanted ${want} (shipped ${shipped}, word ${word ?? 'none'}) · in the tables ${had} · an old recording: ${old} · one recorded with it up: ${kept}`);
-      // ---- 4 · the office stood up: one name on the row, the rear man's row and the response team's line
-      { WORDS.on = true; const g = W.game, d = g.doors.byName('breakroom_w'), RW = await import(`${ROOT}/src/game/rearwatch.ts`), T = await import(`${ROOT}/src/game/tactics.ts`);
-        const read = () => `${O.doorWords(d)} | ${N.doorWrittenName(d) ?? `${T.doorLabel(d)} door`}`; void RW;
-        WORDS.doors = true; const upRow = read(); WORDS.doors = false; const downRow = read();
-        F.verdict(upRow === 'cubicles-side break room door | cubicles-side break room door' && downRow === 'break room west door | break room west door',
-          'the office\'s break room door off the cubicles: the squad\'s row and a line that names it some other way say one name with the key up, and what each said with it down', `up: ${upRow} · down: ${downRow}`); } }
+    // ---- 4 · the office stood up: one name on the row, the rear man's row and the response team's line
+    { const W = await (await import('./headless.ts')).standUp({ uploadEvery: 4 }); WORDS.on = true; const g = W.game, d = g.doors.byName('breakroom_w'), T = await import(`${ROOT}/src/game/tactics.ts`);
+      const upRow = `${O.doorWords(d)} | ${N.doorWrittenName(d) ?? `${T.doorLabel(d)} door`}`;
+      F.verdict(upRow === 'cubicles-side break room door | cubicles-side break room door',
+        'the office\'s break room door off the cubicles: the squad\'s row and a line that names it some other way say one name', `${upRow}`); }
     WORDS.on = true;
     // ---- 1 · the lookup
     { const level: any = { scenarios: { roomClear: { rooms: [{ id: 'mess', name: 'mess', doors: [{ id: 'm_w', from: 'hall' }, { id: 'm_k', from: 'kitchen' }] }, { id: 'hall', name: 'hall', doors: [{ id: 'h_a', from: 'dock' }, { id: 'h_b', from: 'dock' }] }] },
         doorNames: [{ door: 'm_w', name: 'serving hatch' }, { door: 'gate_n', name: 'the yard gate' }, { door: 'h_a', name: 'loading door' }, { door: 'nobody', name: 'a door that is not there' }, { door: 'blank', name: '  ' }] } };
       const doors = (ids: string[]) => ids.map(id => ({ def: { name: id } })), said = (ds: any[]) => ds.map(d => O.doorWords(d)).join(' · ');
-      // (the names are hung on the doors once, at construction, whatever the key says then; the key is asked each time a name is read)
-      WORDS.doors = false; const ds = doors(['m_w', 'm_k', 'gate_n', 'gate_s', 'blank', 'h_a', 'h_b']); N.nameDoors(level, false, ds); const office = doors(['m_w', 'gate_n']); N.nameDoors(level, true, office);
-      WORDS.doors = true; const up = said(ds), upOffice = said(office); WORDS.doors = false; const down = said(ds); WORDS.doors = true;
-      F.verdict(up === 'serving hatch · kitchen-side mess door · yard gate · gate south door · blank door · loading door · hall door' && down === 'hall-side mess door · kitchen-side mess door · gate north door · gate south door · blank door · first hall door · second hall door' && upOffice === 'serving hatch · yard gate'
+      const ds = doors(['m_w', 'm_k', 'gate_n', 'gate_s', 'blank', 'h_a', 'h_b']); N.nameDoors(level, false, ds); const office = doors(['m_w', 'gate_n']); N.nameDoors(level, true, office);
+      const up = said(ds), upOffice = said(office);
+      F.verdict(up === 'serving hatch · kitchen-side mess door · yard gate · gate south door · blank door · loading door · hall door' && upOffice === 'serving hatch · yard gate'
         && [...N.authoredDoorNames(level, ['m_w', 'gate_n']).keys()].join() === 'm_w,gate_n',
-        'a written name is the door\'s name and wins over a made one (a leading \'the\' dropped); the door beside it is no longer a \'second\'; with the key down the same doors read as they were; a level with no made names (the office) takes them too; a row for no door, or an empty one, names nothing',
-        `up: ${up} | down: ${down} | the office's rule: ${upOffice}`); }
+        'a written name is the door\'s name and wins over a made one (a leading \'the\' dropped); the door beside it is no longer a \'second\'; a level with no made names (the office) takes them too; a row for no door, or an empty one, names nothing',
+        `up: ${up} | the office's rule: ${upOffice}`); }
     // ---- 2, 3 · the level files and the office
-    WORDS.doors = !process.env.DOORNAMES_BREAK;
     const files: { file: string; L: any; office: boolean }[] = readdirSync(`${ROOT}/levels`).filter(f => f.endsWith('.json')).sort().map(file => ({ file, L: JSON.parse(readFileSync(`${ROOT}/levels/${file}`, 'utf8')), office: false }));
     for (let i = files.length - 1; i >= 0; i--) if (!Array.isArray(files[i].L.doors)) files.splice(i, 1);   // (a lint list, a look file: not a level)
     for (const f of files) if (/^office/.test(f.file)) f.office = true;   // (the office and its relief: the game's own rule for them is dialogue.ts isOffice, by their routes)
@@ -303,7 +271,7 @@ export const wordsDoorNames = guarded(async () => {
       const ds = ids.map(id => ({ def: { name: id } })); N.nameDoors(L, office, ds); const names = ds.map(d => O.doorWords(d)); doorsN += ids.length;
       names.forEach((n, i) => { if (names.indexOf(n) !== i) twins.push(`${file}: two doors called '${n}'`); });
       const k = ids.filter((_id, i) => bearing(names[i])).sort().join(' '); if (k) owed[file] = k;
-      const S = L.scenarios ?? {}, pl = [...(S.quiet?.exits ?? []).map((x: any) => `exit '${x.name}'`), ...(S.snatch?.exits ?? []).map((x: any) => `exit '${x.name}'`), ...(S.places?.areas ?? []).map((a: any) => `area '${a.name}'`)];
+      const S = L.scenarios ?? {}, pl = [...(S.quiet?.exits ?? []).map((x: any) => `exit '${x.name}'`), ...(S.places?.areas ?? []).map((a: any) => `area '${a.name}'`)];
       const pk = [...new Set(pl.filter(bearing))].sort().join(' · '); if (pk) places[file] = pk;
       const lk = office ? '' : ids.filter((id, i) => (N.shorthandId(id) && names[i] === O.doorIdWords(id)) || /\b(\w+) \1\b/.test(names[i])).sort().join(' '); if (lk) letters[file] = lk;
     }

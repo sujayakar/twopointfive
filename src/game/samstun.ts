@@ -17,7 +17,7 @@
 // `on`: ON in the page (src/host/profile.ts pageSwitches; ?nosamstun = the player as he was), OFF in the module and on the harness's frozen stand
 // (TPS_SAMSTUN=1): with it off the stamps are still written by a frag (FRAG.samStun) and read by nothing. The two stamps ride a checkpoint (savestate.ts).
 import type { Game } from './game';
-import { Vec3, v3, clamp } from '../math/vec';
+import { Vec3, v3 } from '../math/vec';
 import { cancelSustained } from './interact';
 import { RUST_PASS, RUST_SURFACE } from './crossing';
 
@@ -61,8 +61,6 @@ export function dazzlePlayer(g: Game, secs: number, at: Vec3): void {
 
 /** is he folded right now (rooted, gun down, no round)? */
 export function samStaggered(g: Game, now = g.time): boolean { return live(g) && now < g.player.staggerUntil; }   // (`now`: the clock asked of — a look ahead's own, walkahead.ts)
-/** how blind he is right now: 1 for the body of a dazzle, easing to 0 over its last `fade` seconds */
-export function samBlind(g: Game, now = g.time): number { if (!live(g)) return 0; const left = g.player.dazzledUntil - now; return left <= 0 ? 0 : clamp(left / Math.max(0.05, SAMSTUN.fade), 0, 1); }
 /** may his feet move? (player.ts asks before it reads the walk keys) */
-export function samRooted(g: Game, now = g.time): boolean { return samStaggered(g, now) || (SAMSTUN.blindRoots && samBlind(g, now) > 0.5); }
+export function samRooted(g: Game, now = g.time): boolean { return samStaggered(g, now); }
 

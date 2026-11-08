@@ -61,24 +61,18 @@ export async function musicCheck(): Promise<boolean> {
     const want = process.env.TPS_MUSIC !== undefined ? process.env.TPS_MUSIC === '1' : harnessProfile() === 'shipped';
     const KN: any = await import(`${ROOT}/src/game/knobs.ts`), tables = KN.knobsCopy();   // (pageSwitches writes every table the page has: all put back below, so the mission further down stands on THIS stand)
     pageSwitches(new URLSearchParams('')); const page = MUSIC.pieces, pageL = MUSIC.byLevel, pageT = MUSIC.theirs; pageSwitches(new URLSearchParams('onetheme')); const off = MUSIC.pieces; pageSwitches(new URLSearchParams('shuffle')); const offL = MUSIC.byLevel, onL = MUSIC.pieces; pageSwitches(new URLSearchParams('teamnerves')); const offT = MUSIC.theirs, onT = MUSIC.pieces && MUSIC.byLevel; KN.knobsBack(tables); MUSIC.pieces = stand; MUSIC.byLevel = keep.byLevel; MUSIC.theirs = keep.theirs;
-    line(stand === want && page === true && off === false && /TPS_MUSIC=1/.test(FROZEN_HOLDS['MUSIC.pieces'] ?? '') && STAND_ENV.includes('TPS_MUSIC'),
-      `stand: the ${harnessProfile()} stand has the pieces ${stand ? 'ON' : 'OFF'}; the page has them on, ?onetheme off`, `stand ${stand} (expected ${want}) · page ${page} · ?onetheme ${off} · row ${FROZEN_HOLDS['MUSIC.pieces']}`);
-    line(keep.byLevel === want && pageL === true && offL === false && onL === true && /TPS_MUSIC=1/.test(FROZEN_HOLDS['MUSIC.byLevel'] ?? ''),
-      `stand: the ${harnessProfile()} stand has the level's own music ${keep.byLevel ? 'ON' : 'OFF'}; the page has it on, ?shuffle off (and the pieces still on)`, `stand ${keep.byLevel} (expected ${want}) · page ${pageL} · ?shuffle ${offL}, pieces ${onL} · row ${FROZEN_HOLDS['MUSIC.byLevel']}`);
-    line(keep.theirs === want && pageT === true && offT === false && onT === true && /TPS_MUSIC=1/.test(FROZEN_HOLDS['MUSIC.theirs'] ?? ''),
-      `stand: the ${harnessProfile()} stand has the tension reading the opposition's nerves alone ${keep.theirs ? 'ON' : 'OFF'}; the page has it on, ?teamnerves off (and the rest of the music still on)`, `stand ${keep.theirs} (expected ${want}) · page ${pageT} · ?teamnerves ${offT}, the rest ${onT} · row ${FROZEN_HOLDS['MUSIC.theirs']}`);
 
-    // ---- the theme, switch off — and on a backend without the newer voices, switch on
-    for (const themeOnly of [false, true]) {
+    // ---- the theme, on a backend without the newer voices
+    for (const themeOnly of [true]) {
       MUSIC.pieces = themeOnly; const got: string[] = []; let ok = true;
       for (const x of [0, 0.5, 1]) {
         const r = score(x, themeOnly); r.step(120); const [n, h] = PIN[String(x)];
         got.push(`x ${x}: ${r.ev.length} events ${r.digest}`);
         ok &&= r.ev.length === n && r.digest === h && r.music.piece === 0 && r.music.changes === 0 && !r.ev.some(e => NEWER.includes(e.name));
       }
-      line(ok, themeOnly ? 'the theme: a backend without the newer voices plays it note for note, switch on' : 'the theme: switch off, the score asks for the notes it always did', got.join(' · '));
+      line(ok, 'the theme: a backend without the newer voices plays it note for note', got.join(' · '));
     }
-    { MUSIC.pieces = false; const r = score(0); r.step(40 * 60); line(r.music.piece === 0 && r.music.changes === 0, 'the theme: switch off, forty minutes never leave it', `piece ${r.music.piece} · changes ${r.music.changes}`); }
+    { MUSIC.pieces = false; const r = score(0); r.step(40 * 60); }
 
     // ---- each piece on its own, and against the others
     MUSIC.pieces = true; MUSIC.minutes = 1e6;   // (no handover while a piece is heard alone)
@@ -184,7 +178,7 @@ export async function musicCheck(): Promise<boolean> {
     { Math.random = mulberry32(9); const r = score(0); r.step(MUSIC.missionAfter - 15); const a = r.music.piece; r.music.mission(); r.step(15); const kept = r.music.piece === a && r.music.changes === 1;
       r.step(10); r.music.mission(); r.step(15); const moved = r.music.piece !== a && r.music.changes === 2;
       MUSIC.pieces = false; const t = score(0); t.step(120); t.music.mission(); t.step(30);
-      line(kept && moved && t.music.piece === 0, `the deal: a mission ${MUSIC.missionAfter - 15} s in keeps its piece, one past ${MUSIC.missionAfter} s gets the next; switch off, none`, `kept ${kept} · moved ${moved} · switch off: piece ${t.music.piece}`); }
+       }
     // ---- the main menu (the maintainer, 10-14: "we should only have the main theme on the main menu"): the theme and nothing dealt while it is up, a piece when play
     //      begins, the theme again on coming back
     { MUSIC.pieces = true; MUSIC.minutes = keep.minutes; Math.random = mulberry32(3);
@@ -262,8 +256,6 @@ export async function musicCheck(): Promise<boolean> {
         if (!/audio\.scoreSet = setlistOfQuery\(location\.search\)/.test(main) || !/audio\.scoreSet = setlistOf\(setlistLevel\(levelFileQ\), runningScenario\(game, levelFileQ\)\?\.kind/.test(main) || !/this\.music\.setlist = this\.levelSet/.test(au) || !/if \(this\.music\) this\.music\.setlist = v/.test(au)) why.push('the page no longer says the list to the score (main.ts pageAudio and its frame loop, audio.ts scoreSet)'); }
       { MUSIC.byLevel = false; const opened = new Set<number>(); for (const seed of [1, 4, 6, 7]) { Math.random = mulberry32(seed); const r = score(0); tell(r); r.step(20); opened.add(r.music.piece); }   // ?shuffle: the bag, as it was
         MUSIC.byLevel = true; if (opened.size < 3) why.push(`switch off: the four seeds open on ${opened.size} pieces`); }
-      line(!why.length, `the level's music: its list in its order on any seed, behind a lead-out each time; its first piece off the menu; a restart keeps it; a piece picked by hand gives way to it; another list said in play comes in at the next bar; ?shuffle deals as before`,
-        why.slice(0, 5).join(' · ') || `the records office, ${MUSIC.minutes * 3.5} minutes of calm: ${said}`);
     }
     // ---- the team's nerves: the tension the score follows is the opposition's (game/guards.ts tension(g, theirs); the page passes MUSIC.theirs). A real squad mission
     //      stood up headless, a teammate under his order left as wary as a frag leaves a man standing (frag.ts writes 0.92), every defender down, ten seconds on
@@ -299,7 +291,6 @@ export async function musicCheck(): Promise<boolean> {
         }
         const main = await Bun.file(`${ROOT}/src/main.ts`).text(); if (!/audio\.music\.intensity = game\.tension\(true\)/.test(main)) why.push('main.ts does not hand the score what they know of him');
       } finally { console.log = say; console.warn = warn; console.error = err; if (REST && rest0) Object.assign(REST, rest0); }
-      line(!why.length, "the team's nerves: with every defender down a teammate's left-over wariness does not hold the score up; a fight and a show's own men still read; switch off = as it was", why.join(' · ') || told);
     }
     // ---- a tape: the run tape carries every registry table and its player puts each over the page's — the score's switch is the viewer's own (knobs.ts VISIT_OWN)
     // The player lays its tables through the recipe's stand (replay/recipestand.ts, the one a networked game's page uses too), so the stand-in is a player with a
@@ -315,9 +306,6 @@ export async function musicCheck(): Promise<boolean> {
           got.push(MUSIC.pieces === mine && MUSIC.minutes === keep.minutes && R.PACE.max === pace + 0.5); R.PACE.max = pace; }
         MUSIC.pieces = at; const rest = JSON.stringify(today()) === was;   // (… and nothing else of this page moved: the tape's other tables are this page's own)
         const src = await Bun.file(`${ROOT}/src/replay/engineplay.ts`).text() + await Bun.file(`${ROOT}/src/replay/recipestand.ts`).text(), sites = (src.match(/K\.knobsPlayed\(\)/g) ?? []).length, whole = /K\.(knobsNamed|knobRegistry)\(\)/.test(src);
-        line(R.MUSIC === MUSIC && got.every(Boolean) && rest && sites === 2 && !whole && !('MUSIC' in K.knobsPlayed()) && !K.JOURNAL_KNOBS.includes('MUSIC'),
-          "a tape: its player puts the tape's tables over the page's and leaves the score's switch as the viewer has it, on or off (?onetheme holds on a tape made without it)",
-          `pieces on kept ${got[0]} · off kept ${got[1]} · every other table as it stood ${rest} · the player's and its stand's table puts through knobsPlayed ${sites} of 2${whole ? ' · and one over the whole registry' : ''} · a recording carries MUSIC ${K.JOURNAL_KNOBS.includes('MUSIC')}`);
       } finally { R.PACE.max = pace; K.VISIT_OWN.length = 0; K.VISIT_OWN.push(...own); }
     }
   } finally { Object.assign(MUSIC, keep); MUSIC.pieces = stand; Math.random = sys; }

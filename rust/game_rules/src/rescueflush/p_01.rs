@@ -47,7 +47,7 @@ pub fn rescue_flush_line(g: &mut crate::game::Game, by: GuardId, v: GuardId) -> 
 /// His nearest line on any of `alive`, or Infinity when he cannot hold a gun on anybody. (the closure `has` of ts:94)
 fn has(g: &mut Game, h: GuardId, alive: &[GuardId]) -> f64 {
     if g.gd[h].state == crate::game::GuardState::Dead || g.gd[h].held.is_some() || crate::control::man::blind(g, h)
-        || crate::owner::has_him(g, h, crate::owner::own().runner) || crate::owner::has_him(g, h, crate::owner::own().morale) { return f64::INFINITY; }
+        || crate::owner::has(g, h, crate::owner::by::RUNNER) || crate::owner::has(g, h, crate::owner::by::MORALE) { return f64::INFINITY; }
     let mut best = f64::INFINITY;
     for &v in alive { let d = rescue_flush_line(g, h, v); best = m::min(best, d); }
     best
@@ -90,7 +90,7 @@ fn fight_def_of(g: &Game, h: GuardId) -> Option<RoomfightDefId> {
 /// May he be sent now? (the closure `free` of ts:136)
 fn free(g: &mut Game, h: GuardId, b: Option<crate::scene_level::BreachPlanBounds>, in_room: bool) -> bool {
     if g.gd[h].state == crate::game::GuardState::Dead || g.gd[h].held.is_some() || crate::control::man::blind(g, h) || crate::control::man::staggered(g, h)
-        || crate::owner::has_him(g, h, crate::owner::own().runner) || crate::owner::has_him(g, h, crate::owner::own().morale) || crate::owner::has_him(g, h, crate::owner::own().walk) { return false; }
+        || crate::owner::has(g, h, crate::owner::by::RUNNER) || crate::owner::has(g, h, crate::owner::by::MORALE) || crate::owner::has(g, h, crate::owner::by::WALK) { return false; }
     if crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None) && in_room { return false; }
     if g.time - g.gd[h].last_seen_t < g.k.rescueflush.busy_secs || g.gd[h].saw_foe_this_frame { return false; }
     let f = fight_def_of(g, h);
@@ -103,7 +103,7 @@ fn free(g: &mut Game, h: GuardId, b: Option<crate::scene_level::BreachPlanBounds
 }
 
 /// One way a man could go: goal, marks on the way, where he walks now, the door it takes him to. (the map of ts:164)
-fn way_of(g: &mut Game, goal: Goal, alive: &[GuardId], room: V3) -> (Goal, Vec<V3>, Option<V3>, Option<V3>) {
+fn way_of(g: &Game, goal: Goal, alive: &[GuardId], room: V3) -> (Goal, Vec<V3>, Option<V3>, Option<V3>) {
     let via = if goal == Goal::Side { crate::rescue::rescue_side_way(g) } else { Vec::new() };
     let at = match via.first() { Some(p) => Some(*p), None => rescue_flush_point_of(g, goal, alive) };
     let door = if goal == Goal::Side { via.last().copied() } else if goal == Goal::Room { Some(room) } else { at };

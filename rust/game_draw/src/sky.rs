@@ -55,7 +55,7 @@ pub fn fill(g: &Game, out: &mut Vec<Sky>) {
     r.gloss = s.gloss as u32;
     r.hour = match game::hours::hour_of(g) { HourId::Night => 0, HourId::Dawn => 1, HourId::Midday => 2, HourId::Overcast => 3, HourId::Dusk => 4 };
     r.hour_sun = g.m.hours.states.as_ref().map_or(0.0, |st| st.def.sun.intensity as f32);
-    r.snow_level = g.snow_tracks.is_some() as u32;
+    r.snow_level = game::weather_kinds::snow_level(g, game::scene_level_load::level_name_of(g).as_deref()) as u32;
     r.own_zenith = f3(g.level.sky.zenith);
     r.own_horizon = f3(g.level.sky.horizon);
     r.kept = g.level.kept.unwrap_or(-1.0) as f32;

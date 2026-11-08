@@ -169,8 +169,3 @@ export const airSave = () => kept(async () => {
 });
 
 // ---------------------------------------------------------------- airdust-off
-export const airOff = () => kept(async () => {
-  const F = family('airdust-off: with no weather picked the dust is inert');
-  const N = await born(null); F.verdict(!N.game.airDust.live && N.game.airDust.snapshot() === null && N.game.airDust.shareAt(20, 14) === 1, 'no weather picked: inert', N.game.airDust.summary());
-  return F.done();
-});

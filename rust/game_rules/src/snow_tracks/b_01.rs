@@ -19,5 +19,5 @@ pub fn update_snow_tracks(g: &crate::game::Game, t: &crate::snow_tracks::SnowTra
 pub fn mark(g: &mut crate::game::Game, t: &mut crate::snow_tracks::SnowTracks, k: f64, a: &[f64]) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowTracks.ts:511 lay)
-pub fn lay(g: &mut crate::game::Game, t: &mut crate::snow_tracks::SnowTracks, k: f64, a: &[f64], live: bool) {}
+pub fn lay(g: &crate::game::Game, t: &crate::snow_tracks::SnowTracks, k: f64, a: &[f64], live: bool) {}
 

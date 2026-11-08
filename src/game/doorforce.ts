@@ -61,7 +61,7 @@ export const DOORFORCE = {
   /** a man walking to boot a door who is put on a post gives the walk up (a switch of its own: ?postends=0, TPS_POSTENDS=1) */
   postEnds: false,
   /** the two halves, each off = that half as it was: rounds through the leaf · the boot */
-  shoot: true, kick: true,
+  
   /** how sure he must be to start on a door · down to what he stays on it · s his sureness takes to fade to a third · s his newest word of it may be old */
   sure: 1, keep: 0.3, fadeSecs: 5, staleSecs: 6,
   /** what a sound adds: `gain` × (its level × what the path carries × its falloff — guards.ts's own sum), nothing under `hearMin` of that sum · a report

@@ -1,7 +1,7 @@
 // WHAT A MAN HOLDS, MEASURED AGAINST HIS HANDS IN REAL PLAY — every frame of whole scripted missions, every living man the fog shows.
 //
 //   TPS_PROFILE=shipped bun run tools/qa/attach-play.ts [--runs name,name|all|list] [--seeds 1,2] [--out <dir>] [--every 1]
-//       plays each run of RUNS below (an existing scripted player: lights-out-run, command-tally, playthrough, solo-night, soak) in a child process with THIS
+//       plays each run of RUNS below (an existing scripted player: lights-out-run, playthrough, solo-night, soak) in a child process with THIS
 //       file preloaded, which wraps Game.update and samples after every step; then merges what the children wrote and prints / writes the tables
 //       (<dir>/attach-play.json, <dir>/report-tables.md; dir: ./attach-play-out unless given).
 //   … --merge <dir>      the tables again from the JSON files a previous call left in <dir>
@@ -147,9 +147,6 @@ export const RUNS: { name: string; say: string; cmd: string[]; kit?: string; env
   { name: 'lights-tail-pistol', say: 'lights-out as two, the partner with the suppressed pistol, never spoken to: he follows Sam all the way', cmd: ['tools/qa/lights-out-run.ts', '--one', '--plan', 'tail', '--seed', '{seed}'], kit: '1:pistol:sup' },
   { name: 'lights-tail-9mm', say: 'the same, the partner with the 9 mm (no can)', cmd: ['tools/qa/lights-out-run.ts', '--one', '--plan', 'tail', '--seed', '{seed}'], kit: '1:pistol:loud' },
   { name: 'lights-tail-rifle', say: 'the same, the partner with the rifle as issued', cmd: ['tools/qa/lights-out-run.ts', '--one', '--plan', 'tail', '--seed', '{seed}'] },
-  { name: 'killhouse-b', say: 'the kill house, four teammates as issued (rifles), the B hand', cmd: ['tools/qa/command-tally.ts', '--trace', 'b:killhouse-four:{seed}', '--cap', '200'] },
-  { name: 'killhouse-mixed', say: 'the kill house, the cards mixed: pistol + can, shotgun, rifle + hammer, 9 mm', cmd: ['tools/qa/command-tally.ts', '--trace', 'plan:killhouse-four:{seed}', '--cap', '200'], kit: '1:pistol:sup;2:shotgun;3:rifle:hammer;4:pistol:loud' },
-  { name: 'compound-plan', say: 'the compound, four teammates, the plan hand; one man with the breaching shotgun in his big slot', cmd: ['tools/qa/command-tally.ts', '--trace', 'plan:compound-four:{seed}', '--cap', '240'], kit: '2:rifle:shotgun' },
   { name: 'compound-play', say: 'the compound played through on the floor with the order menu (playthrough.ts), a hammer on one man', cmd: ['tools/qa/playthrough.ts', '--trace', 'compound-four:{seed}', '--cap', '240'], kit: '1:rifle:hammer;3:pistol:sup' },
   { name: 'registry-rescue', say: 'the registry hostage rescue played through (hostages, a pair)', cmd: ['tools/qa/playthrough.ts', '--trace', 'rescue-registry:{seed}', '--cap', '240'] },
   { name: 'solo-walk', say: 'the solo night on the office, Sam walking upright: patrols with torches, then drawn', cmd: ['tools/qa/solo-night.ts', '--trace', '{seed}', '--plan', 'walk'] },

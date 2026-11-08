@@ -17,10 +17,11 @@ pub fn plain_short(def: &crate::weapons::WeaponDef) -> String {
     def.short.clone()
 }
 
-/// The HUD tag of the rifle's first attachment. `GEAR.on` is settled on.   (gear.ts ringTag)
-pub fn ring_tag(g: &crate::game::Game) -> String {
-    String::from("SPONGE")
-}
+/// The launcher's sponge round, in the kit's words.   (gear.ts ringTag)
+pub fn ring_tag() -> &'static str { "SPONGE" }
+
+/// The launcher's high-explosive round, in the kit's words.   (gear.ts shellTag)
+pub fn shell_tag() -> &'static str { "HE" }
 
 /// A line written in the old kit's words, in the kit's words as issued. `GEAR.on` is settled on.   (gear.ts gearText)
 pub fn gear_text(g: &crate::game::Game, s: &str) -> String {

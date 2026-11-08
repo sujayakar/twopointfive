@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A box's row. Every box read or written in this file goes through here, so this one body is all that changes when the table of Box rows is back.
-fn bx<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
+fn bx<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 /// The live GPU particle system or None, as a place to write `ours`: `gpu_fx` answers only whether there is one.   (fogofwar.ts `gpuFx(this.g)`, particleFx.ts:25)
 fn gpu_particles(g: &mut Game) -> Option<&mut crate::render_particles::Particles> {
@@ -96,7 +96,7 @@ fn long_side(h: V3, yaw: f64, best: f64) -> Option<(f64, f64, f64)> {
 }
 
 /// The long side of boxes i‥j of a list into `span_x` / `span_z`: its biggest box's long axis in plan, 15 cm in from the ends; 0, 0 under 0.9 m long.   (fogofwar.ts FogOfWar.span)
-pub fn fog_of_war_span(g: &mut crate::game::Game, list: &[BoxId], i: f64, j: f64) {
+pub fn fog_of_war_span(g: &mut crate::game::Game, list: &[AnyBoxId], i: f64, j: f64) {
     let mut best = 0.45;
     g.fog_of_war.span_x = 0.0;
     g.fog_of_war.span_z = 0.0;
@@ -114,7 +114,7 @@ pub fn fog_of_war_span(g: &mut crate::game::Game, list: &[BoxId], i: f64, j: f64
 }
 
 /// Does the team see this thing (its boxes as a list)?   (fogofwar.ts FogOfWar.seesThing)
-pub fn fog_of_war_sees_thing(g: &mut crate::game::Game, boxes: &[BoxId]) -> bool {
+pub fn fog_of_war_sees_thing(g: &mut crate::game::Game, boxes: &[AnyBoxId]) -> bool {
     let mut x = 0.0;
     let mut z = 0.0;
     for &b in boxes {
@@ -130,7 +130,7 @@ pub fn fog_of_war_sees_thing(g: &mut crate::game::Game, boxes: &[BoxId]) -> bool
 }
 
 /// `take` of `things`: the picture has boxes i‥j of the list as they stand.   (fogofwar.ts FogOfWar.things `take`)
-fn thing_take(g: &mut Game, tk: f64, list: &[BoxId], i: usize, j: usize, (x, z, ox, oz): (f64, f64, f64, f64), f: f64, moving: bool) {
+fn thing_take(g: &mut Game, tk: f64, list: &[AnyBoxId], i: usize, j: usize, (x, z, ox, oz): (f64, f64, f64, f64), f: f64, moving: bool) {
     if !g.fog_of_war.thing_recs.has(crate::Num(tk)) {
         g.fog_of_war.thing_recs.set(crate::Num(tk), ThingRec { ghost: Vec::new(), x, z, ox, oz, f, moving, held: false });
     }
@@ -155,7 +155,7 @@ fn thing_take(g: &mut Game, tk: f64, list: &[BoxId], i: usize, j: usize, (x, z, 
 }
 
 /// Do boxes i‥j stand where the record's copies do?   (fogofwar.ts FogOfWar.things `same`)
-fn thing_same(g: &mut Game, list: &[BoxId], i: usize, j: usize, ghost: &[BoxId]) -> bool {
+fn thing_same(g: &mut Game, list: &[AnyBoxId], i: usize, j: usize, ghost: &[FrameBoxId]) -> bool {
     if ghost.len() != j - i { return false; }
     let mut k = i;
     while k < j {
@@ -195,7 +195,7 @@ fn things_ours(g: &mut Game, ours: bool, prime: bool) {
         g.fog_of_war.our_chunks.add(crate::Num(k));
         if let Some(mate) = mate {
             if bx(g, mate).mkey.is_some() {
-                let mk = thing_key_of(g, mate);
+                let mk = thing_key_of(g, mate.into());
                 g.fog_of_war.our_chunks.add(crate::Num(mk));
             }
         }
@@ -203,7 +203,7 @@ fn things_ours(g: &mut Game, ours: bool, prime: bool) {
 }
 
 /// The picture's list of loose things, rewritten thing by thing: live where the team sees the floor it is on; out of sight, the copy where it was last seen at rest, or nothing. Hands back the list as it now stands.   (fogofwar.ts FogOfWar.things)
-pub fn fog_of_war_things(g: &mut crate::game::Game, list: &mut Vec<BoxId>) -> Vec<BoxId> {
+pub fn fog_of_war_things(g: &mut crate::game::Game, list: &mut Vec<AnyBoxId>) -> Vec<AnyBoxId> {
     g.fog_of_war.thing_stats.held = 0.0;
     g.fog_of_war.thing_stats.out = 0.0;
     g.fog_of_war.thing_stats.tests = 0.0;
@@ -310,7 +310,7 @@ pub fn fog_of_war_things(g: &mut crate::game::Game, list: &mut Vec<BoxId>) -> Ve
             i = j;
             continue;
         }
-        out.extend_from_slice(&ghost);
+        out.extend(ghost.iter().map(|&b| AnyBoxId::Frame(b)));
         g.fog_of_war.thing_stats.held += 1.0;
         i = j;
     }
@@ -330,7 +330,7 @@ pub fn fog_of_war_things(g: &mut crate::game::Game, list: &mut Vec<BoxId>) -> Ve
         }
         let r = g.fog_of_war.thing_recs.get_mut(key).unwrap();
         r.held = true;
-        out.extend_from_slice(&r.ghost);
+        out.extend(r.ghost.iter().map(|&b| AnyBoxId::Frame(b)));
         g.fog_of_war.thing_stats.held += 1.0;
     }
     if js::truthy(g.fog_of_war.thing_stats.held) || js::truthy(g.fog_of_war.thing_stats.out) {
@@ -417,7 +417,26 @@ pub fn fog_of_war_fired_on(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Left out of the picture this frame; false for everybody while the fog is off.   (fogofwar.ts FogOfWar.hidden)
-#[doc(hidden)] pub fn fog_of_war_hidden__body(g: &crate::game::Game, gd: GuardId) -> bool {
+#[doc(hidden)] pub fn fog_of_war_hidden__body(g: &crate::game::Game, gd: GuardId) -> bool { fog_of_war_hides(g, gd) }
+/// The last sightings: each living enemy out of the picture now, and in it recently enough: where he stood, and how long ago. Nobody's AI reads it. (fogofwar.ts FogOfWar.lastSeen)
+pub fn fog_of_war_last_seen(g: &crate::game::Game) -> Vec<crate::view::SeenMark> {
+    let told = match crate::told::told_now(g) { crate::told::ToldRung::Guided => m::max(0.0, g.k.told.guided), crate::told::ToldRung::Standard => m::max(0.0, g.k.told.standard), _ => 0.0 };
+    let secs = if g.k.fog.last_seen > 0.0 { g.k.fog.last_seen } else { told };
+    let wand = g.k.wand.on && g.k.wand.mark_secs > 0.0;
+    let mut out = Vec::new();
+    if !fog_of_war_active(g) || !(secs > 0.0 || wand) { return out; }
+    for &gd in g.guards.iter() {
+        if g.gd[gd].state == crate::game::GuardState::Dead || !crate::teams::is_hostile(g, g.gd[gd].team, crate::teams::Team::Player) || !fog_of_war_hides(g, gd) { continue; }
+        let Some(r) = g.fog_of_war.recs.get(gd) else { continue };
+        let Some(at) = r.at else { continue };
+        let age = g.time - r.t;
+        let life = if wand && r.wand_t.map_or(false, |w| m::abs(r.t - w) < 0.5) { m::max(secs, g.k.wand.mark_secs) } else { secs };
+        if age >= 0.0 && age < life { out.push(crate::view::SeenMark { man: g.ch[g.gd[gd].ch].id, at, age, life }); }
+    }
+    out
+}
+/// does the team not see this man (asked of the game shared: no tool's tap is told)
+pub fn fog_of_war_hides(g: &crate::game::Game, gd: GuardId) -> bool {
     g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(g.gd[gd].ch)
 }
 

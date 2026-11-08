@@ -112,7 +112,7 @@ pub fn wall_charge_draw(g: &mut crate::game::Game, c_2: WallChargeId) {
     let n = wall_pt(g, &w, 0.0, 1.0, None);
     let o = wall_pt(g, &w, 0.0, 0.0, None);
     let flag = crate::scene_boxes::box_flag();
-    let slab = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+    let slab = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP {
         c: p,
         h: [0.07, 0.11, 0.02],
         yaw: Some(yaw),
@@ -121,7 +121,7 @@ pub fn wall_charge_draw(g: &mut crate::game::Game, c_2: WallChargeId) {
         ..Default::default()
     });
     g.fx.push(crate::game::GameFxItem { box_: slab, ttl: 1e-3 });
-    let tell = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+    let tell = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP {
         c: [p[0] + (n[0] - o[0]) * 0.022, p[1] + 0.07, p[2] + (n[2] - o[2]) * 0.022],
         h: [0.012, 0.012, 0.004],
         yaw: Some(yaw),

@@ -23,7 +23,8 @@ rewrites only what is still drawn the old way; a draw written by hand afterwards
 
 `--check` writes nothing, lists the sites and who each is about, and exits 1 if any is still drawn the old way.
 """
-import glob, os, re, sys
+import os, re, sys
+from bodies import bodies
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rust', 'game_rules', 'src')
 OLD = 'crate::math_dice::sim_random(g)'
@@ -51,8 +52,7 @@ def who_of(sig):
 def main():
     check = '--check' in sys.argv
     left, done, sites, burned = 0, 0, [], set()
-    for path in sorted(glob.glob(os.path.join(ROOT, '*', '[pb]_*.rs'))):
-        module = os.path.basename(os.path.dirname(path))
+    for path, module, _ in bodies(ROOT):
         if module in SKIP: continue
         lines = open(path).read().split('\n')
         fn, sig, count, in_tests, changed = '?', '', {}, False, False

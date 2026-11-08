@@ -72,7 +72,7 @@ pub struct FogOfWar {
     pub thing_recs: JsMap<crate::Num, crate::fogofwar::ThingRec>,
     pub props_loaded: bool,
     pub loaded: bool,
-    pub thing_out: Vec<BoxId>,
+    pub thing_out: Vec<AnyBoxId>,
     pub thing_since: f64,
     pub thing_stats: crate::fogofwar::FogOfWarThingStats,
     pub rig_from: f64,
@@ -150,7 +150,7 @@ pub struct FogPicture {
     pub face_recs: JsMap<FixtureId, Vec<V3>>,
     pub full_stats: crate::fogofwar::FogOfWarFullStats,
     pub viewer: bool,
-    pub raw_list: Vec<BoxId>,
+    pub raw_list: Vec<AnyBoxId>,
     pub raw_at: f64,
 }
 impl FogPicture {
@@ -240,7 +240,7 @@ impl Default for FogOfWarDoorRecsValue { fn default() -> Self { Self::zeroed() }
 /// (TypeScript: ThingRec, src/game/fogofwar.ts:378)
 #[derive(Clone, Debug)]
 pub struct ThingRec {
-    pub ghost: Vec<BoxId>,
+    pub ghost: Vec<FrameBoxId>,
     pub x: f64,
     pub z: f64,
     pub ox: f64,

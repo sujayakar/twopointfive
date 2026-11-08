@@ -115,7 +115,7 @@ pub fn line_box(g: &mut crate::game::Game, a: V3, rd: V3, b: BoxId) -> Option<cr
         return Some(LineBox { t0: s.t0, t1: s.t1, depth: s.depth });
     }
     let (mut t0, mut t1, mut depth) = (s.t0, s.t1, s.depth);
-    if has_cut && crate::scene_boxes::cut_met(g, b) {
+    if has_cut && crate::scene_boxes::cut_met(g, b.into()) {
         let cut = seam_box(g, b).cut.clone().unwrap();
         let ([ox, oy, oz], [dx, dy, dz]) = (s.o, s.d);
         if !crate::scene_cut::cut_clip(g, &cut, ox, oy, oz, dx, dy, dz, t0, t1) { return None; }
@@ -155,7 +155,7 @@ pub fn rows_how(r: Option<crate::scene_collision::LampRows>) -> f64 {
 }
 /// a question's word of the rows as a call of the module takes it (lib.rs light_rows over `rowsHow`). `LampRows.st` is Opaque: the block that holds the rows is this game's, `g.sim`
 fn rows_for(g: &Game, r: Option<LampRows>) -> Option<sim::light::Rows> {
-    r.map(|r| sim::light::Rows { g: g.sim, leave: js::to_u32(r.leave), steady: js::to_u32(rows_how(Some(r))) & 2 != 0 })
+    r.map(|r| sim::light::Rows { g: g.sim, leave: js::to_u32(r.leave), steady: js::to_u32(rows_how(Some(r))) & 2 != 0, exposure: crate::hours::exposure(g) })
 }
 
 /// a sense's question the module handed back, in words
@@ -362,7 +362,7 @@ pub fn foot_of(g: &crate::game::Game, y0: f64) -> f64 {
 /// A TICK SHUTS AND THE COPY STANDS: its debts are paid, so that whoever asks before the next tick asks it of the game shared (`ask::WorldAsk`). A writer that
 /// cannot say what it writes (a tool's write by path, a state read in) puts it down first (`unstand`).
 pub fn tick_shut(g: &mut crate::game::Game) {
-    if standing(g) { stands(g); }
+    if standing(g) { stands(g); crate::scene_box_mirror::box_mirror_things(g); }
 }
 /// does a copy of the boxes stand that is this game's and of this moment (it may owe a debt, which the next question pays)
 pub fn standing(g: &Game) -> bool { g.col.mirror.live && g.col.mirror.stood != 0 && g.col.mirror.stood == sim::world::world_read(g.sim).stood }
@@ -448,7 +448,7 @@ pub fn gather_ask(g: &mut crate::game::Game, x0: f64, z0: f64, x1: f64, z1: f64,
 }
 
 /// TWIN: the module's gather, its list read into `out`. (collision.ts StaticCollision.gatherHere)
-pub fn gather_here(g: &mut crate::game::Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
+pub fn gather_here(g: &crate::game::Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
     let w = slot(g);
     let n = sim::collide::gather(w, x0, z0, x1, z1, y0, y1, out.len());
     let list = &sim::world::asking(w).list;
@@ -641,21 +641,6 @@ pub fn segment_blocked_dynamic_ask(g: &mut crate::game::Game, a: V3, b: V3, need
     set >= 0 && sim::lines::leaves_blocked(slot(g), a[0], a[1], a[2], b[0], b[1], b[2], len, js::to_u32(need), set)
 }
 
-/// the furniture as the copy reads it: every thing by its id, and the ones in the level in the furniture's own order (the TypeScript hands PropSystem itself; here `P` is always g.props)
-fn furniture(g: &mut Game) -> crate::scene_box_mirror::Furniture {
-    fn things(g: &mut Game, ids: &[PropId]) -> Vec<crate::scene_box_mirror::FurnitureThing> {
-        let mut out = Vec::with_capacity(ids.len());
-        for &p in ids {
-            let (id, radius, boxes) = { let r = &g.tab.props_prop[p]; (r.id, r.radius, r.boxes.clone()) };
-            let (x, z, yaw) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p), crate::props::prop_yaw(g, p));
-            out.push(crate::scene_box_mirror::FurnitureThing { id, x, z, yaw, radius, boxes });
-        }
-        out
-    }
-    let (all, props) = (g.props.all.clone(), g.props.props.clone());
-    crate::scene_box_mirror::Furniture { all: things(g, &all), props: things(g, &props) }
-}
-
 /// the furniture's ray: the nearest part met; inner None = nothing met, outer None = the module cannot answer it now. (collision.ts StaticCollision.thingsRay)
 pub fn things_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<Option<crate::scene_collision::ThingsRay>> {
     let r = if alone(g) {
@@ -672,15 +657,14 @@ pub fn things_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Optio
 pub fn things_ask(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<Option<crate::scene_collision::ThingsAsk>> {
     ready(g);
     if !standing(g) { return None; }
-    let p = furniture(g);
-    if !crate::scene_box_mirror::box_mirror_things(g, &p) { return None; }
+    if !crate::scene_box_mirror::box_mirror_things(g) { return None; }
     let mut out = [0.0; 5];
     let k = sim::lines::ray_things(slot(g), ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, &mut out);
     if k < 0 { return Some(None); }
     let at = out[sim::lines::RAY_PART];
-    let box_ = match crate::scene_box_mirror::box_mirror_thing_box(g, &p, at) {
+    let box_ = match crate::scene_box_mirror::box_mirror_thing_box(g, at) {
         Some(b) => b,
-        None => panic!("the Rust module's ray into the furniture met part {} of its list, which is no part of the furniture as it stands ({} things)", js::num_str(at), p.props.len()),
+        None => panic!("the Rust module's ray into the furniture met part {} of its list, which is no part of the furniture as it stands ({} things)", js::num_str(at), g.props.props.len()),
     };
     Some(Some(ThingsAsk { row: k as f64, t: out[0], n: [out[1], out[2], out[3]], box_ }))
 }
@@ -742,9 +726,9 @@ pub fn dynamic_hit(g: &mut crate::game::Game, a: V3, r0: f64, r1: f64, r2: f64, 
         i += 1;
         let (flags, c, h, tilted, round, cut) = { let x = seam_box(g, db); (x.flags, x.c, x.h, x.rot.is_some(), x.round == Some(true), x.cut.is_some()) };
         if ((js::to_i32(flags) & need) as f64) != need_flags { continue; }
-        if tilted || round || (cut && crate::scene_boxes::cut_met(g, db)) {
+        if tilted || round || (cut && crate::scene_boxes::cut_met(g, db.into())) {
             if seg_clear(g, a0, a1, a2, r0, r1, r2, len, db, SEG_PAD) { continue; }
-            if let Some(hit) = crate::scene_boxes::ray_box(g, a, [r0, r1, r2], db, len) {
+            if let Some(hit) = crate::scene_boxes::ray_box(g, a, [r0, r1, r2], db.into(), len) {
                 if hit.t >= 0.0 { return true; }
             }
             continue;
@@ -1039,7 +1023,7 @@ pub fn sense_for(g: &mut crate::game::Game, row: crate::scene_collision::SenseFo
 }
 
 /// `n` steps of the coarse grid's smoke over the boxes and leaves as they stand. False = nothing was done. (collision.ts StaticCollision.gridStep)
-pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::GridStepK, glow: Option<crate::scene_collision::GridStepGlow>, wind: Option<&crate::scene_collision::GridWind>) -> bool {
+pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::GridStepK, sweep: f64, wind: Option<&crate::scene_collision::GridWind>) -> bool {
     ready(g);
     let mine = !standing(g);
     if mine {
@@ -1056,15 +1040,14 @@ pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::G
     // the light that comes round: the only `lamps` hung is guards.ts steadyLamps (sense.ts step, called from game.ts), which writes the lamps of nobody's fixture and answers with the rows' word
     let mut lamps = -1i32;
     let mut said_rows: Option<LampRows> = None;
-    if glow.is_some() {
-        g.col.mirror.lamp_n = 0.0;
-        lamps_over(g);
-        match crate::guards::steady_lamps(g) {
-            crate::guards::SteadyLamps::Bool(false) => {}
-            crate::guards::SteadyLamps::Bool(true) => { lamps = g.col.mirror.lamp_n as i32; }
-            crate::guards::SteadyLamps::LampRows(r) => { lamps = g.col.mirror.lamp_n as i32; said_rows = Some(r); }
-        }
+    g.col.mirror.lamp_n = 0.0;
+    lamps_over(g);
+    match crate::guards::steady_lamps(g) {
+        crate::guards::SteadyLamps::Bool(false) => {}
+        crate::guards::SteadyLamps::Bool(true) => { lamps = g.col.mirror.lamp_n as i32; }
+        crate::guards::SteadyLamps::LampRows(r) => { lamps = g.col.mirror.lamp_n as i32; said_rows = Some(r); }
     }
+    let sky = crate::hours::sky_now(g);
     let (mut wx, mut wz, mut low, mut gain, mut full_at) = (0.0, 0.0, 1.0, 0.0, 1.0);
     if let Some(wd) = wind {
         if wd.x != 0.0 || wd.z != 0.0 {
@@ -1102,13 +1085,8 @@ pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::G
     let copy = crate::scene_box_mirror::box_mirror_grid_copy(g);
     let (w, block) = (slot(g), g.sim);
     let rows = rows_for(g, said_rows);
-    let r = match (&glow, lamps >= 0) {
-        (Some(gl), true) => {
-            let gk = sim::glow::K { albedo: gl.k.albedo, share: gl.k.share, passes: js::to_u32(gl.k.passes), sweep: gl.k.sweep, lamps: lamps as usize, rows };
-            sim::bricks::step(block, stamp, w, copy, set, js::to_u32(n), &bk, Some(&gk))
-        }
-        _ => sim::bricks::step(block, stamp, w, copy, set, js::to_u32(n), &bk, None),
-    };
+    let gk = if lamps >= 0 { Some(sim::glow::K { sweep, sky, lamps: lamps as usize, rows }) } else { None };
+    let r = sim::bricks::step(block, stamp, w, copy, set, js::to_u32(n), &bk, gk.as_ref());
     if mine { crate::scene_box_mirror::box_mirror_shut(g); }
     r != ASK_HOST
 }
@@ -1225,6 +1203,20 @@ pub fn ray_shared(g: &Game, over: &Over, ro: V3, rd: V3, tmax: f64) -> Option<cr
     let k = lent(g, over, |v| sim::lines::ray_over(slot(g), v, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, pane_word(g) != 0, &mut out));
     if k < 0 { return None; }   // (a ray that is no number meets nothing here: a host asks it of a camera or a cursor, and the game is not to fall for it)
     Some(Raycast { t: out[0], index: k as f64, n: [out[1], out[2], out[3]] })
+}
+/// (ask::WorldAsk's leaf: one across a→b; with `need`, one carrying those flags)
+pub fn leaf_shared(g: &Game, a: V3, b: V3, need: Option<f64>) -> bool {
+    let len = m::hyp3(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+    if !(len >= 1e-4) || !(len < 1e6) { return false; }
+    let set = own_set(g);
+    set >= 0 && sim::lines::leaves_blocked(slot(g), a[0], a[1], a[2], b[0], b[1], b[2], len, js::to_u32(need.unwrap_or(0.0)), set)
+}
+/// (ask::WorldAsk's furniture: the nearest part met, of a copy that has every write of the furniture; one that could not take them all, or owes one, meets nothing)
+pub fn things_shared(g: &Game, ro: V3, rd: V3, tmax: f64) -> Option<(f64, V3)> {
+    if !g.col.mirror.things_ok || g.col.mirror.things_at != g.m.scene_box_mirror.things.n { return None; }
+    let mut out = [0.0; 5];
+    let k = sim::lines::ray_things(slot(g), ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, &mut out);
+    if k < 0 { None } else { Some((out[0], [out[1], out[2], out[3]])) }
 }
 /// (ask::WorldAsk's path of sound: no route is remembered and none is looked up. A place that is no number, or no place of this world, is heard from nowhere: a host asks
 /// it of a sound and a listener of its own, and the game is not to fall for it)

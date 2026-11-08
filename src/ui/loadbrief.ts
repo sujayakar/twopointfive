@@ -3,10 +3,10 @@
 // The maintainer, 10-19, after watching a first-time player: "having the loading screen make more sense (e.g. being a pre mission brief) that you then click
 // through rather than flashing the controls"; that player's own notes: "stay on loading screen longer, would like to read".
 //
-// Before this a page whose address names a mission booted behind the OLD start card's look-alike (ui/menu.ts bootCard: a grey Start, the notes, the whole
+// Before this a page whose address names a mission booted behind the old start card (a grey Start, the notes, the whole
 // controls list and the shader count) and the mission began under it the moment the boot was done: a list of keys up for as long as the machine took, gone
 // before it could be read. Now that page shows THE MISSION: its own words off the mission list (scene/scenarioList.ts: the heading it sits under, its title,
-// the place, the job in one line, the team as deployed, the approach; the defenders' count only under `?mystery=0`) beside THE MAP of its ground (the mission list's own map sheet — ui/missions.ts
+// the place, the job in one line, the team as deployed, the approach) beside THE MAP of its ground (the mission list's own map sheet — ui/missions.ts
 // drawMissionMap: the place as a model, a 10 m scale, the way in marked; the maintainer on the first cut, which had the mission's picture there: "let's show
 // the map vs. the (kinda low res) level art"), and ONE block, START, which fills as the boot goes and is live when the level can start. Nothing here is a new sentence: every word is the list's.
 //   · IT STAYS UNTIL IT IS STARTED: a click on the block, Enter or Space. The world is stood up and held still behind it (main.ts: one term of the loop's
@@ -21,12 +21,11 @@
 // tool that stands a Menu on a fake DOM measures the cards as they were. A page-only screen: no game rule reads it and no knob table carries it.
 // Plain DOM in a layer of its own (#brief, made here), styled with ui/theme.ts's tokens; its rules are injected once. Nothing at module level uses another
 // module's exports. tools/qa/loadbrief-check.ts holds the words and the hand-over on a fake DOM; tools/qa/loadbrief-page.cjs looks at the real page.
-import { ALL_MISSIONS, specOfQuery, quitSearch } from '../scene/scenarioList';
+import { ALL_MISSIONS, specOfQuery } from '../scene/scenarioList';
 import { MISSION_GROUPS } from '../scene/scenarios';
-import { PICKS_UI, pickOfQuery, pickQuitSearch } from '../scene/picks';
-import { SOLO_NIGHT, missionOf, missionOfQuery, drawMissionMap, teamWordsOf, leanWords, defendersShown, reopenMissionsAfterLoad, type Mission } from './missions';
+import { pickQuitSearch } from '../scene/picks';
+import { SOLO_NIGHT, missionOf, missionOfQuery, drawMissionMap, teamWordsOf, leanWords, reopenMissionsAfterLoad, type Mission } from './missions';
 import { openOptions, closeOptions, optionsOpen } from './options';
-import { START_PAGE } from './startpage';
 import { menuTheme } from './theme';
 import { textZoom, rectZoom, TEXT_EVENT } from './textsize';
 
@@ -150,7 +149,7 @@ export function loadBrief(search: string = typeof location !== 'undefined' ? loc
   else { if (m.blurb) col.appendChild(el('div', 'bjob', m.blurb));
     const facts = el('div', 'bfacts');
     const fact = (label: string, value: string) => { if (!value || value === '—') return; const f = el('div', 'bf'); f.appendChild(el('b', undefined, label)); f.appendChild(el('span', undefined, value)); facts.appendChild(f); };
-    fact('Team', W.team); fact('Defenders', defendersShown(m)); fact('Approach', leanWords(m.lean));   // (the mission sheet's own three cells and their names: ui/missions.ts)
+    fact('Team', W.team); fact('Approach', leanWords(m.lean));   // (the mission sheet's own three cells and their names: ui/missions.ts)
     col.appendChild(facts); }
   const go = el('button', 'bgo') as HTMLButtonElement, fill = el('i'), words = el('div', 'bstatus', 'starting the GPU…');
   go.type = 'button'; go.setAttribute('aria-busy', 'true'); go.appendChild(fill); go.appendChild(el('span', undefined, 'Start')); go.appendChild(el('kbd', undefined, 'Enter'));
@@ -187,9 +186,9 @@ export function loadBrief(search: string = typeof location !== 'undefined' ? loc
   };
   const arm = (on: boolean) => { armed = on; root.classList.toggle('armed', on); go.setAttribute('aria-pressed', String(on)); };
   const leave = () => {   // BACK: the mission list, by a page load (this one is still booting) — the address a quit of this mission leaves (main.ts's own quit)
-    const s = location.search ?? '', pick = PICKS_UI.on ? pickOfQuery(s) : null;
-    if (!pick || START_PAGE.on) reopenMissionsAfterLoad();
-    location.assign(location.pathname + (PICKS_UI.on ? pickQuitSearch(s) : quitSearch(s)) + location.hash);
+    const s = location.search ?? '';
+    reopenMissionsAfterLoad();
+    location.assign(location.pathname + pickQuitSearch(s) + location.hash);
   };
   // THE KEYS are the brief's while it is up (first in line at the window: main.ts makes it before the game's Input exists, so no key of the game's, and no Esc
   // of the pause card's, is read under it): Enter / Space start, Esc is Back, Tab walks its three buttons. Left alone: a chord and the F-keys (the browser's,

@@ -111,12 +111,7 @@ export const RESCUE = {
   /** dynamic tempo (rescueflow.ts): once the clock runs the last man in the file covers each opening Sam passes, unasked, and catches up (off = the pair only
    *  follow — the build as it was: the tally's A/B); a lone man still peels off to cover (off = he stays on Sam); the strips on the floor across each opening
    *  and the objective line's 'behind you' */
-  flow: true, flowSolo: true, marks: true,
-  /** true = the man covering an opening with one of theirs known behind it stays on it for as long as the room is HOT (rescueflow.ts: until it has been seen
-   *  empty, the man is seen elsewhere or down, or FLOW.hotSecs after the last sign of him) — or until Sam calls him on. Ships OFF = as it was (FLOW.hotHold,
-   *  6 s after the last sight: 'lost him — moving.'): over 24 seeds of the scripted rescue it bought nothing with the team's goggles on (24 won, nobody lost,
-   *  either way) and with them off it cost men — 13 of 48 teammates lost against 3: the pair split for longer, and the man left behind met the roamer alone */
-  holdHot: false,
+  flow: true, marks: true,
   /** F with a man posted in the server room (or pressed from in there with both men free): he takes the side door, the other the corridor door, on one signal;
    *  a man Sam has put on a cover of his own is left on it. Off = F takes whoever is up to the corridor door — but for one fix that has no switch: a man sent
    *  there from inside the server room goes round by the corridor (roundBy), not through the side door and the hostage room */
@@ -134,8 +129,6 @@ export const RESCUE = {
    *               team's noise is at the hostage door and nobody is in his sights
    *  Each off = that much of Standard back (all three off = Hard on a rescue as it was: nothing) */
   crewDoor: true, crewCross: true, crewBehind: true, crewCallSecs: 1.5,
-  /** in the hostage room with a man of theirs still up in it, the team's men pan their lights across it instead of standing on their sectors (search()) */
-  roomSearch: true,
   /** the HUD line shows the captor's clock in seconds (tuning) instead of its three steps */
   clockAsSeconds: false,
   /** how many teammates are staged (game/loadout.ts — the page's ?squad=N; scenarioRun.ts writes it): 2 = the pair, exactly as it always was · 0 / 1 = nobody /

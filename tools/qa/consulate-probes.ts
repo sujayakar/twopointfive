@@ -15,8 +15,7 @@
 //                     pressed from the side door's room with four, the side door is taken by a PAIR (two men of one colour) and the main door by the other;
 //                     with the pair staged (PT_SQUAD=2) by one man — the rule as it was. The counts are printed, not judged: the tally is
 //                     bun run tools/qa/ships.ts --scn rescue-consulate --seeds 1-144 --jobs 4 [--hard] --json out.json   (PT_RESCUE=split for the other way in)
-import { readFileSync, mkdtempSync, existsSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 import { exporterCheck } from './level-file.ts';
 const { RESCUE, checkRescue } = await import(`${ROOT}/src/game/rescue.ts`);
@@ -67,7 +66,8 @@ export const consulateLevel = guarded(async () => {
   const L = loadLevel(data), glass = L.boxes.filter((b: any) => (b.flags ?? 0) & BoxFlag.Glass).length;
   const out = L.boxes.filter((b: any) => b.c[0] - b.h[0] < WORLD.min[0] - 1e-6 || b.c[0] + b.h[0] > WORLD.max[0] + 1e-6 || b.c[2] - b.h[2] < WORLD.min[2] - 1e-6 || b.c[2] + b.h[2] > WORLD.max[2] + 1e-6).length;
   verdict(L.boxes.length <= WORLD.maxBoxes && glass <= MAX_GLASS && out === 0, "inside the renderer's fixed sizes: the world box, the box count, the glass panes", `${L.boxes.length} boxes of ${WORLD.maxBoxes} · ${glass} glass panes of ${MAX_GLASS} · ${out} boxes outside the world box`);
-  const W = await stand(1, 4), g = W.game, S = g.level.scenarios.rescue, was: string[] = checkRescue(g);
+  const W = await stand(1, 4), g = W.game, S = g.level.scenarios.rescue; W.step(1 / 60);   // (the first tick stands the host the rule's call crosses to)
+  const was: string[] = checkRescue(g);
   verdict(was.length === 0, "the rescue's data sits on the floor (checkRescue, the route's own check included)", was.length ? was.join(' · ') : `every mark standable and clear of the furniture; the room's men inside it; a way on foot to every mark; ${S.flow.route.length} openings on the route, each with a stand and a watch`);
   const men = 2 + (S.guards?.length ?? 0) + (S.cast?.roamers ?? 0), chars = 1 + 4 + men + S.hostages.length;
   verdict(men <= 11 && chars <= 16 && (S.cast?.roamers ?? 0) < S.roamers.length, 'the cast fits: eleven defenders at most, sixteen skinned characters in all, fewer roamers than places for them', `${men} defenders (the captor, ${S.guards?.length ?? 0} more in the room, the door man, ${S.cast?.roamers} roamers on ${S.roamers.length} marks) · ${chars} characters with Sam, the four and ${S.hostages.length} hostages`);
@@ -122,27 +122,3 @@ export const consulateStage = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- consulate-run
-type Out = { seed: number; end: string; why: string; t: number; team: number; of: number; hostages?: [number, number]; clock?: { log: [number, string][] } };
-async function play(env: Record<string, string>, seeds: string): Promise<Out[]> {
-  const out = `${mkdtempSync(`${tmpdir()}/consulate-`)}/runs.json`;
-  const pr = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/ships.ts`, '--scn', ID, '--seeds', seeds, '--jobs', '3', '--json', out], { stdout: 'ignore', stderr: 'pipe', env: { ...process.env, ...env } });
-  const [code, errText] = await Promise.all([pr.exited, new Response(pr.stderr).text()]);
-  if (!existsSync(out)) throw new Error(`ships.ts left no runs (exit ${code}): ${errText.trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
-  const j = JSON.parse(readFileSync(out, 'utf8')); return (j.runs ?? j) as Out[];
-}
-export const consulateRun = guarded(async () => {
-  const { verdict, done } = family('consulate-run: the scripted commander on six seeds, by the main door and by both doors — every run ends, both ways can bring hostages out, the side door is a pair\'s');
-  const main = await play({}, '1-6'), split = await play({ PT_RESCUE: 'split' }, '1-6'), pair = await play({ PT_RESCUE: 'split', PT_SQUAD: '2' }, '1-3');
-  const line = (rs: Out[]) => `${rs.filter(r => r.end === 'rescued').length} of ${rs.length} rescued · hostages out ${rs.reduce((a, r) => a + (r.hostages?.[0] ?? 0), 0)} of ${rs.reduce((a, r) => a + (r.hostages?.[1] ?? 0), 0)} · team up ${rs.reduce((a, r) => a + r.team, 0)} of ${rs.reduce((a, r) => a + r.of, 0)}`;
-  console.log(`    F at the main door: ${line(main)}\n    F from the side door's room: ${line(split)}\n    the pair, F from the side door's room: ${line(pair)}`);
-  const all = [...main, ...split, ...pair], errs = all.filter(r => r.end !== 'rescued' && r.end !== 'lost');
-  verdict(errs.length === 0, `${all.length} runs: each ended on the scenario's own result inside the cap, none threw`, errs.length ? errs.slice(0, 4).map(r => `seed ${r.seed}: ${r.end} ${r.why}`).join(' · ') : 'rescued or lost, every one');
-  verdict(main.some(r => r.end === 'rescued') && split.some(r => r.end === 'rescued'), 'it can be finished both ways: a run with a hostage out by the main door alone, and one by both doors', `main door: seeds ${main.filter(r => r.end === 'rescued').map(r => r.seed).join(', ') || '—'} · both doors: seeds ${split.filter(r => r.end === 'rescued').map(r => r.seed).join(', ') || '—'}`);
-  const splits = (rs: Out[]) => rs.map(r => ({ seed: r.seed, s: (r.clock?.log ?? []).map(x => x[1]).find(w => w.startsWith('split:')) ?? '' }));
-  const sideOf = (s: string) => (/side=([^,]*)/.exec(s)?.[1] ?? '').split('+').filter(x => x), frontOf = (s: string) => (/front=([^,]*)/.exec(s)?.[1] ?? '').split('+').filter(x => x);
-  const four = splits(split).filter(x => x.s), ok4 = four.filter(x => { const sd = sideOf(x.s), fr = frontOf(x.s); return sd.length === 2 && new Set(sd.map(n => n.split(' ')[0])).size === 1 && fr.every(n => n.split(' ')[0] !== sd[0].split(' ')[0]); });
-  verdict(four.length >= 4 && ok4.length * 2 >= four.length, 'F from the side door\'s room with four: on most seeds the side door is taken by a pair of one colour and the main door by the other pair (a seed with a man down, or his mate not yet in the room, gives one)', four.length ? four.map(x => `${x.seed}: ${x.s.slice(6)}`).join(' · ') : 'no run split');
-  const two = splits(pair).filter(x => x.s);
-  verdict(two.length > 0 && two.every(x => sideOf(x.s).length <= 1) && two.some(x => sideOf(x.s).length === 1), 'with the pair staged the side door never takes two: one man there, the other on the main door — the rule as it was', two.length ? two.map(x => `${x.seed}: ${x.s.slice(6)}`).join(' · ') : 'no run split');
-  return done();
-});

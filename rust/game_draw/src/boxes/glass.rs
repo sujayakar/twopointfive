@@ -39,6 +39,8 @@ pub struct Glass {
 }
 
 impl Glass {
+    /// the game is another: what was sent of the last one's panes may not be this one's
+    pub fn cut(&mut self) { self.live = true; self.sent.clear(); }
     pub fn take(&mut self, g: &Game, n: usize) {
         self.panes.clear();
         for (i, &b) in g.engine.world.statics[..n].iter().enumerate() { if pack::flags(&g.tab.boxes[b]) & pack::GLASS != 0 { self.panes.push(i as u32); } }

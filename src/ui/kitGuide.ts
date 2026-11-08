@@ -1,5 +1,5 @@
 // THE KIT STEP'S WALKTHROUGH — Team & kit walks the player through picking a kit by doing it, one small card at a time. This file is the ENGINE and
-// the step's general script; the script a player is shown unasked is a tutorial mission's own plan (ui/kitPlan.ts).
+// the step's general script (no script is shown unasked since the one mission with a plan of its own went, 2026-11-07).
 //
 // The maintainer, 10-22: "we should teach how to pick squad layouts! so maybe a tutorial on the gear page for a mission (that's skippable)" — and, 10-23,
 // of the walkthrough that then came up on every mission's step: "this tutorial is good but we should attach it to a tutorial mission (and make it
@@ -7,7 +7,7 @@
 //   · A WALKTHROUGH IS A SCRIPT (GuideScript): its beats in the step's own order, each the row its card sits by, its words for the step as it stands,
 //     and what counts as having done it. A card sits beside its row, that row lit and the rest of the step dimmed, and goes when the player has DONE
 //     what it asks (or on its 'Next'). A beat whose row this mission's step does not have, or whose thing is already so, is left out.
-//   · WHICH SCRIPT (guideFor): the plan written for the mission whose step this is (KIT_PLANS — today the tutorial's squad mission), played unasked on a
+//   · WHICH SCRIPT (guideFor): once the plan written for the mission whose step this was (none is left), played unasked on a
 //     first visit. A REGULAR MISSION HAS NONE: no card, no word on the head. The step's general walkthrough (GENERIC below: the job, who comes, a kit
 //     for the squad, each man, his card, go) is kept for comparing and played only when asked for on the address (`?kitguide=1`).
 //   · THE PAGE UNDER A CARD IS LIVE: nothing is locked, a click anywhere does what it always did — but Enter, which on most rows of the step is Deploy,
@@ -29,7 +29,6 @@ import type { PlaceNeeds } from './missions';
 import { countWords } from './kitBrief';
 import { sizeWords } from '../game/loadout';
 import { kitWorn } from '../game/kit';
-import { KIT_PLANS } from './kitPlan';
 import { rectZoom } from './textsize';
 
 export const KITGUIDE = { on: true, again: false, /** a script drives this browser: nothing is played unasked */ driven: false };
@@ -81,8 +80,8 @@ export const GENERIC: GuideScript = { id: 'generic', ls: KITGUIDE_LS, again: 'Ho
   { id: 'go', row: 'actions',
     words: () => ({ title: 'Go', text: 'Press [Enter] on Deploy to start with this team, or [Esc] to go back to the mission.' }) },
 ] };
-/** the walkthrough of a mission's step: the plan written for that mission (ui/kitPlan.ts), else the step's own where it was asked for, else none */
-export function guideFor(missionId: string): GuideScript | null { return KIT_PLANS[missionId]?.guide ?? (KITGUIDE.again ? GENERIC : null); }
+/** the walkthrough of a mission's step: the step's own where it was asked for, else none */
+export function guideFor(_missionId: string): GuideScript | null { return KITGUIDE.again ? GENERIC : null; }
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 /** key caps: each word in brackets is a key */
 const caps = (line: string) => line.replace(/[&<>]/g, c => (c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;')).replace(/\[([^\]]+)\]/g, '<kbd>$1</kbd>');

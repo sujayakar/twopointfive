@@ -65,7 +65,6 @@ import type { Input } from './input';
 import { backName } from './backkey';
 import type { Door } from './doors';
 import { lostOf, lostShown, type LostMan } from './deathrecap';
-import { BoxFlag } from '../scene/boxes';
 import type { FollowCamera } from './camera';
 import type { View } from '../host/hud';
 import { order } from './squad';
@@ -79,9 +78,10 @@ import './rearwatch';
 import { gunFileCost, gunFileRanks } from './gunroles';   // (called inside pair only)
 import { pairUp } from './pairup';
 import './spotted';
-import { wallTarget, wallRows, wallPt, skyAside } from './wallcharge';
+import { seatOf, targetOf } from './under';
+import { wallRows, wallPt } from './wallcharge';
 import type { WallSpot } from './wallcharge';
-import { workNear, workOn, workRows } from './workthings';
+import { workRows } from './workthings';
 import type { WorkThing } from './workthings';
 import { SEENWALK, SEENWALK_STATS, seenPrice } from './seenwalk';
 import { DOORMANNERS, DOORMANNERS_STATS, STACK_OWN, doorwayLanePrice, doorwayInWay, doorwayClearNear } from './doorway';
@@ -101,8 +101,6 @@ import { AUTOPILOT, AUTOPILOT_STATS, autoHint, autoPick, type AutoPick } from '.
 import { whyWords } from './squadnet';   // (read inside hud() and quickFor() only)
 import { CMDRING, CMDRING_STATS, ringZoom, ringHoldSecs, ringSeats, flatSeats, type RingView, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
 import { handsBusy } from './interact';   // (read inside ringInput only: his hands on a list, a press or a running verb)
-import type { LayState } from './planlay';
-import { PLANLAY, layable, layGiven, layNote, layKey } from './planlay';
 import { goalShift } from './planmode';   // (planmode.ts: Shift + the key adds a goal, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
 import './teampace';   // (read inside update only)
 import './noshove';   // (read inside update only)
@@ -149,19 +147,12 @@ export const ORDERS = {
   refreshSecs: 1.0,
   /** the reticle within this of a doorway's centre (or of its leaf) is ON that door; within `selfM` of Sam or `manM` of a teammate it is on nobody's floor */
   doorPickM: 1.0, selfM: 1.0, manM: 0.8,
-  /** the cursor ON A DOORWAY AS IT IS DRAWN is that door (doorOnRay): its ray crosses the doorway's own rectangle — the frame's width (+ `doorRayPad` a side),
+  /** the cursor ON A DOORWAY AS IT IS DRAWN is that door: its ray crosses the doorway's own rectangle — the frame's width (+ `doorRayPad` a side),
    *  the floor to the leaf's top — with nothing of the scene drawn in front of it there, and lands no farther than `doorRayReachM` from the doorway (and not
    *  by another door, nor with a teammate's or Sam's own body under the cursor). Through an OPEN doorway the ray lands on the room's floor a stride or two past the frame line: by `doorPickM` alone that
    *  is a spot of floor, and the floor's menu has no door rows. The cursor on a door's own LEAF is that door too, wherever Sam stands. False: `doorPickM`
    *  alone, as it was */
   doorRay: true, doorRayPad: 0.08, doorRayReachM: 3.0,
-  /** HIS OWN BODY UNDER THE CURSOR IS HIMSELF (targetUnderOf). The cursor's ray through his chest lands on the floor a pace PAST him, and what was near
-   *  that point was the target: with a door a pace behind him the squad's key 'on himself' was that door (a stack), and only at his feet was it fall
-   *  in — found by two tutorial missions that ask for the key on himself right after a room is taken, which is beside its door. With this on his body
-   *  under the cursor, nearer than anything of the scene, is himself, whatever is near where the ray lands; a teammate, a man of the other side or a
-   *  thing to be worked in front of him is still that. On in the page (`?selfbody=0` off); off here and on the frozen stand (`TPS_SELFBODY=1`; a
-   *  FROZEN_HOLDS row): false = the point past him, as it was. Check: tools/qa/selfbody-check.ts (`SELFBODY_BREAK=1` must fail) */
-  selfBody: false,
   /** a reticle on something a man cannot stand on (a wall's top, a desk) means the nearest free floor within this of it */
   floorSnapM: 1.0,
   /** the stack: how far off the wall a man stands, how far past the jamb, and the gap to the second man when both file on one side */
@@ -292,7 +283,7 @@ export const ORDERS = {
   moveSpread: 0.9,
   /** a man the fight AI has (the seam in the head comment) is back on his order this long after he last saw anybody / heard a shot / was handed over — never
    *  mid-reload; `pinPosted`: he fights from his post (false: the fight layer moves him as it likes and he walks back after) */
-  coldSecs: 2.5, pinPosted: true,
+  coldSecs: 2.5, 
   /** Sam within this of the line a man's gun is on (`laneOut` to come back up): the muzzle goes down until he is clear */
   laneIn: 0.45, laneOut: 0.7,
   /** hold: a man on the move stops a stride on (this × his velocity), not on the spot */
@@ -338,13 +329,6 @@ const COMPASS = ['south', 'south-east', 'east', 'north-east', 'north', 'north-we
 const flat = v3.distXZ, yawTo = v3.yawTo;
 const compass = (yaw: number) => COMPASS[((Math.round(yaw / (Math.PI / 4)) % 8) + 8) % 8];
 
-/** WHERE hover()'s KEPT ANSWER LIVES: with the one who asks (the page's own, ui/hoverkept.ts, shared by the HUD's lines and the ring's hint), never on the
- *  order book. `hov` = the last answer while the cursor rests; `cam` = the camera it was asked under (hintView asks again when that has moved). It is outside
- *  the rollback snapshot: after a restore it can hold an answer from the time line left behind, used only if the clock comes back into its tenth of a
- *  second with the cursor on the same pixel. */
-export interface HoverKept { hov: { x: number; y: number; t: number; v: OrderTarget } | null; cam: number[]; /** what the pick is asked on, made at the first ask and anew for another game: the tables its rays stamp (Collision.aside, BoxWorld.rayAside) and its kept list of things to be worked (WorkThings.askAside) */ pick?: { g?: object; s?: object; q?: object; w?: object; c?: object } }
-/** a store for one asker (the page's, a check's) */
-export function hoverStore(): HoverKept { return { hov: null, cam: [] }; }
 /** What the menu was opened on. `man`: the reticle was on that teammate — the order is his alone. */
 export type OrderTarget =
   | { kind: 'floor'; at: Vec3; wall?: WallSpot; thing?: WorkThing }   // (wall: the point is on a wall a charge might go on — wallcharge.ts · thing: it is the spot a man stands on to work a thing — workthings.ts)
@@ -538,7 +522,7 @@ export class SquadOrders {
   posture: { word(): string | null; mark(def: OrderDef): string; given(def: OrderDef): void } | null = null;
   /** the men of the OTHER side a menu can be opened on (pairorders.ts — null, or both answering null: nobody; a person is never a target): the one nearest a
    *  point, with how near · the one a cursor ray lands on nearer than `max` along it */
-  people: { near(at: Vec3): { gd: Guard; d: number } | null; ray(ro: Vec3, rd: Vec3, max: number): Guard | null } | null = null;
+  people: object | null = null;
   who: Who = 'all';
   menu: Menu | null = null;
   /** cmdring.ts: the menu is up as a ring on a held key — where it was opened and the lit wedge (null: no ring; never set with CMDRING.on false) */
@@ -549,10 +533,7 @@ export class SquadOrders {
   tapWas: { at: number; t: OrderTarget; /** where the cursor was, in the view's pixels */ x: number; y: number } | null = null;
   /** what was ordered when (the probes read it; capped) */
   log: { t: number; order: string; who: string[]; target: string; /** the quick key gave it with the autopilot on (autopilot.ts: its plan is drawn a little longer) */ auto?: boolean; /** the word's key sent it off a laid plan (planlay.ts) */ laid?: boolean }[] = [];
-  /** the plan laid for the word, and the one kept for the next try (planlay.ts — nothing is ever in it with that switch off) */
-  readonly lay: LayState = { laid: [], kept: null, keptFor: '', tryKey: '', started: false, sending: false, restoredT: -1 };
   /** the order being given is the SEAT's own, at once (the menu's pick, the quick key) — not a scenario's, a tool's or the plan's (planlay.ts strikes its men off a laid plan) */
-  private byHand = false;
   /** the squad's own changes of plan, newest last: who, when (autopilot.ts AUTOPILOT.replan — PICTURE ONLY: floorplan.ts draws these men for a moment as it
    *  does an order just given; nothing of the game reads it, it is no order and starts no clock) */
   shows: { t: number; who: string[] }[] = [];
@@ -684,8 +665,6 @@ export class SquadOrders {
     const i = ring.indexOf(this.who);   // (a man of a squad in pairs is not on the ring: −1 → gold, either way)
     return this.who = i < 0 ? 'all' : ring[(i + dir + ring.length) % ring.length];
   }
-  /** CMDRING.wholeSquad, the player's own squad: every order of his is everyone's, and nothing he does narrows it (a part of the squad is Shift + the key's: planmode.ts) */
-  private whole(): boolean { return CMDRING.wholeSquad && !this.cast; }
   /** who these men are, in a word or two: 'gold' (the whole of a squad in pairs; 'all' for the one pair), 'red' / 'blue' (a whole pair of it), else their callsigns */
   whoWords(men: Guard[] = this.recipients()): string { const S = this.squad().filter(gd => gd.state !== 'dead'); if (men.length === S.length && men.length > 1) return this.paired ? 'gold' : 'all';
     const id = men.length > 1 ? this.pairOf(men[0]) : null; if (id && men.every(gd => this.pairOf(gd) === id) && men.length === this.men(id).length) return id;   // (a whole pair of a bigger squad)
@@ -719,87 +698,13 @@ export class SquadOrders {
   clear(men: Guard[] = [...this.asg.keys()]) { for (const gd of men) { if (this.asg.has(gd) && gd.script && gd.state !== 'dead') order(gd, { goal: null }); this.drop(gd); } if (![...this.asg.values()].some(A => A.post === null)) this.trail.length = 0; }
 
   // ------------------------------------------------------------ targets and the menu
-  /** What a point in the world is, as a target: the nearest of a door (the point within doorPickM of its frame's centre or its leaf), a teammate (manM) and Sam
-   *  himself (selfM) — so the reticle on a man stacked beside a door is the man, on the leaf an arm's length ahead of Sam the door; else the free floor at (or
-   *  nearest) it; else nothing. (The cursor's own answer is targetUnder: a leaf or a doorway drawn under it is that door.) */
-  targetAt(p: Vec3): OrderTarget { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.targetAt', this, [p]); if (__r !== RUST_PASS) return __r as any; } }
-    const g = this.g, K = ORDERS, sam = g.player.char.pos, at: Vec3 = [p[0], 0, p[2]];
-    let door: Door | null = null, dd = K.doorPickM;
-    for (const d of g.doors.list) { const m = Math.min(flat(d.frameCentre, at), flat(d.pos, at)); if (m < dd) { dd = m; door = d; } }
-    let man: Guard | null = null, dm = K.manM;
-    for (const gd of this.squad()) { const m = flat(gd.char.pos, at); if (gd.state !== 'dead' && m < dm) { dm = m; man = gd; } }
-    const ds = flat(sam, at);
-    const fo = this.people?.near(at) ?? null;   // (pairorders.ts: a man of the other side nearer the point than a door, a teammate or Sam himself)
-    if (fo && !(door && dd < fo.d) && !(man && dm < fo.d) && !(ds < K.selfM && ds < fo.d)) return { kind: 'foe', at: [fo.gd.char.pos[0], 0, fo.gd.char.pos[2]], foe: fo.gd };
-    const wk = workNear(g, at);   // (workthings.ts: a thing a teammate can work — the breaker, the mission's thing — nearer the point than a door, a teammate or Sam himself; null with its switch off)
-    if (wk && !(door && dd < wk.d) && !(man && dm < wk.d) && !(ds < K.selfM && ds < wk.d)) return wk.target;
-    if (man && !(door && dd < dm) && !(ds < K.selfM && ds < dm)) return { kind: 'none', at, man };
-    if (door && !(ds < K.selfM && ds < dd)) return { kind: 'door', at: [door.frameCentre[0], 0, door.frameCentre[2]], door, side: sideOf(door, sam) };
-    if (ds < K.selfM) return { kind: 'none', at };
-    const spot = this.freeSpot(at); return wallTarget(this.g, at, spot ? { kind: 'floor', at: spot } : { kind: 'none', at });   // (wallcharge.ts: a floor target under a wall carries the wall)
-  }
-  /** The door a ray is ON AS DRAWN (ORDERS.doorRay): the nearest door whose doorway rectangle — the frame line across its width, the floor to the leaf's top —
-   *  the ray crosses with nothing of the scene nearer along it than a hand's width short of the frame line (a shut leaf lies in that plane; a wall or a desk
-   *  in front of the doorway hides it). `tScene`: how far the ray runs before it lands on the scene (Infinity: on nothing). */
-  doorOnRay(ro: Vec3, rd: Vec3, tScene = Infinity): Door | null {
-    const pad = ORDERS.doorRayPad; let best: Door | null = null, bt = Infinity;
-    for (const d of this.g.doors.list) {
-      const th = d.def.closedDir, ax = Math.cos(th), az = Math.sin(th), c = d.frameCentre;   // (the frame line's own direction; its normal is (−az, ax))
-      const dn = rd[2] * ax - rd[0] * az; if (Math.abs(dn) < 1e-4) continue;   // (along the wall: no face of the doorway is shown)
-      const t = ((c[2] - ro[2]) * ax - (c[0] - ro[0]) * az) / dn; if (!(t > 0) || t >= bt) continue;
-      if ((t - tScene) * Math.abs(dn) > 0.1) continue;   // the scene is drawn in front of the frame line there
-      const y = ro[1] + rd[1] * t; if (y < 0 || y > d.height) continue;
-      const u = (ro[0] + rd[0] * t - c[0]) * ax + (ro[2] + rd[2] * t - c[2]) * az; if (Math.abs(u) > d.def.width * 0.5 + pad) continue;
-      bt = t; best = d;
-    }
-    return best;
-  }
-  /** What the CURSOR is on, for the menu: the teammate its ray lands on, else targetAt of the world point under it — the cursor's own point, not Game.aimPoint
-   *  (the auto-aim snaps that to a man's chest within 60 px or a light under the cursor: an order for the floor under a ceiling panel's dot would go to the panel) — and where that
-   *  is not a door and the cursor is on a door's own leaf, or on the room seen THROUGH a doorway (doorOnRay), that door: what is DRAWN under the cursor (a
-   *  teammate's body, Sam's own, a leaf, a doorway) comes before what is only near its point (a teammate within manM, Sam's feet). */
-  targetUnder(input: Input, cam: FollowCamera, canvas: View): OrderTarget { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.targetUnder', this, [input, cam, canvas]); if (__r !== RUST_PASS) return __r as any; } }
-    const t = this.targetUnderOf(input, cam, canvas);
-    return t.kind === 'none' && t.man && this.whole() ? { kind: 'none', at: t.at } : t;   // (CMDRING.wholeSquad: a teammate under the cursor is the squad itself, never a man the order is his alone)
-  }
-  private targetUnderOf(input: Input, cam: FollowCamera, canvas: View): OrderTarget {
-    const g = this.g, K = ORDERS; if (g.puppet?.aim) return this.targetAt(g.aimPoint);
-    { const m = g.rails?.markUnder(input, cam, canvas); if (m) return this.targetAt(m); }   // (a tutorial mission's ring on the screen is the place it marks — rails.ts; null off such a level)
-    const ray = cam.ray(input.mouseX / Math.max(1, canvas.clientWidth), input.mouseY / Math.max(1, canvas.clientHeight));
-    const hit = g.engine.world.raycast(ray.ro, ray.rd, 200, undefined, g.player.char.id);
-    const p: Vec3 = hit ? v3.mad(ray.ro, ray.rd, hit.t) : cam.groundPoint(input.mouseX / Math.max(1, canvas.clientWidth), input.mouseY / Math.max(1, canvas.clientHeight), 0) ?? g.aimPoint;
-    let man: Guard | null = null, best = hit ? hit.t + 0.3 : 200;
-    for (const gd of this.squad()) { if (gd.state === 'dead') continue; const t = gd.char.rayHit(ray.ro, ray.rd, best); if (t >= 0 && t < best) { best = t; man = gd; } }
-    const fo = this.people?.ray(ray.ro, ray.rd, best) ?? null;   // (pairorders.ts: a man of the other side under the cursor, nearer than any teammate there)
-    if (fo) return { kind: 'foe', at: [fo.char.pos[0], 0, fo.char.pos[2]], foe: fo };
-    if (man) return { kind: 'none', at: [man.char.pos[0], 0, man.char.pos[2]], man };
-    const wt = hit ? workOn(g, g.engine.world.all[hit.index]) : null; if (wt) return wt;   // (workthings.ts: the cursor on the breaker's own panel is the breaker)
-    // (ORDERS.selfBody: his own body under the cursor, in front of whatever of the scene the ray lands on, is himself — not the door a pace past him)
-    if (K.selfBody && !SELFBODY_BREAK && g.player.char.rayHit(ray.ro, ray.rd, hit ? hit.t : 200) >= 0) { const s = g.player.char.pos; return { kind: 'none', at: [s[0], 0, s[2]] }; }
-    const base = this.targetAt(p);
-    // a door by the point, Sam's own body under the cursor: as ever. Else — floor, Sam's feet, or a teammate only NEAR the point (his body under the cursor was
-    // taken above): is the cursor on a door's own leaf, or on the room seen through a doorway? What is drawn under the cursor comes before what is near its point
-    if (!K.doorRay || base.kind === 'door' || g.player.char.rayHit(ray.ro, ray.rd, best) >= 0) return base;
-    const S = this.sceneHit(ray.ro, ray.rd, hit), box = S.index >= 0 ? g.engine.world.all[S.index] : null, land = S.index >= 0 ? v3.mad(ray.ro, ray.rd, S.t) : p;
-    const own = box ? g.doors.list.find(d => d.box === box) : undefined;
-    const leaf = own ? (own.off ? null : own) : box ? g.fogOfWar.doorOfBox(box) : null;   // (a door off its hinges: the slab on the floor is not the door — its doorway still is, below; else the leaf under the cursor — or, in the fog of war, the leaf drawn where the team last saw it)
-    if (!leaf && base.kind === 'floor' && base.thing) return base;   // (a thing to be worked that the cursor's point is on — workthings.ts — is that thing, seen through a doorway or not; a leaf the cursor is ON is still the door)
-    const door = leaf || this.doorOnRay(ray.ro, ray.rd, S.t);
-    return door && (door === leaf || flat(door.frameCentre, land) <= K.doorRayReachM) ? { kind: 'door', at: [door.frameCentre[0], 0, door.frameCentre[2]], door, side: sideOf(door, g.player.char.pos) } : base;
-  }
-  /** what a cursor ray lands on of the SCENE — a wall, a leaf, furniture, the floor — and how far along it: looking through glass and past the men and what they
-   *  carry (a box with an owner: the ray is taken on from where it met it, that owner's boxes skipped). `first`: the ray's plain landing, when the caller has it
-   *  (the scene's own unless it is glass or a man's). index −1, t Infinity: on nothing. */
-  private sceneHit(ro: Vec3, rd: Vec3, first?: { t: number; index: number } | null): { t: number; index: number } {
-    const W = this.g.engine.world, skip = BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Glass;
-    if (first) { const b = W.all[first.index]; if (b && !b.owner && !(b.flags & BoxFlag.Glass)) return { t: first.t, index: first.index }; }
-    let t0 = 0, owner = this.g.player.char.id;
-    for (let k = 0; k < 16; k++) {
-      const hit = W.raycast(k ? v3.mad(ro, rd, t0) : ro, rd, 200, skip, owner); if (!hit) break;
-      owner = W.all[hit.index]?.owner ?? 0; t0 += hit.t; if (!owner) return { t: t0, index: hit.index };
-    }
-    return { t: Infinity, index: -1 };
-  }
+  /** What a point in the world is, as a target: the nearest of a door, a teammate and Sam himself; else the free floor at (or nearest) it; else nothing. The Rust
+   *  game's answer (rust/game_rules/src/orders target_at); nothing where no Rust game stands. (The cursor's own answer is targetUnder: a leaf or a doorway drawn
+   *  under it is that door.) */
+  targetAt(p: Vec3): OrderTarget { return targetOf(this.g, this.g.underAsk?.(p, seatOf(this.g)) ?? null) ?? { kind: 'none', at: [p[0], 0, p[2]] }; }
+  /** What the CURSOR is on, for the menu: the teammate its ray lands on, else what the world point under it is, else the door whose leaf or doorway is drawn there.
+   *  The Rust game's answer (target_under), by the cursor and the camera handed in. */
+  targetUnder(input: Input, cam: FollowCamera, canvas: View): OrderTarget { return targetOf(this.g, this.g.cursorAsk?.(input, cam, canvas, seatOf(this.g)).under ?? null) ?? { kind: 'none', at: [this.g.aimPoint[0], 0, this.g.aimPoint[2]] }; }
   /** the rows that fit a target's kind on one page of the menu (null: the first), top to bottom (an order that cannot be carried out there right now is still
    *  listed — greyed, with whyNot's word) */
   rowsFor(t: OrderTarget, page: string | null = null, men?: Guard[]): OrderDef[] {
@@ -829,7 +734,7 @@ export class SquadOrders {
   /** a stand-in row put where the row it stands in for is: that row's digit and page, the next place in the table */
   private seat(def: OrderDef, stood: OrderDef) { def.key = stood.key; def.hotKey = stood.hotKey; def.page = stood.page; this.defs.splice(this.defs.indexOf(stood) + 1, 0, def); }
   /** is the 'wait for my word' row offered under these rows (a door, the squad of four, a row among them that can wait) */
-  private wordRowOf(t: OrderTarget, rows: OrderDef[]): boolean { return PLANLAY.on ? t.kind !== 'foe' && rows.some(layable) : t.kind === 'door' && this.big && rows.some(d => d.onWord); }   // (planlay.ts: with its switch on, under every menu with an order in it — the row LAYS)
+  private wordRowOf(t: OrderTarget, rows: OrderDef[]): boolean { return t.kind === 'door' && this.big && rows.some(d => d.onWord); }
   /** the open menu's page that has the 'wait for my word' row, seen from its first page (null: none, or not on the first page) */
   private wordPage(M: Menu): string | null { return M.page !== null ? null : M.rows.find(d => d.opens && this.wordRowOf(M.target, this.rowsFor(M.target, d.opens, M.men)))?.opens ?? null; }
   /** the digit the open menu's 'wait for my word' row is on (0: none — a row of the page has it, or the knob is not a digit: `waitAlt` flips it) */
@@ -869,7 +774,6 @@ export class SquadOrders {
     if (ORDERS.sameWay && men.length > 1) this.sameWays(men);   // (a pair handed one order goes round a building by one side: a return on its first line for a man alone)
     if (flipped) g.cleared.stats.face++;
     if (!def.free) this.log.push({ t: g.time, order: id, who: men.map(gd => gd.callsign), target: t.kind === 'door' ? `door:${t.door.def.name}` : t.kind === 'floor' ? (t.thing ? `thing:${t.thing.kind}` : `floor:${t.at[0].toFixed(1)},${t.at[2].toFixed(1)}`) : t.kind === 'foe' ? `foe:${t.foe.callsign}` : 'none' }); if (this.log.length > 200) this.log.splice(0, 50);
-    if (!def.free && this.byHand) layGiven(g, men);   // (planlay.ts: an order the player gives at once takes its men off a laid plan — never a scenario's own 'fall in'; a return on its first line with the switch off)
     g.msg(this.givenLine(def, t, men));
     if (def.ack?.length) { const k = this.acks++, A = opts?.ack ? [opts.ack] : wg(def.ackNow ?? def.ack, def.ack); g.say(men[k % men.length], A[Math.floor(k / men.length) % A.length]); }   // (the men take turns answering, each through the lines in turn)
     this.posture?.given(def);
@@ -919,7 +823,6 @@ export class SquadOrders {
     if (!this.active || this.g.player.down) return false;
     const rows = flat ? this.flatRows(target, part) : this.rowsFor(target, null, part);   // (`flat`: ringUp's, under cmdring.ts CMDRING.flat — every order of the target, no pages)
     this.menu = { target, men: [], rows, why: [], sel: 0, wheelAcc: 0, readT: -1, page: null, wordRow: this.wordRowOf(target, rows), onWord: false, menSide: null, sideKey: '', flat: flat || undefined, ...(part ? { part } : {}) }; this.refresh();   // (the highlight starts on the first row — the target's own order: the button twice gives it)
-    if (this.menu && PLANLAY.on && PLANLAY.sticky && this.menu.wordRow && this.lay.laid.length) this.menu.onWord = true;   // (planlay.ts: a plan is being laid — the next order is for it too)
     return !!this.menu;
   }
   close() { this.menu = null; }
@@ -972,20 +875,9 @@ export class SquadOrders {
     const later = M.flat && !this.cmdRing?.more ? new Set(this.seats(M, null).over) : null;
     M.why = M.rows.map((d, i) => { if (later?.has(i)) return null; const o = d.only ? d.only(this, M.men, mt) : M.men; return this.whyNot(d, mt, o.length ? o : M.men); }); M.readT = this.g.time;   // (an order for some of them only: as give() asks it)
   }
-  /** what the cursor is on (null: no squad, or before the first frame) — the HUD's lines under the squad block; the simulation never reads it. Kept while the
-   *  cursor has not moved, for a tenth of a second (the page asks every frame) — in the ASKER'S store (`HoverKept`), never on the order book. With no store
-   *  nothing is kept and every ask looks again. The pick under it is asked ASIDE: its rays stamp the asker's own tables (`kept.pick`; a throwaway set
-   *  with no store), never the collision world's; its list of things to be worked is the asker's own (workthings.ts askAside); and what it makes anew
-   *  of a swung leaf's kept centre (doors.ts Door.posAside) or adds to the memo of sky faces (wallcharge.ts skyAside) is put back —
-   *  tools/qa/hoverpick-check.ts. */
-  hover(kept?: HoverKept): OrderTarget | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.hover', this, [kept]); if (__r !== RUST_PASS) return __r as any; } }
-    const v = this.view; if (!v.input || !v.cam || !v.canvas || !this.active) return null;
-    const c = kept?.hov, x = v.input.mouseX, y = v.input.mouseY, t = this.g.time;
-    if (c && c.x === x && c.y === y && t >= c.t && t - c.t < 0.1) return c.v;
-    const g = this.g, own = !kept ? {} : kept.pick?.g === g ? kept.pick : (kept.pick = { g }), input = v.input, cam = v.cam, canvas = v.canvas;
-    const out = g.doors.posAside(() => skyAside(g, () => g.work.askAside(own, () => g.col.aside(own, () => g.engine.world.rayAside(own, () => this.targetUnder(input, cam, canvas))))));
-    if (kept) kept.hov = { x, y, t, v: out }; return out;
-  }
+  /** what the cursor is on (null: no squad, or before the first frame) — the HUD's lines under the squad block; the simulation never reads it. The Rust game's
+   *  answer, by the host's cursor and camera as they stand: a read, kept nowhere in the game */
+  hover(): OrderTarget | null { const v = this.view; return !v.input || !v.cam || !v.canvas || !this.active ? null : targetOf(this.g, this.g.cursorAsk?.(v.input, v.cam, v.canvas, seatOf(this.g)).under ?? null); }
   /** the order the quick key gives on a target: its first row (null: none fits) */
   defaultFor(t: OrderTarget): OrderDef | null { return this.rowsFor(t).find(d => !d.opens) ?? null; }
   /** What T would make of `who` with the cursor on `point`: a teammate under it = that man (already him: back to everyone); a menu that was opened on one man
@@ -1016,15 +908,13 @@ export class SquadOrders {
    *  kind of thing, where the glyph goes — beside the cursor, or in the middle of a ring that is up, whose target it then is — how much larger than its px it
    *  is drawn (ringZoom) and the thing's own outline on the floor: a doorway's line, a stretch of wall, a ring at a man's feet or on the spot; the squad's own
    *  menu (the cursor on nothing an order goes to) is a glyph alone. ui/cmdring.ts draws it; the simulation never reads it. */
-  hintView(kept?: HoverKept): { kind: RingHint; x: number; y: number; zoom: number; held: boolean; press: boolean; tone: Tone | undefined; seg: [Vec3, Vec3] | null; ring: { at: Vec3; r: number } | null; /** the kind's glyph is drawn (cmdring.ts plainHint: false — the outline alone) */ glyph: boolean } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.hintView', this, [kept]); if (__r !== RUST_PASS) return __r as any; } }
+  hintView(): { kind: RingHint; x: number; y: number; zoom: number; held: boolean; press: boolean; tone: Tone | undefined; seg: [Vec3, Vec3] | null; ring: { at: Vec3; r: number } | null; /** the kind's glyph is drawn (cmdring.ts plainHint: false — the outline alone) */ glyph: boolean } | null {
     const v = this.view; if (CMDRING.bareHint || (!CMDRING.on && !CMDRING.hint) || !this.active || !v.input || !v.cam || !v.canvas) return null;   // (`hint` is a setting of its own: the mark is drawn with the ring off too)
     if (!CMDRING.hint && !this.cmdRing && !this.cmdPress) return null;   // (before the key it is drawn only when asked for — `hint`; with the key down it is the press seen to land, and the ring's own middle)
     const R = this.cmdRing && this.menu ? this.cmdRing : null, M = this.menu;
     if (!R && !this.cmdPress && !this.ringFree(v.input)) return null;
-    // (before the key the outline is drawn every frame under a view that moves: hover()'s answer, kept while the cursor rests, is asked again when it has)
-    if (!R && kept) { const c = v.cam, k = kept.cam; if (k[0] !== c.pos[0] || k[1] !== c.pos[1] || k[2] !== c.pos[2] || k[3] !== c.yaw || k[4] !== c.pitch) { k[0] = c.pos[0]; k[1] = c.pos[1]; k[2] = c.pos[2]; k[3] = c.yaw; k[4] = c.pitch; kept.hov = null; } }
     const P = R ? null : this.cmdPress;   // (the key down, the ring not yet up: the thing it went down on, its outline as bright as the ring's — the press is seen to land)
-    const t = R ? M!.target : P ? P.t : this.hover(kept); if (!t) return null;
+    const t = R ? M!.target : P ? P.t : this.hover(); if (!t) return null;
     const kind: RingHint = t.kind === 'door' ? 'door' : t.kind === 'foe' ? 'foe' : t.kind === 'floor' ? (t.thing ? 'thing' : t.wall ? 'wall' : 'floor') : t.man ? 'man' : 'squad';
     let seg: [Vec3, Vec3] | null = null, ring: { at: Vec3; r: number } | null = null; const Y = 0.03, C = CMDRING;
     const at = (p: Vec3, r: number) => ({ at: [p[0], Y, p[2]] as Vec3, r });
@@ -1935,7 +1825,7 @@ export class SquadOrders {
    *  its digit (one that cannot be done here greyed with the reason), the cancel row — and, otherwise, one block under the Space rows: who the next order goes
    *  to, every man with what he is doing (the addressed ones marked when it is not all of them), what X would open on under the cursor right now, the keys.
    *  Nothing without a squad. */
-  hud(kept?: HoverKept): { menu: OrderHudMenu | null; status: OrderHudRow[] } {
+  hud(): { menu: OrderHudMenu | null; status: OrderHudRow[] } {
     if (!this.active) return { menu: null, status: [] };
     const M = this.cmdRing ? null : this.menu, key = keyName(ORDERS.key), whoKey = keyName(ORDERS.whoKey);   // (cmdring.ts: a menu up as a ring is drawn at the cursor, not listed in the panel)
     if (M) {
@@ -1947,8 +1837,8 @@ export class SquadOrders {
       const alt = ORDERS.waitAlt ? keyName(ORDERS.waitAlt) : '', waitD = this.waitDigit(M), wordPage = this.wordPage(M);
       const carries = (d: OrderDef) => M.page !== null && M.onWord && this.wordRowOf(M.target, this.rowsFor(mt, d.opens ?? null, M.men));   // (a page behind a page: 'wait for my word', on, goes in with it)
       const hot = (d: OrderDef) => { const h = this.rowsFor(mt, d.opens ?? null, M.men).find(x => !!x.hotKey && !x.pageOnly); return h ? ` · ${keyName(h.hotKey!)}: ${this.labelOf(h, mt).split(' · ')[0]}` : ''; };   // (a page with a row on a key of its own — the word, on a held threshold's: that key works from here too)
-      const words = (d: OrderDef) => d.opens ? `${this.labelOf(d, mt)} ▸${d.opens !== wordPage ? (carries(d) ? ' · on my word: ON' : hot(d)) : M.onWord ? ' · on my word: ON' : alt && !(PLANLAY.on && M.wordRow) ? ` · ${alt}: on my word` : ''}${d.opens === wordPage ? hot(d) : ''}` : (M.onWord && (PLANLAY.on ? layable(d) : d.onWord) ? 'wait · ' : '') + this.labelOf(d, mt);
-      const altLive = PLANLAY.on && (M.rows.some((d, i) => d.hotKey === ORDERS.waitAlt && !M.why[i]) || this.g.doorTools.wordKeyHeld()), altDead = (d: OrderDef, i: number) => PLANLAY.on && M.wordRow && d.hotKey === ORDERS.waitAlt && !!M.why[i];   // (planlay.ts, as input() has it: the key is a row's own while that row can be given, else the 'wait for my word' row's — and is shown on one of them only)
+      const words = (d: OrderDef) => d.opens ? `${this.labelOf(d, mt)} ▸${d.opens !== wordPage ? (carries(d) ? ' · on my word: ON' : hot(d)) : M.onWord ? ' · on my word: ON' : alt ? ` · ${alt}: on my word` : ''}${d.opens === wordPage ? hot(d) : ''}` : (M.onWord && d.onWord ? 'wait · ' : '') + this.labelOf(d, mt);
+      const altLive = false, altDead = (_d: OrderDef, _i: number) => false;   // (planlay.ts, as input() has it: the key is a row's own while that row can be given, else the 'wait for my word' row's — and is shown on one of them only)
       const rows: OrderHudRow[] = M.rows.map((d, i) => ({ kind, label: headOf(d), opts: [{ key: d.key ? String(d.key) : d.hotKey && !altDead(d, i) ? keyName(d.hotKey) : '', text: words(d) + (this.posture?.mark(d) ?? '') + (M.why[i] ? ` — ${M.why[i]}` : '') }], inReach: n > 0 && !M.why[i], off: !!M.why[i], cont: i > 0 && headOf(M.rows[i - 1]) === headOf(d) }));
       if (!rows.length) rows.push({ kind, label: head, opts: [{ key: '', text: 'no order fits' }], inReach: false, off: false });
       if (M.wordRow) rows.push({ kind, label: WORD_HEAD, opts: [{ key: waitD ? String(waitD) : !digitOf(ORDERS.waitKey) && ORDERS.waitKey ? keyName(ORDERS.waitKey) : altLive ? '' : alt, text: `wait for my word${waitD && alt && !altLive ? ` (${alt})` : ''} · ${M.onWord ? 'ON' : 'off'}` }], inReach: n > 0, off: false, cont: M.rows.length > 0 && headOf(M.rows[M.rows.length - 1]) === WORD_HEAD });
@@ -1957,7 +1847,7 @@ export class SquadOrders {
       return { menu: { rows: [whoRow, ...rows], primary: M.sel + 1, more: 0, open: true, hint: `${ORDERS.wheelElement ? 'digit picks · wheel: who' : ORDERS.clickGives ? 'digit, or wheel + click' : `digit, or wheel + space${ORDERS.mouseOpens ? ' / middle click' : ''}`} · ${closes}`, cancel: 'close — no order' }, status: [] };
     }
     const S = this.squad(), men = this.recipients(), tone = this.toneOf(men), some = men.length < S.filter(gd => gd.state !== 'dead').length;
-    const hov = this.hover(kept), onMan = hov?.kind === 'none' && hov.man ? hov.man : null;
+    const hov = this.hover(), onMan = hov?.kind === 'none' && hov.man ? hov.man : null;
     const next = onMan ? this.whoAfterT(hov) : null;   // (what T would do with the cursor on a teammate: him — or, already him, back to everyone)
     const posture = this.posture?.word() ?? null;   // (silent.ts: which of the two the squad is in, at a glance)
     const P = hov && AUTOPILOT.on ? autoPick(this.g, hov, false) : undefined;   // (asked once for the row's words and its reason)
@@ -1966,7 +1856,7 @@ export class SquadOrders {
     const quick = hov && words ? `${words}${hov.kind === 'none' && !hov.man ? '' : ` · ${this.hoverWords(hov)}`}${why ? ` · ${why}` : ''}` : null;   // (what the quick key would give on what the cursor is on)
     const lk = (act: string) => !!this.g.rails?.locks(act);   // (rails.ts, a tutorial mission: a key the mission has not taught yet is not named on the panel either)
     return { menu: null, status: [{ kind: 'objective', label: lk('who') ? 'squad' : `squad · ${posture ? `${posture} · ` : ''}orders to ${this.whoTag().tag}`, inReach: true, off: false, tone,
-      opts: [...S.map(gd => ({ key: '', text: `${some ? (men.includes(gd) ? '▸ ' : '· ') : ''}${gd.callsign} · ${this.statusOf(gd)}${this.g.cover.tail(gd)}`, tone: this.paired ? this.pairOf(gd) ?? undefined : undefined, gone: gd.state === 'dead' && lostShown(), lost: gd.state === 'dead' ? lostOf(this.g, gd.char.id) ?? undefined : undefined })), ...(lk('menu') ? [] : [...this.notes.flatMap(f => f()).map(x => typeof x === 'string' ? { key: '', text: x } : x), ...layNote(this.g, keyName(layKey()))]),   // (planlay.ts: the key's line while a plan waits on it)
+      opts: [...S.map(gd => ({ key: '', text: `${some ? (men.includes(gd) ? '▸ ' : '· ') : ''}${gd.callsign} · ${this.statusOf(gd)}${this.g.cover.tail(gd)}`, tone: this.paired ? this.pairOf(gd) ?? undefined : undefined, gone: gd.state === 'dead' && lostShown(), lost: gd.state === 'dead' ? lostOf(this.g, gd.char.id) ?? undefined : undefined })), ...(lk('menu') ? [] : [...this.notes.flatMap(f => f()).map(x => typeof x === 'string' ? { key: '', text: x } : x)]),
         ...(quick && !lk('order') && !(CMDRING.on && ringHoldSecs() > 0 && this.g.rails?.teachesHold()) ? [{ key: keyName(ORDERS.quickKey), text: quick }] : []), ...(lk('menu') || CMDRING.only ? [] : [{ key, text: hov ? `orders · ${this.hoverWords(hov)}` : 'orders' }]), ...(lk('who') || CMDRING.only ? [] : [{ key: whoKey, text: onMan && next === S.indexOf(onMan) ? `who · ${onMan.callsign} (under the cursor)` : onMan && next === 'all' ? `who · back to ${this.paired ? 'gold' : 'all'}` : `who · ${this.whoStrip()}` }]) ] }] };   // (cmdring.ts `only`: the orders key and the who key have no key — the ring is the menu, and who is its wheel or a click on a man)
   }
   /** Where the menu that is up is frozen, for a mark in the world (the page's overlay rings it — Sam may have walked on and be aiming elsewhere): the point, a
@@ -1987,7 +1877,6 @@ const OFF_M = 0.3, ROUND_ITER = 30000, MOUTH_M = 0.8;
 /** ORDERS.sameWay: the metres a mate's way may cost over `sameLong` times his own */
 const SAME_PLUS_M = 2;
 const SAMEWAY_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SAMEWAY_BREAK === '1';   // (QA: the rule's own check must fail with this set)
-const SELFBODY_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SELFBODY_BREAK === '1';   // (QA: ORDERS.selfBody's own check must fail with this set)
 const FILEQUEUE_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.FILEQUEUE_BREAK === '1';   // (QA: ORDERS.fileQueue's own check must fail with this set)
 const PROPROUND_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.PROPROUND_BREAK === '1';   // (QA: ORDERS.propRound's own check must fail with the rule's body out)
 /** ORDERS.propRound: of the way over the statics alone (`plain`) and the way laid with movable things dear (`round`, null: that search found none), the one

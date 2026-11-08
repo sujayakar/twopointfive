@@ -11,10 +11,10 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 fn sys_of(k: f64) -> u32 { js::to_u32(k) >> 24 }
 
 /// A box's row (`Box.*`, scene/boxes.ts:66). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`: once the table stands, this one line is that row.
-fn bx<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
+fn bx<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 /// Which thing a keyed box belongs to, or -1 for one the rule leaves alone. (fogofwar.ts thingKeyOf)
-pub fn thing_key_of(g: &mut crate::game::Game, b: BoxId) -> f64 {
+pub fn thing_key_of(g: &mut crate::game::Game, b: AnyBoxId) -> f64 {
     let k = bx(g, b).mkey.expect("thingKeyOf: a box with no mkey (fogofwar.ts:364 `b.mkey!`)");
     key_of_mkey(g, k)
 }
@@ -42,8 +42,8 @@ pub fn is_prop(thing_key: f64) -> bool {
 
 /// A box copied for the picture's memory; its vectors are values in Rust, so nothing follows the live one. (fogofwar.ts ghostBox)
 /// (A copy the record keeps until it takes the thing afresh: `box_kept`, and `box_let_go` for the copies before it: thing_take.)
-pub fn ghost_box(g: &mut crate::game::Game, s: BoxId) -> BoxId {
-    let copy = g.tab.boxes[s].clone();
+pub fn ghost_box(g: &mut crate::game::Game, s: AnyBoxId) -> FrameBoxId {
+    let copy = g.tab[s].clone();
     crate::scene_boxes::box_kept(g, copy)
 }
 
@@ -668,13 +668,13 @@ pub fn fog_of_war_door_seen(g: &mut crate::game::Game, d: DoorId, shown: f64) ->
 }
 
 /// Is this door drawn where the team last saw it rather than where it stands. (FogOfWar.doorHeld)
-pub fn fog_of_war_door_held(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn fog_of_war_door_held(g: &crate::game::Game, d: DoorId) -> bool {
     let shown = match g.fog_of_war.door_recs.get(d) { Some(r) => r.shown, None => return false };
     fog_of_war_active(g) && m::abs(crate::doors::door_angle(g, d) - shown) > DOOR_EPS
 }
 
 /// The angle the picture has this door at. (FogOfWar.doorShown)
-pub fn fog_of_war_door_shown(g: &mut crate::game::Game, d: DoorId) -> f64 {
+pub fn fog_of_war_door_shown(g: &crate::game::Game, d: DoorId) -> f64 {
     if let Some(s) = g.fog_of_war.door_recs.get(d).map(|r| r.shown) {
         if fog_of_war_active(g) { return s; }
     }
@@ -682,17 +682,17 @@ pub fn fog_of_war_door_shown(g: &mut crate::game::Game, d: DoorId) -> f64 {
 }
 
 /// The door a box in the picture's list is the remembered leaf of. (FogOfWar.doorOfBox)
-pub fn fog_of_war_door_of_box(g: &crate::game::Game, box_: BoxId) -> Option<DoorId> {
+pub fn fog_of_war_door_of_box(g: &crate::game::Game, box_: AnyBoxId) -> Option<DoorId> {
     for (d, r) in g.fog_of_war.door_recs.iter() {
         if let Some(gh) = r.ghost.as_ref() {
-            if gh[0] == box_ { return Some(d); }
+            if AnyBoxId::World(gh[0]) == box_ { return Some(d); }
         }
     }
     None
 }
 
 /// The doors' boxes for the picture: each leaf where it stands, or for one moved unseen, copies at the angle last seen. (FogOfWar.doorBoxes)
-pub fn fog_of_war_door_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn fog_of_war_door_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     g.fog_of_war.door_n = 0.0;
     if !fog_of_war_active(g) || !js::truthy(g.fog_of_war.doors_held) {
         crate::doors::doors_boxes(g, out);
@@ -707,7 +707,7 @@ pub fn fog_of_war_door_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
         let angle = crate::doors::door_angle(g, d);
         let shown = match g.fog_of_war.door_recs.get(d).map(|r| r.shown) {
             Some(s) if m::abs(angle - s) > DOOR_EPS => s,
-            _ => { out.push(bx_); out.push(h0); out.push(h1); continue; }
+            _ => { out.push(bx_.into()); out.push(h0.into()); out.push(h1.into()); continue; }
         };
         let pose = crate::doors::door_pose_at(g, d, shown);
         let had = g.fog_of_war.door_recs.get(d).and_then(|r| r.ghost.clone());
@@ -731,7 +731,7 @@ pub fn fog_of_war_door_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
             bx(g, gh[2]).rot = None;
         }
         for s in 0..2 { let q = bx(g, gh[1 + s]); q.c = pose.handles[s]; q.yaw = pose.yaw; }
-        out.push(gh[0]); out.push(gh[1]); out.push(gh[2]);
+        out.push(gh[0].into()); out.push(gh[1].into()); out.push(gh[2].into());
     }
     g.fog_of_war.door_n = out.len() as f64 - g.fog_of_war.door_from;
 }

@@ -165,7 +165,7 @@
     #overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
     .marker { position: absolute; transform: translate(-50%, -100%); font-size: 13px; font-weight: 700; text-shadow: 0 1px 3px #000, 0 0 6px #000; white-space: nowrap; }
     .marker.sus { color: #fd6; } .marker.alert { color: #f54; } .marker.dead { color: #777; font-weight: 400; font-size: 10px; } .marker.ko { color: var(--h-dim); font-weight: 400; font-size: 10px; letter-spacing: -0.05em; } .marker.calm { color: var(--h-soft); font-weight: 400; font-size: 10px; }
-    .marker.frag { color: #ff5a3c; font-weight: 700; font-size: 14px; letter-spacing: 0.04em; }   /* frag.ts fragMarks: a defender's live grenade Sam has been cued on, with the seconds left */
+    .marker.frag { color: #ff5a3c; font-weight: 700; font-size: 14px; letter-spacing: 0.04em; }   /* game.view.marks.frags: a defender's live grenade Sam has been cued on, with the seconds left */
     .lostfrom { position: absolute; height: 3px; transform-origin: 0 50%; pointer-events: none; background: linear-gradient(90deg, rgba(var(--h-acc-rgb),0.35), var(--h-acc)); }   /* deathrecap.ts lostLive: the way the round came in at a squad man lost, on the ground at him */
     .lostfrom::after { content: ''; position: absolute; right: -2px; top: -3.5px; border-left: 9px solid var(--h-acc); border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
     .marker.lastseen { color: #cbb98a; font-weight: 400; font-size: 12px; letter-spacing: 0.08em; }   /* fogofwar.ts lastSeen: '(?)' where an enemy was last seen, fading — thin and bracketed, never a live man's bold '?' */
@@ -176,7 +176,7 @@
     .reticle.aim { width: 16px; height: 16px; border-width: 1px; opacity: 0.7; box-shadow: none; pointer-events: none; }   /* the auto-aim snap ring: smaller and quieter than the interaction ring; under the aim model overlay.ts sizes it to the cone and brightens it as the aim settles */
     .reticle.aim.k-free { border-color: rgba(var(--h-hi-rgb),0.85); }   /* …round the bare cursor's point when nothing is near (aim model only) */
     .reticle.aim.trail { opacity: 0.55; }   /* aimweight.ts: the circle is where the gun points — quieter while it is still swinging onto the cursor */
-    .reticle.aim.shut, .aimwish.gun.shut { border-style: dashed; opacity: 0.95 !important; }   /* player.ts gunShut: his gun cannot get a round out from here (a wall holds it down, or its muzzle is past a jamb) — the ring is broken and barred; while the ring is busy on a thing Space acts on, the gun's own small circle is */
+    .reticle.aim.shut, .aimwish.gun.shut { border-style: dashed; opacity: 0.95 !important; }   /* game.view.aim shut: his gun cannot get a round out from here (a wall holds it down, or its muzzle is past a jamb) — the ring is broken and barred; while the ring is busy on a thing Space acts on, the gun's own small circle is */
     .reticle.aim.shut::after, .aimwish.gun.shut::after { content: ''; position: absolute; left: 50%; top: 50%; width: 2px; height: 130%; min-height: 20px; background: rgba(var(--h-hi-rgb),0.95); border-radius: 1px; transform: translate(-50%, -50%) rotate(45deg); box-shadow: 0 0 3px rgba(0,0,0,0.9); }
     .reticle.aim.k-guard.shut::after { background: #ff8070; }
     .aimwish { position: absolute; width: 5px; height: 5px; border-radius: 50%; transform: translate(-50%, -50%); background: #ffe9a8; opacity: 0.85; pointer-events: none; }   /* …and a dot on what the reticle snapped to (a light, a man) until it gets there */
@@ -274,10 +274,6 @@
     #checkpoint.on { opacity: 0.8; transition: opacity .15s; }
     #checkpoint b { display: inline-block; width: 5px; height: 5px; margin-right: 7px; transform: rotate(45deg); background: currentColor; vertical-align: 1px; }
     body.touring #checkpoint { display: none; }
-    /* the session journal's REC tag (game/journal.ts, overlay.ts; F10): under the checkpoint tag, red while recording, amber while it waits for a moment it may start on */
-    #journal { position: absolute; right: 14px; top: 26px; font: 700 11px/1 var(--h-head); letter-spacing: 0.16em; color: #e8b04c; text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0; transition: opacity .3s; }
-    #journal.on { opacity: 0.9; }
-    #journal.rec { color: #ff5a4e; }
     .objmark { position: absolute; transform: translate(-50%, -5px); pointer-events: none; text-align: center; }
     .objmark i { display: block; width: 7px; height: 7px; margin: 0 auto; border: 1.5px solid var(--h-acc); transform: rotate(45deg); box-shadow: 0 0 5px rgba(0,0,0,0.8); }
     .objmark span { display: block; margin-top: 6px; font: 700 11px/1 var(--h-head); letter-spacing: 0.14em; color: var(--h-hi); text-shadow: var(--h-shadow); white-space: nowrap; }
@@ -310,8 +306,6 @@
     #menu .note.bootstatus { color: var(--m-btn-text); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
     #menu .bootstatus .bbar { display: block; height: 2px; margin-top: 6px; background: rgba(var(--m-edge),0.18); }
     #menu .bootstatus .bbar i { display: block; height: 100%; width: 0; background: var(--m-accent); transition: width 0.2s; }
-    #menu .sandbox { display: flex; gap: 18px; margin: 10px 2px 2px; font-size: 11px; letter-spacing: 0.06em; color: var(--m-dim); text-transform: uppercase; }
-    #menu .sandbox label { display: flex; align-items: center; gap: 5px; cursor: pointer; } #menu .sandbox input { margin: 0; accent-color: var(--m-accent); }
     #menu .refused { margin: 0 0 6px; padding: 6px 10px; font-size: 12px; color: #f0c27a; border-left: 3px solid #e8b46a; background: rgba(232,180,106,0.08); }   /* the URL named a scenario and its start said no (ui/menu.ts) */
     /* THE TITLE SCREEN (#menu.title: the start card while the one starting page is the way in): the wordmark and the main menu down the left, the floor — and the attract reel — showing through on the right */
     #menu.title { align-items: stretch; justify-content: flex-start; background: linear-gradient(90deg, rgba(var(--m-base-rgb),0.97) 0, rgba(var(--m-base-rgb),0.9) 24%, rgba(var(--m-base-rgb),0.4) 56%, rgba(var(--m-base-rgb),0.06) 100%); }
@@ -373,7 +367,7 @@
     #missions .mrow:focus { outline: none; }
     #missions .mrow:hover { background: rgba(var(--m-hover-rgb),0.35); color: var(--m-bright); }
     #missions .mrow.sel { background: rgba(var(--m-edge),0.16); border-left-color: var(--m-accent); color: var(--m-bright); }
-    #missions .mrow.unplayed:not(.sel):not(:hover) > * { opacity: 0.5; }   /* (THE UNPLAYED ROWS, ui/missions.ts unplayedClass: drawn quieter, back to full under the cursor; ?unplayed=0 = no row wears the class) */
+    #missions .mrow.unplayed:not(.sel):not(:hover) > * { opacity: 0.5; }   /* (THE UNPLAYED ROWS, ui/missions.ts unplayedClass: drawn quieter, back to full under the cursor) */
     #missions .mlist:not(.tiles) .mrow.unplayed.first { position: relative; margin-top: 15px; }   /* (and a rule over the first of a group's, in the room above it and outside the row's own box, so its highlight is the size of any row's: they stand apart, with no word for it) */
     #missions .mlist:not(.tiles) .mrow.unplayed.first::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; border-top: 1px solid rgba(var(--m-edge),0.14); opacity: 1; pointer-events: none; }
     #missions .mn { font: 11px ui-monospace, Menlo, monospace; color: var(--m-faint); }
@@ -427,9 +421,6 @@
     #menu .saves .tile.ahead .age { color: var(--m-dim); }
     #menu .btn.quit { border-color: rgba(240,196,110,0.55); color: #f3d79a; }
     #menu .body { margin-top: 10px; }
-    #menu .controls .row { display: flex; gap: 14px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    #menu .controls .k { flex: 0 0 128px; font: 12px/1.4 var(--m-mono); color: var(--m-accent-hi); letter-spacing: 0.04em; }
-    #menu .controls .v { flex: 1; color: var(--m-text); }
     #menu .note { font-size: 11px; color: var(--m-dim); margin: -2px 0 6px 2px; }
     #menu .foot { margin-top: 12px; font: 11px var(--m-mono); color: var(--m-faint); letter-spacing: 0.06em; }
     #menu .t2 b { color: var(--m-accent-hi); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }   /* the debrief card's rating word */
@@ -549,7 +540,7 @@
     /* the same pips on a mission's card on the start page (ui/verdictRows.ts): at the right of the card's last line, small; four dim marks until a way is won */
     /* (on a mission's CARD: the foot line the menus keep empty for it — column 3 of row 3, 17 px tall. The strip is 17 px with its frame — an 11 px mark over 4 px
        of ticks — so a card is the height it was; it is no link and takes no pointer, the card under it is; colours are the menu's own tokens, the gold
-       frame a pale sand that is not the selection's orange. Text rows — ?nogroups, the older card's list — show none.) */
+       frame a pale sand that is not the selection's orange. Text rows show none.) */
     #missions .mrow > .vpips { display: none; }
     #missions.one .mgrid .mrow > .vpips { display: inline-flex; grid-column: 3; grid-row: 3; justify-self: end; align-self: center; margin: 0 5px 0 auto; padding: 0 3px; gap: 4px; pointer-events: none; }
     #missions .mrow > .vpips .vpip { gap: 0; cursor: default; color: rgba(147,139,118,0.38); }
@@ -564,7 +555,7 @@
     #timeline { position: absolute; left: max(310px, calc(50% - 450px)); right: max(40px, calc(50% - 450px)); bottom: 14px; height: 30px; display: none; gap: 3px; pointer-events: auto; font: 600 10px/1 var(--h-head); letter-spacing: 0.12em; text-transform: uppercase; user-select: none; z-index: 6; }
     #timeline.on { display: flex; }
     body.panel-open #timeline { right: max(398px, calc(50% - 450px)); }
-    #timeline .seg { position: relative; min-width: 0; cursor: pointer; border-top: 2px solid rgba(var(--h-edge),0.28); padding-top: 7px; color: rgba(var(--h-edge),0.5); transition: color .2s, border-color .2s; }
+    #timeline .seg { position: relative; min-width: 0; border-top: 2px solid rgba(var(--h-edge),0.28); padding-top: 7px; color: rgba(var(--h-edge),0.5); transition: color .2s, border-color .2s; }
     #timeline .seg span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: var(--h-shadow); }
     #timeline .seg b { position: absolute; left: 0; top: -2px; height: 2px; width: 0; background: var(--h-acc); }
     #timeline .seg.done { border-top-color: rgba(var(--h-edge),0.7); color: rgba(var(--h-edge),0.75); }
@@ -627,30 +618,18 @@
     /* (PLAN.keyLit) the key's cap on every door that waits on it: dark while its men are on their way or the press would not send it, lit in their colour once they stand there and it would */
     .plan .lit .pk { fill: rgba(6,6,6,0.92); stroke-opacity: 0.5; transition: fill 0.25s linear, stroke-opacity 0.25s linear; } .plan .lit .pkt { fill: currentColor; fill-opacity: 0.55; transition: fill 0.25s linear; }
     .plan .lit.live .pk { fill: currentColor; stroke-opacity: 1; } .plan .lit.live .pkt { fill: var(--h-base); fill-opacity: 1; }
-    .plan .laid .pp { stroke-width: 2.5; stroke-dasharray: 0.1 13; } .plan .laid .pd { stroke-width: 3; stroke-opacity: 0.9; stroke-dasharray: 5 5; } .plan .laid .pw { stroke-dasharray: 2 3; }   /* (a plan laid for the word, game/planlay.ts: nobody moving yet — wider gaps than a way being walked) */
     body.attract .plan, body.blinded .plan { display: none; }
     /* closer than ever (game/close.ts → ui/overlay.ts drawClose): the windows round a man near Sam, on the floor — open = a thin outline, the one he stands in
        filled and bright, a shut one amber and broken; each with what it gives in a few words just outside its arc */
-    /* game/throwreach.ts: what the thing he is aiming will reach, flat on the floor — a frag's kill ring (solid, alarm red-orange) and the ring it hurts to (dotted), a stun canister's ring (the HUD's own bright, dashed) */
+    /* game.view.aim.throw.reach: what the thing he is aiming will reach, flat on the floor — a frag's kill ring (solid, alarm red-orange) and the ring it hurts to (dotted), a stun canister's ring (the HUD's own bright, dashed) */
     .reach { fill: none; stroke-linejoin: round; stroke-linecap: round; } .reach.cut { fill: none !important; } .reach.kill { stroke: rgba(255,112,72,0.95); stroke-width: 2; fill: rgba(255,96,56,0.10); } .reach.hurt { stroke: rgba(255,112,72,0.6); stroke-width: 1.5; stroke-dasharray: 1 7; } .reach.stun { stroke: rgba(var(--h-hi-rgb),0.85); stroke-width: 1.5; stroke-dasharray: 8 6; fill: rgba(var(--h-hi-rgb),0.06); }
-    .trajpath { stroke: rgba(var(--h-hi-rgb),0.85); } .trajland { fill: rgba(var(--h-hi-rgb),0.12); stroke: rgba(var(--h-hi-rgb),0.9); } .trajroll { stroke: rgba(var(--h-hi-rgb),0.6); } .trajtick { fill: none; stroke: rgba(var(--h-hi-rgb),0.7); }   /* player.ts throwRest: the ring is where the can comes to rest; the tick is its first touch, the dots the floor it rolls over */
-    .closewin path { fill: rgba(var(--h-edge),0.06); stroke: rgba(var(--h-edge),0.55); stroke-width: 1.2; stroke-linejoin: round; }
-    .closewin path.cw-in { fill: rgba(var(--h-edge),0.2); stroke: rgba(var(--h-hi-rgb),0.98); stroke-width: 2; }
-    .closewin path.cw-shut { fill: none; stroke: rgba(255,190,120,0.5); stroke-dasharray: 3 4; }
-    .closewin text { font: 500 10px/1 var(--h-font); letter-spacing: 0.03em; fill: rgba(var(--h-edge),0.9); paint-order: stroke; stroke: rgba(var(--h-plate),0.72); stroke-width: 3px; stroke-linejoin: round; }
-    .closewin text.cw-in { font-weight: 700; font-size: 11px; fill: var(--h-hi); }
-    .closewin text.cw-shut { fill: rgba(255,200,140,0.85); }
+    .trajpath { stroke: rgba(var(--h-hi-rgb),0.85); } .trajland { fill: rgba(var(--h-hi-rgb),0.12); stroke: rgba(var(--h-hi-rgb),0.9); } .trajroll { stroke: rgba(var(--h-hi-rgb),0.6); } .trajtick { fill: none; stroke: rgba(var(--h-hi-rgb),0.7); }   /* game.view.aim.throw.rest: the ring is where the can comes to rest; the tick is its first touch, the dots the floor it rolls over */
     /* kit, bottom-left, a column standing on the light / sound meters (Chaos-Theory-style): the key strip (the selected gun's light · night vision) and the condition
        pips as two slim rows on top, then one slot per item in the digits' order — 1 the pistol (its OCP charge closing the row), 2 the FN2000 (SEMI/AUTO, RING ×n),
        3 smoke, 4 stun: key, name, rounds / cans — the selected one lit. Left edges line up with the meters at 18 px. */
     #equip { position: absolute; left: 18px; bottom: 86px; min-width: 200px; font: 11px/1.15 var(--h-font); color: var(--h-ink); text-shadow: var(--h-shadow); pointer-events: none; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
     #equip .slot { display: flex; align-items: center; gap: 8px; padding: 4px 7px; border: 1px solid rgba(var(--h-edge),0.25); background: rgba(var(--h-plate),0.6); border-radius: 3px; opacity: 0.7; white-space: nowrap; }
     #equip .slot.sel { opacity: 1; border-color: rgba(var(--h-edge),0.7); box-shadow: 0 0 8px rgba(0,0,0,0.4); }
-    #equip .slot.holstered { opacity: 0.7; border-style: dashed; }   /* E: the selected item put away */
-    #equip .slot.holstered::after { content: 'holstered · E'; margin-left: 8px; color: var(--h-dim); font-size: 10px; letter-spacing: 0.1em; }
-    #equip .slot.slung.holstered::after { content: 'slung · E'; }
-    body.handslot #equip .slot.holstered::after { content: 'holstered'; } body.handslot #equip .slot.slung.holstered::after { content: 'slung'; }   /* empty hands are a slot (game/handslot.ts): E is not the way back, the row's own digit is */   /* the FN2000's row: put away is on his back */
-    #equip .slot.slung .rounds i { width: 2px; } #equip .slot.slung .rounds i.spent { width: 0; }   /* thirty of them: slimmer pips */
     #equip .slot.absent { opacity: 0.3; border-style: dotted; }   /* the rifle's row in a kit without it: kept (greyed) so smoke and stun keep their numbers */
     #equip .slot.absent .name { color: var(--h-dim); }
     #equip .tag { font: 700 10px/1.2 var(--h-head); letter-spacing: 0.14em; padding: 0 4px; border: 1px solid rgba(var(--h-edge),0.35); border-radius: 2px; color: var(--h-faint); }   /* SEMI / AUTO (Z) and RING ×n (B): lit = what the trigger does now */
@@ -660,8 +639,6 @@
     #equip .tag.ocp .ocpbar { width: 30px; height: 4px; margin-left: 5px; border-color: rgba(var(--h-edge),0.45); }
     #equip .tag.ocp.on .ocpbar { border-color: rgba(var(--h-edge),0.6); }
     #equip .tag.ocp:not(.on) .ocpbar b { background: var(--h-faint); }
-    #equip .pace { display: flex; align-items: center; gap: 8px; font: 600 10px/1.3 var(--h-head); letter-spacing: 0.14em; color: var(--h-soft); padding: 1px 7px; }
-    #equip .pace .ticks { display: inline-flex; gap: 3px; } #equip .pace .ticks i { width: 9px; height: 6px; border: 1px solid rgba(var(--h-edge),0.5); } #equip .pace .ticks i.on { background: var(--h-hi); box-shadow: 0 0 4px rgba(0,0,0,0.5); }
     #equip .key { color: var(--h-dim); font: 700 11px/1 var(--h-mono); }
     #equip .name { font: 700 12px/1 var(--h-head); letter-spacing: 0.08em; text-transform: uppercase; color: var(--h-hi); }
     /* the magazine's pips: a line of their own UNDER each gun's row, selected or not (so the column keeps its height when the selection changes). Out of the
@@ -674,7 +651,6 @@
     #equip .mags { display: flex; gap: 3px; align-items: flex-end; margin-left: 4px; }
     #equip .mag { width: 7px; height: 14px; border: 1px solid rgba(var(--h-edge),0.55); position: relative; }
     #equip .mag b { position: absolute; left: 0; right: 0; bottom: 0; background: var(--h-ink); }
-    #equip .gadgets { display: flex; gap: 12px; padding: 1px 1px 2px; font-size: 10px; letter-spacing: 0.05em; white-space: nowrap; }
     #equip .g { color: var(--h-soft); } #equip .g.on { color: var(--h-hi); text-shadow: 0 0 6px #000; }
     #equip .ocpbar { width: 46px; height: 5px; border: 1px solid rgba(var(--h-edge),0.5); display: inline-block; vertical-align: middle; margin-left: 4px; position: relative; }
     #equip .ocpbar b { position: absolute; left: 0; top: 0; bottom: 0; background: var(--h-hi); }
@@ -716,7 +692,6 @@
     <div id="tabcard"></div>
     <div id="alarm"></div>
     <div id="checkpoint"><b></b>CHECKPOINT</div>
-    <div id="journal"></div>
     <div id="caption"></div>
       <div id="timeline"></div>
     <div class="bar top"></div><div class="bar bot"></div><div id="blind"></div><div id="veil"></div>

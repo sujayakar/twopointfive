@@ -345,7 +345,8 @@ pub fn can_see_char(g: &mut crate::game::Game, gd: GuardId, pc: CharId, is_playe
         None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]),
     };
     let look = look_of(g, c);
-    let range = reach_for(g, &crate::seats::here(g), gd, pc, is_player, eye);
+    let sam = crate::seats::here(g).player;
+    let range = reach_for(g, sam, gd, pc, is_player, eye);
     let e = crate::guards::Eye { pos: eye, look, range, half_deg: g.k.guard_eye.half_deg, near_m: g.k.guard_eye.near_m, near_deg: g.k.guard_eye.near_deg, v_half_deg: None };
     let through = eye_through(g, gd);
     let blind = crate::control::man::blind(g, gd) || crate::pairorders::pair_gripped(g, gd) || crate::doze::doze_asleep(g, gd);
@@ -368,10 +369,10 @@ fn reach_of(k: &crate::knobs::GuardEyeK, lit: f64) -> f64 {
 }
 
 /// …for the man `pc` in this man's view.   (guards.ts reachFor)
-pub fn reach_for(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, pc: CharId, is_player: bool, eye: V3) -> f64 {
+pub fn reach_for(g: &mut crate::game::Game, sam: PlayerId, gd: GuardId, pc: CharId, is_player: bool, eye: V3) -> f64 {
     if g.touring { return g.k.guard_eye.range; }
     if is_player {
-        let vis = g.pl[seat.player].visibility;
+        let vis = g.pl[sam].visibility;
         return eye_reach(g, vis);
     }
     let t = match g.ch[pc].bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => g.ch[pc].pos };

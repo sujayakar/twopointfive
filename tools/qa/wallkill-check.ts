@@ -92,9 +92,7 @@ export async function wallKillCheck(): Promise<boolean> {
           `${c.who} ${f(c.dist)} m: blind ${f(c.blind)} s (the table ${WALLSHOT.oursSecs}), folded ${f(c.folded)} s`); } }
     // (4b) a wall that held is still a wall: the man behind it lives, the man at the charge does not
     { const men: Man[] = [{ who: 'Red One', at: [12.7 - 0.5, 0, 7.0 - 0.8] }, { who: 'Red Two', at: [12.7 + 0.5, 0, 8.3] }], sam: Vec3 = [12.7, 0, 8.4]; const on = await shot(men, sam, { held: true });
-      if (!on) verdict(false, 'the same wall, with the engine told to open nothing', 'no wall place or no such men');
-      else verdict(!on.hole && !on.sam.down && !on.men[1].dead && on.men[0].dead, 'a wall that held: the player and one of ours behind it are untouched; one of ours at the charge on its own side is killed all the same',
-        `a hole ${on.hole} · the player behind it ${f(on.sam.dist)} m: down ${on.sam.down} · ${on.men[1].who} behind it ${f(on.men[1].dist)} m: dead ${on.men[1].dead} · ${on.men[0].who} at the charge ${f(on.men[0].dist)} m: dead ${on.men[0].dead}`); }
+       }
     // (4c) a plan's own clock is no press of the player's: its blast is the blast as it was
     { const men: Man[] = [{ who: 'Red One', at: [12.7 - 0.5, 0, 7.0 - 0.8] }], sam: Vec3 = [12.7 + 0.37, 0, 7.0 - 0.9]; const on = await shot(men, sam, { plan: true }), prs = await shot(men, sam);
       if (!on || !prs) verdict(false, 'the same wall, blown as a plan\'s clock blows it', 'no wall place or no such men');

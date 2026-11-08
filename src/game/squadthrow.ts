@@ -93,8 +93,6 @@ export const SQUADTHROW = {
   walkSecs: 16, turnSecs: 1.2, tossSecs: 0.5,
   /** thrown, he walks back to where he stood and to the order he had (off: he holds where he threw from) */
   back: true,
-  /** the picture on the overlay: who throws, his walk, the arc, where it rests (off: none — a module that draws the squad's plan may fold `squadThrowPlans` in and put this off) */
-  draw: true,
   /** A MAN WORKS HIS THROW OUT (throwplan.ts; on with the switch, off = the one straight arc that rests on the spot, as it was; `?throwlob=0`): where the
    *  straight arc has no answer he flies a few throws before he makes one — straight at the spot at `lobPaces` (m/s over the ground: the solver's, flat and
    *  hard, a slow lob) and at up to `lobWalls` walls that stand within `lobWallM` of it (met `lobWallH` up; `lobBankPaces`) — and takes the one that GOES OFF
@@ -391,11 +389,10 @@ function fragCatches(g: Game, rest: Vec3, at: Vec3, moved: { gd: Guard; at: Vec3
   const mate = g.guards.find(gd => gd.team === 'operative' && (gd.state !== 'dead' ? on(gd) : isBreathing(gd) && inIt(bodyPos(gd))));   // (a teammate down and breathing — wounded, out cold — is still one of ours)
   if (mate) return `${mate.callsign} is in it.`;
   const live = (c: Guard | null | undefined) => !!c && c.state !== 'dead' && inIt(c.char.pos), no = burst?.no ?? 'no frag.';
-  const hostage = !!g.rescue?.hostages.some(live), wanted = live(g.snatch?.man) ? g.snatch!.man! : null;
-  if (!WORDS.on) return hostage || wanted || g.civilians.some(live) ? `hostages. ${no}` : null;
-  // (the words name who it is: a rescue's hostages; the man a snatch came for, by the name his objective row gives him; anybody else unarmed on the floor)
+  const hostage = !!g.rescue?.hostages.some(live);
+  if (!WORDS.on) return hostage || g.civilians.some(live) ? `hostages. ${no}` : null;
+  // (the words name who it is: a rescue's hostages; anybody else unarmed on the floor)
   if (hostage) return `hostages. ${no}`;
-  if (wanted) return `${wanted.civ?.name ?? 'our man'} is in it. ${no}`;
   if (g.civilians.some(live)) return `a civilian is in it. ${no}`;
   return null;
 }

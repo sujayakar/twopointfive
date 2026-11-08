@@ -180,7 +180,7 @@ pub fn needs_live(g: &crate::game::Game) -> bool {
 }
 
 /// Would a man leave his route on this floor? (needs.ts floorCalm)
-pub fn floor_calm(g: &mut crate::game::Game) -> bool {
+pub fn floor_calm(g: &crate::game::Game) -> bool {
     crate::guards::escalation_of(g) == 0.0 && !g.alarm.episode && !crate::sim_lightshome::mains_active(g)
 }
 
@@ -201,7 +201,7 @@ pub fn man_calm(g: &crate::game::Game, gd: GuardId, awareness: f64) -> bool {
 }
 
 /// Why a trip under way must be broken off now, or None. (needs.ts interruptOf)
-pub fn interrupt_of(g: &mut crate::game::Game, gd: GuardId) -> Option<String> {
+pub fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if !g.tune.needs {
         return Some(key("switched off"));
     }
@@ -385,7 +385,7 @@ pub fn schedule_trip(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs:
     let lead = g.k.needs.announce_lead;
     let wp = g.gd[gd].wp;
     let name = spot.name.clone();
-    crate::owner::claim_man(g, gd, crate::owner::own().needs, now, None);
+    crate::owner::claim(g, gd, crate::owner::by::NEEDS, now, None);
     mem(g, gd).trip = Some(Trip {
         kind,
         spot,
@@ -440,7 +440,7 @@ pub fn cancel_trip(g: &mut crate::game::Game, gd: GuardId, why: &str) {
         return;
     }
     let now = g.time;
-    crate::owner::release_man(g, gd, crate::owner::own().needs, now);
+    crate::owner::release(g, gd, crate::owner::by::NEEDS, now);
     let Some(t) = mem(g, gd).trip.take() else { return };
     mem(g, gd).cancels += 1.0;
     g.stats.needs.cancelled += 1;
@@ -762,7 +762,7 @@ pub fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) 
                     t.back_at = now;
                     (t.left_at, t.arrived_at, t.dwell_until)
                 };
-                crate::owner::release_man(g, gd, crate::owner::own().needs, now);
+                crate::owner::release(g, gd, crate::owner::by::NEEDS, now);
                 {
                     let r = row!(g, gd);
                     r.trip = None;

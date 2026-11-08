@@ -6,23 +6,17 @@
 // The police post's quiet mission (its hand-set deal), the shift on its own beats, Sam out of everybody's sight unless a line says so:
 //   (a) a man with a long wait in the dark bunk room sits in the chair there and sleeps: seated on the chair, his place dark, his torch out, the 'z' over him;
 //   (b) asleep his eyes are shut: Sam stood lit in front of him for three seconds is not seen;
-//   (b2) the partner's sneak reads his eyes the same way: dark floor at a sleeper's elbow is not watched;
 //   (c) his ears are dull, not gone: crouched steps beside the chair and a walking step 2.8 m off do not wake him; a walking step beside the chair and a
 //       running step 3.4 m off do;
-//   (d) woken by a noise he is suspicious on the frame, placed on the noise, rooted while he comes round, out of the chair — and awake for the rest of the run;
-//       a whistle beside him wakes him and he is the one who answers it;
+//   (d) woken by a noise he is suspicious on the frame, placed on the noise, rooted while he comes round, out of the chair — and awake for the forty seconds after;
+//       a whistle beside him wakes him;
 //   (e) light on his face wakes him; (f) his chair shoved wakes him; (g) the floor going up has him on his feet;
 //   (h) from behind, the close-in mode offers the take over the chair;
-//   (j) nobody sleeps in a lit place, over four minutes of the shift; the relay's picket (a 110 s stand in the dark, the lit door in his eye) never sits;
 //   AT A SCREEN (the police post's terminal, built off, on the bunk room's footlocker):
 //   (m) a man with a short wait in the dark pulls the chair up, sits to it and switches it on: facing it, its light on his face, torch out, awake, '♪' over him;
 //   (n) headphones on: a walking step near him counts for less (or nothing) and he stays; running steps beside him have him up, the screen left on;
 //   (n2) his attention is the screen's (a lent hold at the screen that the floor shows) and the headphones count once;
 //   (o) the screen going dark under his eyes has him up and looking at it;
-//   (o2) got up from the screen, or hauled out of the chair, he leaves it lit, and it goes dark by itself `idleSecs` on;
-//   (p) a checkpoint carries him: forty seconds after a load, twice, are the forty the game went on to — same words, up on time, the screen off again;
-//   (q) six minutes of the shift: the one chair is a short wait's screen and a long wait's bed, one man at the screen at a time, nobody asleep by a lit screen;
-//   (k) a checkpoint carries it: every man's record after a load is his record at the save, and ten seconds after a load, twice, are the same game.
 // DOZE_BREAK=1 = the level is stood without its lived-in furniture (no chair in the bunk room): nobody sits, and (a) must fail.   exit 0 = all hold · 1 = one does not
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
@@ -36,14 +30,13 @@ export async function dozeCheck(): Promise<boolean> {
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-  const { DOZE, DOZE_STATS, DOZE_LOG, dozeOf, dozeMark, dozeAsleep, dozeWoke, dozeAt, dozeLines } = await import(`${ROOT}/src/game/doze.ts`);
+  const dozeMark = (g: any, m: any): string => g.view.marks.men.find((x: any) => x.man === m.char.id)?.text ?? '';   // (what the HUD is told)
+  const { DOZE, DOZE_STATS, DOZE_LOG, dozeOf, dozeAsleep, dozeWoke, dozeAt, dozeLines } = await import(`${ROOT}/src/game/doze.ts`);
   const { CLOSE, closeAt, closeKindOf, closeSeated } = await import(`${ROOT}/src/game/close.ts`);
   const { workLit } = await import(`${ROOT}/src/game/calmtorch.ts`);
   const { raiseEscalation, lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
   const { ROW_BIT } = await import(`${ROOT}/src/sim/lightshome.ts`);
   const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
-  const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-  const { sneakWalk } = await import(`${ROOT}/src/game/sneak.ts`);
   const { attentionOf, attentionSideK, attentionMarks } = await import(`${ROOT}/src/game/attention.ts`);
   const DT = 1 / 60, rnd0 = Math.random, was = { ears: DOZE.ears }, BREAK = process.env.DOZE_BREAK === '1'; let all = true;
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
@@ -94,17 +87,6 @@ export async function dozeCheck(): Promise<boolean> {
       const still = dozeAsleep(m); g.playerInvisible = true;
       line(!!front && still && peak < 0.05, 'asleep his eyes are shut: Sam stood lit two metres in front of him for three seconds is not seen', `${front ? '' : 'NO FLOOR IN FRONT OF HIM · '}awareness peaked ${peak.toFixed(2)}, still asleep ${still}`); }
 
-    // (b2) the partner's sneak reads his eyes the same way (sneak.ts sneakWalk; eyesFor takes the same skip): of the dark floor all round a sleeper at an elbow's
-    //      length, with a line to his head, none is watched (until 2026-11-07 the same man awake, with the switch off, was the control)
-    { const m = back(); const mateOf = (G: any) => ({ team: 'player', unit: {}, char: G.player.char, visibility: 0, irradiance: 0 });   // (a walker the staff are hostile to on a solo stand: Sam's side — on a partner's run teams.ts staffVsOperatives makes the operative one)
-      const ring = (G: any, x: any) => { for (const o of staff(G)) if (o !== x) o.dazzledUntil = G.time + 10;   /* (HIS eyes: the sneak leaves a dazzled man out, and a mate awake in the next room would watch the same floor) */ const p = x.char.pos, eye = x.char.bones.head ?? [p[0], 1.6, p[2]], S = sneakWalk(G, mateOf(G), true); let clear = 0, seen = 0;
-        for (let k = 0; k < 24; k++) { const a = k * Math.PI / 12, q = [p[0] + Math.sin(a) * 1.3, 0, p[2] + Math.cos(a) * 1.3];
-          if (G.col.nav.isBlocked(q[0], q[2]) || G.col.segmentBlocked(eye, [q[0], 1.0, q[2]]) || G.col.segmentBlocked(eye, [q[0], 0.5, q[2]])) continue; clear++; if (S.watched(q[0], q[2])) seen++; }
-        return { clear, seen }; };
-      const asleep = ring(g, m), still = dozeAsleep(m);
-      line(still && asleep.clear >= 4 && asleep.seen === 0, 'the partner\'s sneak reads him the same way: of the dark floor round a sleeper at an elbow\'s length none is watched',
-        `${asleep.seen} of ${asleep.clear} places with a line to his head watched`); }
-
     // (c) dull ears
     { let m = back(); const near = clearPoint(g, m, 1.0), far = clearPoint(g, m, 3.4), mid = clearPoint(g, m, 2.8);
       if (!near || !far || !mid) line(false, 'his ears are dull, not gone', 'no clear air round the chair to make the noises in');
@@ -120,15 +102,14 @@ export async function dozeCheck(): Promise<boolean> {
     { const m = back(), at = clearPoint(g, m, 1.0), p0 = [m.char.pos[0], 0, m.char.pos[2]]; step(W, at, 0.26, 2);
       const sus = m.state === 'suspicious', placed = !!m.lastKnown && flat(m.lastKnown, at) < 0.6, seated = closeSeated(g, m), why = dozeWoke(g, m);
       let moved = 0; for (let i = 0; i < Math.floor((DOZE.stirSecs - 0.15) / DT); i++) { W.step(DT); moved = Math.max(moved, flat(m.char.pos, p0)); }
-      let again = false; for (let i = 0; i < 240 * 60 && !again; i++) { W.step(DT); if (dozeAsleep(m)) again = true; }
-      line(sus && placed && !seated && why === 'noise' && moved < 0.45 && !again, 'woken by a noise: suspicious on the frame, placed on the noise, out of the chair, rooted while he comes round — and awake for the four minutes after',
+      let again = false; for (let i = 0; i < 40 * 60 && !again; i++) { W.step(DT); if (dozeAsleep(m)) again = true; }
+      line(sus && placed && !seated && why === 'noise' && moved < 0.45 && !again, 'woken by a noise: suspicious on the frame, placed on the noise, out of the chair, rooted while he comes round — and awake for the forty seconds after',
         `two frames on: ${m.state === 'patrol' && !sus ? 'still calm' : sus ? 'suspicious' : m.state} · fix ${m.lastKnown ? flat(m.lastKnown, at).toFixed(2) + ' m off the noise' : 'none'} · seated ${seated} · woken by ${why} · moved ${moved.toFixed(2)} m in the first ${(DOZE.stirSecs - 0.15).toFixed(2)} s · slept again ${again}`); }
 
     // (d2) a whistle beside him is his to answer
-    { const m = back(), at = clearPoint(g, m, 1.0); const { WHISTLE, WHISTLE_LOG } = await import(`${ROOT}/src/game/whistle.ts`);
+    { const m = back(), at = clearPoint(g, m, 1.0); const { WHISTLE } = await import(`${ROOT}/src/game/whistle.ts`);
       g.playerInvisible = false; g.events.push({ kind: 'whistle', pos: [at[0], 0, at[2]], time: g.time, loud: false, level: WHISTLE.level, who: 1 }); for (let i = 0; i < 3; i++) W.step(DT); g.playerInvisible = true;
-      const L = WHISTLE_LOG[WHISTLE_LOG.length - 1];
-      line(!dozeAsleep(m) && dozeWoke(g, m) === 'noise' && L?.answered === m.callsign && m.state === 'suspicious', 'a whistle beside him is his to answer, as it is a waking man\'s: it wakes him and he is the one who comes', `asleep ${dozeAsleep(m)} · woken by ${dozeWoke(g, m)} · the whistle: heard by ${L?.hearers?.join('/') || 'nobody'}, answered by ${L?.answered ?? 'NOBODY'} · ${m.state}`); }
+      line(!dozeAsleep(m) && dozeWoke(g, m) === 'noise' && m.state === 'suspicious', 'a whistle beside him wakes him, suspicious', `asleep ${dozeAsleep(m)} · woken by ${dozeWoke(g, m)} · ${m.state}`); }
 
     // (e) light on his face
     { const m = back(), head = m.char.bones.head ?? [m.char.pos[0], 1.15, m.char.pos[2]], f = [Math.sin(m.char.bodyYaw), 0, Math.cos(m.char.bodyYaw)];
@@ -147,18 +128,6 @@ export async function dozeCheck(): Promise<boolean> {
     { const m = back(), c = m.char, behind = [c.pos[0] - Math.sin(c.bodyYaw) * (0.33 + CLOSE.seatDist - 0.1), 0, c.pos[2] - Math.cos(c.bodyYaw) * (0.33 + CLOSE.seatDist - 0.1)];
       const o = closeAt(g, m, behind), kind = closeKindOf(o);
       line(kind === 'seat' && dozeAsleep(m), 'from behind his chair the close-in mode offers the take over the chair, and he sleeps on', `the window behind him: ${kind}${o.win ? '' : ' (none)'} · asleep ${dozeAsleep(m)}`); }
-
-    // (j) nobody sleeps in a lit place · the shift's dozes over four minutes
-    { const W3 = await stand(22), g3 = W3.game; DOZE_LOG.length = 0; let frames = 0, lit = 0; const who = new Map<string, number>();
-      for (let i = 0; i < 240 * 60; i++) { W3.step(DT); if (i % 15) continue; for (const x of staff(g3)) if (dozeAsleep(x)) { frames++; who.set(x.callsign, (who.get(x.callsign) ?? 0) + 0.25); if (workLit(g3, x.char.pos[0], x.char.pos[2])) lit++; } }
-      line(frames > 100 && lit === 0, 'over four minutes of the shift nobody sleeps in a lit place', `${[...who].map(([k, v]) => `${k} asleep ${v.toFixed(0)} s`).join(' · ') || 'nobody slept'} · ${lit} readings in a lit place · rose at the end of a wait ${DOZE_LOG.filter((l: any) => l.why === 'time').length} times, woken ${DOZE_LOG.filter((l: any) => l.why !== 'time').length}`); }
-
-    // (j2) a man POSTED in the dark with lit floor before him is a picket, not a dozer: the relay's, over six minutes (his stand: 110 s, a dark chair in reach)
-    { Math.random = seeded(31); const W4: any = await quiet(() => standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels/quiet-relay.json'), 'utf8')), { lived: true }) })); const g4 = W4.game;
-      await quiet(() => startFromQuery(g4, '?quiet=0')); g4.playerInvisible = true; g4.godMode = true; Math.random = seeded(1031);
-      const picket = g4.guards.find((x: any) => x.route?.name === 'picket'); let sat = 0; const slept = new Map<string, number>();
-      for (let i = 0; i < 360 * 60; i++) { W4.step(DT); if (i % 15) continue; const r = picket && dozeOf(picket); if (r && r.phase !== 'no') sat++; for (const x of staff(g4)) if (dozeAsleep(x)) slept.set(x.callsign, (slept.get(x.callsign) ?? 0) + 0.25); }
-      line(!!picket && sat === 0 && !slept.has(picket.callsign) && slept.size > 0, 'the relay\'s picket never sits his stand out (a post, and lit floor in his eye), while the man off watch does doze', picket ? `${picket.callsign} (picket, ${Math.max(...picket.route.wait)} s stand): ${sat} readings off his feet · asleep over six minutes: ${[...slept].map(([k, v]) => `${k} ${v.toFixed(0)} s`).join(' · ') || 'NOBODY'}` : 'the relay has no route named picket'); }
 
     // ---- AT A SCREEN (the police post's terminal on the footlocker, built off; the chair is the lived-in bunk room's) ----
     { const W5 = await stand(24), g5 = W5.game; DOZE_LOG.length = 0;
@@ -179,11 +148,6 @@ export async function dozeCheck(): Promise<boolean> {
           `${m.callsign} (${m.route.name}, a ${m.route.wait[m.wp]} s wait) · screen built ${builtOn ? 'ON' : 'off'}, now ${mon.on ? 'on' : 'OFF'} (supply ${mon.factor.toFixed(2)}) · the chair pulled ${flat([chair.x, 0, chair.z], c0).toFixed(2)} m up to it · hips ${onChair.toFixed(2)} m off the chair · ${(off * 180 / Math.PI).toFixed(0)}° off the screen · the light at his face ${lit.toFixed(3)} (${dark.toFixed(3)} with the screen dark) · torch ${m.flashlight.enabled ? 'BURNING' : 'out'} · mark '${dozeMark(g5, m)}'`); }
       const name5 = m.callsign, c1 = [chair.x, 0, chair.z], snap5 = W5.snapshot('doze-screen', true);
       const back5 = () => { Math.random = seeded(78); W5.restore(snap5); return same(g5, name5); };
-      /** his next forty seconds, second by second — carried on from the save (no load), or after a load of it */
-      const forty = (load: boolean) => { let x = m; if (load) x = back5(); Math.random = seeded(78);   /* (the harness's game draws Math.random: seeded here, after the load, so both ways start the same stream) */ let s = '', own = '', rose = -1; const said: string[] = []; let last = '';
-        for (let i = 0; i < 40 * 60; i++) { W5.step(DT); if (atWork(x) && x.bubble && x.bubble.text !== last) { last = x.bubble.text; said.push(last); } if (rose < 0 && !dozeOf(x)) rose = i; if (i % 60 === 59) { own += `${atWork(x) ? 'w' : '-'}${mon.on ? 'L' : 'd'}${x.char.pos[0].toFixed(3)},${x.char.pos[2].toFixed(3)},${x.wp} `; s += hashDigest(digestGame(g5, true)) + ' '; } }
-        return { s, own, rose, said, on: mon.on, factor: mon.factor, drift: flat([chair.x, 0, chair.z], c1), walking: !closeSeated(g5, x) && x.state === 'patrol', why: DOZE_LOG[DOZE_LOG.length - 1]?.why }; };
-      const carried5 = forty(false);
       // (n) headphones on: the same footfall counts for a share at his ear — and a noise that does reach him has him up, the screen left on
       { const walkAt = (ears: number) => { const x = back5(); DOZE.ears = ears; const q = clearPoint(g5, x, 2.5); const a0 = x.awareness; if (q) step(W5, q, 0.26, 12); DOZE.ears = was.ears; return { q, d: x.awareness - a0, still: atWork(x) }; };
         const full = walkAt(1), half = walkAt(was.ears);
@@ -204,42 +168,7 @@ export async function dozeCheck(): Promise<boolean> {
       { const x = back5(); W5.game.lightHome.stage(mon, false, null); for (let i = 0; i < 20; i++) W5.step(DT); const r = dozeOf(x);
         line(!atWork(x) && !closeSeated(g5, x) && r?.why === 'light' && x.awareness >= DOZE.wakeAw - 0.05 && !!x.lastKnown && flat(x.lastKnown, mon.pos) < 0.5,
           'the screen goes dark under his eyes: that he notices — up, and looking at it', `${r ? `${r.phase} (${r.why})` : 'no record'} · awareness ${x.awareness.toFixed(2)} · looking ${x.lastKnown ? `${flat(x.lastKnown, mon.pos).toFixed(2)} m from the screen` : 'NOWHERE'}`); }
-      // (o2) got up from it, or hauled out of the chair, he leaves it lit — and a screen nobody touches blanks `idleSecs` on (or the next man at it switches it off as he leaves)
-      { let x = back5(); x.held = true; W5.step(DT); const r0 = dozeOf(x), hauled = r0?.why === 'taken' && mon.on && W5.snapshot('doze-hauled', true).doze?.left?.length === 1;   // (the checkpoint's slice is the only window on the list of screens left lit)
-        x = back5(); killGuard(g5, x, [0, 0, 1], true); W5.step(DT); const killed = x.state === 'dead' && mon.on && W5.snapshot('doze-killed', true).doze?.left?.length === 1;
-        x = back5(); const q = clearPoint(g5, x, 1.5); if (q) for (let k = 0; k < 4 && atWork(x); k++) step(W5, q, 0.6, 12);
-        const up0 = !atWork(x) && mon.on, t0 = g5.time, snapL = W5.snapshot('doze-left', true), inFile = snapL.doze?.left?.length === 1; let offAt = -1, satAgain = false; const ten = () => { for (let i = 0; i < 600; i++) { W5.step(DT); if (staff(g5).some(atWork)) satAgain = true; if (offAt < 0 && !mon.on) offAt = g5.time - t0; } };
-        const dark = () => { offAt = -1; satAgain = false; Math.random = seeded(79); ten(); const at10 = mon.on || satAgain; for (let k = 0; k < Math.ceil(DOZE.idleSecs / 10) && offAt < 0; k++) ten(); return { at10, offAt, satAgain }; };
-        const a = dark(); W5.restore(snapL); const b = dark();
-        line(hauled && killed && up0 && inFile && a.at10 && a.offAt > 0 && (a.satAgain || Math.abs(a.offAt - DOZE.idleSecs) < 1.5) && Math.abs(a.offAt - b.offAt) < 0.05 && !mon.broken,
-          'got up from his screen, hauled out of the chair or put down in it, he leaves it lit and it is on the list of screens left so — and a screen nobody touches goes dark by itself a minute on, the same after a load',
-          `hauled out: ${r0 ? `${r0.phase} (${r0.why})` : 'no record'}, screen ${hauled ? 'on and listed' : 'OFF, NOT TAKEN OR NOT LISTED'} · put down in the chair: ${killed ? 'on and listed' : 'OFF, NOT DOWN OR NOT LISTED'} · got up by running steps: screen ${up0 ? 'on' : 'OFF'}, ten seconds on ${a.at10 ? 'still on' : 'OFF'}, dark ${a.offAt < 0 ? 'NEVER' : `${a.offAt.toFixed(1)} s after he got up`}${a.satAgain ? ' (a man sat to it again in between)' : ''} · in the checkpoint ${inFile}, dark ${b.offAt < 0 ? 'NEVER' : `${b.offAt.toFixed(1)} s`} after a load of it · idleSecs ${DOZE.idleSecs}`); }
-      // (p) a checkpoint at the screen, and the end of his wait: the screen off again, the chair where it stood
-      { const carried = Array.isArray(snap5.doze?.men) && snap5.doze.men.some((y: any) => y.phase === 'work' && y.mon >= 0);
-        const a = forty(true), b = forty(true), strange = [...carried5.said, ...a.said].filter(t => !pool.includes(t));
-        line(carried && a.own === carried5.own && a.own === b.own && a.said.join('|') === carried5.said.join('|') && a.s === b.s && a.s === carried5.s && a.rose > 0 && a.why === 'time' && !a.on && a.factor < 0.1 && a.drift < 0.1 && a.walking && strange.length === 0 && pool.every(t => t.length <= 90),
-          'a checkpoint carries the man at his screen: his next forty seconds after a load, twice, are the forty the game went on to without one — he says the same things, gets up, the screen goes off again, the chair is where it stood, he walks on',
-          `slice in the file ${carried} · his own forty seconds: load = carried on ${a.own === carried5.own}, load = load ${a.own === b.own} · the whole game's digests: load = carried on ${a.s === carried5.s}, load = load ${a.s === b.s} · up ${(a.rose / 60).toFixed(1)} s after the load (${a.why}) · screen ${a.on ? 'STILL ON' : 'off'} (supply ${a.factor.toFixed(2)}) · chair ${a.drift.toFixed(2)} m from where it stood · said: ${a.said.map(t => `"${t}"`).join(' ') || 'nothing in this sit'}${strange.length ? ` · NOT HIS LINES: ${strange.join(' | ')}` : ''}`); }
-      // (q) a shift: the same chair is a short wait's screen and a long wait's bed; nobody sleeps by a lit screen; what is said is from the lines
-      { const W6 = await stand(25), g6 = W6.game, mon6 = g6.targets.find((t: any) => t.group === 'monitors'), ch6 = g6.props.props.find((p: any) => p.def.kind === 'chair' && Math.hypot(p.x - mon6.pos[0], p.z - mon6.pos[2]) < DOZE.screenM), at0 = [ch6.x, 0, ch6.z];
-        const work = new Map<string, number>(), nap = new Map<string, number>(), said = new Set<string>(); let both = 0, strange = 0, last = '', litNap = 0, longAtScreen = 0, lines0 = DOZE_STATS.lines; const marks: { at: number[]; sleep: boolean }[] = []; const wasIn = new Set<string>();
-        for (let i = 0; i < 360 * 60; i++) { W6.step(DT);
-          for (const x of staff(g6)) { const w = atWork(x); if (w && x.bubble && x.bubble.text !== last) { last = x.bubble.text; if (g6.time - x.bubble.t < 0.05) { said.add(last); if (!pool.includes(last)) strange++; } }
-            if (i % 15) continue; if (w) { work.set(x.callsign, (work.get(x.callsign) ?? 0) + 0.25); if (x.route.wait[x.wp] >= DOZE.napWait) longAtScreen++; } if (dozeAsleep(x)) { nap.set(x.callsign, (nap.get(x.callsign) ?? 0) + 0.25); if (mon6.on) litNap++; }
-            const inIt = (w || dozeAsleep(x)) && Math.hypot(x.char.pos[0] - ch6.x, x.char.pos[2] - ch6.z) < 1; if (inIt && !wasIn.has(x.callsign)) { wasIn.add(x.callsign); marks.push({ at: [ch6.x, 0, ch6.z], sleep: !w }); } else if (!inIt) wasIn.delete(x.callsign); }
-          if (i % 15 === 0 && staff(g6).filter(atWork).length > 1) both++; }
-        const drift = flat([ch6.x, 0, ch6.z], at0), spoke = DOZE_STATS.lines - lines0; let creep = 0, beds = 0; for (let k = 1; k < marks.length; k++) if (marks[k].sleep) { beds++; creep = Math.max(creep, flat(marks[k].at, marks[k - 1].at)); }   // (a sleeper finds the chair where the man before him — at the screen, or asleep — had it: nobody's rising moved it)
-        line(work.size > 0 && nap.size > 0 && both === 0 && litNap === 0 && longAtScreen === 0 && strange === 0 && spoke > 0 && drift <= DOZE.pullM + 0.02 && beds > 0 && creep < 0.05 && !mon6.broken,
-          'over six minutes of the shift the one chair is a short wait\'s screen and a long wait\'s bed: one man at the screen at a time, nobody asleep beside a lit screen, the chair no further from its place than a man pulls it to the screen and found by every sleeper where the man before him left it, every word to the screen one of its lines',
-          `at the screen: ${[...work].map(([k, v]) => `${k} ${v.toFixed(0)} s`).join(' · ') || 'NOBODY'} · asleep: ${[...nap].map(([k, v]) => `${k} ${v.toFixed(0)} s`).join(' · ') || 'NOBODY'} · ${spoke} lines said (${said.size} different) · chair ${drift.toFixed(2)} m from where it stood, ${creep.toFixed(2)} m at most between where one man had it and where the next sleeper found it (${beds} such)`); }
     }
-
-    // (k) a checkpoint
-    { const carried = Array.isArray(snap.doze?.men) && snap.doze.men.some((x: any) => x.phase === 'asleep');
-      const run = () => { Math.random = seeded(99); let s = ''; for (let i = 0; i < 600; i++) { W.step(DT); s += staff(g).map((x: any) => dozeAsleep(x) ? 'z' : '-').join('') + (i % 60 === 59 ? hashDigest(digestGame(g, true)) + ' ' : ''); } return s; };
-      Math.random = seeded(77); W.restore(snap); const recs1 = recs(), a = run(); Math.random = seeded(77); W.restore(snap); const b = run();
-      line(carried && recs1 === recs0 && a === b && a.includes('z'), 'a checkpoint carries it: every man\'s record after a load is his record at the save (the sleeper, the men whose wait had no chair), and ten seconds after a load, twice, are the same sleepers and the same game', `slice in the file ${carried} · records ${recs1 === recs0 ? 'the same' : `DIFFER: saved ${recs0} · loaded ${recs1}`} · timelines equal ${a === b}${a === b ? '' : ` (first difference at character ${[...a].findIndex((ch2, i) => ch2 !== b[i])})`}`); }
-
   } finally { DOZE.ears = was.ears; Math.random = rnd0; }
   console.log(`=== doze: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

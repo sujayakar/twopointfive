@@ -58,7 +58,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   id `block-four`, eight defenders) is the start card's eighth row. Scripted numbers only — nothing of this was seen on a GPU. QA: `probes.ts picker-card`
   (the row, the links, custom), the room-fight families at standard.
 - **Defender cues (10-07;** `src/game/cues.ts`, `Game.cues`, record rebuild/telegraphing/cues.md; the maintainer: "maybe we just need more
-  telegraphing from the NPCs then"; `CUES.on` DEFAULT ON, Tab ▸ Sandbox ▸ 'Defender cues', `?nocues`, persisted `twopointsix.cues`; off = the strip and every line as they
+  telegraphing from the NPCs then"; `CUES.on` DEFAULT ON, Tab ▸ Sandbox ▸ 'Defender cues', `?nocues`; off = the strip and every line as they
   were, digest for digest). Three things, all for a ROOM FIGHT's defenders (team 'hostile' units while `fightLive`): (1) their radio lines reach the RADIO STRIP — `say()`
   hands them to `cues.heard`, the overlay draws `game.view.radio` (`cues::radio_rows`, the cues' own row list: an undrawn row can no longer push a drawn one out of the five-row message ring;
   `'radio: '` rows from `Game.msg` are filed as class 0, always drawn; `adopt()` on a checkpoint load); (2) the strip RANKS and RATE-LIMITS (classes 1 coming round / to help ·
@@ -292,7 +292,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `QRF_MARKS` (door 'stairwell', landing, entry fan, posts, outside spawns) live in qrf.ts with a TODO for LevelData; the door + landing boxes are in
   the level ('stairwell' LevelDoorDef: `steel` (doors.ts: kickIn → 'clang' DoorSound → loud 'door' event, no lockBroken; pick refuses; player.ts offers no
   pick row), `lock 'stairwell'`, `keySide −1`; the west plant moved to the SW corner out of the leaf's sweep). Knobs `tune.qrf/qrfEta/qrfSize/perimeter/
-  perimeterEta/perimeterSize` (persisted `twopointsix.qrf`, Tab ▸ Sandbox ▸ QRF rows + 'call QRF now' / 'perimeter now' / 'stand down'). Character
+  perimeterEta/perimeterSize` (Tab ▸ Sandbox ▸ QRF rows + 'call QRF now' / 'perimeter now' / 'stand down'). Character
   budget: skinning holds 16 (`MAX_CHARS`); the shadow-proxy table holds 8 — Sam + guards/units are guaranteed (a 9th unit throws in spawnUnit), civilians
   are appended last and lose their shadow proxies while a full QRF wave is up. QA: `probes.ts qrf` (trigger / timeline / element / wave / reset /
   gating / limits / perimeter), `soak.ts --loud-at MIN` (+ qrf invariants always on: state sane, men never below 'search', budget, radio ≤ 30/min).
@@ -311,7 +311,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   his side), radio + summon the nearest free colleague as second, wait `tune.doorWait`, open the leaf, a stun in first if `stunsOf` (giveStuns; staff carry
   none) else SLICE the pie (4 stations across, muzzle in), CROSS fast and split; banged+entered clears it. guards.ts seam: the alert branch's chase is now
   `chaseFix()` (the old lines) behind `tacticsAlert`, + goTo / followPath / the aim block (`tacticsLook`) / body discovery / bodyAftermath one-liners; game.ts
-  `tacticsTick` before the guards + `loadTactics` (the four clocks kept per machine, Tab ▸ Sandbox rows). Panel/QA: `game.tacticsSummary()`, `tacticsRoleOf`,
+  `tacticsTick` before the guards. Panel/QA: `game.tacticsSummary()`, `tacticsRoleOf`,
   `TACTICS_DEBUG.log`, `TACTICS_STATS`; `probes.ts tactics` (flank / single / lone / door / rounds / decay / identity), soak `--doorway-kills-per-min N`,
   `--tactics off`, invariants + the `walkInAtDangerDoor` smell (must stay 0).
 - **A pistol from behind a held man** (`src/game/gunhold.ts`, table `GUNHOLD`; `GUNHOLD.on` — ON in the page, `?nogunhold` = the standoff's ring as it was; OFF in the module and on the
@@ -353,7 +353,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   patrol branch's chain after post — `else if (T.needs && needsPatrol(g, gd, dt, walk)) moveSpeed = gd.speed;` (+ the import); character.ts `TellKind` /
   `TELL_DUR` / `tell()` / `telling` / `tellShown` / `tellLayer` (left arm IK + head, staggered dynMask like the signals; the gaze stabiliser leaves it alone);
   dialogue.ts `NEEDS_LINES` + `needsLines()` + `chatty` skips `OWN.needs`; chronicle 'needBreak' rows (left / back with `away` s / cancelled with why); overlay's
-  debug label shows kind:phase. Knobs `NEEDS` (rateK, maxAway, announceLead, dwell.* persisted with the switch: `twopointsix.needs`, Tab ▸ Sandbox ▸ needs rows +
+  debug label shows kind:phase. Knobs `NEEDS` (rateK, maxAway, announceLead, dwell.*, Tab ▸ Sandbox ▸ needs rows +
   'send <name> for a coffee' = `needsSend(g, gd, kind)`: the full telegraph from wherever he stands, over the slot; `__needs.send(i, kind)` / `.trip(i)` / `.log`).
   QA: `probes.ts needs` (determinism / telegraph / one-away / interrupts incl. a whole headless tour lap / frozen-up / identity; telegraph + interrupts also in
   `ai-pass`), soak `--needs-rate K|off` (K > 1 adds the quiet-spell + send stimuli), invariants (≤ maxAway, no trip through a frozen floor or on a man not
@@ -381,7 +381,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   civilian block; `tune.civilianKillFails` (off) fails the mission on a kill instead. Hidden under the tour / breach / quietUtility (`civiliansOnFloor`); cleared
   off the floor ('evacuate' to the exits) when the QRF is called (never the man a snatch came for: `evacuationCheck` leaves `g.snatch.isMan` where he is). A calm civilian is no prop contact and yields to guards (they never feel her); frightened she
   shoves furniture like anybody. `CIV_SPOTS` phones / exits are constants with a headless check (TODO(LevelData)). Knobs `CIV` + `tune.civilians /
-  civilianKillFails` + `CIV.greet` (persisted `twopointsix.civilians`; Tab ▸ Sandbox ▸ civilians rows: on, kill fails, greetings, 'panic the cleaner', 'send
+  civilianKillFails` + `CIV.greet` (Tab ▸ Sandbox ▸ civilians rows: on, kill fails, greetings, 'panic the cleaner', 'send
   her to the phone', summary); `__civ` {list, panic(i, 'panic'|'phone'), set, knobs, stats, log, spots, check, summary}. QA: `probes.ts civilians` (spots /
   sight / phone / comply / scoring / hearing / determinism / identity), soak `--civilians on|off` + the civ-panic / civ-grab stimuli + invariants + `civStats`.
 - **Hard, after-close rules (10-13; each a switch that steps back, none with a Tab row, none in a journal's tables — no recording is made with a room fight on the floor)**: `PRESSURE.stunKnown`
@@ -674,7 +674,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the threshold's watch, the shot scan, `others`), and `g.cleared` / `g.doorPath` / `g.cover` / `g.entry` are the Game's own (built over Sam's squad) —
   for the QRF those answer as for a squad nobody shot at; module states kept per Game (silent, sneak) are fresh for the view, so the cast is never
   'silent'. SWITCH: ON in the page (`?qrfsquad=0` = the element's own drill for the visit, never written to the machine; the backtick panel ▸ Stealth ▸ QRF
-  'QRF ▸ clears rooms like your squad', persisted in `twopointsix.qrf`), OFF on the frozen stand (`FROZEN_HOLDS 'tune.qrfSquad'`, `TPS_QRFSQUAD=1`), a recording
+  'QRF ▸ clears rooms like your squad'), OFF on the frozen stand (`FROZEN_HOLDS 'tune.qrfSquad'`, `TPS_QRFSQUAD=1`), a recording
   without the key replays with it off (`applyKnobs`). Off = the build as it was: two staged QRF nights × 240 half-second digests equal to aa17743c.
   CHECK: `bun run tools/qa/qrf-squad-check.ts` (`probes.ts qrfsquad`, in the `qrf` family; 12 lines, both stands; `QRFSQUAD_BREAK=1` fails every line
   but (3) and (6)); `qrf-probes.ts` pins the switch off (it measures the element's own drill). MEASURED, headless, hard, the scripted loud Sam made
@@ -734,10 +734,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   men down first and nobody calls, whatever is fired afterwards: the response is something play can stop. WHICH LEVELS, and why: `depot` (a motor pool
   with trucks out on the road under escort; the signals hut is what talks to them, and going round the back to the hut and the mains was already the
   level's answer: the convoy escort, 2 or 3, by the main gate or the back gate) and `records` (a night desk with a telephone in the front office, 'the
-  first room on a quiet floor': the night patrol, 2, off the street or round the back lane) and `snatch` (the village guard, 2, by the back gate or round
-  the wall to the front gate, 20–40 s after the call: ONLY under `SNATCHOUT.on` — docs/agents/missions.md, *a snatch ends in the van* — where it is what the
-  squad holds off while the player walks the man out; the house falling does not call it off there, only the snatch's own end does (`raidOver`). Two is all
-  the sixteen figures leave on that floor: eight defenders, the four, the man). LEFT WITHOUT, ON PURPOSE: the office's three squad missions
+  first room on a quiet floor': the night patrol, 2, off the street or round the back lane). LEFT WITHOUT, ON PURPOSE: the office's three squad missions
   (its block answers a quiet night; they stay as tuned), block-squads / warehouse / compound / barracks (at eleven: nobody is left to come), registry and
   consulate (the hostage clock is the pressure), defuse / killhouse (each has its own clock), floodlit / mousehole / glasshouse (one idea each,
   and it is not this), pass (a snowed-in road). `block` (a telephone exchange, eight men) and `hall` (a police barracks wing) would suit one and have
@@ -1073,13 +1070,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   wall changes the way they come. No man is added and nobody's eyes, aim or health change. A pure function: no dice, no clock, no state (nothing for a
   checkpoint). WHAT IT COSTS, known: with squads staged the floor is a squads level to every rule that asks (`squadsLive`): the press stands down, men
   dig in on their squad's word, and HARD on these eight levels is the drilled garrison and no longer "the defenders come at you together" — the mission
-  sheet says so (`difficulty.ts squadsHeld`, read by ui/picks.ts and ui/missions.ts; `squadsOf` stays the row's fact about its level FILE). The
+  sheet says so (`difficulty.ts squadsHeld`, read by ui/missions.ts; `squadsOf` stays the row's fact about its level FILE). The
   maintainer's call is asked on that. With the enemy kit on stun charges at standard, the office room clear's defenders put 1 charge through a door in 8 scripted runs
   where one pool puts three or more (it is the press that carries them, and the press stands down): the kit lever does little on these levels while
   the rule is on (`levers-run` holds the rule off for its two tallies: it measures the kit lever on one pool). SWITCH: ON in the page (`?nosquaddeal`; the debugger
   row 'enemies are in squads on every level'), OFF in the module and on the frozen stand (`FROZEN_HOLDS` `'SQUADDEAL.on': 'TPS_SQUADDEAL=1'`), in the
   knob registry and `JOURNAL_KNOBS` (a recording from before the key replays with it off). SEAMS in others' files, one clause each: roomclear.ts
-  (`onStaged`), difficulty.ts (`squadsHeld`), ui/picks.ts and ui/missions.ts (the Hard sentence asks `squadsHeld`), enemysquads-probes.ts (its "no
+  (`onStaged`), difficulty.ts (`squadsHeld`), ui/missions.ts (the Hard sentence asks `squadsHeld`), enemysquads-probes.ts (its "no
   squads block = none staged" line holds the rule off), levers-probes.ts (as above). CHECK: `tools/qa/squaddeal-check.ts` (probe `squaddeal`), 7 lines:
   (a) the cut on the eight rows (every room in one squad, a man in each, the count the men call for, roomclear.ts `checkSquads` silent), (b) the file
   wins (the warehouse: the same object), (c) a loud way in draws men to the noise with their word 1.5 s or more before the first is there (the kill

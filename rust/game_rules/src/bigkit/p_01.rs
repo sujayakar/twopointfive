@@ -45,7 +45,7 @@ pub fn big_broken() -> bool {
 }
 
 /// The big slot's tool that opens this door from where you stand.   (bigkit.ts samBig)
-pub fn sam_big(g: &mut crate::game::Game, d: DoorId, p: Option<V3>) -> Option<crate::bigkit::SamBig> {
+pub fn sam_big(g: &crate::game::Game, d: DoorId, p: Option<V3>) -> Option<crate::bigkit::SamBig> {
     let pid = g.player;
     let kit = g.pl[pid].big_kit;
     if !g.k.bigslot.on
@@ -238,11 +238,6 @@ pub fn sam_big_pose(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Opti
 /// The tool changes hands with the weight of a gun swap: on, on the page.   (bigkit.ts weighed)
 pub fn weighed(g: &crate::game::Game) -> bool {
     true
-}
-
-/// … is on (kitanim.ts asks).   (bigkit.ts bigWeighed)
-pub fn big_weighed(g: &crate::game::Game) -> bool {
-    weighed(g)
 }
 
 /// Seconds from the hand leaving for the tool to the tool in his hands.   (bigkit.ts bigEquip)
@@ -541,7 +536,7 @@ pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
 }
 
 /// The blows the hammer needs on d from p.   (bigkit.ts hammerBlows)
-pub fn hammer_blows(g: &mut crate::game::Game, d: DoorId, p: &[f64]) -> f64 {
+pub fn hammer_blows(g: &crate::game::Game, d: DoorId, p: &[f64]) -> f64 {
     if crate::doors::door_locked(g, d) && crate::doors::doors_boot_holds(g, d, [p[0], p[1], p[2]]) {
         m::max(1.0, g.k.bigslot.swings)
     } else {

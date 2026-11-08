@@ -8,6 +8,7 @@ use game::savestate::control as saves;
 /// bytes being read
 pub struct Bytes<'a> { b: &'a [u8], at: usize }
 impl<'a> Bytes<'a> {
+    pub fn of(b: &'a [u8]) -> Bytes<'a> { Bytes { b, at: 0 } }
     fn take(&mut self, n: usize) -> &'a [u8] { let r = &self.b[self.at..self.at + n]; self.at += n; r }
 }
 pub trait Field<'a>: Sized { fn read(b: &mut Bytes<'a>) -> Self; }
@@ -20,7 +21,7 @@ macro_rules! commands {
     ($($(#[$m:meta])* $i:literal $name:ident { $($f:ident: $t:ty),* } = $do:expr;)*) => {
         /// the list in `b`, done to the game in its order; a number no command has ends it, and says so
         pub fn apply(g: &mut Game, b: &[u8]) -> Result<(), String> {
-            let mut r = Bytes { b, at: 0 };
+            let mut r = Bytes::of(b);
             while r.at < b.len() {
                 match u32::read(&mut r) {
                     $($i => { $(let $f = <$t as Field>::read(&mut r);)* let f: fn(&mut Game, $($t),*) = $do; f(g, $($f),*); })*
@@ -30,6 +31,11 @@ macro_rules! commands {
             Ok(())
         }
     };
+}
+
+fn lever(key: &str) -> Option<game::difficulty::LeverKey> {
+    use game::difficulty::LeverKey as K;
+    [K::Fog, K::Told, K::Ai, K::Kit].into_iter().find(|k| k.as_str() == key)
 }
 
 commands! {
@@ -57,4 +63,17 @@ commands! {
     10 LetGo {} = |g| { let pl = g.player; g.pl[pl].launch_held = None; };
     /// whatever is up is backed out of
     11 Escape {} = |g| { let _ = game::game::game_escape(g); };
+    /// how hard the defenders are, every lever back on it (before a game is made: what it is staged by)
+    12 Difficulty { hard: u32 } = |g, hard| game::difficulty::set_difficulty(g, if hard != 0 { game::difficulty::Difficulty::Hard } else { game::difficulty::Difficulty::Standard }, Some(false));
+    /// one lever over that, by its key and its rung (an empty rung: back to the level's own)
+    13 Lever { key: &str, rung: &str } = |g, key, rung| if let Some(k) = lever(key) { game::difficulty::set_lever(g, k, if rung.is_empty() { None } else { Some(rung) }, Some(false), None); };
+    /// one of the two tables under the difficulty, by itself
+    14 Pressure { on: u32 } = |g, on| g.k.pressure.on = on != 0;
+    15 DigIn { on: u32 } = |g, on| g.k.digin.on = on != 0;
+    /// the fog of war's cone, whatever the level says, for a visit
+    16 FogCone { on: u32 } = |g, on| game::difficulty::set_cone_visit(g, Some(on != 0));
+    /// one knob, by its name (knobs.rs); a name no knob has is nothing
+    17 Knob { name: &str, value: f64 } = |g, name, value| { let _ = crate::knobs::set(g, name, value); };
+    /// the cards as the player's machine keeps them (before a game is made: what its men are staged in)
+    18 Kit { kept: &str } = |g, kept| crate::kept::read(g, kept);
 }

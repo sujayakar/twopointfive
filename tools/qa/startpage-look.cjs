@@ -1,5 +1,5 @@
 // THE ONE STARTING PAGE LOOK (ui/startpage.ts): the page on the REAL build in headless Chromium:
-// what is on it, that every mission is on it and goes through its loadout to Deploy, the keys through both halves, real page loads, and the switch off.
+// what is on it, that every mission is on it and goes through its loadout to Deploy, the keys through both halves, real page loads.
 // The page's two steps: MISSION (the list, the briefing, the Setup rail of value rows) and TEAM & KIT (the loadout's rows); the rail's rows stand in for the list's own setting rows, which stay in the page unseen.
 //   node tools/qa/startpage-look.cjs <outDir>      env: PORT (the dev server's, default 5199) · SIZE (default 1440x900) · QUALITY (default verylow) · ALL=1 (deploy EVERY mission) · STILLS=0 (no stills) · GPU=1 (see below)
 // PASS / FAIL lines, stills beside a report.json, exit 1 on a FAIL or a page error.
@@ -39,11 +39,11 @@ const stateOf = page => page.evaluate(() => {
     shown: [...(R?.querySelectorAll('.mrow') ?? [])].filter(vis).map(a => a.getAttribute('data-mission')), under: Object.fromEntries([...(R?.querySelectorAll('.mrow') ?? [])].map(a => { let g = a.getAttribute('data-group'); if (g == null) { let e = a; while (e && !e.classList.contains('msec')) e = e.previousElementSibling; g = e?.textContent ?? ''; } return [a.getAttribute('data-mission'), g]; })),   // (a row names its group; the list before the groups had its heading as an earlier sibling)
     sel: R?.querySelector('.mrow.sel')?.getAttribute('data-mission') ?? null, title: R?.querySelector('.mst')?.textContent ?? '', tip: R?.querySelector('.mtip')?.textContent ?? '',
     hour: R?.querySelector('[data-hour].on, [data-hour].sel, [data-hour][aria-pressed="true"]')?.getAttribute('data-hour') ?? null,
-    loadout: L ? { title: L.querySelector('.lo-title')?.textContent ?? '', inSheet: !!L.closest('.msheet'), kits: [...L.querySelectorAll('[data-row="squadkit"] [data-kit]')].map(b => b.textContent), deploy: dep?.textContent ?? '',
-      deployInView: !!r && r.top >= 0 && r.bottom <= innerHeight && r.width > 0, backShown: vis(L.querySelector('[data-act="back"]')),
+    loadout: L ? { title: R?.querySelector('.mst')?.textContent ?? '', inSheet: !!L.closest('.msheet'), kits: [...L.querySelectorAll('[data-row="squadkit"] [data-kit]')].map(b => b.textContent), deploy: dep?.textContent ?? '',
+      deployInView: !!r && r.top >= 0 && r.bottom <= innerHeight && r.width > 0,
       // (the foot bar's filled block: which button carries the accent fill, and whether the page's own 'Team & kit' button is drawn)
       kitShown: vis(L.querySelector('[data-act="kit"]')), kitWords: L.querySelector('[data-act="kit"]')?.textContent ?? '', filled: [...L.querySelectorAll('.lo-actions button')].filter(b => vis(b) && !/rgba\(0, 0, 0, 0\)|transparent/.test(getComputedStyle(b).backgroundColor)).map(b => b.getAttribute('data-act')), headShown: vis(L.querySelector('.lo-head')) } : null,
-    goShown: vis(R?.querySelector('.mgo')), menuInert: document.getElementById('menu')?.hasAttribute('inert') ?? false };
+    menuInert: document.getElementById('menu')?.hasAttribute('inert') ?? false };
 });
 const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelectorAll('#menu .actions button')].map(b => b.textContent), picks: document.querySelectorAll('#menu .picks .prow').length,
   focus: document.activeElement?.textContent?.slice(0, 20) ?? '' }));
@@ -72,7 +72,7 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
 
   // ---- the card under the page: one button to it
   const card = await cardOf(page);
-  check(card.buttons[0] === 'Play ›' && !card.buttons.includes('Start') && !card.buttons.includes('Missions') && card.picks === 0, "the card has ONE way in: 'Play ›' (no short list of its own, no Missions, no Start)", `buttons: ${card.buttons.join(' | ')} · short-list rows on the card ${card.picks}`);
+  check(card.buttons[0] === 'Play ›' && !card.buttons.includes('Start') && !card.buttons.includes('Missions'), "the card has ONE way in: 'Play ›' (no Missions, no Start)", `buttons: ${card.buttons.join(' | ')}`);
  
 
   // ---- the page: everything on it
@@ -84,7 +84,7 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
     && GROUPS.every((h, k) => s0.counts[k] === inGroup(s0, h).length && s0.counts[k] >= 1 && s0.counts[k] <= 8) && GROUPS.every(h => { const g = inGroup(s0, h), p = first.filter(id => g.includes(id)); return p.every((id, i) => g[i] === id); }),
     'the page lists every mission once, each under one of six headings that are all drawn with how many they hold (eight at most); inside a group the short list\'s missions come first, in play order', `${s0.heads.map((h, k) => `${h} ${s0.counts[k]}`).join(' / ')} · ${s0.rows.length} rows: ${s0.rows.join(', ')}`);
   check(s0.sel === first[0] && s0.open.join() === s0.under[first[0]] && s0.shown.join() === inGroup(s0, s0.under[first[0]]).join(), 'a fresh visit opens on the short list\'s first mission, and only ITS group shows its rows', `on ${s0.sel} · open '${s0.open.join()}' · drawn: ${s0.shown.join(', ')}`);
-  check(!!s0.loadout && s0.loadout.inSheet && s0.loadout.title === s0.title && s0.loadout.kits.some(k => /wall charge/i.test(k)) && s0.loadout.deployInView && !s0.loadout.backShown && !s0.goShown && s0.pane === 'list',
+  check(!!s0.loadout && s0.loadout.inSheet && s0.loadout.title === s0.title && s0.loadout.kits.some(k => /wall charge/i.test(k)) && s0.loadout.deployInView && s0.pane === 'list',
     "the highlighted mission's LOADOUT is mounted on the same page (its Squad kit row, with 'One wall charge', waits in the Team & kit step), and Deploy is in view without scrolling", s0.loadout ? `'${s0.title}' · squad kit: ${s0.loadout.kits.join(' | ') || 'no row'} · '${s0.loadout.deploy}' in view ${s0.loadout.deployInView} · tip: ${s0.tip.slice(0, 60)}` : 'no loadout on the page');
 
   // ---- the filled block leads on: 'Team & kit' on the Mission step (Deploy a quiet word beside it), Deploy on the Team & kit step; a lesson (no kit to pick) has Deploy on both
@@ -132,11 +132,6 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
       cut: [...R.querySelectorAll('.mrow:not(.shut) .mtitle, .msec .mgname')].filter(e => e.scrollWidth > e.clientWidth + 0.5).map(e => e.textContent) }; });
   check(room.n >= 1 && !room.out.length && !room.bare.length && !room.tiles.length && !room.cut.length, 'the open group\'s missions are cards, each whole inside the grid with its picture; every group is a picture tile; no title or heading is cut short',
     `${room.n} cards · outside the grid: ${room.out.join(', ') || 'none'} · no picture: ${room.bare.join(', ') || 'none'} · tiles with no picture: ${room.tiles.join(', ') || 'none'} · cut: ${room.cut.join(', ') || 'none'}`);
-  // ---- ?nogroups: the list as it was before the groups — the short list on top with no heading, every other mission under one, nothing folded
-  await open(Q + '&nogroups'); const ng = await stateOf(page);
-  check(ng.heads.join() === 'Every other mission' && first.slice(0, 6).every((id, i) => ng.rows[i] === id) && ng.shown.length === ng.rows.length && ng.rows.length === s0.rows.length,
-    '?nogroups: the short list on top in play order with no heading over it, every other mission under one heading, every row drawn', `${ng.heads.join(' / ')} · ${ng.shown.length} of ${ng.rows.length} drawn · on ${ng.sel}`);
-
   // ---- the mouse: a click on a squad kit, then the Deploy button
   await open(); await page.waitForTimeout(300);
   await page.click('#missions .mrail .mteam'); await page.waitForTimeout(200); const s4a = await stateOf(page);
@@ -234,12 +229,6 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
   await page.setViewportSize({ width: 1280, height: 720 }); await open(); const sS = await stateOf(page);
   check(!!sS.loadout?.deployInView, 'at 1280 x 720 Deploy is still in view without scrolling', `in view ${sS.loadout?.deployInView}`);
   await page.setViewportSize({ width: W, height: H });
-
-  // ---- the switch off: ?cards
-  await boot(Q + '&cards'); const cc = await cardOf(page);
-  await page.click('#menu .actions button:has-text("Missions")'); await page.waitForTimeout(300);
-  const off = await page.evaluate(() => ({ list: document.getElementById('missions')?.classList.contains('on'), one: document.getElementById('missions')?.classList.contains('one'), lo: !!document.getElementById('loadout') }));
-  check(cc.picks >= 2 && cc.buttons.includes('Missions') && cc.buttons.includes('Start') && off.list && !off.one && !off.lo, '?cards: the start card with its short list, Missions and Start, and the list as a screen of its own, as it was', `rows ${cc.picks} · ${cc.buttons.join(' | ')} · list ${off.list} one ${off.one} loadout ${off.lo}`);
 
   // ---- a narrow window, the squad line at its longest ('One wall charge' picked): nothing on the sheet runs off its right edge
   await boot(); await page.click('#menu .actions button.primary'); await page.waitForSelector('#missions.one.on', { timeout: 20000 });

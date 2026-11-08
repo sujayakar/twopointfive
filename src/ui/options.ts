@@ -41,8 +41,7 @@ const TIERS: { v: 'auto' | QualityName; label: string; line: string }[] = [
   { v: 'high',    label: 'High',     line: 'This is the intended look, with ray-traced light and shadow, traced bounce light, volumetric beams and smoke, and reflections in polished floors and glass. It\'s the tier the game is tuned on.' },
 ];
 
-/** THE KEYS, grouped by what the hand is doing: [key caps, what it does, the small print]. The flat list other readers take is ui/menu.ts CONTROLS: a key
- *  that changes is changed in both. */
+/** THE KEYS, grouped by what the hand is doing: [key caps, what it does, the small print] */
 const WALL_WHAT = 'Back to the wall beside you', WALL_SMALL = 'slide along it and look around its end, then press Q or step away to let go';
 const E_WHAT = 'Holster or draw';
 /** the empty hands' own slot (game/handslot.ts; '0' is its row's cap in the build, shown as the key it is on: backtick): it heads the kit's rows, and E's row is gone */
@@ -383,8 +382,8 @@ export function walkInNow(): boolean {
 }
 /** HOW A WALL IS TAKEN ON THIS BOARD: 'key' = the hold's row has one · 'walk' = it has none and walking into a wall takes it (host/keymap.ts qFree: the
  *  build's own board) · 'none' = neither: he took its key off and switched the walk-in off. The Controls list keeps the row whichever it is, its cap the
- *  dashed — a click puts on a key, and writes the row's words to suit; the start card's list does the same (ui/menu.ts controlRows) */
-export function wallWay(): 'key' | 'walk' | 'none' { return keysOf('KeyQ').length ? 'key' : WALLSNAP.on && walkInNow() ? 'walk' : 'none'; }
+ *  dashed — a click puts on a key, and writes the row's words to suit */
+function wallWay(): 'key' | 'walk' | 'none' { return keysOf('KeyQ').length ? 'key' : WALLSNAP.on && walkInNow() ? 'walk' : 'none'; }
 const wallLine = (s: string) => { const w = wallWay(); return w === 'key' ? s : s === WALL_WHAT ? (w === 'walk' ? 'Walk into a wall to put your back to it' : s) : s === WALL_SMALL ? (w === 'walk' ? 'slide along it and look around its end, then step away to let go' : 'no key yet. click the cap to give it one') : s; };
 /** THE GUN'S SETUP (game/slotsetup.ts), with its switch on: the two rows it took the keys of say where the thing is set now (while they have no key),
  *  and a gun's own row says what its key does pressed again */
@@ -452,7 +451,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
       case 'Enter': case 'NumpadEnter': case 'Space': if (onBtn) { e.stopImmediatePropagation(); return; } if (!e.repeat) S.rows[S.sel]?.press(); eat(); return;   // (on Back / Reset / a tab the key is that button's)
       case 'Tab': if (S.onTab) { const back = S.onTab; if (!e.repeat) { closeOptions(); back(); } eat(); return; }   // (the screen Tab itself opened — ui/tabkey.ts 'keys' — goes away on Tab)
         e.stopImmediatePropagation(); return;   // (the browser's own walk over Back and Reset; never the game's key)
-      default: if (/^F\d{1,2}$/.test(e.code)) return;   // (the recorders' keys — F7 replay, F8 sweep, F9, F10 — work with the screen up, as they do over a pause card)
+      default: if (/^F\d{1,2}$/.test(e.code)) return;   // (the recorders' keys — F7 replay, F8 sweep, F9 — work with the screen up, as they do over a pause card)
         e.stopImmediatePropagation();   // (nothing else under the screen hears a key while it is up; the rest keep their browser defaults)
     }
   }, { capture: true });

@@ -273,7 +273,7 @@ pub fn light_switch_reset(g: &mut crate::game::Game) {
 
 // ---------------------------------------------------------------- the flip
 /// Are the room's lights on at the switch: any fixture of it switched on. (lightswitch.ts switchLit)
-pub fn switch_lit(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitch) -> bool {
+pub fn switch_lit(g: &crate::game::Game, sw: &crate::lightswitch::WallSwitch) -> bool {
     sw.targets.iter().any(|&t| crate::sim_lightshome::fixture_on(g, t))
 }
 
@@ -284,7 +284,7 @@ pub fn plants(g: &crate::game::Game, seat: &crate::seats::SeatRef, by: CharId) -
 }
 
 /// The time his turn to the plate and his step in to it take. (lightswitch.ts turnSecs)
-pub fn turn_secs(g: &mut crate::game::Game, by: CharId, sw: &crate::lightswitch::WallSwitch) -> f64 {
+pub fn turn_secs(g: &crate::game::Game, by: CharId, sw: &crate::lightswitch::WallSwitch) -> f64 {
     let (yaw, pos) = (g.ch[by].body_yaw, g.ch[by].pos);
     let (stand_m, step_pace) = (g.k.handwork.stand_m, g.k.handwork.step_pace);
     let face = m::atan2(-sw.n[0], -sw.n[2]);
@@ -294,7 +294,7 @@ pub fn turn_secs(g: &mut crate::game::Game, by: CharId, sw: &crate::lightswitch:
 }
 
 /// What breaks the plant off: he is down, has a man or a body in hand, is folded by a blast, or has been moved off the plate. (lightswitch.ts plantBroken)
-pub fn plant_broken(g: &mut crate::game::Game, h: &crate::lightswitch::Hand) -> bool {
+pub fn plant_broken(g: &crate::game::Game, h: &crate::lightswitch::Hand) -> bool {
     let pl = g.player;
     let p = &g.pl[pl];
     if p.down || p.holding.is_some() || p.takedown.is_some() || p.dragging.is_some() || p.wall.is_some() { return true; }
@@ -313,7 +313,7 @@ pub fn switch_let_go(g: &mut crate::game::Game) {
 }
 
 /// The plate Sam is planted at, while he is. (lightswitch.ts switchHand)
-pub fn switch_hand(g: &mut crate::game::Game) -> Option<crate::lightswitch::SwitchHand> {
+pub fn switch_hand(g: &crate::game::Game) -> Option<crate::lightswitch::SwitchHand> {
     let c = g.pl[g.player].ch;
     let h = g.m.lightswitch.states.as_ref()?.hands.iter().find(|x| x.plant && x.c == c)?.clone();
     if g.time >= h.at && g.time - h.at < h.dur && !plant_broken(g, &h) { Some(SwitchHand { p: h.sw.pos, n: h.sw.n }) } else { None }
@@ -495,7 +495,7 @@ pub fn light_switch_tick(g: &mut crate::game::Game) {
 
 // ---------------------------------------------------------------- drawing (into Game.dynBoxes, beside the keypads' plates)
 /// The plate, its rocker (top proud with the lights on) and, in a room off at the switch, the small amber pilot: a decal's depth, nobody's collision, no shadow. (lightswitch.ts switchBoxes)
-pub fn switch_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn switch_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let flag = crate::scene_boxes::box_flag();
     let deco = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
     for sw in wall_switches(g) {
@@ -503,11 +503,11 @@ pub fn switch_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
         let lit = switch_lit(g, &sw);
         let key = crate::scene_boxes::mkey().device + SW_KEY + sw.id * 4.0;
         let a = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: v3::mad(sw.pos, sw.n, 0.006), h: [0.042, 0.06, 0.006], yaw: Some(yaw), albedo: Some(plate()), flags: Some(deco), mkey: Some(key), ..Default::default() });
-        out.push(a);
+        out.push(a.into());
         let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: v3::add(v3::mad(sw.pos, sw.n, 0.015), [0.0, if lit { 0.012 } else { -0.012 }, 0.0]), h: [0.016, 0.018, 0.005], yaw: Some(yaw), albedo: Some(rocker()), flags: Some(deco), mkey: Some(key + 1.0), ..Default::default() });
-        out.push(b);
+        out.push(b.into());
         let c = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: v3::add(v3::mad(sw.pos, sw.n, 0.013), [0.0, -0.045, 0.0]), h: [0.007, 0.004, 0.002], yaw: Some(yaw), albedo: Some([0.05, 0.03, 0.01]), emissive: Some(if lit { [0.0, 0.0, 0.0] } else { glow() }), flags: Some(deco), mkey: Some(key + 2.0), ..Default::default() });
-        out.push(c);
+        out.push(c.into());
     }
 }
 

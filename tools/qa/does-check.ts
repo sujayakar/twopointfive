@@ -22,8 +22,7 @@
 //                 box on the default row: no wall a charge cuts, no cover, nothing a round goes through, exactly what the red path shows.
 //                 tools/levels/does-bake.ts brings such a file forward)
 // A level and its look twin are held to the same words by tools/qa/look-check.ts; that every box's word is what its colour once said, by does-audit.ts.
-// NOT HELD HERE, AND STILL TRUE OF THE GAME: two rules ask a PAINT something that is no reading of a material. Which slabs are one round thing is asked
-// of their wearing the same paint (scene/round.ts, geoTry.ts: why line 3 gives one new colour a paint, not a box); and a vehicle's lamps are found by
+// NOT HELD HERE, AND STILL TRUE OF THE GAME: one rule asks a PAINT something that is no reading of a material: a vehicle's lamps are found by
 // a signature a generator leaves, a size and a paint together (game/carlamps.ts), so a car's lamp repainted is no lamp to a round.
 // Nothing here looks at a picture.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -90,8 +89,7 @@ async function answers(file: string, paint: (o: { albedo: number[]; does?: strin
   } finally { DESTRUCTION.on = was; }
 }
 { const LEVELS = ['office.json', 'barracks.json', 'barracks-gwot.json', 'depot-gwot.json', 'white-roof.json', 'pass.json'].filter(f => existsSync(resolve(ROOT, 'levels', f)));
-  // (another colour for each colour: two boxes in one paint stay in one paint. Which slabs are one round thing is asked of their paint being the SAME
-  //  paint — scene/round.ts, geoTry.ts — which is a question about the paint and no reading of a material; a colour a box of its own would undo it)
+  // (another colour for each colour: two boxes in one paint stay in one paint)
   const h = (a: number[], c: number) => { let x = 0x811c9dc5; for (const ch of `${a.join(',')}|${c}`) { x ^= ch.charCodeAt(0); x = Math.imul(x, 0x01000193) >>> 0; } x ^= x >>> 15; x = Math.imul(x, 0x2c1b3c6d) >>> 0; x ^= x >>> 12; return (x >>> 0) / 4294967296; };
   const bad: string[] = [], said: string[] = []; let total = { walls: 0, cover: 0, through: 0 };
   for (const f of LEVELS) {

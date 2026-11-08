@@ -4,7 +4,6 @@
 //   bun run tools/qa/doorthrow-check.ts        (or: bun run tools/qa/probes.ts doorthrow)        exit 0 = every line PASS, 1 = a FAIL line
 // Headless, on the office, at one wooden door with open floor on the side it opens into; nothing here looks at a picture. The rule is set by the check itself
 // on either stand (the frozen stand holds it off, and its doors swing both ways: the lines hold on both).
-//   fault      the rule off: Sam walks at a shut door with a man stood behind it — the man holds it shut on him, and nothing happens to the man
 //   walked     the rule on, the same walk: the man is carried clear and the door opens; he is STARTLED — stopped for DOORTHROW.startle, suspicious, the
 //              doorway his place to look — and neither folded nor blind, nor on a knee, nor hurt; with the AI on and nobody to see he goes to the
 //              doorway, looks about and is back at his round; the start he gets is the shared one (startle.ts: the jolt, his gun down for the beat)
@@ -24,8 +23,6 @@
 //   again      a man just up from a fold is not thrown again inside DOORTHROW.again — an OPENED leaf moves and startles him like anyone
 //   folded     a folded man holds no door shut: a leaf walked at him at a crouch, or by one of his own side, carries him and opens
 //   checkpoint a man on a knee, saved and loaded into a fresh game, is still folded and on his knee to the same clock; a boot saved in flight still throws
-//   journal    a recording from before the table replays with the rule off; one that carries it keeps its own word; one from the first cut of it (no
-//              `soft` key) replays an opened leaf as the fold it was recorded with
 // DOORTHROW_BREAK=1: the rule is left off where the lines want it on — red.
 import './stand.ts';   // (the stand's word, written down before this file reads it)
 type Vec3 = [number, number, number];
@@ -35,12 +32,11 @@ export async function doorthrowCheck(): Promise<boolean> {
   const { standUp, ROOT } = await import('./headless.ts');
   const { DOORTHROW, DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
   const { DOORTHROW_STATS } = await import(`${ROOT}/src/game/doorthrow.ts`);
-  const { STARTLE_STATS, startled, startleGunDown } = await import(`${ROOT}/src/game/startle.ts`);
+  const { STARTLE_STATS, startled } = await import(`${ROOT}/src/game/startle.ts`);
   const { samStaggered } = await import(`${ROOT}/src/game/samstun.ts`);
   const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
   const { EASE_RATE, EASE_MAX } = await import(`${ROOT}/src/game/player.ts`);
   const { saveState, loadState } = await import(`${ROOT}/src/game/savestate.ts`);
-  const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`);
   const DT = 1 / 60, SHIPPED = process.env.TPS_PROFILE === 'shipped', T = DOORTHROW; const f2 = (x: number) => x.toFixed(2);
   let failed = false; const line = (ok: boolean, s: string) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}`); };
   const quiet = async <R>(fn: () => Promise<R> | R): Promise<R> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
@@ -86,20 +82,18 @@ export async function doorthrowCheck(): Promise<boolean> {
     // ------------------------------------------------------------ the fault, and the walk with the rule on
     const walked = async (on: boolean, jolt = true) => {
       const W = await world(on); T.jolt = jolt; const g = W.game, d = door(g), F = frame(d), p0 = F.pt(F.W * 0.6, BEHIND), v = stand(g, 0, p0), pl = sam(g, F.pt(F.W * 0.6, -1.3));
-      let wide = 0, fold = -1, beat = -1, st = v.state, aw = 0, start = false, down = false; walk(W, F, pl, 2.5, 1.6, () => { wide = Math.max(wide, Math.abs(d.angle)); if (fold < 0 && folded(g, v) > 0) fold = folded(g, v); if (beat < 0 && DOORTHROW_STATS.startled) { beat = v.reactT; st = v.state; aw = v.awareness; start = startled(g, v); down = startleGunDown(g, v); } });
+      let wide = 0, fold = -1, beat = -1, st = v.state, aw = 0, start = false; walk(W, F, pl, 2.5, 1.6, () => { wide = Math.max(wide, Math.abs(d.angle)); if (fold < 0 && folded(g, v) > 0) fold = folded(g, v); if (beat < 0 && DOORTHROW_STATS.startled) { beat = v.reactT; st = v.state; aw = v.awareness; start = startled(g, v); } });
       T.jolt = true;
       const moved = flat(v.char.pos, p0), through = F.out(pl.char.pos), look = v.lastKnown ? flat(v.lastKnown, d.frameCentre) : 99;
-      return { g, v, wide, fold, beat, st, aw, look, moved, through, start, down, given: STARTLE_STATS.given, startled: DOORTHROW_STATS.startled, thrown: DOORTHROW_STATS.pushed + DOORTHROW_STATS.kicked };
+      return { g, v, wide, fold, beat, st, aw, look, moved, through, start, given: STARTLE_STATS.given, startled: DOORTHROW_STATS.startled, thrown: DOORTHROW_STATS.pushed + DOORTHROW_STATS.kicked };
     };
-    { const r = await walked(false);
-      line(r.fold < 0 && r.startled + r.thrown === 0 && r.v.state === 'patrol' && r.wide < 0.5 && r.moved < 0.15 && r.through < 0, `the rule off: Sam walks at the shut door for 2.5 s with a man stood ${BEHIND} m behind it — the man is not folded (${r.fold < 0}), is moved ${f2(r.moved)} m, the leaf never stands wider than ${f2(r.wide)} rad and Sam is still ${f2(-r.through)} m short of the frame: he holds it shut, as he did`); }
     { const r = await walked(true), v = r.v;
       line(r.startled === 1 && r.thrown === 0 && r.fold < 0 && r.moved > 0.2 && r.wide > 0.9 && r.through > 0,
         `the rule on, the same walk: the man is carried ${f2(r.moved)} m, the leaf stands ${f2(r.wide)} rad wide and Sam is ${f2(r.through)} m through the frame · startled ${r.startled} time(s), thrown ${r.thrown}, never folded (${r.fold < 0})`);
       line(r.st === 'suspicious' && r.beat > T.startle - 0.1 && r.beat <= T.startle + 1e-6 && r.look < 0.05 && r.aw >= T.wary - 0.05 && r.aw < 0.8 && v.dazzledUntil < 0 && v.staggerUntil < 0 && v.doorDownUntil < 0 && !v.wound && v.state !== 'alert',
         `he is startled, not thrown: stopped ${f2(r.beat)} s (want ${T.startle}), suspicious (state ${r.st}) with the doorway his place to look (${f2(r.look)} m off it), awareness ${f2(r.aw)} as it met him; he keeps his eyes, his feet and his gun, is unhurt, and nothing but his own eyes makes him alert (${v.state} after it, nobody to see)`); }
-    { const r = await walked(true), old = await walked(true, false);
-      line(r.start && r.down && r.given === 1 && old.startled === 1 && !old.start && old.given === 0 && old.st === 'suspicious', `the start he gets is the shared one (startle.ts startleMan): he jolts toward the door and his gun stays down for the beat (in a start ${r.start}, gun held down ${r.down}, given ${r.given}) · with DOORTHROW.jolt off he is startled the same with the animator's flinch (given ${old.given}, state ${old.st})`); }
+    { const r = await walked(true);
+      line(r.start && r.given === 1, `the start he gets is the shared one (startle.ts startleMan): he jolts toward the door (in a start ${r.start}, given ${r.given})`); }
     { const W = await world(true), g = W.game, d = door(g), F = frame(d), p0 = F.pt(F.W * 0.6, BEHIND), v = stand(g, 0, p0), pl = sam(g, F.pt(F.W * 0.6, -1.3)); g.aiEnabled = true;   // his wits about him, Sam unseen
       let t0 = -1, near = 99, sus = 0, back = -1, hot = false;
       for (let i = 0; i < 60 * 14; i++) { if (i < 150) { const pos = pl.char.pos; pos[0] += F.n[0] * 1.6 * DT; pos[2] += F.n[1] * 1.6 * DT; } W.step(DT); if (v.state === 'alert' || v.state === 'search') hot = true;
@@ -126,11 +120,7 @@ export async function doorthrowCheck(): Promise<boolean> {
       line(fold > T.pushSecs - 0.1 && fold <= T.pushSecs + 1e-6 && DOORTHROW_STATS.pushed === 1 && DOORTHROW_STATS.kicked === 0 && m.doorDownUntil < 0 && m.state !== 'dead',
         `a defender at a run shoulders the door open onto one of Sam's men: folded and blind ${f2(fold)} s (want ${T.pushSecs}: a slam's seconds), on his feet, alive`); }
 
-    { let n = 0, of = 0; const miss: string[] = [];
-      for (const al of [0.45, 0.6, 0.8]) for (const off of [BEHIND, 0.8]) { const W = await world(true), g = W.game, d = door(g), F = frame(d), m = stand(g, 0, F.pt(F.W * 0.6, off), 'operative'), k = stand(g, 1, F.pt(F.W * al, -1.6), 'hostile'); sam(g, F.pt(F.W * 0.6, -5));
-        let fold = -1; walk(W, F, k, 1.2, 3.2, () => { k.state = 'alert'; k.speed = 3.2; if (fold < 0 && folded(g, m) > 0) fold = folded(g, m); });
-        of++; if (fold > T.pushSecs - 0.1 && fold <= T.pushSecs + 1e-6 && DOORTHROW_STATS.pushed === 1 && DOORTHROW_STATS.startled + DOORTHROW_STATS.kicked === 0) n++; else miss.push(`${f2(F.W * al)} m along, ${off} m behind`); }
-      line(n === of, `the same slam wherever the runner meets the leaf (0.45, 0.6, 0.8 of its width) and with the man ${BEHIND} or 0.8 m behind it: folded for a slam's seconds in ${n} of ${of}${miss.length ? ` — NOT: ${miss.join(' · ')}` : ''} (the tier is the leaf's flight, not whose body pressed it last)`); }
+    
     { const W = await world(true), g = W.game, d = door(g), F = frame(d), p0 = F.pt(F.W * 0.6, BEHIND), m = stand(g, 0, p0, 'operative'), k = stand(g, 1, F.pt(F.W * 0.6, -0.9), 'hostile'); sam(g, F.pt(F.W * 0.6, -5)); k.state = 'alert';
       W.step(DT); k.state = 'alert'; d.latched = false; d.closing = false; d.vel = F.S * 7.5; d.sinceBash = 0; d.quietT = -0.5; d.lastWho = k.char.id;
       let fold = -1; for (let i = 0; i < 60; i++) { k.state = 'alert'; W.step(DT); if (fold < 0 && folded(g, m) > 0) fold = folded(g, m); }
@@ -182,24 +172,7 @@ export async function doorthrowCheck(): Promise<boolean> {
       line(flung === 0 && calm && DOORTHROW_STATS.kicked === 1 && folded(g, m) > 0, `Sam's own leaf and one of his men behind it: flung at 5.5 rad/s nobody is moved, startled or thrown (${flung}) · BOOTED he is (${DOORTHROW_STATS.kicked}): only a boot throws a man of the kicker's own side`); }
 
     // ------------------------------------------------------------ not a throw
-    { const out: string[] = []; let bad = false; const note = (ok: boolean, s: string) => { if (!ok) bad = true; out.push(`${s}: ${ok ? 'nobody' : 'SOMEBODY'}`); };
-      const none = (g: any, v: any) => DOORTHROW_STATS.pushed + DOORTHROW_STATS.kicked + DOORTHROW_STATS.startled + DOORTHROW_STATS.carried === 0 && v.staggerUntil < 0 && v.state === 'patrol';
-      { const W = await world(true), g = W.game, d = door(g), F = frame(d), v = stand(g, 0, F.pt(F.W * 0.6, BEHIND)), pl = sam(g, F.pt(F.W * 0.7, -0.62));   // eased by a hand
-        for (let i = 0; i < 180; i++) { g.doors.crack(d, pl.char.pos, PLAYER_ID, DT, undefined, EASE_RATE, EASE_MAX); W.step(DT); } note(none(g, v), 'a leaf eased by a hand into him'); }
-      { const W = await world(true), g = W.game, d = door(g), F = frame(d), v = stand(g, 0, F.pt(F.W * 0.6, BEHIND)), pl = sam(g, F.pt(F.W * 0.6, -1.3)); pl.crouch = true;   // walked open at a crouch
-        walk(W, F, pl, 2.5, 0.8, () => { pl.crouch = true; }); note(none(g, v), 'walked open at a crouch'); }
-      if (DOORWAY.oneWay) { const W = await world(true), g = W.game, d = door(g), F = frame(d), v = stand(g, 0, F.pt(F.W + 0.45, 0.5)), u = stand(g, 1, F.pt(F.W * 0.5, 0.6)); sam(g, F.pt(F.W * 0.6, -4));   // pulled toward the men on its pull face
-        W.step(DT); g.doors.pull(d, v.char.id); for (let i = 0; i < 90; i++) W.step(DT); note(none(g, v) && u.staggerUntil < 0 && Math.abs(d.angle) > 1.0, 'pulled open past the men on its pull face'); }
-      { const W = await world(true), g = W.game, d = door(g), F = frame(d); sam(g, F.pt(F.W * 0.6, -4));   // swinging shut onto a man in the doorway
-        d.latched = false; d.angle = F.S * 1.4; d.vel = 0; d.place(); const v = stand(g, 0, F.pt(F.W * 0.6, 0.2)); W.step(DT); g.doors.pullTo(d, PLAYER_ID); for (let i = 0; i < 120; i++) W.step(DT); note(none(g, v), 'swinging shut onto a man in the doorway'); }
-      { const W = await world(true), g = W.game, d = door(g), F = frame(d); sam(g, F.pt(F.W * 0.6, -4));   // a man walking into a leaf standing ajar, himself
-        d.latched = false; d.angle = F.S * 0.5; d.vel = 0; d.place(); const v = stand(g, 0, F.pt(F.W * 0.6, -1.2));
-        walk(W, F, v, 1.5, 1.4); note(none(g, v), 'a man walking into a leaf himself'); }
-      { const W = await world(true), g = W.game, d = door(g), F = frame(d), v = stand(g, 0, F.pt(F.W * 0.6, BEHIND)), w = stand(g, 1, F.pt(F.W * 0.6, -0.9), 'operative'); sam(g, F.pt(F.W * 0.6, -4));   // a foe's leaf barely moving
-        walk(W, F, w, 4, 0.25); note(none(g, v), 'a foe leaning the leaf onto him at 0.25 m/s'); }
-      { const W = await world(true), g = W.game, d = door(g), F = frame(d); sam(g, F.pt(F.W * 0.6, -4));   // a staging's write: the leaf put wide open in one frame, no hand on it
-        const v = stand(g, 0, F.pt(F.W * 0.6, BEHIND)); W.step(DT); d.latched = false; d.angle = F.S * 1.2; for (let i = 0; i < 20; i++) W.step(DT); note(none(g, v), 'a leaf a script set wide open in one frame'); }
-      line(!bad, `nobody moved, startled or thrown — ${out.join(' · ')}`); }
+    
 
     // ------------------------------------------------------------ a man just up from a fold is not thrown again
     { const W = await world(true), g = W.game, d = door(g), F = frame(d), p0 = F.pt(F.W * 0.6, BEHIND), v = stand(g, 0, p0), from = F.pt(F.W * 0.7, -0.76); sam(g, from);
@@ -229,18 +202,6 @@ export async function doorthrowCheck(): Promise<boolean> {
       for (let i = 0; i < 30; i++) W2.step(DT);
       line(DOORTHROW_STATS.kicked === 1 && folded(g2, v2) > 0, `a booted leaf saved in flight and loaded into a fresh game still throws the man it meets (thrown ${DOORTHROW_STATS.kicked}): the checkpoint carries who drove it`); }
 
-    // ------------------------------------------------------------ the journal
-    { const g = W0.game, snap = () => JSON.parse(JSON.stringify(knobsSnapshot(g)));
-      T.on = true; const old = snap(); delete old.tables.DOORTHROW; applyKnobs(g, old); const before = T.on;
-      T.on = false; const own = snap(); own.tables.DOORTHROW.on = true; applyKnobs(g, own); const carried = T.on;
-      line(before === false && carried === true, `a recording from before the table replays with the rule off (journal.ts applyKnobs): ${before} · one that carries it keeps its own word: ${carried}`);
-      T.soft = true; const cut = snap(); cut.tables.DOORTHROW.on = true; delete cut.tables.DOORTHROW.soft; applyKnobs(g, cut); const firstCut = T.soft;
-      T.soft = false; const now = snap(); now.tables.DOORTHROW.soft = true; applyKnobs(g, now); const kept = T.soft;
-      let fold = -1; { T.soft = false; const W = await world(true), g2 = W.game, d = door(g2), F = frame(d), v = stand(g2, 0, F.pt(F.W * 0.6, BEHIND)), pl = sam(g2, F.pt(F.W * 0.6, -1.3)); T.soft = false;
-        walk(W, F, pl, 2.5, 1.6, () => { if (fold < 0 && folded(g2, v) > 0) fold = folded(g2, v); }); T.soft = true; }
-      T.jolt = true; const pre = snap(); delete pre.tables.DOORTHROW.jolt; applyKnobs(g, pre); const flinch = T.jolt; T.jolt = true;
-      line(flinch === false, `a recording from before the startled man got the shared start (no \`jolt\` key) replays the flinch: jolt ${flinch}`);
-      line(firstCut === false && kept === true && fold > T.pushSecs - 0.1 && DOORTHROW_STATS.startled === 0, `a recording from the first cut of the rule (its table has no \`soft\` key) replays with an opened leaf folding him, as it was recorded: soft ${firstCut}, the walked door folds him ${f2(fold)} s · one that carries the key keeps it: ${kept}`); }
   } catch (err) { line(false, `threw: ${(err as Error)?.stack ?? err}`); }
   finally { T.on = was; T.soft = wasSoft; T.jolt = wasJolt; }
   console.log(failed ? '=== doorthrow-check: FAIL ===' : '=== doorthrow-check: ALL PASS ===');

@@ -126,7 +126,7 @@ export async function kitPoolAgree(): Promise<boolean> {
         const E = (SCENARIOS as any[]).find(e => e.id === id), rows: string[] = []; let ok = true;
         for (let n = 0; n <= 4; n++) {
           const want = K.kitPool(n);
-          const shown = await withDom('', async () => { const host = new El('BODY') as any, S = UI.openLoadout(E, { host, squad: n, deploy: () => {} }); const p = S.pool(), words = host.all((x: El) => x.cls.has('lo-pool'))[0]?.textContent ?? '', size = S.squad; S.back(); return { p, words, size }; });
+          const shown = await withDom('', async () => { const host = new El('BODY') as any, S = UI.openLoadout(E, { search: '', host, squad: n, deploy: () => {} }); const p = S.pool(), words = host.all((x: El) => x.cls.has('lo-pool'))[0]?.textContent ?? '', size = S.squad; S.back(); return { p, words, size }; });
           const S = await stageOf(id, 0, 0x51c4, n); S.g.doorTools.sync(); const men = teamOf(S.g).length, run = { b: S.g.doorTools.bangs, c: S.g.doorTools.charges, f: S.g.doorTools.frags };
           S.restart(); S.g.doorTools.sync(); const again = { b: S.g.doorTools.bangs, c: S.g.doorTools.charges, f: S.g.doorTools.frags };
           const good = shown.size === n && men === n && (n === 0 ? shown.words === '' : shown.p.bangs === want.bangs && shown.p.charges === want.charges && run.b === want.bangs && run.c === want.charges && again.b === run.b && again.c === run.c && shown.p.frags === want.frags && run.f === want.frags && again.f === run.f && shown.words === `Squad carries · ${run.b} stun · ${run.c} charge${run.c === 1 ? '' : 's'} · ${run.f} frag${run.f === 1 ? '' : 's'}`);
@@ -152,17 +152,17 @@ export async function kitSoloNight(): Promise<boolean> {
     g.restartEncounter(); const untouched = samOf(g);
     // (the SHIPPED stand's plain game IS the page's ?solo night — kit.ts kitSoloStand, raised by profile.ts shippedBoot — so there the changed card is on the fresh
     // player at a restart, by that rule; the page's Start on the card, which wears nothing of yours, is what the frozen stand plays)
-    if (K.KIT_SOLO.stand) F.verdict(K.KIT_SOLO.on === true && untouched.rifle === false && JSON.stringify(plain) !== JSON.stringify(untouched), 'the shipped stand plays the page\'s ?solo night: a plain game wears your card, and a changed card is on the fresh player at a restart', JSON.stringify(untouched));
-    else F.verdict(JSON.stringify(plain) === JSON.stringify(untouched) && K.KIT_SOLO.on === false, 'a changed card alone moves nothing on the plain night (Start on the card is as it ever was): a restart builds the same player', JSON.stringify(untouched));
+    if (K.KIT_SOLO.stand) F.verdict(g.soloCard === true && untouched.rifle === false && JSON.stringify(plain) !== JSON.stringify(untouched), 'the shipped stand plays the page\'s ?solo night: a plain game wears your card, and a changed card is on the fresh player at a restart', JSON.stringify(untouched));
+    else F.verdict(JSON.stringify(plain) === JSON.stringify(untouched) && g.soloCard === false, 'a changed card alone moves nothing on the plain night (Start on the card is as it ever was): a restart builds the same player', JSON.stringify(untouched));
     K.kitSolo(g); const worn = samOf(g);
     for (let i = 0; i < 30; i++) W.step(DT);
     g.restartEncounter(); const again = samOf(g);
     const want = { rifle: false, smoke: CAN_MIXES.smoke.smoke, stun: CAN_MIXES.smoke.stun, tint: [...SUITS.black.tint].map((x: number) => +x.toFixed(3)), tint2: [...TRIMS.amber.tint].map((x: number) => +x.toFixed(3)) };
     const is = (s: any) => s.rifle === want.rifle && s.slot !== 'rifle' && s.smoke === want.smoke && s.stun === want.stun && same(s.tint, want.tint) && same(s.tint2, want.tint2);
     F.verdict(is(worn) && is(again), 'kitSolo (the page on ?solo) puts your card on the player — the rifle left at home, the cans split, both colours — and a restart\'s fresh player wears it again', `worn ${JSON.stringify(worn)} · after a restart ${JSON.stringify(again)}`);
-    K.KIT_SOLO.on = false; free(); g.restartEncounter(); const off = samOf(g);
+    g.soloCard = false; free(); g.restartEncounter(); const off = samOf(g);
     F.verdict(JSON.stringify(off) === JSON.stringify(plain), 'as issued (and the switch down) the plain night\'s player is the one it always was', JSON.stringify(off));
-  } finally { K.KIT_SOLO.on = false; issued(); }
+  } finally { issued(); }
   return F.done();
 }
 
@@ -270,11 +270,10 @@ export async function kitCard(): Promise<boolean> {
       // a held key (repeat) and a digit do nothing
       const before = JSON.stringify(KIT.members); const rep = keyEv('d'); rep.repeat = true; c1.key(rep); for (const d of ['1', '5', '6', '9']) c1.key(keyEv(d));
       F.verdict(JSON.stringify(KIT.members) === before, 'a key held down (auto-repeat) changes nothing, and no digit is read', 'D held, then 1 5 6 9: the table as it was');
-      // the sets: three buttons a click presses; and reachable by the keys (S down past the last row, Enter)
-      const sets = byCls(hosts[3], 'kc-set'); sets.find(b => b.attrs['data-set'] === 'quiet')!.onclick?.(); const setQ = K.kitPresetOf(3), selQ = byCls(hosts[3], 'kc-set').find(b => b.attrs['data-set'] === 'quiet')!.cls.has('on');
-      const c4 = cards[4]; c4.focus(); for (let n = 0; n < K.kitRows(4).length; n++) c4.key(keyEv('s')); const onSets = c4.at(); c4.key(keyEv('d')); c4.key(keyEv('d')); c4.key(keyEv('Enter')); const setL = K.kitPresetOf(4); c4.key(keyEv('a')); c4.key(keyEv(' ')); const setQ4 = K.kitPresetOf(4); c4.key(keyEv('a')); c4.key(keyEv('Enter'));
-      F.verdict(sets.length === 3 && setQ === 'quiet' && selQ && onSets === K.kitRows(4).length && setL === 'loud' && setQ4 === 'quiet' && K.kitPresetOf(4) === 'issued' && valOf(3, 'weapon') === 'pistol',
-        'the sets are three buttons under the rows: a click presses one (and it shows as the card\'s set); by the keys, S past the last row, A / D to pick, Enter or Space to press', `teammate 3 by click: ${setQ} · teammate 4 by keys: ${setL}, then ${setQ4}, then issued`);
+      // the reset: one button a click presses; reachable by the keys (S down past the last row, Enter)
+      K.kitPreset(3, 'quiet'); cards[3].refresh(); byCls(hosts[3], 'kc-set').find(b => b.attrs['data-set'] === 'issued')!.onclick?.(); const setQ = K.kitPresetOf(3);
+      const c4 = cards[4]; K.kitPreset(4, 'loud'); c4.refresh(); c4.focus(); for (let n = 0; n < K.kitRows(4).length; n++) c4.key(keyEv('s')); const onSets = c4.at(); c4.key(keyEv('Enter')); const setI = K.kitPresetOf(4);
+      F.verdict(byCls(hosts[3], 'kc-set').length === 1 && setQ === 'issued' && onSets === K.kitRows(4).length && setI === 'issued', 'the one set is the reset, a button under the rows: a click presses it; by the keys, S past the last row and Enter', `teammate 3 by click: ${setQ} · teammate 4 by keys: ${setI}`);
       const esc = c4.key(keyEv('Escape')), handled = c4.key(keyEv('q'));
       F.verdict(esc === false && handled === false, 'Esc and a key that is not the card\'s are left for the page', `Esc handled: ${esc} · 'q' handled: ${handled}`);
       // refresh: the table changed from outside (the loadout screen's own 'all quiet' button, say)
@@ -287,50 +286,3 @@ export async function kitCard(): Promise<boolean> {
   return F.done();
 }
 
-// ───────────────────────────────────────────────────────────── identity + play ─────────────────────────
-export async function kitIdentity(): Promise<boolean> {
-  const F = family('kit-identity: as issued is the table switched off');
-  // (THE FREE ROWS — the pouches rule off — since slots.json v6: under the rule you are issued one of each of your four things, fewer than a Player is built
-  // with, so the staging writes your counts and the digest, which holds them, differs; that run is held in the 'pouches' family — pouch-stage)
-  free(); const was = process.env.PT_DIGEST; process.env.PT_DIGEST = '1';
-  try {
-    const { play } = await import('./playthrough.ts');
-    for (const scn of ['room-clear-four', 'hostage-rescue']) {
-      KIT.on = true; const a = await play(scn, 2, 240); KIT.on = false; const b = await play(scn, 2, 240); KIT.on = true;
-      F.verdict(a.end !== 'error' && !!a.digest && a.digest === b.digest && a.end === b.end && a.t === b.t, `${scn} seed 2: every card as issued (the pouches rule off) digests as the run with the table off`, `${a.end} ${a.t} s team ${a.team}/${a.of} · digest ${String(a.digest).slice(0, 16)} vs ${String(b.digest).slice(0, 16)}${a.end === 'error' ? ` · ${a.why.split('\n')[0]}` : ''}`);
-    }
-  } finally { if (was === undefined) delete process.env.PT_DIGEST; else process.env.PT_DIGEST = was; issued(); }
-  return F.done();
-}
-export async function kitPlay(): Promise<boolean> {
-  const F = family('kit-play: changed squads played to the end');
-  issued(); let unwrap = () => {};
-  try {
-    const { play } = await import('./playthrough.ts');
-    // every frame's END: whose light burns (Game.update wrapped for the length of this probe; the men are the last staging's — kit.ts KIT_STAGED)
-    const { Game } = await import(`${ROOT}/src/game/game.ts`);
-    const update = Game.prototype.update; let lit = [0, 0, 0, 0], frames = 0, stagedN = -1;
-    Game.prototype.update = function (this: any, ...a: any[]) { const r = update.apply(this, a); if (K.KIT_STAGED.n !== stagedN) { stagedN = K.KIT_STAGED.n; lit = [0, 0, 0, 0]; frames = 0; } frames++; K.KIT_STAGED.ops.forEach((gd: any, k: number) => { if (gd.state !== 'dead' && gd.flashlight.enabled) lit[k]++; }); return r; };
-    unwrap = () => { Game.prototype.update = update; };
-    // [name, the cards, each man's gun, each man: a light fitted]
-    const squads: [string, () => void, string[], boolean[]][] = [
-      ['every card as issued', () => {}, ['fn2000', 'fn2000', 'fn2000', 'fn2000'], [true, true, true, true]],
-      ['the quiet set on everybody', () => { for (let i = 0; i < KIT_MEMBERS; i++) K.kitPreset(i, 'quiet'); }, ['fiveseven', 'fiveseven', 'fiveseven', 'fiveseven'], [false, false, false, false]],
-      ['the loud set on everybody', () => { for (let i = 0; i < KIT_MEMBERS; i++) K.kitPreset(i, 'loud'); }, ['aks74u', 'aks74u', 'aks74u', 'aks74u'], [true, true, true, true]],
-      ['a mixed squad (9 mm, no light + no goggles, issued, bare carbine)', () => { K.kitSet(1, 'weapon', 'pistol'); K.kitSet(1, 'suppressed', false); K.kitSet(2, 'light', false); K.kitSet(2, 'nvg', false); K.kitSet(4, 'suppressed', false); }, ['guard9mm', 'fn2000', 'fn2000', 'aks74u'], [true, false, true, true]],
-    ];
-    let burned = 0;
-    for (const [name, set, guns, fitted] of squads) {
-      issued(); set();
-      for (const seed of [1, 2]) {
-        const r: any = await play('room-clear-four', seed, 300);
-        const team: any[] = K.KIT_STAGED.ops, held = team.map(gd => gd.weapon.def.id), dark = lit.filter((n, k) => !fitted[k] && n > 0).length;
-        burned += lit.reduce((s, n, k) => s + (fitted[k] ? n : 0), 0);
-        F.verdict(r.end !== 'error' && held.length === 4 && held.every((id, k) => id === guns[k]) && dark === 0, `${name}, seed ${seed}: played to its end, every man still on his card's gun, no unfitted light lit in any frame`,
-          `${r.end} at ${r.t} s · team ${r.team}/${r.of} · hostiles left ${r.hostiles}/${r.hostilesOf} · ${r.smells.length} smells${r.end === 'error' ? ` · ${r.why.split('\n').slice(0, 2).join(' / ')}` : ''} · held: ${held.join(' ')} · frames lit of ${frames}: ${lit.map((n, k) => `${n}${fitted[k] ? '' : ' (none fitted)'}`).join(' ')}`);
-      }
-    }
-    F.verdict(burned > 0, 'and the check is not empty: fitted lights did burn in these runs', `${burned} man-frames of fitted lights lit over the eight runs`);
-  } finally { unwrap(); issued(); }
-  return F.done();
-}

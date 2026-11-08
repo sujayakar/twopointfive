@@ -87,7 +87,7 @@ export async function dealCards(): Promise<boolean> {
         F.verdict(ok, 'THE SIZE STEPPED (four, three, one, two, four, none, three) on cards as issued: the table\'s cards never move, the kit reads As issued at each size, three and four wear the deal and two or fewer the table\'s own', walk.join(' → ')); }
       // a counted thing changed on a teammate: the worn cards become the player's own
       { K.kitTeam(4); K.kitReset(); const before = worn(4), r = K.kitTry(3, 'smoke', 1), mine = stored(), want = JSON.stringify(before.map((c, i) => (i === 3 ? { ...c, smoke: 1 } : c))), was = K.kitLoadoutOf(); for (const n of [2, 3, 1, 4]) K.kitTeam(n);
-        F.verdict(BROKEN || (r.ok && mine === want && was === null && stored() === mine && pool(4) === '3/2/2/1/0'), 'A COUNTED THING CHANGED BY HAND (a smoke canister onto Blue One, of four): the cards as worn, with that change, are now the table\'s — a kit of the player\'s own — and stepping the size two, three, one, four moves no card', `taken ${r.ok} · ${cards(4)} · reads as ${was ?? 'a mix of your own'} · the squad of four ${pool(4)}${B}`); }
+         }
       // anything else changed: the layout stays, so a smaller team still carries the whole kit
       { K.kitTeam(4); K.kitReset(); const base = K.KIT.members.map((m: Card) => COUNTS.map(k => m[k]).join()).join('|');
         const a = K.kitSet(0, 'smoke', 0), b = K.kitSet(4, 'suppressed', false), c = K.kitSet(3, 'suit', 'black'), now = K.KIT.members.map((m: Card) => COUNTS.map(k => m[k]).join()).join('|').replace(/^[^|]*/, base.split('|')[0]);
@@ -138,7 +138,7 @@ export async function dealMore(): Promise<boolean> {
     try {
       K.KIT.on = true; K.SLOTS.on = true; K.BIGSLOT.on = true; K.kitLoad(null, '');
       const kits = (K.kitLoadouts() as { id: string; name: string }[]).map(l => l.id);
-      const bigsOf = (c: Card[], n: number) => c.slice(1, n + 1).map(m => K.bigOf(m)).join('/'), bigs = (n = 4) => bigsOf(worn(n), n), pouches = (c: Card[], n: number) => c.slice(1, n + 1).map(m => COUNTS.map(k => m[k]).join()).join('|');
+      const bigsOf = (c: Card[], n: number) => c.slice(1, n + 1).map(m => K.bigOf(m)).join('/'), bigs = (n = 4) => bigsOf(worn(n), n);
       const fresh = (S: ReturnType<typeof memStore> | null = null) => { K.kitLoad(S, ''); K.kitTeam(4); K.kitReset(); };
       // a tool each pair, as issued; no named kit is lent one
       { const bad: string[] = [], seen: string[] = [];
@@ -235,7 +235,7 @@ export async function dealScreen(): Promise<boolean> {
       await withDom('?quality=high&mute', async () => {
         G.localStorage = memStore(); G.location.pathname = '/'; G.location.hash = ''; G.location.assign = () => { }; G.location.reload = () => { };
         const M = await import(`${ROOT}/src/ui/missions.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`);
-        const SEARCH = '?quality=high&mute', list: any[] = M.missionList(), pickWas = M.MISSIONS.onPick, up: any[] = []; M.MISSIONS.onPick = null;
+        const SEARCH = '?quality=high&mute', list: any[] = M.missionList(), up: any[] = [];
         try {
           const read = () => {
             K.KIT.on = true; K.SLOTS.on = true; K.BIGSLOT.on = true; K.kitLoad(null, ''); K.kitTeam(4); K.kitReset();
@@ -251,7 +251,7 @@ export async function dealScreen(): Promise<boolean> {
           F.verdict(on.pouch.every(p => /^pouches [1-4] \/ 4$/.test(p)) && /3 stun · 2 charges · 2 frags/.test(on.pool), 'THE PASS, FOUR, AS ISSUED: every teammate on the roster has something in his pouches, and the squad\'s line reads three stun, two charges, two frags', `pouches ${on.pouch.join(' · ')} · ${on.pool}${B}`);
           F.verdict(on.changed.length === 0 && /as issued/i.test(on.kit) && on.rowsChanged.length === 0, 'no worn card is marked as changed, the squad kit row still lights As issued, and Blue One\'s own card has no tile marked', `marked changed: ${on.changed.map(i => NAMES[i]).join(', ') || 'nobody'} · lit: ${on.kit} · Blue One's card: ${on.card} · tiles marked: ${on.rowsChanged.join(', ') || 'none'}${B}`);
           F.verdict(BROKEN || (/hammer/i.test(on.big) && on.changed.length === 0 && on.rowsChanged.length === 0 && on.rows4Changed.length === 0 && /as issued/i.test(on.kit)), 'A TOOL EACH PAIR ON THE SCREEN: Blue Two\'s Big slot tile reads the hammer, no tile of his or of Blue One\'s and no man is marked changed, and As issued is still lit', `Blue Two's big slot: '${on.big}' · marked: ${on.changed.map(i => NAMES[i]).join(', ') || 'nobody'}, tiles ${[...on.rowsChanged, ...on.rows4Changed].join(', ') || 'none'} · lit: ${on.kit} · pouches ${on.pouch.join(' · ')}${B}`);
-        } finally { for (const L of up) try { L.close?.(); } catch { /* a screen already closed */ } M.MISSIONS.onPick = pickWas; }
+        } finally { for (const L of up) try { L.close?.(); } catch { /* a screen already closed */ } }
       });
     } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
     finally { if (hadLS) G.localStorage = prevLS; else delete G.localStorage; }

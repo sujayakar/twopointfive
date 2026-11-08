@@ -43,7 +43,7 @@ import type { Level, LevelDoorDef, DeviceDef, CivilianDef, PatrolRoute } from '.
 import type { LevelScenarios, QuietData, Rect, ResponseData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, roundSlabs, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/scene/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
@@ -420,8 +420,8 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     const side = (f: '+x' | '-x' | '+z' | '-z', pals: (Mt | number)[], fn: Cell, max = 1) => G.mk(G.face(f, 'coarse', pals.map(p => typeof p === 'number' ? { mul: p } : pal(p)), fn, 0, max));
     const fill: Cell = (i, j, W, Hc) => edge(i, j, W, Hc) >= 1 ? 1 : 0;
     const disc = (k: number): Cell => (i, j, W, Hc) => Math.hypot(i - (W - 1) / 2, j - (Hc - 1) / 2) < W * k ? 1 : 0;
-    /** a round thing standing: the kit's own slabs (gwotKit.ts roundSlabs — from 0.2 m the octagon the round rule makes one round box of; `extra` = its lid's mark) */
-    const rnd = (x: number, z: number, y0: number, y1: number, r: number, mat: Mt, extra: Parameters<typeof w>[7] = {}) => roundSlabs(r).forEach((s, k) => w(x, z, y0, y1 - s.drop, s.hx, s.hz, M[mat], k === 0 ? extra : {}, s.yaw));
+    /** a round thing standing, the kit's (`extra` = its lid's mark) */
+    const rnd = (x: number, z: number, y0: number, y1: number, r: number, mat: Mt, extra: Parameters<typeof w>[7] = {}) => G.round(w, x, z, y0, y1, r, M[mat], extra, {});
     /** a plank top on two board ends (three boxes): hx × hz half extents, `hgt` high */
     const bench = (x: number, z: number, hx: number, hz: number, hgt: number, mat: Mt, alongX = true) => {
       w(x, z, hgt - 0.04, hgt, hx, hz, M[mat]);

@@ -22,7 +22,7 @@ import { pickupShapes, vanShapes, bikeShapes, lorryShapes, hubPaint, layOn, type
 import type { BoxShape, ShapePiece } from './shapes';
 import { WORLD } from './world';
 import type { Level, LightDef, PropKind, PropPart, PropDef } from './level';
-import { MarkingDef, MarkFace, MarkRes, MarkPal, MARKING_TEXEL, RES_K, CellCanvas, marking, mkHash, faceHalf, faceIndex } from './markings';
+import { MarkingDef, MarkFace, MarkRes, MarkPal, MARKING_TEXEL, MAX_MARKS_PER_BOX, RES_K, CellCanvas, marking, mkHash, faceHalf, faceIndex, texelOf } from './markings';
 
 const H = WORLD.ceilingY;
 
@@ -52,14 +52,39 @@ export function gwotOfOffice(K: { add: GwotHost['add']; prop: GwotHost['prop']; 
   return { add: K.add, prop: K.prop, wallX: K.wallX, wallZ: K.wallZ, lights: K.lights, switchables: K.switchables, marks: K.MARKS, texel: K.TX };
 }
 
-/** A ROUND THING AS BOXES, the one way every kit writes it (this kit's `round`, tools/levels/livedKit.ts and livedPieces.ts): the slabs that stand for a round of
- *  radius r through one centre — each its half extents, its turn about y and how far its top is let down so no two tops share a plane.
- *  From 0.2 m an OCTAGON: four slabs 45° apart, each as wide as the round and tan 22.5° as deep — their union is the regular octagon exactly (seen from above a
- *  drum is round; two squares read as a cog), tops stepped 2 mm. This is the shape scene/round.ts finds in a level's boxes and makes ONE round box of.
- *  Smaller: two squares 45° apart, the second 4 mm lower (nothing finds those: they only read rounder than one square). */
+/** A ROUND THING, the one way every kit writes it (this kit's `round`, tools/levels/livedKit.ts and livedPieces.ts). From ROUND_FROM of radius it is ONE BOX that
+ *  says it is round (scene/round.ts, BoxData.round). Its radius is roundRadius of the half width `roundFace` gives: the circle whose area is the regular octagon's
+ *  that drew a drum before it was round, so 0.985 of the radius asked for. Its marks are made for a face of that half width and laid by roundMarks. */
+export const ROUND_FROM = 0.2;
+const R_OF_FACE = 1.026;
+/** the half width and depth of the face a round's marks are made for */
+export const roundFace = (r: number): { a: number; t: number } => { const a = r * 0.96; return { a, t: a * 0.4142 }; };
+export const roundRadius = (a: number): number => a * R_OF_FACE;
+/** a round patch on a lid (a tyre's hole, an oven's mouth), drawn as a disc of radius R */
+function discMark(like: MarkingDef, R: number, texel: number): MarkingDef {
+  const t = texelOf(like, texel), N = Math.min(32, 2 * Math.ceil(R / t) + 2), cells: string[] = [];
+  for (let j = N - 1; j >= 0; j--) { let row = ''; for (let i = 0; i < N; i++) row += Math.hypot(i + 0.5 - N / 2, j + 0.5 - N / 2) * t < R ? 'a' : '.'; cells.push(row); }
+  return { face: '+y', ...(like.res && like.res !== 'base' ? { res: like.res } : {}), at: [-N / 2, -N / 2], size: [N, N], pal: [like.pal[0]], cells };
+}
+/** WHAT A ROUND WEARS, from the marks made for its face: the first band on a long face goes on all four sides, and a lid of one paint becomes a disc (a lid of two
+ *  paints is a drum's: its rim is the shader's). `sets` in order, the first set the one that holds the lid */
+export function roundMarks(sets: readonly (readonly MarkingDef[] | undefined)[], R: number, texel = MARKING_TEXEL): MarkingDef[] | undefined {
+  const band = sets.flatMap(m => m ?? []).find(m => m.face === '+z' || m.face === '-z'), lid = (sets[0] ?? []).find(m => m.face === '+y');
+  const marks: MarkingDef[] = [];
+  if (lid && lid.pal.length === 1) marks.push(discMark(lid, R * 0.5, texel));
+  if (band) for (const f of ['+x', '-x', '+z', '-z'] as const) if (marks.length < MAX_MARKS_PER_BOX) marks.push({ ...band, face: f });
+  return marks.length ? marks : undefined;
+}
+/** a thing of radius under ROUND_FROM, which no one takes for round: two squares 45° apart, the second 4 mm lower (it only reads rounder than one square) */
 export function roundSlabs(r: number): { hx: number; hz: number; yaw: number; drop: number }[] {
-  if (r < 0.2) { const s = r * 0.93; return [{ hx: s, hz: s, yaw: 0, drop: 0 }, { hx: s, hz: s, yaw: Math.PI / 4, drop: 0.004 }]; }
-  const a = r * 0.96, t = a * 0.4142;
+  if (r >= ROUND_FROM) throw new Error(`roundSlabs: a thing of radius ${r} is one round box`);
+  const s = r * 0.93; return [{ hx: s, hz: s, yaw: 0, drop: 0 }, { hx: s, hz: s, yaw: Math.PI / 4, drop: 0.004 }];
+}
+/** a round thing that is DRAWN ONLY (a tray, a thing that may lie on a mark): plain boxes that no ray or foot meets, so nothing asks them to be round. Under
+ *  ROUND_FROM as roundSlabs; from it four slabs through one centre, 45° apart, whose union is a regular octagon, their tops stepped 2 mm */
+export function drawnRoundSlabs(r: number): { hx: number; hz: number; yaw: number; drop: number }[] {
+  if (r < ROUND_FROM) return roundSlabs(r);
+  const { a, t } = roundFace(r);
   return [0, 1, 2, 3].map(k => ({ hx: a, hz: t, yaw: k * Math.PI / 4, drop: 0.002 * k }));
 }
 
@@ -176,9 +201,12 @@ export function gwotKit(host: GwotHost) {
    *  `nth`: it lies on that many earlier falls */
   const lay = (x: number, z: number, yaw: number, top: BowedTop, lx: number, lz: number, y0: number, y1: number, hx: number, hz: number, m: Mat, nth = 0) =>
     piece(x, z, yaw)(lx, lz, y0, y1, hx, hz, m, { flags: BoxFlag.NoShadow, shape: layOn(top, [lx, (y0 + y1) / 2, lz], [hx, (y1 - y0) / 2, hz], m, { nth }) });
-  /** a round thing of radius r, as the slabs of `roundSlabs` (the first carries `extra`, the others `extra2`) */
+  /** a round thing of radius r: one round box from ROUND_FROM, its marks made for a face (`extra` first, then `extra2`); under it the two squares of `roundSlabs` */
   const round = (b: Put, lx: number, lz: number, y0: number, y1: number, r: number, m: Mat, extra: Extra = {}, extra2: Extra = extra) => {
-    roundSlabs(r).forEach((s, k) => b(lx, lz, y0, y1 - s.drop, s.hx, s.hz, m, k === 0 ? extra : extra2, s.yaw));
+    if (r < ROUND_FROM) { roundSlabs(r).forEach((s, k) => b(lx, lz, y0, y1 - s.drop, s.hx, s.hz, m, k === 0 ? extra : extra2, s.yaw)); return; }
+    const { a, t } = roundFace(r), R = roundRadius(a), { art: _art, marks: _marks, ...rest } = extra;
+    const sets = [0, 1, 2, 3].map(k => { const e = k === 0 ? extra : extra2; return e.marks ?? marksOf([a, (y1 - 0.002 * k - y0) / 2, t], e.art).marks; }), marks = roundMarks(sets, R, TX);
+    b(lx, lz, y0, y1, R, R, m, { ...rest, yaw: 0, round: true, ...(marks ? { marks } : {}) });
   };
   /** TRIM IN A PAINT OF ITS OWN (a log's pale end, a pipe's bore, the ties on a rolled blanket): the paint, its finish, and WHAT THAT PAINT IS MADE OF — a
    *  shape's piece is of its box's stuff unless it says another (scene/shapes.ts ShapePiece), and nothing reads a word off a colour */
@@ -883,7 +911,7 @@ export function gwotKit(host: GwotHost) {
   };
 
   // the kit's TOOLS, then its PIECES by name (scene/library.ts: the catalogue, docs/library.md, is written from this list)
-  return { M, mk, face, marksOf, piece, as, groundAt, lie, flatAt, lay, ...pieces('gwotKit', {
+  return { M, mk, face, marksOf, piece, round, as, groundAt, lie, flatAt, lay, ...pieces('gwotKit', {
     // walls
     wallX, wallZ, partX, partZ, yardWallX, yardWallZ, pier, skirt, dado, wallHanging, gate,
     // ground
