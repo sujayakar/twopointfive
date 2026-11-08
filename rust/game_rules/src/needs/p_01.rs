@@ -220,7 +220,7 @@ pub fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if g.qrf.state != crate::qrf::QrfState::Idle {
         return Some(key("the response team"));
     }
-    if g.pl[g.player].down {
+    if crate::seats::all_down(g) {
         return Some(key("target down"));
     }
     if crate::guards::escalation_of(g) > 0.0 {
