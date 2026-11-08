@@ -14,7 +14,7 @@ const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { PLAN } = FP;
 // the plan is read as the page reads it (ui/planfloor.ts plansToDraw over `view.plan`, its own store of kept legs); here a man is found by his id and a door by its name
-const floorPlan = (g: any) => { if (!g.view.plan) throw new Error('no plan in the view: a check with nothing to read holds nothing'); const P = PF.plansToDraw(hudSource(g))[0].P, by = (id: number) => g.guards.find((m: any) => m.char.id === id);
+const floorPlan = (g: any) => { if (g.view.me < 0) throw new Error('no view: a check with nothing to read holds nothing'); const P = PF.plansToDraw(hudSource(g))[0].P, by = (id: number) => g.guards.find((m: any) => m.char.id === id);
   return { ...P, men: P.men.map((m: any) => ({ ...m, gd: by(m.man) })), who: P.who.map((w: any) => ({ ...w, gd: by(w.man) })), throws: P.throws.map((t: any) => ({ ...t, gd: by(t.man) })), doors: P.doors.map((d: any) => ({ ...d, door: d.door ? g.doors.byName(d.door) : null })) }; };
 
 const DT = 1 / 60;

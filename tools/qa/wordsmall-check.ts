@@ -37,7 +37,7 @@ async function rig(squad: number) {
     /** the panel's lines that carry a key, and the notes among them */
     lines(): string[] { return blockOf(O).flatMap((s: any) => s.opts.map((o: any) => `${o.key ? `[${o.key}] ` : ''}${o.text}`)); },
     wordLine(): string | null { return R.lines().find((l: string) => l.startsWith('[F] go · ')) ?? null; },
-    mark(): any { if (!g.view.plan) throw new Error('no plan in the view'); return g.view.plan.own.doors.find((x: any) => x.door === R.door.def.name && x.why === 'stack') ?? null; },
+    mark(): any { if (g.view.me < 0) throw new Error('no view'); return g.view.plan.own.doors.find((x: any) => x.door === R.door.def.name && x.why === 'stack') ?? null; },
     filed(): string[] { return O.log.slice(R.n0).map((r: any) => `${r.order} ${r.who.join('+')}`); },
     op(): any { return D.ops.find((o: any) => o.door === R.door) ?? null; },
     stacked() { return R.team.every((m: any) => m.state === 'dead' || (O.of(m)?.order === 'stack' && O.of(m)?.arrived)); },

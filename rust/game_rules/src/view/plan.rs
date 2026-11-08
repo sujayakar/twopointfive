@@ -43,10 +43,7 @@ fn ang_diff(a: f64, b: f64) -> f64 {
     if d < -core::f64::consts::PI { d += tau; }
     crate::m::abs(d)
 }
-fn cap_of(g: &Game, key: &Option<String>, now: bool, ready: bool) -> KeyCap {
-    if key.is_none() { return KeyCap::None; }
-    if now && ready { KeyCap::Lit } else { KeyCap::Dark }
-}
+fn cap_of(now: bool, ready: bool) -> KeyCap { if now && ready { KeyCap::Lit } else { KeyCap::Dark } }
 /// a man's colour: his pair's wherever the team is in pairs
 fn tone_of(g: &Game, paired: bool, gd: GuardId) -> Option<Tone> {
     if !paired { return None; }
@@ -156,7 +153,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
             let (fx, fz) = (crate::m::sin(c.aim_yaw), crate::m::cos(c.aim_yaw));
             let (cx, cz) = (c.pos[0] + fx * g.k.plan.pair_bar_m, c.pos[2] + fz * g.k.plan.pair_bar_m);
             let key = Some(String::from("F"));
-            let cap = cap_of(g, &key, pair_first, j.set || j.watcher.is_some());
+            let cap = cap_of(pair_first, j.set || j.watcher.is_some());
             out.push(PlanDoor { door: None, a: [cx - fz * 0.3, 0.0, cz + fx * 0.3], b: [cx + fz * 0.3, 0.0, cz - fx * 0.3], tone: tone_of(g, paired, *gd), key, now: pair_first, cap, why: WaitWhy::Pair });
         }
     }
@@ -199,14 +196,14 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
             }
             let key = Some(f.clone());
             let ready = set(&e.men) && !e.untold;
-            let cap = cap_of(g, &key, now, ready);
+            let cap = cap_of(now, ready);
             out.push(PlanDoor { door: Some(g.dr[e.door].def.name.clone()), a: ja, b: jb, tone: tone_for(g, seat, paired, &e.men), key, now, cap, why: e.why });
         }
         for &c in &w_set {
             let sc = &g.tab.wallcharge_set_wall_charge[c];
             let key = Some(f.clone());
             let now = up && !pair_first && !row_key && wall_first && Some(c) == wall;
-            let cap = cap_of(g, &key, now, true);
+            let cap = cap_of(now, true);
             out.push(PlanDoor { door: None, a: crate::wallcharge::wall_pt(g, &sc.wall, -0.4, 0.03, None), b: crate::wallcharge::wall_pt(g, &sc.wall, 0.4, 0.03, None), tone: tone_for(g, seat, paired, &charge_men(&sc.by)), key, now, cap, why: WaitWhy::Wall });
         }
     }
@@ -306,8 +303,8 @@ fn seat_plan(g: &Game, seat: &SeatRef, who: For) -> SeatPlan {
             man: c.id, tag: plan_tag(&m.callsign), tone: tone_of(g, paired, gd), age,
             way: if walking { Some(way_of(g, gd, a, mark)) } else { None },
             mark, there, held,
-            aim: aim,
-            watch: watch,
+            aim,
+            watch,
             on_door: watch.is_some() && on_door,
         });
     }
@@ -338,7 +335,7 @@ fn same_wait(a: &PlanDoor, b: &PlanDoor) -> bool {
 }
 
 /// the plan on the floor, about the seat it is handed: its own whole, then each other player's (a wait both plans list is on the page once, as the seat's own)
-pub fn plan_view(g: &Game, seat: &SeatRef) -> Option<PlanView> {
+pub fn plan_view(g: &Game, seat: &SeatRef) -> PlanView {
     let own = seat_plan(g, seat, For { own: true, reading: false });
     let mut others = Vec::new();
     if g.seats.len() > 1 && g.k.plan.others > 0.0 {
@@ -350,5 +347,5 @@ pub fn plan_view(g: &Game, seat: &SeatRef) -> Option<PlanView> {
             others.push(p);
         }
     }
-    Some(PlanView { own, others })
+    PlanView { own, others }
 }
