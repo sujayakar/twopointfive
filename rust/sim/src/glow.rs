@@ -85,16 +85,17 @@ const JOIN: f32 = 2.6;
 pub const QUICK: f64 = 8.0;
 const ROUNDS: f64 = 6.0;
 
-/// WHERE A LINE ENDS: how far (cm), what it meets (the metre before the surface, or one of the words below), how much that sends back (of 255), and the
-/// sun's cosine there (of 255; 0 = it is in shade)
+/// WHERE A LINE ENDS: how far (cm), what it meets (the metre before the surface, or one of the words below), whose surface (what that sends back is its box's to say, as it
+/// is painted: its place in the list and one, 0 = bare floor), and the sun's cosine there (of 255; 0 = it is in shade)
 #[repr(C)]
 #[derive(Clone, Copy)]
 struct Ray {
     cm: u16,
     to: u16,
-    back: u8,
+    of: u16,
     sun: u8,
 }
+const _: () = assert!(MAX_BOXES < 0xffff);
 const TO_SKY: u16 = 0xffff;
 const TO_GROUND: u16 = 0xfffe;
 /// a surface under the open sky, seen out by an opening over the horizon
@@ -123,7 +124,8 @@ struct Cast {
     word: [u64; MAX_BOXES],
     at: [[f32; 4]; MAX_BOXES],
 }
-const NO_RAY: Ray = Ray { cm: 0, to: 0, back: 0, sun: 0 };
+// (all zeros: a table that is not would be in the module's file)
+const NO_RAY: Ray = Ray { cm: 0, to: 0, of: 0, sun: 0 };
 const NO_CAST: Cast = Cast {
     rays: [[NO_RAY; RAYS]; MAX_GLOW],
     cast: [false; MAX_GLOW],
@@ -198,9 +200,9 @@ fn plan_of(r: &[f64]) -> [f32; 4] {
 fn over(a: &[f32; 4], b: &[f32; 4]) -> bool {
     a[0] <= b[2] && b[0] <= a[2] && a[1] <= b[3] && b[1] <= a[3]
 }
-/// a word of static `i`'s row: its sixteen numbers, its planes, its flags and what it sends back
+/// a word of static `i`'s row: its sixteen numbers, its planes and its flags (what it sends back is read as it is)
 fn word_of(o: &World, i: usize) -> u64 {
-    let mut h: u64 = 0xcbf29ce484222325 ^ ((o.flags[i] as u64) << 8 | o.back[i] as u64);
+    let mut h: u64 = 0xcbf29ce484222325 ^ o.flags[i] as u64;
     let r = &o.rec[i * REC..(i + 1) * REC];
     let planes = if r[R_KIND] as u32 & K_CUT != 0 { &o.cut[r[R_CUT] as usize * CUT_PLANES * 4..][..js_min(r[R_CUTN], CUT_PLANES as f64) as usize * 4] } else { &[] };
     for v in r.iter().chain(planes) {
@@ -343,9 +345,9 @@ fn cast(c: &mut Cast, w: usize, m: usize) {
         let hit = first(w, a, d, FAR);
         let down = if d[1] < -1e-6 { a[1] / -d[1] } else { FAR };
         // (the floor is a box in most places; where it is not, it is bare)
-        let (far, normal, back) = match hit {
-            Some((t, n, bi)) if t < down + 0.05 => (t, n, world_read(w).back[bi]),
-            _ => (down, [0.0, 1.0, 0.0], (BARE * 255.0) as u8),
+        let (far, normal, of) = match hit {
+            Some((t, n, bi)) if t < down + 0.05 => (t, n, bi as u16 + 1),
+            _ => (down, [0.0, 1.0, 0.0], 0),
         };
         let mut out = None;
         let mut t = 0.1;
@@ -395,7 +397,7 @@ fn cast(c: &mut Cast, w: usize, m: usize) {
                 None => (TO_DARK, 0),
             }
         };
-        c.rays[m][i] = Ray { cm: js_min(65535.0, end * 100.0) as u16, to, back, sun };
+        c.rays[m][i] = Ray { cm: js_min(65535.0, end * 100.0) as u16, to, of, sun };
     }
     c.reach[m] = [box_[0] as f32 - 0.6, box_[1] as f32 - 0.6, box_[2] as f32 + 0.6, box_[3] as f32 + 0.6];
     c.cast[m] = true;
@@ -526,7 +528,7 @@ fn work(c: &mut Cast, w: usize, set: i32, st: &mut [f64; LEN], m: usize, k: &K) 
     for (i, r) in c.rays[m].iter().enumerate() {
         let d = w_.d[i];
         let t = r.cm as f64 / 100.0;
-        let back = r.back as f64 / 255.0;
+        let back = if r.of == 0 { BARE } else { o.back[r.of as usize - 1] as f64 / 255.0 };
         // (a line that goes out is followed a leaf's width on: the leaf hangs in the opening's frame or stands open before it)
         let l = if n > 0 && shut(a, d, if r.to >= TO_OUTSIDE { t + 1.0 } else { t }) {
             LEAF / PI * st[O_GLOW_A + m]
