@@ -15,7 +15,7 @@ import { lookNumbers } from '../../src/draw/look';
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`), { roundConfig } = await import(`${ROOT}/src/scene/round.ts`), { lookConfig } = await import(`${ROOT}/src/render/frame.ts`), { lookWordOf, lookCoreOf } = await import(`${ROOT}/src/render/gbuffer.ts`), { COATFINISH, SOLIDGLASS } = await import(`${ROOT}/src/scene/stuff.ts`);
+const { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`), { lookConfig } = await import(`${ROOT}/src/render/frame.ts`), { lookWordOf, lookCoreOf } = await import(`${ROOT}/src/render/gbuffer.ts`), { COATFINISH, SOLIDGLASS } = await import(`${ROOT}/src/scene/stuff.ts`);
 const { DRESS } = await import(`${ROOT}/src/game/dress.ts`), { MARKCUT, MARKSIT } = await import(`${ROOT}/src/render/decals.ts`);
 
 const LEVELS = process.argv.slice(2).length ? process.argv.slice(2) : ['office', 'compound', 'glasshouse', 'mousehole'];
@@ -28,7 +28,7 @@ const f32 = (w: number): number => { const b = new Uint32Array([w]); return new 
 /** the same float, as near as a mark on a moving leaf is kept to its box (render/decals.ts `near`) */
 const same = (a: number, b: number): boolean => a === b || Math.abs(f32(a) - f32(b)) <= 3e-5 * Math.max(1, Math.abs(f32(a)));
 
-cutConfig.on = true; roundConfig.gpu = true; lookConfig.on = true; COATFINISH.on = true; SOLIDGLASS.on = true; MARKCUT.on = true; MARKSIT.on = true;
+cutConfig.on = true; lookConfig.on = true; COATFINISH.on = true; SOLIDGLASS.on = true; MARKCUT.on = true; MARKSIT.on = true;
 
 for (const L of LEVELS) { const [name, query] = L.split(':');
   const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', `${name}.json`), 'utf8'))), seed: 3 }));

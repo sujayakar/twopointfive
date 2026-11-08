@@ -75,7 +75,6 @@ fn born(slot: usize) {
 /// the level's statics into the host's box world and its lights into the light set (standup.ts populateHost)
 fn populate_host(g: &mut Game, boxes: &mut Vec<BoxId>) {
     let doors = g.level.doors.clone();
-    if g.k.round.on { let texel = g.level.mark_texel; passes::round_level(g, boxes, texel); }
     passes::thin_level(g, boxes, &doors);
     passes::bar_level(g, boxes);
     if g.k.shapes.on { passes::shape_level(g, boxes); }

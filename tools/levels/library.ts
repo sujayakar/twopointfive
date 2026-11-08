@@ -30,7 +30,6 @@ import { KIT_PALETTE } from '../../src/scene/levelKit';
 import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
 import { GWOT_PALETTE, GWOT_FINISH, GWOT_SURFACE, SNOW_PALETTE, ROUGH_CLOTH, type GwotMat, type SnowMat } from '../../src/scene/gwotPalette';
 import { doesOfName } from '../../src/scene/stuff';
-import { findOctagons } from '../../src/scene/round';
 import { ALL_MISSIONS } from '../../src/scene/scenarioList';
 import { encodePng } from '../qa/png';
 import { livedKit, LIVED_PAINT } from './livedKit';
@@ -227,7 +226,7 @@ function measure(kitName: string, name: string, said: Said | undefined, stand: (
   const foot = Math.min(...all.map(bottom)), [len, wid] = footprint(all);
   piece.boxes = all;
   piece.count = { solid: solid.length, drawn: statics.length - solid.length, loose: props.length, parts: parts.length, marks: all.reduce((k, b) => k + (b.marks?.length ?? 0), 0),
-    round: findOctagons(statics).length, lights: lights.length, fixtures: fixtures.length };
+    round: statics.filter(b => b.round).length, lights: lights.length, fixtures: fixtures.length };
   piece.size = [r2(len), r2(wid), r2(Math.max(...all.map(top)) - foot)];
   piece.lit = lights.length + fixtures.length > 0;
   piece.reach = inWay.length ? r2(Math.max(...inWay.map(top))) : 0;
@@ -283,7 +282,7 @@ for (const k of KITS) {
 // and only some lines dealt two that lapped; 11-05, with a handcart's shafts lying in its bed's top and a van's bumpers in its sides: 89 patches on 20 levels).
 // And of the showrooms' files, where pieces that are made to meet (a gate in its yard wall) stand as they are meant to.
 /** a kit's box as zfight asks a level file's: its flags by name, and what it is painted with */
-const asFile = (b: Box, i: number | string) => ({ id: `#${i}`, c: [...b.c], h: [...b.h], yaw: b.yaw, ...(b.rot ? { rot: b.rot } : {}), flags: bitsToFlags(b.flags),
+const asFile = (b: Box, i: number | string) => ({ id: `#${i}`, c: [...b.c], h: [...b.h], yaw: b.yaw, ...(b.rot ? { rot: b.rot } : {}), ...(b.round ? { round: true } : {}), flags: bitsToFlags(b.flags),
   albedo: [...b.albedo], emissive: [...b.emissive], metal: b.metal ? 1 : 0, rough: b.rough, markings: b.marks?.length ? b.marks : undefined });
 const flickers = new Map<string, { n: number; level: string; big: [number, number] }>(); let callsAsked = 0, callsUnlaid = 0, callsOfProps = 0, hiddenWhereLaid = 0;
 /** … WHERE IT IS LAID. A piece on a wall's face has a back, and laid alone its back is open: a run of conduit and its clips lie in the wall's plane in two
@@ -346,7 +345,7 @@ function page(): string {
     '  down to the floor (it is laid on furniture or on a wall); *glass* = sight passes it, feet and sound do not; *walked over* = solid but under 0.2 m;',
     '  *loose* = a body a man shoves and a blast throws; *drawn only* = no ray and no foot meets it; *lit* = it adds a lamp or a lit fixture.',
     '- **Size** is length × width × height in metres of the call that was laid. A wall, a rug or a line is as long as it was asked for.',
-    '- **Boxes** is what the piece costs: solid boxes, drawn-only boxes, loose things and their parts, round things the round rule finds, marking bitmaps, lamps.',
+    '- **Boxes** is what the piece costs: solid boxes, drawn-only boxes, loose things and their parts, round things, marking bitmaps, lamps.',
     '- **Paints** are rows of the tables under Paints below, most boxes first; `row × 0.60` is a row darkened; a colour a kit writes as numbers shows as its numbers.',
     `- **The showrooms**: ${SHOWROOMS.map(s => `\`?levelFile=${s}.json&solo&hour=midday\``).join(' and ')}. Between them one of each piece stands, and its line in the`,
     '  showroom\'s generator is the call to copy.',

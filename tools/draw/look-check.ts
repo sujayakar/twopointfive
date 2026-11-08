@@ -13,7 +13,7 @@ import { lookNumbers } from '../../src/draw/look';
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { lookConfig } = await import(`${ROOT}/src/render/frame.ts`), { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`), { roundConfig } = await import(`${ROOT}/src/scene/round.ts`), { lookWordOf, lookCoreOf } = await import(`${ROOT}/src/render/gbuffer.ts`), { COATFINISH, SOLIDGLASS } = await import(`${ROOT}/src/scene/stuff.ts`);
+const { lookConfig } = await import(`${ROOT}/src/render/frame.ts`), { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`), { lookWordOf, lookCoreOf } = await import(`${ROOT}/src/render/gbuffer.ts`), { COATFINISH, SOLIDGLASS } = await import(`${ROOT}/src/scene/stuff.ts`);
 const { buildWearMap } = await import(`${ROOT}/src/render/wear.ts`), { lookDoors } = await import(`${ROOT}/src/scene/lookTidy.ts`), { LOOK, LOOK_DOORS } = await import(`${ROOT}/src/scene/look.ts`), { DUST_LOOK } = await import(`${ROOT}/src/game/particleFx.ts`);
 
 const LEVELS = process.argv.slice(2).length ? process.argv.slice(2) : ['office', 'compound-gwot', 'block-gwot', 'mousehole-gwot', 'glasshouse', 'killhouse-gwot', 'records-gwot'];
@@ -22,7 +22,7 @@ let fails = 0;
 const line = (ok: boolean, what: string, detail = '') => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${detail ? `\n    ${detail}` : ''}`); };
 const log = console.log, quiet = async <T>(f: () => T | Promise<T>): Promise<T> => { console.log = () => { }; try { return await f(); } finally { console.log = log; } };
 
-lookConfig.on = true; LOOK.on = true; cutConfig.on = true; roundConfig.gpu = true; COATFINISH.on = true; SOLIDGLASS.on = true;
+lookConfig.on = true; LOOK.on = true; cutConfig.on = true; COATFINISH.on = true; SOLIDGLASS.on = true;
 
 for (const name of LEVELS) {
   const level = loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', `${name}.json`), 'utf8')));

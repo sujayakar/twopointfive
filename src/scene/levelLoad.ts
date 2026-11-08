@@ -14,7 +14,6 @@ import { withScript } from './level';
 import { LEVEL_SCRIPTS } from './levelScripts';
 import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, MarkData, validateLevelData, flagsToBits, bitsToFlags } from './levelData';
 import { copyMarkings } from './markings';
-import { authoredC, authoredH } from './round';   // (leaf helpers: a box's centre and half size as its level authored them)
 import { formOf, type BoxShape, type ShapePiece } from './shapes';
 import { LIVED, isLived } from './lived';   // (no imports of its own: the lived-in rooms' switch and what counts as lived)
 import { DESTRUCTION, DRESS_GROUP } from '../game/destructionSwitch';   // (no imports of its own: the one switch + the dressing group's name)
@@ -82,6 +81,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
     boxIndex.set(b.id, i);
     const p: Partial<Box> & { c: Vec3; h: Vec3 } = { c: V(b.c), h: V(b.h), yaw: b.yaw ?? 0, albedo: albedoOf(b), emissive: b.emissive ? V(b.emissive) : [0, 0, 0], flags: flagsToBits(b.flags) };
     if (b.rot) p.rot = [b.rot[0], b.rot[1], b.rot[2], b.rot[3]];
+    if (b.round) p.round = true;
     if (b.name !== undefined) p.name = b.name;
     if (b.cutHeight !== undefined) p.cutHeight = b.cutHeight;
     const marks = copyMarkings(b.markings); if (marks) p.marks = marks;   // (through markings.ts marking(): the same structure the generator builds)
@@ -247,13 +247,13 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
   const DERIVED = BoxFlag.AreaLit | BoxFlag.Emissive | BoxFlag.Rot | BoxFlag.Dynamic | BoxFlag.Thin | BoxFlag.Bar;
   const boxes: BoxData[] = level.boxes.slice(0, n).map((b, i) => {
     if (b.owner) throw new Error(`box ${i}: owner ${b.owner} — level boxes belong to the world`);
-    const pt = paint(b.albedo), yaw = b.was ? b.was.yaw : b.yaw, fl = b.was ? b.was.flags : b.flags, mk = b.was ? b.was.marks : b.marks;   // (AS AUTHORED: a round thing's slab — round.ts Box.was — is written as the level file has it, so a level that is standing goes back to data as its file; a shaped box keeps its centre, half size and marks)
-    const d: BoxData = { id: ids[i], floor: F0, ...(opts.boxGroups?.[i] ? { group: opts.boxGroups[i] } : {}), ...(b.name !== undefined ? { name: b.name } : {}), c: V(authoredC(b)), h: V(authoredH(b)), ...(yaw !== 0 ? { yaw } : {}), ...(b.rot ? { rot: [b.rot[0], b.rot[1], b.rot[2], b.rot[3]] } : {}), ...pt, ...finish(b, pt as { material?: string }) };
+    const pt = paint(b.albedo);
+    const d: BoxData = { id: ids[i], floor: F0, ...(opts.boxGroups?.[i] ? { group: opts.boxGroups[i] } : {}), ...(b.name !== undefined ? { name: b.name } : {}), c: V(b.c), h: V(b.h), ...(b.yaw !== 0 ? { yaw: b.yaw } : {}), ...(b.rot ? { rot: [b.rot[0], b.rot[1], b.rot[2], b.rot[3]] } : {}), ...(b.round ? { round: true } : {}), ...pt, ...finish(b, pt as { material?: string }) };
     if (b.emissive[0] !== 0 || b.emissive[1] !== 0 || b.emissive[2] !== 0) d.emissive = V(b.emissive);
-    const flags = bitsToFlags(fl & ~DERIVED); if (flags.length) d.flags = flags;
+    const flags = bitsToFlags(b.flags & ~DERIVED); if (flags.length) d.flags = flags;
     if (b.cutHeight !== 1e6) d.cutHeight = b.cutHeight;
     const word = says(b, pt as { material?: string }); if (word.stuff !== undefined) d.stuff = word.stuff; if (word.does !== undefined) d.does = word.does;
-    const marks = copyMarkings(mk); if (marks) d.markings = marks;
+    const marks = copyMarkings(b.marks); if (marks) d.markings = marks;
     if (b.shape) {   // A SHAPE (scene/shapes.ts), as it was read: a piece's paint by name where the level has one, its finish and its word only where they are not the material's
       const s = b.shape, sd: ShapeData = { ...formOf(s) };
       if (s.with) sd.with = s.with.map((w): ShapePieceData => { if (!w.albedo) return { off: V(w.off), h: V(w.h), ...(w.yaw ? { yaw: w.yaw } : {}), ...formOf(w) }; const wp = paint(w.albedo); return { off: V(w.off), h: V(w.h), ...(w.yaw ? { yaw: w.yaw } : {}), ...wp, ...finish(w, wp as { material?: string }), ...says(w, wp as { material?: string }), ...formOf(w) }; });

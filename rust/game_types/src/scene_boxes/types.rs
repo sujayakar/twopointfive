@@ -79,7 +79,6 @@ pub struct Box {
     pub cut_old: Option<bool>,
     pub cut_core_stuff: Option<crate::scene_stuff::BoxStuff>,
     pub round: Option<bool>,
-    pub was: Option<crate::scene_boxes::BoxWas>,
     pub shape: Option<crate::scene_shapes::BoxShape>,
     pub shaped: Option<bool>,
     pub piece: Option<bool>,
@@ -121,7 +120,6 @@ impl Box {
             cut_old: None,
             cut_core_stuff: None,
             round: None,
-            was: None,
             shape: None,
             shaped: None,
             piece: None,
@@ -131,29 +129,6 @@ impl Box {
     }
 }
 impl Default for Box { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/boxes.ts:154 Box.was, src/scene/boxes.ts:154)
-#[derive(Clone, Debug)]
-pub struct BoxWas {
-    pub c: V3,
-    pub h: V3,
-    pub yaw: f64,
-    pub flags: f64,
-    pub marks: Option<Vec<crate::scene_markings::MarkingDef>>,
-}
-impl BoxWas {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxWas {
-            c: [0.0; 3],
-            h: [0.0; 3],
-            yaw: 0.0,
-            flags: 0.0,
-            marks: None,
-        }
-    }
-}
-impl Default for BoxWas { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: BoxWorld, src/scene/boxes.ts:261)
 #[derive(Clone, Debug)]
@@ -253,7 +228,6 @@ pub struct BoxWorld {
     pub mark_of_box: JsMap<BoxId, crate::scene_boxes::BoxWorldMarkOfBoxValue>,
     pub mark_stats_info: crate::scene_boxes::BoxWorldMarkStatsInfo,
     pub cut_on: bool,
-    pub round_on: bool,
     pub cut_data: Vec<f32>,
     pub cut_lo: f64,
     pub cut_hi: f64,
@@ -372,7 +346,6 @@ impl BoxWorld {
             mark_of_box: JsMap::new(),
             mark_stats_info: crate::scene_boxes::BoxWorldMarkStatsInfo { lists: 0.0, records: 0.0, rows: 0.0, boxes: 0.0, dropped: 0.0, uploads: 0.0 },
             cut_on: false,
-            round_on: false,
             cut_data: alloc::vec![0.0; 0],
             cut_lo: 1073741824.0,
             cut_hi: -1.0,
@@ -729,7 +702,6 @@ pub struct MakeBoxP {
     pub cut_old: Option<bool>,
     pub cut_core_stuff: Option<crate::scene_stuff::BoxStuff>,
     pub round: Option<bool>,
-    pub was: Option<crate::scene_boxes::BoxWas>,
     pub shape: Option<crate::scene_shapes::BoxShape>,
     pub shaped: Option<bool>,
     pub piece: Option<bool>,
@@ -771,7 +743,6 @@ impl MakeBoxP {
             cut_old: None,
             cut_core_stuff: None,
             round: None,
-            was: None,
             shape: None,
             shaped: None,
             piece: None,
