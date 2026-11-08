@@ -1,4 +1,4 @@
-// THE FIRST TUTORIAL MISSION: a squad led from above (levels/tut-sky.json; `bun run tools/levels/export.ts tut-sky`), on a place made for it:
+// THE FLOOR tools/levels/tut-team.ts builds on (this file was the generator of a mission led from above, cut 2026-11-07; its beats below are what the floor was made for):
 // THE TUNNEL STATION. The road over the pass goes into the mountain here, and the men who keep the tunnel open in winter live beside its mouth: one long
 // range under the cut rock (the tea room, the kitchen, the store), a bunkhouse across the yard on the road, a court behind it for the generator and the fuel,
 // and a wide yard between them where the plough lorry stands by the grit heap. One gate onto the road.
@@ -7,7 +7,7 @@
 // THE PLAYER IS NOBODY ON THE FLOOR: he is over the squad, and all he has is the view and the squad's command key. So everything here is laid out to be read
 // from above, with room for four men wherever four men are sent: a road long enough to look down, a gateway three metres wide, a yard nine metres deep, rooms
 // seven metres deep with their doors on the walls the view looks at, and two metres of plain wall on each side of every door.
-// FOUR BEATS, one new thing at a time (game/rails.ts locks the rest; levels/tut-sky.script.ts stages the fire):
+// FOUR BEATS, one new thing at a time (game/rails.ts locks the rest; its script, cut with the mission, staged the fire):
 //   the road      the squad is behind its two pickups under fire from the roadblock at the tunnel's mouth. Turn the view, zoom it, shift it; then the
 //                 command key on the yard takes the squad through the gate under its own smoke, and the roadblock comes for the gate.
 //   indoors       what is behind a door is not known until it opens (the fog of war is on from the first step). The command key on a door stacks them; the
@@ -54,9 +54,9 @@ import { rockOf } from './snowRock';
 import { BoxFlag } from '../../src/scene/boxes';
 import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
 
-export const NAME = 'tut-sky';
+export const NAME = 'tunnel-station';
 export const MATERIALS = { ...GWOT_MATERIALS, ...SNOW_MATERIALS };
-export const NOTES = 'The first tutorial mission, on a place of its own: the tunnel station, a walled road-keepers\' post beside a tunnel\'s mouth on a pass road, at night, in winter. The squad\'s two pickups in the west of the road, a roadblock and a gun truck at the tunnel in the east of it; seven men in four rooms round a wide yard under snow. Regenerate: bun run tools/levels/export.ts tut-sky';
+export const NOTES = 'The first tutorial mission, on a place of its own: the tunnel station, a walled road-keepers\' post beside a tunnel\'s mouth on a pass road, at night, in winter. The squad\'s two pickups in the west of the road, a roadblock and a gun truck at the tunnel in the east of it; seven men in four rooms round a wide yard under snow. Built by tools/levels/tut-team.ts; no file of its own.';
 
 const HALF = Math.PI / 2;
 // ---- the rooms' floors inside their walls ----
@@ -80,7 +80,7 @@ export const SKY_PARK: Vec3 = [2.0, 0, 9.0];
 // ---- the road, east: the roadblock (two low walls of sandbags across the lanes), the gun truck in front of the south one, the tunnel behind them ----
 const GUN_TRUCK = { x: 29.2, z: 24.4, yaw: Math.PI - 0.07 };
 const PORTAL_X = 37.6;
-// (the three men of the roadblock are the level's script's: levels/tut-sky.script.ts POSTS, behind the sandbags below)
+// (the three men of the roadblock are the level's script's: levels/tut-team.script.ts POSTS, behind the sandbags below)
 /** THE PLOUGH LORRY, the yard's one big thing: parked across the east half of the yard in front of the bunkhouse, its blade toward the gateway. Local +X is its nose */
 const LORRY = { x: 24.0, z: 15.6, yaw: Math.PI - 0.05 };   // (a lane a man walks on each side of it, never a pocket he is posted in — and it stands in the line from the mains box, and from most of the yard, to the bunkhouse's door: what comes out of that door in the dark is seen first as light round its tail)
 
@@ -97,7 +97,7 @@ export const ROAD_BACK: Rect = { x0: 1.1, x1: 11.5, z0: 20.6, z1: 27.0 };
 const TEA_IN: Vec3 = [DOOR.tea, 1.1, 11.4], PASS_W: Vec3 = [13.9, 1.1, DOOR.pass], KITCHEN_IN: Vec3 = [DOOR.kitchen, 1.1, 11.4], STORE_E: Vec3 = [22.1, 1.1, DOOR.store], BUNK_IN: Vec3 = [29.2, 1.1, DOOR.bunk];
 
 /** THE STATION: seven men. The tea room two, the kitchen one, the store one behind its lock, the bunkhouse three: the two of them nearest its door are the
- *  ones the script walks to the mains box behind their torches when the lights go (levels/tut-sky.script.ts 'torches'), the third keeps the room. */
+ *  ones the script walks to the mains box behind their torches when the lights go (its script's 'torches'), the third keeps the room. */
 const STRUCTURE: StructureData = {
   name: 'the station', maxMen: 7,
   wallCharges: 3,
