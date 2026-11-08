@@ -469,6 +469,9 @@ pub fn tick_men(g: &mut crate::game::Game, dt: f64) {
 
 /// The senses updateGuard would have run for a man the runner drives. A noise is a cue; eyes on him is contact (true).   (qrf.ts perceiveScripted)
 pub fn perceive_scripted(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
+    crate::seats::standing_for(g, m, &mut |g| perceive_here(g, m, dt))
+}
+fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
     use crate::game::{Foe, GuardState};
     if !g.ai_enabled { return false; }
     let mut ids: Vec<f64> = Vec::new();
