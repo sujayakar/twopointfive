@@ -5,6 +5,21 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 244–260 -->
+- **THE CHECK SUITE SINCE THE CUT (2026-11-07/08; the maintainer: "cutting checks before AI rework all sgtm"). READ THIS BEFORE WRITING OR MENDING A CHECK; older bullets
+  describe the suite before it.** 1,446 names became about 1,150. What holds now:
+  - **A check reads the same alone, in its family and on every run.** A game stood with no seed and no die gets die 1 (`tools/qa/die.ts`; `standdie-check.ts`,
+    STANDDIE_BREAK=1 fails it), each probe begins on it (`holds.ts asProbe`), and `probes.ts <family>` runs a process a probe, `QA_JOBS` at a time (the cores by
+    default), each stopped at `QA_PROBE_CAP` seconds (600; 0 = none). The closing line says what the run cost and names the five slowest.
+  - **A probe is under a minute of CPU.** A sweep asks a sample (`tools/qa/sweep.ts`: `sample`, `everyNth`, floors through `swept`); `QA_SWEEP=all` asks every case.
+    A game stood with `reach: true` makes the picture's light masks every step: only a check that reads masks asks for it (it was nine tenths of the wall family's time).
+  - **A red is the game's only when the check reached the game.** A tool holds a COPY of the Rust game's state. Of about sixty reds placed one by one, five were the
+    game's. What does NOT reach it, or never comes back: a method or hook wrapped on the copy (`onRelease`, `WALLPEN_HOOKS.crossed`, `lightAt`, `probe.results`); a thing
+    planted on it (`col.addStatic`, `lists.push`, a record opened by hand); a TypeScript rule that kept its body and has no row on the call surface; a kit card changed after the
+    stand (a card reaches a game by Deploy); `saveState` by hand (use `W.snapshot()` / `W.restore()`). What does: keys, orders, functions that cross, fields named in a tool's own
+    text (a yaw is written EVERY frame). A bubble's object is reused: compare its `t`. Only the newest game of a process is live: play one arm to its end, then stand the next.
+  - `game.msg` / `game.say` wrapped by a check are told what the Rust game said (`headless.ts`, `heard.ts`): the log's five rows a tick and one line a man.
+  - **A rule of the simulation is asked natively first** (`rust/game_start/tests`); a probe is for what crosses the bridge or the page.
+  - The expected reds are what is left red, each a fault placed or a thing nobody has placed yet; a row goes the day its check is green.
 - **THE HARNESS STANDS THE GAME AS THE PAGE OPENS IT (2026-11-05; the maintainer ruled that the frozen stand may be retired).** With no word in front a
   headless tool is on what the bullet below calls the SHIPPED stand. THE RULE IS ONE FUNCTION, `standOf` in the import-free `src/host/standEnv.ts`: no
   word or `TPS_PROFILE=shipped` = the page's stand, `TPS_PROFILE=frozen` = the old one, any other word stops the tool. `harnessProfile()`
