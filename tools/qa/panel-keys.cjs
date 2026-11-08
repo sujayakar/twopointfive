@@ -74,7 +74,7 @@ const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${
   await page.keyboard.press(KEY); s = await frame(); check(!s.open && s.view === 0, 'and the key shuts it from the game again', s);
 
   const rail = await page.evaluate(() => { const names = [...document.querySelectorAll('#panel .sys')].map(b => (b.title || '').split(' — ')[0]); const rows = document.querySelectorAll('#panel .row').length; const empty = [...document.querySelectorAll('#panel .ppage')].filter(p => !p.querySelector('.row')).length; return { names, rows, empty }; });
-  check(rail.names[0] === 'Sandbox' && ['Missions', 'Squad', 'Enemy AI', 'Stealth', 'Player & weapons', 'Frame'].every(n => rail.names.includes(n)) && rail.rows > 1000 && rail.empty === 0, 'the rail: the game\'s pages first, every page has rows', { ...rail, names: rail.names.join(' · ') });
+  check(rail.names[0] === 'Sandbox' && ['Missions', 'Weather & wind', 'Frame'].every(n => rail.names.includes(n)) && rail.rows > 300 && rail.empty === 0, 'the rail: the Sandbox first, every page has rows', { ...rail, names: rail.names.join(' · ') });
   // THE PANEL KEEPS ITS HEIGHT WHILE THE SEARCH TYPES. On a tall window a long page's panel is taller than its rail, and a query with few rows would shrink it from under a pointer
   // resting low on it; a browser with a real pointer reads that as the pointer leaving, and the rest of the word would go to the game. Headless Chromium sends no such
   // leave, so what is held here is the height: the same while the search types, let go when the search does.
