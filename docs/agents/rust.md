@@ -1217,6 +1217,8 @@ one stops the tool by name, on an address one does nothing and says so in the co
   maintainer, 2026-11-07: "we should make one way for sensing"). The rules ask the simulation how lit a point is and how much smoke is on a line, in the tick that
   wants to know, the same on a page, a server and a bare machine. NOTHING IS READ OF THE PICTURE: `Sensors`, its keys, its record and replay, the probe's table and
   the queues made for its 64 places are gone, and the five switches with them. No off-word and no journal key: a recording made on the picture's answers parts from its run.
+  A page asks the light for a preview through `g.ask.light` (`src/view/worldask.ts`, `face_light`, `game::sense::light_asked`), which applies nothing and writes nothing
+  (`game_start/tests/senses.rs asking_the_light_writes_nothing`): a throw preview asks it a block of floor at a time, and a crossing with its whole apply cost 5.5 ms a question.
   - THE SMOKE IS ALL IN THE BLOCK (cells, emitters, beat). 512 bricks, a place each, so none is refused. A source too small to hide anybody (`SENSE.smoke.least`) and a
     `look` source are the picture's alone and take no room of `smoke_system_like_budget`, so a fire fight's wisps do not starve the dust.
   - A TABLE KEPT BESIDE A BLOCK goes by `sim::state::stamp`; `sim::state::put` is the one way a block is written whole (a start, a put-back, a move between slots).
