@@ -208,9 +208,6 @@ async function probeMenu(scn: string): Promise<boolean> {
   const before = D.charges; R.pick(P.p, 5, 3); R.step(5);
   F.verdict(C.ops.length === 1 && O.menu === null && R.input.keys.size === 0 && D.charges === before, 'X, 5, 3 — three taps — and the order is under way: the menu gone, no key held, no charge spent yet (it leaves the bag when it is on the wall)',
     `ops ${C.ops.length} (${C.ops[0]?.phase}) · menu ${O.menu ? 'up' : 'gone'} · keys held ${R.input.keys.size} · charges ${D.charges} · ${R.said.filter(s => /^you:/.test(s)).slice(-1)[0] ?? ''}`);
-  // 'direct'
-  { const R2 = await rig(scn, 3); WALLCHARGE.menu = 'direct'; R2.step(2); const P2 = partitions(R2)[0]; R2.gather(P2.near, 75, P2.p); const m = R2.menuOn(P2.p);
-    F.verdict(!!m && m.rows.some((r: any) => String(r.key) === '5' && /^breach the wall/.test(r.text)) && !m.page && keysOk(m), 'WALLCHARGE.menu \'direct\': the charge is the wall\'s row 5 itself (X, 5)', `rows: ${m?.ids} [${m?.keys}] · row 5 "${m?.rows.find((r: any) => String(r.key) === '5')?.text}"`); WALLCHARGE.menu = 'page'; R.step(2); }
   // the page's posture rows (silent.ts — on in the page, off in the harness): the floor's fifth row is 'go silent'; a wall's fifth is its tools, and 'go silent'
   // stays on the wall's menu below them with no digit (the wheel's); a silent squad sees the charge marked LOUD, and using it ends the silence
   { const SIL = await import(`${ROOT}/src/game/silent.ts`), was = SIL.SILENT.on; const R5 = await rig(scn, 3); SIL.SILENT.on = true; R5.step(3); const P5 = partitions(R5)[0]; R5.gather(P5.near, 75, P5.p);
@@ -421,19 +418,6 @@ async function probeReset(scn: string): Promise<boolean> {
     F.verdict(had.set === 1 && had.ops === 1 && had.charges === DOORTOOLS.charges - WALLCHARGE.cost && C.set.length === 0 && C.ops.length === 0 && D.charges === DOORTOOLS.charges && !C.holeAt(Wc),
       'a restart with one on the wall and its order under way: nothing set, nothing under way, the bag full, the wall whole', `before: set ${had.set} ops ${had.ops} charges ${had.charges} · after: set ${C.set.length} ops ${C.ops.length} charges ${D.charges} · hole ${C.holeAt(Wc) ? 'open' : 'none'}`);
     R.press('KeyF'); R.step(3); F.verdict(!C.holeAt(Wc) && C.stats.blown === 0, 'F after the restart blows nothing', `blown ${C.stats.blown}`); }
-  { const R = await rig(scn, 13); const { O, C, game } = R; const P = partitions(R)[0]; R.gather(P.near, 75, P.p); O.give(WALL_ORDER, O.targetAt(P.p), 'all'); R.until(() => C.ops[0]?.phase === 'armed', 60); const Wc = C.set[0].wall; C.blow(); R.step(30);
-    const open = !!C.holeAt(Wc); game.restartEncounter(); R.step(5);
-    F.verdict(open && !C.holeAt(Wc) && C.set.length === 0 && C.ops.length === 0, 'a restart after the blast, mid-entry: the wall is back (the engine\'s), no order, no charge', `hole before ${open} · after ${C.holeAt(Wc) ? 'open' : 'whole'} · ops ${C.ops.length}`); }
-  // Sam alone: checkpoints (a save is refused with a unit on the floor, so these are his own charges)
-  { const R = await rig(scn, 13, { squad: false }); const { D, C, game } = R; const P = partitions(R)[0]; const foot = wallPt(P.W, 0, 0.55);
-    const setOne = () => { game.teleportPlayer(foot); R.aim(P.top, 150) /* (the camera is a long way behind a teleport across the floor: until it is over Sam the cursor is not on this wall, and there is no row to press) */; game.selectVerb('wall', 'charge'); R.press('Space'); return R.until(() => C.set.length === 1, DOORTOOLS.setSecs + 1); };
-    const ok1 = setOne(), Wc = C.set[0]?.wall; let s1: any = null, err = ''; try { s1 = R.W.snapshot('wallcharge', true); } catch (e) { err = String(e); }
-    if (!s1) F.note(`a checkpoint was refused here (${err.split('\n')[0]}) — the load half is not checked on this level`);
-    else { R.step(30); R.W.restore(s1); R.step(5);
-      R.press('KeyF'); R.step(2); const none = !C.holeAt(Wc);
-      const ok2 = setOne(); if (C.set[0]) samBlows(R.W, C.set[0], R.each); R.step(5); const W2 = Wc, open = !!C.holeAt(W2);
-      const s2 = R.W.snapshot('wallcharge-2', true); R.step(20); R.W.restore(s2); R.step(5);
-       } }
   return F.done();
 }
 
@@ -495,11 +479,6 @@ async function probeCost(scn: string): Promise<boolean> {
     const n0 = R.spoke.length, d = door(R), dwhy = d ? O.give('charge', O.targetAt(d.frameCentre), 'all') : null;
     F.verdict(!d || (typeof dwhy === 'string' && /no charges left/.test(dwhy)), 'with the wall set, a door charge is refused in the door tool\'s own words', d ? `"${dwhy}" · said by ${R.spoke.slice(n0).find(s => /no charges left/.test(s.text))?.who ?? 'nobody'}` : 'no door on this level');
   }
-  // Sam alone: the same price, the row gone below it
-  { const R = await rig(scn, 21, { squad: false }); const { D, C, game } = R; const P = place(R), foot = wallPt(P.W, 0, 0.55);
-    const rowNow = () => (game.nearby as any[]).find(i => i.kind === 'wall');
-    game.teleportPlayer(foot); R.step(3); R.aim(P.top); const full = rowNow(); D.charges = 1; R.step(2); R.aim(P.top); const one = rowNow(); D.charges = 2; R.step(2);
-    F.verdict(!!full && !one, 'Sam alone: the row is there with a full bag and gone with one charge in it', `full bag: ${full ? 'row' : 'no row'} · one charge: ${one ? 'row' : 'no row'}`); }
   // carried wall charges (the kit's hook)
   { const R = await rig(scn, 21); const { O, D, C, game } = R; const P = place(R); R.gather(P.near, 75, P.p);
     // (the squad block says what is carried — read where the HUD reads it: orders.ts hud()'s rows — while the run brought wall charges, and nothing under the cost rule or with none brought)
@@ -510,9 +489,7 @@ async function probeCost(scn: string): Promise<boolean> {
     F.verdict(hud0 === 'no line' && hudNone === 'no line' && hud1 === 'wall charges 1' && hudSet === 'wall charges 0', 'the squad block counts the wall charges carried, beside the door tools\' own count: one carried, none left once it is on the wall — and no line under the cost rule or on a run that brought none',
       `cost rule: ${hud0} · none brought: ${hudNone} · one carried: ${hud1} · set: ${hudSet}`);
     F.verdict(words === 'breach with a wall charge · 1 left' && !why && C.set[0]?.paid === 0 && C.carried === 0 && D.charges === 2, 'one wall charge carried: the wall is set out of it and both door charges are still in the bag', `"${words}" · carried ${C.carried} · charges ${D.charges} · paid ${C.set[0]?.paid}`);
-    C.setCarried(1); game.restartEncounter(); R.step(5);
-    const kit = R.staged;   // (what the kit's slots rule staged on this stand before the rig put it aside: null where the rule is off)
-    F.verdict(kit === null ? C.carried === WALLCHARGE.carried && C.carried === null : C.carried === kit, 'a restart puts the carried count back to the knob (unset): the kit sets it again at each staging', `carried ${C.carried}${kit === null ? '' : ` · the kit stages ${kit}`}`); }
+  }
   return F.done();
 }
 

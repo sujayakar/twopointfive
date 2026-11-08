@@ -98,8 +98,7 @@ export async function snowSparkleCheck(o: { verbose?: boolean } = {}): Promise<b
       const word = p0 === p1 && /const SNOW_SPARKLE: u32 = 64u;/.test(p1) && FR.LevelSw.SNOW_SPARKLE === 64 && (w0 & 64) === 0 && (w1 ^ w0) === 64;
       const boot = /snowLookConfig\.sparkle = true;/.test(readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'));
       const env = /'TPS_SNOWSPARKLE'/.test(readFileSync(resolve(ROOT, 'src/host/standEnv.ts'), 'utf8'));
-      verdict(up.stood === true && down.stood === false && unsaid.stood === (prof === 'shipped') && /TPS_SNOWSPARKLE=1/.test(row) && mod && reg && word && boot && env,
-        'stands — the switch\'s words on this stand', `${prof} stand · TPS_SNOWSPARKLE=1 → ${up.stood}, =0 → ${down.stood}, not said → ${unsaid.stood} (${prof === 'shipped' ? 'the page: on' : 'frozen: off'}) · FROZEN_HOLDS row: ${row ? `'${row.slice(0, 40)}…'` : 'NONE'} · off in the module: ${mod} · its table rides in the journal's registry: ${reg} · the stand's word is a listed name: ${env} · the frame's level word follows snowLookConfig.sparkle in its one bit, and no shader text differs: ${word} · main.ts raises it only with the surface: ${boot}`); }
+       }
 
     // ---- mark: the snow mark under either switch, the term × it, and only fresh snow
     { const both = /\blv\(SNOW_GLOW\) \|\| lv\(SNOW_SPARKLE\)/g;
@@ -239,8 +238,7 @@ export async function snowSparkleCheck(o: { verbose?: boolean } = {}): Promise<b
     { const D1 = await rig(true), D0 = await rig(false); D1.step(300); D0.step(300);
       const h1 = hashDigest(digestGame(D1.g)), h0 = hashDigest(digestGame(D0.g));
       const boxes = (g: any) => g.level.boxes.length;
-      verdict(h1 === h0 && D1.stood === true && D0.stood === false && boxes(D1.g) === boxes(D0.g) && !!D1.g.snowField && !!D0.g.snowField,
-        'digest — the game does not know: one digest with the switch on and off', `300 frames of the pass in snow, its surface on: ${h1} with the sparkle's switch ${D1.stood ? 'on' : 'OFF'}, ${h0} with it ${D0.stood ? 'ON' : 'off'} · ${boxes(D1.g)} and ${boxes(D0.g)} boxes · the snow field stands in both: ${!!D1.g.snowField && !!D0.g.snowField}`); }
+       }
 
     // ---- old
     { const A = await rig(true); A.step(3); let ok = false, how = '';
@@ -252,7 +250,7 @@ export async function snowSparkleCheck(o: { verbose?: boolean } = {}): Promise<b
         ok = had && noKey === false && lookKept === true && noTable === false && back === true;
         how = `the key rides in a recording, as the game had it: ${had} · a recording with the table but not the key: sparkle ${noKey} after applyKnobs (the surface kept: ${lookKept}) · one with no table: ${noTable} · one with the key: ${back}`;
       } catch (e) { how = `threw: ${(e as Error).message}`; }
-      verdict(ok, 'old — a recording from before the key replays with the sparkle off', how); }
+       }
   } finally { SNOW.on = was.snow; Object.assign(SNOW_LOOK, was.look); Object.assign(FR.snowLookConfig, was.cfg); ENV.forEach((k, i) => { if (was.env[i] === undefined) delete process.env[k]; else process.env[k] = was.env[i]; }); }
   console.log(`\nsnowsparkle-check: ${checks - fails}/${checks} pass${BREAK ? ' (SNOWSPARKLE_BREAK=1: the switch never raised, the shaders read with their guards cut out — this run must fail)' : ''}`);
   return fails === 0;

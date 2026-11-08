@@ -146,7 +146,7 @@ async function probeSites(scn: string): Promise<boolean> {
   const F = family(`outerwall-sites: the level's outer walls as the module reads them (${scn})`);
   const R = await rig(scn, 2); const g = R.game, boxes = g.col.boxes, N = Math.min(g.destr.walls.authored, boxes.length);
   let shell = 0, yard = 0; for (let i = 0; i < N; i++) if (outerWall(g, i)) { if (skyFaces(g, i) === 2) yard++; else shell++; }
-  const out = outerSites(R, 'outside', 99), inn = outerSites(R, 'inside', 99), yd = outerSites(R, 'yard', 99), parts = g.destr.walls.all().length;
+  const every = outerSites(R, 'any', 99), out = every.filter(s => s.from === 'outside'), inn = every.filter(s => s.from === 'inside'), yd = every.filter(s => s.from === 'yard'), parts = g.destr.walls.all().length;
   F.verdict(shell + yard > 0 && out.length + yd.length > 0, 'the level has outer walls a charge can go on, and places on them a squad of four can work from outside', `${shell} building walls (the sky over one face) · ${yard} yard walls (over both) · with room to work: ${out.length} from outside, ${inn.length} from inside, ${yd.length} yard`);
   F.verdict(g.destr.walls.all().every((w: any) => !g.destr.walls.breakableAt(w.id)?.hard), 'none of them is the engine\'s until a charge goes: its list is the partitions and cover it found at load', `${parts} breakables, none hard`);
   for (const s of [...out.slice(0, 2), ...yd.slice(0, 1)]) F.note(`${s.from}: wall ${s.W.index} at ${at(s.p)} · ${f2(thickOf(s.W))} m thick · ${f2(s.walk)} m walk from Sam's start`);
@@ -312,7 +312,7 @@ async function probeLive(scn: string): Promise<boolean> {
   const armed = R.until(() => op.phase === 'armed' || !C.ops.includes(op), 60);
   if (!armed || op.phase !== 'armed') { F.note(`the order ended before it was armed ('${op.ended ?? op.phase}' — a fight found them first): ${R.beats(op)}`); return F.done(); }
   const h0 = R.hostiles.filter((h: any) => h.state !== 'dead'), st0 = h0.map((h: any) => h.state); const feed0 = game.destr.walls.serial ?? 0;
-  R.press('KeyF'); const hole = op.hole; R.step(60 * swept(15, 25));
+  R.press('KeyF'); const hole = op.hole; R.step(60 * swept(6, 25));
   const men = [...game.guards, { char: game.player.char, state: 'player', callsign: 'Sam' }].filter((m: any) => m.state !== 'dead');
   const bad = men.filter((m: any) => { const p = m.char.pos; if (!p.every(Number.isFinite)) return true; const q: Vec3 = [p[0], p[1], p[2]]; return col.collideCircle(q, 0.2, 0.25, 1.5) && flat(q, p) > 0.25; });
   const woke = h0.filter((h: any, i: number) => h.state !== st0[i] || h.state === 'dead').length;

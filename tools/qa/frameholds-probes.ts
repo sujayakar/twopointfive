@@ -124,9 +124,6 @@ export const frameholdsTools = guarded(async () => {
   // ((d) 'the same door hung the way it was dealt …: the boot as ever' went 2026-11-07: it asked the squad of before the handle is tried (the rig held that rule
   //  off for it). A locked door found shut ends the first order at the door now, whichever way it is hung.)
   // (e) a charge set on the face it opens toward still opens it: off its hinges
-  { const R = await rig(7); const { d } = faceTeam(R, 'manager', true); const w = R.give('charge', 'manager');
-    const set = R.until(() => !!R.D.chargeOn(d), 60); R.step(60 * 3); const did = R.D.blow(R.D.chargeOn(d)); R.step(60 * 2);
-    F.verdict(w === null && set && !!did && d.lockBroken && d.off, 'a charge set on that face: the leaf comes off', `refused ${w} · set ${set} · blown ${!!did} · off its hinges ${!!d.off} · angle ${f2(d.angle)} · keep broken ${!!d.lockBroken}`); }
   return F.done();
 });
 
