@@ -151,7 +151,7 @@ pub fn item_stand(g: &mut crate::game::Game, id: ItemId, r: f64) {
 }
 
 /// A double by its place. (throwables.ts Item.f)
-pub fn item_f(g: &mut crate::game::Game, id: ItemId, c_2: f64) -> f64 {
+pub fn item_f(g: &crate::game::Game, id: ItemId, c_2: f64) -> f64 {
     if let Some(k) = &g.tab.item[id].kept {
         return k[c_2 as usize];
     }
@@ -170,7 +170,7 @@ pub fn item_pf(g: &mut crate::game::Game, id: ItemId, c_2: f64, v: f64) {
 }
 
 /// A word by its place. (throwables.ts Item.w)
-pub fn item_w(g: &mut crate::game::Game, id: ItemId, c_2: f64) -> f64 {
+pub fn item_w(g: &crate::game::Game, id: ItemId, c_2: f64) -> f64 {
     if let Some(k) = &g.tab.item[id].kept {
         return k[c_2 as usize];
     }
@@ -189,7 +189,7 @@ pub fn item_pw(g: &mut crate::game::Game, id: ItemId, c_2: f64, v: f64) {
 }
 
 /// A truth: a bit of `flags`. (throwables.ts Item.bit)
-pub fn item_bit(g: &mut crate::game::Game, id: ItemId, b: f64) -> bool {
+pub fn item_bit(g: &crate::game::Game, id: ItemId, b: f64) -> bool {
     (js::to_i32(item_w(g, id, ic::FLAGS)) & js::to_i32(b)) != 0
 }
 
@@ -201,7 +201,7 @@ pub fn item_pbit(g: &mut crate::game::Game, id: ItemId, b: f64, on: bool) {
 }
 
 /// (throwables.ts Item.kind)
-pub fn item_kind(g: &mut crate::game::Game, id: ItemId) -> crate::throwables::ItemKind {
+pub fn item_kind(g: &crate::game::Game, id: ItemId) -> crate::throwables::ItemKind {
     ITEM_KINDS[item_w(g, id, ic::KIND) as usize]
 }
 
@@ -212,7 +212,7 @@ pub fn item_set_kind(g: &mut crate::game::Game, id: ItemId, v: crate::throwables
 }
 
 /// Given as a new vector. (throwables.ts Item.pos)
-pub fn item_pos(g: &mut crate::game::Game, id: ItemId) -> V3 {
+pub fn item_pos(g: &crate::game::Game, id: ItemId) -> V3 {
     [item_f(g, id, ic::PX), item_f(g, id, ic::PY), item_f(g, id, ic::PZ)]
 }
 
@@ -326,7 +326,7 @@ pub fn item_set_life(g: &mut crate::game::Game, id: ItemId, v: f64) {
 }
 
 /// (throwables.ts Item.fuse)
-pub fn item_fuse(g: &mut crate::game::Game, id: ItemId) -> f64 {
+pub fn item_fuse(g: &crate::game::Game, id: ItemId) -> f64 {
     item_f(g, id, ic::FUSE)
 }
 
@@ -381,7 +381,7 @@ pub fn item_set_settled(g: &mut crate::game::Game, id: ItemId, v: bool) {
 }
 
 /// (throwables.ts Item.fired)
-pub fn item_fired(g: &mut crate::game::Game, id: ItemId) -> bool {
+pub fn item_fired(g: &crate::game::Game, id: ItemId) -> bool {
     item_bit(g, id, crate::sim_itemshome::itf().fired)
 }
 
@@ -402,7 +402,7 @@ pub fn item_set_carried(g: &mut crate::game::Game, id: ItemId, v: Option<bool>) 
 }
 
 /// (throwables.ts Item.bounces)
-pub fn item_bounces(g: &mut crate::game::Game, id: ItemId) -> f64 {
+pub fn item_bounces(g: &crate::game::Game, id: ItemId) -> f64 {
     item_w(g, id, ic::BOUNCES)
 }
 
@@ -412,7 +412,7 @@ pub fn item_set_bounces(g: &mut crate::game::Game, id: ItemId, v: f64) {
 }
 
 /// Who threw or dropped it, an i32. (throwables.ts Item.who)
-pub fn item_who(g: &mut crate::game::Game, id: ItemId) -> f64 {
+pub fn item_who(g: &crate::game::Game, id: ItemId) -> f64 {
     js::to_i32(item_w(g, id, ic::WHO)) as f64
 }
 
@@ -422,7 +422,7 @@ pub fn item_set_who(g: &mut crate::game::Game, id: ItemId, v: f64) {
 }
 
 /// (throwables.ts Item.serial)
-pub fn item_serial(g: &mut crate::game::Game, id: ItemId) -> f64 {
+pub fn item_serial(g: &crate::game::Game, id: ItemId) -> f64 {
     item_w(g, id, ic::SERIAL)
 }
 
@@ -432,7 +432,7 @@ pub fn item_set_serial(g: &mut crate::game::Game, id: ItemId, v: f64) {
 }
 
 /// The thing of furniture it lies on: the column holds its id plus one, a place in `g.props.all` (the TypeScript's `things`). (throwables.ts Item.on)
-pub fn item_on(g: &mut crate::game::Game, id: ItemId) -> Option<PropId> {
+pub fn item_on(g: &crate::game::Game, id: ItemId) -> Option<PropId> {
     let k = item_w(g, id, ic::ON);
     if js::truthy(k) { g.props.all.get(k as usize - 1).copied() } else { None }
 }

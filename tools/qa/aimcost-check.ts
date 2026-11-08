@@ -22,7 +22,8 @@ export async function aimcostCheck(): Promise<boolean> {
   const { stage } = await import('./fn2000-probes.ts');
   const { standUp } = await import('./headless.ts');
   const { AIMCOST, AIMCOST_STATS, lampStruck } = await import(`${ROOT}/src/game/aimcost.ts`);
-  const { AIM, playerAim, trackGuard, trackPlayer } = await import(`${ROOT}/src/game/aim.ts`);
+  const { AIM, trackGuard, trackPlayer } = await import(`${ROOT}/src/game/aim.ts`);
+  const playerAim = (g: any) => ({ spread: g.view.aim.ring?.cone?.spread ?? 0 });   // (what the ring is told)
   const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);

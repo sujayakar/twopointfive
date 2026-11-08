@@ -105,7 +105,7 @@ fn free(g: &mut Game, h: GuardId, b: Option<crate::scene_level::BreachPlanBounds
 }
 
 /// One way a man could go: goal, marks on the way, where he walks now, the door it takes him to. (the map of ts:164)
-fn way_of(g: &mut Game, goal: Goal, alive: &[GuardId], room: V3) -> (Goal, Vec<V3>, Option<V3>, Option<V3>) {
+fn way_of(g: &Game, goal: Goal, alive: &[GuardId], room: V3) -> (Goal, Vec<V3>, Option<V3>, Option<V3>) {
     let via = if goal == Goal::Side { crate::rescue::rescue_side_way(g) } else { Vec::new() };
     let at = match via.first() { Some(p) => Some(*p), None => rescue_flush_point_of(g, goal, alive) };
     let door = if goal == Goal::Side { via.last().copied() } else if goal == Goal::Room { Some(room) } else { at };

@@ -49,12 +49,12 @@ pub fn air_dust_ready(g: &mut crate::game::Game) {
 }
 
 /// The module's switch. (airDust.ts AirDust.on)
-pub fn air_dust_on(g: &mut crate::game::Game) -> bool {
+pub fn air_dust_on(g: &crate::game::Game) -> bool {
     air_read(g).on != 0.0
 }
 
 /// The module's leak. (airDust.ts AirDust.leak)
-pub fn air_dust_leak(g: &mut crate::game::Game) -> f64 {
+pub fn air_dust_leak(g: &crate::game::Game) -> f64 {
     air_read(g).leak
 }
 

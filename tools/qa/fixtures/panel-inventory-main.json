@@ -3924,14 +3924,6 @@
  },
  {
   "path": "Sandbox ▸ Sandbox",
-  "kind": "buttons",
-  "label": "old tuning",
-  "title": "",
-  "def": false,
-  "extra": "[forget it — numbers once moved on the pages that have gone (squad, enemy, stealth, player, destruction, effects) are still read from this browser, and no row shows them. This drops them, hard defenders with them, and loads the page again]"
- },
- {
-  "path": "Sandbox ▸ Sandbox",
   "kind": "toggle",
   "label": "show AI debug labels",
   "title": "state / awareness tags over the guards",

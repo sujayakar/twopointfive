@@ -6,7 +6,7 @@
 // groups?'), every mission under exactly one heading and listed once: all the headings are always drawn, each with how many it holds, and only the one the
 // cursor is in shows its rows (ui/missions.ts `fold`) — W S walk every row, crossing a heading opens it, a click on a heading is its first row. Inside a
 // group the short list's missions (scene/picks.ts PICKS) come first, in play order, each still that pick (below); a fresh visit opens on the short list's
-// first. `?nogroups` = the list as it was before: the short list on top, 'Every other mission' under it, nothing folded. No way in skips another: there is
+// first. No way in skips another: there is
 // no straight-in row, no separate Missions button and no separate Start.
 //
 // THE PAGE, left to right (the calm pass, 10-11): the rows (W S / ↑ ↓, or a click), words only · the highlighted mission — its title, what it is in one
@@ -25,8 +25,8 @@
 // The page is looked at on the real build by tools/qa/startpage-look.cjs (its rows as data: picks-probes.ts picks-list). A page whose URL names a mission never opens it (that page is booting the mission).
 // Plain DOM inside the mission list's own layer (#missions, which gets the class `one`), styles injected here once. Nothing at module level uses another
 // module's exports.
-import { PICKS, PICKS_UI, pickHref, pickEntry, pickSquad, pickOfQuery, namesMission, type Pick } from '../scene/picks';
-import { MISSIONS, missionList, listedMissions, openMissions, currentMissions, GROUPS_UI, type Mission, type MissionsScreen } from './missions';
+import { PICKS, pickHref, pickEntry, pickSquad, pickOfQuery, namesMission, type Pick } from '../scene/picks';
+import { MISSIONS, missionList, listedMissions, openMissions, currentMissions, type Mission, type MissionsScreen } from './missions';
 import { openLoadout, entryOfMission, type LoadoutScreen } from './loadout';
 import { notePicked } from './picks';
 import { difficultyNow, leversMixed, leversBase, leversHref } from '../game/difficulty';
@@ -36,7 +36,6 @@ import type { HourId } from '../game/hours';
 import { squadOfQuery, sizeWords, kitAsIssued, type SquadSize } from '../game/loadout';
 import { menuTheme } from './theme';
 import { mountKitView, type KitViewFrame } from './kitView';
-import { KIT_CLIP } from './kitCard';
 import { mountKitBrief, type KitBrief } from './kitBrief';
 import { mountKitGuide, type KitGuide } from './kitGuide';
 
@@ -93,7 +92,7 @@ const CSS = `
 #missions.one .mfact { display: flex; align-items: baseline; gap: 8px; padding: 0; border: 0; border-radius: 0; background: none; }
 #missions.one .mfact i { font: 600 11px/1 var(--m-head); letter-spacing: 0.18em; color: var(--m-dim); }
 #missions.one .mfact b { margin: 0; font: 600 11px/1 var(--m-head); letter-spacing: 0.18em; text-transform: uppercase; color: var(--m-text); }
-#missions.one:not(.pane-loadout) .mfacts.nodef { display: none; }   /* (the Defenders cell was this step's only one: with the count a mystery — ui/missions.ts MYSTERY — the row is not drawn) */
+#missions.one:not(.pane-loadout) .mfacts.nodef { display: none; }   /* (how many are inside is a mystery: this step has no fact to draw) */
 #missions.one .mfact[data-fact="level"], #missions.one .mfact[data-fact="team"], #missions.one .mfact[data-fact="approach"] { display: none; }   /* (the name over it says where, the rail's Team row says who, the list's own tag says how) */
 /* the plan: a map sheet. Crop ticks at its corners, the place's own line and a scale at its foot (the canvas draws the grid and the scale) */
 #missions.one .mmap { --tick: rgba(var(--m-edge),0.34); position: relative; margin: 14px 0 0; padding: 0;
@@ -105,7 +104,7 @@ const CSS = `
 #missions.one .mplace { display: none; position: absolute; left: 12px; right: 96px; bottom: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 10px/1 var(--m-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--m-soft); }
 #missions.one .mblurb { max-width: 62ch; margin: 14px 0 0; font-size: 14px; line-height: 1.5; color: var(--m-text); }
 #missions.one .mtip { display: none; }
-#missions.one .mstore, #missions.one .mgo, #missions.one .mfoot { display: none; }
+#missions.one .mstore { display: none; }
 /* THE RAIL: one row a setting, its value at the right; a click steps it, its key steps it; the levers hang under Difficulty (three, and a fourth while game/told.ts's is on) */
 #missions.one .mrail { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; min-width: 0; padding: 4px 0 14px; }
 #missions.one .mrl { margin: 0 0 8px; font: 600 11px/1 var(--m-head); letter-spacing: 0.2em; text-transform: uppercase; color: var(--m-dim); }
@@ -140,7 +139,7 @@ const CSS = `
 #missions.one #loadout .lo-card { flex: 1 0 auto; width: auto; max-height: none; overflow: visible; padding: 0; background: none; border: 0; border-radius: 0; box-shadow: none; }
 #missions.one #loadout .lo-body { flex: 1 0 auto; overflow: visible; padding: 0; border: 0; }   /* (a Loadout whose rows sit in an inner scroller of their own: here the page scrolls, not the rows) */
 #missions.one.pane-list #loadout .lo-body { display: none; }
-#missions.one #loadout .lo-head, #missions.one #loadout .lo-foot, #missions.one #loadout [data-act="back"], #missions.one #loadout .lo-team .lo-label, #missions.one #loadout .lo-step, #missions.one #loadout .lo-words, #missions.one #loadout .lo-fig, #missions.one #loadout .lo-gun { display: none; }
+#missions.one #loadout .lo-words, #missions.one #loadout .lo-gun { display: none; }
 #missions.one #loadout .lo-row { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; gap: 6px; }
 #missions.one #loadout .lo-row.sel, #missions.one #loadout .lo-slots.sel { border-color: transparent; background: none; }
 #missions.one.pane-loadout #loadout .lo-team.sel::before, #missions.one.pane-loadout #loadout .lo-kits.sel .lo-label { color: var(--m-bright); border-left-color: var(--m-accent); }
@@ -150,14 +149,13 @@ const CSS = `
 #missions.one #loadout .lo-sizes { margin: 0; gap: 2px; }
 #missions.one #loadout .lo-size, #missions.one #loadout .lo-set, #missions.one #loadout .kc-set { min-width: 0; padding: 7px 13px 6px; font: 600 12px/1.3 var(--m-head); letter-spacing: 0.12em; text-transform: uppercase; color: var(--m-soft); background: none; border: 0; border-radius: 0; box-shadow: none; }
 #missions.one #loadout .lo-size.own { border: 0; padding: 7px 13px 6px; }
-#missions.one #loadout .lo-size.off, #missions.one #loadout .lo-set:disabled { display: none; }   /* (only the sizes this mission can be played at; alone there is no squad to kit, and the row's own line says so) */
+#missions.one #loadout .lo-size.off { display: none; }   /* (only the sizes this mission can be played at) */
 #missions.one #loadout .lo-sizes:not(:has(.lo-size:not(.off):not(.on))) .lo-size.on { padding-left: 0; color: var(--m-text); box-shadow: none !important; cursor: default; }   /* (one size only: a fact, not a control) */
-#missions.one #loadout .lo-size:hover:not(.on):not(.off), #missions.one #loadout .lo-set:hover:not(.on):not(:disabled), #missions.one #loadout .kc-set:hover:not(.on):not(.off) { color: var(--m-bright); background: rgba(var(--m-edge),0.1); border: 0; }
-#missions.one #loadout .lo-size.on, #missions.one #loadout .lo-set.on, #missions.one #loadout .kc-set.on { color: var(--m-bright); background: none; box-shadow: inset 0 -2px 0 var(--m-soft); }
+#missions.one #loadout .lo-size:hover:not(.on):not(.off), #missions.one #loadout .lo-set:hover:not(.on), #missions.one #loadout .kc-set:hover:not(.on):not(.off) { color: var(--m-bright); background: rgba(var(--m-edge),0.1); border: 0; }
+#missions.one #loadout .lo-size.on, #missions.one #loadout .lo-set.on { color: var(--m-bright); background: none; box-shadow: inset 0 -2px 0 var(--m-soft); }
 #missions.one.pane-loadout #loadout .lo-team.sel .lo-size.on, #missions.one.pane-loadout #loadout .lo-kits.sel .lo-set.pick, #missions.one.pane-loadout #loadout .kc.focus .kc-sets.sel .kc-set.pick { outline: 0; box-shadow: inset 0 -3px 0 var(--m-accent); }
 #missions.one #loadout .lo-kits { margin-top: 6px; row-gap: 4px; gap: 2px; }
 #missions.one #loadout .lo-kits-own { margin-left: 10px; font-style: normal; }
-#missions.one #loadout .lo-kits:has(.lo-set:disabled) { display: none; }   /* (alone: no squad to kit; the keys step over a row that is not drawn — loadout.ts move) */
 #missions.one #loadout .lo-noteline { flex-wrap: wrap; gap: 3px 22px; margin: 8px 0 0; padding-left: 113px; }   /* (a narrow window: what the squad carries drops under the note, nothing runs off the sheet) */
 #missions.one #loadout .lo-note { flex: 0 1 auto; min-height: 0; font-size: 12px; color: var(--m-soft); }
 #missions.one #loadout .lo-note:empty, #missions.one #loadout .lo-note:not(.off) { display: none; }   /* (only a refused step is said) */
@@ -366,7 +364,7 @@ function styles() { menuTheme(); if (document.getElementById?.('startpage-css'))
 function el(tag: string, cls?: string, text?: string) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 
 export type Pane = 'list' | 'loadout';
-export interface StartPage { readonly missions: MissionsScreen; readonly loadout: LoadoutScreen | null; readonly pane: Pane; /** how many rows on top are the short list's, outside every group (0 in the groups; the short list's length under ?nogroups) */ readonly first: number;
+export interface StartPage { readonly missions: MissionsScreen; readonly loadout: LoadoutScreen | null; readonly pane: Pane;
   setPane(p: Pane): void; /** the query string Deploy loads the highlighted mission's own team with (the loadout puts the size on it) */ baseOf(m: Mission): string; close(): void }
 let page: StartPage | null = null;
 /** the one page, while it is up */
@@ -375,18 +373,14 @@ export function startPage(): StartPage | null { return page && currentMissions()
 export function startPageWanted(search: string = typeof location !== 'undefined' ? location.search ?? '' : ''): boolean { return !namesMission(search); }
 
 /** the rows in the page's order: the list's groups in their order, each mission once, and INSIDE a group the short list's missions first, in play order,
- *  then the rest in the list's own (`first` 0: no row stands outside a group). ?nogroups (GROUPS_UI.on false): the short list's missions on top, in play
- *  order, then every other mission in the list's own order — `first` = how many are on top */
-export function startPageList(all: Mission[] = listedMissions(), picks: Pick[] = PICKS): { list: Mission[]; first: number } {
-  if (!PICKS_UI.on) return { list: all, first: 0 };
+ *  then the rest in the list's own */
+export function startPageList(all: Mission[] = listedMissions(), picks: Pick[] = PICKS): Mission[] {
   const ids = [...new Set(picks.map(p => p.mission))];
-  if (GROUPS_UI.on) { const at = (m: Mission) => all.findIndex(x => x.group === m.group), rank = (m: Mission) => { const k = ids.indexOf(m.id); return k < 0 ? ids.length : k; };   // (a group's place = where its first row stands in `all`, which is in group order)
-    return { list: all.map((m, i) => ({ m, i })).sort((a, b) => at(a.m) - at(b.m) || rank(a.m) - rank(b.m) || a.i - b.i).map(x => x.m), first: 0 }; }   // (`all` comes with each group's unplayed rows already last — ui/missions.ts missionList; the short list's rows go in front of both halves)
-  const top = ids.flatMap(id => all.filter(m => m.id === id));
-  return { list: [...top, ...all.filter(m => !top.includes(m))], first: top.length };
+  const at = (m: Mission) => all.findIndex(x => x.group === m.group), rank = (m: Mission) => { const k = ids.indexOf(m.id); return k < 0 ? ids.length : k; };   // (a group's place = where its first row stands in `all`, which is in group order)
+  return all.map((m, i) => ({ m, i })).sort((a, b) => at(a.m) - at(b.m) || rank(a.m) - rank(b.m) || a.i - b.i).map(x => x.m);   // (`all` comes with each group's unplayed rows already last — ui/missions.ts missionList; the short list's rows go in front of both halves)
 }
 /** the short list's row for a mission (its first, where two rows start the same mission) */
-export function pickOfMission(id: string, picks: Pick[] = PICKS): Pick | null { return PICKS_UI.on ? picks.find(p => p.mission === id) ?? null : null; }
+export function pickOfMission(id: string, picks: Pick[] = PICKS): Pick | null { return picks.find(p => p.mission === id) ?? null; }
 
 export interface StartPageOpts { /** the row to open on */ select?: string; /** the words on the button back to the card behind (absent: the title's) */ backLabel?: string; /** where the keys start */ pane?: Pane;
   /** THE PAGE IN ITS CO-OP DRESS (ui/coop.ts): only the missions `can` passes, `title` on its head, no kit step (two players play the kit as issued), and the block — worded `words` — hands the mission's address to `deploy` instead of loading it */
@@ -397,7 +391,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   const root = opts.root ?? document.getElementById('missions'); if (!root) return null;
   styles();
   const search = typeof location !== 'undefined' ? location.search ?? '' : '';
-  const { list, first } = startPageList(listedMissions(undefined, opts.select).filter(m => !opts.coop || opts.coop.can(m)));   // (a cut row the visit names — ?loadout=<id> — is drawn this once: ui/missions.ts listedMissions)
+  const list = startPageList(listedMissions(undefined, opts.select).filter(m => !opts.coop || opts.coop.can(m)));   // (a cut row the visit names — ?loadout=<id> — is drawn this once: ui/missions.ts listedMissions)
   const squads = new Map<string, SquadSize>(); if (opts.select && opts.squad !== undefined) squads.set(opts.select, opts.squad);
   let pane: Pane = 'list', L: LoadoutScreen | null = null, mounted = '', shut = false, ready = false;
   let M!: MissionsScreen;   // (set by the call below; nothing here reads it before `ready`)
@@ -429,7 +423,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   const next = el('button', 'lo-btn sp-next', 'Team & kit ›'); next.setAttribute('type', 'button'); next.setAttribute('data-act', 'kit');
   next.addEventListener('click', onward);
   const say = () => { const bar = host.querySelector?.('[data-row="actions"]') as HTMLElement | null; if (!bar) return;
-    bar.setAttribute('data-what', (pane === 'loadout' && KIT_CLIP.on && L?.card ? WHAT.loadout.replace('change', 'change · C copy · V paste') : pane === 'list' && noKit() ? WHAT.list.replace('team and kit', 'deploy') : WHAT[pane]).replace('Esc back', pane === 'loadout' && kbrief?.map ? 'M map · Esc back' : 'Esc back')); if (next.parentElement !== bar) bar.appendChild(next);   // (copy and paste of a man's kit — ui/kitCard.ts KIT_CLIP — where there are cards to copy)
+    bar.setAttribute('data-what', (pane === 'loadout' && L?.card ? WHAT.loadout.replace('change', 'change · C copy · V paste') : pane === 'list' && noKit() ? WHAT.list.replace('team and kit', 'deploy') : WHAT[pane]).replace('Esc back', pane === 'loadout' && kbrief?.map ? 'M map · Esc back' : 'Esc back')); if (next.parentElement !== bar) bar.appendChild(next);   // (copy and paste of a man's kit — ui/kitCard.ts KIT_CLIP — where there are cards to copy)
     root.classList.toggle('nokit', noKit()); root.classList.toggle('quiet', !!L && quietGear(L.entry.kind, search)); };
   const steps: [Pane, HTMLElement][] = [];
   const setPane = (p: Pane) => { if (p === 'loadout' && noKit()) p = 'list';   // (no kit step to stand on: a link that opens a mission on its kit — ?loadout= — opens this one on its rows)
@@ -487,8 +481,8 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
     if (L) { squads.set(L.entry.id, L.squad); L.close(); }
     mounted = key;
     const p = asPick(m), row = pickOfMission(m.id);   // (a short-list row opens at the ROW's team size — 'you + four' — until a size is picked on the page)
-    L = openLoadout(entryOfMission(m), { host, embedded: { keys: () => !shut && pane === 'loadout', key: (code, repeat) => !!kbrief?.key(code, repeat), rest: (code, repeat) => !!kguide?.key(code, repeat) }, search: base, squad: squads.get(m.id) ?? (row && pickEntry(row) ? pickSquad(row) as SquadSize : undefined),
-      back: toList, ...(opts.coop ? { deployWords: opts.coop.words, deploy: (to: string) => opts.coop!.deploy(to, m) } : {}), onPaint: s => { paintFigure(s); if (s === L) { say(); kguide?.paint(guideOn()); } },   // (embedded.key: the map's M, and the keys that put it back while it is large; embedded.rest: the walkthrough's Esc and Enter, after the highlighted row has had its say · say: the key line names copy and paste only while there are cards — a mission's own issue takes them away after the screen is up)
+    L = openLoadout(entryOfMission(m), { host, keys: () => !shut && pane === 'loadout', key: (code, repeat) => !!kbrief?.key(code, repeat), rest: (code, repeat) => !!kguide?.key(code, repeat), search: base, squad: squads.get(m.id) ?? (row && pickEntry(row) ? pickSquad(row) as SquadSize : undefined),
+      back: toList, ...(opts.coop ? { deployWords: opts.coop.words, deploy: (to: string) => opts.coop!.deploy(to, m) } : {}), onPaint: s => { paintFigure(s); if (s === L) { say(); kguide?.paint(guideOn()); } },   // (key: the map's M, and the keys that put it back while it is large; rest: the walkthrough's Esc and Enter, after the highlighted row has had its say · say: the key line names copy and paste only while there are cards — a mission's own issue takes them away after the screen is up)
       onDeploy: to => { kguide?.deployed(); kview?.close(); kview = null;
         if (opts.coop) return;   // (a hosted game is not this list's to remember: the row it opens on, the short list's played marks and the count's 'loading…' are the mission LOADED from here, and a game that could not be made loads nothing — ui/coop.ts says what it is doing in its own line)
         try { globalThis.localStorage?.setItem('twopointsix.mission', m.id); } catch { /* no store */ }   // (the row the page opens on next time, however it was deployed)
@@ -513,17 +507,17 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
     mount();
   };
 
-  M = openMissions({ root: opts.root, list, keep: true, planPx: GROUPS_UI.on ? 640 : 1320, select: opts.select, first: PICKS_UI.on ? PICKS[0]?.mission : undefined, fold: GROUPS_UI.on, tiles: GROUPS_UI.on, heads: GROUPS_UI.on ? undefined : first > 0 && first < list.length ? { [first]: 'Every other mission' } : {},   // (the groups, folded — ui/missions.ts groupHeads / `fold`; a visit that names no row opens on the short list's first, wherever its group stands; ?nogroups = the short list on top and the one heading it had)
+  M = openMissions({ root: opts.root, list, select: opts.select, first: PICKS[0]?.mission,   // (a visit that names no row opens on the short list's first, wherever its group stands)
     onPick: onward,
     onPaint: () => { if (ready) onPaint(); },
     onClose: () => { shut = true; if (L?.open) L.close(); L = null; kview?.close(); kview = null; kguide?.close(); kguide = null; kbrief?.close(); kbrief = null; figHost.remove?.(); root.classList.remove('one', 'tiles', 'pane-list', 'pane-loadout', 'quiet'); MISSIONS.keysAway = null; if (page === P) page = null;
       root.removeEventListener?.('click', onClick, true); for (const v of vals) if (v.lit) clearTimeout(v.lit);
       if (playerHour !== null) try { M.hour(playerHour); } catch { /* the list is gone */ }   // (the list remembers the PLAYER's hour, not one a short-list row put on)
       setTimeout(() => { const m = document.getElementById?.('menu'), b = m?.classList.contains('on') && !m.hasAttribute('inert') ? m.querySelector?.('.actions button.primary') as HTMLElement | null : null; if (b && !currentMissions()) b.focus?.(); }, 0); } });   // (the card behind has the keys again: Enter is its 'Play ›')
-  root.classList.add('one'); root.classList.toggle('tiles', GROUPS_UI.on);
+  root.classList.add('one', 'tiles');
   // the page's own places in the list's layer: the plan in the briefing beside the blurb, the short list's line under the blurb, the loadout at the foot of the sheet, its words on the head and the foot
   const q = <T extends HTMLElement>(sel: string) => root.querySelector?.(sel) as T | null;
-  const sheet = q('.msheet'), plan = q('.mplan'), blurb = q('.mblurb'), back = q('.mback'), title = q('.mt'), foot = q('.mfoot');
+  const sheet = q('.msheet'), plan = q('.mplan'), blurb = q('.mblurb'), back = q('.mback'), title = q('.mt');
   const count = q('.mcount') ?? el('div');
   if (!sheet && blurb?.parentElement) blurb.parentElement.insertBefore(tip, blurb.nextSibling);   // (with a sheet the briefing below takes it)
   // THE FRAME: the mission in the middle (its name, what it is in one line, the level's plan as a map sheet with the place's own line at its foot, its words),
@@ -551,7 +545,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
     team.addEventListener('click', () => { if (!noKit()) onward(); });
     rail.append(rule, team, read);
     sheet.insertBefore(brief, sheet.firstChild); sheet.insertBefore(rail, brief.nextSibling); sheet.appendChild(store);
-    if (GROUPS_UI.on) sheet.insertBefore(map, rail.nextSibling);   // (the tiles' cards are pictures: the map sheet stands under the rail, in the room it leaves)
+    sheet.insertBefore(map, rail.nextSibling);   // (the tiles' cards are pictures: the map sheet stands under the rail, in the room it leaves)
     kbrief = mountKitBrief(root, sheet);
   }
   sheet?.appendChild(host);
@@ -563,7 +557,6 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
       b.addEventListener('click', () => { if (pane === k) return; if (k === 'list') toList(); else if (!noKit()) onward(); });
       if (steps.length) bar.appendChild(el('span', undefined, '›')); bar.appendChild(b); steps.push([k, b]); }
     title.parentElement.insertBefore(bar, title.nextSibling); }
-  if (foot) foot.textContent = '';   // (the keys are on the rail's rows and on the Deploy bar now)
   kguide = mountKitGuide(root, kbrief, stepsBar);
   if (kbrief) kbrief.onChange = () => { if (shut) return; say(); kguide?.paint(guideOn()); };   // (say: the key line names M only where there is a map to open)
   MISSIONS.keysAway = () => !shut && pane === 'loadout' && !!L?.open;
@@ -579,7 +572,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
     if (to && to !== pane) setTimeout(() => { if (!shut && page === P && pane !== to) toList(); }, 0); };
   root.addEventListener?.('click', onClick, true);
 
-  const P: StartPage = { missions: M, get loadout() { return L; }, get pane() { return pane; }, first, setPane, baseOf, close() { M.close(); } };
+  const P: StartPage = { missions: M, get loadout() { return L; }, get pane() { return pane; }, setPane, baseOf, close() { M.close(); } };
   page = P;
   ready = true; onPaint();   // (the list's first paint ran before its screen was handed back: the loadout and the row's own hour are put on now)
   setPane(opts.pane ?? 'list');

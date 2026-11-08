@@ -799,7 +799,6 @@ pub struct Game {
     pub par: crate::par::Par,
     pub recap: crate::deathrecap::Recap,
     pub verdict: crate::verdict::Verdict,
-    pub snatch: crate::snatch::Snatch,
     pub defuse: crate::defuse::Defuse,
     pub room_clear: crate::roomclear::RoomClearScenario,
     pub orders: crate::orders::SquadOrders,
@@ -883,6 +882,10 @@ pub struct Game {
     pub sim: usize,
     /// who has each man's body this tick, and who was asked (control/): written by the arbiter, read by the debugger's lines; not on the wire
     pub ctl: crate::owned::Owned,
+    /// the marks on the world (render_decals set.rs): what the picture draws of what happened; no rule reads them, and they are not on the wire
+    pub mark_set: crate::owned::Owned,
+    /// the stages to come of a wall charge's feel, the picture's half (blast_feel picture.rs)
+    pub feel: crate::owned::Owned,
     /// this tick's count of keyed draws a (site, man) (dice.rs): empty between ticks; not on the wire
     pub keyed: crate::dice::Keyed,
 }
@@ -988,7 +991,6 @@ impl Game {
             par: crate::par::Par::blank(),
             recap: crate::deathrecap::Recap::blank(),
             verdict: crate::verdict::Verdict::blank(),
-            snatch: crate::snatch::Snatch::blank(),
             defuse: crate::defuse::Defuse::blank(),
             room_clear: crate::roomclear::RoomClearScenario::blank(),
             orders: crate::orders::SquadOrders::blank(),
@@ -1051,6 +1053,8 @@ impl Game {
             stats: Stats::blank(),
             sim: 0,
             ctl: crate::owned::Owned::new(),
+            mark_set: crate::owned::Owned::new(),
+            feel: crate::owned::Owned::new(),
             keyed: crate::dice::Keyed::default(),
         }
     }
@@ -3215,7 +3219,6 @@ pub struct Mods {
     pub scene_ground_field: crate::scene_ground_field::SceneGroundFieldMod,
     pub math_exact: crate::math_exact::MathExactMod,
     pub scene_markings: crate::scene_markings::SceneMarkingsMod,
-    pub scene_round: crate::scene_round::SceneRoundMod,
     pub scene_materials: crate::scene_materials::SceneMaterialsMod,
     pub scene_stuff: crate::scene_stuff::SceneStuffMod,
     pub thinline: crate::thinline::ThinlineMod,
@@ -3388,7 +3391,6 @@ impl Mods {
             scene_ground_field: crate::scene_ground_field::SceneGroundFieldMod::blank(),
             math_exact: crate::math_exact::MathExactMod::blank(),
             scene_markings: crate::scene_markings::SceneMarkingsMod::blank(),
-            scene_round: crate::scene_round::SceneRoundMod::blank(),
             scene_materials: crate::scene_materials::SceneMaterialsMod::blank(),
             scene_stuff: crate::scene_stuff::SceneStuffMod::blank(),
             thinline: crate::thinline::ThinlineMod::blank(),

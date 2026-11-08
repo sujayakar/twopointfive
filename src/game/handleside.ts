@@ -32,7 +32,7 @@ import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 export const HANDLE = {
   /** THE switch: off = the build before this file, by run digest (its rules under it, each off = that rule as it was) */
-  on: true, push: true, pull: true, tools: true,
+  on: true, tools: true,
   /** metres of his walk ahead looked along for a leaf in his way; a leaf standing less open than `ajar` rad is in his way (doors.ts: under it a man on the
    *  pull face 'presses' it) */
   look: 2.6, ajar: 1.35,

@@ -131,7 +131,7 @@ pub fn near_known_body(g: &crate::game::Game, p: V3, r: Option<f64>) -> Option<G
 }
 
 /// What a keyed door gives away: its keep kicked out, or standing unlocked. (guards.ts doorTamper)
-pub fn door_tamper(g: &mut crate::game::Game, d: DoorId) -> Option<crate::guards::DoorTamper> {
+pub fn door_tamper(g: &crate::game::Game, d: DoorId) -> Option<crate::guards::DoorTamper> {
     if !g.dr[d].def.locked.unwrap_or(false) { return None; }
     if crate::doors::door_lock_broken(g, d) { return Some(crate::guards::DoorTamper::Forced); }
     if !crate::doors::door_locked(g, d) { return Some(crate::guards::DoorTamper::Picked); }

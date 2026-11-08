@@ -13,7 +13,7 @@
 // or a running gunfight — control locks the COMPOUND down: the exterior lamps come up and men take posts outside every exit (spawned if the renderer's
 // character budget has room; on this floor it has none — Sam + 3 staff + 4 QRF is the 8 the shadow-capsule list holds — so the element's rear pair peels off
 // and jogs out through the doors to them), pinned there covering the doors from outside: leaving by the fire exit is now a walk into their arcs.
-// State on Game.qrf; knobs on Game.tune (qrf / qrfEta / qrfSize / perimeter / perimeterEta / perimeterSize, Tab ▸ Sandbox, kept per machine); reset with the
+// State on Game.qrf; knobs on Game.tune (qrf / qrfEta / qrfSize / perimeter / perimeterEta / perimeterSize); reset with the
 // guards (Game.resetGuards → resetQrf; the men are units, resetGuards despawns them). Never under the tour, the breach's daylight, or with the AI off.
 // THE ROOM IS TAKEN BY THE SQUAD'S OWN CODE (tune.qrfSquad — the page ships it on; off = the element's own drill below on the level's authored marks, as it
 // was): at the door the four are handed, as a second cast (squadcast.ts), to the very classes Sam's squad runs — doortools.ts's stack on the jambs worked out
@@ -117,7 +117,7 @@ interface Marks { door: string | null; name: string; muster: readonly Vec3[]; en
 export function responseOf(g: Game): ResponseData | null { return g.level.scenarios?.response ?? null; }
 /** A RAID ON A PLACE THAT HAS A TEAM TO CALL (RESPONSE.raid): a squad's room clear under way on a level whose block carries `raid`. The team is then the
  *  DEFENDERS' (side 'hostile': the squad's enemies and Sam's), counted inside the eleven a squad ever faces, and it has no second lift */
-function raid(g: Game): boolean { return RESPONSE.on && RESPONSE.raid && !!g.nightBreach?.active && !g.rescue?.active && !!responseOf(g)?.raid && (!g.level.scenarios?.snatch || !!g.snatch?.out.on); }   // (a snatch level's block answers only the snatch that ends in the van — snatchout.ts: with that rule off the level is as it was, and nobody comes)
+function raid(g: Game): boolean { return RESPONSE.on && RESPONSE.raid && !!g.nightBreach?.active && !g.rescue?.active && !!responseOf(g)?.raid; }
 /** a raid: the men who can call it in — the living defenders of the block's room (where the set is), any defender when it names none; never the team itself */
 function callers(g: Game): Guard[] {
   const R = responseOf(g), id = R?.raid?.room, nb = g.nightBreach;
@@ -227,28 +227,10 @@ export class Qrf {
   }
 }
 
-// ================================================================ knobs kept per machine
-const TUNE_KEY = 'twopointsix.qrf';
-/** `?qrfsquad=0` on the page's address: the element's own drill for this visit — over the machine's memory of the row, and never written into it */
+// ================================================================ the address
+/** `?qrfsquad=0` on the page's address: the element's own drill for this visit */
+export function qrfAddressWord(g: Game) { if (ownDrillAsked()) g.tune.qrfSquad = false; }
 function ownDrillAsked(): boolean { try { const q = (globalThis as { location?: { search?: string } }).location?.search; return !!q && /[?&]qrfsquad=(0|off|false)\b/i.test(q); } catch { return false; } }
-function storedTune(): Record<string, unknown> | null { try { const raw = localStorage.getItem(TUNE_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; } }   // (null: no storage (the harness), nothing kept, or junk in it)
-export function loadQrfTune(g: Game) {
-  const o = storedTune() as { [k: string]: any } | null, T = g.tune;
-  if (o) {
-    if (typeof o.qrf === 'boolean') T.qrf = o.qrf; if (typeof o.perimeter === 'boolean') T.perimeter = o.perimeter; if (typeof o.qrfSilent === 'boolean') T.qrfSilent = o.qrfSilent; if (typeof o.qrfSquad === 'boolean') T.qrfSquad = o.qrfSquad;
-    if (Number.isFinite(o.qrfEta)) T.qrfEta = clamp(o.qrfEta, 15, 240); if (Number.isFinite(o.perimeterEta)) T.perimeterEta = clamp(o.perimeterEta, 10, 180);
-    if (Number.isFinite(o.qrfSize)) T.qrfSize = clamp(Math.round(o.qrfSize), 2, 4); if (Number.isFinite(o.perimeterSize)) T.perimeterSize = clamp(Math.round(o.perimeterSize), 2, 4);
-  }
-  if (ownDrillAsked()) T.qrfSquad = false;
-}
-export function saveQrfTune(g: Game) {
-  const T = g.tune, kept = storedTune()?.qrfSquad, qrfSquad = ownDrillAsked() ? (typeof kept === 'boolean' ? kept : QRF_TUNE_DEFAULTS.qrfSquad) : T.qrfSquad;   // (under the address's word the row's memory stays as it was)
-  try { localStorage.setItem(TUNE_KEY, JSON.stringify({ qrf: T.qrf, qrfEta: T.qrfEta, qrfSize: T.qrfSize, perimeter: T.perimeter, perimeterEta: T.perimeterEta, perimeterSize: T.perimeterSize, qrfSilent: T.qrfSilent, qrfSquad })); } catch { /* */ }
-}
-/** the knobs back to what game.ts's tune ships (its literal — keep the two in step) and the machine's memory of them dropped, like every other module's 'defaults' (whistle / needs / tactics …);
- *  for a Tab ▸ Sandbox 'QRF ▸ defaults' button and the console */
-export const QRF_TUNE_DEFAULTS = { qrf: true, qrfEta: 75, qrfSize: 4, perimeter: true, perimeterEta: 45, perimeterSize: 2, qrfSilent: true, qrfSquad: true } as const;
-
 // ================================================================ small shared helpers
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 function note(Q: Qrf, g: Game, what: string) { Q.log.push({ t: g.time, what }); if (Q.log.length > 200) Q.log.splice(0, 50); }

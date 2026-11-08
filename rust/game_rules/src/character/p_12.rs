@@ -244,7 +244,7 @@ pub fn character_pack_side_pass(g: &mut crate::game::Game, id: CharId) {
     g.ch[id].in_hand_ov = Some(ov);
 }
 /// An arm re-solved so its wrist is at `t`, the hand's rotation `rot`, into `ov` and not the pose. (Character.reachOv)
-pub fn character_reach_ov(g: &mut crate::game::Game, id: CharId, ov: &mut Vec<Option<crate::anim_skeleton::NodeOverride>>, right: bool, t: V3, rot: Quat) {
+pub fn character_reach_ov(g: &crate::game::Game, id: CharId, ov: &mut Vec<Option<crate::anim_skeleton::NodeOverride>>, right: bool, t: V3, rot: Quat) {
     let n = g.ch[id].anim.nodes;
     let (i_s, i_e, i_h) = if right { (n.upper_arm_r, n.forearm_r, n.hand_r) } else { (n.upper_arm_l, n.forearm_l, n.hand_l) };
     let (s, e, h) = (node_pos(g, id, i_s), node_pos(g, id, i_e), node_pos(g, id, i_h));

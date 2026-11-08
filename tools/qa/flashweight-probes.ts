@@ -1,7 +1,7 @@
 // The 'flashweight' family: A FLASHBANG THAT COUNTS ON A DOOR, AND A TEAM THAT MOVES WITH WEIGHT (the maintainer, 10-05, off the merged build: "it feels like
 // flashbangs are too weak. using them for breaching doesn't seem to help" and "teammate movement is too fast. in ready or not they did a good job of making
 // everyone feel weighty. they should probably never really sprint"). Run through probes.ts:
-//   bun run tools/qa/probes.ts flashweight | flashweight-pace | flashweight-flash | flashweight-night | flashweight-fog | flashweight-lights | flashweight-corners | flashweight-entry | flashweight-feel
+//   bun run tools/qa/probes.ts flashweight | flashweight-pace | flashweight-flash | flashweight-night | flashweight-fog | flashweight-lights | flashweight-corners | flashweight-entry
 // PASS / FAIL each, all headless (the Game of headless.ts stood up on each row's own level; nothing is drawn). THE SCENARIOS are scene/scenarioList.ts
 // SCENARIOS, row by row, each started as a click on its row starts it (bang-tally.ts stage()).
 //   flashweight-pace    in each scenario: the team told to fall in behind a Sam who SPRINTS a lap of the floor near the start, then sent to stack on the nearest
@@ -25,8 +25,6 @@
 //   flashweight-corners CHECK THE CORNERS ("teammates clearing rooms seem to miss enemies. they need to check their corners"), every scenario: into an emptied
 //                       held room, every man's muzzle is on the near corner of his own side inside DOORTOOLS.cornerCap of crossing, and the entry does not
 //                       end until the room's floor has been looked over (fewer than DOORTOOLS.deadCells cells no muzzle was ever on).
-//   flashweight-feel    the Tab panel's 'Team feel' rows (game/teamfeel.ts) under a stand-in localStorage: only what differs from the build is stored, a fresh
-//                       Game reads it back, a bad stored value is passed over, the reset drops it. Also in the 'ui' family.
 // SINCE 2026-11-07 the switches these probes once put off are settled on, and no probe here writes one or hands one to the tally's staging: out are
 // flashweight-pace's hold on the newer pace rule (teampace.ts: its lines now ask the team's legs as the page moves them) and its "PACE off shows the old
 // run"; flashweight-flash's "FLASH.on false is the dazzle as it was"; flashweight-fog's "FOG.doors off draws it live" half and every laser line (an
@@ -327,48 +325,3 @@ export const flashweightCorners = guarded(async () => {
 
 // ---------------------------------------------------------------- what it buys
 
-// ---------------------------------------------------------------- flashweight-feel: the Tab panel's 'Team feel' rows keep a changed rule across a page load
-/** game/teamfeel.ts under a stand-in localStorage: only what differs from the build is stored, a fresh Game reads it back before its squad systems do, a
- *  stored value of the wrong type or for a key the build does not keep is passed over, and the reset puts the build's values back and drops the stored copy. */
-export async function flashweightFeel(): Promise<boolean> {
-  const F = family('flashweight-feel: a changed feel rule is kept per machine, and only what was changed');
-  const TF: any = await import(`${ROOT}/src/game/teamfeel.ts`);
-  const store = new Map<string, string>(); const G: any = globalThis; const had = 'localStorage' in G, was = G.localStorage;
-  G.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, String(v)); }, removeItem: (k: string) => { store.delete(k); } };
-  const KEY = 'twopointsix.teamfeel';
-  // (whatever an earlier probe left in the tables — the bang tally's staging switches the defenders' rally off — is put by for the length of this one: the
-  //  rows are judged from the build's values, and handed back as they were found)
-  const T = TF.feelTables(), D = clone(TF.feelDefaults()), found = clone(T);
-  try {
-    TF.resetTeamFeel(); store.clear();
-    F.verdict(TF.teamFeelSummary() === 'as shipped' && !store.has(KEY), 'untouched: as shipped, nothing stored', `summary '${TF.teamFeelSummary()}' · stored ${store.get(KEY) ?? 'nothing'}`);
-    T.PACE.max = 1.8; TF.saveTeamFeel('PACE.max'); T.FLASH.secs[0] = 5; TF.saveTeamFeel('FLASH.secs.0');
-    T.LIGHTS.hotSecs = 9; TF.saveTeamFeel('LIGHTS.hotSecs'); T.LIGHTS.hotSecs = D.LIGHTS.hotSecs; TF.saveTeamFeel('LIGHTS.hotSecs');   // (a row moved and moved back)
-    const stored = JSON.parse(store.get(KEY) ?? '{}');
-    F.verdict(JSON.stringify(Object.keys(stored).sort()) === JSON.stringify(['FLASH.secs.0', 'PACE.max']) && stored['PACE.max'] === 1.8 && stored['FLASH.secs.0'] === 5,
-      'two rows changed (a third moved and moved back): exactly those two are stored', `${store.get(KEY)} · summary '${TF.teamFeelSummary()}'`);
-    // a page load: the tables as the build ships them, then a Game constructed
-    T.PACE.max = D.PACE.max; T.FLASH.secs[0] = D.FLASH.secs[0];
-    const W = await standUp({});
-    F.verdict(T.PACE.max === 1.8 && T.FLASH.secs[0] === 5 && T.FLASH.secs[1] === D.FLASH.secs[1] && T.PACE.accel === D.PACE.accel && !!W.game,
-      'a fresh Game reads the two back, and nothing else moves', `PACE.max ${T.PACE.max} · FLASH.secs ${JSON.stringify(T.FLASH.secs)} · PACE.accel ${T.PACE.accel}`);
-    T.PACE.accel = 4; TF.saveTeamFeel('PACE.accel');
-    F.verdict(Object.keys(JSON.parse(store.get(KEY) ?? '{}')).length === 3, 'a row moved after the load: the two read back are still kept beside it', `${store.get(KEY)}`);
-    TF.resetTeamFeel();
-    F.verdict(T.PACE.max === D.PACE.max && T.FLASH.on === D.FLASH.on && T.FLASH.secs[0] === D.FLASH.secs[0] && T.PACE.accel === D.PACE.accel && !store.has(KEY) && TF.teamFeelSummary() === 'as shipped',
-      'reset: the build\'s values back, the stored copy gone', `PACE.max ${T.PACE.max} · FLASH.on ${T.FLASH.on} · stored ${store.get(KEY) ?? 'nothing'}`);
-    store.set(KEY, JSON.stringify({ 'PACE.max': 'fast', 'PACE.on': 0, 'PACE.nope': 3, 'NOPE.x': 1, 'ORDERS.key': 'KeyQ', 'LIGHTS.aloneM': 9, 'FLASH.secs.1': null, 'PACE.accel': 0, 'LIGHTS.onM': -1, 'DOORTOOLS.bangs': 1e9 }));
-    TF.loadTeamFeel();
-    F.verdict(T.PACE.max === D.PACE.max && T.PACE.on === D.PACE.on && T.PACE.nope === undefined && T.ORDERS.key === D.ORDERS.key && T.FLASH.secs[1] === D.FLASH.secs[1] && T.LIGHTS.aloneM === 9
-      && T.PACE.accel === D.PACE.accel && T.LIGHTS.onM === D.LIGHTS.onM && T.DOORTOOLS.bangs === D.DOORTOOLS.bangs,
-      'a stored value of the wrong type, outside its row\'s range, or for a key not kept, is passed over; a good one beside it is taken', `PACE.max ${T.PACE.max} · PACE.on ${T.PACE.on} · PACE.accel ${T.PACE.accel} · LIGHTS.onM ${T.LIGHTS.onM} · DOORTOOLS.bangs ${T.DOORTOOLS.bangs} · ORDERS.key ${T.ORDERS.key} · LIGHTS.aloneM ${T.LIGHTS.aloneM}`);
-    store.set(KEY, '{not json'); TF.resetTeamFeel(); store.set(KEY, '{not json'); TF.loadTeamFeel();
-    F.verdict(TF.teamFeelSummary() === 'as shipped', 'an unreadable stored copy changes nothing', `summary '${TF.teamFeelSummary()}'`);
-  } catch (e) { F.verdict(false, 'the probe ran to its end', String(e instanceof Error ? e.stack ?? e.message : e).split('\n').slice(0, 3).join(' / '));
-  } finally {
-    TF.resetTeamFeel(); store.clear();
-    for (const n of Object.keys(found)) for (const k of Object.keys(found[n])) T[n][k] = found[n][k];   // (as the earlier probes left them)
-    if (had) G.localStorage = was; else delete G.localStorage;
-  }
-  return F.done();
-}

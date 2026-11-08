@@ -273,7 +273,7 @@ pub fn light_switch_reset(g: &mut crate::game::Game) {
 
 // ---------------------------------------------------------------- the flip
 /// Are the room's lights on at the switch: any fixture of it switched on. (lightswitch.ts switchLit)
-pub fn switch_lit(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitch) -> bool {
+pub fn switch_lit(g: &crate::game::Game, sw: &crate::lightswitch::WallSwitch) -> bool {
     sw.targets.iter().any(|&t| crate::sim_lightshome::fixture_on(g, t))
 }
 
@@ -284,7 +284,7 @@ pub fn plants(g: &crate::game::Game, seat: &crate::seats::SeatRef, by: CharId) -
 }
 
 /// The time his turn to the plate and his step in to it take. (lightswitch.ts turnSecs)
-pub fn turn_secs(g: &mut crate::game::Game, by: CharId, sw: &crate::lightswitch::WallSwitch) -> f64 {
+pub fn turn_secs(g: &crate::game::Game, by: CharId, sw: &crate::lightswitch::WallSwitch) -> f64 {
     let (yaw, pos) = (g.ch[by].body_yaw, g.ch[by].pos);
     let (stand_m, step_pace) = (g.k.handwork.stand_m, g.k.handwork.step_pace);
     let face = m::atan2(-sw.n[0], -sw.n[2]);
@@ -294,7 +294,7 @@ pub fn turn_secs(g: &mut crate::game::Game, by: CharId, sw: &crate::lightswitch:
 }
 
 /// What breaks the plant off: he is down, has a man or a body in hand, is folded by a blast, or has been moved off the plate. (lightswitch.ts plantBroken)
-pub fn plant_broken(g: &mut crate::game::Game, h: &crate::lightswitch::Hand) -> bool {
+pub fn plant_broken(g: &crate::game::Game, h: &crate::lightswitch::Hand) -> bool {
     let pl = g.player;
     let p = &g.pl[pl];
     if p.down || p.holding.is_some() || p.takedown.is_some() || p.dragging.is_some() || p.wall.is_some() { return true; }
@@ -313,7 +313,7 @@ pub fn switch_let_go(g: &mut crate::game::Game) {
 }
 
 /// The plate Sam is planted at, while he is. (lightswitch.ts switchHand)
-pub fn switch_hand(g: &mut crate::game::Game) -> Option<crate::lightswitch::SwitchHand> {
+pub fn switch_hand(g: &crate::game::Game) -> Option<crate::lightswitch::SwitchHand> {
     let c = g.pl[g.player].ch;
     let h = g.m.lightswitch.states.as_ref()?.hands.iter().find(|x| x.plant && x.c == c)?.clone();
     if g.time >= h.at && g.time - h.at < h.dur && !plant_broken(g, &h) { Some(SwitchHand { p: h.sw.pos, n: h.sw.n }) } else { None }

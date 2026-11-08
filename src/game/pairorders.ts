@@ -58,7 +58,7 @@ export const PAIR = {
    *  ends with the job. It is asked inside guards.ts bodySeen, so every caller takes it — enemysquads.ts's two as well (a squad man in those hands). false = as it was */
   gripBody: true,
   /** his pace working round to the man's back, and over the last paces once sent (m/s; the silent posture's own cap still applies) · on a knee on the way */
-  pace: 1.1, goPace: 1.6, crouch: true,
+  pace: 1.1, goPace: 1.6, 
   /** the way to that back is read this often (s); with every way across somebody's eyes he waits this long (s) before he says there is none */
   stalkEvery: 0.3, stalkWait: 20,
   /** A SENTRY WHO SWEEPS: a standing man's head turning to and fro takes his near field (±100° of where he looks) round with it, so the floor at his elbow
@@ -98,11 +98,9 @@ export const PAIR = {
   takeSecs: 75,
   /** Sam's own hands going onto a man (his takedown, his grab) are the mark too */
   markOnHands: true,
-  /** a row here given while the squad is loud puts it in silent first (off: refused, "we're loud") */
-  quietFirst: true,
   /** hold in the dark: floor is DARK at or under this on the light meter's 0‥1 scale (the place's steady light, direct only) · how far (m) from the point he
    *  may look for it · none: refuse (off: go anyway, and say so) · on a knee there · the height (m) the light is read at */
-  darkVis: 0.3, darkM: 1.5, darkRefuse: true, darkCrouch: true, darkH: 0.9,
+  darkVis: 0.3, darkM: 1.5, darkH: 0.9,
   /** … and once there he says so when the place has been lit this long (s), not more often than every `litEvery` s */
   litSecs: 2, litEvery: 20,
 };

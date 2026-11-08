@@ -22,6 +22,7 @@ import { CMDRING } from '../game/cmdring';
 import { autoPick } from '../game/autopilot';   // (asked inside enter() only)
 import { INTERACT_KEY } from '../game/consts';
 import type { View } from './hud';
+import { fogHides } from '../view/seatview';
 
 /** a way into a held room as the room fight keeps it (roomfight.ts): the opening's centre, the unit vector out of the room, its door */
 interface Way { at: Vec3; out: [number, number]; door: Door }
@@ -84,11 +85,11 @@ export class HandsOff {
   private hands() {
     const g = this.g, pl = g.player, c = pl.char, I = this.I; this.target = null;
     if (pl.down) return;
-    { const eye: Vec3 = [c.pos[0], 1.45, c.pos[2]]; let best: Guard | null = null, bd = 1e9;   // he shoots only a man the fog shows, on the screen, on a clear line, a beat after he shows
+    { const eye: Vec3 = [c.pos[0], 1.45, c.pos[2]]; let best: Guard | null = null, bd = 1e9; const V = g.view;   // he shoots only a man the fog shows, on the screen, on a clear line, a beat after he shows
       for (const h of this.hostiles) {
         if (h.state === 'dead') { this.seen.delete(h); continue; }
         const ch = this.chest(h), d = flat(c.pos, h.char.pos);
-        if (g.fogOfWar.hidden(h) || !this.onScreen(ch) || g.col.shotBlocked(eye, ch)) continue;
+        if (fogHides(V, h.char.id) || !this.onScreen(ch) || g.col.shotBlocked(eye, ch)) continue;
         let s = this.seen.get(h); if (!s || this.t - s.last > 1) { s = { first: this.t, last: this.t, need: this.react * (0.75 + 0.5 * this.dice()) }; this.seen.set(h, s); } else s.last = this.t;
         if (this.t - s.first >= s.need && d < bd) { bd = d; best = h; }
       }

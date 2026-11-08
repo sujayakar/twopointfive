@@ -89,7 +89,7 @@ export async function leversRules(): Promise<boolean> {
       F.verdict(built.t === hard && built.f === 'cone' && built.now === 'hard' && !built.mix && h.t === hard && h.f === 'cone' && h.set === '{}' && soft.t === hard && soft.f === 'round' && soft.now === 'custom' && soft.mix && tables() === std && fog() === stdFog,
         'hard\'s rungs set lever by lever over standard ARE hard (rows to the byte, and it reads hard); the level\'s switch puts every lever back; hard with the fog let down is hard\'s defenders seen all round',
         `built: reads ${built.now} · hard, fog → team: reads ${soft.now}, fog ${soft.f}, press ${JSON.parse(soft.t).P.on}`); }
-    // ---- the fog's own kept option (teamfeel.ts FOG.own) is the lever's only while the lever is moved
+    // ---- the fog's own option (FOG.own) is the lever's only while the lever is moved
     { FOG.own = true; D.setDifficulty('hard', false); const kept = fog();
       D.setLever('fog', 'cones', false); const over = fog(); D.setLever('fog', null, false); const back = fog(); D.setDifficulty('standard', false); const std = fog(); FOG.own = false;
       F.verdict(kept === 'cone+own' && over === 'cone' && back === 'cone+own' && std === 'round+own', 'a machine that keeps the fog\'s own-eyes option: the level leaves it alone, the fog lever stands over it while moved, and it is back when the lever lets go', `hard ${kept} · lever on cones ${over} · let go ${back} · standard ${std}`); }
@@ -131,10 +131,9 @@ export async function leversRules(): Promise<boolean> {
       F.verdict(bare.d === `${plain}&difficulty=standard&fog=own&enemyai=hard` && bare.l === `${plain}&difficulty=hard&fog=own&enemyai=hard`, 'where nothing can be kept the link carries the moved levers itself, in place of whatever it carried', `${bare.d} · ${bare.l}`); }
     // ---- other roads: the kept own-eyes option, a lever the visitor arrived with, rows moved by hand, a lesson's page, a level's own kit
     { const plain = '?roomclear&squad4&mute', flip = () => { PRESSURE.second = !PRESSURE.second; };   // (a row moved by hand: one a level's own start writes — the table's first, `press`, is settled and takes no write)
-      // the Game's constructor reads the kept feel rows back ROUND the fog lever (leversFog): a machine with no kept option, then one that keeps own eyes
-      fresh(); D.setLever('fog', 'own', false); D.leversFog(() => { /* nothing kept */ }); const heldOn = FOG.own; D.setDifficulty('standard', false); const a = `${heldOn ? 'own' : 'NOT own'} → ${FOG.own ? 'STILL own' : 'off'}`, aOk = heldOn && !FOG.own;
-      fresh(); D.setLever('fog', 'team', false); D.leversFog(() => { FOG.own = true; }); const heldOff = !FOG.own; D.setDifficulty('standard', false); const b = `${heldOff ? 'off' : 'NOT off'} → ${FOG.own ? 'own again' : 'LOST'}`, bOk = heldOff && FOG.own; FOG.own = false;
-      F.verdict(aOk && bOk, 'a new Game reads the kept feel rows back round the fog lever: own eyes held by the lever goes when the lever lets go on a machine that keeps none, and a kept own-eyes option is back after the lever held it off', `nothing kept, lever own eyes: ${a} · own eyes kept, lever all round: ${b}`);
+      // the Game's constructor lays the fog lever over FOG.own (leversFog): own eyes held by the lever goes when the lever lets go
+      fresh(); D.setLever('fog', 'own', false); D.leversFog(); const heldOn = FOG.own; D.setDifficulty('standard', false); const a = `${heldOn ? 'own' : 'NOT own'} → ${FOG.own ? 'STILL own' : 'off'}`, aOk = heldOn && !FOG.own;
+      F.verdict(aOk, 'a new Game lays the fog lever over FOG.own: own eyes held by the lever goes when the lever lets go', `lever own eyes: ${a}`);
       // a page that arrived with ?fog=own, then Standard pressed: the link loses it
       const arrived = await withStore({}, () => { fresh(); D.initDifficulty(new URLSearchParams('fog=own')); const on = D.difficultyHref(`${plain}&fog=own`); D.setDifficulty('standard'); const off = D.difficultyHref(`${plain}&fog=own`), offL = D.leversHref(`${plain}&difficulty=hard&fog=own`); return { on, off, offL }; });
       F.verdict(arrived.on === `${plain}&difficulty=standard&fog=own` && arrived.off === plain && arrived.offL === `${plain}&difficulty=hard`, 'a lever the visitor ARRIVED with (?fog=own) rides the links while it stands, and is off them once the level\'s switch has let it go', `${arrived.on} · Standard pressed: ${arrived.off}`);
@@ -188,12 +187,12 @@ export async function leversScreens(): Promise<boolean> {
     await withStore({}, async store => { await withDom(SEARCH, async () => {
       G.location.pathname = '/'; G.location.hash = ''; const loads: string[] = []; G.location.assign = (u: string) => { loads.push(u); }; G.location.reload = () => { loads.push('(reload)'); };
       const M = await import(`${ROOT}/src/ui/missions.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`), { SCENARIOS, LESSON_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
-      fresh(); M.MISSIONS.onPick = null;
+      fresh();
       const host = new El('DIV') as any, list: any[] = M.missionList(), four = list.find(m => m.id === 'room-clear-four'), solo = M.SOLO_NIGHT, quietM = list.find(m => m.scenario?.kind === 'quiet' && m.scenario.group !== 'tutorial')   /* (a tutorial mission's fog is its frame's, game/rails.ts: its lever is greyed, as a lesson's) */, lessonM = list.find(m => m.scenario?.group === 'tutorial');
       // ---- the mission sheet
       const S = M.openMissions({ root: host, select: four.id, search: SEARCH, onPick: () => {} }), root = S.root as unknown as El;
       const rows0 = leverRowsOf(root), href0 = S.hrefOf(four);
-      press(root, 'fog', 'own'); const r1 = leverRowsOf(root), href1 = S.hrefOf(four), go1 = root.all(e => e.cls.has('mgo'))[0]?.attrs.href, dn1 = root.all(e => !!e.attrs['data-difficulty'] && e.cls.has('on')).length;
+      press(root, 'fog', 'own'); const r1 = leverRowsOf(root), href1 = S.hrefOf(four), go1 = S.hrefOf(S.selected), dn1 = root.all(e => !!e.attrs['data-difficulty'] && e.cls.has('on')).length;
       const t1 = { fog: fog(), press: PRESSURE.on, stuns: PRESSURE.stuns, kept: store.get('twopointsix.levers') };
       M.missionsKey({ code: 'KeyD' }); const afterD = shown(); M.missionsKey({ code: 'KeyA' }); const afterA = shown();
       press(root, 'ai', 'hard'); press(root, 'fog', 'cones'); const built = `${shown()} reads ${D.difficultyNow()}`, hardLit = root.all(e => e.attrs['data-difficulty'] === 'hard')[0]?.cls.has('on');
@@ -206,27 +205,6 @@ export async function leversScreens(): Promise<boolean> {
       S.select(solo.id); const soloRows = leverRowsOf(root); if (quietM) S.select(quietM.id); const quietRows = quietM ? leverRowsOf(root) : []; if (lessonM) S.select(lessonM.id); const lessonRows = lessonM ? leverRowsOf(root) : [];
       const said = (rows: typeof soloRows) => rows.map(r => `${r.key} ${r.na ? 'greyed' : 'live'}`).join(' · ');
       S.close();
-      // ---- the loadout
-      const e4 = SCENARIOS.find((e: any) => e.id === 'room-clear-four'), deployed: string[] = [];
-      const L = UI.openLoadout(e4, { host, search: `${M.missionHref(four, SEARCH)}`, deploy: (s: string) => deployed.push(s), back: () => {} }), lroot = L.root as unknown as El;
-      const lr = leverRowsOf(lroot), nRows = L.rows.length;
-      press(lroot, 'kit', 'stuns'); const l1 = leverRowsOf(lroot), noteL = lroot.all(e => e.cls.has('lo-levnote'))[0]?.textContent ?? '';
-      L.deploy(); const to = deployed[0] ?? '';
-      // (opened on a link that names another level than the machine's: that level under the levers while the screen is up; closed untouched, the machine's again)
-      const Lh = UI.openLoadout(e4, { host, search: `${M.missionHref(four, SEARCH)}&difficulty=hard`.replace('&difficulty=standard', ''), deploy: (s: string) => deployed.push(s), back: () => {} });
-      const up = `${shown()} base ${D.leversBase()}`; Lh.deploy(); const toH = deployed[1] ?? ''; const after = `${shown()} base ${D.leversBase()}`;
-      F.verdict(up === 'cones/hard/stuns base hard' && toH.includes('difficulty=hard') && !toH.includes('enemykit') && after === 'team/standard/stuns base standard', 'opened on a row\'s own hard link: hard\'s rungs under the kept lever while the screen is up, the link\'s own level on what Deploy loads; closed with no lever pressed, the machine\'s level again',
-        `up: ${up} · deploy ${toH} · after: ${after}`);
-      D.setDifficulty('standard');
-      // (a squad mix kept on the machine says its line on a squad mission's loadout only: none of it acts on a quiet mission or the solo night)
-      { D.setLever('fog', 'own', false); D.setLever('kit', 'stuns', false); const mixed = D.leversMixed(), noteOf = (L: any) => { const t = (L.root as unknown as El).all(e => e.cls.has('lo-levnote'))[0]?.textContent ?? ''; L.close(); return t; };
-        const n4 = noteOf(UI.openLoadout(e4, { host, search: `${M.missionHref(four, SEARCH)}`, deploy: () => {}, back: () => {} })), nS = noteOf(UI.openLoadout(UI.entryOfMission(solo), { host, deploy: () => {}, back: () => {} }));
-        const nQ = quietM ? noteOf(UI.openLoadout(UI.entryOfMission(quietM), { host, deploy: () => {}, back: () => {} })) : '';
-        D.setDifficulty('standard', false);
-        F.verdict(mixed && n4.includes('Your own mix') && nS === '' && nQ === '', 'a squad mix kept on the machine: its line under a squad mission\'s lever rows, none under the solo night\'s or a quiet mission\'s (the mix does not act there)',
-          `squad '${n4}' · solo '${nS}' · ${quietM ? `${quietM.id} '${nQ}'` : '(no quiet mission on this build)'}`); }
-      const Ls = UI.openLoadout(UI.entryOfMission(solo), { host, deploy: () => {}, back: () => {} }); const soloLR = leverRowsOf(Ls.root as unknown as El), soloL = soloLR.length, soloFog = QUIETFOG.on && QUIETFOG.solo; Ls.close();
-      const lesson = (LESSON_MISSIONS as any[])[0]; let lessonL = -1; if (lesson) { const Lt = UI.openLoadout(lesson, { host, deploy: () => {}, back: () => {} }); lessonL = leverRowsOf(Lt.root as unknown as El).length; Lt.close(); }
     }); });
   } finally { fresh(); FOG.own = ownWas; }
   return F.done();

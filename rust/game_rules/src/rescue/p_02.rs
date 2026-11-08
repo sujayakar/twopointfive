@@ -1058,10 +1058,10 @@ pub fn rescue_let_go(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// The floor just outside the hostage room's main door. (rescue.ts Rescue.outsidePoint)
-pub fn rescue_outside_point(g: &mut crate::game::Game) -> V3 { rescue_room_point(g, RescueRoomPointWhich::Outside) }
+pub fn rescue_outside_point(g: &crate::game::Game) -> V3 { rescue_room_point(g, RescueRoomPointWhich::Outside) }
 
 /// The floor a metre outside the hostage room's side door. (rescue.ts Rescue.sideOutside)
-pub fn rescue_side_outside(g: &mut crate::game::Game) -> Option<V3> {
+pub fn rescue_side_outside(g: &crate::game::Game) -> Option<V3> {
     let n = rescue_data(g)?.side?.door;
     let d = crate::doors::doors_by_name(g, &n)?;
     let b = rescue_bounds(g);
@@ -1069,7 +1069,7 @@ pub fn rescue_side_outside(g: &mut crate::game::Game) -> Option<V3> {
 }
 
 /// The way round to the side door. (rescue.ts Rescue.sideWay)
-pub fn rescue_side_way(g: &mut crate::game::Game) -> Vec<V3> {
+pub fn rescue_side_way(g: &crate::game::Game) -> Vec<V3> {
     let o = match rescue_side_outside(g) { Some(o) => o, None => return Vec::new() };
     let mut way: Vec<V3> = Vec::new();
     if let Some(out) = g.rescue.server_out { way.push(v3::copy(out)); }

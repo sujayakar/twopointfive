@@ -254,7 +254,6 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
   if (ffOn && isPlayer && lead) ffPast(g, muzzle, hitP, hitGuard?.char ?? null);
   const manDown = !hitGuard ? null : () => {   // (by 'guard': the held man, above — the only colleague a guard's round ever tests — or, teams, an enemy AI man)
     const wasUp = hitGuard.state !== 'dead';
-    if (wasUp && hitGuard.civ) g.snatch?.roundOn(hitGuard, sg);   // (snatch.ts: whose round found the man the team came for — the tally's, nothing else reads it)
     const foeLine = sg && isHostile(sg.team, hitGuard.team) ? `${hitGuard.callsign} down — ${sg.callsign}'s round` : undefined;   // (teams: not 'hit by his own side' — he was the other side's to hit)
     const ownHit = ffOurs && !hitGuard.civ && !isHostile('player', hitGuard.team);   // (friendlyfire.ts: a man of Sam's side by a round of Sam's side — the log says whose)
     const does = roundDoes(g, hitGuard, v3.dist(v3.mad(muzzle, dir, tHit), hitP) < 1e-6 ? muzzle : v3.mad(hitP, dir, -tHit), dir, tHit, hostageHit, isPlayer);   // WOUNDS (wounds.ts): where it landed decides — 'shot' is the only answer with the switch off. (Its line is the muzzle's for a straight round, as ever; for a round that has changed direction on its way — through glass, in a build where one can: `dir` and `tHit` are then its last leg's and its whole path's — it is taken BACK from where the round stopped, so the stretch of the man that is measured is the one it went into)
@@ -518,7 +517,7 @@ export function irBeams(g: Game, out: Box[]) {
   });
 }
 
-/** WHETHER AN ENEMY CARRIES A VISIBLE WEAPON LASER (Tab ▸ Sandbox ▸ Team feel ▸ 'enemies carry visible lasers', kept per machine by teamfeel.ts; ?enemylasers
+/** WHETHER AN ENEMY CARRIES A VISIBLE WEAPON LASER (?enemylasers
  *  for a visit; the maintainer after playing: 'the enemies having super visible lasers is a bit much', then 'we should probably just remove them for realism,
  *  not just tone them down'). false, the default: a man hostile to Sam has no laser — no line and no dot, in any state, in every game and both showcases.
  *  true = the game as it was: every hunting man's red line from muzzle to dot. Nothing else changes with it either way: the laser was only ever a picture

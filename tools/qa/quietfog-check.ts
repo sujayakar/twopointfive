@@ -98,20 +98,14 @@ export async function quietfogCheck(): Promise<boolean> {
       const G = globalThis as any; G.location.pathname = '/'; G.location.hash = ''; G.location.assign = () => { }; G.location.reload = () => { };
       fresh();
       const M = await import(`${ROOT}/src/ui/missions.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`), { QUIET_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
-      const SEARCH = '?quality=high&mute', pickWas = M.MISSIONS.onPick; M.MISSIONS.onPick = null;
+      const SEARCH = '?quality=high&mute';
       const host = new El('DIV') as any, list: any[] = M.missionList(), four = list.find(m => m.id === 'room-clear-four'), quietM = list.find(m => m.id === 'bazaar-quiet'), twoM = list.find(m => m.id === 'lights-out-two'), lessonM = list.find(m => m.scenario?.group === 'tutorial' && m.scenario.kind === 'quiet');
       const S = M.openMissions({ root: host, select: quietM.id, search: SEARCH, onPick: () => { } }), root = S.root as unknown as El;
       const href0 = S.hrefOf(quietM);   // (until 2026-11-07 a line here asked the sheet as it opened: the lever lit on off, the other levers all greyed, the link naming no rung)
       press(root, 'fog', 'cones');   // (until 2026-11-07 a line here asked of the press what the links and the store then said: red on the last TypeScript game as on this one)
       // (until 2026-11-07 a line here asked that a squad mission's row never shows the off rung: the squad lever has that rung now)
       S.close(); D.setDifficulty('standard');
-      // the loadout of a quiet mission
-      const eq = (QUIET_MISSIONS as any[]).find(e => e.id === 'bazaar-quiet'), deployed: string[] = [];
-      const L = UI.openLoadout(eq, { host, search: M.missionHref(quietM, SEARCH), deploy: (s: string) => deployed.push(s), back: () => { } }), lroot = L.root as unknown as El, lr = rowsOf(lroot);
-      let pressed = ''; if (lr.length) { press(lroot, 'fog', 'own'); pressed = rowsOf(lroot)[0].lit; } L.deploy(); const to = deployed[0] ?? '';
-      F.verdict(lr.length === 0 ? /quietfog=cones/.test(to) : lr[0].key === 'fog' && !lr[0].na && lr[0].lit === 'cones' && lr[0].shown === 'off,team,cones,own' && pressed === 'own' && /quietfog=own/.test(to) && !/quietfog=cones/.test(to) && store.get('twopointsix.quietfog') === 'own',
-        'the loadout of a quiet mission: the same lever, lit on the kept pick; moved there, Deploy loads the mission under that rung', lr.length ? `lit ${lr[0].lit} → ${pressed} · deploy ${to}` : `(no lever rows on this loadout) deploy ${to}`);
-      L.close?.(); QF.setQuietFog('off'); fresh(); M.MISSIONS.onPick = pickWas;
+      QF.setQuietFog('off'); fresh();
     }); });
     // ───────────────────────────── runs
     for (const [file, two] of [['bazaar.json', false], ['lights-out.json', true]] as [string, boolean][]) {

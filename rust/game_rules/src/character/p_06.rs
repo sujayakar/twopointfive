@@ -98,7 +98,7 @@ fn kept(a: &crate::character::Anim, k: &'static str) -> ClipId {
     *a.clips.get(k).unwrap()
 }
 /// the fist-taking `grab` of the constructor: each hand's 15 digit joints' rotations off a pose
-fn grab(g: &mut crate::game::Game, hands: &[Vec<i32>], q: crate::anim_skeleton::Pose) -> Vec<Vec<f32>> {
+fn grab(g: &crate::game::Game, hands: &[Vec<i32>], q: crate::anim_skeleton::Pose) -> Vec<Vec<f32>> {
     hands.iter().map(|ns| {
         let mut a = vec![0.0f32; 60];
         for (k, i) in ns.iter().enumerate() {

@@ -171,7 +171,6 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::par::par_tick(g);   // (right after the mission's update: this tick's orders and the room clear's end are in)
     crate::lesson::lesson_tick(g, dt);
     crate::rails::rails_tick(g, dt);
-    crate::snatch::snatch_tick(g, dt);
     crate::defuse::defuse_tick(g, dt);
     crate::game::game_update_props(g, dt);
     crate::destruction::destruction_update(g, dt);
@@ -223,6 +222,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     if g.m.dress.dress.cues { crate::cues::cues_tick(g); }
     crate::teamtally::team_tally_tick(g);
     crate::deathrecap::recap_tick(g);   // (last: it reads the frame as it ended, and moves nothing a rule reads)
+    crate::render_decals::marks_settle(g);   // (the marks' arms ask the world as the tick left it)
     g.ticking = false;
     crate::scene_collision::tick_shut(g);
     g.m.rustknobs.rust_knobs.tick = false;   // (game.ts:1727, the finally)

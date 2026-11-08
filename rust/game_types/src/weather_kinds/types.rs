@@ -80,13 +80,6 @@ impl WeatherPreset {
 }
 impl Default for WeatherPreset { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
-#[derive(Clone, Debug)]
-pub enum WeatherOfSearchSearch {
-    Text(String),
-    URLSearchParams(crate::query::Query),
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct WeatherKindsMod {

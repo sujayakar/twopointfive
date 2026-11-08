@@ -12,7 +12,6 @@ import { charSlots, meshAuthored } from '../render/charMaterials';
 import { MeshShadows } from '../render/meshShadows';
 import { fitRig, fitRigCast } from '../render/sdfrig';
 import { cutConfig, initCutSwitch } from '../scene/cut';
-import { roundConfig } from '../scene/round';
 import { CAST_FILE, CAST_FILE_LOOK, castUrlFor, loadCharacterSet } from '../anim/gltf';
 import { CharacterRenderer } from '../anim/characters';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
@@ -44,6 +43,8 @@ import { Particles } from '../render/particles';
 import { DrawReach, doorways } from '../draw/reach';
 import { DrawMen } from '../draw/men';
 import { DrawLights } from '../draw/lights';
+import { DrawDecals } from '../draw/marks';
+import { dustFrom, trafficFrom } from '../draw/levellook';
 import { DrawWorld } from '../draw/world';
 import { lookNumbers } from '../draw/look';
 import { sampleHand } from '../draw/hand';
@@ -51,6 +52,7 @@ import { HOURS_OF, skyFrom } from '../draw/sky';
 import { fogFrom } from '../draw/fog';
 import { makeFogFrame } from '../render/fogofwar';
 import { WeatherPicture } from '../picture/weather';
+import { SNOW_LOOK, snowLookOfQuery } from '../picture/snow/look';
 import type { Vec3 } from '../math/vec';
 
 const LOW_PITCH = 24 * Math.PI / 180, HIGH_PITCH = 55 * Math.PI / 180;
@@ -86,14 +88,15 @@ async function main(): Promise<void> {
   wallSidesConfig.on = lookAmounts.walls > 0;
   lookConfig.kept = lookKeptOf(D.f[sky() + Sky.kept] < 0 ? undefined : D.f[sky() + Sky.kept], q.get('kept'));
   weatherKindConfig.on = true; snowConfig.on = D.u[sky() + Sky.snowLevel] !== 0;
-  if (snowConfig.on) { snowLookConfig.surface = true; snowLookConfig.glow = true; snowLookConfig.sparkle = true; snowLookConfig.under = true; }
-  glassBreakConfig.on = true; initCutSwitch(); roundConfig.gpu = cutConfig.on;
+  if (snowConfig.on) { snowLookOfQuery(q); snowLookConfig.surface = SNOW_LOOK.on; snowLookConfig.wisps = SNOW_LOOK.wisps; snowLookConfig.tracks = SNOW_LOOK.on && SNOW_LOOK.tracks; snowLookConfig.glow = SNOW_LOOK.on && SNOW_LOOK.glow; snowLookConfig.sparkle = SNOW_LOOK.on && SNOW_LOOK.sparkle; snowLookConfig.under = SNOW_LOOK.under; snowLookConfig.grains = SNOW_LOOK.grains || SNOW_LOOK.oneAir; }
+  glassBreakConfig.on = true; initCutSwitch();
   COATFINISH.on = true; SOLIDGLASS.on = true;
 
   const gpu = await initGpu(canvas, { retry: true });   // (the module's game has stood by now)
   let world!: DrawWorld; const engine = new Engine(gpu, undefined, d => world = new DrawWorld(d, D)), smoke = new SmokeSystem(engine);
   engine.setParticles(new Particles(engine.device, engine.sceneLayout));
   engine.setSmoke(smoke.binding); engine.afterSubmit.push(() => smoke.afterSubmit());
+  engine.setDecals(new DrawDecals(engine.device, D)); trafficFrom(engine.gbuffer, D);
   engine.settings.markingTexel = D.f[sky() + Sky.markTexel] || MARKING_TEXEL;
   pipelineProgress.onChange = () => say(`compiling shaders ${pipelineProgress.done} / ${pipelineProgress.total} …`);
   // the men: the mesh and its skinning, the tree that shadows him, the cones the rays meet of him
@@ -153,6 +156,7 @@ async function main(): Promise<void> {
     const keys = sampleHand(game.numbersOf(), input, cam, canvas);
     game.step(dt, keys);
     if (D.u[view() + View.stood] !== stood) anew();
+    weather.told();
     events.from();
     D.fresh();   // (a sound asks the module, whose memory may have grown)
     lens();
@@ -186,7 +190,7 @@ async function main(): Promise<void> {
     // (the run's end card, once each time one is due; a restart or a load is another end to come)
     { const e = D.u[view() + View.ended]; if (e !== ended) { ended = e; if (e) onEnded(); } }
     D.fresh();
-    skyFrom(engine, D); fogFrom(fog, D); rimsFrom(rims, D, dt); weather.frame(cam);
+    skyFrom(engine, D); fogFrom(fog, D); rimsFrom(rims, D, dt); weather.frame(cam); dustFrom(engine.particles!, D);
     { const o = view(); engine.settings.nvAmount = D.f[o + View.night]; engine.settings.hitFlash = D.f[o + View.hit]; }
     game.look(lookNumbers(engine.settings, engine.world, !!ch.cast));
     const t1 = performance.now();

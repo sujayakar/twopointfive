@@ -23,7 +23,7 @@ fn look_from(s: V3, yaw: f64, eye: f64, eye_half: f64, arc: f64, eye_slack: f64)
 }
 
 /// What a man holding a room watches: the last man's arc, low on his spot; a whip's noise. (netquiet.ts netQuietLook)
-pub fn net_quiet_look(g: &mut crate::game::Game, gd: GuardId, pt: &mut V3) {
+pub fn net_quiet_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
     if netquiet_qa().broken { return; }
     let Some(n) = g.m.netquiet.state_of.get(gd) else { return };
     let (low, look, whip_at) = (n.low, n.look, n.whip_at);

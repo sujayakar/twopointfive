@@ -162,7 +162,7 @@ fn out_of_snap(x: f64) -> f64 {
     if m::abs(x) < 1e-9 { 0.0 } else if m::abs(m::abs(x) - 1.0) < 1e-9 { m::sign(x) } else { x }
 }
 /// `dist` out of a door's frame on the side away from a room. (rescue.ts Rescue.outOf)
-pub fn rescue_out_of(g: &mut crate::game::Game, d: DoorId, room: Option<crate::scene_scenarios::Rect>, dist: f64) -> V3 {
+pub fn rescue_out_of(g: &crate::game::Game, d: DoorId, room: Option<crate::scene_scenarios::Rect>, dist: f64) -> V3 {
     let th = g.dr[d].def.closed_dir;
     let s = match room {
         Some(r) => -crate::orders::side_of(g, d, [(r.x0 + r.x1) / 2.0, 0.0, (r.z0 + r.z1) / 2.0]),
@@ -173,7 +173,7 @@ pub fn rescue_out_of(g: &mut crate::game::Game, d: DoorId, room: Option<crate::s
 }
 
 /// The floor just outside the hostage room's main door, or the point its first man in holds. (rescue.ts Rescue.roomPoint)
-pub fn rescue_room_point(g: &mut crate::game::Game, which: crate::rescue::RescueRoomPointWhich) -> V3 {
+pub fn rescue_room_point(g: &crate::game::Game, which: crate::rescue::RescueRoomPointWhich) -> V3 {
     let s = rescue_data(g).unwrap();
     let given = match which { RescueRoomPointWhich::Outside => s.room.outside, RescueRoomPointWhich::Hold => s.room.hold };
     if let Some(p) = given { return v3::copy(p); }
@@ -363,7 +363,7 @@ pub fn rescue_marks(g: &mut crate::game::Game, on: bool) {
 }
 
 /// The face of one of the room's doors that is not the room's. (rescue.ts Rescue.faceOf)
-pub fn rescue_face_of(g: &mut crate::game::Game, d: DoorId) -> f64 {
+pub fn rescue_face_of(g: &crate::game::Game, d: DoorId) -> f64 {
     match rescue_bounds(g) {
         Some(b) => -crate::orders::side_of(g, d, [(b.x0 + b.x1) / 2.0, 0.0, (b.z0 + b.z1) / 2.0]),
         None => 1.0,

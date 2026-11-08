@@ -191,6 +191,8 @@ impl Events {
         self.heard.push(Heard { time: g.time as f32, rain: self.rain });
         self.rolls.clear();
         for r in &g.rolls { self.rolls.push(Roll { voice: r.voice as u32, at: [r.x as f32, r.z as f32], hard: r.k as f32 }); }
+        // (what the marks and the feels threw this tick)
+        if let Some(s) = game::render_decals::mark_set(g) { for e in &s.thrown { self.one(tick, g, e); } }
         self.anchors.clear();
         let mut rides = core::mem::take(&mut self.rides);
         rides.retain(|(key, t, until)| {
@@ -204,15 +206,7 @@ impl Events {
 
     fn one(&mut self, tick: u32, g: &Game, e: &E) {
         match e {
-            E::ParticlesEmit(e) => {
-                let (o, serial) = (&e.o, self.emits.len() as u32);
-                self.emits.push(Emit {
-                    tick, serial, kind: e.kind as u32, count: e.count as u32, ours: e.ours as u32, shape: o.shape.as_ref().map_or(0, |s| *s as u32 + 1), owner: o.owner.unwrap_or(0.0) as u32,
-                    seed: o.seed.map_or(u32::MAX, |s| s as u32), pos: f3(e.pos), dir: f3(e.dir), speed: o.speed as f32, life: o.life as f32, size: o.size as f32,
-                    more: [o.spread, o.speed_jit, o.life_jit, o.size_jit, o.lift, o.radius, o.pos_jit, o.top, o.aspect, o.tumble, o.nrm_jit, o.steam, o.ember].map(opt),
-                    vadd: o.vadd.map_or([NONE; 3], f3), color: o.color.map_or([NONE; 3], f3),
-                });
-            }
+            E::ParticlesEmit(e) => self.emit(tick, e),
             E::ParticlesImpulse(e) => {
                 let serial = self.kicks.len() as u32;
                 let o = e.o.as_ref();
@@ -257,6 +251,16 @@ impl Events {
             }
             _ => {}
         }
+    }
+
+    fn emit(&mut self, tick: u32, e: &game::out_events::OutParticlesEmit) {
+        let (o, serial) = (&e.o, self.emits.len() as u32);
+        self.emits.push(Emit {
+            tick, serial, kind: e.kind as u32, count: e.count as u32, ours: e.ours as u32, shape: o.shape.as_ref().map_or(0, |s| *s as u32 + 1), owner: o.owner.unwrap_or(0.0) as u32,
+            seed: o.seed.map_or(u32::MAX, |s| s as u32), pos: f3(e.pos), dir: f3(e.dir), speed: o.speed as f32, life: o.life as f32, size: o.size as f32,
+            more: [o.spread, o.speed_jit, o.life_jit, o.size_jit, o.lift, o.radius, o.pos_jit, o.top, o.aspect, o.tumble, o.nrm_jit, o.steam, o.ember].map(opt),
+            vadd: o.vadd.map_or([NONE; 3], f3), color: o.color.map_or([NONE; 3], f3),
+        });
     }
 
     fn push(&mut self, tick: u32, p: &SmokePush) {

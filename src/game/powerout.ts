@@ -73,9 +73,7 @@ export const POWEROUT = {
   /** … or the floor he stands on, watches (out to `lookM`, every `stepM`) or has about him (`aboutM` every way) read `litAt` or over by the place's light and falls under `dropK` of it, read `darkAfter` s after the trip */
   lookM: 12, aboutM: 4, stepM: 2, fanRad: 0.3, litAt: 0.3, dropK: 0.5, darkAfter: 0.3,
   /** men who go · the longest way they will walk for it, m · a garrison with nobody to spare sends its nearest man alone */
-  men: 2, maxM: 60, lone: true,
-  /** a squad the level tells to stay in its rooms still sends for the lights */
-  stayers: true,
+  men: 2, maxM: 60, 
   /** times a garrison walks to the breaker in one fight (the next time the lights go it is no fault) */
   parties: 1,
   /** s a man looks at a breaker shot to scrap before he says so · legs a walk is tried in before it is given up */

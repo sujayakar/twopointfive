@@ -1127,7 +1127,7 @@ fn in_volume(v: &crate::scene_level::VolumeDef, p: V3) -> bool {
     m::abs(lx) <= v.h[0] && m::abs(lz) <= v.h[2] && p[1] >= v.c[1] - v.h[1] - 0.1 && p[1] <= v.c[1] + v.h[1] + 2.0
 }
 /// (director.ts Director.insideVolume)
-pub fn director_inside_volume(g: &mut crate::game::Game, r: DirectorRunId, id_2: &str, who: &crate::director::DirectorInsideVolumeWho) -> bool {
+pub fn director_inside_volume(g: &crate::game::Game, r: DirectorRunId, id_2: &str, who: &crate::director::DirectorInsideVolumeWho) -> bool {
     let g = &*g;
     let Some(v) = g.level.volumes.as_ref().and_then(|l| l.iter().find(|x| x.name == id_2)) else { return false };
     let pl = &g.pl[g.player];
@@ -1157,7 +1157,7 @@ pub fn director_query_state(g: &crate::game::Game, r: DirectorRunId, u: &crate::
     director_guard_of(g, r, u).ok().map(|gd| g.gd[gd].state)
 }
 /// (director.ts Query.room, of 'sam')
-pub fn director_query_room_sam(g: &mut crate::game::Game) -> String {
+pub fn director_query_room_sam(g: &crate::game::Game) -> String {
     let p = g.ch[g.pl[g.player].ch].pos;
     crate::chronicle::room_of(g, p)
 }
@@ -1167,7 +1167,7 @@ pub fn director_query_pos_unit(g: &crate::game::Game, r: DirectorRunId, u: &crat
     Ok(v3::copy(g.ch[g.gd[gd].ch].pos))
 }
 /// (director.ts Query.door; DOORWAY.oneWay is settled on: swing is the door's)
-pub fn director_query_door(g: &mut crate::game::Game, d: &crate::director::DoorRef) -> Result<crate::director::QueryDoor, String> {
+pub fn director_query_door(g: &crate::game::Game, d: &crate::director::DoorRef) -> Result<crate::director::QueryDoor, String> {
     let id = director_door_of(g, d)?;
     Ok(QueryDoor {
         angle: crate::doors::door_angle(g, id),
@@ -1183,7 +1183,7 @@ pub fn director_query_signalled(g: &crate::game::Game, r: DirectorRunId, n: &str
     g.tab.director_run[r].signals.iter().any(|s| s.name == n)
 }
 /// (director.ts Query.routed)
-pub fn director_query_routed(g: &mut crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
+pub fn director_query_routed(g: &crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
     match director_guard_of(g, r, u) {
         Ok(gd) => crate::owner::has(g, gd, crate::owner::by::RUNNER),
         Err(_) => false,

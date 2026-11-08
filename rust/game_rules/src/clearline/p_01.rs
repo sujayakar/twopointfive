@@ -20,7 +20,7 @@ fn lead_of_is(lead_of: Option<LeadsBy>, by: LeadsBy) -> bool {
     }
 }
 /// What a man is doing about it this moment: nothing, the row being cut. (clearline.ts clearLineOf: a row of the call surface until the page's side goes)
-pub fn clear_line_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::clearline::ClearLineOf> { None }
+pub fn clear_line_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::clearline::ClearLineOf> { None }
 
 pub fn mem_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::clearline::Mem {
     g.m.clearline.mem.get_or_insert_with(gd, || Mem {
@@ -353,12 +353,12 @@ pub fn doing<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> Option<&'g mut cr
 }
 
 /// orders.ts, as it poses him: where his feet go while this lasts; None: as ordered. (clearline.ts clearLineFeet)
-pub fn clear_line_feet(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::clearline::ClearLineFeet> {
+pub fn clear_line_feet(g: &crate::game::Game, gd: GuardId) -> Option<crate::clearline::ClearLineFeet> {
     return None;
 }
 
 /// roomfight.ts (tickOp): this frame his shot at `tgt` is masked by a friend. True: this rule has it. (clearline.ts clearLineBlocked)
-pub fn clear_line_blocked(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId, to: V3, by: crate::clearline::LeadsBy) -> bool {
+pub fn clear_line_blocked(g: &crate::game::Game, gd: GuardId, tgt: GuardId, to: V3, by: crate::clearline::LeadsBy) -> bool {
     return false;
 }
 

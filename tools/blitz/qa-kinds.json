@@ -136,9 +136,6 @@
 "OWNBLOW.on=false",
 "HANDWORK.on=false"
 ],
-"headmark": [
-"OWNBLOW.on=false"
-],
 "inhand": [
 "FOG.cone=true",
 "INHAND.on=false"
@@ -168,7 +165,6 @@
 "kitanim-nv": [
 "RELOAD.auto=false",
 "QUICKTHROW.on=true",
-"KITANIM.nv=false",
 "KITANIM.on=false"
 ],
 "kitanim-reload": [
@@ -213,15 +209,6 @@
 ],
 "smokebreak": [
 "SMOKEBREAK.on=false"
-],
-"snatch": [
-"SNATCHOUT.on=false",
-"SNATCH.on=false"
-],
-"snatchout": [
-"SNATCHOUT.hold=false",
-"RESPONSE.on=false",
-"SNATCHOUT.on=false"
 ],
 "words-hostage": [
 "RESCUE.seedRoamers=false"
@@ -433,7 +420,6 @@
 "ai-pass-2",
 "all-quick",
 "checkpoints",
-"coverfire",
 "doors",
 "fn2000",
 "frame-layout",
@@ -600,7 +586,6 @@
 "close-duo": "iv-b",
 "close-grab": "iii",
 "close-held": "iii",
-"close-marks": "iii",
 "close-melee": "iii",
 "close-mode": "iii",
 "close-offer": "iii",
@@ -709,7 +694,6 @@
 "fire": "iv-a",
 "fireline": "iv-b",
 "flashweight-corners": "iii",
-"flashweight-feel": "ii",
 "flashweight-flash": "iii",
 "flashweight-fog": "iii",
 "flashweight-night": "iii",
@@ -835,7 +819,6 @@
 "he40-burst": "iii",
 "he40-dud": "iii",
 "he40-quiet": "iii",
-"headmark": "0",
 "held-leader": "iii",
 "heldclicks": "iv-a",
 "heldshut": "iii",
@@ -1218,8 +1201,6 @@
 "slotsetup": "iii",
 "smokebreak": "iv-a",
 "snap-bites": "iv-b",
-"snatch": "iii",
-"snatchout": "iii",
 "sneak-aside": "iv-b",
 "sneak-door": "iv-b",
 "sneak-fallin": "iv-b",
@@ -1460,7 +1441,6 @@
 "cutboxes-lines": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "cutboxes-pack": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "debrief-dom": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
-"flashweight-feel": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "glasshouse": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "hourwx-air": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "oneway-deal": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",

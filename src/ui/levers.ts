@@ -20,7 +20,7 @@
 //
 // CONTROLS: a click on a rung (the keys stay the sheet's own: W S the missions, A D standard / hard). The DOM asked for is the little the probes' stand-in
 // has: createElement, className, textContent, setAttribute, appendChild, onclick.
-import { leversNow, difficultyNow, leversShown, leversSet, leversBase, leversMixed, leverWords, setLever, setBase, type LeverKey } from '../game/difficulty';
+import { leversNow, leversShown, leversSet, leversBase, leverWords, setLever, type LeverKey } from '../game/difficulty';
 import { QUIET_RUNGS, quietFog, setQuietFog, quietFogWords, quietFogAside, quietCams, setQuietCams, quietFogDefault, quietCamsDefault, type QuietRung } from '../game/quietfog';
 import { STICKY } from '../game/stickycam';
 import { WAND } from '../game/wand';
@@ -90,15 +90,4 @@ export function leverRows(host: HTMLElement, cls: LeverCls, onChange: () => void
     },
   };
   return U;
-}
-
-/** A SCREEN OPENED ON A LINK THAT NAMES ITS LEVEL (a short-list row opens the loadout on its own difficulty, whatever this machine keeps): the tables are put
- *  on that level for as long as the screen is up, the levers moved by hand staying over it. Returns the way back, for a screen closed with nothing pressed
- *  on its rows (pass their `touched`). Tables standing on rows moved by hand in the Tab panel are left alone both ways. */
-export function leversOpenOn(href: string): (touched: boolean) => void {
-  const d = new URLSearchParams(href.replace(/^[^?]*\?/, '')).get('difficulty'), was = leversBase();
-  const named = d === 'standard' || d === 'hard' ? d : null, free = quietFogAside(() => difficultyNow() !== 'custom' || leversMixed());
-  if (!named || named === was || !free) return () => { /* nothing was changed */ };
-  quietFogAside(() => setBase(named));
-  return touched => { if (!touched && leversBase() === named) quietFogAside(() => setBase(was)); };
 }

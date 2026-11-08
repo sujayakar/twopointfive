@@ -26,7 +26,7 @@ interface Play { why: string; pre: number; first: number; firstHit: number; fram
 /** the office, the four fallen in, Sam walked upright into a wall: `stay` on it 2.5 s, or pushed off a quarter second after his back lands and watched 2.5 s more */
 async function play(how: 'stay' | 'brush', o: { secs?: number } = {}): Promise<Play> {
   const P: Play = { why: '', pre: 0, first: NaN, firstHit: NaN, frames: 0, held: 0, maxHit: 0, series: '', g: null };
-  const R: any = await quiet(() => Run.start(QUERY, 1, { hard: true })); R.stopOnNotice = false; R.cap = 600; const g = R.g, pl = R.pl, c = pl.char; P.g = g;
+  const R: any = await quiet(() => Run.start(QUERY, 1, { hard: true, lean: true })); R.stopOnNotice = false; R.cap = 600; const g = R.g, pl = R.pl, c = pl.char; P.g = g;
   if (o.secs !== undefined) UNSEEN.wallSecs = o.secs;
   WALLSNAP.on = true; WALLSNAP.press = true;
   const why = g.orders.give('fallIn', { kind: 'none', at: [R.pos[0], 0, R.pos[2]] }); if (why) { P.why = `fall in refused: ${why}`; return P; }

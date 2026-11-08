@@ -34,8 +34,8 @@
 // WHAT WALKS MEETS THE PLAIN LEVEL, by construction and not by a rule its author must keep: a shaped box is pushed against as its UNCUT box (cut.ts's own
 // rule), which is the plain box, and a piece is met by nobody. The rules that mark a level's boxes by their size as it is stood up (thin things, a window's
 // bars: host/standup.ts) read the plain boxes too: shapes are given after them.
-// WHAT AN ENGINE CUTS UP ITSELF SAYS NO FORM: a window's bar (game/winbars.ts breaks it into lengths) is left plain by shapeLevel, a slab of one of the kit's
-// octagons is refused by the lint (scene/round.ts makes the four one round box), and tools/qa/shapes-check.ts is red on a level file whose shape does not
+// WHAT AN ENGINE CUTS UP ITSELF SAYS NO FORM: a window's bar (game/winbars.ts breaks it into lengths) is left plain by shapeLevel, a round thing is
+// refused a shape by the lint (scene/round.ts), and tools/qa/shapes-check.ts is red on a level file whose shape does not
 // stand.
 // A BLAST: a box whose shape has a form is one cell to the wall engine and never a wall cut into cells (its cells would be cut from the whole box); its
 // trim is out of the picture the moment the box is (above), and joins, loads and hangs on nothing meanwhile.
@@ -174,13 +174,13 @@ export function plainLevel(boxes: Box[]): void {
   for (const b of boxes) if (b.shaped === true) { b.cut = undefined; b.shaped = undefined; b.cutRound = undefined; b.cutArc = undefined; b.cutOld = undefined; }   // (set, never deleted: a box keeps its one layout — boxes.ts boxOf)
 }
 /** A LEVEL'S SHAPES, as it is stood up: the level is put back as its file has it (plainLevel) and, with `on`, each box that says a shape is given its record
- *  and its pieces follow the level's last box. Never a tilted box, a box cut already, a round thing's slab (scene/round.ts keeps those) or a window's bar
+ *  and its pieces follow the level's last box. Never a tilted box, a box cut already or a window's bar
  *  (the head). Returns how many boxes are shaped now. */
 export function shapeLevel(boxes: Box[], on: boolean): number {
   plainLevel(boxes);
   let made = 0; const tail: Box[] = [];
   if (on) boxes.forEach((b, i) => {
-    const s = b.shape; if (!s || b.rot || b.was || b.cut !== undefined || (b.flags & BoxFlag.Bar)) return;
+    const s = b.shape; if (!s || b.rot || b.cut !== undefined || (b.flags & BoxFlag.Bar)) return;
     formBox(b, s); b.shaped = true;
     for (const w of s.with ?? []) {
       const o = cutToWorld(w.off, b.yaw);   // (the box's own frame: cut.ts)

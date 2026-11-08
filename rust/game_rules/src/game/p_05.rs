@@ -353,7 +353,7 @@ pub fn game_set_loadout(g: &mut crate::game::Game, with_rifle: bool) {
 }
 
 /// Was this fixture's switch on in the level as authored.   (game.ts authoredOn)
-pub fn game_authored_on(g: &mut crate::game::Game, t: FixtureId) -> bool { crate::sim_lightshome::fixture_authored(g, t) }
+pub fn game_authored_on(g: &crate::game::Game, t: FixtureId) -> bool { crate::sim_lightshome::fixture_authored(g, t) }
 
 /// The lights' rows stood on the list as it is: as the level is built, and again when a fixture is hung after that.   (game.ts standLights)
 pub fn game_stand_lights(g: &mut crate::game::Game) {
@@ -380,13 +380,9 @@ pub fn game_reset_level_state(g: &mut crate::game::Game) {
     crate::glassbreak::glass_break_reset(g);   // (before the destruction's: the walls' nav re-bake in there must see whole panes)
     crate::destruction::destruction_reset(g);
     crate::shards::glass_shards_reset(g);
-    crate::wet::clear_wet_prints(g);
     crate::snow_blast::clear_snow_blast(g);
     crate::snow_marks::clear_snow_marks(g);
-    if let Some(mut t) = g.snow_tracks.take() {   // (the stub takes g and the tracks inside it: out of g for the call)
-        crate::snow_tracks::clear_snow_tracks(g, &t);
-        g.snow_tracks = Some(t);
-    }
+    g.out.push(crate::out_events::OutEvent::ClearSnowTracks);   // (the prints are the picture's: the game says they go, on a level with them or not)
     crate::hours::hour_after_reset(g);
     crate::air_dust::air_dust_reset(g);
 }

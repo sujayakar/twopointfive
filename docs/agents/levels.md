@@ -338,7 +338,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and `scenarios.roomClear.wallCharges` (wall charges of its own, whatever the cards carry: nobody is issued one). The listing's row for a mission
   says the sizes it offers, whether the cards can be changed there, the level's own kit, its locked and steel doors against the two door charges a
   squad is issued (no hammer or shotgun opens steel, and only a team of three or four as issued is lent a big-slot tool: `KITDEAL.more`, menus.md), whether frags can be ordered at all (never with a hostage,
-  the man a snatch came for or a civilian in the blast: `squadthrow.ts`), and whether the Team & kit picture has a place for each way in
+  a civilian in the blast: `squadthrow.ts`), and whether the Team & kit picture has a place for each way in
   (`scenarios.kitView.ways`). A listing, not a gate: it always exits 0.
 - **THE LEVEL SKILL AND ITS ONE COMMAND** (10-18; tools and a list only: no switch, no game code, no level file touched). The maintainer, on a Team & kit
   screen where the blue pair carried a rifle and nothing else: "as issued still has blue team pretty empty" · "i think we should make something like a level
@@ -636,27 +636,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   leaf, for `doors` carry no finish in this tool; a prop), and the weaker share of the same blend in the diffuse gather and on presets with no
   traced reflections, which the named and strong counts are the place to look for. A mend for the reflections was being handed in when this was
   written; this number will not move with it.
-- **Round things are round** (`ROUND`, `src/scene/round.ts`, 10-23; the maintainer's pick on the geometry trial: round drums and tyres into the
-  game). ON in the page, `?round=0` puts it off; OFF in the module and on the frozen stand, `TPS_ROUND=1`; a `FROZEN_HOLDS` row; in the knob
-  registry and the journal. THE SWITCH IS READ ONCE, AS A LEVEL IS STOOD UP (`host/standup.ts populateHost`, before the boxes go to the world and
-  before `new Game`): a recording from before the table has it put down before its level stands (`roundTape`, called by `replay/engineplay.ts
-  tables()` and `tools/qa/rerun.ts tables()`; `applyKnobs` says the same afterwards; `tools/qa/replay.ts` says the file's word for its one
-  stand-up), and the debugger's row 'round things are round (reloads)' reloads the page with the word on the address. The level files are not
-  touched. The kit (`gwotKit.ts round`, radius 0.2 m or more: drums, tyres, stoves, the oven, the water tank) and three older generators (round
-  table tops and drums in lived-in rooms) write a round thing as FOUR slabs through one centre, 45° apart, their tops stepped 2 or 3 mm;
-  `findOctagons` finds them by that shape, and `roundLevel` makes the first slab ONE box with `Box.round` (the cylinder about the box's own y,
-  radius `h[0]` = 1.026 × the slabs' half length, the circle with the octagon's area, which is 0.985 of the radius the kit was asked for; half
-  height `h[1]`; yaw 0) and the other three specks that carry NoPrimary | NoShadow, so every box keeps its index. What each box was is kept on
-  it (`Box.was`), `roundLevel(…, false)` puts every box back, and the level's fingerprint is taken over the boxes as authored (`authoredC /
-  authoredH`).
+- **Round things are round** (`src/scene/round.ts`, 10-23; the maintainer's pick on the geometry trial: round drums and tyres into the game). THE FILE SAYS IT, SINCE
+  2026-11-07 (his word: "yeah seems like we should remove the round detector"): `BoxData.round`, one box, the cylinder about its own y, radius `h[0]` = `h[2]`, half height
+  `h[1]`, no yaw, rot, flags or shape, version 2 of the format (`docs/level-format.md`). There is no switch, no recogniser in the game or the lint, and no stand on which
+  a level's drums are slabs: until then two detectors, page and Rust, took four slabs through one centre for one round box at every stand-up and left three specks in the
+  list, 691 round things and 2,073 specks in 52 of 59 files. `tools/levels/round-convert.ts` made the files once, and refuses to carry a reference to a slab that left
+  unless the list named all four. The kits write the one box (`gwotKit.ts round`, `roundFace`, `roundRadius`, `roundMarks`; `livedKit`, `livedPieces`, `lived-train`,
+  `lived-quiet`, `officeGen` `pipe`); a drawn-only round is still four flagged slabs (`drawnRoundSlabs`), which nothing meets, 19 of them in the files today. Every
+  generator's run equals its converted file byte for byte (`export.ts --check`). `tools/qa/round-same.ts --base <hash>` stands every level by the tree before the
+  conversion and by this one and holds the round boxes to the bit (`ROUNDSAME_BREAK=1` red). THE STANDS: frozen numbers on levels with a round moved to what the page
+  plays, since the frozen stand had the slabs. A LEVEL WITH A ROUND CHANGED ITS FINGERPRINT, so older checkpoints and tapes of it are refused. THE PICTURE moved in one way: a mark's hand and wear are salted by its box's place in the list (`markings.wgsl markSurfaceGB`, `bi * 7 + k`), and every box after a round has a new place, so the paint on a drum's band or a crate's stamp wobbles differently. With that salt held still, the pass and the long hall came out with no pixel different on the software adapter. NEVER SEEN ON A GPU.
+  Below, what was written of the old form is kept where it says how a round is met; `?round`, `?roundexact`, `roundConfig`, `findOctagons`, `roundLevel`, `Box.was` are gone.
   ONE MODEL: CPU rays and segments (`boxes.ts rayBoxRound` behind `rayBox`, `collision.ts lineBox`, and the two fast paths in `segmentBlocked`
   and the dynamic walk hand a round box to them), MOVEMENT (`collideCircle` pushes a body straight out from the axis, `circleTouches` asks circle
   against circle, so the walk grid is baked round too), GPU rays (`common.wgsl isectRound`, called from `isectBox` behind the scene prelude's
   `const ROUND_BOXES` on a box whose flags word carries `GEO_ROUND`; the side answers the code `ROUND_SIDE` and the closest-hit walks ask
   `roundNormalAt` — in a program compiled WITHOUT the cut rule; one compiled with it traces the picture's prism, THE CUT SET below), and the picture (the g-buffer's cut pass draws a twelve-sided prism standing round the cylinder, shaded with one turning
   normal, its marks run round it, a rolled rim on the lid: `gbuffer_cut.wgsl`, the ROUND block). Round wins over a cut record in every one of
-  them; nothing gives a round box one. THE GPU HALF RIDES THE CUT TABLE AND THE CUT PIPELINE BUT NOT THE CUT RULE: `roundConfig.gpu` is set at
-  boot (`main.ts`: the switch AND the cut switch); a round box has no `BOX_CUT_BIT`, its prism's eight planes sit in its own rows of the cut
+  them; nothing gives a round box one. THE GPU HALF RIDES THE CUT TABLE AND THE CUT PIPELINE BUT NOT THE CUT RULE: it goes with the cut switch; a round box has no `BOX_CUT_BIT`, its prism's eight planes sit in its own rows of the cut
   table with `ROUND_CORE_W` in the core row, it is listed at the cut list's picture-only end, and `BoxWorld.cutTraced` does not count it, so the
   cut swap (`render/cutSwap.ts`, "a calm room pays nothing") is as it was and every ray program holds a round rule from boot (the cylinder's in
   the calm set, the prism's in the cut set). SINCE 2026-11-07 THERE IS ONE SET (`docs/agents/render.md`): every ray meets a round as its prism at all
@@ -717,7 +714,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   distance; tut-pair's seven chewable drums one cell each; a save loading with the switch as saved and across it; a lone
   round's walk grid a disc; ten seconds of the pass with the switch down the same run by digest on a level that was rounded and put back;
   fingerprint, stands, an old recording; the box world's words, rows and lists with the GPU half up and down. PAGE: `node
-  tools/qa/round-page.cjs --root . --out <dir>` boots the pass twice on the software adapter (`round=0` and as it opens), wants every pipeline
+  tools/qa/round-page.cjs --root . --out <dir>` boots a level on the software adapter, once for each checkout it is run on, wants every pipeline
   compiled and no console or GPU error, and writes a still of the brazier from each.
   EVERY LEVEL'S ROUND THINGS, WHERE THEY STAND (`round-check` line 4c; the routine is `tools/qa/round-lib.ts probeRound`, and line 4's brazier
   is handed to the same one): no recorded run reaches most round things (the depot's ten tyres became round and no play-through result
