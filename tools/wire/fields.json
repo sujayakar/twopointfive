@@ -8988,7 +8988,14 @@
 "view::TickView.plan",
 "view::TickView.live",
 "view::TickView.quiet",
-"view::SquadView.quick"
+"view::SquadView.quick",
+"view::TickView.interact",
+"view::TickView.alarm",
+"view::TickView.stage",
+"view::TickView.look",
+"view::TickView.attention",
+"view::MateLine.kit",
+"view::MarksView.floor"
 ],
 "pageTick": [
 "aim::AimState.bearing_rate",

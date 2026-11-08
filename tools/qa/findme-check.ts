@@ -29,7 +29,10 @@ export async function findmeCheck(): Promise<boolean> {
   const { mulberry32: seeded } = await import(`${ROOT}/src/math/dice.ts`);
   const F = await import(`${ROOT}/src/host/findme.ts`) as typeof import('../../src/host/findme.ts');
   const { OutlinePass, makeOutlineFrame, makeOutlineMan, outlineBox, outlineBoxes, outlineRadius, OUTLINE, OUTLINE_MEN } = await import(`${ROOT}/src/render/outline.ts`) as typeof import('../../src/render/outline.ts');
-  const { findMeRing, findMeOutline } = await import(`${ROOT}/src/ui/findmeviz.ts`) as typeof import('../../src/ui/findmeviz.ts');
+  const { findMeOutline } = await import(`${ROOT}/src/ui/findmeviz.ts`) as typeof import('../../src/ui/findmeviz.ts');
+  const { findMeRing: ringOf } = await import(`${ROOT}/src/ui/findring.ts`) as typeof import('../../src/ui/findring.ts');
+  const { hudSource } = await import(`${ROOT}/src/host/hudsource.ts`) as typeof import('../../src/host/hudsource.ts');
+  const findMeRing = (g: Parameters<typeof hudSource>[0]) => ringOf(hudSource(g));
   const { FINDME, FINDME_START, findMeRead } = F;
   const BREAK = process.env.FINDME_BREAK === '1';
   const set: typeof F.setFindMe = BREAK ? () => {} : F.setFindMe;

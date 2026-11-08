@@ -135,9 +135,9 @@ async function inventoryOf(bindingsPath: string, panelPath: string, W: any): Pro
   const engineReal = W.engine;
   const engine = new Proxy(engineReal, { get(t, p) { if (p in t) return (t as any)[p]; if (p === 'particles') return fake('particles'); return fake(`engine.${String(p)}`); } });
   const smoke = new Proxy(W.smoke, { get(t, p) { if (p in t) return (t as any)[p]; return fake(`smoke.${String(p)}`); } });
-  const overlay = { showLightDots: true, windViz: fake('windViz') };
+  const overlay = { showLightDots: true };
   const panel = new PM.Panel();
-  BM.buildPanel(panel, engine, g, smoke, W.cam, overlay, fake('audio'), fake('quality'), () => ({ fps: 60, union: 8 }));
+  BM.buildPanel(panel, engine, g, smoke, W.cam, overlay, fake('audio'), fake('quality'), () => ({ fps: 60, union: 8 }), { windViz: fake('windViz') });
   return rows;
 }
 

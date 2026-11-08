@@ -36,13 +36,20 @@ pub fn floor_at(p: V3, s: Option<&crate::scene_level_data::SurfacesData>) -> cra
 }
 
 /// The material under a point on this game's level; a quiet mission's level that declares no surfaces is plain lino. (floor.ts floorOf)
-pub fn floor_of(g: &mut crate::game::Game, pos: V3) -> crate::floor::FloorMat {
+pub fn floor_of(g: &crate::game::Game, pos: V3) -> crate::floor::FloorMat {
     let l = &g.level;
     if l.surfaces.is_none() && l.scenarios.as_ref().map_or(false, |s| s.quiet.is_some()) {
         FloorMat::Lino
     } else {
         floor_at(pos, l.surfaces.as_ref())
     }
+}
+
+/// What the hearing model has under a point, as a HUD says it (None: the floors are all one). (game.ts floorUnderPlayer)
+pub fn floor_heard(g: &crate::game::Game, pos: V3) -> Option<crate::view::FloorWord> {
+    use crate::{floor::FloorMat as F, view::FloorWord as W};
+    if !g.tune.floor_materials { return None; }
+    Some(match floor_of(g, pos) { F::Carpet => W::Carpet, F::Lino => W::Lino, F::Stone => W::Stone, F::Tile => W::Tile, F::Asphalt => W::Asphalt, F::Grass => W::Grass })
 }
 
 /// One footfall, for the mixer and the model alike: plays it and returns the level the caller files. (floor.ts tread)

@@ -39,19 +39,17 @@ pub fn ring_view(g: &Game, seat: &SeatRef) -> Option<RingView> {
     Some(RingView { x: r.ax, y: r.ay, zoom: r.z, lit: r.lit, tone: crate::orders::squad_orders_tone_of(g, seat, &m.men).map(tone_word), caption, wedges, pin })
 }
 
-/// a row's words as the panel has them, less its key and less what follows a dot: what the ring keeps for under it
-fn row_words(line2: &str) -> &str {
-    let s = line2.strip_prefix("Space").map_or(line2, |r| if r.starts_with(char::is_whitespace) { r.trim_start() } else { line2 });
-    let s = cut(s, &['·']);
-    cut(s, &['—', '–', '-']).trim()
+/// a row's words as his ring has them: the first thing a key does on it (`row_opts`, the panel's own reading), less what follows a dash
+fn row_words(line2: &str) -> String {
+    let opts = crate::interact::row_opts(line2);
+    let Some(o) = opts.iter().find(|o| !o.key.is_empty()).or(opts.first()) else { return String::new() };
+    String::from(before_dash(&o.text).trim())
 }
-/// up to the first of these standing between spaces
-fn cut<'a>(s: &'a str, by: &[char]) -> &'a str {
-    let mut before = false;
+/// up to the first dash standing between spaces
+fn before_dash(s: &str) -> &str {
     let cs: Vec<(usize, char)> = s.char_indices().collect();
     for (k, &(i, c)) in cs.iter().enumerate() {
-        if before && by.contains(&c) && cs.get(k + 1).is_some_and(|x| x.1.is_whitespace()) { return s[..i].trim_end(); }
-        before = c.is_whitespace();
+        if k > 0 && cs[k - 1].1.is_whitespace() && matches!(c, '—' | '–' | '-') && cs.get(k + 1).is_some_and(|x| x.1.is_whitespace()) { return s[..i].trim_end(); }
     }
     s
 }
@@ -67,7 +65,7 @@ pub fn hand_ring_view(g: &Game, seat: &SeatRef) -> Option<HandRingView> {
         if !crate::interact::wedged(it) { continue; }
         // (how a switch or the mains STAND is no reason its row cannot be given)
         let stands = matches!(it.kind, InteractableKind::Switch | InteractableKind::Breaker);
-        wedges.push(RingWedge { key: (i + 1) as f64, text: String::from(row_words(&it.line2)), off: (it.off && !stands) || !it.in_reach, opens: false });
+        wedges.push(RingWedge { key: (i + 1) as f64, text: row_words(&it.line2), off: (it.off && !stands) || !it.in_reach, opens: false });
     }
     if crate::interact::whistle_wedge(g, seat) {
         wedges.push(RingWedge { key: n, text: String::from("whistle"), off: crate::whistle::whistle_ready_in_of(g, seat) > 0.0, opens: false });
@@ -88,7 +86,7 @@ pub fn empty_view(g: &Game, seat: &SeatRef) -> Option<EmptyView> {
     let t = crate::interact::empty_thing(g, seat);
     if crate::interact::empty_word(t.as_ref()) != pl.sel.word { return None; }
     Some(match t {
-        Some(t) => { let far = t.why == crate::handring::empty_why().far.as_str(); EmptyView { word: pl.sel.word.clone(), kind: String::from(t.it.kind.as_str()), dist: if far { Some(t.d) } else { None } } }
-        None => EmptyView { word: pl.sel.word.clone(), kind: String::from("wall"), dist: None },
+        Some(t) => { let far = t.why == crate::handring::empty_why().far.as_str(); EmptyView { word: pl.sel.word.clone(), kind: crate::interact::thing_kind(t.it.kind), dist: if far { Some(t.d) } else { None } } }
+        None => EmptyView { word: pl.sel.word.clone(), kind: ThingKind::Wall, dist: None },
     })
 }
