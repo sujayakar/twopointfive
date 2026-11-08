@@ -286,6 +286,15 @@ pub fn cut_prism(axis: f64, half_t: f64, poly: &[[f64; 2]]) -> crate::scene_cut:
 
 /// THE CPU CLIP every ray / segment test shares: [t0, t1] of the local line o + t·d cut down by the record; the answer in `g.m.scene_cut.cut_clip`, false = nothing left (and it is not written).   (cut.ts cutClip)
 pub fn cut_clip(g: &mut crate::game::Game, cut: &[crate::scene_cut::CutPlane], ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64, t0: f64, t1: f64) -> bool {
+    let Some((t0, t1, k)) = cut_clip_of(cut, ox, oy, oz, dx, dy, dz, t0, t1) else { return false };
+    let out = &mut g.m.scene_cut.cut_clip;
+    out.t0 = t0;
+    out.t1 = t1;
+    out.k = k;
+    true
+}
+/// …the interval left and the plane it is entered by (−1 none); None = nothing is left
+pub fn cut_clip_of(cut: &[crate::scene_cut::CutPlane], ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64, t0: f64, t1: f64) -> Option<(f64, f64, f64)> {
     let (mut t0, mut t1) = (t0, t1);
     let mut k = -1.0;
     let mut i = 0;
@@ -308,18 +317,14 @@ pub fn cut_clip(g: &mut crate::game::Game, cut: &[crate::scene_cut::CutPlane], o
                 t1 = t;
             }
         } else if num < 0.0 {
-            return false;
+            return None;
         }
         if t0 > t1 {
-            return false;
+            return None;
         }
         i += 1;
     }
-    let out = &mut g.m.scene_cut.cut_clip;
-    out.t0 = t0;
-    out.t1 = t1;
-    out.k = k;
-    true
+    Some((t0, t1, k))
 }
 
 #[cfg(test)]

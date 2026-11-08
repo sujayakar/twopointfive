@@ -6099,8 +6099,6 @@
 "scene_boxes::Box.wet_k",
 "scene_boxes::Box.yaw",
 "scene_boxes::BoxWorld.dynamics",
-"scene_boxes::BoxWorld.rg_ray",
-"scene_boxes::BoxWorld.rg_stamp",
 "scene_boxes::BoxWorld.statics",
 "scene_boxes::BoxWorld.statics_dirty",
 "scene_collision::LampRows.leave",

@@ -391,11 +391,6 @@ pub fn squad_orders_back_free(g: &crate::game::Game, seat: &crate::seats::SeatRe
     seat.orders.menu.is_none() && g.pl[seat.player].launch_held.is_none() && !crate::interact::hands_busy(g, seat)
 }
 
-/// What the key would open on, for a hint: CMDRING.bareHint draws none. (orders.ts hintView)
-pub fn squad_orders_hint_view(g: &crate::game::Game, kept: Option<&mut crate::orders::HoverKept>) -> Option<crate::orders::SquadOrdersHintView> {
-    None
-}
-
 /// The menu's own highlight follows the lit wedge. (orders.ts ringSel)
 pub fn squad_orders_ring_sel(g: &mut crate::game::Game) {
     let r = match (&g.orders.menu, g.orders.cmd_ring) {

@@ -206,7 +206,7 @@ pub fn door_mirrored(g: &mut crate::game::Game, id: DoorId) -> f64 { col(g, id, 
 /// (doors.ts Door.mirrored)
 pub fn door_set_mirrored(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::MIRRORED, v) }
 /// off its hinges: to whoever reads a door, a doorway   (doors.ts Door.off)
-pub fn door_off(g: &mut crate::game::Game, id: DoorId) -> bool { col(g, id, ::sim::doors::OFF) != 0.0 }
+pub fn door_off(g: &crate::game::Game, id: DoorId) -> bool { col(g, id, ::sim::doors::OFF) != 0.0 }
 /// (doors.ts Door.off)
 pub fn door_set_off(g: &mut crate::game::Game, id: DoorId, v: bool) { set_flag(g, id, ::sim::doors::OFF, v) }
 
@@ -332,17 +332,12 @@ pub fn door_new(g: &mut crate::game::Game, def: &crate::doors::DoorDef, index: O
     id
 }
 
-/// Leaf centre (1 m up) at the current angle, made anew only when the angle has moved   (doors.ts Door.pos)
-pub fn door_pos(g: &mut crate::game::Game, id: DoorId) -> V3 {
+/// Leaf centre (1 m up) at the current angle   (doors.ts Door.pos)
+pub fn door_pos(g: &crate::game::Game, id: DoorId) -> V3 {
     if door_off(g, id) { return g.dr[id].frame_centre; }   // (off its hinges: 'the door' is its doorway)
-    let a = door_angle(g, id);
-    if a != col(g, id, ::sim::doors::POS_ANGLE) {
-        set_col(g, id, ::sim::doors::POS_ANGLE, a);
-        let u = door_dir(g, id);
-        let (hinge, width) = (g.dr[id].def.hinge, g.dr[id].def.width);
-        door_kept_pos(g, id, [hinge[0] + u[0] * width * 0.5, 1.0, hinge[1] + u[1] * width * 0.5]);
-    }
-    g.dr[id].pos_at
+    let u = door_dir(g, id);
+    let (hinge, width) = (g.dr[id].def.hinge, g.dr[id].def.width);
+    [hinge[0] + u[0] * width * 0.5, 1.0, hinge[1] + u[1] * width * 0.5]
 }
 /// `p` is the kept centre from here on   (doors.ts Door.keptPos)
 pub fn door_kept_pos(g: &mut crate::game::Game, id: DoorId, p: V3) {
@@ -352,19 +347,10 @@ pub fn door_kept_pos(g: &mut crate::game::Game, id: DoorId, p: V3) {
 }
 /// the kept centre as it stands, whatever angle the leaf has now   (doors.ts Door.keptAt)
 pub fn door_kept_at(g: &crate::game::Game, id: DoorId) -> V3 { g.dr[id].pos_at }
-/// `fn_` asked aside: what each of `doors` kept of its centre is put back after   (doors.ts Door.posAside)
-pub fn door_pos_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, doors: &mut Vec<DoorId>, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    let mut a = Vec::with_capacity(doors.len());
-    let mut p = Vec::with_capacity(doors.len());
-    for &d in doors.iter() { a.push(col(g, d, ::sim::doors::POS_ANGLE)); p.push(g.dr[d].pos_at); }
-    let r = fn_(g);
-    for i in 0..doors.len() { set_col(g, doors[i], ::sim::doors::POS_ANGLE, a[i]); door_kept_pos(g, doors[i], p[i]); }
-    r
-}
 /// 'Closed enough' that using it means opening it   (doors.ts Door.isClosed)
-pub fn door_is_closed(g: &mut crate::game::Game, id: DoorId) -> bool { m::abs(door_angle(g, id)) < 0.25 }
+pub fn door_is_closed(g: &crate::game::Game, id: DoorId) -> bool { m::abs(door_angle(g, id)) < 0.25 }
 /// (doors.ts Door.dir)
-pub fn door_dir(g: &mut crate::game::Game, id: DoorId) -> [f64; 2] {
+pub fn door_dir(g: &crate::game::Game, id: DoorId) -> [f64; 2] {
     let a = g.dr[id].def.closed_dir + door_angle(g, id);
     [m::cos(a), m::sin(a)]
 }

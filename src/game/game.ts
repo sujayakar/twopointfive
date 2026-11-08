@@ -79,6 +79,7 @@ import { doorMan } from './doorthrow';
 import './mission';
 import { NO_VIEW, type TickView } from '../view/seatview';
 import type { WorldAsk } from '../view/worldask';
+import type { CursorAt, CursorLens, CursorView, Under } from '../view/cursor';
 import { Chronicle, chronInterrogated } from './chronicle';
 import { hiddenProps, irBeams } from './combat';
 import { irViewer, irMade } from './irlaser';
@@ -1677,6 +1678,9 @@ export class Game {
     together: f => this.askHost ? f() : this.col.window(f),
   };
   askHost: WorldAsk | null = null;
+  /** what the cursor is on, through a camera as it stands, and what a point is, as an order would be about them (src/view/read.ts): the host's, asked of the Rust game */
+  cursorAsk: ((input: CursorAt, cam: CursorLens, canvas: { clientWidth: number; clientHeight: number }, seat?: number) => CursorView) | null = null;
+  underAsk: ((p: Vec3, seat?: number) => Under | null) | null = null;
   objectivePos(): Vec3 | null { return this.view.mission?.pos ?? null; }
   objectiveText(): string { return this.view.mission?.text ?? ''; }
 

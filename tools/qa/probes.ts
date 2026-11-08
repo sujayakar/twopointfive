@@ -2991,8 +2991,6 @@ if (on('squadthrow-walk', 'squadthrow', 'squadorders', 'all')) await run('squadt
 if (on('plan', 'squadorders', 'all')) await run('plan', async () => (await import('./plan-check.ts')).planCheck());
 // B is the squad's autopilot: on a door the men wait on they go in by the entry they pick; its plan is drawn for its own time (autopilot-check.ts; AUTOPILOT.on)
 if (on('autopilot', 'squadorders', 'all')) await run('autopilot', async () => (await import('./autopilot-check.ts')).autopilotCheck());
-// the orders ring, a prototype: the key down puts the menu up as a ring at the cursor, the key up gives the lit wedge; off unless asked for (cmdring-check.ts; CMDRING.on)
-// the cursor's pick, read for the picture, is asked aside: a game whose cursor is read and the same game never read hold the same whole state (hoverpick-check.ts; orders.ts hover, BoxWorld.rayAside)
 // the squad's command key is Q: the board gives the quick order's own code off the Q key, B gives nothing, and the game is as it was (qkey-check.ts; host/keymap.ts qCmd)
 if (on('qkey', 'squadorders', 'player', 'all')) await run('qkey', async () => (await import('./qkey-check.ts')).qkeyCheck());
 if (on('wordsmall', 'doortools', 'squadorders', 'all')) await run('wordsmall', async () => (await import('./wordsmall-check.ts')).wordsmallCheck());   // the word (F) sends one or two teammates in from a plain stack (DOORTOOLS.wordSmall, settled); WORDSMALL_BREAK=1 fails it
