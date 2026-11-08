@@ -555,14 +555,10 @@ left	src/sim/sim.ts
 left	src/sim/slabshome.ts
 left	src/sim/state.ts
 left	src/sim/weatherhome.ts
-left	src/ui/bindings.ts
-left	src/ui/devhud.ts
 left	src/ui/findmeviz.ts
 left	src/ui/menu.ts
 left	src/ui/netrows.ts
-left	src/ui/pictureviz.ts
 left	src/ui/replaykey.ts
-left	src/ui/windviz.ts
 stays	src/anim/characters.ts
 stays	src/anim/gltf.ts
 stays	src/audio/acoustic.ts
@@ -820,6 +816,7 @@ stays	src/ui/pricerun.ts
 stays	src/ui/quality.ts
 stays	src/ui/railcard.ts
 stays	src/ui/railclear.ts
+stays	src/ui/rainrows.ts
 stays	src/ui/readout.ts
 stays	src/ui/recap.ts
 stays	src/ui/ringlone.ts
