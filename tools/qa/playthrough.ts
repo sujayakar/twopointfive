@@ -167,6 +167,7 @@
 // EVERY TEAMMATE'S DEATH is also kept with what he was doing (RunOut.deaths, in --json: his order, his target, whether he was on his killer, how far off his
 // muzzle the killer stood, the beat he still owed, gun down for a friend, light, blind …) — the raw material for 'why do they die' tables.
 // THE HARNESS HAS NO GPU: no light meter (what a man sees of another is guards.ts's direct-light estimate), no smoke sight lines, no picture, no feel.
+import { doing } from './squadwords';
 import { readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
@@ -499,7 +500,7 @@ class Watcher {
                 return { mask: m === 'player' ? 'Sam' : m ? m.callsign : null, job: T.jobId, jobAgo: T.jobId ? +(t - T.jobT).toFixed(1) : -1, samRoom: !!r && r === g.fight.roomAt(sam.pos), samD: +flat(sam.pos, p).toFixed(1), at: [+p[0].toFixed(1), +p[2].toFixed(1)], kAt: [+kp[0].toFixed(1), +kp[2].toFixed(1)], samAt: [+sam.pos[0].toFixed(1), +sam.pos[2].toFixed(1)] }; })() }); }
           if (k && k.team !== 'operative' && off > 75 && !T.blind) this.add('unaware', gd.callsign, p, `killed by ${k.callsign} ${f1(flat(k.char.pos, p))} m off, ${Math.round(off)}° from where his gun pointed · ${T.last}`); }
         T.was = gd.state; continue; }
-      T.was = gd.state; T.last = `${this.order(gd)} · ${g.cover?.words?.(gd) || 'covering nothing'}`; { const A = O.of(gd); T.mark2 = !!A?.post && flat(p, A.post) < 0.8; } T.door = g.doorTools?.ops?.find((o: any) => o.men.includes(gd))?.phase ?? null;
+      T.was = gd.state; T.last = `${this.order(gd)} · ${doing(g, gd).match(/ · (on [^·]*)$/)?.[1] || 'covering nothing'}`; { const A = O.of(gd); T.mark2 = !!A?.post && flat(p, A.post) < 0.8; } T.door = g.doorTools?.ops?.find((o: any) => o.men.includes(gd))?.phase ?? null;
       { const J = g.cover?.of?.(gd); if (J) { T.jobId = J.o.id; T.jobT = t; } }
       { const O = g.fight?.opOf?.(gd); T.op = O ? { tgt: O.tgt ?? null, turn: O.turn?.to ?? null, track: O.track, readyAt: O.readyAt, held: O.heldForFriend, muzzleDown: !!gd.muzzleDown } : null; }   // (the fight's own state on his last living frame: its dead branch has wiped it by the time his death is seen)
       const A = O.of(gd), fighting = g.fight.engaged(gd) || (!gd.script && (gd.state === 'alert' || gd.state === 'search')), blind = gd.dazzledUntil > t || gd.staggerUntil > t;

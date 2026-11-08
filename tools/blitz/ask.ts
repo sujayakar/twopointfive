@@ -6,7 +6,7 @@
 //   A question that writes (issue, given, give) calls `handFirst` before it and `reapply` after it. handFirst hands over what the host has changed since the last step (its cameras above all): an apply outside a step otherwise writes back the cameras as Rust last had them, and the view jumps a frame
 import { bookOf, exportPart } from './export';
 
-export const ASK = { label: 0, can: 1, only: 2, valid: 3, when: 4, gone: 5, word: 6, mark: 7, given: 8, issue: 9, give: 10 } as const;
+export const ASK = { label: 0, can: 1, only: 2, valid: 3, when: 4, gone: 5, mark: 6, given: 7, issue: 8, give: 9 } as const;
 const TARGET = 'crate::orders::OrderTarget', MEN = 'Vec<GuardId>', OPTS = 'Option<crate::orders::GiveOpts>';
 const DEC = new TextDecoder();
 
@@ -29,7 +29,6 @@ export function askNothing(kind: number, name: string): Uint8Array {
     case ASK.valid: return Uint8Array.of(1);
     case ASK.when: return Uint8Array.of(0);
     case ASK.gone: return Uint8Array.of(1);
-    case ASK.word: return Uint8Array.of(0);
     case ASK.mark: return strBytes('');
     case ASK.given: return new Uint8Array(0);
     default: return someBytes('not available');
@@ -56,7 +55,7 @@ export function installAsks(g: any, knobs: Record<string, unknown>, ask0: AskFn,
     d.gone = (S: any, t: any, men: any[]) => new Answer(ask(ASK.gone, r(), seatOfS(S), bytes([TARGET, t], [MEN, men]))).u8() !== 0;
     d.issue = (S: any, men: any[], t: any, o?: any) => { handFirst(); const a = new Answer(ask(ASK.issue, r(), seatOfS(S), bytes([MEN, men], [TARGET, t], [OPTS, o]))); reapply(); return a.optStr() ?? undefined; }; };
   const when = (d: any) => (S: any, t: any, men: any[]) => new Answer(ask(ASK.when, rowId(d), seatOfS(S), bytes([TARGET, t], [MEN, men]))).u8() !== 0;
-  const postureOf = (seat: any) => { const s = seatId(seat); return { word: () => new Answer(ask(ASK.word, 0, s, new Uint8Array(0))).optStr(), mark: (def: any) => new Answer(ask(ASK.mark, rowId(def), s, new Uint8Array(0))).str(), given: (def: any) => { handFirst(); ask(ASK.given, rowId(def), s, new Uint8Array(0)); reapply(); } }; };
+  const postureOf = (seat: any) => { const s = seatId(seat); return { mark: (def: any) => new Answer(ask(ASK.mark, rowId(def), s, new Uint8Array(0))).str(), given: (def: any) => { handFirst(); ask(ASK.given, rowId(def), s, new Uint8Array(0)); reapply(); } }; };
   const done = new WeakSet<object>(), whens = new WeakMap<object, unknown>(), postures = new WeakSet<object>(); let seen = 0;
   const after = () => { const L = rows(); for (; seen < L.length; seen++) if (!done.has(L[seen])) { done.add(L[seen]); closures(L[seen]); }
     for (const d of L) if (d.standsIn && (!d.standsIn.when || d.standsIn.when !== whens.get(d))) { const w = when(d); whens.set(d, w); d.standsIn.when = w; }   // (`standsIn` is a value: an apply can make it anew)

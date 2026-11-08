@@ -29,7 +29,7 @@ import { SideMap } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import { v3 } from '../math/vec';
 import type { Game, Guard } from './game';
-import type { OrderDef, OrderNote } from './orders';
+import type { OrderDef } from './orders';
 import type { ThrowSolution } from './throwables';
 import { GRAVITY } from './throwables';
 import { bogRun, snowBogAt } from './snowBog';
@@ -74,7 +74,6 @@ export function squadSmokeStage(g: Game, cans: number) { { const __s = RUST_SURF
   if (!n) return;
   const after = S.defs.findIndex(d => d.id === 'hold');   // (its place: straight under the floor's own four, above whatever a later part has added)
   S.register(row(g), after >= 0 ? S.defs[after + 1]?.id : undefined);
-  if (!s.noted) { s.noted = true; S.notes.push(() => notes(g)); }
 }
 
 /** where a can thrown from `from` on `sol` comes to rest on open floor: its landing, and the run of its bounces past it (SQUADSMOKE.rollK; `rollK`: another
@@ -144,8 +143,6 @@ function row(g: Game): OrderDef {
       SQUADSMOKE_STATS.thrown++; SQUADSMOKE_LOG.push({ t: g.time, who: th.gd.callsign, from: th.from, at: v3.copy(t.at), land: v3.copy(th.sol.land), rest: th.rest, left: s.cans }); if (SQUADSMOKE_LOG.length > 100) SQUADSMOKE_LOG.splice(0, 50);
     } };
 }
-/** the squad's HUD block: what is left, while this staging brought any */
-function notes(g: Game): OrderNote[] { const s = states.get(g); return s && s.brought > 0 ? [`smoke ${s.cans}`] : []; }
 
 export function squadSmokeSummary(g: Game): string {
   const s = states.get(g); return s && s.brought ? `${s.cans} of ${s.brought} left · ${SQUADSMOKE.orderKey.replace('Key', '')} with the menu up on a spot of floor` : 'none brought (no card carries smoke)';

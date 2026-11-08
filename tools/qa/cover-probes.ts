@@ -31,6 +31,7 @@
 // goggles' switch: cover-order's "the plain contract first" staging (rear security held off) and its "COVER.on false" line, cover-step's run of each case
 // with the step off and "the BEFORE" line, and cover-settle's off walks, "no more twitches than with the switch off" and "(off: it does)" are out.
 // cover-side is deleted: every line of it compared the step-outs with cover on against the same seeds with cover off.
+import { blockOf } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { sample } from './sweep.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
@@ -298,7 +299,7 @@ export const coverOrder = guarded(async () => {
   const under0 = R.ops.filter((m: any) => O.of(m)?.order === 'fallIn').length, stray = R.ops.filter((m: any) => C.of(m) && O.of(m)?.order !== 'fallIn').length, spare0 = R.ops.filter((m: any) => !C.of(m) && !boxed(m)).length;
   const quiet = START.fallIn ? under0 === 4 && stray === 0 && spare0 === 0 && before >= 1 : before === 0;
   R.fallIn(); R.step(120); R.walk([[13, 0, 17.6]]); R.walk([[19.0, 0, 11.0]]); R.step(120);
-  const following = dealt(), rows = () => O.hud().status[0]?.opts.slice(0, 4).map((o: any) => o.text) ?? [];
+  const following = dealt(), rows = () => blockOf(O)[0]?.opts.slice(0, 4).map((o: any) => o.text) ?? [];
   const r0 = rows();
   verdict(quiet && following === 4 && r0.every((t: string) => / · on /.test(t)), 'following with no other order, all four are dealt an opening — and the squad block says which', `${START.fallIn ? `fallen in from the staging, ${under0} of 4 under 'fall in' with nothing said: ${before} dealt, ${stray} dealt with no such order, ${spare0} with nothing beside an opening that is his to take` : `before 'fall in': ${before} dealt`} · after: ${following} · ${r0.join(' | ')}`);
   // an order to everybody: stack up on the server door

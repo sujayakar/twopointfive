@@ -551,11 +551,10 @@ pub fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
 }
 
 /// The squad's HUD block: the throw just made. (squadthrow.ts notes)
-pub fn notes(g: &mut crate::game::Game) -> Vec<crate::orders::OrderNote> {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
-    if let Some(w) = g.m.squadthrow.states.get(key).and_then(|s| s.shown.as_ref()) {
+pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
+    if let Some(w) = g.m.squadthrow.states.get(crate::seats::view_key(g, seat)).and_then(|s| s.shown.as_ref()) {
         if g.time >= w.t && g.time - w.t < g.k.squadthrow.shown_secs {
-            return vec![crate::orders::OrderNote::Text(w.text.clone())];
+            return vec![crate::view::Note { key: String::new(), text: w.text.clone() }];
         }
     }
     Vec::new()
@@ -590,7 +589,7 @@ pub fn sync(g: &mut crate::game::Game) {
     let s = state(g);
     if !s.noted {
         s.noted = true;
-        g.orders.notes.push(crate::orders::OrderNoteFn::SquadThrow);
+        crate::orders::squad_orders_voice(g, crate::orders::OrderNoteFn::SquadThrow);
     }
 }
 

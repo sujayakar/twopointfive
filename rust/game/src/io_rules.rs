@@ -2,7 +2,7 @@
 use game_wire::io::*;
 use game_wire::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
-/// WHAT THE HOST ASKS OF AN ORDER ROW (bridge/ask.ts): the closures of a row in the TypeScript, each answered by the match over its arms. `kind` is ask.ts's; `args` is written by the schema. 0 to 7 only read; 8, 9 and 10 write, and the host applies again after them.
+/// WHAT THE HOST ASKS OF AN ORDER ROW (bridge/ask.ts): the closures of a row in the TypeScript, each answered by the match over its arms. `kind` is ask.ts's; `args` is written by the schema. 0 to 6 only read; 7, 8 and 9 write, and the host applies again after them.
 pub fn ask(g: &mut crate::game::Game, kind: u32, row: u32, seat: u32, args: &[u8]) -> Vec<u8> {
     use crate::orders::OrderTarget as T;
     let s = <SeatId as Id>::from_ix(seat as usize); let d = <OrdersOrderDefId as Id>::from_ix(row as usize);
@@ -13,11 +13,10 @@ pub fn ask(g: &mut crate::game::Game, kind: u32, row: u32, seat: u32, args: &[u8
         3 => { let t: T = Io::r(&mut i); let men: Vec<GuardId> = Io::r(&mut i); match crate::orders::order_valid(g, d, &t, &men) { Ok(()) => o.b.push(0), Err(None) => o.b.push(1), Err(Some(w)) => { o.b.push(2); w.w(&mut o); } } }
         4 => { let t: T = Io::r(&mut i); let men: Vec<GuardId> = Io::r(&mut i); crate::orders::order_when(g, d, &t, &men).w(&mut o); }
         5 => { let t: T = Io::r(&mut i); let men: Vec<GuardId> = Io::r(&mut i); crate::orders::order_gone(g, d, &t, &men).w(&mut o); }
-        6 => { crate::silent::posture_word(g).w(&mut o); }
-        7 => { String::from(crate::silent::posture_mark(g, &crate::seats::here(g), d)).w(&mut o); }
-        8 => { crate::silent::posture_given(g, d); }
-        9 => { let men: Vec<GuardId> = Io::r(&mut i); let t: T = Io::r(&mut i); let opts: Option<crate::orders::GiveOpts> = Io::r(&mut i); crate::orders::order_issue(g, d, &men, &t, opts.as_ref()).w(&mut o); }
-        10 => { let id: String = Io::r(&mut i); let t: Option<T> = Io::r(&mut i); let who: Option<crate::orders::Who> = Io::r(&mut i); let opts: Option<crate::orders::GiveOpts> = Io::r(&mut i); crate::orders::squad_orders_give(g, &id, t.as_ref(), who, opts.as_ref()).w(&mut o); }
+        6 => { String::from(crate::silent::posture_mark(g, &crate::seats::here(g), d)).w(&mut o); }
+        7 => { crate::silent::posture_given(g, d); }
+        8 => { let men: Vec<GuardId> = Io::r(&mut i); let t: T = Io::r(&mut i); let opts: Option<crate::orders::GiveOpts> = Io::r(&mut i); crate::orders::order_issue(g, d, &men, &t, opts.as_ref()).w(&mut o); }
+        9 => { let id: String = Io::r(&mut i); let t: Option<T> = Io::r(&mut i); let who: Option<crate::orders::Who> = Io::r(&mut i); let opts: Option<crate::orders::GiveOpts> = Io::r(&mut i); crate::orders::squad_orders_give(g, &id, t.as_ref(), who, opts.as_ref()).w(&mut o); }
         k => panic!("bridge: no question of kind {}", k),
     } assert!(i.p == args.len(), "bridge: {} bytes left over in a question of kind {}", args.len() - i.p, kind); o.b })
 }
@@ -27,6 +26,11 @@ pub fn deal_closures(g: &mut crate::game::Game) {
     use crate::orders::*;
     use crate::squadthrow::SquadThrowKind::{Frag as F, Stun as S};
     let small = g.door_tools.go_key == Some(Some(String::from("small")));
+    // (the block's voices, on a game handed over by a host that registers none: each reader answers for itself whether it has anything to say)
+    for f in [OrderNoteFn::DoorToolsHud, OrderNoteFn::DoorToolsWord, OrderNoteFn::Pair, OrderNoteFn::SquadSmoke, OrderNoteFn::WallCharge, OrderNoteFn::Squad40, OrderNoteFn::SquadThrow] {
+        crate::orders::squad_orders_voice(g, f);
+        for s in g.tab.cmd_seat.ids().collect::<Vec<_>>() { if let Some(o) = g.tab.cmd_seat[s].own.as_mut() { if !o.orders.notes.contains(&f) { o.orders.notes.push(f); } } }
+    }
     for id in g.tab.orders_order_def.ids().collect::<Vec<_>>() {
         let d = &mut g.tab.orders_order_def[id];
         match d.id.as_str() {

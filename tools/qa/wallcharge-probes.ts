@@ -25,6 +25,7 @@
 // 2026-11-07: the family 'off' (the module's switch or the destruction's down = the build without the module, and a played half-minute digest for digest) is
 // deleted: both are settled rules, and every line of it asked the build without them. Sam alone no longer has his own charges written off: he stands as the
 // page stands him.
+import { blockOf, listedOf, menuKey } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { samBlows } from './charge-rig.ts';
 import { listen } from './heard.ts';
@@ -99,9 +100,9 @@ async function rig(scn: string, seed: number, o: { squad?: boolean; still?: bool
     press(code: string) { input.pressed.add(code); R.step(); },
     /** X on p: the menu's first page, the page behind its opener (if any), Esc, Esc */
     menuOn(p: number[], byCode = false) {   // (byCode: the menu opened on the target at p without the cursor — a point the camera does not see past a nearer wall)
-      if (byCode) { O.open(O.targetAt([p[0], p[1], p[2]])); R.step(2); } else { W.cursorAt([p[0], p[1], p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(24); }
-      const read = () => { const M = O.menu, hud = O.hud().menu; return M ? { ids: M.rows.map((r: any) => r.id).join(' '), keys: M.rows.map((r: any) => r.key ?? (r.hotKey ? 'hot' : '?')).join(' '), why: [...M.why] as (string | null)[], kind: M.target.kind as string, wall: !!M.target.wall,
-        rows: (hud?.rows ?? []).slice(1).filter((r: any) => r.kind !== 'cancel').map((r: any) => ({ key: r.opts[0]?.key, text: r.opts[0]?.text, off: r.off })) } : null; };
+      if (byCode) { O.open(O.targetAt([p[0], p[1], p[2]])); R.step(2); } else { W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(24); }
+      const read = () => { const M = O.menu, hud = listedOf(O); return M ? { ids: M.rows.map((r: any) => r.id).join(' '), keys: M.rows.map((r: any) => r.key ?? (r.hotKey ? 'hot' : '?')).join(' '), why: [...M.why] as (string | null)[], kind: M.target.kind as string, wall: !!M.target.wall,
+        rows: (hud?.rows ?? []).map((r: any) => ({ key: r.opts[0]?.key, text: r.opts[0]?.text, off: r.off })) } : null; };
       const first = read(); if (!first) { input.pressed.add('Escape'); R.step(); return null; }
       // the page a DIGIT opens: an opener on a hot key (the squad's throw row) is another menu
       const opener = O.menu.rows.find((r: any) => r.opens && r.key !== undefined); let page: ReturnType<typeof read> = null, back = true;
@@ -110,7 +111,7 @@ async function rig(scn: string, seed: number, o: { squad?: boolean; still?: bool
       return { ...first, page, back, gone: O.menu === null };
     },
     /** X on p, then the digits, a third of a second apart — taps, nothing held */
-    pick(p: number[], ...n: number[]) { W.cursorAt([p[0], p[1], p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(20); for (const k of n) { input.pressed.add(`Digit${k}`); R.step(); R.step(6); } },
+    pick(p: number[], ...n: number[]) { W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(20); for (const k of n) { input.pressed.add(`Digit${k}`); R.step(); R.step(6); } },
     get op(): any { return C.ops[0] ?? C.done[C.done.length - 1] ?? null; },
     beats(op: any): string { return (op?.beats ?? []).map((b: any) => `${f2(b.t)} ${b.what}`).join(' | '); },
     free(p: number[]) { return !game.col.nav.isBlocked(p[0], p[2]); },
@@ -266,8 +267,8 @@ async function probeSquad(scn: string): Promise<boolean> {
     'the squad stands off: every man on the charge\'s side of the wall, two metres or more from it, and says so', `${dists.map(x => `${x.m.callsign} ${f2(x.d)} m`).join(' · ')} · ${f2(game.time - tSet)} s after it was set`);
   // nothing happens until Sam's word
   R.step(60 * 8);
-  F.verdict(op.phase === 'armed' && C.set.length === 1 && !C.holeAt(W) && R.pathLen(a, b) === before && R.up.every((m: any) => flat(m.char.pos, cp) >= 1.6) && O.hud().status !== undefined && C['hudNotes']().some((n: any) => n.key === 'F'),
-    'eight seconds on: nothing has happened — the wall whole, the charge on it, the men where they stood, the HUD saying F blows it', `phase ${op.phase} · set ${C.set.length} · route ${f2(R.pathLen(a, b))} m (was ${f2(before)}) · note "${C['hudNotes']()[0]?.text}"`);
+  F.verdict(op.phase === 'armed' && C.set.length === 1 && !C.holeAt(W) && R.pathLen(a, b) === before && R.up.every((m: any) => flat(m.char.pos, cp) >= 1.6) && blockOf(O) !== undefined && (O.g.view.squad?.notes ?? []).some((n: any) => n.key === 'F'),
+    'eight seconds on: nothing has happened — the wall whole, the charge on it, the men where they stood, the HUD saying F blows it', `phase ${op.phase} · set ${C.set.length} · route ${f2(R.pathLen(a, b))} m (was ${f2(before)}) · note "${(O.g.view.squad?.notes ?? []).find((n: any) => n.key === 'F')?.text}"`);
   // rear security while they wait (the stack's rule at a door): the two stood furthest from the charge have their eyes spare for the way a man could come; the others' guns stay on the wall
   { const byDist = [...op.men].sort((x: any, y: any) => flat(op.mine.get(y).post, cp) - flat(op.mine.get(x).post, cp)), spare = op.men.filter((m: any) => op.mine.get(m).spare), want = byDist.slice(0, op.men.length >= 4 ? 2 : 1);
     const dd = (m: any) => flat(op.mine.get(m).post, cp), rest = op.men.filter((m: any) => !spare.includes(m));   // (two men the same distance off: either is 'the furthest')
@@ -481,8 +482,8 @@ async function probeCost(scn: string): Promise<boolean> {
   }
   // carried wall charges (the kit's hook)
   { const R = await rig(scn, 21); const { O, D, C, game } = R; const P = place(R); R.gather(P.near, 75, P.p);
-    // (the squad block says what is carried — read where the HUD reads it: orders.ts hud()'s rows — while the run brought wall charges, and nothing under the cost rule or with none brought)
-    const block = () => { const sq = (O.hud().status ?? []).find((b: any) => /^squad/.test(b.label ?? '')); if (!sq) return 'no squad block';
+    // (the squad block says what is carried — read where the HUD reads it: the view's squad — while the run brought wall charges, and nothing under the cost rule or with none brought)
+    const block = () => { const sq = (blockOf(O) ?? []).find((b: any) => /^squad/.test(b.label ?? '')); if (!sq) return 'no squad block';
           return (sq.opts ?? []).map((o: any) => o.text as string).filter((t: string) => /^wall charges /.test(t)).join(' / ') || 'no line'; };
     C.setCarried(null); const hud0 = block(); C.setCarried(0); const hudNone = block(); C.setCarried(1); const hud1 = block();
     const words = label(R, P), why = O.give(WALL_ORDER, O.targetAt(P.p), 'all'); R.until(() => C.set.length === 1, 60); const hudSet = block();

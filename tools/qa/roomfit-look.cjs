@@ -48,7 +48,7 @@ process.on('exit', stop); for (const s of ['SIGINT', 'SIGTERM', 'SIGHUP']) proce
       let t = 0; const men = () => O.squad(), there = () => men().every(m => { const A = O.of(m); return !A || A.arrived; });
       for (; t < secs && !(t > 2 && there()); t += 0.5) { quiet(); window.__runFrames(30); }
       quiet(); window.__runFrames(60);   // (a second more: guns settle on what each man watches)
-      const rows = men().map(m => { const A = O.of(m), c = m.char.pos; return { who: m.callsign, pos: [+c[0].toFixed(2), +c[2].toFixed(2)], off: +Math.hypot(c[0] - P[0], c[2] - P[2]).toFixed(2), yawDeg: Math.round(m.char.bodyYaw * 180 / Math.PI), row: O.statusOf(m), arrived: !!(A && A.arrived), state: m.state }; });
+      const rows = men().map(m => { const A = O.of(m), c = m.char.pos; return { who: m.callsign, pos: [+c[0].toFixed(2), +c[2].toFixed(2)], off: +Math.hypot(c[0] - P[0], c[2] - P[2]).toFixed(2), yawDeg: Math.round(m.char.bodyYaw * 180 / Math.PI), row: (window.__game.view.squad?.mates.find(x => x.man === m.char.id)?.doing ?? ''), arrived: !!(A && A.arrived), state: m.state }; });
       let near = Infinity; for (const a of rows) for (const b of rows) if (a !== b) near = Math.min(near, Math.hypot(a.pos[0] - b.pos[0], a.pos[1] - b.pos[1]));
       document.body.classList.add('breaching');   // (index.html: kit, meters, markers and prompts hidden — the picture alone)
       const pin = window.__stage({ look: [P[0], 0, P[2]], yaw: 0, pitch: 80 * Math.PI / 180, dist }, {});

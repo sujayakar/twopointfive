@@ -291,16 +291,16 @@ pub fn squad_orders_summary(g: &mut crate::game::Game) -> String {
         None => String::new(),
     };
     let mut men: Vec<String> = Vec::new();
-    for gd in squad_orders_squad(g, &crate::seats::here(g)) { let s = squad_orders_status_of(g, gd); men.push(format!("{}: {}", g.gd[gd].callsign, s)); }
+    for gd in squad_orders_squad(g, &crate::seats::here(g)) { let s = squad_orders_status_of(g, &crate::seats::here(g), gd); men.push(format!("{}: {}", g.gd[gd].callsign, s)); }
     format!("orders to {} · {}{}", who, menu, men.join(" · "))
 }
 
 /// What one man is doing, in a few words.   (orders.ts SquadOrders.statusOf)
-pub fn squad_orders_status_of(g: &mut crate::game::Game, gd: GuardId) -> String {
+pub fn squad_orders_status_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> String {
     if g.gd[gd].state == crate::game::GuardState::Dead {
         return String::from(if g.gd[gd].wound.is_some() { "wounded" } else { "down" });
     }
-    if let Some(a) = g.orders.asg.get(gd).copied() {
+    if let Some(a) = seat.orders.asg.get(gd).copied() {
         let w = if g.tab.orders_assignment[a].post.is_none() && crate::pairup::pair_up(g, crate::pairup::PairUpRule::Word) {
             crate::sneak::sneak_word(g, gd)
         } else { None };
@@ -313,7 +313,7 @@ pub fn squad_orders_status_of(g: &mut crate::game::Game, gd: GuardId) -> String 
     }
     for own in [true, false] {
         let mut i = 0;
-        while i < g.orders.owners.len() {
+        while i < seat.orders.owners.len() {
             if nightbreach_owns(g, gd) == own {
                 if let Some(s) = nightbreach_status(g, gd) {
                     if !s.is_empty() { return s; }

@@ -399,13 +399,13 @@ fn list(g: &mut crate::game::Game) {
 }
 
 /// the squad's HUD block: what is left while this staging brought any, and the shot just made. (squad40.ts notes)
-pub fn notes(g: &mut crate::game::Game) -> Vec<crate::orders::OrderNote> {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
-    let (brought, shown) = match g.m.squad40.states.get(key) { Some(s) => (s.brought, s.shown.clone()), None => return Vec::new() };
-    if !js::truthy(brought) || !def_listed(g, &crate::seats::here(g), SHELL_THERE) { return Vec::new(); }
-    let left = crate::orders::OrderNote::Text(format!("40 mm {}", js::num_str(squad40_left(g, &crate::seats::here(g)))));
-    match shown {
-        Some(w) if g.time >= w.t && g.time - w.t < g.k.squad40.shown_secs => vec![crate::orders::OrderNote::Text(w.text), left],
+pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
+    let Some(st) = g.m.squad40.states.get(crate::seats::view_key(g, seat)) else { return Vec::new() };
+    if !js::truthy(st.brought) || !def_listed(g, seat, SHELL_THERE) { return Vec::new(); }
+    let plain = |text: String| crate::view::Note { key: String::new(), text };
+    let left = plain(format!("40 mm {}", js::num_str(squad40_left(g, seat))));
+    match &st.shown {
+        Some(w) if g.time >= w.t && g.time - w.t < g.k.squad40.shown_secs => vec![plain(w.text.clone()), left],
         _ => vec![left],
     }
 }
@@ -435,7 +435,7 @@ pub fn squad40_tick(g: &mut crate::game::Game) {
     let s = g.m.squad40.states.get_mut(key).unwrap();
     if !s.noted {
         s.noted = true;
-        g.orders.notes.push(crate::orders::OrderNoteFn::Squad40);
+        crate::orders::squad_orders_voice(g, crate::orders::OrderNoteFn::Squad40);
     }
 }
 

@@ -1,7 +1,6 @@
 /** EVERY DEATH EXPLAINS ITSELF. It is the Rust game's: rust/game_rules/src/deathrecap keeps who of ours fell, to whom, from where and with what and the floor's last seconds
  *  (the end card is told as it opens: src/view/debriefview.ts), and what the squad knows of a man lost while the run is on (`g.recap.lostLive`, on the bridge). The panel is
  *  src/ui/recap.ts. Here: the table the knobs carry, and how the HUD reads the squad's own. */
-import type { Game } from './game';
 export { MAN_STRIDE } from '../view/debriefview';
 export type { RecapCause, RecapMan, RecapDeath, RecapShot, RecapFrame, RecapDoor, RecapTake, DeathRecap } from '../view/debriefview';
 
@@ -31,12 +30,3 @@ export const RECAP = {
 export interface LostMan { id: number; name: string; t: number; at: [number, number]; from?: [number, number] | null; knownAt: number; }
 /** the game's own counts of it, as the bridge brings them */
 export const RECAP_STATS = { deaths: 0, takes: 0, rounds: 0, known: 0, calls: 0 };
-
-const NONE: readonly LostMan[] = [];
-/** The squad's men lost so far this run, as the squad knows them (the game's record; the HUD's read while the run is on). */
-export function lostLive(g: Game): readonly LostMan[] { return RECAP.on && RECAP.live ? g.recap.lostLive : NONE; }
-/** is the live rule drawing at all (the squad block strikes every man of the squad who is down while it is: the record only adds the way it came from, drawn only under `liveArrows`) */
-export function lostShown(): boolean { return RECAP.on && RECAP.live; }
-/** is the way a lost man's round came from DRAWN: the arrow on his row, the stroke on the ground (RECAP.liveArrows; ui/overlay.ts asks before either) */
-export function lostArrowsShown(): boolean { return lostShown() && RECAP.liveArrows; }
-export function lostOf(g: Game, id: number): LostMan | null { for (const L of lostLive(g)) if (L.id === id) return L; return null; }

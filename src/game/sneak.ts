@@ -198,11 +198,6 @@ export function sneakLow(g: Game, gd: Guard): boolean { { const __s = RUST_SURFA
  *  on his way to a sound: no errand, no body to see to, not held to his post or in Sam's arm, none of them in his view this moment, still on the walk,
  *  his route's end the place he means to look at, and what is left of that route inside `noiseWalkM` of the teammate with nothing solid between (where the man stands, the corners still ahead, the place itself) */
 export function sneakComing(g: Game, gd: Guard, h: Guard): boolean { return crossToRust('sneakComing', undefined, [g, gd, h]) as any; }
-/** what he is doing, for a HUD's line (null: nothing to say — he is walking with Sam) */
-export function sneakWord(g: Game, gd: Guard): string | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('sneakWord', undefined, [g, gd]); if (__r !== RUST_PASS) return __r as any; } }
-  if (!SNEAK.on) return null; const M = states.get(g)?.men.get(gd); if (!M || !sneaking(g, gd)) return null;
-  return M.mode === 'wait' ? (M.why === 'door' ? 'clear of the door' : M.why === 'lit' || M.why === 'near' ? 'waiting on eyes' : 'waiting on the light') : M.mode === 'cross' ? 'crossing' : M.mode === 'back' ? 'backing off' : null;
-}
 
 const cpuLit = (g: Game, a: Vec3, b: Vec3, own?: (o: number) => boolean, steady = true) => g.visibilityOf(Math.max(lightEstimateAt(g, a, own, steady), lightEstimateAt(g, b, own, steady)));
 

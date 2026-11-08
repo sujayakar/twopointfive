@@ -42,7 +42,6 @@ pub struct DoorTools {
     pub sam_of: Option<PlayerId>,
     pub sam_spent: f64,
     pub tried: JsMap<DoorId, f64>,
-    pub close_at: JsMap<ChargeId, crate::doortools::DoorToolsCloseAtValue>,
     pub gate_asked: JsSet<DoorOpId>,
     pub held: JsMap<GuardId, crate::doortools::DoorToolsHeldValue>,
     pub watches: Vec<DoorOpId>,
@@ -79,7 +78,6 @@ impl DoorTools {
             sam_of: None,
             sam_spent: 0.0,
             tried: JsMap::new(),
-            close_at: JsMap::new(),
             gate_asked: JsSet::new(),
             held: JsMap::new(),
             watches: Vec::new(),
@@ -1116,23 +1114,6 @@ impl DoorToolsSamOf {
     }
 }
 impl Default for DoorToolsSamOf { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/doortools.ts:1439 DoorTools.closeAt, src/game/doortools.ts:1439)
-#[derive(Clone, Debug)]
-pub struct DoorToolsCloseAtValue {
-    pub t: f64,
-    pub w: String,
-}
-impl DoorToolsCloseAtValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorToolsCloseAtValue {
-            t: 0.0,
-            w: String::new(),
-        }
-    }
-}
-impl Default for DoorToolsCloseAtValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:2793 DoorTools.held, src/game/doortools.ts:2793)
 #[derive(Clone, Copy, Debug)]
@@ -2266,23 +2247,6 @@ impl DoorToolsPocketOf {
     }
 }
 impl Default for DoorToolsPocketOf { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/doortools.ts:3828 cornerNotes ->, src/game/doortools.ts:3828)
-#[derive(Clone, Debug)]
-pub struct DoorToolsCornerNotesItem {
-    pub key: String,
-    pub text: String,
-}
-impl DoorToolsCornerNotesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorToolsCornerNotesItem {
-            key: String::new(),
-            text: String::new(),
-        }
-    }
-}
-impl Default for DoorToolsCornerNotesItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
