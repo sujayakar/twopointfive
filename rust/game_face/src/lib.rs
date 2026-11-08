@@ -62,6 +62,7 @@
 //!   face_part_hashes(slot) -> p               13 words: each part's hash as tools/blitz/mission.ts takes it (its words up to the last not zero)
 use std::cell::{Cell, RefCell};
 mod memo;
+mod moment;
 mod page;
 mod harness;
 mod desk;
@@ -115,6 +116,10 @@ fn with<R>(h: u32, f: impl FnOnce(&mut Held) -> R) -> R {
     let r = f(&mut g);
     GAMES.with(|v| v.borrow_mut()[h as usize - 1] = Some(g));
     r
+}
+/// the game of a number that was lost to a panic is `f`'s again
+fn stand_if_lost(h: u32, f: impl FnOnce() -> Box<Game>) {
+    if GAMES.with(|v| v.borrow().get((h as usize).wrapping_sub(1)).is_some_and(|x| x.is_none())) { let g = f(); GAMES.with(|v| v.borrow_mut()[h as usize - 1] = Some(Held::new(g))); }
 }
 /// a call that may write what it does not say (a write by path, a state read in, a rule called from outside a tick, which may stage a level): the box world's copy is put
 /// down first, and the next question or tick proves it from nothing
@@ -329,6 +334,7 @@ pub extern "C" fn face_blank() -> u32 {
 #[no_mangle]
 pub extern "C" fn face_drop(h: u32) {
     page::shelf_off(h, |_| true);
+    moment::off(h);
     GAMES.with(|v| if let Some(x) = v.borrow_mut().get_mut((h as usize).wrapping_sub(1)) { *x = None; });
 }
 #[no_mangle]

@@ -10,6 +10,8 @@ export class Writer {
   protected i32(v: number): void { const at = this.room(4); this.d.setInt32(at, v | 0, true); }
   protected f64(v: number): void { const at = this.room(8); this.d.setFloat64(at, v, true); }
   protected text(s: string): void { const t = enc.encode(s); this.u32(t.length); const at = this.room(t.length); this.b.set(t, at); }
+  /** what was written once before, again */
+  put(b: Uint8Array): void { const at = this.room(b.length); this.b.set(b, at); }
   /** what was written, which is then nothing (the bytes stand until the next write) */
   take(): Uint8Array { const r = this.b.subarray(0, this.n); this.n = 0; return r; }
 }

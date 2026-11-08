@@ -1,6 +1,7 @@
 // THE BACKEND'S HALF OF A VISIT (src/cloud/cloud.ts), on a page that draws a game it does not hold: on a hosted build that was given one, and only where this browser sends, a few records of the visit, the
 // settings and the files the page saves go up. Null on every other build: no id, no timer, no request. The kept tape is not this page's yet (a replay here is a start, the hands and
 // the commands).
+import { buildName } from './buildname';
 import type { Engine } from '../engine';
 import type { Gpu } from '../gpu/device';
 import { RENDER_PASSES } from '../gpu/timer';
@@ -50,7 +51,7 @@ export function drawCloud(q: URLSearchParams, d: DrawCloudDeps): DrawCloud | nul
   (window as unknown as { __cloud: unknown }).__cloud = cloud?.hook() ?? null;
   doorTo(cloud);
   if (!cloud) return null;
-  try { void fetch('/qa/commit', { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(t => { const c = t.trim(); if (/^[0-9a-f]{7,40}$/.test(c)) build = c; }).catch(() => { /* a static build says none */ }); } catch { /* no fetch */ }
+  void buildName().then(c => { build = c || build; });
   void gpu.device.lost.then(info => { if (info.reason !== 'destroyed') void cloud.telemetry.flush(true); });
   return { cloud, begins: () => { began = performance.now(); ticksAt = game.ticks; callsAt = CALLS.play ? CALLS.play.ms : NaN; },
     drawn: (rawDt, gpuMs) => cloud.frame(rawDt, asked(d.live, false), endStage(d.offBooks ? '' : 'play', asked(end, null)), gpuMs, gpu.device.queue) };

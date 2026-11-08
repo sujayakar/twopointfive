@@ -58,7 +58,7 @@ export class HandTape {
     const says = (Object.is(dt, this.dt) ? 0 : DT) | (keys === this.keys ? 0 : KEYS) | (wide0 || wide1 ? WIDE : 0);
     this.room(32 + count * 8); this.u8(STEP); this.u8(says); this.u32(moved0); this.u32(moved1); if (says & WIDE) { this.u32(wide0); this.u32(wide1); }
     if (says & DT) this.f64(this.dt = dt);
-    if (says & KEYS) this.text(this.keys = keys);
+    if (says & KEYS) { this.text(this.keys = keys); this.room(count * 8); }
     for (let i = 0; i < count; i++) { const bit = 1 << (i & 31); if (!((i < 32 ? moved0 : moved1) & bit)) continue;
       if ((i < 32 ? wide0 : wide1) & bit) { this.d.setFloat64(this.n, was[i], true); this.n += 8; } else { this.d.setFloat32(this.n, was[i], true); this.n += 4; } }
     this.ticks++;
@@ -77,8 +77,10 @@ export class HandTape {
   take(): Uint8Array { const out = this.b.slice(0, this.n); this.sent += this.n; this.n = 0; return out; }
 }
 
-/** why a tape cannot be walked here */
+/** why a tape cannot be walked here, as the player is told it */
 export class TapeRefused extends Error { }
+/** … one of another build's making */
+export const ANOTHER = 'This replay is from a different version of the game, so it can\u2019t be played on this one.';
 
 /** A TAPE READ BACK: its start, then its rows in the order they were written. A tape cut off in a row ends at the row before */
 export class HandWalk {
@@ -91,17 +93,17 @@ export class HandWalk {
   /** `count`: the numbers of this build's hand */
   constructor(private b: Uint8Array, count: number) {
     this.d = new DataView(b.buffer, b.byteOffset, b.byteLength);
-    if (b.length < 12 || this.u32() !== HANDTAPE.magic) throw new TapeRefused('this is no tape of a run');
+    if (b.length < 12 || this.u32() !== HANDTAPE.magic) throw new TapeRefused('That file isn\u2019t a replay of this game.');
     const version = this.u32(), numbers = this.u32();
-    if (version !== HANDTAPE.version) throw new TapeRefused(`this tape is of version ${version}, and this build walks version ${HANDTAPE.version}`);
-    if (numbers !== count) throw new TapeRefused(`this tape's hand has ${numbers} numbers, and this build's has ${count}`);
+    if (version !== HANDTAPE.version) throw new TapeRefused(ANOTHER);
+    if (numbers !== count) throw new TapeRefused(ANOTHER);
     this.hand = new Float64Array(count).fill(NaN);
     try {
       if (this.u8() !== START) throw new RangeError();
       const build = this.text(), levelName = this.text(), level = this.bytes(), words = this.text(), parts: PartOf[] = [];
       for (let i = this.u32(); i > 0; i--) parts.push({ name: this.text(), length: this.u32(), hash: this.u32() });
       this.start = { build, levelName, level, words, parts, seed: this.f64(), seats: this.u32(), flags: this.u32(), commands: this.bytes() };
-    } catch (e) { if (e instanceof RangeError) throw new TapeRefused('this tape has no start'); throw e; }
+    } catch (e) { if (e instanceof RangeError) throw new TapeRefused('This replay is cut off before it begins.'); throw e; }
   }
 
   private u8(): number { return this.d.getUint8(this.at++); }

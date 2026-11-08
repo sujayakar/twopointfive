@@ -5,6 +5,7 @@ import { Drawn, drawRefused, type DrawFace } from '../draw/drawn';
 import { Man, Section, View, Want } from '../draw/sections';
 import { Commands } from '../draw/commands';
 import { HAND } from '../draw/hand';
+import { HandTape, MARKS, hashOf, type PartOf, type TapeMark, type TapeRow } from '../replay/handtape';
 import type { SaveRow } from '../ui/runcard';
 import { CURSOR_DOUBLES, sampleCursor, type CursorAt, type CursorCanvas, type CursorLens } from '../view/cursor';
 import { readCursorView, readDebriefView, readRunView, readTickView, type CursorView, type DebriefView, type RunView, type TickView } from '../view/read';
@@ -17,18 +18,22 @@ export interface Verdict { won: boolean; word: string; why: string; secs: number
 /** what a measuring take notes: each man by what he is at and whether he carries a light, the reaction force, the alarm, the run's saves, the mission's stage */
 export interface Tally { men: [state: string, lit: 0 | 1][]; qrf: string; escalation: number; autosaves: number; manual: number; loads: number; stage: string; alarm: boolean; alerts: number; /** a room clear is staged */ clear: boolean; /** the kind of mission its verdict is for */ kind: string | null; /** the mission's own counts */ stats: Record<string, number | boolean | string | null> }
 /** what a start is handed beside the level (rust/game_start/src/handed.rs PARTS) */
-export interface Start { level: Uint8Array; words: string; mannequin: Uint8Array; mannequinBin: Uint8Array; cast: Uint8Array; castLook: Uint8Array; seed: number; seats?: number }
+export interface Start { level: Uint8Array; words: string; mannequin: Uint8Array; mannequinBin: Uint8Array; cast: Uint8Array; castLook: Uint8Array; seed: number; seats?: number; /** what a tape of the run says it is of */ named?: { level: string; build: string } }
+/** the parts of a start that are the build's own, as a tape holds a walk's to its */
+export const partsOf = (o: Start): PartOf[] => (['mannequin', 'mannequinBin', 'cast', 'castLook'] as const).map(name => ({ name, length: o[name].length, hash: hashOf(o[name]) }));
 
 /** `face_start`'s: the rows that dress the picture are up */
 const DRESS = 1;
 /** `face_step`'s: the lights' envelopes · a rails level's view · the save controller */
 const LIGHTS = 2, VIEW = 4, SAVES = 8;
 
+/** bytes a tape may be: it ends there (an hour and a half and more of play) */
+const TAPE_MOST = 48 * 1048576;
 /** the save controller with nothing to tell */
 const QUIET = { tag: '', lines: [] as string[] };
 
 /** the calls a lost game may still be asked, or is stood again by */
-const STILL = new Set(['face_alloc', 'face_free', 'face_out_ptr', 'face_out_len', 'face_panic_ptr', 'face_panic_len', 'face_panic_clear', 'face_mem', 'face_recover', 'face_recover_what', 'face_drop', 'face_start']);
+const STILL = new Set(['face_alloc', 'face_free', 'face_out_ptr', 'face_out_len', 'face_panic_ptr', 'face_panic_len', 'face_panic_clear', 'face_mem', 'face_recover', 'face_recover_what', 'face_drop', 'face_start', 'face_moment_back', 'face_moment_drop']);
 
 /** the game of a call was lost to a panic in it: its words, the call, and the tick */
 export class GameLost extends Error { constructor(readonly words: string, readonly what: string, readonly tick: number) { super(`the game stopped in ${what}, at tick ${tick}: ${words}`); this.name = 'GameLost'; } }
@@ -40,6 +45,10 @@ export class DrawGame {
   h = 0;
   /** what a player or a panel does that is not input: the next step takes it */
   readonly commands = new Commands();
+  /** WHAT THE MODULE IS HANDED, kept as it is handed (put here before a start: that start is its first row); null: nobody keeps it */
+  tape: HandTape | null = null;
+  /** the last tape that ended: a run's lost to a panic */
+  ended: HandTape | null = null;
   /** ticks stepped since the start, and ms of the last one by part */
   ticks = 0;
   /** moves with everything done to the game: what was asked of it before is asked again */
@@ -65,7 +74,7 @@ export class DrawGame {
       if (this.lost && !STILL.has(k)) throw this.lost;
       try { const n = f(...a); this.drawn?.fresh(); return n; } catch (e) { if (!(e instanceof WebAssembly.RuntimeError) && !(e instanceof RangeError)) throw e;
         let words = ''; try { const p = raw.face_panic_ptr() >>> 0, n = raw.face_panic_len() >>> 0; words = this.dec.decode(new Uint8Array(this.memory.buffer, p, n)); raw.face_panic_clear(); } catch { /* the trap's own words, then */ }
-        throw this.lost = new GameLost(words || String((e as Error).message), k, this.ticks); } }; }
+        this.lost = new GameLost(words || String((e as Error).message), k, this.ticks); this.tape?.end(this.lost.message); this.ended = this.tape ?? this.ended; this.tape = null; throw this.lost; } }; }
     return out;
   }
   /** the panic the game was lost to, until it stands again */
@@ -81,12 +90,14 @@ export class DrawGame {
   /** A GAME, from its start; what has been commanded by now is done to it before it is made */
   start(o: Start): void {
     this.lost = null;
-    const parts = [o.level, this.enc.encode(o.words), o.mannequin, o.mannequinBin, o.cast, o.castLook, new Uint8Array(0), this.commands.take().slice()], n = 4 + parts.reduce((s, p) => s + 4 + p.length, 0);
+    const said = this.commands.take().slice(), seats = o.seats ?? 1;
+    this.tape?.start({ build: o.named?.build ?? '', levelName: o.named?.level ?? '', level: o.level, words: o.words, parts: partsOf(o), seed: o.seed, seats, flags: DRESS, commands: said });
+    const parts = [o.level, this.enc.encode(o.words), o.mannequin, o.mannequinBin, o.cast, o.castLook, new Uint8Array(0), said], n = 4 + parts.reduce((s, p) => s + 4 + p.length, 0);
     const at = this.X.face_alloc(n) >>> 0, b = new Uint8Array(this.memory.buffer, at, n), d = new DataView(this.memory.buffer, at, n); let q = 4;
     d.setUint32(0, parts.length, true);
     for (const p of parts) { d.setUint32(q, p.length, true); b.set(p, q + 4); q += 4 + p.length; }
     if (this.h) { this.X.face_drop(this.h); this.h = 0; }
-    try { this.h = this.X.face_start(at, n, -1, o.seed, o.seats ?? 1, DRESS); } finally { this.X.face_free(at, n); }
+    try { this.h = this.X.face_start(at, n, -1, o.seed, seats, DRESS); } finally { this.X.face_free(at, n); }
     if (!this.h) throw new FaceError('no room for another game in this module');
     this.ticks = 0; this.done++; this.said = null; this.between = 1;
     // (room asked for and given back: the allocator keeps it, and a step seldom has to grow the memory)
@@ -100,16 +111,43 @@ export class DrawGame {
   step(dt: number, keys: string): void {
     const t0 = performance.now();
     this.order();
-    const n = this.enc.encodeInto(keys, new Uint8Array(this.memory.buffer, this.keys, DrawGame.KEYS)).written;
-    this.X.face_hand(this.h, 0, this.hand, HAND.count * 8, this.keys, n);
-    this.X.face_step(this.h, dt, LIGHTS | VIEW | SAVES);
-    this.ticks++; this.done++;
+    const T = this.tape; T?.step(dt, this.numbersOf(), keys);
+    this.tick(dt, keys);
+    if (T) { if (this.ticks % MARKS.every === 0) T.mark(this.mark()); if (T.length > TAPE_MOST) { T.end('it was longer than a tape is kept'); this.tape = null; } }
     const t1 = performance.now();
     this.draw();
     this.X.face_out_clear(this.h);   // (what the tick told its host is in its sections now)
     this.ms.step = t1 - t0; this.ms.draw = performance.now() - t1;
   }
-  private order(): void { if (this.commands.length) this.handed(this.commands.take(), (p, m) => { if (!this.X.face_commands(this.h, p, m)) throw new Error(this.answer()); }); }
+  private tick(dt: number, keys: string): void {
+    const n = this.enc.encodeInto(keys, new Uint8Array(this.memory.buffer, this.keys, DrawGame.KEYS)).written;
+    this.X.face_hand(this.h, 0, this.hand, HAND.count * 8, this.keys, n);
+    this.X.face_step(this.h, dt, LIGHTS | VIEW | SAVES);
+    this.ticks++; this.done++;
+  }
+  /** it is walked through a tape: nobody commands it but the tape */
+  walked = false;
+  private order(): void { if (this.commands.length) { const b = this.commands.take(); if (this.walked) return; this.tape?.order(b); this.command(b); } }
+  private command(b: Uint8Array): void { this.handed(b, (p, m) => { if (!this.X.face_commands(this.h, p, m)) throw new Error(this.answer()); }); }
+  /** what the game has come to: the rolls of its die and its block's hash, and the whole of it where that is asked (a check's: it is a frame's worth of time) */
+  mark(whole = false): TapeMark {
+    const at = this.X.face_part_hashes(this.X.face_slot(this.h)) >>> 0, n = this.X.face_parts(), die = this.X.face_die_n(this.h), parts = hashOf(new Uint8Array(this.memory.buffer, at, n * 4));
+    let state: number | null = null; if (whole) { this.X.face_state_words(this.h); state = hashOf(this.bytes()); }
+    return { tick: this.ticks, die, parts, state };
+  }
+  /** A ROW OF A TAPE, handed over as it was: `seen` false, a tick nobody is shown (what it left to be drawn is not made, nor kept) */
+  feed(row: TapeRow, seen = true): void {
+    if (row.kind === 'step') { const t0 = performance.now(); this.numbersOf().set(row.hand); this.tick(row.dt, row.keys); const t1 = performance.now(); if (seen) this.draw(); this.X.face_out_clear(this.h); this.ms.step = t1 - t0; this.ms.draw = performance.now() - t1; }
+    else if (row.kind === 'order') { this.command(row.bytes); this.done++; if (seen) this.draw(); }
+    else if (row.kind === 'hands') this.handsTo(row.plan);
+  }
+  /** THE MOMENT THE GAME STANDS AT, whole, to come back to exactly (a walk of a tape's): its number, 0 where it cannot be held */
+  moment(): number { return this.X.face_moment(this.h); }
+  /** the game stands there again, at tick `ticks` */
+  momentBack(k: number, ticks: number): boolean { if (!this.X.face_moment_back(this.h, k)) return false; this.lost = null; this.ticks = ticks; this.done++; return true; }
+  /** ticks were stepped that nobody was shown: the picture is of where the game stands, and of nothing before it */
+  show(): void { this.X.face_draw_cut(this.h); this.draw(); }
+  momentDrop(k: number): void { this.X.face_moment_drop(k); }
   /** what has been commanded is done now, between two ticks, and what it changed is there to be read: the next step would do the same things first */
   tell(): void { this.order(); this.done++; this.draw(); }
   /** A FRAME IS DRAWN, `a` of the way from the tick before to the last */
@@ -160,7 +198,8 @@ export class DrawGame {
     return { won: r === 2, word, why, secs: Number(secs), approach: way === '-' ? null : way, lost, of, foesDown, foesOf, hostages: kept === '-' ? null : { alive, of: held }, void: voided === 'true', clean: clean === 'true' };
   }
   /** nobody's hands are on the seat: a hands-off player takes it (rust/game_run hands_off.rs), or with no plan it is the host's again */
-  handsOff(plan: HandsOffPlan | null): void { const b = this.enc.encode(plan ? [plan.seed, plan.cap ?? 240, plan.breaker ? 1 : 0, ...plan.route ?? []].join('\n') : ''); this.handed(b, (p, n) => this.X.face_hands_off(this.h, 0, p, n)); this.handsKept.done = -1; }
+  handsOff(plan: HandsOffPlan | null): void { this.handsTo(this.enc.encode(plan ? [plan.seed, plan.cap ?? 240, plan.breaker ? 1 : 0, ...plan.route ?? []].join('\n') : '')); }
+  private handsTo(b: Uint8Array): void { this.tape?.hands(b); this.handed(b, (p, n) => this.X.face_hands_off(this.h, 0, p, n)); this.handsKept.done = -1; }
   /** how he stands, null where nobody is hands off */
   hands(): HandsOffSaid | null {
     const K = this.handsKept; if (K.done === this.done) return K.said;
