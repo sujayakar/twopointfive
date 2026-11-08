@@ -7,8 +7,6 @@ import { NET_WORD_SEED, foldWhole, foldWord, wordTick } from './words';
 
 /** a record's numbers, as the module is handed them (rust/game_face net.rs RECORD) */
 const RECORD = 18;
-/** `face_step`'s: the lights' envelopes. Nothing else of a host's is the game's: the saves and a rails level's view are a game of one's */
-const LIGHTS = 2;
 /** where each number of a look ahead lies (rust/game_face net.rs face_ahead); the path follows */
 const AHEAD = { id: 0, down: 1, at: 2, yaw: 5, wall: 6, wallX: 7, wallZ: 8, near: 9, free: 10, pos: 11, aimYaw: 14, follow: 15, aims: 18, aim: 19, path: 22 } as const;
 
@@ -53,7 +51,7 @@ export class NetGame {
   step(cmds: readonly WireCmd[]): void {
     const X = this.X, h = this.h;
     cmds.forEach((c, seat) => this.handed([c], (p, n, k, kn) => X.face_record(h, seat, p, n, k, kn)));
-    X.face_step(h, 1 / NET.hz, LIGHTS);
+    X.face_step(h, 1 / NET.hz, 0);   // (the saves and a rails level's view are a game of one's)
     this.w = foldWord(this.w, X.face_die_n(h), this.parts());
     if (wordTick(this.ticks++)) this.wide = foldWhole(this.whole().words, null);
   }
