@@ -24,21 +24,10 @@ import { type Pace, Steps, WHOLE as AT_ONCE, whole, paced as isPaced } from './s
 
 /** a place's number is 0‥13 (two places a read could blend never share one; places far apart may); 14 = nothing known here; 15 = a doorway's cell */
 export const SIDE_UNKNOWN = 14, SIDE_DOOR = 15, SIDE_WORDS = PLACE_W * PLACE_H;
-/** in what sideAt returns for a free cell, bit 4: every cell within a probe spacing of it (a metre and the cell's own half, three cells) is its own place */
-export const SIDE_CLEAR = 16;
 /** a box whose |cos × sin| of yaw is this or more is turned: it has no line along an axis of the plan (a wall built askew) */
 export const SIDE_TURNED = 0.02;
 const WHOLE = 255, REACH = 3, Q_STEP = 0.025, D4: readonly (readonly [number, number])[] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
-/** the word of every cell of the map (row-major, as the map), a u32. Bits 0‥1 = 0 a free cell (bits 2‥5 its place, or 15 in a doorway; bit 6 = clear, above) ·
- *  1 a wall cell that knows its lines (bit 2 = it has a line across x, bits 3‥7 where: the cell's centre + (q − 15.5) × 2.5 cm; bit 8 and bits 9‥13 the same for a
- *  line across z; then four places of four bits from bit 14: low x low z, high x low z, low x high z, high x high z, each side of each line the cell has) ·
- *  2 a wall that says nothing (two walls side by side in one cell, a turned wall between two places) ·
- *  3 A DOORWAY'S CELL THAT KNOWS ITS LINE: the lines as a wall cell's (the same bits; no places), read by sideLine; to sideAt it is a doorway's cell, every
- *  place's. Its line is its door's (`gaps`), or for a doorway by its shape alone its run's one line (step 2: the jambs' own, else the run's middle).
- *  A wall cell with no line that stands inside one place (a square pier in a room) is that place's, written as a free cell. `mask` = placeMask's of the
- *  same boxes and doors. */
-export function placeSides(statics: readonly Box[], mask: Uint8Array, gaps: readonly PlaceGap[] = [], out = new Uint32Array(PLACE_W * PLACE_H)): Uint32Array { return whole(placeSidesSteps(statics, mask, gaps, out)); }
 const WALLS_A_STOP = 32, CELLS_A_STOP = 350;   // (a stop every so many wall boxes laid, and every so many cells of a pass over the map)
 /** … MADE IN STEPS (render/steps.ts: in a browser this runs cold each time a wall changes, 13 to 18 ms of the office's blast frame in one go). EVERYTHING THAT
  *  CAN CHANGE UNDER IT IS TAKEN BEFORE THE FIRST STOP: the map's cells, the doors' lines, and of each box that is part of a wall the six numbers asked of
@@ -173,22 +162,7 @@ export function sideWordAt(words: Uint32Array, x: number, z: number): number {
   const hx = (w >>> 2) & 1 && qx / PLACE_RES >= (i + 0.5) / PLACE_RES + (((w >>> 3) & 31) - 15.5) * Q_STEP ? 1 : 0, hz = (w >>> 8) & 1 && qz / PLACE_RES >= (j + 0.5) / PLACE_RES + (((w >>> 9) & 31) - 15.5) * Q_STEP ? 2 : 0;
   return (w >>> (14 + 4 * (hx + hz))) & 15;
 }
-/** is (x, z) in a cell with nothing but its own place in a probe's reach (the shader's early way out) */
-export function sideClear(words: Uint32Array, x: number, z: number): boolean { const w = sideWordAt(words, x, z); return w !== SIDE_UNKNOWN && (w & SIDE_CLEAR) !== 0 && w < 32 && (w & 15) < SIDE_UNKNOWN; }
 
-/** THE LINES OF ONE CELL, asked of any point: how far past each line of cell (i, j) the point (mx, mz), metres from the map's corner, is, toward +x and +z
- *  (0 on an axis the cell has no line across, never 0 on one it has); [0, 0] for a cell with no lines and off the map. Its sign is the step, in cells,
- *  toward the point's own side. The shader's sideLine (common.wgsl), line for line. */
-export function sideLine(words: Uint32Array, i: number, j: number, mx: number, mz: number): [number, number] {
-  if (i < 0 || j < 0 || i >= PLACE_W || j >= PLACE_H) return [0, 0];
-  const w = words[j * PLACE_W + i]; if ((w & 1) === 0) return [0, 0];
-  const dx = mx - ((i + 0.5) / PLACE_RES + (((w >>> 3) & 31) - 15.5) * Q_STEP), dz = mz - ((j + 0.5) / PLACE_RES + (((w >>> 9) & 31) - 15.5) * Q_STEP), off = (d: number) => (d >= 0 ? Math.max(d, 1e-6) : Math.min(d, -1e-6));
-  return [(w >>> 2) & 1 ? off(dx) : 0, (w >>> 8) & 1 ? off(dz) : 0];
-}
-/** is cell (i, j) a doorway's that knows its line (the shader's sideIsDoor) */
-export function sideIsDoor(words: Uint32Array, i: number, j: number): boolean { return i >= 0 && j >= 0 && i < PLACE_W && j < PLACE_H && (words[j * PLACE_W + i] & 3) === 3; }
-/** … of the cell the point (x, z) is in (a tool's: the shader asks sideLine of the cell it has in hand) */
-export function sideOff(words: Uint32Array, x: number, z: number): [number, number] { const mx = x - WORLD.rcMin[0], mz = z - WORLD.rcMin[2]; return sideLine(words, Math.floor(mx * PLACE_RES), Math.floor(mz * PLACE_RES), mx, mz); }
 /** the words as the frame carries them, made again only when the map they are read off changes its walls or its doorways (or the cascade's size moves).
  *  WHERE THE MAP ONLY OPENED (a wall holed, a door's line opened) THEY ARE MADE OVER A FEW FRAMES (render/steps.ts; `pace` = the frame's allowance), the
  *  words and columns last made serving until the new ones are whole: for those frames a read by a hole just blown keeps to its own side as it did before
@@ -244,27 +218,3 @@ export function sideCols(words: Uint32Array, nx: number, nz: number, out: Uint32
   return true;
 }
 
-/** THE SHADER'S READ, IN TS, for the check alone (lighting_common.wgsl diceTaps, line for line; `dims` and `sp` = the cache's first cascade in plan: probes a
- *  cell, metres a probe). The lattice columns a read at (x, z) blends and each one's share: [column x index, column z index, share]. */
-export function diceTapsOf(words: Uint32Array, x: number, z: number, dims: readonly [number, number] = [WORLD.rcSize[0], WORLD.rcSize[2]], sp: readonly [number, number] = [1, 1]): [number, number, number][] {
-  const ox = WORLD.rcMin[0], oz = WORLD.rcMin[2], cl = (v: number, a: number, b: number) => Math.min(Math.max(v, a), b);
-  const gx = cl((x - ox) / sp[0] - 0.5, 0, dims[0] - 1), gz = cl((z - oz) / sp[1] - 0.5, 0, dims[1] - 1), ix = Math.floor(gx), iz = Math.floor(gz), fx = gx - ix, fz = gz - iz;
-  const jx = Math.min(ix + 1, dims[0] - 1), jz = Math.min(iz + 1, dims[1] - 1), plain: [number, number, number][] = [[ix, iz, (1 - fx) * (1 - fz)], [jx, iz, fx * (1 - fz)], [ix, jz, (1 - fx) * fz], [jx, jz, fx * fz]];
-  const word = (px: number, pz: number) => sideWordAt(words, px, pz);
-  const own = word(x, z); if (own >= SIDE_UNKNOWN) return plain;
-  const cx0 = ox + (ix + 0.5) * sp[0], cx1 = ox + (jx + 0.5) * sp[0], cz0 = oz + (iz + 0.5) * sp[1], cz1 = oz + (jz + 0.5) * sp[1];
-  const ok = (px: number, pz: number) => { const c = word(px, pz) & 15; return c === own || c >= SIDE_UNKNOWN ? 1 : 0; };
-  const m00 = ok(cx0, cz0), m10 = ok(cx1, cz0), m01 = ok(cx0, cz1), m11 = ok(cx1, cz1), any = m00 + m10 + m01 + m11; if (any === 4 || any === 0) return plain;
-  const wx0 = Math.max(1 - fx, 1e-3), wx1 = Math.max(fx, 1e-3), wz0 = Math.max(1 - fz, 1e-3), wz1 = Math.max(fz, 1e-3);
-  const a0 = wx0 * m00, b0 = wx1 * m10, a1 = wx0 * m01, b1 = wx1 * m11, r0 = (a0 + b0) * wz0, r1 = (a1 + b1) * wz1, tot = r0 + r1;
-  const row = (a: number, b: number, r: number, k: number): [number, number, number][] => (r <= 0 ? [] : [[ix, k, r / tot * a / (a + b)], [jx, k, r / tot * b / (a + b)]]);
-  return [...row(a0, b0, r0, iz), ...row(a1, b1, r1, jz)].filter(t => t[2] > 0) as [number, number, number][];
-}
-/** … and where a face at (sx, sz) with plan normal (nx, nz) reads, `off` metres out (lighting_common.wgsl diceFacePointBy): [x, z] */
-export function diceFacePointOf(words: Uint32Array, sx: number, sz: number, nx: number, nz: number, off = 1): [number, number] {
-  const word = (px: number, pz: number) => sideWordAt(words, px, pz);
-  const Q: [number, number] = [sx + nx * off, sz + nz * off], own = word(sx + nx * 0.04, sz + nz * 0.04); if (own >= SIDE_UNKNOWN) return Q;
-  const q = word(Q[0], Q[1]) & 15; if (q === own || q === SIDE_DOOR) return Q;
-  const H: [number, number] = [sx + nx * off * 0.5, sz + nz * off * 0.5], h = word(H[0], H[1]) & 15; if (h === own || h === SIDE_DOOR) return H;
-  const d = Math.min(off, 0.12); return [sx + nx * d, sz + nz * d];
-}
