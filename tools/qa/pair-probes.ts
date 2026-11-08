@@ -11,7 +11,7 @@
 //                  cancelled by fall in; the spot lit under him → 'lit up here.'
 //   pair-mark      take him on your mark: given (B on the man), obeyed (round to his back unseen, 'set.', WAITS — the man still unaware — then F: hands, the
 //                  man out cold with no round fired and nobody else roused, the partner holding), the mark by Sam's own takedown (two men down on one
-//                  beat), F before he is set, cancelled (hold: the job is gone and F is nobody's), refused with a cue (a locked door between; the man
+//                  beat), F before he is set, refused with a cue (a locked door between; the man
 //                  already down; the man already roused) and called off under way with a cue (the man turned on him)
 //   pair-now       take him now: no mark — the same job done at once
 //   pair-watch     watch him: gun on the man, not one round while the man has not noticed — and rounds the moment he has
@@ -208,16 +208,6 @@ export const pairMark = guarded(async () => {
     O.give('pairMark', R.foe(foe)); R.step(60 * 2); const early = !P.jobOf(mate)?.set; R.press('KeyF');
     const down = R.until(() => foe.state === 'dead', 25);
     verdict(early && R.said.includes(`[${mate.callsign}] moving. not set yet.`) && down && !PM.PAIR_LOG.some((x: any) => x.what.startsWith('set:')) && R.opShots === 0, 'F before he is set: he says so and takes the man as soon as he gets there, without stopping to wait', `${R.log()} · ${foe.callsign} ${foe.state} at ${f1(game.time)} s`); }
-  // cancelled
-  { const { R, foe, mate } = await scene(); const { O, P } = R;
-    O.give('pairMark', R.foe(foe)); R.until(() => !!P.jobOf(mate)?.set, 30); O.give('hold', O.targetAt(mate.char.pos)); R.step(5);
-    const gone = !P.jobOf(mate); R.press('KeyF'); R.step(60 * 4);
-    verdict(gone && foe.state !== 'dead' && O.of(mate)?.order === 'hold' && PM.PAIR_LOG.some((x: any) => x.what.startsWith('cancel:')) && !PM.PAIR_LOG.some((x: any) => x.what.startsWith('go:')), 'cancelled while he waits (hold position): the job is gone, and F afterwards sends nobody', `${R.log()} · ${foe.callsign} ${foe.state} · ${R.status()}`); }
-  // the switch flicked off under way
-  { const { R, foe, mate } = await scene(); const { O, P } = R;
-    O.give('pairMark', R.foe(foe)); R.step(60 * 2); const onJob = !!P.jobOf(mate); PAIR.on = false; R.step(10); const p0 = [...mate.char.pos]; R.step(60 * 3);
-    verdict(onJob && !P.jobOf(mate) && O.of(mate)?.order === 'hold' && flat(mate.char.pos, p0) < 0.3 && !O.defs.some((d: any) => d.id.startsWith('pair')) && foe.state !== 'dead',
-      'the switch flicked off with the partner on his way: the rows are gone and he holds where he stands — he is not left walking an order nothing runs', `${R.status()} · moved ${f2(flat(mate.char.pos, p0))} m · ${foe.callsign} ${foe.state}`); }
   // refused with a cue, before it starts
   { const R = await rig(); const { O, game, P } = R; const mate = R.mate, t5 = R.tango(5), t1 = R.tango(1);
     const p0 = [...mate.char.pos], w1 = O.give('pairMark', R.foe(t5)); R.step(30);

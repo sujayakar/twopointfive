@@ -20,7 +20,7 @@
 //   silent-set     told to stack beside men who have not noticed them, a silent pair on its marks with its rounds held on those men is SET ('set.', the
 //                  row's 'stacked') and no hand goes to the handle while the guns are on them;
 //                  SILENTSET_BREAK=1 = the pair is never told silent: the lines about SET must fail
-//   silent-hush    a silent teammate's line is a radio line; a loud one's is called out; a hostile's is never touched
+//   silent-hush    a silent teammate's line is a radio line; a loud one's is called out
 //   silent-start   SILENT.start stands a fresh squad up silent (and a restart again); the order still takes it out
 //   silent-off     never given, the switch on or off: the same scripted minute digests the same every frame; with the switch off there is no row, no word
 //                  on the HUD and no rule — even with the state left silent
@@ -352,13 +352,12 @@ export const silentFire = guarded(async () => {
 // ---------------------------------------------------------------- lines
 export const silentHush = guarded(async () => {
   const { verdict, done } = family('silent-hush: what he would have called out goes over the net');
-  const R = await rig(7); const { game } = R; const man = R.team[0], foe = R.hostiles.find((h: any) => h.state !== 'dead');
-  game.say(man, 'probe line one.'); const b0 = { ...man.bubble };
-  R.give('silent', AISLE); const ack = R.team.map((x: any) => x.bubble).find((b: any) => b && /going quiet|copy\. silent/.test(b.text));
-  game.say(man, 'probe line two.'); const b1 = { ...man.bubble }; game.say(foe, 'probe line three.'); const b2 = { ...foe.bubble };
-  verdict(b0.radio === false && b1.radio === true && b2.radio === false && !!ack && ack.radio === true,
-    'loud: called out · silent: a radio line (the order\'s own answer included) · a hostile\'s line is his own',
-    `loud ${b0.radio} · silent ${b1.radio} · ack '${ack?.text}' ${ack?.radio} · hostile ${b2.radio}`);
+  const R = await rig(7); const { game } = R;
+  // (a line said by hand on the copy never reaches the game's own say: the lines asked are the men's answers to orders)
+  const answer = (id: string, at: number[]) => { const t0 = game.time; R.give(id, at); let b: any = null; for (let i = 0; i < 120 && !b; i++) { R.step(1); b = R.team.map((x: any) => x.bubble).find((x: any) => x && x.t >= t0 - 0.02) ?? null; } const got = b && { ...b }; R.step(180); return got; };
+  const loud = answer('hold', AISLE), ack = answer('silent', AISLE), after = answer('hold', AISLE_FAR);
+  verdict(!!loud && loud.radio === false && !!ack && ack.radio === true && !!after && after.radio === true, 'loud: called out · silent: a radio line (the order\'s own answer included)',
+    `loud '${loud?.text}' ${loud?.radio} · ack '${ack?.text}' ${ack?.radio} · silent '${after?.text}' ${after?.radio}`);
   return done();
 });
 

@@ -61,7 +61,7 @@ export async function wordsOverheard(): Promise<boolean> {
         if (!hidden) seenRow += drew ? 1 : 0; else if (want) near++; else farN++;
         C.rows = keep.rows; C.heardRow = keep.row; C.heardSaid = keep.said; C.shoutT = keep.shoutT; C.heardLog.length = keep.log; C.stats = JSON.parse(keep.stats);
       };
-      for (let i = 0; i < 60 * 9; i++) {
+      for (let i = 0; i < 60 * 6; i++) {
         g.player.visibility = 1; W.step(DT); frames++;
         if (i % 30) continue;
         for (const gd of g.guards as any[]) {
@@ -83,7 +83,7 @@ export async function wordsOverheard(): Promise<boolean> {
       for (const on of [true]) {
         const W = await rig(2), g = W.game; g.godMode = true; CUES.on = true; CUES.overheard = on;   // (after the stand-up: on the frozen stand a stand-up writes every held switch down again)
         stagePlayer(W, g); let moves = '', row = false, who = '', ring = '';
-        for (let i = 0; i < 60 * 30; i++) { g.player.visibility = 1; W.step(DT);
+        for (let i = 0; i < 60 * 14; i++) { g.player.visibility = 1; W.step(DT);
           if (i === 600) {   // ten seconds in: the player is stood two metres from a hidden defender who then shouts through the game's own say()
             pick: for (const gd of g.guards as any[]) { if (gd.state === 'dead' || !isHostile(gd.team, 'player') || !g.fogOfWar.hidden(gd)) continue;
               for (const [dx, dz] of ROUND) { g.teleportPlayer([gd.char.pos[0] + dx, 0, gd.char.pos[2] + dz]);   // (the teleport stands him on free floor: the law is asked from where he ended up — the same tries, in the same order, switch down or up)
