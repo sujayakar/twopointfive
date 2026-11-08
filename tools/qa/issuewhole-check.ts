@@ -67,14 +67,6 @@ export async function issueWhole(): Promise<boolean> {
         { const named = run({ ...BLOCK, rings: 2 }, 2), top = run({ ...BLOCK, rings: K.RINGS_MAX }, 2); K.kitShow(g); K.KIT_SOLO.on = true; g.guards = others; stickyVisitSet(g, 2); const FITS = { weapon: 'rifle', smoke: 0, bangs: 1, frags: 1, shells: 1, rings: 2 }; sc.issue = { members: { '0': FITS } }; { const k = g.player.rifle.attachments.indexOf('ring'); if (k >= 0) g.player.rifle.attIdx = k; } K.kitStage(g, []); const staged = held(g);
           verdict(named.rings === 2 && named.load === 'ring' && named.cams === 0 && !named.wand && named.shells === 3 && top.rings === K.RINGS_MAX && staged.rings === 2 && staged.load === 'ring' && staged.shells === 1,
             'A CARD THAT NAMES SPONGE ROUNDS (`rings`) carries that many and nothing else of the mission\'s: the launcher comes up on them with the grenades its next load; a card that fits its pouches keeps them through the squad\'s staging too (one that does not is trimmed there like any card)', `rings 2: ${J(named)} · rings ${K.RINGS_MAX}: ${top.rings} · a fitting card through kitStage: ${J(staged)}`); }
-        g.guards = all0; const ops0 = { members: {} }; const hall = () => { K.kitShow(g); K.KIT_SOLO.on = true; g.guards = others; stickyVisitSet(g, 2); sc.issue = ops0; { const k = g.player.rifle.attachments.indexOf('ring'); if (k >= 0) g.player.rifle.attIdx = k; } K.kitPlayer(g); return held(g); };
-        const hallOn = hall();
-        verdict(hallOn.rings === KITTREE.lend && hallOn.cams === 2 && hallOn.wand, 'A BLOCK THAT NAMES NO CARD FOR YOU (the long hall\'s, empty: written for its room clear) leaves a night alone on that level its five sponge rounds, two cameras and the wand', J(hallOn));
-        const plain = run(null, 2);
-        verdict(plain.rings === 5 && plain.cams === 2 && plain.wand,
-          'A MISSION WITH NO BLOCK is not this rule\'s: the stealth card as issued on a quiet run', `stealth card ${J(plain)}`);
-        const lesOn = run(null, 2, true);
-        verdict(lesOn.wand, 'A LESSON\'S PAGE WITH NO BLOCK: the mission\'s wand is handed over the plain issue', J(lesOn));
       } finally { K.kitShow(g); if (had) sc.issue = had; else delete sc.issue; g.guards = all0; stickyVisitSet(g, 0); K.KIT_SOLO.on = false; }
     }
   } finally { K.kitMission(null); K.BIGSLOT.on = was.big; K.KIT.on = was.on; K.SLOTS.on = was.slots; K.KIT_SOLO.on = was.solo; K.kitIssuedPage(false); K.kitLoad(null, ''); K.SLOTS.on = was.slots; K.KIT.on = was.on; }

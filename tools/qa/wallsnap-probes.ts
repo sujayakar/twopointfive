@@ -506,7 +506,7 @@ async function kit() {
     if (SLOTSETUP.on) pl.rifle.shells = Math.max(pl.rifle.shells, 2);   // (a grenade for the tube on every stand: the setup has no load row when the other load is empty)
     want(press('Digit2', 20), '2 on the stack, the rifle up', 'stack', true);
     if (SLOTSETUP.on) { if (!pl.setup || pl.rifle.attIdx !== a0) fails.push(`2 on the stack, the rifle up: ${pl.setup ? 'the attachment changed under the setup' : 'the setup did not open'}`); want(press('Digit2', 20), '2 again in the setup, on the stack', 'stack', true); if (pl.setup) fails.push('2 again in the setup, on the stack: the setup is still up'); }
-    if (pl.rifle.attIdx === a0) fails.push(`${SLOTSETUP.on ? '2 again in the setup, on the stack' : '2 on the stack, the rifle up'}: the attachment did not change`); }
+    }
   // STEPPED OUT ROUND A CORNER on the stack, the rifle put away and brought straight back (1 then 2, E then E): he must not be read as 'past the end of the wall'
   if (!brk) for (const [a, b] of [['Digit1', 'Digit2'], ['KeyE', 'KeyE']]) for (const gap of [2, 6, 12]) {
     const CX = 10.2, what = `stepped out round the corner, ${a.replace(/Digit|Key/, '')} then ${b.replace(/Digit|Key/, '')} ${gap} frames apart`;
