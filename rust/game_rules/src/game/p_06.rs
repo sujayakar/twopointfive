@@ -91,6 +91,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
             crate::doortools::door_tools_big_key(g, input);
             if crate::squadthrow::squad_throw_key(g, input) { let pl = g.player; g.pl[pl].throw_eaten = true; }
             crate::orders::rows::frame(g);
+            crate::orders::shown::keep(g, input, cam, canvas);
             crate::interact::update_interact(g, dt, input, Some(canvas), Some(cam));
             crate::aim::track_player(g, dt);
             crate::game::game_threat_tick(g);

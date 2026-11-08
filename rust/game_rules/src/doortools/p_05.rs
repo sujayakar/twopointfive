@@ -1419,6 +1419,7 @@ pub fn door_tools_tick(g: &mut crate::game::Game) {
     let seen_m = g.k.doortools.lead_seen_m;
     crate::floorseen::floor_seen_tick(g, &roster, seen_m);
     door_tools_keep_sectors(g);
+    door_tools_forget(g);
     door_tools_test_stacks(g);
     door_tools_walk_tried(g);
     for op in g.door_tools.watches.clone() {
