@@ -290,6 +290,30 @@ fn a_hand_at_work_says_what_the_work_is_for_either_seat() {
     }
 }
 
+/// THE RULE: a player's hand on a light switch is planted the same for either seat, and held by his own state.
+#[test]
+fn a_hand_on_a_switch_is_planted_for_either_seat() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, _) = two(s);
+            let sw = p.g.m.lightswitch.states.as_ref().and_then(|st| st.all.first().cloned()).expect("the office has a switch");
+            let m = man(&p, seat);
+            let pc = p.g.pl[m].ch;
+            p.seat_stands(seat, [sw.pos[0] + sw.n[0] * 0.5, sw.pos[2] + sw.n[2] * 0.5]);
+            game::lightswitch::flip_switch(&mut p.g, &sw, false, pc);
+            let plant = |p: &Play| p.g.m.lightswitch.states.as_ref().unwrap().hands.last().map(|h| h.plant);
+            assert_eq!(plant(&p), Some(true), "seed {s}: seat {seat}'s man flips a switch");
+            // his plant goes by where HE stands, wherever the other player is
+            p.seat_stands(1 - seat, [3.0, 3.0]);
+            p.frame();
+            assert_eq!(plant(&p), Some(true), "seed {s}: the other player's place broke seat {seat}'s plant");
+            p.seat_stands(seat, [sw.pos[0] + sw.n[0] * 3.0, sw.pos[2] + sw.n[2] * 3.0]);
+            p.frame();
+            assert_eq!(plant(&p), Some(false), "seed {s}: seat {seat}'s man walked off and his plant held");
+        }
+    }
+}
+
 /// (coop.rs's store: a door and a room behind it)
 fn store(seed: u32) -> Scene {
     let mut s = Scene::new("store");
