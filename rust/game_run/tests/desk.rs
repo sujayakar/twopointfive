@@ -58,6 +58,18 @@ fn kept_then_written_then_read_again_is_the_same_five_cards() {
 }
 
 #[test]
+fn a_press_that_changes_no_kept_card_writes_nothing() {
+    let mut d = Desk::new();
+    press(&mut d, &head(4, 1));
+    let p = press(&mut d, &head(5, 4));
+    assert!(p.ok && p.kept.len() == 1, "pasted: written once");
+    let again = press(&mut d, &head(5, 4));
+    assert!(again.ok && again.changed.is_empty() && again.kept.is_empty(), "he wears it already");
+    let (p, again) = (press(&mut d, &head(3, 4)), press(&mut d, &head(3, 4)));
+    assert!(p.kept.len() == 1 && again.ok && again.kept.is_empty(), "as issued already");
+}
+
+#[test]
 fn a_press_refused_writes_nothing() {
     // your four pouches are full as issued, so one more smoke has no room
     let mut d = Desk::new();
@@ -65,7 +77,8 @@ fn a_press_refused_writes_nothing() {
     let p = step(&mut d, 0, "smoke", 1);
     assert!(!p.ok);
     assert!(p.why.starts_with("needs a pouch"), "{}", p.why);
-    assert_eq!(p.kept[0].text, kept_before);
+    assert!(p.kept.is_empty(), "nothing to write");
+    assert_eq!(kept::write(&mut d.g), kept_before);
     assert_eq!(cards, all_cards(&mut d));
 }
 
