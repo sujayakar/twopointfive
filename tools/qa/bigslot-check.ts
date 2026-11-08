@@ -64,7 +64,7 @@ const { Character, KIT: HANDKIT } = await import(`${ROOT}/src/game/character.ts`
 
 /** the big slot's hammer as it is DRAWN on the man with this character id (rigProps.ts bigBoxes, by its tag): how many boxes, and the head's centre; `all` = every box the frame draws on anybody */
 const drawnTool = (g: any, id: number) => { const out: any[] = []; handProps(g, out); const mine = out.filter(b => b.name === BIG_TAG && b.owner === (id & 0xff)), head = mine.find(b => b.h[0] > 0.05); return { n: mine.length, head: head ? [...head.c] as number[] : null, all: out.length }; };
-const SIL = await import(`${ROOT}/src/game/silent.ts`);
+const SIL = await import(`${ROOT}/src/game/silent.ts`), { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { harnessProfile, FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -314,6 +314,15 @@ export async function bigMate(): Promise<boolean> {
 }
 
 // ───────────────────────────────────────────────────────────── any shut door, from beside the frame
+/** what the squad's ring draws on a door, its first ring and the one behind 'more', as a hand reads it: the cursor on the door, the squad's key kept down; then put away with nothing given */
+function ringRows(R: Rig, d: any): string {
+  const { W, O, input: I } = R, KEY = CMDRING.key, c = d.frameCentre, th = d.def.closedDir, words = () => (O.g.view.ring?.wedges ?? []).map((x: any) => x.text as string);
+  search: for (const y of [c[1], 0.05, 1.0, 1.8]) for (const k of [0, 0.35, -0.35]) { W.cursorAt([c[0] - Math.sin(th) * k, y, c[2] + Math.cos(th) * k]); R.step(2); const t = O.hover(); if (t?.kind === 'door' && t.door === d) break search; }
+  I.keys.add(KEY); I.pressed.add(KEY); R.until(() => !!O.cmdRing, 1.5); const first = words(), more = (O.g.view.ring?.wedges ?? []).find((x: any) => x.text === 'more');
+  if (more) { I.pressed.add(`Digit${more.key}`); R.step(2); } const second = more ? words() : [];
+  I.keys.delete(KEY); O.cmdRing = null; O.close(); I.pressed.add('Escape'); R.step(3);
+  return `${first.join(' | ') || 'no ring'} ▸ ${second.join(' | ')}`;
+}
 /** the room clear, `tool` on the first teammate's card, and the big slot's own row on a door: the manager's from the corridor (the face the leaf opens AWAY
  *  from) or the break room's north door from inside the room (the face it opens TOWARD — its defenders taken off the floor first, as bigMate does). The door
  *  NOT locked unless `lock` says so (by hand either way). `key`: the row given as the page gives it — the menu opened on the door, then H; else by its id
@@ -326,15 +335,15 @@ async function mateShut(tool: 'none' | 'hammer' | 'shotgun', o: { face?: 'push' 
   g.teleportPlayer(sam); closeUp(R, sam); R.step(5);
   const switched = !!o.silent && !SIL.SILENT.on; if (o.silent) { SIL.SILENT.on = true; SIL.setSilent(g, true); R.step(2); }
   const st = stats(), t0 = g.time, target = () => R.O.targetAt(d.frameCentre), id = o.order ?? 'bigClear';
-  let w: string | null = null, menuDown = true;
-  if (o.key) { const up = R.O.open(target()); R.step(2);
+  let w: string | null = null, menuDown = true, shown = '';
+  if (o.key) { shown = ringRows(R, d); const up = R.O.open(target()); R.step(2);
     R.input.pressed.add('KeyH'); R.step(); menuDown = !R.O.menu; if (!up || !menuDown) w = 'the menu took no H'; }
   else w = R.O.give(id, target());
   const big = R.D.ops.some((op: any) => op.big);
   if (o.watch) R.post = () => o.watch!(R, gd, d);
   R.until(() => typeof w === 'string' || Math.abs(d.angle) > 0.5 || (!R.D.ops.length && g.time - t0 > 0.5), 30); const secs = g.time - t0; R.step(o.watch ? 80 : 20); R.post = null;
   const beats = R.beats(t0), last = R.D.done[R.D.done.length - 1], trips = (beats.match(/(?:^|\| )[\d.]+ (?:hammer|gun):/g) ?? []).length;
-  return { R, g, d, gd, switched, w, menuDown, big, secs, beats, trips, s: since(st), open: Math.abs(d.angle) > 0.5, broken: !!d.lockBroken, locked: d.locked as boolean, ended: R.D.ops.length ? '' : String(last?.ended ?? ''),
+  return { R, g, d, gd, switched, w, shown, menuDown, big, secs, beats, trips, s: since(st), open: Math.abs(d.angle) > 0.5, broken: !!d.lockBroken, locked: d.locked as boolean, ended: R.D.ops.length ? '' : String(last?.ended ?? ''),
     kicks: R.D.stats.kicks as number, gun: gd.weapon.def.id as string, out: !!gd.slung?.out, shell: R.ev.filter(x => x.t >= t0 && x.kind === 'guardShot' && x.weapon === 'm870').length, mateKick: R.ev.filter(x => x.t >= t0 && x.kind === 'kick' && x.who === gd.char.id).length };
 }
 export async function bigShut(): Promise<boolean> {
@@ -344,7 +353,7 @@ export async function bigShut(): Promise<boolean> {
       const B = BROKEN ? ' · BIGKIT_BREAK=1' : '';
       // A TEAMMATE: the squad's own row
       { const r = await mateShut('hammer', { key: true });
-        F.verdict(r.w === null && r.menuDown && r.big, 'A TEAMMATE, THE HAMMER: with the menu open on the (unlocked) manager\'s door, H gives the row', `after H: menu down ${r.menuDown}, a door order of the tool's ${r.big}`);
+        F.verdict(/(?:▸|\|) hammer and clear/.test(r.shown) && r.w === null && r.menuDown && r.big, 'A TEAMMATE, THE HAMMER: the squad\'s ring on the (unlocked) manager\'s door draws the row behind \'more\', and with the menu open H gives it', `the ring: ${r.shown} · after H: menu down ${r.menuDown}, a door order of the tool's ${r.big}`);
         F.verdict(r.open && r.broken && r.s.mateBlows === 1 && r.s.mateHammered === 1 && r.kicks === 0 && r.trips === 1 && r.shell === 0 && r.mateKick >= 1, 'he takes the door with ONE blow from beside the frame — loud as the boot, no shot, no boot after it — and the entry goes in', `open ${r.open} after ${f2(r.secs)} s · latch broken ${r.broken} · blows ${r.s.mateBlows}, hammered ${r.s.mateHammered} · door tools' kicks ${r.kicks}${B} · ${r.beats}`); }
       
       { const r = await mateShut('hammer', { face: 'pull' });
@@ -352,7 +361,7 @@ export async function bigShut(): Promise<boolean> {
       
       
       { const none = await mateShut('none', { key: true }), quiet = await mateShut('hammer', { silent: true });
-        F.verdict(typeof none.w === 'string' && !none.big && none.s.mateBlows === 0, 'NOBODY CARRIES ONE: the key gives nothing', `H: ${none.w}`);
+        F.verdict(/^stack up/.test(none.shown) && !/hammer|shotgun/.test(none.shown) && typeof none.w === 'string' && !none.big && none.s.mateBlows === 0, 'NOBODY CARRIES ONE: the ring draws no such row and the key gives nothing', `the ring: ${none.shown} · H: ${none.w}`);
         // (silent.ts: the row is one of LOUD_ROWS, as bang and clear and the charge are — picking it IS the squad going loud)
         F.verdict(quiet.w === null && !SIL.squadSilent(quiet.g) && quiet.s.mateHammered === 1 && quiet.open && (SIL.LOUD_ROWS as string[]).includes('bigClear'),
           'the squad told SILENT: the row is a LOUD tool (silent.ts LOUD_ROWS) — picking it is the squad going loud, and the hammer takes the door',
