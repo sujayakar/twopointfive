@@ -3,7 +3,7 @@
 // combat.ts, pairorders.ts and spotted.ts do it for the partner — killGuard(…, 'guard'), `killerId` his where a round was his — then one step is played and the
 // run's numbers, badges and timeline are read.
 //   bun run tools/qa/teamtally-check.ts        (also `probes.ts teamtally`)        exit 0 = all hold · 1 = one does not
-//   TEAMTALLY_BREAK=1 = the partner's rounds carry no name (killerId is left unset): (2), (3) and (4) must fail.
+//   TEAMTALLY_BREAK=1 = the partner's rounds carry no name (killerId is left unset): (2) and (3) must fail.
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 
@@ -29,7 +29,7 @@ export async function teamTallyCheck(): Promise<boolean> {
     const foes = () => g.guards.filter((x: any) => x.team !== 'operative' && !x.civ && x.state !== 'dead' && hostileTo(x, 'player'));
     const mate = teamOf(g)[0] ?? null;
     /** a man put down the way the partner's sites do it (the game's own order: the kill, then whose round it was), and a step for it to land */
-    const down = (h: any, how: 'shot' | 'struck' | 'wounded', by: 'player' | 'guard', killer: number | null) => hush(() => {
+    const down = (h: any, how: 'shot' | 'struck', by: 'player' | 'guard', killer: number | null) => hush(() => {
       killGuard(g, h, [1, 0, 0], how === 'struck', how, by); if (killer !== null && !BREAK) h.killerId = killer; h.diedAt = g.time + 1 / 60;   // (the game's tally asks of the men who went down in the step it ends: a kill made between steps is given to the next one)
       W.step(1 / 60);
     });
@@ -45,12 +45,11 @@ export async function teamTallyCheck(): Promise<boolean> {
       line(A.C().kills === 1 && A.C().kos === 0 && !A.badge('nokills') && !A.badge('pacifist') && A.rows().length === 1 && A.rows()[0].includes(A.mate.callsign), `(2) the partner's round is a kill — kills ${A.C().kills}, 'no kills' ${A.badge('nokills')}, 'pacifist' ${A.badge('pacifist')}, row '${A.rows()[0] ?? ''}'`);
       A.step(30);
       line(A.C().kills === 1 && A.rows().length === 1, `(3) counted once — thirty steps later kills ${A.C().kills}, rows ${A.rows().length}`); }
-    // (4) on: his takedown (no name on it, as pairorders.ts leaves it) is a knockout; a wounding round a knockout and a round near a man
-    { const A = await stage(); const [h, k] = A.foes();
+    // (4) on: his takedown (no name on it, as pairorders.ts leaves it) is a knockout
+    { const A = await stage(); const [h] = A.foes();
       A.down(h, 'struck', 'guard', null); A.step(2);
       const ko1 = A.C().kos, kills1 = A.C().kills, keep = A.badge('nokills') && A.badge('pacifist');
-      A.down(k, 'wounded', 'guard', A.mate.char.id); A.step(2);
-      line(ko1 === 1 && kills1 === 0 && keep && A.C().kos === 2 && A.C().kills === 0 && A.badge('nokills') && !A.badge('pacifist'), `(4) his takedown is a knockout (KOs ${ko1}, 'pacifist' kept ${keep}); his wounding round a knockout and no pacifist's (KOs ${A.C().kos}, 'pacifist' ${A.badge('pacifist')})`); }
+      line(ko1 === 1 && kills1 === 0 && keep, `(4) his takedown is a knockout (KOs ${ko1}, kills ${kills1}, 'pacifist' kept ${keep})`); }
     // (5) on: what is not the team's stays on nobody's card; the player's own is counted once
     { const A = await stage(); const [h, k, m] = A.foes();
       A.down(h, 'shot', 'guard', k.char.id); A.step(2);

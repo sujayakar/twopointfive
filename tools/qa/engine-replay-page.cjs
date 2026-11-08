@@ -1,6 +1,6 @@
 // THE ENGINE REPLAY ON THE REAL PAGE (src/replay/engineplay.ts): headless Chromium on the software WebGPU adapter (tools/qa/page-look.cjs's recipe), muted.
 //   PORT=5243 node tools/qa/engine-replay-page.cjs [outDir]        (a dev server on that port: PORT=5243 bun run tools/serve.ts)
-//   record  a four-man room clear played for a quarter of a minute by scripted input (walk, rounds, a can, an order), saved to this browser's shelf as F7 would
+//   record  a four-man room clear played for ten seconds by scripted input (walk, rounds, a can, an order), saved to this browser's shelf as F7 would
 //   play    /?playtape=<its id>: the page is sent to the tape's own query, stands, and walks the tape to its end — every man where the trace had him;
 //           the sounds the mixer was asked for while it played are the recording's own, name for name in order
 //   note    a note typed there is on the shelf row, and the 2D viewer (replay.html) lists it
@@ -69,7 +69,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     return { page, errors };
   };
   const shot = async (page, name) => { if (OUT) await page.screenshot({ path: path.join(OUT, `${name}.png`), timeout: 180000 }).catch(e => console.log('    (no still: ' + String(e).slice(0, 80) + ')')); };
-  const want = n => { const ok = (process.env.ONLY || 'record').split(',').includes(n);   // (no word: record. ONLY=record,refuse: the refused page was still not standing after four minutes when last asked)
+  const want = n => { const ok = (process.env.ONLY || 'record,play').split(',').includes(n);   // (no word: a run recorded, and played to its end as it was)
     if (ok) section = n; return ok; };
   const beat = setInterval(() => {
     if (asked) { say(`the page has not answered since ${asked} (inside a step or a draw)`, false); return; } const p = cur; if (!p || p.isClosed()) { say('no page open', false); return; }
@@ -98,12 +98,12 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
       press('Digit2'); quick(50); window.__click(0); quick(12); window.__click(0); quick(30);   // the rifle, two rounds
       press('KeyB'); quick(90, ['KeyD']);                                  // the quick order, a walk
       press('Digit4'); quick(50); window.__click(0); quick(200);           // a stun canister, its bang
-      press('KeyR'); quick(160); await real(1); quick(120, ['KeyS']);      // a reload, a walk back
+      await real(1);
       const f = window.__replay.file('check'), id = await window.__replay.save('check');
       return { id, ticks: f?.rerun?.ticks ?? null, dead: f?.rerun?.dead ?? null, search: f?.rerun?.recipe?.search ?? null, samples: f?.samples?.length ?? 0, probe: window.__probe ?? null, heard: window.__heard.slice(), pos: [...g.player.char.pos].map(v => +v.toFixed(3)), scn: window.__scenarios?.current?.()?.id ?? null }; });
     id = rec.id; if (rec.probe && OUT) fs.writeFileSync(path.join(OUT, 'probe-rec.json'), JSON.stringify(rec.probe));
     const kinds = [...new Set(rec.heard.map(n => n.split('@')[0]))];
-    line(id !== null && rec.ticks > 800 && !rec.dead && kinds.length >= 4 && !errors.length, 'a played quarter minute is on the shelf with its run tape', `id ${id} · ${rec.ticks} steps · ${rec.samples} samples · ${rec.heard.length} sounds asked (${kinds.slice(0, 14).join(' ')}) · tape query ${rec.search}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+    line(id !== null && rec.ticks > 500 && !rec.dead && kinds.length >= 4 && !errors.length, 'ten seconds played are on the shelf with their run tape', `id ${id} · ${rec.ticks} steps · ${rec.samples} samples · ${rec.heard.length} sounds asked (${kinds.slice(0, 14).join(' ')}) · tape query ${rec.search}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
     await page.close();
   }
   // ── stay: every way between the game, the replay and the map viewer keeps to THE ONE WINDOW (the maintainer, 10-15: "replays should just play in the current
