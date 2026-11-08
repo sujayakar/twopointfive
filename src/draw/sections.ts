@@ -1,7 +1,7 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 1624433460;
+export const LAYOUT = 3923819931;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, all = 16383 }
 /** each section's place in the table the module answers with */
@@ -113,16 +113,28 @@ export const enum View {
   target = 34,
   /** u32: what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it */
   locks = 37,
-  /** u32: what the game is set to, for a screen that sets it: 1 hits do nothing to him · 2 the men think · 4 unlimited ammunition · 8 it saves by itself · 16 the wall hold's feel · 32 walking into a wall takes it · 64 the command key tapped twice calls the squad in */
-  set = 38,
+  /** u32: what the game is set to, for a screen that sets it: hits do nothing to him, the men think, unlimited ammunition, it saves by itself, the wall hold's feel, walking into a wall takes it, the command key tapped twice calls the squad in */
+  god = 38,
+  /** u32 */
+  thinks = 39,
+  /** u32 */
+  ammo = 40,
+  /** u32 */
+  autosave = 41,
+  /** u32 */
+  wallFeel = 42,
+  /** u32 */
+  wallPress = 43,
+  /** u32 */
+  fallIn = 44,
   /** u32: the run's end card is due: 1 it was lost, 2 won (0: not yet) */
-  ended = 39,
+  ended = 45,
   /** f32: night vision's amount, and how hard he has just been hit */
-  night = 40,
+  night = 46,
   /** f32 */
-  hit = 41,
+  hit = 47,
   /** words a row */
-  row = 42,
+  row = 48,
 }
 
 /** the sky: one row */

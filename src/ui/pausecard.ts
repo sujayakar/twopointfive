@@ -1,9 +1,8 @@
 // THE CARDS OVER A RUN of a page that holds no game (#menu, styled in index.html): paused (Resume, the saves, Restart, Options, the way out) and ended (how, and what to do about it).
 // The world holds still under either.
-import { typedInto } from '../host/keymap';
 import { menuTheme } from './theme';
 import { closeOptions, openOptions } from './options';
-import { button, checkpointButton, el, saveStrip, walkMenu, type RunSaves } from './runcard';
+import { button, checkpointButton, el, saveStrip, type RunSaves } from './runcard';
 
 export interface PauseDeps {
   /** what is paused, under the wordmark */
@@ -11,7 +10,7 @@ export interface PauseDeps {
   saves: RunSaves;
   /** how the run ended, or null */
   verdict(): { won: boolean; word: string; why: string } | null;
-  /** may a card go up (the game may be lost to a panic, which has a card of its own) */
+  /** may a card go up: a run is on, and not lost to a panic (which has a card of its own) */
   may(): boolean;
   restart(): void;
   /** leave the mission */
@@ -27,7 +26,7 @@ export class PauseCard {
     menuTheme();
     this.root.addEventListener('mousedown', e => e.stopPropagation());   // (a click on the card is no shot)
     this.root.addEventListener('contextmenu', e => e.preventDefault());
-    addEventListener('keydown', e => { if (e.code === 'Escape' && !e.repeat) { e.preventDefault(); this.toggle(); } else if (this.up) walkMenu(e, typedInto); }, { capture: true });
+    addEventListener('keydown', e => { if (e.code === 'Escape' && !e.repeat) { e.preventDefault(); this.toggle(); } }, { capture: true });
   }
   toggle(): void { if (this.up) this.close(); else this.open(); }
   /** the run's end card */
