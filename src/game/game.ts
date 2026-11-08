@@ -1359,7 +1359,7 @@ export class Game {
     pl.hasRifle = withRifle;
   }
 
-  /** THE ROWS OF THE LIGHTS STOOD ON THE LIST AS IT IS: as the level is built, and again when a fixture is hung after that (the kit picture's, host/kitView.ts). So every lamp a fixture feeds has a row and one way of burning. */
+  /** THE ROWS OF THE LIGHTS STOOD ON THE LIST AS IT IS: as the level is built. So every lamp a fixture feeds has a row and one way of burning. */
   standLights(): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.standLights', this, []); if (__r !== RUST_PASS) return __r as any; } } this.lightHome.stand(this.engine.lights.lights, this.targets, this.beacons, this.devices.cameras.map(c => ({ light: c.cone, target: c.target, slot: c.slot }))); }
   resetLevelState() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.resetLevelState', this, []); if (__r !== RUST_PASS) return __r as any; } }
     for (const t of this.targets) this.lightHome.in(LIGHT_IN.on, t, t.authored ? 1 : 0);

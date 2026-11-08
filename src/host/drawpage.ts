@@ -407,7 +407,7 @@ async function main(): Promise<void> {
   };
   const loop = (ts: number): void => {
     try {
-      const room = pageRoom({ calibrating: quality.calibrating, measuring: measure.active, kitView: false });
+      const room = pageRoom({ calibrating: quality.calibrating, measuring: measure.active });
       if (kit?.rests || held || document.hidden) { last = performance.now(); pace.reset(); rate.reset(); requestAnimationFrame(loop); return; }
       if (pace.skip(ts, kit ? 60 : !quality.calibrating && !measure.active && (quality.adaptive || quality.auto) ? quality.bands.target : 0, false, room)) { requestAnimationFrame(loop); return; }
       const now = performance.now(), raw = (now - last) / 1000; last = now; told.fps = rate.push(now);

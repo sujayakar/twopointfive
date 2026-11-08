@@ -22,7 +22,7 @@
 // shadow; what must stop a round or a man is a box of the level, which may say a shape of its own. (A piece says no flags.) It knows the box that says
 // it (Box.of) and IS DRAWN WHILE THAT BOX IS (scene/boxes.ts trimDrawn, asked where the world lists what it draws): whatever hides the box (a round, a
 // blast, a wall coming down) has hidden its trim, and whatever puts the box back has put the trim back, with nothing hidden, filed or restored for the
-// piece itself: a piece's own flags never change. (A kit view that SINKS boxes moves their trim with them: withPieces, host/kitView.ts.)
+// piece itself: a piece's own flags never change.
 // TO EVERY ENGINE THAT SWEEPS THE LEVEL'S THINGS A PIECE IS NOT THERE: not an item of the destruction lane, not a rider or a load in a blast's furniture
 // (game/furnblast.ts: its index, its mouth rule), not a thing hung on a wall (game/wallbreak.ts ghosts). An engine that walks the statics as things
 // skips `piece`; tools/qa/shapes-check.ts line 11 holds each of them to the plain level's answer.
@@ -196,13 +196,6 @@ export function shapeLevel(boxes: Box[], on: boolean): number {
   SHAPES_STATS.shaped = made; SHAPES_STATS.pieces = tail.length; SHAPES_STATS.levels++;
   return made;
 }
-/** the numbers `idx` of a stood level's boxes, and after them the numbers of the pieces those boxes say: what goes out of the picture with them */
-export function withPieces(boxes: readonly Box[], idx: readonly number[]): number[] {
-  const out = [...idx]; let first = boxes.length; for (let i = 0; i < boxes.length; i++) if (boxes[i].piece === true) { first = i; break; }
-  if (first < boxes.length) { const own = new Set(idx); for (let i = first; i < boxes.length; i++) { const b = boxes[i]; if (b.piece === true && b.of !== undefined && own.has(b.of)) out.push(i); } }
-  return out;
-}
-
 /** A RECORDING'S TABLES, before its level is stood up (replay/recipestand.ts and tools/qa/rerun.ts `tables`): one from before this table is played on a floor
  *  of plain boxes, as it was recorded — journal.ts applyKnobs says the same afterwards, too late for a level already standing */
 export function shapesTape(tables: Record<string, unknown>) {
