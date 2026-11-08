@@ -17,8 +17,8 @@
 // NO STATE: what is shown is worked out each frame from the beat the animator's support hand is on (CharacterAnimator.feedClock) and what the Firearm said the
 // reload puts in (Firearm.feedN / feedPort, written by startReload). The dice are touched once more than before by nobody: a thing that falls is the magazine
 // that fell before, drawn as what it is.
-// WHO GETS WHAT. You: all of it (player.ts reloadInHand). A teammate: the sounds on his beat wherever his reload has a clock (guards.ts tickReloadBeat, the
-// room fight's reloadUntil, gunslots.ts taking his long gun up again), the hand's stations where the movement pass shows his change (game.ts deals his clock),
+// WHO GETS WHAT. You: all of it (player.ts reloadInHand). A teammate: the sounds on his beat wherever his reload has a clock (guards.ts tickReloadBeat,
+// gunslots.ts taking his long gun up again), the hand's stations where the movement pass shows his change (game.ts deals his clock),
 // always as a gun run dry — a full belt, a full tube, the first shell in the port; and his empty falls only where one fell before (tickReloadBeat).
 import type { Game } from './game';
 import type { Character } from './character';
@@ -120,12 +120,12 @@ export const feedLive = (): boolean => gunLookOn();
 /** a weapon's reload row as a beat (a row that gives only its length does everything at the end: the weapon's own rule) */
 export const beatOf = (R: WeaponDef['reload'], pull: boolean): FeedBeat => goneWithTick('beatOf') as any;
 
-/** A MAN WHOSE RELOAD IS A BEAT BEGINS ONE (guards.ts startReloadBeat, the room fight's and the covering fire's reloadUntil): the row his beat runs on — the
+/** A MAN WHOSE RELOAD IS A BEAT BEGINS ONE (the Rust game's begin_reload): the row his beat runs on — the
  *  gun's own, as ever, or under the shells key a tube gun's row for the shells that go in, planned on the gun for his ticks (feedTick books them) */
 export function feedBegin(gun: Firearm): WeaponDef['reload'] { return crossToRust('feedBegin', undefined, [gun]) as any; }
 
 // ------------------------------------------------------------------ a teammate, a defender: the sounds on his beat
-/** His reload's clock went from `before` to `now` seconds into his row's beat (guards.ts tickReloadBeat, the room fight's reloadUntil, gunslots.ts taking the
+/** His reload's clock went from `before` to `now` seconds into his row's beat (guards.ts tickReloadBeat, gunslots.ts taking the
  *  long gun up again): the sounds of his gun's own feeding that fall between are played at him. Nothing for a magazine gun or with the switch off. */
 export function feedTick(g: Game, c: Character, def: WeaponDef, before: number, now: number, vol = 0.7, gun?: Firearm): void { return crossToRust('feedTick', undefined, [g, c, def, before, now, vol, gun]) as any; }
 

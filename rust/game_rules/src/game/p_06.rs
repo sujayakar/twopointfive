@@ -379,10 +379,7 @@ pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
             let w = g.gd[gd].weapon;
             let r = crate::weapons::firearm_reload_row(g, w);
             let reload_t = g.gd[gd].reload_t;
-            let fo = if reload_t < 0.0 && !dead { crate::roomfight::room_fight_op_of(g, gd) } else { None };
-            let at = if dead { -1.0 }
-                else if reload_t >= 0.0 { r.dur - reload_t }
-                else { match fo { Some(o) if g.tab.roomfight_op[o].reload_until > now => m::max(0.0, r.dur - (g.tab.roomfight_op[o].reload_until - now)), _ => -1.0 } };
+            let at = if dead || reload_t < 0.0 { -1.0 } else { r.dur - reload_t };
             let row = crate::character::ReloadBeat { dur: r.dur, out: r.out, in_: r.in_, rack: r.rack.map(Some), keep: None, hand: None, exact: r.exact };
             let an = &mut g.ch[c].anim;
             an.reload_row = Some(row);

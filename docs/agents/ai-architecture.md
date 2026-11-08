@@ -282,6 +282,7 @@ Under `rust/game_rules/src/`. One man's frame, in the order it runs (`guards/fra
 | his pose, his light, his footfall | `guards/frame.rs pose` | |
 | whose man he is (fifteen taskers, strongest first) | `game_types/src/owner/types.rs`, `owner/` | a line of `taskers!` |
 | what a rule may ask of a man (enemy, blind, staggered, held, in contact, still) | `control/man.rs` | a function |
+| his hands: a change of magazine | `guards/frame.rs hands`; begun by `guards::begin_reload` only | |
 | why he is doing that | `control::control_line`, `mind::why`, `owner::who` | |
 
 The squad's side: an order is `orders/rows/<name>.rs` and a line of `rows!`; a throw is `squadthrow/plan.rs`; who is
@@ -315,9 +316,9 @@ him, rounds pass close). One file and one line.
    Write a control beside it (the same scene where the thing does not happen, or happens to a calm man), and
    break the rule once (`propose` returns `None`) to see the test go red.
 
-Worked example, held back until the dice are keyed: `control/reload_in_cover.rs` (a defender who runs dry kneels or
-goes to cover to change magazine), the line `reload_in_cover: "changing magazine in cover";`, and the test
-`a_guard_who_runs_dry_in_the_open_kneels_to_change_magazine` in `tests/control.rs`.
+The worked example printed below, `control/reload_in_cover.rs` (a defender who runs dry kneels or goes to cover to
+change magazine), was written and is not in the game: in 208 runs of thirteen missions an enemy changed magazine three
+times, so nobody would see it. Count how often the thing happens before writing the rule.
 
 **An order**: a row of the squad's menu. One file and one line.
 
@@ -343,15 +344,14 @@ two tests of `tests/orders.rs`, hands its three functions on to a module of its 
 - `bun run tools/sim/build.ts` after any change under `rust/`.
 - Reading a game back deals a row its functions by the list (`rows::by_id`), so an order needs no line in the
   wire, and a row with an id on no line stops the import, by name.
-- A dozen modules know orders BY ID and a new order is in none of their lists: `silent` (loud rows),
-  `holdfire` (lift and blow orders), `sneak` and `unseen` (posted), `orders::lane_orders`, `squadthrow`
-  (resumed), `rails` (a lesson's list of rows hides a row it does not name), `cmdring` (the ring's seats),
-  `cover` and `roomfight` (`order == "hold"`, `"cover"`, `"fallIn"`). Read each name once and decide; say in
-  the commit which the order joined.
+- What the rest of the game may ask of an order is in its row: `is: &[Is]` (loud, keeps his lane, resumed after a
+  throw, and so on; `orders/types.rs` says what each is read by). Read the list once and decide. Two places name
+  orders otherwise: `rails` (a lesson's list of rows hides a row it does not name) and `cmdring` (the ring's seats).
 - The menu's digit: `squad_orders_register` deals a row with no key the first free digit (from 5, or from 1
   for a row on a page), and none when all five are taken: the wheel still reaches it.
-- A switch or not: section 14 lands changes of play with tallies and no switch, the repo's standing rule says
-  a new rule is a switch. Until that is ruled, say in the commit which was done.
+- No switch: a change of play of this rework lands on by default and is fixed forward. Its commit is headed A CHANGE
+  OF PLAY with what a player would notice, its test is red without it, and it carries the missions before and after
+  on four seeds or more.
 - The build: a change to a rule or an order is a build of the game crate, about ten minutes on a small
   machine; a change to a test is fifteen seconds. Ask your questions of the game from the test first.
 - Searching for a field of a man: leave out `io.rs` and `puppet.rs`, whose lines are several thousand
@@ -381,7 +381,7 @@ shows a line in the squad's HUD block says so in its file (`notes` of its `Row`,
 
 ### The pieces in detail
 
-The list of reactions as it stands (`rust/game_rules/src/control/`), with the held worked example's line last:
+The list of reactions as it stands (`rust/game_rules/src/control/`), with the example's line last:
 
 ```rust
 // control/mod.rs: THE LIST. The order of the lines is the rank.
@@ -391,7 +391,7 @@ rules! {
     morale: "shaken by a blast";
     startle: "startled";
     duck: "head down under fire";
-    reload_in_cover: "changing magazine in cover";   // held: lands after the keyed draws
+    reload_in_cover: "changing magazine in cover";   // the example: not in the game
 }
 
 // control/reload_in_cover.rs: the whole rule
@@ -417,9 +417,8 @@ hands free to change magazine. The line makes the rule's module, its id, the tab
 the pilot is its file and one line.
 
 Two things the list does not yet do for a rule:
-- **`TakeCover` cannot say "hands idle".** Any rule that asks for cover lets the reload run on. No rule has
-  needed it yet, so the word is not built: it is one field of `TakeCover` and one `if` at the reload's line of
-  `alert`, and it lands with the first rule that wants it and a fight that goes red without it.
+- **Nothing can say "hands idle".** A change of magazine goes on whoever has the man (`frame.rs hands`). A rule that
+  wants his hands would be the first.
 - **The list holds 32 rules** (the "said no" record is 32 bits). A 33rd stops the build with those words.
 
 What a rule asks of a man is `control/man.rs`, a line a question, each saying what it does NOT tell you:
