@@ -142,7 +142,7 @@ const probeNames = [...known].filter(n => ran.has(n)).sort(), heldNames = probeN
 // (10) AND EVERY PAGE SCRIPT: a row of pages.ts's table, or required by one (writetrap.cjs).
 { const { PAGES } = await import('./pages.ts'), rows = new Set(PAGES.map(r => r[0])), scripts = readdirSync(HERE).filter(f => f.endsWith('.cjs'));
   const required = new Set(scripts.filter(f => rows.has(f)).flatMap(f => [...readFileSync(resolve(HERE, f), 'utf8').matchAll(/require\(['"]\.\/([\w-]+\.cjs)['"]\)/g)].map(m => m[1])));
-  const lost = [...scripts, ...(BREAK ? ['no-such-page.cjs'] : [])].filter(f => !rows.has(f) && !required.has(f)), dead = [...rows].filter(f => !scripts.includes(f));
+  const lost = [...scripts, ...(BREAK ? ['no-such-page.cjs'] : [])].filter(f => !rows.has(f) && !required.has(f)), all = readdirSync(HERE), dead = [...rows].filter(f => !all.includes(f));
   line(!lost.length && !dead.length, '(10) every tools/qa/*.cjs is a row of pages.ts or required by one', lost.length || dead.length ? `no row: ${few(lost, 8)} · a row with no file: ${few(dead, 8)}` : `${scripts.length} scripts`); }
 
 // (9) A BREAK WORD IS SAID, AND WHETHER IT BIT (stand.ts BREAK_WORDS, the close of probes.ts): the runner's own green and red self tests in children started
