@@ -301,7 +301,7 @@ let stateFails = 0;
       check(scaleRungs.length >= 3 && Math.abs(E.settings.renderScale - topWant) < 1e-6 && log.every(e => e.scale <= topWant + 1e-9), `headroom (∪ 8 ms @ 60 fps): the scale climbs ${s0.toFixed(2)} → ${scaleRungs.map(e => e.scale.toFixed(2)).join(' → ')} and stops at ${topWant.toFixed(2)} (sharp direct ${E.settings.sharpDirect ? 'on: 1.0 would switch it off' : 'off'}), never above`);
       check(gaps.every(g => g >= CL.climbGap - 1e-6) && log[0].t >= CL.windows - 1e-6, `≥ ${CL.climbGap} s between climbs (gaps ${gaps.map(g => g.toFixed(1)).join(', ')}), the first only after ${CL.windows} roomy windows (t = ${log[0].t.toFixed(1)} s)`);
       check(!E.settings.gatherThird && orderOk && log.filter(e => /gather/.test(e.note)).length === 1, `then the divisors, in order: gather ⅓ → ½ once the scale is at its top (gatherThird ${E.settings.gatherThird}); no scale rung after a divisor rung; volQuarter untouched at high (${E.settings.volQuarter} — the preset never had it)`);
-      check(E.settings.maxInternalHeight === PRESETS.high.maxH, `capClimb off: the output cap stays at ${E.settings.maxInternalHeight}`);
+      check(E.settings.maxInternalHeight === PRESETS.high.maxH, `the climb leaves the output cap at ${E.settings.maxInternalHeight}`);
       // E2: back-off on the GPU: the union jumps to 14 ms (84 %) → the newest rung (the gather) is undone within about a window, then a scale rung per window + cooldown; failed rungs are held
       const nUp = log.length; drive(q, E, 1.6, 60, 14.0, log, T);
       const firstUndo = log[nUp];
@@ -364,10 +364,6 @@ let stateFails = 0;
     // E7c: the climb itself on a 60.0 Hz-capped machine with the GPU 9 ms busy at high (pinned from a menu): it climbs
     { const { E, q } = mk(); const log: Ev[] = []; const T = { t: 0 }; drive(q, E, 30, 60.0, 9.0, log, T);
       check(log.filter(e => /climb ↑/.test(e.note)).length >= 2 && E.settings.renderScale > PRESETS.high.scale + 1e-6, `60.0 fps exactly, ∪ 9 ms at high: climbs (${log.map(e => e.note.split(' (')[0]).join(' | ')})`); }
-    // E8: capClimb: past 1.0 and the divisors the cap climbs in CLIMB.capStep rows toward the window's 1800 device rows, never past them
-    { const { E, q } = mk(); E.settings.capClimb = true; const log: Ev[] = []; const T = { t: 0 }; drive(q, E, 140, 60, 5.0, log, T);
-      const caps = log.filter(e => /cap \d+ rows/.test(e.note)).map(e => e.maxH);
-      check(caps.length >= 2 && caps[0] === PRESETS.high.maxH + CL.capStep && caps.every((c, i) => c <= 1800 && (i === 0 || c === Math.min(1800, caps[i - 1] + CL.capStep))), `capClimb on, ∪ 5 ms for 140 s: the cap climbs ${PRESETS.high.maxH} → ${caps.join(' → ')} (steps of ${CL.capStep}, ≤ the window's 1800 rows)`); }
     void LD;
   }
 }
