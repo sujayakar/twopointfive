@@ -692,10 +692,7 @@ pub fn wall_break_reset(g: &mut crate::game::Game, silent: Option<bool>) {
     for i in g.destr.walls.owner.keys() { if i.0 >= authored { g.destr.walls.owner.delete(i); } }
     let_go(g);
     crate::scene_collision::truncate_statics(g, authored);
-    if g.engine.world.statics.len() as f64 > authored {
-        g.engine.world.statics.truncate(authored as usize);
-        g.engine.world.statics_dirty = true;
-    }
+    if g.engine.world.statics.len() as f64 > authored { crate::scene_boxes::box_world_keep_statics(g, authored as usize); }
     g.destr.walls.dirty = false;
     wall_break_bump(g);
     if !any { return; }
