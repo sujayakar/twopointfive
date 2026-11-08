@@ -1,10 +1,10 @@
 //! The types of `civilians`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what a civilian has given up on (TypeScript: a Set of objects, compared by identity): a man, or a CivSpot of the level by its place in the level's list
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum CivBadTarget { Guard(GuardId), Spot(u32) }
 
 /// (TypeScript: CivSnap, src/game/civilians.ts:236)
@@ -268,7 +268,7 @@ impl CivSnapOneDownRag {
 impl Default for CivSnapOneDownRag { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CivState {
     Held,
     Work,
@@ -299,7 +299,7 @@ impl CivState {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CivCause {
     Shot,
     Bang,
@@ -420,7 +420,7 @@ impl CivPendingSnap {
 impl Default for CivPendingSnap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum PendKind {
     GreetReply,
     ReportRadio,
@@ -447,7 +447,7 @@ impl PendKind {
 }
 
 /// (TypeScript: CivSpot, src/game/civilians.ts:56)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CivSpot {
     pub name: String,
     pub pos: V3,
@@ -466,7 +466,7 @@ impl CivSpot {
 impl Default for CivSpot { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: CivTarget, src/game/civilians.ts:136)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CivTarget {
     pub kind: crate::civilians::CivTargetKind,
     pub guard: Option<GuardId>,
@@ -491,7 +491,7 @@ impl CivTarget {
 impl Default for CivTarget { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CivTargetKind {
     Guard,
     Phone,
@@ -508,7 +508,7 @@ impl CivTargetKind {
 }
 
 /// (TypeScript: Civ, src/game/civilians.ts:137)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Civ {
     pub def: crate::scene_level::CivilianDef,
     pub name: String,
@@ -627,7 +627,7 @@ impl Civ {
 impl Default for Civ { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Pending, src/game/civilians.ts:449)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Pending {
     pub at: f64,
     pub kind: crate::civilians::PendKind,
@@ -692,7 +692,7 @@ impl CiviliansModOwnSpotsValue {
 impl Default for CiviliansModOwnSpotsValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/civilians.ts:181 CIV_LOG, src/game/civilians.ts:181)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CiviliansModCIVLOGItem {
     pub t: f64,
     pub who: String,
@@ -724,7 +724,7 @@ impl CIVDEBUG {
 impl Default for CIVDEBUG { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/civilians.ts:443 floors, src/game/civilians.ts:443)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CiviliansModFloorsValue {
     pub evac_told: bool,
     pub greet_at: f64,
@@ -768,7 +768,7 @@ impl TASKCLIPValue {
 impl Default for TASKCLIPValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/civilians.ts:71 civSpots ->, src/game/civilians.ts:71)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CivSpots {
     pub phones: Vec<crate::civilians::CivSpot>,
     pub exits: Vec<crate::civilians::CivSpot>,
@@ -888,7 +888,7 @@ pub enum InViewVp {
 }
 
 /// (TypeScript: inline at src/game/civilians.ts:685 work ->, src/game/civilians.ts:685)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Work {
     pub move_: f64,
 }
@@ -967,7 +967,7 @@ impl Follow {
 impl Default for Follow { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/civilians.ts:1020 cower ->, src/game/civilians.ts:1020)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Cower {
     pub move_: f64,
     pub crouch: f64,
@@ -1016,7 +1016,7 @@ impl CivPanicWhat {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CiviliansMod {
     /// (src/game/civilians.ts:78 ownSpots)
     pub own_spots: Option<crate::civilians::CivSpots>,

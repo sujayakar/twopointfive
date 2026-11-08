@@ -1,10 +1,10 @@
 //! The types of `smokebreak`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: SmokeBreakStats, src/game/smokebreak.ts:52)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SmokeBreakStats {
     pub men: f64,
     pub lit: f64,
@@ -31,7 +31,7 @@ impl SmokeBreakStats {
 impl Default for SmokeBreakStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Man, src/game/smokebreak.ts:53)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Man {
     pub t: f64,
     pub flamed: bool,
@@ -59,7 +59,7 @@ impl Man {
 impl Default for Man { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: State, src/game/smokebreak.ts:68)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub men: JsMap<CharId, crate::smokebreak::Man>,
     pub stats: crate::smokebreak::SmokeBreakStats,
@@ -116,7 +116,7 @@ impl MouthOf {
 impl Default for MouthOf { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SmokebreakMod {
     /// (src/game/smokebreak.ts:69 states)
     pub states: Option<crate::smokebreak::State>,

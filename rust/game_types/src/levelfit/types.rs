@@ -1,6 +1,6 @@
 //! The types of `levelfit`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: LevelFit, src/game/levelfit.ts:60)
@@ -35,7 +35,7 @@ impl LevelFit {
 impl Default for LevelFit { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: BreakRoom, src/game/levelfit.ts:99)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreakRoom {
     pub boxes: f64,
     pub items: f64,

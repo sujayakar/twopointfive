@@ -1,10 +1,10 @@
 //! The types of `nvg`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Mode {
     Off,
     Free,
@@ -21,7 +21,7 @@ impl Mode {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Why {
     YourLight,
     YourGoggles,
@@ -42,7 +42,7 @@ impl Why {
 }
 
 /// (TypeScript: Man, src/game/nvg.ts:74)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Man {
     pub down: bool,
     pub dark: bool,
@@ -69,7 +69,7 @@ impl Man {
 impl Default for Man { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Team, src/game/nvg.ts:84)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Team {
     pub t: f64,
     pub mode: crate::nvg::Mode,
@@ -100,7 +100,7 @@ impl Team {
 impl Default for Team { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: NvgNote, src/game/nvg.ts:91)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NvgNote {
     pub t: f64,
     pub who: String,
@@ -163,7 +163,7 @@ impl NvgStateMenItem {
 impl Default for NvgStateMenItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NvgMod {
     /// (src/game/nvg.ts:93 NVG_LOG)
     pub nvg_log: Vec<crate::nvg::NvgNote>,

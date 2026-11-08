@@ -1,10 +1,10 @@
 //! The types of `render_decals`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DecalKind {
     Bullet,
     Scorch,
@@ -29,7 +29,7 @@ impl DecalKind {
 }
 
 /// (TypeScript: Decal, src/render/decals.ts:40)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Decal {
     pub kind: crate::render_decals::DecalKind,
     pub pos: V3,
@@ -70,7 +70,7 @@ impl Decal {
 impl Default for Decal { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/render/decals.ts:49 Decal.local, src/render/decals.ts:49)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DecalLocal {
     pub p: V3,
     pub n: V3,

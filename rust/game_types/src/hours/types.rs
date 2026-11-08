@@ -1,10 +1,10 @@
 //! The types of `hours`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum HourId {
     Overcast,
     Night,
@@ -25,7 +25,7 @@ impl HourId {
 }
 
 /// (TypeScript: HourDef, src/game/hours.ts:47)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct HourDef {
     pub id: crate::hours::HourId,
     pub label: String,
@@ -58,7 +58,7 @@ impl HourDef {
 impl Default for HourDef { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/hours.ts:56 HourDef.sun, src/game/hours.ts:56)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HourDefSun {
     pub bearing_deg: f64,
     pub elev_deg: f64,
@@ -83,7 +83,7 @@ impl HourDefSun {
 impl Default for HourDefSun { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/hours.ts:57 HourDef.sky, src/game/hours.ts:57)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HourDefSky {
     pub zenith: V3,
     pub horizon: V3,
@@ -195,7 +195,7 @@ impl SkyStateDome {
 impl Default for SkyStateDome { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: HourState, src/game/hours.ts:124)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct HourState {
     pub sun: LightId,
     pub def: crate::hours::HourDef,
@@ -249,10 +249,12 @@ impl NIGHT {
 impl Default for NIGHT { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct HoursMod {
     /// (src/game/hours.ts:140 states)
     pub states: Option<crate::hours::HourState>,
+    /// (made again from the world: in no bytes)
+    #[bytes(skip)]
     pub reach: crate::hours::SkyReach,
 }
 impl HoursMod {

@@ -1,6 +1,6 @@
 //! The types of `smoke_types`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what kind of source an emitter is, for the host's solver (smoke/types.ts:15 SmokeEmitter.kind)
@@ -211,7 +211,7 @@ impl WindGpuSourceKind {
 }
 
 /// (TypeScript: inline at src/smoke/types.ts:54 WindGpuSource.bound, src/smoke/types.ts:54)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WindGpuSourceBound {
     pub c: V3,
     pub r: f64,
@@ -228,7 +228,7 @@ impl WindGpuSourceBound {
 impl Default for WindGpuSourceBound { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: CanisterParams, src/smoke/types.ts:59)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CanisterParams {
     pub canister_duration: f64,
     pub canister_density: f64,
@@ -251,7 +251,7 @@ impl CanisterParams {
 impl Default for CanisterParams { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SmokeSystemLike, src/smoke/types.ts:61)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SmokeSystemLike {
     pub params: Option<crate::smoke_types::CanisterParams>,
 }

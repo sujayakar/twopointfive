@@ -1,6 +1,6 @@
 //! The types of `player`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: WallSnap, src/game/player.ts:1223)
@@ -48,7 +48,7 @@ impl WallSnapPress {
 impl Default for WallSnapPress { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Hold, src/game/player.ts:132)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Hold {
     pub g: GuardId,
     pub variant: crate::character::HoldVariant,
@@ -112,7 +112,7 @@ impl Hold {
 impl Default for Hold { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/player.ts:132 Hold.ask, src/game/player.ts:132)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldAsk {
     pub t: f64,
     pub dur: f64,
@@ -129,7 +129,7 @@ impl HoldAsk {
 impl Default for HoldAsk { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/player.ts:132 Hold.after, src/game/player.ts:132)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct HoldAfter {
     pub text: String,
     pub id: String,
@@ -214,7 +214,7 @@ impl LegsChar {
 impl Default for LegsChar { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: WallHold, src/game/player.ts:928)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WallHold {
     pub n: V3,
     pub along: V3,
@@ -314,7 +314,7 @@ impl WallHold {
 impl Default for WallHold { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum WallHoldKind {
     Stack,
 }
@@ -377,7 +377,7 @@ impl DOORFIT {
 impl Default for DOORFIT { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/player.ts:1135 wsPend, src/game/player.ts:1135)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PlayerModWsPendValue {
     pub t: f64,
     pub at: f64,
@@ -396,7 +396,7 @@ impl PlayerModWsPendValue {
 impl Default for PlayerModWsPendValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/player.ts:1165 wsPress, src/game/player.ts:1165)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PlayerModWsPressValue {
     pub t: f64,
     pub at: f64,
@@ -737,7 +737,7 @@ impl PressFace {
 impl Default for PressFace { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/player.ts:1278 throwRest ->, src/game/player.ts:1278)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ThrowRest {
     pub at: V3,
     pub path: Vec<V3>,
@@ -890,7 +890,7 @@ impl CursorPointHit {
 impl Default for CursorPointHit { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PlayerMod {
     /// (src/game/player.ts:1135 wsPend)
     pub ws_pend: JsMap<PlayerId, crate::player::PlayerModWsPendValue>,

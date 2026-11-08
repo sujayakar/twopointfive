@@ -1,21 +1,38 @@
 //! The types of `host_api`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: HostApi, src/host/api.ts:41)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
+#[bytes(parts)]
 pub struct HostApi {
     pub world: crate::scene_boxes::BoxWorld,
     pub lights: crate::render_lights::LightSet,
+    /// (the host's own: in no bytes)
+    #[bytes(skip)]
     pub settings: crate::root_settings::RenderSettings,
     pub weather: Option<crate::render_frame::WeatherFrame>,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub air: Option<crate::host_api::HostApiAir>,
+    /// (the host's own: in no bytes)
+    #[bytes(skip)]
     pub sharp_on: Option<bool>,
+    /// (the host's own: in no bytes)
+    #[bytes(skip)]
     pub effective_scale: f64,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub fires: Option<Vec<crate::render_passes::FireRecord>>,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub host_books: Option<crate::host_api::HostBooks>,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub skin: Option<crate::render_gbuffer::SkinnedDrawable>,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub device: crate::Opaque,
 }
 impl HostApi {

@@ -1,10 +1,10 @@
 //! The types of `close`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CloseKind {
     Behind,
     Side,
@@ -23,7 +23,7 @@ impl CloseKind {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CloseId {
     Behind,
     Front,
@@ -42,7 +42,7 @@ impl CloseId {
 }
 
 /// (TypeScript: CloseWindow, src/game/close.ts:123)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CloseWindow {
     pub id: crate::close::CloseId,
     pub kind: crate::close::CloseKind,
@@ -71,7 +71,7 @@ impl CloseWindow {
 impl Default for CloseWindow { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: CloseOffer, src/game/close.ts:132)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CloseOffer {
     pub guard: GuardId,
     pub win: Option<crate::close::CloseWindow>,
@@ -104,7 +104,7 @@ impl CloseOffer {
 impl Default for CloseOffer { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Seat, src/game/close.ts:144)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Seat {
     pub at: V3,
     pub face: f64,
@@ -125,7 +125,7 @@ impl Seat {
 impl Default for Seat { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: State, src/game/close.ts:145)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub t: f64,
     pub best: Option<crate::close::CloseOffer>,
@@ -148,7 +148,7 @@ impl State {
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/close.ts:140 CLOSE_LOG, src/game/close.ts:140)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CloseModCLOSELOGItem {
     pub t: f64,
     pub who: String,
@@ -173,7 +173,7 @@ impl CloseModCLOSELOGItem {
 impl Default for CloseModCLOSELOGItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CloseModCLOSELOGItemWhat {
     Grab,
     Seat,
@@ -397,7 +397,7 @@ impl CloseTookWhat {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CloseMod {
     /// (src/game/close.ts:140 CLOSE_LOG)
     pub close_log: Vec<crate::close::CloseModCLOSELOGItem>,

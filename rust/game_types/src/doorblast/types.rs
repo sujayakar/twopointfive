@@ -1,6 +1,6 @@
 //! The types of `doorblast`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: SlabMet, src/game/doorblast.ts:160)
@@ -107,7 +107,7 @@ impl StepThereW {
 impl Default for StepThereW { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorblastMod {
     /// (src/game/doorblast.ts:70 DOORBLAST_LOG)
     pub doorblast_log: Vec<String>,

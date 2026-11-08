@@ -1,10 +1,10 @@
 //! The types of `morale`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum Training {
     None,
     Trained,
@@ -25,7 +25,7 @@ impl Training {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum Nerve {
     Steady,
     Normal,
@@ -61,7 +61,7 @@ impl MoraleSnap {
 impl Default for MoraleSnap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum MoraleAct {
     Down,
     Reload,
@@ -92,7 +92,7 @@ impl MoraleAct {
 }
 
 /// (TypeScript: Mind, src/game/morale.ts:125)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Mind {
     pub shock: f64,
     pub alone: bool,
@@ -163,7 +163,7 @@ impl Mind {
 impl Default for Mind { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Blast, src/game/morale.ts:131)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Blast {
     pub at: V3,
     pub t: f64,
@@ -230,7 +230,7 @@ impl Kept {
 impl Default for Kept { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/morale.ts:111 MORALE_LOG, src/game/morale.ts:111)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MoraleModMORALELOGItem {
     pub id: f64,
     pub t: f64,
@@ -253,7 +253,7 @@ impl MoraleModMORALELOGItem {
 impl Default for MoraleModMORALELOGItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum MoraleModMORALELOGItemOf {
     Dust,
     Bait,
@@ -293,7 +293,7 @@ impl LINESValue {
 impl Default for LINESValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/morale.ts:219 mixAt, src/game/morale.ts:219)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct MoraleModMixAtValue {
     pub key: String,
     pub mix: crate::morale::MoraleModMixAtValueMix,
@@ -310,7 +310,7 @@ impl MoraleModMixAtValue {
 impl Default for MoraleModMixAtValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum MoraleModMixAtValueMix {
     Hard,
     Mixed,
@@ -456,7 +456,7 @@ impl MoraleKeepRow {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct MoraleMod {
     /// (src/game/morale.ts:111 MORALE_LOG)
     pub morale_log: Vec<crate::morale::MoraleModMORALELOGItem>,

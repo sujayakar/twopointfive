@@ -1,6 +1,6 @@
 //! The types of `stalk`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
@@ -29,7 +29,7 @@ impl Why {
 }
 
 /// (TypeScript: St, src/game/stalk.ts:137)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct St {
     pub on: Option<GuardId>,
     pub grab: Option<GuardId>,
@@ -60,7 +60,7 @@ impl St {
 impl Default for St { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/stalk.ts:141 St.broke, src/game/stalk.ts:141)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StBroke {
     pub gd: GuardId,
     pub t: f64,
@@ -209,7 +209,7 @@ impl StalkWait {
 impl Default for StalkWait { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StalkMod {
     /// (src/game/stalk.ts:142 STATE)
     pub state: JsMap<PlayerId, crate::stalk::St>,

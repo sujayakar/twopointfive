@@ -1,10 +1,10 @@
 //! The types of `glass`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: GlassState, src/game/glass.ts:58)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct GlassState {
     pub panes: Vec<f64>,
     pub seen: JsSet<u32>,
@@ -112,7 +112,7 @@ impl GlassHitCause {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct GlassMod {
     /// (src/game/glass.ts:45 fxForced)
     pub fx_forced: Option<bool>,

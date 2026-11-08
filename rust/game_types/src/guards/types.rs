@@ -1,17 +1,17 @@
 //! The types of `guards`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what litPlace last read the light for besides the man himself: the man he has, or the point he is turning to (guards.ts litPlace's `key`; null is the Option's None)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum LitSeenTgt {
     Man { gd: GuardId },
     Pt,
 }
 
 /// (TypeScript: Engagement, src/game/guards.ts:3532)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Engagement {
     pub operatives: Vec<GuardId>,
     pub hostiles: Vec<GuardId>,
@@ -42,7 +42,7 @@ impl Engagement {
 impl Default for Engagement { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: EngageResult, src/game/guards.ts:3531)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct EngageResult {
     pub outcome: crate::guards::EngageResultOutcome,
     pub secs: f64,
@@ -67,7 +67,7 @@ impl EngageResult {
 impl Default for EngageResult { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum EngageResultOutcome {
     Wiped,
     Reset,
@@ -88,7 +88,7 @@ impl EngageResultOutcome {
 }
 
 /// (TypeScript: inline at src/game/guards.ts:3531 EngageResult.kills, src/game/guards.ts:3531)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct EngageResultKillsItem {
     pub victim: String,
     pub team: crate::teams::Team,
@@ -109,7 +109,7 @@ impl EngageResultKillsItem {
 impl Default for EngageResultKillsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/guards.ts:3531 EngageResult.rounds, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct EngageResultRounds {
     pub guard: Option<f64>,
     pub operative: Option<f64>,
@@ -132,7 +132,7 @@ impl EngageResultRounds {
 impl Default for EngageResultRounds { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/guards.ts:3534 Engagement.rounds, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct EngagementRounds {
     pub guard: Option<f64>,
     pub operative: Option<f64>,
@@ -155,7 +155,7 @@ impl EngagementRounds {
 impl Default for EngagementRounds { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Standoff, src/game/guards.ts:854)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Standoff {
     pub pair: GuardId,
     pub since: f64,
@@ -294,7 +294,7 @@ impl Eye {
 impl Default for Eye { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: UnstickLeg, src/game/guards.ts:1363)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct UnstickLeg {
     pub to: V3,
     pub best: f64,
@@ -313,7 +313,7 @@ impl UnstickLeg {
 impl Default for UnstickLeg { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SearchSpot, src/game/guards.ts:1776)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SearchSpot {
     pub pos: V3,
     pub cell: f64,
@@ -354,7 +354,7 @@ impl SearchSpot {
 impl Default for SearchSpot { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SearchSpotKind {
     Wall,
     Prop,
@@ -375,7 +375,7 @@ impl SearchSpotKind {
 }
 
 /// (TypeScript: inline at src/game/guards.ts:1790 SearchSpot.samples, src/game/guards.ts:1790)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SearchSpotSamplesItem {
     pub t: f64,
     pub e: f64,
@@ -392,7 +392,7 @@ impl SearchSpotSamplesItem {
 impl Default for SearchSpotSamplesItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SearchPlan, src/game/guards.ts:1792)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SearchPlan {
     pub fix: V3,
     pub t0: f64,
@@ -429,7 +429,7 @@ impl SearchPlan {
 impl Default for SearchPlan { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SearchPlanPhase {
     Done,
     Look,
@@ -448,7 +448,7 @@ impl SearchPlanPhase {
 }
 
 /// (TypeScript: Pieing, src/game/guards.ts:1993)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Pieing {
     pub door: DoorId,
     pub phase: crate::guards::PieingPhase,
@@ -479,7 +479,7 @@ impl Pieing {
 impl Default for Pieing { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum PieingPhase {
     Slice,
     Approach,
@@ -496,7 +496,7 @@ impl PieingPhase {
 }
 
 /// (TypeScript: Rollcall, src/game/guards.ts:3034)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Rollcall {
     pub next_at: f64,
     pub stage: crate::guards::RollcallStage,
@@ -523,7 +523,7 @@ impl Rollcall {
 impl Default for Rollcall { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RollcallStage {
     Idle,
     Called,
@@ -575,7 +575,7 @@ impl UnitOpts {
 impl Default for UnitOpts { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/guards.ts:270 groundTrack, src/game/guards.ts:270)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GuardsModGroundTrackValue {
     pub pos: V3,
     pub t: f64,
@@ -617,7 +617,7 @@ impl BODYLIGHTDEFAULTS {
 impl Default for BODYLIGHTDEFAULTS { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/guards.ts:370 bodyMeters, src/game/guards.ts:370)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GuardsModBodyMetersValue {
     pub vis: f64,
     pub e: f64,
@@ -696,7 +696,7 @@ impl HELDMETER {
 impl Default for HELDMETER { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/guards.ts:915 heldMeters, src/game/guards.ts:915)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GuardsModHeldMetersValue {
     pub vis: f64,
     pub t: f64,
@@ -765,7 +765,7 @@ impl STANDOFFNAMELESS {
 impl Default for STANDOFFNAMELESS { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/guards.ts:1371 UNSTICK, src/game/guards.ts:1371)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GuardsModUNSTICK {
     pub legs: f64,
     pub snaps: f64,
@@ -786,7 +786,7 @@ impl GuardsModUNSTICK {
 impl Default for GuardsModUNSTICK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/guards.ts:1545 litSeen, src/game/guards.ts:1545)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct GuardsModLitSeenValue {
     pub t: f64,
     pub lit: bool,
@@ -807,7 +807,7 @@ impl GuardsModLitSeenValue {
 impl Default for GuardsModLitSeenValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/guards.ts:1563 darkSeen, src/game/guards.ts:1563)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GuardsModDarkSeenValue {
     pub t: f64,
     pub dark: bool,
@@ -824,7 +824,7 @@ impl GuardsModDarkSeenValue {
 impl Default for GuardsModDarkSeenValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/guards.ts:1579 wallSeen, src/game/guards.ts:1579)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GuardsModWallSeenValue {
     pub t: f64,
     pub since: f64,
@@ -845,7 +845,7 @@ impl GuardsModWallSeenValue {
 impl Default for GuardsModWallSeenValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/guards.ts:1642 torchLowSeen, src/game/guards.ts:1642)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GuardsModTorchLowSeenValue {
     pub t: f64,
     pub low: bool,
@@ -862,7 +862,7 @@ impl GuardsModTorchLowSeenValue {
 impl Default for GuardsModTorchLowSeenValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/guards.ts:1665 litManSeen, src/game/guards.ts:1665)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GuardsModLitManSeenValue {
     pub t: f64,
     pub tgt: GuardId,
@@ -1455,7 +1455,7 @@ impl EndEngagementOutcome {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct GuardsMod {
     /// (src/game/guards.ts:270 groundTrack)
     pub ground_track: JsMap<PlayerId, crate::guards::GuardsModGroundTrackValue>,

@@ -1,6 +1,6 @@
 //! The types of `seenwalk`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a walk's price of the floor, the penalty of nav.findPath and C.dearAlong: `dear` on lit floor in view of an uncleared room and on floor outside the box, 1 elsewhere. The box and the eyes are this walk's; the knobs, g.cleared, g.col.nav and the block memo (g.m.seenwalk.shared, shared by every walk of the tick) are read live from g (seenwalk.ts seenPrice)
@@ -10,7 +10,7 @@ pub enum SeenPrice {
 }
 
 /// (TypeScript: Shared, src/game/seenwalk.ts:48)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Shared {
     pub t: f64,
     pub known: f64,
@@ -33,7 +33,7 @@ impl Shared {
 impl Default for Shared { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/seenwalk.ts:48 Shared.eyes, src/game/seenwalk.ts:48)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SharedEyesItem {
     pub x: f64,
     pub z: f64,
@@ -50,7 +50,7 @@ impl SharedEyesItem {
 impl Default for SharedEyesItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SeenwalkMod {
     /// (src/game/seenwalk.ts:49 shared)
     pub shared: Option<crate::seenwalk::Shared>,

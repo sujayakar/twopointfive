@@ -1,10 +1,10 @@
 //! The types of `frag`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: BlastReport, src/game/frag.ts:207)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BlastReport {
     pub at: V3,
     pub who: f64,
@@ -35,7 +35,7 @@ impl BlastReport {
 impl Default for BlastReport { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: BlastHit, src/game/frag.ts:206)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BlastHit {
     pub id: f64,
     pub name: String,
@@ -64,7 +64,7 @@ impl BlastHit {
 impl Default for BlastHit { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum BlastResult {
     Wounded,
     Killed,
@@ -83,7 +83,7 @@ impl BlastResult {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum BlastHitBehind {
     Door,
     Cover,
@@ -161,7 +161,7 @@ impl GlassView {
 }
 
 /// (TypeScript: Live, src/game/frag.ts:447)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Live {
     pub it: ItemId,
     pub side: crate::teams::Team,
@@ -198,7 +198,7 @@ impl Live {
 impl Default for Live { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Rest, src/game/frag.ts:471)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Rest {
     pub t: f64,
     pub still: bool,
@@ -219,7 +219,7 @@ impl Rest {
 impl Default for Rest { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/frag.ts:447 Live.made, src/game/frag.ts:447)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct LiveMadeValue {
     pub at: V3,
     pub t: f64,
@@ -236,7 +236,7 @@ impl LiveMadeValue {
 impl Default for LiveMadeValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Carrier, src/game/frag.ts:818)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Carrier {
     pub gd: GuardId,
     pub frags: f64,
@@ -265,7 +265,7 @@ impl Carrier {
 impl Default for Carrier { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/frag.ts:818 Carrier.wind, src/game/frag.ts:818)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CarrierWind {
     pub until: f64,
     pub at: V3,
@@ -290,7 +290,7 @@ impl CarrierWind {
 impl Default for CarrierWind { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/frag.ts:818 Carrier.spots, src/game/frag.ts:818)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CarrierSpots {
     pub at: V3,
     pub from: V3,
@@ -311,7 +311,7 @@ impl CarrierSpots {
 impl Default for CarrierSpots { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: DefBook, src/game/frag.ts:819)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DefBook {
     pub men: Vec<GuardId>,
     pub carriers: Vec<crate::frag::Carrier>,
@@ -334,7 +334,7 @@ impl DefBook {
 impl Default for DefBook { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/frag.ts:268 WALLS_FOR, src/game/frag.ts:268)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FragModWALLSFORValue {
     pub time: f64,
     pub serial: f64,
@@ -353,7 +353,7 @@ impl FragModWALLSFORValue {
 impl Default for FragModWALLSFORValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/frag.ts:281 TORN, src/game/frag.ts:281)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FragModTORNValue {
     pub time: f64,
     pub doors: Vec<DoorId>,
@@ -661,7 +661,7 @@ impl LandsSol {
 impl Default for LandsSol { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FragMod {
     /// (src/game/frag.ts:210 FRAG_LOG)
     pub frag_log: Vec<crate::frag::BlastReport>,

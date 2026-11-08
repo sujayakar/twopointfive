@@ -1,6 +1,6 @@
 //! The types of `doornames`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: inline at src/game/doornames.ts:75 nameDoors(doors), src/game/doornames.ts:75)
@@ -60,7 +60,7 @@ impl DoorSaidNameD {
 impl Default for DoorSaidNameD { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoornamesMod {
     /// (src/game/doornames.ts:24 SAID)
     pub said: JsMap<DoorId, String>,

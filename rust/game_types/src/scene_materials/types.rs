@@ -1,10 +1,10 @@
 //! The types of `scene_materials`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DoesWord {
     Snow,
     Carpet,
@@ -85,7 +85,7 @@ impl DoesWord {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum Surf {
     Carpet,
     Metal,
@@ -116,7 +116,7 @@ impl Surf {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum BreakClass {
     Hard,
     Metal,
@@ -137,7 +137,7 @@ impl BreakClass {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SnowKind {
     Snow,
     SnowPacked,
@@ -154,7 +154,7 @@ impl SnowKind {
 }
 
 /// (TypeScript: Does, src/scene/materials.ts:34)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Does {
     pub surf: crate::scene_materials::Surf,
     pub breaks: crate::scene_materials::BreakClass,
@@ -193,7 +193,7 @@ impl Does {
 impl Default for Does { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DoesWall {
     Board,
     Screen,
@@ -208,7 +208,7 @@ impl DoesWall {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DoesCover {
     Wood,
     Cardboard,
@@ -2116,7 +2116,7 @@ impl DoesWetB {
 impl Default for DoesWetB { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SceneMaterialsMod {
     /// (src/scene/materials.ts:123 ROWS)
     pub rows: JsMap<String, crate::scene_materials::Does>,

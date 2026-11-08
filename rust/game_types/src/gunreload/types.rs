@@ -1,6 +1,6 @@
 //! The types of `gunreload`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
@@ -160,7 +160,7 @@ impl ShellRow {
 impl Default for ShellRow { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/weapons.ts:73 ShellRow.shell, src/game/weapons.ts:73)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ShellRowShell {
     pub lead: f64,
     pub each: f64,

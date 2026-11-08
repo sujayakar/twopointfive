@@ -1,10 +1,10 @@
 //! The types of `nightbreach`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: BlindBurst, src/game/nightbreach.ts:107)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BlindBurst {
     pub until: f64,
     pub n: f64,
@@ -23,7 +23,7 @@ impl BlindBurst {
 impl Default for BlindBurst { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: NightBreachMark, src/game/nightbreach.ts:128)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NightBreachMark {
     pub pos: V3,
     pub aim_at: V3,
@@ -44,7 +44,7 @@ impl NightBreachMark {
 impl Default for NightBreachMark { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: NightBreachLayout, src/game/nightbreach.ts:132)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NightBreachLayout {
     pub name: String,
 }
@@ -88,7 +88,7 @@ impl NightBreachState {
 }
 
 /// (TypeScript: NightBreach, src/game/nightbreach.ts:145)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NightBreach {
     pub active: bool,
     pub drill: Option<crate::breach::BreachDrill>,
@@ -139,7 +139,7 @@ impl NightBreach {
 impl Default for NightBreach { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/nightbreach.ts:160 NightBreach.log, src/game/nightbreach.ts:160)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NightBreachLogItem {
     pub t: f64,
     pub what: String,
@@ -234,7 +234,7 @@ impl NightBreachObjective {
 impl Default for NightBreachObjective { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NightbreachMod {
     /// (src/game/nightbreach.ts:140 applied)
     pub applied: Option<crate::scene_scenarios::TeamStart>,

@@ -1,10 +1,10 @@
 //! The types of `destruction_switch`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: inline at src/game/destructionSwitch.ts:47 BLAST_PACE, src/game/destructionSwitch.ts:47)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DestructionSwitchModBLASTPACE {
     pub on: bool,
     pub reach_hold: f64,
@@ -25,7 +25,7 @@ impl DestructionSwitchModBLASTPACE {
 impl Default for DestructionSwitchModBLASTPACE { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DestructionSwitchMod {
     /// (src/game/destructionSwitch.ts:47 BLAST_PACE)
     pub blast_pace: crate::destruction_switch::DestructionSwitchModBLASTPACE,

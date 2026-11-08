@@ -1,10 +1,10 @@
 //! The types of `tracers`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Tracers, src/game/tracers.ts:58)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Tracers {
     pub pool: Vec<crate::tracers::Tracer>,
     pub live: f64,
@@ -27,7 +27,7 @@ impl Tracers {
 impl Default for Tracers { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: Tracer, src/game/tracers.ts:39)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Tracer {
     pub alive: bool,
     pub from: V3,
@@ -70,7 +70,7 @@ impl Tracer {
 impl Default for Tracer { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum TracerImpact {
     None,
     Solid,
@@ -87,7 +87,7 @@ impl TracerImpact {
 }
 
 /// (TypeScript: inline at src/game/tracers.ts:69 Tracers.params, src/game/effects.ts:156)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct TracersParams {
     pub speed: f64,
     pub min_life: f64,

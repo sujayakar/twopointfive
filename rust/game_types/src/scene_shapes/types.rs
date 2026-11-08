@@ -1,6 +1,6 @@
 //! The types of `scene_shapes`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: ShapeForm, src/scene/shapes.ts:73)
@@ -25,7 +25,7 @@ impl ShapeForm {
 impl Default for ShapeForm { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/shapes.ts:73 ShapeForm.arc, src/scene/shapes.ts:73)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ShapeFormArc {
     pub axis: f64,
     pub rise: f64,
@@ -42,7 +42,7 @@ impl ShapeFormArc {
 impl Default for ShapeFormArc { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: ShapePiece, src/scene/shapes.ts:75)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ShapePiece {
     pub off: V3,
     pub h: V3,
@@ -79,7 +79,7 @@ impl ShapePiece {
 impl Default for ShapePiece { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: BoxShape, src/scene/shapes.ts:77)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BoxShape {
     pub with: Option<Vec<crate::scene_shapes::ShapePiece>>,
     pub round: Option<f64>,

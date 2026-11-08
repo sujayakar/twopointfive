@@ -1,10 +1,10 @@
 //! The types of `aim`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: AimState, src/game/aim.ts:102)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AimState {
     pub track: f64,
     pub tgt_key: String,
@@ -41,7 +41,7 @@ impl AimState {
 impl Default for AimState { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/aim.ts:121 AimState.fouled, src/game/aim.ts:121)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AimStateFouled {
     pub n: f64,
     pub pos: V3,
@@ -58,7 +58,7 @@ impl AimStateFouled {
 impl Default for AimStateFouled { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/aim.ts:124 AimState.lastShot, src/game/aim.ts:124)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AimStateLastShot {
     pub t: f64,
     pub track: f64,

@@ -1,6 +1,6 @@
 //! The types of `wind`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: WindTune, src/game/wind.ts:55)
@@ -21,7 +21,7 @@ impl WindTune {
 impl Default for WindTune { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum WindWhy {
     Door,
     Glass,
@@ -40,7 +40,7 @@ impl WindWhy {
 }
 
 /// (TypeScript: WindSource, src/game/wind.ts:108)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WindSource {
     pub why: crate::wind::WindWhy,
     pub base: f64,
@@ -101,7 +101,7 @@ impl WindSource {
 impl Default for WindSource { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum WindSourceKind {
     Jet,
     Storm,
@@ -116,7 +116,7 @@ impl WindSourceKind {
 }
 
 /// (TypeScript: Wind, src/game/wind.ts:118)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Wind {
     pub all: Vec<WindWindSourceId>,
     pub active: Vec<WindWindSourceId>,
@@ -154,7 +154,7 @@ impl WINDFIELD {
 impl Default for WINDFIELD { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WindMod {
     /// (src/game/wind.ts:38 SHAPE)
     pub shape: Option<Vec<f64>>,

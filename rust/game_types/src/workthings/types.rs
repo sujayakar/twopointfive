@@ -1,10 +1,10 @@
 //! The types of `workthings`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: WorkThing, src/game/workthings.ts:89)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WorkThing {
     pub kind: crate::workthings::WorkThingKind,
     pub face: V3,
@@ -27,7 +27,7 @@ impl WorkThing {
 impl Default for WorkThing { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum WorkThingKind {
     Breaker,
     Objective,
@@ -42,7 +42,7 @@ impl WorkThingKind {
 }
 
 /// (TypeScript: WorkThings, src/game/workthings.ts:154)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WorkThings {
     pub row: OrdersOrderDefId,
     pub jobs: JsMap<GuardId, crate::workthings::Job>,
@@ -65,7 +65,7 @@ impl WorkThings {
 impl Default for WorkThings { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: Job, src/game/workthings.ts:94)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Job {
     pub thing: crate::workthings::WorkThing,
     pub verb: crate::workthings::WorkVerb,
@@ -88,7 +88,7 @@ impl Job {
 impl Default for Job { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum WorkVerb {
     Drive,
     BreakerOff,
@@ -105,7 +105,7 @@ impl WorkVerb {
 }
 
 /// (TypeScript: inline at src/game/workthings.ts:160 WorkThings.hands, src/game/workthings.ts:160)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WorkThingsHandsValue {
     pub push: crate::character::DoorPush,
     pub until: f64,
@@ -130,7 +130,7 @@ impl WorkThingsHandsValue {
 impl Default for WorkThingsHandsValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/workthings.ts:161 WorkThings.cache, src/game/workthings.ts:161)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WorkThingsCache {
     pub key: String,
     pub t: f64,
@@ -149,7 +149,7 @@ impl WorkThingsCache {
 impl Default for WorkThingsCache { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/workthings.ts:169 WorkThings.log, src/game/workthings.ts:169)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WorkThingsLogItem {
     pub t: f64,
     pub who: String,
@@ -208,7 +208,7 @@ impl Area {
 impl Default for Area { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: BreakerErrand, src/game/workthings.ts:135)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreakerErrand {
     pub goal: V3,
     pub mid: V3,
@@ -227,7 +227,7 @@ impl BreakerErrand {
 impl Default for BreakerErrand { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/workthings.ts:136 errands, src/game/workthings.ts:136)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WorkthingsModErrandsValue {
     pub t: f64,
     pub key: String,
@@ -322,7 +322,7 @@ pub enum WorkOn {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WorkthingsMod {
     /// (src/game/workthings.ts:136 errands)
     pub errands: Option<crate::workthings::WorkthingsModErrandsValue>,

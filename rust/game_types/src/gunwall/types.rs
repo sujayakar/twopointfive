@@ -1,6 +1,6 @@
 //! The types of `gunwall`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
@@ -19,7 +19,7 @@ impl GunUp {
 }
 
 /// (TypeScript: Hold, src/game/gunwall.ts:52)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Hold {
     pub x: f64,
     pub z: f64,
@@ -51,7 +51,7 @@ impl Hold {
 impl Default for Hold { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: St, src/game/gunwall.ts:53)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct St {
     pub low: bool,
     pub t: f64,
@@ -86,7 +86,7 @@ impl St {
 impl Default for St { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/gunwall.ts:72 FIGHT, src/game/gunwall.ts:72)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GunwallModFIGHTValue {
     pub t: f64,
     pub until: f64,
@@ -173,7 +173,7 @@ impl RaisedLine {
 impl Default for RaisedLine { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct GunwallMod {
     /// (src/game/gunwall.ts:56 ST)
     pub st: JsMap<CharId, crate::gunwall::St>,

@@ -1,10 +1,10 @@
 //! The types of `samlook`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: St, src/game/samlook.ts:32)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct St {
     pub on: Option<GuardId>,
 }
@@ -55,7 +55,7 @@ impl SlipNow {
 impl Default for SlipNow { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SamlookMod {
     /// (src/game/samlook.ts:33 STATE)
     pub state: JsMap<PlayerId, crate::samlook::St>,

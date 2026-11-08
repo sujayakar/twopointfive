@@ -1,6 +1,6 @@
 //! The types of `fogofwar`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: FogSnap, src/game/fogofwar.ts:377)
@@ -27,7 +27,7 @@ impl FogSnap {
 impl Default for FogSnap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: FogEye, src/game/fogofwar.ts:392)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FogEye {
     pub id: f64,
     pub pos: V3,
@@ -54,7 +54,7 @@ impl FogEye {
 impl Default for FogEye { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: FogOfWar, src/game/fogofwar.ts:424)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FogOfWar {
     pub on: bool,
     pub eyes: Vec<crate::fogofwar::FogEye>,
@@ -170,7 +170,7 @@ impl FogPicture {
 impl Default for FogPicture { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/fogofwar.ts:436 FogOfWar.stats, src/game/fogofwar.ts:436)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FogOfWarStats {
     pub frames: f64,
     pub eyes: f64,
@@ -199,7 +199,7 @@ impl FogOfWarStats {
 impl Default for FogOfWarStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Rec, src/game/fogofwar.ts:407)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Rec {
     pub seen: bool,
     pub framed: Option<bool>,
@@ -224,7 +224,7 @@ impl Rec {
 impl Default for Rec { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/fogofwar.ts:446 FogOfWar.doorRecs, src/game/fogofwar.ts:446)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FogOfWarDoorRecsValue {
     pub shown: f64,
     pub ghost: Option<Vec<BoxId>>,
@@ -241,7 +241,7 @@ impl FogOfWarDoorRecsValue {
 impl Default for FogOfWarDoorRecsValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: ThingRec, src/game/fogofwar.ts:378)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ThingRec {
     pub ghost: Vec<FrameBoxId>,
     pub x: f64,
@@ -270,7 +270,7 @@ impl ThingRec {
 impl Default for ThingRec { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/fogofwar.ts:457 FogOfWar.thingStats, src/game/fogofwar.ts:457)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FogOfWarThingStats {
     pub held: f64,
     pub out: f64,
@@ -308,7 +308,7 @@ impl FogOfWarPendingItem {
 impl Default for FogOfWarPendingItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/fogofwar.ts:622 FogOfWar.callLog, src/game/fogofwar.ts:622)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FogOfWarCallLogItem {
     pub t: f64,
     pub who: String,
@@ -331,7 +331,7 @@ impl FogOfWarCallLogItem {
 impl Default for FogOfWarCallLogItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum FogOfWarCallLogItemKind {
     Heard,
     Contact,
@@ -346,7 +346,7 @@ impl FogOfWarCallLogItemKind {
 }
 
 /// (TypeScript: inline at src/game/fogofwar.ts:623 FogOfWar.callStats, src/game/fogofwar.ts:623)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FogOfWarCallStats {
     pub contact: f64,
     pub heard: f64,
@@ -382,7 +382,7 @@ impl FogOfWarFullStats {
 impl Default for FogOfWarFullStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/fogofwar.ts:348 FOG_PAGE, src/game/fogofwar.ts:348)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FogofwarModFOGPAGE {
     pub desat: f64,
     pub edge: f64,
@@ -456,7 +456,7 @@ impl FogOfWarLastSeenItem {
 impl Default for FogOfWarLastSeenItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FogofwarMod {
     /// (src/game/fogofwar.ts:348 FOG_PAGE)
     pub fog_page: crate::fogofwar::FogofwarModFOGPAGE,

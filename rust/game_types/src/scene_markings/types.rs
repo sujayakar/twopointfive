@@ -1,10 +1,10 @@
 //! The types of `scene_markings`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum MarkFace {
     X,
     X2,
@@ -27,7 +27,7 @@ impl MarkFace {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum MarkRes {
     Base,
     Fine,
@@ -44,7 +44,7 @@ impl MarkRes {
 }
 
 /// (TypeScript: MarkPal, src/scene/markings.ts:37)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MarkPal {
     pub albedo: Option<V3>,
     pub mul: Option<f64>,
@@ -65,7 +65,7 @@ impl MarkPal {
 impl Default for MarkPal { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: MarkingDef, src/scene/markings.ts:38)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct MarkingDef {
     pub face: crate::scene_markings::MarkFace,
     pub res: Option<crate::scene_markings::MarkRes>,
@@ -231,7 +231,7 @@ impl MarkWorldRect {
 impl Default for MarkWorldRect { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SceneMarkingsMod {
     /// (src/scene/markings.ts:369 AREA_LIT_MARKS)
     pub area_lit_marks: JsSet<u32>,
