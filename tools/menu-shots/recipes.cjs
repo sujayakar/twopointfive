@@ -15,12 +15,6 @@ R['block-four'] = {      // the mess, a room that turns a corner: the point man 
   play: `ms.approach('m_s', 3.0, 30); ms.order('openClear', 'm_s');
          return ms.sim(25, () => ms.shotNow() && ms.ops().some(o => o.char.pos[2] < 8 && o.char.pos[0] < 15.5));`,
   cam: { look: [14.7, 1, 7.4], yaw: -2.5, pitch: 1.1, dist: 11.5 } };
-R['block-squads'] = {    // night; the workshop taken through its second door behind a can: the first two men through the tool crib's door, a round going, seen from the corner its men held
-  query: 'levelFile=block-squads.json&roomclear&squad4' + Q, quality: 'medium', frames: 8,
-  play: `ms.order('fallIn', [8.6, 0, 13.9]); ms.go([9.4, 0, 21.2]); ms.sim(25, () => ms.arrived());
-         ms.order('bangClear', 'w_c'); const t0 = g.time; ms.must(ms.sim(40, () => ms.bangBy('w_c', t0)), 'the can');
-         return ms.sim(8, () => ms.shotNow() && ms.ops().some(o => o.char.pos[0] > 17.05 && o.char.pos[2] > 18.6));`,
-  cam: { look: [17.7, 1.1, 22.5], yaw: 2.4, pitch: 0.3, dist: 3.4 } };
 R['pass-four'] = {       // night, snow; in by the gate and round the lorry's tail, a can through the tea room's door: the flash in the doorway and out of its windows, the door man black against it, the brazier, seen from the yard past the lorry's cab
   query: 'levelFile=pass.json&roomclear&squad4' + Q, quality: 'medium', frames: 8,
   play: `for (const w of [[19.8, 0, 23.6], [21.6, 0, 20.4]]) { ms.go(w); ms.must(ms.sim(25, () => ms.arrived()), 'the walk in by the gate'); }

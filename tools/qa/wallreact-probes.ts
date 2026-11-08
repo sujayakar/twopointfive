@@ -1,4 +1,4 @@
-// Both sides react when the level breaks (src/game/wallreact.ts): `bun run tools/qa/wallreact-probes.ts [--level block-squads|compound|warehouse|all] [--verbose]`
+// Both sides react when the level breaks (src/game/wallreact.ts): `bun run tools/qa/wallreact-probes.ts [--level block|compound|warehouse|all] [--verbose]`
 // (its own runner: it is not a family of probes.ts — exit 0 all pass, 1 a failure). PASS / FAIL each, all headless: the Game of headless.ts on a loud level, started exactly
 // as the page's scenario row starts it (the four against that level's defenders), THE ONE SWITCH of the destruction goal raised by the probe itself, holes
 // blown with `g.destr.blast` directly (who decides to blow one is other pieces'). Men are STOOD where a probe needs them (a defender's post moved beside a
@@ -28,7 +28,7 @@ type Vec3 = [number, number, number];
 const DT = 1 / 60;
 const VERBOSE = process.argv.includes('--verbose');
 if (process.argv.includes('--debug')) WALLREACT_DEBUG.log = (m: string) => console.log(m);
-const LEVELS = (() => { const i = process.argv.indexOf('--level'); const v = i >= 0 ? process.argv[i + 1] : 'all'; return v === 'all' ? ['block-squads', 'compound', 'warehouse'] : [v]; })();
+const LEVELS = (() => { const i = process.argv.indexOf('--level'); const v = i >= 0 ? process.argv[i + 1] : 'all'; return v === 'all' ? ['block', 'compound', 'warehouse'] : [v]; })();
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const f1 = (x: number) => (Number.isFinite(x) ? x.toFixed(1) : String(x)), at = (p: number[]) => `(${f1(p[0])}, ${f1(p[2])})`;
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);

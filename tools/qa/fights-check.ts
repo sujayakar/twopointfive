@@ -3,7 +3,7 @@
 // says which of them has him (src/game/owner.ts) or why it is meant before it goes on the list.
 //   bun run tools/qa/fights-check.ts                        the 42 runs on the frozen stand; exit 0 = no new pair, 1 = a new pair (named), 2 = a run left no count
 //   TPS_PROFILE=shipped bun run tools/qa/fights-check.ts    the same on the shipped stand
-//   FIGHTS_SCN=depot-four,block-squads FIGHTS_SEEDS=1 …     fewer runs (a pair's absence then means nothing; a NEW pair still does)
+//   FIGHTS_SCN=depot-four,block-four FIGHTS_SEEDS=1 …     fewer runs (a pair's absence then means nothing; a NEW pair still does)
 //   FIGHTS_JOBS=4                                           how many at once
 //   FIGHTS_BREAK=1 bun run tools/qa/fights-check.ts …       the red path: the list without its pairs of the guards and the room fight, so the same runs must name them: must FAIL
 // What it does not see (the review's own list, 2026-11-05): aimYaw, bodyYaw and the animator's fields, doors, the player, solo stealth missions, god mode; a scripted player. A pair
