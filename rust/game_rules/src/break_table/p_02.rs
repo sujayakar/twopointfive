@@ -394,8 +394,7 @@ pub fn breaks_break_again(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     if row.mark > 0.0 && bc[1] - crate::debris::support_along(g, b, [0.0, 1.0, 0.0]) < 0.06 {
         let opts = if dressing { crate::render_decals::DecalOpts { look: Some(true), ..Default::default() } } else { Default::default() };
         let pos = [bc[0], bc[1] - crate::debris::support_along(g, b, [0.0, 1.0, 0.0]) + 0.002, bc[2]];
-        let d = crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Chip, pos, [0.0, 1.0, 0.0], Some(row.mark * (0.7 + 0.6 * r(20.0))), Some(opts));
-        if dressing { crate::look_decals::look_decal(g, d.as_ref()); }
+        crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Chip, pos, [0.0, 1.0, 0.0], Some(row.mark * (0.7 + 0.6 * r(20.0))), Some(opts));
     }
     g.stats.break_table.again += 1;
 }
