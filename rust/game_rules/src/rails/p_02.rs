@@ -82,8 +82,8 @@ pub fn rails_lesson(g: &crate::game::Game) -> Option<crate::rails::RailsLesson> 
     Some(crate::rails::RailsLesson { l, i })
 }
 /// the actions that work now, derived from the step that is up (rails.ts Rails.allowed)
-pub fn rails_allowed(g: &crate::game::Game) -> Option<JsSet<String>> {
-    let s = rails_lesson(g)?;
+pub fn rails_allowed(g: &crate::game::Game) -> Option<JsSet<String>> { rails_lesson(g).map(|s| allowed_of(&s)) }
+fn allowed_of(s: &crate::rails::RailsLesson) -> JsSet<String> {
     let mut set = JsSet::new();
     for a in &s.l.rails.as_ref().unwrap().allow { set.add(a.clone()); }
     let mut k = 0;
@@ -93,15 +93,15 @@ pub fn rails_allowed(g: &crate::game::Game) -> Option<JsSet<String>> {
         if let Some(l) = &t.deny { for a in l { set.delete(a.clone()); } }
         k += 1;
     }
-    Some(set)
+    set
 }
 /// is this action locked right now (rails.ts Rails.locks)
 pub fn rails_locks(g: &crate::game::Game, action: &str) -> bool {
     match rails_allowed(g) { Some(a) => !has(&a, action), None => false }
 }
 /// has a step taken this back: the last step that names it denies it (rails.ts Rails.shuts)
-pub fn rails_shuts(g: &crate::game::Game, action: &str) -> bool {
-    let s = match rails_lesson(g) { Some(s) => s, None => return false };
+pub fn rails_shuts(g: &crate::game::Game, action: &str) -> bool { rails_lesson(g).map_or(false, |s| shuts_of(&s, action)) }
+fn shuts_of(s: &crate::rails::RailsLesson, action: &str) -> bool {
     let mut off = false;
     let mut k = 0;
     while (k as f64) <= s.i && k < s.l.steps.len() {
@@ -130,8 +130,6 @@ pub fn rails_settles(g: &mut crate::game::Game, l: &crate::scene_scenarios::Less
     let t = g.time - done_t;
     t >= 0.0 && (t < g.k.rails.card_beat_secs || (e.quiet.unwrap_or(false) && t < g.k.rails.card_max && g.time - rails_fight(g) < g.k.rails.card_quiet))
 }
-/// no teammate shows an aiming laser on this level (rails.ts Rails.noLasers)
-pub fn rails_no_lasers(g: &crate::game::Game) -> bool { rails_data(g).map_or(false, |d| d.lasers == Some(false)) }
 /// the step teaches the hold: a tap gives nothing, and is noted for the page (rails.ts Rails.tapOff)
 pub fn rails_tap_off(g: &mut crate::game::Game) -> bool {
     if !rails_teaches_hold(g) { return false; }
@@ -572,7 +570,7 @@ pub fn rails_keep(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
     { let i = &g.tab.input[input]; if walk_keys().iter().any(|k| i.keys.has(k.clone())) { return; } }
     let s = match rails_lesson(g) { Some(s) => s, None => return };
     let at = match step_at(&s.l, s.i).and_then(|t| t.at) { Some(a) => a, None => return };
-    let v = match rails_look(g) { Some(v) => v, None => return };
+    let v = match rails_look(g, &crate::seats::here(g)) { Some(v) => v, None => return };
     let dist = g.tab.camera[cam].distance;
     if rails_on_way(g, &crate::seats::here(g), Some(&s)) {
         let o = g.rails.sky.off;
@@ -601,32 +599,117 @@ pub fn rails_keep(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
 }
 /// how far the view has been shifted off the squad (rails.ts Rails.panned)
 pub fn rails_panned(g: &crate::game::Game) -> f64 { m::hyp2(g.rails.sky.off[0], g.rails.sky.off[2]) }
-/// where the view looks in the sky seat (rails.ts Rails.look)
-pub fn rails_look(g: &mut crate::game::Game) -> Option<V3> {
-    if !rails_sky_on(g) { return None; }
+/// the middle of the men still up
+fn squad_middle(g: &crate::game::Game) -> Option<V3> {
     let men = rails_squad(g);
-    if !men.is_empty() {
-        let n = men.len() as f64;
-        let mut c: V3 = [0.0, 0.0, 0.0];
-        for x in &men { let p = g.ch[g.gd[*x].ch].pos; c[0] += p[0] / n; c[2] += p[2] / n; }
-        if g.rails.sky.mid.is_none() || g.rails.sky.mid_t != g.time {
-            match g.rails.sky.mid {
-                None => g.rails.sky.mid = Some(c),
-                Some(mut q) => {
-                    let dt = m::max(0.0, g.time - g.rails.sky.mid_t);
-                    let a = 1.0 - m::exp(-dt * 2.5);
-                    q[0] += (c[0] - q[0]) * a;
-                    q[2] += (c[2] - q[2]) * a;
-                    g.rails.sky.mid = Some(q);
-                }
-            }
-            g.rails.sky.mid_t = g.time;
+    if men.is_empty() { return None; }
+    let n = men.len() as f64;
+    let mut c: V3 = [0.0, 0.0, 0.0];
+    for x in &men { let p = g.ch[g.gd[*x].ch].pos; c[0] += p[0] / n; c[2] += p[2] / n; }
+    Some(c)
+}
+/// THE LAST THING A TICK DOES in the sky seat: the point the view rides eases toward the middle of the men still up, wherever the tick left them
+pub fn rails_ease_mid(g: &mut crate::game::Game) {
+    if !rails_sky_on(g) { return; }
+    let c = match squad_middle(g) { Some(c) => c, None => return };
+    if g.rails.sky.mid.is_some() && g.rails.sky.mid_t == g.time { return; }
+    match g.rails.sky.mid {
+        None => g.rails.sky.mid = Some(c),
+        Some(mut q) => {
+            let dt = m::max(0.0, g.time - g.rails.sky.mid_t);
+            let a = 1.0 - m::exp(-dt * 2.5);
+            q[0] += (c[0] - q[0]) * a;
+            q[2] += (c[2] - q[2]) * a;
+            g.rails.sky.mid = Some(q);
         }
     }
-    let mid = match g.rails.sky.mid { Some(q) => q, None => g.ch[g.pl[g.player].ch].pos };
+    g.rails.sky.mid_t = g.time;
+}
+/// where the view looks in the sky seat, as the last tick eased it, plus the hand's own shift (rails.ts Rails.look)
+pub fn rails_look(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<V3> { if rails_sky_on(g) { Some(look_now(g, seat)) } else { None } }
+fn look_now(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> V3 {
+    let mid = g.rails.sky.mid.or_else(|| squad_middle(g)).unwrap_or(g.ch[g.pl[seat.player].ch].pos);
     let o = g.rails.sky.off;
     let w = crate::scene_world::world();
-    Some([m::min(w.max[0], m::max(w.min[0], mid[0] + o[0])), 0.0, m::min(w.max[2], m::max(w.min[2], mid[2] + o[2]))])
+    [m::min(w.max[0], m::max(w.min[0], mid[0] + o[0])), 0.0, m::min(w.max[2], m::max(w.min[2], mid[2] + o[2]))]
+}
+
+// ---------------------------------------------------------------- what the HUD is told (the view)
+/// a line that names a key: /\[[^\]]+\]/
+fn names_key(line: &str) -> bool {
+    line.split('[').skip(1).any(|rest| rest.find(']').map_or(false, |end| end > 0))
+}
+/// the one line on screen (None: the run is over) (rails.ts Rails.prompt)
+fn rails_prompt(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &crate::rails::RailsLesson) -> Option<crate::view::RailPrompt> {
+    use crate::lesson::{lesson_line, lesson_over, lesson_settling, line_of};
+    use crate::scene_scenarios::LessonTestKind;
+    let of = s.l.steps.len();
+    if of == 0 || lesson_over(g, seat) { return None; }
+    // (every step done and the mission not yet over: the last line stays up until the mission's own end)
+    let up = (s.i as usize) < of;
+    let i = m::min(s.i, of as f64 - 1.0) as usize;
+    let t = &s.l.steps[i];
+    let step_line = || lesson_line(g, &line_of(g, t));
+    let cue = matches!(t.done, LessonTestKind::Cue { .. });
+    let said_now = |a: &crate::scene_scenarios::LessonStepAfter| said(a, g.rails.gave).filter(|l| !l.is_empty());
+    let gave_here = g.rails.gave_step == s.i && js::truthy(g.rails.gave);
+    let (n, of_n) = (i as u32 + 1, of as u32);
+    // (the step's deed is done and it settles before the next step's card: what its men are doing, or nothing. Never a line that asks for a key)
+    if up && g.k.rails.card_beat && s.l.steps.get(i + 1).map_or(false, |x| x.explain.is_some()) && lesson_settling(g) {
+        let w = if cue { step_line() } else if gave_here { t.after.as_ref().and_then(said_now).map_or(String::new(), |l| lesson_line(g, &l)) } else { String::new() };
+        return Some(crate::view::RailPrompt { line: if names_key(&w) { String::new() } else { w }, n, of: of_n, note: None, watch: true });
+    }
+    // (the squad's ring is up ON THE STEP'S MARK: the line is what to press in it)
+    let menu = if up { seat.orders.menu.as_ref() } else { None };
+    let flat = menu.map_or(false, |x| x.flat.unwrap_or(false));
+    let on = menu.map_or(false, |x| t.at.map_or(true, |at| {
+        let p = crate::orders::order_target_at(&x.target);
+        m::hyp2(p[0] - at[0], p[2] - at[2]) < MENU_M
+    }));
+    let ring = if !on { None } else {
+        let x = menu.unwrap();
+        let l = if flat { t.flat_line.as_ref().or(t.menu_line.as_ref()) } else if x.page.is_none() { t.menu_line.as_ref() } else { t.page_line.as_ref().or(t.menu_line.as_ref()) };
+        l.filter(|l| !l.is_empty())
+    };
+    let d = g.time - g.rails.tap_t;
+    let note = if up && menu.is_none() && d >= 0.0 && d < NOTE_SECS { t.no_tap.as_ref().filter(|l| !l.is_empty()).map(|l| lesson_line(g, l)) } else { None };
+    // (the order the step asks for has gone out: the line is what the men are doing. `afterSecs` on, the step asks again)
+    let since = g.time - g.rails.gave_t;
+    let aft = if up && gave_here && g.k.rails.after_secs > 0.0 && since >= 0.0 && since < g.k.rails.after_secs && g.time - g.rails.gave0 < g.k.rails.after_max { t.after.as_ref().and_then(said_now) } else { None };
+    // (over a flat ring that line stands whatever is open: that ring's line names ONE digit, and with the order out the row on it may be the order's next half)
+    let flat_aft = aft.is_some() && flat;
+    let line = match (ring, &aft) {
+        (Some(r), _) if !flat_aft => lesson_line(g, r),
+        (_, Some(a)) => lesson_line(g, a),
+        _ => step_line(),
+    };
+    // (a line that asks for nothing is drawn as something to watch, with no ring on its place. Never a step's own line that merely names no key)
+    let watch = (ring.is_none() || flat_aft) && (aft.is_some() || (up && cue)) && !names_key(&line);
+    Some(crate::view::RailPrompt { line, n, of: of_n, note, watch })
+}
+/// what a seat's HUD is told of the frame over this lesson
+pub fn rails_view(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &crate::rails::RailsLesson) -> Option<crate::view::RailsView> {
+    let rd = s.l.rails.as_ref()?;
+    let t = step_at(&s.l, s.i);
+    let over = crate::lesson::lesson_over(g, seat);
+    let sky = rd.sky.as_ref().map(|_| look_now(g, seat));
+    let mut line_men: Vec<f64> = rails_squad(g).into_iter().map(|x| g.ch[g.gd[x].ch].id).collect();
+    if sky.is_none() { line_men.push(g.ch[g.pl[seat.player].ch].id); }
+    let open = allowed_of(s);
+    Some(crate::view::RailsView {
+        prompt: rails_prompt(g, seat, s),
+        card: t.filter(|_| !over).and_then(|t| t.explain.as_ref()).map(|e| crate::view::RailCard { title: e.title.clone(), text: crate::lesson::lesson_line(g, &e.text) }),
+        mark: t.and_then(|t| t.at),
+        arrow: t.filter(|t| !over && t.at.is_some()).and_then(|t| t.toward),
+        line_men,
+        rows: rd.rows.as_ref().map(|r| if has(&open, "use") { r.clone() } else { Vec::new() }),
+        open: open.iter().collect(),
+        orders: rd.orders.clone(),
+        stalk_shut: shuts_of(s, "stalk"),
+        teaches_hold: t.map_or(false, |t| word_of(&t.no_tap)),
+        no_lasers: rd.lasers == Some(false),
+        sky,
+    })
 }
 /// the frame's own log (rails.ts Rails.note)
 pub fn rails_note(g: &mut crate::game::Game, s: &str) {

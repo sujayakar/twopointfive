@@ -84,7 +84,6 @@ import { DOORMANNERS, DOORMANNERS_STATS, STACK_OWN, doorwayLanePrice, doorwayInW
 import { PICTURE, PICTURE_STATS, anyIdea, exposedFor, pictureQuiet } from './picture';   // (asked inside stackSeen and the file's pose only: src/game is one import cycle)
 import './stackline';
 import './handleside';
-import './clearline';
 import './fireline';
 import { fitSpots, fitGroups, fitTick, type Fit } from './roomfit';   // (used inside the 'move' order only: nothing of roomfit.ts is touched at load)
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
@@ -95,13 +94,15 @@ import { stackRoomFix, stackViewFix, stackRoomBookKeep, stackRoomHas, stackViewO
 import { holdFireOrder, holdFireSilent } from './holdfire';   // (called / read inside give / tick only)
 import { AUTOPILOT, AUTOPILOT_STATS, autoHint, autoPick, type AutoPick } from './autopilot';   // (read inside input(), quickLine() and show() only)
 import { whyWords } from './squadnet';   // (read inside quickLine() and quickFor() only)
-import { CMDRING, CMDRING_STATS, ringHoldSecs, ringSeats, flatSeats, type RingView, type RingState } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
+import { CMDRING, CMDRING_STATS, ringHoldSecs, ringSeats, flatSeats, type RingState } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
 import { handsBusy } from './interact';   // (read inside ringInput only: his hands on a list, a press or a running verb)
 import './teampace';   // (read inside update only)
 import './noshove';   // (read inside update only)
 import './close';   // (read inside input() only: the left click that shuts the menu with a man in the arm)
 import './silent';
 import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
+import { locked } from '../view/seatview';
+import { RAILS } from './rails';   // (read inside targetUnder only: src/game is one import cycle)
 /** where Sam 'stands' while the stack's makers are asked as if he were not there (ownMarkFirst): a place no mark is near */
 const NOWHERE: Vec3 = [1e7, 0, 1e7];
 /** … and how near a mark handed out must be to the post a man stands on to be that same mark, metres */
@@ -518,7 +519,7 @@ export class SquadOrders {
   /** what was ordered when (the probes read it; capped) */
   log: { t: number; order: string; who: string[]; target: string; /** the quick key gave it with the autopilot on (autopilot.ts: its plan is drawn a little longer) */ auto?: boolean; /** the word's key sent it off a laid plan (planlay.ts) */ laid?: boolean }[] = [];
   /** the order being given is the SEAT's own, at once (the menu's pick, the quick key) — not a scenario's, a tool's or the plan's (planlay.ts strikes its men off a laid plan) */
-  /** the squad's own changes of plan, newest last: who, when (autopilot.ts AUTOPILOT.replan — PICTURE ONLY: floorplan.ts draws these men for a moment as it
+  /** the squad's own changes of plan, newest last: who, when (autopilot.ts AUTOPILOT.replan — PICTURE ONLY: the plan (`view.plan`) draws these men for a moment as it
    *  does an order just given; nothing of the game reads it, it is no order and starts no clock) */
   shows: { t: number; who: string[] }[] = [];
   /** a module that changed these men's plan with nobody asking says so (doortools.ts haltAt): drawn for a moment, with the autopilot's switch on */
@@ -693,10 +694,11 @@ export class SquadOrders {
    *  listed — greyed, with whyNot's word) */
   rowsFor(t: OrderTarget, page: string | null = null, men?: Guard[]): OrderDef[] {
     const on = workRows(this.g, t, page, wallRows(this.g, t, page, this.defs.filter(d => (d.listed ?? d.targets).includes(t.kind) && (d.page ?? null) === page)));   // (wallcharge.ts: a wall's menu · workthings.ts: a thing's own order where 'move there' is)
-    if (!on.some(d => d.standsIn)) return this.g.rails ? this.g.rails.orderRows(on) : on;   // (rails.ts: a tutorial mission's menu lists only the orders it names)
+    const only = this.g.view.lesson?.rails?.orders, named = (rows: OrderDef[]): OrderDef[] => only ? rows.filter(d => only.includes(d.id)) : rows;   // (a tutorial mission's menu lists only the orders it names)
+    if (!on.some(d => d.standsIn)) return named(on);
     // a row that STANDS IN for another (OrderDef.standsIn): in while its `when` says so — the row it stands in for out — and out otherwise
     const who = men ?? this.recipients(t), ins = on.filter(d => d.standsIn?.when(this, t, who)), out = new Set(ins.map(d => d.standsIn!.for));
-    const all = on.filter(d => d.standsIn ? ins.includes(d) : !out.has(d.id)); return this.g.rails ? this.g.rails.orderRows(all) : all;
+    return named(on.filter(d => d.standsIn ? ins.includes(d) : !out.has(d.id)));
   }
   /** (cmdring.ts CMDRING.flat) a ring put up now is one of the flat tree — on a tutorial mission only where its level says so (rails.ts flatRing:
    *  a mission's lines teach the menu's pages and their digits until they are written for this tree) */
@@ -891,21 +893,6 @@ export class SquadOrders {
   /** … for the open menu's first wedge: the quick key's words there — for a ring of a part of the squad (Menu.part) what THOSE men would do, as its
    *  first wedge gives it (quickFor) */
   private menuQuick(M: Menu): string | null { return M.part ? autoHint(this.g, M.target, autoPick(this.g, M.target, false, M.men)) : this.quickWords(M.target); }   // (quickFor asks the pick whether or not the quick key's switch is on: so do its words)
-  /** What the ring shows this frame (null: no ring): where it is, the lit wedge, whose colour it wears, and the wedge on each digit — the first page's
-   *  first in the quick key's own words. ui/cmdring.ts draws it; the simulation never reads it (ringKeys is what it reads). */
-  ringView(): RingView | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.ringView', this, []); if (__r !== RUST_PASS) return __r as any; } }
-    const R = this.cmdRing, M = this.menu; if (!R || !M) return null;
-    const mt = this.menuTarget()!, wedges: { key: number; text: string; off: boolean; opens: boolean }[] = [];
-    const seat = this.seats(M, R);
-    for (let d = 1; d <= CMDRING.wedges; d++) {
-      const i = seat.row[d], row = i >= 0 ? M.rows[i] : null;
-      if (d === seat.more) wedges.push({ key: d, text: 'more', off: false, opens: true });
-      else if (M.page === null && !R.more && d === 1) { const text = this.menuQuick(M); if (text) wedges.push({ key: 1, text, off: false, opens: false }); }   // (no words: the quick key would give nothing here, and no wedge is drawn)
-      else if (row) wedges.push({ key: d, text: this.labelOf(row, mt), off: !!M.why[i], opens: !!row.opens });
-    }
-    const t = M.target, what = t.kind === 'none' ? (t.man ? t.man.callsign : '') : this.hoverWords(t), who = this.whoTag().tag;   // (who it goes to, and what it was opened on: the menu's own mark's words)
-    return { x: R.ax, y: R.ay, zoom: R.z, lit: R.lit, tone: this.toneOf(M.men), caption: what && what !== who ? `${who} → ${what}` : who, wedges };
-  }
 
   /** a man's order goes: and with it the pin the fight seam put on him */
   private drop(gd: Guard) { this.asg.delete(gd); if (this.ours.delete(gd)) gd.pinned = false; }
@@ -1736,12 +1723,6 @@ export class SquadOrders {
   // ------------------------------------------------------------ the HUD
   /** who the next order goes to, as the panel names it: GOLD / RED / BLUE for a squad in pairs ('all' for the one pair), or one man's callsign (`one`) — the
    *  man the menu was opened on, else the standing `who` */
-  private whoTag(): { tag: string; one: boolean } {
-    if (this.menu?.part) return { tag: this.menu.men.length ? this.whoWords(this.menu.men) : 'nobody', one: true };   // (CMDRING.goalRing: the part of the squad this ring is for, by name — whoever the standing choice is)
-    const t = this.menu?.target, man = t?.kind === 'none' && t.man ? t.man : typeof this.who === 'number' ? this.squad()[this.who] : null;
-    if (man) return { tag: man.callsign, one: true };
-    return { tag: this.who === 'all' ? (this.paired ? 'GOLD' : 'all') : String(this.who).toUpperCase(), one: false };
-  }
   /** a target in the panel's words: what an order from the menu would be about */
   private hoverWords(t: OrderTarget | null): string { return !t ? '' : t.kind === 'door' ? doorWords(t.door) : t.kind === 'floor' ? (t.thing ? t.thing.name : t.wall ? 'that wall' : 'that spot') : t.kind === 'foe' ? t.foe.callsign || 'that man' : t.man ? `${t.man.callsign} alone` : 'the squad itself'; }
   /** What the quick key would give on what the cursor is on, for the corner's line on that key (ui/overlay.ts): a question of the cursor, which the view of a
@@ -1750,7 +1731,7 @@ export class SquadOrders {
     if (!this.active) return null;
     const hov = this.hover(), P = hov && AUTOPILOT.on ? autoPick(this.g, hov, false) : undefined;   // (asked once for the row's words and its reason)
     const words = hov ? this.quickWords(hov, P) : null;   // (autopilot.ts: the squad's first choice on a door it waits on)
-    if (!hov || !words || this.g.rails?.locks('order') || (CMDRING.on && ringHoldSecs() > 0 && this.g.rails?.teachesHold())) return null;   // (rails.ts: a key the mission has not taught yet is not named on the panel)
+    if (!hov || !words || locked(this.g.view, 'order') || (CMDRING.on && ringHoldSecs() > 0 && this.g.view.lesson?.rails?.teachesHold)) return null;   // (rails.ts: a key the mission has not taught yet is not named on the panel)
     const why = P ? whyWords(P)?.row ?? null : null;   // (squadnet.ts: why the squad's pick is not a plain open; null with its switch off)
     return { key: keyName(ORDERS.quickKey), text: `${words}${hov.kind === 'none' && !hov.man ? '' : ` · ${this.hoverWords(hov)}`}${why ? ` · ${why}` : ''}` };
   }

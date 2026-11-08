@@ -101,7 +101,7 @@ pub fn body_hit(g: &mut crate::game::Game, c_2: CharId, ro: V3, rd: V3, tmax: f6
 // ---------------------------------------------------------------- a man goes down
 
 /// A man goes down: `how` he went and `by` whose hand; `quiet` is the physical side.   (combat.ts killGuard)
-pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option<bool>, how: Option<crate::game::DownKind>, by: Option<crate::game::DownBy>, line: Option<&str>, zone: Option<crate::combat::KillGuardZone>) {
+pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option<bool>, how: Option<crate::game::DownKind>, by: Option<crate::game::DownBy>, line: Option<&str>) {
     use crate::game::{DownBy, DownKind, GuardState};
     let quiet = quiet.unwrap_or(false);
     let how = how.unwrap_or(if quiet { DownKind::Struck } else { DownKind::Shot });
@@ -147,12 +147,7 @@ pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option
         let it = drop_from_hand(g, c, kind, along, if quiet { [0.0, 0.0, 0.0] } else { dir }, Some(suppressed), Some(quiet), None);
         g.gd[gd].dropped = Some(it);
     }
-    if how == DownKind::Wounded {
-        let z = zone.map(|z| match z { KillGuardZone::Side => crate::wounds::WoundDownZone::Side, KillGuardZone::Leg => crate::wounds::WoundDownZone::Leg });
-        crate::wounds::wound_down(g, gd, dir, z);
-    } else {
-        crate::character::character_ragdollize(g, c, true, dir, quiet);
-    }
+    crate::character::character_ragdollize(g, c, true, dir, quiet);
     let text: String = match line {
         Some(l) => String::from(l),
         None => {
@@ -584,23 +579,6 @@ pub fn hidden_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         if tied && crate::fogofwar::fog_of_war_hidden(g, cv) { crate::rig_props::wrist_tie_boxes(g, c, out); }
     }
     rig_keys(g, out, n0);
-}
-
-/// The infrared lines the run's men really have on, for a viewer's picture through a tube the run's own picture did not have. Never part of a step.   (combat.ts irBeams)
-pub fn ir_beams(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    crate::irlaser::ir_view_as(g, true, &mut |g| {
-        let mut i = 0usize;
-        while i < g.guards.len() {
-            let gd = g.guards[i];
-            i += 1;
-            if g.gd[gd].state == crate::game::GuardState::Dead || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
-            if crate::irlaser::laser_band(g, gd) != crate::irlaser::LaserBand::Ir { continue; }
-            let rule = crate::guards::in_hand(g, gd).map(|r| match r { crate::guards::InHand::Torch => crate::handwork::SwapHeldHeld::Torch, crate::guards::InHand::Weapon => crate::handwork::SwapHeldHeld::Weapon });
-            if crate::handwork::swap_held(g, gd, rule).is_none() || !crate::irlaser::laser_on(g, gd) { continue; }
-            laser_boxes(g, gd, out);
-        }
-        crate::irlaser::sam_laser_boxes(g, out);
-    });
 }
 
 /// A hunting man's weapon laser: a thin emissive line from the muzzle to what it meets, and a dot there. LASER.enemy is off on the page: a man hostile to the player has none.   (combat.ts laserBoxes)

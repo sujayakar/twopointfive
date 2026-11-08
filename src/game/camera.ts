@@ -40,8 +40,6 @@ export class FollowCamera {
     this.pin = { look: v3.copy(p.look), yaw: p.yaw, pitch: clamp(p.pitch, -PIN_PITCH_MAX, PIN_PITCH_MAX), dist: Math.max(this.near + 0.05, p.dist) };
     return this.pin;
   }
-  /** THE HOST'S OWN SHIFT of the follow point, metres on the floor (null = none): nothing on the page reads it any more; the wire still carries it. */
-  hostShift: Vec3 | null = null;
   update(dt: number, follow: Vec3, aimPoint: Vec3 | null) { this.frame(); this.step(dt, follow, aimPoint); }
   /** update()'s two halves, for a host that steps the camera with the game and draws at its own rate (host/loop.ts under the fixed step). `frame()`, once a drawn
    *  frame: 'previous' ← the matrix the last frame was DRAWN with. `step()`, once a game tick: the follow itself. */

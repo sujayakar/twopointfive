@@ -32,6 +32,7 @@
 //
 // Every special case here is marked STAND-IN with its reason and where it belongs.
 import { FaceError, fetchFace } from './face';
+import type { DeskFace } from '../view/desk';
 import { simAdopt, type SimExports } from '../sim/sim';
 import { BoxMirror } from '../scene/boxMirror';
 import { PUT_BACKS } from '../math/side';
@@ -43,9 +44,9 @@ import { SNAPS, levelFingerprint, type SlotInfo } from '../game/savestate';
 import type { Snapshot } from '../game/rollback';
 import type { Game } from '../game/game';
 import { NO_VIEW, type TickView } from '../view/seatview';
-import { readCursorView, readDebriefView, readTickView, readUnder, type CursorView } from '../view/read';
+import { readCursorView, readDebriefView, readRunView, readTickView, readUnder, type CursorView } from '../view/read';
 import { CURSOR_DOUBLES, sampleCursor } from '../view/cursor';
-import { heardOf, type WorldAsk } from '../view/worldask';
+import { heardOf, wayOf, type WorldAsk } from '../view/worldask';
 import { pageSay } from '../view/pagesaid';
 import { CharacterAnimator } from '../game/character';
 import { SkeletonInstance } from '../anim/skeleton';
@@ -68,6 +69,8 @@ import { crossing, surfaceHost } from 'tps-bridge/surface';
 import { Drawn, drawRefused, type DrawFace } from '../draw/drawn';
 import { Want } from '../draw/sections';
 import { fogFrom } from '../draw/fog';
+import { smokeFrom } from '../draw/smoke';
+import type { SmokeSystem } from '../smoke/smoke';
 import LISTS from 'tps-bridge/puppet-lists.json';
 
 
@@ -283,6 +286,8 @@ export function rustSettledLine(): string {
   if (R.said !== n) { R.said = n; console.info(`rust=1: ${line}`); }
   return line;
 }
+/** the module the page has booted, as the cards' desk asks it */
+export function rustFace(): { exports: DeskFace; memory: WebAssembly.Memory } { if (!X || !MEM) throw new Error('rustFace before rustBoot'); return { exports: X as unknown as DeskFace, memory: MEM }; }
 /** THE MODULE, fetched and compiled off the page's thread (Chrome compiles nothing over 8 MB on it), started, and handed to src/sim as the simulation's
  *  one instance. Before anything has asked src/sim for its module. Throws in plain words where there is no module to fetch. */
 export async function rustBoot(): Promise<void> {
@@ -294,7 +299,7 @@ export async function rustBoot(): Promise<void> {
   //  by the page's readers, are handed on as they are)
   { const raw = M.exports as unknown as Record<string, unknown>, W: Record<string, unknown> = {}; for (const k of Object.keys(raw)) { const f = raw[k]; W[k] = typeof f === 'function' && k.startsWith('face_') ? guard(k, f as (...a: number[]) => number) : f; } X = W as unknown as Face; }
   MEM = X.memory; BUF = MEM.buffer;
-  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_debrief_view', 'face_line', 'face_ray', 'face_hear', 'face_cursor_view', 'face_under', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new FaceError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
+  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_debrief_view', 'face_run_view', 'face_line', 'face_ray', 'face_hear', 'face_way', 'face_cursor_view', 'face_under', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new FaceError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
   { const no = drawRefused(X as unknown as DrawFace); if (no) throw new FaceError(`?rust=1: ${no} (tools/blitz/face-build.ts builds this checkout's)`); }
   // (the module and this page's half of the bridge must be of one generation: a module of another reads garbage)
   if ((X.face_layout?.() >>> 0) !== SCHEMA.layout) throw new FaceError(`?rust=1: game_face.wasm is of another generation than this page's bridge (its layout ${(X.face_layout?.() ?? 0) >>> 0}, the page's ${SCHEMA.layout}): the checkout's module is stale, tools/blitz/face-build.ts builds this one's`);
@@ -359,7 +364,7 @@ function grown(g: Game): void {
 export function rustAttach(g: Game): void {
   if (!X) throw new Error('rustAttach before rustBoot');
   const G = g as unknown as Record<string, any>;
-  H = { drawn: new Drawn(X as unknown as DrawFace, MEM!, Want.fog), moved: 0, viewAt: -1, view: NO_VIEW, told: -1, toolScan: false, inRun: false, g, lastCmds: null, kept: new Set(), startKept: 0, back: null, took: false, shelfSig: '', poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null, quiet: false, owed: 0, quietDt: 1 / 60 };
+  H = { drawn: new Drawn(X as unknown as DrawFace, MEM!, Want.fog | (drawnSmoke(g) ? Want.smoke : 0)), moved: 0, viewAt: -1, view: NO_VIEW, told: -1, toolScan: false, inRun: false, g, lastCmds: null, kept: new Set(), startKept: 0, back: null, took: false, shelfSig: '', poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null, quiet: false, owed: 0, quietDt: 1 / 60 };
   const held = H;
   G.stepSeats = (dt: number, cmds: readonly PlayerCmd[]) => step(held, dt, cmds);
   // (for a networked game, src/net/step.ts: a quiet run of steps, and the game's own words for its state, as `rustHashes` reads them by name for a check)
@@ -430,6 +435,9 @@ export function rustAttach(g: Game): void {
   g.debriefAsk = () => { if (!held.h || held.stale || RUST_PANIC.dead) return NO_DEBRIEF;
     try { settle(held); if (held.toolScan && !held.inRun && !held.inStep) scanFlush(held); tellShown(held); call('face_debrief_view', () => X!.face_debrief_view(held.h)); const r = readDebriefView(outBytes()); grown(g); return r; }
     catch (e) { if (!RUST_PANIC.dead) throw e; return NO_DEBRIEF; } };   // (a trap here is no throw of the frame's, or the panic card's key would never be read: as `viewAsk`)
+  g.runAsk = () => { if (!held.h || held.stale || RUST_PANIC.dead) return null;
+    try { settle(held); if (held.toolScan && !held.inRun && !held.inStep) scanFlush(held); call('face_run_view', () => X!.face_run_view(held.h)); const r = readRunView(outBytes()); grown(g); return r; }
+    catch (e) { if (!RUST_PANIC.dead) throw e; return null; } };
   // THE BOX WORLD ASKED (src/view/worldask.ts): the Rust game's, as its boxes stand. While none stands, or one is stopped, the page's own copy answers
   { const ask = rustAsk(held); Object.defineProperty(g, 'askHost', { configurable: true, enumerable: false, get: () => held.h && !held.stale && !RUST_PANIC.dead ? ask : null }); }
   // THE GAME'S OWN METHODS A TOOL OR A PANEL CALLS BETWEEN TICKS (`GAME_CROSSES`): run as TypeScript they move the puppet only, and the Rust game keeps
@@ -448,6 +456,7 @@ function rustAsk(S: Held): WorldAsk {
     solid: (a, b) => ask(() => call('face_line', () => X!.face_line(S.h, 1, a[0], a[1], a[2], b[0], b[1], b[2])) !== 0, false),
     ray: (o, d, max) => ask(() => { if (!call('face_ray', () => X!.face_ray(S.h, o[0], o[1], o[2], d[0], d[1], d[2], max))) return null; const r = f64(5); return { t: r[0], n: [r[1], r[2], r[3]] as [number, number, number] }; }, null),
     hear: (from, to) => ask(() => { call('face_hear', () => X!.face_hear(S.h, from[0], from[1], from[2], to[0], to[1], to[2])); return heardOf(f64(10)); }, { direct: true, routed: false, pathLen: 0, via: [from[0], from[1], from[2]], apparent: [from[0], from[1], from[2]], muffle: 0, carry: 1 }),
+    way: (a, b, maxIter) => ask(() => { const n = call('face_way', () => X!.face_way(S.h, a[0], a[2], b[0], b[2], maxIter)); return n < 0 ? null : wayOf(n ? f64(n * 2) : []); }, null),
     together: f => f(),
   };
 }
@@ -502,11 +511,15 @@ function start(S: Held): void {
   console.info(`rust=1: the Rust game started from the page's (${state.length} bytes of state, slot ${slot}) in ${RUST_GAME.startMs.toFixed(0)} ms${RUST_GAME.notCarried.length ? `; the bridge could not carry ${RUST_GAME.notCarried.length} kinds of value (window.__rust.notCarried)` : ''}`);
 }
 
+/** the picture's solver, where this host draws smoke (the harness's null one holds nothing to bend) */
+const drawnSmoke = (g: Game): SmokeSystem | null => { const s = g.smoke as Partial<SmokeSystem> | null; return s?.bent ? s as SmokeSystem : null; };
+
 /** WHAT STANDS ROUND EVERY APPLY, the filtered one and the whole one: the menu's questions for the rows an apply made, the doors' stand-in, and what the
  *  host's writes between ticks are told by */
 function after(S: Held): void {
   // (what the picture is told by section, src/draw: no field of it is on the bridge)
   call('face_draw', () => S.drawn.take(S.h)); fogFrom(S.g.fogOfWar.frame, S.drawn);
+  { const smoke = drawnSmoke(S.g); if (smoke) smokeFrom(smoke, S.drawn); }
   const g = S.g, G = g as unknown as Record<string, any>;
   if (S.toolScan && !S.inStep && !S.inRun) scanRebase(S);   // (an apply between a script's runs of frames, a crossing's or a load's: the puppet as it now stands is the Rust game's, and no tool's write)
   // THE MENU'S QUESTIONS (tools/blitz/ask.ts): every order row and the squad's posture have closures that ask the Rust game by the row's ID; a row or a
@@ -755,7 +768,7 @@ function tail(S: Held, dt: number, cmds: readonly PlayerCmd[], tHost: number, tS
   // STAND-IN: F5, the save by hand (player.ts:498, a line of the TypeScript tick the Rust tick does not have): read off the tick's own record here.
   // Belongs in the Rust tick (the controller's `hand`, read back with `face_saves_asked`).
   if (cmds[g.seats.indexOf(g.hostSeat())]?.pressed.includes('F5') && !g.player.down) G.saves?.askSave();
-  { const sv = G.saves, D = G.director, R = G.rails, authored = !!sv?.authored && !!R?.live, stop = D?.stop, resume = R?.resume;
+  { const sv = G.saves, D = G.director, R = G.rails, authored = !!sv?.authored && !!g.view.lesson?.rails, stop = D?.stop, resume = R?.resume;
     // (an authored checkpoint of a tutorial mission: the controller stops the level's program for the take, savestate.ts:991. That is the Rust game's
     //  to do, and `take` does it there in the same order; the TypeScript's two calls would run on a puppet's program, which holds no beat)
     if (authored) { D.stop = () => {}; R.resume = () => {}; }

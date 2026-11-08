@@ -88,7 +88,7 @@ export const TEAMPACE = {
    *  muzzle leads him round to — are as they were, and so is every drill (squad.ts is not touched). doorpath.ts hands the same kind of point, the way he
    *  goes, for a gun that would cross an open leaf. `walkAimOff` / `walkAimOn`: how long the line must have been shut before the watch is given up, and clear before it is
    *  his again (s). Off = the gun on the order's watch from the first step, as it was (walkLead answers null) */
-  walkAim: false, walkAimOff: 0.25, walkAimOn: 0.5,
+  walkAimOff: 0.25, walkAimOn: 0.5,
   /** m/s from which a teammate is running: the gun goes low, nothing is fired, the boots are a sprinter's (character.ts BLEND.jogAt) */
   runAt: 2.7,
   /** m/s² a man with leave to run picks pace up at (guards.ts PACE.accel is 2.6: a walker leaning into a walk) */

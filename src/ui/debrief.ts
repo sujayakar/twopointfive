@@ -7,7 +7,6 @@
 import { gearText } from '../game/gear';
 import type { Game } from '../game/game';
 import { mountRecap } from './recap';
-import { quietWords } from '../game/quiet';
 import { indoors } from '../game/rooms';
 import type { Debrief, DebriefRow, DeathRecap } from '../view/debriefview';
 import { verdictLine, type RunVerdict } from '../game/verdict';
@@ -112,7 +111,7 @@ export function renderDebrief(into: HTMLElement, game: Game, actions: HTMLElemen
   const legend = el('div', 'db-legend');
   const seenLabels = new Set<string>();
   for (const k of Object.keys(PIN)) { const p = PIN[k]!; if (seenLabels.has(p.label)) continue; seenLabels.add(p.label); const s = el('span', `lg ${p.cls}`); const g = el('i'); g.textContent = p.glyph; s.append(g, ` ${p.label}`); legend.appendChild(s); }
-  for (const [g, label] of [['S', 'insertion'], ['◎', quietWords(game)?.holder ?? 'the rack'], ['⇥', quietWords(game) ? 'a way out' : 'fire exit']] as const) { const s = el('span', 'lg mark'); const i = el('i'); i.textContent = g; s.append(i, ` ${label}`); legend.appendChild(s); }
+  for (const [g, label] of [['S', 'insertion'], ['◎', game.view.quiet?.holder ?? 'the rack'], ['⇥', game.view.quiet ? 'a way out' : 'fire exit']] as const) { const s = el('span', 'lg mark'); const i = el('i'); i.textContent = g; s.append(i, ` ${label}`); legend.appendChild(s); }
   { const s = el('span', 'lg path'); const i = el('i'); i.textContent = '━'; s.append(i, ' his path, early → late'); legend.appendChild(s); }
   right.appendChild(legend);
   return { root, debrief: D, copyText };
@@ -158,12 +157,12 @@ function buildMap(game: Game, events: DebriefRow[], P: ArrayLike<number>, V: Run
   const L = game.level, M = L.mission;
   const mark = (g: string, cls: string, x: number, z: number, title: string) => { const m = el('i', `mark ${cls}`); m.textContent = g; m.title = title; place(m, x, z); };
   { const at = game.roomClear?.startAt ?? L.playerSpawn; mark('S', 'spawn', at[0], at[2], 'insertion point'); }   // (a room clear stands Sam on its team start — and on a level with two ways in, on the one this visit took)
-  const QW = quietWords(game);   // (a quiet mission: its own holder, thing and ways out — game/quiet.ts; null on the plain night)
+  const QW = game.view.quiet;   // (a quiet mission: its own holder, thing and ways out — game/quiet.ts; null on the plain night)
   mark('◎', 'rack', M.rack.front[0], M.rack.front[2], QW ? `${QW.holder} — ${QW.thing}` : `rack ${M.rack.index + 1} — the drive`);
   if (QW) { for (const X of game.quiet.exits) { const ex = game.doors.byName(X.door)?.frameCentre ?? [X.x, 0, X.z]; mark('⇥', 'exit', ex[0], ex[2], X.name); } }
   else { const ex = game.doors.byName(M.exfilDoor)?.frameCentre; if (ex) mark('⇥', 'exit', ex[0], ex[2], 'the fire exit'); }
   for (const e of events) { const p = pinnedRow(e); if (!p) continue; const pin = el('i', `pin ${p.cls}`); pin.textContent = p.glyph; pin.title = `${fmtMMSS(e.t)} · ${e.room} · ${e.text}`; place(pin, e.pos[0], e.pos[2]); }
-  if (V) for (const m of namedMen(game, V)) { if (!m.downPos || (m.human && !squadVerdict(V))) continue; const x = el('i', `vfell t-${m.tone ?? 'mate'}`); x.textContent = m.state === 'dead' ? '✕' : m.state === 'wounded' ? '✚' : 'z'; x.title = fellWords(m); place(x, m.downPos[0], m.downPos[1]); }   // (where each man of the team fell; not a `mark`: the three marks are the level's)
+  if (V) for (const m of namedMen(game, V)) { if (!m.downPos || (m.human && !squadVerdict(V))) continue; const x = el('i', `vfell t-${m.tone ?? 'mate'}`); x.textContent = m.state === 'dead' ? '✕' : 'z'; x.title = fellWords(m); place(x, m.downPos[0], m.downPos[1]); }   // (where each man of the team fell; not a `mark`: the three marks are the level's)
   box.title = 'the floor';
   return box;
 }

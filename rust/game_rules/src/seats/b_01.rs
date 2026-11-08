@@ -34,7 +34,7 @@ pub fn view_rekey(g: &mut crate::game::Game, old: PlayerId, new: PlayerId) {
     rekey(&mut m.rearwatch.books, old, new); rekey(&mut m.samlook.state, old, new); rekey(&mut m.showwhy.states, old, new);
     rekey(&mut m.silent.seats, old, new); rekey(&mut m.silent.states, old, new); rekey(&mut m.squad40.states, old, new);
     rekey(&mut m.squadsmoke.states, old, new); rekey(&mut m.squadthrow.states, old, new); rekey(&mut m.stalk.state, old, new);
-    rekey(&mut m.tapstep.state, old, new); rekey(&mut m.unseen.states, old, new); rekey(&mut m.wandorder.states, old, new);
+    rekey(&mut m.unseen.states, old, new); rekey(&mut m.wandorder.states, old, new);
 }
 
 /// one seat's SEAT_KEYS fields and Game's, changed over

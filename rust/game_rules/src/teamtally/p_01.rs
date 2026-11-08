@@ -19,7 +19,7 @@ pub fn team_tallied(g: &crate::game::Game, gd: GuardId) -> bool {
         return false;
     }
     let how = g.gd[gd].down_kind;
-    if !(how == Some(crate::game::DownKind::Shot) || how == Some(crate::game::DownKind::Wounded)) {
+    if how != Some(crate::game::DownKind::Shot) {
         return true;
     }
     let killer = g.gd[gd].killer_id;
@@ -51,8 +51,7 @@ pub fn team_tally_tick(g: &mut crate::game::Game) {
         }
         let how = g.gd[gd].down_kind;
         let shot = how == Some(crate::game::DownKind::Shot);
-        let wounded = how == Some(crate::game::DownKind::Wounded);
-        let round = shot || wounded;
+        let round = shot;
         let killer = g.gd[gd].killer_id;
         let mate = mates.iter().copied().find(|&m| g.ch[g.gd[m].ch].id == killer);
         if round && mate.is_none() {
@@ -72,9 +71,7 @@ pub fn team_tally_tick(g: &mut crate::game::Game) {
             data.set(String::from("weapon"), Some(crate::chronicle::ChronicleDataValue::Text(weapon)));
             crate::chronicle::chronicle(g, crate::chronicle::ChronKind::Kill, Some(&data), Some(pos));
         } else {
-            let method = if wounded {
-                "wounded"
-            } else if how == Some(crate::game::DownKind::Choked) {
+            let method = if how == Some(crate::game::DownKind::Choked) {
                 "choke"
             } else {
                 "takedown"

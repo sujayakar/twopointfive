@@ -128,7 +128,7 @@ interface ImportMeta { dir: string; main: boolean; path: string; file: string; u
 
 interface BunFile { text(): Promise<string>; json(): Promise<any>; arrayBuffer(): Promise<ArrayBuffer>; bytes(): Promise<Uint8Array>; exists(): Promise<boolean>; stream(): ReadableStream<Uint8Array>; size: number; name?: string; type: string }
 /** `Bun.spawn` / `Bun.spawnSync` take two call shapes and a wide options bag; the handles are typed only as far as the tools read them */
-interface BunSubprocess { pid: number; stdin: any; stdout: any; stderr: any; exited: Promise<number>; exitCode: number | null; signalCode: string | null; killed: boolean; kill(signal?: number | string): void; unref(): void }
+interface BunSubprocess { resourceUsage(): { cpuTime: { user: bigint; system: bigint; total: bigint } } | undefined; pid: number; stdin: any; stdout: any; stderr: any; exited: Promise<number>; exitCode: number | null; signalCode: string | null; killed: boolean; kill(signal?: number | string): void; unref(): void }
 interface BunSyncSubprocess { exitCode: number; success: boolean; signalCode?: string; stdout: Buffer; stderr: Buffer; pid: number }
 declare const Bun: {
   version: string; revision: string; main: string; argv: string[]; env: Record<string, string | undefined>;

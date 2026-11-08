@@ -51,7 +51,6 @@ pub mod blast_feel { pub mod types; pub use types::*; }
 pub mod blast_look { pub mod types; pub use types::*; }
 pub mod breach { pub mod types; pub use types::*; }
 pub mod break_table { pub mod types; pub use types::*; }
-pub mod buddy { pub mod types; pub use types::*; }
 pub mod calmtorch { pub mod types; pub use types::*; }
 pub mod camera { pub mod types; pub use types::*; }
 pub mod carlamps { pub mod types; pub use types::*; }
@@ -62,7 +61,6 @@ pub mod chronicle { pub mod types; pub use types::*; }
 pub mod civilians { pub mod types; pub use types::*; }
 pub mod cleanrestart { pub mod types; pub use types::*; }
 pub mod cleared { pub mod types; pub use types::*; }
-pub mod clearline { pub mod types; pub use types::*; }
 pub mod close { pub mod types; pub use types::*; }
 pub mod cloud_report { pub mod types; pub use types::*; }
 pub mod cmd { pub mod types; pub use types::*; }
@@ -274,7 +272,7 @@ pub mod script_tut_queue { pub mod types; pub use types::*; }
 pub mod script_tut_quiet { pub mod types; pub use types::*; }
 pub mod script_tut_road { pub mod types; pub use types::*; }
 pub mod script_tut_team { pub mod types; pub use types::*; }
-pub mod seats { pub mod types; pub use types::*; }
+pub mod seats { pub mod types; pub use types::*; pub mod seat_ref; pub use seat_ref::*; }
 pub mod seenwalk { pub mod types; pub use types::*; }
 pub mod sense { pub mod types; pub use types::*; }
 pub mod sensors { pub mod types; pub use types::*; }
@@ -335,7 +333,6 @@ pub mod suppression { pub mod types; pub use types::*; }
 pub mod tactics { pub mod types; pub use types::*; }
 pub mod takecheck { pub mod types; pub use types::*; }
 pub mod takedown { pub mod types; pub use types::*; }
-pub mod tapstep { pub mod types; pub use types::*; }
 pub mod teamfeel { pub mod types; pub use types::*; }
 pub mod teampace { pub mod types; pub use types::*; }
 pub mod teams { pub mod types; pub use types::*; }
@@ -371,4 +368,3 @@ pub mod wind { pub mod types; pub use types::*; }
 pub mod words { pub mod types; pub use types::*; }
 pub mod workstow { pub mod types; pub use types::*; }
 pub mod workthings { pub mod types; pub use types::*; }
-pub mod wounds { pub mod types; pub use types::*; }

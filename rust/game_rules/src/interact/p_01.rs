@@ -15,16 +15,16 @@ static SHUT_ROWS: &[&str] = &["pull", "ease", "charge", "breach", "hammer", "wan
 static MOVE_KEYS: &[&str] = &["KeyW", "KeyA", "KeyS", "KeyD"];
 
 /// a level line from his eye to a hand's breadth short of the thing (interact.ts emptyThing `walled`)
-fn walled(g: &mut Game, eye: V3, to: V3) -> bool {
+fn walled(g: &Game, eye: V3, to: V3) -> bool {
     let dx = to[0] - eye[0];
     let dz = to[2] - eye[2];
     let k = m::max(0.0, 1.0 - crate::handring::EMPTY_SHY_M / m::max(1e-6, m::hyp2(dx, dz)));
-    crate::scene_collision::solid_blocked(g, eye, [eye[0] + dx * k, eye[1], eye[2] + dz * k], None)
+    crate::ask::WorldAsk::of(g).line(eye, [eye[0] + dx * k, eye[1], eye[2] + dz * k], crate::ask::Line::Solid)
 }
 
-/// THE THING AN EMPTY TAP IS BESIDE, and why the key did nothing on it. (interact.ts emptyThing)
-pub fn empty_thing(g: &mut Game) -> Option<crate::interact::EmptyThing> {
-    let pl = g.player;
+/// THE THING AN EMPTY TAP IS BESIDE, and why the key did nothing on it, about the seat it is asked of (the copy of the boxes standing: a tick's rule calls `stands` first). (interact.ts emptyThing)
+pub fn empty_thing(g: &Game, seat: &crate::seats::SeatRef) -> Option<crate::interact::EmptyThing> {
+    let pl = seat.player;
     if g.pl[pl].takedown.is_some() { return None; }
     let p = g.ch[g.pl[pl].ch].pos;
     let eye: V3 = [p[0], if g.pl[pl].crouch { 0.9 } else { 1.3 }, p[2]];
@@ -32,10 +32,8 @@ pub fn empty_thing(g: &mut Game) -> Option<crate::interact::EmptyThing> {
     let mut rank = 3;
     let mut man = m::INF;
     let mut other = m::INF;
-    // (nothing below changes the list: each row is copied so that the calls may take `g`)
-    for i in 0..g.interactables.len() {
-        let it = g.interactables[i].clone();
-        let d = crate::player::thing_dist(g, &it, p);
+    for it in seat.interactables.iter() {
+        let d = crate::player::thing_dist(g, it, p);
         if d > crate::handring::EMPTY_NEAR_M { continue; }
         if it.kind == crate::game::InteractableKind::Guard {
             if d < man && !walled(g, eye, it.pos) { man = d; }
@@ -58,17 +56,16 @@ pub fn empty_thing(g: &mut Game) -> Option<crate::interact::EmptyThing> {
             for v in rows { if crate::rails::rails_offers(g, v) { offered = true; break; } }
             if !offered { why_of.held.as_str() } else if r == 1 { why_of.run.as_str() } else { why_of.far.as_str() }
         };
-        if why.is_empty() { other = m::min(other, d); continue; }   // (in reach with no row and no frame to blame: a wounded man)
+        if why.is_empty() { other = m::min(other, d); continue; }   // (in reach with no row and no frame to blame)
         if r > rank || (r == rank && best.as_ref().map_or(false, |b| d >= b.d)) { continue; }
         let skip = if r == 2 {
             let frame = g.dr[door.unwrap()].frame_centre;
             walled(g, eye, it.pos) && walled(g, eye, frame)
         } else if r == 1 {
-            let keys = g.pl[pl].keys.clone();
-            crate::doors::doors_locked_out(g, door.unwrap(), p, Some(&keys))
+            crate::doors::doors_locked_out(g, door.unwrap(), p, Some(&g.pl[pl].keys))
         } else { false };
         if skip { continue; }
-        best = Some(crate::interact::EmptyThing { it, d, why: String::from(why) });
+        best = Some(crate::interact::EmptyThing { it: it.clone(), d, why: String::from(why) });
         rank = r;
     }
     match best {
@@ -77,13 +74,8 @@ pub fn empty_thing(g: &mut Game) -> Option<crate::interact::EmptyThing> {
     }
 }
 
-/// what a tap that found no row says (interact.ts emptyWord; `t` None = its default, the thing as of now)
-pub fn empty_word(g: &mut Game, t: Option<&crate::interact::EmptyThing>) -> String {
-    let own;
-    let t = match t {
-        Some(t) => Some(t),
-        None => { own = empty_thing(g); own.as_ref() }
-    };
+/// what a tap that found no row says (interact.ts emptyWord)
+pub fn empty_word(t: Option<&crate::interact::EmptyThing>) -> String {
     match t {
         Some(t) => {
             let head = t.it.line1.split(" · ").next().unwrap_or("");
@@ -485,7 +477,8 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
     let quick = !g.pl[pl].sel.moved && g.pl[pl].sel.down_t < (if stays { g.k.handring.hold_secs } else { TAP_SECS });
     close_selector(g, false);
     if !listed && row_now.is_none() && g.puppet.is_none() && !crate::samstun::sam_staggered(g, &crate::seats::here(g), None) {
-        let w = empty_word(g, None);
+        crate::scene_collision::stands(g);
+        let w = empty_word(empty_thing(g, &crate::seats::here(g)).as_ref());
         let time = g.time;
         g.pl[pl].sel.word = w.clone();
         g.pl[pl].sel.word_t = time;

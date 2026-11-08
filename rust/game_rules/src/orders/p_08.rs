@@ -47,16 +47,6 @@ pub fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3) -> cra
     SquadOrdersAsked { why: r.why, lock: r.lock.map(|l| SquadOrdersAskedLock { door: l.door, side: l.side }) }
 }
 
-/// A question asked by the picture: `fn_` with the walks it asks about kept in the asker's own table, not in `reached`.   (orders.ts SquadOrders.askAside)
-pub fn squad_orders_ask_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, own: &mut crate::orders::SquadOrdersAskAsideOwn, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    let mine = core::mem::take(&mut g.orders.reached);
-    g.orders.reached = own.r.take().unwrap_or_default();
-    let out = fn_(g);
-    own.r = Some(core::mem::take(&mut g.orders.reached));
-    g.orders.reached = mine;
-    out
-}
-
 /// Has he a line to cover it from where he stands: to a door, the way to it clear at eye height; 'that way', nothing in his face for two metres.   (orders.ts SquadOrders.hasLine)
 pub fn squad_orders_has_line(g: &mut crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> bool {
     let p = man_pos(g, gd);
@@ -281,24 +271,10 @@ pub fn squad_orders_pair(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3
 
 // ------------------------------------------------------------ the HUD's words
 
-/// The squad's orders in one line, for a panel or a log: who the next order goes to, what the menu is up on, each man with what he is doing.
-/// (src/game/orders.ts:2626 SquadOrders.summary)
-pub fn squad_orders_summary(g: &mut crate::game::Game) -> String {
-    if !squad_orders_active(g, &crate::seats::here(g)) { return String::from("no squad"); }
-    let who = squad_orders_who_words(g, &crate::seats::here(g), None);
-    let menu = match g.orders.menu.as_ref().map(|m| m.target.clone()) {
-        Some(t) => format!("menu up on {} · ", squad_orders_hover_words(g, Some(&t))),
-        None => String::new(),
-    };
-    let mut men: Vec<String> = Vec::new();
-    for gd in squad_orders_squad(g, &crate::seats::here(g)) { let s = squad_orders_status_of(g, &crate::seats::here(g), gd); men.push(format!("{}: {}", g.gd[gd].callsign, s)); }
-    format!("orders to {} · {}{}", who, menu, men.join(" · "))
-}
-
 /// What one man is doing, in a few words.   (orders.ts SquadOrders.statusOf)
 pub fn squad_orders_status_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> String {
     if g.gd[gd].state == crate::game::GuardState::Dead {
-        return String::from(if g.gd[gd].wound.is_some() { "wounded" } else { "down" });
+        return String::from("down");
     }
     if let Some(a) = seat.orders.asg.get(gd).copied() {
         let w = if g.tab.orders_assignment[a].post.is_none() && crate::pairup::pair_up(g, crate::pairup::PairUpRule::Word) {

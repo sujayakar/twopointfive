@@ -41,10 +41,8 @@ import { SUPPRESSION } from './suppression';
 import { RIFLE_SPREAD, FOOTFALL, TWOGEARS, CROUCHRUN } from './player';
 import { SAMLOOK } from './samlook';
 import { STALK } from './stalk';
-import { TAPSTEP } from './tapstep';
 import { OVERHEAR } from './devices';
 import { SCORE, BADGE } from './chronicle';
-import { WOUND } from './wounds';
 import { DOORPATH } from './doorpath';
 import { FOG } from './fogofwar';
 import { DOORWAY, DOORSTAY, DOORTHROW } from './doors';
@@ -80,9 +78,7 @@ import { WX_OWN, SNOW, SNOW_LOOK } from './weatherKinds';
 import { AIR_SIM } from './airSim';
 import { SQUADS, DRILL_AT } from './enemysquads';
 import { CUES } from './cues';
-import { BUDDY } from './buddy';
 import { LASTSTAND } from './laststand';
-import { CLEARLINE } from './clearline';
 import { STACKROOM } from './stackroom';
 import { REARWATCH } from './rearwatch';
 import { STACKLINE } from './stackline';
@@ -106,7 +102,7 @@ import { WALLSNAP } from './wallsnap';
 import { cutConfig } from '../scene/cut';   // (the cut-pieces switch: not a game module, no cycle)
 
 /** the names a recording carries and a replay applies, in the order journal.ts has always written them (a session file's `knobs.tables` keys) */
-export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'AI_TUNE', 'BODY_LIGHT', 'GUARD_EYE', 'NEEDS', 'WHISTLE', 'WET', 'WIND', 'CIV', 'CHAOS', 'RING', 'LAUNCHER', 'HE40', 'LAUNCHER40', 'FRAG', 'SHOTGUN', 'GLASS', 'GLASSFX', 'GLASSBREAK', 'GLASSPEN', 'SHARDS', 'TALK_TUNE', 'HOLD', 'SUPPRESSION', 'STALK', 'RIFLE_SPREAD', 'OVERHEAR', 'SCORE', 'BADGE', 'CKPT', 'FOG', 'MOVES', 'MV', 'TURN', 'WOUND', 'DOORPATH', 'WALLS', 'WALLCHARGE', 'WALLREACT', 'COVERFIRE', 'FURNBLAST', 'DOORWAY', 'DOORBLAST', 'OPENING', 'DOORSTAY', 'HANDLE', 'DOORMANNERS', 'BREAKS', 'FURN', 'LIGHTWALL', 'GUNWALL', 'RUBBLE', 'EVICT', 'WALLSNAP', 'CLOSE', 'GEAR', 'START', 'SAMESTART', 'TAKE', 'RELOAD', 'QUICKTHROW', 'FRIENDS', 'FRIENDLYFIRE', 'FIRELINE', 'LIGHTSWITCH', 'SAMSTUN', 'AIMWEIGHT', 'AIMCOST', 'TORCH', 'DOZE', 'KITANIM', 'KIT', 'THROW_BY', 'HANDS', 'HANDWORK', 'WORDS', 'WORK', 'WAND', 'OWNCHARGE', 'BIGSLOT', 'KITDEAL', 'SQUADTHROW', 'STICKY', 'AIRDUST', 'STACKROOM', 'WX_OWN', 'SNOW', 'SNOW_LOOK', 'AIR_SIM', 'LANES', 'GUNHOLD', 'QUIETFOG', 'TOLD', 'ISSUE', 'TAKEDOWN', 'STEALTHPOSE', 'FOOTFALL', 'TWOGEARS', 'CASTOR', 'HOLDFIRE', 'MORALE', 'DARKFOE', 'DARKDOOR', 'RUNNER', 'NETQUIET', 'ATTENTION', 'PICTURE', 'POWEROUT',
+export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'BODY_LIGHT', 'GUARD_EYE', 'NEEDS', 'WHISTLE', 'WET', 'WIND', 'CIV', 'CHAOS', 'RING', 'LAUNCHER', 'HE40', 'LAUNCHER40', 'FRAG', 'SHOTGUN', 'GLASS', 'GLASSFX', 'GLASSBREAK', 'GLASSPEN', 'SHARDS', 'TALK_TUNE', 'HOLD', 'SUPPRESSION', 'STALK', 'RIFLE_SPREAD', 'OVERHEAR', 'SCORE', 'BADGE', 'CKPT', 'FOG', 'MOVES', 'MV', 'TURN', 'DOORPATH', 'WALLS', 'WALLCHARGE', 'WALLREACT', 'COVERFIRE', 'FURNBLAST', 'DOORWAY', 'DOORBLAST', 'OPENING', 'DOORSTAY', 'HANDLE', 'DOORMANNERS', 'BREAKS', 'FURN', 'LIGHTWALL', 'GUNWALL', 'RUBBLE', 'EVICT', 'WALLSNAP', 'CLOSE', 'GEAR', 'START', 'SAMESTART', 'TAKE', 'RELOAD', 'QUICKTHROW', 'FRIENDS', 'FRIENDLYFIRE', 'FIRELINE', 'LIGHTSWITCH', 'SAMSTUN', 'AIMWEIGHT', 'AIMCOST', 'TORCH', 'DOZE', 'KITANIM', 'KIT', 'THROW_BY', 'HANDS', 'HANDWORK', 'WORDS', 'WORK', 'WAND', 'OWNCHARGE', 'BIGSLOT', 'KITDEAL', 'SQUADTHROW', 'STICKY', 'AIRDUST', 'STACKROOM', 'WX_OWN', 'SNOW', 'SNOW_LOOK', 'AIR_SIM', 'LANES', 'GUNHOLD', 'QUIETFOG', 'TOLD', 'ISSUE', 'TAKEDOWN', 'STEALTHPOSE', 'FOOTFALL', 'TWOGEARS', 'CASTOR', 'HOLDFIRE', 'MORALE', 'DARKFOE', 'DARKDOOR', 'RUNNER', 'NETQUIET', 'ATTENTION', 'PICTURE', 'POWEROUT',
   // the squad's tables the page's boot writes a key of (host/profile.ts pageSwitches), and SNEAK: a recording made on the page used to replay them at the
   // stand's values. A recording cannot START with a squad on the floor, but men who work by the squad's code can come once it runs. A file from before
   // these names carries none of them and replays on the stand's values, as it always did. tools/qa/knobs-check.ts holds the rule for the next one.
@@ -168,9 +164,6 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'HANDRING',
   // a can in the wind-up goes back on the belt when another beat begins (throwback.ts THROWBACK): a recording made with it on replays those cans kept, one from before as thrown late
   'THROWBACK',
-  // the camera frames things itself once its key is tapped twice (host/autocam.ts AUTOCAM): the seat's view rides every record, so a recording replays the view it was made with
-  // either way — the name is here so that a file from before the key puts the switch off for the hand that takes over when it ends
-  'AUTOCAM',
   // his own charge goes off from his own actions, not the squad's key (ownblow.ts OWNBLOW): a recording made with it on replays its interaction-key row as the blast, one from before the squad's key as it was
   'OWNBLOW',
   // the gun is put away for a two-handed job (workstow.ts WORKSTOW): a recording made with it on replays a charge's longer clock and the draw after it, one from before the gun in the hand as it was
@@ -248,7 +241,6 @@ import { TOLD } from './told';
 import { TORCH } from './calmtorch';
 import { BACKKEY } from './backkey';
 import { FIXEDSTEP } from '../host/loop';
-import { AUTOCAM } from '../host/autocam';
 import { TWEEN } from '../host/tween';
 import { SAVEPIC } from '../host/savepic';
 import { EVENPACE } from '../host/pace';
@@ -348,7 +340,7 @@ export function knobRegistry(): Record<string, object> {
   const all: Record<string, object | undefined> = {
     // what a recording carries (JOURNAL_KNOBS)
     AIM, TRAINED, AI_TUNE, BODY_LIGHT, GUARD_EYE, NEEDS, WHISTLE, WET, WIND, CIV, CHAOS, RING, LAUNCHER, HE40, LAUNCHER40, FRAG, SHOTGUN, GLASS, GLASSFX, GLASSBREAK, GLASSPEN, SHARDS,
-    TALK_TUNE, HOLD, SUPPRESSION, RIFLE_SPREAD, FOOTFALL, TWOGEARS, CROUCHRUN, RUNREADY, RUNARMS, SAMLOOK, DASH, WATCH, STALK, TAPSTEP, OVERHEAR, SCORE, BADGE, CKPT, FOG, MOVES, MV, TURN, WOUND, DOORPATH, WALLS, WALLCHARGE, WALLSHOT, WALLKILL, HARDBREATH, CASTOR, WALLREACT, COVERFIRE, FURNBLAST, DOORWAY, DOORBLAST, DOORSHOT, DOORTHROW, WINBARS, OPENING,
+    TALK_TUNE, HOLD, SUPPRESSION, RIFLE_SPREAD, FOOTFALL, TWOGEARS, CROUCHRUN, RUNREADY, RUNARMS, SAMLOOK, DASH, WATCH, STALK, OVERHEAR, SCORE, BADGE, CKPT, FOG, MOVES, MV, TURN, DOORPATH, WALLS, WALLCHARGE, WALLSHOT, WALLKILL, HARDBREATH, CASTOR, WALLREACT, COVERFIRE, FURNBLAST, DOORWAY, DOORBLAST, DOORSHOT, DOORTHROW, WINBARS, OPENING,
     DOORSTAY, HANDLE, DOORMANNERS,
     // what breaks into what, by material (breakTable.ts), and how a blast treats furniture (furnblast.ts): the sim reads both, so a recording carries them
     BREAKS, FURN,
@@ -457,8 +449,6 @@ export function knobRegistry(): Record<string, object> {
     EVENPACE,
     // which starts the outline's rows have on this machine (host/findme.ts): the page's alone, as the three above are
     FINDTUNED,
-    // the camera running itself (host/autocam.ts): the switch, what it frames and by how much, when it may turn
-    AUTOCAM,
     // shaken (morale.ts): what a blast does to the men it does not hurt — who ducks, who breaks, the rounds a broken man puts into the dust — reads these
     MORALE,
     // a man's condition (condition.ts): whether a blast that leaves a man standing leaves him hurt, the pace and the spread that costs him, how long
@@ -535,7 +525,7 @@ export function knobRegistry(): Record<string, object> {
     // the squad's feel (teamfeel.ts keeps rows of these per machine; FOG, FRAG and DOORMANNERS are above)
     FLASH, PACE, LIGHTS, NVG, IR, IRLIGHT, WALLPEN, LASER, DOORTOOLS, ROOMFIGHT, ORDERS, COVER, ROOMFIT, ENTRY, REAR, SILENT, PAIR,
     // the scenario's and the defenders' tables (a play-through's --set reaches them)
-    RESCUE, DIGIN, HAULHOME, PRESSURE, LANES, GUNHOLD, HARD, HARD_AT, DRILLED, SQUADS, DRILL_AT, CUES, BUDDY, WX_SIM, WX_OWN, SNOW, SNOW_LOOK, AIR_SIM, LASTSTAND, CLEARLINE, STACKROOM, REARWATCH, STACKLINE,
+    RESCUE, DIGIN, HAULHOME, PRESSURE, LANES, GUNHOLD, HARD, HARD_AT, DRILLED, SQUADS, DRILL_AT, CUES, WX_SIM, WX_OWN, SNOW, SNOW_LOOK, AIR_SIM, LASTSTAND, STACKROOM, REARWATCH, STACKLINE,
     // the team's own rules that no other list named (found by tools/qa/knobs-check.ts), and the two scenarios' own tables
     SNEAK, PAIRUP, SPOTTED, NIGHTBREACH, ROOMCLEAR, LESSON,
     // a room clear against a clock (the Rust game keeps it, rust/game_rules/src/par). A SETTLED row, on: nothing reads it any more, on either side

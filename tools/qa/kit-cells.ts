@@ -7,7 +7,7 @@
 //                   shells suit trim) and its value one the row offers — set through kitSet, the card's own click, so nothing a card cannot do can be asked.
 //                   "all" = every teammate (1‥4): --kit '{"all":{"bangs":3}}'. No --kit = every card as issued = ships.ts, run for run.
 //     --name cell   the cell's name (goes in the JSON and the total line)
-//     --hard · --weather rain|downpour|fog|dust · --callout · --regroup · --base (the old frozen stand, by name) · --set '{…}'      exactly ships.ts's
+//     --hard · --weather rain|downpour|fog|dust · --callout · --base (the old frozen stand, by name) · --set '{…}'      exactly ships.ts's
 //     --scn --seeds --jobs --cap --json --md                                                                              exactly playthrough.ts's
 //     --trace scn:seed   one run with its timeline (the kit applied)
 //     env passes through (PT_HOUR, PT_SEARCH, PT_SQUAD, PT_WEDGED=charge … — playthrough.ts's head lists them)
@@ -46,7 +46,7 @@ type Run = RunOut & { kit?: KitOut; frag?: { theirs?: number } };
 
 const argv = process.argv.slice(2);
 const bad = (why: string): never => { console.error(why); process.exit(2); };
-const VALUED = ['--kit', '--name', '--set', '--weather', '--scn', '--seeds', '--cap', '--jobs', '--json', '--trace', '--one', '--out', '--against', '--boot'], BARE = ['--hard', '--callout', '--regroup', '--base', '--md', '--table', '--verbose'];
+const VALUED = ['--kit', '--name', '--set', '--weather', '--scn', '--seeds', '--cap', '--jobs', '--json', '--trace', '--one', '--out', '--against', '--boot'], BARE = ['--hard', '--callout', '--base', '--md', '--table', '--verbose'];
 const val = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 const has = (n: string) => argv.includes(n);
 const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
@@ -151,7 +151,7 @@ const merge = (n: string, o: Record<string, unknown>) => { set[n] = { ...o, ...(
 if (!base) merge('FRAG', { defenders: true });
 if (has('--hard')) merge('DIFFICULTY', { level: 'hard' });
 if (val('--weather')) merge('WEATHER', { kind: val('--weather') });
-if (has('--callout')) last.push('callout'); if (has('--regroup')) last.push('regroup');
+if (has('--callout')) last.push('callout');
 const env: Record<string, string | undefined> = { ...process.env, ...(base ? { TPS_PROFILE: 'frozen' } : { GLASSFX: 'on', TPS_MOVES: '1', TPS_TURN: '1', TPS_CAST: '1' }), ...(last.length ? { LASTSTAND: last.join(',') } : {}) };
 const stand = `${base ? 'the old frozen stand (--base)' : 'as shipped (ships.ts: glass parts, moves, turn, cast, defenders\' frags)'}${has('--hard') ? ' · Hard' : ' · Standard'}${val('--weather') ? ` · ${val('--weather')}` : ''}${process.env.PT_HOUR ? ` · ${process.env.PT_HOUR}` : ' · night'}${last.length ? ` · ${last.join(' + ')}` : ''}`;
 const one = (job: string, extra: string[], io: 'inherit' | 'ignore') => Bun.spawn(['bun', 'run', import.meta.path, '--one', job, '--cap', String(cap), '--set', JSON.stringify(set), '--kit', JSON.stringify(spec), ...extra], { stdout: io, stderr: io === 'inherit' ? 'inherit' : 'pipe', env });

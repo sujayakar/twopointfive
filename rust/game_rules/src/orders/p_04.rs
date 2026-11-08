@@ -57,7 +57,7 @@ fn target_kind(t: &OrderTarget) -> &'static str {
         OrderTarget::Foe(_) => "foe",
     }
 }
-fn target_at(t: &OrderTarget) -> V3 {
+pub fn order_target_at(t: &OrderTarget) -> V3 {
     match t {
         OrderTarget::Floor(x) => x.at,
         OrderTarget::Door(x) => x.at,
@@ -84,7 +84,7 @@ fn unlight(g: &mut Game, more: Option<bool>) {
 fn ring_more(r: Option<crate::cmdring::RingState>) -> bool {
     r.is_some_and(|r| r.more.unwrap_or(false))
 }
-/// `this.seats(this.menu!, R)`: the menu is lent as a copy, since `seats` takes `g` too
+/// `this.seats(this.menu!, R)`
 fn seats_now(g: &mut Game, r: Option<crate::cmdring::RingState>) -> SquadOrdersSeats {
     let m = g.orders.menu.clone().unwrap();
     squad_orders_seats(g, &m, r)
@@ -141,6 +141,8 @@ pub fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId, cam: C
             Some(part) => { let t0 = g.time; squad_orders_ring_up(g, &t, input, canvas, t0, Some(cam), part.as_ref()) }
         };
     }
+    // what its rows say, all at one moment: every wedge of this frame is laid out over these words, the tick's and a HUD's
+    super::read_words(g);
     // it stays on its point: its middle put back over the place it was opened on; a cursor the hand has not moved lights no other wedge
     let (w, h) = (canvas.client_width, canvas.client_height);
     let mut still = false;
@@ -340,7 +342,7 @@ pub fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderT
     g.stats.cmdring.opened += 1;
     // it stays on its point: the place, and where its middle stands from it (from the cursor, not from where the view's edge stood it)
     if let Some(cam) = cam {
-        let at = target_at(t);
+        let at = order_target_at(t);
         let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, at, w, h, None, None);
         if front {
             let (mx, my) = mouse(g, input);
@@ -401,8 +403,9 @@ pub fn squad_orders_ring_sel(g: &mut crate::game::Game) {
     if i >= 0.0 { g.orders.menu.as_mut().unwrap().sel = i; }
 }
 
-/// The open menu's rows by wedge: its page's own, or on 'more' the rest of them from wedge 1. (orders.ts seats)
-pub fn squad_orders_seats(g: &mut crate::game::Game, m: &crate::orders::Menu, r: Option<crate::cmdring::RingState>) -> crate::orders::SquadOrdersSeats {
+/// The open menu's rows by wedge: its page's own, or on 'more' the rest of them from wedge 1. A function of the menu's record: the tick's wedges and a HUD's are the same over the
+/// same words (`menu.words`, `menu.quick`: orders/words.rs). (orders.ts seats)
+pub fn squad_orders_seats(g: &crate::game::Game, m: &crate::orders::Menu, r: Option<crate::cmdring::RingState>) -> crate::orders::SquadOrdersSeats {
     let word_key = g.k.orders.wait_alt.clone();
     let flat = m.flat.unwrap_or(false);
     let (mut s_row, s_more, s_over) = if flat {
@@ -423,12 +426,10 @@ pub fn squad_orders_seats(g: &mut crate::game::Game, m: &crate::orders::Menu, r:
         return SquadOrdersSeats { row, more: 0.0, over: s_over, same };
     }
     // the flat tree's first ring: a row that says what wedge 1 says has no wedge of its own, and its digit is wedge 1's
-    let q = if flat { squad_orders_menu_quick(g, m) } else { None };
-    let mt = if text(&q) { squad_orders_menu_target(g, &crate::seats::here(g)) } else { None };
-    if let (true, Some(mt)) = (text(&q), mt) {
+    if flat && text(&m.quick) {
         for d in 2..=wedges {
             let i = s_row[d];
-            if i >= 0.0 && d as f64 != s_more && Some(squad_orders_label_of(g, m.rows[i as usize], &mt)) == q {
+            if i >= 0.0 && d as f64 != s_more && m.words.get(i as usize) == m.quick.as_ref() {
                 same[d] = i;
                 s_row[d] = -1.0;
             }
@@ -507,7 +508,7 @@ pub fn squad_orders_all_in(g: &mut crate::game::Game) {
 /// The quick key's own order on `t`, given by hand: the entry the men pick, else the target's first row. (orders.ts quickGive)
 pub fn squad_orders_quick_give(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) {
     if !crate::autopilot::auto_quick(g, t) {
-        if let Some(d) = squad_orders_default_for(g, t) {
+        if let Some(d) = squad_orders_default_for(g, &crate::seats::here(g), t) {
             let id = g.tab.orders_order_def[d].id.clone();
             squad_orders_give(g, &id, Some(t), None, None);
         }
@@ -519,7 +520,7 @@ pub fn squad_orders_quick_for(g: &mut crate::game::Game, men: &[GuardId], t: &cr
     use crate::autopilot::AutoPickWhy as Why;
     let n = g.orders.group;
     let tail = g.orders.log.last().map(|row| row.serial);
-    let a = crate::autopilot::auto_pick(g, t, Some(true), Some(men));
+    let a = crate::autopilot::auto_pick(g, &crate::seats::here(g), t, Some(true), Some(men));
     if a.why == Why::Pending { return None; }
     let to: Vec<GuardId> = a.men.clone().unwrap_or_else(|| men.to_vec());
     if a.why == Why::Set {
@@ -559,7 +560,7 @@ pub fn squad_orders_quick_words(g: &mut crate::game::Game, t: &crate::orders::Or
 /// … for the open menu's first wedge; for a ring of a part of the squad, what those men would do. (orders.ts menuQuick)
 pub fn squad_orders_menu_quick(g: &mut crate::game::Game, m: &crate::orders::Menu) -> Option<String> {
     if m.part.is_some() {
-        let p = crate::autopilot::auto_pick(g, &m.target, Some(false), Some(&m.men));
+        let p = crate::autopilot::auto_pick(g, &crate::seats::here(g), &m.target, Some(false), Some(&m.men));
         crate::autopilot::auto_hint(g, &m.target, Some(&p))
     } else {
         squad_orders_quick_words(g, &m.target, None)
@@ -602,48 +603,13 @@ pub fn squad_orders_ring_keys(g: &mut crate::game::Game) -> f64 {
     for d in 1..=wedges {
         let at = d as usize;
         let on = d as f64 == seat.more || if menu.page.is_none() && !ring_more(Some(r)) && d == 1 {
-            text(&squad_orders_menu_quick(g, &menu))
+            text(&menu.quick)
         } else {
             seat.row[at] >= 0.0 && (seat.row[at] as usize) < menu.rows.len()
         };
         if on { keys |= 1 << d; }
     }
     keys as f64
-}
-
-/// What the ring shows this frame: where it is, the lit wedge, whose colour it wears, the wedge on each digit. For the page: the simulation never reads it. (orders.ts ringView)
-pub fn squad_orders_ring_view(g: &mut crate::game::Game) -> Option<crate::cmdring::RingView> {
-    let (r, menu) = match (g.orders.cmd_ring, g.orders.menu.clone()) {
-        (Some(r), Some(menu)) => (r, menu),
-        _ => return None,
-    };
-    let mt = squad_orders_menu_target(g, &crate::seats::here(g)).unwrap();
-    let mut wedges = Vec::new();
-    let seat = squad_orders_seats(g, &menu, Some(r));
-    let n = g.k.cmdring.wedges as usize;
-    for d in 1..=n {
-        let i = seat.row[d];
-        let row = if i >= 0.0 { menu.rows.get(i as usize).copied() } else { None };
-        if d as f64 == seat.more {
-            wedges.push(crate::cmdring::RingViewWedgesItem { key: d as f64, text: String::from("more"), off: false, opens: true });
-        } else if menu.page.is_none() && !ring_more(Some(r)) && d == 1 {
-            let quick = squad_orders_menu_quick(g, &menu);
-            if text(&quick) { wedges.push(crate::cmdring::RingViewWedgesItem { key: 1.0, text: quick.unwrap(), off: false, opens: false }); }
-        } else if let Some(row) = row {
-            let words = squad_orders_label_of(g, row, &mt);
-            let off = menu.why.get(i as usize).is_some_and(text);
-            let opens = text(&g.tab.orders_order_def[row].opens);
-            wedges.push(crate::cmdring::RingViewWedgesItem { key: d as f64, text: words, off, opens });
-        }
-    }
-    let what = match &menu.target {
-        OrderTarget::None(n) => n.man.map_or(String::new(), |man| g.gd[man].callsign.clone()),
-        t => squad_orders_hover_words(g, Some(t)),
-    };
-    let who = squad_orders_who_tag(g, &crate::seats::here(g)).tag;
-    let tone = squad_orders_tone_of(g, &crate::seats::here(g), &menu.men).map(|t| String::from(t.as_str()));
-    let caption = if !what.is_empty() && what != who { format!("{} \u{2192} {}", who, what) } else { who };
-    Some(crate::cmdring::RingView { x: r.ax, y: r.ay, zoom: r.z, lit: r.lit, tone, caption, wedges })
 }
 
 /// The roster as it stands; a new cast starts clean. (orders.ts sync)

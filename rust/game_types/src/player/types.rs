@@ -1047,9 +1047,6 @@ pub const LEAN_CHEST: f64 = 1.2;
 /// (src/game/player.ts:1384 STACK_PRESS)
 pub const STACK_PRESS: f64 = 0.12;
 
-/// (src/game/player.ts:2238 WOUNDED_SNAP_PX)
-pub const WOUNDED_SNAP_PX: f64 = 26.0;
-
 /// (src/game/player.ts:2554 INTERACT_PRIORITY: a table nothing writes)
 pub fn interact_priority() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("guard"), 0.0); t.set(String::from("held"), 0.0); t.set(String::from("body"), 1.0); t.set(String::from("objective"), 2.0); t.set(String::from("door"), 3.0); t.set(String::from("light"), 9.0); t.set(String::from("breaker"), 2.5); t.set(String::from("switch"), 3.2); t.set(String::from("charge"), 9.4); t.set(String::from("wall"), 9.5); t.set(String::from("cam"), 9.6); t.set(String::from("cancel"), 10.0); t } }
 

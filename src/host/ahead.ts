@@ -28,7 +28,7 @@ import { TWEEN, type TweenHost, type TweenSkin } from './tween';
 interface AheadSkin extends TweenSkin { drawJointsOf(i: number, data: Float32Array): void }
 /** a man the outline pass rims (render/outline.ts OutlineMan): whose pixels, and where it looks for them */
 interface Rimmed { on: boolean; owner: number; at: ArrayLike<number> & { [i: number]: number } }
-/** the host: the tween's, and the outline's frame once it has one (ui/findme.ts lays it from the game before every draw) */
+/** the host: the tween's, and the outline's frame once it has one (ui/findmeviz.ts lays it from the game before every draw) */
 export type AheadHost = TweenHost & { outline?: (Rimmed & { mates: Rimmed[] }) | null };
 /** a box a man wears or carries: the rig's own motion key with his id in it (game/combat.ts: MKEY.rig + his id << 8 + the box's ordinal). NOT his owner byte
  *  alone — that says whose rays skip a thing, and a tracer in flight and a charge he has laid carry it too: those are where the tick left them */

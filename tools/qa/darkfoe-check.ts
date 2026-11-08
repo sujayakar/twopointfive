@@ -62,7 +62,7 @@ export async function darkfoeCheck(): Promise<boolean> {
     { const W = await stand(33), g = W.game; Object.assign(DARKFOE, was, { on: true, carry: 1 }); const men = foes(g);
       const los = (a: any, b: any) => flat(a.char.pos, b.char.pos) <= DARKFOE.lampM + 0.5 && !g.col.segmentBlocked([a.char.pos[0], 1.5, a.char.pos[2]], [b.char.pos[0], 1.5, b.char.pos[2]]);
       const inCone = (a: any, b: any) => { let d = Math.atan2(b.char.pos[0] - a.char.pos[0], b.char.pos[2] - a.char.pos[2]) - a.char.aimYaw; d = Math.atan2(Math.sin(d), Math.cos(d)); return Math.abs(d) <= (GUARD_EYE.halfDeg + 8) * Math.PI / 180; };
-      const first = men.filter(gd => ownBlind(g, gd)).sort((a, b) => men.filter(o => o !== b && los(o, b) && inCone(o, b)).length - men.filter(o => o !== a && los(o, a) && inCone(o, a)).length)[0];
+      const first = men.filter(gd => darkFoeBlind(g, gd)).sort((a, b) => men.filter(o => o !== b && los(o, b) && inCone(o, b)).length - men.filter(o => o !== a && los(o, a) && inCone(o, a)).length)[0];
       if (!first) line(false, 'the lamps are the word: no blind man to tell on this staging'); else { tell(first); const last = new Map<any, number>(), had = new Set<any>(), litToo = new Set<any>(); let unseen = 0, latched = 0;
       for (let i = 0; i < 60 * 15; i++) { await step(W);
         for (const gd of men) { if (gd === first || gd.state === 'dead') continue; if (men.some(o => o !== gd && burns(o) && darkFoeOf(o)?.knows && los(gd, o) && inCone(gd, o))) last.set(gd, i);   // (the lamp of a man who KNOWS: a lamp lit on the word passes none)

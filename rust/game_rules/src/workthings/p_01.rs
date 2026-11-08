@@ -127,20 +127,13 @@ pub fn breaker_errand(g: &mut crate::game::Game) -> Option<crate::workthings::Br
 
 /// Makes the row and registers it on the orders' menu. (workthings.ts WorkThings.constructor)
 pub fn work_things_new(g: &mut crate::game::Game) -> crate::workthings::WorkThings {
-    let def = crate::orders::OrderDef {
-        id: String::from(WORK_ORDER),
+    let def = crate::orders::rows::def(&crate::orders::rows::work::ORDER, crate::orders::OrderDef {
         key: Some(1.0),
-        label: crate::orders::OrderLabel::Work,
         targets: vec![crate::orders::TargetKind::Floor],
         listed: Some(Vec::new()),
         ack: Some(vec![String::from("on it."), String::from("moving.")]),
-        can: Some(crate::orders::OrderCan::Work),
-        only: Some(crate::orders::OrderOnly::Work),
-        valid: Some(crate::orders::OrderValid::Work),
-        issue: crate::orders::OrderIssue::Work,
-        tick: Some(crate::orders::OrderTick::Work),
         ..crate::orders::OrderDef::zeroed()
-    };
+    });
     let row = crate::orders::squad_orders_row(g, def);
     crate::orders::squad_orders_register(g, row, None);
     WorkThings { row, ..WorkThings::blank() }
@@ -584,20 +577,6 @@ pub fn work_things_note(g: &mut crate::game::Game, gd: GuardId, what: &str) {
     let row = WorkThingsLogItem { t: g.time, who: g.gd[gd].callsign.clone(), what: String::from(what) };
     g.work.log.push(row);
     if g.work.log.len() > 200 { g.work.log.drain(0..50); }
-}
-
-/// One line for a probe. (workthings.ts WorkThings.summary)
-pub fn work_things_summary(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> String {
-    let th = work_things_things(g, &crate::seats::here(g));
-    let mut n = 0;
-    for gd in seat.work.jobs.keys() {
-        if work_things_working(g, &crate::seats::here(g), gd) { n += 1; }
-    }
-    let parts: Vec<String> = th.iter().map(|x| format!("{}{}", x.name, if x.stand.is_some() { "" } else { " (no place to stand)" })).collect();
-    let joined = parts.join(" · ");
-    let things = if joined.is_empty() { String::from("nothing to work") } else { joined };
-    let s = &g.stats.workthings;
-    format!("{} · {} at work · given {} done {} moot {}", things, n, s.given, s.done, s.moot)
 }
 
 /// orders.ts targetAt: a thing a teammate can work near a point. (workthings.ts workNear)

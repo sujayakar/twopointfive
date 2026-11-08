@@ -45,7 +45,7 @@ async function arm() {
     const t0 = g.time, man: any = g.guards.find((x: any) => x.task?.kind === 'breaker'); if (!g.blackout.active || !man) return { ok: false as const, why: `mains ${g.blackout.active ? 'out' : 'on'} · sent ${man?.callsign ?? 'nobody'}` };
     const spot = [man.task.pos[0], man.task.pos[1], man.task.pos[2]];
     // the one thing staged by hand: no errand — a man walking to where he heard something, his interest kept up as a whistle keeps it
-    const noErrand = () => { man.task = null; if (man.state === 'suspicious') { if (!man.lastKnown) man.lastKnown = [...spot]; if (flat(man.char.pos, spot) > 1.2) man.awareness = Math.max(man.awareness, WHISTLE.walkFloor); } };
+    const noErrand = () => { man.task = null; man.dazzledUntil = g.time + 1;   /* (Sam's lead runs up that man's own route and how near they meet is the dice's: asked is the follower, so the man walks with no eyes for him) */ if (man.state === 'suspicious') { if (!man.lastKnown) man.lastKnown = [...spot]; if (flat(man.char.pos, spot) > 1.2) man.awareness = Math.max(man.awareness, WHISTLE.walkFloor); } };
     noErrand(); step(72); if (!BREAK) O.give('fallIn', { kind: 'floor', at: [9, 0, 17.5] }, 'all');
     let still = 0, stillMax = 0, on = 0, off = 0, low = 0, roused: string | null = null, rousedT = -1, nearest = 1e9, fastest = 0, errand = 0, astray = 0, past = 0;
     for (let f = 0; f < 26 * 60; f++) {

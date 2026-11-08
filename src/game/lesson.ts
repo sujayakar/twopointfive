@@ -7,43 +7,26 @@
 // its kind — a quiet mission (quiet.ts) or a room clear (roomclear.ts) — with real guards on real routes; the scenario's own objective takes the row back after
 // the last step and ends the run as it always does.
 //
-// LIVE = the switch on (`LESSON.on`; `?nolesson` off) ∧ the level carries the block ∧ a scenario is up on it (so the plain `?levelFile=x&solo` boot of a lesson
+// LIVE = the level carries the block ∧ a scenario is up on it (so the plain `?levelFile=x&solo` boot of a lesson
 // level is that level's plain night, no lines) ∧ no show running. A level without the block: every entry point returns on its first line.
 //
-// THE TESTS (LESSON_TESTS below): plain records `{ is: '<kind>', … }`. Two families —
+// THE TESTS (LESSON_CHECKS below): plain records `{ is: '<kind>', … }`, each asked by the Rust game (rust/game_rules/src/lesson: `passes`). Two families —
 //   STATE, true while it holds:  in · near · flag · slot · pace · meter · stage · door · target · men · all · any, and by family —
 //     hands: downed · body · calm   kit: reload · launcher · burst   squad: orderTo · stackOn · pairsOn · taken · following   doors: stacks   the quiet partner: mate
 //   DEEDS, counted from the moment the step came up:  did { what: 'act:<verb>' | 'event:<kind>' | 'chron:<kind>' | 'order:<id>' | 'order:<id>@foe:<callsign>', n?, on?: '<door>' } ·
 //     threw (a can, the frag, the launcher's grenade) · word (F, the squad's word, over how many doors) · pair (the quiet pair's log)
-// A new kind is one row of that table (its test, and its check against the built floor for checkLesson). Per-player state is asked of `g.player` through one
-// accessor here (who()), so a second player is one place to change.
+// A new kind is its arm in the Rust game and its row of the checker's table here.
+//
+// ALL OF A LESSON THAT RUNS IS THE RUST GAME'S: which step is up, whether it is done, how its line reads. What a HUD is told of it is the view's `lesson` section
+// (src/view/seatview.ts). What is left here: the switch, the level file's lint against the built floor (checkLesson), and the lesson's record as the bridge fills it.
 //
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
-import { SideSet } from '../math/side';
-import type { Game, Guard, Player } from './game';
-import type { LessonData, LessonStep, LessonTest, Rect } from '../scene/scenarios';
+import type { Game } from './game';
+import type { LessonTest, Rect } from '../scene/scenarios';
 import type { Vec3 } from '../math/vec';
-import { squadSilent } from './silent';
-import { PAIR_LOG } from './pairorders';
-import { hostileTo } from './teams';
 import { WORLD } from '../scene/world';
-import { HANDRING } from './handring';
-import { CMDRING } from './cmdring';
-import { stalkClickOnly } from './stalk';
-import { CLOSE } from './close';
-/** a step's line that names the whistle's old key, and what it says while the whistle is the ring's last wedge (handring.ts): the page's words turn
- *  'Space' into the key the interaction is on */
-const WHISTLE_LINE = /\bV whistles\b/g;
-/** …and one that names the held list's wheel (the second row of a locked door is its second wedge) */
-const WHEEL_LINE = /\bHold Space, wheel to kick, let go\b/g, WHEEL_RING = 'Hold Space, then 2 kicks it';
-/** …and one that names the grab's key, while the held click is the only way to a man (stalk.ts `only`): 'press [Space] behind him to grab him' is the hold */
-const GRAB_BEHIND = /\b([Pp])ress \[?Space\]? behind (him|the near guard) to grab him\b/g, GRAB_KEY = /\b([Pp])ress \[?Space\]? to grab him\b/g;
-const stalkLine = (line: string): string => line.replace(GRAB_BEHIND, (_m, p: string, who: string) => `${p === 'P' ? 'H' : 'h'}old left click on ${who} from behind to grab him`).replace(GRAB_KEY, (_m, p: string) => `${p === 'P' ? 'H' : 'h'}old left click on him to grab him`);
-/** …and one that names the knife, while there is none (close.ts CLOSE.noKnife): the right click's knockout is the blow */
-const KNIFE_OR = /\bRight click to knock him out, or left click to use the knife\b/g, KNIFE_HIM = /\bleft click to knife him\b/g, KNIFE_KILL = /\bleft-click to kill him with the knife\b/g;
-const bareLine = (line: string): string => line.replace(KNIFE_OR, 'Right-click to knock him out').replace(KNIFE_HIM, 'right-click to knock him out').replace(KNIFE_KILL, 'right-click to knock him out');   // (the click as a verb takes its hyphen, as every other line of the game writes it: docs/agents/writing.md)
 /** A LINE NAMES THE MOVE, NOT ITS KEY: a token in braces is written out in the build's own words — the held click or the grab's key, the knockout or the
- *  knife — so a level's sentence can be reworded freely and still say the key the build has (the patterns above turn only the exact old sentences).
+ *  knife — so a level's sentence can be reworded freely and still say the key the build has.
  *  `{grab him}` · `{grab him from behind}` · `{knock him out}` (the blow in reach) · `{take him out}` (the silent blow from behind). `him` may be any words
  *  for the man (`{grab the near guard from behind}`, `{grab yours}`): letters and apostrophes, one space between words. A capital first letter begins a sentence. A name in braces that is none of these is
  *  left as written, and checkLesson refuses one (lessonTokenFaults, below). */
@@ -56,10 +39,10 @@ const TOKENS: [RegExp, (who: string, held: boolean, bare: boolean) => string][] 
 /** the four, as a level writes them of 'him' */
 export const LESSON_TOKENS: readonly string[] = ['grab him', 'grab him from behind', 'knock him out', 'take him out'];
 const TOKEN = /\{([A-Za-z][A-Za-z' ]*)\}/g, lower = (name: string) => name.charAt(0).toLowerCase() + name.slice(1);
-/** is this name (the words between the braces, either capital) one lessonLine writes out? */
+/** is this name (the words between the braces, either capital) one the writer writes out? */
 export const lessonToken = (name: string): boolean => { const n = lower(name); if (!/^[A-Za-z]+(?: [A-Za-z']+)*$/.test(name)) return false;   // (the letters the writer-out reads, one space between words, none at an end)
   const hit = TOKENS.find(([re]) => re.test(n)); return !!hit && !/(^| )from( |$)/.test(hit[0].exec(n)![1]); };   // (…and a 'from' left in the man's words is a 'from behind' misspelt)
-const tokenLine = (line: string, held = stalkClickOnly(), bare = CLOSE.on && CLOSE.noKnife): string => line.indexOf('{') < 0 ? line : line.replace(TOKEN, (m, name: string) => {
+export const tokenLine = (line: string, held: boolean, bare: boolean): string => line.indexOf('{') < 0 ? line : line.replace(TOKEN, (m, name: string) => {
   const n = lower(name); if (!lessonToken(name)) return m; for (const [re, say] of TOKENS) { const hit = re.exec(n); if (!hit) continue;
     const s = say(hit[1], held, bare); return n !== name ? s.charAt(0).toUpperCase() + s.slice(1) : s; }   // (the capital the author wrote, nothing guessed)
   return m; });
@@ -73,284 +56,125 @@ export function lessonTokenFaults(w: string, line: string, cap: number, row = 't
   if (!out.length && (always || line.length <= cap) && long > cap) out.push(`${w} is ${long} characters with its tokens written out: ${row} holds about ${cap}`);   // (`row`: what the cap is of, for the message · `always`: a field with no cap of its own as written — without it a line already over the cap as written is its own check's to refuse, and is not said twice)
   return out;
 }
-/** a step's line as the HUD's row says it now */
-export const lessonLine = (written: string): string => { const line = tokenLine(written), s0 = stalkClickOnly() ? stalkLine(line) : line, s = CLOSE.on && CLOSE.noKnife ? bareLine(s0) : s0; return HANDRING.on ? s.replace(WHISTLE_LINE, `Space held, then ${CMDRING.wedges}, whistles`).replace(WHEEL_LINE, WHEEL_RING) : s; };
-import { railsFaults, RAILS } from './rails';   // (railsFaults is called inside checkLesson only, the switch read inside `data`)
-import { wallPt } from './wallcharge';   // (called inside a flag only)
-import { OWNBLOW } from './ownblow';   // (read inside lineOf only)
-import { SLOTSETUP } from './slotsetup';
-import { TWOGEARS } from './player';   // (read inside a step's test only)
+import { railsFaults } from './rails';   // (called inside checkLesson only)
 
-/** the switch: off = a lesson level plays as its scenario alone, no lines (and nothing here runs) */
+/** the switch's knob (`?nolesson`): the Rust game does not read it, a lesson level always has its lesson */
 export const LESSON = { on: true };
 export const LESSON_STATS = { started: 0, steps: 0, finished: 0 };
 
-/** what a step has seen since it came up (the deeds): counts by `what` */
-interface StepSeen { t0: number; n: Map<string, number>; chron: number; heard: WeakSet<object>; held: number; /** the clock the step's deed was done at (LessonStep.settle waits from it) · …and it was already done as the step came up */ doneT?: number; idle?: boolean;
-  /** where the step began in the logs that are TRIMMED from the front (orders.log, pairorders.ts PAIR_LOG): the last row there was then, by identity */
-  lastOrder: object | null; lastPair: object | null;
-  /** the chronicle row the step began at, and the row G was first seen held at (-1: not yet) — the kit's `threw` */
-  chron0: number; heldAt: number;
-  /** the doors the word (F) has let go since the step came up — the squad's `word` */
-  words: Set<object>;
-  /** the seat's view as the step found it and how far it has been turned since, radians summed (the rails' `view`) */
-  yaw0: number; dist0: number; yawLast: number; turned: number;
-  /** the step `doneT` was set on (a tool or a debugger that moves `Lesson.i` by hand moves it off this, and the deed was not that step's) */
-  doneI?: number }
-type TestFn = (g: Game, t: LessonTest, S: StepSeen) => boolean;
-/** a test kind: `ok` = is it true now; `check` = what is wrong with this record on this floor (null: nothing) */
-interface TestKind { ok: TestFn; check?: (g: Game, t: LessonTest) => string | null }
+/** what is wrong with one kind's record on this floor (null: nothing) */
+type TestCheck = (g: Game, t: LessonTest) => string | null;
 
-/** one test asked, safely: an unknown kind or a record the checker would refuse (a hand-edited file) is never true and never throws into the game's frame */
-const BAD = new SideSet<object>('lesson.BAD');
-function passes(g: Game, t: LessonTest, S: StepSeen): boolean {
-  try { return !!LESSON_TESTS[t?.is]?.ok(g, t, S); }
-  catch (x) { if (!BAD.has(t)) { BAD.add(t); console.error(`lesson: test '${String(t?.is)}' threw (${(x as Error).message}) — it never passes; lesson-check names the fault`); } return false; }
-}
-/** the first row of a front-trimmed log that came after `last` (0: `last` is gone, or there was none) */
-function after(log: readonly object[], last: object | null): number { let k = log.length; while (k > 0 && log[k - 1] !== last) k--; return k; }
 const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const str = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
 const rect = (v: unknown): v is Rect => !!v && typeof v === 'object' && num((v as Rect).x0) && num((v as Rect).x1) && num((v as Rect).z0) && num((v as Rect).z1) && (v as Rect).x0 < (v as Rect).x1 && (v as Rect).z0 < (v as Rect).z1;
 const vec = (v: unknown): v is Vec3 => Array.isArray(v) && v.length === 3 && v.every(num);
-const inside = (R: Rect, p: Vec3) => p[0] > R.x0 && p[0] < R.x1 && p[2] > R.z0 && p[2] < R.z1;
-/** the player a lesson is taught to (one seat today) */
-const who = (g: Game): Player => g.player;
-type PairSel = 'all' | 'red' | 'blue';
-/** the door a teammate is on a plain 'stack up' on (orders.ts Assignment), by name; null: none */
-const onStack = (g: Game, m: Guard): string | null => { const A = g.orders.of(m); return A && A.order === 'stack' && A.door ? A.door.def.name : null; };
-/** a man who is no longer on his feet: dead, or out cold (the floor keeps both as state 'dead') */
-const downed = (x: Guard) => x.state === 'dead';
-/** the one partner of a quiet pair (the first operative unit on his feet; null: none) */
-const partnerOf = (g: Game): Guard | null => g.guards.find(x => !!x.unit && x.team === 'operative' && x.state !== 'dead') ?? null;
 /** what a `pair` test may count (the first words of pairorders.ts PAIR_LOG rows) */
 const PAIR_WHATS = ['mark', 'now', 'set', 'go', 'go:F', 'go:hands', 'down'];
 
-/** the flags a `flag` test can read off the player (and the team's posture): each true while it holds */
-const FLAGS: Record<string, (g: Game) => boolean> = {
-  crouch: g => who(g).crouch,
-  sprint: g => who(g).sprinting,
-  wall: g => !!who(g).wall,                                   // back to a wall (Q)
-  peek: g => (who(g).wall?.peek ?? 0) > 0.5,                  // …and leaning out of its open end
-  lean: g => { const w = who(g).wall; return !!w && ((w.lean ?? 0) > 0.5 || (w.kind !== 'stack' && (w.peek ?? 0) > 0.5)); },   // out round a wall's open end, whichever hold: stepped out with the rifle in the shoulder, or his back leant out (`peek` alone is also true of a rifleman who has only slid to the end)
-  nv: g => who(g).nv,                                         // night vision down (N)
-  light: g => { const p = who(g); return (p.pistolUp && p.pistol.lightOn) || (p.rifleUp && p.rifle.lightOn); },   // the weapon light of the gun in hand (L)
-  holstered: g => who(g).holstered,                           // hands empty (E)
-  gun: g => !!who(g).gunInHand(),                             // a gun in the hands
-  ringsOut: g => who(g).rifle.rings <= 0,                     // the launcher's ring airfoils are spent (the honest other way past a step that asks for one)
-  shellsOut: g => who(g).rifle.shells <= 0,                   // …and its 40 mm grenades
-  auto: g => who(g).rifle.mode !== 'semi',                              // the rifle's selector on AUTO (Z)
-  // the setup of the gun in his hands is up (slotsetup.ts) — and where a gun has no setup (the switch off) there is nothing to ask for: the line goes by;
-  // `setupShut`: it is not up (Tab, or anything else that puts it away)
-  setup: g => !SLOTSETUP.on || !!g.view.kit.setup,
-  setupShut: g => !g.view.kit.setup,
-  dragging: g => !!who(g).dragging,
-  dark: g => g.blackout.active,                               // the mains are off (the breaker thrown, by whoever threw it)
-  chargeSet: g => (g.wallCharge?.set.length ?? 0) > 0,        // a wall charge is on a wall, waiting on the trigger
-  // …on the wall the step's mark is on (a step with none: any wall), with nobody of the squad inside its reach (they have stood off)
-  chargeClear: g => { const W = g.wallCharge, c = W?.set[0], at = g.lesson?.step?.at; if (!c || W.tooClose(c).length) return false; if (!at) return true;
-    const p = wallPt(c.wall, 0, 0); return (c.wall.alongX ? Math.abs(p[2] - at[2]) : Math.abs(p[0] - at[0])) < 0.4 && Math.hypot(p[0] - at[0], p[2] - at[2]) < 4; },
-  wallBlown: g => (g.wallCharge?.stats.holes ?? 0) > 0,       // …and one has made its hole this run
-  holding: g => !!who(g).holding,                             // a man in his arm
-  picking: g => !!who(g).picking,
-  coding: g => !!who(g).coding,
-  menu: g => !!g.orders?.menu,                                // the order menu is up (X)
-  ownRing: g => { const S = who(g).sel; return !!S.open && !!S.ring; },   // his own ring is up (the interaction key held: handring.ts), with or without a key down
-  silent: g => squadSilent(g),                                // the squad's posture is SILENT
-};
+/** the flags a `flag` test can read off the player (and the team's posture) */
+const FLAGS: readonly string[] = ['crouch', 'sprint', 'wall', 'peek', 'lean', 'nv', 'light', 'holstered', 'gun', 'ringsOut', 'shellsOut', 'auto', 'setup', 'setupShut', 'dragging', 'dark', 'chargeSet', 'chargeClear', 'wallBlown', 'holding', 'picking', 'coding', 'menu', 'ownRing', 'silent'];
 
-// ---- the test kinds. KEEP each family's rows together and a blank line between families: parts add rows side by side ----
-export const LESSON_TESTS: Record<string, TestKind> = {
+// ---- the test kinds' checks. KEEP each family's rows together and a blank line between families: parts add rows side by side ----
+const areaCheck: TestCheck = (g, t) => !rect(t.area) ? 'area: a rect { x0, x1, z0, z1 }' : freeIn(g, t.area) ? null : 'area: no free floor inside it';
+const noFields: TestCheck = () => null;
+export const LESSON_CHECKS: Record<string, TestCheck> = {
   // -- where he is
-  in: { ok: (g, t) => inside(t.area as Rect, who(g).char.pos), check: (g, t) => !rect(t.area) ? 'area: a rect { x0, x1, z0, z1 }' : freeIn(g, t.area) ? null : 'area: no free floor inside it' },
-  near: { ok: (g, t) => { const p = who(g).char.pos, a = t.at as Vec3; return Math.hypot(p[0] - a[0], p[2] - a[2]) < ((t.r as number) ?? 1.2); }, check: (_g, t) => !vec(t.at) ? 'at: a Vec3' : t.r !== undefined && !num(t.r) ? 'r: metres' : null },
+  in: areaCheck,
+  near: (_g, t) => !vec(t.at) ? 'at: a Vec3' : t.r !== undefined && !num(t.r) ? 'r: metres' : null,
 
   // -- what he is doing / carrying
-  flag: { ok: (g, t) => FLAGS[t.flag as string](g) === ((t.value as boolean | undefined) ?? true), check: (_g, t) => FLAGS[t.flag as string] ? null : `flag: one of ${Object.keys(FLAGS).join(', ')}` },
-  slot: { ok: (g, t) => { const p = who(g); return p.slot === t.slot && (t.drawn === undefined || !p.holstered === t.drawn); }, check: (_g, t) => ['pistol', 'rifle', 'smoke', 'flash', 'frag'].includes(t.slot as string) ? null : 'slot: pistol, rifle, smoke, flash or frag' },
-  // (with two gears — player.ts TWOGEARS — the wheel is nobody's pace and there is nothing to ask for: the line goes by, as `setup` does where a gun has none)
-  pace: { ok: (g, t) => TWOGEARS.on || band(who(g).pace, t), check: (_g, t) => bandCheck(t) },
-  meter: { ok: (g, t) => band(t.which === 'noise' ? who(g).noise : who(g).visibility, t), check: (_g, t) => t.which !== 'light' && t.which !== 'noise' ? "which: 'light' or 'noise'" : bandCheck(t) },
+  flag: (_g, t) => FLAGS.includes(t.flag as string) ? null : `flag: one of ${FLAGS.join(', ')}`,
+  slot: (_g, t) => ['pistol', 'rifle', 'smoke', 'flash', 'frag'].includes(t.slot as string) ? null : 'slot: pistol, rifle, smoke, flash or frag',
+  pace: (_g, t) => bandCheck(t),
+  meter: (_g, t) => t.which !== 'light' && t.which !== 'noise' ? "which: 'light' or 'noise'" : bandCheck(t),
 
   // -- the world
-  stage: { ok: (g, t) => STAGES.indexOf(g.mission.stage) >= STAGES.indexOf(t.stage as string) && g.mission.stage !== 'failed', check: (_g, t) => STAGES.includes(t.stage as string) && t.stage !== 'infiltrate' ? null : 'stage: drive (the place reached), exfil (the thing taken) or done' },
-  door: { ok: (g, t) => { const d = g.doors.byName(t.door as string); if (!d) return false; const s = t.state; return s === 'open' ? !d.isClosed() : s === 'shut' ? d.isClosed() : s === 'unlocked' ? !d.locked || d.lockBroken : s === 'charged' ? !!g.doorTools?.chargeOn(d) : d.lockBroken; },   // (charged: a door charge stands SET on it, whoever's hands set it — doortools.ts)
-    check: (g, t) => !g.doors.byName(t.door as string) ? `door: no door named '${String(t.door)}'` : ['open', 'shut', 'unlocked', 'broken', 'charged'].includes(t.state as string) ? null : 'state: open, shut, unlocked, broken or charged' },
-  target: { ok: (g, t) => { const x = g.targets.find(y => y.name === t.name); return !!x && (x.on && !x.broken && x.factor > 0.05) === t.on; },   // a fixture / a device as the eye has it: lit, or dark (switched off, shot out, under the OCP's spell, the mains down)
-    check: (g, t) => !g.targets.some(y => y.name === t.name) ? `name: no light or device named '${String(t.name)}'` : typeof t.on !== 'boolean' ? 'on: true or false' : null },
-  men: { ok: (g, t) => g.guards.filter(x => hostileTo(x, 'player') && downed(x)).length >= ((t.down as number) ?? 1), check: (_g, t) => t.down === undefined || (num(t.down) && t.down >= 1) ? null : 'down: how many, ≥ 1' },
+  stage: (_g, t) => STAGES.includes(t.stage as string) && t.stage !== 'infiltrate' ? null : 'stage: drive (the place reached), exfil (the thing taken) or done',
+  door: (g, t) => !g.doors.byName(t.door as string) ? `door: no door named '${String(t.door)}'` : ['open', 'shut', 'unlocked', 'broken', 'charged'].includes(t.state as string) ? null : 'state: open, shut, unlocked, broken or charged',
+  target: (g, t) => !g.targets.some(y => y.name === t.name) ? `name: no light or device named '${String(t.name)}'` : typeof t.on !== 'boolean' ? 'on: true or false' : null,
+  men: (_g, t) => t.down === undefined || (num(t.down) && t.down >= 1) ? null : 'down: how many, ≥ 1',
 
   // -- deeds, counted since the step came up
   // (an order may name the DOOR it was given on: `on: '<door name>'` — "stack up on the first hut's door" is not passed by a stack on another — or, after an `@` in `what`, the MAN or the THING it was given on, in the words orders.ts logs as its target: a callsign is the deal's, so a man is named only on a mission whose men are placed the same every run)
-  did: { ok: (_g, t, S) => (S.n.get(t.on === undefined ? t.what as string : `${t.what}@door:${t.on}`) ?? 0) >= ((t.n as number) ?? 1),
-    check: (g, t) => { const m = str(t.what) ? /^(?:(?:act|event|chron|order):[\w.-]+|order:[\w.-]+@(foe:[\w.'-]+(?: [\w.'-]+)*|thing:(?:breaker|objective|device)))$/.exec(t.what) : null, foe = m?.[1]?.startsWith('foe:') ? m[1].slice(4) : null;
-      return !m ? "what: 'act:<verb>', 'event:<kind>', 'chron:<kind>', 'order:<id>', 'order:<id>@foe:<callsign>' (an order given ON that man) or 'order:<id>@thing:breaker|objective|device' (a door is `on`)"
-      : foe !== null && g.guards.some(x => x.team !== 'operative' && x.state !== 'dead') && !g.guards.some(x => x.team !== 'operative' && x.callsign === foe) ? `what: no man called '${foe}' on this floor`
-      : t.on === undefined ? null : m[1] ? 'on: not with a target in `what`' : !(t.what as string).startsWith('order:') ? 'on: only with an order' : !str(t.on) || !g.doors.byName(t.on as string) ? `on: no door '${t.on}'` : null; } },
+  did: (g, t) => { const m = str(t.what) ? /^(?:(?:act|event|chron|order):[\w.-]+|order:[\w.-]+@(foe:[\w.'-]+(?: [\w.'-]+)*|thing:(?:breaker|objective|device)))$/.exec(t.what) : null, foe = m?.[1]?.startsWith('foe:') ? m[1].slice(4) : null;
+    return !m ? "what: 'act:<verb>', 'event:<kind>', 'chron:<kind>', 'order:<id>', 'order:<id>@foe:<callsign>' (an order given ON that man) or 'order:<id>@thing:breaker|objective|device' (a door is `on`)"
+    : foe !== null && g.guards.some(x => x.team !== 'operative' && x.state !== 'dead') && !g.guards.some(x => x.team !== 'operative' && x.callsign === foe) ? `what: no man called '${foe}' on this floor`
+    : t.on === undefined ? null : m[1] ? 'on: not with a target in `what`' : !(t.what as string).startsWith('order:') ? 'on: only with an order' : !str(t.on) || !g.doors.byName(t.on as string) ? `on: no door '${t.on}'` : null; },
 
   // -- (the hands' rows)
-  // a man put down BY THE PLAYER'S HAND in this run, by the way it was done (the chronicle's own rows — combat.ts killGuard → chronDown): out cold by the
-  // 'takedown' blow, the 'choke', the pistol 'whip' or a 'ring'; dead by the 'knife'
-  downed: { ok: (g, t) => g.chronicle.events.filter(e => t.how === 'knife' ? e.kind === 'kill' && e.data?.weapon === 'knife' : e.kind === 'ko' && e.data?.method === t.how).length >= ((t.n as number) ?? 1),
-    check: (_g, t) => !HOWS.includes(t.how as string) ? `how: one of ${HOWS.join(', ')}` : t.n === undefined || (num(t.n) && t.n >= 1) ? null : 'n: how many, ≥ 1' },
-  // a body (a man down, dead or out cold) LIES inside the area, let go of
-  body: { ok: (g, t) => g.guards.some(x => downed(x) && who(g).dragging !== x && inside(t.area as Rect, x.char.bones.hips ?? x.char.pos)), check: (g, t) => !rect(t.area) ? 'area: a rect { x0, x1, z0, z1 }' : freeIn(g, t.area) ? null : 'area: no free floor inside it' },
-
-  // calm: the shift is on its beat — every hostile man still on his feet is in state 'patrol' (nobody looking for a noise, hunting or searching); `route` = only
-  // the man of that patrol route (the level's own name for it). A man who is down no longer counts; with nobody left to ask it is true
-  calm: { ok: (g, t) => g.guards.every(x => !hostileTo(x, 'player') || downed(x) || (t.route !== undefined && x.route?.name !== t.route) || x.state === 'patrol'),
-    check: (g, t) => t.route === undefined || g.level.routes.some(r => r.name === t.route) ? null : `route: no patrol route named '${String(t.route)}'` },
-
-  // -- (the lights', locks' and devices' rows)
+  downed: (_g, t) => !HOWS.includes(t.how as string) ? `how: one of ${HOWS.join(', ')}` : t.n === undefined || (num(t.n) && t.n >= 1) ? null : 'n: how many, ≥ 1',
+  body: areaCheck,
+  calm: (g, t) => t.route === undefined || g.level.routes.some(r => r.name === t.route) ? null : `route: no patrol route named '${String(t.route)}'`,
 
   // -- (the guns' and the kit's rows)
-  // loaded: a reload of the gun in his hands has run to its end since the step came up, or one would gain him nothing (weapons.ts startReload's own
-  // refusal: a round up the pipe and no fuller magazine to seat, or nothing spare at all) — what 'press R to reload' waits for when the next line must
-  // not come up over the reload. A gun he ran dry reloads itself (autoreload.ts): that reload counts, R pressed or not
-  loaded: { ok: (g, _t, S) => { const w = who(g).gunInHand(); if (!w) return false; if (w.reloading) { S.n.set('loaded:began', 1); return false; }
-      return !!S.n.get('loaded:began') || !w.spare.length || (w.chamber === 1 && (w.mag ?? 0) >= Math.min(Math.max(...w.spare), w.magRoom)); }, check: () => null },
-  // reload: the gun in his hands is being reloaded (R) — true for the beat's length
-  reload: { ok: g => { const p = who(g); return (p.pistolUp && p.pistol.reloading) || (p.rifleUp && p.rifle.reloading); }, check: () => null },
-  // launcher: what the rifle's right button fires (2 again, with the rifle up, flips it): on 'ring' | 'he40' ('none' was a selection once: now it is true only of a long gun with no launcher, the shotgun); `fired` = …and the tube has just sent one (true while it cycles)
-  launcher: { ok: (g, t) => { const p = who(g), r = p.rifle; return (r.attachment ?? 'none') === t.on && (!t.fired || (p.rifleUp && r.ringCd > 0)); },
-    check: (_g, t) => !['ring', 'he40', 'none'].includes(t.on as string) ? "on: 'ring', 'he40' or 'none'" : t.fired !== undefined && typeof t.fired !== 'boolean' ? 'fired: true or false' : t.fired && t.on === 'none' ? 'fired: nothing is fired with no attachment on' : null },
-  // burst: a string of n rounds (default 3) under one held trigger with the rifle's selector on AUTO — true while the string is still running
-  burst: { ok: (g, t) => { const p = who(g); return p.rifleUp && p.rifle.automatic && p.rifle.autoIdx >= ((t.n as number) ?? 3); }, check: (_g, t) => t.n === undefined || (num(t.n) && t.n >= 2) ? null : 'n: how many rounds in the one string, ≥ 2' },
-  // threw: a thing has left his hand since the step came up (the chronicle's 'thrown' row): `kind` 'smoke' | 'flash' (the stun can) | 'frag' | 'he40' (the launcher's
-  // grenade) says which; `quick` = by G's quick-throw (G seen held with a can to throw, then a can gone); `area` = …and one of that kind has gone off lying inside the rect
-  threw: { ok: (g, t, S) => { const ev = g.chronicle.events, from = t.quick ? S.heldAt : S.chron0; if (from < 0) return false;
-      const A = t.area as Rect | undefined, key = A ? `threw:${String(t.kind)}:${A.x0},${A.z0},${A.x1},${A.z1}` : '';
-      if (A && S.n.get(key)) return true;   // (seen once is seen: a frag or a stun can is off the floor the frame after it goes off, and a `hold` must still run)
-      for (let i = Math.min(from, ev.length); i < ev.length; i++) if (ev[i].kind === 'thrown' && (t.kind === undefined || ev[i].data.kind === t.kind)) {
-        if (!A) return true;
-        // `area`: …and it has gone off in there — one thrown the wrong way does not pass. A smoke can lies venting where it went off: THAT can (his, on the
-        // floor no longer than since it left his hand: never an older one). A stun can and a frag are gone with their bang: the bang this frame, by where it was.
-        const me = who(g).char.id, since = g.mission.stats.elapsed - ev[i].t + 0.5, k = t.kind;   // (the chronicle's clock is the mission's own)
-        const lying = k !== 'flash' && k !== 'frag' && g.items.items.some(x => x.kind === 'smoke' && x.fired && x.who === me && x.age <= since && inside(A, x.pos));
-        const bang = k !== 'smoke' && g.events.some(e => e.kind === 'bang' && !e.charge && (k === undefined || (k === 'frag') === !!e.frag) && inside(A, e.pos));
-        if (lying || bang) { S.n.set(key, 1); return true; }
-      }
-      return false; },
-    check: (_g, t) => t.area !== undefined && !rect(t.area) ? 'area: a rect { x0, x1, z0, z1 }' : t.area !== undefined && (t.quick || t.kind === 'he40') ? 'area: a thrown can or frag (not the quick throw, not the 40 mm)' : t.kind !== undefined && !['smoke', 'flash', 'frag', 'he40'].includes(t.kind as string) ? "kind: 'smoke', 'flash', 'frag' or 'he40'" : t.quick !== undefined && typeof t.quick !== 'boolean' ? 'quick: true or false' : t.quick && (t.kind === 'frag' || t.kind === 'he40') ? 'quick: G throws only smoke and the stun can' : null },
+  loaded: noFields,
+  reload: noFields,
+  launcher: (_g, t) => !['ring', 'he40', 'none'].includes(t.on as string) ? "on: 'ring', 'he40' or 'none'" : t.fired !== undefined && typeof t.fired !== 'boolean' ? 'fired: true or false' : t.fired && t.on === 'none' ? 'fired: nothing is fired with no attachment on' : null,
+  burst: (_g, t) => t.n === undefined || (num(t.n) && t.n >= 2) ? null : 'n: how many rounds in the one string, ≥ 2',
+  threw: (_g, t) => t.area !== undefined && !rect(t.area) ? 'area: a rect { x0, x1, z0, z1 }' : t.area !== undefined && (t.quick || t.kind === 'he40') ? 'area: a thrown can or frag (not the quick throw, not the 40 mm)' : t.kind !== undefined && !['smoke', 'flash', 'frag', 'he40'].includes(t.kind as string) ? "kind: 'smoke', 'flash', 'frag' or 'he40'" : t.quick !== undefined && typeof t.quick !== 'boolean' ? 'quick: true or false' : t.quick && (t.kind === 'frag' || t.kind === 'he40') ? 'quick: G throws only smoke and the stun can' : null,
 
-  // -- (the squad's rows: orders, door tools, two pairs): who the orders go to, a pair stacked on a door, the word, a room of the structure taken, the squad falling in
-  orderTo: { ok: (g, t) => !!g.orders?.active && g.orders.who === t.who, check: (_g, t) => t.who === 'all' || t.who === 'red' || t.who === 'blue' ? null : "who: 'all', 'red' or 'blue'" },
-  stackOn: { ok: (g, t) => { const men = g.orders?.active ? g.orders.men((t.who as PairSel | undefined) ?? 'all') : []; return men.length > 0 && men.every(m => onStack(g, m) === t.door && (!t.set || !!g.orders.of(m)?.arrived)); },   // every living man of them is on a 'stack up' on that door (`set`: and stands on his mark)
-    check: (g, t) => !g.doors.byName(t.door as string) ? `door: no door named '${String(t.door)}'` : t.who === undefined || t.who === 'all' || t.who === 'red' || t.who === 'blue' ? null : "who: 'all', 'red' or 'blue'" },
-  pairsOn: { ok: (g, t) => { if (!g.orders?.active) return false; const doors = new Set<string>();   // pairs stacked whole, each on its door: how many DIFFERENT doors
-      for (const id of g.orders.pairs()) { const men = g.orders.men(id), d = men.length ? onStack(g, men[0]) : null; if (d && men.every(m => onStack(g, m) === d)) doors.add(d); }
-      return doors.size >= ((t.doors as number) ?? 2); }, check: (_g, t) => t.doors === undefined || (num(t.doors) && t.doors >= 1) ? null : 'doors: how many different doors, ≥ 1' },
-  word: { ok: (_g, t, S) => S.words.size >= ((t.doors as number) ?? 1),   // the word given since the step came up (doortools.ts goMen: its beat on every order it let go), over how many doors — kept once seen: the order it let go ends and leaves the list
-    check: (_g, t) => t.doors === undefined || (num(t.doors) && t.doors >= 1) ? null : 'doors: how many doors go on it, ≥ 1' },
-  taken: { ok: (g, t) => !!g.roomClear?.active && !!g.roomClear.rooms.find(r => r.def.id === t.room)?.cleared, check: (g, t) => g.level.scenarios?.roomClear?.rooms.some(r => r.id === t.room) ? null : `room: no room '${String(t.room)}' in the level's roomClear block` },
-  following: { ok: g => { const men = g.orders?.active ? g.orders.men('all') : []; return men.length > 0 && men.every(m => g.orders.of(m)?.order === 'fallIn'); } },   // every living teammate is on 'fall in'
+  // -- (the squad's rows: orders, door tools, two pairs)
+  orderTo: (_g, t) => t.who === 'all' || t.who === 'red' || t.who === 'blue' ? null : "who: 'all', 'red' or 'blue'",
+  stackOn: (g, t) => !g.doors.byName(t.door as string) ? `door: no door named '${String(t.door)}'` : t.who === undefined || t.who === 'all' || t.who === 'red' || t.who === 'blue' ? null : "who: 'all', 'red' or 'blue'",
+  pairsOn: (_g, t) => t.doors === undefined || (num(t.doors) && t.doors >= 1) ? null : 'doors: how many different doors, ≥ 1',
+  word: (_g, t) => t.doors === undefined || (num(t.doors) && t.doors >= 1) ? null : 'doors: how many doors go on it, ≥ 1',
+  taken: (g, t) => g.level.scenarios?.roomClear?.rooms.some(r => r.id === t.room) ? null : `room: no room '${String(t.room)}' in the level's roomClear block`,
+  following: noFields,
 
   // -- (the quiet partner's rows)
-  // mate: where the ONE partner is — any of `area` (a rect he stands in), `at` (+ `r`, default 1.5 m), `by` (within that many metres of the player), `away` (further
-  // than that from him); all that are given must hold. False with no partner on his feet.
-  mate: { ok: (g, t) => { const m = partnerOf(g); if (!m) return false; const p = m.char.pos, s = who(g).char.pos, d = Math.hypot(p[0] - s[0], p[2] - s[2]);
-      return (t.area === undefined || inside(t.area as Rect, p)) && (t.at === undefined || Math.hypot(p[0] - (t.at as Vec3)[0], p[2] - (t.at as Vec3)[2]) < ((t.r as number) ?? 1.5)) && (t.by === undefined || d < (t.by as number)) && (t.away === undefined || d > (t.away as number)); },
-    check: (g, t) => t.area === undefined && t.at === undefined && t.by === undefined && t.away === undefined ? 'one of area (a rect), at (a Vec3, + r), by (metres from the player), away (metres)'
-      : t.area !== undefined && !rect(t.area) ? 'area: a rect { x0, x1, z0, z1 }' : t.area !== undefined && !freeIn(g, t.area as Rect) ? 'area: no free floor inside it' : t.at !== undefined && !vec(t.at) ? 'at: a Vec3'
-      : [t.r, t.by, t.away].some(v => v !== undefined && !(num(v) && v > 0)) ? 'r / by / away: metres, > 0' : null },
-  // pair: the quiet pair's own deeds since the step came up, read off pairorders.ts's log by the row's first word(s): 'mark' (take him on your mark, given) ·
-  // 'now' (take him now, given) · 'set' (he is behind his man, waiting) · 'go' (the mark: 'go:F' the key, 'go:hands' the player's own hands on a man) · 'down' (the partner put a man out)
-  pair: { ok: (_g, t, S) => { let n = 0; for (let i = after(PAIR_LOG, S.lastPair); i < PAIR_LOG.length; i++) if (PAIR_LOG[i].what.startsWith(t.what as string)) n++; return n >= ((t.n as number) ?? 1); },
-    check: (_g, t) => !PAIR_WHATS.includes(t.what as string) ? `what: one of ${PAIR_WHATS.join(', ')}` : t.n === undefined || (num(t.n) && t.n >= 1) ? null : 'n: how many, ≥ 1' },
+  mate: (g, t) => t.area === undefined && t.at === undefined && t.by === undefined && t.away === undefined ? 'one of area (a rect), at (a Vec3, + r), by (metres from the player), away (metres)'
+    : t.area !== undefined && !rect(t.area) ? 'area: a rect { x0, x1, z0, z1 }' : t.area !== undefined && !freeIn(g, t.area as Rect) ? 'area: no free floor inside it' : t.at !== undefined && !vec(t.at) ? 'at: a Vec3'
+    : [t.r, t.by, t.away].some(v => v !== undefined && !(num(v) && v > 0)) ? 'r / by / away: metres, > 0' : null,
+  pair: (_g, t) => !PAIR_WHATS.includes(t.what as string) ? `what: one of ${PAIR_WHATS.join(', ')}` : t.n === undefined || (num(t.n) && t.n >= 1) ? null : 'n: how many, ≥ 1',
 
   // -- several at once
   // ---- a rails level's (rails.ts) ----
-  cue: { ok: (g, t) => !!g.rails?.cued(t.name as string), check: (_g, t) => str(t.name) ? null : 'name: the beat the level\'s script ends with c.signal(\'done:<name>\')' },   // the level's script has played a beat out
-  view: { ok: (g, t, S) => (t.turned === undefined || S.turned * 180 / Math.PI >= (t.turned as number)) && (t.zoomed === undefined || Math.abs(Math.log(g.seat.cam.distance / S.dist0)) >= Math.log(t.zoomed as number)) && (t.panned === undefined || (g.rails?.panned() ?? 0) >= (t.panned as number)),   // the seat's own view since the step came up: turned by so many degrees in all, zoomed by this ratio either way, shifted this far off the squad (the sky seat)
-    check: (_g, t) => t.turned === undefined && t.zoomed === undefined && t.panned === undefined ? 'turned (degrees), zoomed (a ratio over 1) and / or panned (metres)' : (t.turned !== undefined && !num(t.turned)) || (t.panned !== undefined && !num(t.panned)) || (t.zoomed !== undefined && !(num(t.zoomed) && t.zoomed > 1)) ? 'turned, panned: numbers · zoomed: a ratio over 1' : null },
-  // squad: the teammates on their feet stand inside `area`, all of them (or `n` of them): where an order has taken them
-  squad: { ok: (g, t) => { const men = g.guards.filter(x => x.unit && x.team === 'operative' && x.state !== 'dead'), inn = men.filter(m => inside(t.area as Rect, m.char.pos)).length; return men.length > 0 && inn >= Math.min(men.length, (t.n as number) ?? men.length); },
-    check: (g, t) => !rect(t.area) ? 'area: a rect { x0, x1, z0, z1 }' : !freeIn(g, t.area as Rect) ? 'area: no free floor inside it' : t.n === undefined || (num(t.n) && t.n >= 1) ? null : 'n: how many, ≥ 1' },
-  // stacks: each of the named doors has `n` men (default 1) on a 'stack up' on it (`set`: standing on their marks) — a squad split over doors,
-  // however he split it
-  stacks: { ok: (g, t) => { const O = g.orders; if (!O?.active) return false; const men = O.men('all');
-      return (t.doors as string[]).every(d => men.filter(m => onStack(g, m) === d && (!t.set || !!O.of(m)?.arrived)).length >= ((t.n as number) ?? 1)); },
-    check: (g, t) => !Array.isArray(t.doors) || !t.doors.length ? 'doors: a list of door names' : (t.doors as string[]).find(d => !g.doors.byName(d)) !== undefined ? `doors: no door named '${String((t.doors as string[]).find(d => !g.doors.byName(d)))}'` : t.n === undefined || (num(t.n) && t.n >= 1) ? null : 'n: how many men a door, ≥ 1' },
-  // watching: `n` teammates (default 1) are on a 'cover' order whose point is within `r` metres (default 3) of `at` — men turned to a gate, a door,
-  // a spot: who watches what, however they came to (the command key's own cover, or Shift with it: planmode.ts planGoal)
-  watching: { ok: (g, t) => { const O = g.orders; if (!O?.active) return false; const a = t.at as Vec3, r = (t.r as number) ?? 3;
-      return O.men('all').filter(m => { const A = O.of(m); return !!A && A.order === 'cover' && !!A.watch && Math.hypot(A.watch[0] - a[0], A.watch[2] - a[2]) < r; }).length >= ((t.n as number) ?? 1); },
-    check: (_g, t) => !vec(t.at) ? 'at: a Vec3' : t.r !== undefined && !(num(t.r) && t.r > 0) ? 'r: metres, > 0' : t.n === undefined || (num(t.n) && t.n >= 1) ? null : 'n: how many men, ≥ 1' },
-  all: { ok: (g, t, S) => (t.of as LessonTest[]).every(u => passes(g, u, S)), check: (g, t) => ofCheck(g, t) },
-  any: { ok: (g, t, S) => (t.of as LessonTest[]).some(u => passes(g, u, S)), check: (g, t) => ofCheck(g, t) },
+  cue: (_g, t) => str(t.name) ? null : 'name: the beat the level\'s script ends with c.signal(\'done:<name>\')',
+  view: (_g, t) => t.turned === undefined && t.zoomed === undefined && t.panned === undefined ? 'turned (degrees), zoomed (a ratio over 1) and / or panned (metres)' : (t.turned !== undefined && !num(t.turned)) || (t.panned !== undefined && !num(t.panned)) || (t.zoomed !== undefined && !(num(t.zoomed) && t.zoomed > 1)) ? 'turned, panned: numbers · zoomed: a ratio over 1' : null,
+  squad: (g, t) => !rect(t.area) ? 'area: a rect { x0, x1, z0, z1 }' : !freeIn(g, t.area as Rect) ? 'area: no free floor inside it' : t.n === undefined || (num(t.n) && t.n >= 1) ? null : 'n: how many, ≥ 1',
+  stacks: (g, t) => !Array.isArray(t.doors) || !t.doors.length ? 'doors: a list of door names' : (t.doors as string[]).find(d => !g.doors.byName(d)) !== undefined ? `doors: no door named '${String((t.doors as string[]).find(d => !g.doors.byName(d)))}'` : t.n === undefined || (num(t.n) && t.n >= 1) ? null : 'n: how many men a door, ≥ 1',
+  watching: (_g, t) => !vec(t.at) ? 'at: a Vec3' : t.r !== undefined && !(num(t.r) && t.r > 0) ? 'r: metres, > 0' : t.n === undefined || (num(t.n) && t.n >= 1) ? null : 'n: how many men, ≥ 1',
+  all: (g, t) => ofCheck(g, t),
+  any: (g, t) => ofCheck(g, t),
 };
 const STAGES: string[] = ['infiltrate', 'drive', 'exfil', 'done'];
 const HOWS: string[] = ['takedown', 'choke', 'whip', 'ring', 'knife'];
-function band(v: number, t: LessonTest): boolean { return (t.below === undefined || v < (t.below as number)) && (t.above === undefined || v > (t.above as number)); }
 function bandCheck(t: LessonTest): string | null { return (t.below === undefined && t.above === undefined) || (t.below !== undefined && !num(t.below)) || (t.above !== undefined && !num(t.above)) ? 'below and / or above: numbers' : null; }
 function ofCheck(g: Game, t: LessonTest): string | null { if (!Array.isArray(t.of) || !t.of.length) return 'of: a non-empty list of tests'; for (const u of t.of as LessonTest[]) { const why = testFault(g, u); if (why) return why; } return null; }
 function freeIn(g: Game, R: Rect): boolean { const nav = g.col.nav; for (let x = R.x0 + 0.2; x < R.x1; x += 0.3) for (let z = R.z0 + 0.2; z < R.z1; z += 0.3) if (!nav.isBlocked(x, z)) return true; return false; }
 /** what is wrong with one test record on this floor (null: nothing) */
 export function testFault(g: Game, t: LessonTest): string | null {
   if (!t || typeof t !== 'object' || !str(t.is)) return "a test is a record { is: '<kind>', … }";
-  const K = LESSON_TESTS[t.is]; if (!K) return `no test kind '${t.is}' (${Object.keys(LESSON_TESTS).join(', ')})`;
-  const why = K.check?.(g, t) ?? null; return why ? `${t.is} — ${why}` : null;
+  const K = LESSON_CHECKS[t.is]; if (!K) return `no test kind '${t.is}' (${Object.keys(LESSON_CHECKS).join(', ')})`;
+  const why = K(g, t); return why ? `${t.is} — ${why}` : null;
 }
 
 /** a checkpoint's slice of a lesson */
 export interface LessonSnap { i: number; done: [string, number][] }
 
+/** THE LESSON'S RECORD on the page's copy, as the bridge fills it from the Rust game. Nothing here decides anything: what a HUD is told is `game.view.lesson`. */
 export class Lesson {
   /** the step that is up (= steps.length once every step is done) */
   i = 0;
   /** game time each step was done at, by id — the scripted run and the probes read it */
   doneAt = new Map<string, number>();
   log: string[] = [];
-  private seen: StepSeen | null = null;
-  private run: object | null = null;   // the Mission this pass belongs to: a fresh one (restartEncounter) starts the lesson over
+  seen: unknown = null;
+  run: object | null = null;   // the Mission this pass belongs to
   constructor(private g: Game) {}
-
-  /** the lesson in force (null: not live) */
-  get data(): LessonData | null {
-    const g = this.g; if (!LESSON.on) return null;
-    const L = g.level.scenarios?.lesson; if (!L?.steps?.length) return null;
-    if (L.rails && !RAILS.on) return null;   // (a tutorial mission's steps are written for the frame — a seat, locks, cues: with its switch off the level is its mission alone)
-    if (g.touring || g.quietUtility || g.puppet) return null;
-    return g.quiet?.active || g.roomClear?.active || g.nightBreach?.active || g.rescue?.active ? L : null;
-  }
-  /** the step that is up for THE MISSION THAT IS RUNNING: `i` is the last pass's until tick() has met a fresh Mission (a restart between frames), and that
-   *  pass's step is nobody's — not the row's, not a checkpoint's. A fresh run is on its first step. */
-  private get at(): number { return this.run === this.g.mission ? this.i : 0; }
-  /** the index of the step that is up for the mission that is running (rails.ts asks this, never `i`) */
-  get index(): number { return this.at; }
-  get step(): LessonStep | null { return this.data?.steps[this.at] ?? null; }
-  get finished(): boolean { const L = this.data; return !!L && this.at >= L.steps.length; }
-
-  /** the step that is up has done its deed and is waiting for the moment to play out — its own `settle`, or the beat before the next step's card (rails.ts `settles`) — (the frame's to read: nothing more is asked of him) */
-  get settling(): boolean { return this.run === this.g.mission && this.seen?.doneT !== undefined && this.seen.doneI === this.i; }
 
   /** a checkpoint's slice (savestate.ts): which step is up and when the ones before it were done. The deeds a step has counted are NOT filed: a loaded step
    *  counts from the load */
-  snapshot(): LessonSnap { return { i: this.at, done: this.run === this.g.mission ? [...this.doneAt] : [] }; }   // (a save that lands on a fresh Mission before its first tick files step 1, never the last run's step)
+  snapshot(): LessonSnap { const mine = this.run === this.g.mission; return { i: mine ? this.i : 0, done: mine ? [...this.doneAt] : [] }; }   // (a save that lands on a fresh Mission before its first tick files step 1, never the last run's step)
   /** a checkpoint loaded (savestate.ts, after the mission slice): the file's place among the steps — a file without the slice (made with the lesson off)
    *  leaves the lesson stood down for that run: its world is mid-way, and step 1 over it could ask for a deed already done */
   restore(s: LessonSnap | undefined) {
-    const L = this.data; if (!L) return;
-    this.run = this.g.mission; this.seen = null; this.doneAt.clear(); this.i = L.steps.length;
-    if (s && Number.isInteger(s.i) && s.i >= 0 && s.i <= L.steps.length) { this.i = s.i; for (const [id, t] of s.done ?? []) if (typeof id === 'string' && Number.isFinite(t)) this.doneAt.set(id, t); }
-    this.note(`checkpoint loaded: step ${Math.min(this.i + 1, L.steps.length)}/${L.steps.length}`);
+    const of = this.g.level.scenarios?.lesson?.steps?.length; if (!of) return;   // (the level's word, not the view's: a file loads with no Rust game standing to ask)
+    this.run = this.g.mission; this.seen = null; this.doneAt.clear(); this.i = of;
+    if (s && Number.isInteger(s.i) && s.i >= 0 && s.i <= of) { this.i = s.i; for (const [id, t] of s.done ?? []) if (typeof id === 'string' && Number.isFinite(t)) this.doneAt.set(id, t); }
   }
-
-  /** the run is over, whichever scenario it was: the quiet mission's stage, the player down, a room clear taken or the team wiped (roomclear.ts `end`) */
-  over(): boolean { const g = this.g; return g.mission.stage === 'failed' || g.mission.stage === 'done' || who(g).down || (!!g.roomClear?.active && !!g.roomClear.end); }
-  summary(): string {
-    const L = this.data; if (!L) return this.g.level.scenarios?.lesson ? (LESSON.on ? 'off · this level carries one (start its mission)' : 'off · switched off') : 'off · this level carries none';
-    const i = this.at;
-    return i >= L.steps.length ? `'${L.title}' · every step done (${L.steps.length})` : `'${L.title}' · step ${i + 1}/${L.steps.length} '${L.steps[i].id}': ${lineOf(L.steps[i])}`;
-  }
-  private note(s: string) { this.log.push(`${this.g.time.toFixed(2)} ${s}`); if (this.log.length > 80) this.log.splice(0, 40); }
 }
-
-/** a step's line as the keys stand: the gun's setup on (slotsetup.ts) moves the selector, the launcher's load and the light off their old keys; his own
- *  actions a ring (handring.ts) takes the whistle off its key */
-const lineOf = (T: LessonStep): string => OWNBLOW.on && T.blowLine ? T.blowLine : HANDRING.on && T.ringLine ? T.ringLine : SLOTSETUP.on && T.setupLine ? T.setupLine : T.line;
-/** …and as the page says it: a tutorial mission's one big line (rails.ts prompt) is the same words as the row's */
-export const stepLine = (T: LessonStep): string => lessonLine(lineOf(T));
 
 // ---------------------------------------------------------------- the checker (tools/qa/lesson-check.ts; the probes): the block against the BUILT floor
 /** Everything the level file's validator cannot say (scene/levelData.ts checks shapes): each test's kind and fields, its doors / lights / areas on this floor,

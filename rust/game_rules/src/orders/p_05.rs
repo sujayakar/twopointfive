@@ -12,33 +12,10 @@ fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
 /// (orders.ts:340 `yawTo = v3.yawTo`)
 fn yaw_to(a: V3, b: V3) -> f64 { v3::yaw_to(a, b) }
 
-// ------------------------------------------------------------ what a stored function became
 
-/// (pairorders.ts:232 the 'watch him' row's `tick`: his gun stays on the man he was told to watch, while he sees him)
-fn pair_watch_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
-    let h = match g.tab.orders_assignment[a].foe { Some(h) => h, None => return };
-    if g.gd[h].state == crate::game::GuardState::Dead || !g.guards.contains(&h) { crate::pairorders::pair_orders_stand(g, gd, "holding", None); return; }
-    if !crate::pairorders::pair_orders_sees(g, gd, h) { return; }   // (behind something: the gun stays on where he last saw him)
-    let (c, p) = (g.ch[g.gd[h].ch].pos, g.ch[g.gd[gd].ch].pos);
-    let aa = &mut g.tab.orders_assignment[a];
-    if let Some(w) = &mut aa.watch { w[0] = c[0]; w[2] = c[2]; }
-    aa.face = Some(yaw_to(p, c));
-}
-
-/// `d.tick?.(S, gd, A)`: each arm is the closure of the row that holds it. It may rewrite his Assignment or re-assign him. (orders.ts:1393)
+/// `d.tick?.(S, gd, A)`: it may rewrite his Assignment or re-assign him. (orders.ts:1393)
 pub fn order_tick(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, a: OrdersAssignmentId) {
-    let tick = match g.tab.orders_order_def[d].tick { Some(t) => t, None => return };
-    match tick {
-        OrderTick::Move => crate::roomfit::fit_tick(g, gd, a),
-        OrderTick::ShutDoor => crate::shutdoor::tick(g, gd, a),
-        OrderTick::ThrowRow => crate::squadthrow::walk_tick(g, gd, a),
-        OrderTick::Wand => crate::wandorder::tick(g, gd, a),
-        OrderTick::Row(r) => if let Some(f) = r.tick { f(g, gd, a) },
-        OrderTick::Work => crate::workthings::work_things_tick(g, gd, a),
-        OrderTick::PairTake => crate::pairorders::pair_orders_take_tick(g, gd, a),
-        OrderTick::PairWatch => pair_watch_tick(g, gd, a),
-        OrderTick::PairDark => crate::pairorders::pair_orders_dark_tick(g, gd, a),
-    }
+    if let Some(f) = g.tab.orders_order_def[d].row.tick { f(g, gd, a); }
 }
 
 // ------------------------------------------------------------ the men
@@ -417,13 +394,8 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
             if w.plain > t { strafe = false; face = None; }
         }
         g.tab.orders_assignment[a].face_now = face;
-        let mut cl = crate::clearline::clear_line_feet(g, gd);
-        if cl.is_some() && !posted && squad_orders_aside(g, gd).is_some() { cl = None; }   // (stepping out of Sam's own way still comes first)
-        if cl.is_some() && sp.is_some() { cl = None; }   // (…and so does the silent partner's rule)
-        let (cl_goal, cl_speed, cl_crouch) = match &cl { Some(x) => (Some(x.goal), Some(x.speed), x.crouch), None => (None, None, false) };
-        if let Some(x) = &cl { face = x.face; strafe = x.strafe; }
         let own_goal = if keep { None } else { Some(s_goal.unwrap_or(g.tab.orders_assignment[a].goal)) };
-        let fl = if sp.is_some() || cl.is_some() { None }   // (`sp?.speed !== undefined`: every answer of spottedFeet has the key, null or a number)
+        let fl = if sp.is_some() { None }   // (`sp?.speed !== undefined`: every answer of spottedFeet has the key, null or a number)
              else { crate::fireline::fire_line_feet(g, gd, own_goal, speed, stepping || must) };
         let (fl_goal, fl_speed) = match &fl { Some(x) => (x.goal, Some(x.speed)), None => (None, None) };
         if pose.1 == crate::character::UpperMode::Aim || pose.0 == crate::character::Stance::Stack {   // Sam in the line of his gun: the muzzle comes down until he is clear of it
@@ -447,9 +419,9 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
             if low_now { let k = crate::orders::low(); pose = (k.stance, k.upper); }
         } else { g.tab.orders_assignment[a].low = false; }
         // (who has the follower's feet: spotted.ts, clearline.ts, fireline.ts, else the sneak's step, else the order's own goal)
-        let goal = sp_goal.or(cl_goal).or(fl_goal).or(own_goal);
-        let speed_out = sp_speed.or(cl_speed).or(fl_speed).unwrap_or(speed);
-        let crouch = g.tab.orders_assignment[a].crouch.unwrap_or(false) || low || sp_crouch || cl_crouch;
+        let goal = sp_goal.or(fl_goal).or(own_goal);
+        let speed_out = sp_speed.or(fl_speed).unwrap_or(speed);
+        let crouch = g.tab.orders_assignment[a].crouch.unwrap_or(false) || low || sp_crouch;
         // (the lean is written only where one is asked or one is to be taken off: a script patch keeps what it is not told. He leans on his mark, not on the walk to it)
         let a_lean = g.tab.orders_assignment[a].lean.unwrap_or(0.0);
         let script_lean = match &g.gd[gd].script { Some(s) => s.lean.unwrap_or(0.0), None => 0.0 };
@@ -459,7 +431,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
         } else { None };
         let (stack_side, light) = (g.tab.orders_assignment[a].stack_side, g.tab.orders_assignment[a].light);
         // (held: everything this call passes is a kept point, compared by value; A.goal written anew is the one exception: Assignment.new_leg, spent when it is the arm chosen)
-        let own_passed = sp_goal.is_none() && cl_goal.is_none() && fl_goal.is_none() && s_goal.is_none() && !keep;
+        let own_passed = sp_goal.is_none() && fl_goal.is_none() && s_goal.is_none() && !keep;
         let fresh = own_passed && g.tab.orders_assignment[a].new_leg;
         if fresh { g.tab.orders_assignment[a].new_leg = false; }
         crate::squad::order(g, gd, crate::squad::OrderPatch {
@@ -469,7 +441,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
             held: !fresh,
             ..Default::default()
         });
-        if let Some(q) = s_goal { if sp_goal.is_none() && cl_goal.is_none() && fl_goal.is_none() { crate::sneak::sneak_way(g, gd, q); } }
+        if let Some(q) = s_goal { if sp_goal.is_none() && fl_goal.is_none() { crate::sneak::sneak_way(g, gd, q); } }
     }
     // 'set.': once, from the last man on, when everybody the order sent is on his mark
     let mut at = 0usize;

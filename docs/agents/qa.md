@@ -351,8 +351,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `switches.json` whether a row is settled. A word a game module reads as it loads over a settled row (`GLASSFX=off`) does nothing either, and is
   not said any more. MEASURED: every table after `shippedBoot()` the same as before (one row, `CUT.on`, is raised there and no longer as a game is
   stood), and each of 708 words of the source at seven values moves the same rows that are still switches, but for three: `?autotune=0`, `?goals=0`
-  and `?qring=0` moved such rows through a settled one, as `?findtuned=0` did the outline's own table (in no registry). Seven page checks still say
-  one of the four and lose the arm or the staging they made with it: autocam-page, findme-page, findme-squad-page, findtuned-page, goals-page,
+  and `?qring=0` moved such rows through a settled one, as `?findtuned=0` did the outline's own table (in no registry). Six page checks still say
+  one of the four and lose the arm or the staging they made with it: findme-page, findme-squad-page, findtuned-page, goals-page,
   squadkeys-page, engine-replay-page (`fog`, `turn`). FROZEN_HOLDS, `standup.ts` and the reads in `src/game` are as they were.
   THE HOLDS TABLE IS TWO ROWS (2026-11-07; `tools/qa/holds.ts`). It held rules OFF for probes written for an older model. Fourteen of its sixteen
   rows held only settled rows: on the page's stand every such hold was refused under the fold (101 a run of `holds`, which was red in all-quick by
@@ -483,7 +483,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   WHAT MAKING IT FOUND: 21 rows the list called settled that the page's own code writes, so a game with them as constants was wrong: ten the
   player's DIFFICULTY lays (`difficulty.ts write()` assigns the whole PRESSURE and DIGIN tables and the fog's two rows: PRESSURE.warned,
   second, byWay, rescueCrew, wayOut, drilled, sweep; DIGIN.keeper; FOG.cone; FOG.own, also a quiet mission's fog rung), eight the camera's
-  tune in Options > Game (`autocam.ts` AUTO_KEYS), three inside the slots table (data, `NOT_KNOBS`). The retire tool had not seen them: a
+  tune in Options > Game (the auto camera's, shelved 2026-11-08), three inside the slots table (data, `NOT_KNOBS`). The retire tool had not seen them: a
   whole-table assign is no write site to it. A second review then walked all 38 missions on Hard with every lever under the fold: nothing
   refused. NOT COVERED: a write through a road nothing here walks (a menu's own row through an alias); the fold names it when a check does.
   THE CHECK (`fold-check.ts`, the same on both stands, every game in a child on the page's stand): (1) the settled rows are in the tables,
@@ -991,7 +991,7 @@ but synthetic writes still work.
   minutes. ITS SCENES ARE REAL FLOORS (the set `floors-1`; the day showcase it once played was removed with both showcases): the pass in night snow, the block
   with the mains thrown by a teammate (red emergency lights, the men's torches), the compound in a storm; four teammates, hard, each a mission of the list on
   its own deal and die. A LEVEL IS ONLY LOADED AT BOOT, so a run is A PAGE PER SCENE: `benchBegin` writes a small record to the tab's session store and loads
-  the first scene's address (the mission's own query with `roomclear=<seed>&seed=<seed>&difficulty=hard&noverdict&nokeep&benchrun=<i>`); each page finds the
+  the first scene's address (the mission's own query with `roomclear=<seed>&seed=<seed>&difficulty=hard&nokeep&benchrun=<i>`); each page finds the
   record (`benchLegOfPage`), plays its part (`BenchLeg`) and hands its lines on with the next page's load; the last page shows the card, and Close (or an Esc
   with nothing to show) loads the address the run was asked on. Of the visitor's flags only `mute`, `nomusic`, `quality`, `pipequeue`, `shadertrim`, `shaderfold`, `savepic` (2026-11-02: until then
   `?bench&savepic=0` against `?bench`, the pair the save picture's bullet names, was one run twice), `pace` (11-03: a benchmark draws every display frame whatever the word says, as it
@@ -1371,9 +1371,7 @@ but synthetic writes still work.
   too, for a question asked at once. Each returns the function that puts back what it changed and no more (a flag is lowered only where it was
   raised here). A door's leaf is no static: neither hides one. The floor's grid is not baked again: a man meets a wall and does not plan round it.
   Take walls down last up first; stand none across a restart.
-  THE FIVE CHECKS THAT LAID A STAND-IN NOW STAND WALLS, and each reads what it read (both stands, the same day, the lines compared with the tree before):
-  `autocam-check` (a wall half way to a man at his side; a wall 0.9 m toward the lens as wide as hid everything within acos 0.9 of that way, stood
-  again where he stops since a wall does not follow a man as the function did; a pillar half way to the locked man): every line of its output the same;
+  THE CHECKS THAT LAID A STAND-IN NOW STAND WALLS, and each reads what it read (both stands, the same day, the lines compared with the tree before):
   `stalk-check` (a wall half way between Sam and his man where 'something solid comes between them'): every line the same, and under `STALK_BREAK=1`;
   `deathrecap-check` (`RECAP_BREAK=seen` hides what stands between his mate or Sam and the man, where he lies and at his chest: every line the same, and the break fails the lines it failed; its output the same but for a digest one byte longer on the page's stand); `moonlight-check`
   (`MOONLIGHT_BREAK=1` asks of a level with no static standing): every line the same, the break fails `shadow` as it did, to the digit;

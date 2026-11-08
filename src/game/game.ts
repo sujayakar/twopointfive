@@ -81,6 +81,7 @@ import { doorMan } from './doorthrow';
 import './mission';
 import { NO_VIEW, type TickView } from '../view/seatview';
 import { NO_DEBRIEF, type DebriefView } from '../view/debriefview';
+import type { RunView } from '../view/read';
 import type { WorldAsk } from '../view/worldask';
 import type { CursorAt, CursorLens, CursorView, Under } from '../view/cursor';
 import { Chronicle, chronInterrogated } from './chronicle';
@@ -107,7 +108,6 @@ import type { Clearing } from './squad';
 import { launchCancel } from './player';
 import { closeReset } from './close';
 import { STALK, stalkReset } from './stalk';
-import { tapReset } from './tapstep';
 import './samlook';
 import type { CloseKind } from './close';
 import type { Haul, DoorMove } from './hands';
@@ -171,7 +171,7 @@ import { WallCharge } from './wallcharge';
 import { WorkThings } from './workthings';
 import { DoorPath } from './doorpath';
 import { registerShutDoor } from './shutdoor';
-import { spawnCivilians, resetCivilians, civilianAnswer, civiliansSummary, loadCivTune } from './civilians';
+import { spawnCivilians, resetCivilians, civilianAnswer, civiliansSummary, civiliansAddressWord } from './civilians';
 import type { Civ } from './civilians';
 import { updateTargets } from './lighting';
 import { LightHome, LIGHT_IN, type Fixture } from '../sim/lightshome';
@@ -208,7 +208,6 @@ import { kitFresh } from './kit';
 import type { BigKit } from './kit';
 import type { KitWorn } from './kitload';
 import './kitload';   // (asked inside the frame only)
-import type { Wound } from './wounds';
 import { buildInteriorCells } from '../render/reach';
 import { simDraw, simRandom, useDice } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import type { SimDice } from '../math/dice';
@@ -251,7 +250,7 @@ export interface Interactable { kind: 'light' | 'door' | 'body' | 'guard' | 'obj
    *  is the other such row, known by its verb) */
   past?: boolean;
   /** a MARKER whose every row the mission's frame kept back this frame (rails.ts `rows`; player.ts buildInteractables): the key does nothing on the
-   *  thing though it has rows — an empty tap in reach of it says so (interact.ts emptyWord) */
+   *  thing though it has rows — an empty tap in reach of it says so (`view.empty`) */
   framed?: boolean; }
 /** Every verb a row can be (player.ts buildInteractables words them; game.ts updateDoors / player.ts updateHold / mission.ts act on Game.act): a shut door's
  *  push / ease (silent, sustained), an open one's pull, a lock's pick (sustained) / kick / rattle (the handle tried, crouched), a keyed lock's unlock; the grab
@@ -513,7 +512,7 @@ export const TEMPERAMENT: Record<string, Temperament> = {
 /** How a downed man went down and by whose hand (combat.ts killGuard): shot = dead; struck (the takedown's cross, a pistol-whip later) / choked (the choke-out
  *  from a hold, later) = out cold and breathing. His state is 'dead' either way — every one of the floor's 'is this man out of the picture' tests keeps working —
  *  this is the side record the found-body lines, the room clear's grim lines, the debrief and (one day) a wake-up read. by: only the player's own count on the card. */
-export type DownKind = 'shot' | 'struck' | 'choked' | 'wounded';   // (wounded: a round that did not land where it kills — wounds.ts, behind WOUND.on: down, breathing, out of the fight, and POSED rather than a ragdoll — Guard.wound)
+export type DownKind = 'shot' | 'struck' | 'choked';
 export type DownBy = 'player' | 'guard' | 'world';
 /** Down but breathing: put out cold (struck / choked), not shot. False for a living man and for a corpse. */
 export function isBreathing(gd: Guard): boolean { return gd.state === 'dead' && gd.downKind !== null && gd.downKind !== 'shot'; }
@@ -620,8 +619,6 @@ export class Guard extends GuardCols {
   found = false;                 // (dead) somebody has discovered this body — counted once for the debrief
   /** (dead) how he went down and by whose hand — set once by combat.ts killGuard; null while he lives. isBreathing() reads it: struck / choked = out cold. */
   downKind: DownKind | null = null; downBy: DownBy | null = null;
-  /** WOUNDS (wounds.ts): down wounded — out of the fight, breathing, posed where he went down (state 'dead', downKind 'wounded'). null on everybody else, always with the switch off. */
-  wound: Wound | null = null;
   /** what he has personally seen and heard this encounter (see Witness) — event memory for the dialogue to come; the AI itself never reads it */
   witness: Witness = newWitness();
   /** what Sam has got out of him so far (see Talk) — read and advanced only by the interrogation (dialogue.ts via Game.interrogate) */
@@ -1070,7 +1067,7 @@ export class Game {
     leversFog(); fogFlags(); irFlags();           // (before the squad's systems read them)
     this.tune.chaos = CHAOS.def;
     loadWind(this.tune);      // this machine's wind (wind.ts, the Weather page's rows; the moths' switch rides with it)
-    loadCivTune(this);      // (?nocivilians: civilians.ts)
+    civiliansAddressWord(this);      // (?nocivilians: civilians.ts)
     // (the FN2000 is always in the kit now — no per-machine loadout memory; Game.fn2000 / setLoadout stay for the harness)
     this.col = new StaticCollision(level.boxes, levelNameOf(level));
     if (engine.gbuffer?.setWearMap) { const wm = buildWearMap(level, this.col.nav, lookConfig.longFoot > 0, lookConfig.walked > 0); engine.gbuffer.setWearMap(wm.data, wm.w, wm.h); }   // the detail layer's traffic map (render/wear.ts: the routes over the nav grid + the thresholds, the walls' feet) — the harness's engine stand-in has no g-buffer to hand it to
@@ -1280,7 +1277,7 @@ export class Game {
   }
 
 
-  resetGuards() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.resetGuards', this, []); if (__r !== RUST_PASS) return __r as any; } } powerOutReset(this); rescueCheckReset(this); dozeReset(this); eachSeat(this, v => { closeReset(v); stalkReset(v); tapReset(v); }); this.fight?.reset(); this.cover?.reset(); this.entry?.reset(); this.cleared?.reset(); this.doorPath?.reset(); wallReactReset(this); coverfireReset(this); doorForceReset(this); resetQrf(this); resetGuards(this); resetCivilians(this); tacticsReset(this); lanesReset(this); pictureReset(this); }   // (…and the civilians: fresh ones on their marks with the fresh shift — a held / dragged one let go of first; and the tactics' memory: plans, gates and kill-zone doorways were the OLD shift's — tactics.ts, review G3.3)   // (the response team first: its men are units resetGuards despawns anyway, its radio clocks and marks are its own to drop)
+  resetGuards() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.resetGuards', this, []); if (__r !== RUST_PASS) return __r as any; } } powerOutReset(this); rescueCheckReset(this); dozeReset(this); eachSeat(this, v => { closeReset(v); stalkReset(v); }); this.fight?.reset(); this.cover?.reset(); this.entry?.reset(); this.cleared?.reset(); this.doorPath?.reset(); wallReactReset(this); coverfireReset(this); doorForceReset(this); resetQrf(this); resetGuards(this); resetCivilians(this); tacticsReset(this); lanesReset(this); pictureReset(this); }   // (…and the civilians: fresh ones on their marks with the fresh shift — a held / dragged one let go of first; and the tactics' memory: plans, gates and kill-zone doorways were the OLD shift's — tactics.ts, review G3.3)   // (the response team first: its men are units resetGuards despawns anyway, its radio clocks and marks are its own to drop)
   tension(theirs = false) : number { return tension(this, theirs); }
   /** one line on the alarm escalation for the panel / debugging (level, clock, episode, lockdown pair + post) */
   escalationSummary(): string { return escalationSummary(this); }
@@ -1355,7 +1352,7 @@ export class Game {
   clearQueueSummary(): string { return clearQueueSummary(this); }
   clearNearestRoom() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.clearNearestRoom', this, []); if (__r !== RUST_PASS) return __r as any; } } forceClear(this); }
   /** Camera follow position (player or spectated guard). */
-  followPos(at?: Vec3): Vec3 { const g = this.spectate >= 0 ? this.guards[this.spectate] : null; return g ? g.char.pos : this.rails?.look() ?? at ?? this.player.char.pos; }   // (`at`: where his man is — a look ahead asks with where he will be, walkahead.ts)
+  followPos(at?: Vec3): Vec3 { const g = this.spectate >= 0 ? this.guards[this.spectate] : null; return g ? g.char.pos : this.view.lesson?.rails?.sky ?? at ?? this.player.char.pos; }   // (`at`: where his man is — a look ahead asks with where he will be, walkahead.ts)
   teleportPlayer(p: Vec3) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.teleportPlayer', this, [p]); if (__r !== RUST_PASS) return __r as any; } } return teleportPlayer(this, p); }
   /** HUD / panel: what the player's feet are on as the hearing model has it (floor.ts — lino everywhere with tune.floorMaterials off) */
   get floorUnderPlayer(): FloorMat { return stepMat(this, this.player.char.pos); }
@@ -1586,7 +1583,7 @@ export class Game {
     const world = this.engine.world; world.resetCapsules();   // (nobody handed over with the row down: the lists are emptied, not left as they last stood)
     const wetOn = (this.engine.settings as { wetChars?: boolean }).wetChars !== false;   // wet characters (wet.ts): the renderer's switch — off (or a dry man) hands the g-buffer zeros, and it shades him exactly as before
     let drawn = bare ? this.fogOfWar.everybody(all) : this.fogOfWar.filter(all);
-    if (this.rails.skyOn) { const me = this.player.char; drawn = drawn.filter(c => c !== me); }   // (rails.ts, the sky seat: nobody on the floor is the player — he is parked, and not in the picture)   // (fog of war: the men nobody on the team sees are not drawn and cast nothing — the list itself while it is off)
+    if (this.view.lesson?.rails?.sky) { const me = this.player.char; drawn = drawn.filter(c => c !== me); }   // (rails.ts, the sky seat: nobody on the floor is the player — he is parked, and not in the picture)   // (fog of war: the men nobody on the team sees are not drawn and cast nothing — the list itself while it is off)
     if (drawn.length > 8 && (this.nightBreach.active || this.rescue.active)) {   // more men on screen than have a mesh tree (the four-man squad, nightbreach.ts: Sam + four + up to five defenders; render/meshbvh.ts MESH_MAX_CHARS is eight. Every drawn man has his round-cone proxies: BoxWorld.MAX_CAST): the men down give up the trees' places first, so it is a body that is shadowed by his cones before any man standing is. Eight or fewer = the list as it was
       const down = new Set<Character>(); for (const gd of this.guards) if (gd.state === 'dead') down.add(gd.char);
       if (down.size) drawn = [...drawn.filter(c => !down.has(c)), ...drawn.filter(c => down.has(c))];
@@ -1660,6 +1657,9 @@ export class Game {
   /** WHAT THE END CARD SHOWS OF THE RUN (src/view/debriefview.ts): asked of the Rust game by the host that steps it, as the card is built */
   debriefView(): DebriefView { return this.debriefAsk?.() ?? NO_DEBRIEF; }
   debriefAsk: (() => DebriefView) | null = null;
+  /** WHAT THERE IS TO KEEP OF THE RUN (ui/runBooks.ts), asked as its try begins and as it ends; null while no Rust game stands */
+  runView(): RunView | null { return this.runAsk?.() ?? null; }
+  runAsk: (() => RunView | null) | null = null;
   /** THE BOX WORLD, ASKED (src/view/worldask.ts) by whoever draws, hears or points: the Rust game's answer where one steps this game (the host sets `askHost`), and
    *  this page's own copy of the level where none does (a workbench's floor, the moment before the first start) */
   readonly ask: WorldAsk = {
@@ -1667,6 +1667,7 @@ export class Game {
     solid: (a, b) => this.askHost ? this.askHost.solid(a, b) : this.col.solidBlocked(a, b),
     ray: (o, d, max) => this.askHost ? this.askHost.ray(o, d, max) : this.col.raycast(o, d, max),
     hear: (from, to) => this.askHost ? this.askHost.hear(from, to) : this.col.sound.propagate(from, to),
+    way: (a, b, maxIter) => this.askHost ? this.askHost.way(a, b, maxIter) : this.col.nav.findPath(a, b, maxIter) as Vec3[] | null,
     together: f => this.askHost ? f() : this.col.window(f),
   };
   askHost: WorldAsk | null = null;

@@ -31,7 +31,6 @@ function fakeLight(game: any, E: (p: Vec3) => number): () => void {
   return () => { game.lightQuery = q0; game.lightAt = a0; game.lightForget = f0; };
 }
 /** west of x = 20 pitch dark (0.005 W/m²: visibility 0), east of it lit like a desk under a panel (3 W/m²: visibility ≈ 0.92) */
-const WEST_DARK = (p: Vec3) => p[0] < 20 ? 0.005 : 3.0;
 
 // ================================================================ darkness
 /** (A) one searcher at a central fix in the cubicle farm, west half dark: his first three spots are in the dark half and are cover spots (not open floor);
@@ -45,7 +44,7 @@ export async function darkness() {
   let allPass = true; const verdict = (ok: boolean, label: string, detail: string) => { allPass &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   const FIX: Vec3 = [19.9, 0, 18.4];   // the middle aisle of the cubicle farm, between the four clusters
   const spotStr = (s: any) => `${s.kind}${s.hidden ? '/hid' : ''}@(${s.pos[0].toFixed(1)}, ${s.pos[2].toFixed(1)}) dark ${s.dark.toFixed(2)}${s.E === undefined ? '?' : ''} cov ${s.cover.toFixed(2)} pl ${s.plaus.toFixed(2)}`;
-  // ---- (A) one man, west dark
+  // ---- (A) one man. (The light is the Rust game's, and a lightAt planted on the copy does not reach its tick: what is asked is that of the spots as the game's own lamps light them, he goes to dark cover first.)
   {
     Math.random = seeded(301);
     const W = await standUp(); const { game } = W;
@@ -53,7 +52,6 @@ export async function darkness() {
     for (let i = 0; i < 10; i++) W.step(DT);
     parkFrom(game, 1); const gd = game.guards[0];
     dropSearcher(game, gd, FIX, FIX);
-    const restore = fakeLight(game, WEST_DARK);
     W.step(DT);
     const P0 = gd.searchPlan; const dealt = P0 ? P0.spots.map(spotStr) : [];
     const looks: any[] = []; let lastPhase = ''; let maxN = 0; const t0 = game.time; let tSusp = -1, tPatrol = -1; let aimErr = 0, aimPitch = 0, aimN = 0;
@@ -65,10 +63,9 @@ export async function darkness() {
       if (tSusp < 0 && gd.state === 'suspicious') tSusp = game.time - t0;
       if (tPatrol < 0 && gd.state === 'patrol') { tPatrol = game.time - t0; break; }
     }
-    restore();
     const first3 = looks.slice(0, 3); const errDeg = aimN ? aimErr / aimN * 180 / Math.PI : 99, pitchDeg = aimN ? aimPitch / aimN * 180 / Math.PI : 0;
-    const ok = !!P0 && P0.spots.length >= 10 && first3.length === 3 && first3.every(s => s.pos[0] < 20 && s.kind !== 'open' && s.cover >= 0.3) && tSusp > 12 && tPatrol > tSusp && maxN <= 8 && errDeg < 20 && pitchDeg < -15;
-    verdict(ok, '(A) one searcher, central fix, west half dark', `${P0 ? P0.spots.length : 0} spots dealt (want ≥ 10); looked into ${looks.length}: ${looks.map(s => `${s.kind}@(${s.pos[0].toFixed(1)},${s.pos[2].toFixed(1)}) d${s.dark.toFixed(2)} +${s.t.toFixed(1)}s`).join(' → ')}; first three all west of x=20 and cover spots: ${first3.every(s => s.pos[0] < 20 && s.kind !== 'open')}; while looking into one: aim ${errDeg.toFixed(1)}° off its bearing (want < 20), pitched ${pitchDeg.toFixed(1)}° (want below −15: down into it); search → suspicious +${tSusp.toFixed(1)} s → patrol +${tPatrol.toFixed(1)} s; most light queries in a frame ${maxN} (budget 8)`);
+    const ok = !!P0 && P0.spots.length >= 10 && first3.length === 3 && first3.every(s => s.dark > 0.5 && s.kind !== 'open' && s.cover >= 0.3) && tSusp > 12 && tPatrol > tSusp && maxN <= 8 && errDeg < 20 && pitchDeg < -15;
+    verdict(ok, '(A) one searcher, central fix: the first three he looks into are cover, and dark as the lamps light them', `${P0 ? P0.spots.length : 0} spots dealt (want ≥ 10); looked into ${looks.length}: ${looks.map(s => `${s.kind}@(${s.pos[0].toFixed(1)},${s.pos[2].toFixed(1)}) d${s.dark.toFixed(2)} +${s.t.toFixed(1)}s`).join(' → ')}; first three dark and cover spots: ${first3.every(s => s.dark > 0.5 && s.kind !== 'open')}; while looking into one: aim ${errDeg.toFixed(1)}° off its bearing (want < 20), pitched ${pitchDeg.toFixed(1)}° (want below −15: down into it); search → suspicious +${tSusp.toFixed(1)} s → patrol +${tPatrol.toFixed(1)} s; most light queries in a frame ${maxN} (budget 8)`);
     console.log('    dealt: ' + dealt.join('\n           '));
   }
   // ---- (B) two men, same fix. (Which spots are dark is not asked here: the light is the Rust game's, and a lightAt planted on the copy does not reach its tick.)

@@ -78,15 +78,11 @@ export const HOURS: Record<Exclude<HourId, 'night'>, HourDef> = {
 };
 const NIGHT = { label: 'Night', clock: '02:00', words: 'the level as it was built, with the moon, the lights outside and the storm' };
 export function hourLabel(id: HourId): string { return id === 'night' ? NIGHT.label : HOURS[id].label; }
-export function hourClock(id: HourId): string { return id === 'night' ? NIGHT.clock : HOURS[id].clock; }
-export function hourWords(id: HourId): string { return id === 'night' ? NIGHT.words : HOURS[id].words; }
 
 /** THE VISIT'S PICK (the page's ?hour=, the harness's PT_HOUR): what a game stood with nothing said for it is stood at (stood.ts stoodOfPick), and what a page's screens
  *  ask. No rule reads it and the bridge does not carry it: a game's own is Game.stood. `sun` is the one number a weather dims under cloud (1 = the hour's own sun; picture and
  *  meter stand-in alike). `dry`: hold the night's storm off while an hour other than night is in. */
-export const HOUR: { id: HourId; sun: number; /** `sun` was SET for the visit (?sun=, PT_SUN): it stands whatever cloud a picked weather brings; not set = the cloud dims the sun (THE WEATHER OVER THE HOUR, below) */ sunGiven: boolean; dry: boolean; /** the page's running game's hour, for screens that hold no Game (main.ts sets it; the mission sheet's no-load shortcut asks) */ live: (() => HourId) | null } = { id: 'night', sun: 1, sunGiven: false, dry: true, live: null };
-/** the hour the page is standing at right now: the running game's where a page has one (a checkpoint or the panel may have moved it off the visit's), else the visit's */
-export function hourLive(): HourId { return HOUR.live?.() ?? HOUR.id; }
+export const HOUR: { id: HourId; sun: number; /** `sun` was SET for the visit (?sun=, PT_SUN): it stands whatever cloud a picked weather brings; not set = the cloud dims the sun (THE WEATHER OVER THE HOUR, below) */ sunGiven: boolean; dry: boolean } = { id: 'night', sun: 1, sunGiven: false, dry: true };
 
 const ALIAS: Record<string, HourId> = { day: 'midday', noon: 'midday', afternoon: 'overcast', sunrise: 'dawn', sunset: 'dusk', evening: 'dusk' };
 /** a word → an hour ('' / unknown = night) */

@@ -1091,6 +1091,15 @@ pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::G
     r != ASK_HOST
 }
 
+/// What the light under a roof is worked out from is made as a game stands, behind the loading, and not in its first step: the statics' lines, no state.
+pub fn light_ready(g: &mut crate::game::Game) {
+    let to_sun = crate::hours::sky_now(g).to_sun;
+    window(g, &mut |g: &mut Game| {
+        ready(g);
+        if standing(g) { sim::bricks::light_ready(slot(g), to_sun); }
+    });
+}
+
 // ---- how a sound reaches a listener
 
 /// (collision.ts SoundPaths.constructor)
@@ -1217,6 +1226,14 @@ pub fn things_shared(g: &Game, ro: V3, rd: V3, tmax: f64) -> Option<(f64, V3)> {
     let mut out = [0.0; 5];
     let k = sim::lines::ray_things(slot(g), ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, &mut out);
     if k < 0 { None } else { Some((out[0], [out[1], out[2], out[3]])) }
+}
+/// (ask::WorldAsk's way: the module's plain search, on a grid written to it for the question. A place that is no number has no way, and the game is not to fall for it)
+pub fn way_shared(g: &Game, a: V3, b: V3, max_iter: u32) -> Option<Vec<V3>> {
+    nav_grid_there(g);
+    let n = sim::nav::find_path(slot(g), own_set(g), pane_word(g), g.col.nav.w as usize, g.col.nav.h as usize, g.col.nav.cell, a[0], a[2], b[0], b[2], max_iter);
+    if n == sim::nav::NO_WAY || n == sim::nav::ASK_HOST { return None; }
+    let at = sim::nav::way_addr();
+    Some((0..n as usize).map(|i| [get_f64(at, i * 2), 0.0, get_f64(at, i * 2 + 1)]).collect())
 }
 /// (ask::WorldAsk's path of sound: no route is remembered and none is looked up. A place that is no number, or no place of this world, is heard from nowhere: a host asks
 /// it of a sound and a listener of its own, and the game is not to fall for it)

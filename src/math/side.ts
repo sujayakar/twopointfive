@@ -75,7 +75,7 @@ export const RAW: unique symbol = Symbol('raw');
 /** THE NAMED SIDE TABLES THAT ARE A SEAT'S (keyed by the view they were handed: a row a player). A plain table handed a view that is not listed here is a
  *  mistake — world state forked in two — and tools/qa/seats-check.ts is red on it: such a table is a `GameSideMap`. */
 export const SEAT_TABLES: readonly string[] = ['blastFeel.STATE', 'blastLook.STATE', 'close.STATE', 'guards.groundTrack', 'holdfire.states', 'player.lightAt', 'rearwatch.books', 'samlook.STATE',
-  'showwhy.states', 'silent.seats', 'silent.states', 'squad40.states', 'squadsmoke.states', 'squadthrow.states', 'stalk.STATE', 'tapstep.STATE', 'unseen.states', 'wandorder.states'];
+  'showwhy.states', 'silent.seats', 'silent.states', 'squad40.states', 'squadsmoke.states', 'squadthrow.states', 'stalk.STATE', 'unseen.states', 'wandorder.states'];
 /** a table of one of these is keyed by a seat's view (the Game itself in a game of one seat), and the Rust game keeps it by that seat's man: the bridge crosses between the two keys */
 export const isSeatTable = (t: { sideName?: string } | null | undefined): boolean => !!t?.sideName && SEAT_TABLES.includes(t.sideName);
 

@@ -78,10 +78,10 @@ pub fn pose(g: &mut crate::game::Game, l: LightId, c_2: CharId) {
     row.enabled = true;
 }
 
-/// Does the tube make too little of this floor by its own light? By its picture (`show`), not by what shows nothing at all: between the two a man is neither in a flood nor plain without one.
+/// Is this floor too dark for the tube by its own light? (irlight.ts darkAt)
 pub fn dark_at(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
     let e = crate::nvg::nvg_place_light(g, [x, 1.2, z]);
-    crate::nvg::tube_sig(g, e) < g.k.irlight.show
+    crate::nvg::tube_vis(g, e) < g.k.nvg.black_at
 }
 
 /// Is the floor his flood would fall on too dark? A fan across the cone, each ray to the first wall; FAN_NEED of its readings must be dark. (irlight.ts fanDark)

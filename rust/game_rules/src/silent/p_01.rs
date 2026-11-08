@@ -216,33 +216,28 @@ pub fn silent_compromised(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
     match g.m.silent.states.get(key) { Some(s) => s.hot, None => false }
 }
 
+/// `only` of the posture's two rows: the whole squad, whoever was addressed
+pub fn row_whole_squad(g: &mut crate::game::Game, _men: &[GuardId], _t: &crate::orders::OrderTarget) -> Vec<GuardId> { crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) }
+
 /// the posture's two rows on the menu: made anew at each call, as the TypeScript's literals are   (silent.ts rows)
 pub fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
-    let silent = crate::orders::squad_orders_row(g, crate::orders::OrderDef {
-        id: String::from("silent"),
+    let silent = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::silent::ORDER, crate::orders::OrderDef {
         head: Some(String::from(HEAD)),
-        label: crate::orders::OrderLabel::Text { text: String::from("go silent") },
         targets: targets(),
         listed: listed(),
         free: Some(true),
-        only: Some(crate::orders::OrderOnly::SilentAll),
         ack: Some(vec![String::from("going quiet."), String::from("copy. silent.")]),
-        issue: crate::orders::OrderIssue::Silent,
         ..Default::default()
-    });
-    let loud = crate::orders::squad_orders_row(g, crate::orders::OrderDef {
-        id: String::from("loud"),
+    }));
+    let loud = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::loud::ORDER, crate::orders::OrderDef {
         head: Some(String::from(HEAD)),
-        label: crate::orders::OrderLabel::Text { text: String::from("go loud") },
         targets: targets(),
         listed: listed(),
         free: Some(true),
-        only: Some(crate::orders::OrderOnly::SilentAll),
         ack: Some(vec![String::from("going loud."), String::from("copy. loud.")]),
-        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from("silent"), when: crate::orders::OrderWhen::Loud }),
-        issue: crate::orders::OrderIssue::Loud,
+        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from("silent") }),
         ..Default::default()
-    });
+    }));
     [silent, loud]
 }
 

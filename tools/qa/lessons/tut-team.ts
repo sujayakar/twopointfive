@@ -2,9 +2,10 @@
 // mission is always stood up on the shipped stand). He is a man on the floor: his own feet, the view's zoom, the squad's key on a point under the cursor
 // (the ground, a door, himself) and the go key. He never fires: what the squad does with one order and one word is what the run is about.
 import type { Bot } from '../lesson-run';
+import { locked } from '../../../src/view/seatview.ts';
 
 export const query = '?roomclear=1&squad4';
-export const ended = (g: any) => g.lesson.finished;
+export const ended = (g: any) => g.view.lesson?.finished;
 /** the roadblock can be down before he is through the gate: then its step is done as it comes up */
 export const idleOk = ['gate'];
 /** TUTTEAM_GOD=1: rounds do not drop him (a run that is about the steps alone). Without it he is as mortal as a player, which is what the run is for */
@@ -47,7 +48,7 @@ function breach(B: Bot, door: number[], room: string) {
 }
 
 export const steps: Record<string, (B: Bot) => void> = {
-  zoom: B => { for (let i = 0; i < 20; i++) { if (!B.g.rails.locks('zoom')) B.cam.zoom(60); B.step(); } B.wait(1); },
+  zoom: B => { for (let i = 0; i < 20; i++) { if (!locked(B.g.view, 'zoom')) B.cam.zoom(60); B.step(); } B.wait(1); },
   // nothing to press: the two cans are called, thrown and burning before the line goes by
   smoke: B => { B.wait(4.2); },
   move: B => { command(B, YARD); if (!B.until(() => squad(B).every((m: any) => m.char.pos[2] < 19.7 && m.char.pos[0] > 4.4), 45)) { command(B, YARD); B.until(() => squad(B).every((m: any) => m.char.pos[2] < 19.7), 30); } B.wait(1); },

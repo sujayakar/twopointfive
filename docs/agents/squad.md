@@ -593,7 +593,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `autopilot-check`, `squadnet-check`, `onesignal-check` (a chain's men with a can for each door) and one line of `rails-check` (the
   entry the squad would pick as its window on what the squad knows). MEASURED: one deal. NOT MEASURED: whether a soak or a
   tour's tally moves on the page's stand (the squad spends fewer stuns when the player taps the key twice). The squad's lines that say WHY
-  it picked a stun (`squadnet.ts whyWords`) are never said by the key now. Nobody has played it; never seen on a GPU.
+  it picked a stun are gone with the page's words for them: the key never picks a tool. Nobody has played it; never seen on a GPU.
 - **Plan mode: a click on bare ground deselects** (2026-10-25; `CMDRING.planClear`, `planmode.ts planInput`). The maintainer, with the digits
   picking the men and the ground click doing nothing: "clicking on the ground to deselect is pretty key". ON, with `planDigits`: a left click on
   bare ground leaves NOBODY picked (`plan.pick = []`, an empty set that `tick` lets stand): no circle is drawn as picked, a right click orders
@@ -625,7 +625,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   line, both stands (one deal, the conference door: dark with feet on the jambs, lit 3.5 to 4.5 s later at the call; `THRTOLD_BREAK=1` red on
   both). NOT covered: the HUD's own word line (`doortools.ts wordNote`, "go · … waiting") still shows from the stack, and several doors on one
   word (`planOne`) wait for every stack to FORM, not for a call. Never seen on a GPU.
-- **What the cursor is on is a read** (`orders.ts hover / quickLine`, `src/game/under.ts`, `src/view/cursor.ts`; `rust/game_rules/src/view cursor_view`, orders `target_under`; picture
+- **The quick key's line is the tick's** (`rust/game_rules/src/orders/shown.rs` `quick`, kept each tick for each seat: the row's words, then ` · ` and what the cursor is on, unless that is nothing and no man; `orders/hud.rs quick_note`, `game.view.squad.quick`: none where the lesson holds `order` back or teaches the ring's hold). The page keeps no pick of its own: `autopilot.ts` `autoPick` / `autoHint` are crossings a tool or the hands-off driver asks. Test `rust/game_start/tests/menu.rs`: on three seeds the line is what the press then gives, on a door, the floor and a teammate. Never seen on a GPU.
+- **What the cursor is on is a read** (`orders.ts hover`, `src/game/under.ts`, `src/view/cursor.ts`; `rust/game_rules/src/view cursor_view`, orders `target_under`; picture
   only, no switch). The Rust game says what the cursor is on, asked once a cursor, camera and moment of the game, and nothing of it is kept on the order book. Before the first tick (no Rust game
   standing) `hover()` answers null and `targetAt` / `targetUnder` `{kind:'none'}`, so a check steps once before it asks.
   What a point or the cursor is on reads the tick's list of things to work, kept every tick for every seat.
@@ -1136,6 +1137,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   No save slice (a checkpoint is refused with a unit on the floor); a recording without the table replays with it off (journal.ts). QA: `probes.ts workthings`
   (work-breaker / work-four / work-objective / work-edges / work-posted / work-face / work-held / work-walk / work-off (deleted 2026-11-06 with the off side: qa.md) / work-harness). A pose layer reads `workHand(g, c)` (where and when: the
   thing's face point, its normal, weight) and `workJob(g, c)` (what: verb `breakerOff | breakerOn | drive`, seconds in, seconds it takes) — reads only; the pose is not this file's.
+- **Since 2026-11-08 what the plan, the throws and the rings list is the Rust game's** (`view.plan`, `view.throws`, `view.ring`, `view.hand`: `rust/game_rules/src/view/plan.rs`, `throws.rs`, `rings.rs`; `src/game/floorplan.ts` keeps only the `PLAN` table, and `src/ui/planfloor.ts`, `squadthrowviz.ts`, `cmdring.ts` read the view). Older bullets below name `floorPlan`, `waitsOnKey`, `squadThrowPlans`, `ringView`: their rules are those files' now.  nobody has seen any of it on a GPU.
 - **The squad's plan is drawn on the floor** (`src/game/floorplan.ts` = WHAT, `src/ui/planfloor.ts` = the drawing, index.html `.plan …` = the look; `PLAN.on` ON on every stand — it is picture only —
   `?noplan` = nothing drawn; Tab ▸ Squad ▸ Order menu & keys ▸ 'plan drawn on the floor' + three part rows, this visit only; page rebuild/plan-on-floor/read-first.md).
   `floorPlan(g)` ONLY READS: the squad's assignments as they stand (`orders.of(gd)`), each man's own nav path (`gd.path` from `gd.pathI` where `gd.pathGoal` is this order's and the path runs
@@ -1310,7 +1312,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   reads it. A man-down row off the screen goes by it too. NOT SEEN: any of it on a GPU or in play; the objective's mark and a far line
   together; a line for a man behind the eye; a view zoomed by the text size setting. A line whose edge place is under a wide card can end
   several rows or a line's width from where the way to him leaves the view.
-  WHY (`SQUADNET.why`, `?qwhy=0`, `TPS_QWHY=1`): `squadnet.ts whyWords(pick)` gives the reason when the autopilot's pick on a door the men wait
+  WHY (`SQUADNET.why`, `?qwhy=0`, `TPS_QWHY=1`; since the key never picks a tool the row carries no reason: the words below are the history, and the page's `whyWords` is gone): the reason came when the autopilot's pick on a door the men wait
   on is not a plain open: at the end of the quick key's row (`orders.ts hud()`, one `autoPick` a frame for the words and the reason) and in the
   answer of the man who takes the order (`GiveOpts.ack`, in place of the row's own; `autoQuick` and a plan's `quickFor` both pass it):
   `nobody's been in there` / `banging it. nobody's been in there.` · `they see one inside` / `banging it. i see one in there.` · `they're saving
@@ -1367,3 +1369,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   it no longer goes off. With no menu up nothing outlives the frame. Before, up to a second could stand between what was shown and what was thrown (4 of 337 presses differed, never in the man). No
   switch. CHECK: native, `rust/game_start/tests/throw.rs`, six levels by two seeds: shown is given, 70 presses of 70 (66 of 66 before: not a fault mended; two simpler forms failed it, 33 of 84 and 7 of
   76). Never seen on a GPU, never played.
+- **Is this way seen has one answer** (2026-11-08; `pairorders pair_orders_stalk`, `sneak seen_along`). The way to a man's back is priced and read by the sneak's own eye (`sneak_walk`,
+  `sneak_walk_cost`) whether `PAIRUP.on` is thrown or not: the second test of the floor (`front`, `frontM`, `coneM`, `coneLit`) is gone. A quiet mission always threw the switch, so the page
+  plays as it did; only `?pairorders` alone changes: its row now names who has him ("waiting · Tango 1 is facing this way") and dark floor 2.1 to 3.6 m in front of a man no longer reads as seen.
+  A way round is a way: on the office's placement 10 the man faces the aisle door, the floor behind him is dark, and the partner goes round by the corridor door and sets up, so `pair-mark`'s last
+  line ("the only way lies across his eyes") stages a place where it does not. Check: `tests/pair.rs a_way_across_his_eyes_is_waited_on_by_one_eye`, `a_dark_way_round_is_a_way`, one seed each. Never seen on a GPU.
+- **A 40 mm shell is one plan (2026-11-08; `squad40/p_01.rs plan` → `ShellPlan`).** The man, his shot and why it may not be given are asked each time they are wanted (0.016 ms with one carrier) by the row's
+  `only` and `valid`, the order and, once a frame while its row is lit, by the menu (`follow` → `states[seat].plan`), which is what is drawn. Gone: the answers two askers kept for 0.3 s each. A change of
+  play only where one of those was stale; no switch. CHECK: native, `rust/game_start/tests/orders.rs the_shell_shown_is_the_shell_given`, three seeds. Never seen on a GPU, never played.

@@ -92,7 +92,7 @@ pub fn witness_kill(g: &mut crate::game::Game, victim: GuardId, how: crate::game
         if o == victim || g.gd[o].state == crate::game::GuardState::Dead || crate::control::man::blind(g, o) || crate::doze::doze_asleep(g, o) { continue; }
         if (!g.player_invisible && point_in_view(g, o, at, None, None)) || g.gd[o].saw_player_this_frame {
             let kind = match how {
-                crate::game::DownKind::Wounded | crate::game::DownKind::Shot => crate::game::WitnessSawActKind::Shot,
+                crate::game::DownKind::Shot => crate::game::WitnessSawActKind::Shot,
                 crate::game::DownKind::Struck => crate::game::WitnessSawActKind::Struck,
                 crate::game::DownKind::Choked => crate::game::WitnessSawActKind::Choked,
             };
@@ -315,9 +315,7 @@ pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option
                         let radioing = match g.gd[gd].bubble.as_ref() { Some(u) => u.radio && g.time - u.t < 5.0, None => false };
                         if role != Role::Finder && !g.gd[b].body_remarked && !radioing {
                             g.gd[b].body_remarked = true;
-                            let line = if g.gd[b].wound.is_some() {
-                                "…he's shot. still breathing. — stay sharp"
-                            } else if crate::game::is_breathing(g, b) {
+                            let line = if crate::game::is_breathing(g, b) {
                                 "…he's out cold. someone did this by hand. — stay sharp"
                             } else {
                                 "…christ. — stay sharp"

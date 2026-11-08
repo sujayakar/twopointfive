@@ -23,7 +23,7 @@ fn keypad(seed: u32, charges: Option<f64>) -> (Play, game::ids::DoorId, [f64; 3]
     p.run(0.5);
     for m in p.mates() { if let Some(mut e) = p.g.m.kit.man_of.get(m).cloned() { e.kit.big = game::kit::BigKit::None; p.g.m.kit.man_of.set(m, e); } }
     if let Some(n) = charges { p.g.door_tools.charges = n; }
-    for gd in p.g.guards.clone() { if p.g.gd[gd].team != game::teams::Team::Operative && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, None, None); } }
+    for gd in p.g.guards.clone() { if p.g.gd[gd].team != game::teams::Team::Operative && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, None); } }
     p.run(1.0);
     let office = game::doors::doors_by_name(&p.g, "manager").unwrap();
     game::doors::door_set_locked(&mut p.g, office, false);
@@ -126,7 +126,7 @@ fn a_defender_lets_go_of_a_leaf_a_body_has_stopped() {
 /// A FAILURE MEANS: a wall the game would take a charge on has no row for a man standing at it.
 #[test]
 fn sam_is_offered_the_wall_row_where_a_charge_can_be_set() {
-    for (level, index, u, side) in [("block.json", 115, 10.44, -1.0), ("block.json", 115, 11.19, -1.0), ("block-squads.json", 115, 10.44, -1.0), ("block-squads.json", 115, 11.19, -1.0), ("depot.json", 9, 10.48, -1.0), ("pass.json", 16, 29.05, -1.0), ("pass.json", 41, 14.22, 1.0), ("mousehole.json", 36, 13.05, 1.0)] {
+    for (level, index, u, side) in [("block.json", 115, 10.44, -1.0), ("block.json", 115, 11.19, -1.0), ("depot.json", 9, 10.48, -1.0), ("pass.json", 16, 29.05, -1.0), ("pass.json", 41, 14.22, 1.0), ("mousehole.json", 36, 13.05, 1.0)] {
         let mut p = Play::mission(level, &format!("?levelFile={level}&roomclear&squad4"), &Opts { seed: 7, ..Default::default() });
         p.g.god_mode = true;
         for gd in p.g.guards.clone() { if p.g.gd[gd].team != game::teams::Team::Operative { p.g.gd[gd].hold = true; p.g.gd[gd].pinned = true; } }

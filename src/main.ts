@@ -1,9 +1,9 @@
 import { kitViewOn, kitViewStart, kitViewFatal, kitViewQuietOf, type KitView } from './host/kitView';   // (FIRST on purpose: under ?kitview its load makes this window's storage read-only before any module below reads or writes a store — it imports no module at run time, so nobody's load order changes)
 import { END_CARD } from './host/endcard';
 import { Menu, loadSandbox, bootCard } from './ui/menu';
-import { optionsOpen, walkInNow } from './ui/options';
+import { optionsOpen, openOptions, closeOptions, walkInNow } from './ui/options';
 import { LOADBRIEF, loadBrief } from './ui/loadbrief';
-import { SETTLE, Settle } from './ui/settle';
+import { settleOfQuery, startWaits } from './ui/startwait';
 import { CMDRING } from './game/cmdring';   // (a prototype: with the orders ring on, Tab is its key and nothing else's)
 import { tabCardOf, tabCardHtml } from './ui/tabcard';
 import { bootTextSize } from './ui/textsize';
@@ -11,10 +11,13 @@ import { modelErrAsked, modelErrBoot, modelErrFrame, sceneOf } from './host/mode
 import { SENSE_PAGE } from './game/sense';
 import { kitFresh, kitShow, kitPlayer, kitGun, kitLessonPage, kitLoad, kitRows, KIT, SUITS, TRIMS } from './game/kit';
 import { kitBoot } from './ui/kitBoot';
-import { missionsBusy, reopenMissionsAfterLoad, missionsReopenAsked, OFFLIST_UI } from './ui/missions';
+import { Desk, KIT_KEPT, desk, setDesk } from './view/desk';
+import { Commands } from './draw/commands';
+import { machineBefore } from './host/machine';
+import { missionsBusy, reopenMissionsAfterLoad, missionsReopenAsked } from './ui/missions';
 import { startPage, startPageWanted, openStartPage, openList } from './ui/startpage';
 import { PICKS, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
-import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, laterIdle, laterProgress, PIPE_QUEUE, FATAL } from './gpu/device';
+import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, laterIdle, PIPE_QUEUE, FATAL } from './gpu/device';
 import { shaderRowsOn } from './ui/shaderrows';
 import * as boot from './ui/boot';
 import { rigTable } from './render/sdfrig';
@@ -35,8 +38,8 @@ import { MARKING_TEXEL } from './scene/markings';
 import { LOOK, LOOK_LAB, lookLabOn, lookLevelFile, lookPageRows, placeOfQuery, setLookPlace, setSuitAs, lookKeptOf } from './scene/look';
 import { lookTidy } from './scene/lookTidy';
 import { stepFrame, FIXEDSTEP, type LoopCtx } from './host/loop';
-import { bindFindMe, watchCtrlTaps, FINDME, setFindMe } from './host/findme';
-import { findMeOutline } from './ui/findme';
+import { bindFindMe, FINDME, setFindMe } from './host/findme';
+import { findMeOutline } from './ui/findmeviz';
 import { makeOutlineFrame } from './render/outline';
 import { SavePicture } from './render/savepic';
 import { EVENPACE, pacer, pageRoom, rateMeter } from './host/pace';
@@ -60,7 +63,7 @@ import { SHARDS, SHARD_STATS, shardsLive } from './game/shards';
 import lightingCommonSrc from './render/shaders/lighting_common.wgsl' with { type: 'text' };
 import { setDaylight, isDaylight } from './game/lighting';
 import { Game } from './game/game';
-import { SQUADTHROW, SQUADTHROW_STATS, squadThrowPlan, squadThrowPlans } from './game/squadthrow';
+import { SQUADTHROW, SQUADTHROW_STATS, squadThrowPlan } from './game/squadthrow';
 import { AUTOPILOT, AUTOPILOT_STATS, autoPick } from './game/autopilot';
 import { thinIs, thinAirOf } from './game/thinline';
 import { floorAt } from './game/floor';
@@ -106,24 +109,22 @@ import { GEAR } from './game/gear';
 import { civPanic, setCivilians, CIV, CIV_STATS, CIV_LOG, civSpots, checkCivSpots } from './game/civilians';
 import { Attract } from './game/attract';
 import { startFromQuery, quitScenario, runningScenario, plainFog, refusalWords, teamOf } from './game/scenarioRun';
-import { missionLive } from './game/mission';
 import { sideOf } from './game/orders';   // (in game/game.ts's cycle, loaded above: no load order moves)
 import { LIGHTSWITCH, LIGHTSWITCH_STATS, wallSwitches, switchLit } from './game/lightswitch';
 import { CARLAMPS, CARLAMPS_STATS, VEHICLE_GROUP } from './game/carlamps';
 import { CLEANRESTART, CLEANRESTART_STATS } from './game/cleanrestart';
-import { SQUAD40, SQUAD40_STATS, SQUAD40_LOG, squad40Left, squad40Brought, squad40Of, squad40Plans, squad40Stage, squad40Summary } from './game/squad40';
+import { SQUAD40, SQUAD40_STATS, SQUAD40_LOG, squad40Left, squad40Brought, squad40Of, squad40Stage, squad40Summary } from './game/squad40';
 import { squadSmokeStage } from './game/squadsmoke';   // (the same: game/kit.ts has loaded it)
 import { checkQuiet } from './game/quiet';
 import { LESSON_STATS, checkLesson } from './game/lesson';
-import { parBest } from './ui/parBest';
-import { verdictKey, recordOf, tryStarted, runEnded, APPROACHES, type MissionRecord } from './ui/verdictStore';
+import { RunBooks } from './ui/runBooks';
 import { watchMissionRows } from './ui/verdictRows';
-import { SOLO_ID } from './scene/picks';
 import { SCENARIOS, ALL_MISSIONS, LESSON_MISSIONS, pickSearch } from './scene/scenarioList';
 import { lessonGroup } from './scene/scenarios';
 import { DOORWAY } from './game/doors';
 import { HANDLE, HANDLE_STATS } from './game/handleside';
-import { initDifficulty, difficultyNow, keptLevers } from './game/difficulty';
+import { initDifficulty, difficultyNow, difficultyFromStore, keptLevers } from './game/difficulty';
+import { quietFogForget } from './game/quietfog';
 import { WEATHER_PRESETS, snowLevelOfQuery } from './game/weatherKinds';
 import { SNOW_SURF, snowCfgRows } from './render/snowField';
 import { SNOWTRACKS, TRACK_RES } from './game/snowTracks';
@@ -210,12 +211,7 @@ async function main() {
   await rustGame.rustBoot();
   { const no = simWhyNot(); if (no) { console.info(simSay()); throw noWasm() ? new NoWasmError(no) : new Error(`the Rust simulation did not start: ${no}`); } }
   if (!kitViewOn && await cloudAdopt(q)) return;   // a browser handed another's id (`?player=`) takes it and its settings before a single key is read, then loads once more without the word (cloud/cloud.ts; no request at all on a build with no backend)
-  keymap.KEYMAP.handWhen = () => true;   // (…and his own actions on the key that leaves spare, the whistle's row with no key: host/keymap.ts HAND, the rule game/handring.ts)
-  keymap.KEYMAP.slotWhen = () => true;   // (empty hands are a slot on backtick, the debugger on backslash, E spare: host/keymap.ts SLOT, the rule game/handslot.ts)
-  keymap.KEYMAP.freeWhen = () => WALLSNAP.on && walkInNow();   // (the wall hold's row has no key while walking into a wall takes it: host/keymap.ts qFree)
-  keymap.KEYMAP.setWhen = () => true;   // (…and the selector's and the light's while a gun's key again opens its setup: host/keymap.ts setFree)
-  keymap.KEYMAP.onlyWhen = () => true; keymap.KEYMAP.throwWhen = () => false;   // (the old menu's letters sleep while the ring carries every order and the menu has no key; G not while it is the quick throw's: host/keymap.ts letGo)
-  keymap.keysBoot(q);   // the player's own keys (host/keymap.ts): live on this page from before anything is drawn; ?keybinds=0 = the build's
+  keymap.gameKeysBoot(q, walkInNow);   // the player's own keys (host/keymap.ts): live on this page from before anything is drawn; ?keybinds=0 = the build's
   (window as any).__keys = keymap;   // …and its hook from the same moment: the Controls screen is up before the boot is over, and a check of it asks the table (tools/qa/keybinds-page.cjs)
   bootTextSize(q, kitViewOn);   // the page's words at the window's size, the browser's zoom keys the game's (ui/textsize.ts; ?textsize=0 = the page as it was) — before anything is drawn
   // `?pick=<id | place>` alone (scene/picks.ts): a link to a row of the short list that stays right when the row's settings change — answered with ONE replace to
@@ -242,10 +238,15 @@ async function main() {
   pageSwitches(q);   // the switches this boot writes from the URL — the destruction goal's (?nodestruction ?nofurnblast ?nowallreact ?nocoverfire ?nowallcharge ?wallmenu=direct) and the room entry's door walk (?nodoorpath ?doorpath=0|gun) — in src/host/profile.ts, which the QA harness's shipped stand calls too with an empty query: one function, so the two cannot drift. Before the level loads (the destruction's dressing)
   const recipeTables = (): void => { if (!recipe) return; recipe.tables(); pageRows(q); };   // a recipe's knob tables over this machine's (below, at each point of the boot that wrote over them) — and then the Rust module's rows as the build has them, whatever an older recipe wrote (profile.ts pageRows: a row is no switch, and no recipe made now carries one)
   setLookPlace(placeOfQuery(q));   // the men's dress follows the place (scene/look.ts): on the office family the first cast and its tables, dressed for a building — said before the cast is fetched below
-  OFFLIST_UI.on = q.get('offlist') !== '0';   // the rows cut from the mission list are drawn on no list (ui/missions.ts listedMissions; ?offlist=0 = every row drawn, as before the cut)
+  LOADBRIEF.options = { open: () => openOptions({ tab: 'controls' }), close: closeOptions, up: optionsOpen };
   LOADBRIEF.on = q.get('loadbrief') !== '0';   // a mission's page loads behind that mission's brief and waits for the player's Start (ui/loadbrief.ts; ?loadbrief=0 = the boot card and the straight start, as before)
-  { const v = q.get('settle'), w = Number(q.get('settlewait')); SETTLE.on = v === null ? navigator.webdriver !== true : v !== '0'; if (v && /^\d+$/.test(v) && +v > 1) SETTLE.frames = +v; if (w > 0) SETTLE.programSecs = w; }   // the brief's START is live when the picture behind it is ready: every shader in, the first frames drawn, auto quality's pick made (ui/settle.ts). On where a person sits; ?settle=0 = live the moment the level stands, as before; ?settle=1 = on for a page a script drives too, a number over 1 = that many frames and ?settlewait=N = that many seconds for the programs (a page tool on a slow adapter)
+  settleOfQuery(q);   // the brief's START is live when the picture behind it is ready (ui/settle.ts). On where a person sits; ?settle=0 = live the moment the level stands; ?settle=1 = on for a page a script drives too, a number over 1 = that many frames and ?settlewait=N = that many seconds for the programs (a page tool on a slow adapter)
   kitBoot();   // each member's kit and uniform read from this machine's store (ui/kitBoot.ts, game/kit.ts)
+  // THE DESK (view/desk.ts): the cards before a game ask the module the page has booted. What a press keeps goes in this machine's store and from there into the tables the page's own start wears
+  { const F = rustGame.rustFace(), C = new Commands();
+    setDesk(new Desk(F.exports, F.memory, (key, text) => { let store: Storage | null = null; try { store = window.localStorage; if (text) store.setItem(key, text); else store.removeItem(key); } catch { /* a sandboxed frame: nothing is kept */ }
+      if (key === KIT_KEPT) kitLoad(store, location.search); else if (key.startsWith('twopointsix.quiet')) quietFogForget(); else difficultyFromStore(); }));
+    machineBefore(q, q.get('levelFile') ?? 'office.json', C); desk().do(C); }
   const lessonRow = LESSON_MISSIONS.find(e => e.level === q.get('levelFile')) ?? null; kitLessonPage(lessonRow && lessonGroup(lessonRow.group) ? lessonRow : null);   // …but a TRAINING level is played with the kit AS ISSUED (game/loadout.ts kitAsIssued): the page names its lesson's row (kit.ts kitLessonPage) and every staging on it puts the issue cards on the men — all but the one lesson he packs for (kit.ts ISSUE.picked), whose stagings wear the kept cards —, since a lesson's steps ask for the issue kit's own things (a card with no rifle left 'press 2' a step that could never pass; your own four counts stay what a Player is built with — the kit lesson throws more than the one of each the pouches rule issues). The table and the store stay this machine's: the lesson neither wears nor writes the kept cards, and the loadout screen opened from this page for ANOTHER mission shows and keeps them
   recipeTables();
   const canvas = document.getElementById('view') as HTMLCanvasElement;
@@ -256,7 +257,7 @@ async function main() {
   // THE DIFFICULTY SWITCH (game/difficulty.ts) before the card paints its row: the level this machine keeps, then ?hard / ?hard=0 / ?difficulty=hard|standard for
   // the visit, then ?pressure / ?pressure=0 and ?digin — the two tables under the switch (game/pressure.ts, game/digin.ts) one at a time — over that
   initDifficulty(q, lessonGroup(lessonRow?.group));   // (…and the LEVERS this machine keeps over the level — fog of war, enemy AI, enemy kit — but not on a Training lesson's page: it is taught on the level as it is)
-  watchMissionRows();   // each mission's card on the start page shows the ways it has been won (ui/verdictRows.ts: this machine's record at the difficulty picked; none under ?noverdict) — here, before the boot card paints: the start page is live long before the renderer is
+  watchMissionRows();   // each mission's card on the start page shows the ways it has been won (ui/verdictRows.ts: this machine's record at the difficulty picked) — here, before the boot card paints: the start page is live long before the renderer is
   { const n = parseInt(q.get('smokepool') || q.get('sparsesmoke') || '', 10); if (n >= 256) smokeGridConfig.cap = Math.min(8192, Math.ceil(n / 256) * 256); }   // ?smokepool=N: the smoke solver's pool in bricks (smoke/smokeGrid.ts; 4096 ships) — buffer sizes and shader constants, so it is read at boot. (?sparsesmoke[=N] = the flag the pool was tried behind: still read for its N, otherwise nothing)
   // (a mission's address BEFORE THE GAME IS MADE, as every host reads it: host/standup.ts addressBeforeGame. Its lines:)
   // the row's own settings: a mission row's own hour and weather (game/rowset.ts; ScenarioEntry.hour / weather: a tutorial level is built for them) written over this visit's query, never the address — ?rowset=0 = the link's as ever
@@ -291,6 +292,7 @@ async function main() {
   await tick();
   const tGpu = performance.now();
   const rigPage = q.has('bench') || runPage(q) || navigator.webdriver === true;   // a measurement or a driven page: it keeps its own page and its own timings
+  const offBooks = ownPage(q);   // A RUN'S PAGE IS NOBODY'S TRY (host/runpage.ts): the fight on it was the run's, not the visitor's. Its end files no try and no par best, opens no end card and writes no `run` to the cloud; a driven page that is no run keeps all of them, so a check can read them
   const gpu = await initGpu(canvas, { retry: !kitViewOn && !rigPage, canvasRead: !kitViewOn, keeper: keep.keeper, seat: keep.seat });   // (a real loss of the device loads this page again — gpu/device.ts GPU_LOST; never the kit picture's window: the start page is told below and draws its standing man; never a benchmark or a driven page, which must see the card)
   startCallClock(gpu.device);   // (the load's clock on its buffer, texture and submit calls, to the boot's freeze: gpu/keep.ts)
   if (kitViewOn) void gpu.device.lost.then(() => kitViewFatal());   // (?kitview: the device's own card — gpu/device.ts — is seen by nobody in there: the start page is told there is no picture)
@@ -376,7 +378,7 @@ async function main() {
   worldHooks(engine, game, audio);
   input.listen(canvas);
   (window as any).__findme = { table: FINDME, set: setFindMe };   // (host/findme.ts: the Options rows for finding your own man, for a page check to move without the screen)
-  bindFindMe(cam); const ctrlTwice = watchCtrlTaps(window, () => !!input.lockExcept, keymap.camKey);   // (host/findme.ts: the player's kept aim pan onto the follow camera; the camera key tapped twice)
+  bindFindMe(cam);   // (host/findme.ts: the player's kept aim pan onto the follow camera)
   window.__cam = cam;   // (the follow camera standGame put on the spawn)
   const overlay = new Overlay(); if (tape || q.get('cards') === '0') overlay.cards = false;   // (a replay's tape shows no tutorial card, nor does `?cards=0`: ui/railcard.ts)
   overlay.cardClosed = () => input.focusGame();
@@ -513,6 +515,7 @@ async function main() {
       jpeg(picCanvas, picCanvas.getContext('2d'), cx => cx.drawImage(canvas, 0, 0, W, H));
     } catch (e) { reportWarning('save.picture', e); /* no picture: the save stands without one */ }
   };
+  let vRun: object | null = null; const books = new RunBooks();
   { const host = game.saves.onPutBack; game.saves.onPutBack = info => { host?.(info); cutToHim(); vRun = null; }; }   // (…and the run's books below start over: the Mission is the same OBJECT put back, and a load is another try, as a file's is — an end already filed must not stand for the end to come)
   // the start card's sandbox row (god mode / no AI / unlimited ammo) as this machine last left it — but not on a benchmark scene's page: its fight is the set's, and with
   // 'no AI' kept the mission below refuses to start at all (nobody would move), so the row has to stand off BEFORE the scenario is staged, not at the scene's start
@@ -602,7 +605,7 @@ async function main() {
   (window as any).__picks = { list: PICKS, current: () => pickOfQuery(location.search), href: (id: string) => { const p = PICKS.find(x => x.id === id); return p ? pickHref(p, location.search) : null; }, silent: () => ({ start: SILENT.start, squad: squadSilent(game) }), difficulty: () => difficultyNow() };   // the short list (scene/picks.ts): the table, the row this page is, a row's URL, the team's posture (?silentstart) and the difficulty in force
   (window as any).__scenarios = { list: SCENARIOS, all: ALL_MISSIONS, current: scenario.current, quit: scenario.quit, pick: (id: string) => { const e = ALL_MISSIONS.find(x => x.id === id); if (e) { const to = location.pathname + pickSearch(e, location.search) + location.hash; if (to === location.pathname + location.search + location.hash) location.reload(); else location.assign(to); } return !!e; } };   // the picker for the console / automation: .list, .current(), .pick(id) (a page load), .quit()
   (window as any).__quiet = { get on() { return game.quiet.active; }, get deal() { return game.quiet.deal; }, get ops() { return game.quiet.ops; }, summary: () => game.quiet.summary(), log: game.quiet.log, check: () => checkQuiet(game), restage: () => game.quiet.restage() };   // the quiet mission (game/quiet.ts): what this run was dealt, the level's block against its floor
-  (window as any).__lesson = { get step() { return game.lesson.step; }, get i() { return game.lesson.i; }, summary: () => game.lesson.summary(), log: game.lesson.log, stats: LESSON_STATS, check: () => checkLesson(game) };   // a training lesson (game/lesson.ts): the step that is up, the level's block against its floor
+  (window as any).__lesson = { get step() { return game.view.lesson; }, get i() { return game.lesson.i; }, log: game.lesson.log, stats: LESSON_STATS, check: () => checkLesson(game) };   // a training lesson (game/lesson.ts): the step that is up, the level's block against its floor
   soloOfAddress(game, q);   // (host/standup.ts: the one question every host asks of an address) the plain night — off the loadout screen (?solo) or off the card's own Start —, or a quiet mission alone, and no squad scenario up: your own card on the plain night's player, and on every fresh one after a restart (game/kit.ts — one function, which the harness's shipped stand asks of a game stood up plain too: Start no longer hands him the eleven things the pouches rule took off every other Sam)
   const openStartCard = !q.has('solo') && !game.nightBreach.active && !game.rescue.active && !game.quiet.active && !tape && !net && !kitViewOn;   // (?solo: the mission list's solo night — ui/missions.ts — is the plain night straight in)   // (opened below, once every hook is on window: that is the moment the card's buttons come alive and __ready resolves)
 
@@ -761,7 +764,7 @@ async function main() {
   // is playing a replay's tape (?playtape): that is not a visit anybody played.
   const cloud = kitViewOn || tape ? null : cloudBoot(q, { sid: replaykey.session, store: replaykey.keeper ? keptStore() : null, build: () => replaykey.commit,
     machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz).now,
-    facts: () => ({ scenario: runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? '', stage: game.mission.stage, live: missionLive(game) && !menu.isOpen && !brief?.held && !document.hidden, stats: game.mission.stats as unknown as Record<string, unknown>, preset: quality.current, scale: engine.settings.renderScale, auto: quality.auto, sharp: !!engine.settings.sharpDirect, shed: quality.shed, res: [engine.width, engine.height], out: [gpu.canvas.width, gpu.canvas.height], hz: quality.displayHzPin || quality.displayHz,
+    facts: () => ({ scenario: runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? '', stage: game.mission.stage, live: game.view.live && !menu.isOpen && !brief?.held && !document.hidden, stats: game.mission.stats as unknown as Record<string, unknown>, preset: quality.current, scale: engine.settings.renderScale, auto: quality.auto, sharp: !!engine.settings.sharpDirect, shed: quality.shed, res: [engine.width, engine.height], out: [gpu.canvas.width, gpu.canvas.height], hz: quality.displayHzPin || quality.displayHz,
       over: (R => R && { kind: R.kind, won: R.won, word: R.word, why: R.why, secs: R.secs, approach: R.approach, void: R.void, clean: R.clean, lost: R.lost, of: R.of, foesDown: R.foes.down, foesOf: R.foes.of, ...(R.hostages ? { hostagesAlive: R.hostages.alive, hostagesOf: R.hostages.of } : {}) })(game.verdict.result) }),
     // (the GPU for the visit's record, and the pass times the engine's timer already holds: the records read them, nothing new is measured — cloud/telemetry.ts)
     gpu: () => { const L = gpu.device.limits; return { timestamps: gpu.hasTimestamps, format: gpu.format, features: [...gpu.device.features].sort(), limits: { texture2d: L.maxTextureDimension2D, buffer: L.maxBufferSize, storageBinding: L.maxStorageBufferBindingSize, computeInvocations: L.maxComputeInvocationsPerWorkgroup } }; },
@@ -836,7 +839,7 @@ async function main() {
       if (!kitView) attract.tick(rawDt);   // (never under ?kitview: the world runs there with no card up) idle seconds on the start card → the attract programme (its opening veil on the wall clock, then live; and off again the moment it may not run)
       step(dt);
       if ((away || room > 0) && behind.drawn !== drawnLast) { drawnLast = behind.drawn; const w = pace.sent(performance.now()), end = () => pace.done(w, performance.now(), away && engine.timer.enabled ? engine.timer.unionMs(GPU_RENDER_PASSES) : 0); gpu.device.queue.onSubmittedWorkDone().then(end, end); }   // (waiting for the GPU, and giving way: the queue's word that this frame's work is done is what lets a later one begin, and a window giving way waits after it by the GPU's own timing of a frame where there is one. Asked only of a frame that drew: a card that hides the picture hands the GPU nothing. A queue that fails has said so too, and a lost device has its own card)
-      perfrec.frame(rawDt, fpsSm); if (cloud) { cloud.frame(rawDt, missionLive(game) && !menu.isOpen && !brief?.held && !document.hidden && !rested, endStage(game.mission.stage, game.verdict.result), cloudGpuMs, gpu.device.queue); cloudGpuMs = NaN; } perfsweep.tick(); bench.tick(rawDt); if (handsHeld && !bench.active) handsOff(); if (perfNoteT > 0) perfNoteT -= rawDt;
+      perfrec.frame(rawDt, fpsSm); if (cloud) { cloud.frame(rawDt, game.view.live && !menu.isOpen && !brief?.held && !document.hidden && !rested, endStage(offBooks ? '' : game.mission.stage, offBooks ? null : game.verdict.result), cloudGpuMs, gpu.device.queue); cloudGpuMs = NaN; } perfsweep.tick(); bench.tick(rawDt); if (handsHeld && !bench.active) handsOff(); if (perfNoteT > 0) perfNoteT -= rawDt;
       requestAnimationFrame(frame);
     } catch (e) { console.error(e); replaykey.crashed(e); fatalOnce('The frame loop threw and has been stopped:', e); }   // no re-arm: stepping on with broken state would only bury this message under a cascade (scripted __runFrames still works for poking at it)
   }
@@ -900,7 +903,6 @@ async function main() {
     fixedStep: () => !scripted && !kitViewOn,   // (the fixed 60 Hz game step, host/loop.ts FIXEDSTEP: live frames only — a script's __runFrames names its own dt and gets exactly that; and never ?kitview's picture: host/kitView.ts stands its men round EVERY update from two hooks the loop calls once a frame, and a frame of two ticks or of none would leave updates unattended — it keeps one update a drawn frame under its own pacer, as it was built)
     betweenTicks: () => { engine.world.relist(); },   // (nothing is drawn between two ticks: the list the cursor's ray reads, not the pack — scene/boxes.ts relist)
     ...(net ? { tick: (tdt: number, i: Input, c: FollowCamera, v: LoopCtx['view']) => net.tick(tdt, i, c, v), lead: () => net.lead() } : {}),   // (a networked game: the server's confirmed ticks step the game — net/page.ts)
-    ctrlTwice,
     tween,
     vsyncDt: () => vsDt >= 0 ? vsDt : undefined,
     beforeTick: dt => handsTick(dt),
@@ -923,8 +925,8 @@ async function main() {
     },
     postUpdate: () => {
       vBooks();   // (what this machine keeps of the run that just ended, before its card is drawn)
-      if (END_CARD.due) { END_CARD.due = false; menu.open('debrief'); }   // the game's word for the end card, out with the drive or a beat after he is down (freezes the world like the pause menu; Esc / Keep playing resume, Again restarts)
-      else if (game.verdict.takeDue()) menu.open('debrief');   // a squad's mission ended (taken, wiped, rescued, lost): the same card, a beat after — game/verdict.ts says when
+      if (END_CARD.due) { END_CARD.due = false; if (!offBooks) menu.open('debrief'); }   // the game's word for the end card, out with the drive or a beat after he is down (freezes the world like the pause menu; Esc / Keep playing resume, Again restarts)
+      else if (game.verdict.takeDue() && !offBooks) menu.open('debrief');   // a squad's mission ended (taken, wiped, rescued, lost): the same card, a beat after — game/verdict.ts says when
     },
     render: (camR, t, dt, present) => {
       if (viewHidden() || (leanBurst && !lastOfBurstNow)) { if (leanBurst) engine.world.relist(); behind.skipped++; perfrec.cpuRender = 0; return; }   // (an undrawn step of a lean burst still lists the world its tick left: the cursor's ray reads that list — the pack is the next draw's)
@@ -954,26 +956,14 @@ async function main() {
     fire: (man, at) => { const c = man ? man.char : game.player.char, w = firearmOf(game, c, !man); if (!w.fire()) { w.rearm(); w.fire(); }   // (as every fire site: Firearm.fire() cycles the round out FIRST — the gun's own counters are what tracers.ts isTracerRound reads; a dry or reloading gun is stood up fresh for it. The view tops the magazine up as the row ends)
       fireWeapon(game, c, at, !man, { steady: true }); }, panes: () => glassMod.glassPanes(game).map(i => game.level.boxes[i]),
     mendGlass: () => { glassMod.resetGlass(game); resetGlassPen(game); } }) : null;
-  let parCheat = false;   // (a sandbox flag was on at some frame while this run's par clock ran: its time is not filed)
-  // the verdict's bookkeeping (game/verdict.ts names how a run went; what this MACHINE keeps of it is the page's: ui/verdictStore.ts): `vRun` = the run the
-  // three below belong to, `vKey` = the key it is kept under (mission + difficulty, read when the try starts), `vStreak` = which try of the streak it is
-  // (0: not counted), `vDone` = its end has been filed
-  let vRun: object | null = null, vKey = '', vStreak = 0, vCounted = false, vDone = false;
-  const vNote = (rec: MissionRecord | null, streak: number, fresh: boolean) => { const ways: Record<string, { first: boolean; clean: boolean }> = {}; let n = 0; if (rec) for (const a of APPROACHES) { const w = rec.w[a]; if (w) { ways[a] = { first: w.tries === 1, clean: w.clean }; n++; } } return { streak, fresh, gold: n >= 2, ways }; };
-  // a try started / a run ended (game/verdict.ts): counted and kept here, the page's side. A try is counted the frame it STARTS (so one given up is a
-  // try all the same) and never under a cheat; a run loaded from a checkpoint is ANOTHER try (the load is the retry). The card is told what was kept
-  // (`kept`) — so this runs before the card is opened (postUpdate: the stealth game's card opens on the very frame its run ends).
-  const vBooks = () => { if (tape || net || kitViewOn) return; const VD = game.verdict;   // (?kitview: a beat at the door is nobody's run — no try counted, no end filed, no par below; nor is a networked game's, a run the server decided with another player in it)
-    if (VD.current !== vRun) { vRun = VD.current; vKey = ''; vStreak = 0; vCounted = false; vDone = false; }
-    const lesson = () => lessonGroup(runningScenario(game, levelFileQ)?.entry?.group);   // a Training lesson is not a run to be won: no try counted, no way kept, and its card grades nothing
-    if (VD.live && VD.started && !vCounted) { vCounted = true;
-      vKey = verdictKey(runningScenario(game, levelFileQ)?.entry?.id ?? (levelFileQ ? `night:${levelFileQ}` : SOLO_ID), difficultyNow());
-      vStreak = VD.cheat || lesson() ? 0 : tryStarted(vKey); }
-    const R = VD.result;
-    if (R && !vDone) { vDone = true;
-      if (lesson()) VD.kept = { streak: 0, fresh: false, gold: false, ways: {}, lesson: true };
-      else if (R.void || !vStreak) VD.kept = vNote(vKey ? recordOf(vKey) : null, 0, false);
-      else { const K = runEnded(vKey, vStreak, { won: R.won, approach: R.approach, clean: R.clean, secs: R.secs }); VD.kept = vNote(K.rec, K.streak, K.fresh); } } };
+  // the books of what this machine keeps of the runs played (ui/runBooks.ts), told as a run's try begins and as it ends, before its card is opened (postUpdate: the stealth game's card opens on the very
+  // frame its run ends). `vRun` = the run they are of. Not a replay's, a networked game's (the server decides it, with another player in it) nor the kit view's, nobody's run, nor a benchmark's or a pricing run's
+  const vBooks = () => { if (tape || net || kitViewOn || offBooks) return; const VD = game.verdict;
+    if (VD.current !== vRun) { vRun = VD.current; books.anew(); }
+    if (!books.due(VD.live && VD.started, !!VD.result)) return;
+    const R = game.runView(); if (!R) return;
+    books.tell(R);
+    if (books.note) { VD.kept = books.note; if (books.best) game.par.best(books.best); } };
   function step(dt: number, lastOfBurst = true) {
     lastOfBurstNow = lastOfBurst;
     stressTick(game);   // (?extra=N / the panel's stress row: the asked-for extra enemies stood again after a restart — a return on its first line while off)
@@ -981,12 +971,6 @@ async function main() {
     if (tape) tape.frame(dt); else { stepFrame(loop, dt); if (net && loop.frozen()) net.rest(input, cam, canvas); }   // (a replay owns the frame: the tape's steps, then the picture — replay/engineplay.ts; a networked game goes on under a card that freezes this page — net/page.ts)
     modelErrFrame();   // (?modelerr: a return on its first line otherwise)
     perfrec.cpuUpdate = loop.updateMs;
-    // a par run just ended (game/par.ts): this machine's best for THIS run — level file, way in, squad size, difficulty — is filed here, the page's side,
-    // and its words ride the result where this page shows it (the card, the debrief). Never under a sandbox flag (god mode, no AI, unlimited ammo): that time is not a record —
-    // and the flag counts if it was on at ANY frame while the clock ran (`parCheat`), not only on the frame the result appears.
-    if (!tape && !net && !kitViewOn) { const R = game.par.result();
-      if (!game.par.started) parCheat = false; else if (game.godMode || !game.aiEnabled || game.infiniteAmmo) parCheat = true;
-      if (R && !game.par.bestSaid) game.par.best(parCheat ? '' : parBest(`${levelFileQ ?? 'office'}|way${(game.roomClear.way ?? 0) + 1}|squad${game.nightBreach.ops.length}|${difficultyNow()}`, R.shown)); }   // (once a run: the words are kept with the run they are about)
     vBooks();   // (the verdict's bookkeeping again, for a try that started this frame and an end no card followed)
     simSm = simSm * 0.95 + loop.updateMs * 0.05;   // (the read-out's 'sim ms': Game.update on the CPU, eased as the fps row is)
 
@@ -1039,28 +1023,8 @@ async function main() {
   // THE LOAD BRIEF stays up, the world held still behind it (`frozen` below), until the player starts the run — on a page a person sits at. A page a script
   // drives, a benchmark, a show, or a mission whose start was refused (the start card says why) drops it here and goes on as before.
   const briefGo = !openStartCard && !automated && !benchOn() && !game.director.showing;
-  // THE START WAITS FOR THE PICTURE (ui/settle.ts): the brief holds the world, its block not yet live, until every program is in (the later set too:
-  // nothing compiles once the run is live) and the frames behind it have been drawn with them and measured. A press kept from the boot
-  // starts the run then. `__boot.marks.settled` is when; a script that takes the page meanwhile drops the brief (briefHolds) and the wait with it.
-  const briefSettle = (b: NonNullable<typeof brief>): void => {
-    const run = (): void => { audio.start(); input.focusGame(); };
-    if (!SETTLE.on) { boot.mark('settled'); b.live(run); return; }
-    b.hold(); pipeQueue.rush(true);
-    const P = pipelineProgress, S = new Settle(); let laterMost = laterProgress.pending, settleLast = performance.now(), drawnAt = behind.drawn;
-    const back = (): void => { settleLast = performance.now(); };   // (a tab that comes back: the time it was away is not the wait's)
-    const end = (): void => { settling = false; pipeQueue.rush(false); document.removeEventListener('visibilitychange', back); };
-    document.addEventListener('visibilitychange', back);
-    const settleStep = (): void => {
-      if (!b.held) { end(); return; }
-      const now = performance.now(), out = P.total - P.done + laterProgress.pending; laterMost = Math.max(laterMost, laterProgress.pending);
-      const done = S.step((now - settleLast) / 1000, behind.drawn - drawnAt, { out, measuring: quality.calibrating }); settleLast = now; drawnAt = behind.drawn;
-      if (done) { end(); boot.mark('settled'); b.live(run); return; }
-      settling = S.picture;   // (only the picture's turn needs its frames: while programs compile the still behind the brief goes undrawn after its warm frames, as ever)
-      b.status(S.picture ? 'getting the picture ready …' : `compiling shaders ${P.done + laterMost - laterProgress.pending} / ${P.total + laterMost} …`);
-      requestAnimationFrame(settleStep);
-    };
-    requestAnimationFrame(settleStep);
-  };
+  // THE START WAITS FOR THE PICTURE (ui/startwait.ts). `__boot.marks.settled` is when it is over; a script that takes the page meanwhile drops the brief (briefHolds) and the wait with it.
+  const briefSettle = (b: NonNullable<typeof brief>): void => startWaits(b, { drawn: () => behind.drawn, measuring: () => quality.calibrating, settling: on => { settling = on; }, settled: () => boot.mark('settled'), run: () => { audio.start(); input.focusGame(); } });
   // THE FIRST PLAYED FRAME IS AN ORDINARY ONE, ON EVERY ROAD STRAIGHT TO PLAY (a mission's card, a benchmark's address): the Rust game is started, its apply and its tick run once here, before the loop's first frame, and not where the first frame would pay for them (host/rustgame.ts rustWarm). Not behind the title (a pick is a page load, and an idle title's attract stages by name first), a show, a networked game's machine (it starts by its server's clock) or a replay (it stands from its tape). ?rustwarm=0: the first frame pays.
   if (!openStartCard && !net && !tape && q.get('rustwarm') !== '0') rustGame?.rustWarm({ input, cam, canvas });
   if (openStartCard) { brief?.off(); menu.open('start');
@@ -1154,7 +1118,6 @@ function weatherHourHooks(game: Game, smoke: SmokeSystem) {
   (window as any).__weather = game.weather;
   // the hour (hours.ts): __hour.set('dusk') live, .sun(0.4) = the one number a cloud dims, .at([x,y,z]) = the hour's light the meter's stand-in adds there, .est(p, skipOwner) = that
   // stand-in whole (guards.ts lightEstimateAt: what the harness and the team's rules read) — beside `__game.sensors.read('playerChest')` it is the stand-in against the renderer's own meter
-  HOUR.live = () => hourOf(game);   // (the mission sheet's no-load shortcut asks which hour the page is standing at: a checkpoint or the panel may have moved it off the visit's)
   (window as any).__hour = { ids: HOUR_IDS, table: HOURS, visit: HOUR, get id() { return hourOf(game); }, set: (id: string) => { applyHour(game, HOUR_IDS.includes(id as any) ? id as any : 'night'); return hourOf(game); },
     sun: (k?: number) => { if (k !== undefined) setSunStrength(game, k); return sunStrength(game); }, cloud: () => { sunToCloud(game); return sunStrength(game); },
     cover: (c?: number) => { const W = game.weather; if (!W?.kind) return null; if (c !== undefined && Number.isFinite(c)) { WEATHER_PRESETS[W.kind].cloud = Math.min(1, Math.max(0, c)); sunToCloud(game); game.engine.invalidateWorldCache?.(); } return W.cloud; },   // the picked weather's cloud cover for the VISIT (the look panel's Cloud row): the sun, its disc and the sky follow by hours.ts's own rule; null with no weather picked. Not carried by a save or a recording
@@ -1204,7 +1167,7 @@ function pageAudio(game: Game) {
 function worldHooks(engine: Engine, game: Game, audio: AudioEngine) {
   window.__engine = engine; window.__game = game; window.__audio = audio;
   (window as any).__anim = { LIFE, FEET };   // the animation's life layer / foot lock constants (character.ts): renderer noise measurements zero LIFE.on / FEET.on so a still man's silhouette holds still to the pixel (tools/qa/perf-harness.js)
-  (window as any).__killGuard = (i: number, how: 'shot' | 'struck' | 'wounded' = 'shot', zone?: 'side' | 'leg', dir: Vec3 = [1, 0, 0]) => { const gd = game.guards[i]; if (!gd || gd.state === 'dead') return false; killGuard(game, gd, dir, how === 'struck', how, 'player', undefined, how === 'wounded' ? zone ?? 'side' : undefined); return true; };   // staging: drop guard i where he stands (a body on the floor for renderer captures — the torch-shadow boil scene)
+  (window as any).__killGuard = (i: number, how: 'shot' | 'struck' = 'shot', dir: Vec3 = [1, 0, 0]) => { const gd = game.guards[i]; if (!gd || gd.state === 'dead') return false; killGuard(game, gd, dir, how === 'struck', how, 'player'); return true; };   // staging: drop guard i where he stands (a body on the floor for renderer captures — the torch-shadow boil scene)
   // __glass: the glass panes' console handles — on/off (the renderer's pane list), the knobs, a crack on the pane under the cursor or on a named pane, the numbers
   (window as any).__glass = {
     get on() { return engine.settings.glass; }, set on(v: boolean) { engine.settings.glass = !!v; },
@@ -1305,11 +1268,11 @@ function squadFlagsAndHooks(q: URLSearchParams, engine: Engine, game: Game) {
   (window as any).__picture = { knobs: PICTURE, stats: PICTURE_STATS, summary: () => pictureSummary(game), views: () => pictureViews(game), ideas: (i: number) => ideasOf(game, game.guards[i]).map(I => ({ who: I.who === 'player' ? -1 : game.guards.indexOf(I.who), at: I.at, age: game.time - I.t, how: I.how, lost: I.lost })), tell: (i: number, who: number, at: [number, number, number], age = 0) => pictureTell(game, game.guards[i], who < 0 ? 'player' : game.guards[who], at, age) };   // each man's own picture of the fight (game/picture.ts): .knobs / .stats / .summary() / .views() = what the floor view draws / .ideas(i) = guard i's ideas / .tell(i, who, at, age) = hand guard i an idea (tests)
   (window as any).__runner = { knobs: RUNNER, stats: RUNNER_STATS, of: (i: number) => runnerOf(game.guards[i]), break: (i: number) => runnerBreak(game, game.guards[i]) };   // drops it and runs (game/runner.ts): .knobs / .stats / .of(i) = guard i's run, null when he has none / .break(i) = break guard i into it (tests)
   (window as any).__autopilot = { knobs: AUTOPILOT, stats: AUTOPILOT_STATS, pick: (at: [number, number, number]) => autoPick(game, game.orders.targetAt(at)) };
-  (window as any).__squadthrow = { knobs: SQUADTHROW, stats: SQUADTHROW_STATS, plans: () => squadThrowPlans(game), plan: (at: [number, number, number], kind: 'frag' | 'stun', who: 'all' | 'red' | 'blue' = 'all') => squadThrowPlan(game, game.orders.men(who), at, kind, true) };   // teammates' throws on order (game/squadthrow.ts): .plans() = what the overlay draws (who, his walk, the arc), .plan(at, kind) = who would throw there and from where
+  (window as any).__squadthrow = { knobs: SQUADTHROW, stats: SQUADTHROW_STATS, plans: () => game.view.throws, plan: (at: [number, number, number], kind: 'frag' | 'stun', who: 'all' | 'red' | 'blue' = 'all') => squadThrowPlan(game, game.orders.men(who), at, kind, true) };   // teammates' throws on order (game/squadthrow.ts): .plans() = what the overlay draws (who, his walk, the arc), .plan(at, kind) = who would throw there and from where
   (window as any).__lightswitch = { knobs: LIGHTSWITCH, stats: LIGHTSWITCH_STATS, list: () => wallSwitches(game), lit: (i: number) => { const sw = wallSwitches(game)[i]; return sw ? switchLit(sw) : null; } };   // a room's wall switches (game/lightswitch.ts): tools/qa/lightswitch-page.cjs reads the plates and works one through the page's own Space
   (window as any).__carlamps = { knobs: CARLAMPS, stats: CARLAMPS_STATS, list: () => game.targets.filter(t => t.group === VEHICLE_GROUP) };   // a parked vehicle's lamps as light targets (game/carlamps.ts): what the level gave and how many a round has met
   (window as any).__cleanrestart = { knobs: CLEANRESTART, stats: CLEANRESTART_STATS };   // a restart gives a clean level (game/cleanrestart.ts): tools/qa/cleanrestart-page.cjs reads what a restart did
-  (window as any).__squad40 = { knobs: SQUAD40, stats: SQUAD40_STATS, log: SQUAD40_LOG, left: () => squad40Left(game), brought: () => squad40Brought(game), of: (i: number) => squad40Of(game, game.orders.squad()[i]), plans: () => squad40Plans(game), summary: () => squad40Summary(game),
+  (window as any).__squad40 = { knobs: SQUAD40, stats: SQUAD40_STATS, log: SQUAD40_LOG, left: () => squad40Left(game), brought: () => squad40Brought(game), of: (i: number) => squad40Of(game, game.orders.squad()[i]), plans: () => game.view.throws.filter(t => t.kind === 'shell'), summary: () => squad40Summary(game),
     stage: (rounds: number[]) => squad40Stage(game, game.orders.squad().map((gd, i) => [gd, rounds[i] ?? 0] as const)) };   // a teammate's 40 mm grenade on order (game/squad40.ts)
   (window as any).__fight = game.fight;   // the room fight (game/roomfight.ts): .summary() / .log / .stats / .knobs / .skill (FIGHT_SKILL) / .watchOf(guard) / .teamSees(guard)
   (window as any).__rescue = game.rescue;   // ?rescue: the HOSTAGE RESCUE playtest (game/rescue.ts) — .start() / .stop() / .restage() / .press() (= F) / .orderDoor() / .callOff() / .entry / .knobs / .state / .summary() / .log

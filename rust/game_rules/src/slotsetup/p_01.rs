@@ -115,7 +115,7 @@ pub fn setup_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option
         };
         crate::view::KitSetupRow { key: digit_code(r.key as i32), words }
     }).collect();
-    Some(crate::view::KitSetup { rows, back: String::from(if g.k.backkey.tab { "TAB" } else { "ESC" }) })
+    Some(crate::view::KitSetup { rows, back: String::from("TAB") })
 }
 
 /// the keys the setup would take if pressed now: the gun in his hands' own digit and, while it is open, its rows' (slotsetup.ts slotSetupTakes)

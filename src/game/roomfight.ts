@@ -59,7 +59,6 @@ import { digInReset } from './digin';
 import './wallreact';
 import { squadRally } from './enemysquads';
 import { PRESSURE, pressStop, run as pressRun } from './pressure';
-import { buddyStop } from './buddy';
 import './pairorders';
 import './workthings';
 import './spotted';
@@ -70,7 +69,6 @@ import './lanes';
 import { BELIEF, cover, word } from './belief';
 import './glasspen';
 import { airTrans } from './weather';
-import './clearline';
 import './gunwall';
 import './gunslots';   // (called inside tickOp only)
 import { gunBlindGap } from './gunroles';   // (called inside tickOp only)
@@ -95,7 +93,7 @@ export const ROOMFIGHT = {
   /** below this no entry is feared: he faces the way he was put */
   fearMin: 0.15,
   /** defenders leave a lost room (off = they hold to the last) / go to a fight next door */
-  fallBack: true, rally: true,
+  fallBack: true, 
   /** a man who leaves a lost room by a door never picks a spot outside the BUILDING: one that lies outside the rectangle round every room of the level's
    *  structure (scenarios.roomClear.rooms' bounds) AND has no roof over it (most of five upward rays from head height find nothing — wet.ts's open-sky test).
    *  A door onto the lot is then no way out for him — he takes another door or goes to cover inside. A yard between the rooms (the compound's, the barracks')
@@ -143,7 +141,7 @@ export const ROOMFIGHT = {
    *  mate has him (the mate is behind a jamb, reloading, has a friend in his line or his muzzle down), his muzzle comes onto this man, or he is inside
    *  `coverNearM`; a man he is already on he hands over only when the mate is past his own beat to fire. A look he had begun at such a man is dropped.
    *  Not covered: coverfire.ts's rounds into cover at a man a mate knows of. Off = as it was: his eyes took any man they saw. */
-  coverKeep: false, coverHalfDeg: 45, coverNearM: 6,
+  coverHalfDeg: 45, coverNearM: 6,
   /** s a teammate stays ROUSED after a shot, a charge or a boot last reached his ears: a sighting alone is a man to him (no making the shape out first) and he
    *  reads at the roused rate. 10 = as it was — a quarter of a minute after a room was taken the team looked as calm men look, and a defender walking in through
    *  a connecting door two metres off had three tenths of a second on the man watching it */
@@ -366,7 +364,7 @@ export class RoomFight {
   /** may the module run at all: the switch, the AI, sides, and no show holding the floor */
   get on(): boolean {
     const g = this.g;
-    return ROOMFIGHT.on && g.aiEnabled && g.tune.teams && !g.touring && !g.quietUtility && !g.puppet && !(g.director?.run && !g.director.run.ended && !g.rails?.live);   // (a tutorial mission's own program — rails.ts — runs beside the fight, it does not hold the floor)
+    return ROOMFIGHT.on && g.aiEnabled && g.tune.teams && !g.touring && !g.quietUtility && !g.puppet && !(g.director?.run && !g.director.run.ended && !g.view.lesson?.rails);   // (a tutorial mission's own program — rails.ts — runs beside the fight, it does not hold the floor)
   }
   private note(gd: Guard | null, what: string) { this.log.push({ t: this.g.time, who: gd ? gd.callsign : '-', what }); if (this.log.length > 600) this.log.splice(0, 200); }
 
@@ -414,7 +412,7 @@ export class RoomFight {
   short(gd: Guard): boolean { if (!LIGHTS.litMan || !this.live) return false; const O = this.opOf(gd); return !!O && this.g.time - O.shortT >= 0 && this.g.time - O.shortT < 0.25; }
 
   private stop() {
-    pressStop(this.g); buddyStop(this.g); lastStandStop(this.g);
+    pressStop(this.g); lastStandStop(this.g);
     for (const O of this.ops) { this.restore(O); this.handBack(O); }
     for (const D of this.defs) {   // every man as this module found him: a mover's script ended (nobody is left walking on legs nothing watches), the pin it put on taken off
       if (D.mode === 'move' && D.gd.script && D.gd.state !== 'dead') endGuardScript(D.gd, 'alert');

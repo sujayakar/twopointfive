@@ -759,7 +759,7 @@ export const fragDown = guarded(async () => {
   const lies = (g: any, gd: any) => { const B = lying(gd), from = [P0[0], FRAG.lift, P0[2]]; return { e: lyingShows(g, from, B, 'blown'), d: Math.hypot(B[0][0] - from[0], B[0][1] - from[1], B[0][2] - from[2]) }; };   // (as blast() asks a man who is down: frag.ts lying)
   const say = (gd: any) => `${gd.callsign} ${gd.downKind}${isBreathing(gd) ? ', breathing' : ', dead'} by ${gd.downBy}`;
   /** three men put out by the player — in the open by the burst, behind a wall from it, in the open past its reach — and settled; then a burst at P0 */
-  const deal = async (seed: number, burst: (R: any) => void, how: 'struck' | 'wounded' = 'struck', opt: { watch?: boolean; friend?: boolean; koBy?: 'guard' } = {}) => {
+  const deal = async (seed: number, burst: (R: any) => void, how: 'struck' = 'struck', opt: { watch?: boolean; friend?: boolean; koBy?: 'guard' } = {}) => {
     const R = await rig(seed), g = R.game; g.aiEnabled = false; g.godMode = true; g.teleportPlayer([8, 0, 17.6]);
     const [A, B, C] = g.guards; const open = R.spot(P0, 2.4, true), far = R.spot(P0, FRAG.woundM + 3, true, [open!]);
     // (behind a wall: floor the burst has no line to at any height, nor to anywhere a body can come to rest within 0.9 m of it)
@@ -790,10 +790,6 @@ export const fragDown = guarded(async () => {
   { const D = await deal(72, R => { blast(R.game, [P0[0], 0.4 - FRAG.lift, P0[2]], { who: 1, name: '40 mm grenade' }); });
     if (!D) F.verdict(false, '(d) staging', 'no spots');
     else F.verdict(D.A.downKind === 'shot' && D.B.downKind === 'struck' && D.g.mission.stats.kills === D.st0.kills + 1 && D.said.some((t: string) => t.includes('40 mm grenade')), `(d) a 40 mm burst beside him: ${D.A.callsign} is dead, ${D.B.callsign} behind the wall still breathing, the log names the round`, `${say(D.A)} · ${say(D.B)} · said ${JSON.stringify(D.said)}`); }
-  // (e) a man down WOUNDED (a posed figure, not a ragdoll): dead, the wound's record off him, his body the ragdoll's
-  { const D = await deal(73, hand, 'wounded');
-    if (!D) F.verdict(false, '(e) staging', 'no spots');
-    else F.verdict(D.A.downKind === 'shot' && D.A.wound === null && !!D.A.char.ragdoll && D.g.mission.stats.kills === D.st0.kills + 1, `(e) ${D.A.callsign}, down wounded in the open: dead, no wound record left on him, the body handed to the ragdoll`, `${say(D.A)} · wound ${JSON.stringify(D.A.wound)} · ragdoll ${!!D.A.char.ragdoll} · kills ${D.st0.kills} → ${D.g.mission.stats.kills} · the others ${say(D.B)}, ${say(D.C)}`); }
   // (f) somebody else's grenade (a man of the shift's, thrown before he was put down himself): he is dead, by that man, and the card keeps the player's knockout and gains no kill
   { const D = await deal(74, R => { R.frag(P0, 0.2, R.game.guards[2].char.id); });
     if (!D) F.verdict(false, '(f) staging', 'no spots');

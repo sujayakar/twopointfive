@@ -189,12 +189,12 @@ export function priceLookWords(search: string): string[] {
   const q = new URLSearchParams(search), own = search.replace(/^\?/, '').split('&').filter(p => !!p && lookWord(p));   // (with or without a `look` word beside them: every look page of a run is one, so `?pricelevels&firefit=0` prices the look without that trial)
   return [...(own.some(p => /^look(=|$)/.test(p)) ? [] : ['look']), ...own, ...lookTrialsKept(q)];
 }
-/** the address a step is priced on: its mission's own words on the look's page with that page's words, the die pinned, no verdict kept of
- *  the try and no replay filed (the run is nobody's play: as a benchmark's scene, ui/benchrun.ts), no sound, the preset, and its place in the run */
+/** the address a step is priced on: its mission's own words on the look's page with that page's words, the die pinned, no replay filed, no sound, the preset,
+ *  and its place in the run (that word makes it a run's page: the run is nobody's play, so main.ts `offBooks` keeps no try of it, as of a benchmark's scene) */
 export function priceSearch(level: string, i: number, quality: string, look: string[] = ['look'], keep: string[] = []): string {
   const L = priceLevels().find(l => l.level === level); if (!L) throw new Error(`no level '${level}' on the mission list`);
   // (the page's own words for a held picture: the preset pinned and the ladder off, the window giving way to nobody. `auto` leaves the ladder to the page)
-  const own = `${L.query.slice(1)}&seed=1&noverdict&nokeep&mute${quality === 'auto' ? '' : `&quality=${quality}&${HELD_LADDER_WORD}`}&${HELD_WINDOW_WORD}&${PRICE_RUN_KEY}=${i}`, has = new URLSearchParams(own);
+  const own = `${L.query.slice(1)}&seed=1&nokeep&mute${quality === 'auto' ? '' : `&quality=${quality}&${HELD_LADDER_WORD}`}&${HELD_WINDOW_WORD}&${PRICE_RUN_KEY}=${i}`, has = new URLSearchParams(own);
   return `?${[...[...look, ...keep].filter(p => !has.has(p.split('=')[0])), own].join('&')}`;   // (a word the page's own address says for itself — its preset, no sound — is not said twice)
 }
 

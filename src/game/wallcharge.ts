@@ -295,7 +295,6 @@ export function wallChargeOn(g: Game): boolean { return WALLCHARGE.on && wallBre
 /** how high the open-sky test looks (m) · the samples it takes off each face: metres out, and along the wall as a share of its half length */
 const SKY_TOP = 12, SKY_OFF = [0.5, 1.0, 1.6], SKY_ALONG = [-0.5, 0, 0.5];
 const skyMemo = new SideMap<object, Map<number, number>>('wallcharge.skyMemo');
-const standIns = new SideMap<OrderDef, OrderDef>('wallcharge.standIns'); standIns.asMemo();   // (a pure function of the row, and a row is one game's own; the HUD's row list asks it before any menu is opened, so it is no part of the state)
 /** THE FACES OF A WALL THE OPEN SKY IS OVER: 0 = neither (a wall inside), 1 = one (a building's outer wall), 2 = both (a yard wall). Asked of the level's own
  *  geometry as the glass asks it of a pane (glassbreak.ts skySide): upward solid rays from chest height at nine places off each face — a canopy or a lamp head
  *  over part of one side does not flip the majority. Kept per static (the authored statics do not move; a hole in the wall changes nothing over it). */
@@ -376,7 +375,7 @@ export function wallTarget(g: Game, at: Vec3, base: OrderTarget): OrderTarget { 
 export function wallRows(g: Game, t: OrderTarget, page: string | null, rows: OrderDef[]): OrderDef[] {
   const WC = g.wallCharge; if (t.kind !== 'floor' || !t.wall || !WC || !wallChargeOn(g) || !WC.seated) return rows;
   const direct = WALLCHARGE.menu === 'direct';
-  if (page === null) return [...rows.filter(d => d.key !== 5), direct ? WC.row : WC.opener, ...rows.filter(d => d.key === 5).map(d => WC.undigit(d))];   // (the floor's own fifth row — 'go silent' — stays on the wall's menu, below, with no digit: the wheel reaches it, as any row past the fifth)
+  if (page === null) return [...rows.filter(d => d.key !== 5), direct ? WC.row : WC.opener, ...rows.filter(d => d.key === 5)];   // (the floor's own fifth row — 'go silent' — stays on the wall's menu, below: a digit is the first row's that has it, and the wheel reaches the other)
   return page === WALL_PAGE && !direct ? [WC.row] : rows;
 }
 
@@ -419,8 +418,6 @@ export class WallCharge {
     if (mode !== this.mode) { this.mode = mode; this.seat(); if (!live) this.stop(); }
     return live;
   }
-  /** a row the wall's fifth has taken the digit of: itself, digitless (one stand-in a row, so the menu's highlight rides it by identity) */
-  undigit(d: OrderDef): OrderDef { let x = standIns.get(d); if (!x) standIns.set(d, x = Object.create(d, { key: { value: undefined, writable: true, enumerable: true } }) as OrderDef); return x; }
   private seat() {
     const S = this.g.orders; S.unregister(WALL_PAGE); S.unregister(WALL_ORDER); this.seated = false; if (!this.mode) return;
     const page = this.mode === 'page';

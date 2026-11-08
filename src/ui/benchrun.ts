@@ -7,7 +7,7 @@
 //   the run was started from.
 //   THE SCENES ARE THE SET'S, NOT THE VISITOR'S: of the flags on the address the run was asked on, only the ones that change no fight ride along (CARRIED), and the
 //   look prototype's own where the run is asked for on its page (it says so in its notes); a
-//   scene's address says its own level, deal, die and difficulty, keeps no verdict of the try and files no replay of it (the fight was not the visitor's).
+//   scene's address says its own level, deal, die and difficulty and files no replay of the fight, and as a run's page keeps no try of it (main.ts `offBooks`): the fight was not the visitor's.
 //   BACK DOES NOT START ANOTHER: a run asked for on the address REPLACES that address with the first scene's, and each scene's with the next.
 //   A RELOAD IN THE MIDDLE DOES NOT START IT AGAIN: a page marks the record as begun on its scene before it plays, and a page that finds its own mark drops the
 //   record and is a plain mission page.
@@ -39,11 +39,11 @@ const read = (): Carry | null => { try { const t = sessionStorage.getItem(KEY), 
 const write = (c: Carry): boolean => { try { sessionStorage.setItem(KEY, JSON.stringify(c)); return true; } catch { return false; } };
 const clear = (): void => { try { sessionStorage.removeItem(KEY); } catch { /* no store: nothing was kept */ } };
 
-/** the address scene `i` is played on: its mission's own, the deal and the die pinned by the scene's seed, its difficulty said, no verdict kept of the try (the
- *  run is the benchmark's, not the visitor's: game/verdict.ts files nothing and raises no end card), and the scene's place */
+/** the address scene `i` is played on: its mission's own, the deal and the die pinned by the scene's seed, its difficulty said, no replay kept, and the scene's
+ *  place (that word makes it a run's page: the fight is the benchmark's, not the visitor's, so main.ts `offBooks` files nothing of it and raises no end card) */
 export function benchSceneSearch(S: BenchSceneDef, i: number, keep: string[] = []): string {
   const E = SCENARIOS.find(e => e.id === S.scn); if (!E) throw new Error(`no mission '${S.scn}'`);
-  const own = `${scenarioQuery(E).replace(/(^|[?&])roomclear(=\d+)?(?=&|$)/, `$1roomclear=${S.seed}`)}&seed=${S.seed}&difficulty=${S.hard ? 'hard' : 'standard'}&noverdict&nokeep&${BENCH_RUN_KEY}=${i}`;
+  const own = `${scenarioQuery(E).replace(/(^|[?&])roomclear(=\d+)?(?=&|$)/, `$1roomclear=${S.seed}`)}&seed=${S.seed}&difficulty=${S.hard ? 'hard' : 'standard'}&nokeep&${BENCH_RUN_KEY}=${i}`;
   const has = new URLSearchParams(own), rest = keep.filter(p => !has.has(p.split('=')[0]));
   return rest.length ? `${own}&${rest.join('&')}` : own;
 }

@@ -115,7 +115,7 @@ export async function responseCheck(): Promise<boolean> {
   // ---- (2) the floor
   { const out: string[] = []; let caught = 0, clean = true;
     for (const f of [null, ...sample(WITH, 3)]) { const W = await stand(f, 2, true, f ? RAIDS[f] ?? null : null); const g = W.game; const c: string[] = checkResponse(g); clean &&= c.length === 0 && !!g.level.scenarios?.response; out.push(`${f ?? 'office'}: ${c.length ? c.slice(0, 2).join(' / ') : 'stands'}`);
-      if (f === 'police-post.json') { const R = g.level.scenarios.response, keep = R.ways[0].muster[0]; let wall: Vec3 | null = null; for (let x = 5; x < 35 && !wall; x += 0.5) for (let z = 5; z < 23 && !wall; z += 0.5) if (g.col.nav.isBlocked(x, z)) wall = [x, 0, z];
+      if (f && !caught) { const R = g.level.scenarios.response, keep = R.ways[0].muster[0]; let wall: Vec3 | null = null; for (let x = 5; x < 35 && !wall; x += 0.5) for (let z = 5; z < 23 && !wall; z += 0.5) if (g.col.nav.isBlocked(x, z)) wall = [x, 0, z];
         R.ways[0].muster[0] = wall!; caught = checkResponse(g).length; R.ways[0].muster[0] = keep; } }
     const W = await stand(null, 2, true, null), R = W.game.level.scenarios.response, y = R.ways[0];
     const same = JSON.stringify(y.muster) === JSON.stringify(QRF_MARKS.landing) && JSON.stringify(y.entry) === JSON.stringify(QRF_MARKS.entry) && JSON.stringify(y.entryFace) === JSON.stringify(QRF_MARKS.entryFace) && y.door === QRF_MARKS.door && JSON.stringify(R.posts) === JSON.stringify(QRF_MARKS.posts) && JSON.stringify(R.outside) === JSON.stringify(QRF_MARKS.outsideSpawn);

@@ -85,11 +85,6 @@ pub fn tube_vis(g: &crate::game::Game, e: f64) -> f64 {
     }
 }
 
-/// The tube's picture of a matte floor under irradiance `e`, 0..1 of its range.   (nvg.ts tubeSig)
-pub fn tube_sig(g: &crate::game::Game, e: f64) -> f64 {
-    tube_curve(g, e).1
-}
-
 /// A living operative with a unit whose card left him his goggles.   (nvg.ts isMate)
 pub fn is_mate(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].team == crate::teams::Team::Operative
