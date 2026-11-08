@@ -40,7 +40,7 @@ struct DnParams {
   sh: vec4f,       // SHADOW   x = clamp k (σ), y = history cap (frames; 0 = no temporal reuse), z = σ_l (luminance edge-stop scale), w = light-motion threshold: relative change of a class's unshadowed luminance per frame past which its history drops to the moving length (flags.z)
   sh2: vec4f,      //          x = depth weight k (plane distance ÷ (z·k)), y = normal power, z = history-length scale this frame (1; ½ after a resize carried the histories), w = ratio clamp hi (1, or 4 under the chroma-exact tail / ReSTIR hues)
   gi: vec4f,       // DIFFUSE  x = clamp k, y = history cap, z = σ_l, w = fast-history cap (frames; 0 = clamp on the raw neighbourhood mean)
-  gi2: vec4f,      //          x = depth k, y = normal power, z = firefly: incoming luminance ≤ mean + z·σ of the 5×5 (0 = off), w = free (0)
+  gi2: vec4f,      //          x = depth k, y = normal power, z, w = free (0)
   sp: vec4f,       // SPECULAR x = clamp k, y = history cap, z = σ_l, w = roughness STAND-IN (0 = mirror … 1) for the gather-res chain (glass panes / the legacy gloss floors), whose texels have no material of their own
   sp2: vec4f,      //          x = depth k, y = normal power, z = virtual-hit reprojection share override (< 0: derived from roughness), w = PER-PIXEL ROUGHNESS mode: > 0 = this chain is the reflection
                    //          pass's (reflect.wgsl) — roughness per texel from the g-buffer's material target (gMatR), texels rougher than this value hold no term (weight 0, history 0), the
@@ -50,10 +50,6 @@ struct DnParams {
                    //     believes reaches it (CUR.a) — a switch, a fluorescent's dropout stroke, a lightning stroke arriving; not a torch drifting — takes that class's VALUE from this frame (capped, leant on its 5×5)
                    //     and carries its sample variance across instead of booking the step as variance (shTemporal 'jump');
                    // y = THIS chain's resolution divisor (the gather's 2|3, or the reflection target's 1|2|3); z = the shadow client's 'moving' history length (frames; 0 = the light-motion cue off); w spare
-  gi3: vec4f,      // DIFFUSE, GI in motion (docs/internal/gi-motion.md §D; both 0 = the client as it was): x = CLAMP CUT — where the clamp had to move the long history (the bounce at a valid pixel CHANGED:
-                   //          a man's soft occlusion sliding along a wall), the history length is cut by how far it moved relative to the box (the reflection chain's rule), so the next frames
-                   //          weigh the fresh estimate more AND the gather's young-history rays fire there; y = YOUNG WIDEN — the à-trous luminance edge-stop loosened × (1 + y) on texels whose
-                   //          history is young (smoother while only a frame or two stand behind the estimate); zw spare
 };
 @group(1) @binding(0) var<uniform> dn: DnParams;
 @group(1) @binding(1) var gDepth: texture_depth_2d;
@@ -621,8 +617,6 @@ fn radTemporalCore(gid: vec3u, haveFastTex: bool, cur4: vec4f, sc: vec2i) -> Rad
     // colour off the texel under the chair leg instead of a dark fringe; the à-trous passes such a texel through and never take it as a tap
     if (rough > prm2.w || hitT < 0.0) { let fill = wgFill; o.hist = vec4f(select(vec3f(0.0), fill.xyz, fill.a >= 0.0), zNow); o.mom = vec4f(0.0); o.fast = vec4f(0.0); return o; }
   }
-  // firefly (diffuse): an incoming texel far above its own neighbourhood is an outlier one ray found — bounded to mean + z·σ before it can enter any history (0 = off; the gather's own per-ray bound stays)
-  if (!SPEC && prm2.z > 0.0) { let lcap = s.lmean + prm2.z * s.lsig + 1e-4; if (l > lcap) { cur *= lcap / l; l = lcap; } }
   // ---- reprojection: the surface's own motion; the specular client blends toward the VIRTUAL hit point (the mirror image sits hitT beyond the surface along the view ray —
   // exact for a planar reflector: its parallax under a moving camera is that point's, not the floor's) by how mirror-like the surface is ----
   var rp = reproject(P, full);
@@ -704,9 +698,6 @@ fn radTemporalCore(gid: vec3u, haveFastTex: bool, cur4: vec4f, sc: vec2i) -> Rad
     let hc = clamp(h, centre - e, centre + e);
     // per-pixel specular: shorten the history by how far the clamp had to move it, relative to the box's own size — a switched panel or a torch swung into the mirror direction converges in a few frames
     if (pp) { let moved = length(hc - h) / (length(e) * 2.0 + 0.05 * s.lmean + 0.01); nKeep = max(1.0, n * (1.0 - clamp(moved * 0.5, 0.0, 0.8))); }
-    // diffuse, GI in motion (dn.gi3.x > 0): the same rule for the bounce — a valid pixel whose history the clamp had to drag (the light there CHANGED under a long history: a man's occlusion sliding
-    // along the wall beside him) keeps a shorter history, so the next frames lean on the fresh estimate and the gather's young-history rays (fgather.wgsl, len < young) fire exactly there
-    if (!SPEC && dn.gi3.x > 0.0) { let moved = length(hc - h) / (length(e) * 2.0 + 0.05 * s.lmean + 0.01); let c = clamp(moved * dn.gi3.x, 0.0, 0.8); nKeep = max(1.0, n * (1.0 - c)); if (c >= 0.6) { nKeep = min(nKeep, 3.0); } }   // (dragged most of a box: as young as a disocclusion, whatever the length was)
     h = hc;
   }
   let outC = mix(h, cur, alpha);
@@ -804,7 +795,6 @@ fn radAtrous(@builtin(global_invocation_id) gid: vec3u) {
   let l0 = luminance(c0.xyz);
   var sig = sqrt(max(c0.a, 0.0));   // the pixel's own σ (its sample-moment EMA; the filtered variance from the second iteration on)
   if (pp) { sig *= 1.0 + 3.0 * young; }                                     // (a young history's variance is the spatial stand-in and its neighbours are all it has: looser)
-  if (!SPEC && dn.gi3.y > 0.0) { let mz = textureLoad(raMom, pc, 0).z; sig *= 1.0 + dn.gi3.y * clamp(1.0 - (mz - 1.0) / 4.0, 0.0, 1.0); }   // diffuse, GI in motion: the same allowance for a young bounce history (0 from the fifth frame)
   let own = placeOf(P0, n0);
   var acc = vec4f(0.0); var ws = 0.0;
   for (var t = 0; t < 9; t++) {
