@@ -308,10 +308,10 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   //          measurement, so the lit side of an ARRIVING shadow qualifies: its leading edge can show a frame late at part weight;
   //   bits 16‥23 DIM CLASS (percent) — a class holding less than this share of the pixel's live unshadowed light takes ONE ray a frame (re-trace / fresh on alternate frames) and no second fresh ray.
   let heldAdapt = RESTIR_TRADE && (ru.cfg.x & 4096u) != 0u && heldK > 2u; let stableRe = RESTIR_TRADE && (ru.cfg.x & 8192u) != 0u; let dimShare = f32((ru.cfg.x >> 16u) & 255u) * 0.01;
-  // D (image-quality program, the dim multi-light penumbra grain): ru.cfg.z bits 8‥15 = an M cap that applies INSIDE PENUMBRAE only (a pixel whose inherited texel carries a blocker-distance hint in
-  // either class: a ray from here was blocked toward a lit-tile light within the last two frames) — shorter memory there = the reservoir's random walk turned into noise the ratio filter and the
-  // TAA can average (0 = off); bit 16 = a SECOND fresh candidate + ray in those pixels whatever the tier's ray count (the rays-6 path, per pixel: an auditing tile's penumbra lanes give up their audit slot)
-  let penCapU = (ru.cfg.z >> 8u) & 255u; let penRays = ((ru.cfg.z >> 16u) & 1u) != 0u;
+  // D (image-quality program, the dim multi-light penumbra grain): INSIDE PENUMBRAE (a pixel whose inherited texel carries a blocker-distance hint in
+  // either class: a ray from here was blocked toward a lit-tile light within the last two frames)
+  // ru.cfg.z bit 16 = a SECOND fresh candidate + ray in those pixels whatever the tier's ray count (the rays-6 path, per pixel: an auditing tile's penumbra lanes give up their audit slot)
+  let penRays = ((ru.cfg.z >> 16u) & 1u) != 0u;
   var mCapPix = mCap; var fresh2Pix = raysCfg >= 6u;
   let alt = frame.frameIdx & 1u;   // below 4 rays the classes trade the odd ray frame by frame (NOT on a checkerboard: lanes tracing different kinds of ray side by side measured dearer than the rays saved)
   let finalRay = raysCfg >= 5u;   // (the second fresh candidate — rays 6, or D1's penumbra pixels — is fresh2Pix above)
@@ -361,7 +361,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     // ---- temporal: last frame's reservoirs for this surface point, their lights re-mapped by identity ----
     tw = prevTexelAt(Pu, P, gxy, dims, true);   // (P: the raster's own point — the motion is measured off it)
     motionPx = mvPx;   // (MOTION: this pixel's own screen motion, px — read before any spatial tap's reprojection reuses mvPx)
-    { let pen = rHint(tw.x) > 0.0 || rHint(tw.z) > 0.0; if (pen && penCapU > 0u) { mCapPix = min(mCap, f32(penCapU)); } if (pen && penRays) { fresh2Pix = true; } }   // (D: this pixel sat in a penumbra last frame — see penCapU / penRays above)
+    { let pen = rHint(tw.x) > 0.0 || rHint(tw.z) > 0.0; if (pen && penRays) { fresh2Pix = true; } }   // (D: this pixel sat in a penumbra last frame — see penRays above)
     if ((ru.cfg.w & 512u) != 0u) { mCapPix = max(1.0, mCapPix * (1.0 - (1.0 - ru.mot.y) * smoothstep(ru.mot.x, ru.mot.x * MOTION_RAMP, motionPx))); }   // (b) MOTION-SCALED CONFIDENCE: the memory this pixel keeps (and stores) is whole under mot.x px a frame of its own motion and × mot.y past MOTION_RAMP × that — measured, not modelled: at 0.8 px a frame (770 rows) the nearest-texel history is still worth its 20 candidates and any cut costs 10–25 % MORE flow; at 1.4–2 px it is worth about two (docs/internal/direct-motion.md §2)
     darkSlot = ((tw.y >> 28u) & 7u) | (((tw.w >> 28u) & 7u) << 3u);   // (the two B words' spare bits 28‥30; read before a gone light zeroes its word below)
     if (darkSlot != 0u) { let ns = fwdSlot(darkSlot - 1u); darkSlot = select(ns + 1u, 0u, ns >= 63u); }   // by identity; gone (255) or slot 63 (unrepresentable in 6 bits + none) = none
