@@ -780,7 +780,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
       { id: 'motorpool', mat: 'stone', x0: 4, z0: 4, x1: 8.9, z1: 9.2 },
     ],
   };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the north gate from outside the wall (the second start's side), the motor
+  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the north gate from outside the wall (the second start's side), the motor
   // pool's two pickups under their canopy behind it.
   const scenarios = !VARIANT ? { quiet: QUIET, places: PLACES, response: RESPONSE, kitView: { ways: [{ door: 'gate_n', ref: [12.5, 1.8], side: 1 }] }, doorNames: DOOR_NAMES } as LevelScenarios : undefined;
   return { level, ...(scenarios ? { scenarios } : {}), groups: trace.groups, surfaces, quiet: QUIET };

@@ -73,11 +73,11 @@ import { placeholderTints, TINTS_AS_IS } from '../render/charMaterials';
 import { rainSummary } from './rainFx';
 import './smokebreak';
 import { resetShowWhy } from './showwhy';
-import { updateFire } from './fire';
+import { updateFire, FIRE } from './fire';
 import { railLightDef, torchLightDef } from './rigProps';
 import { hostileTo, type Team } from './teams';
 import { PLAYER_ID } from './consts';
-import { seatsStand, seatManId, standMen, spotBeside, manById, isManId, eachSeat } from './seats';
+import { seatsStand, seatManId, standMen, spotBeside, manById, isManId, eachSeat, hostMan } from './seats';
 import { doorMan } from './doorthrow';
 import './mission';
 import { NO_VIEW, type TickView } from '../view/seatview';
@@ -952,6 +952,10 @@ export class Game {
   /** the stand's one call (standGame). A tick is still SAMPLED from whatever camera and Input `update` is handed (a replay's player steps with the tape's
    *  own): these two are what the HOST shows through and types on, which is what a show pins and locks */
   hostHands(cam: FollowCamera, input: Input): void { this.hostCam = cam; this.hostInput = input; }
+  /** where the picture looks: the host's camera, or its man where it has none. For whoever draws, never a rule (rust/game_draw looks_at) */
+  get looksAt(): Vec3 { return this.hostCam?.focus ?? hostMan(this).char.pos; }
+  /** what the picture leaves out of a fire's embers and hot air: anything further from where it looks than it would ever show */
+  farForAFire(p: Vec3): boolean { const f = this.looksAt; return !(Math.hypot(p[0] - f[0], p[2] - f[2]) < FIRE.emberR); }
   /** the night breach playtest (nightbreach.ts; ?nightbreach / native --nightbreach / __nightbreach): Sam leading two AI operatives against three men barricaded in the
    *  break room. Off — the game exactly — until its start(); ticked right after the Director */
   nightBreach!: NightBreach;
@@ -1355,7 +1359,7 @@ export class Game {
     pl.hasRifle = withRifle;
   }
 
-  /** THE ROWS OF THE LIGHTS STOOD ON THE LIST AS IT IS: as the level is built, and again when a fixture is hung after that (the kit picture's, host/kitView.ts). So every lamp a fixture feeds has a row and one way of burning. */
+  /** THE ROWS OF THE LIGHTS STOOD ON THE LIST AS IT IS: as the level is built. So every lamp a fixture feeds has a row and one way of burning. */
   standLights(): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.standLights', this, []); if (__r !== RUST_PASS) return __r as any; } } this.lightHome.stand(this.engine.lights.lights, this.targets, this.beacons, this.devices.cameras.map(c => ({ light: c.cone, target: c.target, slot: c.slot }))); }
   resetLevelState() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.resetLevelState', this, []); if (__r !== RUST_PASS) return __r as any; } }
     for (const t of this.targets) this.lightHome.in(LIGHT_IN.on, t, t.authored ? 1 : 0);

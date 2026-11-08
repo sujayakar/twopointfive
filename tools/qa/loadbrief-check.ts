@@ -4,7 +4,7 @@
 //            list of keys; the boot's status line fills the block by its 'N / M'; a press while it boots is kept and the run starts the moment it is live,
 //            once; live and unpressed it holds, then Enter starts it, once; a key of the game's pressed under it is not passed on; Esc is a page load of the
 //            address a quit leaves, with the list asked for; off() goes without starting
-//   wiring   main.ts makes one only for a page somebody sits at (no replay, no ?kitview window, no ?paused, no benchmark scene), holds the world behind a live
+//   wiring   main.ts makes one only for a page somebody sits at (no replay, no ?paused, no benchmark scene), holds the world behind a live
 //            one and drops it for a script; the switch is on in the page by its URL flag alone
 //   stands   a page-only screen: the module's switch is off on whichever stand this runs on, before and after a Game is stood up, and no stand's word names it
 // Nothing here is a picture: tools/qa/loadbrief-page.cjs boots the real page.

@@ -34,7 +34,7 @@
 // the maintainer: "sam also has an unrealistic number of pouches. we should make him symmetric with the team"): you have a teammate's four pouches and are
 // issued one of each of your things — a smoke, a stun, a frag, a round of 40 mm — which is fewer than a Player is built with (BUILT below: the plain night
 // with no scenario, the harness, a lesson, and your card with the rule off), so a staging under the rule writes your counts onto you (kitPlayer: whatever
-// differs from what a Player is built with) and kitShow puts back what he had.
+// differs from what a Player is built with).
 //
 // THE BIG SLOT (10-14, the maintainer, over a shot of a Door Kickers 2 loadout card: "we can change the slot system to be like door kickers. you have a single
 // big slot on the bottom that can fit larger kit items and then smaller pouches for other stuff" · "i do think we should change the breaching shotgun to not
@@ -67,7 +67,7 @@ import { WAND } from './wand';   // (read inside a row's builder, a card's cost 
 import { OWNCHARGE } from './owncharge';   // (your own door and wall charges: read inside a row's builder, the squad's count and a staging only — never as this module loads)
 import { SQUADSMOKE, squadSmokeStage } from './squadsmoke';   // (read inside a row's note / called inside kitStage only)
 import { squad40Here, squad40Stage } from './squad40';   // (called inside kitStage and a row's builder only)
-import { loadWear, loadMan } from './kitload';   // (called inside kitPlayer / kitShow / kitStage only)
+import { loadWear, loadMan } from './kitload';   // (called inside kitPlayer / kitStage only)
 import { GUNSLOTS, gunPicks, gunsBroken, pickRow, pickWord, sideStage, NO_PRIMARY, type GunSlot } from './gunslots';   // (read inside a row's builder, a card's gun and a staging only — never as this module loads)
 import { KITTREE, treeOn } from './kittree';   // (read inside a row's builder, a card's gun and a staging only — never as this module loads)
 import slotsData from './slots.json' with { type: 'json' };   // (plain data: no game module is behind it)
@@ -1174,7 +1174,7 @@ export const kitPacks = (e: { packs?: unknown } | null | undefined): boolean => 
  *  one thing of his own, a frag over the sandbags, and the men behind them are held down until it lands, so a card packed with none would leave a line
  *  asking for what he cannot do. His frags are never fewer than that there; the loadout screen shows it on his tile as the mission's (ui/loadout.ts). */
 let lessonRow: { packs?: { frags?: number } } | null = null;
-export function kitLessonPage(row: { packs?: { frags?: number } } | null | undefined) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitLessonPage', undefined, [row]); if (__r !== RUST_PASS) return __r as any; } } lessonRow = row ?? null; }
+export function kitLessonPage(row: { packs?: { frags?: number } } | null | undefined) { lessonRow = row ?? null; }
 /** every staging on this page wears the issue cards (a tool raised it, or the page's lesson is not one he packs for) */
 const pageIssued = (): boolean => issuedPage || (!!lessonRow && !kitPacks(lessonRow));
 /** the least frags he carries on this page (0: no such page) */
@@ -1219,9 +1219,6 @@ const manOf = new SideMap<Guard, { i: number; kit: MemberKit }>('kit.manOf');
 const bareEyed = new SideSet<Guard>('kit.bareEyed');
 /** the last staging's men, in member order, and how many stagings there have been (the page's __kit hook and the probes read it) */
 export const KIT_STAGED: { n: number; ops: Guard[] } = { n: 0, ops: [] };
-/** the card a staged teammate was staged WITH — a copy taken then, so what he has, not what the table says now (null: no staging put a card on him: not
- *  one of a staged team, or the table was off) */
-export function kitOf(gd: Guard): MemberKit | null { return manOf.get(gd)?.kit ?? null; }
 /** which member a staged teammate is (1 to 4), or 0 */
 export function kitIndex(gd: Guard): number { return manOf.get(gd)?.i ?? 0; }
 /** he is one of a staged team and his card has him carry a pistol (guards.ts handCarry: an operator's sidearm is in his hand, never a hand torch) */
@@ -1229,7 +1226,7 @@ export function kitPistol(gd: Guard): boolean { return manOf.has(gd) && gd.weapo
 /** the breaching shotgun or the hammer in a staged teammate's big slot ('none': the switch off, no card on him, a wall charge there) */
 export function kitBig(gd: Guard): BigKit { const m = bigOn ? manOf.get(gd)?.kit : undefined; return m && !m.walls ? m.big : 'none'; }
 
-/** what a Player carried before his card went on (kitShow gives it back) */
+/** what a Player carried before his card went on (the state bridge carries it: tools/blitz/schema.json) */
 const issuedPlayer = new SideMap<object, { rifle: boolean; gun: Rifle; side: Pistol; slot: Game['player']['slot']; smoke: number; stun: number; frags: number; shells: number; rings: number; wand: boolean; big: BigKit; /** sticky cameras for the tube, −1 = that load was not on his rifle */ cams: number; tint: Vec3; tint2: Vec3 }>('kit.issuedPlayer');
 /** KITTREE: what your card took off you — the weapon light (L is dead), the goggles (N is dead). Asked by player.ts at the two keys; nobody without a
  *  card on him has an entry (a Player as built has both). */
@@ -1318,11 +1315,6 @@ export function kitSoloIf(g: Game, solo: boolean) { { const __s = RUST_SURFACE; 
  *  nothing kept on the machine that is the fresh Player as he stands. */
 export function kitSoloStand(g: Game, plain = true) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitSoloStand', undefined, [g, plain]); if (__r !== RUST_PASS) return __r as any; } } g.soloCard = false; if (!g.stood.soloStand) return; if (!g.level.scenarios?.lesson?.steps?.length) kitSoloIf(g, plain); }
 export function kitFresh(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitFresh', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } if (g.soloCard && !g.touring && !g.director?.showing) kitPlayer(g); }
-/** a showcase is about to start on this Player (main.ts): his card comes off — what he carried before it is his again */
-export function kitShow(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitShow@src/game/kit.ts', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
-  const pl = g.player, was = issuedPlayer.get(pl); if (!was) return;
-  pl.hasRifle = was.rifle; pl.rifle = was.gun; pl.pistol = was.side; pl.slot = was.slot; pl.canisters = was.smoke; pl.flashbangs = was.stun; pl.frags = was.frags; pl.rifle.shells = was.shells; if (treeUp()) pl.rifle.rings = was.rings; youBare.delete(pl); stickyIssue(pl, Math.max(0, was.cams), was.cams >= 0); pl.wand = was.wand; pl.bigKit = was.big; pl.char.tint = [...was.tint] as Vec3; pl.char.tint2 = [...was.tint2] as Vec3; issuedPlayer.delete(pl); loadWear(g, null);
-}
 /** A SCENARIO HAS JUST STAGED ITS TEAM (`ops` in staging order: member 1 first): each man's card onto him, yours onto you, and the squad's counted stun
  *  canisters and charges moved by what the cards changed. Called once per staging, after the cast stands and Sam is on his mark; every restart stages again
  *  and so calls again. With every card as issued nothing is written on a teammate (but the count, when one man comes alone: kitPool) — and on you only

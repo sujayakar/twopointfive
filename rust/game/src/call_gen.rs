@@ -554,14 +554,12 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 840 => { let a1: f64 = Io::r(&mut i); let a2: crate::kit::MemberKit = Io::r(&mut i); let r = crate::kit::kit_wears(g, a1, &a2); r.w(&mut o);  }
 841 => { let a1: f64 = Io::r(&mut i); let a2: Option<JsMap<String, crate::kit::KitValue>> = Io::r(&mut i); let r = crate::kit::kit_sanitize(g, a1, a2.as_ref()); r.w(&mut o);  }
 842 => { let a1: Option<bool> = Io::r(&mut i); crate::kit::kit_issued_page(g, a1);  }
-843 => { let a1: Option<crate::kit::KitLessonPageRow> = Io::r(&mut i); crate::kit::kit_lesson_page(g, a1);  }
 844 => {  crate::kit::kit_reset(g);  }
 845 => {  crate::kit::kit_player(g);  }
 846 => {  crate::kit::kit_solo(g);  }
 847 => { let a1: bool = Io::r(&mut i); crate::kit::kit_solo_if(g, a1);  }
 848 => { let a1: Option<bool> = Io::r(&mut i); crate::kit::kit_solo_stand(g, a1);  }
 849 => {  crate::kit::kit_fresh(g);  }
-850 => {  crate::kit::kit_show(g);  }
 851 => { let a1: Vec<GuardId> = Io::r(&mut i); crate::kit::kit_stage(g, &a1);  }
 852 => { let a1: f64 = Io::r(&mut i); let a2: Option<crate::kit::KitPoolIssued> = Io::r(&mut i); let r = crate::kit::kit_pool(g, a1, a2); r.w(&mut o);  }
 854 => {  crate::fogofwar::fog_flags(g);  }

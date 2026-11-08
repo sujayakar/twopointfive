@@ -130,7 +130,7 @@ export const MOUSEHOLE_STRUCTURE: StructureData = {
   ],
 };
 
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest). The way this level is named for is a WALL: the first way is
+/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest). The way this level is named for is a WALL: the first way is
  *  a bespoke set — a stretch of the clinic's street wall with the ward behind it, three cots and the cross on the floor. It was anchored on a span of blank wall
  *  (a breach and not a door), and every pick whose kit works a leaf — the hammer, the breaching shotgun, a door charge, the wand, a bang or a frag on order —
  *  stood idle there: the maintainer, of the hammer on this level, "some demos still don't really do anything". So the set has a SIDE DOOR in that wall

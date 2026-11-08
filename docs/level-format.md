@@ -299,7 +299,7 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   level with no structure; a door with no row keeps the name it had. Every line that names the door then says this name. Words only: it does not move the
   level's fingerprint. Checks: the validator (the door exists, once, the name's length) and `bun run tools/qa/probes.ts words-doornames` (no bearing, no
   two doors of a level called the same, and the list of doors still owed a name — a door named here comes off `DOORS_OWED` in the same change).
-- `kitView` — THE TEAM AT THE DOOR, the start page's Team & kit picture (`src/host/kitView.ts`, `src/ui/kitView.ts`; picture only — no rule of the game reads
+- `kitView` — THE TEAM AT THE DOOR, the start page's Team & kit picture (`rust/game_rules/src/kitstage`, `src/ui/kitView.ts`; picture only — no rule of the game reads
   it, and a level without the block shows an empty column there): `{ ways[], sets? }`, indexed as the team starts are (`[0]` = the room clear's own
   `team`, `[k]` = its `starts[k − 1]`; never more ways than starts). A way needs only `door` (a door id): the men's slots, the camera and the lamps are worked
   out from that door's frame and the side the team starts on — teammates along the wall 0.7 m off its face and 0.9 m apart from 0.45 m past the jamb away
@@ -317,10 +317,9 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   marks). WHICH LEVELS CARRY A BLOCK is never written down here: `grep -l '"kitView"' levels/*.json` (the bundled office's is
   `levels/office.scenarios.ts`), or the first line `bun run tools/qa/kitview-plan.ts --quiet` prints. A block is written TWICE where the level has a look twin
   — `X.json` (the start page reads it) and `X-gwot.json` (the picture's own page loads it), the same block to the byte; that tool FAILS a level whose two
-  files disagree. `PORT=<dev server> node tools/qa/kitview-page.cjs` stages every way and holds the slots
-  to free floor.
-  THE PLAN'S KEYS (`src/host/kitViewPlan.ts`: every value below is MEASURED from the level's own boxes where the way does not write it, and a written one
-  is taken as written; the picture is STAGED FROM THE PLAN — `src/host/kitView.ts place()` takes the places, the wall's face and top, the lamps, the
+  files disagree, and holds the slots to free floor.
+  THE PLAN'S KEYS (`rust/game_start/src/kit_plan.rs`: every value below is MEASURED from the level's own boxes where the way does not write it, and a written one
+  is taken as written; the picture is STAGED FROM THE PLAN — `rust/game_rules/src/kitstage/stage.rs` takes the places, the wall's face and top, the lamps, the
   camera, what is sunk out of the picture and the floor behind the anchor from it, on the game's own nav grid). The ANCHOR is `door`, or `span
   [[x, z], [x, z]]` where there is no door: a stretch of blank wall to breach, or the two posts of an open gate — never both; `kind` ('wall' | 'gap' on a
   span, 'door' on a door; absent = measured: wall between the span's ends or open floor). Overrides: `ref [x, z]` (a point on the team's side; absent =
@@ -351,13 +350,12 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   NAMES: a `hide` / `show` / `pane.box` should name a box's `group` or its own `name` (a named box's id IS its name) — a generated `box_NNNN` id is the
   box's place in the file and points elsewhere when the box order changes; tools/qa/kitview-plan.ts prints a WARNING for one. ONE NAME, ONE WORD: a
   name written in `show` AND in `hide` / `hideMore` is a plan problem (its boxes would go, hidden by name, and its loose props stay, shown by name).
-  THE LEVEL'S DEVICES REPORT NOTHING IN A PICTURE: cameras and tripwires are drawn, pan and glow, and call nobody (src/host/kitView.ts kitViewInert).
+  THE LEVEL'S DEVICES REPORT NOTHING IN A PICTURE: cameras and tripwires are drawn, pan and glow, and call nobody (rust/game_rules/src/kitstage/stage.rs park).
   A SPAN HAS NO LEAF: on a 'gap' the gun fires on the opening's middle, the light plays with nothing pushed and what is thrown goes straight in; on a
   'wall' only the wall charge plays (the wall is stood again under the dissolve after it); every row that works a leaf — a door charge, the wand, a
   teammate's bang or frag order, the big tool — plays the GUN's there. Throws and the spot a round is put on are held to the floor measured behind the
   anchor (`inside`). The stack's `hand` mirrors the child's own framing (door / left / right) — a way whose stack falls on the right needs nothing said.
-  EVERY WAY ANCHORS ON A DOOR THAT IS NOT STEEL (10-18; tools/qa/kitview-plan.ts section C fails any other way, tools/qa/kitview-work.cjs holds the page
-  to it): a pick whose kit works a leaf — the hammer, the breaching shotgun, a door charge, the wand, a bang or a frag on order — played the gun's row on a
+  EVERY WAY ANCHORS ON A DOOR THAT IS NOT STEEL (10-18; tools/qa/kitview-plan.ts section C fails any other way): a pick whose kit works a leaf — the hammer, the breaching shotgun, a door charge, the wand, a bang or a frag on order — played the gun's row on a
   span or a steel door, and on a blank wall the gun only scanned: the picture stood still for that pick. A mission whose own way in is a gate, a gap or a
   wall writes the first door behind it (`ref`: the side the picture is taken from, when that door is another way's too), or a set with a door in the wall
   the stack stands on (mousehole's `ward`: the wall charge still opens the wall beside the door — `KIT_VIEW_LOOP.wallAt` is measured along the stack's wall).
@@ -369,15 +367,12 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   file's palette holds, so one block text serves a level's plain file and its look file) that the picture loads INSTEAD of the level's geometry; a set's
   own lamps stay lit (`roomLights` is 1 on a set way unless written; 0 on a level's own way); world metres inside the
   0‥40 × 0‥28 floor, bringing its own ground; `ref` = a point on the team's side of its anchor. A way names one with `set`; its `door` / `span` /
-  `slots` / `hide` are then the set's, never the level's (the validator holds a set way's door to the set's doors). Under `?kitview` and nowhere else
-  `src/host/kitViewSet.ts kitViewSetLevel` lays the set over the file before `loadLevel`: the set's boxes (index for index), doors and lamps; the level's
+  `slots` / `hide` are then the set's, never the level's (the validator holds a set way's door to the set's doors). Under `kitview` and nowhere else
+  `rust/game_start/src/kit_set.rs set_level` lays the set over the file before `loadLevel`: the set's boxes (index for index), doors and lamps; the level's
   name, materials, surfaces, sky, daylight and directional lights (the `moon`) kept; everything else of the level gone, with stand-ins for what any level
   must have (two sunk breaker boxes, the three objectives, a one-room `roomClear` whose team is the plan's five places). A way with no set is the file
-  untouched. `bun run tools/qa/kitview-plan.ts [level …]` checks every block statically (the plan AS THE CHILD MAKES IT — two passes: what stands in the camera's way is sunk before the places are planned — has no problems, five places on free floor, the
-  anchor real, the way in walkable on the nav grid's cells, a set loaded as the page loads it passes this validator) and prints the dry run of every
-  mission's way in; `KITPLAN_BREAK=1` must fail. ON THE PAGE: `PORT=<dev server> node tools/qa/kitview-levels.cjs` (`LEVEL=a,b`, `WAY=n`) runs the same
-  generic rows on every level-way with a block — it knows no level: five men on the plan's places on free floor, every tile's row from pick to everyone
-  home and the world whole, throws beyond the anchor's line, a cut mid-row, `pins` 0, a silent console; `KITLEVELS_BREAK=1` must fail.
+  untouched. `bun run tools/qa/kitview-plan.ts [level …]` checks every block statically (the plan as a start makes it — two passes: what stands in the camera's way is sunk before the places are planned — has no problems, five places on free floor, the
+  anchor real, the way in walkable on the nav grid's cells, a set laid as the picture lays it passes this validator); `KITPLAN_BREAK=1` must fail. THE GAME ON IT: `cargo test --test kit_levels` in `rust/game_start` stands every way of every block for every kind the mission list has, and `kit_acts` plays the rows.
   SHAPES TO COPY FROM — examples, not the list of levels with a block (that is the grep above): a door with every place written, `records` (below);
   a door INDOORS with its own lamps off and the room's left lit, `block` (the kitchen door off the hall); a SPAN of blank wall on a set, `mousehole`
   way 1 (`ward`: the clinic's street wall), beside the level's own door as way 2; ONE SET FOR BOTH WAYS, `pass` (`gate`: the wicket in the truck gate

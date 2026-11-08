@@ -18,13 +18,12 @@
 // pace is never made slower by this than the browser already made it, and a late frame moves the beat rather than doubling the wait.
 //
 // THE DISPLAY'S PERIOD is read here, off the stamps of the frame callbacks themselves, every one of them, passed over or not: the fastest gaps that agree,
-// then every gap that is a whole number of those over the periods they span (the kit view's reading, host/kitView.ts `fastest`). A callback after work that
+// then every gap that is a whole number of those over the periods they span. A callback after work that
 // ran long comes a whole number of periods later, so a page that is slow on every frame reads a slower display than it has; that page is given every frame,
 // which is what it had. Frames in pairs show the period in the short gap of each pair, and a paced page shows it at every frame passed over, so a window
 // dragged to a slower display is read again within a quarter of a second. (Not ui/quality.ts's `displayHz`: that one is only ever raised.)
 //
-// WHY NOT THE KIT VIEW'S PACER (kitViewPacer): that one also steps a slow machine DOWN to an even 45 or 30, and to do it passes frames over at boot and now
-// and then after to see the period. In the game the ladder is what brings the work inside the frame, a pace under the ladder's cut would read to it as a slow
+// IT NEVER STEPS A SLOW MACHINE DOWN to an even 45 or 30, which would pass frames over to see the period. In the game the ladder is what brings the work inside the frame, a pace under the ladder's cut would read to it as a slow
 // machine, and a frame passed over to look is a hitch in a fight. This one never passes over a frame that was due.
 //
 // The page's alone, as the frame loop's others are (game/knobs.ts VISIT_OWN): nothing in the simulation reads it and a run is the same run either way. The
@@ -61,8 +60,7 @@
 // asked for, this says whether the GPU has room for the one asked. With work inside the paced frame nothing is ever held and the pace is the even one;
 // with work over it, frames come as the GPU finishes them, one or two display frames apart, never back to back. A frame held for this is the machine's own
 // pace, so the ladder reads its gap as it reads any other. A benchmark and a sweep wait too, and only the boot's calibration does not (pageRoom below).
-// And not under ?kitview: the kit picture's pacer reads how late its own frames come and steps down to an even pace by that; a frame held here after that
-// pacer had taken it would hide the lateness from it. The queue is asked once for every frame that DREW (a card that hides the picture draws nothing and
+// The queue is asked once for every frame that DREW (a card that hides the picture draws nothing and
 // asks nothing). A FRAME THE QUEUE NEVER ANSWERS FOR is given up after `lost` ms and the page goes on without it: a window held at its limit for good by
 // one lost answer would be a frozen picture with no card to say why. (Ten seconds: a frame on the software adapter is seconds long and is not lost.)
 // ON in the page at two (`FLIGHT_PAGE`), `?flight=0` = nothing waits, as it was; OFF here and on a harness stand.
@@ -114,13 +112,13 @@ export function periodOf(G: readonly number[]): number {
  *  card cannot draw at the display's rate queued frames without end: a flipped row's stamps came back seconds late, in another row's turn, and the frame
  *  rate read the display's whatever the card did. 0 only for the boot's CALIBRATION by itself (a second and a half that counts its frames as they come:
  *  on an adapter that takes seconds a frame the wait would stretch it without end; under a benchmark it waits like the rest, so a run opens with no
- *  pile behind it) and under ?kitview, whose own pacer reads how late its frames come. */
-export const pageRoom = (p: { calibrating: boolean; measuring: boolean; kitView: boolean }): number => p.kitView || (p.calibrating && !p.measuring) ? 0 : EVENPACE.flight;
+ *  pile behind it). */
+export const pageRoom = (p: { calibrating: boolean; measuring: boolean }): number => p.calibrating && !p.measuring ? 0 : EVENPACE.flight;
 
 export interface Pacer {
   /** a frame callback stamped `ts` (ms), with the rate being held (0 = none: every frame is worked, and the period is still read). `away` = nobody is at this
    *  window (it gives way, under `giveway`). `room` = how many frames may be with the GPU when this one is begun (0 = any number: the boot's
-   *  calibration, and ?kitview; left out = `flight`). true = pass this display frame over whole (touch nothing: the next worked frame takes the real time). */
+   *  calibration; left out = `flight`). true = pass this display frame over whole (touch nothing: the next worked frame takes the real time). */
   skip(ts: number | undefined, target: number, away?: boolean, room?: number): boolean;
   /** a worked frame has handed its work to the GPU, at `now` (ms): the word to give `done` back when the queue says that frame is finished, at `now`, with
    *  the GPU's own timing of a frame's passes where the page has one (`own`, ms; 0 = none). An answer for a frame already given up as lost changes nothing */
