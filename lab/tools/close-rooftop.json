@@ -1,0 +1,434 @@
+[
+ {
+  "hour": 15.0,
+  "cut": 2.55,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d1-desk",
+  "look": [
+   2.7,
+   0.9,
+   -0.6
+  ],
+  "dist": 3.6,
+  "yaw": -0.9,
+  "pitch": 0.45,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 2.55,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d1-desk-ref",
+  "look": [
+   2.7,
+   0.9,
+   -0.6
+  ],
+  "dist": 3.6,
+  "yaw": -0.9,
+  "pitch": 0.45,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 2.55,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d2-sofa",
+  "look": [
+   0.6,
+   0.5,
+   6.2
+  ],
+  "dist": 3.6,
+  "yaw": 0.3,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 2.55,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d2-sofa-ref",
+  "look": [
+   0.6,
+   0.5,
+   6.2
+  ],
+  "dist": 3.6,
+  "yaw": 0.3,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 2.55,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d3-lab",
+  "look": [
+   8.2,
+   1.0,
+   2.4
+  ],
+  "dist": 3.6,
+  "yaw": 0.4,
+  "pitch": 0.45,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 2.55,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d3-lab-ref",
+  "look": [
+   8.2,
+   1.0,
+   2.4
+  ],
+  "dist": 3.6,
+  "yaw": 0.4,
+  "pitch": 0.45,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 2.55,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d4-books",
+  "look": [
+   -8.0,
+   1.2,
+   0.5
+  ],
+  "dist": 3.6,
+  "yaw": 0.2,
+  "pitch": 0.35,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 2.55,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d4-books-ref",
+  "look": [
+   -8.0,
+   1.2,
+   0.5
+  ],
+  "dist": 3.6,
+  "yaw": 0.2,
+  "pitch": 0.35,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 2.55,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d5-crates",
+  "look": [
+   10.4,
+   0.8,
+   -6.9
+  ],
+  "dist": 3.6,
+  "yaw": -0.5,
+  "pitch": 0.45,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 2.55,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d5-crates-ref",
+  "look": [
+   10.4,
+   0.8,
+   -6.9
+  ],
+  "dist": 3.6,
+  "yaw": -0.5,
+  "pitch": 0.45,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 2.55,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d6-person",
+  "person": 0,
+  "dist": 3.2,
+  "yaw": 0.6,
+  "pitch": 0.35,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 2.55,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d6-person-ref",
+  "person": 0,
+  "dist": 3.2,
+  "yaw": 0.6,
+  "pitch": 0.35,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 1000000000.0,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d7-leaves",
+  "look": [
+   8.4,
+   5.2,
+   3.4
+  ],
+  "dist": 4.0,
+  "yaw": 0.9,
+  "pitch": 0.45,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 1000000000.0,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d7-leaves-ref",
+  "look": [
+   8.4,
+   5.2,
+   3.4
+  ],
+  "dist": 4.0,
+  "yaw": 0.9,
+  "pitch": 0.45,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 1000000000.0,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d8-pool",
+  "look": [
+   8.5,
+   4.0,
+   -2.7
+  ],
+  "dist": 5.0,
+  "yaw": 0.3,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 1000000000.0,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d8-pool-ref",
+  "look": [
+   8.5,
+   4.0,
+   -2.7
+  ],
+  "dist": 5.0,
+  "yaw": 0.3,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 1000000000.0,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d9-roof",
+  "look": [
+   -7.2,
+   7.4,
+   -5.7
+  ],
+  "dist": 5.0,
+  "yaw": 0.6,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 1000000000.0,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d9-roof-ref",
+  "look": [
+   -7.2,
+   7.4,
+   -5.7
+  ],
+  "dist": 5.0,
+  "yaw": 0.6,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 21.5,
+  "cut": 2.55,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d10-night",
+  "look": [
+   2.7,
+   0.9,
+   -0.6
+  ],
+  "dist": 3.6,
+  "yaw": -0.9,
+  "pitch": 0.45,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 21.5,
+  "cut": 2.55,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d10-night-ref",
+  "look": [
+   2.7,
+   0.9,
+   -0.6
+  ],
+  "dist": 3.6,
+  "yaw": -0.9,
+  "pitch": 0.45,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 2.55,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d11-stairs",
+  "look": [
+   -2.4,
+   1.2,
+   1.4
+  ],
+  "dist": 4.0,
+  "yaw": 0.6,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 15.0,
+  "cut": 2.55,
+  "doors": 0.8,
+  "tick": 600,
+  "name": "d11-stairs-ref",
+  "look": [
+   -2.4,
+   1.2,
+   1.4
+  ],
+  "dist": 4.0,
+  "yaw": 0.6,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ }
+]

@@ -1,0 +1,450 @@
+[
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c1-shelf",
+  "look": [
+   -2.6,
+   0.85,
+   -2.9
+  ],
+  "dist": 3.2,
+  "yaw": 0.1,
+  "pitch": 0.42,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c1-shelf-ref",
+  "look": [
+   -2.6,
+   0.85,
+   -2.9
+  ],
+  "dist": 3.2,
+  "yaw": 0.1,
+  "pitch": 0.42,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c2-cooler",
+  "look": [
+   -3.4,
+   1.1,
+   -9.1
+  ],
+  "dist": 4.2,
+  "yaw": 0.15,
+  "pitch": 0.3,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c2-cooler-ref",
+  "look": [
+   -3.4,
+   1.1,
+   -9.1
+  ],
+  "dist": 4.2,
+  "yaw": 0.15,
+  "pitch": 0.3,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c3-counter",
+  "look": [
+   3.7,
+   1.15,
+   -4.6
+  ],
+  "dist": 3.6,
+  "yaw": -1.1,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c3-counter-ref",
+  "look": [
+   3.7,
+   1.15,
+   -4.6
+  ],
+  "dist": 3.6,
+  "yaw": -1.1,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c4-chiller",
+  "look": [
+   -5.6,
+   0.9,
+   -6.2
+  ],
+  "dist": 3.4,
+  "yaw": 1.3,
+  "pitch": 0.4,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c4-chiller-ref",
+  "look": [
+   -5.6,
+   0.9,
+   -6.2
+  ],
+  "dist": 3.4,
+  "yaw": 1.3,
+  "pitch": 0.4,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c5-vending",
+  "look": [
+   -10.4,
+   1.1,
+   -1.2
+  ],
+  "dist": 4.2,
+  "yaw": 0.2,
+  "pitch": 0.35,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c5-vending-ref",
+  "look": [
+   -10.4,
+   1.1,
+   -1.2
+  ],
+  "dist": 4.2,
+  "yaw": 0.2,
+  "pitch": 0.35,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c6-noodle",
+  "look": [
+   9.6,
+   1.2,
+   -1.7
+  ],
+  "dist": 3.6,
+  "yaw": 0.2,
+  "pitch": 0.4,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c6-noodle-ref",
+  "look": [
+   9.6,
+   1.2,
+   -1.7
+  ],
+  "dist": 3.6,
+  "yaw": 0.2,
+  "pitch": 0.4,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c7-bike",
+  "look": [
+   -7.2,
+   0.5,
+   0.4
+  ],
+  "dist": 3.4,
+  "yaw": 0.5,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c7-bike-ref",
+  "look": [
+   -7.2,
+   0.5,
+   0.4
+  ],
+  "dist": 3.4,
+  "yaw": 0.5,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c8-person",
+  "person": 0,
+  "dist": 3.4,
+  "yaw": 0.6,
+  "pitch": 0.35,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c8-person-ref",
+  "person": 0,
+  "dist": 3.4,
+  "yaw": 0.6,
+  "pitch": 0.35,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c9-bins",
+  "look": [
+   1.5,
+   0.5,
+   -1.0
+  ],
+  "dist": 3.0,
+  "yaw": 0.2,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c9-bins-ref",
+  "look": [
+   1.5,
+   0.5,
+   -1.0
+  ],
+  "dist": 3.0,
+  "yaw": 0.2,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c10-scooter",
+  "look": [
+   3.6,
+   0.5,
+   0.6
+  ],
+  "dist": 3.0,
+  "yaw": 0.7,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c10-scooter-ref",
+  "look": [
+   3.6,
+   0.5,
+   0.6
+  ],
+  "dist": 3.0,
+  "yaw": 0.7,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c11-sign",
+  "look": [
+   -2,
+   2.9,
+   -0.4
+  ],
+  "dist": 5.0,
+  "yaw": 0.1,
+  "pitch": 0.3,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c11-sign-ref",
+  "look": [
+   -2,
+   2.9,
+   -0.4
+  ],
+  "dist": 5.0,
+  "yaw": 0.1,
+  "pitch": 0.3,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c12-puddle",
+  "look": [
+   3.5,
+   0.0,
+   3.2
+  ],
+  "dist": 4.5,
+  "yaw": 0.4,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "c12-puddle-ref",
+  "look": [
+   3.5,
+   0.0,
+   3.2
+  ],
+  "dist": 4.5,
+  "yaw": 0.4,
+  "pitch": 0.5,
+  "w": 1280,
+  "h": 720,
+  "samples": 260,
+  "method": "reference",
+  "scale": 1
+ }
+]
