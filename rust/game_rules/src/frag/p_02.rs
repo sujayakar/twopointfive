@@ -115,11 +115,11 @@ fn finish(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
         if b.mine || !fresh { g.mission.stats.kills += 1.0; }
     }
     if b.mine || (team_ && !fresh) {
-        let weapon = if b.mine { b.name.clone() } else { alloc::format!("a teammate's {}", b.name) };
+        let weapon = if b.mine { alloc::format!("the {}", b.name) } else { alloc::format!("a teammate's {}", b.name) };
         let mut data: JsMap<String, Option<crate::chronicle::ChronicleDataValue>> = JsMap::new();
         data.set(String::from("who"), Some(crate::chronicle::ChronicleDataValue::Text(callsign.clone())));
         data.set(String::from("weapon"), Some(crate::chronicle::ChronicleDataValue::Text(weapon)));
-        if b.mine { data.set(String::from("blast"), Some(crate::chronicle::ChronicleDataValue::Bool(true))); }
+        data.set(String::from("blast"), Some(crate::chronicle::ChronicleDataValue::Bool(true)));
         crate::chronicle::chronicle(g, crate::chronicle::ChronKind::Kill, Some(&data), Some(pts[0]));
     }
     if b.mine { crate::guards::witness_kill(g, gd, crate::game::DownKind::Shot, crate::game::DownBy::Player); }

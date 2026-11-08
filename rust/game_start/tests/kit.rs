@@ -62,8 +62,8 @@ fn a_burst_on_a_man_out_cold_moves_him_from_knockout_to_kill() {
     use game::chronicle::ChronKind::Kill;
     for (seed, by, sams, name, row) in [
         (3, DownBy::Player, false, None, "a teammate's frag grenade"),
-        (4, DownBy::Guard, true, Some("40 mm grenade"), "40 mm grenade"),
-        (5, DownBy::Player, true, None, "frag grenade"),
+        (4, DownBy::Guard, true, Some("40 mm grenade"), "the 40 mm grenade"),
+        (5, DownBy::Player, true, None, "the frag grenade"),
         (6, DownBy::Guard, false, None, "a teammate's frag grenade"),
     ] {
         let (mut p, man) = one_down(seed, by);
@@ -73,6 +73,9 @@ fn a_burst_on_a_man_out_cold_moves_him_from_knockout_to_kill() {
         assert_eq!(p.g.gd[man].down_kind, Some(DownKind::Shot), "{by:?}, thrown by Sam {sams}: the burst did not reach him");
         assert_eq!(card(&p), (1.0, 0.0), "{by:?}, thrown by Sam {sams}: kills, knockouts");
         assert!(timeline_has(&p, Kill, row), "{by:?}, thrown by Sam {sams}: no row names {row}");
+        let e = p.g.chronicle.events.iter().find(|e| e.kind == Kill).unwrap();
+        let said = game::chronicle::event_text(&p.g, e);
+        assert!(said.ends_with(&format!("killed — {row}")), "{by:?}, thrown by Sam {sams}: the row reads {said}");
     }
 }
 
