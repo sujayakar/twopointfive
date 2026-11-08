@@ -16,7 +16,6 @@
 // URL with the other `difficulty=` on it (pickHref's last argument). Both read back as the same pick (pickOfQuery), so 'next' and the quit work on either,
 // and 'next' carries a difficulty the player chose over the row's own on to the row after.
 //
-// THE SWITCH: `?nopicks` — the start page's order, the pause card and the boot are the build's as it was (PICKS_UI.on false: no 'next', no redirect).
 // Types and pure functions (the guarded read of the page's own query string aside): nothing here imports the game at run time or touches the DOM.
 import { scenarioQuery, type ScenarioEntry } from './scenarios';
 import { ALL_MISSIONS, SCENARIO_KEYS, quitSearch, specOfQuery } from './scenarioList';
@@ -54,12 +53,8 @@ export const PICKS: Pick[] = [
     line: 'Alone in the office after dark. Reach the server room, pull the drive, leave by the fire exit.' },
 ];
 
-/** the switch: off = the build as it was before the short list (the 'next' buttons, the ?pick= redirect) */
-export const PICKS_UI = { on: true };
-try { const q = new URLSearchParams(location.search); if (q.has('nopicks')) PICKS_UI.on = false; } catch { /* no page (the harness) */ }
-
 // ─────────────────────────────────────────────────────────────── a pick and the query string ───────────────────────────────────────────────────────────────
-export const PICK_KEY = 'pick';
+const PICK_KEY = 'pick';
 /** the settings a pick owns on the URL beside the scenario's own keys: whatever the visitor's URL carried for these is replaced, never kept */
 const SETTING_KEYS = ['hard', 'difficulty', 'digin', 'pressure', 'hour', 'sun', 'weather', PICK_KEY];   // (digin / pressure: the two older single-switch difficulty flags)
 const keyOf = (part: string) => part.split('=')[0];
@@ -71,9 +66,8 @@ const partsOf = (search: string) => search.replace(/^[^?]*\?/, '').split('&').fi
 /** `search` without the keys in `drop` — every other flag kept as it was typed, in order ('' or '?a&b=c') */
 function without(search: string, drop: string[]): string { const keep = partsOf(search).filter(k => !drop.includes(decodeURIComponent(keyOf(k)))); return keep.length ? '?' + keep.join('&') : ''; }
 
-/** `mission` (a SCENARIOS id or SOLO_ID) is on the short list while the list is on: the mission sheet and the loadout screen leave their hand-set
- *  'untuned' tag off it (ui/missions.ts, ui/loadout.ts — the label itself stays in the data, and shows again under ?nopicks) */
-export function onShortList(mission: string, list: Pick[] = PICKS): boolean { return PICKS_UI.on && list.some(p => p.mission === mission); }
+/** `mission` (a SCENARIOS id or SOLO_ID) is on the short list: the mission sheet leaves its hand-set 'untuned' tag off it (ui/missions.ts — the label itself stays in the data) */
+export function onShortList(mission: string, list: Pick[] = PICKS): boolean { return list.some(p => p.mission === mission); }
 /** the SCENARIOS row a pick starts (null: the solo night; undefined: the list names a mission the build does not have) */
 export function pickEntry(p: Pick, scenarios: ScenarioEntry[] = ALL_MISSIONS): ScenarioEntry | null | undefined { return p.mission === SOLO_ID ? null : scenarios.find(e => e.id === p.mission); }
 /** teammates beside the player in the pick */

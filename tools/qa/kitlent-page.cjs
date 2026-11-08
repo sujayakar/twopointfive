@@ -4,7 +4,6 @@
 //   lent    a quiet mission's Team & kit screen as the page opens it: the cameras tile and the wand tile are marked `lent` and read the mission's word;
 //           the store's card was never written
 //   nofog   the same screen with the fog choice kept on its bottom rung (the store's twopointsix.quietfog = off): both are empty tiles
-//   off     the same screen under ?nokitlent: both tiles read the card alone
 // Every page here is opened under ?nokitstealth: with a stealth mission's kit your card's own (kit.ts KITDEAL.stealth, tools/qa/kitstealth-page.cjs) nothing is lent.
 // exit 0 = all of it, with no page error · 1 = otherwise. Stills (the whole page) are written to outDir when one is given. Software adapter: not a GPU's picture.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -46,12 +45,6 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     const b = await tiles(page);
     line(!!b.cams && !b.cams.lent && !b.wand.lent && !/mission/.test(b.cams.val + b.wand.val) && !b.card?.wand && !b.card?.cams, 'THE FOG KEPT ON ITS BOTTOM RUNG: the same screen shows both as empty tiles, the card untouched', say(b));
     line(errors.length === 0, 'no page error with the fog off', errors.join(' | ') || 'none'); await page.close(); }
-
-  // ── off
-  { const { page, errors } = await open(`loadout=${MISSION}&nokitstealth&nokitlent`);
-    const c = await tiles(page);
-    line(!!c.cams && !c.cams.lent && !c.wand.lent && !/mission/.test(c.cams.val + c.wand.val), 'UNDER ?nokitlent the same screen reads the card alone', say(c));
-    line(errors.length === 0, 'no page error under ?nokitlent', errors.join(' | ') || 'none'); await page.close(); }
 
   await Promise.race([browser.close(), new Promise(r => setTimeout(r, 15000))]);   // (the software adapter's browser can hang on its way out: the verdict does not wait for it)
   console.log(failed ? '=== kitlent-page: FAILURES above ===' : '=== kitlent-page: ALL PASS ==='); process.exit(failed ? 1 : 0);

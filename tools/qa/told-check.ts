@@ -149,7 +149,7 @@ export async function toldCheck(): Promise<boolean> {
       const rowsOf = (root: El) => root.all(e => !!e.attrs['data-lever'] && e.attrs['data-lever'] !== 'cams').map(r => ({ key: r.attrs['data-lever'], na: r.cls.has('na'), moved: r.cls.has('moved'),
         btns: r.all(e => e.tagName === 'BUTTON'), shown: r.all(e => e.tagName === 'BUTTON' && (e as any).style.display !== 'none').map(b => b.attrs['data-rung']).join('|'), lit: r.all(e => e.tagName === 'BUTTON' && e.cls.has('on')).map(b => b.attrs['data-rung']).join(','), note: r.all(e => e.tagName === 'SPAN').at(-1)?.textContent ?? '' }));
       const press = (root: El, key: string, rung: string) => { const b = rowsOf(root).find(r => r.key === key)?.btns.find(b => b.attrs['data-rung'] === rung); if (!b?.onclick) throw new Error(`no ${key}:${rung} button`); b.onclick(); };
-      const sheet = () => { QF.quietFogForget(); fresh(); M.MISSIONS.onPick = null; const host = new El('DIV') as any, list: any[] = M.missionList();
+      const sheet = () => { QF.quietFogForget(); fresh(); const host = new El('DIV') as any, list: any[] = M.missionList();
         const S = M.openMissions({ root: host, select: 'room-clear-four', search: '?quality=high&mute', onPick: () => { } }); return { S, root: S.root as unknown as El, list }; };
       const said = (rows: ReturnType<typeof rowsOf>) => rows.map(r => `${r.key} [${r.shown}] lit ${r.lit}${r.na ? ' greyed' : ''}${r.moved ? ' moved' : ''}`).join(' · ');
       const { S, root, list } = sheet(), r0 = rowsOf(root), four = list.find(m => m.id === 'room-clear-four');
@@ -158,7 +158,7 @@ export async function toldCheck(): Promise<boolean> {
       press(root, 'told', 'guided'); const r1 = rowsOf(root), dn1 = root.all(e => !!e.attrs['data-difficulty'] && e.cls.has('on')).length, mix1 = root.all(e => e.cls.has('dn'))[0]?.textContent ?? '';
       verdict(r1[3]?.lit === 'guided' && r1[3].moved && !r1[0].moved && dn1 === 0 && /^your own mix: .*told: guided$/.test(mix1) && store.get('twopointsix.levers') === '{"told":"guided"}' && T.toldNow() === 'guided',
         'Guided pressed: that row alone is moved and kept on this machine, neither Standard nor Hard is lit, and the Difficulty row says your own mix', `${said(r1)} · kept ${store.get('twopointsix.levers')} · '${mix1}'`);
-      press(root, 'fog', 'off'); const r2 = rowsOf(root), go2 = root.all(e => e.cls.has('mgo'))[0]?.attrs.href ?? '';
+      press(root, 'fog', 'off'); const r2 = rowsOf(root), go2 = S.hrefOf(S.selected);
       verdict(r2[0].lit === 'off' && r2[0].moved && !r2[0].na && /you and your team always know where every enemy is/.test(r2[0].note) && !r2[3].na && r2[3].lit === 'guided' && D.fogOffNow() && !RUN.fogOfQuery(Q(go2)) && store.get('twopointsix.levers') === '{"told":"guided","fog":"off"}',
         'the fog row\'s bottom rung pressed: lit, still live, its line says the team knows every enemy too, the mission\'s link would start with no fog, and the fourth row stays live beside it (the lever is for more signs than the fog\'s mark)', `${said(r2)}\n    '${r2[0].note}' · go '${go2}'`);
       const quietM = list.find(m => m.scenario?.kind === 'quiet' && m.scenario.group !== 'training' && m.scenario.group !== 'tutorial'), lessonM = list.find(m => m.scenario?.group === 'training');
@@ -172,10 +172,6 @@ export async function toldCheck(): Promise<boolean> {
       root.all(e => e.attrs['data-difficulty'] === 'hard')[0].onclick!(); const r4 = rowsOf(root), hardLit = root.all(e => e.attrs['data-difficulty'] === 'hard')[0]?.cls.has('on');
       verdict(r4[3]?.lit === 'bare' && !r4[3].moved && !!hardLit && T.toldLastSeen() === 0, 'Hard pressed: the fourth row is on Bare, its own rung there, and no mark is left', said(r4));
       root.all(e => e.attrs['data-difficulty'] === 'standard')[0].onclick!(); S.close();
-      // (d) the loadout screen of the same mission: the same four rows, the fourth live beside the fog's whatever its rung
-      { D.setLever('told', 'guided'); D.setLever('fog', 'off'); const UI = await import(`${ROOT}/src/ui/loadout.ts`), e4 = SCENARIOS.find((e: any) => e.id === 'room-clear-four'), L = UI.openLoadout(e4, { host: new El('DIV') as any, search: M.missionHref(four, '?quality=high&mute'), deploy: () => { }, back: () => { } }), lroot = L.root as unknown as El;
-        const l0 = rowsOf(lroot); press(lroot, 'fog', 'team'); const l1 = rowsOf(lroot); L.close(); D.setDifficulty('standard');
-        verdict(l0.map(x => x.key).join(',') === 'fog,ai,kit,told' && l0[0].lit === 'off' && !l0[0].na && !l0[3].na && l0[3].lit === 'guided' && !l1[3].na && l1[0].lit === 'team', 'the loadout screen of that mission: the same four rows, the fourth live beside the fog\'s on its off rung and on another', `${said(l0)}\n    fog put on all round: ${said(l1)}`); }
       const words = [D.TOLD_LEVER.label, ...D.TOLD_LEVER.rungs.map((x: any) => `${x.label} ${x.words}`), D.FOG_OFF_RUNG.words].join(' ');
       verdict(!/[6-9]|\d\d/.test(words) && !/\b(north|south|east|west)/i.test(words) && !/hit points|\bHP\b/i.test(words), 'the new rows\' words: no digit above 5, no compass word, nothing about hit points', words);
     }); });

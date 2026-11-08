@@ -156,7 +156,7 @@ export async function wandTile(): Promise<boolean> {
       const M = await import(`${ROOT}/src/ui/missions.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`);
       K.kitLoad(null, ''); for (const f of ['smoke', 'bangs', 'frags', 'shells']) K.kitSet(0, f, 0);
       if (!BREAK) K.kitTry(0, 'wand', 1); K.kitTry(0, 'cams', 2);
-      const SEARCH = '?quality=high&mute', list: any[] = M.missionList(), pickWas = M.MISSIONS.onPick, up: any[] = []; M.MISSIONS.onPick = null;
+      const SEARCH = '?quality=high&mute', list: any[] = M.missionList(), up: any[] = [];
       try {
       const tiles = (root: El) => Object.fromEntries(root.all(e => e.cls.has('kc-row')).map(r => [r.attrs['data-field'], { idle: r.cls.has('idle'), val: r.all(e => e.cls.has('kc-val'))[0]?.textContent ?? '', title: r.title, dimIco: !!r.all(e => e.cls.has('kc-ico'))[0]?.cls.has('none') }])) as Record<string, { idle: boolean; val: string; title: string; dimIco: boolean }>;
       const open = (id: string) => { const m = list.find(x => x.id === id); const host = new El('DIV') as any; const L = UI.openLoadout(UI.entryOfMission(m), { host, search: M.missionHref(m, SEARCH), deploy: () => { }, back: () => { } }); up.push(L); return { L, root: L.root as unknown as El }; };
@@ -166,7 +166,7 @@ export async function wandTile(): Promise<boolean> {
       const four = open('room-clear-four'), t1 = tiles(four.root);
       F.verdict(!!t1.wand && !t1.wand.idle && /carried/i.test(t1.wand.val) && !t1.wand.title && !t1.cams.idle && t1.cams.val === '2', 'a squad mission (its own fog of war): the same card reads carried and 2, nothing idle', say({ wand: t1.wand, cams: t1.cams }));
 
-      } finally { for (const L of up) L.close?.(); M.MISSIONS.onPick = pickWas; }
+      } finally { for (const L of up) L.close?.(); }
     }); });
   } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   finally { if (hadLS) G.localStorage = prevLS; else delete G.localStorage; }
