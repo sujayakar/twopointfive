@@ -21,7 +21,6 @@
 import type { PairId } from './game';
 import { soloFogRow } from './quietfog';   // (called inside noteOf only: src/game is one import cycle)
 import { lessonGroup } from '../scene/scenarios';
-import { kitPacks } from './kit';   // (called inside kitAsIssued only: src/game is one import cycle)
 
 export { SQUAD_SIZES, asSquadSize, sizeTag, sizeWords, squadOfQuery, squadSearch, type SquadSize } from '../scene/squadsize';
 import { asSquadSize, SQUAD_SIZES, type SquadSize } from '../scene/squadsize';
@@ -47,9 +46,8 @@ const QUIET_ONLY = 'A quiet mission is for one or two: you, or you and one partn
 /** a lesson's row (scenarioList.ts LESSON_MISSIONS: the tutorial's missions) is its own size and no other: its lines name that team's keys */
 const LESSON_ONLY = 'A tutorial mission is played at its own size.';
 /** …and with the kit AS ISSUED, whatever this machine keeps: its steps ask for the issue kit's own things, and a kept card without one would leave a step that can never pass.
- *  BUT NOT a lesson the player packs for (kit.ts ISSUE.picked, the row's `packs`: the tutorial's squad mission): its screen shows the cards and its page
- *  stages what this machine keeps. Its SIZE stays its own (squadChoices below reads the group), and its levers stay off (main.ts reads the group). */
-export function kitAsIssued(e: { group?: string; packs?: unknown } | null | undefined): boolean { return lessonGroup(e?.group) && !kitPacks(e); }
+ *  Its SIZE stays its own (squadChoices below reads the group), and its levers stay off (main.ts reads the group). */
+export function kitAsIssued(e: { group?: string } | null | undefined): boolean { return lessonGroup(e?.group); }
 /** WHICH SIZES A SCENARIO CAN STAGE — a pure function of its row (kind, own size, level), since the level itself is not loaded until Deploy. Every kind stages
  *  every size today (tools/qa/loadout-probes.ts boots each one and counts the men); the notes say what a size changes. `CANNOT` is where a size that truly
  *  cannot work on a scenario is greyed with its reason: keyed by entry id or by kind. A row that carries `only` (scenarios.ts ScenarioEntry: The two charges, The long hall)

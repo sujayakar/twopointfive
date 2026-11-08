@@ -14,7 +14,6 @@ const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/le
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { LESSON_MISSIONS, ALL_MISSIONS, entryOfQuery } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { kitAsIssued } = await import(`${ROOT}/src/game/loadout.ts`);
-const { kitPacks } = await import(`${ROOT}/src/game/kit.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { objectiveWords } = await import(`${ROOT}/src/ui/tabcard.ts`);
@@ -86,7 +85,7 @@ for (const name of list) {
   if (/[{}]/.test(L.steps[0].line)) verdict(false, 'the first step\'s line carries a token: this check compares it as written against the row (lesson-check.ts line0), write it out there first');
   const rows = (LESSON_MISSIONS as any[]).filter(e => e.level === `${name}.json`);   // (the tutorial's rows: scenarioList.ts)
   verdict(rows.length > 0 && rows.every(e => e.group === 'tutorial'), `the missions list has it under Tutorial (${rows.map(e => `'${e.title}'`).join(', ') || 'no row'})`);
-  verdict(rows.every(e => kitAsIssued(e) || kitPacks(e)) && !kitAsIssued((ALL_MISSIONS as any[]).find(e => e.group !== 'tutorial')) && !kitAsIssued(null), 'its row is played with the kit as issued (every staging on its level\'s page puts the issue cards on — kit.ts kitIssuedPage —, the loadout screen shows no card: game/loadout.ts kitAsIssued) unless it is a lesson the player packs for (kit.ts ISSUE.picked, the row\'s `packs`), and no other row is');
+  verdict(rows.every(e => kitAsIssued(e)) && !kitAsIssued((ALL_MISSIONS as any[]).find(e => e.group !== 'tutorial')) && !kitAsIssued(null), 'its row is played with the kit as issued (every staging on its level\'s page puts the issue cards on — kit.ts kitIssuedPage —, the loadout screen shows no card: game/loadout.ts kitAsIssued) unless it is a lesson the player packs for (kit.ts ISSUE.picked, the row\'s `packs`), and no other row is');
   // THE WORDS AS THE TOOLS WRITE THEM (lesson.ts tokenLine; the HUD's are the Rust game's, rust/game_rules/src/lesson): with the held click the only way to a man (stalk.ts `only`) and no knife (close.ts `noKnife`) a
   // line may name neither the key that grabbed nor the blade. A line reworded in the level could
   // name one and nothing else would say so: every line and card is read through it here. LESSON_BREAK=words leaves the two rules off: it must fail
@@ -161,7 +160,7 @@ if (!names.length || names.includes('tut-road')) { console.log('\n=== lesson-che
     await withDom('', async () => {
       K.kitLoad(st, ''); const set = K.kitSet(0, 'weapon', 'pistol') && K.kitSet(1, 'light', false); const st0 = m.get(K.KIT_LS);   // (this machine keeps a card with no rifle — the card that left a lesson's 'press 2' unpassable — and a teammate with no weapon light)
       // (staged on a tutorial mission whose level issues no kit of its own — tut-solo, tut-quiet and tut-pair do, scenarios.issue, and the kept card never
-      // shows on those; tut-squad is packed for, ISSUE.picked, and stages the kept cards on its own page. Both are played with the team: no tutorial mission
+      // shows on those; both are played with the team: no tutorial mission
       // played alone is left without a card of its own, so standRow's kitSolo line is not walked here)
       const alone: any = rowOf('tut-team'), pair: any = alone;   // (the second such mission, tut-plan, went out with plan mode: both halves are asked of the one)
       // the plant is real: off a lesson's page that start wears the kept card
