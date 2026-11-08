@@ -87,8 +87,7 @@ The maintainer, 10-26: "we should just deploy this on vercel and have a convex b
 preferences, etc." No accounts; nothing multiplayer.
 
 - **The hosted build** = `vercel.json` + `tools/host/build.sh`: the static `bun run build` (`dist/`), `cleanUrls` so `/replay`,
-  `/sounds`, `/music` open as on the dev server, the dev server's two forwards (`/sneaklab`, `/firelab`) as redirects, and
-  `dist/qa/commit` (the commit, from the host's `VERCEL_GIT_COMMIT_SHA` or a clean checkout's `git rev-parse`: a recording made on the build
+  `/sounds`, `/music` open as on the dev server, `dist/qa/commit` (the commit, from the host's `VERCEL_GIT_COMMIT_SHA` or a clean checkout's `git rev-parse`: a recording made on the build
   names it, as on the dev server). The project on the host is the maintainer's; its production branch is `twopointsix`, so every step that
   joins the build redeploys the link. NOT in the repo: the project, its address, any key.
 - **The backend** = `cloud/` — a Convex project (`cloud/convex/`: `schema.ts`, `prefs.ts`, `tapes.ts`, `telemetry.ts`, `limits.ts`) with a
