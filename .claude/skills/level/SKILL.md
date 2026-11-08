@@ -183,14 +183,12 @@ like that."
   It does not hold `STYLE.md`'s rule for a patch. Whether it reads is **by eye**, at the level's own hour (a midday
   sun shows ground a night hid). Never seen on a GPU here.
 - **A level says how kept it is, once.** `export const KEPT = <0 to 1>` in the generator (the file's `meta.kept`;
-  absent = 0, a place left to the weather, which is how every level was drawn before the word). A look's second
-  file (`<name>-gwot.ts`) takes the word of the level it dresses unless it exports its own; the office, which has
+  absent = 0, a place left to the weather, which is how every level was drawn before the word). The office, which has
   no generator of this kind, says it as `level.kept` in its builder. At 1 nothing blotches, no wall has a damp
   foot or runs under its head, no rubbish gathers where nobody treads, a mud wall's render has not let go, and
   paint on a wall is whole and its own colour; what USE does stays (a lane where feet go, paint trodden off a
   floor), and plaster, block and slab get the knocked foot and the brought-in dirt their kept cousins have.
-  A level built on another's floor with no `DRESS_AS` (a squads level on its plain one) says the word itself:
-  `export { KEPT } from './<plain>'`. Say it before saying a wall again as another stuff to make it look clean.
+  A level built on another's floor says the word itself: `export { KEPT } from './<floor>'`. Say it before saying a wall again as another stuff to make it look clean.
   `&kept=<n>` on the look page's address is the word for a visit. **What it does not do:** it changes no stuff's
   own picture. Rust on a rack is drawn into the `metal` stuff itself, so a clean rack is another stuff's word
   (`steel`, `enamel`, `brushed`), not a kept level. **seen** an office's half-metre wall numerals drew chipped,
@@ -443,8 +441,8 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
 - **Its picture**: `public/assets/menu/<row>.jpg` and `stills.json`, from a recipe in `tools/menu-shots/recipes.cjs` (a
   frame of real play; no two in a group share a moment, an hour and a camera) or `tools/menu-art.ts`. **check** `picture`
   (that it is there; whether it looks like play is **by eye**).
-- **Its look**: built on the look's kit, or a twin `levels/<name>-gwot.json` (box for box, other paint) with its rows in
-  `src/scene/look.ts LOOK_LEVELS` and `LOOK_DOORS`; one accent and one family of ground marks no other level has. **check**
+- **Its look**: built on the look's kit (or the plain kit with `tools/levels/gwotSkin.ts` over it, box for box, other paint), with its row in
+  `src/scene/look.ts LOOK_DOORS`; one accent and one family of ground marks no other level has. **check**
   `look`; `probes.ts look`.
 - **Hard, the short list, the par clock** where the level has them: `HARD_AT` / `SQUAD_HARD`, `src/scene/picks.ts`,
   `scenarios.par` set from 24 measured seeds.

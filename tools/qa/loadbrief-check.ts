@@ -44,7 +44,6 @@ export async function loadbriefCheck(): Promise<boolean> {
   const said = (search: string) => { const q = new URLSearchParams(search), depot = q.get('levelFile') === 'depot.json'; return { id: depot ? 'depot-four' : q.has('solo') ? 'solo-night' : '', title: depot ? 'The depot' : 'Solo night', kind: depot ? 'roomclear' : 'solo', groupTitle: 'Raids', place: 'The depot', blurb: 'The job in one line.', leanWords: 'loud', team: 'you + four', level: depot ? 'depot.json' : 'office.json', scene: '', teaches: [], way: q.get('way') === '2' ? 2 : 0 }; };
   setDesk({ brief: said, leave: quitSearch } as any);
   LOADBRIEF.options = { open() { }, close() { }, up: () => false };   // (the options layer is the page's to hand over)
-  const { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`);
   const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
   const was = LOADBRIEF.on;
 
@@ -119,7 +118,7 @@ export async function loadbriefCheck(): Promise<boolean> {
     B6?.off(); const left6 = winL.length;
     const B7 = loadBrief('?solo'), root7 = doc.getElementById('brief'); await new Promise(r => setTimeout(r, 5)); const cv7 = root7?.find(e => e.tag === 'CANVAS') ?? null; B7?.off();
     const B8 = loadBrief(Q), root8 = doc.getElementById('brief'); await new Promise(r => setTimeout(r, 5)); const cv8 = root8?.find(e => e.tag === 'CANVAS') ?? null, w8 = (cv8 as any)?.width, h8 = (cv8 as any)?.height; B8?.off();
-    line(!!cv6 && !img6 && cv6.getAttribute('data-level') === lookLevelFile('depot.json') && mark6 === 'roomclear|2' && cv8?.getAttribute('data-mark') === 'roomclear|0' && w8 === 760 && h8 === 532 && (cv8 as any)?.width === 0 && left6 === 0 && cv7?.getAttribute('data-level') === 'office.json' && cv7.getAttribute('data-mark') === 'solo|0',
+    line(!!cv6 && !img6 && cv6.getAttribute('data-level') === 'depot.json' && mark6 === 'roomclear|2' && cv8?.getAttribute('data-mark') === 'roomclear|0' && w8 === 760 && h8 === 532 && (cv8 as any)?.width === 0 && left6 === 0 && cv7?.getAttribute('data-level') === 'office.json' && cv7.getAttribute('data-mark') === 'solo|0',
       `screen: beside the words is the map of the mission's own level as the page loads it, asked of the mission list's sheet with the way in the address names (${cv6?.getAttribute('data-level')} ${mark6} · ${cv8?.getAttribute('data-mark')} ${w8} x ${h8} · ${cv7?.getAttribute('data-level')} ${cv7?.getAttribute('data-mark')}), in the sheet's own shape, its pixels let go when the brief goes — and no picture`);
   } catch (e: any) { line(false, `screen: threw — ${e?.stack ?? e}`); }
   finally { LOADBRIEF.on = was; for (const k of Object.keys(saved)) { if (saved[k]) Object.defineProperty(G, k, saved[k]!); else delete G[k]; } }

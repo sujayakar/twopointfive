@@ -9,7 +9,7 @@
 // is LEFT on the tape's tables and kit (the live game handed back goes on reading them): stand nothing else in it afterwards and expect this process's own stand.
 // REFUSED, in words (`refuse`): a replay with no tape to walk (format.ts tapeWhy: none, one of another version, or one that ended — a scenario switched from a menu,
 // another run's checkpoint loaded, a session past the tape's length: the step is named), and a level that is not this checkout's (the fingerprint differs: the words name the commit to check out).
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { standOf } from '../../src/host/standEnv.ts';
@@ -33,12 +33,10 @@ export interface RerunReport {
 }
 export interface Rerun { W: Headless | null; refuse: string; report: RerunReport | null; D: Decoded; }
 
-/** the level a page's `?levelFile=` names, as the page loads it (the look's file where it has one) */
+/** the level a page's `?levelFile=` names, as the page loads it */
 export async function levelOf(file: string): Promise<any> {
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-  const L = await import(`${ROOT}/src/scene/level.ts`), look = await import(`${ROOT}/src/scene/look.ts`).catch(() => null);
-  const named = resolve(ROOT, 'levels', file), lk = look?.lookLevelFile ? resolve(ROOT, 'levels', look.lookLevelFile(file)) : named;
-  const data = parseLevelData(readFileSync(existsSync(lk) ? lk : named, 'utf8'));
+  const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8'));
   return loadLevel(data);
 }
 

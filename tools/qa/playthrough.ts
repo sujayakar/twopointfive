@@ -202,7 +202,6 @@ export const entryOf = (id: string): any => SCENARIOS.find((e: any) => e.id === 
 const NO_SCN = (id: string) => `no scenario '${id}' — ${SCENARIOS.map((e: any) => e.id).join(', ')} (or <name>.json = levels/<name>.json's room clear with the four)`;
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-const { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 // DESTRUCTION (src/game/destructionSwitch.ts): PT_DESTR=1 plays the build the PAGE plays — the switch on; without it a playthrough is the one build
 // before the destruction goal, by digest (chaos.md), so every tally and frozen digest made before it measures what it measured. Only when this file is the program
@@ -256,7 +255,7 @@ const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const f1 = (x: number) => (Number.isFinite(x) ? x.toFixed(1) : '—');
 const at = (p: number[]) => `(${f1(p[0])}, ${f1(p[2])})`;
 const wrap = (a: number) => { a = (a + Math.PI) % (2 * Math.PI); if (a <= 0) a += 2 * Math.PI; return a - Math.PI; };
-const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync((f => existsSync(f) ? f : resolve(ROOT, 'levels', file))(resolve(ROOT, 'levels', lookLevelFile(file))), 'utf8'));   // (scene/look.ts: under TPS_LOOK=1 a level's file in the default look — the same boxes in other paint)
+const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8'));
   return loadLevel(data); };
 async function quiet<T>(on: boolean, fn: () => T | Promise<T>): Promise<T> { if (!on) return await fn(); const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } }
 

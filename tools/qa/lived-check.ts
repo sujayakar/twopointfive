@@ -62,7 +62,7 @@ const BASE_REVS = ['636e5eaef', '3046a115e', 'c069ca16f', 'd13650f85', '0d3a1807
  *  part (a box, a door, a mark, a route, a held key of its lesson, a lesson re-cut) moves ITS row to the commit that carries the change — a commit of the
  *  checkout's own history whose file is the level as meant — and says over the row what changed; no other level's bar moves. A row is its note, its line and
  *  an empty line, and a new row goes in by the level's name: two branches that each move a row then join without a hand (two that ADD a row at one place
- *  still meet). A look twin (`<name>-gwot.json`) with no row of its own is held to the plain level's. A level with no row is held to BASE_REVS above, as it
+ *  still meet).  A level with no row is held to BASE_REVS above, as it
  *  was; a level BASE_REVS does not carry must have one. */
 const LEVEL_BASE: Record<string, string> = {
   // the ground melted round the brazier laid round: two ten-sided patches of five slabs each where two squares lay (eight boxes more, in the level's own part)
@@ -109,9 +109,9 @@ const LEVEL_BASE: Record<string, string> = {
  *  that changes one byte is another id ON PURPOSE: write the file again only when the level's own part was changed on purpose — a change to its lived
  *  things alone needs no new id, since both sides are read with their lived things taken out. The file is one id on a line; a line that starts with `#`
  *  says what changed, as a row's note does. Red, never 'nothing to compare': an id this clone does not hold, a file that is no id, a file for a level
- *  that is not under levels/. A look twin has its own file or none: an id names one file's bytes, so the plain level's does not stand for its twin. */
+ *  that is not under levels/. */
 const LEVEL_BLOB_DIR = resolve(ROOT, 'tools/qa/fixtures/level-base');
-/** the base file of a level file (`block-gwot.json`), read: its id, or what is wrong with it; undefined = the level has none */
+/** the base file of a level file (`block.json`), read: its id, or what is wrong with it; undefined = the level has none */
 function levelBlob(name: string): { id?: string; bad?: string } | undefined {
   const f = resolve(LEVEL_BLOB_DIR, name.replace(/\.json$/, '') + '.txt'); if (!existsSync(f)) return undefined;
   const lines = readFileSync(f, 'utf8').split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
@@ -166,7 +166,7 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
   { const one = allBase || BASE_REV, dup = (['lesson', 'step', 'rails'] as const).flatMap(k => LESSON_FREE[k].filter(x => LESSON_HELD[k].includes(x)).map(x => `${k}.${x}`));
     if (one !== 'none' && spawnSync('git', ['-C', ROOT, 'cat-file', '-e', `${one}^{commit}`]).status !== 0) { console.error(`lived-check: no commit ${one} in this checkout (a shallow clone? --base <rev> or --base none)`); process.exit(2); }   // (a base that is not there used to read as 'a new level' and pass)
     if (dup.length) { console.error(`lived-check: ${dup.join(', ')} in both LESSON_FREE and LESSON_HELD`); process.exit(2); } }
-  const rowOf = (name: string): string | undefined => LEVEL_BASE[name] ?? LEVEL_BASE[name.replace(/-gwot\.json$/, '.json')];   // (a look twin with no row of its own: the plain level's)
+  const rowOf = (name: string): string | undefined => LEVEL_BASE[name];
   const fileOf = (a: string) => { if (a.endsWith('.json') && existsSync(resolve(a))) return resolve(a); const n = basename(a).replace(/\.json$/, ''); return resolve(ROOT, 'levels', n + '.json'); };   // (a path to a file anywhere, or a level's name)
   const hasLived = (d: any) => d.boxes.some((b: any) => isLived(b.group)) || [d.props, d.lights, d.switchables].some((l: any[]) => (l ?? []).some(x => isLived(x.id)));
   let list = files.map(fileOf);
