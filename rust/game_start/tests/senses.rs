@@ -295,3 +295,43 @@ fn a_fire_fights_wisps_leave_room_for_dust() {
     p.run(1.5);
     assert_eq!(game::smoke_types::smoke_system_like_budget(&p.g), room, "a source that is spent gives its room back");
 }
+
+/// every word of the game's state, a word a part: the game's own parts, then rust/sim's block
+fn words(p: &mut Play) -> Vec<u32> {
+    let (mut w, mut words) = (game::io::W::new(), Vec::new());
+    game::state_words::state_words(&mut p.g, &mut w, &mut words);
+    words.extend(game_start::block::part_hashes(0));
+    words
+}
+
+/// A FAILURE MEANS: asking what light stands on a point changes the game. A page's throw preview asks it for a block of floor at a time, whenever a menu is up, and the host
+/// takes no state back after it (src/view/worldask.ts `light`): a question that writes would part two machines of one game, and a replay from its run.
+#[test]
+fn asking_the_light_writes_nothing() {
+    for seed in [1u32, 2, 3] {
+        let run = |ask: bool| -> Vec<Vec<u32>> {
+            let mut p = Play::level("killhouse.json", true, &Opts { seed, ..Default::default() });
+            let mut out = Vec::new();
+            for s in 0..8 {
+                if s == 3 { let at = p.sam_at(); can(&mut p, [at[0], 0.2, at[1]], 2.0); }
+                for _ in 0..60 {
+                    p.frame();
+                    if !ask { continue; }
+                    let at = p.sam_at();
+                    for (i, d) in [[0.0, 0.0], [2.0, 1.0], [-3.0, 2.0], [40.0, 40.0]].into_iter().enumerate() {
+                        let q = [at[0] + d[0], 1.0, at[1] + d[1]];
+                        let owner = [p.g.ch[p.g.pl[p.g.player].ch].id as f64];
+                        assert!(game::sense::light_asked(&mut p.g, q, if i % 3 == 0 { &owner } else { &[] }, i % 2 == 0, if i == 3 { 1.0 } else { 0.0 }).is_finite());
+                    }
+                }
+                out.push(words(&mut p));
+            }
+            out
+        };
+        let (never, always) = (run(false), run(true));
+        for (s, (a, b)) in never.iter().zip(always.iter()).enumerate() {
+            let parts: Vec<usize> = (0..a.len()).filter(|&i| a[i] != b[i]).collect();
+            assert!(parts.is_empty(), "seed {}: after {} s the asked game differs in parts {:?}", seed, s + 1, parts);
+        }
+    }
+}

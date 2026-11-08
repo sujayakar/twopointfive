@@ -18,6 +18,9 @@ export interface WorldAsk {
   hear(from: Vec3, to: Vec3): Heard;
   /** the way on the floor from a to b, its corners (null: the floor has none); a search, so whoever asks keeps the answer by its own clock */
   way(a: Vec3, b: Vec3, maxIter: number): Vec3[] | null;
+  /** the light that stands on a point, leaving out the carried lamps of `owners`; `steady`: what the place lights, with nothing that passes; `leave`: lamps of the level's own left
+   *  out, by what feeds them (sim/lightshome.ts ROW_BIT) */
+  light(p: Vec3, owners: readonly number[], steady: boolean, leave: number): number;
   /** several questions at once (a page whose own copy answers proves it once for them all) */
   together<T>(f: () => T): T;
 }
