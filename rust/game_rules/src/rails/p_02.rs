@@ -350,7 +350,6 @@ pub fn rails_tick(g: &mut crate::game::Game, dt: f64) {
     }
     let rd = s.l.rails.as_ref().unwrap();
     if rails_sky_on(g) && !g.rails.sky.parked { rails_park(g, rd); }
-    if rails_sky_on(g) { rails_ease_mid(g); }
     if g.rails.answered != s.i { rails_answer(g, &s, false); }
     // (RAILS.cardBeat: the last moment of HIS fight is kept up to date wherever a card ahead waits for one to go quiet)
     if s.l.steps.iter().enumerate().any(|(k, t)| (k as f64) > s.i && t.explain.as_ref().map_or(false, |e| e.quiet.unwrap_or(false))) { rails_fight(g); }
@@ -574,7 +573,6 @@ pub fn rails_keep(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
     { let i = &g.tab.input[input]; if walk_keys().iter().any(|k| i.keys.has(k.clone())) { return; } }
     let s = match rails_lesson(g) { Some(s) => s, None => return };
     let at = match step_at(&s.l, s.i).and_then(|t| t.at) { Some(a) => a, None => return };
-    rails_ease_mid(g);
     let v = match rails_look(g, &crate::seats::here(g)) { Some(v) => v, None => return };
     let dist = g.tab.camera[cam].distance;
     if rails_on_way(g, &crate::seats::here(g), Some(&s)) {
@@ -613,8 +611,9 @@ fn squad_middle(g: &crate::game::Game) -> Option<V3> {
     for x in &men { let p = g.ch[g.gd[*x].ch].pos; c[0] += p[0] / n; c[2] += p[2] / n; }
     Some(c)
 }
-/// once a tick in the sky seat: the point the view rides eases toward the middle of the men still up
-fn rails_ease_mid(g: &mut crate::game::Game) {
+/// THE LAST THING A TICK DOES in the sky seat: the point the view rides eases toward the middle of the men still up, wherever the tick left them
+pub fn rails_ease_mid(g: &mut crate::game::Game) {
+    if !rails_sky_on(g) { return; }
     let c = match squad_middle(g) { Some(c) => c, None => return };
     if g.rails.sky.mid.is_some() && g.rails.sky.mid_t == g.time { return; }
     match g.rails.sky.mid {

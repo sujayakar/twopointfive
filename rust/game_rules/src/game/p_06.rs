@@ -219,6 +219,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     if g.m.dress.dress.net { crate::squadnet::squad_net_tick(g); }
     if g.m.dress.dress.cues { crate::cues::cues_tick(g); }
     crate::teamtally::team_tally_tick(g);
+    crate::rails::rails_ease_mid(g);
     g.ticking = false;
     crate::scene_collision::tick_shut(g);
     g.m.rustknobs.rust_knobs.tick = false;   // (game.ts:1727, the finally)
