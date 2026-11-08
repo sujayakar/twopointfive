@@ -674,3 +674,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   over 0.007 m off the trace (the trace's own rounding), and the same four files walked by `tools/qa/rerun.ts` to 0.01 m. ON THE GPU'S SENSES a page's tape
   parts (room clear: at step 1,174): the light probe's answers are on no tape, since the tick no longer reads them through `Sensors.read`. That is why the game page
   plays no tapes yet. Nobody has watched one; never seen on a GPU.
+- **Every draw is keyed (2026-11-08; `rust/game_types/src/dice.rs`, `dice::draw_of / draw_body / draw_def / draw_op / draw_for / draw_world`).** A draw is a fixed function of the game's seed, the SITE
+  that asks (`"<module>::<function>#<n>"`, a string in the code), the man it is about, the tick and how many times that site drew for him this tick. So a draw added, dropped or made in another order
+  moves no other draw, and a rule's tally shows the rule. The block's die is still stepped once a draw (its count witnesses how many draws a run made); its value is not used. WRITING ONE: name the site
+  by hand; a body that moves to another module KEEPS its string, or its values move. A helper that draws is handed its man (`dice::Who`). A draw whose value nothing reads keeps nothing: delete it.
+  CHECK `python3 tools/blitz/sweeps/keyed-dice.py --check` and `dice-who.py --check` (0 each). It dealt every mission anew once: recordings from before it play other dice. MEASURED, before and after:
+  13 levels by six seeds, 75 s, native: floors cleared 34 and 37 of 78, squad men standing 117 and 128 of 312, first notice (median) 6.48 and 6.48 s; playthrough, god, seeds 1 and 2 on 21: wins 27 and
+  25, men up 77 and 64 of 148, hall and floodlit lost on both seeds. Those two with barracks and block-squads, the same code with either die, 24 seeds each (96 runs a die, native, 75 s): floors cleared 25
+  and 31, squad men standing 106 and 142 of 384, enemies left 267 and 257 of 864, ever alert 790 and 791, the first notice and alert to the hundredth or four, a squad man fell in 90 and 83 runs; hall 11
+  and 14 men up of 96, floodlit 31 and 42. So two seeds' losses were the seeds'. 50,000 draws of either die are flat in tenths. TWO MEN OF ONE NUMBER IN TWO LEVELS draw the same as they are made, at one
+  seed: the level is not in the key. Never played.
