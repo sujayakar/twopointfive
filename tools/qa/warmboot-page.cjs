@@ -28,7 +28,7 @@ async function visit(sc, k) {
     await page.goto(`http://localhost:${PORT}/?${QUERY}`, { waitUntil: 'commit' });
     await page.waitForFunction(() => !!(window.__boot && window.__boot.marks && window.__boot.marks.interactive), null, { timeout: LIMIT, polling: 100 });
     r.wall = Date.now() - t0;
-    await page.evaluate(() => { try { window.__menu.close(); } catch { } });
+    await page.evaluate(() => { try { window.__draw.run(0); } catch { } });
     if (sc.stay === 'full') {
       await Promise.race([page.evaluate(() => window.__ready.then(() => true)), sleep(LIMIT)]);
       for (let i = 0; i < LIMIT / 250; i++) { if (await page.evaluate(() => { try { return !!window.__boot.marks.laterReady; } catch { return true; } })) break; await sleep(250); }   // (the programs compiled behind the start: the later set's own mark)
@@ -50,7 +50,7 @@ async function visit(sc, k) {
   const all = { query: QUERY, browser: '', adapter: null, scenarios: [] };
   for (const sc of PLAN) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'warmboot-')), args = ['--enable-unsafe-webgpu', ...(sc.kb ? [`--gpu-disk-cache-size-kb=${sc.kb}`] : [])];
-    const open = async () => { ctx = await chromium.launchPersistentContext(dir, { args, viewport: { width: 1920, height: 1080 } }); await ctx.addInitScript(() => { window.__testVisible = true; }); all.browser = ctx.browser() ? ctx.browser().version() : all.browser; };
+    const open = async () => { ctx = await chromium.launchPersistentContext(dir, { args, viewport: { width: 1920, height: 1080 } }); await ctx.addInitScript(() => { }); all.browser = ctx.browser() ? ctx.browser().version() : all.browser; };
     await open(); const rows = [];
     if (!all.adapter) { const p = await ctx.newPage(); await p.goto(`http://localhost:${PORT}/?${QUERY}`, { waitUntil: 'commit' }).catch(() => { }); all.adapter = await p.evaluate(async () => { if (!navigator.gpu) return 'no navigator.gpu'; const a = await navigator.gpu.requestAdapter(); return a ? `${a.info.vendor} ${a.info.architecture} ${a.info.description || ''}`.trim() : 'no adapter'; }).catch(e => String(e).slice(0, 80)); await p.close(); log('adapter:', all.adapter); }
     log(`== ${sc.name}: ${sc.visits} visits, each stays ${sc.stay === 'full' ? 'until every shader behind the start is in' : sc.stay + ' s after interactive'}${sc.kb ? `, the shader store set to ${sc.kb} KB` : ''}${sc.restart ? ', the browser restarted between visits' : ''}`);

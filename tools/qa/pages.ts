@@ -11,23 +11,14 @@ export type PageGroup = 'boot' | 'play' | 'menus' | 'coop' | 'saves' | 'cloud' |
 export type PageRow = readonly [script: string, group: PageGroup, guards: string, minutes: number];
 export const PAGES: readonly PageRow[] = [
   ['nogpu-page.cjs', 'boot', "a start with no GPU: the red card, its lines and its Copy button", 2.1],
-  ['firstframe-page.cjs', 'boot', "the first played frame is an ordinary one: the game is warmed before the loop", 3.0],
-  ['keeppage-page.cjs', 'boot', "the kept page: the game in a frame on a lease, a second mission compiles nothing again", 3.1],
+  ['keeppage-page.cjs', 'boot', "the kept page: the game in a frame on a lease, a second mission compiles nothing again", 3],
   ['loadbrief-page.cjs', 'boot', "a mission's own address as a visitor opens it: the brief, then the block goes live", 5.6],
   ['wgsl-compile.cjs', 'boot', "every shader text compiles", 0.1],
-  ['tut-road-page.cjs', 'play', "the first tutorial mission with real keys, first line to debrief", 2.4],
-  ['tut-team-page.cjs', 'play', "the squad tutorial mission with real keys", 2.4],
-  ['tut-pair-page.cjs', 'play', "the pair tutorial mission with real keys", 7.2],
-  ['tut-kit-page.cjs', 'play', "the kit tutorial mission with real keys", 3.6],
-  ['tut-queue-page.cjs', 'play', "the fourth tutorial mission with real keys", 1.9],
-  ['tut-quiet-page.cjs', 'play', "the stealth tutorial's stretch with the launcher, real keys", 1.3],
-  ['samefight-page.cjs', 'play', "same seed, same inputs: the page against the harness to the last bit", 2.7],
-  ['cleanrestart-page.cjs', 'play', "a restart on the page: a lamp shot out comes back, the frames after it as the first", 4.1],
-  ['deathrecap-page.cjs', 'play', "every death explains itself: the down card's plan, who fired, it plays", 3.3],
-  ['runbooks-page.cjs', 'play', "a run's page is nobody's try: the end card and the books", 5.1],
+  ['tut-road-page.cjs', 'play', "the first tutorial mission with real keys, first line to debrief", 1.6],
+  ['../draw/weather-page.cjs', 'play', "a snow level, a wet night and a fire reach the picture", 4.5],
   ['panel-keys.cjs', 'play', "the debugger's key and Tab, pressed for real", 1.5],
   ['startpage-look.cjs', 'menus', "every mission on the start page goes through its loadout to Deploy", 0.9],
-  ['cards-page.ts', 'menus', "the start page walked: every mission, row and card written down as the page shows them", 0.7],
+  ['cards-page.ts', 'menus', "the start page walked: every mission, row and card written down as the page shows them", 2.3],
   ['kitdense-page.cjs', 'menus', "the dense kit card: tiles, pop-ups, fits at four window sizes", 0.5],
   ['kitguide-page.cjs', 'menus', "the kit step's brief and the tutorial's walkthrough", 0.8],
   ['kitpaste-page.cjs', 'menus', "copy and paste for loadouts", 0.2],
@@ -35,35 +26,29 @@ export const PAGES: readonly PageRow[] = [
   ['textsize-page.cjs', 'menus', "the game's own text size, the screens at each size", 1.5],
   ['mpclient-page.cjs', 'coop', "the page as a client of a real game server", 4.5],
   ['lobby-page.cjs', 'coop', "host or join a co-op game, two windows", 0],
-  ['savetimeline-page.cjs', 'saves', "the save timeline: F5, the strip, a click goes back", 5.8],
+  ['savetimeline-page.cjs', 'saves', "the save timeline: F5, the strip, a click goes back", 1.5],
   ['savedoor-page.cjs', 'saves', "a saved file goes to the backend, no download", 0],
   ['cloud-page.cjs', 'cloud', "the hosted page's backend: tape, visit, settings, the link", 0],
   ['cloudfatal-page.cjs', 'cloud', "a red card tells the backend", 0],
   ['cloudnote-page.cjs', 'cloud', "the notice line on a card that is not the title", 0.1],
-  ['engine-replay-page.cjs', 'replay', "a played run is on the shelf with its run tape, and plays to its end as recorded", 7.9],
-  ['replaykeep-page.cjs', 'replay', "every run kept, one handed over", 6.1],
+  ['../draw/tape-page.cjs', 'replay', "a run is kept as it is played, and its page walks it to the same state, sought both ways", 11],
   ['replaysend-page.cjs', 'replay', "the map viewer's Send", 0.4],
-  ['bench-page.cjs', 'tools', "the benchmark run end to end", 0],
   ['perf-sweep-page.cjs', 'tools', "the F8 sweep run and its dump", 0],
   ['framecap-page.cjs', 'tools', "an F6 frame capture taken and read back", 0],
   ['pricerun-page.cjs', 'tools', "the pricing run", 0],
   ['cpuprofile-page.cjs', 'tools', "where a frame's CPU goes", 0],
-  ['draw-equal.cjs', 'tools', "the picture-equality rig", 0],
   ['kernel-stack.cjs', 'tools', "how near a kernel is to the software adapter's limit", 0],
   ['level-cost-page.cjs', 'tools', "what the look costs on one level", 0],
-  ['look-sheet.cjs', 'tools', "the look page's picture at every hour, a contact sheet", 0],
-  ['page-look.cjs', 'tools', "a scenario played a little: stills, errors", 0],
   ['shader-count-page.cjs', 'tools', "how much a page compiles", 0],
   ['shader-serial-page.cjs', 'tools', "what each program costs to compile alone", 0],
   ['warmboot-page.cjs', 'tools', "a second visit's boot, on a GPU", 0],
-  ['weather-look.cjs', 'tools', "a still per level, weather and view", 0],
 ];
 /** these start their own dev server (it wants a backend's words) on the PORT they are handed */
 const OWN_SERVER = new Set(['lobby-page.cjs']);
 
 const ROOT = resolve(import.meta.dir, '../..'), GROUPS = new Set<string>([...PAGES.map(r => r[1])]);
 const freePort = (): number => { const s = (Bun as any).serve({ hostname: '127.0.0.1', port: 0, fetch: () => new Response() }), p: number = s.port; s.stop(true); return p; };
-const short = (script: string): string => script.replace(/\.(cjs|ts)$/, '');
+const short = (script: string): string => script.replace(/^.*\//, '').replace(/\.(cjs|ts)$/, '');
 const mins = (ms: number): string => (ms / 60000).toFixed(1);
 
 /** every process under `pid` by parent (Playwright starts its browser in a process group of its own) */

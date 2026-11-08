@@ -45,7 +45,7 @@ const SEEN = () => { const b = document.getElementById('brief'), t = (s) => (b &
     menu: document.getElementById('menu').classList.contains('on'), bootHead: !!document.querySelector('#menu .head') && !!document.querySelector('#menu .bootstatus'), buttons: document.querySelectorAll('#menu .actions button').length, options: !!(document.getElementById('options') && document.getElementById('options').classList.contains('on')),
     fatal: (document.getElementById('fatal') || {}).textContent || '' }; };
 // in the page: the game's clock after two drawn frames (so a clock that did not move is a held world, not a page that drew nothing)
-const CLOCK = async () => { await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); const g = window.__game; return { t: g.time, held: [...window.__input.keys], pressed: [...window.__input.pressed] }; };
+const CLOCK = async () => { await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); const g = window.__game; return { t: g.time, held: [...window.__draw.input.keys], pressed: [...window.__draw.input.pressed] }; };
 const centre = (page, sel) => page.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }, sel);
 const runs = async (page, from, secs = 300) => { for (const end = Date.now() + secs * 1000; Date.now() < end;) { const c = await page.evaluate(CLOCK); if (c.t > from + 1e-6) return c; await page.waitForTimeout(500); } return null; };
 
