@@ -410,7 +410,7 @@ pub fn prop_way(g: &crate::game::Game, from: V3, plain: &[V3], round: Option<&[V
 }
 
 /// The cells about every movable thing made dear, for a teammate only. None: `pen` itself, untouched (guards.ts:1491 `round !== pen`), and the one search is the search it was.   (orders.ts propPenalty)
-pub fn prop_penalty(g: &mut crate::game::Game, gd: GuardId, pen: Option<&crate::lanes::LanePenalty>) -> Option<crate::orders::PropPenalty> {
+pub fn prop_penalty(g: &crate::game::Game, gd: GuardId, pen: Option<&crate::lanes::LanePenalty>) -> Option<crate::orders::PropPenalty> {
     if g.gd[gd].team != crate::teams::Team::Operative || g.props.props.is_empty() { return None; }
     let mut i = 0;
     while i < g.orders.owners.len() {

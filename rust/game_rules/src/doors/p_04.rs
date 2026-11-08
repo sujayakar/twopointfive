@@ -17,7 +17,7 @@ fn emit(g: &mut Game, d: DoorId, sound: crate::doors::DoorSound, pos: V3, who: f
 }
 
 /// How far a leaf stands open the way a shove would send it; one-way, simply how far open.   (doors.ts Doors.openFor)
-pub fn doors_open_for(g: &mut crate::game::Game, d: DoorId, s: f64) -> f64 {
+pub fn doors_open_for(g: &crate::game::Game, d: DoorId, s: f64) -> f64 {
     m::abs(door_angle(g, d))
 }
 
@@ -32,7 +32,7 @@ pub fn doors_pull_to(g: &mut crate::game::Game, d: DoorId, who: f64) {
 }
 
 /// A leaf pulled to and still on its way home. A body in its way, or a hand on it, stops that within a moment; the slowest it swings on its own before it latches is about 0.01 rad/s.
-pub fn doors_coming_home(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn doors_coming_home(g: &crate::game::Game, d: DoorId) -> bool {
     door_closing(g, d) && door_vel(g, d) * door_angle(g, d) < 0.0 && m::abs(door_vel(g, d)) > 0.005
 }
 
@@ -77,7 +77,7 @@ fn work_spot_at(hinge: [f64; 2], u: [f64; 2], s: f64, stand: f64, along: f64) ->
 }
 
 /// Where to work d's lock from `from`'s side.   (doors.ts Doors.workSpot)
-pub fn doors_work_spot(g: &mut crate::game::Game, d: DoorId, from: V3, stand: Option<f64>, along: Option<f64>) -> crate::doors::DoorsWorkSpot {
+pub fn doors_work_spot(g: &crate::game::Game, d: DoorId, from: V3, stand: Option<f64>, along: Option<f64>) -> crate::doors::DoorsWorkSpot {
     let stand = stand.unwrap_or(0.5);
     let along = along.unwrap_or(g.dr[d].def.width - 0.14);
     let hinge = g.dr[d].def.hinge;
@@ -94,7 +94,7 @@ fn kick_along(hinge: [f64; 2], u: [f64; 2], width: f64, from: V3) -> f64 {
 }
 
 /// Where a kick is thrown from: square to the leaf, by the lock.   (doors.ts Doors.kickSpot)
-pub fn doors_kick_spot(g: &mut crate::game::Game, d: DoorId, from: V3) -> crate::doors::DoorsKickSpot {
+pub fn doors_kick_spot(g: &crate::game::Game, d: DoorId, from: V3) -> crate::doors::DoorsKickSpot {
     let u = door_dir(g, d);
     let (hinge, width) = (g.dr[d].def.hinge, g.dr[d].def.width);
     let spot = doors_work_spot(g, d, from, Some(0.76), Some(kick_along(hinge, u, width, from)));
@@ -111,7 +111,7 @@ fn side_spot_at(hinge: [f64; 2], u: [f64; 2], s: f64, w: f64, past: f64, out: f6
 }
 
 /// The same kick thrown from beside the door. Geometry only: whether there is floor there is the caller's to ask.   (doors.ts Doors.kickSpotSide)
-pub fn doors_kick_spot_side(g: &mut crate::game::Game, d: DoorId, from: V3) -> crate::doors::DoorsKickSpotSide {
+pub fn doors_kick_spot_side(g: &crate::game::Game, d: DoorId, from: V3) -> crate::doors::DoorsKickSpotSide {
     let hinge = g.dr[d].def.hinge;
     let u = door_dir(g, d);
     let s = doors_side(g, d, from);
@@ -122,7 +122,7 @@ pub fn doors_kick_spot_side(g: &mut crate::game::Game, d: DoorId, from: V3) -> c
 }
 
 /// How far along the frame line from the hinge, and how far off it, a point stands.   (doors.ts Doors.frameCoords)
-pub fn doors_frame_coords(g: &mut crate::game::Game, d: DoorId, p: V3) -> crate::doors::DoorsFrameCoords {
+pub fn doors_frame_coords(g: &crate::game::Game, d: DoorId, p: V3) -> crate::doors::DoorsFrameCoords {
     let u = door_dir(g, d);
     let hinge = g.dr[d].def.hinge;
     let (dx, dz) = (p[0] - hinge[0], p[2] - hinge[1]);

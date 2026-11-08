@@ -154,7 +154,7 @@ pub fn snatch_out_tick(g: &mut crate::game::Game, dt: f64) -> bool {
 }
 
 /// Is the one he follows down. (snatchout.ts SnatchOut.downed)
-pub fn snatch_out_downed(g: &mut crate::game::Game, c_2: CharId) -> bool {
+pub fn snatch_out_downed(g: &crate::game::Game, c_2: CharId) -> bool {
     let pl = who(g, &crate::seats::here(g));
     if c_2 == g.pl[pl].ch { return g.pl[pl].down; }
     g.guards.iter().any(|x| g.gd[*x].ch == c_2 && g.gd[*x].state == crate::game::GuardState::Dead)
@@ -184,7 +184,7 @@ pub fn snatch_out_fighting(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Whoever is moving him: the one he follows, or the player with him in an arm or in his hands. (snatchout.ts SnatchOut.mover)
-pub fn snatch_out_mover(g: &mut crate::game::Game) -> Option<CharId> {
+pub fn snatch_out_mover(g: &crate::game::Game) -> Option<CharId> {
     if let Some(lead) = g.snatch.out.lead { return Some(lead); }
     let pl = who(g, &crate::seats::here(g));
     let gd = g.snatch.man?;

@@ -239,7 +239,7 @@ pub fn update_stickies(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// Is its surface flat. (stickycam.ts flat)
-pub fn flat(g: &mut crate::game::Game, c_2: StickyCamId) -> bool {
+pub fn flat(g: &crate::game::Game, c_2: StickyCamId) -> bool {
     m::abs(g.tab.stickycam_sticky_cam[c_2].n[1]) > g.k.sticky.flat_y
 }
 
@@ -262,7 +262,7 @@ pub fn sticky_live(g: &crate::game::Game, pl: &crate::stickycam::StickyLivePl) -
 }
 
 /// The fog's eyes a player's live stuck cameras are, newest first. (stickycam.ts stickyEyes)
-pub fn sticky_eyes(g: &mut crate::game::Game) -> Vec<crate::fogofwar::FogEye> {
+pub fn sticky_eyes(g: &crate::game::Game) -> Vec<crate::fogofwar::FogEye> {
     let pl = g.player;
     if g.pl[pl].cams.is_empty() { return none(); }
     let mut out: Vec<crate::fogofwar::FogEye> = Vec::new();
@@ -397,7 +397,7 @@ pub fn sticky_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 }
 
 /// Is this camera sending this frame: one of the newest `live` stuck, and the fog took it as an eye. (stickycam.ts sending)
-pub fn sending(g: &mut crate::game::Game, c: StickyCamId) -> bool {
+pub fn sending(g: &crate::game::Game, c: StickyCamId) -> bool {
     let live = if crate::fogofwar::fog_of_war_active(g) {
         let pl = g.player;
         let cams = StickyLivePl { cams: g.pl[pl].cams.clone() };

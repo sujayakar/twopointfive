@@ -17,7 +17,7 @@ fn seam_box_c_h(g: &Game, b: BoxId) -> (V3, V3) { let x = &g.tab.boxes[b]; (x.c,
 /// a man's feet
 fn pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 /// the mains' two flags, `bo.active` and `bo.permanent`
-fn mains(g: &mut Game) -> (bool, bool) {
+fn mains(g: &Game) -> (bool, bool) {
     let active = crate::sim_lightshome::mains_active(g);
     let permanent = crate::sim_lightshome::mains_permanent(g);
     (active, permanent)
@@ -219,7 +219,7 @@ pub fn work_things_prune(g: &mut crate::game::Game) {
 }
 
 /// What working it would do now. (workthings.ts WorkThings.verbOf)
-pub fn work_things_verb_of(g: &mut crate::game::Game, th: &crate::workthings::WorkThing) -> crate::workthings::WorkVerb {
+pub fn work_things_verb_of(g: &crate::game::Game, th: &crate::workthings::WorkThing) -> crate::workthings::WorkVerb {
     match th.kind {
         WorkThingKind::Device => WorkVerb::Defuse,
         WorkThingKind::Objective => WorkVerb::Drive,
@@ -228,7 +228,7 @@ pub fn work_things_verb_of(g: &mut crate::game::Game, th: &crate::workthings::Wo
 }
 
 /// The row's words. (workthings.ts WorkThings.words)
-pub fn work_things_words(g: &mut crate::game::Game, th: &crate::workthings::WorkThing) -> String {
+pub fn work_things_words(g: &crate::game::Game, th: &crate::workthings::WorkThing) -> String {
     if th.kind == WorkThingKind::Device { return format!("make {} safe", th.name); }
     if th.kind == WorkThingKind::Breaker {
         return String::from(if mains(g).0 { "turn the power back on" } else { "throw the breaker" });
@@ -240,7 +240,7 @@ pub fn work_things_words(g: &mut crate::game::Game, th: &crate::workthings::Work
 }
 
 /// Why that is not there to be done any more (None: it is): the word the man says. (workthings.ts WorkThings.moot)
-pub fn work_things_moot(g: &mut crate::game::Game, th: &crate::workthings::WorkThing, verb: crate::workthings::WorkVerb) -> Option<String> {
+pub fn work_things_moot(g: &crate::game::Game, th: &crate::workthings::WorkThing, verb: crate::workthings::WorkVerb) -> Option<String> {
     if th.kind == WorkThingKind::Device { return crate::defuse::defuse_moot(g, th.dev.unwrap_or(-1.0)); }
     if th.kind == WorkThingKind::Objective {
         if g.mission.stage == crate::game::MissionStage::Drive { return None; }
@@ -627,7 +627,7 @@ pub fn work_things_note(g: &mut crate::game::Game, gd: GuardId, what: &str) {
 }
 
 /// One line for a probe. (workthings.ts WorkThings.summary)
-pub fn work_things_summary(g: &mut crate::game::Game) -> String {
+pub fn work_things_summary(g: &crate::game::Game) -> String {
     let th = work_things_things(g, &crate::seats::here(g));
     let mut n = 0;
     for gd in g.work.jobs.keys() {

@@ -11,7 +11,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 macro_rules! cl { ($g:ident) => { $g.clearing.as_mut().unwrap() } }
 
 /// g.blackout.active (game.ts blackout, lightshome.ts Mains.active)
-fn blackout_active(g: &mut Game) -> bool {
+fn blackout_active(g: &Game) -> bool {
     crate::sim_lightshome::mains_active(g)
 }
 /// gd.task.pos, which every arm of the union has
@@ -97,7 +97,7 @@ pub fn path_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
 }
 
 /// The lockdown pair's job, not yet at `g.clearing`: the caller puts it there. (squad.ts Clearing.constructor)
-pub fn clearing_new(g: &mut crate::game::Game, rooms: &[Vec<crate::scene_level::RoomClearPlan>], a: GuardId, b: Option<GuardId>) -> crate::squad::Clearing {
+pub fn clearing_new(g: &crate::game::Game, rooms: &[Vec<crate::scene_level::RoomClearPlan>], a: GuardId, b: Option<GuardId>) -> crate::squad::Clearing {
     let mut c = Clearing::blank();
     c.rooms = rooms.to_vec();
     c.a = a;

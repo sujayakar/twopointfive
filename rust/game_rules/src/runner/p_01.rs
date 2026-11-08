@@ -834,7 +834,7 @@ pub fn runner_bare(g: &crate::game::Game, gd: GuardId) -> bool { g.m.runner.stat
 pub fn runner_nobody(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].fled }
 
 /// speaks for nobody, from the shout   (runner.ts runnerMute)
-pub fn runner_mute(g: &mut crate::game::Game, gd: GuardId) -> bool { let rule = crate::owner::by::RUNNER; crate::owner::has(g, gd, rule) }
+pub fn runner_mute(g: &crate::game::Game, gd: GuardId) -> bool { let rule = crate::owner::by::RUNNER; crate::owner::has(g, gd, rule) }
 
 #[cfg(test)]
 mod tests {

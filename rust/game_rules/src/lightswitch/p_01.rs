@@ -273,7 +273,7 @@ pub fn light_switch_reset(g: &mut crate::game::Game) {
 
 // ---------------------------------------------------------------- the flip
 /// Are the room's lights on at the switch: any fixture of it switched on. (lightswitch.ts switchLit)
-pub fn switch_lit(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitch) -> bool {
+pub fn switch_lit(g: &crate::game::Game, sw: &crate::lightswitch::WallSwitch) -> bool {
     sw.targets.iter().any(|&t| crate::sim_lightshome::fixture_on(g, t))
 }
 

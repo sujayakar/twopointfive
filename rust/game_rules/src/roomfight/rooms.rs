@@ -109,7 +109,7 @@ pub fn room_fight_out_of_building(g: &mut crate::game::Game, p: V3) -> bool {
 }
 
 /// The open doorway `p` stands in: its frame's span, within 0.75 m of the frame line; a shut leaf is a wall. (roomfight.ts funnelOf)
-pub fn room_fight_funnel_of(g: &mut crate::game::Game, p: V3) -> Option<DoorId> {
+pub fn room_fight_funnel_of(g: &crate::game::Game, p: V3) -> Option<DoorId> {
     let mut i = 0;
     while i < g.doors.list.len() {
         let d = g.doors.list[i];
