@@ -23,7 +23,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
-import { sample } from './sweep.ts';
 import { tapVerb } from './verbs.ts';
 import { listen } from './heard.ts';
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
@@ -32,9 +31,7 @@ const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { LASTSTAND, lastStandReport } = await import(`${ROOT}/src/game/laststand.ts`);
-const { DIGIN_STATS } = await import(`${ROOT}/src/game/digin.ts`);
 const { KIT } = await import(`${ROOT}/src/game/kit.ts`);
 
 const DT = 1 / 60, BREAK = process.env.FRAMEHOLDS_BREAK === '1';   // (the red path: no door is hung the other way, so no locked face is one a door opens toward)
