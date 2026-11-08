@@ -4,8 +4,6 @@ import { buildBvh, type Bounds, type Bvh } from '../bvh';
 
 /** what a piece is to a ray */
 export const F = { GLASS: 1 << 8, WATER: 1 << 9, CUT: 1 << 10, GLOW: 1 << 11, NOSHADOW: 1 << 12, QUAD: 1 << 13, MOVES: 1 << 14, FAR: 1 << 15, /** grows on the terrace, out of doors: the section leaves it whole, or hides it whole when the terrace itself is hidden */ OPEN: 1 << 28 } as const;
-/** the terrace's floor: a section under it hides what is OPEN */
-export const OPEN_FLOOR = 3.5;
 
 /** ONE PIECE: a frame and half extents, cut by up to 8 planes and at most one quadric (A x² + B y² + C z² + D y ≤ 1) */
 export interface Piece {

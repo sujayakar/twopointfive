@@ -27,6 +27,10 @@ export const MATERIALS: Material[] = [
   { name: 'skin', kind: 18, base: [0.55, 0.36, 0.27], rough: 0.5 },
   { name: 'plastic', kind: 0, base: [0.84, 0.84, 0.84], rough: 0.38 },
   { name: 'paleBark', kind: 15, base: [0.60, 0.50, 0.39], rough: 0.85 },
+  { name: 'asphalt', kind: 22, base: [0.085, 0.086, 0.09], rough: 0.82 },
+  { name: 'print', kind: 18, base: [0.92, 0.92, 0.92], rough: 0.34, f0: 0.045 },
+  { name: 'lamp shade', kind: 18, base: [0.85, 0.82, 0.76], rough: 0.8 },
+  { name: 'brick', kind: 3, base: [0.42, 0.27, 0.21], rough: 0.85, b2: [0.55, 0.52, 0.48], scale: 0.22 },
   { name: 'mirror', kind: 18, base: [0.95, 0.95, 0.95], rough: 0.015, metal: 1 },
 ];
 export const M: Record<string, number> = Object.fromEntries(MATERIALS.map((m, i) => [m.name, i]));

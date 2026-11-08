@@ -1,10 +1,10 @@
 // THE AIR, as one medium: the city's haze, the dust of the rooms, the steam off the vents, the rain. Each adds to one density; what stands at a point is lit one
 // way: the sun if it is seen from there, the lamps near it, the sky. Steps go where something is: along the ray, inside each plume, and near each bright lamp.
 /** (a floor the section hides has no air to see) */
-fn roomAir(x: vec3f) -> f32 { return select(0.0, 1.0, x.y < frame.misc.y && abs(x.x) < 12.0 && abs(x.z) < 8.0 && x.y < 6.7 && (x.y < 3.3 || x.x < 4.0)); }
+fn roomAir(x: vec3f) -> f32 { return select(1.0, 0.0, openAir(x) || x.y > frame.misc.y); }
 fn vn3(p: vec3f) -> f32 { let i = floor(p); let f = p - i; let w = f * f * (3.0 - 2.0 * f); let z = f32(i.z) * 37.0; return mix(vnoise(p.xy + z), vnoise(p.xy + z + 37.0), w.z); }
 /** 1 where the section leaves the air to be seen, 0 over the rooms it hides, softly */
-fn cutShows(x: vec3f) -> f32 { if (frame.misc.y > 1e8) { return 1.0; } let over = abs(x.x) < 12.3 && abs(x.z) < 8.3 && !(x.x > 4.0 && frame.misc.y > OPEN_FLOOR); return select(1.0, smoothstep(0.0, 0.35, frame.misc.y - x.y), over); }
+fn cutShows(x: vec3f) -> f32 { if (frame.misc.y > 1e8) { return 1.0; } return select(1.0, smoothstep(0.0, 0.35, frame.misc.y - x.y), overCut(x, frame.misc.y)); }
 /** scattering per metre of everything but steam */
 fn airAt(x: vec3f) -> f32 { return frame.misc.w * (0.0015 * @tune.haze * exp(-max(x.y + 12.0, 0.0) * 0.045) + @tune.dust * roomAir(x)) + frame.weather.y * 0.0011 * (0.4 + 1.2 * smoothstep(0.35, 0.65, fbm((x.xz - vec2f(cos(frame.weather.w), sin(frame.weather.w)) * frame.misc.x * 4.0) * 0.11 + 3.0))) * (1.0 - roomAir(x)); }
 fn hg(mu: f32, g: f32) -> f32 { return (1.0 - g * g) / (4.0 * PI * pow(1.0 + g * g - 2.0 * g * mu, 1.5)); }

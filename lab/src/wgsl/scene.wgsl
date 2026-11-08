@@ -45,7 +45,7 @@ struct Mark { at: vec2f, size: vec2f, uv: vec4f, color: vec3f, face: u32 };
 @group(0) @binding(15) var smokeTex: texture_3d<f32>;       // the pool's bricks, each with a cell of its neighbours round it: light scattered per unit, and how much smoke per metre
 @group(0) @binding(16) var smokePage: texture_3d<u32>;      // which of them stands where (+ 1)
 
-const GLASS = 256u; const WATER = 512u; const CUT = 1024u; const GLOW = 2048u; const NOSHADOW = 4096u; const QUAD = 8192u; const MOVES = 16384u; const FAR = 32768u; const OPEN = 0x10000000u; const OPEN_FLOOR = 3.5;
+const GLASS = 256u; const WATER = 512u; const CUT = 1024u; const GLOW = 2048u; const NOSHADOW = 4096u; const QUAD = 8192u; const MOVES = 16384u; const FAR = 32768u; const OPEN = 0x10000000u;
 const NOTHING = 0xffffffffu; const LEAF_HIT = 0x80000000u;
 
 // ---- random numbers: a stream per pixel and frame, the same every run
@@ -129,7 +129,7 @@ fn meetLeaf(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> f32 {
 }
 
 /** where a point is in the sun's map of the leaves: 0‥1, 0‥1, and how far along (1 = toward the sun) */
-fn sunMap(x: vec3f) -> vec3f { let b = basis(frame.sunDir.xyz); let d = x - vec3f(4.0, 4.0, 0.0); return vec3f(dot(d, b[0]) / 30.0 + 0.5, dot(d, b[1]) / 30.0 + 0.5, dot(d, frame.sunDir.xyz) / 80.0 + 0.5); }
+fn sunMap(x: vec3f) -> vec3f { let b = basis(frame.sunDir.xyz); let d = x - SUN_AT; return vec3f(dot(d, b[0]) / SUN_WIDE + 0.5, dot(d, b[1]) / SUN_WIDE + 0.5, dot(d, frame.sunDir.xyz) / 80.0 + 0.5); }
 /** leaves one by one, or as a ball of them: a medium. Rays from what the camera sees take them one by one; the rest do not need to */
 var<private> fineLeaves: bool = true; var<private> noLeaves: bool = false;
 // (a ball's density is its own: half its leaves' area over its size, less for how they clump; with the instance's tint)

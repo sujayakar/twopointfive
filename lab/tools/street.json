@@ -1,0 +1,167 @@
+[
+ {
+  "w": 1600,
+  "h": 900,
+  "samples": 200,
+  "method": "realtime",
+  "tick": 300,
+  "hour": 22.2,
+  "cut": 2.5,
+  "scale": 0.8,
+  "name": "k1-street",
+  "dist": 27,
+  "look": [
+   0.5,
+   1,
+   -1.0
+  ],
+  "yaw": 0.5,
+  "pitch": 0.72
+ },
+ {
+  "w": 1600,
+  "h": 900,
+  "samples": 200,
+  "method": "realtime",
+  "tick": 300,
+  "hour": 22.2,
+  "cut": 2.5,
+  "scale": 0.8,
+  "name": "k2-store",
+  "dist": 14,
+  "look": [
+   -1.5,
+   0.8,
+   -5
+  ],
+  "yaw": 0.4,
+  "pitch": 0.75
+ },
+ {
+  "w": 1600,
+  "h": 900,
+  "samples": 200,
+  "method": "realtime",
+  "tick": 300,
+  "hour": 22.2,
+  "cut": 2.5,
+  "scale": 0.8,
+  "name": "k3-noodle",
+  "dist": 13,
+  "look": [
+   10.2,
+   1,
+   -1
+  ],
+  "yaw": 0.25,
+  "pitch": 0.6
+ },
+ {
+  "w": 1600,
+  "h": 900,
+  "samples": 200,
+  "method": "realtime",
+  "tick": 300,
+  "hour": 22.2,
+  "cut": 2.5,
+  "scale": 0.8,
+  "name": "k4-alley",
+  "dist": 14,
+  "look": [
+   -8.5,
+   1,
+   -3
+  ],
+  "yaw": -0.4,
+  "pitch": 0.7
+ },
+ {
+  "w": 1600,
+  "h": 900,
+  "samples": 200,
+  "method": "realtime",
+  "tick": 300,
+  "hour": 22.2,
+  "cut": 2.5,
+  "scale": 0.8,
+  "name": "k5-rain",
+  "dist": 22,
+  "look": [
+   1,
+   0.6,
+   2
+  ],
+  "yaw": 0.6,
+  "pitch": 0.55,
+  "rain": 0.8
+ },
+ {
+  "w": 1600,
+  "h": 900,
+  "samples": 200,
+  "method": "realtime",
+  "tick": 300,
+  "hour": 22.2,
+  "cut": 1000000000.0,
+  "scale": 0.8,
+  "name": "k6-roofs",
+  "dist": 44,
+  "look": [
+   0,
+   3,
+   0
+  ],
+  "yaw": 0.7,
+  "pitch": 0.62
+ },
+ {
+  "w": 1600,
+  "h": 900,
+  "samples": 200,
+  "method": "realtime",
+  "tick": 300,
+  "hour": 23.4,
+  "cut": 2.5,
+  "scale": 0.8,
+  "name": "k7-quiet",
+  "dist": 26,
+  "look": [
+   0.5,
+   1,
+   -1.5
+  ],
+  "yaw": 0.5,
+  "pitch": 0.72,
+  "groups": {
+   "store": 0,
+   "coolers": 0.2,
+   "signs": 0,
+   "vending": 0.35,
+   "lanterns": 0,
+   "noodle": 0,
+   "street": 0,
+   "alley": 0.5,
+   "back": 0.6,
+   "signal": 1
+  }
+ },
+ {
+  "w": 1600,
+  "h": 900,
+  "samples": 800,
+  "method": "reference",
+  "tick": 300,
+  "hour": 22.2,
+  "cut": 2.5,
+  "scale": 1,
+  "name": "k8-ref",
+  "dist": 27,
+  "look": [
+   0.5,
+   1,
+   -1.0
+  ],
+  "yaw": 0.5,
+  "pitch": 0.72
+ }
+]

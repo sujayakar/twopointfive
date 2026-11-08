@@ -1,5 +1,5 @@
 // The page: input, a clock of fixed ticks, the panel. Everything drawn comes from Lab.
-import { Lab, TICK, type Method } from './lab';
+import { Lab, TICK, SCENES, type Method } from './lab';
 import { realtime } from './stages/realtime';
 import { pathTracer } from './stages/path';
 import { Present } from './present';
@@ -11,17 +11,17 @@ import { Perf } from './perf';
 import { tourStep } from './tour';
 import { type V3, add, mul, sub, dot, clamp, norm } from './math';
 import { boundsOf } from './scene/world';
-import { QUIET } from './scene/building';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T, canvas = $<HTMLCanvasElement>('c'), Q = new URLSearchParams(location.search);
 const say = (t: string, k: number) => { $('what').textContent = t; $('bar').style.width = Math.round(k * 100) + '%'; };
 async function main() {
-  const lab = new Lab(); say('Building the scene', 0.12); await lab.open(canvas); if (Q.has('watch')) lab.graph.guard = 'off'; (window as never as { lab: Lab }).lab = lab;
+  let sceneName = Q.get('scene') ?? 'rooftop'; try { sceneName = Q.get('scene') ?? localStorage.getItem('lab scene') ?? sceneName; } catch { /* no storage here */ } if (!SCENES[sceneName]) sceneName = 'rooftop';
+  const lab = new Lab(); say('Building the scene', 0.12); await lab.open(canvas, sceneName); if (Q.has('watch')) lab.graph.guard = 'off'; (window as never as { lab: Lab }).lab = lab;
   const present = new Present(lab.gpu); await present.init(); const rt = realtime(), ref = pathTracer(); let method: Method = rt;
   let scale = Number(Q.get('scale') ?? 0.67), auto = !Q.has('scale'); const cap = Number(Q.get('px') ?? 2.4e6);
   const fit = () => { const dpr = window.devicePixelRatio || 1, w = Math.max(64, innerWidth * dpr), h = Math.max(64, innerHeight * dpr), k = Math.min(1, Math.sqrt(cap / (w * h))), ow = Math.round(w * k), oh = Math.round(h * k); if (canvas.width !== ow || canvas.height !== oh) { canvas.width = ow; canvas.height = oh; } lab.resize([Math.max(32, Math.round(ow * scale)), Math.max(32, Math.round(oh * scale))], [ow, oh]); };
   fit(); say('Lighting every wall', 0.3); await lab.use(rt); say('Reference', 0.8); await lab.use(ref); await lab.use(rt); say('Ready', 1);
-  lab.hour = Number(Q.get('hour') ?? 16.4); lab.camera.want = { look: [1.5, 3, 0.5], yaw: 0.62, pitch: 0.86, dist: 50 }; lab.camera.snap();
+  const st = lab.building.place.start; lab.hour = Number(Q.get('hour') ?? st.hour); lab.camera.want = { look: [...st.look] as V3, yaw: st.yaw, pitch: st.pitch, dist: st.dist }; lab.camera.snap(); lab.wet = st.wet; lab.rain = lab.rainNow = st.rain; lab.steam = st.steam; lab.level = st.level; lab.cut = lab.wantCut = lab.building.levels[st.level]!.cut; document.querySelector('#top b')!.textContent = lab.building.place.title;
   // ---- what the hand does, kept until the next tick, so that a run is its ticks and its inputs
   const held = new Set<string>(); let drag: { x: number; y: number; moved: number } | null = null, point = { x: 0.5, y: 0.5 }, tour = Q.has('tour'), torchOn = false, plant: [number, number, number] | true | null = null;
   const teach = new Teach(lab, present, rt, ref, { close() { lab.paused = false; paint(); }, point: () => point }); const study = () => { if (teach.on) { teach.close(); return; } if (method !== rt) act.method(rt); tour = false; lab.paused = true; teach.open(); paint(); };
@@ -31,13 +31,14 @@ async function main() {
   const row = (id: string, items: [string, () => boolean, () => void][]) => { const el = $(id); el.textContent = ''; for (const [t, on, go] of items) { const b = document.createElement('button'); b.textContent = t; b.className = on() ? 'on' : ''; b.onclick = () => { go(); paint(); }; el.append(b); } };
   function paint() {
     row('hide', [['Hide', () => false, () => { document.body.classList.add('nopanel'); }]]);
+    if (Object.keys(SCENES).length > 1) row('scene', Object.keys(SCENES).map(k => [k[0]!.toUpperCase() + k.slice(1), () => k === sceneName, () => { if (k === sceneName) return; try { localStorage.setItem('lab scene', k); } catch { /* */ } location.reload(); }] as [string, () => boolean, () => void]));
     row('method', [['Real time', () => method === rt, () => act.method(rt)], ['Reference', () => method === ref, () => act.method(ref)]]);
     row('level', lab.building.levels.map((l, i) => [l.name, () => lab.level === i, () => act.level(i)] as [string, () => boolean, () => void]));
     row('doors', [['Doors open', () => false, () => act.doors(1)], ['shut', () => false, () => act.doors(0)], ['swing', () => lab.doorsAuto, () => act.doors(lab.doorsAuto ? 0 : 'auto')]]);
-    row('lamps', (['auto', 'on', 'off'] as const).map(k => ['Lamps ' + k, () => lab.lampsMode === k, () => { lab.lampsMode = k; }] as [string, () => boolean, () => void]).concat([['Infiltration', () => lab.lampGroup === QUIET.groups, () => { if (lab.lampGroup === QUIET.groups) { lab.lampGroup = {}; lab.hour = 16.4; } else { lab.lampGroup = QUIET.groups; lab.hour = QUIET.hour; lab.lampsMode = 'auto'; } }]]));
+    row('lamps', (['auto', 'on', 'off'] as const).map(k => ['Lamps ' + k, () => lab.lampsMode === k, () => { lab.lampsMode = k; }] as [string, () => boolean, () => void]).concat([['Infiltration', () => lab.lampGroup === lab.building.place.quiet.groups, () => { if (lab.lampGroup === lab.building.place.quiet.groups) { lab.lampGroup = {}; lab.hour = lab.building.place.start.hour; } else { lab.lampGroup = lab.building.place.quiet.groups; lab.hour = lab.building.place.quiet.hour; lab.lampsMode = 'auto'; } }]]));
     row('view', [['Step through the frame', () => teach.on, study], ['Performance', () => perf.shown, () => perf.toggle()]]);
-    row('groups', ['atrium', 'orange', 'green', 'blue', 'gallery', 'studio', 'lounge'].map(k => [k, () => (lab.lampGroup[k] ?? 1) > 0, () => { lab.lampGroup = { ...lab.lampGroup, [k]: (lab.lampGroup[k] ?? 1) > 0 ? 0 : 1 }; }] as [string, () => boolean, () => void]));
-    row('weather', [['Clear', () => lab.rain === 0, () => { lab.rain = 0; }], ['Rain', () => lab.rain > 0, () => { lab.rain = 1; }], ['Steam', () => lab.steam > 0, () => { lab.steam = lab.steam > 0 ? 0 : 1; }], ['Smoke', () => lab.smoke.burning, () => { if (lab.smoke.burning) lab.smoke.clear(); else { toss([0.5, 0.02, 1.5]); toss([6.5, 0.02, -3.0]); } }], ['Fire', () => lab.smoke.fires.length > 0, () => { if (lab.smoke.fires.length) lab.smoke.fires = []; else { burn([-0.5, 0.02, 3.2]); burn([-15.2, 0.02, 5.2]); } }]]);
+    row('groups', lab.building.place.groups.map(k => [k, () => (lab.lampGroup[k] ?? 1) > 0, () => { lab.lampGroup = { ...lab.lampGroup, [k]: (lab.lampGroup[k] ?? 1) > 0 ? 0 : 1 }; }] as [string, () => boolean, () => void]));
+    row('weather', [['Clear', () => lab.rain === 0, () => { lab.rain = 0; }], ['Rain', () => lab.rain > 0, () => { lab.rain = 1; }], ['Steam', () => lab.steam > 0, () => { lab.steam = lab.steam > 0 ? 0 : 1; }], ['Smoke', () => lab.smoke.burning, () => { if (lab.smoke.burning) lab.smoke.clear(); else for (const p of lab.building.place.smokes) toss(p); }], ['Fire', () => lab.smoke.fires.length > 0, () => { if (lab.smoke.fires.length) lab.smoke.fires = []; else for (const p of lab.building.place.fires) burn(p); }]]);
     $('mode').textContent = method === rt ? 'Real time' : 'Reference, path traced';
     $<HTMLInputElement>('hour').value = String(lab.hour);
   }
@@ -49,9 +50,9 @@ async function main() {
       if (l.kind === 'spot' || l.name === 'pool') return; let b = pinOf[i]; if (!b) { b = pinOf[i] = document.createElement('button'); b.title = l.name; b.setAttribute('aria-label', 'Switch lamp ' + l.name); b.onclick = () => { flip(i); b!.blur(); }; pins.append(b); }
       const v = sub(l.at, c.pos), z = dot(v, c.fwd), x = dot(v, c.right) / dot(c.right, c.right) / z, y = dot(v, c.up) / dot(c.up, c.up) / z, f = floorOf(l.at[1]), here = lab.level === 0 ? f < 2 && l.name === 'terrace' : f === lab.level || (l.name === 'terrace' && lab.level === 1); const off = !here || z < 0.5 || Math.abs(x) > 1.05 || Math.abs(y) > 1.05; if (b.hidden !== off) b.hidden = off; if (off) return; b.style.transform = `translate(${(x * 0.5 + 0.5) * innerWidth}px,${(0.5 - y * 0.5) * innerHeight}px)`; b.className = lab.lampOff.has(i) ? 'off' : ''; }); };
   // ---- N: a smoke canister where the pointer is, on this floor
-  const toss = (at?: V3) => { const r = lab.camera.ray(lab.graph.output[0] / lab.graph.output[1], point.x, point.y), f = lab.level === 2 ? 0.02 : lab.level === 1 ? 3.42 : 3.42; lab.smoke.drop(at ?? add(r.from, mul(r.dir, (f - r.from[1]) / Math.min(r.dir[1], -0.05)))); paint(); };
+  const toss = (at?: V3) => { const r = lab.camera.ray(lab.graph.output[0] / lab.graph.output[1], point.x, point.y), f = lab.building.place.floors[lab.level]!; lab.smoke.drop(at ?? add(r.from, mul(r.dir, (f - r.from[1]) / Math.min(r.dir[1], -0.05)))); paint(); };
   // ---- J: a fire where the pointer is
-  const burn = (at?: V3) => { const r = lab.camera.ray(lab.graph.output[0] / lab.graph.output[1], point.x, point.y), f = lab.level === 2 ? 0.02 : 3.42; lab.smoke.light(at ?? add(r.from, mul(r.dir, (f - r.from[1]) / Math.min(r.dir[1], -0.05)))); paint(); };
+  const burn = (at?: V3) => { const r = lab.camera.ray(lab.graph.output[0] / lab.graph.output[1], point.x, point.y), f = lab.building.place.floors[lab.level]!; lab.smoke.light(at ?? add(r.from, mul(r.dir, (f - r.from[1]) / Math.min(r.dir[1], -0.05)))); paint(); };
   // ---- X: what the exposure looks at: the person nearest the pointer, else the spot under it; again to let go
   const eyePin = document.createElement('div'); eyePin.id = 'eye'; eyePin.hidden = true; document.body.append(eyePin);
   const pinEye = async () => { if (lab.eye !== null) { lab.eye = null; return; } const [w, h] = lab.graph.output; let best = 40 / innerHeight, who = -1; lab.building.people.forEach((p, i) => { const q = lab.project([p.pos[0], p.pos[1] + 1, p.pos[2]]); if (!q || p.pos[1] > lab.cut) return; const d = Math.hypot((q[0] - point.x) * innerWidth / innerHeight, q[1] - point.y); if (d < best) { best = d; who = i; } }); if (who >= 0) { lab.eye = who; return; }
@@ -63,7 +64,7 @@ async function main() {
   canvas.onpointermove = e => { point = { x: e.clientX / innerWidth, y: e.clientY / innerHeight }; if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy); if (drag.moved < 4) return; tour = false; const c = lab.camera; if (e.shiftKey || e.buttons === 2) pan(-dx * c.dist * 0.0007, -dy * c.dist * 0.0009); else { c.want.yaw -= dx * 0.005; c.want.pitch += dy * 0.004; } };
   canvas.onpointerup = e => { if (drag && drag.moved < 5 && teach.on) teach.click(e.clientX / innerWidth, e.clientY / innerHeight); else if (drag && drag.moved < 5 && lampAt(e.clientX / innerWidth, e.clientY / innerHeight) >= 0) flip(lampAt(e.clientX / innerWidth, e.clientY / innerHeight)); else if (drag && drag.moved < 5) { const d = pickDoor(e.clientX / innerWidth, e.clientY / innerHeight); if (d) { lab.doorsAuto = false; d.want = d.want > 0.5 ? 0 : 1; paint(); } } drag = null; };
   canvas.oncontextmenu = e => e.preventDefault(); canvas.onwheel = e => { e.preventDefault(); tour = false; lab.camera.want.dist *= Math.exp(e.deltaY * 0.0011); };
-  const pan = (x: number, z: number) => { const c = lab.camera, s = Math.sin(c.yaw), k = Math.cos(c.yaw); c.want.look = [clamp(c.want.look[0] + x * k + z * s, -18, 18), c.want.look[1], clamp(c.want.look[2] - x * s + z * k, -14, 14)]; };
+  const pan = (x: number, z: number) => { const c = lab.camera, s = Math.sin(c.yaw), k = Math.cos(c.yaw); c.want.look = [clamp(c.want.look[0] + x * k + z * s, -lab.building.place.pan[0], lab.building.place.pan[0]), c.want.look[1], clamp(c.want.look[2] - x * s + z * k, -lab.building.place.pan[1], lab.building.place.pan[1])]; };
   onkeydown = e => { if (e.metaKey || e.ctrlKey) return; const k = e.key.toLowerCase(); held.add(k); if (e.repeat) return; if (k === 'p') act.method(method === rt ? ref : rt); if (k === '1' || k === '2' || k === '3') act.level(Number(k) - 1); if (k === 'f') { torchOn = !torchOn; plant = null; } if (k === 'g') plant = plant ? null : true; if (k === 't' && !teach.on) { study(); return; } if (teach.on && teach.key(k)) { e.preventDefault(); return; } if (k === 'c') tour = !tour; if (k === 'x') void pinEye(); if (k === 'n') toss(); if (k === 'j') burn(); if (k === 'b') perf.toggle(); if (k === 'h') document.body.classList.toggle('bare'); if (k === 'o') act.doors(lab.building.doors.some(d => d.want > 0.5) ? 0 : 1); if (k === ' ') lab.paused = !lab.paused; };
   onkeyup = e => { held.delete(e.key.toLowerCase()); if (e.key === ' ') teach.hold(false); }; onblur = () => held.clear(); onresize = fit;
   // ---- the torch at the pointer: a lamp like any other
@@ -90,7 +91,7 @@ async function main() {
           if (tour) tourStep(lab, act); lab.step(); } if (n === 4) { acc = 0; perf.note('ticks dropped'); } lab.alpha = Math.min(1, acc / TICK);
       }
       if (method === rt) {                                       // the torch at the pointer: from over your shoulder, or from where G planted it
-        const r = lab.camera.ray(lab.graph.output[0] / lab.graph.output[1], point.x, point.y), l = lab.building.world.lamps[hand]!, plane = lab.level === 2 ? 0.8 : lab.level === 1 ? 4.2 : 4, at = add(r.from, mul(r.dir, (plane - r.from[1]) / Math.min(r.dir[1], -0.05))); if (plant === true) { const f = lab.level === 2 ? 0.02 : 3.45; plant = add(r.from, mul(r.dir, (f - r.from[1]) / Math.min(r.dir[1], -0.05))); plant[1] = f + 1.25; torchOn = true; }
+        const r = lab.camera.ray(lab.graph.output[0] / lab.graph.output[1], point.x, point.y), l = lab.building.world.lamps[hand]!, plane = lab.level === 2 ? 0.8 : lab.level === 1 ? 4.2 : 4, at = add(r.from, mul(r.dir, (plane - r.from[1]) / Math.min(r.dir[1], -0.05))); if (plant === true) { const f = lab.building.place.floors[lab.level]!; plant = add(r.from, mul(r.dir, (f - r.from[1]) / Math.min(r.dir[1], -0.05))); plant[1] = f + 1.25; torchOn = true; }
         const src: V3 = plant ? [...plant] : add(at, [1.2, lab.level === 0 ? 4.5 : 1.35, 2.6]); if (src[1] > lab.cut - 0.1) src[1] = lab.cut - 0.1; l.at = src; l.v = norm(sub(at, src)); lab.scene.lampOn[hand] = torchOn ? 1 : 0; l.on = torchOn ? 1 : 0; void dot;
       }
       { const sp = lab.camera.dist * 0.012 * dt * 60; if (held.has('q')) lab.camera.want.yaw += 1.2 * dt; if (held.has('e')) lab.camera.want.yaw -= 1.2 * dt; if (held.has('w')) pan(0, -sp); if (held.has('s')) pan(0, sp); if (held.has('a')) pan(-sp, 0); if (held.has('d')) pan(sp, 0); lab.camera.step(dt); if (teach.on && !teach.due(now)) return; }

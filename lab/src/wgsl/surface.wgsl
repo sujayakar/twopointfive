@@ -76,7 +76,7 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
   let fade = 1.0 - smoothstep(0.01, 0.06, fp); let seed = f32((*p).lamp >> 8u);
   // three noises serve every material: broad, middle, fine
   var fr = vec3f(0.9, 4.3, 7.0); var st = vec2f(1.0);
-  switch (m.kind) { case 5u: { fr = vec3f(0.45, 1.1, 5.0); } case 6u: { fr = vec3f(2.0, 2.0, 9.0); st = vec2f(1.0, 22.0); } case 13u: { fr = vec3f(4.0, 9.0, 22.0); } case 15u: { fr = vec3f(4.0, 4.0, 9.0); st = vec2f(4.5, 1.0); } case 16u: { fr = vec3f(3.0, 30.0, 70.0); } case 4u: { fr = vec3f(2.0, 2.0, 2.0); st = vec2f(1.0, 60.0); } default: {} }
+  switch (m.kind) { case 5u: { fr = vec3f(0.45, 1.1, 5.0); } case 6u: { fr = vec3f(2.0, 2.0, 9.0); st = vec2f(1.0, 22.0); } case 13u: { fr = vec3f(4.0, 9.0, 22.0); } case 15u: { fr = vec3f(4.0, 4.0, 9.0); st = vec2f(4.5, 1.0); } case 16u: { fr = vec3f(3.0, 30.0, 70.0); } case 22u: { fr = vec3f(0.5, 1.6, 26.0); } case 4u: { fr = vec3f(2.0, 2.0, 2.0); st = vec2f(1.0, 60.0); } default: {} }
   let nA = fbm(uv * fr.x + seed * 1.7); let nB = fbm(uv * fr.y * st + 11.0 + seed); let nC = vnoise(uv * fr.z * st + 3.0);
   let foot = select(0.0, 1.0 - smoothstep(0.0, 0.13, q.y - floor(q.y / 3.4) * 3.4), an.y < 0.5);
   switch (m.kind) {
@@ -95,6 +95,7 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
     case 21u: { base *= 0.95 + 0.1 * nB; }
     case 11u: { base *= (0.95 + 0.07 * nA) * (1.0 - 0.08 * foot * nC); }
     case 12u: { let g = gridLine(uv, vec2f(0.12)); s.glow *= mix(1.0, 0.86, band(g, 0.004, fp)); }
+    case 22u: { base *= 0.82 + 0.25 * nA + 0.45 * (nC - 0.5) * shows(26.0, fp); let mend = smoothstep(0.52, 0.54, vnoise(floor(uv * vec2f(0.22, 0.45)) + 3.0)); base *= 1.0 - 0.22 * mend; let crack = abs(fbm(uv * 1.7 + 4.0) - 0.5) + 0.06 * smoothstep(0.4, 0.6, nB); base *= 1.0 - 0.35 * (1.0 - smoothstep(0.0, 0.004 + 0.6 * fp, crack)); s.rough = mix(s.rough, 0.62, smoothstep(0.45, 0.6, nB)); }
     case 13u, 15u, 16u: { base *= 0.6 + 0.7 * nB; }
     case 19u: { let z = step(0.5, fract((uv.x + uv.y) / 0.36)); base = mix(m.b2, m.base * tint2, z); }
     default: { base *= 0.97 + 0.05 * nA; }
@@ -121,22 +122,20 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
     var f = lp.xz; if (h.code < 2u) { f = lp.zy; if (h.code == 1u) { f.x = -f.x; } } else if (h.code > 3u) { f = lp.xy; if (h.code == 4u) { f.x = -f.x; } }
     let r = (f - a.xy) / a.zw; if (abs(r.x) > 0.5 || abs(r.y) > 0.5) { continue; }
     let t = vec2f(r.x + 0.5, select(0.5 - r.y, r.y + 0.5, h.code == 2u || h.code == 3u));
-    let px = b.zw * 2048.0; let lod = log2(max(1.0, fp * px.x / a.z));
+    let px = b.zw * vec2f(4096.0, 2048.0); let lod = log2(max(1.0, fp * px.x / a.z));
     let art = textureSampleLevel(artTex, linSamp, b.xy + t * b.zw, min(lod, 6.0));
     let wear = 1.0 - 0.25 * smoothstep(0.5, 0.72, nB);
     let al = art.a * wear; base = mix(base, c.rgb * c.rgb * art.rgb, al); s.rough = mix(s.rough, min(s.rough, 0.42), al); if (s.metal > 0.5) { s.metal *= 1.0 - al; }
   }
   s.albedo = clamp(base, vec3f(0.0), vec3f(0.94)); return s;
 }
-/** under the open sky? (the building's own rooms are dry) */
-fn openAir(x: vec3f) -> bool { let room = abs(x.x) < 12.0 && abs(x.z) < 8.0 && (x.y < 3.3 || (x.y < 6.55 && x.x < 4.0)); return !room; }
 /** the pool's surface, and what the rain does to it */
 fn poolNormal(p: vec2f, t: f32) -> vec3f { var s = waveSlope(p, t) * (1.0 - 0.45 * frame.weather.y); if (frame.weather.y > 0.0) { s += rainRings(p, t, frame.weather.y) + rainRings(p * 1.7 + 5.0, t * 1.1, frame.weather.y) * 0.6; } return normalize(vec3f(-s.x, 1.0, -s.y)); }
 /** THE WET FILM, laid over any material the rain reaches. What soaks goes dark and stays dull; what sheds water shines; low ground fills, and is a mirror with rings in it */
 fn wetFilm(s0: Surf, fp: f32) -> Surf {
   var s = s0; let w = frame.weather.x; if (w <= 0.0 || !openAir(s.x + s.ng * 0.02)) { return s; }
   if (s.kind == 14u || s.kind == 20u) { s.albedo *= mix(1.0, 0.82, w); s.rough = mix(s.rough, 0.24, w); return s; }
-  let up = sat(s.ng.y); let soaks = select(select(0.55, 0.15, s.metal > 0.5 || s.rough < 0.35), 1.0, s.kind == 1u || s.kind == 5u || s.kind == 6u || s.kind == 13u || s.kind == 15u || s.kind == 16u || s.kind == 10u || s.kind == 21u);
+  let up = sat(s.ng.y); let soaks = select(select(0.55, 0.15, s.metal > 0.5 || s.rough < 0.35), 1.0, s.kind == 1u || s.kind == 22u || s.kind == 5u || s.kind == 6u || s.kind == 13u || s.kind == 15u || s.kind == 16u || s.kind == 10u || s.kind == 21u);
   // how low the ground is here: broad dips and the fine unevenness of what was laid
   let low = fbm(s.x.xz * 0.34 + 5.0) + 0.10 * (vnoise(s.x.xz * 2.7) - 0.5); let pud = w * smoothstep(0.50 - 0.07 * w, 0.565, low) * smoothstep(0.93, 0.995, up); let damp = w * smoothstep(0.42 - 0.06 * w, 0.54, low) * up;
   // down a wall it runs in streaks

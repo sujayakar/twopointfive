@@ -1,5 +1,6 @@
 // THE BUILDING: white outside, one strong color a room inside, a garden and a pool on the terrace, doors that swing.
 import { plan } from './nav';
+import type { Place } from './place';
 import { settle, freeEdges } from './faces';
 import { type V3, type Rot, rotY, rotX, rotZ, compose, apply, add, mul, sub, norm, rng, smooth } from '../math';
 import { World, F, type Piece, type Mark, taper } from './world';
@@ -8,7 +9,7 @@ import { plantKit, domeTree, MAPLE, HEDGE, GRASS, tuft, bush, type Kit } from '.
 import { Person, type Stop } from './people';
 
 export interface Door { name: string; hinge: V3; yaw: number; swing: number; open: number; want: number; leaf: Piece[]; local: { at: V3; half: V3 }[]; slide?: V3 }
-export interface Building { world: World; doors: Door[]; people: Person[]; levels: { name: string; cut: number; look: V3 }[]; pool: [number, number, number, number]; poolTop: number; poolDeep: number }
+export interface Building { world: World; doors: Door[]; people: Person[]; levels: { name: string; cut: number; look: V3 }[]; pool: [number, number, number, number]; poolTop: number; poolDeep: number; place: Place }
 type Hole = { a: number; b: number; y0: number; y1: number; kind: 'door' | 'window' | 'open'; glass?: boolean; frame?: V3; sky?: 1 | -1; bars?: number };
 const FL = 3.4, H = 3.2;                                              // floor to floor; clear height
 
@@ -237,12 +238,18 @@ export function makeBuilding(): Building {
   who(C.red as V3, 1.3, false, [{ at: [14.6, 0, 6.5] }, { at: [14.4, 0, -1.5], wait: 2.6, face: -1.6 }, { at: [13.9, 0, -5.6] }, { at: [14.2, 0, 1.2] }]);
   settle(w.pieces); for (const [p, mask] of freeEdges(w.pieces)) p.flags |= mask << 16; for (const p of w.moving) if (!p.quad && !p.planes?.length) p.flags |= 0xfff << 16;
   void r; void smooth; void rotZ; void taper; void ({} as Kit);
-  return { world: w, doors, people, levels: [{ name: 'Roof', cut: 1e9, look: [0, 3.2, 0] }, { name: 'Upper floor', cut: FL + 2.55, look: [0, 3.4, 0] }, { name: 'Ground floor', cut: 2.55, look: [0, 0.6, 0] }], pool: [px0, pz0, px1, pz1], poolTop, poolDeep: poolTop - pf };
+  return { place: PLACE, world: w, doors, people, levels: [{ name: 'Roof', cut: 1e9, look: [0, 3.2, 0] }, { name: 'Upper floor', cut: FL + 2.55, look: [0, 3.4, 0] }, { name: 'Ground floor', cut: 2.55, look: [0, 0.6, 0] }], pool: [px0, pz0, px1, pz1], poolTop, poolDeep: poolTop - pf };
 }
 
 // ---------------------------------------------------------------- what moves, as a pure function of the tick
 export function poseDoor(d: Door) {
-  const a = d.yaw + d.swing * d.open * 1.75, rt: Rot = rotY(a); d.leaf.forEach((p, i) => { const l = d.local[i]!; p.at = add(d.hinge, apply(rt, l.at)); p.rot = rt; p.half = l.half; });
+  const a = d.yaw + (d.slide ? 0 : d.swing * d.open * 1.75), rt: Rot = rotY(a), at = d.slide ? add(d.hinge, mul(d.slide, d.open)) : d.hinge; d.leaf.forEach((p, i) => { const l = d.local[i]!; p.at = add(at, apply(rt, l.at)); p.rot = rt; p.half = l.half; });
 }
-/** the building as someone would break into it: nearly all of it dark, a pool of light here and there */
-export const QUIET: { hour: number; groups: Record<string, number> } = { hour: 23, groups: { atrium: 0.10, orange: 0, green: 0.06, blue: 0.25, gallery: 0, studio: 0, lounge: 0.12, landing: 0.08, terrace: 0.5, pool: 0.35 } };
+const PLACE: Place = {
+  name: 'rooftop', title: 'ROOFTOP', rooms: [[-12, -0.5, -8, 12, 3.3, 8], [-12, 3.3, -8, 4, 6.7, 8]], openFloor: 3.5, sunAt: [4, 4, 0], sunSize: 30,
+  start: { hour: 16.4, look: [1.5, 3, 0.5], yaw: 0.62, pitch: 0.86, dist: 50, level: 0, wet: 0, rain: 0, steam: 1 }, floors: [3.42, 3.42, 0.02], pan: [18, 14],
+  legs: [{ name: 'roof', look: [1, 3, 0], dist: 52, level: 0 }, { name: 'garden', look: [7.5, 3.6, 0.5], dist: 32, level: 0 }, { name: 'upper floor', look: [-4, 3.4, -1], dist: 38, level: 1 }, { name: 'ground near', look: [2, 0.6, 0], dist: 30, level: 2 }, { name: 'ground', look: [0, 0.6, 0], dist: 46, level: 2 }],
+  groups: ['atrium', 'orange', 'green', 'blue', 'gallery', 'studio', 'lounge'], quiet: { hour: 23, groups: { atrium: 0.10, orange: 0, green: 0.06, blue: 0.25, gallery: 0, studio: 0, lounge: 0.12, landing: 0.08, terrace: 0.5, pool: 0.35 } },
+  fires: [[-0.5, 0.02, 3.2], [-15.2, 0.02, 5.2]], smokes: [[0.5, 0.02, 1.5], [6.5, 0.02, -3.0]],
+  judged: [['orange', [4, 0, -8, 12, 3.2, 0]], ['green', [4, 0, 0, 12, 3.2, 8]], ['blue', [-12, 0, -8, -4, 3.2, 0]], ['gallery', [-12, 0, 0, -4, 3.2, 8]], ['atrium', [-4, 0, -8, 4, 3.2, 8]], ['studio', [-12, 3.4, -8, -4, 6.6, -2.2]], ['lounge', [-12, 3.4, 1, -4, 6.6, 8]], ['all', [-99, -99, -99, 99, 99, 99]]],
+};
