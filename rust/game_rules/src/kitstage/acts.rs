@@ -107,9 +107,9 @@ pub fn ask_veil(g: &Game, st: &mut KitStage) {
     st.veil_asked = Some(g.time);
     st.veil_laid = false;
 }
-fn press(st: &mut KitStage, key: &'static str) { if !st.a.press.contains(&key) { st.a.press.push(key); } }
+pub(super) fn press(st: &mut KitStage, key: &'static str) { if !st.a.press.contains(&key) { st.a.press.push(key); } }
 fn unpress(st: &mut KitStage, key: &'static str) { st.a.press.retain(|k| *k != key); }
-fn to(g: &Game, b: &mut Beat, phase: &'static str) { b.phase = phase; b.pt = g.time; }
+pub(super) fn to(g: &Game, b: &mut Beat, phase: &'static str) { b.phase = phase; b.pt = g.time; }
 fn mark(g: &Game, b: &mut Beat, word: &'static str) { b.marks.push(word); if b.mark_t.is_nan() { b.mark_t = g.time; } }
 fn pos(g: &Game, b: &Beat) -> V3 { g.ch[b.ch_id].pos }
 fn sam_pos(g: &Game) -> V3 { g.ch[g.pl[g.player].ch].pos }
@@ -153,12 +153,18 @@ fn mates_can(g: &Game) -> bool { let me = sam_id(g); g.items.items.iter().any(|&
 /// the thing thrown has gone off: it says so, or it has left the list, as a thing that has gone off does
 fn item_went(g: &Game, b: &Beat) -> bool { b.item.map_or(false, |i| !g.items.items.contains(&i) || th::item_fired(g, i)) }
 fn cans(g: &Game) -> f64 { g.items.items.iter().filter(|&&i| th::item_kind(g, i) == th::ItemKind::Smoke && th::item_fired(g, i)).count() as f64 }
-/// the smoke cans venting are shut: the game's own emitters, and what the picture was told of them comes to its end by the time it was told (`after`)
+/// the smoke cans venting are shut: the game's own emitters, and the word to the picture's solver where one was venting
 pub(super) fn shut_cans(g: &mut Game) {
-    for k in 0..g.items.items.len() { let i = g.items.items[k]; if th::item_kind(g, i) == th::ItemKind::Smoke && th::item_fired(g, i) { th::item_set_emit_t(g, i, 0.0); } }
+    let mut any = false;
+    for k in 0..g.items.items.len() { let i = g.items.items[k]; if th::item_kind(g, i) == th::ItemKind::Smoke && th::item_fired(g, i) && th::item_emit_t(g, i) > 0.0 { th::item_set_emit_t(g, i, 0.0); any = true; } }
     crate::sense::smoke_shut(g);
+    if any { crate::out_events::smoke_cans_shut(g); }
 }
-pub(super) fn gas_out(g: &mut Game) { if crate::sense::smoky(g) { crate::smoke_types::smoke_system_like_clear_all(g); crate::out_events::push_smoke_system_like_clear_all(g); } }
+/// the air empty, for the lamp's dark: the game's smoke, and the picture's: the muzzle's jet is told to the picture's solver alone, so the game's own smoke says nothing of it. `first`: the row says so, whatever was told; else only what has been told since the last clear
+pub(super) fn gas_out(g: &mut Game, st: &mut KitStage, first: bool) {
+    if crate::sense::smoky(g) { crate::smoke_types::smoke_system_like_clear_all(g); }
+    if first || st.a.smoke_told { crate::out_events::push_smoke_system_like_clear_all(g); st.a.smoke_told = false; }
+}
 
 // ------------------------------------------------------------ the pools
 fn count(c: &MemberKit, k: &str) -> f64 {
@@ -1259,6 +1265,8 @@ pub fn live(g: &mut Game, st: &mut KitStage) {
     st.a.beam = None;
     st.a.kneel = None;
     st.a.home_t = f64::NAN;
+    st.a.hole_men.clear();
+    st.a.hole_all = false;
     st.a.beat = None;
     st.a.apart = false;
     st.a.dirty = false;
@@ -1285,13 +1293,14 @@ pub fn live(g: &mut Game, st: &mut KitStage) {
     pools(g, st, None);
     st.a.vent_at = -1.0;
     st.a.vent_kill = -1.0;
-    st.a.rest_until = g.time + if st.a.asked.is_some() { 0.0 } else { K.rest_stage };
+    st.a.rest_until = g.time + if st.a.asked.is_some() || st.a.seated { 0.0 } else { K.rest_stage };
     if st.who > 0 { let m0 = actor(g, st); rotate(g, st, m0); }
 }
 /// WHAT LIVES ON THROUGH A RESTAGE: the game and every row id are new and its clock has gone back; what the director was asked and what it remembers of this way, and the counters a check reads, go on
 pub(super) fn carry(was: &Acts, a: &mut Acts) {
     a.cards = was.cards.clone();
     (a.hi, a.asked, a.flip, a.rest_next, a.beat_n) = (was.hi, was.asked, was.flip, was.rest_next, was.beat_n);
+    (a.seated, a.seat_tried) = (was.seated, was.seat_tried);
     (a.shut_wall, a.shut_own) = (was.shut_wall.clone(), was.shut_own.clone());
     (a.issued_suit, a.issued_trim) = (was.issued_suit.clone(), was.issued_trim.clone());
     a.kept = was.kept.clone();
@@ -1326,7 +1335,9 @@ pub(super) fn finish(g: &mut Game, st: &mut KitStage, mut b: Beat, how: &'static
     let quick = how == "cut";
     let hole_made = b.prelude && b.marks.contains(&"hole");
     st.a.home_men = b.moved.iter().copied().filter(|&x| Some(x) != b.man).collect();
-    st.a.home_until = if st.a.home_men.is_empty() { -1.0 } else { now + K.swap_secs };
+    // (at a wall left open: who the next row waits for. The charge that opened it: everybody, Sam too. Any other row: the men it moved, once)
+    if hole_made { st.a.hole_men = st.order.clone(); st.a.hole_all = true; }
+    else if st.hole { for x in b.moved.iter().copied().chain(b.man) { if !st.a.hole_men.contains(&x) { st.a.hole_men.push(x); } } }
     if !far || hole_made {
         let n = b.moved.len();
         for j in 0..n {
@@ -1415,9 +1426,10 @@ pub(super) fn cut(g: &mut Game, st: &mut KitStage) {
     if b.man.is_none() && b.item.is_none() { g.pl[pl].pending_throw = None; g.pl[pl].throw_held = false; }
     if b.man.is_none() && g.pl[pl].charging.is_some() { crate::doortools::door_tools_cancel_sam(g); }
     if b.field == "smoke" && (b.thrown || b.item.is_some()) { shut_cans(g); st.a.vent_kill = g.time + K.vent_kill; }
+    // (asked before what lies unfired is taken up: a frag taken off the floor has not gone off)
+    if b.field == "frags" && b.mark_t.is_nan() && (g.door_tools.stats.frags > b.base || item_went(g, &b)) { mark(g, &mut b, "frag"); }
     let mut i = g.items.items.len();
     while i > 0 { i -= 1; let it = g.items.items[i]; if th::item_kind(g, it) == th::ItemKind::Frag && !th::item_fired(g, it) { th::throwables_remove_at(g, i as f64); } }
-    if b.field == "frags" && b.mark_t.is_nan() && (g.door_tools.stats.frags > b.base || item_went(g, &b)) { mark(g, &mut b, "frag"); }
     if b.man.is_none() { g.pl[pl].launch_held = None; if b.row == Act::Cam { g.pl[pl].cams.clear(); } }
     let info = row(b.row);
     let on_wall = info.team && !g.wall_charge.set.is_empty();
@@ -1451,7 +1463,7 @@ fn begin(g: &mut Game, st: &mut KitStage, f0: &'static str) {
         ch: chan(g.ch[c].aim_yaw), legs: Vec::new(), leg: 0, leg_t: f64::NAN, quiet: false, turn: false, pitch: None, rose: false, h_to: 1.1, moved: Vec::new(), loose: false, fire: None, shots: 0, shot_t: f64::NAN, via: None, drift: 0.0,
     };
     // (the wall charge's own tile at a wall already open: the wall stood again under the dissolve first, then its whole row. So too after `hole_bursts` bursts through it)
-    if st.hole && (b.row == Act::WallCharge || (st.a.shot && st.a.hole_shots >= K.hole_bursts)) { st.a.dirty = true; if st.a.asked.is_none() { st.a.ask_t = now; } st.a.asked = Some(f); return; }
+    if st.hole && (b.row == Act::WallCharge || (st.a.shot && st.a.hole_shots >= K.hole_bursts)) { st.a.dirty = true; st.a.asked = Some(f); return; }
     if row(b.row).opening && walled(st) {
         if let Some(no) = st.a.shut_wall.clone() {
             st.a.refused = Some(format!("{}: {}", f, no));
@@ -1518,7 +1530,9 @@ fn tidy(g: &mut Game, st: &mut KitStage) {
     let slack = if st.quiet && b_man.is_some() { 0.25 } else { 0.0 };
     if !st.a.cost_t.is_nan() { g.puppet = Some(GamePuppet { aim: Some(at(st, [0.0, 0.0, QK.cost.aim_y])), ..GamePuppet::zeroed() }); }
     else if (!b_some || b_man.is_some()) && !b_team {
-        if flat(p, st.sam) > K.on_slot + slack && !(!b_some && actor(g, st).is_none() && away(g, st)) { sam_goes(g, st.sam); }
+        // (his walk would stop theirs, so the men first. At a wall left open: only the men it has yet to wait for, `swap_secs` at most: then he is walked home by the same wait)
+        let men_first = !b_some && actor(g, st).is_none() && away(g, st) && (!st.hole || (!st.a.hole_men.is_empty() && (st.a.home_t.is_nan() || now - st.a.home_t < K.swap_secs)));
+        if flat(p, st.sam) > K.on_slot + slack && !men_first { sam_goes(g, st.sam); }
         else if g.puppet.is_some() { g.puppet = None; }
     }
     if !b_some && (!g.door_tools.ops.is_empty() || !g.door_tools.set.is_empty()) { crate::doortools::door_tools_reset(g); pools(g, st, None); }
@@ -1551,6 +1565,7 @@ fn direct(g: &mut Game, st: &mut KitStage) {
         if r == Step::Done { let how = if b.marks.contains(&"cap") { "cap" } else { "done" }; finish(g, st, b, how); } else { st.a.beat = Some(b); }
     }
     tidy(g, st);
+    if !st.shown { return; }
     quiet::life(g, st);
     if st.a.beat.is_some() { return; }
     if quiet::cost_tick(g, st) { return; }
@@ -1572,9 +1587,8 @@ fn direct(g: &mut Game, st: &mut KitStage) {
     begin(g, st, f);
 }
 /// a thing asked for now: a pick cuts whatever is running and its thing starts from where he stands
-pub(super) fn pick(g: &Game, st: &mut KitStage, f: Option<&'static str>) {
+pub(super) fn pick(st: &mut KitStage, f: Option<&'static str>) {
     st.a.asked = Some(f.unwrap_or("weapon"));
-    st.a.ask_t = g.time;
     st.a.wait_t = f64::NAN;
     if f.is_none() { st.a.flip = 1; }
     if st.a.beat.is_some() { st.a.cut_now = true; }
@@ -1683,11 +1697,12 @@ pub fn after_step(g: &mut Game, st: &mut KitStage) {
     }
     st.a.pin_t = now;
     if g.pl[pl].stagger_until > now { st.a.hits_sam += 1; }
-    // (what the picture's solver was told of a can comes to its end by the row's own clock: a cut one vents nothing)
-    let (killed, limit) = (now < st.a.vent_kill && !st.a.beat.as_ref().map_or(false, |b| b.field == "smoke"), K.vent_secs);
+    // (a can whose fuse runs out under a cut vents nothing: the word to shut comes before a tick's sources are played, so one told this very tick has to be told shut. And what has been told since the air was last cleared)
+    let killed = now < st.a.vent_kill && !st.a.beat.as_ref().map_or(false, |b| b.field == "smoke");
     for e in g.out.iter_mut() {
         if let crate::out_events::OutEvent::SmokeSystemLikeEmit(o) = e {
-            if matches!(o.e.kind, crate::smoke_types::SmokeEmitterKind::Vent | crate::smoke_types::SmokeEmitterKind::Canister) { o.e.ttl = if killed { 0.0 } else { m::min(o.e.ttl, limit) }; }
+            st.a.smoke_told = true;
+            if killed && matches!(o.e.kind, crate::smoke_types::SmokeEmitterKind::Vent | crate::smoke_types::SmokeEmitterKind::Canister) { o.e.ttl = 0.0; }
         }
     }
     if st.a.vent_at >= 0.0 && now >= st.a.vent_at { shut_cans(g); st.a.vent_at = -1.0; }

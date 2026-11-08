@@ -1,10 +1,10 @@
 //! THE QUIET PICTURE'S OWN ROWS: his suppressed gun puts the lamp out, the lean, his light's one blink; LOUD KIT'S COST (a loud row on a quiet job is answered from inside the room); LIFE AT REST (off as shipped).
-use super::acts::{gas_out, off_rest};
+use super::acts::{gas_out, off_rest, press, to};
 use super::aim::{aim_legs, clamp, quiet_tick, Step, R};
 use super::light::{KIT_VIEW_LOOP as K, KIT_VIEW_QUIET as QK};
 use super::plan::KIT_PLAN;
 use super::types::*;
-use super::walk::{at, away, flat, free, sam_goes, sam_stand, v2, yaw_to};
+use super::walk::{along, at, away, flat, free, out_of, sam_goes, sam_stand, v2, yaw_to};
 use crate::doors::door_off;
 use crate::game::{Game, GamePuppet, SlotKind};
 use crate::ids::*;
@@ -14,9 +14,7 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 
-fn press(st: &mut KitStage, k: &'static str) { if !st.a.press.contains(&k) { st.a.press.push(k); } }
 fn smooth(u: f64) -> f64 { let x = clamp(u, 0.0, 1.0); x * x * (3.0 - 2.0 * x) }
-fn to(g: &Game, b: &mut Beat, phase: &'static str) { b.phase = phase; b.pt = g.time; }
 fn lamp_up(g: &Game, st: &KitStage) -> bool {
     st.pool.map_or(false, |p| home::fixture_on(g, p) && !home::fixture_broken(g, p) && home::fixture_disabled_until(g, p) < g.time && g.tab.sim_lightshome_fixture[p].light.is_some())
 }
@@ -81,7 +79,7 @@ pub(super) fn gun_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
             b.marks.push("dark");
             if b.mark_t.is_nan() { b.mark_t = now; }
             st.a.lift_at = now;
-            if QK.cut { gas_out(g); }
+            if QK.cut { gas_out(g, st, true); }
             to(g, b, "dark");
             b.legs = vec![Leg { yaw: yaw_to(p, at(st, [0.0, -1.5, 0.0])), cap: K.gun_rate * R, min_t: -1.0, hold: 0.0 }];
             b.leg = 0;
@@ -97,13 +95,12 @@ pub(super) fn gun_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     }
     if b.phase == "dark" {
         let t = now - b.mark_t;
-        if QK.cut && t < 1.5 { gas_out(g); }
+        if QK.cut && t < 1.5 { gas_out(g, st, false); }
         st.a.rise = 1.0 - smooth((t - QK.walk_at) / 0.4);
         aim_legs(g, st, b);
         if t >= QK.walk_at && b.post.is_none() {
             let plan_face = st.plan.as_ref().map_or(0.0, |x| x.wall.face);
-            let al = (st.sam[0] - st.mid[0]) * st.s[0] + (st.sam[1] - st.mid[1]) * st.s[1];
-            let sg = if al > 0.0 { 1.0 } else { -1.0 };
+            let sg = if along(st, st.sam) > 0.0 { 1.0 } else { -1.0 };
             let jamb = |k: f64| at(st, [k * (st.width / 2.0 + QK.jamb_along), plan_face + QK.jamb_out, 0.0]);
             let jf = jamb(-sg);
             let walk_free = |g: &Game, a: V2, c: V2| { let n = m::ceil(m::hyp2(c[0] - a[0], c[1] - a[1]) / 0.25); let mut i = 1.0; while i <= n { if !free(g, [a[0] + (c[0] - a[0]) * i / n, a[1] + (c[1] - a[1]) * i / n]) { return false; } i += 1.0; } true };
@@ -174,7 +171,7 @@ pub(super) fn light_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step 
         let busy = crate::character::anim_kit_busy(g, c);
         if (g.pl[pl].holstered || busy || g.pl[pl].equip_t > 0.0 || el < 0.15) && el < 2.5 { return Step::On; }
         if g.pl[pl].holstered { b.marks.push("kept"); st.a.refused = Some(String::from("light: the gun never came out")); return Step::Done; }
-        let sg = if (st.sam[0] - st.mid[0]) * st.s[0] + (st.sam[1] - st.mid[1]) * st.s[1] >= 0.0 { 1.0 } else { -1.0 };
+        let sg = if along(st, st.sam) >= 0.0 { 1.0 } else { -1.0 };
         let (w2, o) = (st.width / 2.0, st.plan.as_ref().map_or(0.0, |x| x.wall.face));
         b.quiet = true;
         b.legs = vec![Leg { yaw: yaw_to(p, at(st, [-sg * w2, o, 0.0])), cap: K.gun_rate * R, min_t: -1.0, hold: 0.0 }, Leg { yaw: yaw_to(p, at(st, [sg * w2, o, 0.0])), cap: K.gun_rate * R, min_t: QK.light.sweep, hold: QK.light.hold }];
@@ -198,17 +195,16 @@ fn cost_at(t: f64) -> CostAt {
     CostAt { share: if t >= c.slit { c.room } else { 1.0 }, pool: if t >= c.slit { c.pool } else { 1.0 }, open: t >= c.slit, done: t >= c.slit + c.wide_deg * R / m::max(0.1, c.swing) + c.hold }
 }
 /// THE COST'S LAMP: where it hangs so that the slab through the opened doorway falls along the wall over the man beside it
-fn cost_lamp(g: &Game, st: &KitStage, hinge: Option<V2>) -> (V3, bool) {
+fn cost_lamp(g: &Game, st: &KitStage, hinge: Option<V2>) -> V3 {
     let c = &QK.cost.lamp;
     let (mid, s, n) = (st.mid, st.s, st.n);
     let (face, wall_back) = st.plan.as_ref().map_or((0.0, 0.0), |x| (x.wall.face, x.wall.back));
-    let al = |p: V2| (p[0] - mid[0]) * s[0] + (p[1] - mid[1]) * s[1];
     let w2 = st.width / 2.0;
-    let s_al = al(st.sam);
+    let s_al = along(st, st.sam);
     let sg = if s_al >= 0.0 { 1.0 } else { -1.0 };
-    let o = m::max(0.2, (st.sam[0] - mid[0]) * n[0] + (st.sam[1] - mid[1]) * n[1] - face);
+    let o = m::max(0.2, out_of(st, st.sam) - face);
     let th = face - wall_back;
-    let leaf_far = hinge.map_or(false, |h| al(h) * sg < 0.0);
+    let leaf_far = hinge.map_or(false, |h| along(st, h) * sg < 0.0);
     let (lo, hi) = (if leaf_far { -(w2 - c.clear) } else { -(w2 + c.side) }, w2 - c.clear);
     let need = m::abs(s_al) + c.past - w2;
     let mut back = c.back;
@@ -222,7 +218,7 @@ fn cost_lamp(g: &Game, st: &KitStage, hinge: Option<V2>) -> (V3, bool) {
         a *= 0.85;
         if k == 11 { a = 0.0; }
     }
-    (pos(a, back), reach(a, back) >= m::abs(s_al) - c.body)
+    pos(a, back)
 }
 pub(super) fn cost_off(g: &mut Game, st: &mut KitStage) {
     st.a.cost_t = f64::NAN;
@@ -236,10 +232,10 @@ pub(super) fn cost_off(g: &mut Game, st: &mut KitStage) {
 pub(super) fn cost_begin(g: &mut Game, st: &mut KitStage, b: &Beat) {
     life_off(g, st, true);
     let hinge = st.door.filter(|&d| !door_off(g, d)).map(|d| g.dr[d].def.hinge);
-    let (p, catches) = cost_lamp(g, st, hinge);
+    let p = cost_lamp(g, st, hinge);
     st.a.cost_t = g.time;
     st.a.cost_n += 1;
-    st.a.cost_last = Some(CostSeen { field: b.field, i: b.i, door: hinge.is_some(), leaf: 0.0, up: false, catches, s: 0.0, how: "", moved: 0.0, pool: false });
+    st.a.cost_last = Some(CostSeen { field: b.field, i: b.i, door: hinge.is_some(), leaf: 0.0, up: false, s: 0.0, how: "", moved: 0.0, pool: false });
     st.a.cost_feet = v2(g.ch[g.pl[g.player].ch].pos);
     super::stage::quiet_inside(g, st, 1.0, QK.cost.blade);
     let c = &QK.cost.lamp;
@@ -340,7 +336,7 @@ pub(super) fn life(g: &mut Game, st: &mut KitStage) {
     } else if busy { life_off(g, st, true); return; }
     let a = idle_at(now - st.a.life_t);
     let Some(l) = st.a.life_lamp.filter(|_| !a.done) else { life_off(g, st, false); return };
-    let sg = if (st.sam[0] - st.mid[0]) * st.s[0] + (st.sam[1] - st.mid[1]) * st.s[1] >= 0.0 { 1.0 } else { -1.0 };
+    let sg = if along(st, st.sam) >= 0.0 { 1.0 } else { -1.0 };
     let way = if st.door.map_or(false, |d| !door_off(g, d)) { st.latch } else { -sg };
     let h = st.a.life_home;
     let i = (if st.a.life_hung { QK.own.intensity * QK.idle.gain * a.env } else { QK.own.intensity * st.a.blade }) * a.lit;

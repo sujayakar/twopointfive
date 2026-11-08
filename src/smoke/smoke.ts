@@ -256,6 +256,8 @@ export class SmokeSystem implements SmokeSystemLike {
     this.engine.device.queue.writeBuffer(this.M, this.bentAt * 4, new Uint32Array([wide, deep]));
     rows(this.M, (this.bentAt + BENT_HEAD) * 4, (this.bentAt + BENT_HEAD + BENT_PLAN) * 4);
   }
+  /** the cans venting stop now: what they let out stays in the air */
+  shutCans() { for (const e of this.emitters) if (e.kind === 'vent' || e.kind === 'canister') e.ttl = Math.min(e.ttl, e.age); }
   clearAll() { this.snap = 0; this.bentMade = -1; this.bentPlan = 0; this.bentRows = 0; this.emitters.length = 0; this.pushes.length = 0; this.needsReset = true; this.needsWipe = true; this.boxes = []; this.binding.count = 0; this.quiet = 1e9; this.epoch++; this.zeroStats(); }
   private again = false; private skipWas = false;
   obstaclesChanged(c: Vec3, r: number) { this.noteDirty([c[0] - r, c[1] - r, c[2] - r], [c[0] + r, c[1] + r, c[2] + r]); }

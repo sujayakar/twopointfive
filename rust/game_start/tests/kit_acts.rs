@@ -1,6 +1,7 @@
 //! THE KIT PICTURE'S ACTS: the man whose card is open uses the thing under the highlight, at the door, again and again. Every row of every card is played here on the kinds of way a level has: a door, a set, a blank wall, an open gap, the quiet picture, the solo night. There is no other game to compare with: a row's marks are what it did, in the game's own books.
 use game::game::GuardState;
-use game::kitstage::{self, walk, KitStage};
+use game::kitstage::{self, light::KIT_VIEW_LOOP as K, walk, KitStage};
+use game::out_events::OutEvent;
 use game_start::json::{self, Json};
 use game_start::play::{Opts, Play};
 
@@ -15,9 +16,26 @@ const REFUSALS: &[&str] = &[
     "not a suppressed gun", "no lamp burning to put out", "nobody to take it",
 ];
 
-fn stood(level: &str, words: &str) -> Play {
+/// the mission stood, and nobody yet told the page has shown it
+fn unshown(level: &str, words: &str) -> Play {
     let link = format!("?levelFile={}&kitview{}{}", std::path::Path::new(level).file_name().unwrap().to_str().unwrap(), if words.is_empty() { "" } else { "&" }, words);
     Play::mission(level, &link, &Opts { seed: 3, ..Default::default() })
+}
+fn stood(level: &str, words: &str) -> Play {
+    let mut p = unshown(level, words);
+    kitstage::shown(&mut p.g);
+    p
+}
+/// a frame, and what it told the host
+fn frame_out(p: &mut Play) -> Vec<OutEvent> { let h = p.host; game_start::stand::frame(&mut p.g, &h, 1.0 / 60.0) }
+/// the file as team indexes
+fn file(p: &Play) -> Vec<usize> { let team = game::scenario_run::team_of(&p.g); st(p).order.iter().map(|x| team.iter().position(|t| t == x).unwrap()).collect() }
+/// this man stood `d` m out from his place, this very tick
+fn hold_off(p: &mut Play, x: game::ids::GuardId, d: f64) {
+    let (h, n) = { let s = st(p); (walk::home_of(&p.g, s, x).0, s.n) };
+    let c = p.g.gd[x].ch;
+    p.g.ch[c].pos = [h[0] + n[0] * d, 0.0, h[1] + n[1] * d];
+    p.g.ch[c].vel = [0.0; 3];
 }
 fn st(p: &Play) -> &KitStage { p.g.kit_stage.as_ref().expect("a stage") }
 fn sam(p: &Play) -> [f64; 3] { p.g.ch[p.g.pl[p.g.player].ch].pos }
@@ -132,6 +150,8 @@ fn every_row(level: &str, words: &str, what: &str) -> Vec<String> {
     // (the cards' big slots hold a tool: their tile's thing is on the door)
     use game::kit::BigKit;
     for (i, big) in [(0usize, BigKit::Hammer), (1, BigKit::Hammer)] { if let Some(c) = p.g.m.kit.kit.members.get_mut(i) { c.big = big; } }
+    // (his card as the page sends it: on a quiet mission and the solo night it is also the stealth card his run wears)
+    p.g.m.kit.stealth_you = Some(p.g.m.kit.kit.members[0].clone());
     kitstage::cards(&mut p.g, -1);
     p.run(1.0);
     let rows = game::kit::kit_rows(&mut p.g, 0.0);
@@ -306,6 +326,181 @@ fn left_alone(level: &str, words: &str) {
 #[test] fn sixty_seconds_mousehole() { left_alone("mousehole.json", "roomclear&squad4"); left_alone("mousehole.json", "roomclear&squad4&way=2"); }
 #[test] fn sixty_seconds_quiet() { left_alone("bazaar.json", "quiet&squad=1"); left_alone("vault.json", "quiet"); left_alone("office.json", ""); }
 #[test] fn sixty_seconds_span_and_gap() { left_alone(&wall_way(), "roomclear&squad4"); left_alone(&gap_way(), "roomclear&squad4"); }
+
+/// goggles taken off and put on again: the set of bare-eyed men is of each game's own men, and the game thrown away takes its set with it
+#[test]
+fn goggles_off_and_on_again_he_wears_them() {
+    let mut p = stood("records.json", "roomclear&squad4");
+    let under = |p: &mut Play| { kitstage::under(&mut p.g); p.frame(); };
+    tell(&mut p, &mut |m| m.nvg = false, 1, -1);
+    under(&mut p);
+    let x = game::scenario_run::team_of(&p.g)[0];
+    assert!(!game::kit::kit_goggles(&p.g, x), "off: he has none");
+    tell(&mut p, &mut |m| m.nvg = true, 1, -1);
+    under(&mut p);
+    let x = game::scenario_run::team_of(&p.g)[0];
+    assert!(game::kit::kit_goggles(&p.g, x), "on again: he wears them");
+}
+
+/// a frag still on its fuse, cut: nothing burst, so nothing is marked and nothing is staged again
+#[test]
+fn a_pick_during_the_fuse_begins_at_once() {
+    let mut p = stood("records.json", "roomclear&squad4");
+    kitstage::open(&mut p.g, 0, "frags");
+    let lit = |p: &Play| st(p).a.beat.as_ref().map_or(false, |b| b.field == "frags" && b.marks.is_empty() && b.item.map_or(false, |i| p.g.items.items.contains(&i)));
+    p.until(14.0, |p| lit(p));
+    assert!(lit(&p), "the frag is out and has not burst");
+    let (n, serial) = (st(&p).a.beat.as_ref().unwrap().n, st(&p).a.restages);
+    kitstage::open(&mut p.g, 0, "suit");
+    let t0 = p.g.time;
+    p.until(0.1, |p| st(p).a.beat.as_ref().map_or(false, |b| b.n > n));
+    assert_eq!(st(&p).a.beat.as_ref().map(|b| b.field), Some("turn"), "the pick's row is up {} s after the pick", p.g.time - t0);
+    let last = st(&p).a.last.as_ref().unwrap();
+    assert!(!last.marks.contains(&"frag"), "nothing burst: {:?}", last.marks);
+    p.run(3.0);
+    assert_eq!((st(&p).a.restages, st(&p).veil_asked), (serial, None), "no restage");
+}
+
+/// the fourth man's card open through a restage: he keeps his place in the file, and goes round Sam again
+#[test]
+fn a_restage_keeps_the_fourth_man_fourth() {
+    let mut p = stood("records.json", "roomclear&squad4");
+    kitstage::open(&mut p.g, 4, "charges");
+    p.run(1.0);
+    let was = file(&p);
+    assert_eq!(was[3], 3, "he stands fourth");
+    assert!(st(&p).four, "at his place by Sam");
+    let serial = st(&p).a.restages;
+    p.until(40.0, |p| st(p).a.restages != serial);
+    assert!(st(&p).a.restages != serial, "his charge left a leaf to hang again: {:?}", st(&p).a.last);
+    assert_eq!(file(&p), was, "the file as it stood");
+    assert!(st(&p).four, "he goes to his place by Sam again");
+}
+
+/// the lamp shot out: the picture's smoke, a muzzle's jet that the game's own smoke never holds, is told to clear
+#[test]
+fn the_shot_that_puts_the_lamp_out_clears_the_picture() {
+    let mut p = stood("vault.json", "quiet");
+    kitstage::open(&mut p.g, 0, "weapon");
+    let mut told = false;
+    let mut dark = 0;
+    for _ in 0..1200 {
+        let out = frame_out(&mut p);
+        let up = st(&p).a.beat.as_ref().map_or(false, |b| b.marks.contains(&"dark"));
+        if up { dark += 1; told |= out.iter().any(|e| matches!(e, OutEvent::SmokeSystemLikeClearAll)); }
+        if dark > 10 { break; }
+    }
+    assert!(dark > 0, "the lamp went out: {:?} {:?}", st(&p).a.refused, st(&p).a.last);
+    assert!(told, "the clear is in the out events after the shot");
+}
+
+/// the link's `stillkit`: the old picture's word: staged and held
+#[test]
+fn the_link_can_ask_for_the_still_picture() {
+    let mut p = stood("records.json", "roomclear&squad4&stillkit");
+    assert!(st(&p).still, "the link's word");
+    p.run(4.0);
+    assert_eq!(st(&p).a.beat_n, 0, "no acts");
+}
+
+/// A WALL OPENED FOR A ROW: when the row asked begins, the men and Sam are on their places: not walking in from where the charge had them stand
+#[test]
+fn at_a_hole_the_light_waits_for_sam_on_his_place() {
+    let l = wall_way();
+    let mut p = stood(&l, "roomclear&squad4");
+    kitstage::open(&mut p.g, 0, "light");
+    let mut off_at_start = None;
+    let mut off_on_sweep = None;
+    for _ in 0..3600 {
+        p.frame();
+        let s = st(&p);
+        let Some(b) = s.a.beat.as_ref() else { continue };
+        if b.field != "light" || b.prelude || !s.hole || !b.lit { continue; }
+        let post = b.post.unwrap();
+        if off_at_start.is_none() { off_at_start = Some(flat(sam(&p), s.sam)); }
+        if b.leg >= 1 { off_on_sweep = Some(flat(sam(&p), post)); break; }
+    }
+    let (a, b) = (off_at_start.expect("the light came after the charge"), off_on_sweep.expect("the beam swept"));
+    assert!(a <= K.on_slot + 0.1 + 1.0 / 60.0, "{} m off his place as the beam comes on", a);
+    assert!(b <= K.way_m, "{} m off his post as the beam sweeps", b);
+}
+/// a man who cannot get home at a hole holds the first row after it, once, and no row after that
+#[test]
+fn a_man_on_rubble_holds_no_row_again_and_again() {
+    let l = wall_way();
+    let mut p = stood(&l, "roomclear&squad4");
+    kitstage::open(&mut p.g, 0, "light");
+    p.until(60.0, |p| st(p).hole);
+    assert!(st(&p).hole, "the wall is open");
+    let x = st(&p).order[1];
+    let mut waits: Vec<f64> = Vec::new();
+    let (mut ended, mut n) = (f64::NAN, st(&p).a.beat_n);
+    for _ in 0..3600 {
+        hold_off(&mut p, x, 0.5);
+        p.frame();
+        let s = st(&p);
+        if s.a.beat.is_none() && ended.is_nan() { ended = s.a.rest_until.max(p.g.time); }
+        if s.a.beat_n != n { n = s.a.beat_n; if !ended.is_nan() { waits.push(p.g.time - ended); } ended = f64::NAN; }
+    }
+    assert!(waits.len() >= 3, "rows go on: {:?}", waits);
+    let cap = K.swap_secs + K.home_secs;
+    assert!(waits[0] <= cap + 0.1, "the once: {:?}", waits);
+    for w in &waits[1..] { assert!(*w < 0.5, "a row held {} s after the hole's own wait: {:?}", w, waits); }
+}
+
+/// a smoke cut while it vents: the picture is told to shut its cans
+#[test]
+fn a_smoke_cut_while_it_vents_is_shut_in_the_picture() {
+    let mut p = stood("records.json", "roomclear&squad4");
+    kitstage::open(&mut p.g, 0, "smoke");
+    p.until(14.0, |p| st(p).a.beat.as_ref().map_or(false, |b| b.field == "smoke" && b.marks.contains(&"smoke")));
+    assert!(st(&p).a.beat.as_ref().map_or(false, |b| b.marks.contains(&"smoke")), "the can vents");
+    p.run(0.5);
+    kitstage::open(&mut p.g, 0, "suit");
+    let out = frame_out(&mut p);
+    assert_eq!(st(&p).a.last.as_ref().map(|l| l.how), Some("cut"));
+    assert!(out.iter().any(|e| matches!(e, OutEvent::SmokeCansShut)), "the word is in the tick's out events");
+    for _ in 0..30 {
+        for e in frame_out(&mut p) { if let OutEvent::SmokeSystemLikeEmit(o) = e { assert!(!matches!(o.e.kind, game::smoke_types::SmokeEmitterKind::Vent | game::smoke_types::SmokeEmitterKind::Canister) || o.e.ttl == 0.0, "a can told to vent after the cut"); } }
+    }
+}
+
+/// a man who cannot be got home: one restage, the row that waited begins at once, and no loop of restages
+#[test]
+fn a_man_held_off_his_place_does_not_loop_the_restage() {
+    let mut p = stood("records.json", "roomclear&squad4");
+    kitstage::open(&mut p.g, 0, "weapon");
+    let (mut restaged_at, mut late) = (f64::NAN, None);
+    let mut last = st(&p).a.restages;
+    for _ in 0..1200 {
+        let x = st(&p).order[0];
+        hold_off(&mut p, x, 0.15);
+        p.frame();
+        let s = st(&p);
+        if s.a.restages != last { last = s.a.restages; restaged_at = p.g.time; late = None; }
+        if s.a.beat.is_some() && late.is_none() && !restaged_at.is_nan() { late = Some(p.g.time - restaged_at); }
+    }
+    let s = st(&p);
+    assert!(s.a.beat_n >= 3, "Sam's rows go on: {} of them", s.a.beat_n);
+    assert!(s.a.restages < 2, "{} restages in 20 s", s.a.restages);
+    if s.a.restages > 0 { assert!(late.map_or(false, |l| l <= 0.1), "the row that waited begins at once: {:?}", late); }
+}
+
+/// nothing begins before the page has shown the picture: a row asked for waits for it, and a restage does not take the word back
+#[test]
+fn nothing_begins_before_the_page_has_shown_the_picture() {
+    let mut p = unshown("records.json", "roomclear&squad4");
+    kitstage::open(&mut p.g, 0, "weapon");
+    p.run(5.0);
+    assert_eq!(st(&p).a.beat_n, 0, "no row before it");
+    kitstage::shown(&mut p.g);
+    p.until(2.0, |p| st(p).a.beat_n > 0);
+    assert!(st(&p).a.beat_n > 0, "and a row after it");
+    tell(&mut p, &mut |m| m.nvg = !m.nvg, 1, -1);
+    kitstage::under(&mut p.g);
+    p.frame();
+    assert!(st(&p).shown, "the word goes on through a restage");
+}
 
 /// THE RED PATH: a stage whose director never begins a row is what a count of rows catches
 #[test]
