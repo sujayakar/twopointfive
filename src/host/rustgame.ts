@@ -69,6 +69,8 @@ import { crossing, surfaceHost } from 'tps-bridge/surface';
 import { Drawn, drawRefused, type DrawFace } from '../draw/drawn';
 import { Want } from '../draw/sections';
 import { fogFrom } from '../draw/fog';
+import { smokeFrom } from '../draw/smoke';
+import type { SmokeSystem } from '../smoke/smoke';
 import LISTS from 'tps-bridge/puppet-lists.json';
 
 
@@ -362,7 +364,7 @@ function grown(g: Game): void {
 export function rustAttach(g: Game): void {
   if (!X) throw new Error('rustAttach before rustBoot');
   const G = g as unknown as Record<string, any>;
-  H = { drawn: new Drawn(X as unknown as DrawFace, MEM!, Want.fog), moved: 0, viewAt: -1, view: NO_VIEW, told: -1, toolScan: false, inRun: false, g, lastCmds: null, kept: new Set(), startKept: 0, back: null, took: false, shelfSig: '', poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null, quiet: false, owed: 0, quietDt: 1 / 60 };
+  H = { drawn: new Drawn(X as unknown as DrawFace, MEM!, Want.fog | (drawnSmoke(g) ? Want.smoke : 0)), moved: 0, viewAt: -1, view: NO_VIEW, told: -1, toolScan: false, inRun: false, g, lastCmds: null, kept: new Set(), startKept: 0, back: null, took: false, shelfSig: '', poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null, quiet: false, owed: 0, quietDt: 1 / 60 };
   const held = H;
   G.stepSeats = (dt: number, cmds: readonly PlayerCmd[]) => step(held, dt, cmds);
   // (for a networked game, src/net/step.ts: a quiet run of steps, and the game's own words for its state, as `rustHashes` reads them by name for a check)
@@ -509,11 +511,15 @@ function start(S: Held): void {
   console.info(`rust=1: the Rust game started from the page's (${state.length} bytes of state, slot ${slot}) in ${RUST_GAME.startMs.toFixed(0)} ms${RUST_GAME.notCarried.length ? `; the bridge could not carry ${RUST_GAME.notCarried.length} kinds of value (window.__rust.notCarried)` : ''}`);
 }
 
+/** the picture's solver, where this host draws smoke (the harness's null one holds nothing to bend) */
+const drawnSmoke = (g: Game): SmokeSystem | null => { const s = g.smoke as Partial<SmokeSystem> | null; return s?.bent ? s as SmokeSystem : null; };
+
 /** WHAT STANDS ROUND EVERY APPLY, the filtered one and the whole one: the menu's questions for the rows an apply made, the doors' stand-in, and what the
  *  host's writes between ticks are told by */
 function after(S: Held): void {
   // (what the picture is told by section, src/draw: no field of it is on the bridge)
   call('face_draw', () => S.drawn.take(S.h)); fogFrom(S.g.fogOfWar.frame, S.drawn);
+  { const smoke = drawnSmoke(S.g); if (smoke) smokeFrom(smoke, S.drawn); }
   const g = S.g, G = g as unknown as Record<string, any>;
   if (S.toolScan && !S.inStep && !S.inRun) scanRebase(S);   // (an apply between a script's runs of frames, a crossing's or a load's: the puppet as it now stands is the Rust game's, and no tool's write)
   // THE MENU'S QUESTIONS (tools/blitz/ask.ts): every order row and the squad's posture have closures that ask the Rust game by the row's ID; a row or a

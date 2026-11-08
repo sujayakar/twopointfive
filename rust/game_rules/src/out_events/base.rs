@@ -11,7 +11,7 @@ pub fn push_particles_emit(g: &mut crate::game::Game, kind: crate::render_partic
 /// (SmokeSystemLike.clearAll: its body does something of its own, so a part calls this beside it)
 pub fn push_smoke_system_like_clear_all(g: &mut crate::game::Game) { g.out.push(crate::out_events::OutEvent::SmokeSystemLikeClearAll); }
 /// (SmokeSystemLike.emit: its body does something of its own, so a part calls this beside it)
-pub fn push_smoke_system_like_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEmitter) { g.out.push(crate::out_events::OutEvent::SmokeSystemLikeEmit(crate::out_events::OutSmokeSystemLikeEmit { e: e.clone() })); }
+pub fn push_smoke_system_like_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEmitter) { g.out.push(crate::out_events::OutEvent::SmokeSystemLikeEmit(crate::out_events::OutSmokeSystemLikeEmit { e: crate::smoke_types::SmokeEmitter { held: Some(crate::sense::smoke_held(g, e)), ..e.clone() } })); }
 /// (Tap: its body does something of its own, so a part calls this beside it)
 pub fn push_tap(g: &mut crate::game::Game, row: u32, args: &[u8], answer: &[u8]) { g.out.push(crate::out_events::OutEvent::Tap(crate::out_events::OutTap { row: row, args: args.to_vec(), answer: answer.to_vec() })); }
 /// the end card is due: the host opens it after the step (mission `end_card`)
