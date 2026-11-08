@@ -1372,3 +1372,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   plays as it did; only `?pairorders` alone changes: its row now names who has him ("waiting · Tango 1 is facing this way") and dark floor 2.1 to 3.6 m in front of a man no longer reads as seen.
   A way round is a way: on the office's placement 10 the man faces the aisle door, the floor behind him is dark, and the partner goes round by the corridor door and sets up, so `pair-mark`'s last
   line ("the only way lies across his eyes") stages a place where it does not. Check: `tests/pair.rs a_way_across_his_eyes_is_waited_on_by_one_eye`, `a_dark_way_round_is_a_way`, one seed each. Never seen on a GPU.
+- **A 40 mm shell is one plan (2026-11-08; `squad40/p_01.rs plan` → `ShellPlan`).** The man, his shot and why it may not be given are asked each time they are wanted (0.016 ms with one carrier) by the row's
+  `only` and `valid`, the order and, once a frame while its row is lit, by the menu (`follow` → `states[seat].plan`), which is what is drawn. Gone: the answers two askers kept for 0.3 s each. A change of
+  play only where one of those was stale; no switch. CHECK: native, `rust/game_start/tests/orders.rs the_shell_shown_is_the_shell_given`, three seeds. Never seen on a GPU, never played.
