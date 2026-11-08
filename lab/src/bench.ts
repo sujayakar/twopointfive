@@ -105,7 +105,7 @@ export async function flicker(lab: Lab, m: Method, shown: () => Promise<Uint8Cla
   for (let i = 0; i < a.length; i++) { const u = a[i]! / N; b[i] = Math.sqrt(Math.max(0, b[i]! / N - u * u)); } return { by: byKind(b, await kindsOf(lab, w, h)), map: b };
 }
 /** the camera has been turning for 90 frames: that frame against the reference from where it stands; and the same once it has stood still for 120 */
-export async function moving(lab: Lab, m: Method, ref: Method, w: number, h: number, paths = 400, quick = false, shown?: (m: Method, pre: string) => Promise<Uint8ClampedArray>): Promise<{ moving: ByKind; still: ByKind; maps: Float32Array[]; eye?: { moving: ByKind; still: ByKind } }> {
+export async function moving(lab: Lab, m: Method, ref: Method, w: number, h: number, paths = 1000, quick = false, shown?: (m: Method, pre: string) => Promise<Uint8ClampedArray>): Promise<{ moving: ByKind; still: ByKind; maps: Float32Array[]; eye?: { moving: ByKind; still: ByKind } }> {
   const idle = () => lab.gpu.device.queue.onSubmittedWorkDone(), c = lab.camera; await lab.use(m); lab.frameNo = 0; const yaw = c.want.yaw; c.want.yaw = yaw - 0.36; c.snap(); for (let i = 0; i < (quick ? 4 : 120); i++) { lab.draw(); if (i % 4 === 3) await idle(); }
   for (let i = 0; i < (quick ? 4 : 90); i++) { c.want.yaw += 0.004; c.snap(); lab.draw(); if (i % 4 === 3) await idle(); } const a = await picture(lab, m), kinds = await kindsOf(lab, w, h), eyeA = await shown?.(m, 'rt'); for (let i = 0; i < (quick ? 4 : 120); i++) { lab.draw(); if (i % 4 === 3) await idle(); } const s = await picture(lab, m), eyeS = await shown?.(m, 'rt');
   await lab.use(ref); lab.frameNo = 0; for (let i = 0; i < paths; i++) { lab.draw(); if (i % 4 === 3) await idle(); } const t = soft(await picture(lab, ref), w, h), eyeT = await shown?.(ref, 'ref'); c.want.yaw = yaw; c.snap();
@@ -118,7 +118,7 @@ export async function moving(lab: Lab, m: Method, ref: Method, w: number, h: num
 /** the same in what is shown (0‥255 after exposure and curve), where a dark place counts by what can be seen of it */
 export function shownApart(a: Uint8ClampedArray, b: Uint8ClampedArray, kinds: Uint8Array): ByKind { const n = a.length / 4, v = new Float32Array(n); for (let i = 0; i < n; i++) v[i] = (Math.abs(a[i * 4]! - b[i * 4]!) + Math.abs(a[i * 4 + 1]! - b[i * 4 + 1]!) + Math.abs(a[i * 4 + 2]! - b[i * 4 + 2]!)) / 3; return byKind(v, kinds); }
 export const AFTER = [1, 2, 4, 8, 16, 32, 64, 128, 240];
-export async function converge(lab: Lab, m: Method, ref: Method, w: number, h: number, how: 'turn' | 'doors', paths = 400): Promise<{ at: Record<string, number[]>; frames: Record<string, number> }> {
+export async function converge(lab: Lab, m: Method, ref: Method, w: number, h: number, how: 'turn' | 'doors', paths = 1000): Promise<{ at: Record<string, number[]>; frames: Record<string, number> }> {
   const idle = () => lab.gpu.device.queue.onSubmittedWorkDone(), c = lab.camera, yaw = c.want.yaw, doors = lab.building.doors.map(d => d.open); await lab.use(m); lab.frameNo = 0; const set = (open: boolean) => { lab.building.doors.forEach((d, i) => { d.open = d.want = open ? 0.85 : 0; void i; }); lab.pose(); };
   if (how === 'turn') { c.want.yaw = yaw - 0.36; c.snap(); } else set(false); for (let i = 0; i < 160; i++) { lab.draw(); if (i % 4 === 3) await idle(); }
   if (how === 'turn') for (let i = 0; i < 90; i++) { c.want.yaw += 0.004; c.snap(); lab.draw(); if (i % 4 === 3) await idle(); } else set(true);

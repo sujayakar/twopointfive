@@ -10,7 +10,7 @@ fn binDir(b: u32, u: vec2f) -> vec3f { let z = (f32(b >> 4u) + u.x) / 8.0 * 2.0 
 fn gValue(s: u32, b: u32) -> f32 { return guide[s * 32u + (b >> 2u)][b & 3u]; }
 /** what a bin is worth to a surface that faces n: what comes from there, and how squarely */
 fn gWorth(s: u32, b: u32, n: vec3f) -> f32 { return gValue(s, b) * max(dot(binDir(b, vec2f(0.5)), n) + 0.22, 0.0); }
-const GUIDED = 0.6;
+const GUIDED = 0.7;
 /** a direction for wide incoming light: w = cosine over its chance */
 fn guidedDir(x: vec3f, n: vec3f, u: vec2f, pick: f32) -> vec4f {
   let s = gFind(gKey(x, n)); if (s == NOTHING || guide[s * 32u].x <= 0.0) { return wideDir(x, n, u, pick); }
