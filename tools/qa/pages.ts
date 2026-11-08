@@ -46,7 +46,6 @@ export const PAGES: readonly PageRow[] = [
   ['engine-replay-page.cjs', 'replay', "a played run is on the shelf with its run tape, and plays to its end as recorded", 7.9],
   ['replaykeep-page.cjs', 'replay', "every run kept, one handed over", 6.1],
   ['replaysend-page.cjs', 'replay', "the map viewer's Send", 0.4],
-  ['kitview-page.cjs', 'tools', "the Team & kit picture: the team at the door, live; long, not read", 0],
   ['bench-page.cjs', 'tools', "the benchmark run end to end", 0],
   ['perf-sweep-page.cjs', 'tools', "the F8 sweep run and its dump", 0],
   ['framecap-page.cjs', 'tools', "an F6 frame capture taken and read back", 0],

@@ -218,7 +218,7 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
         wheel = wheel || act.wheel.unwrap_or(false);
     }
     let walk = walk_keys();
-    let menu_up = g.orders.menu.is_some() && (has(&a, "menu") || has(&a, "ring"));
+    let menu_up = g.orders.menu.is_some() && (has(&a, "menu") || has(&a, "ring") || has(&a, "ringPart"));
     let (shift, enter) = {
         let i = &g.tab.input[input];
         (i.keys.has(String::from("ShiftLeft")) || i.keys.has(String::from("ShiftRight")),
@@ -259,7 +259,8 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
                 if i.pressed.has(kb()) || i.keys.has(kb()) { i.keys.delete(String::from("ShiftLeft")); i.keys.delete(String::from("ShiftRight")); }
             }
         }
-        if !has(&a, "ring") && !i.pressed.has(kb()) { i.keys.delete(kb()); }
+        // (`ringPart`: only with Shift down. Else the key is seen let go, so the press is a tap, which on a `noTap` step gives nothing and shows the note)
+        if !has(&a, "ring") && !(has(&a, "ringPart") && shift) && !i.pressed.has(kb()) { i.keys.delete(kb()); }
     }
     let clicked = js::to_i32(i.clicked);
     if clicked & !buttons != 0 { dropped += 1; }
@@ -661,7 +662,7 @@ fn rails_prompt(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &LessonA
     let gave_here = g.rails.gave_step == s.i && js::truthy(g.rails.gave);
     let (n, of_n) = (i as u32 + 1, of as u32);
     // (the step's deed is done and it settles before the next step's card: what its men are doing, or nothing. Never a line that asks for a key)
-    if up && g.k.rails.card_beat && s.l.steps.get(i + 1).map_or(false, |x| x.explain.is_some()) && lesson_settling(g) {
+    if up && s.l.steps.get(i + 1).map_or(false, |x| x.explain.is_some()) && lesson_settling(g) {
         let w = if cue { step_line() } else if gave_here { t.after.as_ref().and_then(said_now).map_or(String::new(), |l| lesson_line(g, &l)) } else { String::new() };
         return Some(crate::view::RailPrompt { line: if names_key(&w) { String::new() } else { w }, n, of: of_n, note: None, watch: true });
     }

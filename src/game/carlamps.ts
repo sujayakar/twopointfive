@@ -22,7 +22,7 @@
 // Nothing here has been seen on a GPU.
 import type { Vec3 } from '../math/vec';
 import type { Box } from '../scene/boxes';
-import { GWOT_PALETTE } from '../scene/gwotPalette';
+import { carLampsIn as lampsIn, near3, type FoundLamp } from '../scene/carLamps';
 import type { Game, LightTarget } from './game';
 import type { FixtureDef } from '../sim/lightshome';
 
@@ -37,41 +37,8 @@ export const CARLAMPS = {
 export const CARLAMPS_STATS = { found: 0, head: 0, tail: 0, lit: 0, shot: 0, painted: 0 };
 
 export const VEHICLE_GROUP = 'vehicle';
-interface LampSig { what: 'head lamp' | 'tail lamp'; h: Vec3; albedo?: Vec3; emissive?: Vec3; /** centre to centre across the vehicle */ gap: number; }
-/** what each generator writes for a lamp (built on demand: nothing here is read at module load) */
-function sigs(): LampSig[] {
-  const white = GWOT_PALETTE.plasticWhite, red = GWOT_PALETTE.truckRed;
-  return [
-    { what: 'tail lamp', h: [0.02, 0.06, 0.16], emissive: [0.5, 0.03, 0.02], gap: 1.24 },   // the car (officeGen.ts, levelKit.ts)
-    { what: 'head lamp', h: [0.02, 0.07, 0.14], albedo: [0.8, 0.8, 0.75], gap: 1.24 },
-    { what: 'head lamp', h: [0.03, 0.07, 0.16], albedo: white, gap: 1.32 },                  // the pickup and the van (gwotKit.ts)
-    { what: 'tail lamp', h: [0.03, 0.08, 0.1], albedo: red, gap: 1.44 },                     // the pickup
-    { what: 'tail lamp', h: [0.02, 0.15, 0.04], albedo: red, gap: 1.72 },                    // the van
-    { what: 'head lamp', h: [0.02, 0.08, 0.1], albedo: white, gap: 1.4 },                    // the pass's lorry
-  ];
-}
-const near3 = (a: ArrayLike<number>, b: ArrayLike<number>, eps: number) => Math.abs(a[0] - b[0]) <= eps && Math.abs(a[1] - b[1]) <= eps && Math.abs(a[2] - b[2]) <= eps;
-const glows = (b: Box) => b.emissive[0] > 0 || b.emissive[1] > 0 || b.emissive[2] > 0;
-function fits(b: Box, s: LampSig): boolean {
-  if (b.rot || !near3(b.h, s.h, CARLAMPS.fit)) return false;
-  if (s.emissive) return near3(b.emissive, s.emissive, CARLAMPS.tone);
-  return !glows(b) && near3(b.albedo, s.albedo!, CARLAMPS.tone);
-}
-
-export interface FoundLamp { box: number; what: LampSig['what']; lit: boolean; }
-/** the lamp boxes of a level's vehicles, in box order: each fits one generator's lamp and has its twin across the vehicle */
-export function findCarLamps(boxes: readonly Box[]): FoundLamp[] {
-  const S = sigs(), cand: { i: number; s: number }[] = [];
-  for (let i = 0; i < boxes.length; i++) { const s = S.findIndex(x => fits(boxes[i], x)); if (s >= 0) cand.push({ i, s }); }
-  const out: FoundLamp[] = [];
-  for (const a of cand) {
-    const A = boxes[a.i], s = S[a.s];
-    const twin = cand.some(b => b.i !== a.i && b.s === a.s && Math.abs(boxes[b.i].c[1] - A.c[1]) <= CARLAMPS.twin && Math.abs(boxes[b.i].yaw - A.yaw) <= 1e-3
-      && Math.abs(Math.hypot(boxes[b.i].c[0] - A.c[0], boxes[b.i].c[2] - A.c[2]) - s.gap) <= CARLAMPS.twin);
-    if (twin) out.push({ box: a.i, what: s.what, lit: !!s.emissive });
-  }
-  return out;
-}
+/** the lamp boxes of a level's vehicles, in box order (scene/carLamps.ts) */
+export const findCarLamps = (boxes: readonly Box[]): FoundLamp[] => lampsIn(boxes, CARLAMPS);
 
 /** the light targets of a level's vehicle lamps (game.ts pushes them after the level's switchables; nothing with the switch down) */
 export function carLampTargets(boxes: readonly Box[]): FixtureDef[] {

@@ -1,3 +1,6 @@
+# the frames and jambs are dark varnished wood, said over the brown they wear (they said cloth): 65 boxes change word and finish, nothing else moved
 # every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
+# the look's stand-ins wear their rows' own numbers: colours only, at most 0.0024 a channel
 # version 2: a round thing is one box, the file converted by tools/levels/round-convert.ts: no box moved
-d7c27052dbcb73af9f12e5e5d7ebe5165221c896
+# one file a level: this is the file the page played, under its own name
+1964478b73d88393e45766af29000ef7dfd1161f

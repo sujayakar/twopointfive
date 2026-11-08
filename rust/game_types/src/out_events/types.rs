@@ -23,7 +23,6 @@ pub enum OutEvent {
     SmokeSystemLikeClearAll,
     SmokeCansShut,
     SmokeSystemLikeEmit(crate::out_events::OutSmokeSystemLikeEmit),
-    SmokeSystemLikeKeepHot(crate::out_events::OutSmokeSystemLikeKeepHot),
     SmokeSystemLikeObstaclesChanged(crate::out_events::OutSmokeSystemLikeObstaclesChanged),
     SmokeSystemLikePush(crate::out_events::OutSmokeSystemLikePush),
     WallWearReset,
@@ -43,6 +42,7 @@ pub enum OutEvent {
     WallFeel(crate::out_events::OutWallFeel),
     EndCard,
     SnowBlast(crate::out_events::OutSnowBlast),
+    SmokeSystemLikeRound(crate::out_events::OutSmokeSystemLikeRound),
 }
 
 #[derive(Clone, Debug)]
@@ -126,11 +126,6 @@ pub struct OutSmokeSystemLikeEmit {
 }
 
 #[derive(Clone, Debug)]
-pub struct OutSmokeSystemLikeKeepHot {
-    pub heat: f64,
-}
-
-#[derive(Clone, Debug)]
 pub struct OutSmokeSystemLikeObstaclesChanged {
     pub c_2: V3,
     pub r: f64,
@@ -139,6 +134,13 @@ pub struct OutSmokeSystemLikeObstaclesChanged {
 #[derive(Clone, Debug)]
 pub struct OutSmokeSystemLikePush {
     pub p: crate::smoke_types::SmokePush,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct OutSmokeSystemLikeRound {
+    pub from: V3,
+    pub dir: V3,
+    pub len: f64,
 }
 
 #[derive(Clone, Debug)]

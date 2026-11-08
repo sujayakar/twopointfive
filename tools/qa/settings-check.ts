@@ -49,7 +49,7 @@ const KNOWN: Record<string, Record<string, Row>> = {
   },
   'game/fogofwar.ts': { emissiveScale: [2, 'CARRIED, TO MOVE (2026-11-05, with lighting.ts\'s): the fog\'s lamps'] },
   'game/journal.ts': { '(all)': [5, 'CARRIED: this is the carrying (envSnapshot reads the settings a file keeps, applyEnvSettings lays them back)'] },
-  'game/fire.ts': { fireSmoke: [1, 'TO JUDGE (2026-11-05): whether the fire\'s smoke is drawn by the solver, on a line that also reads the picture\'s camera'] },
+  'game/fire.ts': { fireSmoke: [2, 'TO JUDGE (2026-11-05): whether the fire\'s smoke is drawn by the solver, and how far its soot has handed over; both are the picture\'s and leave with this file'] },
   'game/weather.ts': { gloss: [3, 'PICTURE: the wet ground\'s gloss, kept and handed back'] },
   'game/game.ts': {
     decals: [1, 'TO JUDGE (2026-11-05): whether the decal layer runs; the digest counts decals'],

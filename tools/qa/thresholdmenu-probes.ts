@@ -8,7 +8,7 @@
 // src/game/doortools.ts), and both probes asked for the pages as they were to have anything to walk. Row 4 as each stand has it is
 // orderkeys-high's, doormenu-rows' and doortools-menu's; the order behind it is threshold-probes.ts's and doortest-check.ts's. The calls that lived on the
 // old page (calls-menu, calls-leave, calls-held, calls-rally) went 2026-11-07 with `pagesAsTheyWere`: both rows it wrote are settled.
-import { listedOf, menuKey } from './squadwords';
+import { listedOf, ringUp, ringDown } from './squadwords';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -58,7 +58,7 @@ async function stage(E: any, seed: number) {
     press(code: string) { R.pressed.push(code); input.pressed.add(code); R.step(); },
     digit(n: number) { R.press(`Digit${n}`); R.step(2); },
     /** X on what the cursor is on, then a few frames with every key up */
-    openX(): any { if (O.menu) O.close(); menuKey(O); R.step(); R.step(6); return O.menu; },
+    openX(): any { if (O.menu) { ringDown(input); R.step(); } ringUp(input, R); R.step(6); return O.menu; },
     /** the open menu's page, read off the order table and off the panel (rows[0] of the panel = who the orders go to) */
     read(): Page | null { const M = O.menu; if (!M) return null; const hud = listedOf(O), body = (hud?.rows ?? []).slice(0, M.rows.length);
       const rows: Row[] = M.rows.map((d: any, i: number) => ({ id: d.id, key: String(body[i]?.opts?.[0]?.key ?? ''), text: String(body[i]?.opts?.[0]?.text ?? ''), off: !!body[i]?.off, why: M.why[i] ?? null, opens: d.opens ?? null }));
@@ -98,8 +98,8 @@ async function findSpot(R: Rig): Promise<Spot | string> {
         const p = [c.at[0] + out[0] * back + lx * lat, 0, c.at[2] + out[1] * back + lz * lat];
         if (g.col.nav.isBlocked(p[0], p[2]) || g.col.solidBlocked([p[0], 1.1, p[2]], [c.at[0] + out[0] * 0.7, 1.1, c.at[2] + out[1] * 0.7])) continue;
         const ok = await quiet(() => R.place(p, c.d)); if (!ok) continue;
-        const M = await quiet(() => { const m = R.openX(); if (m) R.digit(5); return R.O.menu; });
-        const pg = M && M.target.door === c.d && M.page === TOOLS_PAGE ? R.read() : null; if (R.O.menu) R.O.close();
+        const M = await quiet(() => R.openX());
+        const pg = M && M.target.door === c.d ? R.read() : null; if (R.O.menu) { ringDown(R.input); R.step(); }
         const forms = pg?.rows.filter(r => r.id === 'thresholdHold') ?? [];
         if (forms.length === 1 && !forms[0].why) return { door: c.d.def.name, sam: p, held: c.held };
         if (forms.length) why.push(`${c.d.def.name}: ${forms.map(r => r.why).find(Boolean)}`);

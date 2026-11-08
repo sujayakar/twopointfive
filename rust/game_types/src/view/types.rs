@@ -484,8 +484,8 @@ pub struct TickView {
     pub hand: Option<crate::view::HandRingView>,
     /// what a tap of the key that found no row says, while it is still up and still so
     pub empty: Option<crate::view::EmptyView>,
-    /// the plan on the floor, the seat's and each other player's: empty with nothing to show (None: the plan is switched off)
-    pub plan: Option<crate::view::PlanView>,
+    /// the plan on the floor, the seat's and each other player's: empty with nothing to show
+    pub plan: crate::view::PlanView,
     /// the run is live (no show, no menu's game, not over)
     pub live: bool,
     /// a quiet mission's words for its room, its holder, its thing and its ways out
@@ -1154,9 +1154,9 @@ pub struct PlanWho {
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum WaitWhy { #[default] Stack, Tool, Charge, Thr, Drill, Wall, Pair }
 
-/// how a door's key is drawn: none · on its plate · it waits on the key and is not set · they stand there and the press sends them
+/// how a door's key is drawn: none · it waits on the key and is not set · they stand there and the press sends them
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub enum KeyCap { #[default] None, Plate, Dark, Lit }
+pub enum KeyCap { #[default] None, Dark, Lit }
 
 /// something waiting on the player's key: a doorway's two jambs (a wall's foot), whose it is, the key that sends it and whether that key would send this one now
 #[derive(Clone, Debug, Default)]

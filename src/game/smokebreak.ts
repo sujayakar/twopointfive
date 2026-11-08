@@ -11,7 +11,7 @@
 //   THE SMOKE real smoke: sources on the smoke solver's fine lattice, the one a gun's gas and the cold's breath live on. A thin thread off the end in his
 //             hand all the while, and what he breathes out after each draw, off his mouth, thicker than a breath and slower to go. Both are LOOK sources
 //             (smoke/types.ts `look`): the game's own smoke, the one sight lines are cut by, never hears of them. With no solver drawing (the harness, a
-//             page with smoke off) what he breathes out is the particle system's soft puffs, as a breath in the cold is; the thread is then not shown.
+//             page with smoke off) neither is shown.
 //   NOBODY    reads any of it but the light meter: no eye, ear or foot. Its clock is the frames' dt, its dice are its own (never Math.random, never the
 //             game's die).
 // THE SWITCH: SMOKEBREAK.on — ON in the page (`?smokebreak=0` puts it off), OFF in the module and on the frozen stand (FROZEN_HOLDS; TPS_SMOKEBREAK=1
@@ -37,13 +37,8 @@ export const SMOKEBREAK = {
   tipOut: 0.11, tipUp: 0.02,
   /** THE THREAD off the end (the solver's units, as snowBreath.ts BREATHSTEAM: 6 /m of extinction a unit of density; +1.6 m/s² a unit of heat) */
   thread: { radius: 0.02, cells: 1.2, density: 5, temp: 5, speed: 0.25, push: 10, jitter: 0.35 },
-  /** frames with a solver drawing and no word from it of his thread (it asks every source where it is, every step) before the thread is taken for gone and filed again */
-  threadGone: 30,
   /** WHAT HE BREATHES OUT after a draw */
   breath: { radius: 0.04, cells: 1.5, density: 16, temp: 2.5, speed: 1.1, push: 12, expand: 2.2, attack: 0.1, jitter: 0.3, down: 0.1 },
-  /** … as puffs, with no solver drawing: records across `out`, puffs a record, and the puff's own numbers (render/particles.ts; `steam` = its share of the
-   *  dust puff's opacity and that it rises) */
-  puffs: { records: 4, count: 6, speed: 0.8, spread: 0.26, life: 2.4, size: 0.1, opacity: 0.8 },
   /** what the smoke scatters: a blue grey (the solver's `tint`, the puff's colour) */
   color: [0.72, 0.76, 0.86] as Vec3,
   /** m: the mouth off the head joint, ahead and down (snowBreath.ts's own two numbers) */
@@ -53,19 +48,6 @@ export const SMOKEBREAK = {
 export interface SmokeBreakStats { men: number; lit: number; draws: number; flames: number; embers: number; breaths: number; frames: number }
 interface Man { /** s since he was first asked */ t: number; flamed: boolean; /** draws begun, breaths let out */ draws: number; outs: number; emberT: number;
   /** this frame he smokes (the sources' tracks read it) */ live: boolean }
-/** WHAT OF A SMOKE IS THE HOST'S AND NOT THE GAME'S: whether his smoke goes to the solver or out as puffs hangs on a solver drawing and on a particle pool,
- *  neither of which a recording or a snapshot carries. So the book of what was filed is kept on the HOST (`engine.hostBooks.smokeBreak`, host/api.ts HostBooks; `Game.engine` is
- *  in no snapshot), as an open fire's is (fire.ts FireShown): two games that differ only in their picture are the same game.
- *  AND THE BOOK IS NEVER TAKEN AT ITS WORD: the solver lets a source go without a word to whoever filed it (an encounter restarted, a file loaded, a save
- *  put back, a script's or the panel's clear — each empties it; its `ttl` runs out; a full list drops the first look-only one), and a book that still said
- *  'filed' was a man smoking with no smoke for the rest of his break. A solver asks every source it holds where it is, every step: so the thread's own
- *  track stamps the book (`beat`), and a thread nobody has asked after for `threadGone` frames with a solver drawing is gone and is filed again. Each filing
- *  has its own number (`gen`): a source from an older filing answers 'gone' the next time it is asked, so there is never more than one.
- *  A man by his character's id: `thread` = a thread was filed for him; `left`, `gap` = records of this breath still to file as puffs, and the clock between
- *  them. `frame` = this file's frames on this host; `threads`, `records` = how many this run. No rule reads any of it back. */
-export interface SmokeShown { men: Map<number, { thread: boolean; gen: number; beat: number; left: number; gap: number }>; frame: number; threads: number; records: number }
-/** the host's side of it, for the panel's line and the tools; undefined before the first frame a man smokes in, and behind a load */
-export function smokeShown(g: Game): Readonly<SmokeShown> | undefined { return goneWithTick('smokeShown') as any; }
 interface State { men: SideMap<Character, Man>; stats: SmokeBreakStats; seed: number }
 const states = new SideMap<Game, State>('smokebreak.states');
 const fresh = (): SmokeBreakStats => ({ men: 0, lit: 0, draws: 0, flames: 0, embers: 0, breaths: 0, frames: 0 });

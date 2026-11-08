@@ -23,7 +23,7 @@ pub fn anim_torch_up(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.tu_
 /// Nothing but the aim or the carry has the gun arm this frame.   (character.ts gunArmOwn)
 pub fn anim_gun_arm_own(g: &crate::game::Game, c: CharId) -> bool {
     let a = &g.ch[c].anim;
-    let taken = a.hold_pose.is_some() || a.held_pose.is_some() || a.haul.is_some() || a.lockpick || a.act.is_some() || a.wound.is_some() || a.kit.is_some() || a.sw.shown || a.hide_held_item || a.throw_t >= 0.0 || a.strike_t >= 0.0
+    let taken = a.hold_pose.is_some() || a.held_pose.is_some() || a.haul.is_some() || a.lockpick || a.act.is_some() || a.kit.is_some() || a.sw.shown || a.hide_held_item || a.throw_t >= 0.0 || a.strike_t >= 0.0
         || a.hit_t >= 0.0 || a.reload_t >= 0.0 || a.sig_t >= 0.0 || a.tell_t >= 0.0;
     !(taken || anim_mv_busy(g, c) || g.ch[c].anim.mvs.ts_t >= 0.0)
 }
@@ -96,7 +96,7 @@ fn big_off_tool(b: &AnimBigTool) -> bool { big_off(BigOffB { t: b.t, equip: b.eq
 fn left_hand_clear(g: &Game, c: CharId, w_hd: f64, w_he: f64, w_lp: f64, w_hl: f64, w_lg: f64, w_wall_arms: f64, w_act: f64, w_strike: f64, kt: f64) -> bool {
     let a = &g.ch[c].anim;
     let first = w_hd < 0.05 && w_he < 0.05 && w_lp < 0.05 && w_hl < 0.05 && w_lg < 0.05 && w_wall_arms < 0.05 && w_act <= 0.0 && w_strike <= 0.0 && kt < 0.0 && a.throw_t < 0.0 && a.reload_t < 0.0 && a.hit_t < 0.0 && a.tell_t < 0.0
-        && a.upper_w.aim < 0.3 && a.kit.is_none() && a.ready.is_none() && a.wound.is_none() && a.dazzle.is_none();
+        && a.upper_w.aim < 0.3 && a.kit.is_none() && a.ready.is_none() && a.dazzle.is_none();
     if !first || anim_mv_busy(g, c) { return false; }
     let a = &g.ch[c].anim;
     a.mvs.arm_l <= 0.0 && a.mvs.ts_t < 0.0 && a.dp.w_l.x < 0.05 && !a.wk.fed && a.wk.shown < 0.05
@@ -693,7 +693,7 @@ pub fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
         let first = w_hd > 0.003 || w_he > 0.003 || w_lp > 0.003 || w_hl > 0.003 || kt >= 0.0 || a.throw_t >= 0.0 || a.reload_t >= 0.0 || a.sig_t >= 0.0 || a.tell_t >= 0.0 || a.hit_t >= 0.0 || a.strike_t >= 0.0 || a.bw.is_some() || a.tk.is_some() || a.clutch > 0.0 || a.bound != 0.0;
         let busy = first || anim_mv_busy(g, c) || {
             let a = &g.ch[c].anim;
-            a.mvs.ts_t >= 0.0 || a.mvs.arm_l > 0.0 || w_st * wl > 0.003 || w_wall_arms > 0.003 || a.long_gun || w_lg > 0.003 || a.kit.is_some() || a.nv.as_ref().map_or(false, |n| n.hand) || a.act.is_some() || a.wound.is_some() || a.dazzle.is_some() || a.wk.fed || a.wk.shown > 0.003 || a.dp.w_l.x > 0.003 || a.dp.w_r.x > 0.003 || a.rx.w.x > 0.003 || a.upper_w.relaxed + a.upper_w.aim + a.upper_w.torch + w_carry > 0.003
+            a.mvs.ts_t >= 0.0 || a.mvs.arm_l > 0.0 || w_st * wl > 0.003 || w_wall_arms > 0.003 || a.long_gun || w_lg > 0.003 || a.kit.is_some() || a.nv.as_ref().map_or(false, |n| n.hand) || a.act.is_some() || a.dazzle.is_some() || a.wk.fed || a.wk.shown > 0.003 || a.dp.w_l.x > 0.003 || a.dp.w_r.x > 0.003 || a.rx.w.x > 0.003 || a.upper_w.relaxed + a.upper_w.aim + a.upper_w.torch + w_carry > 0.003
         };
         let w_move = if crouch_pose > 0.001 { g.ch[c].anim.cr_walk / crouch_pose } else { 0.0 };
         anim_stealth_layer(g, c, dt, busy, crouch_pose, w_move, y, -p * 0.35);
@@ -739,7 +739,7 @@ pub fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
     if g.ch[c].anim.kit.is_some() {   // KIT: the right hand's errand; dropped by whatever else takes the arms, NOT by the wall hold
         let a = &g.ch[c].anim;
         let first = a.hold_pose.is_some() || a.held_pose.is_some() || a.haul.is_some() || a.lockpick || kt >= 0.0 || a.throw_t >= 0.0 || a.strike_t >= 0.0 || a.hit_t >= 0.0;
-        if first || anim_mv_hands(g, c) || g.ch[c].anim.mvs.ts_t >= 0.0 || g.ch[c].anim.act.is_some() || g.ch[c].anim.wound.is_some() { anim_kit_cancel(g, c); }
+        if first || anim_mv_hands(g, c) || g.ch[c].anim.mvs.ts_t >= 0.0 || g.ch[c].anim.act.is_some() { anim_kit_cancel(g, c); }
         else { anim_kit_layer(g, c, dt, y, -p * 0.35); }
     } else if g.ch[c].anim.kit_hold.is_some() { anim_kit_cancel(g, c); }
     g.ch[c].anim.kit_gun_free = 0.0;
@@ -851,11 +851,6 @@ pub fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
     if let Some(pre) = g.ch[c].anim.arms_pre { if w_act > 0.0 { crate::anim_skeleton::blend_pose(g, None, p_b, w_act, None, pre, singles); } }
     // ---- MOVES: a crouched man's toes stay out of the floor
     if crouch_pose > 0.003 { anim_toes_up(g, c, crouch_pose); }
-    if g.ch[c].anim.wound.is_some() || g.ch[c].anim.wd_w > 0.0 {
-        let wd = anim_wound_layer(g, c, dt);
-        w_act = m::max(w_act, wd);
-        g.ch[c].anim.arms_pre = None;
-    }
     // ---- MOVES: the hand pass, last of all, finger and thumb joints only
     {
         let a = &g.ch[c].anim;

@@ -3,7 +3,7 @@
 //! the one its boxes are painted in, army green where they have none), an inside one in weathered grey wood (one in four with that paint faded on it), each a shade of
 //! its own by its name. Steel doors are left alone, and so is a level that carries none of the look's paints. It is the box's own colour and word, so what a breach
 //! throws off a leaf and a round's chips take it. No rule asks what colour a leaf is, and the word only says which picture a round's hit has (a leaf is wood to a round
-//! whatever its paint: `particle_fx::hit_look`). The look's switch (`k.look.on`, down on an address that says `look=plain`: `scenario_run::address_before_game`) is read here once: a leaf keeps what it was stood with.
+//! whatever its paint: `particle_fx::hit_look`). The look's switch (`k.look.on`) is read here once: a leaf keeps what it was stood with.
 use crate::game::Game;
 use crate::m;
 use crate::scene_gwot_palette::{gwot_palette, snow_palette};
@@ -57,7 +57,7 @@ pub fn paint_leaves(g: &mut Game) {
     }
     if !wears { return; }
     let name = crate::scene_level_load::level_name_of(g).unwrap_or_default();
-    let row = row_of(name.strip_suffix("-gwot").unwrap_or(&name));
+    let row = row_of(&name);
     let top = *count.iter().max().unwrap();
     let accent = match &row { Some(r) => r.out, None if top > 0 => accents[count.iter().position(|c| *c == top).unwrap()], None => p.paint_green };
     let wood = row.as_ref().and_then(|r| r.inside).unwrap_or(p.wood_grey);

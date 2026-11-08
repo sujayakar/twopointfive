@@ -39,7 +39,7 @@ async function rig(seed: number, squad = 4) {
     /** the HUD's B line with the cursor on p */
     hudB(p: number[]): string { W.cursorAt([p[0], p[1], p[2]]); R.step(2); return (blockOf(O)?.[0]?.opts ?? []).find((o: any) => o.key === 'B')?.text ?? ''; },
     tail() { return O.log[O.log.length - 1]; },
-    listed() { const P = game.view.plan; if (!P) throw new Error('no plan in the view'); return P.own.men.length; },
+    listed() { if (game.view.me < 0) throw new Error('no view'); return game.view.plan.own.men.length; },
     stacked() { return R.team.filter((m: any) => m.state !== 'dead').every((m: any) => O.of(m)?.order === 'stack' && O.of(m)?.arrived); },
     /** everybody back on Sam, nothing of the door tools running */
     home() { O.give('fallIn', O.targetAt(game.player.char.pos), 'all'); R.until(() => game.doorTools.ops.length === 0, 40); R.step(60); },
@@ -66,7 +66,7 @@ const pointsAt = (R: any, d: any) => !!aimOf(R, d);
 function quickDoor(R: any, d: any): 'key' | 'call' {
   // (the press goes in the frame after the cursor was seen to be on the door: a man walking through the doorway a moment later is not what was pressed on)
   if (aimOf(R, d)) { R.W.input.pressed.add(ORDERS.quickKey); R.step(); return 'key'; }
-  const O = R.O, t = O.targetAt(d.frameCentre); if (!(AUTOPILOT.on && AP.autoQuick(R.game, t))) { const def = O.defaultFor(t); if (def) O.give(def.id, t); } R.step();
+  const O = R.O, t = O.targetAt(d.frameCentre); AP.autoQuick(R.game, t); R.step();
   return 'call';
 }
 const farRoom = (g: any, t: any) => g.cleared.roomBy(t.door, t.side > 0 ? -1 : 1);

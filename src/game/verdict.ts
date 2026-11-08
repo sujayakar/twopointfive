@@ -27,7 +27,6 @@
 import type { Game } from './game';
 import { activeScenario, runningScenario } from './scenarioRun';
 import { levelNameOf } from '../scene/levelLoad';   // (asked inside rowFile only)
-import { LOOK_LEVELS } from '../scene/look';   // (a table of file names: read inside rowFile only)
 
 export const VERDICT = {
   on: true,
@@ -42,12 +41,10 @@ export const VERDICT = {
 };
 
 /** The file a mission row names for the level this game stands on (null: the bundled office, which rows name by naming none). The game is not told the
- *  page's `levelFile`, so it is read back off the level's own name: `<name>.json`, or the file whose look that is (scene/look.ts LOOK_LEVELS: the page
- *  loads `barracks-gwot.json` for the row on `barracks.json`). `probes.ts debrief-loud` holds every row's file and its look's file to this. */
+ *  page's `levelFile`, so it is read back off the level's own name: `<name>.json`. `probes.ts debrief-loud` holds every row's file to this. */
 export function rowFile(g: Game): string | null {
   const name = levelNameOf(g.level); if (!name || name === 'office') return null;
-  const file = `${name}.json`; for (const k in LOOK_LEVELS) if (LOOK_LEVELS[k] === file) return k;
-  return file;
+  return `${name}.json`;
 }
 /** The mission that is up is the STEALTH GAME'S kind (a quiet mission: the one kind whose card carries the rating beside a verdict) on a row of the list
  *  that LEANS LOUD (scene/scenarios.ts `lean`: the mission sheet's 'Approach'), asked while VERDICT.loudCard is up. The stealth game's rating prices every
@@ -60,36 +57,10 @@ export function loudRow(g: Game): boolean {
   return run?.kind === 'quiet' && run.entry?.lean === 'loud';
 }
 
-/** the way a run was won, read off the run */
-export type Approach = 'doors' | 'walls' | 'dark' | 'quiet';
-export type ManState = 'up' | 'out' | 'dead';
-export type ManTone = 'you' | 'purple' | 'red' | 'blue' | null;
-
-/** one man of the team at the run's end. Times are seconds from the try's start; `path` is x, z, t triples sampled as he walked. */
-export interface VerdictMan {
-  id: number; name: string; tone: ManTone; human: boolean;
-  state: ManState; downAt: number; downRoom: string; downBy: string; downPos: [number, number] | null;
-  drops: number[]; path: number[];
-}
-export interface RunVerdict {
-  kind: ReturnType<typeof activeScenario>;
-  won: boolean; word: string; why: string;
-  /** seconds from the try's start to the end */
-  secs: number;
-  approach: Approach | null;
-  /** a cheat was on during the try: nothing of it is kept */
-  void: boolean;
-  /** nobody of the team was lost */
-  clean: boolean;
-  men: VerdictMan[]; lost: number; of: number;
-  /** the defenders: how many went down of how many, and where (x, z pairs) */
-  foes: { down: number; of: number; fell: number[] };
-  hostages: { alive: number; of: number } | null;
-  /** where the team started (the map's mark) */
-  start: [number, number];
-}
-/** the page's note to the card: which try of the streak this was (0 = not a counted try), the ways won on this mission so far */
-export interface KeptNote { streak: number; fresh: boolean; gold: boolean; ways: Partial<Record<Approach, { first: boolean; clean: boolean }>>; /** a Training lesson's run: nothing is kept of it and the card grades nothing — no ways, no tries */ lesson?: boolean }
+import { clock, verdictLine } from '../view/runend';
+export { clock, verdictLine };
+import type { Approach, KeptNote, ManState, ManTone, RunVerdict, VerdictMan } from '../view/runend';
+export type { Approach, KeptNote, ManState, ManTone, RunVerdict, VerdictMan } from '../view/runend';
 
 /** THE VERDICT ON A PUPPET IS A READER. The Rust game works the verdict out in its own tick and latches it (rust/game/src/verdict/p_01.rs: the first end
  *  of a run stays); what the page reads of the record is applied onto this object every tick: the run it is of (the mission record), the try's start,
@@ -131,16 +102,3 @@ export class Verdict {
   summary(): string { const R = this.result; return R ? verdictLine(R, this.kept) : this.started ? `try running · ${clock(this.secs)}` : 'not started'; }
 }
 
-/** m:ss */
-export function clock(s: number): string { const t = Math.max(0, Math.floor(s)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; }
-/** the verdict as one line (the copy button, a console read-out) */
-export function verdictLine(R: RunVerdict, kept: KeptNote | null = null): string {
-  const parts = [`${R.word} ${clock(R.secs)}`];
-  if (R.approach && !kept?.lesson) parts.push(R.approach);
-  if (R.of > 1) parts.push(`${R.of - R.lost} of ${R.of} up`);
-  if (R.foes.of) parts.push(`${R.foes.down} of ${R.foes.of} defenders down`);
-  if (R.hostages) parts.push(`${R.hostages.alive} of ${R.hostages.of} hostages alive`);
-  if (kept?.streak) parts.push(`try ${kept.streak}`);
-  if (R.void) parts.push('cheats on: not kept');
-  return parts.join(' · ');
-}

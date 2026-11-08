@@ -230,8 +230,7 @@ export const WALLSHOT = { on: false, pall: 0.75, staggerSecs: 3.5, stunSecs: [8.
  *      or two; on a team of two he already went down);
  *    past that reach one of ours behind the wall is blind as one of ours, whatever the team's size (on a team of two he took the defenders' longer stun and fold).
  *  The player goes down as a round puts him down (combat.ts hitPlayer: his one hit): never in god mode, never the tour's scripted player. A man with god mode
- *  of his own (Guard.god) is passed over. WHO BLOWS IT: the player's trigger and his order's release — and a plan's own clock (host/kitView.ts), which is no
- *  press of his: that caller says so (`pressed` false) and its blast is the blast as it was. With the safety radius on (the page) the trigger's row names who
+ *  of his own (Guard.god) is passed over. WHO BLOWS IT: the player's trigger and his order's release. With the safety radius on (the page) the trigger's row names who
  *  is too close and who is behind the wall before he presses it. No hit points anywhere: nobody takes more or fewer rounds.
  *  OFF here and on the frozen stand (TPS_WALLKILL=1); ON in the page (?wallkill=0). Check: tools/qa/wallkill-check.ts (WALLKILL_BREAK=1). */
 export const WALLKILL = { on: false, nearM: 1.5 };

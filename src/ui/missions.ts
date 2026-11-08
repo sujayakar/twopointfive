@@ -9,7 +9,6 @@
 // Enter / Space on · Esc back — taken
 // by ONE capture listener registered when this module loads, i.e. before main.ts's own Esc handler, so Esc here goes back instead of closing the card.
 // Plain DOM, styled in index.html (#missions …). What is the page's here is the plan sheet, the pictures, the DOM, the keys, and the row last started on this machine.
-import { lookLevelFile } from '../scene/look';   // (a leaf: which file of a level the page loads)
 import { desk } from '../view/desk';
 import type { Setting, SheetView, StartRow, StartView } from '../view/read';
 import { menuTheme } from './theme';
@@ -332,12 +331,11 @@ function drawCard(cv: HTMLCanvasElement, m: Mission, key: string, mark?: PlanMar
   });
 }
 /** THE MAP SHEET of a mission on a canvas of the caller's, `width` px wide (the sheet's own proportions) — the model of its place AS THE PAGE WILL LOAD IT
- *  (scene/look.ts lookLevelFile: the level's file in the look that is on), with the way in its address asks for marked as this list marks it: the load brief's
+ *  (the level's file), with the way in its address asks for marked as this list marks it: the load brief's
  *  map (ui/loadbrief.ts). Resolves true when it was drawn; the canvas is hidden where the level's file did not come. */
 export function drawMissionMap(cv: HTMLCanvasElement, level: string, kind: string, way: number, width: number): Promise<boolean> {
-  const file = lookLevelFile(level);
   cv.width = width; cv.height = Math.round(width * PLAN_D / PLAN_W);
-  return drawPlan(cv, file, false, { kind, way }).then(() => cv.style?.display !== 'none' && !!cv.getContext?.('2d'));
+  return drawPlan(cv, level, false, { kind, way }).then(() => cv.style?.display !== 'none' && !!cv.getContext?.('2d'));
 }
 function drawPlan(cv: HTMLCanvasElement, file: string, thumb: boolean, mark?: PlanMark, small = thumb): Promise<void> {
   cv.setAttribute('data-level', file); cv.setAttribute('data-sheet', small ? 'small' : 'full'); cv.setAttribute('data-mark', mark ? `${mark.kind}|${mark.way}` : '');

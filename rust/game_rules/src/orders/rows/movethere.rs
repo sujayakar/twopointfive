@@ -7,7 +7,7 @@ use crate::v3::{self, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
-    is: &[Is::Resumed, Is::KeepsLane, Is::WalksLow],
+    is: &[Is::LooksAbout, Is::Resumed, Is::KeepsLane, Is::WalksLow],
     can: Some(can),
     valid: Some(valid),
     tick: Some(crate::roomfit::fit_tick),

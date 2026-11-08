@@ -12,6 +12,7 @@
 // WHOLESQUAD_BREAK=1 = the switch left off and the same lines asked: 1 to 4 must fail.
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
+import { ringDown } from './squadwords';
 
 const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
@@ -43,7 +44,7 @@ async function rig(seed: number) {
     clickMan(m: any) { W.cursorAt([m.char.pos[0], 1.0, m.char.pos[2]]); R.step(); input.clicked |= 1; input.buttons |= 1; R.step(); input.buttons &= ~1; R.step(); },
     tail() { return O.log[O.log.length - 1]; },
     /** everything put away and the men back round Sam */
-    home() { input.keys.clear(); input.buttons = 0; O.cmdRing = null; O.close(); O.who = 'all';
+    home() { input.keys.clear(); input.buttons = 0; ringDown(input); R.step(); O.who = 'all';
       O.give('fallIn', O.targetAt(game.player.char.pos), 'all'); R.until(() => game.doorTools.ops.length === 0, 40); R.until(() => R.team.every((m: any) => dist(m.char.pos, game.player.char.pos) < 4.5), 25); R.step(30); },
   };
   R.step(30);
@@ -67,7 +68,7 @@ export async function wholesquadCheck(): Promise<boolean> {
     const name = (w: any): string => typeof w === 'number' ? O.squad()[w]?.callsign ?? `man ${w}` : String(w);
     /** the key tapped where the cursor is: who took the order it gave (nobody: none was given) */
     const tap = (): string[] => { const n0 = O.log.length; input.keys.add(KEY); input.pressed.add(KEY); R.step(2); input.keys.delete(KEY); R.step(12); const row = R.tail();
-      const who = O.log.length > n0 && row ? (row.who ?? []).map(String) : []; O.cmdRing = null; O.close(); return who; };
+      const who = O.log.length > n0 && row ? (row.who ?? []).map(String) : []; ringDown(input); R.step(); return who; };
     const onFloor = () => { const s = floorSpot(R); if (s) R.aim(s); return !!s; };
     const chest = (m: any) => { R.W.cursorAt([m.char.pos[0], 1.0, m.char.pos[2]]); R.step(); };
     const set = (on: boolean) => { K.wholeSquad = on; };
@@ -81,7 +82,7 @@ export async function wholesquadCheck(): Promise<boolean> {
     R.home();
     { const stay0 = K.stay; K.stay = true; onFloor(); input.keys.add(KEY); input.pressed.add(KEY); R.until(() => !!O.cmdRing, 2); input.keys.delete(KEY); R.step(6); const up = !!O.cmdRing;
       const n0 = O.log.length; R.clickMan(T()[2]); R.step(6); const who = O.who, row = O.log.length > n0 ? R.tail() : null, took = row ? (row.who ?? []).length : -1;
-      O.cmdRing = null; O.close(); K.stay = stay0;
+      ringDown(input); R.step(); K.stay = stay0;
       line(up && who === 'all' && (took < 0 || took === N), '2. a click on a man with the ring up picks nobody: the orders are still everyone\'s',
         `the ring up: ${up} · a click on ${T()[2].callsign}: orders to ${name(who)} · ${took < 0 ? 'no order given by it' : `the click gave ${row.order} to ${took} of ${N}`}`); }
     // 3

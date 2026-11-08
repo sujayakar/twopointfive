@@ -1453,7 +1453,7 @@ impl GameDoorHandRecsValue {
 impl Default for GameDoorHandRecsValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: a union)
-#[derive(Clone, Copy, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum Foe {
     Guard(GuardId),
     Player,

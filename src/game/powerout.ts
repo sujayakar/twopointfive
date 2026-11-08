@@ -15,7 +15,7 @@
 //     boots), and the men who go burn their weapon lights for as long as the mains are down (guards.ts poseFlashlight: `powerOutLit`) — heard and seen
 //     before it lands; what lands is the lights coming back on.
 //   · WHO GOES: only men who are FREE (`kept` below — calm, holding a post the room fight gave them, nobody else's: no dig-in, squad's word, lane, press, buddy,
-//     last stand, captor, script, Sam's arm). The breaker in a defender's own room: the man of that room nearest it, alone, and he never leaves the room.
+//     captor, script, Sam's arm). The breaker in a defender's own room: the man of that room nearest it, alone, and he never leaves the room.
 //     Elsewhere: the `men` nearest it by the way they would walk, no further than `maxM`, A MAN LEFT IN EVERY ROOM THAT HAD ONE while that can be done; no
 //     man to spare anywhere and `lone`: the nearest goes by himself and his room stands empty behind him (that is the price of the lights, and the team's
 //     opening). A squad told to stay in its rooms (`mayLeave: false`: it answers no other squad's FIGHT) still sends for the lights with `stayers`.

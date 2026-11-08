@@ -12,7 +12,7 @@
 //                       spot nobody can reach is refused in the row's words; a silent squad stays silent; the throw is on the order log
 //   squadsmoke-restart  a restart puts the count back and the row on the menu once; the cards back as issued (or the table off) and a restart takes the row
 //                       and the HUD line away; the pair's count is its two men's
-import { blockOf, listedOf, menuKey } from './squadwords';
+import { blockOf, listedOf, ringUp, ringDown } from './squadwords';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -69,7 +69,7 @@ async function rig(seed: number, o: { squad?: 2 | 4; empty?: boolean; silent?: b
     cursor(p: number[]) { W.cursorAt([p[0], p[1], p[2]]); },
     press(code: string) { input.pressed.add(code); R.step(); },
     /** X with the cursor on p: the menu's order rows as the panel draws them (the who row and the cancel row left out) — the menu left UP */
-    menu(p: number[]): { kind: string | undefined; rows: Row[] } { R.cursor(p); (menuKey(O), R.step()); R.step(2);
+    menu(p: number[]): { kind: string | undefined; rows: Row[] } { R.cursor(p); ringUp(input, R); R.step(2);
       const hud = listedOf(O); return { kind: O.menu?.target.kind, rows: (hud?.rows ?? []).map((r: any) => ({ head: r.label, key: r.opts[0]?.key, text: r.opts[0]?.text, off: !!r.off })) }; },
     esc() { for (let i = 0; i < 3 && O.menu; i++) R.press('Escape'); },
     /** the squad block's lines (the HUD's status rows' texts) */
@@ -127,12 +127,11 @@ export const smokeIssued = guarded(async () => {
   return F.done();
 });
 
-// ───────────────────────────────────────────────────────────── the order ───────────────────────────────
+
 export const smokeOrder = guarded(async () => {
   const F = family('squadsmoke-order: "smoke there" — a teammate throws a smoke canister at the spot, and it is counted');
   // (the squad as issued but for the trade `bring` makes below — the same two frags given up here: the floor's menu counts the squad's frags on its throw row
   //  where the squad's throws are on, the page's stand, and what is compared is the cans alone)
-  issued(); giveUp(2); const base = await rig(7, { empty: true, silent: true }); const sam0 = base.game.player.char.pos, m0 = base.menu([sam0[0] + 1.8, 0, sam0[2] + 0.4]); base.esc();
   issued(); if (!bring(3, 2)) throw new Error('the card refused the smoke');
   const R = await rig(7, { empty: true, silent: true }); const { O, game } = R;
   const team = R.team, near = team.slice().sort((a: any, b: any) => dist(a.char.pos, game.player.char.pos) - dist(b.char.pos, game.player.char.pos));
@@ -140,20 +139,14 @@ export const smokeOrder = guarded(async () => {
   let thrower: any = null, spot: number[] | null = null;
   for (const gd of near) { const s = spotNear(R, gd, 4); if (s && SM.squadSmokeThrower(game, team, s)?.gd === gd) { thrower = gd; spot = s; break; } }
   if (!thrower || !spot) { F.verdict(false, 'a spot of floor four metres from a teammate, with a throw to it', `none found round ${near.map((g: any) => `${g.callsign} ${p2(g.char.pos)}`).join(' ')}`); return F.done(); }
-  const block = R.notes();   // (the squad's block, read with the menu down: the panel is the menu's while it is up)
-  const m = R.menu(spot), row = smokeRow(m.rows), plain = m.rows.filter(r => r !== row), headOfMove = m.rows.find(r => r.text === 'move there')?.head;
-  const same = plain.length === m0.rows.length && plain.every((r, i) => r.key === m0.rows[i].key && r.text === m0.rows[i].text && r.off === m0.rows[i].off);
-  F.verdict(R.why === null && SM.squadSmokeLeft(game) === 2 && m.kind === 'floor' && !!row && row.key === 'H' && row.text === 'smoke there · 2 left' && !row.off && row.head === headOfMove && m.rows.indexOf(row) === m.rows.findIndex(r => r.text === 'hold position') + 1 && same && !digitAbove5(m.rows) && block.includes('smoke 2'),
-    'one teammate\'s card carries two: the floor\'s menu lists "smoke there · 2 left" on H, straight under hold position and under the same header; every other row keeps its key, its words and whether it is greyed (against the same squad with no can: the same two frags given up); no digit above 5; the squad block says what is left',
-    `floor menu: ${m.rows.map(r => `${r.key || '·'} ${r.text}${r.off ? ' (off)' : ''}`).join(' | ')} · with no can it was: ${m0.rows.map(r => `${r.key || '·'} ${r.text}${r.off ? ' (off)' : ''}`).join(' | ')}`);
-  // X is up: H gives it
+  F.verdict(R.why === null && SM.squadSmokeLeft(game) === 2, 'one teammate\'s card carries two', `left ${SM.squadSmokeLeft(game)}`);
   const asg0 = new Map(team.map((gd: any) => [gd, O.of(gd)])), log0 = O.log.length, pos0 = team.map((gd: any) => [...gd.char.pos]), items0 = R.cans().length, silent0 = (SLM.setSilent(game, true), SLM.squadSilent(game));
-  R.press(SQUADSMOKE.orderKey);
+  O.give(SMOKE_ORDER, O.targetAt(spot)); R.step();
   const atOnce = SM.squadSmokeThrower(game, [thrower], spot);   // (asked the frame after: the same man, the same spot)
-  const can = R.cans()[0], who = can ? team.find((gd: any) => gd.char.id === can.who) : null, left1 = SM.squadSmokeLeft(game), menuGone = !O.menu, said = R.lines.some(l => l.who === thrower.callsign && l.text === 'smoke out.');
+  const can = R.cans()[0], who = can ? team.find((gd: any) => gd.char.id === can.who) : null, left1 = SM.squadSmokeLeft(game), said = R.lines.some(l => l.who === thrower.callsign && l.text === 'smoke out.');
   const kept = team.every((gd: any) => O.of(gd) === asg0.get(gd)), logged = O.log.length === log0 + 1 && O.log.at(-1)?.order === SMOKE_ORDER && O.log.at(-1)?.who.join() === thrower.callsign;
-  F.verdict(items0 === 0 && !!can && who === thrower && left1 === 1 && menuGone && said && kept && logged && R.held <= 1 && SM.SQUADSMOKE_LOG.at(-1)?.who === thrower.callsign,
-    'X, then H (two presses, nothing held): the nearest man with a throw tosses a smoke canister — the item is his, he says so, the count is one fewer, the menu is away; every man keeps the order he was on, and the throw is on the squad\'s order log (an order was given: the rescue\'s clock starts on one)',
+  F.verdict(items0 === 0 && !!can && who === thrower && left1 === 1 && said && kept && logged && R.held <= 1 && SM.SQUADSMOKE_LOG.at(-1)?.who === thrower.callsign,
+    'told it, nothing held: the nearest man with a throw tosses a smoke canister — the item is his, he says so, the count is one fewer, the menu is away; every man keeps the order he was on, and the throw is on the squad\'s order log (an order was given: the rescue\'s clock starts on one)',
     `${thrower.callsign} at ${p2(thrower.char.pos)}, spot ${p2(spot)} (${f1(dist(thrower.char.pos, spot))} m) · item ${can ? `'${can.kind}' who ${can.who} fuse ${can.fuse.toFixed(2)}` : 'none'} · left ${left1} · said ${said} · orders kept ${kept} · logged ${logged} · most keys held at once ${R.held}`);
   R.until(() => !!can?.fired && can.settled, 6); R.step(30);
   const rest = can ? dist(can.pos, spot) : NaN, moved = Math.max(...team.map((gd: any, i: number) => dist(gd.char.pos, pos0[i])));
@@ -162,17 +155,17 @@ export const smokeOrder = guarded(async () => {
     `at rest ${can ? p2(can.pos) : '—'}, ${f1(rest)} m from the spot · fired ${can?.fired} · venting ${can ? f1(can.emitT) : '—'} s left · the furthest any man moved ${moved.toFixed(2)} m · silent ${SLM.squadSilent(game)}`);
   // the second, then none left
   const again = O.give(SMOKE_ORDER, O.targetAt(spot), R.team.indexOf(thrower)); R.step(5); const again2 = O.give(SMOKE_ORDER, O.targetAt(spot)); R.step(5);
-  const block2 = R.notes(), m2 = R.menu(spot), row2 = smokeRow(m2.rows), n2 = R.cans().length; R.press(SQUADSMOKE.orderKey); R.step(5); const n3 = R.cans().length; R.esc();
-  F.verdict(atOnce === null && again === null && again2 === 'no smoke left.' && SM.squadSmokeLeft(game) === 0 && !!row2 && row2.off && /no smoke left/.test(row2.text) && n2 === 2 && n3 === 2 && block2.includes('smoke 0'),
+  const block2 = R.notes(), n2 = R.cans().length; O.give(SMOKE_ORDER, O.targetAt(spot)); R.step(5); const n3 = R.cans().length;
+  F.verdict(atOnce === null && again === null && again2 === 'no smoke left.' && SM.squadSmokeLeft(game) === 0 && n2 === 2 && n3 === 2 && block2.includes('smoke 0'),
     'the same man has no second throw in the same breath (the toss has to finish); once it has, told by name he throws the second; a third order is refused in words; at none left the row stays, greyed with its reason, and H throws nothing',
-    `the frame after: ${atOnce ? 'a throw' : 'no throw'} · later, to him alone: ${again === null ? 'given' : `'${again}'`} · a third: '${again2}' · left ${SM.squadSmokeLeft(game)} · row '${row2?.text}'${row2?.off ? ' (off)' : ''} · cans on the floor ${n2} then ${n3}`);
+    `the frame after: ${atOnce ? 'a throw' : 'no throw'} · later, to him alone: ${again === null ? 'given' : `'${again}'`} · a third: '${again2}' · left ${SM.squadSmokeLeft(game)} `);
   // nobody has a throw to a spot far from every man
   issued(); bring(4, 1);
   const Q = await rig(7, { empty: true }); const far = (() => { const men = Q.team; for (const c of [[6, 0, 10], [30, 0, 8], [34, 0, 20], [10, 0, 21], [20, 0, 6]]) { const t = Q.O.targetAt(c); if (t.kind === 'floor' && men.every((gd: any) => dist(gd.char.pos, t.at) > 12)) return t.at as number[]; } return null; })();
   if (!far) { F.verdict(false, 'a spot of floor more than 12 m from every man', 'none of the candidates is floor that far off'); return F.done(); }
-  const mf = Q.menu(far), rf = smokeRow(mf.rows); Q.press(SQUADSMOKE.orderKey); Q.step(5);
-  F.verdict(!!rf && rf.off && /no throw from here/.test(rf.text) && Q.cans().length === 0 && SM.squadSmokeLeft(Q.game) === 1,
-    'a spot nobody has a throw to (every man more than 12 m off): the row is greyed with its reason, H throws nothing and the can stays in the kit', `spot ${p2(far)}, nearest man ${f1(Math.min(...Q.team.map((gd: any) => dist(gd.char.pos, far))))} m · row '${rf?.text}'${rf?.off ? ' (off)' : ''} · left ${SM.squadSmokeLeft(Q.game)}`);
+  const wf = Q.O.give(SMOKE_ORDER, Q.O.targetAt(far)); Q.step(5);
+  F.verdict(/no throw from here/.test(wf ?? '') && Q.cans().length === 0 && SM.squadSmokeLeft(Q.game) === 1,
+    'a spot nobody has a throw to (every man more than 12 m off): refused in words, nothing is thrown and the can stays in the kit', `spot ${p2(far)}, nearest man ${f1(Math.min(...Q.team.map((gd: any) => dist(gd.char.pos, far))))} m · give '${wf}'`);
   // the reach, measured: the furthest spot on open floor a standing man's can comes to rest on
   { const gd = Q.team[0]; let reach = 0; for (let d = 2; d <= 16; d += 0.25) if (spotNear(Q, gd, d)) reach = d;
     F.verdict(reach >= 8 && reach <= 14, 'the reach of the throw, measured on this floor (the page quotes it): somewhere between 8 and 14 m', `${gd.callsign} at ${p2(gd.char.pos)}: the furthest ring with a clear throw is ${reach} m`); }

@@ -15,7 +15,7 @@
 //     Live is when the level stands AND its picture is ready behind the brief (ui/settle.ts, 10-28: every shader in, the first frames drawn, auto quality's
 //     pick made; `hold` below is the stretch between the two, the world still and the block filling). `?settle=0` = live the moment the level stands.
 //   · THE CONTROLS are where they are from every other screen, Options ▸ Controls (ui/options.ts), one quiet word away; BACK (Esc) is the mission list.
-//   · NOT FOR A PAGE NOBODY SITS AT: main.ts makes none under ?paused, a replay's tape, ?kitview's window or a benchmark's scene, and drops it unstarted once
+//   · NOT FOR A PAGE NOBODY SITS AT: main.ts makes none under ?paused, a replay's tape or a benchmark's scene, and drops it unstarted once
 //     any script drives the page; the headless harness never comes through main.ts at all.
 // THE SWITCH: LOADBRIEF.on — ON in the page (main.ts; `?loadbrief=0` = the boot card and the straight start, as the build was), OFF in the module, so every
 // tool that stands a Menu on a fake DOM measures the cards as they were. A page-only screen: no game rule reads it and no knob table carries it.

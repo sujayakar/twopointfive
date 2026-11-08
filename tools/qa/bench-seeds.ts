@@ -19,13 +19,12 @@
 // the same deal and the same dice, read through the picture's own light meter at the display's own frame time: it is not this fight tick for tick.
 process.env.TPS_PROFILE ??= 'shipped';
 const { standUp, ROOT } = await import('./headless.ts');
-const { readFileSync, existsSync, writeFileSync } = await import('node:fs');
+const { readFileSync, writeFileSync } = await import('node:fs');
 const { resolve } = await import('node:path');
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-const { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
 const { setDifficulty } = await import(`${ROOT}/src/game/difficulty.ts`);
@@ -37,7 +36,7 @@ interface Out { scn: string; seed: number; end: string; t: number; men: number; 
 const f1 = (x: number) => (Number.isFinite(x) ? x.toFixed(1) : '—');
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b), n = s.length; return n ? (n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2) : NaN; };
 const fnv = (h: number, s: string) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
-const levelOfFile = (file: string): any => loadLevel(parseLevelData(readFileSync((f => existsSync(f) ? f : resolve(ROOT, 'levels', file))(resolve(ROOT, 'levels', lookLevelFile(file))), 'utf8')));
+const levelOfFile = (file: string): any => loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')));
 
 async function playOne(id: string, seed: number, o: { cap?: number; hz?: number; jitter?: number; verbose?: boolean } = {}): Promise<Out> {
   const S = BENCH_SCENES.find((s: any) => s.id === id); if (!S) throw new Error(`no scene '${id}' (scenes: ${BENCH_SCENES.map((s: any) => s.id).join(', ')})`);

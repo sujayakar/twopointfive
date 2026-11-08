@@ -152,8 +152,6 @@ pub unsafe extern "C" fn face_hand(h: u32, seat: usize, p: *const f64, pn: usize
         // (the host's own camera, as the hand has it: what a rule asks of the host's view, and where one writes to it)
         if let (true, Some(c)) = (x.g.seats[seat] == game::game::game_host_seat(&x.g), x.g.host_cam) {
             x.drawn.desired = v[56];
-            // (where the view looks: what is gathered round it, gusts and embers, follows it and not the man)
-            x.g.engine.view_focus = Some(cmd.view.target);
             let (c, v) = (&mut x.g.tab.camera[c], &cmd.view);
             (c.target, c.pos, c.forward) = (v.target, v.pos, v.forward);
             (c.yaw, c.pitch, c.distance, c.desired_distance, c.fov, c.aspect) = (v.yaw, v.pitch, v.distance, x.drawn.desired, v.fov, v.aspect);
@@ -199,11 +197,18 @@ pub extern "C" fn face_hands_said(h: u32) {
 pub extern "C" fn face_hands_trace(h: u32) { let s = super::with(h, |x| x.hands.as_ref().map_or(String::new(), |p| p.1.trace())); super::out(s.into_bytes()); }
 #[no_mangle]
 pub extern "C" fn face_draw(h: u32, want: u32) -> *const u32 {
-    super::with(h, |x| { x.drawn.take(&x.g, want); x.drawn.table().as_ptr() })
+    super::with(h, |x| { watch(x); x.drawn.take(&x.g, want); x.drawn.table().as_ptr() })
+}
+/// what a viewer's picture shows that the game lists nowhere is made of it, and the world's copy, which was asked, is proven again by whoever asks next
+fn watch(x: &mut super::Held) {
+    let watches = x.drawn.watches();
+    if watches { game::scene_collision::stands(&mut x.g); }
+    x.drawn.watch(&x.g);
+    if watches { game::scene_collision::unstand(&mut x.g); }
 }
 #[no_mangle]
 pub extern "C" fn face_draw_over(h: u32, want: u32) -> *const u32 {
-    super::with(h, |x| { x.drawn.over(&x.g, want); x.drawn.table().as_ptr() })
+    super::with(h, |x| { watch(x); x.drawn.over(&x.g, want); x.drawn.table().as_ptr() })
 }
 #[no_mangle]
 pub extern "C" fn face_frame(h: u32, a: f64, x: f64, y: f64, z: f64) -> *const u32 {

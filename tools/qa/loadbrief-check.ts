@@ -4,7 +4,7 @@
 //            list of keys; the boot's status line fills the block by its 'N / M'; a press while it boots is kept and the run starts the moment it is live,
 //            once; live and unpressed it holds, then Enter starts it, once; a key of the game's pressed under it is not passed on; Esc is a page load of the
 //            address a quit leaves, with the list asked for; off() goes without starting
-//   wiring   main.ts makes one only for a page somebody sits at (no replay, no ?kitview window, no ?paused, no benchmark scene), holds the world behind a live
+//   wiring   main.ts makes one only for a page somebody sits at (no replay, no ?paused, no benchmark scene), holds the world behind a live
 //            one and drops it for a script; the switch is on in the page by its URL flag alone
 //   stands   a page-only screen: the module's switch is off on whichever stand this runs on, before and after a Game is stood up, and no stand's word names it
 // Nothing here is a picture: tools/qa/loadbrief-page.cjs boots the real page.
@@ -44,7 +44,6 @@ export async function loadbriefCheck(): Promise<boolean> {
   const said = (search: string) => { const q = new URLSearchParams(search), depot = q.get('levelFile') === 'depot.json'; return { id: depot ? 'depot-four' : q.has('solo') ? 'solo-night' : '', title: depot ? 'The depot' : 'Solo night', kind: depot ? 'roomclear' : 'solo', groupTitle: 'Raids', place: 'The depot', blurb: 'The job in one line.', leanWords: 'loud', team: 'you + four', level: depot ? 'depot.json' : 'office.json', scene: '', teaches: [], way: q.get('way') === '2' ? 2 : 0 }; };
   setDesk({ brief: said, leave: quitSearch } as any);
   LOADBRIEF.options = { open() { }, close() { }, up: () => false };   // (the options layer is the page's to hand over)
-  const { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`);
   const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
   const was = LOADBRIEF.on;
 
@@ -119,7 +118,7 @@ export async function loadbriefCheck(): Promise<boolean> {
     B6?.off(); const left6 = winL.length;
     const B7 = loadBrief('?solo'), root7 = doc.getElementById('brief'); await new Promise(r => setTimeout(r, 5)); const cv7 = root7?.find(e => e.tag === 'CANVAS') ?? null; B7?.off();
     const B8 = loadBrief(Q), root8 = doc.getElementById('brief'); await new Promise(r => setTimeout(r, 5)); const cv8 = root8?.find(e => e.tag === 'CANVAS') ?? null, w8 = (cv8 as any)?.width, h8 = (cv8 as any)?.height; B8?.off();
-    line(!!cv6 && !img6 && cv6.getAttribute('data-level') === lookLevelFile('depot.json') && mark6 === 'roomclear|2' && cv8?.getAttribute('data-mark') === 'roomclear|0' && w8 === 760 && h8 === 532 && (cv8 as any)?.width === 0 && left6 === 0 && cv7?.getAttribute('data-level') === 'office.json' && cv7.getAttribute('data-mark') === 'solo|0',
+    line(!!cv6 && !img6 && cv6.getAttribute('data-level') === 'depot.json' && mark6 === 'roomclear|2' && cv8?.getAttribute('data-mark') === 'roomclear|0' && w8 === 760 && h8 === 532 && (cv8 as any)?.width === 0 && left6 === 0 && cv7?.getAttribute('data-level') === 'office.json' && cv7.getAttribute('data-mark') === 'solo|0',
       `screen: beside the words is the map of the mission's own level as the page loads it, asked of the mission list's sheet with the way in the address names (${cv6?.getAttribute('data-level')} ${mark6} · ${cv8?.getAttribute('data-mark')} ${w8} x ${h8} · ${cv7?.getAttribute('data-level')} ${cv7?.getAttribute('data-mark')}), in the sheet's own shape, its pixels let go when the brief goes — and no picture`);
   } catch (e: any) { line(false, `screen: threw — ${e?.stack ?? e}`); }
   finally { LOADBRIEF.on = was; for (const k of Object.keys(saved)) { if (saved[k]) Object.defineProperty(G, k, saved[k]!); else delete G[k]; } }

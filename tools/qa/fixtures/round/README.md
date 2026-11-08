@@ -10,4 +10,3 @@ Write one in the commit that gives a level a round thing, or takes one away:
 
 Two whole numbers on one line with a space between, for example `0 18`. A line that starts with `#` says what changed.
 `TPS_LIVED=1 bun run tools/qa/round-check.ts` reads the second number, the plain run the first, and each says what it found when the two differ.
-A look twin (`<name>-gwot.json`) has its own file or none.

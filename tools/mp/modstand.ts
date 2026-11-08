@@ -8,7 +8,7 @@ import type { WireCmd } from '../../src/net/wire.ts';
 import { commandBytes, startWhy, type NetStart } from '../../src/net/start.ts';
 import { NetGame, type NetFace } from '../../src/net/modgame.ts';
 import { wordTick } from '../../src/net/words.ts';
-import { LOOK, lookLevelFile, lookOfQuery } from '../../src/scene/look.ts';
+import { LOOK } from '../../src/scene/look.ts';
 import { characterFiles, pack } from '../blitz/start-pack.ts';
 import { faceHere } from '../blitz/face-build.ts';
 import { wordsKept, type Stood } from './stood.ts';
@@ -19,10 +19,9 @@ const ROOT = resolve(import.meta.dir, '../..');
 export interface StartSetup { search: string; seed: number; commands?: string }
 export function freshStart(setup: StartSetup): NetStart {
   const q = new URLSearchParams(setup.search), named = q.get('levelFile') ?? 'office.json';
-  LOOK.on = lookOfQuery(q);
-  const look = lookLevelFile(named), start: NetStart = { file: named, words: setup.search, seed: setup.seed, seats: Number(q.get('seats') ?? 1), commands: setup.commands ?? '' };
+  LOOK.on = true;
+  const start: NetStart = { file: named, words: setup.search, seed: setup.seed, seats: Number(q.get('seats') ?? 1), commands: setup.commands ?? '' };
   const why = startWhy(start); if (why) throw new Error(`the setup: ${why}`);
-  if (existsSync(resolve(ROOT, 'levels', look))) start.file = look;
   return start;
 }
 

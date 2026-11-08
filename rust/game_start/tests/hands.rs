@@ -52,7 +52,7 @@ fn nobody_fires_with_his_magazine_out_and_no_change_stands_still() {
                 let Some(&lead) = mates.iter().find(|&&m| p.up(m)) else { break };
                 let at = p.at(lead);
                 let Some(near) = p.hostiles_by(at).into_iter().find(|&h| p.up(h)) else { break };
-                p.order("move", p.at(near), Who::All);
+                p.tries_order("move", p.at(near), Who::All);
             }
             p.frame();
             for (i, &m) in men.iter().enumerate() {

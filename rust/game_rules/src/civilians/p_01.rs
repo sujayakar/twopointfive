@@ -146,7 +146,7 @@ pub fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::Civili
     let tint = v3::copy(def.tint);
     let (men, rig) = (g.men, g.rig);
     let gd = crate::game::guard_new(g, men, rig, id, route, -1, fl, tint, Some(&look));
-    g.gd[gd].foe = None;
+    crate::mind::foe(g, gd, None, "civilians");
     g.gd[gd].drawn = false;
     g.gd[gd].heard_up_to = g.event_seq;
     let worker = def.kind == crate::scene_level::CivilianDefKind::Worker;

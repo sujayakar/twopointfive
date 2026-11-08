@@ -146,12 +146,13 @@ export const CMDRING = {
    *  is cool but it does really slow the tempo of the game and is quite complicated" · "the main problem we're trying to solve is having the squad do
    *  simultaneous room clears and cover multiple directions" · "could we prototype removing plan mode and having shift Q instead add a goal to the
    *  squad? like shift Q on a second door will naturally split the squad in two, and F tells all of them to go in. shift Q on a spot to watch
-   *  automatically has them split up angles"): Shift + the key never puts the mode up. A TAP of it (kept down it is the ring, as the key always is) gives what the cursor is on to a PART of the squad and
+   *  automatically has them split up angles"; and, 11-08, of the spot: "i think shift Q on a point should just move the squad there, should match what
+   *  regular Q does. you should need to open the radial menu to get covering a point"): Shift + the key never puts the mode up. A TAP of it gives what the cursor is on to a PART of the squad (kept down it is that part's ring, `goalRing`) and
    *  leaves the rest on what they were doing: the men with nothing to do take it first (everyone, with nothing going: it is then the key's own
-   *  order); else the biggest group on one thing gives up half of itself, a whole pair where it has two (the pair nearer the new thing). On a
-   *  door that part stacks up on it, and the word's key sends every stack in together, as the squad of four's own word always did (doortools.ts
-   *  goMen). On a bare spot of floor that part covers it from where they stand, the men with a line to it first. On a door some of them are on
-   *  already, it is the key's order for those men. A group of one has nobody to give. The key without Shift is still everyone's, and one goal.
+   *  order); else the biggest group on one thing gives up half of itself, a whole pair where it has two (the pair nearer the new thing). THAT PART TAKES WHAT THE KEY
+   *  ALONE WOULD GIVE THERE (autopilot `quick`, one answer): on a door it stacks up, and the word's key sends every stack in together, as the squad of four's
+   *  own word always did (doortools.ts goMen); on a bare spot of floor it moves there (covering a spot is the ring's, `goalRing`); on a door some of them
+   *  are on already, those men take it. A group of one has nobody to give. The key without Shift is still everyone's, and one goal.
    *  On a tutorial mission only from the step that lists the frame's action `goal` (rails.ts; no lesson but the fourth mission's lists it). PLAN MODE
    *  ITSELF IS GONE (the maintainer, 10-26: "let's remove plan mode"): false is Shift + the key as the key with no Shift, everyone's. Off here and on
    *  the frozen stand (`TPS_GOALS=1`, beside `TPS_QRING=1`); the page raises it with the ring (`?goals=0` off) */
@@ -159,8 +160,8 @@ export const CMDRING = {
   /** … AND KEPT DOWN, SHIFT + THE KEY IS THE RING FOR THAT PART (the maintainer, 10-26, having played `goals`: "okay this feels good. let's make
    *  shift-Q long press open the radial menu to append another order too"): the ring goes up on what the cursor is on as it always did, but for the
    *  men a tap of it there would have sent (planmode.ts goalMen: the men with nothing to do, else half of the biggest group), named on the ring and
-   *  in its colour — and the wedge picked is THEIRS, the rest left on what they were doing. Its first wedge is the key's own order for those men
-   *  (on a spot of floor: they go there, where the tap has them cover it — 'cover' is a wedge of its own). With every man on a thing of his own
+   *  in its colour — and the wedge picked is THEIRS, the rest left on what they were doing. Its first wedge is the tap's order for those men
+   *  (on a spot of floor: they go there), and 'cover' is a wedge of its own: the only way to have a part cover a spot (the maintainer, 11-08, above). With every man on a thing of his own
    *  nobody is free and no ring goes up (the tap's own line). With nothing going, on himself, or on a teammate it is the ring it always was.
    *  false: kept down, Shift + the key is everyone's ring, as `goals` was first built. Needs `goals`. Off here and on the frozen stand
    *  (`TPS_GOALRING=1`, beside `TPS_GOALS=1`); the page raises it with `goals` (`?goalring=0` off) */
@@ -168,7 +169,7 @@ export const CMDRING = {
   /** THE FIRST SHIFT + KEY SENDS HALF THE SQUAD (the maintainer, 11-02, passing on a play tester's note: "first shift Q should just send half the
    *  squad, whoever's closest"): with nothing going a goal was everyone's, the key's own order, and only the second one split the squad. Now a
    *  squad with nothing going gives up half of itself as any group does (planmode.ts goalMen): a whole pair where it holds two, the pair nearer
-   *  what the cursor is on (on a spot to watch: the pair with more men who can see it, then the nearer), else the nearer half of its men (two teammates: the
+   *  what the cursor is on, else the nearer half of its men (two teammates: the
    *  nearer man; three: the nearer of the whole pair and the odd man). The rest stay with him, and the next goal is theirs. One teammate alone is
    *  still everyone. false: with nothing going the goal is everyone's, as
    *  `goals` was built. Needs `goals`. Off here and on the frozen stand (`TPS_GOALHALF=1`, beside `TPS_GOALS=1`); the page raises it with `goals`
@@ -288,6 +289,6 @@ export function wedgeAt(dx: number, dy: number, n: number): number { return gone
 /** a file holds no ring (a held key is not state): a load, or the switch put off, finds the key up — savestate.ts, ui/bindings.ts */
 export function ringRestore(g: Game): void {
   g.orders.cmdPress = null; g.orders.tapWas = null;
-  if (g.orders.cmdRing) { g.orders.cmdRing = null; g.orders.close(); }
+  if (g.orders.cmdRing) { g.orders.cmdRing = null; g.orders.menu = null; }
   const S = g.player.sel; if (S.ring) { S.ring = null; S.open = false; S.downT = -1; S.moved = false; g.player.fHeld = true; }   // (his own ring: the press is spent, as a teleport spends it)
 }

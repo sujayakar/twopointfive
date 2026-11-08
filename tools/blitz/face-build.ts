@@ -33,12 +33,18 @@ export const FACE_CRATES = ['prim', 'sim', 'game_types', 'game_wire', 'game_rule
 
 /** the checked-in module and the hash of the sources it was built from */
 export const PREBUILT = join(CRATE, 'prebuilt/game_face.wasm'), PREBUILT_SOURCES = join(CRATE, 'prebuilt/SOURCES');
+/** the sources of a crate that the module does not compile: its programs (src/bin), and the files of a module that lib.rs names under `feature = "std"` (the module takes game_start without it) or `test` */
+function native(src: string): Set<string> {
+  const out = new Set([join(src, 'bin')]), lib = join(src, 'lib.rs'); if (!existsSync(lib)) return out;
+  for (const m of readFileSync(lib, 'utf8').matchAll(/^#\[cfg\((?:feature = "std"|test)\)\]\s*\n(?:pub )?mod (\w+);/gm)) { out.add(join(src, `${m[1]}.rs`)); out.add(join(src, m[1])); }
+  return out;
+}
 /** the newest source the module is made from: its time and its path (and, in `files`, every source file) */
 function newest(): { t: number; file: string; files: string[] } {
   let best = { t: 0, file: '', files: [] as string[] };
   const see = (p: string) => { best.files.push(p); const t = statSync(p).mtimeMs; if (t > best.t) { best.t = t; best.file = p; } };
-  const walk = (dir: string) => { for (const n of readdirSync(dir)) { const p = join(dir, n); if (statSync(p).isDirectory()) walk(p); else if (n.endsWith('.rs')) see(p); } };
-  for (const c of FACE_CRATES) { const d = join(RUST, c); if (!existsSync(d)) continue; for (const f of ['Cargo.toml', 'build.rs']) if (existsSync(join(d, f))) see(join(d, f)); if (existsSync(join(d, 'src'))) walk(join(d, 'src')); }
+  const walk = (dir: string, skip: Set<string>) => { for (const n of readdirSync(dir)) { const p = join(dir, n); if (skip.has(p)) continue; if (statSync(p).isDirectory()) walk(p, skip); else if (n.endsWith('.rs')) see(p); } };
+  for (const c of FACE_CRATES) { const d = join(RUST, c), src = join(d, 'src'); if (!existsSync(d)) continue; for (const f of ['Cargo.toml', 'build.rs']) if (existsSync(join(d, f))) see(join(d, f)); if (existsSync(src)) walk(src, native(src)); }
   if (existsSync(join(RUST, 'rust-toolchain.toml'))) see(join(RUST, 'rust-toolchain.toml'));
   return best;
 }

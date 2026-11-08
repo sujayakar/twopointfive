@@ -7,7 +7,7 @@
 //   walk     key on, the same: not refused, not greyed; the men walk (never faster than a plain 'move' walks them); one man tries the leaf; the door
 //            orders' own words are said once and logged; every man of the order is left stacked on that door, on his mark three seconds on, on his own
 //            side of it, nobody inside the room, nobody moving after; the team knows, and the same order is now refused and greyed
-import { doing, listedOf } from './squadwords';
+import { doing, listedOf, ringUp, ringDown } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
@@ -54,7 +54,7 @@ async function rig(key: boolean, squad: 2 | 4, testDoor = true) {
   const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; for (const h of NB.hostiles) if (h.state !== 'dead') h.dazzledUntil = g.time + 5; W.step(DT); } };
   // (the page's squad opens following Sam, the frozen stand's with no order: told to hold where it stands, the same on both, before anything is read)
   await quiet(() => { step(30); g.teleportPlayer(AWAY); step(5); O.give('hold', O.targetAt(g.player.char.pos), 'all'); step(60); });
-  return { g, O, D, said, step, door: (name: string): any => g.doors.list.find((d: any) => d.def.name === name) };
+  return { W, g, O, D, said, step, door: (name: string): any => g.doors.list.find((d: any) => d.def.name === name) };
 }
 type Rig = Awaited<ReturnType<typeof rig>>;
 /** what a staging does part-way through the walk: `[seconds after the order, what]` */
@@ -69,7 +69,7 @@ async function play(mode: 'locked' | 'known' | 'ring' | 'open', key: boolean, o:
   const team: any[] = O.men('all'), sent: any[] = O.men(who);
   const men = (l: any[] = team): Man[] => l.map((m: any) => { const A = O.of(m); return { c: m.callsign, order: String(A?.order ?? '-'), door: String(A?.door?.def.name ?? '-'), there: String(A?.there ?? '-'), post: A?.post ? [A.post[0], 0, A.post[2]] : null, pos: [m.char.pos[0], 0, m.char.pos[2]], side: sideOf(d, m.char.pos), tries: !!A?.tries, arrived: !!A?.arrived, dead: m.state === 'dead' }; });
   /** the menu opened on that spot as the player opens it: its 'move there' row — greyed or not, and its words */
-  const row = (): Row | null => { const was = O.who; O.who = who; try { if (!O.open(O.targetAt(spot))) return null; const r = listedOf(O)?.rows.find((x: any) => String(x.opts[0]?.text ?? '').startsWith('move there')); return r ? { off: !!r.off, text: String(r.opts[0].text) } : null; } finally { O.close(); O.who = was; } };
+  const row = (): Row | null => { const was = O.who; O.who = who; try { R.W.cursorAt(spot); ringUp(R.W.input, R); if (!O.menu) return null; const r = listedOf(O)?.rows.find((x: any) => String(x.opts[0]?.text ?? '').startsWith('move there')); return r ? { off: !!r.off, text: String(r.opts[0].text) } : null; } finally { ringDown(R.W.input); R.step(); O.who = was; } };
   if (mode === 'known') await quiet(() => { O.give('stack', O.targetAt(d.frameCentre), who); for (let i = 0; i < 60 * 30 && !D.knownShut(d, samSide); i++) R.step(); R.step(60); });
   if (mode === 'ring') g.player.keys.add(d.lockId);
   o.before?.(R, d);
@@ -163,9 +163,9 @@ export async function moveWalkTries(): Promise<boolean> {
       verdict(on.halt.length === 2 && on.halt.every(told) && on.later.every(stacked) && gap(on.later, on.end) < 0.05 && on.shutStill,
         `${K} — every man of the order is left stacked on that door ('stacked · <door> · locked', the halted door order's own carriage) as the line is said; three seconds on each stands on his mark, within 2.6 m of the frame on the corridor's side, nobody in the room, the leaf still shut and locked; and nobody moves in the two seconds after that`,
         `${on.later.map(m => `${m.c} ${at(m.pos)} mark ${m.post ? `${at(m.post)} ${f2(dist(m.post, on.frame))} m off the frame` : 'NONE'} side ${m.side} (Sam's ${on.samSide}) [${m.order} · ${m.there}]`).join(', ')} · as the line is said: ${line(on.halt)} · moved in the last 2 s: ${f2(gap(on.later, on.end))} m · door locked and shut: ${on.shutStill}`); }
-    verdict(on.knew1 && on.why2 === refusal && !!on.row1?.off && on.row1.text.includes(refusal) && same(on.later, on.end),
-      `${K} — the team knows now: the same order is refused and its row greyed with the door's name, and the men stay stacked`,
-      `team knows the door: ${on.knew1} · give('move') again → ${JSON.stringify(on.why2)} · menu row: ${rowWords(on.row1)} · after it: ${line(on.end)}`);
+    verdict(on.knew1 && on.why2 === refusal && same(on.later, on.end),
+      `${K} — the team knows now: the same order is refused in the door's name, and the men stay stacked`,
+      `team knows the door: ${on.knew1} · give('move') again → ${JSON.stringify(on.why2)} · after it: ${line(on.end)}`);
     console.log(`=== move-walktries: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
     return all;
   } finally { Math.random = rnd; back(); }

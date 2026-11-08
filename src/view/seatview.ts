@@ -15,7 +15,7 @@ export const NO_VIEW: TickView = { mission: null, lesson: null, radio: [], bubbl
   kit: { slots: [], gun: null, setup: null, big: null, hitsLeft: 0, hitsMax: 0, down: false, god: false, nightVision: null, keyTag: null },
   marks: { men: [], seen: [], cams: [], frags: [], blind: 0, light: 0, irradiance: 0, noise: 0, stalk: null, stalkWaits: false, floor: null },
   aim: { ring: null, dot: null, tooClose: false, throw: null },
-  worn: [], squad: null, corner: [], throws: [], ring: null, hand: null, empty: null, plan: null, live: false, quiet: null,
+  worn: [], squad: null, corner: [], throws: [], ring: null, hand: null, empty: null, plan: { own: { men: [], who: [], you: null, doors: [], throws: [], mode: false }, others: [] }, live: false, quiet: null,
   interact: { rows: [], lit: -1, more: 0, open: false, corner: true, ring: null, dots: [] }, alarm: null, stage: 'infiltrate', attention: [],
   look: { ring: { places: 0, hole: 0, rim: 0, boxX: 0, boxY: 0, lone: { r: 0, h: 0, pad: 0, letter: 0, max: 0, lead: 0 } }, plan: { freshSecs: 0, walkDim: 0, restDim: 0, ringM: 0, sectorM: 0, sectorDeg: 0, reaskSecs: 0, others: 0 }, net: { edge: false, near: 0, edgeIn: 0 }, attention: { ringM: 0, wayReask: 0 }, lineClear: false, markClear: false, back: 'Esc' } };
 

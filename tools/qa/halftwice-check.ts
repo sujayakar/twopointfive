@@ -9,7 +9,10 @@
 //  H1. nobody on anything, Shift + the key on a door: ONE whole pair is sent to stack there, the pair that stands nearer it, and the other two are
 //      still with him.
 //  H2. Shift + the key on the second door: the two who stayed stack there, and the first pair is still on the first.
-//  H3. nobody on anything, Shift + the key on a spot: two cover it and two are still with him. A second spot: two cover each. A third: two, one and one.
+//  H3. nobody on anything, Shift + the key on a spot: a whole pair, the nearer, moves there (the key's own order; nobody covers) and two are still with him. A second spot: the two who
+//      stayed, a whole pair. A third: two, one and one (the maintainer, 11-08: "shift Q on a point should just move the squad there").
+// H3b. Shift + the key kept down on a spot: the ring is that pair's, its first wedge says what the tap gives and its 'cover' wedge is the only way to have them
+//      cover it, that pair alone, the other two still with him.
 //  H4. nobody on anything, Shift + the key KEPT DOWN on a door: the ring is one whole pair's and nobody is told anything; its first wedge: that pair
 //      stacks there and the other two are still with him. On himself the rule still names everyone.
 //  H5. ONE teammate: Shift + the key on a door is his (half of one man is nobody: it stays everyone's).
@@ -29,7 +32,7 @@
 // T12. a pause between the two taps (the loop's 'Thawed', the first tick after a frozen frame): the tap after it is a first tap, and all four stack.
 //   P. CONTROL (plumbing) — a recording from before the keys replays with both off; the frozen stand holds both off, the page's has both on,
 //      FROZEN_HOLDS has their rows.
-// GOALHALF_BREAK=1 = that switch left off and the same lines asked: H1 to H4, H7 and H8 must fail.
+// GOALHALF_BREAK=1 = that switch left off and the same lines asked: H1 to H4 (H3b with them), H7 and H8 must fail.
 // QTWICE_BREAK=1 = that switch left off: T1, T2 and T9 to T11 must fail.
 //   exit 0 = all hold · 1 = one does not
 import { ROOT } from './headless.ts';
@@ -47,7 +50,7 @@ export async function halftwiceCheck(): Promise<boolean> {
   let fails = 0;
   const line = (ok: boolean, what: string, got: string) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what} — ${got}`); if (!ok) fails++; };
   const knobs0 = knobsCopy(), K = CMDRING;
-  console.log(`The first goal sends half the squad (CMDRING.goalHalf) and the key tapped twice is 'fall in' (CMDRING.twice)${HBREAK ? ' — GOALHALF_BREAK=1: that switch left off, H1 to H4, H7 and H8 must fail' : TBREAK ? ' — QTWICE_BREAK=1: that switch left off, T1, T2 and T9 to T11 must fail' : ''}`);
+  console.log(`The first goal sends half the squad (CMDRING.goalHalf) and the key tapped twice is 'fall in' (CMDRING.twice)${HBREAK ? ' — GOALHALF_BREAK=1: that switch left off, H1 to H4 (H3b with them), H7 and H8 must fail' : TBREAK ? ' — QTWICE_BREAK=1: that switch left off, T1, T2 and T9 to T11 must fail' : ''}`);
   try {
     const R = await rig(true, { goalHalf: !HBREAK, twice: !TBREAK }), g = R.g, O = R.O, D = R.D, W = R.W, N = O.men('all').length;
     const A = R.door('guard'), B = R.door('guard_side'), names = (l: any[]) => l.map((m: any) => m.callsign).sort().join(', ') || 'nobody';
@@ -56,7 +59,6 @@ export async function halftwiceCheck(): Promise<boolean> {
     const withHim = (): any[] => O.men('all').filter((m: any) => { const a = O.of(m); return !a || a.post === null; });
     const fallen = (): any[] => O.men('all').filter((m: any) => O.of(m)?.order === 'fallIn');
     const far = (men: any[], d: any) => men.reduce((s: number, m: any) => s + flat(m.char.pos, d.frameCentre), 0) / Math.max(1, men.length);
-    const sizes = (): string => [...R.watches().values()].map((l: string[]) => l.length).sort((x: number, y: number) => y - x).join(' + ') || 'nobody covering';
 
     // H1, H2
     R.home();
@@ -69,10 +71,17 @@ export async function halftwiceCheck(): Promise<boolean> {
         `the cursor on the second door: ${onB} · on the first: ${names(a2)} · on the second: ${names(b2)}`); }
     // H3
     R.home();
-    { const spots: V[] = [], add = (): string => { const p = R.onSpot(spots); if (!p) return 'no spot'; spots.push(p); R.key(true); R.step(10); return sizes(); };
-      const s1 = add(), rest1 = withHim().length, s2 = add(), s3 = add();
-      line(s1 === '2' && rest1 === 2 && s2 === '2 + 2' && s3 === '2 + 1 + 1', 'H3. nobody on anything, Shift + the key on a spot: two cover it and two are still with him. A second spot: two cover each. A third: two, one and one',
-        `covering after the first: ${s1}, still with him ${rest1} · the second: ${s2} · the third: ${s3}`); }
+    { const spots: V[] = [], add = (): string => { const p = R.onSpot(spots); if (!p) return 'no spot'; spots.push(p); R.key(true); R.step(10); return R.parts(); };
+      const pairs: any[][] = O.pairs().map((id: any) => O.men('all').filter((m: any) => O.pairOf(m) === id)), p0 = R.onSpot(spots), nearAt = (l: any[]) => p0 ? l.reduce((x: number, m: any) => x + flat(m.char.pos, p0), 0) / l.length : 0, near0 = [...pairs].sort((x, y) => nearAt(x) - nearAt(y))[0];
+      const s1 = add(), sent = R.onOrder('move'), rest1 = withHim(), c1 = R.onOrder('cover').length, whole = sent.length === 2 && O.pairOf(sent[0]) === O.pairOf(sent[1]), s2 = add(), both = R.onOrder('move').length, s3 = add(), c3 = R.onOrder('cover').length;
+      line(s1 === '2' && whole && names(sent) === names(near0) && rest1.length === 2 && c1 === 0 && s2 === '2 + 2' && both === N && s3 === '2 + 1 + 1' && c3 === 0, 'H3. nobody on anything, Shift + the key on a spot: the nearer whole pair moves there, nobody covers, and two are still with him. A second spot: the two who stayed. A third: two, one and one',
+        `after the first: ${s1}, sent ${names(sent)} (the nearer pair was ${names(near0)}), still with him ${rest1.length}, covering ${c1} · the second: ${s2}, moving ${both} · the third: ${s3}, covering ${c3}`); }
+    // H3b
+    R.home();
+    { const p = R.onSpot(), ring = !!p && R.hold(), part: any[] = [...(O.menu?.part ?? [])], q = (O.g.view.ring?.wedges ?? []).find((y: any) => y.key === 1)?.text ?? null, rows: string[] = O.menu?.rows.map((r: any) => r.id) ?? [], w = ring ? R.wedge(/cover/i) : null; if (!ring) R.away(); R.step(10);
+      const cov = R.onOrder('cover'), rest = withHim(), wp = R.watches().size;
+      line(ring && part.length === 2 && O.pairOf(part[0]) === O.pairOf(part[1]) && /move|go/i.test(q ?? '') && rows.includes('cover') && !!w && names(cov) === names(part) && rest.length === 2 && wp === 1, 'H3b. Shift + the key kept down on a spot: the ring is a whole pair\'s, and its \'cover\' wedge has that pair cover it and leaves the other two with him',
+        `the ring ${ring ? 'up' : 'NOT up'} for ${names(part)}, its first wedge '${q}', rows ${rows.join(', ')} · '${w}' picked: covering ${names(cov)}, still with him ${rest.length}`); }
     // H4
     R.home();
     { const onA = R.onDoor(A), n0 = O.log.length, ring = R.hold(), part: any[] = O.menu?.part ?? [], told = O.log.length - n0, pair = part.length === 2 && O.pairOf(part[0]) === O.pairOf(part[1]);

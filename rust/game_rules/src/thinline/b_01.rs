@@ -20,7 +20,5 @@ pub fn thin_forget(g: &mut crate::game::Game, b: AnyBoxId) {
     if !g.m.thinline.thin.is_empty() { g.m.thinline.thin.delete(b); }
     if !g.m.thinline.air.is_empty() { g.m.thinline.air.delete(b); }
 }
-/// BOUNDARY NO-OP (thinline.ts:26): no line was noted, so none is refitted: the list stands
-pub fn thin_fit(g: &crate::game::Game, list: &[AnyBoxId], px: f64) -> Option<Vec<AnyBoxId>> { None }
 /// `line` (already noted) is a weapon laser's beam and `bead` the dot where it lands, or none: a host may draw the pair as light in the air.   (thinline.ts:44 thinAir)
 pub fn thin_air(g: &mut crate::game::Game, line: AnyBoxId, bead: Option<AnyBoxId>) -> AnyBoxId { g.m.thinline.air.set(line, bead); line }
