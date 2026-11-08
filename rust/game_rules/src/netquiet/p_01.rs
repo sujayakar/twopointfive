@@ -642,11 +642,7 @@ pub fn free(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.ai_enabled
         && !g.touring
         && !g.quiet_utility
-        && g.gd[gd].held.is_none()
-        && !crate::control::man::blind(g, gd)
-        && !crate::control::man::staggered(g, gd)
-        && !crate::owner::has(g, gd, crate::owner::by::MORALE)
-        && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
+        && crate::owner::kept(g, gd, crate::owner::by::LAST_MAN).is_none()
 }
 
 /// is he the last: 2 = he had mates and none of his side is up anywhere · 1 = his squad is down and he knows it, nobody at his side · 0 = neither (netquiet.ts lastKind)

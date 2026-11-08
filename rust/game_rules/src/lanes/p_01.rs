@@ -65,7 +65,7 @@ pub fn lane_of(g: &crate::game::Game, gd: GuardId) -> Option<LanesLaneId> {
 /// The owner's record says what this file's state says of him.   (lanes.ts laneSay)
 pub fn lane_say(g: &mut crate::game::Game, gd: GuardId) {
     let (rule, t) = (crate::owner::by::LANE, g.time);
-    if lane_of(g, gd).is_some() {
+    if lane_of(g, gd).is_some() && !crate::owner::has(g, gd, crate::owner::by::RUNNER) {
         crate::owner::claim(g, gd, rule, t, None);
     } else {
         crate::owner::release(g, gd, rule, t);

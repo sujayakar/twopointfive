@@ -143,7 +143,8 @@ man, by::LANE, t, why)`, `owner::release`, `owner::has(&Game, man, by::PRESS | b
 strongest, why, since when), which `control_line` prints. It RECORDS: a tasker takes its man whoever has him, and
 each rule asks `has` of those it yields to. Deciding by the list is step G.
 
-In code an assignment is three calls, and a tasker is whoever makes them (not built yet; step E makes the
+(What is built: the list decides who may take a man, by `owner::kept`, and each tasker claims and releases him there. What
+he was given is still the tasker's own.) In code an assignment is three calls, and a tasker is whoever makes them (not built; step E makes the
 first, for `hold` and `pinned`):
 
 ```rust
@@ -281,7 +282,7 @@ Under `rust/game_rules/src/`. One man's frame, in the order it runs (`guards/fra
 | what he does, by his state | `guards/behave/{patrol,suspicious,alert,search}.rs` | his state's file |
 | the looks laid over his aim | `guards/looks.rs` | a line of `LOOKS` |
 | his pose, his light, his footfall | `guards/frame.rs pose` | |
-| whose man he is (fifteen taskers, strongest first) | `game_types/src/owner/types.rs`, `owner/` | a line of `taskers!` |
+| whose man he is: the taskers, strongest first, and who may take him (`kept`) | `game_types/src/owner/types.rs`, `owner/` | a line of `taskers!`; `kept` before it takes him |
 | what a rule may ask of a man (enemy, blind, staggered, held, in contact, still) | `control/man.rs` | a function |
 | his hands: a change of magazine | `guards/frame.rs hands`; begun by `guards::begin_reload` only | |
 | why he is doing that | `control::control_line`, `mind::why`, `owner::who` | |
