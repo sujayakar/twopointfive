@@ -55,10 +55,10 @@ const LEAN_OF_KIND: Record<ScenarioEntry['kind'], Lean> = { nightbreach: 'either
  *  mission a raid (every row is under exactly one heading: there is no 'the rest') */
 export function groupOf(e: ScenarioEntry): MissionGroup { return e.group ?? (e.kind === 'quiet' ? (e.squad ? 'quiet-two' : 'quiet-alone') : e.kind === 'rescue' ? 'clock' : 'raids'); }
 const groupRank = (g: MissionGroup) => { const i = MISSION_GROUPS.findIndex(x => x.id === g); return i < 0 ? MISSION_GROUPS.length : i; };
-/** the headings a list of rows is drawn under: one over the first row of each run of one group, from row `from` on (`{ index: title }` — openMissions' `heads`) */
-export function groupHeads(list: Mission[], from = 0): Record<number, string> {
+/** the headings a list of rows is drawn under: one over the first row of each run of one group (`{ index: title }`) */
+export function groupHeads(list: Mission[]): Record<number, string> {
   const H: Record<number, string> = {};
-  for (let i = from; i < list.length; i++) if (i === from || list[i].group !== list[i - 1].group) H[i] = MISSION_GROUPS.find(x => x.id === list[i].group)?.title ?? 'Missions';
+  for (let i = 0; i < list.length; i++) if (i === 0 || list[i].group !== list[i - 1].group) H[i] = MISSION_GROUPS.find(x => x.id === list[i].group)?.title ?? 'Missions';
   return H;
 }
 export function missionOf(e: ScenarioEntry): Mission {
