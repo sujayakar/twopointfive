@@ -482,13 +482,23 @@ pub fn beat(g: usize, dt: f64) -> u32 {
     n
 }
 
+/// the plan of box world `w`, in squares
+fn plan_of(w: usize) -> (f64, f64) {
+    let o = world(w);
+    (-floor(-(o.w as f64 * o.cs) / SIDE), -floor(-(o.h as f64 * o.cs) / SIDE))
+}
+/// the light's tables of box world `w` made before a step asks for them (glow.rs ready)
+pub fn light_ready(w: usize, to_sun: [f64; 3]) {
+    let (x, z) = plan_of(w);
+    if x >= 1.0 && z >= 1.0 && x * z <= MAX_BRICKS as f64 {
+        crate::glow::ready(w, x as usize, z as usize, to_sun);
+    }
+}
 /// `n` STEPS of a tenth of a second each of the grid of the game in slot `g` (its block's `stamp`), over the copy `copy` of box world `w` as it stands
 /// and the leaves of list `set`. 0, or ASK_HOST = no grid stands on this level (its plan is larger than a grid can be), or the game has none: the
 /// state is as it was.
 pub fn step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, k: &K, glow: Option<&crate::glow::K>) -> u32 {
-    let o = world(w);
-    let (mx, mz) = (o.w as f64 * o.cs, o.h as f64 * o.cs);
-    let (nbx, nbz) = (-floor(-mx / SIDE), -floor(-mz / SIDE));
+    let (nbx, nbz) = plan_of(w);
     if !(nbx >= 1.0 && nbz >= 1.0 && nbx * nbz <= MAX_BRICKS as f64) || set >= LEAF_SETS as i32 || state(g).smoke.live == 0 {
         return ASK_HOST;
     }
