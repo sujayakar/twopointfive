@@ -13,6 +13,7 @@ import sceneCode from './wgsl/scene.wgsl' with { type: 'text' };
 import surfaceCode from './wgsl/surface.wgsl' with { type: 'text' };
 import wavesCode from './wgsl/waves.wgsl' with { type: 'text' };
 import { Water } from './water';
+import { mapLamps, lampMapCode } from './lampmap';
 
 export const TICK = 1 / 60;
 export interface Method { name: string; signals(g: Graph, lab: Lab): void; stages(lab: Lab): Stage[]; frame?(lab: Lab): void; result: string; reset?(lab: Lab): void; prepare?(lab: Lab): Promise<void> }
@@ -25,10 +26,12 @@ export class Lab {
   async open(canvas: HTMLCanvasElement | null) {
     this.gpu = await openGpu(canvas); this.building = makeBuilding(); this.sky = new Sky(this.gpu); await this.sky.init();
     this.water = new Water(this.gpu); await this.water.init(); this.scene = new SceneGpu(this.gpu, this.building.world, this.sky.tex, this.water.tex);
-    this.graph = new Graph(this.gpu, () => math + '\n' + sceneCode + '\n' + wavesCode + '\n' + surfaceCode + '\n', { layout: this.scene.layout, group: this.scene.group });
+    this.graph = new Graph(this.gpu, () => math + '\n' + sceneCode + '\n' + wavesCode + '\n' + lampMapCode + '\n' + surfaceCode + '\n', { layout: this.scene.layout, group: this.scene.group });
     this.pose(); for (const p of this.building.world.moving) this.prevAt.set(p, { at: p.at, rot: p.rot });
   }
+  private mapped = false;
   async use(m: Method) {
+    if (!this.mapped) { this.mapped = true; this.send(); this.prev = null; await mapLamps(this); }
     if (!this.methods.has(m.name)) { m.signals(this.graph, this); await m.prepare?.(this); const stages = m.stages(this); await this.graph.build(stages); this.methods.set(m.name, { m, stages }); }
     this.current = m.name; m.reset?.(this); return m;
   }

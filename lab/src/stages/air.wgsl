@@ -1,6 +1,7 @@
 // THE AIR, as one medium: the city's haze, the dust of the rooms, the steam off the vents, the rain. Each adds to one density; what stands at a point is lit one
 // way: the sun if it is seen from there, the lamps near it, the sky. Steps go where something is: along the ray, inside each plume, and near each bright lamp.
-fn roomAir(x: vec3f) -> f32 { return select(0.0, 1.0, abs(x.x) < 12.0 && abs(x.z) < 8.0 && x.y < 6.7 && (x.y < 3.3 || x.x < 4.0)); }
+/** (a floor the section hides has no air to see) */
+fn roomAir(x: vec3f) -> f32 { return select(0.0, 1.0, x.y < frame.misc.y && abs(x.x) < 12.0 && abs(x.z) < 8.0 && x.y < 6.7 && (x.y < 3.3 || x.x < 4.0)); }
 fn vn3(p: vec3f) -> f32 { let i = floor(p); let f = p - i; let w = f * f * (3.0 - 2.0 * f); let z = f32(i.z) * 37.0; return mix(vnoise(p.xy + z), vnoise(p.xy + z + 37.0), w.z); }
 fn steamAt(x: vec3f) -> f32 {
   var s = 0.0; if (frame.weather.z <= 0.0) { return 0.0; } let wind = vec2f(cos(frame.weather.w), sin(frame.weather.w));
@@ -32,9 +33,9 @@ fn hg(mu: f32, g: f32) -> f32 { return (1.0 - g * g) / (4.0 * PI * pow(1.0 + g *
     let e = exp(-st[i].w); L += exp(-tau) * (1.0 - e) * (V + near); tau += st[i].w;
   }
   // beams: one lamp a pixel, drawn by how near the ray passes it, and one point drawn by its nearness along the ray
-  { var W = 0.0; var pick = -1; var w0 = 0.0; var u = j2.y; for (var i = 0u; i < frame.counts.x; i++) { if (lamps[i].kind == 0u || lamps[i].on <= 0.0) { continue; } let d = lamps[i].at - ro; let b = clamp(dot(d, rd), 0.0, t1); let D = max(length(d - rd * b), 0.15); if (D > lamps[i].reach * 0.7) { continue; } var w = lum(lamps[i].radiance) * lamps[i].area * lamps[i].area / D; if (lamps[i].kind == 2u) { let c = dot(normalize(ro + rd * b - lamps[i].at), lamps[i].n); w *= 0.05 + smoothstep(0.2, 0.95, c); } W += w; let q = w / W; if (u < q) { pick = i32(i); w0 = w; u = u / q; } else { u = (u - q) / (1.0 - q); } }
+  { var W = 0.0; var pick = -1; var w0 = 0.0; var u = j2.y; for (var i = 0u; i < frame.counts.x; i++) { if (lamps[i].kind == 0u || lamps[i].on <= 0.0 || lamps[i].at.y > frame.misc.y) { continue; } let d = lamps[i].at - ro; let b = clamp(dot(d, rd), 0.0, t1); let D = max(length(d - rd * b), 0.15); if (D > lamps[i].reach * 0.7) { continue; } var w = lum(lamps[i].radiance) * lamps[i].area * lamps[i].area / D; if (lamps[i].kind == 2u) { let c = dot(normalize(ro + rd * b - lamps[i].at), lamps[i].n); w *= 0.05 + smoothstep(0.2, 0.95, c); } W += w; let q = w / W; if (u < q) { pick = i32(i); w0 = w; u = u / q; } else { u = (u - q) / (1.0 - q); } }
     if (pick >= 0) { let l = &lamps[u32(pick)]; let d = (*l).at - ro; let b = dot(d, rd); let D = max(length(d - rd * b), 0.12); let ta = max(0.0, b - 9.0); let tb = min(t1, b + 9.0);
-      if (tb > ta) { let a0 = atan((ta - b) / D); let a1 = atan((tb - b) / D); let t = b + D * tan(mix(a0, a1, fract(j2.x + 0.37))); let pdf = D / ((a1 - a0) * (D * D + (t - b) * (t - b))); let x = ro + rd * t; let s = airAt(x) + 0.006 + steamAt(x); let a = aimLamp(u32(pick), x, vec2f(0.5));
+      if (tb > ta) { let a0 = atan((ta - b) / D); let a1 = atan((tb - b) / D); let t = b + D * tan(mix(a0, a1, fract(j2.x + 0.37))); let pdf = D / ((a1 - a0) * (D * D + (t - b) * (t - b))); let x = ro + rd * t; let s = select(0.0, airAt(x) + 0.006 + steamAt(x), x.y < frame.misc.y); let a = aimLamp(u32(pick), x, vec2f(0.5));
         if (max3(a.E) > 0.0) { let V = lum(visible(x, a.dir, 1e-3, a.dist - 0.1)); L += min(a.E * V * (s * hg(dot(rd, a.dir), 0.35) / pdf * W / w0), vec3f(6.0)); } } } }
   textureStore(outA, id.xy, vec4f(L, exp(-tau)));
 }

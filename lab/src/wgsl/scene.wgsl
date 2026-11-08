@@ -40,6 +40,7 @@ struct Mark { at: vec2f, size: vec2f, uv: vec4f, color: vec3f, face: u32 };
 @group(0) @binding(11) var noiseTex: texture_2d<f32>;
 @group(0) @binding(12) var causticTex: texture_2d<f32>;
 @group(0) @binding(13) var repSamp: sampler;
+@group(0) @binding(14) var lampTex: texture_3d<f32>;
 
 const GLASS = 256u; const WATER = 512u; const CUT = 1024u; const GLOW = 2048u; const NOSHADOW = 4096u; const QUAD = 8192u; const MOVES = 16384u; const FAR = 32768u;
 const NOTHING = 0xffffffffu; const LEAF_HIT = 0x80000000u;

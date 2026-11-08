@@ -162,10 +162,12 @@ fn lampWeight(i: u32, x: vec3f, n: vec3f) -> f32 {
   let a = aimLamp(i, x, vec2f(0.5)); let c = dot(n, a.dir);
   return lum(a.E) * select(max(c, 0.0) + 0.12 * select(0.0, 1.0, (*l).kind == 0u && c > -0.6), 0.5, all(n == vec3f(0.0)));
 }
+var<private> byReach: bool = false;                                 // (the reference asks every lamp)
 /** one lamp drawn in proportion to what it would send: its number and 1 / chance, or none */
 fn drawLamp(x: vec3f, n: vec3f) -> vec2f {
   var W = 0.0; var pick = -1.0; var w0 = 0.0;
-  for (var i = 0u; i < frame.counts.x; i++) { let w = lampWeight(i, x, n); if (w <= 0.0) { continue; } W += w; if (rnd() * W < w) { pick = f32(i); w0 = w; } }
+  var near = vec4f(1.0);
+  for (var i = 0u; i < frame.counts.x; i++) { if (byReach && (i & 3u) == 0u) { near = lampReach(x, i >> 2u); } if (near[i & 3u] <= 0.0) { continue; } let w = lampWeight(i, x, n) * near[i & 3u]; if (w <= 0.0) { continue; } W += w; if (rnd() * W < w) { pick = f32(i); w0 = w; } }
   return vec2f(pick, select(0.0, W / w0, w0 > 0.0));
 }
 // ================================================================ openings: where the sky is, for rays that should look there

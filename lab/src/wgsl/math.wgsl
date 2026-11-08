@@ -1,6 +1,7 @@
 // Plain functions, no bindings.
 const PI = 3.14159265;
 fn lum(c: vec3f) -> f32 { return dot(c, vec3f(0.2126, 0.7152, 0.0722)); }
+fn max4(v: vec4f) -> f32 { return max(max(v.x, v.y), max(v.z, v.w)); }
 fn max3(v: vec3f) -> f32 { return max(v.x, max(v.y, v.z)); }
 fn min3(v: vec3f) -> f32 { return min(v.x, min(v.y, v.z)); }
 fn sat(x: f32) -> f32 { return clamp(x, 0.0, 1.0); }
