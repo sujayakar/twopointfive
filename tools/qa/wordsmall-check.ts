@@ -14,7 +14,6 @@ import { blockOf } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 const { ORDERS, sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
-const { floorPlan } = await import(`${ROOT}/src/game/floorplan.ts`);
 
 const DT = 1 / 60, F = 'KeyF';
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -38,7 +37,7 @@ async function rig(squad: number) {
     /** the panel's lines that carry a key, and the notes among them */
     lines(): string[] { return blockOf(O).flatMap((s: any) => s.opts.map((o: any) => `${o.key ? `[${o.key}] ` : ''}${o.text}`)); },
     wordLine(): string | null { return R.lines().find((l: string) => l.startsWith('[F] go · ')) ?? null; },
-    mark(): any { return floorPlan(g).doors.find((x: any) => x.door === R.door && x.why === 'stack') ?? null; },
+    mark(): any { if (!g.view.plan) throw new Error('no plan in the view'); return g.view.plan.own.doors.find((x: any) => x.door === R.door.def.name && x.why === 'stack') ?? null; },
     filed(): string[] { return O.log.slice(R.n0).map((r: any) => `${r.order} ${r.who.join('+')}`); },
     op(): any { return D.ops.find((o: any) => o.door === R.door) ?? null; },
     stacked() { return R.team.every((m: any) => m.state === 'dead' || (O.of(m)?.order === 'stack' && O.of(m)?.arrived)); },

@@ -68,13 +68,13 @@ const HANDS = `(() => { const g = () => window.__game, I = window.__input, cam =
       H.press('KeyB', 6); out.afterTap = O.log.map(l => l.order); H.step(180);
       // the command key kept down on the door: the ring, as the overlay reads it
       H.aim([c[0], 1.0, c[2]]); H.step(2); H.I.pressed.add('KeyB'); H.hold(['KeyB'], 30); H.step(2);
-      const v = O.ringView(); out.ring = v ? { caption: v.caption, wedges: v.wedges.map(w => w.key + ':' + w.text + (w.off ? '(off)' : '')) } : null; out.targetKind = O.menu && O.menu.target ? String(O.menu.target.kind) : 'no menu';
+      const v = window.__game.view.ring; out.ring = v ? { caption: v.caption, wedges: v.wedges.map(w => w.key + ':' + w.text + (w.off ? '(off)' : '')) } : null; out.targetKind = O.menu && O.menu.target ? String(O.menu.target.kind) : 'no menu';
       // a wedge by its digit: the order logged is the wedge's own
       const w = v && v.wedges.find(x => /^cover/.test(x.text) && !x.off); if (w) { H.press('Digit' + w.key, 6); out.digit = w.key + ' ' + w.text; out.afterDigit = O.log.map(l => l.order); }
       const away = () => { for (let i = 0; i < 3 && O.cmdRing; i++) { H.I.clicked |= 4; H.step(4); } }; away();
-      const ringUp = p => { H.aim(p); H.step(2); H.I.pressed.add('KeyB'); H.hold(['KeyB'], 30); H.step(2); return O.ringView(); };
+      const ringUp = p => { H.aim(p); H.step(2); H.I.pressed.add('KeyB'); H.hold(['KeyB'], 30); H.step(2); return window.__game.view.ring; };
       // the door's second page (the wedge that opens it), and a wedge there by its digit: 'bang and clear' must give the bang, whatever its place
-      { let v2 = ringUp([c[0], 1.0, c[2]]); const more = v2 && v2.wedges.find(x => x.opens); if (more) { H.press('Digit' + more.key, 4); v2 = O.ringView(); }
+      { let v2 = ringUp([c[0], 1.0, c[2]]); const more = v2 && v2.wedges.find(x => x.opens); if (more) { H.press('Digit' + more.key, 4); v2 = window.__game.view.ring; }
         out.page2 = v2 ? v2.wedges.map(w => w.key + ':' + w.text + (w.off ? '(off)' : '')) : null; const NAMES = [[/^bang and clear/, 'bangClear'], [/^open and clear/, 'openClear'], [/^breach with a charge/, 'charge'], [/^clear from outside/, 'thresholdHold'], [/^shotgun and clear/, 'bigClear'], [/^frag and clear/, 'fragClear']];
         const pick = v2 && NAMES.map(([re, id]) => ({ w: v2.wedges.find(x => re.test(x.text) && !x.off), id })).find(x => x.w); if (pick) { H.press('Digit' + pick.w.key, 6); out.tool = pick.w.key + ' ' + pick.w.text; out.toolWants = pick.id; out.afterTool = O.log.map(l => l.order); } away(); }
       // the ring on a floor spot beside him

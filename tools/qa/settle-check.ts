@@ -43,7 +43,7 @@ line(SETTLE.on === false, 'the switch is off in the module: the page raises it (
   const drawn = /quality\.measuring \|\| settling \|\|/.test(main) && /o\.settling\(S\.picture\);/.test(wait) && /quality\.measuring \|\|/.test(draw) && [main, draw].every(p => /settling: on => \{ settling = on; \}/.test(p));
   const away = /const back = \(\): void => \{ last = performance\.now\(\); \};/.test(wait) && /addEventListener\('visibilitychange', back\)/.test(wait);
   const held = /get held\(\) \{ return up && \(live \|\| holding\); \}/.test(brief) && /hold\(\) \{ if \(up && !live\) holding = true; \}/.test(brief);
-  const records = (main.match(/missionLive\(game\) && !menu\.isOpen && !brief\?\.held && !document\.hidden/g) ?? []).length === 2;
+  const records = (main.match(/game\.view\.live && !menu\.isOpen && !brief\?\.held && !document\.hidden/g) ?? []).length === 2;
   line(flag && road && waits && ends && drawn && away && held && records, `wiring: both pages raise the switch where a person sits, a mission's brief goes live by this road alone, it waits on every pipeline asked for, the later set and the second set and on auto quality's pick, the picture's frames are drawn, a tab's time away is not counted, the queue's rush ends with it, the brief holds the world meanwhile, and a visit's records do not count the frames behind it as play (${[flag, road, waits, ends, drawn, away, held, records].map(x => x ? 'y' : 'N').join('')})`); }
 
 console.log(`=== settle: ${red ? `${red} FAILED` : 'ALL PASS'} ===`);

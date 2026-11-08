@@ -76,6 +76,7 @@
 // refuses such a file too rather than pour it over a living man), a body (a man's or a civilian's) still falling, a man scripted or the lockdown pair clearing
 // rooms (unless `force`, which files them as searching men and drops the drill), Sam mid-action (unless `force`, which lets go of everything the way a teleport
 // does — in the FILE, never in the running game: saving is read-only).
+import { NO_VIEW } from '../view/seatview';
 import { SideMap, rollbackVar, wallClock, HostOwned } from '../math/side';
 import { autosaveKept, keepAutosave, loadSandbox } from '../host/sandbox';
 import { hostileTo } from './teams';
@@ -90,7 +91,6 @@ import type { BigKit } from './kit';
 import { KITLOAD, type KitWorn } from './kitload';
 import type { QuietSnap } from './quiet';
 import type { FogSnap } from './fogofwar';
-import { quietWords } from './quiet';   // (called inside functions only: src/game is one import cycle)
 import type { LessonSnap } from './lesson';
 import { woundRestore, type Wound } from './wounds';
 import type { GameEvent, LightTarget, MissionStage, Mission, SlotKind, ThrowKind, Witness, GuardState, DownKind, DownBy, GuardTask } from './game';
@@ -104,7 +104,6 @@ import { RAG_COUNT } from './ragdoll';
 import { Chronicle, MAX_EVENTS } from './chronicle';
 import { roomOf } from './rooms';
 import type { ChronEvent, ChronCounts, ChronKind, ChronData } from './chronicle';
-import { missionLive } from './mission';
 import { attachFlashlight, rollcallState, escalationOf, forgetGuardClocks } from './guards';
 import { forgetSuppressionClocks } from './suppression';
 import { glassState } from './glass';
@@ -963,8 +962,8 @@ export class Checkpoints {
     this.pending = { why, label, at: g.time }; this.note(g, `request: ${why} (${label})`);
   }
   /** The autosave gate proper: null = an autosave may be written this frame, else why not (the panel line says). */
-  gate(g: Game): string | null {
-    if (!missionLive(g)) return 'not a live run';
+  gate(g: Game, live = g.view.live): string | null {
+    if (!live) return 'not a live run';
     if (!g.aiEnabled) return 'AI off';
     const hard = SAVETIMELINE.on && squadUp(g) ? canSnap(g) : canSave(g, false); if (hard) return hard;   // (a team on the floor: the save is kept in memory, and what a file refuses of hands and the air is in it)
     for (const x of g.guards) { if (x.state === 'dead') continue; if (x.state === 'alert' || x.state === 'search') return `${x.callsign} is ${x.state}`; if (x.awareness > CKPT.awareMax) return `${x.callsign} at awareness ${x.awareness.toFixed(2)}`; }
@@ -995,10 +994,12 @@ export class Checkpoints {
       else { const al = g.guards.find(x => x.state === 'alert' && (SAVETIMELINE.on ? hostileTo(x, 'player') : !x.unit)); const why = al ? `${al.callsign} alert ${(g.time - this.lastAuto.t).toFixed(0)} s after` : g.alarm.episode ? 'an alarm straight after' : pl.down ? 'down straight after' : null;   // (a mission's defenders are units too: under SAVETIMELINE the man who counts is one against him, not one who is no unit)
         if (why && (al || g.alarm.episode)) { this.markRegret(g, this.lastAuto.key, why); this.lastAuto = null; } }
     }
-    if (!missionLive(g)) { this.pending = null; return; }
+    // (no view yet, before a host's first start or under an audit: nothing is known of the run, and a request waits)
+    const V = g.view, live = V.live;
+    if (!live) { if (V !== NO_VIEW) this.pending = null; return; }
     if (!this.enabled) this.pending = null;
     // (1) the mission moved on
-    if (m.stage !== this.stageRef) { const was = this.stageRef; this.stageRef = m.stage; if (STAGE_RANK[m.stage] > STAGE_RANK[was] && m.stage !== 'done') { const W = quietWords(g); this.request(g, 'stage', m.stage === 'drive' ? (W ? `${W.place} reached` : 'server room reached') : m.stage === 'exfil' ? (W ? `${W.bare} taken` : 'the drive is out') : m.stage); } }   // (a quiet mission: the level's own words for its room and its thing — quiet.ts)
+    if (m.stage !== this.stageRef) { const was = this.stageRef; this.stageRef = m.stage; if (STAGE_RANK[m.stage] > STAGE_RANK[was] && m.stage !== 'done') { const W = V.quiet; this.request(g, 'stage', m.stage === 'drive' ? (W ? `${W.place} reached` : 'server room reached') : m.stage === 'exfil' ? (W ? `${W.bare} taken` : 'the drive is out') : m.stage); } }   // (a quiet mission: the level's own words for its room and its thing — quiet.ts)
     // (2) a room region entered for the first time this run
     const room = roomHere(g);
     if (this.roomRef === null) { this.roomRef = room; this.visited.add(room); }
@@ -1007,7 +1008,7 @@ export class Checkpoints {
     if (pl.dragging && pl.dragging !== this.dragRef) { this.dragRef = pl.dragging; const b = pl.dragging.char.ragdoll; this.bodyFrom = b ? [b.x[0], 0, b.x[2]] : v3.copy(pl.char.pos); }
     if (!pl.dragging && this.dragRef) { const body = this.dragRef as Guard; this.dragRef = null; const b = body.char.ragdoll; const at: Vec3 = b ? [b.x[0], 0, b.x[2]] : pl.char.pos; if (this.bodyFrom && v3.distXZ(at, this.bodyFrom) >= CKPT.bodyHideM) this.request(g, 'body', `${body.callsign}'s body moved`); this.bodyFrom = null; }
     // (4) quiet play: the clock runs while the gates would pass, and asks every quietSecs of it
-    const blocked = this.gate(g);
+    const blocked = this.gate(g, live);
     if (!blocked) { this.quietT += dt; if (this.quietT >= CKPT.quietSecs) { this.quietT = 0; this.request(g, 'quiet', `${CKPT.quietSecs} s undetected`); } }
     // the pending request against the gates
     const P = this.pending; if (!P) return;

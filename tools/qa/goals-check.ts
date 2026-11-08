@@ -82,7 +82,7 @@ export async function rig(on: boolean, more: Record<string, unknown> = {}, squad
     /** Shift and the squad's key kept down where the cursor is, until the ring is up (false: none came) */
     hold(): boolean { I.keys.add('ShiftLeft'); I.keys.add(KEY); I.pressed.add(KEY); return R.until(() => !!O.cmdRing, 1.5); },
     /** … a wedge of it given by its digit — the first, or the one whose words fit — and every key let go (its words; null: no such wedge, the ring put away) */
-    wedge(w: number | RegExp): string | null { const V = O.ringView(), x = (V?.wedges ?? []).find((y: any) => typeof w === 'number' ? y.key === w : w.test(y.text));
+    wedge(w: number | RegExp): string | null { const V = O.g.view.ring, x = (V?.wedges ?? []).find((y: any) => typeof w === 'number' ? y.key === w : w.test(y.text));
       if (!x) { R.away(); return null; } I.pressed.add(`Digit${x.key}`); R.step(); I.keys.clear(); R.step(4); if (O.cmdRing) R.away(); return x.text; },
     away() { I.keys.clear(); O.cmdRing = null; O.close(); R.step(4); },
     /** all four sent to stack on that door (true: they stand on their marks) */
@@ -157,7 +157,7 @@ export async function goalsCheck(): Promise<boolean> {
     // 10 (the ring for a part: the switches as this run has them — line 8 and 9 raised them)
     R.home(); K.goals = !BREAK; K.goalRing = !BREAK && !RBREAK;
     { const all = R.stackAll(A), onB = R.onDoor(B), n0 = O.log.length, g0 = PM.PLAN_STATS.goals, r0 = PM.PLAN_STATS.rings;
-      const ring = R.hold(), part: any[] = O.menu?.part ?? [], cap = String(O.ringView()?.caption ?? ''), told = O.log.length - n0;
+      const ring = R.hold(), part: any[] = O.menu?.part ?? [], cap = String(O.g.view.ring?.caption ?? ''), told = O.log.length - n0;
       const pair = part.length === 2 && O.pairOf(part[0]) === O.pairOf(part[1]), named = pair && cap.startsWith(String(O.pairOf(part[0])));
       const text = ring ? R.wedge(1) : null; if (!ring) R.away(); R.step(20); const a = R.onStack(A), b = R.onStack(B), theirs = pair && names(b) === names(part);
       line(all && onB && ring && pair && named && told === 0 && PM.PLAN_STATS.rings - r0 === 1 && theirs && a.length === 2 && PM.PLAN_STATS.goals - g0 === 1,

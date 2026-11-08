@@ -170,3 +170,32 @@ fn a_question_of_boxes_that_are_not_this_moments_is_refused_by_name() {
     game::scene_collision::unstand(&mut p.g);
     assert_eq!(WorldAsk::try_of(&p.g).err(), Some("no copy of the boxes stands"));
 }
+
+/// THE RULE: a way asked of the game shared is the way a rule of the tick is given, and a question it cannot answer is no way, not a stop. A FAILURE MEANS: the HUD draws a walk the men would not take,
+/// or a page's own numbers stop the game. Controls: the door's room with no door shut (a way), a place walled in (none), a place that is no number, a start inside a wall.
+#[test]
+fn a_way_asked_shared_is_the_way_the_tick_is_given() {
+    for seed in [1, 2, 3] {
+        let mut p = two_rooms(seed);
+        let a: game::V3 = [12.0, 0.0, 12.0];
+        let way = |p: &Play, a: game::V3, b: game::V3| game::ask::WorldAsk::of(&p.g).way(a, b, 3000);
+        // a way, through the room
+        let b: game::V3 = [16.0, 0.0, 14.5];
+        let shared = way(&p, a, b).expect("the room's floor has a way");
+        assert!(!shared.is_empty(), "seed {seed}");
+        assert_eq!(Some(shared), game::scene_collision::nav_grid_find_path(&mut p.g, a, b, Some(3000.0), None), "seed {seed}: a way");
+        // no way: out of the level's floor altogether, behind the walls
+        let out: game::V3 = [2.0, 0.0, 2.0];
+        assert_eq!(way(&p, a, out), game::scene_collision::nav_grid_find_path(&mut p.g, a, out, Some(3000.0), None), "seed {seed}: no way");
+        // a start inside the wall between the rooms
+        let wall: game::V3 = [18.0, 0.0, 15.0];
+        assert_eq!(way(&p, wall, b), game::scene_collision::nav_grid_find_path(&mut p.g, wall, b, Some(3000.0), None), "seed {seed}: a start in a blocked cell");
+        // a place that is no number: none, where the tick's search would stop the game
+        assert_eq!(way(&p, [f64::NAN, 0.0, 12.0], b), None, "seed {seed}");
+        assert_eq!(way(&p, a, [12.0, 0.0, f64::NAN]), None, "seed {seed}");
+        // and it changes nothing
+        let before = words(&mut p);
+        let _ = way(&p, a, b);
+        assert_eq!(before, words(&mut p), "seed {seed}: asked, a word of the state moved");
+    }
+}
