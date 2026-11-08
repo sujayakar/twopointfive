@@ -12897,7 +12897,6 @@
 "sim_propshome::PropStore": "where a column of the block lies: addresses, not state",
 "sim_propshome::PropStoreO": "where a column of the block lies: addresses, not state",
 "weapons::Firearm.def": "the gun's own row of the weapons table: made with the gun",
-"weather_kinds::WeatherKindsModWEATHERBOOT": "the weather as the page booted",
 "wind::WindSource.name": "a wind's name: made with the wind"
 }
 }
