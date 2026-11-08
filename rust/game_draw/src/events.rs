@@ -248,7 +248,7 @@ impl Events {
                 let anchor = match &e.track { None => 0, Some(t) => { self.keys += 1; self.rides.push((self.keys, t.clone(), g.time + e.ttl)); self.keys } };
                 let serial = self.sources.len() as u32;
                 self.sources.push(SmokeSource {
-                    tick, serial, kind: e.kind as u32, push, anchor, says: (e.look == Some(true)) as u32 | (e.confined == Some(true)) as u32 * 2 | (e.track_vel == Some(true)) as u32 * 4, lattice,
+                    tick, serial, kind: e.kind as u32, push, anchor, says: (e.look == Some(true)) as u32 | (e.confined == Some(true)) as u32 * 2 | (e.track_vel == Some(true)) as u32 * 4 | (e.held == Some(true)) as u32 * 8, lattice,
                     pos: f3(e.pos), radius: e.radius as f32, density: e.density as f32, heat: e.temperature as f32, ttl: e.ttl as f32, age: e.age as f32,
                     attack: opt(e.attack), jitter: opt(e.jitter), prio: opt(e.prio), min_cells: opt(e.min_voxels), tint: e.tint.map_or([NONE; 3], f3),
                 });

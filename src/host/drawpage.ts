@@ -52,6 +52,7 @@ import { lookNumbers } from '../draw/look';
 import { sampleHand } from '../draw/hand';
 import { HOURS_OF, skyFrom } from '../draw/sky';
 import { fogFrom } from '../draw/fog';
+import { smokeFrom } from '../draw/smoke';
 import { makeFogFrame } from '../render/fogofwar';
 import { WeatherPicture } from '../picture/weather';
 import { SNOW_LOOK, snowLookOfQuery } from '../picture/snow/look';
@@ -186,7 +187,7 @@ async function main(): Promise<void> {
     // (the run's end card, once each time one is due; a restart or a load is another end to come)
     { const e = D.u[view() + View.ended]; if (e !== ended) { ended = e; if (e) onEnded(); } }
     D.fresh();
-    skyFrom(engine, D); fogFrom(fog, D); rimsFrom(rims, D); weather.frame(cam); dustFrom(engine.particles!, D);
+    skyFrom(engine, D); fogFrom(fog, D); smokeFrom(smoke, D); rimsFrom(rims, D); weather.frame(cam); dustFrom(engine.particles!, D);
     { const o = view(); engine.settings.nvAmount = D.f[o + View.night]; engine.settings.hitFlash = D.f[o + View.hit]; }
     game.look(lookNumbers(engine.settings, engine.world, !!ch.cast));
     const t1 = performance.now();
