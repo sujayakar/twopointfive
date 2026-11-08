@@ -362,7 +362,8 @@ two tests of `tests/orders.rs`, hands its three functions on to a module of its 
 /tmp/held`; after it, `… -- check /tmp/held`. 72 native runs, every part of the game hashed every frame; it names
 the first frame and the parts that differ. A new reaction or order is meant to change play where it acts, so read
 it this way: every run in which it never acted must still be the same (each run's line says how long each rule
-had a man), and what it does where it acts is for the mission tallies to judge.
+had a man), and what it does where it acts is for the missions to judge: `cargo run --release --bin missions` before and
+after, then `missions diff` (208 runs of thirteen room clears, three minutes).
 
 **A behaviour of a man's own** (how he patrols, looks, fights and searches when nothing has taken him) is one file a
 state: `rust/game_rules/src/guards/behave/{patrol,suspicious,alert,search}.rs`, each one function from what he

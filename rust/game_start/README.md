@@ -363,3 +363,13 @@ neither build is refused. Its first use: the orders' table no longer growing wit
 
 A build is the same as itself with every part in: the box mirror's record, once left out because it kept addresses, is hashed
 with the rest.
+
+## Missions: what a change of play does (`src/bin/missions.rs`)
+
+`cargo run --release --bin missions > before.tsv` on the tree before a change of play, the same to `after.tsv` on the tree after it, then
+`… --bin missions -- diff before.tsv after.tsv`: thirteen room clears as the page stands them, standard and hard, eight seeds (208 runs, three
+minutes on four cores), under a commander who gives the squad the same orders on every build. A row says who was up at the end, when the first
+man fell, when the floor was clear, the rounds and reloads of each side and how long each rule of the list had an enemy. The file's head says
+what it does not see: stealth, Sam's gun, the rescues, a commander who waits. `hold` says whether a build is the same game; this says what the
+other game came to.
+
