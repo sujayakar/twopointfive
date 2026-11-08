@@ -1669,13 +1669,10 @@ export class Game {
 
 
 /** the men `drawMen` left out, each said once (game.ts drawMen): who, and the fault that kept him out of the picture */
-let NOT_DRAWN: WeakSet<object> | null = null;
 function manNotDrawn(g: Game, c: Character, e: unknown): void {
-  const said = (NOT_DRAWN ??= new WeakSet());
-  if (said.has(c)) return;
-  said.add(c);
   const gd = g.guards.find(x => x.char === c), who = gd ? gd.callsign : c === g.player.char ? 'the player' : `man ${c.id}`;
   const book = ((g as unknown as { menNotDrawn?: { who: string; id: number; why: string }[] }).menNotDrawn ??= []);
+  if (book.some(b => b.id === c.id)) return;
   const why = String((e as { message?: string })?.message ?? e).slice(0, 300);
   book.push({ who, id: c.id, why });
   console.error(`${who} (id ${c.id}) cannot be posed and is NOT DRAWN: ${why}`);
