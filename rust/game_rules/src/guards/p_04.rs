@@ -325,6 +325,15 @@ pub fn can_see(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::CanSee 
     crate::guards::CanSee { visible: r.visible, dist: r.dist, in_cone: r.in_cone }
 }
 
+/// he sees a man who is up: any player, each asked of on his own seat
+pub fn sees_a_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
+    if g.seats.len() == 1 { let p = g.player; return !g.pl[p].down && can_see(g, gd).visible; }
+    for s in g.seats.clone() {
+        if crate::seats::with_seat(g, s, &mut |g: &mut Game| { let p = g.player; !g.pl[p].down && { let pc = g.pl[p].ch; can_see_char(g, gd, pc, true).visible } }) { return true; }
+    }
+    false
+}
+
 /// WHERE A MAN LOOKS, for every eye in the game: his head, or his sights when a long gun is in his shoulder and level; level, always. It is the
 /// fog's own answer (`fogofwar::gaze_of`), so what the player is shown of where a man looks and what that man can see are one thing.
 ///
