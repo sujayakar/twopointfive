@@ -75,23 +75,4 @@ function noteOf(kind: LoadoutKind, n: SquadSize, office: boolean, own = 2): stri
 }
 
 // ───────────────────────────────────────────── what this machine picked last (the screen's memory, never a run's) ─────────────────────────────────────────────
-export const LOADOUT_LS = 'twopointsix.loadout';
-/** the stored record: the size last deployed with, per scenario id */
-export interface LoadoutStore { squad: Record<string, SquadSize> }
 type Store = Pick<Storage, 'getItem' | 'setItem'>;
-const ls = (): Store | null => { try { return typeof localStorage !== 'undefined' ? localStorage : null; } catch { return null; } };
-export function readLoadout(store: Store | null = ls()): LoadoutStore {
-  const out: LoadoutStore = { squad: {} };
-  try { const o = JSON.parse(store?.getItem(LOADOUT_LS) ?? 'null'); if (o && typeof o.squad === 'object' && o.squad) for (const [id, v] of Object.entries(o.squad)) { const n = asSquadSize(v); if (n !== null) out.squad[id] = n; } } catch { /* unreadable: nothing remembered */ }
-  return out;
-}
-/** remember `n` for scenario `id` (the other keys of the record — another part's — are kept as they stood) */
-export function storeSquad(id: string, n: SquadSize, store: Store | null = ls()) {
-  if (!store) return;
-  try { let o: any = null; try { o = JSON.parse(store.getItem(LOADOUT_LS) ?? 'null'); } catch { /* start over */ } if (!o || typeof o !== 'object') o = {}; if (!o.squad || typeof o.squad !== 'object') o.squad = {}; o.squad[id] = n; store.setItem(LOADOUT_LS, JSON.stringify(o)); } catch { /* a full or forbidden store: the pick is simply not remembered */ }
-}
-/** the size the screen opens on for a scenario: what was deployed last if that can still be staged, else its own */
-export function startSize(e: { id: string; kind: LoadoutKind; squad: number; level?: string; group?: string }, store: Store | null = ls()): SquadSize {
-  const C = squadChoices(e), last = readLoadout(store).squad[e.id];
-  return last !== undefined && C[last].ok ? last : (asSquadSize(e.squad) ?? 2);
-}

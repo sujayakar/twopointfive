@@ -516,14 +516,6 @@ export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: Str
  *  group is a KIND OF PLAY, every mission is under exactly one, and none DRAWS more than eight (tools/qa/listed.ts: a row cut from the list, `offList`, is in the table and not counted). SHOW, NOT TELL: a heading is a
  *  word or two; `line` is its tooltip, never drawn. A group with no row draws nothing. */
 export type MissionGroup = 'tutorial' | 'raids' | 'strongholds' | 'clock' | 'quiet-alone' | 'quiet-two';
-export const MISSION_GROUPS: { id: MissionGroup; title: string; line: string }[] = [
-  { id: 'tutorial', title: 'Tutorial', line: 'The game, a mission at a time' },   // (game/rails.ts: missions on rails — one thing at a time, everything not yet met switched off)
-  { id: 'raids', title: 'Raids', line: 'Small buildings, up to seven defenders' },   // (where a squad's mission that names no group falls: ui/missions.ts groupOf)
-  { id: 'strongholds', title: 'Strongholds', line: 'Eight to eleven defenders' },
-  { id: 'clock', title: 'On the clock', line: 'A hostage or a par time' },
-  { id: 'quiet-alone', title: 'Quiet, alone', line: 'Light, noise and cameras' },
-  { id: 'quiet-two', title: 'Quiet, as two', line: 'You and one partner, silent from the start' },
-];
 
 /** a row of the LESSON group (the tutorial's missions; the older Training group was taken out 2026-10-23): its own team size and no other, the kit as issued, no levers, no verdict kept */
 export const lessonGroup = (g: string | undefined): boolean => g === 'tutorial';
