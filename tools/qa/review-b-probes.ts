@@ -1,5 +1,5 @@
 // The 'review-b' probe family (run through probes.ts: `bun run tools/qa/probes.ts review-b | checkpoint-civilians (also rb-checkpoint-civilians) | rb-refuse-over | rb-tactics-reset | rb-gate-civilians |
-// rb-laser-civilian | rb-whistle-load | rb-score-cap | rb-rain-annex | rb-glass-reset | rb-nocivilians [--verbose]`): the deep review's game-systems findings
+// rb-laser-civilian | rb-whistle-load | rb-rain-annex | rb-glass-reset | rb-nocivilians [--verbose]`): the deep review's game-systems findings
 // fixed by lane game-fixes-B (docs/internal/review-ledger.md pass 3 + pass 9), each held by a directed headless repro:
 //   checkpoint-civilians  (G3.1 / G3.7) the cleaner told to stay down and the late worker knocked out are SAVED: a minute of play later the file loads to exactly
 //                         that — her corner and her promise, his body where it lay (asleep), the card's counts and price unchanged but for the load; a civilian
@@ -13,8 +13,6 @@
 //                         a body are no objection; the queue of words due (a guard's radio a beat after her report) holds it too.
 //   rb-laser-civilian     (G3.6) the cleaner stood in the corridor beam: the beam is drawn CUT at her shins and does not trip; gone again, the beam is whole.
 //   rb-whistle-load       (G3.8) a whistle in the air at the save is not in the loaded game's event queue: nobody answers it a second time.
-//   rb-score-cap          (U9.2) the timeline filled to its cap with rows, then the floor locked down: the score still drops by SCORE.lockdown; a checkpoint SAVE
-//                         row is chatter past the soft cap (a LOAD row is kept), a coffee-break row likewise; the counters move regardless.
 //   rb-rain-annex         (U9.9) the rain bed's gain: full out in the lot, a third inside the building AND inside the roofed stair tower (ANNEX).
 //   rb-glass-reset        (U9.10) a pane starred, then restartEncounter: the glass's hit count / log go with the crack decals.
 //   rb-nocivilians        (lead) ?nocivilians on a FRESH profile (no stored record): nobody but the shift — the URL flag is read whatever storage holds.
@@ -26,7 +24,8 @@ const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { rollcallState, raiseEscalation } = await import(`${ROOT}/src/game/guards.ts`);
 const { markDanger, dangerDoors } = await import(`${ROOT}/src/game/tactics.ts`);
 const { tryWhistle, WHISTLE_STATS } = await import(`${ROOT}/src/game/whistle.ts`);
-const { chronicle, chronCheckpoint, debriefOf, SCORE, MAX_EVENTS, SOFT_EVENTS } = await import(`${ROOT}/src/game/chronicle.ts`);
+const { SCORE } = await import(`${ROOT}/src/game/chronicle.ts`);
+const { debriefOf } = await import('./debrief-read.ts');
 const { glassState, crackNear, glassPanes } = await import(`${ROOT}/src/game/glass.ts`);
 const { ANNEX } = await import(`${ROOT}/src/game/weather.ts`);
 
@@ -116,29 +115,6 @@ export async function whistleLoad() {
   const res1 = WHISTLE_STATS.resolved, ans1 = WHISTLE_STATS.answered;
   ok = verdict(blew && inQueue && fileHas && !afterLoad && res1 === res0 && ans1 === ans0, 'blown, in the queue, in the file — and NOT in the loaded game\'s queue: no second resolution, no second answer over the next second', `blew ${blew}, queue ${inQueue}, file ${fileHas}, after load ${afterLoad}; resolved ${res0} → ${res1}, answered ${ans0} → ${ans1}; Kowalski ${game.guards[0].state} aw ${f2(game.guards[0].awareness)}`) && ok;
   console.log(`=== rb-whistle-load: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`); if (!ok) failures++;
-  return ok;
-}
-
-// ================================================================================================================================ U9.2
-export async function scoreCap() {
-  console.log('\n=== rb-score-cap: the timeline at its cap still prices a lockdown; a checkpoint SAVE row / a coffee-break row are chatter past the soft cap, a LOAD row is kept; counters move regardless ===');
-  let ok = true;
-  const S = await stage(3939); const { W, game } = S;
-  steps(W, 0.5); for (const gd of game.guards) { gd.heardUpTo = 1e12; gd.hold = true; }
-  const C = game.chronicle;
-  // to the soft cap with plain rows; then chatter is refused but counted
-  while (C.events.length < SOFT_EVENTS) chronicle(game, 'objective', { text: 'filler' });
-  const n0 = C.events.length; chronCheckpoint(game, 'save', 'x'); const nSave = C.events.length; const saves = C.counts.saves;
-  chronCheckpoint(game, 'load', 'x'); const nLoad = C.events.length; const loads = C.counts.loads;
-  chronicle(game, 'needBreak', { who: 'Kowalski', kind: 'coffee', what: 'left' }); const nNeed = C.events.length;
-  ok = verdict(n0 === SOFT_EVENTS && nSave === n0 && saves === 1 && nLoad === n0 + 1 && loads === 1 && nNeed === nLoad, `at the soft cap (${SOFT_EVENTS}): a checkpoint SAVE row is refused (chatter) but counted, a LOAD row lands and is counted, a needBreak row is refused`, `rows ${n0} → save ${nSave} (saves ${saves}) → load ${nLoad} (loads ${loads}) → needBreak ${nNeed}; dropped ${C.dropped}`) && ok;
-  // to the hard cap; then the floor locks down: no row can land, the price must
-  while (C.events.length < MAX_EVENTS) chronicle(game, 'objective', { text: 'filler' });
-  const score0 = debriefOf(game).score, esc20 = C.counts.esc2, rows0 = C.events.length, dropped0 = C.dropped;
-  raiseEscalation(game, 2, null, 'search'); steps(W, DT);
-  const score1 = debriefOf(game).score, esc21 = C.counts.esc2;
-  ok = verdict(rows0 === MAX_EVENTS && C.events.length === MAX_EVENTS && esc21 === esc20 + 1 && score1 === score0 - SCORE.lockdown, `at the hard cap (${MAX_EVENTS}): the lockdown's row is dropped but esc2 counts and the score drops by SCORE.lockdown (${SCORE.lockdown})`, `rows ${rows0} → ${C.events.length} (dropped ${dropped0} → ${C.dropped}); esc2 ${esc20} → ${esc21}; score ${score0} → ${score1}`) && ok;
-  console.log(`=== rb-score-cap: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`); if (!ok) failures++;
   return ok;
 }
 

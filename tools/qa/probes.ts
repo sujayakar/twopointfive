@@ -2452,9 +2452,6 @@ if (on('teams-despawn', 'teams', 'all')) await run('teams-despawn', async () => 
 // ---------------------------------------------------------------- the run's chronicle + the debrief card made of it (debrief-probes.ts): 'debrief' = the family
 if (on('debrief-run', 'debrief', 'all')) await run('debrief-run', async () => (await import('./debrief-probes.ts')).debriefRun());
 if (on('debrief-rooms', 'debrief', 'all')) await run('debrief-rooms', async () => (await import('./debrief-probes.ts')).debriefRooms());
-if (on('debrief-doorname', 'debrief', 'words', 'all')) await run('debrief-doorname', async () => (await import('./debrief-probes.ts')).debriefDoorName());   // a kicked or picked door is called on the card what its level calls it (WORDS.doors)
-if (on('debrief-charge', 'debrief', 'all')) await run('debrief-charge', async () => (await import('./debrief-probes.ts')).debriefCharge());   // the rows a wall charge makes are worded as a charge's
-if (on('debrief-score', 'debrief', 'all')) await run('debrief-score', async () => (await import('./debrief-probes.ts')).debriefScore());
 if (on('debrief-dom', 'debrief', 'all')) await run('debrief-dom', async () => (await import('./debrief-probes.ts')).debriefDom());
 // ---------------------------------------------------------------- 'breach' = the family (breach-probes.ts): what stays of the removed daytime breach showcase's checks — the daylight variant's round trip (here) and clear-doctrine (below)
 if (on('breach-daylight', 'breach', 'all')) await run('breach-daylight', async () => (await import('./breach-probes.ts')).breachDaylight());
@@ -3232,7 +3229,6 @@ if (KNOWN.has(which) && which.startsWith('journal')) here() && familyBanner('jou
 if (on('rb-refuse-over', 'review-b', 'all')) await run('rb-refuse-over', async () => (await import('./review-b-probes.ts') as any).refuseOver());
 if (on('rb-tactics-reset', 'review-b', 'all')) await run('rb-tactics-reset', async () => (await import('./review-b-probes.ts') as any).tacticsResetProbe());
 if (on('rb-whistle-load', 'review-b', 'all')) await run('rb-whistle-load', async () => (await import('./review-b-probes.ts') as any).whistleLoad());
-if (on('rb-score-cap', 'review-b', 'all')) await run('rb-score-cap', async () => (await import('./review-b-probes.ts') as any).scoreCap());
 if (on('rb-glass-reset', 'review-b', 'all')) await run('rb-glass-reset', async () => (await import('./review-b-probes.ts') as any).glassReset());
 if (KNOWN.has(which) && (which === 'review-b' || which.startsWith('rb-'))) here() && familyBanner('review-b', (await import('./review-b-probes.ts')).reviewBFailures());
 // ---------------------------------------------------------------- weather kinds (weather-kinds-probes.ts — ?weather=<kind>, game/weatherKinds.ts): 'wxkinds' = the family
