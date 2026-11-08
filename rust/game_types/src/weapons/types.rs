@@ -48,7 +48,7 @@ impl GunModelId {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum WeaponId {
     Fiveseven,
     Guard9mm,

@@ -29,7 +29,7 @@ pub fn particles_emit(g: &mut crate::game::Game, kind: crate::render_particles::
     if n == 0.0 { return 0.0; }
     let rain = kind == PKind::Rain;
     let n = m::min(n, if rain { RAIN_MAX_BIRTHS } else { MAX_NEW_PER_FRAME });
-    let ours = !rain && g.engine.particles.as_ref().map_or(false, |p| p.ours);
+    let ours = !rain && g.fog_of_war.filing_ours;
     crate::out_events::push_particles_emit(g, kind, pos, dir, count, o, ours);
     n
 }

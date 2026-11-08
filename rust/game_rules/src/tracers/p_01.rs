@@ -243,15 +243,8 @@ pub fn tracers_ember(g: &mut crate::game::Game, t: crate::tracers::Tracer) {
     let at = [t.from[0] + t.dir[0] * (t.l - 0.03), t.from[1] + t.dir[1] * (t.l - 0.03), t.from[2] + t.dir[2] * (t.l - 0.03)];
     let was = crate::fogofwar::fog_of_war_begin(g, Some(t.owner));
     if p.ember_sparks > 0.0 {
-        let seed = g.tracers.seed;
-        g.tracers.seed += 1.0;
         let back = [-t.dir[0], -t.dir[1] + 0.3, -t.dir[2]];
-        // (the sink, particleFx.ts:324: to the GPU while it is on, into the CPU pool otherwise, decided per ember)
-        if crate::particle_fx::gpu_fx(g) {
-            crate::particle_fx::ember_fx(g, at, back, crate::particle_fx::EmberFxO { count: p.ember_sparks, speed: p.ember_speed, cone: p.ember_cone, life: p.ember_life });
-        } else {
-            crate::sparks::sparks_emit_cone(g, at, back, crate::sparks::SparksEmitConeO { count: p.ember_sparks, speed: p.ember_speed, cone: p.ember_cone, life: p.ember_life }, seed);
-        }
+        crate::particle_fx::ember_fx(g, at, back, crate::particle_fx::EmberFxO { count: p.ember_sparks, speed: p.ember_speed, cone: p.ember_cone, life: p.ember_life });
     }
     if p.ember_intensity > 0.0 {
         let l = crate::render_lights::light_set_flash(g, at, v3::copy(t.color), p.ember_intensity, p.ember_range, p.ember_ttl, 0.0);

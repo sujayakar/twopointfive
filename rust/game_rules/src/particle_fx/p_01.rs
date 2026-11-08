@@ -7,12 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---------------------------------------------------------------- the switch every site routes by
-
-/// Whether the live particle system is on: one attached and the setting on. Off, the caller keeps to the CPU path. (particleFx.ts gpuFx)
-pub fn gpu_fx(g: &crate::game::Game) -> bool {
-    g.engine.particles.is_some() && g.engine.settings.gpu_particles
-}
 
 // ---------------------------------------------------------------- dust: every puff goes through one table
 
@@ -22,25 +16,10 @@ pub fn reset_dust(g: &mut crate::game::Game) {
     let t = crate::particle_fx::dust_defaults();
     g.m.particle_fx.dust = crate::particle_fx::ParticleFxModDUST { count: t.emit.count, size: t.emit.size, life: t.emit.life, speed: t.emit.speed, rise: t.emit.rise, spread: t.emit.spread };
     g.m.particle_fx.dust_look = crate::particle_fx::ParticleFxModDUSTLOOK { opacity: t.look.opacity, growth: t.look.growth, fade_in: t.look.fade_in, soft: t.look.soft, wrap: t.look.wrap, ambient: t.look.ambient };
-    if gpu_fx(g) { apply_dust_look(g); }
-}
-
-/// The look table onto the kind's numbers the kernels read; no system = nothing to do. Reads the attached system, setting or no. (particleFx.ts applyDustLook)
-pub fn apply_dust_look(g: &mut crate::game::Game) {
-    let l = g.m.particle_fx.dust_look;
-    let Some(p) = g.engine.particles.as_mut() else { return; };
-    let Some(d) = p.params.get_mut(crate::render_particles::PKind::Dust) else { return; };
-    d.bright_or_opacity = l.opacity;
-    d.shutter_or_growth = l.growth;
-    d.sleep_v = l.fade_in;
-    d.hold_or_fade = l.soft;
-    d.restitution = l.wrap;
-    d.keep = l.ambient;
 }
 
 /// THE dust emit: the site's numbers times the table; the count rounded, never below 1 where a site asked for any. (particleFx.ts emitDust)
 pub fn emit_dust(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) -> f64 {
-    if !gpu_fx(g) { return 0.0; }
     match dust_asked(g, count, o) { Some((n, o)) => crate::render_particles::particles_emit(g, crate::render_particles::PKind::Dust, pos, dir, n, o), None => 0.0 }
 }
 
@@ -167,7 +146,6 @@ fn js_ix(len: usize, i: f64) -> Option<usize> {
 /// A round stopped in something solid: what it knocks out, by what it hit. (particleFx.ts impactFx)
 pub fn impact_fx(g: &mut crate::game::Game, hit_p: V3, dir: V3, hit: crate::particle_fx::ImpactFxHit, def: &crate::weapons::WeaponDef) {
     use crate::particle_fx::{ImpactRecipeChipTint as Chip, ImpactRecipeDustTint as Puff};
-    if !gpu_fx(g) { return; }
     let look = hit_look(g, crate::particle_fx::HitLookHit { index: hit.index, prop: hit.prop, box_: hit.box_ });
     let (surf, albedo, solid) = (look.surf, look.albedo, look.solid);
     let r = impact_row(surf);
@@ -204,9 +182,8 @@ fn impact_row(surf: crate::scene_materials::Surf) -> crate::particle_fx::ImpactR
 
 /// The muzzle's unburnt powder. (particleFx.ts muzzleSparksFx)
 pub fn muzzle_sparks_fx(g: &mut crate::game::Game, muzzle: V3, dir: V3, shooter: CharId) {
-    let has = gpu_fx(g);
     let s = crate::effects::shot();
-    if !has || !crate::effects::flags().shot_sparks || s.spark_count <= 0.0 { return; }
+    if !crate::effects::flags().shot_sparks || s.spark_count <= 0.0 { return; }
     let d = v3::normalize(dir);
     let (vel, id) = (g.ch[shooter].vel, g.ch[shooter].id);
     let size = g.m.particle_fx.pfx.muzzle_spark_size;
@@ -217,7 +194,6 @@ pub fn muzzle_sparks_fx(g: &mut crate::game::Game, muzzle: V3, dir: V3, shooter:
 
 /// The stun charge coming apart: the fragments, a ring of dust along the floor, a puff over the can. (particleFx.ts bangFx)
 pub fn bang_fx(g: &mut crate::game::Game, at: V3) {
-    if !gpu_fx(g) { return; }
     let s = crate::effects::sparks();
     let pfx = g.m.particle_fx.pfx;
     if !crate::blast_look::blast_sparks(g, at) {
@@ -235,7 +211,6 @@ pub fn bang_fx(g: &mut crate::game::Game, at: V3) {
 
 /// A boot through the lock: plaster dust and splinters off the jamb, blown away from the kicker. (particleFx.ts kickDustFx)
 pub fn kick_dust_fx(g: &mut crate::game::Game, d: DoorId, from: V3) {
-    if !gpu_fx(g) { return; }
     let (hinge, width, cd) = (g.dr[d].def.hinge, g.dr[d].def.width, g.dr[d].def.closed_dir);
     let pfx = g.m.particle_fx.pfx;
     let u: V3 = [m::cos(cd), 0.0, m::sin(cd)];
@@ -255,7 +230,6 @@ pub fn kick_dust_fx(g: &mut crate::game::Game, d: DoorId, from: V3) {
 
 /// A tube, panel or lamp shot out: pale glass and phosphor raining off it, a puff of powder, a fizz off the ballast. (particleFx.ts fixtureShatterFx)
 pub fn fixture_shatter_fx(g: &mut crate::game::Game, t: &crate::particle_fx::FixtureShatterFxT, from: V3) {
-    if !gpu_fx(g) { return; }
     let pfx = g.m.particle_fx.pfx;
     let b: Option<BoxId> = t.boxes.first().and_then(|&i| js_ix(g.engine.world.statics.len(), i)).map(|i| g.engine.world.statics[i]);
     let (at, spread): (V3, f64) = match b {
@@ -280,7 +254,6 @@ pub fn fixture_shatter_fx(g: &mut crate::game::Game, t: &crate::particle_fx::Fix
 
 /// A vehicle's lamp shot out: the lens's own glass, back toward whoever broke it and down, in the lens's colour. (particleFx.ts lensShatterFx)
 pub fn lens_shatter_fx(g: &mut crate::game::Game, t: crate::particle_fx::LensShatterFxT, from: V3) {
-    if !gpu_fx(g) { return; }
     let out = v3::normalize([from[0] - t.pos[0], 0.0, from[2] - t.pos[2]]);
     let l = t.lens.unwrap_or([0.9, 0.9, 0.9]);
     let n = g.m.particle_fx.pfx.bulb_shards;
@@ -291,7 +264,6 @@ pub fn lens_shatter_fx(g: &mut crate::game::Game, t: crate::particle_fx::LensSha
 
 /// The breaker shot: a hard burst of sparks out of the panel, molten copper dripping, a cough of soot. (particleFx.ts breakerSparkFx)
 pub fn breaker_spark_fx(g: &mut crate::game::Game, at: V3, from: V3) {
-    if !gpu_fx(g) { return; }
     let out = v3::normalize([from[0] - at[0], 0.15, from[2] - at[2]]);
     let n = g.m.particle_fx.pfx.breaker_sparks;
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, v3::mad(at, out, 0.06), out, n, Emit {
@@ -307,7 +279,6 @@ pub fn breaker_spark_fx(g: &mut crate::game::Game, at: V3, from: V3) {
 
 /// A lock kicked through: long splinters of the jamb and the strike plate's screws, a few back past the boot. (particleFx.ts lockSplinterFx)
 pub fn lock_splinter_fx(g: &mut crate::game::Game, d: DoorId, from: V3) {
-    if !gpu_fx(g) { return; }
     let (hinge, width, cd) = (g.dr[d].def.hinge, g.dr[d].def.width, g.dr[d].def.closed_dir);
     let pfx = g.m.particle_fx.pfx;
     let u: V3 = [m::cos(cd), 0.0, m::sin(cd)];
@@ -327,7 +298,6 @@ pub fn lock_splinter_fx(g: &mut crate::game::Game, d: DoorId, from: V3) {
 
 /// The ring airfoil meeting a wall or a desk: a few sparks off the clack. (particleFx.ts clackFx)
 pub fn clack_fx(g: &mut crate::game::Game, at: V3) {
-    if !gpu_fx(g) { return; }
     let pfx = g.m.particle_fx.pfx;
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, v3::add(at, [0.0, 0.02, 0.0]), [0.0, 1.0, 0.0], pfx.clack_sparks, Emit {
         speed: 2.5, speed_jit: Some(0.6), spread: Some(1.3), life: 0.3, life_jit: Some(0.4), size: pfx.spark_size, ..Emit::default()
@@ -336,7 +306,6 @@ pub fn clack_fx(g: &mut crate::game::Game, at: V3) {
 
 /// The tracer's ember where it stops in geometry: the same few sparks back off the surface. (particleFx.ts emberFx)
 pub fn ember_fx(g: &mut crate::game::Game, at: V3, dir: V3, o: crate::particle_fx::EmberFxO) {
-    if !gpu_fx(g) { return; }
     let size = g.m.particle_fx.pfx.ember_size;
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, at, dir, o.count, Emit {
         speed: o.speed, speed_jit: Some(0.55), spread: Some(o.cone), life: o.life, life_jit: Some(0.35), size, ..Emit::default()
@@ -382,7 +351,6 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::particle_fx:
 
 /// One spent case out of the shooter's gun, and the sound of it landing `tink` seconds later where it will roughly come down. (particleFx.ts casingFx)
 pub fn casing_fx(g: &mut crate::game::Game, shooter: CharId, def: &crate::weapons::WeaponDef) {
-    if !gpu_fx(g) { return; }
     let Some(c) = casing_of(g, def) else { return; };
     let (muzzle, gun_dir, vel, id) = (g.ch[shooter].muzzle, g.ch[shooter].gun_dir, g.ch[shooter].vel, g.ch[shooter].id);
     let f = crate::effects::muzzle_frame(muzzle, gun_dir);
@@ -408,7 +376,6 @@ fn tink_rate(n: f64) -> f64 { 0.9 + js::rem(n * 7.0, 11.0) * 0.03 }
 /// Once a frame: the cases due to land are heard landing. (particleFx.ts updateParticleFx)
 pub fn update_particle_fx(g: &mut crate::game::Game) {
     let mut i = match &g.m.particle_fx.state { Some(st) if !st.tinks.is_empty() => st.tinks.len(), _ => return };
-    let heard = gpu_fx(g);
     let gain = g.m.particle_fx.pfx.tink_gain;
     let now = g.time;
     while i > 0 {
@@ -417,14 +384,14 @@ pub fn update_particle_fx(g: &mut crate::game::Game) {
         let k = st.tinks[i];
         if k.t > now { continue; }
         st.tinks.remove(i);
-        if heard { crate::audio_iface::game_audio_like_play(g, "casingTink", Some(k.pos), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate: k.rate })); }
+        crate::audio_iface::game_audio_like_play(g, "casingTink", Some(k.pos), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate: k.rate }));
     }
 }
 
 /// Encounter restart, the tour's cuts: nothing in the air, nothing on the floor, nothing waiting to be heard. (particleFx.ts clearParticleFx)
 pub fn clear_particle_fx(g: &mut crate::game::Game) {
     if let Some(st) = g.m.particle_fx.state.as_mut() { st.tinks.clear(); }
-    if g.engine.particles.is_some() { crate::render_particles::particles_clear(g); }
+    crate::render_particles::particles_clear(g);
 }
 
 /// QA: the cases waiting to be heard. (particleFx.ts pendingTinks)
@@ -435,7 +402,6 @@ pub fn pending_tinks(g: &mut crate::game::Game) -> Vec<crate::particle_fx::Pendi
 /// Panel: what the sites throw, without firing anything. (particleFx.ts testBurst)
 pub fn test_burst(g: &mut crate::game::Game, kind: crate::particle_fx::TestBurstKind, at: V3) -> f64 {
     use crate::particle_fx::TestBurstKind as K;
-    if !gpu_fx(g) { return 0.0; }
     let pfx = g.m.particle_fx.pfx;
     let up: V3 = [0.0, 1.0, 0.0];
     let p = v3::add(at, [0.0, 0.05, 0.0]);
@@ -546,19 +512,6 @@ mod tests {
         assert_eq!((p.len(), p[0].t, p[0].pos), (1, 1.5, [1.0, 2.0, 3.0]));
     }
 
-    /// Off (none attached, or the setting off) the sites stop before any stub, and an emit answers 0.
-    #[test]
-    fn off_means_nothing_is_emitted() {
-        let mut g = crate::game::Game::blank();
-        assert!(!gpu_fx(&mut g));
-        assert_eq!(emit_dust(&mut g, [0.0; 3], [0.0, 1.0, 0.0], 5.0, Emit::default()), 0.0);
-        assert_eq!(test_burst(&mut g, crate::particle_fx::TestBurstKind::Sparks, [0.0; 3]), 0.0);
-        ember_fx(&mut g, [0.0; 3], [0.0, 1.0, 0.0], crate::particle_fx::EmberFxO { count: 4.0, speed: 1.0, cone: 1.0, life: 1.0 });
-        clack_fx(&mut g, [0.0; 3]);
-        clear_particle_fx(&mut g);
-    }
-
-    /// Cases due land and leave the list, the rest stay, the walk from the back; off, none is heard, so no stub is reached.
     #[test]
     fn due_tinks_leave_the_list() {
         let mut g = crate::game::Game::blank();
@@ -567,22 +520,6 @@ mod tests {
         update_particle_fx(&mut g);
         let p = pending_tinks(&mut g);
         assert_eq!((p.len(), p[0].t), (1, 2.0));
-    }
-
-    /// The look goes onto the attached system whatever the setting says; reset gives back the shipped table and, setting off, does not touch the system.
-    #[test]
-    fn dust_look_and_reset() {
-        let mut g = crate::game::Game::blank();
-        g.m.particle_fx.dust.count = 3.0;
-        g.m.particle_fx.dust_look.opacity = 0.9;
-        let mut sys = crate::render_particles::Particles::blank();
-        sys.params.set(crate::render_particles::PKind::Dust, crate::render_particles::KindParams::zeroed());
-        g.engine.particles = Some(sys);
-        apply_dust_look(&mut g);
-        assert_eq!(g.engine.particles.as_mut().unwrap().params.get_mut(crate::render_particles::PKind::Dust).unwrap().bright_or_opacity, 0.9);
-        reset_dust(&mut g);
-        assert_eq!((g.m.particle_fx.dust.count, g.m.particle_fx.dust_look.opacity), (1.0, 0.3));
-        assert_eq!(g.engine.particles.as_mut().unwrap().params.get_mut(crate::render_particles::PKind::Dust).unwrap().bright_or_opacity, 0.9);
     }
 
     /// A leaf with no box as wood, nothing as concrete: the paths that reach no box's row. Those that do wait on the table of Box rows (notes.md, ## Skeleton).

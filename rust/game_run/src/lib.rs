@@ -12,6 +12,7 @@
 //!   after    `write_after` (each line of hostwrites.txt for this tick) · the compare (`part_hashes`) · `lights` · `view` · `follow`
 pub mod command;
 pub mod desk;
+pub mod hands_off;
 pub mod kept;
 pub mod knobs;
 mod knobs_list;

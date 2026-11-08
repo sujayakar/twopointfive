@@ -95,7 +95,6 @@ Left: saves do not outlive the page (the store is the browser's, a few megabytes
   apply left through the generated write by path (`tools/blitz/poke.ts` → `face_write` → `io::poke`): no call of the face a field. A tool writes with
   `window.__rust.poke(obj, path, value)`, which answers null or the reason. `window.__rust.poked` counts them by path; `pokeRefused` names a write that
   has no way there.
-- **The options' particle row** (`engine.settings.gpuParticles`) is among the watched writes: the tick reads it (`gpuFx`).
 - **Not covered:** a panel's row that calls a method (it runs a rule on the puppet only), and a write to a field outside the list in
   `src/host/rustgame.ts` `watched` (the next apply may put the Rust game's value back over it).
 
@@ -250,9 +249,8 @@ The rule: what the simulation's own code computes from the game's state for the 
 | the wind's two lists (the sources that blow; the ones for the particles) and each source's record (speed, direction, place, reach) | `wind/p_01.rs wind_update` | the filtered export (`Wind.active`, `to_pool`, the source's rows); `windOut` hands them to the |
 | the weather frame, the sky's two colours, the haze, the exposure, the gloss, the box world's geometry serial | `weather`, `lighting`, `hours`, `wallbreak` | the filtered export (`HostApi.weather`, `RenderSettings`, `BoxWorld.geom_serial`). A row moves on the page only when the Rust game's moved, so what a panel set stays until the tick changes it |
 
-What the tick has to be TOLD of the host, because a rule asks it: whether there is a particle pool (`particleFx.ts gpuFx`: with one, embers and
-fragments go to it and the sparks' own pool of streak boxes stays empty), the pool's two switches a door charge's fragments go by, and whether there is
-a reach keeper (a breached wall tells it). They ride in the host's half.
+The tick is told nothing of the host's particle pool or its reach keeper: no rule asks. Particles and a breached wall's news are out events, and a host
+with nothing to draw drops them.
 
 A wall charge's feel is in two halves. The report and the camera's kick are the Rust tick's (`blast_feel`). Its particles (the fireball, the dust
 ring, the three pushes, the ceiling's dust) are queued closures in the TypeScript and stay the page's: the host starts them on the report's own out

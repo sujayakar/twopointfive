@@ -1,8 +1,8 @@
 //! WHAT THE TYPESCRIPT LEANS ON OF ITS LANGUAGE, kept as it was: a Map and a Set that remember the order their keys were first set (the game
 //! walks them, and the order is play), the integer conversions, the stable sort. A translated file uses these wherever the TypeScript's result
 //! depends on the language's own behaviour.
-use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
+use core::hash::{Hash, Hasher};
 
 /// A `Map`: `get` / `set` / `delete` by key, walked in the order keys were FIRST set (setting a key again keeps its place; a deleted key set
 /// again goes to the end), as JavaScript's.
@@ -10,10 +10,15 @@ use alloc::vec::Vec;
 /// A deleted key's row stays as a hole only until the holes outnumber the live rows by `PACK_OVER`; then the map closes them up, in `delete`
 /// itself. That is safe under an open walk because A WALK'S CURSOR IS NOT A PLACE IN THE ROWS: it is a row's NUMBER, the count of keys first set
 /// before it since the map was made, which no packing changes (`next_key`). So a table set and deleted every tick stays as small as what it holds.
+///
+/// A key is FOUND by a scan of the rows while they are few, and past `SCAN` rows by a table of their places, open addressed on the key's hash. Nothing but finding a
+/// key reads the table: the order of the game's walks is the rows' and no hash is ever in it.
 #[derive(Clone, Debug)]
-pub struct JsMap<K: Ord + Clone, V> {
-    /// a key's place in `rows` (written again for every row when the map packs)
-    at: BTreeMap<K, usize>,
+pub struct JsMap<K: Eq + Clone + Hash, V> {
+    /// a key's place in `rows`, plus one, at a slot its hash leads to: `EMPTY`, or `GONE` where one was deleted. Empty while the rows are few. A power of two long.
+    table: Vec<u32>,
+    /// the table's slots that are not `EMPTY`
+    used: usize,
     /// (the row's number, the row or the hole a delete left), in the order first set: the numbers rise along it
     rows: Vec<(usize, Option<(K, V)>)>,
     live: usize,
@@ -23,14 +28,40 @@ pub struct JsMap<K: Ord + Clone, V> {
 }
 /// how many more holes than live rows a map holds before a delete closes them up: the packing is paid for by at least that many deletes
 const PACK_OVER: usize = 16;
-impl<K: Ord + Clone, V> Default for JsMap<K, V> {
+/// how many rows are found by walking them before a map keeps a table of their places
+const SCAN: usize = 8;
+const EMPTY: u32 = 0;
+const GONE: u32 = u32::MAX;
+/// the multiply and rotate of a word at a time: a key's hash is read only to find its slot, on one machine, within one run
+struct KeyHash(u64);
+impl Hasher for KeyHash {
+    fn write(&mut self, bytes: &[u8]) {
+        for c in bytes.chunks(8) { let mut w = [0u8; 8]; w[..c.len()].copy_from_slice(c); self.write_u64(u64::from_le_bytes(w)); }
+    }
+    fn write_u8(&mut self, x: u8) { self.write_u64(x as u64); }
+    fn write_u16(&mut self, x: u16) { self.write_u64(x as u64); }
+    fn write_u32(&mut self, x: u32) { self.write_u64(x as u64); }
+    fn write_usize(&mut self, x: usize) { self.write_u64(x as u64); }
+    fn write_u64(&mut self, x: u64) { self.0 = (self.0.rotate_left(5) ^ x).wrapping_mul(0x517c_c1b7_2722_0a95); }
+    // (a whole number held as a double has only high bits, and a multiply keeps its low ones zero: its high bits are brought down, twice over, before a table's mask reads the low)
+    fn finish(&self) -> u64 {
+        let h = (self.0 ^ (self.0 >> 33)).wrapping_mul(0xff51_afd7_ed55_8ccd);
+        h ^ (h >> 33)
+    }
+}
+fn hash_of<K: Hash>(k: &K) -> u64 {
+    let mut h = KeyHash(0);
+    k.hash(&mut h);
+    h.finish()
+}
+impl<K: Eq + Clone + Hash, V> Default for JsMap<K, V> {
     fn default() -> Self {
         Self::new()
     }
 }
-impl<K: Ord + Clone, V> JsMap<K, V> {
+impl<K: Eq + Clone + Hash, V> JsMap<K, V> {
     pub const fn new() -> Self {
-        JsMap { at: BTreeMap::new(), rows: Vec::new(), live: 0, next: 0 }
+        JsMap { table: Vec::new(), used: 0, rows: Vec::new(), live: 0, next: 0 }
     }
     pub fn len(&self) -> usize {
         self.live
@@ -38,39 +69,93 @@ impl<K: Ord + Clone, V> JsMap<K, V> {
     pub fn is_empty(&self) -> bool {
         self.live == 0
     }
+    /// the key's place in the rows
+    fn place(&self, k: &K) -> Option<usize> {
+        if self.table.is_empty() {
+            return self.rows.iter().position(|r| matches!(&r.1, Some((x, _)) if x == k));
+        }
+        let mask = self.table.len() - 1;
+        let mut s = hash_of(k) as usize & mask;
+        loop {
+            match self.table[s] {
+                EMPTY => return None,
+                GONE => {}
+                p => {
+                    let i = p as usize - 1;
+                    if matches!(&self.rows[i].1, Some((x, _)) if x == k) { return Some(i); }
+                }
+            }
+            s = (s + 1) & mask;
+        }
+    }
+    /// every row's place in a table of `slots` slots (none: found by walking the rows)
+    fn file_all(&mut self) {
+        self.used = 0;
+        if self.rows.len() <= SCAN { self.table = Vec::new(); return; }
+        let slots = (self.rows.len() * 4).next_power_of_two();
+        self.table.clear();
+        self.table.resize(slots, EMPTY);
+        for i in 0..self.rows.len() {
+            if let Some((k, _)) = &self.rows[i].1 {
+                let mut s = hash_of(k) as usize & (slots - 1);
+                while self.table[s] != EMPTY { s = (s + 1) & (slots - 1); }
+                self.table[s] = i as u32 + 1;
+                self.used += 1;
+            }
+        }
+    }
     pub fn has(&self, k: K) -> bool {
-        self.at.contains_key(&k)
+        self.place(&k).is_some()
     }
     pub fn get(&self, k: K) -> Option<&V> {
-        self.at.get(&k).and_then(|&i| self.rows[i].1.as_ref()).map(|r| &r.1)
+        self.place(&k).and_then(|i| self.rows[i].1.as_ref()).map(|r| &r.1)
     }
     pub fn get_mut(&mut self, k: K) -> Option<&mut V> {
-        match self.at.get(&k) {
-            Some(&i) => self.rows[i].1.as_mut().map(|r| &mut r.1),
+        match self.place(&k) {
+            Some(i) => self.rows[i].1.as_mut().map(|r| &mut r.1),
             None => None,
         }
     }
     /// `map.set(k, v)`; what was there before, if anything
     pub fn set(&mut self, k: K, v: V) -> Option<V> {
-        if let Some(&i) = self.at.get(&k) {
-            return self.rows[i].1.replace((k, v)).map(|r| r.1);
+        if let Some(i) = self.place(&k) {
+            return self.rows[i].1.as_mut().map(|r| core::mem::replace(&mut r.1, v));   // (the key first set stays, as the language's)
         }
-        self.at.insert(k.clone(), self.rows.len());
+        let i = self.rows.len();
+        let slot = if self.table.is_empty() { None } else { Some(hash_of(&k) as usize) };
         self.rows.push((self.next, Some((k, v))));
         self.next += 1;
         self.live += 1;
+        match slot {
+            // (the table is kept under half full, what was deleted counted; at that it is made again)
+            Some(h) if (self.used + 1) * 2 <= self.table.len() => {
+                let mask = self.table.len() - 1;
+                let mut s = h & mask;
+                while self.table[s] != EMPTY && self.table[s] != GONE { s = (s + 1) & mask; }
+                if self.table[s] == EMPTY { self.used += 1; }
+                self.table[s] = i as u32 + 1;
+            }
+            _ => if self.rows.len() > SCAN { self.file_all(); },
+        }
         None
     }
     /// `let s = map.get(k); if (!s) map.set(k, s = make());` in one step
     pub fn get_or_insert_with(&mut self, k: K, make: impl FnOnce() -> V) -> &mut V {
-        if !self.has(k.clone()) {
-            self.set(k.clone(), make());
-        }
-        self.get_mut(k).unwrap()
+        let i = match self.place(&k) {
+            Some(i) => i,
+            None => { self.set(k, make()); self.rows.len() - 1 }
+        };
+        &mut self.rows[i].1.as_mut().unwrap().1
     }
     /// `map.delete(k)`; what was there
     pub fn delete(&mut self, k: K) -> Option<V> {
-        let i = self.at.remove(&k)?;
+        let i = self.place(&k)?;
+        if !self.table.is_empty() {
+            let mask = self.table.len() - 1;
+            let mut s = hash_of(&k) as usize & mask;
+            while self.table[s] != i as u32 + 1 { s = (s + 1) & mask; }
+            self.table[s] = GONE;
+        }
         self.live -= 1;
         let was = self.rows[i].1.take().map(|r| r.1);
         // (the hole is closed up once there are more of them than the map is worth: a walk in progress keeps its place by the row's number)
@@ -80,20 +165,15 @@ impl<K: Ord + Clone, V> JsMap<K, V> {
         was
     }
     pub fn clear(&mut self) {
-        self.at.clear();
+        self.table = Vec::new();
+        self.used = 0;
         self.rows.clear();
         self.live = 0;
     }
     /// close up the places of deleted keys (the order and every row's number stay). Safe at any time, under an open walk too.
     pub fn pack(&mut self) {
         self.rows.retain(|r| r.1.is_some());
-        for (i, r) in self.rows.iter().enumerate() {
-            if let Some((k, _)) = &r.1 {
-                if let Some(p) = self.at.get_mut(k) {
-                    *p = i;
-                }
-            }
-        }
+        self.file_all();
     }
     /// how many holes the rows hold now (for a count of them at a run's end: never more than the live rows and `PACK_OVER`)
     pub fn holes(&self) -> usize {
@@ -132,15 +212,15 @@ impl<K: Ord + Clone, V> JsMap<K, V> {
 
 /// A `Set`, with the same order rule.
 #[derive(Clone, Debug)]
-pub struct JsSet<K: Ord + Clone> {
+pub struct JsSet<K: Eq + Clone + Hash> {
     m: JsMap<K, ()>,
 }
-impl<K: Ord + Clone> Default for JsSet<K> {
+impl<K: Eq + Clone + Hash> Default for JsSet<K> {
     fn default() -> Self {
         Self::new()
     }
 }
-impl<K: Ord + Clone> JsSet<K> {
+impl<K: Eq + Clone + Hash> JsSet<K> {
     pub const fn new() -> Self {
         JsSet { m: JsMap::new() }
     }
@@ -429,6 +509,41 @@ pub fn float_of(text: &str) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    /// past the scan the table finds what the rows hold: whole numbers as doubles, a delete, a key set again at the end, a pack, and the order of the walk throughout
+    #[test]
+    fn a_big_map_finds_and_walks_as_a_small_one() {
+        use crate::Num;
+        let mut m: JsMap<Num, u32> = JsMap::new();
+        for i in 0..2000u32 { m.set(Num(i as f64 * 3.0), i); }
+        for i in 0..2000u32 { assert_eq!(m.get(Num(i as f64 * 3.0)), Some(&i)); assert!(!m.has(Num(i as f64 * 3.0 + 1.0))); }
+        for i in (0..2000u32).step_by(2) { assert_eq!(m.delete(Num(i as f64 * 3.0)), Some(i)); }
+        assert_eq!(m.len(), 1000);
+        m.set(Num(0.0), 7);
+        let keys = m.keys();
+        assert_eq!((keys[0].0, keys[1].0, keys[1000].0), (3.0, 9.0, 0.0));
+        for i in (1..2000u32).step_by(2) { m.delete(Num(i as f64 * 3.0)); }
+        assert_eq!(m.keys().len(), 1);
+        assert_eq!(m.get(Num(0.0)), Some(&7));
+        m.clear();
+        assert!(!m.has(Num(0.0)));
+        m.set(Num(1.0), 1);
+        assert_eq!(m.get(Num(1.0)), Some(&1));
+    }
+    /// a number as a key, as the language's Map has it
+    #[test]
+    fn negative_zero_is_zero_and_nan_is_nan() {
+        use crate::Num;
+        for n in [4usize, 40] {
+            let mut m: JsMap<Num, u32> = JsMap::new();
+            for i in 0..n { m.set(Num(i as f64 + 1.0), 0); }
+            m.set(Num(0.0), 1);
+            assert_eq!(m.get(Num(-0.0)), Some(&1));
+            m.set(Num(f64::NAN), 2);
+            assert_eq!(m.get(Num(-f64::NAN)), Some(&2));
+            assert_eq!(m.len(), n + 2);
+        }
+    }
+
     use super::*;
     use alloc::string::String;
     /// each row: the text, JavaScript's `Number(text)` and `parseFloat(text)` of it as the language prints them (read off bun)

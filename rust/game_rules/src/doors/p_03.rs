@@ -134,9 +134,7 @@ pub fn doors_take_back(g: &mut crate::game::Game, contacts: &mut Vec<crate::door
         while at < noises && e_all[at_e(at * stride, de.door)] == i as f64 {
             let e = at * stride;
             let d = g.doors.list[i];
-            if e_all[at_e(e, de.fresh)] != 0.0 {
-                door_kept_pos(g, d, [e_all[at_e(e, de.px)], 1.0, e_all[at_e(e, de.pz)]]);
-            }
+            door_kept_pos(g, d, [e_all[at_e(e, de.px)], 1.0, e_all[at_e(e, de.pz)]]);
             let pos = door_kept_at(g, d);
             doors_sound(g, d, sound_at(e_all[at_e(e, de.sound)]), pos, e_all[at_e(e, de.who)], e_all[at_e(e, de.level)]);
             at += 1;

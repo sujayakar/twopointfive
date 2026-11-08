@@ -535,7 +535,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   uniform block, seeds off the system's own serial), kernel `emit` + `update` in ONE compute pass after the cascades (collision = `traceClosest` through
   the trace grid, resting chips sleep, shading per particle: sparks on the CPU sparks' cooling ramp, chips / dust / brass LIT off the three strongest
   shadow-tested lights + the dice), then a splat into the HDR target between composite and bloom (`passes.encode(…, overlayHdr)`). Sites in
-  `game/particleFx.ts` behind `engine.particlesOn` (= `settings.gpuParticles` ∧ attached; OFF = the CPU box sparks byte for byte): impactFx by material,
+  `game/particleFx.ts`, out events on every host (`engine.particlesOn`, = `settings.gpuParticles` ∧ attached, is whether the picture draws them): impactFx by material,
   muzzleSparksFx, casingFx (+ the CPU-scheduled `casingTink`), bangFx, kickDustFx, clackFx, the tracers' `sparkSink`. `?noparticles`, Tab ▸ Renderer —
   particles, `__particles` {stats, params, on, test(kind, at), emit, clear}. QA: `probes.ts particles` (queue / sites / off / determinism).
   The fifth kind `sheet` (id 4, LONG ring; `game/sheetModel.ts` = the CPU REFERENCE of its equations, keep the two in step — `probes.ts destruction-sheet`
