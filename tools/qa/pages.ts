@@ -1,9 +1,10 @@
 // THE PAGE SCRIPTS: the real page in headless Chromium on the software WebGPU adapter, one script at a time (a page takes the whole box), against one dev server started here.
 //   bun run tools/qa/pages.ts [group | name …] [--list]     groups: boot · play · menus · coop · saves · cloud · replay · all (every group but tools) · tools (named one by one: never run by a group)
 //   env: QA_PAGE_CAP (minutes a script may take, default 10; its whole process group is stopped there) · the script's own words pass through (SHOTS=0, JOBS=…)
-// A script reads PORT, PLAYWRIGHT_MODULE and CHROMIUM from here. Exit 0 every script green · 1 one red (a FAIL line, a non-zero exit or the cap) · 2 an unknown name.
+// A .ts row is run by bun with a fresh folder and its own --port. A script reads PORT, PLAYWRIGHT_MODULE, CHROMIUM and CHROME from here. Exit 0 every script green · 1 one red (a FAIL line, a non-zero exit or the cap) · 2 an unknown name.
 // holds-check.ts (10) is red on a tools/qa/*.cjs that is neither a row here nor required by one.
-import { existsSync } from 'node:fs';
+import { existsSync, mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 
 export type PageGroup = 'boot' | 'play' | 'menus' | 'coop' | 'saves' | 'cloud' | 'replay' | 'tools';
@@ -30,6 +31,8 @@ export const PAGES: readonly PageRow[] = [
   ['tut-queue-page.cjs', 'play', "the fourth tutorial mission with real keys", 0],
   ['tut-quiet-page.cjs', 'play', "the stealth tutorial's stretch with the launcher, real keys", 0],
   ['samefight-page.cjs', 'play', "same seed, same inputs: the page against the harness to the last bit", 0],
+  ['cleanrestart-page.cjs', 'play', "a restart on the page: a lamp shot out comes back, the frames after it as the first", 0],
+  ['deathrecap-page.cjs', 'play', "every death explains itself: the down card's plan, who fired, it plays", 0],
   ['readtrap-page.cjs', 'play', "what the page reads of the game and is not sent", 0],
   ['writetrap-page.cjs', 'play', "what the page writes of the game", 0],
   ['runbooks-page.cjs', 'play', "a run's page is nobody's try: the end card and the books", 0],
@@ -39,6 +42,7 @@ export const PAGES: readonly PageRow[] = [
   ['findme-page.cjs', 'play', "finding your own man, the camera under the hand", 0],
   ['panel-keys.cjs', 'play', "the debugger's key and Tab, pressed for real", 0],
   ['startpage-look.cjs', 'menus', "every mission on the start page goes through its loadout to Deploy", 0],
+  ['cards-page.ts', 'menus', "the start page walked: every mission, row and card written down as the page shows them", 0],
   ['kitview-page.cjs', 'menus', "the Team & kit picture: the team at the door, live", 0],
   ['kitdense-page.cjs', 'menus', "the dense kit card: tiles, pop-ups, fits at four window sizes", 0],
   ['kitguide-page.cjs', 'menus', "the kit step's brief and the tutorial's walkthrough", 0],
@@ -93,6 +97,7 @@ const OWN_SERVER = new Set(['cloudlocal-page.cjs', 'lobby-page.cjs']);
 
 const ROOT = resolve(import.meta.dir, '../..'), GROUPS = new Set<string>([...PAGES.map(r => r[1])]);
 const freePort = (): number => { const s = (Bun as any).serve({ hostname: '127.0.0.1', port: 0, fetch: () => new Response() }), p: number = s.port; s.stop(true); return p; };
+const short = (script: string): string => script.replace(/\.(cjs|ts)$/, '');
 const mins = (ms: number): string => (ms / 60000).toFixed(1);
 
 /** every process under `pid` by parent (Playwright starts its browser in a process group of its own) */
@@ -114,8 +119,8 @@ interface Read { script: string; ms: number; ok: boolean; fails: string[]; code:
 async function runOne(script: string, port: number, capMs: number): Promise<Read> {
   const env: Record<string, string | undefined> = { ...process.env, PORT: String(OWN_SERVER.has(script) ? freePort() : port) };
   const pw = '/opt/node-tools/node_modules'; if (existsSync(pw)) { env.NODE_PATH = pw; env.PLAYWRIGHT_MODULE ??= `${pw}/playwright`; }
-  if (existsSync('/usr/bin/chromium')) env.CHROMIUM ??= '/usr/bin/chromium';
-  const t0 = performance.now(), c = Bun.spawn(['node', resolve(import.meta.dir, script)], { cwd: ROOT, detached: true, stdout: 'pipe', stderr: 'pipe', env }), fails: string[] = [];
+  if (existsSync('/usr/bin/chromium')) { env.CHROMIUM ??= '/usr/bin/chromium'; env.CHROME ??= '/usr/bin/chromium'; }
+  const t0 = performance.now(), c = Bun.spawn(script.endsWith('.ts') ? ['bun', 'run', resolve(import.meta.dir, script), mkdtempSync(resolve(tmpdir(), 'page-')), '--port', String(freePort())] : ['node', resolve(import.meta.dir, script)], { cwd: ROOT, detached: true, stdout: 'pipe', stderr: 'pipe', env }), fails: string[] = [];
   let capped = false; const timer = setTimeout(() => { capped = true; stopAll(c.pid); }, capMs);
   LIVE.add(c.pid);
   const gone = c.exited.then(code => { stop(-c.pid, 'SIGKILL'); return code; });   // (nothing it started outlives it, so the pipes close)
@@ -128,12 +133,12 @@ const LIVE = new Set<number>();
 if (import.meta.main) {
   const args = process.argv.slice(2), words = args.filter(a => !a.startsWith('--'));
   if (args.includes('--list') || !words.length) {
-    for (const g of [...GROUPS]) { const rows = PAGES.filter(r => r[1] === g); console.log(`${g}  (${rows.reduce((n, r) => n + r[3], 0).toFixed(0)} min)`); for (const [s, , what, m] of rows) console.log(`  ${s.replace(/\.cjs$/, '').padEnd(24)} ${String(m).padStart(4)}  ${what}`); }
+    for (const g of [...GROUPS]) { const rows = PAGES.filter(r => r[1] === g); console.log(`${g}  (${rows.reduce((n, r) => n + r[3], 0).toFixed(0)} min)`); for (const [s, , what, m] of rows) console.log(`  ${short(s).padEnd(24)} ${String(m).padStart(4)}  ${what}`); }
     process.exit(0);
   }
-  const unknown = words.filter(w => w !== 'all' && !GROUPS.has(w) && !PAGES.some(r => r[0] === w || r[0] === `${w}.cjs`));
+  const unknown = words.filter(w => w !== 'all' && !GROUPS.has(w) && !PAGES.some(r => r[0] === w || short(r[0]) === w));
   if (unknown.length) { console.error(`pages: no such group or script: ${unknown.join(', ')}`); process.exit(2); }
-  const chosen = PAGES.filter(([s, g]) => words.includes(s) || words.includes(s.replace(/\.cjs$/, '')) || (g !== 'tools' && (words.includes(g) || words.includes('all'))));
+  const chosen = PAGES.filter(([s, g]) => words.includes(s) || words.includes(short(s)) || (g !== 'tools' && (words.includes(g) || words.includes('all'))));
   const capMs = Number(process.env.QA_PAGE_CAP || 10) * 60000, port = freePort();
   const server = Bun.spawn(['bun', 'run', 'tools/serve.ts'], { cwd: ROOT, stdout: 'ignore', stderr: 'ignore', env: { ...process.env, PORT: String(port) } });
   for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => { for (const p of LIVE) for (const q of under(p)) stop(q, 'SIGKILL'); server.kill(); process.exit(1); });
