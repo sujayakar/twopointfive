@@ -28,8 +28,8 @@ import type { IrradianceProbe } from './render/probe';
 import { buildLevel } from './scene/level';
 import { loadLevel } from './scene/levelLoad';
 import { parseLevelData } from './scene/levelData';
-import { Input } from './game/input';
-import type { FollowCamera } from './game/camera';
+import { Input } from './host/input';
+import type { FollowCamera } from './host/camera';
 import { standGame, populateHost, addressBeforeGame, lessonOfAddress, soloOfAddress } from './host/standup';
 import { pageSwitches, pageRows } from './host/profile';
 import { MARKING_TEXEL } from './scene/markings';
@@ -92,7 +92,7 @@ import { HandsOff } from './host/handsoff';
 import { oneAirFlip, wispMotesFlip } from './ui/sweepSnow';
 import { snowOf } from './host/gamesnow';
 import { ReplayKey } from './ui/replaykey';
-import { keptStore } from './replay/keptui';
+import { keptStore } from './tape/keptui';
 import { cloudAdopt, cloudBoot, cloudReports } from './cloud/cloud';   // (the hosted build's backend: nothing of it is made on a build that was given no address — src/cloud/cloud.ts)
 import { tellRedCards } from './cloud/redcards';
 import { endStage } from './cloud/telemetry';   // (a run's end for the records: the verdict's, where it has one)
@@ -106,7 +106,7 @@ import { requestQrf, callPerimeter, qrfStandDown } from './game/qrf';
 import { needsSend, needsTrip, NEEDS, NEEDS_STATS, NEEDS_LOG, type NeedKind } from './game/needs';
 import { WALLSNAP } from './game/wallsnap';
 import * as keymap from './host/keymap';
-import { GEAR } from './game/gear';
+import { GEAR } from './host/gear';
 import { civPanic, setCivilians, CIV, CIV_STATS, CIV_LOG, civSpots, checkCivSpots } from './game/civilians';
 import { Attract } from './game/attract';
 import { startFromQuery, quitScenario, runningScenario, plainFog, refusalWords } from './game/scenarioRun';

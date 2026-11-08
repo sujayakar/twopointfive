@@ -116,25 +116,16 @@ if (CHECK) {
   if (cur !== text) { console.error(`--check: ${OUT} ${cur === null ? 'does not exist' : 'is STALE'} — run bun run tools/levels/export.ts ${name}`); process.exit(1); }
   console.log(`--check: ${OUT} is up to date`);
 } else { writeFileSync(OUT, text); console.log(`wrote ${OUT}`); }
-// ANOTHER WAY IN: a level that stands a room clear or a rescue is asked the second-way rule the day it is written: whatever its defenders wedge, every
-// room with men in it is still reached without a charge (tools/qa/second-way-check.ts, on the shipped stand). The file is written either way. THE RULE
-// IS ABOUT A LEVEL A SQUAD MISSION PLAYS (any row of scenarioList.ts ALL_MISSIONS that is not a quiet one: the missions, the lessons, the rows off the
-// list), so a red check
-// FAILS THE EXPORT of such a level and is a NOTE on any other: a test yard or a showroom stands a team to try things on and no player is ever shut out
-// of it, and a level in the making reads here what it will owe the day it has a row. SECONDWAY=0 in front skips the question.
-if (!CHECK && !FLOOR_TO && (data.scenarios?.roomClear || data.scenarios?.rescue) && process.env.SECONDWAY !== '0') {
-  const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), played = (ALL_MISSIONS as { kind: string; level?: string }[]).some(e => e.kind !== 'quiet' && (e.level ?? 'office.json') === basename(OUT));   // (every row a squad plays: the lessons' and the rows off the list with the rest)
-  const p = Bun.spawnSync(['bun', 'run', resolve(import.meta.dir, '../qa/second-way-check.ts'), basename(OUT)], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, TPS_PROFILE: 'shipped' } });
-  if (p.exitCode === 1 && played) { console.error(`second way in: FAILED on ${basename(OUT)} (the file is written)\n${p.stdout.toString()}${p.stderr.toString()}`); process.exit(1); }
-  if (p.exitCode === 1) console.log(`  second way in: A NOTE, not a failure: no squad mission on the list plays ${basename(OUT)}, and the day one does this fails its export\n${p.stdout.toString().split('\n').filter(l => /NO WAY IN|FAIL —/.test(l)).map(l => `    ${l.trim()}`).join('\n')}`);
-  else console.log(p.exitCode === 0 ? '  second way in: every room they can shut has another way in' : `  second way in: NOT ASKED (${p.stderr.toString().trim().split('\n').pop() ?? 'the check did not run'})`);
-}
-// A DEFENDER SEES WHAT HE WATCHES: the same day, every man the file stands with a `pos` and an `aimAt` is asked for his line and for the ground he watches,
-// against the level's own count file (tools/qa/marksight-check.ts, on the shipped stand). The file is written either way; a red check
-// fails the export: something was stood in a man's view, or a level new to the check has no count file yet (the check's --write, once on each stand).
-// MARKSIGHT=0 in front skips it for a level still in the making.
-if (!CHECK && !FLOOR_TO && process.env.MARKSIGHT !== '0') {
-  const p = Bun.spawnSync(['bun', 'run', resolve(import.meta.dir, '../qa/marksight-check.ts'), basename(OUT)], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, TPS_PROFILE: 'shipped' } });
-  if (p.exitCode === 1) { console.error(`a defender sees what he watches: FAILED on ${basename(OUT)} (the file is written)\n${p.stdout.toString()}${p.stderr.toString()}`); process.exit(1); }
-  console.log(p.exitCode === 0 ? '  marks\' sight: no man the file stands sees less than its count file says (or it stands none)' : `  marks' sight: NOT ASKED (${p.stderr.toString().trim().split('\n').pop() ?? 'the check did not run'})`);
+// WHAT A LEVEL OWES WHOEVER PLAYS IT, asked of the game the day it is written (rust/game_start/src/bin/levels.rs; the file is written either way). ANOTHER WAY IN: whatever its defenders
+// wedge, every room with men in it is still reached without a charge. The rule is about a level A SQUAD MISSION PLAYS (any row of scenarioList.ts ALL_MISSIONS that is not a quiet one), so a
+// red answer fails the export of such a level and is a note on any other. A DEFENDER SEES WHAT HE WATCHES: a red answer fails the export (something was stood in a man's view, or the level
+// has no count file yet: `levels sight <name> --write`). LEVELASK=0 in front skips both for a level still in the making.
+if (!CHECK && !FLOOR_TO && process.env.LEVELASK !== '0') {
+  const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), played = (ALL_MISSIONS as { kind: string; level?: string }[]).some(e => e.kind !== 'quiet' && (e.level ?? 'office.json') === basename(OUT));   // (every list: a lesson's yard is played too)
+  const ask = (question: string): { code: number; text: string } => { try { const p = Bun.spawnSync(['cargo', 'run', '--release', '--quiet', '--bin', 'levels', '--', question, basename(OUT)], { cwd: `${ROOT}/rust/game_start`, stdout: 'pipe', stderr: 'pipe' }); return { code: p.exitCode, text: `${p.stdout}${p.exitCode ? p.stderr : ''}`.trim() }; } catch (e) { return { code: -1, text: String((e as Error).message) }; } };
+  const asked = (question: string, what: string, fails: boolean): void => { const a = ask(question);
+    if (a.code === 0) console.log(`  ${what}: yes`); else if (a.code !== 1 || !a.text.includes('FAIL')) console.log(`  ${what}: NOT ASKED (${a.text.split('\n').pop() || 'the tool did not run'})`);
+    else if (fails) { console.error(`${what}: NO, on ${basename(OUT)} (the file is written)\n${a.text}`); process.exit(1); } else console.log(`  ${what}: NO, A NOTE and not a failure: no squad mission on the list plays ${basename(OUT)}, and the day one does this fails its export\n${a.text}`); };
+  if (data.scenarios?.roomClear || data.scenarios?.rescue) asked('second-way', 'every room they can shut has another way in', played);
+  asked('sight', 'every defender sees what he watches', true);
 }

@@ -538,7 +538,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `game/particleFx.ts`, out events on every host (`engine.particlesOn`, = `settings.gpuParticles` ∧ attached, is whether the picture draws them): impactFx by material,
   muzzleSparksFx, casingFx (+ the CPU-scheduled `casingTink`), bangFx, kickDustFx, clackFx, the tracers' `sparkSink`. `?noparticles`, Tab ▸ Renderer —
   particles, `__particles` {stats, params, on, test(kind, at), emit, clear}. QA: `probes.ts particles` (queue / sites / off / determinism).
-  The fifth kind `sheet` (id 4, LONG ring; `game/sheetModel.ts` = the CPU REFERENCE of its equations, keep the two in step — `probes.ts destruction-sheet`
+  The fifth kind `sheet` (id 4, LONG ring; `render/sheetModel.ts` = the CPU REFERENCE of its equations, keep the two in step — `probes.ts destruction-sheet`
   compares the constants): a leaf of office paper as a LIT two-sided oriented quad (width `size` × `aspect`; the struct's 5th row = octahedral normal + f16
   angular velocity + aspect, `pOctEncode/Decode`, `sheetFrame`), gravity + drag through the sheet scaled by airspeed (a gliding leaf gets lift) + flutter torque
   off the offset centre of pressure (`sheetAir`), traceClosest lays it flat on floors / desks and puts it to sleep, walls let it slide; `sheetLight` = one pass

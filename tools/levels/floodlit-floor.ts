@@ -134,7 +134,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   // ---------------- the building (x 9‥31, z 6‥13) ----------------
   K.grp(k, 'walls.exterior');
   const ext = C.concrete;
-  // (the store's back door opens OUTWARD: no wedge holds it, so the store's men can shut the radio room's door alone — tools/qa/second-way-check.ts)
+  // (the store's back door opens OUTWARD: no wedge holds it, so the store's men can shut the radio room's door alone — rust/game_start levels second-way)
   K.wallX(k, 6, 8.88, 31.12, EXT, ext, [K.doorAt(k, 'back', 'x', 6, 28.4, { exterior: true, swing: -1 })]);
   K.wallX(k, 13, 8.88, 31.12, EXT, ext, [hole(12, 14), K.doorAt(k, 'front', 'x', 13, 18.4, { exterior: true }), hole(23.5, 25.5)]);
   K.wallZ(k, 9, 6.12, 12.88, EXT, ext);

@@ -12,7 +12,7 @@ import { DrawGame, type Start } from '../../src/host/drawgame';
 import { HAND, sampleHand } from '../../src/draw/hand';
 import { DrawPlay } from '../../src/host/drawplay';
 import { HandTape, MARKS } from '../../src/tape/handtape';
-import { FollowCamera } from '../../src/game/camera';
+import { FollowCamera } from '../../src/host/camera';
 import { Section, View } from '../../src/draw/sections';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.TAPE_BREAK === '1', args = process.argv.slice(2), at = args.indexOf('--secs'), SECS = at >= 0 ? Number(args[at + 1]) : 30;

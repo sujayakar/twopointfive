@@ -18,8 +18,8 @@ import { CharacterRenderer } from '../anim/characters';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { MARKING_TEXEL } from '../scene/markings';
 import { LOOK, lookKeptOf, placeOfQuery, setLookPlace } from '../scene/look';
-import { Input } from '../game/input';
-import { FollowCamera } from '../game/camera';
+import { Input } from './input';
+import { FollowCamera } from './camera';
 import { FIXEDSTEP, planTicks } from './fixedstep';
 import { CameraPair, Lag } from './between';
 import { FINDTUNED, bindFindMe, ctrlTurn, findMeStarts } from './findme';
@@ -51,8 +51,8 @@ import { TapeMap } from '../tape/map';
 import { FreeCam } from '../tape/freecam';
 import { PLAYTAPE } from '../tape/address';
 import { RunKeep, keeps } from '../tape/run';
-import { backToGame, gameUp } from '../replay/format';
-import { keptStore } from '../replay/keptui';
+import { backToGame, gameUp } from '../tape/format';
+import { keptStore } from '../tape/keptui';
 import { cloudNotes } from '../cloud/cloud';
 import { buildName } from './buildname';
 import { HandTape } from '../tape/handtape';
@@ -221,7 +221,7 @@ async function main(): Promise<void> {
   const made = Promise.all([engine.init({ ...pictureMakes(q), onGroup: group }), timed('smoke', smoke.init()), timed('particles', engine.particles!.init()), timed('materials', engine.gbuffer.needLook()), timed('meshShadows', shadows.init()), timed('skin', engine.gbuffer.prepareSkin(chars.jointsFormat))]);
   made.catch(() => { /* awaited below */ });
   // (while the programs compile: the ticks a run begins with, still, walking and firing)
-  if (!play && !net && !kitPicture && !title) { const eye = new FollowCamera(), o = view() + View.follow, none = new Set<string>(), walk = new Set(['KeyW']), w = Math.max(1, canvas.clientWidth), h = Math.max(1, canvas.clientHeight);
+  if (!play && !kitPicture && !title) { const eye = new FollowCamera(), o = view() + View.follow, none = new Set<string>(), walk = new Set(['KeyW']), w = Math.max(1, canvas.clientWidth), h = Math.max(1, canvas.clientHeight);
     eye.target = [D.f[o], D.f[o + 1], D.f[o + 2]]; eye.aspect = w / h; eye.rebuild();
     await game.warm(WARM, (N, i) => sampleHand(N, { keys: i >= WARM / 3 ? walk : none, pressed: none, buttons: i >= WARM * 2 / 3 ? 1 : 0, clicked: 0, wheel: 0, mouseX: w * 0.6, mouseY: h * 0.4 }, eye, canvas), nextTask); }
   await made;

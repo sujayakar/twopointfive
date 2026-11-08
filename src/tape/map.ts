@@ -1,6 +1,6 @@
-// THE MAP OF A RUN BEING PLAYED AGAIN (replay/minimap.ts draws it): small in the corner, large over the picture on a press of it or on M. The floor and who stands on it are asked of the game as it plays.
-import type { ReplayNote } from '../replay/format';
-import { drawFloor, drawScene, mapFit, MAP_RING, mapSize, mapToWorld, type MapDoor, type MapFit, type MapMan, type MapScene } from '../replay/minimap';
+// THE MAP OF A RUN BEING PLAYED AGAIN (tape/minimap.ts draws it): small in the corner, large over the picture on a press of it or on M. The floor and who stands on it are asked of the game as it plays.
+import type { ReplayNote } from './format';
+import { drawFloor, drawScene, mapFit, MAP_RING, mapSize, mapToWorld, type MapDoor, type MapFit, type MapMan, type MapScene } from './minimap';
 
 export interface MapDeps {
   floor(): { bounds: [number, number, number, number]; boxes: number[] };

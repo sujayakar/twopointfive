@@ -1,6 +1,6 @@
 // THE PICTURE'S CAMERA OFF THE RUN'S OWN VIEW, paused or playing: a drag moves it over the floor, a right drag (or Shift + drag) turns and tilts it, Ctrl turns it as in play, the wheel zooms,
 // W A S D slide it. Turned or zoomed only, it still follows where the run looked. Only the picture's: the game is handed the tape's hands.
-import { FollowCamera } from '../game/camera';
+import { FollowCamera } from '../host/camera';
 import { clamp, DEG, type Vec3 } from '../math/vec';
 
 export interface TapeView { look: Vec3; yaw: number; pitch: number; dist: number; fov: number }

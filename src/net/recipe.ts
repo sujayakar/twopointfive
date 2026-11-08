@@ -1,11 +1,10 @@
 // THE RECIPE: how a networked game is told of where the game that steps is stood through the TypeScript game (a page with one, tools/mp/stand.ts): the die, the
-// page's address, every knob table, the kit, as a tape carries them (replay/format.ts RunTape.recipe). It goes with that page (start.ts is what a game in
+// page's address, every knob table, the kit, as a tape carries them (tape/format.ts RunTape.recipe). It goes with that page (start.ts is what a game in
 // the module is started from).
 import type { PlayerCmd } from '../game/cmd';
-import type { RunTape } from '../replay/format';
-import type { WireCmd } from './wire';
+import type { Recipe, WireCmd } from './wire';
 
-export type Recipe = RunTape['recipe'];
+export type { Recipe };
 /** the knob tables a networked game stands on, whatever its maker says (the game's own maths, the same bits on every engine, are no table: every game
  *  plays on them): every seat's record checked (the view worked out again from its pose: fromWire sends none), and the run's verdict kept (how a server knows the
  *  mission is over). Whoever makes a recipe forces them; whoever stands one refuses a recipe without them (`recipeWhy`) */

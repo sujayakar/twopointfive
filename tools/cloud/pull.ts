@@ -4,7 +4,7 @@
 // deployment's own deploy key, which the internal functions answer to — it is never written anywhere by this tool, and never belongs in the repo. A hosted
 // deployment's key with no address given is enough: the key names its deployment (tools/cloud/local.ts keyUrl).
 // Into --out (default ./cloud-pull):
-//   twopointsix-cloud-<stamp>-<n>-visits.ndjson.gz   every visit's tape, in the browser's own hand-over format (src/replay/kept.ts: gzip members end to end) —
+//   twopointsix-cloud-<stamp>-<n>-visits.ndjson.gz   every visit's tape, in the browser's own hand-over format (src/tape/kept.ts: gzip members end to end) —
 //                                                    `bun run tools/qa/replay-dump.ts <that file>` unpacks it, the /replay page opens it; what the players
 //                                                    wrote on their replays (notes, the F7 shelf's saved windows) rides in it as the browser's file had it
 //   telemetry.ndjson                                 the records, one a line, oldest first
@@ -17,7 +17,7 @@ import { gunzipSync, gzipSync } from 'node:zlib';
 import { join } from 'node:path';
 import { FILESYNC } from '../../src/cloud/files.ts';
 import { wire, type Wire } from '../../src/cloud/wire.ts';
-import { KEPT_VERSION } from '../../src/replay/kept.ts';
+import { KEPT_VERSION } from '../../src/tape/kept.ts';
 
 export interface VisitRow { sid: string; pid: string; startedAt: string; lastAt: string; scenario: string; url: string; commit?: string; seconds: number; pieces: number; bytes: number; have: number }
 interface Chunk { seq: number; part: number; parts: number; at: string; body: Uint8Array }

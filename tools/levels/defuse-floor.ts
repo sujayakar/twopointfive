@@ -149,7 +149,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   const ext = C.concrete;
   K.wallX(k, 7, 5.88, 34.12, EXT, ext);                                    // north: blank — the benches stand against it
   // west and east, the ends of the house: each workshop's own back door, hung to open OUTWARD — no wedge holds it, so a workshop's men can shut the inside
-  // door alone and the way round the house stays a way in (tools/qa/second-way-check.ts)
+  // door alone and the way round the house stays a way in (rust/game_start levels second-way)
   K.wallZ(k, 6, 7.12, 16.88, EXT, ext, [K.doorAt(k, 'back_1', 'z', 6, 9.9, { exterior: true, swing: 1 })]);
   K.wallZ(k, 34, 7.12, 16.88, EXT, ext, [K.doorAt(k, 'back_2', 'z', 34, 9.9, { exterior: true, swing: -1 })]);
   // south z=17: the front door in the middle, a window onto the hall at each end

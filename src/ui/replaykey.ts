@@ -1,5 +1,5 @@
 // The game page's side of the REPLAY BUFFER (game/replaybuf.ts): the buffer is given to the Game at boot and runs from then on with nothing pressed; F7 puts the
-// last stretch of play on the replay SHELF (src/replay/shelf.ts — this browser's IndexedDB) and SAYS SO ON THE PAGE in a tag of its own (`say`: the game's message line
+// last stretch of play on the replay SHELF (src/tape/shelf.ts — this browser's IndexedDB) and SAYS SO ON THE PAGE in a tag of its own (`say`: the game's message line
 // is drawn only on the debug read-out, which is off unless a machine asked for it — with the words only there F7 looked like it did nothing); Shift+F7 does that and opens the
 // VIEWER (replay.html) on it in this window. A crash of the page (main.ts's fatal card) saves one by itself, and is filed in the buffer as a line at its moment. Off: ?noreplay for a visit, or localStorage
 // `twopointsix.replay` = '0' (__replay.on = false writes it) — then no buffer is made and the Game's tap stays null: the build as it was.
@@ -11,17 +11,17 @@ import { typedInto } from '../host/keymap';
 import { visitPairs } from '../tape/address';
 import { ReplayBuffer, REPLAY } from '../game/replaybuf';
 import type { ReplayMeta } from '../game/replaybuf';
-import type { RunTape, ReplayFile } from '../replay/format';
-import { shelfPut } from '../replay/shelf';
-import { CAME_FROM, clock, gameUp, replayBlob, errorMarks, lastRun, leaveFor, replayName, tapeWhy } from '../replay/format';
+import type { RunTape, ReplayFile } from '../tape/format';
+import { shelfPut } from '../tape/shelf';
+import { CAME_FROM, clock, gameUp, replayBlob, errorMarks, lastRun, leaveFor, replayName, tapeWhy } from '../tape/format';
 export { CAME_FROM, leaveFor };
-import { ReplayKeeper, ringSource } from '../replay/keeper';
-import { KEEP, keptSummary, pruneKept, keepBudget } from '../replay/keepstore';
-import { keptStore, keptWords } from '../replay/keptui';
+import { ReplayKeeper, ringSource } from '../tape/keeper';
+import { KEEP, keptSummary, pruneKept, keepBudget } from '../tape/keepstore';
+import { keptStore, keptWords } from '../tape/keptui';
 import { cloudUrl, cloudFile, cloudSendsFiles } from '../cloud/cloud';
 
 const LS = 'twopointsix.replay';
-/** EVERY RUN IS KEPT (replay/keeper.ts): the tape is written to this browser's storage in pieces as it is played, nothing pressed. Off for a visit with ?nokeep,
+/** EVERY RUN IS KEPT (tape/keeper.ts): the tape is written to this browser's storage in pieces as it is played, nothing pressed. Off for a visit with ?nokeep,
  *  for the machine with localStorage `twopointsix.keep` = '0' (__replay.keeping = false writes it); off with the buffer itself */
 const LS_KEEP = 'twopointsix.keep';
 /** replays an error saves by itself in one page load, and the least time between two tries that made no file */
@@ -148,7 +148,7 @@ export class ReplayKey {
    *  work, and the end card's Replay button (ui/menu.ts). The page goes once the shelf has the file, and stays where it is if none was shelved (save() never
    *  rejects: a save that fails says why and comes back null) or there is no viewer page (a plain save: the one-file build's is sent, where it has a backend). One press, one
    *  leaving: a second inside the save's wait, or the first seconds of the going, does nothing. THE WAY BACK is the browser's own Back, and the replay bar's '‹ Game' (replay/engineplay.ts), which
-   *  reads the mark left here (replay/format.ts leaveFor / backToGame): the address left, its slot in this window's history, the shelf entry it left for. The page left is LEFT (a mission the key leaves mid-way is over, as a
+   *  reads the mark left here (tape/format.ts leaveFor / backToGame): the address left, its slot in this window's history, the shelf entry it left for. The page left is LEFT (a mission the key leaves mid-way is over, as a
    *  reload's is; F7 alone saves and stays).
    *  THE CARD'S goes to the game page playing the run again (the maintainer, 10-15: "clicking on replay after a mission should start in engine") where the file
    *  has a tape to play (engineUrl), and to the map viewer as before where it has none; the key's is the map viewer's, as it was. */
@@ -243,7 +243,7 @@ export class ReplayKey {
       view: (why = 'console') => self.openViewer(why), get canView() { return self.canView; },
       summary: () => self.buf ? self.buf.summary() : 'replay buffer off (?noreplay or the stored switch)',
       get last() { return self.last; },
-      // every run kept (replay/keeper.ts, replay/keptui.ts)
+      // every run kept (tape/keeper.ts, tape/keptui.ts)
       get keeping() { return !!self.keeper && !self.keeper.broke; },
       set keeping(v: boolean) { try { localStorage.setItem(LS_KEEP, v ? '1' : '0'); } catch { /* */ } },   // (from the next page load)
       keep: KEEP, session: self.session,

@@ -26,7 +26,7 @@ import { manLeaves } from '../sim/men/store';
 import { men } from './seats';
 import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3, clamp, DEG } from '../math/vec';
-import { plainShort } from './gear';   // (a leaf: a weapon's name as it is written into a row)
+import { plainShort } from '../host/gear';   // (a leaf: a weapon's name as it is written into a row)
 import type { Game, DownKind, DownBy } from './game';
 import { Guard } from './game';
 import type { PatrolRoute, CivilianDef, CivilianTask } from '../scene/level';

@@ -1,16 +1,16 @@
-// THE REPLAY VIEWER (replay.html): a saved replay (src/replay/format.ts — F7 on the game page) drawn as a MAP of the floor with a scrubber. Every man is a disc with
+// THE REPLAY VIEWER (replay.html): a saved replay (src/tape/format.ts — F7 on the game page) drawn as a MAP of the floor with a scrubber. Every man is a disc with
 // his facing and his muzzle's line, ringed by his state, with the route ahead of him and the mark he is going to; rounds are lines, blasts rings, doors swing. A
 // click on a man says what he was doing; a click on the FLOOR puts a NOTE on that spot at that moment — the notes are kept in the file (and written back to this
 // browser's shelf as they are typed). NO FILE IS DOWNLOADED FROM THIS PAGE (the maintainer, 2026-10-27: "we should get rid of local downloads entirely"): a kept visit goes
 // to a build's backend by the game page's own rounds and a note the moment it is saved (src/cloud), and a replay that does not go up by itself has a Send
 // (`sendShown`). No game code runs here: the page reads the trace and nothing else.
-import type { ReplayFile, ReplayNote, Decoded, ManAt, ManDo, ReplayEvent } from './format';
+import type { ReplayFile, ReplayNote, Decoded, ManAt, ManDo, ReplayEvent } from '../tape/format';
 import { reportWarning } from '../cloud/report';
-import { checkReplay, decode, sampleAt, clock, doWords, isErrorMark, errorMarks, lastRun, backToGame, replayBlob, tapeWhy } from './format';
-import { shelfList, shelfGet, shelfPut, shelfNotes, shelfDelete } from './shelf';
-import { assemble } from './kept';
-import { readVisit, beingWritten } from './keepstore';
-import { keptStore, keptNow, keptWords, mb } from './keptui';
+import { checkReplay, decode, sampleAt, clock, doWords, isErrorMark, errorMarks, lastRun, backToGame, replayBlob, tapeWhy } from '../tape/format';
+import { shelfList, shelfGet, shelfPut, shelfNotes, shelfDelete } from '../tape/shelf';
+import { assemble } from '../tape/kept';
+import { readVisit, beingWritten } from '../tape/keepstore';
+import { keptStore, keptNow, keptWords, mb } from '../tape/keptui';
 import { cloudNotes, cloudCarries, cloudSendsFiles, cloudFile, cloudReports } from '../cloud/cloud';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -265,7 +265,7 @@ function renderNotes(focusId?: string) {
 let dirty = false, writing: Promise<unknown> = Promise.resolve();   // (the notes' writes still on their way: a page that leaves waits for them)
 function keep() { sendStale(); if ((shelfId === null && keptSid === null) || !F) return; dirty = true; clearTimeout(saveT); saveT = window.setTimeout(flush, 250); }
 function flush() { clearTimeout(saveT); if (!dirty || (shelfId === null && keptSid === null) || !F) return; dirty = false; const N = F.notes.filter(n => n.text.trim());
-  const w = shelfId !== null ? shelfNotes(shelfId, N) : keptSid !== null ? keptStore().patch(keptSid, { notes: N }) : null; if (w) { const kept = shelfId === null;   // (a shelf's own failed write is said by the shelf: replay/shelf.ts)
+  const w = shelfId !== null ? shelfNotes(shelfId, N) : keptSid !== null ? keptStore().patch(keptSid, { notes: N }) : null; if (w) { const kept = shelfId === null;   // (a shelf's own failed write is said by the shelf: tape/shelf.ts)
     writing = Promise.all([writing, Promise.resolve(w).then(ok => { if (ok === false && kept) reportWarning('replay.viewer.notes.write', 'the notes were not written to this browser'); return ok; }).catch(e => reportWarning('replay.viewer.notes.write', e))]);
     // a hosted build's backend is told at once (src/cloud/cloud.ts cloudNotes: it asks nothing where this browser does not send); never waited for — a page that
     // leaves first loses nothing, the game's page sends the note on its next round

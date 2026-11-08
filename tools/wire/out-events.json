@@ -112,7 +112,7 @@
 "sites": 3,
 "ts": "footstep",
 "of": "GameAudioLike",
-"file": "src/game/audio_iface.ts",
+"file": "src/audio/iface.ts",
 "why": "this",
 "params": [
 {
@@ -143,7 +143,7 @@
 "sites": 209,
 "ts": "play",
 "of": "GameAudioLike",
-"file": "src/game/audio_iface.ts",
+"file": "src/audio/iface.ts",
 "why": "this",
 "params": [
 {
@@ -174,7 +174,7 @@
 "sites": 2,
 "ts": "rain",
 "of": "GameAudioLike",
-"file": "src/game/audio_iface.ts",
+"file": "src/audio/iface.ts",
 "why": "this",
 "params": [
 {

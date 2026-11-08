@@ -3,6 +3,7 @@
 // the build by this import and turned into a Level by scene/levelLoad.ts loadLevel(). The procedural code that used to BE this file lives on as the legacy
 // generator (scene/officeGen.ts) that tools/level-export.ts regenerates the JSON from. Units: meters. +X east, +Z south, +Y up. Floor top at y=0.
 import { Vec3, DEG } from '../math/vec';
+import type { LightDef } from '../render/lights';
 import type { Box } from './boxes';
 import type { MarkingDef } from './markings';
 import type { LevelData, SurfacesData } from './levelData';
@@ -11,22 +12,7 @@ import officeData from '../../levels/office.json' with { type: 'json' };
 import type { LevelScenarios } from './scenarios';
 import type { WeaponId } from './weaponIds';
 
-export interface LightDef {
-  kind: 'point' | 'spot' | 'dir';
-  pos: Vec3; dir: Vec3;
-  color: Vec3;         // linear rgb, multiplied by intensity
-  intensity: number;   // point/spot: candela-ish; dir: irradiance (lux-ish)
-  range: number;
-  innerDeg: number; outerDeg: number;
-  name: string;
-  group: string;       // for UI toggles / OCP ("ceiling", "exterior", "desk", ...)
-  mains?: boolean;     // fed from the building breaker (default true) — false for street lighting etc.
-  broad?: boolean;     // wide soft emitter → the direct pass's 'broad' denoise class (street lamps; area lights derived from fixtures set it themselves)
-  fixtureBox?: number; // index of the emissive box representing the fixture (glow card)
-  enabled: boolean;
-  volumetric: number;  // 0..1 haze scattering multiplier for beams
-  radius?: number;     // physical emitter size (m) → penumbra width; for 'dir' lights the angular radius in radians
-}
+export type { LightDef };
 
 /** One man's beat. `weapon`: the weapons.ts row he carries (absent = the 9 mm service pistol) — dealt at spawn (game.ts Guard); nobody on this level is authored one
  *  yet (the carbine lanes decide who: docs/internal/sc20k-design.md §3.5). `keys`: the keys on his belt, by lock name (doors.ts DoorDef.lock) — what Sam takes off

@@ -12,7 +12,7 @@
 // pips); game.ts (who carries which row, Character.muzzleAhead).
 import type { Vec3 } from '../math/vec';
 import type { MuzzleFxKey } from './effects';
-import { GEAR, GEAR_NAMES, GEAR_MAG } from './gear';   // (a leaf: the issue kit's switch — read only inside the getters of Sam's two rows below, never as this module loads)
+import { GEAR, GEAR_NAMES, GEAR_MAG } from '../host/gear';   // (a leaf: the issue kit's switch — read only inside the getters of Sam's two rows below, never as this module loads)
 import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 import type { WeaponId } from '../scene/weaponIds';

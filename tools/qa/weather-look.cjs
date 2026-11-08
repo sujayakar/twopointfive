@@ -22,7 +22,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 // ---- THE VIEWS. yaw / pitch in DEGREES (converted for __stage), look in world metres, dist in metres. yaw 0 looks north (−z) from the south, +90 looks west
-// from the east. The game's own follow camera is yaw −22°, pitch 55°, distance 21, fov 28° (src/game/camera.ts): pitch stays at 55 throughout.
+// from the east. The game's own follow camera is yaw −22°, pitch 55°, distance 21, fov 28° (src/host/camera.ts): pitch stays at 55 throughout.
 const VIEWS = {
   'compound.json': {
     wide: { look: [20, 0, 14.6], yaw: 0, pitch: 55, dist: 48 },

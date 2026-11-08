@@ -131,7 +131,7 @@ export async function noshieldTape(): Promise<boolean> {
   const F = family('noshield-tape: what was recorded with a shield — a session\'s knobs apply and make no table');
   await kept(async () => {
     try {
-      const W: any = await hushed(() => standUp()), g = W.game, JR = await import(`${ROOT}/src/game/journal.ts`), RF = await import(`${ROOT}/src/replay/format.ts`);
+      const W: any = await hushed(() => standUp()), g = W.game, JR = await import(`${ROOT}/src/game/journal.ts`), RF = await import(`${ROOT}/src/tape/format.ts`);
       const now = JR.knobsSnapshot(g), has = 'SHIELD' in (now.tables as Record<string, unknown>);
       // a tape from the build before carries the SHIELD table among its tables (the cards are in no recording: kit.ts KIT is in no registry)
       const old = JSON.parse(J(now)); old.tables.SHIELD = { on: true, handsK: 1.6, first: true, blast: true, aimLow: true };

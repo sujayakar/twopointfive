@@ -33,7 +33,7 @@ const RUN_STEP: f64 = 0.12;
 const RUN_TURN: f64 = 0.9986;
 const PATH_ITER: f64 = 6000.0;
 
-fn door_mid(d: &LevelDoorDef) -> V3 { [d.hinge[0] + m::cos(d.closed_dir) * d.width * 0.5, 0.0, d.hinge[1] + m::sin(d.closed_dir) * d.width * 0.5] }
+pub fn door_mid(d: &LevelDoorDef) -> V3 { [d.hinge[0] + m::cos(d.closed_dir) * d.width * 0.5, 0.0, d.hinge[1] + m::sin(d.closed_dir) * d.width * 0.5] }
 fn mid(r: &Rect) -> V3 { [(r.x0 + r.x1) / 2.0, 0.0, (r.z0 + r.z1) / 2.0] }
 
 /// the map of a level, made once a level
@@ -69,7 +69,7 @@ fn fill(g: &Game, out: &mut Vec<Word>) {
             }
         };
         // every way the level is walked, each traced along its own line, by its kind's weight
-        for (amp, pts) in ways(g) { for k in 0..pts.len().saturating_sub(1) {
+        for Way { amp, points: pts, .. } in ways(g).list { for k in 0..pts.len().saturating_sub(1) {
             let (a, b) = (pts[k], pts[k + 1]);
             let len = m::hyp2(b[0] - a[0], b[2] - a[2]);
             let n = m::max(1.0, m::ceil(len / 0.1));
@@ -95,21 +95,29 @@ fn fill(g: &Game, out: &mut Vec<Word>) {
     }
 }
 
-/// every way the level is walked: what a metre of it counts as, and its line on the floor. Each is the walk grid's own path, asked of a copy of the game: the search's tables are the module's, and this takes the game shared.
-fn ways(g: &Game) -> Vec<(f64, Vec<V3>)> {
+/// what a way is of
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum WayKind { Patrol, Team, Doors, Hint }
+/// a way the level is walked: what a metre of it counts as, and its line on the floor
+pub struct Way { pub kind: WayKind, pub amp: f64, pub points: Vec<V3> }
+/// the level's ways, the names its own list asks for that it has not, and how many of them the walk grid has no path for
+pub struct Ways { pub list: Vec<Way>, pub unknown: Vec<alloc::string::String>, pub lost: usize }
+/// every way the level is walked. Each is the walk grid's own path, asked of a copy of the game: the search's tables are the module's, and this takes the game shared.
+pub fn ways(g: &Game) -> Ways {
     let mut asked = g.clone();
-    let mut out: Vec<(f64, Vec<V3>)> = Vec::new();
-    let mut walk = |amp: f64, a: V3, b: V3, out: &mut Vec<(f64, Vec<V3>)>| {
+    let mut out = Ways { list: Vec::new(), unknown: Vec::new(), lost: 0 };
+    let mut walk = |kind: WayKind, weight: f64, a: V3, b: V3, out: &mut Ways| {
         let pts = match game::scene_collision::nav_grid_find_path(&mut asked, a, b, Some(PATH_ITER), None) {
             Some(p) if !p.is_empty() => { let mut l = Vec::with_capacity(p.len() + 1); l.push(a); l.extend(p); l }
-            _ => vec![a, b],
+            _ => { out.lost += 1; vec![a, b] }
         };
-        out.push((amp, pts));
+        let amp = weight * match kind { WayKind::Patrol => PATROL, WayKind::Team => TEAM, WayKind::Doors => DOORS, WayKind::Hint => HINT };
+        out.list.push(Way { kind, amp, points: pts });
     };
     let level = &g.level;
     let door_at = |id: &str| level.doors.iter().find(|d| d.name == id).map(door_mid);
     // the shift's routes
-    for &r in &level.routes { let p = &g.tab.route[r].points; if p.len() < 2 { continue; } for i in 0..p.len() { walk(PATROL, p[i], p[(i + 1) % p.len()], &mut out); } }
+    for &r in &level.routes { let p = &g.tab.route[r].points; if p.len() < 2 { continue; } for i in 0..p.len() { walk(WayKind::Patrol, 1.0, p[i], p[(i + 1) % p.len()], &mut out); } }
     // every start to everything a team goes for
     let sc = level.scenarios.as_ref();
     let (mut starts, mut goals): (Vec<V3>, Vec<V3>) = (Vec::new(), Vec::new());
@@ -129,10 +137,10 @@ fn ways(g: &Game) -> Vec<(f64, Vec<V3>)> {
         }
     }
     if starts.is_empty() { starts.push(level.player_spawn); }
-    for s in &starts { for t in &goals { walk(TEAM, *s, *t, &mut out); } }
+    for s in &starts { for t in &goals { walk(WayKind::Team, 1.0, *s, *t, &mut out); } }
     // the yard's own ways: every pair of the level's outer doors
     let outer: Vec<&LevelDoorDef> = level.doors.iter().filter(|d| d.exterior == Some(true)).collect();
-    for i in 0..outer.len() { for k in i + 1..outer.len() { walk(DOORS, door_mid(outer[i]), door_mid(outer[k]), &mut out); } }
+    for i in 0..outer.len() { for k in i + 1..outer.len() { walk(WayKind::Doors, 1.0, door_mid(outer[i]), door_mid(outer[k]), &mut out); } }
     // the author's own, by name: a door's, a mark's, a route's first point, a room clear room's, a place's
     let named = |n: &str| -> Option<V3> {
         if n == "spawn" { return Some(level.player_spawn); }
@@ -144,7 +152,10 @@ fn ways(g: &Game) -> Vec<(f64, Vec<V3>)> {
         s.places.as_ref().and_then(|p| p.areas.iter().find(|x| x.name == n)).map(|a| mid(&a.bounds))
     };
     for h in sc.and_then(|s| s.walked.as_ref()).into_iter().flatten() {
-        if let (Some(a), Some(b)) = (named(&h.from), named(&h.to)) { walk(HINT * h.weight.unwrap_or(1.0), a, b, &mut out); }
+        match (named(&h.from), named(&h.to)) {
+            (Some(a), Some(b)) => walk(WayKind::Hint, h.weight.unwrap_or(1.0), a, b, &mut out),
+            (a, b) => for (n, at) in [(&h.from, a), (&h.to, b)] { if at.is_none() { out.unknown.push(n.clone()); } },
+        }
     }
     out
 }

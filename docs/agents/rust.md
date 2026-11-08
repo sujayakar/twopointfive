@@ -96,8 +96,8 @@ it sets an `OptionsGame` (`src/ui/options.ts`), the old page's Menu handing it t
 **HOW THE PAGE OPENS (2026-11-08).** `src/host/pictureopens.ts` sets what a renderer module has down and the page has up: the stuff maps on workers, the tuned smoke, the motion rows, the solver's dispatch, the pace
 (a window nobody is at gives way), and the address's words for the picture. The new page opened without them until then, and no still showed it: it was found by setting every number of `settings`, `smokeDraw` and
 `passes` of the two pages side by side (all equal after; shader texts too). A frame owes ticks by the display's own stamp (`beat`), steadier than a clock read in one. BEFORE THE FIRST TICK the page plays 36 and throws them
-away (`DrawGame.warm`, a moment kept and put back, a tick a turn of the event loop while the programs compile): a browser compiles a function of the module as it is first called, and a cold first tick was 345 ms here
-(about 95 on an M4 Max by his records) and is 60. `play-check` holds every mission to it: the game after is the game before, word for word, and the page is told of no other. A kept page's lease that is over hands the GPU's queue
+away (`DrawGame.warm`, co-op too: a moment kept and put back, a tick a turn of the event loop while the programs compile): a browser compiles a function of the module as it is first called, and a cold first tick was 345 ms here
+(about 95 on an M4 Max by his records) and is 60. `play-check` holds every mission to it: the game after is the game before, word for word, and the page is told of no other; `net-check` plays its page so and holds every word to the server's. A kept page's lease that is over hands the GPU's queue
 nothing (`gpu/keep.ts`; `keeppage-check`): a Team & kit picture's boot still on its way when its frame went wrote seven destroyed buffers. Never seen on a GPU.
 
 FOR A SCRIPT (`window.__draw`, `__ready`): `run(n, keys, 'none' | 'last' | 'all')` steps exactly n ticks by the page's own hand, whatever the tab; `game.view()`, `map()` (men; doors by name and place), `floor()`, `tally()`, `run()`,

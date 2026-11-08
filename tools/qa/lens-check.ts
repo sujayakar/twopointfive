@@ -24,7 +24,7 @@ const STEPS = Number(process.env.LENS_STEPS ?? 7 * 60), POKES = [0, 90, 91, 240,
 // (the child: a room clear with the four, taped, its raw bits chained — written to the file named, then nothing else runs. `--poke`: the camera's pose is written
 // with no rebuild before the steps of POKES)
 if (val('tape-to')) {
-  const { ReplayBuffer } = await import(`${ROOT}/src/game/replaybuf.ts`), { levelFingerprint } = await import(`${ROOT}/src/game/savestate.ts`), KP = await import(`${ROOT}/src/replay/kept.ts`);
+  const { ReplayBuffer } = await import(`${ROOT}/src/game/replaybuf.ts`), { levelFingerprint } = await import(`${ROOT}/src/game/savestate.ts`), KP = await import(`${ROOT}/src/tape/kept.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`), { chainBits } = await import(`${ROOT}/src/game/digest.ts`);
   Math.random = mulberry32(0xbeef);
   const W: any = await standUp({ seed: 33 }); const r = startFromQuery(W.game, 'roomclear&squad4'); if (r.why) throw new Error(r.why);
