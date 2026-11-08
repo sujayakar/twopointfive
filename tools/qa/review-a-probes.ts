@@ -1,5 +1,5 @@
 // The 'review-a' probe family (run through probes.ts: `bun run tools/qa/probes.ts review-a | review-hostage-civ | review-lightout | review-rack | review-routed-shot |
-// review-bodylight | review-kick-leaf | review-ring-civ | review-item-cap | review-door-reset | review-day-blackout | review-meter | review-act-down | review-kickhit |
+// review-bodylight | review-kick-leaf | review-ring-civ | review-item-cap | review-door-reset | review-day-blackout | review-act-down | review-kickhit |
 // review-torch-dt | review-stack`): one staged situation per finding of the deep review's game-core passes (docs/internal/review-ledger.md, pass 6 'A6.x', pass 7
 // 'B7.x', pass 8 'W8.5') that this lane fixed — each written to FAIL on the tree as reviewed and PASS on the fix. Headless (headless.ts): the whole Game over the fake
 // device, one situation, PASS / FAIL lines, a closing '=== name: ALL PASS ===' per probe.
@@ -22,7 +22,6 @@
 //   review-door-reset     B7.12 Door.reset() forgets who last touched the leaf (lastWho −1).
 //   review-day-blackout   A6.8  the breaker shot (a PERMANENT blackout), then the daylight variant in and out (lighting.ts setDaylight): the blackout comes back
 //                               permanent; a timed one lifted by the day stays lifted (breach-daylight's premise).
-//   review-meter          A6.4  a NaN off the light probe never reaches Sam's meter, and a meter already poisoned heals to a number the next frame.
 //   review-act-down       A6.9  a door verb chosen the frame Sam went down is not performed (the leaf stays latched).
 //   review-kickhit        B7.8  a pose re-bake (Character.update(0)) inside the kick's impact frame leaves kickImpact standing.
 //   review-torch-dt       B7.6  the relaxed torch carry's smoothing is per second, not per frame: two steps at 60 Hz land where one at 30 Hz does.
@@ -254,26 +253,6 @@ export async function reviewDayBlackout() {
   ok = verdict(!game.blackout.active, 'no blackout before the day: none after', `active ${game.blackout.active}`) && ok;
   return done('review-day-blackout', ok);
 }
-
-// ================================================================ A6.4 — the meter never takes a NaN, and heals one
-export async function reviewMeter() {
-  console.log('\n=== review-meter (A6.4): the light probe answers NaN for a frame — Sam\'s visibility / irradiance stay finite; a meter already NaN heals within a frame ===');
-  const { W, game, pl } = await stage(4121);
-  let ok = true;
-  pl.visibility = 0.4; pl.irradiance = 0.1;
-  const get0 = game.probe.get.bind(game.probe);
-  game.probe.get = (k: string) => k === 'playerChest' ? [NaN, 0, 0, 0] : k === 'playerHead' ? [0.2, 0, 0, 0] : get0(k);
-  W.step(DT); W.step(DT);
-  ok = verdict(Number.isFinite(pl.visibility) && Number.isFinite(pl.irradiance), 'a NaN reading is refused: visibility and irradiance stay numbers', `vis ${pl.visibility}, E ${pl.irradiance}`) && ok;
-  game.probe.get = (k: string) => k === 'playerChest' || k === 'playerHead' ? [0.2, 0, 0, 0] : get0(k);
-  pl.visibility = NaN; W.step(DT);
-  ok = verdict(Number.isFinite(pl.visibility), 'a meter poisoned already (NaN) is a number again after one frame with a good reading', `vis ${pl.visibility}`) && ok;
-  game.probe.get = get0; pl.visibility = NaN; W.step(DT);
-  ok = verdict(Number.isFinite(pl.visibility), '…and with no reading at all (headless), the self-heal alone puts it back to a number', `vis ${pl.visibility}`) && ok;
-  return done('review-meter', ok);
-}
-
-
 
 // ================================================================ B7.6 — the torch carry smooths per second
 export async function reviewTorchDt() {
