@@ -84,9 +84,10 @@ export async function charmatsTables() {
   CM.resetCharMats();
   const OP: [number[], number[]] = [[0.07, 0.09, 0.1], [0.07, 0.2, 0.6]], DEF: [number[], number[]] = [[0.36, 0.33, 0.24], [0.09, 0.08, 0.05]];
   { const f: string[] = []; let rows = 0;
-    for (const side of ['operator', 'defender', 'responder', 'civilian']) for (let id = 1; id <= 40; id += 3) {
+    const SIDES = ['operator', 'defender', 'responder', 'civilian'];
+    for (const side of SIDES) for (let id = 1; id <= 40; id += 3) {
       const pal = new Float32Array(CM.CHAR_MAT_FLOATS); CM.writeCharPalette(pal, 0, side, side === 'operator' ? OP[0] : DEF[0], side === 'operator' ? OP[1] : DEF[1], id); rows++;
-      if (pal[0] !== 1) f.push(`${side} ${id}: header ${pal[0]}`);
+      if (pal[0] !== 1 + SIDES.indexOf(side)) f.push(`${side} ${id}: header ${pal[0]}`);   // the header's row is the side's own look (1 to 4; a suit's is 5)
       for (let s = 0; s < CM.CHAR_SLOT_COUNT; s++) { const p = 8 + s * 8; const a = [pal[p], pal[p + 1], pal[p + 2]];
         if (!a.every(x => x >= 0 && x <= 1 && Number.isFinite(x))) f.push(`${side} ${id} ${CM.CHAR_SLOTS[s]} albedo ${a}`);
         if (!(pal[p + 3] >= 0.03 && pal[p + 3] <= 0.65)) f.push(`${side} ${CM.CHAR_SLOTS[s]} rough ${pal[p + 3]} outside the lobe's 0.03‥0.65`);

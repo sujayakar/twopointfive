@@ -35,7 +35,7 @@ const WEST_DARK = (p: Vec3) => p[0] < 20 ? 0.005 : 3.0;
 
 // ================================================================ darkness
 /** (A) one searcher at a central fix in the cubicle farm, west half dark: his first three spots are in the dark half and are cover spots (not open floor);
- *  (B) two searchers on the same fix: no two visited spots within a metre of each other, both men's first spots dark-side, ≤ 8 light queries any frame;
+ *  (B) two searchers on the same fix: no two visited spots within a metre of each other, ≤ 8 light queries any frame;
  *  (C) the fix by the break room's west door with that leaf latched AND locked against the cubicle side (and the corridor door latched): not one break-room spot is
  *      dealt (Sam has no key); the same with the leaf latched but unlocked: break-room spots are dealt at plausibility 0 and come up to 1 as the seconds pass;
  *  (D) no light provider at all (the harness's silent GPU): the plan still builds, every spot reads neutral, spots get looked into, and the search ends by its own
@@ -71,7 +71,7 @@ export async function darkness() {
     verdict(ok, '(A) one searcher, central fix, west half dark', `${P0 ? P0.spots.length : 0} spots dealt (want ≥ 10); looked into ${looks.length}: ${looks.map(s => `${s.kind}@(${s.pos[0].toFixed(1)},${s.pos[2].toFixed(1)}) d${s.dark.toFixed(2)} +${s.t.toFixed(1)}s`).join(' → ')}; first three all west of x=20 and cover spots: ${first3.every(s => s.pos[0] < 20 && s.kind !== 'open')}; while looking into one: aim ${errDeg.toFixed(1)}° off its bearing (want < 20), pitched ${pitchDeg.toFixed(1)}° (want below −15: down into it); search → suspicious +${tSusp.toFixed(1)} s → patrol +${tPatrol.toFixed(1)} s; most light queries in a frame ${maxN} (budget 8)`);
     console.log('    dealt: ' + dealt.join('\n           '));
   }
-  // ---- (B) two men, same fix
+  // ---- (B) two men, same fix. (Which spots are dark is not asked here: the light is the Rust game's, and a lightAt planted on the copy does not reach its tick.)
   {
     Math.random = seeded(302);
     const W = await standUp(); const { game } = W;
@@ -79,7 +79,6 @@ export async function darkness() {
     for (let i = 0; i < 10; i++) W.step(DT);
     parkFrom(game, 2); const [a, b] = game.guards;
     dropSearcher(game, a, FIX, FIX); dropSearcher(game, b, [20.7, 0, 17.3], FIX);
-    const restore = fakeLight(game, WEST_DARK);
     const looks: Record<string, any[]> = { a: [], b: [] }; const last: Record<string, string> = {}; let maxN = 0; const t0 = game.time; let lines = 0;
     const origSay = game.say.bind(game); game.say = (gd: any, text: string, radio = false) => { if (/check the corners/.test(text)) lines++; return origSay(gd, text, radio); };
     for (let f = 0; f < 60 * 30; f++) {
@@ -87,11 +86,10 @@ export async function darkness() {
       for (const [k, gd] of [['a', a], ['b', b]] as [string, any][]) { const P = gd.searchPlan; if (P && P.phase !== last[k]) { last[k] = P.phase; if (P.phase === 'look') looks[k].push({ ...P.spots[P.current], t: game.time - t0 }); } }
       if (a.state !== 'search' && b.state !== 'search') break;
     }
-    restore(); game.say = origSay;
+    game.say = origSay;
     let shared = 0, nearest = Infinity; for (const p of looks.a) for (const q of looks.b) { const d = v3.distXZ(p.pos, q.pos); nearest = Math.min(nearest, d); if (d < 1.0) shared++; }
-    const firstDark = [...looks.a.slice(0, 2), ...looks.b.slice(0, 2)].every(s => s.pos[0] < 20);
-    const ok = shared === 0 && looks.a.length >= 2 && looks.b.length >= 2 && firstDark && maxN <= 8 && lines <= 1;
-    verdict(ok, '(B) two searchers on one fix split the spots', `A looked into ${looks.a.length}: ${looks.a.map(s => `(${s.pos[0].toFixed(1)},${s.pos[2].toFixed(1)})`).join(' ')} · B ${looks.b.length}: ${looks.b.map(s => `(${s.pos[0].toFixed(1)},${s.pos[2].toFixed(1)})`).join(' ')}; pairs within 1 m: ${shared} (want 0; nearest ${nearest.toFixed(2)} m); each man's first two dark-side: ${firstDark}; most light queries in a frame ${maxN} (want ≤ 8); 'check the corners' said ${lines}× (want ≤ 1)`);
+    const ok = shared === 0 && looks.a.length >= 2 && looks.b.length >= 2 && maxN <= 8 && lines <= 1;
+    verdict(ok, '(B) two searchers on one fix split the spots', `A looked into ${looks.a.length}: ${looks.a.map(s => `(${s.pos[0].toFixed(1)},${s.pos[2].toFixed(1)})`).join(' ')} · B ${looks.b.length}: ${looks.b.map(s => `(${s.pos[0].toFixed(1)},${s.pos[2].toFixed(1)})`).join(' ')}; pairs within 1 m: ${shared} (want 0; nearest ${nearest.toFixed(2)} m); most light queries in a frame ${maxN} (want ≤ 8); 'check the corners' said ${lines}× (want ≤ 1)`);
   }
   // ---- (C) behind a latched door
   for (const locked of [true, false]) {

@@ -99,11 +99,19 @@ async function pinnedCase(seed: number, type = 'annealed') {
   return { R, g, C, shots, alertT, searchT, pinnedT, energy, firstT, impacts: GB_STATS.impacts - imp0, crossed: GLASSPEN_STATS.crossed - x0, whole: PANES.every(bi => R.open(bi) === 0),
     line: `${C.callsign} ${C.state} (alert ${f2(alertT)} s, pinned ${f2(pinnedT)} s of it, searching ${f2(searchT)} s) · his gun's energy for a pane ${energy === undefined ? 'the default' : f2(energy as number)} · rounds fired ${shots}${shots ? ` (first at ${f2(firstT)} s)` : ''} · panes crossed ${GLASSPEN_STATS.crossed - x0} · blows on glass ${GB_STATS.impacts - imp0} · ${PANES.map(bi => R.pane(bi)).join(' | ')}` };
 }
+/** one seed's answer, printed for the process that asked (below) */
+export async function pinnedSeed(seed: number) { const a = await pinnedCase(seed); process.stdout.write(`PINNED ${JSON.stringify({ through: a.shots > 0 && a.crossed > 0 && (a.energy ?? 0) > 0, line: a.line })}\n`); }
+// A process of its own a seed: the man the room clear stages is made by the Rust game, a module of the copy keeps him, and the next game stood in that process
+// cannot export him ("SkeletonInstance.rig: no object for RigId"). The question is one man's, and each seed asks it on a game of its own.
 export const gearglassPinned = guarded(async () => {
   const F = family('gearglass-pinned: a PINNED defender fires through standing glass at a man he sees');
   const SEEDS = [3, 5, 8];
   { let through = 0; const lines: string[] = [];
-    for (const s of SEEDS) { const a = await pinnedCase(s); if (a.shots > 0 && a.crossed > 0 && (a.energy ?? 0) > 0) through++; lines.push(`seed ${s}: ${a.line}`); }
+    for (const s of SEEDS) {
+      const r = Bun.spawnSync(['bun', '-e', `await (await import(${JSON.stringify(import.meta.path)})).pinnedSeed(${s}); process.exit(0)`], { cwd: ROOT, env: process.env as Record<string, string>, stdout: 'pipe', stderr: 'pipe' });
+      const row = r.stdout.toString().split('\n').find(l => l.startsWith('PINNED '));
+      if (!row) { lines.push(`seed ${s}: no answer (exit ${r.exitCode}): ${r.stderr.toString().trim().split('\n')[0]?.slice(0, 200)}`); continue; }
+      const a = JSON.parse(row.slice(7)); if (a.through) through++; lines.push(`seed ${s}: ${a.line}`); }
     F.verdict(through === SEEDS.length, 'pinned on his post, alert on a lit man he sees through the glazing: he fires through the pane', `${through}/${SEEDS.length}\n    ${lines.join('\n    ')}`); }
   return F.done();
 });
