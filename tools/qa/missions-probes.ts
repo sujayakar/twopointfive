@@ -2,8 +2,8 @@
 //   bun run tools/qa/probes.ts missions | missions-list | missions-screen | missions-start
 // PASS / FAIL each, all headless. Nothing here looks at a picture: the screen is the real openMissions on the picker probes' fake DOM (what it puts on the page
 // and what its keys and clicks do, not how it looks), and main.ts's one line for it (?solo keeps the start card shut) is the page's, not run here.
-//   missions-list    the list as data: the solo night and EVERY row of SCENARIOS, in their groups (a heading per group); an id, a title, a place, a line, a lean and a
-//                    defenders cell on each; every row's URL reads back to that row (and to nothing else), keeps the visitor's flags, drops an older run's
+//   missions-list    the list as data: the solo night and EVERY row of SCENARIOS, in their groups (a heading per group); an id, a title, a place, a line and a lean
+//                    on each; every row's URL reads back to that row (and to nothing else), keeps the visitor's flags, drops an older run's
 //   missions-screen  the real screen: the start card's Missions button opens it; one link per mission in order; the sheet follows the highlight (title, place,
 //                    line, team, approach, level, untuned exactly where set); W S ↑ ↓ move and wrap, A D ← → set Standard | Hard and put it on every
 //                    scenario link, Enter and Space start the highlighted row = a load of ITS OWN URL (every row, both keys); `MISSIONS.onPick` takes the pick instead of the load; Esc goes back to the card; the boot card's and the plain
@@ -205,10 +205,10 @@ export async function missionsStart(): Promise<boolean> {
     // (a QUIET mission's defenders are the level's own shift — staff, not a staged side: one of its patrol sets, so 1 to the sheet's 'up to N', and nobody staged against the team)
     const men = m.scenario.kind === 'quiet' ? s?.hostiles === 0 && s?.staff >= 1 && s?.staff <= m.scenario.defenders : s?.hostiles === m.scenario.defenders;
     const ok = !r.threw && s && s.why === null && s.entry === m.id && s.operatives === m.squad && men && (r.errors ?? []).length === 0;
-    F.verdict(!!ok, `${String(i + 1).padStart(2, '0')} ${m.title}: ${M.missionHref(m, FLAGS)}`, r.threw ? `threw: ${r.threw}` : `started ${s?.why === null ? 'unrefused' : `REFUSED (${s?.why})`} as '${s?.entry}' · ${s?.operatives} teammates (sheet: ${M.teamWordsOf(m)}) · ${m.scenario.kind === 'quiet' ? `${s?.staff} of the shift on` : `${s?.hostiles} defenders`} (sheet: ${m.defenders})${s?.hostages ? ` · ${s.hostages} hostages` : ''}${(r.errors ?? []).length ? ` · errors: ${r.errors.join(' | ')}` : ''}`); }
-  { const m = L[SOLO], r = boots[SOLO], s = r.start, want = /^(\d+), and (\d+) civilians$/.exec(m.defenders);
+    F.verdict(!!ok, `${String(i + 1).padStart(2, '0')} ${m.title}: ${M.missionHref(m, FLAGS)}`, r.threw ? `threw: ${r.threw}` : `started ${s?.why === null ? 'unrefused' : `REFUSED (${s?.why})`} as '${s?.entry}' · ${s?.operatives} teammates (sheet: ${M.teamWordsOf(m)}) · ${m.scenario.kind === 'quiet' ? `${s?.staff} of the shift on` : `${s?.hostiles} defenders`}${s?.hostages ? ` · ${s.hostages} hostages` : ''}${(r.errors ?? []).length ? ` · errors: ${r.errors.join(' | ')}` : ''}`); }
+  { const m = L[SOLO], r = boots[SOLO], s = r.start, want = ['', '3', '2'];   // (the shift: three guards and two civilians)
     const ok = !r.threw && s && r.spec === null && s.active === null && s.operatives === 0 && s.units === 0 && !!want && s.staff === Number(want[1]) && s.civilians === Number(want[2]);
-    F.verdict(!!ok, `01 ${m.title}: ${M.missionHref(m, FLAGS)}`, r.threw ? `threw: ${r.threw}` : `no scenario named or started (${s?.active ?? 'none'}) · nobody beside Sam · the shift ${s?.staff}, civilians ${s?.civilians} (sheet: ${m.defenders})`); }
+    F.verdict(!!ok, `01 ${m.title}: ${M.missionHref(m, FLAGS)}`, r.threw ? `threw: ${r.threw}` : `no scenario named or started (${s?.active ?? 'none'}) · nobody beside Sam · the shift ${s?.staff}, civilians ${s?.civilians}`); }
   return F.done();
 }
 
