@@ -231,8 +231,6 @@ export function kitSlotDef(i: number, m: MemberKit, slot: GunSlot): WeaponDef | 
   if (slot === 'primary' && m.weapon === 'pistol') return null;
   const tree = treeUp(), w = pickRow(m[slot], i === 0 && !tree ? true /* (both of yours wore it) */ : slot === 'primary' || !tree ? m.suppressed : m.sideCan); return w ? WEAPONS[w] : null;
 }
-/** the gun on member i's row `field` wears a suppressor (the one gun row, or either slot's: both of yours do) */
-export function kitRowCan(i: number, m: MemberKit, field: string): boolean { if (field === 'weapon') return kitGunCan(i, m); if (treeUp()) return field === 'primary' ? m.weapon !== 'pistol' && kitSlotCan(m, 'primary') : field === 'secondary' && kitSlotCan(m, 'secondary'); const w = field === 'primary' ? (m.weapon === 'pistol' ? null : pickRow(m.primary, i === 0 || m.suppressed)) : field === 'secondary' ? pickRow(m.secondary, i === 0 || m.suppressed) : null; return !!w && WEAPONS[w].suppressed; }
 /** a card's two picks are ones the table offers. WHETHER a long gun is brought stays where every rule of the build before reads it — `weapon`
  *  ('pistol': none) — so a set, an issue card or a tool that writes that field alone is still right; `primary` only says WHICH long gun. */
 const gunsHome = (m: MemberKit): MemberKit => { const long = gunPicks('primary').filter(p => p !== NO_PRIMARY), side = gunPicks('secondary'); if (!long.includes(m.primary)) m.primary = long[0] ?? ''; if (!side.includes(m.secondary)) m.secondary = side[0] ?? ''; return m; };
@@ -396,7 +394,7 @@ const moreOn = (): boolean => KITDEAL.more && !MORE_BREAK;
  *  run's staging call (forRun), and the loud one back. The store keeps the loud card where it always was and the stealth one beside it (`stealth`: the card, or `true` where the first card
  *  written IS the stealth one — a run tape, the door picture's child).
  *  NOT COVERED: a mission's own issue and a lesson's page (kitIssue, kitIssuedPage) wear the issue cards: those kits are nobody's card. (A lesson's page
- *  is handed the mission's kit over the plain issue as it was; a mission's own card for you is handed nothing: ISSUE.whole.) REQUIRED EQUIPMENT: no mission requires a thing today; one that did would be a refusal with its reason (kitRowCan), never a second kind of gear.
+ *  is handed the mission's kit over the plain issue as it was; a mission's own card for you is handed nothing: ISSUE.whole.) REQUIRED EQUIPMENT: no mission requires a thing today; one that did would be a refusal with its reason, never a second kind of gear.
  *  Off (and KITSTEALTH_BREAK=1, the check's) = the build before: the hand-overs, the tiles that say whose, a sponge round a pouch each. */
 const STEALTH_BREAK = envIs('KITSTEALTH_BREAK');
 const stealthOn = (): boolean => KITDEAL.stealth && !STEALTH_BREAK && treeUp();
@@ -795,11 +793,8 @@ const trimRow: KitRow = { field: 'trim', label: 'Trim', values: ['issued', ...Ob
 const YOU_GUNS: Record<KitWeapon, string> = { rifle: 'FN2000 + Five-seveN', pistol: 'Five-seveN only', shotgun: 'M870 shotgun + Five-seveN' };
 /** …and where the card shows the suppressor (ui/kitCard.ts): the pistol carried alone is named for what it is — the one gun the floor does not hear as
  *  gunfire. The rifle's line stays as it is: suppressed too (its can is drawn), and heard as gunfire all the same. */
-const YOU_GUNS_CAN: Partial<Record<KitWeapon, string>> = { pistol: 'Suppressed Five-seveN' };
-export function youGunsCan(v: KitValue): string | null { const w = YOU_GUNS_CAN[v as KitWeapon]; return w ? gearText(w) : null; }
 /** the gun in member i's hands wears a suppressor (weapons.ts `suppressed`): both of yours whatever the card's field says (no row of your card writes it, and
  *  the game hands you the suppressed pair), a teammate's by his Suppressor row, never the shotgun */
-export function kitGunCan(i: number, m: MemberKit): boolean { return treeUp() ? kitSlotCan(m, m.weapon === 'pistol' ? 'secondary' : 'primary') : i === 0 ? m.weapon !== 'shotgun' : WEAPONS[kitGun(m)].suppressed; }
 const SHOTGUN_NOTE = 'drops a man across a room, poor down a corridor; shoots a lock off its door';
 /** the split of six a card's two canister counts are, if they are one */
 const mixOf = (m: MemberKit): CanMix | null => (Object.keys(CAN_MIXES) as CanMix[]).find(k => CAN_MIXES[k].smoke === m.smoke && CAN_MIXES[k].stun === m.bangs) ?? null;
