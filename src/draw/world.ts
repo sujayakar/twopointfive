@@ -5,17 +5,22 @@ import { BoxFlag, BoxWorld, GB_ROWS, MAT_STRIDE, boxOf, type Box, type DrawWait 
 import { MARK_TABLE_ROWS } from '../scene/markings';
 import { AIR_ROWS } from '../scene/airGrid';
 import { lookNeedBits } from '../render/gbuffer';
+import type { Vec3 } from '../math/vec';
 import type { CutPlane } from '../scene/cut';
 import type { Drawn } from './drawn';
 import { Beam, Cut, Geo, Head, Leaf, Mat, Row4, Section, Word } from './sections';
 
 /** the GPU's flag word (rust/game_draw boxes/pack.rs): what of it a plan asks */
 const KEPT = 0xe7 | BoxFlag.Glass, ROUND = 8, ROT = 64, CUT = 1 << 16;
+/** m round a box that changed */
+const STALE = 0.6;
 const A_CUT: CutPlane[] = [{ n: [0, 1, 0], d: 0 }];
 
 export class DrawWorld extends BoxWorld {
   /** where the statics that a wall could be have changed since this was last read: rects on the plan */
   readonly walls: [number, number, number, number][] = [];
+  /** …and where any static came, went or was cut, whatever its height: what the smoke's solver has baked round there is stale */
+  readonly stale: { c: Vec3; r: number }[] = [];
   private boxes = 0; private stuffs = 0;
   private leaf: Box[] = [];
   /** the lines of light nearest the view, and the dot one ends on (engine.ts `beams`) */
@@ -63,7 +68,7 @@ export class DrawWorld extends BoxWorld {
     this.statics.length = Math.min(this.statics.length, count); this.glassStatics.length = 0;
     for (let i = from; i < to; i++) {
       const g = g0 + i * Geo.row, m = m0 + i * Mat.row, w = u[g + 7], was = this.statics[i], b = this.statics[i] ?? (this.statics[i] = boxOf([0, 0, 0], [0, 0, 0], 0, [0, 0, 0], [0, 0, 0], 0, 0));
-      const stood = was !== undefined && b.c[0] === f[g] && b.c[1] === f[g + 1] && b.c[2] === f[g + 2] && b.h[0] === f[g + 4] && b.h[1] === f[g + 5] && b.h[2] === f[g + 6] && b.flags === (w & KEPT);
+      const stood = was !== undefined && b.c[0] === f[g] && b.c[1] === f[g + 1] && b.c[2] === f[g + 2] && b.h[0] === f[g + 4] && b.h[1] === f[g + 5] && b.h[2] === f[g + 6] && b.flags === (w & KEPT) && (b.cut !== undefined) === ((w & CUT) !== 0);
       if (was && !stood) this.wall(b);
       for (let k = 0; k < 3; k++) { b.c[k] = f[g + k]; b.h[k] = f[g + 4 + k]; b.albedo[k] = f[m + k]; b.emissive[k] = f[m + 4 + k]; }
       b.flags = w & KEPT; b.round = (w & ROUND) !== 0 ? true : undefined; b.cut = (w & CUT) !== 0 ? A_CUT : undefined; b.cutHeight = f[m + 3];
@@ -84,7 +89,7 @@ export class DrawWorld extends BoxWorld {
     this.leaves();
   }
   private told = false;
-  private wall(b: Box): void { const [ex, ez] = BoxWorld.footprint(b); if (b.h[1] > 0.25) this.walls.push([b.c[0] - ex, b.c[2] - ez, b.c[0] + ex, b.c[2] + ez]); }
+  private wall(b: Box): void { this.stale.push({ c: [b.c[0], b.c[1], b.c[2]], r: Math.hypot(b.h[0], b.h[1], b.h[2]) + STALE }); const [ex, ez] = BoxWorld.footprint(b); if (b.h[1] > 0.25) this.walls.push([b.c[0] - ex, b.c[2] - ez, b.c[0] + ex, b.c[2] + ez]); }
   private leaves(): void {
     const D = this.D, f = D.f, u = D.u, n = D.n[Section.leaves], list = this.dynamics; list.length = n;
     for (let i = 0; i < n; i++) { const o = D.at[Section.leaves] + i * Leaf.row, b = this.leaf[i] ?? (this.leaf[i] = boxOf([0, 0, 0], [0, 0, 0], 0, [0.5, 0.5, 0.5], [0, 0, 0], 0, 0)); list[i] = b;
