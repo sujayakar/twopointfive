@@ -28,6 +28,7 @@
 // TUTQUEUE_BREAK=1 = no step gives `goal` (the lesson as any other tutorial's): lines 3, 4, 8 and 9 must fail.   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
+import { locked } from '../../src/view/seatview.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -66,7 +67,7 @@ async function rig(seed = 1) {
     /** the cursor on a step's own ring */
     mark(id: string): boolean { const at = R.stepOf(id)?.at; return !!at && W.cursorAt(at); },
     stepOf(id: string): any { return (g.level.scenarios.lesson.steps as any[]).find(T => T.id === id); },
-    up(): string { return g.lesson.step?.id ?? '(none)'; },
+    up(): string { return g.view.lesson?.id ?? '(none)'; },
     on(door: string): any[] { return O.men('all').filter((m: any) => O.of(m)?.order === 'stack' && O.of(m)?.door?.def.name === door); },
     set(doors: string[]) { return doors.every(d => R.on(d).length > 0 && R.on(d).every((m: any) => O.of(m)?.arrived)); },
     watching(at: V): any[] { return O.men('all').filter((m: any) => { const A = O.of(m); return A?.order === 'cover' && A.watch && flat(A.watch, at) < 3; }); },
@@ -85,9 +86,9 @@ export async function tutqueueCheck(): Promise<boolean> {
     const steps: any[] = L?.steps ?? [], ids = steps.map(T => T.id as string);
     // ---- 1
     { const faults = checkLesson(g), start: V = g.level.scenarios.roomClear.team.sam, idle = O.men('all').filter((m: any) => { const A = O.of(m); return !A || A.post === null; });
-      verdict(!R.why && !!L?.rails && faults.length === 0 && R.up() === ids[0] && g.rails.live && !g.rails.skyOn && !L.rails.sky && !O.plan?.up && flat(pl.char.pos, start) < 1 && !g.playerInvisible && N === 4 && idle.length === 4 && CMDRING.goals && !PM.goalsOn(O),
+      verdict(!R.why && !!L?.rails && faults.length === 0 && R.up() === ids[0] && !!g.view.lesson?.rails && !g.view.lesson?.rails?.sky && !L.rails.sky && !O.plan?.up && flat(pl.char.pos, start) < 1 && !g.playerInvisible && N === 4 && idle.length === 4 && CMDRING.goals && !PM.goalsOn(O),
         'the level starts on rails with its lesson whole, and he is on its floor with the four behind him: no seat, plan mode down, the goal rule not his yet',
-        `start ${R.why ?? 'ok'} · lesson faults ${faults.length}${faults.length ? ` (${faults[0]})` : ''} · step '${R.up()}' · sky seat ${!!g.rails.skyOn} · plan mode ${O.plan?.up ? 'UP' : 'down'} · he stands ${flat(pl.char.pos, start).toFixed(1)} m off his start · the four on nothing: ${idle.length} of ${N} · the rule on in the game ${CMDRING.goals}, his here ${PM.goalsOn(O)}`); }
+        `start ${R.why ?? 'ok'} · lesson faults ${faults.length}${faults.length ? ` (${faults[0]})` : ''} · step '${R.up()}' · sky seat ${!!g.view.lesson?.rails?.sky} · plan mode ${O.plan?.up ? 'UP' : 'down'} · he stands ${flat(pl.char.pos, start).toFixed(1)} m off his start · the four on nothing: ${idle.length} of ${N} · the rule on in the game ${CMDRING.goals}, his here ${PM.goalsOn(O)}`); }
     // ---- 2
     R.stand(R.stepOf('corner').at); R.until(() => R.up() === 'door1', 3);
     { const g0 = PM.PLAN_STATS.goals, onMark = R.mark('door1'); R.key(true); R.step(10); const a = R.on('guard');
@@ -147,9 +148,9 @@ export async function tutqueueCheck(): Promise<boolean> {
       const clear = O.men('all').every((m: any) => O.hasLine(m, { kind: 'floor', at: E }) && O.hasLine(m, { kind: 'floor', at: Nn }));
       R.until(() => R.up() === 'gateA', 4); R.mark('gateA'); R.key(true); R.step(10); const e1 = R.watching(E);
       // (the second gate is the wheel's: a Shift tap gives nothing there and says to keep the key down; kept down past the hold the ring is up for the pair a tap would have sent, and its wedge is theirs)
-      R.until(() => R.up() === 'gateB', 4); R.mark('gateB'); const g0 = PM.PLAN_STATS.goals; R.key(true); R.step(10); const tapped = R.watching(Nn).length + (PM.PLAN_STATS.goals - g0), note = g.rails.prompt()?.note ?? '';
+      R.until(() => R.up() === 'gateB', 4); R.mark('gateB'); const g0 = PM.PLAN_STATS.goals; R.key(true); R.step(10); const tapped = R.watching(Nn).length + (PM.PLAN_STATS.goals - g0), note = g.view.lesson?.rails?.prompt?.note ?? '';
       R.mark('gateB'); R.I.keys.add('ShiftLeft'); R.step(2); R.I.keys.add(CMDRING.key); R.I.pressed.add(CMDRING.key); R.step(); for (let i = 0; i < 45; i++) { R.mark('gateB'); R.step(); }
-      const M = O.menu, ring = M?.part ? `${names(M.men)}${M.flat ? '' : ' (NOT the one ring)'}` : M ? 'everyone' : 'no ring', rows: string[] = M?.rows.map((r: any) => r.id) ?? [], line = g.rails.prompt()?.line ?? '', digit = `Digit${rows.indexOf('cover') + 1}`;
+      const M = O.menu, ring = M?.part ? `${names(M.men)}${M.flat ? '' : ' (NOT the one ring)'}` : M ? 'everyone' : 'no ring', rows: string[] = M?.rows.map((r: any) => r.id) ?? [], line = g.view.lesson?.rails?.prompt?.line ?? '', digit = `Digit${rows.indexOf('cover') + 1}`;
       R.I.keys.add(digit); R.I.pressed.add(digit); R.step(); R.I.keys.delete(digit); R.step(3); R.I.keys.delete(CMDRING.key); R.I.keys.delete('ShiftLeft'); R.step(10);
       const e2 = R.watching(E), n2 = R.watching(Nn), pair = n2.length === 2 && O.pairOf(n2[0]) === O.pairOf(n2[1]);
       const first = CMDRING.goalHalf ? 2 : N, kept = !CMDRING.goalHalf || (e1.length === 2 && O.pairOf(e1[0]) === O.pairOf(e1[1]) && e1.every((m: any) => e2.includes(m)));   // (the first goal is half the squad's since `CMDRING.goalHalf`: the pair it sent is the pair left on the road gate)
@@ -169,7 +170,7 @@ export async function tutqueueCheck(): Promise<boolean> {
       R.mark('gateB'); R.I.keys.add(CMDRING.key); R.I.pressed.add(CMDRING.key); R.step(); for (let i = 0; i < 45; i++) { R.mark('gateB'); R.step(); }
       const M = O.menu, ring = M?.part ? `a part (${names(M.men)})` : M ? 'everyone' : 'no ring', digit = `Digit${(M?.rows.map((r: any) => r.id) ?? []).indexOf('cover') + 1}`;
       R.I.keys.add(digit); R.I.pressed.add(digit); R.step(); R.I.keys.delete(digit); R.step(3); R.I.keys.delete(CMDRING.key); R.step(10);
-      const n1 = R.watching(at('gateB')), left = R.watching(at('gateA')); R.until(() => R.up() === 'split', 4); const onSplit = R.up() === 'split', line = g.rails.prompt()?.line ?? '';
+      const n1 = R.watching(at('gateB')), left = R.watching(at('gateA')); R.until(() => R.up() === 'split', 4); const onSplit = R.up() === 'split', line = g.view.lesson?.rails?.prompt?.line ?? '';
       R.mark('split'); R.key(true); R.step(10); const e2 = R.watching(at('gateA')), n2 = R.watching(at('gateB')), pairs = e2.length === 2 && n2.length === 2 && O.pairOf(e2[0]) === O.pairOf(e2[1]) && O.pairOf(n2[0]) === O.pairOf(n2[1]);
       R.until(() => R.up() === 'hold', 6); const onHold = R.up() === 'hold';
       verdict(onA && s0 === (CMDRING.goalHalf ? 2 : N) && e1.length === 2 && onB && !!M && !M.part && n1.length === N && left.length === 0 && onSplit && /road gate/.test(line) && pairs && onHold,
@@ -179,9 +180,9 @@ export async function tutqueueCheck(): Promise<boolean> {
     { const R = await rig(), g = R.g, O = R.O, N = O.men('all').length; CMDRING.twice = true;
       R.stand(R.stepOf('corner').at); R.until(() => R.up() === 'door1', 3); const t0 = CMDRING_STATS.twice, onMark = R.mark('door1'), g0 = g.time; R.key(false); R.key(false); const dt = g.time - g0; R.step(10);
       const a = R.on('guard'), fallen = O.men('all').filter((m: any) => O.of(m)?.order === 'fallIn');
-      verdict(onMark && dt < CMDRING.twiceSecs && g.rails.locks('twice') && a.length === N && fallen.length === 0 && CMDRING_STATS.twice === t0,
+      verdict(onMark && dt < CMDRING.twiceSecs && locked(g.view, 'twice') && a.length === N && fallen.length === 0 && CMDRING_STATS.twice === t0,
         'the key tapped twice is not the lesson\'s: on the first door\'s step a second tap inside the window is the key\'s order again, and all four still stack',
-        `the cursor on its ring: ${onMark} · the two taps ${dt.toFixed(2)} s apart (the window is ${CMDRING.twiceSecs} s) · the frame locks it: ${g.rails.locks('twice')} · stacked on the door: ${names(a)} · falling in: ${fallen.length}`); }
+        `the cursor on its ring: ${onMark} · the two taps ${dt.toFixed(2)} s apart (the window is ${CMDRING.twiceSecs} s) · the frame locks it: ${locked(g.view, 'twice')} · stacked on the door: ${names(a)} · falling in: ${fallen.length}`); }
   } finally { knobsBack(keep.knobs); RAILS.on = keep.on; AUTOPILOT.on = keep.ap; }
   console.log(all ? '=== tutqueue-check: ALL PASS ===' : '=== tutqueue-check: FAIL ===');
   return all;

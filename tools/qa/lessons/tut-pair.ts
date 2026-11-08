@@ -10,6 +10,7 @@ import { WORK } from '../../../src/game/workthings';
 import { RAILS } from '../../../src/game/rails';
 import { floorPlan } from '../../../src/game/floorplan';
 import { TP } from '../../levels/tut-pair';
+import { locked } from '../../../src/view/seatview.ts';
 
 export const query = '?quiet&squad=1';
 // the moon on his meter (lesson-run's --moon): the CPU's light estimate leaves it out. And a FLOOR under every meter (--floor), the partner's own too:
@@ -79,7 +80,7 @@ function onGround(B: Bot) {
 /** the frame's line once an order is out: what the partner is doing, drawn as a thing to watch — never the ask a second time */
 function watchLine(B: Bot, when: string) {
   if (!RAILS.on) return;
-  const p = B.g.rails.prompt(); if (!p) B.fail(`no line ${when}`);
+  const p = B.g.view.lesson?.rails?.prompt; if (!p) B.fail(`no line ${when}`);
   if (!p!.watch || /\[/.test(p!.line)) B.fail(`${when} the line is still an ask: "${p!.line}"`);
   B.say(`  the line ${when}: "${p!.line}" (a thing to watch)`);
 }
@@ -104,7 +105,7 @@ export const steps: Record<string, (B: Bot) => void> = {
   // (one step: the order, then the line is what he is doing until he says "set")
   // (…and until the word is taught nothing on the floor names its key: the maintainer's play, "what is F here", was the key's mark by the partner at this step)
   mark: B => { const A = man(B, 'pickup'); onMan(B, A); B.step(4); watchLine(B, 'after the order on the first man');
-    if (B.g.rails.locks('word') && pairKey(B).length) B.fail('the word\'s key is marked by the partner while the lesson still holds the word shut');
+    if (locked(B.g.view, 'word') && pairKey(B).length) B.fail('the word\'s key is marked by the partner while the lesson still holds the word shut');
     waitSet(B, A); },
   word: B => { const A = man(B, 'pickup'), n0 = seen(B);
     { const K = pairKey(B); if (K.length !== 1 || !K[0].ready || !K[0].now) B.fail(`the partner is set and the word is taught, and its key is not marked ready by him (${K.length} mark(s)${K[0] ? `, ready ${K[0].ready}, now ${K[0].now}` : ''})`);
@@ -116,8 +117,8 @@ export const steps: Record<string, (B: Bot) => void> = {
   // (it used to wait on the partner, and was a dead end the day he judged the way lit); THIS run still fails if he does not come up, here and past the wall
   gap: B => { const n0 = seen(B); B.crouch(true); B.go(TP.gap, 20, { near: 0.3 }); together(B, 4.2, 30, 'fall in again by himself after his man went down'); B.wait(0.4); B.say(`  at the gap: lit ${lit(B)}; the partner at ${at(mate(B).char.pos)} (${B.g.orders.statusOf(mate(B))})`); calm(B, n0, 'at the gap'); },
   // (TUTPAIR_NEAR=1: the squad's key on the NEAR man first, as a player who misread the card would. The step must still be up and still asking; then the far man)
-  far: B => { if (process.env.TUTPAIR_NEAR === '1') { onMan(B, man(B, 'near')); B.wait(1.0); const p = RAILS.on ? B.g.rails.prompt() : null;
-      if (B.g.lesson.step?.id !== 'far') B.fail(`the squad's key on the near man passed the step that asks for the far one (now '${B.g.lesson.step?.id}')`);
+  far: B => { if (process.env.TUTPAIR_NEAR === '1') { onMan(B, man(B, 'near')); B.wait(1.0); const p = RAILS.on ? B.g.view.lesson?.rails?.prompt : null;
+      if (B.g.view.lesson?.id !== 'far') B.fail(`the squad's key on the near man passed the step that asks for the far one (now '${B.g.view.lesson?.id}')`);
       B.say(`  the near man given first: the step is still 'far'${p ? `, its line "${p.line}"` : ''}`); }
     onMan(B, man(B, 'far')); B.wait(1.5); B.say(`  1.5 s on: the partner at ${at(mate(B).char.pos)} (${B.g.orders.statusOf(mate(B))})`); },
   // through the gap to the near man's back, a stride off, and there until the partner is set behind the far one

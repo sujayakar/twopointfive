@@ -9279,7 +9279,8 @@
 "view::TickView.kit",
 "view::TickView.marks",
 "view::TickView.aim",
-"view::TickView.worn"
+"view::TickView.worn",
+"view::TickView.lesson"
 ],
 "pageTick": [
 "aim::AimState.bearing_rate",
