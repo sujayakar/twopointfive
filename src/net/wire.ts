@@ -1,13 +1,13 @@
 // THE WIRE OF A NETWORKED GAME (two-player co-op: a game server with authority, src/net/server.ts, and its clients, src/net/client.ts). What travels is the
-// INPUT TIMELINE, never the state: the game plays the same fight to the bit from its recipe and its seats' records on every machine (tools/qa/mpclient-page.cjs holds a
+// INPUT TIMELINE, never the state: the game plays the same fight to the bit from its start and its seats' records on every machine (tools/qa/mpclient-page.cjs holds a
 // Chromium page to a bun server state word by state word), so the server decides which record each seat's tick ran on and tells everybody; a state word
 // (words.ts foldWord: the game's own words, chained) twice a second is the alarm. Messages are JSON text over a WebSocket, numbers to the bit (numtext.ts).
-//   A RECORD ON THE WIRE (WireCmd) is a PlayerCmd minus what the game works out again for a seat it does not trust (game/cmd.ts checkCmd: the eye, the forward, both
+//   A RECORD ON THE WIRE (WireCmd) is what a player's hand did, minus what the game works out again for a seat it does not trust (rust/game_rules cmd: the eye, the forward, both
 //   view matrices, from the look-at, the angles, the distance and the lens). EVERY seat of a networked game is such a seat on EVERY machine — the server and each
 //   client, a client's own seat too — so one working makes the view everywhere and about a hundred bytes travel a tick, not a kilobyte.
 //   WHAT A GAME IS STOOD FROM rides the welcome: a START (start.ts: the level's file, the address's words, the die, the seats, the host's commands), which every machine
-//   hands the game's own start in the module; or, for a page that holds a TypeScript game, a RECIPE (recipe.ts). Every client stands its own game from it.
-// Host-neutral: no DOM, no bun, no game: client.ts, server.ts, timeline.ts, foresee.ts, delay.ts, words.ts, modgame.ts and this import nothing of src/game.
+//   hands the game's own start in the module.
+// Host-neutral: no DOM, no bun, no game.
 import { numWord, wordNum } from './numtext';
 import type { NetStart } from './start';
 
@@ -45,7 +45,7 @@ export interface WireCmd { k: string[]; p?: string[]; b: number; c?: number; w?:
 const keysOk = (a: unknown): a is string[] => Array.isArray(a) && a.every(k => typeof k === 'string');
 const numsOk = (a: unknown, n: number): a is number[] => Array.isArray(a) && a.length === n && a.every(x => typeof x === 'number' && Number.isFinite(x));
 /** `c` is a record as the wire says one is: every field there, of its kind and finite. A server asks before it keeps what a client sent. (A SHAPE only: how
- *  many keys, how long a name, how far a view may be from its man are the game's own referee's to say, cmd.ts checkCmd, and a message's length is NET.maxText's) */
+ *  many keys, how long a name, how far a view may be from its man are the game's own referee's to say, and a message's length is NET.maxText's) */
 export function wireOk(c: unknown): c is WireCmd {
   const w = c as WireCmd | null;
   return !!w && typeof w === 'object' && keysOk(w.k) && (w.p === undefined || keysOk(w.p)) && Number.isInteger(w.b) && (w.c === undefined || Number.isInteger(w.c))
@@ -64,8 +64,8 @@ export function withEdges(w: WireCmd, p: readonly string[], c: number, wheel: nu
 export function heldOf(w: WireCmd): WireCmd { return { k: w.k, b: w.b, m: w.m, s: w.s, v: w.v }; }
 /** `w` with nothing held either: a seat nobody is sitting in (its view stays where it was) */
 export function idleOf(w: WireCmd): WireCmd { return { k: [], b: 0, m: w.m, s: w.s, v: w.v }; }
-/** THE HANDS COME OFF (a card went up over the player's game, his tab was hidden): nothing held, and the game's own one-tick word for it, 'Paused'
- *  (game/backkey.ts), so the tick that takes it lets go UNSENT what a button let go would have done — a held launcher's round, a held list's row */
+/** THE HANDS COME OFF (a card went up over the player's game, his tab was hidden): nothing held, and the game's own one-tick word for it, 'Paused',
+ *  so the tick that takes it lets go UNSENT what a button let go would have done — a held launcher's round, a held list's row */
 export function restOf(w: WireCmd): WireCmd { return { k: [], p: ['Paused'], b: 0, m: w.m, s: w.s, v: w.v }; }
 /** the record of a seat that has never sent one: nothing held, a plain view over the origin (the referee holds the look-at near the seat's own man) */
 export const FIRST: WireCmd = { k: [], b: 0, m: [640, 360], s: [1280, 720, 1280, 720], v: [0, 0, 0, 0, 0.96, 21, 0.6, 16 / 9, 0] };
@@ -77,14 +77,14 @@ export const netParse = (t: string): unknown => JSON.parse(t, wordNum);
 /** the server's states: `waiting` until every seat is sat in and its client has stood its game (no tick runs), `playing`, `ended` (the mission's own end: the
  *  game runs on a short grace) */
 export type NetState = 'waiting' | 'playing' | 'ended';
-/** how the mission ended, by the game's own verdict (game/verdict.ts): won or lost, its word ('CLEAR', 'RESCUED', 'DOWN', …) and its reason */
+/** how the mission ended, by the game's own verdict: won or lost, its word ('CLEAR', 'RESCUED', 'DOWN', …) and its reason */
 export interface Outcome { won: boolean; end: string; why: string; }
 
 // ---- client → server
 /** the first message: who is asking. `key` = a seat's key (the control plane hands one to each player); none = a watcher, who is sent every tick and sends none.
  *  `build` = the build the client runs: a server that names its own lets in no other */
 export interface Hello { k: 'hello'; proto: number; build: string; game: string; key?: string; /** what a seat's player calls himself (cleanName; none = his seat's number) */ name?: string; }
-/** a seat's client has stood its game from the welcome's recipe: the fight starts when every seat has said so */
+/** a seat's client has stood its game from the welcome's start: the fight starts when every seat has said so */
 export interface Ready { k: 'ready'; }
 /** the seat's record for tick `t` (one a client tick; a client never sends a tick twice) */
 export interface In { k: 'in'; t: number; c: WireCmd; }
@@ -94,11 +94,9 @@ export type ToServer = Hello | Ready | In | Lost;
 
 // ---- server → client
 /** the answer to a hello: the seat (−1 a watcher) of how many, what to stand the game from, and how many ticks have run (they follow, as `tape` messages) */
-/** what a game is stood from when a networked game stands through the TypeScript game: the die, the page's address, every knob table, the kit, as a tape carries them (net/recipe.ts) */
-export interface Recipe { seed: number | null; search: string; levelFile?: string; scenario: string | null; env: unknown; knobs: unknown; stand?: 'page' | 'shipped' | 'frozen'; words?: Record<string, string>; tables?: Record<string, unknown>; kit?: { on: boolean; members: unknown[] } }
-export interface Welcome { k: 'welcome'; proto: number; game: string; build: string; seat: number; seats: number; hz: number; /** what the game is stood from: one of the two */ recipe?: Recipe; start?: NetStart; tick: number; state: NetState; }
+export interface Welcome { k: 'welcome'; proto: number; game: string; build: string; seat: number; seats: number; hz: number; start: NetStart; tick: number; state: NetState; }
 /** tick `t` as it ran: each seat's record (0 = the seat's record of the tick before with its edges off), and every `wordEvery` ticks the state word after it */
-export interface Tick { k: 't'; t: number; c: (WireCmd | 0)[]; w?: string; /** with `w`: the wider word (net/step.ts netWatch), watched and never an alarm */ v?: string; }
+export interface Tick { k: 't'; t: number; c: (WireCmd | 0)[]; w?: string; /** with `w`: the word of every part of the game (words.ts foldWhole), watched and never an alarm */ v?: string; }
 /** a stretch of the run for whoever is behind (a joiner; a connection that was backed up): ticks `from` on, each as a Tick's `c` (and `w` where the tick carried
  *  one). A stretch may begin before the tick its reader is due: he passes over what he has */
 export interface Tape { k: 'tape'; from: number; ticks: { c: (WireCmd | 0)[]; w?: string; v?: string }[]; }

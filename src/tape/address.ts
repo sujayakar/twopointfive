@@ -21,7 +21,7 @@ const NOT_THE_RUNS = ['paused', 'mute', 'quality', 'seed', 'pick', 'loadout', 'n
 export const SENDING_WORDS = ['cloud', 'cloudtapes', 'cloudstats', 'cloudprefs', 'cloudfiles'];
 export const SAYS_OFF = /^(0|off|false|no)$/i;
 /** a recipe's own query with this visit's keys and the words that say what the page is doing with it (`own`: a tape's `playtape` and `at`, a networked game's
- *  `net` words — src/net/page.ts): what the page must be booted on to be that run's page */
+ *  `net` words — src/net/door.ts): what the page must be booted on to be that run's page */
 export function recipeSearch(recipe: { search?: string; seed?: number | null }, now: URLSearchParams, own: Record<string, string>): string {
   const out = new URLSearchParams();
   for (const [k, val] of new URLSearchParams(recipe.search ?? '')) if (SENDING_WORDS.includes(k) ? SAYS_OFF.test(val) : !NOT_THE_RUNS.includes(k) && !visitWord(k)) out.append(k, val);   // (a visit's word is never the run's, whichever list a goal put it on: a tape recorded under one does not put it on the page that replays it)

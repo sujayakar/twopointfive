@@ -15,7 +15,7 @@ import type { Hello, ToClient, Welcome, WireCmd, NetState, Outcome } from './wir
 import { NET, netText, netParse, heldOf, restOf, withEdges, cleanName } from './wire';
 
 /** the host's game as the client drives it: one confirmed tick on every seat's record, and the chained state word after the last */
-export interface ClientHost { step(cmds: WireCmd[]): void; word(): string; /** the wider word after the last word tick (step.ts netWatch), where the host has one */ watch?(): string | null; }
+export interface ClientHost { step(cmds: WireCmd[]): void; word(): string; /** the word of the whole game after the last word tick (words.ts foldWhole), where the host has one */ watch?(): string | null; }
 
 export class NetClient {
   welcome: Welcome | null = null;
@@ -32,7 +32,7 @@ export class NetClient {
   confirmed = 0; heard = 0;
   /** state words that matched · the first that did not: the tick it was after, the server's and the host's own */
   wordsOk = 0; bad: { t: number; server: string; mine: string } | null = null;
-  /** THE WIDER WORD, WATCHED (step.ts netWatch): word ticks on which this machine's was the server's, on which it was not, and the first of those.
+  /** THE WHOLE GAME'S WORD, WATCHED (words.ts foldWhole): word ticks on which this machine's was the server's, on which it was not, and the first of those.
    *  Never an alarm: the game plays on, nothing is said to the server or the player; whoever reads the client's state is told */
   watchOk = 0; watchOff = 0; watchFirst: number | null = null;
   /** the next tick a record may be sent for · records sent · beats held (the host beat faster than the server ticks) · ticks skipped (the beat came late) · the last pace note's depth */

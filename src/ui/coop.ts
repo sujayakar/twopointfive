@@ -1,10 +1,10 @@
 // CO-OP ON THE PAGE: host a game or join one (the door, the words and the control plane's calls are net/lobby.ts; the page once it is in a game is
-// net/page.ts). Four small things, each where a player would look:
-//   the title's CO-OP row    (ui/menu.ts hands this file its column of buttons: `coopRows`) — a field for the player's name (host/names.ts: kept by
+// host/drawnet.ts). Four small things, each where a player would look:
+//   the title's CO-OP row    (ui/title.ts hands this file its column of buttons: `coopRows`) — a field for the player's name (host/names.ts: kept by
 //                            the browser, shown to the other player), 'Host a game', and a field for a code with 'Join'
 //   hosting                  the ONE STARTING PAGE in its co-op dress (ui/startpage.ts `coop`): the missions two can play, the setup rail as ever, no kit step
 //                            (both players play the kit as issued today), and its block makes the game instead of loading the mission (`host`)
-//   the door                 `coopFromUrl`, asked by main.ts where it asks a replay's and a networked game's: an address with `?join=<CODE>` (the link, a
+//   the door                 `coopFromUrl`, asked by the page where it asks a replay's and a networked game's: an address with `?join=<CODE>` (the link, a
 //                            page loaded again) is given its seat and sent on to the game's server; a line says what it is waiting for, or why it cannot.
 //                            The title's own two ways in go through the same door with no page load of their own (`enter`): the one load is the game's
 //   the invite               `coopInvite`, on the host's page while the server waits for the second player: the code, the link and a button that copies it
@@ -38,7 +38,7 @@ async function lobby(q: URLSearchParams): Promise<Lobby | string> {
   return new Lobby(wire(url), tabId(), build);
 }
 
-// ---- the one line that says what the page is waiting for, or why not (the look of net/page.ts's line: this one is up before there is a game)
+// ---- the one line that says what the page is waiting for, or why not (the look of net/door.ts's line: this one is up before there is a game)
 let lineEl: HTMLElement | null = null, lineNo = 0;   // (lineNo: which line is up — a line's own way out acts on that line only, never on the same words said again)
 function say(text: string, passing = false): void {
   if (typeof document === 'undefined') return;
@@ -50,7 +50,7 @@ function say(text: string, passing = false): void {
     window.addEventListener('keydown', off, true); window.addEventListener('mousedown', off, true); }, 1500);   // (it stays until the player does something: a refusal read in passing is a refusal missed)
 }
 
-/** THE DOOR (main.ts): this address names a co-op game. 'moved' = the page is on its way to the game's server (stop booting); null = it is not a game this
+/** THE DOOR (host/drawpage.ts): this address names a co-op game. 'moved' = the page is on its way to the game's server (stop booting); null = it is not a game this
  *  page can play: the words are up, the code is off the address, and the page boots as itself */
 export async function coopFromUrl(q: URLSearchParams): Promise<'moved' | null> {
   const stay = (why: string): null => { say(why, true); try { const u = new URLSearchParams(location.search); u.delete(NET_JOIN); const s = u.toString(); history.replaceState(null, '', location.pathname + (s ? '?' + s : '') + location.hash); } catch { /* a sandboxed frame */ } return null; };
@@ -72,9 +72,9 @@ async function enter(L: Lobby, code: string, told: (words: string) => void): Pro
   try { const v = await L.seat(code, s => told(waitWords(s))); location.assign(location.pathname + netSearch(location.search, v) + location.hash); return ''; } catch (e) { return String((e as Error)?.message ?? e); }
 }
 
-/** the missions two can play: a kind the game seats two in (game/seats.ts), and not a lesson (on rails, for one) or a row built for its own size only */
+/** the missions two can play: a kind the game seats two in (scene/seatkinds.ts), and not a lesson (on rails, for one) or a row built for its own size only */
 export const coopCan = (m: Mission): boolean => { const e = ALL_MISSIONS.find(x => x.id === m.id); return !!e && seatsKind(e.kind) && !e.only && !m.lesson; };
-/** what the page that hosts has set for the game beside its address (a page whose game is the module's: where it stands, and this machine's own settings) */
+/** what the page that hosts has set for the game beside its address (this machine's own settings) */
 export const HOSTED = { setup: (_scenario: string): Record<string, unknown> => ({}) };
 /** HOST: the starting page, picking a mission for two. Its block hands the mission's address here */
 export function coopHostList(select?: string): void {
@@ -89,13 +89,13 @@ async function host(search: string, m: Mission): Promise<void> {
   const q = new URLSearchParams(location.search), L = await lobby(q); if (typeof L === 'string') return fail(L);
   const kept = leversSaid();
   // (the mission's address is the starting page's link, which carries this VISIT's words along — a picture's quality, a muted mixer, where it sends: those
-  // are this window's, not the game's, and the second player's page must not take them from the recipe)
+  // are this window's, not the game's, and the second player's page must not take them from the game's address)
   const own = new URLSearchParams([...new URLSearchParams(search.replace(/^[^?]*\?/, ''))].filter(([k]) => !visitWord(k) && !SENDING_WORDS.includes(k) && k !== 'seed' && k !== 'player'));
   let made: GameView; try { const scenario = coopScenario('?' + own.toString(), kept); made = await L.make(scenario, undefined, HOSTED.setup(scenario)); } catch (e) { return fail(lobbyWhy(e, 'host')); }
   const why = await enter(L, made.code, say); if (why) fail(why);
 }
 
-// ---- the title's CO-OP page: the title's own column of buttons, filled by this file (ui/menu.ts puts the row there and takes the column back on `back`)
+// ---- the title's CO-OP page: the title's own column of buttons, filled by this file (ui/title.ts puts the row there and takes the column back on `back`)
 let styled = false;
 function styles(): void {
   if (styled || typeof document === 'undefined') return; styled = true;
@@ -130,7 +130,7 @@ export function coopRows(actions: HTMLElement, back: () => void, focus = true): 
   // YOUR NAME (host/names.ts): what the other player's page calls this one, kept by this browser as it is typed; empty = his number
   const who = el('div', 'xhead', 'Your name'), name = el('input', 'cocode coname') as HTMLInputElement;
   name.type = 'text'; name.placeholder = 'Player'; name.maxLength = NET.nameMax; name.autocomplete = 'off'; name.spellcheck = false; name.setAttribute('aria-label', 'Your name'); name.dataset.coop = 'name';
-  name.dataset.walk = 'off';   // (not a stop of the title's W / S walk, ui/menu.ts: a walk that ended here would type its next step into the name. The mouse and Tab reach it)
+  name.dataset.walk = 'off';   // (not a stop of the title's W / S walk, ui/title.ts: a walk that ended here would type its next step into the name. The mouse and Tab reach it)
   name.value = PAGE.name ?? myName();
   name.addEventListener('input', () => { PAGE.name = name.value; setMyName(name.value); });
   name.addEventListener('change', () => { name.value = setMyName(name.value); PAGE.name = null; });   // (as kept, once he is done typing: a space at the end is his to type meanwhile)
@@ -147,13 +147,13 @@ export function coopRows(actions: HTMLElement, back: () => void, focus = true): 
   code.addEventListener('input', () => { const c = codeTyped(code.value); if (c !== code.value) code.value = c; PAGE.code = c; if (!PAGE.busy) tell(''); });
   code.addEventListener('keydown', e => { if (e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); join(); } if (e.code !== 'Escape' && e.code !== 'Tab') e.stopPropagation(); });   // (a letter typed here is the code's, nobody else's key)
   row.append(code, joinBtn);
-  const backBtn = btn('‹ Main menu', back, 'xback');   // (Esc is the title's own: ui/menu.ts presses this button)
+  const backBtn = btn('‹ Main menu', back, 'xback');   // (Esc is the title's own: ui/title.ts presses this button)
   actions.append(who, name, hostBtn, head, row, note, backBtn);
   if (focus) hostBtn.focus(); else if (PAGE.typing) { const f = PAGE.typing === 'name' ? name : code; f.focus(); f.setSelectionRange(f.value.length, f.value.length); }   // (the title drawn again under a player who is typing: he goes on typing)
   code.addEventListener('focus', () => { PAGE.typing = 'code'; }); code.addEventListener('blur', () => { if (code.isConnected) PAGE.typing = ''; });
 }
 
-/** THE INVITE (main.ts, once a networked page stands): on the host's page, while the server waits for the second player, the code and the link to send.
+/** THE INVITE (host/drawpage.ts, once a networked page stands): on the host's page, while the server waits for the second player, the code and the link to send.
  *  Gone when the fight starts. `net.client` is the page's client (net/client.ts) */
 export function coopInvite(net: { client: { state: string; seat: number; bye: string; broken: string; names?: readonly string[] } }, q: URLSearchParams): void {
   const code = q.get(NET_JOIN) ?? ''; if (!COOP.on || !codeWhole(code) || typeof document === 'undefined' || net.client.seat !== 0) return;
