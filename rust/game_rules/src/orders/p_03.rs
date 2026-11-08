@@ -326,7 +326,7 @@ pub fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
         },
         OrderLabel::Smoke => format!("smoke there · {} left", crate::squadsmoke::squad_smoke_left(g, &crate::seats::here(g))),
         OrderLabel::PairGo => {
-            let waiting = crate::pairorders::pair_orders_waiting(g);
+            let waiting = crate::pairorders::pair_orders_waiting(g, &crate::seats::here(g));
             if waiting.is_empty() { return String::from("mark"); }
             let mut parts: Vec<String> = Vec::with_capacity(waiting.len());
             for (gd, j) in &waiting {
@@ -429,7 +429,7 @@ pub fn order_only(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId
             out.truncate(1);
             out
         }
-        OrderOnly::PairGo => crate::pairorders::pair_orders_waiting(g).into_iter().map(|(gd, _)| gd).collect(),
+        OrderOnly::PairGo => crate::pairorders::pair_orders_waiting(g, &crate::seats::here(g)).into_iter().map(|(gd, _)| gd).collect(),
     }
 }
 /// `d.valid(S, t, men)`, the match over OrderValid: Ok true, or the row has no `valid`; Err(None) false, whyNot's 'not here.'; Err(Some) the word (orders.ts:852)
@@ -482,7 +482,7 @@ pub fn order_valid(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
             plain_valid(crate::pairorders::pair_orders_gone(g, x.foe))
         }
         OrderValid::PairGo => {
-            if !crate::pairorders::pair_orders_waiting(g).is_empty() { return Ok(()); }
+            if !crate::pairorders::pair_orders_waiting(g, &crate::seats::here(g)).is_empty() { return Ok(()); }
             let (now, was) = (String::from("nobody's waiting on your mark."), String::from("nobody is waiting on your mark."));
             Err(Some(crate::words::wg(g, &now, &was)))
         }
