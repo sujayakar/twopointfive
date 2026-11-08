@@ -1010,11 +1010,6 @@ pub struct Anim {
     pub act: Option<crate::character::AnimAct>,
     pub slump: f64,
     pub slump_w: f64,
-    pub wound: Option<crate::character::AnimWound>,
-    pub wd_t: f64,
-    pub wd_w: f64,
-    pub wd_clip: Option<ClipId>,
-    pub wd_pose: String,
     pub act_t: f64,
     pub act_w: f64,
     pub act_clip: Option<ClipId>,
@@ -1324,11 +1319,6 @@ impl Anim {
             act: None,
             slump: 0.0,
             slump_w: 0.0,
-            wound: None,
-            wd_t: 0.0,
-            wd_w: 0.0,
-            wd_clip: None,
-            wd_pose: String::from(""),
             act_t: 0.0,
             act_w: 0.0,
             act_clip: None,
@@ -1834,57 +1824,6 @@ impl AnimAct {
     }
 }
 impl Default for AnimAct { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/character.ts:1591 CharacterAnimator.wound, src/game/character.ts:1591)
-#[derive(Clone, Copy, Debug)]
-pub struct AnimWound {
-    pub pose: crate::character::AnimWoundPose,
-    pub at: crate::character::AnimWoundAt,
-    pub settled: Option<bool>,
-    pub clock: Option<f64>,
-}
-impl AnimWound {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AnimWound {
-            pose: crate::character::AnimWoundPose::Knee,
-            at: crate::character::AnimWoundAt::Ribs,
-            settled: None,
-            clock: None,
-        }
-    }
-}
-impl Default for AnimWound { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimWoundPose {
-    Knee,
-    Back,
-}
-impl AnimWoundPose {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimWoundPose::Knee => "knee",
-            AnimWoundPose::Back => "back",
-        }
-    }
-}
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimWoundAt {
-    Ribs,
-    Thigh,
-}
-impl AnimWoundAt {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimWoundAt::Ribs => "ribs",
-            AnimWoundAt::Thigh => "thigh",
-        }
-    }
-}
 
 /// (TypeScript: inline at src/game/character.ts:1605 CharacterAnimator.upperW, src/game/character.ts:1605)
 #[derive(Clone, Copy, Debug)]
