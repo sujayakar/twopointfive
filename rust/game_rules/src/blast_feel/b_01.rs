@@ -4,8 +4,7 @@
 //! the can's report (true = this burst is a wall charge's, and its own report is played in the can's place); the report's sounds; the kick written to
 //! the seat's camera for the render (`kick_of`), a field of a camera the game holds. All of it under the DRESS row `blastFeel`, as game.ts calls the tick.
 //!
-//! LEFT TO THE PICTURE'S SIDE (particles and the particles' impulses, which a Rust game has none of): the fireball, the dust ring, the pushes, the
-//! ceiling's dust. A host that draws them needs to be told the blast (an out event for `wall_report`: asked of the generator).
+//! THE PICTURE'S HALF (the fireball, the dust ring, the pushes, the ceiling's dust) is picture.rs.
 //!
 //! STAND-IN: THE REPORT IS PLAYED AT ONCE. The TypeScript holds each of the report's sounds back by the time sound takes from the blast to the player's
 //! head (at most 0.25 s; the thump a frame and the patter 0.1 s after that) on a queue of closures (`later`). The generated queue row holds no data
@@ -81,13 +80,11 @@ pub fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
     let Some(i) = found else { return false; };
     let wall = g.tab.wallcharge_set_wall_charge[seen[i]].wall.clone();
     state_mut(g).seen.remove(i);
-    // (the TypeScript asks whether the wall gave here, for the ways out of it: the fireball's and the ring's, the picture's. The ask is kept: it is a
-    //  query of the box world like any other.)
-    let _open = holed(g, &wall);
     let pl = g.player;
     report(g, pl, at);
     let t0 = g.time;
     state_mut(g).kicks.push(Kick { t0, at });
+    crate::render_decals::mark_asked(g, crate::render_decals::Ask::Feel(wall));
     true
 }
 
@@ -169,9 +166,3 @@ pub fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
     crate::audio_iface::game_audio_like_play(g, "wallDebris", Some(at), Some(k.debris * (0.4 + 0.6 * dull) * carry), Some(&crate::audio_iface::PlayOpts::Rate { rate: r3 }));
     if !g.pl[pl].down && d < k.ring_m { crate::audio_iface::game_audio_like_play(g, "earRing", None, Some(k.ring * (1.0 - d / k.ring_m)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 })); }
 }
-
-/// BOUNDARY NO-OP (the picture's: a particle record; a Rust game has no particles): (src/game/blastFeel.ts:175 emit)
-pub fn emit(g: &mut crate::game::Game, pl: PlayerId, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) {}
-
-/// BOUNDARY NO-OP (the picture's: particles): (src/game/blastFeel.ts:213 ceiling)
-pub fn ceiling(g: &crate::game::Game, pl: PlayerId, faces: &[crate::blast_feel::Face]) {}
