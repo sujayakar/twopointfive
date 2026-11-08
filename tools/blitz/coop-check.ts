@@ -2,8 +2,9 @@
 // rust/game with everything else and mended there on 2026-11-07; the Library's rebuild/rust-sim/port/blitz/coop-needs.md, needs 12 and 13; the account:
 // rebuild/multiplayer/seat-faults-2026-11-05.md).
 //   bun run tools/blitz/coop-check.ts [--only held,lock,full] [--out DIR] [--no-build] [--keep-blobs]
-// NO TYPESCRIPT TICK IS RUN. The three games are KEPT RUNS (tools/blitz/kept/two-*.tar.zst, tools/blitz/PLAY.md "Kept runs: the three games of two
-// seats"): the records of every tick and the orders given, written by the TypeScript tick while it stood. hold.sh stands each start again from this tree
+// NO KEPT CO-OP RUN IS IN THE TREE: the three this was written for parted at tick 1 by design and are deleted (their guard is the native tests), so with none
+// here the check says so and exits 0. It stays for new ones, under the names below.
+// NO TYPESCRIPT TICK IS RUN. The games are KEPT RUNS (tools/blitz/kept/two-*.tar.zst): the records of every tick and the orders given. hold.sh stands each start again from this tree
 // and the native runner steps the Rust game through the records; this file then reads the whole states the runner keeps.
 //   held   each of the three plays the series kept with it (the die's count and the block after every tick): the Rust game still plays those two-seat
 //          games as it did when they were read. A game that parts is named with its first tick; the lines below are still read off its states
@@ -47,6 +48,7 @@ function run(name: string, keeps: number[]): Run | null {
 const sweep = (dir: string) => { for (const f of readdirSync(dir)) if (/^(n|a|s|ns)\d+\.bin$/.test(f)) unlinkSync(`${dir}/${f}`); };
 const LOCK_KEEPS: number[] = []; for (let k = LOCK_FROM; k <= LOCK_TO; k += LOCK_STEP) LOCK_KEEPS.push(k);
 const GAMES: [string, number[]][] = [['two-lock0-9', LOCK_KEEPS], ['two-lock1-9', LOCK_KEEPS], ['two-full-3', [1, 3600, 7200]]];
+if (GAMES.every(([name]) => !existsSync(`${ROOT}/tools/blitz/kept/${name}.tar.zst`))) { say(`coop-check: no kept co-op run is in the tree (tools/blitz/kept/two-*.tar.zst): nothing to check.`); process.exit(0); }
 
 /** a state of either side, the few things this check reads: each man by his callsign (his seat, where he stands), and how many the game holds */
 function read(file: string): { men: Map<string, { seat: number | null; pos: number[] }>; holds: number; seats: number } | null {

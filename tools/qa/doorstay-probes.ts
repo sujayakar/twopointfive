@@ -189,7 +189,7 @@ export const stayOpenSave = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- a man past a leaf on its stop
-// (the four cases are probes.ts leafWedge's own — the soak's commonest wedges; a level edit that moves one of these doors moves both tables)
+// (the four cases are the soak's commonest wedges; a level edit that moves one of these doors moves this table)
 const WEDGE: { door: string; angle: number; guardAt: V3; goal: V3; note: string }[] = [
   { door: 'breakroom_ext', angle: 1.92, guardAt: [31.5, 0, 24.8], goal: [19.4, 0, 24.64], note: 'the exterior break-room door swung out into the lot, the chase west along the south wall' },
   { door: 'breakroom_w', angle: 1.92, guardAt: [27.1, 0, 17.3], goal: [27.6, 0, 15.6], note: 'the break-room side door at its stop, folded into the cubicle aisle, the man going north past it' },
