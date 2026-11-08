@@ -10,7 +10,7 @@
   let o = s.x + s.ng * off; let h = nearest(o, d, 2e-3, 1500.0, 0u, 1e9); var L = vec3f(0.0);
   if (h.piece == NOTHING) { L = skyLod(d, s.rough * 5.0); }
   else {
-    let q = surfaceAt(o, d, h, 0.004 + h.t * (0.002 + s.rough * s.rough)); L = q.glow; let cs = dot(q.n, frame.sunDir.xyz); var V1 = vec3f(0.0); let leaf = (h.piece & LEAF_HIT) != 0u; let c = cacheRead(q.x, select(q.ng, vec3f(0.0), leaf), rnd2());
+    let q = surfaceAt(o, d, h, 0.004 + h.t * (0.002 + s.rough * s.rough)); L = q.glow; let cs = dot(q.n, frame.sunDir.xyz); var V1 = vec3f(0.0); let leaf = (h.piece & LEAF_HIT) != 0u; let c = cacheSmooth(q.x, select(q.ng, vec3f(0.0), leaf));
     if (max3(frame.sunE.xyz) > 0.0 && (cs > 0.0 || any(q.through > vec3f(0.0)))) { V1 = visible(q.x + q.ng * 0.004 * sign(dot(q.ng, frame.sunDir.xyz)), coneDir(frame.sunDir.xyz, frame.sunDir.w, rnd2()), 2e-3, 400.0); }
     let m = returns(q); L += select(m, q.albedo + q.through, leaf) / PI * c.E * select(0.0, 1.0, c.n > 0.0) + m / PI * frame.sunE.xyz * max(cs, 0.0) * V1 + q.through / PI * frame.sunE.xyz * max(-cs, 0.0) * V1;
     if ((h.piece & LEAF_HIT) == 0u && (pieces[h.piece].flags & WATER) != 0u) { L = skyLod(reflect(d, vec3f(0.0, 1.0, 0.0)), 2.0) * 0.12 + vec3f(0.02, 0.09, 0.1) * lum(frame.sunE.xyz) * 0.2; }

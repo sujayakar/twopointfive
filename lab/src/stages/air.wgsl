@@ -20,7 +20,7 @@ fn hg(mu: f32, g: f32) -> f32 { return (1.0 - g * g) / (4.0 * PI * pow(1.0 + g *
   var L = vec3f(0.0); var tau = airAt(ro + rd * tc * 0.6) * tc; { let e = exp(-tau); L += (1.0 - e) * (frame.sunE.xyz * hg(mu, 0.55) + amb * 0.25); }
   // what the steps are: (place, scattering x length)
   var st: array<vec4f, 12>; var n = 0u;
-  for (var i = 0u; i < 5u; i++) { let dt = (t1 - tc) / 5.0; let t = tc + dt * (f32(i) + fract(j.x + f32(i) * 0.618)); let s = airAt(ro + rd * t) * dt; if (s > 1e-6) { st[n] = vec4f(ro + rd * t, s); n++; } }
+  for (var i = 0u; i < 3u; i++) { let dt = (t1 - tc) / 3.0; let t = tc + dt * (f32(i) + fract(j.x + f32(i) * 0.618)); let s = airAt(ro + rd * t) * dt; if (s > 1e-6) { st[n] = vec4f(ro + rd * t, s); n++; } }
   for (var i = 0u; i < u32(plumes[8].x); i++) {                                // a plume: three steps of its own where the ray is near it
     let p = plumes[i]; let q = plumes[9u + i]; if (frame.weather.z <= 0.0 || n > 8u) { break; } if (p.y > frame.misc.y) { continue; } let c = p.xyz + vec3f(0.0, q.x * 0.5, 0.0); let R = q.x * 0.62 + 0.5; let b = dot(c - ro, rd); let d2 = dot(c - ro, c - ro) - b * b; if (d2 > R * R) { continue; } let h = sqrt(R * R - d2); let a = max(b - h, 0.0); let e = min(b + h, t1); if (e <= a) { continue; }
     for (var k = 0u; k < 3u; k++) { let dt = (e - a) / 3.0; let x = ro + rd * (a + dt * (f32(k) + fract(j2.x + f32(k) * 0.41))); let s = steamAt(x) * dt; if (s > 1e-4 && n < 12u) { st[n] = vec4f(x, s); n++; } }

@@ -26,6 +26,15 @@ fn cacheFound(key: u32, who: u32) {
 fn cacheWants(x: vec3f, n: vec3f, moves: bool) -> u32 {
   var w = 0u; for (var l = select(0u, 1u, moves || !cacheNear(x)); l < 2u; l++) { let s = cacheFind(cacheKey(x, n, l)); if (s == NOTHING) { w |= 1u << l; continue; } if (all(cells[2u * s + 1u].xyz == vec3f(0.0))) { w |= 1u << l; } } return w;
 }
+/** the same with no dice: the four fine cells round x in its plane, by nearness. For a mirror's image, where blocks or their grain would be seen */
+fn cacheSmooth(x: vec3f, n: vec3f) -> Cached {
+  let f = facing(n); if (f > 5u || !cacheNear(x)) { return cacheRead(x, n, vec2f(0.5)); } let k = f >> 1u; let u = (k + 1u) % 3u; let v = (k + 2u) % 3u; let g = x / CELL - 0.5; let w = fract(g); var c: Cached; var ws = 0.0;
+  for (var i = 0u; i < 4u; i++) {
+    var q = x; q[u] = (floor(g[u]) + select(0.5, 1.5, (i & 1u) == 1u)) * CELL; q[v] = (floor(g[v]) + select(0.5, 1.5, i > 1u)) * CELL; let s = cacheFind(cacheKey(q, n, 0u)); if (s == NOTHING) { continue; }
+    let a = cells[2u * s]; if (a.w < 3.0 || bad4(a)) { continue; } let wt = select(1.0 - w[u], w[u], (i & 1u) == 1u) * select(1.0 - w[v], w[v], i > 1u) + 1e-4; c.E += a.xyz * wt; c.sun += finite(cells[2u * s + 1u].w, 1.0) * wt; c.n = max(c.n, a.w); ws += wt;
+  }
+  if (ws < 0.02) { return cacheRead(x, n, vec2f(0.5)); } c.E /= ws; c.sun /= ws; return c;
+}
 struct Cached { E: vec3f, sun: f32, n: f32 };
 /** what lands at x, facing n. `j` spreads the lookups over neighbouring cells, so that blocks blend; far or young falls back on the coarse cells */
 fn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached {

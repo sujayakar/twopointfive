@@ -10,6 +10,7 @@ var<workgroup> tile: array<vec4f, 144>;                            // this group
   var m1 = vec4f(0.0); var m2 = vec4f(0.0); var wn = 0.0; let R = 2;
   for (var y = -R; y <= R; y++) { for (var x = -R; x <= R; x++) { let v = tile[u32(i32(at) + y * 12 + x)]; if (NARROW == 1 && v.a < 0.0) { continue; } m1 += v; m2 += v * v; wn += 1.0; } }
   m1 /= wn; let sd = sqrt(max(m2 / wn - m1 * m1, vec4f(0.0)));
+  var c1 = c; if (NARROW == 1 && wn > 2.0) { let k = (m1 * wn - c) / (wn - 1.0); let e = sqrt(max((m2 - c * c) / (wn - 1.0) - k * k, vec4f(0.0))); let most = lum(k.rgb) + 3.0 * lum(e.rgb) + 0.02; c1 = vec4f(c.rgb * min(1.0, most / max(lum(c.rgb), 1e-4)), c.a); }     // one bright sample alone is held to its neighbours
   let aux = textureLoad(auxT, full, 0); var uv = (vec2f(full) + 0.5) / rdim + aux.xy; var x0 = p.x; let fr = textureLoad(frontT, full, 0); var checkT = p.t; var front = false;
   if (NARROW == 1) {                                               // a mirror's image moves as if it stood behind the surface
     var t = p.t; var rough = p.rough; if (fr.x != 0u) { t = bitcast<f32>(fr.x); rough = 0.02; front = true; } let img = frame.camPos.xyz + rd * (t + min(c.a, 60.0) * (1.0 - smoothstep(0.15, 0.45, rough))); let q = projectPrev(img); let now = project(img); uv = (vec2f(full) + 0.5) / rdim + (q.xy - now.xy);
@@ -22,13 +23,13 @@ var<workgroup> tile: array<vec4f, 144>;                            // this group
     var ok = abs(dot(was - p.x, p.ng)) < 0.006 * p.t + 0.02 && dot(o.ng, p.ng) > 0.7; if (aux.w > 0.5) { ok = abs(o.t - p.t) < 0.25 && dot(o.ng, p.ng) > 0.4; } if (p.leaf) { ok = o.leaf && abs(o.t - p.t) < 0.5; } if (NARROW == 1 && front) { ok = true; }
     if (!ok) { continue; } let v = textureLoad(hist, q, 0); let pm = textureLoad(momPrev, q, 0); if (bad4(v) || bad4(pm)) { continue; } if (NARROW == 1 && v.a < 0.0) { continue; } h += v * w; mo += pm * w; ws += w;
   }
-  var n = 0.0; var o = c; var mom = vec4f(lum(c.rgb), lum(c.rgb) * lum(c.rgb), 0.0, 0.0); if (NARROW == 0) { mom.w = c.a * c.a; }
+  var n = 0.0; var o = c1; var mom = vec4f(lum(c1.rgb), lum(c1.rgb) * lum(c1.rgb), 0.0, 0.0); if (NARROW == 0) { mom.w = c.a * c.a; }
   if (ws > 0.02) {
     h /= ws; mo /= ws; let st = steady(p.x); let cap = mix(3.0, f32(CAP), st) * select(1.0, 0.5, aux.w > 0.5 || p.leaf); n = min(mo.z, cap - 1.0);
     var se = sd; if (KIND == 1) { let q = (clamp(m1, vec4f(0.0), vec4f(1.0)) * wn + 1.0) / (wn + 2.0); let doubt = sqrt(q * (1.0 - q)); se = vec4f(max(sd.xy, doubt.xy), sd.z, sd.w + 0.04); }
  
     let e = se * SPREAD + abs(m1) * 0.04 + 1e-4; let hc = clamp(h, m1 - e, m1 + e); let moved = select(length((hc - h).rgb) / (length(e.rgb) + 1e-4), length((hc - h).xyw) / (length(e.xyw) + 1e-4), KIND == 1); n *= 1.0 / (1.0 + moved * 0.35);
-    var k = 1.0 / (n + 1.0); o = mix(hc, c, k); mom = vec4f(mix(mo.x, mom.x, max(k, 0.06)), mix(mo.y, mom.y, max(k, 0.06)), 0.0, mix(mo.w, mom.w, max(k, 0.06)));
+    var k = 1.0 / (n + 1.0); o = mix(hc, c1, k); mom = vec4f(mix(mo.x, mom.x, max(k, 0.06)), mix(mo.y, mom.y, max(k, 0.06)), 0.0, mix(mo.w, mom.w, max(k, 0.06)));
     if (NARROW == 1) { o.a = mix(h.a, c.a, max(k, 0.2)); }
   }
   mom.z = n + 1.0;

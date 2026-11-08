@@ -86,9 +86,9 @@ export const svgf: DenoisePart = {
   },
 };
 /** no memory of light at all: what a bounce hits is lit by nothing. Shows what the cache is worth */
-export function noCache(): CachePart { const lib = 'struct Cached { E: vec3f, sun: f32, n: f32 };\nconst EVERY_WAY = 0x80010003u;\nfn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached { var c: Cached; return c; }\nfn cacheKey(x: vec3f, n: vec3f, level: u32) -> u32 { return 1u; }\nfn cacheFind(key: u32) -> u32 { return 1u; }\nfn cacheFound(key: u32, who: u32) {}\n'; return { name: 'none', lib: lib + 'fn cacheWants(x: vec3f, n: vec3f, moves: bool) -> u32 { return 0u; }\n', bind: {}, stages: [], async init(lab) { lab.buffer('hits', HITS * 16); } }; }
+export function noCache(): CachePart { const lib = 'struct Cached { E: vec3f, sun: f32, n: f32 };\nconst EVERY_WAY = 0x80010003u;\nfn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached { var c: Cached; return c; }\nfn cacheSmooth(x: vec3f, n: vec3f) -> Cached { var c: Cached; return c; }\nfn cacheKey(x: vec3f, n: vec3f, level: u32) -> u32 { return 1u; }\nfn cacheFind(key: u32) -> u32 { return 1u; }\nfn cacheFound(key: u32, who: u32) {}\n'; return { name: 'none', lib: lib + 'fn cacheWants(x: vec3f, n: vec3f, moves: bool) -> u32 { return 0u; }\n', bind: {}, stages: [], async init(lab) { lab.buffer('hits', HITS * 16); } }; }
 export const bilinear: UpscalePart = { name: 'bilinear', stages(g) { g.signal('picture', 'rgba16float', 'output', true); return { result: 'picture', stages: [{ name: 'upscale', over: 'output', reads: { color: 'color' }, writes: { outT: 'picture' }, buffers: { taauK: ['taauK', 'vec4f', 'uniform'] }, code: '@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let o = frame.size.zw; if (f32(id.x) >= o.x || f32(id.y) >= o.y) { return; } textureStore(outT, id.xy, textureSampleLevel(color, linSamp, (vec2f(id.xy) + 0.5) / o, 0.0)); }' }] }; } };
-export const noDenoise: DenoisePart = { name: 'none', stages: ({ signal }) => ({ stages: [], result: signal }) };
+export const noDenoise: DenoisePart = { name: 'none', stages: ({ signal, div }, g) => { for (const k of ['H', 'M']) g.signal(signal + k, 'rgba16float', div === 2 ? 'half' : 'render', true); return { stages: [], result: signal }; } };
 export const taauUp: UpscalePart = { name: 'taau', stages(g) { g.signal('picture', 'rgba16float', 'output', true); return { result: 'picture', stages: [{ name: 'upscale', over: 'output', reads: { color: 'color', 'picture@prev': 'hist', aux: 'auxT' }, writes: { outT: 'picture' }, buffers: { taauK: ['taauK', 'vec4f', 'uniform'] }, code: taau }] }; } };
 
 export function realtime(o: { name?: string; cache?: CachePart; denoise?: DenoisePart; upscale?: UpscalePart } = {}): Method & { glow: string } {
@@ -104,14 +104,14 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
       const g = lab.graph, c = { ...cache.bind, ...CHANGES };
       const raster = rasterStage(lab, g);
       const S = (name: string, code: string, over: Size, reads: Record<string, string>, writes: Record<string, string>, buffers: Stage['buffers'] = {}, consts?: Record<string, number>): Stage => ({ name, code: signals + code, over, reads, writes, buffers: { ...CHANGES, ...buffers }, ...(consts ? { consts } : {}) });
-      const dVis = dn.stages({ signal: 'vis', div: 1, cap: 18, rounds: 3, fractions: true }, g), dB = dn.stages({ signal: 'bounce', div: 2, cap: 36, rounds: 4 }, g), dM = dn.stages({ signal: 'mirror', div: 2, cap: 26, rounds: 2, narrow: true }, g), u = up.stages(g); m.result = u.result;
+      const dVis = dn.stages({ signal: 'vis', div: 1, cap: 18, rounds: 3, fractions: true }, g), dB = dn.stages({ signal: 'bounce', div: 2, cap: 36, rounds: 4 }, g), dM = dn.stages({ signal: 'mirror', div: 2, cap: 26, rounds: 3, narrow: true }, g), u = up.stages(g); m.result = u.result;
       const glows = [...glowStages(g, u.result, 'rt'), ...exposeStages(lab, g, u.result, 'rtGlow2', 'rt')];
       return [
         raster,
         S('first hit', surf, 'render', { id: 'idT', idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }, { past: ['past', 'array<vec4f>', 'read'], pastLeaves: ['pastLeaves', 'array<vec4f>', 'read'] }),
         S('water', waterpx, 'render', { idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }),
         ...cache.stages,
-        S('lamps', lamps, 'render', { surf: 'surf', front: 'frontT', sunLeaves: 'sunLeaves' }, { outVis: 'vis', outU: 'lampU' }),
+        S('lamps', lamps, 'render', { surf: 'surf', front: 'frontT', aux: 'auxT', 'surf@prev': 'surfPrev', 'visH@prev': 'hist', 'visM@prev': 'momPrev', sunLeaves: 'sunLeaves' }, { outVis: 'vis', outU: 'lampU' }),
         S('gather', cache.lib + bounceLib + gather, 'half', { surf: 'surf', front: 'frontT' }, { outE: 'bounce' }, { ...c, hits: ['hits', 'array<vec4u>', 'read_write'] }, { HITS }),
         S('mirror', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2 }),
         ...dVis.stages, ...dB.stages, ...dM.stages,
