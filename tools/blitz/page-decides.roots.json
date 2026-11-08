@@ -82,11 +82,6 @@
       "behind": "a hand"
     },
     {
-      "id": "src/net/page.ts:NetPlay.tick",
-      "why": "the networked page: it walks its own seat ahead of the server with the TypeScript's rules (src/net/foresee.ts) and puts kept games back",
-      "behind": "the networked page"
-    },
-    {
       "id": "src/game/savestate.ts:Checkpoints.write",
       "why": "the save controller keeps a game (under the Rust host the take is the module's own, src/host/rustgame.ts SNAPS)",
       "behind": "a save"
@@ -110,11 +105,6 @@
       "id": "src/replay/engineplay.ts:TapePlay.frame",
       "why": "a tape's page plays a recording, not a Rust game",
       "behind": "a tape's page"
-    },
-    {
-      "id": "src/net/page.ts:NetPlay.rest",
-      "why": "the networked page between its server's steps: it walks its own seat ahead with the TypeScript's rules",
-      "behind": "the networked page"
     },
     {
       "id": "src/host/modelerr.ts:modelErrFrame",

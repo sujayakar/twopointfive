@@ -26,14 +26,11 @@ import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions,
 import { CMDRING } from '../game/cmdring';
 import { WALLSNAP } from '../game/wallsnap';
 import { cloudNote } from './cloudnote';
-import { COOP } from '../net/lobby';
-import { coopRows } from './coop';
 import { TITLE, cheatWords, titleScreen } from './title';
 import type { SlotInfo } from '../game/savestate';
 import { button, checkpointButton, el, layStripAgain, saveStrip, type Press, type RunSaves } from './runcard';
 import { locked } from '../view/seatview';
 
-TITLE.coop = () => (COOP.on ? coopRows : null);
 
 export interface MenuDeps { engine: Engine; game: Game; quality: Quality; audio: AudioEngine; overlay: Overlay; stopTour?: () => void; onStart: () => void; focusGame?: () => void;
   /** the benchmark (ui/bench.ts): Extras ▸ Benchmark on the live title begins it (a page load of its first scene: ui/benchrun.ts) */

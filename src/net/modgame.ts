@@ -18,7 +18,7 @@ export interface NetFace {
   face_state_n(): number; face_state_name(i: number): void; face_state_words(h: number): void; face_verdict(h: number): number; face_part_name(i: number): void;
 }
 
-/** a key's code, as the referee has one (game/cmd.ts): anything else is no key, and is left out before the codes become one text */
+/** a key's code, as the referee has one: anything else is no key, and is left out before the codes become one text */
 const CODE = /^[A-Za-z0-9]+$/;
 const codes = (k: readonly string[] | undefined): string => k ? k.filter(c => CODE.test(c)).join(' ') : '';
 /** a record's numbers into `N` at `at`; answers its keys' text: those held, a line feed, those that went down */
@@ -53,7 +53,7 @@ export class NetGame {
     cmds.forEach((c, seat) => this.handed([c], (p, n, k, kn) => X.face_record(h, seat, p, n, k, kn)));
     X.face_step(h, 1 / NET.hz, 0);   // (the saves and a rails level's view are a game of one's)
     this.w = foldWord(this.w, X.face_die_n(h), this.parts());
-    if (wordTick(this.ticks++)) this.wide = foldWhole(this.whole().words, null);
+    if (wordTick(this.ticks++)) this.wide = foldWhole(this.whole().words);
   }
   private parts(): Uint32Array { const p = this.X.face_part_hashes(this.X.face_slot(this.h)) >>> 0, n = this.X.face_parts(); return new Uint32Array(this.memory.buffer, p, n); }
   /** what the ticks told their host is let go */
