@@ -43,17 +43,6 @@ fn data_string(d: &RowData, k: &str) -> String {
         None => String::from("undefined"),
     }
 }
-fn data_from_add(d: &JsMap<String, Option<ChronicleAddDataValue>>) -> RowData {
-    let mut o = JsMap::new();
-    for (k, v) in d.iter() {
-        o.set(k, v.as_ref().map(|v| match v {
-            ChronicleAddDataValue::Text(s) => ChronEventDataValue::Text(s.clone()),
-            ChronicleAddDataValue::Num(x) => ChronEventDataValue::Num(*x),
-            ChronicleAddDataValue::Bool(b) => ChronEventDataValue::Bool(*b),
-        }));
-    }
-    o
-}
 fn data_from_generic(d: &JsMap<String, Option<ChronicleDataValue>>) -> RowData {
     let mut o = JsMap::new();
     for (k, v) in d.iter() {
@@ -233,11 +222,6 @@ pub fn indoors(p: V3) -> bool {
 }
 
 // ------------------------------------------------------------ the record
-
-/// The core append; `None` when the caps refuse it, else the row's place in `events`.   (chronicle.ts Chronicle.add)
-pub fn chronicle_add(g: &mut crate::game::Game, t: f64, kind: crate::chronicle::ChronKind, pos: V3, data: &JsMap<String, Option<crate::chronicle::ChronicleAddDataValue>>) -> Option<usize> {
-    add_row(g, t, kind, pos, data_from_add(data))
-}
 
 /// The row a hearing event made, as its place in `events`.   (chronicle.ts Chronicle.heardRow)
 pub fn chronicle_heard_row<'g>(g: &'g mut crate::game::Game, e: u32) -> Option<&'g mut usize> {

@@ -278,18 +278,6 @@ pub fn rescue_owns(g: &crate::game::Game, gd: GuardId) -> bool {
     e.ops.iter().any(|x| x.ended.is_none() && g.tab.doortools_door_op[x.op].men.contains(&gd))
 }
 
-/// Call F's entry off: its men stop where they are. Always None. (rescue.ts Rescue.callOff)
-pub fn rescue_call_off(g: &mut crate::game::Game) -> Option<String> {
-    if !g.rescue.active { return None; }
-    let Some(men) = g.rescue.entry.as_ref().map(|e| e.men.clone()) else { return None; };
-    for o in men {
-        if g.gd[o].state != crate::game::GuardState::Dead && rescue_owns(g, o) { rescue_post(g, o, None, None); }
-    }
-    rescue_note(g, "drill:called-off");
-    rescue_end_entry(g, false);
-    None
-}
-
 /// Is this civilian one of the scenario's hostages. (rescue.ts Rescue.isHostage)
 pub fn rescue_is_hostage(g: &crate::game::Game, gd: GuardId) -> bool {
     g.rescue.active && g.rescue.hostages.contains(&gd)

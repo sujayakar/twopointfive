@@ -49,23 +49,6 @@ pub fn door_path_reset(g: &mut crate::game::Game) {
     g.door_path.lent.clear();
 }
 
-/// Does the gun's line on this heading cross a leaf: from his chest and a shoulder's width either side, and (`lead`) where he will stand. (doorpath.ts guns `crosses`)
-fn crosses(p: V3, l: &[[V3; 2]], gun_side: f64, gun_m: f64, lx: f64, lz: f64, yaw: f64, lead: bool) -> bool {
-    let sx = m::sin(yaw);
-    let cz = m::cos(yaw);
-    for o in [0.0, gun_side, -gun_side] {
-        let a: V3 = [p[0] + cz * o, 0.0, p[2] - sx * o];
-        let b: V3 = [a[0] + sx * gun_m, 0.0, a[2] + cz * gun_m];
-        if l.iter().any(|x| seg_seg(a, b, x[0], x[1]) < 0.06) {
-            return true;
-        }
-        if lead && o == 0.0 && l.iter().any(|x| seg_seg([a[0] + lx, 0.0, a[2] + lz], [b[0] + lx, 0.0, b[2] + lz], x[0], x[1]) < 0.06) {
-            return true;
-        }
-    }
-    false
-}
-
 /// THE GUN: a teammate's long gun whose line crosses an open leaf is carried along his walk or brought down; what it writes on his script `after` puts back. (doorpath.ts DoorPath.guns)
 pub fn door_path_guns(g: &crate::game::Game, dt: f64) {
     

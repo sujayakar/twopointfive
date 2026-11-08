@@ -45,15 +45,6 @@ pub fn ir_viewer(g: &crate::game::Game) -> bool {
     g.seats.iter().any(|&s| g.pl[crate::seats::seat(g, s).player].nv_amount > 0.5)
 }
 
-/// `fn_` run under a viewer's own tube, the old one put back after. Between steps only.   (irlaser.ts irViewAs)
-pub fn ir_view_as<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, tube: bool, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    let was = g.m.irlaser.view_tube;
-    g.m.irlaser.view_tube = Some(tube);
-    let r = fn_(g);
-    g.m.irlaser.view_tube = was;
-    r
-}
-
 /// Is this box an infrared line the step drew for its own tube (`ir_note`)?   (irlaser.ts irMade)
 pub fn ir_made(g: &mut crate::game::Game, b: AnyBoxId) -> bool {
     g.m.irlaser.ir_made.has(b)
@@ -62,16 +53,6 @@ pub fn ir_made(g: &mut crate::game::Game, b: AnyBoxId) -> bool {
 /// The band of a man's weapon laser this frame. IR.on is settled on.   (irlaser.ts laserBand)
 pub fn laser_band(g: &crate::game::Game, gd: GuardId) -> crate::irlaser::LaserBand {
     if crate::nvg::nvg_worn(g, gd) && crate::nvg::nvg_down(g, gd) { LaserBand::Ir } else { LaserBand::Visible }
-}
-
-/// A teammate's laser is on this frame. IR.on and IR.carry are settled on, IR.teamOff settled on, BREAK false.   (irlaser.ts laserOn)
-pub fn laser_on(g: &crate::game::Game, gd: GuardId) -> bool {
-    if g.gd[gd].muzzle_down || g.gd[gd].held.is_some() || crate::rails::rails_no_lasers(g) { return false; }
-    let team = g.gd[gd].team;
-    if !crate::teams::is_hostile(g, team, crate::teams::Team::Player) { return false; }
-    if g.gd[gd].state == crate::game::GuardState::Alert || g.gd[gd].state == crate::game::GuardState::Search { return true; }
-    let c = g.gd[gd].ch;
-    g.ch[c].anim.upper == crate::character::UpperMode::Aim && laser_band(g, gd) == LaserBand::Ir
 }
 
 /// An infrared line would end on one of his own: a player, or a man of a team not hostile to his.   (irlaser.ts paintsOwn)

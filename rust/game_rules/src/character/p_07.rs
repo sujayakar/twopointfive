@@ -20,8 +20,6 @@ pub fn anim_throw_off(g: &crate::game::Game, c: CharId) -> bool { g.ch[c].anim.t
 pub fn anim_aim_shown(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.upper_w.aim }
 /// How far the torch is up in the hand that holds it, 0..1.   (character.ts torchUp)
 pub fn anim_torch_up(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.tu_k }
-/// His long gun is off its line and his eyes are at its magazine well.   (character.ts atWell)
-pub fn anim_at_well(g: &crate::game::Game, c: CharId) -> bool { m::max(g.ch[c].anim.rlc.k, g.ch[c].anim.rlc.h) > 0.5 }
 /// Nothing but the aim or the carry has the gun arm this frame.   (character.ts gunArmOwn)
 pub fn anim_gun_arm_own(g: &crate::game::Game, c: CharId) -> bool {
     let a = &g.ch[c].anim;
