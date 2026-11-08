@@ -254,6 +254,7 @@ pub fn team_view(g: &mut Game, f: Option<&TeamFor>, clip: Option<&MemberKit>) ->
         frags: you.as_ref().map_or(0.0, |y| y.frags),
         smoke: you.as_ref().map_or(0.0, |y| y.smoke),
         bangs: if on { kit_pool(g, size, None).bangs } else { 0.0 },
+        link: String::new(),
     }
 }
 

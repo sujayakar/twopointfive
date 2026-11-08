@@ -235,6 +235,7 @@ pub use game_rules::scene_markings;
 pub use game_rules::scene_materials;
 pub use game_rules::scene_place_plan;
 pub use game_rules::scene_scenario_list;
+pub use game_rules::start_list;
 pub use game_rules::scene_scenarios;
 pub use game_rules::scene_shapes;
 pub use game_rules::scene_stuff;
