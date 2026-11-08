@@ -5,7 +5,7 @@ use crate::orders::rows::Row;
 use crate::orders::*;
 use alloc::{format, string::String, vec, vec::Vec};
 
-pub const ORDER: Row = Row::new(crate::squadthrow::THROW_OPEN, label, rows::opens_a_page);
+pub const ORDER: Row = Row::new("throwThere", label, rows::opens_a_page);
 
 fn label(g: &mut Game, t: &OrderTarget) -> String {
     let frag = crate::squadthrow::left(g, crate::squadthrow::SquadThrowKind::Frag);

@@ -5,6 +5,6 @@ use crate::orders::rows::Row;
 use crate::orders::*;
 use alloc::{format, string::String, vec, vec::Vec};
 
-pub const ORDER: Row = Row::new(crate::doortools::HELD_PAGE, label, rows::opens_a_page);
+pub const ORDER: Row = Row::new("held", label, rows::opens_a_page);
 
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("threshold held") }

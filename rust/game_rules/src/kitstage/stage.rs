@@ -241,7 +241,7 @@ fn torches(g: &mut Game, st: &KitStage) {
 /// the man at his place, turned his way, as the squad's own hand-over has it: it takes him off whatever had him. A staged man's `hold` is only "nothing moves until the first order", and with no order of his own he drifts after Sam.
 fn send(g: &mut Game, x: GuardId, p: V2, face: f64, low: bool) {
     let mut a = crate::orders::SquadOrdersAssignA::zeroed();
-    a.order = String::from("cover");
+    a.order = String::from(crate::orders::rows::cover::ORDER.id);
     a.post = Some([p[0], 0.0, p[1]]);
     a.face = Some(face);
     a.strafe = Some(true);
@@ -257,7 +257,7 @@ fn home_men(g: &mut Game, st: &mut KitStage) {
         let x = st.order[k];
         let actor = open_man(g, st) == Some(x);
         let (p, yaw, low) = match st.mate { Some((p, y)) if k == 0 && !actor => (p, y, st.quiet), _ => (st.spots[k], st.yaws[k], false) };
-        let mine = crate::orders::squad_orders_of(g, &crate::seats::here(g), x).map_or(false, |a| g.tab.orders_assignment[a].order == "cover");
+        let mine = crate::orders::squad_orders_of(g, &crate::seats::here(g), x).map_or(false, |a| g.tab.orders_assignment[a].order == crate::orders::rows::cover::ORDER.id);
         if mine && st.sent.contains(&x) { continue; }
         send(g, x, p, yaw, low);
         if !st.sent.contains(&x) { st.sent.push(x); }

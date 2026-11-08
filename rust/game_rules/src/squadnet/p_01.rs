@@ -79,13 +79,13 @@ pub fn why_words(g: &crate::game::Game, p: &crate::autopilot::AutoPick) -> Optio
     use crate::autopilot::AutoPickWhy;
     if p.word || !matches!(p.t, crate::orders::OrderTarget::Door(_)) { return None; }
     let id = p.id.as_deref();
-    let (row, ack) = if id == Some("bangClear") && p.why == AutoPickWhy::Contact {
+    let (row, ack) = if id == Some(crate::orders::rows::bangclear::ORDER.id) && p.why == AutoPickWhy::Contact {
         ("they see one inside", "banging it. i see one in there.")
-    } else if id == Some("bangClear") && p.why == AutoPickWhy::Unknown {
+    } else if id == Some(crate::orders::rows::bangclear::ORDER.id) && p.why == AutoPickWhy::Unknown {
         ("nobody's been in there", "banging it. nobody's been in there.")
-    } else if id == Some("charge") && p.why == AutoPickWhy::Shut {
+    } else if id == Some(crate::orders::rows::charge::ORDER.id) && p.why == AutoPickWhy::Shut {
         ("they can't open it", "we can't open it. setting a charge.")
-    } else if id == Some("openClear") && p.kept == Some(true) {
+    } else if id == Some(crate::orders::rows::openclear::ORDER.id) && p.kept == Some(true) {
         ("they're saving the last bang", "going in. i'm saving the last bang.")
     } else {
         return None;

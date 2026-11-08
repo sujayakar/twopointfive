@@ -933,7 +933,7 @@ fn assign_to_on(s: &SquadOrdersAssignA) -> TriesOn { order_as!(TriesOn, s, |t: O
 pub fn squad_orders_walk_send(g: &mut crate::game::Game, gd: GuardId, t: crate::orders::SquadOrdersWalkSendT, at: V3, on: &crate::orders::SquadOrdersAssignA) {
     let fc = g.dr[t.door].frame_centre;
     let a = SquadOrdersAssignA {
-        order: String::from("move"),
+        order: String::from(crate::orders::rows::movethere::ORDER.id),
         post: Some(t.post.pos),
         face: Some(t.post.face),
         watch: Some([fc[0], 1.05, fc[2]]),

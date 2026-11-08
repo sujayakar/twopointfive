@@ -28,7 +28,7 @@ pub fn team_starts_fallen_in(g: &mut crate::game::Game, men: &[GuardId]) -> f64 
 fn fall_in_here(g: &mut Game, men: &[GuardId]) -> f64 {
     let up: Vec<GuardId> = men.iter().copied().filter(|&m| g.gd[m].state != crate::game::GuardState::Dead).collect();
     if up.is_empty() { return 0.0; }
-    let def = match g.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == "fallIn") {
+    let def = match g.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::fallin::ORDER.id) {
         Some(d) => d,
         None => return 0.0,
     };

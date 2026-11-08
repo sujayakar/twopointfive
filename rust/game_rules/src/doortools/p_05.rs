@@ -87,7 +87,7 @@ fn splice_out<T: PartialEq>(list: &mut Vec<T>, x: &T) {
 fn give_go(g: &mut Game, p: V3, men: &[GuardId]) -> Option<String> {
     let t = crate::orders::OrderTarget::None(crate::orders::OrderTargetNone { at: [p[0], 0.0, p[2]], man: None });
     let opts = crate::orders::GiveOpts { men: Some(men.to_vec()), ..Default::default() };
-    crate::orders::squad_orders_give(g, "go", Some(&t), None, Some(&opts))
+    crate::orders::squad_orders_give(g, crate::orders::rows::go::ORDER.id, Some(&t), None, Some(&opts))
 }
 /// the row of the menu that is up with this hot key: -1 with none (or no menu)
 fn menu_row_hot(g: &Game, seat: &crate::seats::SeatRef, key: &str) -> i32 {
@@ -556,7 +556,7 @@ pub fn door_tools_go_men(g: &mut crate::game::Game, men: &[GuardId], only: Optio
     if list.is_empty() {
         return Some(String::from("nobody's waiting for you to say go."));
     }
-    crate::holdfire::hold_fire_order(g, "go", None);
+    crate::holdfire::hold_fire_order(g, crate::orders::rows::go::ORDER.id, None);
     let w = g.tab.doortools_word.push(Word { t0: g.time, go1: f64::NAN, fled_t: None });
     g.door_tools.words.push(w);
     g.door_tools.stats.words += 1.0;
@@ -1175,7 +1175,7 @@ pub fn door_tools_menu_key(g: &mut crate::game::Game, input: InputId) -> bool {
         return false;
     }
     let rows = g.orders.menu.as_ref().unwrap().rows.clone();
-    let Some(i) = rows.iter().position(|&d| g.tab.orders_order_def[d].id == "fragClear") else { return false };
+    let Some(i) = rows.iter().position(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::fragclear::ORDER.id) else { return false };
     press_off(g, input, &key);
     crate::orders::squad_orders_pick(g, Some(i as f64));
     true

@@ -981,7 +981,7 @@ pub fn door_tools_make_room(g: &mut crate::game::Game, d: DoorId, back: &JsMap<G
         let hit = crate::scene_collision::raycast(g, [p[0], 1.5, p[2]], [m::sin(post.face), 0.0, m::cos(post.face)], 8.0);
         let r = m::max(1.5, (match hit { Some(h) => h.t, None => 8.0 }) - 0.5);
         crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
-            order: String::from("stack"), post: Some(p), face: Some(post.face),
+            order: String::from(crate::orders::rows::stack::ORDER.id), post: Some(p), face: Some(post.face),
             watch: Some([p[0] + m::sin(post.face) * r, 1.1, p[2] + m::cos(post.face) * r]),
             door: Some(d), shy: Some(d), stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(true), stack_side: Some(post.stack_side),
             going: alloc::format!("making room · {}", name), there: alloc::format!("rear security · {}", name), ..Default::default()

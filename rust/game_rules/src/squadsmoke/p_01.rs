@@ -40,7 +40,7 @@ pub fn squad_smoke_stage(g: &mut crate::game::Game, cans: f64) {
     g.stats.squadsmoke.staged += 1;
     crate::orders::squad_orders_unregister(g, SMOKE_ORDER);
     if !js::truthy(n) { return; }
-    let after = g.orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == "hold");
+    let after = g.orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::hold::ORDER.id);
     let def = row(g);
     let before = match after {
         Some(a) => g.orders.defs.get(a + 1).map(|d| g.tab.orders_order_def[*d].id.clone()),

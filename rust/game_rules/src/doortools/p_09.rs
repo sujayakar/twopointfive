@@ -45,7 +45,7 @@ pub fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> 
     let into = -side;
     let at = g.door_tools.set.iter().position(|x| *x == c)?;
     g.door_tools.set.remove(at);
-    crate::holdfire::hold_fire_order(g, "charge", Some(crate::holdfire::HoldFireOrderO { blown: Some(true), ..Default::default() }));
+    crate::holdfire::hold_fire_order(g, crate::orders::rows::charge::ORDER.id, Some(crate::holdfire::HoldFireOrderO { blown: Some(true), ..Default::default() }));
     let out = door_pt(g, d, w / 2.0, 0.5, side, Some(1.1));
     let inn = door_pt(g, d, w / 2.0, 0.45, into, Some(1.1));
     let who = sam_id(g, &crate::seats::here(g));

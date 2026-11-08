@@ -237,9 +237,3 @@ pub struct CmdringStats {
     pub who: i32,
     pub twice: i32,
 }
-
-/// (src/game/cmdring.ts:276 FLAT_TOP: a table nothing writes)
-pub fn flat_top() -> JsMap<String, JsMap<String, f64>> { { let mut t = JsMap::new(); t.set(String::from("floor"), { let mut t = JsMap::new(); t.set(String::from("cover"), 2.0); t.set(String::from("fallIn"), 3.0); t.set(String::from("hold"), 4.0); t }); t.set(String::from("door"), { let mut t = JsMap::new(); t.set(String::from("cover"), 2.0); t.set(String::from("openClear"), 3.0); t.set(String::from("bangClear"), 4.0); t }); t.set(String::from("none"), { let mut t = JsMap::new(); t.set(String::from("fallIn"), 3.0); t.set(String::from("hold"), 4.0); t }); t.set(String::from("foe"), JsMap::new()); t } }
-
-/// (src/game/cmdring.ts:279 FLAT_LEFT: a table nothing writes)
-pub fn flat_left() -> JsMap<String, Vec<String>> { { let mut t = JsMap::new(); t.set(String::from("door"), alloc::vec![String::from("fallIn"), String::from("hold")]); t } }
