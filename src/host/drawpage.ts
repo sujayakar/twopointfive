@@ -186,7 +186,7 @@ async function main(): Promise<void> {
     // (the run's end card, once each time one is due; a restart or a load is another end to come)
     { const e = D.u[view() + View.ended]; if (e !== ended) { ended = e; if (e) onEnded(); } }
     D.fresh();
-    skyFrom(engine, D); fogFrom(fog, D); rimsFrom(rims, D, dt); weather.frame(cam);
+    skyFrom(engine, D); fogFrom(fog, D); rimsFrom(rims, D); weather.frame(cam);
     { const o = view(); engine.settings.nvAmount = D.f[o + View.night]; engine.settings.hitFlash = D.f[o + View.hit]; }
     game.look(lookNumbers(engine.settings, engine.world, !!ch.cast));
     const t1 = performance.now();

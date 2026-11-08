@@ -48,7 +48,7 @@ let all = true;
 const say = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
 const hush = async <T,>(f: () => T | Promise<T>): Promise<T> => { const log = console.log; console.log = () => {}; try { return await f(); } finally { console.log = log; } };
 const stand = async (seats: number) => { Math.random = mulberry32(0xc0de); const W: any = await standUp({ seed: 9, seats }); const r: any = await hush(() => startFromQuery(W.game, '?roomclear&squad4')); return { W, g: W.game, why: r?.why as string | undefined }; };
-const INK = F.OUTLINE_INK, mix = (hue: keyof typeof INK) => INK.pale.map((v, i) => v + (INK[hue][i] - v) * F.FINDME.colour);
+const INK = F.OUTLINE_INK, mix = (hue: keyof typeof INK) => INK.pale.map((v, i) => v + (INK[hue][i] - v) * F.OUTLINE_LOOK.colour);
 const inkIs = (m: { ink: number[] }, hue: keyof typeof INK) => m.ink.every((v, i) => Math.abs(v - mix(hue)[i]) < 1e-9);
 const hueOf = (m: { ink: number[] }) => (['you', 'purple', 'red', 'blue'] as const).find(h => inkIs(m, h)) ?? '?';
 
@@ -77,13 +77,13 @@ try {
   const two = g.seats.length === 2, v0 = g.seats[0].view, v1 = (g.seats[1] ?? g.seats[0]).view, p0 = v0.player, p1 = v1.player;
   const team: any[] = SE.teamMen(g), dark = () => { for (const p of SE.men(g)) { p.visibility = 0.04; p.nvAmount = 0; } for (const gd of team) gd.visibility = 0.04; };
   const show = (i: number) => { g.localSeat = g.seats[Math.min(i, g.seats.length - 1)]; };
-  const fill = () => { const M = makeOutlineFrame(); dark(); findMeOutline(M, g, 0); return M; };
+  const fill = () => { const M = makeOutlineFrame(); dark(); findMeOutline(M, g); return M; };
 
   // ---- rims · both
   show(0); const A = fill(), a = A.mates.filter(m => m.on), byId = (L: typeof a, id: number) => L.find(m => m.owner === id);
   const pairHue = (gd: any) => gd.unit?.pair === 'red' ? 'red' : 'blue', reds = team.filter(gd => pairHue(gd) === 'red').length;
-  const matesOk = (L: typeof a) => team.every(gd => { const m = byId(L, gd.char.id); return !!m && inkIs(m, pairHue(gd)) && m.times === F.FINDME.mates && m.strength === 1; });
-  const rims = two && !why && A.on && A.owner === p0.char.id && inkIs(A, 'you') && a.length === 5 && team.length === 4 && reds === 2 && matesOk(a) && !!byId(a, p1.char.id) && inkIs(byId(a, p1.char.id)!, 'purple') && byId(a, p1.char.id)!.times === F.FINDME.mates;
+  const matesOk = (L: typeof a) => team.every(gd => { const m = byId(L, gd.char.id); return !!m && inkIs(m, pairHue(gd)) && m.times === F.OUTLINE_LOOK.mates; });
+  const rims = two && !why && A.on && A.owner === p0.char.id && inkIs(A, 'you') && a.length === 5 && team.length === 4 && reds === 2 && matesOk(a) && !!byId(a, p1.char.id) && inkIs(byId(a, p1.char.id)!, 'purple') && byId(a, p1.char.id)!.times === F.OUTLINE_LOOK.mates;
   say(rims, 'rims: from the first seat every man of the team is rimmed — his own yellow, the other player purple, the red pair red, the blue pair blue',
     `seats ${g.seats.length}${why ? ` · refused: ${why}` : ''} · his own: ${A.on ? hueOf(A) : 'OFF'} · others rimmed ${a.length} (5 wanted): ${a.map(m => `#${m.owner} ${hueOf(m)}`).join(' ')}`);
   show(1); const B = fill(), b = B.mates.filter(m => m.on);
@@ -94,11 +94,10 @@ try {
 
   // ---- down
   show(0); const was = p1.down; p1.down = true; const C = fill().mates.filter(m => m.on);
-  show(1); const E = fill(), e = E.mates.filter(m => m.on), mineStill = E.on && E.strength === 0 && e.length === 5 && !!byId(e, p0.char.id);   // (his own page: he is down, the team is not)
+  show(1); const E = fill(), e = E.mates.filter(m => m.on), mineStill = E.on && e.length === 5 && !!byId(e, p0.char.id);   // (his own page: he is down, the team is not)
   const allDownWas = g.recap.allDown; g.recap.allDown = true; const allOff = !fill().on; g.recap.allDown = allDownWas; p1.down = was; show(0);
-  F.setFindMe('mates', 0); const D = fill(), alone = D.on && D.mates.every(m => !m.on); F.setFindMe('mates', F.FINDME_START.mates);
-  say(two && C.length === 4 && !byId(C, p1.char.id) && mineStill && allOff && alone, 'down: a player who is down gives his place up on the other screen and keeps the team\'s rims on his own; both down, none; the teammates\' row at none leaves his own rim alone',
-    `the second player down: ${C.length} others rimmed on the first's screen (4 wanted), his among them ${!!byId(C, p1.char.id)}; on his own screen his rim's strength ${E.strength} and ${e.length} others (5 wanted) · both down: the frame ${allOff ? 'off' : 'ON'} · teammates' row at none: his own ${D.on ? 'on' : 'OFF'}, others ${D.mates.filter(m => m.on).length}`);
+  say(two && C.length === 4 && !byId(C, p1.char.id) && mineStill && allOff, 'down: a player who is down gives his place up on the other screen and keeps the team\'s rims on his own; both down, none',
+    `the second player down: ${C.length} others rimmed on the first's screen (4 wanted), his among them ${!!byId(C, p1.char.id)}; on his own screen ${e.length} others (5 wanted) · both down: the frame ${allOff ? 'off' : 'ON'}`);
 
   // ---- plans · faint
   // (a floor spot some way off that the seat's own order book takes: the first one it does not refuse)
@@ -183,14 +182,14 @@ try {
   // ---- one
   const S1 = await stand(1), g1 = S1.g; for (let i = 0; i < 60; i++) S1.W.step(DT);
   for (const gd of SE.teamMen(g1) as any[]) gd.visibility = 0.04; g1.player.visibility = 0.04; g1.player.nvAmount = 0;
-  const M1 = makeOutlineFrame(); findMeOutline(M1, g1, 0); const m1 = M1.mates.filter(m => m.on), t1 = [...((g1.verdict as any).tracks as Map<number, any>).values()].filter(T => T.human);
+  const M1 = makeOutlineFrame(); findMeOutline(M1, g1); const m1 = M1.mates.filter(m => m.on), t1 = [...((g1.verdict as any).tracks as Map<number, any>).values()].filter(T => T.human);
   const one = g1.seats.length === 1 && SE.playerName(g1, g1.player) === 'Player' && t1.length === 1 && t1[0].name === 'Player' && t1[0].tone === 'you' && PF.plansToDraw(g1).length === 1
     && M1.on && inkIs(M1, 'you') && m1.length === 4 && m1.filter(m => inkIs(m, 'red')).length === 2 && m1.filter(m => inkIs(m, 'blue')).length === 2;
   say(one, 'one: a game of one seat is as it was — Player, one plan to draw, the four rimmed red and blue', `${t1.map(T => `${T.name} (${T.tone})`).join(' ')} · plans ${PF.plansToDraw(g1).length} · his own ${hueOf(M1)}, others ${m1.map(hueOf).join(' ')}`);
 
   // ---- pure
   // (the orders given above are the game's own and move its word: what is held is the asking — every way this file asks, from both seats, with plans up)
-  const ask = () => { findMeOutline(makeOutlineFrame(), g, 0); findMeOutline(makeOutlineFrame(), g, DT); PF.plansToDraw(g); drawn(g); };
+  const ask = () => { findMeOutline(makeOutlineFrame(), g); PF.plansToDraw(g); drawn(g); };
   send(v0); send(v1); for (let i = 0; i < 6; i++) W.step(DT);
   dark(); show(0); const h0 = stateHash(g); show(1); ask(); show(0); ask(); const h1 = stateHash(g);
   say(h0 === h1 && typeof h0 === 'string' && h0.length > 0, 'pure: rims filled, plans listed and the overlay drawn from both seats leave the game\'s state word where it was', `${h0 === h1 ? 'equal' : 'MOVED'}`);
