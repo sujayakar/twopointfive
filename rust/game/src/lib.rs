@@ -340,7 +340,6 @@ pub use game_rules::wind;
 pub use game_rules::words;
 pub use game_rules::workstow;
 pub use game_rules::workthings;
-pub use game_rules::wounds;
 pub use game_rules::dice;
 pub use game_rules::mind;
 pub mod state_words;

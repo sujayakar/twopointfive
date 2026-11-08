@@ -106,7 +106,6 @@ fn finish(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
     let line = alloc::format!("{} — the {} reached him where he lay", callsign, b.name);
     let fresh = g.gd[gd].died_at == g.time;
     let had = g.gd[gd].down_by == Some(crate::game::DownBy::Player) || (!fresh && crate::teamtally::team_tallied(g, gd));
-    if g.gd[gd].wound.is_some() { g.gd[gd].wound = None; g.ch[c].anim.wound = None; }
     g.gd[gd].down_kind = Some(crate::game::DownKind::Shot);
     g.gd[gd].down_by = Some(down_by(b));
     if js::truthy(b.who) { g.gd[gd].killer_id = b.who; }
@@ -286,7 +285,7 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
             rep.killed += 1.0;
             let line = alloc::format!("{} down — the {}", g.gd[gd].callsign, b.name);
             let dir = away(at, g.ch[c].pos);
-            crate::combat::kill_guard(g, gd, dir, Some(false), Some(crate::game::DownKind::Shot), Some(down_by(&b)), Some(&line), None);
+            crate::combat::kill_guard(g, gd, dir, Some(false), Some(crate::game::DownKind::Shot), Some(down_by(&b)), Some(&line));
             if js::truthy(spec.who) { g.gd[gd].killer_id = spec.who; }
         } else {
             if r == BlastResult::Wounded { rep.wounded += 1.0; }

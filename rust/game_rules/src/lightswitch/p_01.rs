@@ -423,7 +423,6 @@ pub fn puts_back(g: &crate::game::Game, gd: GuardId) -> bool {
         && g.ch[man.ch].alive
         && man.held.is_none()
         && man.civ.is_none()
-        && man.wound.is_none()
         && man.script.is_none()
         && man.body_duty.is_none()
         && time >= man.dazzled_until

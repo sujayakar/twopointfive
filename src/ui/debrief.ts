@@ -162,7 +162,7 @@ function buildMap(game: Game, events: DebriefRow[], P: ArrayLike<number>, V: Run
   if (QW) { for (const X of game.quiet.exits) { const ex = game.doors.byName(X.door)?.frameCentre ?? [X.x, 0, X.z]; mark('⇥', 'exit', ex[0], ex[2], X.name); } }
   else { const ex = game.doors.byName(M.exfilDoor)?.frameCentre; if (ex) mark('⇥', 'exit', ex[0], ex[2], 'the fire exit'); }
   for (const e of events) { const p = pinnedRow(e); if (!p) continue; const pin = el('i', `pin ${p.cls}`); pin.textContent = p.glyph; pin.title = `${fmtMMSS(e.t)} · ${e.room} · ${e.text}`; place(pin, e.pos[0], e.pos[2]); }
-  if (V) for (const m of namedMen(game, V)) { if (!m.downPos || (m.human && !squadVerdict(V))) continue; const x = el('i', `vfell t-${m.tone ?? 'mate'}`); x.textContent = m.state === 'dead' ? '✕' : m.state === 'wounded' ? '✚' : 'z'; x.title = fellWords(m); place(x, m.downPos[0], m.downPos[1]); }   // (where each man of the team fell; not a `mark`: the three marks are the level's)
+  if (V) for (const m of namedMen(game, V)) { if (!m.downPos || (m.human && !squadVerdict(V))) continue; const x = el('i', `vfell t-${m.tone ?? 'mate'}`); x.textContent = m.state === 'dead' ? '✕' : 'z'; x.title = fellWords(m); place(x, m.downPos[0], m.downPos[1]); }   // (where each man of the team fell; not a `mark`: the three marks are the level's)
   box.title = 'the floor';
   return box;
 }

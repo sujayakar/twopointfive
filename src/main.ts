@@ -1167,7 +1167,7 @@ function pageAudio(game: Game) {
 function worldHooks(engine: Engine, game: Game, audio: AudioEngine) {
   window.__engine = engine; window.__game = game; window.__audio = audio;
   (window as any).__anim = { LIFE, FEET };   // the animation's life layer / foot lock constants (character.ts): renderer noise measurements zero LIFE.on / FEET.on so a still man's silhouette holds still to the pixel (tools/qa/perf-harness.js)
-  (window as any).__killGuard = (i: number, how: 'shot' | 'struck' | 'wounded' = 'shot', zone?: 'side' | 'leg', dir: Vec3 = [1, 0, 0]) => { const gd = game.guards[i]; if (!gd || gd.state === 'dead') return false; killGuard(game, gd, dir, how === 'struck', how, 'player', undefined, how === 'wounded' ? zone ?? 'side' : undefined); return true; };   // staging: drop guard i where he stands (a body on the floor for renderer captures — the torch-shadow boil scene)
+  (window as any).__killGuard = (i: number, how: 'shot' | 'struck' = 'shot', dir: Vec3 = [1, 0, 0]) => { const gd = game.guards[i]; if (!gd || gd.state === 'dead') return false; killGuard(game, gd, dir, how === 'struck', how, 'player'); return true; };   // staging: drop guard i where he stands (a body on the floor for renderer captures — the torch-shadow boil scene)
   // __glass: the glass panes' console handles — on/off (the renderer's pane list), the knobs, a crack on the pane under the cursor or on a named pane, the numbers
   (window as any).__glass = {
     get on() { return engine.settings.glass; }, set on(v: boolean) { engine.settings.glass = !!v; },
