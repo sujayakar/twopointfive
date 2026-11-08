@@ -3,7 +3,7 @@
 // PASS / FAIL each, all headless. No picture and no sound here: 'drawn' is the strip's own row list (game.view.radio, what the HUD draws), not a screen.
 //   cues-lines   every new line of the table falls in the class it was written for, and the defenders' existing calls fall where the ranking puts them
 //   (the strip's own rules, a unit's line gets a row, the same words twice, a class inside its gap, a full strip: rust/game_start/tests/radio.rs)
-//   cues-run     the team met in the mess on levels/block-squads.json: no cue is ever written on a Guard, the net reaches the strip, Sam down is told to the floor, a place on the net is the level's own. CUESRUN_BREAK=1 = Sam's god mode is left on: must fail
+//   cues-run     the team met in the mess on levels/compound.json: no cue is ever written on a Guard, the net reaches the strip, Sam down is told to the floor, a place on the net is the level's own. CUESRUN_BREAK=1 = Sam's god mode is left on: must fail
 // The rule is settled (CUES.on): no line asks the switch off and nothing here writes it (until 2026-11-07 cues-strip's last line and half of every line of
 // cues-run asked the message ring as it was before the rule, and cues-run's first line held the run with the switch on to the run with it off).
 import { readFileSync } from 'node:fs';
@@ -50,8 +50,8 @@ async function rig(seed: number) {
   Math.random = seeded(seed);
   const log = console.log, err = console.error, warn = console.warn; let W: any;
   try { console.log = console.error = console.warn = () => { };
-    W = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'block-squads.json'), 'utf8'))) });
-    await startFromQuery(W.game, new URLSearchParams(`?levelFile=block-squads.json&roomclear=${seed}&squad4`));
+    W = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'compound.json'), 'utf8'))) });
+    await startFromQuery(W.game, new URLSearchParams(`?levelFile=compound.json&roomclear=${seed}&squad4`));
   } finally { console.log = log; console.error = err; console.warn = warn; }
   return W;
 }
@@ -68,7 +68,7 @@ export async function cuesRun(): Promise<boolean> {
   // Sam is stood where the first squad's first posted man is aiming — read off the level's own marks, so a rebuilt floor moves the staging with it
   // (a fixed point in the old mess was out of every eye on the rebuilt block: nobody called anything and three lines went red)
   const rc = g.level.scenarios?.roomClear, aim = rc?.rooms?.find((r: any) => r.id === rc.squads?.[0]?.rooms?.[0])?.marks?.[0]?.aimAt;
-  if (!aim) throw new Error('cues-run: block-squads.json has no first squad room with a mark to stage Sam in front of');
+  if (!aim) throw new Error('cues-run: compound.json has no first squad room with a mark to stage Sam in front of');
   // (THE TEAM IS TOLD TO HOLD WHERE IT STANDS before Sam goes. The page's squad opens following Sam: it walked after him
   // onto the squad's room, dropped the three men who had a line to that spot and lost two of its own, and with god mode off nobody was left to see
   // Sam: 38 s lit on the mark, not a round at him, never down, so the line his fall is owed was never said. The held team still fights from where it

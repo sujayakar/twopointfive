@@ -1,8 +1,8 @@
 // The 'enemysquads' family (game/enemysquads.ts — defender SQUADS on a level whose room clear structure declares them), run through probes.ts:
 //   bun run tools/qa/probes.ts enemysquads | enemysquads-stage | enemysquads-noise | enemysquads-contact | enemysquads-radiocheck
-// PASS / FAIL each, all headless (the Game of headless.ts on levels/block-squads.json, started exactly as the page's scenario row starts it). No order is given
+// PASS / FAIL each, all headless (the Game of headless.ts on levels/compound.json, started exactly as the page's scenario row starts it). No order is given
 // to the team in any of them: what is under test is what each squad DOES with what it hears — how a whole clear goes is the scripted tally's
-// (tools/qa/playthrough.ts --scn block-squads, whose RunOut carries every squad's timeline).
+// (tools/qa/playthrough.ts --scn compound-four, whose RunOut carries every squad's timeline).
 //   enemysquads-stage    the file's three squads stand as dealt (Alpha 3 in the mess, Bravo 5 in the workshop + store, Charlie 3 in comms), sixteen characters
 //   enemysquads-noise    surprise lost on open floor (one loud report where the team starts, nobody in contact): every squad says ONE thing on its net and
 //                        gets on its doors, nobody is sent at the noise, and the first contact call is answered at once — not all of
@@ -62,16 +62,16 @@ async function rig(file: string, seed: number) {
 // spot these probes had picked by eye off the old plan is behind a wall on the new one; the rally is where the file's author gathers the squad, on open floor
 // of the mess in its men's view on the block as it stands (nothing in the format promises that: the lines that stand Sam here say where he ended up, and
 // 'Alpha is in contact' is red when nobody of it sees him)
-const messSpot = (R: any): number[] => { const r = R.data.scenarios.roomClear.squads.find((q: any) => q.id === 'alpha')?.rally; if (!r) throw new Error('enemysquads probes: block-squads.json gives Alpha no rally point to stand Sam on'); return [r[0], 0, r[2]]; };
+const messSpot = (R: any): number[] => { const r = R.data.scenarios.roomClear.squads.find((q: any) => q.id === 'alpha')?.rally; if (!r) throw new Error('enemysquads probes: compound.json gives Alpha no rally point to stand Sam on'); return [r[0], 0, r[2]]; };
 const stood = (g: any) => `Sam at ${g.player.char.pos[0].toFixed(1)}, ${g.player.char.pos[2].toFixed(1)}${inRoom(g, 'mess', g.player.char.pos) ? ', in the mess' : ', NOT in the mess'}`;
 const inRoom = (g: any, id: string, p: number[]) => { const b = g.roomClear.structure.rooms.find((r: any) => r.id === id).bounds; return p[0] >= b.x0 && p[0] <= b.x1 && p[2] >= b.z0 && p[2] <= b.z1; };
 
 export async function enemysquadsStage(): Promise<boolean> {
   const F = family('enemysquads-stage: the squads of the file stand as dealt');
-  const R = await rig('block-squads.json', 1);
+  const R = await rig('compound.json', 1);
   try {
     const g = R.g, rep = squadsReport(g);
-    F.verdict(validateLevelData(R.data).length === 0 && !R.why, 'levels/block-squads.json validates and the scenario starts', `validate ${validateLevelData(R.data).length} errors · start ${R.why ?? 'ok'}`);
+    F.verdict(validateLevelData(R.data).length === 0 && !R.why, 'levels/compound.json validates and the scenario starts', `validate ${validateLevelData(R.data).length} errors · start ${R.why ?? 'ok'}`);
     F.verdict(rep.map((q: any) => `${q.name} ${q.men}`).join(' · ') === 'Alpha 3 · Bravo 5 · Charlie 3' && squadsLive(g), 'three squads take the eleven defenders by the rooms they were dealt into', rep.map((q: any) => `${q.name} ${q.men} ${q.state}`).join(' · '));
     F.verdict(1 + g.guards.length === 16 && g.nightBreach.hostiles.length === 11, 'sixteen characters on the floor: Sam, the four, eleven defenders', `${1 + g.guards.length} characters · ${g.nightBreach.hostiles.length} defenders`);
     const H = g.nightBreach.hostiles;
@@ -85,7 +85,7 @@ export async function enemysquadsStage(): Promise<boolean> {
 export async function enemysquadsNoise(): Promise<boolean> {
   const F = family('enemysquads-noise: surprise lost on open floor — nobody walks out at a noise, every squad stands to on its doors, and the first call is answered at once');
   for (const seed of [1, 2, 3]) {
-    const R = await rig('block-squads.json', seed);
+    const R = await rig('compound.json', seed);
     try {
       const g = R.g; R.step(1);
       const at = [g.player.char.pos[0], 0, g.player.char.pos[2]];
@@ -114,7 +114,7 @@ export async function enemysquadsNoise(): Promise<boolean> {
 export async function enemysquadsContact(): Promise<boolean> {
   const F = family('enemysquads-contact: the team met in the mess — Alpha calls it, Bravo sends men, Charlie locks down');
   {
-    const R = await rig('block-squads.json', 2);
+    const R = await rig('compound.json', 2);
     // (rounds through thin walls, wallpen.ts, are on as the page opens: a teammate's rounds at Alpha's man by the mess's far partition can go on through it
     // and the comms room's, a man of Charlie drop in his own room before its word, and Charlie then be in CONTACT — the squads' rule reading its man down,
     // not the answer to a call on the net these lines ask)
@@ -154,7 +154,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
   try {
     // ---- 2 · on, dark: nothing at the drop; asked for by name; men walk to his post; the body at a man's feet; contact
     { dark(true);
-      const R = await rig('block-squads.json', 1);
+      const R = await rig('compound.json', 1);
       try { const g = R.g; R.step(1); const { m, d } = loneliest(g), t0 = g.time, at = [m.char.pos[0], 0, m.char.pos[2]]; killGuard(g, m, [1, 0, 0], true); R.step(0.1);
         F.verdict(!ev(g, 'Bravo').some(e => e.what === 'contact') && !R.said.some(t => /contact/.test(t)), 'on: the same drop — no contact at the drop, nothing said', `${m.callsign} down @${t0.toFixed(2)}, his nearest mate ${d.toFixed(1)} m off · Bravo ${squadsReport(g).find((q: any) => q.name === 'Bravo').state} · ${R.said.length} radio lines`);
         let walked = 0, n = 0; until(R, 90, () => { for (const x of bravo(g)) if (x.script && x.speed > 0.4) { walked = Math.max(walked, x.speed); n++; } return ev(g, 'Bravo').some(e => e.what === 'contact'); });
@@ -169,7 +169,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
       } finally { R.done(); } }
     // ---- 3 · on, lit: a body in a mate's open view is contact by his eyes, no check needed
     { dark(false); BODY_LIGHT.lit = 0; BODY_LIGHT.litNear = 0;   // (a floor light enough everywhere: what is under test is eyes, cone and line)
-      const R = await rig('block-squads.json', 1);
+      const R = await rig('compound.json', 1);
       try { const g = R.g; R.step(1); const B = bravo(g);
         // the man a mate is looking at: nearest to the line of a mate's chest
         let m = B[0], best = -2; for (const v of B) for (const x of B) { if (x === v) continue; const to = [v.char.pos[0] - x.char.pos[0], v.char.pos[2] - x.char.pos[2]], l = Math.hypot(to[0], to[1]) || 1, c = (to[0] * x.char.chestDir[0] + to[1] * x.char.chestDir[2]) / l; if (l < 10 && c > best && !g.col.segmentBlocked([x.char.pos[0], 1.6, x.char.pos[2]], [v.char.pos[0], 0.9, v.char.pos[2]])) { best = c; m = v; } }
@@ -179,7 +179,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
       } finally { R.done(); } }
     // ---- 4 · on: a man taken from his post — asked for, looked for, no sign: back on their doors, nothing on the net
     { dark(true);
-      const R = await rig('block-squads.json', 1);
+      const R = await rig('compound.json', 1);
       try { const g = R.g; R.step(1); const { m } = loneliest(g), t0 = g.time, home = bravo(g).length;
         const away = () => { m.held = true; m.char.pos[0] = -60; m.char.pos[2] = -60; }; away();   // (in somebody's arm, carried clean off the floor: nobody's eyes on either of them)
         until(R, 120, () => { away(); return ev(g, 'Bravo').some(e => e.what === 'no sign'); });
@@ -195,7 +195,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
       } finally { R.done(); } }
     // ---- 5 · on: a loud drop is contact at once (a drop a mate heard keeps the reaction it had)
     { dark(true);
-      const R = await rig('block-squads.json', 1);
+      const R = await rig('compound.json', 1);
       try { const g = R.g; R.step(1); const { m } = loneliest(g), t0 = g.time;
         g.events.push({ kind: 'shot', pos: [m.char.pos[0], 0, m.char.pos[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID }); killGuard(g, m, [1, 0, 0], false); R.step(0.5);
         const c = first(ev(g, 'Bravo'), 'contact');

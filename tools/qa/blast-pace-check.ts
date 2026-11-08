@@ -4,7 +4,7 @@
 //   · the rain's drip lines (rainFx.ts: found again in shares),
 //   · the game's digest (play itself),
 // compared between the two. Also how many frames after the blast each took to land under the pace.
-//   bun run tools/qa/blast-pace-check.ts [--levels depot,block,warehouse,block-squads,office] [--blasts 3] [--frames 240]
+//   bun run tools/qa/blast-pace-check.ts [--levels depot,block,warehouse,office] [--blasts 3] [--frames 240]
 //   exit 0 = equal on every level · 1 = something differs (named), or an arm did not play under its switch (BLASTARM_BREAK=1 makes the off arm so, and must fail) · 2 = unknown flag
 import { standUp, ROOT } from './headless.ts';
 import { readFileSync } from 'node:fs';
@@ -17,7 +17,7 @@ const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { rainDripPoints, rainDripPending } = await import(`${ROOT}/src/game/rainFx.ts`);
 const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
-const LEVELS = arg('--levels', 'depot,block,warehouse,block-squads,office').split(','), BLASTS = +arg('--blasts', '3'), FRAMES = +arg('--frames', '240'), DT = 1 / 60;
+const LEVELS = arg('--levels', 'depot,block,warehouse,office').split(','), BLASTS = +arg('--blasts', '3'), FRAMES = +arg('--frames', '240'), DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const maskOf = (K: any, l: any) => { const m = l.kind === 2 ? K.dirOf(l) : K.of(l); return m ? Array.from(m as Uint32Array).join(',') : ''; };
 
