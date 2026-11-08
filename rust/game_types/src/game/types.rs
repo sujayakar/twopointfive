@@ -874,6 +874,8 @@ pub struct Game {
     pub ctl: crate::owned::Owned,
     /// the marks on the world (render_decals set.rs): what the picture draws of what happened; no rule reads them, and they are not on the wire
     pub mark_set: crate::owned::Owned,
+    /// the ray grid (scene_boxes `RayGrid`): made from the statics as a tick opens, so it is not on the wire
+    pub ray_grid: crate::owned::Owned,
     /// the stages to come of a wall charge's feel, the picture's half (blast_feel picture.rs)
     pub feel: crate::owned::Owned,
     /// this tick's count of keyed draws a (site, man) (dice.rs): empty between ticks; not on the wire
@@ -1038,6 +1040,7 @@ impl Game {
             stats: Stats::blank(),
             sim: 0,
             ctl: crate::owned::Owned::new(),
+            ray_grid: crate::owned::Owned::new(),
             mark_set: crate::owned::Owned::new(),
             feel: crate::owned::Owned::new(),
             keyed: crate::dice::Keyed::default(),

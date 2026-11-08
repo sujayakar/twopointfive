@@ -201,8 +201,6 @@ pub fn frame(g: &mut Game, h: &Host, dt: f64) -> Vec<game::out_events::OutEvent>
     let (follow, aim) = game::seats::with_seat(g, me, &mut |g| (game::game::game_follow_pos(g, None), g.aim_point));
     let aim = if g.spectate >= 0.0 { None } else { Some(aim) };
     game::camera::follow_camera_update(g, h.cam, dt, follow, aim);
-    let now = g.time;
-    game::render_lights::light_set_update(g, dt, now);
     game::input::input_end_frame(g, h.input);
     core::mem::take(&mut g.out)
 }

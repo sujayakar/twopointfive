@@ -21,8 +21,8 @@ export interface Start { level: Uint8Array; words: string; mannequin: Uint8Array
 
 /** `face_start`'s: the rows that dress the picture are up */
 const DRESS = 1;
-/** `face_step`'s: the lights' envelopes · a rails level's view · the save controller */
-const LIGHTS = 2, VIEW = 4, SAVES = 8;
+/** `face_step`'s: a rails level's view · the save controller */
+const VIEW = 4, SAVES = 8;
 
 /** the save controller with nothing to tell */
 const QUIET = { tag: '', lines: [] as string[] };
@@ -102,7 +102,7 @@ export class DrawGame {
     this.order();
     const n = this.enc.encodeInto(keys, new Uint8Array(this.memory.buffer, this.keys, DrawGame.KEYS)).written;
     this.X.face_hand(this.h, 0, this.hand, HAND.count * 8, this.keys, n);
-    this.X.face_step(this.h, dt, LIGHTS | VIEW | SAVES);
+    this.X.face_step(this.h, dt, VIEW | SAVES);
     this.ticks++; this.done++;
     const t1 = performance.now();
     this.draw();

@@ -113,7 +113,6 @@ pub fn sunk(g: &mut Game, idx: &[usize]) {
 }
 /// the game's own word that a static was written: the mirror compares them again, and what is drawn off the list sees it
 fn box_changed(g: &mut Game) {
-    g.engine.world.statics_dirty = true;
     g.engine.world.geom_serial += 1.0;
     crate::scene_collision::wrote(g);
 }
@@ -482,7 +481,7 @@ fn place(g: &mut Game, st: &mut KitStage) {
     }
     // the porch lamp's glowing box on the wall (a restart cuts the world back to its authored boxes: put again)
     {
-        if let Some(f) = st.fixture.take() { if let Some(i) = g.engine.world.statics.iter().position(|&b| b == f) { g.engine.world.statics.remove(i); g.engine.world.statics_dirty = true; } }
+        if let Some(f) = st.fixture.take() { if let Some(i) = g.engine.world.statics.iter().position(|&b| b == f) { crate::scene_boxes::box_world_drop_static(g, i); } }
         if let (Some(fx), true) = (plan.lamps.porch.fixture.as_ref(), porch_i > 0.0) {
             let (c, half) = (porch_color, or(o.porch.fix_half, T.fixture.half));
             let mut p = MakeBoxP::zeroed();

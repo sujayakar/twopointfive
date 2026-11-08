@@ -313,9 +313,6 @@ pub fn checkpoint(g: &mut game::game::Game, label: &str) -> bool {
     stopped
 }
 
-/// HOST STEP AFTER THE TICK (the headless host's `engine.lights.update(dt, game.time)`): every flash's envelope and retirement, which the next tick's light reads
-pub fn lights(g: &mut game::game::Game, dt: f64) { let now = g.time; game::render_lights::light_set_update(g, dt, now); }
-
 /// HOST STEP AFTER THE TICK (game.ts hostAfter): a tutorial mission staged again opens on its first view, set with the host's camera; a return on its
 /// first line off a rails level. The host's camera is the row the game was handed at its stand (`host_cam`).
 pub fn view(g: &mut game::game::Game) {
