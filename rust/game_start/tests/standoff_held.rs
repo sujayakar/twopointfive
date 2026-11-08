@@ -95,3 +95,68 @@ fn men_point_and_go_round_but_fire_nothing_until_the_shield_is_gone() {
         assert!(first >= 0.35, "seed {s}: the first round {first:.2} s after: no beat");
     }
 }
+
+/// THE RULE: a round of his own side meant for Sam goes into the man in his arm: fired from square in front it takes the man, shot by his own, Sam untouched, and the shooter says so; the shot itself does not raise the floor. The control is
+/// the round from dead astern, past the man: it stops in Sam.
+/// A FAILURE MEANS: a shield that does not shield, or one that stops a round from behind.
+#[test]
+fn a_round_of_his_own_side_goes_into_the_man_in_his_arm() {
+    for s in SEEDS {
+        let (mut p, held, a, _, at) = the_hall(s);
+        p.sam_hurtable();
+        assert!(p.sam_holds(held), "seed {s}");
+        p.point_at([at[0] + 8.0, at[1]]);
+        p.run(0.3);
+        let front = [p.sam_at()[0] + 4.2, p.sam_at()[1]];
+        stood_facing(&mut p, a, front, at);
+        p.until(1.5, |p| p.in_standoff(a).is_some()).unwrap_or_else(|| panic!("seed {s}: he never saw it"));
+        p.pin_man(a, front, yaw_to(front, at), GuardState::Alert, 1.0);
+        p.frame();
+        let (was, esc, n0) = (p.sam_down_hits(), p.escalation(), p.lines(a).len());
+        let chest = p.sam_at();
+        p.round_from(a, [chest[0], 1.25, chest[1]]);
+        p.run(3.0 / 60.0);
+        assert!(!p.up(held), "seed {s}: the round did not take him");
+        assert_eq!(p.down_how(held), Some((game::game::DownKind::Shot, game::game::DownBy::Guard)), "seed {s}");
+        assert_eq!(p.sam_down_hits(), was, "seed {s}: Sam took it");
+        assert_eq!(p.escalation(), esc, "seed {s}: the shot itself moved the alarm");
+        assert!(p.lines(a).len() > n0, "seed {s}: the shooter says nothing");
+        drop(p);
+
+        let (mut p, held, a, _, at) = the_hall(s);
+        p.sam_hurtable();
+        assert!(p.sam_holds(held), "seed {s}");
+        p.point_at([at[0] + 8.0, at[1]]);
+        p.run(0.3);
+        let was = p.sam_down_hits();
+        let behind = [p.sam_at()[0] - 4.2, p.sam_at()[1]];
+        p.pin_man(a, behind, yaw_to(behind, at), GuardState::Alert, 1.0);
+        p.frame();
+        let chest = p.sam_at();
+        p.round_from(a, [chest[0], 1.25, chest[1]]);
+        p.run(3.0 / 60.0);
+        assert!(p.up(held), "seed {s}: from astern it took the man in front");
+        assert_ne!(p.sam_down_hits(), was, "seed {s}: from astern it should stop in Sam");
+    }
+}
+
+/// THE RULE: a man finds no shield in the dark: the same pair with the lights off, the same man looking: no standoff forms, and no round is fired at a pair nobody can see. The control is the lit hall above.
+/// A FAILURE MEANS: a guard sees through the dark because a hold is on, and the picture says otherwise.
+#[test]
+fn nobody_stands_off_a_pair_he_cannot_see() {
+    for s in SEEDS {
+        let at = [14.0 + nudge(s, 90), 15.0 + nudge(s, 91)];
+        let mut sc = Scene::new("hall");
+        sc.room("hall", 6.0, 6.0, 34.0, 24.0).room("back", 6.0, 24.0, 34.0, 28.0).door("back-door", Axis::X, 24.0, 28.0);
+        sc.bulb_off(14.0, 15.0).bulb_off(24.0, 15.0).sam(at[0] - 0.8, at[1]);
+        sc.sentry("held", at, [at[0] + 6.0, at[1]]).sentry("a", [9.0, 26.0], [9.0, 28.0]);
+        let mut p = Play::scene(&sc, &Opts { seed: s, ..Default::default() });
+        p.sam_unhurt();
+        p.run(0.1);
+        let (held, a) = (p.guard("held"), p.guard("a"));
+        assert!(p.sam_holds(held), "seed {s}");
+        stood_facing(&mut p, a, [at[0] + 12.0, at[1]], at);
+        for _ in 0..6 * 60 { p.frame(); assert!(p.in_standoff(a).is_none(), "seed {s}: a standoff round a pair in the dark"); }
+        assert_eq!(p.rounds_fired(a), 0.0, "seed {s}");
+    }
+}
