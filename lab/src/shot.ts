@@ -4,7 +4,7 @@ import { pathTracer } from './stages/path';
 import { Present } from './present';
 import { realtime, noDenoise } from './stages/realtime';
 import type { V3 } from './math';
-export interface View { w: number; h: number; hour?: number; cut?: number; look?: V3; yaw?: number; pitch?: number; dist?: number; fov?: number; samples: number; method?: string; tick?: number; doors?: Record<string, number> | number; lamps?: 'auto' | 'on' | 'off'; bias?: number; scale?: number; warm?: number }
+export interface View { w: number; h: number; hour?: number; cut?: number; look?: V3; yaw?: number; pitch?: number; dist?: number; fov?: number; samples: number; method?: string; tick?: number; doors?: Record<string, number> | number; lamps?: 'auto' | 'on' | 'off'; bias?: number; scale?: number; warm?: number; jpeg?: boolean; run?: boolean }
 const methods: Record<string, () => Method> = { reference: () => pathTracer(), realtime: () => realtime(), raw: () => realtime({ name: 'raw', denoise: noDenoise }) };
 export function register(name: string, m: () => Method) { methods[name] = m; }
 export async function shots() {
@@ -14,9 +14,9 @@ export async function shots() {
     lab.tick = v.tick ?? 0; lab.hour = v.hour ?? 15.2; lab.cut = lab.wantCut = v.cut ?? 1e9; lab.lampsMode = v.lamps ?? 'auto'; present.bias = v.bias ?? 0; const c = lab.camera; Object.assign(c.want, { look: v.look ?? [0, 3, 0], yaw: v.yaw ?? 0.62, pitch: v.pitch ?? 0.94, dist: v.dist ?? 44 }); c.fov = v.fov ?? 0.40; c.snap();
     for (const d of lab.building.doors) d.open = d.want = typeof v.doors === 'number' ? v.doors : v.doors?.[d.name] ?? 0; lab.pose();
     const s = v.scale ?? 1; lab.resize([Math.round(v.w * s), Math.round(v.h * s)], [v.w, v.h]); const name = v.method ?? 'reference'; let m = made.get(name); if (!m) made.set(name, m = methods[name]!()); await lab.use(m); lab.frameNo = 0;
-    const t0 = performance.now(); for (let i = 0; i < v.samples; i++) { lab.draw(); if (i % 2 === 1) await lab.gpu.device.queue.onSubmittedWorkDone(); } await lab.gpu.device.queue.onSubmittedWorkDone(); const ms = (performance.now() - t0) / v.samples;
-    const out = lab.gpu.device.createTexture({ size: [v.w, v.h], format: 'rgba8unorm', usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC }); const e = lab.gpu.device.createCommandEncoder(); present.run(e, lab, lab.graph.texture(m.result), out.createView(), 'rgba8unorm', { snap: true, grain: 0 }); lab.gpu.device.queue.submit([e.finish()]);
-    const { readTexture } = await import('./gpu'); const r = await readTexture(lab.gpu, out); const cv = document.createElement('canvas'); cv.width = v.w; cv.height = v.h; cv.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(r.data), v.w, v.h), 0, 0); out.destroy(); return { png: cv.toDataURL('image/png'), ms };
+    const t0 = performance.now(); lab.graph.timer.ms.clear(); for (let i = 0; i < v.samples; i++) { if (v.run) lab.step(); lab.draw(); if (i % 2 === 1) await lab.gpu.device.queue.onSubmittedWorkDone(); } await lab.gpu.device.queue.onSubmittedWorkDone(); const ms = (performance.now() - t0) / v.samples;
+    const out = lab.gpu.device.createTexture({ size: [v.w, v.h], format: 'rgba8unorm', usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC }); const e = lab.gpu.device.createCommandEncoder(); const pre = name === 'reference' ? 'ref' : 'rt', G = (i: number) => lab.graph.texture(pre + 'Glow' + i); present.run(e, lab, lab.graph.texture(m.result), out.createView(), 'rgba8unorm', { snap: true, grain: 0, glow: G(3), wide: G(5), wider: G(6) }); lab.gpu.device.queue.submit([e.finish()]);
+    const { readTexture } = await import('./gpu'); const r = await readTexture(lab.gpu, out); const cv = document.createElement('canvas'); cv.width = v.w; cv.height = v.h; cv.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(r.data), v.w, v.h), 0, 0); out.destroy(); const gpu = Object.fromEntries([...lab.graph.timer.ms].map(([k, v]) => [k, +v.toFixed(3)])); return { png: v.jpeg ? cv.toDataURL('image/jpeg', 0.93) : cv.toDataURL('image/png'), ms, gpu, sum: +Object.values(gpu).reduce((a, b) => a + b, 0).toFixed(2), render: lab.graph.render };
   };
   return { lab, shot, counts: lab.scene.counts };
 }

@@ -15,3 +15,5 @@ do_not_commit/
 
 # Local playwright venv for tools/headless (see .claude/skills/verify)
 .venv-headless/
+lab/dist
+lab/node_modules

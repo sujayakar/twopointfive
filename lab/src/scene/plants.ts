@@ -29,7 +29,7 @@ export function plantKit(w: World): Kit {
 export function tree(w: World, kit: Kit, at: V3, height: number, seed: number, tint: V3 = [0.50, 0.62, 0.22]) {
   const r = rng(seed), ends: [V3, number][] = [];
   const limb = (a: V3, dir: V3, l: number, ra: number, depth: number) => {
-    const b = add(a, mul(dir, l)), rb = ra * 0.62; w.taper(a, b, ra, rb, M.bark!, { tint: [0.9, 0.85, 0.8] }); w.ellipsoid(b, [rb * 1.02, rb * 1.02, rb * 1.02], M.bark!, { tint: [0.9, 0.85, 0.8] });
+    const b = add(a, mul(dir, l)), rb = ra * 0.62; w.taper(a, b, ra, rb, M.bark!, { tint: [0.9, 0.85, 0.8], flags: F.CUT }); w.ellipsoid(b, [rb * 1.02, rb * 1.02, rb * 1.02], M.bark!, { tint: [0.9, 0.85, 0.8], flags: F.CUT });
     if (depth === 0) { ends.push([b, l]); return; }
     const n = depth > 1 ? 3 : 3 + (r() > 0.5 ? 1 : 0), a0 = r() * 6.28;
     for (let i = 0; i < n; i++) { const an = a0 + i * 6.2832 / n + (r() - 0.5) * 0.7, out = 0.55 + 0.35 * r(); limb(b, norm([dir[0] * 0.5 + Math.cos(an) * out, 0.75 + 0.3 * r(), dir[2] * 0.5 + Math.sin(an) * out]), l * (0.62 + 0.2 * r()), rb * 0.8, depth - 1); }

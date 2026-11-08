@@ -8,7 +8,7 @@
 import type { Gpu } from './gpu';
 import { Timer } from './gpu';
 
-export type Size = 'render' | 'half' | 'output' | [number, number];
+export type Size = 'render' | 'half' | 'output' | [number, number] | { of: 'output'; div: number };
 export type Signal = { format: GPUTextureFormat; size: Size; history?: boolean };
 export type Access = 'read' | 'read_write' | 'uniform';
 export interface Stage {
@@ -42,7 +42,7 @@ export class Graph {
 
   signal(name: string, format: GPUTextureFormat, size: Size, history = false) { this.signals.set(name, { format, size, history }); return this; }
   bind(name: string, t: GPUTexture) { this.external.set(name, t); this.signals.set(name, { format: t.format, size: [t.width, t.height] }); }
-  px(s: Size): [number, number] { return s === 'render' ? this.render : s === 'output' ? this.output : s === 'half' ? [Math.ceil(this.render[0] / 2), Math.ceil(this.render[1] / 2)] : s; }
+  px(s: Size): [number, number] { return s === 'render' ? this.render : s === 'output' ? this.output : s === 'half' ? [Math.ceil(this.render[0] / 2), Math.ceil(this.render[1] / 2)] : Array.isArray(s) ? s : [Math.max(1, Math.ceil(this.output[0] / s.div)), Math.max(1, Math.ceil(this.output[1] / s.div))]; }
 
   resize(render: [number, number], output: [number, number]) {
     if (render[0] === this.render[0] && render[1] === this.render[1] && output[0] === this.output[0] && output[1] === this.output[1]) return false;
@@ -102,7 +102,7 @@ export class Graph {
       if (!group) this.groups.set(key, group = this.g.device.createBindGroup({ layout: b.layout, entries: res.map((resource, binding) => ({ binding, resource: resource as GPUBindingResource })) }));
       const p = enc.beginComputePass({ label: s.name, timestampWrites: this.timer.pass(s.name) });
       p.setPipeline(b.pipe); p.setBindGroup(0, this.shared.group()); p.setBindGroup(1, group);
-      if (typeof s.over === 'object' && 'groups' in s.over) p.dispatchWorkgroups(...s.over.groups());
+      if (typeof s.over === 'object' && !Array.isArray(s.over) && 'groups' in s.over) p.dispatchWorkgroups(...s.over.groups());
       else { const [w, h] = this.px(s.over), [gx, gy] = s.wg ?? [8, 8]; p.dispatchWorkgroups(Math.ceil(w / gx), Math.ceil(h / gy)); }
       p.end();
     }

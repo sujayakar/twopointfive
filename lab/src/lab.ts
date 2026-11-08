@@ -19,7 +19,7 @@ export class Lab {
   gpu!: Gpu; graph!: Graph; scene!: SceneGpu; sky!: Sky; camera = new Camera(); building!: Building;
   tick = 0; frameNo = 0; seed = 0; hour = 15.2; hourNow!: Hour; level = 0; cut = 1e9; wantCut = 1e9; knobs = [0, 0, 0, 0]; lampsMode: 'auto' | 'on' | 'off' = 'auto'; wind: V3 = norm([1, 0, 0.35]); exposure = 0; paused = false;
   private prev: ReturnType<Camera['frame']> | null = null; prevAt = new Map<Piece, { at: V3; rot: Piece['rot'] }>(); slots = new Map<Piece, number>(); jitter: [number, number] = [0, 0]; private prevJitter: [number, number] = [0, 0];
-  methods = new Map<string, { m: Method; stages: Stage[] }>(); current = ''; doorsAuto = false; torch: { on: boolean; at: V3; dir: V3 } | null = null; jittered = true;
+  methods = new Map<string, { m: Method; stages: Stage[] }>(); current = ''; doorsAuto = false; torch: { on: boolean; at: V3; dir: V3 } | null = null; jittered = true; lampGroup: Record<string, number> = {};
   async open(canvas: HTMLCanvasElement | null) {
     this.gpu = await openGpu(canvas); this.building = makeBuilding(); this.sky = new Sky(this.gpu); await this.sky.init();
     this.scene = new SceneGpu(this.gpu, this.building.world, this.sky.tex);
@@ -41,8 +41,8 @@ export class Lab {
   }
   pose() {
     const b = this.building, t = this.tick * TICK, on = this.scene?.lampOn; for (const d of b.doors) poseDoor(d);
-    const h = hourOf(this.hour), dark = this.lampsMode === 'on' ? 1 : this.lampsMode === 'off' ? 0 : Math.max(h.night, 0.0); this.hourNow = h;
-    b.world.lamps.forEach((l, i) => { if (on && l.kind !== 'spot') on[i] = l.on * (l.night ? dark * (l.name === 'blue' || l.name === 'pool' ? 1 : 1) : 1); if (on && (l.name === 'blue')) on[i] = Math.max(on[i]!, this.lampsMode === 'off' ? 0 : 0.6); });
+    const h = hourOf(this.hour), dark = this.lampsMode === 'on' ? 1 : this.lampsMode === 'off' ? 0 : h.night, inside = this.lampsMode === 'auto' ? Math.max(dark, 0.45) : dark; this.hourNow = h;
+    b.world.lamps.forEach((l, i) => { if (on && l.kind !== 'spot') on[i] = l.on * (l.name === 'terrace' || l.name === 'pool' ? dark : inside) * (this.lampGroup[l.name] ?? 1); });
     for (const p of b.people) { const s = posePerson(p, t); if (s) { const l = b.world.lamps[s.lamp]!; l.at = s.at; l.v = s.dir; if (on) on[s.lamp] = h.night > 0.5 ? 1 : 0; } }
   }
   /** the frame's numbers to the GPU */
