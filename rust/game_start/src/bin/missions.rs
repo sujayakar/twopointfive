@@ -8,7 +8,8 @@
 //! every build, which is all that is asked of him: a row is for setting beside the same row of another build, never a claim about how hard a mission is.
 //!
 //! WHAT A ROW SAYS, summed over the seeds: the squad's men up at the end of those staged · enemies left of those staged · floors cleared · when the first of the squad
-//! fell (median, and in how many runs) · when the floor was clear (median) · rounds fired by each side · magazine changes begun by each side · the enemy man-seconds each
+//! fell (median, and in how many runs) · when the floor was clear (median) · rounds fired by each side · magazine changes begun by each side · how long open ways onto floor nobody has been on were within 4 m of
+//! a man of the squad, and how much of that a gun of theirs was on them (a second a way) · the enemy man-seconds each
 //! rule of the list had a man. Eight seeds of the thirteen at both difficulties (208 runs) are three minutes on four cores.
 //!
 //! WHAT IT DOES NOT SAY: anything of stealth, of Sam's own gun, of a rescue, or of what a commander who waits and looks would meet. On one seed a floor is a coin toss:
@@ -24,10 +25,13 @@ const LEVELS: [&str; 13] = ["barracks", "block", "compound", "defuse", "depot", 
 /// an order every so many frames, the first half a second in
 const ORDER_EVERY: usize = 300;
 const ORDER_FIRST: usize = 30;
+/// the open ways near the squad are counted every so many frames, within so far of a man
+const WAYS_EVERY: usize = 10;
+const WAYS_M: f64 = 4.0;
 
 /// what one run came to
 #[derive(Clone, Debug, Default, PartialEq)]
-struct Run { up: usize, squad: usize, left: usize, enemies: usize, fell: Option<f64>, clear: Option<f64>, rounds: [f64; 2], reloads: [u32; 2], had: BTreeMap<String, f64> }
+struct Run { up: usize, squad: usize, left: usize, enemies: usize, fell: Option<f64>, clear: Option<f64>, rounds: [f64; 2], reloads: [u32; 2], ways: [f64; 2], had: BTreeMap<String, f64> }
 
 fn file_of(level: &str) -> String {
     let look = format!("{level}-gwot.json");
@@ -69,6 +73,7 @@ fn play(level: &str, hard: bool, seed: u32, secs: f64) -> Run {
             was.insert(m.0, now);
             if side == 1 && p.g.gd[m].state != GuardState::Dead { if let Some(rule) = p.rule(m) { *r.had.entry(rule.to_string()).or_default() += 1.0 / 60.0; } }
         }
+        if f % WAYS_EVERY == 0 { for (_, on) in p.watched(WAYS_M) { r.ways[0] += WAYS_EVERY as f64 / 60.0; if on { r.ways[1] += WAYS_EVERY as f64 / 60.0; } } }
         if r.clear.is_none() && enemies(&p).into_iter().all(|m| !p.up(m)) { r.clear = Some(t); }
     }
     r.up = p.mates().into_iter().filter(|&m| p.up(m)).count();
@@ -82,7 +87,7 @@ fn median(mut v: Vec<f64>) -> String {
     format!("{:.1}", v[v.len() / 2])
 }
 
-const HEAD: [&str; 14] = ["level", "difficulty", "runs", "squad up", "squad", "enemies left", "enemies", "cleared", "first fell s", "fell in", "clear s", "rounds squad/enemy", "reloads squad/enemy", "rules man-secs"];
+const HEAD: [&str; 16] = ["level", "difficulty", "runs", "squad up", "squad", "enemies left", "enemies", "cleared", "first fell s", "fell in", "clear s", "rounds squad/enemy", "reloads squad/enemy", "ways s", "ways watched s", "rules man-secs"];
 
 fn row(level: &str, hard: bool, runs: &[Run]) -> String {
     let sum = |f: &dyn Fn(&Run) -> f64| runs.iter().map(f).sum::<f64>();
@@ -93,6 +98,7 @@ fn row(level: &str, hard: bool, runs: &[Run]) -> String {
     [level.to_string(), if hard { "hard" } else { "standard" }.into(), runs.len().to_string(), sum(&|r| r.up as f64).to_string(), sum(&|r| r.squad as f64).to_string(), sum(&|r| r.left as f64).to_string(),
      sum(&|r| r.enemies as f64).to_string(), runs.iter().filter(|r| r.left == 0).count().to_string(), median(fell.clone()), fell.len().to_string(), median(clear),
      format!("{}/{}", sum(&|r| r.rounds[0]), sum(&|r| r.rounds[1])), format!("{}/{}", sum(&|r| r.reloads[0] as f64), sum(&|r| r.reloads[1] as f64)),
+     format!("{:.0}", sum(&|r| r.ways[0])), format!("{:.0}", sum(&|r| r.ways[1])),
      had.iter().map(|(k, v)| format!("{k} {v:.1}")).collect::<Vec<_>>().join(" · ")].join("\t")
 }
 
@@ -105,7 +111,7 @@ fn seeds_of(word: &str) -> Vec<u32> {
 fn fail(why: &str) -> ! { eprintln!("missions: {why}"); std::process::exit(2) }
 
 /// the columns that are numbers to be added up
-const ADDED: [usize; 6] = [2, 3, 4, 5, 6, 7];
+const ADDED: [usize; 8] = [2, 3, 4, 5, 6, 7, 13, 14];
 
 fn diff(before: &str, after: &str) {
     let read = |f: &str| -> BTreeMap<(String, String), Vec<String>> {

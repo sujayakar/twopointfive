@@ -7,6 +7,11 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// how far through an opening with no door in it the floor beyond it is asked of: the first that is a room's (a bed may stand at the hole)
+const BEYOND_M: [f64; 4] = [0.9, 1.5, 2.1, 2.7];
+/// a gun within this of an opening, with a line to it, is on it
+const ON_IT: f64 = 25.0 * v3::DEG;
+
 /// Does his script hold this point of ours. By value: a point the cover made is p + sin(yaw) * r, no other writer holds its bits, and every move of it is written through to the script here (poseFor, turnOut). (cover.ts:630,640,675,700 `gd.script?.aimAt === J.aim`)
 fn script_aim_is(g: &Game, gd: GuardId, aim: V3) -> bool {
     g.gd[gd].script.as_ref().map_or(false, |s| s.aim_at == Some(aim))
@@ -257,6 +262,47 @@ pub fn cover_tick(g: &mut Game) {
     g.cover.deal_at = g.time + k.deal_secs;
     if !g.cover.nav { cover_build(g); }
     cover_deal(g);
+}
+
+/// Does it give onto floor nobody of the team has been on, with nothing shut in it.
+pub fn onto_unknown(g: &mut Game, o: CoverOpeningId) -> bool {
+    let row = &g.tab.cover_opening[o];
+    if row.kind == OpeningKind::Rear { return false; }
+    let (at, n, door) = (row.at, row.n, row.door);
+    if door.map_or(false, |d| m::abs(crate::doors::door_angle(g, d)) < 0.5) { return false; }
+    for s in [1.0, -1.0] {
+        let room = match door {
+            Some(d) => crate::cleared::cleared_rooms_room_by(g, d, s),
+            None => BEYOND_M.iter().map(|&d| crate::cleared::cleared_rooms_room_at(g, [at[0] + n[0] * s * d, 0.0, at[2] + n[1] * s * d])).find(|&r| js::truthy(r)).unwrap_or(0.0),
+        };
+        if !crate::cleared::cleared_rooms_is_known(g, room) { return true; }
+    }
+    false
+}
+
+/// WHAT THE SQUAD HAS A GUN ON (nothing of the game asks it; the checks do): the open ways onto floor nobody of the team has been on, within `reach` of a man who has a line to it,
+/// each with whether a gun of the team's, his player's among them, is within 25 degrees of it with a line.
+pub fn cover_watched(g: &mut Game, reach: f64) -> Vec<(CoverOpeningId, bool)> {
+    let mut eyes: Vec<(V3, f64)> = Vec::new();
+    for gd in crate::seats::team_men(g, &crate::seats::here(g)) {
+        if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+        let c = g.gd[gd].ch;
+        eyes.push((g.ch[c].pos, g.ch[c].aim_yaw));
+    }
+    let mut guns = eyes.clone();
+    for pl in crate::seats::men_up(g) { let c = g.pl[pl].ch; guns.push((g.ch[c].pos, g.ch[c].aim_yaw)); }
+    let mut out = Vec::new();
+    for o in cover_ready(g) {
+        let at = g.tab.cover_opening[o].at;
+        if !eyes.iter().any(|&(p, _)| v3::dist_xz(p, at) <= reach) || !onto_unknown(g, o) { continue; }
+        let mut near = false;
+        for &(p, _) in &eyes { if !near && v3::dist_xz(p, at) <= reach { near = cover_line(g, cover_eye_of(g, p), o); } }
+        if !near { continue; }
+        let mut on = false;
+        for &(p, yaw) in &guns { if !on && m::abs(v3::wrap_angle(v3::yaw_to(p, at) - yaw)) < ON_IT { on = cover_line(g, cover_eye_of(g, p), o); } }
+        out.push((o, on));
+    }
+    out
 }
 
 /// What the deal's closures captured.
