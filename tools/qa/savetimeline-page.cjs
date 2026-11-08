@@ -19,7 +19,7 @@
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', outDir = process.argv[2] || '', BREAK = process.env.SAVEPUTBACK_BREAK === '1', CARDBREAK = process.env.SAVECARD_BREAK === '1';
-const JOBS = (process.env.JOBS || 'on,lesson,off,card').split(',');
+const JOBS = (process.env.JOBS || 'on').split(',');   // (no word: `on`, near six minutes here; the others by name)
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 if (outDir) fs.mkdirSync(outDir, { recursive: true });
