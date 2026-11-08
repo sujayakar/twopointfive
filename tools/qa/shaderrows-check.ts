@@ -1,4 +1,4 @@
-// THE SHADER ROW ON TRIAL (src/ui/shaderrows.ts; Options > Graphics > Shaders): "Start on first frame shaders" (gpu/device.ts PIPE_QUEUE.later: the start waits only
+// THE FIRST-FRAME START (src/ui/shaderrows.ts; `?firstframe`, no row on Options): "Start on first frame shaders" (gpu/device.ts PIPE_QUEUE.later: the start waits only
 // for the pipelines the first frame draws). The Engine is built on a stand-in device that records every module's text and every pipeline asked for and HOLDS each
 // async creation until the check lets it go, in two arms, each a process of its own (the row is read once, when its module is imported):
 //   off      the row off: the start waits for every pipeline it asks for, every pass draws with its own program at once
@@ -10,7 +10,7 @@
 // kernels have one writing now and the gather is the split one, so there is nothing left to hold level.)
 // No browser and no compiler: that the texts COMPILE, and what the row draws, is the page's to say (tools/qa/wgsl-compile.cjs, docs/agents/render.md).
 //   bun run tools/qa/shaderrows-check.ts                     exit 0 = every check passed, 1 = one failed
-//   SHADERROWS_BREAK=1 bun run tools/qa/shaderrows-check.ts  each arm is handed the other arm's row, and the store cases an environment that says off: both arms and the `kept` and `starts` cases must FAIL
+//   SHADERROWS_BREAK=1 bun run tools/qa/shaderrows-check.ts  each arm is handed the other arm's row, and the store cases an environment that says off: both arms and the `old` and `starts` cases must FAIL
 //   bun run tools/qa/shaderrows-check.ts --dump <file>       this tree's boot under the environment's row, a line a module (its length and a digest of its text) and
 //                                                            a line a pipeline, in the order made: for a diff against another checkout's
 export {};
@@ -105,9 +105,9 @@ async function arm(name: Arm, dump: string | null) {
   (engine.settings as unknown as Record<string, unknown>).volLightCap = 4;   // (as high has it: RenderSettings' own 0 is before any preset, and has its own line below)
   const base = JSON.stringify(engine.settings);
   const restirU = (engine.passes as unknown as { restirUData: ArrayBuffer }).restirUData;   // (the restir pass's uniform as the engine last packed it; cfg.y is word 1)
-  const frame = (set: (s: Record<string, unknown>) => void) => {
+  const frame = (set: (s: Record<string, unknown>) => void, moved = false) => {
     Object.assign(engine.settings, JSON.parse(base)); set(engine.settings as unknown as Record<string, unknown>); S.drawn.length = 0; S.wrote.length = 0;
-    try { engine.render(cam, 1, 1 / 60, false); engine.render(cam, 1 + 1 / 60, 1 / 60, false); } catch (e) { return { err: String((e as Error)?.message ?? e).split('\n')[0], by: {} as Record<string, string[]>, none: [] as string[], flags: 0, restirSent: false, cfgY: 0 }; }
+    try { engine.render(cam, 1, 1 / 60, false); if (moved) cam.update(1 / 60, [24, 0, 14], null); engine.render(cam, 1 + 1 / 60, 1 / 60, false); if (moved) cam.update(1, [20, 0, 14], null); } catch (e) { return { err: String((e as Error)?.message ?? e).split('\n')[0], by: {} as Record<string, string[]>, none: [] as string[], flags: 0, restirSent: false, cfgY: 0 }; }
     const by: Record<string, string[]> = {}; const none: string[] = [];
     for (const d of S.drawn) { if (d.pipe === null) none.push(d.pass); else (by[d.pass] ??= []).push(d.pipe); }
     return { err: '', by, none, flags: new Uint32Array(engine.frameData)[62], restirSent: S.wrote.includes(restirU), cfgY: new Uint32Array(restirU)[1] };
@@ -127,7 +127,7 @@ async function arm(name: Arm, dump: string | null) {
     }
     { const fr = frame(s => { s.volumetrics = true; }), got = fr.by.volumetrics ?? []; check(!fr.err && got.length > 0 && got.every(l => l === 'vol'), `${when}: the volumetric pass draws with the one march program`, fr.err || got.join(', ')); }
     // the motion levers are bits of the one program's uniform: a frame the camera moved carries its taps beside the spatial count, whatever has landed
-    const mv = frame(s => { s.restirMotion = 7; s.restirMotionStatic = true; s.restirMotionTaps = 6; }), mvGot = mv.by.direct ?? [], taps = (mv.cfgY >>> 8) & 15;
+    const mv = frame(s => { s.restirMotion = 7; s.restirMotionTaps = 6; }, true), mvGot = mv.by.direct ?? [], taps = (mv.cfgY >>> 8) & 15;
     check(!mv.err && mvGot.length > 0 && mvGot.every(l => l === 'restir') && taps === 6, `${when}: a frame the camera moved runs the one direct program with its motion taps packed beside the spatial count`, mv.err || `direct: ${mvGot.join(', ')}, cfg.y 0x${mv.cfgY.toString(16)}`);
   };
   if (wantFirst) {
@@ -157,79 +157,33 @@ async function arm(name: Arm, dump: string | null) {
   }
 }
 
-// ---- the row's own module: what a load reads (the address, then the kept line), what Options lists and writes. A process a case: the module reads once, at import
+// ---- the row's own module: what a load reads (the address, else where a browser starts). A process a case: the module reads once, at import
 const MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', WIN = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36';
 const STORE = {
-  kept: { kept: '{"firstFrame":true}', search: '' },
-  word: { kept: '{"firstFrame":true}', search: '?firstframe=0' },
-  visit: { kept: null as string | null, search: '?firstframe=1' },
-  // … and in a BROWSER (the harness is none: its own name is not a browser's), where the row starts on for a person
-  starts: { kept: null as string | null, search: '', agent: MAC },
-  // … a line kept by a build that still had Compact shaders and Separate shadow rays as rows: their entries are read past, and dropped when a row is next moved
-  offkept: { kept: '{"compact":true,"splitRays":false,"firstFrame":false}', search: '', agent: WIN },
-  plain: { kept: null as string | null, search: '?compactshaders=0&splitrays=0&firstframe=0', agent: WIN },
-  // … and in a browser a SCRIPT drives (every page tool's): the row starts off there, so a tool's first picture is the settings' own
-  driven: { kept: null as string | null, search: '', agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.0.0 Safari/537.36', driven: true },
-} as Record<string, { kept: string | null; search: string; agent?: string; driven?: boolean }>;
+  // a line an older build kept (the row was on Options until 2026-11-08) means nothing now: read past, never written
+  old: { kept: '{"firstFrame":false}', search: '', agent: MAC, want: true },
+  word: { kept: null as string | null, search: '?firstframe=0', agent: MAC, want: false },
+  visit: { kept: null as string | null, search: '?firstframe=1', want: true },
+  // … and in a BROWSER (the harness is none: its own name is not a browser's), where it starts on for a person
+  starts: { kept: null as string | null, search: '', agent: MAC, want: true },
+  plain: { kept: null as string | null, search: '?compactshaders=0&splitrays=0&firstframe=0', agent: WIN, want: false },
+  // … and in a browser a SCRIPT drives (every page tool's): it starts off there, so a tool's first picture is the settings' own
+  driven: { kept: null as string | null, search: '', agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.0.0 Safari/537.36', driven: true, want: false },
+  // … and with no browser at all: off
+  harness: { kept: null as string | null, search: '', want: false },
+} as Record<string, { kept: string | null; search: string; agent?: string; driven?: boolean; want: boolean }>;
 async function store(name: keyof typeof STORE) {
   const c = STORE[name], LS = 'twopointsix.shaderrows', box = new Map<string, string>(); if (c.kept !== null) box.set(LS, c.kept);
   let writes = 0;
   (globalThis as Record<string, unknown>).localStorage = { getItem: (k: string) => box.get(k) ?? null, setItem: (k: string, v: string) => { writes++; box.set(k, v); }, removeItem: (k: string) => { writes++; box.delete(k); } };
   (globalThis as Record<string, unknown>).location = { search: c.search };
   if (c.agent) Object.defineProperty(globalThis, 'navigator', { value: { userAgent: c.agent, webdriver: c.driven === true }, configurable: true });
-  const { SHADER_ROWS, useShaderRow, shaderRows, shaderRowLabel } = await import(`${ROOT}/src/ui/shaderrows.ts`) as typeof import('../../src/ui/shaderrows');
-  const screen = () => { const secs: string[] = [], rows: { label: string; get: () => boolean; set: (v: boolean) => void; describe: string }[] = [];
-    const reset = shaderRows({ sec: (_p, t) => secs.push(t), flip: (_p, label, get, set, describe) => { rows.push({ label, get, set, describe }); } }, {} as HTMLElement); return { secs, rows, reset }; };
-  const FIRST = 'Start on first frame shaders', on = () => (Object.keys(SHADER_ROWS) as (keyof typeof SHADER_ROWS)[]).filter(k => SHADER_ROWS[k]).sort().join();
-  if (name === 'kept') {
-    check(SHADER_ROWS.firstFrame === true && writes === 0, 'a kept row is this load\'s with no word on the address, and reading it writes nothing', JSON.stringify(SHADER_ROWS));
-    check(screen().secs.length === 0 && screen().rows.length === 0, 'a build that carries no reader of a row lists no row and no section');
-    useShaderRow('firstFrame'); const S1 = screen();
-    check(S1.secs.join() === 'Shaders' && S1.rows.map(r => r.label).join() === FIRST && S1.rows[0].get() === true, 'a row is listed once its reader is in the build, under Shaders, showing the kept choice', S1.rows.map(r => r.label).join());
-    check(S1.rows.every(r => /^[A-Z][^0-9]*$/.test(r.label) && r.label.split(' ').length >= 2 && r.label.split(' ').length <= 5 && !r.label.includes('-') && r.describe.endsWith('This starts the next time you load the page.')), 'its label is a few plain words with no digit, and its line ends by saying when it starts');
-    check(shaderRowLabel('compactshaders') === 'Compact shaders' && shaderRowLabel('splitrays') === 'Separate shadow rays' && shaderRowLabel('firstframe') === FIRST && shaderRowLabel('a-later-build') === 'a-later-build', 'a report from a build that still had the two retired rows reads by their names, and a word no build here knows by itself');
-  } else if (name === 'word') {
-    check(SHADER_ROWS.firstFrame === false && writes === 0 && box.get(LS) === c.kept, 'the address\'s word wins over the kept row for the visit and the kept line is left as it was', `${JSON.stringify(SHADER_ROWS)}, kept ${box.get(LS)}`);
-    useShaderRow('firstFrame'); const S1 = screen();
-    check(S1.rows.length === 1 && S1.rows[0].get() === false && /address is setting this/.test(S1.rows[0].describe), 'Options shows the address\'s word while nobody has moved the row, and says the address is setting it');
-    S1.rows[0].set(false);
-    check(!box.has(LS) && S1.rows[0].get() === false && SHADER_ROWS.firstFrame === false, 'a row moved to where it starts is dropped from the kept line (and this load is not changed by it)', String(box.get(LS)));
-    S1.rows[0].set(true); S1.reset();
-    check(!box.has(LS) && S1.rows[0].get() === false, 'Reset to defaults puts the row back where it starts (off, in the harness) and takes the kept line away');
-  } else if (name === 'starts') {
-    check(on() === 'firstFrame' && writes === 0 && !box.has(LS), 'in a browser a person sits at, with nothing kept and no word, Start on first frame shaders is this load\'s, and nothing is written', on() || 'none');
-    useShaderRow('firstFrame'); const S1 = screen();
-    check(S1.rows.length === 1 && S1.rows[0].label === FIRST && S1.rows[0].get() === true, 'Options shows the one row, on');
-    S1.rows[0].set(false);
-    check(box.get(LS) === '{"firstFrame":false}' && S1.rows[0].get() === false && SHADER_ROWS.firstFrame === true, 'a row that starts on, turned off, is kept off (and this load is not changed by it)', String(box.get(LS)));
-    S1.rows[0].set(true);
-    check(!box.has(LS) && S1.rows[0].get() === true, 'put back on it is where it starts, and nothing is kept');
-    S1.rows[0].set(false); S1.reset();
-    check(!box.has(LS) && S1.rows[0].get() === true, 'Reset to defaults puts the row back where it starts and takes the kept line away');
-  } else if (name === 'offkept') {
-    check(on() === '' && writes === 0 && box.get(LS) === c.kept, 'a row kept off stays off on the next load, the two retired rows\' entries are read past, and reading writes nothing', JSON.stringify(SHADER_ROWS));
-    useShaderRow('firstFrame'); const S1 = screen();
-    check(S1.rows.length === 1 && S1.rows[0].get() === false, 'Options lists the one row, off, and neither retired row');
-    S1.rows[0].set(false);
-    check(box.get(LS) === '{"firstFrame":false}', 'the next move of a row writes only the rows there are: the retired rows\' entries are gone from the kept line', String(box.get(LS)));
-  } else if (name === 'driven') {
-    check(on() === '' && writes === 0 && !box.has(LS), 'in a browser a script drives, Start on first frame shaders starts off, and nothing is written', on() || 'none');
-    useShaderRow('firstFrame'); const S1 = screen();
-    check(S1.rows.length === 1 && S1.rows[0].get() === false, 'Options there shows the row off');
-    S1.rows[0].set(true);
-    check(box.get(LS) === '{"firstFrame":true}', 'turned on there it is kept on, as a row moved off its start is anywhere', String(box.get(LS)));
-  } else if (name === 'plain') {
-    check(on() === '' && writes === 0 && !box.has(LS), 'the old three words at 0 on the address still load: the row off, the two retired words read past, nothing written', JSON.stringify(SHADER_ROWS));
-    useShaderRow('firstFrame'); const S1 = screen();
-    check(S1.rows[0].get() === false && /address is setting this/.test(S1.rows[0].describe), 'Options shows the address\'s word and says the address is setting it');
-  } else {
-    check(SHADER_ROWS.firstFrame === true && !box.has(LS) && writes === 0, 'a word on the address raises its row for the visit and is never written (in the harness, no browser, the row starts off)', JSON.stringify(SHADER_ROWS));
-    useShaderRow('firstFrame'); const S1 = screen();
-    check(S1.rows.length === 1 && S1.rows[0].get() === true, 'Options shows it on');
-    S1.rows[0].set(true);
-    check(box.get(LS) === '{"firstFrame":true}' && S1.rows[0].get() === true, 'turning a row on keeps it', String(box.get(LS)));
-    S1.rows[0].set(false);
-    check(!box.has(LS) && S1.rows[0].get() === false, 'with the row off again nothing is kept');
+  const { SHADER_ROWS, useShaderRow, shaderRowsOn, shaderRowLabel } = await import(`${ROOT}/src/ui/shaderrows.ts`) as typeof import('../../src/ui/shaderrows');
+  check(SHADER_ROWS.firstFrame === c.want && writes === 0, `${name}: the load's first-frame start is ${c.want ? 'on' : 'off'}, and nothing is written`, JSON.stringify(SHADER_ROWS));
+  if (name === 'visit') {
+    check(shaderRowsOn().length === 0, 'a report names no row whose reader is not in the build');
+    useShaderRow('firstFrame'); check(shaderRowsOn().join() === 'firstframe', 'with its reader in the build a report names it by its word');
+    check(shaderRowLabel('compactshaders') === 'Compact shaders' && shaderRowLabel('splitrays') === 'Separate shadow rays' && shaderRowLabel('firstframe') === 'Start on first frame shaders' && shaderRowLabel('a-later-build') === 'a-later-build', 'a report from a build that still had the two retired rows reads by their names');
   }
   return red;
 }
@@ -249,8 +203,8 @@ if (argOf('--dump') !== null) {   // this tree, the environment's row
     else if (!fails && !passes) { console.log(`- FAIL — ${title} said nothing`); red++; }
     red += fails;
   };
-  console.log('\n=== the row\'s own module: the address, the kept line, Options ===');
-  { const env: Record<string, string | undefined> = { ...process.env }; for (const w of WORDS) delete env[w]; delete env.SHADERROWS_BREAK; if (BREAK) env.TPS_FIRSTFRAME = '0';   // (broken: the environment speaks over the kept line and over where the row starts)
+  console.log('\n=== the row\'s own module: the address, where a browser starts ===');
+  { const env: Record<string, string | undefined> = { ...process.env }; for (const w of WORDS) delete env[w]; delete env.SHADERROWS_BREAK; if (BREAK) env.TPS_FIRSTFRAME = '0';   // (broken: the environment speaks over where the row starts)
     for (const n of Object.keys(STORE)) child(`the ${n} case`, ['--store', n], env); }
   for (const a of Object.keys(ARMS) as Arm[]) {
     const env: Record<string, string | undefined> = { ...process.env }; for (const w of WORDS) delete env[w]; delete env.SHADERROWS_BREAK;

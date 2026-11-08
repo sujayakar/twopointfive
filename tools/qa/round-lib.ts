@@ -17,8 +17,8 @@ import { ROOT, type Vec3 } from './headless.ts';
 const { BoxFlag, BoxWorld } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { UNDERFOOT, FEET_Y, BAKE_Y } = await import(`${ROOT}/src/scene/collision.ts`);
 
-/** the thing: its middle, its radius and half height as the REFERENCE has them (the level's own numbers and round.ts's circle with the octagon's area, written
- *  out by the caller), and which of the world's boxes are it (a round box and its three specks, or the kit's four slabs) */
+/** the thing: its middle, its radius and half height as the REFERENCE has them (the level's own numbers, written
+ *  out by the caller), and which of the world's boxes are it (a round box, or an octagon of four slabs) */
 export interface RoundThing { c: Vec3; R: number; hy: number; own(i: number): boolean }
 export interface RoundAnswers {
   /** sides asked */ sides: number;

@@ -10,7 +10,6 @@ import type { SmokeSystemLike } from '../smoke/types';
 import type { GameAudioLike } from '../game/audio_iface';
 import { buildLevel } from '../scene/level';
 import { UNDERFOOT } from '../scene/collision';
-import { ROUND, roundLevel } from '../scene/round';
 import { SHAPES, shapeLevel, plainLevel } from '../scene/shapes';
 import { thinClear, thinLevel } from '../scene/thin';
 import { barClear, barLevel } from '../scene/bars';
@@ -121,12 +120,10 @@ import { STAYASK } from '../game/stayask';
 import { KITLOAD } from '../game/kitload';
 import { RESCUECHECK } from '../game/rescuecheck';
 import { RESCUEEND } from '../game/rescueend';
-import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
 import { POSEMATH } from '../anim/skeleton';
 import { rustRows, rustRow, rustOn, retiredEnvWord } from '../sim/sim';
-import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
 import { DOZE } from '../game/doze';
 import { NETQUIET } from '../game/netquiet';
@@ -276,8 +273,7 @@ export function nullSmoke(): SmokeSystemLike & { params?: Record<string, unknown
 
 /** the level's statics into the host's box world and its lights into the light set — the two loops main.ts and headless.ts ran before `new Game` */
 export function populateHost(host: HostApi, level: Level): void {
-  thinClear(level.boxes); barClear(level.boxes);   // (a level stood up a second time: last time's thin marks off before the round things are looked for)
-  roundLevel(level.boxes, ROUND.on, level.markTexel);   // ROUND THINGS (scene/round.ts): the kit's octagons as one round box each, or every box put back as its file has it — before a box goes to the world and before the Game's collision is built from the list
+  thinClear(level.boxes); barClear(level.boxes);   // (a level stood up a second time: last time's thin marks off)
   plainLevel(level.boxes);   // A BOX SAYS ITS SHAPE (scene/shapes.ts): what an earlier stand-up of this level gave is taken back first, so that the two rules below read the level's plain boxes whatever shapes say
   thinLevel(level.boxes, level.doors);   // THIN THINGS THAT STAND FREE (scene/thin.ts): marked for the fog of war's own eyes (FOG.thin) and a teammate's (FOG.mates), on the list as it now is
   barLevel(level.boxes);   // A WINDOW'S BARS (scene/bars.ts): marked for the one rule that reads them (game/winbars.ts WINBARS)
@@ -303,22 +299,15 @@ export function pinPoseMath(): void { if (pinned('TPS_POSESINGLES')) POSEMATH.si
 /** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: every row of RUST_ON, on both stands, as the page. No word of the environment moves
  *  one (TPS_RUST, TPS_RUST<ROW> are retired and stop the tool that says them); a check's own arm is HELD, above. */
 export function pinRust(): void { for (const r of rustRows()) rustRow(r, HELD.rows[r] ?? rustOn(r)); }   // (one write a row: a held row is never raised and dropped again, which would remake every constant kept from the maths twice — pinMaths, called beside this, is what reads the environment)
-/** THE SENSES ON THE CPU (src/game/sense.ts) on the harness: off on both stands, as the page (TPS_CPUSENSE=1 raises it, the page's ?cpusense) */
-export function pinSenses(): void { if (pinned('TPS_CPUSENSE')) SENSE.cpu = String((globalThis as any).process?.env?.TPS_CPUSENSE ?? '') === '1';
-  if (pinned('TPS_SMOKEGRID')) SENSE.grid = String((globalThis as any).process?.env?.TPS_SMOKEGRID ?? '') === '1';   // (…and their smoke on the coarse grid: off on both stands, TPS_SMOKEGRID=1 raises it, the page's ?smokegrid)
-  if (pinned('TPS_CPULIGHT')) SENSE.bounce = String((globalThis as any).process?.env?.TPS_CPULIGHT ?? '') === '1';   // (…and the light model on that grid: off on both stands, TPS_CPULIGHT=1 raises it, the page's ?cpulight)
-  if (pinned('TPS_MOONLIGHT')) SENSE.moon = String((globalThis as any).process?.env?.TPS_MOONLIGHT ?? '') === '1';   // (…and the night's light from the sky in the estimate: off on both stands, TPS_MOONLIGHT=1 raises it, the page's ?moonlight)
-  if (pinned('TPS_SMOKEDRIFT')) SENSE.drift = String((globalThis as any).process?.env?.TPS_SMOKEDRIFT ?? '') === '1'; }   // (…and the grid's smoke drifting with the wind: off on both stands, TPS_SMOKEDRIFT=1 raises it, the page's ?smokedrift)
 /** A RECORD FROM ANYONE (src/game/cmd.ts checkCmd) on the harness: off on the frozen stand (TPS_CMDCHECK=1 raises it); the shipped stand keeps the page's (on) */
 export function pinCmdCheck(): void { if (pinned('TPS_CMDCHECK')) CMDCHECK.on = String((globalThis as any).process?.env?.TPS_CMDCHECK ?? '') === '1'; }
 
 export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<Stood> {
-  if (opts.harness) { pinMaths(); pinPoseMath(); pinRust(); pinSenses(); pinCmdCheck(); }   // (first: the level and the Game's constructor work out sines and cosines)
+  if (opts.harness) { pinMaths(); pinPoseMath(); pinRust(); pinCmdCheck(); }   // (first: the level and the Game's constructor work out sines and cosines)
   const level = opts.level ?? buildLevel();
   let ch = opts.ch;
   if (!ch) { if (!opts.gltfUrl) throw new Error('standGame: neither ch nor gltfUrl given'); ch = await loadGltfCharacter(opts.gltfUrl); }
   const smoke = opts.smoke ?? nullSmoke();
-  if (opts.harness && pinned('TPS_ROUND')) ROUND.on = String((globalThis as any).process?.env?.TPS_ROUND ?? '') === '1';   // round things are round (src/scene/round.ts; read as the level's boxes go to the world, so written before that): off, so a drum is the kit's octagon of four slabs to every ray and every foot, as when every frozen digest and tally was recorded
   if (opts.harness && pinned('TPS_SHAPES')) SHAPES.on = String((globalThis as any).process?.env?.TPS_SHAPES ?? '') === '1';   // a box says its shape (src/scene/shapes.ts; read as the level's boxes go to the world, so written before that): off, so every box of a level is the plain box its file has, as when every frozen digest was recorded
   if (opts.harness && pinned('TPS_COATFINISH')) COATFINISH.on = String((globalThis as any).process?.env?.TPS_COATFINISH ?? '') === '1';   // a named coat's finish goes wherever its word goes (src/scene/stuff.ts; a picture only, read where a box's finish is handed to the GPU): off, so a vehicle's body has the finish its file gives it, as it was
   if (opts.harness && pinned('TPS_SOLIDGLASS')) SOLIDGLASS.on = String((globalThis as any).process?.env?.TPS_SOLIDGLASS ?? '') === '1';   // a thing of solid glass is dark and smooth (src/scene/stuff.ts; a picture only, read where a box's colour and finish are handed to the GPU): off, so a vehicle's window is the grey its file gives it, as it was
@@ -391,7 +380,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_WALLSLOW')) WALLSNAP.slow = String((globalThis as any).process?.env?.TPS_WALLSLOW ?? '') === '1';   // the unhurried take (wallsnap.ts `slow`): off, so every frozen probe and digest has the take's seconds as they were; `TPS_WALLSLOW=1` turns it on (the shipped default)
     if (pinned('TPS_HANDSLOT')) HANDSLOT.on = String((globalThis as any).process?.env?.TPS_HANDSLOT ?? '') === '1';   // empty hands are a slot (game/handslot.ts): off, so the frozen stand's kit keys are as every probe and digest has them; `TPS_HANDSLOT=1` raises it
     if (pinned()) THROWBACK.restMark = false;   // the throw preview's rest mark (throwback.ts `restMark`): the overlay's, held off here like every newer rule
-    if (pinned()) THROWBACK.reach = false;   // the throw preview's reach rings (throwback.ts `reach`, throwreach.ts): the overlay's, held off here like the mark above
+    if (pinned()) THROWBACK.reach = false;   // the throw preview's reach rings (throwback.ts `reach`): the overlay's, held off here like the mark above
     if (pinned('TPS_THROWBACK')) THROWBACK.on = String((globalThis as any).process?.env?.TPS_THROWBACK ?? '') === '1';   // a can in the wind-up goes back on the belt when another beat begins (game/throwback.ts): off, so the frozen stand's throws are as every probe has them; `TPS_THROWBACK=1` raises it
     if (pinned('TPS_AUTOCAM')) AUTOCAM.on = String((globalThis as any).process?.env?.TPS_AUTOCAM ?? '') === '1';   // the camera running itself (src/host/autocam.ts): off, so the camera's key tapped twice is the Options row's on the frozen stand; `TPS_AUTOCAM=1` raises it
     if (pinned('TPS_AUTOSWAY')) AUTOCAM.sway = String((globalThis as any).process?.env?.TPS_AUTOSWAY ?? '') === '1';   // …and its slow turn in a fight and on the move (AUTOCAM.sway): off = it turns only at rest; `TPS_AUTOSWAY=1` raises it
@@ -507,7 +496,6 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_SQUADDEAL')) SQUADDEAL.on = String((globalThis as any).process?.env?.TPS_SQUADDEAL ?? '') === '1';   // squads from the rooms (src/game/squaddeal.ts): off, so a level with no squads block is one pool, as every frozen digest and tally was made
     if (pinned('TPS_STAYASK')) STAYASK.on = String((globalThis as any).process?.env?.TPS_STAYASK ?? '') === '1';   // squads that stay in their rooms still miss a silent room (src/game/stayask.ts): off, so nobody on such a floor asks after another squad, as every frozen digest and tally was made
     if (pinned('TPS_KITLOAD')) KITLOAD.on = String((globalThis as any).process?.env?.TPS_KITLOAD ?? '') === '1';   // lighter kit moves faster and hides better (src/game/kitload.ts): off, so nobody's pace, notice or footfall reads his card, as every frozen digest and tally was made
-    if (pinned('TPS_SNATCHOUT')) SNATCHOUT.on = String((globalThis as any).process?.env?.TPS_SNATCHOUT ?? '') === '1';   // how a snatch ends (src/game/snatchout.ts): off, so the house taken with the man in hand ends it, as every frozen digest and tally was made
     if (pinned('TPS_RESCUEEND')) RESCUEEND.on = String((globalThis as any).process?.env?.TPS_RESCUEEND ?? '') === '1';   // how a rescue is won (src/game/rescueend.ts): off, so the hostage room held fifteen seconds ends it, as every frozen digest and tally was made
     if (pinned('TPS_RESCUEFLUSH')) RESCUEFLUSH.on = String((globalThis as any).process?.env?.TPS_RESCUEFLUSH ?? '') === '1';   // the men left alive come for the hostages (src/game/rescueflush.ts): off, so they stay where the fight left them, as every frozen digest and tally was made
     if (pinned('TPS_RESCUECHECK')) RESCUECHECK.on = String((globalThis as any).process?.env?.TPS_RESCUECHECK ?? '') === '1';   // the rescue's men check in (src/game/rescuecheck.ts): off, so nobody of a rescue's cast misses a man taken quietly, as every frozen digest and tally was made
@@ -537,7 +525,6 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_INWAY')) ORDERS.inWay = String((globalThis as any).process?.env?.TPS_INWAY ?? '') === '1';   // a stack refused only for Sam's own body says so (src/game/orders.ts noRoomWords): off, so every frozen probe's refusal reads 'no room on that door.' as it did; TPS_INWAY=1 raises it
     if (pinned('TPS_WALKTRIES')) ORDERS.walkTries = String((globalThis as any).process?.env?.TPS_WALKTRIES ?? '') === '1';   // a walk whose way runs at a door nobody has tried walks up and tries it (src/game/orders.ts walkStacks): off, so every frozen probe's 'move' at a lock is refused '<door> is locked.' as it was; TPS_WALKTRIES=1 raises it
     if (pinned('TPS_SAMEWAY')) ORDERS.sameWay = String((globalThis as any).process?.env?.TPS_SAMEWAY ?? '') === '1';   // a pair goes round a building by one side (src/game/orders.ts sameWays): off, so every frozen probe's men walk each his own short way as they did; TPS_SAMEWAY=1 raises it
-    if (pinned('TPS_SELFBODY')) ORDERS.selfBody = String((globalThis as any).process?.env?.TPS_SELFBODY ?? '') === '1';   // his own body under the cursor is himself (rust/game_rules/src/orders target_under_of): off, so every frozen probe's cursor on him reads the point past him as it did; TPS_SELFBODY=1 raises it
     if (pinned('TPS_TRAILDOORS')) ORDERS.trailDoors = String((globalThis as any).process?.env?.TPS_TRAILDOORS ?? '') === '1';   // a follower goes by the doors Sam took (src/game/orders.ts trailWay): off, so every frozen probe's followers walk each his own short way as they did; TPS_TRAILDOORS=1 raises it
     if (pinned('TPS_COVERKEEP')) ROOMFIGHT.coverKeep = String((globalThis as any).process?.env?.TPS_COVERKEEP ?? '') === '1';   // a man told to cover keeps his angle (src/game/roomfight.ts)
     if (pinned('TPS_DOORSHOTS')) ROOMFIGHT.doorShots = String((globalThis as any).process?.env?.TPS_DOORSHOTS ?? '') === '1';   // rounds through a doorway keep his gun on it (src/game/roomfight.ts)
@@ -661,7 +648,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_STICKY')) STICKY.on = String((globalThis as any).process?.env?.TPS_STICKY ?? '') === '1';   // sticky cameras (src/game/stickycam.ts): off, so your kit card has no such row and the rifle's launcher no third load
     if (pinned('TPS_CAMTAKE')) STICKY.take = String((globalThis as any).process?.env?.TPS_CAMTAKE ?? '') === '1';   // a stuck camera taken back onto the launcher (stickycam.ts takeCam): off, so a camera sent stays on its wall
     if (pinned('TPS_OVERHEARD')) CUES.overheard = String((globalThis as any).process?.env?.TPS_OVERHEARD ?? '') === '1';   // a hidden defender's shout as a row on the strip (src/game/cues.ts overheard): off, so a shout nobody sees is no row
-    if (pinned('TPS_CAMMARK')) STICKY.mark = String((globalThis as any).process?.env?.TPS_CAMMARK ?? '') === '1';   // his own stuck cameras shown in the fog of war (stickycam.ts stickyMarks): off, so a camera on floor nobody sees is not in the picture
+    if (pinned('TPS_CAMMARK')) STICKY.mark = String((globalThis as any).process?.env?.TPS_CAMMARK ?? '') === '1';   // his own stuck cameras shown in the fog of war (game.view.marks.cams): off, so a camera on floor nobody sees is not in the picture
     if (pinned('TPS_WORKTHINGS')) WORK.on = String((globalThis as any).process?.env?.TPS_WORKTHINGS ?? '') === '1';   // a teammate works a thing (src/game/workthings.ts): off, so the menu on the breaker is the floor's and lighting.ts deals the breaker errand as every frozen probe read it; `TPS_WORKTHINGS=1` turns it on
     if (pinned('TPS_UNSEEN')) UNSEEN.on = String((globalThis as any).process?.env?.TPS_UNSEEN ?? '') === '1';   // a squad nobody has found sneaks when Sam sneaks (src/game/unseen.ts): off, so teammates beside a crouched, slow or wall-hugging Sam stand, walk and shoot as in every frozen probe and digest; `TPS_UNSEEN=1` runs any tool with it on, tools/qa/unseen-probes.ts raises it itself
     if (pinned('TPS_WALLBEAT')) UNSEEN.wallBeat = String((globalThis as any).process?.env?.TPS_WALLBEAT ?? '') === '1';   // a wall hold counts as sneaking after a beat (src/game/unseen.ts)

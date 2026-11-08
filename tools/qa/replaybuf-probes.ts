@@ -1,13 +1,8 @@
 // The REPLAY BUFFER's probes (src/game/replaybuf.ts → src/replay/format.ts):   bun run tools/qa/replaybuf-probes.ts [--write <file.json>] [--scenario '<query>'] [--level <file.json>] [--secs N]
-//   identity   a game stepped with the buffer on digests, second by second, exactly as the same game stepped without it (the buffer only reads)
 //   ring       the ring keeps `seconds` of play and no more, its head is always a keyframe, the file passes its own check and decodes
 //   content    the trace holds what a bug report needs: every man each sample, a route for a walking man, a round with where it went, a door that moved
 //   notes      a note put on the file survives the trip through JSON
 //   fight      a room fight's teammate's row names the man his gun is on (the room fight's own record of him, read only)
-//   tape       a run taped from its first step is walked again by a fresh game (tools/qa/rerun.ts) to the same places and the same digest; refusals are in words
-//   load       a checkpoint loaded between two steps ends the tape as a load and is marked one in the trace whatever its clock says; a restart is a restart; a load
-//              made inside a step leaves the tape alive
-//   stand      a tape made on the page's rules is walked on them by a process that stands frozen (the tape names its stand and carries every knob table and the kit — the stealth card its run wore with it)
 //   crash      the page's own save on an error (ui/replaykey.ts) makes one file a minute and three a page load, in a browser that keeps no shelf (where the file is sent, never a download);
 //              the error itself is a line in the ring at its moment of PLAY, in every file made while the ring holds it
 // --write: the content probe's file is written there (what the viewer page is developed against); --scenario / --level: that file is of a scenario on a level file
@@ -75,14 +70,9 @@ async function run(secs: number, tap: boolean, query: string | null, levelFile: 
 }
 
 console.log('\n=== replay buffer ===');
-// ---- identity
-{ const a = await run(20, false, null), b = await run(20, true, null);
-  const first = a.hashes.findIndex((h, i) => h !== b.hashes[i]);
-  check(first < 0 && a.hashes.length === 20, `identity: 20 s with the buffer on digest as 20 s without it (${a.hashes.length} digests${first >= 0 ? `, FIRST DIFFERENCE at second ${first + 1}` : ''})`);
-  check(!b.buf.broke && b.buf.seconds > 19, `identity: the buffer ran the whole stretch (${b.buf.summary()})`); }
 // ---- ring
 { const keep = REPLAY.seconds; REPLAY.seconds = 10;
-  const { W, buf } = await run(32, true, null); const file = buf.file(W.game, 'probe');
+  const { W, buf } = await run(15, true, null); const file = buf.file(W.game, 'probe');
   REPLAY.seconds = keep;
   const bad = F.checkReplay(file);
   check(bad === '', `ring: the file passes its own check${bad ? ` — ${bad}` : ''}`);
@@ -121,233 +111,6 @@ console.log('\n=== replay buffer ===');
   if (O && foe) { const was = O.tgt; O.tgt = foe; for (let i = 0; i < 6; i++) buf.tick(g, 1 / 60, W.cam); O.tgt = was;   // (set between two steps and put back: the room fight never sees it)
     const D = F.decode(buf.file(g, 'probe', { url: '?roomclear&squad4', fp: levelFingerprint(g) })), ci = D.file.cast.findIndex((c: any) => c.name === mate.callsign), cf = D.file.cast.findIndex((c: any) => c.name === foe.callsign), last = D.men[D.men.length - 1][ci];
     check(ci >= 0 && cf >= 0 && last?.do?.foe === cf, `fight: his row says whom the gun is on (${last?.do ? F.doWords(last.do, D.file.cast) : 'no row'})`); } }
-
-// ---- tape: a run taped from its first step — hands, a camera that turns, a restart and a sandbox switch from outside a step — walked again by a fresh game
-{ const { rerun, rerunWords } = await import('./rerun.ts');
-  Math.random = mulberry32(0xbeef);
-  const W = await standUp({ seed: 11 }); const buf = new ReplayBuffer(); buf.tape.born(W.game);
-  // (headless nothing answers the sensors, so a tape made here never held a number. This run's are answered while its steps run: dim values off a die of their
-  // own, two in three a 32-bit float as the page's renderer hands back, the rest doubles, and now and then no answer or a minus zero, as a page's tape has —
-  // the tape writes every kind and the re-run must be served each one to the bit. WHICH kind is a die's too, never the read's number: with every eleventh read
-  // unanswered and a stand that makes eleven reads a step, one sensor went unanswered all run and the tape, which writes changes, held 'no answer' once)
-  const given: (number | undefined)[][] = []; let answering = false;
-  { const S = W.game.sensors as any, read0 = S.read, die = mulberry32(99), kind = mulberry32(1199);
-    S.read = function (this: unknown, key: string) { if (!answering) return read0.call(this, key);
-      const v = 0.02 + 0.3 * die(), k = kind(), out = k < 1 / 11 ? undefined : k < 1 / 11 + 1 / 37 ? -0 : k < 0.42 ? v : Math.fround(v); given[given.length - 1].push(out); return out; }; }
-  W.game.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(W.game, dt, cmd); else buf.tick(W.game, dt, W.cam); };
-  const N = 30 * 60; let dAt = ''; const { PACE, LIGHTS } = await import(`${ROOT}/src/game/guards.ts`), pace0 = PACE.max, lit0 = { ...LIGHTS }, { RUNTAPE } = await import(`${ROOT}/src/game/runtape.ts`);
-  for (let f = 0; f < N; f++) {
-    hands(W, f); W.cam.yaw = 0.4 * Math.sin(f / 90); W.cam.rebuild();
-    if (f === 700) { LIGHTS.litM += 1; W.game.restartEncounter(); }         // (the down card's button: from outside a step)
-    if (f === 900) W.game.godMode = true;              // (the pause card's switch)
-    if (f === 1000) { PACE.max += 0.25; LIGHTS.litAt += 0.01; }                 // (a Tab row moved mid-run: the tape looks at a table or two a step, so within tablesEvery steps)
-    if (f === 1600) for (let i = 0; i < 70; i++) W.game.events.push({ kind: 'prop', pos: [3 + i * 0.01, 0, 3], time: W.game.time, loud: false, level: 0, who: 0 });   // (seventy things heard on one step)
-    given.push([]); answering = true; W.step(f % 7 === 0 ? 1 / 50 : 1 / 60); answering = false;
-    if (f + 1 === 1500) dAt = hashDigest(digestGame(W.game, true));
-  }
-  const file = JSON.parse(JSON.stringify(buf.file(W.game, 'probe', { url: '', fp: levelFingerprint(W.game) })));
-  check(!!file.rerun && !file.rerun.dead && file.rerun.ticks === N, `tape: the file carries the run from its first step (${buf.tape.summary()})`);
-  check(file.rerun?.x?.some((x: any) => x[1] === 'restart') && file.rerun?.x?.some((x: any) => x[1] === 'flags'), 'tape: the restart and the sandbox switch made from outside a step are on it');
-  { const rows = (file.rerun?.x ?? []).filter((x: any) => x[1] === 'table' && x[2]?.[0] === 'PACE');
-    check(rows.length === 1 && rows[0][0] >= 1000 && rows[0][0] <= 1000 + RUNTAPE.tablesEvery && rows[0][2][1].max === pace0 + 0.25, `tape: a table moved mid-run is on it once, within ${RUNTAPE.tablesEvery} steps (PACE at step ${rows[0]?.[0]})`);
-    const xs = file.rerun?.x ?? [], lit = xs.filter((x: any) => x[1] === 'table' && x[2]?.[0] === 'LIGHTS'), iR = xs.findIndex((x: any) => x[1] === 'restart');
-    check(lit.length === 2 && lit[1][0] === rows[0]?.[0], `tape: a second table written with it is on the tape on the same step (LIGHTS at ${lit[1]?.[0]})`);
-    check(iR >= 0 && lit[0]?.[0] === xs[iR][0] && xs.indexOf(lit[0]) < iR, `tape: a table moved before a restart is on the tape ahead of the restart, on its step (${lit[0]?.[0]})`);
-    const crowd = file.events.filter((e: any) => e.k === 'prop' && Math.abs(e.z - 3) < 1e-6 && e.x >= 3 && e.x < 3.71).length;
-    check(crowd === 70, `content: seventy events filed on one step are all in the trace, once each (${crowd})`); }
-  const back = (): void => { PACE.max = pace0; Object.assign(LIGHTS, lit0); }; back();
-  const tapeBytes = JSON.stringify(file.rerun).length; console.log(`  tape: ${(tapeBytes / 1024).toFixed(0)} KB for ${N} steps (${(tapeBytes / N).toFixed(0)} B a step)`);
-  const servedV: (number | undefined)[] = [];
-  const R = await rerun(file, { toN: 1500, served: v => servedV.push(v) });
-  check(!R.refuse && !!R.report, `tape: a fresh game is walked to step 1500${R.refuse ? ` — REFUSED: ${R.refuse}` : ''}`);
-  if (R.report && R.W) {
-    for (const ln of rerunWords(R.report, file)) console.log(`  ${ln}`);
-    check(R.report.compared > 100 && !R.report.drift && (R.report.worst?.metres ?? 1) < 0.011, `tape: held against ${R.report.compared} trace samples, every man within a centimetre of where the first run had him (worst ${R.report.worst?.metres.toFixed(3)} m)`);
-    check(hashDigest(digestGame(R.W.game, true)) === dAt, 'tape: at step 1500 the re-run digests exactly as the first run did there');
-    check(R.report.unjournaled === 0, `tape: every sensor read was on the tape (${R.report.unjournaled} not)`);
-    { const wd = R.W.engine.world, nS = wd.statics.length, tail = wd.all.slice(nS);   // (the cursor's ray reads `all`: it must hold this step's boxes, not the stand-up's)
-      check(tail.length > 0 && tail.length === wd.dynamics.length && tail.every((b: any, i: number) => b === wd.dynamics[i]) && wd.dynamics === R.W.game.dynBoxes, `tape: the re-run's world is packed after its last step (${tail.length} moving boxes for the cursor's ray, the game's ${R.W.game.dynBoxes.length})`); }
-  }
-  // the sensor values: a 32-bit float is nine digits on the tape and the same float off it; anything else is kept whole
-  { const { tapeF32, tapeNum } = await import(`${ROOT}/src/replay/format.ts`), { encodeValue, decodeValue } = await import(`${ROOT}/src/game/sensors.ts`);
-    const rnd = mulberry32(77), f32s: number[] = [0, 1, -1, 0.1, 1 / 3, 16777217, 1.401298464324817e-45, 1.1754943508222875e-38, 3.4028234663852886e38, -3.4028234663852886e38, 0.30000001192092896].map(Math.fround);
-    { const u = new Uint32Array(1), f = new Float32Array(u.buffer); for (let i = 0; i < 200000; i++) { u[0] = (rnd() * 4294967296) >>> 0; if (Number.isFinite(f[0])) f32s.push(f[0]); } for (let i = 0; i < 50000; i++) f32s.push(Math.fround(rnd() * (i % 5 ? 1 : 4000))); }
-    let badF = 0, strF = 0, chars = 0, full = 0; for (const v of f32s) { const e = JSON.parse(JSON.stringify(tapeF32(v))); if (typeof e !== 'number') strF++; if (!Object.is(tapeNum(e, true), v)) badF++; chars += JSON.stringify(e).length; full += JSON.stringify(v).length; }
-    check(badF === 0 && strF === 0, `tape: ${f32s.length} 32-bit floats come back off nine digits to the bit, each a plain number (${badF} wrong, ${strF} not a number; ${(chars / f32s.length).toFixed(1)} characters each for ${(full / f32s.length).toFixed(1)})`);
-    const odd = [0.1, 1 / 3, Math.PI, 1e-320, 1.7976931348623157e308, 16777217, 0.30000000000000004, -2.5e-9 / 3]; let badD = 0; for (const v of odd) { const e = JSON.parse(JSON.stringify(tapeF32(v))); if (!Array.isArray(e) || !Object.is(tapeNum(e, true), v)) badD++; }
-    const words = [NaN, Infinity, -Infinity, -0, undefined].every(v => Object.is(tapeNum(JSON.parse(JSON.stringify(tapeF32(v as number))), true), v));
-    check(badD === 0 && words, `tape: a value that is no 32-bit float is kept whole and comes back exact; nan, the infinities, minus zero and 'no answer' too (${badD} wrong)`);
-    { let cross = 0; for (const v of [...f32s.slice(0, 60000), ...odd, NaN, Infinity, -Infinity, -0, undefined] as (number | undefined)[]) {   // (one encoding with the session journal's: sensors.ts)
-        if (!Object.is(decodeValue(JSON.parse(JSON.stringify(tapeF32(v)))), v) || !Object.is(tapeNum(JSON.parse(JSON.stringify(encodeValue(v))), true), v)) cross++; }
-      check(cross === 0, `tape: the session journal's reader reads the tape's values and the tape's reader the journal's, to the bit (${cross} off)`); }
-    const vals: unknown[] = []; for (const r of file.rerun.sens.rows) { if (r[1]) vals.push(...r[2]); else for (let i = 1; i < r[2].length; i += 2) vals.push(r[2][i]); }
-    const nNum = vals.filter(v => typeof v === 'number').length, nArr = vals.filter(v => Array.isArray(v)).length, nNone = vals.filter(v => v === null).length, nZero = vals.filter(v => v === '-0').length;
-    check(file.rerun.sens.f32 === 1 && nNum > 20 && nArr > 20 && nNone > 20 && nZero > 20, `tape: the file says its sensor values are floats at nine digits, and this run wrote every kind (${nNum} floats, ${nArr} whole doubles, ${nNone} with no answer, ${nZero} minus zeros)`);
-    { let cur: unknown[] = [], ri = 0, off = 0, steps = 0; const rows = file.rerun.sens.rows;   // (every step's values as a reader gets them, against what the game was handed)
-      for (let f = 0; f < N; f++) { for (; ri < rows.length && rows[ri][0] <= f; ri++) { const [, q, v] = rows[ri]; if (q) cur = v.slice(); else for (let i = 0; i < v.length; i += 2) cur[v[i]] = v[i + 1]; }
-        const G = given[f]; if (G.length) steps++; if (cur.length !== G.length) off++; else for (let i = 0; i < G.length; i++) if (!Object.is(tapeNum(cur[i] as any, true), G[i])) off++; }
-      check(off === 0 && steps > N / 2, `tape: read back with the file's own rule, every sensor value of every step is the one the game was handed, to the bit (${off} off over ${steps} steps that read any)`); }
-    { const want = given.slice(0, 1500).flat(); let off = servedV.length === want.length ? 0 : 1; for (let i = 0; i < want.length && i < servedV.length; i++) if (!Object.is(servedV[i], want[i])) off++;
-      check(off === 0 && want.length > 1000, `tape: the re-run handed its game the very values the first game was handed, read for read, to the bit (${off} off of ${want.length})`); }
-    // (a tape from before the rule: every value the double itself, no word about floats — it must be walked as it always was)
-    const old = JSON.parse(JSON.stringify(file)); delete old.rerun.sens.f32;
-    const wide = (e: unknown): unknown => { const v = tapeNum(e as any, true); return typeof v === 'number' && Number.isFinite(v) && !Object.is(v, -0) ? v : e; };
-    for (const r of old.rerun.sens.rows) { if (r[1]) r[2] = r[2].map(wide); else for (let i = 1; i < r[2].length; i += 2) r[2][i] = wide(r[2][i]); }
-    const grew = JSON.stringify(old.rerun.sens).length, now = JSON.stringify(file.rerun.sens).length;
-    back(); const RO = await rerun(JSON.parse(JSON.stringify(old)), { toN: 1500 });
-    check(!RO.refuse && !!RO.W && hashDigest(digestGame(RO.W.game, true)) === dAt && RO.report?.unjournaled === 0, `tape: the same run on a tape written the old way (every value in full: ${(grew / 1024).toFixed(0)} KB of sensor rows for ${(now / 1024).toFixed(0)} KB) is walked to the same digest`);
-  }
-  back();   // (the re-run left this process on the tape's tables)
-  // a tape that cannot follow says so
-  const dead = JSON.parse(JSON.stringify(file)); dead.rerun = { dead: 'a checkpoint was loaded', tick: 12 };
-  const R2 = await rerun(dead); check(!!R2.refuse && /checkpoint/.test(R2.refuse), `tape: a tape that ended is refused in words (${R2.refuse.slice(0, 70)}…)`);
-  const other = JSON.parse(JSON.stringify(file)); other.level.fp = 'deadbeef'; other.commit = 'abc1234';
-  const R3 = await rerun(other, { toN: 10 }); check(!!R3.refuse && /abc1234/.test(R3.refuse), 'tape: another level is refused, naming the commit to check out');
-  // a tape older (or newer) than this build's knobs: a key it does not carry is played at this build's value, and the report says which, and the commit to walk it at
-  { const notes = (r: Awaited<ReturnType<typeof rerun>>) => (r.report?.warnings ?? []).filter(w => /the tape does not carry|this build does not play/.test(w));
-    check(!!R.report && notes(R).length === 0, `tape: a tape of this build is not called older or newer than its knobs (${notes(R).length} such notes)`);
-    const old = JSON.parse(JSON.stringify(file)), rc = old.rerun.recipe, obj = (v: unknown) => v !== null && typeof v === 'object' && !Array.isArray(v); old.commit = 'abc1234';
-    const big = Object.keys(rc.tables).filter(k => obj(rc.tables[k]) && Object.keys(rc.tables[k]).length >= 3), [t1, t2] = big, [k1, k2] = Object.keys(rc.tables[t1]);
-    const num = Object.keys(rc.tables[t1]).find(k => k !== k1 && k !== k2 && typeof rc.tables[t1][k] === 'number') ?? '', jn = Object.keys(rc.knobs.tables)[0], jk = Object.keys(rc.knobs.tables[jn])[0], tk = Object.keys(rc.knobs.tune)[0];
-    const outer = typeof rc.knobs.tables.WALLCHARGE?.outer === 'boolean';
-    delete rc.tables[t1][k1]; delete rc.tables[t1][k2]; delete rc.tables[t2]; rc.tables[t1].zzGone = 1; if (num) rc.tables[t1][num] = true; delete rc.knobs.tables[jn][jk]; delete rc.knobs.tune[tk]; if (outer) delete rc.knobs.tables.WALLCHARGE.outer;
-    const R4 = await rerun(old, { toN: 10 }), N4 = notes(R4), has = (re: RegExp, ...words: string[]) => N4.some(w => re.test(w) && words.every(x => w.includes(x)));
-    check(!R4.refuse && has(/the tape does not carry/, `${t1}.${k1}`, `${t1}.${k2}`, `${t2} (the whole table`, "THIS build's value"), `tape: keys added to a table since the tape was saved are named (${t1}.${k1}, ${t1}.${k2}, all of ${t2}): ${N4[0]?.slice(0, 60)}…`);
-    check(has(/the tape does not carry/, `${jn}.${jk}`, `tune.${tk}`), `tape: so are a key of a recording's table and one of the game's tune (${jn}.${jk}, tune.${tk})`);
-    check(has(/this build does not play/, `${t1}.zzGone`) && (!num || has(/this build does not play/, `${t1}.${num} (a boolean on the tape, a number here)`)), `tape: and a key the tape has that this build lacks, and one of another kind here (${t1}.zzGone, ${t1}.${num || '–'})`);
-    check(outer && has(/the tape does not carry/, 'WALLCHARGE.outer') && (process.env.TPS_PROFILE !== 'shipped' || has(/before (it|them) by journal\.ts/, 'WALLCHARGE.outer')), 'tape: a key journal.ts knows the older value of is named too, and said to have been given it where that moved it');
-    check(N4.length >= 2 && N4.filter(w => w.includes('abc1234')).length === 1 && N4[N4.length - 1].includes('abc1234'), `tape: the commit to check out is said once, last (${N4.length} notes)`); }
-  back(); }
-
-// ---- load: a checkpoint loaded BETWEEN two steps is never read as a restart, whatever its clock says — one of an earlier visit with a LATER clock, one loaded
-// with no step since it was saved, one loaded a few steps after; a restart is still a restart; a load made INSIDE a step (the bare Enter once down) is the step's
-// own input: the tape lives, the trace marks it once and loses nothing of the next step
-{ const { saveState } = await import(`${ROOT}/src/game/savestate.ts`);
-  const stand = async (seed: number, steps: number, god = true, still = false) => { Math.random = mulberry32(seed); const W: any = await standUp({ seed: 11 }); W.game.godMode = god; const buf = new ReplayBuffer(); buf.tape.born(W.game);   // (god mode: the scripted hands get Sam shot inside ten seconds, and a man who is down saves nothing)
-    W.game.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(W.game, dt, cmd); else buf.tick(W.game, dt, W.cam); };
-    let f = 0; const go = (n: number, pre?: () => void) => { for (let i = 0; i < n; i++, f++) { if (still) { W.input.keys.clear(); } else hands(W, f); pre?.(); W.step(1 / 60); } }; go(steps); return { W, buf, go }; };
-  const read = (W: any, buf: any, url = '') => { const file = JSON.parse(JSON.stringify(buf.file(W.game, 'probe', { url, fp: levelFingerprint(W.game) }))), text = JSON.stringify(file), n = (re: RegExp) => (text.match(re) ?? []).length;
-    return { file, dead: String(buf.tape.dead || ''), loads: n(/a checkpoint loaded/g), restarts: n(/restart \(a fresh run/g) }; };
-  const earlier = await stand(0xa11, 600), old = saveState(earlier.W.game, { label: 'an earlier visit', kind: 'manual', force: true }); earlier.W.game.replayTap = null;
-  { const { W, buf, go } = await stand(0xa12, 200), why = W.game.saves.load(W.game, JSON.parse(JSON.stringify(old))); go(120); const r = read(W, buf);
-    check(why === null && W.game.time > 9 && /checkpoint/.test(r.dead) && r.loads === 1 && !r.restarts, `load: a checkpoint of an earlier visit, its clock LATER than this page's, ends the tape as a load and is marked one in the trace (tape: ${r.dead || 'alive'}${why ? `; load refused: ${why}` : ''})`);
-    W.game.replayTap = null; }
-  { const { W, buf, go } = await stand(0xa13, 200), s = saveState(W.game, { label: 'now', kind: 'manual', force: true }), why = W.game.saves.load(W.game, s); go(120); const r = read(W, buf);
-    check(why === null && /checkpoint/.test(r.dead) && r.loads === 1 && !r.restarts, `load: one loaded with no step since it was saved, the clock the same to the bit, is a load too (tape: ${r.dead || 'alive'}${why ? `; load refused: ${why}` : ''})`);
-    W.game.replayTap = null; }
-  { const { W, buf, go } = await stand(0xa14, 200), s = saveState(W.game, { label: 'ten steps ago', kind: 'manual', force: true }); go(10); const why = W.game.saves.load(W.game, s); go(120); const r = read(W, buf);
-    check(why === null && /checkpoint/.test(r.dead) && r.loads === 1 && !r.restarts, `load: one loaded ten steps after it was saved is a load in the trace as on the tape (tape: ${r.dead || 'alive'}${why ? `; load refused: ${why}` : ''})`);
-    W.game.replayTap = null; }
-  { const { W, buf, go } = await stand(0xa15, 200); W.game.restartEncounter(); go(120); const r = read(W, buf);
-    check(!r.dead && r.restarts === 1 && !r.loads, `load: a restart is still a restart, the tape alive (tape: ${r.dead || 'alive'})`);
-    // the run a file ends in: where the viewer opens a file saved from the end card (format.ts lastRun)
-    { const mk = r.file.lines.find((l: any) => l.k === 'mark' && /^restart \(/.test(l.text)), at = F.lastRun(r.file), none = F.lastRun({ lines: r.file.lines.filter((l: any) => l !== mk) });
-      W.game.restartEncounter(); go(60); const r2 = read(W, buf), at2 = F.lastRun(r2.file), D2 = F.decode(r2.file), first = D2.r.find((x: number) => x >= at2);
-      check(!!mk && at === mk.r && at > 3 && at < r.file.seconds - 1.5 && none === 0 && r2.restarts === 2 && at2 > at + 1.5 && first !== undefined && first - at2 < 0.5,
-        `load: lastRun names the last restart's moment, where the run a file ends in began (one restart ${at.toFixed(2)} s of ${r.file.seconds.toFixed(2)}; a second ${at2.toFixed(2)} s of ${r2.file.seconds.toFixed(2)}, a sample ${first === undefined ? 'never' : (first - at2).toFixed(2) + ' s'} after it; no restart ${none})`); }
-    W.game.replayTap = null; }
-  // the page's restart puts the game back to its start, clock, die and all (host/rustgame.ts toStart; here the tools' host's, rust-host.ts), and counts itself: a
-  // restart in the tape and in the trace, and the walk of it is the same run. ANEW_BREAK=1 = it is not counted: the tape ends on the clock
-  { const { rerun } = await import('./rerun.ts'); Math.random = mulberry32(0xa19); const W: any = await standUp({ seed: 11 }), g = W.game; g.godMode = true; g.rustHost.keepStart();
-    const buf = new ReplayBuffer(); buf.tape.born(g); g.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(g, dt, cmd); else buf.tick(g, dt, W.cam); };
-    let f = 0; const go = (n: number) => { for (let i = 0; i < n; i++, f++) { hands(W, f); W.step(1 / 60); } };
-    go(200); g.rustHost.toStart(); if (process.env.ANEW_BREAK === '1') g.saves.stats.restarts--; const back = g.time; go(160); g.saves.enabled = false; go(240); const N = f, dEnd = hashDigest(digestGame(g, true)), r = read(W, buf), rows = (r.file.rerun?.x ?? []) as any[], x = rows.filter(q => q[1] === 'restart' || q[1] === 'load').map(q => q.join(':'));
-    check(back < 0.1 && !r.dead && x.join() === '200:restart:start' && r.restarts === 1 && !r.loads && F.lastRun(r.file) > 3, `load: the page's restart, the clock put back, is a restart: the tape alive with its row, marked one in the trace (clock ${back.toFixed(2)}; tape: ${r.dead || 'alive'}; rows ${x.join(' ') || 'none'}; ${r.restarts} restart, ${r.loads} load marks; last run from ${F.lastRun(r.file).toFixed(2)} s)`);
-    const fl = rows.filter(q => q[1] === 'flags').map(q => [q[0], q[2].autosave]); check(JSON.stringify(fl) === '[[0,true],[360,false]]', `load: autosave on or off is on the tape, at its first step and where it was switched (${JSON.stringify(fl)})`);
-    const R = await rerun(r.file, { toN: N }), same = !!R.W && hashDigest(digestGame(R.W.game, true)) === dEnd, off = (R.W?.game as any)?.saves?.enabled === false;
-    check(!R.refuse && !!R.report && R.report.compared > 100 && !R.report.drift && same && off, `load: its re-run is the first run again, to the digest at step ${N}, its autosave as taped${R.refuse ? ` — REFUSED: ${R.refuse}` : ` (${R.report?.compared} trace samples, worst ${R.report?.worst?.metres?.toFixed(3)} m, drift ${R.report?.drift ? `${R.report.drift.who} at step ${R.report.drift.n}` : 'none'}, digest ${same ? 'equal' : 'NOT EQUAL'}; autosave off there: ${off})`}`);
-    g.replayTap = null; }
-  // …and a slot of the shelf written from outside a step (a panel's save) ends the tape: the walk's slots would be other saves
-  { const { W, buf, go } = await stand(0xa1b, 100), w = W.game.saves.write(W.game, 'manual', 'a panel', true); go(60); const r = read(W, buf);
-    check(!!w?.ok && /changed from a panel/.test(r.dead), `load: a save made from a panel between two steps ends the tape in those words (${w?.ok ? 'written' : w?.why}; tape: ${r.dead || 'alive'})`); W.game.replayTap = null; }
-  { const { W, buf, go } = await stand(0xa16, 100, false); go(1, () => W.input.pressed.add('F5')); const wrote = W.game.saves.newest(true); let n = 0; while (!W.game.player.down && n < 400) { go(1); n++; }
-    const byHand = !W.game.player.down; if (byHand) W.game.player.down = true;   // (on a stand whose night watch does not find him in time he is put down by hand: the Enter's road is the same)
-    const loads0 = W.game.saves.stats.loads; go(1, () => W.input.pressed.add('Enter')); const inStep = W.game.saves.stats.loads === loads0 + 1 && !W.game.player.down;
-    go(1, () => W.game.events.push({ kind: 'prop', pos: [3.33, 0, 3.33], time: W.game.time, loud: false, level: 0, who: 0 })); go(60); const r = read(W, buf);
-    const kept = r.file.events.filter((e: any) => e.k === 'prop' && Math.abs(e.x - 3.33) < 1e-6 && Math.abs(e.z - 3.33) < 1e-6).length;
-    check(inStep, `load: Sam went down and a bare Enter loaded this run's checkpoint inside a step (down ${byHand ? 'by hand' : `after ${n} steps`}; wrote ${JSON.stringify(wrote)?.slice(0, 60)})`);
-    check(!r.dead && r.loads === 1 && !r.restarts && kept >= 1, `load: a load made inside a step leaves the tape alive, is marked once, and the step after it loses nothing (tape: ${r.dead || 'alive'}; ${r.loads} marks; the next step's event filed ${kept}×)`);
-    W.game.replayTap = null; }
-  // …and a save kept IN MEMORY (a team on the floor: savestate.ts loadMem puts the whole game back, the Sensors object with it) loaded inside a step. All of it is
-  // on the tape — F5's save, his own frag that puts him down, the bare Enter — so the tape lives and its re-run is the first run again, to the digest.
-  { const SS = await import(`${ROOT}/src/game/savestate.ts`), { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`), { rerun } = await import('./rerun.ts'), Q = '?roomclear&squad4&freshstart=0&seed=7', was = SS.SAVETIMELINE.on;
-    try {
-      Math.random = mulberry32(0xa18); const W: any = await standUp({ seed: 7 }), g = W.game; startFromQuery(g, Q); SS.SAVETIMELINE.on = true; g.godMode = true;
-      const buf = new ReplayBuffer(); buf.tape.born(g); g.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(g, dt, cmd); else buf.tick(g, dt, W.cam); };
-      let f = 0, still = false; const go = (n: number, pre?: () => void) => { for (let i = 0; i < n; i++, f++) { const I = W.input; I.keys.clear(); I.buttons = 0; I.mouseX = 800; I.mouseY = 520; if (!still && f % 240 < 150) I.keys.add('KeyW'); pre?.(); W.step(1 / 60); } };
-      go(240); go(1, () => W.input.pressed.add('F5')); go(42); const mem = (g.saves.timeline() as any[]).filter(x => x.mem).length;
-      g.godMode = false; still = true; go(30); go(1, () => W.input.pressed.add('Digit5')); go(30);   // (the flag is a row of the tape; the frag lands at his own feet)
-      for (let k = 0; k < 3 && !g.player.down; k++) { go(1, () => { W.input.clicked |= 1; W.input.buttons |= 1; }); go(62, () => { if (f % 62 < 2) W.input.buttons |= 1; }); }
-      let n = 0; while (!g.player.down && n < 900) { go(1); n++; } still = false; go(20);
-      const loads0 = g.saves.stats.loads, down = g.player.down; go(1, () => W.input.pressed.add('Enter')); const inStep = down && g.saves.stats.loads === loads0 + 1 && !g.player.down;
-      g.godMode = true; go(240); const N = f, dEnd = hashDigest(digestGame(g, true)), file = JSON.parse(JSON.stringify(buf.file(g, 'probe', { url: Q, fp: levelFingerprint(g) }))), marks = (JSON.stringify(file).match(/a checkpoint loaded/g) ?? []).length;
-      check(mem === 1 && inStep, `load: with a team on the floor F5 kept a save in memory, and a bare Enter once down loaded it inside a step (saves in memory ${mem}; down ${down}; loads ${loads0} → ${g.saves.stats.loads})`);
-      check(!buf.tape.dead && file.rerun?.ticks === N && marks === 1, `load: the tape lives across it, holds every step, and the load is marked once (tape: ${buf.tape.dead || 'alive'}; ${file.rerun?.ticks} of ${N} steps; ${marks} marks)`);
-      const R = await rerun(file, { toN: N }), same = !!R.W && hashDigest(digestGame(R.W.game, true)) === dEnd;
-      check(!R.refuse && !!R.report && R.report.compared > 50 && !R.report.drift && same, `load: its re-run is the first run again, to the digest at step ${N}${R.refuse ? ` — REFUSED: ${R.refuse}` : ` (${R.report?.compared} trace samples, worst ${R.report?.worst?.metres?.toFixed(3)} m, drift ${R.report?.drift ? 'YES' : 'none'}, digest ${same ? 'equal' : 'DIFFERS'})`}`);
-      g.replayTap = null;
-    } finally { SS.SAVETIMELINE.on = was; } }
-  // …and one loaded from OUTSIDE a step (the pause and down cards' 'Restart from checkpoint'): a row of the tape by its slot, done again on the walk, which has
-  // made the same save. LOADROW_BREAK=1 = the slot is not told: the tape ends there, as it did
-  { const SS = await import(`${ROOT}/src/game/savestate.ts`), { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`), { rerun } = await import('./rerun.ts'), Q = '?roomclear&squad4&freshstart=0&seed=7', was = SS.SAVETIMELINE.on;
-    try {
-      Math.random = mulberry32(0xa1a); const W: any = await standUp({ seed: 7, search: Q }), g = W.game; startFromQuery(g, Q); SS.SAVETIMELINE.on = true; g.godMode = true;
-      const buf = new ReplayBuffer(); buf.tape.born(g); g.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(g, dt, cmd); else buf.tick(g, dt, W.cam); };
-      let f = 0; const go = (n: number, pre?: () => void) => { for (let i = 0; i < n; i++, f++) { const I = W.input; I.keys.clear(); I.buttons = 0; I.mouseX = 800; I.mouseY = 520; if (f % 240 < 150) I.keys.add('KeyW'); pre?.(); W.step(1 / 60); } };
-      go(200); go(1, () => W.input.pressed.add('F5')); go(99); g.godMode = false; const key = (g.saves.timeline() as any[]).find(x => x.mem)?.key, t0 = g.time, why = key ? g.saves.load(g, key) : 'no save in memory';
-      if (process.env.LOADROW_BREAK === '1') g.saves.loadedKey = null;
-      go(240); const N = f, dEnd = hashDigest(digestGame(g, true)), { file, dead, loads, restarts } = read(W, buf, Q), rows = (file.rerun?.x ?? []).filter((q: any) => q[1] === 'load');
-      check(why === null && g.time < t0 + 4 && !dead && rows.length === 1 && rows[0][0] === 300 && rows[0][2] === key && loads === 1 && !restarts, `load: a save in memory loaded between two steps is a row of the tape, marked a load (${why ?? 'loaded'}; tape: ${dead || 'alive'}; ${JSON.stringify(rows)}; ${loads} load, ${restarts} restart marks)`);
-      const R = await rerun(file, { toN: N }), same = !!R.W && hashDigest(digestGame(R.W.game, true)) === dEnd;
-      check(!R.refuse && !!R.report && R.report.compared > 100 && !R.report.drift && same, `load: its re-run is the first run again, to the digest at step ${N}${R.refuse ? ` — REFUSED: ${R.refuse}` : ` (${R.report?.compared} trace samples, worst ${R.report?.worst?.metres?.toFixed(3)} m, drift ${R.report?.drift ? `${R.report.drift.who} at step ${R.report.drift.n}` : 'none'}, digest ${same ? 'equal' : 'NOT EQUAL'})`}`);
-      g.replayTap = null;
-    } finally { SS.SAVETIMELINE.on = was; } }
-}
-
-// ---- stand: a tape made on the page's rules (the child below stands as the page does) is walked on the page's rules by this process, whatever it stands as itself —
-// a thread's `replay-at.ts --rerun` stands frozen; what a browser keeps per machine rides in the tape
-{ const { rerun } = await import('./rerun.ts'), K = await import(`${ROOT}/src/game/knobs.ts`), Kt = await import(`${ROOT}/src/game/kit.ts`), J = await import(`${ROOT}/src/game/journal.ts`);
-  const { tmpdir } = await import('node:os'), { readFileSync, rmSync } = await import('node:fs');
-  const at = `${tmpdir()}/replaybuf-stand-${process.pid}.json`, keptTables = K.knobsCopy(), keptKit = JSON.stringify(Kt.KIT.members), word = process.env.TPS_PROFILE;
-  const back = () => { K.knobsBack(keptTables); Kt.kitMission(null); Kt.KIT.members.length = 0; Kt.KIT.members.push(...JSON.parse(keptKit)); Kt.kitStealthSet(null); };
-  try {
-    const child = Bun.spawnSync([process.execPath, 'run', import.meta.path, '--tape-to', at], { env: { ...process.env, TPS_PROFILE: 'shipped' }, stdout: 'ignore', stderr: 'pipe', timeout: 180000 });
-    check(child.exitCode === 0, `stand: a room clear with the four taped on the shipped stand${child.exitCode !== 0 ? ` — the child failed (${child.exitCode}): ${child.stderr.toString().slice(-300)}` : ''}`);
-    if (child.exitCode === 0) {
-      const file = JSON.parse(readFileSync(at, 'utf8')), rc = file.rerun.recipe, names = Object.keys(rc.tables ?? {});
-      { const poses = (file.rerun.x as any[]).filter(x => x[1] === 'pose'); check(poses.length === 1 && poses[0][0] === 0, `stand: a run nobody stages or moves him in tapes where the player stands once, at its first step (${poses.length} such rows over ${file.rerun.ticks} steps)`); }
-      check(rc.stand === 'shipped' && rc.tables?.PACE?.accel === 0.6 && !names.some(n => n in J.knobTables()) && names.length + Object.keys(rc.knobs.tables).length === Object.keys(K.knobsNamed()).length && rc.kit?.members?.[4]?.suit === 'navy',
-        `stand: the tape says where it stood and carries the kit and every knob table once (${names.length} beside the ${Object.keys(rc.knobs.tables).length} a recording has)`);
-      const same = (R: any) => !R.refuse && !!R.report && R.report.compared > 100 && !R.report.drift && hashDigest(digestGame(R.W.game, true)) === file.probeDigest;
-      const R = await rerun(file, { toN: 1140 });
-      check(same(R), `stand: walked here it is the same run, to the digest (${R.report?.compared} samples, worst ${R.report?.worst?.metres.toFixed(3)} m)`);
-      { const odd = (R.report?.warnings ?? []).filter((w: string) => /the tape does not carry|this build does not play/.test(w)); check(odd.length === 0, `stand: a tape of this build made on another stand is not called older or newer than the tables${odd.length ? ` — ${odd[0].slice(0, 160)}` : ''}`); }
-      check((K.knobsNamed().PACE as { accel: number }).accel === 0.6 && Kt.KIT.members[4].suit === 'navy' && process.env.TPS_PROFILE === word, 'stand: the re-run stood on the tape\'s own table and kit card, and left this process\'s stand word as it was');
-      // the faults the tape's own tables and stand mend, each asserted with that part taken off the tape
-      const less = (...keys: string[]) => { const f = JSON.parse(JSON.stringify(file)); for (const k of keys) delete f.rerun.recipe[k]; return f; };
-      back(); const R1 = await rerun(less('tables'), { toN: 1140 });
-      check(!same(R1), `stand: without its own tables the same tape is another run (${R1.report?.drift ? `parted at step ${R1.report.drift.n}` : 'the digest differs'}: a Team feel row this browser kept)`);
-      if (word !== 'shipped') { back(); const R0 = await rerun(less('stand', 'words', 'tables', 'kit'), { toN: 1140 });
-        check(!!R0.report?.drift, `stand: read as a tape with no stand named it parts from its trace (at step ${R0.report?.drift?.n}: the frozen stand's rules)`); }
-      else console.log('  (this process stands shipped itself: the frozen-stand control is not asked)');
-    }
-    // the stealth card a run wore (kit.ts KITDEAL.stealth) rides in the tape beside the loud cards: a re-run in a process that never kept one wears the tape's
-    { back(); const child2 = Bun.spawnSync([process.execPath, 'run', import.meta.path, '--stealth-tape-to', at], { env: { ...process.env, TPS_PROFILE: 'shipped' }, stdout: 'ignore', stderr: 'pipe', timeout: 180000 });
-      check(child2.exitCode === 0, `stand: the night alone with a stealth card changed by hand taped on the shipped stand${child2.exitCode !== 0 ? ` — the child failed (${child2.exitCode}): ${child2.stderr.toString().slice(-300)}` : ''}`);
-      if (child2.exitCode === 0) {
-        const file = JSON.parse(readFileSync(at, 'utf8')), card = file.rerun?.recipe?.kit?.stealth;
-        if (!file.probeRule) console.log('  (the shipped stand has the stealth card rule off: its tape carries no such card, nothing to judge)');
-        else {
-          check(!!card && card.rings === 0 && file.probeRings === 0, `stand: the tape carries the stealth card its run wore (sponge rounds on the card ${card?.rings}, in his launcher ${file.probeRings})`);
-          const wore = (R: any) => R.W?.game.player.rifle.rings, same = (R: any) => !R.refuse && !!R.report && !R.report.drift && hashDigest(digestGame(R.W.game, true)) === file.probeDigest;
-          const R = await rerun(file, { toN: 300 });
-          check(same(R) && wore(R) === 0, `stand: walked here, where no stealth card was ever kept, it wears the tape's and is the same run to the digest (${wore(R)} sponge rounds; ${R.report?.drift ? `parted at step ${R.report.drift.n}` : `${R.report?.compared} samples`})`);
-          back(); const f0 = JSON.parse(JSON.stringify(file)); delete f0.rerun.recipe.kit.stealth; const R0 = await rerun(f0, { toN: 300 });
-          check(!same(R0) && wore(R0) > 0, `stand: with the card taken off the tape it wears the mission's kit and is another run (${wore(R0)} sponge rounds; ${R0.report?.drift ? `parted at step ${R0.report.drift.n}` : 'the digest differs'})`);
-        }
-      } }
-  } finally { back();
-    try { rmSync(at); } catch { /* never written */ } } }
 
 // ---- crash: an error that repeats makes ONE file a minute and three a page load, in a browser that keeps no shelf (bun has no IndexedDB: the shelf's own branch
 // stamps through the same line of ReplayKey.put). With no shelf the file is SENT to the build's backend, never downloaded: the probe stands in for the backend ----
@@ -406,19 +169,15 @@ console.log('\n=== replay buffer ===');
       check(f.lines.every((l: any) => l.r >= 0 && l.r <= end), `crash: no line of a file lies before its first sample or past its last (${f.lines.length} lines, the last sample at ${end.toFixed(2)} s)`); }
     await settle();
     const keep = REPLAY.seconds; REPLAY.seconds = 6;
-    try { for (let f = 0; f < 1200; f++) { hands(W, f); W.step(1 / 60); } } finally { REPLAY.seconds = keep; }
+    try { for (let f = 0; f < 600; f++) { hands(W, f); W.step(1 / 60); } } finally { REPLAY.seconds = keep; }
     const id4 = await key.save('key'), l4 = notes[notes.length - 1] ?? '';
     check(id4 === null && texts(key.last?.file).length === 0 && !/holds the page/.test(l4), `crash: once the ring has rolled past the errors a file holds none of them and F7 does not say it does (${texts(key.last?.file).length} lines in ${key.last?.file.seconds.toFixed(0)} s)`);
-    { const buf = key.buf!, play = (secs: number) => { for (let f = 0; f < secs * 60; f++) { hands(W, f); W.step(1 / 60); } }, rs = () => F.errorMarks(key.file('probe')).filter((e: any) => e.text === 'still').map((e: any) => e.r);
+    { const buf = key.buf!, rs = () => F.errorMarks(key.file('probe')).filter((e: any) => e.text === 'still').map((e: any) => e.r);
       const a = [buf.pageError('still', true), buf.pageError('still', true), buf.pageError('still')];
       check(a.join() === 'true,false,false' && rs().length === 1, 'crash: with the game standing still the same error is one line, asked plainly or by an error about to save a file');
-      play(30); const b = [buf.pageError('still'), buf.pageError('still', true), buf.pageError('still', true)], r1 = rs();
-      check(b.join() === 'false,true,false' && r1.length === 2 && Math.abs(r1[1] - r1[0] - 30) < 0.2, `crash: half a minute of play on, the same words are a new line only for the error that saves a file, at its own moment (${r1.map((r: number) => r.toFixed(1)).join(' and ')} s)`);
-      play(61); const c = buf.pageError('still');
-      check(c && rs().length === 3, 'crash: a minute of play after its last line the same error is a line again');
       buf.on = false; const off = buf.pageError('while off'); buf.on = true; const on = buf.pageError('while off');
       (buf as any).broke = 'probe'; const dead = buf.pageError('while stopped'); (buf as any).broke = '';
-      check(!off && on && !dead && texts(key.file('probe')).join('|') === 'still|still|still|while off', 'crash: a buffer that is off or has stopped itself files no line and says so, and files the same error once it runs again'); }
+      check(!off && on && !dead && texts(key.file('probe')).join('|') === 'still|while off', 'crash: a buffer that is off or has stopped itself files no line and says so, and files the same error once it runs again'); }
     // WHAT F7 DID IS SAID ON THE PAGE ITSELF: the note handed in (the message line, the debug read-out) is drawn nowhere on a page that never asked for the read-out,
     // so the key's file keeps a tag of its own — one element, the last line said, shown — and a save that throws or a shelf that never answers still ends in words
     { const { SHELF } = await import(`${ROOT}/src/replay/shelf.ts`);

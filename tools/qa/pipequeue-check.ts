@@ -80,7 +80,7 @@ PIPE_QUEUE.boot = 3;
   check(ms('short') === 10, `the short one behind it is not charged the wait (${ms('short')} ms: 10 of its own, the 120 it waited left out)`);
   PIPE_QUEUE.boot = 3; }
 
-// ---- THE LATER LANE (laterPipelineAsync: what the row 'Start on first frame shaders' leaves out of the start): held while a pipeline of the boot's own waits or is in
+// ---- THE LATER LANE (laterPipelineAsync: what the first-frame start leaves out of the start): held while a pipeline of the boot's own waits or is in
 // flight, not counted on the start card, handed over once those are all in
 const later = (label: string, bytes: number, extra: object = {}) => laterPipelineAsync(dev, { label, compute: { module: mod(bytes) }, ...extra } as unknown as GPUComputePipelineDescriptor);
 { PIPE_QUEUE.boot = 3; pipelineProgress.reset(); const got: string[] = [];

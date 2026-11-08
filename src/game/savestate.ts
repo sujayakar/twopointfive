@@ -92,7 +92,6 @@ import type { QuietSnap } from './quiet';
 import type { FogSnap } from './fogofwar';
 import { quietWords } from './quiet';   // (called inside functions only: src/game is one import cycle)
 import type { LessonSnap } from './lesson';
-import type { SnatchSnap } from './snatch';
 import type { DefuseSnap } from './defuse';
 import { woundRestore, type Wound } from './wounds';
 import type { GameEvent, LightTarget, MissionStage, Mission, SlotKind, ThrowKind, Witness, GuardState, DownKind, DownBy, GuardTask } from './game';
@@ -154,7 +153,6 @@ import { hourOf, hourIdOf, applyHour, setSunStrength, sunStrength, sunGiven, typ
 import type { DevicesSnap } from './devices';
 import type { DecalKind } from '../render/decals';
 import type { Box } from '../scene/boxes';
-import { authoredC, authoredH } from '../scene/round';   // (leaf helpers: a round thing's boxes as the level file has them)
 import { shapeStamp } from '../scene/shapes';   // (a leaf helper: a number of the shapes a level stands on)
 import { LOOK_DECALS, lookDecal } from './lookDecals';
 import { diceInUse } from '../math/dice';
@@ -250,8 +248,6 @@ export interface SaveState {
   /** a training lesson's place among its steps (lesson.ts LessonSnap) — absent off a lesson level or with the lesson switched off */
   lesson?: LessonSnap;
   // (a file from the builds that had plan mode may carry a `plan` key — the men picked and the chains they were on: nothing reads it now, and the file loads without it)
-  /** a snatch level's man: hands up / tied / how it ended (snatch.ts SnatchSnap) — absent off a snatch level */
-  snatch?: SnatchSnap;
   /** a defuse mission's clock and charges (defuse.ts DefuseSnap) — absent off a level with the block */
   defuse?: DefuseSnap;
   player: PlayerSnap; guards: GuardSnap[]; items: ItemSnap[]; doors: DoorSnap[]; props: PropSnap[]; propsTime: number; targets: TargetSnap[];
@@ -391,7 +387,7 @@ export function levelFingerprint(g: Game): SaveState['level'] {
   const L = g.level, nBox = g.destr?.walls?.authored ?? L.boxes.length, st = shapeStamp(L.boxes, nBox);
   const cached = fpCache.get(L); if (cached && cached.st === st) return cached.fp;   // (nBox = the AUTHORED statics only: wall breaking appends pieces to the list at runtime — the level is still the level)
   let geo = 0x811c9dc5;   // + every static's centre and half-extents to the centimetre: a re-export that MOVES geometry under the same names and counts is another level to a checkpoint
-  for (let i = 0; i < nBox; i++) for (const v of [...authoredC(L.boxes[i]), ...authoredH(L.boxes[i])]) { geo ^= Math.round(v * 100) & 0xffffffff; geo = Math.imul(geo, 0x01000193) >>> 0; }
+  for (let i = 0; i < nBox; i++) for (const v of [...L.boxes[i].c, ...L.boxes[i].h]) { geo ^= Math.round(v * 100) & 0xffffffff; geo = Math.imul(geo, 0x01000193) >>> 0; }
   const s = `${nBox}|${L.doors.map(d => d.name).join(',')}|${L.routes.map(r => `${r.name}:${r.points.length}`).join(',')}|${g.targets.reduce((n, t) => n + (lampGlass(t) ? 0 : 1), 0)}|${L.props.length}|${geo.toString(16)}${st ? `|shapes:${st.toString(16)}` : ''}`;
   // (the count of light targets is the LEVEL's own: a vehicle's lamps — carlamps.ts — are made of the level's boxes by a rule that can be off, and a target is
   //  poured back by name, so a checkpoint or a recording from before that rule, or from a page with it off, is still this level's)
@@ -608,7 +604,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     events: g.events.map(e => ({ kind: e.kind, pos: c3(e.pos), time: e.time, loud: e.loud, level: e.level, id: e.id, who: e.who, weapon: e.weapon, from: e.from ? c3(e.from) : undefined, to: e.to ? c3(e.to) : undefined, announced: e.announced, cause: e.cause, ...(e.ears ? { ears: [c3(e.ears[0]), c3(e.ears[1])] as [Vec3, Vec3] } : {}), ...(e.swAt ? { swAt: c3(e.swAt) } : {}) })),
     messages: g.messages.map(m => ({ text: m.text, t: m.t })),
     rollcall: { nextAt: R.nextAt, stage: R.stage, t0: R.t0, caller: gi(R.caller), missing: gi(R.missing), answered: R.answered, checks: R.checks },
-    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), lanes: lanesSnapshot(g), walls: g.destr?.walls?.snapshot(), furn: g.destr?.furn?.snapshot(), bars: barsSnapshot(g), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, ...(air ? { air } : {}), ...(g.quiet?.active ? { quiet: g.quiet.snapshot()! } : {}), ...(g.lesson?.data ? { lesson: g.lesson.snapshot() } : {}), ...(g.defuse?.active ? { defuse: g.defuse.snapshot() } : {}), ...(g.snatch?.active ? { snatch: g.snatch.snapshot() } : {}), qrf: { loudT: g.qrf?.loudT ?? -1e9, ...(RESPONSE.on ? { word: responseWordSnapshot(g) } : {}) },
+    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), lanes: lanesSnapshot(g), walls: g.destr?.walls?.snapshot(), furn: g.destr?.furn?.snapshot(), bars: barsSnapshot(g), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, ...(air ? { air } : {}), ...(g.quiet?.active ? { quiet: g.quiet.snapshot()! } : {}), ...(g.lesson?.data ? { lesson: g.lesson.snapshot() } : {}), ...(g.defuse?.active ? { defuse: g.defuse.snapshot() } : {}), qrf: { loudT: g.qrf?.loudT ?? -1e9, ...(RESPONSE.on ? { word: responseWordSnapshot(g) } : {}) },
     civilians: civiliansSnapshot(g),
     decals, ...(glassPenSnapshot(g) ? { glassPen: glassPenSnapshot(g) } : null),
     ...(dz ? { doze: dz } : null),   // (who dozes in which chair and who was woken — doze.ts; no key with its switch off)
@@ -678,7 +674,7 @@ export function loadState(g: Game, s: SaveState, opts: { label?: string } = {}) 
   barsRestore(g, s.bars);             // the window bars a round or a blast took (winbars.ts), gone again before the walls settle round them — the order they went in
   g.destr?.walls?.restore(s.walls);   // the level first (holed walls, chewed cover: the statics re-cut, the nav grid re-baked) — everything below is placed in it
   g.destr?.furn?.restore(s.furn);     // …then the furniture a blast took: gone again, silently (its pieces are not filed — no debris is)
-  try { applyState(g, s, prevLoads, prevSaves, opts); g.lesson?.restore(s.lesson); g.defuse?.restore(s.defuse); g.snatch?.restore(s.snatch); ringRestore(g); g.fogOfWar?.restore(s.fog); }   // (…and a training lesson's place among its steps, lesson.ts: after the mission slice — a file without it, made with the lesson off, leaves the lesson stood down for that run)
+  try { applyState(g, s, prevLoads, prevSaves, opts); g.lesson?.restore(s.lesson); g.defuse?.restore(s.defuse); ringRestore(g); g.fogOfWar?.restore(s.fog); }   // (…and a training lesson's place among its steps, lesson.ts: after the mission slice — a file without it, made with the lesson off, leaves the lesson stood down for that run)
   catch (e) { g.restartEncounter(); pageSay(`checkpoint failed to load (${(e as Error).message}) — encounter restarted`); throw e; }   // (a file broken past the checks: never a half-poured encounter — the fresh one, and the reason)
 }
 function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number, opts: { label?: string }) {

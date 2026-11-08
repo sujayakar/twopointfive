@@ -156,7 +156,7 @@ pub fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: O
 }
 
 /// This frame's deeds into the step's counts.   (lesson.ts Lesson.count)
-pub fn lesson_count(g: &mut crate::game::Game, s: &mut crate::lesson::StepSeen) {
+pub fn lesson_count(g: &crate::game::Game, s: &mut crate::lesson::StepSeen) {
     let cam = g.tab.cmd_seat[g.seat].cam;
     if js::truthy(g.rails.fresh) {
         let yaw = g.tab.camera[cam].yaw;

@@ -70,7 +70,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rows FOR THE VISIT (`quietFogStart`: `FOG.cone` through `difficulty.ts setConeVisit`, `FOG.own` directly; `?fogcone` / `?fogown` on the same URL speak over it), let go of by
   `quietFogEnd` at the quit, a refusal or the next start. The fog's eyes are its own: the player, and the partner of a quiet mission as two (own eyes: the player alone). ui/levers.ts
   `paint(live, structure, quiet)` shows the off button only on a quiet row. THE SQUAD'S LEVER WHILE A RUNG IS HELD (the sheet opened from the pause card of a quiet mission under the fog):
-  every read of the squad lever off the fog's rows and every press that writes them goes through `quietFogAside(fn)` (levers.ts paint / press / `leversSig` / `leversOpenOn`, missions.ts
+  every read of the squad lever off the fog's rows and every press that writes them goes through `quietFogAside(fn)` (levers.ts paint / press / `leversSig`, missions.ts
   Standard | Hard, its A / D keys and its links; the loadout's, the short list's and the start page's reads of `difficultyNow / leversMixed / leversLine / difficultyHref / leversHref` — unwrapped, a kept AI lever beside a held rung read as all of Hard and D dropped the kept levers; the aside may nest) — the rung's hand off the rows for `fn`, laid again on what it left — so a squad row lights the squad's lever, a press there never moves the mission being played, and the
   quit puts back what it wrote (a new UI site that reads or writes the difficulty tables wants the same; the debugger's rows are 'moved by hand' and are not wrapped). The quiet row's own pick is the
   NEXT deploy's (the link), like Hour and Weather: the mission being played keeps its rung. `difficulty.ts coneVisitNow()` = the visit's cone pin, read so the quit puts it back. `bun run tools/qa/quietfog-check.ts` (`probes.ts quietfog`, also under `fog` and `quiet`; passes on both stands,
@@ -169,7 +169,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`ui/loadout.ts paintLevers`, the kit card's file; words on a screen only, no switch). `levers-screens` holds it on both stands; red on the tree before.
 - **How much you're told is a fourth difficulty lever, and a squad mission's fog can be put off** (`src/game/told.ts` TOLD; 10-23, from the maintainer's
   "how do we communicate friendly and enemy AI state to the player (especially on easier difficulties)"). What was there: every setting only took signs
-  away (the fog's cones, own eyes), and the last-seen mark (`fogofwar.ts lastSeen()`, the fading '(?)' `ui/overlay.ts` draws) was built and at 0 s
+  away (the fog's cones, own eyes), and the last-seen mark (`fogofwar::fog_of_war_last_seen`, `game.view.marks.seen`, the fading '(?)' `ui/overlay.ts` draws) was built and at 0 s
   (`FOG.lastSeen`). THE LEVER: `You're told`, three rungs from the easiest, GUIDED · STANDARD · BARE, a fourth row under Enemy kit on the mission sheet,
   the Setup rail and the loadout screen (`difficulty.ts leversNow()` = LEVERS plus this one; `ui/levers.ts` draws whatever that list holds). The level
   standard puts it on Standard and hard on Bare; Guided is no level's, it is reached by moving the lever (a mix of your own, kept on the machine with the
@@ -204,7 +204,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `TOLD.rung` with the switch off too (nothing reads it then), and over a harness `--set TOLD.rung`. Measured on one level (the pair's room
   clear), one seed, both stands. Never seen on a GPU and never played: whether 4 s and 10 s read right, and whether the '(?)' is enough of a sign, is
   the maintainer's to say.
-- **Your own stuck cameras show in the fog of war** (`STICKY.mark`, `stickycam.ts stickyBoxes / stickyMarks`, drawn by `ui/overlay.ts` as `.cammark`;
+- **Your own stuck cameras show in the fog of war** (`STICKY.mark`, `stickycam.ts stickyBoxes`, `stickycam::sticky_marks`, drawn by `ui/overlay.ts` as `.cammark`;
   2026-10-17; the maintainer, from play on the vault, quiet, hard, the fog's cones: "nit, you should be able to see your sticky cameras in fog of war").
   WHAT WAS THERE: a camera's two boxes were unkeyed, so the fog's rule for loose things (fogofwar.ts rule 4d) handed them to the picture only on floor an
   eye of the team sees. The one camera that sends is its own eye and stayed; a DARK one (the older of two, `STICKY.live` 1) on floor nobody watches, or
@@ -213,7 +213,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   THE RULE: up, (1) a camera's boxes, in the air and stuck, carry a wall device's key (`MKEY.device + 0x800000 + id × 2 + part`; fogofwar.ts `THING_PASS`
   lets that class through wherever it is — his own, it gives nobody away), so it is always in the picture, fired into the fog included. KNOWN, LEFT: a
   camera on a wall that is blown out where nobody looks is seen to drop live in the fog (it is heard to, and it is his); (2) while the fog
-  is live the HUD puts a small lens on each stuck camera of his (`stickyMarks(g)` → `{ at: the lens, sends }`; a ring, brighter with a red pupil on the one
+  is live the HUD puts a small lens on each stuck camera of his (`game.view.marks.cams` → `{ at: the lens, sends }`; a ring, brighter with a red pupil on the one
   that sends), so he finds them to take back and reads which one is the feed. No mark with no fog up, none on one in flight, none off screen (no edge
   clamp), none on a viewer's picture with the fog lifted; the use key's own dot is not drawn inside a marked camera's lens. Picture only: no step reads it, the run digests the same down and up.
   THE SWITCH: ON in the page (`?cammark=0`), OFF in the module and on the frozen stand (`TPS_CAMMARK=1`; `FROZEN_HOLDS['STICKY.mark']`); in the knob
@@ -526,7 +526,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the build's near-sight floor (a shape inside 1.8 m in his view is seen whatever the light, rate ≥ 3.5) is scaled by the light on SAM — none under `darkAt` of his meter, whole
   from `litAt`, whole for a man alert / searching and inside `touchM` 0.55; Sam only (the pair's partner keeps sneak.ts's own rule and waits short). `player.visibility` is the GPU
   meter: headless feed it (close-probes do); in the page a room lit only by the men's own torches reads 0.17–0.45 on Sam between them (bounce), 0.85+ in a beam. Floor marks
-  (`CLOSE.marks`, overlay `.closewin`) ship off. Tab ▸ 'Closer than ever' section. NOT saved in checkpoints (the mode's hysteresis and the held gait's clock restart on a load). QA:
+  (`CLOSE.marks`) are gone: the row was settled off, and the HUD's drawing of them is deleted. Tab ▸ 'Closer than ever' section. NOT saved in checkpoints (the mode's hysteresis and the held gait's clock restart on a load). QA:
   `probes.ts close` (14 probes incl. close-off (deleted 2026-11-06 with the off side: qa.md) = the switch off is the build, close-duo = beside a partner under `PAIRUP`; rides all-quick), `bun run tools/qa/ready-pose-probes.ts
   poses | ease | identity | knife | creep | gait | strips --out DIR` (the animator alone: identity hash = the base's with nothing asked).
 - **Close-up takedowns as moves** (`src/game/takedown.ts` = the game's half, `character.ts` `BLOW` / `TAKEN` / `KNIFE_SLASH` + `blow() / taken() / takePre / blowTrunk / blowArms /
@@ -613,7 +613,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   carries optional `fov / near`, written per eye into the `looks` row the shader already reads): `pastM` 0.22 beyond the leaf, `eyeY` 0.1 m off the floor, a wedge of `fovDeg` 90
   (under `FOG.cone` the cone's own, since the picture's soft edge is one number for all eyes) turned by the AIM POINT at `panRate`, never nearer than `blindDeg` 10 to the door's own
   wall; its smoke line to a man is asked under its own probe key (`fowW_<id>`), not Sam's. So while he looks his own surroundings are fog unless a teammate sees them. No rule for the dark (the fog never asks for light), nobody notices the lens, it files no sound. N IS HIS WHILE HE LOOKS (`WAND.nv`, on; false = the key did nothing on his knee at the door, as it was, and a recording from before the key replays so; the maintainer, 10-12: "should be able to use night vision with wand"): player.ts reads N ahead of the look's early return, the goggles go down / up by kitanim.ts's nod (his hands are on the cable) and the picture is the tube's as anywhere else — the lens, its wedge, the fog and the look's clocks are untouched, and nothing is seen that the goggles do not show elsewhere; his head stays within 1.5 cm through the flip on both stands (`wand-look` holds 3). KNOWN, read off the code and not seen: on the page the stealth poses' squat at the door (`stealthPicture`) re-aims his head every frame, so the goggles swing but the nod itself is mostly levelled out.
-  WHAT HE KEEPS: a hostile last seen through the lens gets the fog's own fading '(?)' for `markSecs` 15 whatever `FOG.lastSeen` says (`Rec.wandT`; `lastSeen()` returns a per-mark
+  WHAT HE KEEPS: a hostile last seen through the lens gets the fog's own fading '(?)' for `markSecs` 15 whatever `FOG.lastSeen` says (`Rec.wandT`; `fog_of_war_last_seen` returns a per-mark
   `life` both overlays fade by; HUD only). Out again, no round until the gun is back up: with kit handling on that is the by-hand draw's own time, else `stowSecs` 0.6. A look under
   way refuses a plain save (`playerBusy` 'looking under a door'). Tab ▸ Player & weapons ▸ 'Optical wand' (the switch, 'on me now', seven numbers). A TEAMMATE'S IS THE NEXT BULLET. NOT built: a cable prop, a pose of its own, hostages marked, an IR / dark rule. QA: `bun run tools/qa/wand-check.ts [kit|tile|look|costs|doors|mate|off]` (`probes.ts wand`,
   in all-quick; `wand-kit` and `wand-tile` (the real loadout screen on a fake DOM: the 'no use here' tile on the solo night, the plain one on a squad mission, the quiet mission's following its fog lever) also under `kit`, `wand-look` under `fog`; both stands; `WAND_BREAK=1` must fail; `wand-doors` = the lens beyond the leaf and in the open on every door face
@@ -928,7 +928,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and the picture's ray (`occludedTBoxes`). So a stovepipe 10 cm across, a window's bar or a lone post each threw a sliver of "not seen" across the room
   behind it, and with men outside looking in through barred windows the floor, rug and back wall were fans of seen and unseen (on The Pass, 3 to 5
   slivers from one eye by a window of the long room, by the game's own sight test). THE RULE (`src/scene/thin.ts thinLevel`, run by
-  `host/standup.ts populateHost` after `roundLevel`, on both stands): a static is marked `BoxFlag.Thin` when it is NARROW (under `THIN_WIDTH` 0.25 m
+  `host/standup.ts populateHost`, on both stands): a static is marked `BoxFlag.Thin` when it is NARROW (under `THIN_WIDTH` 0.25 m
   across in plan both ways), FREE (no solid box beside it over a quarter of its height, counted over all its neighbours; what it stands on or under,
   a pane of glass and the other slabs of the same round thing are not beside it) and NOT A DOOR'S (nothing within `DOOR_NEAR` 0.3 m of a door's shut
   leaf: a jamb or a stop passed would open every shut door — the first version of this did exactly that, by size alone, and a review caught it). A

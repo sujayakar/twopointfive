@@ -1,6 +1,7 @@
-// WHAT THIS MACHINE KEEPS OF HOW IT PLAYS, as the commands a game is handed: the difficulty and its levers before it is made, the sandbox row once it stands. The
+// WHAT THIS MACHINE KEEPS OF HOW IT PLAYS, as the commands a game is handed: the difficulty, its levers and the men's cards before it is made, the sandbox row once it stands. The
 // address's words win over what is kept, for the visit.
 import type { Commands } from '../draw/commands';
+import { KIT_KEPT } from '../view/desk';
 
 /** the levers' keys and the address's word for each (game/difficulty.ts) */
 const LEVERS: readonly (readonly [string, string])[] = [['fog', 'fog'], ['ai', 'enemyai'], ['kit', 'enemykit'], ['told', 'told']];
@@ -18,6 +19,7 @@ export function machineBefore(q: URLSearchParams, level: string, C: Commands): v
     for (const [key] of LEVERS) if (typeof mine[key] === 'string') C.lever(key, mine[key]);
     for (const [key, said] of LEVERS) { const rung = q.get(said); if (rung) C.lever(key, rung); }
   }
+  { const cards = kept(KIT_KEPT); if (cards !== null && !q.has('nokit')) C.kit(cards); }
   if (q.has('digin')) C.digIn(1);
   if (q.has('pressure')) C.pressure(q.get('pressure') !== '0' ? 1 : 0);
   if (q.has('fogcone')) C.fogCone(q.get('fogcone') !== '0' ? 1 : 0);

@@ -31,7 +31,7 @@ import { SideMap, GameSideMap } from '../math/side';
 import { Vec3, wrapAngle, clamp, smoothstep } from '../math/vec';
 import type { Game, Guard } from './game';
 import { canStand } from './player';
-import { civilianSeated, civiliansShown } from './civilians';
+import { civilianSeated } from './civilians';
 import type { ReadyKind } from './character';
 import './handwork';
 import './stalk';
@@ -45,17 +45,13 @@ export const CLOSE = {
   on: false,
   /** the mode near a man: the changed carriage and the gait that holds its pose (character.ts `creep`) · the hand on the knife and the reaching arm in melee reach
    *  (`ready`) · the men's near-sight floor scaled by the light on Sam (`dark`) */
-  mode: true, ready: true, dark: true,
+  ready: true, dark: true,
   /** the windows drawn on the floor (ui/overlay.ts): OFF as shipped — the character is the tell */
   marks: false,
   /** the strikes besides the one from behind, each its own switch · a seated man's longer rear reach */
   side: true, front: true, seat: true,
   /** a strike (never a grab) still lands on a man who is ALERT */
   alertStrike: true,
-  /** THE BLOW IS THE PLAYER'S CHOICE (Chaos Theory's two buttons): hands empty in reach, the LEFT click is the knife — he is dead — and the RIGHT click the
-   *  knockout — he is out cold, breathing. Off = the left click is the knockout, as the build had it, and the right click nothing. Never under a show (the
-   *  tour's clicks are knockouts) and never on a civilian (either button puts her out). */
-  lethal: true,
   /** WITH A MAN IN HIS ARM THE SAME TWO BUTTONS (player.ts updateHold) — its own switch: it does not wait on `on`. The knife is at his throat: the LEFT click
    *  uses it — he is dead, and once begun it is not eased off (no tap, step or Esc stops a blade) — and the RIGHT click is the choke, begun exactly as his Space
    *  row begins it (he is out cold, breathing; a tap or a step still eases it off). The arm hold only: the pistol's hold keeps its own clicks (a round past
@@ -259,65 +255,6 @@ export function closeNoise(kind: CloseKind, wasAlert: boolean): number { return 
 /** the tallies (player.ts startTakedown / startGrab report what they made) */
 export function closeTook(g: Game, gd: Guard, what: 'take' | 'grab', kind: CloseKind, bearing: number, dist: number) { (what === 'take' ? CLOSE_STATS.takes : CLOSE_STATS.grabs)[kind]++; note(g, gd, what, kind, bearing, dist); }
 
-// ------------------------------------------------------------ the picture: each window as a floor polygon, cut by the walls the offer is cut by
-export interface CloseMark {
-  guard: Guard; id: CloseId; kind: CloseKind;
-  /** the window's outline on the floor (world), outer arc then inner arc back — empty when a wall leaves nothing of it */
-  pts: Vec3[];
-  /** where its words go (just outside the outer arc at its middle) and what they say */
-  labelAt: Vec3; label: string;
-  /** in = Sam stands in it and the move is on · open = it would be, from inside it · shut = nothing from there now (`label` says why) */
-  state: 'in' | 'open' | 'shut';
-  /** 0‥1 by Sam's distance (drawn only near a man) */
-  alpha: number;
-}
-/** how far out along a bearing the window runs before a wall or a leaf ends it: the offer's own test, bisected to a few centimetres */
-function clipReach(g: Game, gd: Guard, a: number, r0: number, r1: number): number {
-  const gp = gd.char.pos, s = Math.sin(a), c = Math.cos(a); const at = (r: number): Vec3 => [gp[0] + s * r, 0, gp[2] + c * r];
-  // (asked FROM THE MAN outward: a segment that starts inside a wall does not see that wall — collision.ts — and the window would be drawn through its thickness)
-  if (clearBetween(g, gp, at(r1))) return r1;
-  if (!clearBetween(g, gp, at(r0))) return r0;
-  let lo = r0, hi = r1; for (let i = 0; i < 5; i++) { const m = (lo + hi) / 2; if (clearBetween(g, gp, at(m))) lo = m; else hi = m; }
-  return lo;
-}
-/** what a window says on the floor, by what Sam's hands hold */
-function labelOf(g: Game, w: CloseWindow): string {
-  const pl = g.player, empty = pl.holstered;
-  if (w.kind === 'front') return empty ? 'STRIKE' : 'STRIKE · HOLSTER FIRST';
-  if (w.kind === 'seat') return empty ? 'HAUL OUT · TAKEDOWN' : 'HAUL OUT';
-  if (w.kind === 'side') return empty ? 'STRIKE' : 'STRIKE · HOLSTER FIRST';
-  return empty ? 'GRAB · TAKEDOWN' : 'GRAB';
-}
-/** THE WINDOWS TO DRAW this frame (ui/overlay.ts; the probes): every window of every man within `modeM` of Sam, cut by walls, with its words and its state.
- *  Nothing while Sam's hands are on somebody, he is down, or the switch / the marks are off. Reads only — safe to call from the HUD. */
-export function closeMarks(g: Game): CloseMark[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('closeMarks', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
-  const out: CloseMark[] = []; const pl = g.player;
-  if (!CLOSE.on || !CLOSE.marks || pl.down || pl.holding || pl.takedown || pl.dragging) return out;
-  const p = pl.char.pos, K = CLOSE;
-  for (const gd of [...g.guards, ...civiliansShown(g)]) {
-    if (!closeSubject(g, gd)) continue;
-    const gp = gd.char.pos; const d = Math.hypot(p[0] - gp[0], p[2] - gp[2]); if (d >= K.modeM) continue;
-    const alpha = smoothstep(K.modeM, K.modeM - K.fadeM, d);
-    const o = closeAt(g, gd, p); const y = gp[1] + 0.03;
-    const alert = gd.state === 'alert'; const catchable = !gd.civ || (gd.civ.state !== 'flee' && gd.civ.state !== 'evacuate' && gd.civ.state !== 'report');
-    for (const w of closeWindows(g, gd)) {
-      const opens = catchable && ((w.grab && !alert) || (w.strike && (!alert || K.alertStrike)));
-      const n = Math.max(2, Math.ceil((2 * w.half) / (K.stepDeg * DEGR))); const outer: Vec3[] = [], inner: Vec3[] = [];
-      let any = false;
-      for (let i = 0; i <= n; i++) {
-        const b = w.mid - w.half + (2 * w.half) * (i / n), a = gd.char.bodyYaw + b; const r = clipReach(g, gd, a, K.inner, w.reach);
-        if (r > K.inner + 0.04) any = true;
-        outer.push([gp[0] + Math.sin(a) * r, y, gp[2] + Math.cos(a) * r]); inner.push([gp[0] + Math.sin(a) * K.inner, y, gp[2] + Math.cos(a) * K.inner]);
-      }
-      const am = gd.char.bodyYaw + w.mid, rl = w.reach + 0.2;
-      const here = o.win?.id === w.id;
-      const state: CloseMark['state'] = here && o.can ? 'in' : opens && !pl.sprinting ? 'open' : 'shut';
-      const label = state === 'shut' ? (alert && !opens ? 'HE IS ONTO YOU' : pl.sprinting ? 'STOP SPRINTING' : !catchable ? 'NOT NOW' : labelOf(g, w)) : here && !o.can && o.inReach && o.why ? o.why.toUpperCase() : labelOf(g, w);
-      out.push({ guard: gd, id: w.id, kind: w.kind, pts: any ? [...outer, ...inner.reverse()] : [], labelAt: [gp[0] + Math.sin(am) * rl, y, gp[2] + Math.cos(am) * rl], label, state, alpha });
-    }
-  }
-  return out;
-}
 
 // ------------------------------------------------------------ a seated staff man (staged: the panel, __close.seat, the clip)
 const SIT_CLIP = { clip: 'Sitting_Idle_Loop', loop: true, rate: 1, in: 0.7, out: 0.8 };

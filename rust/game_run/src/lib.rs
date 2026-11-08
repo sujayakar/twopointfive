@@ -11,6 +11,8 @@
 //!   the tick `step`
 //!   after    `write_after` (each line of hostwrites.txt for this tick) · the compare (`part_hashes`) · `lights` · `view` · `follow`
 pub mod command;
+pub mod desk;
+pub mod kept;
 pub mod knobs;
 mod knobs_list;
 use game::ids::Id;
@@ -45,12 +47,7 @@ pub fn part_hashes(slot: usize) -> [u32; 13] {
 pub fn start(state: &[u8], block: &[u8], slot: usize) -> (Box<game::game::Game>, Vec<String>) {
     let mut g = Box::new(game::io::import(state));
     let mut said: Vec<String> = Vec::new();
-    let len = core::mem::size_of::<sim::state::State>();
-    unsafe {
-        let at = sim::state::addr(slot) as *mut u8;
-        core::ptr::write_bytes(at, 0, len);
-        core::ptr::copy_nonoverlapping(block.as_ptr(), at, block.len().min(len));
-    }
+    sim::state::put(slot, block);
     // (the one way to say which of rust/sim's slots a game stands in: the game's own word and the box mirror's)
     game::io::set_slot(&mut g, slot);
     // (the level's script and its define pass are the import's own now: io::deal_scripts)
@@ -189,11 +186,11 @@ pub fn write_before(g: &mut game::game::Game, k: usize, l: &str) -> Option<Strin
         let r = game::wallcharge::wall_charge_blow(g, c, None);
         return Some(format!("  the driver before tick {}: blows the wall charge on wall {} ({}) -> {:?}", k, ix, if c.is_some() { "set" } else { "NOT SET HERE" }, r));
     }
-    // HARNESS STAND-IN: the scripted player gives the hostages (rescueend.ts `word`) or the man in hand (snatchout.ts `word`) the word by the module's own
+    // HARNESS STAND-IN: the scripted player gives the hostages (rescueend.ts `word`) the word by the module's own
     // call between ticks: `player` they follow the player, `none` they stay where they stand
-    if w.get(1) == Some(&"rescue_word") || w.get(1) == Some(&"snatch_word") {
+    if w.get(1) == Some(&"rescue_word") {
         let by = match w.get(2) { Some(&"player") => Some(g.pl[g.player].ch), Some(&"none") => None, x => return Some(format!("  NOTE tick {}: a word to follow somebody this runner cannot give: {:?}", k, x)) };
-        let ok = if w[1] == "rescue_word" { game::rescueend::rescue_end_word(g, by) } else { game::snatchout::snatch_out_word(g, by) };
+        let ok = game::rescueend::rescue_end_word(g, by);
         return Some(format!("  the driver before tick {}: {}({}) -> {}", k, w[1], w[2], ok));
     }
     // HARNESS STAND-IN: the scripted player puts the highlight on a row of the nearby list between ticks (it writes `Player.nearSel` and calls

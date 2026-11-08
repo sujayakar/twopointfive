@@ -10,6 +10,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **A check reads the same alone, in its family and on every run.** A game stood with no seed and no die gets die 1 (`tools/qa/die.ts`; `standdie-check.ts`,
     STANDDIE_BREAK=1 fails it), each probe begins on it (`holds.ts asProbe`), and `probes.ts <family>` runs a process a probe, `QA_JOBS` at a time (the cores by
     default), each stopped at `QA_PROBE_CAP` seconds (600; 0 = none). The closing line says what the run cost and names the five slowest.
+  - **`probes.ts all-quick` is every probe that costs at most 8 CPU seconds** (`tools/qa/costs.json`, written anew by `probes.ts all --costs`; `QA_QUICK_SECS`): some 290
+    probes in five to six minutes on four cores. `all` is about 950 in an hour and a half there.
   - **A probe is under a minute of CPU.** A sweep asks a sample (`tools/qa/sweep.ts`: `sample`, `everyNth`, floors through `swept`); `QA_SWEEP=all` asks every case.
     A game stood with `reach: true` makes the picture's light masks every step: only a check that reads masks asks for it (it was nine tenths of the wall family's time).
   - **A red is the game's only when the check reached the game.** A tool holds a COPY of the Rust game's state. Of about sixty reds placed one by one, five were the
@@ -19,7 +21,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     text (a yaw is written EVERY frame). A bubble's object is reused: compare its `t`. Only the newest game of a process is live: play one arm to its end, then stand the next.
   - `game.msg` / `game.say` wrapped by a check are told what the Rust game said (`headless.ts`, `heard.ts`): the log's five rows a tick and one line a man.
   - **A rule of the simulation is asked natively first** (`rust/game_start/tests`); a probe is for what crosses the bridge or the page.
-  - The expected reds are what is left red, each a fault placed or a thing nobody has placed yet; a row goes the day its check is green.
+  - **The expected reds are one short list** (`tools/qa/expected-red.ts`): faults of the game, placed or waiting for their owner's read. A check's own red is mended, cut or deleted,
+    never listed; a row goes the day its check is green. (The five tables, `red-rows.ts`, `LIST_READ_ON`, the `on` / `bisect` / `rust` fields that older bullets name are gone.)
+  - A check file that is a script of its own is a row of the runner's script table (`probes.ts`, [name, file, families]): a file nothing runs is not a check.
 - **THE HARNESS STANDS THE GAME AS THE PAGE OPENS IT (2026-11-05; the maintainer ruled that the frozen stand may be retired).** With no word in front a
   headless tool is on what the bullet below calls the SHIPPED stand. THE RULE IS ONE FUNCTION, `standOf` in the import-free `src/host/standEnv.ts`: no
   word or `TPS_PROFILE=shipped` = the page's stand, `TPS_PROFILE=frozen` = the old one, any other word stops the tool. `harnessProfile()`
@@ -621,7 +625,7 @@ camera drifts under scripts and framed walls instead of the subject for a whole 
 write becomes a walk that stops at the first wall). **The boot is asynchronous** (every pipeline through `createComputePipelineAsync`, `Engine.init()` awaited
 behind a start card that counts them in): `window.__ready` is a Promise that exists from the first tick and resolves once every hook above is assigned, the
 card is live AND every kernel is in (rejects if the boot dies) — `await window.__ready` is the one line a script needs. Since 2026-10-27 the start card of a
-PERSON'S browser does not wait for the heaviest kernels (the row Start on first frame shaders starts on there: `docs/agents/render.md`). A browser a script
+PERSON'S browser does not wait for the heaviest kernels (the start on first frame shaders is on there: `docs/agents/render.md`). A browser a script
 drives (`navigator.webdriver`: every page tool) starts with that row OFF, so there the card still waits for everything and `__ready`, the hooks and the first
 picture are as they were. `window.__started` is true from the moment the card is live (on a mission's page a person sits at the brief's block is live later, at `__boot.marks.settled`: `docs/agents/menus.md`, the brief's Start waits for the picture; `?settle=0` off); with the row on (`?firstframe=1` on a tool's address) the later set
 may still be compiling then and its passes drawing stand-ins, the hooks are already assigned, and `__ready` resolves only once the set is in (`gpu/device.ts

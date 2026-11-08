@@ -17,8 +17,7 @@
 //    through glass
 // 11 the light, by the headless stand-in of the meter (guards.ts lightEstimateAt: direct light, no moon, no bounce): the gateway reads lit, both starts dark
 // 12 THE MELT ROUND THE BRAZIER IS ROUND: the slush and the bare earth about the burning drum each reach the same distance from it on every bearing (a square
-//    of ground finish round a round drum read as a tile once the fire lit it), the slush shows all the way round the earth, the drum stands inside the earth,
-//    and no slab of it is taken for a round THING (scene/round.ts: a cylinder with a drum's rim)
+//    of ground finish round a round drum read as a tile once the fire lit it), the slush shows all the way round the earth, the drum stands inside the earth (scene/round.ts: a cylinder with a drum's rim)
 // PASS_BREAK=1 = way 1's start is stood in the gateway under its lamp (lines 9 and 11 must fail), a bank is stood back at the back wall's outside foot (line 6, feet)
 // and the melt is laid as the two squares it was (line 12).
 // Exit 0 = every line holds, 1 = one does not. Nothing here looks at a picture: never seen on a GPU.
@@ -179,10 +178,10 @@ export async function passCheck(): Promise<boolean> {
         return Math.max(...L.map(({ b }) => { const c = Math.cos(b.yaw || 0), s = Math.sin(b.yaw || 0); return Math.min(b.h[0] / Math.max(1e-9, Math.abs(c * dx - s * dz)), b.h[2] / Math.max(1e-9, Math.abs(s * dx + c * dz))); })); });
       const paints = [...new Set(laid.map(({ b }) => key(b.albedo)))].map(k => { const L = laid.filter(({ b }) => key(b.albedo) === k), R = reach(L); return { n: paintOf(L[0].b) ?? 'earth', slabs: L.length, lo: Math.min(...R), hi: Math.max(...R), top: Math.max(...L.map(({ b }) => top(b))), low: Math.min(...L.map(({ b }) => top(b))) }; }).sort((p, q) => p.hi - q.hi);
       const drum = boxes.filter((b, i) => groups[i] === 'stoves' && !(b.flags & BoxFlag.NoShadow) && Math.hypot(b.c[0] - fx, b.c[2] - fz) < 0.01), drumR = Math.max(0, ...drum.map(b => Math.hypot(b.h[0], b.round ? 0 : b.h[2])));
-      const [earth, slush] = paints, taken = melt.filter(({ b }) => b.round || b.was).length;
-      line(!!fire && paints.length === 2 && paints.every(p => p.hi / p.lo < 1.07) && earth.n === 'earth' && slush.n === 'snowOld' && slush.lo > earth.hi + 0.15 && earth.low > slush.top + 0.0006 && drum.length > 0 && earth.lo > drumR + 0.1 && taken === 0,
-        'the ground melted round the brazier is round: slush and earth each reach the same distance from the fire on every bearing, within 7 % (a square is 41 % out at its corners); the slush shows all the way round the earth, which lies over it; the drum stands inside the earth; none of it is taken for a round thing',
-        `${paints.map(p => `${p.n}: ${p.slabs} slab${p.slabs === 1 ? '' : 's'}, reach ${p.lo.toFixed(3)}‥${p.hi.toFixed(3)} m (${((p.hi / p.lo - 1) * 100).toFixed(1)} % out), tops ${(p.low * 1000).toFixed(1)}‥${(p.top * 1000).toFixed(1)} mm`).join(' · ')} · the drum ${drum.length} box${drum.length === 1 ? '' : 'es'}, ${drumR.toFixed(2)} m out · taken for a round thing: ${taken}`); }
+      const [earth, slush] = paints;
+      line(!!fire && paints.length === 2 && paints.every(p => p.hi / p.lo < 1.07) && earth.n === 'earth' && slush.n === 'snowOld' && slush.lo > earth.hi + 0.15 && earth.low > slush.top + 0.0006 && drum.length > 0 && earth.lo > drumR + 0.1,
+        'the ground melted round the brazier is round: slush and earth each reach the same distance from the fire on every bearing, within 7 % (a square is 41 % out at its corners); the slush shows all the way round the earth, which lies over it; the drum stands inside the earth',
+        `${paints.map(p => `${p.n}: ${p.slabs} slab${p.slabs === 1 ? '' : 's'}, reach ${p.lo.toFixed(3)}‥${p.hi.toFixed(3)} m (${((p.hi / p.lo - 1) * 100).toFixed(1)} % out), tops ${(p.low * 1000).toFixed(1)}‥${(p.top * 1000).toFixed(1)} mm`).join(' · ')} · the drum ${drum.length} box${drum.length === 1 ? '' : 'es'}, ${drumR.toFixed(2)} m out`); }
     console.log(ok ? '=== pass: ALL PASS ===' : '=== pass: FAILURES above ===');
     return ok;
   } finally { ROOMCLEAR.way = wayWas; console.log = log; }

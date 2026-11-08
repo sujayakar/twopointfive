@@ -103,7 +103,7 @@ pub fn made_out(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
     if flat(g.ch[g.gd[gd].ch].pos, p) <= g.k.picture.made_out_m {
         return true;
     }
-    let e = crate::guards::light_estimate_at(g, [p[0], 1.1, p[2]], None, None, None, None, None);
+    let e = crate::guards::light_estimate_at(g, [p[0], 1.1, p[2]], None, None, None);
     crate::game::game_visibility_of(g, e) >= g.k.picture.made_out
 }
 
@@ -389,7 +389,7 @@ pub fn hear(g: &mut crate::game::Game) {
 }
 
 /// are two men on one net: a's call reaches b. Each is his picture's owner, None = Sam's: one picture a man, so `a === b` is owner against owner (picture.ts onNet)
-pub fn on_net(g: &mut crate::game::Game, a: Option<GuardId>, b: Option<GuardId>) -> bool {
+pub fn on_net(g: &crate::game::Game, a: Option<GuardId>, b: Option<GuardId>) -> bool {
     let bo = match b {
         Some(bo) if a != b => bo,
         _ => return false,

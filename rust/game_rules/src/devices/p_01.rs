@@ -30,8 +30,8 @@ fn bits_or(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
 
 // ---------------------------------------------------------------- runtime records
 /// A camera of the level: its machine is rust/sim's row `slot`.   (devices.ts CameraRt)
-pub fn camera_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::CameraDef2, index: f64, target: FixtureId, cone: LightId, smoke_key: &str) -> CameraRtId {
-    g.tab.devices_camera_rt.push(CameraRt { smoke_trans: 1.0, def: def.clone(), index, target, cone, smoke_key: String::from(smoke_key), slot, st })
+pub fn camera_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::CameraDef2, index: f64, target: FixtureId, cone: LightId) -> CameraRtId {
+    g.tab.devices_camera_rt.push(CameraRt { def: def.clone(), index, target, cone, slot, st })
 }
 /// A tripwire of the level: its machine is rust/sim's row `slot`.   (devices.ts LaserRt)
 pub fn laser_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::LaserDef2, index: f64, target: FixtureId, dir: V3, len: f64) -> LaserRtId {
@@ -76,7 +76,7 @@ pub fn devices_new(g: &mut crate::game::Game) -> crate::devices::Devices {
                 let cone = lamp;
                 let slot = crate::sim_lightshome::light_home_camera(g, target, d.yaw, d.sweep, d.sweep_period.unwrap_or(dd.sweep_period), d.pitch.unwrap_or(dd.pitch), d.pos);
                 ci += 1.0;
-                let rt = camera_rt_new(g, slot, crate::Opaque, d, ci, target, cone, &format!("smokeCam{}", ci));
+                let rt = camera_rt_new(g, slot, crate::Opaque, d, ci, target, cone);
                 this.cameras.push(rt);
             }
             crate::scene_level::DeviceDef::Laser(d) => {
@@ -159,7 +159,7 @@ pub fn devices_reset(g: &mut crate::game::Game) {
 }
 
 /// Powered, unbroken, not knocked out: the device works this frame.   (devices.ts alive)
-pub fn alive(g: &mut crate::game::Game, t: FixtureId) -> bool {
+pub fn alive(g: &crate::game::Game, t: FixtureId) -> bool {
     crate::sim_lightshome::fixture_factor(g, t) > 0.05 && !crate::sim_lightshome::fixture_broken(g, t)
 }
 /// Live play: devices sense.   (devices.ts sensing)
@@ -205,13 +205,9 @@ pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: 
     let half = d.fov_deg.unwrap_or(dd.fov_deg) / 2.0;
     let look = lens_dir(crate::sim_lightshome::camera_machine_yaw(g, c), d.pitch.unwrap_or(dd.pitch));
     let e = crate::guards::Eye { pos: d.pos, look, range, half_deg: half, near_m: 0.0, near_deg: half, v_half_deg: Some(half) };
-    let key = g.tab.devices_camera_rt[c].smoke_key.clone();
-    if let Some(tr) = crate::sensors::sensors_read(g, &key) { g.tab.devices_camera_rt[c].smoke_trans = tr; }
     let chest = bone_or(g, pc, crate::character::Bone::Chest, [0.0, 1.1, 0.0]);
-    let smoke = g.tab.devices_camera_rt[c].smoke_trans;
-    let air = smoke * crate::weather::air_trans(g, d.pos, chest);
+    let air = crate::sense::smoke_between(g, d.pos, chest) * crate::weather::air_trans(g, d.pos, chest);
     let vis = crate::guards::eye_contact(g, e, pc, true, false, air, None);
-    if vis.in_cone { let chest = bone_or(g, pc, crate::character::Bone::Chest, [0.0, 1.1, 0.0]); crate::sensors::sensors_ask_segment(g, &key, d.pos, chest); }
     let gain = if vis.visible { lens_gain(g, &crate::seats::here(g), vis.dist, range, air) } else { 0.0 };
     let (now, at, sus, alarm) = (g.time, g.ch[pc].pos, g.tune.camera_suspicion_secs, g.tune.camera_alarm_secs);
     let r = crate::sim_lightshome::light_home_camera_see(g, slot, now, dt, vis.visible, gain, at, sus, alarm);
@@ -507,7 +503,7 @@ pub fn pad_door_name(g: &crate::game::Game, k: &crate::devices::KeypadRt) -> Str
     if name == "server_manager" { String::from("side door") } else { format!("{} door", name.replace('_', " ")) }
 }
 /// Is `d` a keypad door locked against the player where he stands, and does he know its code.   (devices.ts padState)
-pub fn pad_state(g: &mut crate::game::Game, d: DoorId, from: V3) -> Option<crate::devices::PadState> {
+pub fn pad_state(g: &crate::game::Game, d: DoorId, from: V3) -> Option<crate::devices::PadState> {
     let pad = devices_pad_of(g, d)?;
     if !crate::doors::doors_locked_out(g, d, from, None) { return None; }
     let pl = g.player;

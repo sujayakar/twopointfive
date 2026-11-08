@@ -863,7 +863,7 @@ pub extern "C" fn light_cap() -> usize {
 /// question's last part)
 fn light_rows(lg: usize, leave: u32, how: u32) -> Option<light::Rows> {
     if how & 1 != 0 && lg < state::GAMES {
-        Some(light::Rows { g: lg, leave, steady: how & 2 != 0 })
+        Some(light::Rows { g: lg, leave, steady: how & 2 != 0, exposure: 1.0 })
     } else {
         None
     }
@@ -972,23 +972,20 @@ pub extern "C" fn grid_dirty(w: usize, x0: f64, z0: f64, x1: f64, z1: f64) {
 }
 /// `n` steps of a tenth of a second under the model's numbers, over the copy as it stands and the leaves of list `set`: 0 · 0xffffffff = no grid stands
 /// on this level, and nothing was done. `emits`: that many emitters join the list first, written in the scratch from its start, six doubles each
-/// (where, how wide in metres, what it lets out a second in unit·m³, for how long). `lamps` ≥ 0 = the light that comes round is stepped too (glow.rs),
-/// from the level's rows (`lg`, `leave`, `how`: light_rows) and that many lamps written beside them as for a question about the light. `wind_x`, `wind_z` not both 0 = the smoke under the open sky drifts by that
+/// (where, how wide in metres, what it lets out a second in unit·m³, for how long). `wind_x`, `wind_z` not both 0 = the smoke under the open sky drifts by that
 /// vector (m/s), by the shares of it written at `grid_wind` and its rise with height (`wind_low` of it at the ground, `wind_gain` more by
 /// `wind_full_at` metres up); there the smoke keeps `wind_keep` of its own spread
 #[no_mangle]
-pub extern "C" fn grid_step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, emits: usize, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64, lamps: i32, albedo: f64, share: f64, passes: u32, sweep: f64, wind_x: f64, wind_z: f64, wind_low: f64, wind_gain: f64, wind_full_at: f64, wind_keep: f64, lg: usize, leave: u32, how: u32) -> u32 {
+pub extern "C" fn grid_step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, emits: usize, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64, wind_x: f64, wind_z: f64, wind_low: f64, wind_gain: f64, wind_full_at: f64, wind_keep: f64) -> u32 {
     // (a wind that is no number, or whose rise with height is none, is still air: the block is the game's state, and what is no number spreads)
     let real = |v: f64| v - v == 0.0;
     let windy = real(wind_x) && real(wind_z) && real(wind_low) && real(wind_gain) && real(wind_full_at) && real(wind_keep) && wind_low >= 0.0 && wind_gain >= 0.0 && wind_full_at > 0.0;
     let (wind_x, wind_z) = if windy { (wind_x, wind_z) } else { (0.0, 0.0) };
     let k = bricks::K { decay, spread, rise, rise_rate, gone, wind_x, wind_z, wind_low, wind_gain, wind_full_at, wind_keep };
-    let emits = &scratch()[..if emits > SCRATCH_LEN / 6 { SCRATCH_LEN / 6 * 6 } else { emits * 6 }];
-    if lamps < 0 {
-        bricks::step(g, stamp, w, copy, set, n, emits, &k, None)
-    } else {
-        bricks::step(g, stamp, w, copy, set, n, emits, &k, Some(&glow::K { albedo, share, passes, sweep, lamps: lamps as usize, rows: light_rows(lg, leave, how) }))
+    for e in scratch()[..if emits > SCRATCH_LEN / 6 { SCRATCH_LEN / 6 * 6 } else { emits * 6 }].chunks_exact(6) {
+        bricks::emit(g, e[0], e[1], e[2], e[3], e[4], e[5]);
     }
+    bricks::step(g, stamp, w, copy, set, n, &k, None)
 }
 /// where the host writes the wind's share of each square metre of the plan before a step that has wind (bricks.rs WIND: `grid_wind_cap` doubles, row
 /// by row, twice the plan's bricks to a row)

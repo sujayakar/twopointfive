@@ -1,35 +1,29 @@
 // THE MISSION LIST (the level select; the maintainer, 10-07: 'a nice level select screen for all our different scenarios (both quiet and loud) … think like
-// mgsv did'): one screen off the start card holding EVERY run the build has — the plain solo night (the office drive mission Start has always run) and one
-// row per entry of scene/scenarioList.ts SCENARIOS — laid out as a list down the left and the highlighted mission's sheet on the right: a floor plan, title,
-// place, its line, the team, the defenders, whether it leans quiet or loud, 'untuned', and the Standard | Hard switch the scenario picker used to carry.
-//
-// A PICK IS STILL A PAGE LOAD through the query string (scene/scenarioList.ts pickSearch — main.ts boots it through game/scenarioRun.ts startFromQuery), so a
-// pasted URL starts the same run; every row is a link to its own URL. The solo night's URL is `?solo`: the plain night with no start card (main.ts). The one
-// shortcut: opened off the real start card over the plain night (`MISSIONS.startSolo`, ui/menu.ts), the solo night just closes the card — what Start does
-// (with the loadout screen wired in between — ui/loadout.ts wireMissions — it is that screen's Deploy that takes the shortcut).
-// THE SEAM for a screen between the list and the run (a loadout): `MISSIONS.onPick` / `opts.onPick` gets (mission, href) INSTEAD of the load, the list
-// closed first (its keys are a capture listener: two screens up at once would fight over Enter and Esc); that screen's Back comes back with
-// `openMissions({ select: mission.id })`.
+// mgsv did'): the rows and the sheet the one starting page is built on (ui/startpage.ts, which lays them out and hands a pick on to the kit step, ui/loadout.ts):
+// EVERY run the build has — the plain solo night (the office drive mission) and one row per entry of scene/scenarioList.ts SCENARIOS — in their groups, the
+// highlighted mission's sheet beside them: a floor plan, title, place, its line, the team, whether it leans quiet or loud, 'untuned', and the settings' rows.
+// Every row is a link to its own URL (scene/scenarioList.ts pickSearch — main.ts boots it through game/scenarioRun.ts startFromQuery), so a pasted URL starts the same run.
+// The solo night's URL is `?solo`: the plain night with no start card (main.ts).
 //
 // ITS OWN LAYER (#missions, over #menu): the boot card can open it while the shaders compile (it needs nothing of the engine), and Menu re-rendering the
 // card under it does not touch it. KEYS (no held keys, nothing past 5): W S / ↑ ↓ move · A D / ← → Standard | Hard · H the next hour (Shift+H the one before) · J the next weather (Shift+J) · K the next way in (Shift+K), on a level with more than one ·
-// Enter / Space start · Esc back — taken
+// Enter / Space on · Esc back — taken
 // by ONE capture listener registered when this module loads, i.e. before main.ts's own Esc handler, so Esc here goes back instead of closing the card.
 // Plain DOM, styled in index.html (#missions …). Nothing at module level uses another module's exports (ui/menu.ts imports this beside the game).
-import { PICKS_UI, pickLeaveSearch, onShortList } from '../scene/picks';
+import { pickLeaveSearch, onShortList } from '../scene/picks';
 import { MISSION_GROUPS, lessonGroup, type MissionGroup, type ScenarioEntry } from '../scene/scenarios';
 import { ALL_MISSIONS, SCENARIO_KEYS, pickSearch, quitSearch, entryOfQuery, levelWords, teamWords, teamTag } from '../scene/scenarioList';
 import { lookLevelFile } from '../scene/look';   // (a leaf: which file of a level the page loads)
 import { DIFFICULTIES, difficultyNow, setDifficulty, difficultyWords, difficultyHref, structureOfLevel, squadsHeld, type Difficulty } from '../game/difficulty';
 import { leverRows, leversSig } from './levers';
-import { fogOfLink, sameFog } from '../game/scenarioRun';
+import { fogOfLink } from '../game/scenarioRun';
 import { quietFogHref, quietFogRow, quietFogAside, soloFogRow } from '../game/quietfog';
 import { rowHour, rowWeather } from '../game/rowset';
 import { WEATHER_KINDS, WEATHER_PRESETS, weatherTitle, weatherWords, weatherOfSearch, weatherSearch, snowLevel, type WeatherKind } from '../game/weatherKinds';
-import { HOUR_IDS, HOURS, hourIdOf, hourHref, hourLive, hourLabel, hourClock, hourWords, type HourId } from '../game/hours';
+import { HOUR_IDS, HOURS, hourIdOf, hourHref, hourLabel, hourClock, hourWords, type HourId } from '../game/hours';
 import { menuTheme } from './theme';
 import officeData from '../../levels/office.json' with { type: 'json' };   // (the bundled office — scene/level.ts imports the same module: its plan needs no server)
-import { artFrom, drawSheet, sheetView, type ArtData, type PlanArt } from './planArt';   // (the map sheet's picture: the place as a model)
+import { artFrom, drawSheet, type ArtData, type PlanArt } from './planArt';   // (the map sheet's picture: the place as a model)
 import { stillOf, drawStill } from './menuStills';   // (a card's picture: the mission's key art, where one was made)
 
 export type Lean = 'quiet' | 'loud' | 'either';
@@ -43,90 +37,62 @@ export interface Mission {
   /** the group it is listed under (scene/scenarios.ts MISSION_GROUPS: the list draws a heading per group, in that table's order) */
   group: MissionGroup;
   place: string; blurb: string; lean: Lean; untuned: boolean;
-  /** the sheet's 'defenders' cell, in words ('11', '3 holding hostages', '3, and 2 civilians'; '—' where the row does not say). No screen draws it while
-   *  MYSTERY is on: a screen asks defendersShown(), never this */
-  defenders: string;
 }
-/** HOW MANY ARE INSIDE IS A MYSTERY. The maintainer, 10-23: "we should also remove all defender counts from the menus, etc., it should be a mystery!" The
- *  sheet's Defenders cell, the same cell on the Team & kit step (ui/kitBrief.ts) and on the mission's load page (ui/loadbrief.ts) are not drawn, and the
- *  run tally's intel cell no longer says how many there were to question (ui/debrief.ts). A row's `defenders` is untouched: it is what the stand-up and
- *  the probes count against. On in the page; `?mystery=0` = the cells as they were. UI only: nothing under src/game reads it and no recording carries it. */
-export const MYSTERY = { on: true };
-try { if (new URLSearchParams(location.search).get('mystery') === '0') MYSTERY.on = false; } catch { /* no page (the harness) */ }
-/** the Defenders cell's words: '—' (which every screen reads as "no cell") while the count is a mystery */
-export function defendersShown(m: Mission): string { return MYSTERY.on ? '—' : m.defenders; }
-export type PickFn = (m: Mission, href: string) => void;
-/** the seams other screens set once: `onPick` replaces the page load (the loadout screen's way in), `startSolo` is the start card's Start (set by ui/menu.ts
- *  only while the real start card is up), `pickLabel` is the sheet's button */
-export const MISSIONS: { onPick: PickFn | null; startSolo: ((card?: boolean) => void) | null; pickLabel: string;
-  /** the screen a pick hands over to (the loadout — ui/loadout.ts sets it): one of the two is up at a time, so opening the list closes it, closeMissions()
-   *  closes it too (the boot card going, the start card closing), and missionsBusy() counts it */
-  next: { isOpen(): boolean; close(): void } | null;
+/** the seams other screens set: `startSolo` is the start card's Start (set by ui/menu.ts only while the real start card is up) */
+export const MISSIONS: { startSolo: ((card?: boolean) => void) | null;
   /** THE KEYS ARE ELSEWHERE ON THE LIST'S OWN PAGE (ui/startpage.ts: the loadout mounted in the sheet has them): while it says so the list takes no key */
-  keysAway: (() => boolean) | null } = { onPick: null, startSolo: null, pickLabel: 'Start mission', next: null, keysAway: null };
+  keysAway: (() => boolean) | null } = { startSolo: null, keysAway: null };
 const LS = 'twopointsix.mission';   // the row last started on this machine: the list opens on it
 
 /** THE SOLO NIGHT: the office after dark, alone — reach the server room, pull the drive, leave by the fire exit (game/mission.ts). Not a scenario: no flag
  *  but `?solo`, which only keeps the start card shut. The shift is three guards and two civilians (tools/qa missions probe counts them on a plain boot). */
 export const SOLO_KEY = 'solo';
-export const SOLO_NIGHT: Mission = { id: 'solo-night', title: 'Solo night', scenario: null, squad: 0, group: 'quiet-alone', place: 'The office, after dark', lean: 'quiet', untuned: false, defenders: '3, and 2 civilians',
+export const SOLO_NIGHT: Mission = { id: 'solo-night', title: 'Solo night', scenario: null, squad: 0, group: 'quiet-alone', place: 'The office, after dark', lean: 'quiet', untuned: false,
   blurb: 'You\'re alone on the office floor. Reach the server room, pull the drive and leave through the fire exit. Watch out for lights, noise and cameras.' };
 
 const LEAN_OF_KIND: Record<ScenarioEntry['kind'], Lean> = { nightbreach: 'either', roomclear: 'loud', rescue: 'loud', quiet: 'quiet' };
 /** THE GROUP A ROW IS LISTED UNDER: its own (`group`), else by what it is — a quiet mission alone or as two, a rescue on the clock, and any other squad's
  *  mission a raid (every row is under exactly one heading: there is no 'the rest') */
 export function groupOf(e: ScenarioEntry): MissionGroup { return e.group ?? (e.kind === 'quiet' ? (e.squad ? 'quiet-two' : 'quiet-alone') : e.kind === 'rescue' ? 'clock' : 'raids'); }
-/** THE SWITCH over the list's GROUPS: `?nogroups` (GROUPS_UI.on false) = the list drawn as it was before them — the solo night first, then every row in its
- *  table's order, no group headings (the start page: its short list on top, 'Every other mission' under it, nothing folded). Drawing only: what a row starts
- *  is the same either way. */
-export const GROUPS_UI = { on: true };
-try { if (new URLSearchParams(location.search).has('nogroups')) GROUPS_UI.on = false; } catch { /* no page (the harness) */ }
 const groupRank = (g: MissionGroup) => { const i = MISSION_GROUPS.findIndex(x => x.id === g); return i < 0 ? MISSION_GROUPS.length : i; };
-/** the headings a list of rows is drawn under: one over the first row of each run of one group, from row `from` on (`{ index: title }` — openMissions' `heads`) */
-export function groupHeads(list: Mission[], from = 0): Record<number, string> {
-  const H: Record<number, string> = {}; if (!GROUPS_UI.on) return H;
-  for (let i = from; i < list.length; i++) if (i === from || list[i].group !== list[i - 1].group) H[i] = MISSION_GROUPS.find(x => x.id === list[i].group)?.title ?? 'Missions';
+/** the headings a list of rows is drawn under: one over the first row of each run of one group (`{ index: title }`) */
+export function groupHeads(list: Mission[]): Record<number, string> {
+  const H: Record<number, string> = {};
+  for (let i = 0; i < list.length; i++) if (i === 0 || list[i].group !== list[i - 1].group) H[i] = MISSION_GROUPS.find(x => x.id === list[i].group)?.title ?? 'Missions';
   return H;
 }
 export function missionOf(e: ScenarioEntry): Mission {
-  return { id: e.id, title: e.title, scenario: e, squad: e.squad, group: groupOf(e), place: e.place ?? (e.level ? levelWords(e) : 'The office'), blurb: e.blurb ?? '', lean: e.lean ?? LEAN_OF_KIND[e.kind], untuned: !!e.untuned,
-    defenders: e.defenders === undefined ? '—' : e.kind === 'rescue' ? `${e.defenders} holding hostages` : e.kind === 'quiet' ? `up to ${e.defenders} on patrol` : String(e.defenders) };
+  return { id: e.id, title: e.title, scenario: e, squad: e.squad, group: groupOf(e), place: e.place ?? (e.level ? levelWords(e) : 'The office'), blurb: e.blurb ?? '', lean: e.lean ?? LEAN_OF_KIND[e.kind], untuned: !!e.untuned };
 }
 /** the whole list IN ITS GROUPS (MISSION_GROUPS' order: training, raids, strongholds, on the clock, quiet alone, quiet as two): inside a group the solo night
- *  first, then the scenarios in their list's order — and, with UNPLAYED_UI on, each group's unplayed rows after its others (unplayedLast) */
+ *  first, then the scenarios in their list's order, each group's unplayed rows after its others (unplayedLast) */
 export function missionList(list: ScenarioEntry[] = ALL_MISSIONS): Mission[] {
-  const flat = [SOLO_NIGHT, ...list.map(missionOf)]; if (!GROUPS_UI.on) return flat;   // (?nogroups: the list's own order, as it was)
+  const flat = [SOLO_NIGHT, ...list.map(missionOf)];
   return unplayedLast(flat.map((m, i) => ({ m, i })).sort((a, b) => groupRank(a.m.group) - groupRank(b.m.group) || a.i - b.i).map(x => x.m));
 }
 /** THE SWITCH over the rows CUT FROM THE LIST (scene/scenarios.ts `offList`): on, no list draws them. ON IN THE PAGE (`?offlist=0` = every row of the table
  *  drawn, as before the cut), OFF in the module and so in every harness: every list probe there pins the whole table, as it always has (one bar apart: the cap of eight rows a group is asked of what the page draws, tools/qa/listed.ts). Drawing only,
  *  and which lesson a won lesson's end card offers next (ui/verdictNext.ts: the next one the lists draw): a cut row's own address, its `?loadout=` and its id
  *  read back to it either way (missionList keeps it). */
-export const OFFLIST_UI = { on: false };   // (the page's entry puts it on — main.ts, beside wireMissions; nothing at this module's load does, so a probe's stand-in page leaves it off)
+export const OFFLIST_UI = { on: false };   // (the page's entry puts it on — main.ts; nothing at this module's load does, so a probe's stand-in page leaves it off)
 /** THE ROWS A LIST DRAWS: missionList without the rows cut from the list — what the Missions screen and the start page show when handed no list of their own.
  *  `keep` = a row the visit itself names (`?loadout=<id>`, a `select`): a cut row asked for by name is drawn that once, so its address still lands on it */
 export function listedMissions(list: Mission[] = missionList(), keep?: string): Mission[] { return OFFLIST_UI.on ? list.filter(m => !m.scenario?.offList || m.id === keep) : list; }
-/** THE SWITCH over the UNPLAYED rows: `?unplayed=0` (UNPLAYED_UI.on false) = the list drawn as it was — a group's rows in the list's own order, no row
- *  quieter than another. Drawing only: what a row starts is the same either way. */
-export const UNPLAYED_UI = { on: true };
-try { if (new URLSearchParams(location.search).get('unplayed') === '0') UNPLAYED_UI.on = false; } catch { /* no page (the harness) */ }
-/** IS THIS ROW UNPLAYED: it runs and nobody has balanced it (`untuned`), and the short list does not name it (scene/picks.ts; ?nopicks = every untuned row).
- *  The rule itself, whatever the switch says: the sheet's tag asks it, and so can whatever a mission earns. */
-export function unplayed(m: { id: string; untuned?: boolean }): boolean { return !!m.untuned && !onShortList(m.id); }   // (it follows the sheet's tag, ?nopicks and all: under that flag the short list's untuned rows are unplayed too)
+/** IS THIS ROW UNPLAYED: it runs and nobody has balanced it (`untuned`), and the short list does not name it (scene/picks.ts). The sheet's tag asks it, and so
+ *  can whatever a mission earns. */
+export function unplayed(m: { id: string; untuned?: boolean }): boolean { return !!m.untuned && !onShortList(m.id); }
 /** a list that stands IN ITS GROUPS, each group's unplayed rows put AFTER its others (stable: both halves keep the order they came in, no row leaves its
- *  group) — the one step missionList and the start page's own order (ui/startpage.ts startPageList) both take. Off (?unplayed=0), or a flat list: as given */
-export function unplayedLast(list: Mission[]): Mission[] {
-  if (!UNPLAYED_UI.on || !GROUPS_UI.on) return list;
+ *  group) */
+function unplayedLast(list: Mission[]): Mission[] {
   const at = new Map<MissionGroup, number>(); list.forEach((m, i) => { if (!at.has(m.group)) at.set(m.group, i); });   // (a group's place = where its first row stands)
   return list.map((m, i) => ({ m, i, u: unplayed(m) ? 1 : 0 })).sort((a, b) => at.get(a.m.group)! - at.get(b.m.group)! || a.u - b.u || a.i - b.i).map(x => x.m);
 }
 /** the classes a drawn row wears over `mrow` for it: `unplayed` (drawn quieter) on every unplayed row, and `first` on the one a group's unplayed rows begin
- *  at when a played row stands before it in that group (the break is drawn over it; a group of nothing else has nothing to part from). '' with the switch off;
- *  a flat list (?nogroups) is not reordered, so its rows wear `unplayed` alone */
+ *  at when a played row stands before it in that group (the break is drawn over it; a group of nothing else has nothing to part from) */
 export function unplayedClass(list: Mission[], i: number): string {
-  if (!UNPLAYED_UI.on || !unplayed(list[i])) return '';
+  if (!unplayed(list[i])) return '';
   const g = list[i].group, k = list.findIndex(m => m.group === g && unplayed(m));   // (the group's FIRST unplayed row, wherever the list put it: a list that did not come through unplayedLast still gets one break a group)
-  return GROUPS_UI.on && k === i && list.some(m => m.group === g && !unplayed(m)) && i > 0 && list[i - 1].group === g ? ' unplayed first' : ' unplayed';
+  return k === i && list.some(m => m.group === g && !unplayed(m)) && i > 0 && list[i - 1].group === g ? ' unplayed first' : ' unplayed';
 }
 /** does Standard | Hard change anything on this mission? Only a squad scenario's defenders read it (game/difficulty.ts): not the solo night, not a quiet mission */
 export const diffLive = (m: Mission): boolean => !!m.scenario && m.scenario.kind !== 'quiet';
@@ -151,34 +117,15 @@ export interface MissionsOpts {
   search?: string;
   /** the layer to render into (default #missions) */
   root?: HTMLElement;
-  /** each row carries a small plan of its level (the one starting page's mission cards) */
-  thumbs?: boolean;
-  onPick?: PickFn;
+  /** Enter, Space or a double click on a row: the next step (ui/startpage.ts: the kit, mounted inside this list) */
+  onPick: () => void;
   /** the row to open on (default: the URL's, else the one last started here, else `first`, else the list's first) */
   select?: string;
   /** the row a visit that names none and has started none opens on (the start page: the short list's first — its groups put Training on top) */
   first?: string;
-  /** the hour the row opens on (default: the URL's — a screen coming BACK to the list hands over the hour it was given) */
-  hour?: HourId;
   onClose?: () => void;
-  /** a pick does NOT close the list (ui/startpage.ts: the next screen is mounted inside this one) */
-  keep?: boolean;
-  /** the sheet's plan is drawn this many pixels wide, as a MAP SHEET (a 5 m grid, a scale, doors as thin leaves): the one starting page, where the plan is
-   *  the page's largest thing. Absent: the 480-pixel sketch */
-  planPx?: number;
   /** after every paint (the highlighted row, the difficulty, the hour or the weather may have changed) */
   onPaint?: () => void;
-  /** a heading over the row at that place in the list (the start page under ?nogroups passes none over row 0: its short list has no heading). Absent: one
-   *  per group (groupHeads) */
-  heads?: Record<number, string>;
-  /** THE HEADINGS FOLD (the start page): every heading is always drawn, with how many rows it holds (`data-count`: the page's CSS draws the number), and only
-   *  the one over the highlighted row shows its rows (the others' are `.mrow.shut`). The keys walk every row as ever — crossing into a group opens it — and
-   *  a click on a heading highlights its first row. Absent: every row drawn, a heading is words only */
-  fold?: boolean;
-  /** THE GROUPS AS TILES, THEIR MISSIONS AS CARDS (the start page; implies the fold): the headings stand together in a rail of their own (`.mgroups`), each a tile
-   *  with a small picture of its first mission's place, and the rows in a grid beside it (`.mgrid`), each a card with its own place drawn on it — the model the
-   *  map sheet draws (ui/planArt.ts), small; the highlighted card's carries the way in. A card's picture is drawn when its group first opens. */
-  tiles?: boolean;
 }
 /** the weather picked on the list this page last showed (kept while the page lives: the loadout's Back reopens the list; never stored) */
 let wxPick: { search: string; kind: WeatherKind | null } | null = null;
@@ -194,7 +141,7 @@ export function waySearch(href: string, way: number): string {
   return keys.length ? `${path}?${keys.join('&')}` : path;
 }
 /** the Way in row's line under its buttons */
-export function wayNote(m: Mission, way: number): string {
+function wayNote(m: Mission, way: number): string {
   const W = m.scenario?.ways; if (!W) return 'this mission has one way in';
   return way < 0 ? 'the game picks one for you each time, along with where the defenders start' : way > 1 ? 'this side has a different first room, so plan it again' : 'the level was built around this way in';
 }
@@ -213,14 +160,14 @@ export interface MissionsScreen { root: HTMLElement; list: Mission[]; readonly s
 
 let open: MissionsScreen | null = null;
 export function currentMissions(): MissionsScreen | null { return open; }
-/** the list or the screen it handed over to is up: the start card under them is not idle (attract mode, the card's own focus) */
-export function missionsBusy(): boolean { return !!open || !!MISSIONS.next?.isOpen(); }
-export function closeMissions() { open?.close(); MISSIONS.next?.close(); }
+/** the list is up: the start card under it is not idle (attract mode, the card's own focus) */
+export function missionsBusy(): boolean { return !!open; }
+export function closeMissions() { open?.close(); }
 
-export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
+export function openMissions(opts: MissionsOpts): MissionsScreen {
   menuTheme();
-  open?.close(); MISSIONS.next?.close();
-  const list = opts.list ?? listedMissions(undefined, opts.select), page = typeof location !== 'undefined' ? location.search ?? '' : '', search = opts.search ?? (PICKS_UI.on ? pickLeaveSearch(page) : page);   // (off a short-list pick's page: without the pick's name and its own switches — scene/picks.ts)
+  open?.close();
+  const list = opts.list ?? listedMissions(undefined, opts.select), page = typeof location !== 'undefined' ? location.search ?? '' : '', search = opts.search ?? pickLeaveSearch(page);   // (off a short-list pick's page: without the pick's name and its own switches — scene/picks.ts)
   const root = opts.root ?? document.getElementById('missions')!;
   const had = typeof document !== 'undefined' ? (document as { activeElement?: Element | null }).activeElement as HTMLElement | null | undefined : null;
   const under = opts.root ? null : document.getElementById('menu') as HTMLElement | null;   // the card under the list: inert while it is up (Tab stays on the list's own buttons)
@@ -230,31 +177,30 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
   const head = el('div', 'mhead');
   const back = el('button', 'btn mback') as HTMLButtonElement; back.type = 'button'; back.textContent = '‹ Back'; back.onclick = () => S.close(); head.appendChild(back);
   const ht = el('div', 'mt'); ht.textContent = 'Missions'; head.appendChild(ht);
-  const count = el('div', 'mcount'); count.textContent = `${list.length} on this build`; head.appendChild(count);
+  head.appendChild(el('div', 'mcount'));
   card.appendChild(head);
   const body = el('div', 'mbody'); card.appendChild(body);
-  // ---- the list: every row a link to its own URL (a click highlights it; its sheet's button, a double click, Enter or Space starts it)
-  const fold = !!(opts.fold || opts.tiles);
-  const col = el('div', opts.tiles ? 'mlist tiles' : fold ? 'mlist fold' : 'mlist'); body.appendChild(col);
-  const gcol = opts.tiles ? el('div', 'mgroups') : col, ccol = opts.tiles ? el('div', 'mgrid') : col; if (opts.tiles) col.append(gcol, ccol);
+  // ---- the list, THE GROUPS AS TILES, THEIR MISSIONS AS CARDS: the headings stand together in a rail of their own (`.mgroups`), each a tile with a small picture of its
+  // first mission's place and how many rows it holds (`data-count`), and only the one over the highlighted row shows its rows (the others' are `.mrow.shut`), in a grid beside it
+  // (`.mgrid`). The keys walk every row, crossing into a group opens it, a click on a heading highlights its first row. Every row a link to its own URL (a click highlights it; a double click, Enter or Space goes on)
+  const col = el('div', 'mlist tiles'); body.appendChild(col);
+  const gcol = el('div', 'mgroups'), ccol = el('div', 'mgrid'); col.append(gcol, ccol);
   const cardPx = 456, cards: HTMLCanvasElement[] = [], arts: [HTMLCanvasElement, Mission][] = [];   // (a card's picture, twice the px it is shown at)
-  const rows: HTMLElement[] = [], thumbs: [HTMLCanvasElement, string][] = [];
-  const heads = opts.heads ?? groupHeads(list);
+  const rows: HTMLElement[] = [];
+  const heads = groupHeads(list);
   const apart = list.map((_, i) => unplayedClass(list, i));   // (THE UNPLAYED ROWS — unplayedClass: ' unplayed', ' unplayed first' or nothing, worn beside whatever the paint gives the row)
-  const secs: { h: HTMLElement; at: number }[] = [], secOf: number[] = [];   // (the folding headings, and which one each row is under: −1 = none, never shut)
+  const secs: { h: HTMLElement; at: number }[] = [], secOf: number[] = [];   // (the folding headings, and which one each row is under)
   list.forEach((m, i) => {
     if (heads[i]) { const h = el('div', i ? 'msec rest' : 'msec'); h.setAttribute('data-head', heads[i]); const g = MISSION_GROUPS.find(x => x.title === heads[i]); if (g) h.title = g.line; gcol.appendChild(h);
-      if (opts.tiles) { const cv = el('canvas', 'mgart') as HTMLCanvasElement; cv.width = 336; cv.height = Math.round(cv.width * PLAN_D / PLAN_W); const nm = el('span', 'mgname'); nm.textContent = heads[i]; h.append(cv, nm); arts.push([cv, m]); }
-      else h.textContent = heads[i];
-      if (fold) { secs.push({ h, at: i }); h.onclick = () => S.select(i); } }   // (a click on a heading = its first row: the group opens round the cursor)
+      const cv = el('canvas', 'mgart') as HTMLCanvasElement; cv.width = 336; cv.height = Math.round(cv.width * PLAN_D / PLAN_W); const nm = el('span', 'mgname'); nm.textContent = heads[i]; h.append(cv, nm); arts.push([cv, m]);
+      secs.push({ h, at: i }); h.onclick = () => S.select(i); }   // (a click on a heading = its first row: the group opens round the cursor)
     secOf.push(secs.length - 1);
     const a = el('a', 'mrow') as HTMLAnchorElement; a.setAttribute('data-mission', m.id); a.setAttribute('tabindex', '-1');   // (W S walk the rows; Tab walks the buttons)
-    if (fold && secs.length) a.setAttribute('data-group', heads[secs[secs.length - 1].at]);
-    if (opts.tiles) { const cv = el('canvas', 'mthumb') as HTMLCanvasElement; cv.width = cardPx; cv.height = Math.round(cv.width * 5 / 8); a.appendChild(cv); cards.push(cv); }   // (8 : 5, the shape the page's CSS shows it at)
-    else if (opts.thumbs) { const cv = el('canvas', 'mthumb') as HTMLCanvasElement; cv.width = 176; cv.height = Math.round(cv.width * PLAN_D / PLAN_W); a.appendChild(cv); thumbs.push([cv, m.scenario?.level ?? OFFICE]); }
+    a.setAttribute('data-group', heads[secs[secs.length - 1].at]);
+    { const cv = el('canvas', 'mthumb') as HTMLCanvasElement; cv.width = cardPx; cv.height = Math.round(cv.width * 5 / 8); a.appendChild(cv); cards.push(cv); }   // (8 : 5, the shape the page's CSS shows it at)
     const n = el('span', 'mn'); n.textContent = String(i + 1).padStart(2, '0'); a.appendChild(n);
     const t = el('span', 'mtitle'); t.textContent = m.title; a.appendChild(t);
-    if (opts.tiles && secs.length) {   // (a card under 'Quiet, as two' does not say ', as two' again: the tile it stands under does; the whole name is its tooltip)
+    {   // (a card under 'Quiet, as two' does not say ', as two' again: the tile it stands under does; the whole name is its tooltip)
       const tail = /,\s*([^,]+)$/.exec(heads[secs[secs.length - 1].at] ?? '')?.[1]?.toLowerCase();
       if (tail && m.title.toLowerCase().endsWith(`, ${tail}`)) { t.textContent = m.title.slice(0, -tail.length - 2); t.title = m.title; }
     }
@@ -266,13 +212,14 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
   });
   // ---- the sheet of the highlighted row
   const sheet = el('div', 'msheet'); body.appendChild(sheet);
-  const plan = el('canvas', 'mplan') as HTMLCanvasElement; plan.width = opts.planPx ?? 480; plan.height = Math.round(plan.width * PLAN_D / PLAN_W); sheet.appendChild(plan);
+  const plan = el('canvas', 'mplan') as HTMLCanvasElement; plan.width = 640; plan.height = Math.round(plan.width * PLAN_D / PLAN_W); sheet.appendChild(plan);
   const top = el('div', 'mtop'); const title = el('span', 'mst'); const untuned = el('span', 'tag untuned'); untuned.textContent = 'untuned'; untuned.title = 'it runs, but nobody has balanced it yet'; top.append(title, untuned); sheet.appendChild(top);
   const place = el('div', 'mplace'); sheet.appendChild(place);
   const blurb = el('div', 'mblurb'); sheet.appendChild(blurb);
-  const facts = el('div', 'mfacts'); sheet.appendChild(facts);
+  const facts = el('div', 'mfacts nodef'); sheet.appendChild(facts);
   const fact = (label: string) => { const c = el('div', 'mfact'); const l = el('i'); l.textContent = label; const v = el('b'); c.append(l, v); c.setAttribute('data-fact', label.toLowerCase()); facts.appendChild(c); return v; };
   const fTeam = fact('Team'), fDef = fact('Defenders'), fLean = fact('Approach'), fLevel = fact('Level');
+  fDef.parentElement!.style.display = 'none';   // (how many are inside is a mystery. No screen draws this cell: it stands empty only while the page's written walk, tools/qa/cards-page.ts, counts it)
   // the difficulty switch (game/difficulty.ts): Standard | Hard, kept per machine and put on every scenario link — it changes the squad scenarios' defenders only
   const diff = el('div', 'mdiff'); const dl = el('span', 'dl'); dl.textContent = 'Difficulty'; diff.appendChild(dl);   // (it was 'Defenders': the level sets the fog of war too — every lever under it)
   const dbtns: [Difficulty, HTMLElement][] = [];
@@ -300,10 +247,8 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
   { const most = Math.max(0, ...list.map(m => m.scenario?.ways?.length ?? 0));
     for (const v of [...Array.from({ length: most }, (_, k) => k ? k + 1 : 0), -1]) { const b = el('button', 'dbtn') as HTMLButtonElement; b.type = 'button'; b.textContent = 'Dealt'; b.setAttribute('data-way', v < 0 ? 'any' : String(v || 1)); b.onclick = (e?: Event) => { e?.preventDefault?.(); S.setWay(v); }; ybtns.push([v, b]); yrow.appendChild(b); } }
   const ynote = el('span', 'dn'); yrow.appendChild(ynote); sheet.appendChild(yrow);
-  const go = el('a', 'btn primary mgo') as HTMLAnchorElement; go.onclick = (e?: Event) => { e?.preventDefault?.(); S.pick(); }; sheet.appendChild(go);
-  const foot = el('div', 'mfoot'); foot.textContent = `W S or ↑ ↓ choose · A D or ← → difficulty standard / hard · H hour · J weather · K way in · Enter or Space ${opts.onPick ?? MISSIONS.onPick ? 'loadout' : 'start'} · Esc back`; card.appendChild(foot);
 
-  let hourSel: HourId = opts.hour ?? (hourPick && hourPick.search === search ? hourPick.id : hourIdOf(new URLSearchParams(search).get('hour'))), hourShown: HourId | null = null;
+  let hourSel: HourId = (hourPick && hourPick.search === search ? hourPick.id : hourIdOf(new URLSearchParams(search).get('hour'))), hourShown: HourId | null = null;
   let wx: WeatherKind | null = wxPick && wxPick.search === search ? wxPick.kind : weatherOfSearch(search), wxShown: WeatherKind | null | undefined;   // (the pick made on this page's list earlier — Back from the loadout reopens the list — else the URL's)
   { const m0 = missionOfQuery(search, list), w = new URLSearchParams(search).get('way');   // (the page's own way in is its mission's pick until another is made)
     if (m0?.scenario?.ways && !(m0.id in wayPick) && w) wayPick[m0.id] = wayOfLink(m0, search); }
@@ -327,11 +272,11 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
     { const W = m.scenario?.ways, y = wayOf(m);
       for (const [v, b] of ybtns) { const k = v < 0 ? -1 : v ? v - 1 : 0, shown = !!W && v >= 0 && k < W.length; (b as HTMLElement & { style: { display: string } }).style.display = shown ? '' : 'none'; if (W && v >= 0 && k < W.length) b.textContent = W[k]; b.className = shown && y === v ? 'dbtn on' : 'dbtn'; b.setAttribute('aria-pressed', shown && y === v ? 'true' : 'false'); }
       yrow.className = W ? 'mdiff mway' : 'mdiff mway na'; (yrow as HTMLElement & { style: { display: string } }).style.display = W ? '' : 'none'; ynote.textContent = wayNote(m, y); }   // (a mission with one way in shows no row: the one-page start has no line to spare)
-    rows.forEach((r, i) => { r.className = (i === sel ? 'mrow sel' : fold && secOf[i] >= 0 && secOf[i] !== secOf[sel] ? 'mrow shut' : 'mrow') + apart[i]; r.setAttribute('aria-current', i === sel ? 'true' : 'false'); });
+    rows.forEach((r, i) => { r.className = (i === sel ? 'mrow sel' : secOf[i] !== secOf[sel] ? 'mrow shut' : 'mrow') + apart[i]; r.setAttribute('aria-current', i === sel ? 'true' : 'false'); });
     secs.forEach((x, k) => { const on = k === secOf[sel]; x.h.className = `msec${x.at ? ' rest' : ''}${on ? ' open' : ''}`; x.h.setAttribute('aria-expanded', on ? 'true' : 'false'); x.h.setAttribute('data-count', String((secs[k + 1]?.at ?? list.length) - x.at)); });
-    title.textContent = m.title; untuned.style.display = unplayed(m) ? '' : 'none';   // (a mission on the short list does not wear the hand-set label — scene/picks.ts; ?nopicks = as it was)
+    title.textContent = m.title; untuned.style.display = unplayed(m) ? '' : 'none';   // (a mission on the short list does not wear the hand-set label — scene/picks.ts)
     place.textContent = m.place; blurb.textContent = m.blurb;
-    fTeam.textContent = teamWordsOf(m); fDef.textContent = defendersShown(m); if (fDef.parentElement) fDef.parentElement.style.display = MYSTERY.on ? 'none' : ''; facts.className = MYSTERY.on ? 'mfacts nodef' : 'mfacts';   /* (the cell out of the row: three cells on the old sheet, no row at all where it was the only one — index.html, ui/startpage.ts, ui/kitBrief.ts) */ fLean.textContent = leanWords(m.lean); fLevel.textContent = m.scenario?.level ? levelWords(m.scenario) : 'office';
+    fTeam.textContent = teamWordsOf(m); fLean.textContent = leanWords(m.lean); fLevel.textContent = m.scenario?.level ? levelWords(m.scenario) : 'office';
     for (const [lv, b] of dbtns) { b.className = now === lv ? 'dbtn on' : 'dbtn'; b.setAttribute('aria-pressed', now === lv ? 'true' : 'false'); }
     diff.className = diffLive(m) ? 'mdiff' : 'mdiff na';   // (greyed where the pick changes nothing: the solo night, and a quiet mission — its shift is the level's own)
     dnote.textContent = m.scenario?.kind === 'quiet' ? 'a quiet mission uses the level\'s own shift on either setting' : m.scenario ? quietFogAside(() => difficultyWords(now!, squadsHeld(m.scenario))) : 'the night shift is the same on either setting';
@@ -339,11 +284,10 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
     { const fogOn = !!m.scenario && fogOfLink(new URLSearchParams(hrefs[sel].replace(/^[^?]*\?/, '')));   // (the fog of war is up on a room clear and a rescue — game/scenarioRun.ts fogOfQuery: the lever is greyed where the mission has none; a Training lesson is taught on the level as it is — its page reads no lever, game/difficulty.ts initDifficulty)
       const quiet = m.scenario ? quietFogRow(m.scenario) : soloFogRow();   // (a quiet mission may be played under the fog — game/quietfog.ts: the lever is live there with a bottom rung of its own, off, and lit where a quiet mission starts — QUIETFOG.def — until it is moved)
       levers.paint(key => !lessonGroup(m.scenario?.group) && (key === 'fog' || key === 'told' ? fogOn || quiet : diffLive(m)),   /* (how much you're told — game/told.ts — is live wherever the fog's lever is, its off rung included: the lever is for more signs than the fog's mark) */ m.scenario?.kind === 'roomclear' ? structureOfLevel(m.scenario.level) : '', quiet); }
-    go.textContent = MISSIONS.pickLabel; go.setAttribute('href', hrefs[sel]); go.setAttribute('data-mission', m.id);
     (rows[sel] as unknown as { scrollIntoView?: (o: unknown) => void }).scrollIntoView?.({ block: 'nearest' });
     const file = m.scenario?.level ?? OFFICE, mark: PlanMark = { kind: m.scenario ? m.scenario.kind : 'solo', way: wayOf(m) }, pk = `${file}|${mark.kind}|${mark.way}`;
-    if (pk !== planFile) { planFile = pk; drawPlan(plan, file, false, !!opts.planPx, mark, !!opts.tiles); }
-    if (opts.tiles) rows.forEach((_, i) => {   // the open group's cards: each its place, the highlighted one's with the way in on it
+    if (pk !== planFile) { planFile = pk; drawPlan(plan, file, false, mark, true); }
+    rows.forEach((_, i) => {   // the open group's cards: each its place, the highlighted one's with the way in on it
       if (secOf[i] !== secOf[sel]) return;
       const cv = cards[i], f = list[i].scenario?.level ?? OFFICE, mk = i === sel ? mark : undefined, key = mk ? `${f}|${mk.kind}|${mk.way}` : f;
       if (cv.getAttribute('data-card') !== key) { cv.setAttribute('data-card', key); drawCard(cv, list[i], key, mk); } });   // (the map sheet marks where the team starts: the way in is SHOWN, and moves with its row)
@@ -362,14 +306,8 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
     get way() { return wayOf(list[sel]); },
     setWay(v) { const m = list[sel], W = m.scenario?.ways; if (!W) return; const all = [0, ...W.slice(1).map((_, k) => k + 2)]; wayPick[m.id] = v === 'next' || v === 'prev' ? all[(all.indexOf(wayOf(m)) + (v === 'next' ? 1 : all.length - 1)) % all.length] : all.includes(v) ? v : 0; wayVer++; paint(); },
     pick() {
-      const m = list[sel], href = hrefs[sel], fn = opts.onPick ?? MISSIONS.onPick;
-      try { globalThis.localStorage?.setItem(LS, m.id); } catch { /* no store */ }
-      if (fn) { if (!opts.keep) S.close(); fn(m, href); return; }   // (closed FIRST: the next screen's keys and focus are its own; its Back reopens the list on this row)
-      // the solo night off the real start card over the plain night: Start, as it has always been — no load
-      if (!m.scenario && MISSIONS.startSolo && hourSel === hourLive() && wx === weatherOfSearch(search) && !SCENARIO_KEYS.some(k => k !== SOLO_KEY && new URLSearchParams(search).has(k)) && sameFog(href, search)) { const start = MISSIONS.startSolo; S.close(); start(); return; }   // (…at the hour and in the weather the page stands at: another of either is a load)
-      go.textContent = 'starting…';
-      const L = location as Location, to = (L.pathname ?? '') + href + (L.hash ?? '');
-      if (to === (L.pathname ?? '') + (L.search ?? '') + (L.hash ?? '')) L.reload(); else L.assign(to);
+      try { globalThis.localStorage?.setItem(LS, list[sel].id); } catch { /* no store */ }
+      opts.onPick();
     },
     close() { if (open !== S) return; open = null; root.classList.remove('on'); root.innerHTML = ''; under?.removeAttribute?.('inert'); try { had?.focus?.(); } catch { /* gone */ } opts.onClose?.(); },
   };
@@ -384,13 +322,6 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
   }
   root.setAttribute('tabindex', '-1'); try { root.focus?.(); } catch { /* a fake element */ }   // (focus leaves the card's button underneath: Enter / Space must not press IT)
   for (const [cv, m] of arts) { cv.setAttribute('data-card', m.id); drawCard(cv, m, m.id); }   // (the six tiles' pictures: each its first mission's)
-  if (thumbs.length) {   // a card's plan is fetched when the card comes into the list's view (a file that does not come leaves its frame empty), not all of them on opening
-    const IO = (globalThis as { IntersectionObserver?: typeof IntersectionObserver }).IntersectionObserver;
-    if (IO) { const files = new Map(thumbs), io = new IO(es => { if (open !== S) { io.disconnect(); return; }
-        for (const e of es) if (e.isIntersecting) { const cv = e.target as HTMLCanvasElement; io.unobserve(cv); void drawPlan(cv, files.get(cv) ?? OFFICE, true); } }, { rootMargin: '160px' });
-      for (const [cv] of thumbs) io.observe(cv); }
-    else void (async () => { for (const [cv, file] of thumbs) { if (open !== S) return; await drawPlan(cv, file, true); } })();   // (no observer: one file at a time, in the rows' order)
-  }
   return S;
 }
 
@@ -416,10 +347,10 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
   // registered at module load = ahead of every listener main.ts adds at boot (its Esc handler, the Input class): a key the list takes stops here. Enter / Space
   // on one of the list's own BUTTONS (Tab put the focus there) is that button's, not a pick.
   const onButton = (e: KeyboardEvent) => (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter') && !!open && e.target instanceof HTMLElement && e.target.tagName === 'BUTTON' && open.root.contains(e.target);
-  // Tab stays on the list while it is up: Back → Standard → Hard → the five hours → the seven weathers → the ways in (where the mission has them) → the start button, round and round (the card underneath is inert, and a Tab that reached
+  // Tab stays on the list while it is up: Back → Standard → Hard → the five hours → the seven weathers → the ways in (where the mission has them) → round and round (the card underneath is inert, and a Tab that reached
   // the page's body would be the game's key and go nowhere)
   const tab = (e: KeyboardEvent) => {
-    const f = [...open!.root.querySelectorAll<HTMLElement>('button, a.mgo')].filter(b => b.offsetParent !== null && !(b as HTMLButtonElement).disabled);   // (only what the focus can land on: a hidden or disabled button would hold the walk where it stands)
+    const f = [...open!.root.querySelectorAll<HTMLElement>('button')].filter(b => b.offsetParent !== null && !(b as HTMLButtonElement).disabled);   // (only what the focus can land on: a hidden or disabled button would hold the walk where it stands)
     const i = f.indexOf(document.activeElement as HTMLElement);
     f[i < 0 ? (e.shiftKey ? f.length - 1 : 0) : (i + (e.shiftKey ? f.length - 1 : 1)) % f.length]?.focus(); };
   window.addEventListener('keydown', e => {
@@ -431,21 +362,16 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
 }
 
 /** 'Quit to scenarios' across a page load (a scenario on a level file of its own quits by loading the bare URL — main.ts): ask BEFORE the load, and the start
- *  card that boots opens the list. One shot, this tab only. */
+ *  card that boots opens the page. One shot, this tab only. */
 const REOPEN = 'twopointsix.missions.reopen';
 export function reopenMissionsAfterLoad() { try { globalThis.sessionStorage?.setItem(REOPEN, '1'); } catch { /* no store */ } }
-/** the same question asked by the boot card of the one starting page (ui/menu.ts), which puts its own page up: read once, nothing opened here */
+/** the same question asked by the boot card (ui/menu.ts) and the boot (main.ts), who put the page up: read once, nothing opened here */
 export function missionsReopenAsked(): boolean { let asked = false; try { asked = globalThis.sessionStorage?.getItem(REOPEN) === '1'; globalThis.sessionStorage?.removeItem(REOPEN); } catch { /* no store */ } return asked; }
-export function openMissionsIfAsked(): boolean {
-  const asked = missionsReopenAsked();
-  if (asked && !missionsBusy()) openMissions(); return asked;   // (a screen the visitor opened off the boot card meanwhile stays the one that is up)
-}
 
-// ---- the floor plan on the sheet: the level file's own boxes from above (walls bright, furniture faint, glass blue, door leaves amber), fitted to the
-// canvas by the walls' own extent. The office is the bundle's; a level file comes off the dev server's /levels/ like the level itself does, once per file —
-// a file that does not come = no plan this time (the sheet closes up; asked again on the next sight). A briefing sketch: nobody is on it.
-// THE MAP SHEET (the one starting page) draws the same boxes as a MODEL of the place instead — tilted, the walls cut, lit like a thing on a table: ui/planArt.ts.
-interface Plan { walls: number[][]; low: number[][]; glass: number[][]; doors: number[][]; min: [number, number]; max: [number, number];
+// ---- THE MAP SHEET: the level file's own boxes as a MODEL of the place — tilted, the walls cut, lit like a thing on a table (ui/planArt.ts) —, fitted to the canvas by the
+// walls' own extent. The office is the bundle's; a level file comes off the dev server's /levels/ like the level itself does, once per file —
+// a file that does not come = no plan this time (the sheet closes up; asked again on the next sight).
+interface Plan { min: [number, number]; max: [number, number];
   /** the same file as the map sheet's model (ui/planArt.ts): its ground, what stands on it back to front, its lamps */ art: PlanArt;
   /** where the team starts, [x, z], by the mission's kind (a room clear: one per way in, the level's own first; 'solo' = the level's own spawn) */ starts: Record<string, number[][]>;
   /** wall charges the level's own room clear ISSUES the squad (the file's scenarios.roomClear.wallCharges — game/issue.ts raises the bag to it at staging); 0 = none */ issued: number;
@@ -464,19 +390,19 @@ function planFrom(d: PlanData): Plan {
   const w = d.scenarios?.roomClear?.wallCharges;
   const k = d.scenarios?.issue?.members;
   let art: PlanArt | null = null;   // (made when a picture of the place is first drawn: the sort of what stands is the dear part, and most files are never drawn on a visit)
-  const P: Plan = { get art() { return art ??= artFrom(d); }, walls: [], low: [], glass: [], doors: [], min: [Infinity, Infinity], max: [-Infinity, -Infinity], issued: typeof w === 'number' && Number.isInteger(w) && w > 0 ? w : 0, kit: k && typeof k === 'object' && !Array.isArray(k) ? k as IssuedKit : null, starts: {}, kv: (Array.isArray(d.scenarios?.kitView?.ways) ? d.scenarios.kitView.ways : []).map(y => (typeof y?.door === 'string' && !!y.door) || Array.isArray(y?.span)),
+  const P: Plan = { get art() { return art ??= artFrom(d); }, min: [Infinity, Infinity], max: [-Infinity, -Infinity], issued: typeof w === 'number' && Number.isInteger(w) && w > 0 ? w : 0, kit: k && typeof k === 'object' && !Array.isArray(k) ? k as IssuedKit : null, starts: {}, kv: (Array.isArray(d.scenarios?.kitView?.ways) ? d.scenarios.kitView.ways : []).map(y => (typeof y?.door === 'string' && !!y.door) || Array.isArray(y?.span)),
     needs: { locked: 0, steel: 0, hostages: Array.isArray(d.scenarios?.rescue?.hostages) ? d.scenarios.rescue.hostages.length : 0, marked: false }, sideLocked: false, sideSteel: false };   // (anchored on a door, or on a span: a stretch of wall, a gap)
   { const at = (v?: number[]) => (Array.isArray(v) && v.length >= 3 && Number.isFinite(v[0]) && Number.isFinite(v[2]) ? [[v[0], v[2]]] : []), sc = d.scenarios;   // where the team starts, per kind of mission (a room clear: one per way in, the level's own first)
     P.starts = { roomclear: [...at(sc?.roomClear?.team?.sam), ...(sc?.roomClear?.starts ?? []).flatMap(t => at(t?.sam))], nightbreach: at(sc?.nightBreach?.team?.sam), rescue: at(sc?.rescue?.team?.sam), solo: at(d.mission?.playerSpawn) }; }
   for (const b of d.boxes ?? []) {
     if (SKIP_GROUP.test(b.group ?? '') || b.flags?.includes('NoPrimary')) continue;
-    const yaw = b.yaw ?? 0, rect = [b.c[0], b.c[2], b.h[0], b.h[2], yaw], top = b.c[1] + b.h[1], bottom = b.c[1] - b.h[1];
-    if (b.flags?.includes('Glass')) P.glass.push(rect); else if (top >= 1.9 && bottom < 1) P.walls.push(rect); else if (top > 0.35 && bottom < 1.6) { P.low.push(rect); continue; } else continue;
+    const yaw = b.yaw ?? 0, top = b.c[1] + b.h[1], bottom = b.c[1] - b.h[1];
+    if (!b.flags?.includes('Glass') && !(top >= 1.9 && bottom < 1)) continue;
     const cs = Math.abs(Math.cos(yaw)), sn = Math.abs(Math.sin(yaw)), ex = cs * b.h[0] + sn * b.h[2], ez = sn * b.h[0] + cs * b.h[2];   // (the frame = what stands: walls and glazing)
     P.min = [Math.min(P.min[0], b.c[0] - ex), Math.min(P.min[1], b.c[2] - ez)]; P.max = [Math.max(P.max[0], b.c[0] + ex), Math.max(P.max[1], b.c[2] + ez)];
   }
   const side = d.scenarios?.rescue?.side?.door;
-  for (const o of d.doors ?? []) { P.doors.push([o.hinge[0], o.hinge[1], o.hinge[0] + Math.cos(o.closedDir) * o.width, o.hinge[1] + Math.sin(o.closedDir) * o.width]);
+  for (const o of d.doors ?? []) {
     const k = o as { id?: unknown; locked?: unknown; steel?: unknown }; if (k.locked !== true) continue;
     P.needs.locked++; if (k.steel === true) P.needs.steel++; if (typeof side === 'string' && k.id === side) { P.sideLocked = true; P.sideSteel = k.steel === true; } }
   if (!(P.max[0] > P.min[0] && P.max[1] > P.min[1])) { P.min = [0, 0]; P.max = [PLAN_W, PLAN_D]; }
@@ -524,7 +450,7 @@ function startPts(P: Plan, mark?: PlanMark): { pts: number[][]; dealt: boolean }
  *  left to that. */
 function drawCard(cv: HTMLCanvasElement, m: Mission, key: string, mark?: PlanMark): void {
   const file = m.scenario?.level ?? OFFICE, g = cv.getContext?.('2d') ?? null, mine = () => cv.getAttribute('data-card') === key;
-  const drawn = () => { cv.removeAttribute?.('data-still'); void drawPlan(cv, file, true, true, mark); };
+  const drawn = () => { cv.removeAttribute?.('data-still'); void drawPlan(cv, file, true, mark); };
   if (!g) return drawn();
   if (cv.getAttribute('data-still') === m.id) return;   // (its picture is up already, and nothing is marked on a picture)
   void stillOf(m.id).then(pic => {
@@ -543,28 +469,19 @@ function wayOfLink(m: Mission, search: string): number {
 export function drawMissionMap(cv: HTMLCanvasElement, m: Mission, search: string, width: number): Promise<boolean> {
   const w = wayOfLink(m, search), file = lookLevelFile(m.scenario?.level ?? OFFICE);
   cv.width = width; cv.height = Math.round(width * PLAN_D / PLAN_W);
-  return drawPlan(cv, file, false, true, { kind: m.scenario ? m.scenario.kind : 'solo', way: w < 0 ? 0 : w }).then(() => cv.style?.display !== 'none' && !!cv.getContext?.('2d'));
+  return drawPlan(cv, file, false, { kind: m.scenario ? m.scenario.kind : 'solo', way: w < 0 ? 0 : w }).then(() => cv.style?.display !== 'none' && !!cv.getContext?.('2d'));
 }
-function drawPlan(cv: HTMLCanvasElement, file: string, thumb = false, map = false, mark?: PlanMark, small = thumb): Promise<void> {
-  cv.setAttribute('data-level', file); cv.setAttribute('data-sheet', map ? (small ? 'small' : 'full') : ''); cv.setAttribute('data-mark', mark ? `${mark.kind}|${mark.way}` : '');
+function drawPlan(cv: HTMLCanvasElement, file: string, thumb: boolean, mark?: PlanMark, small = thumb): Promise<void> {
+  cv.setAttribute('data-level', file); cv.setAttribute('data-sheet', small ? 'small' : 'full'); cv.setAttribute('data-mark', mark ? `${mark.kind}|${mark.way}` : '');
   const g = cv.getContext?.('2d') ?? null; if (!g) { if (!thumb) cv.style.display = 'none'; return Promise.resolve(); }
   const paint = (P: Plan | null) => {
     if (cv.getAttribute('data-level') !== file || cv.getAttribute('data-mark') !== (mark ? `${mark.kind}|${mark.way}` : '')) return;   // (another row was highlighted while this one loaded)
     if (!thumb) cv.style.display = P ? '' : 'none'; if (!P) return;
-    if (map) {   // THE MAP SHEET: the place as a model — the level's own boxes tilted as the game sees them, walls cut, ground as flat fills, a 10 m scale at the foot (ui/planArt.ts)
-      // THE START: the page's accent, its third and last use — a dot where the team stands for the way in picked; dealt = a ring at every way
-      const { pts, dealt } = startPts(P, mark);
-      g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
-      drawSheet(g, cv.width, cv.height, P.art, [P.min[0], P.min[1], P.max[0], P.max[1]], Object.values(P.starts).flat(), pts, dealt, small);   // (small: a card's picture, and the tiles' own sheet — a third the size of the old one)
-      return;
-    }
-    const pad = thumb ? 1.2 : 2.2, w = P.max[0] - P.min[0] + 2 * pad, d = P.max[1] - P.min[1] + 2 * pad, k = Math.min(cv.width / w, cv.height / d);   // (pad: the lot's edge, a car, a hut outside the walls)
-    const ox = (cv.width - w * k) / 2 - (P.min[0] - pad) * k, oz = (cv.height - d * k) / 2 - (P.min[1] - pad) * k;
+    // the place as a model — the level's own boxes tilted as the game sees them, walls cut, ground as flat fills, a 10 m scale at the foot (ui/planArt.ts)
+    // THE START: the page's accent, its third and last use — a dot where the team stands for the way in picked; dealt = a ring at every way
+    const { pts, dealt } = startPts(P, mark);
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
-    // (a box's yaw turns world → local by +yaw about Y — scene/collision.ts — so local → the page, x right and z down, is a turn by −yaw)
-    const rects = (list: number[][], fill: string) => { g.fillStyle = fill; for (const [x, z, hx, hz, yaw] of list) { g.save(); g.translate(ox + x * k, oz + z * k); if (yaw) g.rotate(-yaw); g.fillRect(-hx * k, -hz * k, Math.max(1, 2 * hx * k), Math.max(1, 2 * hz * k)); g.restore(); } };
-    rects(P.low, 'rgba(170,178,186,0.16)'); rects(P.glass, 'rgba(150,190,240,0.75)'); rects(P.walls, thumb ? 'rgba(214,210,200,0.8)' : 'rgba(232,228,218,0.92)');
-    g.strokeStyle = '#f0912e'; g.lineWidth = thumb ? 1.5 : 2; g.beginPath(); for (const [x0, z0, x1, z1] of P.doors) { g.moveTo(ox + x0 * k, oz + z0 * k); g.lineTo(ox + x1 * k, oz + z1 * k); } g.stroke();
+    drawSheet(g, cv.width, cv.height, P.art, [P.min[0], P.min[1], P.max[0], P.max[1]], Object.values(P.starts).flat(), pts, dealt, small);   // (small: a card's picture, and the tiles' own sheet — a third the size of the old one)
   };
   return planOf(file).then(paint);
 }

@@ -28,7 +28,8 @@ export const STEALTHPOSE = {
   /** THE switch — the page: on (`?nostealthpose` off); the frozen stand: off (`TPS_STEALTHPOSE=1` on) */
   on: false,
   /** its halves, for A/B on the panel: the crouch idle's arms and sway · the crouch walk's arms · standing up / crouching down · the creep's leading hand · the look under a door */
-  idle: true, walk: true, rise: true, creep: true, cable: true,
+  
+  idle: true, walk: true, rise: true, creep: true,   // (read by name: rust/sim/src/knobs.rs)
   /** a goggle nod made while he looks under a door is SEEN: the look poses it itself, as a lift of the head off the gap and back (false = the look takes the nod back out: the goggles swing on a still head, as it was). A key of its own so that a recording from before it replays with the head it was made with */
   nod: true,
   /** the idle's weight shift: seconds a cycle · metres the pelvis goes to each side · metres the hands drift */

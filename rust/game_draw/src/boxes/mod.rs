@@ -11,6 +11,7 @@ pub mod glass;
 pub mod grid;
 pub mod marks;
 pub mod pack;
+pub mod paint;
 pub mod rank;
 
 /// no key: the box is another thing each frame
@@ -150,9 +151,9 @@ impl Default for Look { fn default() -> Look { Look { on: false, marks: true, cu
 
 /// what a static's rows were packed of: where it stands, and everything else of it as one word
 #[derive(Clone, Copy, PartialEq)]
-struct Was { c: [f64; 3], h: [f64; 3], yaw: f64, rot: Option<[f64; 4]>, flags: u32, cut_height: f64, rest: u64 }
+pub struct Was { c: [f64; 3], h: [f64; 3], yaw: f64, rot: Option<[f64; 4]>, flags: u32, cut_height: f64, rest: u64 }
 impl Was {
-    fn of(b: &Box, look: &Look) -> Was {
+    pub fn of(b: &Box, look: &Look) -> Was {
         let mut k = 0xcbf2_9ce4_8422_2325u64;
         let mut eat = |v: u64| { k = (k ^ v).wrapping_mul(0x0000_0100_0000_01b3); k ^= k >> 29; };
         for v in pack::sent(b, look).iter().chain(pack::emission(b).iter()) { eat(v.to_bits()); }
@@ -192,6 +193,7 @@ pub struct Boxes {
     pub glass: glass::Glass,
     pub leaves: Vec<Leaf>,
     pub beams: Vec<Beam>,
+    pub wet: crate::wet::Wet,
     /// the frame's own that are drawn as light and not as boxes
     unboxed: Vec<u32>,
     /// every box as it is drawn this frame, the statics first
@@ -206,6 +208,8 @@ pub struct Boxes {
     stuffs: u32,
     moved: (u32, u32),
     undrawn: Vec<u32>,
+    /// the leaves' paint, by box (paint.rs): worked out as a game is first drawn
+    painted: Option<Vec<(BoxId, [f64; 3], Option<game::scene_stuff::BoxStuff>)>>,
 }
 
 impl Boxes {
@@ -234,8 +238,9 @@ impl Boxes {
         self.cut.resize(total, Cut::ZERO);
         let (mut from, mut to) = (n as u32, 0u32);
         let mut cut_at = (u32::MAX, 0u32);
+        self.wet.follow(g);
         for i in 0..n {
-            let b = &all[st[i]];
+            let b = if self.wet.is(i as u32) { let was = Was::of(&all[st[i]], &self.look); self.wet.dressed(g, i as u32, &all[st[i]], was) } else { &all[st[i]] };
             let now = Was::of(b, &self.look);
             if !whole && self.was[i] == now { continue; }
             let anew = i >= self.was.len();
@@ -270,9 +275,11 @@ impl Boxes {
         self.own.clear();
         self.leaves.clear();
         let ir = &g.m.irlaser.ir_made;
+        if self.painted.is_none() { self.painted = Some(paint::paints(g)); }
         for &id in w.dynamics.iter().take(total - n) {
             if !night && ir.has(id) { continue; }
-            let b = &g.tab[id];
+            let leaf = id.world().and_then(|w| self.painted.as_ref().and_then(|p| p.binary_search_by_key(&w.0, |x| x.0 .0).ok().map(|i| paint::on(&g.tab[id], p[i].1, p[i].2))));
+            let b = leaf.as_ref().unwrap_or(&g.tab[id]);
             let (c, h) = match b.dc { Some(c) => (c, b.dh.unwrap_or(b.h)), None => (b.c, b.h) };
             let i = n + self.own.len();
             pack::pack(b, c, h, true, &self.look, &mut self.marks, &mut self.geo[i], &mut self.mat[i], &mut self.cut[i]);
@@ -287,6 +294,12 @@ impl Boxes {
         self.cut.truncate(n + self.own.len());
         self.glass.take(g, n);
     }
+
+    /// how many statics, and the frame's own boxes in their order: a box's place in the list is the one, plus its place in the other
+    pub fn statics(&self) -> u32 { self.was.len() as u32 }
+    pub fn own_ids(&self) -> impl Iterator<Item = AnyBoxId> + '_ { self.own.iter().map(|o| o.id) }
+    /// how the `k`th of the frame's own stands this frame
+    pub fn own_stood(&self, k: usize) -> Option<&grid::Stood> { self.stood.get(self.was.len() + k) }
 
     fn earlier(&self, key: u32) -> Option<&Own> {
         let i = self.before.partition_point(|x| x.0 < key);

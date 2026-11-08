@@ -117,8 +117,6 @@ export const WALLCHARGE = {
    *  teammates up 147 → 176, aim-snap flags 831 → 546. `hole` stays OFF: 24 block seeds, 37 teammates up with it against 48 without (and as first
    *  shipped, hole dealt before the doors and both taken together at the end: 11 up of 96 on the warehouse against 17 with neither). */
   hole: false, doors: true,
-  /** with `hole` / `doors` on: they are taken up once the room is theirs (the entry's last act), not on the way in */
-  holdLate: true,
   /** THE TRADE: what one wall charge takes out of the squad's breaching bag (doortools.ts DoorTools.charges, 2 a run): 2 = the whole bag, so a run is one wall OR
    *  two doors, chosen at the wall — the row is offered only while the bag holds it, and all of it comes back if the charge comes off the wall unblown.
    *  1 = a wall costs what a door costs (the build before this knob, by digest) */
@@ -129,7 +127,7 @@ export const WALLCHARGE = {
   carried: null as number | null,
   /** … and each man takes his up by himself, once HE has been on his point `holdSecs` with his gun on the room (false: all of them together, when the last
    *  man is on his — a mate held up in the hole left every door of the room unwatched until he was through) */
-  holdEach: true, holdSecs: 1.5,
+  holdSecs: 1.5,
   /** m: no door is given to a man whose line to it passes this near a mate's point inside (he would hold it with a friend down his muzzle) */
   mateLine: 0.6,
   /** m: none of this order's marks is in a DOORWAY — a stand-off post or the setter's spot within `offFrame` of a door frame's centre is passed over for

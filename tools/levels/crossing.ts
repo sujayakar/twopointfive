@@ -431,8 +431,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     lamps: [{ id: 'kv_bulb', kind: 'point', pos: [12.45, 2.2, 23.25], dir: [0, -1, 0], color: [1, 0.62, 0.22], intensity: 14, range: 7, innerDeg: 0, outerDeg: 180, group: 'kv', enabled: true, volumetric: 0.05, radius: 0.06, mains: false, fixture: 'kv_fix' }],
   };
   // (FOUND, not typed: an unnamed box has its place in the file for an id, so a box added earlier in this generator would turn a typed list onto other boxes.
-  //  The eleven are what those two calls laid, counted off the kit's list either side of them; a count that is not eleven throws.)
-  if (lorryPark1 - lorryPark0 !== 11) throw new Error(`crossing: the gear screen's way hides the 11 boxes of the lorry park's crates and tyres and the two calls laid ${lorryPark1 - lorryPark0}`);
+  //  The five are what those two calls laid, counted off the kit's list either side of them; a count that is not five throws.)
+  if (lorryPark1 - lorryPark0 !== 5) throw new Error(`crossing: the gear screen's way hides the 5 boxes of the lorry park's crates and tyres and the two calls laid ${lorryPark1 - lorryPark0}`);
   const lorryParkOut = Array.from({ length: lorryPark1 - lorryPark0 }, (_, k) => `box_${String(lorryPark0 + k).padStart(4, '0')}`);
   const kitView: KitViewData = { ways: [{ door: 'gate_s', ref: [15.9, 25.9], side: -1, hide: lorryParkOut, add: kitAdd }] };
   // what a row calls the doors (scenarios.doorNames — game/doornames.ts; no bearing in a name): the level lists no rooms, so each is named by what it is known by above —

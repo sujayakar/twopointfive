@@ -1,20 +1,19 @@
 import { kitViewOn, kitViewStart, kitViewFatal, kitViewQuietOf, type KitView } from './host/kitView';   // (FIRST on purpose: under ?kitview its load makes this window's storage read-only before any module below reads or writes a store — it imports no module at run time, so nobody's load order changes)
 import { END_CARD } from './host/endcard';
 import { Menu, loadSandbox, bootCard } from './ui/menu';
-import { optionsOpen, openOptions, walkInNow } from './ui/options';
+import { optionsOpen, walkInNow } from './ui/options';
 import { LOADBRIEF, loadBrief } from './ui/loadbrief';
 import { SETTLE, Settle } from './ui/settle';
 import { CMDRING } from './game/cmdring';   // (a prototype: with the orders ring on, Tab is its key and nothing else's)
-import { TABKEY, tabFromQuery, tabSettle, tabNow } from './ui/tabkey';
 import { tabCardOf, tabCardHtml } from './ui/tabcard';
 import { bootTextSize } from './ui/textsize';
-import { wireMissions } from './ui/loadout';
 import { modelErrAsked, modelErrBoot, modelErrFrame, sceneOf } from './host/modelerr';
+import { SENSE_PAGE } from './game/sense';
 import { kitFresh, kitShow, kitPlayer, kitGun, kitLessonPage, kitLoad, kitRows, KIT, SUITS, TRIMS } from './game/kit';
 import { kitBoot } from './ui/kitBoot';
-import { missionsBusy, reopenMissionsAfterLoad, openMissionsIfAsked, OFFLIST_UI } from './ui/missions';
+import { missionsBusy, reopenMissionsAfterLoad, missionsReopenAsked, OFFLIST_UI } from './ui/missions';
 import { startPage, startPageWanted, openStartPage, openList } from './ui/startpage';
-import { PICKS, PICKS_UI, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
+import { PICKS, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
 import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, laterIdle, laterProgress, PIPE_QUEUE, FATAL } from './gpu/device';
 import { shaderRowsOn } from './ui/shaderrows';
 import * as boot from './ui/boot';
@@ -54,7 +53,6 @@ import { scenePrelude, glassBreakConfig, weatherKindConfig, weatherEdgeConfig, w
 import { smokeGridConfig } from './smoke/smokeGrid';
 import * as cutMod from './scene/cut';
 import { cutConfig, initCutSwitch, cutBoxesOn, type CutPlane } from './scene/cut';
-import { ROUND, ROUND_STATS, roundConfig } from './scene/round';
 import { makeBox, BoxFlag, MKEY, BoxWorld } from './scene/boxes';
 import { MESH_MAX_CHARS } from './render/meshbvh';
 import { GLASSBREAK, GB_STATS, glassBreakLive } from './game/glassbreak';
@@ -121,9 +119,7 @@ import { parBest } from './ui/parBest';
 import { verdictKey, recordOf, tryStarted, runEnded, APPROACHES, type MissionRecord } from './ui/verdictStore';
 import { watchMissionRows } from './ui/verdictRows';
 import { SOLO_ID } from './scene/picks';
-import { SNATCH, checkSnatch } from './game/snatch';
-import { SNATCHOUT } from './game/snatchout';
-import { SCENARIOS, ALL_MISSIONS, LESSON_MISSIONS, pickSearch, quitSearch } from './scene/scenarioList';
+import { SCENARIOS, ALL_MISSIONS, LESSON_MISSIONS, pickSearch } from './scene/scenarioList';
 import { lessonGroup } from './scene/scenarios';
 import { DOORWAY } from './game/doors';
 import { HANDLE, HANDLE_STATS } from './game/handleside';
@@ -161,7 +157,7 @@ import * as breathMod from './game/snowBreath';
 import * as destrMod from './game/destruction';
 import * as windMod from './game/wind';
 import { DOZE, DOZE_STATS, DOZE_LOG, dozeOf, dozeSummary, dozeAsleep, dozeAt } from './game/doze';
-import { CLOSE, CLOSE_STATS, CLOSE_LOG, closeAt, closeWindows, closeMarks, closeSeat, closeUnseat, closeSeated, closeSummary, closeMode } from './game/close';
+import { CLOSE, CLOSE_STATS, CLOSE_LOG, closeAt, closeWindows, closeSeat, closeUnseat, closeSeated, closeSummary, closeMode } from './game/close';
 import * as mothsMod from './game/moths';
 import * as saveMod from './game/savestate';
 import { PICTURE, PICTURE_STATS, pictureSummary, pictureViews, pictureTell, ideasOf } from './game/picture';
@@ -188,7 +184,7 @@ const readout = { on: localStorage.getItem('twopointsix.readout') === '1', set(v
 
 // THE READINESS CONTRACT for scripts: `await window.__ready` — a Promise that exists from this module's first tick and resolves once the boot has finished (every kernel compiled, the ones the start card does not wait for too: gpu/device.ts laterIdle,
 // the Game built, EVERY automation hook below assigned, the start card live); it rejects if the boot dies. The hooks themselves (__engine, __game, __runFrames …) are put
-// on window when the start card goes live (`window.__started`). On a page a script drives that is the same moment as `__ready`: the row 'Start on first frame shaders' starts
+// on window when the start card goes live (`window.__started`). On a page a script drives that is the same moment as `__ready`: the first-frame start starts
 // off there (ui/shaderrows.ts), so nothing compiles behind the card and the older wait loops that poll for the hooks + #view.clientWidth stay correct. A tool that asks for
 // the row (`?firstframe=1`) and polls for a hook begins on the stand-ins' picture: it waits on `__ready`. window.__boot has the boot's timeline (ui/boot.ts).
 let readyResolve!: () => void, readyReject!: (e: unknown) => void;
@@ -223,8 +219,8 @@ async function main() {
   (window as any).__keys = keymap;   // …and its hook from the same moment: the Controls screen is up before the boot is over, and a check of it asks the table (tools/qa/keybinds-page.cjs)
   bootTextSize(q, kitViewOn);   // the page's words at the window's size, the browser's zoom keys the game's (ui/textsize.ts; ?textsize=0 = the page as it was) — before anything is drawn
   // `?pick=<id | place>` alone (scene/picks.ts): a link to a row of the short list that stays right when the row's settings change — answered with ONE replace to
-  // the row's own URL before anything boots (that URL names its mission, so it is never answered twice). Off under ?nopicks.
-  { const to = PICKS_UI.on ? pickRedirect(location.search) : null; if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }
+  // the row's own URL before anything boots (that URL names its mission, so it is never answered twice).
+  { const to = pickRedirect(location.search); if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }
   // `?bench` (ui/benchrun.ts): the benchmark asked for on the address — the way in for a machine nobody here can sit at. Its first scene is a mission's own page, so the
   // page goes there BEFORE anything boots: that scene's load is then this machine's first, and it is the one the report times. Never in ?kitview's own window.
   let benchRefused: string | null = null;
@@ -249,7 +245,6 @@ async function main() {
   OFFLIST_UI.on = q.get('offlist') !== '0';   // the rows cut from the mission list are drawn on no list (ui/missions.ts listedMissions; ?offlist=0 = every row drawn, as before the cut)
   LOADBRIEF.on = q.get('loadbrief') !== '0';   // a mission's page loads behind that mission's brief and waits for the player's Start (ui/loadbrief.ts; ?loadbrief=0 = the boot card and the straight start, as before)
   { const v = q.get('settle'), w = Number(q.get('settlewait')); SETTLE.on = v === null ? navigator.webdriver !== true : v !== '0'; if (v && /^\d+$/.test(v) && +v > 1) SETTLE.frames = +v; if (w > 0) SETTLE.programSecs = w; }   // the brief's START is live when the picture behind it is ready: every shader in, the first frames drawn, auto quality's pick made (ui/settle.ts). On where a person sits; ?settle=0 = live the moment the level stands, as before; ?settle=1 = on for a page a script drives too, a number over 1 = that many frames and ?settlewait=N = that many seconds for the programs (a page tool on a slow adapter)
-  wireMissions();   // one flow: a pick on the mission list is the loadout screen, whose Deploy is the page load (ui/loadout.ts)
   kitBoot();   // each member's kit and uniform read from this machine's store (ui/kitBoot.ts, game/kit.ts)
   const lessonRow = LESSON_MISSIONS.find(e => e.level === q.get('levelFile')) ?? null; kitLessonPage(lessonRow && lessonGroup(lessonRow.group) ? lessonRow : null);   // …but a TRAINING level is played with the kit AS ISSUED (game/loadout.ts kitAsIssued): the page names its lesson's row (kit.ts kitLessonPage) and every staging on it puts the issue cards on the men — all but the one lesson he packs for (kit.ts ISSUE.picked), whose stagings wear the kept cards —, since a lesson's steps ask for the issue kit's own things (a card with no rifle left 'press 2' a step that could never pass; your own four counts stay what a Player is built with — the kit lesson throws more than the one of each the pouches rule issues). The table and the store stay this machine's: the lesson neither wears nor writes the kept cards, and the loadout screen opened from this page for ANOTHER mission shows and keeps them
   recipeTables();
@@ -307,7 +302,7 @@ async function main() {
   urlFlagsBeforeEngine(q);
   if (q.get('framecap') === '0') FRAMECAP.on = false;   // ?framecap=0: the render targets are made without COPY_SRC, no texture is watched and F6 does nothing, as it was before the frame capture (render/framecap.ts FRAMECAP)
   if (FRAMECAP.on) watchTextures(gpu.device);   // (a frame capture knows every texture made from here on: render/framecap.ts)
-  if (kitViewOn) PIPE_QUEUE.later = false;   // (the Team & kit picture waits for every program, whatever the row 'Start on first frame shaders' says: its still picture is drawn once and would keep the stand-ins')
+  if (kitViewOn) PIPE_QUEUE.later = false;   // (the Team & kit picture waits for every program, whatever the first-frame start says: its still picture is drawn once and would keep the stand-ins')
   const engine = new Engine(gpu);
   { const _host: HostApi = engine; void _host; }   // the WebGPU Engine IS a HostApi (src/host/api.ts): the one place the structural conformance is asserted — the game takes the interface
   boot.mark('engine');
@@ -354,7 +349,7 @@ async function main() {
   ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed, input, stood }));   // the ONE stand-up (src/host/standup.ts) — the world / lights were populated above; the harness and the native entry come through the same call
   if (game.weather.levelRoofs) weatherKindConfig.on = true;   // (the picture follows the game: a game that stands under a level's own roofs has the shaders read the third and fourth, whose half is frame data: render/frame.ts levelSwitches)
   boot.span('gameCtor', tGame); boot.mark('game');
-  if (rustGame) { rustGame.rustAttach(game); (window as any).__rust = Object.assign(rustGame.RUST_GAME, { hashes: rustGame.rustHashes, settled: rustGame.RUST_SETTLED, means: rustGame.rustMeans, resync: rustGame.rustResync, whole: rustGame.rustWhole, file: rustGame.rustFile, fileIn: rustGame.rustFileIn, poke: rustGame.rustPoke, call: rustGame.rustCall, bridge: rustGame.rustBridge, state: rustGame.rustState, warmUp: (n?: number) => rustGame.rustWarm({ input, cam, canvas }, n) }); }   // (?rust=1: from here the game's tick is the Rust game's and this Game its puppet)
+  if (rustGame) { rustGame.rustAttach(game); SENSE_PAGE.call = rustGame.rustCall; (window as any).__rust = Object.assign(rustGame.RUST_GAME, { hashes: rustGame.rustHashes, settled: rustGame.RUST_SETTLED, means: rustGame.rustMeans, resync: rustGame.rustResync, whole: rustGame.rustWhole, file: rustGame.rustFile, fileIn: rustGame.rustFileIn, poke: rustGame.rustPoke, call: rustGame.rustCall, bridge: rustGame.rustBridge, state: rustGame.rustState, warmUp: (n?: number) => rustGame.rustWarm({ input, cam, canvas }, n) }); }   // (?rust=1: from here the game's tick is the Rust game's and this Game its puppet)
   if (LOOK.on) lookDoors(game.doors.list, engine.world.statics, LOOK_DOORS[(q.get('levelFile') ?? '').replace(/-gwot(?=\.json$)/, '')]);   // (picture only: under the default look a level that wears it has its door leaves in its own paint and weathered wood, not the office's veneer — scene/lookTidy.ts)
   // … and the maps of what the level stands up with are made before its first frame (render/gbuffer.ts needLook, awaited with the pipelines below): every static,
   // door's leaf and loose prop's part is asked its word, by the one rule (whatever a paint is told by: its colour, or a name) and after the leaves have their paint
@@ -363,13 +358,13 @@ async function main() {
     lookMaps = timed('materials', engine.gbuffer.needLook()); lookMaps?.catch(() => { /* awaited below */ }); }
   if (q.has('noweather')) game.weather.setEnabled(false);   // ?noweather: the storm experiment off from boot (weather.ts) — the plain night, byte for byte
   const probe = game.probe as IrradianceProbe;   // (the game holds a ProbeLike — src/game/sensors.ts; on this host it is the WebGPU kernel the Game built, whose encode / readback the frame drives)
-  engine.extraPasses.push((enc, sceneBG, diceView, ts) => { if (probe.hasPending) probe.encode(enc, sceneBG, diceView, ts('probe')); });
-  engine.afterSubmit.push(() => probe.afterSubmit());
+  const probed = modelErrAsked(q);   // (the game asks the picture nothing: the probe is the error tool's, and is compiled and run under its word alone)
+  if (probed) { engine.extraPasses.push((enc, sceneBG, diceView, ts) => { if (probe.hasPending) probe.encode(enc, sceneBG, diceView, ts('probe')); }); engine.afterSubmit.push(() => probe.afterSubmit()); }
   engine.afterSubmit.push(() => smoke.afterSubmit());
   // ---- everything the first frame dispatches must exist: the engine's kernels, the smoke solver's, the Game's own three GPU modules (mesh-shadow skin / refit, the particles, the light
   // probe) and the skinned-mesh raster for this glTF's joint format — all compiled off the browser's compositing thread, counted in on the card meanwhile
   await tick(); status();
-  await Promise.all([engineInit, smokeInit, lookMaps, timed('meshShadows', game.meshShadows.init()), timed('particles', engine.particles?.init()), timed('probe', probe.init()), timed('skin', engine.gbuffer.prepareSkin(game.chars.jointsFormat))]);
+  await Promise.all([engineInit, smokeInit, lookMaps, timed('meshShadows', game.meshShadows.init()), timed('particles', engine.particles?.init()), ...(probed ? [timed('probe', probe.init())] : []), timed('skin', engine.gbuffer.prepareSkin(game.chars.jointsFormat))]);
   boot.span('pipelines', tPipe); boot.mark('pipelines');
   pipelineProgress.onChange = null; boot.freezePipelines(); keptFreeze(); gpuStory.stage = 'while setting up';
   pipeQueue.settle();   // THE COMPILE QUEUE (gpu/device.ts PIPE_QUEUE): from here the background set compiles two at a time, leaving the browser's GPU workers free to draw the page
@@ -539,7 +534,6 @@ async function main() {
   try { const v = localStorage.getItem('twopointsix.ocpNotice'); if (v === 'glance' || v === 'investigate') game.tune.ocpNotice = v; } catch { /* */ }   // the OCP'd-light rule (Tab ▸ Sandbox ▸ Detection) as this machine last left it
   let viewReplay: (() => void) | null = null;   // (the end card's Replay button: set once the replay key is made, below)
   let startBench: () => void = () => {};   // (set where the benchmark is built, below: ui/bench.ts)
-  TABKEY.whoGone = () => true; TABKEY.first = navigator.webdriver === true ? 'off' : 'brief'; tabFromQuery(q); tabSettle();   // (what Tab does where nobody has chosen: before the menu is made, whose Options read it — ui/tabkey.ts, and the card's own lines below)
   const menu = new Menu({ engine, game, quality, audio, overlay, saveDue: () => savePending() && !game.saves.handNo(game), stopTour: () => { if (game.director.showing) game.director.stop(); }, focusGame: () => input.focusGame(), onStart: () => { attract.poke(); kitFresh(game); if (gestured) audio.start(); }, replay: () => viewReplay,
     startBench: () => startBench(), loadCheckpoint });
   window.__menu = menu;
@@ -595,7 +589,7 @@ async function main() {
     refused: () => booted.spec && booted.why && !runningScenario(game, levelFileQ) ? refusalWords(booted.spec, booted.why) : null,
     quit: () => {
       if (!runningScenario(game, levelFileQ)) return;   // (the cards only offer it with a scenario up; the console hook gets the same rule)
-      const pick = PICKS_UI.on ? pickOfQuery(location.search) : null, next = PICKS_UI.on ? pickQuitSearch(location.search) : quitSearch(location.search); booted.why = null;   // (pickQuitSearch off a pick's page = quitSearch, less a row's name left on the URL)
+      const pick = pickOfQuery(location.search), next = pickQuitSearch(location.search); booted.why = null;   // (pickQuitSearch off a pick's page = quitSearch, less a row's name left on the URL)
       if (net) { net.close(); location.assign(location.pathname + netLeave(next) + location.hash); return; }   // (a networked game is left by leaving its page: the seat is let go, the address loses the game's words)
       if (pick || q.has('levelFile')) { reopenMissionsAfterLoad(); location.assign(location.pathname + next + location.hash); return; }
       attract.poke();
@@ -606,10 +600,9 @@ async function main() {
     },
   };
   menu.setScenario(scenario);
-  (window as any).__picks = { ui: PICKS_UI, list: PICKS, current: () => pickOfQuery(location.search), href: (id: string) => { const p = PICKS.find(x => x.id === id); return p ? pickHref(p, location.search) : null; }, silent: () => ({ start: SILENT.start, squad: squadSilent(game) }), difficulty: () => difficultyNow() };   // the short list (scene/picks.ts): the table, the row this page is, a row's URL, the team's posture (?silentstart) and the difficulty in force
+  (window as any).__picks = { list: PICKS, current: () => pickOfQuery(location.search), href: (id: string) => { const p = PICKS.find(x => x.id === id); return p ? pickHref(p, location.search) : null; }, silent: () => ({ start: SILENT.start, squad: squadSilent(game) }), difficulty: () => difficultyNow() };   // the short list (scene/picks.ts): the table, the row this page is, a row's URL, the team's posture (?silentstart) and the difficulty in force
   (window as any).__scenarios = { list: SCENARIOS, all: ALL_MISSIONS, current: scenario.current, quit: scenario.quit, pick: (id: string) => { const e = ALL_MISSIONS.find(x => x.id === id); if (e) { const to = location.pathname + pickSearch(e, location.search) + location.hash; if (to === location.pathname + location.search + location.hash) location.reload(); else location.assign(to); } return !!e; } };   // the picker for the console / automation: .list, .current(), .pick(id) (a page load), .quit()
   (window as any).__quiet = { get on() { return game.quiet.active; }, get deal() { return game.quiet.deal; }, get ops() { return game.quiet.ops; }, summary: () => game.quiet.summary(), log: game.quiet.log, check: () => checkQuiet(game), restage: () => game.quiet.restage() };   // the quiet mission (game/quiet.ts): what this run was dealt, the level's block against its floor
-  (window as any).__snatch = { knobs: SNATCH, get man() { return game.snatch.man; }, get end() { return game.snatch.end; }, get log() { return game.snatch.log; }, summary: () => game.snatch.summary(), check: () => checkSnatch(game), out: SNATCHOUT, get exfil() { return game.snatch.out; } };
   (window as any).__lesson = { get step() { return game.lesson.step; }, get i() { return game.lesson.i; }, summary: () => game.lesson.summary(), log: game.lesson.log, stats: LESSON_STATS, check: () => checkLesson(game) };   // a training lesson (game/lesson.ts): the step that is up, the level's block against its floor
   soloOfAddress(game, q);   // (host/standup.ts: the one question every host asks of an address) the plain night — off the loadout screen (?solo) or off the card's own Start —, or a quiet mission alone, and no squad scenario up: your own card on the plain night's player, and on every fresh one after a restart (game/kit.ts — one function, which the harness's shipped stand asks of a game stood up plain too: Start no longer hands him the eleven things the pouches rule took off every other Sam)
   const openStartCard = !q.has('solo') && !game.nightBreach.active && !game.rescue.active && !game.quiet.active && !tape && !net && !kitViewOn;   // (?solo: the mission list's solo night — ui/missions.ts — is the plain night straight in)   // (opened below, once every hook is on window: that is the moment the card's buttons come alive and __ready resolves)
@@ -874,17 +867,12 @@ async function main() {
   const tween = new Tween(engine);
   const aheadDraw = net ? new AheadDraw(engine) : null;   // (a networked game: the player's own man drawn where his records take him, over the tween's blend — host/ahead.ts)
   let lastOfBurstNow = true;
-  // Tab, while it is on trial (ui/tabkey.ts): 'run' = the pause card on 'Run so far' and back, 'keys' = Options ▸ Controls over a paused run and back. Never under a show.
-  // 'brief' = a card of the objective in full and the squad over a held game, and back (ui/tabcard.ts) — what Tab does where nobody has chosen, on a page
-  // somebody sits at (a page a script drives keeps Tab as it was: its checks press the key for other things).
+  // Tab: a card of the objective in full and the squad over a held game, and back (ui/tabcard.ts).
   const tabEl = document.getElementById('tabcard'); let tabUp = false;
   const tabShow = (on: boolean) => { if (!tabEl) return; tabUp = on; tabEl.classList.toggle('on', on); if (on) tabEl.innerHTML = tabCardHtml(tabCardOf(game)); };   // (painted once: the game is held under it)
   const tabKey = (frozen: boolean) => {
     if (game.director.showing || attract.live) return;
-    const free = !frozen && !menu.isOpen;
-    if (tabNow() === 'brief') { if (tabUp) tabShow(false); else if (free && !game.backable()) tabShow(true); return; }   // (never over a list, the order menu or a running verb, whatever backs out of those)
-    if (tabNow() === 'run') { if (free) menu.openRun(); else if (menu.mode === 'pause' && !optionsOpen() && !missionsBusy()) { if (menu.runOpen) menu.close(); else menu.openRun(); } }   // (from a pause card Esc opened: the run first, then back to the game)
-    else if (tabNow() === 'keys') { if (free) menu.open('pause'); if (free || (menu.mode === 'pause' && !optionsOpen() && !missionsBusy())) openOptions({ tab: 'controls', onTab: () => menu.close() }); }   // (from a pause card — one Esc opened, or the one left when Esc put the list away — the list first, then back to the game)
+    if (tabUp) tabShow(false); else if (!frozen && !menu.isOpen && !game.backable()) tabShow(true);   // (never over a list, the order menu or a running verb, whatever backs out of those)
   };
   // THE LEVEL IS NOT DRAWN BEHIND A PAGE THAT HIDES ALL OF IT. The one starting page (ui/startpage.ts: `#missions.one`) and the options layer (`#options`) paint the menu's
   // own ground over the whole view, and the world under them is frozen: the frame behind is a still nobody sees, and drawing it again every display frame was the whole
@@ -923,11 +911,10 @@ async function main() {
     afterFreeze: (frozen) => { if (refreshStill) { refreshStill = false; if (frozen && canvas.clientWidth > 0 && canvas.clientHeight > 0) refreshFrozenStill(); } },   // (set by attract's onStop — refreshFrozenStill above; a stop that closed the card, i.e. the hand-over to the tour, needs none of it: that frame is live and under the tour's own veil)
     hotkeys: (frozen) => {
       if (bench.active) return;   // (hands off: P would quit its scene, F9 its recording)
-      if (tabUp && (menu.isOpen || optionsOpen() || overlay.cardUp || scripted || tabNow() !== 'brief')) tabShow(false);   // (Tab's card, ui/tabcard.ts: a menu or a lesson's card over it, or a script taking the page, puts it away)
+      if (tabUp && (menu.isOpen || optionsOpen() || overlay.cardUp || scripted)) tabShow(false);   // (Tab's card, ui/tabcard.ts: a menu or a lesson's card over it, or a script taking the page, puts it away)
       if (!frozen && input.hit('BracketLeft')) engine.settings.exposure /= 1.25;
       if (!frozen && input.hit('BracketRight')) engine.settings.exposure *= 1.25;
-      if (tabNow() !== 'off' && CMDRING.key !== 'Tab' && input.hit('Tab') && !(!frozen && game.backable())) {   // (…unless Tab is backing out of something this frame: game/backkey.ts)
-        if (tabNow() === 'who') { if (!frozen) input.pressed.add(game.orders.knobs.whoKey); } else tabKey(frozen); }   // (what Tab does, on trial: ui/tabkey.ts — 'who' = a press of the orders' own key, handed to this frame's tick)
+      if (CMDRING.key !== 'Tab' && input.hit('Tab') && !(!frozen && game.backable())) tabKey(frozen);   // (…unless Tab is backing out of something this frame: game/backkey.ts)
       if (!frozen && input.hit('Backquote')) panel.toggle();   // the debugger (the tweak panel) is on backtick's code: the backslash key while empty hands are a slot (host/keymap.ts SLOT); Tab is left to the game, and the debug views are a row on its Frame page (no key steps them)
       if (frozen) { if ((menu.mode === 'pause' || tabUp) && !missionsBusy() && !optionsOpen() && input.hit('F5') && input.saveKey?.()) { savePend = { m: game.mission, time: game.time }; if (tabUp) tabShow(false); else menu.saveAsked(); } }   // (F5 on the pause card itself, no screen over it: the save by hand is written as play goes on — it is the recording's own input, so it goes through a tick like any press; a refusal is said on the feed there as ever)
       else if (savePend) { if (savePending()) input.pressed.add('F5'); else savePend = null; }   // (…handed over on every live frame until a tick has moved the clock: a frame with no tick keeps the press for the next one — host/loop.ts — and a card that came up again before any tick still has it)
@@ -944,7 +931,7 @@ async function main() {
       if (viewHidden() || (leanBurst && !lastOfBurstNow)) { if (leanBurst) engine.world.relist(); behind.skipped++; perfrec.cpuRender = 0; return; }   // (an undrawn step of a lean burst still lists the world its tick left: the cursor's ray reads that list — the pack is the next draw's)
       behind.drawn++;
       const firstRender = !rendered;
-      { const bc = document.body.classList; findMeOutline(engine.outline ??= makeOutlineFrame(), game, dt, !kitViewOn && !bc.contains('attract') && !bc.contains('blinded')); }   // the outline in the dark (host/findme.ts → render/outline.ts): off unless his Options ask, and never where the HUD's own marks of him stand down
+      { const bc = document.body.classList; findMeOutline(engine.outline ??= makeOutlineFrame(), game, !kitViewOn && !bc.contains('attract') && !bc.contains('blinded')); }   // the outline in the dark (host/findme.ts → render/outline.ts): off unless his Options ask, and never where the HUD's own marks of him stand down
       const tR = performance.now();
       if (aheadDraw) { const between = !tween.stale && tween.have > 1; aheadDraw.around(between ? tween.last.a : 1, between ? tween.drawn : null, () => engine.render(camR, t, dt, present)); }
       else engine.render(camR, t, dt, present);
@@ -1078,7 +1065,7 @@ async function main() {
   // THE FIRST PLAYED FRAME IS AN ORDINARY ONE, ON EVERY ROAD STRAIGHT TO PLAY (a mission's card, a benchmark's address): the Rust game is started, its apply and its tick run once here, before the loop's first frame, and not where the first frame would pay for them (host/rustgame.ts rustWarm). Not behind the title (a pick is a page load, and an idle title's attract stages by name first), a show, a networked game's machine (it starts by its server's clock) or a replay (it stands from its tape). ?rustwarm=0: the first frame pays.
   if (!openStartCard && !net && !tape && q.get('rustwarm') !== '0') rustGame?.rustWarm({ input, cam, canvas });
   if (openStartCard) { brief?.off(); menu.open('start');
-    if (openMissionsIfAsked() && !startPage()) openStartPage();   // (ui/startpage.ts: the one page was put up by the boot card — `?loadout=` included; left on the list across a load: the page again)
+    if (missionsReopenAsked() && !startPage()) openStartPage();   // (ui/startpage.ts: the one page was put up by the boot card — `?loadout=` included; left on the list across a load: the page again)
   } else if (brief && briefGo) briefSettle(brief); else card.off();
   loading.style.display = 'none';   // (the backdrop went before the first frame in the old boot too; the card is over the canvas until Start, and ?paused / a script that only __shot()s must not keep it)
   boot.mark('interactive'); boot.span('toInteractive', 0, performance.now()); gpuStory.stage = '';
@@ -1096,14 +1083,12 @@ async function main() {
 // shares main()'s frame state (the shows, the menus, the automation hooks, the loop) stays in main().
 /** the URL flags the Engine reads while it builds its pipelines — set before `new Engine` */
 function urlFlagsBeforeEngine(q: URLSearchParams) {
-  if (q.get('roundexact') === '1') roundConfig.exact = true;   // ?roundexact=1: the ray programs with the cut rule test a round thing's cylinder as well, as they did at first (scene/round.ts roundConfig; common.wgsl ROUND_AS_CUT) — a picture comparison only, and more than a newer software adapter runs
   if (q.get('blastpace') === 'old') BLAST_PACE.on = false;   // ?blastpace=old: everything a wall going sets off is done on the frame it goes, as before (game/destructionSwitch.ts BLAST_PACE; same play, same masks and drip lines — one longer frame)
   if (q.get('sunlooks') === 'old') REACH_OPTS.solidLooks = true;   // ?sunlooks=old: the sun's and the moon's reach masks as they were, a look that falls inside a wall counted as seeing the sky (render/reach.ts reachMaskForDirectional)
   (window as any).__reachOpts = REACH_OPTS;   // (a page run can set solidLooks and ask engine.reach.dir again, to draw the old mask and the new in one boot)
   if (q.has('reachUniform')) reachBinding.storage = false;   // A/B only: force the reach rows' uniform binding (the adapter fallback itself is the Engine's decision — render/frame.ts, engine.ts)
   if (glassMod.glassFxBoot() && (!q.has('glassbreak') || q.get('glassbreak') !== '0')) glassBreakConfig.on = true;   // GLASS BREAKING (game/glassbreak.ts): the renderer's half is the scene prelude's compile-time const — raised here, before the Engine builds a pipeline, from the switch kept on this machine (Tab ▸ Destruction ▸ Glass; ?glassbreak / ?glassbreak=0 force it for one boot without touching the stored switch); off = every shader is main's program   // ?trace=N: the ray-traversal lab's compile-time variant const in every scene shader (render/frame.ts traceConfig, docs/internal/trace-perf.md; only 0 = today's walk exists on main) — must be set before the Engine builds any pipeline
   initCutSwitch();
-  roundConfig.gpu = ROUND.on && cutConfig.on;   // (ROUND THINGS, scene/round.ts: the GPU's half — the prelude's ROUND_BOXES const, the round bit, the prism's rows — set once, before the first pipeline. It needs the cut switch, whose table and pipeline draw a round: without that one a round is drawn and traced as the box round it, and the game meets the cylinder all the same. THE LOOK PROTOTYPE with a geometry trial on (scene/geoTry.ts: its cut boxes stand from the first frame to the last) is compiled WITHOUT the round test unless `?round=1` asks: with it on top the software adapter lost its device on the first drawn frame where the plain page drew, docs/agents/render.md. `ROUND.on` is not moved: the game still plays a round thing round)   // CUT BOXES (scene/cut.ts): on in the page unless ?nocutboxes / ?cutboxes=0 / localStorage twopointsix.cutboxes = '0' — the scene prelude's CUT_BOXES const, the cut table's rows in boxMat and the second g-buffer pipeline all follow it, so it is read before the Engine exists (a reload flips it)
   { const ds = Number(q.get('decalStress')); if (ds > 1) decalDebug.repeat = Math.min(64, ds | 0); }   // measurement only (?decalStress=N): the decal lookup N× per g-buffer fragment (render/decals.ts decalDebug), so its cost can be read above the timer's noise; must be set before the Engine builds the g-buffer shader
 }
 
@@ -1119,9 +1104,9 @@ function urlFlagsOnEngine(engine: Engine) {
   (window as any).__sharp = {   // sharp direct from the console: on / off, what it runs at, its memory
     get on() { return engine.settings.sharpDirect; }, set on(v: boolean) { engine.settings.sharpDirect = !!v; },
     get live() { return engine.sharpOn; },
-    knobs: () => { const S = engine.settings; return { planeK: S.sharpPlaneK, sliver: S.sharpSliver, sliverCap: S.sharpSliverCap, diag: S.sharpDiag, gbaaClamp: S.gbaaClamp, heldRays: S.heldRays, hueSplit: S.restirHueSplit }; },
-    set: (k: Partial<{ planeK: number; sliver: number; sliverCap: number; diag: number; gbaaClamp: boolean; heldRays: number; hueSplit: boolean }>) => { const S = engine.settings; if (k.planeK !== undefined) S.sharpPlaneK = k.planeK;
-      if (k.sliver !== undefined) S.sharpSliver = k.sliver; if (k.sliverCap !== undefined) S.sharpSliverCap = k.sliverCap; if (k.diag !== undefined) S.sharpDiag = k.diag; if (k.gbaaClamp !== undefined) S.gbaaClamp = !!k.gbaaClamp; if (k.heldRays !== undefined) S.heldRays = k.heldRays; if (k.hueSplit !== undefined) S.restirHueSplit = !!k.hueSplit; return (window as any).__sharp.knobs(); },   // (+ the direct-quality lane's knobs: the sliver rule / cap / paint, GBAA's clamp, the hybrid estimator's K — docs/internal/direct-quality.md)
+    knobs: () => { const S = engine.settings; return { planeK: S.sharpPlaneK, sliver: S.sharpSliver, sliverCap: S.sharpSliverCap, gbaaClamp: S.gbaaClamp, heldRays: S.heldRays, hueSplit: S.restirHueSplit }; },
+    set: (k: Partial<{ planeK: number; sliver: number; sliverCap: number; gbaaClamp: boolean; heldRays: number; hueSplit: boolean }>) => { const S = engine.settings; if (k.planeK !== undefined) S.sharpPlaneK = k.planeK;
+      if (k.sliver !== undefined) S.sharpSliver = k.sliver; if (k.sliverCap !== undefined) S.sharpSliverCap = k.sliverCap; if (k.gbaaClamp !== undefined) S.gbaaClamp = !!k.gbaaClamp; if (k.heldRays !== undefined) S.heldRays = k.heldRays; if (k.hueSplit !== undefined) S.restirHueSplit = !!k.hueSplit; return (window as any).__sharp.knobs(); },   // (+ the direct-quality lane's knobs: the sliver rule / cap, GBAA's clamp, the hybrid estimator's K — docs/internal/direct-quality.md)
     /** the sliver census of the LAST frame: sharpE[0]'s alpha carries the fallback code per output pixel (sharp_direct.wgsl SLIVERS) → counts {px, live, ring, sliver, traced, unshadowedDefault} + the per-row mask if asked (harness: tools/qa/dq-scenes.js) */
     census: async (mask = false) => { const t = engine.passes.sharpE[0]; if (!engine.sharpOn || !t) return null; const dev = engine.device; const w = t.width, h = t.height; const bpr = Math.ceil(w * 8 / 256) * 256; const buf = dev.createBuffer({ size: bpr * h, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ }); const enc = dev.createCommandEncoder(); enc.copyTextureToBuffer({ texture: t }, { buffer: buf, bytesPerRow: bpr }, [w, h]); dev.queue.submit([enc.finish()]); await buf.mapAsync(GPUMapMode.READ); const u16 = new Uint16Array(buf.getMappedRange().slice(0)); buf.unmap(); buf.destroy();
       const f16 = (x: number) => { const e = (x >> 10) & 31, m = x & 1023; return e === 0 ? m * 5.960464477539063e-8 : (1 + m / 1024) * Math.pow(2, e - 15); }; let ring = 0, sliver = 0, traced = 0, unsh = 0; const m8 = mask ? new Uint8Array(w * h) : null;
@@ -1323,7 +1308,6 @@ function squadFlagsAndHooks(q: URLSearchParams, engine: Engine, game: Game) {
   (window as any).__autopilot = { knobs: AUTOPILOT, stats: AUTOPILOT_STATS, pick: (at: [number, number, number]) => autoPick(game, game.orders.targetAt(at)) };
   (window as any).__squadthrow = { knobs: SQUADTHROW, stats: SQUADTHROW_STATS, plans: () => squadThrowPlans(game), plan: (at: [number, number, number], kind: 'frag' | 'stun', who: 'all' | 'red' | 'blue' = 'all') => squadThrowPlan(game, game.orders.men(who), at, kind, true) };   // teammates' throws on order (game/squadthrow.ts): .plans() = what the overlay draws (who, his walk, the arc), .plan(at, kind) = who would throw there and from where
   (window as any).__lightswitch = { knobs: LIGHTSWITCH, stats: LIGHTSWITCH_STATS, list: () => wallSwitches(game), lit: (i: number) => { const sw = wallSwitches(game)[i]; return sw ? switchLit(sw) : null; } };   // a room's wall switches (game/lightswitch.ts): tools/qa/lightswitch-page.cjs reads the plates and works one through the page's own Space
-  (window as any).__round = { knobs: ROUND, config: roundConfig, stats: ROUND_STATS, list: () => engine.world.statics.map((b, i) => ({ i, b })).filter(e => e.b.round === true) };   // round things (scene/round.ts): the switch, its GPU half, and the level's round boxes
   (window as any).__carlamps = { knobs: CARLAMPS, stats: CARLAMPS_STATS, list: () => game.targets.filter(t => t.group === VEHICLE_GROUP) };   // a parked vehicle's lamps as light targets (game/carlamps.ts): what the level gave and how many a round has met
   (window as any).__cleanrestart = { knobs: CLEANRESTART, stats: CLEANRESTART_STATS };   // a restart gives a clean level (game/cleanrestart.ts): tools/qa/cleanrestart-page.cjs reads what a restart did
   (window as any).__squad40 = { knobs: SQUAD40, stats: SQUAD40_STATS, log: SQUAD40_LOG, left: () => squad40Left(game), brought: () => squad40Brought(game), of: (i: number) => squad40Of(game, game.orders.squad()[i]), plans: () => squad40Plans(game), summary: () => squad40Summary(game),
@@ -1346,7 +1330,6 @@ function soloNightHooks(game: Game) {
 /** the renderer URL flags that stood above `new Quality` (?norestirmotion ?restirmotion ?nosmokediffuse), __rt */
 function rendererFlags(engine: Engine) {
   { const q = new URLSearchParams(location.search); if (q.get('holedepth') === '0') engine.settings.portalHole = false;   // &holedepth=0: an opening's daylight is its whole rectangle again (settings.portalHole)
-    { const pw = Number(q.get('portalworth')); if (pw > 0) engine.settings.portalWorth = pw; }   // &portalworth=<number>: how far an opening's own light reaches, for the visit (settings.portalWorth; 0.003 = until 11-05)
     if (q.has('norestirmotion')) engine.settings.restirMotion = 0; const rm = q.get('restirmotion'); if (rm !== null && rm !== '') engine.settings.restirMotion = Math.max(0, Math.min(7, parseInt(rm, 10) || 0)); }   // ?norestirmotion / ?restirmotion=N: the direct-motion lane's reservoir-reprojection levers from boot (docs/internal/direct-motion.md; 0 = the estimator's program byte for byte)
   if (new URLSearchParams(location.search).get('nvoval') === '1') engine.passes.nvOval = 1;   // ?nvoval=1: the goggles' dark oval over the picture, as it was (off by default: it hid too much of the screen — picture only, nothing reads it)
   if (new URLSearchParams(location.search).has('nosmokediffuse')) engine.passes.smokeDiffuse = 0;   // ?nosmokediffuse: smoke attenuates only, nothing behind it blurred (the final blit as it was)
@@ -1369,18 +1352,18 @@ function daylightHook(game: Game) {
 function giMotionHooks(engine: Engine) {
   // __gimo: GI IN MOTION (docs/internal/gi-motion.md) — the ladder's climb and the motion-calm rows, in one object for the console / automation
   (window as any).__gimo = {
-    knobs: () => { const S = engine.settings; return { ladderClimb: S.ladderClimb, capClimb: S.capClimb }; },
-    set: (k: Partial<{ ladderClimb: boolean; capClimb: boolean }>) => { const S = engine.settings; if (k.ladderClimb !== undefined) S.ladderClimb = !!k.ladderClimb; if (k.capClimb !== undefined) S.capClimb = !!k.capClimb; return (window as any).__gimo.knobs(); },
+    knobs: () => { const S = engine.settings; return { ladderClimb: S.ladderClimb }; },
+    set: (k: Partial<{ ladderClimb: boolean }>) => { const S = engine.settings; if (k.ladderClimb !== undefined) S.ladderClimb = !!k.ladderClimb; return (window as any).__gimo.knobs(); },
     calm: (on?: boolean) => { if (on !== undefined) (window.__quality as any)?.applyMotionCalm(!!on); return !!(window.__quality as any)?.motionCalm; },   // the motion-calm rows on / off (quality.ts MOTION_CALM)
-    summary: () => { const S = engine.settings; return `gi in motion: climb ${S.ladderClimb ? 'on' : 'off'}${S.capClimb ? ' + cap' : ''} · motion-calm rows ${(window.__quality as any)?.motionCalm ? 'ON' : 'off'}`; },
+    summary: () => { const S = engine.settings; return `gi in motion: climb ${S.ladderClimb ? 'on' : 'off'} · motion-calm rows ${(window.__quality as any)?.motionCalm ? 'ON' : 'off'}`; },
   };
   // __dmo: DIRECT LIGHT IN MOTION (docs/internal/direct-motion.md) — ReSTIR's temporal reuse under a moving camera: settings.restirMotion (bitmask 1 = stochastic-bilinear reprojection, 2 = motion-scaled
   // confidence, 4 = spatial reuse under motion; 0 = the estimator as it was) and its three knobs, for the console / the harnesses (`__gim.run(tag, {extra: {restirMotion: 3}})` measures it)
   (window as any).__dmo = {
-    knobs: () => { const S = engine.settings; return { motion: S.restirMotion, v: S.restirMotionV, min: S.restirMotionMin, px: S.restirMotionPx, taps: S.restirMotionTaps, static: S.restirMotionStatic, live: engine.passes.restirMotionLive }; },
-    set: (k: Partial<{ motion: number; v: number; min: number; px: number; taps: number; static: boolean }>) => { const S = engine.settings; if (k.motion !== undefined) S.restirMotion = Math.max(0, Math.min(7, k.motion | 0)); if (k.v !== undefined) S.restirMotionV = k.v; if (k.min !== undefined) S.restirMotionMin = k.min; if (k.px !== undefined) S.restirMotionPx = k.px; if (k.taps !== undefined) S.restirMotionTaps = k.taps; if (k.static !== undefined) S.restirMotionStatic = !!k.static; return (window as any).__dmo.knobs(); },
+    knobs: () => { const S = engine.settings; return { motion: S.restirMotion, v: S.restirMotionV, min: S.restirMotionMin, px: S.restirMotionPx, taps: S.restirMotionTaps, live: engine.passes.restirMotionLive }; },
+    set: (k: Partial<{ motion: number; v: number; min: number; px: number; taps: number }>) => { const S = engine.settings; if (k.motion !== undefined) S.restirMotion = Math.max(0, Math.min(7, k.motion | 0)); if (k.v !== undefined) S.restirMotionV = k.v; if (k.min !== undefined) S.restirMotionMin = k.min; if (k.px !== undefined) S.restirMotionPx = k.px; if (k.taps !== undefined) S.restirMotionTaps = k.taps; return (window as any).__dmo.knobs(); },
     get on() { return engine.settings.restirMotion; }, set on(v: number) { engine.settings.restirMotion = Math.max(0, Math.min(7, v | 0)); },
-    summary: () => { const S = engine.settings; const m = S.restirMotion; return m ? `restir motion ${m} = ${[m & 1 ? 'stochastic-bilinear reprojection' : '', m & 2 ? `confidence whole under ${S.restirMotionV} px @1000 rows, × ${S.restirMotionMin} past ${(S.restirMotionV * 1.6).toFixed(2)}` : '', m & 4 ? `spatial past ${S.restirMotionPx} px${S.restirMotionTaps ? ` × ≥ ${S.restirMotionTaps} taps` : ''}` : ''].filter(Boolean).join(' + ')} · ${engine.passes.restirMotionLive ? 'LIVE this frame' : S.restirMotionStatic ? 'live' : 'the camera is still: main\'s program'}` : 'restir motion off — the reservoir reprojection as it was (nearest texel, full confidence)'; },
+    summary: () => { const S = engine.settings; const m = S.restirMotion; return m ? `restir motion ${m} = ${[m & 1 ? 'stochastic-bilinear reprojection' : '', m & 2 ? `confidence whole under ${S.restirMotionV} px @1000 rows, × ${S.restirMotionMin} past ${(S.restirMotionV * 1.6).toFixed(2)}` : '', m & 4 ? `spatial past ${S.restirMotionPx} px${S.restirMotionTaps ? ` × ≥ ${S.restirMotionTaps} taps` : ''}` : ''].filter(Boolean).join(' + ')} · ${engine.passes.restirMotionLive ? 'LIVE this frame' : 'the camera is still: main\'s program'}` : 'restir motion off — the reservoir reprojection as it was (nearest texel, full confidence)'; },
   };
 }
 
@@ -1478,7 +1461,7 @@ function destructionWeatherFlagsAndHooks(engine: Engine, game: Game) {
   (window as any).__close = {
     knobs: CLOSE, stats: CLOSE_STATS, log: CLOSE_LOG,
     at: (i: number, p?: Vec3) => { const o = closeAt(game, game.guards[i], p ?? game.player.char.pos); return { kind: o.win?.kind ?? null, id: o.win?.id ?? null, dist: o.dist, bearingDeg: o.bearing * 180 / Math.PI, inReach: o.inReach, clear: o.clear, grab: o.grab, strike: o.strike, can: o.can, why: o.why }; },
-    windows: (i: number) => closeWindows(game, game.guards[i]), marks: () => closeMarks(game).map(m => ({ who: m.guard.callsign, id: m.id, kind: m.kind, state: m.state, label: m.label, pts: m.pts.length, alpha: m.alpha })),
+    windows: (i: number) => closeWindows(game, game.guards[i]),
     seat: (i: number, at?: Vec3, face?: number) => closeSeat(game, game.guards[i], at, face), unseat: (i: number) => closeUnseat(game, game.guards[i]), seated: (i: number) => closeSeated(game, game.guards[i]),
     mode: () => closeMode(game)?.callsign ?? null,
     summary: () => closeSummary(game),
@@ -1550,14 +1533,14 @@ function resolveGlassFlagsAndHooks(engine: Engine, gpu: Gpu) {
   (window as any).__taa = {
     get on() { return engine.settings.taau; }, set on(v: boolean) { engine.settings.taau = !!v; },
     get jitter() { return [...engine.jitter]; }, get resets() { return engine.taaResets; }, get lastReset() { return engine.lastTaaReset; }, get stats() { return engine.passes.taaStats; },
-    reset: (why = 'by hand') => engine.resetTaa(why), knobs: () => { const S = engine.settings; return { alpha: S.taauAlpha, clipGamma: S.taauClipGamma, phases: S.taauPhases, sharpen: S.taauSharpen, reactive: S.taauReactive, kernel: S.taauKernel, velK: S.taauVelK, lightJump: S.taauLightJump, motionAlpha: S.taauMotionAlpha, motionClip: S.taauMotionClip, sharpenMotion: S.taauSharpenMotion }; },
-    set: (k: Partial<{ alpha: number; clipGamma: number; phases: number; sharpen: number; reactive: number; kernel: number; velK: number; lightJump: number; motionAlpha: number; motionClip: number; sharpenMotion: number }>) => { const S = engine.settings; if (k.alpha !== undefined) S.taauAlpha = k.alpha; if (k.clipGamma !== undefined) S.taauClipGamma = k.clipGamma; if (k.phases !== undefined) S.taauPhases = k.phases; if (k.sharpen !== undefined) S.taauSharpen = k.sharpen; if (k.reactive !== undefined) S.taauReactive = k.reactive; if (k.kernel !== undefined) S.taauKernel = k.kernel; if (k.velK !== undefined) S.taauVelK = k.velK; if (k.lightJump !== undefined) S.taauLightJump = k.lightJump; if (k.motionAlpha !== undefined) S.taauMotionAlpha = k.motionAlpha; if (k.motionClip !== undefined) S.taauMotionClip = k.motionClip; if (k.sharpenMotion !== undefined) S.taauSharpenMotion = k.sharpenMotion; return (window as any).__taa.knobs(); },
+    reset: (why = 'by hand') => engine.resetTaa(why), knobs: () => { const S = engine.settings; return { alpha: S.taauAlpha, clipGamma: S.taauClipGamma, phases: S.taauPhases, sharpen: S.taauSharpen, reactive: S.taauReactive, kernel: S.taauKernel, velK: S.taauVelK, motionAlpha: S.taauMotionAlpha, sharpenMotion: S.taauSharpenMotion }; },
+    set: (k: Partial<{ alpha: number; clipGamma: number; phases: number; sharpen: number; reactive: number; kernel: number; velK: number; motionAlpha: number; sharpenMotion: number }>) => { const S = engine.settings; if (k.alpha !== undefined) S.taauAlpha = k.alpha; if (k.clipGamma !== undefined) S.taauClipGamma = k.clipGamma; if (k.phases !== undefined) S.taauPhases = k.phases; if (k.sharpen !== undefined) S.taauSharpen = k.sharpen; if (k.reactive !== undefined) S.taauReactive = k.reactive; if (k.kernel !== undefined) S.taauKernel = k.kernel; if (k.velK !== undefined) S.taauVelK = k.velK; if (k.motionAlpha !== undefined) S.taauMotionAlpha = k.motionAlpha; if (k.sharpenMotion !== undefined) S.taauSharpenMotion = k.sharpenMotion; return (window as any).__taa.knobs(); },
     summary: () => `taau ${engine.settings.taau ? 'on' : 'off'} · ${engine.width}×${engine.height} → ${engine.outWidth}×${engine.outHeight} · jitter ${engine.jitter.map(v => v.toFixed(3)).join(',')} · ${engine.passes.taaStats.frames} resolves, ${engine.taaResets} resets (last: ${engine.lastTaaReset || '—'})`,
   };
   // __dn: the denoiser for the console / automation — the clients' knobs in one object, the last frame's dispatch counts
   (window as any).__dn = {
     get stats() { return engine.passes.den.stats; },
-    knobs: () => { const S = engine.settings; return { shadowIters: S.dnShadowIters, shadowCap: S.dnShadowCap, shadowClampK: S.dnShadowClampK, shadowSigmaL: S.dnShadowSigmaL, shadowPrior: S.dnShadowPrior, shadowLitAlike: S.dnShadowLitAlike, shadowOccl: S.dnShadowOccl, shadowMoveCap: S.dnShadowMoveCap, shadowMoveThresh: S.dnShadowMoveThresh, giIters: S.dnGiIters, giCap: S.dnGiCap, giClampK: S.dnGiClampK, giSigmaL: S.dnGiSigmaL, giFast: S.dnGiFast, giFirefly: S.dnGiFirefly, specIters: S.dnSpecIters, specCap: S.dnSpecCap, specClampK: S.dnSpecClampK, specSigmaL: S.dnSpecSigmaL, specRough: S.dnSpecRough, depthK: S.dnDepthK, normalPow: S.dnNormalPow, motionVectors: S.dnMotionVectors }; },
+    knobs: () => { const S = engine.settings; return { shadowIters: S.dnShadowIters, shadowCap: S.dnShadowCap, shadowClampK: S.dnShadowClampK, shadowSigmaL: S.dnShadowSigmaL, shadowPrior: S.dnShadowPrior, shadowLitAlike: S.dnShadowLitAlike, shadowOccl: S.dnShadowOccl, shadowMoveCap: S.dnShadowMoveCap, shadowMoveThresh: S.dnShadowMoveThresh, giIters: S.dnGiIters, giCap: S.dnGiCap, giClampK: S.dnGiClampK, giSigmaL: S.dnGiSigmaL, giFast: S.dnGiFast, specIters: S.dnSpecIters, specCap: S.dnSpecCap, specClampK: S.dnSpecClampK, specSigmaL: S.dnSpecSigmaL, specRough: S.dnSpecRough, depthK: S.dnDepthK, normalPow: S.dnNormalPow, motionVectors: S.dnMotionVectors }; },
     set: (k: Record<string, number | boolean>) => { const S = engine.settings as unknown as Record<string, unknown>; for (const [key, v] of Object.entries(k)) { const name = 'dn' + key[0].toUpperCase() + key.slice(1); if (name in S) S[name] = v; } return (window as any).__dn.knobs(); },
     summary: () => { const S = engine.settings, st = engine.passes.den.stats; return `shadow ${S.dnShadowIters} it / cap ${S.dnShadowCap} · gi ${S.dnGiIters} it / cap ${S.dnGiCap} (fast ${S.dnGiFast}) · spec ${S.dnSpecIters} it / cap ${S.dnSpecCap} · mv ${S.dnMotionVectors && S.taau ? 'on' : 'off'} · last frame ${st.shadow}+${st.gi}+${st.spec} dispatches`; },
   };

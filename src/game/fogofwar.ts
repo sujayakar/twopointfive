@@ -125,11 +125,10 @@ import { placeName } from './dialogue';
 import type { Door } from './doors';
 import { type Box, BoxFlag, MKEY, copyBox } from '../scene/boxes';
 import { type FogFrame, makeFogFrame, FOG_EYES, FOG_LIGHTS } from '../render/fogofwar';
-import { WAND, WAND_STATS, wandEye } from './wand';
+import { WAND_STATS, wandEye } from './wand';
 import { mateWandEye, mateWandEyes } from './wandorder';
 import { peekEye } from './peeksight';
 import { STICKY_STATS, stickyEyes } from './stickycam';
-import { toldLastSeen } from './told';   // (called inside lastSeen() only)
 import { runnerNobody } from './runner';   // (asked inside a tick only: false with its switch off)
 import { gpuFx } from './particleFx';   // (called inside begin() / done() / hush() only)
 import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
@@ -296,7 +295,7 @@ export const FOG = {
   /** … a lamp that would add less than this, as displayed, at a pixel is not traced (one under twice it is faded in: no line where a lamp's reach ends) */
   litCut: 0.006,
   /** WHERE HE WAS LAST SEEN: a living enemy who has gone out of the team's sight keeps a fading '?' on the spot he was last seen at for this many seconds
-   *  (the HUD's alone: lastSeen() below — nothing in the game reads it). 0 (as it ships) = the 'you're told' lever decides (told.ts: a few seconds on
+   *  (the HUD's alone: the Rust game's fog_of_war_last_seen, game.view.marks.seen — nothing in the game reads it). 0 (as it ships) = the 'you're told' lever decides (told.ts: a few seconds on
    *  Standard, longer on Guided, none on Bare or with that lever off, which is no mark, as it was); turned up, this is the seconds on every rung */
   lastSeen: 0,
 };
@@ -464,7 +463,7 @@ export class FogOfWar {
   private frameNo = 0; private asked = new Map<string, number>(); private pending: { key: string; a: Vec3; b: Vec3 }[] = []; private turn = 0;
   /** A VIEWER'S PICTURE WITHOUT THE FOG (the engine replay's 'Fog' switch, replay/engineplay.ts → Game.fogLift / fogBack): `viewer` is raised by whoever may ask
    *  for one — never by play — and then each frame's list is also kept as it stood before the rules above cut it (`raw()`); `bared` is up only while that picture
-   *  and its HUD are drawn, between two steps, and makes `hidden()` / `lastSeen()` answer as if nobody were left out. No step reads either: a run is the same run. */
+   *  and its HUD are drawn, between two steps, and makes `hidden()` answer as if nobody were left out (the HUD takes the same word, overlay.ts `bare`). No step reads either: a run is the same run. */
   viewer = false; bared = false;
   /** fog frames left to put the picture under the page's own fog look (FOG_PAGE) — THE ENGINE REPLAY'S CALL, made as it takes the frame and after every table
    *  of the tape's it lays over FOG (replay/engineplay.ts): a few frames, so that word is the last; after them the Tab rows are the viewer's to move. Never
@@ -1008,18 +1007,6 @@ export class FogOfWar {
   }
   /** is the squad shooting at him: a teammate's aimed round went at him inside FOG.squadFireSecs (false while the rule is off) */
   firedOn(gd: Guard): boolean { if (!FOG.squadFire) return false; const t = this.firedAt.get(gd); return t !== undefined && this.fireClock - t < FOG.squadFireSecs; }
-  /** THE LAST SIGHTINGS (FOG.lastSeen seconds of them, or at 0 the seconds of told.ts's rung; none while both are 0 or the fog stands aside): each living enemy who is out of the picture now and was
-   *  in it that recently — where he stood when last seen, and how long ago. The HUD marks each with a '?' that fades (ui/overlay.ts); nobody's AI reads it. */
-  lastSeen(): { gd: Guard; at: Vec3; age: number; life: number }[] {
-    const secs = FOG.lastSeen > 0 ? FOG.lastSeen : toldLastSeen();   // (the debugger's row, turned up, is the mark's seconds whatever the lever says; at 0 the 'you're told' lever decides — told.ts: its seconds on Guided and Standard, 0 on Bare and with that lever off, which is FOG.lastSeen alone, as it was)
-    const out: { gd: Guard; at: Vec3; age: number; life: number }[] = []; if (!this.active || this.bared || !(secs > 0 || (WAND.on && WAND.markSecs > 0))) return out;
-    for (const gd of this.g.guards) { if (gd.state === 'dead' || !isHostile(gd.team, 'player') || !this.hiddenChars.has(gd.char)) continue;
-      const r = this.recs.get(gd); if (!r || !r.at) continue; const age = this.g.time - r.t;
-      // (a man the wand's lens had when he was last seen keeps his mark WAND.markSecs — what a look under a door leaves its owner with; anybody else FOG.lastSeen, as ever)
-      const life = WAND.on && r.wandT !== undefined && Math.abs(r.t - r.wandT) < 0.5 ? Math.max(secs, WAND.markSecs) : secs;
-      if (age >= 0 && age < life) out.push({ gd, at: r.at, age, life }); }
-    return out;
-  }
   /** left out of the picture this frame (what combat.ts handProps, the HUD's markers and the bubbles ask) — false for everybody while it is off */
   hidden(gd: Guard): boolean { if (RUST_SURFACE?.tapFiring('FogOfWar.hidden')) return RUST_SURFACE.tapAnswer() as any; return !this.bared && this.hiddenChars.size > 0 && this.hiddenChars.has(gd.char); }
   /** this frame's things that are the team's own rubble on its first way down · the ones the picture has since taken at rest (things()) */

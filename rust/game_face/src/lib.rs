@@ -64,6 +64,7 @@ use std::cell::{Cell, RefCell};
 mod memo;
 mod page;
 mod harness;
+mod desk;
 
 type Game = game::game::Game;
 /// a game and what the host has handed over for its next step
@@ -155,7 +156,7 @@ pub extern "C" fn face_verdict(h: u32) -> i32 {
 #[no_mangle]
 pub extern "C" fn face_tick_view(h: u32) {
     use game::io::Io;
-    out(with_ref(h, |x| { let g = &x.g; let mut o = game::io::W::new(); game::view::tick_view(g, &game::seats::seat(g, g.local_seat.unwrap_or(g.seat))).w(&mut o); o.b }));
+    out(asked(h, |world| { let g = world.shared(); let mut o = game::io::W::new(); game::view::tick_view(g, &game::seats::seat(g, g.local_seat.unwrap_or(g.seat))).w(&mut o); o.b }));
 }
 /// what the end card shows of the run (a DebriefView at face_out): asked once, as the card opens; a read, nothing kept
 #[no_mangle]
@@ -168,6 +169,7 @@ pub extern "C" fn face_debrief_view(h: u32) {
 fn asked<R>(h: u32, f: impl FnOnce(game::ask::WorldAsk) -> R) -> R {
     with(h, |x| {
         if game::ask::WorldAsk::try_of(&x.g).is_err() { game::scene_collision::stands(&mut x.g); }
+        game::scene_box_mirror::box_mirror_things(&mut x.g);   // (a writer between ticks: the furniture's copy is paid up as the boxes' is)
         let g: &Game = &x.g;
         f(game::ask::WorldAsk::of(g))
     })
@@ -282,8 +284,7 @@ pub extern "C" fn face_blank() -> u32 {
     let mut g = Box::new(Game::blank());
     g.sim = slot;
     // (a block with nothing in it is zeros under the layout's word: whatever game stood in the slot before is gone)
-    unsafe { core::ptr::write_bytes(sim::state::addr(slot) as *mut u8, 0, core::mem::size_of::<sim::state::State>()); }
-    sim::state::state(slot).head.layout = sim::state::LAYOUT;
+    sim::state::put(slot, &[]);
     put(Held::new(g))
 }
 #[no_mangle]

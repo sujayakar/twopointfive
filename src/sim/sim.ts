@@ -110,7 +110,7 @@ export interface SimExports {
   // the game's own smoke on the coarse grid (rust/sim/src/bricks.rs; game/sense.ts SmokeGrid): its state is a part of the game's block (state.ts), so a call
   // names the block's slot `g` (`st.bind()`), with the block's `stamp` where it reads the tables made from the state, and a step the box world and its copy
   grid_reset(g: number, home: number): void; grid_clear(g: number): void; grid_dirty(w: number, x0: number, z0: number, x1: number, z1: number): void;
-  grid_step(g: number, stamp: number, w: number, copy: number, set: number, n: number, emits: number, decay: number, spread: number, rise: number, riseRate: number, gone: number, lamps: number, albedo: number, share: number, passes: number, sweep: number, windX: number, windZ: number, windLow: number, windGain: number, windFullAt: number, windKeep: number, lg: number, leave: number, how: number): number;
+  grid_step(g: number, stamp: number, w: number, copy: number, set: number, n: number, emits: number, decay: number, spread: number, rise: number, riseRate: number, gone: number, windX: number, windZ: number, windLow: number, windGain: number, windFullAt: number, windKeep: number): number;
   /** where the wind's share of each square metre of the plan is written before a step that has wind, and how many doubles it holds (bricks.rs WIND) */
   grid_wind(): number; grid_wind_cap(): number;
   grid_trans(g: number, stamp: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, sigma: number): number;

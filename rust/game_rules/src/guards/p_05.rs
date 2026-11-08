@@ -19,7 +19,7 @@ fn same_key(a: &Option<LitSeenTgt>, b: &Option<LitSeenTgt>) -> bool {
 /// is this floor point under what the meter calls lit, by the place's own lights only (guards.ts litPlace `dark`)
 fn place_dark(g: &mut Game, x: f64, z: f64) -> bool {
     let mut carried = |_: &mut Game, _: f64| true;
-    let e = light_estimate_at(g, [x, 1.2, z], Some(&mut carried), None, None, None, None);
+    let e = light_estimate_at(g, [x, 1.2, z], Some(&mut carried), None, None);
     crate::game::game_visibility_of(g, e) < g.k.lights.lit_at
 }
 
@@ -223,7 +223,7 @@ pub fn light_ruled(g: &mut crate::game::Game, gd: GuardId) -> bool {
 /// stands this floor point lit by the place's steady lights (guards.ts darkOnLitMan `lit`)
 fn place_lit_steady(g: &mut Game, p: V3) -> bool {
     let mut carried = |_: &mut Game, _: f64| true;
-    let e = light_estimate_at(g, [p[0], 1.2, p[2]], Some(&mut carried), Some(true), None, None, None);
+    let e = light_estimate_at(g, [p[0], 1.2, p[2]], Some(&mut carried), Some(true), None);
     crate::game::game_visibility_of(g, e) >= g.k.lights.lit_at
 }
 
@@ -590,7 +590,6 @@ fn far_from(p: V3, list: &[Cand], r: f64) -> bool { list.iter().all(|k| v3::dist
 pub fn deal_spots(g: &mut crate::game::Game, gd: GuardId) {
     let (w, hn, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let n = (w * hn) as usize;
-    let gi = g.guards.iter().position(|&o| o == gd).unwrap_or(0);
     let fix = g.gd[gd].search_plan.as_ref().unwrap().fix;
     let crate::guards::FloodFrom { secs, metres } = flood_from(g, fix, SEARCH_RADIUS_M, None);
     // props: every cell within reach of a chair / carton / plant / bin counts it
@@ -685,10 +684,8 @@ pub fn deal_spots(g: &mut crate::game::Game, gd: GuardId) {
         }
     }
     let mut spots: Vec<crate::guards::SearchSpot> = Vec::with_capacity(chosen.len());
-    for (i, c) in chosen.iter().enumerate() {
-        let key = alloc::format!("srch:{}:{}", gi, i);
-        crate::game::game_light_forget(g, &key);   // (the last plan's answer under this key was for another spot)
-        spots.push(crate::guards::SearchSpot { pos: c.pos, cell: c.cell as f64, key, kind: c.kind, hidden: c.hidden, cover: c.cover, dark: 0.5, e: None, need: secs[c.cell] as f64, plaus: 1.0, score: 0.0, visited: false, by: -1.0, unreachable: false, samples: Vec::new() });
+    for c in chosen.iter() {
+        spots.push(crate::guards::SearchSpot { pos: c.pos, cell: c.cell as f64, kind: c.kind, hidden: c.hidden, cover: c.cover, dark: 0.5, e: None, need: secs[c.cell] as f64, plaus: 1.0, score: 0.0, visited: false, by: -1.0, unreachable: false, samples: Vec::new() });
     }
     let now = g.time;
     let p = g.gd[gd].search_plan.as_mut().unwrap();

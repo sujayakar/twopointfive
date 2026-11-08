@@ -157,19 +157,12 @@ pub fn prep(root: &Path, scratch: &Path) -> Result<String, String> {
     crate::dead::rs_files(&to.join(body_crate).join("src"), &mut all);
     for p in &all {
         let Ok(t) = std::fs::read_to_string(p) else { continue };
-        let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
         let mut out = t.clone();
         if is_body(p) {
             out = privatise(&out, &keep);
-        } else if name == "mod.rs" {
-            // a module hands its parts on to the crate, not to the world
-            // (`pub use p_01::*;`, `pub use base::*;`: a part whose file is a body file)
-            let dir = p.parent().map(|d| d.to_path_buf()).unwrap_or_default();
-            out = out.lines().map(|l| {
-                let part = l.strip_prefix("pub use ").and_then(|r| r.split("::").next()).unwrap_or("");
-                if !part.is_empty() && is_body(&dir.join(format!("{part}.rs"))) && dir.join(format!("{part}.rs")).exists() { l.replacen("pub use", "pub(crate) use", 1) } else { l.to_string() }
-            }).collect::<Vec<_>>().join("\n") + "\n";
         }
+        // (a module's `pub use p_01::*;` stays as it is: a glob hands on each item at the item's own visibility, so what was made private here stays private, and
+        // a name another crate spells stays reachable by the path it spells)
         if out.contains("dead_code") {
             out = out.replace("#![allow(dead_code)]", "").replace("#[allow(dead_code)]", "").replace("dead_code, ", "").replace(", dead_code", "");
         }

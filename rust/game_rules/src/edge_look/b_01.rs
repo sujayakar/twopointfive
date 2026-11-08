@@ -187,7 +187,7 @@ pub fn edge_look_flush(g: &mut crate::game::Game) {
 /// This lane's pieces into the frame's dynamic list (after the lane's debris). (src/game/edgeLook.ts:169 EdgeLook.boxes)
 pub fn edge_look_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     if g.destr.edge_look.held { g.destr.edge_look.held = false; } else { edge_look_flush(g); }   // (a wall that opened this frame is dressed on the next: `dress`)
-    let e = &mut g.destr.edge_look;
+    let e = &g.destr.edge_look;
     let (room, mut n) = (e.room, 0.0);
     for l in e.decor.values() { for &b in l { if n >= room { break; } out.push(b.into()); n += 1.0; } }
     let mut i = e.rubble.len();
@@ -550,11 +550,10 @@ pub fn edge_look_shed(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike
     }
 }
 
-/// One soot mark, tagged as the picture's. The answer is `None` here: the TypeScript's only use of it is a count for the checks, not kept. (edgeLook.ts:406-409,423)
+/// One soot mark, the picture's alone. (edgeLook.ts:406-409,423)
 fn soot(g: &mut crate::game::Game, pos: V3, normal: V3, size: f64, param: f64) {
     let opts = crate::render_decals::DecalOpts { param: Some(param), look: Some(true), ..Default::default() };
-    let d = crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Scorch, pos, normal, Some(size), Some(opts));
-    crate::look_decals::look_decal(g, d.as_ref());
+    crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Scorch, pos, normal, Some(size), Some(opts));
 }
 
 /// Soot round a blast's gap: where along the wall the charge opened it (the edge pieces there are sooted), then both faces of the wall about the opening, the floor at its foot, the rim of what still stands. (src/game/edgeLook.ts:398 EdgeLook.scorch)

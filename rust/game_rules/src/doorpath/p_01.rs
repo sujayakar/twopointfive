@@ -67,7 +67,7 @@ fn crosses(p: V3, l: &[[V3; 2]], gun_side: f64, gun_m: f64, lx: f64, lz: f64, ya
 }
 
 /// THE GUN: a teammate's long gun whose line crosses an open leaf is carried along his walk or brought down; what it writes on his script `after` puts back. (doorpath.ts DoorPath.guns)
-pub fn door_path_guns(g: &mut crate::game::Game, dt: f64) {
+pub fn door_path_guns(g: &crate::game::Game, dt: f64) {
     
 }
 
@@ -96,7 +96,7 @@ pub fn door_path_after(g: &mut crate::game::Game) {
 }
 
 /// The leaf as it stands: hinge → free tip. (doorpath.ts DoorPath.leaf)
-pub fn door_path_leaf(g: &mut crate::game::Game, d: DoorId) -> [V3; 2] {
+pub fn door_path_leaf(g: &crate::game::Game, d: DoorId) -> [V3; 2] {
     let u = crate::doors::door_dir(g, d);
     let h = g.dr[d].def.hinge;
     let w = g.dr[d].def.width;

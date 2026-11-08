@@ -119,7 +119,6 @@ import './handwork';
 import { throwCount, toggleDrag, teleportPlayer, settleSpot, freeHeld, takeKey, pickHover } from './player';
 import type { WallHold, Hold } from './player';
 import { escapeInteract, backableInteract } from './interact';
-import { slotSetupOpen, slotSetupShut } from './slotsetup';
 import { tacticsSummary, tacticsReset } from './tactics';
 import { lanesReset } from './lanes';
 import { pictureReset } from './picture';
@@ -144,7 +143,6 @@ import { Rails } from './rails';
 import { Par } from './par';
 import type { LostMan } from './deathrecap';
 import { Verdict } from './verdict';
-import { Snatch } from './snatch';
 import { Defuse } from './defuse';
 import { RoomClearScenario } from './roomclear';
 import { SquadOrders } from './orders';
@@ -985,8 +983,6 @@ export class Game {
   recap: { lostLive: LostMan[]; allDown: boolean } = { lostLive: [], allDown: false };
   /** how the run went, said once it is over (verdict.ts): reads only — the end card's record */
   verdict!: Verdict;
-  /** the man a snatch level's team must take alive (snatch.ts): inert without the level's scenarios.snatch block */
-  snatch!: Snatch;
   /** a defuse mission's charges and their one clock (defuse.ts): an overlay on a room clear; inert on a level without a scenarios.defuse block */
   defuse!: Defuse;
   /** the room clear (roomclear.ts; ?roomclear / native --roomclear / __roomclear): the night breach on a structure of four held rooms, with per-room cleared state
@@ -1214,7 +1210,6 @@ export class Game {
     this.verdict = new Verdict(this);           // the run's verdict (verdict.ts): reads only, said once at the run's end
     this.rails = new Rails(this);               // a tutorial mission's frame (rails.ts): inert unless the level's lesson carries a rails record
     this.lesson = new Lesson(this);             // a training lesson's steps (lesson.ts): inert on a level without a scenarios.lesson block
-    this.snatch = new Snatch(this);             // the man to take alive (snatch.ts): inert on a level without a scenarios.snatch block
     this.defuse = new Defuse(this);             // a defuse mission's charges (defuse.ts): inert on a level without a scenarios.defuse block
     this.nightBreach = new NightBreach(this);   // the night breach playtest (nightbreach.ts): inert until started
     this.roomClear = new RoomClearScenario(this);   // the room clear (roomclear.ts): the same playtest on a four-room structure — inert until started
@@ -1551,7 +1546,7 @@ export class Game {
   private menAll: Character[] = []; private menStatured = false; private menBare = false; private fogHeld: { dyn: Box[]; on: boolean } | null = null;
   /** A VIEWER'S PICTURE WITHOUT THE FOG OF WAR (replay/engineplay.ts's 'Fog' switch; only where `fogOfWar.viewer` was raised, so never in play): call right before
    *  a draw, BETWEEN two steps, and `fogBack()` right after it. With `want` the renderer is handed everybody — the men the fog leaves out after the men it draws —,
-   *  the frame's boxes as they stood before the fog cut them, what the left-out men carry, and no fog pass; the HUD's `hidden()` / `lastSeen()` answer for an open
+   *  the frame's boxes as they stood before the fog cut them, what the left-out men carry, and no fog pass; the HUD's `hidden()` and its marks answer for an open
    *  floor meanwhile. Nothing a step reads is written: `fogBack()` hands the CPU's rays the step's own list again (the cursor's ray walks the packed list); the
    *  skin instances and shadow proxies stay the lifted draw's until the next step or draw deals them again (the GPU's alone: no step reads them).
    *  `tube` (the replay's 'NV' switch; null = the run's own): the picture's night vision is the viewer's for this draw, so the INFRARED laser lines — boxes a step
@@ -1630,9 +1625,9 @@ export class Game {
     this.player.nearSel = i; pickHover(this); return true;
   }
   /** Esc, before the pause menu gets it (main.ts): the open selector backs out / a running sustained verb stops. True = used here, no menu this press. */
-  escape(): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.escape', this, []); if (__r !== RUST_PASS) return __r as any; } } return this.orders.escape() || launchCancel(this) || escapeInteract(this) || slotSetupShut(this); }   // (the squad's command menu backs out first: orders.ts)
+  escape(): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.escape', this, []); if (__r !== RUST_PASS) return __r as any; } } return this.orders.escape() || launchCancel(this) || escapeInteract(this); }   // (the squad's command menu backs out first: orders.ts)
   /** is there anything the back key would back out of right now (backkey.ts; asked by the page before Tab's trial choice gets the key) */
-  backable(): boolean { return !!this.orders.menu || !!this.player.launchHeld || backableInteract(this) || slotSetupOpen(this); }   // (…and the open setup of the gun in his hands: slotsetup.ts)
+  backable(): boolean { return !!this.orders.menu || !!this.player.launchHeld || backableInteract(this) || !!this.view.kit.setup; }   // (…and the open setup of the gun in his hands)
   /** The light meter's mapping, irradiance (W/m², max over the axes as the probe reports it) → 0‥1 visibility: 0 at or below visFloor, 1 by visFloor·e^(1/visSlope).
    *  One mapping for the meter on Sam and for a searcher judging how dark a hiding place is (guards.ts): dark for the one is dark for the other. */
   visibilityOf(E: number): number { return clamp(this.tune.visSlope * Math.log(Math.max(E, 1e-5) / this.tune.visFloor), 0, 1); }

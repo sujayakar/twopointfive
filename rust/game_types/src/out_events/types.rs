@@ -41,6 +41,7 @@ pub enum OutEvent {
     Tap(crate::out_events::OutTap),
     WallFeel(crate::out_events::OutWallFeel),
     EndCard,
+    SnowBlast(crate::out_events::OutSnowBlast),
 }
 
 #[derive(Clone, Debug)]
@@ -218,6 +219,12 @@ pub struct OutTap {
 #[derive(Clone, Debug)]
 pub struct OutWallFeel {
     pub at: V3,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct OutSnowBlast {
+    pub at: V3,
+    pub radius: f64,
 }
 
 /// (audio_iface.ts PlayOpts: an object with some of these)

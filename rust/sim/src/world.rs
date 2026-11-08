@@ -138,6 +138,8 @@ pub struct World {
     /// WHAT SNOW A STATIC IS, a byte a static (snowBog.ts ground: 0 none · SNOW_BARE ground somebody cleared · SNOW_PACKED trodden · SNOW_OLD old · SNOW_BANK snow
     /// that stands or caps): where a thrown thing bogs down is asked of these and of the statics' own rows (items.rs bog_at)
     pub snow: [u8; MAX_BOXES],
+    /// WHAT A STATIC SENDS BACK of the light on it, of 255: its colour by luminance (glow.rs)
+    pub back: [u8; MAX_BOXES],
     pub w: u32,
     pub h: u32,
     pub boxes: u32,
@@ -146,6 +148,8 @@ pub struct World {
     /// WHOSE THE ROWS ARE AND OF WHAT MOMENT: one more each time anything of them is written. Who wrote them keeps the number, and a question is refused to
     /// anybody who holds another (another game of the process, a kept game put back). 0 = nobody's: no rows were written
     pub stood: u32,
+    /// how many times a static's row was written: whose a table made from the statics is
+    pub wrote: u32,
 }
 
 const BLANK: World = World {
@@ -174,12 +178,14 @@ const BLANK: World = World {
     sheets: [Sheet { bi: 0, sky: 0, gap: 0.0 }; MAX_SHEETS],
     view_at: [0.0; 6],
     snow: [0; MAX_BOXES],
+    back: [0; MAX_BOXES],
     w: 0,
     h: 0,
     boxes: 0,
     n_tilted: 0,
     leaves: [0; LEAF_SETS],
     stood: 0,
+    wrote: 0,
 };
 static mut ALL: [World; WORLDS] = [BLANK; WORLDS];
 

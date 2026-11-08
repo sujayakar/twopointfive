@@ -44,25 +44,20 @@ pub fn chest_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     }
 }
 
-/// The sensor key of a pair of bodies, whichever way round it is asked.   (roomfight.ts pairKey)
-pub fn pair_key(a: f64, b: f64) -> String {
-    if a < b { alloc::format!("fightS{}_{}", a, b) } else { alloc::format!("fightS{}_{}", b, a) }
-}
-
-/// The smoke between two AI men as last answered (1 = clear air), a picked weather's fog on top.   (roomfight.ts pairSmoke)
+/// What of the light from `a`'s eye to `b`'s chest comes through the smoke, a picked weather's fog on top.   (roomfight.ts pairSmoke)
 pub fn pair_smoke(g: &mut crate::game::Game, a: CharId, b: CharId) -> f64 {
-    let key = pair_key(g.ch[a].id, g.ch[b].id);
-    let t = match g.fight.trans.get(key) { Some(v) => *v, None => 1.0 };
+    let (eye, chest) = (eye_of(g, a), chest_of(g, b));
+    let t = crate::sense::smoke_between(g, eye, chest);
     if crate::weather::weather_fog(g).is_some() {
-        let (ca, cb) = (chest_of(g, a), chest_of(g, b));
-        t * crate::weather::air_trans(g, ca, cb)
+        let ca = chest_of(g, a);
+        t * crate::weather::air_trans(g, ca, chest)
     } else {
         t
     }
 }
 
-/// The light to read for `o` when `eye` stands inside the cone of his burning weapon light, else 0.   (roomfight.ts lampGlare)
-pub fn lamp_glare(g: &crate::game::Game, eye: CharId, o: GuardId) -> f64 {
+/// The light to read for `o` when `eye` stands inside the cone of his burning weapon light, else 0: as strong beside an hour's light as the lamp is, to eyes used to the place.   (roomfight.ts lampGlare)
+pub fn lamp_glare(g: &mut crate::game::Game, eye: CharId, o: GuardId) -> f64 {
     if !g.fight.live { return 0.0; }
     let l = g.gd[o].flashlight;
     let light = &g.tab.light[l];
@@ -72,7 +67,12 @@ pub fn lamp_glare(g: &crate::game::Game, eye: CharId, o: GuardId) -> f64 {
     let (dx, dy, dz) = (e[0] - pos[0], e[1] - pos[1], e[2] - pos[2]);
     let len = m::hyp3(dx, dy, dz);
     if len > range || len < 1e-3 { return 0.0; }
-    if (dx * dir[0] + dy * dir[1] + dz * dir[2]) / len >= m::cos(outer_deg * v3::DEG) { g.k.roomfight.lamp } else { 0.0 }
+    if !((dx * dir[0] + dy * dir[1] + dz * dir[2]) / len >= m::cos(outer_deg * v3::DEG)) { return 0.0; }
+    let exposure = crate::hours::exposure(g);
+    if exposure >= 1.0 { return g.k.roomfight.lamp; }
+    let k = sim::light::by_day(crate::render_lights::light_by_day(light), light.intensity, light.peak_intensity, exposure) / light.intensity;
+    let k = m::min(1.0, k * crate::guards::eyes_in(g, e));
+    m::max(0.0, g.k.roomfight.lamp + g.tune.vis_slope * m::log(k))
 }
 
 /// Is the room fight running this frame?   (roomfight.ts fightLive)
@@ -267,7 +267,6 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
         }
     }
     while !g.fight.reports.is_empty() && g.time - g.fight.reports[0].t > 2.0 { g.fight.reports.remove(0); }
-    room_fight_smoke(g);
     for (k, d) in g.fight.defs.clone().into_iter().enumerate() {
         let gd = g.tab.roomfight_def[d].gd;
         if !is_dead(g, gd) { room_fight_tick_def(g, d, dt, k as f64); }
@@ -345,8 +344,7 @@ pub fn room_fight_stop(g: &mut crate::game::Game) {
     }
     for d in g.fight.defs.clone() { let gd = g.tab.roomfight_def[d].gd; g.gd[gd].skill = None; }
     for o in g.fight.ops.clone() { let x = g.tab.roomfight_op[o].gd; g.gd[x].skill = None; }
-    for k in g.fight.trans.keys() { crate::sensors::sensors_forget(g, &k); }
-    g.fight.live = false; g.fight.defs = Vec::new(); g.fight.ops = Vec::new(); g.fight.trans.clear(); g.fight.called.clear(); g.fight.down_called.clear(); g.fight.blind_rounds = 0.0; g.fight.hot_t = -100.0; g.fight.reports = Vec::new();
+    g.fight.live = false; g.fight.defs = Vec::new(); g.fight.ops = Vec::new(); g.fight.called.clear(); g.fight.down_called.clear(); g.fight.blind_rounds = 0.0; g.fight.hot_t = -100.0; g.fight.reports = Vec::new();
     crate::digin::dig_in_reset(g);
 }
 
@@ -356,38 +354,9 @@ pub fn room_fight_reset(g: &mut crate::game::Game) {
     g.fight.blind_fire = true; g.fight.drill_said = false; g.fight.log.clear(); g.fight.stats = RoomFightStats::zeroed();
 }
 
-/// the smoke between every operative and every defender in reach of each other.   (roomfight.ts smoke)
-pub fn room_fight_smoke(g: &mut crate::game::Game) {
-    let mut pairs: Vec<(GuardId, GuardId)> = Vec::new();
-    for i in 0..g.fight.ops.len() {
-        let og = g.tab.roomfight_op[g.fight.ops[i]].gd; if is_dead(g, og) { continue; }
-        for &d in &g.fight.defs { let dg = g.tab.roomfight_def[d].gd; if !is_dead(g, dg) && flat(pos_of(g, og), pos_of(g, dg)) < 18.0 { pairs.push((og, dg)); } }
-    }
-    if pairs.is_empty() { for k in g.fight.trans.keys() { crate::sensors::sensors_forget(g, &k); } g.fight.trans.clear(); return; }
-    let mut live: JsSet<String> = JsSet::default();
-    let n = pairs.len() as f64;
-    for (i, &(a, b)) in pairs.iter().enumerate() {
-        let (ac, bc) = (g.gd[a].ch, g.gd[b].ch);
-        let key = pair_key(g.ch[ac].id, g.ch[bc].id); live.add(key.clone());
-        let ask = js::rem(js::rem(i as f64 - g.fight.rr, n) + n, n) < g.k.roomfight.pairs;
-        let (eye, chest) = (eye_of(g, ac), chest_of(g, bc));
-        let v = crate::sensors::sensors_segment(g, &key, eye, chest, Some(ask));
-        g.fight.trans.set(key, match v { Some(x) if x.is_finite() => x, _ => 1.0 });
-    }
-    g.fight.rr = js::rem(g.fight.rr + g.k.roomfight.pairs, n);
-    for k in g.fight.trans.keys() { if !live.has(k.clone()) { g.fight.trans.delete(k.clone()); crate::sensors::sensors_forget(g, &k); } }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn a_pair_has_one_key_whichever_way_it_is_asked() {
-        assert_eq!(pair_key(3.0, 12.0), "fightS3_12");
-        assert_eq!(pair_key(12.0, 3.0), "fightS3_12");
-        assert_eq!(pair_key(5.0, 5.0), "fightS5_5");
-    }
 
     #[test]
     fn flat_ignores_height() {

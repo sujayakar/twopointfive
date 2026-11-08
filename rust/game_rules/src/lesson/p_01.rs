@@ -222,7 +222,7 @@ fn test_ok(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> Option<bool> {
     })
 }
 
-fn ok_door(g: &mut Game, door: &str, state: &str) -> bool {
+fn ok_door(g: &Game, door: &str, state: &str) -> bool {
     use crate::doors::{door_is_closed, door_lock_broken, door_locked, doors_by_name};
     let Some(d) = doors_by_name(g, door) else { return false };
     match state {
@@ -234,7 +234,7 @@ fn ok_door(g: &mut Game, door: &str, state: &str) -> bool {
     }
 }
 
-fn ok_target(g: &mut Game, name: &str, on: bool) -> bool {
+fn ok_target(g: &Game, name: &str, on: bool) -> bool {
     use crate::sim_lightshome::{fixture_broken, fixture_factor, fixture_on};
     let Some(x) = g.targets.iter().copied().find(|&y| g.tab.sim_lightshome_fixture[y].name == name) else { return false };
     (fixture_on(g, x) && !fixture_broken(g, x) && fixture_factor(g, x) > 0.05) == on
@@ -280,13 +280,13 @@ fn ok_loaded(g: &mut Game, s: &mut StepSeen) -> bool {
     mag >= m::min(most, crate::weapons::firearm_mag_room(g, w))
 }
 
-fn ok_reload(g: &mut Game) -> bool {
+fn ok_reload(g: &Game) -> bool {
     let p = who(g, &crate::seats::here(g));
     let (pistol, rifle) = (g.pl[p].pistol, g.pl[p].rifle);
     (crate::game::player_pistol_up(g, p) && crate::weapons::firearm_reloading(g, pistol)) || (crate::game::player_rifle_up(g, p) && crate::weapons::firearm_reloading(g, rifle))
 }
 
-fn ok_launcher(g: &mut Game, on: &str, fired: bool) -> bool {
+fn ok_launcher(g: &Game, on: &str, fired: bool) -> bool {
     let p = who(g, &crate::seats::here(g));
     let r = g.pl[p].rifle;
     let up = crate::weapons::rifle_attachment(g, r).map_or("none", |a| a.as_str());

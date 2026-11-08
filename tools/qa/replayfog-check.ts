@@ -119,7 +119,7 @@ export async function replayfogCheck(): Promise<boolean> {
           if ([0, 1, 2, 3, 4, 5, 6, 7, 8].map(ray).join(' ') !== hits) note(f, 'a ray meets something else after the hand-back');
         } else if (lift) {
           const eye = [...g.player.char.pos] as number[]; eye[1] = 1.2;   // (the rays from where Sam stands now: the boxes the fog changes are round the team)
-          const dyn = world.dynamics, before = dyn.slice(), on = FW.frame.on, hid = g.guards.filter((x: any) => FW.hidden(x)), marks = FW.lastSeen().length;
+          const dyn = world.dynamics, before = dyn.slice(), on = FW.frame.on, hid = g.guards.filter((x: any) => FW.hidden(x)), marks = g.view.marks.seen.length;
           const ray = (k: number) => { const a = k * 0.7 + f * 0.01, r = world.raycast(eye, [Math.sin(a), 0, Math.cos(a)], 30); return r ? `${r.t.toFixed(5)}:${r.index ?? ''}` : '-'; };
           const hits = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(ray).join(' ');
           g.fogLift(true, viewer ? null : true, viewer ? 0 : g.mPerPx * 6); world.upload();   // (the draw packs what it was handed: engine.render; with no viewer a tube and another pixel are asked for as well, and must add and fit nothing)
@@ -127,7 +127,6 @@ export async function replayfogCheck(): Promise<boolean> {
           if (viewer && FW.active) { A.lifted++; A.hiddenMax = Math.max(A.hiddenMax, hid.length);
             if (g.guards.some((x: any) => FW.hidden(x))) note(f, 'a man still hidden to the HUD while lifted');
             if (FW.frame.on) note(f, 'the fog pass still on while lifted');
-            if (FW.lastSeen().length) note(f, 'last-seen marks while lifted');
             if (world.dynamics === dyn) note(f, 'the renderer was handed the step\'s own list');
             if (world.dynamics.length > before.length) A.more++;
             if (FW.raw() === null) note(f, 'no list from before the fog was kept for this frame');
@@ -139,7 +138,7 @@ export async function replayfogCheck(): Promise<boolean> {
           if (!BREAK) g.fogBack(); else { g.fogBack = function () { }; FW.bared = false; FW.frame.on = on; world.dynamics = dyn; g.fogHeld = null; }   // (BREAK: everything put back but the pack)
           if (world.dynamics !== dyn) note(f, 'the step\'s list not handed back');
           if (dyn.length !== before.length || dyn.some((b: any, i: number) => b !== before[i])) note(f, 'the step\'s list was written to');
-          if ((FW.frame.on !== on || FW.bared || g.guards.filter((x: any) => FW.hidden(x)).length !== hid.length || FW.lastSeen().length !== marks)) note(f, 'the fog\'s own answers not put back');
+          if ((FW.frame.on !== on || FW.bared || g.guards.filter((x: any) => FW.hidden(x)).length !== hid.length || g.view.marks.seen.length !== marks)) note(f, 'the fog\'s own answers not put back');
           if ([0, 1, 2, 3, 4, 5, 6, 7, 8].map(ray).join(' ') !== hits) note(f, 'a ray meets something else after the hand-back');
         }
         if (f % 30 === 29) A.digests.push(hash(JSON.stringify(digestGame(g, true))));

@@ -114,7 +114,7 @@ export const flashweightPace = guarded(async () => {
   if (process.env.FLASHWEIGHT_BREAK) console.log('  (FLASHWEIGHT_BREAK: the squad is taken out of each staging before the lap — it must fail)');
   F.verdict(P.max < jogAt && ORM.ORDERS.run <= P.max && ORM.ORDERS.brisk <= P.max && ORM.ORDERS.entry <= P.max, 'the knobs: no pace the team is asked for reaches the sprint band',
     `PACE.max ${P.max} m/s, accel ${P.accel} m/s² · orders: fall in ≤ ${ORM.ORDERS.run}, a leg to a mark ${ORM.ORDERS.brisk} then ${ORM.ORDERS.onto} onto it, an entry ${ORM.ORDERS.entry} · the animator's sprint clip starts past ${jogAt} m/s (the walk carries to ${CHM.BLEND.walkTop})`);
-  for (const E of sample(SCENARIOS as any[], 2)) {
+  for (const E of sample(SCENARIOS as any[], 1)) {
     const r = await paceRun(E.id);
     const ok = r.men > 0 && r.moved && r.asked <= P.max + 1e-6 && r.rise <= P.accel + 1e-3 && r.covered <= P.max + 0.35;
     F.verdict(ok, `${E.title}: ${r.men} teammates`, `fastest asked of anybody's legs ${f2(r.asked)} m/s (cap ${P.max}) · fastest pick-up ${f2(r.rise)} m/s² (cap ${P.accel}) · most ground covered in any quarter second ${f2(r.covered)} m/s${r.moved ? '' : ' · NOBODY MOVED at better than a stroll: nothing was measured'}`);

@@ -471,7 +471,7 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
 }
 
 /// WHAT THE PICTURE DRAWS, and what a module drawing the squad's plan may read: one entry per throw on its way, and the highlighted row's preview. (squadthrow.ts squadThrowPlans)
-pub fn squad_throw_plans(g: &mut crate::game::Game, _v: Option<&mut crate::squadthrow::SquadThrowKept>) -> Vec<crate::squadthrow::SquadThrowPlan> {
+pub fn squad_throw_plans(g: &crate::game::Game, _v: Option<&mut crate::squadthrow::SquadThrowKept>) -> Vec<crate::squadthrow::SquadThrowPlan> {
     let mut out = Vec::new();
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     if !g.m.squadthrow.states.has(key) || !g.k.squadthrow.on {

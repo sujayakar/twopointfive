@@ -1,4 +1,4 @@
-# The level format (LevelData v1)
+# The level format (LevelData v2)
 
 The office is **data**: `levels/office.json`. This note is for whoever edits it by hand or from a generator, and for the lanes that extend it (G2 floors + stairs, G4 cameras / keypads / lasers).
 
@@ -18,6 +18,18 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
 * **Prove**: `bun run tools/qa/probes.ts level` — `level-identity` (generator vs loaded JSON: 0 structural diffs, one digest, file
   not stale, file canonical), `level-validate` (validator clean + 12 planted faults caught + surface map ≡ `game/floor.ts`),
   `level-roundtrip` (data → level → data exact, serializer a fixed point, key-order independent, no shared state between loads).
+
+## Round things
+
+`"round": true` on a box says it is a ROUND THING (`src/scene/round.ts`): to every ray, eye and foot and to the picture it is the cylinder about its own y, radius `h[0]`,
+half height `h[1]`. A drum, a tyre, a stove, the oven. It is not a shape: a shape is cut from a box that still walks as the plain box, and a round thing does not.
+
+Refused by the lint: `h[0]` that differs from `h[2]`, and `yaw`, `rot`, `flags` or `shape` on the same box. Marks are drawn as they are written: a band on each side
+face, a disc on the lid. A drawn-only round thing is plain boxes, since nothing meets it (`drawnRoundSlabs`, `src/scene/gwotKit.ts`).
+
+Version 2 is the version that says this. A file of version 1 wrote a round thing as four slabs through one centre, 45 degrees apart, and the loader refuses it by its
+version: `bun run tools/levels/round-convert.ts <file>` rewrites it. Unnamed boxes are named by their place in the file, so a generator that names one (`box_0132`, a kit
+view's `hide`) names a place: count it, as `tools/levels/crossing.ts` does, or find it, as `tools/levels/blocksquads.ts` does.
 
 ## Editing by hand
 
@@ -90,8 +102,7 @@ its centre and half size, so to the simulation a shaped level is the plain level
 | `with` | pieces of TRIM that are there only when shapes are on: each `{ off, h, yaw?, material? \| albedo?, rough?, metal?, stuff?, does?, round? \| arc?, cut?, old? }` (`off` from the box's centre, `yaw` from the box's own), painted and finished by the reader a box is, and made of what a box is: its own `stuff`, else its material row's. A piece that says NO paint wears its box's paint, finish and word, and says none of its own. A piece is drawn and nothing else: it says no flags and stands `NoShadow`, so no ray, eye, round or body meets it and it casts no shadow. What must stop a round or a man is a box of the level. Pieces follow the level's last box when it is stood up, so no box changes its number. |
 
 Refused: a shape on a box with `rot`; a form (`round`, `arc`, `cut`) on a box with `markings` or the `Glass` flag (the mark painter and the pane engine
-read the whole box: give the marks a box of their own, or say the form of a piece); a shape on a kit view's box; a shape on a slab of one of the kit's
-octagons (a round thing). A window's bar that says a form is left plain as the level is stood up, and `shapes-check` is red on a level file with a
+read the whole box: give the marks a box of their own, or say the form of a piece); a shape on a kit view's box; a shape on a round thing (see Round things). A window's bar that says a form is left plain as the level is stood up, and `shapes-check` is red on a level file with a
 shape that does not stand.
 
 - **The data names the shape**; the engine's cut record is built from it by `cut.ts cutRecord` as the level is stood up, and every ray meets the shaped
@@ -389,14 +400,6 @@ A NEW LEVEL is a generator, like the office: `tools/levels/<name>.ts` exports `N
 `levels/<name>.json` (refused unless it validates and reloads to the same Level; `--check` = stale test). `tools/levels/test-rooms.ts` is the worked example.
 Play it with `?levelFile=<name>.json&roomclear[=seed][&squad4]` or `&rescue` (the dev server), headless with
 `standUp({ level })`.
-
-**`scenarios.snatch`** (`SnatchData`, read by `src/game/snatch.ts` and by nothing else; a level without it is the room clear as it was): one unarmed man the
-team has to take alive, laid over the level's room clear. `man {name, pos, face, tint, tint2?, points?, wait?}` = who he is and the marks he keeps to while the
-floor is quiet; `exits [{name, pos}]` = the ways off the floor he runs for once it is loud, his NEAREST by walking first (the export's check says so if it is
-not) — on one, he is gone and the mission is failed. At least two, so one can be covered while the team goes in by another. `levels/snatch.json` is the level
-built for it; `bun run tools/qa/snatch-check.ts` holds the rules. `van? {name, pos}` = the team's own vehicle by its way in, `pos` the spot at its open doors:
-while `SNATCHOUT.on` (`src/game/snatchout.ts`) the man, once tied, is led there by the player and the mission is won when he is in it, the house taken or
-not (`bun run tools/qa/snatchout-check.ts`). Without the key the snatch ends as it did.
 
 ## Working on a level from code
 

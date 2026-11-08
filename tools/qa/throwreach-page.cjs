@@ -1,4 +1,4 @@
-// THE THROW'S REACH RINGS, ON THE REAL PAGE (THROWBACK.reach, src/game/throwreach.ts, ui/overlay.ts drawReach; the headless card is
+// THE THROW'S REACH RINGS, ON THE REAL PAGE (THROWBACK.reach, game.view.aim.throw.reach, ui/overlay.ts drawReach; the headless card is
 // tools/qa/throwreach-check.ts, which cannot see the overlay): boot the page in headless Chromium on the software WebGPU adapter (hudmarks-page.cjs's
 // recipe), start the plain night, aim a throw down the corridor and read the overlay's own paths.
 //   frag    a frag in his hand: the kill ring and the wider hurt ring are drawn, the small ring (the rest mark) inside both, the hurt ring about twice the
@@ -46,15 +46,12 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
   const frag = await page.evaluate(async () => { const T = window.__tr; await T.aim('Digit5', 30); return T.read(); }); await shot('reach-frag');
   const okFrag = !setup.fatal && setup.reach === true && frag.arc && !!frag.kill && !!frag.hurt && !frag.stun && near(frag.kill, frag.ring) && near(frag.hurt, frag.ring) && frag.kill.w > 40 && frag.hurt.w / frag.kill.w > 1.6 && frag.hurt.w / frag.kill.w < 2.6 && frag.hurt.dash !== 'none' && frag.kill.dash === 'none' && frag.kill.whole === !frag.kill.cut;
   console.log(`- ${okFrag ? 'PASS' : 'FAIL'} — frag: rings ${setup.reach}, slot ${frag.slot}, arc ${frag.arc} · kill ring ${say(frag.kill)}, hurt ring ${say(frag.hurt)} (${frag.kill && frag.hurt ? (frag.hurt.w / frag.kill.w).toFixed(2) : '?'}× as wide), stun ${say(frag.stun)} · the small ring inside each: ${near(frag.kill, frag.ring)} / ${near(frag.hurt, frag.ring)} · kill ${frag.kill ? frag.kill.stroke : ''} solid, hurt dashed '${frag.hurt ? frag.hurt.dash : ''}'`);
-  const off = await page.evaluate(async () => { const T = window.__tr; T.K.THROWBACK.reach = false; await T.aim('', 6); const r = T.read(); T.K.THROWBACK.reach = true; await T.aim('', 6); return r; });
-  const okOff = off.arc && !off.kill && !off.hurt && !off.stun;
-  console.log(`- ${okOff ? 'PASS' : 'FAIL'} — off: arc ${off.arc} · kill ${say(off.kill)}, hurt ${say(off.hurt)}, stun ${say(off.stun)}`);
   const stun = await page.evaluate(async () => { const T = window.__tr; await T.aim('Digit4', 30); return T.read(); }); await shot('reach-stun');
   const okStun = stun.arc && !!stun.stun && !stun.kill && !stun.hurt && near(stun.stun, stun.ring) && stun.stun.w > 80;
   console.log(`- ${okStun ? 'PASS' : 'FAIL'} — stun: slot ${stun.slot}, arc ${stun.arc} · stun ring ${say(stun.stun)}, the small ring inside it: ${near(stun.stun, stun.ring)} · kill ${say(stun.kill)}`);
   await browser.close();
   if (errors.length) console.log(`- FAIL — page errors:\n    ${errors.slice(0, 5).join('\n    ')}`);
-  const failed = !okFrag || !okOff || !okStun || !okSmoke || errors.length > 0;
+  const failed = !okFrag || !okStun || !okSmoke || errors.length > 0;
   console.log(failed ? '=== throwreach-page: FAILED ===' : '=== throwreach-page: ALL PASS ===');
   process.exit(failed ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

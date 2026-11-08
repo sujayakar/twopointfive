@@ -87,13 +87,13 @@ export const LANES = {
   /** rounds down it inside this many seconds: a man standing in it off his post gets out of the line */
   hotSecs: 8,
   /** GO ROUND: on · how many of the men held at its mouths at most · the breath before anybody is sent · the longest way round, m · no sooner again, s */
-  round: true, roundMen: 2, thinkSecs: 2.5, roundMaxM: 80, roundGap: 25,
+  roundMen: 2, thinkSecs: 2.5, roundMaxM: 80, roundGap: 25,
   /** …and he may first show himself to the guns only this far round from the lane's own line, deg, and only for the last this much of his way, m */
   roundSideDeg: 55, roundShowM: 8,
   /** a place to stop is out of sight of the guns as they stood AND of a gun a stride to either side of each (they shift about), m */
   shiftM: 0.9,
   /** THE CHARGE: on · a throw's reach to the guns, m · a bang this near the guns has them blind, m · how long the lane is theirs to push down behind the bang, s · who goes (this near the guns), m · how much faster than a chase they go, m/s · no sooner again, s */
-  stun: true, stunM: 12, bangM: 5, pushSecs: 6, pushM: 12, pushFast: 0.8, stunGap: 20,
+  stunM: 12, bangM: 5, pushSecs: 6, pushM: 12, pushFast: 0.8, stunGap: 20,
   /** THE GUNS HAVE MOVED: once every gun that made a lane has cost them from further than `movedM` from it (or is down), it is forgotten `movedSecs` later, m · s */
   movedM: 15, movedSecs: 20,
   /** A LOOK ROUND THE CORNER (what they know of a lane is only as good as the last time it cost them): on · a lane quiet this long gets one, s · no sooner

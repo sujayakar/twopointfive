@@ -234,11 +234,8 @@ pub struct GlassShards {
     pub sound_owed: JsMap<String, f64>,
     pub deferred: Vec<crate::shards::GlassShardsDeferredItem>,
     pub deferred_n: f64,
-    pub pane_mem: JsMap<crate::Num, crate::shards::GlassShardsPaneMemValue>,
     pub crunch_n: f64,
     pub log: Vec<String>,
-    pub ghost: DebrisChunkId,
-    pub last_plate: Option<DebrisChunkId>,
     pub serial: f64,
 }
 impl GlassShards {
@@ -254,11 +251,8 @@ impl GlassShards {
             sound_owed: JsMap::new(),
             deferred: Vec::new(),
             deferred_n: 0.0,
-            pane_mem: JsMap::new(),
             crunch_n: 0.0,
             log: Vec::new(),
-            ghost: DebrisChunkId(0),
-            last_plate: None,
             serial: 0.0,
         }
     }
@@ -343,44 +337,6 @@ impl SprayOpts {
     }
 }
 impl Default for SprayOpts { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/shards.ts:175 GlassShards.paneMem, src/game/shards.ts:175)
-#[derive(Clone, Copy, Debug)]
-pub struct GlassShardsPaneMemValue {
-    pub hits: f64,
-    pub sites: f64,
-    pub t: f64,
-    pub cause: crate::shards::GlassShardsPaneMemValueCause,
-    pub diced_t: f64,
-}
-impl GlassShardsPaneMemValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassShardsPaneMemValue {
-            hits: 0.0,
-            sites: 0.0,
-            t: 0.0,
-            cause: crate::shards::GlassShardsPaneMemValueCause::Blast,
-            diced_t: 0.0,
-        }
-    }
-}
-impl Default for GlassShardsPaneMemValue { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GlassShardsPaneMemValueCause {
-    Blast,
-    Hit,
-}
-impl GlassShardsPaneMemValueCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GlassShardsPaneMemValueCause::Blast => "blast",
-            GlassShardsPaneMemValueCause::Hit => "hit",
-        }
-    }
-}
 
 /// (TypeScript: inline at src/game/shards.ts:337 cutPlates(fr), src/game/shards.ts:693)
 #[derive(Clone, Copy, Debug)]

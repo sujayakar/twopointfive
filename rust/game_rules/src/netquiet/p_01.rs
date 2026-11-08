@@ -79,7 +79,7 @@ pub fn on_net(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// gone to his mates, whether or not they know it yet (netquiet.ts lostTo)
-pub fn lost_to(g: &mut crate::game::Game, m: GuardId) -> bool {
+pub fn lost_to(g: &crate::game::Game, m: GuardId) -> bool {
     g.gd[m].state == crate::game::GuardState::Dead
         || g.gd[m].held.is_some()
         || crate::owner::has(g, m, crate::owner::by::RUNNER)

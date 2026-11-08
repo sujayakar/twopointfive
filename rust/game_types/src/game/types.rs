@@ -713,10 +713,6 @@ pub struct Game {
     pub civilians: Vec<GuardId>,
     pub targets: Vec<FixtureId>,
     pub events: Vec<crate::game::GameEvent>,
-    pub probe: crate::sensors::ProbeLike,
-    pub sensors: crate::sensors::Sensors,
-    pub cpu_smoke: crate::sense::CpuSmoke,
-    pub smoke_owned: bool,
     pub search_probe_n: f64,
     pub time: f64,
     pub dice: Option<crate::math_dice::SimDice>,
@@ -799,7 +795,6 @@ pub struct Game {
     pub par: crate::par::Par,
     pub recap: crate::deathrecap::Recap,
     pub verdict: crate::verdict::Verdict,
-    pub snatch: crate::snatch::Snatch,
     pub defuse: crate::defuse::Defuse,
     pub room_clear: crate::roomclear::RoomClearScenario,
     pub orders: crate::orders::SquadOrders,
@@ -858,7 +853,6 @@ pub struct Game {
     /// a bit for each function of tools/blitz/taps.json a tool has replaced on the puppet: where set, the function reports its call as an out event. The host sets them (face_tap); nothing in the game reads them but the function itself
     pub taps: u64,
     /// state.ts:136 SimState.stamp, for what is made from the block (the fog's grid, the air): a native game has one block, and whatever writes it wholesale raises this
-    pub sim_stamp: f64,
     /// the table of these things: never shrinks
     pub ch: Tab<CharId, crate::character::Character>,
     /// the table of these things: never shrinks
@@ -883,6 +877,10 @@ pub struct Game {
     pub sim: usize,
     /// who has each man's body this tick, and who was asked (control/): written by the arbiter, read by the debugger's lines; not on the wire
     pub ctl: crate::owned::Owned,
+    /// the marks on the world (render_decals set.rs): what the picture draws of what happened; no rule reads them, and they are not on the wire
+    pub mark_set: crate::owned::Owned,
+    /// the stages to come of a wall charge's feel, the picture's half (blast_feel picture.rs)
+    pub feel: crate::owned::Owned,
     /// this tick's count of keyed draws a (site, man) (dice.rs): empty between ticks; not on the wire
     pub keyed: crate::dice::Keyed,
 }
@@ -905,10 +903,6 @@ impl Game {
             civilians: Vec::new(),
             targets: Vec::new(),
             events: Vec::new(),
-            probe: crate::sensors::ProbeLike::zeroed(),
-            sensors: crate::sensors::Sensors::blank(),
-            cpu_smoke: crate::sense::CpuSmoke::blank(),
-            smoke_owned: false,
             search_probe_n: 0.0,
             time: 0.0,
             dice: None,
@@ -988,7 +982,6 @@ impl Game {
             par: crate::par::Par::blank(),
             recap: crate::deathrecap::Recap::blank(),
             verdict: crate::verdict::Verdict::blank(),
-            snatch: crate::snatch::Snatch::blank(),
             defuse: crate::defuse::Defuse::blank(),
             room_clear: crate::roomclear::RoomClearScenario::blank(),
             orders: crate::orders::SquadOrders::blank(),
@@ -1038,7 +1031,6 @@ impl Game {
             out: Vec::new(),
             view_depth: 0,
             taps: 0,
-            sim_stamp: 1.0,
             ch: Tab::new(),
             dr: Tab::new(),
             gd: Tab::new(),
@@ -1051,6 +1043,8 @@ impl Game {
             stats: Stats::blank(),
             sim: 0,
             ctl: crate::owned::Owned::new(),
+            mark_set: crate::owned::Owned::new(),
+            feel: crate::owned::Owned::new(),
             keyed: crate::dice::Keyed::default(),
         }
     }
@@ -3215,7 +3209,6 @@ pub struct Mods {
     pub scene_ground_field: crate::scene_ground_field::SceneGroundFieldMod,
     pub math_exact: crate::math_exact::MathExactMod,
     pub scene_markings: crate::scene_markings::SceneMarkingsMod,
-    pub scene_round: crate::scene_round::SceneRoundMod,
     pub scene_materials: crate::scene_materials::SceneMaterialsMod,
     pub scene_stuff: crate::scene_stuff::SceneStuffMod,
     pub thinline: crate::thinline::ThinlineMod,
@@ -3388,7 +3381,6 @@ impl Mods {
             scene_ground_field: crate::scene_ground_field::SceneGroundFieldMod::blank(),
             math_exact: crate::math_exact::MathExactMod::blank(),
             scene_markings: crate::scene_markings::SceneMarkingsMod::blank(),
-            scene_round: crate::scene_round::SceneRoundMod::blank(),
             scene_materials: crate::scene_materials::SceneMaterialsMod::blank(),
             scene_stuff: crate::scene_stuff::SceneStuffMod::blank(),
             thinline: crate::thinline::ThinlineMod::blank(),

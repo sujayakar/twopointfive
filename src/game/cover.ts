@@ -102,9 +102,6 @@ export const COVER = {
    *  of where orders.ts's own muzzle lane lets a gun back up, laneOut 0.7, and kept clear of where it brings one down, laneIn 0.45) · a man STOOD on his opening
    *  keeps it this long with a mate crossing his line (s: his muzzle dips and comes back; he does not turn away and back) */
   lane: 0.7, laneKeep: 0.5, laneSecs: 0.6,
-  /** a WALKING man keeps his opening through a mate crossing his line for `laneSecs` too (false = only a man stood still did: in a file on the move every
-   *  crossing dropped the job and the next deal handed it back, the gun going to and fro) */
-  laneWalk: true,
   /** Sam's gun within this of an opening he has a line to: his · what such an opening, and one a posted man has, still weighs (a spare man doubles up on it) */
   samDeg: 35, samK: 0.2, heldK: 0.1,
   /** the weights: a shut door against an open way · the rear · how fast nearness tells (m) */
@@ -169,7 +166,7 @@ export const COVER = {
  *  twitches too, but depot-four loses teammates with it on every seed set tried.
  *  Measured (tools/qa/playthrough.ts, the two four-man scenarios × 72 seeds, off → on): a stack's rear men's twitches 151 → 8, all twitches 397 → 214,
  *  won 113 → 116 of 144, teammates up 365 → 376 of 576 (inside the scatter). With `file` on as well: 10, 149, 117 and 335 (depot-four 207 → 180 of 288). */
-export const REAR = { settle: true, secs: 0.75, file: false };
+export const REAR = { settle: true, secs: 0.75, };
 
 export type OpeningKind = 'door' | 'gap' | 'mouth' | 'rear';
 /** One opening. `at`: its middle, chest high (a door: its frame's centre) · `n`: the unit line THROUGH it in plan (which way is beyond depends on who asks) ·

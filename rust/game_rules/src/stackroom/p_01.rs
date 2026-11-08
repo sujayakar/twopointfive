@@ -470,14 +470,14 @@ pub fn far_cells(g: &crate::game::Game, d: DoorId, side: f64) -> Vec<V3> {
 }
 
 /// the leaf stands open: off its hinges, or unlatched and swung   (stackroom.ts stackViewOpen)
-pub fn stack_view_open(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn stack_view_open(g: &crate::game::Game, d: DoorId) -> bool {
     if crate::doors::door_off(g, d) { return true; }
     if crate::doors::door_latched(g, d) { return false; }
     m::abs(crate::doors::door_angle(g, d)) >= g.k.stackroom.view_ajar
 }
 
 /// how far from the frame's centre a plain stack's mark on this door can be   (stackroom.ts stackViewReach)
-pub fn stack_view_reach(g: &mut crate::game::Game, d: DoorId) -> f64 {
+pub fn stack_view_reach(g: &crate::game::Game, d: DoorId) -> f64 {
     if stack_view_open(g, d) { m::max(2.6, g.dr[d].def.width / 2.0 + g.k.stackroom.view_past + 0.7) } else { 2.6 }
 }
 

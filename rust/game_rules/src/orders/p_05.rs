@@ -586,7 +586,7 @@ pub fn squad_orders_on_top(g: &crate::game::Game, seat: &crate::seats::SeatRef, 
 }
 
 /// The open doorway `p` stands in, for a place in the file. (orders.ts SquadOrders.inFrame)
-pub fn squad_orders_in_frame(g: &mut crate::game::Game, p: V3) -> bool {
+pub fn squad_orders_in_frame(g: &crate::game::Game, p: V3) -> bool {
     if crate::doorway::doorway_stand(g, p) { return true; }   // (doorway.ts STAND)
     let k = g.k.orders.off_door;
     if !(k > 0.0) { return false; }

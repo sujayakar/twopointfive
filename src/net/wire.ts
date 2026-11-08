@@ -41,10 +41,9 @@ export function cleanName(raw: unknown): string {
 
 export type Recipe = RunTape['recipe'];
 /** the knob tables a networked game stands on, whatever its maker says (the game's own maths, the same bits on every engine, are no table: every game
- *  plays on them): the senses on the CPU (no GPU
- *  asked), every seat's record checked (the view worked out again from its pose: fromWire sends none), and the run's verdict kept (how a server knows the
+ *  plays on them): every seat's record checked (the view worked out again from its pose: fromWire sends none), and the run's verdict kept (how a server knows the
  *  mission is over). Whoever makes a recipe forces them; whoever stands one refuses a recipe without them (`recipeWhy`) */
-export const NET_TABLES: Record<string, Record<string, unknown>> = { SENSE: { cpu: true }, CMDCHECK: { on: true }, VERDICT: { on: true } };
+export const NET_TABLES: Record<string, Record<string, unknown>> = { CMDCHECK: { on: true }, VERDICT: { on: true } };
 /** why a networked game cannot be stood from `r` ('' = it can) */
 export function recipeWhy(r: Recipe): string {
   if (!r || typeof r !== 'object' || !r.tables) return 'the recipe carries no knob tables';

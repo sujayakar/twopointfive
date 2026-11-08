@@ -145,7 +145,7 @@ export const DOORTOOLS = {
    *  past him, the first man's gun stays on the opening and he is first through with it ready (false = the man who opened the door threw it, then went first). `tossTurn`: seconds a thrower who was rear
    *  security until the shove may take to come round to the door before he throws — 0, he throws as he turns: at 0.35 the door stood open with no can in
    *  the air that much longer, and the pair holding the next room lost four of twelve where it loses none (pairs-hold) */
-  secondThrows: true, throwReach: 4, tossTurn: 0,
+  throwReach: 4, tossTurn: 0,
   /** FRAG AND CLEAR — THE LEAF IS LOOKED AT BEFORE THE GRENADE LEAVES THE HAND (`fragWay`, on; off = thrown `tossAfterOpen` after the shove whatever the leaf did,
    *  as it was). The shove does not always open a door: a defender walking up behind the leaf, or furniture against it, stops it in the first tenth of a second
    *  (and the man then pushes it back out at the stack). A grenade thrown at a leaf comes back off it and lies a metre and a half outside the door, among the
@@ -195,7 +195,7 @@ export const DOORTOOLS = {
   /** CHECK THE CORNERS (the maintainer, 10-05: 'teammates clearing rooms seem to miss enemies. they need to check their corners'): from the moment a man is
    *  through the frame his muzzle is on the NEAR corner of his own side of the door, then on that side's DEEP corner — each until it has been within
    *  `cornerRad` of it for `cornerSecs` (given up `cornerCap` after he crossed) — and only then his point's sweep. False: muzzle wherever he walks, as it was */
-  corners: true, cornerSecs: 0.3, cornerRad: 0.3, cornerCap: 1.6,
+  cornerSecs: 0.3, cornerRad: 0.3, cornerCap: 1.6,
   /** … AND A SHOT DOES NOT COST HIM HIS CORNER (the footage, Ready or Not 7:45: the first two men 'are allowed to take a shot at that threat and then immediately
    *  collapse their corner'). `cornerOwed`: the seconds the room fight has his muzzle on a man are not seconds his corner had — `cornerCap`'s clock stands still
    *  for them (false = as it was: the cap ran from the moment he crossed, whatever his gun was doing, and a man who met somebody in the middle of the room
@@ -206,7 +206,7 @@ export const DOORTOOLS = {
    *  of keeps that half second either way: he is not dealt with.
    *  `cornerTurn`: stood on his point with the owed corner more than 1.3 rad round from his chest (he fought his way past it; his muzzle goes 1.5 rad round his
    *  chest and no further), he turns his body to it (false = as it was: squared to his point's facing, the muzzle against its stop until the cap ran out) */
-  cornerOwed: true, collapse: true, cornerTurn: true,
+  cornerOwed: true, 
   /** WHO GOES IN FIRST: the man who has already seen most of the room (the footage, Door Kickers: 'i'm going to lead with this man because he's already seen
    *  most of the room he knows what it looks like and where the threats are at'). Of the men AT the frame — the front man of the file on each jamb — the one
    *  whose own eyes have been over the most of the room's floor in the last `leadSeenSecs` (floorseen.ts: within `leadSeenM` of him, in his eye's wedge, with a
@@ -217,7 +217,7 @@ export const DOORTOOLS = {
   leadSeen: true, leadSeenMin: 12, leadSeenSecs: 30, leadSeenM: 11,
   /** a man left holding a room swings his sector off a teammate who stands in it (off = as it was: every man on the sector his point gave him, and the gun of
    *  any man whose sector ran through a mate at the low ready for as long as they held — in one room three of the four) */
-  sectors: true, sectorSecs: 0.6,
+  sectorSecs: 0.6,
   /** … then SEARCH THE ROOM: the room's floor (the room fight's own model of it) is LOOKED OVER — a cell counts once it has been inside `lookRad` of a
    *  man's muzzle, within `lookM` of him, with a line to it — each man's muzzle travelling at `scanRate` rad/s to the floor nobody has looked at yet that
    *  needs the least turn. Floor no man can see from where he stands (`deadCells` of it or more) sends the nearest man on to where it can be seen, up to
@@ -313,7 +313,7 @@ export const DOORTOOLS = {
   /** `thrDoorsStay`: with nobody left on the door they came in by (that is the last of three or more — a pair, or a lone man, has no such man) that many of
    *  the entry's men are NOT sent: a lone survivor walked off to a side door with his back to the way in, and the registry's roamer came in behind him — 8 of
    *  32 rescues lost that had been won (hostages alive 70 → 54 of 128; with it 70 again. 0 = every man may be sent) */
-  thrDoors: true, thrDoorsM: 5.5, thrDoorsLit: true, thrDoorsWalk: 16, thrDoorsStay: 1,
+  thrDoors: true, thrDoorsM: 5.5, thrDoorsWalk: 16, thrDoorsStay: 1,
   /** THE ROOM'S OTHER DOOR HAS A GUN ON IT FROM THE ENTRY ITSELF (`otherDoorM`, metres; 0 = as it was: every man of a bang / open and clear on his corners,
    *  the floor and then the sector his point gave him, the room's other doors in nobody's — the warehouse's front office and the compound's garage: two men
    *  shot in the back through the connecting door within seconds of taking the room, 72 of 167 teammates lost in 48 warehouse runs). Every other door of the
@@ -529,13 +529,6 @@ export const DOORTOOLS = {
    *  short of the frame (`threatStuck` seconds without a stride, the room fight's seconds not counted: a leaf a defender stands behind) lets the place go and
    *  is the entry's as it was — with his gun kept on a place deep in the room he never looked round the leaf at the man stopping it (0 = kept until old news). */
   threatFirst: true, threatSecs: 12, threatCap: 1.5, threatNearM: 1.5, threatStuck: 1,
-  /** the threshold's FAR DOORS under `buddy`. false (shipped) = as they were: each far door of the room the team stands in is ONE man's, whoever is nearest,
-   *  up to `thrDoorsWalk` — the threshold order's own design, a short walk across a room his mates stand in. true = by the search's rule: a door away from
-   *  everybody is the pair's or nobody's. Measured, threshold entries, seeds 1 to 144: the pair at a far door ends every lone walk there is (the depot: 125
-   *  stretches of about five seconds each, to none) but the second man stands by a door for no gain and is shot at it — the block 303 men up of 576 as it
-   *  was, 269 with the pair (his partner's deaths up by half, the killers to his side or back). A third rule tried and dropped: one man, but only where a
-   *  mate who stays sees him there — it changed next to nothing (the block 296 men up with it or without, the depot 443 against 444). */
-  buddyDoors: false,
   /** THE FAR GUN IS SET BEFORE THE DOOR MOVES (`thrSet`; false = both jamb men step out as the leaf swings, as it was). The far-jamb man — the still gun —
    *  steps onto his diagonal with the door still shut, his gun up on where the opening will be, as the stack's last step: 'stacked' is called, and the
    *  lead opens it, only once he stands there (or `thrSetSecs` after he was sent, whichever is first) — the gun that covers the opening is planted and
@@ -543,12 +536,7 @@ export const DOORTOOLS = {
    *  open already, one that wants the boot, and an order given ON A WORD (its men wait on the wall with their rear watched) are worked as before.
    *  SHIPS OFF: over the same 448 it moved nothing (283 with it, 284 without; men lost at the frame 33 either way — the door's duel is lost to the
    *  light, not to the step) and half a second later at the door cost the night breach's scripted last hunt four men */
-  thrSet: false, thrSetSecs: 1.5,
-  /** GOGGLES COUNT AT THE DOOR (`thrTube`; false = only a burning weapon light or the room's own light makes floor 'seen' from the frame, as it was):
-   *  floor a jamb man's gun is across with his goggles down, where the place's own light shows a man through the tube (nvg.ts tubeVis at NVG.blackAt or
-   *  better), is floor that has been looked at — it is not banged as a blind pocket for want of a white light. Floor black even to the tube stays a pocket
-   *  (none inside its reach is, to a man whose goggles carry an infrared light: irlight.ts irShowsAt) */
-  thrTube: true,
+  thrSetSecs: 1.5,
   /** THE HOLD AT THE DOOR IS DARK UNDER GOGGLES (`thrDark`; false = `thrLight` decides for every man, as it was): a jamb man who wears goggles burns no
    *  light for the hold — a lit lens in a doorway is seen at once by every man it points at (roomfight.ts lampGlare), where the tube shows him the room by
    *  its own light — unless what he looks at is black even to the tube (nvg.ts), when the still gun's light comes on after all. A man without goggles,

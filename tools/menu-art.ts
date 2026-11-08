@@ -68,7 +68,6 @@ const PIN: Record<string, Pin> = {
   'hall-four': { at: [10.5, 0, 14], ops: [[9.4, 0, 14.3], [8.2, 0, 13.7], [7.0, 0, 14.3], [5.8, 0, 13.7]], aim: [31, 14], look: [14, 1, 14], yaw: -80, pitch: 38, dist: 17, ajar: { front: 1.4 }, guards: [[30.6, 13.5, 9, 14], [30.6, 14.5, 9, 14]] },   // the file at the one door in, the far guns' lights down the hall's length
   'mousehole-four': { charges: [[12, 1.1, 6.86]], at: [9.9, 0, 6.3], ops: [[9.0, 0, 6.3], [14.1, 0, 6.3], [15.0, 0, 6.3]], aim: [12, 7.0], look: [12, 1, 6.6], yaw: 165, pitch: 30, dist: 11 },   // either side of a charge on blank wall
   'rescue-registry': { expo: 1.8, dist: 11, pitch: 40 }, 'rescue-consulate': { expo: 1.8, dist: 11, pitch: 40 },
-  'snatch-four': { at: [26.9, 0, 11.6], ops: [[26.9, 0, 9.6], [27.8, 0, 12.2], [27.8, 0, 9.0]], aim: [26.0, 10.75], look: [25.6, 1, 10.6], yaw: 90, dist: 13, pitch: 54, lampK: 0.5, ajar: { side: 0.9 } },   // the man by his lantern, the team on his side door
   'defuse-four': { at: [8.5, 0, 8.6], work: [0], lampK: 0.05, skyK: 0.4, expo: 0.7, ops: [[7.4, 0, 10.9], [10.9, 0, 12.0], [6.9, 0, 12.3], [10.2, 0, 9.4]], aim: [8.5, 7.65], pitch: 44 },   // a man's hands on charge 1
   'compound-four': { at: [2.4, 0, 14.9], ops: [[2.4, 0, 16.1], [1.6, 0, 15.5], [1.6, 0, 16.6], [2.5, 0, 13.6]], aim: [10, 14.9], ajar: { gate_w: 1.2 }, look: [3.8, 1, 15.3], yaw: -62, pitch: 36, dist: 13 },   // the west gate, the lit yard beyond it
   'quiet-relay-two': { at: [16.77, 0, 15.15], ops: [[15.3, 0, 15.9]], aim: [16.77, 14.5], look: [17.6, 1, 15.6], yaw: -78, pitch: 24, dist: 8 },   // at the lock of the hut's door, under its lamp
@@ -91,7 +90,7 @@ interface Data {
   switchables?: { id: string; boxes: string[]; on?: boolean; baseEmissive?: number[] }[]; routes?: { points: (number[] | { pos: number[] })[] }[];
   mission?: { playerSpawn?: number[]; objectives?: { area?: { x0: number; x1: number; z0: number; z1: number } }[] };
   devices?: { kind: string; from?: number[]; to?: number[] }[];
-  scenarios?: { defuse?: { devices?: { pos: number[]; n?: number[] }[] }; snatch?: { man?: { pos: number[]; face?: number; tint?: number[]; tint2?: number[] } }; roomClear?: { team?: Team; starts?: Team[] }; nightBreach?: { team?: Team }; rescue?: { team?: Team }; quiet?: { starts?: Team[] } };
+  scenarios?: { defuse?: { devices?: { pos: number[]; n?: number[] }[] }; roomClear?: { team?: Team; starts?: Team[] }; nightBreach?: { team?: Team }; rescue?: { team?: Team }; quiet?: { starts?: Team[] } };
 }
 const F_PRIMARY = 1, F_SHADOW = 2, F_GLASS = 4;   // (a pane is neither drawn nor a shadow: the lens tints what it sees through one)
 /** boxes as flat rows: centre, half size, cos / sin of the yaw, paint, glow, flags */
@@ -326,8 +325,6 @@ async function render(m: Mission, O: Opts): Promise<Cam> {
       const hit = trace(S, muzzle[0], muzzle[1], muzzle[2], dir[0], dir[1], dir[2], 40, F_SHADOW, false) ? hT : 40; if ((d.scenarios as any)?.lesson?.rails?.lasers !== false) lasers.push({ a: muzzle, b: [muzzle[0] + dir[0] * hit, muzzle[1] + dir[1] * hit, muzzle[2] + dir[2] * hit] });
     });
     subject.push(...places);
-    // the one man a snatch is for: stood where the level has him, facing the way they come
-    const his = kind === 'roomclear' ? d.scenarios?.snatch?.man : undefined; if (his) { addMan(his.pos, toward0(his.pos, [at[0], at[2]]), { ...CIVIL, body: [0.42, 0.39, 0.32], legs: [0.2, 0.18, 0.15], kit: [0.42, 0.39, 0.32] }, false, 'none'); subject.push(his.pos); }
     // a rescue's picture is the room the clock runs in: the hostages on their knees and the man over them
     if (held?.captor && !pin.at) { const cp = held.captor.pos, hs = (held.hostages ?? []).map(h => h.pos), mid = hs.length ? [hs.reduce((a, h) => a + h[0], 0) / hs.length, hs.reduce((a, h) => a + h[2], 0) / hs.length] : [cp[0] + 1, cp[2]];
       for (const h of hs) addMan(h, toward0(h, [2 * h[0] - cp[0], 2 * h[2] - cp[2]]), CIVIL, 'kneel', 'none'); addMan(cp, toward0(cp, mid), GUARD, false, 'rifle', -0.3);

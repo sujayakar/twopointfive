@@ -1,11 +1,11 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 2958026896;
+export const LAYOUT = 40177740;
 /** what a host may ask for: what is made together is asked for together */
-export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, all = 1023 }
+export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, all = 16383 }
 /** each section's place in the table the module answers with */
-export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, rims = 30, fires = 31, fireTable = 32, count = 33 }
+export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, rims = 30, fires = 31, fireTable = 32, decals = 33, decalKeys = 34, decalHead = 35, winds = 36, gusts = 37, heat = 38, air = 39, windRoofs = 40, roofs = 41, ceilings = 42, doorBoxes = 43, openPanes = 44, resets = 45, traffic = 46, dust = 47, feet = 48, things = 49, blasts = 50, snowWords = 51, count = 52 }
 
 /** the fog: one row */
 export const enum Fog {
@@ -713,6 +713,220 @@ export const enum FireTable {
   soot = 60,
   /** words a row */
   row = 63,
+}
+
+/** who a record is, in the same order: the id of what made it (its tick; the arm in the top byte and its place among that tick's) */
+export const enum DecalKey {
+  /** u32 */
+  tick = 0,
+  /** u32 */
+  made = 1,
+  /** words a row */
+  row = 2,
+}
+
+/** what the page is told of the marks' buffer this frame: one row */
+export const enum DecalHead {
+  /** u32: a word of it moved: send it */
+  moved = 0,
+  /** u32: marks in the list, and of them drawn this frame */
+  count = 1,
+  /** u32 */
+  drawn = 2,
+  /** u32: entries of the cells' lists, and left out of them by their caps */
+  listed = 3,
+  /** u32 */
+  dropped = 4,
+  /** words a row */
+  row = 5,
+}
+
+/** a source of moving air */
+export const enum Wind {
+  /** u32: 0 a jet, 1 the storm */
+  kind = 0,
+  /** u32: 1 the storm is a field cut roof by roof · 2 the air of a fire */
+  says = 1,
+  /** u32: which particles it moves, a bit a kind (0: the usual) */
+  kinds = 2,
+  /** u32: the roofs it blows between: its first row in `wind_roofs`, and how many (0: its two rectangles) */
+  roofsAt = 3,
+  /** u32 */
+  roofs = 4,
+  /** f32 × 3 */
+  pos = 5,
+  /** f32 × 3 */
+  dir = 8,
+  /** f32 */
+  speed = 11,
+  /** f32 */
+  reach = 12,
+  /** f32 */
+  tanSpread = 13,
+  /** f32 */
+  r0 = 14,
+  /** f32 */
+  dMax = 15,
+  /** f32: NaN: not said */
+  floorY = 16,
+  /** f32 × 4 */
+  interior = 17,
+  /** f32 × 4 */
+  annex = 21,
+  /** f32 × 4: the sphere it reaches: middle, radius */
+  bound = 25,
+  /** words a row */
+  row = 29,
+}
+
+/** the weather's air: one row */
+export const enum Air {
+  /** f32: the wind's master (0: still air), how fast the solver's air answers it, and the particles' three numbers */
+  master = 0,
+  /** f32 */
+  relax = 1,
+  /** f32 × 3 */
+  knobs = 2,
+  /** f32: the storm: how fast it blows now, which way, its gust, and the share of its speed at the ground (0: no storm source) */
+  stormSpeed = 5,
+  /** f32 × 3 */
+  stormDir = 6,
+  /** f32 */
+  stormGust = 9,
+  /** f32: how far from a roof the storm's field has come in whole (m) */
+  stormLee = 10,
+  /** u32: a rain falls by the level's own roofs (`roofs`), else by the two rectangles */
+  levelRoofs = 11,
+  /** f32 × 4: the two rectangles */
+  interior = 12,
+  /** f32 × 4 */
+  annex = 16,
+  /** words a row */
+  row = 20,
+}
+
+/** the corners of a rectangle on the plan: x0 z0 x1 z1 */
+export const enum Rect {
+  /** f32 × 4 */
+  r = 0,
+  /** words a row */
+  row = 4,
+}
+
+/** the tick began a part of the picture again */
+export const enum Reset {
+  /** u32 */
+  tick = 0,
+  /** u32 */
+  serial = 1,
+  /** u32: 1 the level: every history · 2 the smoke · 4 the snow's blasts · 8 the things' marks · 16 the prints */
+  what = 2,
+  /** words a row */
+  row = 3,
+}
+
+/** peak opacity at its centre · × radius over its life · seconds to full opacity · × the softening where it meets a surface · the share of a crossing beam scattered toward the eye · × the cache's ambient on it */
+export const enum DustLook {
+  /** f32 */
+  opacity = 0,
+  /** f32 */
+  growth = 1,
+  /** f32 */
+  fadeIn = 2,
+  /** f32 */
+  soft = 3,
+  /** f32 */
+  wrap = 4,
+  /** f32 */
+  ambient = 5,
+  /** words a row */
+  row = 6,
+}
+
+/** a man, as what stands on the snow and breathes over it */
+export const enum Foot {
+  /** u32 */
+  id = 0,
+  /** u32 */
+  says = 1,
+  /** f32 × 3 */
+  pos = 2,
+  /** f32 × 3 */
+  vel = 5,
+  /** f32 */
+  yaw = 8,
+  /** f32 × 3 */
+  hips = 9,
+  /** f32 × 3 */
+  head = 12,
+  /** f32 × 3 */
+  chest = 15,
+  /** f32 × 3 */
+  footL = 18,
+  /** f32 × 3 */
+  footR = 21,
+  /** f32 × 3 */
+  toeL = 24,
+  /** f32 × 3 */
+  toeR = 27,
+  /** f32 × 3: where his head faces */
+  facing = 30,
+  /** words a row */
+  row = 33,
+}
+
+/** a part of a thing that moves over the ground: each of a prop's parts, a thrown thing, a chunk of debris */
+export const enum Thing {
+  /** u32: 0 a prop's part · 1 a thrown thing · 2 a chunk */
+  kind = 0,
+  /** u32 */
+  key = 1,
+  /** u32 */
+  part = 2,
+  /** u32: 1 at rest · 2 lying on something that is not the ground */
+  says = 3,
+  /** f32 × 3 */
+  c = 4,
+  /** f32 × 3 */
+  h = 7,
+  /** f32 */
+  yaw = 10,
+  /** f32 × 2: where the whole thing stands, its velocity and its turn (a prop's) */
+  at = 11,
+  /** f32 × 3 */
+  vel = 13,
+  /** f32 */
+  spin = 16,
+  /** f32: the whole thing's radius and weight, and how far over the floor this part's underside hangs */
+  radius = 17,
+  /** f32 */
+  mass = 18,
+  /** f32 */
+  foot = 19,
+  /** words a row */
+  row = 20,
+}
+
+/** a blast went off */
+export const enum SnowBlast {
+  /** u32 */
+  tick = 0,
+  /** u32 */
+  serial = 1,
+  /** f32 × 3 */
+  at = 2,
+  /** f32 */
+  radius = 5,
+  /** words a row */
+  row = 6,
+}
+
+/** what snow a static is, by its place: 0 none · 1 snow · 2 trodden · 3 old */
+export const enum SnowWord {
+  /** u32 */
+  w = 0,
+  /** words a row */
+  row = 1,
 }
 
 /** what a box may say it is made of, by its number in Rust */

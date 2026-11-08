@@ -83,9 +83,9 @@ pub fn glass_panes(g: &mut crate::game::Game) -> Vec<f64> {
 }
 
 /// a box flagged Glass (glass.ts isPane)
-pub fn is_pane(g: &mut crate::game::Game, b: Option<BoxId>) -> bool {
+pub fn is_pane(g: &crate::game::Game, b: Option<BoxId>) -> bool {
     match b {
-        Some(b) => glass_flagged(seam_box(g, b).flags),
+        Some(b) => glass_flagged(g.tab.boxes[b].flags),
         None => false,
     }
 }
