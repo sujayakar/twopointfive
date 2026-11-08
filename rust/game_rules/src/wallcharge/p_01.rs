@@ -344,7 +344,6 @@ pub fn wall_charge_new(g: &mut crate::game::Game) -> crate::wallcharge::WallChar
         ack: Some(vec![String::from("copy."), String::from("on it.")]),
         ..crate::orders::OrderDef::zeroed()
     }));
-    crate::orders::squad_orders_voice(g, crate::orders::OrderNoteFn::WallCharge);
     wc
 }
 

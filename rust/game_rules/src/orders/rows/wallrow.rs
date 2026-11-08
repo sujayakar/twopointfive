@@ -10,6 +10,7 @@ pub const ORDER: Row = Row {
     can: Some(can),
     valid: Some(valid),
     gone: Some(gone),
+    notes: Some(crate::wallcharge::wall_charge_hud_notes),
     ..Row::new("wallCharge", label, issue)
 };
 
