@@ -125,7 +125,7 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
     let px = b.zw * vec2f(4096.0, 2048.0); let lod = log2(max(1.0, fp * px.x / a.z));
     let art = textureSampleLevel(artTex, linSamp, b.xy + t * b.zw, min(lod, 6.0));
     let wear = 1.0 - 0.25 * smoothstep(0.5, 0.72, nB);
-    let al = art.a * wear; base = mix(base, c.rgb * c.rgb * art.rgb, al); s.rough = mix(s.rough, min(s.rough, 0.42), al); if (s.metal > 0.5) { s.metal *= 1.0 - al; }
+    let al = art.a * wear; base = mix(base, c.rgb * c.rgb * art.rgb, al); if (m.glow > 0.0) { let g = art.rgb * art.rgb; s.glow *= mix(vec3f(1.0), c.rgb * c.rgb * g, al); } s.rough = mix(s.rough, min(s.rough, 0.42), al); if (s.metal > 0.5) { s.metal *= 1.0 - al; }
   }
   s.albedo = clamp(base, vec3f(0.0), vec3f(0.94)); return s;
 }
@@ -184,9 +184,13 @@ fn lampE(i: u32, x: vec3f, n: vec3f) -> vec3f {
 fn byFormula(rough: f32) -> f32 { return smoothstep(0.12, 0.24, rough); }
 /** a lamp seen in a coat: by the point of it nearest the mirror direction */
 fn lampCoat(i: u32, s: Surf, V: vec3f) -> vec3f {
-  let l = &lamps[i]; if ((*l).on <= 0.0) { return vec3f(0.0); } let d0 = (*l).at - s.x; if (length(d0) > (*l).reach) { return vec3f(0.0); } var u = vec2f(0.5); let R = reflect(-V, s.n); var widen = 0.0;
-  if ((*l).kind == 0u) { let den = dot(R, (*l).n); if (den > -1e-3) { u = vec2f(0.5); } else { let t = dot(d0, (*l).n) / den; let q = s.x + R * t - (*l).at; u = clamp(vec2f(dot(q, (*l).u) / dot((*l).u, (*l).u), dot(q, (*l).v) / dot((*l).v, (*l).v)) * 0.5 + 0.5, vec2f(0.0), vec2f(1.0)); } }
-  let a = aimLamp(i, s.x, u); widen = sqrt(max((*l).area, 1e-4)) * select(1.0, 0.35, (*l).kind == 0u) / (2.0 * max(a.dist, 0.2)); return a.E * coatOf(s, V, a.dir, widen);
+  let l = &lamps[i]; if ((*l).on <= 0.0) { return vec3f(0.0); } let d0 = (*l).at - s.x; let dist = length(d0); if (dist > (*l).reach) { return vec3f(0.0); } let R = reflect(-V, s.n); let a = max(s.rough * s.rough, 0.002);
+  if ((*l).kind == 0u) {                                             // a rectangle: how much of the coat's lobe it covers, along each of its sides. Never brighter than it is
+    if (dot(d0, (*l).n) >= 0.0) { return vec3f(0.0); } let den = dot(R, (*l).n); if (den > -0.02 || dot(s.n, R) <= 0.0) { return vec3f(0.0); } let t = dot(d0, (*l).n) / den; let q = s.x + R * t - (*l).at; let hu = length((*l).u); let hv = length((*l).v); let x = dot(q, (*l).u) / (hu * hu); let y = dot(q, (*l).v) / (hv * hv);
+    let w = a * t * 1.3; let su = w / hu / max(-den, 0.15); let sv = w / hv / max(-den, 0.15); let cov = max(atan((1.0 - x) / su) + atan((1.0 + x) / su), 0.0) * max(atan((1.0 - y) / sv) + atan((1.0 + y) / sv), 0.0) * (1.0 / (PI * PI));
+    return fresnel(coatF0(s), max(dot(s.n, V), 0.02)) * (*l).radiance * ((*l).on * cov * sat(1.0 - pow(dist / (*l).reach, 4.0)));
+  }
+  let p = aimLamp(i, s.x, vec2f(0.5)); let widen = (*l).area * 0.5 / max(p.dist, 0.2); return min(p.E * coatOf(s, V, p.dir, widen), (*l).radiance * (*l).on * fresnel(coatF0(s), max(dot(s.n, V), 0.02)));
 }
 /** what a lamp would send x with nothing in the way: its brightness, for choosing */
 fn lampWeight(i: u32, x: vec3f, n: vec3f) -> f32 {
