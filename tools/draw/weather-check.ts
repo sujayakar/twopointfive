@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from '../qa/headless.ts';
 import { RustHost } from '../blitz/rust-host.ts';
-import { Air, Fire, FireTable, Geo, Mat, Section, SnowWord, Want, Wind } from '../../src/draw/sections';
+import { Air, Fire, FireTable, Geo, Mat, Section, SnowWord, View, Want, Wind } from '../../src/draw/sections';
 import { Drawn } from '../../src/draw/drawn';
 import { DrawWorld } from '../../src/draw/world';
 import { AirMap } from '../../src/picture/air';
@@ -80,7 +80,7 @@ for (const L of LEVELS.length ? LEVELS : ['pass', 'compound:weather=downpour&roo
       for (const [k, a, b] of P) if (!near(a, b, 2e-5)) bad(`fires.${k}`, `tick ${t}: copy ${a} rust ${b}`); }
     if (list.length && E.fireLook) { const t0 = D.at[Section.fireTable]; for (let k = 0; k < 15; k++) if (!near(E.fireLook[k], f[t0 + FireTable.look + k])) bad(`fire.look${k}`, `copy ${E.fireLook[k]} rust ${f[t0 + FireTable.look + k]}`); }
     // ---- the wind's lists
-    const lists: [string, any[], number][] = [['active', g.wind.active, Section.winds], ['pool', (g.wind as any).forParticles ?? [], Section.gusts]];
+    const lists: [string, any[], number][] = [['active', g.wind.active, Section.winds], ['pool', (g.wind as any).gustsAround([0, 1, 2].map(k => f[D.at[Section.view] + View.target + k])), Section.gusts]];   // (the one rule, asked of where the snapshot looks: the host's camera has moved on since the tick took it)
     for (const [k, S, sec] of lists) { if (S.length !== D.n[sec]) { bad(`winds.${k}.count`, `tick ${t}: copy ${S.length} rust ${D.n[sec]}`); continue; } winds = Math.max(winds, S.length);
       for (let i = 0; i < S.length; i++) { const s = S[i], o = D.at[sec] + i * Wind.row, P: [string, number, number][] = [['kind', s.kind === 'storm' ? 1 : 0, u[o + Wind.kind]], ['speed', s.speed, f[o + Wind.speed] + BREAK], ['x', s.pos[0], f[o + Wind.pos]], ['dx', s.dir[0], f[o + Wind.dir]], ['dz', s.dir[2], f[o + Wind.dir + 2]], ['reach', s.reach, f[o + Wind.reach]], ['r0', s.r0, f[o + Wind.r0]], ['dMax', s.dMax, f[o + Wind.dMax]], ['boundR', s.bound.r, f[o + Wind.bound + 3]], ['roofs', s.roofs?.length ?? 0, u[o + Wind.roofs]]];
         for (const [w, a, b] of P) if (!near(a, b)) bad(`winds.${k}.${w}`, `tick ${t}, ${s.name}: copy ${a} rust ${b}`); } }

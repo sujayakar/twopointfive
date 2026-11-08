@@ -6,11 +6,10 @@ use game_start::stand;
 
 const DT: f64 = 1.0 / 60.0;
 
-/// Every source of heat the game told the page of in `frames` frames, with the view by the level's first fire.
+/// Every source of heat the game told the page of in `frames` frames.
 fn heat_told(frames: usize) -> usize {
     let mut p = Play::level("pass.json", false, &Opts::default());
-    let t = (0..p.g.targets.len()).map(|i| p.g.targets[i]).find(|&t| game::fire::is_fire(&p.g, t)).expect("the pass has a brazier");
-    p.g.engine.view_focus = Some(game::fire::mouth_of(&mut p.g, t).pos);
+    assert!((0..p.g.targets.len()).any(|i| game::fire::is_fire(&p.g, p.g.targets[i])), "the pass has a brazier");
     let mut told = 0;
     for _ in 0..frames {
         for e in stand::frame(&mut p.g, &p.host, DT) {
