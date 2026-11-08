@@ -1,25 +1,22 @@
 // DOM overlay: guard state markers, the F reticle + interaction panel, light / sound meters, kit column, message log, mission line, tour caption / timeline.
 import { railClear, type Box } from './railclear';
-import { BIGSLOT } from '../game/kit';
 import { railCard, type RailCard } from './railcard';
 import type { HudLike } from '../host/hud';   // the loop's view of a HUD (src/host/loop.ts stepFrame): this class is the DOM one; a native host's display-list overlay is another
 import { v3, clamp, lerp } from '../math/vec';
 import type { Vec3 } from '../math/vec';
 import { FollowCamera } from '../game/camera';
-import { Game, Player, Interactable, isBreathing } from '../game/game';
+import { Game, Interactable, isBreathing } from '../game/game';
 import { FLOOR } from '../game/floor';
 import { RAILS } from '../game/rails';
 import { backName } from '../game/backkey';
 import { KEYMAP, keyCap, keyText, camCap } from '../host/keymap';   // (the player's own keys: every key this HUD names is named as it is bound — the same string back while nothing is rebound)
-import { FLOOR_KEY } from '../game/doors';
 import { playerAim } from '../game/aim';
 import { AIMCOST } from '../game/aimcost';
 import { aimGunPoint, aimGunOn } from '../game/aimweight';
 import { previewTooClose } from '../game/he40';
 import { gunShut, throwRest, thingDist } from '../game/player';
 import { throwReach, type ThrowReach } from '../game/throwreach';
-import { GEAR, gearText, ringTag, shellTag } from '../game/gear';
-import { HANDSLOT } from '../game/handslot';
+import { GEAR, gearText } from '../game/gear';
 import { HANDRING, EMPTY_WORD, EMPTY_WHY, EMPTY_SHOW_SECS } from '../game/handring';
 import { cornerRows, cornerOn } from './corner';
 import { emptyThing, emptyWord } from '../game/interact';
@@ -34,16 +31,13 @@ import { CKPT } from '../game/savestate';
 import { pageRows } from '../view/pagesaid';
 import { fragMarks } from '../game/frag';
 import { RECAP, lostLive, lostArrowsShown, type LostMan } from '../game/deathrecap';
-import { QUICKTHROW } from '../game/quickthrow';
-import { SLOTSETUP } from '../game/slotsetup';
-import { drawHandBox, handBoxKey, handBoxTick } from './handbox';
+import { drawHandBox } from './handbox';
+import type { KitView } from '../view/seatview';
 import { samBlind } from '../game/samstun';
 import { CmdRingViz } from './cmdring';
 import { closeMarks } from '../game/close';
 import { PlanFloor } from './planfloor';
 import { FindMeViz } from './findme';
-import type { SlotKind } from '../game/game';
-import type { Firearm } from '../game/weapons';
 import { WindViz } from './windviz';
 import { SquadThrowViz } from './squadthrowviz';
 import { AttentionViz } from './attentionviz';
@@ -106,6 +100,8 @@ export class Overlay implements HudLike {
   /** closer than ever (game/close.ts closeMarks): the windows round a man near Sam, each a floor polygon with its words — pooled path + text pairs in the throw arc's svg */
   private closeG!: SVGGElement; private closeEls: { path: SVGPathElement; text: SVGTextElement }[] = []; private closeShown = 0;
   private equipKey = '';
+  private equipKit: KitView | null = null;
+  private equipRev = -1;
   private markers: HTMLElement[] = [];
   private fragMarksEl: HTMLElement[] = [];   // (frag.ts fragMarks: a defender's live grenade Sam has been cued on)
   private lostMarks: HTMLElement[] = [];   // (deathrecap.ts lostLive: the way the round came in at a squad man lost)
@@ -543,97 +539,13 @@ export class Overlay implements HudLike {
   }
 
 
-  /** Kit column (bottom-left, standing on the meters): key strip, condition pips, then the slots top to bottom in KIT_ORDER — 1 the pistol (its OCP charge as the
-   *  tagged meter at the row's end), 2 the FN2000 (a greyed 'not in this kit' row without it: the numbering is per item, so smoke is 3 in every kit), 3 smoke, 4
-   *  stun. Rebuilt only when something it shows changes. */
+  /** Kit column (bottom-left, standing on the meters): ui/handbox.ts draws what the game tells it, and again only when that (or a key's binding) has changed. A new
+   *  record every tick is no change: the OCP's charge is drawn in twentieths. */
   private updateEquip(game: Game) {
-    const pl = game.player; const gun = pl.pistol; const rf = pl.rifle; const rifleSel = pl.rifleSel;
-    const paceShow = game.time - pl.paceShownT < 2.5 || pl.pace < 0.99;   // pace ticks: shown for a moment after a wheel step, and kept while below full pace
-    const rifleKey = pl.hasRifle ? [rf.chamber, rf.mag, rf.spare.join(','), rf.reloading ? 1 : 0, rf.mode, rf.attIdx, rf.rings, rf.shells, rf.attachments.length, rf.cams, rf.lightOn ? 1 : 0].join('/') : '-';   // (the rifle's row: rounds, the beat, SEMI / AUTO, the selected attachment and its rings, its light)
-    const big = BIGSLOT.on && !game.touring ? pl.bigKit : 'none', bigAt = big === 'none' ? '' : big + (game.nearby.some(r => r.kind === 'door' && (r.verb === 'breach' || r.verb === 'hammer')) ? '!' : '') + (BIGSLOT.shut ? 's' : '');   // (the big slot's row: what he carries, and whether a door in reach offers it now)
-    const key = [pl.slot, gun.chamber, gun.mag, gun.spare.join(','), gun.reloading ? 1 : 0, pl.canisters, pl.flashbangs, pl.frags, pl.throwKind, gun.lightOn ? 1 : 0, pl.nv ? 1 : 0, (Math.round(pl.ocp.charge * 20) + (pl.ocp.ready() ? 100 : 0)), pl.hitsLeft, pl.down ? 1 : 0, game.godMode ? 1 : 0, pl.holstered ? 1 : 0, paceShow ? Math.round(pl.pace * 100) : -1, [...pl.keys].join(','), rifleKey, GEAR.on ? 1 : 0, bigAt, KEYMAP.rev, HANDSLOT.on ? 1 : 0].join('|');   // (…and which kit's words the rows are in)
-    if (SLOTSETUP.on) { const k2 = key + handBoxKey(game); if (k2 !== this.equipKey) { this.equipKey = k2; document.body?.classList?.toggle('handslot', HANDSLOT.on); drawHandBox(this.equip, game, paceShow, bigAt); } handBoxTick(game); return; }   // (ui/handbox.ts: the column as one box of what is in his hands and a strip of the rest — game/slotsetup.ts's switch)
-    if (key === this.equipKey) return; this.equipKey = key;
-    document.body?.classList?.toggle('handslot', HANDSLOT.on);   // (index.html: the put-away mark names E only while E is the way back — game/handslot.ts)
-    const el = this.equip; el.textContent = ''; el.classList?.remove('hand', 'setup', 'pop');
-    const mk = (tag: string, cls?: string, text?: string) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = cls === 'key' ? keyCap(text) : keyText(text); return e; };   // (.key: a slot's own cap)
-    const selCls = (k: SlotKind) => pl.slot === k ? (pl.holstered ? ' sel holstered' : ' sel') : '';   // the selected row lit; put away (E) it is lit-dashed with 'holstered · E' ('slung · E' on the rifle's row)
-    // key strip: the selected gun's light and night vision. The right button's business is on the rows themselves — the OCP's charge closes the pistol's, the RING
-    // tag lights on the rifle's while the launcher is selected (nothing is worded beside the reticle any more but the 40 mm's too-close warning)
-    const gad = mk('div', 'gadgets');
-    gad.appendChild(mk('span', 'g' + ((rifleSel ? rf.lightOn : gun.lightOn) ? ' on' : ''), 'L LIGHT'));
-    if (!game.rails?.locks('nvg')) gad.appendChild(mk('span', 'g' + (pl.nv ? ' on' : ''), 'N NIGHT VISION'));   // (a tutorial mission names no key it has not taught)
-    el.appendChild(gad);
-    // walking pace (mouse wheel): a row of ticks, PACE_MIN‥1 — lit up to the current notch; shown after a wheel step and while below full pace
-    if (paceShow) { const pr = mk('div', 'pace'); pr.appendChild(mk('span', 'g', 'PACE')); const ticks = mk('span', 'ticks'); const N = 6; const lit = Math.round((pl.pace - 0.35) / 0.65 * (N - 1)) + 1; for (let i = 0; i < N; i++) ticks.appendChild(mk('i', i < lit ? 'on' : '')); pr.appendChild(ticks); pr.appendChild(mk('span', 'g', 'wheel')); el.appendChild(pr); }
-    // condition: MAX_HITS pips (one: a single 9 mm round downs you); god mode shows a note instead (.god — the tour, which runs in god mode, hides that row).
-    // At its end, while he has one: the KEY tag — a key taken off a questioned man (Player.keys, player.ts takeKey), the keyed doors his from then on; the one
-    // floor key reads plain KEY, anything more particular names its locks
-    const cond = mk('div', 'cond' + (pl.down ? ' down' : '') + (game.godMode ? ' god' : ''));
-    if (game.godMode) cond.appendChild(mk('span', 'g on', 'GOD MODE'));
-    else { cond.appendChild(mk('span', 'g', pl.down ? 'DOWN — ENTER' : 'CONDITION')); const pips = mk('span', 'pips'); for (let i = 0; i < Player.MAX_HITS; i++) pips.appendChild(mk('i', i < pl.hitsLeft ? '' : 'lost')); cond.appendChild(pips); }
-    if (pl.keys.size) { const named = [...pl.keys].filter(k => k !== FLOOR_KEY); const tag = mk('span', 'keytag', named.length ? `KEY · ${named.join(' · ').toUpperCase()}` : 'KEY'); tag.title = 'taken from a guard you questioned, so the keyed doors will open for you'; cond.appendChild(tag); }
-    el.appendChild(cond);
-    /** a gun's row body: a pip per round the magazine holds, the chambered round, the count, a little box per spare drawn as full as it is. THE PIPS ARE DRAWN ON A
-     *  LINE OF THEIR OWN under the row (index.html `#equip .slot .rounds`: the Mk 18's thirty made the row too long — the 10-11 play note); the element stays
-     *  where it was in the row's markup, so the count, the spares and the tags close up and nothing that reads the row's order moves. */
-    const gunRow = (row: HTMLElement, f: Firearm) => {
-      const D = f.def; const inMag = f.mag ?? 0;
-      const per = D.magCapacity > 60 ? 5 : D.magCapacity > 34 ? 2 : 1;   // (a belt of a hundred, a magazine of forty: a pip stands for five rounds, for two — the line stays the length the thirty made it)
-      const rounds = mk('span', 'rounds'); for (let i = 0; i < Math.ceil(D.magCapacity / per); i++) rounds.appendChild(mk('i', i < Math.ceil(inMag / per) ? '' : 'spent')); if (f.chamber) rounds.appendChild(mk('i', 'chamber')); row.appendChild(rounds);
-      row.appendChild(mk('span', '', `${inMag}${f.chamber ? '+1' : '+0'}`));
-      const mags = mk('span', 'mags'); for (const r of f.spareSorted()) { const m = mk('span', 'mag'); const b = mk('b'); b.style.height = `${Math.round((r / D.magCapacity) * 100)}%`; m.appendChild(b); m.title = `${r} rounds`; mags.appendChild(m); } row.appendChild(mags);
-    };
-    // 1: the pistol — its row's short name, its rounds; then its OCP: a small tagged meter of the charge at the row's end, lit when it is ready (right click with the
-    // pistol out knocks out the light the reticle is on — the pistol's gadget, so it lives on the pistol's row like the RING tag lives on the rifle's)
-    const s1 = mk('div', 'slot' + selCls('pistol'));
-    s1.appendChild(mk('span', 'key', '1')); s1.appendChild(mk('span', 'name', gun.reloading ? `${gun.def.short} · reloading` : gun.def.short));
-    gunRow(s1, gun);
-    { const oc = mk('span', 'tag ocp' + (pl.ocp.ready() ? ' on' : ''), 'OCP'); const bar = mk('span', 'ocpbar'); const bb = mk('b'); bb.style.width = `${Math.round(pl.ocp.charge * 100)}%`; bar.appendChild(bb); oc.appendChild(bar); oc.title = 'the OCP on the pistol. With the pistol out, right-click to knock out the light under the reticle for a few seconds, or the flashlight of the guard under it. Then it recharges'; s1.appendChild(oc); }
-    el.appendChild(s1);
-    // 2: the FN2000 — its short name and the selector's position (SEMI / AUTO off Z: what the LEFT button fires, always), thirty slim pips, the chamber, the count,
-    // the spare boxes; then its launcher's two loads for the RIGHT button: RING ×n and 40MM ×n, the one that is UP lit (2 again with it in the hands flips them), the
-    // other dim. 'holstered' here reads slung (index.html .slot.slung). Without the rifle in the kit the row stays, greyed, so 3 and 4 keep their numbers.
-    if (pl.hasRifle) {
-      const s2 = mk('div', 'slot slung' + selCls('rifle'));
-      s2.appendChild(mk('span', 'key', '2'));
-      s2.appendChild(mk('span', 'name', rf.reloading ? `${rf.def.short} · reloading` : rf.def.short));
-      s2.appendChild(mk('span', 'tag on', rf.mode.toUpperCase()));   // (Z: the selector — always lit: the left button always fires rounds)
-      gunRow(s2, rf);
-      if (rf.attachments.includes('ring')) { const rg = mk('span', 'tag rings' + (rf.attachment === 'ring' ? ' on' : ''), `${ringTag()} ×${rf.rings}`); rg.title = gearText(`ring airfoils. When the tag is lit, they're loaded on right-click (press 2 again with the rifle up to ${rf.attachments.includes('cam') ? 'step to the next load' : 'switch to the 40 mm and back'}). Right-click to fire one, or hold it to see the arc first. A hit to the head knocks an enemy out and a hit to the body staggers him. You can't pick them back up`); s2.appendChild(rg); }   // (the shotgun in this slot has no launcher: no tag)
-      if (rf.attachments.includes('he40')) { const sg = mk('span', 'tag rings shells' + (rf.attachment === 'he40' ? ' on' : ''), `${shellTag()} ×${rf.shells}`); sg.title = gearText('40 mm high-explosive grenades. Press 2 again with the rifle up to put them on right-click (lit) in place of the RING. Right-click to fire one, or hold it to see the arc first. It goes off on what it hits with a frag grenade\'s blast, but only past its arming distance. Any closer and it\'s a dud. You can\'t pick them back up'); s2.appendChild(sg); }
-      if (rf.attachments.includes('cam')) { const cg = mk('span', 'tag rings cams' + (rf.attachment === 'cam' ? ' on' : ''), `CAM ×${rf.cams}`); cg.title = 'sticky cameras. Press 2 again with the rifle up to put them on right-click (lit). Right-click to send one to the first wall past the cursor, or hold it to see the arc first. It lifts the fog of war around what it watches'; s2.appendChild(cg); }   // (stickycam.ts: only on a rifle that was issued some)
-      el.appendChild(s2);
-    } else {
-      const s2 = mk('div', 'slot absent'); s2.appendChild(mk('span', 'key', '2')); s2.appendChild(mk('span', 'name', rf.def.short)); s2.appendChild(mk('span', '', 'not in this kit')); s2.title = 'add the rifle to your kit from the start card or the pause menu'; el.appendChild(s2);
-    }
-    // 3 / 4: smoke and stun canisters. Where the quick throw is on (quickthrow.ts: not in the page) "G" marks the one its key will use (the throwable selected last)
-    const gKind = !QUICKTHROW.on ? '' : pl.throwKind === 'flash' && pl.flashbangs > 0 ? 'flash' : pl.canisters > 0 ? 'smoke' : pl.flashbangs > 0 ? 'flash' : '';
-    const s3 = mk('div', 'slot' + selCls('smoke'));
-    s3.appendChild(mk('span', 'key', '3')); s3.appendChild(mk('span', 'name', 'smoke'));
-    const cans = mk('span', 'cans'); for (let i = 0; i < pl.canisters; i++) cans.appendChild(mk('i')); s3.appendChild(cans);
-    s3.appendChild(mk('span', '', pl.canisters ? `×${pl.canisters}${gKind === 'smoke' ? '  G quick-throw' : ''}` : 'empty'));
-    el.appendChild(s3);
-    const s4 = mk('div', 'slot' + selCls('flash'));
-    s4.appendChild(mk('span', 'key', '4')); s4.appendChild(mk('span', 'name', 'stun'));
-    const bangs = mk('span', 'cans bangs'); for (let i = 0; i < pl.flashbangs; i++) bangs.appendChild(mk('i')); s4.appendChild(bangs);
-    s4.appendChild(mk('span', '', pl.flashbangs ? `×${pl.flashbangs}${gKind === 'flash' ? '  G quick-throw' : ''}` : 'empty'));
-    el.appendChild(s4);
-    // 5: fragmentation grenades (frag.ts) — selected with 5 and thrown with a click; the quick-throw key never takes one, in the fist or not
-    const s5 = mk('div', 'slot' + selCls('frag'));
-    s5.appendChild(mk('span', 'key', '5')); s5.appendChild(mk('span', 'name', 'frag'));
-    const frags = mk('span', 'cans frags'); for (let i = 0; i < pl.frags; i++) frags.appendChild(mk('i')); s5.appendChild(frags);
-    s5.appendChild(mk('span', '', pl.frags ? `×${pl.frags}` : 'empty'));
-    el.appendChild(s5);
-    // the big slot (kit.ts BIGSLOT, bigkit.ts): the hammer or the breaching shotgun is not a thing his hands select — it is worked AT A DOOR, on the key every
-    // door is worked with. So its row carries that key where the others carry a digit and says where it works; it lights while a door in reach offers it (the
-    // row by the door, player.ts). No row when he carries neither.
-    if (big !== 'none') {
-      const sb = mk('div', 'slot big' + (bigAt.includes('!') ? ' sel' : ''));
-      sb.appendChild(mk('span', 'key', 'SPACE')); sb.appendChild(mk('span', 'name', big === 'shotgun' ? 'breaching shotgun' : 'hammer'));
-      sb.appendChild(mk('span', '', BIGSLOT.shut ? 'at a shut door' : 'at a locked door'));
-      el.appendChild(sb);
-    }
+    const kit = game.view.kit; if (kit === this.equipKit && KEYMAP.rev === this.equipRev) return;
+    this.equipKit = kit; this.equipRev = KEYMAP.rev;
+    const key = JSON.stringify(kit, (k, v) => k === 'charge' ? Math.round(v * 20) : v) + KEYMAP.rev;
+    if (key !== this.equipKey) { this.equipKey = key; drawHandBox(this.equip, kit); }
   }
 }
 

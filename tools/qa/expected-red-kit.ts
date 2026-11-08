@@ -14,7 +14,6 @@ export const RED_KIT: Record<string, RedRow> = {
   'cleanrestart': { is: 'real', rust: true, line: "read 2026-11-07 · saveState throws at civilians.ts:250, [...C.badTargets] null, saving with a civilian on the floor", whose: RUST },
   'frag-down': { is: 'real', rust: true, line: "read 2026-11-07 · (f2) (f3) a knockout turned kill by a grenade: the card keeps the knockout, no row names a teammate's grenade", whose: RUST },
   'cover-order': { is: 'real', rust: true, line: "read 2026-11-07 · dealt an opening 0.8 s after a sighting, contactSecs 4; orders cleared, the aim stays on all four", whose: RUST },
-  'slotsetup': { is: 'maybe', rust: true, line: "read 2026-11-07 · the load row has no he40 and no camera to step to: the same card as kitstealth", whose: RUST },
   'wallsnap-kit': { is: 'maybe', rust: true, line: "read 2026-11-07 · the setup's attachment does not change on the stack: the same card as kitstealth", whose: RUST },
   'cover-settle': { is: 'maybe', rust: true, line: "read 2026-11-07 · 1 stack, behind the stack 0.0 s, on the door 14.0 s, no rear man found; ref 3 stacks, behind 40.8 s", whose: RUST },
   'cover-step': { is: 'maybe', rust: true, line: "read 2026-11-07 · 0 of 3 stagings dealt a man the doorway; not sure the check reaches the game (a leaf set by hand)", whose: RUST },

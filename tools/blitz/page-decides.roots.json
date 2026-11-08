@@ -180,6 +180,16 @@
       "id": "src/game/kit.ts:kitSolo",
       "why": "the kit of a game with no mission is dealt as a card opens: once, for the hand at the menu",
       "behind": "a hand"
+    },
+    {
+      "id": "src/game/kit.ts:SLOTS",
+      "why": "the pouches rule's knob table: the closure in it carries the kit screen's cards across only when the switch is written (the page's boot, the panel, knobs put back). Naming the table each step (knobRegistry) runs nothing of it. The kit screen before a mission is the cards'",
+      "behind": "a hand"
+    },
+    {
+      "id": "src/game/kit.ts:BIGSLOT",
+      "why": "the big slot's knob table: the closure in it carries the kit screen's cards across only when the switch is written (the page's boot, the panel, knobs put back). Naming the table each step (knobRegistry) runs nothing of it. The kit screen before a mission is the cards'",
+      "behind": "a hand"
     }
   ]
 }

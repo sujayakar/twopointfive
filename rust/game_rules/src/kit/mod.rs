@@ -14,5 +14,7 @@ pub mod card;
 pub use card::*;
 pub mod team;
 pub use team::*;
+pub mod b_01;
+pub use b_01::*;
 pub use p_01::slot_amount;
 pub use p_01::slot_put;

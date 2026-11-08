@@ -126,9 +126,10 @@ async function game(browser) {
   { const c0 = await page.evaluate(() => !!window.__game.player.crouch), k = await tap('k'), c = await tap('c'), k2 = await tap('k');
     check(!fatal && !c0 && k.filed === 'KeyC' && k.crouch && c.filed === '' && c.crouch && !k2.crouch, 'in play, at once: K is filed as the game\'s crouch key and he crouches; C, which crouch left, files nothing and does nothing; K again and he stands',
       `standing ${!c0} · K: filed '${k.filed}', crouched ${k.crouch} · C: filed '${c.filed}', crouched ${c.crouch} · K: crouched ${k2.crouch}`); }
+  await tap('2', 120); await tap('o');   // (the rifle up and its light on: the box names the light's key only while it is on)
   { const hud = await page.evaluate(() => { const g = window.__game; g.teleportPlayer([30.6, 0, 11.45]); g.player.char.bodyYaw = 0; window.__runFrames(12);
-      return { gad: [...document.querySelectorAll('#equip .gadgets .g')].map(e => e.textContent), ia: [...document.querySelectorAll('#interact kbd')].map(e => e.textContent), keys: [...document.querySelectorAll('#equip .slot .key')].map(e => e.textContent) }; });
-    check(hud.gad.includes('O LIGHT') && !hud.gad.includes('L LIGHT') && hud.ia.includes('M') && !hud.ia.includes('SPACE') && hud.keys[0] === '1', 'the HUD names the keys as bound: the kit column\'s light is on O, a door\'s row is on M where it said Space, a key not moved reads as ever',
+      return { gad: [...document.querySelectorAll('#equip .hb-st .o.on')].map(e => e.textContent), ia: [...document.querySelectorAll('#interact kbd')].map(e => e.textContent), keys: [...document.querySelectorAll('#equip .slot .key')].map(e => e.textContent) }; });
+    check(hud.gad.includes('O LIGHT') && !hud.gad.includes('L LIGHT') && hud.ia.includes('M') && !hud.ia.includes('SPACE') && hud.keys[1] === '1', 'the HUD names the keys as bound: the kit column\'s light is on O, a door\'s row is on M where it said Space, a key not moved reads as ever',
       `kit column: ${hud.gad.join(' · ')} · the door's caps: ${hud.ia.join(' ')} · slots: ${hud.keys.join(' ')}`); }   // (no still of the play: a screenshot of the game does not come on the software adapter)
   // the page load: a fresh page of the same machine (the same store). The one that played is shut without waiting for it: under the software adapter it answers a reload late
   { const was = page; page = await ctx.newPage(); watch(page, 'game, loaded again', true); was.close().catch(() => { }); await page.goto(url(), { waitUntil: 'domcontentloaded', timeout: 180000 }); }

@@ -119,7 +119,6 @@ import './handwork';
 import { throwCount, toggleDrag, teleportPlayer, settleSpot, freeHeld, takeKey, pickHover } from './player';
 import type { WallHold, Hold } from './player';
 import { escapeInteract, backableInteract } from './interact';
-import { slotSetupOpen, slotSetupShut } from './slotsetup';
 import { tacticsSummary, tacticsReset } from './tactics';
 import { lanesReset } from './lanes';
 import { pictureReset } from './picture';
@@ -1626,9 +1625,9 @@ export class Game {
     this.player.nearSel = i; pickHover(this); return true;
   }
   /** Esc, before the pause menu gets it (main.ts): the open selector backs out / a running sustained verb stops. True = used here, no menu this press. */
-  escape(): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.escape', this, []); if (__r !== RUST_PASS) return __r as any; } } return this.orders.escape() || launchCancel(this) || escapeInteract(this) || slotSetupShut(this); }   // (the squad's command menu backs out first: orders.ts)
+  escape(): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.escape', this, []); if (__r !== RUST_PASS) return __r as any; } } return this.orders.escape() || launchCancel(this) || escapeInteract(this); }   // (the squad's command menu backs out first: orders.ts)
   /** is there anything the back key would back out of right now (backkey.ts; asked by the page before Tab's trial choice gets the key) */
-  backable(): boolean { return !!this.orders.menu || !!this.player.launchHeld || backableInteract(this) || slotSetupOpen(this); }   // (…and the open setup of the gun in his hands: slotsetup.ts)
+  backable(): boolean { return !!this.orders.menu || !!this.player.launchHeld || backableInteract(this) || !!this.view.kit.setup; }   // (…and the open setup of the gun in his hands)
   /** The light meter's mapping, irradiance (W/m², max over the axes as the probe reports it) → 0‥1 visibility: 0 at or below visFloor, 1 by visFloor·e^(1/visSlope).
    *  One mapping for the meter on Sam and for a searcher judging how dark a hiding place is (guards.ts): dark for the one is dark for the other. */
   visibilityOf(E: number): number { return clamp(this.tune.visSlope * Math.log(Math.max(E, 1e-5) / this.tune.visFloor), 0, 1); }

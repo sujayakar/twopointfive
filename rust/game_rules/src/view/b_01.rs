@@ -20,6 +20,7 @@ pub fn tick_view(g: &Game, seat: &crate::seats::SeatRef) -> TickView {
         bubbles: crate::cues::bubbles_view(g, seat),
         me: me.id,
         place: crate::chronicle::room_of(g, me.pos),
+        kit: crate::kit::kit_view(g, seat),
     }
 }
 
