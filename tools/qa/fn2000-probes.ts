@@ -44,7 +44,7 @@ const { SUPPRESSION } = await import(`${ROOT}/src/game/suppression.ts`);
 const { isBreathing } = await import(`${ROOT}/src/game/game.ts`);
 const { Overlay } = await import(`${ROOT}/src/ui/overlay.ts`);
 const { CLOSE, closeBare } = await import(`${ROOT}/src/game/close.ts`);   // (kit-slots (e): where the blow is the player's choice the knockout is the RIGHT click and the row says so)
-const { KIT: CARDS, KIT_SOLO } = await import(`${ROOT}/src/game/kit.ts`);
+const { KIT: CARDS } = await import(`${ROOT}/src/game/kit.ts`);
 const { KITANIM, KITANIM_LOG } = await import(`${ROOT}/src/game/kitanim.ts`);
 /** the magazine change kit handling plans for the gun's state, off its table of beats (the game's own planner went with the TypeScript tick) */
 const kitReload = (_g: any, gun: any, long: boolean) => { const keeps = gun.mag !== null && gun.mag > 0, racks = gun.chamber === 0, kind: 'tactical' | 'empty' | 'dry' = keeps ? 'tactical' : racks ? 'empty' : 'dry';
@@ -411,8 +411,8 @@ export async function kitSlots() {
   { const fails: string[] = []; const tr: string[] = [];
     const st = () => `${pl.slot}${pl.holstered ? '/away' : ''} att ${rf.attachment ?? 'none'}`;
     if (pl.slot !== 'pistol' || !pl.holstered) fails.push(`fresh: ${st()} (want pistol, holstered)`);
-    { const want = KIT_SOLO.on ? CARDS.members[0].shells : LAUNCHER40.rounds;   // (the plain night wears his card where the stand asks it — kit.ts kitSoloStand; else the rifle as built)
-      if (SH !== want) fails.push(`fresh: ${SH} 40 mm rounds on the rifle (want ${want}: ${KIT_SOLO.on ? 'his card\'s' : 'the rifle as built'})`); }
+    { const want = game.soloCard ? CARDS.members[0].shells : LAUNCHER40.rounds;   // (the plain night wears his card where the stand asks it — kit.ts kitSoloStand; else the rifle as built)
+      if (SH !== want) fails.push(`fresh: ${SH} 40 mm rounds on the rifle (want ${want}: ${game.soloCard ? 'his card\'s' : 'the rifle as built'})`); }
     if (rf.attachment !== 'ring' || rf.attIdx !== 0) fails.push(`fresh: the load up is ${rf.attachment} (attIdx ${rf.attIdx}) — want the RING, never nothing`);
     msgs.length = 0; press('Digit2'); tr.push(`2 → ${st()}`); if (pl.slot !== 'rifle' || pl.holstered || !pl.rifleUp || rf.attachment !== 'ring') fails.push(`2: ${st()} rifleUp ${pl.rifleUp} (want rifle up, the RING on its button)`);
     if (!msgs.some(m => m === gearText('FN2000 · SEMI · RING ×5'))) fails.push(`2: the draw said ${JSON.stringify(msgs)} (want "FN2000 · SEMI · RING ×5": the load named with the rifle)`);

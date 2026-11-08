@@ -152,17 +152,17 @@ export async function kitSoloNight(): Promise<boolean> {
     g.restartEncounter(); const untouched = samOf(g);
     // (the SHIPPED stand's plain game IS the page's ?solo night — kit.ts kitSoloStand, raised by profile.ts shippedBoot — so there the changed card is on the fresh
     // player at a restart, by that rule; the page's Start on the card, which wears nothing of yours, is what the frozen stand plays)
-    if (K.KIT_SOLO.stand) F.verdict(K.KIT_SOLO.on === true && untouched.rifle === false && JSON.stringify(plain) !== JSON.stringify(untouched), 'the shipped stand plays the page\'s ?solo night: a plain game wears your card, and a changed card is on the fresh player at a restart', JSON.stringify(untouched));
-    else F.verdict(JSON.stringify(plain) === JSON.stringify(untouched) && K.KIT_SOLO.on === false, 'a changed card alone moves nothing on the plain night (Start on the card is as it ever was): a restart builds the same player', JSON.stringify(untouched));
+    if (K.KIT_SOLO.stand) F.verdict(g.soloCard === true && untouched.rifle === false && JSON.stringify(plain) !== JSON.stringify(untouched), 'the shipped stand plays the page\'s ?solo night: a plain game wears your card, and a changed card is on the fresh player at a restart', JSON.stringify(untouched));
+    else F.verdict(JSON.stringify(plain) === JSON.stringify(untouched) && g.soloCard === false, 'a changed card alone moves nothing on the plain night (Start on the card is as it ever was): a restart builds the same player', JSON.stringify(untouched));
     K.kitSolo(g); const worn = samOf(g);
     for (let i = 0; i < 30; i++) W.step(DT);
     g.restartEncounter(); const again = samOf(g);
     const want = { rifle: false, smoke: CAN_MIXES.smoke.smoke, stun: CAN_MIXES.smoke.stun, tint: [...SUITS.black.tint].map((x: number) => +x.toFixed(3)), tint2: [...TRIMS.amber.tint].map((x: number) => +x.toFixed(3)) };
     const is = (s: any) => s.rifle === want.rifle && s.slot !== 'rifle' && s.smoke === want.smoke && s.stun === want.stun && same(s.tint, want.tint) && same(s.tint2, want.tint2);
     F.verdict(is(worn) && is(again), 'kitSolo (the page on ?solo) puts your card on the player — the rifle left at home, the cans split, both colours — and a restart\'s fresh player wears it again', `worn ${JSON.stringify(worn)} · after a restart ${JSON.stringify(again)}`);
-    K.KIT_SOLO.on = false; free(); g.restartEncounter(); const off = samOf(g);
+    g.soloCard = false; free(); g.restartEncounter(); const off = samOf(g);
     F.verdict(JSON.stringify(off) === JSON.stringify(plain), 'as issued (and the switch down) the plain night\'s player is the one it always was', JSON.stringify(off));
-  } finally { K.KIT_SOLO.on = false; issued(); }
+  } finally { issued(); }
   return F.done();
 }
 

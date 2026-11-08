@@ -162,7 +162,7 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     settle(&mut g);
     // the harness's stand (standGame with `harness`): the solo night's card on a game stood plain
     // (the flag is the page's boot: host/profile.ts shippedBoot raises it, and the page's own plain night asks `kitSoloIf` by its address)
-    g.m.kit.kit_solo.stand = true;
+    g.stood.solo_stand = true;
     game::kit::kit_solo_stand(&mut g, None);
     let host = host_new(&mut g);
     if let Some(link) = o.link.as_ref() {

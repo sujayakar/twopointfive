@@ -166,7 +166,7 @@ pub fn under_weather(g: &mut crate::game::Game) {
     if !kind && crate::weather::weather_enabled(g) {
         if was_off {
             crate::weather::weather_set_enabled_2(g, false);
-        } else if g.m.hours.hour.dry {
+        } else if g.stood.dry {
             if hour_row(g).storm.is_none() {
                 let storm = crate::weather::weather_snapshot(g);
                 hour_row(g).storm = Some(storm);
@@ -239,9 +239,9 @@ pub fn apply_hour(g: &mut crate::game::Game, id_2: crate::hours::HourId) -> bool
 pub fn put_in(g: &mut crate::game::Game, def: &crate::hours::HourDef, from: Option<&crate::hours::HourState>) {
     let to_sun = to_sun_of(def);
     let kind = crate::weather::weather_kind(g).is_some();
-    let hour = g.m.hours.hour;
-    let sun_k = match from { Some(f) => f.sun_k, None => v3::clamp(hour.sun, 0.0, 1.0) };
-    let given = match from { Some(f) => f.given, None => hour.sun_given || hour.sun != 1.0 };
+    let stood = g.stood;
+    let sun_k = match from { Some(f) => f.sun_k, None => v3::clamp(stood.sun, 0.0, 1.0) };
+    let given = match from { Some(f) => f.given, None => stood.sun_given || stood.sun != 1.0 };
     let was_off = if kind { match from { Some(f) => f.was_off, None => false } } else { !crate::weather::weather_enabled(g) };
     let sky = HourStateSky { zenith: v3::copy(g.engine.settings.sky_zenith), horizon: v3::copy(g.engine.settings.sky_horizon) };
     let haze = g.engine.settings.haze_density;
