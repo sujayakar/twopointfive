@@ -38,7 +38,6 @@ import { TWEEN, type Tween } from './tween';
 import { FINDME, AUTOVIEW, setAutoView, ctrlTurn, behindYaw, behindStep, aimCarry, carryStep, CARRY_KEYS, type AimCarry } from './findme';
 import { AUTOCAM, AUTOCAM_STATS, autoCam, autoBegin, autoRest, autoSway, swayDrop, swayCoast, autoZoom, autoHand, autoFree, autoRead, autoFrame, turnGoal, turnEase, turnCoast, walkKey, type AutoCam } from './autocam';
 import { camKey } from './keymap';
-import { slotSetupTakes } from '../game/slotsetup';
 
 /** the start card's attract mode (game/attract.ts Attract) as the loop sees it */
 export interface AttractLike { readonly active: boolean; update(dt: number): Vec3 | null; }
@@ -173,7 +172,7 @@ function stepFrameIn(ctx: LoopCtx, dt: number): void {
   const carryAim = () => {
     const c = ctx.carry; if (!c) return;
     let used = frozen || !(FINDME.behind || (!!auto && AUTOVIEW.on)) || !viewFree() || !!input.clicked;   // (a button pressed NOW, not one held since before: a burst under way goes on to where it was going)
-    if (!used) for (const k of input.pressed) if (!CARRY_KEYS.has(k) && !slotSetupTakes(game, k)) { used = true; break; }   // (…nor by the digits of a gun's setup: game/slotsetup.ts)
+    if (!used) for (const k of input.pressed) if (!CARRY_KEYS.has(k) && !game.view.kit.takes.includes(k)) { used = true; break; }   // (…nor by the digits of a gun's setup, which do not read the cursor)
     const w = view.clientWidth, h = view.clientHeight;
     const aimOf = !(auto && AUTOVIEW.on) ? undefined : (sx: number, sy: number): Vec3 | null => { const u = sx / Math.max(1, w), v = sy / Math.max(1, h), ray = cam.ray(u, v), hit = game.engine.world.raycast(ray.ro, ray.rd, 200, undefined, PLAYER_ID); return hit ? v3.mad(ray.ro, ray.rd, hit.t) : cam.groundPoint(u, v, 0); };   // (the point the tick's aim will take for a cursor there: player.ts updateAim's own ray)
     const s = carryStep(c, input.mouseX, input.mouseY, used, game.player.char.pos, (x, y, z) => cam.project([x, y, z], w, h, Infinity, 1e-3), aimOf);

@@ -351,7 +351,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SLOTSETUP.on': 'TPS_SLOTSETUP=1',
   'SLOTSETUP.pop': 'TPS_SLOTSETUP=1',
   'SLOTSETUP.draw': 'TPS_SETUPDRAW=1 (acts only with the rule up: TPS_SLOTSETUP=1)',
-  'SLOTSETUP.mags': 'none: the box of what is in his hands reads it, nothing in the game does',
+  'SLOTSETUP.mags': 'none: nothing reads it',
   'GLASSREAL.drop': 'TPS_GLASSDROP=1 (acts only with the glass up: GLASSFX=on)',
   'GLASSREAL.place': 'TPS_GLASSPLACE=1 (acts only with the glass up: GLASSFX=on)',
   'AIMCOST.lamp': 'TPS_LAMPHIT=1',

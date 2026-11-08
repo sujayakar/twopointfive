@@ -38,8 +38,35 @@ function readBubblePlaceIn(I: In): BubblePlace { return I.word(BubblePlaceWords,
 export interface BubbleView { man: number | null; text: string; edge: string; age: number; dur: number; radio: boolean; tone: BubbleTone; place: BubblePlace; at: Vec3 }
 function readBubbleViewIn(I: In): BubbleView { return { man: I.bool() ? I.float64() : null, text: I.str(), edge: I.str(), age: I.float64(), dur: I.float64(), radio: I.bool(), tone: readBubbleToneIn(I), place: readBubblePlaceIn(I), at: [I.float64(), I.float64(), I.float64()] }; }
 export function readBubbleView(b: Uint8Array): BubbleView { const I = new In(b), r = readBubbleViewIn(I); if (I.p !== b.length) throw new Error(`the view: BubbleView is ${b.length} bytes and ${I.p} were read`); return r; }
-export interface TickView { mission: MissionView | null; radio: RadioRow[]; bubbles: BubbleView[]; me: number; place: string }
-function readTickViewIn(I: In): TickView { return { mission: I.bool() ? readMissionViewIn(I) : null, radio: I.list(() => readRadioRowIn(I)), bubbles: I.list(() => readBubbleViewIn(I)), me: I.float64(), place: I.str() }; }
+export type KitThing = 'hands' | 'pistol' | 'rifle' | 'smoke' | 'flash' | 'frag';
+const KitThingWords: readonly KitThing[] = ['hands', 'pistol', 'rifle', 'smoke', 'flash', 'frag'];
+function readKitThingIn(I: In): KitThing { return I.word(KitThingWords, 'KitThing'); }
+export interface KitSlot { thing: KitThing; key: string; name: string; count: number; absent: boolean; spent: boolean; up: boolean; taken: boolean }
+function readKitSlotIn(I: In): KitSlot { return { thing: readKitThingIn(I), key: I.str(), name: I.str(), count: I.float64(), absent: I.bool(), spent: I.bool(), up: I.bool(), taken: I.bool() }; }
+export function readKitSlot(b: Uint8Array): KitSlot { const I = new In(b), r = readKitSlotIn(I); if (I.p !== b.length) throw new Error(`the view: KitSlot is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface KitWord { text: string; on: boolean; out: boolean }
+function readKitWordIn(I: In): KitWord { return { text: I.str(), on: I.bool(), out: I.bool() }; }
+export function readKitWord(b: Uint8Array): KitWord { const I = new In(b), r = readKitWordIn(I); if (I.p !== b.length) throw new Error(`the view: KitWord is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface KitOcp { charge: number; ready: boolean }
+function readKitOcpIn(I: In): KitOcp { return { charge: I.float64(), ready: I.bool() }; }
+export function readKitOcp(b: Uint8Array): KitOcp { const I = new In(b), r = readKitOcpIn(I); if (I.p !== b.length) throw new Error(`the view: KitOcp is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface KitGun { mag: number; capacity: number; chamber: boolean; ready: number; dry: boolean; reloading: boolean; selector: string | null; load: KitWord | null; light: boolean; ocp: KitOcp | null; spares: number[]; loose: number | null }
+function readKitGunIn(I: In): KitGun { return { mag: I.float64(), capacity: I.float64(), chamber: I.bool(), ready: I.float64(), dry: I.bool(), reloading: I.bool(), selector: I.bool() ? I.str() : null, load: I.bool() ? readKitWordIn(I) : null, light: I.bool(), ocp: I.bool() ? readKitOcpIn(I) : null, spares: I.list(() => I.float64()), loose: I.bool() ? I.float64() : null }; }
+export function readKitGun(b: Uint8Array): KitGun { const I = new In(b), r = readKitGunIn(I); if (I.p !== b.length) throw new Error(`the view: KitGun is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface KitSetupRow { key: string; words: KitWord[] }
+function readKitSetupRowIn(I: In): KitSetupRow { return { key: I.str(), words: I.list(() => readKitWordIn(I)) }; }
+export function readKitSetupRow(b: Uint8Array): KitSetupRow { const I = new In(b), r = readKitSetupRowIn(I); if (I.p !== b.length) throw new Error(`the view: KitSetupRow is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface KitSetup { rows: KitSetupRow[]; back: string }
+function readKitSetupIn(I: In): KitSetup { return { rows: I.list(() => readKitSetupRowIn(I)), back: I.str() }; }
+export function readKitSetup(b: Uint8Array): KitSetup { const I = new In(b), r = readKitSetupIn(I); if (I.p !== b.length) throw new Error(`the view: KitSetup is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface KitBig { name: string; place: string; offered: boolean }
+function readKitBigIn(I: In): KitBig { return { name: I.str(), place: I.str(), offered: I.bool() }; }
+export function readKitBig(b: Uint8Array): KitBig { const I = new In(b), r = readKitBigIn(I); if (I.p !== b.length) throw new Error(`the view: KitBig is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface KitView { slots: KitSlot[]; gun: KitGun | null; setup: KitSetup | null; takes: string[]; big: KitBig | null; hitsLeft: number; hitsMax: number; down: boolean; god: boolean; nightVision: boolean | null; keyTag: string | null }
+function readKitViewIn(I: In): KitView { return { slots: I.list(() => readKitSlotIn(I)), gun: I.bool() ? readKitGunIn(I) : null, setup: I.bool() ? readKitSetupIn(I) : null, takes: I.list(() => I.str()), big: I.bool() ? readKitBigIn(I) : null, hitsLeft: I.float64(), hitsMax: I.float64(), down: I.bool(), god: I.bool(), nightVision: I.bool() ? I.bool() : null, keyTag: I.bool() ? I.str() : null }; }
+export function readKitView(b: Uint8Array): KitView { const I = new In(b), r = readKitViewIn(I); if (I.p !== b.length) throw new Error(`the view: KitView is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface TickView { mission: MissionView | null; radio: RadioRow[]; bubbles: BubbleView[]; me: number; place: string; kit: KitView }
+function readTickViewIn(I: In): TickView { return { mission: I.bool() ? readMissionViewIn(I) : null, radio: I.list(() => readRadioRowIn(I)), bubbles: I.list(() => readBubbleViewIn(I)), me: I.float64(), place: I.str(), kit: readKitViewIn(I) }; }
 export function readTickView(b: Uint8Array): TickView { const I = new In(b), r = readTickViewIn(I); if (I.p !== b.length) throw new Error(`the view: TickView is ${b.length} bytes and ${I.p} were read`); return r; }
 export type UnderKind = 'floor' | 'door' | 'none' | 'foe';
 const UnderKindWords: readonly UnderKind[] = ['floor', 'door', 'none', 'foe'];
