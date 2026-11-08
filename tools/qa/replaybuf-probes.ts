@@ -3,6 +3,8 @@
 //   content    the trace holds what a bug report needs: every man each sample, a route for a walking man, a round with where it went, a door that moved
 //   notes      a note put on the file survives the trip through JSON
 //   fight      a room fight's teammate's row names the man his gun is on (the room fight's own record of him, read only)
+//   tape       a room clear taped over a checkpoint loaded and a restart to the start, both from outside a step, is walked again to the digest; a tape that ended, and one of
+//              another version, are refused in words. ANEW_BREAK=1 (the restart is not counted) and LOADROW_BREAK=1 (the load's slot is not told) must fail
 //   crash      the page's own save on an error (ui/replaykey.ts) makes one file a minute and three a page load, in a browser that keeps no shelf (where the file is sent, never a download);
 //              the error itself is a line in the ring at its moment of PLAY, in every file made while the ring holds it
 // --write: the content probe's file is written there (what the viewer page is developed against); --scenario / --level: that file is of a scenario on a level file
@@ -111,6 +113,24 @@ console.log('\n=== replay buffer ===');
   if (O && foe) { const was = O.tgt; O.tgt = foe; for (let i = 0; i < 6; i++) buf.tick(g, 1 / 60, W.cam); O.tgt = was;   // (set between two steps and put back: the room fight never sees it)
     const D = F.decode(buf.file(g, 'probe', { url: '?roomclear&squad4', fp: levelFingerprint(g) })), ci = D.file.cast.findIndex((c: any) => c.name === mate.callsign), cf = D.file.cast.findIndex((c: any) => c.name === foe.callsign), last = D.men[D.men.length - 1][ci];
     check(ci >= 0 && cf >= 0 && last?.do?.foe === cf, `fight: his row says whom the gun is on (${last?.do ? F.doWords(last.do, D.file.cast) : 'no row'})`); } }
+
+// ---- tape: what reached the game from OUTSIDE a step (a checkpoint of this run loaded from a card, a restart that puts the game back to its start, clock, die and
+// all, autosave off) is a row each, and the walk of them is the run again
+{ const SS = await import(`${ROOT}/src/game/savestate.ts`), { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`), { rerun } = await import('./rerun.ts'), Q = '?roomclear&squad4&freshstart=0&seed=7', was = SS.SAVETIMELINE.on;
+  try {
+    Math.random = mulberry32(0xa1a); const W: any = await standUp({ seed: 7, search: Q }), g = W.game; startFromQuery(g, Q); SS.SAVETIMELINE.on = true; g.godMode = true; g.rustHost.keepStart();
+    const buf = new ReplayBuffer(); buf.tape.born(g); g.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(g, dt, cmd); else buf.tick(g, dt, W.cam); };
+    let f = 0; const go = (n: number, pre?: () => void) => { for (let i = 0; i < n; i++, f++) { const I = W.input; I.keys.clear(); I.buttons = 0; I.mouseX = 800; I.mouseY = 520; if (f % 240 < 150) I.keys.add('KeyW'); pre?.(); W.step(1 / 60); } };
+    go(200); go(1, () => W.input.pressed.add('F5')); go(99); const key = (g.saves.timeline() as any[]).find(x => x.mem)?.key, t0 = g.time, why = key ? g.saves.load(g, key) : 'no save in memory', loaded = g.time;
+    if (process.env.LOADROW_BREAK === '1') g.saves.loadedKey = null;
+    go(120); g.rustHost.toStart(); if (process.env.ANEW_BREAK === '1') g.saves.stats.restarts--; const back = g.time; go(100); g.saves.enabled = false; go(140); g.replayTap = null;
+    const N = f, dEnd = hashDigest(digestGame(g, true)), file = JSON.parse(JSON.stringify(buf.file(g, 'probe', { url: Q, fp: levelFingerprint(g) }))), rows = (file.rerun?.x ?? []) as any[], x = rows.filter(q => q[1] === 'restart' || q[1] === 'load').map(q => q.join(':')).join(' ');
+    check(why === null && loaded < t0 && back < 0.1 && file.rerun?.ticks === N && x === `300:load:${key} 420:restart:start` && F.lastRun(file) > 6, `tape: a checkpoint loaded and a restart to the start are a row each, the tape alive (clock ${t0.toFixed(2)} to ${loaded.toFixed(2)}, then ${back.toFixed(2)}; tape: ${file.rerun?.dead || 'alive'}; rows ${x || 'none'}${why ? `; load: ${why}` : ''})`);
+    const R = await rerun(file, { toN: N }), same = !!R.W && hashDigest(digestGame(R.W.game, true)) === dEnd, off = (R.W?.game as any)?.saves?.enabled === false;
+    check(!R.refuse && !!R.report && R.report.compared > 100 && !R.report.drift && same && off, `tape: its walk is the run again, to the digest at step ${N}, its autosave as taped${R.refuse ? ` — REFUSED: ${R.refuse}` : ` (${R.report?.compared} trace samples, worst ${R.report?.worst?.metres?.toFixed(3)} m, drift ${R.report?.drift ? 'YES' : 'none'}, digest ${same ? 'equal' : 'DIFFERS'})`}`);
+    const other = (rr: unknown) => rerun({ ...file, rerun: rr } as any), ended = await other({ dead: 'a scenario was started or quit from a menu', tick: 12 }), v1 = await other({ ...file.rerun, v: 1 });
+    check(file.rerun?.v === F.TAPE_VERSION && F.tapeWhy(file) === '' && /from a menu \(step 12\)/.test(ended.refuse) && /a different version of the game/.test(v1.refuse), `tape: one that ended and one of another version are refused in words (${ended.refuse.slice(0, 110)}… · ${v1.refuse.slice(0, 90)}…)`);
+  } finally { SS.SAVETIMELINE.on = was; } }
 
 // ---- crash: an error that repeats makes ONE file a minute and three a page load, in a browser that keeps no shelf (bun has no IndexedDB: the shelf's own branch
 // stamps through the same line of ReplayKey.put). With no shelf the file is SENT to the build's backend, never downloaded: the probe stands in for the backend ----

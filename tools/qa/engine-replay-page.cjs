@@ -1,13 +1,13 @@
 // THE ENGINE REPLAY ON THE REAL PAGE (src/replay/engineplay.ts): headless Chromium on the software WebGPU adapter (tools/qa/page-look.cjs's recipe), muted.
 //   PORT=5243 node tools/qa/engine-replay-page.cjs [outDir]        (a dev server on that port: PORT=5243 bun run tools/serve.ts)
 //   record  a four-man room clear played for a quarter of a minute by scripted input (walk, rounds, a can, an order), saved to this browser's shelf as F7 would
-//   play    /?playtape=<its id>: the page is sent to the tape's own query, stands, and walks the tape to its end — every man where the trace had him, no sensor
-//           read the tape did not make; the sounds the mixer was asked for while it played are the recording's own, name for name in order
+//   play    /?playtape=<its id>: the page is sent to the tape's own query, stands, and walks the tape to its end — every man where the trace had him;
+//           the sounds the mixer was asked for while it played are the recording's own, name for name in order
 //   note    a note typed there is on the shelf row, and the 2D viewer (replay.html) lists it
 //   file    the same replay opened as a FILE (the shelf's copy served back): plays the same
 //   cam     the picture's camera taken off the player's view (a drag, a right drag, the wheel, W A S D, `__tape.cam`) with the tape standing and playing: the
 //           picture is the viewer's, the run is still the recording's; C / the bar's 'Player view' gives it back; a seek backwards (a page load) keeps it
-//   refuse  a replay with no run tape says so and boots the game as itself
+//   refuse  a replay with no run tape, one of another version, one that ended: each says so and boots the game as itself
 //   fog     the bar's 'Fog' (F, `__tape.fog`) takes the fog of war off the picture for each draw and hands the step's lists back; Ctrl + the mouse turns the
 //           view; a seek back keeps the fog off; the run drawn so is still the recording's
 //   nv      the bar's 'NV' (V, `__tape.nv`) puts the night vision tube on or off the PICTURE (the run's own goggles as played until it is pressed; pressed back
@@ -19,8 +19,8 @@
 //   between under 1× the picture is drawn BETWEEN the tape's last two steps (host/tween.ts): at ¼× a step lasts four frames and every frame is further along,
 //           the men the lifted fog shows too; paused it rests on its step; a script's steps, 1× and faster draw the step itself; played so and then to
 //           its end the run is still the recording's
-//   turn    with the viewer's 'Turn direction' row flipped off its start as built (Options > Game; kept in this browser, read at load; the page under
-//           `findtuned=0`, since the page's own start IS the flipped way) the picture turns the other way under Ctrl —
+//   turn    with the viewer's 'Turn direction' row flipped off the page's own start (Options > Game; kept in this browser, read at load;
+//           host/findme.ts FINDME_TUNED) the picture turns the other way under Ctrl —
 //           the mouse moved, a Ctrl drag, a Ctrl + Shift drag — and a right drag keeps its own way (engineplay.ts ctrlTurn)
 //   open    the page with no `paused`, as a person opens it: it stands on the tape's first step, the men drawn, and plays on as recorded
 //   sent    opened against a stand-in backend on this machine (cloud/test/standin.ts: `npm ci` in cloud/ first; CLOUD_PORT, else PORT + 1000): a replay
@@ -166,9 +166,9 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     let downloadsAsked = 0; page.on('download', () => downloadsAsked++);
     const R = await walk(page); await shot(page, 'engine-replay-end'); if (R.probe && OUT) fs.writeFileSync(path.join(OUT, 'probe-play.json'), JSON.stringify(R.probe));
     const s = R.state || {}, same = rec?.heard ? JSON.stringify(rec.heard) === JSON.stringify(R.heard) : null, at = rec?.pos ? Math.hypot(R.pos[0] - rec.pos[0], R.pos[2] - rec.pos[2]) : null;
-    const detail = `${s.f} of ${s.ticks} steps · held against ${s.compared} samples · worst ${s.worst ? s.worst.metres.toFixed(3) + ' m (' + s.worst.who + ', step ' + s.worst.f + ')' : '—'} · parted ${s.drift ? 'at step ' + s.drift.f + ' (' + s.drift.who + ' ' + (+s.drift.metres).toFixed(2) + ' m)' : 'never'} · ${s.unjournaled} reads the tape never made · level ${s.fp} · sounds ${R.heard?.length}${same === null ? '' : same ? ' = the recording’s, in order' : ' ≠ the recording’s ' + rec.heard.length + (() => { const a = rec.heard, b = R.heard; let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++; return ` (first apart at ${i}: recorded … ${a.slice(Math.max(0, i - 2), i + 8).join(' ')} · played … ${b.slice(Math.max(0, i - 2), i + 8).join(' ')})`; })()}${at === null ? '' : ' · Sam ends ' + at.toFixed(3) + ' m from where the recording left him'} · bar "${R.bar}" · page ${R.search}${R.why ? ' · ' + R.why : ''}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`;
+    const detail = `${s.f} of ${s.ticks} steps · held against ${s.compared} samples · worst ${s.worst ? s.worst.metres.toFixed(3) + ' m (' + s.worst.who + ', step ' + s.worst.f + ')' : '—'} · parted ${s.drift ? 'at step ' + s.drift.f + ' (' + s.drift.who + ' ' + (+s.drift.metres).toFixed(2) + ' m)' : 'never'} · level ${s.fp} · sounds ${R.heard?.length}${same === null ? '' : same ? ' = the recording’s, in order' : ' ≠ the recording’s ' + rec.heard.length + (() => { const a = rec.heard, b = R.heard; let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++; return ` (first apart at ${i}: recorded … ${a.slice(Math.max(0, i - 2), i + 8).join(' ')} · played … ${b.slice(Math.max(0, i - 2), i + 8).join(' ')})`; })()}${at === null ? '' : ' · Sam ends ' + at.toFixed(3) + ' m from where the recording left him'} · bar "${R.bar}" · page ${R.search}${R.why ? ' · ' + R.why : ''}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`;
     if (FILE) console.log(`- REPORT — the file walked in the engine\n    ${detail}`);
-    else line(s.ended && s.f === s.ticks && s.compared > 100 && !s.drift && s.unjournaled === 0 && same === true && at < 0.01 && /as recorded/.test(R.bar || '') && !errors.length, 'the replay plays to its end in the engine as recorded', detail);
+    else line(s.ended && s.f === s.ticks && s.compared > 100 && !s.drift && same === true && at < 0.01 && /as recorded/.test(R.bar || '') && !errors.length, 'the replay plays to its end in the engine as recorded', detail);
     if (FILE && (errors.length || !s.ended)) failed = true;
 
     // ── note
@@ -200,7 +200,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     await ctx.route('**/qa-tape.json', r => r.fulfill({ contentType: 'application/json', body: fileText }));
     const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=qa-tape.json`);
     const R = await walk(page), s = R.state || {};
-    line(s.ended && !s.drift && s.unjournaled === 0 && s.id === id && s.notes >= (want('note') ? 1 : 0) && !errors.length, 'the same replay opened as a file plays the same and is found on the shelf', `${s.f} of ${s.ticks} · parted ${s.drift ? 'at ' + s.drift.f : 'never'} · shelf row ${s.id} (want ${id}) · its notes ${s.notes}${R.why ? ' · ' + R.why : ''}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+    line(s.ended && !s.drift && s.id === id && s.notes >= (want('note') ? 1 : 0) && !errors.length, 'the same replay opened as a file plays the same and is found on the shelf', `${s.f} of ${s.ticks} · parted ${s.drift ? 'at ' + s.drift.f : 'never'} · shelf row ${s.id} (want ${id}) · its notes ${s.notes}${R.why ? ' · ' + R.why : ''}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
     await page.close();
   }
 
@@ -287,28 +287,30 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
       && A.follow.free && near(A.follow.yaw, 1.1, 1e-3) && near(A.follow.dist, 30, 1e-3) && A.follow.withTape && !A.button.free && !A.button.button;
     const keptOk = K.free === true && K.f >= 60 && K.view && near(K.view.yaw, -0.8, 1e-9) && near(K.view.dist, 26, 1e-9) && near(K.view.look[0], A.set?.look?.[0], 1e-9) && /at=60/.test(K.search || '');
     // (FILE=…: a tape of another build may part — its drift is reported above by the play section, not judged; the picture obeying the viewer still is)
-    const runOk = s.ended && s.f === s.ticks && (FILE || (!s.drift && s.unjournaled === 0)) && B.off === 0 && !B.fatal && (same === null || same === true) && (at === null || at < 0.01);
+    const runOk = s.ended && s.f === s.ticks && (FILE || (!s.drift)) && B.off === 0 && !B.fatal && (same === null || same === true) && (at === null || at < 0.01);
     line(hands && !errors.length, 'the picture’s camera comes off the player’s view by drag, right drag, wheel and W A S D while the tape stands, and goes back on C or the bar’s button', A.why ? A.why : `drag ${JSON.stringify(A.drag)} · turn ${JSON.stringify(A.turn)} · slide ${JSON.stringify(A.fly)} · plain click ${JSON.stringify(A.click)} · C ${JSON.stringify(A.back)} · turned only, it follows ${JSON.stringify(A.follow)} · button ${JSON.stringify(A.button)}`);
-    line(keptOk && runOk && !errors.length, 'a seek back keeps the camera where it was put, and the run under a thrown camera is the recording’s', B.why ? B.why : `after the page load: free ${K.free} at step ${K.f}, view ${JSON.stringify(K.view)} (set ${JSON.stringify(A.set)}) · ${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at step ' + s.drift.f + ' (' + s.drift.who + ' ' + (+s.drift.metres).toFixed(2) + ' m)' : 'never'} · ${s.unjournaled} reads the tape never made · picture off the viewer’s pose on ${B.off} frames · sounds from step 60 ${B.heard?.length}${same === null ? '' : same ? ' = the recording’s tail, in order' : ' ≠ the recording’s tail'}${at === null ? '' : ' · Sam ends ' + at.toFixed(3) + ' m from where the recording left him'} · bar "${B.bar}"${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+    line(keptOk && runOk && !errors.length, 'a seek back keeps the camera where it was put, and the run under a thrown camera is the recording’s', B.why ? B.why : `after the page load: free ${K.free} at step ${K.f}, view ${JSON.stringify(K.view)} (set ${JSON.stringify(A.set)}) · ${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at step ' + s.drift.f + ' (' + s.drift.who + ' ' + (+s.drift.metres).toFixed(2) + ' m)' : 'never'} · picture off the viewer’s pose on ${B.off} frames · sounds from step 60 ${B.heard?.length}${same === null ? '' : same ? ' = the recording’s tail, in order' : ' ≠ the recording’s tail'}${at === null ? '' : ' · Sam ends ' + at.toFixed(3) + ' m from where the recording left him'} · bar "${B.bar}"${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
     await page.close();
   }
 
   // ── fog: the bar's 'Fog' (F) takes the fog of war off the PICTURE — everybody drawn, nobody hidden to the HUD, no fog pass — for each draw only (Game.fogLift /
   //    fogBack): between draws the game is as the step left it and the run is still the recording's. Ctrl + the mouse turns the view as it does in play (no tilt).
   if (want('fog')) {
-    const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${id}&findtuned=0`);   // (`findtuned=0`: the Turn direction row as BUILT — the page's own start is the other way, host/findme.ts FINDME_TUNED — so Ctrl's turn here is the sign it always had)
+    const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${id}`);   // (Ctrl's turn here goes the way the page starts it: host/findme.ts FINDME_TUNED, -1)
     const prep = () => { const e = window.__engine, g = window.__game, fw = g.fogOfWar, R = window.__seen = [], render = e.render.bind(e);
-      window.__thin = () => { const a = e.world.dynamics, b = g.dynBoxes; if (a === b) return 0; if (a.length !== b.length) return -1; let n = 0;   // (how the list a draw is handed differs from the step's own: 0 the same boxes · n > 0 the same list with n laser lines / tracers re-made for the picture's pixel, thinline.ts thinFit: width and light only · -1 another list)
+      // (`__own`: the list the step left, as the picture's change of it finds it — Game.fogLift, the one that changes it and gives it back)
+      const lift0 = g.fogLift.bind(g); g.fogLift = (...x) => { if (!g.fogHeld) window.__own = e.world.dynamics; return lift0(...x); };
+      window.__thin = () => { const a = e.world.dynamics, b = window.__own; if (a === b) return 0; if (a.length !== b.length) return -1; let n = 0;   // (how the list a draw is handed differs from the step's own: 0 the same boxes · n > 0 the same list with n laser lines / tracers re-made for the picture's pixel, thinline.ts thinFit: width and light only · -1 another list)
         for (let i = 0; i < a.length; i++) { const x = a[i], y = b[i]; if (x === y) continue; for (const k in x) if (k !== 'h' && k !== 'dh' && k !== 'emissive' && x[k] !== y[k]) return -1; n++; } return n; };
       const px = () => +(g.viewPx(window.__cam, document.getElementById('view')) / g.mPerPx).toFixed(3);
-      e.render = (...a) => { R.push({ on: fw.frame.on, bared: fw.bared, hid: g.guards.filter(x => fw.hidden(x)).length, n: e.world.dynamics.length, own: e.world.dynamics === g.dynBoxes, thin: window.__thin(), px: px() }); return render(...a); }; };
+      e.render = (...a) => { R.push({ on: fw.frame.on, bared: fw.bared, hid: g.guards.filter(x => fw.hidden(x)).length, n: e.world.dynamics.length, own: e.world.dynamics === window.__own, thin: window.__thin(), px: px() }); return render(...a); }; };
     const A = await page.evaluate(async (prepSrc) => {
       const T = window.__tape, e = window.__engine, g = window.__game, cam = window.__cam, cv = document.getElementById('view'); if (!T || typeof T.fog !== 'function') return { why: 'no __tape.fog on the page' };
       (0, eval)('(' + prepSrc + ')')(); const R = window.__seen, fw = g.fogOfWar;
       const tick = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
       const drawn = async () => { T.run(0, true); await e.device.queue.onSubmittedWorkDone(); await tick(); return R[R.length - 1]; };
       const btn = () => [...document.querySelectorAll('#tapebar button')].find(b => b.textContent === 'Fog'), look = () => { const b = btn(); return { shown: !!b && getComputedStyle(b).display !== 'none', off: !!b && b.classList.contains('off'), title: b?.title }; };
-      const now = () => ({ on: fw.frame.on, bared: fw.bared, hid: g.guards.filter(x => fw.hidden(x)).length, n: e.world.dynamics.length, own: e.world.dynamics === g.dynBoxes });
+      const now = () => ({ on: fw.frame.on, bared: fw.bared, hid: g.guards.filter(x => fw.hidden(x)).length, n: e.world.dynamics.length, own: e.world.dynamics === window.__own });
       const out = {}; T.run(180, true);
       out.as = { fog: T.state.fog, active: fw.active, viewer: fw.viewer, btn: look(), draw: await drawn(), after: now() };
       window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyF', bubbles: true, cancelable: true }));
@@ -323,7 +325,8 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
       pe('pointerdown', cx, cy); pe('pointermove', cx + 100, cy + 40); pe('pointerup', cx + 100, cy + 40, { buttons: 0 });
       cv.dispatchEvent(new MouseEvent('click', { clientX: cx + 100, clientY: cy + 40, button: 0, ctrlKey: true, bubbles: true, cancelable: true }));
       await drawn(); const p2 = { yaw: cam.yaw, pitch: cam.pitch }, n = document.getElementById('tapenote');
-      out.ctrl = { move: +(p1.yaw - p0.yaw).toFixed(4), tilt: +(p1.pitch - p0.pitch).toFixed(4), free: p1.free, plain: +(p1b.yaw - p1.yaw).toFixed(4), drag: +(p2.yaw - p1b.yaw).toFixed(4), dragTilt: +(p2.pitch - p1.pitch).toFixed(4), note: !!n && !n.hidden, f: T.state.f };
+      { const y0 = cam.yaw, o = { ctrlKey: false, button: 2, buttons: 2 }; pe('pointerdown', cx, cy, o); pe('pointermove', cx + 50, cy, o); pe('pointerup', cx + 50, cy, { ...o, buttons: 0 }); await drawn(); out.right = +(cam.yaw - y0).toFixed(4); }   // (a right drag's own way, against the row: `turn` has the row round the other way)
+      out.ctrl = { right: out.right,  move: +(p1.yaw - p0.yaw).toFixed(4), tilt: +(p1.pitch - p0.pitch).toFixed(4), free: p1.free, plain: +(p1b.yaw - p1.yaw).toFixed(4), drag: +(p2.yaw - p1b.yaw).toFixed(4), dragTilt: +(p2.pitch - p1.pitch).toFixed(4), note: !!n && !n.hidden, f: T.state.f };
       return out; }, prep.toString());
     let B = { why: 'the first half did not run' };
     if (!A.why) {
@@ -345,7 +348,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
           const d = R[R.length - 1]; if (!d) { bad++; continue; }
           const hid = g.guards.filter(x => fw.hidden(x)).length; hidMax = Math.max(hidMax, hid);   // (asked between two steps: the run's own answer)
           if (lift && fw.active) { lifts++; if (d.on || !d.bared || d.hid || d.own) bad++; if (d.n > e.world.dynamics.length) longer++; } else if (d.bared || !(d.own || d.thin > 0)) bad++;   // (as played: the step's own list, or that list with its thin lines re-fit to this picture)
-          if (fw.bared || e.world.dynamics !== g.dynBoxes || fw.frame.on !== fw.active) bad++; }
+          if (fw.bared || e.world.dynamics !== window.__own || fw.frame.on !== fw.active) bad++; }
         return { kept, state: T.state, bad, lifts, hidMax, longer, draws: R.length, pos: [...g.player.char.pos].map(v => +v.toFixed(3)), fatal: document.getElementById('fatal')?.textContent || '' }; }, prep.toString());
     }
     const L = A.lifted || {}, s = B.state || {}, near = (a, b, eps) => a != null && b != null && Math.abs(a - b) <= eps;
@@ -353,12 +356,12 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     const liftOk = asOk && L.fog === false && L.btn.off && !L.draw.on && L.draw.bared && A.as.after.hid > 0 && L.draw.hid === 0 && !L.draw.own && L.draw.n > A.as.draw.n
       && L.after.on && !L.after.bared && L.after.own && L.after.hid === A.as.after.hid && L.after.n === A.as.after.n && L.f === 180
       && A.back.fog === true && !A.back.btn.off && A.back.draw.on && !A.back.draw.bared && A.api.off === false && A.api.fog === false;
-    const ctrlOk = !A.why && near(A.ctrl.move, 0.3, 1e-3) && A.ctrl.tilt === 0 && A.ctrl.free === true && A.ctrl.plain === 0 && near(A.ctrl.drag, 0.6, 1e-3) && A.ctrl.dragTilt === 0 && !A.ctrl.note && A.ctrl.f === 180;
+    const ctrlOk = !A.why && near(A.ctrl.move, -0.3, 1e-3) && A.ctrl.tilt === 0 && A.ctrl.free === true && A.ctrl.plain === 0 && near(A.ctrl.drag, -0.6, 1e-3) && A.ctrl.dragTilt === 0 && !A.ctrl.note && A.ctrl.f === 180 && near(A.ctrl.right, 0.3, 1e-3);
     const at = rec?.pos && B.pos ? Math.hypot(B.pos[0] - rec.pos[0], B.pos[2] - rec.pos[2]) : null;
-    const runOk = !B.why && B.kept.fog === false && B.kept.off === true && s.ended && s.f === s.ticks && (FILE || (!s.drift && s.unjournaled === 0)) && B.bad === 0 && B.lifts > 0 && B.hidMax > 0 && B.longer > 0 && !B.fatal && (at === null || at < 0.01);
+    const runOk = !B.why && B.kept.fog === false && B.kept.off === true && s.ended && s.f === s.ticks && (FILE || (!s.drift)) && B.bad === 0 && B.lifts > 0 && B.hidMax > 0 && B.longer > 0 && !B.fatal && (at === null || at < 0.01);
     line(liftOk && !errors.length, 'the bar’s Fog (F) takes the fog of war off the picture and its HUD for the draw, and the game between draws is as the step left it', A.why ? A.why : `as played ${JSON.stringify(A.as)} · lifted ${JSON.stringify(L)} · the button again ${JSON.stringify(A.back)} · __tape.fog(false) ${JSON.stringify(A.api)}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
-    line(ctrlOk && !errors.length, 'Ctrl + the mouse turns the view, moved or dragged, at play’s rate and with no tilt; the tape stands', A.why ? A.why : JSON.stringify(A.ctrl));
-    line(runOk && !errors.length, 'a seek back keeps the fog off, and the run drawn without the fog is the recording’s', B.why ? B.why : `after the page load: fog ${B.kept.fog}, button struck ${B.kept.off} · ${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at step ' + s.drift.f + ' (' + s.drift.who + ' ' + (+s.drift.metres).toFixed(2) + ' m)' : 'never'} · ${s.unjournaled} reads the tape never made · ${B.draws} draws, ${B.lifts} without the fog, up to ${B.hidMax} men hidden under it, the lifted list longer on ${B.longer} · wrong on ${B.bad}${at === null ? '' : ' · Sam ends ' + at.toFixed(3) + ' m from where the recording left him'}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+    line(ctrlOk && !errors.length, 'Ctrl + the mouse turns the view, moved or dragged, at play’s rate, with no tilt and the way the page’s own row has it, a right drag its own way; the tape stands', A.why ? A.why : JSON.stringify(A.ctrl));
+    line(runOk && !errors.length, 'a seek back keeps the fog off, and the run drawn without the fog is the recording’s', B.why ? B.why : `after the page load: fog ${B.kept.fog}, button struck ${B.kept.off} · ${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at step ' + s.drift.f + ' (' + s.drift.who + ' ' + (+s.drift.metres).toFixed(2) + ' m)' : 'never'} · ${B.draws} draws, ${B.lifts} without the fog, up to ${B.hidMax} men hidden under it, the lifted list longer on ${B.longer} · wrong on ${B.bad}${at === null ? '' : ' · Sam ends ' + at.toFixed(3) + ' m from where the recording left him'}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
     await page.close();
   }
 
@@ -367,10 +370,11 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
   if (want('nv')) {
     const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${id}`);
     const prep = () => { const e = window.__engine, g = window.__game, R = window.__seen = [], render = e.render.bind(e);
-      window.__thin = () => { const a = e.world.dynamics, b = g.dynBoxes; if (a === b) return 0; if (a.length !== b.length) return -1; let n = 0;   // (how the list a draw is handed differs from the step's own: 0 the same boxes · n > 0 the same list with n laser lines / tracers re-made for the picture's pixel, thinline.ts thinFit: width and light only · -1 another list)
+      const lift0 = g.fogLift.bind(g); g.fogLift = (...x) => { if (!g.fogHeld) window.__own = e.world.dynamics; return lift0(...x); };
+      window.__thin = () => { const a = e.world.dynamics, b = window.__own; if (a === b) return 0; if (a.length !== b.length) return -1; let n = 0;   // (how the list a draw is handed differs from the step's own: 0 the same boxes · n > 0 the same list with n laser lines / tracers re-made for the picture's pixel, thinline.ts thinFit: width and light only · -1 another list)
         for (let i = 0; i < a.length; i++) { const x = a[i], y = b[i]; if (x === y) continue; for (const k in x) if (k !== 'h' && k !== 'dh' && k !== 'emissive' && x[k] !== y[k]) return -1; n++; } return n; };
       const px = () => +(g.viewPx(window.__cam, document.getElementById('view')) / g.mPerPx).toFixed(3);
-      e.render = (...a) => { R.push({ k: +e.settings.nvAmount.toFixed(3), n: e.world.dynamics.length, own: e.world.dynamics === g.dynBoxes, thin: window.__thin(), px: px() }); return render(...a); }; };
+      e.render = (...a) => { R.push({ k: +e.settings.nvAmount.toFixed(3), n: e.world.dynamics.length, own: e.world.dynamics === window.__own, thin: window.__thin(), px: px() }); return render(...a); }; };
     const A = await page.evaluate(async (prepSrc) => {
       const T = window.__tape, e = window.__engine, g = window.__game; if (!T || typeof T.nv !== 'function') return { why: 'no __tape.nv on the page' };
       (0, eval)('(' + prepSrc + ')')(); const R = window.__seen, pl = g.player;
@@ -405,8 +409,8 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
           s = T.run(40, true); await e.device.queue.onSubmittedWorkDone(); await tick();
           const d = R[R.length - 1]; if (!d) { bad++; continue; }
           if (pl.nv || pl.nvAmount > 0.01) wrote++;   // (the recording's Sam never puts his goggles down: any tube on him is the viewer's hand)
-          if (d.n > g.dynBoxes.length) more++; if (d.n < g.dynBoxes.length) fewer++;
-          if (e.world.dynamics !== g.dynBoxes) bad++; }
+          if (d.n > window.__own.length) more++; if (d.n < window.__own.length) fewer++;
+          if (e.world.dynamics !== window.__own) bad++; }
         return { kept, state: T.state, bad, more, fewer, wrote, draws: R.length, pos: [...g.player.char.pos].map(v => +v.toFixed(3)), fatal: document.getElementById('fatal')?.textContent || '' }; }, prep.toString());
     }
     const s = B.state || {}, at = rec?.pos && B.pos ? Math.hypot(B.pos[0] - rec.pos[0], B.pos[2] - rec.pos[2]) : null;
@@ -414,9 +418,9 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     const onOk = asOk && !A.as.run && A.on.nv === true && A.on.tube === true && A.on.btn.on && A.on.draw.k > 0.95 && A.on.run === false && A.on.runK === A.as.runK
       && A.back.nv === null && A.back.tube === false && !A.back.btn.on && A.back.draw.k === A.back.runK && (A.back.draw.own || A.back.draw.thin > 0)
       && A.api.off === false && A.api.held === false && A.api.asPlayed === false && A.api.nv === null && A.api.on === true && A.api.kept === true;
-    const runOk = !B.why && B.kept.nv === true && B.kept.tube === true && B.kept.k === 1 && B.kept.on === true && s.ended && s.f === s.ticks && (FILE || (!s.drift && s.unjournaled === 0)) && B.bad === 0 && (FILE || (B.wrote === 0 && B.fewer === 0)) && !B.fatal && (at === null || at < 0.01);
+    const runOk = !B.why && B.kept.nv === true && B.kept.tube === true && B.kept.k === 1 && B.kept.on === true && s.ended && s.f === s.ticks && (FILE || (!s.drift)) && B.bad === 0 && (FILE || (B.wrote === 0 && B.fewer === 0)) && !B.fatal && (at === null || at < 0.01);
     line((FILE ? asOk : onOk) && !errors.length, 'the bar’s NV (V) puts the tube on the picture and takes it off, as played until pressed, and the run’s own goggles are not written', A.why ? A.why : `as played ${JSON.stringify(A.as)} · V ${JSON.stringify(A.on)} · the button again ${JSON.stringify(A.back)} · __tape.nv ${JSON.stringify(A.api)}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
-    line(runOk && !errors.length, 'a seek back keeps the viewer’s tube, and the run drawn with it on, off and as played is the recording’s', B.why ? B.why : `after the page load: nv ${B.kept.nv}, tube ${B.kept.tube} at ${B.kept.k}, button lit ${B.kept.on} · ${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at step ' + s.drift.f + ' (' + s.drift.who + ' ' + (+s.drift.metres).toFixed(2) + ' m)' : 'never'} · ${s.unjournaled} reads the tape never made · ${B.draws} draws, infrared lines added on ${B.more} · the player’s goggles written on ${B.wrote} · wrong on ${B.bad}${at === null ? '' : ' · Sam ends ' + at.toFixed(3) + ' m from where the recording left him'}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+    line(runOk && !errors.length, 'a seek back keeps the viewer’s tube, and the run drawn with it on, off and as played is the recording’s', B.why ? B.why : `after the page load: nv ${B.kept.nv}, tube ${B.kept.tube} at ${B.kept.k}, button lit ${B.kept.on} · ${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at step ' + s.drift.f + ' (' + s.drift.who + ' ' + (+s.drift.metres).toFixed(2) + ' m)' : 'never'} · ${B.draws} draws, infrared lines added on ${B.more} · the player’s goggles written on ${B.wrote} · wrong on ${B.bad}${at === null ? '' : ' · Sam ends ' + at.toFixed(3) + ' m from where the recording left him'}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
     await page.close();
   }
 
@@ -478,10 +482,10 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     const lineOk = !M.why && (M.line.rounds + M.line.orders === 0 || M.line.ink > 0) && M.line.ghost && M.line.gone
       && M.scrub.held.f === M.scrub.from && !M.scrub.held.seeking && M.scrub.held.ghost && M.scrub.asked && (FILE || Math.abs(M.scrub.share - M.scrub.to) < 0.02) && !M.scrub.ghost && pale(M.after);
     const at = rec?.pos && M.pos ? Math.hypot(M.pos[0] - rec.pos[0], M.pos[2] - rec.pos[2]) : null;
-    const runOk = s.ended && s.f === s.ticks && (FILE || (!s.drift && s.unjournaled === 0)) && (at === null || at < 0.01);
+    const runOk = s.ended && s.f === s.ticks && (FILE || (!s.drift)) && (at === null || at < 0.01);
     line(mapOk && !errors.length, 'a map of the game as it plays sits in the corner, opens large on a click or M, and a click on the large one sends the camera there', M.why ? M.why : `corner ${JSON.stringify(M.mini)} · large ${JSON.stringify(M.big)} · sent ${JSON.stringify(M.sent)} · keys ${JSON.stringify(M.keys)}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
     line(aloneOk, 'nothing of the viewer is see-through over the game, and no room is kept for sound lanes that are not on the page', M.why ? M.why : JSON.stringify(A));
-    line(lineOk && runOk && !errors.length, 'the bar’s line carries the trace’s marks and is dragged to scrub, and the run scrubbed is still the recording’s', M.why ? M.why : `line ${JSON.stringify(M.line)} · scrub ${JSON.stringify(M.scrub)} · the player’s dot after ${JSON.stringify(M.after)} · ${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at ' + s.drift.f : 'never'} · unjournaled ${s.unjournaled}${at === null ? '' : ` · ended ${at.toFixed(3)} m from the recording’s end`}`);
+    line(lineOk && runOk && !errors.length, 'the bar’s line carries the trace’s marks and is dragged to scrub, and the run scrubbed is still the recording’s', M.why ? M.why : `line ${JSON.stringify(M.line)} · scrub ${JSON.stringify(M.scrub)} · the player’s dot after ${JSON.stringify(M.after)} · ${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at ' + s.drift.f : 'never'}${at === null ? '' : ` · ended ${at.toFixed(3)} m from the recording’s end`}`);
     await page.close();
   }
 
@@ -518,10 +522,10 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     const near = (r, speed) => !!r && (FILE ? r.steps > 0 : Math.abs(r.game - r.frames / 60 * speed) <= 0.035 && Math.abs(r.steps - r.frames * speed) <= 1);   // (a file's steps are whatever its page ran at, and whether it parts is reported, not judged)
     const barOk = !A.why && is(A.first, 1, '1×', false, false, false) && is(A.half, 0.5, '½×', true, false, false) && is(A.quarter, 0.25, '¼×', true, true, false) && is(A.floor, 0.25, '¼×', true, true, false)
       && is(A.four, 4, '4×', true, false, true) && is(A.two, 2, '2×', true, false, false) && is(A.one, 1, '1×', false, false, false) && A.off === 1 && is(A.keep, 0.5, '½×', true, false, false) && A.focus === false;
-    const paceOk = !A.why && near(A.q, 0.25) && near(A.x4, 4) && near(A.x1, 1) && (FILE || (!A.state.drift && A.state.unjournaled === 0)) && /[?&]at=60(&|$)/.test(B.search || '') && B.f >= 60 && B.f < A.state.f && is(B.kept, 0.5, '½×', true, false, false) && near(B.h, 0.5);
-    const runOk = s.ended && s.f === s.ticks && (FILE || (!s.drift && s.unjournaled === 0)) && (at === null || at < 0.01);
+    const paceOk = !A.why && near(A.q, 0.25) && near(A.x4, 4) && near(A.x1, 1) && (FILE || (!A.state.drift)) && /[?&]at=60(&|$)/.test(B.search || '') && B.f >= 60 && B.f < A.state.f && is(B.kept, 0.5, '½×', true, false, false) && near(B.h, 0.5);
+    const runOk = s.ended && s.f === s.ticks && (FILE || (!s.drift)) && (at === null || at < 0.01);
     line(barOk && !errors.length, 'the bar’s pace steps from ¼× to 4× by its − and + and the keys, holds at the ends, and a click on the reading is 1× again', A.why ? A.why : `${['first', 'half', 'quarter', 'floor', 'four', 'two', 'one', 'keep'].map(k => `${k} ${JSON.stringify(A[k])}`).join(' · ')} · a pace off the list asked: ${A.off} · a pressed button still holds the keyboard: ${A.focus}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
-    line(paceOk && runOk && !errors.length, 'slow motion feeds the recording’s own steps more slowly, the pace is kept over a seek back, and the run slowed and sped on the way is still the recording’s', A.why ? A.why : `¼× ${JSON.stringify(A.q)} · 4× ${JSON.stringify(A.x4)} · 1× ${JSON.stringify(A.x1)} · after the seek back (from step ${A.state.f}) the page ${B.search} stands on step ${B.f}: ${JSON.stringify(B.kept)} · ½× ${JSON.stringify(B.h)} · ${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at ' + s.drift.f : 'never'} · unjournaled ${s.unjournaled}${at === null ? '' : ` · ended ${at.toFixed(3)} m from the recording’s end`}`);
+    line(paceOk && runOk && !errors.length, 'slow motion feeds the recording’s own steps more slowly, the pace is kept over a seek back, and the run slowed and sped on the way is still the recording’s', A.why ? A.why : `¼× ${JSON.stringify(A.q)} · 4× ${JSON.stringify(A.x4)} · 1× ${JSON.stringify(A.x1)} · after the seek back (from step ${A.state.f}) the page ${B.search} stands on step ${B.f}: ${JSON.stringify(B.kept)} · ½× ${JSON.stringify(B.h)} · ${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at ' + s.drift.f : 'never'}${at === null ? '' : ` · ended ${at.toFixed(3)} m from the recording’s end`}`);
     await page.close();
   }
 
@@ -563,9 +567,9 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     const bareMen = Math.max(0, ...Bz.map(r => r.men || 0)), fogMen = Math.max(0, ...Q.map(r => r.men || 0)), counts = FILE ? qSteps >= 1 && hSteps >= 1 : qSteps >= 11 && qSteps <= 13 && Q.every(r => r.stepped <= 1) && hSteps >= 7 && hSteps <= 9;   // (a file's steps may be of any length: only the recorded quarter minute's are counted)
     const slowOk = !A.why && A.before && counts && posed.length >= (FILE ? 8 : 40) && rising >= (FILE ? 4 : 24) && falls === 0 && menMin >= 1 && pictures >= (FILE ? 4 : 30) && moved === 0
       && Bz.filter(r => r.a !== null && r.a < 1).length >= 12 && A.one.every(r => r.a === null && (FILE || r.stepped === 1)) && A.stood.stepped === 0 && A.stood.rested && A.stood.same && A.stood.on && A.ran.rested && (A.hid === 0 || bareMen > fogMen) && A.drawn.a !== null && A.drawn.a < 1 && A.drawn.men >= 1;
-    const runOk = !A.why && s.ended && s.f === s.ticks && (FILE || (!s.drift && s.unjournaled === 0)) && !A.fatal;
+    const runOk = !A.why && s.ended && s.f === s.ticks && (FILE || (!s.drift)) && !A.fatal;
     line(slowOk && !errors.length, 'at ¼× a step lasts four frames and each frame between is drawn further along between the last two steps, the men with it (those the lifted fog shows too); paused it rests on its step; scripted steps and 1× draw the step itself', A.why ? A.why : `150 scripted steps at ½× left no blend: ${A.before ? 'yes' : 'NO'} · ¼×: ${qSteps} steps in ${Q.length} frames, ${posed.length} drawn between two steps (further along on ${rising}, back on ${falls}), ${pictures} different pictures of the men, at least ${menMin} men blended, the step's own proxies changed by ${moved} frames with no step · fog off: ${Bz.filter(r => r.a !== null && r.a < 1).length} of ${Bz.length} between, ${bareMen} men blended against ${fogMen} under it (${A.hid} hidden by the fog then) · ½×: ${hSteps} steps in ${H.length} frames · drawn for real: ${JSON.stringify(A.drawn)} · paused: ${JSON.stringify(A.stood)} · after a script's two steps: ${JSON.stringify(A.ran)} · 1×: ${JSON.stringify(A.one.map(r => [r.stepped, r.a]))}`);
-    line(runOk && !errors.length, 'played slow, with the fog on and off, then fast to its end, the run is the recording’s', A.why ? A.why : `${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at step ' + s.drift.f + ' (' + s.drift.who + ' ' + (+s.drift.metres).toFixed(2) + ' m)' : 'never'} · ${s.unjournaled} reads the tape never made · worst ${s.worst ? (+s.worst.metres).toFixed(3) + ' m' : '–'}${A.fatal ? ' · FATAL ' + A.fatal.slice(0, 120) : ''}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+    line(runOk && !errors.length, 'played slow, with the fog on and off, then fast to its end, the run is the recording’s', A.why ? A.why : `${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at step ' + s.drift.f + ' (' + s.drift.who + ' ' + (+s.drift.metres).toFixed(2) + ' m)' : 'never'} · worst ${s.worst ? (+s.worst.metres).toFixed(3) + ' m' : '–'}${A.fatal ? ' · FATAL ' + A.fatal.slice(0, 120) : ''}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
     await shot(page, 'engine-replay-between');
     await page.close();
   }
@@ -573,8 +577,8 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
   // ── turn: the viewer's 'Turn direction' row (host/findme.ts: kept in this browser under twopointsix.findme, read once at load) flipped before the page
   //    loads. The handlers are pressed for real; the framing is read off `__tape.view` (what the next frame would take), so nothing here is drawn.
   if (want('turn')) {
-    { const { page } = await open('replay', false); await page.evaluate(() => { localStorage.setItem('twopointsix.findme', JSON.stringify({ turn: -1 })); }); await page.close(); }   // (the map viewer's page: light, the same origin's storage)
-    const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${id}&findtuned=0`);   // (`findtuned=0`: the row's start as built, so the line above is a row moved off it and is left as it lies)
+    { const { page } = await open('replay', false); await page.evaluate(() => { localStorage.setItem('twopointsix.findme', JSON.stringify({ turn: 1 })); }); await page.close(); }   // (the map viewer's page: light, the same origin's storage)
+    const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${id}`);
     const A = await page.evaluate(() => {
       const T = window.__tape, cv = document.getElementById('view'); if (!T || !cv) return { why: 'no tape on the page' };
       const r = cv.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
@@ -585,7 +589,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
       out.drag = drag(50, { ctrlKey: true }); out.both = drag(50, { ctrlKey: true, shiftKey: true }); out.right = drag(50, { button: 2, buttons: 2 }); out.shift = drag(50, { shiftKey: true });
       out.free = T.state.free; out.f1 = T.state.f; localStorage.removeItem('twopointsix.findme'); return out; });
     const near = (a, b) => a != null && Math.abs(a - b) <= 1e-3;
-    const ok = !A.why && A.row === -1 && near(A.moved, -0.18) && near(A.drag.yaw, -0.3) && A.drag.tilt === 0 && near(A.both.yaw, -0.3) && near(A.right.yaw, 0.3) && near(A.shift.yaw, 0.3) && A.free === true && A.f1 === A.f;
+    const ok = !A.why && A.row === 1 && near(A.moved, 0.18) && near(A.drag.yaw, 0.3) && A.drag.tilt === 0 && near(A.both.yaw, 0.3) && near(A.right.yaw, 0.3) && near(A.shift.yaw, 0.3) && A.free === true && A.f1 === A.f;
     line(ok && !errors.length, 'with Turn direction flipped the picture turns the other way under Ctrl, moved or dragged, with Shift or without; a right or Shift drag keeps its own way', A.why ? A.why : `${JSON.stringify(A)}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
     await page.close();
   }
@@ -599,9 +603,9 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
       return { f: T.state.f, playing: T.state.playing, big: !!document.getElementById('tapebig'), men: g.menAll?.length ?? -1, boxes: e.world.dynamics.length }; });
     await shot(page, 'engine-replay-open');
     const R = await walk(page), s = R.state || {}, at = rec?.pos && R.pos ? Math.hypot(R.pos[0] - rec.pos[0], R.pos[2] - rec.pos[2]) : null;
-    line(A.f === 1 && !A.playing && A.big && A.men > 0 && s.ended && s.f === s.ticks && !s.drift && s.unjournaled === 0 && (at === null || at < 0.01) && /as recorded/.test(R.bar || '') && !errors.length,
+    line(A.f === 1 && !A.playing && A.big && A.men > 0 && s.ended && s.f === s.ticks && !s.drift && (at === null || at < 0.01) && /as recorded/.test(R.bar || '') && !errors.length,
       'opened by a person the replay stands on its first step with the men drawn under the play button, and plays from there as recorded',
-      `the still ${JSON.stringify(A)} · then ${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at step ' + s.drift.f : 'never'} · ${s.unjournaled} reads the tape never made · Sam ends ${at === null ? '?' : at.toFixed(3)} m from where the recording left him${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+      `the still ${JSON.stringify(A)} · then ${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at step ' + s.drift.f : 'never'} · Sam ends ${at === null ? '?' : at.toFixed(3)} m from where the recording left him${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
     await page.close();
   }
 
@@ -667,12 +671,16 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
   }
 
   if (want('refuse') && !FILE && fileText) {
-    const F = JSON.parse(fileText); delete F.rerun; F.savedAt += 'x';
-    await ctx.route('**/qa-bare.json', r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(F) }));
-    const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=qa-bare.json`);
-    const R = await page.evaluate(() => ({ tape: !!window.__tape, said: /no run tape/.test(document.body.innerText || ''), game: !!window.__game, search: location.search }));
-    line(!R.tape && R.said && R.game && !errors.length, 'a replay with no run tape says so and the game boots as itself', `${JSON.stringify(R)}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
-    await page.close();
+    // (none, one of the version before, one that ended: the page asks format.ts tapeWhy of each)
+    const bare = JSON.parse(fileText), cases = [['with no run tape', undefined, 'without a record of the controls'], ['of another tape version', { ...bare.rerun, v: 1 }, 'a different version of the game'], ['whose tape ended', { dead: 'a scenario was started or quit from a menu', tick: 12 }, 'a scenario was started or quit']];
+    for (const [what, rerun, words] of cases) {
+      const F = { ...bare, rerun, savedAt: bare.savedAt + 'x' }, name = `qa-bare-${cases.findIndex(c => c[0] === what)}.json`;
+      await ctx.route(`**/${name}`, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(F) }));
+      const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${name}`);
+      const R = await page.evaluate(w => ({ tape: !!window.__tape, said: (document.getElementById('taperefuse')?.textContent || '').includes(w), game: !!window.__game, search: location.search }), words);
+      line(!R.tape && R.said && R.game && !errors.length, `a replay ${what} says so and the game boots as itself`, `${JSON.stringify(R)}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+      await page.close();
+    }
   }
   await browser.close();
   console.log(failed ? '\n=== engine-replay-page: FAILED ===' : '\n=== engine-replay-page: ALL PASS ===');

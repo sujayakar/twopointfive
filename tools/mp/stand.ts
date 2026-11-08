@@ -13,6 +13,7 @@ import { appendFileSync } from 'node:fs';
 import type { Recipe, Outcome } from '../../src/net/wire.ts';
 import type { Headless } from '../qa/headless.ts';
 import type { PlayerCmd } from '../../src/game/cmd.ts';
+import type { RunTape } from '../../src/replay/format.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 
@@ -87,7 +88,8 @@ export async function standRecipe(recipe: Recipe): Promise<Stood> {
   const { recipeWhy } = await import(`${ROOT}/src/net/wire.ts`);
   { const why = recipeWhy(recipe) || levelWhy((recipe as { levelFile?: string }).levelFile); if (why) throw new Error(`no networked game can be stood from this recipe: ${why}`); }   // (…a recipe a server sent names its level the same way)
   const { rerun } = await import('../qa/rerun.ts');
-  const tape = { v: 1, ticks: 0, recipe, dt: [], view: [], cam: [], input: [], lens: [], sens: { keys: [], rows: [] }, x: [] };
+  const { TAPE_VERSION } = await import(`${ROOT}/src/replay/format.ts`);
+  const tape: RunTape = { v: TAPE_VERSION, ticks: 0, recipe, dt: [], view: [], cam: [], input: [], lens: [], x: [] };
   const F = { v: 1, game: 'twopointsix', kind: 'replay', savedAt: '', why: 'net', level: { fp: '', boxes: 0 }, flags: {}, hz: 60, seconds: 0, samples: [], cast: [], notes: [], map: { doors: [] }, rerun: tape };
   // (`scan: false`: once it is stood NOTHING writes this game between two ticks. Every change comes as a seat's record through netStep, so the host of the
   //  Rust game does not walk the puppet for a tool's writes before a step or a look ahead: about 3 ms of each on a 4 core box)

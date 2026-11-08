@@ -12,7 +12,7 @@ pub const ORDER: Row = Row {
 };
 
 fn label(g: &mut Game, t: &OrderTarget) -> String {
-    let waiting = crate::pairorders::pair_orders_waiting(g);
+    let waiting = crate::pairorders::pair_orders_waiting(g, &crate::seats::here(g));
     if waiting.is_empty() { return String::from("mark"); }
     let mut parts: Vec<String> = Vec::with_capacity(waiting.len());
     for (gd, j) in &waiting {
@@ -23,11 +23,11 @@ fn label(g: &mut Game, t: &OrderTarget) -> String {
 }
 
 fn only(g: &mut Game, men: &[GuardId], t: &OrderTarget) -> Vec<GuardId> {
-    crate::pairorders::pair_orders_waiting(g).into_iter().map(|(gd, _)| gd).collect()
+    crate::pairorders::pair_orders_waiting(g, &crate::seats::here(g)).into_iter().map(|(gd, _)| gd).collect()
 }
 
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    if !crate::pairorders::pair_orders_waiting(g).is_empty() { return Ok(()); }
+    if !crate::pairorders::pair_orders_waiting(g, &crate::seats::here(g)).is_empty() { return Ok(()); }
     let (now, was) = (String::from("nobody's waiting on your mark."), String::from("nobody is waiting on your mark."));
     Err(Some(crate::words::wg(g, &now, &was)))
 }

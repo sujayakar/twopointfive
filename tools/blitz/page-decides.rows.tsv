@@ -17,7 +17,6 @@ src/game/dialogue.ts:ownPlace	moving	the verdict	asked by the verdict's watch (c
 src/game/dialogue.ts:isOffice	moving	the verdict	asked by the verdict's watch (chronicle.ts roomOf): goes when the verdict is the tick's	1
 src/game/dialogue.ts:levelRects	decides	debrief	the debrief's map names its rooms: goes when the debrief is the Rust game's
 src/game/doornames.ts:*	decides	radio and spoken lines	a door's said and written name are worked out again on the copy
-src/game/squadnet.ts:whyWords	decides	orders menu and hand ring	worded off the pick under the cursor (autoPick, on the page until the world ask and the one plan): goes with it
 # ---- decides: the same rule worked out twice (the HUD asks TypeScript, on the copy, what the Rust game already answers)
 src/game/mission.ts:*	decides	HUD mission lines	"is the mission live" and how far the rack is are worked out again on the copy
 src/game/nightbreach.ts:*	decides	HUD mission lines	the plain night's state is worked out again on the copy
@@ -26,12 +25,10 @@ src/game/scenarioRun.ts:*	decides	HUD mission lines	which scenario is running an
 src/game/doors.ts:Doors.*	decides	HUD door and charge notes	which door is which by name, which side a man is on and whether he is locked out are worked out again on the copy
 src/game/doortools.ts:*	decides	HUD door and charge notes	the door notes (who waits, on which word, TOO CLOSE and who it names) are worked out by TypeScript on the copy each frame, and a door found shut is learnt on the copy only
 src/game/wallcharge.ts:*	decides	HUD door and charge notes	the wall charge's rows, target and who stands too close are worked out again on the copy
-src/game/cleared.ts:*	decides	HUD door and charge notes	which rooms are known and cleared is worked out again on the copy (the plan, the door words)
 src/game/roomfight.ts:*	decides	HUD door and charge notes	which door operation a room fight belongs to is worked out again on the copy
 src/game/orders.ts:*	decides	orders menu and hand ring	the menu's HUD (rows, words, who, the hover, the quick word) is built by TypeScript on the copy each frame; only a row's own closures ask the Rust game
 src/game/cover.ts:*	decides	orders menu and hand ring	cover's words in the menu are worked out by TypeScript, and its map of cover is built on the copy
 src/game/workthings.ts:*	decides	orders menu and hand ring	which things can be worked and their rows are worked out again on the copy
-src/game/autopilot.ts:*	decides	orders menu and hand ring	the quick order the HUD offers is picked by TypeScript on the copy
 src/game/pairorders.ts:*	decides	orders menu and hand ring	which pair is up and waiting is worked out again on the copy
 src/game/stickycam.ts:*	decides	orders menu and hand ring	whether a sticky camera is live and sending is worked out again on the copy
 src/game/qrf.ts:*	decides	orders menu and hand ring	who the reaction force owns is worked out again on the copy
@@ -45,7 +42,6 @@ src/game/aim.ts:*	decides	aim and stance on the HUD	the player's aim, its cost a
 src/game/gunwall.ts:*	decides	aim and stance on the HUD	whether the gun is at a wall is worked out again on the copy
 src/game/player.ts:*	decides	aim and stance on the HUD	whether he can stand, what is in the way and how far a thing is are worked out again on the copy
 src/game/combat.ts:*	decides	aim and stance on the HUD	whether something solid lies between two points is worked out again on the copy
-src/game/silent.ts:*	decides	squad status words	whether the squad is silent and whether that is compromised are worked out again on the copy
 src/game/samstun.ts:*	decides	squad status words	whether Sam is blind or staggered is worked out again on the copy
 src/game/nvg.ts:*	decides	squad status words	whether goggles are worn is worked out again on the copy
 src/game/weapons.ts:*	decides	squad status words	"reloading" and "ready" are worked out again on the copy
@@ -60,8 +56,7 @@ src/game/kit.ts:priceOf	decides	kit rows	LEFT, the cards': the run's tape keeps 
 src/game/kit.ts:kitBig	decides	the men drawn	what a man carries where he is drawn is asked of the copy (game/cast.ts): goes with drawMen and the Draw thread's men section
 src/game/kit.ts:*	decides	kit rows	the kit screen's rows, costs, what is legal and what each man is dealt are worked out by TypeScript
 # ---- the host's own
-src/host/rustgame.ts:*	host	the Rust host	the host itself: it hands the Rust game the host's half, steps it, takes the state and the out events	24
-src/game/under.ts:*	host	the Rust host	the view's answer in the page's objects	1
+src/host/rustgame.ts:*	host	the Rust host	the host itself: it hands the Rust game the host's half, steps it, takes the state and the out events	23
 src/host/rustdress.ts:*	host	the Rust host	the dress step hands the frame's men to the picture	1
 src/game/game.ts:Game.update	host	the Rust host	the game's update round the step: the die, the record sampled, the camera's cut	1
 src/game/game.ts:Game.host*	host	the Rust host	the host's half round the step: the Input's drag, the camera's peek and kick	2

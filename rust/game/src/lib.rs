@@ -126,6 +126,7 @@ pub use game_rules::kit;
 pub use game_rules::kitanim;
 pub use game_rules::kitload;
 pub use game_rules::kittree;
+pub use game_rules::kitstage;
 pub use game_rules::knobs_reg;
 pub use game_rules::lanes;
 pub use game_rules::laststand;

@@ -123,7 +123,7 @@ pub fn ps_game_GameBeaconsItem(s: &crate::game::GameBeaconsItem, o: &mut W) { s.
 pub fn ps_throwables_Throwables(s: &crate::throwables::Throwables, o: &mut W) { s.items.w(o); s.rows.w(o); ps_sim_itemshome_ItemStore(&s.store, o); s.serial.w(o); }
 pub fn ps_game_GameFxItem(s: &crate::game::GameFxItem, o: &mut W) { s.box_.w(o); s.ttl.w(o); }
 pub fn ps_sparks_Sparks(s: &crate::sparks::Sparks, o: &mut W) { s.pool.w(o); s.live.w(o); }
-pub fn ps_tracers_Tracers(s: &crate::tracers::Tracers, o: &mut W) { s.pool.w(o); s.live.w(o); s.lit.w(o); s.spawned.w(o); s.seed.w(o); }
+pub fn ps_tracers_Tracers(s: &crate::tracers::Tracers, o: &mut W) { s.pool.w(o); s.live.w(o); s.lit.w(o); s.spawned.w(o); }
 pub fn ps_weather_Weather(s: &crate::weather::Weather, o: &mut W) { s.roof_rects.w(o); s.flash.w(o); ps_weather_WeatherStats(&s.stats, o); s.suspended.w(o); s.touched.w(o); s.gloss_was.w(o); s.own.w(o); s.fits.w(o); s.cam_yaw.w(o); s.wet_on.w(o); s.lot.w(o); }
 pub fn ps_game_GameMessagesItem(s: &crate::game::GameMessagesItem, o: &mut W) { s.text.w(o); s.t.w(o); s.serial.w(o); }
 pub fn ps_chronicle_Chronicle(s: &crate::chronicle::Chronicle, o: &mut W) { s.events.w(o); s.dropped.w(o); ps_chronicle_ChronCounts(&s.counts, o); s.questioned.w(o); s.path.w(o); s.path_n.w(o); s.path_every.w(o); s.path_next.w(o); s.heard_of.w(o); s.heard_no_row.w(o); }
@@ -1189,7 +1189,7 @@ pub fn pa_game_GameBeaconsItem(s: &crate::game::GameBeaconsItem, o: &mut W) { s.
 pub fn pa_throwables_Throwables(s: &crate::throwables::Throwables, o: &mut W) { s.items.w(o); s.rows.w(o); pa_sim_itemshome_ItemStore(&s.store, o); s.serial.w(o); }
 pub fn pa_game_GameFxItem(s: &crate::game::GameFxItem, o: &mut W) { s.box_.w(o); s.ttl.w(o); }
 pub fn pa_sparks_Sparks(s: &crate::sparks::Sparks, o: &mut W) { s.pool.w(o); s.live.w(o); pa_sparks_SparkParams(&s.params, o); }
-pub fn pa_tracers_Tracers(s: &crate::tracers::Tracers, o: &mut W) { s.pool.w(o); s.live.w(o); s.lit.w(o); s.spawned.w(o); s.seed.w(o); }
+pub fn pa_tracers_Tracers(s: &crate::tracers::Tracers, o: &mut W) { s.pool.w(o); s.live.w(o); s.lit.w(o); s.spawned.w(o); }
 pub fn pa_weather_Weather(s: &crate::weather::Weather, o: &mut W) { s.on.w(o); s.kind_now.w(o); s.roof_rects.w(o); s.fog_spec.w(o); s.wind.w(o); s.wet_gloss.w(o); s.flash.w(o); pa_weather_WeatherStats(&s.stats, o); s.suspended.w(o); s.touched.w(o); s.gloss_was.w(o); s.snow_rate.w(o); s.own.w(o); s.fits.w(o); s.cam_yaw.w(o); s.wet_on.w(o); s.lot.w(o); }
 pub fn pa_game_GameMessagesItem(s: &crate::game::GameMessagesItem, o: &mut W) { s.text.w(o); s.t.w(o); s.serial.w(o); }
 pub fn pa_chronicle_Chronicle(s: &crate::chronicle::Chronicle, o: &mut W) { s.events.w(o); s.dropped.w(o); pa_chronicle_ChronCounts(&s.counts, o); s.questioned.w(o); s.path.w(o); s.path_n.w(o); s.path_every.w(o); s.path_next.w(o); s.heard_of.w(o); s.heard_no_row.w(o); }
@@ -2223,6 +2223,7 @@ pub fn pa_verdict_Verdict(s: &crate::verdict::Verdict, o: &mut W) { s.origin.w(o
 pub fn pa_deathrecap_Recap(s: &crate::deathrecap::Recap, o: &mut W) { s.lost_live.w(o); s.all_down.w(o); }
 pub fn pa_view_Under(s: &crate::view::Under, o: &mut W) { s.thing.w(o); }
 pub fn pa_view_CursorView(s: &crate::view::CursorView, o: &mut W) { s.under.w(o); }
+pub fn pa_view_SquadView(s: &crate::view::SquadView, o: &mut W) { s.quick.w(o); }
 pub fn pm_autopilot_AutoPick(s: &crate::autopilot::AutoPick, o: &mut W, c: &mut Vec<u32>) { s.word.w(o); c.push(o.b.len() as u32); match &s.t { crate::orders::OrderTarget::Floor(x0) => { (0 as u16).w(o); ps_orders_OrderTargetFloor(&x0, o); } crate::orders::OrderTarget::Door(x0) => { (1 as u16).w(o); ps_orders_OrderTargetDoor(&x0, o); } crate::orders::OrderTarget::None(x0) => { (2 as u16).w(o); ps_orders_OrderTargetNone(&x0, o); } crate::orders::OrderTarget::Foe(x0) => { (3 as u16).w(o); ps_orders_OrderTargetFoe(&x0, o); } #[allow(unreachable_patterns)] _ => 0xffffu16.w(o), } c.push(o.b.len() as u32); }
 pub fn pm_cmd_CheckCmd(s: &crate::cmd::CheckCmd, o: &mut W, c: &mut Vec<u32>) { pm_cmd_PlayerCmd(&s.cmd, o, c); }
 pub fn pm_combat_FireOpts(s: &crate::combat::FireOpts, o: &mut W, c: &mut Vec<u32>) { s.weapon.w(o); c.push(o.b.len() as u32); }
@@ -2341,7 +2342,7 @@ pub fn pm_game_GameBeaconsItem(s: &crate::game::GameBeaconsItem, o: &mut W, c: &
 pub fn pm_throwables_Throwables(s: &crate::throwables::Throwables, o: &mut W, c: &mut Vec<u32>) { s.items.w(o); c.push(o.b.len() as u32); if o.wide { s.rows.w(o); } c.push(o.b.len() as u32); pm_sim_itemshome_ItemStore(&s.store, o, c); s.serial.w(o); c.push(o.b.len() as u32); }
 pub fn pm_game_GameFxItem(s: &crate::game::GameFxItem, o: &mut W, c: &mut Vec<u32>) { s.box_.w(o); c.push(o.b.len() as u32); s.ttl.w(o); c.push(o.b.len() as u32); }
 pub fn pm_sparks_Sparks(s: &crate::sparks::Sparks, o: &mut W, c: &mut Vec<u32>) { s.pool.w(o); c.push(o.b.len() as u32); s.live.w(o); c.push(o.b.len() as u32); }
-pub fn pm_tracers_Tracers(s: &crate::tracers::Tracers, o: &mut W, c: &mut Vec<u32>) { s.pool.w(o); c.push(o.b.len() as u32); s.live.w(o); c.push(o.b.len() as u32); s.lit.w(o); c.push(o.b.len() as u32); s.spawned.w(o); c.push(o.b.len() as u32); if o.wide { s.seed.w(o); } c.push(o.b.len() as u32); }
+pub fn pm_tracers_Tracers(s: &crate::tracers::Tracers, o: &mut W, c: &mut Vec<u32>) { s.pool.w(o); c.push(o.b.len() as u32); s.live.w(o); c.push(o.b.len() as u32); s.lit.w(o); c.push(o.b.len() as u32); s.spawned.w(o); c.push(o.b.len() as u32); }
 pub fn pm_weather_Weather(s: &crate::weather::Weather, o: &mut W, c: &mut Vec<u32>) { s.roof_rects.w(o); c.push(o.b.len() as u32); s.flash.w(o); c.push(o.b.len() as u32); pm_weather_WeatherStats(&s.stats, o, c); s.suspended.w(o); c.push(o.b.len() as u32); s.touched.w(o); c.push(o.b.len() as u32); s.gloss_was.w(o); c.push(o.b.len() as u32); s.own.w(o); c.push(o.b.len() as u32); s.fits.w(o); c.push(o.b.len() as u32); s.cam_yaw.w(o); c.push(o.b.len() as u32); s.wet_on.w(o); c.push(o.b.len() as u32); s.lot.w(o); c.push(o.b.len() as u32); }
 pub fn pm_game_GameMessagesItem(s: &crate::game::GameMessagesItem, o: &mut W, c: &mut Vec<u32>) { s.text.w(o); c.push(o.b.len() as u32); s.t.w(o); c.push(o.b.len() as u32); s.serial.w(o); c.push(o.b.len() as u32); }
 pub fn pm_chronicle_Chronicle(s: &crate::chronicle::Chronicle, o: &mut W, c: &mut Vec<u32>) { s.events.w(o); c.push(o.b.len() as u32); s.dropped.w(o); c.push(o.b.len() as u32); pm_chronicle_ChronCounts(&s.counts, o, c); s.questioned.w(o); c.push(o.b.len() as u32); s.path.w(o); c.push(o.b.len() as u32); s.path_n.w(o); c.push(o.b.len() as u32); s.path_every.w(o); c.push(o.b.len() as u32); s.path_next.w(o); c.push(o.b.len() as u32); if o.wide { s.heard_of.w(o); } c.push(o.b.len() as u32); if o.wide { s.heard_no_row.w(o); } c.push(o.b.len() as u32); }

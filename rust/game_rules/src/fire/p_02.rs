@@ -200,7 +200,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         // the embers: for a fire near the view, a steady few off the flame and a throw with each crack
         let (height, ember_r, embers, ember_life, ember_crack) = (g.k.fire.height, g.k.fire.ember_r, g.k.fire.embers, g.k.fire.ember_life, g.k.fire.ember_crack);
         let flame_h = height * g.k.fire.look.tall;
-        let px = moved && embers > 0.0 && d < ember_r && crate::particle_fx::gpu_fx(g);
+        let px = moved && embers > 0.0 && d < ember_r;
         let fl_smoke = fire_look_smoke();
         if moved && snow_lift && d < ember_r {
             // the falling snow: this fire's hot air
@@ -333,7 +333,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         if let Some(stir) = g.engine.host_books.as_mut().and_then(|b| b.fire.as_mut()).and_then(|p| p.stir.as_mut()) {
             stir.clear();
         }
-        if crate::particle_fx::gpu_fx(g) { crate::render_particles::particles_set_heat(g, &jets); }
+        crate::render_particles::particles_set_heat(g, &jets);
     }
     let s = state_of(g);
     s.fires = fires;

@@ -78,8 +78,10 @@ struct Held {
     after: Vec<(usize, String)>,
     /// what the last tick left to be drawn (a host that draws)
     drawn: game_draw::Drawn,
+    /// the seat nobody's hands are on, and who plays it
+    hands: Option<(usize, game_run::hands_off::HandsOff)>,
 }
-impl Held { fn new(g: Box<Game>) -> Held { Held { g, cmd: None, cmds: None, after: Vec::new(), drawn: Default::default() } } }
+impl Held { fn new(g: Box<Game>) -> Held { Held { g, cmd: None, cmds: None, after: Vec::new(), drawn: Default::default(), hands: None } } }
 
 thread_local! {
     static GAMES: RefCell<Vec<Option<Held>>> = const { RefCell::new(Vec::new()) };
@@ -150,6 +152,19 @@ pub extern "C" fn face_verdict(h: u32) -> i32 {
         None => 0,
         Some((won, s)) => { out(s.into_bytes()); if won { 2 } else { 1 } }
     }
+}
+/// what a measuring take notes of the game, as JSON: each man by what he is at and whether he carries a light, the reaction force, the alarm, the run's saves
+#[no_mangle]
+pub extern "C" fn face_tally(h: u32) {
+    let s = with_ref(h, |x| {
+        let g = &x.g;
+        let men: Vec<String> = g.guards.iter().map(|&gd| { let m = &g.gd[gd]; format!("[\"{}\",{}]", m.state.as_str(), g.tab.light[m.flashlight].enabled as u32) }).collect();
+        let (s, m) = (&g.saves.stats, &g.mission.stats);
+        let word = |w: Option<&str>| w.map_or(String::from("null"), |w| format!("\"{}\"", w.replace('\\', "").replace('"', "")));
+        format!("{{\"men\":[{}],\"qrf\":\"{}\",\"escalation\":{},\"autosaves\":{},\"manual\":{},\"loads\":{},\"stage\":\"{}\",\"alarm\":{},\"alerts\":{},\"clear\":{},\"kind\":{},\"stats\":{{\"elapsed\":{},\"alerts\":{},\"spotted\":{},\"bodies\":{},\"shots\":{},\"kills\":{},\"knockouts\":{},\"keys\":{},\"blackout\":{},\"sandbox\":{},\"qrf\":{},\"qrfAt\":{},\"qrfWho\":{}}}}}", men.join(","), g.qrf.state.as_str(), g.escalation, s.autosaves, s.manual, s.loads, g.mission.stage.as_str(), g.mission.alarm_on, g.mission.stats.alerts, game::roomclear::room_clear_scenario_active(g),
+            word(g.verdict.res.as_ref().and_then(|r| r.kind).map(|k| k.as_str())), m.elapsed, m.alerts, m.spotted, m.bodies, m.shots, m.kills, m.knockouts, m.keys, m.blackout, m.sandbox, m.qrf, m.qrf_at, word(m.qrf_who.as_deref()))
+    });
+    out(s.into_bytes());
 }
 /// WHAT A HUD IS TOLD of the game as its last tick left it (`view::tick_view`), about the seat this machine shows: a `TickView`'s bytes at face_out, read
 /// by the host with the table's own reader. A read: no word of the game's state is written and no seat is changed over; where a writer put the copy of the boxes down it is

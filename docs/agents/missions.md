@@ -2491,6 +2491,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   their music rows, menu pictures, menu-art pins and menu-shot recipes; the eight recorded sound replays that were a lesson played (the seven, and `whip`,
   which was recorded on the hands lesson's yard), with `tools/qa/tapes/whip.ts`. `lesson-check` and `lesson-gate` with no name now walk the six tutorial
   missions; `verdict-lessons` too, on the page's stand only (a tutorial mission's scripted player is not run frozen; it exits 2 without the word). KEPT, AS
+  [2026-11-08: those three stage yards are deleted too, with `gwot-yard.json` (its generator stays, as the library's showroom, with no file), `office-relief.json` and `?level=`. Their checks stand on kept levels. See the commit.]
   STAGES FOR CHECKS: `levels/train-move.json`, `train-orders.json`, `train-silent.json` and their generators,
   with no lesson, no row and nothing on a menu that loads them, because checks owned elsewhere are staged on their floors (the hands probes,
   `thrpie-check`, `wordcuts-check`, `teamtally-check`, `takecheck-check`, `savetimeline-check`, `carlamps-check`, `keybinds-check`'s wall line, four page

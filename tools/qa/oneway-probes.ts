@@ -24,7 +24,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
 import { sample } from './sweep.ts';
-const { DOORWAY, Doors } = await import(`${ROOT}/src/game/doors.ts`);
+const { DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);

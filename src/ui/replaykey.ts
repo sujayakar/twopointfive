@@ -4,6 +4,7 @@
 // VIEWER (replay.html) on it in this window. A crash of the page (main.ts's fatal card) saves one by itself, and is filed in the buffer as a line at its moment. Off: ?noreplay for a visit, or localStorage
 // `twopointsix.replay` = '0' (__replay.on = false writes it) — then no buffer is made and the Game's tap stays null: the build as it was.
 // Its own key listener, as F8's: a replay must save from the pause card, the down card and a frozen frame alike.
+import { sessionId } from '../host/session';
 import type { Game } from '../game/game';
 import { reportWarning } from '../cloud/report';
 import { typedInto } from '../host/keymap';
@@ -11,9 +12,9 @@ import { SHADER_ROW_WORDS } from './shaderrows';
 import { lookDressWord } from '../scene/look';
 import { ReplayBuffer, REPLAY } from '../game/replaybuf';
 import type { ReplayMeta } from '../game/replaybuf';
-import type { ReplayFile } from '../replay/format';
+import type { RunTape, ReplayFile } from '../replay/format';
 import { shelfPut } from '../replay/shelf';
-import { CAME_FROM, GAME_PAGE, clock, replayBlob, errorMarks, lastRun, leaveFor, replayName } from '../replay/format';
+import { CAME_FROM, clock, replayBlob, errorMarks, lastRun, leaveFor, replayName, tapeWhy } from '../replay/format';
 export { CAME_FROM, leaveFor };
 import { ReplayKeeper } from '../replay/keeper';
 import { KEEP, keptSummary, pruneKept, keepBudget } from '../replay/keepstore';
@@ -261,8 +262,8 @@ export function viewerUrl(id: number): string { return new URL(`replay.html#id=$
  *  run the file ENDS in began (`&at=<step>`: the tries before it are run through unseen first; one try = from the top). That moment is read off BOTH halves of the
  *  file: the trace's last restart mark (format.ts lastRun, the map viewer's own rule for a card's file — the step of the first sample from it on), which also has
  *  a restart made INSIDE a step (Shift+Enter, Enter once down: on no tape row), and the tape's last restart row (one older than the trace's window), the step
- *  after it so the still it opens on is the new try's. null: no tape to play (ended early: a checkpoint loaded, a scenario started from a menu, past the tape's
- *  length), or a game page that plays none (format.ts GAME_PAGE) — the map viewer plays that file */
+ *  after it so the still it opens on is the new try's. null: no tape to play (format.ts tapeWhy: it ended
+ *  early — another run's checkpoint loaded, a scenario started from a menu, past the tape's length) — the map viewer plays that file */
 /** the address words a replay page keeps from the VISIT, not from the run it plays (replay/engineplay.ts tapeSearch): how the page is looked at and listened to is the
  *  viewer's — which sound table the mixer plays is the listener's, a replay holds no sound. The end card's Replay hands the game page's own on to its tab, bar the
  *  harness's `paused`: the replay of a run played at a chosen quality, or muted, opens the same way. */
@@ -276,15 +277,11 @@ export const visitWord = (k: string, v: string): boolean => VISIT_FLAGS.includes
 /** the visit's words on an address, pair by pair in the list's order (a word can stand more than once: the look page's rows) */
 export const visitPairs = (q: URLSearchParams): [string, string][] => VISIT_FLAGS.flatMap(k => q.getAll(k).filter(v => visitWord(k, v)).map(v => [k, v] as [string, string]));
 export function engineUrl(id: number, file: ReplayFile): string | null {
-  const T = file.rerun; if (!GAME_PAGE.playsTapes || !T || 'dead' in T) return null;
+  if (tapeWhy(file)) return null;
+  const T = file.rerun as RunTape;
   const r0 = lastRun(file), seen = r0 > 0 ? file.samples.find(s => s.r >= r0)?.n ?? 0 : 0;
   const taped = T.x.reduce((a, row) => row[1] === 'restart' && row[0] > 0 && row[0] + 1 > a ? row[0] + 1 : a, 0);
   const at = Math.min(T.ticks, Math.max(seen, taped));
   const now = new URLSearchParams(location.search), visit = visitPairs(now).filter(([k]) => k !== 'paused').map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join('');
   return new URL(`index.html?playtape=${id}${at > 0 ? `&at=${at}` : ''}${visit}`, document.baseURI).href;
-}
-/** a name for this page visit: when it began, and enough dice that two tabs opened in one second differ */
-function sessionId(): string {
-  let r = ''; try { const a = new Uint32Array(1); crypto.getRandomValues(a); r = a[0].toString(36); } catch { r = Math.floor(Math.random() * 0xffffffff).toString(36); }
-  return `${new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15)}-${r}`;
 }

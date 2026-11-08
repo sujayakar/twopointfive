@@ -452,7 +452,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   is decided still puts his light at full or out at once. WHERE NO RENDERER ANSWERS — headless, a page before its first frame (Sam's own
   meter has no answer) — the CPU's rule is the whole rule at once, so HEADLESS NOTHING MOVES on either stand: every tally and digest is the build's.
   The question 'does the renderer answer' is one read of `playerChest` a frame, made only when somebody's goggles are down (10-18: read every frame it
-  made eleven sensor reads a step of a goggles-up run on the shipped stand, and `replaybuf-probes.ts`, which plants 'no answer' on every eleventh read,
+  made eleven sensor reads a step of a goggles-up run on the shipped stand, and `replaybuf-probes.ts`, which planted 'no answer' on every eleventh read,
   then wrote that kind once in 1,800 steps and went red on its 'every kind' line; with nobody's goggles down this file reads no sensor).
   KNOWN EDGES: the meter also has carried white light, so a torch on the floor he looks at puts his light out a hold later; `irShowsAt` and nvg.ts
   `readPlace` still go by the CPU (a man in a bounce-lit room is read by his own meter, which has the bounce); up to five more probe places a

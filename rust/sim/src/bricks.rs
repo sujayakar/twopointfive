@@ -145,6 +145,45 @@ fn dims(st: &[f64; LEN]) -> (usize, usize) {
         (0, 0)
     }
 }
+/// a cell's faces in four bytes a word
+pub const WORDS: usize = CELLS / 4;
+/// THE GRID AS IT STANDS, for whoever draws it: the plan in bricks, the steps taken, and each brick
+pub struct Stands {
+    pub wide: usize,
+    pub deep: usize,
+    pub steps: f64,
+    g: usize,
+}
+/// a brick: its place in plan, what is in each cell, and the faces each is open by (bits 1, 2, 4; 8 = asked)
+pub struct Stood {
+    pub x: usize,
+    pub z: usize,
+    pub rho: &'static [f64],
+    pub open: [u32; WORDS],
+}
+/// …none before its first step, or where no step has asked the faces of the state that stands there (a game put back: up to a tenth of a second)
+pub fn stands(g: usize, stamp: f64) -> Option<Stands> {
+    let st = &state_read(g).smoke.st;
+    let (wide, deep) = dims(st);
+    let m = made(g);
+    if wide == 0 || m[M_STAMP] != stamp || m[M_COPY] == 0.0 {
+        return None;
+    }
+    Some(Stands { wide, deep, steps: st[H_STEPS], g })
+}
+impl Stands {
+    pub fn brick(&self, b: usize) -> Option<Stood> {
+        let st = &state_read(self.g).smoke.st;
+        let (x, z) = (st[O_KEYS + b * 2], st[O_KEYS + b * 2 + 1]);
+        if !(x >= 1.0 && z >= 1.0 && x <= self.wide as f64 && z <= self.deep as f64) {
+            return None;
+        }
+        let faces = unsafe { &(*core::ptr::addr_of!(FACES))[self.g] };
+        let face = |c: usize| (faces[b * CELLS + c] & (F_X | F_Y | F_Z | F_ASKED)) as u32;
+        let open = core::array::from_fn(|w| (0..4).fold(0, |o, j| o | face(w * 4 + j) << (8 * j)));
+        Some(Stood { x: x as usize - 1, z: z as usize - 1, rho: &st[O_RHO + b * CELLS..O_RHO + (b + 1) * CELLS], open })
+    }
+}
 /// THE LIGHT UNDER A ROOF at a point, of the game in slot `g` over box world `w` (glow.rs at)
 pub fn under_roof(g: usize, w: usize, p: [f64; 3]) -> Option<crate::glow::Field> {
     let st = &state_read(g).smoke.st;

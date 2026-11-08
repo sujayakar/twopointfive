@@ -22,10 +22,8 @@ export const DRESS = {
   fixtures: true,   // a fixture that broke: its tray, its glass, the arcing lead (fixtureBreak.ts)
   fx: true,         // the short-lived drawn boxes (a muzzle flash's card, a chip): their time to live
   stature: true,    // each man's drawn scale about his feet (stature.ts)
-  cases: true,      // spent cases (particleFx.ts updateParticleFx)
   net: true,        // the squad's net: the click a line arrives with (squadnet.ts)
   wind: true,       // the wind's sources to the particles and the solver (wind.ts)
-  debris: true,     // the rigid pieces a break throws, as the pool holds and tumbles them (debris.ts) — dressing only under DEBRIS.dress (destructionSwitch.ts): the row acts only there, and without that switch the pool is the game's and is kept whatever the row says
 };
 export type DressRow = keyof typeof DRESS;
 /** every row up or down at once: a host that draws nothing puts them down */

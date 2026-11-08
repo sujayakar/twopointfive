@@ -1,5 +1,5 @@
 // THE HEADLESS HALF OF tools/qa/samefight-page.cjs: a replay file the REAL PAGE made is walked again here off its run tape (tools/qa/rerun.ts — the die's seed, the
-// page's query and tables, then per step its dt, the player's record and what the game read off the GPU), and the raw bits of the game (src/game/digest.ts rawBits)
+// page's query and tables, then per step its dt and the player's record), and the raw bits of the game (src/game/digest.ts rawBits)
 // are folded after every step exactly as the page folded its own (`__digest.chain`). Prints one line: SAMEFIGHT {words, steps, …} — the caller compares the words.
 //   bun run tools/qa/samefight-rerun.ts <replay.json> <steps the page chained> [every=30]
 import { readFileSync } from 'node:fs';
@@ -16,5 +16,5 @@ let word: number = RAW_BITS_SEED, n = 0; const words: string[] = [];
 const R = await rerun(F, { toN: ticks, each: (W, f) => { if (f < from) return; word = rawBits(W.game as never, word); if (n < DETAIL) { parts.push(rawBitsParts(W.game as never)); sam.push(samRow(W.game as never)); } if (++n % every === 0) words.push(word.toString(36)); } });
 if (R.refuse) { console.log('SAMEFIGHT ' + JSON.stringify({ refuse: R.refuse })); process.exit(3); }
 const rep = R.report!;
-console.log('SAMEFIGHT ' + JSON.stringify({ parts, sam, samNames: SAM_ROW, words, steps: n, ticks, compared: rep.compared, worst: rep.worst?.metres ?? 0, drift: rep.drift ? `${rep.drift.who} ${rep.drift.metres.toFixed(2)} m at step ${rep.drift.n}` : '', unjournaled: rep.unjournaled, warnings: rep.warnings }));
+console.log('SAMEFIGHT ' + JSON.stringify({ parts, sam, samNames: SAM_ROW, words, steps: n, ticks, compared: rep.compared, worst: rep.worst?.metres ?? 0, drift: rep.drift ? `${rep.drift.who} ${rep.drift.metres.toFixed(2)} m at step ${rep.drift.n}` : '', warnings: rep.warnings }));
 process.exit(0);

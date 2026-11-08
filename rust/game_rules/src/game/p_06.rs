@@ -9,8 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// `s.view` handed to `f`. A game of one seat has no view: its seat's view IS the Game (seats.ts seatsStand).
 fn in_seat<R>(g: &mut Game, s: SeatId, mut f: impl FnMut(&mut Game) -> R) -> R {
-    if g.seats.len() == 1 { return f(g); }
-    crate::seats::with_seat(g, s, &mut f)
+    crate::seats::on_seat(g, Some(s), &mut f)
 }
 
 /// the character of a seat's man
@@ -28,6 +27,18 @@ fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, up: f64) -> V3 {
 pub fn game_step_seats(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) {
     let n = g.seats.len();
     if cmds.len() != n { panic!("stepSeats: {} record(s) for {} seat(s)", cmds.len(), n); }
+    // (the kit picture's stage, where one is up, has the hand before the tick and what it left after it)
+    if g.kit_stage.is_some() {
+        let mut held = cmds.to_vec();
+        crate::kitstage::before(g, &mut held[0]);
+        step_listed(g, dt, &held);
+        crate::kitstage::after(g);
+        return;
+    }
+    step_listed(g, dt, cmds);
+}
+fn step_listed(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) {
+    let n = g.seats.len();
     // (inside a tick the Game's own fields of a seat's name answer the FIRST seat's, whoever this host shows: seats.ts seatsStand)
     // (bare: no seat's view is open while the world's own lines run)
     // (the verdict's tick comes last, with the first seat still standing, so the end it latches is the same on every machine: verdict.ts tick)
@@ -111,7 +122,10 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     g.search_probe_n = 0.0;
     crate::game::game_deal_weapons(g, Some(dt));
     crate::director::director_tick(g, dt, None, None);
-    crate::pairorders::pair_orders_input(g, input);
+    for &s in &seats {
+        let input = g.tab.cmd_seat[s].input;
+        in_seat(g, s, |g| crate::pairorders::pair_orders_input(g, input));
+    }
     for &s in &seats {
         let input = g.tab.cmd_seat[s].input;
         in_seat(g, s, |g| {
@@ -436,7 +450,7 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
     crate::sparks::sparks_update(g, dt);
     crate::sparks::sparks_boxes(g, &mut out);
     // (game.ts:1822: spent cases heard landing when they are due: the list is the tick's own (a shot adds to it), so the step that empties it is here too)
-    if g.m.dress.dress.cases { crate::particle_fx::update_particle_fx(g); }
+    crate::particle_fx::update_particle_fx(g);
     for &s in seats.iter() { in_seat(g, s, |g| crate::blast_look::blast_look_tick(g, &mut out)); }
     // (game.ts:1824: the feel of a wall charge going off; what of it is the tick's is blast_feel's own head)
     if g.m.dress.dress.blast_feel { for &s in seats.iter() { let cam = g.tab.cmd_seat[s].cam; in_seat(g, s, |g| crate::blast_feel::blast_feel_tick(g, cam)); } }

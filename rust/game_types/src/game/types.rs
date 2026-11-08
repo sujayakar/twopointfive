@@ -269,7 +269,7 @@ impl SlotKind {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum GuardState {
     Patrol,
     Suspicious,
@@ -694,6 +694,8 @@ pub struct Game {
     pub stood: crate::game::StoodWith,
     /// the solo night's card: your own kit on the plain night's player and on every fresh one
     pub solo_card: bool,
+    /// the Team & kit picture's stage: a host's, round the tick, and read by no rule of the game. Only Rust uses it
+    pub kit_stage: Option<alloc::boxed::Box<crate::kitstage::KitStage>>,
     pub col: crate::scene_collision::StaticCollision,
     pub snow_field: Option<crate::render_snow_field::SnowField>,
     pub snow_tracks: Option<crate::snow_tracks::SnowTracks>,
@@ -883,6 +885,7 @@ impl Game {
         Game {
             stood: crate::game::StoodWith::blank(),
             solo_card: false,
+            kit_stage: None,
             col: crate::scene_collision::StaticCollision::blank(),
             snow_field: None,
             snow_tracks: None,
@@ -1447,7 +1450,7 @@ impl GameDoorHandRecsValue {
 impl Default for GameDoorHandRecsValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: a union)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Hash)]
 pub enum Foe {
     Guard(GuardId),
     Player,
@@ -1533,6 +1536,8 @@ pub struct Player {
     pub visibility: f64,
     pub irradiance: f64,
     pub hit_flash: f64,
+    /// his hands were on a man last frame (the partner's word goes as they first are)
+    pub pair_hands_was: bool,
     pub stagger_until: f64,
     pub dazzled_until: f64,
     pub dazzled_at: Option<V3>,
@@ -1643,6 +1648,7 @@ impl Player {
             visibility: 0.0,
             irradiance: 0.0,
             hit_flash: 0.0,
+            pair_hands_was: false,
             stagger_until: -1.0,
             dazzled_until: -1.0,
             dazzled_at: None,

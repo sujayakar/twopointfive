@@ -1,8 +1,8 @@
 // THE ENGINE REPLAY: a saved replay (F7) played back on the GAME PAGE itself — the real renderer, the real mixer — by walking this page's own game through the
-// file's RUN TAPE (game/runtape.ts: the die, the page's query, the knob tables, then per step the dt, the player's input, the camera and every value the game read
-// off the GPU). The 2D viewer (replay.html, src/replay/viewer.ts) draws the file's TRACE and jumps anywhere at once; this one runs the simulation again, in a
-// straight line, so what is on screen and in the speakers is the game. Notes typed here are the file's own notes (format.ts ReplayNote, kept on the shelf row): the
-// 2D viewer shows them and the other way round.
+// file's RUN TAPE (game/runtape.ts: the die, the page's query, the knob tables, then per step the dt, the player's input and the camera). The 2D viewer
+// (replay.html, src/replay/viewer.ts) draws the file's TRACE and jumps anywhere at once; this one runs the simulation again, in a straight line, so what is on
+// screen and in the speakers is the game. Notes typed here are the file's own notes (format.ts ReplayNote, kept on the shelf row): the 2D viewer shows them and
+// the other way round.
 //
 //   /?playtape=<shelf id>            a replay on this browser's shelf (F7 puts them there; the 2D viewer's and this page's ids are the same)
 //   /?playtape=<path or url>         a replay file served beside the page (.json or .json.gz) — the shipped sound tours, tapes/…
@@ -13,7 +13,7 @@
 // before and after the game is stood, round the mission's staging and once more at the first step (tools/qa/rerun.ts does the same headless: keep the two in step; the WALK over the tape's rows is one file
 // both take, tapewalk.ts).
 // While it plays nothing but the tape reaches the simulation: the game is handed an input and a camera OF THE TAPE'S (never the page's keyboard, mouse or view
-// size). The picture is drawn through the page's own camera on the
+// size), and the game senses for itself, as it did when the run was recorded. The picture is drawn through the page's own camera on the
 // tape's pose with the window's own aspect.
 //
 // THE PICTURE'S CAMERA CAN BE TAKEN OFF THE PLAYER'S VIEW, paused or playing (`free`): a drag on the picture moves it over the floor, a right drag (or Shift +
@@ -44,13 +44,13 @@
 // Nothing here is read by the game: no table, no knob, no state a step reads. The page without ?playtape never calls into this file past `tapeFromUrl`'s first line.
 import type { ReplayFile, ReplayNote, RunTape, Decoded } from './format';
 import { reportWarning } from '../cloud/report';
-import { PLAYER_NAME, TAPE_SHIELD, backToGame, checkReplay, clock, decode, isErrorMark, replayBlob, sampleAt, tapeShield } from './format';
+import { PLAYER_NAME, backToGame, checkReplay, clock, decode, isErrorMark, replayBlob, sampleAt, tapeWhy } from './format';
 import type { LineMark, MapFit, MapMan, MapScene } from './minimap';
 import { drawFloor, drawLine, drawScene, mapFit, mapSize, mapToWorld, MAP_RING } from './minimap';
 import { TapeWalk } from './tapewalk';
 import { RecipeStand, layFlags, put, plain, type Plain } from './recipestand';
 import { shelfGet, shelfList, shelfNotes, shelfPut } from './shelf';
-import { onePage, viewerUrl, visitWord, visitPairs } from '../ui/replaykey';
+import { viewerUrl, visitWord, visitPairs } from '../ui/replaykey';
 import { cloudCarries, cloudFile, cloudNotes, cloudSendsFiles } from '../cloud/cloud';
 import { keptStore } from './keptui';
 import { TEXT_EVENT, rectZoom, textZoom } from '../ui/textsize';
@@ -131,9 +131,11 @@ export interface TapeHost {
   audio: { enabled: boolean; started: boolean; start(): void; setVolumes(): void };
   /** the page's own lines round a step (main.ts step(): the stress row's men, the look's tidy) */
   pre?: () => void;
+  /** round a script's run of steps, as round main.ts `__runFrames`: what the script wrote before it is carried into the game, what the steps left is nobody's write (rustgame.ts rustToolsWrote / rustToolsHold) */
+  tools?: { wrote(): void; hold(): void };
   fingerprint?: () => string;
 }
-export interface TapeState { f: number; ticks: number; playing: boolean; ended: boolean; seeking: boolean; speed: number; compared: number; unjournaled: number;
+export interface TapeState { f: number; ticks: number; playing: boolean; ended: boolean; seeking: boolean; speed: number; compared: number;
   free: boolean; /** is the fog of war on the picture (false = taken off by the viewer) */ fog: boolean; /** the viewer's own night vision: true / false = held on / off, null = as the run had it */ nv: boolean | null; /** does the picture show the tube */ tube: boolean; map: boolean; drift: { f: number; who: string; metres: number } | null; worst: { f: number; who: string; metres: number } | null; notes: number; id: number | null; fp: 'same' | 'differs' | 'unknown'; refuse: string }
 
 /** main()'s first question. null = no tape asked for; 'moved' = the page is on its way to the tape's own query (stop booting); else the player, or a refusal the
@@ -151,18 +153,11 @@ export async function tapeFromUrl(q: URLSearchParams): Promise<TapePlay | 'moved
     }
   } catch (e) { why = `Could not read ${v}: ${(e as Error).message}`; }
   if (F && !why) why = checkReplay(F);
-  if (F && !why) { const T = F.rerun; if (!T) why = 'This replay has no run tape (saved by an older build, or with the tape off): the map viewer plays it.'; else if ('dead' in T) why = `This replay’s run tape ended early (${T.dead}): the map viewer plays it.`; else if (tapeShield(T)) why = `${TAPE_SHIELD}: the map viewer plays it.`; }
+  if (F && !why && (why = tapeWhy(F))) why += '.';
   if (!F || why) return new TapePlay(F, id, v, why || 'No replay.');
   const tape = F.rerun as RunTape, want = tapeSearch(tape, q, v);
   if (new URLSearchParams(location.search).toString() !== new URLSearchParams(want).toString()) { location.replace(location.pathname + want + location.hash); return 'moved'; }
   const P = new TapePlay(F, id, v, ''); for (const n of seen) P.onShelf.add(n.id); return P;
-}
-/** where a `?playtape=` address goes on a game page that plays no tapes (format.ts GAME_PAGE): the map viewer on that shelf entry, with the visit's own sending
- *  words (the viewer sends too, and a visit that said not to still does not). null: a served file, or a build with no viewer page */
-export function tapeMapUrl(q: URLSearchParams): string | null {
-  const v = q.get(PLAYTAPE) ?? ''; if (!/^\d+$/.test(v) || onePage()) return null;
-  const to = new URL(viewerUrl(Number(v))); for (const k of SENDING_WORDS) if (q.has(k)) to.searchParams.set(k, q.get(k) ?? '');
-  return to.href;
 }
 /** the tape's own query, with this visit's keys: what the page must be booted on to be the recording's page */
 export function tapeSearch(tape: RunTape, now: URLSearchParams, v: string): string { return recipeSearch(tape.recipe, now, { [PLAYTAPE]: v, ...(now.has('at') ? { at: now.get('at') ?? '' } : {}) }); }
@@ -194,7 +189,7 @@ export class TapePlay {
   private poster = false;
   private host: TapeHost | null = null;
   private simInput = Input.detached(); private simCam = new FollowCamera(); private simView = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 };
-  /** the tape's row cursors and its sensor answers: tapewalk.ts, the walk tools/qa/rerun.ts takes too */
+  /** the tape's row cursors: tapewalk.ts, the walk tools/qa/rerun.ts takes too */
   private walk: TapeWalk | null = null;
   /** the game stood as the tape's recipe says (recipestand.ts) */
   private rs: RecipeStand | null = null;
@@ -257,7 +252,7 @@ export class TapePlay {
       cam: (p: Partial<TapeView> | null) => this.camSet(p), get view() { return me.view(); }, map: (open?: boolean) => this.mapOpen(open), fog: (on?: boolean) => this.fogSet(on), nv: (on?: boolean | null) => this.nvSet(on), speed: (to: number) => this.speedSet(to),
       get state() { return me.state(); }, get file() { return me.F; }, get notes() { return me.F?.notes ?? []; } };
   }
-  state(): TapeState { return { f: this.f, ticks: this.tape?.ticks ?? 0, playing: this.playing, ended: this.ended, seeking: this.seekTo > this.f, speed: this.speed, compared: this.compared, unjournaled: this.walk?.unjournaled ?? 0, free: !!this.free, fog: !this.nofog, nv: this.nvView, tube: this.tube(), map: !!this.ui && !this.ui.modal.hidden, drift: this.drift, worst: this.worst, notes: this.F?.notes.length ?? 0, id: this.id, fp: this.fp, refuse: this.refuse }; }
+  state(): TapeState { return { f: this.f, ticks: this.tape?.ticks ?? 0, playing: this.playing, ended: this.ended, seeking: this.seekTo > this.f, speed: this.speed, compared: this.compared, free: !!this.free, fog: !this.nofog, nv: this.nvView, tube: this.tube(), map: !!this.ui && !this.ui.modal.hidden, drift: this.drift, worst: this.worst, notes: this.F?.notes.length ?? 0, id: this.id, fp: this.fp, refuse: this.refuse }; }
 
   // ------------------------------------------------------------------------------------------------------------------------ one step of the tape
   /** the length of the last step run (s): a slow frame's picture is that much of it behind the game's clock */
@@ -278,7 +273,7 @@ export class TapePlay {
     const tw = played ? this.slow() : null; if (tw?.stale) this.blendEnd(tw);   // (a slow replay's first step: what stands before it is what its picture is drawn FROM)
     const dt = W.step(cv, I);
     W.layCamera(cam);   // (tapewalk.ts: the pose, and the matrices the page's step read, as tools/qa/rerun.ts lays them)
-    try { g.update(dt, I, cam, cv as unknown as HTMLCanvasElement); } catch (e) { W.failed(); throw e; }
+    g.update(dt, I, cam, cv as unknown as HTMLCanvasElement);
     W.done();
     this.simTime += dt; h.engine.lights.update(dt, this.simTime); this.f = f + 1; this.lastDt = dt;
     if (tw) this.blendEnd(tw); else { const lt = h.loop.tween; if (lt && !lt.stale) lt.rest(); }   // (a step no slow frame will draw between — a seek, a script's, a faster pace — ends the blend: nothing is ever drawn across it)
@@ -435,9 +430,12 @@ export class TapePlay {
   /** scripts: n steps now, exactly, and one drawn frame after them */
   run(n: number, draw = true): TapeState {
     const h = this.host, T = this.tape; if (!h || !T) return this.state();
-    let dt = 0; for (let i = 0; i < n && this.f < T.ticks; i++) { if (i) this.between(); dt += this.stepOne(); } dt = Math.min(dt, 0.25);
-    if (this.f >= T.ticks) { this.ended = true; this.playing = false; }
-    h.loop.time = this.simTime; if (draw && h.canvas.clientWidth > 0 && h.canvas.clientHeight > 0) this.draw(dt); else this.between();
+    h.tools?.wrote();
+    try {
+      let dt = 0; for (let i = 0; i < n && this.f < T.ticks; i++) { if (i) this.between(); dt += this.stepOne(); } dt = Math.min(dt, 0.25);
+      if (this.f >= T.ticks) { this.ended = true; this.playing = false; }
+      h.loop.time = this.simTime; if (draw && h.canvas.clientWidth > 0 && h.canvas.clientHeight > 0) this.draw(dt); else this.between();
+    } finally { h.tools?.hold(); }
     this.paint(); return this.state();
   }
   /** The pace the tape plays at from here on: one of `TAPE_SPEEDS`, anything else is not taken. Nothing a step reads. */

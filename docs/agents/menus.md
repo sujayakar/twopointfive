@@ -95,6 +95,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   one arc, `kitloud`, the solo night, a loud mission as it was, no page error; `QUIETGEAR_BREAK=1` must fail). SEEN: stills of the real page's DOM at
   1440 × 900 with no picture behind it, looked at twice by a reviewer. NOT SEEN BY ANYONE: the panel over the real night picture, on a GPU, in a Mac's
   condensed face, with a pair (a teammate's card), in a window under 1180 px wide.
+- **The Team & kit picture on the new page is the Rust game's** (2026-11-08). draw.html in the kit screen's frame, on the very address Deploy would load plus `kitview` (`src/ui/kitView.ts` makes it, as
+  the old page does). The module starts that mission and STAGES it: `rust/game_start/src/kit_stage.rs` reads the words (way, set, `add`, dress) and makes the plan (`kit_plan.rs`, `kit_set.rs`, to the bit
+  the TypeScript's: `tools/blitz/kitplan-diff.ts`), `rust/game_rules/src/kitstage` stands the team, parks everybody else, hangs the lamps and pins the camera, round the tick (`game_step_seats`); no rule
+  reads it (`Game.kit_stage`, None in every other game). Commands 30 `KitStageCards`, 31 `KitStageOpen`, 32 `KitStageFrame`; the View section's `kit` (1 staged, 2 nothing to stage). The page's half is
+  `src/host/kitpage.ts` (messages to commands; a team staged again is staged under a copy of the last picture) and `src/host/kitguard.ts` (this window writes no store and hears no key). Checks:
+  `game_start --test kit_stage`, `game_run --test kit_commands`, `kitplan-diff.ts` (`KITPLAN_DIFF_BREAK=1`), `kitstage-diff.ts` against the old staging (`KITSTAGE_DIFF_BREAK=1`). `?stillkit` is the old picture's alone. STANDING ONLY so far: no
+  acts, no walk as another card opens (the team is staged again). Seen on a page on the software adapter; never on a GPU.
 - **Team & kit shows the team at the mission's way-in door** (2026-10-13, the owner's pick; `src/ui/kitView.ts` + `src/host/kitView.ts`). SWITCH, UI-ONLY:
   `KIT_VIEW.acts` / `?stillkit` (THE LOOP, 2026-10-14; off = the still picture: staged, warm, held, every
   kit change a plain restage, nothing played — the parent opens the child `&stillkit`, which is what the child reads), on in the page, in the UI module's table (with `kitMs` 150). No `src/game` code reads it, so
@@ -807,7 +814,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   throw release / startGrab; game.ts interrogate; mission.ts spotted / objectives / `tickChronicle`) through the SAME gate as the tallies (`missionLive`: nothing under
   the tour / puppet, nothing once done or failed). New verbs: call `chronicle` or add a `chron_x` helper there; a save's or a load's row is the game's own, written under the save's label (`face_checkpoint`, `face_loaded`). What the page's own books ask of a floor point (the autosave's 'first time in a room' and its label, the verdict's rows, the devices) is `src/game/rooms.ts`. Reading: the page asks ONCE, as the card is built, `face_debrief_view` → `view::debrief_view` (`game.debriefView()`, the record `src/view/debriefview.ts`): `debrief_of`
   → counts + `stealth_score` (100 minus SCORE's price list — every term only subtracts; `the_score_only_goes_down` holds it) + `rating_of` (bands: GHOST ≥ 90 · SHADOW ≥ 70 ·
-  OPERATIVE ≥ 40 · ASSAULT) + `badges_of` (BADGE knobs) + the summary line; `rows` = each row in words (`event_text`), `path`, `rooms`, `recap`. A tool reads it with `tools/qa/debrief-read.ts`. The card is `ui/debrief.ts renderDebrief(host, game, actions)`
+  OPERATIVE ≥ 40 · ASSAULT) + `badges_of` (BADGE knobs) + the summary line; `rows` = each row in words (`event_text`), `path`, `recap`. A tool reads it with `tools/qa/debrief-read.ts`. The card is `ui/debrief.ts renderDebrief(host, game, actions)`
   (menu.ts: mode 'debrief' on the game's out event EndCard — sent on exfil AND `DOWN_CARD_SECS` after Sam drops, `END_CARD.due` for the page's frame — plus the pause card's *Run so far* tab; CSS `#menu .db-*`);
   the map is a canvas at nav-grid resolution + percent-placed DOM pins (PIN table). QA: `rust/game_start/tests/debrief.rs` and chronicle's own tests natively, `probes.ts debrief` (run / rooms / loud / dom) for the card as the page reads it, soak's 'leak chronicle' invariant.
 

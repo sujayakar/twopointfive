@@ -95,11 +95,6 @@ pub unsafe extern "C" fn face_start(p: *const u8, n: usize, slot: i32, seed: u32
     if slot >= sim::state::GAMES { return 0; }
     let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, ..Default::default() };
     let mut stood = game_start::handed::stand_handed(super::bytes(p, n), &o, &mut |g, b| if let Err(why) = game_run::command::apply(g, b) { panic!("face_start: {why}") });
-    // (a host that draws has a particle pool, and keeps the lights' reach: the tick asks only whether they are there)
-    if o.dress {
-        stood.game.engine.particles = Some(game::render_particles::Particles { collide: true, spark_bounce: true, ..game::render_particles::Particles::blank() });
-        stood.game.engine.reach = Some(game::render_reach_keep::ReachKeep::blank());
-    }
     game::scene_collision::light_ready(&mut stood.game);
     let h = super::put(super::Held::new(stood.game));
     crate::memo::forget(h);
@@ -156,12 +151,48 @@ pub unsafe extern "C" fn face_hand(h: u32, seat: usize, p: *const f64, pn: usize
             (c.target, c.pos, c.forward) = (v.target, v.pos, v.forward);
             (c.yaw, c.pitch, c.distance, c.desired_distance, c.fov, c.aspect) = (v.yaw, v.pitch, v.distance, x.drawn.desired, v.fov, v.aspect);
         }
+        let mut cmd = cmd;
+        if x.hands.as_ref().is_some_and(|h| h.0 == seat) {
+            // (he asks of the box world: its copy stands, as for any question between two ticks)
+            if game::ask::WorldAsk::try_of(&x.g).is_err() { game::scene_collision::stands(&mut x.g); }
+            game::scene_box_mirror::box_mirror_things(&mut x.g);
+            if let Some((_, h)) = &mut x.hands { h.hand(&x.g, &mut cmd, 1.0 / 60.0); }
+        }
         let still = |s: game::ids::SeatId| { let c = x.g.tab.cmd_seat[s].cmd.as_ref().unwrap_or(&cmd); PlayerCmd { keys: Vec::new(), pressed: Vec::new(), buttons: 0.0, clicked: 0.0, wheel: 0.0, ..c.clone() } };
         let mut cmds = x.cmds.take().unwrap_or_else(|| x.g.seats.iter().map(|&s| still(s)).collect());
         cmds[seat] = cmd;
         x.cmds = Some(cmds);
     });
 }
+/// NOBODY'S HANDS ARE ON A SEAT (game_run hands_off): the hands it is handed from here are his own. `p`, `n`: his plan, a word a line: the seed, the seconds he plays, 1 to throw the breaker
+/// first, then doors by name to take first. An empty plan: the seat is the host's again.
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_hands_off(h: u32, seat: usize, p: *const u8, n: usize) {
+    let text = super::text(p, n);
+    let w: Vec<&str> = text.split('\n').collect();
+    super::with(h, |x| x.hands = if text.is_empty() { None } else {
+        let num = |i: usize| w.get(i).and_then(|v| v.parse::<f64>().ok()).unwrap_or(0.0);
+        let plan = game_run::hands_off::Plan { seed: num(0) as u32, cap: num(1), breaker: num(2) != 0.0, route: w.iter().skip(3).map(|s| String::from(*s)).collect() };
+        Some((seat, game_run::hands_off::HandsOff::new(x.g.seats[seat], plan)))
+    });
+}
+/// how he stands, as JSON at face_out (empty: nobody is hands off): seconds played, how it ended, orders given, when a round last left a gun, the squad's men up and of how many, defenders left
+#[no_mangle]
+pub extern "C" fn face_hands_said(h: u32) {
+    let s = super::with(h, |x| match &x.hands { None => String::new(), Some((seat, p)) => {
+        let g = &x.g;
+        let squad = game::orders::squad_orders_squad(g, &game::seats::seat(g, g.seats[*seat]));
+        let up = squad.iter().filter(|&&m| g.gd[m].state != game::game::GuardState::Dead).count();
+        format!("{{\"t\":{},\"end\":{},\"given\":{},\"shotAt\":{},\"up\":{},\"of\":{},\"left\":{}}}", p.t(), p.end().map_or(String::from("null"), |e| format!("\"{}\"", e.as_str())), p.given(), p.shot_at(), up, squad.len(),
+            g.guards.iter().filter(|&&m| g.gd[m].team == game::teams::Team::Hostile && g.gd[m].state != game::game::GuardState::Dead).count())
+    } });
+    super::out(s.into_bytes());
+}
+/// his timeline, a line an entry, at face_out
+#[no_mangle]
+pub extern "C" fn face_hands_trace(h: u32) { let s = super::with(h, |x| x.hands.as_ref().map_or(String::new(), |p| p.1.trace())); super::out(s.into_bytes()); }
 #[no_mangle]
 pub extern "C" fn face_draw(h: u32, want: u32) -> *const u32 {
     super::with(h, |x| { x.drawn.take(&x.g, want); x.drawn.table().as_ptr() })
@@ -398,7 +429,8 @@ fn drop_kept(k: u32) { KEPT.with(|v| if let Some(x) = v.borrow_mut().get_mut((k 
 #[no_mangle]
 pub unsafe extern "C" fn face_commands(h: u32, p: *const u8, n: usize) -> u32 {
     let b = super::bytes(p, n);
-    match super::with(h, |x| game_run::command::apply(&mut x.g, b)) { Ok(()) => 1, Err(why) => { super::out(why.into_bytes()); 0 } }
+    // (a restart done between two ticks: the picture of the game before it is not blended into this one's)
+    match super::with(h, |x| { let done = game_run::command::apply(&mut x.g, b); if x.g.restart_cut { x.drawn.cut(); } done }) { Ok(()) => 1, Err(why) => { super::out(why.into_bytes()); 0 } }
 }
 
 thread_local! {

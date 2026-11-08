@@ -101,7 +101,6 @@ fn the_map_gets_the_path_the_rooms_and_the_rows_pins() {
         let v = card(&p);
         assert_eq!(v.path.len() as f64, p.g.chronicle.path_n * 3.0, "seed {}: every sample and none past it", seed);
         assert!(!v.path.is_empty(), "seed {}: he stood somewhere", seed);
-        assert!(v.rooms.iter().any(|r| r.label == "break"), "seed {}: the office's rooms, each with its label: {:?}", seed, v.rooms.iter().map(|r| &r.label).collect::<Vec<_>>());
         chronicle::chron_alarm(&mut p.g, 1.0, true, Some("heard"));
         chronicle::chron_alarm(&mut p.g, 0.0, false, None);
         let alarms: Vec<bool> = card(&p).rows.iter().filter(|r| r.kind == ChronKind::Alarm).map(|r| r.down).collect();

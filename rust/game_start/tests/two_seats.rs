@@ -1,7 +1,8 @@
 //! A GAME OF TWO: what the world's lines of the tick say about the team is about every player, not the first (tools/blitz/sweeps/seat-tick.py lists them).
 use game::game::Foe;
 use game::ids::GuardId;
-use game_start::play::{Opts, Play};
+use game_start::play::{nudge, Opts, Play};
+use game_start::scene::{Axis, Scene};
 
 const SEEDS: [u32; 2] = [21, 22];
 /// a clear run of floor down the office's aisle
@@ -235,5 +236,277 @@ fn a_teammates_lane_is_clear_of_both_players() {
             p.seat_stands(seat, [16.0, AISLE]);
             assert!(!game::coverfire::cover_lane(&mut p.g, shooter, [12.0, 1.4, AISLE], [20.0, 1.4, AISLE]), "seed {s}: seat {seat}'s man stands in the lane and it is called clear");
         }
+    }
+}
+
+/// THE RULE: a man's walk through a door goes by his own seat's order, whichever seat he is. Back from a fight his order's way is taken up again.
+/// A failure means the walk finds no order for the second player's men.
+#[test]
+fn a_walk_through_a_door_goes_by_his_own_seats_order() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let scene = store(s);
+            let door = scene.door_centre("store-yard");
+            let mut p = Play::scene(&scene, &Opts { seed: s, seats: 2, ..Default::default() });
+            let inside = p.defender_at([17.25, 9.25]);
+            p.falls(inside, game::game::DownBy::Player);
+            p.run(0.5);
+            p.seat_orders(seat, "stack", door, game::orders::Who::All);
+            p.run(7.0);
+            p.seat_orders(seat, "openClear", door, game::orders::Who::All);
+            let sn = p.g.seats[seat];
+            let mine = game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, sn));
+            let walker = p.until(5.0, |p| mine.iter().any(|m| p.g.door_path.walks.has(*m))).map(|_| *mine.iter().find(|m| p.g.door_path.walks.has(**m)).unwrap());
+            let Some(m) = walker else { panic!("seed {s}, seat {seat}: CONTROL: five seconds after the word no man of his has a walk") };
+            let a = game::orders::squad_orders_of(&p.g, &game::seats::seat(&p.g, sn), m).expect("he is on the order");
+            let pod = p.g.door_path.walks.get(m).unwrap().pod;
+            p.g.tab.orders_assignment[a].post = Some(pod);
+            p.g.tab.orders_assignment[a].via = vec![pod];
+            p.frame();
+            assert!(p.g.tab.orders_assignment[a].via.is_empty(), "seed {s}: seat {seat}'s man's walk did not take his order's way up");
+        }
+    }
+}
+
+/// THE RULE: a man's hand at work tells what his work is, whichever seat he is.
+/// A failure means the second player's man works a breaker with the hand of a man pushing a door.
+#[test]
+fn a_hand_at_work_says_what_the_work_is_for_either_seat() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, _) = two(s);
+            for d in p.g.doors.list.clone() { game::doors::door_set_locked(&mut p.g, d, false); }
+            p.run(0.3);
+            let sn = p.g.seats[seat];
+            let th = game::workthings::work_things_things(&p.g, &game::seats::seat(&p.g, sn)).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("the office has a breaker");
+            p.seat_orders(seat, "work", [th.face[0], th.face[2]], game::orders::Who::All);
+            let mine = game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, sn));
+            let chars: Vec<_> = mine.iter().map(|m| p.g.gd[*m].ch).collect();
+            let at = p.until(40.0, |p| chars.iter().any(|c| game::workthings::work_hand(&mut p.g, *c).is_some()));
+            assert!(at.is_some(), "seed {s}: CONTROL: forty seconds and no hand of seat {seat}'s is out: {}", p.roll());
+            let c = *chars.iter().find(|c| game::workthings::work_hand(&mut p.g, **c).is_some()).unwrap();
+            assert!(game::workthings::work_job(&mut p.g, c).is_some(), "seed {s}: seat {seat}'s man has a hand out and no job");
+        }
+    }
+}
+
+/// THE RULE: a player's hand on a light switch is planted the same for either seat, and held by his own state.
+#[test]
+fn a_hand_on_a_switch_is_planted_for_either_seat() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, _) = two(s);
+            let sw = p.g.m.lightswitch.states.as_ref().and_then(|st| st.all.first().cloned()).expect("the office has a switch");
+            let m = man(&p, seat);
+            let pc = p.g.pl[m].ch;
+            p.seat_stands(seat, [sw.pos[0] + sw.n[0] * 0.5, sw.pos[2] + sw.n[2] * 0.5]);
+            game::lightswitch::flip_switch(&mut p.g, &sw, false, pc);
+            let plant = |p: &Play| p.g.m.lightswitch.states.as_ref().unwrap().hands.last().map(|h| h.plant);
+            assert_eq!(plant(&p), Some(true), "seed {s}: seat {seat}'s man flips a switch");
+            // his plant goes by where HE stands, wherever the other player is
+            p.seat_stands(1 - seat, [3.0, 3.0]);
+            p.frame();
+            assert_eq!(plant(&p), Some(true), "seed {s}: the other player's place broke seat {seat}'s plant");
+            p.seat_stands(seat, [sw.pos[0] + sw.n[0] * 3.0, sw.pos[2] + sw.n[2] * 3.0]);
+            p.frame();
+            assert_eq!(plant(&p), Some(false), "seed {s}: seat {seat}'s man walked off and his plant held");
+        }
+    }
+}
+
+/// THE RULE: a defender's live grenade is called to whichever player it is near.
+#[test]
+fn a_grenade_is_called_to_either_player() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, _) = two(s);
+            p.seat_stands(1 - seat, [3.0, 3.0]);
+            p.seat_stands(seat, [18.0, AISLE]);
+            p.frag_lands([19.0, AISLE]);
+            p.frame();
+            p.g.m.frag.books.as_mut().unwrap()[0].cued = false;
+            game::frag::sam_cue(&mut p.g, 0, [19.0, 0.2, AISLE]);
+            assert!(p.g.m.frag.books.as_ref().unwrap()[0].cued, "seed {s}: a grenade a metre from seat {seat}'s man and nobody is told");
+        }
+    }
+}
+
+/// (coop.rs's store: a door and a room behind it)
+fn store(seed: u32) -> Scene {
+    let mut s = Scene::new("store");
+    s.room("store", 10.0, 8.0, 18.0, 14.0).room("far", 26.0, 8.0, 34.0, 14.0);
+    s.door("store-yard", Axis::X, 14.0, 13.4 + nudge(seed, 0)).locked("store-yard").door("far-yard", Axis::X, 14.0, 29.4).door("far-back", Axis::X, 8.0, 29.4);
+    s.bulb(14.0, 11.0).bulb(30.0, 11.0).moon();
+    s.team([14.0, 21.0], std::f64::consts::PI, &[[13.0, 22.0 + nudge(seed, 1)], [15.0, 22.0], [13.0, 23.0], [15.0, 23.0]]);
+    s.defender("far", [32.25, 10.25], "far-yard").defender("store", [17.25, 9.25], "store-yard");
+    s
+}
+
+/// A game of two with the partner's rules up (`?pair`), every squad silent, one defender left, held.
+fn partners(seed: u32) -> (Play, GuardId) {
+    let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad=2", &Opts { seed, seats: 2, ..Default::default() });
+    p.g.god_mode = true;
+    p.run(0.3);
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    p.drop_all_but(&foes[..1]);
+    let t1 = foes[0];
+    p.g.k.pairup.on = true;
+    game::pairup::pair_up_apply(&mut p.g, None);
+    p.g.k.silent.on = true;
+    for i in 0..2 { let sn = p.g.seats[i]; game::seats::with_seat(&mut p.g, sn, &mut |g| game::silent::set_silent(g, true, None)); }
+    p.frame();
+    (p, t1)
+}
+/// THE RULE: each player has the partner's rows on his own menu and his own word for the go: a mark waiting on one player's man goes on that player's F, and on nobody else's.
+/// A failure means the second player has no partner's rows, or the first player's F sends the second player's man.
+#[test]
+fn each_player_has_his_own_partner() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, t1) = partners(s);
+            let sn = p.g.seats[seat];
+            let has = |p: &Play, sn, id: &str| { let seat = game::seats::seat(&p.g, sn); seat.orders.defs.iter().any(|d| p.g.tab.orders_order_def[*d].id == id) };
+            assert!(has(&p, sn, "pairMark"), "seed {s}: seat {seat} has no partner's rows on his menu");
+            let mine = game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, sn));
+            let at = [22.0, AISLE];
+            const EAST: f64 = std::f64::consts::FRAC_PI_2;
+            let theirs = game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, p.g.seats[1 - seat]));
+            for _ in 0..10 {
+                p.pin_man(t1, at, EAST, game::game::GuardState::Patrol, 0.0);
+                p.seat_stands(seat, [11.0, 18.5]);
+                for &m in &mine { p.man_stands(m, [13.0, AISLE]); }
+                p.seat_stands(1 - seat, [3.0, 3.0]);
+                for &m in &theirs { p.man_stands(m, [3.5, 3.5]); }
+                p.frame();
+            }
+            let picked = game::orders::squad_orders_people_near(&p.g, &game::seats::seat(&p.g, sn), [at[0], 0.0, at[1]]).map(|(h, _)| h);
+            assert_eq!(picked, Some(t1), "seed {s}: seat {seat}'s cursor cannot pick a man for his partner");
+            let why = game::seats::with_seat(&mut p.g, sn, &mut |g| {
+                let t = game::orders::OrderTarget::Foe(game::orders::OrderTargetFoe { at: [at[0], 0.0, at[1]], foe: t1 });
+                game::orders::squad_orders_give(g, "pairMark", Some(&t), Some(game::orders::Who::All), None)
+            });
+            assert_eq!(why, None, "seed {s}: seat {seat}'s mark was refused");
+            p.pin_man(t1, at, EAST, game::game::GuardState::Patrol, 0.0);
+            p.frame();
+            let job = |p: &Play| mine.iter().find_map(|m| p.g.pair.jobs.get(*m).copied());
+            assert!(job(&p).map_or(false, |j| !j.go), "seed {s}: seat {seat}'s man waits on the mark: {:?}", job(&p));
+            // the other player's F sends nobody of his
+            let other = p.g.tab.cmd_seat[p.g.seats[1 - seat]].input;
+            p.g.tab.input[other].pressed.add(String::from("KeyF"));
+            p.pin_man(t1, at, EAST, game::game::GuardState::Patrol, 0.0);
+            p.net_frame(0);
+            assert!(job(&p).map_or(false, |j| !j.go), "seed {s}: the other player's F sent seat {seat}'s man");
+            let marks = p.g.stats.pairorders.marks;
+            let own = p.g.tab.cmd_seat[sn].input;
+            p.g.tab.input[own].pressed.add(String::from("KeyF"));
+            p.pin_man(t1, at, EAST, game::game::GuardState::Patrol, 0.0);
+            p.net_frame(0);
+            assert!(p.g.stats.pairorders.marks > marks, "seed {s}: seat {seat}'s own F did not send his man: {:?}", job(&p));
+        }
+    }
+}
+
+/// THE RULE: a camera watches every player in its cone. The player nearest the lens does not hide the other.
+/// A failure means standing behind a camera shields your partner.
+#[test]
+fn a_camera_sees_any_player_in_its_cone() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, _) = two(s);
+            let c = *p.g.devices.cameras.first().expect("the office has a camera");
+            let def = p.g.tab.devices_camera_rt[c].def.clone();
+            let yaw = game::sim_lightshome::camera_machine_yaw(&p.g, c);
+            let look = game::devices::lens_dir(yaw, def.pitch.unwrap_or(game::scene_level_data::device_defaults().pitch));
+            let m = man(&p, seat);
+            for x in p.mates() { p.man_stands(x, [3.5, 3.5]); }
+            p.seat_stands(1 - seat, [def.pos[0] - look[0] * 0.4, def.pos[2] - look[2] * 0.4]);
+            let spot = [4.0, 3.0, 5.0, 2.0, 6.0].into_iter().map(|d| [def.pos[0] + look[0] * d, 0.0, def.pos[2] + look[2] * d])
+                .find(|q| !game::scene_collision::segment_blocked(&mut p.g, def.pos, [q[0], 1.1, q[2]], None, None, None)).expect("the lens looks down some clear floor");
+            p.seat_stands(seat, [spot[0], spot[2]]);
+            p.frame();
+            let pc = p.g.pl[m].ch;
+            let spot = p.g.ch[pc].pos;
+            p.g.pl[m].visibility = 1.0;
+            let dd = game::scene_level_data::device_defaults();
+            let half = def.fov_deg.unwrap_or(dd.fov_deg) / 2.0;
+            let yaw = game::sim_lightshome::camera_machine_yaw(&p.g, c);
+            let look = game::devices::lens_dir(yaw, def.pitch.unwrap_or(dd.pitch));
+            let e = game::guards::Eye { pos: def.pos, look, range: def.range.unwrap_or(dd.range), half_deg: half, near_m: 0.0, near_deg: half, v_half_deg: Some(half) };
+            assert!(game::guards::eye_contact(&mut p.g, e, pc, true, false, 1.0, None).visible, "seed {s}: CONTROL: the lens has seat {seat}'s man in its cone at {spot:?}");
+            game::devices::update_camera(&mut p.g, c, 1.0 / 60.0, true);
+            let last = game::sim_lightshome::camera_machine_last_seen(&p.g, c);
+            assert!(last.map_or(false, |l| (l[0] - spot[0]).abs() < 0.1 && (l[2] - spot[2]).abs() < 0.1), "seed {s}: seat {seat}'s man stands at {spot:?} in the cone, the other behind the lens, and the camera last saw {last:?}");
+        }
+    }
+}
+
+/// THE RULE: a kill by a blast is written down with the man who set it off, not whoever stands.
+/// A failure means the debrief names the first player's gun for the second player's grenade.
+#[test]
+fn a_blast_kill_is_the_man_who_set_it_off() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, t1) = two(s);
+            let (m, other) = (man(&p, seat), man(&p, 1 - seat));
+            p.g.pl[other].holstered = true;
+            p.g.pl[m].holstered = false;
+            let c = p.g.gd[t1].ch;
+            let (who, at) = (p.g.ch[p.g.pl[m].ch].id, p.g.ch[c].pos);
+            let n0 = p.g.chronicle.events.len();
+            let spec = game::frag::BlastSpec { who, name: Some(String::from("grenade")), fx: Some(false), ..Default::default() };
+            game::frag::blast(&mut p.g, [at[0] + 0.1, 0.05, at[2]], &spec);
+            let row = p.g.chronicle.events[n0..].iter().find(|e| e.kind == game::chronicle::ChronKind::Kill).cloned();
+            let Some(row) = row else { panic!("seed {s}: CONTROL: a grenade at his feet and no kill row: {:?}", p.g.gd[t1].state) };
+            let said = format!("{:?}", row.data);
+            assert!(said.contains("grenade"), "seed {s}: seat {seat}'s blast is written with what is in somebody's hands: {said}");
+            assert_eq!(game::chronicle::event_text(&p.g, &row), format!("{} killed — the grenade", p.g.gd[t1].callsign), "seed {s}: seat {seat}");
+        }
+    }
+}
+
+/// THE RULE: a kill by a blast names what went off, not the gun in the hand, for one player as for two.
+/// A failure means the debrief says "shot dead (FN2000)" of a man a grenade killed.
+#[test]
+fn a_blast_kill_names_what_went_off_with_one_player() {
+    for s in SEEDS {
+        let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: s, ..Default::default() });
+        p.g.god_mode = true;
+        p.run(0.3);
+        let t1 = p.g.guards.iter().copied().find(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).expect("a defender");
+        let pl = p.g.player;
+        p.g.pl[pl].holstered = false;
+        assert!(game::game::player_gun_in_hand(&p.g, pl).is_some(), "seed {s}: CONTROL: a gun in his hand");
+        let c = p.g.gd[t1].ch;
+        let (who, at) = (p.g.ch[p.g.pl[pl].ch].id, p.g.ch[c].pos);
+        let n0 = p.g.chronicle.events.len();
+        let spec = game::frag::BlastSpec { who, name: Some(String::from("grenade")), fx: Some(false), ..Default::default() };
+        game::frag::blast(&mut p.g, [at[0] + 0.1, 0.05, at[2]], &spec);
+        let row = p.g.chronicle.events[n0..].iter().find(|e| e.kind == game::chronicle::ChronKind::Kill).cloned();
+        let Some(row) = row else { panic!("seed {s}: CONTROL: a grenade at his feet and no kill row") };
+        assert_eq!(game::chronicle::event_text(&p.g, &row), format!("{} killed — the grenade", p.g.gd[t1].callsign), "seed {s}");
+    }
+}
+
+/// THE RULE: a civilian killed by a blast is written down under what went off.
+/// A failure means the debrief says she was killed by the gun in his hand.
+#[test]
+fn a_civilian_killed_by_a_blast_names_what_went_off() {
+    for s in SEEDS {
+        let mut p = Play::level("office.json", false, &Opts { seed: s, ..Default::default() });
+        p.g.god_mode = true;
+        p.run(0.2);
+        let her = *p.g.civilians.first().expect("CONTROL: the office has a civilian");
+        let pl = p.g.player;
+        p.g.pl[pl].holstered = false;
+        assert!(game::game::player_gun_in_hand(&p.g, pl).is_some(), "seed {s}: CONTROL: a gun in his hand");
+        let c = p.g.gd[her].ch;
+        let (who, at) = (p.g.ch[p.g.pl[pl].ch].id, p.g.ch[c].pos);
+        let n0 = p.g.chronicle.events.len();
+        let spec = game::frag::BlastSpec { who, name: Some(String::from("grenade")), fx: Some(false), ..Default::default() };
+        game::frag::blast(&mut p.g, [at[0] + 0.1, 0.05, at[2]], &spec);
+        let row = p.g.chronicle.events[n0..].iter().find(|e| e.kind == game::chronicle::ChronKind::CivilianKilled).cloned();
+        let Some(row) = row else { panic!("seed {s}: CONTROL: a grenade at her feet and no row") };
+        let said = game::chronicle::event_text(&p.g, &row);
+        assert!(said.contains("(grenade)"), "seed {s}: {said}");
     }
 }
