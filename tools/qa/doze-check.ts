@@ -30,7 +30,8 @@ export async function dozeCheck(): Promise<boolean> {
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-  const { DOZE, DOZE_STATS, DOZE_LOG, dozeOf, dozeMark, dozeAsleep, dozeWoke, dozeAt, dozeLines } = await import(`${ROOT}/src/game/doze.ts`);
+  const dozeMark = (g: any, m: any): string => g.view.marks.men.find((x: any) => x.man === m.char.id)?.text ?? '';   // (what the HUD is told)
+  const { DOZE, DOZE_STATS, DOZE_LOG, dozeOf, dozeAsleep, dozeWoke, dozeAt, dozeLines } = await import(`${ROOT}/src/game/doze.ts`);
   const { CLOSE, closeAt, closeKindOf, closeSeated } = await import(`${ROOT}/src/game/close.ts`);
   const { workLit } = await import(`${ROOT}/src/game/calmtorch.ts`);
   const { raiseEscalation, lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);

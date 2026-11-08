@@ -21,6 +21,9 @@ pub fn tick_view(g: &Game, seat: &crate::seats::SeatRef) -> TickView {
         me: me.id,
         place: crate::chronicle::room_of(g, me.pos),
         kit: crate::kit::kit_view(g, seat),
+        marks: marks_view(g, seat),
+        aim: aim_view(g, seat),
+        worn: worn_view(g),
     }
 }
 

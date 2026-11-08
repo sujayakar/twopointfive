@@ -3,19 +3,15 @@ import { railClear, type Box } from './railclear';
 import { railCard, type RailCard } from './railcard';
 import type { HudLike } from '../host/hud';   // the loop's view of a HUD (src/host/loop.ts stepFrame): this class is the DOM one; a native host's display-list overlay is another
 import { v3, clamp, lerp } from '../math/vec';
-import type { Vec3 } from '../math/vec';
 import { FollowCamera } from '../game/camera';
-import { Game, Interactable, isBreathing } from '../game/game';
+import { Game, Interactable } from '../game/game';
+import type { Character } from '../game/character';
+import type { ThrowReachView } from '../view/read';
 import { FLOOR } from '../game/floor';
 import { RAILS } from '../game/rails';
 import { backName } from '../game/backkey';
 import { KEYMAP, keyCap, keyText, camCap } from '../host/keymap';   // (the player's own keys: every key this HUD names is named as it is bound — the same string back while nothing is rebound)
-import { playerAim } from '../game/aim';
-import { AIMCOST } from '../game/aimcost';
-import { aimGunPoint, aimGunOn } from '../game/aimweight';
-import { previewTooClose } from '../game/he40';
-import { gunShut, throwRest, thingDist } from '../game/player';
-import { throwReach, type ThrowReach } from '../game/throwreach';
+import { thingDist } from '../game/player';
 import { GEAR, gearText } from '../game/gear';
 import { HANDRING, EMPTY_WORD, EMPTY_WHY, EMPTY_SHOW_SECS } from '../game/handring';
 import { cornerRows, cornerOn } from './corner';
@@ -24,18 +20,13 @@ import { emptyThing, emptyWord } from '../game/interact';
  *  the RMB overlay on the cursor" — what the right button holds is read on the kit column's rows) */
 const HE40_SHORT = '40 MM · TOO CLOSE TO ARM';
 const HE40_SHORT_STROKE = 'rgba(255, 170, 90, 0.95)';
-import { needsTrip } from '../game/needs';
-import { headMark, waryDots } from './headmark';
-import { stickyMarks } from '../game/stickycam';
 import { CKPT } from '../game/savestate';
 import { pageRows } from '../view/pagesaid';
-import { fragMarks } from '../game/frag';
+import { fogHides } from '../view/seatview';
 import { RECAP, lostLive, lostArrowsShown, type LostMan } from '../game/deathrecap';
 import { drawHandBox } from './handbox';
 import type { KitView } from '../view/seatview';
-import { samBlind } from '../game/samstun';
 import { CmdRingViz } from './cmdring';
-import { closeMarks } from '../game/close';
 import { PlanFloor } from './planfloor';
 import { FindMeViz } from './findme';
 import { WindViz } from './windviz';
@@ -55,6 +46,8 @@ function lostArrow(L: LostMan, cam: FollowCamera, now: number): string {
   if (!Number.isFinite(sx) || !Number.isFinite(sy)) return '';
   return `${(((Math.round(Math.atan2(sy, sx) / (Math.PI / 4)) % 8) + 8) % 8) * 45}${now - L.knownAt < 1.2 ? ' n' : ''}`;
 }
+/** the widest the aiming ring opens, px: moving feet may open it past the 60 it stands at */
+const RING_PX = 120;
 const MAX_ROWS = 5;     // …at most this many blocks, then '+N more' (player.ts MAX_NEAR verb rows + the cancel row while the selector is open, and one spare)
 
 /** One block of the interaction panel — one ROW of the list (player.ts buildInteractables: a verb Space can do, or a running one): what the thing is (`label`,
@@ -92,21 +85,21 @@ export class Overlay implements HudLike {
   private equip = document.getElementById('equip')!;
   private traj = document.getElementById('traj') as unknown as SVGSVGElement;
   private trajPath: SVGPolylineElement; private trajLand: SVGCircleElement; private trajShort = false;
-  private reachEls!: Record<'kill' | 'hurt' | 'stun', { el: SVGPathElement; d: string }>; private reach: ThrowReach | null = null;   // throwreach.ts: what the thing he is aiming will reach, flat on the floor round where it ends
-  private trajRoll: SVGPolylineElement; private trajTick: SVGCircleElement; private restKey = ''; private restN = 0; private rest: { at: Vec3; path: Vec3[] } | null = null;   // player.ts throwRest: the ring goes where the can comes to REST, a tick stays on its first touch, the floor between is dotted
+  private reachEls!: Record<'kill' | 'hurt' | 'stun', { el: SVGPathElement; d: string }>;   // (game.view.aim.throw.reach): what the thing he is aiming will reach, flat on the floor round where it ends
+  private trajRoll: SVGPolylineElement; private trajTick: SVGCircleElement;   // (game.view.aim.throw.rest): the ring goes where the can comes to REST, a tick stays on its first touch, the floor between is dotted
   private squadThrow!: SquadThrowViz;
   private attention!: AttentionViz;
   private picture!: PictureViz;
-  /** closer than ever (game/close.ts closeMarks): the windows round a man near Sam, each a floor polygon with its words — pooled path + text pairs in the throw arc's svg */
-  private closeG!: SVGGElement; private closeEls: { path: SVGPathElement; text: SVGTextElement }[] = []; private closeShown = 0;
   private equipKey = '';
   private equipKit: KitView | null = null;
   private equipRev = -1;
   private markers: HTMLElement[] = [];
-  private fragMarksEl: HTMLElement[] = [];   // (frag.ts fragMarks: a defender's live grenade Sam has been cued on)
+  /** the men on the floor by their characters' ids, this frame: where the game's marks go */
+  private men = new Map<number, Character>();
+  private fragMarksEl: HTMLElement[] = [];   // (game.view.marks.frags: a defender's live grenade Sam has been cued on)
   private lostMarks: HTMLElement[] = [];   // (deathrecap.ts lostLive: the way the round came in at a squad man lost)
-  private camMarks: HTMLElement[] = [];    // (stickycam.ts stickyMarks: a small lens on each of his own stuck sticky cameras while the fog of war is live — STICKY.mark)
-  private seenMarks: HTMLElement[] = [];   // (fogofwar.ts lastSeen: a fading '?' where an enemy was last seen — FOG.lastSeen, 0 = none)
+  private camMarks: HTMLElement[] = [];    // (game.view.marks.cams: a small lens on each of his own stuck sticky cameras while the fog of war is live)
+  private seenMarks: HTMLElement[] = [];   // (game.view.marks.seen: a fading '?' where an enemy was last seen)
   /** the orders ring at the cursor (ui/cmdring.ts ← game/cmdring.ts — a prototype: nothing unless CMDRING.on — the ring while its key is down, and before it the hint of what it would open on) */
   readonly cmdRing = new CmdRingViz(this.traj);
   private dots: HTMLElement[] = [];
@@ -145,7 +138,7 @@ export class Overlay implements HudLike {
   private menuEl = document.getElementById('menu')!;                               // start / pause / debrief card up ('on'): no interaction panel behind it
   private objEl = document.getElementById('objective')!; private objKey = '\0';   // the mission's one line (top-centre)
   private alarmEl = document.getElementById('alarm')!; private alarmKey = '';       // alarm stage under it (hidden at calm)
-  private blindEl = document.getElementById('blind'); private blindK = 0;             // the white of a stun canister in his eyes (game/samstun.ts samBlind) — absent on a page without the element
+  private blindEl = document.getElementById('blind'); private blindK = 0;             // the white of a stun canister in his eyes (game.view.marks.blind) — absent on a page without the element
   private ckEl = document.getElementById('checkpoint'); private ckKey = '';           // the CHECKPOINT tag (game.saves.flash: written / loaded), shown CKPT.flashSecs — absent on a page without the element
   private orderMark: HTMLElement;                                                  // the ring on what the squad's order menu is frozen on (orders.ts mark())
   private skyWas = false;
@@ -174,7 +167,6 @@ export class Overlay implements HudLike {
     this.trajPath.setAttribute('fill', 'none'); this.trajPath.setAttribute('class', 'trajpath'); this.trajPath.setAttribute('stroke-width', '2'); this.trajPath.setAttribute('stroke-dasharray', '5 6'); this.trajPath.setAttribute('stroke-linecap', 'round');
     this.trajLand = document.createElementNS(NS, 'circle') as SVGCircleElement;
     this.trajLand.setAttribute('r', '9'); this.trajLand.setAttribute('class', 'trajland'); this.trajLand.setAttribute('stroke-width', '1.5');
-    this.closeG = document.createElementNS(NS, 'g') as SVGGElement; this.closeG.setAttribute('class', 'closewin'); this.traj.appendChild(this.closeG);   // (under the throw arc: the floor's own marks first)
     this.trajRoll = document.createElementNS(NS, 'polyline') as SVGPolylineElement;
     this.trajRoll.setAttribute('fill', 'none'); this.trajRoll.setAttribute('class', 'trajpath trajroll'); this.trajRoll.setAttribute('stroke-width', '2'); this.trajRoll.setAttribute('stroke-dasharray', '1 6'); this.trajRoll.setAttribute('stroke-linecap', 'round');
     this.trajTick = document.createElementNS(NS, 'circle') as SVGCircleElement;
@@ -188,50 +180,31 @@ export class Overlay implements HudLike {
     this.picture = new PictureViz(this.traj, this.traj.firstChild as Element | null);   // (one man's picture of the fight — game/picture.ts: a debug view, nothing unless PICTURE.show asks)
     this.trajPath.style.display = 'none'; this.trajLand.style.display = 'none';
   }
-  /** The close-in windows on the floor (game/close.ts): every window of every man near Sam as its outline projected through the camera — the one he stands in
-   *  filled and bright, the open ones outlined, a shut one amber and broken — with what it gives in a few words just outside its arc. Nothing with the switch
-   *  off (closeMarks returns none and the pool stays hidden: no element is touched). */
-  private drawClose(game: Game, cam: FollowCamera, w: number, h: number) {
-    const marks = closeMarks(game); let n = 0;
-    if (marks.length) {
-      const NS = 'http://www.w3.org/2000/svg';
-      for (const m of marks) {
-        let el = this.closeEls[n];
-        if (!el) { el = { path: document.createElementNS(NS, 'path') as SVGPathElement, text: document.createElementNS(NS, 'text') as SVGTextElement }; el.text.setAttribute('text-anchor', 'middle'); el.text.setAttribute('dominant-baseline', 'middle'); this.closeG.appendChild(el.path); this.closeG.appendChild(el.text); this.closeEls.push(el); }
-        n++;
-        let d = '', seen = false;
-        for (let i = 0; i < m.pts.length; i++) { const [x, y, vis] = cam.project(m.pts[i], w, h, 3); if (vis) seen = true; d += `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`; }
-        const cls = `cw-${m.state}`;
-        if (seen && d) { el.path.setAttribute('d', d + 'Z'); if (el.path.getAttribute('class') !== cls) el.path.setAttribute('class', cls); el.path.style.opacity = m.alpha.toFixed(2); el.path.style.display = 'block'; } else el.path.style.display = 'none';
-        const [lx, ly, lv] = cam.project(m.labelAt, w, h, 3);
-        if (seen && lv && m.label) { if (el.text.textContent !== m.label) el.text.textContent = m.label; if (el.text.getAttribute('class') !== cls) el.text.setAttribute('class', cls); el.text.setAttribute('x', lx.toFixed(1)); el.text.setAttribute('y', ly.toFixed(1)); el.text.style.opacity = (m.alpha * (m.state === 'in' ? 1 : 0.8)).toFixed(2); el.text.style.display = 'block'; } else el.text.style.display = 'none';
-      }
-    }
-    for (let i = n; i < this.closeShown; i++) { const el = this.closeEls[i]; el.path.style.display = 'none'; el.text.style.display = 'none'; }
-    this.closeShown = n;
-  }
   update(game: Game, cam: FollowCamera, canvas: HTMLCanvasElement) {
     const tz = textZoom(), w = canvas.clientWidth / tz, h = canvas.clientHeight / tz;   // (the layer's own pixels: ui/textsize.ts)
-    // guards
-    while (this.markers.length < game.guards.length) { const el = document.createElement('div'); el.className = 'marker'; this.root.appendChild(el); this.markers.push(el); }
-    game.guards.forEach((g, i) => {
-      const el = this.markers[i];
-      const head = g.char.bones.head ?? g.char.pos; const [x, y, vis] = cam.project([head[0], head[1] + 0.45, head[2]], w, h, EDGE);
-      if (!vis || game.fogOfWar.hidden(g)) { el.style.display = 'none'; return; }   // (fog of war: no marker over a man nobody on the team sees — never true while it is off)
-      el.style.display = 'block'; el.style.left = `${x}px`; el.style.top = `${y}px`;
-      const mark = headMark(game, g), cls = mark.cls; let text = mark.text;   // (headmark.ts: which glyph, which colour — a living man of your own carries no wary mark)
-      if (game.showDebug) text += ` ${g.state} ${(g.awareness * 100) | 0}%${game.time < g.dazzledUntil ? ` dazzled ${(g.dazzledUntil - game.time).toFixed(1)}s` : ''}`;
-      if (game.showDebug) { const T = needsTrip(g); if (T) text += ` ${T.kind}:${T.phase}${T.phase === 'telegraph' ? ` ${Math.ceil(T.departAt - game.time)}s` : T.phase === 'dwell' ? ` ${Math.ceil(T.dwellUntil - game.time)}s` : ''}`; }   // (the debug label only: in play the trip is told by the man himself — the watch, the word, the neck — never by the HUD; needs.ts)
-      el.textContent = text; el.className = 'marker ' + cls;
-    });
-    // where an enemy who has gone out of the team's sight was last seen (fogofwar.ts lastSeen — empty on the 'you're told' lever's Bare rung, game/told.ts, unless FOG.lastSeen is turned up): a '?' on the spot, fading
-    { const seen = game.fogOfWar.lastSeen();   // (each mark fades over its own life: the lever's seconds or FOG.lastSeen, or the wand's WAND.markSecs for a man its lens had)
+    // WHAT THE GAME MARKS (game.view.marks): which men, in which glyphs and which colour; where a man stands is what the picture drew. A viewer's own picture with the fog lifted
+    // (bared: the engine replay's switch) shows every man the fog hides, and none of the fog's own marks.
+    const M = game.view.marks, A = game.view.aim, bare = game.fogOfWar.bared, men = this.men;
+    men.clear(); for (const gd of game.guards) men.set(gd.char.id, gd.char); for (const gd of game.civilians) men.set(gd.char.id, gd.char);
+    { let n = 0;
+      for (const m of M.men) {
+        if (m.hidden && !bare) continue;
+        const c = men.get(m.man), text = m.debug ? `${m.text} ${m.debug}` : m.text; if (!c || !text) continue;
+        const head = c.bones.head ?? c.pos, [x, y, vis] = cam.project([head[0], head[1] + 0.45, head[2]], w, h, EDGE); if (!vis) continue;
+        let el = this.markers[n]; if (!el) { el = document.createElement('div'); el.className = 'marker'; this.root.appendChild(el); this.markers.push(el); }
+        n++; el.style.display = 'block'; el.style.left = `${x}px`; el.style.top = `${y}px`; el.textContent = text;
+        el.className = `marker ${m.tone}${m.civ && m.tone !== 'ko' && m.tone !== 'dead' ? ' civ' : ''}`;
+      }
+      for (let i = n; i < this.markers.length; i++) this.markers[i].style.display = 'none'; }
+    // where an enemy who has gone out of the team's sight was last seen: a '?' on the spot, fading
+    { const seen = bare ? [] : M.seen;
       while (this.seenMarks.length < seen.length) { const el = document.createElement('div'); el.className = 'marker lastseen'; el.textContent = '(?)'; this.root.appendChild(el); this.seenMarks.push(el); }
       this.seenMarks.forEach((el, i) => { const s = seen[i]; if (!s) { el.style.display = 'none'; return; }
         const [x, y, vis] = cam.project([s.at[0], s.at[1] + 2.1, s.at[2]], w, h, EDGE); if (!vis) { el.style.display = 'none'; return; }
         el.style.display = 'block'; el.style.left = `${x}px`; el.style.top = `${y}px`; el.style.opacity = String(Math.max(0.15, 1 - s.age / Math.max(0.01, s.life))); }); }
-    // his own stuck sticky cameras under the fog of war (stickycam.ts stickyMarks — none unless STICKY.mark is up and the fog is live): a small lens on each, red in the one that sends
-    { const cams = stickyMarks(game); let n = 0;
+    // his own stuck sticky cameras under the fog of war: a small lens on each, red in the one that sends
+    const cams = bare ? [] : M.cams;
+    { let n = 0;
       for (const m of cams) {
         const [x, y, vis] = cam.project(m.at, w, h, EDGE); if (!vis) continue;
         let el = this.camMarks[n]; if (!el) { el = document.createElement('div'); this.root.appendChild(el); this.camMarks.push(el); }
@@ -250,76 +223,49 @@ export class Overlay implements HudLike {
         st.transform = `rotate(${Math.atan2(by - ay, bx - ax).toFixed(3)}rad)`; st.opacity = Math.min(1, (life - age) / 4).toFixed(2);
       }
       for (let i = n; i < this.lostMarks.length; i++) this.lostMarks[i].style.display = 'none'; }
-    // a defender's live grenade Sam has seen or heard land (frag.ts fragMarks): a blinking '!' over it with the seconds left — the cue he acts on
-    { const marks = fragMarks(game);
+    // a defender's live grenade Sam has seen or heard land: a blinking '!' over it with the seconds left, the cue he acts on
+    { const marks = M.frags;
       while (this.fragMarksEl.length < marks.length) { const el = document.createElement('div'); el.className = 'marker frag'; this.root.appendChild(el); this.fragMarksEl.push(el); }
       this.fragMarksEl.forEach((el, i) => { const m = marks[i]; if (!m) { el.style.display = 'none'; return; }
         const [x, y, vis] = cam.project([m.at[0], m.at[1] + 0.6, m.at[2]], w, h, EDGE); if (!vis) { el.style.display = 'none'; return; }
         el.style.display = 'block'; el.style.left = `${x}px`; el.style.top = `${y}px`; el.textContent = `! ${Math.max(0, m.left).toFixed(1)}`; el.style.opacity = Math.floor(m.left * 6) % 2 ? '1' : '0.55'; }); }
-    // civilians (civilians.ts): a small marker of their own — nothing while calm at work, '?' startled, '!' frightened / running / telling / on the phone, '·' cowering,
-    // 'zz' / '✕' on the floor; the debug label adds the state and what frightened her
-    const civs = game.civilians; const nG = game.guards.length;
-    while (this.markers.length < nG + civs.length) { const el = document.createElement('div'); el.className = 'marker'; this.root.appendChild(el); this.markers.push(el); }
-    civs.forEach((cv, k) => {
-      const el = this.markers[nG + k]; const C = cv.civ!;
-      if (C.state === 'gone' || game.touring || game.quietUtility || game.fogOfWar.hidden(cv)) { el.style.display = 'none'; return; }
-      const head = cv.char.bones.head ?? cv.char.pos; const [x, y, vis] = cam.project([head[0], head[1] + 0.45, head[2]], w, h, EDGE);
-      if (!vis) { el.style.display = 'none'; return; }
-      let text = '', cls = 'calm civ';
-      if (cv.state === 'dead') { if (isBreathing(cv)) { text = 'zz'; cls = 'ko'; } else { text = '✕'; cls = 'dead'; } }
-      else if (C.state === 'startled') { text = '?'; cls = 'sus civ'; }
-      else if (C.state === 'cower' || C.state === 'held') { text = '·'; cls = 'sus civ'; }
-      else if (C.state !== 'work') { text = C.state === 'phone' ? '!☎' : '!'; cls = 'alert civ'; }
-      else if (waryDots(cv.awareness)) { text = waryDots(cv.awareness); cls = 'sus civ'; }
-      if (game.showDebug) text += ` ${C.name} ${C.state}${C.cause ? ` [${C.cause}${C.armed ? '!' : ''}${C.reported ? ' told' : ''}]` : ''} ${(cv.awareness * 100) | 0}%`;
-      if (!text) { el.style.display = 'none'; return; }
-      el.style.display = 'block'; el.style.left = `${x}px`; el.style.top = `${y}px`; el.textContent = text; el.className = 'marker ' + cls;
-    });
-    for (let i = nG + civs.length; i < this.markers.length; i++) this.markers[i].style.display = 'none';   // (markers past the roster: a spawned unit despawned again — teams — or civilians gone, must not leave a mark hanging where they stood)
     // a faint dot on everything F can act on (lights, doors, bodies — so hidden ceiling panels and closed doors are discoverable)
     const its = game.interactables;
-    const camMarked = stickyMarks(game).length > 0;   // (his stuck cameras carry their own lens mark: no dot inside it)
+    const camMarked = cams.length > 0;   // (his stuck cameras carry their own lens mark: no dot inside it)
     while (this.dots.length < its.length) { const el = document.createElement('div'); el.className = 'idot'; el.style.cssText = 'position:absolute;width:5px;height:5px;border-radius:50%;transform:translate(-50%,-50%);'; this.root.appendChild(el); this.dots.push(el); }   // (the class is only a handle for index.html to hide them wholesale — attract mode — over the inline display this loop keys)
     this.dots.forEach((el, i) => {
       const it = its[i];
       if (!it || !this.showLightDots || it.pos === game.hover?.pos) { el.style.display = 'none'; return; }   // (the highlighted row is a copy of its thing's marker — same pos array — and the ring is on it already)
       const [x, y, vis] = cam.project(it.pos, w, h, EDGE);
-      if (!vis || (it.guard && game.fogOfWar.hidden(it.guard))) { el.style.display = 'none'; return; }
+      if (!vis || (it.guard && !bare && fogHides(game.view, it.guard.char.id))) { el.style.display = 'none'; return; }
       el.style.display = 'block'; el.style.left = `${x}px`; el.style.top = `${y}px`;
       if (it.kind === 'guard' || (it.kind === 'cam' && camMarked)) { el.style.display = 'none'; return; }   // living guards already carry a state marker, a stuck camera its lens mark; no extra dot
       el.style.background = it.kind === 'door' ? 'rgba(150,190,230,0.5)' : it.kind === 'body' ? 'rgba(230,140,120,0.6)' : it.kind === 'objective' ? 'rgba(var(--h-acc-rgb),0.8)' : it.off ? 'rgba(120,140,160,0.45)' : 'rgba(255,240,180,0.55)';
     });
     // the ring on the highlighted row's thing (what it offers is listed in the interaction panel, below — the ring only says WHICH thing Space means; the selector's cancel row has no thing)
-    const hv = game.hover?.kind === 'cancel' || game.hover?.kind === 'charge' ? null : game.hover; const pl = game.player;   // (charge: ownblow.ts's row is on his list wherever he stands — it is no thing under the cursor, and the gun's ring stays his)
-    const gunOut = !!pl.gunInHand() && !pl.down;   // pistol OR the FN2000 actually in the hands (R5's rule), not the pistol's slot alone
-    const model = game.tune.aimModel && gunOut && !pl.sprinting && !pl.dragging;   // the aim model's ring: at the snapped thing, or round the bare cursor's point when nothing is near — sized to his cone (aim.ts playerAim) at that distance
-    let styled = false;
-    const gp = gunOut && !pl.sprinting && !pl.dragging ? aimGunPoint(game) : null, trail = !!gp && !aimGunOn(game);   // aimweight.ts: the circle is where the GUN points — it trails the cursor and swings onto it; null = the circle is the cursor's (switch off, a show, a branch that drives his aim itself)
-    let wishKey = '';
-    const shut = gunOut && !pl.sprinting && !pl.dragging && gunShut(game);   // (player.ts gunShut: his gun cannot get a round out from here — the ring is barred, or, while the ring is busy on a thing Space acts on, the gun's own small circle is)
-    // Beside the ring: nothing but the 40 mm's too-close warning. The right button's own words ('RMB  OCP' on a light or a man's burning torch, 'RMB  RING' /
-    // 'RMB  40 MM' with the rifle up) were taken off the cursor on the maintainer's play note; the kit column says what the button holds (the OCP's meter, the lit load tag).
-    let rmb = gunOut && !pl.sprinting && pl.rifleUp && pl.rifle.attachment === 'he40' && pl.rifle.shells > 0 && previewTooClose(game) ? HE40_SHORT : '';   // (a WARNING, not a prompt: the arc the 40 mm would fly is shorter than its arming distance, said before the click)
+    const hv = game.hover?.kind === 'cancel' || game.hover?.kind === 'charge' ? null : game.hover;   // (charge: ownblow.ts's row is on his list wherever he stands — it is no thing under the cursor, and the gun's ring stays his)
+    let styled = false, wishKey = '';
+    // Beside the ring: nothing but the 40 mm's too-close warning (a WARNING, not a prompt: the arc the 40 mm would fly is shorter than its arming distance, said before the click). The
+    // right button's own words were taken off the cursor on the maintainer's play note; the kit column says what the button holds.
+    let rmb = A.tooClose ? HE40_SHORT : '';
     if (hv) {
       const [x, y, vis] = cam.project(hv.pos, w, h, EDGE);
       this.reticle.style.display = vis ? 'block' : 'none'; this.reticle.style.left = `${x}px`; this.reticle.style.top = `${y}px`;
       this.reticle.className = 'reticle' + (hv.off ? ' off' : '') + (hv.inReach ? '' : ' far') + ` k-${hv.kind}`;
       const pr = hv.progress !== undefined && hv.progress > 0 ? Math.round(Math.min(1, hv.progress) * 200) : -1;   // half-percent steps: no style churn between them
       if (pr !== this.ringKey) { this.ringKey = pr; this.ring.style.display = pr >= 0 ? 'block' : 'none'; if (pr >= 0) this.ring.style.setProperty('--p', `${pr / 2}%`); }
-      if ((trail && gp) || shut) { const [gx, gy, gv] = cam.project(gp ?? game.aimPoint, w, h, EDGE); if (gv) { wishKey = shut ? 'x' : 'c'; this.wish.style.left = `${gx}px`; this.wish.style.top = `${gy}px`; } }   // (the ring is on the thing Space acts on: the gun's own point still shows while it is off the cursor — a round goes there)
-    } else if (gunOut && (game.aimSnap || model || gp)) {   // nothing to interact with near him, a gun out: the ring shows what the auto-aim snapped to (a light: right click OCPs it with the pistol, click shoots it; a man's chest) — or, under the aim model, sits round the cursor's own point
-      const at = gp ?? game.aimSnap ?? game.aimPoint;
-      const [x, y, vis] = cam.project(at, w, h, EDGE);
-      if (trail && game.aimSnap) { const [wx, wy, wv] = cam.project(game.aimSnap, w, h, EDGE); if (wv) { wishKey = game.aimGuard ? 'g' : 'l'; this.wish.style.left = `${wx}px`; this.wish.style.top = `${wy}px`; } }   // what it will settle on, marked while it travels (bare floor needs none: the cursor is the mark)
+      if (A.dot) { const [gx, gy, gv] = cam.project(A.dot.at, w, h, EDGE); if (gv) { wishKey = A.dot.shut ? 'x' : 'c'; this.wish.style.left = `${gx}px`; this.wish.style.top = `${gy}px`; } }   // (the ring is on the thing Space acts on: the gun's own point still shows while it is off the cursor — a round goes there)
+    } else if (A.ring) {   // nothing to interact with near him, a gun out: the ring shows what the auto-aim snapped to, or sits round the cursor's own point
+      const R = A.ring, [x, y, vis] = cam.project(R.at, w, h, EDGE);
+      if (R.wish) { const [wx, wy, wv] = cam.project(R.wish, w, h, EDGE); if (wv) { wishKey = R.on === 'guard' ? 'g' : 'l'; this.wish.style.left = `${wx}px`; this.wish.style.top = `${wy}px`; } }   // what it will settle on, marked while it travels
       this.reticle.style.display = vis ? 'block' : 'none'; this.reticle.style.left = `${x}px`; this.reticle.style.top = `${y}px`;
-      this.reticle.className = 'reticle aim' + (trail ? ' k-free trail' : game.aimGuard ? ' k-guard' : game.aimSnap ? ' k-light' : ' k-free') + (shut ? ' shut' : '');   // (it takes the man's / the light's colour only once the gun is on it)
+      this.reticle.className = 'reticle aim' + (R.trail ? ' k-free trail' : ` k-${R.on}`) + (R.shut ? ' shut' : '');   // (it takes the man's / the light's colour only once the gun is on it)
       if (this.ringKey !== -1) { this.ringKey = -1; this.ring.style.display = 'none'; }
-      if (model) {   // the ring IS his cone: its diameter the cone's width at the target's distance (spread × range over the metres a CSS pixel covers at the look-at depth), 10‥60 px, eased; brighter and thinner as the track settles
-        const A = playerAim(game); const gunAt = pl.char.bones.handR ?? v3.add(pl.char.pos, [0, 1.4, 0]);
-        const want = aimRingPx(A.spread, v3.dist(at, gunAt), cam, h, AIMCOST.move ? AIMCOST.ringPx : 60);   // moving feet may open it past 60 (aimcost.ts)
+      if (R.cone) {   // the ring IS his cone: its diameter the cone's width at the target's distance (spread × range over the metres a CSS pixel covers at the look-at depth), 10‥RING_PX px, eased; brighter and thinner as the track settles
+        const want = aimRingPx(R.cone.spread, R.cone.range, cam, h, RING_PX);
         this.aimPx += (want - this.aimPx) * 0.3;
         const st = this.reticle.style, d = `${this.aimPx.toFixed(1)}px`; st.width = d; st.height = d;
-        st.opacity = (lerp(0.42, 0.95, A.track) * (trail ? 0.7 : 1)).toFixed(2); st.borderWidth = A.track > 0.97 ? '1px' : '1.5px';
+        st.opacity = (lerp(0.42, 0.95, R.cone.track) * (R.trail ? 0.7 : 1)).toFixed(2); st.borderWidth = R.cone.track > 0.97 ? '1px' : '1.5px';
         styled = true;
       }
     } else { this.reticle.style.display = 'none'; rmb = ''; }
@@ -332,10 +278,10 @@ export class Overlay implements HudLike {
       for (const r of ia.rows) for (const o of r.opts) if (o.gone) o.mark = o.lost && lostArrowsShown() ? lostArrow(o.lost, cam, game.time) : '';   // (the way the round came from, as it lies on the screen)
       this.setInteractions(ia.rows, ia.primary, ia.more, ia.open, ia.hint, ia.cancel); }
     // light + sound meters (bottom-left): how lit you are (the GPU light meter) and how much noise you are making (peak-hold marker)
-    const v = game.player.visibility;
-    this.lightFill.style.width = `${(v * 100).toFixed(0)}%`; this.lightNum.textContent = game.showDebug ? `${(v * 100) | 0}  E ${game.player.irradiance.toFixed(3)}` : `${(v * 100) | 0}`;
+    const v = M.light;
+    this.lightFill.style.width = `${(v * 100).toFixed(0)}%`; this.lightNum.textContent = game.showDebug ? `${(v * 100) | 0}  E ${M.irradiance.toFixed(3)}` : `${(v * 100) | 0}`;
     this.meters.classList.toggle('hot', v > 0.55);
-    const n = Math.min(1, game.player.noise);
+    const n = Math.min(1, M.noise);
     this.soundFill.style.width = `${(n * 100).toFixed(0)}%`; this.soundNum.textContent = `${(n * 100) | 0}`;
     if (this.peakT > game.time) { this.peakT = game.time; this.peak = n; }   // (a checkpoint loaded put the clock back: the held peak was the abandoned future's)
     if (n >= this.peak) { this.peak = n; this.peakT = game.time; } else if (game.time - this.peakT > 1.2) this.peak = Math.max(n, this.peak - 0.02);
@@ -396,7 +342,7 @@ export class Overlay implements HudLike {
       if (key !== this.alarmKey) { this.alarmKey = key;
         if (!key) this.alarmEl.className = ''; else { this.alarmEl.className = `on l${lvl}${live ? ' live' : ''}`; this.alarmEl.innerHTML = `<i></i>${lvl === 1 ? 'ALARM I · heightened' : 'ALARM II · lockdown'}${live ? '' : left ? ` · ${left}s` : ''}`; } }
     }
-    { const b = Math.round(samBlind(game) * 50) / 50; if (b !== this.blindK && this.blindEl) { this.blindK = b; this.blindEl.style.opacity = String(0.97 * b); document.body.classList.toggle('blinded', b > 0.5); } }   // blind: the picture whites out, clearing over the dazzle's last seconds
+    { const b = Math.round(M.blind * 50) / 50; if (b !== this.blindK && this.blindEl) { this.blindK = b; this.blindEl.style.opacity = String(0.97 * b); document.body.classList.toggle('blinded', b > 0.5); } }   // blind: the picture whites out, clearing over the dazzle's last seconds
     { // the checkpoint tag: up for a couple of seconds after a save / load (game/savestate.ts Checkpoints.flash), keyed so the DOM is touched only on change
       const F = game.saves.flash; const on = !!F && game.time - F.t >= 0 && game.time - F.t < CKPT.flashSecs; const key = on ? F!.text : '';
       if (key !== this.ckKey && this.ckEl) { this.ckKey = key; this.ckEl.className = on ? 'on' : ''; if (on) this.ckEl.innerHTML = `<b></b>${key}`; } }
@@ -433,17 +379,15 @@ export class Overlay implements HudLike {
     this.squadThrow.update(game, cam, w, h, EDGE);
     this.attention.update(game, cam, w, h, EDGE);
     this.picture.update(game, cam, w, h, EDGE);
-    // throw preview
-    const pv = game.player.throwPreview;
-    if (pv && pv.points.length > 1) {
+    // throw preview: the arc as the game has it, where it comes to rest (none: the launcher's arc) and what it would reach
+    const pv = A.throw;
+    if (pv) {
       const pts: string[] = [];
       for (const p of pv.points) { const [x, y, vis] = cam.project(p, w, h, EDGE); if (vis) pts.push(`${x.toFixed(1)},${y.toFixed(1)}`); }
       this.trajPath.setAttribute('points', pts.join(' ')); this.trajPath.style.display = 'block';
-      { const short = previewTooClose(game); if (short !== this.trajShort) { this.trajShort = short; this.trajPath.style.stroke = this.trajLand.style.stroke = short ? HE40_SHORT_STROKE : ''; this.trajPath.style.strokeDasharray = short ? '3 7' : ''; } }   // (a 40 mm arc too short to arm: amber, broken — whatever the reticle is busy saying)
-      // WHERE IT COMES TO REST (player.ts throwRest; null = the mark off, or the launcher's arc): reckoned again when the arc has changed, and four times a second under one held still (a door swung, a chair shoved)
-      { const p0 = pv.points[0], k = `${p0[0].toFixed(2)},${p0[1].toFixed(2)},${p0[2].toFixed(2)},${pv.v0[0].toFixed(2)},${pv.v0[1].toFixed(2)},${pv.v0[2].toFixed(2)},${game.player.heldKind},${Math.floor(game.time * 4)}`; if (k !== this.restKey && (!this.restKey || (this.restN++ & 1) === 0)) { this.restKey = k; this.rest = throwRest(game); this.reach = throwReach(game, this.rest); } }   // (every other frame under a moving cursor: the replay is some tenths of a millisecond, the ring trails the arc by a frame)
-      const rest = this.rest, ring = rest ? rest.at : pv.land;
-      this.drawReach(this.reach, cam, w, h);
+      if (pv.short !== this.trajShort) { this.trajShort = pv.short; this.trajPath.style.stroke = this.trajLand.style.stroke = pv.short ? HE40_SHORT_STROKE : ''; this.trajPath.style.strokeDasharray = pv.short ? '3 7' : ''; }   // (a 40 mm arc too short to arm: amber, broken — whatever the reticle is busy saying)
+      const rest = pv.rest, ring = rest ? rest.at : pv.land;
+      this.drawReach(pv.reach, cam, w, h);
       const [lx, ly, lv] = cam.project(ring, w, h, EDGE); this.trajLand.style.display = lv ? 'block' : 'none'; this.trajLand.setAttribute('cx', lx.toFixed(1)); this.trajLand.setAttribute('cy', ly.toFixed(1));
       if (rest) {
         const [tx, ty, tv] = cam.project(pv.land, w, h, EDGE), far = Math.hypot(rest.at[0] - pv.land[0], rest.at[2] - pv.land[2]) > 0.3;   // (a can that stays where it lands needs no tick under its ring)
@@ -451,8 +395,7 @@ export class Overlay implements HudLike {
         const rp: string[] = []; if (far) for (const p of [pv.land, ...rest.path, rest.at]) { const [x, y, vis] = cam.project(p, w, h, EDGE); if (vis) rp.push(`${x.toFixed(1)},${y.toFixed(1)}`); }
         this.trajRoll.setAttribute('points', rp.join(' ')); this.trajRoll.style.display = rp.length > 1 ? 'block' : 'none';
       } else { this.trajTick.style.display = 'none'; this.trajRoll.style.display = 'none'; }
-    } else { this.trajPath.style.display = 'none'; this.trajLand.style.display = 'none'; this.trajTick.style.display = 'none'; this.trajRoll.style.display = 'none'; this.restKey = ''; this.rest = null; this.reach = null; this.drawReach(null, cam, w, h); }
-    this.drawClose(game, cam, w, h);
+    } else { this.trajPath.style.display = 'none'; this.trajLand.style.display = 'none'; this.trajTick.style.display = 'none'; this.trajRoll.style.display = 'none'; this.drawReach(null, cam, w, h); }
     this.plan.update(game, cam, w, h);
     this.findme.update(game, cam, w, h, this.plan.youOn);
     // equipment
@@ -461,10 +404,10 @@ export class Overlay implements HudLike {
     this.windViz.update(game, cam, w, h);
   }
 
-  /** WHAT THE THING HE IS AIMING WILL REACH (throwreach.ts; null = nothing to draw): each radius a ring flat on the floor under the point, so the camera's
+  /** WHAT THE THING HE IS AIMING WILL REACH (null = nothing to draw): each radius a ring flat on the floor under the point, so the camera's
    *  tilt squashes it as it squashes the floor. A point behind the camera BREAKS the ring there and the rest of it stays (squadthrowviz.ts draws the
    *  squad's the same way); only a whole ring is filled. A ring that has not changed writes nothing. */
-  private drawReach(R: ThrowReach | null, cam: FollowCamera, w: number, h: number) {
+  private drawReach(R: ThrowReachView | null, cam: FollowCamera, w: number, h: number) {
     const ring = (E: { el: SVGPathElement; d: string }, r: number) => {
       let d = '', run = 0, whole = true;
       if (R && r > 0) for (let i = 0, N = 64; i <= N; i++) {

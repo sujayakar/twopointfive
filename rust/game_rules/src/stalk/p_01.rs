@@ -510,6 +510,11 @@ pub fn stalk_wait(g: &mut crate::game::Game) -> Option<crate::stalk::StalkWait> 
     Some(StalkWait { at, reach: r[0] + (r[1] - r[0]) * near, coil: g.k.stalk.corner_coil })
 }
 
+/// He waits at a corner this frame: what the tick found, as the view is told it. (stalk.ts stalkWait, whose man and reach are his body's alone)
+pub fn stalk_waits(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    g.pl[seat.player].wall.is_some() && g.m.stalk.state.get(seat.player).map_or(false, |r| r.wait == Some(true) && g.time - r.t <= 0.1)
+}
+
 /// A man is being stalked, or the stalk has just become a grab: this frame's left click is no blow. (stalk.ts stalkHas)
 pub fn stalk_has(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     match g.m.stalk.state.get(seat.player) {
