@@ -4892,30 +4892,6 @@ impl HOSTAGELINES {
 }
 impl Default for HOSTAGELINES { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1983 SNATCH_LINES, src/game/dialogue.ts:1983)
-#[derive(Clone, Debug)]
-pub struct SNATCHLINES {
-    pub running: Vec<String>,
-    pub cornered: Vec<String>,
-    pub hands_up: Vec<String>,
-    pub tied: Vec<String>,
-    pub held: Vec<String>,
-    pub dry: Vec<String>,
-}
-impl SNATCHLINES {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SNATCHLINES {
-            running: Vec::new(),
-            cornered: Vec::new(),
-            hands_up: Vec::new(),
-            tied: Vec::new(),
-            held: Vec::new(),
-            dry: Vec::new(),
-        }
-    }
-}
-impl Default for SNATCHLINES { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/dialogue.ts:121 agitationTerms ->, src/game/dialogue.ts:121)
 #[derive(Clone, Debug)]
@@ -6495,8 +6471,6 @@ pub fn civ_count() -> Vec<String> { alloc::vec![String::from("None"), String::fr
 /// (src/game/dialogue.ts:1958 HOSTAGE_LINES: a table nothing writes)
 pub fn hostage_lines_table() -> crate::dialogue::HOSTAGELINES { crate::dialogue::HOSTAGELINES { wait: alloc::vec![String::from("Please — just let us go —"), String::from("We'll do what you say — please —"), String::from("Please. Please."), String::from("I can't feel my hands —"), String::from("— breathe. Just breathe. —"), String::from("I want to go home —"), String::from("We haven't seen your faces — we haven't —")], threat: alloc::vec![String::from("Please — don't — we've done NOTHING —"), String::from("He means it — oh god, he MEANS it —"), String::from("Don't — please, please don't —"), String::from("Somebody — PLEASE —")], aimed: alloc::vec![String::from("No — no, PLEASE —"), String::from("Don't — I'm begging you —"), String::from("Wait — WAIT —")], shot: alloc::vec![String::from("NO —!"), String::from("{other}! — oh god — {other} —"), String::from("He SHOT {other} — he —"), String::from("— no no no no —")], entry: alloc::vec![String::from("— what was THAT —"), String::from("They're shooting — oh god —"), String::from("In HERE — we're in HERE —"), String::from("{other} — stay DOWN — stay down —")], alone: alloc::vec![String::from("Hello? — is somebody there —?"), String::from("We're in here — HELP —"), String::from("In here — please —")], secured: alloc::vec![String::from("Don't shoot — please — we're hostages —"), String::from("Oh thank god — thank god —"), String::from("Is it over? — is it OVER —?"), String::from("Are they — are they gone —?")], team: alloc::vec![String::from("stay down. you're safe — we've got you."), String::from("you're all right. stay where you are."), String::from("friendlies. stay down till we say.")] } }
 
-/// (src/game/dialogue.ts:1983 SNATCH_LINES: a table nothing writes)
-pub fn snatch_lines_table() -> crate::dialogue::SNATCHLINES { crate::dialogue::SNATCHLINES { running: alloc::vec![String::from("They're here — they're HERE —"), String::from("Not me — not ME —"), String::from("Out — get me OUT —")], cornered: alloc::vec![String::from("Stay back — stay BACK —"), String::from("I've nothing for you — nothing —"), String::from("— no, no, no —")], hands_up: alloc::vec![String::from("don't shoot! don't shoot!"), String::from("All right — all RIGHT — they're up —"), String::from("I'm not armed — look — nothing —")], tied: alloc::vec![String::from("You've the wrong man —"), String::from("I'm not fighting you — easy —"), String::from("They will come for me. You know that.")], held: alloc::vec![String::from("All right — I'm not fighting — all right —"), String::from("Easy — I have no gun — nothing —")], dry: alloc::vec![String::from("I say nothing to you."), String::from("Ask whoever sent you.")] } }
 /// INVENTED: `===` on two StageKeys (dialogue.ts:662, 665). By hand because a union derives PartialEq only as a Map or Set key (skel.cjs:128, 501) and this one holds an f64, so it cannot be Eq.
 impl PartialEq for crate::dialogue::StageKey {
     fn eq(&self, o: &Self) -> bool {

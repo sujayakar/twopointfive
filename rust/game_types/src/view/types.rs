@@ -12,7 +12,6 @@ pub enum MissionOf {
     Script,
     Lesson,
     Defuse,
-    Snatch,
     Roomclear,
     Rescue,
     Nightbreach,

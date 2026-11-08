@@ -279,8 +279,6 @@ pub use game_rules::slotsetup;
 pub use game_rules::smoke_smoke_grid;
 pub use game_rules::smoke_types;
 pub use game_rules::smokebreak;
-pub use game_rules::snatch;
-pub use game_rules::snatchout;
 pub use game_rules::sneak;
 pub use game_rules::snow_blast;
 pub use game_rules::snow_bog;

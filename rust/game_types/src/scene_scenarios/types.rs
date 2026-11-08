@@ -1073,86 +1073,6 @@ impl IssueData {
 }
 impl Default for IssueData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SnatchData, src/scene/scenarios.ts:346)
-#[derive(Clone, Debug)]
-pub struct SnatchData {
-    pub man: crate::scene_scenarios::SnatchDataMan,
-    pub exits: Vec<crate::scene_scenarios::SnatchDataExitsItem>,
-    pub van: Option<crate::scene_scenarios::SnatchDataVan>,
-}
-impl SnatchData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SnatchData {
-            man: crate::scene_scenarios::SnatchDataMan::zeroed(),
-            exits: Vec::new(),
-            van: None,
-        }
-    }
-}
-impl Default for SnatchData { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/scenarios.ts:348 SnatchData.man, src/scene/scenarios.ts:348)
-#[derive(Clone, Debug)]
-pub struct SnatchDataMan {
-    pub name: String,
-    pub pos: V3,
-    pub face: f64,
-    pub tint: V3,
-    pub tint2: Option<V3>,
-    pub points: Option<Vec<V3>>,
-    pub wait: Option<Vec<f64>>,
-}
-impl SnatchDataMan {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SnatchDataMan {
-            name: String::new(),
-            pos: [0.0; 3],
-            face: 0.0,
-            tint: [0.0; 3],
-            tint2: None,
-            points: None,
-            wait: None,
-        }
-    }
-}
-impl Default for SnatchDataMan { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/scenarios.ts:350 SnatchData.exits, src/scene/scenarios.ts:350)
-#[derive(Clone, Debug)]
-pub struct SnatchDataExitsItem {
-    pub name: String,
-    pub pos: V3,
-}
-impl SnatchDataExitsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SnatchDataExitsItem {
-            name: String::new(),
-            pos: [0.0; 3],
-        }
-    }
-}
-impl Default for SnatchDataExitsItem { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/scenarios.ts:354 SnatchData.van, src/scene/scenarios.ts:354)
-#[derive(Clone, Debug)]
-pub struct SnatchDataVan {
-    pub name: String,
-    pub pos: V3,
-}
-impl SnatchDataVan {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SnatchDataVan {
-            name: String::new(),
-            pos: [0.0; 3],
-        }
-    }
-}
-impl Default for SnatchDataVan { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: DefuseDevice, src/scene/scenarios.ts:360)
 #[derive(Clone, Debug)]
 pub struct DefuseDevice {
@@ -1345,7 +1265,6 @@ pub struct LevelScenarios {
     pub quiet: Option<crate::scene_scenarios::QuietData>,
     pub lesson: Option<crate::scene_scenarios::LessonData>,
     pub par: Option<crate::scene_scenarios::ParData>,
-    pub snatch: Option<crate::scene_scenarios::SnatchData>,
     pub defuse: Option<crate::scene_scenarios::DefuseData>,
     pub issue: Option<crate::scene_scenarios::IssueData>,
     pub kit_view: Option<crate::scene_scenarios::KitViewData>,
@@ -1364,7 +1283,6 @@ impl LevelScenarios {
             quiet: None,
             lesson: None,
             par: None,
-            snatch: None,
             defuse: None,
             issue: None,
             kit_view: None,

@@ -213,15 +213,6 @@
 "smokebreak": [
 "SMOKEBREAK.on=false"
 ],
-"snatch": [
-"SNATCHOUT.on=false",
-"SNATCH.on=false"
-],
-"snatchout": [
-"SNATCHOUT.hold=false",
-"RESPONSE.on=false",
-"SNATCHOUT.on=false"
-],
 "words-hostage": [
 "RESCUE.seedRoamers=false"
 ],
@@ -1215,8 +1206,6 @@
 "slotsetup": "iii",
 "smokebreak": "iv-a",
 "snap-bites": "iv-b",
-"snatch": "iii",
-"snatchout": "iii",
 "sneak-aside": "iv-b",
 "sneak-door": "iv-b",
 "sneak-fallin": "iv-b",

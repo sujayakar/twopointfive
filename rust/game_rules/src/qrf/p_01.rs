@@ -42,18 +42,12 @@ pub fn response_of(g: &crate::game::Game) -> Option<crate::scene_scenarios::Resp
 /// A squad's room clear under way on a level whose block carries `raid`.   (qrf.ts raid)
 pub fn raid(g: &crate::game::Game) -> bool {
     if !g.night_breach.active || g.rescue.active { return false; }
-    if !response_of(g).map_or(false, |r| r.raid.is_some()) { return false; }
-    let snatch_level = g.level.scenarios.as_ref().map_or(false, |s| s.snatch.is_some());
-    !snatch_level || crate::snatchout::snatch_out_on(g)
+    response_of(g).map_or(false, |r| r.raid.is_some())
 }
 
-/// The raid is over: the room clear ended, or on a snatch that ends in the van, the snatch did.   (qrf.ts raidOver)
+/// The raid is over: the room clear ended.   (qrf.ts raidOver)
 pub fn raid_over(g: &crate::game::Game) -> bool {
-    if crate::snatchout::snatch_out_ruled(g) {
-        g.snatch.end.is_some() || g.room_clear.end == Some(crate::roomclear::RoomClearEnd::Wiped)
-    } else {
-        g.room_clear.end.is_some()
-    }
+    g.room_clear.end.is_some()
 }
 
 /// The side the team stands on: the shift's, or in a raid the defenders'.   (qrf.ts sideOfTeam)

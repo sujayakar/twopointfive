@@ -110,10 +110,10 @@ export function squad40Stage(g: Game, carried: readonly (readonly [Guard, number
  *  unarmed, a hostage, the man to take alive — `foes`, on whom it may go off — and `mates`: a round in flight passes a teammate (he40.ts), but nobody
  *  fires one through a friend's back, so to the plan a teammate in the line is a body like any other */
 function bodies(g: Game): { friends: Character[]; foes: Character[]; mates: Character[] } {
-  const friends: Character[] = [], foes: Character[] = [], mates: Character[] = [], wanted = g.snatch?.man ?? null, hostages = g.rescue?.hostages ?? [];
+  const friends: Character[] = [], foes: Character[] = [], mates: Character[] = [], hostages = g.rescue?.hostages ?? [];
   if (!g.player.down) friends.push(g.player.char);
   for (const gd of g.guards) if (gd.team === 'operative') { if (gd.state !== 'dead' && gd.char.alive) mates.push(gd.char); }
-    else if (gd.state !== 'dead' && gd.char.alive && !g.fogOfWar.hidden(gd)) (isHostile('operative', gd.team) && !gd.civ && gd !== wanted && !hostages.includes(gd) ? foes : friends).push(gd.char);
+    else if (gd.state !== 'dead' && gd.char.alive && !g.fogOfWar.hidden(gd)) (isHostile('operative', gd.team) && !gd.civ && !hostages.includes(gd) ? foes : friends).push(gd.char);
   for (const cv of civilianBodies(g)) if (cv.char.alive && !g.fogOfWar.hidden(cv)) friends.push(cv.char);
   return { friends, foes, mates };
 }
