@@ -930,7 +930,7 @@ async function main() {
       if (viewHidden() || (leanBurst && !lastOfBurstNow)) { if (leanBurst) engine.world.relist(); behind.skipped++; perfrec.cpuRender = 0; return; }   // (an undrawn step of a lean burst still lists the world its tick left: the cursor's ray reads that list — the pack is the next draw's)
       behind.drawn++;
       const firstRender = !rendered;
-      { const bc = document.body.classList; findMeOutline(engine.outline ??= makeOutlineFrame(), game, dt, !kitViewOn && !bc.contains('attract') && !bc.contains('blinded')); }   // the outline in the dark (host/findme.ts → render/outline.ts): off unless his Options ask, and never where the HUD's own marks of him stand down
+      { const bc = document.body.classList; findMeOutline(engine.outline ??= makeOutlineFrame(), game, !kitViewOn && !bc.contains('attract') && !bc.contains('blinded')); }   // the outline in the dark (host/findme.ts → render/outline.ts): off unless his Options ask, and never where the HUD's own marks of him stand down
       const tR = performance.now();
       if (aheadDraw) { const between = !tween.stale && tween.have > 1; aheadDraw.around(between ? tween.last.a : 1, between ? tween.drawn : null, () => engine.render(camR, t, dt, present)); }
       else engine.render(camR, t, dt, present);
