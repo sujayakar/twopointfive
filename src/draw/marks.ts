@@ -13,6 +13,7 @@ export class DrawDecals extends Decals {
   override frame(): void {
     const D = this.D; if (!D.n[Section.decalHead]) return;
     if (D.u[D.at[Section.decalHead] + DecalHead.moved]) this.owed = true;
-    if (this.owed && this.enabled) { D.send(this.queue, this.buf, Section.decals, Word.row); this.owed = false; }
+    const o = D.at[Section.decalHead], s = this.stats; s.count = D.u[o + DecalHead.drawn]; s.listLen = D.u[o + DecalHead.listed]; s.dropped = D.u[o + DecalHead.dropped];
+    if (this.owed && this.enabled) { D.send(this.queue, this.buf, Section.decals, Word.row); this.owed = false; s.uploads++; }
   }
 }

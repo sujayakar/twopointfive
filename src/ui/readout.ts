@@ -15,14 +15,18 @@ export class Readout {
     (window as unknown as { __readout: unknown }).__readout = this;
   }
   set(on: boolean): void { this.on = on; try { localStorage.setItem(LS, on ? '1' : '0'); } catch { /* no store */ } if (!on) this.el.textContent = ''; }
+  private words = ''; private until = 0;
+  /** a line of a tool's, for a few seconds, whether the read-out is on or not */
+  say(words: string): void { this.words = words; this.until = performance.now() + 6000; this.n = 0; if (!this.on) this.el.textContent = words; }
   /** a frame was drawn */
   frame(): void {
     const { engine: E, smoke, quality, told } = this.s, t = E.timer;
+    const said = performance.now() < this.until ? this.words : ''; if (!said && this.words) { this.words = ''; if (!this.on) this.el.textContent = ''; }
     if (!this.on) return;
     if (t.resolved !== this.read) { const ms = t.unionMs(RENDERED); this.gpu += (ms - this.gpu) * (this.read < 0 ? 1 : 0.1); this.read = t.resolved; }
     if (this.n++ % EVERY) return;
     const row = (k: string, v: string): string => k.padEnd(11) + v, ms = (v: number): string => v.toFixed(2);
-    const lines = [this.s.adapter,
+    const lines = [this.s.adapter, ...(said ? [said] : []),
       row('res', `${E.width}×${E.height} ×${E.settings.renderScale.toFixed(2)}${E.settings.taau ? ` → ${E.outWidth}×${E.outHeight} taau${E.sharpOn ? ' sharp' : ''}` : ''}`),
       row('quality', `${quality.label}${quality.adaptive ? ' +adapt' : ''}`), row('fps', told.fps.toFixed(0)), row('gpu ms', ms(this.gpu)),
       row('page ms', `${ms(told.update + told.render)} · tick ${ms(told.tick)} · rows ${ms(told.draw)} · draw ${ms(told.render)}`)];

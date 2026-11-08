@@ -5,7 +5,6 @@
 // Stop → the dump as JSON to whoever listens at the one door (host/savefile.ts: no download since 2026-10-27, `?downloads=1` = as it was) and, if the shot server is up (:5174), POST /perf?name=… → docs/perf/<name>.json. tools/qa/perf-report.ts turns a dump into the
 // tables docs/internal/renderer-v3 was written from (per-pass mean / σ / p95 / worst, spike frames with the events around them, a contention check).
 import type { Engine } from '../engine';
-import type { Game } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import type { Quality } from './quality';
 import { saveFile, wanted, savedWords, savedEnd, onThisMachine, type Fate } from '../host/savefile';
@@ -29,6 +28,16 @@ export interface PerfFrame {
    *  collection, another script); with a short beat = the thread was free and the browser did not hand the page a frame (its compositor, the GPU's queue, the page
    *  around an embedded one). Absent where no timer ran: a headless take, a dump from before 10-25, a take with `watch` off */
   beat?: number;
+}
+/** WHAT A TAKE READS OF THE GAME, whoever holds it (the game's page: the Game itself) */
+export interface MeasuredGame {
+  readonly guards: readonly { state: string; flashlight?: { enabled: boolean } }[];
+  readonly weather?: { rainRate?: number; strokeT?: number } | null; readonly smoke?: unknown; readonly decals?: { count?: number; list?: unknown[] } | null;
+  readonly qrf?: { state?: string } | null; readonly escalation?: number;
+  readonly saves?: { stats?: { autosaves?: number; manual?: number; loads?: number } } | null;
+  /** its clock, s */
+  readonly time?: number;
+  readonly fogOfWar?: { readonly on?: boolean; readonly knobs?: { edge?: number } } | null;
 }
 export interface PerfEvent { t: number; frame: number; kind: string; text: string }
 export interface PerfDump {
@@ -124,7 +133,7 @@ export class PerfRecorder {
   private beatAt = -1; private beatMax = 0; private gapBeat = -1; private beatTimer: ReturnType<typeof setInterval> | null = null;
   private longSeen: { type: string; o: PerformanceObserver }[] = []; private longN: Record<string, number> = {}; private longFrames = false; private dtUsual = 0;
   private heldN = 0; private inOpen: { type: string; at: number } | null = null; private inMax = 0; private inMaxType = ''; private onIn: [(e: Event) => void, (e: Event) => void] | null = null; private onVis: (() => void) | null = null;
-  constructor(private engine: Engine, private game: Game, private cam: FollowCamera, private quality: Quality, private hudNote: (s: string) => void) {}
+  constructor(private engine: Engine, private game: MeasuredGame, private cam: FollowCamera, private quality: Quality, private hudNote: (s: string) => void) {}
   /** frames recorded so far (the ring's count) */
   get frameCount(): number { return this.ring.n; }
   toggle(): void { if (this.recording) this.stop(); else this.start(); }
@@ -151,7 +160,7 @@ export class PerfRecorder {
     this.watchThread(false); this.recording = false; this.event('stop', `${this.ring.n} frames`);
     this.events.sort((a, b) => a.t - b.t);   // (a long task is reported after it ends and filed at the moment it began: the list stays in the order things happened)
     const frames: PerfFrame[] = new Array(this.ring.n); for (let f = 0; f < this.ring.n; f++) frames[f] = this.ring.frameAt(f);   // (the objects exist only for the dump: built here, serialized, dropped)
-    const dump: PerfDump = { version: 1, startedAt: this.startedAt, machine: this.engine.gpu?.adapterInfo ?? 'unknown', dpr: (typeof window !== 'undefined' && window.devicePixelRatio) || 1, userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'bun', ...(this.commit ? { commit: this.commit } : {}), ...(typeof location !== 'undefined' ? { query: location.search } : {}), ...(typeof (this.game as unknown as { smoke?: { stats?: { pool?: number } } }).smoke?.stats?.pool === 'number' ? { smokeUnit: 512 } : {}),
+    const dump: PerfDump = { version: 1, startedAt: this.startedAt, machine: this.engine.gpu?.adapterInfo ?? 'unknown', dpr: (typeof window !== 'undefined' && window.devicePixelRatio) || 1, userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'bun', ...(this.commit ? { commit: this.commit } : {}), ...(typeof location !== 'undefined' ? { query: location.search } : {}), ...(typeof (this.game.smoke as { stats?: { pool?: number } } | undefined)?.stats?.pool === 'number' ? { smokeUnit: 512 } : {}),
       note: `twopointsix perf recording · ${this.ring.n} frames · ${(this.ring.n ? this.ring.lastT() / 1000 : 0).toFixed(1)} s`,
       frames, events: this.events, settingsAtStart: this.settings0, settingsAtEnd: this.snapSettings(), ...(this.shed0 ? { shedAtStart: true } : {}) };
     // (no file lands in a downloads folder any more, host/savefile.ts: the note says where the take went, since nothing else shows it)
@@ -227,10 +236,10 @@ export class PerfRecorder {
     const c = this.cam as unknown as { target: number[]; yaw: number; pitch: number; distance: number };
     const guardsByState: Record<string, number> = {}; let lit = 0;
     for (const gd of g.guards) { guardsByState[gd.state] = (guardsByState[gd.state] ?? 0) + 1; if (gd.flashlight?.enabled) lit++; }
-    const wx = (g as unknown as { weather?: { rainRate?: number; wetness?: number; strokeT?: number; enabled?: boolean } }).weather;
+    const wx = g.weather;
     const P = (E as unknown as { particles?: { stats?: { alive?: number } } }).particles;
-    const smoke = (g as unknown as { smoke?: { stats?: { live?: number } } }).smoke;
-    const decals = (g as unknown as { decals?: { count?: number; list?: unknown[] } }).decals;
+    const smoke = g.smoke as { stats?: { live?: number } } | undefined;
+    const decals = g.decals;
     const union = typeof T.unionMs === 'function' && T.lastRaw?.length ? +T.unionMs(['gbuffer', 'composite', 'post', 'fxaa', 'pdraw']).toFixed(2) : undefined;
     const cols = new Array<number>(NUM_COLS);
     cols[C.t] = +(now - this.t0).toFixed(1); cols[C.dt] = +(dtWall * 1000).toFixed(2); cols[C.fps] = +fps.toFixed(1);
@@ -240,18 +249,18 @@ export class PerfRecorder {
     cols[C.cam0] = +(c.target?.[0] ?? 0).toFixed(2); cols[C.cam1] = +(c.target?.[2] ?? 0).toFixed(2); cols[C.cam2] = +(c.yaw ?? 0).toFixed(3); cols[C.cam3] = +(c.pitch ?? 0).toFixed(3); cols[C.cam4] = +(c.distance ?? 0).toFixed(2);
     cols[C.lights] = E.lights.activeCount; cols[C.dyn] = (E.world as unknown as { dynamics: unknown[] }).dynamics?.length ?? 0; cols[C.particles] = P?.stats?.alive ?? 0; cols[C.smoke] = smoke?.stats?.live ?? 0;
     cols[C.beat] = this.beatAt < 0 || this.gapBeat < 0 ? -1 : +this.gapBeat.toFixed(1); this.gapBeat = -1; this.dtUsual = this.dtUsual ? this.dtUsual * 0.95 + dtWall * 50 : dtWall * 1000; if (this.beatAt >= 0) { this.beatMax = 0; this.beatAt = now; this.inMax = 0; }   // (the frame's own step is not the gap: the next beat starts here)
-    cols[C.decals] = decals?.count ?? decals?.list?.length ?? 0; cols[C.rain] = +(wx?.rainRate ?? 0).toFixed(2); cols[C.stroke] = +((wx as { strokeT?: number } | undefined)?.strokeT ?? 0).toFixed(2);
-    this.ring.push(cols, gpu, union === undefined, this.quality.label, Object.entries(guardsByState).map(([k, v]) => `${k}:${v}`).join(' ') + ` lit:${lit}`, (g as unknown as { qrf?: { state?: string } }).qrf?.state ?? '-');
+    cols[C.decals] = decals?.count ?? decals?.list?.length ?? 0; cols[C.rain] = +(wx?.rainRate ?? 0).toFixed(2); cols[C.stroke] = +(wx?.strokeT ?? 0).toFixed(2);
+    this.ring.push(cols, gpu, union === undefined, this.quality.label, Object.entries(guardsByState).map(([k, v]) => `${k}:${v}`).join(' ') + ` lit:${lit}`, g.qrf?.state ?? '-');
     // events it can see for itself
     if (this.quality.label !== this.lastPreset) { this.event('preset', `${this.lastPreset} → ${this.quality.label}`); this.lastPreset = this.quality.label; }
     if (Math.abs(E.effectiveScale - this.lastEff) > 0.004) { this.event('scale', `effective ×${this.lastEff.toFixed(2)} → ×${E.effectiveScale.toFixed(2)} = ${E.width}×${E.height} (render scale ×${E.settings.renderScale.toFixed(2)} of the cap; ${E.settings.keepHistories ? 'histories resampled, targets from the pool' : 'keepHistories OFF: histories restarted, targets reallocated → expect one slow frame'})`); this.lastEff = E.effectiveScale; }
     const qn = this.quality.lastChange ?? ''; if (qn && qn !== this.lastQualityNote) { this.event('ladder', qn); this.lastQualityNote = qn; }
     // a checkpoint written or put back in this step (game/savestate.ts Checkpoints.stats): a save walks the whole game and, on the page, takes its picture off the canvas
-    const sv = (g as unknown as { saves?: { stats?: { autosaves?: number; manual?: number; loads?: number } } }).saves?.stats, nSave = (sv?.autosaves ?? 0) + (sv?.manual ?? 0), nLoad = sv?.loads ?? 0;
+    const sv = g.saves?.stats, nSave = (sv?.autosaves ?? 0) + (sv?.manual ?? 0), nLoad = sv?.loads ?? 0;
     if (nSave !== this.lastSaves) { if (this.lastSaves >= 0 && nSave > this.lastSaves) this.event('save', `a checkpoint was written (${sv?.autosaves ?? 0} by the game, ${sv?.manual ?? 0} by hand in this run)`); this.lastSaves = nSave; }
     if (nLoad !== this.lastLoads) { if (this.lastLoads >= 0 && nLoad > this.lastLoads) this.event('load', 'a checkpoint was put back'); this.lastLoads = nLoad; }
     if (E.passes.reallocs !== this.lastReallocs) { this.event('targets', E.passes.lastRealloc); this.lastReallocs = E.passes.reallocs; }   // render targets re-made (resize / divisor flip / explicit history restart): what was pooled, resampled, cleared
-    const esc = (g as unknown as { escalation?: number }).escalation ?? -1; if (esc !== this.lastEsc) { if (this.lastEsc >= 0) this.event('alarm', `escalation ${this.lastEsc} → ${esc}`); this.lastEsc = esc; }
+    const esc = g.escalation ?? -1; if (esc !== this.lastEsc) { if (this.lastEsc >= 0) this.event('alarm', `escalation ${this.lastEsc} → ${esc}`); this.lastEsc = esc; }
     if ((this.ring.n & 31) === 0) { const k = this.settingsKey(); if (k !== this.lastSettingsKey) { this.event('settings', diffKeys(this.lastSettingsKey, k)); this.lastSettingsKey = k; } }
   }
 
