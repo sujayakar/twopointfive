@@ -369,8 +369,7 @@ pub fn foe_in_view(g: &mut crate::game::Game, gd: GuardId) -> bool {
         return true;
     }
     let team = g.gd[gd].team;
-    let player = g.player;
-    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[player].down && !g.player_invisible && crate::guards::can_see(g, gd).visible {
+    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.player_invisible && crate::guards::sees_a_man(g, gd) {
         return true;
     }
     let mut i = 0;

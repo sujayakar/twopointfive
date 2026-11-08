@@ -368,7 +368,7 @@ pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
         }
         // (MOVES.on, page 1)
         let dip = g.k.moves.entry > 0.5 && cb && !show && g.gd[gd].held.is_none() && !dead && team == Team::Operative
-            && !crate::roomfight::room_fight_busy(g, gd, 1.5) && !crate::roomfight::room_fight_contact(g, gd) && crate::game::friend_before_muzzle(g, &crate::seats::here(g), gd);
+            && !crate::roomfight::room_fight_busy(g, gd, 1.5) && !crate::roomfight::room_fight_contact(g, gd) && crate::game::friend_before_muzzle(g, gd);
         g.ch[c].anim.dip = if dip { 1.0 } else { 0.0 };
         if !dead && now < g.gd[gd].dazzled_until {
             // (trap: the TypeScript's `from` may be his own position array, which follows him; here it is this moment's copy: notes.md)

@@ -212,7 +212,7 @@ pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: 
     let air = smoke * crate::weather::air_trans(g, d.pos, chest);
     let vis = crate::guards::eye_contact(g, e, pc, true, false, air, None);
     if vis.in_cone { let chest = bone_or(g, pc, crate::character::Bone::Chest, [0.0, 1.1, 0.0]); crate::sensors::sensors_ask_segment(g, &key, d.pos, chest); }
-    let gain = if vis.visible { lens_gain(g, &crate::seats::here(g), vis.dist, range, air) } else { 0.0 };
+    let gain = if vis.visible { let s = crate::seats::seat_of_char(g, Some(pc)).unwrap_or(g.seat); lens_gain(g, &crate::seats::seat(g, s), vis.dist, range, air) } else { 0.0 };
     let (now, at, sus, alarm) = (g.time, g.ch[pc].pos, g.tune.camera_suspicion_secs, g.tune.camera_alarm_secs);
     let r = crate::sim_lightshome::light_home_camera_see(g, slot, now, dt, vis.visible, gain, at, sus, alarm);
     if has(r, bit.suspect) { camera_suspect(g, c); }
@@ -484,6 +484,12 @@ pub fn learn_code(g: &mut crate::game::Game, lock_id: &str, how: crate::devices:
 }
 /// A man has just said the code aloud: the player learns it iff it carried to him; whether he now knows it.   (devices.ts overhear)
 pub fn overhear(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str) -> bool {
+    let mut any = false;
+    crate::seats::each_seat(g, &mut |g| { if overhear_here(g, speaker, lock_id, any) { any = true; } });
+    any
+}
+/// … by the man of the seat that stands; `told`: another man has already learnt it just now, and the telling is not said again
+fn overhear_here(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str, told: bool) -> bool {
     let pl = g.player;
     if g.pl[pl].down || g.pl[pl].codes.has(String::from(lock_id)) { return g.pl[pl].codes.has(String::from(lock_id)); }
     let mouth = bone_or(g, g.gd[speaker].ch, crate::character::Bone::Head, [0.0, 1.6, 0.0]);
@@ -491,6 +497,7 @@ pub fn overhear(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str) -> b
     let ear = bone_or(g, g.pl[pl].ch, crate::character::Bone::Head, [0.0, ear_up, 0.0]);
     let prop = crate::weather::hear_path(g, mouth, ear, None);
     if prop.path_len > g.k.overhear.path_m || prop.carry < g.k.overhear.carry { return false; }
+    if told { g.pl[pl].codes.add(String::from(lock_id)); return true; }
     learn_code(g, lock_id, LearnCodeHow::Overheard, Some(speaker)) || g.pl[pl].codes.has(String::from(lock_id))
 }
 /// The digits as said ('7-3-9-1').   (devices.ts spell)
