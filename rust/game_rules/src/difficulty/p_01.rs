@@ -626,6 +626,33 @@ pub fn difficulty_custom(g: &mut crate::game::Game) {
     }
 }
 
+/// WHAT AN ADDRESS SAYS OF THE DIFFICULTY, and no more: None where it says nothing. `plain` (a Training lesson's address) reads no lever. Writes nothing. (difficulty.ts difficultyAsked)
+pub fn difficulty_asked(g: &crate::game::Game, q: &crate::query::Query, plain: bool) -> Option<crate::difficulty::DifficultyAsked> {
+    let v = if q.has("hard") { Some(if q.get("hard") == Some("0") { "standard" } else { "hard" }) } else { q.get("difficulty") };
+    let level = match v { Some("hard") => Some(Difficulty::Hard), Some("standard") => Some(Difficulty::Standard), _ => None };
+    let mut levers = Vec::new();
+    if !plain {
+        for l in levers_now(g).iter() {
+            if let Some(r) = q.get(&l.param) { if is_rung(g, l.key, Some(r)) { levers.push((l.key, String::from(r))); } }
+        }
+    }
+    let digin = q.has("digin");
+    let pressure = if q.has("pressure") { Some(q.get("pressure") != Some("0")) } else { None };
+    let cone = if q.has("fogcone") { Some(q.get("fogcone") != Some("0")) } else { None };
+    if level.is_none() && levers.is_empty() && !digin && pressure.is_none() && cone.is_none() { return None; }
+    Some(DifficultyAsked { level, levers, digin, pressure, cone })
+}
+
+/// …AND IT LAID ON THE GAME'S TABLES, not stored: the level, the levers over it, the two older single-switch flags over whatever those wrote. (difficulty.ts difficultyLay; no host of a
+/// Rust start keeps anything, so nothing goes between)
+pub fn difficulty_lay(g: &mut crate::game::Game, a: &crate::difficulty::DifficultyAsked) {
+    if let Some(level) = a.level { set_difficulty(g, level, Some(false)); }
+    for (key, rung) in a.levers.iter() { set_lever(g, *key, Some(rung.as_str()), Some(false), None); }
+    if a.digin { g.k.digin.on = true; }
+    if let Some(on) = a.pressure { g.k.pressure.on = on; }
+    if a.cone.is_some() { set_cone_visit(g, a.cone); }
+}
+
 /// the levers this machine keeps, only rungs the build still has. (difficulty.ts keptLevers)
 pub fn kept_levers(g: &crate::game::Game) -> crate::difficulty::KeptLevers {
     let rows = match crate::savestate::save_store_get(g, LS_LEVERS) { Some(t) => json_rows(&t), None => Vec::new() };
