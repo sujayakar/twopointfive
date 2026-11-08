@@ -307,7 +307,7 @@ import { WORKSTOW } from './workstow';
 import { SQUADNET } from './squadnet';
 import { TAKEDOWN } from './takedown';
 import { STEALTHPOSE } from './stealthpose';
-import { GEAR } from './gear';
+import { GEAR } from '../host/gear';
 import { WORDS } from './words';
 import { LOOK } from '../scene/look';
 import { MUSIC } from '../audio/pieces';   // (the score's pieces switch: not a game module, no cycle)

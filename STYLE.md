@@ -27,7 +27,7 @@ than the camera you play from.
 
 ## Camera
 
-- By default 55° down, turned 22° off the grid, 21 m back, a 28° lens (`src/game/camera.ts`). Nearly a plan view, but you see wall faces and men's shoulders. The player can zoom (6–40 m) and orbit.
+- By default 55° down, turned 22° off the grid, 21 m back, a 28° lens (`src/host/camera.ts`). Nearly a plan view, but you see wall faces and men's shoulders. The player can zoom (6–40 m) and orbit.
 - Rooms are drawn roofless: full-height walls are cut at the ceiling line and the cut is drawn as one near-black cap, like a section on a plan. There is no cut-away beyond that: you turn the camera instead.
 - Things are sized and coloured to read from play distance. Key art and showcases go in closer and lower, and the models hold up there better than they were built to; the test for new work is still the play camera.
 

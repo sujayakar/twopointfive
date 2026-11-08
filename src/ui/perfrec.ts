@@ -5,7 +5,7 @@
 // Stop → the dump as JSON to whoever listens at the one door (host/savefile.ts: no download since 2026-10-27, `?downloads=1` = as it was) and, if the shot server is up (:5174), POST /perf?name=… → docs/perf/<name>.json. tools/qa/perf-report.ts turns a dump into the
 // tables docs/internal/renderer-v3 was written from (per-pass mean / σ / p95 / worst, spike frames with the events around them, a contention check).
 import type { Engine } from '../engine';
-import type { FollowCamera } from '../game/camera';
+import type { FollowCamera } from '../host/camera';
 import type { Quality } from './quality';
 import { saveFile, wanted, savedWords, savedEnd, onThisMachine, type Fate } from '../host/savefile';
 

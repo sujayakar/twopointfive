@@ -1,4 +1,4 @@
-// THE KEPT TAPES, on the server: a page hands over the pieces its browser already keeps (src/replay/keeper.ts files one every few seconds; src/cloud/tapes.ts
+// THE KEPT TAPES, on the server: a page hands over the pieces its browser already keeps (src/tape/keeper.ts files one every few seconds; src/cloud/tapes.ts
 // sends what is not here yet). A piece is immutable and numbered, so sending one twice writes it once; the head is the one thing that is replaced (the last
 // one stands, as in the browser's store). Reading a tape back out is internal: a deploy key's (tools/cloud/pull.ts lays a visit's chunks end to end into the
 // same file the browser's own hand-over makes, which tools/qa/replay-dump.ts and the replay viewer already read).

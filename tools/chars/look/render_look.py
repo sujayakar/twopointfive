@@ -256,7 +256,7 @@ class Stage:
         return cam
 
     def game_camera(self, target, dist, yaw=-22.0, pitch=55.0, fov=28.0):
-        """src/game/camera.ts FollowCamera: pitch 55 deg down, vertical fov 28 deg, `dist` from the look-at"""
+        """src/host/camera.ts FollowCamera: pitch 55 deg down, vertical fov 28 deg, `dist` from the look-at"""
         p, y = math.radians(pitch), math.radians(yaw)
         t = Vector(target)
         loc = t + Vector((math.sin(y) * math.cos(p) * dist, -math.cos(y) * math.cos(p) * dist, math.sin(p) * dist))

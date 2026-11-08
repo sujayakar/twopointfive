@@ -17,7 +17,6 @@
 import type { GwotMat } from './gwotPalette';
 import type { DoesWord } from './materials';   // (a type: what a paint DOES is a word of the table of materials)
 import { LOOK_NAMES, lookStuffOf } from '../render/lookTex';   // (a module of arithmetic with no imports of its own: the look's list of materials is the one list)
-import { RUST_PASS, RUST_SURFACE } from '../game/crossing';
 
 export type Stuff = typeof LOOK_NAMES[number] | 'plain' | 'waits' | 'glass' | 'rubber';
 
@@ -151,7 +150,7 @@ export function namePaints(palette: Readonly<Record<string, readonly number[]>>,
 export function namePaint(row: readonly number[], name: string, finish?: { rough: number; metal?: boolean }, does?: DoesWord): void { keep(row, record(name, finish, wordOfName(name), does ?? doesOfName(name))); }   // (`does`: what the stand-in stands for to a round, where that is another thing than the name's)
 /** … and a paint of a kit's OWN that the table of names does not know (its names are its own, or its name there is another kit's paint): what it is
  *  made of and its finish, said outright */
-export function sayPaint(row: readonly number[], name: string, said: { stuff?: BoxStuff; does?: DoesWord } & Finish): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('sayPaint', undefined, [row, name, said]); if (__r !== RUST_PASS) return __r as any; } } keep(row, record(name, said, said.stuff, said.does)); }
+export function sayPaint(row: readonly number[], name: string, said: { stuff?: BoxStuff; does?: DoesWord } & Finish): void { keep(row, record(name, said, said.stuff, said.does)); }
 /** ONE PAINT, ANOTHER THING: the same paint to the eye (its numbers, its name, its finish) said to be made of `stuff` where a kit paints two things with
  *  it and the row can say only one: `saidAs('earth', C.asphalt)` is the compound's mud at the pump, laid in the car park's paint for its darkness.
  *  `finish` = the thing's own, where its stuff has another than the paint's row (as `madeOf` takes one: the word and its finish are said together, so
@@ -161,7 +160,7 @@ export function saidAs(stuff: BoxStuff, paint: readonly number[], finish?: { rou
 }
 /** A COLOUR WRITTEN AS NUMBERS SAYS ITS WORD BESIDE IT: `madeOf('cloth', [0.3, 0.1, 0.09])` is those numbers, known from here on as a paint made of
  *  that (and of that finish, if one is given), wherever they are handed: a box's albedo, a helper's argument, a constant a generator names once. */
-export function madeOf(stuff: BoxStuff, colour: [number, number, number], finish?: { rough: number; metal?: boolean }): [number, number, number] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('madeOf', undefined, [stuff, colour, finish]); if (__r !== RUST_PASS) return __r as any; } } sayPaint(colour, '', { stuff, ...finish }); return colour; }
+export function madeOf(stuff: BoxStuff, colour: [number, number, number], finish?: { rough: number; metal?: boolean }): [number, number, number] { sayPaint(colour, '', { stuff, ...finish }); return colour; }
 /** THE SAME PAINT ON A THING THAT DOES SOMETHING ELSE: `paint` itself where that is what it does anyway, else its numbers as a paint of their own, known by
  *  everything `paint` is known by (its name, its finish, what it is drawn as) and doing `does`. The one way a stand-in is made: a kit's row on another
  *  thing (gwotPalette.ts gwotAs), and the same over paints a host hands a kit (gwotKit.ts). Returns the paint to lay. */

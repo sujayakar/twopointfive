@@ -1,6 +1,6 @@
 // THE WEATHER, THE AIR AND THE FIRES OF A PAGE THAT HOLDS NO GAME: each the picture's own, each reading the rows a tick left. Once a tick what it files, once a drawn frame what the frame
 // is told; on a cut (a load, a restart, a rollback) what it holds is another moment's, and it begins again from the rows.
-import type { FollowCamera } from '../game/camera';
+import type { FollowCamera } from '../host/camera';
 import type { Particles } from '../render/particles';
 import type { SmokeSystem } from '../smoke/smoke';
 import type { Engine } from '../engine';

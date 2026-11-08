@@ -10,7 +10,7 @@ import { DrawGame } from '../../src/host/drawgame';
 import { DrawPlay } from '../../src/host/drawplay';
 import { HAND, sampleHand } from '../../src/draw/hand';
 import { HandTape, HandWalk, TapeRefused } from '../../src/tape/handtape';
-import { FollowCamera } from '../../src/game/camera';
+import { FollowCamera } from '../../src/host/camera';
 import { Man, Section, View } from '../../src/draw/sections';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.WALK_BREAK === '1';

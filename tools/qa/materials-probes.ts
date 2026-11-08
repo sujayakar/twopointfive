@@ -117,7 +117,7 @@ export async function materialsPresets() {
 async function fakeEngine() {
   (globalThis as any).window ??= globalThis; (globalThis as any).devicePixelRatio ??= 1;
   const { Engine } = await import(`${ROOT}/src/engine.ts`);
-  const { FollowCamera } = await import(`${ROOT}/src/game/camera.ts`);
+  const { FollowCamera } = await import(`${ROOT}/src/host/camera.ts`);
   const inner = fake('device');
   const dev = new Proxy(inner, { get(t: any, p) { if (p === 'limits') return { maxStorageBuffersPerShaderStage: 10 }; return t[p]; } });   // (the fake coerces to 0: give the Engine's budget check a real number)
   const gpu: any = { device: dev, hasTimestamps: false, format: 'bgra8unorm', linearSampler: fake('sampler'), canvas: { clientWidth: 800, clientHeight: 500, width: 800, height: 500 }, ctx: fake('ctx') };

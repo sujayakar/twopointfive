@@ -8,7 +8,6 @@ src/game/director.ts:*	moving	the Director	its host fields (the camera and Input
 # ---- decides: the records the page keeps and the lines it says
 src/game/par.ts:Par.best*	picture	the picture's feel	this machine's words about its best time, handed in by the page for the result as it shows it (the browser's store is a machine's own)	1
 src/game/par.ts:*	leaves	HUD mission lines	what the page reads of the clock (armed, started, the result) is asked of the copy; the row with the clock on it is the Rust game's own (par_objective, in the view)	3
-src/game/rails.ts:Rails.hostView	leaves	lesson conditions	left on the page: it sets the page's own camera as a tutorial opens (the view is the host's, and reaches the game in the next tick's record)	1
 src/game/rails.ts:Rails.resume	leaves	lesson conditions	left on the page: the save controller's word that the level's program was stopped for an authored checkpoint; it goes with the controller	1
 src/game/cues.ts:Cues.bubbleOf	leaves	debrief	the death recap's witness asks whether a cue stands over him, on the copy: it goes with him	1
 src/game/dialogue.ts:roomName	leaves	squad status words	what names a floor on the page: the replay buffer and the developer's panel ask it	1
@@ -61,8 +60,6 @@ src/game/game.ts:Game.update	host	the Rust host	the game's update round the step
 src/game/game.ts:Game.host*	host	the Rust host	the host's half round the step: the Input's drag, the camera's peek and kick	2
 src/game/game.ts:Game.step	host	the Rust host	hands the record to the step the host hung	1
 src/game/cmd.ts:*	host	the Rust host	the player's record sampled from the Input and the camera	3
-src/game/input.ts:*	host	the Rust host	the page's Input rows	2
-src/game/camera.ts:*	host	the Rust host	the host's camera: its ease, zoom, kick and draw-in are the page's own between ticks	13
 src/host/loop.ts:*	host	the Rust host	the frame's loop: the Input's rows cleared, the camera stepped	2
 tools/blitz/out-dispatch.ts:*	host	the Rust host	the out events' dispatcher: what the tick told the host is made as today's calls on the page's objects (sound, particles, decals, smoke)	1
 src/game/savestate.ts:*	host	saves	the save controller's rhythm and shelf (saves and replays are not this list's)	14
@@ -131,7 +128,6 @@ src/main.ts:readout › {set}	hand	the developer's hand	a readout's row kept	1
 src/ui/perf*.ts:*	hand	the developer's hand	the performance recorder and sweep	2
 src/ui/missions.ts:*	hand	menus	a plan fetched for the list	1
 src/cloud/*	hand	the cloud	the backend's client	2
-src/main.ts:main › refreshFrozenStill*	host	the Rust host	the page holds its own keys up while it draws a frozen picture again (an update of no time): its input, put back after, and no state of the game	1
 src/draw/*	host	the page that draws	the new page's own plumbing: it hands the module's bytes on and asks it, and holds no game	6
 src/host/drawgame.ts:*	host	the page that draws	the new page's own plumbing: it steps the module and reads what it is told, and holds no game	6
 src/ui/panel.ts:*	hand	the developer's hand	a panel's row, for the hand that presses it	1

@@ -6,8 +6,8 @@
 // their own verbs — described structurally here so a script gets completion without this file importing half the game.
 import type { Engine } from './engine';
 import type { Game } from './game/game';
-import type { FollowCamera } from './game/camera';
-import type { Input } from './game/input';
+import type { FollowCamera } from './host/camera';
+import type { Input } from './host/input';
 import type { SmokeSystem } from './smoke/smoke';
 import type { Menu } from './ui/menu';
 import type { Quality } from './ui/quality';
@@ -91,7 +91,7 @@ declare global {
     /** the civilians by hand: list, panic(i, 'panic' | 'phone'), set(on), knobs, stats, log, spots, check, summary */
     __civ?: KnobHook & { panic(i?: number, what?: 'panic' | 'phone'): unknown; set(on: boolean): unknown };
     __wallsnap?: { on: boolean; [k: string]: unknown };
-    /** the 2010s issue kit (game/gear.ts, ?oldgear = off): the switch, live */
+    /** the 2010s issue kit (host/gear.ts, ?oldgear = off): the switch, live */
     __gear?: { on: boolean };
     /** the needs by hand: send(i, kind) / trip(i) / log */
     __needs?: { send(i?: number, kind?: string): unknown; trip(i?: number): unknown; [k: string]: unknown };

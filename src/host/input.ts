@@ -1,5 +1,5 @@
 // Keyboard + mouse state.
-import { gameCode, camKey, KEYMAP, SINK_LABEL } from '../host/keymap';
+import { gameCode, camKey, KEYMAP, SINK_LABEL } from './keymap';
 import { KEPT } from '../gpu/keep';   // (a leaf)
 export class Input {
   keys = new Set<string>();

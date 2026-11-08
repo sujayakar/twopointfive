@@ -11,7 +11,7 @@ import { resolve } from 'node:path';
 import type { Recipe } from '../../src/net/recipe.ts';
 import type { Headless } from '../qa/headless.ts';
 import { wordsKept, type Stood } from './stood.ts';
-import type { RunTape } from '../../src/replay/format.ts';
+import type { RunTape } from '../../src/tape/format.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 
@@ -66,7 +66,7 @@ export async function standRecipe(recipe: Recipe): Promise<StoodCopy> {
   // (the men's dress follows the place, read off the address before the cast is loaded: main.ts's line, so every machine of one game stands the same men)
   { const L = await import(`${ROOT}/src/scene/look.ts`); L.setLookPlace(L.placeOfQuery(new URLSearchParams((recipe as { search?: string }).search ?? ''))); }
   const { rerun } = await import('../qa/rerun.ts');
-  const { TAPE_VERSION } = await import(`${ROOT}/src/replay/format.ts`);
+  const { TAPE_VERSION } = await import(`${ROOT}/src/tape/format.ts`);
   const tape: RunTape = { v: TAPE_VERSION, ticks: 0, recipe, dt: [], view: [], cam: [], input: [], lens: [], x: [] };
   const F = { v: 1, game: 'twopointsix', kind: 'replay', savedAt: '', why: 'net', level: { fp: '', boxes: 0 }, flags: {}, hz: 60, seconds: 0, samples: [], cast: [], notes: [], map: { doors: [] }, rerun: tape };
   // (`scan: false`: once it is stood NOTHING writes this game between two ticks. Every change comes as a seat's record through netStep, so the host of the

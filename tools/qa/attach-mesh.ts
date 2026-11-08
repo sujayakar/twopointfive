@@ -43,7 +43,7 @@ const GL: any = await import(`${ROOT}/src/anim/gltf.ts`);
 const HW: any = await import(`${ROOT}/src/game/handwork.ts`);
 const IH: any = await import(`${ROOT}/src/game/inhand.ts`).catch(() => null);   // (a tree from before the rule has no such module)
 if (IH) IH.INHAND.on = has('--inhand');
-const GE: any = await import(`${ROOT}/src/game/gear.ts`);
+const GE: any = await import(`${ROOT}/src/host/gear.ts`);
 const { skinVertices } = await import(`${ROOT}/src/render/meshbvh.ts`);
 const { sideOfTeam } = await import(`${ROOT}/src/game/charLook.ts`);
 const DT = 1 / 60;

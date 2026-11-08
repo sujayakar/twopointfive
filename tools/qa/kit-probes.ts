@@ -26,7 +26,7 @@ const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery, teamOf } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { nvgWorn } = await import(`${ROOT}/src/game/nvg.ts`);
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
-const { gearText } = await import(`${ROOT}/src/game/gear.ts`);   // (the pistol's name on a card is the issue kit's: asked for as the card words it)
+const { gearText } = await import(`${ROOT}/src/host/gear.ts`);   // (the pistol's name on a card is the issue kit's: asked for as the card words it)
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 

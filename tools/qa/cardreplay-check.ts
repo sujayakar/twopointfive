@@ -23,7 +23,7 @@ export async function cardReplayCheck(): Promise<boolean> {
   const W: any = await standUp();
   try {
     for (const k of Object.keys(stub)) { kept[k] = Object.getOwnPropertyDescriptor(G, k); Object.defineProperty(G, k, { value: stub[k], configurable: true, writable: true }); }
-    const { ReplayKey, viewerUrl, engineUrl, VISIT_FLAGS, CAME_FROM } = await import(`${ROOT}/src/ui/replaykey.ts`); const { backToGame } = await import(`${ROOT}/src/replay/format.ts`); const { tapeSearch } = await import(`${ROOT}/src/replay/engineplay.ts`);
+    const { ReplayKey, viewerUrl, engineUrl, VISIT_FLAGS, CAME_FROM } = await import(`${ROOT}/src/ui/replaykey.ts`); const { backToGame } = await import(`${ROOT}/src/tape/format.ts`); const { tapeSearch } = await import(`${ROOT}/src/replay/engineplay.ts`);
     store.set(CAME_FROM, '{"href":"an older trip"}');   // (a game page that boots drops the last trip's mark)
     const key = new ReplayKey(W.game, W.cam, () => { /* */ }), K = key as any, dropped = !store.has(CAME_FROM);
     const tick = () => new Promise(r => setTimeout(r, 5));

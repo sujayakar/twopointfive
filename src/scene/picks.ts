@@ -20,7 +20,7 @@
 import { scenarioQuery, type ScenarioEntry } from './scenarios';
 import { ALL_MISSIONS, SCENARIO_KEYS, quitSearch, specOfQuery } from './scenarioList';
 import { squadSearch, type SquadSize } from './squadsize';   // (pure — scenarioList.ts takes the same module)
-import type { Difficulty } from '../game/difficulty';
+import type { Difficulty } from './words';
 
 export interface Pick {
   /** its own name on the URL (`pick=<id>`): lower case, digits and dashes; never reused for another row */

@@ -1,7 +1,7 @@
-// THE TRAJECTORY SHEET for broken glass (rebuild/glass/shards.md): the CPU reference of the 'shard' particle kind (src/game/shardModel.ts — the kernel's
+// THE TRAJECTORY SHEET for broken glass (rebuild/glass/shards.md): the CPU reference of the 'shard' particle kind (src/render/shardModel.ts — the kernel's
 // equations and hashes) flown for one piece shot out of a pane 1.35 m up, the round travelling +z. Writes an SVG: side view of the flights by class, top view
 // of where everything comes to rest, time-to-rest histogram. `bun run tools/qa/shards-sheet.ts [out.svg]`
-import { sprayShards, flyShard, SHARD, type ShardSpray, type ShardState } from '../../src/game/shardModel';
+import { sprayShards, flyShard, SHARD, type ShardSpray, type ShardState } from '../../src/render/shardModel';
 import { SHARDS } from '../../src/game/shards';
 
 const out = process.argv[2] ?? 'docs/shots/shards-sheet.svg';
@@ -20,7 +20,7 @@ const W = 1180, HH = 1000; const svg: string[] = [];
 const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 svg.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${HH}" width="${W}" height="${HH}" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12"><rect width="${W}" height="${HH}" fill="#11151a"/>`);
 const text = (x: number, y: number, t: string, o = '') => svg.push(`<text x="${x}" y="${y}" ${o.includes('fill=') ? '' : 'fill="#cfd6dd"'} ${o}>${esc(t)}</text>`);
-text(24, 30, 'Broken glass: where a released piece goes (CPU reference of the shard particle kernel, src/game/shardModel.ts)', 'font-size="16" font-weight="600"');
+text(24, 30, 'Broken glass: where a released piece goes (CPU reference of the shard particle kernel, src/render/shardModel.ts)', 'font-size="16" font-weight="600"');
 text(24, 50, `one piece shot out of a pane ${H0} m up; the round travels to the right (+z). gravity ${SHARD.gravity}, drag ${SHARD.drag}/s at ${SHARD.REF_SIZE * 1e3} mm (∝ 1/size, ≤ ${SHARD.DRAG_MAX}), floor restitution ${SHARD.restitution} ± ${SHARD.E_JIT * 100 / 2}%, keep ${SHARD.keep}, sleeps under ${SHARD.sleepV} m/s`, 'fill="#8d99a6"');
 
 // ---- panel 1: side view (z, y)

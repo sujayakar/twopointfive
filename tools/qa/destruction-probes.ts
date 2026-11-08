@@ -2,7 +2,7 @@
 //   bun run tools/qa/probes.ts destruction | destruction-sheet | destruction-caps | destruction-dust | destruction-screen | destruction-hearing |
 //                               destruction-reset | destruction-identity | destruction-determinism | destruction-bounds | destruction-impulses [--verbose]
 // Headless = the Proxy device: no kernel runs and the smoke solver is a null object, so what is asserted is every CPU-side promise —
-//   (sheet)        the falling-sheet reference model (game/sheetModel.ts — the equations particles.wgsl mirrors): 200 seeded leaves let go tilted / kicked all
+//   (sheet)        the falling-sheet reference model (render/sheetModel.ts — the equations particles.wgsl mirrors): 200 seeded leaves let go tilted / kicked all
 //                  come to rest within a few seconds, none NaN, terminal ≈ 1 m/s face-down, and they FLUTTER (the along-slip reverses); the kind's numbers in
 //                  particles.ts KIND_DEFAULTS.sheet ARE the model's; particles_common.wgsl carries the same two constants; a sheet emit packs aspect / tumble /
 //                  normal-jitter where the kernel reads them;
@@ -33,7 +33,7 @@ const { fireWeapon, detonateStun } = await import(`${ROOT}/src/game/combat.ts`);
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const { Particles, KIND_DEFAULTS, MAX_QUEUE, MAX_IMPULSES, BLOCK_HDR_BYTES, REC_BYTES, IMP_OFFSET, IMP_BYTES, KI_FLOAT, P_KINDS } = await import(`${ROOT}/src/render/particles.ts`);
 const D = await import(`${ROOT}/src/game/destruction.ts`);
-const SM = await import(`${ROOT}/src/game/sheetModel.ts`);
+const SM = await import(`${ROOT}/src/render/sheetModel.ts`);
 const { SHEET, flySheet } = SM;
 const { DEBRIS_IMP } = await import(`${ROOT}/src/game/debris.ts`);
 const { DECAL_CAP } = await import(`${ROOT}/src/render/decals.ts`);
@@ -283,7 +283,7 @@ export async function destructionBounds() {
 }
 
 // ================================================================ impulses (later events kick the litter: destruction.ts bangImpulse / impactImpulse / thud → particles.ts impulse + debris.ts impulse)
-// Headless there is no kernel, so the GPU half is asserted on the CPU REFERENCE (game/sheetModel.ts impulseKick + sheetImpulse — the equations particles.wgsl
+// Headless there is no kernel, so the GPU half is asserted on the CPU REFERENCE (render/sheetModel.ts impulseKick + sheetImpulse — the equations particles.wgsl
 // applyImpulses mirrors, its constants scraped out of the WGSL below) fed the very record destruction.ts queued; the queue, the block, the caps, the gates, the
 // debris pool and the three thud sites are the real code.
 /** settled reference leaves on the floor round `c` at hashed bearings, distances lo‥hi m */

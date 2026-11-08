@@ -16,7 +16,7 @@ import type { Quality } from '../ui/quality';
 import { View, Section } from '../draw/sections';
 import type { DrawGame } from './drawgame';
 import type { Measure } from './measure';
-import type { KeptStore } from '../replay/keepstore';
+import type { KeptStore } from '../tape/keepstore';
 
 export interface DrawCloudDeps {
   gpu: Gpu; engine: Engine; quality: Quality; game: DrawGame; measure: Measure;

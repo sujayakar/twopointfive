@@ -5,7 +5,7 @@
 // own; its dice are its own; nothing reads it.
 import type { SweptSnow } from '../../ui/sweepSnow';
 import { clamp, type Vec3 } from '../../math/vec';
-import type { FollowCamera } from '../../game/camera';
+import type { FollowCamera } from '../../host/camera';
 import { snowConfig, snowLookConfig, lookConfig } from '../../render/frame';
 import type { Particles } from '../../render/particles';
 import { RAIN_MAX_BIRTHS, RAIN_CAP } from '../../render/particles';

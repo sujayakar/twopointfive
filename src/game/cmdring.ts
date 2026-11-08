@@ -43,7 +43,7 @@
 //
 // STATE: `cmdRing` is a key held down or a ring left up — nothing of it is filed, so there is no snapshot; `ringRestore` is the other half (a load finds the key up: no ring, no menu).
 import type { Game } from './game';
-import type { Input } from './input';
+import type { Input } from '../host/input';
 import type { Vec3 } from '../math/vec';
 import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
