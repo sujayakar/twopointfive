@@ -33,6 +33,7 @@
 "game::Player":{"plain":{"r":0}},
 "glassbreak::GlassBreak":{"plain":{"onRelease":null}},
 "input::Input":{"plain":{"camHeld":"","ctrlDown":false,"el":null,"keyVeto":null,"onLockedInput":null,"saveKey":null,"sink":null}},
+"math_dice::SimDice":{"plain":{"at":0}},
 "orders::SquadOrders":{"plain":{"fight":null}},
 "par::Par":{"plain":{"bestRun":null,"bestWords":""}},
 "props::PropSystem":{"typed":{"near":["Int32Array",256]}},
