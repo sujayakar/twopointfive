@@ -68,14 +68,8 @@ const LEVEL_BASE: Record<string, string> = {
   // the ground melted round the brazier laid round: two ten-sided patches of five slabs each where two squares lay (eight boxes more, in the level's own part)
   'pass.json': '5d2bfc3f0',
 
-  // the lesson taken out of the yard (the seven Training lessons went 2026-10-23; the yard stays as a stage for checks)
-  'train-move.json': 'd5893130e',
 
-  // Training 5's kitchen step is done by 'bang and clear' given at the held door too (the word spends no can: the lesson asks for the can)
-  'train-orders.json': '18d63085f',
 
-  // the lesson taken out of the yard, as train-move's
-  'train-silent.json': 'd5893130e',
 
   // the pair mission's gate yard re-laid with ruts and stones, the partner's ways out of every line
   'tut-pair.json': '9048a2e01',

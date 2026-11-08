@@ -57,7 +57,7 @@ export async function takeCheck(): Promise<boolean> {
     // (1) every quiet level, every spot
     const rows: string[] = []; let okOn = true, okWords = true, spots = 0, wiredN = 0; let post = '', relay = '';
     for (const file of quietLevels().filter(f => swept(0, 1) === 1 || f === 'police-post.json' || f === 'quiet-relay.json')) {
-      const W = await stand(3, file), g = W.game, Q = g.level.scenarios.quiet; const squad = /lights-out|train-silent/.test(file) ? '&squad=1' : '';
+      const W = await stand(3, file), g = W.game, Q = g.level.scenarios.quiet; const squad = /lights-out/.test(file) ? '&squad=1' : '';
       for (let k = 0; k < Q.spots.length; k++) {
         if (!asked(file, k)) continue;
         const P = Q.spots[k]; let on: ReturnType<typeof takeAndWait> | null = null;
