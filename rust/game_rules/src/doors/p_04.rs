@@ -325,13 +325,6 @@ pub fn doors_leaf_boxes(g: &crate::game::Game) -> Vec<BoxId> {
     g.doors.list.iter().map(|d| g.dr[*d].box_).collect()
 }
 
-/// `fn_` asked aside of every door here.   (doors.ts Doors.posAside)
-pub fn doors_pos_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    let mut list = g.doors.list.clone();
-    door_pos_aside(g, &mut list, fn_)
-}
-
-
 #[doc(hidden)] pub fn doors_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f64) -> Vec<DoorId> {
     use crate::io::Io;
     if g.taps & (1u64 << 7) == 0 { return doors_blast__body(g, at, tear_m, who); }

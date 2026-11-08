@@ -417,7 +417,9 @@ pub fn fog_of_war_fired_on(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Left out of the picture this frame; false for everybody while the fog is off.   (fogofwar.ts FogOfWar.hidden)
-#[doc(hidden)] pub fn fog_of_war_hidden__body(g: &crate::game::Game, gd: GuardId) -> bool {
+#[doc(hidden)] pub fn fog_of_war_hidden__body(g: &crate::game::Game, gd: GuardId) -> bool { fog_of_war_hides(g, gd) }
+/// does the team not see this man (asked of the game shared: no tool's tap is told)
+pub fn fog_of_war_hides(g: &crate::game::Game, gd: GuardId) -> bool {
     g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(g.gd[gd].ch)
 }
 

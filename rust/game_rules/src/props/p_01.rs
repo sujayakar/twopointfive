@@ -482,15 +482,8 @@ pub fn prop_system_raycast_here(g: &mut crate::game::Game, ro: V3, rd: V3, tmax:
 }
 
 /// which box a place in the furniture's list of parts is, the things in their order   (boxMirror.ts thingBox)
-fn thing_part(g: &Game, mut at: usize) -> BoxId {
-    for &p in &g.props.props {
-        let boxes = &g.tab.props_prop[p].boxes;
-        if at < boxes.len() {
-            return boxes[at];
-        }
-        at -= boxes.len();
-    }
-    panic!("the module's ray into the furniture met a part of its list that is no part of the furniture as it stands")
+fn thing_part(g: &Game, at: usize) -> BoxId {
+    crate::scene_box_mirror::box_mirror_thing_box(g, at as f64).expect("the module's ray into the furniture met a part of its list that is no part of the furniture as it stands")
 }
 
 /// planar impulse J at a world point; `who` is blamed; thud reports it as an impact   (props.ts PropSystem.applyImpulse)

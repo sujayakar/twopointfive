@@ -210,6 +210,8 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::game::game_draw_characters(g, &all, statured);
     crate::smokebreak::update_smoke_break(g, dt);
     crate::game::game_light_meter(g, dt);
+    // (every seat's list of things its men can work, before anybody's orders are read: what a point or a cursor is on is asked of it, inside a tick and between two)
+    for &s in &seats { in_seat(g, s, |g| crate::workthings::work_things_keep(g)); }
     for &s in &seats {
         let pl = crate::cmd::seat_man(g, s);
         g.pl[pl].hit_flash = m::max(0.0, g.pl[pl].hit_flash - dt * 3.0);

@@ -11,7 +11,6 @@ import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
 import { CMDRING, ringPin, type RingHint, type RingState, type RingView } from '../game/cmdring';
 import { handRingView } from '../game/interact';
-import { hoverKept } from './hoverkept';
 import { HANDRING } from '../game/handring';
 import { RING_BOX, RING_HOLE, RING_RIM, lonePill, loneWedge, wedgeMid, wedgeWords, type LonePill, type RingPlace } from '../game/ringlone';
 
@@ -97,7 +96,7 @@ export class CmdRingViz {
   /** the hint of what the ring would open on (orders.ts hintView): the thing's outline on the floor and a glyph beside the cursor — in the ring's middle
    *  once a ring is up */
   private updateHint(game: Game, cam: FollowCamera, w: number, h: number, tz: number) {
-    const bc = document.body.classList, H = (CMDRING.on || CMDRING.hint) && !(bc.contains('blinded') || bc.contains('attract')) ? game.orders.hintView(hoverKept) : null;   // (hidden by the page under those: nothing asked)
+    const bc = document.body.classList, H = (CMDRING.on || CMDRING.hint) && !(bc.contains('blinded') || bc.contains('attract')) ? game.orders.hintView() : null;   // (hidden by the page under those: nothing asked)
     if (!H) { if (this.hintWas) { this.hintWas = ''; if (this.hint) this.hint.style.display = 'none'; } return; }
     const pt = (p: Vec3): string | null => { const [x, y, front] = cam.project(p, w, h, Infinity, NEAR_W); return front ? `${x.toFixed(1)},${y.toFixed(1)}` : null; };
     let d = '';

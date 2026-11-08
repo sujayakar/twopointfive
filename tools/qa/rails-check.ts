@@ -139,10 +139,11 @@ export async function railsCheck(): Promise<boolean> {
     // ---- 11: the ring on the screen is the place it marks; the mission has no fog of war (the level's `rails.fog: false`): every man on the floor is in the picture
     { const R = await rig(true), g = R.g, I = R.I; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step: its mark is on the yard)
       const at = g.lesson.step?.at as [number, number, number] | undefined, cv = R.W.canvas, cam = R.W.cam; const [sx, sy] = at ? cam.project(at, cv.clientWidth, cv.clientHeight) : [0, 0];
-      I.mouseX = sx + 12; I.mouseY = sy - 9; const on = g.rails.markUnder(I, cam, cv); I.mouseX = sx + 140; const off = g.rails.markUnder(I, cam, cv);
+      const there = at ? g.orders.targetAt(at) : null, onMark = (t: any) => !!there && t.kind === there.kind && Math.hypot(t.at[0] - there.at[0], t.at[2] - there.at[2]) < 1e-3;   // (what the cursor is on is the Rust game's: on the ring it is what the mark's own place is. RAILS_BREAK=1 reaches no Rust rule, so there the cursor is put off the ring)
+      I.mouseX = sx + (process.env.RAILS_BREAK === '1' ? 140 : 12); I.mouseY = sy - 9; const on = onMark(g.orders.targetUnder(I, cam, cv)); I.mouseX = sx + 140; const off = onMark(g.orders.targetUnder(I, cam, cv));
       const foes = g.guards.filter((x: any) => x.team !== 'operative' && x.state !== 'dead'), road = foes.filter((x: any) => x.char.pos[2] > 22), house = foes.filter((x: any) => x.char.pos[2] < 18);
       const seenRoad = road.filter((x: any) => g.fogOfWar.drawn(x)).length, seenHouse = house.filter((x: any) => g.fogOfWar.drawn(x)).length;
-      verdict(!!at && on === at && off === null && !g.fogOfWar.active && road.length > 0 && seenRoad === road.length && house.length > 0 && seenHouse === house.length,
+      verdict(!!at && on && !off && !g.fogOfWar.active && road.length > 0 && seenRoad === road.length && house.length > 0 && seenHouse === house.length,
         'the ring on the screen is the place it marks (the cursor on it is on that place, off it is not), and the mission is played with no fog of war: the men on the road and the men in the rooms are all in the picture',
         `step '${g.lesson.step?.id}' mark ${at ? at.join(',') : 'none'} · cursor on the ring → ${on ? 'the place' : 'nothing'}, 140 px off → ${off ? 'the place' : 'nothing'} · fog ${g.fogOfWar.active ? 'on' : 'off'} · on the road ${seenRoad}/${road.length} drawn · in the house ${seenHouse}/${house.length} drawn`); }
     // ---- the last line stays up until the mission's own end

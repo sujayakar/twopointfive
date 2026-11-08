@@ -243,11 +243,6 @@ pub struct BoxWorld {
     pub rg_shape: Vec<f64>,
     pub rg_fill: Vec<u32>,
     pub rg_ranges: Vec<i32>,
-    pub rg_stamp: Vec<u32>,
-    pub rg_ray: f64,
-    pub rc_best: f64,
-    pub rc_bi: f64,
-    pub rc_bn: V3,
     pub ray_grid_stats: crate::scene_boxes::BoxWorldRayGridStats,
     pub markings_enabled: bool,
     pub marking_texel: f64,
@@ -367,11 +362,6 @@ impl BoxWorld {
             rg_shape: alloc::vec![0.0; 0],
             rg_fill: alloc::vec![0; 1120],
             rg_ranges: alloc::vec![0; 0],
-            rg_stamp: alloc::vec![0; 0],
-            rg_ray: 0.0,
-            rc_best: 0.0,
-            rc_bi: -1.0,
-            rc_bn: [0.0, 1.0, 0.0],
             ray_grid_stats: crate::scene_boxes::BoxWorldRayGridStats { statics: 0.0, globals: 0.0, items: 0.0 },
             markings_enabled: true,
             marking_texel: 0.025,
@@ -842,34 +832,6 @@ impl SolidGlassBoxB {
     }
 }
 impl Default for SolidGlassBoxB { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/boxes.ts:432 rayAside(own), src/scene/boxes.ts:432)
-#[derive(Clone, Copy, Debug)]
-pub struct BoxWorldRayAsideOwn {
-    pub w: Option<crate::scene_boxes::BoxWorldRayAsideOwnW>,
-}
-impl BoxWorldRayAsideOwn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxWorldRayAsideOwn {
-            w: None,
-        }
-    }
-}
-impl Default for BoxWorldRayAsideOwn { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/boxes.ts:432 BoxWorldRayAsideOwn.w, src/scene/boxes.ts:432 BoxWorldRayAsideOwn.w)
-#[derive(Clone, Copy, Debug)]
-pub struct BoxWorldRayAsideOwnW {
-}
-impl BoxWorldRayAsideOwnW {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxWorldRayAsideOwnW {
-        }
-    }
-}
-impl Default for BoxWorldRayAsideOwnW { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/boxes.ts:530 packList(ent), src/scene/boxes.ts:530)
 #[derive(Clone, Debug)]

@@ -186,10 +186,10 @@ pub fn wall_break_breakable_at(g: &crate::game::Game, index: f64) -> Option<crat
 }
 
 /// Could authored static `index` be taken on as a hard wall: a breaching charge's wall, by shape. (WallBreak.adoptable)
-pub fn wall_break_adoptable(g: &mut crate::game::Game, index: f64) -> bool {
+pub fn wall_break_adoptable(g: &crate::game::Game, index: f64) -> bool {
     if index < 0.0 || index >= g.col.boxes.len() as f64 || index >= g.destr.walls.authored || g.destr.walls.owner.has(crate::Num(index)) || g.destr.walls.hidden.has(crate::Num(index)) { return false; }
     let b = at(g, index);
-    let (c, h, yaw, flags, em, rot) = { let x = seam_box(g, b); (x.c, x.h, x.yaw, js::to_i32(x.flags), x.emissive, x.rot.is_some()) };
+    let (c, h, yaw, flags, em, rot) = { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, js::to_i32(x.flags), x.emissive, x.rot.is_some()) };
     let f = flag();
     if (flags & (js::to_i32(f.glass) | js::to_i32(f.no_primary) | js::to_i32(f.no_shadow) | js::to_i32(f.dynamic))) != 0 { return false; }
     if rot || m::abs(m::sin(yaw)) > 1e-6 || em[0] + em[1] + em[2] > 0.0 || g.destr.walls.fixture_boxes.has(crate::Num(index)) || crate::destruction::destruction_item_of(g, index).is_some() || crate::scene_boxes::shape_cut(g, b) { return false; }
