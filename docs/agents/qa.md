@@ -37,14 +37,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`STAND_BREAK=1` is its red path; it reads text, so a tool that CLEARS the word for a child is not seen by it). A check is run ONCE.
   THE OLD STAND is one word, `TPS_PROFILE=frozen`: every newer rule held off as below, kept reachable for the switch cleanup until the off paths are gone
   (the retire tool's proofs, `stand-bisect.ts`); the process the word is given to says so once on stderr. A TOOL THAT WANTS THE OLD STAND OF A CHILD SAYS
-  THE WORD: giving a child no word asks for the page's (`rerun.ts` for a tape made on the old stand, `rust-check.ts`'s old-stand arms, `lesson-gate.ts`'s
+  THE WORD: giving a child no word asks for the page's (`rerun.ts` for a tape made on the old stand, `lesson-gate.ts`'s
   frozen runs, `ships.ts` / `kit-cells.ts` / `solo-night.ts` `--base`, `blast-frame.ts --arm round1` all say it). NO NEW FIXTURE IS RECORDED ON IT. What
-  that leaves: (1) the recordings that were made on it are taken again on the page's stand, each by its owner in a commit of its own: `ident-pin.ts`
-  records on the page's stand and on no other (its `RECORDED_ON`; a family names no stand: the glass's `pane-words.json`, the senses' `sense-words.json`
-  and the layers' `layer-words.json` were each taken again there by step 1576, and the first two keep the old stand's recording beside it, held and
-  never written again), and `rust-check.ts` asks a family's child on the page's stand (the glass's on the old one as well, which is what keeps that entry of `pane-words.json` held; the layers' file has no old entry, and a layers run on the old stand fails as NOT HELD). A RUN OF AN IDENT THAT IS HELD TO NOTHING FAILS, said as
-  NOT HELD, unless the tool or its caller says the word (`unpinned`, `--unpinned`: `docs/agents/rust.md`, "What holds a family once its TypeScript is
-  gone"); `threshold-identity` and `shotgun-identity`'s two frozen words are asked on the old stand only and
+  that leaves: (1) the recordings of the twin checks went with them (2026-11-08, `docs/agents/rust.md`);
+  `threshold-identity` and `shotgun-identity`'s two frozen words are asked on the old stand only and
   hold nothing on a run with no word, and say so; (2) a check that was green on the old stand and red on the page's is red in a plain run now:
   `tools/qa/expected-red.ts` is where each is named with its cause and whose it is (ONE list since 2026-11-06, the page's stand's: THE EXPECTED REDS ARE ONE LIST, below); (3) headers that say
   "frozen by default" or "run it on BOTH stands" are older than this: once, with no word. Proof of the flip itself: `stand-dump.ts` with no word after =
@@ -137,8 +133,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   red path: `1` a tool on 7 (the family's older word; red on both stands), `four` the door tools' fourth row on 6 (`orderkeys-high`; red on both), `free`
   every free row's deed refuses (`orderkeys-give`: 23 FAIL on the page's stand; green on the old one, where no free row is on a digit this walk presses, so
   the judgement it breaks is never asked there). `picker-start` boots three pages at a time, not its 42 at once (`PICKER_JOBS=n`):
-  `tools/qa/pool.ts` is the pool that `picker`, `dress-check`, `loadout-stage` and `weather-ident` share in place of a copy each (results in order;
-  after a case throws no further case is started; `jobsOf` reads a word or a flag the same way for all four: a number under one is one, no number is the
+  `tools/qa/pool.ts` is the pool that `picker`, `dress-check` and `loadout-stage` share in place of a copy each (results in order;
+  after a case throws no further case is started; `jobsOf` reads a word or a flag the same way for all of them: a number under one is one, no number is the
   tool's default). Other tools still keep a loop of their own.
   THE SOAK'S FOUR OLD KINDS on the page's stand were its own readings: the arm hold's knife is wanted only where the close-in rule has one (`closeBare`), a ring
   that stays stands by itself with the key up and no press in hand (`ring.free`), and the cancel row is the list's, never a ring's (`listOpen`). A ring is held
