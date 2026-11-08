@@ -11,13 +11,15 @@ import { cross, len, norm } from './math';
 import { blueNoise } from './noise';
 import { LM } from './lampmap';
 import { LOOSE } from './stages/loose';
+import { JOIN_ROWS } from './joins';
 
 export class SceneGpu {
   readonly layout: GPUBindGroupLayout; private bg!: GPUBindGroup;
   readonly frame: GPUBuffer; readonly nodes: GPUBuffer; readonly pieces: GPUBuffer; private extra: GPUBuffer; readonly insts: GPUBuffer; readonly lamps: GPUBuffer; private openings: GPUBuffer; private mats: GPUBuffer;
   readonly per: [number, number, number, number]; readonly node0: [number, number, number, number]; readonly piece0: [number, number, number, number]; readonly stepOf: [number, number, number, number]; private moveTree: Bvh | null = null; private moveAge = 0; private instTree: Bvh | null = null; readonly lists: GPUBuffer; readonly leafDraws: { first: number; count: number; leaves: number }[] = []; readonly counts: { pieces: number; moving: number; leaves: number; instances: number };
   private clusterAt: { node: number; per: number; leaf: number }[] = []; private maxMoving: number; private maxInst: number; private nodeData: ArrayBuffer;
-  readonly lampOn: Float32Array; /** where the dice's blue noise starts in extra */ readonly noiseAt: number; readonly lampTex: GPUTexture; readonly smokeTex: GPUTexture; readonly smokePage: GPUTexture; /** the one leaf every loose one is */ readonly looseLeaf: number = 0; readonly standing: Piece[];
+  readonly lampOn: Float32Array; /** where the grid of what is joined starts in extra */ readonly joinRow: number; writeExtra(row: number, d: Uint8Array) { this.g.device.queue.writeBuffer(this.extra, row * 16, d.buffer as ArrayBuffer, d.byteOffset, d.byteLength); }
+  /** where the dice's blue noise starts in extra */ readonly noiseAt: number; readonly lampTex: GPUTexture; readonly smokeTex: GPUTexture; readonly smokePage: GPUTexture; /** the one leaf every loose one is */ readonly looseLeaf: number = 0; readonly standing: Piece[];
   constructor(private g: Gpu, readonly world: World, sky: GPUTexture, caustic: GPUTexture) {
     const d = g.device, S = GPUBufferUsage.STORAGE, U = GPUBufferUsage.UNIFORM;
     // ---- what stands: pieces in the tree's order
@@ -28,7 +30,7 @@ export class SceneGpu {
     const rows: number[] = [], planeAt = new Map<Piece, number>(), markAt = new Map<Piece, number>(); let row = leafRows;
     for (const p of [...order, ...world.moving]) { if (p.planes?.length) { planeAt.set(p, row); for (const [n, dd] of p.planes) { rows.push(...n, dd); row++; } } if (p.marks?.length) { markAt.set(p, row); for (const m of p.marks) { const a = artRect(m.art); rows.push(m.at[0], m.at[1], m.size[0], m.size[1], a[0], a[1], a[2], a[3], m.color[0], m.color[1], m.color[2], m.face); row += 3; } } }
     const NZ = 64, na = blueNoise(NZ, 3), nb = blueNoise(NZ, 9); this.noiseAt = leafRows + rows.length / 4; for (let i = 0; i < NZ * NZ; i++) rows.push(na[i]!, nb[i]!);
-    const ex = new Float32Array((leafRows + rows.length / 4) * 4); let at = 0; for (const p of packed) { ex.set(new Float32Array(p.data), at); at += p.data.byteLength / 4; } ex.set(rows, leafRows * 4);
+    this.joinRow = leafRows + rows.length / 4; const ex = new Float32Array((this.joinRow + JOIN_ROWS) * 4); let at = 0; for (const p of packed) { ex.set(new Float32Array(p.data), at); at += p.data.byteLength / 4; } ex.set(rows, leafRows * 4);
     // bits of packed leaves must survive: copied as words
     { const u = new Uint32Array(ex.buffer); let o = 0; for (const p of packed) { u.set(new Uint32Array(p.data), o); o += p.data.byteLength / 4; } }
     this.extra = buffer(g, 'extra', ex, S);

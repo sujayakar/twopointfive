@@ -11,7 +11,7 @@
     if (h.piece == NOTHING) { L = skyLod(w.xyz, 3.0); dist += 12.0; }
     else {
       let q = surfaceMean(x, w.xyz, h); let leaf = (h.piece & LEAF_HIT) != 0u; let own = !leaf && (pieces[h.piece].lamp & 255u) != 255u; L = select(q.glow, vec3f(0.0), own) + sentBack(q, leaf, rnd2(), w.xyz); dist += min(h.t, 12.0);
-      let w0 = who * 2u + k; if (k < 2u && w0 < HITS) { let wn = select(q.ng, vec3f(0.0), leaf); let wants = cacheWants(q.x, wn, !leaf && (q.flags & MOVES) != 0u); if (wants != 0u) { hits[w0] = vec4u(bitcast<vec3u>(q.x), select(octPack(q.ng), EVERY_WAY, leaf)); for (var l = 0u; l < 2u; l++) { if ((wants & (1u << l)) != 0u) { cacheFound(cacheKey(q.x, wn, l), w0); } } } }
+      let w0 = who * 2u + k; if (k < 2u && w0 < HITS) { let wn = select(q.ng, vec3f(0.0), leaf); let wants = cacheWants(q.x, wn, !leaf && (q.flags & MOVES) != 0u); if (wants != 0u) { hits[w0] = vec4u(bitcast<vec3u>(q.x), select(octPack(q.ng), EVERY_WAY, leaf)); for (var l = 0u; l < 4u; l++) { if ((wants & (1u << l)) != 0u) { cacheFound(cacheKeyOf(q.x, wn, l & 1u, l >> 1u), w0); } } } }
     }
     let sm = smokeSeen(select(x, p.x - p.ng * 0.02, side), w.xyz, min(h.t, 80.0)); L = L * sm.a + sm.rgb;
     E += min(L * h.thru * w.w, vec3f(50.0));

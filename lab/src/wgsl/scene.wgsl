@@ -7,7 +7,7 @@ struct Frame {
   size: vec4f,         // render size, output size
   jitter: vec4f,       // this frame's, last frame's, in render pixels
   misc: vec4f,         // time (s), cut height, exposure, haze
-  knobs: vec4f,        // free for a stage under study
+  knobs: vec4f,        // x y free for a stage under study; z where the grid of what is joined starts in extra; w how lit the city's windows are
   counts: vec4u,       // lamps, openings, frame, seed
   per: vec4u,          // nodes per octant of the four trees: standing pieces the section cuts, standing pieces it does not, moving pieces, leaf clusters
   node0: vec4u,        // where each starts in nodes
