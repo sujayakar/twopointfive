@@ -42,7 +42,7 @@ import { WORLD } from '../../src/scene/world';
 import { rockOf, SCREE_PAINT } from './snowRock';
 import { BoxFlag } from '../../src/scene/boxes';
 import { carLampsIn } from '../../src/scene/carLamps';
-import { LAST_OUT, LAST_MEN, HUT_NOOK, HUT_MARK, TRUCK_FLANK, HUT_WALL, HUT_END, BAGS_TOP, WALL_FACE } from '../../levels/tut-road.script';
+import { LAST_OUT, LAST_MEN, HUT_NOOK, HUT_MARK, TRUCK_FLANK, HUT_WALL, HUT_END, BAGS_TOP, WALL_FACE } from './tutRoadMarks';
 import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'tut-road';

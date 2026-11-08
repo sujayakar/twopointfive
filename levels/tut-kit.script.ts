@@ -9,6 +9,7 @@
 // (tools/levels/tut-kit.ts): the page's bundle takes this file and no tool. The gun court's numbers are the fuel halt's own (levels/tut-solo.script.ts).
 import type { LevelScriptFn, UnitRef, Query, BeatCtx, BeatFn } from '../src/game/director';
 import type { Vec3 } from '../src/math/vec';
+import { LAST_IN, LAST_MEN, YARD_IN, YARD_MEN } from '../tools/levels/tutKitMarks';
 
 /** the man on the gun, behind his two low walls in the gun court's far corner */
 const GUNNER = 'Novak', GUN_AT: Vec3 = [22.7, 0, 6.9];
@@ -22,16 +23,8 @@ const BAGS_TOP: Vec3[] = [16.6, 17.2, 17.8, 18.4, 19.0, 19.6, 20.2, 20.8].map((x
 const GAP_FLOOR: Vec3[] = [[21.55, 0.5, 13.75], [21.95, 0.75, 13.8], [21.75, 0.45, 13.75], [22.1, 0.7, 13.85], [21.65, 0.8, 13.7], [22.05, 0.5, 13.8], [21.85, 0.65, 13.75], [21.6, 0.6, 13.75]];
 /** where he was: the sandbags' near end (the gun fires blind once the smoke is up) */
 const WAS: Vec3[] = [[17.2, 1.3, 13.2], [18.4, 1.3, 13.4], [16.8, 1.42, 13.6]];
-/** THE TWO FOR THE LAUNCHER come through the building behind him once he is back at the arch: where they come onto the floor (the lane behind the store,
- *  outside its back door, which is thrown open for them), where they stand (the shop's doorway, one a step behind the other) and what each shoots at until
- *  the grenade or a round finds one of them: the top of the arch's wall either side of its mouth, a man's height and more over anyone standing in it */
-export const LAST_IN: Vec3[] = [[37.4, 0, 14.0], [38.4, 0, 14.5]], LAST_MEN: Vec3[] = [[25.7, 0, 13.98], [26.5, 0, 14.5]];
 const LAST = ['Brandt', 'Marsh'];
 const ARCH_HEAD: Vec3[][] = [[[16.0, 2.2, 12.5], [16.0, 2.1, 12.0], [16.0, 2.25, 12.3]], [[16.0, 2.2, 16.0], [16.0, 2.1, 16.5], [16.0, 2.25, 16.2]]];
-/** THE TWO OF THE WASH YARD come in by its back door from the plain behind the halt while the squad is still inside the building (the cue of the line
- *  that sends him back out): where they come onto the floor, and where they get down, behind the wall of sandbags across the yard. They are down
- *  before anyone in the court can look: a man on his feet at that door shows over the bags */
-export const YARD_IN: Vec3[] = [[37.6, 0, 19.5], [38.6, 0, 20.1]], YARD_MEN: Vec3[] = [[29.5, 0, 19.2], [29.5, 0, 20.4]];
 const YARD = ['Voss', 'Kerr'], YARD_GATEWAY: Vec3 = [25.0, 1.2, 19.75];
 /** the shop's doorway, the doorway in the wall between the shop and the store, the bunk room's door and the fuel room's from inside, chest high */
 const SHOP_DOORWAY: Vec3 = [25.4, 1.2, 14.25], PART_DOORWAY: Vec3 = [30.5, 1.2, 14.25], BUNK_DOORWAY: Vec3 = [27.75, 1.1, 10.2], FUEL_DOORWAY: Vec3 = [31.3, 1.1, 9.25];

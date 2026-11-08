@@ -405,8 +405,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   fails after another replay was opened says "The replay you were sending wasn't sent."; a file this browser would not shelve says "This browser couldn't keep this replay. Press
   Send to send it with your notes." where Send is drawn. It sends
   `replayBlob` with `cloudFile(…, 'replay', { of?, savedAt, why, scenario })` — the visit as `of`, never `session`, which the backend's side would hold to the very rule that
-  does not carry it. With the button up the note's line reads "Your notes are saved in this browser. Press Send to send them." Check: `PORT=<dev server> node
-  tools/qa/replaysend-page.cjs` (about a minute: no game is booted; a replay made headless by `tools/qa/replay-make.ts`; a stand-in for the wire in the tool itself: `?cloud=0`
+  does not carry it. With the button up the note's line reads "Your notes are saved in this browser. Press Send to send them." Check, until 2026-11-08, when the headless game that made its replay went: `tools/qa/replaysend-page.cjs`
+  (about a minute: no game is booted; a replay made headless by `tools/qa/replay-make.ts`; a stand-in for the wire in the tool itself: `?cloud=0`
   = no Send; with one = drawn, pressed, Sent, the stand-in holds one file that is the replay with the note in it, packed on the way, its row naming the visit as `of` and no
   `session`, and the reader takes it; a note with no words leaves it Sent, a newer note puts Send back; bytes refused = Not sent and it can be pressed again; `?cloudtapes=0` =
   no Send; no download event; `REPLAYSEND_BREAK=1` = the stand-in refuses from the start, exit 1). THE SAME RULE AND LABELS ARE WRITTEN TWICE, here and on the engine replay's bar
