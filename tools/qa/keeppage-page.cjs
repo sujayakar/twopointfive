@@ -151,7 +151,7 @@ const SHELL = () => ({ keeper: !!window.__pageKeeper, seats: window.__pageKeeper
     // (a click is the element's own: the browser's pointer waits for a page that paints, and this one is still compiling behind its start)
     const click = async (sel) => { if (!(await G().evaluate(q => { const e = document.querySelector(q); if (!e) return false; e.click(); return true; }, sel))) throw new Error(`nothing to click at '${sel}'`); };
     const t0 = await G().evaluate(SEEN); log(` ${name}: the start page — ${JSON.stringify(t0.stats)} of boot ${JSON.stringify(t0.boot)}`);
-    // the start page's own way to a mission's Team & kit step (tools/qa/kitview-page.cjs open / goRow / kit)
+    // the start page's own way to a mission's Team & kit step 
     await G().waitForSelector('#menu .actions button', { timeout: 60000 }); await page.waitForTimeout(500); await click('#menu .actions button.primary'); await G().waitForSelector('#missions.one.on', { timeout: 20000 }); await page.waitForTimeout(500);
     const goRow = async (id) => { const g = G(), sel = `#missions .mrow[data-mission="${id}"]`;
       const away = await g.evaluate(() => { const l = document.querySelector('#missions .mgrid, #missions .mlist'); return !!l && l.getClientRects().length === 0; });
