@@ -234,7 +234,7 @@ pub fn squad_hand_back(g: &mut crate::game::Game, w: &mut crate::squadthrow::Len
     }
     crate::orders::squad_orders_new_group(g);
     if b.as_ref().map_or(false, |b| crate::orders::rows::id_is(&b.order, crate::orders::Is::Follows)) {
-        let d = g.orders.defs.iter().copied().find(|d| g.tab.orders_order_def[*d].id == "fallIn");
+        let d = g.orders.defs.iter().copied().find(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::fallin::ORDER.id);
         if let Some(d) = d {
             crate::orders::order_issue(g, d, &[gd], &w.t, None);
             return;
@@ -271,7 +271,7 @@ pub fn squad_hand_back(g: &mut crate::game::Game, w: &mut crate::squadthrow::Len
     let at: V3 = if back { w.home } else { [p[0], 0.0, p[2]] };
     let face = if back { w.home_yaw } else { g.ch[c].body_yaw };
     crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
-        order: String::from("hold"),
+        order: String::from(crate::orders::rows::hold::ORDER.id),
         post: Some(v3::copy(at)),
         face: Some(face),
         stance: Some(crate::character::Stance::LowReady),
@@ -346,7 +346,7 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
         }
         let face = g.ch[c].body_yaw;
         crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
-            order: String::from("hold"),
+            order: String::from(crate::orders::rows::hold::ORDER.id),
             post: Some([p[0], 0.0, p[2]]),
             face: Some(face),
             stance: Some(crate::character::Stance::LowReady),
@@ -521,8 +521,8 @@ pub fn sync(g: &mut crate::game::Game) {
         return;
     }
     state_key(g);
-    let smoke = g.orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == "smokeThere");
-    let hold = g.orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == "hold");
+    let smoke = g.orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::smokethere::ORDER.id);
+    let hold = g.orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::hold::ORDER.id);
     let after = if smoke.is_some() { smoke } else { hold };
     let made = rows(g);
     let before = after.and_then(|a| g.orders.defs.get(a + 1).copied()).map(|d| g.tab.orders_order_def[d].id.clone());

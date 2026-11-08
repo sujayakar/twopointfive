@@ -166,6 +166,3 @@ pub struct WandorderStats {
     pub live: i32,
     pub moved: i32,
 }
-
-/// (src/game/wandorder.ts:37 WAND_ORDER)
-pub const WAND_ORDER: &str = "wandLook";

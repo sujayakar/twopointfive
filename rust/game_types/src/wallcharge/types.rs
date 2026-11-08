@@ -1070,12 +1070,6 @@ impl WallchargeMod {
 /// (src/game/wallcharge.ts:212 WALLCHARGE_DEFAULTS: a table nothing writes)
 pub fn wallcharge_defaults() -> crate::knobs::WallchargeK { crate::knobs::page_wallcharge() }
 
-/// (src/game/wallcharge.ts:242 WALL_PAGE)
-pub const WALL_PAGE: &str = "walltools";
-
-/// (src/game/wallcharge.ts:244 WALL_ORDER)
-pub const WALL_ORDER: &str = "wallCharge";
-
 /// (src/game/wallcharge.ts:284 FACE)
 pub const FACE: f64 = 0.06;
 

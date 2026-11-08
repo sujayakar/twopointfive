@@ -134,7 +134,7 @@ pub fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::
             g,
             gd,
             &crate::orders::SquadOrdersAssignA {
-                order: String::from("hold"),
+                order: String::from(crate::orders::rows::hold::ORDER.id),
                 post: Some(to.pos),
                 face: Some(to.yaw),
                 watch: Some([fc[0], 1.1, fc[2]]),
@@ -155,7 +155,7 @@ pub fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::
             g,
             gd,
             &crate::orders::SquadOrdersAssignA {
-                order: String::from("hold"),
+                order: String::from(crate::orders::rows::hold::ORDER.id),
                 post: Some([p[0], 0.0, p[2]]),
                 face: Some(face),
                 stance: Some(crate::character::Stance::LowReady),
@@ -338,7 +338,7 @@ pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
     }
     let listed = g.orders.defs.iter().any(|&d| g.tab.orders_order_def[d].id == WAND_ORDER);
     if want && !listed {
-        let after = g.orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == "hold");
+        let after = g.orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::hold::ORDER.id);
         let r = row(g);
         let before = after.and_then(|i| g.orders.defs.get(i + 1)).map(|&d| g.tab.orders_order_def[d].id.clone());
         crate::orders::squad_orders_register(g, r, before.as_deref());

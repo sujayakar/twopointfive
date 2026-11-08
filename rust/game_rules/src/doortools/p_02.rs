@@ -167,11 +167,11 @@ pub fn door_tools_new(g: &mut crate::game::Game) -> crate::doortools::DoorTools 
 pub fn door_tools_thr_rows(g: &mut crate::game::Game) {
     use crate::orders::{rows, OrderDef, TargetKind as K};
     g.door_tools.thr_sig = door_tools_thr_sig_now(g);
-    for id in ["thresholdHold", "threshold", "outside", "thrStep", "thrBang", "thrLeave", crate::doortools::THR_PAGE] {
+    for id in [crate::orders::rows::threshold::ORDER.id, "threshold", "outside", "thrStep", "thrBang", "thrLeave", crate::doortools::THR_PAGE] {
         crate::orders::squad_orders_unregister(g, id);
     }
     register(g, rows::def(&rows::threshold::ORDER, OrderDef { page: Some(String::from(crate::doortools::TOOLS_PAGE)), targets: vec![K::Door],
-        ack: Some(strs(&["on the jambs. your call after.", "copy, holding it for you."])), ack_now: Some(strs(&["on the jambs. your call.", "copy, holding it for you."])), on_word: Some(true), ..OrderDef::default() }), Some("fragClear"));
+        ack: Some(strs(&["on the jambs. your call after.", "copy, holding it for you."])), ack_now: Some(strs(&["on the jambs. your call.", "copy, holding it for you."])), on_word: Some(true), ..OrderDef::default() }), Some(crate::orders::rows::fragclear::ORDER.id));
     g.door_tools.thr_key = None;
 }
 
@@ -255,7 +255,7 @@ pub fn door_tools_sync(g: &mut crate::game::Game) {
         if let Some(key) = &go_key {
             register(g, rows::def(&rows::go::ORDER, OrderDef { head: Some(String::from(WORD_HEAD)), hot_key: Some(key.clone()).filter(|k| !k.is_empty()), targets: vec![K::Floor, K::Door, K::None], listed: Some(vec![K::Floor, K::None]), ack: Some(strs(&["going.", "moving."])), ..OrderDef::default() }), None);
         } else {
-            crate::orders::squad_orders_unregister(g, "go");
+            crate::orders::squad_orders_unregister(g, crate::orders::rows::go::ORDER.id);
         }
     }
     if g.door_tools.thr_sig != door_tools_thr_sig_now(g) {
@@ -279,7 +279,7 @@ pub fn door_tools_sync(g: &mut crate::game::Game) {
         g.door_tools.big_row = Some(big);
         crate::orders::squad_orders_unregister(g, BIG_ORDER);
         if big {
-            register(g, rows::def(&rows::bigclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), hot_key: Some(String::from(BIG_KEY)), targets: vec![K::Door], ack: Some(strs(&["on it.", "breaching."])), on_word: Some(true), ..OrderDef::default() }), Some("fragClear"));
+            register(g, rows::def(&rows::bigclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), hot_key: Some(String::from(BIG_KEY)), targets: vec![K::Door], ack: Some(strs(&["on it.", "breaching."])), on_word: Some(true), ..OrderDef::default() }), Some(crate::orders::rows::fragclear::ORDER.id));
         }
     }
     // THE WORD'S ROW ON A HELD THRESHOLD'S PAGE, dealt its key when it is registered and again when the key moves (doortools.ts:932-938). skeleton 5.2 has

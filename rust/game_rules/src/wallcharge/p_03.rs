@@ -919,7 +919,7 @@ pub fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>
     let i = g.wall_charge.set.iter().position(|&x| x == c)?;
     let w = g.tab.wallcharge_set_wall_charge[c].wall.clone();
     g.wall_charge.set.remove(i);
-    crate::holdfire::hold_fire_order(g, "wallCharge", Some(crate::holdfire::HoldFireOrderO { blown: Some(true), ..Default::default() }));   // (a charge starts the fight when it GOES)
+    crate::holdfire::hold_fire_order(g, WALL_ORDER, Some(crate::holdfire::HoldFireOrderO { blown: Some(true), ..Default::default() }));   // (a charge starts the fight when it GOES)
     let tk = thick(g, &w);
     let at = charge_at(g, &w);
     let outer = w.outer.unwrap_or(false);
