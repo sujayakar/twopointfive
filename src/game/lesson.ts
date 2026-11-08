@@ -78,7 +78,7 @@ export const lessonLine = (written: string): string => { const line = tokenLine(
 import { railsFaults, RAILS } from './rails';   // (railsFaults is called inside checkLesson only, the switch read inside `data`)
 import { wallPt } from './wallcharge';   // (called inside a flag only)
 import { OWNBLOW } from './ownblow';   // (read inside lineOf only)
-import { SLOTSETUP, slotSetupOpen } from './slotsetup';   // (slotSetupOpen is called inside a flag only)
+import { SLOTSETUP } from './slotsetup';
 import { TWOGEARS } from './player';   // (read inside a step's test only)
 
 /** the switch: off = a lesson level plays as its scenario alone, no lines (and nothing here runs) */
@@ -142,8 +142,8 @@ const FLAGS: Record<string, (g: Game) => boolean> = {
   auto: g => who(g).rifle.mode !== 'semi',                              // the rifle's selector on AUTO (Z)
   // the setup of the gun in his hands is up (slotsetup.ts) — and where a gun has no setup (the switch off) there is nothing to ask for: the line goes by;
   // `setupShut`: it is not up (Tab, or anything else that puts it away)
-  setup: g => !SLOTSETUP.on || slotSetupOpen(g),
-  setupShut: g => !slotSetupOpen(g),
+  setup: g => !SLOTSETUP.on || !!g.view.kit.setup,
+  setupShut: g => !g.view.kit.setup,
   dragging: g => !!who(g).dragging,
   dark: g => g.blackout.active,                               // the mains are off (the breaker thrown, by whoever threw it)
   chargeSet: g => (g.wallCharge?.set.length ?? 0) > 0,        // a wall charge is on a wall, waiting on the trigger
