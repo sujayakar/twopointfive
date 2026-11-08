@@ -882,7 +882,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     pose_gun_light(g);
     // footsteps, for audio and the AI's hearing
     let phase = g.ch[c].anim.phase;
-    let tread_speed = if crate::tapstep::tap_held(g, &crate::seats::here(g)) { 0.0 } else { speed };
+    let tread_speed = speed;
     let fall = footfall_due(g, dt, phase, tread_speed);
     if js::truthy(fall) {
         let base = if g.pl[pl].sprinting { 1.0 } else if g.pl[pl].dash { g.k.crouchrun.loud } else if g.pl[pl].crouch { 0.125 }
