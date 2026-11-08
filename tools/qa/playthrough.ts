@@ -242,14 +242,13 @@ const { isWeatherKind } = await import(`${ROOT}/src/game/weatherKinds.ts`);   //
 const { SQUADS, DRILL_AT = {}, squadsReport } = await import(`${ROOT}/src/game/enemysquads.ts`);   // (DRILL_AT: absent in an older checkout)
 const { CUES } = await import(`${ROOT}/src/game/cues.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
-// (the last defenders' switches: a build without the file is a build without them. Set by LASTSTAND=regroup,callout in the environment, or --set '{"LASTSTAND":{"regroup":true}}')
+// (the last defenders' switches: a build without the file is a build without them. Set by LASTSTAND=callout in the environment, or --set '{"LASTSTAND":{"callOut":true}}')
 const LASTM: any = await import(`${ROOT}/src/game/laststand.ts`).catch(() => null);
 const { DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
 const { DOORBLAST } = await import(`${ROOT}/src/game/doorblast.ts`);   // (a blast takes a door off its hinges: --set '{"DOORBLAST":{"on":false}}' = a charge flings the leaf in on its hinge, as before)
 const { HANDLE, HANDLE_STATS, HANDLE_DEBUG } = await import(`${ROOT}/src/game/handleside.ts`);
 const NVGM = await import(`${ROOT}/src/game/nvg.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-const { WOUND, WOUND_STATS, resetWoundStats } = await import(`${ROOT}/src/game/wounds.ts`);   // TPS_WOUNDS=1 (env): wounds on (src/game/wounds.ts) — every run's JSON then carries `wounds`: who ended the run down wounded rather than dead, per side, and where the rounds landed
 const { hashStr, placeRects } = await import(`${ROOT}/src/game/dialogue.ts`);
 const { TACTICS_STATS, TACTICS_DEBUG } = await import(`${ROOT}/src/game/tactics.ts`);
 
@@ -1540,7 +1539,7 @@ export async function play(scn: string, seed: number, cap = 300, verbose = false
 async function playRun(scn: string, seed: number, cap: number, verbose: boolean, set: Record<string, Record<string, unknown>>): Promise<RunOut & { trace: string[] }> {
   const E = entryOf(scn); if (!E) throw new Error(NO_SCN(scn));
   const out: RunOut & { trace: string[] } = { scn, seed, end: 'error', why: '', t: 0, team: 0, of: 0, hostiles: 0, hostilesOf: 0, orders: 0, refused: [], smells: [], rooms: 0, note: '', trace: [] };
-  let P: Player | null = null, cuesOn = true, clOn = false;
+  let P: Player | null = null, cuesOn = true;
   MAINS.length = 0; mainsOut = false;
   const { FRIENDLYFIRE_STATS: FF } = await import('../../src/game/friendlyfire.ts'); let ff0 = { ...FF }; const { FIRELINE_STATS: FL } = await import('../../src/game/fireline.ts'); let fl0 = { ...FL };   // (friendly fire: this run's own share of the tally, on `ff` below)
   // (--set reaches the feel tables, the rescue's own, and the harder defenders: THE SWITCH as the game's own row sets it — --set '{"DIFFICULTY":{"level":"hard"}}'
@@ -1582,7 +1581,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
     DOORSTAY.on = (rest.DOORSTAY?.on as boolean | undefined) ?? true;   // (the page's default too: doors stay where they are left — the harness stood the game up with the closers of old; --set '{"DOORSTAY":{"on":false}}' keeps them)
     T.DOORMANNERS.on = (rest.DOORMANNERS?.on as boolean | undefined) ?? true;   // (and the doorway manners as shipped: headless.ts stands every other tool up without them; --set '{"DOORMANNERS":{"on":false}}' plays without)
     DOORBLAST.on = (rest.DOORBLAST?.on as boolean | undefined) ?? true;   // (and a blast takes a leaf off its hinges, as shipped: --set '{"DOORBLAST":{"on":false}}' = a charge flings it in on its hinge)
-    for (const n of ['FRAG', 'MOVES', 'TURN', 'WOUND', 'AIM', 'GLASSPEN']) if (rest[n]) put(n, rest[n]);   // (standUp has just put the harness's own pins back over these — no defenders' frags, the movement pass, the turn weight, wounds and rounds through glass off, the old aim: src/host/standup.ts — so a --set row of theirs is put again; without this it was read and then silently lost)
+    for (const n of ['FRAG', 'MOVES', 'TURN', 'AIM', 'GLASSPEN']) if (rest[n]) put(n, rest[n]);   // (standUp has just put the harness's own pins back over these — no defenders' frags, the movement pass, the turn weight, wounds and rounds through glass off, the old aim: src/host/standup.ts — so a --set row of theirs is put again; without this it was read and then silently lost)
     if ((set as any).SILENT) put('SILENT', (set as any).SILENT);   // (… and the silent order off the menu: --set '{"SILENT":{"on":true,"start":true}}' = a squad that stands up SILENT, as the loadout screen's row starts it)
     const destr0 = { ...DESTR_STATS }, gb0 = { ...GB_STATS } as Record<string, number>; if (process.env.PT_DUST === '1' && DESTRUCTION.on) W.dust = installDustStandin(W);
     (out as any).destr0 = [destr0, gb0];
@@ -1594,7 +1593,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
     if (rest.REARWATCH) put('REARWATCH', rest.REARWATCH);   // (and the rear man's watch on the door behind: standUp's frozen stand has just pinned it off — TPS_REARWATCH — over a --set row)
     if (rest.STACKLINE) put('STACKLINE', rest.STACKLINE);
     if (rest.HAULHOME) put('HAULHOME', rest.HAULHOME);   // (and the hauled furniture's last hand to the door: standUp's frozen stand has just pinned it off — TPS_HAULHOME — over a --set row)   // (and the brisk walk onto a stack mark at an open door: standUp's frozen stand has just pinned it off — TPS_STACKLINE — over a --set row)
-    resetWoundStats(); g.godMode = !MORTAL; g.tune.chaos = 0.5;   // (the page's default chaos; Sam cannot be hurt — the team is what is under test — but he is seen, heard and in the way)
+    g.godMode = !MORTAL; g.tune.chaos = 0.5;   // (the page's default chaos; Sam cannot be hurt — the team is what is under test — but he is seen, heard and in the way)
     const { why } = await quiet(!verbose, () => W.start()); if (why) throw new Error(`start refused — ${why}`);
     if (process.env.PT_METER === 'sky') { const { installSkyMeter } = await import('./hour-lib.ts'); installSkyMeter(g); } else if (process.env.PT_METER) throw new Error(`PT_METER=${process.env.PT_METER}: sky, or unset`);
     if (DOOR && !g.doors.byName(DOOR)) throw new Error(`PT_DOOR=${DOOR}: this level has no door of that name`);
@@ -1622,7 +1621,6 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
   } catch (e) {
     if (e instanceof Done) { out.end = e.end; out.why = e.why; } else { out.end = 'error'; out.why = e instanceof Error ? `${e.message}\n${(e.stack ?? '').split('\n').slice(1, 6).join('\n')}` : String(e); }
   }
-  if (P && WOUND.on) out.wounds = { team: P.team.filter((m: any) => m.wound).length, hostiles: P.hostiles.filter((h: any) => h.wound).length, zones: { ...WOUND_STATS.byZone }, again: WOUND_STATS.again, finished: WOUND_STATS.finished };
   if (BREAKER) (out as any).breaker = [...MAINS];
   if (P) { if (P.g.level.scenarios?.par) { const R = P.g.par?.result(); (out as any).par = R ? { secs: +R.secs.toFixed(1), lost: R.lost, total: +R.total.toFixed(1), medal: R.medal } : { medal: null, on: !!P.g.par?.data }; }   // (a par level — game/par.ts: the run's time, its penalty and its medal; medal null = no time: wiped, stalled, or the par switched off)
     if (WALL) (out as any).wall = WALL.wallTally(P); out.t = +P.t.toFixed(1); out.team = P.atEnd?.team ?? P.upAll.length; out.hostiles = P.atEnd?.hostiles ?? P.hostiles.filter((h: any) => h.state !== 'dead').length; out.orders = P.orders; out.refused = P.refused; out.smells = P.watch.smells; out.deaths = P.watch.deaths; out.other = P.watch.otherStats; P.watch.aloneClose(); out.alone = P.watch.alone; out.upSecs = Math.round(P.watch.upSecs); out.aloneSecs = Math.round(P.watch.aloneSecs); out.rooms = P.rooms; out.entry = { ...P.g.entry.stats }; if (TOOL) out.thr = P.thr; if (TECH) (out as any).tech = TECH; out.entries = P.tally.close(); out.kills = P.tally.kills; out.losses = P.tally.losses; out.bangs = P.bangs0 - P.D.bangs; if (HOLD) out.told = P.told;
@@ -1636,7 +1634,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
       (out as any).destr = { on: DESTRUCTION.on, ...d, dark, ...(Object.keys(fixWhy).length ? { fixWhy } : {}), debrisPeak: P.g.destr.debris.stats.peakLive, debrisRefused: P.g.destr.debris.stats.refused, inv: P.g.destr.inventory(), ...(Object.keys(gbs).length ? { glass: gbs } : {}), ...(dust ? { dust: { ...dust.stats, minT: +dust.stats.minT.toFixed(3) } } : {}) }; }
     out.endgame = P.endw.close(P.t, out.end); if (P.search) out.search = P.search.close();
     if (P.handw) out.handle = { ...P.handw.close(), stats: { ...HANDLE_STATS } };
-    if (LASTM?.LASTSTAND && (LASTM.LASTSTAND.regroup || LASTM.LASTSTAND.callOut)) { const r = LASTM.lastStandReport(P.g); out.lastStand = { on: r.on, stats: r.stats, room: r.room, in: r.in.length, out: r.out.length, named: r.named, said: r.said }; }
+    if (LASTM?.LASTSTAND && LASTM.LASTSTAND.callOut) { const r = LASTM.lastStandReport(P.g); out.lastStand = { on: r.on, stats: r.stats, room: r.room, in: r.in.length, out: r.out.length, named: r.named, said: r.said }; }
     if (P.leaves.length) (out as any).leaves = P.leaves;   // (the commander's own: open leaves across his way he pulled to — absent when he never did)
     if (SHUT) (out as any).shut = P.shut.map(({ ref, ...x }) => ({ ...x, open: !ref.latched }));   // (open: that door stands open again as the run ends)
     out.trace = P.trace; (out as any).frag = { ...FRAG_STATS }; (out as any).condition = { ...CONDITION_STATS }; (out as any).holdfire = { ...HOLDFIRE_STATS, lifts: { ...HOLDFIRE_STATS.lifts } };
@@ -1708,6 +1706,6 @@ if (import.meta.main) {
   runs.sort((a, b) => ids.indexOf(a.scn) - ids.indexOf(b.scn) || a.seed - b.seed);
   console.log(report(runs, argv.includes('--md')));
   console.log(`\n${runs.length} runs in ${Math.round((Date.now() - t0) / 1000)} s`);
-  if (flag('--json')) writeFileSync(flag('--json')!, JSON.stringify({ cap, set, ...(STACKWAIT > 0 ? { stackWait: STACKWAIT } : {}), ...(PAUSE > 0 ? { pause: PAUSE } : {}), ...(NOISE ? { noise: true } : {}), ...(SEARCH ? { search: true } : {}), ...(LASTM?.LASTSTAND && (LASTM.LASTSTAND.regroup || LASTM.LASTSTAND.callOut) ? { lastStand: { regroup: LASTM.LASTSTAND.regroup, callOut: LASTM.LASTSTAND.callOut } } : {}), runs }, null, 1));
+  if (flag('--json')) writeFileSync(flag('--json')!, JSON.stringify({ cap, set, ...(STACKWAIT > 0 ? { stackWait: STACKWAIT } : {}), ...(PAUSE > 0 ? { pause: PAUSE } : {}), ...(NOISE ? { noise: true } : {}), ...(SEARCH ? { search: true } : {}), ...(LASTM?.LASTSTAND && LASTM.LASTSTAND.callOut ? { lastStand: { regroup: LASTM.LASTSTAND.regroup, callOut: LASTM.LASTSTAND.callOut } } : {}), runs }, null, 1));
   process.exit(runs.some(r => r.end === 'error' || r.end === 'stalled') ? 1 : 0);
 }

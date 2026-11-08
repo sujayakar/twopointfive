@@ -411,7 +411,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'DOORTOOLS.chargeAnswer': 'TPS_CHARGEANSWER=1',
   'DOORTOOLS.podFrames': 'TPS_PODFRAMES=1',
   'DOORTOOLS.thrHand': 'TPS_THRHAND=1',
-  'DOORTOOLS.thrNoCan': 'TPS_THRNOCAN=1 (acts only with the can\'s wait for a hand up as well: TPS_THRHAND=1)',
   'DOORTOOLS.thrFragHold': 'TPS_THRFRAGHOLD=1',
   'DOORTOOLS.fragHold': 'TPS_FRAGHOLD=1 (this rule alone: the threshold\'s half has its own word above)',
   'DOORWAY.sideKick': 'TPS_SIDEKICK=1',
