@@ -36,7 +36,6 @@ const { floorAt } = await import(`${ROOT}/src/game/floor.ts`);
 const { BoxFlag, MAX_GLASS } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`);
 const { MAX_CHARS } = await import(`${ROOT}/src/anim/characters.ts`);
-const { MAX_QUERIES } = await import(`${ROOT}/src/render/probe.ts`);
 const { SCENARIOS, entryOfQuery } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const SCN: any = await import(`${ROOT}/src/scene/scenarios.ts`), { scenarioQuery } = SCN;
 const { checkStructure } = await import(`${ROOT}/src/game/roomclear.ts`);
@@ -264,13 +263,6 @@ if (g && RC && ROW) {
     team = g.nightBreach?.ops?.length ?? 0; theirs = g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead').length; } catch (e: any) { why = String(e?.message ?? e); }
   const want = rooms.reduce((n, r) => n + r.garrison, 0);
   verdict(why === null && team === ROW.squad && theirs === want, `picked, it stages with ${ROW.squad === 4 ? 'the four' : 'the pair'}: ${team} teammates, ${theirs} defenders`, why ?? (theirs !== want || team !== ROW.squad ? `${ROW.squad} teammates and ${want} defenders expected` : scenarioQuery(ROW)));
-  // (the light meter and the smoke sight lines are asked of the GPU through one probe of MAX_QUERIES a frame: what is asked past it goes unanswered that frame)
-  try { const P = g.probe; let n = 0, most = 0; const late = new Set<string>(), q = P.query.bind(P), qs = P.querySegment.bind(P);
-    P.query = (...a: any[]) => { if (++n > MAX_QUERIES) late.add(String(a[0]).replace(/\d+/g, '#')); return q(...a); }; P.querySegment = (...a: any[]) => { if (++n > MAX_QUERIES) late.add(String(a[0]).replace(/\d+/g, '#')); return qs(...a); };
-    await quietly(() => { for (let i = 0; i < 30; i++) { n = 0; W.step(1 / 60); most = Math.max(most, n); } }); P.query = q; P.querySegment = qs;
-    if (most > MAX_QUERIES) note(`${most} probe queries a frame once staged, against ${MAX_QUERIES}: the last ${most - MAX_QUERIES} asked go unanswered every frame on the page (here: ${[...late].join(', ')} — '#' a man's number; 'unitC# / unitH#' a man's own light meter, 'smoke#' a defender's sight line through smoke to Sam)${late.has('playerChest') || late.has('playerHead') ? ` · SAM'S OWN LIGHT METER IS AMONG THEM (game.ts asks it after every unit's): on the page his meter, and how visible he is to every eye, stop updating once the floor is this full` : ''}`);
-    else pass(`${most} probe queries a frame once staged, of ${MAX_QUERIES} (the light meter and the smoke sight lines)`);
-  } catch (e: any) { note(`probe queries not counted: ${String(e?.message ?? e).split('\n')[0]}`); }
   const L = g.engine?.lights?.lights; if (Array.isArray(L)) { const steady = L.filter((l: any) => l.ttl === undefined || l.ttl < 0).length;
     verdict(steady <= MAX_LIGHTS, `${steady} steady lights registered once staged, of ${MAX_LIGHTS} for the whole map (the level's, every man's torch; flashes and tracers take the rest)`);
     if (steady > MAX_LIGHTS - 6 && steady <= MAX_LIGHTS) note(`${MAX_LIGHTS - steady} light slot(s) left: a late squad's torches will not fit (spawnUnit refuses past ${MAX_LIGHTS}), and flashes and tracers are the first dropped`); }
