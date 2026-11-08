@@ -790,6 +790,27 @@
 "sig": "pub fn end_card(g: &mut crate::game::Game)",
 "mode": "push",
 "hostArm": "endCard"
+},
+{
+"call": "snowBlast#snowBlastAt",
+"rust": "crate::out_events::snow_blast",
+"sites": 1,
+"ts": "snowBlastAt",
+"of": null,
+"file": "src/game/snowBlast.ts",
+"why": "param",
+"params": [
+{
+"ts": "at",
+"rust": "at"
+},
+{
+"ts": "radius",
+"rust": "radius"
+}
+],
+"sig": "pub fn snow_blast(g: &mut crate::game::Game, at: V3, radius: f64)",
+"mode": "push"
 }
 ],
 "listed": [
