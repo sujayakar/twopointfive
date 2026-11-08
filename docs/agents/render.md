@@ -1582,7 +1582,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   SEEN on the software adapter only (the pass at dusk, the solver stepped 10 s with the row up, then 14 s with it at 0; 480 × 300, a play view and a
   close one): with the row up a pale column leaves the flame's own tips, warm at its foot, and widens as it climbs; with it at 0 the gas shows first well
   over the flame. Whether it BILLOWS cannot be judged from a still at that size. NEVER SEEN ON A GPU; the numbers are a first setting.
-- **A FIRE AS ONE COLUMN, ON THE LOOK PAGE** (10-29; `lookConfig.fireFit`, on with the Fire smoke row up, `?firefit=0` = the pieces as they were;
+- **A FIRE AS ONE COLUMN, ON THE LOOK PAGE** (10-29; on with the Fire smoke row up;
   `game/fire.ts FIRE_LOOK_SMOKE` and `axisAt`). The maintainer on a GPU, with a simulated fire beside his shot of the pass's drum: "interaction of smoke
   with embers, heat distortion, hot part of the plume doesn't seem to look right. they should fit together more naturally?" READ OFF HIS SHOT: the gas over
   the flame is a pale glowing haze (white solver smoke a hand from the fire's own lamp); the soot the flame draws is dark and stands on the flame's
@@ -1650,8 +1650,8 @@ row on his machine is the answer, and the word puts the count back on any machin
   with no fire smoke, so a low that put the smoke back would be 0.5 to 0.95 ms short beside a fire, fall to the floor, find room and hop again, the plume coming and
   going each time. While AUTO moves the preset, low reached from verylow keeps the shed; the smoke is back at medium (where the scale has the room: the hop low →
   medium is priced without it too, and medium's scale has 6 to 11 % to give) or when a preset is put on by hand; a machine that came DOWN to low keeps its smoke. HOW: `Quality.apply` writes `settings.fireSmoke` (render-side, never `FIRE.smoke.on`: that table rides the journal
-  and a graphics preset must not write it), `game/fire.ts updateFire` reads it beside the solver's `drawing`; a fire that gets its smoke back (a hop up the ladder)
-  smokes the same frame, and one that loses it just stops filing: the plume there thins out by itself and the solver sleeps when its bricks are let go. SWITCH:
+  and a graphics preset must not write it), the tick files a fire's smoke with the word `fire` and `smoke.ts emit` drops it by this setting; a fire that gets its smoke back (a hop up the ladder)
+  smokes again at its next source (within a second; so does one near the view after a load), and one that loses it just stops filing: the plume there thins out by itself and the solver sleeps when its bricks are let go. SWITCH:
   `settings.fireSmokeShed`, default on, `?fireshed=0` = every preset keeps the fire's smoke, as it was (render-side like ONE SMOKE SOLVE: no `FROZEN_HOLDS` row, no
   journal line; `?firesmoke=0` still puts the smoke off at every preset). WHAT IT IS NOT: a game rule on any stand (the source is look-only, and no headless stand
   has a solver that draws) — but in the PAGE a sight line reads the solver, so beside a fire a line over a standing man's head (the fire's notes: 0.92 to 0.94 kept
