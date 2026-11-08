@@ -1,7 +1,8 @@
 // The 'furnblast' probe family — FURNITURE UNDER A BLAST (src/game/furnblast.ts, behind the destruction switch and its own knob FURNBLAST.on), run through probes.ts:
 //   bun run tools/qa/probes.ts furnblast | furnblast-throw | furnblast-break | furnblast-stun | furnblast-reset | furnblast-off | furnblast-levels | furnblast-save [--verbose]
 // Headless = the Proxy device; what is asserted is every CPU-side promise, on the warehouse's office (the wall entry the maintainer watched) unless said:
-//   (throw)   a wall charge on the office wall: the chair behind the hole it opens is thrown AWAY from it;
+//   (throw)   a wall charge on the office wall: the chair behind the hole it opens is thrown AWAY from it; a blast the wall HOLDS against moves and breaks nothing behind it,
+//             where the same one inside the room takes the desk and throws the chair (FURNHELD_BREAK=1 puts the first inside too and must FAIL);
 //   (break)   the desk a metre from the charge is gone for sight (rays through where it stood), for feet (the nav cells under it) and for the AI's feed (a row),
 //             its pieces exist inside the per-blast budget and the pool's cap, what stood on it went with it, the cabinets further in lie on their sides;
 //   (stun)    a stun grenade of its own breaks and throws nothing; a charge's BORROWED bang (the door charge's road) does; the wall charge's own borrowed bang, on
@@ -43,7 +44,7 @@ async function quiet<T>(fn: () => Promise<T> | T): Promise<T> { if (VERBOSE) ret
 const resetStats = () => { for (const k of Object.keys(F.FURN_STATS)) (F.FURN_STATS as any)[k] = 0; F.FURN_LOG.length = 0; };
 
 /** the warehouse's office: the wall between the corridor and it runs along z = 17; the charge goes on its corridor face */
-const OFFICE = { file: 'warehouse.json', charge: [8.0, 0.9, 16.9] as Vec3, desk: [8.2, 18.2] as [number, number], chair: [8.2, 19.1] as [number, number], cabinets: [9.55, 20.2] as [number, number] };
+const OFFICE = { file: 'warehouse.json', charge: [8.0, 0.9, 16.9] as Vec3, inside: [8.2, 0.9, 17.5] as Vec3, desk: [8.2, 18.2] as [number, number], chair: [8.2, 19.1] as [number, number], cabinets: [9.55, 20.2] as [number, number] };
 interface Stage { W: any; game: any }
 /** `asStands` = the level as the stand has it (furnblast-levels: every level with its lived-in furniture where the stand raises it). Every other probe here is
  *  staged BY HAND on the warehouse's office — a charge, a desk, a chair and two cabinets at marks measured in the room as its generator drew it — so it stands
@@ -66,14 +67,20 @@ const posesOf = (game: any) => game.props.props.map((p: any) => `${p.id}:${p.x.t
 const navOf = (game: any) => { let h = 0; const b = game.col.nav.blocked; for (let i = 0; i < b.length; i++) h = (Math.imul(h, 31) + b[i]) | 0; return h; };
 const finite = (game: any) => game.destr.debris.list.every((c: any) => [...c.box.c, ...c.v, ...c.w].every(Number.isFinite)) && game.props.props.every((p: any) => [p.x, p.z, p.yaw, p.vx, p.vz, p.w].every(Number.isFinite));
 
-/** A wall charge throws the chair behind the hole. */
+const BREAK_HELD = process.env.FURNHELD_BREAK === '1';
+/** A wall charge throws the chair behind the hole; a wall that holds shields what is behind it. */
 export async function furnThrow(): Promise<boolean> {
-  const Fm = family('furnblast-throw: pushable furniture goes away from the blast');
+  const Fm = family('furnblast-throw: pushable furniture goes away from the blast, and a wall that holds shields what is behind it');
   { const S = await stage(); const g = S.game; const chair = propAt(g, OFFICE.chair); const x0 = chair.x, z0 = chair.z, yaw0 = chair.yaw;
     const res = wallCharge(S, OFFICE.charge); run(S, 240);
     const dx = chair.x - x0, dz = chair.z - z0; const ax = x0 - OFFICE.charge[0], az = z0 - OFFICE.charge[2]; const al = Math.hypot(ax, az); const away = (dx * ax + dz * az) / al;
     Fm.verdict(res.walls >= 1 && away > 0.8 && g.props.props.includes(chair), 'the chair behind the blown wall is thrown away from the charge', `wall holed ${res.walls} (${res.opened} nav cells) · ${chair.def.name} ${f2(al)} m from the charge moved ${f2(Math.hypot(dx, dz))} m (${f2(away)} m along the line away), turned ${f2(chair.yaw - yaw0)} rad · thrown ${F.FURN_STATS.propsThrown}`);
     Fm.verdict(finite(g), 'nothing NaN', `${g.destr.debris.list.length} chunks, ${g.props.props.length} props`); }
+  // (a charge of no strength for the wall: `power` is the walls' reach and nothing else, so the wall holds and the furniture's half is a door charge's)
+  const held = async (at: Vec3) => { const S = await stage(), g = S.game, chair = propAt(g, OFFICE.chair), desk = groupAt(g, OFFICE.desk); resetStats(); const res = g.destr.blast(at, { who: PLAYER_ID, chaos: false, power: 0 }); run(S, 240);
+    return { walls: res.walls as number, moved: Math.hypot(chair.x - chair.home[0], chair.z - chair.home[1]), stand: desk.members.filter((i: number) => standing(g, i)).length as number, of: desk.members.length as number, shut: F.FURN_STATS.shielded as number, shutProps: F.FURN_STATS.propsShielded as number }; };
+  { const wall = await held(BREAK_HELD ? OFFICE.inside : OFFICE.charge), inside = await held(OFFICE.inside), said = (h: typeof wall) => `walls holed ${h.walls}, the chair moved ${f2(h.moved)} m, desk parts standing ${h.stand} of ${h.of}, shielded ${h.shut} pieces and ${h.shutProps} props`;
+    Fm.verdict(wall.walls === 0 && wall.moved < 1e-6 && wall.stand === wall.of && wall.shut >= 1 && wall.shutProps >= 1 && inside.moved > 0.8 && inside.stand === 0, 'a wall that holds shields the desk and the chair behind it; the same blast on their side of it takes both', `behind the wall: ${said(wall)} · on their side: ${said(inside)}`); }
   return Fm.done();
 }
 
