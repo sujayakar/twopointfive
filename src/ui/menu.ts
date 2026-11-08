@@ -17,7 +17,6 @@ import { Overlay } from './overlay';
 import { MISSIONS, closeMissions, missionsBusy, missionsReopenAsked } from './missions';
 import { nextPickOf } from './picks';
 import { nextLessonOf } from './verdictNext';
-import { pickEntry } from '../scene/picks';
 import { quitSearch } from '../scene/scenarioList';
 import { openList, openStartPage, startPageWanted, startPageFromQuery } from './startpage';
 import { menuTheme } from './theme';
@@ -259,7 +258,7 @@ export class Menu {
   /** 'Next: <title>' while the page is a run the short list started (scene/picks.ts pickOfQuery) and a row follows it: that row's own page load. Null otherwise. */
   private nextPickButton(armed: () => boolean = () => true): HTMLElement | null {
     const nx = nextPickOf(); if (!nx) return null;
-    if (!!pickEntry(nx.from) !== !!this.d.scenario?.current()) return null;   // (the URL is a pick's, but what is up is not it: its scenario was refused at boot and the plain night is being played — or a scenario is up on the solo pick's page)
+    if (nx.scenario !== !!this.d.scenario?.current()) return null;   // (the URL is a pick's, but what is up is not it: its scenario was refused at boot and the plain night is being played — or a scenario is up on the solo pick's page)
     return button(`Next: ${nx.title} ›`, () => { if (!armed()) return; this.d.stopTour?.(); nx.start(); }, 'next');
   }
   /** the slot the cards offer: this run's newest at or before now on the mission clock, else an earlier run's newest (null: none / no loader) */

@@ -18,7 +18,8 @@
 // lamps the level keeps dark included; a door the file gives no angle stands ajar one time in five, by a hash, whichever way it swings and steel or not.
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { missionList, type Mission } from '../src/ui/missions';
+import { ALL_MISSIONS } from '../src/scene/scenarioList';
+import type { ScenarioEntry } from '../src/scene/scenarios';
 
 const ROOT = join(import.meta.dir, '..'), DEG = Math.PI / 180, FOV = 28;
 type V3 = [number, number, number];
@@ -244,6 +245,12 @@ function levelOf(file: string): { d: Data; file: string } {
   return { d: JSON.parse(readFileSync(join(ROOT, 'levels', f), 'utf8')) as Data, file: f };
 }
 
+/** a mission as this tool draws it: a row of the table, or the plain solo night (`scenario` null), under the heading it is listed under */
+interface Mission { id: string; scenario: ScenarioEntry | null; group: string; squad: number }
+function missionList(): Mission[] {
+  const groupOf = (e: ScenarioEntry) => e.group ?? (e.kind === 'quiet' ? (e.squad ? 'quiet-two' : 'quiet-alone') : e.kind === 'rescue' ? 'clock' : 'raids');
+  return [{ id: 'solo-night', scenario: null, group: 'quiet-alone', squad: 0 }, ...ALL_MISSIONS.map(e => ({ id: e.id, scenario: e, group: groupOf(e), squad: e.squad }))];
+}
 async function render(m: Mission, O: Opts): Promise<Cam> {
   const file = m.scenario?.level ?? 'office.json', { d } = levelOf(file), pin: Pin = { ...(PIN[m.id] ?? {}), ...(O.set[m.id] ?? {}) }, M: Mood = { ...(MOODS[m.group ?? 'raids'] ?? NIGHT), ...pin } as Mood;
   const S = new Scene(), lampsAll = (pin.lamps ?? 'all') === 'all'; men.length = 0; spots.length = 0; areas.length = 0; seed = hash(m.id);
