@@ -55,7 +55,7 @@ pub fn hands(g: &mut crate::game::Game) -> bool {
         && g.pl[me].wanding.is_none()
         && g.pl[me].wall.is_none()
         && !crate::game::player_list_open(g, me)
-        && able(g)
+        && able(g, &crate::seats::here(g))
 }
 
 /// Is the held click his to begin one with. (stalk.ts free)
@@ -69,9 +69,9 @@ pub fn shut(g: &mut crate::game::Game) -> bool {
 }
 
 /// The gate game.ts puts on a grab: not folded by a blast, no hand on a breaker's lever. (stalk.ts able)
-pub fn able(g: &crate::game::Game) -> bool {
-    let me = g.player;
-    !crate::samstun::sam_staggered(g, None) && g.pl[me].breaker_move.is_none()
+pub fn able(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    let me = seat.player;
+    !crate::samstun::sam_staggered(g, seat, None) && g.pl[me].breaker_move.is_none()
 }
 
 /// How far off a press can begin one. (stalk.ts beginM)
@@ -170,7 +170,7 @@ pub fn corner_gate(g: &mut crate::game::Game) -> bool {
         || g.pl[me].picking.is_some()
         || g.pl[me].wanding.is_some()
         || crate::game::player_list_open(g, me)
-        || !able(g)
+        || !able(g, &crate::seats::here(g))
         || shut(g)
         || (g.pl[me].crouch && !crate::player::can_stand(g)))
 }

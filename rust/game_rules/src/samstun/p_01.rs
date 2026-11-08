@@ -60,10 +60,10 @@ pub fn dazzle_player(g: &mut crate::game::Game, secs: f64, at: V3) {
 }
 
 /// Is he folded right now (rooted, gun down, no round)? `now`: the clock asked of.   (samstun.ts samStaggered)
-pub fn sam_staggered(g: &crate::game::Game, now: Option<f64>) -> bool {
+pub fn sam_staggered(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: Option<f64>) -> bool {
     let now = now.unwrap_or(g.time);
     if !live(g, &crate::seats::here(g)) { return false; }
-    let p = g.player;
+    let p = seat.player;
     now < g.pl[p].stagger_until
 }
 
@@ -78,8 +78,8 @@ pub fn man_blind(g: &crate::game::Game, p: PlayerId, now: Option<f64>) -> f64 {
 }
 
 /// May his feet move? A dazzle does not root him on the page (SAMSTUN.blindRoots).   (samstun.ts samRooted)
-pub fn sam_rooted(g: &crate::game::Game, now: Option<f64>) -> bool {
-    sam_staggered(g, now)
+pub fn sam_rooted(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: Option<f64>) -> bool {
+    sam_staggered(g, seat, now)
 }
 
 /// Once a frame right after the down test: what the two states show on him and keep true while they run.   (samstun.ts samStunPose)
@@ -87,7 +87,7 @@ pub fn sam_stun_pose(g: &mut crate::game::Game) {
     let p = g.player;
     let c = g.pl[p].ch;
     let blind = sam_blind(g, &crate::seats::here(g), None);
-    let stag = sam_staggered(g, None);
+    let stag = sam_staggered(g, &crate::seats::here(g), None);
     g.pl[p].stun_posed = stag || blind > 0.0;
     g.ch[c].anim.clutch = if stag && blind <= 0.0 { 1.0 } else { 0.0 };
     if blind > 0.0 {
@@ -138,15 +138,15 @@ mod tests {
         let p = g.player;
         g.pl[p].stagger_until = 12.0;
         g.pl[p].dazzled_until = 12.0;
-        assert!(sam_staggered(&mut g, None));
+        assert!(sam_staggered(&g, &crate::seats::here(&g), None));
         assert_eq!(sam_blind(&g, &crate::seats::here(&g), None), 1.0);
-        assert!(!sam_staggered(&mut g, Some(12.0)));   // the clock asked of, not the game's
+        assert!(!sam_staggered(&g, &crate::seats::here(&g), Some(12.0)));   // the clock asked of, not the game's
         g.pl[p].down = true;
-        assert!(!sam_staggered(&mut g, None));
+        assert!(!sam_staggered(&g, &crate::seats::here(&g), None));
         assert_eq!(sam_blind(&g, &crate::seats::here(&g), None), 0.0);
         g.pl[p].down = false;
         g.touring = true;
-        assert!(!sam_staggered(&mut g, None));
+        assert!(!sam_staggered(&g, &crate::seats::here(&g), None));
         assert_eq!(sam_blind(&g, &crate::seats::here(&g), None), 0.0);
     }
 
@@ -156,9 +156,9 @@ mod tests {
         let p = g.player;
         g.pl[p].dazzled_until = 12.0;
         assert_eq!(sam_blind(&g, &crate::seats::here(&g), None), 1.0);
-        assert!(!sam_rooted(&mut g, None));
+        assert!(!sam_rooted(&g, &crate::seats::here(&g), None));
         g.pl[p].stagger_until = 12.0;
-        assert!(sam_rooted(&mut g, None));
+        assert!(sam_rooted(&g, &crate::seats::here(&g), None));
     }
 
     #[test]

@@ -294,12 +294,12 @@ pub fn turn_secs(g: &crate::game::Game, by: CharId, sw: &crate::lightswitch::Wal
 }
 
 /// What breaks the plant off: he is down, has a man or a body in hand, is folded by a blast, or has been moved off the plate. (lightswitch.ts plantBroken)
-pub fn plant_broken(g: &crate::game::Game, h: &crate::lightswitch::Hand) -> bool {
-    let pl = g.player;
+pub fn plant_broken(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: &crate::lightswitch::Hand) -> bool {
+    let pl = seat.player;
     let p = &g.pl[pl];
     if p.down || p.holding.is_some() || p.takedown.is_some() || p.dragging.is_some() || p.wall.is_some() { return true; }
     let c = p.ch;
-    crate::samstun::sam_staggered(g, None) || v3::dist_xz(h.sw.pos, g.ch[c].pos) > 1.6
+    crate::samstun::sam_staggered(g, seat, None) || v3::dist_xz(h.sw.pos, g.ch[c].pos) > 1.6
 }
 
 /// A click or any row given lets go of Sam's plant at the plate. (lightswitch.ts switchLetGo)
@@ -313,10 +313,10 @@ pub fn switch_let_go(g: &mut crate::game::Game) {
 }
 
 /// The plate Sam is planted at, while he is. (lightswitch.ts switchHand)
-pub fn switch_hand(g: &crate::game::Game) -> Option<crate::lightswitch::SwitchHand> {
-    let c = g.pl[g.player].ch;
+pub fn switch_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::lightswitch::SwitchHand> {
+    let c = g.pl[seat.player].ch;
     let h = g.m.lightswitch.states.as_ref()?.hands.iter().find(|x| x.plant && x.c == c)?.clone();
-    if g.time >= h.at && g.time - h.at < h.dur && !plant_broken(g, &h) { Some(SwitchHand { p: h.sw.pos, n: h.sw.n }) } else { None }
+    if g.time >= h.at && g.time - h.at < h.dur && !plant_broken(g, seat, &h) { Some(SwitchHand { p: h.sw.pos, n: h.sw.n }) } else { None }
 }
 
 /// Work a switch: off, each burning fixture seen to go and marked as a hand's; on, what the hand put out or the room as authored. (lightswitch.ts flipSwitch)
@@ -482,7 +482,7 @@ pub fn light_switch_tick(g: &mut crate::game::Game) {
     for i in 0..n {
         let h = g.m.lightswitch.states.as_ref().unwrap().hands[i].clone();
         let mut plant = h.plant;
-        if plant && plant_broken(g, &h) {
+        if plant && plant_broken(g, &crate::seats::here(g), &h) {
             g.m.lightswitch.states.as_mut().unwrap().hands[i].plant = false;
             plant = false;
         }
