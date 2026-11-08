@@ -340,7 +340,7 @@ pub trait DoorsAsk {
     fn smoke_cans(&mut self) -> Vec<([f64; 2], bool)>;
     /// the kit's cards set to carry these cans, by card, and the game restarted as the page does on the kit
     fn cards_carry(&mut self, cards: &[(usize, f64)]);
-    /// a round fired dead straight from a man's gun at a place, whoever is in the way
+    /// a round fired dead straight from a man's shoulder height at a place, whoever is in the way (a pinned man's pose is not the point)
     fn round_from(&mut self, m: GuardId, at: [f64; 3]);
     /// is Sam down, and what he has left
     fn sam_down_hits(&self) -> (bool, f64);
@@ -773,7 +773,7 @@ impl DoorsAsk for Play {
         }
         game::game::game_restart(&mut self.g, None);
     }
-    fn round_from(&mut self, m: GuardId, at: [f64; 3]) { let c = self.g.gd[m].ch; let o = game::combat::FireOpts { spread: Some(0.0), weapon: None, steady: Some(true), blind: None }; game::combat::fire_weapon(&mut self.g, c, at, false, Some(&o)); }
+    fn round_from(&mut self, m: GuardId, at: [f64; 3]) { let c = self.g.gd[m].ch; let q = self.g.ch[c].pos; self.g.ch[c].muzzle = [q[0], 1.35, q[2]]; let o = game::combat::FireOpts { spread: Some(0.0), weapon: None, steady: Some(true), blind: None }; game::combat::fire_weapon(&mut self.g, c, at, false, Some(&o)); }
     fn sam_down_hits(&self) -> (bool, f64) { let p = &self.g.pl[self.g.player]; (p.down, p.hits_left) }
     fn down_how(&self, m: GuardId) -> Option<(game::game::DownKind, game::game::DownBy)> { let h = &self.g.gd[m]; Some((h.down_kind?, h.down_by?)) }
     fn rescue_free(&self) -> bool { game::rescue::rescue_mode(&self.g) == game::rescue::RescueMode::Free }
