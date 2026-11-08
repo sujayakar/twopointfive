@@ -147,7 +147,9 @@ impl Layout {
         all
     }
     pub fn body_files(&self, root: &Path) -> Vec<PathBuf> {
-        self.game_files(root).into_iter().filter(|p| crate::dead::is_body(p)).collect()
+        // (the tables' crate holds the game's types: a file of its own there, as a seat's borrowed view, is one a pass leaves alone)
+        let tables = self.knobs.components().nth(1).map(|c| c.as_os_str().to_os_string());
+        self.game_files(root).into_iter().filter(|p| crate::dead::is_body(p) && !p.strip_prefix(root.join("rust")).ok().is_some_and(|r| r.components().next().map(|c| c.as_os_str().to_os_string()) == tables)).collect()
     }
     /// the crates that are not body crates and use one, however far: each has to build after a pass has changed the bodies
     pub fn users(&self) -> Vec<String> {

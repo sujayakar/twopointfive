@@ -101,7 +101,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   not carry it; the MOVES hand pass keeps no straight trigger finger on the fist round the handle, and the reload arm (`mvArms`) does not play over either tool. `null` = the layer is not run: every other pose is bit for bit the build
   before's. Look at it with `bun run tools/qa/bigmoves-strip.ts --out <dir>` (front / side / top stick strips with the prop boxes; always pass `--out`). FIRST-PASS numbers,
   placed headless: never in the viewer, never on a GPU; finger curls pop; his own gun pops to its place.
-- **Wounds (`WOUND.on`) are shelved** (2026-11-07, his list, to pick up later): gone from the game on both sides, with their page word, hook and checks. A round kills or knocks out as before. The commit named "Wounds leave the tree" has what went; its parent still has them. The animator's wound layer stays until rust/sim's list is made again.
+- **Wounds (`WOUND.on`) are shelved** (2026-11-07, his list, to pick up later): gone from the game on both sides, with their page word, hook and checks. A round kills or knocks out as before. The commit named "Wounds leave the tree" has what went; its parent still has them. The animator's wound layer left after them, on both sides.
 - **A man's condition on the figure** (`character.ts MV2.hurt / MV2.shaken`, the animator's `hurt`, `hurtSide`, `shaken`, `foldToo`; dealt every frame
   for the player, his men and the defenders alike by `condition.ts conditionPose` from `Game.dealWeapons`, nothing under a showcase; all inside the
   MOVES pass, so none of it on the frozen stand or with `?nomoves`). HURT (`mvPost`): a hunch he keeps (`pitch` 11°, head 9°, pelvis 2.5 cm), a lean

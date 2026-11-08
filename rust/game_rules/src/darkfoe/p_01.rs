@@ -340,8 +340,8 @@ pub fn dark_foe_kept(g: &mut crate::game::Game, gd: GuardId, d: Option<Roomfight
     if crate::owner::has(g, man, hands) || crate::pressure::press_keeps_home(g, d, Some(false)) {
         return Some(String::from("the press's"));
     }
-    if crate::rescue::rescue_captor(g) == Some(gd) || crate::owner::has(g, gd, crate::owner::by::STAND) {
-        return Some(String::from("the captor / last stand"));
+    if crate::rescue::rescue_captor(g) == Some(gd) {
+        return Some(String::from("the captor"));
     }
     None
 }

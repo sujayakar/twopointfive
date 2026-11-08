@@ -8195,9 +8195,7 @@ pub struct SmokebreakK {
     pub tip_out: f64,
     pub tip_up: f64,
     pub thread: crate::knobs::SmokebreakKThread,
-    pub thread_gone: f64,
     pub breath: crate::knobs::SmokebreakKBreath,
-    pub puffs: crate::knobs::SmokebreakKPuffs,
     pub color: V3,
     pub mouth_ahead: f64,
     pub mouth_down: f64,
@@ -8226,9 +8224,7 @@ impl SmokebreakK {
             tip_out: 0.0,
             tip_up: 0.0,
             thread: crate::knobs::SmokebreakKThread::zeroed(),
-            thread_gone: 0.0,
             breath: crate::knobs::SmokebreakKBreath::zeroed(),
-            puffs: crate::knobs::SmokebreakKPuffs::zeroed(),
             color: [0.0; 3],
             mouth_ahead: 0.0,
             mouth_down: 0.0,
@@ -8296,33 +8292,6 @@ impl SmokebreakKBreath {
     }
 }
 impl Default for SmokebreakKBreath { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/smokebreak.ts:45 SmokebreakK.puffs, src/game/smokebreak.ts:45)
-#[derive(Clone, Copy, Debug)]
-pub struct SmokebreakKPuffs {
-    pub records: f64,
-    pub count: f64,
-    pub speed: f64,
-    pub spread: f64,
-    pub life: f64,
-    pub size: f64,
-    pub opacity: f64,
-}
-impl SmokebreakKPuffs {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SmokebreakKPuffs {
-            records: 0.0,
-            count: 0.0,
-            speed: 0.0,
-            spread: 0.0,
-            life: 0.0,
-            size: 0.0,
-            opacity: 0.0,
-        }
-    }
-}
-impl Default for SmokebreakKPuffs { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/showwhy.ts:53 SHOWWHY, src/game/showwhy.ts:53)
 #[derive(Clone, Copy, Debug)]
@@ -13136,7 +13105,7 @@ pub fn page_rowset() -> RowsetK {
 }
 
 pub fn page_smokebreak() -> SmokebreakK {
-    crate::knobs::SmokebreakK { on: true, light_secs: 3.2, light_up: [0.5, 2.6], flame_at: 1.3, flame: 0.9, every: 7.5, draw: 2.1, out_after: 0.7, out: 1.3, flame_color: [1.0, 0.62, 0.24], flame_k: 2.4, flame_range: 3.2, ember_color: [1.0, 0.36, 0.1], ember_k: 0.1, ember_draw_k: 0.7, ember_range: 1.3, ember_every: 0.4, tip_out: 0.11, tip_up: 0.02, thread: crate::knobs::SmokebreakKThread { radius: 0.02, cells: 1.2, density: 5.0, temp: 5.0, speed: 0.25, push: 10.0, jitter: 0.35 }, thread_gone: 30.0, breath: crate::knobs::SmokebreakKBreath { radius: 0.04, cells: 1.5, density: 16.0, temp: 2.5, speed: 1.1, push: 12.0, expand: 2.2, attack: 0.1, jitter: 0.3, down: 0.1 }, puffs: crate::knobs::SmokebreakKPuffs { records: 4.0, count: 6.0, speed: 0.8, spread: 0.26, life: 2.4, size: 0.1, opacity: 0.8 }, color: [0.72, 0.76, 0.86], mouth_ahead: 0.1, mouth_down: 0.075 }
+    crate::knobs::SmokebreakK { on: true, light_secs: 3.2, light_up: [0.5, 2.6], flame_at: 1.3, flame: 0.9, every: 7.5, draw: 2.1, out_after: 0.7, out: 1.3, flame_color: [1.0, 0.62, 0.24], flame_k: 2.4, flame_range: 3.2, ember_color: [1.0, 0.36, 0.1], ember_k: 0.1, ember_draw_k: 0.7, ember_range: 1.3, ember_every: 0.4, tip_out: 0.11, tip_up: 0.02, thread: crate::knobs::SmokebreakKThread { radius: 0.02, cells: 1.2, density: 5.0, temp: 5.0, speed: 0.25, push: 10.0, jitter: 0.35 }, breath: crate::knobs::SmokebreakKBreath { radius: 0.04, cells: 1.5, density: 16.0, temp: 2.5, speed: 1.1, push: 12.0, expand: 2.2, attack: 0.1, jitter: 0.3, down: 0.1 }, color: [0.72, 0.76, 0.86], mouth_ahead: 0.1, mouth_down: 0.075 }
 }
 
 pub fn page_showwhy() -> ShowwhyK {

@@ -4,6 +4,8 @@ import { Vec3 } from '../math/vec';
  *  Everything after `mode` is optional and absent = the original behaviour, so the hand-tuned legacy emitters are bit-identical;
  *  the graded effects in src/game/effects.ts are the ones that set them (semantics ported from twopointfive's fluid.wgsl Source). */
 export interface SmokeEmitter {
+  /** an open fire's: the graphics preset that sheds a fire's smoke drops it (smoke.ts emit) */
+  fire?: boolean;
   pos: Vec3; dir: Vec3;
   speed: number;        // gas velocity along dir (m/s) the medium is dragged toward inside the splat
   radius: number;       // gaussian splat radius (m): weight exp(-r²/radius²), cut at 3·radius
@@ -66,16 +68,16 @@ export interface SmokeSystemLike {
   push(p: SmokePush): void;
   /** true if p lies inside one of the loose bounds round the smoke there is (a cheap 'could there be smoke here': a yes can be clear air) */
   inSmokeDomain(p: Vec3): boolean;
-  /** A ROUND'S STRAIGHT LEG through whatever smoke there is: from `from`, `len` metres along the unit `dir`. true = the smoke took it as a line; false / absent = it
-   *  did not, and the caller sends its old row of soft shoves */
+  /** A ROUND'S STRAIGHT LEG through whatever smoke there is: from `from`, `len` metres along the unit `dir`, for the solver to stir as one line. true = it took it as one; nobody reads the
+   *  answer in the game: the tick says it and the solver takes it or drops it */
   round?(from: Vec3, dir: Vec3, len: number): boolean;
   /** gas on the fine lattice hotter than `heat` is not let go while this stands (0 = none kept, as the solver was built: sparse.fineKeep) — a fire whose flame is
    *  heat on that lattice asks for it (game/fire.ts FIRE.gas) and puts it back */
   keepHot?(heat: number): void;
   /** how many more emitters would still be packed for the solver this step (an effect sizing its spark-trail count charges against this) */
   budget?(): number;
-  /** is smoke handed over now stepped AND drawn (a solver switched off or frozen, or its rendering switched off, is not; absent = no: the harness's null one)? What a
-   *  look-only source asks before it trades another picture for gas in here */
+  /** is smoke handed over now stepped AND drawn (a solver switched off or frozen, or its rendering switched off, is not; absent = no: the harness's null one)? The solver's
+   *  own question (emit drops a look-only source when it is not, and the picture asks it): the game asks nothing */
   drawing?(): boolean;
   /** drop every emitter and all the smoke (encounter restart: a 30 s canister must not keep venting into the next one) */
   clearAll?(): void;

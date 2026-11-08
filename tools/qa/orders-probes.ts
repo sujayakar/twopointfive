@@ -18,8 +18,9 @@
 //   orders-seams       what the later parts build on: a man the fight AI has (script ended, alert, eyes on) is left to it on his post and taken back once cold; a show
 //                      taking the floor drops every order
 //   orders-edges       what cannot be done is refused aloud; the men keep clear of Sam; the file closes up; the fight seam's clock
-import { blockOf, doing, listedOf, menuKey, sameWord } from './squadwords';
+import { blockOf, doing, listedOf, ringUp, ringDown, sameWord } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
+import { CMDRING } from '../../src/game/cmdring';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS, doorWords } = await import(`${ROOT}/src/game/orders.ts`);   // (doorWords: a door's name as the HUD says it — its id's words, or the rooms it joins where the door names rule is on — so the expected words follow the stand)
 const { WORDS } = await import(`${ROOT}/src/game/words.ts`);
@@ -70,7 +71,7 @@ async function rig(seed: number, o: { nb?: boolean; quiet?: boolean; knobs?: Rec
     /** the quick key pressed with the cursor on p: the target's own order, at once */
     quick(p: number[]) { R.aim(p); input.pressed.add(ORDERS.quickKey); R.step(); },
     /** X PRESSED (one frame — nothing is held) with the cursor on p: the menu comes up there; then `secs` more of frames with every key up */
-    openX(p: number[], secs = 0.4) { R.aim(p); menuKey(O); R.step(); const n = Math.round(secs * 60) - 1; for (let i = 0; i < n; i++) R.step(); },
+    openX(p: number[], secs = 0.4) { R.aim(p); ringUp(R.input, R); const n = Math.round(secs * 60) - 1; for (let i = 0; i < n; i++) R.step(); },
     /** Esc pressed: the menu goes down with no order */
     esc() { input.pressed.add('Escape'); R.step(); },
     /** a left click as the page's mouse writes it: the press bit for one frame, the held bit until the button comes up a few frames on */
@@ -96,7 +97,7 @@ const AISLE: number[] = [15, 0, 17.6], AISLE_FAR: number[] = [21, 0, 17.6], WEST
 export const ordersOff = guarded(async () => {
   const { verdict, done } = family('orders-off: with no squad on the floor X, B, T and the middle button are dead');
   const run = async (keys: boolean) => { const R = await rig(5, { nb: false }); Math.random = seeded(77);
-    for (let i = 0; i < 600; i++) { if (keys) { if (i === 100) menuKey(O); if (i === 160) R.input.pressed.add(ORDERS.whoKey); if (i === 220) R.input.pressed.add(ORDERS.quickKey); if (i === 280) R.input.clicked |= 2; if (i === 340) menuKey(O); } R.step(); }
+    for (let i = 0; i < 600; i++) { if (keys) { if (i === 100) { R.input.keys.add(CMDRING.key); R.input.pressed.add(CMDRING.key); } if (i === 125) R.input.keys.delete(CMDRING.key); if (i === 160) R.input.pressed.add(ORDERS.whoKey); if (i === 220) R.input.pressed.add(ORDERS.quickKey); if (i === 280) R.input.clicked |= 2; if (i === 340) ringDown(R.input); } R.step(); }
     return R; };
   const A = await run(false), B = await run(true); const O = B.O;
   const hud = { menu: listedOf(O), status: blockOf(O) };
@@ -339,7 +340,7 @@ export const ordersSeams = guarded(async () => {
     'his contact cold: he is back on his order, on his post', `re-taken ${f2(tCold)} s after the last sighting (coldSecs ${ORDERS.coldSecs}) · ${f2(dist(b1.char.pos, post))} m off his post · "${doing(O.g, b1)}" · state ${b1.state}`);
   // a show takes the floor
   O.give('hold', O.targetAt(g.player.char.pos), 'all'); R.step(5); const had = men.filter((m: any) => O.of(m)).length;
-  g.touring = true; menuKey(O); R.step(3); const left = men.filter((m: any) => O.of(m)).length; const hud = { menu: listedOf(O), status: blockOf(O) }; g.touring = false;
+  g.touring = true; ringUp(R.input, R); R.step(3); const left = men.filter((m: any) => O.of(m)).length; const hud = { menu: listedOf(O), status: blockOf(O) }; g.touring = false;
   verdict(had === 2 && left === 0 && !hud.menu && hud.status.length === 0, 'a show takes the floor (touring): every order is dropped, X is dead, the HUD block is gone', `orders ${had} → ${left} · hud rows ${hud.status.length}`);
   return done();
 });

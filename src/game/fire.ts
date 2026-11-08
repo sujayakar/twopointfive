@@ -121,7 +121,7 @@ export const FIRE = {
     steps: FIRE_STEPS },
   /** THE SMOKE (the solver's units: 6 /m of extinction a unit of density, +1.6 m/s² a unit of heat): how high over the coals the source's middle is as a share of the
    *  flame's height (its foot, a radius lower, stays over a standing man's head on a drum: tools/qa/fire-check.ts holds it), the source's radius (m) and its least width in cells, what it lets out a second, how hot, how fast it leaves, and how hard the air is dragged along;
-   *  filed afresh every `every` s for that long; only for a fire within `viewR` m of what the view looks at; `on` false = a fire with no smoke (`?firesmoke=0`) */
+   *  filed afresh every `every` s for that long; only for a fire within `viewR` m of what the view looks at; `on` false = a fire with no smoke */
   smoke: { on: true, up: 1.9, radius: 0.26, cells: 4, density: 1, temp: 21, speed: 0.9, push: 6, jitter: 0.5, every: 1, viewR: 18, lean: 0.12 },
   /** THE FLAME AS GAS (the maintainer's pick, 10-23: "Drive it from our 3D smoke solver"; "i'm curious how far we can push our existing smoke solver … if we can
    *  make the finer cells work well with our existing brick stuff"): a second LOOK source, on the solver's FINE lattice (2.2 cm cells, the breath's), filed at
@@ -155,7 +155,7 @@ export const FIRE = {
 /** what the renderer is handed for one fire: render/passes.ts FireRecord (setFires → shaders/fire.wgsl FireRec) */
 export type FireDraw = FireRecord;
 export interface FireStats { fires: number; lit: number; frames: number; cracks: number; /** the light's swing this run: least and most of the authored strength, and their sum and count */ lo: number; hi: number; sum: number; n: number }
-/** THE LOOK PROTOTYPE's FIRE SMOKE (the look panel's "Fire smoke" row, render/frame.ts lookConfig.fireSmoke; 0 = the smoke as the build has it). The maintainer,
+/** THE LOOK PROTOTYPE's FIRE SMOKE (the look panel's "Fire smoke" row, render/frame.ts lookConfig.fireSmoke; 0 = none of it, smoke/smoke.ts emit drops it). The maintainer,
  *  10-28, of a drum fire on the look page by day: "smoke plume from fire looks a bit weird, disconnected from fire. should be billowing more". TWO CAUSES, both
  *  in the table above. DISCONNECTED: the build files the gas with its middle 1.9 flame heights over the coals (2.2 m over them, its foot above a standing man's
  *  head, so that no sight line near a fire is cut by its smoke), and a camera that looks down on the yard shows that height as a gap beside the flame. Here the
@@ -171,7 +171,7 @@ export const FIRE_LOOK_SMOKE = {
   puffRadius: 0.24, puffOff: 0.09,                     // its radius and how far off the fire's middle it may be born (m)
   puffDensity: 3.2, puffTemp: 30, puffSpeed: 1.25,     // what it lets out a second while it lasts, how hot, how fast it leaves
   puffPush: 9, puffExpand: 2.2,                        // how hard the air is dragged along, and how hard it is pushed apart (1/s)
-  // ONE COLUMN (lookConfig.fireFit, `?firefit=0` = as it was): the maintainer on a GPU, 10-29, with a simulated fire beside his shot of the pass's drum: "interaction
+  // ONE COLUMN: the maintainer on a GPU, 10-29, with a simulated fire beside his shot of the pass's drum: "interaction
   // of smoke with embers, heat distortion, hot part of the plume doesn't seem to look right. they should fit together more naturally?" In his shot the gas over the
   // flame is a pale glowing haze (white smoke a hand from the fire's own lamp), the soot the flame draws is dark and stands on another line, and the embers leave
   // the coals in a wide cone. With this on every piece is filed on the flame's own middle as fire.wgsl fireBend leans it and leaves along it; the gas is SOOT
@@ -199,7 +199,7 @@ export const FIRE_LOOK_SMOKE = {
   snow: { speed: 2.6, reach: 2.2, spread: 0.2, mouth: 1.3, top: 4.5 },   // the jet: m/s on its axis at the mouth, the height (m) at which that has halved, how fast it widens (tan), its width at the mouth (× the mouth's radius), where it ends (m)
 };
 /** whether a fire's pieces are filed as one column (the look page, with its Fire smoke row up) */
-const fits = () => lookConfig.fireSmoke > 0 && lookConfig.fireFit > 0;
+const fits = () => lookConfig.fireSmoke > 0;
 /** THE FLAME'S OWN MIDDLE `up` metres over its mouth, as the picture leans it (fire.wgsl fireBend × the capped wind it is handed): how far downwind it stands
  *  (x, z) and its slope there (metres downwind a metre up) */
 function axisAt(up: number, wind: readonly [number, number]): [number, number, number, number] {
@@ -409,22 +409,26 @@ export function updateFire(g: Game, dt: number) { { const __s = RUST_SURFACE; if
 /** THE FIRES THE PICTURE DRAWS this frame (engine.fires; the picture only, nothing here is kept or read by the game): every burning one near the view, and under
  *  the fog of war each as the team last saw it (FIRE.fog, by the fog's memory of the fire's own lamp: RtLight.fog / fogGhost). Called by updateFire, and by the
  *  game again straight behind the fog's own turn (game.ts), which is what says this frame's classes: a fire put out where nobody sees keeps its flame in the
- *  fog from the very frame it goes out. Every number is a closed form of the clock, so the two calls of a frame agree but for the fog's word. */
-export function fireDraws(g: Game) {
+ *  fog from the very frame it goes out. Every number but the soot is a closed form of the clock, so the two calls of a frame agree but for the fog's word. */
+export function fireDraws(g: Game, dt = 0) {
   const E = g.engine, K = FIRE;
   if (!K.on) return;
   const time = g.time, focus = E.viewFocus ?? hostMan(g).char.pos, list: (FireDraw & { d: number })[] = [], P = E.hostBooks?.fire;
   let fires = 0;
+  if (time < (E.fireSootAt ?? 0)) E.fireSoot = [];
+  E.fireSootAt = time; const mixes = (E.fireSoot ??= []);
   for (const t of g.targets) {
     if (!isFire(t)) continue;
     const ix = fires++;
-    const l = t.light!, lit = burns(t);
+    const l = t.light!, lit = burns(t), M = mouthOf(g, t), d = Math.hypot(M.pos[0] - focus[0], M.pos[2] - focus[2]);
+    // how far its painted soot has handed over to its gas: the picture's own, eased here, and from nothing when the clock has gone back (a restart, a load)
+    const up = lit && K.smoke.on && fits() && g.smoke?.drawing?.() === true && E.settings?.fireSmoke !== false && d < K.smoke.viewR;
+    const soot = mixes[ix] = Math.min(1, Math.max(0, (mixes[ix] ?? 0) + (up ? dt : -dt) * FIRE_LOOK_SMOKE.sootEase));
     // out, and nobody on the team saw it go out: where the team does not see, the fog's picture has its lamp lit still (the lamp's own ghost) and its flame on it
     if (!lit && !(K.fog && (l.fogGhost ?? 0) > 0)) continue;
-    const M = mouthOf(g, t), d = Math.hypot(M.pos[0] - focus[0], M.pos[2] - focus[2]);
     if (!(d < K.drawR)) continue;
     const seed = fireSeed(t);
-    list.push({ pos: M.pos, r: M.r, h: K.height, heat: lit ? heatOf(t) : 1, seed, time: time % 4096, wind: windAt(g, M.pos).wind, flick: fireFlicker(seed, time), bed: M.lid * K.bedR, fog: !lit ? 2 : !K.fog || l.fog === 1 ? 1 : 0, gas: lit ? P?.gasMix[ix] ?? 0 : 0, soot: lit ? P?.sootMix?.[ix] ?? 0 : 0, d });
+    list.push({ pos: M.pos, r: M.r, h: K.height, heat: lit ? heatOf(t) : 1, seed, time: time % 4096, wind: windAt(g, M.pos).wind, flick: fireFlicker(seed, time), bed: M.lid * K.bedR, fog: !lit ? 2 : !K.fog || l.fog === 1 ? 1 : 0, gas: lit ? P?.gasMix[ix] ?? 0 : 0, soot: lit ? soot : 0, d });
   }
   const cap = Math.max(0, Math.min(4, Math.floor(K.max)));
   if (list.length > cap) { list.sort((a, b) => a.d - b.d); list.length = cap; }   // (which ones, not in what order: the composite orders them ray by ray)

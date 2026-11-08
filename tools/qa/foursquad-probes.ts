@@ -26,7 +26,7 @@
 // SETTLED RULES ARE NOT WRITTEN HERE ANY MORE (2026-11-07). Out: 'move there (ROOMFIT off)' in `stack`; in `clear` the pin that had a locked door booted
 // untried (DOORTOOLS.testDoor off: the lead tries the handle now, as on the page) and the line of the slicing order by four, which lived on the threshold's
 // page the game no longer has (DOORTOOLS.outsidePlain off).
-import { doing, menuKey } from './squadwords';
+import { doing, ringUp, ringDown } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { sample } from './sweep.ts';
 const { NIGHTBREACH, SQUAD4, SQUAD4_BUDGET } = await import(`${ROOT}/src/game/nightbreach.ts`);
@@ -106,7 +106,6 @@ async function rig(seed: number, o: { squad?: 2 | 4; stage?: 'rc' | 'nb'; quiet?
     beats(op: any): string { return (op?.beats ?? []).map((b: any) => b.what).join(' | '); },
     room(id: string) { return RC.rooms.find((r: any) => r.def.id === id); },
     /** press X on p (one frame, nothing held), then the digit a third of a second later: the row with that digit, as a player gives it */
-    pick(p: number[], n: number) { W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(20); input.pressed.add(`Digit${n}`); R.step(); },
     /** friendly fire: a teammate down by a teammate's (or Sam's) hand */
     get fratricide(): string[] { return R.downs.filter(x => x.who.team === 'operative' && (x.by?.team === 'operative' || x.who.killerId === game.player.char.id)).map(x => `${x.who.callsign} by ${x.by?.callsign ?? 'Sam'}`); },
   };

@@ -392,7 +392,7 @@ pub fn anim_hold_busy(g: &mut crate::game::Game, c: CharId) -> bool {
     let i = &an.hd_idle;
     an.hd_busy = an.upper != i.upper || an.long_gun != i.long || an.crouch_target != i.crouch || carry != i.carry
         || an.shoot_t >= 0.0 || an.reload_t >= 0.0 || an.throw_t >= 0.0 || an.strike_t >= 0.0 || an.hit_t >= 0.0 || an.kick_t >= 0.0 || an.sig_t >= 0.0 || an.bw.is_some() || an.kit.is_some()
-        || an.lockpick || an.haul.is_some() || an.work.is_some() || an.door_push.is_some() || an.stance != Stance::None || an.ready.is_some() || an.creep || an.wound.is_some() || an.act.is_some();
+        || an.lockpick || an.haul.is_some() || an.work.is_some() || an.door_push.is_some() || an.stance != Stance::None || an.ready.is_some() || an.creep || an.act.is_some();
     an.hd_busy
 }
 

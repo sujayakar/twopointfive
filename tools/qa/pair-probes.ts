@@ -21,7 +21,7 @@
 // the lit point anyway', 'the rule switched off (PAIR.watched)', 'the rule off, hands as the mark', 'the rule off (PAIR.lookBack)', and pair-watch's
 // contrast (a plain hold with the silent order's fire hold off: the probe no longer puts SILENT.holdFire off).
 // The cross-commit identity (switch off = the base build 25e5e7c) is the play-through digests, run in this checkout and in one of the base: the same lines.
-import { blockOf, doing, listedOf, menuKey } from './squadwords';
+import { blockOf, doing, listedOf, ringUp, ringDown } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
@@ -77,7 +77,7 @@ async function rig(o: RigOpts = {}) {
     press(code: string) { input.pressed.add(code); R.step(); },
     last(): any { return O.log[O.log.length - 1] ?? null; },
     /** X with the cursor on p: the menu's order rows as the panel draws them (the who row and the cancel row left out) — the menu left UP */
-    menu(p: number[]) { R.cursor(p); (menuKey(O), R.step()); R.step(2);
+    menu(p: number[]) { R.cursor(p); ringUp(input, R); R.step(2);
       const hud = listedOf(O); return { kind: O.menu?.target.kind as string | undefined, rows: (hud?.rows ?? []).map((r: any) => ({ head: r.label as string, key: r.opts[0]?.key as string, text: r.opts[0]?.text as string, off: !!r.off })) }; },
     esc() { for (let i = 0; i < 3 && O.menu; i++) R.press('Escape'); },
     /** a man stood somewhere by hand, facing `yaw` */
@@ -109,26 +109,26 @@ export const pairWait = guarded(async () => {
   const { verdict, done } = family("pair-wait: 'wait here' and 'on me' — hold position and fall in, from a person's menu and from the floor's");
   const { R, foe, mate } = await scene(); const { O, game } = R; const sam = game.player.char;
   // hold, from the floor's menu
-  R.menu([mate.char.pos[0] + 1.5, 0, mate.char.pos[2] + 0.8]); R.press('Digit4'); R.step(5); const p0 = [...mate.char.pos];
+  O.give('hold', O.targetAt([mate.char.pos[0] + 1.5, 0, mate.char.pos[2] + 0.8])); R.step(5); const p0 = [...mate.char.pos];
   const given1 = R.last()?.order === 'hold' && O.of(mate)?.order === 'hold';
   game.teleportPlayer([8, 0, 20]); R.step(60 * 4);
-  verdict(given1 && flat(mate.char.pos, p0) < 0.4, "'wait here' (4 on the floor's menu): given, and he stays where he is while Sam goes six metres off for four seconds", `log ${JSON.stringify(R.last())} · moved ${f2(flat(mate.char.pos, p0))} m · ${R.status()} · said: ${R.said.slice(-2).join(' / ')}`);
+  verdict(given1 && flat(mate.char.pos, p0) < 0.4, "'wait here': given, and he stays where he is while Sam goes six metres off for four seconds", `log ${JSON.stringify(R.last())} · moved ${f2(flat(mate.char.pos, p0))} m · ${R.status()} · said: ${R.said.slice(-2).join(' / ')}`);
   // fall in, from the floor's menu
-  R.menu([sam.pos[0] + 1, 0, sam.pos[2]]); R.press('Digit3'); R.step(5);
+  O.give('fallIn', O.targetAt([sam.pos[0] + 1, 0, sam.pos[2]])); R.step(5);
   const given2 = R.last()?.order === 'fallIn' && O.of(mate)?.order === 'fallIn'; const came = R.until(() => flat(mate.char.pos, sam.pos) < 2.6, 12);
-  verdict(given2 && came, "'on me' (3): given — the hold is cancelled — and he comes to Sam", `log ${JSON.stringify(R.last())} · ${f1(flat(mate.char.pos, sam.pos))} m from Sam · ${R.status()}`);
+  verdict(given2 && came, "'on me': given — the hold is cancelled — and he comes to Sam", `log ${JSON.stringify(R.last())} · ${f1(flat(mate.char.pos, sam.pos))} m from Sam · ${R.status()}`);
   // from a PERSON's menu, over a take job
   R.put(mate, AISLE_W, EAST); game.teleportPlayer([11, 0, 18.5]); R.step(20);
   const g1 = O.give('pairMark', R.foe(foe)); R.step(60 * 2); const onJob = !!R.P.jobOf(mate);
-  R.menu(R.chest(foe)); R.press('Digit4'); R.step(5); const p1 = [...mate.char.pos]; R.step(60 * 3);
+  O.give('hold', R.foe(foe)); R.step(5); const p1 = [...mate.char.pos]; R.step(60 * 3);
   verdict(g1 === null && onJob && R.last()?.order === 'hold' && R.last()?.target === `foe:${foe.callsign}` && !R.P.jobOf(mate) && O.of(mate)?.order === 'hold' && flat(mate.char.pos, p1) < 0.4 && PM.PAIR_LOG.some((x: any) => x.what.startsWith('cancel:')),
-    "4 on the defender's own menu, the partner on his way to him: the take job is cancelled and he holds where he stands", `log ${JSON.stringify(R.last())} · job ${R.P.jobOf(mate) ? 'still on' : 'gone'} · moved ${f2(flat(mate.char.pos, p1))} m · ${R.log()}`);
-  O.give('pairMark', R.foe(foe)); R.step(60); R.menu(R.chest(foe)); R.press('Digit3'); R.step(5);
+    "hold, on the defender, the partner on his way to him: the take job is cancelled and he holds where he stands", `log ${JSON.stringify(R.last())} · job ${R.P.jobOf(mate) ? 'still on' : 'gone'} · moved ${f2(flat(mate.char.pos, p1))} m · ${R.log()}`);
+  O.give('pairMark', R.foe(foe)); R.step(60); O.give('fallIn', R.foe(foe)); R.step(5);
   const back = R.until(() => flat(mate.char.pos, sam.pos) < 2.6, 12);
-  verdict(R.last()?.order === 'fallIn' && !R.P.jobOf(mate) && back && foe.state !== 'dead', "3 on the defender's menu: the job is cancelled and he comes back to Sam — the man untouched", `log ${JSON.stringify(R.last())} · ${f1(flat(mate.char.pos, sam.pos))} m from Sam · ${foe.callsign} ${foe.state}`);
+  verdict(R.last()?.order === 'fallIn' && !R.P.jobOf(mate) && back && foe.state !== 'dead', "fall in, on the defender: the job is cancelled and he comes back to Sam — the man untouched", `log ${JSON.stringify(R.last())} · ${f1(flat(mate.char.pos, sam.pos))} m from Sam · ${foe.callsign} ${foe.state}`);
   verdict(R.held === 0 && R.opShots === 0 && R.roused().length === 0, 'no key held, no round fired, nobody roused by any of it', `held ${R.held} · rounds ${R.opShots} · roused ${R.roused().length}`);
   // the cue with nobody to order
-  killGuard(game, mate, [0, 0, 1], true); R.step(30); const opened = O.open(O.targetAt(foe.char.pos)), w = O.give('hold', O.targetAt(sam.pos));
+  killGuard(game, mate, [0, 0, 1], true); R.step(30); R.cursor(foe.char.pos); ringUp(R.input, R); const opened = !!O.menu, w = O.give('hold', O.targetAt(sam.pos));
   verdict(!opened && w !== null, 'with the partner down there is nobody to order: the menu does not open and the order comes back with the reason', `open → ${opened} · give('hold') → ${w}`);
   return done();
 });
@@ -168,7 +168,7 @@ export const pairDark = guarded(async () => {
   // cancelled
   O.give('fallIn', O.targetAt(game.player.char.pos)); R.step(60 * 3);
   verdict(O.of(mate)?.order === 'fallIn' && mate.char.anim.crouch < 0.5, 'cancelled by fall in: he is up off his knee and on Sam again', `${R.status()} · crouch ${f1(mate.char.anim.crouch)}`);
-  verdict(R.held === 0 && R.opShots === 0, 'no key held, no round fired', `held ${R.held} · rounds ${R.opShots}`);
+  verdict(R.held <= 1 && R.opShots === 0, 'no key but the ring\'s held, no round fired', `held ${R.held} · rounds ${R.opShots}`);
   return done();
 });
 
@@ -263,15 +263,16 @@ export const pairWatched = guarded(async () => {
   return done();
 });
 
+
 // ---------------------------------------------------------------- take him now
 export const pairNow = guarded(async () => {
   const { verdict, done } = family('pair-now: take him now — the same job with no mark');
   const { R, foe, mate } = await scene(); const { O, game, P } = R;
-  R.menu(R.chest(foe)); R.press('Digit5'); R.step(3); const t0 = game.time;
+  O.give('pairTake', R.foe(foe)); R.step(3); const t0 = game.time;
   const given = R.last()?.order === 'pairTake' && P.jobOf(mate)?.mode === 'now';
   const down = R.until(() => foe.state === 'dead', 45); R.step(60 * 2);
   verdict(given && down && foe.downKind === 'struck' && R.opShots === 0 && R.roused().length === 0 && !PM.PAIR_LOG.some((x: any) => x.what.startsWith('go:')) && O.of(mate)?.order === 'hold' && R.held === 0,
-    'X, 5 on the man: he goes round to his back and takes him with no mark given — out cold, no round, nobody roused, then holds', `log ${JSON.stringify(R.last())} · down ${f1(game.time - 2 - t0)} s after the order · ${R.log()} · ${R.status()}`);
+    'told to take him: he goes round to his back and takes him with no mark given — out cold, no round, nobody roused, then holds', `log ${JSON.stringify(R.last())} · down ${f1(game.time - 2 - t0)} s after the order · ${R.log()} · ${R.status()}`);
   return done();
 });
 

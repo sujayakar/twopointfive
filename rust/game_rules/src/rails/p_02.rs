@@ -661,7 +661,7 @@ fn rails_prompt(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &LessonA
     let gave_here = g.rails.gave_step == s.i && js::truthy(g.rails.gave);
     let (n, of_n) = (i as u32 + 1, of as u32);
     // (the step's deed is done and it settles before the next step's card: what its men are doing, or nothing. Never a line that asks for a key)
-    if up && g.k.rails.card_beat && s.l.steps.get(i + 1).map_or(false, |x| x.explain.is_some()) && lesson_settling(g) {
+    if up && s.l.steps.get(i + 1).map_or(false, |x| x.explain.is_some()) && lesson_settling(g) {
         let w = if cue { step_line() } else if gave_here { t.after.as_ref().and_then(said_now).map_or(String::new(), |l| lesson_line(g, &l)) } else { String::new() };
         return Some(crate::view::RailPrompt { line: if names_key(&w) { String::new() } else { w }, n, of: of_n, note: None, watch: true });
     }

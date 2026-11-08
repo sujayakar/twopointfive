@@ -476,7 +476,7 @@ interface Menu { target: OrderTarget; men: Guard[]; rows: OrderDef[]; why: (stri
   /** the men it is for, exactly — never the standing choice (cmdring.ts CMDRING.goalRing: Shift + the key kept down, the ring that adds a goal for a
    *  part of the squad; planmode.ts goalMen chose them as it went up) · `split`: they are half of a group that was on one thing */
   part?: Guard[]; split?: boolean;
-  /** the page of it that is showing (null: the first — turn()) */
+  /** the page of it that is showing (null: the first) */
   page: string | null;
   /** the 'wait for my word' row is offered (a door, the squad of four, a row of this page that can wait) — it sits at index rows.length, the cancel row after it · it is on */
   wordRow: boolean; onWord: boolean;
@@ -641,14 +641,6 @@ export class SquadOrders {
   pairs(): PairId[] { const out: PairId[] = []; for (const gd of this.squad()) { const id = gd.unit?.pair; if (id && !out.includes(id)) out.push(id); } return out; }
   /** is the squad dealt into more than one pair (the four: its elements are gold / red / blue) — or the one pair, stepped man by man */
   get paired(): boolean { return this.pairs().length > 1; }
-  /** T: the next ELEMENT — gold → red → blue → gold for a squad in pairs (a pair with nobody standing is passed over; from one man: back to gold); the one
-   *  pair: all → the first living man → the next → … → all */
-  cycleWho(dir: 1 | -1 = 1): Who {
-    const S = this.squad();
-    const ring: Who[] = this.paired ? ['all', ...this.pairs().filter(id => this.men(id).length > 0)] : ['all', ...S.map((gd, k) => gd.state !== 'dead' ? k : -1).filter(k => k >= 0)];
-    const i = ring.indexOf(this.who);   // (a man of a squad in pairs is not on the ring: −1 → gold, either way)
-    return this.who = i < 0 ? 'all' : ring[(i + dir + ring.length) % ring.length];
-  }
   /** who these men are, in a word or two: 'gold' (the whole of a squad in pairs; 'all' for the one pair), 'red' / 'blue' (a whole pair of it), else their callsigns */
   whoWords(men: Guard[] = this.recipients()): string { const S = this.squad().filter(gd => gd.state !== 'dead'); if (men.length === S.length && men.length > 1) return this.paired ? 'gold' : 'all';
     const id = men.length > 1 ? this.pairOf(men[0]) : null; if (id && men.every(gd => this.pairOf(gd) === id) && men.length === this.men(id).length) return id;   // (a whole pair of a bigger squad)
@@ -699,9 +691,6 @@ export class SquadOrders {
     const who = men ?? this.recipients(t), ins = on.filter(d => d.standsIn?.when(this, t, who)), out = new Set(ins.map(d => d.standsIn!.for));
     return named(on.filter(d => d.standsIn ? ins.includes(d) : !out.has(d.id)));
   }
-  /** (cmdring.ts CMDRING.flat) a ring put up now is one of the flat tree — on a tutorial mission only where its level says so (rails.ts flatRing:
-   *  a mission's lines teach the menu's pages and their digits until they are written for this tree) */
-  private flatRing(): boolean { return goneWithTick('SquadOrders.flatRing') as any; }
   /** … and its rows: EVERY ORDER OF THE TARGET — the first page's, then each page's behind a row of it, in the menu's own order, the rows that open
    *  pages left out and no row twice — less what is not offered there at all (OrderDef.gone); and on a place the squad's own posture row after them
    *  (silent.ts: free, on no key, listed for the squad's own menu — on a door too, where the menu never listed it) */
@@ -796,32 +785,9 @@ export class SquadOrders {
    *  are the hand's, not the saved moment's — brought back, the ring took the next click for a wedge with nobody having asked for it */
   loaded(): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.loaded', this, []); if (__r !== RUST_PASS) return __r as any; } } if (this.cmdRing) { this.menu = null; this.cmdRing = null; } this.cmdPress = null; this.tapWas = null; }
   escape(): boolean { if (!this.menu) return false; if (this.cmdRing) { this.menu = null; this.cmdRing = null; CMDRING_STATS.cancelled++; }   // (cmdring.ts: Esc gives nothing, whatever page the ring is on)
-    else if (!this.pageBack()) this.menu = null; this.escUsed = true; return true; }
+    else this.menu = null; this.escUsed = true; return true; }
   /** the page's Esc went to the pause (backkey.ts: Esc is only the pause): that press is nobody's in the tick */
 
-  /** Open the menu on a target (X / the middle button over the cursor's; the console, a probe): it stays up until pick() or close(). False: no squad to order. */
-  open(target: OrderTarget = this.targetAt(this.g.aimPoint), flat = false, part?: Guard[]): boolean {
-    if (!this.active || this.g.player.down) return false;
-    const rows = flat ? this.flatRows(target, part) : this.rowsFor(target, null, part);   // (`flat`: ringUp's, under cmdring.ts CMDRING.flat — every order of the target, no pages)
-    this.menu = { target, men: [], rows, why: [], sel: 0, wheelAcc: 0, readT: -1, page: null, wordRow: this.wordRowOf(target, rows), onWord: false, menSide: null, sideKey: '', flat: flat || undefined, ...(part ? { part } : {}) }; this.refresh();   // (the highlight starts on the first row — the target's own order: the button twice gives it)
-    return !!this.menu;
-  }
-  close() { this.menu = null; }
-  /** The open menu turned to a page of it (null: back to its first): that page's rows, on the same target and for the same men, the highlight on its first
-   *  row (back on the first page: on the row that opened the page it came from). `onWord`: with its 'wait for my word' row already on, where it has one.
-   *  'Wait for my word' is the MENU's, not the page's: flipped on, it stays on through a step back and into the tools again (the first page says so). */
-  turn(page: string | null, onWord = false) {
-    const M = this.menu; if (!M) return; const from = M.page;
-    M.page = page; M.rows = this.rowsFor(M.target, page, M.men); M.wordRow = this.wordRowOf(M.target, M.rows); M.onWord ||= M.wordRow && onWord;
-    // (stepped back: the highlight on the row that opened the page it came from — or, that row gone with what it stood in for, on the row now on its digit)
-    const opener = from !== null ? this.defs.find(d => d.opens === from) : undefined;
-    let sel = M.rows.findIndex(d => !!d.opens && d.opens === from); if (sel < 0 && opener?.key !== undefined) sel = M.rows.findIndex(d => d.key === opener.key && (d.page ?? null) === (opener.page ?? null));
-    M.sel = Math.max(0, sel); M.wheelAcc = 0; if (this.cmdRing) { this.cmdRing.lit = 0; this.cmdRing.armed = false; this.cmdRing.more = false; }   // (cmdring.ts: a page turned lights nothing — a tool is chosen, never fallen into)
-    this.refresh();
-  }
-  /** a page of the open menu → the page it was opened from: the first, or — a page behind a row of another page ('door tools ▸', then 'work it from the
-   *  threshold ▸') — that one (false: there is no menu, or it is on its first page already) */
-  pageBack(): boolean { const M = this.menu; if (!M || M.page === null) return false; this.turn(this.defs.find(d => d.opens === M.page)?.page ?? null); return true; }
   /** Give the open menu's row `i` (default: the highlighted one; the cancel row, or none such: nothing) and take the menu down. Null = given, else why not.
    *  Two rows are not orders and leave the menu UP: the 'wait for my word' row (index rows.length, where it is offered) flips, for the row it is meant for —
    *  and a row that opens a page (OrderDef.opens) turns the menu to it ('opened'). */
