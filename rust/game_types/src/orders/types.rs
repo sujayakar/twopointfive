@@ -1958,6 +1958,6 @@ impl core::fmt::Debug for Row {
 /// WHAT THE SQUAD'S PANEL SAYS OF A SEAT BESIDE ITS MENU: kept by the tick, read by whoever draws it (orders/shown.rs).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Shown {
-    /// the quick key's words for what the seat's cursor is on: the row it would give. None: a menu is up, or the key gives nothing there
+    /// the quick key's line for what the seat's cursor is on: the row it would give, and what it is on. None: a menu is up, or the key gives nothing there
     pub quick: Option<String>,
 }

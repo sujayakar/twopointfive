@@ -2263,6 +2263,7 @@ pub fn pa_verdict_Verdict(s: &crate::verdict::Verdict, o: &mut W) { s.origin.w(o
 pub fn pa_deathrecap_Recap(s: &crate::deathrecap::Recap, o: &mut W) { s.lost_live.w(o); s.all_down.w(o); }
 pub fn pa_view_Under(s: &crate::view::Under, o: &mut W) { s.thing.w(o); }
 pub fn pa_view_CursorView(s: &crate::view::CursorView, o: &mut W) { s.under.w(o); }
+pub fn pa_view_SquadView(s: &crate::view::SquadView, o: &mut W) { s.quick.w(o); }
 pub fn pm_autopilot_AutoPick(s: &crate::autopilot::AutoPick, o: &mut W, c: &mut Vec<u32>) { s.word.w(o); c.push(o.b.len() as u32); match &s.t { crate::orders::OrderTarget::Floor(x0) => { (0 as u16).w(o); ps_orders_OrderTargetFloor(&x0, o); } crate::orders::OrderTarget::Door(x0) => { (1 as u16).w(o); ps_orders_OrderTargetDoor(&x0, o); } crate::orders::OrderTarget::None(x0) => { (2 as u16).w(o); ps_orders_OrderTargetNone(&x0, o); } crate::orders::OrderTarget::Foe(x0) => { (3 as u16).w(o); ps_orders_OrderTargetFoe(&x0, o); } #[allow(unreachable_patterns)] _ => 0xffffu16.w(o), } c.push(o.b.len() as u32); }
 pub fn pm_cmd_CheckCmd(s: &crate::cmd::CheckCmd, o: &mut W, c: &mut Vec<u32>) { pm_cmd_PlayerCmd(&s.cmd, o, c); }
 pub fn pm_combat_FireOpts(s: &crate::combat::FireOpts, o: &mut W, c: &mut Vec<u32>) { s.weapon.w(o); c.push(o.b.len() as u32); }

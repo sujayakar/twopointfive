@@ -93,8 +93,7 @@ import { doorSaidName } from './doornames';   // (a leaf: a shorthand door id's 
 import { propGap } from './roomclear';   // (used inside workedMarks only: nothing of roomclear.ts is touched at load)
 import { stackRoomFix, stackViewFix, stackRoomBookKeep, stackRoomHas, stackViewOpen, STACKROOM, STACKROOM_STATS } from './stackroom';
 import { holdFireOrder, holdFireSilent } from './holdfire';   // (called / read inside give / tick only)
-import { AUTOPILOT, AUTOPILOT_STATS, autoHint, autoPick, type AutoPick } from './autopilot';   // (read inside input(), quickLine() and show() only)
-import { whyWords } from './squadnet';   // (read inside quickLine() and quickFor() only)
+import { AUTOPILOT, AUTOPILOT_STATS, autoHint, autoPick } from './autopilot';   // (read inside input(), menuQuick() and show() only)
 import { CMDRING, CMDRING_STATS, ringHoldSecs, ringSeats, flatSeats, type RingState } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
 import { handsBusy } from './interact';   // (read inside ringInput only: his hands on a list, a press or a running verb)
 import './teampace';   // (read inside update only)
@@ -889,11 +888,10 @@ export class SquadOrders {
    *  whether or not the quick key's switch is on. 'entry': it was the way in through a door they stand on, or the word · 'first': the target's first row ·
    *  null: nothing was given (refused — a man has said why — or a charge left alone on its word). */
   quickFor(men: Guard[], t: OrderTarget): 'first' | 'entry' | null { return goneWithTick('SquadOrders.quickFor') as any; }
-  /** … and its words for the HUD and the ring's first wedge (null: it would give nothing worth a line) */
-  private quickWords(t: OrderTarget, P?: AutoPick): string | null { if (AUTOPILOT.on) return autoHint(this.g, t, P); const d = this.defaultFor(t); return d ? this.labelOf(d, t) : null; }
+
   /** … for the open menu's first wedge: the quick key's words there — for a ring of a part of the squad (Menu.part) what THOSE men would do, as its
    *  first wedge gives it (quickFor) */
-  private menuQuick(M: Menu): string | null { return M.part ? autoHint(this.g, M.target, autoPick(this.g, M.target, false, M.men)) : this.quickWords(M.target); }   // (quickFor asks the pick whether or not the quick key's switch is on: so do its words)
+  private menuQuick(M: Menu): string | null { return M.part ? autoHint(this.g, M.target, autoPick(this.g, M.target, false, M.men)) : autoHint(this.g, M.target); }   // (quickFor asks the pick whether or not the quick key's switch is on: so do its words)
 
   /** a man's order goes: and with it the pin the fight seam put on him */
   private drop(gd: Guard) { this.asg.delete(gd); if (this.ours.delete(gd)) gd.pinned = false; }
@@ -1719,22 +1717,6 @@ export class SquadOrders {
       if (cross && (d(0, 0) + d(1, 1) + gc(0, 1) <= d(0, 1) + d(1, 0) + gc(1, 0)) !== (d(0, 0) + d(1, 1) + gc(0, 1) + xc(0, 1) <= d(0, 1) + d(1, 0) + gc(1, 0) + xc(1, 0))) STACK_OWN.queue++;
       return d(0, 0) + d(1, 1) + gc(0, 1) + xc(0, 1) <= d(0, 1) + d(1, 0) + gc(1, 0) + xc(1, 0) ? [[men[0], spots[0]], [men[1], spots[1]]] : [[men[0], spots[1]], [men[1], spots[0]]]; }
     const left = [...spots]; return men.map(gd => { let bi = 0; left.forEach((s, i) => { if (flat(gd.char.pos, s) < flat(gd.char.pos, left[bi])) bi = i; }); return [gd, left.length > 1 ? left.splice(bi, 1)[0] : left[0]] as [Guard, Vec3]; });
-  }
-
-  // ------------------------------------------------------------ the HUD
-  /** who the next order goes to, as the panel names it: GOLD / RED / BLUE for a squad in pairs ('all' for the one pair), or one man's callsign (`one`) — the
-   *  man the menu was opened on, else the standing `who` */
-  /** a target in the panel's words: what an order from the menu would be about */
-  private hoverWords(t: OrderTarget | null): string { return !t ? '' : t.kind === 'door' ? doorWords(t.door) : t.kind === 'floor' ? (t.thing ? t.thing.name : t.wall ? 'that wall' : 'that spot') : t.kind === 'foe' ? t.foe.callsign || 'that man' : t.man ? `${t.man.callsign} alone` : 'the squad itself'; }
-  /** What the quick key would give on what the cursor is on, for the corner's line on that key (ui/overlay.ts): a question of the cursor, which the view of a
-   *  tick (game.view.squad, every other line of the squad's) cannot answer. Null: nothing there, or the mission's frame keeps the key back. */
-  quickLine(): { key: string; text: string } | null {
-    if (!this.active) return null;
-    const hov = this.hover(), P = hov && AUTOPILOT.on ? autoPick(this.g, hov, false) : undefined;   // (asked once for the row's words and its reason)
-    const words = hov ? this.quickWords(hov, P) : null;   // (autopilot.ts: the squad's first choice on a door it waits on)
-    if (!hov || !words || locked(this.g.view, 'order') || (CMDRING.on && ringHoldSecs() > 0 && this.g.view.lesson?.rails?.teachesHold)) return null;   // (rails.ts: a key the mission has not taught yet is not named on the panel)
-    const why = P ? whyWords(P)?.row ?? null : null;   // (squadnet.ts: why the squad's pick is not a plain open; null with its switch off)
-    return { key: keyName(ORDERS.quickKey), text: `${words}${hov.kind === 'none' && !hov.man ? '' : ` · ${this.hoverWords(hov)}`}${why ? ` · ${why}` : ''}` };
   }
 }
 

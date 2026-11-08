@@ -68,5 +68,5 @@ pub fn debrief_view(g: &Game, seat: &crate::seats::SeatRef) -> DebriefView {
     let c = &g.chronicle;
     let rows = c.events.iter().map(|e| DebriefRow { t: e.t, kind: e.kind, room: e.room.clone(), pos: e.pos, text: crate::chronicle::event_text(g, e), down: crate::chronicle::alarm_down(e) }).collect();
     let n = c.path_n as usize * 3;
-    DebriefView { debrief: crate::chronicle::debrief_of(g, seat), rows, dropped: c.dropped, path: c.path[..n.min(c.path.len())].to_vec(), rooms: crate::chronicle::map_rooms(g), recap: crate::deathrecap::recap_card(g) }
+    DebriefView { debrief: crate::chronicle::debrief_of(g, seat), rows, dropped: c.dropped, path: c.path[..n.min(c.path.len())].to_vec(), recap: crate::deathrecap::recap_card(g) }
 }
