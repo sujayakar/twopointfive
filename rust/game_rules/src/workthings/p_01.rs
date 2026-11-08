@@ -656,7 +656,7 @@ pub fn work_coming(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
 
 /// A pose layer's read beside workHand: what that hand is doing (None whenever workHand is). (workthings.ts workJob)
 pub fn work_job(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::workthings::WorkJob> {
-    if work_things_hand(g, c_2).is_some() { work_things_job(g, &crate::seats::here(g), c_2) } else { None }
+    crate::seats::first_of(g, &mut |v: &mut Game| if work_things_hand(v, c_2).is_some() { work_things_job(v, &crate::seats::here(v), c_2) } else { None })
 }
 
 /// lighting.ts: is the breaker none of this man's business unless he is told. (workthings.ts workNotHis)

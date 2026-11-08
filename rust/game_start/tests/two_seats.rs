@@ -268,6 +268,28 @@ fn a_walk_through_a_door_goes_by_his_own_seats_order() {
     }
 }
 
+/// THE RULE: a man's hand at work tells what his work is, whichever seat he is.
+/// A failure means the second player's man works a breaker with the hand of a man pushing a door.
+#[test]
+fn a_hand_at_work_says_what_the_work_is_for_either_seat() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, _) = two(s);
+            for d in p.g.doors.list.clone() { game::doors::door_set_locked(&mut p.g, d, false); }
+            p.run(0.3);
+            let sn = p.g.seats[seat];
+            let th = game::workthings::work_things_things(&p.g, &game::seats::seat(&p.g, sn)).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("the office has a breaker");
+            p.seat_orders(seat, "work", [th.face[0], th.face[2]], game::orders::Who::All);
+            let mine = game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, sn));
+            let chars: Vec<_> = mine.iter().map(|m| p.g.gd[*m].ch).collect();
+            let at = p.until(40.0, |p| chars.iter().any(|c| game::workthings::work_hand(&mut p.g, *c).is_some()));
+            assert!(at.is_some(), "seed {s}: CONTROL: forty seconds and no hand of seat {seat}'s is out: {}", p.roll());
+            let c = *chars.iter().find(|c| game::workthings::work_hand(&mut p.g, **c).is_some()).unwrap();
+            assert!(game::workthings::work_job(&mut p.g, c).is_some(), "seed {s}: seat {seat}'s man has a hand out and no job");
+        }
+    }
+}
+
 /// (coop.rs's store: a door and a room behind it)
 fn store(seed: u32) -> Scene {
     let mut s = Scene::new("store");
