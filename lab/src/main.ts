@@ -27,6 +27,7 @@ async function main() {
   (window as never as { teach: Teach }).teach = teach;
   const row = (id: string, items: [string, () => boolean, () => void][]) => { const el = $(id); el.textContent = ''; for (const [t, on, go] of items) { const b = document.createElement('button'); b.textContent = t; b.className = on() ? 'on' : ''; b.onclick = () => { go(); paint(); }; el.append(b); } };
   function paint() {
+    row('hide', [['Hide', () => false, () => { document.body.classList.add('nopanel'); }]]);
     row('method', [['Real time', () => method === rt, () => act.method(rt)], ['Reference', () => method === ref, () => act.method(ref)]]);
     row('level', lab.building.levels.map((l, i) => [l.name, () => lab.level === i, () => act.level(i)] as [string, () => boolean, () => void]));
     row('doors', [['Doors open', () => false, () => act.doors(1)], ['shut', () => false, () => act.doors(0)], ['swing', () => lab.doorsAuto, () => act.doors(lab.doorsAuto ? 0 : 'auto')]]);
@@ -57,7 +58,7 @@ async function main() {
   canvas.oncontextmenu = e => e.preventDefault(); canvas.onwheel = e => { e.preventDefault(); tour = false; lab.camera.want.dist *= Math.exp(e.deltaY * 0.0011); };
   const pan = (x: number, z: number) => { const c = lab.camera, s = Math.sin(c.yaw), k = Math.cos(c.yaw); c.want.look = [clamp(c.want.look[0] + x * k + z * s, -18, 18), c.want.look[1], clamp(c.want.look[2] - x * s + z * k, -14, 14)]; };
   onkeydown = e => { if (e.metaKey || e.ctrlKey) return; const k = e.key.toLowerCase(); held.add(k); if (e.repeat) return; if (k === 'p') act.method(method === rt ? ref : rt); if (k === '1' || k === '2' || k === '3') act.level(Number(k) - 1); if (k === 'f') { torchOn = !torchOn; plant = null; } if (k === 'g') plant = plant ? null : true; if (k === 't' && !teach.on) { study(); return; } if (teach.on && teach.key(k)) { e.preventDefault(); return; } if (k === 'c') tour = !tour; if (k === 'x') void pinEye(); if (k === 'h') document.body.classList.toggle('bare'); if (k === 'o') act.doors(lab.building.doors.some(d => d.want > 0.5) ? 0 : 1); if (k === ' ') lab.paused = !lab.paused; };
-  onkeyup = e => held.delete(e.key.toLowerCase()); onblur = () => held.clear(); onresize = fit;
+  onkeyup = e => { held.delete(e.key.toLowerCase()); if (e.key === ' ') teach.hold(false); }; onblur = () => held.clear(); onresize = fit;
   // ---- the torch at the pointer: a lamp like any other
   const hand = lab.building.world.lamps.length; lab.building.world.lamps.push({ kind: 'spot', at: [0, -50, 0], u: [0.03, 0, 0], v: [0, -1, 0], radiance: [52000, 49000, 43000], cos: 0.93, name: 'hand', on: 0 });
   if (Q.has('bench')) {

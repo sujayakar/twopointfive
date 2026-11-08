@@ -12,7 +12,7 @@ fn steamAt(x: vec3f) -> f32 {
   return s * frame.weather.z;
 }
 /** scattering per metre of everything but steam */
-fn airAt(x: vec3f) -> f32 { return frame.misc.w * (0.0015 * exp(-max(x.y + 12.0, 0.0) * 0.045) + 0.009 * roomAir(x)) + frame.weather.y * 0.0011 * (0.4 + 1.2 * smoothstep(0.35, 0.65, fbm((x.xz - vec2f(cos(frame.weather.w), sin(frame.weather.w)) * frame.misc.x * 4.0) * 0.11 + 3.0))) * (1.0 - roomAir(x)); }
+fn airAt(x: vec3f) -> f32 { return frame.misc.w * (0.0015 * @tune.haze * exp(-max(x.y + 12.0, 0.0) * 0.045) + @tune.dust * roomAir(x)) + frame.weather.y * 0.0011 * (0.4 + 1.2 * smoothstep(0.35, 0.65, fbm((x.xz - vec2f(cos(frame.weather.w), sin(frame.weather.w)) * frame.misc.x * 4.0) * 0.11 + 3.0))) * (1.0 - roomAir(x)); }
 fn hg(mu: f32, g: f32) -> f32 { return (1.0 - g * g) / (4.0 * PI * pow(1.0 + g * g - 2.0 * g * mu, 1.5)); }
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   let dim = textureDimensions(outA); if (id.x >= dim.x || id.y >= dim.y) { return; }
@@ -35,7 +35,7 @@ fn hg(mu: f32, g: f32) -> f32 { return (1.0 - g * g) / (4.0 * PI * pow(1.0 + g *
   // beams: one lamp a pixel, drawn by how near the ray passes it, and one point drawn by its nearness along the ray
   { var W = 0.0; var pick = -1; var w0 = 0.0; var u = j2.y; for (var i = 0u; i < frame.counts.x; i++) { if (lamps[i].kind == 0u || lamps[i].on <= 0.0 || lamps[i].at.y > frame.misc.y) { continue; } let d = lamps[i].at - ro; let b = clamp(dot(d, rd), 0.0, t1); let D = max(length(d - rd * b), 0.15); if (D > lamps[i].reach * 0.7) { continue; } var w = lum(lamps[i].radiance) * lamps[i].area * lamps[i].area / D; if (lamps[i].kind == 2u) { let c = dot(normalize(ro + rd * b - lamps[i].at), lamps[i].n); w *= 0.05 + smoothstep(0.2, 0.95, c); } W += w; let q = w / W; if (u < q) { pick = i32(i); w0 = w; u = u / q; } else { u = (u - q) / (1.0 - q); } }
     if (pick >= 0) { let l = &lamps[u32(pick)]; let d = (*l).at - ro; let b = dot(d, rd); let D = max(length(d - rd * b), 0.12); let ta = max(0.0, b - 9.0); let tb = min(t1, b + 9.0);
-      if (tb > ta) { let a0 = atan((ta - b) / D); let a1 = atan((tb - b) / D); let t = b + D * tan(mix(a0, a1, fract(j2.x + 0.37))); let pdf = D / ((a1 - a0) * (D * D + (t - b) * (t - b))); let x = ro + rd * t; let s = select(0.0, airAt(x) + 0.006 + steamAt(x), x.y < frame.misc.y); let a = aimLamp(u32(pick), x, vec2f(0.5));
+      if (tb > ta) { let a0 = atan((ta - b) / D); let a1 = atan((tb - b) / D); let t = b + D * tan(mix(a0, a1, fract(j2.x + 0.37))); let pdf = D / ((a1 - a0) * (D * D + (t - b) * (t - b))); let x = ro + rd * t; let s = select(0.0, airAt(x) + @tune.beams + steamAt(x), x.y < frame.misc.y); let a = aimLamp(u32(pick), x, vec2f(0.5));
         if (max3(a.E) > 0.0) { let V = lum(visible(x, a.dir, 1e-3, a.dist - 0.1)); L += min(a.E * V * (s * hg(dot(rd, a.dir), 0.35) / pdf * W / w0), vec3f(6.0)); } } } }
   textureStore(outD, id.xy, vec4f(seen.x / seen.y, seen.y, 0.0, 0.0));       // (how far off what is seen of the air is: its history moves as that does, not as what stands behind it)
   textureStore(outA, id.xy, vec4f(L, exp(-tau)));

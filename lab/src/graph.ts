@@ -8,6 +8,7 @@
 import type { Gpu } from './gpu';
 import { Timer } from './gpu';
 import type { Watch } from './watch';
+import { tuned } from './tune';
 
 export type Size = 'render' | 'half' | 'output' | [number, number] | { of: 'output'; div: number };
 export type Signal = { format: GPUTextureFormat; size: Size; history?: boolean };
@@ -90,7 +91,7 @@ export class Graph {
       let c = 'c'; if (spoilt) c = `select(c, vec4f(bitcast<f32>(0x7fc00000u | (p.x & 0u))), frame.counts.z == ${this.spoil!.frame}u && all(p / 8u == vec2u(4u)))`; if (guarded) c = `finite4(${c}, ${most})`; if (round) c = `round16(${c}, vec4u(a, a >> 13u, b, b >> 13u))`;
       out.push(`fn put_${v}(p: vec2u, c: vec4f) { ${round ? `let a = pcg(p.x + pcg(p.y + pcg(frame.counts.z + ${31 + 7 * salt++}u))); let b = pcg(a); ` : ''}textureStore(${v}, p, ${c}); }`); code = code.replaceAll(`textureStore(${v},`, `put_${v}(`);
     }
-    out.push(code); return out.join('\n');
+    out.push(code); return tuned(out.join('\n'));
   }
   async build(stages: Stage[]) {
     const d = this.g.device;

@@ -16,6 +16,7 @@ struct Frame {
   pool: vec4f,         // the water: x0 z0 x1 z1
   pool2: vec4f,        // its level, its depth
   weather: vec4f,      // how wet the open ground is, how hard it rains, steam, the wind's way (rad)
+  tune: array<vec4f, 6>,  // what can be turned while looking (tune.ts)
 };
 struct Piece { r0: vec4f, r1: vec4f, r2: vec4f, half: vec3f, flags: u32, quad: vec4f, mat: u32, tint: u32, planes: u32, lamp: u32 };
 struct Node { mn: vec3f, skip: u32, mx: vec3f, leaf: u32 };
@@ -128,6 +129,8 @@ var<private> fineLeaves: bool = true; var<private> noLeaves: bool = false;
 // (a ball's density is its own: half its leaves' area over its size, less for how they clump; with the instance's tint)
 fn ballStay(o: vec3f, d: vec3f, tmin: f32, tmax: f32) -> vec2f { let a = dot(d, d); let b = dot(o, d); let c = dot(o, o) - 1.0; let q = b * b - a * c; if (q <= 0.0) { return vec2f(1.0, 0.0); } let s = sqrt(q); return vec2f(max((-b - s) / a, tmin), min((-b + s) / a, tmax)); }
 /** NEAREST: what is out there. `cut` < 1e8 is the camera's section; `skip` = flags a ray does not meet. Glass is passed, and what it lets through is in thru */
+/** boxes looked at by the last rays (nothing reads it but the panel) */
+var<private> walked: u32 = 0u;
 fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) -> Hit {
   var best = tmaxIn; var id = NOTHING; var code = 0u; let inv = safeInv(rd); let oc = octant(rd);
   var g0 = vec2f(1e30, 0.0); var g1 = vec2f(1e30, 0.0); var gp = NOTHING; var gc = 0u;   // the two nearest panes: (t, tint)
@@ -136,7 +139,7 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
     let per = frame.per[s]; let b0 = frame.node0[s] + oc * frame.step[s]; let pb = frame.piece0[s]; let tm = select(t0, tmin, s == 1u);
     var i = 0u;
     while (i < per) {
-      let n = &nodes[b0 + i];
+      walked += 1u; let n = &nodes[b0 + i];
       if (!boxHit(n, ro, inv, tm, best)) { i = (*n).skip; continue; }
       let lf = (*n).leaf; let cnt = lf & 15u; let first = pb + (lf >> 4u);
       for (var j = 0u; j < cnt; j++) {
@@ -152,7 +155,7 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
   }
   { let per = frame.per.w; let b0 = frame.node0.w + oc * frame.step.w; var i = 0u;
     while (i < per) {
-      let n = &nodes[b0 + i];
+      walked += 1u; let n = &nodes[b0 + i];
       if (!boxHit(n, ro, inv, tmin, best)) { i = (*n).skip; continue; }
       let lf = (*n).leaf;
       if ((lf & 15u) != 0u) {

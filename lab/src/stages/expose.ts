@@ -6,18 +6,18 @@ import type { Graph, Stage, Size } from '../graph';
 export const CURVE = `
 /** the curve: a toe that keeps black black, a straight middle, a shoulder (Uchimura) */
 fn film(x: vec3f) -> vec3f {
-  let a = 1.45; let m = 0.22; let l0 = (1.0 - m) * 0.4 / a; let s0 = m + l0; let s1 = m + a * l0; let c2 = a / (1.0 - s1); let t = clamp(x / m, vec3f(0.0), vec3f(1.0)); let w0 = 1.0 - t * t * (3.0 - 2.0 * t); let w2 = step(vec3f(s0), x);
-  return clamp(w0 * (m * pow(max(x, vec3f(1e-8)) / m, vec3f(1.6))) + (1.0 - w0 - w2) * (m + a * (x - m)) + w2 * (1.0 - (1.0 - s1) * exp(-c2 * (x - s0))), vec3f(0.0), vec3f(1.0));
+  let a = @tune.contrast; let m = 0.22; let l0 = (1.0 - m) * 0.4 / a; let s0 = m + l0; let s1 = m + a * l0; let c2 = a / (1.0 - s1); let t = clamp(x / m, vec3f(0.0), vec3f(1.0)); let w0 = 1.0 - t * t * (3.0 - 2.0 * t); let w2 = step(vec3f(s0), x);
+  return clamp(w0 * (m * pow(max(x, vec3f(1e-8)) / m, vec3f(@tune.toe))) + (1.0 - w0 - w2) * (m + a * (x - m)) + w2 * (1.0 - (1.0 - s1) * exp(-c2 * (x - s0))), vec3f(0.0), vec3f(1.0));
 }
 /** how strong a light is to the curve: a pure color fills the screen by its strongest part, not by its luminance */
 fn strong(c: vec3f) -> f32 { return mix(dot(c, vec3f(0.2126, 0.7152, 0.0722)), max(c.r, max(c.g, c.b)), 0.45); }
 /** by the parts, and by the light with the hue held: between them */
 fn shown(c0: vec3f) -> vec3f {
-  let y0 = dot(c0, vec3f(0.2126, 0.7152, 0.0722)); let mx = max(c0.r, max(c0.g, c0.b)); let sat = (mx - min(c0.r, min(c0.g, c0.b))) / max(mx, 1e-4); let c = max(vec3f(0.0), y0 + (c0 - y0) * (1.0 + 0.38 * (1.0 - 0.6 * sat)));
-  let y = max(strong(c), 1e-6); var h = c * (film(vec3f(y)).x / y); let hm = max(h.r, max(h.g, h.b)); if (hm > 1.0) { h = 0.5 * h / hm + 0.5 * min(h, vec3f(1.0)); } return mix(film(c), h, 0.65);
+  let y0 = dot(c0, vec3f(0.2126, 0.7152, 0.0722)); let mx = max(c0.r, max(c0.g, c0.b)); let sat = (mx - min(c0.r, min(c0.g, c0.b))) / max(mx, 1e-4); let c = max(vec3f(0.0), y0 + (c0 - y0) * (1.0 + @tune.color * (1.0 - 0.6 * sat)));
+  let y = max(strong(c), 1e-6); var h = c * (film(vec3f(y)).x / y); let hm = max(h.r, max(h.g, h.b)); if (hm > 1.0) { h = 0.5 * h / hm + 0.5 * min(h, vec3f(1.0)); } return mix(film(c), h, @tune.hue);
 }
 /** stops to add: l = this point's stops, base = the base's here (a, b of the guided filter, about the measure A) */
-fn stops(l: f32, A: f32, ab: vec2f) -> f32 { let d = ab.x * (l - A) + ab.y; let out = -2.1 + A * 0.1 + select(-log(1.0 - 0.05 * min(d, 0.0)) * (0.78 / 0.05), log(1.0 + 0.10 * max(d, 0.0)) * (0.55 / 0.10), d > 0.0) + (l - A - d) * 1.12; return out - l; }
+fn stops(l: f32, A: f32, ab: vec2f) -> f32 { let d = ab.x * (l - A) + ab.y; let out = @tune.key + A * 0.1 + select(-log(1.0 - 0.05 * min(d, 0.0)) * (@tune.low / 0.05), log(1.0 + 0.10 * max(d, 0.0)) * (@tune.high / 0.10), d > 0.0) + (l - A - d) * @tune.detail; return out - l; }
 `;
 const R = 14, BASE: Size = [160, 90];
 export function exposeStages(lab: Lab, g: Graph, picture: string, small: string, pre: string): Stage[] {

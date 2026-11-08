@@ -34,7 +34,7 @@ fn oneMore(s: u32) {
       let L = select(q.glow, vec3f(0.0), own) + sentBack(q, leaf, rnd2(), w.xyz);
       E += min(L * h.thru * w.w, vec3f(60.0)); }
   }
-  let cap = mix(7.0, 96.0, st); let m = min(a.w + 1.0, cap); let k = min(1.0, 2.0 / (m + 1.0));   // later samples weigh more: the first ones were lit by a table that was still dark
+  let cap = mix(min(7.0, @tune.keep), @tune.keep, st); let m = min(a.w + 1.0, cap); let k = min(1.0, 2.0 / (m + 1.0));   // later samples weigh more: the first ones were lit by a table that was still dark
  
   cachePut(s, mix(a.xyz, E, k), m, x0, mix(b.w, select(sun, 0.0, cs <= 0.0), k));
 }
