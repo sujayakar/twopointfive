@@ -9,8 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// `s.view` handed to `f`. A game of one seat has no view: its seat's view IS the Game (seats.ts seatsStand).
 fn in_seat<R>(g: &mut Game, s: SeatId, mut f: impl FnMut(&mut Game) -> R) -> R {
-    if g.seats.len() == 1 { return f(g); }
-    crate::seats::with_seat(g, s, &mut f)
+    crate::seats::on_seat(g, Some(s), &mut f)
 }
 
 /// the character of a seat's man
