@@ -26,7 +26,7 @@ const bulb = light('bulb_store', 'store', 0, 26), lantern = light('lantern_hut',
   ghost = light('seen out', 'tea', 0, 0, { enabled: false, fogGhost: 8 }), flash = light('flash', 'fx', 0, 160, { ttl: 0.05 }), fire = light('fire0', 'fire', 0, 30, { steady: { intensity: 0, pos: [0, 0, 0], radius: 0.1 } as RtLight['steady'] });
 const sign = light('front_blue_mark98_0', 'fronts', 3, 1.85, { broad: true }), skyAtWindow = light('opening_0', 'sky', 3, 40, { broad: true });   // (a lit sign's light, and the look page's daylight at an opening: both one-sided panels)
 const scaled = [bulb, lantern, torch, rail, van, ghost, flash, fire, sign];
-const kept = [light('sun', 'hour', 2, 6), light('stroke', 'weather', 2, 20, { transient: true }), light('cam_cone', 'devices', 1, 1.1), light('kitview_fill', 'kitview', 0, 3), skyAtWindow];
+const kept = [light('sun', 'hour', 2, 6), light('stroke', 'weather', 2, 20, { transient: true }), light('cam_cone', 'devices', 1, 1.1), skyAtWindow];
 ls.lights.push(...scaled, ...kept); ls.ir.push(light('ir_sam', 'infrared', 1, 4)); ls.tube = true;
 const all = [...scaled, ...kept, ls.ir[0]], f32 = (ls as any).f32 as Float32Array;
 const up = (l: RtLight) => f32[(l.slot ?? -1) * 16 + 8], words = () => Array.from(((ls as any).u32 as Uint32Array).subarray(0, ls.activeCount * 16)).join(',');
@@ -40,7 +40,7 @@ check(near(K(bulb), exp.midday) && near(K(lantern), exp.midday) && near(K(ghost)
 check(near(K(torch) * 70, TRUE_CD.hand / LUX_PER_UNIT * exp.midday) && near(K(rail) * 60, TRUE_CD.hand / LUX_PER_UNIT * exp.midday) && near(K(van) * 150, TRUE_CD.vehicle / LUX_PER_UNIT * exp.midday), `a hand light goes up as ${TRUE_CD.hand.toLocaleString('en-US')} candela at that exposure whatever the game gave it (the torch ${one(K(torch))}, the rail light ${one(K(rail))}), a van's lamp as ${TRUE_CD.vehicle.toLocaleString('en-US')} (${one(K(van))})`);
 check(near(K(sign), FACE_TRUE * exp.midday) && near(K(sign) / K(bulb), FACE_TRUE), `the light that stands for a glowing face (a panel, a screen, a lit sign) goes up as ${FACE_TRUE} times its authored strength (${one(K(sign))}): against the midday sun a ceiling panel puts ${(100 * 6 * FACE_TRUE / 2.6 ** 2 * LUX_PER_UNIT / 100000).toFixed(2)} % on the floor under it`);
 check(near(K(flash), FLASH_TRUE * exp.midday) && near(K(fire), FLASH_TRUE * exp.midday), `a flash and a fire's light at ${FLASH_TRUE} times theirs (${one(K(flash))})`);
-check(kept.every(l => up(l) === night.get(l)) && up(ls.ir[0]) === night.get(ls.ir[0]), 'the sun, a lightning stroke, a device\'s cone, the kit figure\'s lamp and an infrared illuminator go up as they were');
+check(kept.every(l => up(l) === night.get(l)) && up(ls.ir[0]) === night.get(ls.ir[0]), 'the sun, a lightning stroke, a device\'s cone and an infrared illuminator go up as they were');
 { // the real proportions against the sun, at midday: a face 3 m down the rail light's beam, the floor 2.3 m under the bulb
   const sun = HOURS.midday.sun.intensity, beam = up(rail) / 9 / sun, pool = up(bulb) / (2.3 * 2.3) / sun;
   check(beam > 0.005 && beam < 0.03 && pool < 0.001 && pool > 0.00005, `against the midday sun the rail light puts ${(beam * 100).toFixed(1)} % on a wall 3 m off (a real weapon light: about 1 %) and the bulb ${(pool * 100).toFixed(3)} % on the floor under it (a real one: 0.015 %)`);

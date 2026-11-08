@@ -370,7 +370,7 @@ export async function castLook() {
           const sm = gr.player.char, ps = worn(gr, sm), cl = cloth(gr, sm), ops = gr.guards.filter((x: any) => x.team === 'operative');
           verdict(!r.why && !!gr.roomClear?.active && !sneakSuit(gr, sm) && ps.includes('helmet') && ps.some(n => n.startsWith('kit_')) && cl.u > 0.12 && ops.length >= 2 && ops.every((x: any) => !sneakSuit(gr, x.char) && worn(gr, x.char).includes('helmet')), `a room clear (loud): Sam and his ${ops.length} men wear the issue dress — helmet, kit, the look's cloth (${cl.u.toFixed(3)})`, r.why ?? ps.join(' '));
           { const rl = rifleOf(gr, sm); verdict(rl.n === M4_BOXES && rl.tan === 5, `a loud mission: his carbine keeps its dark earth furniture (${rl.tan} of ${rl.n} boxes tan)`); }
-          // (a picture's host saying the dress, scene/look.ts setSuitAs, is the page's own: a crossing castParts does not hear it. The suit a staged room clear is asked for is the Rust game's native test)
+          // (the suit a staged room clear is asked for is the Rust game's native test, tests/kit_stage.rs)
           } finally { gr.nightBreach?.stop?.(); } }
         { // a quiet mission as two: Sam and the partner in the suit, the staff in their own
           const W: any = await standUp({ ch: await loadCastOf(true), level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/vault.json`, 'utf8'))) }); const gq = W.game; try { const r = startFromQuery(gq, '?quiet=1&squad=1'); for (let f = 0; f < 6; f++) W.step(1 / 60);
