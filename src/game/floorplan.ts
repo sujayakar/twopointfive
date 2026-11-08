@@ -54,7 +54,6 @@ import { wallPt } from './wallcharge';
 import { squadThrowPlans, squadThrowKept, type SquadThrowKept } from './squadthrow';
 import { FRAG } from './frag';
 import { AUTOPILOT, showSecsOf } from './autopilot';   // (read inside floorPlan only)
-import { layMen, layPoint, layKey, layPending } from './planlay';   // (the same)
 import { teamPaired } from './seats';   // (the same)
 
 export const PLAN = {
@@ -308,21 +307,6 @@ export function floorPlan(g: Game, kept: PlanKept = planKept(), who: PlanFor = M
   }
   if (PLAN.word) waitsOnKey(g, out, toneOf);
   if (!who.own) for (const d of out.doors) { d.key = null; d.now = false; }   // (the press is its own player's)
-  // a plan laid for the word (planlay.ts): in the order mode all of it; with the menu down an order just laid, going out as an order just given does —
-  // and while one waits the key is the plan's, so nothing else is marked as what the key would send now
-  if (layPending(g)) {
-    for (const d of out.doors) d.now = false;
-    const F = who.own ? keyCap(layKey()) : '';
-    for (const o of S.lay.laid) {
-      const age = g.time - o.t, k = mode ? 1 : age >= 0 && age < PLAN.freshSecs ? Math.min(1, (1 - age / PLAN.freshSecs) / 0.4) : 0; if (k <= 0) continue;
-      const men = layMen(g, o); if (!men.length) continue;
-      const at = layPoint(g, o), door = o.kind === 'door' ? g.doors.list[o.door ?? -1] : null;
-      const L: PlanLaid = { tone: toneFor(g, men, toneOf), feet: men.map((m): Vec3 => [m.char.pos[0], 0, m.char.pos[2]]), ways: [], at, a: null, b: null, key: F, k };
-      if (door) [L.a, L.b] = jambs(door);
-      if (at && PLAN.paths) for (const m of men) { const pts = leg(g, kept, m, 9, m.char.pos, at, 20000).pts; if (pts) L.ways.push([[m.char.pos[0], 0, m.char.pos[2]], ...pts.map((q): Vec3 => [q[0], 0, q[2]]), at]); }
-      out.laid.push(L);
-    }
-  }
   if (PLAN.throws) {
     const ours = new Set(S.squad());
     for (const T of squadThrowPlans(g, kept.throws ??= squadThrowKept())) {

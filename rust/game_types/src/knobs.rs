@@ -7805,25 +7805,6 @@ impl AutopilotK {
 }
 impl Default for AutopilotK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/planlay.ts:36 PLANLAY, src/game/planlay.ts:36)
-#[derive(Clone, Copy, Debug)]
-pub struct PlanlayK {
-    pub on: bool,
-    pub keep: bool,
-    pub sticky: bool,
-}
-impl PlanlayK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlanlayK {
-            on: false,
-            keep: false,
-            sticky: false,
-        }
-    }
-}
-impl Default for PlanlayK { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/cmdring.ts:50 CMDRING, src/game/cmdring.ts:50)
 #[derive(Clone, Debug)]
 pub struct CmdringK {
@@ -13757,10 +13738,6 @@ pub fn page_autopilot() -> AutopilotK {
     crate::knobs::AutopilotK { on: true, show_secs: 4.0, keep_bangs: 1.0, contact_m: 9.0, replan: true, plain: true, restack: true }
 }
 
-pub fn page_planlay() -> PlanlayK {
-    crate::knobs::PlanlayK { on: true, keep: true, sticky: true }
-}
-
 pub fn page_cmdring() -> CmdringK {
     crate::knobs::CmdringK { on: true, key: String::from("KeyB"), wedges: 5.0, flick_px: 24.0, hold_secs: 0.2, stay: true, stay_hold_secs: 0.3, stay_digit: true, pin: true, tap_now: true, tap_secs: 0.15, edge_x: 150.0, edge_y: 100.0, man_px: 24.0, ref_: [1920.0, 1080.0], hint: false, hands: false, flat: true, plain_hint: true, bare_hint: true, wheel_idle: true, whole_squad: true, goals: true, goal_ring: true, goal_half: true, twice: true, twice_secs: 0.4, twice_px: 24.0, only: true, hint_wall_m: 0.6, hint_spot_m: 0.3, hint_man_m: 0.5 }
 }
@@ -14341,7 +14318,6 @@ pub struct Knobs {
     pub squadthrow: SquadthrowK,
     pub squad40: Squad40K,
     pub autopilot: AutopilotK,
-    pub planlay: PlanlayK,
     pub cmdring: CmdringK,
     pub torch: TorchK,
     pub backkey: BackkeyK,
@@ -14591,7 +14567,6 @@ impl Knobs {
             squadthrow: page_squadthrow(),
             squad40: page_squad40(),
             autopilot: page_autopilot(),
-            planlay: page_planlay(),
             cmdring: page_cmdring(),
             torch: page_torch(),
             backkey: page_backkey(),

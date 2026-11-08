@@ -165,7 +165,6 @@ pub use game_rules::par;
 pub use game_rules::particle_fx;
 pub use game_rules::peeksight;
 pub use game_rules::picture;
-pub use game_rules::planlay;
 pub use game_rules::planmode;
 pub use game_rules::player;
 pub use game_rules::posehome;
