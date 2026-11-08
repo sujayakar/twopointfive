@@ -1027,7 +1027,7 @@ but synthetic writes still work.
   its whole box under a timed line, as it always did (that set is not in `standsIn`). NOT DONE either: the engine replay's address (`ui/replaykey.ts
   VISIT_FLAGS`) drops the same words. Checked by `bench-check` (the fake page and tab) and once on a page on the software adapter: never run on a GPU. THE LOOK PROTOTYPE (11-02) rides along too: a run asked for on the look's page keeps the look (`?bench&look`): every
   `look=key:value` row and the page's other boot words (`scene/look.ts lookPageWord`: hills, geo, front, lorry, dress, seat, the cut boxes' switch and the
-  rest; never the dress's `look=plain|0|off`) ride along, since the page reads them at boot into its shader text and its level. Before, such a run timed
+  rest; the look's rows) ride along, since the page reads them at boot into its shader text and its level. Before, such a run timed
   the plain build on every scene and said nothing. A TRIAL THE LOOK PANEL'S BUTTON KEEPS OFF on the machine goes on the address as its own word
   (`lookTrialsKept`, `hills=0`; the kept cut boxes' switch with them), so the run times the look the page it was asked on shows and the report's address says which. A SCENE'S ADDRESS IS
   NOBODY'S TO TUNE (`main.ts`, on the word `benchrun`, as the load brief and the GPU retry are; so also a scene's address opened with no run under way): the
@@ -1048,7 +1048,7 @@ but synthetic writes still work.
   tree's plain page loses the device every time; `&round=0` on this tree changes nothing, so the round test in the cut set's walks is not the whole of
   it. Which of the build's steps since the base mends it was not found (the build's change to how round things are traced in the cut set does not apply
   to this tree, which has its own), so nothing was ported: it is expected to go at the join, and that is one run to make then. Never tried on a GPU. `window.__look.parts()` says which trials a look page asked for at boot. NOT CARRIED: the dress's off words beside a look row
-  (`?look=plain&look=…`: the scenes are the set's dressed levels). NEVER PLAYED TO ITS CARD, and never on a GPU. A reload in the middle is a plain mission page (the page marks the record before it plays); `?bench` on the address
+  (the scenes are the set's dressed levels). NEVER PLAYED TO ITS CARD, and never on a GPU. A reload in the middle is a plain mission page (the page marks the record before it plays); `?bench` on the address
   goes to the first scene BEFORE the game boots (`main()`'s first lines, a `replace`: that load is the machine's first and the one the report's `load` line
   times, and Back does not ask again), the row is a second load and the report says so. EACH SCENE IS PLAYED BY THE HANDS-OFF PLAYER (`HandsOff`, the page
   twin of the removed tally's hand `b`): W A S D along the nav path, the cursor on a door, the quick key B (stack, then B again when the men have arrived),

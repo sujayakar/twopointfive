@@ -76,7 +76,7 @@ side by side with a door between them and a door each to the yard, a defender in
 
 ### The game in a test's hands (`src/play.rs`)
 
-- **Stand:** `Play::scene(&scene, &opts)`, or `Play::level("kit-yard.json", room_clear, &opts)` for a file of `levels/`. `Play::mission("depot-gwot.json", "?levelFile=depot.json&roomclear&squad4", &opts)` starts a mission on a file from the words of its address, as a click on its row of the mission list does (the row's hour and weather, the fog of war, then the mission).
+- **Stand:** `Play::scene(&scene, &opts)`, or `Play::level("kit-yard.json", room_clear, &opts)` for a file of `levels/`. `Play::mission("depot.json", "?levelFile=depot.json&roomclear&squad4", &opts)` starts a mission on a file from the words of its address, as a click on its row of the mission list does (the row's hour and weather, the fog of war, then the mission).
 - **Time:** `p.run(secs)`; `p.until(secs, |p| …)` answers how long it took, or `None`; `p.always(secs, |p| …)` answers `None`, or the second it
   first failed; `p.frame()` is one sixtieth.
 - **Who:** `p.guard("route name")`, `p.defender_at(mark)`, `p.mates()` (the first two are the red pair, the last two the blue),
@@ -187,7 +187,7 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
    between the level's boxes going to the world and the Game). The page would hand each of these in.
 6. **The character's files twice.** `gltf.rs` reads the rig, the clips and the cast's variants for the simulation. The picture's meshes and
    skins are read from the same files by `src/anim/gltf.ts`. One reader, or two that must agree.
-7. **Which file.** The page loads a level's file in the look that is on (`scene/look.ts lookLevelFile`) and fetches it. Here the caller hands
+7. **Which file.** The page fetches the level's file. Here the caller hands
    the file's text in. (The office was the one level whose missions were not in its file: they are now, and it starts as the others do.)
 8. **The file's checks.** `validateLevelData` is TypeScript. A page that starts in Rust still validates in TypeScript, or the rules move.
 9. **What stands a game again from outside a tick.** A mission staged from a menu, a show, a kit view that sinks boxes: each is a TypeScript
@@ -229,7 +229,7 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
 ```sh
 tools/blitz/start.sh kit-yard.json                                   # a level of levels/, as its file has it
 tools/blitz/start.sh kit-yard.json --scenario roomclear --frames 1800
-tools/blitz/start.sh depot-gwot.json --link '?levelFile=depot.json&roomclear&squad4' --frames 300   # started as the page starts it
+tools/blitz/start.sh depot.json --link '?levelFile=depot.json&roomclear&squad4' --frames 300   # started as the page starts it
 tools/blitz/start.sh --mission depot-four --frames 300               # a row of the mission list: its file, started from its link
 tools/blitz/start.sh rust/game_start/target/scenes/two-rooms.json --scenario roomclear --frames 900
 bun run tools/blitz/start-levels.ts --write                          # every mission, and LEVELS.md written from the result (--seats 2: as games of two)

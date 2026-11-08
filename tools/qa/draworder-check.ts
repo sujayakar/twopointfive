@@ -18,7 +18,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 // the default stand-up (it has tilted things) · plinths across piers' feet · posts in walls' ends · boxes turned 45 degrees · a look's stepped sheets · the most statics
-const LEVELS = ['office', 'white-roof', 'police-post', 'block-gwot', 'records-gwot', 'barracks-gwot'];
+const LEVELS = ['office', 'white-roof', 'police-post', 'block', 'records', 'barracks'];
 type V = [number, number, number];
 export async function drawOrderCheck(): Promise<boolean> {
   const BRK = process.env.DRAWORDER_BREAK === '1'; let all = true;

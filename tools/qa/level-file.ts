@@ -3,7 +3,7 @@
 // dressing, the look twin beside it) and compares the text with the file, writing nothing. Three level checks (the registry's, the consulate's, the
 // depot's) each built the generator's level themselves and walked those steps after it one by one, and each step the exporter gained turned all three red
 // with the files right: the last was the word every box says it does, stamped at the export (175, 75 and 84 'diffs' on files the exporter calls up to
-// date, on both stands). A stale look twin (`<name>-gwot.json`) fails the same answer: the exporter writes the two in step.
+// date, on both stands). 
 // LEVELFILE_BREAK=1 = the red path: the level is asked for without its dressing (`--bare`), which the file has, so the answer is STALE.
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');

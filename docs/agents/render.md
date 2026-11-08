@@ -1728,8 +1728,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   merged and then try to fix forward, especially as we clean everything up and simplify the code").** Until this the look's layers drew only with a
   `look` row on the address (the bullet below, which still says how they are made). Now there is no switch: the engine draws it on every page, with what stands on it (the walls' two sides, the men's side rows, the smoke's shorter step, the
   stirred smoke and the fire's column, the maps made on workers). `?look=key:value` still
-  opens the page with a row's amount; `?look=plain|0|off` is still the GWOT dress's word, read from any `look` word of the address, and no longer
-  decides the picture's layers. THE OTHER WAY IS DELETED (the same day, the second commit): the prelude's `const LOOK`, its 35 branches in eleven
+  opens the page with a row's amount. THE OTHER WAY IS DELETED (the same day, the second commit): the prelude's `const LOOK`, its 35 branches in eleven
   shaders, every reader of `lookConfig.on` in the page, the stub functions the g-buffer was given without it, `?look=old` (which drew the picture as it was
   for a few hours of the build) and the pricing run's second page. The tools' page boot counts 47 distinct shader texts over its settings (one of them with the walls row
   down) where it counted 53. `lookConfig.on` ITSELF IS GONE from both sides (the Rust
@@ -1782,7 +1781,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   Mac on earlier builds; the look with the round things' GPU half compiled in was drawn there only as "the look, its trials off" on 11-04, on an
   older tree. NOT MEASURED HERE: what the look costs a frame (the bar: `rebuild/look-join/bar.md` in the project's files) and a load.
 - **THE LOOK PROTOTYPE** (`?look` at boot, or the page `/look` = the game's page with `look` on the pass at night unless the link names its own `levelFile`; `?look=relief:1.4,air:2` opens it with those
-  amounts, each held to 0‥4, and `?look=plain|0|off` stays the GWOT dress's word and does not raise it; `render/frame.ts lookConfig`,
+  amounts, each held to 0‥4; `render/frame.ts lookConfig`,
   `shaders/look.wgsl`, `render/lookTex.ts`, the panel `ui/lookpanel.ts`; OFF on every other page). A place to find out how far materials carry a world of boxes,
   NOT the look when it was made; the maintainer said yes to a material look on 11-01 and `STYLE.md`'s rule 1 and Surfaces are rewritten for it on this branch (the bullet THE MATERIAL MAPS ARE THE LOOK NOW, below, has what changed with that). Where the surfaces try above writes a pattern in the shader, this one samples MAPS:
   eleven tiling materials (the try's eight classes and three more for what stood untouched beside them: cloth, bare metal and painted metal; the class is
@@ -3263,8 +3262,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   rust" in a kept office are cured by saying them as `steel`, `enamel` or `brushed`, not by this word. A stuff's own `fades` and `soaks`
   now say what it does where nobody keeps it, and the kept cousins (stucco and skim of plaster, cast panel and gloss block of block, paver
   of slab) are no longer the only way to a clean wall; folding each pair into one stuff is not done. WHO SAYS IT: a generator, `export
-  const KEPT = 0.8`; the exporter writes the file's `meta.kept`, and gives a look's second file (`<name>-gwot.ts`, what the look's page
-  loads) the word of the level it dresses unless it says its own (`tools/levels/keptWord.ts`, which the check runs too); a level built on
+  const KEPT = 0.8`; the exporter writes the file's `meta.kept`; a level built on
   another's floor with no `DRESS_AS` re-exports the word; the office would say it as `level.kept` in its builder (`levelToData` writes
   the file's meta from the Level and drops either key from a caller's `meta`, a marks' texel the same way now). Every way a level enters
   the page goes through `main.ts hostLevel`, so the bundled office that stands in for an editor level that cannot stand takes its own

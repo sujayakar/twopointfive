@@ -46,7 +46,7 @@ export function livedKit(K: Kit) {
   };
 
   // ---- the floor: drawn-only slabs from the floor up (no ray, no foot and no round meets one). `top` over the look's own ground marks (15 mm), so neither flickers;
-  // the look's RUGS lie at 24 mm and are dealt as if no lived thing were there: a lived floor piece stays off a look rug's rectangle (read them off <name>-gwot.json)
+  // the look's RUGS lie at 24 mm and are dealt as if no lived thing were there: a lived floor piece stays off a look rug's rectangle (read them off <name>.json)
   const placed = () => { if (!room) throw new Error('livedKit: a lived piece before the first room()'); };
   /** a floor MAT over a rectangle in the colour given (drawn only) */
   const mat = (x0: number, z0: number, x1: number, z1: number, albedo: Vec3, top = 0.022) => { placed(); return K.slab(x0, 0, z0, x1, top, z1, albedo, { flags: NS }); };

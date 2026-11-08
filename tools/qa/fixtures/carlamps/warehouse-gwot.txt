@@ -1,4 +1,0 @@
-# the impounded pickup is a lived thing: none with lived-in rooms left out
-# one line a count this file may give: a stand may leave out the lived-in room its vehicle stands in
-0 0 0
-2 2 0
