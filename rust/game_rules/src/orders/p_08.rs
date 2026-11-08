@@ -298,7 +298,7 @@ pub fn squad_orders_summary(g: &mut crate::game::Game) -> String {
 /// What one man is doing, in a few words.   (orders.ts SquadOrders.statusOf)
 pub fn squad_orders_status_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> String {
     if g.gd[gd].state == crate::game::GuardState::Dead {
-        return String::from(if g.gd[gd].wound.is_some() { "wounded" } else { "down" });
+        return String::from("down");
     }
     if let Some(a) = seat.orders.asg.get(gd).copied() {
         let w = if g.tab.orders_assignment[a].post.is_none() && crate::pairup::pair_up(g, crate::pairup::PairUpRule::Word) {

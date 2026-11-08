@@ -38,14 +38,13 @@ pub fn body(g: &mut Game, gd: GuardId, c: CharId, staff: bool, lvl: f64) {
                 crate::tactics::tactics_body_found(g, gd, x);
                 n += 1;
                 if crate::game::is_breathing(g, x) { cold += 1; }
-                if g.gd[x].wound.is_some() { hurt += 1; }
             }
             if g.gd[gd].state == St::Patrol || g.gd[gd].state == St::Search {
                 crate::mind::set_state(g, gd, St::Suspicious, "guards");
                 g.gd[gd].search_t = 0.0;
                 clear_path(g, gd);
             }
-            let line = words(g, o, n, cold, hurt);
+            let line = words(g, o, n, cold);
             crate::game::game_say(g, gd, &line, Some(true), None, None);
             crate::audio_iface::game_audio_like_play(g, "radio", Some(eye), Some(0.9), None);
             if !g.quiet_utility {
@@ -76,16 +75,10 @@ pub fn body(g: &mut Game, gd: GuardId, c: CharId, staff: bool, lvl: f64) {
 }
 
 /// what the finder calls in: `n` men here, `cold` of them breathing, `hurt` of them shot
-fn words(g: &mut Game, o: GuardId, n: i32, cold: i32, hurt: i32) -> String {
+fn words(g: &mut Game, o: GuardId, n: i32, cold: i32) -> String {
     let in_here = if !crate::dialogue::is_office(g) { "someone's here" } else { "someone's in here" };
     let who = crate::teams::spoken_name(g, o).unwrap_or_else(|| String::from("one of ours"));
-    if hurt > 0 {
-        if n > 1 {
-            alloc::format!("{} men down — {}. {} — radioing it in", n, if hurt == n { "shot, still breathing" } else { "one's shot and breathing" }, in_here)
-        } else {
-            alloc::format!("it's {} — he's shot, still breathing. {} — radioing it in", who, in_here)
-        }
-    } else if n > 1 {
+    if n > 1 {
         if cold == n {
             alloc::format!("{} men down — out cold, {} breathing. {} — radioing it in", n, if n > 2 { "all" } else { "both" }, in_here)
         } else {

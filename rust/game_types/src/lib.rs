@@ -368,4 +368,3 @@ pub mod wind { pub mod types; pub use types::*; }
 pub mod words { pub mod types; pub use types::*; }
 pub mod workstow { pub mod types; pub use types::*; }
 pub mod workthings { pub mod types; pub use types::*; }
-pub mod wounds { pub mod types; pub use types::*; }

@@ -62,7 +62,7 @@ export function loudRow(g: Game): boolean {
 
 /** the way a run was won, read off the run */
 export type Approach = 'doors' | 'walls' | 'dark' | 'quiet';
-export type ManState = 'up' | 'wounded' | 'out' | 'dead';
+export type ManState = 'up' | 'out' | 'dead';
 export type ManTone = 'you' | 'purple' | 'red' | 'blue' | null;
 
 /** one man of the team at the run's end. Times are seconds from the try's start; `path` is x, z, t triples sampled as he walked. */

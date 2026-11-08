@@ -101,7 +101,7 @@ pub fn body_hit(g: &mut crate::game::Game, c_2: CharId, ro: V3, rd: V3, tmax: f6
 // ---------------------------------------------------------------- a man goes down
 
 /// A man goes down: `how` he went and `by` whose hand; `quiet` is the physical side.   (combat.ts killGuard)
-pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option<bool>, how: Option<crate::game::DownKind>, by: Option<crate::game::DownBy>, line: Option<&str>, zone: Option<crate::combat::KillGuardZone>) {
+pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option<bool>, how: Option<crate::game::DownKind>, by: Option<crate::game::DownBy>, line: Option<&str>) {
     use crate::game::{DownBy, DownKind, GuardState};
     let quiet = quiet.unwrap_or(false);
     let how = how.unwrap_or(if quiet { DownKind::Struck } else { DownKind::Shot });
@@ -147,12 +147,7 @@ pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option
         let it = drop_from_hand(g, c, kind, along, if quiet { [0.0, 0.0, 0.0] } else { dir }, Some(suppressed), Some(quiet), None);
         g.gd[gd].dropped = Some(it);
     }
-    if how == DownKind::Wounded {
-        let z = zone.map(|z| match z { KillGuardZone::Side => crate::wounds::WoundDownZone::Side, KillGuardZone::Leg => crate::wounds::WoundDownZone::Leg });
-        crate::wounds::wound_down(g, gd, dir, z);
-    } else {
-        crate::character::character_ragdollize(g, c, true, dir, quiet);
-    }
+    crate::character::character_ragdollize(g, c, true, dir, quiet);
     let text: String = match line {
         Some(l) => String::from(l),
         None => {

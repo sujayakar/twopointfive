@@ -128,8 +128,7 @@ fn calls_mate_down(g: &mut Game, o: RoomfightOpId) {
         let xp = g.ch[g.gd[x].ch].pos;
         if crate::scene_collision::segment_blocked(g, e, [xp[0], 0.4, xp[2]], None, None, None) { continue; }
         g.fight.down_called.add(x);
-        let text = if g.gd[x].wound.is_some() { alloc::format!("{}'s hit — breathing.", g.gd[x].callsign) } else { String::from("man down.") };
-        room_fight_speak(g, o, &text, Some(0.0));
+        room_fight_speak(g, o, "man down.", Some(0.0));
     }
 }
 
@@ -275,9 +274,7 @@ fn muzzle_to(g: &mut Game, o: RoomfightOpId, best: Option<GuardId>, sk: &FightSk
         let fell = was.map_or(false, |t| g.gd[t].state == crate::game::GuardState::Dead);
         if let (Some(t), true) = (was, fell) {
             let mine = g.gd[t].killer_id == g.ch[c].id;
-            let text: &str = if g.gd[t].wound.is_some() {
-                if mine { crate::words::wg(g, &"he's hit — he's down and out of the fight.", &"he's hit — down, gun's out of it.") } else { "he's down, breathing." }
-            } else if mine { "tango down." } else { "he's down." };
+            let text: &str = if mine { "tango down." } else { "he's down." };
             room_fight_speak(g, o, text, Some(0.6));
         }
         g.tab.roomfight_op[o].fell = Some(fell);
