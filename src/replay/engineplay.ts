@@ -51,7 +51,8 @@ import { drawFloor, drawLine, drawScene, mapFit, mapSize, mapToWorld, MAP_RING }
 import { TapeWalk } from './tapewalk';
 import { RecipeStand, layFlags, put, plain, type Plain } from './recipestand';
 import { shelfGet, shelfList, shelfNotes, shelfPut } from './shelf';
-import { viewerUrl, visitWord, visitPairs } from '../ui/replaykey';
+import { viewerUrl } from '../ui/replaykey';
+import { PLAYTAPE, SAYS_OFF, SENDING_WORDS, recipeSearch, visitPairs } from '../tape/address';
 import { cloudCarries, cloudFile, cloudNotes, cloudSendsFiles } from '../cloud/cloud';
 import { keptStore } from './keptui';
 import { TEXT_EVENT, rectZoom, textZoom } from '../ui/textsize';
@@ -68,7 +69,7 @@ import * as K from '../game/knobs';
 import { tapePoses } from '../game/runtape';
 
 /** the URL's key */
-export const PLAYTAPE = 'playtape';
+export { PLAYTAPE, SENDING_WORDS, recipeSearch } from '../tape/address';
 /** metres a man may stand from his traced place before the run is said to have parted (rerun.ts's own) */
 const TOL = 0.15;
 /** steps run and not drawn in one frame at most (a slow display plays slow, it does not spiral) · milliseconds of a frame a seek may take */
@@ -109,15 +110,6 @@ const SLOMO_BREAK = said('SLOMO_BREAK');
 const FLY = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD']), PITCH_MIN = 12 * DEG, PITCH_MAX = 89 * DEG, DIST_MIN = 3, DIST_MAX = 60, FAR_M = 80, DRAG_PX = 5, CAM_KEEP = 'twopointsix.tapecam', SHOT_S = 1;
 /** a framing of the picture: look-at, yaw, pitch, distance (FollowCamera.pin's own shape) */
 export interface TapeView { look: Vec3; yaw: number; pitch: number; dist: number }
-/** keys of the tape's query that are this visit's and not the run's (the tape's seed is said by its recipe) */
-const NOT_THE_RUNS = ['paused', 'mute', 'quality', 'seed', 'pick', 'loadout', 'noreplay', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'soundlanes', PLAYTAPE, 'at', 'player', 'net', 'netgame', 'netkey'];
-/** THE SENDING WORDS (cloud/cloud.ts: whether this browser sends, and what) are the viewer's, not the run's — a tape recorded against one backend does not
- *  point the page that replays it there, and a viewer's `?cloud=0` stays on the replay's address — with ONE thing kept from the tape: its OFF, where the
- *  viewer's address says nothing of that word (the map viewer's road here carries no words, and a visit that did not send must not start sending on its
- *  replay's page). `player` (whose settings a link hands over) is no word of the run either */
-export const SENDING_WORDS = ['cloud', 'cloudtapes', 'cloudstats', 'cloudprefs', 'cloudfiles'];
-const SAYS_OFF = /^(0|off|false|no)$/i;
-/** …and the ones this visit keeps from its own address: ui/replaykey.ts VISIT_FLAGS (the end card's Replay hands the same ones on to the tab it opens) */
 
 async function textOf(buf: Uint8Array): Promise<string> {
   if (buf[0] === 0x1f && buf[1] === 0x8b) return await new Response(new Blob([buf as BlobPart]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
@@ -162,19 +154,6 @@ export async function tapeFromUrl(q: URLSearchParams): Promise<TapePlay | 'moved
 }
 /** the tape's own query, with this visit's keys: what the page must be booted on to be the recording's page */
 export function tapeSearch(tape: RunTape, now: URLSearchParams, v: string): string { return recipeSearch(tape.recipe, now, { [PLAYTAPE]: v, ...(now.has('at') ? { at: now.get('at') ?? '' } : {}) }); }
-/** a recipe's own query with this visit's keys and the words that say what the page is doing with it (`own`: a tape's `playtape` and `at`, a networked game's
- *  `net` words — src/net/page.ts): what the page must be booted on to be that run's page */
-export function recipeSearch(recipe: RunTape['recipe'], now: URLSearchParams, own: Record<string, string>): string {
-  const out = new URLSearchParams();
-  for (const [k, val] of new URLSearchParams(recipe.search ?? '')) if (SENDING_WORDS.includes(k) ? SAYS_OFF.test(val) : !NOT_THE_RUNS.includes(k) && !visitWord(k, val)) out.append(k, val);   // (a visit's word is never the run's, whichever list a goal put it on: a tape recorded under one does not put it on the page that replays it)
-  out.set('seed', recipe.seed === null || recipe.seed === undefined ? 'off' : String(recipe.seed));
-  out.set('noreplay', '');   // (no tape of a tape: the page's own buffer stays off)
-  for (const [k, v] of visitPairs(now)) out.append(k, v);   // (pair by pair: the dress's `look` word is the run's and stays as the recipe has it, ui/replaykey.ts visitWord)
-  for (const k of SENDING_WORDS) if (now.has(k)) out.set(k, now.get(k) ?? '');
-  for (const [k, val] of Object.entries(own)) out.set(k, val);
-  return '?' + out.toString();
-}
-
 /** STEPS NOBODY SAW ARE OVER (a replay's seek, a networked page that slept and caught up — net/page.ts): the mixer back as it was, and the queues those steps
  *  built up let go, or they would all land on the first frame drawn */
 export function unseenDone(h: { audio: { enabled: boolean; setVolumes(): void }; smoke: { emitters: { kind: string }[] } | null; engine: { particles?: { clear(): void } | null; resetTaa?(why?: string): void } }, audioWas: boolean, why: string): void {
