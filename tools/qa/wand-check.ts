@@ -125,8 +125,10 @@ export async function wandKit(): Promise<boolean> {
       const staged = g.player.wand, cans = g.player.canisters;
       await hushed(() => { g.restartEncounter(); steps(W, 10); });
       const again = g.player.wand;
-      K.kitSet(0, 'wand', false); await hushed(() => { g.restartEncounter(); steps(W, 10); }); const none = g.player.wand;
-      F.verdict(staged === true && again === true && none === false, 'a mission staged with the wand on your card puts it on the Player, a restart keeps it, a card without it stages none', `staged ${staged} (smokes ${cans}) · after a restart ${again} · card without ${none}`);
+      // (a card changed reaches a game by Deploy: a restart does not read it again, a start of the mission does; the card is the game's that stands when it is changed)
+      K.kitSet(0, 'wand', false); await hushed(() => { g.restartEncounter(); steps(W, 10); }); const stays = g.player.wand;
+      const W3 = await stand(3), g3 = W3.game; K.kitSet(0, 'wand', false); await hushed(() => { startFromQuery(g3, 'roomclear&squad4'); steps(W3, 10); }); const none = g3.player.wand;
+      F.verdict(staged === true && again === true && stays === true && none === false, 'a mission staged with the wand on your card puts it on the Player, a restart keeps it even with the card changed, a Deploy with a card without it stages none', `staged ${staged} (smokes ${cans}) · after a restart ${again} · card changed, restarted ${stays} · deployed with a card without ${none}`);
 
       const W2 = await stand(2), g2 = W2.game; await hushed(() => steps(W2, 10));
       g2.player.wand = true; const s = SAVE.saveState(g2, { kind: 'harness', force: true }); const inFile = s.player.wand;
