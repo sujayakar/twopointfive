@@ -72,7 +72,7 @@ async function one(browser, name) {
       const file = path.join(OUT, `fire_${name}_${v}_${String(k).padStart(2, '0')}.png`); await page.screenshot({ path: file, timeout: 300000 }); rows.push(r); log(`${name}: ${v} ${k}`, JSON.stringify(r), '→', file); } }
   // what the game reads: the meter beside the drum and off it, the sight lines through the plume
   const read = METER <= 0 ? { meter: {}, lines: {}, answered: {}, skipped: true } : await page.evaluate(async ({ n, at, stand }) => { const yieldM = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
-    const g = window.__game, S = g.sensors, out = { meter: {}, lines: {}, answered: {} };
+    const g = window.__game, S = g.probe, out = { meter: {}, lines: {}, answered: {} };
     const dir = [Math.sin(stand.yaw + Math.PI), Math.cos(stand.yaw + Math.PI)];   // from the fire toward where he stands
     // across the plume at the heights of a standing man's chest, eyes and the top of his helmet, over the drum and where the wind has carried it; ALONG the wind
     // through all of it (the longest way through a thin haze, and the first to fall); and over a man's head, to see the smoke is there at all
@@ -84,9 +84,9 @@ async function one(browser, name) {
     for (const key in lines) { out.lines[key] = 1; out.answered[key] = 0; }
     for (const d of [1.25, 3, 5]) { const p = [at[0] + dir[0] * d, 0, at[2] + dir[1] * d]; window.__stage(window.__firePin, { player: { pos: p, yaw: stand.yaw, holstered: true } });
       let lo = 9, hi = -9, sum = 0, m = 0, elo = 9, ehi = -9;
-      for (let i = 0; i < n + 12; i++) { for (const key in lines) S.askSegment('fp_' + key, lines[key][0], lines[key][1]);
+      for (let i = 0; i < n + 12; i++) { for (const key in lines) S.querySegment('fp_' + key, lines[key][0], lines[key][1]);
         window.__runFrames(1, 1 / 30); await window.__engine.device.queue.onSubmittedWorkDone(); await yieldM(); await yieldM();
-        for (const key in lines) { const v = S.read('fp_' + key); if (typeof v === 'number' && isFinite(v)) { out.answered[key]++; if (v < out.lines[key]) out.lines[key] = +v.toFixed(3); } }
+        for (const key in lines) { const v = S.get('fp_' + key)?.[0]; if (typeof v === 'number' && isFinite(v)) { out.answered[key]++; if (v < out.lines[key]) out.lines[key] = +v.toFixed(3); } }
         if (i >= 12) { const v = g.player.visibility, e = g.player.irradiance ?? 0; lo = Math.min(lo, v); hi = Math.max(hi, v); sum += v; m++; elo = Math.min(elo, e); ehi = Math.max(ehi, e); } }
       out.meter[d + 'm'] = { lo: +lo.toFixed(3), hi: +hi.toFixed(3), mean: +(sum / m).toFixed(3), E: [+elo.toFixed(4), +ehi.toFixed(4)] }; }
     out.summary = window.__fire.summary(); const st = window.__smoke.stats; out.pool = st.pool; out.emitters = st.emitters; return out;

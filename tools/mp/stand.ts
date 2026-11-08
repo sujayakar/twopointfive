@@ -99,7 +99,6 @@ export async function standRecipe(recipe: Recipe): Promise<Stood> {
   const R = await rerun(F as never, { toN: 0, scan: false, dress: true, draws: false });
   if (R.refuse || !R.W) throw new Error(`the game could not be stood from its recipe: ${R.refuse}`);
   const W = R.W, g = W.game;
-  { const S = g.sensors as object; if (Object.hasOwn(S, 'read')) delete (S as { read?: unknown }).read; }   // (the re-run serves the sensors off its tape; this game answers its own, SENSE.cpu)
   const { netStep, netStand, netWord, netWatch, netQuiet, netWhole, wordTick, NET_WORD_SEED } = await import(`${ROOT}/src/net/step.ts`), { activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   if (activeScenario(g) !== recipe.scenario) throw new Error(`the recipe's mission (${recipe.scenario}) did not come up here (${activeScenario(g) ?? 'none'} is up): ${(R.report?.warnings ?? []).find((w: string) => w.includes('did not start')) ?? 'another build or level than the recipe\'s'}`);
   netStand(g);

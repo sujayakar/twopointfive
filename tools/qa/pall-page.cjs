@@ -59,9 +59,9 @@ const MEASURE = async ({ which, frames, every, from, full, fps }) => {
   const yieldMacro = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
   const light = () => { e.world.upload(); window.__smoke.stepAlone(1 / fps, window.__cam.focus); const P = e.particles, on = !!P && e.particlesOn; if (P) P.prepare(1 / fps, on, e.settings.particleBirths);
     const enc = dev.createCommandEncoder(); if (on && P.hasWork) P.encodeUpdate(enc, e.sceneBG, e.rc.diceView); for (const f of e.extraPasses) f(enc, e.sceneBG, e.rc.diceView, () => undefined); dev.queue.submit([enc.finish()]); if (P) P.afterSubmit(); for (const f of e.afterSubmit) f(); };
-  for (let i = 1; i <= frames; i++) { for (const s of segs) g.sensors.askSegment(s.key, s.a, s.b); g.player.visibility = 0.05;
+  for (let i = 1; i <= frames; i++) { for (const s of segs) g.probe.querySegment(s.key, s.a, s.b); g.player.visibility = 0.05;
     e.render = full <= 1 || (from + i) % full === 1 ? real : light; try { window.__runFrames(1, 1 / fps); } finally { e.render = real; }
-    if ((from + i) % every === 0) { await dev.queue.onSubmittedWorkDone(); await yieldMacro(); await yieldMacro(); out.push({ t: (from + i) / fps, v: segs.map(s => { const x = g.sensors.read(s.key); return x === undefined ? null : +x.toFixed(3); }) }); } }
+    if ((from + i) % every === 0) { await dev.queue.onSubmittedWorkDone(); await yieldMacro(); await yieldMacro(); out.push({ t: (from + i) / fps, v: segs.map(s => { const x = g.probe.get(s.key)?.[0]; return x === undefined ? null : +x.toFixed(3); }) }); } }
   return { out, wide: W.wide, all: W.all, puffs: W.puffs, names: segs.map(s => s.name), fatal: (document.getElementById('fatal') || {}).textContent || '' };
 };
 const GRAB = async () => {

@@ -54,8 +54,8 @@ const picked = (arg('runs') || 'compound,rescue').split(',').filter(Boolean);
       }
       inp.buttons = 0; C.stop();
       const file = window.__replay.file('samefight'), reg = window.__knobs.registry();
-      return { fatal: document.getElementById('fatal')?.textContent || '', parts: C.parts, sam: C.sam, words: C.words, steps: C.steps, file, seed: g.dice ? g.dice.seed : null, exact: window.__sim.exact(), sense: reg.SENSE ? reg.SENSE.cpu : undefined,
-        gpuReads: g.sensors.stats.reads, fixed: g.seat.fixed, fixedCmds: g.seat.fixedCmds, checked: reg.CMDCHECK && reg.CMDCHECK.on, events: g.events.length - before.events, down: before.up - g.guards.filter(x => x.state !== 'dead').length, men: g.guards.length, time: g.time, playerUp: g.player.char.health > 0 };
+      return { fatal: document.getElementById('fatal')?.textContent || '', parts: C.parts, sam: C.sam, words: C.words, steps: C.steps, file, seed: g.dice ? g.dice.seed : null, exact: window.__sim.exact(),
+        fixed: g.seat.fixed, fixedCmds: g.seat.fixedCmds, checked: reg.CMDCHECK && reg.CMDCHECK.on, events: g.events.length - before.events, down: before.up - g.guards.filter(x => x.state !== 'dead').length, men: g.guards.length, time: g.time, playerUp: g.player.char.health > 0 };
     }, { script: SCRIPT, every: DRAW }).catch(e => ({ fatal: String(e && e.stack || e).slice(0, 600) }));
     await page.close();
     const secs = ((Date.now() - t0) / 1000).toFixed(0);
@@ -68,7 +68,6 @@ const picked = (arg('runs') || 'compound,rescue').split(',').filter(Boolean);
     if (!H || H.refuse) { line(false, `${name}: the tape was not re-run — ${H ? H.refuse : (r.stderr || r.stdout || '').trim().split('\n').slice(-3).join(' / ').slice(0, 500)}`); continue; }
     let k = 0; while (k < P.words.length && k < H.words.length && P.words[k] === H.words[k]) k++;
     const same = P.words.length > 0 && P.words.length === H.words.length && k === P.words.length;
-    if (H.ownSenses && H.ownSenses.on && H.ownSenses.differ) failed = true;
     line(same, `${name}: the tape re-run under bun is the page's fight to the bit — ${same ? `${P.words.length} words over ${P.steps} steps equal` : `${k} of ${P.words.length} words equal: the bits part in the half second ending at step ${(k + 1) * 30} (the re-run chained ${H.steps} steps of ${H.ticks})`} · held against the trace: ${H.compared} samples, worst ${Number(H.worst).toFixed(2)} m${H.drift ? `, drift ${H.drift}` : ''}${H.unjournaled ? ` · ${H.unjournaled} read(s) the page never made` : ''}${H.ownSenses && H.ownSenses.on ? ` · the re-run answered ${H.ownSenses.reads} reads itself, ${H.ownSenses.differ} not what the page's game had read` : ''}${H.warnings && H.warnings.length ? ` · ${H.warnings.length} note(s): ${H.warnings[0].slice(0, 160)}` : ''} (file: ${path})`);
     if (!same && P.parts && H.parts) {   // which kind of thing parted first, in the steps both sides kept apart (digest.ts rawBitsParts), and Sam's own numbers there
       const n = Math.min(P.parts.length, H.parts.length); let i = 0; const off = j => Object.keys(P.parts[j]).filter(q => P.parts[j][q] !== H.parts[j][q]);

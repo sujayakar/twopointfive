@@ -6,7 +6,6 @@
 // A run is FAIR only if it reached every name below (MET). THE WORDS: held to tools/qa/fixtures/pane-words.json, the recording of the page's stand (--record writes it, there only). The file also keeps the old stand's recording, the first, taken on the last tree where the TypeScript twin stood
 // with every call of this same run asked of both and none differing: a run on the old stand (TPS_PROFILE=frozen) is held to that one. A run of another length or seed (--n, --seed) has no recording and says so (UNPINNED); a plain run that is held to nothing FAILS.
 // PANES_BREAK=1 is the red path: what the module says is bent at every name, and every name's word must move against the same run played plain by a child (exit 1 = red, as it must be).
-process.env.TPS_CPUSENSE ??= '1';
 import { resolve } from 'path';
 import { standUp } from './headless.ts';
 import { Fold, hold } from './ident-pin.ts';

@@ -56,15 +56,15 @@ async function one(browser, name) {
   for (let k = 8; k <= STEPS; k += 8) {
     const r = await page.evaluate(async () => {
       const yieldM = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
-      const g = window.__game, S = g.sensors, c = g.player.char, h = c.bones.head, hd = c.headDir(), hl = Math.hypot(hd[0], hd[2]) || 1, f = [hd[0] / hl, 0, hd[2] / hl], s = [f[2], 0, -f[0]];
+      const g = window.__game, S = g.probe, c = g.player.char, h = c.bones.head, hd = c.headDir(), hl = Math.hypot(hd[0], hd[2]) || 1, f = [hd[0] / hl, 0, hd[2] / hl], s = [f[2], 0, -f[0]];
       const m = [h[0] + f[0] * 0.1, h[1] - 0.075, h[2] + f[2] * 0.1], P = (a, sd, up) => [m[0] + f[0] * a + s[0] * sd, m[1] + up, m[2] + f[2] * a + s[2] * sd];
       // the lines (asked every frame of the read, as the guards' are; answered a drawn frame or two on)
       const lines = { across15: [P(0.15, -0.4, -0.02), P(0.15, 0.4, -0.02)], across30: [P(0.3, -0.4, -0.04), P(0.3, 0.4, -0.04)], down20: [P(0.2, 0, 0.5), P(0.2, 0, -0.5)], eyeToChest: [[h[0], h[1], h[2]], [h[0] + f[0] * 3, h[1] - 0.35, h[2] + f[2] * 3]], alongIt: [P(-0.05, 0, 0), P(1.2, 0, -0.15)] };
       const least = {}; for (const key in lines) least[key] = 1;
       for (let i = 0; i < 8; i++) {
-        for (const key in lines) S.askSegment('bs_' + key, lines[key][0], lines[key][1]);
+        for (const key in lines) S.querySegment('bs_' + key, lines[key][0], lines[key][1]);
         window.__runFrames(1, 1 / 30); await window.__engine.device.queue.onSubmittedWorkDone(); await yieldM(); await yieldM();
-        for (const key in lines) { const v = S.read('bs_' + key); if (v !== undefined && v < least[key]) least[key] = +v.toFixed(3); }
+        for (const key in lines) { const v = S.get('bs_' + key)?.[0]; if (v !== undefined && v < least[key]) least[key] = +v.toFixed(3); }
       }
       const st = window.__smoke.stats, b = window.__snow.breathStats;
       return { breaths: b.breaths, steam: b.steam, steaming: b.steaming, puffRecords: b.records, why: b.why, pool: st.pool, fineBricks: st.fineAll, fineDrawn: st.fine, sources: window.__smoke.emitters.filter(e => e.kind === 'breath').length, emitters: st.emitters, refused: st.failedTotal, held: st.fineHeldTotal, light: least };

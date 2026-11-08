@@ -16,5 +16,5 @@ let word: number = RAW_BITS_SEED, n = 0; const words: string[] = [];
 const R = await rerun(F, { toN: ticks, each: (W, f) => { if (f < from) return; word = rawBits(W.game as never, word); if (n < DETAIL) { parts.push(rawBitsParts(W.game as never)); sam.push(samRow(W.game as never)); } if (++n % every === 0) words.push(word.toString(36)); } });
 if (R.refuse) { console.log('SAMEFIGHT ' + JSON.stringify({ refuse: R.refuse })); process.exit(3); }
 const rep = R.report!;
-console.log('SAMEFIGHT ' + JSON.stringify({ parts, sam, samNames: SAM_ROW, words, steps: n, ticks, compared: rep.compared, worst: rep.worst?.metres ?? 0, drift: rep.drift ? `${rep.drift.who} ${rep.drift.metres.toFixed(2)} m at step ${rep.drift.n}` : '', unjournaled: rep.unjournaled, ownSenses: rep.ownSenses, warnings: rep.warnings }));
+console.log('SAMEFIGHT ' + JSON.stringify({ parts, sam, samNames: SAM_ROW, words, steps: n, ticks, compared: rep.compared, worst: rep.worst?.metres ?? 0, drift: rep.drift ? `${rep.drift.who} ${rep.drift.metres.toFixed(2)} m at step ${rep.drift.n}` : '', unjournaled: rep.unjournaled, warnings: rep.warnings }));
 process.exit(0);
