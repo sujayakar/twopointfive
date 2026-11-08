@@ -346,55 +346,6 @@ pub fn tick_moved(g: &mut crate::game::Game) {
     }
 }
 
-/// where the team is, as far as the survivors know; never the team's true positions (laststand.ts teamKnown)
-pub fn team_known(g: &crate::game::Game, near: V3) -> crate::laststand::TeamKnown {
-    let known_secs = g.k.laststand.known_secs;
-    let defs = g.fight.defs.clone();
-    let mut pts: Vec<V3> = Vec::new();
-    let mut last: Option<V3> = None;
-    let mut lt = f64::NEG_INFINITY;
-    for &d in &defs {
-        if !alive(g, d) { continue; }
-        let gd = g.tab.roomfight_def[d].gd;
-        let pt = g.tab.roomfight_def[d].pt;
-        if let Some(kn) = crate::belief::eyes_fix_def(g, gd, d) {
-            if g.gd[gd].last_seen_t > -50.0 {
-                let seen = g.gd[gd].last_seen_t;
-                if g.time - seen < known_secs { pts.push(kn); }
-                if seen > lt { lt = seen; last = Some(kn); }
-            }
-        }
-        if let Some(at) = g.tab.roomfight_def[d].noise_at {
-            let heard = g.tab.roomfight_def[d].noise_t;
-            if g.time - heard < known_secs { pts.push(at); }
-            if heard > lt { lt = heard; last = Some(at); }
-        }
-    }
-    if last.is_none() {
-        let mut bd = f64::INFINITY;
-        for &d in &defs {
-            let gd = g.tab.roomfight_def[d].gd;
-            if g.gd[gd].state == crate::game::GuardState::Dead {
-                let p = man_pos(g, d);
-                let dist = flat(p, near);
-                if dist < bd { bd = dist; last = Some(p); }
-            }
-        }
-    }
-    TeamKnown { pts, last: v3::copy(last.unwrap_or(near)) }
-}
-
-/// a room the stand could be made in, as one of the men holding it stands (laststand.ts standRoom)
-pub fn stand_room(g: &mut crate::game::Game, d: RoomfightDefId, known: &[V3]) -> Option<crate::laststand::StandRoom> {
-    if g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Hold { return None; }
-    let room = g.tab.roomfight_def[d].room?;
-    let p = man_pos(g, d);
-    if g.tab.roomfight_room[room].entries.is_empty() || !in_room(g, Some(room), p) { return None; }
-    let id = where_(g, p).id.filter(|s| !s.is_empty())?;
-    if crate::digin::dig_in_entered(g, room) || known.iter().any(|&q| in_room(g, Some(room), q)) { return None; }
-    Some(StandRoom { room, id })
-}
-
 /// one of the fit asks the net who is still up; every other man up gets his beat to answer (laststand.ts startCheck)
 pub fn start_check(g: &mut crate::game::Game) {
     let men = up_defs(g);
