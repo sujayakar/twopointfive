@@ -70,7 +70,7 @@ const TIME = async (n) => {
 };
 // ---- in the page: the frame as it stands, read back as a PNG
 const STILL = async () => {
-  const e = window.__engine; e.render(window.__cam, window.__game.time, 1 / 60, false); const fr = await e.readbackFrame(); if (!fr) return { err: 'no frame' };
+  const e = window.__engine; e.render(window.__draw.cam, window.__game.time, 1 / 60, false); const fr = await e.readbackFrame(); if (!fr) return { err: 'no frame' };
   if (fr.bgra) for (let i = 0; i < fr.data.length; i += 4) { const b = fr.data[i]; fr.data[i] = fr.data[i + 2]; fr.data[i + 2] = b; }
   let sum = 0; for (let i = 0; i < fr.data.length; i += 4) { sum += fr.data[i] + fr.data[i + 1] + fr.data[i + 2]; fr.data[i + 3] = 255; }
   const c2 = document.createElement('canvas'); c2.width = fr.w; c2.height = fr.h; c2.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(fr.data.buffer), fr.w, fr.h), 0, 0);
@@ -91,7 +91,7 @@ const up = () => new Promise(res => { const r = http.get({ host: 'localhost', po
 async function boot(browser, level, query, dir) {
   const R = { url: `http://localhost:${PORT}/?look&${query}${SCENE}&paused&mute&quality=${QUALITY}`, errors: [], gpuErrors: [] };
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
-  await page.addInitScript(() => { window.__testVisible = true; }); await page.addInitScript(COUNT);
+  await page.addInitScript(() => { }); await page.addInitScript(COUNT);
   page.on('pageerror', x => R.errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 500)));
   page.on('console', m => { const x = m.text(); if (m.type() === 'error' && !/Failed to load resource/.test(x)) (/WebGPU|GPU device|pipeline|shader/i.test(x) ? R.gpuErrors : R.errors).push(x.slice(0, 400)); });
   page.on('response', r => { if (r.status() >= 400 && !/favicon/.test(r.url())) R.errors.push(`http ${r.status()}: ${r.url()}`); });
@@ -104,7 +104,7 @@ async function boot(browser, level, query, dir) {
     R.readySecs = +((Date.now() - t) / 1000).toFixed(1); Object.assign(R, ready); if (ready.fatal) R.errors.push('fatal: ' + ready.fatal);
     log(level, `ready in ${R.readySecs} s`);
     // the start card away, the smoke solver off (a step of it is seconds on this adapter), the mission staged
-    await page.evaluate(() => { window.__menu?.close(); if (window.__smoke?.params) window.__smoke.params.enabled = false; });
+    await page.evaluate(() => { window.__draw.run(0); if (window.__draw.smoke?.params) window.__draw.smoke.params.enabled = false; });
     const threw = await page.evaluate(PLAY, 2); if (threw) R.errors.push('play threw: ' + threw);
     await page.evaluate(TIME, 2);   // (the first frames after a boot fill the histories: not timed)
     Object.assign(R, await page.evaluate(() => { const e = window.__engine; return { internal: [e.width, e.height], out: [e.outWidth, e.outHeight], scale: +e.settings.renderScale.toFixed(3), quality: window.__quality?.label ?? null }; }));   // (the sizes as the first drawn frames left them: at ready the canvas has none yet)

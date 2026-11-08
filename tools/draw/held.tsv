@@ -192,7 +192,6 @@ holder	tools/qa/rerun.ts
 holder	tools/qa/response-check.ts
 holder	tools/qa/rollback-check.ts
 holder	tools/qa/rust-check.ts
-holder	tools/qa/samefight-rerun.ts
 holder	tools/qa/samestart-check.ts
 holder	tools/qa/scenario-level-probes.ts
 holder	tools/qa/scenario-picker-probes.ts
