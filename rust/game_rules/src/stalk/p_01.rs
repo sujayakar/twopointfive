@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A new row, every key from birth. (stalk.ts fresh)
 pub fn fresh() -> crate::stalk::St {
-    St { on: None, grab: None, t: -1.0, wait: Some(false), armed: Some(false), stick: None, orbit_r: None, orbit_t: None, orbit_ask: None, broke: None }
+    St { on: None, grab: None, t: -1.0, wait: Some(false), armed: Some(false), orbit_r: None, orbit_t: None, orbit_ask: None, broke: None }
 }
 
 /// This seat's row, made if it is not there. (stalk.ts stateOf)
@@ -241,7 +241,7 @@ pub fn broke_duck(g: &mut crate::game::Game, pl: PlayerId) {
 }
 
 /// Once a frame from updatePlayer, before his keys become a step: what the stalk asks of his feet, or None = his own. (stalk.ts stalkStep)
-pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys: bool, stick: Option<crate::stalk::StalkStick>, keys: Option<crate::stalk::StalkKeys>) -> Option<crate::stalk::StalkMove> {
+pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys: bool, keys: Option<crate::stalk::StalkKeys>) -> Option<crate::stalk::StalkMove> {
     let me = g.player;
     let now = g.time;
     let r = state_of(g);
@@ -275,7 +275,6 @@ pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys:
             let r = g.m.stalk.state.get_mut(me).unwrap();
             r.on = Some(gd);
             r.armed = Some(false);
-            r.stick = stick.map(|k| [k.x, k.y]);
             g.stats.stalk.begun += 1;
         }
     }
