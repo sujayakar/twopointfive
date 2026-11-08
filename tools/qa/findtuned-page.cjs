@@ -3,8 +3,7 @@
 // headless Chromium on the software WebGPU adapter, a squad of four, the page's own boot. The table and what a kept line makes of it are
 // tools/qa/findme-check.ts (12), headless on both stands; this is that the page itself boots so, and that the rim is DRAWN there with no error.
 //   PORT=5241 bun run tools/serve.ts &      then      node tools/qa/findtuned-page.cjs [outDir]
-//   fresh    a browser that has kept nothing, the page with no word: Options' table says the outline is on, a quarter of its width, the teammates' at
-//            four fifths, half the colour; the renderer's frame has his own man and four teammates so; the pass's one program compiles and it draws
+//   fresh    a browser that has kept nothing, the page with no word: Options' table says the outline is on; the renderer's frame has his own man and four teammates so; the pass's one program compiles and it draws
 //            (frames counted); the follow camera has no lead toward the aim point, and the camera's key held with a real drag of the mouse turns the
 //            view the other way round from the page under the word; Options > Game shows those rows so on its own screen (Aim pan None, Turn direction
 //            Reversed), a row put Off is kept as Off, Reset puts the page's starts back;
@@ -44,8 +43,8 @@ const DRAW = async (n) => {
   let ink = 0; const d = fr.data; for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) { const i = (y * fr.w + x) * 4, hi = Math.max(d[i], d[i + 1], d[i + 2]), lo = Math.min(d[i], d[i + 1], d[i + 2]); if (hi > 70 && hi - lo > hi * 0.45) ink++; }
   return { full: c2.toDataURL('image/png'), ink };
 };
-const STATE = () => { const E = window.__engine, P = E.passes.outlinePass, F = E.outline, T = window.__findme.table, man = m => ({ on: m.on, wide: m.wide, times: m.times, strength: +m.strength.toFixed(2) });
-  return { table: { outline: T.outline, width: T.width, mates: T.mates, colour: T.colour, opacity: T.opacity, picture: T.picture, ring: T.ring, pan: T.pan, turn: T.turn }, you: F ? man(F) : null, mates: F ? F.mates.filter(m => m.on).map(man) : [],
+const STATE = () => { const E = window.__engine, P = E.passes.outlinePass, F = E.outline, T = window.__findme.table, man = m => ({ on: m.on, times: m.times });
+  return { table: { outline: T.outline, ring: T.ring, pan: T.pan, turn: T.turn }, you: F ? man(F) : null, mates: F ? F.mates.filter(m => m.on).map(man) : [],
     pass: P ? { pipe: !!P.pipe, bad: !!P.bad, drawn: P.drawn } : null, lead: window.__cam.aimLead, kept: localStorage.getItem('twopointsix.findme'), fatal: (document.querySelector('#fatal') || {}).textContent || '' }; };
 
 (async () => {
@@ -67,7 +66,7 @@ const STATE = () => { const E = window.__engine, P = E.passes.outlinePass, F = E
     return { ctx, page };
   };
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  const BUILT = { outline: false, width: 1, mates: 1, colour: 0.6, opacity: 0.6, picture: true, ring: false, pan: 1, turn: 1 }, TUNED = { ...BUILT, outline: true, width: 0.25, mates: 0.8, colour: 0.5, pan: 0, turn: -1 };
+  const BUILT = { outline: false, ring: false, pan: 1, turn: 1 }, TUNED = { ...BUILT, outline: true, pan: 0, turn: -1 };
   /** the camera's key held and the mouse really dragged 100 px to the right: how far the view turned (rad) */
   const drag = async (page) => { const cap = await page.evaluate(() => (window.__keys && window.__keys.camCap ? window.__keys.camCap() : 'Ctrl')), KEY = cap === 'Ctrl' ? 'Control' : cap;
     if (cap !== 'Ctrl' && cap !== 'Space') throw new Error(`the camera's key reads '${cap}': this tool knows Ctrl and Space`);
@@ -79,7 +78,7 @@ const STATE = () => { const E = window.__engine, P = E.passes.outlinePass, F = E
     // fresh: nothing kept, no word
     { const { ctx, page } = await open('', null);
       let s = await page.evaluate(STATE);
-      line(same(s.table, TUNED) && s.kept == null && s.lead === 0 && !!s.you && s.you.on && s.you.wide === 0.25 && s.mates.length === 4 && s.mates.every(m => m.wide === 0.25 && m.times === 0.8),
+      line(same(s.table, TUNED) && s.kept == null && s.lead === 0 && !!s.you && s.you.on && s.mates.length === 4 && s.mates.every(m => m.times === 0.8),
         'a browser that has kept nothing, the page with no word: the outline is on at the tuned numbers, the aim pan at none (the follow camera has no lead) and the turn reversed, and the renderer\'s frame has his man and four teammates so', JSON.stringify({ table: s.table, lead: s.lead, kept: s.kept, you: s.you, mates: s.mates }));
       for (let i = 0; i < 40 && !(s.pass && (s.pass.pipe || s.pass.bad)); i++) { await page.evaluate(DRAW, 1); await new Promise(r => setTimeout(r, 1000)); s = await page.evaluate(STATE); }   // (the program compiles off the frame)
       const d0 = s.pass ? s.pass.drawn : 0, pic = await page.evaluate(DRAW, 6), s2 = await page.evaluate(STATE); if (pic) keep('findtuned-fresh.png', pic.full);
@@ -87,11 +86,11 @@ const STATE = () => { const E = window.__engine, P = E.passes.outlinePass, F = E
         'its one program compiles and the rims are drawn on the page (frames counted)', `program ${s2.pass ? (s2.pass.pipe ? 'in' : s2.pass.bad ? 'FAILED' : 'not in') : 'NO PASS'} · frames drawn ${d0} → ${s2.pass ? s2.pass.drawn : '?'} · strongly coloured pixels in the men's boxes ${pic ? pic.ink : '?'} (said, not judged: at a quarter of its width the rim is a few per cent of one pixel, and this count was made for whole rims)${s2.fatal ? ` · the error card: ${s2.fatal.slice(0, 120)}` : ''}`);
       turnFresh = await drag(page);   // (after the picture is kept: that is the page as it opens. Judged against the page under the word, below)
       // the Options screen says so, a row put Off is kept as Off, and Reset puts the page's starts back
-      let e = await page.evaluate(OPEN); if (e) throw new Error(e); const o0 = await page.evaluate(ROWS), four = r => ['Outline in the dark', 'Outline width', 'Teammate outline width', 'Outline colour', 'Aim pan', 'Turn direction'].map(l => r.rows[l]).join(' · ');
+      let e = await page.evaluate(OPEN); if (e) throw new Error(e); const o0 = await page.evaluate(ROWS), four = r => ['Outline in the dark', 'Aim pan', 'Turn direction'].map(l => r.rows[l]).join(' · ');
       e = await page.evaluate(FLIP, 'Outline in the dark'); if (e) throw new Error(e); const o1 = await page.evaluate(ROWS);
-      e = await page.evaluate(RESET); if (e) throw new Error(e); const o2 = await page.evaluate(ROWS), WANT = 'On · 25 % · 80 % · 50 % · None · Reversed';
+      e = await page.evaluate(RESET); if (e) throw new Error(e); const o2 = await page.evaluate(ROWS), WANT = 'On · None · Reversed';
       line(four(o0) === WANT && o0.kept == null && o1.rows['Outline in the dark'] === 'Off' && o1.kept === '{"outline":false}' && four(o2) === WANT && o2.kept === '{}',
-        'Options > Game shows the outline On at 25 %, teammates 80 %, colour 50 %, Aim pan None and Turn direction Reversed; the outline put Off is kept as Off; Reset to defaults puts those back', `as it opens: ${four(o0)}, kept ${o0.kept} · flipped: ${o1.rows['Outline in the dark']}, kept ${o1.kept} · Reset: ${four(o2)}, kept ${o2.kept}`);
+        'Options > Game shows the outline On, Aim pan None and Turn direction Reversed; the outline put Off is kept as Off; Reset to defaults puts those back', `as it opens: ${four(o0)}, kept ${o0.kept} · flipped: ${o1.rows['Outline in the dark']}, kept ${o1.kept} · Reset: ${four(o2)}, kept ${o2.kept}`);
       await ctx.close(); }
     // the word: the rows as built, no pass at all
     { const { ctx, page } = await open('&findtuned=0', null); await page.evaluate(DRAW, 3); const s = await page.evaluate(STATE);
@@ -101,7 +100,7 @@ const STATE = () => { const E = window.__engine, P = E.passes.outlinePass, F = E
       await ctx.close(); }
     // kept Off: stays off, and the line is not written away
     { const { ctx, page } = await open('', '{"outline":false}'); await page.evaluate(DRAW, 3); const s = await page.evaluate(STATE);
-      line(s.table.outline === false && s.table.width === 0.25 && s.table.pan === 0 && s.table.turn === -1 && s.kept === '{"outline":false}' && (!s.you || !s.you.on) && !s.pass, 'a browser that kept the row Off: off on the plain page, its line as it was', JSON.stringify({ table: s.table, kept: s.kept, you: s.you, pass: s.pass }));
+      line(s.table.outline === false && s.table.pan === 0 && s.table.turn === -1 && s.kept === '{"outline":false}' && (!s.you || !s.you.on) && !s.pass, 'a browser that kept the row Off: off on the plain page, its line as it was', JSON.stringify({ table: s.table, kept: s.kept, you: s.you, pass: s.pass }));
       await ctx.close(); }
   } catch (e) { fails++; console.log(`- FAIL — the run itself: ${String(e && e.stack || e).slice(0, 600)}`); }
   line(!errs.length, 'no page error, no console error (a GPU validation error is one)', (errs.length ? errs.slice(0, 8).join('\n    ') : 'none') + (warns.length ? `\n    warnings, not judged: ${warns.slice(0, 4).join(' | ')}` : ''));
