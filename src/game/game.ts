@@ -251,7 +251,7 @@ export interface Interactable { kind: 'light' | 'door' | 'body' | 'guard' | 'obj
    *  is the other such row, known by its verb) */
   past?: boolean;
   /** a MARKER whose every row the mission's frame kept back this frame (rails.ts `rows`; player.ts buildInteractables): the key does nothing on the
-   *  thing though it has rows — an empty tap in reach of it says so (interact.ts emptyWord) */
+   *  thing though it has rows — an empty tap in reach of it says so (`view.empty`) */
   framed?: boolean; }
 /** Every verb a row can be (player.ts buildInteractables words them; game.ts updateDoors / player.ts updateHold / mission.ts act on Game.act): a shut door's
  *  push / ease (silent, sustained), an open one's pull, a lock's pick (sustained) / kick / rattle (the handle tried, crouched), a keyed lock's unlock; the grab
@@ -1667,6 +1667,7 @@ export class Game {
     solid: (a, b) => this.askHost ? this.askHost.solid(a, b) : this.col.solidBlocked(a, b),
     ray: (o, d, max) => this.askHost ? this.askHost.ray(o, d, max) : this.col.raycast(o, d, max),
     hear: (from, to) => this.askHost ? this.askHost.hear(from, to) : this.col.sound.propagate(from, to),
+    way: (a, b, maxIter) => this.askHost ? this.askHost.way(a, b, maxIter) : this.col.nav.findPath(a, b, maxIter) as Vec3[] | null,
     together: f => this.askHost ? f() : this.col.window(f),
   };
   askHost: WorldAsk | null = null;

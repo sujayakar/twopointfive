@@ -232,6 +232,10 @@ pub struct Menu {
     pub men_side: Option<f64>,
     pub side_key: String,
     pub flat: Option<bool>,
+    /// each row's words, read beside its why (orders/words.rs): no part of the wire
+    pub words: Vec<String>,
+    /// the first wedge's word, the quick key's there (the same)
+    pub quick: Option<String>,
 }
 impl Menu {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -252,6 +256,8 @@ impl Menu {
             men_side: None,
             side_key: String::new(),
             flat: None,
+            words: Vec::new(),
+            quick: None,
         }
     }
 }

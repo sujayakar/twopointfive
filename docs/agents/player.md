@@ -1208,6 +1208,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   rest, writes `--railshift` on it: down past the ring if the window has the room, else up over it (index.html: the line's transform, eased). The
   line stays readable: it is often what says which wedge to press. The older `ringover` (the status column faint under the squad's ring) is as it
   was. Page-only: no headless check sees it; read on the software adapter by the boxes' places, never seen on a GPU, no picture taken.
+- (Since 2026-11-08 `emptyThing`, `emptyWord` and `handRingView` below are `rust/game_rules/src/interact`'s and `view/rings.rs`'s: the HUD reads `view.empty` and `view.hand`.)
 - **A tap that finds no row beside a thing names the thing and why** (`HANDRING.near`, handring.ts; interact.ts `emptyThing` / `emptyWord`; on and off
   with `on`, as `empty` is: `?handring=0`, `TPS_HANDRING=1`, a `FROZEN_HOLDS` row, a recording from before the key replays with it off). The
   maintainer, 10-22, on the stealth tutorial with the back door open at his elbow: "nothing in reach to close the door?". THE CAUSE was not reach:

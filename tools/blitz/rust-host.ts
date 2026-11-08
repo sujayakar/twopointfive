@@ -472,7 +472,8 @@ export class RustHost {
     const ask = <T>(f: () => T): T => { if (this.askedAt !== this.stamp && !this.inStep && !this.quietOn && this.busy === 0) { this.askedAt = this.stamp; this.scanFlush(); } try { return f(); } catch (e) { throw new Error(`a question of the Rust game's boxes panicked: ${this.F.panicText() || String(e)}`); } };   /* (a tool's writes are sent once a step: a walk a question would be a walk a line) */
     return { blocked: (a: any, b: any) => ask(() => X.face_line(this.h, 0, a[0], a[1], a[2], b[0], b[1], b[2]) !== 0), solid: (a: any, b: any) => ask(() => X.face_line(this.h, 1, a[0], a[1], a[2], b[0], b[1], b[2]) !== 0),
       ray: (o: any, d: any, max: number) => ask(() => { if (!X.face_ray(this.h, o[0], o[1], o[2], d[0], d[1], d[2], max)) return null; const r = out(5); return { t: r[0], n: [r[1], r[2], r[3]] }; }),
-      hear: (s: any, d: any) => ask(() => { X.face_hear(this.h, s[0], s[1], s[2], d[0], d[1], d[2]); return this.B.heardOf(out(10)); }), together: (f: any) => f() }; }
+      hear: (s: any, d: any) => ask(() => { X.face_hear(this.h, s[0], s[1], s[2], d[0], d[1], d[2]); return this.B.heardOf(out(10)); }),
+      way: (a: any, b: any, maxIter: number) => ask(() => { const n = X.face_way(this.h, a[0], a[2], b[0], b[2], maxIter); if (n < 0) return null; const r = out(n * 2), w: any[] = []; for (let i = 0; i < n; i++) w.push([r[i * 2], 0, r[i * 2 + 1]]); return w; }), together: (f: any) => f() }; }
   private askedAt = -1;
   /** how the mission ended, off the record the Rust game's own tick latches (`face_verdict`: null while it is played). For a host with no puppet, and
    *  for holding the puppet's own verdict to it. `lines` is the whole record as the module writes it (game::verdict::verdict_lines). Hung as `verdictNow` */

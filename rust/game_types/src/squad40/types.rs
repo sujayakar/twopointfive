@@ -215,46 +215,6 @@ impl StateShown {
 }
 impl Default for StateShown { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Squad40Plan, src/game/squad40.ts:246)
-#[derive(Clone, Debug)]
-pub struct Squad40Plan {
-    pub gd: GuardId,
-    pub from: V3,
-    pub points: Vec<V3>,
-    pub land: V3,
-    pub kind: crate::squad40::Squad40PlanKind,
-    pub preview: Option<bool>,
-    pub walk: Option<()>,
-}
-impl Squad40Plan {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Squad40Plan {
-            gd: GuardId(0),
-            from: [0.0; 3],
-            points: Vec::new(),
-            land: [0.0; 3],
-            kind: crate::squad40::Squad40PlanKind::Shell,
-            preview: None,
-            walk: None,
-        }
-    }
-}
-impl Default for Squad40Plan { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum Squad40PlanKind {
-    Shell,
-}
-impl Squad40PlanKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Squad40PlanKind::Shell => "shell",
-        }
-    }
-}
-
 /// (TypeScript: inline at src/game/squad40.ts:90 SQUAD40_LOG, src/game/squad40.ts:90)
 #[derive(Clone, Debug)]
 pub struct Squad40ModSQUAD40LOGItem {

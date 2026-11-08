@@ -95,7 +95,7 @@ import { stackRoomFix, stackViewFix, stackRoomBookKeep, stackRoomHas, stackViewO
 import { holdFireOrder, holdFireSilent } from './holdfire';   // (called / read inside give / tick only)
 import { AUTOPILOT, AUTOPILOT_STATS, autoHint, autoPick, type AutoPick } from './autopilot';   // (read inside input(), quickLine() and show() only)
 import { whyWords } from './squadnet';   // (read inside quickLine() and quickFor() only)
-import { CMDRING, CMDRING_STATS, ringHoldSecs, ringSeats, flatSeats, type RingView, type RingState } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
+import { CMDRING, CMDRING_STATS, ringHoldSecs, ringSeats, flatSeats, type RingState } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
 import { handsBusy } from './interact';   // (read inside ringInput only: his hands on a list, a press or a running verb)
 import './teampace';   // (read inside update only)
 import './noshove';   // (read inside update only)
@@ -520,7 +520,7 @@ export class SquadOrders {
   /** what was ordered when (the probes read it; capped) */
   log: { t: number; order: string; who: string[]; target: string; /** the quick key gave it with the autopilot on (autopilot.ts: its plan is drawn a little longer) */ auto?: boolean; /** the word's key sent it off a laid plan (planlay.ts) */ laid?: boolean }[] = [];
   /** the order being given is the SEAT's own, at once (the menu's pick, the quick key) — not a scenario's, a tool's or the plan's (planlay.ts strikes its men off a laid plan) */
-  /** the squad's own changes of plan, newest last: who, when (autopilot.ts AUTOPILOT.replan — PICTURE ONLY: floorplan.ts draws these men for a moment as it
+  /** the squad's own changes of plan, newest last: who, when (autopilot.ts AUTOPILOT.replan — PICTURE ONLY: the plan (`view.plan`) draws these men for a moment as it
    *  does an order just given; nothing of the game reads it, it is no order and starts no clock) */
   shows: { t: number; who: string[] }[] = [];
   /** a module that changed these men's plan with nobody asking says so (doortools.ts haltAt): drawn for a moment, with the autopilot's switch on */
@@ -894,21 +894,6 @@ export class SquadOrders {
   /** … for the open menu's first wedge: the quick key's words there — for a ring of a part of the squad (Menu.part) what THOSE men would do, as its
    *  first wedge gives it (quickFor) */
   private menuQuick(M: Menu): string | null { return M.part ? autoHint(this.g, M.target, autoPick(this.g, M.target, false, M.men)) : this.quickWords(M.target); }   // (quickFor asks the pick whether or not the quick key's switch is on: so do its words)
-  /** What the ring shows this frame (null: no ring): where it is, the lit wedge, whose colour it wears, and the wedge on each digit — the first page's
-   *  first in the quick key's own words. ui/cmdring.ts draws it; the simulation never reads it (ringKeys is what it reads). */
-  ringView(): RingView | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.ringView', this, []); if (__r !== RUST_PASS) return __r as any; } }
-    const R = this.cmdRing, M = this.menu; if (!R || !M) return null;
-    const mt = this.menuTarget()!, wedges: { key: number; text: string; off: boolean; opens: boolean }[] = [];
-    const seat = this.seats(M, R);
-    for (let d = 1; d <= CMDRING.wedges; d++) {
-      const i = seat.row[d], row = i >= 0 ? M.rows[i] : null;
-      if (d === seat.more) wedges.push({ key: d, text: 'more', off: false, opens: true });
-      else if (M.page === null && !R.more && d === 1) { const text = this.menuQuick(M); if (text) wedges.push({ key: 1, text, off: false, opens: false }); }   // (no words: the quick key would give nothing here, and no wedge is drawn)
-      else if (row) wedges.push({ key: d, text: this.labelOf(row, mt), off: !!M.why[i], opens: !!row.opens });
-    }
-    const t = M.target, what = t.kind === 'none' ? (t.man ? t.man.callsign : '') : this.hoverWords(t), who = this.whoTag().tag;   // (who it goes to, and what it was opened on: the menu's own mark's words)
-    return { x: R.ax, y: R.ay, zoom: R.z, lit: R.lit, tone: this.toneOf(M.men), caption: what && what !== who ? `${who} → ${what}` : who, wedges };
-  }
 
   /** a man's order goes: and with it the pin the fight seam put on him */
   private drop(gd: Guard) { this.asg.delete(gd); if (this.ours.delete(gd)) gd.pinned = false; }
@@ -1739,12 +1724,6 @@ export class SquadOrders {
   // ------------------------------------------------------------ the HUD
   /** who the next order goes to, as the panel names it: GOLD / RED / BLUE for a squad in pairs ('all' for the one pair), or one man's callsign (`one`) — the
    *  man the menu was opened on, else the standing `who` */
-  private whoTag(): { tag: string; one: boolean } {
-    if (this.menu?.part) return { tag: this.menu.men.length ? this.whoWords(this.menu.men) : 'nobody', one: true };   // (CMDRING.goalRing: the part of the squad this ring is for, by name — whoever the standing choice is)
-    const t = this.menu?.target, man = t?.kind === 'none' && t.man ? t.man : typeof this.who === 'number' ? this.squad()[this.who] : null;
-    if (man) return { tag: man.callsign, one: true };
-    return { tag: this.who === 'all' ? (this.paired ? 'GOLD' : 'all') : String(this.who).toUpperCase(), one: false };
-  }
   /** a target in the panel's words: what an order from the menu would be about */
   private hoverWords(t: OrderTarget | null): string { return !t ? '' : t.kind === 'door' ? doorWords(t.door) : t.kind === 'floor' ? (t.thing ? t.thing.name : t.wall ? 'that wall' : 'that spot') : t.kind === 'foe' ? t.foe.callsign || 'that man' : t.man ? `${t.man.callsign} alone` : 'the squad itself'; }
   /** What the quick key would give on what the cursor is on, for the corner's line on that key (ui/overlay.ts): a question of the cursor, which the view of a

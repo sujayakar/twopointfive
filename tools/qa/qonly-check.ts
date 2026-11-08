@@ -91,7 +91,7 @@ export async function qonlyCheck(): Promise<boolean> {
     const stackDef = O.defs.find((d: any) => d.id === 'stack'), men = () => O.men('all'); let D: any = null;
     for (const d of [...g.doors.list].sort((a: any, b: any) => dist(a.frameCentre, g.player.char.pos) - dist(b.frameCentre, g.player.char.pos))) { const t = O.targetAt(d.frameCentre); if (t.kind !== 'door' || t.door !== d) continue; if (!O.whyNot(stackDef, O.forMen(t, men()), men()) && R.aimOf(d)) { D = d; break; } }
     if (!D) { line(false, 'a door to open the ring on', 'none the cursor finds'); return false; }
-    const view = () => O.ringView(), wedges = () => (view()?.wedges ?? []).map((w: any) => `${w.key}:${w.text.split(' · ')[0]}${w.opens ? ' ▸' : ''}${w.off ? ' (off)' : ''}`).join(' | ');
+    const view = () => O.g.view.ring, wedges = () => (view()?.wedges ?? []).map((w: any) => `${w.key}:${w.text.split(' · ')[0]}${w.opens ? ' ▸' : ''}${w.off ? ' (off)' : ''}`).join(' | ');
     const wedge = (k: number) => (view()?.wedges ?? []).find((w: any) => w.key === k), rmb = () => R.click(4);
     // a row of the check's own on the door tools' page, on a letter: with the page's four digits and its frag row that is one row more than five wedges hold
     let probed = 0; O.register({ id: 'qonlyProbe', page: TOOLS_PAGE, hotKey: 'KeyJ', label: 'probe row', targets: ['door'], free: true, issue: () => { probed++; } });
