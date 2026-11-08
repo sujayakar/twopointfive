@@ -882,7 +882,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `tools/qa/unplayed-page.cjs` on the software adapter at 1280 x 720 (classes, order, computed opacity, the list's rule; no page
   error) and stills taken with no GPU at all; the page script also holds the open group's cards to the SAME BOXES with the switch on and off. Never seen on a GPU, nobody has played with it.
 - **Every run ends on a verdict** (`src/game/verdict.ts`, `Game.verdict`, ticked in `Game.step` after the scenarios; `VERDICT {on, winSecs, lossSecs}` in the knob registry,
-  ON, `?noverdict` = the game and the end card as they were; READS ONLY — on and off digest the same). A TRY starts at the par clock's rule (the first order logged, Sam
+  settled on; READS ONLY — it moves no run's digest). A TRY starts at the par clock's rule (the first order logged, Sam
   1 m off his mark, a round or a throw); `ended()` names each mission kind's end (CLEAR / RESCUED / OUT · DOWN / WIPED / LOST / GOT AWAY /
   FAILED); `result: RunVerdict` = word, clock, a row per man (path, where he fell, the defenders he dropped), the way a WON run was won — `Approach` doors / walls / dark /
   quiet, one a run, the rarest it earned: nobody ever hunted the team (the stealth game: no alarm, nothing spotted either) = quiet, the mains cut before it was found =
@@ -912,12 +912,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (every row of the table drawn: the Tutorial group draws nine today) and a visit that names a cut row (`?loadout=<id>` draws that one row that once; a group
   with eight drawn rows and a cut one would draw nine). `startpage-look.cjs` asks its own count of eight on the real page with the cut rows off. RUN: the three
   probes ALL PASS on both stands; `UNPLAYED_BREAK=1` still fails `unplayed`. Nothing here was seen on a GPU.
-- **A Training lesson ends on the verdict card too, graded as a lesson** (same switch as the verdict: `VERDICT`, `?noverdict`): lessons 5 and 6 are room clears, so their end is the
+- **A run's page is nobody's try** (2026-11-08; `main.ts offBooks`, `host/runpage.ts ownPage`: `benchrun`, `pricerun`, `bench`, `pricelevels` on the address; no switch, a rule of the page). The fight on such
+  an address files no try and no par best, opens no end card, for a win or for Sam down, and writes no `run` on the cloud. The address is what it goes by, so a reloaded scene (its record dropped) and a refused
+  `?bench` (no session store) play on with no card either. It stands where `?noverdict` once did, a word that stopped doing anything when `VERDICT.on` settled, so that for a while a benchmark's
+  won scene froze behind a card and filed a try. CHECK: `tools/qa/runbooks-page.cjs`, the kill house on the page by `__killGuard`, seed 1: won on a plain address (card, try and time filed), won on all three other addresses, and Sam shot down on a plain and a scene's address.
+  Without the rule (the head before it) every run-page line of card and books is red, but the par best on a loss, which files no time. NOT RUN: `bench-page.cjs` (a whole run is hours); the cloud line, read only (the check boots `cloud=0`); the stealth game's own end. Never seen on a GPU.
+- **A Training lesson ends on the verdict card too, graded as a lesson** (`VERDICT`): lessons 5 and 6 are room clears, so their end is the
   room clear's `'taken'` / `'wiped'` and the card comes up a beat later like any squad mission's (before the verdict a room clear had no card at all: only the row 'structure taken
   — shift+enter stages it again'); lessons 1 to 4 and 7 end at the exfil on the stealth mission's own card. On a lesson's card NOTHING IS GRADED OR KEPT: no ways pips, no tries
   ticks, no record under `twopointsix.verdicts` (`main.ts vBooks`: the running row's `group === 'training'` → `KeptNote.lesson`; `verdictCard.ts verdictHead` draws the word and the
   clock only; `verdictLine` leaves the approach out). A lesson WON leads with `Next: <the next Training row's title> ›` (`src/ui/verdictNext.ts nextLessonOf`, wired in
-  `menu.ts debrief`: the first button, primary, the focus; the row's own page load by `missionHref`; none after lesson 7, on a loss, or under `?noverdict`; since 2026-10-26 it is the next lesson the lists draw, a row cut from the list being skipped: `missions.md`, the two missions off the tutorial's list). The room can fall
+  `menu.ts debrief`: the first button, primary, the focus; the row's own page load by `missionHref`; none after lesson 7 or on a loss; since 2026-10-26 it is the next lesson the lists draw, a row cut from the list being skipped: `missions.md`, the two missions off the tutorial's list). The room can fall
   before the lesson's last step is done (lesson 5's scripted run: the card was due 5.7 s before the last line went by): the card wins, as the row already did. QA:
   `bun run tools/qa/verdict-lessons.ts [name …]` (the scripted player of `lesson-run.ts` plays each of the seven to its end, input only; the run must end WON with a card due;
   ~1.5 min; `VERDICT_BREAK=1` must fail), `node tools/qa/verdict-look.cjs <dir> lesson` (the real page, software adapter: lesson 6 taken, the card up by itself, no pips, no
@@ -1940,7 +1945,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   floor up, bodies found, kills, doors kicked, called in, checkpoint loads, the civilians' saw / told) stand untoned — a hit taken and a civilian
   hurt keep their red; the copied line opens on the clock; `mission.ts`'s two end lines ('exfiltrated', 'mission complete') read `grade` and stop
   at the clock. The numbers, the timeline and the map stay. A row that leans quiet or either way, the plain night, and every squad kind (its end
-  card never showed the rating; its 'run so far' and its card under `?noverdict` still do) are as they were. Reads only: no run's digest differs.
+  card never showed the rating; its 'run so far' still does) are as they were. Reads only: no run's digest differs.
   ON in the page (`?loudcard=0` = the rating on every card it stood on); off in the module and on the frozen stand (`TPS_LOUDCARD=1`); a
   `FROZEN_HOLDS` row; a recording carries it (`VERDICT` is the last name of `JOURNAL_KNOBS`: `mission.ts`'s two end lines are worded by it), and
   one from before the key, or the table, replays with it off (`journal.ts applyKnobs`). CHECK `probes.ts debrief-loud` (the
