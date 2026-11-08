@@ -332,3 +332,9 @@ export function readBriefView(b: Uint8Array): BriefView { const I = new In(b), r
 export interface StartView { rows: StartRow[]; named: string; pick: string; playing: boolean; first: string }
 function readStartViewIn(I: In): StartView { return { rows: I.list(() => readStartRowIn(I)), named: I.str(), pick: I.str(), playing: I.bool(), first: I.str() }; }
 export function readStartView(b: Uint8Array): StartView { const I = new In(b), r = readStartViewIn(I); if (I.p !== b.length) throw new Error(`the view: StartView is ${b.length} bytes and ${I.p} were read`); return r; }
+export type Approach = 'doors' | 'quiet' | 'walls' | 'dark';
+const ApproachWords: readonly Approach[] = ['doors', 'quiet', 'walls', 'dark'];
+function readApproachIn(I: In): Approach { return I.word(ApproachWords, 'Approach'); }
+export interface RunView { begun: boolean; over: boolean; void: boolean; lesson: boolean; mission: string; level: string; won: boolean; way: Approach | null; clean: boolean; secs: number; course: string; par: number | null }
+function readRunViewIn(I: In): RunView { return { begun: I.bool(), over: I.bool(), void: I.bool(), lesson: I.bool(), mission: I.str(), level: I.str(), won: I.bool(), way: I.bool() ? readApproachIn(I) : null, clean: I.bool(), secs: I.float64(), course: I.str(), par: I.bool() ? I.float64() : null }; }
+export function readRunView(b: Uint8Array): RunView { const I = new In(b), r = readRunViewIn(I); if (I.p !== b.length) throw new Error(`the view: RunView is ${b.length} bytes and ${I.p} were read`); return r; }
