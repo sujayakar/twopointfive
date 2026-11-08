@@ -22,7 +22,7 @@ class Played {
   /** another game, or the same one put back: its ticks are run for the first time again */
   forget(): void { this.by.clear(); }
 }
-const LOOK = 1, CONFINED = 2, RIDES_VELOCITY = 4;
+const LOOK = 1, CONFINED = 2, RIDES_VELOCITY = 4, HELD = 8;
 const LATTICES = [undefined, 'fine', 'coarse'] as const, SHAPE_LINE = 1, SHAPE_BODY = 2, SHAPE_OUT = 4;
 const said = (v: number): number | undefined => v === v ? v : undefined;
 
@@ -73,7 +73,7 @@ export class DrawEvents {
     const vel: Vec3 = a < 0 ? [0, 0, 0] : this.v3(a + AirPush.vel);
     const e: SmokeEmitter = { pos: this.v3(o + SmokeSource.pos), dir: a < 0 ? [0, 1, 0] : this.v3(a + AirPush.dir), speed: Math.hypot(vel[0], vel[1], vel[2]), radius: f[o + SmokeSource.radius], density: f[o + SmokeSource.density], temperature: f[o + SmokeSource.heat], ttl: f[o + SmokeSource.ttl], age: f[o + SmokeSource.age],
       kind: SMOKE_KINDS[u[o + SmokeSource.kind]] as SmokeEmitter['kind'], lattice: LATTICES[u[o + SmokeSource.lattice]], attack: said(f[o + SmokeSource.attack]), jitter: said(f[o + SmokeSource.jitter]), prio: said(f[o + SmokeSource.prio]), minVoxels: said(f[o + SmokeSource.minCells]), tint: this.v3said(o + SmokeSource.tint),
-      look: (says & LOOK) !== 0 || undefined, confined: (says & CONFINED) !== 0 || undefined, trackVel: (says & RIDES_VELOCITY) !== 0 || undefined, mode: a >= 0 && u[a + AirPush.shape] === SHAPE_OUT ? 'burst' : undefined, push: a < 0 ? undefined : said(f[a + AirPush.hard]), expand: a < 0 ? undefined : said(f[a + AirPush.expand]) };
+      look: (says & LOOK) !== 0 || undefined, held: (says & HELD) !== 0 || undefined, confined: (says & CONFINED) !== 0 || undefined, trackVel: (says & RIDES_VELOCITY) !== 0 || undefined, mode: a >= 0 && u[a + AirPush.shape] === SHAPE_OUT ? 'burst' : undefined, push: a < 0 ? undefined : said(f[a + AirPush.hard]), expand: a < 0 ? undefined : said(f[a + AirPush.expand]) };
     if (key) e.track = () => this.anchors.get(key) ?? null;
     this.smoke.emit(e);
   }

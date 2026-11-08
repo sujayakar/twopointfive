@@ -1,11 +1,11 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 734806498;
+export const LAYOUT = 1899554;
 /** what a host may ask for: what is made together is asked for together */
-export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, all = 16383 }
+export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
-export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, rims = 30, fires = 31, fireTable = 32, decals = 33, decalKeys = 34, decalHead = 35, winds = 36, gusts = 37, heat = 38, air = 39, windRoofs = 40, roofs = 41, ceilings = 42, doorBoxes = 43, openPanes = 44, resets = 45, traffic = 46, dust = 47, feet = 48, things = 49, blasts = 50, snowWords = 51, count = 52 }
+export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, rims = 30, fires = 31, fireTable = 32, decals = 33, decalKeys = 34, decalHead = 35, winds = 36, gusts = 37, heat = 38, air = 39, windRoofs = 40, roofs = 41, ceilings = 42, doorBoxes = 43, openPanes = 44, resets = 45, traffic = 46, dust = 47, feet = 48, things = 49, blasts = 50, snowWords = 51, smoke = 52, smokeAt = 53, smokeBricks = 54, count = 55 }
 
 /** the fog: one row */
 export const enum Fog {
@@ -941,6 +941,28 @@ export const enum SnowWord {
   w = 0,
   /** words a row */
   row = 1,
+}
+
+/** the grid's plan: one row, on a level that has one and knows its ways */
+export const enum SmokeHead {
+  /** u32: how many times the rows were made */
+  made = 0,
+  /** u32: the plan in bricks, along x and along z */
+  wide = 1,
+  /** u32 */
+  deep = 2,
+  /** words a row */
+  row = 3,
+}
+
+/** a brick that stands: four half-metre cells along x, then along z, then eight up */
+export const enum SmokeBrick {
+  /** f32 × 128: how much smoke is in each cell, in the solver's own unit as it is drawn */
+  rho = 0,
+  /** u32 × 32: a byte a cell: 1 = open toward +x · 2 = up · 4 = toward +z · 8 = asked */
+  open = 128,
+  /** words a row */
+  row = 160,
 }
 
 /** what a box may say it is made of, by its number in Rust */
