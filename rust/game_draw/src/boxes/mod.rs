@@ -225,7 +225,7 @@ impl Boxes {
     pub fn cut(&mut self) { self.have = 0; self.drawn.clear(); self.glass.cut(); }
 
     /// A TICK HAS RUN: the statics that changed are packed again, and the frame's own boxes are packed where the tick left them (`again`: the tick already taken)
-    pub fn take(&mut self, g: &Game, night: bool, again: bool) {
+    pub fn take(&mut self, g: &Game, night: bool, again: bool, watched: &[(Box, bool)]) {
         let w = &g.engine.world;
         let (st, all) = (&w.statics, &g.tab.boxes);
         if self.marks.texel == 0.0 { self.marks.texel = self.look.texel; }
@@ -281,16 +281,15 @@ impl Boxes {
         // (a viewer's own picture: the list before the fog cut it, or the infrared lines of a tube the run's picture was not)
         let raw = &g.fog_picture.raw_list;
         let bare = self.look.bared && g.fog_picture.viewer;
-        let mut list: Vec<AnyBoxId> = if bare { raw.clone() } else { w.dynamics.clone() };
-        if !bare && night && g.fog_picture.viewer { for &id in raw { if ir.has(id) && !list.contains(&id) { list.push(id); } } }
+        let mut list: Vec<(AnyBoxId, &Box)> = (if bare { raw } else { &w.dynamics }).iter().filter(|id| night || !ir.has(**id)).map(|&id| (id, &g.tab[id])).collect();
+        // (a box of no list has a number no box of the game has)
+        list.extend(watched.iter().enumerate().filter(|(_, (_, line))| night || !line).map(|(k, (b, _))| (AnyBoxId::Frame(game::ids::FrameBoxId(u32::MAX - 1 - k as u32)), b)));
         list.truncate(MAX - n);
         let total = n + list.len();
         self.geo.resize(total, Geo::ZERO);
         self.mat.resize(total, Mat::ZERO);
         self.cut.resize(total, Cut::ZERO);
-        for id in list {
-            if !night && ir.has(id) { continue; }
-            let b = &g.tab[id];
+        for (id, b) in list {
             let (c, h) = match b.dc { Some(c) => (c, b.dh.unwrap_or(b.h)), None => (b.c, b.h) };
             let i = n + self.own.len();
             pack::pack(b, c, h, true, &self.look, &mut self.marks, &mut self.geo[i], &mut self.mat[i], &mut self.cut[i]);
