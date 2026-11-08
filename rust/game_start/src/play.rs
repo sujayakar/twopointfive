@@ -303,6 +303,17 @@ impl Play {
     pub fn objective(&self) -> String { self.view().mission.map_or(String::new(), |m| m.text) }
     /// WHAT A HUD IS TOLD of the game as it stands (`view::tick_view`: the record the page draws, asked of the game and never kept by it)
     pub fn view(&self) -> game::view::TickView { self.view_of(0) }
+    /// WHAT A HUD IS TOLD OF ITS CURSOR with the cursor on a point of the world, through the host's camera as it stands (None: the point is not in the picture)
+    pub fn pointed_at(&self, seat: usize, at: [f64; 3]) -> Option<game::view::CursorView> {
+        let (w, h) = (self.host.canvas.client_width, self.host.canvas.client_height);
+        let (sx, sy, front) = game::camera::follow_camera_project(&self.g, self.host.cam, at, w, h, None, None);
+        if front && sx >= 0.0 && sx < w && sy >= 0.0 && sy < h { Some(self.pointed(seat, [sx, sy])) } else { None }
+    }
+    /// …with the cursor at a place of the picture
+    pub fn pointed(&self, seat: usize, mouse: [f64; 2]) -> game::view::CursorView {
+        let now = game::view::HostNow { mouse, ..game::view::host_now(&self.g, self.host.input, self.host.cam, self.host.canvas) };
+        game::view::cursor_view(&self.g, &game::seats::seat(&self.g, self.g.seats[seat]), &now)
+    }
     /// …and what another player's HUD is told (0 = the first)
     pub fn view_of(&self, seat: usize) -> game::view::TickView { game::view::tick_view(&self.g, &game::seats::seat(&self.g, self.g.seats[seat])) }
     /// the lines on the game's log now, oldest first (it keeps the last five)

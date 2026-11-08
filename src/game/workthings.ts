@@ -23,8 +23,8 @@
 // A man the orders stop short of it (orders.ts brings a stuck man's mark to his feet and calls him arrived) is NOT at it: he holds where he stopped, the thing
 // unworked — the test is his feet on the stand cell, squared to the face, with a clear line to it.
 //
-// WHAT COUNTS AS THE CURSOR BEING ON IT: the breaker's own panel under the ray (workOn), or a point within WORK.pickM of its face on ITS side of the wall it
-// hangs on (workNear) — the wall's top, its far face and the next room's floor are not the breaker. Sam's own feet are Sam; a door leaf under the cursor is the door.
+// WHAT COUNTS AS THE CURSOR BEING ON IT: the breaker's own panel under the ray (rust/game_rules/src/orders target_under, `work_on`), or a point within WORK.pickM of its face on ITS side of the wall it
+// hangs on (target_at, `work_near`) — the wall's top, its far face and the next room's floor are not the breaker. Sam's own feet are Sam; a door leaf under the cursor is the door.
 //
 // ONE THING THIS HAS TO PUT RIGHT, behind its own switch: lighting.ts hands the 'go and check the breaker' errand to the nearest calm man on the guard list
 // and lets ANY man standing by the panel re-arm it — a teammate is on that list. With WORK.on neither is a teammate's: he throws a breaker when told to.
@@ -41,7 +41,6 @@ import { Vec3, wrapAngle } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Character, DoorPush } from './character';
 import type { OrderDef, OrderTarget, SquadOrders, Assignment } from './orders';
-import type { Box } from '../scene/boxes';
 import { DRIVE_SECS, DRIVE_REACH } from './consts';
 import { drivePulled, rackDist } from './mission';
 import { quietWords, holderStand } from './quiet';
@@ -155,13 +154,6 @@ export class WorkThings {
    *  has taken is not ticked: his hand comes off by itself) */
   private hands = new Map<Character, { push: DoorPush; until: number; seen: number; verb: WorkVerb; t0: number; need: number }>();
   private cache: { key: string; t: number; list: WorkThing[] } | null = null;
-  /** a question of the picture's (the cursor's pick under a HUD read — orders.ts hover): the list it reads is kept in the ASKER'S store for its second, the
-   *  game's own kept list is put back after, and no record is dropped — what the game keeps and drops is the simulation's own doing, the same drawn or not */
-  private asking = false;
-  askAside<T>(own: { c?: object }, fn: () => T): T {
-    const was = this.asking, mine = this.cache; this.asking = true; this.cache = (own.c as typeof mine | undefined) ?? null;
-    try { return fn(); } finally { own.c = this.cache ?? undefined; this.cache = mine; this.asking = was; }
-  }
   log: { t: number; who: string; what: string }[] = [];
 
   constructor(private g: Game) {
@@ -182,7 +174,7 @@ export class WorkThings {
     const B = g.level.breaker, bo = g.blackout, M = g.level.mission, drive = g.mission.stage === 'drive' && !g.quietUtility && !g.puppet, W = drive ? quietWords(g) : null;
     const key = `${B ? B.pos.join(',') : ''}|${B && !(bo.active && bo.permanent)}|${drive && M?.rack ? M.rack.front.join(',') : ''}|${W ? W.holder : ''}|${g.defuse?.key ?? ''}`;
     if (this.cache && this.cache.key === key && g.time >= this.cache.t && g.time - this.cache.t < 1) return this.cache.list;
-    if (!this.asking) this.prune();
+    this.prune();
     const list: WorkThing[] = [];
     if (B && !(bo.active && bo.permanent)) { const { face, n } = panelFace(g); list.push({ kind: 'breaker', face, n, stand: standFor(g, B.pos, n), name: 'the breaker' }); }
     if (drive && M?.rack) {   // the mission's thing: the rack's LED face looks +z on the plain night; a quiet mission's holder faces wherever a man can stand, in its room
@@ -217,7 +209,7 @@ export class WorkThings {
     if (bo.active && bo.permanent) return "it's scrap.";
     return verb === 'breakerOff' ? (bo.active ? "it's already dark." : null) : bo.active ? null : "it's already on.";
   }
-  /** orders.ts targetAt: the thing a point is ON, as a target (the floor a man stands on to work it, carrying the thing), with how far the point is off it —
+  /** the thing a point is ON, as a target (the floor a man stands on to work it, carrying the thing), with how far the point is off it —
    *  within its pick distance and on its own side of whatever it is fixed to: the far face of the breaker's wall, the wall's top and the floor of the next
    *  room are not the breaker */
   near(at: Vec3): { d: number; target: OrderTarget } | null {
@@ -228,13 +220,6 @@ export class WorkThings {
       bd = d; best = th;
     }
     return best ? { d: bd, target: { kind: 'floor', at: best.stand ?? [best.face[0], 0, best.face[2]], thing: best } } : null;
-  }
-  /** orders.ts targetUnder: the thing whose own box the cursor's ray landed on (the breaker's panel and its lamp: drawn 1.35 m up a wall, where the ray's
-   *  point is the thing's whatever the angle) */
-  on(box: Box | undefined): OrderTarget | null {
-    const B = this.g.level.breaker, W = this.g.engine.world; if (!box || !B) return null;
-    if (!B.boxes.some(i => W.statics[i] === box)) return null;
-    const th = this.things().find(x => x.kind === 'breaker'); return th ? { kind: 'floor', at: th.stand ?? [th.face[0], 0, th.face[2]], thing: th } : null;
   }
   /** orders.ts rowsFor: a thing's menu is the floor's with its own order where 'move there' was (and whatever stood in for it) */
   rows(t: OrderTarget, page: string | null, rows: OrderDef[]): OrderDef[] {
@@ -346,10 +331,8 @@ export class WorkThings {
   summary(): string { const th = this.things(), n = [...this.jobs.keys()].filter(gd => this.working(gd)).length; return !WORK.on ? 'off' : `${th.map(x => `${x.name}${x.stand ? '' : ' (no place to stand)'}`).join(' · ') || 'nothing to work'} · ${n} at work · given ${WORK_STATS.given} done ${WORK_STATS.done} moot ${WORK_STATS.moot}`; }
 }
 
-/** orders.ts targetAt: a thing a teammate can work near a point (null: none, or the switch is off) */
+/** planlay.ts: a thing a teammate can work near a point (null: none, or the switch is off) */
 export function workNear(g: Game, at: Vec3): { d: number; target: OrderTarget } | null { return WORK.on && g.work ? g.work.near(at) : null; }
-/** orders.ts targetUnder: the thing whose own box the cursor is on (null: none, or the switch is off) */
-export function workOn(g: Game, box: Box | undefined): OrderTarget | null { return WORK.on && g.work ? g.work.on(box) : null; }
 /** orders.ts rowsFor */
 export function workRows(g: Game, t: OrderTarget, page: string | null, rows: OrderDef[]): OrderDef[] { return WORK.on && g.work ? g.work.rows(t, page, rows) : rows; }
 /** game.ts handsOnDoors */

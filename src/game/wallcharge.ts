@@ -38,7 +38,7 @@
 // walls' own tune.wallBreak, never under a show) at chaos > 0. Off — either of them — the rows are not registered, no target carries a wall, Sam's list has
 // no wall row, input() and tick() return on their first line: the build is its base. Nothing here draws from Math.random.
 //
-// SEAMS (one line each, in files this module does not own): orders.ts targetAt (wallTarget: a floor target under a wall carries it), rowsFor (wallRows),
+// SEAMS (one line each, in files this module does not own): rust/game_rules/src/orders target_at (a floor target under a wall carries it), rowsFor (wallRows),
 // hoverWords ('that wall') and OrderTarget's floor variant (`wall?`); game.ts the field, its construction after the door tools, input() ahead of the door
 // tools' and tick() after theirs, Interactable's kind 'wall' and Verb 'charge'; player.ts buildInteractables (wallChargeRows) and INTERACT_PRIORITY.wall.
 // NOT here: a charge on a door (doortools.ts, and the doors goal's own blast), the frag (the gear goal), what either side makes of a hole afterwards.
@@ -309,13 +309,6 @@ export function skyFaces(g: Game, index: number): number { { const __s = RUST_SU
     for (const off of SKY_OFF) for (const t of SKY_ALONG) { const d = sg * (ht + off), p: Vec3 = alongX ? [b.c[0] + t * hu, 1.5, b.c[2] + d] : [b.c[0] + d, 1.5, b.c[2] + t * hu]; if (!g.col.solidBlocked(p, [p[0], SKY_TOP, p[2]], 0.02)) sky++; }
     if (sky * 2 > SKY_OFF.length * SKY_ALONG.length) n++; }
   memo.set(index, n); return n;
-}
-/** `fn` asked aside (a question of the picture's — orders.ts hover): what it adds to the game's memo of sky faces is taken out again, so a wall is in it only
- *  once the simulation has asked of it (the answer is the same: the asker pays for it again) */
-export function skyAside<T>(g: Game, fn: () => T): T {
-  const memo = skyMemo.get(g.col), n = memo ? memo.size : 0;
-  try { return fn(); }
-  finally { const now = skyMemo.get(g.col); if (!memo) { if (now) skyMemo.delete(g.col); } else if (now === memo && memo.size > n) { let i = 0; for (const k of [...memo.keys()]) if (i++ >= n) memo.delete(k); } }
 }
 /** IS STRUCTURE STATIC `index` AN OUTER WALL A CHARGE CUTS (WALLCHARGE.outer; wallAt has already found it a full-height unrotated wall in a wall's stuff):
  *  not steel, no thicker than outerThick, at least outerMinLen long, something the engine can take on (wallbreak.ts adoptable: it lights nothing, carries no
