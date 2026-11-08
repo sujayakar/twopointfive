@@ -26,8 +26,7 @@ export interface GeneratorTrace { groups: string[]; }
  *  cartons, cabinets, papers, whiteboards, the vending machines, racks…; `demote` = FACE RELIEF that used to be modelled as thin sub-part boxes (drawer pulls,
  *  LED nubs, the vending machines' glowing front slabs, clock faces and hands, screen sheets, door-gap strips, deck boards…) is removed and drawn as markings
  *  on the parent face instead — never a free-standing object (papers, notes, books, trays keep their boxes: the sheet's edge is what makes it a thing on the
- *  table). Both default ON; both off = the office exactly as it was before the lane (levels/office-relief.json, ?level=relief — the ray-cost A/B's 'before'
- *  and the identity reference). `texel` = the base lattice the bitmaps are generated for (the page's world-resolution strip: 2 / 2.5 / 4 cm). */
+ *  table). Both default ON. `texel` = the base lattice the bitmaps are generated for (the page's world-resolution strip: 2 / 2.5 / 4 cm). */
 export interface GeneratorOpts { markings?: boolean; demote?: boolean; texel?: number;
   /** the office's lived tier (the hand pass's drawn-only things, groups `lived.<room>` at the tail): laid or left out. Absent = as the level is loaded here
    *  (scene/lived.ts LIVED.on), so the generator and the loaded file are the same Level on either stand; the exporter asks for it, since the FILE carries it */

@@ -5,7 +5,6 @@
 //   bun run tools/level-export.ts            write levels/office.json (+ print counts, sizes, digest)
 //   bun run tools/level-export.ts --check    write nothing; exit 1 if levels/office.json is missing or differs from what the generator gives now
 //   bun run tools/level-export.ts --out path write elsewhere
-//   bun run tools/level-export.ts --relief   write levels/office-relief.json: the office WITHOUT the markings lane (no markings, face relief kept as boxes = main's level; ?level=relief)
 //   bun run tools/level-export.ts --texel 0.02   write levels/office-t20.json: the marking bitmaps generated for a 2 cm base texel (the review page's world-resolution strip; ?levelFile=office-t20.json)
 import { resolve } from 'node:path';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -21,14 +20,13 @@ const { FINISHES, BUILDING, GRASS_EDGE } = await import(`${ROOT}/src/game/floor.
 
 const argv = process.argv.slice(2);
 const CHECK = argv.includes('--check');
-const RELIEF = argv.includes('--relief');
 const TEXEL = argv.includes('--texel') ? parseFloat(argv[argv.indexOf('--texel') + 1]) : undefined;
-const defaultOut = RELIEF ? 'levels/office-relief.json' : TEXEL !== undefined ? `levels/office-t${Math.round(TEXEL * 1000)}.json` : 'levels/office.json';
+const defaultOut = TEXEL !== undefined ? `levels/office-t${Math.round(TEXEL * 1000)}.json` : 'levels/office.json';
 const OUT = resolve(ROOT, argv.includes('--out') ? argv[argv.indexOf('--out') + 1] : defaultOut);
 
 // 1. the procedural level, with the editor group of every box recorded on the side
 const trace = { groups: [] as string[] };
-const level = buildOfficeProcedural(trace, RELIEF ? { markings: false, demote: false } : TEXEL !== undefined ? { texel: TEXEL, lived: true } : { lived: true });   // (lived: the FILE carries the office's lived tier, whatever stand this tool runs on)
+const level = buildOfficeProcedural(trace, TEXEL !== undefined ? { texel: TEXEL, lived: true } : { lived: true });   // (lived: the FILE carries the office's lived tier, whatever stand this tool runs on)
 if (trace.groups.length !== level.boxes.length) throw new Error(`trace: ${trace.groups.length} groups for ${level.boxes.length} boxes`);
 if (TEXEL !== undefined) level.markTexel = TEXEL;   // (the Level's own: levelToData writes it into the file's meta, the loader hands it back. How kept the office is goes the same way: `level.kept`, set by the builder)
 

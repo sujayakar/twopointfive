@@ -1,6 +1,6 @@
 // GWOT-YARD: the GWOT kit's SHOWROOM (src/scene/gwotKit.ts) — NOT a level to play for its own sake and not in the missions list. A walled family compound with
 // a two-room guest house, a rendered store, a yard and the road outside, with EVERY piece of the kit stood in it once, so the kit can be exported, linted,
-// loaded and looked at (?levelFile=gwot-yard.json&solo). It is also the kit's worked example: a map thread reads this file next to the guide
+// looked at once. It has no file of its own now. It is the kit's worked example: a map thread reads this file next to the guide
 // (rebuild/play-style-levels/look/read-first.md) and copies the calls.
 //
 //        x 8  10             15.5        20                    32
