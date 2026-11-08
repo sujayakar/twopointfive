@@ -35,7 +35,7 @@ export class Overlay implements HudLike {
   private lightFill = document.querySelector('#meters .light .fill') as HTMLElement; private lightNum = document.querySelector('#meters .light .num') as HTMLElement;
   private soundFill = document.querySelector('#meters .sound .fill') as HTMLElement; private soundNum = document.querySelector('#meters .sound .num') as HTMLElement; private soundPeak = document.querySelector('#meters .sound .peak') as HTMLElement;
   private soundLab = document.querySelector('#meters .sound .lab') as HTMLElement; private floorKey = '';   // 'SOUND · carpet': what your feet are on, dim, after the label (view.marks.floor)
-  private peak = 0; private peakT = 0;
+  private peak = 0; private peakT = 0; private drawnT = 0;
   private log = document.getElementById('log')!; private logKey = '';
   private captionEl = document.getElementById('caption')!; private captionKey = '';
   private tlEl = document.getElementById('timeline')!; private tlKey = ''; private tlFill: HTMLElement | null = null;
@@ -131,6 +131,7 @@ export class Overlay implements HudLike {
   }
   update(src: HudSource, cam: HudCam, canvas: HTMLCanvasElement) {
     const tz = textZoom(), w = canvas.clientWidth / tz, h = canvas.clientHeight / tz;   // (the layer's own pixels: ui/textsize.ts)
+    const dt = Math.max(0, Math.min(0.1, src.time - this.drawnT)); this.drawnT = src.time;   // (what is eased goes by the picture's clock: the same at any rate of frames)
     // WHAT THE GAME MARKS (game.view.marks): which men, in which glyphs and which colour; where a man stands is what the picture drew. A viewer's own picture with the fog lifted
     // (bared: the engine replay's switch) shows every man the fog hides, and none of the fog's own marks.
     const V = src.view, M = V.marks, A = V.aim, bare = src.page.bared, I = V.interact, K = V.look;
@@ -203,7 +204,7 @@ export class Overlay implements HudLike {
       if (this.ringKey !== -1) { this.ringKey = -1; this.ring.style.display = 'none'; }
       if (R.cone) {   // the ring IS his cone: its diameter the cone's width at the target's distance (spread × range over the metres a CSS pixel covers at the look-at depth), 10‥RING_PX px, eased; brighter and thinner as the track settles
         const want = aimRingPx(R.cone.spread, R.cone.range, cam, h, RING_PX);
-        this.aimPx += (want - this.aimPx) * 0.3;
+        this.aimPx += (want - this.aimPx) * (1 - Math.pow(0.7, dt * 60));
         const st = this.reticle.style, d = `${this.aimPx.toFixed(1)}px`; st.width = d; st.height = d;
         st.opacity = (lerp(0.42, 0.95, R.cone.track) * (R.trail ? 0.7 : 1)).toFixed(2); st.borderWidth = R.cone.track > 0.97 ? '1px' : '1.5px';
         styled = true;
@@ -223,7 +224,7 @@ export class Overlay implements HudLike {
     const n = Math.min(1, M.noise);
     this.soundFill.style.width = `${(n * 100).toFixed(0)}%`; this.soundNum.textContent = `${(n * 100) | 0}`;
     if (this.peakT > src.time) { this.peakT = src.time; this.peak = n; }   // (a checkpoint loaded put the clock back: the held peak was the abandoned future's)
-    if (n >= this.peak) { this.peak = n; this.peakT = src.time; } else if (src.time - this.peakT > 1.2) this.peak = Math.max(n, this.peak - 0.02);
+    if (n >= this.peak) { this.peak = n; this.peakT = src.time; } else if (src.time - this.peakT > 1.2) this.peak = Math.max(n, this.peak - 1.2 * dt);
     this.soundPeak.style.left = `calc(${(this.peak * 100).toFixed(0)}% - 1px)`; this.soundPeak.style.opacity = this.peak > 0.02 ? '0.85' : '0';
     const fl = M.floor ?? ''; if (fl !== this.floorKey) { this.floorKey = fl; this.soundLab.innerHTML = !fl ? 'SOUND' : `SOUND <i style="opacity:.5;font-style:normal">· ${FLOOR[fl].label.toUpperCase()}</i>`; }   // rebuilt only when he crosses onto another finish
     // log
