@@ -111,10 +111,6 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         p.n += 1.0;
         p.time = time;
     }
-    let focus = match g.engine.view_focus {
-        Some(f) => f,
-        None => { let h = crate::seats::host_man(g); let c = g.pl[h].ch; g.ch[c].pos }
-    };
     let drawing = crate::smoke_types::smoke_system_like_drawing(g) && g.engine.settings.fire_smoke;
     let mut fires = 0.0;
     let mut lit = 0.0;
@@ -195,14 +191,13 @@ pub fn update_fire(g: &mut Game, dt: f64) {
             s.n += 1.0;
         }
         let crate::fire::WindAt { wv, wl, wind } = wind_at(g, mouth.pos);
-        let d = m::hyp2(mouth.pos[0] - focus[0], mouth.pos[2] - focus[2]);
         let fit = fits(g);
-        // the embers: for a fire near the view, a steady few off the flame and a throw with each crack
-        let (height, ember_r, embers, ember_life, ember_crack) = (g.k.fire.height, g.k.fire.ember_r, g.k.fire.embers, g.k.fire.ember_life, g.k.fire.ember_crack);
+        // the embers: a steady few off the flame and a throw with each crack, of every fire on every host; the picture leaves out what is far from where it looks
+        let (height, embers, ember_life, ember_crack) = (g.k.fire.height, g.k.fire.embers, g.k.fire.ember_life, g.k.fire.ember_crack);
         let flame_h = height * g.k.fire.look.tall;
-        let px = moved && embers > 0.0 && d < ember_r;
+        let px = moved && embers > 0.0;
         let fl_smoke = fire_look_smoke();
-        if moved && snow_lift && d < ember_r {
+        if moved && snow_lift {
             // the falling snow: this fire's hot air
             let w = fl_smoke.snow;
             let a = axis_at(g, flame_h * 0.5, wind);
@@ -261,9 +256,9 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                 crate::audio_iface::game_audio_like_play(g, "fireBed", Some(mouth.pos), Some(bed_gain), None);
             }
         }
-        // the smoke: a short source on the solver, filed afresh every `every` s while the fire is near the view
+        // the smoke: a short source on the solver, filed afresh every `every` s
         let b = g.k.fire.smoke;
-        if moved && drawing && d < b.view_r {
+        if moved && drawing {
             let slot = m::floor(time / b.every);
             let p = book(g);
             let n = p.n;
@@ -327,7 +322,6 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                 }
             }
         }
-        // the flame as gas: a short source on the solver's fine lattice at the coals, filed afresh every `every` s while the fire is near the view
     }
     if moved {
         if let Some(stir) = g.engine.host_books.as_mut().and_then(|b| b.fire.as_mut()).and_then(|p| p.stir.as_mut()) {

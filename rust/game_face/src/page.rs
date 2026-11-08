@@ -146,8 +146,6 @@ pub unsafe extern "C" fn face_hand(h: u32, seat: usize, p: *const f64, pn: usize
         // (the host's own camera, as the hand has it: what a rule asks of the host's view, and where one writes to it)
         if let (true, Some(c)) = (x.g.seats[seat] == game::game::game_host_seat(&x.g), x.g.host_cam) {
             x.drawn.desired = v[56];
-            // (where the view looks: what is gathered round it, gusts and embers, follows it and not the man)
-            x.g.engine.view_focus = Some(cmd.view.target);
             let (c, v) = (&mut x.g.tab.camera[c], &cmd.view);
             (c.target, c.pos, c.forward) = (v.target, v.pos, v.forward);
             (c.yaw, c.pitch, c.distance, c.desired_distance, c.fov, c.aspect) = (v.yaw, v.pitch, v.distance, x.drawn.desired, v.fov, v.aspect);
