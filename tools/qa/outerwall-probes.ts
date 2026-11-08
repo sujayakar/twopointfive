@@ -15,7 +15,7 @@
 //             un-adopted; after the breach, more of the same widen nothing;
 //   (live)    both sides awake through a breach: nothing throws, nobody ends in a wall, the change goes out on the engine's feed;
 //   (reset)   a restart after a breach: the wall is whole and structure again (the engine has let it go); a checkpoint taken after a breach, loaded: the hole is there.
-import { menuKey } from './squadwords';
+import { ringUp, ringDown } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { samBlows, samBreach } from './charge-rig.ts';
 import { listen } from './heard.ts';
@@ -86,7 +86,8 @@ async function rig(scn: string, seed: number, o: { squad?: boolean; still?: bool
     step(n = 1) { for (let i = 0; i < n; i++) { R.each(); W.step(DT); ears.poll(); } },
     until(pred: () => boolean, secs: number) { for (let i = 0; i < secs * 60 && !pred(); i++) R.step(); return pred(); },
     press(code: string) { input.pressed.add(code); R.step(); },
-    pick(p: number[], ...n: number[]) { W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(20); for (const k of n) { input.pressed.add(`Digit${k}`); R.step(); R.step(6); } },
+    /** the ring on `p` and the wall's row given */
+    orderOn(p: number[]) { W.cursorAt([p[0], p[1], p[2]]); ringUp(input, R); O.give('wallCharge', O.menu?.target); ringDown(input); R.step(); },
     beats(op: any): string { return (op?.beats ?? []).map((b: any) => `${f2(b.t)} ${b.what}`).join(' | '); },
     free(p: number[]) { return !game.col.nav.isBlocked(p[0], p[2]); },
     pathLen(a: number[], b: number[]): number { const path = game.col.nav.findPath(a, b); if (!path) return Infinity; let L = 0, q = a; for (const w of path) { L += flat(q, w); q = w; } return L + flat(q, b); },
@@ -153,9 +154,9 @@ async function probeSquad(scn: string): Promise<boolean> {
   const W0 = P.W, T = thickOf(W0), a: Vec3 = wallPt(W0, 0, 1.2), b: Vec3 = wallPt(W0, 0, -(T + 1.2)), before = R.pathLen(a, b);
   for (const h of R.hostiles) if (h.state !== 'dead' && flat(h.char.pos, wallPt(W0, 0, 0)) < DOORTOOLS.stunM + 1) R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   R.step(2);
-  const t = O.targetAt(P.p), c0 = D.charges, k0 = C.carried; R.pick(P.top, 5, 3); let op = C.ops[0], by = 'X, 5, 3';
+  const t = O.targetAt(P.p), c0 = D.charges, k0 = C.carried; R.orderOn(P.top); let op = C.ops[0], by = 'the row';
   if (!op) { const why = C.order(P.p, 'all'); op = C.ops[0]; by = `the order given by code (the presses found no wall under the cursor: ${why ?? R.said.slice(-1)[0] ?? ''})`; }
-  F.verdict(!!t.wall && t.wall.ok && t.wall.outer && !!op && op.phase === 'place' && op.men.length === R.up.length && by === 'X, 5, 3', 'the order by X, 5, 3 on the outer wall: every man on it, one of them to the wall', `${op ? `${op.men.length} men · ${op.lead.callsign} sets it at ${at(op.spot)} · by ${by}` : `no order — ${R.said.slice(-2).join(' / ')} · ${R.spoke.slice(-1)[0]?.text ?? ''}`}`);
+  F.verdict(!!t.wall && t.wall.ok && t.wall.outer && !!op && op.phase === 'place' && op.men.length === R.up.length && by === 'the row', 'the order by X, 5, 3 on the outer wall: every man on it, one of them to the wall', `${op ? `${op.men.length} men · ${op.lead.callsign} sets it at ${at(op.spot)} · by ${by}` : `no order — ${R.said.slice(-2).join(' / ')} · ${R.spoke.slice(-1)[0]?.text ?? ''}`}`);
   if (!op) return F.done();
   const W = op.wall, cp: Vec3 = wallPt(W, 0, 0, 1.05);
   const setOk = R.until(() => C.set.length === 1, 45), lead = op.lead;

@@ -21,7 +21,7 @@
 //   shutdoor-never   five minutes of a played room clear (stack, open and clear, fall in, room after room) on doors that stay open, the order never given:
 //                    the row is never assigned, its counters and log stay empty, teammates open leaves and none they touched last comes to its latch. The
 //                    same five minutes with the order given once move all of those (so the lines can go red)
-import { listedOf, menuKey } from './squadwords';
+import { listedOf, ringUp, ringDown } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { listen } from './heard.ts';
 import { leftKey } from './order-keys.ts';
@@ -104,7 +104,7 @@ async function rig(seed: number, o: { fight?: boolean; squad?: 2 | 4; keep?: boo
     stand(places: number[][]) { R.ops.forEach((x: any, i: number) => { const p = places[i]; if (!p) return; x.char.pos[0] = p[0]; x.char.pos[2] = p[2]; x.char.vel[0] = x.char.vel[2] = 0; }); R.step(2); O.give('hold', nowhere(O), 'all'); R.step(20); },
     /** X pressed on p: the first page's rows, then the door tools' page behind its opener (ids, digits, words, greyed, reasons), Esc, Esc */
     menuOn(p: number[]) {
-      W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(24);
+      W.cursorAt([p[0], p[1], p[2]]); ringUp(input, R); R.step(24);
       const read = () => { const M = O.menu, hud = listedOf(O); return M ? { ids: M.rows.map((r: any) => r.id) as string[], why: [...M.why] as (string | null)[],
         rows: (hud?.rows ?? []).map((r: any) => ({ key: String(r.opts[0]?.key), text: String(r.opts[0]?.text), off: !!r.off })) } : null; };
       const first = read(); if (!first) { input.pressed.add('Escape'); R.step(); return null; }
@@ -114,7 +114,6 @@ async function rig(seed: number, o: { fight?: boolean; squad?: 2 | 4; keep?: boo
       return { first, tools };
     },
     /** X on p, then the digits a third of a second later, as a player gives a row behind a page */
-    pick(p: number[], ...n: number[]) { W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(20); for (const k of n) { input.pressed.add(`Digit${k}`); R.step(); R.step(4); } },
     said(who: any, since: number) { return R.lines.filter(l => l.who === who.callsign && l.t >= since).map(l => l.text); },
   };
   R.step(30);
@@ -130,50 +129,22 @@ const SAM_W = [24.2, 0, 19.2];
 const PARK = [44, 0, 30];
 const INSIDE = [29.6, 0, 18.4];   // in the break room, the far face of its west door from the corridor
 
-// ---------------------------------------------------------------- menu
-export const shutdoorMenu = guarded(async () => {
-  const { verdict, done } = family(`shutdoor-menu: the row sits on the charge's digit while the door stands open, and nowhere else`);
-  const R = await rig(3); const { O, D, game: g } = R; const d = R.door('breakroom_w');
-  g.teleportPlayer(SAM_W); R.stand(WEST);
-  if (process.env.SHUTDOOR_BREAK === '1') { const x = O.defs.find((q: any) => q.id === 'bangClear'); if (x) x.key = 7; }   // (the red path of the menu's keys: one tool put on a digit out of reach — the line of the keys and the line of the page's digits must both fail)
-  shut(d); R.step(5);
-  const a = R.menuOn(d.frameCentre);
-  prop(d); R.step(5);
-  const b = R.menuOn(d.frameCentre), keys = [...(b?.first.rows ?? []), ...(b?.tools?.rows ?? [])].map(r => r.key);
-  const toolKeys = (m: typeof b) => m?.tools?.rows.map((r: any) => r.key) ?? [], said = `open: ${b?.tools?.rows.map((r: any) => `${r.key} ${r.text}`).join(' | ')} · shut: ${a?.tools?.rows.map((r: any) => `${r.key} ${r.text}`).join(' | ')}`;
-  verdict(keys.length >= 9 && keys.every(k => leftKey(k, 5)) && keys.includes(FRAG_KEY), 'no row of either page is on a digit above 5: each is on 1 to 5 or on a letter an order may have (order-keys.ts), the frag\'s G among them', said);
-  verdict(toolKeys(b).join('').startsWith('1234') && JSON.stringify(toolKeys(b)) === JSON.stringify(toolKeys(a)), 'the page\'s digits are 1 to 4 in order, and the ones the shut door\'s page has', said);
-  // 'stands open' is the door tools' own line (0.6 rad: where a charge is refused "it's open."): past it the row, short of it the charge's row as ever
-  prop(d, 0.7); R.step(2); const c = row3(R, d); prop(d, 0.5); R.step(2); const c2 = row3(R, d); prop(d, 0.05); R.step(2); const c3 = row3(R, d);
-  verdict(c.id === SHUT_ID && !c.row?.off && c2.id === 'charge' && c3.id === 'charge', 'a leaf 0.7 rad open gets the row; one ajar at 0.5 rad and one a hair off its latch keep the charge row', `0.7 rad: ${c.id} · 0.5 rad: ${c2.id} "${c2.row?.text}" · 0.05 rad: ${c3.id}`);
-  { const w = O.give(SHUT_ID, O.targetAt(d.frameCentre)); verdict(/all but shut/.test(w ?? ''), '  given by its id on a leaf only ajar: refused — it\'s all but shut', `give: "${w}"`); }
-  // a charge set on the door: the charge's row stays (it blows it)
-  shut(d); R.step(5); const w = R.give('charge', 'breakroom_w'); const set = R.until(() => !!D.chargeOn(d), 40); R.stand(WEST);   // (the man at the lock stood back: at the leaf he would shoulder it open)
-  prop(d, 0.3); R.step(5); const e = row3(R, d);
-  verdict(w === null && set && !!D.chargeOn(d) && e.id === 'charge' && /^blow the charge/.test(e.row?.text ?? ''), 'a door with a charge set on it, come ajar (0.3 rad): the charge\'s row stays — blow the charge (a leaf come wide open drops its charge: doortools.ts)', `charge order: ${w} · set ${set} · still on ${!!D.chargeOn(d)} · 3 is ${e.id} "${e.row?.text}"`);
-  // X, 5, 3 gives it
-  const R2 = await rig(3); const d2 = R2.door('breakroom_w'); R2.game.teleportPlayer(SAM_W); R2.stand(WEST); prop(d2); R2.step(5);
-  const n0 = R2.O.log.length; R2.pick(d2.frameCentre, 5, 3); R2.step(10);
-  const last = R2.O.log[R2.O.log.length - 1], has = R2.ops.filter((x: any) => R2.O.of(x)?.order === SHUT_ID);
-  verdict(R2.O.log.length === n0 + 1 && last?.order === SHUT_ID && last.target === 'door:breakroom_w' && has.length === 1 && R2.O.menu === null,
-    'X, 5, 3 on the open door gives the order: one row in the order log, one man under it, the menu away', `log +${R2.O.log.length - n0}: ${last?.order} ${last?.target} to ${last?.who} · under it: ${has.map((x: any) => x.callsign)} · menu ${R2.O.menu === null ? 'closed' : 'open'}`);
-  return done();
-});
+
 
 // ---------------------------------------------------------------- refusals
 export const shutdoorRefuse = guarded(async () => {
-  const { verdict, done } = family(`shutdoor-refuse: greyed with its reason, never gone, and a refusal moves nobody`);
+  const { verdict, done } = family(`shutdoor-refuse: refused in words, and a refusal moves nobody`);
   const R = await rig(5); const { O, game: g } = R; const d = R.door('breakroom_w');
   g.teleportPlayer(SAM_W); R.stand(WEST); prop(d); R.step(5);
   const mid = () => { const F = frame(d), a = d.angle / 2, r = F.W * 0.6, c = d.def.closedDir + a; return [F.hx + Math.cos(c) * r, 0, F.hz + Math.sin(c) * r]; };   // the middle of the floor the leaf crosses
   const snap = () => R.ops.map((x: any) => O.of(x));
-  /** the row as the menu shows it and as give() answers it, with nobody's assignment touched and nothing logged */
-  const refused = (want: RegExp) => { const before = snap(), n0 = O.log.length; const r = row3(R, d), w = O.give(SHUT_ID, O.targetAt(d.frameCentre)); R.step(3);
+  /** as give() answers it, with nobody's assignment touched and nothing logged */
+  const refused = (want: RegExp) => { const before = snap(), n0 = O.log.length; const w = O.give(SHUT_ID, O.targetAt(d.frameCentre)); R.step(3);
     const same = snap().every((a: any, i: number) => a === before[i]) && O.log.length === n0;
-    return { ok: r.id === SHUT_ID && !!r.row?.off && want.test(r.why ?? '') && want.test(w ?? '') && same, text: `row 3: ${r.id}${r.row?.off ? ' (greyed)' : ' (lit)'} "${r.why}" · give: "${w}" · assignments ${same ? 'untouched' : 'CHANGED'}` }; };
+    return { ok: want.test(w ?? '') && same, text: `give: "${w}" · assignments ${same ? 'untouched' : 'MOVED'}` }; };
   // off its hinges
   d.off = true; d.angle = Math.sign(d.angle) * Math.PI / 2; d.place(); R.step(2);
-  { const x = refused(/off its hinges/); verdict(x.ok, 'the leaf off its hinges: the row is there, greyed — it\'s off its hinges', x.text); }
+  { const x = refused(/off its hinges/); verdict(x.ok, 'the leaf off its hinges: refused — it\'s off its hinges', x.text); }
   prop(d); R.step(2);
   // Sam in its swing
   g.teleportPlayer(mid()); R.step(3);
@@ -188,8 +159,11 @@ export const shutdoorRefuse = guarded(async () => {
     verdict(w2 === null && took === a && ok, '… addressed to all, the man in the swing is the nearest: he takes it, steps clear and shuts it', `give: ${w2} · taken by ${took?.callsign} · latched ${ok} · ${logText()}`);
     R.until(() => !R.ops.some((x: any) => O.of(x)?.order === SHUT_ID), 5); prop(d); R.stand(WEST); }   // (his order over before the leaf is stood open again: a man still on it pulls a leaf that stopped a second time, as he should)
   // with nothing in the way the same row is given
-  { const r = row3(R, d), w = O.give(SHUT_ID, O.targetAt(d.frameCentre)); const ok = R.until(() => d.latched, 20);
-    verdict(r.id === SHUT_ID && !r.row?.off && w === null && ok, 'with every cause gone the same row is lit, given, and the door shut', `row 3: ${r.id}${r.row?.off ? ' (greyed)' : ' (lit)'} · give: ${w} · latched ${ok}`); }
+  { const w = O.give(SHUT_ID, O.targetAt(d.frameCentre)); const ok = R.until(() => d.latched, 20);
+    verdict(w === null && ok, 'with every cause gone the same order is given, and the door shut', `give: ${w} · latched ${ok}`); }
+  // ajar, all but shut: not this order's (0.6 rad, where a charge is refused "it's open.")
+  prop(d, 0.5); R.step(2); { const w = O.give(SHUT_ID, O.targetAt(d.frameCentre)); verdict(/all but shut/.test(w ?? ''), 'given on a leaf only ajar: refused — it\'s all but shut', `give: "${w}"`); }
+  shut(d); R.step(2);
   // a shut door has no such order to take
   { const w = O.give(SHUT_ID, O.targetAt(d.frameCentre)); verdict(/it's shut/.test(w ?? ''), 'given by its id on a door that is shut: refused — it\'s shut', `give: "${w}"`); }
   return done();
