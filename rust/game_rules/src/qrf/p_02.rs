@@ -634,7 +634,8 @@ pub fn man_down(g: &mut crate::game::Game) {
         note(g, &what);
     }
     // the run ending on one of THEIR rounds
-    if g.pl[g.player].down && !g.qrf.sam_was_down && !g.qrf.got_sam {
+    let down = crate::seats::all_down(g);
+    if down && !g.qrf.sam_was_down && !g.qrf.got_sam {
         for &o in &theirs {
             if let Some(ls) = g.gd[o].aim.last_shot.as_ref() {
                 if m::abs(ls.t - g.time) < 1e-6 {
@@ -646,7 +647,7 @@ pub fn man_down(g: &mut crate::game::Game) {
             }
         }
     }
-    g.qrf.sam_was_down = g.pl[g.player].down;
+    g.qrf.sam_was_down = down;
 }
 
 // ---------------------------------------------------------------- entry
