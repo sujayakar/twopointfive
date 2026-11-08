@@ -1,7 +1,7 @@
 // THE PAGE THAT DRAWS A GAME IT DOES NOT HOLD (draw.html; `?draw=1` on the game's page). The game is the Rust module's (host/drawgame.ts): started from the
 // level's file and the address's words, handed what the player did, stepped, and drawn from what each tick leaves to be drawn (src/draw). Nothing this
 // page's bundle holds is the game's TypeScript: tools/draw/ban.ts stops the build on an import of it.
-import { initGpu, showFatal, showFatalError, pipelineProgress } from '../gpu/device';
+import { initGpu, laterIdle, pipeQueue, showFatal, showFatalError, pipelineProgress } from '../gpu/device';
 import { Engine } from '../engine';
 import { SmokeSystem } from '../smoke/smoke';
 import { Quality } from '../ui/quality';
@@ -110,7 +110,7 @@ async function main(): Promise<void> {
   { const fit = fitRig(ch); engine.setRigFit(ch.cast ? { ...fit, byOwner: men.fits } : fit); if (ch.cast) fitRigCast(ch); }
   game.look(lookNumbers(engine.settings, engine.world, !!ch.cast)); game.frame(1, [20, 0, 14]); engine.world.upload();   // (every stuff the level is made of is known from here: its maps are made with the programs)
   await Promise.all([engine.init({ sharp: true }), smoke.init(), engine.particles!.init(), engine.gbuffer.needLook(), shadows.init(), engine.gbuffer.prepareSkin(chars.jointsFormat)]);
-  pipelineProgress.onChange = null; engine.warmFirstUse();
+  pipelineProgress.onChange = null; pipeQueue.settle(); engine.warmFirstUse();
   const quality = new Quality(engine, smoke); quality.visit(location.search);
   lookSync();
   lookConfig.exposure = () => { const h = HOURS_OF[D.u[sky() + Sky.hour]]; return h === 'night' ? null : hourExposure(h, D.f[sky() + Sky.hourSun]); };
@@ -249,5 +249,6 @@ async function main(): Promise<void> {
   Object.assign(window, { __draw: { game, engine, world, audio, pause, cam, input, quality, told, fog, weather, smoke, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last') => { for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } } } });
   requestAnimationFrame(loop);
 }
-const ready = main(); (window as unknown as { __ready: Promise<void> }).__ready = ready;
+// (a tool waits for the programs made behind the start too: until then a pass draws its stand-in, and the fog of war is the lit one)
+const ready = main(); (window as unknown as { __ready: Promise<void> }).__ready = ready.then(() => laterIdle());
 ready.catch(e => { console.error(e); if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message); else showFatalError(e); });
