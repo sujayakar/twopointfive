@@ -8,9 +8,8 @@ import type { MarkingDef } from './markings';
 import type { LevelData, SurfacesData } from './levelData';
 import { loadLevel } from './levelLoad';
 import officeData from '../../levels/office.json' with { type: 'json' };
-import type { WeaponId } from '../game/weapons';   // (type only: what a route may hand its man — erased at runtime, so the scene layer still loads below the game's)
-import type { LevelScriptFn } from '../game/director';   // (type only, likewise: the level's script is a plain function handed to game/director.ts)
 import type { LevelScenarios } from './scenarios';
+import type { WeaponId } from './weaponIds';
 
 export interface LightDef {
   kind: 'point' | 'spot' | 'dir';
@@ -169,8 +168,6 @@ export interface Level {
   volumes?: VolumeDef[];
   /** named marks (LevelData v2 marks[], M3 of docs/design/level-scripting.md — nothing authors them yet: a script declares its own with literals until then) */
   marks?: MarkDef[];
-  /** this level's SCRIPT (game/director.ts runs it: bespoke set pieces as named programs); absent = no Director programs, the game exactly as it is — no shipped level has one today */
-  script?: LevelScriptFn;
   /** what the playtest SCENARIOS take from this level (scene/scenarios.ts: the room clear's rooms, the rescue's hostage room and marks, where the team starts) —
    *  the level file's own `scenarios` block. Absent = no scenario can be staged on this level */
   scenarios?: LevelScenarios;
@@ -202,9 +199,6 @@ export interface Level {
 export function buildLevel(): Level {
   return loadLevel(OFFICE_DATA);
 }
-/** attach a level SCRIPT to a Level. The script is CODE, not level data: it rides on the Level as a non-enumerable property, so everything that walks the Level's keys as data
- *  (tools/qa level-identity's generator ≡ JSON diff and key order, levelToData, structuralDiff) sees the level exactly as before, while game/director.ts reads level.script like any field. */
-export function withScript(level: Level, script: LevelScriptFn): Level { Object.defineProperty(level, 'script', { value: script, enumerable: false, writable: true, configurable: true }); return level; }
 /** the office's level data as bundled (read-only: loadLevel copies everything it hands out) */
 export const OFFICE_DATA: LevelData = officeData as unknown as LevelData;
 

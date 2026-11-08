@@ -1157,13 +1157,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   where no scenario stands a team); 393 doors, 84 OWED in 30 files (inner doors nobody's shortest way uses, the block 10 of 16; and the lone outer door of three showrooms).
   `WALKED_BREAK=1` asks the ways with no routes and no scenarios: red, every start and 209 doors, 40 levels (the five it cannot bite are named). THE LIST IS THE WORK LEFT: a
   `scenarios.walked` row to a door gives it a way (`docs/level-format.md`), or the rule learns to walk to every door (the look task's function).
-  THE OVERLAY: `bun run tools/levels/walked-overlay.ts <level …> [--out dir] [--px 24]` (the same level, ways and starts as the check's; a look twin
-  asked by name is drawn with its own flat things over its plain file's ways) writes a picture of the level from above (the walk grid, every flat
-  thing lying on the ground in its group's colour, the ways as lines by kind, doors, starts) and a table a group: boxes, square metres, how much of it
-  lies on a lane, and how much of the lanes lies under it, both by area. No list of what a hand-laid path is: a level's groups say (the pass:
-  `snow.paths` 53 % on a lane and under 13 % of the lanes, `snow.cleared` 45 %, `snow.ruts` 8 %; the block's look: 213 flat things, 26 %). It is for
-  deciding, band by band, what the lanes can replace. NO HAND-LAID PATH IS RETIRED BY THIS STEP: the lanes are the look page's only, and the first
-  pair on a real card read the derived lane too weak beside the bands (the dress goal's rule: retire no band until its lane alone reads as clearly).
+  NO HAND-LAID PATH IS RETIRED BY THIS STEP: the lanes are the look page's only, and the first pair on a real card read the derived lane too weak beside the bands (the dress goal's
+  rule: retire no band until its lane alone reads as clearly). The overlay that drew the two over each other (`walked-overlay.ts`) went with the old game's walk grid, 2026-11-08.
 - **The pass's dressing is the kit's: what is done to a wall's face, round things that lie, and a window's two forms** (the library, 2026-11-05; no
   switch: kit pieces and the level files that lay them, on every stand; the shapes among them are the shape rule's, `SHAPES`). The maintainer, of
   dressing the levels: "I'd love for us to have a library of objects, materials, etc. that we reuse across them". The pass's house front and its yard's
@@ -1748,3 +1743,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stands: `stuff`, `rollback-check --static`, `hitstuff` (its break path fails 5), `marksight`, `lived`, `lookmaps`, `walked` (no `--write`),
   `probes.ts kept` and `materials`, `wallfurn`, `wayround`, `look-check`, `coatfinish`, `glassreal`, `kit-stores`, `does-check`, `does-audit`; the
   senses' error tool on the office on the page's stand; every export's `--check`. NOT SEEN: a rack, a keyboard or a hit on one, on a GPU.
+- **A level is made with no game loaded** (2026-11-08). `tools/levels`, `tools/level-export.ts` and `tools/levels-api.ts` import nothing of `src/game` or `src/sim` but the call surface's guard in
+  `scene/boxes.ts` and `scene/stuff.ts`, which leaves with the copy of the game. What a level may have at most is `scene/caps.ts` (held to the game's own room by `rust/sim/tests/level_caps.rs`), the
+  dressing's group and switch `scene/dressing.ts`, a vehicle's lamps as the generators write them `scene/carLamps.ts`, the office's floor `scene/officeFloor.ts`, a gun's word `scene/weaponIds.ts`. A
+  level's script is the game's (`game/levelScripts.ts`, by the level's name), not the loader's. Every generator's file is the same, byte for byte, and the validator's answers the same on 1,980
+  spoiled levels. STILL THE OLD GAME'S: the two questions the export asks of a written level (`second-way-check`, `marksight-check`).
