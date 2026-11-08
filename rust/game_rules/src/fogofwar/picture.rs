@@ -152,7 +152,8 @@ pub fn fog_of_war_faces_lift(g: &mut crate::game::Game) {
 }
 
 /// The frame's list of boxes as it stands BEFORE the fog cuts it, kept for a viewer's draw with the fog off: the doors live in place of the copies the
-/// fog keeps of them. Nothing is kept where no viewer has asked. Called just before `fog_of_war_things`.   (fogofwar.ts FogOfWar.things, its head)
+/// fog keeps of them. What the men the fog leaves out carry, and the lines a tube would show, are in no list of the game's: the drawer makes them (game_draw `watched`). Nothing is kept where no viewer
+/// has asked. Called just before `fog_of_war_things`.   (fogofwar.ts FogOfWar.things, its head; Game.fogLift)
 pub fn keep_raw(g: &mut crate::game::Game, list: &[AnyBoxId]) {
     if !g.fog_picture.viewer { return; }
     let mut raw = core::mem::take(&mut g.fog_picture.raw_list);
