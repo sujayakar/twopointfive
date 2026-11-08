@@ -377,10 +377,8 @@ export async function portalCheck(): Promise<boolean> {
     let mono = true; for (let m = 0.01; m < 2; m *= 1.3) for (let w = 0.2; w < 30; w *= 1.4) { const r = openingReach(m, w, 1, old); if (openingReach(m * 1.3, w, 1, old) < r || openingReach(m, w * 1.4, 1, old) < r || openingReach(m, w, 1.5, old) < r) mono = false; }
     const eng = text('src/engine.ts'), op = text('src/scene/openings.ts');
     verdict(night > 4 && night < 6 && noon > 8 && noon < 9.5 && slit === K.near && Math.abs(wide - (2.75 + K.past)) < 1e-9 && wall === K.far && mono && Math.abs(was - 17.9) < 0.1 && piece < 3.1 && strip > 4.5
-      && eng.includes('l.range = openingReach(m * this.settings.exposure, Math.max(whole, o.of), l.radius, this.settings.portalWorth > 0 ? this.settings.portalWorth : undefined);') && count(eng, 'l.range = ') === 1
+      && eng.includes('l.range = openingReach(m * this.settings.exposure, Math.max(whole, o.of), l.radius);') && count(eng, 'l.range = ') === 1
       && op.includes('for (let i = first0; i < out.length; i++) out[i].of = sum;')
-      && text('src/main.ts').includes("{ const pw = Number(q.get('portalworth')); if (pw > 0) engine.settings.portalWorth = pw; }")
-      && /VISIT_FLAGS = \[[^\]]*'portalworth'/.test(text('src/ui/replaykey.ts')) && /LOOK_PAGE_WORDS[^\n]*'portalworth'/.test(text('src/scene/look.ts'))
       && common.includes('keep = 1.0 - lightWindow(distance(O, lights[i].pos), lights[i].range); break;'),
       'an opening\'s own light reaches as far as it is worth a ray, by one rule at every hour, and the bounce has the sky past it',
       `the consulate's widest opening on its night ${night.toFixed(1)} m (it was ${was.toFixed(1)}), a door at midday ${noon.toFixed(1)} m, a slit at dusk ${slit} m, a wide opening on a dim night ${wide.toFixed(2)} m (never short of its own corners), a glass wall ${wall} m; one piece of a strip of glass alone ${piece} m, as a piece of its strip ${strip.toFixed(1)} m; never shorter for a brighter sky, a larger opening or a longer rectangle`); }
