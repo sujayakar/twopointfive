@@ -126,7 +126,7 @@ and `cargo test`'s threads take turns. A test that stands a second game drops th
 | a mission, where asked | the game's `start_scenario`; or, from an address, `start_at_address`: `start_from_query` on its words, then the solo card's question, as a click on a row of the mission list starts it on a page |
 
 `frame(g, host, dt)` is one frame of that host: the game's `game_update` on the host's Input and camera, the camera after the man, the lights'
-envelopes, the box world listed again. It answers what the step told its host (sounds, marks, lines said).
+envelopes. It answers what the step told its host (sounds, marks, lines said).
 
 NOT MADE, because no rule of the tick reads them: the character renderer, the mesh shadows' tree, the proxy fits of the rig.
 
