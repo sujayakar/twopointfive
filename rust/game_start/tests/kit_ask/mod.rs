@@ -188,6 +188,40 @@ pub trait KitAsk {
     fn own_gun_up(&self, gd: GuardId) -> bool;
     /// how many blows the frame asks of the hammer
     fn frame_blows(&self) -> f64;
+    /// the floor is told something is up, once
+    fn floor_on_edge(&mut self);
+    /// a locked door found picked: its lock open, nothing broken
+    fn door_found_picked(&mut self, d: DoorId);
+    /// a locked door found kicked in: its lock broken
+    fn door_found_forced(&mut self, d: DoorId);
+    /// he has been walked to where he suspects something, on his own wits from here
+    fn man_suspects(&mut self, gd: GuardId, at: [f64; 2]);
+    /// has his body been found by the floor
+    fn body_found(&self, gd: GuardId) -> bool;
+    /// how many lines have been said so far
+    fn said_so_far(&self) -> usize;
+    /// the lines said since that count: who, what
+    fn said_since(&self, n: usize) -> Vec<(GuardId, String)>;
+    /// the room the running clear is drilling now
+    fn clear_drilling(&self) -> Option<String>;
+    /// every man still up on the level who is not ours
+    fn men_on_the_floor(&self) -> Vec<GuardId>;
+    /// the opening a man is dealt, if any
+    fn opening_of(&self, gd: GuardId) -> Option<game::ids::CoverOpeningId>;
+    /// a man dealt an opening with his gun on it within ten degrees and his feet still
+    fn squared_up(&self, gd: GuardId) -> bool;
+    /// the openings Sam's own gun is counted as covering
+    fn openings_of_sam(&self) -> Vec<game::ids::CoverOpeningId>;
+    /// where an opening is
+    fn opening_at(&self, o: game::ids::CoverOpeningId) -> [f64; 2];
+    /// is there an opening nobody has that this man could take
+    fn opening_to_spare_for(&self, gd: GuardId) -> bool;
+    /// how often the openings are dealt
+    fn deal_secs(&self) -> f64;
+    /// a rear man of a stack who has still more than the last steps to his mark to walk: nobody deals him an opening yet
+    fn stacks_on_his_walk(&self, gd: GuardId) -> bool;
+    /// holds a stack's jamb: the door's, and never an opening's
+    fn stacks_at_the_jamb(&self, gd: GuardId) -> bool;
     /// is he on a knee off a boot
     fn on_a_knee(&self, gd: GuardId) -> bool;
     /// has a man's belief in a door come to a boot on its way
@@ -446,6 +480,37 @@ impl KitAsk for Play {
     fn big_counts(&self) -> (i32, i32, i32, i32) { let b = &self.g.stats.bigkit; (b.sam_blows, b.sam_shells, b.mate_blows, b.mate_hammered) }
     fn own_gun_up(&self, gd: GuardId) -> bool { self.g.gd[gd].slung.as_ref().map_or(true, |s| !s.out) && self.g.ch[self.g.gd[gd].ch].anim.big_tool.is_none() }
     fn frame_blows(&self) -> f64 { self.g.k.bigslot.swings }
+    fn floor_on_edge(&mut self) { game::game::game_escalate(&mut self.g); }
+    fn door_found_picked(&mut self, d: DoorId) { game::doors::door_set_locked(&mut self.g, d, false); }
+    fn door_found_forced(&mut self, d: DoorId) { game::doors::door_set_locked(&mut self.g, d, false); game::doors::door_set_lock_broken(&mut self.g, d, true); }
+    fn man_suspects(&mut self, gd: GuardId, at: [f64; 2]) {
+        game::mind::fix(&mut self.g, gd, Some([at[0], 0.0, at[1]]), "guards");
+        game::mind::raise(&mut self.g, gd, 0.5, "guards");
+        self.g.gd[gd].state = GuardState::Suspicious;
+    }
+    fn body_found(&self, gd: GuardId) -> bool { self.g.gd[gd].found }
+    fn said_so_far(&self) -> usize { self.said.len() }
+    fn said_since(&self, n: usize) -> Vec<(GuardId, String)> { self.said[n..].iter().map(|s| (s.who, s.text.clone())).collect() }
+    fn clear_drilling(&self) -> Option<String> {
+        let c = self.g.clearing.as_ref()?;
+        if c.stage != game::squad::ClearStage::Drill || c.drill.is_none() { return None; }
+        c.cur.as_ref().map(|r| r.room.clone().unwrap_or_else(|| r.door.clone()))
+    }
+    fn men_on_the_floor(&self) -> Vec<GuardId> { self.g.guards.iter().copied().filter(|&gd| self.g.gd[gd].team != game::teams::Team::Operative && self.up(gd)).collect() }
+    fn opening_of(&self, gd: GuardId) -> Option<game::ids::CoverOpeningId> { self.g.cover.jobs.get(gd).map(|j| j.o) }
+    fn squared_up(&self, gd: GuardId) -> bool {
+        let Some(o) = self.opening_of(gd) else { return false };
+        let (to, at) = (self.opening_at(o), self.at(gd));
+        let want = (to[0] - at[0]).atan2(to[1] - at[1]);
+        let off = (want - self.g.ch[self.g.gd[gd].ch].aim_yaw + std::f64::consts::PI).rem_euclid(2.0 * std::f64::consts::PI) - std::f64::consts::PI;
+        off.abs() < 10f64.to_radians() && self.speed(gd) < 0.2
+    }
+    fn openings_of_sam(&self) -> Vec<game::ids::CoverOpeningId> { self.g.cover.live.iter().filter(|l| l.sam).map(|l| l.o).collect() }
+    fn opening_at(&self, o: game::ids::CoverOpeningId) -> [f64; 2] { let a = self.g.tab.cover_opening[o].at; [a[0], a[2]] }
+    fn opening_to_spare_for(&self, gd: GuardId) -> bool { self.g.cover.live.iter().any(|l| l.by.is_none() && !l.sam && !l.held && l.can.contains(&gd)) }
+    fn deal_secs(&self) -> f64 { self.g.k.cover.deal_secs }
+    fn stacks_on_his_walk(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).is_some_and(|a| game::cover::cover_walk_only(&self.g, gd, a)) }
+    fn stacks_at_the_jamb(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).is_some_and(|a| { let r = &self.g.tab.orders_assignment[a]; r.order == "stack" && r.spare != Some(true) }) }
     fn on_a_knee(&self, gd: GuardId) -> bool { self.g.gd[gd].door_down_until > self.g.time }
     fn walking_to_boot(&self, gd: GuardId) -> bool { self.g.m.doorforce.states.as_ref().and_then(|s| s.men.get(gd)).and_then(|m| m.kick.as_ref()).map_or(false, |k| k.phase == game::doorforce::KickPhase::Walk) }
     fn on_a_door(&self, gd: GuardId) -> bool { self.g.m.doorforce.states.as_ref().and_then(|s| s.men.get(gd)).map_or(false, |m| m.on.is_some()) }
