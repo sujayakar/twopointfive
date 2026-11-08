@@ -63,7 +63,7 @@ fn a_teammate_throwing_the_breaker_gets_the_games_line_and_his_own() {
     p.run(0.2);
     for d in p.g.doors.list.clone() { game::doors::door_set_locked(&mut p.g, d, false); }
     p.run(0.3);
-    let th = game::workthings::work_things_things(&mut p.g).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("the office has a breaker");
+    let th = game::workthings::work_things_things(&p.g, &game::seats::here(&p.g)).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("the office has a breaker");
     let t = game::orders::squad_orders_target_at(&mut p.g, th.face);
     assert_eq!(game::orders::squad_orders_give(&mut p.g, "work", Some(&t), None, None), None, "the order was refused");
     let lines0 = p.said.len();
@@ -215,6 +215,22 @@ fn the_verdicts_men_carry_pair_colours_only_where_there_are_two_pairs() {
     let four = won("office.json", "?levelFile=office.json&roomclear&squad4");
     let of = |hue| four.men[1..].iter().filter(|m| m.tone == Some(hue)).count();
     assert!(four.won && four.men.len() == 5 && of(Red) == 2 && of(Blue) == 2, "four: won {}, {} rows, {} red, {} blue", four.won, four.men.len(), of(Red), of(Blue));
+}
+
+/// THE RULE: Sam going down is the verdict DOWN, not won, his own row dead, with no approach to its name, once the try has started.
+/// A FAILURE MEANS: the card reads a lost run as anything else.
+#[test]
+fn sam_going_down_is_the_verdict_down() {
+    let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: 1, ..Default::default() });
+    p.run(0.1);
+    let at = p.sam_at();
+    p.sam_put([at[0] + 2.0, at[1]]);
+    p.run(0.3);
+    p.seat_goes_down(0);
+    p.run(0.2);
+    let v = p.g.verdict.res.clone().unwrap_or_else(|| panic!("no verdict: {}", p.roll()));
+    assert_eq!((v.won, v.word.as_str()), (false, "DOWN"));
+    assert!(v.approach.is_none() && v.men[0].human && v.men[0].state == game::verdict::ManState::Dead, "approach {:?}, his row {:?}", v.approach, v.men[0].state);
 }
 
 // ---------------------------------------------------------------- the suit a quiet mission wears
