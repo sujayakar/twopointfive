@@ -50,7 +50,7 @@ export async function textsizeCheck(): Promise<boolean> {
 
     // 4. the page's rules
     const src = readFileSync(`${ROOT}/src/ui/textsize.ts`, 'utf8'), layers: string[] = (/const LAYERS = \[([^\]]+)\]/.exec(src)?.[1] ?? '').split(',').map(s => s.trim().replace(/'/g, '')).filter(Boolean);
-    const page = readFileSync(`${ROOT}/index.html`, 'utf8'), ui = readdirSync(`${ROOT}/src/ui`).filter(f => f.endsWith('.ts')).map(f => [`src/ui/${f}`, readFileSync(`${ROOT}/src/ui/${f}`, 'utf8')] as [string, string]);
+    const page = readFileSync(`${ROOT}/index.html`, 'utf8'), ui = ['src/ui', 'src/tape'].flatMap(d => readdirSync(`${ROOT}/${d}`).filter(f => f.endsWith('.ts')).map(f => [`${d}/${f}`, readFileSync(`${ROOT}/${d}/${f}`, 'utf8')] as [string, string]));
     // (the replay played in the game page — src/replay/engineplay.ts — makes layers of its own: its bar, the note field, the play mark, the no-tape note)
     const replay = readdirSync(`${ROOT}/src/replay`).filter(f => f.endsWith('.ts')).map(f => [`src/replay/${f}`, readFileSync(`${ROOT}/src/replay/${f}`, 'utf8')] as [string, string]);
     const files: [string, string][] = [['index.html', page], ...ui, ...replay];
