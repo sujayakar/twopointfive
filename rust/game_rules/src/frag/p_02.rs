@@ -551,11 +551,10 @@ pub fn rest_of_throw(a: &mut impl crate::ask::Asker, kind: crate::game::ThrowKin
 pub fn throw_reach(g: &crate::game::Game, pl: PlayerId, rest: Option<V3>) -> Option<crate::view::ThrowReachView> {
     use crate::game::ThrowKind;
     let sol = g.pl[pl].throw_preview.as_ref().filter(|s| !s.points.is_empty())?;
-    if !g.k.throwback.reach { return None; }
     let burst = |at: V3| crate::view::ThrowReachView { at, kill: g.k.frag.lethal_m, hurt: m::max(g.k.frag.lethal_m, g.k.frag.wound_m), stun: 0.0 };
     if g.pl[pl].throw_held || (!g.pl[pl].holstered && crate::game::player_canister_sel(g, pl).is_some()) {
         let kind = g.pl[pl].held_kind;
-        if kind != ThrowKind::Flash && !(kind == ThrowKind::Frag && g.k.frag.on) { return None; }
+        if kind != ThrowKind::Flash && !(kind == ThrowKind::Frag) { return None; }
         let at = rest?;
         return Some(if kind == ThrowKind::Frag { burst(at) } else { crate::view::ThrowReachView { at, kill: 0.0, hurt: 0.0, stun: crate::effects::bang().dazzle_radius } });
     }

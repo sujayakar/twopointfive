@@ -573,11 +573,6 @@ pub fn prop_system_update(g: &mut crate::game::Game, dt: f64, contacts: &mut Vec
     g.props.stats.awake = awake as f64;
 }
 
-/// TWIN: the bare call, its hand-over written by whoever calls   (props.ts PropSystem.updateHere)
-pub fn prop_system_update_here(g: &mut crate::game::Game, dt: f64, contacts: &[crate::props::PropContact], leaves: &[BoxId]) {
-    sim::props::update(g.sim, g.col.mirror.slot as usize);
-}
-
 /// the world to step over and which of its leaves sweep; none in a level with no furniture, which has no step   (props.ts PropSystem.there)
 pub fn prop_system_there(g: &mut crate::game::Game, contacts: &[crate::props::PropContact], leaves: &[BoxId]) -> Option<crate::props::PropSystemThere> {
     if g.props.all.is_empty() {

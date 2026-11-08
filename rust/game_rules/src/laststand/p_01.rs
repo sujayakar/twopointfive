@@ -470,14 +470,6 @@ pub fn home_room(g: &mut crate::game::Game, d: RoomfightDefId, known: &[V3]) -> 
     Some(HomeRoom { room, id: def.id, anchor })
 }
 
-/// a room's name as a line says it (laststand.ts theOf)
-pub fn the_of(g: &crate::game::Game, id_2: &str) -> String {
-    match g.room_clear.rooms.iter().find(|r| r.def.id == id_2) {
-        Some(r) => the_word(&r.def.name),
-        None => the_word(id_2),
-    }
-}
-
 /// which room: most men in or able to reach it, then most doors wedged, most men there, farthest from the team, least walking (laststand.ts choose)
 pub fn choose(g: &mut crate::game::Game, men: &[RoomfightDefId], known: &[V3], min: Option<f64>) -> Option<crate::laststand::Plan> {
     let min = min.unwrap_or(2.0);
@@ -653,37 +645,12 @@ pub fn tell_only(g: &mut crate::game::Game, c_2: RoomfightDefId) {
     }
 }
 
-/// a new stand (laststand.ts newStand)
-pub fn new_stand(g: &crate::game::Game, room: Option<RoomfightRoomId>, id_2: Option<&str>, the: &str, anchor: V3) -> crate::laststand::Stand {
-    Stand {
-        room, id: id_2.map(String::from), the: String::from(the), anchor: v3::copy(anchor), t: g.time,
-        in_: JsSet::new(), out: JsSet::new(), movers: Vec::new(),
-        set_said: false, set_t: f64::NAN, thump_at: f64::NAN, look_t: g.time, orders: JsMap::new(), homed: JsSet::new(),
-    }
-}
-
 /// where a man coming in is put beside: a man of theirs in the room, else the spot the room was picked by (laststand.ts anchorOf)
 pub fn anchor_of(g: &crate::game::Game, s: &crate::laststand::Stand) -> V3 {
     for d in s.in_.keys() {
         if alive(g, d) { return man_pos(g, d); }
     }
     s.anchor
-}
-
-/// is he of this stand (laststand.ts member)
-pub fn member(g: &crate::game::Game, s: &crate::laststand::Stand, d: RoomfightDefId) -> bool { stand_has(s, d) }
-
-/// told to hold where he is: he says so, once, with where (laststand.ts holdsOwn)
-pub fn holds_own(g: &mut crate::game::Game, s: &mut crate::laststand::Stand, d: RoomfightDefId, say: Option<crate::laststand::LineKind>) {
-    s.out.add(d);
-    let w = man_spoken(g, d);
-    let say = match say { Some(k) => k, None => return };
-    if calm(g, d) && !st_of(g).told.has(d) {
-        st_of(g).told.add(d);
-        let gd = g.tab.roomfight_def[d].gd;
-        let vars = vars_of(&[("at", w.at.as_str()), ("the", w.the.as_str())]);
-        net(g, gd, say, Some(&vars), Some(&LaterThen::NameAt { d, w: Some(w) }), None);
-    }
 }
 
 #[cfg(test)]

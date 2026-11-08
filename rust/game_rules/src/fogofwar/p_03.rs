@@ -113,22 +113,6 @@ pub fn fog_of_war_span(g: &mut crate::game::Game, list: &[AnyBoxId], i: f64, j: 
     }
 }
 
-/// Does the team see this thing (its boxes as a list)?   (fogofwar.ts FogOfWar.seesThing)
-pub fn fog_of_war_sees_thing(g: &mut crate::game::Game, boxes: &[AnyBoxId]) -> bool {
-    let mut x = 0.0;
-    let mut z = 0.0;
-    for &b in boxes {
-        let c = bx(g, b).c;
-        x += c[0];
-        z += c[2];
-    }
-    x /= boxes.len() as f64;
-    z /= boxes.len() as f64;
-    fog_of_war_span(g, boxes, 0.0, boxes.len() as f64);
-    let (ox, oz) = (g.fog_of_war.span_x, g.fog_of_war.span_z);
-    fog_of_war_thing_seen(g, x, z, ox, oz)
-}
-
 /// `take` of `things`: the picture has boxes i‥j of the list as they stand.   (fogofwar.ts FogOfWar.things `take`)
 fn thing_take(g: &mut Game, tk: f64, list: &[AnyBoxId], i: usize, j: usize, (x, z, ox, oz): (f64, f64, f64, f64), f: f64, moving: bool) {
     if !g.fog_of_war.thing_recs.has(crate::Num(tk)) {
@@ -422,7 +406,7 @@ pub fn fog_of_war_fired_on(g: &crate::game::Game, gd: GuardId) -> bool {
 pub fn fog_of_war_last_seen(g: &crate::game::Game) -> Vec<crate::view::SeenMark> {
     let told = match crate::told::told_now(g) { crate::told::ToldRung::Guided => m::max(0.0, g.k.told.guided), crate::told::ToldRung::Standard => m::max(0.0, g.k.told.standard), _ => 0.0 };
     let secs = if g.k.fog.last_seen > 0.0 { g.k.fog.last_seen } else { told };
-    let wand = g.k.wand.on && g.k.wand.mark_secs > 0.0;
+    let wand = g.k.wand.mark_secs > 0.0;
     let mut out = Vec::new();
     if !fog_of_war_active(g) || !(secs > 0.0 || wand) { return out; }
     for &gd in g.guards.iter() {
