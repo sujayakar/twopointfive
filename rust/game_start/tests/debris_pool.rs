@@ -15,8 +15,7 @@ fn slab(p: &mut Play, i: usize, up: f64) -> bool {
     game::debris::debris_spawn_raw(&mut p.g, ChunkKind::Chunk, b, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], None, None).is_some()
 }
 
-/// (the pool is dressing, and the test game stands without it unless asked: the page has it on)
-fn stand_a_game() -> Play { let mut p = Play::level("pass.json", false, &Opts::default()); p.g.m.dress.dress.debris = true; p }
+fn stand_a_game() -> Play { Play::level("pass.json", false, &Opts::default()) }
 
 #[test]
 fn a_pool_full_of_pieces_in_the_air_refuses_the_next() {

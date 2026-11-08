@@ -15,7 +15,6 @@ import type { Prop } from './props';
 import { impulseKick, type ImpulseLike, type ImpulseResponse } from './sheetModel';
 import { NOBODY_ID } from './consts';
 import { DEBRIS } from './destructionSwitch';
-import { DRESS } from './dress';
 import { flightOf } from './falling';
 import { FALL_PIECES, FALL_HEARD, FALL_MAXP } from '../sim/fallshome';
 import type { PlateMeta } from './shards';
@@ -130,7 +129,6 @@ export class Debris {
   /** spawn() without the glass door (what spawn() always did; shards.ts places its plates through this) */
   spawnRaw(kind: ChunkKind, box: Box, v: Vec3, w: Vec3, who: number = NOBODY_ID, told = false): Chunk | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Debris.spawnRaw', this, [kind, box, v, w, who, told]); if (__r !== RUST_PASS) return __r as any; } }
     const dress = DEBRIS.dress && (told || kind !== 'shard' || !this.glass || !!this.glass.dress?.());   // (is this piece dressing? every piece under DEBRIS.dress whose landing the simulation has — `told`: spawn()'s — and the pool's own; but a glass plate that still lays its litter where it rests, SHARDS.byFall off, is the game's)
-    if (dress && !DRESS.debris) { this.stats.refused++; return null; }   // (dress.ts: a host that draws nothing holds no pool, where the pool is dressing)
     while (this.list.length >= this.cap()) {   // (while: the cap can drop mid-run — the auto ladder hopping a preset — and the pool must come back under it, not hover one over)
       const i = this.breaks?.pick ? this.breaks.pick(this.list, evictable) : this.list.findIndex(evictable);
       if (i < 0) { this.stats.refused++; return null; }
