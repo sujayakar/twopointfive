@@ -348,7 +348,7 @@ export interface IssueCard { weapon?: 'rifle' | 'pistol' | 'shotgun'; suppressed
   loaded?: 'ring' | 'he40' }
 export interface IssueData { members: { [place: string]: IssueCard } }
 /** THE KIT VIEW (rust/game_rules/src/kitstage — the Team & kit step shows the team as picked, stood at the mission's own way-in door, drawn by the page that draws
- *  a game it does not hold, opened `draw.html?…&kitview`): where the men stand and how the camera looks, per WAY IN. `ways` is indexed as the team starts are — [0] the
+ *  a game it does not hold, opened `?…&kitview`): where the men stand and how the camera looks, per WAY IN. `ways` is indexed as the team starts are — [0] the
  *  structure's own `team`, [k] its `starts[k − 1]` (roomclear.ts RoomClearScenario.way). A way needs only its `door` (a door id): the slots, the camera and the
  *  lamps are worked out from the door's frame and the side the team starts on; every other key lays an authored value over that. Picture only: no rule of the
  *  game reads this block, and a level without it shows an empty column there. */

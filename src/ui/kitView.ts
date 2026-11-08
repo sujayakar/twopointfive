@@ -1,5 +1,5 @@
 // THE TEAM AT THE DOOR, on the start page's Team & kit step (the maintainer's pick, 10-13): the REAL renderer's top-down picture of the team as picked, stood at the mission's own way-in door. The game
-// behind the start page is not the picked mission's level, so the picture is a SECOND page in an iframe: draw.html, on the very query Deploy would load plus `&kitview&mute&noreplay`. Its module is that mission
+// behind the start page is not the picked mission's level, so the picture is a SECOND page in an iframe: this page again, on the very query Deploy would load plus `&kitview&mute&noreplay`. Its module is that mission
 // with its team staged at the way in and from then on live: the open card's man uses what he carries at the door, a beat at a time (rust/game_rules/src/kitstage; `&stillkit` on it = drawn for a warm window, then
 // held). The window is read-only on this origin's storage (host/kitguard.ts) and answers through host/kitpage.ts. It is thrown away when the page closes or Deploy fires, so its seat on the kept device goes with it.
 //
@@ -168,9 +168,9 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
         const f = frame = document.createElement('iframe'); f.className = 'kv'; f.tabIndex = -1; f.setAttribute('aria-hidden', 'true');
         key = k; sent = born = kitNow(ask.squad);
         const tier = (window as unknown as { __quality?: { current?: unknown } }).__quality?.current;   // (drawn at the tier this page stands at: no calibration of its own beside this one)
-        const raw = ask.search.replace(/^[^?]*\?/, '').split('&').filter(w => !/^(adapt|draw)(=|$)/.test(w)).join('&');   // (the visit's `adapt` word stays behind: this frame is pinned to a tier, so the word would switch its whole ladder off — ui/quality.ts visit; `draw` would send it to a page that draws no kit)
+        const raw = ask.search.replace(/^[^?]*\?/, '').split('&').filter(w => !/^adapt(=|$)/.test(w)).join('&');   // (the visit's `adapt` word stays behind: this frame is pinned to a tier, so the word would switch its whole ladder off — ui/quality.ts visit)
         f.addEventListener('error', () => { if (frame === f) fail(k); });
-        f.src = `${new URL('draw.html', document.baseURI).pathname}?${raw ? raw + '&' : ''}kitview&mute&noreplay${KIT_VIEW.acts ? '' : '&stillkit'}${KIT_VIEW.quiet || q.has('kitloud') ? '' : '&kitloud'}${typeof tier === 'string' && !q.has('quality') ? '&quality=' + encodeURIComponent(tier) : ''}`;
+        f.src = `${location.pathname}?${raw ? raw + '&' : ''}kitview&mute&noreplay${KIT_VIEW.acts ? '' : '&stillkit'}${KIT_VIEW.quiet || q.has('kitloud') ? '' : '&kitloud'}${typeof tier === 'string' && !q.has('quality') ? '&quality=' + encodeURIComponent(tier) : ''}`;
         body.appendChild(f); place();
       } else { const now = kitNow(ask.squad);   // (the LEADING edge: the first change goes now; what follows inside kitMs is one more message at its end)
         if (now !== sent && now !== want) { if (due) want = now; else { kit(); due = setTimeout(() => { due = 0; if (want) kit(); }, KIT_VIEW.kitMs); } } }
