@@ -11995,7 +11995,6 @@ impl Default for AirSimK { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: inline at src/game/laststand.ts:59 LASTSTAND, src/game/laststand.ts:59)
 #[derive(Clone, Copy, Debug)]
 pub struct LaststandK {
-    pub regroup: bool,
     pub call_out: bool,
     pub places: bool,
     pub moved_secs: f64,
@@ -12022,7 +12021,6 @@ impl LaststandK {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         LaststandK {
-            regroup: false,
             call_out: false,
             places: false,
             moved_secs: 0.0,
@@ -13532,7 +13530,7 @@ pub fn page_air_sim() -> AirSimK {
 }
 
 pub fn page_laststand() -> LaststandK {
-    crate::knobs::LaststandK { regroup: false, call_out: true, places: true, moved_secs: 3.0, still_secs: 2.0, moved_gap: 8.0, few: 3.0, quiet: 3.0, first: [3.0, 6.0], every: 22.0, again: 30.0, answer: [1.2, 2.2], between: [3.2, 3.9], listen: [3.2, 3.8], max_m: 38.0, clear_m: 4.0, known_secs: 30.0, go: [1.3, 2.0], legs: 5.0, dig: [0.6, 1.6], thump: [9.0, 14.0], thump_level: 0.6 }
+    crate::knobs::LaststandK { call_out: true, places: true, moved_secs: 3.0, still_secs: 2.0, moved_gap: 8.0, few: 3.0, quiet: 3.0, first: [3.0, 6.0], every: 22.0, again: 30.0, answer: [1.2, 2.2], between: [3.2, 3.9], listen: [3.2, 3.8], max_m: 38.0, clear_m: 4.0, known_secs: 30.0, go: [1.3, 2.0], legs: 5.0, dig: [0.6, 1.6], thump: [9.0, 14.0], thump_level: 0.6 }
 }
 
 pub fn page_stackroom() -> StackroomK {
