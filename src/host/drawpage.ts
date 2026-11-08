@@ -155,6 +155,7 @@ async function main(): Promise<void> {
     const keys = sampleHand(game.numbersOf(), input, cam, canvas);
     game.step(dt, keys);
     if (D.u[view() + View.stood] !== stood) anew();
+    weather.told();
     events.from();
     D.fresh();   // (a sound asks the module, whose memory may have grown)
     lens();
