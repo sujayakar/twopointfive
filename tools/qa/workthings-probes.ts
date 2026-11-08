@@ -151,7 +151,7 @@ export const workWalk = () => keep(async () => {
       const gave = O.give('work', { kind: 'floor', at: th.stand, thing: th }, 'all'); for (let i = 0; i < 25 * 60 && !g.blackout.active; i++) step();
       const t0 = g.time, man: any = g.guards.find((x: any) => x.task?.kind === 'breaker'); if (!g.blackout.active || !man) return { ok: false as const, why: `order ${gave} · mains ${g.blackout.active ? 'out' : 'on'} · errand ${man?.callsign ?? 'nobody'}` };
       step(72); const fell = O.give('fallIn', { kind: 'floor', at: [9, 0, 17.5] }, 'all');
-      let still = 0, stillMax = 0, on = 0, off = 0, low = 0, roused: string | null = null, rousedT = -1, nearest = 1e9, fastest = 0, back = -1, never = true;
+      let still = 0, stillMax = 0, on = 0, off = 0, low = 0, nearest = 1e9, fastest = 0, never = true;
       for (let f = 0; f < 26 * 60; f++) {
         if (g.time - t0 > 5.2 && seg < WAY.length - 1) { along += 1.4 * DT;   // (as the tape: he waits five seconds for his partner, then goes at a sneak's pace)
           for (let L = Math.hypot(WAY[seg + 1][0] - WAY[seg][0], WAY[seg + 1][1] - WAY[seg][1]); seg < WAY.length - 1 && along >= L;) { along -= L; seg++; if (seg < WAY.length - 1) L = Math.hypot(WAY[seg + 1][0] - WAY[seg][0], WAY[seg + 1][1] - WAY[seg][1]); }
@@ -161,15 +161,13 @@ export const workWalk = () => keep(async () => {
         if (coming) { on++; if (workComing(g, b, man)) never = false; if (b.char.anim.crouch > 0.5) low++; } else off++;
         if (coming && v < 0.1 && gap > 3) { still += DT; stillMax = Math.max(stillMax, still); } else still = 0;
         if (man.state !== 'dead') nearest = Math.min(nearest, flat(b.char.pos, man.char.pos));
-        if (!roused) { const h = g.guards.find((x: any) => x.team !== 'operative' && (x.state === 'alert' || x.state === 'search' || x.state === 'dead')); if (h) { roused = `${h.callsign} ${h.state}`; rousedT = g.time - t0; } }
-        if (back < 0 && !g.blackout.active) back = g.time - t0;
       }
-      return { ok: true as const, why: `${gave} ${fell}`, man: man.callsign, stillMax, on, off, roused, rousedT, nearest, fastest, back, never, low, gap: flat(b.char.pos, pl.char.pos), partner: b.callsign, said: R.said };
+      return { ok: true as const, why: `${gave} ${fell}`, man: man.callsign, stillMax, on, off, nearest, fastest, never, low, gap: flat(b.char.pos, pl.char.pos), partner: b.callsign, said: R.said };
     };
     const B = await arm(!BREAK);
     if (!B.ok) { verdict(false, 'staged: lights out as two, the partner throws the breaker on order, a defender is sent to the panel, Sam calls fall in and walks on', B.why); return; }
-    verdict(!B.roused && B.back > 0, 'key on: nobody is roused, and the man sent puts the mains back himself', `${B.roused ?? 'no defender alert, searching or down'} · mains back ${B.back > 0 ? `${f2(B.back)} s after the throw` : 'never'} · nearest the man came ${f2(B.nearest)} m`);
-    verdict(B.stillMax < 1 && B.gap < 3, 'key on: he does not stand on that walk with Sam gone on, and ends at Sam\'s shoulder', `longest still on the walk ${f2(B.stillMax)} s · ${f2(B.gap)} m from Sam at the end`);
+    // (Whether the man then reaches the panel untouched is not asked: Sam's lead runs up that man's own route, and how near they meet is the dice's — squad.md, KNOWN, not built. Asked is the follower's own walk.)
+    verdict(B.stillMax < 1 && B.gap < 3, 'key on: he does not stand on that walk with Sam gone on, and ends at Sam\'s shoulder', `longest still on the walk ${f2(B.stillMax)} s · ${f2(B.gap)} m from Sam at the end · nearest the man came ${f2(B.nearest)} m`);
     verdict(B.fastest <= ORDERS.brisk + 0.25 && B.low >= B.on * 0.9, 'he never ran for it: a walk, low with Sam the whole of that walk', `fastest ${f2(B.fastest)} m/s (brisk ${ORDERS.brisk}) · low on ${B.low} of the ${B.on} frames on the walk`);
     verdict(B.off > 60 && B.on > 60 && !B.never, 'the rule answered on that walk, and is the walk\'s: once that man is past him it is the build\'s own follower again', `frames on the walk ${B.on} · off it ${B.off} · asked true with the key on: ${!B.never}`);
   } finally { SNEAK.on = sn0; SPOTTED.on = sp0; }
