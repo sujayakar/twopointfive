@@ -525,6 +525,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that lies left to right (the card's standing keys; a walk by the four directions would be a change of the screen's keys); a count's tile has no
   pop-up, only its arrows; in a short window the pop-up lies over the lower part of the guns' tiles. Seen only in
   headless Chromium on the software adapter: never on a GPU, nobody has played it.
+- **The walkthrough below went on 2026-11-09** (`src/ui/kitGuide.ts`, `?kitguide`): no lesson mounted one, and the kit tutorial's cards are its steps. The brief stands; its check is `tools/qa/kitbrief-page.cjs`. See `docs/agents/missions.md`.
 - **The kit step says the job, and a tutorial mission teaches planning on it** (2026-10-22, the walkthrough moved onto a tutorial mission 10-23; `src/ui/kitBrief.ts KITBRIEF`, `src/ui/kitGuide.ts KITGUIDE`; the maintainer: "we should
   teach how to pick squad layouts! so maybe a tutorial on the gear page for a mission (that's skippable). honestly it doesn't make a ton of sense right
   now since you don't know anything about the objective or map when picking kit"). TWO THINGS, EACH ITS OWN SWITCH, both UI only (nothing under

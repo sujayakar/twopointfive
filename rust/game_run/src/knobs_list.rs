@@ -1828,13 +1828,7 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("teampace.gap", offset_of!(Knobs, teampace.gap), false),
     ("noshove.ring", offset_of!(Knobs, noshove.ring), false),
     ("noshove.back", offset_of!(Knobs, noshove.back), false),
-    ("rails.pan_speed", offset_of!(Knobs, rails.pan_speed), false),
-    ("rails.pan_reach", offset_of!(Knobs, rails.pan_reach), false),
     ("rails.snap_px", offset_of!(Knobs, rails.snap_px), false),
-    ("rails.keep", offset_of!(Knobs, rails.keep), false),
-    ("rails.keep_speed", offset_of!(Knobs, rails.keep_speed), false),
-    ("rails.keep_deep", offset_of!(Knobs, rails.keep_deep), false),
-    ("rails.keep_up", offset_of!(Knobs, rails.keep_up), false),
     ("rails.way_m", offset_of!(Knobs, rails.way_m), false),
     ("rails.after_secs", offset_of!(Knobs, rails.after_secs), false),
     ("rails.after_max", offset_of!(Knobs, rails.after_max), false),
@@ -5162,13 +5156,7 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.teampace.gap;
     let _: &f64 = &k.noshove.ring;
     let _: &f64 = &k.noshove.back;
-    let _: &f64 = &k.rails.pan_speed;
-    let _: &f64 = &k.rails.pan_reach;
     let _: &f64 = &k.rails.snap_px;
-    let _: &f64 = &k.rails.keep;
-    let _: &f64 = &k.rails.keep_speed;
-    let _: &f64 = &k.rails.keep_deep;
-    let _: &f64 = &k.rails.keep_up;
     let _: &f64 = &k.rails.way_m;
     let _: &f64 = &k.rails.after_secs;
     let _: &f64 = &k.rails.after_max;

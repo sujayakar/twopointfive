@@ -10,7 +10,6 @@ pub struct Rails {
     pub answered: f64,
     pub back: bool,
     pub orders_seen: f64,
-    pub sky: crate::rails::RailsSky,
     pub spared: JsMap<crate::Num, f64>,
     pub tap_t: f64,
     pub moved: bool,
@@ -22,7 +21,6 @@ pub struct Rails {
     pub act_t: f64,
     pub log: Vec<String>,
     pub running: bool,
-    pub lookout: Option<crate::fogofwar::FogEye>,
     pub step_look: Option<crate::rails::RailsStepLook>,
     pub fresh: f64,
 }
@@ -34,7 +32,6 @@ impl Rails {
             answered: -1.0,
             back: false,
             orders_seen: 0.0,
-            sky: crate::rails::RailsSky { off: [0.0, 0.0, 0.0], mid: None, mid_t: -1.0, parked: false, was: None, view: None, again: false },
             spared: JsMap::new(),
             tap_t: -1000000000.0,
             moved: false,
@@ -46,7 +43,6 @@ impl Rails {
             act_t: -1000000000.0,
             log: Vec::new(),
             running: false,
-            lookout: None,
             step_look: None,
             fresh: 0.0,
         }
@@ -66,67 +62,6 @@ impl RailsRun {
     }
 }
 impl Default for RailsRun { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/rails.ts:225 Rails.sky, src/game/rails.ts:225)
-#[derive(Clone, Copy, Debug, ToBytes)]
-pub struct RailsSky {
-    pub off: V3,
-    pub mid: Option<V3>,
-    pub mid_t: f64,
-    pub parked: bool,
-    pub was: Option<crate::rails::RailsSkyWas>,
-    pub view: Option<crate::rails::RailsSkyView>,
-    pub again: bool,
-}
-impl RailsSky {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsSky {
-            off: [0.0; 3],
-            mid: None,
-            mid_t: 0.0,
-            parked: false,
-            was: None,
-            view: None,
-            again: false,
-        }
-    }
-}
-impl Default for RailsSky { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/rails.ts:225 RailsSky.was, src/game/rails.ts:225)
-#[derive(Clone, Copy, Debug, ToBytes)]
-pub struct RailsSkyWas {
-    pub invisible: bool,
-}
-impl RailsSkyWas {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsSkyWas {
-            invisible: false,
-        }
-    }
-}
-impl Default for RailsSkyWas { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/rails.ts:225 RailsSky.view, src/game/rails.ts:225)
-#[derive(Clone, Copy, Debug, ToBytes)]
-pub struct RailsSkyView {
-    pub yaw: f64,
-    pub pitch: f64,
-    pub dist: f64,
-}
-impl RailsSkyView {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsSkyView {
-            yaw: 0.0,
-            pitch: 0.0,
-            dist: 0.0,
-        }
-    }
-}
-impl Default for RailsSkyView { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rails.ts:411 Rails.stepLook, src/game/rails.ts:411)
 #[derive(Clone, Copy, Debug, ToBytes)]
@@ -390,10 +325,7 @@ pub const BREAK: bool = false;
 pub const WAITS_BREAK: bool = false;
 
 /// (src/game/rails.ts:129 ACTS: a table nothing writes)
-pub fn acts() -> JsMap<String, crate::rails::Act> { { let mut t = JsMap::new(); t.set(String::from("move"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyW"), String::from("KeyA"), String::from("KeyS"), String::from("KeyD")]), buttons: None, wheel: None }); t.set(String::from("pan"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyW"), String::from("KeyA"), String::from("KeyS"), String::from("KeyD")]), buttons: None, wheel: None }); t.set(String::from("sprint"), crate::rails::Act { keys: Some(alloc::vec![String::from("ShiftLeft"), String::from("ShiftRight")]), buttons: None, wheel: None }); t.set(String::from("crouch"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyC")]), buttons: None, wheel: None }); t.set(String::from("wall"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyQ")]), buttons: None, wheel: None }); t.set(String::from("pace"), crate::rails::Act { keys: None, buttons: None, wheel: Some(true) }); t.set(String::from("aim"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("fire"), crate::rails::Act { keys: None, buttons: Some(1.0), wheel: None }); t.set(String::from("alt"), crate::rails::Act { keys: None, buttons: Some(4.0), wheel: None }); t.set(String::from("reload"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyR")]), buttons: None, wheel: None }); t.set(String::from("mode"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyZ")]), buttons: None, wheel: None }); t.set(String::from("slot:pistol"), crate::rails::Act { keys: Some(alloc::vec![String::from("Digit1")]), buttons: None, wheel: None }); t.set(String::from("slot:rifle"), crate::rails::Act { keys: Some(alloc::vec![String::from("Digit2")]), buttons: None, wheel: None }); t.set(String::from("slot:smoke"), crate::rails::Act { keys: Some(alloc::vec![String::from("Digit3")]), buttons: None, wheel: None }); t.set(String::from("slot:flash"), crate::rails::Act { keys: Some(alloc::vec![String::from("Digit4")]), buttons: None, wheel: None }); t.set(String::from("slot:frag"), crate::rails::Act { keys: Some(alloc::vec![String::from("Digit5")]), buttons: None, wheel: None }); t.set(String::from("stalk"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("hands"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyE"), String::from("Digit0")]), buttons: None, wheel: None }); t.set(String::from("use"), crate::rails::Act { keys: Some(alloc::vec![String::from("Space"), String::from("ArrowUp"), String::from("ArrowDown")]), buttons: None, wheel: None }); t.set(String::from("whistle"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyV")]), buttons: None, wheel: None }); t.set(String::from("light"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyL")]), buttons: None, wheel: None }); t.set(String::from("nvg"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyN")]), buttons: None, wheel: None }); t.set(String::from("order"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyB")]), buttons: None, wheel: None }); t.set(String::from("ring"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("ringPart"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("menu"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyX")]), buttons: Some(4.0), wheel: None }); t.set(String::from("who"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyT")]), buttons: None, wheel: None }); t.set(String::from("word"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyF")]), buttons: None, wheel: None }); t.set(String::from("tools"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyG"), String::from("KeyH")]), buttons: None, wheel: None }); t.set(String::from("goal"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("twice"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("camera"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("zoom"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("blow"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("load"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t } }
-
-/// (src/game/rails.ts:160 LOOKOUT_ID)
-pub const LOOKOUT_ID: f64 = 199.0;
+pub fn acts() -> JsMap<String, crate::rails::Act> { { let mut t = JsMap::new(); t.set(String::from("move"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyW"), String::from("KeyA"), String::from("KeyS"), String::from("KeyD")]), buttons: None, wheel: None }); t.set(String::from("sprint"), crate::rails::Act { keys: Some(alloc::vec![String::from("ShiftLeft"), String::from("ShiftRight")]), buttons: None, wheel: None }); t.set(String::from("crouch"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyC")]), buttons: None, wheel: None }); t.set(String::from("wall"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyQ")]), buttons: None, wheel: None }); t.set(String::from("pace"), crate::rails::Act { keys: None, buttons: None, wheel: Some(true) }); t.set(String::from("aim"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("fire"), crate::rails::Act { keys: None, buttons: Some(1.0), wheel: None }); t.set(String::from("alt"), crate::rails::Act { keys: None, buttons: Some(4.0), wheel: None }); t.set(String::from("reload"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyR")]), buttons: None, wheel: None }); t.set(String::from("mode"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyZ")]), buttons: None, wheel: None }); t.set(String::from("slot:pistol"), crate::rails::Act { keys: Some(alloc::vec![String::from("Digit1")]), buttons: None, wheel: None }); t.set(String::from("slot:rifle"), crate::rails::Act { keys: Some(alloc::vec![String::from("Digit2")]), buttons: None, wheel: None }); t.set(String::from("slot:smoke"), crate::rails::Act { keys: Some(alloc::vec![String::from("Digit3")]), buttons: None, wheel: None }); t.set(String::from("slot:flash"), crate::rails::Act { keys: Some(alloc::vec![String::from("Digit4")]), buttons: None, wheel: None }); t.set(String::from("slot:frag"), crate::rails::Act { keys: Some(alloc::vec![String::from("Digit5")]), buttons: None, wheel: None }); t.set(String::from("stalk"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("hands"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyE"), String::from("Digit0")]), buttons: None, wheel: None }); t.set(String::from("use"), crate::rails::Act { keys: Some(alloc::vec![String::from("Space"), String::from("ArrowUp"), String::from("ArrowDown")]), buttons: None, wheel: None }); t.set(String::from("whistle"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyV")]), buttons: None, wheel: None }); t.set(String::from("light"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyL")]), buttons: None, wheel: None }); t.set(String::from("nvg"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyN")]), buttons: None, wheel: None }); t.set(String::from("order"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyB")]), buttons: None, wheel: None }); t.set(String::from("ring"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("ringPart"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("menu"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyX")]), buttons: Some(4.0), wheel: None }); t.set(String::from("who"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyT")]), buttons: None, wheel: None }); t.set(String::from("word"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyF")]), buttons: None, wheel: None }); t.set(String::from("tools"), crate::rails::Act { keys: Some(alloc::vec![String::from("KeyG"), String::from("KeyH")]), buttons: None, wheel: None }); t.set(String::from("goal"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("twice"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("camera"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("zoom"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("blow"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t.set(String::from("load"), crate::rails::Act { keys: None, buttons: None, wheel: None }); t } }
 
 /// (src/game/rails.ts:160 STEP_EYE_ID)
 pub const STEP_EYE_ID: f64 = 198.0;

@@ -1344,7 +1344,7 @@ export class Game {
   clearQueueSummary(): string { return clearQueueSummary(this); }
   clearNearestRoom() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.clearNearestRoom', this, []); if (__r !== RUST_PASS) return __r as any; } } forceClear(this); }
   /** Camera follow position (player or spectated guard). */
-  followPos(at?: Vec3): Vec3 { const g = this.spectate >= 0 ? this.guards[this.spectate] : null; return g ? g.char.pos : this.view.lesson?.rails?.sky ?? at ?? this.player.char.pos; }   // (`at`: where his man is — a look ahead asks with where he will be, walkahead.ts)
+  followPos(at?: Vec3): Vec3 { const g = this.spectate >= 0 ? this.guards[this.spectate] : null; return g ? g.char.pos : at ?? this.player.char.pos; }   // (`at`: where his man is — a look ahead asks with where he will be, walkahead.ts)
   teleportPlayer(p: Vec3) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.teleportPlayer', this, [p]); if (__r !== RUST_PASS) return __r as any; } } return teleportPlayer(this, p); }
 
   repairLights() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.repairLights', this, []); if (__r !== RUST_PASS) return __r as any; } } return repairLights(this); }
@@ -1468,7 +1468,6 @@ export class Game {
     cam.peekOffset = me.cam.peekOffset; cam.kick = me.cam.kick;
     { const cut = me.takeCut(); if (cut) { cam.target = v3.copy(cut); cam.desired = v3.copy(cam.target); } }   // (a scenario's opening cut: the look-at snapped to its man, not flown)
     me.view.viewProj = cam.viewProj;   // (between ticks `viewProj` is the host's live matrix again, as it always was for whoever asks on-screen-or-not from outside a tick)
-    this.rails.hostView(cam);   // (a tutorial mission staged again opens on its first view: a return on its first line off a rails level)
     me.view.orders.hostView(input, cam, canvas);   // (between ticks the HUD and the tools ask the menu what the LIVE cursor is on, as they always did)
   }
   /** the tick for a game of one seat: `stepSeats(dt, [cmd])` */
@@ -1573,7 +1572,6 @@ export class Game {
     const world = this.engine.world; world.resetCapsules();   // (nobody handed over with the row down: the lists are emptied, not left as they last stood)
     const wetOn = (this.engine.settings as { wetChars?: boolean }).wetChars !== false;   // wet characters (wet.ts): the renderer's switch — off (or a dry man) hands the g-buffer zeros, and it shades him exactly as before
     let drawn = bare ? this.fogOfWar.everybody(all) : this.fogOfWar.filter(all);
-    if (this.view.lesson?.rails?.sky) { const me = this.player.char; drawn = drawn.filter(c => c !== me); }   // (rails.ts, the sky seat: nobody on the floor is the player — he is parked, and not in the picture)   // (fog of war: the men nobody on the team sees are not drawn and cast nothing — the list itself while it is off)
     if (drawn.length > 8 && (this.nightBreach.active || this.rescue.active)) {   // more men on screen than have a mesh tree (the four-man squad, nightbreach.ts: Sam + four + up to five defenders; render/meshbvh.ts MESH_MAX_CHARS is eight. Every drawn man has his round-cone proxies: BoxWorld.MAX_CAST): the men down give up the trees' places first, so it is a body that is shadowed by his cones before any man standing is. Eight or fewer = the list as it was
       const down = new Set<Character>(); for (const gd of this.guards) if (gd.state === 'dead') down.add(gd.char);
       if (down.size) drawn = [...drawn.filter(c => !down.has(c)), ...drawn.filter(c => down.has(c))];

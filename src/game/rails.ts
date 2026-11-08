@@ -19,8 +19,6 @@
 //   · NOBODY IS LOST. `rails.respawn` seconds: a teammate who would have gone down is on a knee for that long and then up again (railsSpare, asked by
 //     combat.ts killGuard) — by behaviour, no hit points.
 //   · FOG BY THE STEP. `rails.fog` / a step's `fog`: the fog of war as the newest step that says so has it.
-//   · THE SKY SEAT (`rails.sky`): nobody on the floor is the player. He is parked out of the picture and out of every sense, the view rides the squad
-//     and the walk keys (action `pan`) shift it about them; the seat's own rows on the HUD are the page's to hide (`view.lesson.rails.sky`).
 //   · THE HOLD IS ITS OWN LINE (a step's `noTap`, `menuLine`): while a step teaches the command key held, a tap of it gives no order and a few words come up
 //     under the line; with the ring up the line is what to press in it. A step's `eye` is one more lookout for the fog while it is up (the squad's own charge
 //     on a wall, which its men stand with their backs to); a step's `onWay` hands the view back to the squad once its order is given.
@@ -38,16 +36,8 @@ import { lessonTokenFaults } from './lesson';   // (called inside railsFaults on
 import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 export const RAILS = { on: false,
-  /** the sky seat: metres a second the walk keys shift the view at the default zoom, and how far from the squad it may go */
-  panSpeed: 11, panReach: 16,
   /** the cursor this near (px) the step's mark on the screen is ON the mark's place, whatever stands between the eye and it (orders.ts targetUnder) */
   snapPx: 40,
-  /** the sky seat keeps the step's mark in the picture: with no walk key held, a view shifted so that the mark is further from its middle than `keep` of the
-   *  camera's distance is eased back (m/s at the default zoom) until it is not — a ring off the screen, or under the squad's panel, is a player lost.
-   *  The kept ground is an oval, not a round: `keep` of the distance to either side (short of the squad's panel on the left), `keepDeep` of that reach up and
-   *  down the screen, with its middle `keepUp` of the reach up the screen from the view's own (the step's line sits low in the middle: a ring behind it,
-   *  or behind the panel, is a ring nobody sees) */
-  keep: 0.21, keepSpeed: 9, keepDeep: 0.79, keepUp: 0.39,
   /** a step's `onWay`: a man of the squad under an order whose mark is within this many metres of the step's own is on his way to it (0: never) */
   wayM: 6,
   /** a step's `onWay.run`: those men RUN the leg ("the guys should sprint back to exfil when they're done": the mission's own order, one more reason of
@@ -113,7 +103,7 @@ export const RAILS_STATS = { dropped: 0, cues: 0, starts: 0, kept: 0, putBack: 0
 /** an action → the key codes it owns (the game's own codes: host/keymap.ts moves keys, never codes), its mouse buttons (bits of Input.buttons) and the wheel */
 interface Act { keys?: string[]; buttons?: number; wheel?: boolean }
 const ACTS: Record<string, Act> = {
-  move: { keys: ['KeyW', 'KeyA', 'KeyS', 'KeyD'] }, pan: { keys: ['KeyW', 'KeyA', 'KeyS', 'KeyD'] },
+  move: { keys: ['KeyW', 'KeyA', 'KeyS', 'KeyD'] },
   sprint: { keys: ['ShiftLeft', 'ShiftRight'] }, crouch: { keys: ['KeyC'] }, wall: { keys: ['KeyQ'] }, pace: { wheel: true },
   aim: {}, fire: { buttons: 1 }, alt: { buttons: 4 }, reload: { keys: ['KeyR'] }, mode: { keys: ['KeyZ'] },
   'slot:pistol': { keys: ['Digit1'] }, 'slot:rifle': { keys: ['Digit2'] }, 'slot:smoke': { keys: ['Digit3'] }, 'slot:flash': { keys: ['Digit4'] }, 'slot:frag': { keys: ['Digit5'] },
@@ -192,11 +182,9 @@ export function railsFaults(L: LessonData): string[] {
 /** THE FRAME'S RECORD on the page's copy, as the bridge fills it from the Rust game. Nothing here decides anything: what a HUD is told is `game.view.lesson`. */
 export class Rails {
   run: unknown = null; answered = -1; back = false; ordersSeen = 0;
-  /** the sky seat: the view's own shift about the squad, the eased point it rides, and whether the player has been parked for this run */
-  sky = { off: [0, 0, 0] as Vec3, mid: null as Vec3 | null, midT: -1, parked: false, was: null as { invisible: boolean } | null, view: null as { yaw: number; pitch: number; dist: number } | null, again: false };
   /** teammates spared a down: the game's clock each is back on his feet at, by character id */
   spared = new Map<number, number>();
-  tapT = -1e9; moved = false; wayNv = -1; gaveStep = -1; gave = 0; gaveT = -1e9; gave0 = -1e9; actT = -1e9; running = false; lookout: unknown = null; stepLook: unknown = null;
+  tapT = -1e9; moved = false; wayNv = -1; gaveStep = -1; gave = 0; gaveT = -1e9; gave0 = -1e9; actT = -1e9; running = false; stepLook: unknown = null;
   /** ticks left of a run's opening, in which the view may be set back under the step */
   fresh = 0;
   log: string[] = [];
@@ -210,14 +198,6 @@ export class Rails {
   gate(input: Input, cam: FollowCamera, dt: number): void { return goneWithTick('Rails.gate') as any; }
   /** once a tick (rust: rails_tick) */
   tick(dt: number): void { return goneWithTick('Rails.tick') as any; }
-
-  /** between ticks, with the HOST's camera (game.ts update): the mission again opens on the view the first run opened on. A view left zoomed all the way out
-   *  could not do the step that asks for a zoom. The view is the host's, so it is set there and reaches the game in the next tick's record like any turn of it */
-  hostView(cam: FollowCamera) {
-    if (!this.g.view.lesson?.rails?.sky || !this.sky.parked) return;
-    const V = this.sky.view; if (!V) this.sky.view = { yaw: cam.yaw, pitch: cam.pitch, dist: cam.desiredDistance }; else if (this.sky.again) { cam.yaw = V.yaw; cam.pitch = V.pitch; cam.distance = cam.desiredDistance = V.dist; }
-    this.sky.again = false;
-  }
 
   /** a checkpoint of this run was put back (savestate.ts loadMem, after every object is as it stood): the program's beats are functions half run, which no
    *  snapshot holds — it is started again, and the step's cue sent again, on the next tick */

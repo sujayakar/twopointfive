@@ -537,36 +537,6 @@ pub enum KitModIssuing {
     Own,
 }
 
-/// (TypeScript: inline at src/game/kit.ts:1180 lessonRow, src/game/kit.ts:1180)
-#[derive(Clone, Copy, Debug, ToBytes)]
-pub struct KitModLessonRow {
-    pub packs: Option<crate::kit::KitModLessonRowPacks>,
-}
-impl KitModLessonRow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitModLessonRow {
-            packs: None,
-        }
-    }
-}
-impl Default for KitModLessonRow { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/kit.ts:1180 KitModLessonRow.packs, src/game/kit.ts:1180)
-#[derive(Clone, Copy, Debug, ToBytes)]
-pub struct KitModLessonRowPacks {
-    pub frags: Option<f64>,
-}
-impl KitModLessonRowPacks {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitModLessonRowPacks {
-            frags: None,
-        }
-    }
-}
-impl Default for KitModLessonRowPacks { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/kit.ts:1203 kept0, src/game/kit.ts:1203)
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitModKept0 {
@@ -1032,51 +1002,6 @@ impl KitPaste {
 }
 impl Default for KitPaste { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1173 kitPacks(e), src/game/kit.ts:1173)
-#[derive(Clone, Copy, Debug)]
-pub struct KitPacksE {
-    pub packs: Option<crate::kit::KitModLessonRowPacks>,
-}
-impl KitPacksE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitPacksE {
-            packs: None,
-        }
-    }
-}
-impl Default for KitPacksE { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/kit.ts:1181 kitLessonPage(row), src/game/kit.ts:1181)
-#[derive(Clone, Copy, Debug)]
-pub struct KitLessonPageRow {
-    pub packs: Option<crate::kit::KitLessonPageRowPacks>,
-}
-impl KitLessonPageRow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitLessonPageRow {
-            packs: None,
-        }
-    }
-}
-impl Default for KitLessonPageRow { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/kit.ts:1181 KitLessonPageRow.packs, src/game/kit.ts:1181)
-#[derive(Clone, Copy, Debug)]
-pub struct KitLessonPageRowPacks {
-    pub frags: Option<f64>,
-}
-impl KitLessonPageRowPacks {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitLessonPageRowPacks {
-            frags: None,
-        }
-    }
-}
-impl Default for KitLessonPageRowPacks { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/kit.ts:1212 keptNow ->, src/game/kit.ts:1212)
 #[derive(Clone, Copy, Debug)]
 pub struct KeptNow {
@@ -1182,7 +1107,8 @@ pub struct KitMod {
     /// (src/game/kit.ts:1148 issuing)
     pub issuing: crate::kit::KitModIssuing,
     /// (src/game/kit.ts:1180 lessonRow)
-    pub lesson_row: Option<crate::kit::KitModLessonRow>,
+    /// this page is a lesson's: its stagings wear the issue
+    pub lesson_row: bool,
     /// (src/game/kit.ts:1203 kept0)
     pub kept0: Option<crate::kit::KitModKept0>,
     /// (src/game/kit.ts:1211 keptWand)
@@ -1212,7 +1138,7 @@ impl KitMod {
             kit_note: alloc::vec![String::from(""); 5],
             issued_page: false,
             issuing: crate::kit::KitModIssuing::Bool(false),
-            lesson_row: None,
+            lesson_row: false,
             kept0: None,
             kept_wand: Vec::new(),
             man_of: JsMap::new(),

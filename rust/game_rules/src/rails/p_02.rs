@@ -558,7 +558,6 @@ pub fn rails_view(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &Lesso
         stalk_shut: shuts_of(s, "stalk"),
         teaches_hold: t.map_or(false, |t| word_of(&t.no_tap)),
         no_lasers: rd.lasers == Some(false),
-        sky: None,
     })
 }
 /// the frame's own log (rails.ts Rails.note)

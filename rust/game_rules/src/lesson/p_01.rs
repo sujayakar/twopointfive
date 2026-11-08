@@ -213,7 +213,7 @@ fn test_ok(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> Option<bool> {
         T::Mate { area, at, r, by, away } => ok_mate(g, &crate::seats::here(g), *area, *at, *r, *by, *away),
         T::Pair { what, n } => ok_pair(g, what, *n, s),
         T::Cue { name } => crate::rails::rails_cued(g, name),
-        T::View { turned, zoomed, .. } => ok_view(g, &crate::seats::here(g), *turned, *zoomed, s),
+        T::View { turned, zoomed } => ok_view(g, &crate::seats::here(g), *turned, *zoomed, s),
         T::Squad { area, n } => ok_squad(g, *area, *n),
         T::Stacks { doors, n, set } => ok_stacks(g, doors, *n, *set),
         T::Watching { at, r, n } => ok_watching(g, &crate::seats::here(g), *at, *r, *n),

@@ -279,7 +279,6 @@ fn card_row(g: &mut Game, i: f64, r: &KitRow, m: &mut MemberKit, issued: &mut Me
         fixed: !row_fixed(g, r, m).is_empty(),
         changed: !same_value(&v, &was),
         idle,
-        lent: 0.0,
         less: kit_peek(g, i, r.field, -1.0).why,
         more: kit_peek(g, i, r.field, 1.0).why,
         can: kit_row_can(g, m, r.field),

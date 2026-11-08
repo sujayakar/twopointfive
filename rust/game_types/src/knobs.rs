@@ -6340,13 +6340,7 @@ impl Default for NoshoveK { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RailsK {
     pub on: bool,
-    pub pan_speed: f64,
-    pub pan_reach: f64,
     pub snap_px: f64,
-    pub keep: f64,
-    pub keep_speed: f64,
-    pub keep_deep: f64,
-    pub keep_up: f64,
     pub way_m: f64,
     pub way_run: bool,
     pub after_secs: f64,
@@ -6368,13 +6362,7 @@ impl RailsK {
     pub fn zeroed() -> Self {
         RailsK {
             on: false,
-            pan_speed: 0.0,
-            pan_reach: 0.0,
             snap_px: 0.0,
-            keep: 0.0,
-            keep_speed: 0.0,
-            keep_deep: 0.0,
-            keep_up: 0.0,
             way_m: 0.0,
             way_run: false,
             after_secs: 0.0,
@@ -12210,7 +12198,6 @@ impl Default for LessonK { fn default() -> Self { Self::zeroed() } }
 pub struct IssueK {
     pub on: bool,
     pub whole: bool,
-    pub picked: bool,
 }
 impl IssueK {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -12218,7 +12205,6 @@ impl IssueK {
         IssueK {
             on: false,
             whole: false,
-            picked: false,
         }
     }
 }
@@ -12900,7 +12886,7 @@ pub fn page_noshove() -> NoshoveK {
 }
 
 pub fn page_rails() -> RailsK {
-    crate::knobs::RailsK { on: true, pan_speed: 11.0, pan_reach: 16.0, snap_px: 40.0, keep: 0.21, keep_speed: 9.0, keep_deep: 0.79, keep_up: 0.39, way_m: 6.0, way_run: true, after_secs: 8.0, after_max: 45.0, line_clear: true, mark_clear: true, eye_first: true, eye_view: true, card_beat: true, card_beat_secs: 1.2, card_quiet: 2.0, card_max: 9.0, spare_down: true, flat_ring: true, spare_secs: 6.0 }
+    crate::knobs::RailsK { on: true, snap_px: 40.0, way_m: 6.0, way_run: true, after_secs: 8.0, after_max: 45.0, line_clear: true, mark_clear: true, eye_first: true, eye_view: true, card_beat: true, card_beat_secs: 1.2, card_quiet: 2.0, card_max: 9.0, spare_down: true, flat_ring: true, spare_secs: 6.0 }
 }
 
 pub fn page_belief() -> BeliefK {
@@ -13370,7 +13356,7 @@ pub fn page_lesson() -> LessonK {
 
 
 pub fn page_issue() -> IssueK {
-    crate::knobs::IssueK { on: true, whole: true, picked: true }
+    crate::knobs::IssueK { on: true, whole: true }
 }
 
 pub fn page_verdict() -> VerdictK {

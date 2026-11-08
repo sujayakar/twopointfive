@@ -35,7 +35,7 @@ pub enum LessonTestKind {
     Mate { area: Option<crate::scene_scenarios::Rect>, at: Option<V3>, r: Option<f64>, by: Option<f64>, away: Option<f64> },
     Pair { what: String, n: Option<f64> },
     Cue { name: String },
-    View { turned: Option<f64>, zoomed: Option<f64>, panned: Option<f64> },
+    View { turned: Option<f64>, zoomed: Option<f64> },
     Squad { area: crate::scene_scenarios::Rect, n: Option<f64> },
     Stacks { doors: Vec<String>, n: Option<f64>, set: bool },
     Watching { at: V3, r: Option<f64>, n: Option<f64> },
@@ -887,7 +887,6 @@ pub struct RailsData {
     pub respawn: Option<f64>,
     pub fog: Option<bool>,
     pub waits: Option<crate::scene_scenarios::RailsDataWaits>,
-    pub sky: Option<crate::scene_scenarios::RailsDataSky>,
     pub lasers: Option<bool>,
     pub orders: Option<Vec<String>>,
     pub flat_ring: Option<bool>,
@@ -901,7 +900,6 @@ impl RailsData {
             respawn: None,
             fog: None,
             waits: None,
-            sky: None,
             lasers: None,
             orders: None,
             flat_ring: None,
@@ -925,46 +923,6 @@ impl RailsDataWaits {
     }
 }
 impl Default for RailsDataWaits { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/scenarios.ts:303 RailsData.sky, src/scene/scenarios.ts:303)
-#[derive(Clone, Copy, Debug, ToBytes)]
-pub struct RailsDataSky {
-    pub park: V3,
-    pub reach: Option<f64>,
-    pub eye: Option<crate::scene_scenarios::RailsDataSkyEye>,
-    pub low: Option<bool>,
-}
-impl RailsDataSky {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsDataSky {
-            park: [0.0; 3],
-            reach: None,
-            eye: None,
-            low: None,
-        }
-    }
-}
-impl Default for RailsDataSky { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/scenarios.ts:303 RailsDataSky.eye, src/scene/scenarios.ts:303)
-#[derive(Clone, Copy, Debug, ToBytes)]
-pub struct RailsDataSkyEye {
-    pub at: V3,
-    pub yaw: f64,
-    pub fov: Option<f64>,
-}
-impl RailsDataSkyEye {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsDataSkyEye {
-            at: [0.0; 3],
-            yaw: 0.0,
-            fov: None,
-        }
-    }
-}
-impl Default for RailsDataSkyEye { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: LessonData, src/scene/scenarios.ts:319)
 #[derive(Clone, Debug, ToBytes)]
@@ -1614,7 +1572,6 @@ pub struct ScenarioEntry {
     pub squad: f64,
     pub group: Option<crate::scene_scenarios::MissionGroup>,
     pub only: Option<String>,
-    pub packs: Option<crate::scene_scenarios::ScenarioEntryPacks>,
     pub level: Option<String>,
     pub hour: Option<crate::hours::HourId>,
     pub weather: Option<crate::scene_scenarios::ScenarioEntryWeather>,
@@ -1640,7 +1597,6 @@ impl ScenarioEntry {
             squad: 0.0,
             group: None,
             only: None,
-            packs: None,
             level: None,
             hour: None,
             weather: None,
@@ -1701,21 +1657,6 @@ impl MissionGroup {
         }
     }
 }
-
-/// (TypeScript: inline at src/scene/scenarios.ts:574 ScenarioEntry.packs, src/scene/scenarios.ts:574)
-#[derive(Clone, Copy, Debug)]
-pub struct ScenarioEntryPacks {
-    pub frags: Option<f64>,
-}
-impl ScenarioEntryPacks {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ScenarioEntryPacks {
-            frags: None,
-        }
-    }
-}
-impl Default for ScenarioEntryPacks { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
