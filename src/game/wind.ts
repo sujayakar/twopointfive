@@ -116,13 +116,14 @@ export class Wind {
   /** what goes to the particles this frame (the jets nearest the view, then the storm; ≤ WIND_GPU_MAX). THE HOST'S, not the game's: it needs a particle pool and where the view looks,
    *  so it is made of the standing game where it is asked (src/host/rustdress.ts, the wind's panel), and no game's record holds it. rust/game_draw/src/winds.rs `for_particles` is the
    *  same rule, for the page that holds no game. tools/draw/weather-check.ts holds the two together. */
-  get forParticles(): WindSource[] {
-    const g = this.g; if (windOf(g) <= 0) return [];
-    const f = (g.engine as { viewFocus?: Vec3 }).viewFocus ?? g.player.char.pos, W = g.weather, sx = W ? W.wind[0] * WIND.stormK : 0, sz = W ? W.wind[1] * WIND.stormK : 0, storm = this.blows(true) && hyp2(sx, sz) >= 0.05;
-    const pool = this.active.filter(s => s.kind === 'jet' && v3.dist(s.bound.c, f) < WIND.nearM + s.bound.r), most = WIND_GPU_MAX - (storm ? 1 : 0);
-    if (pool.length > most) { pool.sort((a, b) => v3.dist(a.bound.c, f) - v3.dist(b.bound.c, f)); pool.length = most; }
-    if (storm && this.storm.speed > 0) pool.push(this.storm);
-    return pool;
+  get forParticles(): WindSource[] { return this.gustsAround(this.g.looksAt); }
+  gustsAround(f: Vec3): WindSource[] {
+    const dist = (s: WindSource) => v3.dist(s.bound.c, f);
+    const jets = this.active.filter(s => s.kind === 'jet' && dist(s) < WIND.nearM + s.bound.r), storm = this.active.find(s => s.kind === 'storm');
+    const most = WIND_GPU_MAX - (storm ? 1 : 0);
+    if (jets.length > most) { jets.sort((a, b) => dist(a) - dist(b)); jets.length = most; }
+    if (storm) jets.push(storm);
+    return jets;
   }
   private storm: WindSource;
   /** the level's own roofs as the weather last told them (reroof; null = the office's two) — what the storm record's `roofs` is while WX_OWN.wind is on */

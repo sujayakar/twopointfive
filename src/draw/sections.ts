@@ -1,7 +1,7 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 2093614525;
+export const LAYOUT = 4217857405;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
@@ -143,8 +143,10 @@ export const enum View {
   hit = 51,
   /** u32: this game is the Team & kit picture: 1 staged, 2 nothing to stage (0: it is no picture) */
   kit = 52,
+  /** u32: the Team & kit picture asks for a copy of the last picture over what it is about to stage again: moves each time; answered by a command */
+  veil = 53,
   /** words a row */
-  row = 53,
+  row = 54,
 }
 
 /** the sky: one row */
@@ -163,46 +165,58 @@ export const enum Sky {
   hour = 9,
   /** f32 */
   hourSun = 10,
+  /** f32: the cover of the weather that is picked (under 0: none is), and the share of the hour's own sun that comes through */
+  cover = 11,
+  /** f32 */
+  sunShare = 12,
+  /** u32: the level's moon: 0 it has none, 1 it has, 2 it is up; its strength, its height and bearing in degrees */
+  moon = 13,
+  /** f32 */
+  moonK = 14,
+  /** f32 */
+  moonElev = 15,
+  /** f32 */
+  moonBearing = 16,
   /** u32: snow lies on this level */
-  snowLevel = 11,
+  snowLevel = 17,
   /** f32 × 3: the level's own sky, how kept the place is (under 0: it does not say) and its marks' texel (0: the usual) */
-  ownZenith = 12,
+  ownZenith = 18,
   /** f32 × 3 */
-  ownHorizon = 15,
+  ownHorizon = 21,
   /** f32 */
-  kept = 18,
+  kept = 24,
   /** f32 */
-  markTexel = 19,
+  markTexel = 25,
   /** u32: the weather in the open air (render/frame.ts WeatherFrame, in its order) */
-  weather = 20,
+  weather = 26,
   /** f32 */
-  rain = 21,
+  rain = 27,
   /** f32 */
-  snow = 22,
+  snow = 28,
   /** f32 × 2 */
-  shear = 23,
+  shear = 29,
   /** f32 */
-  wet = 25,
+  wet = 31,
   /** f32 × 3 */
-  flash = 26,
+  flash = 32,
   /** f32 */
-  rainTop = 29,
+  rainTop = 35,
   /** f32 × 4 */
-  interior = 30,
+  interior = 36,
   /** f32 × 4 */
-  annex = 34,
+  annex = 40,
   /** u32 */
-  roofC = 38,
+  roofC = 44,
   /** u32 */
-  roofD = 39,
+  roofD = 45,
   /** u32 */
-  fog = 40,
+  fog = 46,
   /** f32 × 4 */
-  nearFade = 41,
+  nearFade = 47,
   /** f32 × 4: the streaks' phase function; its last number 0 = none said */
-  phase = 45,
+  phase = 51,
   /** words a row */
-  row = 49,
+  row = 55,
 }
 
 /** what the page is told of the boxes' tables this frame: one row */
@@ -845,7 +859,7 @@ export const enum Reset {
   tick = 0,
   /** u32 */
   serial = 1,
-  /** u32: 1 the level: every history · 2 the smoke · 4 the snow's blasts · 8 the things' marks · 16 the prints */
+  /** u32: 1 the level: every history · 2 the smoke · 4 the snow's blasts · 8 the things' marks · 16 the prints · 32 the cans venting stop, what they let out left in the air */
   what = 2,
   /** words a row */
   row = 3,

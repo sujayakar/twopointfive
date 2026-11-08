@@ -65,20 +65,18 @@ section! {
 /// WHAT THE PARTICLE POOL IS HANDED: the jets near the view, nearest first, then the storm. It wants a pool and where the view looks, so it is made here of the standing game and
 /// no game's record holds it. The page that plays the puppet has the same rule (wind.ts `forParticles`); tools/draw/weather-check.ts holds the two together.
 fn for_particles(g: &Game) -> Vec<game::ids::WindWindSourceId> {
-    if game::wind::wind_of(g) <= 0.0 { return Vec::new(); }
-    let f = match g.engine.view_focus { Some(f) => f, None => g.ch[g.pl[g.player].ch].pos };
-    let tab = &g.tab.wind_wind_source;
+    use game::wind::WindSourceKind as K;
+    let (tab, f, near_m) = (&g.tab.wind_wind_source, crate::looks_at(g), g.k.wind.near_m);
     let dist = |s: game::ids::WindWindSourceId| game::v3::dist(tab[s].bound.c, f);
-    let storm = game::wind::wind_storm_wind__body(g).is_some();
-    let near_m = g.k.wind.near_m;
-    let mut pool: Vec<game::ids::WindWindSourceId> = g.wind.active.iter().copied().filter(|&s| tab[s].kind == game::wind::WindSourceKind::Jet && dist(s) < near_m + tab[s].bound.r).collect();
-    let most = (game::smoke_types::WIND_GPU_MAX - if storm { 1.0 } else { 0.0 }) as usize;
-    if pool.len() > most {
-        game::js::sort_by(&mut pool, |&a, &b| dist(a) - dist(b));
-        pool.truncate(most);
+    let mut jets: Vec<_> = g.wind.active.iter().copied().filter(|&s| tab[s].kind == K::Jet && dist(s) < near_m + tab[s].bound.r).collect();
+    let storm = g.wind.active.iter().copied().find(|&s| tab[s].kind == K::Storm);
+    let most = game::smoke_types::WIND_GPU_MAX as usize - storm.is_some() as usize;
+    if jets.len() > most {
+        jets.sort_by(|&a, &b| dist(a).total_cmp(&dist(b)));
+        jets.truncate(most);
     }
-    if storm && tab[g.wind.storm].speed > 0.0 { pool.push(g.wind.storm); }
-    pool
+    jets.extend(storm);
+    jets
 }
 
 #[derive(Default)]
@@ -105,7 +103,7 @@ impl Winds {
         // (the heat of the fires is said by the tick that moved the clock: a tick that said none has none)
         if !again {
             self.heat.clear();
-            for e in g.out.iter().rev() { if let OutEvent::ParticlesSetHeat(h) = e { for s in &h.srcs { self.heat.push(gpu(s)); } break; } }
+            for e in g.out.iter().rev() { if let OutEvent::ParticlesSetHeat(h) = e { for s in &h.srcs { if !crate::far_for_a_fire(g, s.pos) { self.heat.push(gpu(s)); } } break; } }
         }
         for r in g.weather.roof_rects.iter() { self.roofs.push(Rect { r: r.map(|x| x as f32) }); }
         self.stands(g);

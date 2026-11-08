@@ -1,6 +1,6 @@
 // THE BACKEND'S HALF OF A VISIT (src/cloud/cloud.ts), on a page that draws a game it does not hold: on a hosted build that was given one, and only where this browser sends, a few records of the visit, the
-// settings and the files the page saves go up. Null on every other build: no id, no timer, no request. The kept tape is not this page's yet (a replay here is a start, the hands and
-// the commands).
+// settings and the files the page saves go up. Null on every other build: no id, no timer, no request.
+import { buildName } from './buildname';
 import type { Engine } from '../engine';
 import type { Gpu } from '../gpu/device';
 import { RENDER_PASSES } from '../gpu/timer';
@@ -16,10 +16,12 @@ import type { Quality } from '../ui/quality';
 import { View, Section } from '../draw/sections';
 import type { DrawGame } from './drawgame';
 import type { Measure } from './measure';
-import { sessionId } from './session';
+import type { KeptStore } from '../replay/keepstore';
 
 export interface DrawCloudDeps {
   gpu: Gpu; engine: Engine; quality: Quality; game: DrawGame; measure: Measure;
+  /** the visit's name, and what it keeps of its run (null: nothing) */
+  sid: string; store: KeptStore | null;
   /** the mission, in a word */
   mission: string;
   /** a run's page is nobody's try */
@@ -36,7 +38,7 @@ export function drawCloud(q: URLSearchParams, d: DrawCloudDeps): DrawCloud | nul
   const end = (): { won: boolean } | null => { const now = !d.offBooks && (game.drawn.u[game.drawn.at[Section.view] + View.run] & 2) !== 0; if (now && !over) won = game.verdict()?.won ?? false; over = now; return now ? { won } : null; };
   /** what the module says, or nothing of a game that is lost */
   const asked = <T>(f: () => T, none: T): T => { try { return game.lost ? none : f(); } catch { return none; } };
-  const cloud = cloudBoot(q, { sid: sessionId(), store: null, build: () => build,
+  const cloud = cloudBoot(q, { sid: d.sid, store: d.store, build: () => build,
     machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, hz()).now,
     facts: () => { const t = asked(() => game.tally(), null), R = asked(() => d.offBooks ? null : game.verdict(), null);
       return { scenario: d.mission, stage: t?.stage ?? '', live: asked(d.live, false), stats: t?.stats ?? {}, preset: quality.current, scale: S.renderScale, auto: quality.auto, sharp: !!S.sharpDirect, shed: quality.shed, res: [engine.width, engine.height], out: [gpu.canvas.width, gpu.canvas.height], hz: hz(),
@@ -50,7 +52,7 @@ export function drawCloud(q: URLSearchParams, d: DrawCloudDeps): DrawCloud | nul
   (window as unknown as { __cloud: unknown }).__cloud = cloud?.hook() ?? null;
   doorTo(cloud);
   if (!cloud) return null;
-  try { void fetch('/qa/commit', { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(t => { const c = t.trim(); if (/^[0-9a-f]{7,40}$/.test(c)) build = c; }).catch(() => { /* a static build says none */ }); } catch { /* no fetch */ }
+  void buildName().then(c => { build = c || build; });
   void gpu.device.lost.then(info => { if (info.reason !== 'destroyed') void cloud.telemetry.flush(true); });
   return { cloud, begins: () => { began = performance.now(); ticksAt = game.ticks; callsAt = CALLS.play ? CALLS.play.ms : NaN; },
     drawn: (rawDt, gpuMs) => cloud.frame(rawDt, asked(d.live, false), endStage(d.offBooks ? '' : 'play', asked(end, null)), gpuMs, gpu.device.queue) };

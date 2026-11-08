@@ -2,11 +2,9 @@
 // Bot the lesson scripts under tools/qa/lessons/ are written against, over the page's own hooks (__game, __input, __cam, __runFrames), so a run made
 // here is recorded by the page's run tape and plays back in the engine player (src/replay/engineplay.ts) on any machine.
 //
-// What differs from the headless runner, and why: EVERYTHING THE RUN DEPENDS ON MUST BE ON THE TAPE. The tape carries the input, the camera and every
-// value the game reads off the renderer, so
-//   - a row is chosen with the keys (Space held, the arrows, Space let go), never by Game.selectVerb, which writes the highlight from outside a step;
-//   - Sam's light meter is fed as an ANSWER OF THE PROBE (the CPU estimate planted under his two keys before each step), never written on the Player.
-// Nothing is drawn while it runs (the caller stubs the renderer), so no other GPU answer exists: every other reader takes its own stand-in.
+// What differs from the headless runner, and why: EVERYTHING THE RUN DEPENDS ON MUST BE ON THE TAPE. The tape carries the input and the camera, so a row is
+// chosen with the keys (Space held, the arrows, Space let go), never by Game.selectVerb, which writes the highlight from outside a step.
+// Nothing is drawn while it runs (the caller stubs the renderer): the game senses for itself and asks the picture nothing.
 import * as officeLoud from './office-loud';
 import * as wallCharge from './wall-charge';
 import * as chairs from './chairs';
@@ -15,7 +13,7 @@ import * as doors from './doors';
 import type { Bot } from '../lesson-run';
 
 type Vec = number[];
-interface Script { query?: string; mode?: { unseen?: boolean; god?: boolean; noAi?: boolean; /** lesson-run's own (the moon on the CPU's meter): the page has the real meter */ moon?: boolean }; idleOk?: string[]; steps?: Record<string, (B: Bot) => void>; finish?: (B: Bot) => void; ended?: (g: any) => boolean; free?: (B: Bot) => void; level?: string; title?: string }
+interface Script { query?: string; mode?: { god?: boolean; noAi?: boolean }; idleOk?: string[]; steps?: Record<string, (B: Bot) => void>; finish?: (B: Bot) => void; ended?: (g: any) => boolean; free?: (B: Bot) => void; level?: string; title?: string }
 /** lesson scripts by level name: none today (the seven Training lessons' scripts went with the lessons, 2026-10-23; a tutorial mission's script joins here when its replay is recorded) */
 const LESSONS: Record<string, Script> = {};
 /** scripts that are no lesson: one function over the same Bot, on a level and query of their own */
@@ -30,11 +28,10 @@ function run(name: string, o: { cap?: number; pace?: number } = {}): TapeRun {
   const lesson = LESSONS[name], script = lesson ?? FREE[name];
   const lines: string[] = [], out: TapeRun = { code: 0, why: '', lines, steps: [], secs: 0, frames: 0, heard: [] };
   if (!script) return { ...out, code: 2, why: `no script '${name}'` };
-  const g = Wn.__game, I = Wn.__input, cam = Wn.__cam, canvas = document.getElementById('view') as HTMLCanvasElement, hour = Wn.__hour, audio = Wn.__audio;
+  const g = Wn.__game, I = Wn.__input, cam = Wn.__cam, canvas = document.getElementById('view') as HTMLCanvasElement, audio = Wn.__audio;
   const L = g.level.scenarios?.lesson;
   if (lesson && !L) return { ...out, code: 2, why: 'the level carries no scenarios.lesson block' };
   if (lesson) for (const T of L.steps) if (typeof script.steps?.[T.id] !== 'function') return { ...out, code: 2, why: `the script has no steps['${T.id}']` };
-  const unseen = !!script.mode?.unseen;
   if (script.mode?.god) g.godMode = true;
   if (script.mode?.noAi) g.aiEnabled = false;   // (a sandbox switch: the run tape carries it, so the replay stands the same floor)
 
@@ -46,11 +43,6 @@ function run(name: string, o: { cap?: number; pace?: number } = {}): TapeRun {
   class Stop extends Error { }
   const pos = (): Vec => g.player.char.pos;
   const cap = o.cap ?? 600;
-  const meter = () => {
-    const c = g.player.char, id = c.id, chest = c.bones?.chest ?? [c.pos[0], c.pos[1] + 1.2, c.pos[2]], eye = c.bones?.head ?? [c.pos[0], c.pos[1] + 1.6, c.pos[2]];
-    const E = unseen ? 0 : Math.max(hour.est(chest, id), hour.est(eye, id)), R = g.probe.results as Map<string, number[]>;
-    R.clear(); R.set('playerChest', [E, E, E]); R.set('playerHead', [E, E, E]);
-  };
   function step(n = 1) {
     for (let i = 0; i < n; i++) {
       for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) I.keys.delete(k);
@@ -59,7 +51,6 @@ function run(name: string, o: { cap?: number; pace?: number } = {}): TapeRun {
         if (d > 0.1) { const { fwd, right } = cam.planarBasis(), a = (dx * fwd[0] + dz * fwd[2]) / d, b = (dx * right[0] + dz * right[2]) / d, T = 0.3827; if (a > T) I.keys.add('KeyW'); if (a < -T) I.keys.add('KeyS'); if (b > T) I.keys.add('KeyD'); if (b < -T) I.keys.add('KeyA'); } }
       if (sprint && goal) I.keys.add('ShiftLeft'); else if (!held.has('ShiftLeft')) I.keys.delete('ShiftLeft');
       for (const k of held) I.keys.add(k);
-      meter();
       Wn.__runFrames(1, DT); t += DT; frames++;
       for (const x of [g.player, ...g.guards]) { const p = x.char.pos; if (!Number.isFinite(p[0] + p[1] + p[2])) throw new Error(`NaN position on ${x.callsign ?? 'the player'}`); }
       if (g.player.down && !downSaid) { downSaid = true; say(`   !! the player is down at ${at(pos())}`); }

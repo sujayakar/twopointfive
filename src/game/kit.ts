@@ -1174,7 +1174,7 @@ export const kitPacks = (e: { packs?: unknown } | null | undefined): boolean => 
  *  one thing of his own, a frag over the sandbags, and the men behind them are held down until it lands, so a card packed with none would leave a line
  *  asking for what he cannot do. His frags are never fewer than that there; the loadout screen shows it on his tile as the mission's (ui/loadout.ts). */
 let lessonRow: { packs?: { frags?: number } } | null = null;
-export function kitLessonPage(row: { packs?: { frags?: number } } | null | undefined) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitLessonPage', undefined, [row]); if (__r !== RUST_PASS) return __r as any; } } lessonRow = row ?? null; }
+export function kitLessonPage(row: { packs?: { frags?: number } } | null | undefined) { lessonRow = row ?? null; }
 /** every staging on this page wears the issue cards (a tool raised it, or the page's lesson is not one he packs for) */
 const pageIssued = (): boolean => issuedPage || (!!lessonRow && !kitPacks(lessonRow));
 /** the least frags he carries on this page (0: no such page) */

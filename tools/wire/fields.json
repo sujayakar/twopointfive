@@ -4104,7 +4104,6 @@
 "lanes::State.peek",
 "lanes::State.post",
 "lanes::State.push",
-"lanes::State.reloads",
 "lanes::State.roll",
 "lanes::State.said_t",
 "lanes::State.seen",
@@ -5672,7 +5671,6 @@
 "roomfight::Op.pass",
 "roomfight::Op.pre",
 "roomfight::Op.ready_at",
-"roomfight::Op.reload_until",
 "roomfight::Op.rounds",
 "roomfight::Op.said_t",
 "roomfight::Op.short_seen",
@@ -7284,7 +7282,13 @@
 "game::Game.stood",
 "game::Game.solo_card",
 "smoke_types::WindGpuSourceBound.c",
-"smoke_types::WindGpuSourceBound.r"
+"smoke_types::WindGpuSourceBound.r",
+"weather::Weather.on",
+"weather::Weather.kind_now",
+"weather::Weather.fog_spec",
+"weather::Weather.snow_rate",
+"weather::Weather.wind",
+"weather::Weather.wet_gloss"
 ],
 "everyTickNotCarried": [
 {
@@ -11623,7 +11627,6 @@
 "roomfight::Op.meters",
 "roomfight::Op.pass",
 "roomfight::Op.ready_at",
-"roomfight::Op.reload_until",
 "roomfight::Op.rounds",
 "roomfight::Op.short_t",
 "roomfight::Op.step",
@@ -12380,7 +12383,13 @@
 "game::Game.stood",
 "game::Game.solo_card",
 "smoke_types::WindGpuSourceBound.c",
-"smoke_types::WindGpuSourceBound.r"
+"smoke_types::WindGpuSourceBound.r",
+"weather::Weather.on",
+"weather::Weather.kind_now",
+"weather::Weather.fog_spec",
+"weather::Weather.snow_rate",
+"weather::Weather.wind",
+"weather::Weather.wet_gloss"
 ],
 "unsent": {
 "anim_characters::CharacterRenderer": "the page's renderer: the host fills its arrays and draws from them",

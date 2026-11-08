@@ -253,7 +253,7 @@
 "sig": "pub fn particles_emit(g: &mut crate::game::Game, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts, ours: bool)",
 "bodyFile": "render_particles/b_01.rs",
 "mode": "push",
-"armCode": "{ const P = g.engine.particles; if (!P) return; const was = P.ours; P.ours = e.ours; try { P.emit(e.kind, e.pos, e.dir, e.count, e.o); } finally { P.ours = was; } }"
+"armCode": "{ const P = g.engine.particles; if (!P || (e.o.ember !== undefined && g.farForAFire(e.pos))) return; const was = P.ours; P.ours = e.ours; try { P.emit(e.kind, e.pos, e.dir, e.count, e.o); } finally { P.ours = was; } }"
 },
 {
 "call": "Particles.impulse",
@@ -303,6 +303,7 @@
 "sig": "pub fn particles_set_heat(g: &mut crate::game::Game, srcs: &[crate::smoke_types::WindGpuSource])",
 "bodyFile": "render_particles/b_01.rs",
 "mode": "body",
+"armCode": "{ g.engine.particles?.setHeat?.(e.srcs.filter((s: any) => !g.farForAFire(s.pos))); }",
 "answer": null
 },
 {
@@ -810,6 +811,18 @@
 }
 ],
 "sig": "pub fn snow_blast(g: &mut crate::game::Game, at: V3, radius: f64)",
+"mode": "push"
+},
+{
+"call": "SmokeSystemLike.shutCans",
+"rust": "crate::out_events::smoke_cans_shut",
+"sites": 1,
+"ts": "shutCans",
+"of": "SmokeSystemLike",
+"file": "src/smoke/types.ts",
+"why": "this",
+"params": [],
+"sig": "pub fn smoke_cans_shut(g: &mut crate::game::Game)",
 "mode": "push"
 }
 ],

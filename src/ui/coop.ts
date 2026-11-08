@@ -10,15 +10,15 @@
 //   the invite               `coopInvite`, on the host's page while the server waits for the second player: the code, the link and a button that copies it
 // Plain DOM. THE SWITCH is lobby.ts COOP.on (`?coop=0`: none of this is on the page). Nothing here is read by a tick.
 import { COOP, Lobby, codeTyped, codeWhole, coopScenario, joinLink, netSearch, lobbyWhy, freshId, type GameView } from '../net/lobby';
-import { SENDING_WORDS } from '../replay/engineplay';
-import { visitWord } from './replaykey';
-import { NET_JOIN, buildName } from '../net/page';
+import { SENDING_WORDS, visitWord } from '../tape/address';
+import { NET_JOIN } from '../net/address';
+import { buildName } from '../host/buildname';
 import { cloudFind, cloudUrl } from '../cloud/cloud';
 import { wire } from '../cloud/wire';
-import { keptLevers, leversNow } from '../game/difficulty';
-import { seatsKind } from '../game/seats';
+import { leversSaid } from '../host/machine';
+import { seatsKind } from '../scene/seatkinds';
 import { openList } from './startpage';
-import { myName, setMyName } from '../host/names';
+import { myName, setMyName } from '../host/myname';
 import { NET } from '../net/wire';
 import type { Mission } from './missions';
 import { ALL_MISSIONS } from '../scene/scenarioList';
@@ -74,6 +74,8 @@ async function enter(L: Lobby, code: string, told: (words: string) => void): Pro
 
 /** the missions two can play: a kind the game seats two in (game/seats.ts), and not a lesson (on rails, for one) or a row built for its own size only */
 export const coopCan = (m: Mission): boolean => { const e = ALL_MISSIONS.find(x => x.id === m.id); return !!e && seatsKind(e.kind) && !e.only && !m.lesson; };
+/** what the page that hosts has set for the game beside its address (a page whose game is the module's: where it stands, and this machine's own settings) */
+export const HOSTED = { setup: (_scenario: string): Record<string, unknown> => ({}) };
 /** HOST: the starting page, picking a mission for two. Its block hands the mission's address here */
 export function coopHostList(select?: string): void {
   (window as unknown as { __coop?: unknown }).__coop = { hostable: () => desk().start(location.search).rows.filter(coopCan).map(m => ({ id: m.id, group: m.group, kind: m.kind })) };   // (a check's: which rows the page was handed)
@@ -85,11 +87,11 @@ async function host(search: string, m: Mission): Promise<void> {
   say(WAIT.host);
   const fail = (why: string): void => { hosting = false; say(why, true); coopHostList(m.id); };   // (the page closed its kit as it deployed: it is put up again on the same mission)
   const q = new URLSearchParams(location.search), L = await lobby(q); if (typeof L === 'string') return fail(L);
-  const K = keptLevers() as Record<string, string | undefined>, kept = leversNow().flatMap(l => { const v = K[l.key]; return v === undefined ? [] : [[l.param, v] as [string, string]]; });
+  const kept = leversSaid();
   // (the mission's address is the starting page's link, which carries this VISIT's words along — a picture's quality, a muted mixer, where it sends: those
   // are this window's, not the game's, and the second player's page must not take them from the recipe)
   const own = new URLSearchParams([...new URLSearchParams(search.replace(/^[^?]*\?/, ''))].filter(([k, v]) => !visitWord(k, v) && !SENDING_WORDS.includes(k) && k !== 'seed' && k !== 'player'));   // (by pair: the dress's `look=plain` is the game's level and goes to the second player, a look page's row is this window's)
-  let made: GameView; try { made = await L.make(coopScenario('?' + own.toString(), kept)); } catch (e) { return fail(lobbyWhy(e, 'host')); }
+  let made: GameView; try { const scenario = coopScenario('?' + own.toString(), kept); made = await L.make(scenario, undefined, HOSTED.setup(scenario)); } catch (e) { return fail(lobbyWhy(e, 'host')); }
   const why = await enter(L, made.code, say); if (why) fail(why);
 }
 

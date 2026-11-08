@@ -221,7 +221,6 @@ pub fn drive(g: &mut crate::game::Game, gd: GuardId, dt: f64, rooted: bool) {
             bark(g, gd, LineKind::Duck, false, Some(true));
         }
     }
-    if g.gd[gd].reload_t >= 0.0 { crate::guards::tick_reload_beat(g, gd, dt); }
     if g.gd[gd].react_t > 0.0 { g.gd[gd].react_t -= dt; }
 }
 

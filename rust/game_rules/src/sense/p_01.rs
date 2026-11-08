@@ -50,6 +50,11 @@ pub fn smoke_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEmitte
     sim::bricks::emit(g.sim, e.pos[0], e.pos[1], e.pos[2], r, rate, e.ttl);
 }
 
+/// Every source lets out no more; what is in the air stays.
+pub fn smoke_shut(g: &mut crate::game::Game) {
+    if sim::state::state_read(g.sim).smoke.live != 0 { sim::bricks::shut(g.sim); }
+}
+
 /// How many more emitters there is room for, off the game's own count.
 pub fn smoke_budget(g: &crate::game::Game) -> f64 {
     let k = g.k.sense.smoke;

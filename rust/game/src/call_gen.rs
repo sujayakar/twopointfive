@@ -214,7 +214,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 312 => { let a1: Vec<GuardId> = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: Option<String> = Io::r(&mut i); let a4: Option<GuardId> = Io::r(&mut i); let r = crate::tactics::plan_approach(g, &a1, a2, a3.as_deref(), a4); r.w(&mut o);  }
 315 => { let a1: GuardId = Io::r(&mut i); let a2: Option<crate::tactics::TacticsPenalty> = Io::r(&mut i); let r = crate::lanes::lane_penalty(g, a1, a2.as_ref()); r.w(&mut o);  }
 316 => { let a1: GuardId = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let r = crate::lanes::lane_covers(g, a1, a2); r.w(&mut o);  }
-317 => { let a1: GuardId = Io::r(&mut i); crate::lanes::lane_reload(g, a1);  }
 318 => {  crate::lanes::lanes_reset(g);  }
 320 => { let a1: RoomfightDefId = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: Option<DoorId> = Io::r(&mut i); let a4: Option<f64> = Io::r(&mut i); crate::pressure::run(g, a1, a2, a3, a4);  }
 321 => { let a1: RoomfightDefId = Io::r(&mut i); let a2: DoorId = Io::r(&mut i); let a3: Option<RoomfightRoomId> = Io::r(&mut i); let r = crate::pressure::charge(g, a1, a2, a3); r.w(&mut o);  }
@@ -555,7 +554,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 840 => { let a1: f64 = Io::r(&mut i); let a2: crate::kit::MemberKit = Io::r(&mut i); let r = crate::kit::kit_wears(g, a1, &a2); r.w(&mut o);  }
 841 => { let a1: f64 = Io::r(&mut i); let a2: Option<JsMap<String, crate::kit::KitValue>> = Io::r(&mut i); let r = crate::kit::kit_sanitize(g, a1, a2.as_ref()); r.w(&mut o);  }
 842 => { let a1: Option<bool> = Io::r(&mut i); crate::kit::kit_issued_page(g, a1);  }
-843 => { let a1: Option<crate::kit::KitLessonPageRow> = Io::r(&mut i); crate::kit::kit_lesson_page(g, a1);  }
 844 => {  crate::kit::kit_reset(g);  }
 845 => {  crate::kit::kit_player(g);  }
 846 => {  crate::kit::kit_solo(g);  }
