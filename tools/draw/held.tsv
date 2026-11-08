@@ -124,7 +124,6 @@ holder	tools/mp/setup.ts
 holder	tools/mp/stand.ts
 holder	tools/qa/answers.ts
 holder	tools/qa/bang-tally.ts
-holder	tools/qa/bench-check.ts
 holder	tools/qa/bigmoves-strip.ts
 holder	tools/qa/bigslot-check.ts
 holder	tools/qa/bouncewalls-check.ts
@@ -136,7 +135,6 @@ holder	tools/qa/door-watch.ts
 holder	tools/qa/dress-check.ts
 holder	tools/qa/fogfire-watch.ts
 holder	tools/qa/fold.ts
-holder	tools/qa/framecap-check.ts
 holder	tools/qa/fresh.ts
 holder	tools/qa/goals-check.ts
 holder	tools/qa/ground-pieces-check.ts
@@ -144,7 +142,6 @@ holder	tools/qa/gunwall-watch.ts
 holder	tools/qa/halftwice-check.ts
 holder	tools/qa/handle-watch.ts
 holder	tools/qa/headless.ts
-holder	tools/qa/highlights-check.ts
 holder	tools/qa/holds.ts
 holder	tools/qa/hole-watch.ts
 holder	tools/qa/hud-look-check.ts
@@ -173,7 +170,6 @@ holder	tools/qa/lightwall-watch.ts
 holder	tools/qa/line-watch.ts
 holder	tools/qa/lived-check.ts
 holder	tools/qa/lookexpo-check.ts
-holder	tools/qa/lookmaps-check.ts
 holder	tools/qa/map-check.ts
 holder	tools/qa/map-plan.ts
 holder	tools/qa/marksight-check.ts
@@ -189,7 +185,6 @@ holder	tools/qa/paths-watch.ts
 holder	tools/qa/playthrough.ts
 holder	tools/qa/portal-check.ts
 holder	tools/qa/quiet-check.ts
-holder	tools/qa/rainscale-check.ts
 holder	tools/qa/rainwalls-check.ts
 holder	tools/qa/replay-at.ts
 holder	tools/qa/replay-make.ts
@@ -199,21 +194,16 @@ holder	tools/qa/rollback-check.ts
 holder	tools/qa/rust-check.ts
 holder	tools/qa/samefight-rerun.ts
 holder	tools/qa/samestart-check.ts
-holder	tools/qa/savefile-check.ts
 holder	tools/qa/scenario-level-probes.ts
 holder	tools/qa/scenario-picker-probes.ts
 holder	tools/qa/seats-check.ts
 holder	tools/qa/seats-run.ts
 holder	tools/qa/second-way-check.ts
-holder	tools/qa/settle-check.ts
-holder	tools/qa/shaderrows-check.ts
-holder	tools/qa/sharpcap-check.ts
 holder	tools/qa/smokebreak-check.ts
 holder	tools/qa/smokeline-check.ts
 holder	tools/qa/soak.ts
 holder	tools/qa/solo-night.ts
 holder	tools/qa/sound-takes-check.ts
-holder	tools/qa/splitrays-check.ts
 holder	tools/qa/squadsmoke-probes.ts
 holder	tools/qa/squadwords.ts
 holder	tools/qa/stack-marks-check.ts
@@ -221,7 +211,6 @@ holder	tools/qa/stackline-watch.ts
 holder	tools/qa/stand-dump.ts
 holder	tools/qa/stand.ts
 holder	tools/qa/stuff-check.ts
-holder	tools/qa/sunglint-check.ts
 holder	tools/qa/swap-times.ts
 holder	tools/qa/teams-check.ts
 holder	tools/qa/tsconfig.json

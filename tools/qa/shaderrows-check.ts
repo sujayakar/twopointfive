@@ -216,11 +216,8 @@ if (argOf('--dump') !== null) {   // this tree, the environment's row
   const same = (x?: string[], y?: string[]) => !!x && !!y && JSON.stringify(x) === JSON.stringify(y);
   check(same(boots.off, boots.first), 'Start on first frame shaders asks for the same pipelines as the build without it, by name');
   check(!!boots.off && ['gatherTrace', 'gatherLight', 'vol'].every(l => boots.off!.includes(l)) && !boots.off.some(l => /^fgather|^vol(Froxel|Dust|K0)$|^froxel/.test(l)), 'the gather is its two programs and the volumetric pass its one, and no one-kernel gather, march twin or froxel kernel is asked for', (boots.off ?? []).filter(l => /gather|^vol/.test(l)).join(', '));
-  // the page's wiring, read as text: a player's start does not wait for the later set, a script's `__ready` does
-  { const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
-    check(/\n  window\.__started = true;\n  void laterIdle\(\)\.then\(\(\) => \{ [^\n]*readyResolve\(\); \}\);/.test(main) && !/\n\s*readyResolve\(\);/.test(main),
-      'main.ts raises `__started` when the start card is live and resolves `__ready` only once the later set is in');
-  }
+  // the page's wiring, read as text: a script's `__ready` waits for the later set, a player's start does not
+  check(/__ready = ready\.then\(\(\) => laterIdle\(\)\);/.test(readFileSync(`${ROOT}/src/host/drawpage.ts`, 'utf8')), 'the page resolves `__ready` only once the later set is in');
 }
 console.log(red ? `\nshaderrows-check: ${red} FAILED` : '\nshaderrows-check: all passed');
 process.exit(red ? 1 : 0);
