@@ -342,8 +342,7 @@ two tests of `tests/orders.rs`, hands its three functions on to a module of its 
 **Before either lands** (none of this is in the file or the line):
 - `bun run tools/sim/build.ts` after any change under `rust/`.
 - Reading a game back deals a row its functions by the list (`rows::by_id`), so an order needs no line in the
-  wire, and a row with an id on no line stops the import, by name. Its `gone` and its `stands_in.when` are not on
-  the wire: an order that has either also has a line in `io::deal_closures`.
+  wire, and a row with an id on no line stops the import, by name.
 - A dozen modules know orders BY ID and a new order is in none of their lists: `silent` (loud rows),
   `holdfire` (lift and blow orders), `sneak` and `unseen` (posted), `orders::lane_orders`, `squadthrow`
   (resumed), `rails` (a lesson's list of rows hides a row it does not name), `cmdring` (the ring's seats),

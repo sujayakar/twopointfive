@@ -7,6 +7,7 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
     valid: Some(valid),
+    gone: Some(gone),
     ..Row::new("charge", label, issue)
 };
 
@@ -44,4 +45,10 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
     if crate::doortools::door_tools_loose_on(g, &crate::seats::here(g), t) { return started(crate::doortools::door_tools_start_charge(g, men, t, Some(true))); }
     if let Some(c) = crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door) { crate::doortools::door_tools_trigger(g, Some(c)); return None; }
     started(crate::doortools::door_tools_start_charge(g, men, t, None))
+}
+
+/// a steel door takes none, but for the one that is on it
+fn gone(g: &mut Game, t: &OrderTarget, _men: &[GuardId]) -> bool {
+    let OrderTarget::Door(x) = t else { return false };
+    on(g.dr[x.door].def.steel) && crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door).is_none()
 }

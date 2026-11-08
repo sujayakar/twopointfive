@@ -292,7 +292,7 @@ fn take_row(g: &mut Game, row: &'static crate::orders::Row, key: f64, ack: [&str
 
 /// mark, watch, now, dark: new rows each time they are seated   (PairOrders.rows)
 pub fn pair_orders_rows(g: &mut Game) -> Vec<OrdersOrderDefId> {
-    use crate::orders::{rows, OrderWhen};
+    use crate::orders::rows;
     let mark = take_row(g, &rows::pairmark::ORDER, 1.0, ["moving up on him.", "on him. your mark."]);
     let watch = crate::orders::squad_orders_row(g, rows::def(&rows::pairwatch::ORDER, crate::orders::OrderDef {
         key: Some(2.0), targets: vec![crate::orders::TargetKind::Foe],
@@ -303,7 +303,7 @@ pub fn pair_orders_rows(g: &mut Game) -> Vec<OrdersOrderDefId> {
     let dark = crate::orders::squad_orders_row(g, rows::def(&rows::pairdark::ORDER, crate::orders::OrderDef {
         key: Some(1.0), targets: vec![crate::orders::TargetKind::Floor],
         ack: Some(vec![String::from("moving."), String::from("on it.")]),
-        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from("move"), when: OrderWhen::PairDark }),
+        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from("move") }),
         ..Default::default()
     }));
     vec![mark, watch, now, dark]

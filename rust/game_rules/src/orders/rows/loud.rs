@@ -7,6 +7,7 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
     only: Some(crate::silent::row_whole_squad),
+    when: Some(when),
     ..Row::new("loud", label, issue)
 };
 
@@ -16,3 +17,6 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
     crate::silent::set_silent(g, false, Some(crate::silent::By::Order));
     None
 }
+
+/// in silent's place while the squad is silent
+fn when(g: &mut Game, _t: &OrderTarget, _men: &[GuardId]) -> bool { crate::silent::squad_silent(g, &crate::seats::here(g)) }

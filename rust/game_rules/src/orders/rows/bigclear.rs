@@ -7,6 +7,7 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
     valid: Some(valid),
+    gone: Some(gone),
     ..Row::new(crate::doortools::BIG_ORDER, label, issue)
 };
 
@@ -42,4 +43,10 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
     let r = crate::doortools::door_tools_issue(g, crate::doortools::DoorToolKind::OpenClear, men, t, Some(on_word));
     g.door_tools.big_next = false;
     match r { crate::doortools::DoorToolsIssue::Text(w) => Some(w), crate::doortools::DoorToolsIssue::Arm1(()) => None }
+}
+
+/// an open door, or a steel one
+fn gone(g: &mut Game, t: &OrderTarget, _men: &[GuardId]) -> bool {
+    let OrderTarget::Door(x) = t else { return false };
+    crate::doortools::is_open(g, x.door) || on(g.dr[x.door].def.steel)
 }

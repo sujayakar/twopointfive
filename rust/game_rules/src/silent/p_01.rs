@@ -235,7 +235,7 @@ pub fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
         listed: listed(),
         free: Some(true),
         ack: Some(vec![String::from("going loud."), String::from("copy. loud.")]),
-        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from("silent"), when: crate::orders::OrderWhen::Loud }),
+        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from("silent") }),
         ..Default::default()
     }));
     [silent, loud]

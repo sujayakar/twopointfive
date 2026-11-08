@@ -8,6 +8,8 @@
 //!   can     this man can do his part (None), or the word for why not
 //!   only    the men, of those addressed, the order is for
 //!   valid   these men together can carry it out here (Ok), or not (Err(None)), or the word for why (Err(Some))
+//!   gone    the flat ring does not offer it on this target at all
+//!   when    it stands in now for the row its data names (`OrderDef.stands_in`)
 //!   issue   hand each man his assignment; Some is a refusal, in those words
 //!   tick    once a frame for each man under the order, before he is posed
 //!   frame   once a frame for the order itself, after the menu's input: put its row on the menu or take it off
@@ -50,8 +52,7 @@ rows! {
     charge;
     fragclear;
     threshold;
-    gosmall;
-    gobig;
+    go;
     bigclear;
     thrword;
     wallrow;
@@ -112,5 +113,5 @@ pub fn plain_valid(w: Option<String>) -> Result<(), Option<String>> {
     match w { Some(w) => Err(Some(w)), None => Ok(()) }
 }
 
-/// the order of that id. 'go' is two lines, one for each size of squad: this answers the first, and whoever deals it asks `go_key`
+/// the order of that id
 pub fn by_id(id: &str) -> Option<&'static Row> { ROWS.iter().copied().find(|r| r.id == id) }

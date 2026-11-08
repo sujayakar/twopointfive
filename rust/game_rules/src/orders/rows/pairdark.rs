@@ -8,6 +8,7 @@ use alloc::{format, string::String, vec, vec::Vec};
 pub const ORDER: Row = Row {
     can: Some(can),
     tick: Some(crate::pairorders::pair_orders_dark_tick),
+    when: Some(when),
     ..Row::new("pairDark", label, issue)
 };
 
@@ -24,3 +25,6 @@ fn can(g: &mut Game, gd: GuardId, t: &OrderTarget) -> Option<String> {
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
     crate::pairorders::p_01::dark_issue(g, men, t)
 }
+
+/// in move's place while the squad is silent and the pair orders are up
+fn when(g: &mut Game, _t: &OrderTarget, _men: &[GuardId]) -> bool { crate::pairorders::pair_orders_up(g, &crate::seats::here(g)) && crate::silent::squad_silent(g, &crate::seats::here(g)) }

@@ -1,4 +1,4 @@
-//! THE HELD THRESHOLD'S PAGE: the row that opens it, in the tools' place while the jambs are held.
+//! THE HELD THRESHOLD'S PAGE: the row that opens it. It has no `when`: its data says it stands in for the tools, and it never does (from outside, a held door's word is the key's).
 use crate::game::Game;
 use crate::ids::*;
 use crate::orders::rows::Row;

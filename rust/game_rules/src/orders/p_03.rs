@@ -103,34 +103,13 @@ pub fn order_valid(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
 }
 /// `d.issue(S, men, t, opts)`: Some is the refusal, the string the closure returned (orders.ts:877)
 pub fn order_issue(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { (g.tab.orders_order_def[d].row.issue)(g, men, t, o) }
-/// `d.gone?.(S, t, men)`, the match over OrderGone. False with no `gone` (orders.ts:831)
+/// the flat ring does not offer the row on this target at all. False with no `gone` (orders.ts:831)
 pub fn order_gone(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> bool {
-    let Some(arm) = g.tab.orders_order_def[d].gone else { return false };
-    match arm {
-        OrderGone::DoorCharge => match t {
-            OrderTarget::Door(x) => on(g.dr[x.door].def.steel) && crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door).is_none(),
-            _ => false,
-        },
-        OrderGone::DoorBigClear => match t {
-            OrderTarget::Door(x) => crate::doortools::is_open(g, x.door) || on(g.dr[x.door].def.steel),
-            _ => false,
-        },
-        OrderGone::WallRow => g.wall_charge.brought == Some(0.0) && crate::wallcharge::wall_charge_charge_on_target(g, &crate::seats::here(g), t).is_none(),
-    }
+    g.tab.orders_order_def[d].row.gone.map_or(false, |f| f(g, t, men))
 }
-/// `d.standsIn?.when(S, t, men)`, the match over OrderWhen. False with no stands_in (orders.ts:819)
+/// the row stands in for the one its data names now. False with no `when` (orders.ts:819)
 pub fn order_when(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> bool {
-    let Some(arm) = g.tab.orders_order_def[d].stands_in.as_ref().map(|s| s.when) else { return false };
-    match arm {
-        OrderWhen::ShutDoor => {
-            let OrderTarget::Door(x) = t else { return false };
-            crate::shutdoor::stands_open(g, x.door) && crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door).is_none()
-        }
-        // doortools.ts:846 `if (DOORTOOLS.outsidePlain) return false; …`: outsidePlain is on on the page (settled), so the held page never stands in
-        OrderWhen::DoorHeld => false,
-        OrderWhen::Loud => crate::silent::squad_silent(g, &crate::seats::here(g)),
-        OrderWhen::PairDark => crate::pairorders::pair_orders_up(g, &crate::seats::here(g)) && crate::silent::squad_silent(g, &crate::seats::here(g)),
-    }
+    g.tab.orders_order_def[d].row.when.map_or(false, |f| f(g, t, men))
 }
 /// `this.people?.ray(ro, rd, max) ?? null`: the man of the other side a cursor ray lands on nearer than `max` (orders.ts:783; the closure is pairorders.ts:162)
 pub fn squad_orders_people_ray(g: &crate::game::Game, seat: &crate::seats::SeatRef, ro: V3, rd: V3, max: f64) -> Option<GuardId> {

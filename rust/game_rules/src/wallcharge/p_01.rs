@@ -360,7 +360,6 @@ pub fn wall_charge_new(g: &mut crate::game::Game) -> crate::wallcharge::WallChar
         targets: vec![crate::orders::TargetKind::Floor],
         listed: Some(Vec::new()),
         ack: Some(vec![String::from("copy."), String::from("on it.")]),
-        gone: Some(crate::orders::OrderGone::WallRow),
         ..crate::orders::OrderDef::zeroed()
     }));
     crate::orders::squad_orders_voice(g, crate::orders::OrderNoteFn::WallCharge);

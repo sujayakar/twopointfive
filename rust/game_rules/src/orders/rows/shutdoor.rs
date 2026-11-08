@@ -9,6 +9,7 @@ pub const ORDER: Row = Row {
     only: Some(only),
     valid: Some(valid),
     tick: Some(crate::shutdoor::tick),
+    when: Some(when),
     ..Row::new(crate::shutdoor::SHUT_ID, label, issue)
 };
 
@@ -30,4 +31,10 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
 
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
     crate::shutdoor::order_issue(g, men, t)
+}
+
+/// in the charge's place while the door stands open with no charge on it
+fn when(g: &mut Game, t: &OrderTarget, _men: &[GuardId]) -> bool {
+    let OrderTarget::Door(x) = t else { return false };
+    crate::shutdoor::stands_open(g, x.door) && crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door).is_none()
 }
