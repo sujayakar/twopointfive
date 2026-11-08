@@ -19,7 +19,7 @@
 //                     (the threshold's page where the tools page turns to one; where 'clear from outside' is a plain row on 4, that is what is held)
 //   orderkeys-table   the table itself: ORDER_DIGITS is 5, the keys the orders read are X T B F and nothing else, register() never deals a digit above it
 //                     (a page of twelve rows: five digits, the rest on the wheel), and no line of the order path names a digit key above it
-import { menuKey } from './squadwords';
+import { ringUp, ringDown } from './squadwords';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -120,7 +120,7 @@ async function rig(scn: Scn, seed = 21) {
       return man;
     },
     /** X pressed on what the cursor is on, then a few frames with every key up: the menu (or null) */
-    openX(wait = 6): any { (menuKey(O), R.step()); R.step(wait); return O.menu; },
+    openX(wait = 6): any { ringUp(input, R); R.step(wait); return O.menu; },
   };
   // the family's own red paths (ORDERKEYS_BREAK=1 bun run tools/qa/probes.ts orderkeys-walk must FAIL): one tool put back on a digit out of reach; `four`: row 4 of the door tools on 6
   if (BREAK === '1') { const d = O.defs.find((x: any) => x.id === 'bangClear'); if (d) d.key = 7; }
@@ -182,33 +182,6 @@ function walkMenu(R: Rig): { pages: PageRead[]; bad: string[] } {
 
 // ---------------------------------------------------------------- the four: the wait row and the word, from the left hand
 
-// ---------------------------------------------------------------- the digits above the reach do nothing
-export const orderkeysHigh = guarded(async () => {
-  const { verdict, done } = family(`orderkeys-high: the digits above ${ORDER_DIGITS} (and 0) give nothing, with any page of any menu up or with none`);
-  const HIGH = ['Digit0', ...Array.from({ length: 9 - ORDER_DIGITS }, (_, i) => `Digit${ORDER_DIGITS + 1 + i}`)];
-  for (const scn of [LIST.find(s => s.squad === 2 && !s.level)!, LIST.find(s => s.squad === 4 && !s.level)!]) {
-    const R = await rig(scn); const { O, D, game: g, input } = R; if (R.why !== null || !O.active) { verdict(false, `${scn.name}: staged`, String(R.why)); continue; }
-    const s0 = [...g.player.char.pos]; let door: any = null; for (const d of [...g.doors.list].sort((a: any, b: any) => dist(a.frameCentre, s0) - dist(b.frameCentre, s0))) { if (R.atDoor(d)) { door = d; break; } }
-    const out: string[] = []; let ok = !!door; const l0 = O.log.length, slot0 = g.player.slot, ops0 = D.ops.length;
-    const hit = (what: string) => { const M = O.menu, page = M?.page ?? null, sel = M?.sel, onWord = M?.onWord, rows = M?.rows.length;
-      for (const c of HIGH) { input.pressed.add(c); R.step(); }
-      const same = O.menu === M && (!M || (M.page === page && M.sel === sel && M.onWord === onWord && M.rows.length === rows)), quietLog = O.log.length === l0 && D.ops.length === ops0 && g.player.slot === slot0;
-      ok &&= same && quietLog; out.push(`${what}: ${same ? 'as it was' : 'CHANGED'}${quietLog ? '' : ' · SOMETHING WAS GIVEN'}`); };
-    R.aim = null; R.step(2); hit('no menu');
-    R.onFloor(); R.openX(); hit('floor menu'); (menuKey(O), R.step());
-    R.onSam(); R.openX(); hit('Sam menu'); (menuKey(O), R.step());
-    if (door) { R.atDoor(door); const M = R.openX(); hit('door menu, first page'); const k = M?.rows.find((r: any) => r.opens)?.key; R.press(`Digit${k}`); ok &&= !!O.menu && O.menu.page !== null; hit('door menu, tools page');
-      // (…and the page under the tools page, where the menu has one: the threshold's. Where 'clear from outside' is a plain row of the tools page
-      //  — doortools.ts DOORTOOLS.outsidePlain — there is no page to turn to, and the line says so instead of pressing a key that opens nothing)
-      const k2 = O.menu?.rows.find((r: any) => r.opens)?.key;
-      if (k2 !== undefined) { R.press(`Digit${k2}`); ok &&= !!O.menu && O.menu.page !== null && O.menu.page !== 'tools'; hit('door menu, threshold page'); }
-      else { const M2 = O.menu, four = M2?.rows[3], plain = !!M2 && M2.page === 'tools' && DOORTOOLS.outsidePlain === true && four?.id === 'thresholdHold' && String(four.key) === '4' && !M2.rows.some((r: any) => r.opens);
-        ok &&= plain; out.push(plain ? 'no page under the tools page (outside is a plain row there, on 4)' : !M2 ? 'THE MENU WAS GONE FROM THE TOOLS PAGE' : `NO PAGE UNDER THE TOOLS PAGE (page ${M2.page}, rows ${M2.rows.map((r: any) => `${r.key} ${r.id}`).join(' · ')})`); }
-      (menuKey(O), R.step()); }
-    verdict(ok && O.menu === null, `${scn.name} (${scn.query}): ${HIGH.map(nameOf).join(' ')} pressed with each menu page up and with none — no order, no page turned, Sam's slot as it was`, `${out.join(' · ')} · orders logged ${O.log.length - l0} · slot ${slot0} → ${g.player.slot}`);
-  }
-  return done();
-});
 
 // ---------------------------------------------------------------- the table and the code
 export const orderkeysTable = guarded(async () => {

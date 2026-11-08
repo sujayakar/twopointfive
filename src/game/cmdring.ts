@@ -288,6 +288,6 @@ export function wedgeAt(dx: number, dy: number, n: number): number { return gone
 /** a file holds no ring (a held key is not state): a load, or the switch put off, finds the key up — savestate.ts, ui/bindings.ts */
 export function ringRestore(g: Game): void {
   g.orders.cmdPress = null; g.orders.tapWas = null;
-  if (g.orders.cmdRing) { g.orders.cmdRing = null; g.orders.close(); }
+  if (g.orders.cmdRing) { g.orders.cmdRing = null; g.orders.menu = null; }
   const S = g.player.sel; if (S.ring) { S.ring = null; S.open = false; S.downT = -1; S.moved = false; g.player.fHeld = true; }   // (his own ring: the press is spent, as a teleport spends it)
 }

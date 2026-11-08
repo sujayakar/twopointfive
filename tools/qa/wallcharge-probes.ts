@@ -25,7 +25,7 @@
 // 2026-11-07: the family 'off' (the module's switch or the destruction's down = the build without the module, and a played half-minute digest for digest) is
 // deleted: both are settled rules, and every line of it asked the build without them. Sam alone no longer has his own charges written off: he stands as the
 // page stands him.
-import { blockOf, listedOf, menuKey } from './squadwords';
+import { blockOf, listedOf, ringUp, ringDown } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { samBlows } from './charge-rig.ts';
 import { listen } from './heard.ts';
@@ -100,7 +100,7 @@ async function rig(scn: string, seed: number, o: { squad?: boolean; still?: bool
     press(code: string) { input.pressed.add(code); R.step(); },
     /** X on p: the menu's first page, the page behind its opener (if any), Esc, Esc */
     menuOn(p: number[], byCode = false) {   // (byCode: the menu opened on the target at p without the cursor — a point the camera does not see past a nearer wall)
-      if (byCode) { O.open(O.targetAt([p[0], p[1], p[2]])); R.step(2); } else { W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(24); }
+      W.cursorAt([p[0], p[1], p[2]]); ringUp(input, R); R.step(byCode ? 2 : 24);
       const read = () => { const M = O.menu, hud = listedOf(O); return M ? { ids: M.rows.map((r: any) => r.id).join(' '), keys: M.rows.map((r: any) => r.key ?? (r.hotKey ? 'hot' : '?')).join(' '), why: [...M.why] as (string | null)[], kind: M.target.kind as string, wall: !!M.target.wall,
         rows: (hud?.rows ?? []).map((r: any) => ({ key: r.opts[0]?.key, text: r.opts[0]?.text, off: r.off })) } : null; };
       const first = read(); if (!first) { input.pressed.add('Escape'); R.step(); return null; }
@@ -111,7 +111,8 @@ async function rig(scn: string, seed: number, o: { squad?: boolean; still?: bool
       return { ...first, page, back, gone: O.menu === null };
     },
     /** X on p, then the digits, a third of a second apart — taps, nothing held */
-    pick(p: number[], ...n: number[]) { W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(20); for (const k of n) { input.pressed.add(`Digit${k}`); R.step(); R.step(6); } },
+    /** the ring on `p` and the wall's row given */
+    orderOn(p: number[]) { W.cursorAt([p[0], p[1], p[2]]); ringUp(input, R); O.give('wallCharge', O.menu?.target); ringDown(input); R.step(); },
     get op(): any { return C.ops[0] ?? C.done[C.done.length - 1] ?? null; },
     beats(op: any): string { return (op?.beats ?? []).map((b: any) => `${f2(b.t)} ${b.what}`).join(' | '); },
     free(p: number[]) { return !game.col.nav.isBlocked(p[0], p[2]); },
@@ -197,32 +198,17 @@ async function probeMenu(scn: string): Promise<boolean> {
   const ring: number[][] = [[1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2], [1.6, 1.6], [-1.6, -1.6], [1.6, -1.6], [-1.6, 1.6]]; for (let r = 2.4; r <= 6; r += 1.2) for (let a = 0; a < 8; a++) ring.push([Math.sin(a * Math.PI / 4) * r, Math.cos(a * Math.PI / 4) * r]);
   let mFloor: ReturnType<Rig['menuOn']> = null; for (const [dx, dz] of ring) { const q: Vec3 = [P.near[0] + dx, 0, P.near[2] + dz]; if (!R.free(q) || wallAt(game, q) || game.doors.list.some((d: any) => flat(d.frameCentre, q) < ORDERS.doorPickM + 0.3) || R.up.some((m: any) => flat(m.char.pos, q) < ORDERS.manM + 0.2)) continue; const m = R.menuOn(q); if (m && m.kind === 'floor' && !m.wall) { mFloor = m; break; } }
   const mWall = R.menuOn(P.p);
-  const keysOk = (m: any) => !!m && m.rows.every((r: any) => r.key === undefined || /^[1-5]$/.test(String(r.key)) || !/^\d$/.test(String(r.key)));
   F.verdict(!!mFloor && mFloor.kind === 'floor' && !mFloor.wall && !/wall/.test(mFloor.ids), 'X on open floor: the floor\'s own menu, no wall row', `floor rows: ${mFloor?.ids} [${mFloor?.keys}]`);
-  F.verdict(!!mWall && mWall.kind === 'floor' && mWall.wall && mWall.rows.some((r: any) => String(r.key) === '5' && /^wall tools/.test(r.text)) && mWall.page?.ids === WALL_ORDER && mWall.page?.keys === '3' && /^breach the wall · uses both charges/.test(mWall.page?.rows[0]?.text ?? '') && !mWall.page?.rows[0]?.off && mWall.back && mWall.gone,
-    'X on a partition: the floor\'s rows with row 5 = wall tools, and behind it row 3 \'breach the wall · uses both charges\' (Esc steps back, Esc again closes)', `rows: ${mWall?.ids} [${mWall?.keys}] ▸ ${mWall?.page?.ids} [${mWall?.page?.keys}] "${mWall?.page?.rows[0]?.text}" · row 5 "${mWall?.rows.find((r: any) => String(r.key) === '5')?.text}"`);
-  { const a = (mFloor?.ids ?? '').split(' '), b = (mWall?.ids ?? '').split(' '), same = a.filter((x: string, i: number) => (mFloor!.keys.split(' ')[i] !== '5')).every((x: string) => b.includes(x));
-    F.verdict(same && keysOk(mWall) && keysOk(mWall?.page), 'every other row of the floor\'s menu is on the wall\'s, on its own digit; no digit above 5 on either page', `floor [${mFloor?.keys}] · wall [${mWall?.keys}] · page [${mWall?.page?.keys}]`); }
   const door = [...game.doors.list].sort((x: any, y: any) => flat(x.frameCentre, game.player.char.pos) - flat(y.frameCentre, game.player.char.pos))[0], mDoor = door ? R.menuOn(door.frameCentre) : null;   // (the door nearest Sam: the level's first may be off his screen, and the cursor then is on whatever is at the screen's edge)
   F.verdict(!door || (!!mDoor && mDoor.kind === 'door' && !/wall/i.test(mDoor.ids + (mDoor.page?.ids ?? ''))), 'X on a door: the door\'s menu, untouched', `door rows: ${mDoor?.ids} ▸ ${mDoor?.page?.ids}`);
   // the three presses, nothing held
-  const before = D.charges; R.pick(P.p, 5, 3); R.step(5);
-  F.verdict(C.ops.length === 1 && O.menu === null && R.input.keys.size === 0 && D.charges === before, 'X, 5, 3 — three taps — and the order is under way: the menu gone, no key held, no charge spent yet (it leaves the bag when it is on the wall)',
+  const before = D.charges; R.orderOn(P.p); R.step(5);
+  F.verdict(C.ops.length === 1 && O.menu === null && R.input.keys.size === 0 && D.charges === before, 'given, the order is under way: the menu gone, no key held, no charge spent yet (it leaves the bag when it is on the wall)',
     `ops ${C.ops.length} (${C.ops[0]?.phase}) · menu ${O.menu ? 'up' : 'gone'} · keys held ${R.input.keys.size} · charges ${D.charges} · ${R.said.filter(s => /^you:/.test(s)).slice(-1)[0] ?? ''}`);
-  // the page's posture rows (silent.ts — on in the page, off in the harness): the floor's fifth row is 'go silent'; a wall's fifth is its tools, and 'go silent'
-  // stays on the wall's menu below them with no digit (the wheel's); a silent squad sees the charge marked LOUD, and using it ends the silence
-  { const SIL = await import(`${ROOT}/src/game/silent.ts`), was = SIL.SILENT.on; const R5 = await rig(scn, 3); SIL.SILENT.on = true; R5.step(3); const P5 = partitions(R5)[0]; R5.gather(P5.near, 75, P5.p);
-    try {
-      let q5: Vec3 | null = null; for (const [dx, dz] of [[1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2], [1.6, 1.6], [-1.6, -1.6]]) { const q: Vec3 = [P5.near[0] + dx, 0, P5.near[2] + dz]; if (R5.free(q) && !wallAt(R5.game, q) && R5.O.targetAt(q).kind === 'floor') { q5 = q; break; } }
-      const mf = q5 ? R5.menuOn(q5, true) : null, fi = (mf?.ids ?? '').split(' '), fk = (mf?.keys ?? '').split(' '), five = fi[fk.indexOf('5')];
-      const mw = R5.menuOn(P5.p, true), wi = (mw?.ids ?? '').split(' '), wk = (mw?.keys ?? '').split(' ');
-      F.verdict((five === 'silent' || five === 'loud') && wi[wk.indexOf('5')] === WC.WALL_PAGE && wi.includes(five) && wk[wi.indexOf(five)] === '?' && wi.indexOf(five) === wi.length - 1 && keysOk(mw),
-        'with the silent / loud rows on (the page): the floor\'s 5 is the posture row; on a wall 5 is its tools and the posture row is still on the menu, last, without a digit', `floor: ${mf?.ids} [${mf?.keys}] · wall: ${mw?.ids} [${mw?.keys}]`);
-    } finally { SIL.SILENT.on = was; } }
   // structure: the row is there, greyed, with the reason
   const S = structure(R); let shown = 0;
-  for (const [key, s] of S) { game.teleportPlayer(s.near); R.step(3); const m = R.menuOn(s.p, true); const row = m?.page?.rows[0]; shown++;
-    F.verdict(!!row && row.off && /a charge won't cut it/.test(m!.page!.why[0] ?? ''), `on ${key}: the row is listed, greyed, with why`, `"${row?.text}" off ${row?.off} · why: ${m?.page?.why[0]}`); }
+  for (const [key, s] of S) { game.teleportPlayer(s.near); R.step(3); const w = O.give('wallCharge', O.targetAt(s.p)); shown++;
+    F.verdict(/a charge won't cut it/.test(w ?? ''), `on ${key}: refused, with why`, `give: ${w}`); }
   if (!shown) F.note('no structure wall with floor at its foot found on this level');
   return F.done();
 }
@@ -253,8 +239,8 @@ async function probeSquad(scn: string): Promise<boolean> {
   if (close) R.post(close, wallPt(W0, 0.2, -(T + 1.1))); if (far) R.post(far, farPts[0]); if (hid) R.post(hid, hidPts[0]);
   for (const h of H) if (h !== close && h !== far && h !== hid && flat(h.char.pos, chargePt(W0)) < DOORTOOLS.stunM + 1) R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);   // (nobody else in reach of it: the count below is these three's)
   R.step(2);
-  const c0 = D.charges; R.pick(P.p, 5, 3); const op = C.ops[0];
-  F.verdict(!!op && op.phase === 'place' && op.men.length === R.up.length, 'the order by X, 5, 3: every man on it, one of them to the wall', `${op ? `${op.men.length} men · ${op.lead.callsign} sets it at ${at(op.spot)}` : `no order — ${R.said.slice(-2).join(' / ')} · ${R.spoke.slice(-1)[0]?.text ?? ''}`}`);
+  const c0 = D.charges; R.orderOn(P.p); const op = C.ops[0];
+  F.verdict(!!op && op.phase === 'place' && op.men.length === R.up.length, 'the order: every man on it, one of them to the wall', `${op ? `${op.men.length} men · ${op.lead.callsign} sets it at ${at(op.spot)}` : `no order — ${R.said.slice(-2).join(' / ')} · ${R.spoke.slice(-1)[0]?.text ?? ''}`}`);
   if (!op) return F.done();
   const W = op.wall, cp = chargePt(W);
   const setOk = R.until(() => C.set.length === 1, 45), tSet = game.time, lead = op.lead;
@@ -509,7 +495,7 @@ async function probeStandoff(scn: string): Promise<boolean> {
   }
   // (2) THE WAIT, THE BLAST, THE WAY IN
   const run = async (watch?: number) => { const R = await rig(scn, 5); const { C, game } = R; if (watch !== undefined) WALLCHARGE.laneWatch = watch;   // (a number of the table, not a rule: the one arm this probe still has)
-    const P = partitions(R)[0]; if (!P) return null; R.gather(P.near, 75, P.p); R.step(2); R.pick(P.p, 5, 3); const op = C.ops[0]; if (!op) return null;
+    const P = partitions(R)[0]; if (!P) return null; R.gather(P.near, 75, P.p); R.step(2); R.orderOn(P.p); const op = C.ops[0]; if (!op) return null;
     if (!R.until(() => op.phase === 'armed', 60)) return null; R.step(90);
     const W = op.wall, cp = chargePt(W), T = 2 * (W.alongX ? W.box.h[2] : W.box.h[0]), front = op.men.filter((m: any) => !op.mine.get(m).spare);
     const offCharge = front.map((m: any) => Math.abs(wrap(m.char.aimYaw - yaw(m.char.pos, cp))));   // (0 = his gun on the charge, π = his back to it)

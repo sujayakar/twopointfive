@@ -184,11 +184,10 @@ export async function ownchargeSquad(): Promise<boolean> {
     // the squad on a charge set by hand
     const R: any = await hushed(() => rig(7, { door: 'breakroom_w' })); const { D, O, game: g } = R; const d = R.door('breakroom_w'), side = faceToward(d, [20, 0, 18.9]);
     setByHand(R, d, side); g.teleportPlayer([25.0, 0, 18.9]); R.step(5); const n1 = D.charges;
-    const row = R.menuOn(d.frameCentre)?.tools?.rows.find((r: any) => r.key === '3');
     const w = R.give('charge', 'breakroom_w'), op = D.ops[0]; const armed = R.until(() => op?.phase === 'armed', 45);
     const off = R.ops.map((x: any) => dist(x.char.pos, d.frameCentre)), lock = (op?.beats ?? []).some((b: any) => /^set|setter|sets it/.test(b.what));
-    F.verdict(/^stand off · in behind the charge/.test(row?.text ?? '') && !row.off && w === null && armed && D.charges === n1 && D.set.length === 1 && !lock && off.every((x: number) => x > K0.backblastM) && d.latched,
-      'told the charge row on that door ("stand off · in behind the charge") they stand off past the backblast: nobody goes to the lock, nothing more is spent, nothing goes off', `row 3: ${row?.text} · ${R.beats(op)} · count ${n1} → ${D.charges} · set ${D.set.length} · the pair ${off.map(f2).join(' / ')} m off (backblast ${K0.backblastM})`);
+    F.verdict(w === null && armed && D.charges === n1 && D.set.length === 1 && !lock && off.every((x: number) => x > K0.backblastM) && d.latched,
+      'told the charge on that door they stand off past the backblast: nobody goes to the lock, nothing more is spent, nothing goes off', `${R.beats(op)} · count ${n1} → ${D.charges} · set ${D.set.length} · the pair ${off.map(f2).join(' / ')} m off (backblast ${K0.backblastM})`);
     const hud = blockOf(O).flatMap((r: any) => r.opts.map((o: any) => o.text)).join(' / ');
     g.teleportPlayer(doorPt(d, d.def.width / 2, 0.8, side)); R.step(20); const close = (cornerOf(g).map(n => n.text).join(' ').match(/ · (TOO CLOSE|BEHIND THE DOOR):.*$/)?.[0] ?? '').replace('TOO CLOSE:', 'too close:').replace('BEHIND THE DOOR:', 'behind the door:'), hudNear = notesOf(g).join(' / '), doorLine = doorRows(g).map((r: any) => r.line1).join(' | '); g.teleportPlayer([25.0, 0, 18.9]); R.step(4);
     R.press('KeyF'); const crossed = R.until(() => op.crossed.size > 0, 8);

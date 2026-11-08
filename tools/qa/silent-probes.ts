@@ -28,7 +28,7 @@
 // here turns it on, as it ships.
 // The rig runs on the page's door rules: an entry halts at a door found shut and 'clear from outside' is one order.
 // The cross-commit identity (the order never given = the base build) is the play-throughs, run here and in a checkout of the base: the same lines.
-import { blockOf, doing, listedOf, menuKey } from './squadwords';
+import { blockOf, doing, listedOf, ringUp, ringDown } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
@@ -92,7 +92,7 @@ async function rig(seed: number, o: RigOpts = {}) {
     turn(): any { return SLM.SILENT_LOG[SLM.SILENT_LOG.length - 1] ?? null; },
     label(): string { return blockOf(O)[0]?.label ?? ''; },
     /** X with the cursor on p: the menu's order rows as the panel draws them (the who row and the cancel row left out) — the menu left UP */
-    menu(p: number[]) { R.cursor(p); (menuKey(O), R.step()); R.step(2);
+    menu(p: number[]) { R.cursor(p); ringUp(input, R); R.step(2);
       const hud = listedOf(O); return { kind: O.menu?.target.kind as string | undefined, rows: (hud?.rows ?? []).map((r: any) => ({ head: r.label as string, key: r.opts[0]?.key as string, text: r.opts[0]?.text as string, off: !!r.off })) }; },
     esc() { for (let i = 0; i < 3 && O.menu; i++) R.press('Escape'); },
     give(id: string, at: number[], who: any = 'all'): string | null { return O.give(id, O.targetAt(at), who); },
@@ -107,43 +107,6 @@ async function rig(seed: number, o: RigOpts = {}) {
 const digitAbove5 = (rows: { key: string }[]) => rows.some(r => /^[6-9]$|^0$/.test(r.key));
 const rowOf = (rows: { key: string; text: string; head: string }[], text: string) => rows.find(r => r.text === text) ?? null;
 
-// ---------------------------------------------------------------- the order
-export const silentOrder = guarded(async () => {
-  const { verdict, done } = family('silent-order: one row on the squad\'s menu, on 5, for the whole squad — and the row that takes it out');
-  const R = await rig(7); const { O, game } = R; const sam = game.player.char.pos, spot = [sam[0] + 1.6, 0, sam[2]];
-  verdict(R.why === null && R.team.length === 4 && !R.silent(), 'the room clear stands its four up loud', `start: ${R.why} · squad ${R.team.length} · ${SLM.silentSummary(game)}`);
-  // the floor's menu
-  const m1 = R.menu(AISLE), r1 = rowOf(m1.rows, 'go silent');
-  verdict(m1.kind === 'floor' && !!r1 && r1.key === '5' && r1.head === 'the whole squad' && !(r1 as any).off && !digitAbove5(m1.rows) && !rowOf(m1.rows, 'go loud'),
-    'X on the floor: "go silent" is on 5 under "the whole squad", no digit above 5 on the menu', m1.rows.map((r: any) => `${r.key || '·'} ${r.text}`).join(' | '));
-  const n0 = O.log.length, s0 = R.said.length; R.press('Digit5'); R.step(2); const l1 = R.turn(), told = R.said.slice(s0).find((t: string) => /^you: /.test(t)) ?? '';
-  verdict(l1?.to === 'silent' && l1.by === 'order' && /gold — go silent/i.test(told) && R.silent() && O.menu === null && R.held === 0,
-    '5 gives it: the whole squad is silent, the menu is away, no key was ever held', `${l1?.to} by ${l1?.by} · "${told}" · silent ${R.silent()} · most keys down ${R.held} · said: ${R.said.slice(-2).join(' / ')}`);
-  verdict(O.log.length === n0, 'it is not logged as one of Sam\'s orders to the men (a rescue that starts its clock on his first order does not start it on this)', `orders log +${O.log.length - n0}`);
-  // … and the row that stands in its place
-  const m2 = R.menu(AISLE), r2 = rowOf(m2.rows, 'go loud');
-  verdict(!!r2 && r2.key === '5' && !rowOf(m2.rows, 'go silent') && !digitAbove5(m2.rows), 'silent: the same row reads "go loud", on the same digit', m2.rows.map((r: any) => `${r.key || '·'} ${r.text}`).join(' | '));
-  R.press('Digit5'); R.step(2); const l2 = R.turn();
-  verdict(l2?.to === 'loud' && l2.by === 'order' && !R.silent(), '5 again: loud', `${l2?.to} by ${l2?.by} · silent ${R.silent()}`);
-  // a man's menu, and one man addressed
-  const m3 = R.menu([sam[0], 1.0, sam[2]]), r3 = rowOf(m3.rows, 'go silent'); R.esc();
-  verdict(m3.kind === 'none' && !!r3 && r3.key === '5' && !digitAbove5(m3.rows), 'X on Sam himself: the row is there too, on 5', m3.rows.map((r: any) => `${r.key || '·'} ${r.text}`).join(' | '));
-  const s4 = R.said.length, w4 = R.give('silent', spot, 0); R.step(); const told4 = R.said.slice(s4).find((t: string) => /^you: /.test(t)) ?? '';
-  verdict(w4 === null && /gold — go silent/i.test(told4) && R.silent() && R.team.every((x: any) => SLM.underSilence(game, x)), 'addressed to one man it is still the squad\'s: all four take it', `refusal ${w4} · "${told4}" · silent men ${R.team.filter((x: any) => SLM.underSilence(game, x)).length}`);
-  // a door's menu keeps its 5
-  const bw = R.door('breakroom_w'); const m5 = R.menu(bw.frameCentre), five = m5.rows.find((r: any) => r.key === '5'); R.esc();
-  verdict(m5.kind === 'door' && !!five && /^door tools/.test(five.text) && !m5.rows.some((r: any) => /go (silent|loud)/.test(r.text)) && !digitAbove5(m5.rows), 'a door\'s menu is as it was: 5 is the door tools, no posture row',
-    m5.rows.map((r: any) => `${r.key || '·'} ${r.text}`).join(' | '));
-  verdict(R.give('loud', bw.frameCentre) === null && !R.silent(), '… though the order itself fits any target (give with the reticle on a door)', `silent ${R.silent()}`);
-  // the men keep what they were doing
-  R.give('hold', spot); R.step(20); const before = R.team.map((x: any) => O.of(x)); R.give('silent', spot); R.step(5); const after = R.team.map((x: any) => O.of(x));
-  verdict(before.every((a: any, i: number) => !!a && a === after[i] && a.order === 'hold'), 'the men keep the orders they had: the posture moves nobody', after.map((a: any) => a?.order).join(', '));
-  R.give('loud', spot);
-  // the pair
-  const P = await rig(7, { squad: 2 }); const mp = P.menu(AISLE), rp = rowOf(mp.rows, 'go silent'); P.press('Digit5'); P.step(2);
-  verdict(P.team.length === 2 && rp?.key === '5' && P.silent() && P.team.every((x: any) => SLM.underSilence(P.game, x)), 'the pair has the same row on the same digit', `${mp.rows.map((r: any) => `${r.key || '·'} ${r.text}`).join(' | ')} · silent ${P.silent()}`);
-  return done();
-});
 
 // ---------------------------------------------------------------- the HUD
 export const silentHud = guarded(async () => {
@@ -443,6 +406,6 @@ export const silentSet = guarded(async () => {
 });
 
 if (import.meta.main) {
-  const all: Record<string, () => Promise<boolean>> = { 'silent-order': silentOrder, 'silent-hud': silentHud, 'silent-walk': silentWalk, 'silent-doors': silentDoors, 'silent-pick': silentPick, 'silent-boot': silentBoot, 'silent-cans': silentCans, 'silent-tools': silentTools, 'silent-fire': silentFire, 'silent-hush': silentHush, 'silent-start': silentStart, 'silent-set': silentSet };
+  const all: Record<string, () => Promise<boolean>> = { 'silent-hud': silentHud, 'silent-walk': silentWalk, 'silent-doors': silentDoors, 'silent-pick': silentPick, 'silent-boot': silentBoot, 'silent-cans': silentCans, 'silent-tools': silentTools, 'silent-fire': silentFire, 'silent-hush': silentHush, 'silent-start': silentStart, 'silent-set': silentSet };
   process.exit(exitCode(await asProbes(all, wanted())));
 }

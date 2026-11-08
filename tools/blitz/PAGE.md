@@ -99,11 +99,11 @@ Left: saves do not outlive the page (the store is the browser's, a few megabytes
 
 ## A call from outside a tick
 
-The keys are in the input record and the Rust tick acts on them. A call made between ticks is another matter: a tool's `__orders.open()`, a panel's
+The keys are in the input record and the Rust tick acts on them. A call made between ticks is another matter: a tool's `__orders.pick()`, a panel's
 button. Run as TypeScript on the puppet it would build state the Rust game never sees, and the next question about that state names a row the Rust game
 has not got.
 
-- **The orders menu's own calls** (`open`, `close`, `turn`, `pageBack`, `pick`, `cycleWho`, `address`) cross to the Rust functions the tick itself runs,
+- **The orders menu's one call** (`pick`; the ring goes up and down by the player's key, in the record) crosses to the Rust function the tick itself runs,
   by the call table (`tools/blitz/surface.ts` `crossing`; the page stands as a surface host): the writes made between ticks go first, then the host's half
   (the cursor, the cameras), `face_call`, and the puppet takes the state again. Inside a tick, and while the puppet is the game (before a start, while
   one is due), the method runs as it was. `__rust.crossed` counts them. `give` goes with the target as bytes by the schema (`asks.give`), whatever the target is.

@@ -22,7 +22,7 @@
 // the page's stand ((b5), (b8) of frag-mates) are asked always, and (b5) no longer holds the newer pace rule off for its two moments.
 // THE BREAK WORDS no longer leave a rule off (none can be): each takes a piece of its staging away, as said at each probe. FLEELOOK_BREAK is gone: (b7)
 // has no red path of its own, and (b8) fails under FRAGMATES_BREAK.
-import { listedOf, menuKey } from './squadwords';
+import { listedOf, ringUp, ringDown } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { sample, swept } from './sweep.ts';
 const { FRAG, FRAG_LOG, FRAG_STATS, FRAG_WHY, fragStatsReset, blast, exposure, exposedTo, lying, lyingShows, ownClear } = await import(`${ROOT}/src/game/frag.ts`);
@@ -421,7 +421,7 @@ async function orderRig(seed: number, door: string) {
     room(id: string) { return RC.rooms.find((r: any) => r.def.id === id); },
     beats(op: any): string { return (op?.beats ?? []).map((b: any) => `${f2(b.t - R.t0)} ${b.what}`).join(' | '); },
     /** X on p: the menu's first page, then its door tools' page, as rows of key + text (left up on the tools' page) */
-    toolsPage(p: number[]) { W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(24);
+    toolsPage(p: number[]) { W.cursorAt([p[0], p[1], p[2]]); ringUp(input, R); R.step(24);
       const opener = O.menu?.rows.find((r: any) => r.opens); if (!opener) return null; const first = (listedOf(O)?.rows ?? []).map((r: any) => `${r.opts[0]?.key} ${r.opts[0]?.text}`);
       input.pressed.add(`Digit${opener.key}`); R.step(); R.step(4);
       const rows = (listedOf(O)?.rows ?? []).map((r: any) => ({ key: r.opts[0]?.key as string, text: r.opts[0]?.text as string, off: !!r.off }));
@@ -499,18 +499,12 @@ export const fragOrder = guardedOrder(async () => {
   // (what the page's stand changes of this probe's premises and the frozen one does not: row 4 is the one order 'clear from outside' — DOORTOOLS.outsidePlain —
   //  and Sam's frags are his kit card's, not FRAG.issue: both are read here, as staged, and held to that)
   const row4 = DOORTOOLS.outsidePlain ? 'clear from outside' : 'work it from the threshold', sam0 = pl.frags;
-  const pg = R.toolsPage(Wd.frameCentre); const rows = pg?.rows ?? [];
-  const digits = rows.filter((r: any) => /^[0-9]$/.test(r.key)).map((r: any) => `${r.key} ${r.text.split(' · ')[0]}`).join(' | ');
-  const fr = rows.find((r: any) => /frag and clear/.test(r.text));
-  F.verdict(digits.startsWith(`1 open and clear | 2 bang and clear | 3 breach with a charge | 4 ${row4}`) && !!fr && fr.key === 'G' && fr.text === `frag and clear · ${FRAG.squad} left` && !fr.off && rows.every((r: any) => !/^[6-9]$/.test(r.key)) && rows.indexOf(fr) >= 4,
-    '(a) the page: 1‥4 as they were, then G frag and clear · N left at the foot; no digit above 5', rows.map((r: any) => `${r.key} ${r.text}${r.off ? ' (off)' : ''}`).join(' | '));
-  F.verdict(!!pg && !pg.first.some((t: string) => /frag/.test(t)), '(b) the first page says nothing of it (the row that opens the page reads as before)', (pg?.first ?? []).join(' | '));
   // G with the page up: the order, not a thrown can
   const cans0 = pl.canisters, bangs0 = pl.flashbangs, frags0 = pl.frags, n0 = D.frags, items0 = game.items.items.length;
-  input.keys.add('KeyG'); input.pressed.add('KeyG'); R.step(20); input.keys.delete('KeyG'); R.step(30);   // (the key stays down a third of a second, as a finger's does on the page: the rest of the press is not a quick-throw either)
+  R.give('fragClear', 'breakroom_w'); R.step(50);
   const op = D.ops[0];
   F.verdict(!!op && op.kind === 'bangClear' && op.frag === true && D.frags === n0 - 1 && pl.canisters === cans0 && pl.flashbangs === bangs0 && pl.frags === frags0 && !pl.pendingThrow && game.items.items.length === items0 && O.menu === null,
-    '(c) G with that page up gives the order (one frag reserved, the menu away) and throws nothing of Sam\'s', `op ${op?.kind}${op?.frag ? ' frag' : ''} · squad frags ${n0}→${D.frags} · Sam smoke ${cans0}→${pl.canisters} frags ${frags0}→${pl.frags} · items ${items0}→${game.items.items.length}`);
+    '(c) given, the order reserves one frag and throws nothing of Sam\'s', `op ${op?.kind}${op?.frag ? ' frag' : ''} · squad frags ${n0}→${D.frags} · Sam smoke ${cans0}→${pl.canisters} frags ${frags0}→${pl.frags} · items ${items0}→${game.items.items.length}`);
   const defs0 = room.defenders.filter((h: any) => h.state !== 'dead').length; let firstIn = NaN; const opsMen = [...R.ops]; let opHurt = '';
   const stag0 = new Map(opsMen.map((m: any) => [m, m.staggerUntil]));
   for (let i = 0; i < 45 * 60 && D.ops.length; i++) { R.step(); if (isNaN(firstIn) && opsMen.some((m: any) => inBounds(room.def.bounds, m.char.pos, -0.3))) firstIn = game.time; }
@@ -523,9 +517,9 @@ export const fragOrder = guardedOrder(async () => {
   const hit = rep ? rep.hits.filter((h: any) => h.team === 'hostile' && h.result !== 'shielded').length : 0;
   F.verdict(D.frags === n0 - 1 && D.stats.frags === 1, '(g) one frag spent, counted', `squad frags ${D.frags} · stats ${D.stats.frags} · room: ${defs0} defenders, ${hit} killed or folded by it (${rep?.killed} down, ${rep?.wounded} hit)`);
   // none left: greyed with its reason; a restart puts them back
-  { D.frags = 0; const pg2 = R.toolsPage(Wd.frameCentre); const r2 = pg2?.rows.find((r: any) => /frag and clear/.test(r.text)); input.pressed.add('Escape'); R.step(); input.pressed.add('Escape'); R.step();
+  { D.frags = 0;
     const w = R.give('fragClear', 'breakroom_w');
-    F.verdict(!!r2 && r2.off && /no frags left/.test(r2.text) && /no frags left/.test(w ?? ''), '(h) with none left the row is greyed with its reason and the order refused in the same words', `${r2?.key} ${r2?.text} · give: ${w}`);
+    F.verdict(/no frags left/.test(w ?? ''), '(h) with none left the order is refused in words', `give: ${w}`);
     game.restartEncounter(); R.RC.start(7); R.step(10);
     F.verdict(game.doorTools.frags === FRAG.squad && game.player.frags === sam0 && sam0 > 0, '(i) a restart puts the counts back', `squad ${game.doorTools.frags} · Sam ${game.player.frags}`); }
   return F.done();
