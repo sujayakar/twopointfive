@@ -254,24 +254,52 @@ fn the_traffic_map_says_where_the_level_is_walked() {
     assert!(was == d.traffic.words, "the map moved");
 }
 
-/// THE RULE: on a level that wears the look a leaf is drawn in its paint, a shade of its own by its name, the game's own box left as it was; with the look off nothing is painted.
+/// THE RULE: on a level that wears the look a leaf stands in its paint, a shade of its own by its name, on the game's own box, so what is drawn and what a breach throws off it are in that paint.
 #[test]
-fn a_leaf_is_drawn_in_the_look_s_paint() {
-    let mut p = Play::mission("compound-gwot.json", "?levelFile=compound-gwot.json&roomclear&squad4", &Opts { seed: 14, ..Default::default() });
+fn a_leaf_wears_the_level_s_paint_from_its_first_moment() {
+    let mut p = Play::mission("compound-gwot.json", "?levelFile=compound-gwot.json&roomclear&squad4", &Opts { seed: 14, dress: true, ..Default::default() });
     p.run(0.1);
-    let paints = game_draw::boxes::paint::paints(&p.g);
-    assert!(!paints.is_empty(), "the compound wears the look, and no leaf was painted");
+    let list = p.g.doors.list.clone();
+    let (office_in, office_out) = ([0.42, 0.3, 0.19], [0.2, 0.22, 0.25]);
+    let leaves: Vec<_> = list.iter().copied().filter(|d| p.g.dr[*d].def.steel != Some(true)).collect();
+    assert!(!leaves.is_empty(), "the compound has doors");
+    for d in &leaves { let a = p.g.tab.boxes[p.g.dr[*d].box_].albedo; assert!(a != office_in && a != office_out, "a leaf stood in the office's colours: {a:?}"); }
+    // what is drawn is the box
     let mut d = Drawn::default();
     d.take(&p.g, want::boxes);
     d.frame(&p.g, 1.0, [20.0, 0.0, 14.0]);
     let n = p.g.engine.world.statics.len();
-    let list = &p.g.engine.world.dynamics;
-    for (id, a, _) in &paints {
-        let k = list.iter().position(|b| *b == game::ids::AnyBoxId::from(*id)).expect("a leaf is in the list");
-        let m = &d.boxes.mat[n + k].w;
-        assert!((m[0] as f64 - a[0]).abs() < 1e-5 && (m[1] as f64 - a[1]).abs() < 1e-5, "drawn in {:?}, painted {a:?}", &m[..3]);
-        assert!((0..3).any(|i| p.g.tab.boxes[*id].albedo[i] != a[i]), "the paint is the box's own: the game's box was written, or nothing was painted");
+    let drawn = &p.g.engine.world.dynamics;
+    for l in &leaves {
+        let b = p.g.dr[*l].box_;
+        let k = drawn.iter().position(|x| *x == game::ids::AnyBoxId::from(b)).expect("a leaf is in the list");
+        let (m, a) = (&d.boxes.mat[n + k].w, p.g.tab.boxes[b].albedo);
+        assert!((0..3).all(|i| (m[i] as f64 - a[i]).abs() < 1e-5), "drawn in {:?}, the box is {a:?}", &m[..3]);
     }
-    p.g.k.look.on = false;
-    assert!(game_draw::boxes::paint::paints(&p.g).is_empty(), "the look is off, and a leaf was painted");
+    // and what a breach throws off a leaf is in that paint
+    let l = leaves[0];
+    let (paint, word) = { let b = &p.g.tab.boxes[p.g.dr[l].box_]; (b.albedo, b.stuff) };
+    let before = p.g.destr.debris.list.len();
+    assert!(game::doorblast::splinter(&mut p.g, l, [1.0, 0.0, 0.0], 0.0, None), "the leaf would not splinter");
+    let thrown: Vec<_> = p.g.destr.debris.list[before..].to_vec();
+    assert!(!thrown.is_empty(), "a splintered leaf threw nothing");
+    // (a dressed piece's colour is its paint tinted to the break's raw core: the paint it broke off in is the chunk's record)
+    for c in thrown {
+        let ch = &p.g.tab.debris_chunk[c];
+        assert_eq!(ch.mat.as_ref().expect("a leaf's piece is tagged wood").paint, paint, "a piece broke off in another paint than the leaf's");
+        assert_eq!(p.g.tab[ch.box_].stuff, word, "a piece is made of something else than the leaf");
+    }
+}
+
+/// … and a game stood on an address that says the look is off keeps the leaves as they are made (`look=plain`: scenario_run::address_before_game).
+#[test]
+fn the_look_off_paints_nothing() {
+    let on = Play::mission("compound.json", "?levelFile=compound.json&roomclear&squad4", &Opts { seed: 14, ..Default::default() });
+    let leaf = |p: &Play, d| (p.g.tab.boxes[p.g.dr[d].box_].albedo, p.g.dr[d].def.exterior == Some(true), p.g.dr[d].def.steel == Some(true));
+    let plain = |a: [f64; 3], out: bool| a == if out { [0.2, 0.22, 0.25] } else { [0.42, 0.3, 0.19] };
+    assert!(on.g.doors.list.iter().any(|d| { let (a, out, steel) = leaf(&on, *d); !steel && !plain(a, out) }), "the compound wears the look, and no leaf is painted");
+    drop(on);
+    let off = Play::mission("compound.json", "?levelFile=compound.json&look=plain&roomclear&squad4", &Opts { seed: 14, ..Default::default() });
+    assert!(!off.g.k.look.on, "the address said the look is off");
+    for d in &off.g.doors.list { let (a, out, steel) = leaf(&off, *d); assert!(steel || plain(a, out), "the look is off, and a leaf is in {a:?}"); }
 }

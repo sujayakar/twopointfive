@@ -33,6 +33,8 @@ import { snowBogAt, snowBogMay, snowBogKinds } from './snowBog';
 import { attachSnowBlast, clearSnowBlast, stepSnowDigs } from './snowBlast';
 import { SNOW_LOOK, snowLevel, WEATHER_PRESETS } from './weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
+import { LOOK } from '../scene/look';   // (a leaf: no imports)
+import { leafRowOf, paintLeaves } from '../scene/leafPaint';
 import { SmokeSystemLike } from '../smoke/types';
 import { Box, BoxFlag } from '../scene/boxes';
 import { markStats, markWorldRect, AREA_LIT_MARKS, MARKING_TEXEL } from '../scene/markings';
@@ -1168,6 +1170,7 @@ export class Game {
     engine.reach?.boot(level.doors.map(d => ({ hinge: d.hinge, closedDir: d.closedDir, width: d.width })), this.reachInterior);
     // doors: leaves are dynamic occluders for sight / sound / projectiles (collision layer)
     this.doors = new Doors(level.doors.map(d => ({ ...d, albedo: d.exterior ? [0.2, 0.22, 0.25] as Vec3 : undefined })), (e) => this.onDoorEvent(e), this.sim);
+    if (LOOK.on) paintLeaves(this.doors.list, engine.world.statics, leafRowOf(levelNameOf(level)));   // (a level's leaves wear its paint from their first moment: scene/leafPaint.ts)
     this.props.doorways = this.doors.list.map(d => ({ cx: d.frameCentre[0], cz: d.frameCentre[2], ux: Math.cos(d.def.closedDir), uz: Math.sin(d.def.closedDir), half: d.def.width / 2 - 0.02 }));   // (a door frame guides shoved furniture through: props.ts doorways — half the air between the frame's stops)
     nameDoors(level, dialogue.isOffice(level), this.doors.list);   // what a door with a shorthand id is CALLED, by the rooms it joins (doornames.ts; read only while the dialogue pass is on)
     this.doorDeals = dealSwings(level, this.doors, this.col.nav, this.col);   // the side each leaf opens into (doors.ts DOORWAY; doorswing.ts: into the room it serves) — geometry only, no dice
