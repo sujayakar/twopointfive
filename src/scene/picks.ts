@@ -19,7 +19,7 @@
 // Types and pure functions (the guarded read of the page's own query string aside): nothing here imports the game at run time or touches the DOM.
 import { scenarioQuery, type ScenarioEntry } from './scenarios';
 import { ALL_MISSIONS, SCENARIO_KEYS, quitSearch, specOfQuery } from './scenarioList';
-import { squadSearch, type SquadSize } from '../game/loadout';   // (pure — scenarioList.ts takes the same module)
+import { squadSearch, type SquadSize } from './squadsize';   // (pure — scenarioList.ts takes the same module)
 import type { Difficulty } from '../game/difficulty';
 
 export interface Pick {
