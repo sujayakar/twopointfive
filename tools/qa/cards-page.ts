@@ -17,8 +17,7 @@ const word = (k: string) => { const i = args.indexOf(k); return i < 0 ? undefine
 const port = Number(word('--port') ?? 5991), deep = word('--missions')?.split(',');
 const faceAt: string = word('--face') ?? await (async () => { const r = await (await import(resolve(ROOT, 'tools/blitz/face-build.ts'))).faceWasm(); if ('why' in r) { console.error(r.why); process.exit(2); } return r.path; })();
 
-const pageBridge = (await import(resolve(ROOT, 'tools/blitz/page-plugin.ts'))).default;   // (a bundler's plugin: no part of this folder's type check)
-const built = await Bun.build({ entrypoints: [resolve(import.meta.dir, 'cards-entry.ts')], target: 'browser', plugins: [pageBridge,
+const built = await Bun.build({ entrypoints: [resolve(import.meta.dir, 'cards-entry.ts')], target: 'browser', plugins: [
   // (the man drawn beside the card is the renderer's: no part of what the cards say)
   { name: 'no-picture', setup(b: any) { b.onLoad({ filter: /src[\\/]ui[\\/]kitView\.ts$/ }, () => ({ loader: 'ts', contents: 'export const KIT_VIEW = { acts: true, kitMs: 150, quiet: true }; export function mountKitView() { return null; }' })); } }] });
 if (!built.success) { for (const m of built.logs) console.error(m); process.exit(2); }
