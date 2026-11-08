@@ -1,5 +1,5 @@
 // THE RECORD OF A RUN: every call into the Rust game, as bytes, in order, so a run can be played again with no TypeScript game and no tool standing beside it. What a tool did between ticks is in it as what reached the game: the scan's writes, the crossings, the host's half, a caller's die. A host that writes the game's memory itself (a tool's write to the block) says so with `mem`. Nothing else can change the game.
-//   TPS_GAME_RECORD=<file> tools/blitz/rust.sh rust bun run <any tool>       a host that loads the face records to that file
+//   TPS_GAME_RECORD=<file> TPS_GAME=rust bun run <any tool>       a host that loads the face records to that file
 //   bun run tools/blitz/replay.ts <file> [--wasm FILE]                       plays it and holds the end to the end recorded (the die's count, every part's hash, the whole export's); exit 0 equal · 1 parted · 2 no such file
 //   RECORD_BREAK=1 in front of the replay drops one step in fifty: it must part
 // A function that only reads (the pointers and lengths of what was answered, a part's hash) is not written. Each entry: its name's number, then each argument as a number or as the bytes a pointer and a length name.

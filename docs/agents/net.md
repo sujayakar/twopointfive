@@ -278,8 +278,8 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   `players.rs` (each player his own man, hands, pair and order; the team's eyes; a man's hue on both screens; a fight of two one fight on both machines, their
   views unlike; a rescue refuses two), `coop.rs` (what a machine draws, looks at and shows parts nothing; each pair through a locked door; the look ahead),
   `two_seats.rs`, `hosts_agree.rs`, `seats.rs`, and a two-seat line in many a file beside. The old faults of a game of two read as a game of one (bare asks for
-  "the player", a seat's module sweeping all the world's men, a budget counted with one player) are the Rust game's, mended there. `tools/qa/seats-run.ts` still
-  records a two-seat fight for `tools/blitz`.
+  "the player", a seat's module sweeping all the world's men, a budget counted with one player) are the Rust game's, mended there. A fight of two as its
+  records: the gate's `seats` rows.
 - **What nobody has seen or measured**: two PEOPLE in two seats; two machines; a real network; Host and Join through the hosted service; a client through a
   sandbox's tunnel; the look ahead and a correction by eye on a GPU; a mission ENDING on a server over the wire; the run's memory on a long game (its text is
   kept for joiners: about 20 KB a second with two seats sending every tick); a real socket backing up.
