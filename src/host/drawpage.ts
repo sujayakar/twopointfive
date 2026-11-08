@@ -47,7 +47,8 @@ import { netKeyed, netLeave } from '../net/door';
 import { NETPLAY, NET_JOIN } from '../net/address';
 import { keptName, keptNotes, tapeAddress, tapeAsked } from './tapepage';
 import { sessionId } from './session';
-import { TapeBar, type Played } from '../tape/bar';
+import { TapeBar, type Played, type Sees } from '../tape/bar';
+import { TapeMap } from '../tape/map';
 import { FreeCam } from '../tape/freecam';
 import { PLAYTAPE } from '../tape/address';
 import { RunKeep, keeps } from '../tape/run';
@@ -89,7 +90,7 @@ import { nextPickOf } from '../ui/picks';
 import { keepPageBoot } from './keeppage';
 import { heldPage, ownPage, runPage } from './runpage';
 import { bootTextSize } from '../ui/textsize';
-import { Heard, Man, Section, Sky, View } from '../draw/sections';
+import { Fog, Heard, Man, Section, Sky, View } from '../draw/sections';
 import { AudioEngine, SFX_TABLE, SFX_WARM, warmSfx } from '../audio/audio';
 import { setlistOfQuery } from '../audio/setlist';
 import { MUSIC } from '../audio/pieces';
@@ -276,7 +277,7 @@ async function main(): Promise<void> {
   let time = 0, acc = 0, drift = 0, paused = false, settling = false, thaw = false, owed = false, ended = 0, onEnded = (): void => { /* no card is made yet */ };
   // ---- a tape being played: what a bar over it turns
   const firstAt = Math.max(0, Math.floor(Number(q.get('at')) || 0));
-  const played: Played & { to: number; readonly ends: string } = { paused: !!play, pace: 1, to: firstAt > 0 ? firstAt : -1, get seeking() { return this.to >= 0; }, get at() { return play?.at ?? 0; }, get total() { return play?.total ?? 0; }, get ends() { return play?.ends ?? ''; }, get parted() { return play?.parted?.tick ?? null; }, get lost() { return play?.lost?.words.split('\n')[0] ?? null; }, get tries() { return play?.tries ?? []; }, seek(t: number): void { played.to = Math.max(0, Math.min(played.total, Math.round(t))); } };
+  const played: Played & { to: number; readonly ends: string } = { paused: !!play, pace: 1, to: firstAt > 0 ? firstAt : -1, get seeking() { return this.to >= 0; }, get at() { return play?.at ?? 0; }, get total() { return play?.total ?? 0; }, get ends() { return play?.ends ?? ''; }, get parted() { return play?.parted?.tick ?? null; }, get lost() { return play ? (play.lost ?? game.lost)?.words.split('\n')[0] ?? null : null; }, get tries() { return play?.tries ?? []; }, seek(t: number): void { played.to = Math.max(0, Math.min(played.total, Math.round(t))); } };
   if (!play && !kitPicture) gameUp();
   let bar: TapeBar | null = null; const runView = (): { look: [number, number, number]; yaw: number; pitch: number; dist: number; fov: number } => { const n = play?.next; return n && play!.total ? { look: [n[HAND.target], n[HAND.target + 1], n[HAND.target + 2]], yaw: n[HAND.yaw], pitch: n[HAND.pitch], dist: n[HAND.distance], fov: n[HAND.fov] } : { look: [cam.target[0], cam.target[1], cam.target[2]], yaw: cam.yaw, pitch: cam.pitch, dist: cam.distance, fov: cam.fov }; };
   // whoever watches a run sees it his own way: the fog off his picture, a tube or none whatever the run's goggles were (null: as the run had it), eased by the page's clock
@@ -349,8 +350,8 @@ async function main(): Promise<void> {
     if (ticks === undefined) pageKeys(); else hud?.tabShow(false);
     if (!sought()) return;
     if (play && game.lost) { input.endFrame(); return; }
-    dt *= played.pace; if (freeCam && played.paused) { posed(); pair.cut(); }
-    const wall = dt, still = ticks === undefined && !net && stopped(); if (still) dt = 0;   // (the world holds still under a card: what only the picture moves with it)
+    const wall = dt; dt *= played.pace; if (freeCam && played.paused) { posed(); pair.cut(); }
+    const still = ticks === undefined && !net && stopped(); if (still) dt = 0;   // (the world holds still under a card: what only the picture moves with it)
     time += dt;
     const t0 = performance.now(), plan = ticks !== undefined ? { ticks, acc, drift } : still ? { ticks: 0, acc, drift } : planTicks(acc, dt, FIXEDSTEP, drift); acc = plan.acc; drift = plan.drift;
     const locks = D.u[view() + View.locks];
@@ -436,7 +437,9 @@ async function main(): Promise<void> {
   onEnded = () => { if (!kit && !play && !ownPage(q)) pause.end(); };   // (a run's page has no end card: the next is its own)
   const cloud = kitPicture || play ? null : drawCloud(q, { sid, store: !unkept && keeps(q) ? keptStore() : null, gpu, engine, quality, game, measure, mission: desk().brief(location.search).title || (q.get('levelFile') ?? ''), offBooks: ownPage(q) || !!net, live: () => !title && !stopped() && !document.hidden && game.view().live, still: () => stopped() || measure.sweep.active });
   if (play && freeCam) { const named = q.get(PLAYTAPE) ?? '', mine = keptName(named), notes = mine ? await keptNotes(named) : [];
-    bar = new TapeBar({ played, cam: freeCam, canvas, title: desk().brief(location.search).title || name.replace(/\.json$/, ''), notes, keep: mine ? async all => { const ok = await keptStore().patch(named, { notes: all }); if (ok) void cloudNotes(q, keptStore()).catch(() => { /* on the next round */ }); return ok; } : null,
+    const map = new TapeMap({ floor: () => game.floor(), now: () => game.map(), view: () => freeCam.view(), notes, to: (x, z) => freeCam.to([x, freeCam.view().look[1], z]), at: () => played.at });
+    const sees: Sees = { get fog() { return watched.fog; }, get tube() { return watched.tube; }, get fogged() { return D.u[D.at[Section.fog] + Fog.on] !== 0; }, get runs() { return D.f[view() + View.night] > 0.5; }, get lit() { return watched.tube ?? this.runs; }, set: seesAs };
+    bar = new TapeBar({ played, sees, map, cam: freeCam, canvas, title: desk().brief(location.search).title || name.replace(/\.json$/, ''), notes, keep: mine ? async all => { const ok = await keptStore().patch(named, { notes: all }); if (ok) void cloudNotes(q, keptStore()).catch(() => { /* on the next round */ }); return ok; } : null,
       back: () => backToGame(named, location.pathname), begun: () => { audio.start(); input.focusGame(); } }); }
   const bencher = drawBench({ idle: capMs => cloud ? cloud.cloud.filesIdle(capMs) : Promise.resolve(true), gpu, engine, smoke, quality, input, game, settings, measure, say: words => readout.say(words) }); bencher.go(); if (refused) readout.say(`benchmark not now: ${refused}`);
   // ---- the title stays up over its floor, live; a mission's run begins when the player starts it
