@@ -12,6 +12,8 @@
 // first of a file): `m` = the men who moved, `x` = the men whose doing changed, `d` = the doors that moved; a keyframe lists every man and every door there is.
 // A man is named by his index in `cast` (append-only: a restart's new men are new entries). decode() below unfolds all of it into plain per-sample tables.
 
+import type { Recipe } from '../net/wire';
+
 export const REPLAY_VERSION = 1;
 /** how a 'mark' line that files a PAGE ERROR starts (ui/replaykey.ts files one at the play moment the error came; the viewer and replay-at.ts find them by it) */
 export const ERROR_MARK = 'the page hit an error: ';
@@ -119,7 +121,7 @@ export interface RunTape {
    *  tool was started with, src/host/standEnv.ts), `tables` = every registered knob table that is NOT in `knobs.tables` (knobs.ts knobRegistry — a recording's
    *  tables are a subset of the registry), `kit` = the kit cards (kit.ts KIT: in no registry). All absent on a tape from before they were carried: such a page tape
    *  is re-run on the page's switches for its query, nothing kept per machine */
-  recipe: { seed: number | null; search: string; levelFile?: string; scenario: string | null; env: unknown; knobs: unknown; stand?: 'page' | 'shipped' | 'frozen'; words?: Record<string, string>; tables?: Record<string, unknown>; kit?: { on: boolean; members: unknown[] } };
+  recipe: Recipe;
   /** [count, dt] runs · [f, css w, css h, px w, px h] · [f, mask, …changed of: look-at x y z, yaw, pitch, distance, aspect, fov, aim lead] · [f, input] */
   dt: [number, number][]; view: number[][]; cam: TapeVal[][]; input: [number, TapeInput][];
   /** THE LENS, where it was not the pose's: a row for every step whose view matrices were NOT what its nine camera numbers build (camera.ts rebuild) — the host

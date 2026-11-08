@@ -29,7 +29,7 @@
 // is what `navigator` says — and on a visit that is up, where it goes out at once on the live records. Same switch, same notice: a browser that has not
 // seen the notice is told `waits`, and the card that shows the notice's line sends the record by saying `told()`.
 // No game code is imported (src/game is one import cycle): main.ts hands in the visit's name, the kept tapes' store and closures over its own objects.
-import type { KeptStore } from '../replay/keepstore';
+import type { KeptStore } from '../tape/keepstore';
 import { wire, type Wire } from './wire';
 import { TapeSync, TAPESYNC, type TapeNote, type TapeNotes } from './tapes';
 import { PrefSync, PREFSYNC, prefsNow, type KeyStore } from './prefs';
@@ -39,7 +39,7 @@ import { tabLoad, LOADTIME } from './loadtime';
 import { FileSync, FILESYNC } from './files';
 import { LOOPBACK, HTTPS_ADDR, LOCAL_HOST, bare } from './addr';
 import { NoteSync, NOTESYNC, type NoteMarks } from './notes';
-import { shelfNoted, shelfGet } from '../replay/shelf';
+import { shelfNoted, shelfGet } from '../tape/shelf';
 
 /** THE MACHINE'S POWER, in the benchmark report's own words (ui/bench.ts): "plugged in" or "on battery (62 %)". The browser is asked once, on the first
  *  call (no prompt; a browser without the question never answers), and what it handed back is read as it stands on every later call: '' until then.

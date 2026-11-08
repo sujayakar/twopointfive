@@ -33,10 +33,10 @@ import { standUp, ROOT } from './headless.ts';
 if (!existsSync(`${ROOT}/cloud/node_modules/convex-test`)) { console.error('cloud-check: the backend\'s packages are not installed — run `npm ci` in cloud/ first'); process.exit(2); }
 const { standIn } = await import(`${ROOT}/cloud/test/standin.ts`);
 const { ReplayBuffer } = await import(`${ROOT}/src/game/replaybuf.ts`);
-const F = await import(`${ROOT}/src/replay/format.ts`);
-const KP = await import(`${ROOT}/src/replay/kept.ts`);
-const KS = await import(`${ROOT}/src/replay/keepstore.ts`);
-const { ReplayKeeper, ringSource } = await import(`${ROOT}/src/replay/keeper.ts`);
+const F = await import(`${ROOT}/src/tape/format.ts`);
+const KP = await import(`${ROOT}/src/tape/kept.ts`);
+const KS = await import(`${ROOT}/src/tape/keepstore.ts`);
+const { ReplayKeeper, ringSource } = await import(`${ROOT}/src/tape/keeper.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { levelFingerprint } = await import(`${ROOT}/src/game/savestate.ts`);

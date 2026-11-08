@@ -32,12 +32,13 @@
 // IMPORT CYCLE (src/game is one): nothing at module level uses another game module's exports.
 import { PRESSURE, PRESSURE_DEFAULTS, savePressure, resetPressure } from './pressure';
 import { DIGIN, DIGIN_DEFAULTS, saveDigIn, resetDigIn } from './digin';
+import type { Difficulty } from '../scene/words';
 import { FOG } from './fogofwar';   // (the one row hard writes outside the two tables: the fog of war's cone — read inside setDifficulty only)
 import { TOLD, toldNow, toldOfLevel, type ToldRung } from './told';   // (the fourth lever's table: read and written inside functions only — told.ts imports nothing)
 import { SQUADDEAL } from './squaddeal';   // (read inside squadsHeld only: squaddeal.ts imports nothing but types)
 import { RUST_PASS, RUST_SURFACE } from './crossing';
 
-export type Difficulty = 'standard' | 'hard';
+export type { Difficulty };
 export const DIFFICULTIES: Difficulty[] = ['standard', 'hard'];
 /** what HARD is beside 'both switches on': the reach that joins them (m on foot; 0 = no reach rule — the press takes whom it wants; whether the men it leaves
  *  at home dig in is `keeperDigs`). Picked by measurement (record rebuild/harder-defenders/numbers.md): 18 left the office EASIER than standard, 0 clearly harder */

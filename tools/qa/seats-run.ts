@@ -15,8 +15,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { sampleCmd, cmdText, cmdFromText } = await import(`${ROOT}/src/game/cmd.ts`);
-const { Input } = await import(`${ROOT}/src/game/input.ts`);
-const { FollowCamera } = await import(`${ROOT}/src/game/camera.ts`);
+const { Input } = await import(`${ROOT}/src/host/input.ts`);
+const { FollowCamera } = await import(`${ROOT}/src/host/camera.ts`);
 const { stateHash } = await import(`${ROOT}/src/game/rollback.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);

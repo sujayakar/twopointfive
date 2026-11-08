@@ -7,7 +7,7 @@ import type { HostApi } from './api';
 import type { Level } from '../scene/level';
 import type { GltfCharacter } from '../anim/gltf';
 import type { SmokeSystemLike } from '../smoke/types';
-import type { GameAudioLike } from '../game/audio_iface';
+import type { GameAudioLike } from '../audio/iface';
 import { buildLevel } from '../scene/level';
 import { UNDERFOOT } from '../scene/collision';
 import { SHAPES, shapeLevel, plainLevel } from '../scene/shapes';
@@ -83,7 +83,7 @@ import { WORKSTOW } from '../game/workstow';
 import { SQUADNET } from '../game/squadnet';
 import { TAKEDOWN } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
-import { GEAR } from '../game/gear';
+import { GEAR } from './gear';
 import { GUARD_EYE, LIGHTS } from '../game/guards';
 import { WORDS } from '../game/words';
 import { UNSEEN } from '../game/unseen';
@@ -171,8 +171,8 @@ import { HOLD, MOVES, TURN, TURN_FEEL, THROW_BY, HARDBREATH, RUNREADY, RUNARMS }
 import { DOORSTAY, DOORWAY, DOORTHROW } from '../game/doors';
 import { SHARDS } from '../game/shards';
 import { DEBRIS } from '../game/destructionSwitch';
-import { FollowCamera } from '../game/camera';
-import { Input } from '../game/input';
+import { FollowCamera } from './camera';
+import { Input } from './input';
 import { pinned } from './profile';
 import { difficultyAsked, difficultyLay } from '../game/difficulty';
 import { LESSON_MISSIONS } from '../scene/scenarioList';
@@ -316,7 +316,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   if (opts.populate !== false) populateHost(host, level);
   host.settings.skyZenith = v3.copy(level.sky.zenith); host.settings.skyHorizon = v3.copy(level.sky.horizon);   // (the picture told the level's own night: every host, so that what it holds is one thing)
   if (opts.harness && pinned('TPS_OPENING')) OPENING.on = String((globalThis as any).process?.env?.TPS_OPENING ?? '') === '1';   // THE NIGHT'S OPENING (src/game/opening.ts): off, so every man of the shift starts on his route's first waypoint as when every frozen digest, tally and session fixture was recorded — set before the Game exists (its constructor places them); `TPS_OPENING=1` runs any harness tool with it on, tools/qa/solo-night.ts raises it for its as-shipped stand (the shipped default is ON)
-  if (opts.harness && pinned('TPS_GEAR')) GEAR.on = String((globalThis as any).process?.env?.TPS_GEAR ?? '') === '1';   // the 2010s issue kit (src/game/gear.ts): off, so the kit's names in every frozen probe's HUD, message and debrief text are the ones they were written against, and Sam's pistol holds the ten it held; `TPS_GEAR=1` turns it on (the shipped default). Words, drawn boxes and the Glock's fifteen-round magazines — set before the Game exists (its constructor loads Sam's pistol)
+  if (opts.harness && pinned('TPS_GEAR')) GEAR.on = String((globalThis as any).process?.env?.TPS_GEAR ?? '') === '1';   // the 2010s issue kit (src/host/gear.ts): off, so the kit's names in every frozen probe's HUD, message and debrief text are the ones they were written against, and Sam's pistol holds the ten it held; `TPS_GEAR=1` turns it on (the shipped default). Words, drawn boxes and the Glock's fifteen-round magazines — set before the Game exists (its constructor loads Sam's pistol)
   if (opts.harness && pinned('TPS_AIRDUST')) AIRDUST.on = String((globalThis as any).process?.env?.TPS_AIRDUST ?? '') === '1';   // THE WEATHER'S DUST IN THE ROOMS (src/game/airDust.ts): off, so a sight line under a picked weather is cut by the leak under every roof, as when every frozen digest and tally was recorded; `TPS_AIRDUST=1` runs any tool with it (before the Game exists: its constructor seeds the field)
   if (opts.harness) pinSnow();   // a level built for snow is born in snow (src/game/weatherKinds.ts SNOW_LEVELS, weather.ts levelKind): off, so such a level stands under the weather any level has; `TPS_SNOW=1` raises it — set before the Game exists: the Weather picks its kind in its constructor
   if (opts.harness && pinned('TPS_SNOWLOOK')) SNOW_LOOK.on = String((globalThis as any).process?.env?.TPS_SNOWLOOK ?? '') === '1';   // the snow's look (weatherKinds.ts SNOW_LOOK; picture only): off, so a snow level is drawn as its painted boxes

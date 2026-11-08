@@ -4,7 +4,7 @@
 //   bun run tools/qa/samefight-rerun.ts <replay.json> <steps the page chained> [every=30]
 import { readFileSync } from 'node:fs';
 import { rerun } from './rerun.ts';
-import type { ReplayFile } from '../../src/replay/format.ts';
+import type { ReplayFile } from '../../src/tape/format.ts';
 
 const [path, stepsArg, everyArg] = process.argv.slice(2);
 if (!path || !stepsArg) { console.log('usage: bun run tools/qa/samefight-rerun.ts <replay.json> <steps> [every]'); process.exit(2); }

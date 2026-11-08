@@ -147,7 +147,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   fail one line); never tried on his machine. BACKTICK stays the panel's own: it is main.ts's
   hotkey (`panel.toggle()`, not while a card has the game frozen), `onKey` hands it back and it is never typed into the search, and a FIELD inside the panel that holds the keyboard — the
   search box, a slider just dragged, a list, a number — shuts the panel on backtick through the panel's own capture listener, since Input never sees a key a field keeps. Tab is only
-  `preventDefault`ed by game/input.ts and handed to the game like any key — nothing in src/game reads it yet; the mission list walks its own focus with
+  `preventDefault`ed by host/input.ts and handed to the game like any key — nothing in src/game reads it yet; the mission list walks its own focus with
   it while it is up. The WORKBENCH: backtick hides / shows its right-hand panel (the inspector) in every mode, Tab does nothing, and its debug views are ⚙ ▸ Renderer ▸ 'debug view'
   in the Characters / Effects modes and the 'view' list in the level top bar's second row in the Level / Materials modes; `[` `]` are still exposure. The native host: backtick
   toggles its panel, no debug-view key); open page / section / scroll kept in
@@ -283,7 +283,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   game reads it. `__replay.view()` / `__replay.canView` are the hook's. CHECK `probes.ts cardreplay` (family `replay`; `CARDREPLAY_BREAK=1` = the browser hands
   back no tab: must fail), 4 lines, both stands. What the replay holds is the buffer's last stretch of PLAY, as F7's (`REPLAY.seconds`, 300: the card
   up stops the clock, so waiting on it loses nothing): a run longer than that has lost its start and opens at the buffer's own, and after restarts the file
-  still holds the earlier attempts but the viewer opens it at the run the card is for (the last restart's mark, `replay/format.ts lastRun`, for a file whose
+  still holds the earlier attempts but the viewer opens it at the run the card is for (the last restart's mark, `tape/format.ts lastRun`, for a file whose
   why is 'card': the F7 bullet in replays.md). NEVER SEEN ON A GPU; the page look is on the software adapter.
 - **The end card's Replay plays the run in the engine (10-15; the maintainer: "clicking on replay after a mission should start in engine").** The card's press
   (`ReplayKey.openViewer('card')`) still saves the last stretch, and the window (no new tab since 10-15: 'One window' in replays.md) now goes to the GAME PAGE on the file's run
@@ -992,7 +992,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   takes the layout under 1200 × 675 of its own pixels (the smallest window the screens hold whole at, measured with the page check on the build before):
   where the largest step asks for more room than there is, the larger steps share what there is (1366 × 768: 1.04, 1.08, 1.14; 1280 × 720: up to
   1.07), and on a window of 1200 × 675 or less they do nothing. THE KEYS: Ctrl or ⌘ with + and − step it from anywhere, with 0 it is the window's
-  again; those chords, Ctrl + wheel and a pinch are taken from the browser (over the picture a wheel that says Ctrl is still `game/input.ts`'s: a pinch zooms the camera, the wheel under a held Ctrl key is nothing, `player.md` CTRL AND THE WHEEL).
+  again; those chords, Ctrl + wheel and a pinch are taken from the browser (over the picture a wheel that says Ctrl is still `host/input.ts`'s: a pinch zooms the camera, the wheel under a held Ctrl key is nothing, `player.md` CTRL AND THE WHEEL).
   FOUR THINGS A ZOOMED LAYER DOES NOT DO BY ITSELF, and a new screen has to: a viewport unit in a layer is written `calc(25vw / var(--tz, 1))` (the
   check is red on a bare one in `index.html` or `src/ui`); an `@media` width or height is rewritten by the module to ask for px × factor (also when a
   style sheet joins later, one microtask after it joins), and a script asks `uiMatch('(max-width: 720px)')` in place of `matchMedia`; a rectangle a
@@ -1024,7 +1024,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   run (the boot asks the engine which pixels it measures a zoomed element in, and that answer has only ever been Chromium's). The replay player was
   not run with a tape after its six rules changed.
 - **Options ▸ Controls rebinds the keys (10-21; `src/host/keymap.ts` the table, `src/ui/keybinds.ts` the caps, the remap itself in
-  `src/game/input.ts`'s keyboard listener).** The maintainer: "could you add key remapping (plus reset) to settings? that way i could tweak
+  `src/host/input.ts`'s keyboard listener).** The maintainer: "could you add key remapping (plus reset) to settings? that way i could tweak
   settings without a rebuild". WHERE IT SITS: at the keyboard and nowhere else. The listener asks `gameCode()` what a key IS before it files it,
   so the game still asks for the codes it always did and the tick's record, the session journal, a run's tape and a replay hold those codes:
   a recording made on a rebound board plays the same on any machine. It is no rule of the game: no knob table, no `FROZEN_HOLDS` row (the
@@ -1175,7 +1175,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Both checks below pass on either build.) OPTIONS ▸ CONTROLS, Squad, on the page's own board is
   three rows: the command key's, "Order the squad" (its tap gives the usual order where the cursor is, kept down a moment it opens the wheel with
   every order); then, with `goals`, the sprint key with that key, "Send part of the squad to one more thing" (both caps are those rows' own, so a
-  moved sprint key is named there: the game reads the sprint row's code, `game/input.ts` gameCode); then the word's, "Send in everyone who's
+  moved sprint key is named there: the game reads the sprint row's code, `host/input.ts` gameCode); then the word's, "Send in everyone who's
   waiting". The orders menu's row (code `KeyX`, no key and no middle button on this board) and the two rows that are keys of that menu alone (H
   and G: nobody's while a wheel is up, nothing with no menu up) are listed only while the menu has a key, kept from before; its words then leave
   the middle button out. A who row given a key by hand says the key does nothing now. The list is built again, at the same scroll, when one of

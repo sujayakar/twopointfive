@@ -11,7 +11,7 @@ import { HOUR_IDS, hourLabel, hourOf, applyHour, hourSummary, sunStrength, setSu
 import { Engine } from '../engine';
 import { Game } from '../game/game';
 import { SmokeSystem } from '../smoke/smoke';
-import { FollowCamera } from '../game/camera';
+import { FollowCamera } from '../host/camera';
 import { Overlay } from './overlay';
 import type { DevHud } from './devhud';
 import { Panel } from './panel';

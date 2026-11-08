@@ -1,5 +1,5 @@
 // A CARD OF A RUN, on the page that draws a game it does not hold (view/runend.ts RunEnd): asked of the module as the card opens.
-import { GEAR, gearText } from '../game/gear';
+import { GEAR, gearText } from './gear';
 import type { RunBooks } from '../ui/runBooks';
 import type { RunEnd } from '../view/runend';
 import type { DrawGame } from './drawgame';

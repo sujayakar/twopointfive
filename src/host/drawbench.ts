@@ -2,7 +2,7 @@
 // hands-off player (rust/game_run hands_off.rs).
 import type { Engine } from '../engine';
 import type { Gpu } from '../gpu/device';
-import type { Input } from '../game/input';
+import type { Input } from './input';
 import type { SmokeSystem } from '../smoke/smoke';
 import { Bench, benchView, machineFacts, type BenchScene } from '../ui/bench';
 import { benchBegin, benchLegOfPage } from '../ui/benchrun';

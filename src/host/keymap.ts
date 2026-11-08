@@ -1,7 +1,7 @@
 // THE PLAYER'S OWN KEYS: which key on the board gives each key the game asks for. Options ▸ Controls rebinds one (ui/keybinds.ts), this machine keeps it
 // (localStorage `twopointsix.keys`), and Reset there puts every one back. `?keybinds=0` = the build's own keys for the visit, the kept ones left as kept.
 // OFF IN THE MODULE: the game page turns it on as it boots (`keysBoot`, main.ts's first line). A headless tool never does, so its keys are the build's whatever this machine has kept.
-// WHERE IT SITS: at the keyboard, and nowhere else. game/input.ts asks `gameCode()` what a key that went down IS before it files it, so the game goes on asking
+// WHERE IT SITS: at the keyboard, and nowhere else. host/input.ts asks `gameCode()` what a key that went down IS before it files it, so the game goes on asking
 // for the codes it always did (`input.hit('KeyR')`), and everything downstream of the Input is as it was: the tick's PlayerCmd, the session journal, a run's
 // tape, a replay. A recording made with R on another key holds 'KeyR' and plays the same on any machine. Nothing here is read by src/game but that one call
 // (and the keyboard's own two: `camKey` and `KEYMAP.pinchOnly`, which key the camera is on and what the wheel under Ctrl is):
@@ -92,7 +92,7 @@ export const KEYMAP = { /** false = the build's own keys, whatever is kept: the 
   /** the camera's key is Space while Space is no row's (`camKey` below: the action on E, nothing put on Space by hand). false = it is Ctrl: the module's own stand, and the page's under `?camspace=0` */ camSpace: false,
   /** …and while it is, THE WHEEL UNDER A HELD CTRL KEY IS NOTHING (the maintainer, 10-24: "ctrl-scroll still zooms in and out, should remove"). A
    *  trackpad pinch still zooms: the browser sends it as a wheel that says Ctrl with no Ctrl key down, and that is how the two are told apart
-   *  (game/input.ts `ctrlDown`). false = any wheel that says Ctrl zooms, as it was: the module's own stand, and the page's under `?pinchonly=0` */ pinchOnly: false,
+   *  (host/input.ts `ctrlDown`). false = any wheel that says Ctrl zooms, as it was: the module's own stand, and the page's under `?pinchonly=0` */ pinchOnly: false,
   /** empty hands are a slot on backtick while this says so (the page hands it game/handslot.ts's switch; null = never: the module's own stand) */ slotWhen: null as (() => boolean) | null, /** his own actions are a ring while this says so (game/handring.ts; null = never): the whistle's row has no key and, with the slot on, the interaction's row is on the key E left */ handWhen: null as (() => boolean) | null, /** steps on every change: what a drawn surface keys its cache on */ rev: 0 };
 const LS = 'twopointsix.keys';
 /** the rows whose keys in the build are not their own codes, while `qFree` is on: row id → its keys ([] = none) */
@@ -252,12 +252,12 @@ export function capNow(id: string): string { const a = byId.get(id); if (!a) ret
 export function actOfCap(cap: string): KeyAct | null { return byCap.get(cap.toLowerCase()) ?? null; }
 /** a cap the HUD was handed, as it is bound now. Anything that is no row's cap ('LMB', '×') is handed back */
 export function keyCap(cap: string): string { fresh(); if (!map) return cap; const a = byCap.get(cap.toLowerCase()); if (!a || same(keysNow(a), a.codes)) return cap; const now = capNow(a.id); return cap === cap.toUpperCase() && cap !== cap.toLowerCase() ? now.toUpperCase() : now; }
-/** THE HIDDEN TEXT BOX IS NO FIELD. In somebody else's frame (the playable artifact) game/input.ts keeps the keys in a text box nobody sees, told by this
+/** THE HIDDEN TEXT BOX IS NO FIELD. In somebody else's frame (the playable artifact) host/input.ts keeps the keys in a text box nobody sees, told by this
  *  label; a key aimed at it is a key of the game's. `typedInto` is the test a key's listener makes of its target: an input, a select, a text area or
- *  editable text he types in, and never that box (game/input.ts's own `typingTarget`, for a listener that cannot see its box). (replay/engineplay.ts spells the same test itself.) */
+ *  editable text he types in, and never that box (host/input.ts's own `typingTarget`, for a listener that cannot see its box). (replay/engineplay.ts spells the same test itself.) */
 export const SINK_LABEL = 'game input';
 export function typedInto(t: EventTarget | null): boolean { const el = t as { tagName?: string; isContentEditable?: boolean; getAttribute?(k: string): string | null } | null; return !!el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName ?? '') && el.getAttribute?.('aria-label') !== SINK_LABEL || !!el.isContentEditable); }
-/** THE CAMERA'S KEY (game/input.ts: held, the mouse turns the view and the wheel zooms): the Space bar while the board leaves
+/** THE CAMERA'S KEY (host/input.ts: held, the mouse turns the view and the wheel zooms): the Space bar while the board leaves
  *  it spare — his own actions are a ring on E (`HAND_SLOT`) and he put no row on Space himself — else null: it is Ctrl, as it always was. It is no row: it
  *  cannot be moved, and its cap is drawn plain (a line of words that says Space means the action's key, wherever that is) */
 export const camKey = (): string | null => KEYMAP.camSpace && gameCode('Space') === '' ? 'Space' : null;

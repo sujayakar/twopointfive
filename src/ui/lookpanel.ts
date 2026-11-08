@@ -81,7 +81,7 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
   let stayPlain = false;
   /** a row of the panel's that takes buttons with manners of their own (a hold, a text that changes) */
   const row = (sec: HTMLElement, label: string) => { const r = panel.buttons(sec, label, []); return (r.querySelector('.btns') as HTMLElement | null) ?? r; };
-  const btn = (host: HTMLElement, text: string, tip = '') => { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; if (tip) b.title = tip; b.addEventListener('mousedown', e => e.preventDefault()); host.append(b); return b; };   // (no focus: a focused control takes the game's keys, game/input.ts typingTarget)
+  const btn = (host: HTMLElement, text: string, tip = '') => { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; if (tip) b.title = tip; b.addEventListener('mousedown', e => e.preventDefault()); host.append(b); return b; };   // (no focus: a focused control takes the game's keys, host/input.ts typingTarget)
   const words = (sec: HTMLElement, text = '') => { const d = document.createElement('div'); d.className = 'row textrow'; d.style.cssText = 'color:#8aa;white-space:pre-wrap'; d.textContent = text; sec.append(d); return d; };
   /** a slider of the panel's whose value can be absent (the moon by day): it greys out and shows a dot */
   const slide = (sec: HTMLElement, name: string, tip: string, min: number, max: number, step: number, get: () => number | null, set: (v: number) => void) => {

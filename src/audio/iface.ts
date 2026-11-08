@@ -1,5 +1,5 @@
 import { Vec3 } from '../math/vec';
-import type { FloorMat } from './floor';
+import type { FloorMat } from './floors';
 
 /** What the game layer needs from the audio engine (implemented in src/audio; null object until it is started). */
 export interface GameAudioLike {

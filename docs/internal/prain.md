@@ -135,7 +135,7 @@ curtain over the disc) — v2 within the noise of v1, both ~+0.2 ms over today; 
 ## Merge prep (08-12 night) — what changed at the merge, the exit-sign fix, identity, gates, cost
 
 **The merge.** `main` (85bba7a) merged into the branch: the motes are gone on main, so rain is particle KIND 5 of six (`P_KINDS` = spark debris dust casing sheet rain,
-`P_RAIN` 5u, `KIND_RING.rain` 2, `WIND_KINDS_DEFAULT` + rain, `KINDS_DEFAULT` without it, `IMP_RESPONSE.rain` inert in game/sheetModel.ts so the table stays the one source);
+`P_RAIN` 5u, `KIND_RING.rain` 2, `WIND_KINDS_DEFAULT` + rain, `KINDS_DEFAULT` without it, `IMP_RESPONSE.rain` inert in render/sheetModel.ts so the table stays the one source);
 the emit block's header is main's derived `48 + 48·kinds` (`KP_FLOAT` / `KI_FLOAT`), EmitBlock `kp: array<vec4f, 12>` / `ki: array<vec4f, 6>`, and the rain TAIL (rainWin + the six
 rainCfg rows at `BLOCK_TAIL_AT`) stays behind imps — `tools/qa/destruction-probes.ts`'s 'imps end the struct' line (red on this branch since the tail existed) now accepts exactly
 that tail and checks its offsets against particles.ts. `refract_common.wgsl` was already main's byte for byte (no union needed). Frame: main's tail ends giCfg @784, so weatherE /

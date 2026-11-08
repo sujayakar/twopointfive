@@ -309,7 +309,7 @@ export function testBurst(g: Game, kind: 'sparks' | 'debris' | 'dust' | 'casings
   const P = gpuFx(g); if (!P) return 0;
   const up: Vec3 = [0, 1, 0]; const p = v3.add(at, [0, 0.05, 0]);
   switch (kind) {
-    case 'sheets': return P.emit('sheet', v3.add(at, [0, 0.35, 0]), up, 40, { shape: 'burst', spread: 0.2, lift: 0.35, speed: 3.2, speedJit: 0.7, life: 60, lifeJit: 0.2, size: 0.21, sizeJit: 0.15, aspect: 1.41, tumble: 7, nrmJit: 0.5, posJit: 0.25, color: [0.86, 0.86, 0.82] });   // two reams' worth of A4 thrown up off the point: the destruction lane's paper (game/sheetModel.ts)
+    case 'sheets': return P.emit('sheet', v3.add(at, [0, 0.35, 0]), up, 40, { shape: 'burst', spread: 0.2, lift: 0.35, speed: 3.2, speedJit: 0.7, life: 60, lifeJit: 0.2, size: 0.21, sizeJit: 0.15, aspect: 1.41, tumble: 7, nrmJit: 0.5, posJit: 0.25, color: [0.86, 0.86, 0.82] });   // two reams' worth of A4 thrown up off the point: the destruction lane's paper (render/sheetModel.ts)
     case 'sparks': return P.emit('spark', p, up, 60, { speed: 5, speedJit: 0.6, spread: 1.1, life: 0.5, lifeJit: 0.4, size: PFX.sparkSize });
     case 'debris': return P.emit('debris', p, up, 40, { speed: 3, speedJit: 0.7, spread: 1.2, life: PFX.chipLife, lifeJit: 0.3, size: PFX.chipSize, sizeJit: 0.5, color: [0.8, 0.78, 0.74] });
     case 'dust': return emitDust(P, v3.add(at, [0, 0.12, 0]), up, 12, { shape: 'puff', speed: 0.9, speedJit: 0.5, lift: 0.2, life: 1.6, lifeJit: 0.3, size: 0.15, sizeJit: 0.35, posJit: 0.1, color: [0.75, 0.73, 0.7] });

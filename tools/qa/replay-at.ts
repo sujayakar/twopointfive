@@ -1,4 +1,4 @@
-// A SAVED REPLAY, READ AT ITS NOTES (src/replay/format.ts — F7 on the game page, notes put on it in /replay):
+// A SAVED REPLAY, READ AT ITS NOTES (src/tape/format.ts — F7 on the game page, notes put on it in /replay):
 //   bun run tools/qa/replay-at.ts <replay.json[.gz]> [--note N | --at SECONDS [--spot x,z]] [--before 8] [--after 3] [--near 12] [--who NAME] [--all]
 //                                                     [--rerun [--run SECONDS] [--eval probe.ts] [--force]]
 // With no --note / --at: the file's head and every note. For each chosen moment: who stood near the spot and what each was doing (state, order, errand, the mark
@@ -11,8 +11,8 @@
 // what changed; --eval probe.ts imports that module and calls its default export with { W, game, F, D, moment, report } at the moment (a thread's own questions).
 // EXIT 0 read · 2 not a replay · 3 --rerun refused (no tape, another level: the words say which and what to check out) · 4 the re-run parted from the page.
 import { readFileSync } from 'node:fs';
-import type { ReplayFile, ManAt, ManDo } from '../../src/replay/format.ts';
-import { checkReplay, decode, sampleAt, clock, doWords, errorMarks } from '../../src/replay/format.ts';
+import type { ReplayFile, ManAt, ManDo } from '../../src/tape/format.ts';
+import { checkReplay, decode, sampleAt, clock, doWords, errorMarks } from '../../src/tape/format.ts';
 import { markJumped, orderId, STUCK_OFF, toGo, stoppedByOther, meansToWait } from './replay-dump.ts';
 
 const argv = process.argv.slice(2), path = argv.find(a => !a.startsWith('--') && !/^-?[\d.,]+$/.test(a));
