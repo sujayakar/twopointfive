@@ -10,7 +10,7 @@
 import { standUp, seedGame, ROOT } from '../qa/headless.ts';
 const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
 const { hashStr } = await import(`${ROOT}/src/game/dialogue.ts`);
-const DT = 1 / 60, word = process.env.TPS_GAME_BY ?? process.env.TPS_GAME ?? '';
+const DT = 1 / 60, word = process.env.TPS_GAME ?? 'rust';
 let fails = 0;
 const line = (ok: boolean, what: string, detail: string) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
 const secs = (W: any, n: number): string[] => { const out: string[] = []; for (let s = 0; s < n; s++) { for (let i = 0; i < 60; i++) W.step(DT); out.push(hashStr(JSON.stringify(digestGame(W.game))).toString(16)); } return out; };

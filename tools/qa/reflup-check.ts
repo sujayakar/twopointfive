@@ -11,7 +11,7 @@
 // on pixels at a jamb, a sill and a bevel, with the numbers line 1 holds in the text. What the picture looks like is the page's to show (docs/agents/render.md).
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 export async function reflUpCheck(): Promise<boolean> {
   const BRK = process.env.REFLUP_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };

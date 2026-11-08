@@ -16,7 +16,7 @@
 //   materials-wear       the detail layer's traffic map (render/wear.ts) on the office: deterministic, the corridor route worn and a wall's inside not, every
 //                        threshold stamped, the wall-proximity channel 1 at a wall's foot and 0 mid-room, the size the shader's mapping assumes
 //   bun run tools/qa/probes.ts materials       (each prints PASS / FAIL lines and an '=== name: ALL PASS | N FAIL ===' verdict; probes.ts sets the exit code)
-import { ROOT, fake } from './headless.ts';
+import { ROOT, fake, main } from './here.ts';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -336,3 +336,5 @@ export async function materialsWear() {
   verdict(worn / n > 0.01 && worn / n < 0.25 && grimy / n > 0.02 && grimy / n < 0.35, 'coverage is a minority of the floor: worn (> ½) 1–25 %, grime band (> ½) 2–35 %', `worn ${(100 * worn / n).toFixed(1)} % · grime ${(100 * grimy / n).toFixed(1)} %`);
   done('materials-wear');
 }
+
+if (import.meta.main) await main([materialsFinish, materialsPresets, materialsFrame, materialsVndf, materialsArealight, materialsWear], materialsFailures);

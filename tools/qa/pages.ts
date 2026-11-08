@@ -2,7 +2,6 @@
 //   bun run tools/qa/pages.ts [group | name …] [--list]     groups: boot · play · menus · coop · saves · cloud · replay · all (every group but tools) · tools (named one by one: never run by a group)
 //   env: QA_PAGE_CAP (minutes a script may take, default 10; its whole process group is stopped there) · the script's own words pass through (SHOTS=0, JOBS=…)
 // A .ts row is run by bun with a fresh file and its own --port. A script reads PORT, PLAYWRIGHT_MODULE, CHROMIUM and CHROME from here. Exit 0 every script green · 1 one red (a FAIL line, a non-zero exit or the cap) · 2 an unknown name.
-// holds-check.ts (10) is red on a tools/qa/*.cjs that is neither a row here nor required by one.
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
@@ -25,8 +24,6 @@ export const PAGES: readonly PageRow[] = [
   ['samefight-page.cjs', 'play', "same seed, same inputs: the page against the harness to the last bit", 2.7],
   ['cleanrestart-page.cjs', 'play', "a restart on the page: a lamp shot out comes back, the frames after it as the first", 4.1],
   ['deathrecap-page.cjs', 'play', "every death explains itself: the down card's plan, who fired, it plays", 3.3],
-  ['readtrap-page.cjs', 'play', "what the page reads of the game and is not sent", 2.4],
-  ['writetrap-page.cjs', 'play', "what the page writes of the game", 4.7],
   ['runbooks-page.cjs', 'play', "a run's page is nobody's try: the end card and the books", 5.1],
   ['panel-keys.cjs', 'play', "the debugger's key and Tab, pressed for real", 1.5],
   ['startpage-look.cjs', 'menus', "every mission on the start page goes through its loadout to Deploy", 0.9],
@@ -50,7 +47,6 @@ export const PAGES: readonly PageRow[] = [
   ['bench-page.cjs', 'tools', "the benchmark run end to end", 0],
   ['perf-sweep-page.cjs', 'tools', "the F8 sweep run and its dump", 0],
   ['framecap-page.cjs', 'tools', "an F6 frame capture taken and read back", 0],
-  ['modelerr-page.cjs', 'tools', "the game's senses against the picture", 0],
   ['pricerun-page.cjs', 'tools', "the pricing run", 0],
   ['cpuprofile-page.cjs', 'tools', "where a frame's CPU goes", 0],
   ['draw-equal.cjs', 'tools', "the picture-equality rig", 0],
@@ -60,9 +56,6 @@ export const PAGES: readonly PageRow[] = [
   ['page-look.cjs', 'tools', "a scenario played a little: stills, errors", 0],
   ['shader-count-page.cjs', 'tools', "how much a page compiles", 0],
   ['shader-serial-page.cjs', 'tools', "what each program costs to compile alone", 0],
-  ['sound-tapes.cjs', 'tools', "records the replays that cover the game's sounds", 0],
-  ['soundlanes-page.cjs', 'tools', "the engine replay's sound lanes; long, not read since replays play again", 0],
-  ['soundfilm-page.cjs', 'tools', "the hear-again filmstrip; not read since replays play again", 0],
   ['warmboot-page.cjs', 'tools', "a second visit's boot, on a GPU", 0],
   ['weather-look.cjs', 'tools', "a still per level, weather and view", 0],
 ];

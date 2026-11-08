@@ -9,7 +9,7 @@
 //   bun run tools/qa/smokelook-check.ts                     exit 0 = every line passed, 1 = one failed
 //   SMOKELOOK_BREAK=1 bun run tools/qa/smokelook-check.ts   the paste is read with one row moved: must FAIL
 import { readFileSync } from 'node:fs';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 const { SMOKE_LOOK, smokeLook, smokeLookStep, putSmokeLook } = await import(`${ROOT}/src/render/smokeLook.ts`);
 const { defaultSmokeParams } = await import(`${ROOT}/src/smoke/smoke.ts`);
 const { lookPageWord } = await import(`${ROOT}/src/scene/look.ts`);

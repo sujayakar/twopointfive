@@ -10,7 +10,7 @@
 //   wheel         while Space is the camera's, the wheel under a HELD Ctrl key is nothing (KEYMAP.pinchOnly, `?pinchonly=0`); a pinch, a wheel that says
 //                 Ctrl with no Ctrl key down, still zooms; the camera on Ctrl, or the rule off: as it was. PINCHONLY_BREAK=1 = the rule left off: must FAIL
 //   off           the switch off: all of it on Ctrl, as it was, and Space held is nothing to the camera
-import { ROOT } from './headless.ts';
+import { ROOT, main } from './here.ts';
 
 export async function camSpaceCheck(): Promise<boolean> {
   const BRK = process.env.CAMSPACE_BREAK === '1'; let all = true;
@@ -86,3 +86,5 @@ export async function camSpaceCheck(): Promise<boolean> {
   console.log(`=== camspace: ${all ? 'ALL PASS' : 'FAIL'} ===`);
   return all;
 }
+
+if (import.meta.main) await main([camSpaceCheck]);
