@@ -165,7 +165,7 @@ pub fn door_tools_new(g: &mut crate::game::Game) -> crate::doortools::DoorTools 
 pub fn door_tools_thr_rows(g: &mut crate::game::Game) {
     use crate::orders::{rows, OrderDef, TargetKind as K};
     g.door_tools.thr_sig = door_tools_thr_sig_now(g);
-    for id in [crate::orders::rows::threshold::ORDER.id, "threshold", "outside", "thrStep", "thrBang", "thrLeave", crate::doortools::THR_PAGE] {
+    for id in [crate::orders::rows::threshold::ORDER.id, crate::doortools::THR_PAGE] {
         crate::orders::squad_orders_unregister(g, id);
     }
     register(g, rows::def(&rows::threshold::ORDER, OrderDef { page: Some(String::from(crate::doortools::TOOLS_PAGE)), targets: vec![K::Door],
