@@ -484,7 +484,6 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             if g.pl[pl].takedown.is_some() || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
             let cv = g.gd[gd].civ.unwrap();
             if crate::rescue::rescue_is_hostage(g, gd) { continue; }
-            if crate::snatchout::snatch_out_owns(g, gd) { continue; }
             let gc = g.gd[gd].ch;
             let gp = g.ch[gc].pos;
             let (dx, dz) = (p[0] - gp[0], p[2] - gp[2]);
@@ -614,7 +613,6 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             }
         }
         crate::wallcharge::wall_charge_rows(g, p, busy, row_cb!(crate::wallcharge::WallChargeRowsRowOver), offer_cb!(list, things));
-        crate::snatchout::snatch_out_rows_2(g, p, busy, row_cb!(crate::snatchout::SnatchOutRows2RowOver), offer_cb!(list, things));
         crate::rescueend::rescue_end_rows_2(g, p, busy, row_cb!(crate::rescueend::RescueEndRows2RowOver), offer_cb!(list, things));
         let setting = crate::wallcharge::wall_charge_setting(g, &crate::seats::here(g));
         crate::defuse::defuse_rows(g, p, busy || setting, row_cb!(crate::defuse::DefuseRowsRowOver), offer_cb!(list, things));

@@ -307,8 +307,6 @@ pub mod slotsetup { pub mod types; pub use types::*; }
 pub mod smoke_smoke_grid { pub mod types; pub use types::*; }
 pub mod smoke_types { pub mod types; pub use types::*; }
 pub mod smokebreak { pub mod types; pub use types::*; }
-pub mod snatch { pub mod types; pub use types::*; }
-pub mod snatchout { pub mod types; pub use types::*; }
 pub mod sneak { pub mod types; pub use types::*; }
 pub mod snow_blast { pub mod types; pub use types::*; }
 pub mod snow_bog { pub mod types; pub use types::*; }
