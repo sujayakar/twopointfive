@@ -1,0 +1,7 @@
+# AGAIN: the squad is sent at whoever is nearest and Sam shoots at him, and every so often the mission is started over with Shift+Enter.
+# REACHES: a restart in the middle of a fight, from inside a step, whatever it finds: men in rooms, doors open, rounds in the air, what each rule was doing.
+# DOES NOT REACH: a restart from a card, a load, Sam down.
+unhurt
+every 6 from 1    order move nearest all
+every 10 from 5   fire nearest
+every 25 from 20  again
