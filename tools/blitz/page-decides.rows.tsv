@@ -87,10 +87,15 @@ src/game/bigkit.ts:*	decides	squad status words	what big kit a man carries is wo
 src/game/weapons.ts:*	decides	squad status words	"reloading" and "ready" are worked out again on the copy
 src/game/quiet.ts:*	decides	mission switches	a quiet mission's rule switches (silent, sneak, spotted, pairs) live in TypeScript's module tables: the first line of Game.update hands them to this game, and the Rust game gets them through the knob tables, not from its own mission
 src/game/teams.ts:*	decides	mission switches	"staff against operatives" is a TypeScript module switch set with the quiet mission's
-src/game/kit.ts:*	decides	kit rows	the kit's rows, costs, what is legal and what each man is dealt are worked out by TypeScript (the HUD's kit strip and the kit page)
-src/game/kitload.ts:*	decides	kit rows	a gun's load and its share are worked out again on the copy
-src/game/gunslots.ts:*	decides	kit rows	the gun picks are worked out again on the copy
-src/game/slotsetup.ts:*	decides	kit rows	a slot's setup steps are worked out again on the copy
+src/game/kit.ts:camRow	decides	kit rows	LEFT, the cards': the run's tape keeps the kit screen's cards beside its steps and asks of them every 120 steps (game/runtape.ts kitNow): goes with the cards' move and the replay's
+src/game/kit.ts:kitOwn	decides	kit rows	LEFT, the cards': the run's tape keeps the kit screen's cards beside its steps and asks of them every 120 steps (game/runtape.ts kitNow): goes with the cards' move and the replay's
+src/game/kit.ts:stealthIssue	decides	kit rows	LEFT, the cards': the run's tape keeps the kit screen's cards beside its steps and asks of them every 120 steps (game/runtape.ts kitNow): goes with the cards' move and the replay's
+src/game/kit.ts:wandRow	decides	kit rows	LEFT, the cards': the run's tape keeps the kit screen's cards beside its steps and asks of them every 120 steps (game/runtape.ts kitNow): goes with the cards' move and the replay's
+src/game/kit.ts:pouchesOf	decides	kit rows	LEFT, the cards': the run's tape keeps the kit screen's cards beside its steps and asks of them every 120 steps (game/runtape.ts kitNow): goes with the cards' move and the replay's
+src/game/kit.ts:priceOf	decides	kit rows	LEFT, the cards': the run's tape keeps the kit screen's cards beside its steps and asks of them every 120 steps (game/runtape.ts kitNow): goes with the cards' move and the replay's
+src/game/kit.ts:kitBig	decides	the men drawn	what a man carries where he is drawn is asked of the copy (game/cast.ts): goes with drawMen and the Draw thread's men section
+src/game/kit.ts:*	decides	kit rows	the kit screen's rows, costs, what is legal and what each man is dealt are worked out by TypeScript
+src/game/kitload.ts:*	decides	previews that run a planner	the squad's throw preview walks its man at his load's pace on the copy (game/squadthrow.ts): goes with the one plan
 # ---- the host's own
 src/host/rustgame.ts:*	host	the Rust host	the host itself: it hands the Rust game the host's half, steps it, takes the state and the out events	24
 src/game/under.ts:*	host	the Rust host	the view's answer in the page's objects	1

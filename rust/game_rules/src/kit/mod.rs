@@ -10,5 +10,7 @@ pub mod p_03;
 pub use p_03::*;
 pub mod p_04;
 pub use p_04::*;
+pub mod b_01;
+pub use b_01::*;
 pub use p_01::slot_amount;
 pub use p_01::slot_put;

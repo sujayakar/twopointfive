@@ -979,6 +979,11 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   stand-in elements: the rifle at the start, six rounds fired, a reload (the magazine that came out is a box as full as it was), the pistol, the key
   off, the journal, the stands. NOBODY HAS seen it on a GPU or in play; the picture handed to the maintainer is the box's own elements and styles
   off the software-adapter page.
+- **The kit's column reads the game's record** (`game.view.kit`, `rust/game_rules/src/kit/b_01.rs kit_view`; drawn by `src/ui/handbox.ts`, which imports nothing of the game; 2026-11-08).
+  One column is left: the old one `SLOTSETUP` off drew is deleted with the two-line box, the `leftBar` nothing set, the PACE row (his pace is 1 at the head of every update: it could not show), `?magboxes` and `MAGBOXES_BREAK`, and `slotsetup.ts`'s questions on the copy (the
+  rules and their words are `slotsetup::setup_view` and `setup_takes`; the host's carried aim and `Game.backable` read `kit.takes` and `kit.setup`). No switch: it moves no rule. Native:
+  `rust/game_start/tests/kit_view.rs` (three seeds, a control in each, the second seat shown). Set against the column before it on one scripted run, 62 steps over two seeds: the same. The
+  kit screen before a mission still reads `kit.ts`'s tables (the cards'). NOBODY HAS seen it on a GPU or played it.
 - **Empty hands are a slot on backtick; E is spare; the debugger is on backslash** (`src/game/handslot.ts HANDSLOT {on}`, `HANDSLOT_KEY`, 10-22; the
   maintainer: "having backtick be the empty state", "when holding a guy, we can just have picking empty hands or pistol as the way to change
   equipment", "we can move the debug menu to \ or something like that", "if we have an empty equipment state, we can keep that lmb is knife, rmb is
