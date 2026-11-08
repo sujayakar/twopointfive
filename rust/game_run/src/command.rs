@@ -116,6 +116,13 @@ commands! {
     };
     /// what each man is thinking is said over him (and the meters' raw numbers with it)
     22 Labels { on: u32 } = |g, on| g.show_debug = on != 0;
+    /// the hour over the level, for a visit (a word that is no hour: the level as it was built)
+    23 Hour { id: &str } = |g, id| { let _ = game::hours::apply_hour(g, game::hours::hour_id_of(Some(id))); };
+    /// how much of the sky the picked weather covers, and the share of the hour's own sun that comes through whatever the cover
+    24 Cover { share: f64 } = |g, share| game::hours::turns::set_cover(g, share);
+    25 Sun { share: f64 } = |g, share| game::hours::set_sun_strength(g, share, None);
+    /// the level's moon: its strength, its height and bearing in degrees (a number that is none leaves it)
+    26 Moon { k: f64, elev: f64, bearing: f64 } = |g, k, elev, bearing| game::hours::turns::set_moon(g, k, elev, bearing);
     /// the kit picture: the team's cards (as Kit's text) and how many come (under 0: as it stands), staged again
     30 KitStageCards { kept: &str, size: i32 } = |g, kept, size| { crate::kept::read(g, kept); game::kitstage::cards(g, size); };
     /// whose card is open (0 the player) and the row under its highlight

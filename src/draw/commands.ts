@@ -49,6 +49,14 @@ export class Commands extends Writer {
   aside(on: number, x: number, z: number): void { this.u32(21); this.u32(on); this.f64(x); this.f64(z); }
   /** what each man is thinking is said over him (and the meters' raw numbers with it) */
   labels(on: number): void { this.u32(22); this.u32(on); }
+  /** the hour over the level, for a visit (a word that is no hour: the level as it was built) */
+  hour(id: string): void { this.u32(23); this.text(id); }
+  /** how much of the sky the picked weather covers, and the share of the hour's own sun that comes through whatever the cover */
+  cover(share: number): void { this.u32(24); this.f64(share); }
+  /**  */
+  sun(share: number): void { this.u32(25); this.f64(share); }
+  /** the level's moon: its strength, its height and bearing in degrees (a number that is none leaves it) */
+  moon(k: number, elev: number, bearing: number): void { this.u32(26); this.f64(k); this.f64(elev); this.f64(bearing); }
   /** the kit picture: the team's cards (as Kit's text) and how many come (under 0: as it stands), staged again */
   kitStageCards(kept: string, size: number): void { this.u32(30); this.text(kept); this.i32(size); }
   /** whose card is open (0 the player) and the row under its highlight */
