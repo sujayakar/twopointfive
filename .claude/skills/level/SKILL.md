@@ -428,8 +428,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   which side the picture is taken from), or a set with a door in the wall the stack stands on. **seen** "some demos still
   don't really do anything": a hammer, a shotgun, a charge or the wand picked on a span or a steel door played the gun's
   row, and the picture stood still. **check** `kit picture`; `bun run tools/qa/kitview-plan.ts <name>` (fails a way that
-  anchors anywhere else); the page by `PORT=<dev server> LEVEL=<name> node tools/qa/kitview-levels.cjs`, and every pick
-  doing its work by `PORT=<dev server> LEVEL=<name> node tools/qa/kitview-work.cjs`.
+  anchors anywhere else); the game standing on it by `cargo test --test kit_levels` in `rust/game_start`.
 
 ## 8. What the player reads
 

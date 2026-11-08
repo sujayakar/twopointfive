@@ -661,8 +661,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   both stands: Space to the lens through 1.63 s → 0.42 s (hands on it at 0.12 s there), a teammate from on his mark 1.52 s → 0.42 s. QA: `bun run tools/qa/wand-check.ts quick`
   (`probes.ts wand-quick`, family `wand`; both stands; `WANDQUICK_BREAK=1` must fail): off = the feed and the ring on every frame of the row, two log lines; on = through inside
   the animation's time, more than a second sooner, the same time to hands-on as before, no ring on any frame, one log line; a teammate's the same; the stands' row and a
-  recording's tables both ways. wand-look reads the wait as the keys stand; wand-mate's two fed-again lines still hold the 1.5 s on both stands. The kit picture's page check
-  (`tools/qa/kitview-page.cjs`) reads the wait off the page's own table and holds the key off for its one pick-half-way-through-the-feed line. On the real page (software
+  recording's tables both ways. wand-look reads the wait as the keys stand; wand-mate's two fed-again lines still hold the 1.5 s on both stands. On the real page (software
   adapter) `ONLY=play node tools/qa/wand-page.cjs` times it: the lens through 24 frames after the Space, no ring on the row and no bar in the panel on any of them; `ONLY=slow`
   is the same page under `?nowandquick`, the 1.5 s feed with its ring. Never seen on a GPU and never
   played by anybody: whether the lens coming up as the squat lands reads right is a call for an eye (the two sliders are there for it).
