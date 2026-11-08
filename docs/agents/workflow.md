@@ -460,7 +460,7 @@ preferences, etc." No accounts; nothing multiplayer.
   'boot' while the start's story still has a sentence and 'run' after; `data` = `{ where, adapter, facts }` (the start's sentence, the
   adapter's name, the reporter's bag: a start with no GPU hands what the machine said). A page that died before a visit was up asks
   its own server for the build's commit (`/qa/commit`, a second and a half at most). A browser that has not been shown the notice
-  gets it ON THE CARD, first, and the record goes when it has been in view two seconds. Nothing under `?kitview`, on a build with no
+  gets it ON THE CARD, first, and the record goes when it has been in view two seconds. Nothing in the kit picture's window (`?kitview`), on a build with no
   backend, or under the words above. `node tools/qa/cloudfatal-page.cjs` holds it on the real page against the stand-in (the
   adapter stubbed away; a built-in address as a hosted build has; then a page that booted and threw): 6 lines pass,
   `CLOUDFATAL_BREAK=1` red. NEVER SEEN: a machine that really has no adapter, the real service taking a `fatal`.
