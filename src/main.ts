@@ -1309,7 +1309,7 @@ function marksParticlesFlagsAndHooks(engine: Engine, game: Game) {
   };
   window.__marks = { test: () => sprayTestPattern(game), random: (n = 100, seed = 1) => sprayRandom(game, n, seed), clear: () => game.decals.clear(),   // automation: the panel's decal buttons by hand (E1) …
     bang: (p: Vec3) => bangScorch(game, p), scuff: (door: string, from?: Vec3) => { const d = game.doors.byName(door); if (d) kickScuff(game, d, from ?? game.player.char.pos); return !!d; } };   // … and the two staged marks a capture script cannot easily cause for real: a stun scorch at p, the kick's scuff on a named leaf from `from`'s side
-  if (new URLSearchParams(location.search).has('noparticles')) engine.settings.gpuParticles = false;   // ?noparticles: the E4 experiment off at boot — the CPU box sparks exactly as they were (Tab ▸ 'Renderer — particles (EXP)' flips it live)
+  if (new URLSearchParams(location.search).has('noparticles')) engine.settings.gpuParticles = false;   // ?noparticles: the picture draws no particles, and the game plays the same (Tab ▸ 'Renderer — particles (EXP)' flips it live)
   if (engine.particles && new URLSearchParams(location.search).has('nosparkbounce')) engine.particles.sparkBounce = false;   // ?nosparkbounce: sparks off surfaces off from boot — a spark's touch and birth as they were (Tab ▸ particles ▸ 'sparks bounce off surfaces' flips it live)
   // __particles: the GPU particle system for the console / automation — stats (alive / asleep / windows / rates), the live per-kind numbers, a test burst at a world
   // point (or the cursor's), and the raw emit (kind, pos, dir, count, opts) — see render/particles.ts / game/particleFx.ts
