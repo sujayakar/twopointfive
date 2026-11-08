@@ -95,9 +95,9 @@ src/game/game.ts:Game.syncSnowLook	picture	weather and ground	the snow's look fo
 src/game/snow*.ts:*	picture	weather and ground	snow: flakes, tracks, marks, breath (the tick decides nothing by them)	46
 src/game/rainFx.ts:*	picture	weather and ground	rain: drops and drips	6
 src/game/airSim.ts:*	picture	weather and ground	the air's drift for particles and smoke	5
-src/game/weather*.ts:*	picture	weather and ground	the weather's roofs and wet look for the picture	12
+src/game/weather*.ts:*	picture	weather and ground	the weather's roofs and wet look for the picture	14
 src/game/wetGround.ts:*	picture	weather and ground	wet ground following the men	2
-src/game/wind.ts:*	picture	weather and ground	the wind handed to particles and smoke	9
+src/game/wind.ts:*	picture	weather and ground	the wind handed to particles and smoke	10
 src/game/fire.ts:*	picture	weather and ground	fire drawn	6
 src/game/floor*.ts:*	picture	weather and ground	the floor under a point, and the floor's mess	7
 src/game/blastFeel.ts:*	picture	the picture's feel	a blast's kick and its particles' later stages	4
