@@ -36,9 +36,12 @@ for (const S of BENCH_SCENES.filter(s => !only.length || only.includes(s.id))) f
   try {
     for (; ticks < S.secs * 60 + 60 && !game.hands()?.end; ticks++) { const keys = sampleHand(game.numbersOf(), input, cam, canvas); game.step(1 / 60, keys); ms += game.ms.step; const o = D.at[Section.view] + View.aim; cam.easeYaw(1 / 60, false); cam.step(1 / 60, follow(), [D.f[o], D.f[o + 1], D.f[o + 2]]); D.fresh(); }
   } catch (e) { words1 = String((e as Error).message).slice(0, 300); }
-  const h = game.lost ? null : game.hands(), ok = !words1 && !!h && (h.end === 'taken' || ((h.end === 'cap' || !h.end) && h.given >= 3 && h.shotAt > 0 && h.left < left0));
+  // the run's own end, as a card of it has it: the verdict's lines, with every man
+  let carded = ''; if (!game.lost) { for (let i = 0; i < 600 && !game.verdict(); i++) game.step(1 / 60, sampleHand(game.numbersOf(), input, cam, canvas)); const V = game.verdict(), E = game.end().verdict;
+    if (!V !== !E) carded = `the card has ${E ? 'an end' : 'none'}, the game ${V ? 'one' : 'none'}`; else if (V && E && !(E.won === V.won && E.word === V.word && E.why === V.why && Math.abs(E.secs - V.secs) < 1e-6 && E.approach === V.approach && E.lost === V.lost && E.of === V.of && E.foes.down === V.foesDown && E.foes.of === V.foesOf && E.void === V.void && E.clean === V.clean && E.men.length === E.of && E.men.filter(m => m.state !== 'up').length === E.lost && E.men.every(m => m.name && m.path.length >= 3))) carded = `the card's end is not the game's: ${JSON.stringify(V)} against ${JSON.stringify({ ...E, men: E.men.map(m => [m.name, m.state, m.path.length]) })}`; }
+  const h = game.lost ? null : game.hands(), ok = !carded && !words1 && !!h && (h.end === 'taken' || ((h.end === 'cap' || !h.end) && h.given >= 3 && h.shotAt > 0 && h.left < left0));
   if (!ok) fails++;
-  console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${S.id} (${S.scn}, seed ${seed}): ${h ? `${h.end ?? 'cut'} at ${h.t.toFixed(0)} s, ${h.given} orders, ${h.up} of ${h.of} up, ${h.left} defenders left of ${left0}` : 'nobody played'}${words1 ? `\n    ${words1}` : ''} · ${(ms / Math.max(1, ticks)).toFixed(2)} ms a tick, ${((performance.now() - t0) / 1000).toFixed(0)} s`);
+  if (carded) console.log(`    ${carded}`); console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${S.id} (${S.scn}, seed ${seed}): ${h ? `${h.end ?? 'cut'} at ${h.t.toFixed(0)} s, ${h.given} orders, ${h.up} of ${h.of} up, ${h.left} defenders left of ${left0}` : 'nobody played'}${words1 ? `\n    ${words1}` : ''} · ${(ms / Math.max(1, ticks)).toFixed(2)} ms a tick, ${((performance.now() - t0) / 1000).toFixed(0)} s`);
   if (trace && h) console.log(game.handsTrace());
   try { if (game.h) game.X.face_drop(game.h); } catch { /* lost */ }
 }

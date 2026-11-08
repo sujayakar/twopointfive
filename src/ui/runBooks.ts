@@ -1,6 +1,6 @@
 // THE BOOKS OF THE RUNS PLAYED ON THIS MACHINE: each mission's ways won and tries (ui/verdictStore.ts) and each course's best time (ui/parBest.ts). The game says what there is
 // to keep of a run (view RunView: whose, under which difficulty, how it ended); a page tells the books as its try begins and as it ends, and lays the note on its end card.
-import type { KeptNote } from '../game/verdict';
+import type { KeptNote } from '../view/runend';
 import type { RunView } from '../view/read';
 import { keptWays, recordOf, runEnded, tryStarted, verdictKey, waysWon, type MissionRecord } from './verdictStore';
 import { parBest } from './parBest';

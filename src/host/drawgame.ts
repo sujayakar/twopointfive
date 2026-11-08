@@ -7,6 +7,7 @@ import { Commands } from '../draw/commands';
 import { HAND } from '../draw/hand';
 import { HandTape, MARKS, hashOf, type PartOf, type TapeMark, type TapeRow } from '../tape/handtape';
 import type { SaveRow } from '../ui/runcard';
+import type { RunMark, RunVerdict } from '../view/runend';
 import { CURSOR_DOUBLES, sampleCursor, type CursorAt, type CursorCanvas, type CursorLens } from '../view/cursor';
 import { readCursorView, readDebriefView, readRunView, readTickView, type CursorView, type DebriefView, type RunView, type TickView } from '../view/read';
 
@@ -205,6 +206,8 @@ export class DrawGame {
   }
   /** what the end card shows of the run, asked as it opens */
   debrief(): DebriefView { this.X.face_debrief_view(this.h); return readDebriefView(this.bytes()); }
+  /** …and beside that: how it ended, every man of it, the course's par, the map's floor and its marks */
+  end(): { verdict: RunVerdict | null; par: { medal: string; line: string } | null; quiet: { holder: string } | null; marks: RunMark[]; floor: { w: number; h: number; cell: number; rows: string } } { this.X.face_end(this.h); return JSON.parse(this.answer()); }
   /** what a machine keeps of the run, asked as its try begins and as it ends */
   run(): RunView { this.X.face_run_view(this.h); return readRunView(this.bytes()); }
   /** how the run ended, in a word, and why; null while it is being played */
