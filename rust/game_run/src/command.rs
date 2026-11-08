@@ -132,4 +132,6 @@ commands! {
     32 KitStageFrame { aspect: f64, cx: f64, cy: f64, h: f64, w: f64, man: f64, door: f64, left: f64, right: f64, keep: f64, top: f64, bottom: f64 } = |g, aspect, cx, cy, h, w, man, door, left, right, keep, top, bottom| {
         game::kitstage::frame(g, aspect, game::kitstage::frame_ask(cx, cy, h, w, man, [door, left, right, keep], [top, bottom]));
     };
+    /// the kit picture: the page has laid its copy over the picture, as the view's `veil` asked
+    33 KitStageUnder {} = |g| game::kitstage::under(g);
 }

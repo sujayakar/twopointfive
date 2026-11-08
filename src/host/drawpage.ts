@@ -376,7 +376,7 @@ async function main(): Promise<void> {
     if (pose) cam.drawIn(pose);
     game.frame(a, cam.focus); if (!kit) rimsFrom(rims, D); lights.from(); men.from(engine.device.queue); reach.from(); world.from();
     cam.kickIn(); try { engine.render(cam, time, dt, true); const tH = performance.now(); if (hud) { hud.blank = title && !reel.live; hud.told(); hud.draw(cam, canvas); } told.hud = performance.now() - tH; } finally { cam.kickOut(); cam.drawOut(); }
-    kit?.after(D.u[view() + View.kit]);
+    kit?.after(D.u[view() + View.kit], D.u[view() + View.veil]);
     if (plan.ticks) input.endFrame(); else if (still) { input.endFrame(); thaw = true; }   // (pressed over a held world: nobody's, and the first tick after it is told)
     told.update = t1 - t0; told.render = performance.now() - t1 - told.hud; told.frames++;
     if (told.frames === 1) { boot.span('firstFrameCpu', t1); boot.mark('firstSubmit'); gpu.device.queue.onSubmittedWorkDone().then(() => { boot.span('firstFrameGpu', t1); boot.mark('gpuReady'); }, () => { /* the device went */ }); }
