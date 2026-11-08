@@ -15,7 +15,7 @@ out of a solo stealth demo (touchstone: Splinter Cell: Chaos Theory), which is s
 ## Run · build · check
 
 ```bash
-bun run dev            # tools/serve.ts → http://localhost:5173 (game at /, replay viewer at /replay, /sounds, /music)
+bun run dev            # tools/serve.ts → http://localhost:5173 (game at /, /sounds, /music)
 bun run build          # tools/build.ts → dist/
 bun run typecheck      # src/      ← before every commit (no vendor/typescript in a cloud checkout: a system `tsc --noEmit -p tsconfig.json`)
 bun run typecheck:qa   # tools/qa (its own tsconfig)

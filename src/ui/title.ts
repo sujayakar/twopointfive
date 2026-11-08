@@ -7,6 +7,7 @@ import { closeMissions, missionsBusy, missionsReopenAsked } from './missions';
 import { closeOptions, openOptions, optionsOpen } from './options';
 import { button, el, walkMenu } from './runcard';
 import { openList, openStartPage, startPageFromQuery, startPageWanted } from './startpage';
+import { replayRows } from './replays';
 import { menuTheme } from './theme';
 
 /** what this page's title has beside Play, Options, Controls and Extras */
@@ -23,7 +24,7 @@ function titleHead(): HTMLElement { const head = el('div', 'head'); head.innerHT
  *  (The two showcases that were this list's first section — the night and the day — were removed.) What is listed and what is not, and why: rebuild/menus/tools.md. */
 export const EXTRAS: { head: string; rows: { id: string; label: string; line: string; href: string }[] }[] = [
   { head: 'Tools', rows: [
-    { id: 'replay', label: 'Replays', line: 'Scrub through the last minutes of a run on a map. Press F7 to keep one while you play.', href: 'replay.html' },
+    { id: 'replay', label: 'Replays', line: 'Watch a run again. Every run you play is kept.', href: '' },
     { id: 'sounds', label: 'Sounds', line: 'Hear every sound in the game on one page.', href: 'sounds.html' },
     { id: 'bench', label: 'Benchmark', line: 'It plays three floors by itself, then times each quality level on this machine. You get text to copy.', href: '?bench' } ] },
 ];
@@ -35,6 +36,8 @@ type TitleShows = Partial<Record<string, () => boolean>>;
 let titleExtras = false;
 /** …or CO-OP (the page's own rows fill the column; kept through the same handover, with what was typed) */
 let titleCoop = false;
+/** …or the REPLAYS list, off Extras */
+let titleReplays = false;
 let titleShownAt = 0;   // (when the live title was last drawn: an Esc that ENDED a running programme drew it, and that same press must not also step its Extras list back)
 let titleAgain: (() => void) | null = null;   // (the live title's own 'Options closed' — the boot card's buttons, made before there was a Menu, reach it through here)
 function titleActions(onClose?: () => void, shows?: TitleShows): { actions: HTMLElement; play: HTMLElement } {
@@ -44,6 +47,7 @@ function titleActions(onClose?: () => void, shows?: TitleShows): { actions: HTML
     actions.innerHTML = ''; actions.classList.toggle('extras', titleExtras);
     const coop = TITLE.coop?.() ?? null;
     if (titleCoop && coop && !titleExtras) { coop(actions, () => { titleCoop = false; fill('coop'); }, !!focus); play = actions.querySelector('.btn') as HTMLElement; return; }
+    if (titleReplays) { replayRows(actions, () => { titleReplays = false; fill('extras'); }, !!focus); play = actions.querySelector('.btn') as HTMLElement; return; }
     if (titleExtras) {
       for (const sec of EXTRAS) {
         const rows = sec.rows; if (!rows.length) continue;
@@ -51,7 +55,7 @@ function titleActions(onClose?: () => void, shows?: TitleShows): { actions: HTML
         for (const r of rows) {
           const a = el('a', 'btn xrow') as HTMLAnchorElement; a.href = showHref(r.href); a.dataset.extra = r.id; a.innerHTML = `<b>${r.label}</b>`; a.title = r.line;   // (show, not tell: a row is its name; its sentence is the tooltip)
           actions.appendChild(a);
-          const go = shows?.[r.id]; if (go) a.addEventListener('click', e => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; if (go()) e.preventDefault(); });   // (a plain click or Enter; a new-tab click stays the link's)
+          const go = r.id === 'replay' ? () => { titleExtras = false; titleReplays = true; fill('first'); return true; } : shows?.[r.id]; if (go) a.addEventListener('click', e => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; if (go()) e.preventDefault(); });   // (a plain click or Enter; a new-tab click stays the link's)
         }
       }
       const back = button('‹ Main menu', () => { titleExtras = false; fill('extras'); }, 'xback'); actions.appendChild(back);
@@ -131,7 +135,7 @@ export const cheatWords = (g: { god: boolean; thinks: boolean; ammo: boolean }):
 // W S / ↑ ↓ walk the title screen's and the pause card's menu (Enter and Space are the focused button's own). Registered here, at module load, like the other
 // screens' keys; it only ever moves the focus, and stands down while a screen is up over the card (#menu is inert then) or the focus is somewhere else.
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') window.addEventListener('keydown', e => {
-  if (e.code === 'Escape' && (titleExtras || titleCoop)) { const m = document.getElementById('menu'); if (e.timeStamp >= titleShownAt && m?.classList.contains('on') && m.classList.contains('title') && !m.hasAttribute('inert')) { (m.querySelector('.actions .xback') as HTMLElement | null)?.click(); e.preventDefault(); } return; }   // (Esc on the title's EXTRAS or CO-OP page = back to its main menu; the title itself has nothing to back out of)
+  if (e.code === 'Escape' && (titleExtras || titleCoop || titleReplays)) { const m = document.getElementById('menu'); if (e.timeStamp >= titleShownAt && m?.classList.contains('on') && m.classList.contains('title') && !m.hasAttribute('inert')) { (m.querySelector('.actions .xback') as HTMLElement | null)?.click(); e.preventDefault(); } return; }   // (Esc on the title's EXTRAS or CO-OP page = back to its main menu; the title itself has nothing to back out of)
   if (e.code === 'Space' && !e.repeat && titleExtras) { const a = document.activeElement as HTMLElement | null; if (a?.classList?.contains('xrow') && document.getElementById('menu')?.contains(a)) { a.click(); e.preventDefault(); } return; }   // (a row of EXTRAS is a link, and Space does not follow a link: here it does, as it presses every other entry of this menu)
   walkMenu(e, typedInto);
 }, { capture: true });

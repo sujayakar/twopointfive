@@ -198,7 +198,6 @@ holder	tools/qa/smokebreak-check.ts
 holder	tools/qa/smokeline-check.ts
 holder	tools/qa/soak.ts
 holder	tools/qa/solo-night.ts
-holder	tools/qa/sound-takes-check.ts
 holder	tools/qa/squadsmoke-probes.ts
 holder	tools/qa/squadwords.ts
 holder	tools/qa/stack-marks-check.ts
@@ -487,7 +486,6 @@ left	src/game/wind.ts
 left	src/game/words.ts
 left	src/game/workstow.ts
 left	src/game/workthings.ts
-left	src/host/ahead.ts
 left	src/host/api.ts
 left	src/host/gameend.ts
 left	src/host/gpuEnums.ts
@@ -504,19 +502,12 @@ left	src/host/standEnv.ts
 left	src/host/standup.ts
 left	src/host/stub.ts
 left	src/host/tween.ts
-left	src/net/page.ts
 left	src/net/recipe.ts
 left	src/net/server.ts
 left	src/net/step.ts
 left	src/net/timeline.ts
 left	src/render/probe.ts
-left	src/replay/engineplay.ts
-left	src/replay/recipestand.ts
-left	src/replay/soundfilm.ts
-left	src/replay/soundlanes.ts
-left	src/replay/soundtune.ts
 left	src/replay/tapewalk.ts
-left	src/replay/viewer.ts
 left	src/scene/bars.ts
 left	src/scene/boxMirror.ts
 left	src/scene/caps.ts
@@ -561,7 +552,6 @@ left	src/ui/findmeviz.ts
 left	src/ui/menu.ts
 left	src/ui/netrows.ts
 left	src/ui/pictureviz.ts
-left	src/ui/replaykey.ts
 left	src/ui/windviz.ts
 stays	src/anim/characters.ts
 stays	src/anim/gltf.ts
@@ -776,6 +766,9 @@ stays	src/tape/minimap.ts
 stays	src/tape/pace.ts
 stays	src/tape/run.ts
 stays	src/tape/shelf.ts
+stays	src/tape/soundfilm.ts
+stays	src/tape/soundlanes.ts
+stays	src/tape/soundtune.ts
 stays	src/ui/attentionviz.ts
 stays	src/ui/bench.ts
 stays	src/ui/benchrun.ts
@@ -822,6 +815,7 @@ stays	src/ui/railcard.ts
 stays	src/ui/railclear.ts
 stays	src/ui/readout.ts
 stays	src/ui/recap.ts
+stays	src/ui/replays.ts
 stays	src/ui/ringlone.ts
 stays	src/ui/runBooks.ts
 stays	src/ui/runcard.ts
