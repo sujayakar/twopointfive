@@ -289,7 +289,7 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     g.rescue = crate::rescue::rescue_new(g);
     stand_each_seat(g, &mut |v: &mut Game| { v.door_tools = crate::doortools::door_tools_new(v); });   // after the orders: its rows are registered on their menu
     crate::pairup::pair_up_apply(g, None);
-    g.pair = crate::pairorders::pair_orders_new(g);
+    stand_each_seat(g, &mut |v: &mut Game| { v.pair = crate::pairorders::pair_orders_new(v); });   // (the people and the note are each seat's; the jobs are one book)
     stand_each_seat(g, &mut |v: &mut Game| { v.work = crate::workthings::work_things_new(v); });
     stand_each_seat(g, &mut |v: &mut Game| { v.wall_charge = crate::wallcharge::wall_charge_new(v); });   // after the door tools: it spends their charges
     stand_each_seat(g, &mut |v: &mut Game| { crate::shutdoor::register_shut_door(v); });
