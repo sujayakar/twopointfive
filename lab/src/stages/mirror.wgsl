@@ -2,7 +2,7 @@
 // light on surfaces, with the sun asked again so that its shadows stay sharp in the mirror.
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   let dim = textureDimensions(outM); if (id.x >= dim.x || id.y >= dim.y) { return; }
-  let full = min(id.xy * u32(DIV), vec2u(frame.size.xy) - 1u); let rd = pxRay(full); let p = unpackPx(textureLoad(surf, full, 0), rd); let f = textureLoad(frontT, full, 0); var s = pxSurf(p); var on = !p.sky && p.kind != 63u && (p.rough < 0.43 || p.metal > 0.5) && !p.leaf && (f.z >> 24u) != 2u; var off = 0.004 * (1.0 + p.t * 0.02);
+  let full = min(id.xy * u32(DIV), vec2u(frame.size.xy) - 1u); let rd = pxRay(full); let p = unpackPx(textureLoad(surf, full, 0), rd); let f = textureLoad(frontT, full, 0); var s = pxSurf(p); var on = !p.sky && p.kind != 63u && (p.rough < asksMirror() || p.metal > 0.5) && !p.leaf && (f.z >> 24u) != 2u; var off = 0.004 * (1.0 + p.t * 0.02);
   if (LAYER == 1) { on = false; }
   if (LAYER == 1 && f.x != 0u) { let t = bitcast<f32>(f.x); s.x = frame.camPos.xyz + rd * t; s.n = octUnpack(f.y); s.ng = select(s.n, vec3f(0.0, 1.0, 0.0), (f.z >> 24u) == 2u); if (dot(s.n, rd) > 0.0) { s.n = -s.n; s.ng = -s.ng; } s.metal = 0.0; s.f0 = select(0.04, 0.02, (f.z >> 24u) == 2u); s.rough = select(0.015, 0.06, (f.z >> 24u) == 2u); on = true; off = 0.01; }
   if (!on) { textureStore(outM, id.xy, vec4f(0.0, 0.0, 0.0, -1.0)); return; }

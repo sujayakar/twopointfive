@@ -17,3 +17,5 @@ fn pxRayPrev(uv: vec2f) -> vec3f { let p = uv * 2.0 - 1.0; return normalize(fram
 /** how far into the past a point may trust its history, 0‥1: the change signal (what moved, and lamps that switched) */
 fn steady(x: vec3f) -> f32 { var k = 1.0; for (var i = 0u; i < 8u; i++) { let c = changes.at[i]; if (c.w <= 0.0) { continue; } k = min(k, smoothstep(0.55, 1.0, distance(x, c.xyz) / c.w)); } return min(k, changes.all.x); }
 struct Changes { at: array<vec4f, 8>, all: vec4f };
+/** up to what roughness a coat is asked what it mirrors: where it is wet the coat is most of what is seen of dark ground, so rougher ones are asked too */
+fn asksMirror() -> f32 { return mix(0.43, 0.66, smoothstep(0.05, 0.3, frame.weather.x)); }
