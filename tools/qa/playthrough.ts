@@ -248,8 +248,6 @@ const LASTM: any = await import(`${ROOT}/src/game/laststand.ts`).catch(() => nul
 const { DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
 const { DOORBLAST } = await import(`${ROOT}/src/game/doorblast.ts`);   // (a blast takes a door off its hinges: --set '{"DOORBLAST":{"on":false}}' = a charge flings the leaf in on its hinge, as before)
 const { HANDLE, HANDLE_STATS, HANDLE_DEBUG } = await import(`${ROOT}/src/game/handleside.ts`);
-// (a friend in a teammate's line of fire, game/clearline.ts: the same. CLEARLINE=1 in the environment, or --set '{"CLEARLINE":{"on":true}}')
-const CLM: any = await import(`${ROOT}/src/game/clearline.ts`).catch(() => null);
 const NVGM = await import(`${ROOT}/src/game/nvg.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { WOUND, WOUND_STATS, resetWoundStats } = await import(`${ROOT}/src/game/wounds.ts`);   // TPS_WOUNDS=1 (env): wounds on (src/game/wounds.ts) — every run's JSON then carries `wounds`: who ended the run down wounded rather than dead, per side, and where the rounds landed
@@ -302,7 +300,7 @@ export interface RunOut { /** taken rooms' other doors (Watcher.otherStats): ent
   /** every door the AI opened and where its opener stood (tools/qa/handle-watch.ts) */
   handle?: import('./handle-watch.ts').HandleOut;
   /** THE ENDGAME (EndWatch): see the head · PT_SEARCH=1: the searching commander's moves */
-  endgame?: EndgameOut; search?: SearchOut; /** clearline.ts's counts, when its switch is on */ clearLine?: Record<string, number>;
+  endgame?: EndgameOut; search?: SearchOut;
   /** laststand.ts's own report, when one of its switches is on */ lastStand?: { on: string; stats: Record<string, number>; room: string | null; in: number; out: number; named: string[]; said: { t: number; who: string; kind: string; text: string }[] };
   /** PT_TIMES=1: the frame's cost over the run, ms (this machine's) — and against the count of enemies up that frame: [frames, mean ms] */
   frameMs?: { n: number; mean: number; p50: number; p95: number; p99: number; max: number; byAlive: Record<string, [number, number]> } }
@@ -1553,7 +1551,6 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
   const T: Record<string, any> = knobRegistry();   // (THE list of knob tables — src/game/knobs.ts: --set takes any of them; play() puts every one back at the run's end)
   DOORWAY.frameHolds = true;   // (…and their frames hold a boot from the face they open toward, a wedge only a door that opens toward its man — --set '{"DOORWAY":{"frameHolds":false}}' plays without)
   let dug = false, bud = false;
-  if (CLM?.CLEARLINE_STATS) for (const k of Object.keys(CLM.CLEARLINE_STATS)) CLM.CLEARLINE_STATS[k] = 0;
   try {
     DOORWAY.oneWay = true; DOORWAY.exitsOut = false;   // (the doors as shipped — headless.ts stands every other tool up on the old double-acting leaves; --set '{"DOORWAY":{"oneWay":false}}' plays those, '{"DOORWAY":{"exitsOut":true}}' the outside doors opening outward, which ship off)
     const { HARD: hard, DIFFICULTY: diff, WEATHER: wx, ...rest } = set as Record<string, Record<string, unknown>>;
@@ -1573,7 +1570,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
     }
     if (rest.OPENING) throw new Error('--set: OPENING is read while the game is built, which is before --set lands: TPS_OPENING=1 turns it on for the frozen stand, TPS_OPENING=0 off under TPS_PROFILE=shipped');
     for (const [name, o] of Object.entries(rest)) put(name, o);
-    dug = DIGIN.on; bud = BUDDY.on; clOn = !!CLM?.CLEARLINE?.on; out.difficulty = difficultyNow(); if (leversMixed()) (out as any).levers = leversLine(true); if (HOUR.id !== 'night') out.hour = HOUR.id;
+    dug = DIGIN.on; bud = BUDDY.on; out.difficulty = difficultyNow(); if (leversMixed()) (out as any).levers = leversLine(true); if (HOUR.id !== 'night') out.hour = HOUR.id;
     Math.random = seeded(0x9137 + seed * 7919);   // (this run's counts — the JSON's `frag`, `teampace`, `noshove`, `picture`, `doorforce`, `holdfire` — begin level because every stand-up puts a tally back: tools/qa/fresh.ts)
     // THE MISSION'S ADDRESS IS THE STAND'S, as a page's is from its first line (headless.ts `address`): the weather a run is played in goes on it, and the game is born in it
     let q = scenarioQuery(E) as string; if (E.kind === 'roomclear' && process.env.PT_SAMEFLOOR !== '1') q = q.replace(/(^|[?&])roomclear(=\d+)?(?=&|$)/, `$1roomclear=${seed}`);   // (the flag itself, not a level file with the word in its name. PT_SAMEFLOOR=1 leaves the row's own flag: every seed then plays THE ONE FLOOR the row stands — with SAMESTART on, the level's first marks as written — and the seed is only the dice rolled in play; without it each seed pins a placement of its own, which no page deals any more)
@@ -1640,7 +1637,6 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
       (out as any).destr = { on: DESTRUCTION.on, ...d, dark, ...(Object.keys(fixWhy).length ? { fixWhy } : {}), debrisPeak: P.g.destr.debris.stats.peakLive, debrisRefused: P.g.destr.debris.stats.refused, inv: P.g.destr.inventory(), ...(Object.keys(gbs).length ? { glass: gbs } : {}), ...(dust ? { dust: { ...dust.stats, minT: +dust.stats.minT.toFixed(3) } } : {}) }; }
     out.endgame = P.endw.close(P.t, out.end); if (P.search) out.search = P.search.close();
     if (P.handw) out.handle = { ...P.handw.close(), stats: { ...HANDLE_STATS } };
-    if (clOn) out.clearLine = { ...CLM.CLEARLINE_STATS };
     if (LASTM?.LASTSTAND && (LASTM.LASTSTAND.regroup || LASTM.LASTSTAND.callOut)) { const r = LASTM.lastStandReport(P.g); out.lastStand = { on: r.on, stats: r.stats, room: r.room, in: r.in.length, out: r.out.length, named: r.named, said: r.said }; }
     if (P.leaves.length) (out as any).leaves = P.leaves;   // (the commander's own: open leaves across his way he pulled to — absent when he never did)
     if (SHUT) (out as any).shut = P.shut.map(({ ref, ...x }) => ({ ...x, open: !ref.latched }));   // (open: that door stands open again as the run ends)
