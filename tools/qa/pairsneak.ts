@@ -70,9 +70,13 @@ export class Run {
   mateM = 0; crouchS = 0; uprightS = 0; farM = 0; litS = 0; movS = 0;
   private eyes = new Map<any, { mate: number; sam: number }>(); private wasState = new Map<any, string>(); private matePrev: number[] | null = null; private msgLast: any = null; private logN = SNEAKM ? SNEAKM.SNEAK_LOG.length : 0; private said = new Map<any, string>();
   digest = 0; private digestT = 0; stopOnNotice = true;
-  static async start(query: string, dice: number, opts: { verbose?: boolean; hard?: boolean; sneak?: boolean; set?: Record<string, Record<string, unknown>>; level?: string } = {}): Promise<Run> {
+  /** a run for a check that reads none of the watcher's tallies (Run.start's `lean`): no watcher and no digest, Sam's meter every sixth frame. The watcher asks the game's eyes ten times a frame and the meter its light twice: they are most of the CPU of a check that stands on this file */
+  lean = false; digesting = true; private frame = 0;
+  /** called before each frame is stepped: what a check writes every frame (a man's gaze) */
+  beforeFrame: (() => void) | null = null;
+  static async start(query: string, dice: number, opts: { verbose?: boolean; hard?: boolean; sneak?: boolean; set?: Record<string, Record<string, unknown>>; level?: string; lean?: boolean; digest?: boolean } = {}): Promise<Run> {
     Math.random = seeded(0x51ea + dice * 7919);
-    const R = new Run(); R.verbose = !!opts.verbose;
+    const R = new Run(); R.verbose = !!opts.verbose; if (opts.lean) { R.lean = true; R.digesting = !!opts.digest; R.watch = () => { }; }
     const level = opts.level ? loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${opts.level}`, 'utf8'))) : undefined;
     R.W = await quiet(true, () => standUp({ uploadEvery: 2, ...(level ? { level } : {}) })); R.g = R.W.game; R.I = R.W.input; R.cam = R.W.cam;
     SILENT.on = true;   // (the shipped default: the harness stands the game up with the order off the menu)
@@ -98,11 +102,12 @@ export class Run {
       if (goal && !g.player.down) { const dx = goal[0] - this.pos[0], dz = goal[2] - this.pos[2], d = Math.hypot(dx, dz);
         if (d > 0.12) { const { fwd, right } = this.cam.planarBasis(), a = (dx * fwd[0] + dz * fwd[2]) / d, b = (dx * right[0] + dz * right[2]) / d, T = 0.3827; if (a > T) I.keys.add('KeyW'); if (a < -T) I.keys.add('KeyS'); if (b > T) I.keys.add('KeyD'); if (b < -T) I.keys.add('KeyA'); } }
       // Sam's light meter, as the harness can have it: the CPU estimate of the direct light on him (his own lights skipped), through the game's own mapping
-      { const c = g.player.char, pc = c.bones.chest ?? [c.pos[0], 1.2, c.pos[2]], ph = c.bones.head ?? [c.pos[0], 1.6, c.pos[2]], own = (o: number) => o === PLAYER_ID;
+      if (!this.lean || this.frame++ % 6 === 0) { const c = g.player.char, pc = c.bones.chest ?? [c.pos[0], 1.2, c.pos[2]], ph = c.bones.head ?? [c.pos[0], 1.6, c.pos[2]], own = (o: number) => o === PLAYER_ID;
         g.player.visibility = g.visibilityOf(Math.max(lightEstimateAt(g, pc, own), lightEstimateAt(g, ph, own))); }
+      this.beforeFrame?.();
       this.W.step(DT); this.t += DT;
       this.watch();
-      if (this.t - this.digestT >= 0.5) { this.digestT = this.t; this.digest = (Math.imul(this.digest, 31) + parseInt(hashDigest(digestGame(g, true)), 16)) | 0; }
+      if (this.digesting && this.t - this.digestT >= 0.5) { this.digestT = this.t; this.digest = (Math.imul(this.digest, 31) + parseInt(hashDigest(digestGame(g, true)), 16)) | 0; }
       if (this.verbose) { const M = g.messages, last = M[M.length - 1]; if (last && last !== this.msgLast) { const i = M.indexOf(this.msgLast); for (const m of M.slice(i + 1)) this.say(`   “${m.text}”`); this.msgLast = last; }
         if (SNEAKM) for (; this.logN < SNEAKM.SNEAK_LOG.length; this.logN++) { const e = SNEAKM.SNEAK_LOG[this.logN]; this.say(`   · ${e.who} ${e.what} at ${at([e.at[0], 0, e.at[1]])}`); }
         for (const o of this.ops) { const b = o.bubble; if (b && this.said.get(o) !== b.text) { this.said.set(o, b.text); this.say(`   ${o.callsign}: “${b.text}”`); } } }
@@ -112,7 +117,7 @@ export class Run {
     }
   }
   /** the watcher (the head comment) */
-  private watch() {
+  watch() {
     const g = this.g, mate = this.mate, K = Math.exp(-DT / 3);
     if (mate) { const p = mate.char.pos, sp = Math.hypot(mate.char.vel[0], mate.char.vel[2]);
       if (this.matePrev) { const d = flat(p, this.matePrev); if (d < 1) this.mateM += d; } this.matePrev = [p[0], 0, p[2]];
