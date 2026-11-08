@@ -137,7 +137,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   under the ring's own flags, as the ring's three slats; the flight, rule, counts, item kind and the `'ring to the head'` log line the chronicle keys on are
   untouched), and the kit column's second launcher tag reads `HE ×3` for `40MM ×3` (`shellTag()`; the reticle's and the draw line's '40 MM' are as they were). A chronicle row WRITES a weapon by its old name whichever kit is issued (`plainShort(def)`: saves and recordings read the same
   on and off) and is worded where it is shown. The OCP stays. Every player-facing line that names the kit goes through `gearText()` WHERE IT IS SHOWN (kit card, HUD column and
-  reticle word, controls list, captions, the debrief's rows) — a new line that says FN2000 / Five-seveN / ring airfoil needs the same. QA: `bun run
+  reticle word, controls list, captions, the debrief's rows; Options, which holds no game, says the issued kit's words in its one line that names it) — a new line that says FN2000 / Five-seveN / ring airfoil needs the same. QA: `bun run
   tools/qa/gear-check.ts` (`GEAR_BREAK=1` must fail; it holds the fifteen, the Mk 18 and the slug both ways); the fn2000 family's WORD checks ask for their lines
   through `gearText` / `ringTag`, so `TPS_GEAR=1 probes.ts fn2000` and `he40` are green as the frozen stand's are; rifle-slot, nvg-rig and the soak's rifle-box
   count follow the switch. Not seen on a GPU; `RIG.m4` / the tubes are first-pass numbers for the viewer.

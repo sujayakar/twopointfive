@@ -380,7 +380,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`FREED` in keymap.ts), Q pressed files nothing, and the code is given only where the player has put the row on a key in Options ▸ Controls (Q
   itself if he wants it back: a rebind like any other, kept, Reset takes it off). ON in the page (`keysBoot`), `?qfree=0` = Q takes the wall as it
   did; OFF in the module, so a tool, the editor and both headless stands never meet it. It does not wait on `KEYMAP.on`: `?keybinds=0` is the build's
-  own board, and that has no wall key. ONLY WHILE WALKING IN WORKS (`KEYMAP.freeWhen`, set by main.ts to `WALLSNAP.on && walkInNow()`): with the
+  own board, and that has no wall key. ONLY WHILE WALKING IN WORKS (`KEYMAP.freeWhen`, which a page that plays the game sets to `walkInNow`: `gameKeysBoot`): with the
   walk-in switched off (Options ▸ Game, a kept choice, `?wallpress=0`) the row is on Q again there and then, so no board is without a way onto a
   wall unless the player took the key off himself; `walkInNow` (ui/options.ts) reads the kept choice before the Menu has put it on the table, so
   the boot card and the keyboard agree with the page that follows. KEPT AS HE SET IT: a freed row's entry in the kept table is never folded into

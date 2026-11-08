@@ -77,7 +77,7 @@
 // rooms (unless `force`, which files them as searching men and drops the drill), Sam mid-action (unless `force`, which lets go of everything the way a teleport
 // does — in the FILE, never in the running game: saving is read-only).
 import { SideMap, rollbackVar, wallClock, HostOwned } from '../math/side';
-import { loadSandbox } from '../host/sandbox';
+import { autosaveKept, keepAutosave, loadSandbox } from '../host/sandbox';
 import { hostileTo } from './teams';
 import { Vec3, v3, quat, clamp } from '../math/vec';
 import { Game, Guard, Player, KIT_ORDER } from './game';
@@ -363,7 +363,7 @@ export const SAVETIMELINE = {
   picPx: 256, picQ: 0.6,
 };
 const KEY_PREFIX = 'twopointsix.save.';
-const KEY_INDEX = KEY_PREFIX + 'index', KEY_MANUAL = KEY_PREFIX + 'manual', KEY_AUTO = (i: number) => `${KEY_PREFIX}auto.${i}`, KEY_AUTOSAVE_ON = 'twopointsix.autosave';
+const KEY_INDEX = KEY_PREFIX + 'index', KEY_MANUAL = KEY_PREFIX + 'manual', KEY_AUTO = (i: number) => `${KEY_PREFIX}auto.${i}`;
 /** SAVETIMELINE: the ring of saves by hand (its first is the one slot the build always had), a slot's picture, a save kept in memory */
 const KEY_HAND = (i: number) => i === 0 ? KEY_MANUAL : `${KEY_MANUAL}.${i}`, KEY_PIC = (key: string) => `${KEY_PREFIX}pic.${key.slice(KEY_PREFIX.length)}`, KEY_MEM = (slot: 'auto' | 'manual', i: number) => `${KEY_PREFIX}mem.${slot}.${i}`;
 
@@ -921,9 +921,9 @@ export class Checkpoints {
   private hand = false; private due: string | null = null;
   constructor(store?: SaveStore) { wallClock(this, 'runId');   // (a run's name is made of the clock and a serial: never compared between two plays)
     this.store = store ?? (typeof localStorage !== 'undefined' ? localStore : memoryStore());
-    try { if (typeof localStorage !== 'undefined' && localStorage.getItem(KEY_AUTOSAVE_ON) === '0') this.enabled = false; } catch { /* */ }
+    if (!autosaveKept()) this.enabled = false;
   }
-  setEnabled(on: boolean) { this.enabled = !!on; try { if (typeof localStorage !== 'undefined') localStorage.setItem(KEY_AUTOSAVE_ON, on ? '1' : '0'); } catch { /* */ } }
+  setEnabled(on: boolean) { this.enabled = !!on; keepAutosave(this.enabled); }
   /** into the store — false when it would not take it, or threw (a store of the host's own may: the game goes on without the save) */
   private put(key: string, val: string): boolean { try { return this.store.set(key, val); } catch { return false; } }
   private note(g: Game, what: string) { this.log.push({ t: g.time, what }); if (this.log.length > 40) this.log.splice(0, this.log.length - 40); }

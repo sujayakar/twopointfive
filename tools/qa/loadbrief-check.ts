@@ -128,7 +128,7 @@ export async function loadbriefCheck(): Promise<boolean> {
   { const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
     const flag = /LOADBRIEF\.on = q\.get\('loadbrief'\) !== '0';/.test(main);
     const made = /const brief = [^\n;]*q\.has\('paused'\)[^\n;]*\? null : loadBrief\(location\.search\);/.test(main) && /const card = brief \?\? bootCard\(\)/.test(main);
-    const go = /b\.live\(/.test(main) && /brief && briefGo\) briefSettle\(brief\)/.test(main) && /const briefGo = [^\n;]*!automated/.test(main);
+    const go = /startWaits\(b, /.test(main) && /brief && briefGo\) briefSettle\(brief\)/.test(main) && /const briefGo = [^\n;]*!automated/.test(main);
     const hold = /frozen: \(\) => \([^\n]*briefHolds\(\)/.test(main) && /const briefHolds = [^\n]*automated \|\| scripted[^\n]*brief\.off\(\)/.test(main);
     line(flag && made && go && hold, `wiring: main.ts still has the brief's places after whatever was merged round them — the switch by its URL flag, a brief only for a page somebody sits at, the world held behind a live one, dropped for a script (${[flag, made, go, hold].map(x => x ? 'y' : 'N').join('')})`);
   }
