@@ -573,11 +573,6 @@ pub fn ir_shows_at(g: &crate::game::Game, m: GuardId, p: V3) -> bool {
     v >= g.k.nvg.black_at
 }
 
-/// He carries an illuminator of his own: both of its rows are settled on on the page. (irlight.ts irCarried)
-pub fn ir_carried(g: &crate::game::Game) -> bool {
-    true
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -405,7 +405,7 @@ pub fn ahead(g: &crate::game::Game, m: &[u8], gd: GuardId, inside: bool) -> Opti
 /// He is held short of a lane his side knows is covered, and what wants him (`to`; none = anything) lies at its guns or down it. (lanes.ts laneBars)
 pub fn lane_bars(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>) -> bool {
     if crate::gunroles::gun_keeps_post(g, gd) { return true; }
-    if g.m.lanes.states.is_none() || !live(g) || !crate::owner::has_him(g, gd, crate::owner::own().lane) { return false; }
+    if g.m.lanes.states.is_none() || !live(g) || !crate::owner::has(g, gd, crate::owner::by::LANE) { return false; }
     let Some(l) = lane_of(g, gd) else { return false };
     let Some(to) = to else { return true };
     let field = g.k.lanes.field_m;

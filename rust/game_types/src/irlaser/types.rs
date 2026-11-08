@@ -24,7 +24,7 @@ pub struct IrlaserMod {
     /// (src/game/irlaser.ts:73 viewTube)
     pub view_tube: Option<bool>,
     /// (src/game/irlaser.ts:77 IR_MADE)
-    pub ir_made: JsSet<BoxId>,
+    pub ir_made: JsSet<AnyBoxId>,
 }
 impl IrlaserMod {
     pub fn blank() -> Self {

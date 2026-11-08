@@ -175,7 +175,7 @@ line).
   moved to does not carry it, so a visit's record never holds it (a browser that keeps nothing leaves it on the address). WHO STEPS THE GAME is the
   loop's seam, `host/loop.ts LoopCtx.tick` (absent = `game.update` then the lights, the loop as it was): on a page tick the player's input is sampled
   (`sampleCmd`, off the page's own camera) and sent, the game is stepped only through the server's confirmed ticks by `netStep`, and the host's half
-  of a tick is done round them (`Game.hostBefore` / `hostAfter`: `update`'s own lines, named — the peek's nudge, a blast's kick, a cut, the live view
+  of a tick is done round them (`Game.hostAfter`: `update`'s own lines, named — the peek's nudge, a blast's kick, a cut, the live view
   put back). HOW FAST: one confirmed tick a page tick, two while more than `NET.lead` wait; from `NETPAGE.far` waiting (it joined late, its tab slept)
   the page CATCHES UP as a replay seeks — the mixer shut, as many ticks as fit in `NETPAGE.farMs`, the hands off the keys (decided before the tick's
   record is made), nothing drawn between two of those ticks, the picture's queues let go when it is level (`engineplay.ts unseenDone`, the seek's own). No playout buffer: a tick that comes late is a tick drawn late. THE GAME IS THE SERVER'S: a card's Restart and a checkpoint's load are refused in words
@@ -351,8 +351,8 @@ line).
   mission's address to `coop.ts host` instead of loading it (one game a press). WHAT THE HOST HANDS OVER (`coopScenario`): that address — level, hour,
   weather, way in, difficulty — without this visit's own words (`VISIT_FLAGS`, the sending words), with `squad=4&seats=2` on it (each player brings two
   teammates: `seats.ts dealSeats`) and the difficulty levers this machine keeps written out (the server keeps nothing), and a fresh die. THE SERVER
-  READS THE ADDRESS'S DIFFICULTY (`tools/mp/stand.ts freshRecipe` calls `initDifficulty` as the page does at boot; before this a host's Hard was the
-  server's Standard). NOT CARRIED: the kit this machine keeps (both play the kit as issued) and knob tables changed in the debugger (Team feel rows).
+  READS THE ADDRESS'S DIFFICULTY (the harness's addressed stand does, `tools/qa/headless.ts standUp({ address })` by `standup.ts difficultyOfAddress`, with the
+  setup's tables laid over it as `tables`; before this a host's Hard was the server's Standard). NOT CARRIED: the kit this machine keeps (both play the kit as issued) and knob tables changed in the debugger (Team feel rows).
   The control plane takes a scenario up to 400 characters (`games.ts MP.scenarioMax`; it was a word of 120). THE HOST'S PAGE LOADS THE MISSION AT ONCE
   and stands in the first seat while the server waits (its rule: no tick until every seat's client has stood its game); `coopInvite` shows the code,
   the link and Copy link until the fight starts, and 'Your friend is joining' once the control plane says the second seat is connected. REFUSALS are

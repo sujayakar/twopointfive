@@ -188,9 +188,8 @@ const ulps = (a: number, b: number): number => {
   const all: string[] | null = marked(c.out, 'EXACT-LOAD '), un: { files: number; unloaded: string[] } | null = marked(c.out, 'EXACT-UNLOADED ');
   // (the SIMULATION's modules are held: the folders `uncovered` below holds, for the same reason. What they pull in from elsewhere — a sound's table, a
   //  viewer's curve — worked out at load on the engine's own functions is dressing: no digest reads it, and it is counted, not failed)
-  const NEEDS_A_BROWSER = ['src/host/onefile.ts'];
   const at = (x: string) => / at (src\/[^:]+)/.exec(x)?.[1] ?? '?', sites = all?.filter(x => inSim(at(x))) ?? null, dress = all ? all.length - (sites?.length ?? 0) : 0;
-  const strangers = un ? un.unloaded.filter(u => !NEEDS_A_BROWSER.includes(u.split(' ')[0])) : [];
+  const strangers = un ? un.unloaded : [];
   verdict(!!sites && !!un && sites.length === 0 && strangers.length === 0, 'load: no module of the simulation works a rounded function out as it loads, outside onExact (every module of its folders loaded under a watched Math)',
     sites && un ? (sites.length ? `${sites.length} site(s): ${sites.slice(0, 8).join(' · ')} — make each inside onExact(() => …) (math/exact.ts)` : `none in the simulation's folders`) + ` · ${un.files} modules loaded, ${un.unloaded.length} need a browser${strangers.length ? ` — NOT ON THE LIST: ${strangers.join(' · ')}` : ''} · ${dress} site(s) in what they pull in from outside those folders, counted and not held`
       : `the child did not answer (exit ${c.status}): ${c.err.trim().split('\n').slice(-2).join(' / ')}`);

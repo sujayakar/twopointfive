@@ -88,12 +88,12 @@ export const LASTSTAND = {
 };
 export const LASTSTAND_DEFAULTS: typeof LASTSTAND = JSON.parse(JSON.stringify(LASTSTAND));
 const LS = 'twopointsix.laststand';
-/** the panel's rows are kept per machine; `?regroup` / `?callout` (and `=0`) set a switch for the visit; the harness sets them by `LASTSTAND=regroup,callout`
+/** the panel's rows are kept per machine; `?callout` (and `=0`) sets the switch for the visit; the harness sets it by `LASTSTAND=callout`
  *  in the environment (tools/qa/playthrough.ts's --set reaches a fixed list of tables) */
-const KEPT = ['regroup', 'callOut', 'places', 'few', 'every', 'again', 'maxM'] as const;   // (the panel's rows)
+const KEPT = ['callOut', 'places', 'few', 'every', 'again', 'maxM'] as const;   // (the panel's rows)
 export function saveLastStand() { try { const o: Record<string, boolean | number> = {}; for (const k of KEPT) if (LASTSTAND[k] !== LASTSTAND_DEFAULTS[k]) o[k] = LASTSTAND[k]; if (Object.keys(o).length) globalThis.localStorage?.setItem(LS, JSON.stringify(o)); else globalThis.localStorage?.removeItem(LS); } catch { /* no store */ } }
 try { const o = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); if (o) for (const k of KEPT) if (typeof o[k] === typeof LASTSTAND[k]) (LASTSTAND as Record<string, unknown>)[k] = o[k]; } catch { /* no store, or not ours */ }
-try { const q = new URLSearchParams(location.search); if (q.has('regroup')) LASTSTAND.regroup = q.get('regroup') !== '0'; if (q.has('callout')) LASTSTAND.callOut = q.get('callout') !== '0'; if (q.has('calloutplaces')) LASTSTAND.places = q.get('calloutplaces') !== '0'; } catch { /* no page (the harness) */ }
+try { const q = new URLSearchParams(location.search); if (q.has('callout')) LASTSTAND.callOut = q.get('callout') !== '0'; if (q.has('calloutplaces')) LASTSTAND.places = q.get('calloutplaces') !== '0'; } catch { /* no page (the harness) */ }
 try { const e = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.LASTSTAND; if (e) { const w = e.toLowerCase().split(/[\s,+]+/); if (w.includes('regroup')) LASTSTAND.regroup = true; if (w.includes('callout')) LASTSTAND.callOut = true; if (w.includes('nocallout')) LASTSTAND.callOut = false; if (w.includes('places')) LASTSTAND.places = true; if (w.includes('noplaces')) LASTSTAND.places = false; } } catch { /* no process (the page) */ }
 
 type Def = RoomFight['defs'][number];

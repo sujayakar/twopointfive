@@ -17,11 +17,6 @@ pub fn guns_broken() -> bool {
     BREAK
 }
 
-/// hearingCheck: a teammate's quiet report counts, as yours does. GUNSLOTS.on and .heard are settled true. (gunslots.ts quietHeard)
-pub fn quiet_heard(g: &crate::game::Game) -> bool {
-    true
-}
-
 /// The pick of that id, or None. (gunslots.ts gunPick)
 pub fn gun_pick(id_2: &str) -> Option<crate::gunslots::GunPick> {
     picks().into_iter().find(|p| p.id == id_2)

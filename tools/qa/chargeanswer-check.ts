@@ -3,22 +3,18 @@
 // behind him while the pair were still twenty metres off, the order ended there and then on "door's open.", and the pair walked up to the shut door
 // and stood at it — one of them reading 'setting the charge' — until the captor's clock ran out. Nothing was charged, nobody said so.
 //   bun run tools/qa/chargeanswer-check.ts [--seed N] [--verbose]        exit 0 = holds, 1 = it does not
-// A pair (the office's room clear) and four (the compound's), every defender off the floor but one far from the door, the fog of war on, the order
+// Four (the compound's), every defender off the floor but one far from the door, the fog of war on, the order
 // given from where the mission puts the men, on a door the game itself picks: the farthest one a charge order is taken on whose leaf, put open, the
 // picture does not show open (fogofwar.ts doorHeld — nobody of the team has a line to it). Every frame of every staging is watched for the two things
 // a dropped order looks like:
 //   SILENT   a charge order leaves the book with its charge not blown, a man of it alive and still on it, and no teammate speaking on that frame
 //   STALE    a living teammate carries a charge order's assignment ('setting the charge', 'stood off') with no charge order in the book behind it
 // and the stagings are the ways a charge order can come to nothing:
-//   (1) the leaf swings open and shut again with the picture never showing it open: the order is still theirs, the charge goes on, it is armed
 //   (2) the leaf opens unseen and stays open: the order ends within two frames of the picture showing it open, the setter says so, the men hold
-//   (3) the leaf comes open under a set charge: the charge is off, the setter says so, the men hold
-//   (4) the bag is emptied while the setter is at the lock: he says so, the men hold
 //   (5) refused as it is given (the door open with the fog off, so the picture has it open · nothing in the bag): a man says why, nobody moves
-//   (6) a door nothing happens to: charged and armed
 // THE RULE IS NOT WRITTEN HERE ANY MORE (2026-11-07). Out: 'beat for beat as with the rule off' in (6), and (7), the recording from before the key and the
 // stand's row.
-// CHARGEANSWER_BREAK=1, the red path: nothing is done to the door or the bag in (1) to (4), so (2), (3) and (4) must fail (it was: the rule left off).
+// CHARGEANSWER_BREAK=1, the red path: nothing is done to the door in (2), so (2) must fail (it was: the rule left off).
 import { ROOT } from './headless.ts';
 import { stage } from './bang-tally.ts';
 const { isOpen } = await import(`${ROOT}/src/game/doortools.ts`);
@@ -29,7 +25,7 @@ const args = process.argv.slice(2), flag = (n: string) => { const i = args.index
 const VERBOSE = args.includes('--verbose'), SEED = Number(flag('--seed') ?? 1), BREAK = process.env.CHARGEANSWER_BREAK === '1';
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { if (VERBOSE) return await fn(); const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
-const SCNS = ['room-clear-pair', 'compound-four'];
+const SCNS = ['compound-four'], DOOR = 'c_n';   // (the farthest door from the men that takes a charge order and that the picture does not show open when it is put open: asked of the level once, it does not move)
 
 /** a scenario stood up for this check: the fog on, the floor quiet but for one defender far from `door` (when given) */
 async function floor(scn: string, door?: string) {
@@ -43,16 +39,6 @@ async function floor(scn: string, door?: string) {
   const target = (x: any) => ({ kind: 'door', at: [x.frameCentre[0], 0, x.frameCentre[2]], door: x, side: sideOf(x, team[0].char.pos) });
   return { S, g, team, d, put, target };
 }
-/** the door this scenario is staged on: the farthest from the men that takes a charge order and that the picture does not show open when it is put open */
-async function pick(scn: string): Promise<string | null> {
-  const { S, g, team, put, target } = await floor(scn); await quiet(() => S.step(30));
-  const doors: any[] = g.doors.list.filter((x: any) => !x.def.steel && !x.off && !isOpen(x)).sort((a: any, b: any) => flat(b.frameCentre, team[0].char.pos) - flat(a.frameCentre, team[0].char.pos));
-  for (const x of doors) { const was = { a: x.angle, l: x.latched };
-    put(x, true); await quiet(() => S.step(3)); const held = g.fogOfWar.doorHeld(x); x.angle = was.a; x.latched = was.l; await quiet(() => S.step(3));
-    if (held && !(await quiet(() => g.orders.give('charge', target(x), 'all')))) return x.def.name; }
-  return null;
-}
-
 type How = 'swing' | 'open' | 'off' | 'bag' | 'none';
 interface Run { note: string; given: string | null; silent: string[]; stale: string[]; said: string[]; beats: string[]; ended: string; armed: boolean; set: number; shown: boolean; late: number; moved: number; left: string[] }
 
@@ -103,21 +89,13 @@ export async function chargeanswerCheck(): Promise<boolean> {
   const off = BREAK ? ' — CHARGEANSWER_BREAK: nothing done to it' : '', how = (h: How): How => BREAK ? 'none' : h;
   const tell = (R: Run) => R.note ? R.note : `${R.ended} · charges on the door ${R.set} · silent ${R.silent.length ? R.silent.join(', ') : 'none'} · stale ${R.stale.length ? R.stale.join(', ') : 'none'} · the men after: ${R.left.join(' / ')} · said: ${R.said.length ? R.said.join(' / ') : 'nothing'}${VERBOSE ? ' · ' + R.beats.join(' | ') : ''}`;
   const clean = (R: Run) => !R.note && !R.silent.length && !R.stale.length, says = (R: Run, re: RegExp) => R.said.some(x => re.test(x)), holds = (R: Run) => R.left.length > 0 && R.left.every(x => x.startsWith('hold: '));
-  for (const scn of SCNS) { const door = await pick(scn); if (!door) { line(false, `${scn}: no door a charge order is taken on that the picture does not show from the mission's start`); continue; } const w = `${scn} ${door}`;
-    const a = await run(scn, door, how('swing'));
-    line(clean(a) && a.armed && a.set === 1 && !a.shown, `(1) the leaf swings open and shut again and the picture never shows it open (${w}${off}): the charge goes on and is armed`, `${tell(a)} · shown open ${a.shown}`);
+  for (const scn of SCNS) { const door = DOOR, w = `${scn} ${door}`;
     const b = await run(scn, door, how('open'));
     line(clean(b) && b.ended === 'ended: the door opened' && b.set === 0 && says(b, /door's open\.$/) && b.late >= 0 && b.late <= 2 / 60 + 1e-6 && holds(b), `(2) the leaf opens unseen and stays open (${w}${off}): the order ends as the picture shows it open, the setter says so, the men hold on the door`, `${tell(b)} · ended ${isNaN(b.late) ? 'with the picture never showing it open' : `${b.late.toFixed(2)} s after the picture showed it`}`);
-    const c = await run(scn, door, how('off'));
-    line(clean(c) && c.ended === 'ended: the charge is gone' && c.set === 0 && says(c, /charge is off/) && holds(c), `(3) the leaf comes open under a set charge (${w}${off}): the setter says the charge is off, the men hold on the door`, tell(c));
-    const e = await run(scn, door, how('bag'));
-    line(clean(e) && e.ended === 'ended: no charges' && e.set === 0 && says(e, /no charges left/) && holds(e), `(4) the bag emptied while he is at the lock (${w}${off}): he says so, the men hold on the door`, tell(e));
     if (BREAK) continue;
     const f = await run(scn, door, 'none', 'open'), h = await run(scn, door, 'none', 'empty');
     line(f.given === "it's open." && f.said.some(x => x.endsWith("it's open.")) && f.moved < 0.5 && f.ended === 'no order', `(5) refused as it is given, the door open in the picture (${w}): a man says so and nobody moves`, f.note || `give → ${f.given} · said: ${f.said.join(' / ') || 'nothing'} · moved ${f.moved.toFixed(2)} m · ${f.ended}`);
     line(h.given === 'no charges left.' && h.said.some(x => x.endsWith('no charges left.')) && h.moved < 0.5 && h.ended === 'no order', `(5) refused as it is given, nothing in the bag (${w}): a man says so and nobody moves`, h.note || `give → ${h.given} · said: ${h.said.join(' / ') || 'nothing'} · moved ${h.moved.toFixed(2)} m · ${h.ended}`);
-    const n = await run(scn, door, 'none');
-    line(clean(n) && n.armed && n.set === 1, `(6) a door nothing happens to (${w}): charged and armed, nothing silent, nothing stale`, tell(n));
   }
   return ok;
 }

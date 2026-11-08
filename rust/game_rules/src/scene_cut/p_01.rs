@@ -7,11 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Whoever emits cut pieces asks this. Settled: the page has the switch on.   (cut.ts cutBoxesOn)
-pub fn cut_boxes_on(g: &crate::game::Game) -> bool {
-    true
-}
-
 /// A plane from any normal (normalised here) and its offset along that normal's length: keeps n · p ≤ d.   (cut.ts cutPlane)
 pub fn cut_plane(n: V3, d: f64) -> crate::scene_cut::CutPlane {
     let l = m::hyp3(n[0], n[1], n[2]);

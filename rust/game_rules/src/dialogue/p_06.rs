@@ -140,7 +140,7 @@ pub fn chatty(g: &mut crate::game::Game, x: GuardId) -> bool {
         && m.leader.is_none() && m.post.is_none() && m.awareness < 0.15
         && !m.bubble.as_ref().map_or(false, |b| time - b.t < b.dur + 1.0);
     if !calm { return false; }
-    if crate::owner::has_him(g, x, crate::owner::own().needs) { return false; }
+    if crate::owner::has(g, x, crate::owner::by::NEEDS) { return false; }
     g.guards.contains(&x)
 }
 

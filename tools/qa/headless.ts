@@ -148,7 +148,7 @@ const loadMannequin = (): Promise<any> => chPromise ??= loadGltfCharacter(`file:
 let castPromise: Promise<any> | null = null;
 /** THE CAST (public/assets/chars/cast.gltf — the operators' and defenders' meshes on the mannequin's skeleton, what the PAGE boots with): the harness stands on the mannequin as every
  *  frozen number was taken on it (the simulation reads no mesh, so nothing differs but what is drawn); `standUp({ cast: true })`, or TPS_CAST=1 in the environment for a whole tool
- *  (`TPS_CAST=1 bun run tools/qa/tour.ts`), stands on the cast instead. Throws if the file is missing or off contract. */
+ *  (`TPS_CAST=1` in front of a tool), stands on the cast instead. Throws if the file is missing or off contract. */
 export function loadCastCharacter(): Promise<any> { return castPromise ??= loadMannequin().then(base => loadGltfCast(`file://${ROOT}/public/assets/chars/${castFile()}`, base)); }
 /** the same for one named look, whatever the switch says (cast-probes.ts loads both files side by side): not cached */
 export function loadCastOf(look: boolean): Promise<any> { return loadMannequin().then(base => loadGltfCast(`file://${ROOT}/public/assets/chars/${castFile(look)}`, base)); }
@@ -168,10 +168,9 @@ export interface Headless {
   restore(s: any): void;
   /** null (the default): nothing recorded. Set it to an array and every audio call from then on is appended to THAT array, in order, stamped with game.time. */
   audioLog: AudioCall[] | null;
-  /** the null smoke object the Game was given (emit / push / clearAll dropped) — hand the same one to anything else main.ts constructs with `smoke` (the Demo) */
+  /** the null smoke object the Game was given (emit / push / clearAll dropped) */
   smoke: any;
-  /** one frame exactly as main.ts steps it (minus rendering): game.update → camera → lights → box upload → input.endFrame. `follow` is what main.ts calls
-   *  demoPos: the showcase tour's camera look-at for this frame (Demo.update's return, called BEFORE this) — the camera then follows it and drops the aim lead */
+  /** one frame exactly as main.ts steps it (minus rendering): game.update → camera → lights → box upload → input.endFrame. `follow`: a camera look-at for this frame — the camera then follows it and drops the aim lead */
   step(dt: number, follow?: Vec3 | null): void;
   /** A FAILED BEAT OF THE LEVEL'S SCRIPT FAILS ITS TOOL (default true). The director fails the beat, files an `error` row in its log and lets the frame go on,
    *  on every host alike; what to do then is the host's. This host throws after the step that filed one. false: a tool that means to watch a beat fail */
@@ -188,7 +187,7 @@ export interface Headless {
 
 /** A fresh level + engine stand-in + Game. A caller that wants a stream of its own seeds Math.random first (Guard / Character constructors draw from it); one that
  *  seeds nothing and names no seed gets the harness's die put there (tools/qa/die.ts): no game stood here rolls the clock's dice.
- *  `env` (a session journal's EnvSnap — tools/qa/replay.ts): stand the engine up as the RECORDING's was where the simulation can tell — its settings (debris cap,
+ *  `env` (a tape's EnvSnap — tools/qa/rerun.ts): stand the engine up as the RECORDING's was where the simulation can tell — its settings (debris cap,
  *  emissive scale, torch radius, marking lights) before the Game is built, a fake GPU particle system attached if it had one (the effect sites then take the branch
  *  they took), the canister row on the null smoke. Absent = the harness exactly as it always stood.
  *  `level` (a Level — loadLevel(parseLevelData(text)) of any file under levels/): stand the game up on THAT level instead of the bundled office.
@@ -209,7 +208,7 @@ function envSeed(v: string): number { if (!/^\d+$/.test(v.trim())) throw new Err
 function envCollects(v: string | undefined): boolean { if (v === undefined || v === '1') return true; if (v === '0') return false; throw new Error(`QA_STANDUP_GC=${v}: want 0 (the stand-up as it was) or 1`); }
 export const STANDUP_COLLECTS = envCollects(process.env.QA_STANDUP_GC);
 let stoodBefore = false;
-export async function standUp(opts: { /** the dressing rows up, as the page has them (src/game/dress.ts: the debris pool, the moths, the snow…). A headless game on the Rust game stands with them down; a check that is ABOUT a dressing row asks for them */ dress?: boolean; /** false: nothing writes this game between two ticks, so the Rust game's host need not walk it for a tool's writes (tools/blitz/rust-host.ts HostOpts.scan): a networked game's machine */ scan?: boolean; /** false: with `dress`, the rows are up for the game's sake and nothing is drawn: the page's dress step is not run on the copy (HostOpts.draws) */ draws?: boolean; uploadEvery?: number; env?: any; level?: any; cast?: boolean; ch?: any; seed?: number | null; seats?: number; /** the address the game is stood up from, for the words standGame reads off it (`seats=2`) */ search?: string; /** THE MISSION'S ADDRESS, handed to the stand as a page has it from its first line (`levelFile=depot.json&roomclear&squad4&weather=downpour`): what a page reads of it BEFORE THE GAME IS MADE is read here before the game is made (src/host/standup.ts addressBeforeGame: the row's own hour and weather, the weather the game is born in, the visit's hour, into the record the game is made with), the floor is still `level` (or the bundled office: the address's `levelFile` is not loaded here), and `start()` on what comes back starts its mission and asks the solo card's question as the page does. Absent = a game stood plain, as the solo night: a tool that then starts a mission on it by `startFromQuery` is on the older road of two steps, where the weather is changed after the game is made and the solo card is put on and taken off again */ address?: string | URLSearchParams; /** A RECORD TO STAND THE GAME WITH (src/game/stood.ts): wins over the picks; not with `address`, which is read into one */ stood?: any; /** stand the picture's keeper of the lights' reach masks up too (render/reachKeep.ts), as a page's engine has one, and step it once a frame: for the tools that read masks. Absent = none, and no mask is ever made */ reach?: boolean } = {}): Promise<Headless> {
+export async function standUp(opts: { /** a recipe's or a tape's knob tables, laid over the address's before the game is made, as a page lays them (main.ts recipeTables) */ tables?: () => void; /** the dressing rows up, as the page has them (src/game/dress.ts: the debris pool, the moths, the snow…). A headless game on the Rust game stands with them down; a check that is ABOUT a dressing row asks for them */ dress?: boolean; /** false: nothing writes this game between two ticks, so the Rust game's host need not walk it for a tool's writes (tools/blitz/rust-host.ts HostOpts.scan): a networked game's machine */ scan?: boolean; /** false: with `dress`, the rows are up for the game's sake and nothing is drawn: the page's dress step is not run on the copy (HostOpts.draws) */ draws?: boolean; uploadEvery?: number; env?: any; level?: any; cast?: boolean; ch?: any; seed?: number | null; seats?: number; /** the address the game is stood up from, for the words standGame reads off it (`seats=2`) */ search?: string; /** THE MISSION'S ADDRESS, handed to the stand as a page has it from its first line (`levelFile=depot.json&roomclear&squad4&weather=downpour`): what a page reads of it BEFORE THE GAME IS MADE is read here before the game is made (src/host/standup.ts addressBeforeGame: the row's own hour and weather, the weather the game is born in, the visit's hour, into the record the game is made with), the floor is still `level` (or the bundled office: the address's `levelFile` is not loaded here), and `start()` on what comes back starts its mission and asks the solo card's question as the page does. Absent = a game stood plain, as the solo night: a tool that then starts a mission on it by `startFromQuery` is on the older road of two steps, where the weather is changed after the game is made and the solo card is put on and taken off again */ address?: string | URLSearchParams; /** A RECORD TO STAND THE GAME WITH (src/game/stood.ts): wins over the picks; not with `address`, which is read into one */ stood?: any; /** stand the picture's keeper of the lights' reach masks up too (render/reachKeep.ts), as a page's engine has one, and step it once a frame: for the tools that read masks. Absent = none, and no mask is ever made */ reach?: boolean } = {}): Promise<Headless> {
   if (STANDUP_COLLECTS && stoodBefore) Bun.gc(true); stoodBefore = true;
   if (harnessProfile() !== STAND_AT_LOAD) throw new Error(`the stand was '${STAND_AT_LOAD}' when tools/qa/headless.ts loaded and is '${harnessProfile()}' now: TPS_PROFILE was set after the harness was imported (a static import loads before the file's first line). Set it before the import: \`const { standUp } = await import('./headless.ts')\` below the line that sets it`);
   // (a game with no word stood after one under the word in the same process finds the process's dress rows as they were, BEFORE it is built: tools/blitz/rust-host.ts `dressDown`)
@@ -252,7 +251,9 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
     if (!address.has('weather') && WEATHER_BOOT.kind) address.set('weather', String(WEATHER_BOOT.kind));
     standMod.pinSnow(); standMod.pinRowset();   // (the two switches the address's reader reads, pinned by this run's own words BEFORE it reads them: standGame pins them again, to the same)
     stood = standMod.addressBeforeGame(address);
+    standMod.difficultyOfAddress(address);   // (…and the difficulty it asks for, on the process's tables: the next game is made from them)
   }
+  opts.tables?.();
   const stoodGame: any = await standMod.standGame(engine, { ch, smoke, harness: true, seed, input, seats: opts.seats, ...(stood ? { stood } : {}), ...(opts.search !== undefined ? { search: opts.search } : address ? { search: `?${address}` } : {}), ...(opts.level ? { level: opts.level } : {}) });
   const { game, level, cam } = stoodGame;
   if (process.env.QA_DOORSTAY === '1') (await import(`${ROOT}/src/game/doors.ts`)).DOORSTAY.on = true;   // (the harness stands the game up with the door closers of old — standup.ts; this runs any probe, soak or tour with doors staying where they are left, as shipped)
@@ -299,7 +300,7 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
           if (bad && W.beatsThrow) throw new Error(`the level's script: beat '${bad.program}/${bad.beat}' ${bad.what}`); } }
       if (opts.reach) engine.reach.tick();   // (a page's engine steps its keeper of the reach masks once each render, on the clock where the frame has the planners' pace: here on the count, only where a tool asked for one, and never a real engine's, which steps its own)
       { const me = game.hostSeat().view, look = (game as any).rustHost?.look?.();   // (a game that steps somewhere else, in a quiet run of steps: the camera's two inputs asked of it, tools/blitz/PLAY.md)
-        cam.update(dt, follow ?? look?.follow ?? me.followPos(), follow || game.spectate >= 0 ? null : look?.aim ?? me.aimPoint); }   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
+        cam.update(dt, follow ?? look?.follow ?? me.followPos(), follow || game.spectate >= 0 ? null : look?.aim ?? me.aimPoint); }   // (a look-at given: no aim lead)
       engine.lights.update(dt, game.time);
       engine.world.dynamics = game.dynBoxes;
       if (frame++ % uploadEvery === 0) engine.world.upload();   // CPU pack + grid (what the cursor's raycast and the lasers read); the GPU writes go nowhere

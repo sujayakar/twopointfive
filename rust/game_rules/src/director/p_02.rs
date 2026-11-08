@@ -388,7 +388,6 @@ pub fn director_tick(g: &mut crate::game::Game, dt: f64, _input: Option<InputId>
     if let Some(shot) = rr.show.as_mut().and_then(|s| s.shot.as_mut()) {
         shot.t += dt;
     }
-    director_tick_tracks(g, r, dt);
     director_tick_bursts(g, r);
     director_tick_kicks(g, r);
     director_tick_shown(g);
@@ -1051,9 +1050,6 @@ pub fn director_tick_bursts(g: &mut crate::game::Game, r: DirectorRunId) {
     g.tab.director_run[r].bursts.retain(|b| b.left > 0.0);
 }
 
-/// R.tracks is only ever pushed for a c.order with aimAt a unit, which no script on the page gives: always empty, so this returns at its first line. (director.ts Director.tickTracks)
-pub fn director_tick_tracks(g: &crate::game::Game, r: DirectorRunId, dt: f64) {}
-
 /// Kicks in the air: on the animator's impact frame (or the instant the clip is somehow over) doors.ts kickIn does the boot's work from where he stands. (director.ts Director.tickKicks)
 pub fn director_tick_kicks(g: &mut crate::game::Game, r: DirectorRunId) {
     if g.tab.director_run[r].kicks.is_empty() {
@@ -1189,7 +1185,7 @@ pub fn director_query_signalled(g: &crate::game::Game, r: DirectorRunId, n: &str
 /// (director.ts Query.routed)
 pub fn director_query_routed(g: &mut crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
     match director_guard_of(g, r, u) {
-        Ok(gd) => crate::owner::has_him(g, gd, crate::owner::own().runner),
+        Ok(gd) => crate::owner::has(g, gd, crate::owner::by::RUNNER),
         Err(_) => false,
     }
 }

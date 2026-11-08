@@ -473,18 +473,10 @@ pub fn write(g: &mut crate::game::Game, fog_only: Option<bool>) {
 }
 
 
-/// the kept rungs this visit's switches hide; with both switches settled on, none. (difficulty.ts keptHidden)
-pub fn kept_hidden(g: &crate::game::Game) -> crate::difficulty::KeptHidden {
-    KeptHidden { fog: None, ai: None, kit: None, told: None }
-}
-
 /// the machine's store keeps the moved levers, with the kept rungs this visit hides unless `all`. (difficulty.ts storeLevers)
 pub fn store_levers(g: &crate::game::Game, all: Option<bool>) {
     let s = g.m.difficulty.set;
-    let (fog, ai, kit, told) = if all.unwrap_or(false) { (s.fog, s.ai, s.kit, s.told) } else {
-        let h = kept_hidden(g);
-        (s.fog.or(h.fog), s.ai.or(h.ai), s.kit.or(h.kit), s.told.or(h.told))
-    };
+    let (fog, ai, kit, told) = (s.fog, s.ai, s.kit, s.told);
     match levers_json(&[("fog", fog.map(|r| r.as_str())), ("ai", ai.map(|r| r.as_str())), ("kit", kit.map(|r| r.as_str())), ("told", told.map(|r| r.as_str()))]) {
         Some(line) => { crate::savestate::save_store_set(g, LS_LEVERS, &line); }
         None => crate::savestate::save_store_remove(g, LS_LEVERS),
@@ -632,6 +624,33 @@ pub fn difficulty_custom(g: &mut crate::game::Game) {
             None => crate::savestate::save_store_remove(g, LS_LEVERS),
         }
     }
+}
+
+/// WHAT AN ADDRESS SAYS OF THE DIFFICULTY, and no more: None where it says nothing. `plain` (a Training lesson's address) reads no lever. Writes nothing. (difficulty.ts difficultyAsked)
+pub fn difficulty_asked(g: &crate::game::Game, q: &crate::query::Query, plain: bool) -> Option<crate::difficulty::DifficultyAsked> {
+    let v = if q.has("hard") { Some(if q.get("hard") == Some("0") { "standard" } else { "hard" }) } else { q.get("difficulty") };
+    let level = match v { Some("hard") => Some(Difficulty::Hard), Some("standard") => Some(Difficulty::Standard), _ => None };
+    let mut levers = Vec::new();
+    if !plain {
+        for l in levers_now(g).iter() {
+            if let Some(r) = q.get(&l.param) { if is_rung(g, l.key, Some(r)) { levers.push((l.key, String::from(r))); } }
+        }
+    }
+    let digin = q.has("digin");
+    let pressure = if q.has("pressure") { Some(q.get("pressure") != Some("0")) } else { None };
+    let cone = if q.has("fogcone") { Some(q.get("fogcone") != Some("0")) } else { None };
+    if level.is_none() && levers.is_empty() && !digin && pressure.is_none() && cone.is_none() { return None; }
+    Some(DifficultyAsked { level, levers, digin, pressure, cone })
+}
+
+/// …AND IT LAID ON THE GAME'S TABLES, not stored: the level, the levers over it, the two older single-switch flags over whatever those wrote. (difficulty.ts difficultyLay; no host of a
+/// Rust start keeps anything, so nothing goes between)
+pub fn difficulty_lay(g: &mut crate::game::Game, a: &crate::difficulty::DifficultyAsked) {
+    if let Some(level) = a.level { set_difficulty(g, level, Some(false)); }
+    for (key, rung) in a.levers.iter() { set_lever(g, *key, Some(rung.as_str()), Some(false), None); }
+    if a.digin { g.k.digin.on = true; }
+    if let Some(on) = a.pressure { g.k.pressure.on = on; }
+    if a.cone.is_some() { set_cone_visit(g, a.cone); }
 }
 
 /// the levers this machine keeps, only rungs the build still has. (difficulty.ts keptLevers)

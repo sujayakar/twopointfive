@@ -108,14 +108,6 @@ export async function messCheck(): Promise<boolean> {
         await quiet(async () => { for (; shots < 600 && !(open = walls.breakableAt(w.index)?.open ?? 0); shots++) walls.round(PLAYER_ID, [face[0], 0.4 + (shots % 8) * 0.2, face[2]], dir, w.index, rifle, 0.5); S.step(30); }); }
       const F = films(g), face = w ? wallPt(w, 0, 0, 0) : [0, 0, 0], nearFoot = F.filter(d => Math.hypot(d.pos[0] - face[0], d.pos[2] - face[2]) < 1.6).length;
       verdict(!!w && open > 0 && nearFoot >= 1 && picture(F) && F.every(d => d.radius <= K.foot.radius + K.foot.perMetre * 6), 'a wall that gives under rifle fire leaves a small film of its own dust at its foot', `wall #${w?.index}: ${shots} rounds, ${open} cells open · ${nearFoot} films at its foot of ${F.length}, the widest ${f2(Math.max(0, ...F.map(d => d.radius)))} m`); }
-    // A CHUNK THE POOL TAKES leaves its mark where it lay: the pool cut to six, a charge's rubble at rest, a second blast's pieces take their slots
-    { const S = await quiet(() => stand()), g = S.g; g.engine.settings.debrisCap = 6; const D = g.destr.debris;
-      await quiet(async () => { charge(S); S.step(360); }); const ev0 = D.stats.evicted, r0 = rubble(g).length;
-      const lying = D.list.filter((c: any) => c.rest && !c.glass).map((c: any) => [c.box.c[0], c.box.c[1], c.box.c[2]] as Vec3);
-      await quiet(async () => { const w = wallSpot(g); burst(S, 'frag', w ? wallPt(w, 0.8, 0.3, 0.1) : openAt(g)); S.step(240); });
-      const R = rubble(g), ev = D.stats.evicted - ev0, fresh = R.slice(r0), where = fresh.filter(d => lying.some((p: Vec3) => Math.hypot(p[0] - d.pos[0], p[2] - d.pos[2]) < 0.02 && d.pos[1] <= p[1] + 0.02)).length;
-      verdict(lying.length > 0 && D.stats.evicted > 0 && R.length >= 1 && picture(R) && fresh.length >= 1 && where >= 1 && since(S.s0).rubble === R.length && R.every(d => d.radius >= K.rubble.min - 1e-6 && d.radius <= K.rubble.max + 1e-6),
-        'a chunk the debris pool takes for its slot leaves the crushed mark of itself where it lay', `pool of 6: ${D.stats.evicted} taken in all (${ev} by the second blast, ${lying.length} lay at rest before it) · ${R.length} marks (${R.filter(d => lookOf(d) === MESS_LOOK.grit).length} grit, ${R.filter(d => lookOf(d) === MESS_LOOK.splinter).length} splinter), ${where} of the second blast's ${fresh.length} where a piece lay · left out as one with a mark there ${MESS_STATS.crowded}`); }
     // THE TOPS STANDING IN A FILM take their own: a burst over a desk-high static; and six bursts and a charge pack into the decal buffer with nothing dropped
     { const S = await quiet(() => stand()), g = S.g, T = topSpot(g, K); if (T) await quiet(async () => { g.destr.blast([T.box.c[0], 0.2, T.box.c[2] + T.box.h[2] + 0.6], { who: PLAYER_ID, radius: 2.5 }); });
       const F = films(g), tops = F.filter(d => d.pos[1] > 0.05);

@@ -1162,7 +1162,7 @@ export function kitIssuedPage(on = true) { { const __s = RUST_SURFACE; if (__s) 
  *  built with, on every mission, and this rule has none to take. Off (and ISSUEWHOLE_BREAK=1, the check's) = the build before: the hand-overs land
  *  over the card. */
 /** A LESSON THE PLAYER PACKS FOR (`ISSUE.picked`; ?kitpack=0 puts it off, TPS_KITPACK=1 raises it on a frozen run): a tutorial row that carries `packs`
- *  (scene/scenarios.ts ScenarioEntry — today the squad mission alone, whose Team & kit step teaches planning a kit from the job and the map: ui/kitPlan.ts)
+ *  (scene/scenarios.ts ScenarioEntry — no row today; the one that did, the squad mission, went 2026-11-07, and the rule leaves with its Rust side)
  *  is NOT played with the kit as issued. Its loadout screen shows the cards (kitPacks below, read by game/loadout.ts kitAsIssued) and its page stages what
  *  this machine keeps, as any mission's does: so what he packs on that step is what he and the four carry down the street. Every other lesson is as it
  *  was. The headless lesson runs never raised the issued page, so no frozen or shipped digest moves: the rule is the page's, and a recording's. A

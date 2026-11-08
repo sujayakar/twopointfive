@@ -81,7 +81,7 @@ export type Opening = { a: number; b: number; y0?: number; y1?: number; mullions
  *  props, ceiling panels) over one fresh set of lists — what buildOfficeProcedural below lays the office out with, statement for statement as they were inside it,
  *  and what a generator for ANOTHER level builds with (tools/levels/: the scenario levels — same boxes, same palette, same finishes, same markings; no new art).
  *  Every call appends to the kit's own `boxes` / `props` / `lights` / `switchables`; `grp(name)` names the editor group of what follows (trace.groups). */
-/** THE TWO VENDING MACHINES' LIT BODIES, for whoever stands one up (the office's break room; the smoke lab's yard): the upper body's half size and paint, and its
+/** THE TWO VENDING MACHINES' LIT BODIES, for whoever stands one up (the office's break room): the upper body's half size and paint, and its
  *  markings with the emissive field's radiances scaled so the ONE light game.ts registers for it has the LUMINOUS intensity of the slab it replaced (luminance of
  *  its mean radiance × its area = luminance of the old slab's radiance × the old slab's area; luminance, not the peak channel the light's intensity keys on: the
  *  field's light is whiter than the pure red or blue slab, and matched on the peak channel the meter read a third more in front of the machines). `red` is the
@@ -785,7 +785,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     // Each machine = an UPPER body (the marked front: field + control column) standing on a black PLINTH set 6 cm back over its left two-thirds — the dispenser
     // opening, a real recess with a real shadow, its back wall marked black with the flap bar — and a flush block under the control column. (+3 boxes a machine
     // over the single body; footprint and height unchanged, so the nav grid and the collision are what they were.) The body, its paint and its calibrated marks are
-    // vendingSpec's (below: the smoke lab's floor stands the same two machines in its yard).
+    // vendingSpec's (below).
     const A = vendingSpec('red', TX, VENDING_FLUX_K), B = vendingSpec('blue', TX, VENDING_FLUX_K), plinth = A.plinth;
     const vendA = add({ c: [28.62, 1.125, 12.9], h: A.h, albedo: A.body, ...mk(A.marks) });
     add({ c: [28.47, 0.175, 12.87], h: [0.35, 0.175, 0.42], albedo: plinth, ...mk(MD.dispenserMarks([0.35, 0.175, 0.42], TX)) });   // A's dispenser recess (x 28.12‥28.82, 6 cm back)
@@ -1001,11 +1001,11 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // the corridor's north wall hinges on its west jamb and swings north into its room, so the pair stack on the east (latch) jamb — #1 bladed to the wall half a
   // metre off it, #2 tucked in 0.85 m behind — #1 breaches by the lock and hooks east along the near wall, #2 takes the west, door side a beat later; the break
   // room is taken through its corridor door the same way mirrored (that wall is on their left). Staff carry keys, so every breach here is 'open': the leaf comes
-  // unlatched and gets shoved off its real hinge into the room (`fling` is that shove; the tour's conference plan in demo.ts kicks instead). Marks were checked
+  // unlatched and gets shoved off its real hinge into the room (`fling` is that shove). Marks were checked
   // headlessly against this file — free nav cells, ≥ 0.5 m off every settled prop footprint, straight walkable legs, the flung leaf's arc clear of the props —
   // and are listed per room below; y in the aim lists is where the muzzle (and its light) rests: ~1 m on walls and doors, ~0.3 m under furniture.
   const clearPlans: RoomClearPlan[] = [
-    { // conference room (x 4‥14, z 4‥10): the tour's own marks (demo.ts CONFERENCE_CLEAR) — the table-and-chairs block leaves clean lanes only along the south glass
+    { // conference room (x 4‥14, z 4‥10): the table-and-chairs block leaves clean lanes only along the south glass
       // and up the east side, so #1 dominates from the south-east corner and pushes up the TV wall while #2 holds the door side and clears the west half by light
       door: 'conference', room: 'conference room', breach: 'open', bounds: { x0: 4.12, x1: 13.94, z0: 4.12, z1: 9.94 },
       stack: [[10.55, 0, 10.5], [11.4, 0, 10.62]], stackFace: [-1.92, -1.9], stackSide: 1, stackAim: [[9.65, 1.05, 10.02], [9.7, 1.95, 10.0]],

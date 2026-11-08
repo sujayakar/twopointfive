@@ -89,7 +89,7 @@ pub fn kind_of(g: &crate::game::Game, b: BoxId, cut_on: bool) -> f64 {
         let x = &g.tab.boxes[b];
         (x.rot.is_some(), x.round == Some(true), x.cut.is_some(), x.cut.as_ref().map_or(0, |c| c.len()))
     };
-    let cut = has_cut && (cut_on || crate::scene_boxes::shape_cut(g, b)) && cut_len > 0;
+    let cut = has_cut && (cut_on || crate::scene_boxes::shape_cut(g, b.into())) && cut_len > 0;
     ((if rot { K_ROT_ } else { 0 }) | (if round { K_ROUND_ } else { 0 }) | (if cut { K_CUT_ } else { 0 })) as f64
 }
 
@@ -233,7 +233,7 @@ fn leaf_put(g: &mut Game, w: usize, at: usize, b: BoxId, kind: f64, cut_row: f64
 
 /// the rows of boxes a question adds, and their cut planes: as the copy's own rows are written
 pub fn rows_of(g: &Game, boxes: &[BoxId]) -> (Vec<f64>, Vec<f64>) {
-    let cut_on = crate::scene_cut::cut_boxes_on(g);
+    let cut_on = true;
     let (mut rows, mut cuts) = (vec![0.0; boxes.len() * REC_], vec![0.0; boxes.len() * CUT_ROW as usize]);
     for (i, &b) in boxes.iter().enumerate() {
         let kind = kind_of(g, b, cut_on);
@@ -451,7 +451,6 @@ pub fn box_mirror_grid(g: &mut crate::game::Game, cells: &[Vec<f64>], tilted_at:
 /// Every static against its row; a row that differs (or every row, `all`) written again.   (boxMirror.ts BoxMirror.statics)
 pub fn box_mirror_statics(g: &mut crate::game::Game, boxes: &[BoxId], all: bool) {
     let n = boxes.len();
-    let cut_on = crate::scene_cut::cut_boxes_on(g);
     let s = g.sim;
     let grid = !all && g.col.mirror.grid_over;
     let was = g.col.mirror.boxes as usize;
@@ -468,7 +467,7 @@ pub fn box_mirror_statics(g: &mut crate::game::Game, boxes: &[BoxId], all: bool)
     g.col.mirror.boxes = n as f64;
     for i in 0..n {
         let b = boxes[i];
-        let kind = kind_at_copy(g, b, i, cut_on);
+        let kind = kind_at_copy(g, b, i, true);
         if !all && i < was && static_same(g, s, i, b, kind) {
             continue;
         }
@@ -745,12 +744,11 @@ pub fn box_mirror_leaves(g: &mut crate::game::Game, dyn_: &[BoxId]) -> f64 {
         return -2.0;
     }
     let set = if own { 0usize } else { 1usize };
-    let cut_on = crate::scene_cut::cut_boxes_on(g);
     let base = set * caps.leaves as usize;
     let s = g.sim;
     for i in 0..n {
         let b = dyn_[i];
-        let kind = kind_of(g, b, cut_on);
+        let kind = kind_of(g, b, true);
         leaf_put(g, s, base + i, b, kind, caps.cuts + (base + i) as f64);
     }
     sim::world_leaves(s, set, n as u32);
@@ -785,7 +783,6 @@ pub fn box_mirror_things(g: &mut crate::game::Game, p: &crate::scene_box_mirror:
     if parts as f64 > c.leaves {
         return false;
     }
-    let cut_on = crate::scene_cut::cut_boxes_on(g);
     let base = THING_SET_ * c.leaves as usize;
     let every = g.col.mirror.things_all;
     let s = g.sim;
@@ -809,7 +806,7 @@ pub fn box_mirror_things(g: &mut crate::game::Game, p: &crate::scene_box_mirror:
             o.thing_live[q + 2] = t.boxes.len() as u32;
         }
         for &b in &t.boxes {
-            let kind = kind_of(g, b, cut_on);
+            let kind = kind_of(g, b, true);
             let row = base + at;
             if every || !leaf_same(g, s, row, b, kind) {
                 leaf_put(g, s, row, b, kind, c.cuts + row as f64);

@@ -31,7 +31,7 @@
 // THE SWITCH: FIRE.on — ON in the page (`?fire=0` puts it off), OFF in the module and on the frozen stand (FROZEN_HOLDS; TPS_FIRE=1 raises it there). Off = the
 // glowing lid and the steady lamp, the build as it was. tools/qa/fire-check.ts (FIRE_BREAK=1 fails it). The look was set on the software adapter's stills
 // (tools/qa/fire-lab.cjs, fire-page.cjs). SEEN ON A GPU ONCE, the first cut, in one still: docs/agents/render.md says what it showed and what was changed for it;
-// the second in two ("still very ugly"); the third he played, and set the look's numbers himself in the fire lab (FIRE.look, below).
+// the second in two ("still very ugly"); the third he played, and set the look's numbers himself (FIRE.look, below).
 import { hostMan } from './seats';
 import { SideMap } from '../math/side';
 import { Vec3 } from '../math/vec';
@@ -97,14 +97,14 @@ export const FIRE = {
    *  at, each alight `emberLife` s and leaving the flame at `emberSpeed` m/s; `emberSize` its streak's thickness (m), `emberGain` its light as a share of a
    *  spark's; a crack throws `emberCrack` more, harder. `embers` 0 = none (`?fireembers=0`) */
   embers: FIRE_EMBERS, emberLife: 1.7, emberSpeed: 1.1, emberSize: 0.004, emberGain: 0.45, emberCrack: 10, emberR: 30,
-  /** THE LOOK OF THE FLAME (render/shaders/fire.wgsl FireLook; the picture only; live in the page's fire lab, `/firelab`): × its light, × its white heart (the
+  /** THE LOOK OF THE FLAME (render/shaders/fire.wgsl FireLook; the picture only): × its light, × its white heart (the
    *  bloom spreads it), how soon it hides what is behind it (1/m), × how fast its shapes climb, × its height, how torn it is (0‥2), the smoke drawn off its
    *  tips (0‥2; `?fireplume=0` = none), the shimmer of the hot air over it (m the picture behind is pushed aside; `?fireheat=0` = none), how dark its cool
    *  edge is (0‥1) and how hard it breathes (0‥2). Set on the software adapter's stills against the maintainer's reference (a fluid-simulated camp fire: a white
    *  heart, orange body, dark red tips, smoke off them), after his second look on a GPU: "still very ugly. needs more dynamic range, smoke, embers, movement,
    *  could we do heat distortion?" NEVER SEEN ON A GPU. */
-  // THESE NUMBERS ARE NOW THE MAINTAINER'S OWN (and the JSDoc above is how they came to be first), set by eye on his GPU with the fire lab's sliders (/firelab,
-  // its "copy them" line, 2026-10-24) and taken as he sent them: the look's first ten here, and in this table `height`, `coals`, `depth`, `kick`, the embers'
+  // THESE NUMBERS ARE NOW THE MAINTAINER'S OWN (and the JSDoc above is how they came to be first), set by eye on his GPU with live sliders
+  // (2026-10-24) and taken as he sent them: the look's first ten here, and in this table `height`, `coals`, `depth`, `kick`, the embers'
   // and the smoke's density, temp and speed. He set them on the build BEFORE the newer rules (the flame marked for the temporal resolve, the lifted and tinted
   // lamp, the lean, the lamp's wider shift, twice the cracks), so with those on the picture is not the one he tuned: the nearest to that is
   // `?firereact=0&firelean=0&firebright=0&firesway=0`. `wander` is not his 0.07: his note asking for shadows that move came with it (FIRE_WANDER).
@@ -115,7 +115,7 @@ export const FIRE = {
      *  composite marks a fire's pixels and the resolve takes them from this frame by this much. `lean` = how far the wind leans the flame: metres at one flame
      *  height for each m/s (it was 0.07: "would also expect the fire to be affected by the wind, looks like only the smoke is"; `?firelean=0` = 0.07) */
     react: FIRE_REACT, lean: FIRE_LEAN,
-    /** HOW MANY SAMPLES OF THE FLAME A PIXEL'S RAY TAKES (4‥64; `?firesteps=N`, the lab's row): the flame's price is this × the pixels it covers, and a flame
+    /** HOW MANY SAMPLES OF THE FLAME A PIXEL'S RAY TAKES (4‥64; `?firesteps=N`): the flame's price is this × the pixels it covers, and a flame
      *  this thin (sigma 2.5) never goes opaque, so no ray stops early. 40 is the count the maintainer's own numbers were tuned at; fewer is cheaper and bands
      *  sooner. A lever for a timing on a real GPU: nobody has timed the flame, and the count's price is a model. */
     steps: FIRE_STEPS },
@@ -132,7 +132,7 @@ export const FIRE = {
    *  brick's heat; fire.wgsl fireFlameG): white-hot where it is as hot as `ref`, cooling as it climbs, no flame under `lo` of that; the noise only tears its
    *  skin. Its middle `up` of the flame's height over the coals, `radius` m wide and `cells` at least, `density` and `temp` a second, leaving at `speed` m/s;
    *  filed afresh every `every` s; a fire eases to it and back over 1 / `ease` s. While it is gas the DRAWN smoke is off (the fire's smoke is the solver's).
-   *  `on` false = the flame of noise: the page's default until the gas has been seen (`?firegas=1`; a row in the fire lab). While it is on, gun gas and
+   *  `on` false = the flame of noise: always, on the page: the shader's half of this is gone, and the rest goes with the Rust fold. While it is on, gun gas and
    *  breath hotter than `keep` linger as long as the flame does. SET on five stills of the real page on the software adapter (the pass, its storm blowing 0.5 m/s
    *  at the drum): a white heart, orange body and red tip with no haze, one streamer about a metre and a half long that the wind leans some 45° and curls;
    *  `temp` 12 at `speed` 1.2 was thinner and lay lower. One streamer, not the noise's field of tongues: the solver's cells are two centimetres and its

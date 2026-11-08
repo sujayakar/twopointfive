@@ -3,7 +3,7 @@
 // the TypeScript `Game` stays as a PUPPET that everything outside the tick goes on reading: the picture, the sound, the HUD, the menus. Under `?rust=0`
 // nothing here is loaded and the page is the page it was.
 //
-// A STEP (`Game.update` runs its own host lines as ever: the record sampled from the Input and the camera, hostBefore, hostAfter. The step between them,
+// A STEP (`Game.update` runs its own host lines as ever: the record sampled from the Input and the camera, hostAfter. The step between them,
 // `stepSeats`, is this file's `step`, hung on the game object):
 //   the host's half   the knobs the module reads · the light probe's answers (the GPU's, a frame or more old) · each seat's record with every camera and
 //                     Input row (the bridge's `hostHalf` → `face_host_half`)
@@ -32,6 +32,7 @@
 // opened. A FILE is the bridge's bytes of a kept game and its block under a version word (`rustFile` / `rustFileIn`).
 //
 // Every special case here is marked STAND-IN with its reason and where it belongs.
+import { FaceError, fetchFace } from './face';
 import { simAdopt, type SimExports } from '../sim/sim';
 import { BoxMirror } from '../scene/boxMirror';
 import { PUT_BACKS } from '../math/side';
@@ -52,7 +53,7 @@ import { dressStep, DRESS_MS } from './rustdress';
 import { warmRainFx } from '../game/rainFx';
 import { markHeld } from './held';
 import { wallFeelPicture } from '../game/blastFeel';
-import { exportGame, hostHalf, shownSeat, bookOf, report, SCHEMA } from 'tps-bridge/export';
+import { exportGame, hostHalf, shownSeat, bookOf, report, parse, compiledExpr, helpersOf, SCHEMA } from 'tps-bridge/export';
 import { applyGame } from 'tps-bridge/import';
 import { classTable, valueTable } from 'tps-bridge/classes';
 import { puppetRows, SLOW, VALS } from 'tps-bridge/puppet-apply';
@@ -282,38 +283,19 @@ export function rustSettledLine(): string {
 }
 /** THE MODULE, fetched and compiled off the page's thread (Chrome compiles nothing over 8 MB on it), started, and handed to src/sim as the simulation's
  *  one instance. Before anything has asked src/sim for its module. Throws in plain words where there is no module to fetch. */
-/** a failure of the Rust game's own that the page says in its plain words (main.ts shows `message` alone, no stack) */
-export class RustGameError extends Error { constructor(m: string) { super(m); this.name = 'RustGameError'; } }
 export async function rustBoot(): Promise<void> {
-  const t0 = performance.now();
   const say = (line: string) => { const el = typeof document !== 'undefined' ? document.getElementById('loading') : null; if (el) el.textContent = line; };
-  const NOT = 'Without the word the page plays the TypeScript game.';
-  let res: Response;
-  // (the dev server builds the module where it is stale and does not hold the request while it does: 202 and a line to show, asked again every two
-  //  seconds, for as long as the build takes. A static host answers the file or 404.)
-  for (let asked = 0; ; asked++) {
-    try { res = await fetch(new URL('game_face.wasm', location.href), { cache: 'no-store' }); } catch (e) { throw new RustGameError(`?rust=1: the Rust game's module could not be fetched (${String((e as Error)?.message ?? e)}). Is the dev server still running? ${NOT}`); }
-    if (res.status !== 202) break;
-    const line = (await res.text().catch(() => '')).slice(0, 400) || 'Building the Rust game \u2026';
-    say(line); if (asked === 0) console.info(`rust=1: ${line}`);
-    await new Promise(r => setTimeout(r, 2000));
-  }
-  if (!res.ok) { const why = (await res.text().catch(() => '')).slice(0, 900); throw new RustGameError(`?rust=1: there is no Rust game to play here. ${res.status === 404 ? 'This build was made without game_face.wasm (cargo and the wasm32-unknown-unknown target build it: tools/blitz/face-build.ts).' : why} ${NOT}`); }
-  say('loading the Rust game \u2026');
-  let mod: WebAssembly.Module;
-  const t1 = performance.now();
-  if (typeof WebAssembly.compileStreaming === 'function' && (res.headers.get('content-type') ?? '').startsWith('application/wasm')) { RUST_GAME.bytes = Number(res.headers.get('content-length') ?? 0); mod = await WebAssembly.compileStreaming(res); }
-  else { const b = await res.arrayBuffer(); RUST_GAME.bytes = b.byteLength; mod = await WebAssembly.compile(b); }
-  const inst = await WebAssembly.instantiate(mod, { env: { face_roll: () => { throw new Error('rust=1: the Rust game asked a die the page never hands in'); } } });
-  RUST_GAME.fetchMs = t1 - t0; RUST_GAME.compileMs = performance.now() - t1;
+  // (the module asks no die of a page)
+  const M = await fetchFace(say, () => { throw new Error('rust=1: the Rust game asked a die the page never hands in'); });
+  RUST_GAME.bytes = M.bytes; RUST_GAME.fetchMs = M.fetchMs; RUST_GAME.compileMs = M.compileMs;
   // (every export of the face goes through `guard`: a trap stops the game and shows the card; rust/sim's own exports, called a thousand times a frame
   //  by the page's readers, are handed on as they are)
-  { const raw = inst.exports as unknown as Record<string, unknown>, W: Record<string, unknown> = {}; for (const k of Object.keys(raw)) { const f = raw[k]; W[k] = typeof f === 'function' && k.startsWith('face_') ? guard(k, f as (...a: number[]) => number) : f; } X = W as unknown as Face; }
+  { const raw = M.exports as unknown as Record<string, unknown>, W: Record<string, unknown> = {}; for (const k of Object.keys(raw)) { const f = raw[k]; W[k] = typeof f === 'function' && k.startsWith('face_') ? guard(k, f as (...a: number[]) => number) : f; } X = W as unknown as Face; }
   MEM = X.memory; BUF = MEM.buffer;
-  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_line', 'face_ray', 'face_hear', 'face_probe_asks', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new RustGameError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
-  { const no = drawRefused(X as unknown as DrawFace); if (no) throw new RustGameError(`?rust=1: ${no} (tools/blitz/face-build.ts builds this checkout's)`); }
+  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_line', 'face_ray', 'face_hear', 'face_probe_asks', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new FaceError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
+  { const no = drawRefused(X as unknown as DrawFace); if (no) throw new FaceError(`?rust=1: ${no} (tools/blitz/face-build.ts builds this checkout's)`); }
   // (the module and this page's half of the bridge must be of one generation: a module of another reads garbage)
-  if ((X.face_layout?.() >>> 0) !== SCHEMA.layout) throw new RustGameError(`?rust=1: game_face.wasm is of another generation than this page's bridge (its layout ${(X.face_layout?.() ?? 0) >>> 0}, the page's ${SCHEMA.layout}): the checkout's module is stale, tools/blitz/face-build.ts builds this one's`);
+  if ((X.face_layout?.() >>> 0) !== SCHEMA.layout) throw new FaceError(`?rust=1: game_face.wasm is of another generation than this page's bridge (its layout ${(X.face_layout?.() ?? 0) >>> 0}, the page's ${SCHEMA.layout}): the checkout's module is stale, tools/blitz/face-build.ts builds this one's`);
   // STAND-IN: EVERY CLASS OF THE SIMULATION'S FOLDERS GETS ITS OWN NAME BACK (tools/blitz/page-plugin.ts keeps each beside its class). The bridge tells
   // some classes by `constructor.name`, and a minified bundle has renamed them all: a rifle crossed as a plain firearm, and a whole apply (a restart,
   // a load) then made the page's rifle a plain one, whose weapon card threw. On the dev server's bundle the names are already theirs and nothing is
@@ -699,6 +681,8 @@ function shelfIn(S: Held): void {
   let n = 0; for (const b of parts) n += b.length; const all = new Uint8Array(n); n = 0; for (const b of parts) { all.set(b, n); n += b.length; }
   call('face_saves_in', () => hand(all, (p, m) => X!.face_saves_in(S.h, p, m))); RUST_GAME.shelfSent++;
 }
+/** the bridge's own words, for a page check that walks the puppet by the schema (tools/qa/readtrap-page.cjs) */
+export const rustBridge = () => ({ SCHEMA, parse, compiledExpr, helpersOf, bookOf, lists: lists(), knobs: reg() });
 /** THE WHOLE STATE ONTO THE PUPPET (`face_export` → the bridge's whole apply): after a kept game stood again, and for a tool that is about to read the
  *  puppet for something the page does not show (`window.__rust.whole()`). A third of a second, outside any tick. */
 function whole(S: Held): void {

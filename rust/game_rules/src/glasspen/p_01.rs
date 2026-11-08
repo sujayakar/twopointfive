@@ -102,9 +102,6 @@ pub fn round_energy_of(g: &mut crate::game::Game, c_2: CharId) -> f64 {
     g.k.glasspen.default_energy
 }
 
-/// the energy a line-of-fire question about a SIDE is asked with: the model's default, foesThrough being on (glasspen.ts sideShotEnergy)
-pub fn side_shot_energy(g: &crate::game::Game, team: crate::teams::Team) -> Option<f64> { None }
-
 /// the energy a line-of-fire question about THIS man's gun is asked with (glasspen.ts shotEnergy)
 pub fn shot_energy(g: &mut crate::game::Game, c_2: CharId, def: Option<crate::weapons::WeaponId>) -> Option<f64> {
     if !glass_pen_live(g) { return None; }

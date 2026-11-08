@@ -717,7 +717,6 @@ pub struct Game {
     pub sensors: crate::sensors::Sensors,
     pub cpu_smoke: crate::sense::CpuSmoke,
     pub smoke_owned: bool,
-    pub journal: crate::journal::SessionRecorder,
     pub search_probe_n: f64,
     pub time: f64,
     pub dice: Option<crate::math_dice::SimDice>,
@@ -737,8 +736,7 @@ pub struct Game {
     pub aim_target: Option<FixtureId>,
     pub aim_guard: Option<GuardId>,
     pub aim_friend: Option<GuardId>,
-    pub dyn_boxes: Vec<BoxId>,
-    pub dyn_raw: f64,
+    pub dyn_boxes: Vec<AnyBoxId>,
     pub rings: Vec<crate::launcher::Ring>,
     pub shells: Vec<crate::he40::Shell>,
     pub fn2000: bool,
@@ -848,9 +846,9 @@ pub struct Game {
     /// INVENTED: a second cast of the squad is on Game (squadcast::with_cast): seats.ts:240 CAST_VIEW
     pub in_cast: bool,
     /// INVENTED: the rows box_frame has dealt since boxes_frame_reset
-    pub box_frame_rows: Vec<BoxId>,
+    pub box_frame_rows: Vec<FrameBoxId>,
     /// INVENTED: rows box_frame may deal again
-    pub box_frame_free: Vec<BoxId>,
+    pub box_frame_free: Vec<FrameBoxId>,
     /// INVENTED: what the bridge carries of poses that have no place in the pool: Pose.at is Pose::LOOSE + the row
     pub loose_poses: Vec<crate::anim_skeleton::LoosePose>,
     /// what this step did that the host shows: out-events.json. The host drains it (the face clears it before a step)
@@ -911,7 +909,6 @@ impl Game {
             sensors: crate::sensors::Sensors::blank(),
             cpu_smoke: crate::sense::CpuSmoke::blank(),
             smoke_owned: false,
-            journal: crate::journal::SessionRecorder::blank(),
             search_probe_n: 0.0,
             time: 0.0,
             dice: None,
@@ -932,7 +929,6 @@ impl Game {
             aim_guard: None,
             aim_friend: None,
             dyn_boxes: Vec::new(),
-            dyn_raw: 0.0,
             rings: Vec::new(),
             shells: Vec::new(),
             fn2000: true,
@@ -1180,14 +1176,14 @@ impl Default for GameBeaconsItem { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: inline at src/game/game.ts:937 Game.fx, src/game/game.ts:937)
 #[derive(Clone, Copy, Debug)]
 pub struct GameFxItem {
-    pub box_: BoxId,
+    pub box_: FrameBoxId,
     pub ttl: f64,
 }
 impl GameFxItem {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         GameFxItem {
-            box_: BoxId(0),
+            box_: FrameBoxId(0),
             ttl: 0.0,
         }
     }
@@ -3087,6 +3083,7 @@ impl Game {
 #[derive(Clone, Debug)]
 pub struct Tabs {
     pub boxes: Tab<BoxId, crate::scene_boxes::Box>,
+    pub frame_boxes: Tab<FrameBoxId, crate::scene_boxes::Box>,
     pub clip: Tab<ClipId, crate::anim_gltf::Clip>,
     pub anim_gltf_mesh_data: Tab<AnimGltfMeshDataId, crate::anim_gltf::MeshData>,
     pub anim_gltf_cast_variant: Tab<AnimGltfCastVariantId, crate::anim_gltf::CastVariant>,
@@ -3137,10 +3134,18 @@ pub struct Tabs {
     pub guards_standoff: Tab<GuardsStandoffId, crate::guards::Standoff>,
     pub game_talk: Tab<GameTalkId, crate::game::Talk>,
 }
+impl core::ops::Index<AnyBoxId> for Tabs {
+    type Output = crate::scene_boxes::Box;
+    #[inline] fn index(&self, id: AnyBoxId) -> &Self::Output { match id { AnyBoxId::World(b) => &self.boxes[b], AnyBoxId::Frame(b) => &self.frame_boxes[b] } }
+}
+impl core::ops::IndexMut<AnyBoxId> for Tabs {
+    #[inline] fn index_mut(&mut self, id: AnyBoxId) -> &mut Self::Output { match id { AnyBoxId::World(b) => &mut self.boxes[b], AnyBoxId::Frame(b) => &mut self.frame_boxes[b] } }
+}
 impl Tabs {
     pub fn blank() -> Self {
         Tabs {
             boxes: Tab::new(),
+            frame_boxes: Tab::new(),
             clip: Tab::new(),
             anim_gltf_mesh_data: Tab::new(),
             anim_gltf_cast_variant: Tab::new(),
@@ -3287,7 +3292,6 @@ pub struct Mods {
     pub flinch: crate::flinch::FlinchMod,
     pub rescue: crate::rescue::RescueMod,
     pub rescuecheck: crate::rescuecheck::RescuecheckMod,
-    pub planlay: crate::planlay::PlanlayMod,
     pub seenwalk: crate::seenwalk::SeenwalkMod,
     pub rollback: crate::rollback::RollbackMod,
     pub savestate: crate::savestate::SavestateMod,
@@ -3461,7 +3465,6 @@ impl Mods {
             flinch: crate::flinch::FlinchMod::blank(),
             rescue: crate::rescue::RescueMod::blank(),
             rescuecheck: crate::rescuecheck::RescuecheckMod::blank(),
-            planlay: crate::planlay::PlanlayMod::blank(),
             seenwalk: crate::seenwalk::SeenwalkMod::blank(),
             rollback: crate::rollback::RollbackMod::blank(),
             savestate: crate::savestate::SavestateMod::blank(),
@@ -3597,7 +3600,6 @@ pub struct Stats {
     pub darkdoor: crate::darkdoor::DarkdoorStats,
     pub startle: crate::startle::StartleStats,
     pub flinch: crate::flinch::FlinchStats,
-    pub planlay: crate::planlay::PlanlayStats,
     pub sprintdoor: crate::sprintdoor::SprintdoorStats,
     pub seenwalk: crate::seenwalk::SeenwalkStats,
     pub wet: crate::wet::WetStats,

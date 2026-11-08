@@ -1,4 +1,4 @@
-// EVERY FILE THE PAGE SAVES goes out through this one door (2026-10-27): a recorder's take, a benchmark's result, a session journal, an
+// EVERY FILE THE PAGE SAVES goes out through this one door (2026-10-27): a recorder's take, a benchmark's result, an
 // exported checkpoint. It began as the one place the page clicked an <a download>, with a listener (`SAVED.sink`) told of each file
 // so that a hosted build's backend could keep the same one (the maintainer: "can you make it so benchmark results upload automatically?", "we should do that
 // for everything that gets downloaded"). THEN, the same day: "we should get rid of local downloads entirely", and his pick for a file that cannot go: no
@@ -15,7 +15,7 @@
 // A PAGE IS ONE BUNDLE: the replay pages carry no door at all.
 // THIS MODULE IMPORTS NOTHING: ui/ saves through it.
 /** every kind of file the door knows, as a list (the type below is made of it; tools/qa/savefile-check.ts walks it, so a kind added here is watched at once) */
-export const SAVED_KINDS = ['perf', 'bench', 'price', 'session', 'checkpoint', 'modelerr', 'capture'] as const;
+export const SAVED_KINDS = ['perf', 'bench', 'price', 'checkpoint', 'modelerr', 'capture'] as const;
 export type SavedKind = typeof SAVED_KINDS[number];
 /** a file as it went out. `meta`: short facts of it for whoever keeps it (the build's commit, what a take was of), never the file again */
 export interface SavedFile { kind: SavedKind; name: string; blob: Blob; meta?: Record<string, string> }

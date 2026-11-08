@@ -14,7 +14,7 @@ use crate::Num;
 
 // ---------------------------------------------------------------- what the TypeScript reads off an array by a number
 /// a box's row. `g.col.boxes: Vec<BoxId>` names it, `g.tab.boxes` holds it
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
+fn seam_box<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 /// `g.level.boxes[bi]`: undefined off the list (a negative, fractional or NaN index included). That list and `g.col.boxes` are one array in the TypeScript (game.ts:1219): the box at place bi
 fn box_at(g: &Game, bi: f64) -> Option<BoxId> {
     let ix = bi as usize;
@@ -130,6 +130,7 @@ pub fn glass_break_asking<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game
 
 /// a question or a rule of the module's, over this game's block and the copy of its box world as it stands: `fn_` gets the block's slot and the world's, and asks `::sim::panes_*` under the context set here (glassbreak.ts GlassBreak.ask)
 pub fn glass_break_ask<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> T) -> T {
+    crate::shards::glass_shards_hook(g);
     crate::scene_collision::window(g, &mut |g| {
         crate::scene_collision::rules_statics(g);
         if !crate::scene_collision::standing(g) { panic!("glass: the box world's copy will not stand for the rule: rust/sim/src/panes.rs has nothing to ask"); }

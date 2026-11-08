@@ -40,7 +40,7 @@ export const HOLDS: readonly { readonly list: string; readonly names: readonly s
   // a half; at the player's walk he is through it in 0.7 s) and noshove's room keeper (rule off, the entry's timing stands a man across the player and the
   // keeper walks out of his way; at the player's walk the entry lands otherwise). Their mend lines are green with the pace on (TPS_PACING=1 in front shows it:
   // only the fault arm goes red).
-  { list: 'PACE_AS_IT_WAS', names: ['leafstall', 'noshove'], holds: [atStandUp('TPS_PACING', 'TEAMPACE', 'pacing')] },
+  { list: 'PACE_AS_IT_WAS', names: ['noshove'], holds: [atStandUp('TPS_PACING', 'TEAMPACE', 'pacing')] },
 ];
 
 /** whether a name written in the table (one of its three ways) is this probe's */

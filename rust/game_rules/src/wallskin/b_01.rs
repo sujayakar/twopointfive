@@ -1,7 +1,7 @@
 //! WHAT IS PAINTED ON A WALL GOES WITH THE WALL (src/game/wallskin.ts), whole. A sheet (an authored static that is drawn and nothing else) is drawn where
 //! something solid still stands behind it: over an opened cell it is cut square, and what stands of it goes onto the frame's list as boxes of its own
 //! paint, keyed MKEY.skin. No flag of any box is written; the authored sheet is left out of the picture by the world's `undrawn` (the host reads this
-//! lane's `out`). The pieces are on the frame's list, which the tick's own counts read (`g.dyn_raw`, the fog's `rig_from` / `rig_to`, the frame's room):
+//! lane's `out`). The pieces are on the frame's list, which the tick's own counts read (the fog's `rig_from` / `rig_to`):
 //! so the lane runs here as it runs in the TypeScript.
 //!
 //! WHERE THE RUST IS NOT A PLAIN COPY:
@@ -124,7 +124,7 @@ pub fn wall_skin_opened(g: &mut crate::game::Game, b: &crate::edge_look::BreakLi
 
 /// The level put back: every sheet whole again. (src/game/wallskin.ts:155 WallSkin.clear)
 pub fn wall_skin_clear(g: &mut crate::game::Game) {
-    let gone: Vec<BoxId> = g.destr.walls.skins.cut.values().flat_map(|l| l.iter().copied()).collect();
+    let gone: Vec<FrameBoxId> = g.destr.walls.skins.cut.values().flat_map(|l| l.iter().copied()).collect();
     for b in gone { crate::scene_boxes::box_let_go(g, b); }
     let s = &mut g.destr.walls.skins;
     s.cut.clear(); s.out.clear(); s.laid.clear(); s.seats.clear(); s.on.clear(); s.dirty.clear(); s.marked.clear();
@@ -143,12 +143,11 @@ pub fn wall_skin_count(g: &mut crate::game::Game) {
 /// Once a frame, before the frame's box list is made again: what the list can still take of this lane's. (src/game/wallskin.ts:160 WallSkin.update)
 pub fn wall_skin_update(g: &mut crate::game::Game) {
     if g.destr.walls.skins.cut.is_empty() && g.destr.walls.skins.dirty.is_empty() { return; }
-    let (last, slack) = (g.destr.walls.skins.last, g.k.wallskin.box_slack);
-    if let Some(r) = crate::edge_look::frame_room(g, last, slack, None) { g.destr.walls.skins.room = r; }
+    g.destr.walls.skins.room = crate::edge_look::frame_room(g, g.k.wallskin.box_slack, None);
 }
 
 /// What stands of the cut sheets, into the frame's dynamic list, and the world told which authored boxes to leave out. (src/game/wallskin.ts:166 WallSkin.boxes)
-pub fn wall_skin_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn wall_skin_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let on = g.k.wallskin.on && !g.destr.walls.skins.failed;
     if !on && (!g.destr.walls.skins.cut.is_empty() || !g.destr.walls.skins.dirty.is_empty()) { let f = g.destr.walls.skins.failed; wall_skin_clear(g); g.destr.walls.skins.failed = f; }   // (put down under a standing game: the bands as authored)
     if on && !g.destr.walls.skins.was {   // (raised under a standing game: every wall that has opened is asked again)
@@ -164,16 +163,15 @@ pub fn wall_skin_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
     g.destr.walls.skins.out.clear();
     if !g.destr.walls.skins.cut.is_empty() {
         let slack = g.k.wallskin.box_slack;
-        let now = crate::edge_look::frame_room(g, 0.0, slack, Some(out.len() as f64));
-        let room0 = g.destr.walls.skins.room;
-        let room = m::min(room0, now.unwrap_or(room0));   // (… and no more than the list has left as it stands now)
+        let now = crate::edge_look::frame_room(g, slack, Some(out.len() as f64));
+        let room = m::min(g.destr.walls.skins.room, now);   // (… and no more than the list has left as it stands now)
         let mut n = 0.0;
         let col = g.col.boxes.clone();
         for j in g.destr.walls.skins.cut.keys() {
             let l = g.destr.walls.skins.cut.get(j).cloned().unwrap_or_default();
             // (a sheet with nothing left standing needs no room to stay out)
             if !crate::scene_boxes::box_drawn(g, &col, col[j.0 as usize]) || (!l.is_empty() && n + l.len() as f64 > room) { continue; }
-            for &p in l.iter() { out.push(p); }
+            for &p in l.iter() { out.push(p.into()); }
             n += l.len() as f64; g.destr.walls.skins.out.add(j);
         }
         g.destr.walls.skins.last = n;
@@ -295,9 +293,8 @@ pub fn wall_skin_recut(g: &mut crate::game::Game, j: f64) {
     let whole = |r: &[Rect]| r.len() == 1 && r[0][0] <= -hu + EPS && r[0][1] >= hu - EPS && r[0][2] <= -hv + EPS && r[0][3] >= hv - EPS;
     // what stands behind may END RAGGED (a breakable's standing piece under a cut record, with the cut switch up): the part of the sheet on such a piece
     // takes the outline of that piece's face
-    let cut_on = crate::scene_cut::cut_boxes_on(g);
     let mut parts: Vec<Rect> = Vec::new(); let mut rag: Vec<(Bx, Seat)> = Vec::new();
-    if cut_on { for q in seats.iter() {
+    for q in seats.iter() {
         let Some(b) = brk_id(g, q.k) else { continue; };
         let (live, slots) = { let w = &g.tab.wallbreak_breakable[b]; (w.live, w.slots.clone()) };
         let mut i = 0.0;
@@ -310,11 +307,11 @@ pub fn wall_skin_recut(g: &mut crate::game::Game, j: f64) {
             let r: Rect = [m::min(lo[ax(a)], hi[ax(a)]), m::max(lo[ax(a)], hi[ax(a)]), m::min(lo[1], hi[1]), m::max(lo[1], hi[1])];
             if m::min(r[1], hu) - m::max(r[0], -hu) > EPS && m::min(r[3], hv) - m::max(r[2], -hv) > EPS { parts.push(r); rag.push((p.clone(), *q)); }
         }
-    } }
+    } 
     let mut rects: Vec<Rect> = if open.iter().any(|l| !l.is_empty()) || !parts.is_empty() { standing(hu, hv, &on, &near, &open, Some(false), Some(&parts)) } else { vec![[-hu, hu, -hv, hv]] };
     if whole(&rects) && parts.is_empty() { uncut(g, j); return; }   // (something solid stands behind every part of it that lay on anything: the authored box, whole)
     let marked = s.marks.as_ref().map(|x| !x.is_empty()).unwrap_or(false); let base: Vec<CutPlane> = s.cut.clone().unwrap_or_default();
-    if marked && (!cut_on || base.len() as f64 + 4.0 > crate::scene_cut::MAX_CUT_PLANES) {   // (its marks are laid out on the whole box and no record can be drawn, or has room: left as it was)
+    if marked && base.len() as f64 + 4.0 > crate::scene_cut::MAX_CUT_PLANES {   // (its marks are laid out on the whole box and no record can be drawn, or has room: left as it was)
         if !g.destr.walls.skins.marked.has(crate::Num(j)) { g.destr.walls.skins.marked.add(crate::Num(j)); g.destr.walls.skins.stats.uncut += 1.0; }
         return;
     }
@@ -391,6 +388,6 @@ pub fn wall_skin_recut(g: &mut crate::game::Game, j: f64) {
     }
     if !bit && area >= 4.0 * hu * hv - EPS { uncut(g, j); return; }   // (split at a ragged piece's bounds, and no plane of it bites the sheet: the authored box, whole)
     g.destr.walls.skins.laid.set(crate::Num(j), kept);
-    let rows: Vec<BoxId> = pieces.into_iter().map(|p| crate::scene_boxes::box_kept(g, p)).collect();
+    let rows: Vec<FrameBoxId> = pieces.into_iter().map(|p| crate::scene_boxes::box_kept(g, p)).collect();
     if let Some(old) = g.destr.walls.skins.cut.set(crate::Num(j), rows) { for b in old { crate::scene_boxes::box_let_go(g, b); } }
 }

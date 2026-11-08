@@ -448,8 +448,6 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   `look`; `probes.ts look`.
 - **Hard, the short list, the par clock** where the level has them: `HARD_AT` / `SQUAD_HARD`, `src/scene/picks.ts`,
   `scenarios.par` set from 24 measured seeds.
-- **A new KIND of file the page fetches** goes into the pack in `tools/build-one.ts` in the same change (level files and
-  mission pictures are packed by folder). **check** `bun run build:one && node tools/qa/onefile-page.cjs`.
 
 ## 9. Measure it, then say it
 

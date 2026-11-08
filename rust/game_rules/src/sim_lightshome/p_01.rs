@@ -119,11 +119,6 @@ pub fn fixture_stagger(g: &crate::game::Game, id: FixtureId) -> f64 {
     lights_read(g).stagger[fix_i(g, id)]
 }
 
-/// The mains, read. (lightshome.ts Mains.constructor)
-pub fn mains_new(g: &crate::game::Game, st: crate::Opaque) -> crate::sim_lightshome::Mains {
-    Mains { st }
-}
-
 /// (lightshome.ts Mains.active)
 pub fn mains_active(g: &crate::game::Game) -> bool {
     lights_read(g).mains & M_ACTIVE != 0
@@ -267,7 +262,7 @@ pub fn light_home_new(g: &crate::game::Game, st: crate::Opaque) -> crate::sim_li
         panic!("two stores of the lights over one game's block: a part of a block is one store's");
     }
     head.homes |= bit;
-    let mains = mains_new(g, st);
+    let mains = Mains { st };
     let fresh = light_in().fresh;
     light_home_in(g, fresh, None, None, None, None, None);
     LightHome { mains, lamps: Vec::new(), st }

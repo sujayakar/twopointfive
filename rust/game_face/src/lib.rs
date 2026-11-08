@@ -182,7 +182,11 @@ pub extern "C" fn face_ray(h: u32, ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, 
 /// how much of it carries, and 2 direct + 1 routed. A way round is searched for once a tick between the same two places of the floor; the game remembers none of it.
 #[no_mangle]
 pub extern "C" fn face_hear(h: u32, sx: f64, sy: f64, sz: f64, dx: f64, dy: f64, dz: f64) {
-    let p = WAYS.with(|k| { let mut k = k.borrow_mut(); if k.0 != h { *k = (h, Default::default()); } asked(h, |w| w.hear_kept(&mut k.1, [sx, sy, sz], [dx, dy, dz])) });
+    // (taken out for the question, so a panic inside leaves no borrow behind)
+    let mut k = WAYS.with(|k| std::mem::take(&mut *k.borrow_mut()));
+    if k.0 != h { k = (h, Default::default()); }
+    let p = asked(h, |w| w.hear_kept(&mut k.1, [sx, sy, sz], [dx, dy, dz]));
+    WAYS.with(|w| *w.borrow_mut() = k);
     let how = if p.direct { 2.0 } else { 0.0 } + if p.routed { 1.0 } else { 0.0 };
     out([p.path_len, p.via[0], p.via[1], p.via[2], p.apparent[0], p.apparent[1], p.apparent[2], p.muffle, p.carry, how].iter().flat_map(|v| v.to_le_bytes()).collect());
 }
@@ -450,7 +454,7 @@ pub extern "C" fn face_time(h: u32) -> f64 {
 }
 #[no_mangle]
 pub extern "C" fn face_rows(h: u32) -> usize {
-    with(h, |x| x.g.tab.boxes.len())
+    with(h, |x| x.g.tab.boxes.len() + x.g.tab.frame_boxes.len())
 }
 #[no_mangle]
 pub extern "C" fn face_parts() -> usize {

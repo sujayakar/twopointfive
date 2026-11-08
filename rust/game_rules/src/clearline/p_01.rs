@@ -19,15 +19,9 @@ fn lead_of_is(lead_of: Option<LeadsBy>, by: LeadsBy) -> bool {
         _ => false,
     }
 }
-/// The line he says with a friend in his line and nothing to do about it. (clearline.ts:362, 393)
-fn my_line(g: &Game, by: LeadsBy) -> String {
-    match by {
-        LeadsBy::Player => String::from("no shot — you're in my line!"),
-        LeadsBy::Guard(b) => alloc::format!("no shot — {}, my line!", g.gd[b].callsign),
-    }
-}
+/// What a man is doing about it this moment: nothing, the row being cut. (clearline.ts clearLineOf: a row of the call surface until the page's side goes)
+pub fn clear_line_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::clearline::ClearLineOf> { None }
 
-/// His row of the rule's memory, made on first asking. (clearline.ts memOf)
 pub fn mem_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::clearline::Mem {
     g.m.clearline.mem.get_or_insert_with(gd, || Mem {
         since: -100.0,
@@ -89,20 +83,6 @@ pub fn off_seg(p: V3, a: V3, b: V3) -> [f64; 2] {
     [m::hyp2(a[0] + dx * t - p[0], a[2] + dz * t - p[2]), t]
 }
 
-/// Sam is in this man's line only by the wider lane a player on the move is owed. (clearline.ts samAtEdge)
-pub fn sam_at_edge(g: &mut crate::game::Game, gd: GuardId, to: V3) -> bool {
-    let c = g.gd[gd].ch;
-    let muzzle = g.ch[c].muzzle;
-    if crate::roomfight::room_fight_friend_in_line(g, muzzle, to, gd, Some(true)).is_some() {
-        return false;
-    }
-    let shoulder = match g.ch[c].bones.get(crate::character::Bone::UpperArmR) {
-        Some(&b) => b,
-        None => v3::add(g.ch[c].pos, [0.0, 1.4, 0.0]),
-    };
-    crate::roomfight::room_fight_friend_in_line(g, shoulder, to, gd, Some(true)).is_none()
-}
-
 /// The friend in his line leads on that man: nearer him and walking at him, or was inside `secs`. (clearline.ts leads)
 pub fn leads(g: &mut crate::game::Game, gd: GuardId, by: crate::clearline::LeadsBy, tgt: GuardId, to: V3, secs: f64) -> bool {
     let row = mem_of(g, gd);
@@ -144,30 +124,6 @@ pub fn leads(g: &mut crate::game::Game, gd: GuardId, by: crate::clearline::Leads
     }
     let lead_t = mem_of(g, gd).lead_t;
     t - lead_t < secs && t >= lead_t
-}
-
-/// The player is on the move, now or inside the last `secs` seconds; one record a game. (clearline.ts samMoves)
-pub fn sam_moves(g: &mut crate::game::Game, secs: f64) -> bool {
-    let t = g.time;
-    let f = g.pl[g.player].ch;
-    let (f_pos, f_vel) = (g.ch[f].pos, g.ch[f].vel);
-    let asked = m::hyp2(f_vel[0], f_vel[2]) >= LEAD_V;
-    let s = match g.m.clearline.sam_at.as_mut() {
-        Some(s) if !(t < s.p[2]) => s,
-        _ => {
-            g.m.clearline.sam_at = Some(ClearlineModSamAtValue { p: [f_pos[0], f_pos[2], t], move_t: if asked { t } else { -100.0 } });
-            return asked;
-        }
-    };
-    let dt = t - s.p[2];
-    if dt > 0.1 {
-        let moved = if dt < 1.5 { m::hyp2(f_pos[0] - s.p[0], f_pos[2] - s.p[1]) / dt >= LEAD_V } else { asked };
-        if moved {
-            s.move_t = t;
-        }
-        s.p = [f_pos[0], f_pos[2], t];
-    }
-    t - s.move_t < secs && t >= s.move_t
 }
 
 /// Every body on the floor but his own, as a list: nothing between the generator's yields writes, so laying it out at once reads the same floor. (clearline.ts bodies)
@@ -390,286 +346,20 @@ pub fn end_it(g: &mut crate::game::Game, gd: GuardId, rest: Option<f64>) {
 /// What he is doing about a masked shot right now, if anything, and the end of it. The row itself. (clearline.ts doing)
 pub fn doing<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> Option<&'g mut crate::clearline::Doing> {
     let d = g.m.clearline.mem.get(gd)?.doing?; // (what it held as asked: to read; every write goes to the row)
-    let k = g.k.clearline;
     let op = crate::roomfight::room_fight_op_of(g, gd);
     let t = g.time;
-    let gone = !k.on
-        || g.gd[gd].state == crate::game::GuardState::Dead
-        || g.gd[gd].script.is_none()
-        || op.is_none()
-        || !g.fight.live
-        || g.gd[d.of].state == crate::game::GuardState::Dead
-        || t < d.t0
-        || match crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) {
-            Some(a) => g.tab.orders_assignment[a].t0 != d.order_t,
-            None => true,
-        }
-        || (d.what != What::Step && crate::roomfight::room_fight_short(g, gd));
-    if gone {
-        end_it(g, gd, None);
-        return None;
-    }
-    if d.what == What::Step {
-        if op.and_then(|o| g.tab.roomfight_op[o].tgt) == Some(d.of) {
-            live(g, gd).on_t = t;
-        } else if t - d.on_t > k.lose {
-            end_it(g, gd, None);
-            return None;
-        }
-        if t > d.eta && flat(g.ch[g.gd[gd].ch].pos, d.spot) >= 0.5 {
-            end_it(g, gd, Some(3.0));
-            return None;
-        }
-        return Some(live(g, gd));
-    }
-    if t - d.t0 > k.hold_max {
-        end_it(g, gd, Some(k.rest));
-        return None;
-    }
-    if t >= d.until {
-        let to = aim_of(g, d);
-        if masked(g, gd, d.from, to) {
-            live(g, gd).until = t + 0.5;
-        } else {
-            end_it(g, gd, None);
-            return None;
-        }
-    }
-    Some(live(g, gd))
-}
-
-/// orders.ts: this man's stuck clocks wait. (clearline.ts clearLineLive)
-pub fn clear_line_live(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    g.k.clearline.on && doing(g, gd).is_some()
+    end_it(g, gd, None);
+    return None;
 }
 
 /// orders.ts, as it poses him: where his feet go while this lasts; None: as ordered. (clearline.ts clearLineFeet)
 pub fn clear_line_feet(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::clearline::ClearLineFeet> {
-    if !g.k.clearline.on {
-        return None;
-    }
-    let d = *doing(g, gd)?; // (what it held as asked: to read; every write goes to the row)
-    let k = g.k.clearline;
-    let t = g.time;
-    let p = g.ch[g.gd[gd].ch].pos;
-    let face = v3::yaw_to(p, g.ch[g.gd[d.of].ch].pos);
-    let there = flat(p, d.spot) < 0.5;
-    if d.what != What::Kneel && t >= d.look_t {
-        live(g, gd).look_t = t + 0.2;
-        let mine = match crate::roomfight::room_fight_op_of(g, gd) {
-            Some(o) => g.tab.roomfight_op[o].tgt == Some(d.of),
-            None => false,
-        };
-        let to = aim_of(g, d);
-        if !there {
-            if mine && spot_ok(g, gd, [p[0], 0.0, p[2]], to) {
-                let row = live(g, gd);
-                row.what = What::Step;
-                row.spot = [p[0], 0.0, p[2]];
-                row.until = m::INF;
-                row.eta = m::INF;
-                row.good_t = t;
-                g.stats.clearline.planted += 1;
-            }
-        } else if d.what == What::Step {
-            if !mine || shot_from(g, gd, p, to) || crate::roomfight::room_fight_friend_in_line(g, [p[0], 1.4, p[2]], to, gd, None).is_some() {
-                live(g, gd).good_t = t;
-            } else if t - d.good_t > k.stale {
-                end_it(g, gd, Some(3.0));
-                return None;
-            }
-        }
-    }
-    let d = *live(g, gd); // (again: a plant above changed what he is doing)
-    if d.what == What::Kneel {
-        return Some(ClearLineFeet { goal: d.spot, speed: 0.0, face: None, strafe: false, crouch: true });
-    }
-    Some(ClearLineFeet { goal: d.spot, speed: m::min(k.pace, g.k.pace.max), face: Some(face), strafe: true, crouch: d.what == What::Cover && there })
-}
-
-/// A cover spot is a place a man may stand. (clearline.ts coverOk)
-pub fn cover_ok(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
-    if crate::roomfight::room_fight_funnel_of(g, p).is_some() {
-        return false;
-    }
-    let body_m = g.k.clearline.body_m;
-    for b in bodies(g, gd) {
-        if flat(b, p) < body_m {
-            return false;
-        }
-    }
-    for i in 0..g.guards.len() {
-        let o = g.guards[i];
-        if o == gd {
-            continue;
-        }
-        if let Some(d) = live_doing(g, o) {
-            if d.what != What::Kneel && flat(d.spot, p) < 0.8 {
-                return false;
-            }
-        }
-    }
-    true
+    return None;
 }
 
 /// roomfight.ts (tickOp): this frame his shot at `tgt` is masked by a friend. True: this rule has it. (clearline.ts clearLineBlocked)
 pub fn clear_line_blocked(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId, to: V3, by: crate::clearline::LeadsBy) -> bool {
-    let k = g.k.clearline;
-    if !k.on || g.gd[gd].script.is_none() {
-        return false;
-    }
-    let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) else { return false };
-    let t = g.time;
-    if t < mem_of(g, gd).rest_until {
-        return false;
-    }
-    let mut ladder = !crate::roomfight::room_fight_short(g, gd);
-    if let LeadsBy::Guard(b) = by {
-        let v = g.ch[g.gd[b].ch].vel;
-        if m::hyp2(v[0], v[2]) > 0.5 {
-            return false;
-        }
-        let on_him = match crate::roomfight::room_fight_op_of(g, b) {
-            Some(o) => g.tab.roomfight_op[o].tgt == Some(tgt),
-            None => false,
-        };
-        if on_him && t >= g.gd[b].dazzled_until {
-            return false;
-        }
-        ladder = ladder && g.tab.orders_assignment[a].arrived;
-    }
-    let is_player = matches!(by, LeadsBy::Player);
-    g.stats.clearline.blocked += 1;
-    let row = mem_of(g, gd);
-    if t - row.seen_t > 0.5 || t < row.seen_t {
-        row.since = t;
-    }
-    if t - row.seen_t > 0.15 || t < row.seen_t || row.run_of != Some(tgt) {
-        row.run_t = t;
-        row.run_of = Some(tgt);
-    }
-    row.seen_t = t;
-    let c = g.ch[g.gd[gd].ch].pos;
-    let moves = k.still > 0.0 && is_player && sam_moves(g, k.still) && !(k.still_far > 0.0 && flat(c, g.ch[g.gd[tgt].ch].pos) <= k.still_far);
-    let mut d = doing(g, gd).map(|x| *x); // (what it held as asked: to read; every write goes to the row)
-    if let Some(x) = d {
-        if x.of != tgt {
-            end_it(g, gd, None);
-            d = None;
-        }
-    }
-    if let Some(x) = d {
-        if t < x.ask_t {
-            return true;
-        }
-        live(g, gd).ask_t = t + k.again;
-        if x.what == What::Cover {
-            return true;
-        }
-        if x.what == What::Step && t <= x.eta && flat(c, x.spot) > 0.25 && spot_ok(g, gd, x.spot, to) {
-            return true;
-        }
-    } else {
-        let row = mem_of(g, gd);
-        if t - row.since < k.after || t < row.try_t {
-            return true;
-        }
-        let run_t = row.run_t;
-        if k.after_edge > k.after && is_player && t - run_t < k.after_edge && sam_at_edge(g, gd, to) {
-            return true;
-        }
-    }
-    if crate::silent::silent_holds_round(g, gd, tgt) {
-        return false;
-    }
-    let kneeling = matches!(d, Some(x) if x.what == What::Kneel);
-    if moves {
-        if kneeling {
-            return true;
-        }
-        g.stats.clearline.moving += 1;
-        cue(g, gd, "no shot — you're in my line!");
-        look_later(g, gd, d.is_some(), t + k.again);
-        return false;
-    }
-    if k.hold_behind > 0.0 && leads(g, gd, by, tgt, to, k.hold_behind) {
-        if kneeling {
-            return true;
-        }
-        g.stats.clearline.behind += 1;
-        let line = my_line(g, by);
-        cue(g, gd, &line);
-        look_later(g, gd, d.is_some(), t + k.again);
-        return false;
-    }
-    let who = match by {
-        LeadsBy::Player => String::from("Player"),
-        LeadsBy::Guard(b) => g.gd[b].callsign.clone(),
-    };
-    if let Some(s) = find_spot(g, gd, to) {
-        let walk = m::hyp2(s.along, s.side);
-        let step = fresh(g, gd, tgt, to, a, What::Step, s.p, walk, m::INF);
-        mem_of(g, gd).doing = Some(step);
-        g.stats.clearline.steps += 1;
-        if s.along > m::abs(s.side) {
-            g.stats.clearline.up += 1;
-        }
-        note(g, gd, NoteWhat::Step, &who, Some(s.p), Some(walk));
-        let line = if s.along > m::abs(s.side) {
-            "blocked — moving up."
-        } else if -s.along > m::abs(s.side) {
-            "blocked — stepping back."
-        } else if s.side > 0.0 {
-            "blocked — stepping right."
-        } else {
-            "blocked — stepping left."
-        };
-        cue(g, gd, line);
-        return true;
-    }
-    if kneeling {
-        return true;
-    }
-    if !ladder {
-        look_later(g, gd, d.is_some(), t + k.again);
-        return false;
-    }
-    if crate::scene_collision::shot_blocked(g, [c[0], 1.4, c[2]], to, None, None) {
-        look_later(g, gd, d.is_some(), t + k.again);
-        return false;
-    }
-    let tgt_pos = g.ch[g.gd[tgt].ch].pos;
-    if let Some(cov) = crate::suppression::cover_from(g, gd, tgt_pos) {
-        if cover_ok(g, gd, cov) {
-            let walk = flat(c, cov);
-            let cover = fresh(g, gd, tgt, to, a, What::Cover, cov, walk, t + walk / m::max(0.5, k.pace) + k.cover_secs);
-            mem_of(g, gd).doing = Some(cover);
-            g.stats.clearline.covers += 1;
-            note(g, gd, NoteWhat::Cover, &who, Some(cov), Some(walk));
-            cue(g, gd, "no shot — getting off the line.");
-            return true;
-        }
-    }
-    if crate::roomfight::room_fight_funnel_of(g, c).is_none() {
-        let knee = fresh(g, gd, tgt, to, a, What::Kneel, [c[0], 0.0, c[2]], 0.0, t + 0.5);
-        mem_of(g, gd).doing = Some(knee);
-        g.stats.clearline.kneels += 1;
-        note(g, gd, NoteWhat::Kneel, &who, None, None);
-        let line = my_line(g, by);
-        cue(g, gd, &line);
-        return true;
-    }
-    g.stats.clearline.nothing += 1;
-    look_later(g, gd, d.is_some(), t + k.again);
-    false
-}
-
-/// `M.tryT = …; if (D) endIt(g, gd, M)`, the rule's way of giving a look up. (clearline.ts:358, 363, 378, 379, 396)
-fn look_later(g: &mut Game, gd: GuardId, was_doing: bool, try_t: f64) {
-    mem_of(g, gd).try_t = try_t;
-    if was_doing {
-        end_it(g, gd, None);
-    }
+    return false;
 }
 
 /// A new step / cover / knee on `tgt`. (clearline.ts:366 fresh)
@@ -697,12 +387,6 @@ fn fresh(g: &mut Game, gd: GuardId, tgt: GuardId, to: V3, a: OrdersAssignmentId,
         good_t: t,
         head: to[1] - chest_y > 0.2,
     }
-}
-
-/// What a man is doing about it this moment. (clearline.ts clearLineOf)
-pub fn clear_line_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::clearline::ClearLineOf> {
-    let d = if g.k.clearline.on { doing(g, gd) } else { None }?;
-    Some(ClearLineOf { what: d.what, spot: d.spot, of: d.of })
 }
 
 #[cfg(test)]

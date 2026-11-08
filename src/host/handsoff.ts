@@ -1,6 +1,6 @@
 // THE HANDS-OFF PLAYER — a staged room clear played from its first step to its end with nobody at the keys: Sam walked along the nav grid's path by W A S D, the cursor
 // put on a door and the quick key pressed (the squad stacks; once they stand, the key that sends them in — enter() — and the squad picks its entry — autopilot.ts), his rifle on whoever the picture
-// shows him, and a hunt for whoever is left. It is the page's twin of the tallies' 'b' hand (tools/qa/command-tally.ts): what it TELLS the game goes through the real
+// shows him, and a hunt for whoever is left. It is the page's twin of the old tally's 'b' hand: what it TELLS the game goes through the real
 // keys, the real buttons and the real cursor, written into the host's Input before the tick samples it (game/cmd.ts) — so the tick's record, the run tape and the
 // picture's reticle carry it as they carry a person's hands, and nothing in the game knows the difference.
 //   WHO USES IT: the benchmark's scenes (ui/bench.ts: a fight on a real floor, watched through the game's own camera) and tools/qa/bench-seeds.ts (the same hands

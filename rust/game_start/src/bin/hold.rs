@@ -40,9 +40,9 @@ use game::game::GuardState;
 use game_start::play::{dist, Button, Opts, Play};
 use std::io::{Read, Write};
 
-const DEFAULT_LEVELS: [&str; 24] = ["barracks:clear", "block:clear", "block-squads:clear", "compound:clear", "defuse:clear", "depot:clear", "floodlit:clear", "glasshouse:clear",
+const DEFAULT_LEVELS: [&str; 22] = ["barracks:clear", "block:clear", "block-squads:clear", "compound:clear", "defuse:clear", "depot:clear", "floodlit:clear", "glasshouse:clear",
     "hall:clear", "killhouse:clear", "mousehole:clear", "records:clear", "pass:clear", "snatch:clear",
-    "office", "consulate", "registry", "bazaar", "quiet-yard", "lights-out", "sneak-lab", "crossing", "police-post", "library-hall"];
+    "office", "consulate", "registry", "bazaar", "lights-out", "crossing", "police-post", "library-hall"];
 const MAGIC: &[u8; 8] = b"hold 2\n\0";
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -156,7 +156,7 @@ fn kept_head(kept: &[u8], file: &str) -> Result<(Vec<String>, usize), String> {
 }
 
 /// the parts of a frame's drawing that are timed, by the sections they are asked with
-const DRAWN: [(&str, u32); 6] = [("fog", game_draw::want::fog), ("view", game_draw::want::view), ("sky", game_draw::want::sky), ("boxes", game_draw::want::geo), ("lights", game_draw::want::lights), ("men", game_draw::want::men)];
+const DRAWN: [(&str, u32); 8] = [("fog", game_draw::want::fog), ("view", game_draw::want::view), ("sky", game_draw::want::sky), ("boxes", game_draw::want::geo), ("lights", game_draw::want::lights), ("men", game_draw::want::men), ("rims", game_draw::want::rims), ("events", game_draw::want::emits)];
 
 /// ONE RUN DRAWN, in this process
 fn drawn(dir: &str, r: &Run) -> Result<String, String> {

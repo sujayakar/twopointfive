@@ -47,7 +47,6 @@ import type { Firearm } from '../game/weapons';
 import { WindViz } from './windviz';
 import { SquadThrowViz } from './squadthrowviz';
 import { AttentionViz } from './attentionviz';
-import { StalkViz } from './stalkviz';
 import { PictureViz } from './pictureviz';
 import { menuTheme } from './theme';
 import { textZoom } from './textsize';
@@ -96,7 +95,7 @@ export class Overlay implements HudLike {
   private peak = 0; private peakT = 0;
   private log = document.getElementById('log')!; private logKey = '';
   private captionEl = document.getElementById('caption')!; private captionKey = '';
-  private tlEl = document.getElementById('timeline')!; private tlKey = ''; private tlFill: HTMLElement | null = null; private tlOnPick: ((k: number) => void) | null = null;
+  private tlEl = document.getElementById('timeline')!; private tlKey = ''; private tlFill: HTMLElement | null = null;
   private equip = document.getElementById('equip')!;
   private traj = document.getElementById('traj') as unknown as SVGSVGElement;
   private trajPath: SVGPolylineElement; private trajLand: SVGCircleElement; private trajShort = false;
@@ -105,7 +104,6 @@ export class Overlay implements HudLike {
   private squadThrow!: SquadThrowViz;
   private attention!: AttentionViz;
   private picture!: PictureViz;
-  private stalk!: StalkViz;
   /** closer than ever (game/close.ts closeMarks): the windows round a man near Sam, each a floor polygon with its words — pooled path + text pairs in the throw arc's svg */
   private closeG!: SVGGElement; private closeEls: { path: SVGPathElement; text: SVGTextElement }[] = []; private closeShown = 0;
   private equipKey = '';
@@ -125,15 +123,13 @@ export class Overlay implements HudLike {
   /** the player's own man made easy to find (ui/findme.ts ← host/findme.ts): a ring at his feet — nothing unless his Options ask */
   readonly findme = new FindMeViz(this.traj);
   /** Tour timeline: one segment per stop (width ∝ duration) with its chapter title, the live one filled to its progress; segments are clickable. */
-  setTimeline(ch: { list: { title: string; dur: number }[]; i: number; frac: number } | null, onPick: (k: number) => void) {
-    this.tlOnPick = onPick;
+  setTimeline(ch: { list: { title: string; dur: number }[]; i: number; frac: number } | null) {
     if (!ch) { if (this.tlKey) { this.tlKey = ''; this.tlEl.className = ''; this.tlEl.innerHTML = ''; this.tlFill = null; } return; }
     const key = ch.list.length + '|' + ch.i;
     if (key !== this.tlKey) {
       this.tlKey = key; const total = ch.list.reduce((s, c) => s + c.dur, 0) || 1;
-      this.tlEl.innerHTML = ch.list.map((c, k) => `<div class="seg${k < ch.i ? ' done' : k === ch.i ? ' cur' : ''}" data-k="${k}" title="${k + 1}. ${c.title} — click or ←/→" style="flex:${(c.dur / total * 100).toFixed(2)} 1 0"><b></b><span>${c.title}</span></div>`).join('');
+      this.tlEl.innerHTML = ch.list.map((c, k) => `<div class="seg${k < ch.i ? ' done' : k === ch.i ? ' cur' : ''}" title="${k + 1}. ${c.title}" style="flex:${(c.dur / total * 100).toFixed(2)} 1 0"><b></b><span>${c.title}</span></div>`).join('');
       this.tlEl.className = 'on'; this.tlFill = this.tlEl.querySelector('.seg.cur b');
-      if (!this.tlEl.dataset.wired) { this.tlEl.dataset.wired = '1'; this.tlEl.addEventListener('click', ev => { const seg = (ev.target as HTMLElement).closest('.seg') as HTMLElement | null; if (seg && this.tlOnPick) this.tlOnPick(Number(seg.dataset.k)); }); }
     }
     if (this.tlFill) this.tlFill.style.width = `${(ch.frac * 100).toFixed(1)}%`;
   }
@@ -156,7 +152,6 @@ export class Overlay implements HudLike {
   private alarmEl = document.getElementById('alarm')!; private alarmKey = '';       // alarm stage under it (hidden at calm)
   private blindEl = document.getElementById('blind'); private blindK = 0;             // the white of a stun canister in his eyes (game/samstun.ts samBlind) — absent on a page without the element
   private ckEl = document.getElementById('checkpoint'); private ckKey = '';           // the CHECKPOINT tag (game.saves.flash: written / loaded), shown CKPT.flashSecs — absent on a page without the element
-  private recEl = document.getElementById('journal'); private recKey = '';            // the session journal's REC tag (game.journal.hudText(): 'REC f=1234 · 38 KB' / why it waits) — journal.ts, F10 in main.ts; absent on a page without the element
   private orderMark: HTMLElement;                                                  // the ring on what the squad's order menu is frozen on (orders.ts mark())
   private skyWas = false;
   private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private objTurn = ''; private railsWas = false; private railRest: Box | null = null; private railRestOf: [string, string, number, number] = ['\0', '', 0, 0]; private railMan = 0; private railLog = ''; private railBoxes: Box[] = [];                           // a tutorial mission's one big line, low in the middle (game/rails.ts prompt)
@@ -196,7 +191,6 @@ export class Overlay implements HudLike {
     this.squadThrow = new SquadThrowViz(this.traj, this.trajPath);   // (a squad throw's ring, walk and arc: over the floor's marks, under his own throw arc)
     this.attention = new AttentionViz(this.traj, this.traj.firstChild as Element | null);   // (where a guard's attention is — game/attention.ts: a thread and a ring on the floor, under everything else drawn there)
     this.picture = new PictureViz(this.traj, this.traj.firstChild as Element | null);   // (one man's picture of the fight — game/picture.ts: a debug view, nothing unless PICTURE.show asks)
-    this.stalk = new StalkViz(this.traj, this.traj.firstChild as Element | null);   // (the stalk's geometry — game/stalk.ts: a tuning view, nothing unless STALKVIZ.on asks)
     this.trajPath.style.display = 'none'; this.trajLand.style.display = 'none';
   }
   /** The close-in windows on the floor (game/close.ts): every window of every man near Sam as its outline projected through the camera — the one he stands in
@@ -411,9 +405,6 @@ export class Overlay implements HudLike {
     { // the checkpoint tag: up for a couple of seconds after a save / load (game/savestate.ts Checkpoints.flash), keyed so the DOM is touched only on change
       const F = game.saves.flash; const on = !!F && game.time - F.t >= 0 && game.time - F.t < CKPT.flashSecs; const key = on ? F!.text : '';
       if (key !== this.ckKey && this.ckEl) { this.ckKey = key; this.ckEl.className = on ? 'on' : ''; if (on) this.ckEl.innerHTML = `<b></b>${key}`; } }
-    { // the REC tag: the journal's own line while it waits / records (updated when the text changes — the frame count moves it about once a frame, so it is throttled to whole tens of frames)
-      const raw = game.journal.hudText(); const key = raw.replace(/f=(\d+)/, (_m, n) => `f=${Math.floor(Number(n) / 10) * 10}`);
-      if (key !== this.recKey && this.recEl) { this.recKey = key; this.recEl.className = key ? (game.journal.recording ? 'on rec' : 'on') : ''; this.recEl.textContent = key ? (game.journal.recording ? '● ' : '') + key + (game.journal.recording ? '  (F10 stops)' : '') : ''; } }
     const op = game.objectivePos();
     const skySeat = game.rails.skyOn;   // (nobody on the floor is the player: the marker is a place to point at, not a walk to it — no fade near it, no metres)
     const far = op ? v3.distXZ(op, game.player.char.pos) : 0, od = op ? (skySeat || game.rails.arrow() ? 99 : far) : 0;   // (…nor near a step's arrow: it is drawn for the last pace, where the diamond would have faded out)
@@ -447,7 +438,6 @@ export class Overlay implements HudLike {
     this.squadThrow.update(game, cam, w, h, EDGE);
     this.attention.update(game, cam, w, h, EDGE);
     this.picture.update(game, cam, w, h, EDGE);
-    this.stalk.update(game, cam, w, h, EDGE);
     // throw preview
     const pv = game.player.throwPreview;
     if (pv && pv.points.length > 1) {

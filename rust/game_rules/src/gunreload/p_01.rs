@@ -205,11 +205,6 @@ pub fn feed_deal(g: &mut crate::game::Game, ch: CharId, gun: Option<FirearmId>, 
     an.feed_port = port;
 }
 
-/// the switch is up (gunreload.ts feedLive)
-pub fn feed_live(g: &crate::game::Game) -> bool {
-    crate::gunlook::gun_look_on(g)
-}
-
 /// what the player's reload of `gun` on `row` is to sound like and to drop, asked before startReload (gunreload.ts feedPlan)
 pub fn feed_plan(g: &mut crate::game::Game, gun: FirearmId, row: crate::weapons::WeaponDefReload, shells: Option<crate::gunreload::FeedPlanShells>) -> Option<crate::gunreload::FeedPlan> {
     let def = gun_def(g, gun);
@@ -383,7 +378,7 @@ pub fn sstep(a: f64, b: f64, x: f64) -> f64 {
 }
 
 /// the thing in his support hand this frame, as one box in the fist, appended to `out` (gunreload.ts reloadHandBoxes)
-pub fn reload_hand_boxes(g: &mut crate::game::Game, c_2: CharId, id_2: crate::weapons::WeaponId, out: &mut Vec<BoxId>) {
+pub fn reload_hand_boxes(g: &mut crate::game::Game, c_2: CharId, id_2: crate::weapons::WeaponId, out: &mut Vec<AnyBoxId>) {
     let Some(f) = own_of(g, c_2, id_2) else { return };
     let Some(b) = crate::character::anim_feed_clock(g, c_2) else { return };
     let t = b.t;

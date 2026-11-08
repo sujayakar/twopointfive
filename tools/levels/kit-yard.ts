@@ -26,8 +26,7 @@ import { PANEL_GREY } from '../../src/scene/stuff';
 export const NAME = 'kit-yard';
 export const NOTES = 'The map kit\'s throwaway test map: a walled yard, two buildings, three rooms, three squads. Regenerate: bun run tools/levels/export.ts kit-yard';
 
-/** `more`: a floor built on this one adds its own boxes with the same kit (tools/levels/sneak-lab.ts) */
-export function build(more?: (K: ReturnType<typeof officeKit>) => void): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
+export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
   const trace: GeneratorTrace = { groups: [] };
   const K = officeKit(trace), C = OFFICE_PALETTE, H = WORLD.ceilingY;
   const { grp, add, slab, wallX, wallZ, desk, monitor, chair, cabinet, shelf, bench, cardboardBox, ceilingPanel, doorFrame, lights, switchables } = K;
@@ -100,7 +99,6 @@ export function build(more?: (K: ReturnType<typeof officeKit>) => void): { level
     { name: 's_w', hinge: [22.0, 18.42], closedDir: Math.PI / 2, width: 1.16 },
   ];
   for (const d of doors) doorFrame(d);
-  more?.(K);
 
   const BUNKS: Rect = { x0: 10.12, x1: 16.94, z0: 6.12, z1: 11.88 }, RADIO: Rect = { x0: 17.06, x1: 23.88, z0: 6.12, z1: 11.88 }, STORE: Rect = { x0: 22.12, x1: 31.88, z0: 16.12, z1: 21.88 };
 

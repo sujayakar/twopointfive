@@ -18,7 +18,8 @@ A call it cannot place is listed and left; the tree does not compile until it ha
 NO CHANGE OF PLAY by itself: the helpers do not use `who` until tools/blitz/sweeps/keyed-dice.py rewrites their draw
 (it keys a draw in a function handed `who` by him). Run again on a later tree it changes only what is not yet done.
 """
-import glob, os, re, sys
+import os, re, sys
+from bodies import bodies
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rust', 'game_rules', 'src')
 WHO = 'crate::dice::Who'
@@ -56,8 +57,7 @@ def main():
     by_module = {}
     for module, helper in HELPERS: by_module.setdefault(module, []).append(helper)
     for module, helpers in sorted(by_module.items()):
-        for path in sorted(glob.glob(os.path.join(ROOT, module, '[pb]_*.rs'))):
-            where = '%s/%s' % (module, os.path.basename(path))
+        for path, _, where in bodies(ROOT, module):
             lines = open(path).read().split('\n')
             fn, sig, nth, changed = '?', '', {}, False
             for i, line in enumerate(lines):

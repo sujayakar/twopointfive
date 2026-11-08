@@ -21,7 +21,7 @@ const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/le
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 
 const J = (x: unknown) => JSON.stringify(x);
-const BROKEN = process.env.ISSUEWHOLE_BREAK === '1', FILE = 'tut-solo.json';
+const BROKEN = process.env.ISSUEWHOLE_BREAK === '1', FILE = 'tut-quiet.json';
 const hushed = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 const TEXT = readFileSync(resolve(ROOT, 'levels', FILE), 'utf8'), text = () => TEXT;
 const held = (g: any) => { const pl = g.player, rf = pl.rifle; return { rings: rf.rings, cams: rf.attachments.includes('cam') ? rf.cams : 0, wand: !!pl.wand, smoke: pl.canisters, stun: pl.flashbangs, frags: pl.frags, shells: rf.shells, load: rf.attachment as string }; };
@@ -49,8 +49,8 @@ export async function issueWhole(): Promise<boolean> {
         const s = await hushed(() => startFromQuery(g, `?levelFile=${FILE}&quiet`)); why = s?.why ?? ''; K.kitSoloIf(g, false); for (let i = 0; i < 5; i++) W.step(1 / 60); r = held(g);
       } catch (x) { why = String((x as Error).message); } finally { K.kitIssuedPage(false); }
       return { r, why }; };
-    { const on = await page(), b = on.r, own: number = JSON.parse(text()).scenarios?.issue?.members?.['0']?.rings ?? 0;   // (the card's own sponge rounds: two while the mission taught the swap to the grenade, none since it carries the grenade alone)
-      verdict(!on.why && !!b && b.rings === own && b.cams === 0 && !b.wand && b.load === (own ? 'ring' : 'he40') && `${b.smoke}/${b.stun}/${b.frags}/${b.shells}` === '2/2/2/3',
+    { const on = await page(), b = on.r, card: any = JSON.parse(text()).scenarios?.issue?.members?.['0'] ?? {}, own: number = card.rings ?? 0;   // (the card's own sponge rounds: two while the mission taught the swap to the grenade, none since it carries the grenade alone)
+      verdict(!on.why && !!b && b.rings === own && b.cams === 0 && !b.wand && b.load === (card.loaded ?? (own ? 'ring' : 'he40')) && `${b.smoke}/${b.stun}/${b.frags}/${b.shells}` === `${card.smoke ?? 2}/${card.bangs ?? 2}/${card.frags ?? 2}/${card.shells ?? 3}`,
         'THE SOLO TUTORIAL ON ITS PAGE: he carries the block and nothing else: the sponge rounds it names and no more, the right button on them where it names any and on the grenades where it names none', `${J(b)}${on.why ? ` (${on.why})` : ''}`); }
 
     // ── the rule on a rig: a block that names them, a mission with no block, a lesson's page with none
