@@ -1092,7 +1092,7 @@ pub fn pair_orders_lit_cell(g: &mut Game, x: f64, z: f64) -> f64 {
 pub fn pair_orders_lit_at(g: &mut Game, p: V3) -> f64 {
     let at = [p[0], g.k.pair.dark_h, p[2]];
     let mut any = |_g: &mut Game, _o: f64| -> bool { true };
-    let e = crate::guards::light_estimate_at(g, at, Some(&mut any), Some(true), None, None, None);
+    let e = crate::guards::light_estimate_at(g, at, Some(&mut any), Some(true), None);
     crate::game::game_visibility_of(g, e)
 }
 

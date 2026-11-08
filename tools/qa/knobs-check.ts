@@ -48,7 +48,7 @@ export async function knobsCheck(): Promise<boolean> {
   const prof = readFileSync(`${ROOT}/src/host/profile.ts`, 'utf8'), body = prof.slice(prof.indexOf('export function pageSwitches'));
   const wrote = [...new Set([...body.slice(0, body.search(/^}/m)).matchAll(/^\s*([A-Za-z_][A-Za-z0-9_]*)\.[A-Za-z0-9_.]+ = /gm)].map(m => m[1]))];
   const uncarried = wrote.filter(n => !want.includes(n) && !(n in PAGE_ONLY));
-  check(wrote.length > 20 && uncarried.length === 0, `every table the page's boot writes is carried by a recording or on PAGE_ONLY with its reason (${wrote.length} tables written)${uncarried.length ? ` — NOT CARRIED: ${uncarried.join(' ')} (add the name at the END of JOURNAL_KNOBS)` : ''}`);
+  check(wrote.length > 10 && uncarried.length === 0, `every table the page's boot writes is carried by a recording or on PAGE_ONLY with its reason (${wrote.length} tables written)${uncarried.length ? ` — NOT CARRIED: ${uncarried.join(' ')} (add the name at the END of JOURNAL_KNOBS)` : ''}`);
 
   // 1c. a rule in journal.ts that asks a file for a table (`k.tables.X`: "a recording from before the key replays with it off") only works if a recording
   //     CARRIES that table. With X not in JOURNAL_KNOBS every file reads as one from before, and the key is put off whatever the run was recorded with

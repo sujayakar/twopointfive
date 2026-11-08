@@ -22,7 +22,6 @@ import { HOLD } from './character';
 import { MORALE } from './morale';
 import { FIRE, FIRE_LEAN_WAS, FIRE_STEPS } from './fire';
 import { POSEMATH } from '../anim/skeleton';
-import { SENSE } from './sense';
 import { DOZE } from './doze';
 import { AIMWEIGHT } from './aimweight';
 import { TEAMPACE } from './teampace';
@@ -127,11 +126,6 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.FIRE as Partial<typeof FIRE> | undefined)?.look === undefined) { FIRE.look.shimmer = 0; FIRE.look.plume = 0; FIRE.embers = 0; }   // (… one from before the flame's look had numbers: no shimmer over it, no smoke drawn off its tips, no particle embers — the picture only)
   if ((k.tables.FIRE as Partial<typeof FIRE> | undefined)?.size === undefined) FIRE.size = 0;   // (… and one from before its lamp was made as big as the flame: the size the level gave it — a meter's shadow ray stops that much short of the lamp)
   if (k.tables.DOZE) { const d = k.tables.DOZE as Partial<typeof DOZE>; if (d.screen !== undefined && d.idleSecs === undefined) DOZE.idleSecs = 1e9; }   // (a file from before a screen left lit blanked: it stayed lit)
-  if (!k.tables.SENSE) SENSE.cpu = false;   // (a file from before the senses could run on the CPU: it read the renderer's values, and they are in it)
-  if ((k.tables.SENSE as Partial<typeof SENSE> | undefined)?.grid === undefined) SENSE.grid = false;   // (…and one from before their smoke could stand on the coarse grid: it was the blobs)
-  if ((k.tables.SENSE as Partial<typeof SENSE> | undefined)?.bounce === undefined) SENSE.bounce = false;   // (…and one from before the light model: the estimate was the direct light alone)
-  if ((k.tables.SENSE as Partial<typeof SENSE> | undefined)?.moon === undefined) SENSE.moon = false;   // (…and one from before the estimate had the moon: a night's sky lit nobody)
-  if ((k.tables.SENSE as Partial<typeof SENSE> | undefined)?.drift === undefined) SENSE.drift = false;   // (…and one from before the grid's smoke drifted: still air out of doors)
   if (!k.tables.POSEMATH) POSEMATH.singles = false;   // (a file from before a pose's arithmetic could be in singles: it was recorded in doubles, and replays in them — anim/skeleton.ts)
   if (!k.tables.SHAPES) SHAPES.on = false;   // (a file from before a box could say its shape: its vehicles were plain boxes — said again here; the level was stood up by shapesTape's word)
   if ((k.tables.SNEAK as { sideStop?: number } | undefined)?.sideStop === undefined) SNEAK.sideStop = 0;   // (…and from before the partner's step aside was asked along its last quarter metre: the spot alone, as it was)

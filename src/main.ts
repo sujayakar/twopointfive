@@ -8,6 +8,7 @@ import { CMDRING } from './game/cmdring';   // (a prototype: with the orders rin
 import { tabCardOf, tabCardHtml } from './ui/tabcard';
 import { bootTextSize } from './ui/textsize';
 import { modelErrAsked, modelErrBoot, modelErrFrame, sceneOf } from './host/modelerr';
+import { SENSE_PAGE } from './game/sense';
 import { kitFresh, kitShow, kitPlayer, kitGun, kitLessonPage, kitLoad, kitRows, KIT, SUITS, TRIMS } from './game/kit';
 import { kitBoot } from './ui/kitBoot';
 import { missionsBusy, reopenMissionsAfterLoad, missionsReopenAsked, OFFLIST_UI } from './ui/missions';
@@ -348,7 +349,7 @@ async function main() {
   ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed, input, stood }));   // the ONE stand-up (src/host/standup.ts) — the world / lights were populated above; the harness and the native entry come through the same call
   if (game.weather.levelRoofs) weatherKindConfig.on = true;   // (the picture follows the game: a game that stands under a level's own roofs has the shaders read the third and fourth, whose half is frame data: render/frame.ts levelSwitches)
   boot.span('gameCtor', tGame); boot.mark('game');
-  if (rustGame) { rustGame.rustAttach(game); (window as any).__rust = Object.assign(rustGame.RUST_GAME, { hashes: rustGame.rustHashes, settled: rustGame.RUST_SETTLED, means: rustGame.rustMeans, resync: rustGame.rustResync, whole: rustGame.rustWhole, file: rustGame.rustFile, fileIn: rustGame.rustFileIn, poke: rustGame.rustPoke, call: rustGame.rustCall, bridge: rustGame.rustBridge, state: rustGame.rustState, warmUp: (n?: number) => rustGame.rustWarm({ input, cam, canvas }, n) }); }   // (?rust=1: from here the game's tick is the Rust game's and this Game its puppet)
+  if (rustGame) { rustGame.rustAttach(game); SENSE_PAGE.call = rustGame.rustCall; (window as any).__rust = Object.assign(rustGame.RUST_GAME, { hashes: rustGame.rustHashes, settled: rustGame.RUST_SETTLED, means: rustGame.rustMeans, resync: rustGame.rustResync, whole: rustGame.rustWhole, file: rustGame.rustFile, fileIn: rustGame.rustFileIn, poke: rustGame.rustPoke, call: rustGame.rustCall, bridge: rustGame.rustBridge, state: rustGame.rustState, warmUp: (n?: number) => rustGame.rustWarm({ input, cam, canvas }, n) }); }   // (?rust=1: from here the game's tick is the Rust game's and this Game its puppet)
   if (LOOK.on) lookDoors(game.doors.list, engine.world.statics, LOOK_DOORS[(q.get('levelFile') ?? '').replace(/-gwot(?=\.json$)/, '')]);   // (picture only: under the default look a level that wears it has its door leaves in its own paint and weathered wood, not the office's veneer — scene/lookTidy.ts)
   // … and the maps of what the level stands up with are made before its first frame (render/gbuffer.ts needLook, awaited with the pipelines below): every static,
   // door's leaf and loose prop's part is asked its word, by the one rule (whatever a paint is told by: its colour, or a name) and after the leaves have their paint
@@ -357,13 +358,13 @@ async function main() {
     lookMaps = timed('materials', engine.gbuffer.needLook()); lookMaps?.catch(() => { /* awaited below */ }); }
   if (q.has('noweather')) game.weather.setEnabled(false);   // ?noweather: the storm experiment off from boot (weather.ts) — the plain night, byte for byte
   const probe = game.probe as IrradianceProbe;   // (the game holds a ProbeLike — src/game/sensors.ts; on this host it is the WebGPU kernel the Game built, whose encode / readback the frame drives)
-  engine.extraPasses.push((enc, sceneBG, diceView, ts) => { if (probe.hasPending) probe.encode(enc, sceneBG, diceView, ts('probe')); });
-  engine.afterSubmit.push(() => probe.afterSubmit());
+  const probed = modelErrAsked(q);   // (the game asks the picture nothing: the probe is the error tool's, and is compiled and run under its word alone)
+  if (probed) { engine.extraPasses.push((enc, sceneBG, diceView, ts) => { if (probe.hasPending) probe.encode(enc, sceneBG, diceView, ts('probe')); }); engine.afterSubmit.push(() => probe.afterSubmit()); }
   engine.afterSubmit.push(() => smoke.afterSubmit());
   // ---- everything the first frame dispatches must exist: the engine's kernels, the smoke solver's, the Game's own three GPU modules (mesh-shadow skin / refit, the particles, the light
   // probe) and the skinned-mesh raster for this glTF's joint format — all compiled off the browser's compositing thread, counted in on the card meanwhile
   await tick(); status();
-  await Promise.all([engineInit, smokeInit, lookMaps, timed('meshShadows', game.meshShadows.init()), timed('particles', engine.particles?.init()), timed('probe', probe.init()), timed('skin', engine.gbuffer.prepareSkin(game.chars.jointsFormat))]);
+  await Promise.all([engineInit, smokeInit, lookMaps, timed('meshShadows', game.meshShadows.init()), timed('particles', engine.particles?.init()), ...(probed ? [timed('probe', probe.init())] : []), timed('skin', engine.gbuffer.prepareSkin(game.chars.jointsFormat))]);
   boot.span('pipelines', tPipe); boot.mark('pipelines');
   pipelineProgress.onChange = null; boot.freezePipelines(); keptFreeze(); gpuStory.stage = 'while setting up';
   pipeQueue.settle();   // THE COMPILE QUEUE (gpu/device.ts PIPE_QUEUE): from here the background set compiles two at a time, leaving the browser's GPU workers free to draw the page

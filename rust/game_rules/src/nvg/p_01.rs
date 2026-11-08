@@ -111,30 +111,9 @@ pub fn loud_t(g: &crate::game::Game) -> f64 {
     if last > -100.0 { last } else { -m::INF }   // (roomfight's 'never' is -100)
 }
 
-/// The light of the place at a point: the fixtures, nothing carried, plus the moon.   (nvg.ts nvgPlaceLight)
+/// The light of the place at a point, nothing carried.   (nvg.ts nvgPlaceLight)
 pub fn nvg_place_light(g: &mut crate::game::Game, p: V3) -> f64 {
-    let mut every_owner = |_: &mut Game, _: f64| true;
-    let mut e = crate::guards::light_estimate_at(g, p, Some(&mut every_owner), None, None, None, None);
-    let mut i = 0;
-    while i < g.engine.lights.lights.len() {
-        let l = g.engine.lights.lights[i];
-        i += 1;
-        if g.tab.light[l].kind != 2.0
-            || !g.tab.light[l].enabled
-            || g.tab.light[l].intensity <= 0.0
-            || g.tab.light[l].transient.unwrap_or(false)
-            || g.tab.light[l].ttl >= 0.0
-            || crate::hours::in_estimate(g, l)
-        {
-            continue;
-        }
-        let d = g.tab.light[l].dir;
-        if !crate::scene_collision::segment_blocked(g, p, [p[0] - d[0] * 60.0, p[1] - d[1] * 60.0, p[2] - d[2] * 60.0], None, None, None) {
-            let c = g.tab.light[l].color;
-            e += (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * g.tab.light[l].intensity;
-        }
-    }
-    e
+    crate::guards::light_estimate_at(g, p, Some(&mut |_: &mut Game, _: f64| true), None, None)
 }
 
 /// One point of his place: is it dark to the bare eye, and (if `tube`) too dark for the tube.   (nvg.ts readPlace's `at`)
