@@ -375,13 +375,11 @@ interface Plan { min: [number, number]; max: [number, number];
   /** the same file as the map sheet's model (ui/planArt.ts): its ground, what stands on it back to front, its lamps */ art: PlanArt;
   /** where the team starts, [x, z], by the mission's kind (a room clear: one per way in, the level's own first; 'solo' = the level's own spawn) */ starts: Record<string, number[][]>;
   /** wall charges the level's own room clear ISSUES the squad (the file's scenarios.roomClear.wallCharges — game/issue.ts raises the bag to it at staging); 0 = none */ issued: number;
-  /** the kit the level's file ISSUES the squad itself (scenarios.issue.members — game/kit.ts kitIssue: every staging wears the issue cards with these fields written over them, whatever this machine keeps), by place on the roster ('0' = you); null = none */ kit: IssuedKit | null;
+  /** the block in which the level's file ISSUES the squad its own kit (scenarios.issue: every staging wears the issue cards with its fields written over them, whatever this machine keeps), as its text; '' = none */ kit: string;
   /** per way in (the level's own first), whether the file says where the team stands for the Team & kit picture (scenarios.kitView.ways — ui/kitView.ts) */ kv: boolean[];
   /** what the place asks of a kit, counted off the file (the Team & kit step's brief — ui/kitBrief.ts): doors found locked · those of them that are steel · the rescue's hostages */ needs: PlaceNeeds;
   /** the rescue's side door (scenarios.rescue.side.door) is one of the locked ones: its staging unlocks it (game/rescue.ts), so a rescue finds one fewer */ sideLocked: boolean; sideSteel: boolean }
 export interface PlaceNeeds { locked: number; steel: number; hostages: number; /** the map marks where the team goes in (a quiet mission's has no mark) */ marked: boolean }
-/** a level file's own issue, as the file has it: per place on the roster, the fields that differ from that man's issue card */
-export type IssuedKit = Record<string, Record<string, unknown>>;
 interface PlanData extends ArtData { scenarios?: { roomClear?: { wallCharges?: unknown; team?: { sam?: number[] }; starts?: { sam?: number[] }[] }; nightBreach?: { team?: { sam?: number[] } }; rescue?: { team?: { sam?: number[] }; hostages?: unknown; side?: { door?: unknown } }; issue?: { members?: unknown }; kitView?: { ways?: { door?: unknown; span?: unknown }[] } }; mission?: { playerSpawn?: number[] } }
 const OFFICE = 'office.json';
 const PLANS = new Map<string, Promise<Plan | null>>();
@@ -390,7 +388,7 @@ function planFrom(d: PlanData): Plan {
   const w = d.scenarios?.roomClear?.wallCharges;
   const k = d.scenarios?.issue?.members;
   let art: PlanArt | null = null;   // (made when a picture of the place is first drawn: the sort of what stands is the dear part, and most files are never drawn on a visit)
-  const P: Plan = { get art() { return art ??= artFrom(d); }, min: [Infinity, Infinity], max: [-Infinity, -Infinity], issued: typeof w === 'number' && Number.isInteger(w) && w > 0 ? w : 0, kit: k && typeof k === 'object' && !Array.isArray(k) ? k as IssuedKit : null, starts: {}, kv: (Array.isArray(d.scenarios?.kitView?.ways) ? d.scenarios.kitView.ways : []).map(y => (typeof y?.door === 'string' && !!y.door) || Array.isArray(y?.span)),
+  const P: Plan = { get art() { return art ??= artFrom(d); }, min: [Infinity, Infinity], max: [-Infinity, -Infinity], issued: typeof w === 'number' && Number.isInteger(w) && w > 0 ? w : 0, kit: k && typeof k === 'object' && !Array.isArray(k) ? JSON.stringify(d.scenarios?.issue) : '', starts: {}, kv: (Array.isArray(d.scenarios?.kitView?.ways) ? d.scenarios.kitView.ways : []).map(y => (typeof y?.door === 'string' && !!y.door) || Array.isArray(y?.span)),
     needs: { locked: 0, steel: 0, hostages: Array.isArray(d.scenarios?.rescue?.hostages) ? d.scenarios.rescue.hostages.length : 0, marked: false }, sideLocked: false, sideSteel: false };   // (anchored on a door, or on a span: a stretch of wall, a gap)
   { const at = (v?: number[]) => (Array.isArray(v) && v.length >= 3 && Number.isFinite(v[0]) && Number.isFinite(v[2]) ? [[v[0], v[2]]] : []), sc = d.scenarios;   // where the team starts, per kind of mission (a room clear: one per way in, the level's own first)
     P.starts = { roomclear: [...at(sc?.roomClear?.team?.sam), ...(sc?.roomClear?.starts ?? []).flatMap(t => at(t?.sam))], nightbreach: at(sc?.nightBreach?.team?.sam), rescue: at(sc?.rescue?.team?.sam), solo: at(d.mission?.playerSpawn) }; }
@@ -426,9 +424,9 @@ function planOf(file: string): Promise<Plan | null> {
 /** the wall charges a room clear of this level file issues the squad whatever its cards carry (0 = none, or the file did not come) — the loadout's 'Squad carries'
  *  line; the same fetch as the plan's, once per file */
 export function issuedWalls(file: string): Promise<number> { return planOf(file).then(P => P?.issued ?? 0); }
-/** the kit this level file issues the squad itself (null = none, or the file did not come): the loadout screen shows no cards for such a mission and says who
+/** the kit this level file issues the squad itself, as the text of its block ('' = none, or the file did not come): the desk shows no cards for such a mission and says who
  *  carries what — the same fetch, once per file */
-export function issuedKit(file: string): Promise<IssuedKit | null> { return planOf(file).then(P => P?.kit ?? null); }
+export function issuedKit(file: string): Promise<string> { return planOf(file).then(P => P?.kit ?? ''); }
 /** what this mission's place asks of a kit, AS THE MISSION IS STAGED (null: the file did not come) — the same fetch, once per file. The hostages are a rescue's, and
  *  a rescue finds its side door unlocked (game/rescue.ts); the mark is the one the map sheet draws for this kind of mission */
 export function placeNeeds(m: Mission): Promise<PlaceNeeds | null> { const kind = m.scenario ? m.scenario.kind : 'solo', rescue = kind === 'rescue';

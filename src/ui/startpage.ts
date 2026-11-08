@@ -31,9 +31,8 @@ import { openLoadout, entryOfMission, type LoadoutScreen } from './loadout';
 import { notePicked } from './picks';
 import { difficultyNow, leversMixed, leversBase, leversHref } from '../game/difficulty';
 import { quietFogAside } from '../game/quietfog';
-import { quietGear } from './kitNoise';
 import type { HourId } from '../game/hours';
-import { squadOfQuery, sizeWords, kitAsIssued, type SquadSize } from '../game/loadout';
+import { squadOfQuery, type SquadSize } from '../game/loadout';
 import { menuTheme } from './theme';
 import { mountKitView, type KitViewFrame } from './kitView';
 import { mountKitBrief, type KitBrief } from './kitBrief';
@@ -231,7 +230,7 @@ const CSS = `
 #missions.one #loadout .lo-kit .kc:has(.kc-row.refused) .kc-row:not(.refused) > .kc-note { display: none !important; }   /* (a refusal's reason outranks the row pointed at, which outranks the row the keys are on) */
 #missions.one #loadout .lo-kit .kc-sets { grid-column: 1 / 3; grid-row: 1; justify-content: flex-start; align-self: end; margin: 0 0 4px; padding: 0; border: 0; background: none; gap: 2px; }
 #missions.one #loadout .lo-kit .kc.focus .kc-sets.sel { background: none; }
-/* THE CARD AS A TREE (game/kittree.ts): each gun is a tile with what it is good at drawn beside its name (ui/gunStats.ts), and what rides on that gun hangs under it as smaller tiles off one rule: the primary two columns wide, the secondary the third */
+/* THE CARD AS A TREE (game/kittree.ts): each gun is a tile with what it is good at drawn beside its name (ui/kitCard.ts), and what rides on that gun hangs under it as smaller tiles off one rule: the primary two columns wide, the secondary the third */
 #missions.one #loadout .lo-kit .kc-tree .kc-gun { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="primary"] { grid-column: 1 / 3; }
 #missions.one #loadout .lo-kit .kc-tree .kc-gun > .kc-row { flex: 0 0 auto; grid-template-columns: 96px minmax(0, 1fr) minmax(0, 40%); align-items: center; min-height: 76px; box-sizing: border-box; }
@@ -323,17 +322,17 @@ html.tsz #missions.one .mgrid .mthumb { height: 100%; min-height: 0; object-fit:
 @media (max-width: 900px) { #missions.one.tiles.pane-list .mbody { grid-template-columns: minmax(0, 1fr) 250px; } #missions.one .mgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-left: 10px; padding-right: 10px; } html.tsz #missions.one .mgrid .mrow { min-height: calc((100cqw - 10px) / 4 + 48px); } }
 @media (max-width: 720px) { #missions.one.tiles.pane-list .mbody { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 46%) minmax(0, 1fr); } }
 `;
-/** The sound mark on a tile of a quiet mission's gear screen: a source and one, two or three arcs (ui/kitNoise.ts says which), as a mask the rule fills with its own colour. */
+/** The sound mark on a tile of a quiet mission's gear screen: a source and one, two or three arcs (the card says which), as a mask the rule fills with its own colour. */
 const arcs = (n: number): string => { const w = [0, 7, 10, 13][n], d = ['M4.7 1.9 A4 4 0 0 1 4.7 7.1', 'M7.3 0.6 A7 7 0 0 1 7.3 8.4', 'M10.7 0.5 A10 10 0 0 1 10.7 8.5'].slice(0, n).join(' ');
   return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} 9"><circle cx="1.6" cy="4.5" r="1.3"/><path d="${d}" fill="none" stroke="#000" stroke-width="1.3" stroke-linecap="round"/></svg>`)}")`; };
 const Q = '#missions.one.quiet.pane-loadout', QK = `${Q} #loadout .lo-kit`;
 const QUIET_CSS = `
-/* A QUIET MISSION'S GEAR SCREEN (root class 'quiet' on the Team & kit step: a quiet mission and the solo night — ui/kitNoise.ts quietGear; 'kitloud' on the
+/* A QUIET MISSION'S GEAR SCREEN (root class 'quiet' on the Team & kit step: a quiet mission and the solo night — quietGear below; 'kitloud' on the
    address = the screen as it was; the maintainer, 10-17: "quiet missions should have different gear screen stuff"). THE LIGHTS ARE OUT: nothing on it is
    orange — the cursor is bright sand, Deploy is a hollow block — so the night picture beside it is the brightest thing in the window; the tiles are solid
    plates, so the room does not show through them. AND THE KIT READS BY NOISE, with no word added: a tile whose thing makes a sound when it is used wears a
    sound mark by its value — one arc in the ink for what is heard nearby, two in the alarm's amber for what the floor hears, three in its red for the blast (index.html #alarm.l1 / .l2)
-   (the game's own steps, kitNoise.ts) — and a thing he carries none of sinks, so the quiet kit he has stands forward. An empty big slot is a tile like the rest. */
+   (the game's own steps, CardRow.noise) — and a thing he carries none of sinks, so the quiet kit he has stands forward. An empty big slot is a tile like the rest. */
 ${Q} { --m-accent: var(--m-bright); --m-accent-hi: var(--m-bright); --m-accent-rgb: var(--m-bright-rgb); }
 /* (the cursor with no orange: a 4 px bright bar where 'on' is 2 px of the soft ink, and the roster's standing bars a step dimmer, so only the cursor is bright) */
 ${Q} #loadout .lo-team.sel .lo-size.on, ${Q} #loadout .lo-kits.sel .lo-set.pick, ${Q} #loadout .kc.focus .kc-sets.sel .kc-set.pick { box-shadow: inset 0 -4px 0 var(--m-bright); }
@@ -363,6 +362,8 @@ ${QK} .kc-row[data-noise="3"]:not(.zero) .kc-val::after { background: #ff7a5c; }
 function styles() { menuTheme(); if (document.getElementById?.('startpage-css')) return; const s = document.createElement('style'); s.id = 'startpage-css'; s.textContent = CSS + QUIET_CSS; (document.head ?? document.body)?.appendChild?.(s); }
 function el(tag: string, cls?: string, text?: string) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 
+/** Whether the mission's gear screen takes the quiet look: a quiet mission or the solo night, unless the address says `kitloud` (the screen as it was). */
+const quietGear = (kind: string, search = ''): boolean => (kind === 'quiet' || kind === 'solo') && !new URLSearchParams(search.replace(/^[^?]*\?/, '')).has('kitloud');
 export type Pane = 'list' | 'loadout';
 export interface StartPage { readonly missions: MissionsScreen; readonly loadout: LoadoutScreen | null; readonly pane: Pane;
   setPane(p: Pane): void; /** the query string Deploy loads the highlighted mission's own team with (the loadout puts the size on it) */ baseOf(m: Mission): string; close(): void }
@@ -407,7 +408,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   let kbrief: KitBrief | null = null, kguide: KitGuide | null = null;
   const guideOn = () => (pane === 'loadout' && L?.open ? L : null);
   const paintFigure = (s: LoadoutScreen) => { if (shut || !kview) return; if (pane !== 'loadout' || s !== L) { kview.show(null); return; }
-    kview.show({ search: s.search(), kind: s.entry.kind, level: s.entry.level, way: ready ? M.way : 0, squad: s.squad, member: s.member, row: s.card?.at() ?? -1 }); };   // (where the mission's level stages it: the team at its way-in door, the real renderer's picture — ui/kitView.ts)
+    kview.show({ search: s.search(), kind: s.entry.kind, level: s.entry.level, way: ready ? M.way : 0, squad: s.squad, member: s.member, field: s.card?.field() ?? null, worn: s.team.men.map(m => m.worn) }); };   // (where the mission's level stages it: the team at its way-in door, the real renderer's picture — ui/kitView.ts)
 
   /** the short list's settings are what the page shows for `m`: its pick, else null */
   const asPick = (m: Mission): Pick | null => { const p = pickOfMission(m.id); if (!p) return null; const d = quietFogAside(() => leversMixed() ? leversBase() : difficultyNow());   // (levers moved to a mix of their own: the level they stand over)
@@ -416,7 +417,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   const WHAT: Record<Pane, string> = { list: 'W S mission · Enter team and kit · Esc back', loadout: 'W S A D change · Enter deploy · Esc back' };
   /** THE HIGHLIGHTED MISSION HAS NO KIT STEP (a mission played with the kit as issued): its TEAM & KIT pane has nothing on it to pick, so nothing on the
    *  page leads there — Enter on its row is Deploy, as the block under it says, and the head's second step is not offered (.nokit, below) */
-  const noKit = () => !!L && (!!opts.coop || kitAsIssued(L.entry));
+  const noKit = () => !!L && (!!opts.coop || L.team.asIssued);
   /** from the rows on to the next step: the kit, or for a mission with none straight in (Enter on a row, the block, the head's step, the rail's team row) */
   const onward = () => { if (noKit()) { L!.deploy(); return; } setPane('loadout'); mount(); };
   // the Mission step's own block, on the loadout's bar after its Deploy: the way the page draws him is mission, then team and kit, then Deploy
@@ -451,7 +452,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
     const i = bs.findIndex(b => b.classList.contains('on')), n = i < 0 ? (dir > 0 ? 0 : bs.length - 1) : (i + dir + bs.length) % bs.length;
     if (i < 0 && !v.lever && armed !== v && bs[n]) { armed = v; const to = bs[n].textContent ?? ''; v.val.textContent = `Custom → ${to}`; v.btn.classList.add('armed'); tell(v.label, `Press again for ${to}`); return; }   // (a level over levers moved by hand: one press would throw the mix away, so the first only says so)
     armed = null; acting = v; try { bs[n]?.click(); } finally { acting = null; } };
-  const paintTeam = () => { teamVal.textContent = L ? sizeWords(L.squad) : ''; };
+  const paintTeam = () => { teamVal.textContent = L ? L.team.sizes[L.squad].words : ''; };
   /** the rail read off the rows as the list just painted them (`fresh`: another mission came up — nothing was 'last changed') */
   const paintVals = (fresh: boolean) => {
     const said: string[] = [], changed: Val[] = [], level = vals.some(v => !v.lever && v.hint === 'A D' && rowLive(v.src));
