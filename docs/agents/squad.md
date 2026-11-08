@@ -21,7 +21,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOTHING IS HELD: a PRESS of `X` (or the middle mouse button, `ORDERS.mouseOpens`) puts the menu up on what the CURSOR was on at the press and it STAYS UP, frozen on that target
   (`orders.mark()` = the ring both overlays draw there), until a row is picked or it is dismissed (`X` again, Esc, a right click, the cancel row, `'Blur'`, Sam down, the men it was for all down — and THE TRIGGER, below);
   `open(target) / close() / pick(i)` are the same from code. The target (`targetUnder`: the cursor's own ray, never the auto-aim's snapped `aimPoint`; WHAT IS DRAWN UNDER THE CURSOR FIRST — a teammate's
-  body the ray lands on, else (`ORDERS.doorRay`) a door whose own LEAF is under it or whose DOORWAY it looks through (`doorOnRay`: the ray crosses the doorway's rectangle with nothing of the scene in
+  body the ray lands on, else (`ORDERS.doorRay`) a door whose own LEAF is under it or whose DOORWAY it looks through (the ray crosses the doorway's rectangle with nothing of the scene in
   front and lands within `doorRayReachM`) unless Sam's own body is under it or another door is by the landing point — then what is NEAR the landing point: door within `ORDERS.doorPickM` / teammate / Sam
   himself, else free floor. Without `doorRay` an open doorway mostly got the floor's menu and a teammate a step from the landing point his own: neither has door rows. `probes.ts doormenu` holds it for
   every door of every start-card scenario), rows = the `OrderDef`s whose `targets` fit, one that cannot be carried out there (per man `can`, together `valid` → the reason:
@@ -479,7 +479,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   because they ask what the key gave before it. NOBODY HAS HEARD OR SEEN IT: the two lines are text on the panel here, never on a GPU, never
   played. The tactics mission 'A harder fight' (cut from the lists, opened by its address) asked for the key again at three doors: those steps ask
   for the go key now (`docs/agents/missions.md`).
-- **The cursor on himself is himself, with a door a pace behind him too** (2026-10-26; `ORDERS.selfBody`, `orders.ts targetUnderOf`). Found by two
+- **The cursor on himself is himself, with a door a pace behind him too** (2026-10-26; `ORDERS.selfBody`, `rust/game_rules/src/orders target_under_of`). Found by two
   tutorial missions the same day (a scripted player headless on the page's stand, and a thread on the real page): the squad's key "on himself", the
   cursor on his chest and a door a pace behind him, gave that door (a stack) and not fall in. The cursor's ray through his chest lands on the floor
   some 0.7 m PAST him, and what was near that point was the target (`targetAt`: the door where the point is nearer it than him; plain floor, a
@@ -491,8 +491,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the door. OFF (`?selfbody=0`; Tab ▸ Squad ▸ 'the cursor on yourself is yourself'): the point past him, as it was. Off in the module and on the
   frozen stand (`TPS_SELFBODY=1`; a `FROZEN_HOLDS` row); a recording from before the key replays with it off. CHECK: `tools/qa/selfbody-check.ts`
   (probe `selfbody`, family squadorders), six lines on both stands, one deal (no die in it): he is stood 0.7 m in front of the office's conference
-  door, where the rule off gives the door and a stack and the rule on gives himself and fall in for the four; `SELFBODY_BREAK=1` fails line 2 on
-  both. NOT SEEN: on a GPU or by a player; the page draws nothing for it (the HUD's line for the key reads 'fall in' where it read 'stack up').
+  door, where the point past his chest is the door and a stack could be given, and the cursor on him is himself and fall in for the four; `SELFBODY_BREAK=1` (the check's cursor put beside him) fails line 2.
+  The Rust game has the rule always on: `?selfbody=0` and the module's `ORDERS.selfBody` no longer reach it. NOT SEEN: on a GPU or by a player; the page draws nothing for it (the HUD's line for the key reads 'fall in' where it read 'stack up').
   KNOWN: a player who wants the door directly behind his own body on the screen points at the doorway beside him.
 - **Shift + the key adds a goal, and there is no plan mode: a PROTOTYPE** (2026-10-26; `CMDRING.goals`, `planmode.ts planGoal` / `goalsOn`,
   `orders.ts ringInput`). The maintainer: "i think the RTS like plan mode is cool but it does really slow the tempo of the game and is quite
@@ -631,17 +631,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   line, both stands (one deal, the conference door: dark with feet on the jambs, lit 3.5 to 4.5 s later at the call; `THRTOLD_BREAK=1` red on
   both). NOT covered: the HUD's own word line (`doortools.ts wordNote`, "go · … waiting") still shows from the stack, and several doors on one
   word (`planOne`) wait for every stack to FORM, not for a call. Never seen on a GPU.
-- **What the cursor is on is kept by whoever reads the HUD** (2026-10-23; `orders.ts hover / hud / hintView`, `HoverKept`, `ui/hoverkept.ts`; picture
-  only, no switch). `hover()`'s answer, kept a tenth of a second while the cursor rests, and the camera it was asked under were fields of the order
-  book (`orders.hov`, `orders.hovCam`): a game whose HUD was read each frame differed in the whole state from one never read. Now `hud(kept)` and
-  `hintView(kept)` take the asker's store (the page's one store for both, `ui/hoverkept.ts`); with none nothing is kept and every ask looks again.
-  CHECK `probes.ts cmdring`, the last line, both stands: read every frame against never read, digest equal, the answer in the store, and no field of
-  the order book another value after a read than before it; `HOVERKEPT_BREAK=1` (the book handed in as the store, so kept on it again) is red on
-  both. The store is outside the rollback snapshot (after a restore it can hold the other time line's answer for its tenth of a second). The page's
-  own wiring (`overlay.ts`, `ui/cmdring.ts` passing the one store) is held by no check and the page was not driven. STILL OPEN, not held by that line and not this module's: a HUD read
-  still writes the room clear drill's memo of its two men (`nightbreach.ts drillOf`, a getter that keeps its answer) and the collision world's query
-  stamps under the cursor's pick (`game.col.stamp`, `world.rgStamp`), so the whole state still differs (the line prints where). Never seen on a GPU.
-  (Both since mended: the drill's memo by its own module, the pick's stamps by the last bullet of this file.)
+- **What the cursor is on is a read** (`orders.ts hover / hud / hintView`, `src/game/under.ts`, `src/view/cursor.ts`; `rust/game_rules/src/view cursor_view`, orders `target_under`; picture
+  only, no switch). The Rust game says what the cursor is on, asked once a cursor, camera and moment of the game, and nothing of it is kept on the order book. Before the first tick (no Rust game
+  standing) `hover()` answers null and `targetAt` / `targetUnder` `{kind:'none'}`, so a check steps once before it asks.
+  What a point or the cursor is on reads the tick's list of things to work, kept every tick for every seat.
+  CHECK `probes.ts cmdring`, the last line: read every frame against never read, digest equal, an answer on most frames, and no field of
+  the order book another value after a read than before it; `HOVERREAD_BREAK=1` (the answer kept on the book) must be red. Never seen on a GPU.
 - **One word is one signal** (`CMDRING.planOne`: ON in the page with the mode, `?planone=0`; off in the module and on the frozen stand,
   `TPS_PLANONE=1` beside `TPS_QPLAN=1`; the journal carries it, a recording without the key replays with it off; debugger: 'Tab ▸ plan mode ▸ one word,
   one signal'). The maintainer, 10-22, of a plan with a pair on each of a room's two doors: "simultaneous breach on mission 2 didn't really work. and
@@ -1130,8 +1125,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 
 <!-- was CLAUDE.md lines 2550–2563 -->
 - **A teammate works a thing** (`src/game/workthings.ts`, `Game.work: WorkThings`; `WORK.on` — on in the page, `?noworkthings` = as it was; the frozen stand holds it off,
-  `TPS_WORKTHINGS=1`): the orders' menu opened on the BREAKER (its own panel under the cursor — `workOn` in targetUnder — or the floor at its foot on its own side of
-  the wall — `workNear` in targetAt) or on the MISSION'S THING once the objective is to take it (stage 'drive': the rack's drive, a quiet mission's thing in its holder)
+  `TPS_WORKTHINGS=1`): the orders' menu opened on the BREAKER (its own panel under the cursor, or the floor at its foot on its own side of
+  the wall: `rust/game_rules/src/orders target_under` and `target_at`, which read the tick's list of things to work, kept every tick for every seat) or on the MISSION'S THING once the objective is to take it (stage 'drive': the rack's drive, a quiet mission's thing in its holder)
   is a floor target carrying `thing: WorkThing` (`at` = the cell a man stands on to work it, `standFor`, re-read once a second), and `workRows` puts its own order
   (`'work'`, digit 1: 'throw the breaker' / 're-arm the mains' / 'pull the drive' / 'take <thing>') where 'move there' is — so B and the button twice give it. `only`:
   the nearest man who can get there works it, his partner (the other of his pair) covers from a mark behind him on a plain 'move' with `spare` eyes, everybody else is
@@ -1287,34 +1282,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   duck memo were mended from a review's reading and were never seen writing in a run. A NEW cache a
   search fills in turns `state` red on the stand that has the rule, and the line prints the table's name: add it to `TICK_KEPT`, or to
   `Collision.aside` when it is the collision's own. NOT COVERED: `squad40Plans` (the 40 mm's picture) was not looked at; `orders.hud()` read with no
-  menu up writes `orders.hov` (a drawn game differs from an undrawn one there too, digest equal). Never seen in a page.
+  menu up: the bullet below says what a read is now. Never seen in a page.
 - **The cursor's pick, read for the picture, writes nothing of the game's** (no switch: nothing a player reads, and the run digest never moved).
-  `SquadOrders.hover(kept?)` is what the HUD's lines and the ring's hint read every frame. Its answer was already kept in the asker's store; the
-  pick under it (`targetUnder`) still wrote the game's own state, so a game whose cursor is read and the same game never read differed in whole
-  state on EVERY frame, run digest equal. Measured writers: `world.rgStamp`, `rgRay`, `rcBest`, `rcBi`, `rcBn` (frozen stand); on the shipped
-  stand also `game.col.stamp`, `stampId`, `cellStamp`, `game.work.cache.t`, and with a leaf swinging `doors.list[].posAngle` / `posAt`. Found by
-  a review's reading, never seen written in a run: `wallcharge.skyMemo` (the simulation's own ask of the aim point usually fills it first).
-  Now the read runs the pick inside five wrappers, on `HoverKept.pick` (made anew for another game), or on a throwaway store when none is handed
-  in: `Collision.aside` (the collision's query stamps, cell caches and path scratch, as for the throw page); the new `BoxWorld.rayAside`
-  (`src/scene/boxes.ts`: the world's ray grid stamps and counter swapped, its last-hit scratch put back); the new `WorkThings.askAside`
-  (`workthings.ts`: the list of things to be worked is kept in the asker's store for its second, the game's own kept list put back, no hand
-  record dropped); the new `Door.posAside` / `Doors.posAside` (`doors.ts`: each leaf's kept centre put back); the new `skyAside`
-  (`wallcharge.ts`: what the ask adds to the memo of sky faces taken out again). ONLY the read is aside: the pick the simulation makes for
-  itself on a key or a click (`orders.ts` update, `planmode.ts`) is the game's own and unchanged; `host/handsoff.ts` (the hands-off driver)
-  still asks it straight. IN THE PAGE this changes two small things nobody has looked at: a key press no longer finds a list of things to be
-  worked that the HUD made up to a second before (it makes its own), and stale hand records are dropped only on the simulation's own asks.
-  CHECK `probes.ts hoverpick` (`tools/qa/hoverpick-check.ts`; families squadorders), the squad mission on the office, seed 11, eight seconds,
-  the cursor carried round Sam, onto a teammate, onto a door and (shipped stand) onto a wall a charge might go on, moved after the step so the
-  read comes before the simulation's own ask of the point, a door swung twice; the cursor's points are found on a game of their own. Lines: ask
-  (ONE game, the state hashed before and after each read, with the store and with none, and the module variables looked at: 0 of 480 frames),
-  state (read every frame against never read: whole state and digest equal), same (the pick aside on the kept store is the pick straight on all
-  480 frames: kind, place, door and side, man, wall, thing). `HOVERPICK_BREAK=1` (the pick asked straight) fails ask and state on both stands:
-  one break for all five wrappers, it does not prove each apart. One seed, one level. NOT ON THE CURSOR'S WAY: a man of the other side, a
-  thing to be worked, a leaf drawn in the fog of war, the room seen through a doorway. THE HUD'S ROW LIST IS HELD TOO (10-23): on the
-  shipped stand `SquadOrders.hud` filled the wall charge's memo of digitless rows (`wallcharge.ts standIns`) the first time it listed a
-  floor's rows; that memo is a module `SideMap` marked `asMemo()` now (the charges' own mend), and the check's read asks `hud(kept)` every
-  frame after the pick, so `ask` and `state` stand for the whole HUD read. The store is outside the rollback snapshot (scratch and a list a
-  second old). Never seen in a page.
+  What the HUD's lines and the ring's hint read every frame is the Rust game's answer to what the cursor is on, and asking changes nothing. CHECK: the native test
+  `rust/game_start/tests/cursor.rs` (`any_cursor_is_answered_and_pointing_changes_nothing`); the page's half is the last line of `probes.ts cmdring`. Never seen in a page.
 - **The squad reaches you, and the quick key says why** (`src/game/squadnet.ts`, table `SQUADNET`, one `SquadNet` on the Game as `game.squadNet`;
   drawn by `src/ui/bubbles.ts`; Tab ▸ 'Squad net'). The maintainer picked it from the AI legibility doc: "The squad reaches you, and Q says why.
   Off-screen teammate lines arrive near you with a radio click, a man down has its own sound, the Q row says 'Bang and clear. Nobody's been in

@@ -510,7 +510,7 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 754 => { let a1: V3 = Io::r(&mut i); let a2: Option<crate::quiet::HolderStandArea> = Io::r(&mut i); let r = crate::quiet::holder_stand(g, a1, a2); r.w(&mut o);  }
 755 => {  let r = crate::quiet::check_quiet(g); r.w(&mut o);  }
 756 => {  let r = crate::workthings::breaker_errand(g); r.w(&mut o);  }
-757 => {  let r = crate::workthings::work_things_things(g); r.w(&mut o);  }
+757 => {  crate::workthings::work_things_keep(g); let r = crate::workthings::work_things_things(g, &crate::seats::here(g)); r.w(&mut o);  }
 762 => { let a1: CharId = Io::r(&mut i); let r = crate::workthings::work_hand(g, a1); r.w(&mut o);  }
 763 => { let a1: GuardId = Io::r(&mut i); let a2: GuardId = Io::r(&mut i); let r = crate::workthings::work_passes(g, a1, a2); r.w(&mut o);  }
 764 => { let a1: GuardId = Io::r(&mut i); let a2: GuardId = Io::r(&mut i); let r = crate::workthings::work_coming(g, a1, a2); r.w(&mut o);  }
@@ -669,14 +669,10 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 942 => {  crate::deathrecap::recap_tick(g);  }
 943 => { let a1: crate::orders::OrderTarget = Io::r(&mut i); let r = crate::planmode::goal_men(g, &a1); r.w(&mut o);  }
 944 => { let a1: crate::orders::OrderTarget = Io::r(&mut i); crate::planmode::plan_goal(g, &a1);  }
-952 => { let a1: V3 = Io::r(&mut i); let r = crate::orders::squad_orders_target_at(g, a1); r.w(&mut o);  }
-953 => { let a1: InputId = Io::r(&mut i); let a2: CameraId = Io::r(&mut i); let a3: crate::host_hud::View = Io::r(&mut i); let r = crate::orders::squad_orders_target_under(g, a1, a2, a3); r.w(&mut o);  }
 954 => { let a1: String = Io::r(&mut i); let a2: Option<crate::orders::OrderTarget> = Io::r(&mut i); let a3: Option<crate::orders::Who> = Io::r(&mut i); let a4: Option<crate::orders::GiveOpts> = Io::r(&mut i); let r = crate::orders::squad_orders_give(g, &a1, a2.as_ref(), a3, a4.as_ref()); r.w(&mut o);  }
 956 => { let a1: GuardId = Io::r(&mut i); let a2: crate::orders::SquadOrdersAssignA = Io::r(&mut i); crate::orders::squad_orders_assign(g, a1, &a2);  }
 957 => {  crate::orders::squad_orders_loaded(g);  }
 963 => { let a1: Option<f64> = Io::r(&mut i); let r = crate::orders::squad_orders_pick(g, a1); r.w(&mut o);  }
-964 => { let mut a1: Option<crate::orders::HoverKept> = Io::r(&mut i); let r = crate::orders::squad_orders_hover(g, a1.as_mut()); r.w(&mut o); a1.w(&mut o); }
-966 => { let mut a1: Option<crate::orders::HoverKept> = Io::r(&mut i); let r = crate::orders::squad_orders_hint_view(g, a1.as_mut()); r.w(&mut o); a1.w(&mut o); }
 967 => { let a1: Vec<GuardId> = Io::r(&mut i); let a2: crate::orders::OrderTarget = Io::r(&mut i); let r = crate::orders::squad_orders_quick_for(g, &a1, &a2); r.w(&mut o);  }
 971 => {  let r = crate::orders::squad_orders_ring_view(g); r.w(&mut o);  }
 973 => { let a1: V3 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let r = crate::orders::squad_orders_spots_at(g, a1, a2, a3); r.w(&mut o);  }
@@ -692,7 +688,7 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 998 => { let a1: crate::wallcharge::WallSpot = Io::r(&mut i); let r = crate::wallcharge::charge_indoors(g, &a1); r.w(&mut o);  }
 999 => { let a1: crate::wallcharge::WallSpot = Io::r(&mut i); let r = crate::wallcharge::safe_radius(g, &a1); r.w(&mut o);  }
 1000 => { let a1: V3 = Io::r(&mut i); let a2: Option<V3> = Io::r(&mut i); let r = crate::wallcharge::wall_at(g, a1, a2); r.w(&mut o);  }
-1001 => { let a1: V3 = Io::r(&mut i); let a2: crate::orders::OrderTarget = Io::r(&mut i); let r = crate::wallcharge::wall_target(g, a1, &a2); r.w(&mut o);  }
+1001 => { let a1: V3 = Io::r(&mut i); let a2: crate::orders::OrderTarget = Io::r(&mut i); crate::scene_collision::stands(g); let mut k = Vec::new(); let r = crate::wallcharge::wall_target(g, &crate::seats::here(g), a1, &a2, &mut k); crate::wallcharge::sky_kept(g, k); r.w(&mut o);  }
 1002 => {  crate::wallcharge::wall_charge_reset(g);  }
 1003 => { let a1: Option<f64> = Io::r(&mut i); crate::wallcharge::wall_charge_set_carried(g, a1);  }
 1004 => { let a1: f64 = Io::r(&mut i); crate::wallcharge::wall_charge_raise_carried(g, a1);  }

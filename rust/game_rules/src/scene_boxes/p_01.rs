@@ -33,7 +33,7 @@ fn bx_mut(g: &mut Game, id: impl Into<AnyBoxId>) -> &mut Bx { &mut g.tab[id.into
 fn seam_box_push(g: &mut Game, b: Bx) -> BoxId { crate::scene_boxes::box_new(g, b) }
 
 /// A piece of the picture, which no game ray meets. (boxes.ts lookKeyed)
-pub fn look_keyed(g: &mut crate::game::Game, b: AnyBoxId) -> bool {
+pub fn look_keyed(g: &crate::game::Game, b: AnyBoxId) -> bool {
     let (dress, mkey) = { let x = bx(g, b); (x.dress, x.mkey) };
     dress == Some(true) || (match mkey { Some(k) => js::to_u32(k) >> 24 == js::to_u32(crate::scene_boxes::mkey().look) >> 24, None => false })
 }
@@ -114,26 +114,6 @@ pub fn copy_box(g: &mut crate::game::Game, b: BoxId) -> BoxId {
 /// A box's two words, to go on the box made from its paint. (boxes.ts wordOf)
 pub fn word_of(b: crate::scene_boxes::WordOfB) -> crate::scene_boxes::WordOf {
     crate::scene_boxes::WordOf { stuff: b.stuff, does: b.does }
-}
-
-/// A ray asked by the picture: the ray grid's stamps are the asker's, the last ray's scratch put back after. (boxes.ts BoxWorld.rayAside)
-pub fn box_world_ray_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, own: &mut crate::scene_boxes::BoxWorldRayAsideOwn, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    // own.w's table stays out of this: BoxWorldRayAsideOwnW is an empty struct (SKELETON-GAP). Every ask takes a clean table at ray 0, which the TypeScript does
-    // too for a first ask: a stamp is only "met on this ray", so the same candidates meet the same tests. It costs the table's allocation.
-    let need = g.engine.world.rg_stamp.len();
-    let w = &mut g.engine.world;
-    let (best, bi, bn, ray) = (w.rc_best, w.rc_bi, w.rc_bn, w.rg_ray);
-    let stamp = core::mem::replace(&mut w.rg_stamp, vec![0u32; need]);
-    w.rg_ray = 0.0;
-    own.w = None;
-    let out = fn_(g);
-    let w = &mut g.engine.world;
-    w.rg_stamp = stamp;
-    w.rg_ray = ray;
-    w.rc_best = best;
-    w.rc_bi = bi;
-    w.rc_bn = bn;
-    out
 }
 
 /// The world's buffers and tables. (boxes.ts BoxWorld.constructor)
@@ -249,64 +229,48 @@ pub fn box_world_relist(g: &mut crate::game::Game) {
     g.engine.world.pack_behind = true;
 }
 
-/// Ray against all boxes, closest hit. (boxes.ts BoxWorld.raycast)
-pub fn box_world_raycast(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: Option<f64>, skip_flags: Option<f64>, skip_owner: Option<f64>, with_look: Option<bool>) -> Option<crate::scene_boxes::BoxWorldRaycast> {
+/// words a ray's bits stand in: a bit a static
+pub const MET: usize = 128;
+/// the nearest a ray has met so far: how far, which box of `all` (−1 none), the face
+struct Nearest { best: f64, bi: f64, bn: V3 }
+
+/// Closest box along the ray, of every box of the frame as it is drawn (the statics by their grid). A read: the game keeps nothing of a ray. (boxes.ts BoxWorld.raycast)
+pub fn box_world_raycast(g: &crate::game::Game, ro: V3, rd: V3, tmax: Option<f64>, skip_flags: Option<f64>, skip_owner: Option<f64>, with_look: Option<bool>) -> Option<crate::scene_boxes::BoxWorldRaycast> {
     let tmax = tmax.unwrap_or(1e9);
     let skip_flags = skip_flags.unwrap_or_else(|| { let f = box_flag(); (js::to_i32(f.no_shadow) | js::to_i32(f.no_primary)) as f64 });
     let skip_owner = skip_owner.unwrap_or(0.0);
     let with_look = with_look.unwrap_or(false);
-    let w = &mut g.engine.world;
-    w.rc_best = tmax;
-    w.rc_bi = -1.0;
-    w.rc_bn = [0.0, 1.0, 0.0];
-    let n_s = w.rg_n;
-    if n_s < 0.0 || n_s > w.all.len() as f64 {
-        let mut i = 0;
-        while i < g.engine.world.all.len() {
-            let id = g.engine.world.all[i];
-            if with_look || !look_keyed(g, id) { box_world_ray_test(g, i as f64, ro, rd, skip_flags, skip_owner); }
-            i += 1;
-        }
-    } else {
-        let mut i = n_s as usize;
-        while i < g.engine.world.all.len() {
-            let id = g.engine.world.all[i];
-            if with_look || !look_keyed(g, id) { box_world_ray_test(g, i as f64, ro, rd, skip_flags, skip_owner); }
-            i += 1;
-        }
-        let mut k = 0;
-        while k < g.engine.world.rg_globals.len() {
-            let gi = g.engine.world.rg_globals[k];
-            box_world_ray_test(g, gi, ro, rd, skip_flags, skip_owner);
-            k += 1;
-        }
-        box_world_ray_walk(g, ro, rd, skip_flags, skip_owner);
-    }
     let w = &g.engine.world;
-    if w.rc_bi >= 0.0 { Some(crate::scene_boxes::BoxWorldRaycast { t: w.rc_best, index: w.rc_bi, n: w.rc_bn }) } else { None }
+    let mut near = Nearest { best: tmax, bi: -1.0, bn: [0.0, 1.0, 0.0] };
+    let n_s = w.rg_n;
+    let gridded = n_s >= 0.0 && n_s <= w.all.len() as f64;
+    for i in (if gridded { n_s as usize } else { 0 })..w.all.len() {
+        if with_look || !look_keyed(g, w.all[i]) { ray_test(g, &mut near, i, ro, rd, skip_flags, skip_owner); }
+    }
+    if gridded {
+        for &gi in &w.rg_globals { ray_test(g, &mut near, gi as usize, ro, rd, skip_flags, skip_owner); }
+        ray_walk(g, &mut near, ro, rd, skip_flags, skip_owner);
+    }
+    if near.bi >= 0.0 { Some(crate::scene_boxes::BoxWorldRaycast { t: near.best, index: near.bi, n: near.bn }) } else { None }
 }
 
 /// One candidate of the raycast, with the tie rule the index order gave it. (boxes.ts BoxWorld.rayTest)
-pub fn box_world_ray_test(g: &mut crate::game::Game, i: f64, ro: V3, rd: V3, skip_flags: f64, skip_owner: f64) {
-    let id = g.engine.world.all[i as usize];
+fn ray_test(g: &Game, near: &mut Nearest, i: usize, ro: V3, rd: V3, skip_flags: f64, skip_owner: f64) {
+    let id = g.engine.world.all[i];
     let (flags, owner) = { let b = bx(g, id); (b.flags, b.owner) };
     if js::to_i32(flags) & js::to_i32(skip_flags) != 0 { return; }
     if js::truthy(skip_owner) && owner == skip_owner { return; }
-    let best = g.engine.world.rc_best;
-    let Some(r) = ray_box(g, ro, rd, id, best) else { return };
-    if r.t < best || (r.t == best && i < g.engine.world.rc_bi) {
+    let Some(r) = ray_box(g, ro, rd, id, near.best) else { return };
+    if r.t < near.best || (r.t == near.best && (i as f64) < near.bi) {
         // (`this.glassOpen`: a FnField, and glassbreak.ts:214 is the only thing that sets it, so its closure's body is written here)
-        if g.engine.world.glass_open.is_some() && js::to_i32(flags) & js::to_i32(box_flag().glass) != 0 && i < g.engine.world.statics.len() as f64
-            && crate::glassbreak::glass_break_live(g) && crate::glassbreak::glass_break_open_at(g, i, [ro[0] + rd[0] * r.t, ro[1] + rd[1] * r.t, ro[2] + rd[2] * r.t]) { return; }
-        let w = &mut g.engine.world;
-        w.rc_best = r.t;
-        w.rc_bi = i;
-        w.rc_bn = r.n;
+        if g.engine.world.glass_open.is_some() && js::to_i32(flags) & js::to_i32(box_flag().glass) != 0 && i < g.engine.world.statics.len()
+            && crate::glassbreak::glass_break_live(g) && crate::glassbreak::glass_break_open_at(g, i as f64, [ro[0] + rd[0] * r.t, ro[1] + rd[1] * r.t, ro[2] + rd[2] * r.t]) { return; }
+        *near = Nearest { best: r.t, bi: i as f64, bn: r.n };
     }
 }
 
 /// The statics along the ray: a 2D DDA over the XZ cells, each cell's statics tested once. (boxes.ts BoxWorld.rayWalk)
-pub fn box_world_ray_walk(g: &mut crate::game::Game, ro: V3, rd: V3, skip_flags: f64, skip_owner: f64) {
+fn ray_walk(g: &Game, near: &mut Nearest, ro: V3, rd: V3, skip_flags: f64, skip_owner: f64) {
     let wd = crate::scene_world::world();
     let (w_, h_, cs) = (wd.grid_w, wd.grid_h, wd.grid_cell);
     let (gx, gz) = (w_ * cs, h_ * cs);
@@ -331,26 +295,22 @@ pub fn box_world_ray_walk(g: &mut crate::game::Game, ro: V3, rd: V3, skip_flags:
     let dtz = if step_z != 0.0 { cs / m::abs(dz) } else { f64::INFINITY };
     let mut tmx = if dx > 0.0 { ((cx + 1.0) * cs - ox) / dx } else if dx < 0.0 { (cx * cs - ox) / dx } else { f64::INFINITY };
     let mut tmz = if dz > 0.0 { ((cz + 1.0) * cs - oz) / dz } else if dz < 0.0 { (cz * cs - oz) / dz } else { f64::INFINITY };
-    let w = &mut g.engine.world;
-    w.rg_ray += 1.0;
-    if w.rg_ray == 4294967295.0 {
-        w.rg_stamp.fill(0);
-        w.rg_ray = 1.0;
-    }
-    let ray = w.rg_ray as u32;
+    // (a static filed in several cells is tested once: a bit a static, which this ray alone has)
+    let w = &g.engine.world;
+    let mut met = [0u64; MET];
     let mut t_enter = t0;
     loop {
-        if t_enter > g.engine.world.rc_best { return; }
+        if t_enter > near.best { return; }
         let c = cz * w_ + cx;
         // (a NaN origin leaves the cell NaN: the TypeScript's array reads give undefined and no candidate)
         if c == c {
             let c = c as usize;
-            let (s, e) = (g.engine.world.rg_start[c] as usize, g.engine.world.rg_start[c + 1] as usize);
+            let (s, e) = (w.rg_start[c] as usize, w.rg_start[c + 1] as usize);
             for k in s..e {
-                let i = g.engine.world.rg_items[k] as usize;
-                if g.engine.world.rg_stamp[i] == ray { continue; }
-                g.engine.world.rg_stamp[i] = ray;
-                box_world_ray_test(g, i as f64, ro, rd, skip_flags, skip_owner);
+                let i = w.rg_items[k] as usize;
+                if met[i >> 6] >> (i & 63) & 1 != 0 { continue; }
+                met[i >> 6] |= 1 << (i & 63);
+                ray_test(g, near, i, ro, rd, skip_flags, skip_owner);
             }
         }
         if tmx < tmz {
@@ -378,10 +338,7 @@ pub fn box_world_build_ray_grid(g: &mut crate::game::Game, n: f64) {
     let w = &mut g.engine.world;
     let max_boxes = w.max_boxes as usize;
     if w.rg_ranges.len() < count * 4 { w.rg_ranges = vec![0; core::cmp::max(count, max_boxes) * 4]; }
-    if w.rg_stamp.len() < max_boxes {
-        w.rg_stamp = vec![0; max_boxes];
-        w.rg_ray = 0.0;
-    }
+    assert!(count <= MET * 64, "more statics than a ray keeps a bit for");
     w.rg_start.fill(0);
     w.rg_globals.clear();
     for i in 0..count {
@@ -444,7 +401,7 @@ pub fn shape_cut(g: &crate::game::Game, b: AnyBoxId) -> bool {
 }
 
 /// Is this box's cut record met by the game's rays? Ask it only of a box that has one. (boxes.ts cutMet; CUT.on is settled on)
-pub fn cut_met(g: &mut crate::game::Game, b: AnyBoxId) -> bool {
+pub fn cut_met(g: &crate::game::Game, b: AnyBoxId) -> bool {
     bx(g, b).cut.as_ref().unwrap().len() > 0
 }
 
@@ -568,7 +525,7 @@ fn ray_round(ro: V3, rd: V3, b: &Bx, tmax: f64) -> Option<(f64, V3)> {
 }
 
 /// The closest hit of a ray on one box; origin inside = no hit. (boxes.ts rayBox)
-pub fn ray_box(g: &mut crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax: f64) -> Option<crate::scene_boxes::RayBox> {
+pub fn ray_box(g: &crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax: f64) -> Option<crate::scene_boxes::RayBox> {
     let (round, has_cut) = { let x = bx(g, b); (x.round == Some(true), x.cut.is_some()) };
     if round { return ray_box_round(g, ro, rd, b, tmax).map(|r| crate::scene_boxes::RayBox { t: r.t, n: r.n }); }
     if has_cut && cut_met(g, b) { return ray_box_cut(g, ro, rd, b, tmax).map(|r| crate::scene_boxes::RayBox { t: r.t, n: r.n }); }
@@ -581,7 +538,7 @@ pub fn ray_box(g: &mut crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax: f64
 }
 
 /// The test against a box with a cut record: the slab interval, cut down by the record's planes. (boxes.ts rayBoxCut)
-pub fn ray_box_cut(g: &mut crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax: f64) -> Option<crate::scene_boxes::RayBoxCut> {
+pub fn ray_box_cut(g: &crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax: f64) -> Option<crate::scene_boxes::RayBoxCut> {
     let (c, h, yaw, rot) = { let x = bx(g, b); (x.c, x.h, x.yaw, x.rot) };
     let (mut cs, mut sn) = (1.0, 0.0);
     let (px, py, pz) = (ro[0] - c[0], ro[1] - c[1], ro[2] - c[2]);
@@ -599,13 +556,9 @@ pub fn ray_box_cut(g: &mut crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax:
     if !slab(h[0], ox, 1.0 / js::or(dx, 1e-20), 0, &mut t0, &mut t1, &mut axis, &mut sgn) { return None; }
     if !slab(h[1], oy, 1.0 / js::or(dy, 1e-20), 1, &mut t0, &mut t1, &mut axis, &mut sgn) { return None; }
     if !slab(h[2], oz, 1.0 / js::or(dz, 1e-20), 2, &mut t0, &mut t1, &mut axis, &mut sgn) { return None; }
-    // (the record is lent out of the box for the call: cut_clip takes `g` and reads no box)
-    let cut = bx_mut(g, b).cut.take().unwrap();
-    let met = crate::scene_cut::cut_clip(g, &cut, ox, oy, oz, dx, dy, dz, t0, t1);
-    let (clip_t0, k) = (g.m.scene_cut.cut_clip.t0, g.m.scene_cut.cut_clip.k);
-    let plane = if met && k >= 0.0 { Some(cut[k as usize].n) } else { None };
-    bx_mut(g, b).cut = Some(cut);
-    if !met { return None; }
+    let cut = bx(g, b).cut.as_ref().unwrap();
+    let (clip_t0, _, k) = crate::scene_cut::cut_clip_of(cut, ox, oy, oz, dx, dy, dz, t0, t1)?;
+    let plane = if k >= 0.0 { Some(cut[k as usize].n) } else { None };
     if k < 0.0 && axis < 0 { return None; }
     let ln: V3 = match plane {
         Some(n) => [n[0], n[1], n[2]],
@@ -616,7 +569,7 @@ pub fn ray_box_cut(g: &mut crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax:
 }
 
 /// (boxes.ts rayBoxRound)
-pub fn ray_box_round(g: &mut crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax: f64) -> Option<crate::scene_boxes::RayBoxRound> {
+pub fn ray_box_round(g: &crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax: f64) -> Option<crate::scene_boxes::RayBoxRound> {
     ray_round(ro, rd, bx(g, b), tmax).map(|(t, n)| crate::scene_boxes::RayBoxRound { t, n })
 }
 
@@ -754,29 +707,6 @@ mod tests {
         bx_mut(&mut g, wall).flags = f.glass;
         assert!(!box_drawn(&mut g, &all, wall), "a pane is not drawn");
         assert!(box_drawn(&mut g, &all, trim), "trim asks only whether its box is hidden");
-    }
-
-    #[test]
-    fn a_ray_aside_answers_the_same_and_leaves_the_last_rays_scratch() {
-        let mut g = Game::blank();
-        let mut x = Lcg(4242);
-        world(&mut g, &mut x);
-        box_world_list(&mut g);
-        let (ro, rd) = ([1.0, 1.0, 1.0], [0.8, -0.1, 0.6]);
-        let bits = |r: Option<crate::scene_boxes::BoxWorldRaycast>| r.map(|r| (r.t.to_bits(), r.index.to_bits(), r.n.map(f64::to_bits)));
-        let direct = bits(box_world_raycast(&mut g, ro, rd, None, None, None, None));
-        assert!(direct.is_some());
-        let w = &g.engine.world;
-        let before = (w.rg_stamp.clone(), w.rg_ray, w.rc_best, w.rc_bi, w.rc_bn);
-        let mut own = crate::scene_boxes::BoxWorldRayAsideOwn::zeroed();
-        let mut ask = |g: &mut Game| bits(box_world_raycast(g, ro, [-0.8, 0.1, -0.6], None, None, None, None));
-        let aside = box_world_ray_aside(&mut g, &mut own, &mut ask);
-        let w = &g.engine.world;
-        assert_eq!(before, (w.rg_stamp.clone(), w.rg_ray, w.rc_best, w.rc_bi, w.rc_bn), "nothing of the last ray moved");
-        let mut own = crate::scene_boxes::BoxWorldRayAsideOwn::zeroed();
-        let mut ask = |g: &mut Game| bits(box_world_raycast(g, ro, rd, None, None, None, None));
-        assert_eq!(box_world_ray_aside(&mut g, &mut own, &mut ask), direct, "a clean table meets the same box");
-        assert_eq!(aside, bits(box_world_raycast(&mut g, ro, [-0.8, 0.1, -0.6], None, None, None, None)));
     }
 
     const TS_GRID: u32 = 0x92b81bdb;

@@ -223,25 +223,9 @@ pub fn throwables_world(g: &mut crate::game::Game) {
     let dyn_ = g.col.dynamic_boxes.clone();
     crate::scene_collision::rules_world(g, &dyn_);
     debug_assert!(crate::scene_collision::rules_panes(g) >= 0.0, "the pane's rule is not the module's to ask");
-    let p = furniture(g);
-    if !crate::scene_box_mirror::box_mirror_things(g, &p) {
+    if !crate::scene_box_mirror::box_mirror_things(g) {
         panic!("the box world's copy would not take the level's furniture: more things, or more boxes of them, than its tables hold, and a level of more is not loaded (game/levelfit.ts levelOver)");
     }
-}
-
-/// `this.props` as the copy reads it: every thing by its id, and the ones in the level in the furniture's own order (throwables.ts:318 hands the PropSystem itself).
-fn furniture(g: &mut Game) -> crate::scene_box_mirror::Furniture {
-    let (all, props) = (g.props.all.clone(), g.props.props.clone());
-    crate::scene_box_mirror::Furniture { all: things_of(g, &all), props: things_of(g, &props) }
-}
-fn things_of(g: &mut Game, ids: &[PropId]) -> Vec<crate::scene_box_mirror::FurnitureThing> {
-    let mut out = Vec::with_capacity(ids.len());
-    for &p in ids {
-        let (id, radius, boxes) = { let r = &g.tab.props_prop[p]; (r.id, r.radius, r.boxes.clone()) };
-        let (x, z, yaw) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p), crate::props::prop_yaw(g, p));
-        out.push(crate::scene_box_mirror::FurnitureThing { id, x, z, yaw, radius, boxes });
-    }
-    out
 }
 
 /// One number of the walk's hand-over (rust/sim items.rs PAR, by its address as the TypeScript has it: never a reference kept across the walk).

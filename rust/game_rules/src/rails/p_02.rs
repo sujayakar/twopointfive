@@ -272,13 +272,12 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
 }
 
 /// the step's mark under the cursor (rails.ts Rails.markUnder)
-pub fn rails_mark_under(g: &crate::game::Game, input: InputId, cam: CameraId, canvas: crate::rails::RailsMarkUnderCanvas) -> Option<V3> {
+pub fn rails_mark_under(g: &crate::game::Game, now: &crate::view::HostNow) -> Option<V3> {
     let s = rails_lesson(g)?;
     let at = step_at(&s.l, s.i)?.at?;
-    let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, at, canvas.client_width, canvas.client_height, None, None);
+    let (sx, sy, front) = crate::camera::project(&now.view_proj, at, now.client[0], now.client[1], None, None);
     if !front { return None; }
-    let (mx, my) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y);
-    if g.k.rails.snap_px > 0.0 && m::hyp2(mx - sx, my - sy) <= g.k.rails.snap_px { Some(at) } else { None }
+    if g.k.rails.snap_px > 0.0 && m::hyp2(now.mouse[0] - sx, now.mouse[1] - sy) <= g.k.rails.snap_px { Some(at) } else { None }
 }
 /// the menu's rows on a tutorial mission: only the orders the level names (rails.ts Rails.orderRows)
 pub fn rails_order_rows(g: &crate::game::Game, rows: &[OrdersOrderDefId]) -> Vec<OrdersOrderDefId> {
