@@ -13,9 +13,9 @@ import { ReplayBuffer, REPLAY } from '../game/replaybuf';
 import type { ReplayMeta } from '../game/replaybuf';
 import type { RunTape, ReplayFile } from '../replay/format';
 import { shelfPut } from '../replay/shelf';
-import { CAME_FROM, clock, replayBlob, errorMarks, lastRun, leaveFor, replayName, tapeWhy } from '../replay/format';
+import { CAME_FROM, clock, gameUp, replayBlob, errorMarks, lastRun, leaveFor, replayName, tapeWhy } from '../replay/format';
 export { CAME_FROM, leaveFor };
-import { ReplayKeeper } from '../replay/keeper';
+import { ReplayKeeper, ringSource } from '../replay/keeper';
 import { KEEP, keptSummary, pruneKept, keepBudget } from '../replay/keepstore';
 import { keptStore, keptWords } from '../replay/keptui';
 import { cloudUrl, cloudFile, cloudSendsFiles } from '../cloud/cloud';
@@ -59,7 +59,7 @@ export class ReplayKey {
   private played = false;
   constructor(private game: Game, cam: { target: ArrayLike<number>; yaw: number; distance: number }, private note: (s: string) => void, private meta: () => Partial<ReplayMeta> = () => ({})) {
     // (a game page is up — booted, or handed back by the browser as it was left: the last trip to a replay is over, and leaveFor's mark is one trip's)
-    try { if (!/[?&]playtape=/.test(location.search)) { sessionStorage.removeItem(CAME_FROM); window.addEventListener('pageshow', e => { if ((e as PageTransitionEvent).persisted) { try { sessionStorage.removeItem(CAME_FROM); } catch { /* */ } } }); } } catch { /* */ }
+    try { if (!/[?&]playtape=/.test(location.search)) gameUp(); } catch { /* */ }
     try { void fetch('/qa/commit', { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(t => { const c = t.trim(); if (/^[0-9a-f]{7,40}$/.test(c)) this.commit = c; }).catch(() => {}); } catch { /* no dev server */ }
     let on = true;
     try { if (new URLSearchParams(location.search).has('noreplay') || localStorage.getItem(LS) === '0') on = false; } catch { /* a sandboxed frame: on */ }
@@ -126,7 +126,7 @@ export class ReplayKey {
     try { if (new URLSearchParams(location.search).has('nokeep') || localStorage.getItem(LS_KEEP) === '0' || typeof indexedDB === 'undefined') return; if (onePage() && !cloudUrl(new URLSearchParams(location.search))) return; } catch { return; }
     try {
       const store = keptStore(), game = this.game;
-      const K = this.keeper = new ReplayKeeper(buf, { sid: this.session, store, played: () => this.played, say: s => this.say(s),
+      const K = this.keeper = new ReplayKeeper(ringSource(buf), { sid: this.session, store, played: () => this.played, say: s => this.say(s),
         head: () => { let search = ''; try { search = location.search; } catch { /* */ } return buf.head(game, { commit: this.commit, url: search, userAgent: navigator.userAgent, ...this.meta() }); } });
       const idle = (window as unknown as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => void }).requestIdleCallback;
       setInterval(() => { if (idle) idle(() => K.beat(), { timeout: 2000 }); else K.beat(); }, KEEP.secs * 1000);

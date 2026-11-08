@@ -9,6 +9,7 @@
 //   {k:'dump'}   once, first: what the file holds
 //   {k:'head'}   a visit's head (build, page query, level, switches, floor) — written with its first piece and again whenever it changed; the LAST one stands
 //   {k:'piece'}  one piece, numbered from 0 within its visit
+//   {k:'hands'}  a piece of a visit to the page that draws: bytes of its tape of hands, from where in it (tape/keep.ts)
 //   {k:'notes'}  notes put on a kept visit in the viewer
 //   {k:'f7'}     a file saved by the key that the shelf holds: its notes and which visit it is a window of (the trace itself is in the visit's pieces)
 //   {k:'file'}   a whole replay file the shelf holds whose visit is NOT kept here (saved before the page kept tapes, or its visit has been let go)
@@ -44,11 +45,12 @@ export type KeptLine =
   | { k: 'dump'; v: number; at: string; userAgent?: string; visits: { sid: string; pieces: number; bytes: number; startedAt: string; lastAt: string; sent?: string }[]; shelf: number }
   | ({ k: 'head'; sid: string; at: string } & KeptHead)
   | ({ k: 'piece'; sid: string; seq: number; at: string } & KeptPiece)
+  | { k: 'hands'; sid: string; seq: number; at: string; from: number; b: string }
   | { k: 'notes'; sid: string; notes: ReplayNote[] }
   | { k: 'f7'; session?: string; savedAt: string; /** the step count at the file's last sample */ n?: number; seconds: number; why?: string; scenario?: string; notes: ReplayNote[] }
   | { k: 'file'; file: ReplayFile };
 
-export const headLine = (sid: string, at: string, h: KeptHead): string => JSON.stringify({ k: 'head', sid, at, ...h }) + '\n';
+export const headLine = (sid: string, at: string, h: object): string => JSON.stringify({ k: 'head', sid, at, ...h }) + '\n';
 export const pieceLine = (sid: string, seq: number, at: string, p: KeptPiece): string => JSON.stringify({ k: 'piece', sid, seq, at, ...p }) + '\n';
 
 /** lines of JSON as records; a line that does not parse (a write cut short as the page went away) is counted, not thrown */
