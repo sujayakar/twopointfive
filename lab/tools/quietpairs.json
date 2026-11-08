@@ -1,0 +1,121 @@
+[
+ {
+  "name": "k7-quiet",
+  "w": 480,
+  "h": 270,
+  "dist": 26,
+  "look": [
+   0.5,
+   1,
+   -1.5
+  ],
+  "yaw": 0.5,
+  "pitch": 0.72,
+  "hour": 23.4,
+  "cut": 2.5,
+  "tick": 300,
+  "groups": {
+   "store": 0,
+   "coolers": 0.2,
+   "signs": 0,
+   "vending": 0.35,
+   "lanterns": 0,
+   "noodle": 0,
+   "street": 0,
+   "alley": 0.5,
+   "back": 0.6,
+   "signal": 1
+  },
+  "samples": 300
+ },
+ {
+  "name": "k7-raw",
+  "w": 480,
+  "h": 270,
+  "dist": 26,
+  "look": [
+   0.5,
+   1,
+   -1.5
+  ],
+  "yaw": 0.5,
+  "pitch": 0.72,
+  "hour": 23.4,
+  "cut": 2.5,
+  "tick": 300,
+  "groups": {
+   "store": 0,
+   "coolers": 0.2,
+   "signs": 0,
+   "vending": 0.35,
+   "lanterns": 0,
+   "noodle": 0,
+   "street": 0,
+   "alley": 0.5,
+   "back": 0.6,
+   "signal": 1
+  },
+  "samples": 300,
+  "method": "raw"
+ },
+ {
+  "name": "k7-noclamp",
+  "w": 480,
+  "h": 270,
+  "dist": 26,
+  "look": [
+   0.5,
+   1,
+   -1.5
+  ],
+  "yaw": 0.5,
+  "pitch": 0.72,
+  "hour": 23.4,
+  "cut": 2.5,
+  "tick": 300,
+  "groups": {
+   "store": 0,
+   "coolers": 0.2,
+   "signs": 0,
+   "vending": 0.35,
+   "lanterns": 0,
+   "noodle": 0,
+   "street": 0,
+   "alley": 0.5,
+   "back": 0.6,
+   "signal": 1
+  },
+  "samples": 300,
+  "method": "noclamp"
+ },
+ {
+  "name": "k7-norange",
+  "w": 480,
+  "h": 270,
+  "dist": 26,
+  "look": [
+   0.5,
+   1,
+   -1.5
+  ],
+  "yaw": 0.5,
+  "pitch": 0.72,
+  "hour": 23.4,
+  "cut": 2.5,
+  "tick": 300,
+  "groups": {
+   "store": 0,
+   "coolers": 0.2,
+   "signs": 0,
+   "vending": 0.35,
+   "lanterns": 0,
+   "noodle": 0,
+   "street": 0,
+   "alley": 0.5,
+   "back": 0.6,
+   "signal": 1
+  },
+  "samples": 300,
+  "method": "norange"
+ }
+]
