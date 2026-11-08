@@ -3,13 +3,12 @@
 //   TPS_CLOUD_URL          the backend's address (cloud/, a Convex deployment), built into the page as `__TPS_CLOUD__` (src/cloud/cloud.ts): with none the page has no backend at all
 //   VERCEL_GIT_COMMIT_SHA  (else `git rev-parse` of a clean checkout) → dist/qa/commit, the file the dev server answers /qa/commit with: a recording made on the build names it
 import { $ } from "bun";
-import pageBridge from "./blitz/page-plugin.ts";   // the page's way to the state bridge under ?rust=1 (tools/blitz/page-plugin.ts)
 import { faceWasm } from "./blitz/face-build.ts";
 const cloud = (process.env.TPS_CLOUD_URL ?? "").trim();
 if (cloud && !/^https:\/\/[\w.-]+(:\d+)?\/?$/.test(cloud)) { console.error(`build — TPS_CLOUD_URL is not an https address: ${cloud}`); process.exit(1); }
 await $`bun run tools/draw/ban.ts`;   // (the page that draws holds no game: an import of one stops the build)
 await $`rm -rf dist`;
-const res = await Bun.build({ entrypoints: ["./index.html", "./replay.html", "./sounds.html", "./music.html"], outdir: "./dist", minify: true, target: "browser", sourcemap: "linked", loader: { ".wgsl": "text" }, plugins: [pageBridge], ...(cloud ? { define: { __TPS_CLOUD__: JSON.stringify(cloud) } } : {}) });
+const res = await Bun.build({ entrypoints: ["./index.html", "./replay.html", "./sounds.html", "./music.html"], outdir: "./dist", minify: true, target: "browser", sourcemap: "linked", loader: { ".wgsl": "text" }, ...(cloud ? { define: { __TPS_CLOUD__: JSON.stringify(cloud) } } : {}) });
 if (!res.success) { for (const m of res.logs) console.error(m); process.exit(1); }
 await $`cp -R public/. dist/`;
 await $`mkdir -p dist/levels`; await $`cp ${(await Array.fromAsync(new Bun.Glob("levels/*.json").scan())).sort()} dist/levels/`;   // (every mission's level file, fetched as /levels/<file>: without them a mission with a level of its own fell back to the office on a static host)

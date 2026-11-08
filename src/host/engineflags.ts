@@ -11,6 +11,7 @@ export function urlFlagsOnEngine(engine: Engine) {
   if (new URLSearchParams(location.search).has('gbaa')) { gbaaForce.on = true; engine.settings.gbaa = true; engine.settings.taauPhases = 0; }
   if (new URLSearchParams(location.search).has('noiq')) { iqForce.off = true; engine.settings.sharpDirect = false; engine.settings.sharpDecouple = false; engine.settings.gbaa = false; engine.settings.taauHistSharp = 0; }   // ?noiq: the image-quality program's resolve configuration all off = the resolve as it was (the identity A/B against main)   // ?gbaa: geometric edge AA on + the TAA's jitter off (the image-quality program's C3 by hand; the presets' own placement otherwise)
   if (new URLSearchParams(location.search).has('nomv')) engine.settings.motionIds = false;   // ?nomv: motion identity off — the g-buffer index-matches dynamic boxes as before (identity A/B)   // ?sharp: forced ON at every tier for the visit (the presets' own placement: ui/quality.ts Preset.iq)
+  if (new URLSearchParams(location.search).get('holedepth') === '0') engine.settings.portalHole = false;   // ?holedepth=0: an opening's daylight is its whole rectangle (settings.portalHole)
   (window as any).__sharp = {   // sharp direct from the console: on / off, what it runs at, its memory
     get on() { return engine.settings.sharpDirect; }, set on(v: boolean) { engine.settings.sharpDirect = !!v; },
     get live() { return engine.sharpOn; },
