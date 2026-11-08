@@ -518,7 +518,7 @@ export function irBeams(g: Game, out: Box[]) {
   });
 }
 
-/** WHETHER AN ENEMY CARRIES A VISIBLE WEAPON LASER (Tab ▸ Sandbox ▸ Team feel ▸ 'enemies carry visible lasers', kept per machine by teamfeel.ts; ?enemylasers
+/** WHETHER AN ENEMY CARRIES A VISIBLE WEAPON LASER (?enemylasers
  *  for a visit; the maintainer after playing: 'the enemies having super visible lasers is a bit much', then 'we should probably just remove them for realism,
  *  not just tone them down'). false, the default: a man hostile to Sam has no laser — no line and no dot, in any state, in every game and both showcases.
  *  true = the game as it was: every hunting man's red line from muzzle to dot. Nothing else changes with it either way: the laser was only ever a picture

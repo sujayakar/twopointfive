@@ -21,7 +21,7 @@ Every line checked against the code at 527a92a. The build is THE PAGE IN THE BRO
 
 <!-- was CLAUDE.md lines 240–243 -->
 - **Where the families live** (`src/game/`): SQUAD = orders.ts, pairorders.ts, silent.ts, unseen.ts, sneak.ts, spotted.ts, pairup.ts, squadsmoke.ts, squadthrow.ts, squad40.ts, shutdoor.ts, cover.ts, cleared.ts, roomread.ts, roomfit.ts, stackroom.ts, rearwatch.ts, entrypoints.ts,
-  floorseen.ts, teamfeel.ts (the Tab rows), kit.ts + loadout.ts + slots.json, nvg.ts, irlaser.ts · DOORS = doors.ts, doortools.ts, doorpath.ts, doorway.ts, doorswing.ts, handleside.ts,
+  floorseen.ts, kit.ts + loadout.ts + slots.json, nvg.ts, irlaser.ts · DOORS = doors.ts, doortools.ts, doorpath.ts, doorway.ts, doorswing.ts, handleside.ts,
   doorblast.ts, shutdoor.ts · ROOM FIGHT (both sides of a room clear) = roomfight.ts, digin.ts, pressure.ts, laststand.ts, buddy.ts, enemysquads.ts, cues.ts, difficulty.ts, coverfire.ts,
   clearline.ts · GEAR = frag.ts, he40.ts, shotgun.ts, wallcharge.ts · DESTRUCTION = destruction.ts, destructionSwitch.ts, wallbreak.ts, wallreact.ts, furnblast.ts, glassbreak.ts, glasspen.ts, shards.ts.
 

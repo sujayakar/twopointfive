@@ -256,7 +256,7 @@ export const RUST_GAME = {
 
 /** THE SETTLED ROWS, HELD (tools/qa/switches.json, kind "settled": 866 switch rows of the knob tables that are constants of the game now; the Rust game has
  *  no such row, only the branch the page takes). The TypeScript page still has them as switches, and three things can move one on a player's machine: a
- *  row of the debugger's panel KEPT in the browser's store and read back at every visit (teamfeel.ts, pressure.ts, digin.ts and the rest of game.ts's
+ *  row of the debugger's panel KEPT in the browser's store and read back at every visit (pressure.ts, digin.ts and the rest of game.ts's
  *  loaders), a word on the address (`?noautopilot`), a click in the panel. On a puppet such a row would turn only the half of the game the page still
  *  runs (the HUD's rows, the menu, the picture's dressing) and not the tick. So under the word each settled row is held at its value on the page, as
  *  tools/qa/fold.ts holds it for a headless run: a read answers that value, a write of another is refused, and what was refused or stood off its value

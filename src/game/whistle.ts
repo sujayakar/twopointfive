@@ -13,7 +13,7 @@
 //   · a man already hunting (alert / search) takes it as one more fix on where you are — no line, no change of state; a man about to go loud anyway (a shot in the
 //     same half second) is not talked down to 'hello?' by it.
 // The player's side (whistleKey / tryWhistle): V, anywhere but down, once per `cooldown` seconds — the event, the sound meter's tick, the synthesized two-note
-// voice at his head (sfx.ts 'whistle'); no HUD line, it is diegetic. The knobs (WHISTLE) sit in Tab ▸ Sandbox and are kept per machine like the aim rows.
+// voice at his head (sfx.ts 'whistle'); no HUD line, it is diegetic. The knobs are WHISTLE like the aim rows.
 import './seats';
 import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
@@ -48,7 +48,6 @@ export const WHISTLE = {
   gain: 0.55,
 };
 export type WhistleKnobs = typeof WHISTLE;
-export const WHISTLE_DEFAULTS: WhistleKnobs = { ...WHISTLE };
 /** How the man who answers it CARRIES himself on the way over while it is still only a whistle to him (guards.ts, the suspicious branch, via whistleSoft): 'torch'
  *  = the torch comes up to shoulder height and goes where he looks (the animator's Idle_Torch_Loop over the walk — in the hand that holds it with gunhand.ts
  *  GUNHAND.whistle; the clip's own raised hand is the empty one); 'none' = the calm patrol's low carry, the beam
@@ -126,24 +125,6 @@ export function whistleSoft(gd: Guard): boolean {
 }
 
 
-// ---------------------------------------------------------------- persistence (one key, per machine — the way the aim rows are kept)
-const LS_KEY = 'twopointsix.whistle';
-const KEPT: (keyof WhistleKnobs)[] = ['level', 'reachK', 'cooldown', 'twiceWindow'];
-/** write the kept knobs to localStorage (the panel calls it on every change) */
-export function saveWhistle() {
-  try { const out: Record<string, number> = {}; for (const k of KEPT) out[k] = WHISTLE[k]; localStorage.setItem(LS_KEY, JSON.stringify(out)); }
-  catch { /* no storage (the harness, a locked-down page): nothing to keep */ }
-}
-/** read them back (once, at module load): only finite numbers in a sane range are taken */
-export function loadWhistle() {
-  try {
-    const j = JSON.parse(localStorage.getItem(LS_KEY) ?? 'null'); if (!j || typeof j !== 'object') return;
-    for (const k of KEPT) { const v = (j as Record<string, unknown>)[k]; if (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 600) WHISTLE[k] = v; }
-  } catch { /* nothing stored, or not readable: the shipped values stand */ }
-}
-/** everything back to the shipped values, and the stored copy dropped */
-export function resetWhistle() { Object.assign(WHISTLE, WHISTLE_DEFAULTS); try { localStorage.removeItem(LS_KEY); } catch { /* none */ } }
-loadWhistle();
 
 // ---------------------------------------------------------------- checkpoints (game/savestate.ts): Sam's breath, and every man's memory of the whistles by roster index
 export interface WhistleSnap { blower: Blower; men: (WhistleMem | null)[]; }

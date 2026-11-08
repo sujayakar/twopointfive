@@ -202,7 +202,7 @@ export function leversBase(): Difficulty { return BASE; }
 /** levers are moved and every one stands on a rung, but on no level's: 'your own mix' (false at a level's own setting, and with rows moved under a lever by hand) */
 export function leversMixed(): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('leversMixed', undefined, []); if (__r !== RUST_PASS) return __r as any; } } return anySet() && shownWhole() && difficultyNow() === 'custom'; }
 let coneVisit: boolean | null = null;   // (setConeVisit, below: the fog's cone for this visit; null = the level decides)
-let ownWas: boolean | null = null;      // (FOG.own as it stood before the fog lever wrote it — the kept option, teamfeel.ts — put back when the lever lets go)
+let ownWas: boolean | null = null;      // (FOG.own as it stood before the fog lever wrote it — put back when the lever lets go)
 let ownFor: FogRung | FogOff | null = null;      // (the rung FOG.own was last written for: written again only when the lever MOVES, so a ?fogown visit or the Tab row flipped over the lever stands through a later write of the tables — a scenario's start)
 /** the tables written whole from the level and the levers over it, the fog's two rows with them (`fogOnly`: the fog's rows alone — the fog lever moves nothing of the defenders') */
 function write(fogOnly = false) {
@@ -257,10 +257,9 @@ export function setLever<K extends LeverKey>(key: K, rung: Levers[K] | null, kee
   if (keep) { if (!own(key)) { resetPressure(); resetDigIn(); } storeLevers(); if (stood || !own(key)) storeName(BASE); }   // (the level's name with them: what the screen showed under the lever is what the next plain page load starts from)
   write(own(key));
 }
-/** game.ts, ROUND the kept feel rows being read back (`load` — teamfeel.ts loadTeamFeel writes FOG.own as this machine keeps it): the fog lever's rung over it again, the kept one remembered for when the lever lets go */
-export function leversFog(load: () => void) {
-  if (ownFor !== null && ownWas !== null) FOG.own = ownWas;   // (the lever's hand off the row while the kept copy is read: it only writes the keys it keeps)
-  load();
+/** game.ts, as a game is made: the fog lever's rung over FOG.own again, what it stood at remembered for when the lever lets go */
+export function leversFog() {
+  if (ownFor !== null && ownWas !== null) FOG.own = ownWas;
   if (SET.fog) { ownWas = FOG.own; FOG.own = SET.fog === 'own'; ownFor = SET.fog; }
 }
 /** THE CONE FOR THIS VISIT, whatever the level and through every later write of it (a scenario's start writes hard's rows again — difficultyHere; the mission

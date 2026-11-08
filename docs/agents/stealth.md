@@ -269,7 +269,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   one test. LASER tripwires: `bodyBreaks` (capsules vs the beam) for Sam / the hauled body, item flight segments; staff never trip. Cameras + emitters are
   `LightTarget` kind `'device'` (OCP / a round / the mains via lighting.ts `factor`; `alive()`); everything drawn as dynamic boxes (`deviceBoxes`, the beam via
   combat.ts `beamBoxes`). Live play only (`sensing`: aiEnabled, !quietUtility, tune.devices) — under the tour they pan and glow, silent. Knobs `tune.devices /
-  lasers / cameraSuspicionSecs / cameraAlarmSecs / deviceCones` (Tab ▸ Sandbox, persisted `twopointsix.devices`). The office: three cameras, `pad_side` on the
+  lasers / cameraSuspicionSecs / cameraAlarmSecs / deviceCones` (Tab ▸ Sandbox). The office: three cameras, `pad_side` on the
   server room's SIDE door (the front door keeps key / pick / kick — guard-key, dialogue and debrief probes are frozen on it), a shin beam across the corridor at
   x 14.5, a chest beam across the storage doorway (corridor face — a beam ENDS at the first solid thing in it, leaves included, for the picture and the sensor alike). QA: `probes.ts devices` (camera / keypad / laser / editor / vision — the last a frozen digest of the guards' own canSee
   off main), the soak's device invariants; editor tools C / K / J + `__ed.device`.
@@ -444,7 +444,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   slam lifts his awareness past 0.47 or he alerts; other calm hearers glance (`whistlePatrolTick` cranes `lookYawExtra` 1.5 s); alert / search men take it as
   a fix (lastKnown, no bark). The same man answering again within `twiceWindow` (60 s) → `'search'` round the point (`TWICE_LINES`). Per-man memory in a
   WeakMap (`whistleMem(gd)`), `WHISTLE_STATS` / `WHISTLE_LOG` for QA, `whistleSummary` on the panel; knobs level / reachK / cooldown / twiceWindow in Tab ▸
-  Sandbox, kept per machine (`saveWhistle`, localStorage `twopointsix.whistle`). QA: `probes.ts whistle` (reach open / far / shut vs open door with the
+  Sandbox. QA: `probes.ts whistle` (reach open / far / shut vs open door with the
   propagation's numbers, nearest-only, twice, cooldown, alert cue, meter, torch kept, invisible), soak stimulus `whistle` (`--whistle-per-min`, 0 = the old schedule).
 - **The whistle's answer, torch up in the hand that holds it** (GUN HAND, `src/game/gunhand.ts` `GUNHAND.on` + key `whistle`; `character.ts` `torchUpLayer`,
   the torch branch of `inHandWord`). THE FAULT: upper `'torch'` plays the library's `Idle_Torch_Loop`, keyed for a torch in the LEFT hand — an empty left fist

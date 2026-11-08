@@ -125,8 +125,7 @@ The office authors (officeGen.ts → office.json): `cam_corridor` (east end over
 outside its sweep), `pad_side` on `server_manager` (the QUIET way into the server room; the front door keeps its key / pick / kick),
 `laser_corridor` (shin height across the corridor at x 14.5 — the straight walk from the lobby arch to the server door breaks it; round
 through the cubicles, the OCP, or the breaker), `laser_storage` (chest height across the storage DOORWAY on its corridor face, battery —
-in on your knees; the breaker is through that door). Knobs: `Game.tune.devices / lasers / cameraSuspicionSecs / cameraAlarmSecs / deviceCones` (debugger ▸ Sandbox — the game page's tweak panel, on the backtick key —, persisted
-`twopointsix.devices`; 'all codes' / 'forget codes' buttons); `game.devices.summary()` / `.log` for the panel and QA; `probes.ts devices`.
+in on your knees; the breaker is through that door). Knobs: `Game.tune.devices / lasers / cameraSuspicionSecs / cameraAlarmSecs / deviceCones` (debugger ▸ Sandbox — the game page's tweak panel, on the backtick key —; 'all codes' / 'forget codes' buttons); `game.devices.summary()` / `.log` for the panel and QA; `probes.ts devices`.
 
 ## Civilians (`game/civilians.ts`)
 
