@@ -15,7 +15,7 @@
 // A PAGE IS ONE BUNDLE: the replay pages carry no door at all.
 // THIS MODULE IMPORTS NOTHING: ui/ saves through it.
 /** every kind of file the door knows, as a list (the type below is made of it; tools/qa/savefile-check.ts walks it, so a kind added here is watched at once) */
-export const SAVED_KINDS = ['perf', 'bench', 'price', 'checkpoint', 'capture'] as const;
+export const SAVED_KINDS = ['perf', 'bench', 'price', 'capture'] as const;
 export type SavedKind = typeof SAVED_KINDS[number];
 /** a file as it went out. `meta`: short facts of it for whoever keeps it (the build's commit, what a take was of), never the file again */
 export interface SavedFile { kind: SavedKind; name: string; blob: Blob; meta?: Record<string, string> }
