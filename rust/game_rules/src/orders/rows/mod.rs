@@ -69,6 +69,11 @@ rows! {
     throwopen;
     fragthere;
     stunthere;
+    pairmark;
+    pairwatch;
+    pairtake;
+    pairdark;
+    pairgo;
 }
 
 /// The row of the menu for an order: `data` is what only it knows (its page, its targets, its key), and the functions
