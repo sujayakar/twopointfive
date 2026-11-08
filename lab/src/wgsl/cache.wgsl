@@ -3,10 +3,12 @@
 //   keys[slot]   the key's fingerprint, 0 = empty      cand[slot]   who founded it, until claimed (the smallest wins, so a run repeats)
 //   (a round reads cells and writes fresh, which is then copied over: what an entry sees of another never depends on which ran first)
 //   cells[2s]    E.rgb, samples                        cells[2s+1]  its point, sun seen          norms[slot]  its normal, packed
-const SLOTS = 262144u; const REACH = 32u; const CELL = 0.32; const COARSE = 1.35;
+const SLOTS = 262144u; const REACH = 32u; const CELL = 0.32; const COARSE = 1.35; const FAR_CELL = 6.0;
 fn facing(n: vec3f) -> u32 { let a = abs(n); if (a.x >= a.y && a.x >= a.z) { return select(1u, 0u, n.x > 0.0); } if (a.y >= a.z) { return select(3u, 2u, n.y > 0.0); } return select(5u, 4u, n.z > 0.0); }
+/** the building and its roof are kept finely; the city only coarsely, or it would fill the table by itself */
+fn cacheNear(x: vec3f) -> bool { return abs(x.x) < 20.0 && abs(x.z) < 15.0 && x.y > -0.6 && x.y < 12.0; }
 fn cacheKey(x: vec3f, n: vec3f, level: u32) -> u32 {
-  let c = select(CELL, COARSE, level == 1u); let q = vec3i(floor((x + n * select(0.06, 0.2, level == 1u)) / c)); let h = pcg(u32(q.x) + pcg(u32(q.y) + pcg(u32(q.z) + pcg(facing(n) + 8u * level + 77u))));
+  let near = cacheNear(x); let c = select(CELL, select(FAR_CELL, COARSE, near), level == 1u); let q = vec3i(floor((x + n * select(0.06, 0.2, level == 1u)) / c)); let h = pcg(u32(q.x) + pcg(u32(q.y) + pcg(u32(q.z) + pcg(facing(n) + 8u * level + select(16u, 0u, near) + 77u))));
   return max(h, 1u);
 }
 fn cacheFind(key: u32) -> u32 { var s = key % SLOTS; for (var i = 0u; i < REACH; i++) { let k = atomicLoad(&keys[s]); if (k == key) { return s; } if (k == 0u) { return NOTHING; } s = (s + 1u) % SLOTS; } return NOTHING; }
@@ -18,8 +20,11 @@ fn cacheFound(key: u32, who: u32) {
     s = (s + 1u) % SLOTS; i++;
   }
 }
-/** does this surface still want an entry? (Asked of cells, which no one writes while rays are out, so that who founds it never depends on who came first) */
-fn cacheWants(x: vec3f, n: vec3f) -> bool { let s = cacheFind(cacheKey(x, n, 0u)); if (s == NOTHING) { return true; } return all(cells[2u * s + 1u].xyz == vec3f(0.0)); }
+/** which levels this surface still wants an entry at (bit 0 fine, bit 1 coarse). Asked of cells, which no one writes while rays are out, so that who founds it
+ *  never depends on who came first. What moves founds only coarse entries: fine ones would be left behind wherever it has been */
+fn cacheWants(x: vec3f, n: vec3f, moves: bool) -> u32 {
+  var w = 0u; for (var l = select(0u, 1u, moves || !cacheNear(x)); l < 2u; l++) { let s = cacheFind(cacheKey(x, n, l)); if (s == NOTHING) { w |= 1u << l; continue; } if (all(cells[2u * s + 1u].xyz == vec3f(0.0))) { w |= 1u << l; } } return w;
+}
 struct Cached { E: vec3f, sun: f32, n: f32 };
 /** what lands at x, facing n. `j` spreads the lookups over neighbouring cells, so that blocks blend; far or young falls back on the coarse cells */
 fn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached {
