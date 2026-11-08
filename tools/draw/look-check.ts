@@ -1,4 +1,4 @@
-// THE LEVEL'S OWN LOOK RUST SAYS IS THE ONE THE COPY OF THE GAME MADE: the traffic map (render/wear.ts buildWearMap), the door leaves' paint (scene/lookTidy.ts lookDoors) and the dust's table (game/particleFx.ts DUST_LOOK), each
+// THE LEVEL'S OWN LOOK RUST SAYS IS THE ONE THE COPY OF THE GAME MADE: the traffic map (render/wear.ts buildWearMap), the door leaves as drawn (scene/leafPaint.ts paintLeaves: Rust's game has them from the stand's export here, and tools/blitz/start-levels.ts holds its own rule) and the dust's table (game/particleFx.ts DUST_LOOK), each
 // asked of both on one Rust game stood under the headless host. It goes with the copy.
 //   tools/blitz/rust.sh rust bun run tools/draw/look-check.ts [level…]     default: the levels below, each in the look's file where it has one
 //   LOOK_BREAK=1 …    the copy's map is a byte off, and a leaf's paint a shade: it must fail
@@ -14,7 +14,7 @@ const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { lookConfig } = await import(`${ROOT}/src/render/frame.ts`), { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`), { lookWordOf, lookCoreOf } = await import(`${ROOT}/src/render/gbuffer.ts`), { COATFINISH, SOLIDGLASS } = await import(`${ROOT}/src/scene/stuff.ts`);
-const { buildWearMap } = await import(`${ROOT}/src/render/wear.ts`), { lookDoors } = await import(`${ROOT}/src/scene/lookTidy.ts`), { LOOK, LOOK_DOORS } = await import(`${ROOT}/src/scene/look.ts`), { DUST_LOOK } = await import(`${ROOT}/src/game/particleFx.ts`);
+const { buildWearMap } = await import(`${ROOT}/src/render/wear.ts`), { LOOK } = await import(`${ROOT}/src/scene/look.ts`), { leafRowOf, paintLeaves } = await import(`${ROOT}/src/scene/leafPaint.ts`), { levelNameOf } = await import(`${ROOT}/src/scene/levelLoad.ts`), { DUST_LOOK } = await import(`${ROOT}/src/game/particleFx.ts`);
 
 const LEVELS = process.argv.slice(2).length ? process.argv.slice(2) : ['office', 'compound-gwot', 'block-gwot', 'mousehole-gwot', 'glasshouse', 'killhouse-gwot', 'records-gwot'];
 const BREAK = process.env.LOOK_BREAK === '1', DT = 1 / 60;
@@ -44,7 +44,11 @@ for (const name of LEVELS) {
     if (worst > 1) said.push(`the map: ${off} bytes off, the worst by ${worst} at ${at} (${at & 1 ? 'band' : 'traffic'}, texel ${at >> 1}: copy ${wm.data[at]} rust ${bytes[at]})`); else if (!sum) said.push('the copy\'s map is empty');
     else log(`    ${name}: map sum ${sum}, ${off} bytes a step off of ${bytes.length}`); }
   // the leaves' paint
-  const painted = lookDoors(g.doors.list, world.statics, LOOK_DOORS[`${name.replace(/-gwot$/, '')}.json`]); if (BREAK && g.doors.list[0]) g.doors.list[0].box.albedo[0] += 0.1;
+  // (the leaves were painted as the game stood. This game's Rust is made FROM the stand's export, so its leaves are the copy's by the bytes handed over: what this holds is that
+  // the stand painted them and that the rows draw the box. tools/blitz/start-levels.ts holds Rust's own rule, doors/paint.rs, to the copy's, level by level)
+  const asked = g.doors.list.map((d: any) => ({ def: d.def, box: { ...d.box, albedo: [...d.box.albedo] } })), painted: number = paintLeaves(asked, world.statics, leafRowOf(levelNameOf(level)));
+  asked.forEach((a: any, i: number) => { const b = g.doors.list[i].box; if (a.box.albedo.some((x: number, k: number) => x !== b.albedo[k]) || a.box.stuff !== b.stuff) said.push(`${a.def.name}: stood in ${b.albedo} ${b.stuff}, its paint is ${a.box.albedo} ${a.box.stuff}`); });
+  if (BREAK && g.doors.list[0]) g.doors.list[0].box.albedo[0] += 0.1;
   world.glassFocus = [20, 0, 14]; world.upload();
   D.take(H.h); D.frame(H.h, 1, [20, 0, 14]);
   const mat = new Float32Array(world.matData.buffer), m0 = D.at[Section.mat]; let leaves = 0;
