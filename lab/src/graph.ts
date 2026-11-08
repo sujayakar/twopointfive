@@ -75,7 +75,11 @@ export class Graph {
     for (const [ref, v] of Object.entries(s.reads ?? {})) { const f = this.signals.get(ref.split('@')[0]!)?.format; if (!f) throw new Error(`${s.name} reads ${ref}, which nothing declares`); out.push(`@group(1) @binding(${k++}) var ${v}: ${f.startsWith('depth') ? 'texture_depth_2d' : `texture_2d<${SCALAR[f] ?? 'f32'}>`};`); }
     for (const [v, n] of Object.entries(s.writes ?? {})) { const f = this.signals.get(n)?.format; if (!f) throw new Error(`${s.name} writes ${n}, which nothing declares`); out.push(`@group(1) @binding(${k++}) var ${v}: texture_storage_2d<${f}, write>;`); }
     for (const [v, [, type, access]] of Object.entries(s.buffers ?? {})) out.push(`@group(1) @binding(${k++}) var<${access === 'uniform' ? 'uniform' : 'storage, ' + access}> ${v}: ${type};`);
-    out.push(s.code); return out.join('\n');
+    // EVERY FLOAT A STAGE WRITES IS CHECKED, whether or not its author thought of it: a stage cannot reach its outputs but through this. One bad value in a
+    // history would otherwise be read back for ever, and spread.
+    let code = s.code;
+    for (const [v, n] of Object.entries(s.writes ?? {})) { const f = this.signals.get(n)!.format; if (SCALAR[f]) continue; const most = f.includes('16float') ? '60000.0' : f.includes('32float') ? '1e30' : '1.0'; out.push(`fn put_${v}(p: vec2u, c: vec4f) { textureStore(${v}, p, finite4(c, ${most})); }`); code = code.replaceAll(`textureStore(${v},`, `put_${v}(`); }
+    out.push(code); return out.join('\n');
   }
   async build(stages: Stage[]) {
     const d = this.g.device;

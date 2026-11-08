@@ -1,13 +1,8 @@
 [
- {"name":"31-person","w":1280,"h":720,"scale":1,"samples":60,"run":true,"method":"realtime","dist":9,"hour":21.5,"person":0,"cut":2.55,"pitch":0.75,"yaw":0.6,"tick":700},
- {"name":"33-person","w":1280,"h":720,"scale":1,"samples":60,"run":true,"method":"realtime","dist":9,"hour":15.0,"person":1,"pitch":0.65,"yaw":2.6,"tick":760},
- {"name":"40-door-0","w":1280,"h":720,"scale":1,"samples":120,"run":true,"method":"realtime","dist":26,"hour":22,"cut":2.55,"look":[-4,0.6,-3],"doors":0,"tick":1000,"groups":{"blue":0}},
- {"name":"41-door-20","w":1280,"h":720,"scale":1,"samples":24,"run":true,"go":true,"method":"realtime","dist":26,"hour":22,"cut":2.55,"look":[-4,0.6,-3],"want":1,"groups":{"blue":0}},
- {"name":"42-door-60","w":1280,"h":720,"scale":1,"samples":30,"run":true,"go":true,"method":"realtime","dist":26,"hour":22,"cut":2.55,"look":[-4,0.6,-3],"groups":{"blue":0}},
- {"name":"43-door-160","w":1280,"h":720,"scale":1,"samples":100,"run":true,"go":true,"method":"realtime","dist":26,"hour":22,"cut":2.55,"look":[-4,0.6,-3],"groups":{"blue":0}},
- {"name":"44-door-ref","w":1280,"h":720,"scale":1,"samples":700,"method":"reference","dist":26,"hour":22,"cut":2.55,"look":[-4,0.6,-3],"doors":1,"tick":1274,"groups":{"blue":0}},
- {"name":"52-spin","w":1920,"h":1080,"scale":0.75,"samples":80,"run":true,"spin":0.02,"method":"realtime","dist":44,"hour":16.5,"tick":1800,"look":[2,3.5,0]},
- {"name":"55-atrium","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":30,"hour":13.5,"cut":2.55,"look":[0,0.6,0],"doors":0.6,"tick":2400},
- {"name":"56-night-ground","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":44,"hour":21.5,"cut":2.55,"look":[0,0.6,0],"doors":0.9,"tick":2600},
- {"name":"57-all","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":58,"hour":15.5,"tick":2800,"pitch":0.8}
+ {"name":"60-hero-day","w":2560,"h":1440,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":52,"hour":16.8,"tick":1200,"pitch":0.72,"yaw":0.75},
+ {"name":"61-hero-cut","w":2560,"h":1440,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":48,"hour":15.0,"cut":2.55,"look":[0,0.6,0],"doors":0.8,"tick":1400},
+ {"name":"62-hero-night","w":2560,"h":1440,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":50,"hour":21.0,"tick":1600,"pitch":0.65,"yaw":0.9},
+ {"name":"63-spin-cut","w":1920,"h":1080,"scale":0.75,"samples":80,"run":true,"spin":0.015,"method":"realtime","dist":40,"hour":21.5,"cut":2.55,"look":[0,0.6,0],"doors":0.8,"tick":1800},
+ {"name":"64-person","w":1280,"h":720,"scale":1,"samples":60,"run":true,"method":"realtime","dist":8,"hour":16.0,"person":1,"pitch":0.5,"yaw":2.6,"tick":2000},
+ {"name":"65-upper","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":42,"hour":10.0,"cut":5.95,"look":[-2,3.4,0],"doors":0.6,"tick":2200}
 ]

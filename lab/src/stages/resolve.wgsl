@@ -34,6 +34,6 @@ fn upMirror(id: vec2u, p: Px, f: vec4u) -> vec4f {
     c = c * T * (1.0 - F) + max(mir.rgb, vec3f(0.0)) * select(0.0, 1.0, mir.a >= 0.0);
   }
   let ai = vec2i(id.xy) / 2; let ad = vec2i(textureDimensions(air)); var a = vec4f(0.0); var ws = 0.0; for (var k = 0; k < 4; k++) { let q = clamp(ai + vec2i(k & 1, k >> 1u), vec2i(0), ad - 1); let t = bitcast<f32>(textureLoad(surf, min(q * 2, vec2i(dim) - 1), 0).x); let w = exp(-abs(t - p.t) / (0.04 * p.t + 0.1)) + 1e-3; a += textureLoad(air, q, 0) * w; ws += w; } a /= ws;
-  c = c * a.a + a.rgb; if (any(c != c)) { c = vec3f(0.0); }
+  c = c * a.a + a.rgb;
   textureStore(outC, id.xy, vec4f(min(c, vec3f(500.0)), p.t));
 }

@@ -20,7 +20,7 @@ var<workgroup> s: array<vec2f, 256>;
   let n = textureDimensions(src); var a = vec2f(0.0);
   for (var j = 0u; j < 24u; j++) { let t = i * 24u + j; let p = vec2f(f32(t % 96u) + 0.5, f32(t / 96u) + 0.5) / vec2f(96.0, 64.0); let c = textureLoad(src, vec2u(p * vec2f(n)), 0).xyz; let l = log2(clamp(lum(c), 1e-4, 1e3)); let q = (p - 0.5) * 1.6; let w = exp(-dot(q, q) * 2.2); a += vec2f(l * w, w); }
   s[i] = a; workgroupBarrier(); for (var st = 128u; st > 0u; st >>= 1u) { if (i < st) { s[i] += s[i + st]; } workgroupBarrier(); }
-  if (i == 0u) { let mean = s[0].x / max(s[0].y, 1e-4); let want = exp2(clamp(-1.75 - mean * 0.86, -7.0, 6.0)); let r = select(0.05, 1.0, e[1] == 0.0 || k.w > 0.0); e[0] = select(want, exp2(mix(log2(max(e[0], 1e-6)), log2(want), r)), e[1] > 0.0); e[1] = 1.0; e[2] = mean; }
+  if (i == 0u) { let mean = finite(s[0].x / max(s[0].y, 1e-4), 30.0); let want = exp2(clamp(-1.75 - mean * 0.86, -7.0, 6.0)); let was = finite(e[0], 1e6); let r = select(0.05, 1.0, was <= 0.0 || e[1] != 1.0 || k.w > 0.0); e[0] = exp2(mix(log2(max(was, 1e-6)), log2(want), r)); e[1] = 1.0; e[2] = mean; }
 }` });
   out.push({ name: 'exposures', over: sz(0), reads: { [small]: 'src' }, writes: { outL: `${pre}Lum0`, outW: `${pre}Wt0` }, buffers: E, code: CURVE + `
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let d = textureDimensions(outL); if (id.x >= d.x || id.y >= d.y) { return; } let l = lum(textureLoad(src, min(id.xy, textureDimensions(src) - 1u), 0).rgb) * e[0] * exp2(k.x);

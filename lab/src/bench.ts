@@ -22,7 +22,7 @@ export async function bench(lab: Lab, views: (View & { name: string })[], method
     o.stage(v); lab.resize([Math.round(v.w * (v.scale ?? 1)), Math.round(v.h * (v.scale ?? 1))], [v.w, v.h]);
     const ref = get('reference'); await lab.use(ref); lab.frameNo = 0; for (let i = 0; i < (o.reference ?? 400); i++) { lab.draw(); if (i % 4 === 3) await idle(); } await idle(); const truth = soft(await picture(lab, ref), v.w, v.h);
     for (const name of Object.keys(methods)) {
-      if (name === 'reference') continue; const m = get(name); await lab.use(m); lab.frameNo = 0; lab.graph.timer.ms.clear(); for (let i = 0; i < (o.settle ?? 90); i++) { lab.draw(); if (i % 4 === 3) await idle(); } await idle();
+      if (name === 'reference') continue; const m = get(name); await lab.use(m); lab.frameNo = 0; lab.graph.timer.ms.clear(); for (let i = 0; i < (o.settle ?? 240); i++) { lab.draw(); if (i % 4 === 3) await idle(); } await idle();
       const one = await picture(lab, m), sum = new Float32Array(one.length), N = o.mean ?? 24; let last = one, noise = 0; sum.set(one);
       for (let i = 1; i < N; i++) { lab.draw(); await idle(); const p = await picture(lab, m); if (i <= 4) noise += apart(p, last) / 4; last = p; for (let k = 0; k < p.length; k++) sum[k]! += p[k]!; } for (let k = 0; k < sum.length; k++) sum[k]! /= N;
       const passes = Object.fromEntries([...lab.graph.timer.ms].map(([k, x]) => [k, +x.toFixed(3)]));
@@ -35,4 +35,12 @@ export async function bench(lab: Lab, views: (View & { name: string })[], method
 export async function capture(lab: Lab, method: Method, reference: Method, paths: number): Promise<{ name: string; w: number; h: number; format: string; data: ArrayBuffer }[]> {
   const out: { name: string; w: number; h: number; format: string; data: ArrayBuffer }[] = []; await lab.use(method); lab.draw(); lab.graph.flip(); for (const s of ['surf', 'aux', 'emit', 'front', 'vis', 'lampU', 'bounce', 'mirror', 'color', method.result]) out.push({ name: s, ...await lab.read(s) }); lab.graph.flip();
   await lab.use(reference); for (let i = 0; i < paths; i++) { lab.draw(); if (i % 4 === 3) await lab.gpu.device.queue.onSubmittedWorkDone(); } out.push({ name: 'reference', ...await lab.read(reference.result) }); return out;
+}
+
+/** poison every history with NaN and Inf, then see how many frames until the picture holds none, and that it comes back to what it was */
+export async function poison(lab: Lab, m: Method): Promise<{ frames: number; apart: number }> {
+  await lab.use(m); for (let i = 0; i < 60; i++) { lab.draw(); if (i % 4 === 3) await lab.gpu.device.queue.onSubmittedWorkDone(); } const before = await picture(lab, m), d = lab.gpu.device;
+  for (const [name, s] of lab.graph.signals) { if (!s.history || s.format !== 'rgba16float') continue; for (const ref of [name, name + '@prev']) { const t = lab.graph.texture(ref), bad = new Uint16Array(t.width * t.height * 4); for (let i = 0; i < bad.length; i++) bad[i] = i % 3 ? 0x7e00 : 0x7c00; d.queue.writeTexture({ texture: t }, bad, { bytesPerRow: t.width * 8 }, [t.width, t.height]); } }
+  { const c = lab.graph.buffers.get('cells'); if (c) { const now = new Float32Array(await lab.readBuffer('cells')); for (let i = 0; i < now.length; i += 8) if (now[i + 3]! > 0) { now[i] = NaN; now[i + 1] = Infinity; now[i + 3] = NaN; now[i + 7] = NaN; } d.queue.writeBuffer(c, 0, now); } const e = lab.graph.buffers.get('exposure'); if (e) d.queue.writeBuffer(e, 0, new Float32Array([NaN, NaN, NaN, NaN])); }
+  let frames = -1; for (let i = 0; i < 400; i++) { lab.draw(); await d.queue.onSubmittedWorkDone(); if (frames < 0 && i < 12) { const p = await picture(lab, m); if (!p.some(x => Math.abs(x) > 65000)) frames = i + 1; } } return { frames, apart: apart(await picture(lab, m), before) };
 }

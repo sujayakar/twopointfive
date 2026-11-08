@@ -23,3 +23,7 @@ fn unpackTint(t: u32) -> vec3f { return vec3f(f32(t & 255u), f32((t >> 8u) & 255
 fn packRGB(c: vec3f) -> u32 { let q = vec3u(clamp(sqrt(c), vec3f(0.0), vec3f(1.0)) * 255.0 + 0.5); return q.x | (q.y << 8u) | (q.z << 16u); }   // (a square root: the eye's steps, and dark paint keeps its hue)
 fn unpackRGB(u: u32) -> vec3f { let c = vec3f(f32(u & 255u), f32((u >> 8u) & 255u), f32((u >> 16u) & 255u)) * (1.0 / 255.0); return c * c; }
 
+
+// ---- what may be kept: numbers only. By the bits, since a compiler that assumes there are no NaNs may drop any test written with comparisons
+fn finite(x: f32, most: f32) -> f32 { let b = bitcast<u32>(x); if ((b & 0x7f800000u) == 0x7f800000u) { return 0.0; } return clamp(x, -most, most); }
+fn finite4(v: vec4f, most: f32) -> vec4f { return vec4f(finite(v.x, most), finite(v.y, most), finite(v.z, most), finite(v.w, most)); }

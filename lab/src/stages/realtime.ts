@@ -27,7 +27,7 @@ import update from './cacheupdate.wgsl' with { type: 'text' };
 
 const SLOTS = 262144, HITS = 262144;
 export const CHANGES: Record<string, [string, string, 'uniform']> = { changes: ['changes', 'Changes', 'uniform'] };
-export interface CachePart { name: string; lib: string; bind: Stage['buffers']; stages: Stage[]; init(lab: Lab): Promise<void> }
+export interface CachePart { name: string; lib: string; bind: Stage['buffers']; stages: Stage[]; init(lab: Lab): Promise<void>; /** more rounds this frame: the light has changed everywhere */ rush?: number }
 export interface DenoisePart { name: string; stages(o: { signal: string; div: 1 | 2; cap: number; rounds: number; narrow?: boolean; fractions?: boolean }, g: Graph): { stages: Stage[]; result: string } }
 export interface UpscalePart { name: string; stages(g: Graph): { stages: Stage[]; result: string } }
 
@@ -38,8 +38,9 @@ export function hashCache(): CachePart {
   const claimS: Stage = { name: 'cache claim', over: groups, buffers: { ...bind, norms: ['norms', 'array<u32>', 'read_write'], hits: ['hits', 'array<vec4f>', 'read'] }, code: cacheLib + lin(claim) };
   const updateS: Stage = { name: 'cache', over: groups, buffers: { ...bind, norms: ['norms', 'array<u32>', 'read_write'], ...CHANGES }, code: signals + cacheLib + lin(update) };
   let at: [number, number] = [0, 0]; const warmS: Stage = { name: 'cache warm', over: { groups: () => [Math.ceil((at[1] - at[0]) / 64), 1, 1] }, buffers: { ...bind, hits: ['hits', 'array<vec4f>', 'read'], warmAt: ['warmAt', 'vec4u', 'uniform'] }, code: cacheLib + warm };
-  return {
-    name: 'hash', lib: cacheLib, bind, stages: [claimS, updateS],
+  const again = (k: number): Stage => ({ ...updateS, name: 'cache', when: () => (part.rush ?? 0) > k, code: updateS.code.replace('rngKey(key, 91u)', `rngKey(key, ${92 + k}u)`) });
+  const part: CachePart = {
+    name: 'hash', lib: cacheLib, bind, stages: [claimS, updateS, again(0), again(1), again(2)],
     async init(lab) {
       lab.buffer('keys', SLOTS * 4); lab.buffer('cells', SLOTS * 32); lab.buffer('norms', SLOTS * 4); lab.buffer('hits', HITS * 16); lab.uniform('warmAt', new Uint32Array(4));
       const c = lab.buffer('cand', SLOTS * 4); lab.gpu.device.queue.writeBuffer(c, 0, new Uint32Array(SLOTS).fill(0xffffffff));
@@ -52,6 +53,7 @@ export function hashCache(): CachePart {
       (lab as never as { warmed: number }).warmed = pts.length / 4;
     },
   };
+  return part;
 }
 /** points over every standing face a ray could meet, a hand's width apart: where light will be kept */
 function facePoints(lab: Lab): Float32Array {
@@ -120,8 +122,8 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
       const mv = lab.building.world.moving, f = new Float32Array(mv.length * 16); for (const p of mv) { const s = lab.slots.get(p); if (s === undefined) continue; const q = lab.prevAt.get(p) ?? p, o = (s - lab.scene.piece0[2]) * 16; f.set(q.at, o); f.set(q.rot[0], o + 4); f.set(q.rot[1], o + 8); f.set(q.rot[2], o + 12); } if (mv.length) lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('past')!, 0, f);
       const ch = new Float32Array(36); let n = 0; for (const d of lab.building.doors) if (Math.abs(d.want - d.open) > 1e-3 && n < 8) { ch.set([d.hinge[0], d.hinge[1] + 1, d.hinge[2], 7.5], n * 4); n++; }
       lab.building.world.lamps.forEach((l, i) => { if (Math.abs(lab.scene.lampOn[i]! - prevOn[i]!) > 0.02 && l.kind !== 'spot' && n < 8) { ch.set([...l.at, 9], n * 4); n++; } }); prevOn = lab.scene.lampOn.slice();
-      const key = lab.hour.toFixed(3) + lab.lampsMode; if (key !== last) { last = key; quiet = 24; if (Math.abs(lab.hour - lastHour) > 0.25) ch[33] = 1; lastHour = lab.hour; } quiet = Math.max(0, quiet - 1); ch[32] = 1 - 0.85 * (quiet / 24); lab.uniform('changes', ch);
-      lab.uniform('taauK', new Float32Array([0.25 * (lab.exposure || 1), fresh ? 1 : 0, 0, 0])); fresh = false;
+      const key = lab.hour.toFixed(3) + lab.lampsMode; if (key !== last) { last = key; quiet = 40; if (Math.abs(lab.hour - lastHour) > 0.25) ch[33] = 1; lastHour = lab.hour; } quiet = Math.max(0, quiet - 1); ch[32] = 1 - 0.85 * Math.min(1, quiet / 24); lab.uniform('changes', ch);
+      lab.uniform('taauK', new Float32Array([0.25 * (lab.exposure || 1), fresh ? 1 : 0, 0.2 + 0.8 * ch[32]!, 0])); fresh = false; cache.rush = quiet > 0 ? 3 : 0;
     },
     reset() { fresh = true; },
   };

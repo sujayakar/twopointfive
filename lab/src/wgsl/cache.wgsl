@@ -13,6 +13,8 @@ fn cacheFound(key: u32, who: u32) {
   var s = key % SLOTS;
   for (var i = 0u; i < 8u; i++) { let k = atomicLoad(&keys[s]); if (k == key) { atomicMin(&cand[s], who); return; } if (k == 0u) { let r = atomicCompareExchangeWeak(&keys[s], 0u, key); if (r.exchanged || r.old_value == key) { atomicMin(&cand[s], who); return; } } s = (s + 1u) % SLOTS; }
 }
+/** the one way light gets into an entry */
+fn cachePut(s: u32, E: vec3f, n: f32, x: vec3f, sun: f32) { let a = finite4(vec4f(E, n), 1e4); cells[2u * s] = vec4f(max(a.rgb, vec3f(0.0)), a.w); cells[2u * s + 1u] = vec4f(x, clamp(finite(sun, 1.0), 0.0, 1.0)); }
 struct Cached { E: vec3f, sun: f32, n: f32 };
 /** what lands at x, facing n. `j` spreads the lookups over neighbouring cells, so that blocks blend; far or young falls back on the coarse cells */
 fn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached {

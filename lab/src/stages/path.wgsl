@@ -63,9 +63,8 @@ fn lampsAt(s: Surf, V: vec3f, glossy: bool) -> vec3f {
     depth += 1u; cut = 1e9; if (!clear) { spread = 0.02; }
     if (depth > 2u) { let q = clamp(max3(thr), 0.05, 0.95); if (rnd() > q) { break; } thr /= q; }
   }
-  if (any(L != L)) { L = vec3f(0.0); }
   let n = f32(pathKnobs.z);
   var acc = vec4f(0.0); if (pathKnobs.z > 0u) { acc = sums[at]; }
-  acc += vec4f(min(L, vec3f(400.0)), 1.0); sums[at] = acc;
+  acc += vec4f(max(finite4(vec4f(L, 0.0), 400.0).rgb, vec3f(0.0)), 1.0); sums[at] = acc;
   textureStore(outHdr, id.xy, vec4f(acc.xyz / acc.w, 1.0));
 }
