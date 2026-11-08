@@ -9360,7 +9360,10 @@
 "view::TickView.bubbles",
 "view::TickView.me",
 "view::TickView.place",
-"view::TickView.kit"
+"view::TickView.kit",
+"view::TickView.marks",
+"view::TickView.aim",
+"view::TickView.worn"
 ],
 "pageTick": [
 "aim::AimState.bearing_rate",

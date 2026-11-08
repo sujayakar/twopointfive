@@ -23,13 +23,12 @@
 // ITS POLISH (the fourth to sixth passes: stalkPolish below) is a hold of its own: down in this table and on the frozen stand, so a frozen run raised with
 // TPS_STALK=1 is the stalk as it first stood; TPS_STALKPOLISH=1 raises it there, the page has it up unless ?stalkpolish=0.
 import { SideMap } from '../math/side';
-import { Vec3, clamp } from '../math/vec';
+import { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
-import { CLOSE, closeLive, closeSubject, closeClear } from './close';
+import { CLOSE, closeLive } from './close';
 import { holdPolish } from './character';
 import { samStaggered } from './samstun';
-import { canStand } from './player';
-import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
+import { crossToRust, goneWithTick } from './crossing';
 
 export const STALK = {
   on: false,
@@ -166,11 +165,6 @@ export function stalkClickOnly(g?: Game): boolean { return STALK.on && STALK.onl
 /** COULD A PRESS ON THIS MAN BEGIN ONE from where Sam stands (the row's hint asks) */
 export function stalkCould(g: Game, gd: Guard): boolean { return goneWithTick('stalkCould') as any; }
 
-/** STALK.corner: the man the wait at a corner takes this frame — the nearest who has come past him — or null (not on a wall with empty hands; nobody past) */
-function cornerGate(g: Game): boolean {
-  const pl = g.player, w = pl.wall;
-  return !(!STALK.on || !STALK.corner || !w || w.kind === 'stack' || w.drawn || !closeLive(g) || g.puppet || !pl.holstered || pl.down || pl.holding || pl.takedown || pl.dragging || pl.kick || pl.picking || pl.wanding || pl.listOpen || !able(g) || shut(g) || (pl.crouch && !canStand(g)));   // (the last: startGrab would refuse it, with its line, every frame the button stayed down)
-}
 /** THE POLISH, UP OR DOWN TOGETHER (the page's ?stalkpolish=0, and journal.ts for a recording from before the fourth pass): the turn through the step, the longer
  *  long step, the wait's pose at a corner, the duck when the man turns round — and the hold's share (character.ts holdPolish). Up = POLISH_UP's numbers, as
  *  the page has them; down = the tables' own, as the frozen stand has them (src/host/standup.ts: TPS_STALKPOLISH=1 raises them on a frozen run). */
@@ -178,17 +172,6 @@ const POLISH_UP = { turnIn: true, cornerShow: true, yankWith: true, catchLong: 1
 const POLISH_DOWN = { turnIn: STALK.turnIn, cornerShow: STALK.cornerShow, yankWith: STALK.yankWith, catchLong: STALK.catchLong, jolt: STALK.jolt } as const;   // (the table's own, read once as this file loads)
 export function stalkPolish(up: boolean) {
   const U = up ? POLISH_UP : POLISH_DOWN; STALK.turnIn = U.turnIn; STALK.cornerShow = U.cornerShow; STALK.yankWith = U.yankWith; STALK.catchLong = U.catchLong; STALK.jolt = U.jolt; holdPolish(up);
-}
-/** THE WAIT AT A CORNER, ON HIS BODY (close.ts closeTick): lying in wait this frame — where his hands point (the neck of the nearest man he could take, else
- *  out from the wall at his own shoulder height), how much of the grab's reach, and how far he is sunk */
-export function stalkWait(g: Game): { at: Vec3; reach: number; coil: number } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('stalkWait', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
-  const S = STATE.get(g), pl = g.player, w = pl.wall; if (!STALK.cornerShow || !S || !S.wait || !w || g.time - S.t > 0.1 || !cornerGate(g)) return null;
-  const p = pl.char.pos; let best: Guard | null = null, bd = STALK.cornerSee;
-  for (const gd of g.guards) { if (gd.civ || !closeSubject(g, gd) || gd.state === 'alert') continue; const d = Math.hypot(p[0] - gd.char.pos[0], p[2] - gd.char.pos[2]); if (d < bd && closeClear(g, gd.char.pos, p)) { best = gd; bd = d; } }
-  const neck = best ? best.char.bones.neck ?? best.char.bones.head : null, R = STALK.cornerReach;
-  const at: Vec3 = neck ? [neck[0], neck[1], neck[2]] : best ? [best.char.pos[0], 1.45, best.char.pos[2]] : [p[0] + w.n[0] * 0.8, 1.35, p[2] + w.n[2] * 0.8];
-  const near = best ? clamp((STALK.cornerSee - bd) / Math.max(0.05, STALK.cornerSee - STALK.cornerM), 0, 1) : 0;
-  return { at, reach: R[0] + (R[1] - R[0]) * near, coil: STALK.cornerCoil };
 }
 /** STALK.key: the row's grab on this man is about to be taken (game.ts) — is it the stalk's? With the key's rule up, his hands as a stalk wants them and
  *  room to come up it is, whether the held click walked him in or his own keys did. A question only: `stalkKeyTook` once the grab has him. */

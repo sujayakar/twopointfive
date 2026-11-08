@@ -13,6 +13,7 @@ import { stage, quiet, guarded, family } from './thresholdmenu-probes.ts';
 const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { feelRange, feelDefaults } = await import(`${ROOT}/src/game/teamfeel.ts`);
+const lastSeen = (g: any): any[] => g.view.marks.seen.map((m: any) => ({ ...m, gd: g.guards.find((x: any) => x.char.id === m.man) }));   // (what the HUD is told)
 
 const scn = (id: string) => SCENARIOS.find((e: any) => e.id === id);
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -46,14 +47,14 @@ export const callsLastSeen = guarded(async () => {
     const R = await stage(E, 1), g = R.g; FOG.lastSeen = secs; g.fogOfWar.on = true; g.aiEnabled = false;   // (nobody moves or fights: the fog's own answer, a man seen and then not)
     const team = R.team; for (const m of team) m.dazzledUntil = 1e9;   // (the team's own eyes shut: Sam's is the only one, where the probe puts it)
     const start = [...g.player.char.pos], hostiles = g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead');
-    await quiet(() => R.step(30)); const h = hostiles.find((x: any) => g.fogOfWar.hidden(x)); if (!h) return { ok: false, why: 'no defender out of the picture at the start' } as any; const hp = [...h.char.pos]; const before = g.fogOfWar.lastSeen().length, hid0 = g.fogOfWar.hidden(h);
+    await quiet(() => R.step(30)); const h = hostiles.find((x: any) => g.fogOfWar.hidden(x)); if (!h) return { ok: false, why: 'no defender out of the picture at the start' } as any; const hp = [...h.char.pos]; const before = lastSeen(g).length, hid0 = g.fogOfWar.hidden(h);
     // Sam put a stride from him (a ghost: not seen, AI off), then back where he started
     let near: number[] | null = null; for (const [dx, dz] of [[1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2], [0.9, 0.9], [-0.9, -0.9], [0.9, -0.9], [-0.9, 0.9]]) { const p = [hp[0] + dx, 0, hp[2] + dz]; if (!g.col.nav.isBlocked(p[0], p[2]) && !g.col.solidBlocked([p[0], 1.5, p[2]], [hp[0], 1.5, hp[2]])) { near = p; break; } }
     if (!near) return { ok: false, why: 'no floor beside the man' } as any;
-    R.aim = [hp[0], 1.0, hp[2]]; g.teleportPlayer(near); await quiet(() => R.step(20)); const seen = g.fogOfWar.seen(h), during = g.fogOfWar.lastSeen().length;
-    R.aim = null; g.teleportPlayer(start); await quiet(() => R.step(45)); const lost = g.fogOfWar.hidden(h), marks = g.fogOfWar.lastSeen(), m = marks.find((x: any) => x.gd === h);
+    R.aim = [hp[0], 1.0, hp[2]]; g.teleportPlayer(near); await quiet(() => R.step(20)); const seen = g.fogOfWar.seen(h), during = lastSeen(g).length;
+    R.aim = null; g.teleportPlayer(start); await quiet(() => R.step(45)); const lost = g.fogOfWar.hidden(h), marks = lastSeen(g), m = marks.find((x: any) => x.gd === h);
     const age1 = m?.age ?? -1, off = m ? flat(m.at, hp) : -1;
-    await quiet(() => R.step(Math.round(Math.max(1, secs) * 60))); const after = g.fogOfWar.lastSeen().length;
+    await quiet(() => R.step(Math.round(Math.max(1, secs) * 60))); const after = lastSeen(g).length;
     return { ok: true, before, hid0, seen, during, lost, n: marks.length, every: marks.every((x: any) => g.fogOfWar.hidden(x.gd) && x.gd.state !== 'dead' && x.age < secs), age1, off, after };
   };
   const on = await run(4);
