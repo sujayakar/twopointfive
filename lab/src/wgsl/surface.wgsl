@@ -94,7 +94,8 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
     case 10u: { let w = vnoise(uv * 34.0) - 0.5; base *= (0.94 + 0.22 * w * shows(34.0, fp) + 0.10 * (nB - 0.5)) * (1.0 - 0.42 * (1.0 - smoothstep(0.0, 0.22, channel(uv))) * shows(1.0 / CHANNEL, fp)); }
     case 21u: { base *= 0.95 + 0.1 * nB; }
     case 11u: { base *= (0.95 + 0.07 * nA) * (1.0 - 0.08 * foot * nC); }
-    case 12u: { let g = gridLine(uv, vec2f(0.12)); s.glow *= mix(1.0, 0.86, band(g, 0.004, fp)); }
+    case 12u: { if ((((*p).mat >> 8u) & 15u) == 0u) { let g = gridLine(uv, vec2f(0.12)); s.glow *= mix(1.0, 0.86, band(g, 0.004, fp)); } }
+    case 23u: { let c = vnoise(uv * 260.0) * 0.6 + vnoise(uv * 620.0) * 0.4; base *= 1.0 - 0.22 * shows(260.0, fp) * smoothstep(0.35, 0.7, c); }
     case 22u: { base *= 0.82 + 0.25 * nA + 0.45 * (nC - 0.5) * shows(26.0, fp); let mend = smoothstep(0.52, 0.54, vnoise(floor(uv * vec2f(0.22, 0.45)) + 3.0)); base *= 1.0 - 0.22 * mend; let crack = abs(fbm(uv * 1.7 + 4.0) - 0.5) + 0.06 * smoothstep(0.4, 0.6, nB); base *= 1.0 - 0.35 * (1.0 - smoothstep(0.0, 0.004 + 0.6 * fp, crack)); s.rough = mix(s.rough, 0.62, smoothstep(0.45, 0.6, nB)); }
     case 13u, 15u, 16u: { base *= 0.6 + 0.7 * nB; }
     case 19u: { let z = step(0.5, fract((uv.x + uv.y) / 0.36)); base = mix(m.b2, m.base * tint2, z); }
@@ -122,9 +123,9 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
     var f = lp.xz; if (h.code < 2u) { f = lp.zy; if (h.code == 1u) { f.x = -f.x; } } else if (h.code > 3u) { f = lp.xy; if (h.code == 4u) { f.x = -f.x; } }
     let r = (f - a.xy) / a.zw; if (abs(r.x) > 0.5 || abs(r.y) > 0.5) { continue; }
     let t = vec2f(r.x + 0.5, select(0.5 - r.y, r.y + 0.5, h.code == 2u || h.code == 3u));
-    let px = b.zw * vec2f(4096.0, 2048.0); let lod = log2(max(1.0, fp * px.x / a.z));
+    let px = b.zw * 4096.0; let lod = log2(max(1.0, fp * px.x / a.z));
     let art = textureSampleLevel(artTex, linSamp, b.xy + t * b.zw, min(lod, 6.0));
-    let wear = 1.0 - 0.25 * smoothstep(0.5, 0.72, nB);
+    let wear = select(1.0 - 0.25 * smoothstep(0.5, 0.72, nB), 1.0, m.glow > 0.0 || m.kind == 18u);
     let al = art.a * wear; base = mix(base, c.rgb * c.rgb * art.rgb, al); if (m.glow > 0.0) { let g = art.rgb * art.rgb; s.glow *= mix(vec3f(1.0), c.rgb * c.rgb * g, al); } s.rough = mix(s.rough, min(s.rough, 0.42), al); if (s.metal > 0.5) { s.metal *= 1.0 - al; }
   }
   s.albedo = clamp(base, vec3f(0.0), vec3f(0.94)); return s;
@@ -167,6 +168,11 @@ fn aimLamp(i: u32, x: vec3f, u: vec2f) -> Aim {
   }
   return a;
 }
+/** a quadrilateral's light on a level place, cosines and all: its edges' integral, what is under the horizon cut off (2 π for all round) */
+fn quadE(q: ptr<function, array<vec3f, 4>>) -> f32 {
+  var v: array<vec3f, 6>; var m = 0u; for (var k = 0u; k < 4u; k++) { let a = (*q)[k]; let e = (*q)[(k + 1u) & 3u]; if (a.z > 0.0) { v[m] = a; m++; } if ((a.z > 0.0) != (e.z > 0.0)) { v[m] = mix(a, e, a.z / (a.z - e.z)); m++; } } if (m < 3u) { return 0.0; } var s = 0.0;
+  for (var k = 0u; k < m; k++) { let a = normalize(v[k]); let e = normalize(v[select(k + 1u, 0u, k + 1u == m)]); let c = cross(a, e); let sl = length(c); s += c.z * select(1.0, atan2(sl, dot(a, e)) / sl, sl > 1e-5); } return abs(s);
+}
 /** a point of a lamp to ask whether it is seen: where more of its light comes from (the nearer parts of a long one), more often. Its direction and how far */
 fn aimSeen(i: u32, x: vec3f, u: vec2f) -> vec4f {
   let l = &lamps[i]; if ((*l).kind != 0u) { let a = aimLamp(i, x, u); return vec4f(a.dir, a.dist); } let hu = length((*l).u); let hv = length((*l).v); let eu = (*l).u / hu; let ev = (*l).v / hv; let d = x - (*l).at; let pu = dot(d, eu); let pv = dot(d, ev); let h = abs(dot(d, (*l).n));
@@ -180,22 +186,26 @@ fn lampE(i: u32, x: vec3f, n: vec3f) -> vec3f {
   if ((*l).kind != 0u || leaf) { let a = aimLamp(i, x, vec2f(0.5)); let c = dot(n, a.dir); return a.E * select(max(c, 0.0), 0.5, leaf) * win; }
   let face = dot(d, (*l).n); if (face >= 0.0) { return vec3f(0.0); }
   if (dist * dist > 14.0 * (*l).area) { return (*l).radiance * ((*l).on * max(dot(n, d), 0.0) * -face * (*l).area * win / (dist * dist * dist * dist)); }     // (far off, a rectangle is a point: to a hundredth)
-  let b = basis(n); var v: array<vec3f, 6>; var m = 0u; var q: array<vec3f, 4>;
+  let b = basis(n); var q: array<vec3f, 4>;
   for (var k = 0u; k < 4u; k++) { let c = d + (*l).u * select(-1.0, 1.0, k == 1u || k == 2u) + (*l).v * select(-1.0, 1.0, k >= 2u); q[k] = vec3f(dot(c, b[0]), dot(c, b[1]), dot(c, n)); }
-  for (var k = 0u; k < 4u; k++) { let a = q[k]; let e = q[(k + 1u) & 3u]; if (a.z > 0.0) { v[m] = a; m++; } if ((a.z > 0.0) != (e.z > 0.0)) { v[m] = mix(a, e, a.z / (a.z - e.z)); m++; } }
-  if (m < 3u) { return vec3f(0.0); } var s = 0.0;
-  for (var k = 0u; k < m; k++) { let a = normalize(v[k]); let e = normalize(v[select(k + 1u, 0u, k + 1u == m)]); let c = cross(a, e); let sl = length(c); s += c.z * select(1.0, atan2(sl, dot(a, e)) / sl, sl > 1e-5); }
-  return (*l).radiance * ((*l).on * abs(s) * 0.5 * win);
+  return (*l).radiance * ((*l).on * 0.5 * quadE(&q) * win);
 }
 /** how much of a lamp's image in a coat is the formula's (with a ray to see if it is there); the rest is for mirror rays to find. Rough coats would only find a small lamp by luck */
 fn byFormula(rough: f32) -> f32 { return smoothstep(0.12, 0.24, rough); }
+/** a point of a lamp to ask for what a coat shows of it: where the mirrored ray meets it, as widely about that as the coat is rough */
+fn aimCoat(i: u32, s: Surf, V: vec3f, u: vec2f) -> vec4f {
+  let l = &lamps[i]; if ((*l).kind != 0u) { let a = aimLamp(i, s.x, u); return vec4f(a.dir, a.dist); } let R = reflect(-V, s.n); let den = dot(R, (*l).n); var c = vec2f(0.0); var w = vec2f(2.0); let hu = dot((*l).u, (*l).u); let hv = dot((*l).v, (*l).v);
+  if (den < -0.02) { let t = dot((*l).at - s.x, (*l).n) / den; let q = s.x + R * t - (*l).at; c = vec2f(dot(q, (*l).u) / hu, dot(q, (*l).v) / hv); w = min(vec2f(2.0), vec2f(3.0 * s.rough * s.rough * t / max(-den, 0.2)) * vec2f(inverseSqrt(hu), inverseSqrt(hv))); }
+  let lo = max(min(c - w, vec2f(1.0)), vec2f(-1.0)); let hi = min(max(c + w, vec2f(-1.0)), vec2f(1.0)); let p = mix(lo, hi, u); let q = (*l).at + (*l).u * p.x + (*l).v * p.y - s.x; let t = length(q); return vec4f(q / max(t, 1e-4), t);
+}
 /** a lamp seen in a coat: by the point of it nearest the mirror direction */
 fn lampCoat(i: u32, s: Surf, V: vec3f) -> vec3f {
   let l = &lamps[i]; if ((*l).on <= 0.0) { return vec3f(0.0); } let d0 = (*l).at - s.x; let dist = length(d0); if (dist > (*l).reach) { return vec3f(0.0); } let R = reflect(-V, s.n); let a = max(s.rough * s.rough, 0.002);
-  if ((*l).kind == 0u) {                                             // a rectangle: how much of the coat's lobe it covers, along each of its sides. Never brighter than it is
-    if (dot(d0, (*l).n) >= 0.0) { return vec3f(0.0); } let den = dot(R, (*l).n); if (den > -0.02 || dot(s.n, R) <= 0.0) { return vec3f(0.0); } let t = dot(d0, (*l).n) / den; let q = s.x + R * t - (*l).at; let hu = length((*l).u); let hv = length((*l).v); let x = dot(q, (*l).u) / (hu * hu); let y = dot(q, (*l).v) / (hv * hv);
-    let w = 2.0 * a * t; let su = w / hu / max(-den, 0.15); let sv = w / hv / max(-den, 0.15); let cov = 0.25 * max((1.0 - x) * inverseSqrt(su * su + (1.0 - x) * (1.0 - x)) + (1.0 + x) * inverseSqrt(su * su + (1.0 + x) * (1.0 + x)), 0.0) * max((1.0 - y) * inverseSqrt(sv * sv + (1.0 - y) * (1.0 - y)) + (1.0 + y) * inverseSqrt(sv * sv + (1.0 + y) * (1.0 + y)), 0.0);
-    return fresnel(coatF0(s), max(dot(s.n, V), 0.02)) * (*l).radiance * ((*l).on * cov * sat(1.0 - pow(dist / (*l).reach, 4.0)));
+  if ((*l).kind == 0u) {                                             // a rectangle: the coat's lobe as a bent cosine (learn/ltc.py), and that is exact for its edges
+    if (dot(d0, (*l).n) >= 0.0) { return vec3f(0.0); } let nv = clamp(dot(s.n, V), 1e-3, 1.0); let x = sqrt(1.0 - nv) * 15.0; let y = clamp(s.rough, 0.06, 1.0) * 15.0; let x0 = min(u32(x), 14u); let y0 = min(u32(y), 14u); let fx = x - f32(x0); let fy = y - f32(y0); let at = u32(frame.misc2.y) + 2048u + 2u * (y0 * 16u + x0);
+    let m = mix(mix(extra[at], extra[at + 2u], fx), mix(extra[at + 32u], extra[at + 34u], fx), fy); let g = mix(mix(extra[at + 1u], extra[at + 3u], fx), mix(extra[at + 33u], extra[at + 35u], fx), fy).xy;
+    var t1 = V - s.n * dot(s.n, V); let tl = length(t1); if (tl < 1e-3) { t1 = basis(s.n)[0]; } else { t1 /= tl; } let t2 = cross(s.n, t1); var q: array<vec3f, 4>; for (var k = 0u; k < 4u; k++) { let c = d0 + (*l).u * select(-1.0, 1.0, k == 1u || k == 2u) + (*l).v * select(-1.0, 1.0, k >= 2u); let e = vec3f(dot(c, t1), dot(c, t2), dot(c, s.n)); q[k] = vec3f(m.x * e.x + m.y * e.z, e.y, m.z * e.x + m.w * e.z); }
+    let f0 = coatF0(s); return (*l).radiance * (f0 * g.x + (1.0 - f0) * g.y) * ((*l).on * quadE(&q) * (0.5 / PI) * sat(1.0 - pow(dist / (*l).reach, 4.0)));
   }
   let p = aimLamp(i, s.x, vec2f(0.5)); let widen = (*l).area * 0.5 / max(p.dist, 0.2); return min(p.E * coatOf(s, V, p.dir, widen), (*l).radiance * (*l).on * fresnel(coatF0(s), max(dot(s.n, V), 0.02)));
 }

@@ -11,6 +11,7 @@ import { cross, len, norm } from './math';
 import { blueNoise } from './noise';
 import { LM } from './lampmap';
 import { LOOSE } from './stages/loose';
+import ltc from './ltc.json';
 import { JOIN_ROWS } from './joins';
 
 export class SceneGpu {
@@ -29,7 +30,7 @@ export class SceneGpu {
     const packed = world.clusters.map(packCluster); let leafRows = 0; for (const p of packed) leafRows += p.data.byteLength / 16;
     const rows: number[] = [], planeAt = new Map<Piece, number>(), markAt = new Map<Piece, number>(); let row = leafRows;
     for (const p of [...order, ...world.moving]) { if (p.planes?.length) { planeAt.set(p, row); for (const [n, dd] of p.planes) { rows.push(...n, dd); row++; } } if (p.marks?.length) { markAt.set(p, row); for (const m of p.marks) { const a = artRect(m.art); rows.push(m.at[0], m.at[1], m.size[0], m.size[1], a[0], a[1], a[2], a[3], m.color[0], m.color[1], m.color[2], m.face); row += 3; } } }
-    const NZ = 64, na = blueNoise(NZ, 3), nb = blueNoise(NZ, 9); this.noiseAt = leafRows + rows.length / 4; for (let i = 0; i < NZ * NZ; i++) rows.push(na[i]!, nb[i]!);
+    const NZ = 64, na = blueNoise(NZ, 3), nb = blueNoise(NZ, 9); this.noiseAt = leafRows + rows.length / 4; for (let i = 0; i < NZ * NZ; i++) rows.push(na[i]!, nb[i]!); for (let i = 0; i < 256; i++) { const o = i * 6; rows.push(ltc[o]!, ltc[o + 1]!, ltc[o + 2]!, ltc[o + 3]!, ltc[o + 4]!, ltc[o + 5]!, 0, 0); }
     this.joinRow = leafRows + rows.length / 4; const ex = new Float32Array((this.joinRow + JOIN_ROWS) * 4); let at = 0; for (const p of packed) { ex.set(new Float32Array(p.data), at); at += p.data.byteLength / 4; } ex.set(rows, leafRows * 4);
     // bits of packed leaves must survive: copied as words
     { const u = new Uint32Array(ex.buffer); let o = 0; for (const p of packed) { u.set(new Uint32Array(p.data), o); o += p.data.byteLength / 4; } }
@@ -51,7 +52,7 @@ export class SceneGpu {
     this.frame = buffer(g, 'frame', 512, U); this.lamps = buffer(g, 'lamps', 64 * 80, U); this.lampOn = new Float32Array(64).fill(1);
     const op = new Float32Array(32 * 16); world.openings.slice(0, 32).forEach((o, i) => { op.set([...o.at, 4 * len(o.u) * len(o.v), ...o.u, 0, ...o.v, 0, ...norm(o.n), 0], i * 16); }); this.openings = buffer(g, 'openings', op, U);
     const mt = new Float32Array(64 * 12), mu = new Uint32Array(mt.buffer); MATERIALS.forEach((m, i) => { const o = i * 12; mt.set(m.base, o); mu[o + 3] = m.kind; mt[o + 4] = m.rough; mt[o + 5] = m.metal ?? 0; mt[o + 6] = m.f0 ?? 0.04; mt[o + 7] = m.glow ?? 0; mt.set(m.b2 ?? [0, 0, 0], o + 8); mt[o + 11] = m.scale ?? 1; }); this.mats = buffer(g, 'mats', mt, U);
-    const art = drawArt(), mips = 8, artTex = d.createTexture({ label: 'art', size: [4096, 2048], format: 'rgba8unorm', mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
+    const art = drawArt(), mips = 8, artTex = d.createTexture({ label: 'art', size: [4096, 4096], format: 'rgba8unorm', mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
     let src: HTMLCanvasElement = art; for (let i = 0; i < mips; i++) { d.queue.copyExternalImageToTexture({ source: src }, { texture: artTex, mipLevel: i, premultipliedAlpha: false }, [src.width, src.height]); const c: HTMLCanvasElement = document.createElement('canvas'); c.width = src.width / 2; c.height = src.height / 2; const x = c.getContext('2d')!; x.imageSmoothingQuality = 'high'; x.drawImage(src, 0, 0, c.width, c.height); src = c; }
     const C = GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, ro = (binding: number): GPUBindGroupLayoutEntry => ({ binding, visibility: C, buffer: { type: 'read-only-storage' } }), un = (binding: number): GPUBindGroupLayoutEntry => ({ binding, visibility: C, buffer: { type: 'uniform' } }), tx = (binding: number): GPUBindGroupLayoutEntry => ({ binding, visibility: C, texture: {} });
     this.layout = d.createBindGroupLayout({ label: 'scene', entries: [un(0), ro(1), ro(2), ro(3), ro(4), un(5), un(6), un(7), { binding: 8, visibility: C, sampler: {} }, tx(9), tx(10), tx(12), { binding: 13, visibility: C, sampler: {} }, { binding: 14, visibility: C, texture: { viewDimension: '3d' } }, { binding: 15, visibility: C, texture: { viewDimension: '3d' } }, { binding: 16, visibility: C, texture: { viewDimension: '3d', sampleType: 'uint' } }] });
