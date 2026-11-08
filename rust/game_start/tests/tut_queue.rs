@@ -89,57 +89,52 @@ fn in_the_yard(s: u32) -> Play {
     p
 }
 
-/// THE RULE: the first gate turns a whole pair, who stay on it. At the second a Shift tap gives nothing and says to keep the key down; kept down the ring is that pair's, no more than five wedges, and its wedge turns them to the gate.
-/// The wrong hand is put right: a stray Shift tap first and the first gate's own line still parts a pair to it; the key kept down with no Shift is everyone's, all four turn to the second gate, the next line asks for the first
-/// again, and a Shift tap there leaves a pair on each. That wrong hand is the control for the ring's part.
+/// the keys a gate's line names, on its ring: Shift and the key kept down, the ring for a whole pair, no more than five wedges, its second wedge has them watch the gate. Who.
+fn by_the_wheel(p: &mut Play, s: u32, at: [f64; 3]) -> Vec<GuardId> {
+    assert!(p.shift_held(at), "seed {s}: no ring");
+    let part = p.ring_part();
+    let wedges = p.ring_wedges();
+    assert!(one_pair(p, &part) && wedges.len() <= 5, "seed {s}: the ring: {part:?} {wedges:?}");
+    p.wedge_taken(Some("cover"));
+    p.run(0.2);
+    part
+}
+
+/// THE RULE: both gates are the wheel's: a Shift tap gives nothing and says to keep the keys down, and so does the key with no Shift. Kept down with Shift the ring is a whole pair's, and its wedge has them watch the gate, the others staying on the
+/// first. The tap on himself is never stopped: it calls them back, and the next line asks for the road gate where nobody watches it now. That wrong hand is the control for the first run's pairs: nothing is a dead end.
 /// A FAILURE MEANS: a step of the yard can be a dead end.
 #[test]
 fn the_yards_gates_are_done_by_the_keys_their_lines_name() {
     for s in SEEDS {
         let mut p = in_the_yard(s);
         let (ga, gb) = (ring_of(&p, "gateA"), ring_of(&p, "gateB"));
-        p.shift_tap(ga);
-        p.run(0.2);
-        let first = watching(&p, ga);
-        assert!(one_pair(&p, &first), "seed {s}: the first gate: {first:?}");
-        p.until(4.0, |p| up(p) == "gateB").unwrap_or_else(|| panic!("seed {s}: '{}'", up(&p)));
         let n0 = p.orders_given();
-        p.shift_tap(gb);
+        p.shift_tap(ga);
+        p.key_tapped_on(ga);
         p.run(0.2);
-        assert!(watching(&p, gb).is_empty() && p.orders_given() == n0, "seed {s}: a Shift tap at the second gate gave something");
+        assert!(watching(&p, ga).is_empty() && p.orders_given() == n0 && up(&p) == "gateA", "seed {s}: a tap at the gate gave something: '{}'", up(&p));
         let note = p.view().lesson.and_then(|l| l.rails).and_then(|r| r.prompt).map_or(String::new(), |x| x.note.unwrap_or_default());
-        assert!(note.contains("held down") || note.contains("hold"), "seed {s}: it does not say to keep the key down: '{note}'");
-        assert!(p.shift_held(gb), "seed {s}: no ring");
-        let part = p.ring_part();
-        assert!(one_pair(&p, &part) && p.ring_wedges().len() <= 5, "seed {s}: the ring: {part:?} {:?}", p.ring_wedges());
-        p.wedge_taken(Some("cover"));
-        p.run(0.2);
-        assert!(watching(&p, gb).len() == 2 && first.iter().all(|m| watching(&p, ga).contains(m)), "seed {s}: the wedge");
+        assert!(note.contains("held down"), "seed {s}: it does not say to keep the keys down: '{note}'");
+        let first = by_the_wheel(&mut p, s, ga);
+        assert!(first.iter().all(|m| watching(&p, ga).contains(m)), "seed {s}: the first gate: {first:?}");
+        p.until(4.0, |p| up(p) == "gateB").unwrap_or_else(|| panic!("seed {s}: '{}'", up(&p)));
+        let second = by_the_wheel(&mut p, s, gb);
+        assert!(second.iter().all(|m| !first.contains(m) && watching(&p, gb).contains(m)) && first.iter().all(|m| watching(&p, ga).contains(m)), "seed {s}: a pair on each: {first:?} {second:?}");
+        p.until(6.0, |p| up(p) == "hold").unwrap_or_else(|| panic!("seed {s}: '{}'", up(&p)));
         drop(p);
 
         let mut p = in_the_yard(s);
         let (ga, gb) = (ring_of(&p, "gateA"), ring_of(&p, "gateB"));
-        let stray = [30.6, 0.04, 7.6];
-        p.shift_tap(stray);
-        p.run(0.2);
-        assert_eq!(watching(&p, stray).len(), 2, "seed {s}: the stray tap");
-        p.shift_tap(ga);
-        p.run(0.2);
-        assert_eq!(watching(&p, ga).len(), 2, "seed {s}: the first gate after a stray tap");
+        by_the_wheel(&mut p, s, ga);
         p.until(4.0, |p| up(p) == "gateB").unwrap_or_else(|| panic!("seed {s}: '{}'", up(&p)));
-        p.cursor_on(gb);
-        p.run(3.0 / 60.0);
-        let key = p.g.k.cmdring.key.clone();
-        p.key_down(&key);
-        p.until(1.5, |p| p.ring_up()).unwrap_or_else(|| panic!("seed {s}: no ring with no Shift"));
-        assert!(p.ring_part().is_empty(), "seed {s}: with no Shift the ring is everyone's");
-        p.wedge_taken(Some("cover"));
+        let f = p.sam_at();
+        p.key_tapped_on([f[0], 1.0, f[1]]);
         p.run(0.2);
-        assert!(watching(&p, gb).len() == 4 && watching(&p, ga).is_empty(), "seed {s}: all four on the second gate");
+        assert!(watching(&p, ga).is_empty() && p.men().iter().all(|&m| p.doing(m).as_deref() == Some("fallIn")), "seed {s}: the tap on himself calls them back");
+        by_the_wheel(&mut p, s, gb);
         p.until(4.0, |p| up(p) == "split").unwrap_or_else(|| panic!("seed {s}: '{}'", up(&p)));
         let at = ring_of(&p, "split");
-        p.shift_tap(at);
-        p.run(0.2);
+        by_the_wheel(&mut p, s, at);
         let (x, y) = (watching(&p, ga), watching(&p, gb));
         assert!(one_pair(&p, &x) && one_pair(&p, &y), "seed {s}: a pair on each: {x:?} {y:?}");
         p.until(6.0, |p| up(p) == "hold").unwrap_or_else(|| panic!("seed {s}: '{}'", up(&p)));

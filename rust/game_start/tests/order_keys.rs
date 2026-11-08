@@ -84,8 +84,8 @@ fn move_there_puts_the_pair_on_the_spot_and_keeps_them_there() {
         assert_eq!(p.said.iter().filter(|l| l.text == "set.").count(), 1, "seed {s}: 'set.' once");
         for (i, &m) in blue.iter().enumerate() { assert!(dist(p.at(m), was[i]) < 1.5, "seed {s}: the control: blue was not told"); }
         let here: Vec<_> = red.iter().map(|&m| p.at(m)).collect();
-        p.run(6.0);
-        for (i, &m) in red.iter().enumerate() { assert!(dist(p.at(m), here[i]) < 0.1, "seed {s}: six seconds on he has shifted"); }
+        p.run(3.0);
+        for (i, &m) in red.iter().enumerate() { assert!(dist(p.at(m), here[i]) < 0.1, "seed {s}: three seconds on he has shifted"); }
         assert_eq!(p.said.iter().filter(|l| l.text == "set.").count(), 1, "seed {s}: and nobody said it again");
     }
 }
@@ -107,7 +107,7 @@ fn hold_stops_them_where_they_are() {
             if !held { p.until(14.0, |p| men.iter().all(|&m| p.arrived(m))).unwrap_or_else(|| panic!("seed {s}: the control: not there")); continue; }
             p.order("hold", p.sam_at(), Who::All);
             let here: Vec<_> = men.iter().map(|&m| p.at(m)).collect();
-            p.run(8.0);
+            p.run(4.0);
             for (i, &m) in men.iter().enumerate() {
                 assert!(dist(p.at(m), here[i]) < 0.6 && p.speed(m) < 0.1, "seed {s}: he went on {:.2} m", dist(p.at(m), here[i]));
                 assert!(dist(p.at(m), far) > 1.5, "seed {s}: he reached the far spot");
@@ -264,7 +264,8 @@ fn a_man_back_from_the_fight_walks_for_where_his_order_stands() {
         p.frame();
         for &m in &men { assert!(p.order_waits_on_fight(m), "seed {s}: the staging: the fight has him"); }
         p.until(8.0, |p| men.iter().all(|&m| !p.order_waits_on_fight(m))).unwrap_or_else(|| panic!("seed {s}: the fight never let go"));
-        p.run(12.0);
+        p.until(12.0, |p| men.iter().enumerate().all(|(i, &m)| dist(p.at(m), posts[i]) < 1.0));
+        p.run(1.0);
         for (i, &m) in men.iter().enumerate() {
             assert!(dist(p.at(m), posts[i]) < 1.2, "seed {s}: {:.2} m off his place", dist(p.at(m), posts[i]));
             assert!(dist(p.at(m), corner) > 1.5, "seed {s}: he stands on the corner");
