@@ -9173,7 +9173,8 @@
 "view::TickView.aim",
 "view::TickView.worn",
 "view::TickView.squad",
-"view::TickView.corner"
+"view::TickView.corner",
+"view::TickView.lesson"
 ],
 "pageTick": [
 "aim::AimState.bearing_rate",

@@ -30,6 +30,7 @@ import { coopRows } from './coop';
 import { TITLE, cheatWords, titleScreen } from './title';
 import type { SlotInfo } from '../game/savestate';
 import { button, checkpointButton, el, saveStrip, type Press, type RunSaves } from './runcard';
+import { locked } from '../view/seatview';
 
 TITLE.coop = () => (COOP.on ? coopRows : null);
 
@@ -55,7 +56,7 @@ function settingsOf(game: Game, overlay: Overlay): OptionsGame {
     get thinks() { return game.aiEnabled; }, set thinks(v) { game.aiEnabled = v; },
     get ammo() { return game.infiniteAmmo; }, set ammo(v) { game.infiniteAmmo = v; },
     get wallFeel() { return WALLSNAP.on; }, get wallPress() { return WALLSNAP.press; }, set wallPress(v) { WALLSNAP.press = v; },
-    get fallIn() { return CMDRING.twice && !game.rails?.locks('twice'); },
+    get fallIn() { return CMDRING.twice && !locked(game.view, 'twice'); },
     get hints() { return overlay.showLightDots; }, set hints(v) { overlay.showLightDots = v; },
   };
 }

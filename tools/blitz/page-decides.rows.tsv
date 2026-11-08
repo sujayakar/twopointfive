@@ -8,8 +8,8 @@ src/game/director.ts:*	moving	the Director	its host fields (the camera and Input
 # ---- decides: the records the page keeps and the lines it says
 src/game/par.ts:Par.best*	picture	the picture's feel	this machine's words about its best time, handed in by the page for the result as it shows it (the browser's store is a machine's own)	1
 src/game/par.ts:*	decides	HUD mission lines	what the page reads of the clock (armed, started, the result) is asked of the copy; the row with the clock on it is the Rust game's own (par_objective, in the view)
-src/game/lesson.ts:*	decides	lesson conditions	a lesson's step, its line and whether it is over are worked out again on the copy (the camera and the HUD ask Lesson.step each frame)
-src/game/rails.ts:*	decides	lesson conditions	what a tutorial's rails allow, offer and teach is worked out again on the copy each frame (its key locks wait for the host's half to be redrawn)
+src/game/rails.ts:Rails.hostView	decides	lesson conditions	left on the page: it sets the page's own camera as a tutorial opens (the view is the host's, and reaches the game in the next tick's record)
+src/game/rails.ts:Rails.resume	decides	lesson conditions	left on the page: the save controller's word that the level's program was stopped for an authored checkpoint; it goes with the controller
 src/game/cues.ts:Cues.bubbleOf	decides	debrief	the death recap's witness asks whether a cue stands over him, on the copy: it goes with him
 src/game/dialogue.ts:roomName	decides	squad status words	the squad block's row names the floor a man covers (Cover.words): goes when the HUD reads the squad's words
 src/game/dialogue.ts:watchedPlace	decides	squad status words	the squad block's row names the floor a man covers (Cover.words): goes when the HUD reads the squad's words
@@ -71,7 +71,6 @@ src/game/player.ts:*	decides	aim and stance on the HUD	whether he can stand, wha
 src/game/combat.ts:*	decides	aim and stance on the HUD	whether something solid lies between two points is worked out again on the copy
 src/game/condition.ts:*	decides	squad status words	"is he hurt" is worked out again on the copy
 src/game/silent.ts:*	decides	squad status words	whether the squad is silent and whether that is compromised are worked out again on the copy
-src/game/stalk.ts:*	decides	squad status words	whether the stalk can go and what it waits on are worked out again on the copy
 src/game/samstun.ts:*	decides	squad status words	whether Sam is blind or staggered is worked out again on the copy
 src/game/nvg.ts:*	decides	squad status words	whether goggles are worn is worked out again on the copy
 src/game/weapons.ts:*	decides	squad status words	"reloading" and "ready" are worked out again on the copy

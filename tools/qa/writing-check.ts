@@ -67,7 +67,7 @@ function lessonTexts(name: string, L: any): Text[] {
   return out;
 }
 
-/** a list of texts with every line and card replaced by what the page writes out of it (a title, a row and a list entry are shown as written) */
+/** a list of texts with every line and card replaced by what is written out of it (game/lesson.ts tokenLine; a title, a row and a list entry are shown as written) */
 const asRead = (lessonLine: (s: string) => string, T: Text[]): Text[] => T.map(t => t.kind !== 'line' && t.kind !== 'card' ? t : { ...t, text: lessonLine(t.text) });
 
 /** the sentences the guide was written from, and their rewrites */
@@ -88,7 +88,7 @@ export async function writingCheck(): Promise<boolean> {
   console.log(`\n=== writing: the text a player reads, by the guide${BREAK ? ' — WRITING_BREAK: the old sentences are read as a level\'s' : ''} ===`);
   let all = true; const line = (ok: boolean, label: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); };
   const { ALL_MISSIONS, TUTORIAL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
-  const lessonMod = await import(`${ROOT}/src/game/lesson.ts`), W: (s: string) => string = BREAK ? (t: string) => lessonMod.lessonLine(t).replace(/press \[Space\] to grab/gi, '[Space]: grab') : lessonMod.lessonLine;
+  const lessonMod = await import(`${ROOT}/src/game/lesson.ts`), asPage = (t: string): string => lessonMod.tokenLine(t, false, true), W: (s: string) => string = BREAK ? (t: string) => asPage(t).replace(/press \[Space\] to grab/gi, '[Space]: grab') : asPage;
 
   // ---- the lessons
   const texts: Text[] = []; const levels = readdirSync(join(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')).sort(); let lessons = 0;
