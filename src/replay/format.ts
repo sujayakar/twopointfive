@@ -104,19 +104,16 @@ export interface ReplayMap {
 }
 
 /** THE RUN TAPE (game/runtape.ts): what a headless game is walked through the same run with (tools/qa/rerun.ts) — the recipe, then per step (`f`, from the game's
- *  first) its dt, the player's input and camera, the values the game read off the GPU, and what was done to the game from outside a step. */
-export type TapeVal = number | string | null | [number];
-/** a tape value read back (`f32`: the sensor values of a tape that says `sens.f32`; [x] = a double kept whole) */
-export const tapeNum = (e: TapeVal, f32 = false): number | undefined => e === null ? undefined : typeof e === 'number' ? (f32 ? Math.fround(e) : e) : typeof e !== 'string' ? e[0] : e === 'nan' ? NaN : e === '-0' ? -0 : e === 'inf' ? Infinity : e === '-inf' ? -Infinity : Number(e);
-/** a sensor value as a `sens.f32` tape writes it — THE SESSION JOURNAL'S OWN ENCODING (game/sensors.ts SensorEnc: either's reader reads the other's values, the
- *  replay probes hold it): a 32-bit float as nine significant digits (they name exactly one), any other number whole as [x]. Written straight at nine digits,
- *  with no search for a shorter text that would do: this runs inside the step, once per value that changed */
-export const tapeF32 = (v: number | undefined): TapeVal => { if (v === undefined) return null; if (v !== v) return 'nan'; if (v === 0) return Object.is(v, -0) ? '-0' : 0; if (!Number.isFinite(v)) return v > 0 ? 'inf' : '-inf';
-  const q = +v.toPrecision(9); return Math.fround(q) === v ? q : [v]; };
+ *  first) its dt, the player's input and camera, and what was done to the game from outside a step: the game senses for itself, so nothing else goes into it. */
+export type TapeVal = number | string | null;
+/** a tape value read back */
+export const tapeNum = (e: TapeVal): number | undefined => e === null ? undefined : typeof e === 'number' ? e : e === 'nan' ? NaN : e === '-0' ? -0 : e === 'inf' ? Infinity : e === '-inf' ? -Infinity : Number(e);
 /** a step's input where it differs from the step before: keys held, keys that went down, clicked bits, buttons, the cursor, the wheel */
 export interface TapeInput { k?: string[]; p?: string[]; c?: number; b?: number; m?: [number, number]; w?: number; }
+/** the run tape's own version: a tape of another is not walked (tapeWhy). 2 = the game senses for itself: no value of the renderer's is on it */
+export const TAPE_VERSION = 2;
 export interface RunTape {
-  v: 1; ticks: number;
+  v: number; ticks: number;
   /** the game's die, the page's query (+ its level file), the scenario up at the first step, and the journal's env / knobs snapshots (journal.ts EnvSnap / KnobsSnap);
    *  `stand` = where the game stood (the real page, or a headless tool's shipped / frozen stand: a re-run stands the same way; `words` = the stand's env words a
    *  tool was started with, src/host/standEnv.ts), `tables` = every registered knob table that is NOT in `knobs.tables` (knobs.ts knobRegistry — a recording's
@@ -128,14 +125,8 @@ export interface RunTape {
   /** THE LENS, where it was not the pose's: a row for every step whose view matrices were NOT what its nine camera numbers build (camera.ts rebuild) — the host
    *  wrote the pose after the camera last rebuilt (a card closing, an orbit, the tour's pan, a tool) and the step's cursor ray was read off the matrices as they stood.
    *  [f, yaw] = the pose's own with this yaw in place of its own (the usual case: a yaw written a frame ahead of its matrices); [f, …view-projection 16, …its inverse
-   *  16, eye x y z, forward x y z] = the matrices themselves. A step with no row: the pose's own. PRESENT, if empty, on every tape made since: absent = a tape from
-   *  before it, where tapewalk.ts guesses the yaw of an orbit's step and knows nothing of the rest */
-  lens?: TapeVal[][];
-  /** the sensor reads: `keys` by index; a row = [f, the step's read sequence as key indices (null: as the step before), values] — values in full with a
-   *  sequence, else [position, value, …] for the ones that changed. null = no answer yet; 'nan' / 'inf' / '-inf' / '-0' as words. `f32`: a plain number among
-   *  the VALUES is a 32-bit float written to nine significant digits (what the renderer hands back; read it with Math.fround: exact, and half the text), a
-   *  value that is not one is [the double]. Absent (a tape from before it): every number is the double itself. Read both with `tapeNum` */
-  sens: { keys: string[]; rows: [number, number[] | null, TapeVal[]][]; f32?: 1 };
+   *  16, eye x y z, forward x y z] = the matrices themselves. A step with no row: the pose's own */
+  lens: TapeVal[][];
   /** from outside a step, before step f: 'restart' ('start' = put back to the start the run was kept at, clock and die and all: the page's) · 'load' the slot of a save this run made in memory · 'flags' {…} · 'tune' {…} · 'table' [name, {…}] · 'kit' {…} · 'pose' [the player's place x y z, velocity x y z,
    *  body yaw, aim yaw, hands empty 0 | 1, low 0 | 1 — each a TapeVal: where he was put from outside a step] — and one row that is not from outside: 'posein', the
    *  same ten values, where a restart made INSIDE step f left him (a page's own staging behind it). Both are done by game/runtape.ts tapePoses */
@@ -172,19 +163,12 @@ export interface ReplayFile {
   rerun?: RunTape | { dead: string; tick: number };
 }
 
-/** THE BALLISTIC SHIELD IS GONE FROM THE GAME (10-18). A run tape re-runs the game from its inputs, so a run made with a shield man in it cannot be re-run:
- *  he would stage with his own gun and the run part from the tape at the first round his plate stopped. Both readers say so in words before a re-run starts
- *  (the page's engineplay.ts, tools/qa/rerun.ts); the map viewer plays such a file as ever — its samples are the recording itself. A tape was made with one
- *  when the shield was in that game (its SHIELD table on: every tape before 10-15, a `?shield` visit after) AND a teammate's card carried it or the level
- *  issued it (the long hall's issue block did until the shield went). A card on a man who did not come that day reads the same: such a tape is refused too. */
-export function tapeShield(T: RunTape): boolean {
-  const rc = T.recipe, tb = (rc.knobs as { tables?: Record<string, unknown> } | null)?.tables?.SHIELD ?? rc.tables?.SHIELD;
-  if ((tb as { on?: unknown } | undefined)?.on !== true) return false;
-  const carded = rc.kit?.on !== false && (rc.kit?.members ?? []).some((c, i) => i > 0 && (c as { shield?: unknown } | null)?.shield === true);
-  const issued = /(^|\/)hall(-gwot)?\.json$/.test(rc.levelFile ?? '') && !new URLSearchParams(rc.search ?? '').has('noissue');
-  return carded || issued;
+/** why a replay's run cannot be walked through a game, as a sentence with no stop ('' = it can): asked by every reader that would (the page's player and the roads
+ *  to it, tools/qa/rerun.ts). The map viewer draws any file: its samples are the recording itself. */
+export function tapeWhy(F: ReplayFile | null): string {
+  const T = F?.rerun, why = !T ? 'it was saved without a record of the controls' : 'dead' in T ? T.dead : T.v !== TAPE_VERSION ? 'a different version of the game saved it' : '';
+  return why && `This replay can't be played in the game because ${why}`;
 }
-export const TAPE_SHIELD = 'This replay was recorded with a ballistic shield, which is no longer in the game';
 
 /** a file's sanity, in words ('' = fine) */
 export function checkReplay(F: Partial<ReplayFile> | null | undefined): string {
@@ -285,9 +269,6 @@ export function replayBlob(F: ReplayFile): { name: string; blob: Blob } {
  *  (ReplayKey's constructor, and its pageshow for a page handed back as it was left), so a replay reached later by another road finds none and goes to the
  *  game's own page. */
 export const CAME_FROM = 'twopointsix.replay.from';
-/** DOES THE GAME PAGE PLAY A RUN TAPE (engineplay.ts, `?playtape=`): asked by every road that would lead there — the end card's Replay (ui/replaykey.ts
- *  engineUrl), the map viewer's 'Play in engine', the address itself (main.ts). While it does not, all of them are the map viewer's, which draws the file's trace. */
-export const GAME_PAGE = { playsTapes: false };
 type Slots = { currentEntry?: { key?: string } | null; entries?: () => { key: string }[]; traverseTo?: (key: string) => { committed?: Promise<unknown>; finished: Promise<unknown> } };
 const slots = (): Slots | null => { try { return (globalThis as { navigation?: Slots }).navigation ?? null; } catch { return null; } };
 /** this window goes to a replay page — never a new tab — leaving the mark its way back reads */

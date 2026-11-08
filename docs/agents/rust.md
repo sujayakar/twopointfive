@@ -39,8 +39,7 @@ The price: a module in `play` is about a megabyte larger (25.7 to 26.7 MB), beca
 **THE WHOLE TICK IS IN RUST AND THE PAGE PLAYS IT (2026-11-07).** `rust/game` is the game's tick in Rust (hand-written bodies over a generated skeleton),
 `rust/game_face` its WebAssembly face, `rust/game_run` a native runner. The page's game is the Rust game with no address word (`src/host/rustgame.ts`,
 `tools/blitz/PAGE.md`): the TypeScript `Game` stays as a puppet that the picture, the sound, the HUD and the menus read, and the TypeScript tick is not called.
-`?rust=0` is the TypeScript game for as long as it is still in the tree; a page with `?net=`, `?join=` or `?playtape=` stays with it until those have been
-played on the Rust game. A headless tool plays the Rust game under `TPS_GAME=rust` (`tools/blitz/PLAY.md`, `rust.sh`); with no word a tool still stands the
+`?rust=0` is the TypeScript game for as long as it is still in the tree; a page with `?net=`, `?join=` or `?playtape=` is the Rust game too. A headless tool plays the Rust game under `TPS_GAME=rust` (`tools/blitz/PLAY.md`, `rust.sh`); with no word a tool still stands the
 TypeScript game (`tools/blitz/word.ts DEFAULT_WORD`). A built module is checked in (`rust/game_face/prebuilt/`, with a hash of its sources; ANY change under
 `rust/` stales it: `bun run tools/blitz/face-build.ts --prebuilt`, then `--where` must say it is of these sources); a hosted build compiles its own
 (`tools/host/build.sh`) and fails if it cannot. Checked: every tick of 159 scripted runs held to the TypeScript tick (`tools/blitz/run.sh`), a differential

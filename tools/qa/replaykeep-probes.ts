@@ -71,7 +71,8 @@ console.log('\n=== every run kept, and read back out ===');
       check(same(A.file[k], file[k]), `whole: its ${k} ${k === 'samples' ? `(${A.file.samples.length}) ` : k === 'events' ? `(${A.file.events.length}) ` : k === 'cast' ? `(${A.file.cast.length}) ` : ''}are the file's F7 would have made`);
     check(same(A.file.lines, file.lines), `whole: its lines (${A.file.lines.length}) are that file's`);
     check(A.tapeTicks === 32 * 60 && A.tapeEnd === '', `whole: the run tape is whole (${A.tapeTicks} steps)`);
-    { const T = A.file.rerun as any; check(T?.sens?.f32 === (file.rerun as any)?.sens?.f32, `whole: the kept tape says how its sensor values are written as F7's does (f32 ${T?.sens?.f32 ?? 'absent'}, ${T?.sens?.rows?.length ?? 0} sensor rows)`); }
+    { const old = { ...V!, pieces: new Map([...V!.pieces].map(([i, p]: [number, any]) => [i, p.tape ? { ...p, tape: { ...p.tape, v: undefined } } : p])) }, O = KP.assemble(old as any);   // (a visit kept before the tape said its version: the map viewer's alone)
+      check((A.file.rerun as any)?.v === F.TAPE_VERSION && F.tapeWhy(A.file) === '' && !!O && /a different version of the game/.test(F.tapeWhy(O.file)), `whole: the kept tape says its version; a visit kept before tapes said one is put together and not walked (${O ? F.tapeWhy(O.file) : 'not put together'})`); }
     const dAt = R.hashes[29], Rr = await rerun(A.file, { toN: 1800 });
     check(!Rr.refuse && !!Rr.report && !Rr.report.drift && !!Rr.W && hashDigest(digestGame(Rr.W.game, true)) === dAt, `whole: a fresh game walks the kept tape to step 1800 and digests as the first run did there${Rr.refuse ? ` — REFUSED: ${Rr.refuse}` : ''}`);
     console.log(`  cost: ${R.K.stats.beats} beats, ${(R.K.stats.ms / R.K.stats.beats).toFixed(2)} ms each to take and word a piece (worst ${R.K.stats.worstMs.toFixed(2)} ms); ${(R.K.filed.bytes / 42 / 1024).toFixed(1)} KB a second of play kept`);

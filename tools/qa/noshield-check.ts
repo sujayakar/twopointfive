@@ -1,8 +1,8 @@
 // THE BALLISTIC SHIELD IS GONE FROM THE GAME (the maintainer, 10-15: "we should also probably just get rid of the ballistic shield, doesn't match the vibes
 // (feels more like swat)", and 10-18: "we should just remove the riot shield"). It was a switch from 10-15 to 10-18 (in on the frozen stand, out of the page);
 // now there is no module, no table, no word and no row. What this holds, headless:
-//   bun run tools/qa/noshield-check.ts [gone|card|staged|tape]      (NOSHIELD_BREAK=1 = the check is lied to — a shield value on the big row, a shield tape
-//                                                                    waved through: the card and tape lines must FAIL)
+//   bun run tools/qa/noshield-check.ts [gone|card|staged|tape]      (NOSHIELD_BREAK=1 = the check is lied to — a shield value on the big row:
+//                                                                    the card line must FAIL)
 //   gone    no shield module under src/game; no SHIELD table in the knob registry or among the tables a recording carries; no TPS_SHIELD among the stands'
 //           words and no SHIELD row of the two stands' list; the word in the environment changes nothing a card offers; the kit table has no shield tool
 //   card    the big slot on and off, the pouches on and off: no card has a Shield row, no big row offers one, a hand that sets one is refused; a STORED card
@@ -12,8 +12,7 @@
 //           level file names one, and a level whose issue card still does is REFUSED with the reason in words; no mission's words say shield
 //   tape    what was recorded with one: a tape's knobs (the SHIELD table among them) apply without a throw and make no table — such a file LOADS,
 //           and where a shield man was in it the replay parts from the file's own digests and says at which frame, as for any file the build has moved past
-//           (the file does not say who carried what: nothing to refuse it by); an F7 run tape made with one is refused in words before a re-run (the map
-//           viewer plays its samples as ever), and a tape made without is not
+//           (the file does not say who carried what: nothing to refuse it by)
 // There is no switch left for the lines to differ in. Nothing here looks at a picture.
 import { resolve } from 'node:path';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -129,7 +128,7 @@ export async function noshieldStaged(): Promise<boolean> {
 }
 
 export async function noshieldTape(): Promise<boolean> {
-  const F = family('noshield-tape: what was recorded with a shield — a session\'s knobs apply and make no table, and a run tape that cannot be re-run says so in words');
+  const F = family('noshield-tape: what was recorded with a shield — a session\'s knobs apply and make no table');
   await kept(async () => {
     try {
       const W: any = await hushed(() => standUp()), g = W.game, JR = await import(`${ROOT}/src/game/journal.ts`), RF = await import(`${ROOT}/src/replay/format.ts`);
@@ -140,23 +139,13 @@ export async function noshieldTape(): Promise<boolean> {
       const KN = await import(`${ROOT}/src/game/knobs.ts`), reg = 'SHIELD' in (KN.knobRegistry() as Record<string, unknown>), back = J(JR.knobsSnapshot(g).tables) === J(now.tables);
       F.verdict(!has && !threw && !reg && back, 'a snapshot made now carries no SHIELD table; an older session\'s knobs (the table among them) apply without a throw, make no table and leave every other table as the file had it', `a snapshot now has the table: ${has} · applying the older one: ${threw || 'ok'} · the registry has the table: ${reg} · the tables after = the file's own: ${back}`);
       await hushed(() => JR.applyKnobs(g, now));
-      // an F7 run tape: re-run only when nobody in it carried one
-      const tape = (o: { on?: boolean; card?: boolean; file?: string; search?: string; where?: 'knobs' | 'tables' }) => { const T = o.on === undefined ? {} : { SHIELD: { on: o.on } };
-        return { v: 1, ticks: 0, recipe: { seed: 1, search: o.search ?? '', levelFile: o.file ?? 'levels/office.json', scenario: null, env: null, knobs: o.where === 'tables' ? { tables: {} } : { tables: T }, tables: o.where === 'tables' ? T : {}, kit: { on: true, members: [{}, o.card ? { shield: true } : { shield: false }, {}] } } }; };
-      const says = (o: Parameters<typeof tape>[0]): boolean => BROKEN ? false : RF.tapeShield(tape(o)) as boolean;   // (NOSHIELD_BREAK: the lie — every tape waved through)
-      const rows: [string, boolean, boolean][] = [
-        ['in, on a teammate\'s card', says({ on: true, card: true }), true], ['in (the table kept outside the recording\'s), on a card', says({ on: true, card: true, where: 'tables' }), true],
-        ['in, the long hall', says({ on: true, file: 'levels/hall.json' }), true], ['in, the long hall in its other look', says({ on: true, file: '/levels/hall-gwot.json' }), true],
-        ['in, the long hall with ?noissue', says({ on: true, file: 'levels/hall.json', search: '?noissue' }), false], ['in, on nobody\'s card, another level', says({ on: true }), false],
-        ['out, the key still on a card', says({ on: false, card: true }), false], ['no table at all (a tape made now), the long hall', says({ file: 'levels/hall.json' }), false]];
-      F.verdict(rows.every(r => r[1] === r[2]) && /ballistic shield/.test(RF.TAPE_SHIELD), 'a run tape made with a shield man in it is refused before a re-run, in words; one made without is not', rows.map(r => `${r[0]}: ${r[1] ? 'refused' : 're-run'}${r[1] === r[2] ? '' : ' (WRONG)'}`).join(' · ') + ` · the words: "${RF.TAPE_SHIELD}"${B}`);
     } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   });
   return F.done();
 }
 
 export async function noshieldCheck(only?: string): Promise<boolean> {
-  console.log(`noshield-check on the ${STAND.toUpperCase()} stand${BROKEN ? ' — NOSHIELD_BREAK=1: the check is lied to, the card and tape lines below must FAIL' : ''}`);
+  console.log(`noshield-check on the ${STAND.toUpperCase()} stand${BROKEN ? ' — NOSHIELD_BREAK=1: the check is lied to, the card line below must FAIL' : ''}`);
   let ok = true;
   const parts: [string, () => Promise<boolean>][] = [['gone', noshieldGone], ['card', noshieldCard], ['staged', noshieldStaged], ['tape', noshieldTape]];
   for (const [name, fn] of parts) if (!only || only === name) ok = (await fn()) && ok;

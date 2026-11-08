@@ -550,10 +550,10 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   DATA DOES: a stored or pasted card that says `shield` is a card without one — `kitSanitize` takes only what a row offers, and the next change of a row writes the store without
   the word; a save never named one; a level whose issue card says `shield` is REFUSED with the reason in words (`scene/levelData.ts`: 'the ballistic shield is out of the game:
   take the key out'; levels/hall.json and hall-gwot.json now issue nothing); an F10 session whose knobs carry the `SHIELD` table LOADS (the table is passed over) — where a shield
-  man was in it the replay parts from the file's digests and says the frame, since the file does not say who carried what; an F7 run tape made with a shield man is refused before
-  a re-run, in words (`replay/format.ts tapeShield`: the table on AND a teammate's card carrying it or the long hall's issue; the map viewer plays its samples as ever). QA:
+  man was in it the replay parts from the file's digests and says the frame, since the file does not say who carried what; a run tape that old is of
+  another version and is refused before a re-run, in words (`replay/format.ts tapeWhy`). QA:
   `bun run tools/qa/noshield-check.ts [gone|card|staged|tape]` (`probes.ts noshield`, in all-quick; the same 24 lines on BOTH stands; `NOSHIELD_BREAK=1` lies to the check — a
-  shield value on the big row, every tape waved through — and must fail a card line and the tape line). The `shield-*` probes, `shield-tally.ts` and `pellets-shield` went with it.
+  shield value on the big row — and must fail a card line). The `shield-*` probes, `shield-tally.ts` and `pellets-shield` went with it.
   `tools/qa/lived-check.ts` holds a level to its file at a base commit and loads that file with today's reader: a base whose issue block hands out the shield (the long hall's)
   has its issue block and the level's note read as today's, said in a line, and takes no new base revision; `tools/qa/level-needs.ts` reads a level's issue cards as written.
   LEFT AS IT IS: the riot shields stacked in the barracks' bunk room (`tools/levels/barracks.ts`: set dressing, nobody carries one). MEASURED, headless only: see the long hall's
