@@ -210,7 +210,7 @@ impl Events {
 
     fn one(&mut self, tick: u32, g: &Game, e: &E) {
         match e {
-            E::ParticlesEmit(e) => self.emit(tick, e),
+            E::ParticlesEmit(e) => if e.o.ember.is_none() || !crate::far_for_a_fire(g, e.pos) { self.emit(tick, e) },
             E::ParticlesImpulse(e) => {
                 let serial = self.kicks.len() as u32;
                 let o = e.o.as_ref();
