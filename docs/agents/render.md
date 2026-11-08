@@ -1081,7 +1081,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   survey found; his rule: "single path when possible").** Compact shaders and Separate shadow rays were Shaders rows from 2026-10-26, on in every browser since
   2026-10-27 ("Everywhere"), and `render/kernels.ts` said the second copy "goes (one set or the other) when the default is decided". It went: `shaders/compact/` is
   moved up over the ten files it copied (fgather, gather_common, reflect_p5, volumetrics, composite, particles, direct, sharp_direct, restir, sdfrig),
-  `render/kernels.ts` is gone, and `ui/shaderrows.ts` has ONE row left, Start on first frame shaders. **No switch and no word:** `?compactshaders`, `?splitrays`,
+  `render/kernels.ts` is gone, and `ui/shaderrows.ts` has one word left, `?firstframe` (no row on Options since 2026-11-08). **No switch and no word:** `?compactshaders`, `?splitrays`,
   `TPS_COMPACTSHADERS`, `TPS_SPLITRAYS` and a choice kept under either key do nothing (a kept line loses the two entries the next time a row is moved; a report
   made before today still names the rows: `shaderRowLabel`). **The harness now compiles what the page compiles**: it had every row off and so sized, trimmed and
   folded the writing no player ran. **The gather**: `shaders/fgather.wgsl` is the gather's helpers, constants and bindings and has no entry point (843 lines to
@@ -1165,7 +1165,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   browser with no storage shows a row turned off as still on. **Checks:** `shaderrows-check.ts` (cases `starts`, `offkept`, `plain` beside the harness's; `SHADERROWS_BREAK=1` fails `starts` and `offkept`, and `plain`, a load with both words at 0, reads the same under it),
   `splitrays-check.ts` (the refusal's line, and the size tool with both rows on), on the page `shaderrows-page.cjs` (walk `starts`). The ten kernels still exist twice: taking today's writing out
   is the next step, not done here.
-- **(SINCE 2026-11-07 Compact shaders is not a row and its writing is the only one: the bullet 'THE TEN BIG KERNELS HAVE ONE WRITING' above.) Shader rows on trial: Compact shaders and Start on first frame shaders (2026-10-26; Options > Graphics > Shaders, `src/ui/shaderrows.ts`).** The two levers of the
+- **(SINCE 2026-11-07 Compact shaders is not a row and its writing is the only one: the bullet 'THE TEN BIG KERNELS HAVE ONE WRITING' above. SINCE 2026-11-08 Start on first frame shaders is not a row either: a person's page starts on, a driven page off, `?firstframe=0 / =1` holds for the visit and nothing is kept, so a machine's old `{"firstFrame":false}` is read past.) Shader rows on trial: Compact shaders and Start on first frame shaders (2026-10-26; Options > Graphics > Shaders, `src/ui/shaderrows.ts`).** The two levers of the
   bullet above, each a row that was OFF by default when this was written (Compact shaders has started on in a browser since 2026-10-27: the bullet above) and is the NEXT load's (read once, when its module is imported: the pipelines are made before a menu can open). Kept
   under `twopointsix.shaderrows`; a URL word wins for the visit and is never written; a row is listed only in a build whose code reads it (`useShaderRow`). Switches of
   the page, not rules of the game: no knob, no `FROZEN_HOLDS` row, off on BOTH stands; the harness's words are `TPS_COMPACTSHADERS=1` / `TPS_FIRSTFRAME=1` in front of
@@ -1209,7 +1209,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   both stands: 57 modules, 110 pipelines, 974 picks (the Engine and the particle system; the smoke solver, the light probe and the mesh shadows are not in that
   recording and none of their files changed).
   **What the trial costs while both writings are in the tree**: every page's bundle carries the second set's text (about half a megabyte) whether the row is on or
-  not; `src/cloud/prefs.ts` skips `twopointsix.shaderrows` (a row is this machine's).
+  not; `src/cloud/prefs.ts` skips `twopointsix.shaderrows` (a row was this machine's; a browser may still hold the line).
   **On the real page (headless Chromium, the software adapter; nothing here is a time on a real machine)**: `tools/qa/draw-equal.cjs` (`--with compactshaders=1`, a
   new word of the tool: a query added to every view's address) at 640x360, high, the compact set against today's on the same commit: the rain at dusk EQUAL at both
   checkpoints, the firefight EQUAL at its first (230,400 pixels each, by sha256). The firefight's second checkpoint has no pair: TODAY's page lost the software adapter's device there three times out of three (`A valid external Instance reference no longer exists`, with the queue on and off, once before its first checkpoint), where the compact page drew all seven frames; that is this box's adapter under today's kernels and says nothing of the row. The compact page booted with 119 of 119 pipelines and no GPU error
