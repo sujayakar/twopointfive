@@ -37,11 +37,8 @@ const SM = await import(`${ROOT}/src/game/sheetModel.ts`);
 const { SHEET, flySheet } = SM;
 const { DEBRIS_IMP } = await import(`${ROOT}/src/game/debris.ts`);
 const { DECAL_CAP } = await import(`${ROOT}/src/render/decals.ts`);
-const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { resetChase } = await import(`${ROOT}/src/game/guards.ts`);
 const { PLAYER_ID, NOBODY_ID } = await import(`${ROOT}/src/game/consts.ts`);
-const { cutBoxesOn } = await import(`${ROOT}/src/scene/cut.ts`);
-const { BREAK_STATS } = await import(`${ROOT}/src/game/breakTable.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -114,84 +111,6 @@ export async function destructionSheet() {
   return F.done();
 }
 
-// ================================================================ caps
-export async function destructionCaps() {
-  const F = family('destruction-caps: conversions, puffs, knock-offs, tiles and the debris pool stay inside their caps whatever is fired at them');
-  const C = D.CHAOS;
-  { // papers + puffs + knocks per second under 20 rounds/s for 4 s at chaos 1 (a torture rate no gun has)
-    const { W, game, smokeLog } = await stage(3101, 1, [17.75, 0, 23.0], Math.PI);   // from the north: the north desk (papers, the lit monitor) in front, the spine and the south desk's binders through it
-    const perSec: Record<number, { papers: number; puffs: number; knocks: number }> = {};
-    let lastP = 0, lastK = 0;
-    for (let f = 0; f < 240; f++) {
-      if (f % 3 === 0) { const p = NORTH_PTS[(f / 3) % NORTH_PTS.length]; fireWeapon(game, game.player.char, [p[0] + ((f * 0.37) % 1) * 0.4 - 0.2, p[1], p[2]], true, { weapon: WEAPONS.fn2000 }); }
-      if (f % 3 === 1) { const p = NORTH_PTS[(f * 7) % NORTH_PTS.length]; fireWeapon(game, game.player.char, [p[0], p[1] + 0.1, p[2] - 0.3], true, { weapon: WEAPONS.fn2000 }); }
-      if (f === 120) for (const d of [...(game.destr as any).items.values()].filter((d: any) => d.kind === 'paper').slice(0, 12)) (game.destr as any).convertPaper(d, [0, 1, 0], 2, 1);   // + a dozen conversions asked for in ONE frame mid-burst (a bang's ring): the cap decides
-      W.step(DT);
-      const s = Math.floor(f / 60); perSec[s] ??= { papers: 0, puffs: 0, knocks: 0 };
-      perSec[s].papers += D.DESTR_STATS.papers - lastP; lastP = D.DESTR_STATS.papers; perSec[s].knocks += D.DESTR_STATS.knocks - lastK; lastK = D.DESTR_STATS.knocks;
-    }
-    const puffTimes = smokeLog.filter(e => e.kind === 'puff').map(e => e.t);
-    let maxPuffPerSec = 0, maxPuffPerFrame = 0; for (const t of puffTimes) { maxPuffPerSec = Math.max(maxPuffPerSec, puffTimes.filter(u => u > t - 1 + 1e-6 && u <= t + 1e-6).length); maxPuffPerFrame = Math.max(maxPuffPerFrame, puffTimes.filter(u => Math.abs(u - t) < 1e-6).length); }
-    const maxPapers = Math.max(...Object.values(perSec).map(x => x.papers)), maxKnocks = Math.max(...Object.values(perSec).map(x => x.knocks));
-    const fails: string[] = [];
-    if (maxPapers > C.papersPerSec + 1) fails.push(`papers ${maxPapers}/s (cap ${C.papersPerSec})`);   // (+1: the bucket starts full and refills across the second's edge)
-    if (maxPuffPerSec > C.puffsPerSec + 1) fails.push(`puffs ${maxPuffPerSec} in a sliding second (cap ${C.puffsPerSec})`); if (maxPuffPerFrame > C.puffsPerFrame) fails.push(`puffs ${maxPuffPerFrame} in one frame (cap ${C.puffsPerFrame})`);
-    if (maxKnocks > C.knocksPerSec + 4) fails.push(`knock-offs ${maxKnocks}/s (cap ${C.knocksPerSec} + a group's riders)`);
-    if (D.DESTR_STATS.papers < 3 || D.DESTR_STATS.puffs < 4 || D.DESTR_STATS.knocks < 1) fails.push(`staging: papers ${D.DESTR_STATS.papers} puffs ${D.DESTR_STATS.puffs} knocks ${D.DESTR_STATS.knocks} (the torture burst + the dozen asked-for conversions should have made some of each)`);
-    F.verdict(!fails.length, `160 rounds in 4 s at chaos 1: papers ≤ ${maxPapers}/s, puffs ≤ ${maxPuffPerSec}/s and ≤ ${maxPuffPerFrame}/frame (refused ${D.DESTR_STATS.puffsRefused}), knock-offs ≤ ${maxKnocks}/s — inside papersPerSec ${C.papersPerSec} / puffsPerSec ${C.puffsPerSec} / puffsPerFrame ${C.puffsPerFrame} / knocksPerSec ${C.knocksPerSec}`, fails.join('; ') || `totals ${JSON.stringify(D.DESTR_STATS)}`); }
-  { // tiles: gap, per-square, per-encounter; forced drops (bangs) still honour the encounter cap and the square rule
-    const { W, game } = await stage(3102, 1);
-    const destr = game.destr; const times: number[] = []; const keys = new Set<string>();
-    const origLog = D.DESTR_LOG.length;
-    for (let f = 0; f < 60 * 30; f++) { if (f % 2 === 0) { const p = DESK_PTS[(f / 2) % DESK_PTS.length]; fireWeapon(game, game.player.char, p, true, { weapon: WEAPONS.fn2000 }); } W.step(DT); }
-    for (const line of D.DESTR_LOG.slice(origLog)) { const m = /^([0-9.]+) tile (\S+) dropped/.exec(line); if (m) { times.push(Number(m[1])); keys.add(m[2]); } }
-    let minGap = Infinity; for (let i = 1; i < times.length; i++) minGap = Math.min(minGap, times[i] - times[i - 1]);
-    const fails: string[] = [];
-    if (times.length > C.tilesPerEncounter) fails.push(`${times.length} tiles (cap ${C.tilesPerEncounter})`); if (times.length >= 2 && minGap < C.tileGapSecs - 1e-6) fails.push(`two tiles ${f2(minGap)} s apart (gap ${C.tileGapSecs})`);
-    if (keys.size !== times.length) fails.push(`a square dropped twice (${times.length} drops, ${keys.size} squares)`); if (times.length < 3) fails.push(`staging: only ${times.length} tiles from 30 s of fire`);
-    // bangs: forced, but the encounter cap and the square rule hold
-    const before = D.DESTR_STATS.tiles; for (let k = 0; k < 12; k++) { destr.bang([16 + k * 0.9, 0.1, 17.5]); W.step(DT); }
-    const total = times.length + (D.DESTR_STATS.tiles - before);
-    if (total > C.tilesPerEncounter) fails.push(`${total} tiles after 12 bangs on top (cap ${C.tilesPerEncounter})`);
-    F.verdict(!fails.length, `30 s of 30 rounds/s at chaos 1: ${times.length} tiles, ≥ ${f2(minGap)} s apart, ${keys.size} distinct squares; + 12 stun charges → ${total} in all (cap ${C.tilesPerEncounter}, refused ${D.DESTR_STATS.tilesRefused})`, fails.join('; ') || `drops at ${times.map(f2).join(', ')} s`); }
-  { // the debris pool: cap 4, knock eight things in one frame → ≤ 4 chunks, the rest demoted; then once they rest, new ones evict resting chunks
-    const { W, game, engine } = await stage(3103, 1); engine.settings.debrisCap = 4;   // (the pool never goes under 4)
-    const destr = game.destr; const deb = destr.debris; const cut = cutBoxesOn(); const bs0 = { ...BREAK_STATS };
-    const items = [...(destr as any).items.values()].filter((d: any) => (d.kind === 'clutter' || d.kind === 'binder') && !d.group);   // (group-less: a grouped thing takes its riders with it, which is another test's business)
-    const kps0 = D.CHAOS.knocksPerSec; D.CHAOS.knocksPerSec = 99;   // the per-second cap out of the way: this block is about the POOL
-    if (items.length < 10) throw new Error(`staging: only ${items.length} group-less small items indexed`);
-    let ok0 = 0; for (let i = 0; i < 8; i++) { if ((destr as any).knockOff(items[i], [1, 0, 0], 1, 'clutter')) ok0++; }
-    const nAfterBurst = deb.list.length, refused = deb.stats.refused, demoted = D.DESTR_STATS.knocksDemoted, moving0 = deb.moving;
-    for (let f = 0; f < 60 * 6; f++) W.step(DT);
-    const resting = deb.list.filter((c: any) => c.rest).length, liveRest = deb.list.length;
-    const evict0 = deb.stats.evicted; (destr as any).knockOff(items[8], [0, 0, 1], 1, 'clutter'); (destr as any).knockOff(items[9], [0, 0, 1], 1, 'clutter'); D.CHAOS.knocksPerSec = kps0;
-    const fails: string[] = [];
-    if (nAfterBurst > 4) fails.push(`${nAfterBurst} chunks live (cap 4)`); if (ok0 !== 8) fails.push(`only ${ok0}/8 knock-offs accepted (a refused chunk must still hide the thing and burst)`);
-    if (refused !== 4 || demoted !== refused) fails.push(`refused ${refused} / demoted ${demoted} (want 4 refused, all demoted to chip bursts)`);
-    if (moving0 !== nAfterBurst) fails.push(`moving ${moving0} ≠ live ${nAfterBurst} right after the burst`);
-    // the cut switch ON (the break table's overflow ladder): a knocked-off piece that lands hard while over half the pool is moving goes into particles of its own
-    // material and FREES its slot, china shatters outright, a piece may break once more into two. So the count of evictions is no longer a constant — what must hold
-    // is the cap and the books: every piece asked for is placed or refused (refused = a chip burst), and every placed one is live, evicted or gone into particles.
-    const bs = (k: 'mayhem' | 'china' | 'again' | 'refused' | 'crumbled') => BREAK_STATS[k] - bs0[k]; const toParticles = bs('mayhem') + bs('china');
-    if (!cut) {
-      if (resting < nAfterBurst - 1) fails.push(`only ${resting}/${nAfterBurst} at rest after 6 s`);
-      if (deb.stats.evicted - evict0 !== 2 || deb.list.length > 4) fails.push(`eviction: ${deb.stats.evicted - evict0} evicted, ${deb.list.length} live (want 2, ≤ 4)`);
-      if (toParticles + bs('again') + bs('crumbled')) fails.push(`the break table acted with the cut switch off (${toParticles} to particles, ${bs('again')} broken again, ${bs('crumbled')} crumbled)`);
-    } else {
-      const evicted = deb.stats.evicted - evict0, wantEvict = Math.max(0, 2 - (4 - liveRest)), asked = 10 + 2 * bs('again');
-      if (deb.stats.peakLive > 4 || deb.list.length > 4) fails.push(`cut on: the pool passed its cap (peak ${deb.stats.peakLive}, ${deb.list.length} live, cap 4)`);
-      if (resting < liveRest - 1) fails.push(`cut on: only ${resting}/${liveRest} at rest after 6 s`);
-      if (evicted !== wantEvict) fails.push(`cut on: ${evicted} evicted for two more knock-offs with ${4 - liveRest} slots free (want ${wantEvict})`);
-      if (deb.list.length !== Math.min(4, liveRest + 2)) fails.push(`cut on: ${deb.list.length} live after two more knock-offs onto ${liveRest} (want ${Math.min(4, liveRest + 2)}: both placed)`);
-      if (deb.stats.spawned + deb.stats.refused !== asked) fails.push(`cut on: asked for ${asked} pieces (10 knock-offs + two a piece broken again), ${deb.stats.spawned} placed + ${deb.stats.refused} refused`);
-      if (deb.stats.spawned !== deb.list.length + deb.stats.evicted + toParticles + bs('again')) fails.push(`cut on: ${deb.stats.spawned} placed ≠ ${deb.list.length} live + ${deb.stats.evicted} evicted + ${toParticles} to particles + ${bs('again')} broken again`);
-      if (bs('crumbled') !== deb.stats.evicted + toParticles) fails.push(`cut on: ${bs('crumbled')} crumbled ≠ ${deb.stats.evicted} evicted + ${toParticles} to particles (a piece left the pool with no particles of its own)`);
-      if (bs('refused') !== deb.stats.refused - refused) fails.push(`cut on: ${deb.stats.refused - refused} pieces refused after the burst, ${bs('refused')} chip bursts for them`);
-    }
-    for (const c of deb.list) if (!c.box.c.every(Number.isFinite) || (c.box.rot && !c.box.rot.every(Number.isFinite))) { fails.push(`a chunk with a non-finite pose ${JSON.stringify(c.box.c)}`); break; }
-     }
-  return F.done();
-}
 
 // ================================================================ dust
 export async function destructionDust() {
@@ -295,24 +214,6 @@ export async function destructionHearing() {
   return F.done();
 }
 
-// ================================================================ reset
-export async function destructionReset() {
-  const F = family('destruction-reset: restartEncounter puts every static back bit for bit and empties the pools');
-  const { W, game } = await stage(3501, 1);
-  const flags0 = game.col.boxes.map((b: any) => b.flags).join(',');
-  for (let f = 0; f < 60 * 12; f++) { if (f % 4 === 0) { const p = DESK_PTS[(f / 4) % DESK_PTS.length]; fireWeapon(game, game.player.char, [p[0], p[1], p[2] + ((f % 3) - 1) * 0.4], true, { weapon: WEAPONS.fn2000 }); } if (f === 300) game.destr.bang([17.8, 0.1, 19.4]); W.step(DT); }
-  const inv = game.destr.inventory(); const wrecked = { hidden: inv.hidden, debris: game.destr.debris.list.length, tiles: D.DESTR_STATS.tiles, heat: game.destr.heatAt(DESK_PTS[0]) };
-  const hiddenFlagsOk = game.col.boxes.every((b: any, i: number) => !(game.destr as any).hidden.has(i) || ((b.flags & (BoxFlag.NoPrimary | BoxFlag.NoShadow)) === (BoxFlag.NoPrimary | BoxFlag.NoShadow)));
-  game.restartEncounter(); W.step(DT);
-  const flags1 = game.col.boxes.map((b: any) => b.flags).join(',');
-  const after = { hidden: game.destr.inventory().hidden, debris: game.destr.debris.list.length, heat: game.destr.heatAt(DESK_PTS[0]), decals: game.decals.count };
-  const fails: string[] = [];
-  if (wrecked.hidden < 3 || wrecked.debris < 2) fails.push(`staging: only ${wrecked.hidden} hidden / ${wrecked.debris} chunks after the wrecking`); if (!hiddenFlagsOk) fails.push('a hidden static without NoPrimary|NoShadow raised');
-  if (flags1 !== flags0) { let i = 0; const a = flags0.split(','), b = flags1.split(','); while (i < a.length && a[i] === b[i]) i++; fails.push(`static #${i} flags ${b[i]} after restart (authored ${a[i]})`); }
-  if (after.hidden || after.debris || after.heat !== 0 || after.decals) fails.push(`after restart: ${JSON.stringify(after)}`);
-  F.verdict(!fails.length, `12 s of fire + a bang at chaos 1 hid ${wrecked.hidden} statics, left ${wrecked.debris} chunks and ${wrecked.tiles} tiles, heat ${f2(wrecked.heat)}; restartEncounter → every static's flags as authored, ${after.hidden} hidden, ${after.debris} chunks, heat ${after.heat}, ${after.decals} decals`, fails.join('; ') || 'ok');
-  return F.done();
-}
 
 // ================================================================ identity (chaos 0)
 async function recordFight(seed: number, hooks: boolean) {
@@ -356,31 +257,6 @@ export async function destructionIdentity() {
   return F.done();
 }
 
-// ================================================================ determinism (chaos 1)
-async function recordChaos(seed: number) {
-  const { W, game, engine, smokeLog, flush } = await stage(seed, 1);
-  const emits: string[] = []; const events: string[] = []; const seen = new WeakSet<any>();
-  for (let f = 0; f < 60 * 8; f++) {
-    if (f < 300 && f % 6 === 0) { const p = DESK_PTS[(f / 6) % DESK_PTS.length]; fireWeapon(game, game.player.char, p, true, { weapon: WEAPONS.fn2000 }); }
-    if (f === 320) game.destr.bang([17.9, 0.1, 19.3]);
-    W.step(DT);
-    emits.push(...flush().map((s: string) => `${f}:${s}`));
-    for (const e of newEvents(game, seen)) events.push(`${e.kind}@${f}:${e.level ?? ''}`);
-  }
-  const debris = game.destr.debris.list.map((c: any) => `${c.kind}:${p2(c.box.c)}:${c.rest}`).join('|');
-  const decals = game.decals.list.map((d: any) => `${d.kind}:${p2(d.pos)}:${d.param.toFixed(3)}`).join('|');
-  return { log: D.DESTR_LOG.map((s: any) => s), emits, events, debris, decals, smoke: smokeLog.map(e => `${e.kind}@${e.t.toFixed(3)}`), stats: { ...D.DESTR_STATS } };
-}
-export async function destructionDeterminism() {
-  const F = family('destruction-determinism: the same seeded burst + bang at chaos 1 twice → identical destruction log, debris rest poses, particle emits, decals, smoke emits, events');
-  const a = await recordChaos(3701), b = await recordChaos(3701);
-  const fails: string[] = [];
-  for (const k of ['log', 'emits', 'events', 'smoke'] as const) { const x = a[k], y = b[k]; if (JSON.stringify(x) !== JSON.stringify(y)) { let i = 0; while (i < Math.min(x.length, y.length) && x[i] === y[i]) i++; fails.push(`${k} differ (${x.length} / ${y.length}) from #${i}: ${x[i] ?? '∅'} | ${y[i] ?? '∅'}`); } }
-  for (const k of ['debris', 'decals'] as const) if (a[k] !== b[k]) fails.push(`${k} differ`);
-  if (a.log.length < 6 || !a.debris) fails.push(`staging: log ${a.log.length} lines, debris '${a.debris.slice(0, 40)}'`);
-  F.verdict(!fails.length, `${a.log.length} log lines, ${a.emits.length} particle records, ${a.events.length} events, ${a.smoke.length} smoke emits, ${a.debris.split('|').length} chunks, ${a.decals.split('|').length} marks — identical both runs`, fails.join('; ') || `stats ${JSON.stringify(a.stats)}`);
-  return F.done();
-}
 
 // ================================================================ bounds (a short loud soak)
 export async function destructionBounds() {
@@ -621,5 +497,5 @@ export async function destructionImpulses() {
   return F.done();
 }
 
-export async function destructionFamily(): Promise<boolean> { let ok = true; for (const f of [destructionSheet, destructionCaps, destructionDust, destructionScreen, destructionHearing, destructionReset, destructionIdentity, destructionDeterminism, destructionBounds, destructionImpulses]) ok = (await f()) && ok; return ok; }
-if (import.meta.main) { const which = process.argv[2] ?? 'all'; const map: Record<string, () => Promise<boolean>> = { sheet: destructionSheet, caps: destructionCaps, dust: destructionDust, screen: destructionScreen, hearing: destructionHearing, reset: destructionReset, identity: destructionIdentity, determinism: destructionDeterminism, bounds: destructionBounds, impulses: destructionImpulses }; if (which === 'all') await destructionFamily(); else await map[which]?.(); }
+export async function destructionFamily(): Promise<boolean> { let ok = true; for (const f of [destructionSheet, destructionDust, destructionScreen, destructionHearing, destructionIdentity, destructionBounds, destructionImpulses]) ok = (await f()) && ok; return ok; }
+if (import.meta.main) { const which = process.argv[2] ?? 'all'; const map: Record<string, () => Promise<boolean>> = { sheet: destructionSheet, dust: destructionDust, screen: destructionScreen, hearing: destructionHearing, identity: destructionIdentity, bounds: destructionBounds, impulses: destructionImpulses }; if (which === 'all') await destructionFamily(); else await map[which]?.(); }

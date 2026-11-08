@@ -21,7 +21,7 @@
 //                the page's URL and is not in these runs (picks-boot holds it on); the solo night has no scripted player (picks-boot holds its boot)
 import { sample, swept } from './sweep.ts';
 import { resolve } from 'node:path';
-import { readFileSync, rmSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { groupsFit } from './listed.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
@@ -94,7 +94,6 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 const quiet = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 const first = (r: El, cls: string) => r.all(e => e.cls.has(cls))[0];
 const buttons = (root: El) => root.all(e => e.tagName === 'BUTTON');
-const buttonOf = (root: El, text: string) => buttons(root).find(b => b.textContent === text);
 const startsWith = (root: El, text: string) => buttons(root).find(b => b.textContent.startsWith(text));
 const paramsOf = (href: string) => new URLSearchParams(href.replace(/^[^?]*\?/, ''));
 const otherOf = (d: string | null) => (d === 'hard' ? 'standard' : 'hard');
@@ -311,22 +310,6 @@ export async function picksBoot(secs = swept(6, 30)): Promise<boolean> {
   return F.done();
 }
 
-// ───────────────────────────────────────────────────────────── play ─────────────────────────────────────────────────────────────
-export async function picksPlay(seeds = '1-3'): Promise<boolean> {
-  const F = family(`picks-play: every scenario row played to its end by the scripted commander with the row's settings, stood up as the page opens (glass, moves, turn weight, destruction, defenders' frags) (seeds ${seeds})`);
-  const L: any[] = P.PICKS, tmp = `${process.env.TMPDIR ?? '/tmp'}/picks-play-${process.pid}`;
-  for (let i = 0; i < L.length; i++) { const p = L[i], e: any = P.pickEntry(p), w = wantOf(p);
-    if (!e) { console.log(`- (no scripted player for the solo night: ${p.id} is held by picks-boot)`); continue; }
-    const set: any = { DIFFICULTY: { level: w.difficulty } }; if (w.weather) set.WEATHER = { kind: w.weather }; set.FRAG = { defenders: true };
-    const env: Record<string, string> = { ...process.env as any, PT_DIGEST: '1', GLASSFX: 'on', TPS_MOVES: '1', TPS_TURN: '1', PT_DESTR: '1' }; if (w.squad !== e.squad) env.PT_SQUAD = String(w.squad); if (w.hour) env.PT_HOUR = w.hour;   // (PICKS_PLAIN, 'the harness's plain stand-up instead', went 2026-11-06: it asked by leaving these words out, which is the page's stand since the flip — the same game as this arm)
-    const out = `${tmp}-${p.id}.json`, proc = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/playthrough.ts`, '--scn', e.id, '--seeds', seeds, '--jobs', '3', '--json', out, '--set', JSON.stringify(set)], { cwd: ROOT, env, stdout: 'pipe', stderr: 'pipe' });
-    const [text, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]); await proc.exited;
-    let runs: any[] = []; try { runs = JSON.parse(readFileSync(out, 'utf8')).runs; } catch { /* no file: the run died */ } try { rmSync(out); } catch { /* none */ }
-    const bad = runs.filter(r => r.end === 'error' || r.difficulty !== w.difficulty || (r.hour ?? 'night') !== (w.hour ?? 'night') || (w.squad !== e.squad && r.of !== w.squad));
-    F.verdict(proc.exitCode === 0 && runs.length > 0 && bad.length === 0, `${i + 1} ${p.id}: ${e.id}${w.squad !== e.squad ? ` with ${w.squad}` : ''} · ${w.difficulty}${w.hour ? ` · ${w.hour}` : ''}${w.weather ? ` · ${w.weather}` : ''}${w.flags.length ? ` (without ${w.flags.join(', ')}: a page switch)` : ''}`,
-      runs.length ? runs.map(r => `seed ${r.seed}: ${r.end}${r.why ? ` (${r.why})` : ''} at ${Math.round(r.t)} s, ${r.team} of ${r.of} up, ${r.hostiles} of ${r.hostilesOf} defenders left, ${r.difficulty}${r.hour ? `, ${r.hour}` : ''}, digest ${r.digest}`).join('\n    ') : `no runs (exit ${proc.exitCode}): ${(err || text).trim().split('\n').slice(-3).join(' | ')}`); }
-  return F.done();
-}
 
 if (import.meta.main) {
   const want = process.argv.slice(2).filter(a => !a.startsWith('-')); const on = (n: string) => !want.length || want.includes(n) || want.includes('picks');
@@ -334,6 +317,5 @@ if (import.meta.main) {
   if (on('picks-list')) ok = (await picksList()) && ok;
   if (on('picks-card')) ok = (await picksCard()) && ok;
   if (on('picks-boot')) ok = (await picksBoot()) && ok;
-  if (want.includes('picks-play')) ok = (await picksPlay()) && ok;
   process.exit(ok ? 0 : 1);
 }

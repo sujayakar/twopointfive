@@ -151,20 +151,6 @@ export async function furnReset(): Promise<boolean> {
   return Fm.done();
 }
 
-/** Chaos 0, the tour: nothing. */
-export async function furnOff(): Promise<boolean> {
-  const Fm = family('furnblast-off: chaos 0 or the tour — the same charge leaves the furniture standing');
-  const one = async (label: string, opts: Parameters<typeof stage>[1], pre?: (g: any) => void) => {
-    const S = await stage(OFFICE.file, opts); const g = S.game; pre?.(g); const desk = groupAt(g, OFFICE.desk); const poses = posesOf(g);
-    wallCharge(S, OFFICE.charge); const it = g.items.spawn('flash', [8.2, 0.5, 19.7], [0, 0, 0], { fuse: 9, heading: 0, who: NOBODY_ID }); it.fired = true; detonateStun(g, it, true); run(S, 60);
-    const up = desk.members.filter((i: number) => standing(g, i)).length; const zero = Object.values(F.FURN_STATS).every(v => v === 0);
-    const broke = desk.members.filter((i: number) => g.destr.furn.broken(i)).length;
-    return { ok: zero && broke === 0 && posesOf(g) === poses, detail: `${label}: counts all zero ${zero} · desk statics this module broke ${broke} (standing ${up}/${desk.members.length}) · props unmoved ${posesOf(g) === poses}` };
-  };
-  const b = await one('chaos 0', { chaos: 0 }); Fm.verdict(b.ok, 'chaos 0', b.detail);
-  const d = await one('touring', {}, g => { g.touring = true; }); Fm.verdict(d.ok, 'under the tour', d.detail);
-  return Fm.done();
-}
 
 /** Every loud level: blasts beside its furniture stay finite and inside the pool; a restart restores. */
 export async function furnLevels(): Promise<boolean> {

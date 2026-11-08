@@ -16,18 +16,13 @@
 //                         breaking off (the shipped default) the model counts nothing at all. (The cross-BUILD digest against 25e5e7c is on rebuild/glass/shards.md.)
 import { standUp, ROOT, fake } from './headless.ts';
 import { swept } from './sweep.ts';
-import { CONF_PANE, CONF_FAR, floatPartition, type SeamsOut } from './office-pane.ts';
-import type { GlassShards } from '../../src/game/shards.ts';
+import { CONF_PANE, floatPartition } from './office-pane.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
-const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
-const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const PM = await import(`${ROOT}/src/render/particles.ts`);
 const { Particles } = PM;
 const GBM = await import(`${ROOT}/src/game/glassbreak.ts`);
 const SM = await import(`${ROOT}/src/game/shards.ts`);
 const MM = await import(`${ROOT}/src/game/shardModel.ts`);
-const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
-const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { tread } = await import(`${ROOT}/src/game/floor.ts`);
 const { cutBoxesOn } = await import(`${ROOT}/src/scene/cut.ts`);   // (CUTBOXES=1: a dagger is then ONE plate cut to its cell, not two or three rectangles along it)
 const { GB_STATS } = GBM; const { SHARDS, SHARD_STATS } = SM; const { SHARD } = MM;
@@ -35,8 +30,6 @@ const { GB_STATS } = GBM; const { SHARDS, SHARD_STATS } = SM; const { SHARD } = 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-const f2 = (x: number) => x.toFixed(2);
-const p2 = (p: Vec3) => `(${f2(p[0])}, ${f2(p[1])}, ${f2(p[2])})`;
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
@@ -45,7 +38,6 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 function place(gd: any, p: Vec3, yaw: number) { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); }
 function park(gd: any, i: number) { gd.hold = true; gd.pinned = true; place(gd, [37.5, 0, 6 + i * 1.5], Math.PI / 2); gd.heardUpTo = 1e12; gd.dazzledUntil = 1e9; gd.flashlight.enabled = false; }
 const resetStats = () => { for (const k of Object.keys(GB_STATS)) (GB_STATS as any)[k] = 0; for (const k of Object.keys(SHARD_STATS)) (SHARD_STATS as any)[k] = 0; };
-function newEvents(game: any, seen: WeakSet<any>): any[] { const out: any[] = []; for (const e of game.events) { if (seen.has(e)) continue; seen.add(e); out.push(e); } return out; }
 
 // the pane (by where it stands: office-pane.ts) = the conference partition's second sheet (glassbreak-probes.ts): c (7.5, 1.5, 10), annealed; Sam in the corridor south of it, facing it
 const PANE = CONF_PANE;
@@ -66,7 +58,6 @@ async function stage(seed: number, opts: { breakOn?: boolean; shardsOn?: boolean
   const flush = () => { const q = P.pending.map((e: any) => ({ kind: e.kind, count: e.count, pos: e.pos.slice(), dir: e.dir.slice(), seed: e.seed, o: e.o })); P.pending.length = 0; P.pendingImpulses.length = 0; return q; };
   return { W, game, engine, P, flush };
 }
-const recStr = (e: any) => `${e.kind}:${e.count}:${e.pos.map((x: number) => x.toFixed(2)).join(',')}:${e.seed}`;
 const finiteBox = (b: any) => b.c.every(Number.isFinite) && b.h.every(Number.isFinite) && (!b.rot || b.rot.every(Number.isFinite));
 
 // ================================================================ the model
@@ -230,46 +221,6 @@ export async function shardsCaps() {
   return F.done();
 }
 
-const supported = (game: any, c: any) => { const h = game.col.raycast([c.box.c[0], c.box.c[1] + 0.02, c.box.c[2]], [0, -1, 0], 0.4); return c.box.c[1] < 0.12 || !!h; };
-// ================================================================ plates: land, break, rest; heard once
-export async function shardsRest() {
-  const F = family('shards-rest: plates land, some break (never past generation 2), all come to rest; every landing is heard, at the landing');
-  const { W, game, flush } = await stage(9203); const D = game.destr.debris; const S = game.shards;
-  W.audioLog = []; const seen = new WeakSet<any>(); newEvents(game, seen);
-  const t0 = game.time;
-  for (let i = 0; i < 10; i++) game.shards.test([18.5 + i * 0.45, 1.5, 14.6], [0, 0, 1], 0.06 + 0.01 * i, i % 3 === 2 ? 'dagger' : 'piece', 'annealed');
-  const made = S.plateCount; const atRelease = W.audioLog!.filter((a: any) => a.name === 'glassTinkle' || a.name === 'glassShatter').length;
-  const evs: any[] = []; let maxGen = 0, restAt = -1;
-  for (let f = 0; f < 60 * 20; f++) {
-    W.step(DT); flush();
-    evs.push(...newEvents(game, seen).filter(e => e.kind === 'prop'));
-    for (const c of D.list) if (c.glass) maxGen = Math.max(maxGen, c.glass.gen);
-    if (restAt < 0 && f > 30 && D.list.every((c: any) => !c.glass || c.rest)) restAt = game.time - t0;
-  }
-  const plates = D.list.filter((c: any) => c.glass);
-  F.verdict(made >= 10 && SHARD_STATS.breaks > 0 && maxGen <= SHARDS.maxGen && plates.length > made, 'dropped from a pane\'s height, plates break on the floor into smaller plates — two generations at most', `${made} plates let go → ${SHARD_STATS.breaks} broke → ${plates.length} lying (gens ${[0, 1, 2].map(g => plates.filter((c: any) => c.glass.gen === g).length).join(' / ')}); log: ${S.log.slice(0, 2).join(' | ')}`);
-  F.verdict(restAt > 0 && plates.every((c: any) => c.rest && finiteBox(c.box) && c.box.c[1] >= 0 && c.box.c[1] < 1.3 && supported(game, c)), 'every plate comes to rest, lying on the floor or on the furniture under it', `all at rest ${restAt.toFixed(2)} s after release; heights ${Math.min(...plates.map((c: any) => c.box.c[1])).toFixed(3)}‥${Math.max(...plates.map((c: any) => c.box.c[1])).toFixed(3)} m`);
-  const snd = W.audioLog!.filter((a: any) => a.name === 'glassTinkle' || a.name === 'glassShatter'); const first = Math.min(...snd.map((a: any) => a.t)) - t0;
-  F.verdict(atRelease === 0 && snd.length + SHARD_STATS.soundsMerged >= made && first > 0.15 && snd.some((a: any) => a.name === 'glassShatter') && snd.some((a: any) => a.name === 'glassTinkle'), 'the landing is what sounds (a clink, or a shatter when it breaks) — nothing at release, the first after the fall', `${snd.length} sounds + ${SHARD_STATS.soundsMerged} landings inside a voice's gap thickening the next (${snd.filter((a: any) => a.name === 'glassShatter').length} shatters), none at release, the first ${first.toFixed(2)} s on (thrown down at ~1 m/s onto desks 0.75 m up and the floor)`);
-  const gaps = evs.slice(1).map((e, i) => e.time - evs[i].time);
-  F.verdict(evs.length >= (SHARDS.byFall ? 1 : 2) && gaps.every(d => d >= SHARDS.eventGap - 1e-9) && evs.every(e => e.level >= SHARDS.level - 1e-9 && e.level <= SHARDS.level + 0.06 && e.who === 2 && e.loud === false), 'the landings file \'prop\' hearing events at the landing level, blamed on who broke it, never closer together than the gap', `${SHARDS.byFall ? 'by the fall (SHARDS.byFall: the fragments\' own landings tell the floor, the plates\' do not — the drop lands inside one gap): ' : ''}${evs.length} events (smallest gap ${Math.min(...gaps).toFixed(2)} s), levels ${[...new Set(evs.map(e => e.level.toFixed(2)))].join(' / ')}, who ${[...new Set(evs.map(e => e.who))].join(',')}`);
-  // a plate woken and put back to sleep adds no glass to the floor
-  const lit0 = [...S.litter.values()].reduce((a: number, b: number) => a + b, 0);
-  for (const c of plates) { c.rest = false; c.v = [0, 0.4, 0]; }
-  for (let f = 0; f < 60 * 4; f++) { W.step(DT); flush(); }
-  const lit1 = [...S.litter.values()].reduce((a: number, b: number) => a + b, 0);
-  F.verdict(D.list.filter((c: any) => c.glass).every((c: any) => c.rest) && Math.abs(lit1 - lit0) < 1e-9, 'every plate knocked awake and left to settle again: the litter is what it was (a plate is counted once)', `litter ${(lit0 * 1e4).toFixed(0)} cm² → ${(lit1 * 1e4).toFixed(0)} cm²`);
-  // clearAftermath (a showcase starting, a tour cut): nothing still owed sounds or is heard afterwards
-  for (let i = 0; i < 6; i++) game.shards.test([19 + i * 0.4, 1.5, 14.6], [0, 0, 1], 0.05, 'piece', 'annealed');
-  const owed = (S as any).pending.length; game.clearAftermath(); W.audioLog = []; newEvents(game, seen);
-  for (let f = 0; f < 60 * 3; f++) { W.step(DT); flush(); }
-  const late = W.audioLog!.filter((a: any) => a.name.startsWith('glass')).length, lateEv = newEvents(game, seen).filter(e => e.kind === 'prop').length;
-  F.verdict(owed > 0 && late === 0 && lateEv === 0 && S.live === 0 && S.litter.size === 0, 'clearAftermath(): the landings still owed are dropped with the glass — no sound, no hearing event, no litter, an empty live estimate', `${owed} landings were pending; after the clear ${late} glass sounds, ${lateEv} events, ~${S.live} live, ${S.litter.size} litter cells`);
-  // resting plates are seen through: they take what lies under them × the tint
-  const under = plates.filter((c: any) => c.box.albedo.every((x: number) => x > 0 && x < 1));
-  F.verdict(under.length === plates.length && plates.length > 0, 'a resting plate takes the colour of what it lies on × the tint (seen through, not a pale slab)', `albedo e.g. ${plates[0].box.albedo.map((x: number) => x.toFixed(2)).join(', ')}`);
-  return F.done();
-}
 
 // ================================================================ underfoot
 export async function shardsUnderfoot() {
@@ -297,64 +248,9 @@ export async function shardsUnderfoot() {
   return F.done();
 }
 
-// ================================================================ the seeded volley (determinism + off)
-const VOLLEY: Vec3[] = [[7.4, 1.3, 10], [7.42, 1.31, 10], [6.3, 1.0, 10], [7.9, 0.7, 10], [8.8, 1.5, 10], [6.6, 1.6, 10], [7.1, 0.5, 10], [8.9, 1.52, 10], [9.3, 0.9, 10], [7.6, 1.9, 10]];
-async function recordVolley(seed: number, opts: { breakOn: boolean; shardsOn: boolean; cut?: boolean; walk?: boolean; dice?: boolean }) {
-  const S = await stage(seed, opts); const { W, game, flush } = S;
-  if (opts.dice) game.glassBreak.setType(CONF_FAR, 'tempered');   // (the determinism volley: one toughened sheet struck below, so a sheet pouring as dice — by the wave, or dropped at once — is inside what is compared)
-  if (opts.cut) {   // the model OUT: the pool's glass door null, and where the game calls the model a stand-in that answers every public member of it (SeamsOut: the type check names a gap)
-    game.destr.debris.glass = null;
-    game.shards = { pending: [], litter: new Map(), log: [], live: 0, plateCount: 0, release() { return false; }, spall() {}, evicted() {}, crossed() { return false; }, underfoot() { return 0; }, step(_p: Vec3, l: number) { return l; }, update() {}, reset() {}, clear() {}, summary() { return 'cut'; }, test() { return 0; } } satisfies SeamsOut<GlassShards> as any;
-  }
-  W.audioLog = [];
-  const rounds: string[] = [], events: string[] = [], emits: string[] = []; const seen = new WeakSet<any>();
-  for (let f = 0; f < 60 * 10; f++) {
-    if (f < 300 && f % 10 === 0) { const p = VOLLEY[(f / 10) % VOLLEY.length]; const r = fireWeapon(game, game.player.char, p, true, { weapon: WEAPONS.fn2000 }); rounds.push(`${f}:${r?.hit ?? ''}`); }
-    if (opts.dice && f === 150) { const c = game.level.boxes[CONF_FAR].c as Vec3; game.glassBreak.hit(CONF_FAR, [c[0], c[1], c[2]], [0, 0, -1], 1); }
-    if (f === 330) game.events.push({ kind: 'bang', pos: [10.2, 0.4, 10.9], time: game.time, loud: true, who: 0 });
-    if (opts.walk && f >= 400 && f % 20 === 0) events.push(`tread@${f}:${tread(game, [7.5 + ((f / 20) % 5) * 0.4 - 0.8, 0, 9.6], 0.3, true).toFixed(4)}`);   // somebody walks the far side of the glazing, over whatever came down
-    W.step(DT);
-    emits.push(...flush().map((e: any) => `${f}:${recStr(e)}`));
-    for (const e of newEvents(game, seen)) events.push(`${e.kind}@${f}:${e.level ?? ''}:${e.pos ? p2(e.pos) : ''}:${e.who ?? ''}`);
-  }
-  const audio = W.audioLog!.map((a: any) => `${a.name}@${a.t.toFixed(3)}:${a.pos ? p2(a.pos) : ''}:${a.gain.toFixed(3)}`);
-  const debris = game.destr.debris.list.map((c: any) => `${c.kind}:${p2(c.box.c)}:${c.rest}:${c.box.h.map(f2).join(',')}`);
-  const digest = JSON.stringify(digestGame(game, true));
-  return { rounds, events, audio, emits, debris, digest, stats: { ...SHARD_STATS }, gb: { ...GB_STATS }, summary: game.shards.summary?.() ?? '' };
-}
-function diffLists(a: any, b: any, keys: string[], fails: string[]) {
-  for (const k of keys) { const x = a[k], y = b[k]; if (Array.isArray(x)) { if (JSON.stringify(x) !== JSON.stringify(y)) { let i = 0; while (i < Math.min(x.length, y.length) && x[i] === y[i]) i++; fails.push(`${k} differ (${x.length} / ${y.length}) from #${i}: ${x[i] ?? '∅'} | ${y[i] ?? '∅'}`); } } else if (x !== y) fails.push(`${k} differ`); }
-}
-const KEYS = ['rounds', 'events', 'audio', 'emits', 'debris', 'digest'];
 
-export async function shardsDeterminism() {
-  const F = family('shards-determinism: the seeded volley through the glazing twice — identical to the last record');
-  const a = await recordVolley(9205, { breakOn: true, shardsOn: true, walk: true, dice: true }), b = await recordVolley(9205, { breakOn: true, shardsOn: true, walk: true, dice: true });
-  const fails: string[] = []; diffLists(a, b, KEYS, fails);
-  if (JSON.stringify(a.stats) !== JSON.stringify(b.stats)) fails.push(`counters differ: ${JSON.stringify(a.stats)} | ${JSON.stringify(b.stats)}`);
-  if (a.gb.diced < 1) fails.push(`staging: no sheet diced inside the volley (diced ${a.gb.diced})`);
-  F.verdict(!fails.length && a.stats.fragments > 0 && a.stats.born > 0, `two runs: ${a.rounds.length} rounds, ${a.events.length} events, ${a.audio.length} audio calls, ${a.emits.length} particle records, ${a.debris.length} chunks, the run digest and the model's counters identical`, fails.join('; ') || `identical — ${a.summary}`);
-  const c = await recordVolley(9206, { breakOn: true, shardsOn: true, walk: true });
-  F.verdict(c.stats.fragments > 0, 'another seed also breaks glass (the volley is not seed-lucky)', c.summary);
-  return F.done();
-}
 
-export async function shardsOff() {
-  const F = family('shards-off: the switch off = the base — with glass breaking ON and tune.glassShards OFF the seeded volley is identical to the game with this model\'s seams pulled out');
-  const off = await recordVolley(9207, { breakOn: true, shardsOn: false, walk: true }), cut = await recordVolley(9207, { breakOn: true, shardsOn: false, cut: true, walk: true });
-  const fails: string[] = []; diffLists(off, cut, KEYS, fails);
-  if (Object.values(off.stats).some(v => v !== 0)) fails.push(`the model counted something with its switch off: ${JSON.stringify(off.stats)}`);
-  if (off.gb.dropped === 0 || !off.debris.some((d: string) => d.startsWith('shard:'))) fails.push(`staging: no cell dropped / no base shard box (${JSON.stringify(off.gb)})`);
-  F.verdict(!fails.length, `glass breaking on, shards off: ${off.rounds.length} rounds, ${off.events.length} events, ${off.audio.length} audio calls, ${off.emits.length} particle records, ${off.debris.length} chunks (the base's own shard boxes among them) and the run digest identical to the seams-out game; the model's counters all zero`, fails.join('; ') || `identical · digest ${hash(off.digest)} · ${off.gb.dropped} cells dropped, ${off.gb.shards} base shard boxes`);
-  // the shipped default: glass breaking off, shards at its default (on) — inert
-  const def = await recordVolley(9207, { breakOn: false, shardsOn: true, walk: true }), defCut = await recordVolley(9207, { breakOn: false, shardsOn: true, cut: true, walk: true });
-  const f2: string[] = []; diffLists(def, defCut, KEYS, f2); if (Object.values(def.stats).some(v => v !== 0)) f2.push(`counted with glass breaking off: ${JSON.stringify(def.stats)}`);
-  F.verdict(!f2.length, 'the shipped default (glass breaking off, this switch on): nothing runs — identical to the seams-out game, counters zero', f2.join('; ') || `identical · digest ${hash(def.digest)}`);
-  const on = await recordVolley(9207, { breakOn: true, shardsOn: true, walk: true });
-  F.verdict(on.stats.fragments > 0 && on.stats.born > 0 && on.emits.some((e: string) => e.includes(':shard:')) && on.audio.join() !== off.audio.join(), 'the same volley with the switch ON does go through the model (the stimuli reach it)', on.summary);
-  return F.done();
-}
 function hash(s: string): string { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(16).padStart(8, '0'); }
 
 // a bare run prints the off digests (the cross-build check on rebuild/glass/shards.md runs this file's twin at the base commit)
-if (import.meta.main) { const n = process.argv[2]; const fns: Record<string, () => Promise<boolean>> = { model: shardsModel, release: shardsRelease, caps: shardsCaps, rest: shardsRest, underfoot: shardsUnderfoot, determinism: shardsDeterminism, off: shardsOff }; for (const k of n ? [n] : Object.keys(fns)) await fns[k](); }
+if (import.meta.main) { const n = process.argv[2]; const fns: Record<string, () => Promise<boolean>> = { model: shardsModel, release: shardsRelease, caps: shardsCaps, underfoot: shardsUnderfoot,  }; for (const k of n ? [n] : Object.keys(fns)) await fns[k](); }

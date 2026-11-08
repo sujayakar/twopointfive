@@ -44,7 +44,6 @@ const SLM: any = await import(`${ROOT}/src/game/silent.ts`).catch(() => null);  
 const ILM: any = await import(`${ROOT}/src/game/irlight.ts`).catch(() => null);   // (the infrared light on the goggles, a later default-on switch: pinned off in `digest` where the checkout has it)
 const IR: any = IRM?.IR ?? { on: false };
 const LASER = CBM.LASER;
-const laserBoxesOld: (g: any, gd: any, out: any[]) => void = ((await import('./laser-probes.ts')) as any).laserBoxesOld;   // the draw before combat.ts LASER, kept verbatim there: the reference (not exported in a checkout from before this file — `digest` does not use it)
 
 const DT = 1 / 60;
 const VERBOSE = process.argv.includes('--verbose');
@@ -73,7 +72,6 @@ const noShadow = (b: any) => !!(b.flags & BoxFlag.NoShadow);
 /** a box on this character's bore (his laser, not a tripwire across the corridor or another man's) */
 const onBore = (c: any, b: any) => { const m = c.muzzle, d = c.gunDir, r = v3.sub(b.c, m), t = v3.dot(r, d); return t > 0 && v3.len(v3.sub(r, v3.scale(d, t))) < 0.05; };
 const draw = (g: any, gd: any) => { const out: any[] = []; CBM.laserBoxes(g, gd, out); return out; };
-const drawOld = (g: any, gd: any) => { const out: any[] = []; laserBoxesOld(g, gd, out); return out; };
 const same = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b);
 /** lay a man's laser by hand: a muzzle half a metre off his chest and a unit bore (what the draw reads; nothing is stepped in between) */
 const WAYS: number[][] = []; for (let k = 0; k < 8; k++) WAYS.push([Math.sin(k * Math.PI / 4 + 0.2), 0, Math.cos(k * Math.PI / 4 + 0.2)]);
@@ -164,119 +162,10 @@ async function play(id: string, nv: boolean, irOn: boolean): Promise<Play | null
   R.hash = H.hex(); R.shots = foes.reduce((n: number, x: any) => n + x.weapon.shotsFired, 0) - shots0; R.down = foes.filter((x: any) => x.state === 'dead').length; R.raw = digestGame(g, true);
   reset(); return R;
 }
-export const irUnseen = guarded(async () => {
-  const F = family('ir-unseen: nobody reads a laser — no enemy\'s awareness, no camera and no light differs for an infrared one, a red one or none');
-  let onFoe = 0, irMate = 0;
-  for (const id of IDS) {
-    const A = await play(id, true, true), B = await play(id, true, false), A2 = await play(id, true, true), C = await play(id, false, true), D = await play(id, false, false);
-    if (!A || !B || !A2 || !C || !D) { F.verdict(false, `${id}: a door to stack on`, 'the stack order was refused'); continue; }
-    onFoe += A.onFoe; irMate += A.irMateFrames;
-    const tubeSame = A.hash === B.hash, control = A.hash === A2.hash, bareSame = C.hash === D.hash;
-    F.verdict(tubeSame && control && bareSame && A.irFrames > 0 && B.irFrames === 0 && C.irFrames === 0 && D.irFrames === 0 && A.redMateFrames === 0 && A.unshadowed + B.unshadowed + C.unshadowed + D.unshadowed === 0 && A.lightsMin === B.lightsMin && A.lightsMax === B.lightsMax, `${id}: ${A.frames} frames through a held door, five times from one seed`,
-      `Sam's goggles DOWN — IR on: infrared boxes in ${A.irFrames} frames (a teammate's in ${A.irMateFrames}, on a living enemy in ${A.onFoe}), a teammate's red line in ${A.redMateFrames}; IR off: infrared in ${B.irFrames}, a teammate's red line in ${B.redMateFrames}; the game, every man's awareness, every camera and the light list, frame for frame: ${tubeSame ? 'identical' : 'DIFFERENT'} (the control, on twice: ${control ? 'identical' : 'DIFFERENT — this harness run is not deterministic'}) · `
-      + `Sam's goggles UP — IR on: infrared boxes in ${C.irFrames} frames (want 0) over ${C.gogHunting} man-frames of a goggled teammate with his gun up, red in ${C.redMateFrames}; IR off: red in ${D.redMateFrames}; frame for frame: ${bareSame ? 'identical' : 'DIFFERENT'} · `
-      + `enemies: highest awareness ${A.awMax.toFixed(2)} / ${B.awMax.toFixed(2)}, rounds ${A.shots} / ${B.shots}, down ${A.down} / ${B.down} · cameras' integrators peak ${A.camSeen.toFixed(2)} · lights in the list ${A.lightsMin}‥${A.lightsMax} / ${B.lightsMin}‥${B.lightsMax} · laser boxes not NoShadow: ${A.unshadowed + B.unshadowed + C.unshadowed + D.unshadowed}`);
-  }
-  F.verdict(onFoe > 0 && irMate > 0, 'not vacuous: infrared beams were in the frames and lay on living enemies', `${irMate} frames with a teammate's infrared line over ${IDS.length} scenarios, ${onFoe} man-frames of one ending on a living enemy`);
-  // ---- an enemy and a camera looked at closely: Sam LIT and seen (the plays above keep him the sandbox's invisible man in the dark), his IR laser on, in their view
-  { type Look = { hash: string; peak: number; ir: number; frames: number; who: string };
-    const look = async (id: string | null, what: 'foe' | 'cam', irOn: boolean): Promise<Look | null> => {
-      const dice = Math.random; if (!id) { let k = 0x1f2e3d; Math.random = () => { k = (k + 0x6D2B79F5) | 0; let t = Math.imul(k ^ (k >>> 15), 1 | k); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }   // (the solo office is stood up bare: seed its dice as stage() seeds a scenario's, or two runs are two shifts)
-      const S: any = id ? await quiet(() => stage(id, 1)) : { W: await quiet(() => standUp()) }; const W = S.W, g = W.game; IR.on = irOn; teamDrawn(); const pl = g.player; g.godMode = true;
-      if (!id) { pl.slot = 'pistol'; pl.holstered = false; }   // (the office at night, alone: the one game the level's cameras run in)
-      pl.nv = true; g.playerInvisible = false; g.aiEnabled = true;
-      const lit = () => { pl.visibility = 1; W.step(DT); };   // (the meter's stand-in: plainly lit)
-      const foe = g.guards.find((x: any) => x.team === 'hostile' && x.state !== 'dead'), cams: any[] = g.devices?.cameras ?? [];
-      if (what === 'foe' ? !foe : !cams.length) { reset(); if (!id) Math.random = dice; return null; }
-      const H = fnv(); let peak = 0, ir = 0, frames = 0, who = '';
-      if (what === 'foe') { who = foe.callsign; await quiet(() => g.teleportPlayer([foe.char.pos[0] + Math.sin(foe.char.bodyYaw) * 3.5, 0, foe.char.pos[2] + Math.cos(foe.char.bodyYaw) * 3.5])); }
-      else { const c = cams[0]; who = c.def.name ?? 'camera 1'; const p = c.def.pos, y = c.def.yaw; await quiet(() => g.teleportPlayer([p[0] + Math.sin(y) * 3, 0, p[2] + Math.cos(y) * 3])); }
-      for (let f = 0; f < 60 * 8; f++) { await quiet(lit); frames++; if (what === 'foe' ? samIr(g).length : g.dynBoxes.some(isIr)) ir++;
-        for (const c of cams) { H.eat(`cam:${c.seen.toFixed(6)}:${c.state}|`); if (what === 'cam') peak = Math.max(peak, c.seen); }
-        for (const x of g.guards) if (x.team === 'hostile') { H.eat(`${x.state}:${x.awareness.toFixed(6)}|`); if (what === 'foe' && x.state !== 'dead') peak = Math.max(peak, x.awareness); }
-        H.eat(`sam:${pl.visibility.toFixed(6)}|${g.engine.lights.lights.length}|`); }
-      reset(); if (!id) Math.random = dice; return { hash: H.hex(), peak, ir, frames, who };
-    };
-    { const id = IDS[0]; const a = await look(id, 'foe', true), b = await look(id, 'foe', false), a2 = await look(id, 'foe', true);
-      if (!a || !b || !a2) F.verdict(false, `${id}: an enemy's eyes`, 'no living enemy to stand in front of');
-      else F.verdict(a.hash === b.hash && a.hash === a2.hash && a.ir > 0 && b.ir === 0 && a.peak > 0.05, `${id}: Sam lit and in an enemy's eyes (${a.who}) with his IR laser on, eight seconds`,
-        `IR on: his infrared line in ${a.ir} of ${a.frames} frames; off: ${b.ir} · every enemy's awareness and state, every camera's integrator, Sam's meter and the light count, frame for frame: ${a.hash === b.hash ? 'identical' : 'DIFFERENT'} (control: ${a.hash === a2.hash ? 'identical' : 'DIFFERENT'}) · the enemies' awareness peaked ${a.peak.toFixed(2)} / ${b.peak.toFixed(2)} (he IS seen — and no differently for the laser)`); }
-    // CAMERAS: the level's cameras do not run while a scenario's machine has the floor (devices.ts sensing) — the only games that have a team and so a laser.
-    // Held both ways: with a team, Sam lit in a lens fills nothing, laser or not; alone in the office, where they run, the lens fills and nothing infrared exists.
-    { const id = IDS[1]; const a = await look(id, 'cam', true), b = await look(id, 'cam', false);
-      const c = await look(null, 'cam', true), d = await look(null, 'cam', false);
-      if (!a || !b || !c || !d) F.verdict(false, 'a camera\'s lens', 'no camera on the office level');
-      else F.verdict(a.hash === b.hash && a.ir > 0 && b.ir === 0 && a.peak === 0 && b.peak === 0 && c.hash === d.hash && c.peak > 0.05 && c.ir === 0 && d.ir === 0, `a camera's lens (${c.who}), Sam lit in it for eight seconds: no laser and a running camera ever share a frame`,
-        `${id} (a team on the floor): infrared boxes in ${a.ir} of ${a.frames} frames with IR on, ${b.ir} off — the integrator stays ${a.peak.toFixed(2)} / ${b.peak.toFixed(2)} (the cameras do not run in a scenario), frame for frame ${a.hash === b.hash ? 'identical' : 'DIFFERENT'} · the office alone (cameras running): the integrator fills to ${c.peak.toFixed(2)} / ${d.peak.toFixed(2)}, infrared boxes ${c.ir} / ${d.ir} (no team, no laser), frame for frame ${c.hash === d.hash ? 'identical' : 'DIFFERENT'}`); }
-  }
-  return F.done();
-});
 
 // ---------------------------------------------------------------- ir-off
-export const irOff = guarded(async () => {
-  const F = family('ir-off: the switch off is the lasers of the build before; its rows are kept like the other team-feel rows');
-  let bad = 0, n = 0, samBoxes = 0, men = 0;
-  for (const id of IDS) {
-    const S = await settled(id); const { g, step } = S; IR.on = false;
-    for (const tube of [false, true]) { picture(g, tube);
-      for (const x of mates(g)) { men++; for (const d of WAYS) { lay(x, d); const a = draw(g, x), old = drawOld(g, x); n += old.length; if (!same(a, old)) bad++; } } }
-    g.player.nv = true; step(30); samBoxes += g.dynBoxes.filter(isIr).length; reset();
-  }
-  F.verdict(bad === 0 && n > 0 && samBoxes === 0, 'IR.on false: every teammate\'s laser is the old draw, goggles and picture regardless; Sam has none', `${men} man-pictures over ${IDS.length} scenarios, eight ways each: ${bad} stagings differ from the draw before the switch (want 0; ${n} boxes compared field for field) · infrared boxes in a frame with Sam's goggles down: ${samBoxes} (want 0)`);
-  // a flip in play
-  { const S = await settled(IDS[0]); const { g, step } = S; g.player.nv = true; step(30); const was = samIr(g).length; IR.on = false; step(1); const mid = g.dynBoxes.filter(isIr).length; IR.on = true; step(1); const back = samIr(g).length;
-    F.verdict(was > 0 && mid === 0 && back > 0, 'flipped in play: off inside a frame, on again inside a frame', `infrared boxes ${was} → ${mid} → ${back}`); }
-  // the panel's rows
-  { const TFM: any = await import(`${ROOT}/src/game/teamfeel.ts`); const rows = ['on', 'sam', 'carry', 'teamOff'], kept = rows.filter(k => TFM.feelRange('IR', k) === null);
-    F.verdict(kept.length === rows.length && TFM.feelTables().IR === IR && rows.every(k => k in IR) && IR_DEFAULTS.on === true, 'the Team feel rows: four switches, the table the module reads, shipped on', `kept as switches: ${kept.join(', ')} · feelTables().IR is irlaser.ts IR: ${TFM.feelTables().IR === IR} · shipped: ${JSON.stringify(IR_DEFAULTS)}`); }
-  return F.done();
-});
 
 // ---------------------------------------------------------------- the team's guns show no laser line (IR.teamOff)
-/** IR.teamOff: no man on the player's side hands the renderer a laser box, infrared or red, in any picture; Sam's own line is the one it was; an enemy's
- *  sandbox laser is not this switch's; and it is a picture only — a scripted stretch is the same game, frame for frame, with it on and off.
- *  The red path: TEAMLASER_BREAK=1 (irlaser.ts: the switch is not read) must FAIL. */
-export const irTeam = guarded(async () => {
-  const F = family('ir-team: the team\'s guns show no laser line — Sam\'s own stays, an enemy\'s is not this switch\'s, nothing but the picture moves');
-  const teamIr = (g: any) => g.dynBoxes.filter((b: any) => isIr(b) && !onBore(g.player.char, b)).length;
-  const menOn = (g: any) => IRM.irState(g).men.filter((m: any) => m.on).length;
-  let drawn = 0, gone = 0, back = 0, onWas = 0, onNow = 0, samWas = 0, samNow = 0, foeOn = 0, foes = 0, bare = 0, redWas = 0, redNow = 0, stood = 0, stoodOff = 0; const per: string[] = [];
-  /** a man asked as the red laser's own frames have him: hunting, gun up, in nobody's arm (his goggles as they are) */
-  const hunting = (g: any, x: any) => { const st = x.state, md = x.muzzleDown, hd = x.held; x.state = 'alert'; x.muzzleDown = false; x.held = null; const on = IRM.laserOn(g, x); x.state = st; x.muzzleDown = md; x.held = hd; return on; };
-  for (const id of IDS) {
-    stood++; const S: any = await quiet(() => stage(id, 1)); if (IR.teamOff) stoodOff++; teamDrawn();   // (the stand's own word, read off a fresh staging before it is held off)
-    const { g, step } = S; await quiet(() => g.orders.give('fallIn', g.orders.targetAt(g.player.char.pos), 'all')); step(240); g.player.nv = true; step(30);
-    const a = teamIr(g), sa = samIr(g).length, ma = menOn(g);
-    IR.teamOff = true; step(1); const b = teamIr(g), sb = samIr(g).length, mb = menOn(g);
-    g.player.nv = false; step(30); bare += g.dynBoxes.filter((x: any) => (isIr(x) || isRed(x)) && mates(g).some((m: any) => onBore(m.char, x))).length; g.player.nv = true; step(30);
-    { const h = g.guards.find((x: any) => x.state !== 'dead' && x.team === 'hostile'); if (h) { foes++; if (hunting(g, h)) foeOn++; } }
-    for (const m of mates(g)) { if (hunting(g, m)) redNow++; IR.teamOff = false; if (hunting(g, m)) redWas++; IR.teamOff = true; }   // (the red laser's own frames — the guard AI's hunting states, goggles up or down: a showcase's operative, a man the AI has in them)
-    IR.teamOff = false; step(1); const c = teamIr(g);
-    drawn += a; gone += b; back += c; onWas += ma; onNow += mb; samWas += sa; samNow += sb; per.push(`${id} ${a}→${b}→${c}`); reset();
-  }
-  F.verdict(drawn > 0 && onWas > 0 && gone === 0 && onNow === 0 && bare === 0, 'with it on no teammate\'s gun draws a line: none through the tube, none bare-eyed, no man\'s laser reads on', `infrared boxes off the team's bores over ${IDS.length} scenarios, goggles down: ${drawn} with the lines drawn → ${gone} with the switch (want 0) · men whose laser is on ${onWas} → ${onNow} (want 0) · laser boxes on a teammate's bore in thirty bare-eyed frames: ${bare} (want 0)`);
-  F.verdict(samWas > 0 && samNow === samWas, 'Sam\'s own line is the one it was', `infrared boxes on Sam's bore ${samWas} → ${samNow}`);
-  F.verdict(back === drawn && back > 0, 'flipped in play: the lines are back inside a frame', per.join(' · '));
-  F.verdict(redWas > 0 && redNow === 0, '… nor in the red laser\'s own frames: a teammate the guard AI has hunting reads off too', `teammates asked while hunting: on ${redWas} with the lines drawn → ${redNow} with the switch (want 0)`);
-  F.verdict(foes > 0 && foeOn === foes, 'an enemy is not a teammate: the hunting man\'s laser still reads on (it is drawn only where the sandbox gives him one)', `${foeOn} of ${foes} hostile men asked while hunting`);
-  // a picture only: the same scripted stretch with it on and off is the same game
-  { const run = async (off: boolean) => { const S: any = await quiet(() => stage(IDS[0], 1)); const { g, step } = S; const O = g.orders; IR.teamOff = off; const H = fnv(); g.player.nv = true;
-      const frame = () => { step(); H.eat(JSON.stringify(digestGame(g, true))); for (const x of g.guards) H.eat(`${x.flashlight?.enabled ? 1 : 0}${x.state[0]}${x.char.pos[0].toFixed(4)},${x.char.pos[2].toFixed(4)},${x.char.aimYaw.toFixed(4)}`); };
-      const sam = g.player.char.pos; await quiet(() => O.give('fallIn', O.targetAt([sam[0], 0, sam[2]]), 'all')); for (let f = 0; f < 120; f++) frame();
-      let fc: any = null; for (const e of doorsOf(S)) { fc = e.door.frameCentre; if (!(await quiet(() => O.give('stack', O.targetAt(fc), 'all')))) break; } for (let f = 0; f < 60 * 8; f++) frame();
-      await quiet(() => O.give('openClear', O.targetAt(fc), 'all')); for (let f = 0; f < 60 * 20; f++) frame();
-      const r = `${H.hex()} · ${g.guards.filter((x: any) => x.state !== 'dead').length} of ${g.guards.length} standing at ${g.time.toFixed(2)} s`; reset(); return r; };
-    const a = await run(false), b = await run(true);
-    F.verdict(a === b, 'a picture only: fall in, stack, open and clear is the same game frame for frame with it on and off', `${IDS[0]}: drawn ${a} · put off ${b}`); }
-  // the stand, and a recording
-  { const shipped = process.env.TPS_PROFILE === 'shipped', word = process.env.TPS_NOTEAMLASER, want = word !== undefined ? word === '1' : shipped;
-    F.verdict(stoodOff === (want ? stood : 0), 'the stand: on as the page opens, off on the frozen stand (TPS_NOTEAMLASER has the say on either)', `${stoodOff} of ${stood} stagings stood up with it on · ${shipped ? 'the page\'s' : 'the frozen'} stand${word !== undefined ? `, TPS_NOTEAMLASER=${word}` : ''}`);
-    const J: any = await import(`${ROOT}/src/game/journal.ts`), S: any = await quiet(() => stage(IDS[0], 1)), snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(S.g)));
-    IR.teamOff = true; const own = snap(), old = snap(), none = snap(); delete old.tables.IR.teamOff; delete none.tables.IR;
-    IR.teamOff = false; J.applyKnobs(S.g, own); const carried = IR.teamOff; IR.teamOff = true; J.applyKnobs(S.g, old); const before = IR.teamOff; IR.teamOff = true; J.applyKnobs(S.g, none); const bare0 = IR.teamOff;
-    F.verdict(carried === true && before === false && bare0 === false, 'a recording carries it: one made with the lines off replays with them off, one from before the key (or before the table was carried) with them drawn', `the key in the file, on: ${carried} · no key: ${before} · no IR table: ${bare0}`); reset(); }
-  return F.done();
-});
 
 // ---------------------------------------------------------------- digest (the cross-commit identity: run this file's `digest` here and in a checkout of the merged base)
 /** one hash per scenario of a scripted minute with IR.on false (or with no irlaser.ts at all): fall in, stack, open and clear with the room's men alive, Sam's

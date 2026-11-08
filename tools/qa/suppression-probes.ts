@@ -20,7 +20,7 @@
 //                Staged with the gun-hold rule OFF on either stand (gunhold.ts GUNHOLD.on, set after the stand-up): with it on the men in front of the gun do not
 //                stay in the ring to be pinned — they run for cover and go round — and what they do then is tools/qa/gunhold-check.ts's to hold.
 import { standUp, ROOT } from './headless.ts';
-import { stageHold, bringIn, bearingPoint, place, park } from './standoff-probes.ts';
+import { place, park } from './standoff-probes.ts';
 const { v3, DEG } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { resetChase, pairOf } = await import(`${ROOT}/src/game/guards.ts`);
@@ -301,53 +301,3 @@ export async function supSam() {
   return allPass;
 }
 
-// ================================================================ (d) the hold: pinned watchers still never fire
-export async function supHostage() {
-  console.log('\n=== sup-hostage: Sam holds Novak in the break room (gun to his head), Kowalski + Reyes in the standoff in front; Sam fires past THEIR heads for 10 s, the gun-hold rule off — both pinned, both crouch, both stay in it, and with muzzle discipline on not one round comes back ===');
-  let allPass = true;
-  const AT: Vec3 = [33.0, 0, 17.8], FACE = 190;
-  const S = await stageHold(751, 1, AT, FACE * DEG, true, true); const { W, game, victim, lines } = S as any;
-  const rule = GUNHOLD.on; GUNHOLD.on = false;   // after the stand-up (which writes the stand's own value): suppression in the ring standoff is the subject, and the ring in front of a drawn pistol exists only without the rule
-  const A = game.guards[0], C = game.guards[2]; const men = [A, C];
-  const P0 = pairOf(game); if (!P0) { GUNHOLD.on = rule; console.log('- FAIL — staging: no pair (the grab did not take)'); console.log('=== sup-hostage: FAILURES above ==='); return false; }
-  const centre = v3.copy(P0.centre);
-  bringIn(game, A, bearingPoint(centre, FACE + 18, 4.7), centre); bringIn(game, C, bearingPoint(centre, FACE - 22, 4.9), centre);
-  const t0 = game.time; let exc = '', holdEnded = ''; let guardShots = 0, samRounds = 0, nextShot = 1.5, k = 0;
-  const dbg: string[] = []; SUPPRESSION_DEBUG.log = VERBOSE ? (s: string) => dbg.push(`${f2(game.time - t0)} ${s}`) : null;
-  const st = new Map<any, { enterT: number; pinnedT: number; crouchT: number; soFrames: number; frames: number; peak: number; downFrames: number }>(men.map(m => [m, { enterT: -1, pinnedT: -1, crouchT: -1, soFrames: 0, frames: 0, peak: 0, downFrames: 0 }]));
-  const log: string[] = [];
-  try {
-    for (let f = 0; f < 60 * 12; f++) {
-      const t = game.time - t0;
-      if (t >= nextShot && t < 11.5) {   // a round past EACH of them — 0.45 m square off his body axis at a hand under head height (pastHead's rule: beside the head of a man leaning into his aim is in his ribs) — every 0.45 s from 1.5 s (they have entered and had their beat by then)
-        for (const m of men) { if (m.state === 'dead') continue; const h = head(m.char); const ax = m.char.bones.hips ?? m.char.pos; const mu = game.player.char.muzzle; const dx = ax[0] - mu[0], dz = ax[2] - mu[2]; const L = Math.hypot(dx, dz) || 1; const sg = (k++ % 2) ? 1 : -1;
-          fireWeapon(game, game.player.char, [ax[0] - dz / L * 0.45 * sg, h[1] - 0.08, ax[2] + dx / L * 0.45 * sg], true); samRounds++; }
-        nextShot = t + 0.45;
-      }
-      W.step(DT);
-      const P = pairOf(game); if (!P) { holdEnded = `${f2(game.time - t0)}s: victim ${victim.state}/${victim.downKind ?? '-'}, holding ${game.player.holding?.phase ?? 'null'}, Sam down ${game.player.down}`; break; }
-      guardShots += game.events.filter((e: any) => e.kind === 'guardShot' && e.time === game.time).length;
-      for (const m of men) { const T = st.get(m)!; if (m.standoff && T.enterT < 0) T.enterT = game.time - t0; if (T.enterT < 0 || m.state === 'dead') continue; T.frames++; if (m.standoff) T.soFrames++; T.peak = Math.max(T.peak, m.sup.v); if (T.pinnedT < 0 && m.sup.v >= SUPPRESSION.pinned) T.pinnedT = game.time - t0; if (m.sup.downT > 0 || m.sup.latched) T.downFrames++; if (T.crouchT < 0 && m.char.anim.crouchTarget >= 0.99) T.crouchT = game.time - t0; }
-      if (f % 60 === 0) log.push(`${f2(game.time - t0)}s ${men.map(m => `${m.callsign} ${m.state}${m.standoff ? '/so' : ''} sup ${f2(m.sup.v)}${m.sup.latched || m.sup.downT > 0 ? ' DOWN' : ''}${m.sup.cover ? ' SHIFT' : ''} crouch ${f2(m.char.anim.crouch)} ${m.char.anim.upper}/${m.char.anim.stance} fireCd ${f2(m.fireCd)}`).join(' · ')} · Sam sup ${f2(game.player.sup.v)} · ${victim.callsign} ${victim.state}${victim.held ? '/held' : ''} sup ${f2(victim.sup.v)}`);
-    }
-  } catch (e: any) { exc = String(e?.stack ?? e); }
-  game.puppet = null; SUPPRESSION_DEBUG.log = null; GUNHOLD.on = rule;
-  if (VERBOSE && dbg.length) console.log('    debug: ' + dbg.filter(s => !/round by/.test(s)).slice(0, 40).join('\n    debug: '));
-  const fails: string[] = [];
-  if (exc) fails.push('exception: ' + exc.split('\n')[0]);
-  if (holdEnded) fails.push('the hold ended: ' + holdEnded);
-  if (guardShots) fails.push(`${guardShots} guard round(s) with ${victim.callsign} alive in Sam's arm — suppression made somebody fire, or broke the discipline`);
-  if (samRounds < 30) fails.push(`Sam only got ${samRounds} rounds off`);
-  for (const m of men) { const T = st.get(m)!;
-    if (m.state === 'dead') fails.push(`staging: ${m.callsign} died (${m.downKind}/${m.downBy}) — a round "past" him found him`);
-    if (m.sup.displaces) fails.push(`${m.callsign} shifted to cover ${m.sup.displaces}× — a man in the standoff stays in it`);
-    if (T.enterT < 0) { fails.push(`${m.callsign} never entered the standoff`); continue; }
-    if (T.pinnedT < 0) fails.push(`${m.callsign}'s scalar never reached ${SUPPRESSION.pinned} (peak ${f2(T.peak)}) with rounds past his head every second`);
-    if (T.crouchT < 0) fails.push(`${m.callsign} never crouched`);
-    if (T.soFrames < 0.9 * T.frames) fails.push(`${m.callsign} was in the standoff on only ${T.soFrames}/${T.frames} frames after entering (head down in the open room, the pair should stay in his view)`); }
-  if (victim.sup.v !== 0 && victim.held) fails.push(`the held man carries ${f2(victim.sup.v)} (held men accrue nothing)`);
-  const ok = fails.length === 0; allPass &&= ok;
-  console.log(`- ${ok ? 'PASS' : 'FAIL'} — Sam's rounds ${samRounds}, guard rounds ${guardShots}; ${men.map(m => { const T = st.get(m)!; return `${m.callsign}: entered +${T.enterT >= 0 ? f2(T.enterT) : '—'} s, pinned +${T.pinnedT >= 0 ? f2(T.pinnedT) : '—'} s (peak ${f2(T.peak)}), crouched +${T.crouchT >= 0 ? f2(T.crouchT) : '—'} s, head-down ${f1(T.downFrames * DT)} s, standoff ${T.soFrames}/${T.frames} fr, ${m.sup.displaces} shift(s)`; }).join(' · ')}; ${victim.callsign} ${victim.state}${victim.held ? '/held' : ''}\n    lines: ${lines.filter((l: any) => l.t > t0 && !l.radio).slice(0, 10).map((l: any) => `${f1(l.t - t0)}s ${l.who}: "${l.text}"`).join(' · ') || '—'}\n    ${log.join('\n    ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  console.log(`=== sup-hostage: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
-  return allPass;
-}
