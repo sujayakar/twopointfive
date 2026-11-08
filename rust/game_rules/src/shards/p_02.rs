@@ -138,100 +138,6 @@ pub fn glass_shards_spall(g: &mut crate::game::Game, at: V3, n: V3, dir: Option<
     glass_shards_emit(g, v3::mad(at, n, thickness * 0.5 + 0.01), n, nb, spray(1.6 * sp, 0.8, 1.0, fine_life * 0.8, 0.4, fine_size * 0.9, 0.6, 1.3, 45.0, 1.0, 0.012, None, tint), xor_u32(seed, 0xBACC as f64));
 }
 
-/// The interim hookup: a shard box the pool was about to spawn, read back as the fragment it stands for. None = not ours.   (shards.ts GlassShards.take)
-pub fn glass_shards_take(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, who: f64) -> Option<DebrisChunkId> {
-    use crate::glasspen::PaneType;
-    use crate::shards::{GlassFragmentLikeCause as Cause, GlassShardsPaneMemValueCause as MemCause};
-    if g.shards.hooked || !shards_live(g) { return None; }
-    g.shards.serial += 1.0;
-    let serial = g.shards.serial;
-    let c = seam_box(g, box_).c;
-    let word = m::imul(js::to_i32(serial), 0x9E3779B1u32 as i32)
-        ^ m::imul(js::to_i32(m::round(c[0] * 1000.0)), 73856093)
-        ^ m::imul(js::to_i32(m::round(c[1] * 1000.0)), 19349663)
-        ^ m::imul(js::to_i32(m::round(c[2] * 1000.0)), 83492791);
-    let mut f = fragment_of_box(g, box_, v, w, who, u32(word as f64));
-    if let Some(st) = glass_shards_pane_at(g, c) {
-        let now = g.time;
-        let key = crate::Num(st.bi);
-        let row = g.shards.pane_mem.get_or_insert_with(key, || GlassShardsPaneMemValue { hits: 0.0, sites: 0.0, t: -1e9, cause: MemCause::Hit, diced_t: -1e9 });
-        // (`impacts` is no field of PaneState any more: the TypeScript's loose read is always 0, so the blast arm never ran)
-        if st.hits > row.hits { row.cause = MemCause::Hit; row.t = now; }
-        row.hits = st.hits;
-        row.sites = 0.0;
-        let (mem_t, mem_cause) = (row.t, row.cause);
-        f.pane = st.bi;
-        f.type_ = st.type_;
-        f.cause = if now - mem_t < 0.35 { match mem_cause { MemCause::Hit => Cause::Hit, MemCause::Blast => Cause::Blast } } else { Cause::Support };
-        if st.type_ == PaneType::Tempered {
-            let diced = g.shards.pane_mem.get(key).unwrap().diced_t;
-            if now - diced > 2.0 {
-                g.shards.pane_mem.get_mut(key).unwrap().diced_t = now;
-                glass_shards_dice_pane(g, &st, &f);
-            }
-            glass_shards_note(g, &alloc::format!("take pane {} tempered → dice", js::num_str(st.bi)));
-            return Some(g.shards.ghost);
-        }
-        glass_shards_note(g, &alloc::format!("take pane {} {} {} {} {} cm²", js::num_str(st.bi), st.type_.as_str(), f.kind.as_str(), f.cause.as_str(), js::to_fixed(f.area * 1e4, 0)));
-    }
-    g.shards.last_plate = None;
-    glass_shards_release(g, &f);
-    Some(g.shards.last_plate.unwrap_or(g.shards.ghost))
-}
-
-/// The pane whose face a dropped cell's box lies in.   (shards.ts GlassShards.paneAt)
-pub fn glass_shards_pane_at(g: &mut crate::game::Game, c_2: V3) -> Option<crate::glassbreak::PaneState> {
-    let panes = crate::glassbreak::glass_break_panes(g);
-    let mut best = None;
-    let mut best_d = 0.12;
-    for (key, st) in panes.iter() {
-        let (bc, bh, yaw) = { let b = &*seam_box(g, st.box_); (b.c, b.h, b.yaw) };
-        let (dx, dz) = (c_2[0] - bc[0], c_2[2] - bc[2]);
-        let (cy, sy) = (m::cos(yaw), m::sin(yaw));
-        let l = [dx * cy - dz * sy, c_2[1] - bc[1], dx * sy + dz * cy];
-        let thin = if bh[0] < bh[2] { 0 } else { 2 };
-        if m::abs(l[thin]) > bh[thin] + 0.08 { continue; }
-        let out = m::max_n(&[0.0, m::abs(l[2 - thin]) - bh[2 - thin], m::abs(l[1]) - bh[1]]);
-        if out < best_d { best_d = out; best = Some(key); }
-    }
-    best.and_then(|k| panes.get(k).cloned())
-}
-
-/// A tempered pane gone to dice, whole: its face as a grid of clumps, each a release.   (shards.ts GlassShards.dicePane)
-pub fn glass_shards_dice_pane(g: &mut crate::game::Game, st: &crate::glassbreak::PaneState, f0: &crate::shards::GlassFragmentLike) {
-    use crate::glasspen::PaneType;
-    use crate::shards::{GlassFragmentLikeCause as Cause, GlassFragmentLikeKind as Kind};
-    let (bc, bh, yaw) = { let b = &*seam_box(g, st.box_); (b.c, b.h, b.yaw) };
-    let thin = if bh[0] < bh[2] { 0 } else { 2 };
-    let (hu, hv) = (bh[2 - thin], bh[1]);
-    let nu = clamp_i(m::round(hu * 2.0 / 0.5), 1.0, 4.0);
-    let nv = clamp_i(m::round(hv * 2.0 / 0.5), 1.0, 4.0);
-    let (cy, sy) = (m::cos(yaw), m::sin(yaw));
-    let u_ax: V3 = if thin == 0 { [sy, 0.0, cy] } else { [cy, 0.0, -sy] };
-    let mut i = 0.0;
-    while i < nu {
-        let mut j = 0.0;
-        while j < nv {
-            let du = ((i + 0.5) / nu - 0.5) * 2.0 * hu;
-            let dv = ((j + 0.5) / nv - 0.5) * 2.0 * hv;
-            let (su, sv) = (hu / nu, hv / nv);
-            let c: V3 = [bc[0] + u_ax[0] * du, bc[1] + dv, bc[2] + u_ax[2] * du];
-            let corner = |a: f64, e: f64| -> V3 { [c[0] + u_ax[0] * su * a, c[1] + sv * e, c[2] + u_ax[2] * su * a] };
-            let f = GlassFragmentLike {
-                pane: st.bi, type_: PaneType::Tempered, kind: Kind::Clump, grain: 0.009, cause: Cause::Dice,
-                outline: vec![corner(-1.0, -1.0), corner(1.0, -1.0), corner(1.0, 1.0), corner(-1.0, 1.0)],
-                centre: c, area: 4.0 * su * sv, thickness: 2.0 * bh[thin],
-                velocity: [f0.velocity[0], f0.velocity[1] - 0.2 * crate::debris::hash01(f0.seed + i * 7.0 + j), f0.velocity[2]],
-                seed: u32(f0.seed + m::imul(js::to_i32(i * 4.0 + j + 1.0), 0x9E3779B1u32 as i32) as f64),
-                ..f0.clone()
-            };
-            glass_shards_release(g, &f);
-            j += 1.0;
-        }
-        i += 1.0;
-    }
-}
-
 /// The fragment's rigid part: 1‥4 thin boxes over its outline; returns how many.   (shards.ts GlassShards.plates)
 pub fn glass_shards_plates(g: &mut crate::game::Game, f: &crate::shards::GlassFragmentLike, n: V3) -> f64 {
     use crate::shards::GlassFragmentLikeKind as Kind;
@@ -711,8 +617,9 @@ pub fn glass_shards_step(g: &mut crate::game::Game, pos: V3, level: f64) -> f64 
     r.level
 }
 
-/// Per frame: the release hook's edges, waiting records, the live estimate, breaks, landings due.   (shards.ts GlassShards.update)
-pub fn glass_shards_update(g: &mut crate::game::Game, _dt: f64) {
+/// The release hook follows the model: while it is live the fragments are its own. Asked each frame and by the glass's rule before it can let
+/// anything go, so a pane that breaks before the first frame's update goes the way every other pane goes.
+pub fn glass_shards_hook(g: &mut crate::game::Game) -> bool {
     let live = shards_live(g);
     use crate::glassbreak::GlassBreakOnRelease as Hook;
     let ours = matches!(g.glass_break.on_release, Some(Hook::Shards));
@@ -720,6 +627,12 @@ pub fn glass_shards_update(g: &mut crate::game::Game, _dt: f64) {
     else if !live && g.shards.was_live && ours { g.glass_break.on_release = None; }
     g.shards.hooked = matches!(g.glass_break.on_release, Some(Hook::Shards));
     g.shards.was_live = live;
+    live
+}
+
+/// Per frame: the release hook's edges, waiting records, the live estimate, breaks, landings due.   (shards.ts GlassShards.update)
+pub fn glass_shards_update(g: &mut crate::game::Game, _dt: f64) {
+    let live = glass_shards_hook(g);
     if !live {
         if js::truthy(crate::sim_fallshome::fall_store_waiting(g)) { crate::sim_fallshome::fall_store_clear(g, Some(true), None); }
         g.shards.deferred.clear();
