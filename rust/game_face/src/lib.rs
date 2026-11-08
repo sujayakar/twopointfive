@@ -158,8 +158,10 @@ pub extern "C" fn face_tally(h: u32) {
     let s = with_ref(h, |x| {
         let g = &x.g;
         let men: Vec<String> = g.guards.iter().map(|&gd| { let m = &g.gd[gd]; format!("[\"{}\",{}]", m.state.as_str(), g.tab.light[m.flashlight].enabled as u32) }).collect();
-        let s = &g.saves.stats;
-        format!("{{\"men\":[{}],\"qrf\":\"{}\",\"escalation\":{},\"autosaves\":{},\"manual\":{},\"loads\":{},\"stage\":\"{}\",\"alarm\":{},\"alerts\":{},\"clear\":{}}}", men.join(","), g.qrf.state.as_str(), g.escalation, s.autosaves, s.manual, s.loads, g.mission.stage.as_str(), g.mission.alarm_on, g.mission.stats.alerts, game::roomclear::room_clear_scenario_active(g))
+        let (s, m) = (&g.saves.stats, &g.mission.stats);
+        let word = |w: Option<&str>| w.map_or(String::from("null"), |w| format!("\"{}\"", w.replace('\\', "").replace('"', "")));
+        format!("{{\"men\":[{}],\"qrf\":\"{}\",\"escalation\":{},\"autosaves\":{},\"manual\":{},\"loads\":{},\"stage\":\"{}\",\"alarm\":{},\"alerts\":{},\"clear\":{},\"kind\":{},\"stats\":{{\"elapsed\":{},\"alerts\":{},\"spotted\":{},\"bodies\":{},\"shots\":{},\"kills\":{},\"knockouts\":{},\"keys\":{},\"blackout\":{},\"sandbox\":{},\"qrf\":{},\"qrfAt\":{},\"qrfWho\":{}}}}}", men.join(","), g.qrf.state.as_str(), g.escalation, s.autosaves, s.manual, s.loads, g.mission.stage.as_str(), g.mission.alarm_on, g.mission.stats.alerts, game::roomclear::room_clear_scenario_active(g),
+            word(g.verdict.res.as_ref().and_then(|r| r.kind).map(|k| k.as_str())), m.elapsed, m.alerts, m.spotted, m.bodies, m.shots, m.kills, m.knockouts, m.keys, m.blackout, m.sandbox, m.qrf, m.qrf_at, word(m.qrf_who.as_deref()))
     });
     out(s.into_bytes());
 }
