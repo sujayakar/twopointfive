@@ -55,7 +55,8 @@ pub fn read(g: &mut Game, text: &str) {
     }
 }
 
-fn text(s: &str) -> String {
+/// a text as JSON has it
+pub fn text(s: &str) -> String {
     let mut o = String::from("\"");
     for c in s.chars() {
         match c {
