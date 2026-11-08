@@ -2,7 +2,7 @@
 // holds its number and nothing of it.
 import { FaceError, type Face, type Fetched } from './face';
 import { Drawn, drawRefused, type DrawFace } from '../draw/drawn';
-import { Man, Section, View, Want } from '../draw/sections';
+import { Heard, Man, Section, View, Want } from '../draw/sections';
 import { Commands } from '../draw/commands';
 import { HAND } from '../draw/hand';
 import { HandTape, MARKS, hashOf, type PartOf, type TapeMark, type TapeRow } from '../tape/handtape';
@@ -47,7 +47,7 @@ export class DrawGame {
   readonly commands = new Commands();
   /** WHAT THE MODULE IS HANDED, kept as it is handed (put here before a start: that start is its first row); null: nobody keeps it */
   tape: HandTape | null = null;
-  /** the last tape that ended: a run's lost to a panic */
+  /** the last tape that ended: a run's lost to a panic, or past what is kept */
   ended: HandTape | null = null;
   /** ticks stepped since the start, and ms of the last one by part */
   ticks = 0;
@@ -99,7 +99,7 @@ export class DrawGame {
     if (this.h) { this.X.face_drop(this.h); this.h = 0; }
     try { this.h = this.X.face_start(at, n, -1, o.seed, seats, DRESS); } finally { this.X.face_free(at, n); }
     if (!this.h) throw new FaceError('no room for another game in this module');
-    this.ticks = 0; this.done++; this.said = null; this.between = 1;
+    this.ticks = 0; this.done++; this.said = null; this.between = 1; this.tried = -1;
     // (room asked for and given back: the allocator keeps it, and a step seldom has to grow the memory)
     this.X.face_reserve(64 * 1048576);
     this.draw();
@@ -113,7 +113,7 @@ export class DrawGame {
     this.order();
     const T = this.tape; T?.step(dt, this.numbersOf(), keys);
     this.tick(dt, keys);
-    if (T) { if (this.ticks % MARKS.every === 0) T.mark(this.mark()); if (T.length > TAPE_MOST) { T.end('it was longer than a tape is kept'); this.tape = null; } }
+    if (T) { if (this.ticks % MARKS.every === 0) T.mark(this.mark()); if (T.length > TAPE_MOST) { T.end('it was longer than a tape is kept'); this.ended = T; this.tape = null; } }
     const t1 = performance.now();
     this.draw();
     this.X.face_out_clear(this.h);   // (what the tick told its host is in its sections now)
@@ -247,5 +247,10 @@ export class DrawGame {
   turnAgain(): void { for (const [name, value] of this.turned) this.commands.knob(name, value); }
   /** a name that crosses by its number */
   nameOf(i: number): string { this.X.face_draw_name(this.h, i); return this.answer(); }
-  private draw(): void { this.drawn.take(this.h); }
+  private draw(): void {
+    this.drawn.take(this.h); if (!this.tape) return;
+    const { u, at } = this.drawn, run = u[at[Section.heard] + Heard.run]; if (run !== this.tried) { if (this.tried >= 0) this.tape.again(); this.tried = run; }
+  }
+  /** which try of the mission the tape is in */
+  private tried = -1;
 }

@@ -13,6 +13,8 @@ export interface PauseDeps {
   /** may a card go up: a run is on, and not lost to a panic (which has a card of its own) */
   may(): boolean;
   restart(): void;
+  /** watch the run that ended; null: it is not kept */
+  replay(): (() => void) | null;
   /** leave the mission */
   quit(): void;
   /** Escape puts this away first: true = it did, and that is the press's whole job */
@@ -59,6 +61,7 @@ export class PauseCard {
     const lost = this.ended && !(this.d.verdict()?.won ?? false), b = checkpointButton(this.d.saves, press, lost ? 'primary' : ''), strip = saveStrip(this.d.saves, press);
     this.stripAt = again; if (lost && b) again.classList.remove('primary');
     for (const x of !this.ended ? [resume, b, strip, again] : lost && b ? [b, again, strip, resume] : [again, b, strip, resume]) if (x) actions.appendChild(x);
+    { const watch = this.ended ? this.d.replay() : null; if (watch) actions.appendChild(button('Replay', () => { if (armed()) watch(); })); }
     gap();
     if (!this.ended) { actions.appendChild(button('Options', () => openOptions())); gap(); }
     actions.appendChild(button('Quit to missions', () => { if (armed()) this.d.quit(); }, 'quit'));
