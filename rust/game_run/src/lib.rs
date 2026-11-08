@@ -10,11 +10,15 @@
 //!            the writes, the rules the driver called and the meter in the driver's own order, in place of `give`, `write_before` and `meter`
 //!   the tick `step`
 //!   after    `write_after` (each line of hostwrites.txt for this tick) · the compare (`part_hashes`) · `lights` · `view` · `follow`
+pub mod actions;
 pub mod command;
 pub mod desk;
 pub mod hands_off;
 pub mod kept;
 pub mod knobs;
+pub mod words;
+
+pub mod shown;
 mod knobs_list;
 use game::ids::Id;
 use game::io::Io;

@@ -55,4 +55,8 @@ export class Commands extends Writer {
   kitStageOpen(who: number, field: string): void { this.u32(31); this.u32(who); this.text(field); }
   /** foot (a number that is none: not said) */
   kitStageFrame(aspect: number, cx: number, cy: number, h: number, w: number, man: number, door: number, left: number, right: number, keep: number, top: number, bottom: number): void { this.u32(32); this.f64(aspect); this.f64(cx); this.f64(cy); this.f64(h); this.f64(w); this.f64(man); this.f64(door); this.f64(left); this.f64(right); this.f64(keep); this.f64(top); this.f64(bottom); }
+  /** one of the panel's actions, by its name (actions.rs), with what its row picked */
+  act(name: string, value: number, word: string): void { this.u32(33); this.text(name); this.f64(value); this.text(word); }
+  /**  */
+  words(text: string): void { this.u32(34); this.text(text); }
 }

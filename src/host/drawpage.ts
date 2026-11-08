@@ -126,7 +126,7 @@ async function main(): Promise<void> {
   const face = await fetchFace(say, () => { throw new Error('the game asked a die the page never hands in'); });
   // THE DESK: the cards before a game ask the module, and what a press keeps goes in this machine's store, where the next page's start reads it
   { const C = new Commands(); setDesk(new Desk(face.exports as unknown as DeskFace, face.exports.memory as WebAssembly.Memory, (key, text) => { try { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); } catch { /* no store: nothing is kept */ } }));
-    machineBefore(q, name, C); desk().do(C); }
+    C.words(location.search); machineBefore(q, name, C); desk().do(C); }
   // (an address that plays a mission comes up on that mission's brief, one that plays nothing on the title; either is live from here, and the game is made behind it)
   LOADBRIEF.on = q.get('loadbrief') !== '0'; settleOfQuery(q);
   LOADBRIEF.options = { open: () => openOptions({ tab: 'controls' }), close: closeOptions, up: optionsOpen };
@@ -137,7 +137,7 @@ async function main(): Promise<void> {
   say('starting the game …');
   boot.mark('module'); const tGame = performance.now();
   const game = new DrawGame(face), seed = Number(q.get('seed') ?? NaN);
-  machineBefore(q, name, game.commands);
+  machineBefore(q, name, game.commands, game.shown());
   game.start({ level, words: location.search, mannequin, mannequinBin, cast, castLook, seed: Number.isFinite(seed) ? seed >>> 0 : crypto.getRandomValues(new Uint32Array(1))[0] });
   machineAfter(game.commands, !benchSceneWaits() && !heldPage(q));
   game.tell();   // (the title and Options read what is kept before the first step)

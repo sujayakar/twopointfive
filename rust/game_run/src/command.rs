@@ -125,4 +125,8 @@ commands! {
     32 KitStageFrame { aspect: f64, cx: f64, cy: f64, h: f64, w: f64, man: f64, door: f64, left: f64, right: f64, keep: f64, top: f64, bottom: f64 } = |g, aspect, cx, cy, h, w, man, door, left, right, keep, top, bottom| {
         game::kitstage::frame(g, aspect, game::kitstage::frame_ask(cx, cy, h, w, man, [door, left, right, keep], [top, bottom]));
     };
+    /// one of the panel's actions, by its name (actions.rs), with what its row picked
+    33 Act { name: &str, value: f64, word: &str } = |g, name, value, word| crate::actions::act(g, name, value, word);
+    // (the desk: its kit rules read the numbers an address turns)
+    34 Words { text: &str } = |g, text| crate::words::apply(g, text);
 }

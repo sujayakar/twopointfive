@@ -24,6 +24,9 @@
 //!                                      then each: its key and label (text), 1 by hand and 2 regretted (u32), the clock it was made at and which came after which (f64)
 //!   face_saves_told(h) -> n            what the save controller tells the player, at face_out: its tag while it is up, then a line for each thing it has said since it was last asked (0: nothing of either)
 //!   face_knobs(h)                      every knob a person may turn, at face_out: its name's length (its top bit: a yes or no), the name, what it is turned to (f64)
+//!   face_shown()                       the panel's rows of the game's numbers, at face_out: name, label, section, title, how far each runs and how it shows
+//!   face_shown_now(h)                  what those rows stand at now, at face_out
+//!   face_actions(h)                    the panel's actions as rows, at face_out
 //!   face_draw_name(h, i)               a name that crosses by its number (a sound's), at face_out
 //!   face_draw_look(h, p, n)                 what the page says of its look (game_draw::LOOK numbers), once and when it changes
 //!   face_draw_layout() -> stamp        the stamp of the sections' declarations (and their text at face_out): a page whose offsets are of another is refused
@@ -95,7 +98,7 @@ pub unsafe extern "C" fn face_start(p: *const u8, n: usize, slot: i32, seed: u32
     let slot = if slot < 0 { match super::free_slot() { Some(s) => s, None => return 0 } } else { slot as usize };
     if slot >= sim::state::GAMES { return 0; }
     let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, ..Default::default() };
-    let mut stood = game_start::handed::stand_handed(super::bytes(p, n), &o, &mut |g, b| if let Err(why) = game_run::command::apply(g, b) { panic!("face_start: {why}") });
+    let mut stood = game_start::handed::stand_handed(super::bytes(p, n), &o, &mut |g, words, b| if let Err(why) = game_run::words::at_start(g, words, b) { panic!("face_start: {why}") });
     game::scene_collision::light_ready(&mut stood.game);
     let h = super::put(super::Held::new(stood.game));
     crate::memo::forget(h);
@@ -256,6 +259,45 @@ pub extern "C" fn face_knobs(h: u32) {
         }
         b
     });
+    super::out(b);
+}
+/// the panel's rows of the game's numbers (game_run shown.rs), at face_out: each its name, label, section and title (a u32 length, the text), then what it runs over and shows (lo, hi, step, scale: f64), and is it kept on this machine (bit 0) and advanced (bit 1, a u32)
+#[no_mangle]
+pub extern "C" fn face_shown() {
+    let mut b = Vec::new();
+    for r in game_run::shown::ROWS {
+        for t in [r.name, r.label, r.section, r.title] { b.extend_from_slice(&(t.len() as u32).to_le_bytes()); b.extend_from_slice(t.as_bytes()); }
+        for v in [r.lo, r.hi, r.step, r.scale, game_run::knobs::shipped(r.name).unwrap_or(f64::NAN)] { b.extend_from_slice(&v.to_le_bytes()); }
+        b.extend_from_slice(&(r.kept as u32 | (r.adv as u32) << 1).to_le_bytes());
+    }
+    super::out(b);
+}
+/// the panel's actions (game_run actions.rs), at face_out: each its name, label, section and title (a u32 length, the text), then how it is drawn (u32: 0 a button, 1 a button a word, 2 a pick of words, 3 a count, 4 a pick that is a new page), and what that takes: the words (a u32 count, each as text), and for a pick which stands now (text); lo, hi, step, start (f64); the address's word (text), then the words
+#[no_mangle]
+pub extern "C" fn face_actions(h: u32) {
+    use game_run::actions::{Takes, ACTIONS};
+    let b = super::with(h, |x| {
+        let mut b = Vec::new();
+        fn text(b: &mut Vec<u8>, t: &str) { b.extend_from_slice(&(t.len() as u32).to_le_bytes()); b.extend_from_slice(t.as_bytes()); }
+        fn words<S: AsRef<str>>(b: &mut Vec<u8>, w: &[S]) { b.extend_from_slice(&(w.len() as u32).to_le_bytes()); for t in w { text(b, t.as_ref()); } }
+        for a in ACTIONS {
+            for t in [a.name, a.label, a.section, a.title] { text(&mut b, t); }
+            match &a.takes {
+                Takes::Press => b.extend_from_slice(&0u32.to_le_bytes()),
+                Takes::Each(all) => { b.extend_from_slice(&1u32.to_le_bytes()); words(&mut b, &all(&x.g)); }
+                Takes::Choice(all, now) => { b.extend_from_slice(&2u32.to_le_bytes()); words(&mut b, &all(&x.g)); text(&mut b, &now(&x.g)); }
+                Takes::Count { lo, hi, step, start } => { b.extend_from_slice(&3u32.to_le_bytes()); for v in [*lo, *hi, *step, *start] { b.extend_from_slice(&v.to_le_bytes()); } }
+                Takes::Reload { word, picks } => { b.extend_from_slice(&4u32.to_le_bytes()); text(&mut b, word); words(&mut b, picks); }
+            }
+        }
+        b
+    });
+    super::out(b);
+}
+/// what each of those rows stands at now, as a row shows it (f64 each, in their order), at face_out
+#[no_mangle]
+pub extern "C" fn face_shown_now(h: u32) {
+    let b = super::with(h, |x| { let mut b = Vec::new(); for r in game_run::shown::ROWS { b.extend_from_slice(&(game_run::knobs::get(&x.g, r.name).unwrap_or(0.0) * r.scale).to_le_bytes()); } b });
     super::out(b);
 }
 #[no_mangle]
