@@ -640,9 +640,9 @@ pub fn request_qrf(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> 
 }
 
 /// Staging: no enemy of theirs stands within `clearM` of this mark.   (qrf.ts clearOfFoes)
-pub fn clear_of_foes(g: &crate::game::Game, seat: &crate::seats::SeatRef, p: V3) -> bool {
+pub fn clear_of_foes(g: &crate::game::Game, p: V3) -> bool {
     let clear_m = g.k.response.clear_m;
-    if flat(g.ch[g.pl[seat.player].ch].pos, p) < clear_m { return false; }
+    if crate::seats::men_left(g).into_iter().any(|pl| flat(g.ch[g.pl[pl].ch].pos, p) < clear_m) { return false; }
     for &x in &g.guards {
         if g.gd[x].team == crate::teams::Team::Operative && g.gd[x].state != crate::game::GuardState::Dead && flat(g.ch[g.gd[x].ch].pos, p) < clear_m { return false; }
     }

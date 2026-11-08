@@ -32,6 +32,7 @@
 //                 lesson's line for the whistle reads in the ring's words
 //   recordings    a recording carries the switch; one from before it replays with it off; the frozen stand holds it off by name
 // Headless: rows, the ring's view, what was done. The corner's one line and the ring as drawn are the page's (never seen on a GPU). NOBODY HAS PLAYED IT.
+import { cornerOf, notesOf } from './squadwords';
 import { ROOT } from './headless.ts';
 import { world } from './wallsnap-probes.ts';
 export async function handRingCheck(): Promise<boolean> {
@@ -178,11 +179,11 @@ export async function handRingCheck(): Promise<boolean> {
       //  the corner's notes say — a key's line under that key, a warning under none, nothing where the block's line says neither — and the panel has it)
       const DT: any = g.doorTools, leafD = g.doors.list.find((d: any) => d.def.name === 'conference'), { SAM_BY } = await import(`${ROOT}/src/game/ownblow.ts`), set0 = DT.set.length;
       const chargeAt = (near: boolean) => { rule(true); if (near) atDoor(); else floor(); step(20);
-        const hn: string = (DT.hudNotes() as any[]).map((n: any) => typeof n === 'string' ? n : n.text).find((t: string) => /^charge set/.test(t)) ?? '', cn: any[] = DT.cornerNotes(), key = /press \w+ to blow it/.test(hn), warn = (hn.match(/(TOO CLOSE|BEHIND THE DOOR):.*$/) ?? [''])[0];
+        const hn: string = notesOf(g).find((t: string) => /^charge set/.test(t)) ?? '', cn: any[] = cornerOf(g), key = /press \w+ to blow it/.test(hn), warn = (hn.match(/(TOO CLOSE|BEHIND THE DOOR):.*$/) ?? [''])[0];
         const notes = key ? cn.length === 1 && cn[0].key.length > 0 && /^blow the charge/.test(cn[0].text) && cn[0].text.endsWith(warn) : warn ? cn.length === 1 && cn[0].key === '' && /^charge set/.test(cn[0].text) && cn[0].text.endsWith(warn) : cn.length === 0;
         const want = cn.filter((o: any) => !o.key || g.orders.active).map((o: any) => o.text), got = fed(true, true).rows.filter((r: any) => r.one).flatMap((r: any) => r.opts.map((o: any) => o.text)), panel = want.every((t: string) => got.includes(t)) && (want.length > 0 || !got.some((t: string) => /^charge set|TOO CLOSE|BEHIND THE DOOR/.test(t)));   // (his own charge's row, 'blow the charge' on his key, is his list's and stands either way)
         return { ok: notes && panel, say: `the block '${hn}' → ${cn.length ? cn.map((o: any) => `[${o.key}] ${o.text}`).join(' | ') : 'nothing'}, the panel ${panel ? 'has it so' : `HAS [${got.join(' | ')}] FOR [${want.join(' | ')}]`}${notes ? '' : ' (THE NOTES ARE NOT THE BLOCK\'S)'}` }; };
-      DT.set.push({ door: leafD, side: 1, t: g.time, by: SAM_BY }); const cNear = chargeAt(true), cFar = chargeAt(false); DT.set.length = set0; step(20); const cNone = DT.cornerNotes().length === 0; rule(true);
+      DT.set.push({ door: leafD, side: 1, t: g.time, by: SAM_BY }); const cNear = chargeAt(true), cFar = chargeAt(false); DT.set.length = set0; step(20); const cNone = cornerOf(g).length === 0; rule(true);
       
       // (the panel's own gate: the three things with the rule on, the list as it was under the tour's puppet, with his ring's rule off, with this one off)
       const gate = cornerOn(false), gatePup = !cornerOn(true); HANDRING.on = false; const gateRing = !cornerOn(false); rule(true); HANDRING.corner = false; const gateOff = !cornerOn(false); rule(true);

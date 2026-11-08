@@ -125,7 +125,7 @@ const HELP = () => {
       g.aiEnabled = true;   // (the squad walks on its orders; the floor's defenders are parked out of the fight below)
       for (const x of g.guards) if (x.team !== 'operative' && x.state !== 'dead') { x.state = 'unconscious'; x.koT = 1e9; }
       g.teleportPlayer(window.__bmPt(d, s, d.def.width + 2.6, 1.4)); window.__bmPin(d, s, window.__bmPt(d, s, d.def.width / 2, 0.5, 1.0), 3.8); window.__bmStep(6);
-      const up = O.open(O.targetAt(d.frameCentre)); window.__bmStep(2); const shown = (O.hud().menu?.rows ?? []).flatMap(r => r.opts.map(x => `${x.key ? `[${x.key}] ` : ''}${x.text}`)).join(' | ');
+      const up = O.open(O.targetAt(d.frameCentre)); window.__bmStep(2); const shown = (O.menu ? O.menu.rows.map((d, i) => ({ kind: 'row', opts: [{ key: d.key ? String(d.key) : (d.hotKey || '').replace(/^Key|^Digit/, ''), text: `${O.labelOf(d, O.menuTarget())}${d.opens ? ' ▸' : ''}${O.menu.why[i] ? ` — ${O.menu.why[i]}` : ''}` }], off: !!O.menu.why[i] })) : []).flatMap(r => r.opts.map(x => `${x.key ? `[${x.key}] ` : ''}${x.text}`)).join(' | ');
       window.__input.pressed.add('KeyH'); window.__bmStep(1);
       const T = window.__bmT = { posed: 0, offGun: 0, kMax: 0, out: 0 }, an = gd.char.anim; let wound = false;
       window.__bmWatch = () => { if (gd.bigOut) T.out++; if (an.bigTool) T.posed++; if (an.hideHeldItem) T.offGun++; T.kMax = Math.max(T.kMax, an.bigK); };

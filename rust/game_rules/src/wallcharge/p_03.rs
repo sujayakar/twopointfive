@@ -423,14 +423,14 @@ pub fn wall_charge_input(g: &mut crate::game::Game, input: InputId) {
     let foot = wall_pt(g, &wall, 0.0, 0.0, None);
     let mine = v3::dist_xz(foot, sam);
     for x in g.door_tools.set.clone() {
-        if crate::doortools::door_tools_key_is(g, x) {
+        if crate::doortools::door_tools_key_is(g, &crate::seats::here(g), x) {
             let d = g.tab.doortools_set_charge[x].door;
             if v3::dist_xz(g.dr[d].frame_centre, sam) < mine { return; }
         }
     }
     wall_charge_blow(g, Some(c), None);
     let mut word = false;
-    for x in g.door_tools.set.clone() { if crate::doortools::door_tools_key_is(g, x) { word = true; break; } }
+    for x in g.door_tools.set.clone() { if crate::doortools::door_tools_key_is(g, &crate::seats::here(g), x) { word = true; break; } }
     if word { g.tab.input[input].pressed.delete(key.clone()); } else { g.wall_charge.pressed = true; }   // (men waiting at a door get the word on this same press)
 }
 

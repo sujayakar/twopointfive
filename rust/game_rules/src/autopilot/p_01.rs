@@ -67,7 +67,7 @@ pub fn auto_pick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, chec
     if !w.set { return first(g, t); } // (still walking to their marks: 'stack up' again)
     // AUTOPILOT.restack is settled on: on their marks it is 'stack up' again, answered and not walked, but for the two cases below it
     if w.men.len() < r.len() { return first(g, t); }
-    if crate::orders::squad_orders_big(g, &crate::seats::here(g)) || !crate::doortools::door_tools_stack_waits(g, &w.men).is_empty() {
+    if crate::orders::squad_orders_big(g, &crate::seats::here(g)) || !crate::doortools::door_tools_stack_waits(g, &crate::seats::here(g), &w.men).is_empty() {
         return AutoPick { id: Some(String::from("stack")), men: Some(w.men), word: false, why: AutoPickWhy::Set, t: t.clone(), kept: None };
     }
     // the men's own face of the door, off the marks they stand on: no path search to find it

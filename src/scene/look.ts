@@ -53,8 +53,8 @@ export const LOOK_LEVELS: Readonly<Record<string, string>> = {
   'consulate.json': 'consulate-gwot.json', 'defuse.json': 'defuse-gwot.json', 'floodlit.json': 'floodlit-gwot.json', 'mousehole.json': 'mousehole-gwot.json',
   'killhouse.json': 'killhouse-gwot.json', 'hall.json': 'hall-gwot.json',
 };
-/** DOOR LEAVES per level (picture only; scene/lookTidy.ts lookDoors): the paint of the outside leaves and, where a level has its own, of the inside ones — for
- *  the levels whose accent is not one of the three paints lookDoors counts off a level's boxes (the compound's blue, the barracks' green, the depot's oxide
+/** DOOR LEAVES per level (picture only; scene/leafPaint.ts paintLeaves): the paint of the outside leaves and, where a level has its own, of the inside ones — for
+ *  the levels whose accent is not one of the three paints paintLeaves counts off a level's boxes (the compound's blue, the barracks' green, the depot's oxide
  *  red). Without a row here every such level got the barracks' green doors. Keyed by the level's own file, colours as plain numbers (no imports here).
  *  `stuff` = WHAT THE LEAVES ARE MADE OF (Box.stuff): one word for every leaf, or one for the outside leaves and one for the inside ones. A row's colours are
  *  numbers and numbers say nothing, so a row that says no word has plain leaves. (Until 11-04 a leaf was whatever its colour was nearest: the records

@@ -154,14 +154,14 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
   check(reads.length === hit.length && hit.length <= 1 && lines.length >= 4, '10 picture only: in the game\'s code a box\'s word is READ in at most one place, what a round\'s hit looks like (particleFx.ts saidSurf: sparks, chips, the mark), and otherwise only said outright or copied from a thing to what is made of it (a prop\'s part to its box, a wall to its pieces, a named colour to a gun\'s part); no rule of a round, a charge, a blast or a man\'s senses asks it',
     `${lines.length} lines in ${files} · ${reads.length} read it${reads.length > hit.length ? `: ${reads.map(l => l.slice(0, 90)).join(' | ')}` : hit.length ? ' (the hit\'s picture)' : ' (the hit picture\'s rule is not in this build)'}`); }
 
-// 11. A DOOR'S LEAF IS MADE OF WHAT ITS PAINT IS (scene/lookTidy.ts lookDoors): every outside leaf in the level's accent paint is paint and every inside one in
+// 11. A DOOR'S LEAF IS MADE OF WHAT ITS PAINT IS (scene/leafPaint.ts paintLeaves): every outside leaf in the level's accent paint is paint and every inside one in
 //     the palette's wood is wood, whatever shade the leaf's own name gave it; a level's row of bare numbers says nothing unless it says a word for that side
-{ const { lookDoors } = await import(`${ROOT}/src/scene/lookTidy.ts`), { LOOK_DOORS } = await import(`${ROOT}/src/scene/look.ts`);
+{ const { paintLeaves } = await import(`${ROOT}/src/scene/leafPaint.ts`), { LOOK_DOORS } = await import(`${ROOT}/src/scene/look.ts`);
   const wears = [makeBox({ c: [0, 1, 0], h: [1, 1, 0.1], albedo: GWOT_PALETTE.paintBlue })];
   const leaves = (n: number) => Array.from({ length: n }, (_, i) => ({ def: { name: `door ${i}`, exterior: i % 2 === 0, steel: i === 1 }, box: makeBox({ c: [i, 1, 0], h: [0.45, 1, 0.03], albedo: [0.3, 0.3, 0.3], stuff: 'veneer' }) }));
   const of = (D: ReturnType<typeof leaves>, f: (d: ReturnType<typeof leaves>[number]) => boolean) => [...new Set(D.filter(f).map(d => d.box.stuff ?? 'plain'))].sort().join('/');
   const own = leaves(40), bare = leaves(40), sided = leaves(40), one = leaves(40);
-  lookDoors(own, wears); lookDoors(bare, wears, { out: [0.6, 0.42, 0.04] }); lookDoors(sided, wears, LOOK_DOORS['records.json']); lookDoors(one, wears, LOOK_DOORS['white-roof.json']);
+  paintLeaves(own, wears); paintLeaves(bare, wears, { out: [0.6, 0.42, 0.04] }); paintLeaves(sided, wears, LOOK_DOORS['records.json']); paintLeaves(one, wears, LOOK_DOORS['white-roof.json']);
   const out = (d: { def: { exterior?: boolean; steel?: boolean } }) => !!d.def.exterior, inn = (d: { def: { exterior?: boolean; steel?: boolean } }) => !d.def.exterior && !d.def.steel;
   const shades = new Set(own.filter(out).map(d => d.box.albedo[2].toFixed(4))).size;
   check(of(own, out) === 'paint' && of(own, inn) === 'plain/wood' && shades > 10 && own[1].box.stuff === 'veneer' && of(bare, out) === 'plain' && of(bare, inn) === 'plain/wood'

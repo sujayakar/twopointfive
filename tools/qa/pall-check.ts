@@ -152,12 +152,13 @@ export async function pallCheck(): Promise<boolean> {
       verdict(first.palls === K.perWindow && first.refused === 2 && then.palls === K.perWindow + 1, `the allowance: ${N} bursts in half a second raise ${K.perWindow} palls and the other two the old dust alone; ${K.windowSecs} s on the next burst raises its own`, `in the window: ${first.palls} palls, ${first.refused} refused · after it: ${then.palls} palls`);
       // …the wall charge is never the one refused; a restart of the floor (the lane's reset) empties the window. (The bursts go off once the charge is on the
       //  wall: its setting takes longer than the window is)
+      const slack0 = K.slack; K.slack = -1;   // (the solver's budget is a rule of its own, and six bursts spend it: asked here is the window, so the budget does not starve what it lets through)
       const S2 = await quiet(() => floor()), g2 = S2.g, at2 = openAt(g2), t0 = stats();
       const C2 = await quiet(async () => charge(S2, () => { for (let k = 0; k < K.perWindow; k++) { g2.destr.blast([at2[0] + k * 0.3, 0.2, at2[2]], { who: PLAYER_ID, radius: 2.5 }); S2.step(3); } })), afterCharge = since(t0).palls;
       await quiet(async () => { g2.destr.blast([at2[0], 0.2, at2[2]], { who: PLAYER_ID, radius: 2.5 }); }); const full = since(t0);
       await quiet(async () => { g2.destr.reset(); g2.destr.blast([at2[0], 0.2, at2[2]], { who: PLAYER_ID, radius: 2.5 }); }); const end = since(t0);
       verdict(!!C2 && C2.pall.length >= K.wall.near && afterCharge === K.perWindow + 1 && full.palls === K.perWindow + 1 && full.refused === 1 && end.palls === K.perWindow + 2,
-        'a wall charge blown inside a full window still raises its pall (the player\'s own set piece is never the one refused) and counts in it; the lane\'s reset empties the window', `after ${K.perWindow} bursts the charge: ${C2?.pall.length ?? 0} emitters, ${afterCharge} palls · one more burst: ${full.palls} palls, ${full.refused} refused · after reset() the same burst: ${end.palls} palls`); }
+        'a wall charge blown inside a full window still raises its pall (the player\'s own set piece is never the one refused) and counts in it; the lane\'s reset empties the window', `after ${K.perWindow} bursts the charge: ${C2?.pall.length ?? 0} emitters, ${afterCharge} palls · one more burst: ${full.palls} palls, ${full.refused} refused · after reset() the same burst: ${end.palls} palls`); K.slack = slack0; }
     // A STARVED SOLVER: under `slack` free slots nothing of the pall is asked
     { const S = await quiet(() => floor()), g = S.g, s0 = stats(); g.smoke.budget = () => K.slack - 1; await quiet(async () => { burst(S, 'frag'); }); const starved = split(S.emits).pall.length, st = since(s0);
        }

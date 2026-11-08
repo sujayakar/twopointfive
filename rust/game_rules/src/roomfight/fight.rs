@@ -25,7 +25,7 @@ pub fn flat(a: V3, b: V3) -> f64 {
 
 /// A draw of the simulation's die in a range.   (roomfight.ts pick)
 pub fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]) -> f64 {
-    r[0] + crate::math_dice::sim_random(g) * (r[1] - r[0])
+    r[0] + crate::dice::draw_for(g, "roomfight::pick#1", who) * (r[1] - r[0])
 }
 
 /// His head bone, or where it would be.   (roomfight.ts eyeOf)

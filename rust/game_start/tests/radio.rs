@@ -172,15 +172,15 @@ fn the_strip_gives_a_row_to_one_line_ranked_and_rate_limited() {
 #[test]
 fn in_a_game_of_two_each_hud_is_told_its_own_men_its_own_line_and_its_own_room() {
     for seed in SEEDS {
-        let mut p = Play::level("defuse.json", true, &Opts { seed, seats: 2, ..Default::default() });
+        let mut p = Play::level("office.json", true, &Opts { seed, seats: 2, ..Default::default() });
         p.frame();
         // CONTROL: the rule at the place the seat's man stands is the room's own: two men side by side are told one room
         assert_eq!(p.view_of(0).place, p.view_of(1).place, "seed {}: side by side", seed);
-        let charges = p.charges();
         let names: Vec<PlaceRect> = game::dialogue::place_rects(&p.g);
-        let room_of = |at: [f64; 2]| names.iter().position(|r| at[0] >= r.x0 && at[0] < r.x1 && at[1] >= r.z0 && at[1] < r.z1);
-        let far = charges.iter().copied().find(|&c| room_of(c) != room_of(charges[0])).unwrap_or_else(|| panic!("seed {}: the level's charges stand in one room", seed));
-        p.seat_stands(0, charges[0]);
+        let mid = |r: &PlaceRect| [(r.x0 + r.x1) / 2.0, (r.z0 + r.z1) / 2.0];
+        p.seat_stands(0, mid(&names[0]));
+        let here = p.view_of(0).place;
+        let far = names.iter().map(mid).find(|&at| { p.seat_stands(1, at); p.view_of(1).place != here }).unwrap_or_else(|| panic!("seed {}: the level has one room", seed));
         p.seat_stands(1, far);
         let (a, b) = (p.view_of(0), p.view_of(1));
         assert_ne!(a.place, b.place, "seed {}: in two rooms each is told his own", seed);

@@ -277,7 +277,7 @@ export const KEYS = {
   mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'area', 'door'], drive: ['id', 'kind', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'door', 'x', 'z', 'out'],
   breaker: ['pos', 'panel', 'led', 'fumble'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'], daylight: ['sun', 'sky', 'groupsOn', 'groupsOff', 'lightsOff', 'haze', 'exposure'],
   plans: ['roomClear', 'breach'],   // (the container only — what is INSIDE a plan is generic, see canonBlob)
-  scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'defuse', 'issue', 'kitView', 'response', 'doorNames', 'walked'],   // (the container only, likewise: what is inside is scene/scenarios.ts's, carried as written)
+  scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'issue', 'kitView', 'response', 'doorNames', 'walked'],   // (the container only, likewise: what is inside is scene/scenarios.ts's, carried as written)
 } as const;
 /** the keys a shape's piece (BoxData.shape.with) may carry beside its form, in the order they are written. ITS OWN LIST, read by hand in three places
  *  (levelLoad.ts loadLevel and levelToData, canonShape below): a key a box gains for its paint is added here and there together, or a piece would be allowed
@@ -857,20 +857,6 @@ export function validateLevelData(d: LevelData): string[] {
                 if (L.sam.on !== undefined && typeof L.sam.on !== 'boolean') err(`${yw}.light.sam.on`, 'true or false'); if (L.sam.aim !== undefined && !isVec(L.sam.aim)) err(`${yw}.light.sam.aim`, 'Vec3'); } } } }
             for (const k of ['hide', 'hideMore', 'hidePaint']) if (y[k] !== undefined && !(Array.isArray(y[k]) && y[k].every((v: unknown) => typeof v === 'string' && v.length > 0))) err(`${yw}.${k}`, 'a list of box ids / box groups');
             if (y.roomLights !== undefined && !(isNum(y.roomLights) && y.roomLights >= 0)) err(`${yw}.roomLights`, 'a number, 0 or more'); });
-        }
-      }
-      if (S.defuse !== undefined) {   // (scene/scenarios.ts DefuseData: the shapes and the face's normal — whether a man can stand at a charge to work it is asked of the built floor by tools/qa/defuse-check.ts)
-        const D = S.defuse, w = 'scenarios.defuse';
-        if (!isObj(D)) err(w, 'must be an object');
-        else {
-          known(w, D, ['secs', 'workSecs', 'devices', 'blast']);
-          if (!(isNum(D.secs) && D.secs > 0)) err(`${w}.secs`, 'seconds > 0'); if (D.workSecs !== undefined && !(isNum(D.workSecs) && D.workSecs > 0)) err(`${w}.workSecs`, 'seconds > 0');
-          if (D.blast !== undefined) { if (!isObj(D.blast)) err(`${w}.blast`, 'must be an object'); else { known(`${w}.blast`, D.blast, ['lethalM', 'woundM', 'radius', 'power']); for (const k of Object.keys(D.blast)) if (!isNum(D.blast[k])) err(`${w}.blast.${k}`, 'a number'); } }
-          const devs = recs(`${w}.devices`, D.devices); if (!devs.length) err(w, 'devices: at least one');
-          const ids = new Set<unknown>();
-          devs.forEach((d: any, i) => { const dw = `${w}.devices[${i}]`; if (!isObj(d)) return; known(dw, d, ['id', 'name', 'pos', 'n']);
-            if (!isStr(d.id) || !isStr(d.name)) err(dw, 'id, name: non-empty strings'); else if (ids.has(d.id)) err(dw, `id '${show(d.id)}' used twice`); ids.add(d.id);
-            if (!isVec(d.pos)) err(`${dw}.pos`, 'Vec3'); if (!(Array.isArray(d.n) && d.n.length === 2 && d.n.every((x: unknown) => isNum(x)))) err(`${dw}.n`, '[x, z]'); else if (Math.abs(Math.hypot(d.n[0], d.n[1]) - 1) > 0.01) err(`${dw}.n`, 'a unit normal out of the face a man works'); });
         }
       }
       if (S.doorNames !== undefined) {   // (scene/scenarios.ts: what a door is called where its id cannot say it — game/doornames.ts; the words' own rules are probes.ts words-doornames's)

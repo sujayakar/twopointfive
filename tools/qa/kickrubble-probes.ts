@@ -151,7 +151,7 @@ export async function kickWall(): Promise<boolean> {
 export async function kickLeft(): Promise<boolean> {
   const Fm = family('kickrubble-left: a boot leaves alone what is not at his feet, what is too heavy, and glass; a slider never leaves its floor');
   { // a piece on a desk top: he stands in reach of it, then walks past it
-    const S = await stage(true); const g = S.game; RUBBLE.on = false;
+    let S = await stage(true); let g = S.game; RUBBLE.on = false;
     // a low static top (0.35‥1.0 m) with open floor beside it: the first the level has
     const topAt = (x: number, z: number) => { const h = g.col.raycast([x, 1.4, z], [0, -1, 0], 1.6); return h ? 1.4 - h.t : -1; };
     let spot: { x: number; z: number; top: number; sx: number; sz: number } | null = null;
@@ -168,6 +168,7 @@ export async function kickLeft(): Promise<boolean> {
     // the twin with the floor rule widened: there the same man, standing the same, DOES push it — he is in reach of it in plan, so the rule is what holds
     const T2 = await stage(true); const floor0 = RUBBLE.floor; let twin = 0, twinInto = 0;
     try { const B = await lay(T2); RUBBLE.floor = 5; RUBBLE.on = true; run(T2, 120); twin = T2.D.shoves; twinInto = B.into; } finally { RUBBLE.floor = floor0; }
+    S = await stage(true); g = S.game;   // (a page has one Game: the man asked of stands after the twin, whose stand took the world over)
     const A = await lay(S); const c = A.c; RUBBLE.on = true; S.events.length = 0; const l0 = S.D.stats.landed; run(S, 240);
     Fm.verdict(A.on && A.into > RUBBLE.inside && twin > 0 && pose(c) === A.p0 && S.D.shoves === 0, 'a plank lying on a desk top and out over its edge INTO the man standing there is not at his feet', `top ${f2(spot.top)} m at (${f2(spot.x)}, ${f2(spot.z)}), edge ${f2(ed)} m on · it reaches ${f2(A.into)} m into his circle in plan (pushed off past ${RUBBLE.inside}) · pose ${pose(c) === A.p0 ? 'bit-equal' : 'CHANGED'}, shoves ${S.D.shoves} · the twin with the floor rule widened (in ${f2(twinInto)} m): ${twin} shoves`);
     S.gd.char.pos[0] = spot.x + spot.sx * (ed + 0.3) - spot.sz * 1.2; S.gd.char.pos[2] = spot.z + spot.sz * (ed + 0.3) + spot.sx * 1.2; S.gd.hold = false; const from = [...S.gd.char.pos] as Vec3;

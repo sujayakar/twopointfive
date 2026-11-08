@@ -14,8 +14,7 @@
 // handed to the picture in one frame and how many hand-overs were dropped.
 // It writes what mission.ts writes: h<k>.bin, THE HOST'S HALF as tick k opens, is a record a seat (here two), then every camera and Input row
 // (the bridge's own writer, export.ts hostHalf).
-// What the host does round a step here (seats-run.ts `tick`): the lamps' update after the tick, the box world listed again after EVERY tick (host.txt's
-// last column is therefore 1 from the second tick), each hand's camera moved and its Input's frame ended. The cameras and Inputs of the hands are the
+// What the host does round a step here (seats-run.ts `tick`): the lamps' update after the tick, each hand's camera moved and its Input's frame ended. The cameras and Inputs of the hands are the
 // host's own: they feed the next tick's records and nothing else.
 import '../qa/stand.ts';
 import { writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
@@ -101,7 +100,7 @@ for (let i = 0; i < TICKS && !threw; i++) {
     writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g, reg, cmds));
     // (`--start-only`, as mission.ts: the start alone for a kept run of an older layout of the wire; no tick is run)
     if (argv.includes('--start-only')) { writeFileSync(`${outDir}/hostrows.txt`, hostRowsText(g));   /* (which rows of the half are the HOST's own, handed at the stand: half-grow.ts gives them to a half kept before a host had them) */ const x: any = sim(), at = x.knob_addr(0), len = x.knob_len(0) * 8; writeFileSync(`${outDir}/knobs.bin`, new Uint8Array(x.memory.buffer).slice(at, at + len)); process.exit(0); }
-    appendFileSync(`${outDir}/host.txt`, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : 1}\n`);
+    appendFileSync(`${outDir}/host.txt`, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1}\n`);
     try { return step.call(this, dt, c); } finally {
       appendFileSync(`${outDir}/post.txt`, `${k} ${g.dice?.n ?? -1} ${g.dice?.s ?? -1} ${g.time} ${hashes(words(g)).join(' ')}\n`);
       if (keep(k)) { writeFileSync(`${outDir}/a${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s${k}.bin`, block(g)); } }

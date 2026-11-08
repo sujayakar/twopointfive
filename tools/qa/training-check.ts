@@ -80,7 +80,7 @@ export async function trainingCheck(): Promise<boolean> {
    *  alone in it — the nearest who is not his squad's first — the rest across the yard) */
   const stage = async (seed: number, o: { training: string; dark?: boolean; pair?: boolean; trio?: boolean; nerve?: string }) => {
     Math.random = seeded(seed);
-    const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(JSON.stringify(compoundRaw()))) }));
+    const W: any = await quiet(() => standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(JSON.stringify(compoundRaw()))) }));
     const g = W.game; DOORBLAST.on = true; DESTRUCTION.on = true; FRAG.doorStun = true; g.tune.chaos = 0.5; MORALE.nerve = o.nerve ?? 'normal'; train(o.pair ? 'mixed' : o.training);
     startFromQuery(g, 'levelFile=compound.json&roomclear&squad4'); g.godMode = true;
     const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; W.step(DT); } };
@@ -99,8 +99,8 @@ export async function trainingCheck(): Promise<boolean> {
     const hole = doorPt(d, d.def.width / 2, HE40.standoff + 0.03, side, 1.0) as V3;
     let k = 0; men.forEach((x: any) => { if (x !== T && !(o.pair && x === T2) && x !== T3) { put(x, [4.8 + (k % 4) * 0.9, 0, 5.8 + Math.floor(k / 4) * 0.9]); k++; } });
     put(T, p); if (o.pair) put(T2, doorPt(d, d.def.width / 2 + 1.6, 3.4, inside, 0)); if (T3) put(T3, doorPt(d, d.def.width / 2 + 1.2, 2.2, inside, 0));
-    if (o.dark) for (const t of g.targets) if (t.on && flat(t.pos, p) < 6) toggleTarget(g, t);
-    step(40);
+    if (o.dark) for (const t of g.targets) if (t.on) toggleTarget(g, t);   // (every lamp: what the yard's and the next room's lamps send round lights a dark hut past the floor)
+    step(40); if (o.dark) for (let i = 0; i < 300 && !(inTheDark(g, T) && moraleOf(T)?.dark); i++) step();   // (the place's light eases down over a couple of seconds, and he reads where he stands on his own beat)
     const shell = () => blast(g, [hole[0], hole[1] - FRAG.lift, hole[2]], { who: PLAYER_ID, name: '40 mm grenade' });
     const toss = () => { const a = doorPt(d, d.def.width / 2, 1.2, side, 1.3), b = doorPt(d, d.def.width / 2, 0, side, 1.3), q = 4 / Math.max(1e-3, flat(a, b)); return g.items.spawn('mag', a, [(b[0] - a[0]) * q, 1.2, (b[2] - a[2]) * q], { who: PLAYER_ID, fill: 1 }); };
     return { W, g, d, T, T2, T3, men, p, hole, inside, step, shell, toss };
@@ -124,7 +124,7 @@ export async function trainingCheck(): Promise<boolean> {
       const staff = g.guards.filter((x: any) => !x.unit && x.team === 'guard'), T = staff[0];
       for (const x of staff) if (x !== T) { x.hold = true; x.pinned = true; }
       for (const t of g.targets) if (t.on && t.kind !== 'breaker') toggleTarget(g, t);
-      step(90); const S = moraleOf(T), calm = { state: T.state, alone: !!S?.alone, dark: !!S?.dark, dread: dreadOf(T), rung: rungOf(T) };
+      step(90); for (let i = 0; i < 300 && !(inTheDark(g, T) && moraleOf(T)?.dark); i++) step(); const S = moraleOf(T), calm = { state: T.state, alone: !!S?.alone, dark: !!S?.dark, dread: dreadOf(T), rung: rungOf(T) };
       const st = T.state; T.state = 'suspicious'; const up = dreadOf(T); T.state = st;
       moraleShock(g, T, 0.05); const shocked = dreadOf(T);
       line(calm.state === 'patrol' && calm.alone && calm.dark && inTheDark(g, T) && calm.dread === 0 && calm.rung === 0 && Math.abs(up - (MORALE.alone + MORALE.dark)) < 1e-9 && Math.abs(shocked - (0.05 + MORALE.alone + MORALE.dark)) < 1e-9,
@@ -168,7 +168,7 @@ export async function trainingCheck(): Promise<boolean> {
       const said = listen(R, [T], stagger + 3.5, t => { if (t > stagger + 0.1) clutch = Math.max(clutch, T.char.anim.clutch ?? 0); }), call = said.find(s => s.radio && moraleLines('call').includes(s.text));
       const green = { tr, rung: rungOf(T), back: flat(T.char.pos, R.hole) - flat(p0, R.hole), rounds: fired(T) - n0, clutch, act: moraleOf(T)?.act, alone: !!moraleOf(T)?.alone };
       const R2 = await stage(63, { training: 'trained' }), T2 = R2.T, m0 = fired(T2), q0 = [...T2.char.pos], dark2 = inTheDark(R2.g, T2); const tr2 = trainingOf(R2.g, T2); R2.shell(); const stag2 = Math.max(0, T2.staggerUntil - R2.g.time); R2.step(60); const r1 = rungOf(T2), a1 = moraleOf(T2)?.act, mv1 = flat(T2.char.pos, q0), low1 = T2.char.anim.crouch;
-      let upAt2 = NaN; for (let i = 61; i <= 360; i++) { R2.step(); if (Number.isNaN(upAt2) && moraleOf(T2)?.act !== 'duck') upAt2 = i * DT; } const duck2 = upAt2 - stag2;
+      let upAt2 = NaN; for (let i = 61; i <= 360 && Number.isNaN(upAt2); i++) { R2.step(); if (moraleOf(T2)?.act !== 'duck') upAt2 = i * DT; } const duck2 = upAt2 - stag2;
       line(!dark0 && green.tr === 'green' && green.alone && green.rung === 2 && green.back >= 1 && green.rounds >= 3 && !!call && !/can't see/.test(call.text) && green.clutch > 0.5,
         '(T3) a GREEN man alone with the lamps burning, the 40 mm on his door: broken — folded, the call nobody answers (and not the one that says he cannot see), a metre and more back, rounds into the dust',
         `${T.callsign} ${green.tr} · dark ${dark0} alone ${green.alone} · rung ${green.rung} ${green.act} · ${f2(green.back)} m further off · ${green.rounds} rounds · folded after the stagger ${f2(green.clutch)} · ${call ? `"${call.text}" (radio)` : `no call: ${words(said)}`}`);
@@ -180,7 +180,7 @@ export async function trainingCheck(): Promise<boolean> {
       R.shell(); const stagger = Math.max(0, T.staggerUntil - g.time); let clutch = 0, low = 0, n = 0;
       const said = listen(R, [T], stagger + 3.5, t => { if (t > stagger + 0.1) clutch = Math.max(clutch, T.char.anim.clutch ?? 0); if (t > stagger + 1) { n++; if (T.char.anim.crouch > 0.7) low++; } });
       const call = said.find(s => moraleLines('clear').includes(s.text)), panic = said.filter(s => [...moraleLines('call'), ...moraleLines('again'), ...moraleLines('out')].includes(s.text));
-      const back = flat(T.char.pos, R.hole) - flat(p0, R.hole), dust = fired(T) - n0, rung = rungOf(T), act0 = (R.step(150), moraleOf(T)?.act);
+      const back = flat(T.char.pos, R.hole) - flat(p0, R.hole), dust = fired(T) - n0, rung = rungOf(T), act0 = (() => { for (let i = 0; i < 150 && moraleOf(T)?.act !== 'hold'; i++) R.step(); return moraleOf(T)?.act; })();
       line(tr === 'steady' && rung === 2 && clutch < 0.5 && low >= n - 30 && back >= 1 && facing(T, R.hole) < 0.5 && !!call && call.radio && !panic.length && dust === 0 && fired(T) === n0 && act0 === 'hold',
         '(T4) a STEADY man alone in the dark: broken, and copes trained — down, never folded; a metre and more back facing the hole; the flat call on the net; not a round into the dust; then the hold',
         `${T.callsign} ${tr} · rung ${rung} → ${act0} · folded after the stagger ${f2(clutch)} · low ${low} of ${n} frames · ${f2(back)} m further off, ${f2(facing(T, R.hole))} rad off the hole · ${call ? `"${call.text}"${call.radio ? ' (radio)' : ' (SPOKEN)'}` : `no flat call: ${words(said)}`} · rounds ${fired(T) - n0}`); }
@@ -249,7 +249,7 @@ export async function trainingCheck(): Promise<boolean> {
         `together ${together} · ${near.callsign}: rung ${rungs[0]} ${acts[0]}, ${dust[0]} rounds into the dust · ${far.callsign}: rung ${rungs[1]} ${acts[1]}, ${dust[1]} rounds · 'lost' lines after the blast ${lost2}`); }
 
     // (F3) no break is for ever (the cap drawn in from seventy seconds, for the length of the run)
-    { const R = await stage(68, { training: 'green', dark: true, nerve: 'brittle' }), g = R.g, T = R.T; MORALE.halfLife = 1e6; MORALE.holdMax = 10;   // (his shock held up: only the cap can let him go)
+    { const R = await stage(68, { training: 'green', dark: true, nerve: 'brittle' }), g = R.g, T = R.T; MORALE.halfLife = 1e6; MORALE.holdMax = 4;   // (his shock held up: only the cap can let him go)
       const s0 = moraleOf(T)?.shock ?? 0; R.shell(); R.step(2); const fedBy = (moraleOf(T)?.shock ?? 0) - s0, stagger = Math.max(0, T.staggerUntil - g.time);
       let holdAt = NaN, freeAt = NaN, again = 0; const N = Math.round((stagger + MORALE.holdMax + 3) * 60);
       for (let i = 1; i <= N; i++) { R.step(); const a = moraleOf(T)?.act, t = i * DT - stagger; if (Number.isNaN(holdAt) && a === 'hold') holdAt = t; if (!Number.isNaN(holdAt) && Number.isNaN(freeAt) && a === 'none') freeAt = t; else if (!Number.isNaN(freeAt) && (a !== 'none' || hasHim(T, OWN.morale))) again++; }

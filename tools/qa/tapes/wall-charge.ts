@@ -1,6 +1,7 @@
 // A wall charge, start to finish, for the sound replays (tools/qa/sound-tapes.cjs; the page bot runs it): Mousehole from the dark yard, the four told to
 // breach the ward's outside wall, the charge blown on F, the entry left to run. Input only: the cursor on the wall, X, the row's own
 // digits (read off the menu that came up), F.
+import { menuKey } from '../squadwords';
 import type { Bot } from '../lesson-run';
 
 export const query = '?levelFile=mousehole.json&roomclear&squad4&freshstart=0', title = 'A wall charge';
@@ -14,7 +15,7 @@ const ROW = 'wallCharge', PAGE = 'walltools';
 /** X on `p` and the keys to the wall's row; false = that place has no such row, or it is greyed (the menu is put away) */
 function charge(B: Bot, p: number[]): boolean {
   const O = B.g.orders, n = O.log.length;
-  B.aim(p); B.step(2); B.aim(p); B.press('KeyX', 20);
+  B.aim(p); B.step(2); B.aim(p); menuKey(O); B.step(20);
   const key = (id: string, by: 'id' | 'opens') => { const M = O.menu; if (!M) return 0; const i = M.rows.findIndex((r: any) => r[by] === id); return i >= 0 && !M.why[i] ? Number(M.rows[i].key) || 0 : 0; };
   let k = key(ROW, 'id');
   if (!k) { const o = key(PAGE, 'opens'); if (o) { B.press(`Digit${o}`, 6); k = key(ROW, 'id'); } }

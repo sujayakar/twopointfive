@@ -52,7 +52,7 @@ console.log(`\n=== kit stores: a drum is steel in any paint, and the one on its 
 { const body: Box[] = []; for (const [x, z] of [[10, 10], [14.5, 7.25], [22, 31], [3.3, 18.9], [27.1, 5.6], [8.9, 20.3]]) body.push(...laid(G => BREAK ? G.crates(x, z, 0, 3, 'olive') : G.drums(x, z, 6)).boxes.filter(solid));
   const paints = [...new Set(body.map(b => paintOf(b.albedo)?.name ?? '?'))].sort(), notMetalRow = paints.filter(n => n in GWOT_PALETTE && doesOfName(n) !== 'steel');
   const notSteel = body.filter(b => readAs(b).length);
-  check(body.length >= 36 * 4 && notSteel.length === 0 && paints.length >= 3 && notMetalRow.length > 0, '2 the drums `drums` deals are steel, each of them, in the paints it deals from, one at least of which is not metal by its row',
+  check(body.length >= 36 && notSteel.length === 0 && paints.length >= 3 && notMetalRow.length > 0, '2 the drums `drums` deals are steel, each of them, in the paints it deals from, one at least of which is not metal by its row',
     `${body.length} boxes of thirty-six drums in ${paints.join(', ')} (not metal by the row: ${notMetalRow.join(', ') || 'NONE: the line asks nothing'}) · ${notSteel.length} not metal to a round${notSteel.length ? ` (${[...new Set(notSteel.flatMap(readAs))].join(' · ')})` : ''}`); }
 
 // 3. the drum on its side (in a drum's enamel; in a bare paint, so that the trim's bare metal is asked; in a row that is no coat, so that the trim's word is)

@@ -146,8 +146,8 @@ export async function koKinds() {
 // ================================================================ (3) the witness record: a man remembers only what he saw or heard
 /** (a) Sam shoots A on the corridor with his SUPPRESSED pistol (level 0.6 since 8b3f69d: an odd noise within ≈ 7.5 m, not gunfire): B six metres off with A in
  *      his open view remembers seeing it (sawAct shot / A) and hearing the odd noise (heard.small, placed at the muzzle; heard.shots 0; never alert); C out on the
- *      lot hears NOTHING of it (shots / small / bang 0, no sawAct, never alert) and knows only B's call (calledToBody dead). Sam himself is in the dark to both
- *      (visibility 0.02): B saw the VICTIM drop. (The loud carry to the lot lives on in (e)'s level-1 shot and (d)'s charges.)
+ *      lot hears NOTHING of it (shots / small / bang 0, no sawAct, never alert) and knows only B's call (calledToBody dead). Sam himself is kept from both
+ *      (playerInvisible from the frame after the shot): B saw the VICTIM drop. (The loud carry to the lot lives on in (e)'s level-1 shot and (d)'s charges.)
  *  (b) the quiet takedown of A with B watching: B's sawAct says struck; a frame later he finds the body — sawBody breathing; D on the lot gets the call (calledToBody
  *      breathing) and nothing else.
  *  (c) the same takedown with nobody looking (B and D on the lot facing away): both records stay empty for ten seconds — no sound of it reaches them, no call.
@@ -162,13 +162,13 @@ export async function witness() {
   const stage = async (seed: number, opts: { bWatching?: boolean } = {}) => {
     Math.random = seeded(seed);
     const W = await standUp(); const { game } = W;
-    game.player.visibility = 0.02; game.godMode = true;
+    game.godMode = true;
     for (let i = 0; i < 5; i++) W.step(DT);
     const [A, B, C] = game.guards;
     place(A, [14, 0, 11.2], Math.PI / 2); A.hold = true;
     if (opts.bWatching !== false) { place(B, [20, 0, 11.2], -Math.PI / 2); B.hold = true; } else park(B, 0);
     park(C, 1);
-    game.teleportPlayer([13.2, 0, 11.2]); game.player.crouch = true; W.step(DT); game.player.visibility = 0.02;
+    game.teleportPlayer([13.2, 0, 11.2]); game.player.crouch = true; W.step(DT);
     const los = { bSeesA: pointInView(game, B, chest(A)), cSeesA: pointInView(game, C, chest(A)), cWall: game.col.segmentBlocked(eyeOf(C), chest(A)), bSeesSam: B.sawPlayerThisFrame };
     return { W, game, A, B, C, los, ...tap(game) };
   };
@@ -192,6 +192,7 @@ export async function witness() {
     const ev = game.events.find((e: any) => e.kind === 'shot' && e.time === game.time);   // Sam's report as filed this frame
     W.step(DT);
     const smallB1 = B.witness.heard.small, whereB1 = B.witness.heard.smallWhere ? v3.copy(B.witness.heard.smallWhere) : null;   // one frame on: the report alone has reached B (the body's fall and the find come later)
+    game.playerInvisible = true;   // (Sam stands under a corridor panel: what B saw was the VICTIM, so from here Sam is kept from his eyes)
     for (let i = 0; i < 89; i++) W.step(DT);   // a second and a half in all: everything that carries has carried, the far man's reactT would have passed
     if (A.downKind !== 'shot') fails.push(`A ${A.state}/${A.downKind}`);
     if (!ev || (ev.level ?? 0) >= 1 || ev.loud || ev.weapon !== game.player.pistol.def.id) fails.push(`the shot event: ${ev ? `level ${ev.level} loud ${ev.loud} weapon ${ev.weapon}` : 'none filed'} (want the ${game.player.pistol.def.id}'s, level < 1, not loud: the suppressed report)`);
@@ -216,7 +217,7 @@ export async function witness() {
     const fails: string[] = []; if (!los.bSeesA) fails.push('staging: A not in B\'s view');
     startTakedown(game, A);   // (B held with his head on A: the witness asks the same eye as everything else, and a man looking about may not see the blow)
     let actB: any = null; let foundAt = -1;
-    for (let i = 0; i < 60 * 8; i++) { W.step(DT); if (!actB && B.witness.sawAct) actB = { ...B.witness.sawAct, at: game.time }; if (actB) B.hold = false; /* free to walk up and call it */ if (foundAt < 0 && A.found) foundAt = game.time; }
+    for (let i = 0; i < 60 * 8; i++) { W.step(DT); if (!actB && B.witness.sawAct) actB = { ...B.witness.sawAct, at: game.time }; if (actB) { B.hold = false; game.playerInvisible = true; } /* free to walk up and call it; what he saw was the VICTIM, and Sam stands under a corridor panel: kept from his eyes from here */ if (foundAt < 0 && A.found) foundAt = game.time; }
     if (A.downKind !== 'struck' || !isBreathing(A)) fails.push(`A ${A.downKind} breathing ${isBreathing(A)}`);
     if (!actB || actB.kind !== 'struck' || actB.victim !== A.callsign) fails.push(`B.sawAct ${JSON.stringify(actB)} (want struck / ${A.callsign})`);
     if (foundAt < 0) fails.push('B never called the body in 8 s');

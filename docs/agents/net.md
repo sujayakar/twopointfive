@@ -511,6 +511,10 @@ line).
   mpserver-check: its scripted hands are timed by the wall clock, and only one run in several comes near a tube's threshold (a dimmed client parted 1
   run of 1 on step 1334 and 0 of 4 on 1515; with the game's own number turned on purpose, 1 of 8), so a red path there would not be red. Nobody has
   looked at a picture: no GPU, no page was opened for this.
+- **`seats-check`'s fights stage their meeting** (2026-11-08). The scripted hands walk straight at the nearest enemy, walls or no, so `hurt > 0` rode the
+  seed (seeds 1, 2, 3, 5, 7 read 0, 0, 0, 4, 0 men down after the keyed dice). A second in, each player is set down over open floor three to six metres
+  from an enemy of his own, in both plays of the twin alike; the line wants both set down besides. Seeds 1, 2, 3, 5, 7, 9: 7 to 9 men down on the office
+  floor, 3 to 5 on the night breach, 2 to 5 of them the other side's.
 - **The two-seat checks on the Rust game** (2026-11-07). `bun run tools/qa/seats-check.ts` is restated: every tick is `stepSeats(dt, [record, record])`,
   the word a line holds a game to is the game's own (the die and the block: `stateWords`), a moment is kept and put back through `savestate.ts SNAPS`
   (the Rust game kept), and each fight runs in a process of its own (`--fight`: a game stood after another in one process does not start as the first
@@ -559,3 +563,5 @@ line).
   twenty seconds over the wire; a mission ENDING on a server (the verdict's answer was read by hand, never over the wire); the run's memory on a long
   game (its text is kept for joiners: about 20 KB a second with two seats sending every tick, 80 MB over the longest life); a real socket backing up (the
   check's dropping socket is made up; bun's own `drain` was not seen to fire).
+
+- **Every player on the floor (2026-11-08).** In a game of two the world's lines of the tick run with the first seat standing, so a rule that read `g.player` there answered for the first player alone. `tools/blitz/sweeps/seat-tick.py` lists what they reach. Rounds in flight, the team's being down (`seats::all_down`: down when all are), a defender's foe (`teams::foe_char`), friends in a lane, a place clear of foes, a hole in a wall, and a man's senses when another rule runs them (`seats::standing_for`) now go by every player. No switch; a game of one is the same by `hold` (110 of 110). Checks: `rust/game_start/tests/two_seats.rs`, two seeds, each seat in turn, red for the second seat before. Left as it was: a camera looks at the nearest player only, a shared HUD line such as 'a ring airfoil in the ribs' names nobody, and a runner's picture holds one place for the players. Nobody has played these as two; never seen on a GPU.

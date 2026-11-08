@@ -25,6 +25,7 @@
 //                  furniture), where those men really are once staged and two seconds on, whether that is the same at every restart; and ?rescue&squad4 = the
 //                  pair (four in the rescue is not built — why it is not on the list)
 import { sample } from './sweep.ts';
+import { blockOf } from './squadwords';
 import { resolve } from 'node:path';
 import { pool, jobsOf } from './pool.ts';
 import { readFileSync } from 'node:fs';
@@ -72,7 +73,7 @@ function shotOf(W: any, why: string | null, levelFile: string | null): Shot {
   const sam = [...g.player.char.pos];
   for (let i = 0; i < 2; i++) { g.player.visibility = 0.05; W.step(DT); }   // (the HUD's block reads this frame's cursor and camera: two frames first; the men stand as staged)
   const names = new Set(men.map(m => m.name)); let hudMen = 0;
-  for (const row of g.orders.hud().status) for (const o of row.opts) { const t = String(o.text).replace(/^[▸·] /, ''); if ([...names].some(n => t.startsWith(`${n} · `))) hudMen++; }
+  for (const row of blockOf(g.orders)) for (const o of row.opts) { const t = String(o.text).replace(/^[▸·] /, ''); if ([...names].some(n => t.startsWith(`${n} · `))) hudMen++; }
   return { why, active: activeScenario(g), title: run?.title ?? null, team: run?.team ?? null, entry: run?.entry?.id ?? null, staged: g.rescue.active ? g.rescue.staged : g.nightBreach.staged, ops: men,
     operatives: g.guards.filter((x: any) => x.unit && x.team === 'operative' && x.state !== 'dead').length, hostiles: g.guards.filter((x: any) => x.unit && x.team === 'hostile').length,
     hostages: g.rescue.active ? g.rescue.hostages.length : 0, sam, samDown: !!g.player.down, hudMen, fog: !!g.fogOfWar.on, squadKnob: NIGHTBREACH.squad,

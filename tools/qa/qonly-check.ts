@@ -106,15 +106,15 @@ export async function qonlyCheck(): Promise<boolean> {
 
     // (9) the board
     { const boot = (q: string) => { K.keysBoot(new URLSearchParams(q ? `${q}&slotsetup=0` : 'slotsetup=0')); if (BREAK) KM.qOnly = false; },   // (the selector's row and the light's left on Z and L: the rows the gun's setup frees are slotsetup-check.ts's)
-      read = () => `${K.gameCode('KeyX') || '∅'}/${K.gameCode('KeyT') || '∅'} ${K.capNow('KeyX')}/${K.capNow('KeyT')}`;
-      boot(''); const a = read(), others = K.KEY_ACTS.flatMap((x: any) => x.codes).filter((c: string) => !['KeyX', 'KeyT', 'KeyQ', 'KeyB', 'KeyG', 'KeyH'].includes(c) && K.gameCode(c) !== c).length + ['KeyG', 'KeyH'].filter(c => K.gameCode(c) !== '').length, f = K.gameCode('KeyF');   // (the menu's two letters go with its key: spare, giving nothing — host/keymap.ts LETTERS, keybinds-check)
+      read = () => `${K.gameCode('KeyT') || '∅'} ${K.capNow('KeyT')}`;
+      boot(''); const a = read(), others = K.KEY_ACTS.flatMap((x: any) => x.codes).filter((c: string) => !['KeyT', 'KeyQ', 'KeyB', 'KeyG', 'KeyH'].includes(c) && K.gameCode(c) !== c).length + ['KeyG', 'KeyH'].filter(c => K.gameCode(c) !== '').length, f = K.gameCode('KeyF');   // (the menu's two letters go with its key: spare, giving nothing — host/keymap.ts LETTERS, keybinds-check)
      
-      boot('qonly=0'); const b = read(); boot('qring=0'); const c = read();
+      boot('qonly=0'); const b = read();
       boot(''); const w1 = K.keyText('X on the ground, then 5: he goes loud'), w2 = K.keyText('Stack up. X on the door, then 1'), w3 = K.keyText('T again, off the men: BLUE'), cmd = K.capNow('KeyB');
-      boot(''); const r = K.bindKey('KeyX', 'KeyX'), d = read(); K.resetKeys(); const e = read(); boot('');
-      line(a === `∅/∅ ${K.NONE}/${K.NONE}` && others === 0 && f === 'KeyF' && b === 'KeyX/KeyT X/T' && c === b && r.ok && d === `KeyX/∅ X/${K.NONE}` && e === a && w1 === `Hold ${cmd} on the ground, then 5: he goes loud` && w2 === `Stack up. Hold ${cmd} on the door, then 1` && w3 === 'T again, off the men: BLUE',
-        'the board: the orders key and the who key give nothing and read as no key, nothing else moves; ?qonly=0 and ?qring=0 put both back; a row put back on its key by hand gives its code again, and Reset frees it; a line of words that names the orders key names the command key kept down in its place',
-        `(X/T give · read) as it boots ${a}, ${others} other keys moved, F gives ${f} · ?qonly=0 ${b} · ?qring=0 ${c} · X bound back: ${d} · Reset: ${e} · words: "${w1}" · "${w2}" · "${w3}"`); }
+      boot(''); const r = K.bindKey('KeyT', 'KeyT'), d = read(); K.resetKeys(); const e = read(); boot('');
+      line(a === `∅ ${K.NONE}` && others === 0 && f === 'KeyF' && b === 'KeyT T' && r.ok && d === 'KeyT T' && e === a && w1 === `Hold ${cmd} on the ground, then 5: he goes loud` && w2 === `Stack up. Hold ${cmd} on the door, then 1` && w3 === 'T again, off the men: BLUE',
+        'the board: the who key gives nothing and reads as no key, nothing else moves; ?qonly=0 puts it back; a row put back on its key by hand gives its code again, and Reset frees it; a line of words that names the orders key names the command key kept down in its place',
+        `(T gives · reads) as it boots ${a}, ${others} other keys moved, F gives ${f} · ?qonly=0 ${b} · T bound back: ${d} · Reset: ${e} · words: "${w1}" · "${w2}" · "${w3}"`); }
 
   } finally { console.log = log; knobsBack(knobs0); Math.random = rnd0; AUTOPILOT.on = ap0; Object.assign(KM, km0); K.resetKeys(); }   // (pageSwitches, applyKnobs and keysBoot wrote: each back as this check found it)
   console.log(`=== qonly: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);

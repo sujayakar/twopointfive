@@ -280,12 +280,12 @@ pub fn seat(g: &mut crate::game::Game) {
 }
 
 /// `posture.word`   (silent.ts:247): what the posture's seam should call
-pub fn posture_word(g: &mut crate::game::Game) -> Option<String> {
-    if !crate::orders::squad_orders_active(g, &crate::seats::here(g)) { return None; }
-    if squad_silent(g, &crate::seats::here(g)) {
-        return Some(String::from(if silent_compromised(g, &crate::seats::here(g)) { "SILENT · compromised" } else { crate::spotted::spotted_word(g).unwrap_or("SILENT") }));
+pub fn posture_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<String> {
+    if !crate::orders::squad_orders_active(g, seat) { return None; }
+    if squad_silent(g, seat) {
+        return Some(String::from(if silent_compromised(g, seat) { "SILENT · compromised" } else { crate::spotted::spotted_word(g, seat).unwrap_or("SILENT") }));
     }
-    let w = crate::unseen::unseen_word(g);
+    let w = crate::unseen::unseen_word(g, seat);
     Some(loud_word(w.as_deref()))
 }
 /// `posture.mark`   (silent.ts:248): what the posture's seam should call

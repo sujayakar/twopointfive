@@ -23,7 +23,6 @@ const HE40_SHORT_STROKE = 'rgba(255, 170, 90, 0.95)';
 import { CKPT } from '../game/savestate';
 import { pageRows } from '../view/pagesaid';
 import { fogHides } from '../view/seatview';
-import { RECAP, lostLive, lostArrowsShown, type LostMan } from '../game/deathrecap';
 import { drawHandBox } from './handbox';
 import type { KitView } from '../view/seatview';
 import { CmdRingViz } from './cmdring';
@@ -37,15 +36,6 @@ import { menuTheme } from './theme';
 import { textZoom } from './textsize';
 
 const EDGE = 1.1;   // markers / dots / the throw arc stay drawn until they are 10 % of the view past its edge (FollowCamera.project margin)
-/** The way off a lost man to where the round came from, as it lies on the screen: the turn, in degrees, of one right-pointing arrow ('' = the squad does not
- *  have it), a ` n` after it while it is fresh (it comes in with a pulse). The plan's way turned by the camera's own planar basis (no projection: a point
- *  behind the lens cannot mirror it), to the nearest eighth — the squad has it no finer (deathrecap.ts eighth). */
-function lostArrow(L: LostMan, cam: FollowCamera, now: number): string {
-  if (!L.from) return '';
-  const { fwd, right } = cam.planarBasis(), sx = L.from[0] * right[0] + L.from[1] * right[2], sy = -(L.from[0] * fwd[0] + L.from[1] * fwd[2]);
-  if (!Number.isFinite(sx) || !Number.isFinite(sy)) return '';
-  return `${(((Math.round(Math.atan2(sy, sx) / (Math.PI / 4)) % 8) + 8) % 8) * 45}${now - L.knownAt < 1.2 ? ' n' : ''}`;
-}
 /** the widest the aiming ring opens, px: moving feet may open it past the 60 it stands at */
 const RING_PX = 120;
 const MAX_ROWS = 5;     // …at most this many blocks, then '+N more' (player.ts MAX_NEAR verb rows + the cancel row while the selector is open, and one spare)
@@ -54,7 +44,7 @@ const MAX_ROWS = 5;     // …at most this many blocks, then '+N more' (player.t
  *  shown only on the first row of a thing — `cont` marks the rows of the same thing under it), the key → action pair plus hint lines (`opts`; key '' = a
  *  status / hint line such as 'picking… 40%' or 'or sprint into it'), whether it is within reach (else greyed, with `dist` in metres when known), `off` (a
  *  thrown breaker), and `progress` 0‥1 for a bar (a lock being picked, the drive coming out, the leaf easing round). */
-export interface InteractRow { kind: Interactable['kind']; label: string; opts: { key: string; text: string; tone?: string; /** a squad man lost (deathrecap.ts lostLive) · his line as drawn: struck, with an arrow turned this many degrees ('' = no direction known; ' n' after it = fresh) */ gone?: boolean; lost?: LostMan; mark?: string }[]; inReach: boolean; off: boolean; dist?: number; progress?: number; cont?: boolean; /** the squad's element this row is about (orders.ts Tone: gold / red / blue) — #interact .t-<tone> */ tone?: string;
+export interface InteractRow { kind: Interactable['kind']; label: string; opts: { key: string; text: string; tone?: string; /** a squad man down: his line is struck */ gone?: boolean }[]; inReach: boolean; off: boolean; dist?: number; progress?: number; cont?: boolean; /** the squad's element this row is about (orders.ts Tone: gold / red / blue) — #interact .t-<tone> */ tone?: string;
   /** (ui/corner.ts, HANDRING.corner) a block under no heading: a line a key gives, or the lines no key gives (its label alone where it has none) · the objective's section · the clock in front of the objective */ one?: boolean; sec?: boolean; note?: string; /** … and the mission's stage, for its colour */ stage?: string }
 
 /** The marker text is authored as 'key␠␠action  ·  key␠␠action  ·  hint' (player.ts buildInteractables): split it back into rows. 'F or sprint into it  kick…'
@@ -97,10 +87,9 @@ export class Overlay implements HudLike {
   /** the men on the floor by their characters' ids, this frame: where the game's marks go */
   private men = new Map<number, Character>();
   private fragMarksEl: HTMLElement[] = [];   // (game.view.marks.frags: a defender's live grenade Sam has been cued on)
-  private lostMarks: HTMLElement[] = [];   // (deathrecap.ts lostLive: the way the round came in at a squad man lost)
   private camMarks: HTMLElement[] = [];    // (game.view.marks.cams: a small lens on each of his own stuck sticky cameras while the fog of war is live)
   private seenMarks: HTMLElement[] = [];   // (game.view.marks.seen: a fading '?' where an enemy was last seen)
-  /** the orders ring at the cursor (ui/cmdring.ts ← game/cmdring.ts — a prototype: nothing unless CMDRING.on — the ring while its key is down, and before it the hint of what it would open on) */
+  /** the orders ring at the cursor (ui/cmdring.ts ← game/cmdring.ts — a prototype: nothing unless CMDRING.on — the ring while its key is down) */
   readonly cmdRing = new CmdRingViz(this.traj);
   private dots: HTMLElement[] = [];
   showLightDots = true;
@@ -140,7 +129,6 @@ export class Overlay implements HudLike {
   private alarmEl = document.getElementById('alarm')!; private alarmKey = '';       // alarm stage under it (hidden at calm)
   private blindEl = document.getElementById('blind'); private blindK = 0;             // the white of a stun canister in his eyes (game.view.marks.blind) — absent on a page without the element
   private ckEl = document.getElementById('checkpoint'); private ckKey = '';           // the CHECKPOINT tag (game.saves.flash: written / loaded), shown CKPT.flashSecs — absent on a page without the element
-  private orderMark: HTMLElement;                                                  // the ring on what the squad's order menu is frozen on (orders.ts mark())
   private skyWas = false;
   private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private objTurn = ''; private railsWas = false; private railRest: Box | null = null; private railRestOf: [string, string, number, number] = ['\0', '', 0, 0]; private railMan = 0; private railLog = ''; private railBoxes: Box[] = [];                           // a tutorial mission's one big line, low in the middle (game/rails.ts prompt)
   private card: RailCard;                                                          // a tutorial step's card, up in the middle with the world held (ui/railcard.ts)
@@ -158,7 +146,6 @@ export class Overlay implements HudLike {
     this.reticle = document.createElement('div'); this.reticle.className = 'reticle'; this.reticle.innerHTML = '<b></b><i></i>'; this.reticle.style.display = 'none'; this.root.appendChild(this.reticle);
     this.wish = document.createElement('div'); this.wish.className = 'aimwish'; this.wish.style.display = 'none'; this.root.appendChild(this.wish);
     this.ring = this.reticle.firstChild as HTMLElement; this.hint = this.reticle.lastChild as HTMLElement; this.hint.style.display = 'none';
-    this.orderMark = document.createElement('div'); this.orderMark.className = 'ordermark'; this.orderMark.innerHTML = '<i></i><span></span>'; this.orderMark.style.display = 'none'; this.root.appendChild(this.orderMark);
     this.railEl = document.createElement('div'); this.railEl.id = 'railprompt'; this.root.appendChild(this.railEl);
     this.card = railCard(this.root);
     this.objMark = document.createElement('div'); this.objMark.className = 'objmark'; this.objMark.innerHTML = '<i></i><u><b></b><b></b><b></b></u><span></span>'; this.objMark.style.display = 'none'; this.root.appendChild(this.objMark);
@@ -212,17 +199,6 @@ export class Overlay implements HudLike {
         const st = el.style; st.display = 'block'; st.left = `${x}px`; st.top = `${y}px`;
       }
       for (let i = n; i < this.camMarks.length; i++) this.camMarks[i].style.display = 'none'; }
-    // a man of the squad lost, once the squad has the way it came from (deathrecap.ts lostLive: somebody saw him go down, or heard it) AND only while the way is drawn at all (RECAP.liveArrows: off as shipped): a stroke on the ground at him, toward it
-    { const lost = lostArrowsShown() ? lostLive(game) : [], life = RECAP.liveMarkSecs; let n = 0;
-      for (const L of lost) {
-        const age = game.time - L.knownAt; if (!L.from || !(age >= 0) || age > life) continue;
-        const [ax, ay, av] = cam.project([L.at[0] + L.from[0] * 0.35, 0.05, L.at[1] + L.from[1] * 0.35], w, h, EDGE), [bx, by, bv] = cam.project([L.at[0] + L.from[0] * 1.9, 0.05, L.at[1] + L.from[1] * 1.9], w, h, EDGE);   // (off the man, toward where it came from: the row's arrow, on the ground)
-        if (!av || !bv) continue;
-        let el = this.lostMarks[n]; if (!el) { el = document.createElement('div'); el.className = 'lostfrom'; this.root.appendChild(el); this.lostMarks.push(el); }
-        n++; const st = el.style; st.display = 'block'; st.left = `${ax}px`; st.top = `${ay}px`; st.width = `${Math.hypot(bx - ax, by - ay).toFixed(1)}px`;
-        st.transform = `rotate(${Math.atan2(by - ay, bx - ax).toFixed(3)}rad)`; st.opacity = Math.min(1, (life - age) / 4).toFixed(2);
-      }
-      for (let i = n; i < this.lostMarks.length; i++) this.lostMarks[i].style.display = 'none'; }
     // a defender's live grenade Sam has seen or heard land: a blinking '!' over it with the seconds left, the cue he acts on
     { const marks = M.frags;
       while (this.fragMarksEl.length < marks.length) { const el = document.createElement('div'); el.className = 'marker frag'; this.root.appendChild(el); this.fragMarksEl.push(el); }
@@ -275,7 +251,6 @@ export class Overlay implements HudLike {
     if (styled !== this.aimStyled) { this.aimStyled = styled; if (!styled) { const st = this.reticle.style; st.width = st.height = st.opacity = st.borderWidth = ''; this.aimPx = 16; } }   // (the class rules again for the interaction ring / the model off)
     // interaction panel (top-left): the rows Space can do, the highlighted one lit; open (Space held) it says so and grows its cancel row
     { const ia = this.deriveInteractions(game);
-      for (const r of ia.rows) for (const o of r.opts) if (o.gone) o.mark = o.lost && lostArrowsShown() ? lostArrow(o.lost, cam, game.time) : '';   // (the way the round came from, as it lies on the screen)
       this.setInteractions(ia.rows, ia.primary, ia.more, ia.open, ia.hint, ia.cancel); }
     // light + sound meters (bottom-left): how lit you are (the GPU light meter) and how much noise you are making (peak-hold marker)
     const v = M.light;
@@ -371,11 +346,7 @@ export class Overlay implements HudLike {
       (el.lastChild as HTMLElement).textContent = skySeat || turn ? '' : `${Math.round(far)}m`;   // (an arrow lies at his feet and says which way, not how far: under it the metres read '99m', the number that keeps it from fading)
       }
     }
-    // the squad's order menu: a ring on the door / spot / man it was opened on, in the addressed element's colour (it stays there while Sam walks and aims on)
     this.cmdRing.update(game, cam, w, h, tz);
-    { const om = game.orders.mark(), el = this.orderMark; let shown = false;
-      if (om) { const [ox, oy, ov] = cam.project(om.at, w, h, EDGE); if (ov) { shown = true; el.className = om.tone ? `ordermark t-${om.tone}` : 'ordermark'; el.style.left = `${ox.toFixed(1)}px`; el.style.top = `${oy.toFixed(1)}px`; const sp = el.lastChild as HTMLElement; const t = keyText(om.text); if (sp.textContent !== t) sp.textContent = t; } }
-      el.style.display = shown ? 'block' : 'none'; }
     this.squadThrow.update(game, cam, w, h, EDGE);
     this.attention.update(game, cam, w, h, EDGE);
     this.picture.update(game, cam, w, h, EDGE);
@@ -428,10 +399,10 @@ export class Overlay implements HudLike {
   setInteractions(rows: InteractRow[], primary = -1, more = 0, open = false, hint = `let go to do it · wheel / ↑↓ chooses · ${backName()} backs out`, cancel = 'cancel — let go, do nothing') {
     this.cornerObj = rows.some(r => r.sec) && !this.menuEl.classList.contains('on');   // (the objective is drawn here this frame: update()'s line at the top says nothing)
     if (!rows.length || this.menuEl.classList.contains('on')) { if (this.iaKey) { this.iaKey = ''; this.iaEl.className = ''; this.iaEl.textContent = ''; this.iaLive = []; } return; }
-    const key = rows.map(r => r.sec ? `sec|${r.label}|${r.stage ?? ''}|${r.label || r.note ? 1 : 0}` : `${r.kind}|${r.label}|${r.cont ? 1 : 0}|${r.tone ?? ''}|${r.opts.map(o => `${o.key}>${o.text}>${o.tone ?? ''}${o.mark !== undefined ? `~${o.mark}` : ''}`).join('/')}|${r.inReach ? 1 : 0}${r.off ? 1 : 0}${r.dist !== undefined ? 1 : 0}${r.progress !== undefined ? 1 : 0}${r.one ? 'o' : ''}`).join('\n') + `#${primary}#${more}#${open ? `1${hint}` : 0}#${cancel}#${KEYMAP.rev}`;
+    const key = rows.map(r => r.sec ? `sec|${r.label}|${r.stage ?? ''}|${r.label || r.note ? 1 : 0}` : `${r.kind}|${r.label}|${r.cont ? 1 : 0}|${r.tone ?? ''}|${r.opts.map(o => `${o.key}>${o.text}>${o.tone ?? ''}${o.gone ? '~' : ''}`).join('/')}|${r.inReach ? 1 : 0}${r.off ? 1 : 0}${r.dist !== undefined ? 1 : 0}${r.progress !== undefined ? 1 : 0}${r.one ? 'o' : ''}`).join('\n') + `#${primary}#${more}#${open ? `1${hint}` : 0}#${cancel}#${KEYMAP.rev}`;
     if (key !== this.iaKey) {
       this.iaKey = key;
-      const soft = (o: InteractRow['opts'][number]) => o.mark !== undefined ? `<div class="hint lost${o.tone ? ` t-${o.tone}` : ''}"><s>${esc(keyText(o.text))}</s>${o.mark ? `<b${o.mark.endsWith(' n') ? ' class="n"' : ''} style="transform:rotate(${parseInt(o.mark, 10)}deg)">→</b>` : ''}</div>` : `<div class="hint${o.tone ? ` t-${o.tone}` : ''}">${esc(keyText(o.text))}</div>`;   // (a line no key gives; a squad man lost: struck, with the way it came from)
+      const soft = (o: InteractRow['opts'][number]) => `<div class="hint${o.gone ? ' lost' : ''}${o.tone ? ` t-${o.tone}` : ''}">${o.gone ? `<s>${esc(keyText(o.text))}</s>` : esc(keyText(o.text))}</div>`;   // (a line no key gives; a squad man down: struck)
       this.iaEl.innerHTML = (open ? `<div class="selhint">${esc(keyText(hint))}</div>` : '') + rows.map((r, i) =>
         r.kind === 'cancel' ? `<div class="it k-cancel${i === primary ? ' primary' : ''}"><div class="opt"><kbd>×</kbd>${esc(keyText(cancel))}</div></div>`
         : r.sec ? `<div class="it sec${r.stage ? ` ${esc(r.stage)}` : ''}">${r.label || r.note ? `<div class="what"><span>${esc(r.label)}</span><em></em></div>` : ''}<div class="opt"></div></div>`   // (ui/corner.ts: the objective — its words and its clock are set below, in place)
@@ -455,7 +426,6 @@ export class Overlay implements HudLike {
    *  cancel row at the foot while the selector is open) in their stable priority order, the highlighted one (Game.hover) marked primary; rows of the same thing
    *  under its first are continuations (no second header). Light fixtures are never rows (they are ranged: the pistol's business). */
   private deriveInteractions(game: Game): { rows: InteractRow[]; primary: number; more: number; open: boolean; hint?: string; cancel?: string } {
-    const sq = game.orders.hud(); if (sq.menu) return sq.menu;   // the squad's command menu, while it is open, IS the panel (orders.ts)
     const hv = game.hover, p = game.player.char.pos;
     const dist = (it: Interactable) => thingDist(it, p);   // doors: leaf or doorway centre, as the reach test measures it
     // (handring.ts: the corner shows ONE line, what the key would do now — the highlighted row, or a running verb's own; none while the ring's lit wedge
@@ -474,10 +444,12 @@ export class Overlay implements HudLike {
       else if (S.word && young(S.wordT)) { const T = emptyThing(game);
         if (emptyWord(game, T) === S.word) rows.push({ kind: T ? T.it.kind : 'wall', label: S.word, opts: [], inReach: false, off: false, dist: T && T.why === EMPTY_WHY.far ? T.d : undefined }); } }
     const primary = hv ? list.indexOf(hv) : -1;
-    if (cornerOn(!!game.puppet)) {   // (ui/corner.ts: the objective, his key's line, the squad key's line — and what the block and a door's heading said that it would lose: doortools.ts cornerNotes, a key's line kept back where the mission's frame keeps the squad's notes back, a warning never)
-      const C = cornerRows(rows, primary, sq.status, game.rails.prompt() ? '' : keyText(game.objectiveText()), game.doorTools.cornerNotes().filter(o => !o.key || (game.orders.active && !game.rails.locks('menu'))), game.mission.stage);
+    if (cornerOn(!!game.puppet)) {   // (ui/corner.ts: the objective, his key's line, the squad key's line, and what the block and a door's heading said that it would lose: a key's line kept back where the mission's frame keeps the squad's notes back, a warning never)
+      const V = game.view.squad, shut = game.rails.locks('menu'), quick = game.orders.quickLine();
+      const men: InteractRow['opts'] = (V?.mates ?? []).map(M => ({ key: '', text: `${V!.picked ? (M.addressed ? '▸ ' : '· ') : ''}${M.name} · ${M.doing}`, tone: M.pair ?? undefined, gone: M.down }));
+      const squad: InteractRow[] = V ? [{ kind: 'objective', label: '', opts: [...men, ...(shut ? [] : V.notes), ...(quick ? [quick] : [])], inReach: true, off: false }] : [];
+      const C = cornerRows(rows, primary, squad, game.rails.prompt() ? '' : keyText(game.objectiveText()), game.view.corner.filter(o => !o.key || (!!V && !shut)), game.mission.stage);
       return { rows: C.rows, primary: C.primary, more: 0, open: false }; }
-    rows.push(...sq.status);   // … and otherwise the squad's block under the Space rows: who the orders go to, what each man is doing (nothing without a squad)
     return { rows, primary: primary >= 0 && primary < cap ? primary : -1, more: Math.max(0, list.length - cap), open: game.player.listOpen };   // (up as a ring — cmdring.ts CMDRING.hands — the panel's list is the list at rest)
   }
 

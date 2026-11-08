@@ -219,7 +219,7 @@ fn close(g: &mut Game, end: (bool, &'static str, String)) {
     g.verdict.res = Some(res);
 }
 
-/// THE VERDICT'S TICK, after the scenarios, the mission and the defuse overlay have had this tick, so every end they wrote is in. The first
+/// THE VERDICT'S TICK, after the scenarios, and the mission have had this tick, so every end they wrote is in. The first
 /// end of a run is latched in `g.verdict.res` and nothing after it changes it; a new mission is a new run.   (verdict.ts Verdict.tick)
 pub fn verdict_tick(g: &mut crate::game::Game) {
     if !live(g) { return; }

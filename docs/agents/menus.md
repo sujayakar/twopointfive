@@ -862,11 +862,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `window.__recap` {show, seek, stop, take}). The software adapter fires no animation frames once the game is up, so `deathrecap-page.cjs` steps it with `seek(k)` and
   `deathrecap-check.ts` holds the clock on a fake frame clock (`RECAP_BREAK=snap` — every man read off the last sample alone — must fail; a `look` argument after the page tool's
   outDir adds a squad page with no verdict, stills only). STEP 3 (commit 1743d599, in the build since 09e6b525): WHILE THE RUN IS ON (`RECAP.live`,
-  `?recaplive=0`; `deathrecap.ts lostLive` / `lostOf`) a squad man down has his squad-block row struck (`orders.ts` hud opts gone / lost, `overlay.ts`), and only if a man still up saw
+  `?recaplive=0`; the game's `recap.lostLive`) a squad man down has his squad-block row struck (`game.view.squad`, a mate's `down`, `overlay.ts`), and only if a man still up saw
   him fall or heard the shot does the squad get, a beat later, the way it came from, to an eighth of a turn, in the
-  witness's side word ('from the left!', 'from behind us!' — the fog's own sides, `cues.aside`, never a compass word); never the shooter. NOTHING OF IT IS DRAWN since 10-14: the
-  arrow on the row and the `.lostfrom` stroke on the ground at him are only under `RECAP.liveArrows`, off everywhere (`?recaparrows=1`; the bullet 'A lost teammate's way is no longer drawn' below). `deathrecap-page.cjs` holds three squad pages: `live` (as shipped, nothing
-  drawn), `livearrows` (`?recaparrows=1`), `liveoff` (`?recaplive=0`); `ONLY=live` runs the three, `ONLY=<name>` one. The hearing test repeats
+  witness's side word ('from the left!', 'from behind us!' — the fog's own sides, `cues.aside`, never a compass word); never the shooter. NOTHING OF IT IS DRAWN since 10-14, and the drawing is deleted (the bullet 'A lost teammate's way is no longer drawn' below). `deathrecap-page.cjs` holds the one squad page, `live`. The hearing test repeats
   `SoundPaths.propagate`'s rule WITHOUT its cache. Check = section 11 of `tools/qa/deathrecap-check.ts` (`RECAP_BREAK=seen` must fail) and the live pages of `deathrecap-page.cjs`. On
   a squad's card the recap is a `verdictPanels` panel (`debrief.ts recapPanel`), under the men's rows; over the route map otherwise. Seen only on the software adapter.
 - **Unplayed mission rows are drawn apart on the list** (2026-10-13; the owner: 'The 25 untuned rows are the backlog: play each once, say keep, fix or cut. Unplayed rows sit apart and
@@ -883,9 +881,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   so a row added to the table or taken off it moves nothing) — ALL PASS on both stands, `UNPLAYED_BREAK=1` fails on both. `missions-list`'s order line holds the switch off (it pins the order before this). LOOKED AT:
   `tools/qa/unplayed-page.cjs` on the software adapter at 1280 x 720 (classes, order, computed opacity, the list's rule; no page
   error) and stills taken with no GPU at all; the page script also holds the open group's cards to the SAME BOXES with the switch on and off. Never seen on a GPU, nobody has played with it.
-- **Every run ends on a verdict** (`src/game/verdict.ts`, `Game.verdict`, ticked in `Game.step` after `defuse.tick`; `VERDICT {on, winSecs, lossSecs}` in the knob registry,
+- **Every run ends on a verdict** (`src/game/verdict.ts`, `Game.verdict`, ticked in `Game.step` after the scenarios; `VERDICT {on, winSecs, lossSecs}` in the knob registry,
   ON, `?noverdict` = the game and the end card as they were; READS ONLY — on and off digest the same). A TRY starts at the par clock's rule (the first order logged, Sam
-  1 m off his mark, a round or a throw); `ended()` names each mission kind's end (CLEAR / RESCUED / TAKEN ALIVE / DEFUSED / OUT · DOWN / WIPED / LOST / GOT AWAY / BLOWN /
+  1 m off his mark, a round or a throw); `ended()` names each mission kind's end (CLEAR / RESCUED / OUT · DOWN / WIPED / LOST / GOT AWAY /
   FAILED); `result: RunVerdict` = word, clock, a row per man (path, where he fell, the defenders he dropped), the way a WON run was won — `Approach` doors / walls / dark /
   quiet, one a run, the rarest it earned: nobody ever hunted the team (the stealth game: no alarm, nothing spotted either) = quiet, the mains cut before it was found =
   dark, a man by a hole a blast made = walls, else doors — `clean` (nobody lost) and `void` (a cheat on during the try; its own latch — `m.stats.sandbox` latches before
@@ -948,9 +946,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `bun run tools/qa/teamtally-check.ts` (`probes.ts teamtally`, family `quiet`; seven lines; `TEAMTALLY_BREAK=1` must fail; both stands — the check sets the table
   itself after the stand-up). Never played by a person; the card with a partner's kill on it never seen on a page.
 - **A lost teammate's way is no longer drawn (`RECAP.liveArrows`, 10-14; the maintainer: "we shouldn't show the arrows, feels unrealistic").** The live recap
-  (`RECAP.live`, `deathrecap.ts lostLive`) drew the way the round came from twice: an arrow on the man's struck row in the squad block and an orange stroke with
-  a head on the ground at him (`.lostfrom`, `ui/overlay.ts`). Both are now behind `lostArrowsShown()` and off: the row is still struck and the man who saw still
-  says which side — the squad's own word is all the player gets. `?recaparrows=1` = both back; `?recaplive=0` still turns the whole live rule off. The key is
+  (`RECAP.live`, the game's `recap.lostLive`) drew the way the round came from twice: an arrow on the man's struck row in the squad block and an orange stroke with
+  a head on the ground at him (`.lostfrom`, `ui/overlay.ts`). Both are deleted (2026-11-08): the row is still struck and the man who saw still
+  says which side — the squad's own word is all the player gets. The key is
   false in the module and on both stands (the overlay only: no step reads it, no digest moves, not in the journal). Check: `probes.ts deathrecap` (28 lines; the
   new one reads the staged 'mate' run, the key both ways, and that overlay.ts asks before the stroke and before the row's arrow; `RECAP_BREAK=arrows` red) on
   both stands. Never seen on a GPU, never played.

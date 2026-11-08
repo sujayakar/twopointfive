@@ -44,7 +44,7 @@ fn aim(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::directo
 /// c.query.inside(v, 'sam') of one of the script's volumes
 fn sam_in(g: &mut Game, r: DirectorRunId, pick: fn(&TutRoadVars) -> &Option<crate::director::VolumeRef>) -> bool {
     let id = pick(tut_road_vars(g, r)).as_ref().expect("declared by tut_road_define").id.clone();
-    crate::director::director_inside_volume(g, r, &id, &crate::director::DirectorInsideVolumeWho::Sam)
+    crate::director::director_inside_volume(g, &crate::seats::here(g), r, &id, &crate::director::DirectorInsideVolumeWho::Sam)
 }
 
 /// (tut-road.script.ts:67 lane) the player is on the sentry's firing lane, or coming round the truck's nose to it

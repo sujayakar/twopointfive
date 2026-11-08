@@ -12,6 +12,7 @@
 //   startfile-follow   Sam walks off without a word: they come with him (night breach, four) — and on the rescue his first step starts the clock and the men fall in then
 //   startfile-f        F still takes them: the night breach's drill takes its pair off the fall in (the second pair stay on it), the rescue's F sends its men as it did
 //   startfile-restart  a restart (night breach four, room clear four) stages them fallen in again; stop() leaves no order behind
+import { doing } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { rig as rescueRig, family, guarded, dist, DT } from './rescue-probes.ts';
 import { listen } from './heard.ts';
@@ -72,7 +73,7 @@ export const startfileStage = guarded(async () => {
     const as = men.map((m: any) => O.of(m)), groups = new Set(as.map((a: any) => a?.group));
     F.verdict(R.why === null && R.sw && men.length === (k === 'nb2' ? 2 : 4) && as.every((a: any) => a && a.order === 'fallIn' && a.post === null) && groups.size === 1
       && men.every((m: any) => !m.hold && !m.pinned),
-      `${LABEL[k]}: all ${men.length} on 'fall in', no post, one group, nobody held`, `${orders(R)} · follow ranks ${as.map((a: any) => a?.follow).join('/')} · status ${men.map((m: any) => O.statusOf(m)).join(' / ')}`);
+      `${LABEL[k]}: all ${men.length} on 'fall in', no post, one group, nobody held`, `${orders(R)} · follow ranks ${as.map((a: any) => a?.follow).join('/')} · status ${men.map((m: any) => doing(O.g, m)).join(' / ')}`);
     F.verdict(O.log.length === R.log0 && spoke(R).length === 0 && barks(R).length === 0, `${LABEL[k]}: unspoken — no log row, no 'you:' line, no bark`,
       `log rows ${O.log.length - R.log0} · you-lines ${JSON.stringify(spoke(R))} · barks ${JSON.stringify(barks(R))}`);
     const from = men.map((m: any) => [...m.char.pos]), sam0 = [...R.g.player.char.pos];
@@ -81,7 +82,7 @@ export const startfileStage = guarded(async () => {
     const waits = !R.drill || R.drill.phase === 'wait';
     F.verdict(men.every((m: any) => orderOf(R, m) === 'fallIn') && waits && O.log.length === R.log0 && spoke(R).length === 0 && dist(R.g.player.char.pos, sam0) < 0.01 && toSam.every((d: number) => d < 7) && men.every((m: any) => m.state !== 'dead'),
       `${LABEL[k]}: three seconds of Sam standing still — still on it, the drill still waits for F`,
-      `${orders(R)} · walked ${moved.map(f2).join(' / ')} m · now ${toSam.map(f2).join(' / ')} m from Sam · status ${men.map((m: any) => O.statusOf(m)).join(' / ')}${` · drill ${R.drill?.phase ?? 'none'}`}`);
+      `${orders(R)} · walked ${moved.map(f2).join(' / ')} m · now ${toSam.map(f2).join(' / ')} m from Sam · status ${men.map((m: any) => doing(O.g, m)).join(' / ')}${` · drill ${R.drill?.phase ?? 'none'}`}`);
   }
   return F.done();
 });
@@ -103,7 +104,7 @@ export const startfileFollow = guarded(async () => {
     const walked = walk(R, [21, 0, 17.6]); R.step(60 * 4);
     const end = men.map((m: any) => dist(m.char.pos, sam.pos));
     F.verdict(walked > 6 && dist(sam.pos, from) > 6 && end.every((d: number) => d > 0.5 && d < 6) && men.every((m: any) => orderOf(R, m) === 'fallIn') && O.log.length === R.log0 && spoke(R).length === 0,
-      'night breach, four: off down the aisle, no key pressed — all four end with him', `Sam walked ${f2(walked)} m · the men end ${end.map(f2).join(' / ')} m from him · ${men.map((m: any) => O.statusOf(m)).join(' / ')} · log rows ${O.log.length - R.log0}`);
+      'night breach, four: off down the aisle, no key pressed — all four end with him', `Sam walked ${f2(walked)} m · the men end ${end.map(f2).join(' / ')} m from him · ${men.map((m: any) => doing(O.g, m)).join(' / ')} · log rows ${O.log.length - R.log0}`);
   }
   {
     const R = await stage('rescue', 7, false); const O = R.g.orders, men = R.ops, sam = R.g.player.char, S = R.S;

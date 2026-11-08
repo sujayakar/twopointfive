@@ -93,7 +93,6 @@ import { HOLDFIRE } from './holdfire';
 import { PAIRUP } from './pairup';
 import { LESSON } from './lesson';
 import { VERDICT } from './verdict';
-import { DEFUSE } from './defuse';
 import { SPOTTED } from './spotted';
 import { SLOTS, ISSUE, BIGSLOT, KITDEAL } from './kit';
 import { NIGHTBREACH } from './nightbreach';
@@ -538,7 +537,7 @@ export function knobRegistry(): Record<string, object> {
     // the scenario's and the defenders' tables (a play-through's --set reaches them)
     RESCUE, DIGIN, HAULHOME, PRESSURE, LANES, GUNHOLD, HARD, HARD_AT, DRILLED, SQUADS, DRILL_AT, CUES, BUDDY, WX_SIM, WX_OWN, SNOW, SNOW_LOOK, AIR_SIM, LASTSTAND, CLEARLINE, STACKROOM, REARWATCH, STACKLINE,
     // the team's own rules that no other list named (found by tools/qa/knobs-check.ts), and the two scenarios' own tables
-    SNEAK, PAIRUP, SPOTTED, NIGHTBREACH, ROOMCLEAR, LESSON, DEFUSE,
+    SNEAK, PAIRUP, SPOTTED, NIGHTBREACH, ROOMCLEAR, LESSON,
     // a room clear against a clock (the Rust game keeps it, rust/game_rules/src/par). A SETTLED row, on: nothing reads it any more, on either side
     ISSUE,
     // how a run went, said at its end (verdict.ts): reads only — off = no verdict, the end card as it was
