@@ -583,16 +583,20 @@ struct Changes { at: array<vec4f, 8>, all: vec4f };
 //   keys[slot]   the key's fingerprint, 0 = empty      cand[slot]   who founded it, until claimed (the smallest wins, so a run repeats)
 //   (a round reads cells and writes fresh, which is then copied over: what an entry sees of another never depends on which ran first)
 //   cells[2s]    E.rgb, samples                        cells[2s+1]  its point, sun seen          norms[slot]  its normal, packed
-const SLOTS = 262144u; const CELL = 0.32; const COARSE = 1.35;
+const SLOTS = 262144u; const REACH = 32u; const CELL = 0.32; const COARSE = 1.35;
 fn facing(n: vec3f) -> u32 { let a = abs(n); if (a.x >= a.y && a.x >= a.z) { return select(1u, 0u, n.x > 0.0); } if (a.y >= a.z) { return select(3u, 2u, n.y > 0.0); } return select(5u, 4u, n.z > 0.0); }
 fn cacheKey(x: vec3f, n: vec3f, level: u32) -> u32 {
   let c = select(CELL, COARSE, level == 1u); let q = vec3i(floor((x + n * select(0.06, 0.2, level == 1u)) / c)); let h = pcg(u32(q.x) + pcg(u32(q.y) + pcg(u32(q.z) + pcg(facing(n) + 8u * level + 77u))));
   return max(h, 1u);
 }
-fn cacheFind(key: u32) -> u32 { var s = key % SLOTS; for (var i = 0u; i < 8u; i++) { let k = atomicLoad(&keys[s]); if (k == key) { return s; } if (k == 0u) { return NOTHING; } s = (s + 1u) % SLOTS; } return NOTHING; }
+fn cacheFind(key: u32) -> u32 { var s = key % SLOTS; for (var i = 0u; i < REACH; i++) { let k = atomicLoad(&keys[s]); if (k == key) { return s; } if (k == 0u) { return NOTHING; } s = (s + 1u) % SLOTS; } return NOTHING; }
 fn cacheFound(key: u32, who: u32) {
-  var s = key % SLOTS;
-  for (var i = 0u; i < 8u; i++) { let k = atomicLoad(&keys[s]); if (k == key) { atomicMin(&cand[s], who); return; } if (k == 0u) { let r = atomicCompareExchangeWeak(&keys[s], 0u, key); if (r.exchanged || r.old_value == key) { atomicMin(&cand[s], who); return; } } s = (s + 1u) % SLOTS; }
+  var s = key % SLOTS; var i = 0u;
+  for (var tries = 0u; tries < 2u * REACH && i < REACH; tries++) {
+    let k = atomicLoad(&keys[s]); if (k == key) { atomicMin(&cand[s], who); return; }
+    if (k == 0u) { let r = atomicCompareExchangeWeak(&keys[s], 0u, key); if (r.exchanged || r.old_value == key) { atomicMin(&cand[s], who); return; } if (r.old_value == 0u) { continue; } }   // (a weak exchange may fail for nothing: the same slot again)
+    s = (s + 1u) % SLOTS; i++;
+  }
 }
 /** does this surface still want an entry? (Asked of cells, which no one writes while rays are out, so that who founds it never depends on who came first) */
 fn cacheWants(x: vec3f, n: vec3f) -> bool { let s = cacheFind(cacheKey(x, n, 0u)); if (s == NOTHING) { return true; } return all(cells[2u * s + 1u].xyz == vec3f(0.0)); }
