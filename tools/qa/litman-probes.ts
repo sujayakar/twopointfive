@@ -6,7 +6,7 @@
 // here), the teammate's eyes are handed the man (Op.tgt), and the rule is asked — no frame is stepped in between, so the fight never takes the staging back.
 //   litman-rule  · from the dark on a lit man: the rule holds and his weapon light is off
 //                · the man in the dark too, or he himself in the light: it does not hold
-//                · a round's flash by a man in the dark (nobody's light, on a fuse) lights him by the plain estimate and NOT by the rule's: it does not hold
+//                · another man's round fired beside a man in the dark lights him by the plain estimate (no light left out) and NOT by the rule's: it does not hold
 //                · the man out of his eyes a moment ago (Op.kept): it holds; with a cue turning him to somebody else, or the blink grown old: it does not
 // What it cannot say: whether any of it is right to look at, or helps — that is playthrough.ts's tally (rebuild/away-build/night-breach-hunt.md).
 // The family's own red path: LITMAN_BREAK=1 bun run tools/qa/probes.ts litman-rule must FAIL (the teammate is stood in the light himself for the first
@@ -14,7 +14,7 @@
 // break word was the switch taken off.
 import { ROOT } from './headless.ts';
 import { stage } from './bang-tally.ts';
-const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
+const GDM: any = await import(`${ROOT}/src/game/guards.ts`), { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const LIGHTS = GDM.LIGHTS;
 const BREAK = !!process.env.LITMAN_BREAK;
 
@@ -57,11 +57,12 @@ export async function litmanRule(): Promise<boolean> {
     put(h, lit.p); put(gd, lit2.p); eyes(h); const d = ask();
     F.verdict(!c.rule && !d.rule, 'the man in the dark too, or he himself in the light: it does not hold', `man at ${at(dark2.p)} (${f2(dark2.e)}): rule ${c.rule} · himself at ${at(lit2.p)} (${f2(lit2.e)}): rule ${d.rule}`);
     put(gd, dark.p); put(h, dark2.p);
-    g.engine.lights.flash([dark2.p[0] + 0.2, 1.0, dark2.p[2]], [1, 0.8, 0.5], 40, 4, 5, 0); eyes(h);
-    const plain = E(dark2.p, false), steady = E(dark2.p, true), e = ask();
-    F.verdict(plain >= LIGHTS.litAt && steady < LIGHTS.litAt && !e.rule, "a round's flash by a man in the dark lights him by the plain estimate, not by the rule's: it does not hold",
-      `at ${at(dark2.p)}: every light ${f2(plain)} · steady lights only ${f2(steady)} · rule ${e.rule}`);
-    for (const l of g.engine.lights.lights) if (l.ttl >= 0 && l.owner === 0) { l.enabled = false; l.intensity = 0; }
+    const every = (p: number[]) => g.visibilityOf(GDM.lightEstimateAt(g, [p[0], 1.2, p[2]], () => false, false)), near = g.guards.find((x: any) => x !== h && x.team === 'hostile' && x.state !== 'dead'), was = [...near.char.pos];
+    put(near, [dark2.p[0] + 0.6, 0, dark2.p[2]]); eyes(h); const before = every(dark2.p);
+    fireWeapon(g, near.char, [dark2.p[0] + 3, 0, dark2.p[2]], false); eyes(h);
+    const plain = every(dark2.p), steady = E(dark2.p, true), e = ask(); put(near, was);
+    F.verdict(before < LIGHTS.litAt && plain >= LIGHTS.litAt && steady < LIGHTS.litAt && !e.rule, "a round fired beside a man in the dark lights him by the plain estimate, not by the rule's: it does not hold",
+      `at ${at(dark2.p)}: every light ${f2(before)}, with the round's flash ${f2(plain)} · steady lights only ${f2(steady)} · rule ${e.rule}`);
     put(h, lit.p);
     eyes(null, { h, track: 0, t: g.time }); const k1 = ask();
     const other = g.guards.find((x: any) => x !== h && x.team === 'hostile') ?? h;
