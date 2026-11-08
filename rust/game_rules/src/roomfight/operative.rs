@@ -444,7 +444,7 @@ fn fires(g: &mut Game, o: RoomfightOpId, h: GuardId, to: V3, dt: f64, speed: f64
         g.tab.roomfight_op[o].line_by = Some(line_by(f));
         g.tab.roomfight_op[o].line_at = g.time;
         if matches!(f, RoomFightFriendInLine::Player) { room_fight_hold_short(g, o); }
-        if !crate::clearline::clear_line_blocked(g, gd, h, to, clear_by(f)) { room_fight_side_step(g, o, to, speed, None, None); }
+        room_fight_side_step(g, o, to, speed, None, None);
         room_fight_let_go(g, o);
         return;
     }
