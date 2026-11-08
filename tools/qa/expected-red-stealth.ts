@@ -11,11 +11,6 @@ const RUST = "the Rust game's";
 /** the switch cleanup's: the check asks through something the Rust game does not have (a row made by hand on the tools' copy of the game, a hook wrapped on it), and is to be restated */
 const CHECK = "the switch cleanup's (tools)";
 export const RED_STEALTH: Record<string, RedRow> = {
-  'wand-kit': { is: 'maybe', leans: 'stale', rust: true, line: "read 2026-11-07 · 2 of 7 lines fail, nothing refused · first: the row is on YOUR card, the last of your kit rows (after the 40 mm row, and after your charge rows where your card has them: owncharge.ts) · SORTED BY HAND: candidate to delete: the card's row order is from before the kit tree (the night-vision row sits after the wand's now); the store line reads a stand-in store the game does not write", whose: CHECK },
-  'controls-behind': { is: 'maybe', rust: true, line: "read 2026-11-07 · 1 of 2 lines fail, nothing refused · first: (f) a canister up, LMB behind him: a throw, not the takedown (the row says holster first)", whose: RUST },
-  'squaddoors': { is: 'maybe', rust: true, line: "read 2026-11-07 · 1 of 6 lines fail, nothing refused · first: a teammate within reach with a wall stood between him and the leaf (this door has no place within reach behind a wall of the level's) does not see it move", whose: RUST },
-  'spotted-caught': { is: 'real', rust: true, line: "read 2026-11-07 · 1 of 5 lines fails: the squad line's word shows it while it lasts · the Rust posture word has no 'SILENT · contact' (spotted.ts wrapped P.word; not carried over)", whose: RUST },
-  'spotted-suspicious': { is: 'real', rust: true, line: "read 2026-11-07 · 1 of 6 lines fails: he says it once, over the net, and the squad line's word shows it · the Rust posture word has no 'SILENT · low' (spotted.ts wrapped P.word; not carried over)", whose: RUST },
   'needs-interrupts': { is: 'real', rust: true, line: "read 2026-11-07 · throws: undefined is not an object (evaluating 'o.ring.add') · in the tools' host (tools/blitz/import.ts:61, schema OtherCast.ring), at a minute with the QRF requested · 0 of 3 lines failed before it", whose: RUST },
   'qrfsquad': { is: 'real', rust: true, line: "read 2026-11-07 · throws: undefined is not an object (evaluating 'o.ring.add') · in the tools' host (tools/blitz/import.ts:61, schema OtherCast.ring), at the element's first door", whose: RUST },
 };
