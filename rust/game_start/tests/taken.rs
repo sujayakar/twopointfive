@@ -92,3 +92,31 @@ fn a_man_with_a_fresh_sighting_is_dealt_no_opening() {
         assert!(again + 0.85 >= secs - 0.3, "seed {s}: dealt an opening again {:.1} s after the sighting (the rule's {secs} s)", again + 0.85);
     }
 }
+
+/// THE RULE: four men stacked on a door are two on the door and two who keep its rear: those two are dealt it for as long as the stack stands, and
+/// their guns are on what is behind it.
+/// A FAILURE MEANS: the whole stack watches the door.
+#[test]
+fn a_stack_of_four_keeps_its_rear() {
+    for (level, door) in [("office.json", "stairwell"), ("block-squads.json", "m_s")] {
+        let mut p = Play::mission(level, &format!("?levelFile={level}&roomclear&squad4"), &Opts { seed: 5, ..Default::default() });
+        p.sam_unhurt();
+        p.run(0.5);
+        for gd in p.g.guards.clone() { if p.g.gd[gd].team == game::teams::Team::Hostile { p.g.gd[gd].dazzled_until = 1e9; } }
+        let d = p.g.doors.list.iter().copied().find(|&d| p.g.dr[d].def.name == door).unwrap_or_else(|| panic!("{level} has the door {door}"));
+        let c = p.g.dr[d].frame_centre;
+        p.order("stack", [c[0], c[2]], Who::All);
+        let (mut frames, mut behind) = (0, 0);
+        for _ in 0..(14 * 60) {
+            p.frame();
+            let rear: Vec<GuardId> = p.mates().into_iter().filter(|&m| game::orders::squad_orders_of(&p.g, &game::seats::here(&p.g), m).map_or(false, |a| { let a = &p.g.tab.orders_assignment[a]; a.spare == Some(true) && a.from.is_some() })).collect();
+            assert_eq!(rear.len(), 2, "{level} {door}: {} of the four keep the rear", rear.len());
+            frames += rear.len();
+            for m in rear {
+                let at = p.at(m);
+                if let Some(j) = p.g.cover.jobs.get(m) { if (j.to[0] - at[0]) * (c[0] - at[0]) + (j.to[2] - at[1]) * (c[2] - at[1]) < 0.0 { behind += 1; } }
+            }
+        }
+        assert!(behind * 2 > frames, "{level} {door}: the rear men's guns are behind the stack on {behind} of {frames} of their frames");
+    }
+}
