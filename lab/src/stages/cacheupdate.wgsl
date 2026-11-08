@@ -26,6 +26,7 @@ fn cachePut(s: u32, E: vec3f, n: f32, x: vec3f, sun: f32) { let a = finite4(vec4
       var L = select(q.glow, vec3f(0.0), own); if (c.n > 0.0) { L += matteOf(q) / PI * (c.E + frame.sunE.xyz * max(dot(q.ng, frame.sunDir.xyz), 0.0) * c.sun); } else if ((h.piece & LEAF_HIT) != 0u) { L += q.albedo / PI * frame.sunE.xyz * 0.25; }
       E += min(L * h.thru * w.w, vec3f(60.0)); }
   }
-  let cap = mix(7.0, 96.0, st); let m = min(a.w + 1.0, cap); let k = 1.0 / m;
+  let cap = mix(7.0, 96.0, st); let m = min(a.w + 1.0, cap); let k = min(1.0, 2.0 / (m + 1.0));   // later samples weigh more: the first ones were lit by a table that was still dark
+ 
   cachePut(s, mix(a.xyz, E, k), m, x0, mix(b.w, select(sun, 0.0, cs <= 0.0), k));
 }

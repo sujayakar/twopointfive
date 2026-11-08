@@ -2,7 +2,7 @@
 import { type V3, type Rot, rotY, rotX, rotZ, compose, apply, add, mul, sub, norm, rng, smooth } from '../math';
 import { World, F, type Piece, type Mark, taper } from './world';
 import { M, C } from './materials';
-import { plantKit, tree, tuft, type Kit } from './plants';
+import { plantKit, tree, tuft, bush, type Kit } from './plants';
 import { Person, type Stop } from './people';
 
 export interface Door { name: string; hinge: V3; yaw: number; swing: number; open: number; want: number; leaf: Piece[]; local: { at: V3; half: V3 }[]; slide?: V3 }
@@ -139,6 +139,10 @@ export function makeBuilding(): Building {
   const garden = (x0: number, z0: number, x1: number, z1: number, h: number, trees: [number, number, number][], seed: number, tint: V3 = C.white as V3, leafTint?: V3) => { const y = planter(x0, z0, x1, z1, h, tint), q = rng(seed); for (const [x, z, ht] of trees) tree(w, kit, [x, y, z], ht, seed + Math.round(x * 13 + z * 7), leafTint); const n = Math.round((x1 - x0) * (z1 - z0) * 6.5); for (let i = 0; i < n; i++) tuft(w, kit, [x0 + 0.2 + q() * (x1 - x0 - 0.4), y, z0 + 0.2 + q() * (z1 - z0 - 0.4)], 0.22 + q() * 0.3, seed * 31 + i, q() < 0.14 ? [0.70, 0.48, 0.78] : q() < 0.5 ? [0.52, 0.58, 0.30] : [0.42, 0.52, 0.30]); };
   garden(4.6, 2.4, 11.8, 4.2, 0.55, [[5.7, 3.3, 3.4], [8.4, 3.2, 4.0], [10.8, 3.4, 3.1]], 11); garden(9.9, 4.9, 11.8, 7.7, 0.5, [[10.9, 6.4, 3.6]], 23); garden(4.6, 6.4, 7.6, 7.7, 0.5, [[6.2, 7.0, 2.9]], 37, C.white as V3, [0.80, 0.22, 0.14]);
   tree(w, kit, [1.2, 0.35, -6.4], 2.75, 90); w.cylinder([1.2, 0.2, -6.4], 0.42, 0.2, M.paint!, { tint: C.white as V3, ...cut }); w.cylinder([1.2, 0.36, -6.4], 0.37, 0.03, M.soil!, cut);
+  // a hedge by the pool wall, climbers on the concrete, a strip of lawn
+  { const hr = rng(501); const y0 = planter(4.35, -7.9, 4.95, -2.2, 0.4); for (let i = 0; i < 17; i++) bush(w, kit, [4.65 + (hr() - 0.5) * 0.12, y0 + 0.22 + hr() * 0.08, -7.65 + i * 0.33], 0.27 + hr() * 0.06, 600 + i, [0.34, 0.46, 0.20]);
+    for (let i = 0; i < 46; i++) { const z = 5.2 + hr() * 2.7, y = FL + 0.2 + hr() * hr() * 2.6; bush(w, kit, [4.12 + hr() * 0.06, y, z], 0.13 + hr() * 0.12, 700 + i, [0.36, 0.48, 0.18]); }
+    for (let i = 0; i < 60; i++) { const x = -12.0 + hr() * 1.6, y = 0.2 + Math.pow(hr(), 1.4) * 5.2; bush(w, kit, [x, y, 8.13 + hr() * 0.05], 0.12 + hr() * 0.13, 800 + i, [0.40, 0.46, 0.16]); } }
   // loungers, a table
   const lounger = (x: number, z: number, c: V3, yaw: number) => { const rt = rotY(yaw), P = (lx: number, ly: number, lz: number): V3 => add([x, FL + 0.05, z], apply(rt, [lx, ly, lz])); w.add({ at: P(0, 0.24, 0), half: [0.34, 0.045, 0.62], rot: rt, mat: M.fabric!, tint: c, ...cut }); w.add({ at: P(0, 0.42, -0.82), half: [0.34, 0.045, 0.34], rot: compose(rt, rotX(-0.75)), mat: M.fabric!, tint: c, ...cut }); for (const sx of [-0.3, 0.3]) for (const sz of [-0.5, 0.5]) w.cylinder(P(sx, 0.1, sz), 0.02, 0.1, M.steel!, cut); };
   lounger(6.0, 0.2, C.white as V3, 0.25); lounger(7.4, 0.1, C.orange as V3, 0.1); lounger(8.8, 0.15, C.white as V3, -0.05); w.cylinder([10.6, FL + 0.46, 0.2], 0.55, 0.025, M.paint!, { tint: C.red as V3, ...cut }); w.cylinder([10.6, FL + 0.24, 0.2], 0.035, 0.22, M.steel!, cut); for (let i = 0; i < 4; i++) w.cylinder([10.6 + 0.85 * Math.cos(i * 1.57 + 0.5), FL + 0.28, 0.2 + 0.85 * Math.sin(i * 1.57 + 0.5)], 0.2, 0.22, M.fabric!, { tint: i % 2 ? (C.white as V3) : (C.grey as V3), ...cut });

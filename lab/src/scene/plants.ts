@@ -21,7 +21,7 @@ export function grassTuft(seed: number, n: number): Cluster {
 export interface Kit { balls: number[]; tufts: number[] }
 export function plantKit(w: World): Kit {
   const balls: number[] = [], tufts: number[] = [];
-  for (let i = 0; i < 4; i++) { balls.push(w.clusters.length); w.clusters.push(leafBall(100 + i, 560, 0.112)); }
+  for (let i = 0; i < 4; i++) { balls.push(w.clusters.length); w.clusters.push(leafBall(100 + i, 820, 0.094)); }
   for (let i = 0; i < 3; i++) { tufts.push(w.clusters.length); w.clusters.push(grassTuft(200 + i, 110)); }
   return { balls, tufts };
 }
@@ -38,6 +38,8 @@ export function tree(w: World, kit: Kit, at: V3, height: number, seed: number, t
   limb(at, norm([(r() - 0.5) * 0.25, 1, (r() - 0.5) * 0.25]), height * 0.40, height * 0.026, 2);
   for (const [e, k] of ends) { const s = height * (0.115 + 0.055 * r()) * k, v = 0.8 + 0.4 * r(); w.instances.push({ cluster: kit.balls[Math.floor(r() * kit.balls.length)]!, at: add(e, [(r() - 0.5) * s * 0.5, s * 0.15 * r(), (r() - 0.5) * s * 0.5]), rot: rotY(r() * 6.28), scale: s, base: at, sway: 0.05 + 0.035 * (e[1] - at[1]), phase: r() * 6.28, tint: [tint[0] * v * (0.9 + 0.2 * r()), tint[1] * v, tint[2] * v * (0.8 + 0.4 * r())] }); }
 }
+/** a low clipped bush, or a patch of climber on a wall (`flat` = the way it faces) */
+export function bush(w: World, kit: Kit, at: V3, s: number, seed: number, tint: V3) { const r = rng(seed); w.instances.push({ cluster: kit.balls[Math.floor(r() * kit.balls.length)]!, at, rot: rotY(r() * 6.28), scale: s, base: [at[0], at[1] - s, at[2]], sway: 0.025, phase: r() * 6.28, tint: [tint[0] * (0.85 + 0.3 * r()), tint[1] * (0.9 + 0.2 * r()), tint[2] * (0.8 + 0.4 * r())] }); }
 export function tuft(w: World, kit: Kit, at: V3, h: number, seed: number, tint: V3 = [0.46, 0.55, 0.28]) {
   const r = rng(seed); w.instances.push({ cluster: kit.tufts[Math.floor(r() * kit.tufts.length)]!, at, rot: rotY(r() * 6.28), scale: h, base: at, sway: 0.09, phase: r() * 6.28, tint: [tint[0] * (0.8 + 0.4 * r()), tint[1] * (0.85 + 0.3 * r()), tint[2] * (0.7 + 0.5 * r())] });
 }

@@ -18,11 +18,12 @@ fn lum(c: vec3f) -> f32 { return dot(c, vec3f(0.2126, 0.7152, 0.0722)); }
   { // sharpen by what the neighbours allow: no ringing past the brightest and darkest of them
     let q = min(vec2i(v.uv * n), vec2i(n) - 1); let hi = vec2i(n) - 1; let a = textureLoad(src, clamp(q + vec2i(0, -1), vec2i(0), hi), 0).xyz; let b = textureLoad(src, clamp(q + vec2i(0, 1), vec2i(0), hi), 0).xyz; let d = textureLoad(src, clamp(q + vec2i(-1, 0), vec2i(0), hi), 0).xyz; let f = textureLoad(src, clamp(q + vec2i(1, 0), vec2i(0), hi), 0).xyz;
     let la = lum(a); let lb = lum(b); let ld = lum(d); let lf = lum(f); let lc = lum(c); let mn = min(min(la, lb), min(min(ld, lf), lc)); let mx = max(max(la, lb), max(max(ld, lf), lc)); let w = -k[1].z * sqrt(clamp(min(mn, 2.0 * lc) / max(mx, 1e-5), 0.0, 1.0)); c = max((c + (a + b + d + f) * w) / (1.0 + 4.0 * w), vec3f(0.0)); }
-  c = mix(c, textureSampleLevel(glow, sm, v.uv, 0.0).xyz, k[0].z) * e[0] * exp2(k[0].x);
+  let ex = e[0] * exp2(k[0].x); c *= ex;
   { // the fused picture is a quarter the size: fit what it does to brightness over the texels round this pixel, and do that here
     let d = vec2f(textureDimensions(fuse)); let p = v.uv * d - 0.5; let b = vec2i(floor(p + 0.5)); let hi = vec2i(d) - 1; var m = vec4f(0.0); var ws = 0.0; let l = bright(c); let pl = curve(l);
     for (var y = -1; y <= 1; y++) { for (var x = -1; x <= 1; x++) { let q = b + vec2i(x, y); let t = textureLoad(fuse, clamp(q, vec2i(0), hi), 0).xy; let o = vec2f(q) - p; let dl = t.y - pl; let w = exp(-dot(o, o) * 0.9 - dl * dl * 14.0) + 1e-4; m += vec4f(t.y, t.x, t.y * t.x, t.y * t.y) * w; ws += w; } }
-    m /= ws; let va = max(m.w - m.x * m.x, 0.0); let ratio = m.y / max(m.x, 0.02); let a = clamp((m.z - m.x * m.y + 0.004 * ratio) / (va + 0.004), 0.0, 4.0); let f = clamp(a * pl + m.y - a * m.x, 0.0, 0.985); c *= clamp(uncurve(f) / max(l, 1e-5), 0.2, 9.0) ;
+    m /= ws; let va = max(m.w - m.x * m.x, 0.0); let ratio = m.y / max(m.x, 0.02); let a = clamp((m.z - m.x * m.y + 0.004 * ratio) / (va + 0.004), 0.0, 4.0); let f = clamp(a * pl + m.y - a * m.x, 0.0, 0.985); let gain = clamp(uncurve(f) / max(l, 1e-5), 0.2, 9.0); c = mix(c * gain, textureSampleLevel(glow, sm, v.uv, 0.0).xyz * ex * min(gain, 1.0), k[0].z);   // (the glow is the lens's: what is lifted for being dark does not lift it)
+ 
   }
   let q = (v.uv - 0.5) * vec2f(1.0, 0.8); c *= 1.0 - 0.30 * dot(q, q); let l = lum(c); c = max(vec3f(0.0), l + (c - l) * 1.10);
   c = srgb(clamp(neutral(c), vec3f(0.0), vec3f(1.0))); let g = h(vec2u(v.p.xy)) - 0.5; return vec4f(c + g * (1.0 / 255.0 + 0.010 * k[0].w * (1.0 - dot(c, vec3f(0.33)))), 1.0);
