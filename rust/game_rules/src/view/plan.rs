@@ -295,7 +295,7 @@ fn seat_plan(g: &Game, seat: &SeatRef, who: For) -> SeatPlan {
         let fit_watch = a.fit.as_ref().and_then(|f| f.watch);
         let raw = a.watch.or(fit_watch);
         let on_door = raw.is_some_and(|w| a.door.is_some_and(|d| flat(w, g.dr[d].frame_centre) < 1.5));
-        let told = raw.filter(|&w| a.foe.is_none() && (on_door || Some(w) == fit_watch || a.order == "cover" || a.order == "move" || a.order == "hold"));
+        let told = raw.filter(|&w| a.foe.is_none() && (on_door || Some(w) == fit_watch || a.order == crate::orders::rows::cover::ORDER.id || a.order == crate::orders::rows::movethere::ORDER.id || a.order == crate::orders::rows::hold::ORDER.id));
         let (mut aim, mut watch): (Option<f64>, Option<V3>) = (None, None);
         if there {
             aim = Some(c.aim_yaw);

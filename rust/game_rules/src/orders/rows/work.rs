@@ -10,7 +10,7 @@ pub const ORDER: Row = Row {
     only: Some(only),
     valid: Some(valid),
     tick: Some(crate::workthings::work_things_tick),
-    ..Row::new(crate::workthings::WORK_ORDER, label, issue)
+    ..Row::new("work", label, issue)
 };
 
 fn label(g: &mut Game, t: &OrderTarget) -> String {

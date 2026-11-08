@@ -110,8 +110,5 @@ pub struct HoldfireStats {
     pub lifts: [i32; 3],
 }
 
-/// (src/game/holdfire.ts:66 LOUD_ORDER)
-pub const LOUD_ORDER: &str = "loud";
-
 /// (src/game/holdfire.ts:100 WAITS: a table nothing writes)
 pub fn waits() -> Vec<String> { alloc::vec![String::from("place"), String::from("standoff"), String::from("armed")] }

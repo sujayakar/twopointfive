@@ -2283,20 +2283,11 @@ pub fn leaf_posts() -> Vec<Vec<f64>> { alloc::vec![alloc::vec![0.2, 2.4], alloc:
 /// (src/game/doortools.ts:603 SAM_SHIFT)
 pub const SAM_SHIFT: f64 = 0.35;
 
-/// (src/game/doortools.ts:607 TOOLS_PAGE)
-pub const TOOLS_PAGE: &str = "tools";
-
-/// (src/game/doortools.ts:609 BIG_ORDER)
-pub const BIG_ORDER: &str = "bigClear";
-
 /// (src/game/doortools.ts:609 BIG_KEY)
 pub const BIG_KEY: &str = "KeyH";
 
 /// (src/game/doortools.ts:612 THR_PAGE)
 pub const THR_PAGE: &str = "thr";
-
-/// (src/game/doortools.ts:612 HELD_PAGE)
-pub const HELD_PAGE: &str = "held";
 
 /// (src/game/doortools.ts:614 PIE_WAIT)
 pub const PIE_WAIT: f64 = 2.5;

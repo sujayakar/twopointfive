@@ -284,7 +284,7 @@ pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
             if w.is_some() { g.m.squad40.states.get_mut(key).unwrap().turns.delete(gd); }
             let face = g.ch[c].body_yaw;
             crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
-                order: String::from("hold"),
+                order: String::from(crate::orders::rows::hold::ORDER.id),
                 post: Some([p[0], 0.0, p[2]]),
                 face: Some(face),
                 stance: Some(crate::character::Stance::LowReady),

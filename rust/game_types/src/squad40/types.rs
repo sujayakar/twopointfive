@@ -310,8 +310,5 @@ pub struct Squad40Stats {
 /// (src/game/squad40.ts:73 BREAK)
 pub const BREAK: bool = false;
 
-/// (src/game/squad40.ts:77 SHELL_THERE)
-pub const SHELL_THERE: &str = "shellThere";
-
 /// (src/game/squad40.ts:148 none)
 pub const none: &str = "no 40 mm left.";

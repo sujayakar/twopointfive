@@ -866,14 +866,5 @@ pub struct SquadthrowStats {
 /// (src/game/squadthrow.ts:117 THROW_PAGE)
 pub const THROW_PAGE: &str = "throw";
 
-/// (src/game/squadthrow.ts:117 THROW_OPEN)
-pub const THROW_OPEN: &str = "throwThere";
-
-/// (src/game/squadthrow.ts:117 FRAG_THERE)
-pub const FRAG_THERE: &str = "fragThere";
-
-/// (src/game/squadthrow.ts:117 STUN_THERE)
-pub const STUN_THERE: &str = "stunThere";
-
 /// (src/game/squadthrow.ts:143 TICK_KEPT: a table nothing writes)
 pub fn tick_kept() -> Vec<String> { alloc::vec![String::from("frag.WALLS_FOR"), String::from("seenwalk.shared")] }

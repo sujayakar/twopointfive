@@ -14,7 +14,7 @@ pub const ORDER: Row = Row {
     valid: Some(valid),
     tick: Some(squad40::turn_tick),
     frame: Some(squad40::squad40_tick),
-    ..Row::new(squad40::SHELL_THERE, label, issue)
+    ..Row::new("shellThere", label, issue)
 };
 
 fn at_of(t: &OrderTarget) -> V3 { crate::orders::rows::at(t) }

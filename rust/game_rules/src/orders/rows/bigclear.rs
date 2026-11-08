@@ -9,7 +9,7 @@ pub const ORDER: Row = Row {
     is: &[Is::LiftsFire, Is::Loud],
     valid: Some(valid),
     gone: Some(gone),
-    ..Row::new(crate::doortools::BIG_ORDER, label, issue)
+    ..Row::new("bigClear", label, issue)
 };
 
 /// doortools.ts:929
