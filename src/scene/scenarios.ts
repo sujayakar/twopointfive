@@ -347,20 +347,6 @@ export interface IssueCard { weapon?: 'rifle' | 'pistol' | 'shotgun'; suppressed
    *  as above). The stealth tutorial names the grenade, so that its lesson is the swap to the sponge round before the right button is his */
   loaded?: 'ring' | 'he40' }
 export interface IssueData { members: { [place: string]: IssueCard } }
-/** A SNATCH (game/snatch.ts — an overlay on a level's ROOM CLEAR, as a lesson is one on a mission): ONE unarmed man the team has to take alive. He is a
- *  civilian of the usual make (game/civilians.ts: his eyes, his ears, his run, his hands on his head), put on the floor at every staging of the room clear;
- *  the overlay adds who he gives up to, which way out he will not run at, and what ends the mission. A level without the block is the game as it was. */
-export interface SnatchData {
-  /** who he is and where he keeps while the floor is quiet: `points` (default: `pos` alone) are the marks he moves between, `wait` the seconds at each */
-  man: { name: string; pos: Vec3; face: number; tint: Vec3; tint2?: Vec3; points?: Vec3[]; wait?: number[] };
-  /** the WAYS OFF THE FLOOR he runs for once it is loud (nearest first by walking): a spot beyond a gate or an outside door — on it, he is gone */
-  exits: { name: string; pos: Vec3 }[];
-  /** THE WAY HE IS TAKEN OFF THE FLOOR (game/snatchout.ts, while its switch is up): the team's own vehicle by its way in — `pos` is the spot at its open doors a
-   *  man is put in from. Tied, he is led there by the player and the mission is won the moment he is in it, the house taken or not. Without the key, or with the
-   *  switch off, the snatch ends as it did: the house taken with him in hand. */
-  van?: { name: string; pos: Vec3 };
-}
-
 /** A DEFUSE mission's overlay on a room clear (game/defuse.ts): timed charges in rooms of the structure, all on ONE clock. A charge is made safe by a man
  *  standing at it and working it `workSecs`; the clock running out sets off every charge still live — a real blast where it stands. Read by game/defuse.ts
  *  and by nothing else: a level without the block is the room clear as it was. */
@@ -533,7 +519,7 @@ export interface ResponseData {
    *  raids only; one without answers a quiet night gone loud, never a raid */
   raid?: { room?: string };
 }
-export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: StructureData; rescue?: RescueData; places?: PlacesData; quiet?: QuietData; lesson?: LessonData; par?: ParData; snatch?: SnatchData; defuse?: DefuseData; issue?: IssueData; kitView?: KitViewData; response?: ResponseData;
+export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: StructureData; rescue?: RescueData; places?: PlacesData; quiet?: QuietData; lesson?: LessonData; par?: ParData; defuse?: DefuseData; issue?: IssueData; kitView?: KitViewData; response?: ResponseData;
   /** WHAT A DOOR IS CALLED where its id cannot say it (game/doornames.ts, words.ts WORDS.doors): a row a door — its id and the name on the squad's rows
    *  and in a defender's call, written as it is read there ('yard gate', 'records side door': no 'the'). For a door whose id carries a bearing or a letter
    *  and that the room clear structure does not list (or a level with no structure): the HUD has no compass. No bearing in a name, no two doors of a level

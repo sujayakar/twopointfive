@@ -338,7 +338,6 @@ pub fn objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<
     if let Some(o) = crate::director::director_objective(g) { return of(MissionOf::Script, format!("objective ▸ {}", o.text), o.pos); }
     if let Some(o) = crate::lesson::lesson_objective(g, seat) { return of(MissionOf::Lesson, o.text, o.pos); }
     if let Some(o) = crate::defuse::defuse_objective(g, seat) { return of(MissionOf::Defuse, o.text, o.pos); }
-    if let Some(o) = crate::snatch::snatch_objective(g, seat) { return of(MissionOf::Snatch, o.text, o.pos); }
     if let Some(o) = crate::roomclear::room_clear_scenario_objective(g, seat) { return of(MissionOf::Roomclear, crate::par::par_objective(g, &o.text), o.pos); }
     if let Some(o) = crate::rescue::rescue_objective(g, seat) { return of(MissionOf::Rescue, o.text, o.pos); }
     if let Some(o) = crate::nightbreach::night_breach_objective(g) { return of(MissionOf::Nightbreach, o.text, o.pos); }

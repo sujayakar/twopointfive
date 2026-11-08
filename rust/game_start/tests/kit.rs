@@ -146,7 +146,7 @@ fn each_run_wears_its_own_card() {
     assert_eq!((loud.0, loud.1, loud.2), (0.0, 0.0, false), "a loud run has no sponge rounds, no cameras and no wand");
     assert!(loud.5 > 0.0 && loud.6 > 0.0, "a loud run carries frags and 40 mm: {loud:?}");
     let stealth = (5.0, 2.0, true, 0.0, 0.0, 0.0, 0.0);
-    for n in ["vault.json", "bazaar.json", "police-post.json", "quiet-yard.json"] {
+    for n in ["vault.json", "bazaar.json", "police-post.json"] {
         assert_eq!(read(n, &format!("?levelFile={n}&quiet")), stealth, "{n}, alone");
     }
     assert_eq!(read("crossing.json", "?levelFile=crossing.json&quiet&squad=1"), stealth, "as two");

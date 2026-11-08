@@ -32,7 +32,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The end card's verdict is one or two words in capitals, never a sentence** (`src/game/verdict.ts`; the card and its switch are the 'Every run ends on a verdict' bullet in menus.md):
   won — CLEAR · RESCUED · TAKEN ALIVE · DEFUSED · OUT (a solo mission walked out of); lost — DOWN (every player down; the why is 'by <who>') · WIPED (the team) · DEAD (the man who was
   to be taken alive) · GOT AWAY (he left the floor) · LOST (the hostages) · BLOWN (the charge went off) · FAILED (a mission stage failed). The why under it is the mission's own end
-  line (`roomclear.endWhy`, `rescue.result.why`, the snatch's `why`), not a new sentence. Small words: the tag 'cheats' (a cheat was on: nothing is kept of the try), the count rows
+  line (`roomclear.endWhy`, `rescue.result.why`), not a new sentence. Small words: the tag 'cheats' (a cheat was on: nothing is kept of the try), the count rows
   'defenders' and 'hostages' — the game's own nouns (never 'enemies', 'tangos', 'civilians' for a hostage). A new end takes a word of this kind: what happened, in the past, no verb
   of blame, no compass word, no number.
 - **A man out on a look does not say he is coming AT anybody** (`tactics.ts flankCall`, 10-13; the hard-defenders goal's claim, mended as an after-close step of the dialogue pass). The
@@ -163,10 +163,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   'break room west door' of a door nobody wrote a name for — there is none left on the office. On the real page (headless Chromium, the software adapter, the office's room clear, the orders' menu opened on that door, the page's text read): 'ON
   CUBICLES-SIDE BREAK ROOM DOOR', and with `?doornames=0` 'ON BREAK ROOM WEST DOOR'; no console or page error on either. Its text, not its pixels: never seen on a GPU.
 - **The same rule's two other lists (10-19, in `words-doornames`).** With every door named, the check holds two more lists that must shrink, and a level
-  file that gets a new name of either kind is red: `PLACES_OWED` — a quiet mission's or a snatch's EXIT and a level's AREA still named by a bearing
-  ('the east gate', 'north gallery'): an exit's name is on the objective's line and the debrief's map (`quiet.ts` brief `outs`, `snatch.ts`,
+  file that gets a new name of either kind is red: `PLACES_OWED` — a quiet mission's EXIT and a level's AREA still named by a bearing
+  ('the east gate', 'north gallery'): an exit's name is on the objective's line and the debrief's map (`quiet.ts` brief `outs`,
   `ui/debrief.ts`), an area's is in the men's lines the strip prints and on the debrief's timeline (`dialogue.ts roomName`, `chronicle.ts`). 56 names in 20
-  files; they are the level files' own words (`scenarios.quiet.exits` / `.snatch.exits` / `.places.areas`), renamed in each level's generator. Not on the
+  files; they are the level files' own words (`scenarios.quiet.exits` / `.places.areas`), renamed in each level's generator. Not on the
   list: a start's name (printed nowhere but a debug summary), a `from` (only ever read to make a door's name, and a bearing there is dropped), a civilian's
   way out and a need's stand (looked up by name, not shown). `LETTERS_OWED` — a door still called by its id's letters because nothing names it ('p back
   door', 'n1 door', 'lb door'): 23 doors in 10 files, a `scenarios.doorNames` row each. `DOORNAMES_CENSUS=1` in front of the check prints all three lists
@@ -201,7 +201,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   is up. cues.ts `CLASSES` knows the new words beside the old (going around, moving around, get around, coming up behind, ready for them);
   the last-stand answer is "here — I'm after them, {at}." so that no tool reads it as a claim to be on them. A refusal an order returns is
   said by a man AND printed on its greyed menu row: both follow the key. HELD for the maintainer: the office night staff's British voice
-  (the held man's lines, his scripts, the pairs) and `SNATCH_LINES`. Checks that named old words take both wordings.
+  (the held man's lines, his scripts, the pairs). Checks that named old words take both wordings.
   Check: `bun run tools/qa/guidewords-check.ts` (`probes.ts guidewords`, in the `words` and `dialogue` families), `GUIDEWORDS_BREAK=1` (the
   key left up where it is asked down) must fail. With the key off, every line the game can list (about 2,950: the staff, needs, hostage,
   snatch, net-quiet, morale, whistle and small bark lists, the defender net with its classes, every interrogation answer plain and as each

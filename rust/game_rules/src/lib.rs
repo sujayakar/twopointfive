@@ -279,8 +279,6 @@ pub mod slotsetup;
 pub mod smoke_smoke_grid;
 pub mod smoke_types;
 pub mod smokebreak;
-pub mod snatch;
-pub mod snatchout;
 pub mod sneak;
 pub mod snow_blast;
 pub mod snow_bog;
