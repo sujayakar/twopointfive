@@ -1,8 +1,7 @@
 // BROKEN GLASS AFTER IT LETS GO (the glass goal's shards part; rebuild/glass/shards.md is the page). The fracture model (game/glassbreak.ts) decides WHICH piece of a
 // pane lets go and when; from that moment the piece is this file's: glass in the air, on the floor, in the ear and under a boot.
 //
-//   release(f)   one call per fragment (the fracture part's release hook hands them in — `g.glassBreak.onRelease`, wired by this class when that hook exists; until then
-//                the base's own shard spawn is taken at the debris pool's door and turned into the same call, see take()). A fragment becomes
+//   release(f)   one call per fragment (the fracture part's let-go hands them in). A fragment becomes
 //                  PLATES   its big part, rigid: one to four thin Dynamic boxes in the debris pool (game/debris.ts) that tumble, slide like glass, and BREAK AGAIN on a
 //                           hard landing — into smaller plates (two generations at most) and a burst of the particles below — unless it is laminated (it sags in one
 //                           piece) or tempered (it was never a plate: it is dice). Drawn the colour of what lies under them × the pane's tint (a pane is seen
@@ -38,7 +37,6 @@ import type { Chunk } from './debris';
 import { hash01 } from './debris';
 import { gpuFx } from './particleFx';
 import { glassBreakLive } from './glassbreak';
-import type { PaneState } from './glassbreak';
 import { SHARD } from './shardModel';
 import { NOBODY_ID } from './consts';
 import { fallOf } from './falling';
@@ -159,17 +157,15 @@ export class GlassShards {
   private deferred: { pos: Vec3; dir: Vec3; count: number; o: SprayOpts; seed: number }[] = [];
   /** emit births waiting in `deferred` (they count against the live cap from the moment they are asked for; booked into `lives` when sent) */
   private deferredN = 0;
-  /** the interim hookup's memory per pane (take()): the blows it has seen on it, when the last one landed and what it was, and — tempered — when it took the whole pane as dice */
-  private paneMem = new Map<number, { hits: number; sites: number; t: number; cause: 'hit' | 'blast'; dicedT: number }>();
   private crunchN = 0;
   log: string[] = [];
 
   constructor(private g: Game) {
-    g.destr.debris.glass = { take: (box, v, w, who) => this.take(box, v, w, who), landed: (c, speed) => this.landed(c, speed), rested: (c) => this.rested(c), gone: (c) => this.gone(c), dress: () => SHARDS.byFall };
+    g.destr.debris.glass = { landed: (c, speed) => this.landed(c, speed), rested: (c) => this.rested(c), gone: (c) => this.gone(c), dress: () => SHARDS.byFall };
   }
 
   // ---------------------------------------------------------------- in: a fragment lets go
-  /** One fragment, from the fracture part's release hook (or take() below). Returns false when the model is not live (the caller's own stand-in then applies). */
+  /** One fragment, from the fracture part's release hook . Returns false when the model is not live (the caller's own stand-in then applies). */
   release(f: GlassFragmentLike): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('GlassShards.release', this, [f]); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g;
     if (!shardsLive(g)) return false;
@@ -236,63 +232,7 @@ export class GlassShards {
     if (no > 0) this.emit(v3.mad(at, n, -(thickness * 0.5 + 0.01)), out, no, { speed: 3.2 * sp, speedJit: 0.85, spread: 0.7, life: SHARDS.fineLife, lifeJit: 0.4, size: SHARDS.fineSize, sizeJit: 0.6, aspect: 1.4, tumble: 45, nrmJit: 1, posJit: 0.012, color: tint }, u32(seed ^ 0x5BA1));
     this.emit(v3.mad(at, n, thickness * 0.5 + 0.01), n, nb, { speed: 1.6 * sp, speedJit: 0.8, spread: 1.0, life: SHARDS.fineLife * 0.8, lifeJit: 0.4, size: SHARDS.fineSize * 0.9, sizeJit: 0.6, aspect: 1.3, tumble: 45, nrmJit: 1, posJit: 0.012, color: tint }, u32(seed ^ 0xBACC));
   }
-  /** THE INTERIM HOOKUP (the base, before the fracture part's release hook exists): game/glassbreak.ts spawns each fallen cell as 1‥3 thin 'shard' boxes through the debris
-   *  pool — the pool hands each here first (debris.ts spawn), and the box is read back as the fragment it stands for. undefined = not ours (the model is not live, or the
-   *  fracture hook is doing the handing over): the pool spawns it as it always did. */
-  private take(box: Box, v: Vec3, w: Vec3, who: number): Chunk | null | undefined {
-    if (!shardsLive(this.g)) return undefined;
-    const f = fragmentOfBox(box, v, w, who, u32(Math.imul(++this.serial, 0x9E3779B1) ^ Math.imul(Math.round(box.c[0] * 1000), 73856093) ^ Math.imul(Math.round(box.c[1] * 1000), 19349663) ^ Math.imul(Math.round(box.c[2] * 1000), 83492791)));
-    // what the box cannot say, read off the pane it came from (read-only): its glass type, and what made this cell let go — a blow that landed on the pane within
-    // the last moments (a round: its hit count rose; a blast: it gained crack sites without a hit), else it is a tongue that lost its support
-    const st = this.paneAt(box.c);
-    if (st) {
-      const now = this.g.time; let m = this.paneMem.get(st.bi); if (!m) { m = { hits: 0, sites: 0, t: -1e9, cause: 'hit', dicedT: -1e9 }; this.paneMem.set(st.bi, m); }
-      const nSites = (st as unknown as { impacts?: unknown[] }).impacts?.length ?? 0;   // (read loosely: the fracture part's pane state names its sites differently — and with its release hook this path never runs)
-      if (st.hits > m.hits) { m.cause = 'hit'; m.t = now; } else if (nSites > m.sites) { m.cause = 'blast'; m.t = now; }
-      m.hits = st.hits; m.sites = nSites;
-      f.pane = st.bi; f.type = st.type; f.cause = now - m.t < 0.35 ? m.cause : 'support';
-      if (st.type === 'tempered') {
-        // a DICED pane: the base hands over a crumb for a few of its cells only (the rest it throws as chips) — the first one stands for the whole pane, taken here
-        // as a grid of clumps over its face; the pane's later crumbs are already in that pour
-        if (now - m.dicedT > 2) { m.dicedT = now; this.dicePane(st, f); }
-        this.note(`take pane ${st.bi} tempered → dice`);
-        return this.ghost;
-      }
-      this.note(`take pane ${st.bi} ${st.type} ${f.kind} ${f.cause} ${(f.area * 1e4).toFixed(0)} cm²`);
-    }
-    this.lastPlate = null;
-    this.release(f);
-    return this.lastPlate ?? this.ghost;   // (never a refusal: the fragment was taken — as a plate, or whole as spray; the caller's own per-frame budget counts it either way)
-  }
-  /** what take() hands back for a fragment that became particles only: a chunk in no pool (the base sets a finish on what it gets back and counts it spawned) */
-  private ghost = { box: makeBox({ c: [0, -100, 0], h: [0.01, 0.01, 0.01], yaw: 0, albedo: [0, 0, 0], flags: BoxFlag.NoPrimary | BoxFlag.NoShadow }) } as unknown as Chunk;
-  /** the pane a dropped cell's box came from: the one whose face it lies in (inside its outline — or least outside it, for a box at a shared edge — and within 8 cm of its plane) */
-  private paneAt(c: Vec3): PaneState | null {
-    let best: PaneState | null = null, bestD = 0.12;
-    for (const st of this.g.glassBreak.panes.values()) {
-      const b = st.box; const dx = c[0] - b.c[0], dz = c[2] - b.c[2]; const cy = Math.cos(b.yaw), sy = Math.sin(b.yaw);
-      const l = [dx * cy - dz * sy, c[1] - b.c[1], dx * sy + dz * cy]; const thin = b.h[0] < b.h[2] ? 0 : 2;
-      if (Math.abs(l[thin]) > b.h[thin] + 0.08) continue;
-      const out = Math.max(0, Math.abs(l[2 - thin]) - b.h[2 - thin], Math.abs(l[1]) - b.h[1]);
-      if (out < bestD) { bestD = out; best = st; }
-    }
-    return best;
-  }
-  /** a tempered pane gone to dice, whole (the interim hookup): its face as a grid of clumps ≤ ~0.25 m² each, every one a release of its own (dice, fines, a shatter where it lands) */
-  private dicePane(st: PaneState, f0: GlassFragmentLike) {
-    const b = st.box; const thin = b.h[0] < b.h[2] ? 0 : 2; const hu = b.h[2 - thin], hv = b.h[1];
-    const nu = clampI(Math.round(hu * 2 / 0.5), 1, 4), nv = clampI(Math.round(hv * 2 / 0.5), 1, 4);
-    const cy = Math.cos(b.yaw), sy = Math.sin(b.yaw); const uAx: Vec3 = thin === 0 ? [sy, 0, cy] : [cy, 0, -sy];   // (boxes.ts: local +X → (cos, 0, −sin), +Z → (sin, 0, cos))
-    for (let i = 0; i < nu; i++) for (let j = 0; j < nv; j++) {
-      const du = ((i + 0.5) / nu - 0.5) * 2 * hu, dv = ((j + 0.5) / nv - 0.5) * 2 * hv; const su = hu / nu, sv = hv / nv;
-      const c: Vec3 = [b.c[0] + uAx[0] * du, b.c[1] + dv, b.c[2] + uAx[2] * du];
-      const corner = (a: number, e: number): Vec3 => [c[0] + uAx[0] * su * a, c[1] + sv * e, c[2] + uAx[2] * su * a];
-      this.release({ ...f0, pane: st.bi, type: 'tempered', kind: 'clump', grain: 0.009, cause: 'dice', outline: [corner(-1, -1), corner(1, -1), corner(1, 1), corner(-1, 1)], centre: c, area: 4 * su * sv, thickness: 2 * b.h[thin],
-        velocity: [f0.velocity[0], f0.velocity[1] - 0.2 * hash01(f0.seed + i * 7 + j), f0.velocity[2]], seed: u32(f0.seed + Math.imul(i * 4 + j + 1, 0x9E3779B1)) });
-    }
-  }
-  private lastPlate: Chunk | null = null;
-  /** this object's own count of hand-dealt seeds (take / test / a crunch's pitch): reset with the level, so two fresh games agree */
+  /** this object's own count of hand-dealt seeds (test / a crunch's pitch): reset with the level, so two fresh games agree */
   private serial = 0;
 
   // ---------------------------------------------------------------- plates
@@ -356,7 +296,7 @@ export class GlassShards {
     ch.box.rough = 0.05; ch.box.flags |= BoxFlag.NoShadow;   // polished, and clear: no shadow, no ray
     if (cut && SHARDS.cutBody > 0) { const under = this.underAlbedo(ch.box.c); ch.box.albedo = cut.cut ? cutFaceAlbedo(meta.tint, under, meta.type, false) : plateAlbedo(meta.tint, under, meta.type); }   // (the glass body only where the cut pass draws it: a cell that is its own rectangle carries no record, is drawn whole and opaque, and keeps the stand-in colour — as does the child of one)
     if (cut) { ch.box.cut = cut.cut; if (cut.cut) { if (SHARDS.cutEdge > 0) ch.box.cutCore = edgeColour(meta.tint, SHARDS.cutEdge); if (SHARDS.cutSee > 0 || SHARDS.cutRim > 0) ch.box.cutGlass = { see: SHARDS.cutSee, rim: SHARDS.cutRim, anim: SHARDS.cutAnim }; } SHARD_STATS.cutPlates++; SHARD_STATS.cutDropped += cut.dropped; }   // (the pool copies centre, extents and attitude — the record is put on the copy; undefined = the cell was its own rectangle)
-    SHARD_STATS.plates++; this.lastPlate = ch;
+    SHARD_STATS.plates++;
     SHARD_STATS.peakPlates = Math.max(SHARD_STATS.peakPlates, mine + 1);
     return ch;
   }
@@ -539,10 +479,9 @@ export class GlassShards {
   reset() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('GlassShards.reset', this, []); if (__r !== RUST_PASS) return __r as any; } } this.clear(); this.log.length = 0; this.serial = 0; this.crunchN = 0; }
   /** Game.clearAftermath(): the particles and the moving debris have just been wiped (a showcase starting, a tour cut) — nothing of ours is still owed a sound, a hearing
    *  event or a birth, the live estimate is empty, and the litter went with the glass that was it */
-  clear() { this.soundAt = {}; this.soundOwed = {}; this.g.falls.clear(); this.deferred.length = 0; this.deferredN = 0; this.paneMem.clear(); this.lives.length = 0; this.liveEst = 0; this.breaks.length = 0; this.lastPlate = null; this.recsThisFrame = 0; this.soundsThisFrame = 0; }
+  clear() { this.soundAt = {}; this.soundOwed = {}; this.g.falls.clear(); this.deferred.length = 0; this.deferredN = 0; this.lives.length = 0; this.liveEst = 0; this.breaks.length = 0; this.recsThisFrame = 0; this.soundsThisFrame = 0; }
   get live(): number { return this.liveEst + this.deferredN; }
   get plateCount(): number { let n = 0; for (const c of this.g.destr.debris.list) if (c.glass) n++; return n; }
-  private note(s: string) { this.log.push(`${this.g.time.toFixed(2)} ${s}`); if (this.log.length > 60) this.log.shift(); }
   summary(): string {
     const s = SHARD_STATS, cells = this.g.falls.cells(); let lit = 0; for (const c of cells) lit += c[2];
     return `${shardsLive(this.g) ? 'live' : 'inert'} · ${s.fragments} fragments → ${s.plates} plates (${this.plateCount} now, ${s.breaks} broke, ${s.crumbled} crumbled, ${s.platesRefused} refused) + ${s.born} particles in ${s.emits} emits (~${this.liveEst} live of ${SHARDS.liveCap}, ${s.trimmed} trimmed) · ${s.sounds} sounds, ${s.events} heard, ${s.crunches} crunches · litter ${(lit * 1e4).toFixed(0)} cm² in ${cells.length} cells`;
@@ -644,14 +583,3 @@ function cutPlateBox(origin: Vec3, rot: Quat, poly: Pt2[], halfT: number, albedo
   return { box, cut: pr.cut, dropped: pr.dropped, poly: local };
 }
 function signedArea(P: readonly Pt2[]): number { let a = 0; for (let i = 0; i < P.length; i++) { const q = P[(i + 1) % P.length]; a += P[i][0] * q[1] - q[0] * P[i][1]; } return a / 2; }
-/** the base's shard BOX read back as the fragment it stands for (take()): its two long sides are the outline, its thin one the pane's normal, signed the way it was thrown */
-function fragmentOfBox(box: Box, v: Vec3, w: Vec3, who: number, seed: number): GlassFragmentLike {
-  const rot = box.rot ?? quat.yaw(box.yaw);
-  const ax = [0, 1, 2].sort((p, q) => box.h[p] - box.h[q]); const e: Vec3[] = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-  let n = quat.rotate(rot, e[ax[0]]); if (v3.dot(n, v) < 0) n = v3.scale(n, -1);
-  const a = quat.rotate(rot, e[ax[1]]), b = quat.rotate(rot, e[ax[2]]); const ha = box.h[ax[1]], hb = box.h[ax[2]];
-  const c = box.c; const corner = (sa: number, sb: number): Vec3 => [c[0] + a[0] * ha * sa + b[0] * hb * sb, c[1] + a[1] * ha * sa + b[1] * hb * sb, c[2] + a[2] * ha * sa + b[2] * hb * sb];
-  const tinted = Math.abs(box.albedo[0] - box.albedo[2]) > 0.02 || box.albedo[0] < 0.9;
-  return { pane: -1, type: 'annealed', kind: hb > 2.2 * ha ? 'dagger' : 'piece', outline: [corner(-1, -1), corner(1, -1), corner(1, 1), corner(-1, 1)], centre: v3.copy(c), normal: n, thickness: 2 * box.h[ax[0]], area: 4 * ha * hb,
-    velocity: v3.copy(v), spin: v3.copy(w), tint: tinted ? v3.copy(box.albedo) : [0.72, 0.8, 0.82], grain: 0, cause: 'hit', who, seed };
-}
