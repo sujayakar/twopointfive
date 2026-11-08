@@ -1,5 +1,5 @@
 //! THE KIT PICTURE'S STAGE: the mission's own level, stood from a link that carries `kitview`, is held as the picture of the team at its way in. Every case stands on what `stage` wrote: with it doing nothing the
-//! men stand where the mission started them, nobody is parked and no pin is set.
+//! men stand where the mission started them, nobody is parked and no pin is set. The director is held off here (`still`): what the men do is `kit_acts`.
 use game::game::GuardState;
 use game::kitstage::{self, KitStage};
 use game::teams::Team;
@@ -28,7 +28,10 @@ const CASES: &[(&str, &str, usize)] = &[
 
 fn stood(level: &str, words: &str) -> Play {
     let link = format!("?levelFile={}&kitview{}{}", level, if words.is_empty() { "" } else { "&" }, words);
-    Play::mission(level, &link, &Opts { seed: 3, ..Default::default() })
+    let mut p = Play::mission(level, &link, &Opts { seed: 3, ..Default::default() });
+    // (the staging alone: the acts are `kit_acts`)
+    if let Some(s) = p.g.kit_stage.as_mut() { s.still = true; }
+    p
 }
 fn st(p: &Play) -> &KitStage { p.g.kit_stage.as_ref().expect("a link with `kitview` has a stage") }
 fn flat(a: [f64; 3], b: [f64; 2]) -> f64 { ((a[0] - b[0]).powi(2) + (a[2] - b[1]).powi(2)).sqrt() }
@@ -142,7 +145,8 @@ fn an_open_card_stands_its_man_first() {
     assert_eq!(st(&p).order[0], now[1], "the open card's man is first at the door");
     on_their_places(&p, "card 2", 0.05);
     kitstage::open(&mut p.g, 0, ""); p.frame();
-    assert_eq!(st(&p).order[0], game::scenario_run::team_of(&p.g)[0]);
+    assert_eq!(st(&p).who, 0);
+    assert_eq!(st(&p).order[0], game::scenario_run::team_of(&p.g)[1], "a staging keeps the file's order");
 }
 
 #[test]

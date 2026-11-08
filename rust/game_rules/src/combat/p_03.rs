@@ -145,14 +145,15 @@ pub fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, 
             if d <= b.dazzle_radius {
                 let u = v3::clamp(d / b.dazzle_radius, 0.0, 1.0);
                 let mut stag = 0.0;
+                let own_seen = g.k.samstun.own_seen;
                 if !entry {
-                    if !seg(g, from, eye) { sam_secs = v3::lerp(b.dazzle_seconds, b.dazzle_min, u); }
+                    if !(spare && !own_seen) && !seg(g, from, eye) { sam_secs = v3::lerp(b.dazzle_seconds, b.dazzle_min, u); }
                 } else {
                     let seen = !seg(g, from, eye) || (lifted && !seg(g, over, eye));
                     let mut k = 1.0;
                     let mut reach = true;
                     let own = sam_side == crate::teams::Team::Player || sam_side == crate::teams::Team::Operative;
-                    let full = !own || seen;
+                    let full = !own || (seen && own_seen);
                     if !seen {
                         if own && spare {
                             reach = false;
@@ -161,6 +162,8 @@ pub fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, 
                             if pr.muffle > 0.6 || pr.path_len > g.k.flash.concuss_m { reach = false; }
                             k = g.k.flash.concuss_k;
                         }
+                    } else if own && spare && !own_seen {
+                        reach = false;
                     }
                     if reach {
                         if !full {

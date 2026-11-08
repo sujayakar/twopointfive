@@ -1,5 +1,6 @@
 //! THE KIT PICTURE'S STAGE: the Team & kit screen's picture of the team at the mission's own way in. The mission is started as Deploy would start it; then this stands the team on the plan's places, parks
 //! everybody else far off and calm, hangs the lamps and pins the camera. NO RULE OF THE GAME READS THE STAGE: it writes only what any host could write (men, lights, boxes, a pin) round the tick.
+use super::acts;
 use super::light::{KIT_VIEW_LIGHT as T, KIT_VIEW_LOOP as K, KIT_VIEW_QUIET as QK, KIT_VIEW_STAGE as ST};
 use super::plan::{porch_lit, KIT_PLAN};
 use super::types::*;
@@ -116,22 +117,23 @@ fn box_changed(g: &mut Game) {
     g.engine.world.geom_serial += 1.0;
     crate::scene_collision::wrote(g);
 }
-fn drop_props(g: &mut Game, hidden: &[usize]) {
+pub(super) fn drop_props(g: &mut Game, hidden: &[usize]) {
     for &i in hidden { if let Some(&p) = g.props.all.get(i) { crate::props::prop_system_remove(g, p); } }
 }
 
 /// the room behind the door at this share of itself: each lamp's own base, which the game multiplies each step, and its fixture's glow
-fn quiet_inside(g: &mut Game, st: &mut KitStage, k: f64) {
+pub(super) fn quiet_inside(g: &mut Game, st: &mut KitStage, k: f64, blade: f64) {
     st.share = k;
+    st.a.blade = blade;
     let li = light_in();
     for a in &st.lit_in {
         home::light_home_in(g, li.on, Some(a.t), Some(1.0), None, None, None);
         home::light_home_in(g, li.base, Some(a.t), Some(a.intensity * k), None, None, None);
         g.tab.sim_lightshome_fixture[a.t].base_emissive = [a.emissive[0] * k, a.emissive[1] * k, a.emissive[2] * k];
     }
-    if let Some(o) = st.inside { let l = &mut g.tab.light[o]; l.intensity = QK.own.intensity; l.peak_intensity = QK.own.intensity; }
+    if let Some(o) = st.inside { let l = &mut g.tab.light[o]; l.intensity = QK.own.intensity * blade; l.peak_intensity = l.intensity; }
 }
-fn pool_sync(g: &mut Game, st: &KitStage) {
+pub(super) fn pool_sync(g: &mut Game, st: &KitStage) {
     let Some(p) = st.pool else { return };
     let i = st.fixture.and_then(|f| g.engine.world.statics.iter().position(|&b| b == f));
     let row = &mut g.tab.sim_lightshome_fixture[p];
@@ -196,13 +198,33 @@ fn hang(g: &mut Game, name: &str, h: &Hung) -> LightId {
     id
 }
 
+/// a lamp of the picture's own, for a row: a point, hung until it is taken off the list
+pub(super) fn hang_lamp(g: &mut Game, name: &str, kind: f64, pos: V3, dir: V3, color: V3, intensity: f64, range: f64, inner: f64, outer: f64, radius: f64) -> LightId {
+    hang(g, name, &Hung { kind, pos, dir, color, intensity, range, inner, outer, radius, volumetric: 0.0, broad: false })
+}
+
 /// the team's lights off, Sam's dim and tight at the door's foot (the game writes each weapon light in each step)
-fn torches(g: &mut Game, st: &KitStage) {
-    for &x in &st.order { let l = g.gd[x].flashlight; g.tab.light[l].enabled = false; }
+fn torches(g: &mut Game, st: &mut KitStage) {
+    let (lit, lit_man) = st.a.beat.as_ref().map_or((false, None), |b| (b.lit, b.man));
+    let beam = st.a.beam;
+    for &x in &st.order {
+        let on = lit && lit_man == Some(x);
+        let l = g.gd[x].flashlight;
+        let r = &mut g.tab.light[l];
+        r.enabled = on;
+        if on { r.intensity = K.beam; r.peak_intensity = K.beam; if let Some(d) = beam { r.dir = d; } }
+    }
     let pl = g.player;
     let id = g.pl[pl].light;
     let pos = g.tab.light[id].pos;
     let l = &mut g.tab.light[id];
+    let cone = *st.a.sam_cone.get_or_insert((l.inner_deg, l.outer_deg, l.volumetric));
+    if lit && lit_man.is_none() {
+        l.enabled = true;
+        l.intensity = K.beam; l.peak_intensity = K.beam; l.inner_deg = cone.0; l.outer_deg = cone.1; l.volumetric = cone.2;
+        if let Some(d) = beam { l.dir = d; }
+        return;
+    }
     if !st.sam_on { l.enabled = false; return; }
     l.dir = unit(pos, st.sam_aim);
     l.intensity = st.sam_intensity; l.peak_intensity = st.sam_intensity; l.inner_deg = st.sam_inner; l.outer_deg = st.sam_outer; l.volumetric = st.sam_volumetric;
@@ -331,7 +353,7 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
                 st.lit_in.push(LampAs { t, intensity, emissive });
             }
         }
-        quiet_inside(g, st, QK.inside);
+        quiet_inside(g, st, QK.inside, 1.0);
         let roofs = quiet_roofs(g, &plan);
         let np = js::to_i32(box_flag().no_primary);
         let any = !roofs.is_empty();
@@ -347,7 +369,11 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
     // THE MEN: the open card's man first, on the plan's places
     st.who = if st.want >= 1 && (st.want as usize) <= team.len() { st.want } else { 0 };
     let head = open_man(g, st).filter(|h| team.contains(h));
-    let order: Vec<GuardId> = match head { Some(h) => core::iter::once(h).chain(team.iter().copied().filter(|&x| x != h)).collect(), None => team.clone() };
+    // (a restage keeps the file's order, the men's places by team index: a restart makes new men; and stands the open card's man first)
+    let all0 = crate::scenario_run::team_of(g);
+    let kept_men: Vec<GuardId> = st.keep.take().map_or(Vec::new(), |perm| perm.iter().filter_map(|&i| all0.get(i).copied()).filter(|x| team.contains(x)).collect());
+    let file: Vec<GuardId> = kept_men.iter().copied().chain(team.iter().copied().filter(|x| !kept_men.contains(x))).collect();
+    let order: Vec<GuardId> = match head { Some(h) => core::iter::once(h).chain(file.iter().copied().filter(|&x| x != h)).collect(), None => file };
     st.doorway = alloc::vec![a.a, a.b];
     st.stand = plan.slots.iter().map(|p| [p[0], p[1]]).collect();
     st.hand_right = plan.hand == "right";
@@ -375,6 +401,7 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
         crate::control::set_pinned(g, x, true, "the kit picture");
         chars.push((c, p[2] * R));
     }
+    let shut0 = door.map_or(0.0, |d| crate::doors::door_angle(g, d));
     let (rifle, pistol) = (g.pl[pl].rifle, g.pl[pl].pistol);
     g.fa[rifle].light_on = st.sam_on;
     g.fa[pistol].light_on = st.sam_on;
@@ -401,6 +428,7 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
     // THE LIGHTS, after the step (the game writes each weapon light in it)
     st.order = order.clone();
     st.sam_aim = at_of(&plan, or(o.sam.aim, T.sam.aim));
+    st.a.beat = None;
     torches(g, st);
     let list: Vec<LightId> = g.engine.lights.lights.clone();
     for &l in &list {
@@ -493,12 +521,43 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
     st.dist = plan.cam.dist;
     st.fit = if q { let lamp = match st.fixture { Some(f) => g.tab.boxes[f].c, None => g.tab.light[st.porch.unwrap()].pos }; Some((lamp, sam_rest.unwrap_or([slots[0][0], slots[0][1]]))) } else { None };
     st.foot = at_of(&plan, [0.0, 0.0, 0.0]);
+    st.s = plan.s; st.n = a.n; st.mid = a.mid;
     st.sam = [slots[0][0], slots[0][1]];
     st.sam_yaw = slots[0][2] * R;
     st.spots = (0..order.len()).map(|i| [slots[i + 1][0], slots[i + 1][1]]).collect();
     st.yaws = (0..order.len()).map(|i| slots[i + 1][2] * R).collect();
     st.mate = match places.as_ref().and_then(|x| x.mate) { Some(p) if !order.is_empty() => Some(([p[0], p[1]], p[2] * R)), _ => None };
     aim_stage(g, st);
+    {
+        // (the way in as the acts read it. How far in a can or a round may go: the plan's free floor behind the anchor's line; a blank wall: what a hole opens onto)
+        let wall = a.kind == "wall";
+        let foot = st.foot;
+        let side = match door { Some(d) => crate::doors::doors_side(g, d, [slots[0][0], 0.0, slots[0][1]]), None => 1.0 };
+        let latch = match door { Some(d) => { let h = g.dr[d].def.hinge; if (foot[0] - h[0]) * plan.s[0] + (foot[2] - h[1]) * plan.s[1] >= 0.0 { 1.0 } else { -1.0 } } None => 1.0 };
+        let reach_in = if wall { plan.beyond - plan.wall.back } else { plan.inside };
+        let fits = |x: f64| x <= reach_in - 0.3;
+        let spots = |g: &Game, list: &[f64]| -> Vec<V3> {
+            let mut ms: Vec<f64> = list.iter().copied().filter(|&x| fits(x)).collect();
+            if !list.iter().any(|&x| fits(x)) && reach_in >= 0.8 { ms.push(reach_in / 2.0); }
+            let mut o = Vec::new();
+            for x in ms { for k in K.in_along { let p = at_of(&plan, [k * latch, -x, 0.0]); if free(g, p[0], p[2]) { o.push(p); } } }
+            o
+        };
+        st.spots_in = spots(g, &K.in_m);
+        st.spots_smoke = spots(g, &K.smoke_m);
+        let free_at = |x: f64, z: f64| free(g, x, z);
+        st.act4 = super::plan::act4(a.mid, plan.s, a.n, a.width, &plan.slots, Some(&free_at), None);
+        st.frag_m = m::max(0.6, m::min(K.sam_frag_m, reach_in - 0.5));
+        st.frag_land = m::min(K.frag_land, m::max(0.3, st.frag_m - 0.5));
+        st.door = door; st.walled = wall; st.width = a.width; st.reach_in = reach_in; st.hole = false; st.side = side; st.latch = latch;
+        st.leaf_shut = shut0; st.leaf_rest = door.map_or(0.0, |d| crate::doors::door_angle(g, d));
+        st.sam_smoke = at_of(&plan, [0.0, -K.sam_smoke_m, 0.0]);
+        st.sam_stun = at_of(&plan, [0.0, -K.sam_stun_m, 0.0]);
+        st.sam_frag = at_of(&plan, [0.0, -st.frag_m, 0.0]);
+        st.sam_rest = sam_rest.unwrap_or([slots[0][0], slots[0][1]]);
+        st.sam_back = places.as_ref().and_then(|x| x.back).map(|q| [q[0], q[1]]);
+        st.four = false;
+    }
     // LIVE: Sam cannot be killed and his belt refills, no autosave, no response team, the game's turn weight on the picture's numbers, every teammate unhurt, each sent to his place
     g.god_mode = true;
     g.infinite_ammo = true;
@@ -513,6 +572,7 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
     for x in crate::scenario_run::team_of(g) { g.gd[x].god = true; }
     // (the posing step walked the parked men back inside the world's edge)
     let _ = park(g);
+    if !st.still { acts::live(g, st); }
 }
 
 /// WHAT EVERY STAGING STARTS FROM: the mission as its start left it, and the stage as it then is. A staged game is never mended and never grows: it is thrown away whole.
@@ -525,8 +585,11 @@ fn block_of(slot: usize) -> Vec<u8> { unsafe { core::slice::from_raw_parts(::sim
 
 /// THE MISSION FROM ITS START and the team staged again, as the cards, the size and the open card now stand.
 pub fn restage(g: &mut Game) {
-    let Some(was) = take(g) else { return };
-    let Some(base) = was.base.clone() else { g.kit_stage = Some(was); return };
+    let Some(mut was) = take(g) else { return };
+    let Some(base) = was.base.clone() else { was.due = false; g.kit_stage = Some(was); return };
+    // (the file's order, as team indexes: every row id the stage holds is dead after this)
+    let team = crate::scenario_run::team_of(g);
+    let keep: Vec<usize> = was.order.iter().filter_map(|x| team.iter().position(|t| t == x)).collect();
     let mut n = base.0.0.clone();
     // (what the host holds of the game goes on: its count of serials, what the steps told it and the record of its hand; and what the cards and the size are)
     n.serial_next = n.serial_next.max(g.serial_next);
@@ -541,6 +604,8 @@ pub fn restage(g: &mut Game) {
     let mut st = Box::new(base.0.2.clone());
     (st.base, st.want, st.field, st.size, st.frame, st.aspect) = (Some(base), was.want, was.field.clone(), was.size, was.frame, was.aspect);
     (st.roused_men, st.roused_alarms) = (was.roused_men, was.roused_alarms);
+    (st.veil, st.still, st.keep) = (was.veil, was.still, Some(keep));
+    acts::carry(&was.a, &mut st.a);
     crate::game::game_restart_encounter(g);
     place(g, &mut st);
     // (another picture than the last: nothing of it is blended into this one)
@@ -639,7 +704,18 @@ pub fn aim(g: &mut Game) {
     g.kit_stage = Some(st);
 }
 
-/// ROUND THE TICK, BEFORE IT: the park; the seat's hand says nothing but the cursor on the door's foot.
+/// the cursor on a point of the world, as the view a tick is handed sees it (None: behind the lens)
+pub(super) fn cursor_of(cmd: &PlayerCmd, p: V3) -> Option<(f64, f64)> {
+    let vp = &cmd.view.vp;
+    if vp.len() != 16 { return None; }
+    let cw = vp[3] * p[0] + vp[7] * p[1] + vp[11] * p[2] + vp[15];
+    if cw <= 0.0 { return None; }
+    Some((((vp[0] * p[0] + vp[4] * p[1] + vp[8] * p[2] + vp[12]) / cw * 0.5 + 0.5) * cmd.w, (1.0 - ((vp[1] * p[0] + vp[5] * p[1] + vp[9] * p[2] + vp[13]) / cw * 0.5 + 0.5)) * cmd.h))
+}
+/// the mission the stage has up has ended
+pub(super) fn staged_ended(g: &Game, asks_none: bool) -> bool { staged_way_of(g, asks_none).ended }
+
+/// ROUND THE TICK, BEFORE IT: the park; the seat's hand says nothing of its own: the keys and the cursor are the director's.
 pub fn before(g: &mut Game, cmd: &mut PlayerCmd) {
     let Some(mut st) = take(g) else { return };
     cmd.keys.clear();
@@ -647,24 +723,26 @@ pub fn before(g: &mut Game, cmd: &mut PlayerCmd) {
     cmd.buttons = 0.0;
     cmd.clicked = 0.0;
     cmd.wheel = 0.0;
+    // (the page has laid its copy over the picture, or has been given half a second to: the room staged again, now)
+    if let Some(t0) = st.veil_asked { if st.veil_laid || g.time - t0 >= 0.5 { st.due = true; } }
     let pl = g.player;
-    // (the cards, the size or the open card have moved; a man down, a mission ended: nothing the picture shows. Staged again)
-    let again = st.due || !st.none && (g.pl[pl].down || st.order.iter().any(|&x| g.gd[x].state == GuardState::Dead) || staged_way_of(g, st.asks_none).ended);
-    if again { g.kit_stage = Some(st); restage(g); st = match take(g) { Some(s) => s, None => return }; }
+    if st.still && !st.none && (g.pl[pl].down || st.order.iter().any(|&x| g.gd[x].state == GuardState::Dead) || staged_way_of(g, st.asks_none).ended) { st.due = true; }
+    if st.due { g.kit_stage = Some(st); restage(g); st = match take(g) { Some(s) => s, None => return }; }
     if st.none { g.kit_stage = Some(st); return; }
     let (men, alarms) = park(g);
     st.roused_men += men;
     st.roused_alarms += alarms;
-    let vp = &cmd.view.vp;
-    if vp.len() == 16 {
-        let p = st.foot;
-        let cw = vp[3] * p[0] + vp[7] * p[1] + vp[11] * p[2] + vp[15];
-        if cw > 0.0 {
-            cmd.mx = ((vp[0] * p[0] + vp[4] * p[1] + vp[8] * p[2] + vp[12]) / cw * 0.5 + 0.5) * cmd.w;
-            cmd.my = (1.0 - ((vp[1] * p[0] + vp[5] * p[1] + vp[9] * p[2] + vp[13]) / cw * 0.5 + 0.5)) * cmd.h;
-        }
+    if let Some((x, y)) = cursor_of(cmd, st.foot) { cmd.mx = x; cmd.my = y; }
+    st.a.cursor = None;
+    if st.still { home_men(g, &mut st); }
+    else {
+        acts::before_step(g, &mut st, cmd);
+        // (Sam's own keys, for this tick; the cursor where the director asked for it)
+        for k in st.a.press.drain(..) { cmd.pressed.push(String::from(k)); }
+        cmd.clicked = st.a.clicked;
+        st.a.clicked = 0.0;
+        if let Some(q) = st.a.cursor { if let Some((x, y)) = cursor_of(cmd, q) { cmd.mx = x; cmd.my = y; } }
     }
-    home_men(g, &mut st);
     pool_sync(g, &st);
     g.kit_stage = Some(st);
 }
@@ -673,12 +751,19 @@ pub fn before(g: &mut Game, cmd: &mut PlayerCmd) {
 pub fn after(g: &mut Game) {
     let Some(mut st) = take(g) else { return };
     if st.none { g.kit_stage = Some(st); return; }
-    torches(g, &st);
+    if !st.still { acts::after_step(g, &mut st); }
+    torches(g, &mut st);
     let (men, alarms) = park(g);
     st.roused_men += men;
     st.roused_alarms += alarms;
-    if let Some(l) = st.fill { if st.fill_at > 0.0 { let r = &mut g.tab.light[l]; r.intensity = st.fill_at; r.peak_intensity = st.fill_at; } }
-    if let Some(a) = st.moon_at { g.tab.light[a.light].intensity = a.intensity; }
+    // (the dark after the lamp: the fill and the moon lifted, eyes adjusting; the half crouch he shoots from, over the game's own knee)
+    let e = if st.a.lift_at.is_nan() { 0.0 } else { let u = m::max(0.0, m::min(1.0, (g.time - st.a.lift_at) / QK.lift_secs)); u * u * (3.0 - 2.0 * u) };
+    if let Some(l) = st.fill { if st.fill_at > 0.0 { let r = &mut g.tab.light[l]; r.intensity = st.fill_at * (1.0 + (QK.lift_fill - 1.0) * e); r.peak_intensity = r.intensity; } }
+    if let Some(a) = st.moon_at { g.tab.light[a.light].intensity = a.intensity * (1.0 + (QK.lift - 1.0) * e); }
+    if st.quiet {
+        let up = st.a.beat.as_ref().map_or(false, |b| b.row == Act::QuietGun) && st.a.rise > 0.0;
+        if up { let c = g.pl[g.player].ch; let a = &mut g.ch[c].anim; a.crouch = m::min(a.crouch, 1.0 - QK.half * st.a.rise); } else { st.a.rise = 0.0; }
+    }
     if let Some((z, h)) = st.sky_at { g.engine.settings.sky_zenith = z; g.engine.settings.sky_horizon = h; }
     // (the team stands under a roof: no weather on the men, whatever the level's own roof test makes of a ceiling the camera never draws)
     if st.plan.as_ref().map_or(false, |p| p.indoors) {
@@ -707,6 +792,11 @@ pub fn after(g: &mut Game) {
         }
     }
     stroke(g, &list);
+    // (the wand's row: the fog is the game's for its length and never the picture's: no lamp's face as the team last saw it, and the frame's boxes as they stood before the fog cut them)
+    if st.a.fog_up && crate::fogofwar::fog_of_war_active(g) {
+        crate::fogofwar::fog_of_war_faces_lift(g);
+        if g.fog_picture.raw_at == g.fog_of_war.frame_no { g.engine.world.dynamics = g.fog_picture.raw_list.clone(); }
+    }
     g.kit_stage = Some(st);
 }
 
@@ -747,20 +837,25 @@ pub fn frame(g: &mut Game, aspect: f64, ask: Option<FrameAsk>) {
     if ask.is_some() { st.frame = ask; }
     aim(g);
 }
-/// whose card is open (0 the player) and the row under its highlight: the men stand again with that man first at the door, by the next tick. The card may be asked for before its man has come
+/// whose card is open (0 the player) and the row under its highlight: another card's man walks to the head of the file, another tile plays at once. The card may be asked for before its man has come
 pub fn open(g: &mut Game, who: u32, field: &str) {
-    let Some(st) = g.kit_stage.as_mut() else { return };
-    st.field = String::from(field);
-    if st.want == who { return; }
-    st.want = who;
-    st.due = true;
+    let Some(mut st) = take(g) else { return };
+    if st.still {
+        st.field = String::from(field);
+        if st.want != who { st.want = who; st.due = true; }
+    } else { super::cards::opened(g, &mut st, who, field); }
+    g.kit_stage = Some(st);
 }
-/// the cards are written (the caller's) and how many come (under 0: as it stands; a quiet or a solo mission's men are the mission's own): staged again by the next tick
+/// the cards are written (the caller's) and how many come (under 0: as it stands; a quiet or a solo mission's men are the mission's own). What moved is written live; what cannot be asks for the page's copy, and is staged again under it
 pub fn cards(g: &mut Game, size: i32) {
-    let Some(st) = g.kit_stage.as_ref() else { return };
+    let Some(mut st) = take(g) else { return };
     let size = if (0..=4).contains(&size) && !staged_way_of(g, st.asks_none).fixed { Some(size as u32) } else { None };
     if let Some(n) = size { if g.rescue.active { g.k.rescue.squad = n as f64; } else { g.k.nightbreach.squad = n as f64; } }
-    let st = g.kit_stage.as_mut().unwrap();
     if size.is_some() { st.size = size; }
-    st.due = true;
+    if st.still { st.due = true; } else { super::cards::told(g, &mut st, size); }
+    g.kit_stage = Some(st);
+}
+/// THE PAGE HAS LAID ITS COPY over the picture: what it was asked for is staged again in the next tick
+pub fn under(g: &mut Game) {
+    if let Some(st) = g.kit_stage.as_mut() { if st.veil_asked.is_some() { st.veil_laid = true; } }
 }

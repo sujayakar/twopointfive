@@ -1,7 +1,7 @@
 // THE TEAM & KIT PICTURE, the page's half of it: this window is a frame of the kit screen (ui/kitView.ts), on the very address Deploy would load plus `kitview`, and the game in its
 // module is that mission with its team stood at its way in (the module stages it: `kitstage`). What the kit screen says of the cards, of whose card is open and of where the men should
-// sit is commanded; what the window says back is `boot` (it listens), `ready` (the picture is fit to show) and `none` (there is nothing to stage here, or the page has died). A team
-// staged again is staged under a copy of the last picture, which fades.
+// sit is commanded; what the window says back is `boot` (it listens), `ready` (the picture is fit to show) and `none` (there is nothing to stage here, or the page has died). What the
+// module cannot do in front of the eye it asks a copy for (the view's `veil`): the copy is laid over the last picture, the module is told, and the room staged again under it as the copy fades.
 import type { Commands } from '../draw/commands';
 
 /** drawn frames before a first picture is shown · frames drawn under the copy before it fades, and how long it fades (ms) */
@@ -23,9 +23,9 @@ export class KitPage {
   /** the kit screen's step is not showing: nothing is stepped or drawn (but for the first picture, which it waits for) */
   get rests(): boolean { return this.gone || (this.paused && this.said); }
   private paused = false; private said = false; private gone = false; private drawn = 0;
-  private frame: number[] = SAT.map(() => NaN); private aspect = 0; private who = 0;
-  /** the last picture's copy: laid over it as a team is staged again (`left` frames drawn under it yet, 0 as it fades) */
-  private veil: HTMLCanvasElement | null = null; private left = -1; private due: (() => void)[] = [];
+  private frame: number[] = SAT.map(() => NaN); private aspect = 0;
+  /** the last picture's copy: laid over it as a team is staged again (`left` frames drawn under it yet, 0 as it fades) · the copies asked for so far */
+  private veil: HTMLCanvasElement | null = null; private left = -1; private asked = 0;
 
   constructor(private readonly view: HTMLCanvasElement, private readonly commands: Commands) {
     window.addEventListener('message', e => {
@@ -39,27 +39,24 @@ export class KitPage {
   }
   private kit(m: Record<string, unknown>): void {
     const n = m.squad, size = typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= 4 ? n : -1, kept = JSON.stringify({ v: 2, own: true, stealth: true, members: Array.isArray(m.members) ? m.members : [] });
-    this.under(() => this.commands.kitStageCards(kept, size));
+    this.commands.kitStageCards(kept, size);   // (what moved is written live: where it cannot be the module asks for a copy)
   }
   private sel(m: Record<string, unknown>): void {
-    const w = Number(m.who), who = Number.isInteger(w) && w >= 1 && w <= 4 ? w : 0, field = typeof m.field === 'string' ? m.field : '', open = (): void => this.commands.kitStageOpen(who, field);
-    if (who === this.who) { open(); return; }
-    this.who = who; this.under(open);   // (another card: its man is stood at the head of the file)
+    const w = Number(m.who), who = Number.isInteger(w) && w >= 1 && w <= 4 ? w : 0, field = typeof m.field === 'string' ? m.field : '';
+    this.commands.kitStageOpen(who, field);   // (another card: the same men walk)
   }
   private sit(m: Record<string, unknown>): void { this.frame = SAT.map(k => typeof m[k] === 'number' ? m[k] as number : NaN); this.tellFrame(); }
   private tellFrame(): void { const [cx, cy, h, w, man, door, left, right, keep, top, bottom] = this.frame; this.commands.kitStageFrame(this.aspect, cx, cy, h, w, man, door, left, right, keep, top, bottom); }
   /** before a frame is stepped: the window's shape, where it has changed */
   before(aspect: number): void { if (Math.abs(aspect - this.aspect) < 1e-4) return; this.aspect = aspect; this.tellFrame(); }
 
-  /** `work` done under a copy of the picture as it stands: at once where none has been shown */
-  private under(work: () => void): void { if (!this.said || this.gone) { work(); return; } this.due.push(work); }
-  /** a frame has been drawn, in the task that drew it; `kit` = the view section's word */
-  after(kit: number): void {
+  /** a frame has been drawn, in the task that drew it; `kit` = the view section's word, `veil` = the copies the module has asked for */
+  after(kit: number, veil: number): void {
     if (this.gone) return;
     if (kit === NONE) { this.none(); return; }
     this.drawn++;
     if (!this.said && this.drawn >= READY) { this.said = true; post('ready'); }
-    if (this.due.length) { this.cover(); for (const w of this.due.splice(0)) w(); this.left = SETTLE; return; }
+    if (veil !== this.asked) { this.asked = veil; if (this.said) { this.cover(); this.left = SETTLE; } this.commands.kitStageUnder(); return; }
     if (this.left > 0 && --this.left === 0 && this.veil) { const v = this.veil; void v.offsetWidth; v.style.transition = `opacity ${FADE_MS}ms linear`; v.style.opacity = '0'; }
   }
   private cover(): void {
