@@ -9,8 +9,7 @@ place and pushes only an id this menu has never had (orders/p_02.rs), where a pu
 The menu a player sees is the same; the table no longer grows with every re-listing, and its rows are numbered the same
 on every machine. Run again on a later tree it rewrites only what is still pushed.
 
-Two pushes stay, and are read past: the call's own, and the wall tools' digitless copy of a row whose digit their own row
-has taken (`wall_charge_undigit`), which is a second row of the same id on purpose, made once and kept in a map of its own.
+One push stays, and is read past: the call's own.
 With `--check` nothing is written and the exit is 1 if any other row is still pushed.
 """
 import os, re, sys

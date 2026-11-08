@@ -42,6 +42,6 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
 }
 
 /// none were brought, and none is on it
-fn gone(g: &mut Game, t: &OrderTarget, _men: &[GuardId]) -> bool {
-    g.wall_charge.brought == Some(0.0) && crate::wallcharge::wall_charge_charge_on_target(g, &crate::seats::here(g), t).is_none()
+fn gone(g: &Game, seat: &crate::seats::SeatRef, t: &OrderTarget, _men: &[GuardId]) -> bool {
+    seat.wall_charge.brought == Some(0.0) && crate::wallcharge::wall_charge_charge_on_target(g, seat, t).is_none()
 }

@@ -305,39 +305,21 @@ pub fn wall_target(g: &crate::game::Game, seat: &crate::seats::SeatRef, at: V3, 
     }
 }
 
-/// The rows of a wall's menu: the floor's, its fifth turned to 'wall tools ▸', and the wall tools' own page.   (wallcharge.ts wallRows)
-pub fn wall_rows(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, page: Option<&str>, rows: &[OrdersOrderDefId]) -> Vec<OrdersOrderDefId> {
+/// The rows of a wall's menu: the floor's, 'wall tools ▸' on the fifth digit, and the wall tools' own page. The floor's own fifth row comes after it: a digit is the first row's that has it.   (wallcharge.ts wallRows)
+pub fn wall_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate::orders::OrderTarget, page: Option<&str>, rows: &[OrdersOrderDefId]) -> Vec<OrdersOrderDefId> {
     let crate::orders::OrderTarget::Floor(floor) = t else { return rows.to_vec() };
-    if floor.wall.is_none() || !wall_charge_on(g) || !g.wall_charge.seated {
+    if floor.wall.is_none() || !wall_charge_on(g) || !seat.wall_charge.seated {
         return rows.to_vec();
     }
     let direct = g.k.wallcharge.menu == crate::knobs::WallchargeKMenu::Direct;
-    let (row, opener) = (g.wall_charge.row, g.wall_charge.opener);
-    let page = match page {
-        Some(p) => p,
-        None => {
-            // (the floor's own fifth row stays on the wall's menu, below, with no digit)
-            let mut out = Vec::new();
-            let mut fifth = Vec::new();
-            for &d in rows {
-                if g.tab.orders_order_def[d].key == Some(5.0) {
-                    fifth.push(d);
-                } else {
-                    out.push(d);
-                }
-            }
-            out.push(if direct { row } else { opener });
-            for d in fifth {
-                out.push(wall_charge_undigit(g, d));
-            }
-            return out;
-        }
+    let (row, opener) = (seat.wall_charge.row, seat.wall_charge.opener);
+    let Some(page) = page else {
+        let (fifth, mut out): (Vec<_>, Vec<_>) = rows.iter().copied().partition(|&d| g.tab.orders_order_def[d].key == Some(5.0));
+        out.push(if direct { row } else { opener });
+        out.extend(fifth);
+        return out;
     };
-    if page == WALL_PAGE && !direct {
-        vec![row]
-    } else {
-        rows.to_vec()
-    }
+    if page == WALL_PAGE && !direct { vec![row] } else { rows.to_vec() }
 }
 
 /// Sam's own row at the foot of a partition his cursor is on.   (wallcharge.ts wallChargeRows)

@@ -27,4 +27,4 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
 }
 
 /// in move's place while the squad is silent and the pair orders are up
-fn when(g: &mut Game, _t: &OrderTarget, _men: &[GuardId]) -> bool { crate::pairorders::pair_orders_up(g, &crate::seats::here(g)) && crate::silent::squad_silent(g, &crate::seats::here(g)) }
+fn when(g: &Game, seat: &crate::seats::SeatRef, _t: &OrderTarget, _men: &[GuardId]) -> bool { crate::pairorders::pair_orders_up(g, seat) && crate::silent::squad_silent(g, seat) }
