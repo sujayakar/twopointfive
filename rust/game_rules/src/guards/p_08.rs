@@ -225,9 +225,6 @@ pub fn light_on(g: &mut crate::game::Game, c: CharId) -> [f64; 2] {
     let (b, pb) = light_at(g, head, None, None, None);
     [m::max(a, b), m::max(a * eyes_at(g, pa), b * eyes_at(g, pb))]
 }
-/// `light_on`, by the name and the shape the page's call surface has for it (the key it took is nothing's now).
-pub fn meter_of(g: &mut crate::game::Game, c: CharId, _key: &str) -> f64 { light_on(g, c)[1] }
-
 /// The light meter of a man some AI side can be hostile to, eased at Sam's rate into his visibility. (guards.ts unitLightMeter)
 pub fn unit_light_meter(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let c = g.gd[gd].ch;

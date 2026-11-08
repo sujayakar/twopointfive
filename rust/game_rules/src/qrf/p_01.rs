@@ -156,9 +156,6 @@ pub fn qrf_owns(g: &crate::game::Game, gd: GuardId) -> bool {
 
 // ---------------------------------------------------------------- knobs kept per machine
 
-/// `?qrfsquad=0` on the page's address. The skeleton has no row for the address: the TypeScript's answer with no word.   (qrf.ts ownDrillAsked)
-pub fn own_drill_asked() -> bool { false }
-
 /// `JSON.parse` as far as the two readers can tell: an object's booleans and numbers. Not JSON, or JSON of another shape (which reads no row): None.
 fn tune_rows(raw: &str) -> Option<JsMap<String, crate::qrf::StoredTuneRow>> {
     let mut i = 0;
