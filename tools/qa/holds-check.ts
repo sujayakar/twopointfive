@@ -1,14 +1,14 @@
 // THE STAND A PROBE IS OWED BY ITS NAME (tools/qa/holds.ts): the table and the one call, held to their word. It stands no game.
 //   bun run tools/qa/holds-check.ts        exit 0 = all hold · 1 = one does not      (probes.ts holds; the same on both stands: it reads no stand)
 //   HOLDS_BREAK=1 in front = a probe is run with nothing held and no fence round it, a check file's main is read as if it called its parts bare, and the runner
-//   is asked with a word set by hand: lines (2), (4), (5), (7), (8) and (9) must FAIL (the lines about the table itself stay green; for (8) a row of no probe and a row whose bisect names its
-//   probe's own held word are put into the list).
+//   is asked with a word set by hand: lines (2), (4), (5), (7), (8), (9) and (10) must FAIL and (10) (the lines about the table itself stay green; for (8) a row of no probe is put into the list, for (10) a file of no line).
 // What it is for: a check was red run as a file and green in its family, twice in one day, because the runner held rows off for it and its own main did not.
 // So (1) the table names rows the game has, under the words the frozen stand's own list gives them; (2) every probe the runner dispatches by a name in the table
 // runs with its words at '0' and its rows off, and both are back after; (3) a word whoever runs the tool set is left as he set it; (4) the fence puts back what a
 // probe wrote; (5) every check file with a main of its own that the runner dispatches such a name to runs it through the same call, by that name; (6) no name in
 // the table is one the runner no longer has; (7) the runner's own run() holds a probe's words; (8) the rows of the expected reds (tools/qa/expected-red.ts) are under
-// names the runner has and name words the stand can raise. (9) a run started with a break word says so, and whether it bit.
+// names of probes; (9) a run started with a break word says so, and whether it bit; (10) every check file of tools/qa is run by a line of the runner, or is on UNRUN
+// with its reason: a file nothing runs is not a check (a hundred and two were found so on 2026-11-08, half of them red).
 // WHAT (5) CANNOT SEE: that every arm of a main goes through the call (it reads the file's text for the call and the names; a main with one arm wrapped and one
 // bare passes); a check file none of whose probes is in the table (it is not read at all: run alone its parts have no fence between them); and a probe the
 // runner dispatches in a shape it does not read is said, not guessed.
@@ -29,7 +29,7 @@ const under = <T>(name: string, fn: () => T | Promise<T>): Promise<T> => BREAK ?
 const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`), { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
 const R = knobRegistry() as Record<string, Record<string, unknown>>, rows: Hold[] = []; for (const r of HOLDS) for (const h of r.holds) if (!rows.some(o => o.word === h.word)) rows.push(h);
 const at = (h: Hold): string => `${h.table}.${h.key}`, read = (h: Hold): unknown => R[h.table]?.[h.key];
-if (BREAK) console.log('HOLDS_BREAK=1: probes run bare, mains read as bare, the runner asked with a word set by hand — lines (2), (4), (5), (7), (8) and (9) must FAIL');
+if (BREAK) console.log('HOLDS_BREAK=1: probes run bare, mains read as bare, the runner asked with a word set by hand — lines (2), (4), (5), (7), (8), (9) and (10) must FAIL');
 
 // (1) the table against the game and the frozen stand's list
 { const bad: string[] = [];
@@ -58,6 +58,8 @@ srcLines.forEach((ln, i) => {
   if (lit) { ran.add(lit[1]); if (file) { placed.set(lit[1], file); if (imp) exported.set(lit[1], imp[2]); } else inRunner.add(lit[1]); return; }
   const pairs = PAIRS.exec(ln) ?? PAIRS.exec(srcLines[i - 1] ?? ''); if (pairs && file) for (const m of pairs[1].matchAll(/\['([^']+)', '(\w+)'\]/g)) { ran.add(m[1]); placed.set(m[1], file); exported.set(m[1], m[2]); }
 });
+// (the script table: a row a line, [name, file, families])
+for (const m of probesSrc.matchAll(/^  \['([a-z0-9-]+)', '([\w-]+\.ts)'/gm)) { ran.add(m[1]); placed.set(m[1], m[2]); scripts.add(m[2]); }
 /** the runner's probes: a known name it runs, or one that is nowhere a family's name only */
 const probeNames = [...known].filter(n => ran.has(n)).sort(), heldNames = probeNames.filter(n => holdsOf(n).length);
 
@@ -125,9 +127,17 @@ const probeNames = [...known].filter(n => ran.has(n)).sort(), heldNames = probeN
   line(p.exitCode === 0 && said?.[1] === 'PASS' && none === null && ran === 0 && exitCode(none) === 2, '(7) the runner\'s run() holds a probe\'s words by its name, and a part a file has not is said (exit 2), not passed over',
     `probes.ts selftest-holds: exit ${p.exitCode}${said ? ` · ${said[2].slice(0, 150)}` : ` · ${(p.stderr.toString() || out).trim().split('\n').slice(-1)[0]?.slice(0, 150)}`}`); }
 
-// (8) EVERY ROW OF THE EXPECTED REDS (expected-red.ts) is under a name the runner has: a row of a probe that is gone never reads EXPECTED or GREEN AGAIN.
+// (8) EVERY ROW OF THE EXPECTED REDS (expected-red.ts) is under a name the runner has (a family's word passes here and never reads EXPECTED or GREEN AGAIN).
 { const { EXPECTED_RED } = await import('./expected-red.ts'), names = [...Object.keys(EXPECTED_RED), ...(BREAK ? ['no-such-probe'] : [])], bad = names.filter(n => !known.has(n));
   line(!bad.length, '(8) every row of the expected reds is under a name the runner has', bad.length ? few(bad, 8) : `${names.length} rows`); }
+
+// (10) EVERY CHECK FILE IS RUN, or says here why a person runs it by hand.
+{ const PACKAGES = "wants the hosted backend's packages (npm ci in cloud/)", TOOL = 'a tool that wants a name or an argument', GATE = "the gate's or the build's own command, run by its name", RUST = "red or over its minute when read on 2026-11-08: the Rust work's to mend or delete";
+  const UNRUN: Readonly<Record<string, string>> = { 'cloud-check.ts': PACKAGES, 'lobby-check.ts': PACKAGES, 'mp-control-check.ts': PACKAGES, 'lesson-check.ts': TOOL, 'lived-check.ts': TOOL, 'map-check.ts': TOOL, 'zfight-check.ts': TOOL,
+    'rollback-check.ts': `${GATE} (--static)`, 'rust-check.ts': GATE, 'dice-check.ts': `${GATE}, over a minute`, 'mpserver-check.ts': 'three processes over real sockets, minutes', 'seats-check.ts': 'minutes: two players in one game', 'dress-check.ts': GATE, 'wallsides-check.ts': 'minutes: every level',
+    'teams-check.ts': "three lines red, unsure whether they reach the game: co-op's to place", 'exact-check.ts': RUST, 'men-check.ts': RUST, 'simstate-check.ts': RUST, 'smokegrid-check.ts': RUST, 'owner-check.ts': RUST, 'level-names-check.ts': 'red when read on 2026-11-08: the words\' owner\'s' };
+  const files = readdirSync(HERE).filter(f => f.endsWith('-check.ts')), here = new Set(BREAK ? [...files, 'no-such-check.ts'] : files), code = srcLines.map(l => l.replace(/(^|\s)\/\/.*$/, '')).join('\n'), lost = [...here].filter(f => !code.includes(f) && !(f in UNRUN)).sort(), dead = Object.keys(UNRUN).filter(f => !files.includes(f) || code.includes(f));
+  line(!lost.length && !dead.length, '(10) every check file of tools/qa is run by a line of the runner, or is listed with the reason it is not', lost.length || dead.length ? `run by nothing: ${few(lost, 8) || 'none'} · listed and run, or gone: ${few(dead, 8) || 'none'}` : `${files.length} files, ${Object.keys(UNRUN).length} run by hand`); }
 
 // (9) A BREAK WORD IS SAID, AND WHETHER IT BIT (stand.ts BREAK_WORDS, the close of probes.ts): the runner's own green and red self tests in children started
 // with a word no check reads. Green: DID NOT BITE. Red, no row: named as the word's to explain. WHAT (9) CANNOT SEE: the third reading, BITE NOT SHOWN, which
