@@ -144,6 +144,10 @@ section! {
         pub time: f32,
         /// the rain's level where the listener stands
         pub rain: f32,
+        /// how tense the floor is, by the nerves of those who are not the player's own: what the score follows
+        pub tension: f32,
+        /// which run this is (a fresh one is the score's cue)
+        pub run: u32,
     }
 }
 section! {
@@ -188,7 +192,7 @@ impl Events {
         let tick = crate::tick(g);
         for e in &g.out { self.one(tick, g, e); }
         self.heard.clear();
-        self.heard.push(Heard { time: g.time as f32, rain: self.rain });
+        self.heard.push(Heard { time: g.time as f32, rain: self.rain, tension: tension(g) as f32, run: g.mission.serial });
         self.rolls.clear();
         for r in &g.rolls { self.rolls.push(Roll { voice: r.voice as u32, at: [r.x as f32, r.z as f32], hard: r.k as f32 }); }
         // (what the marks and the feels threw this tick)
@@ -268,4 +272,27 @@ impl Events {
         let (shape, len) = match (p.line, p.body) { (Some(l), _) if l > 0.0 => (1, l), (_, Some(b)) => (2, b), _ => (0, 0.0) };
         self.pushes.push(AirPush { tick, serial, shape, pos: f3(p.pos), vel: f3(p.dir.map(|d| d * p.speed)), dir: f3(p.dir), radius: p.radius as f32, len: len as f32, hard: opt(p.push), expand: NONE, ttl: 0.0, lattice: match p.lattice { Some(SmokePushLattice::Fine) => 1, Some(SmokePushLattice::Coarse) => 2, None => 0 } });
     }
+}
+
+/// how tense the floor is, 0 to 1   (guards.ts tension, by the opposition's nerves)
+fn tension(g: &Game) -> f64 {
+    use game::game::GuardState as S;
+    let level = game::guards::escalation_of(g);
+    let mut x = game::m::max(if game::sim_lightshome::mains_active(g) { 0.18 } else { 0.0 }, if level >= 2.0 { 0.22 } else if level >= 1.0 { 0.12 } else { 0.0 });
+    let shown = g.touring || game::director::director_showing(g);
+    for &gd in &g.guards {
+        let d = &g.gd[gd];
+        let own = d.team == game::teams::Team::Operative;
+        if d.state == S::Dead || (!shown && own && d.state != S::Alert) { continue; }
+        let s = match d.state {
+            _ if d.script.is_some() && g.clearing.is_some() => 0.3,
+            S::Alert => 1.0,
+            S::Search => 0.68,
+            S::Suspicious => 0.45 + d.awareness * 0.2,
+            _ if own => 0.0,
+            _ => d.awareness * 0.35,
+        };
+        x = game::m::max(x, s);
+    }
+    x
 }
