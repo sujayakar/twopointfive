@@ -121,7 +121,6 @@ const RULES: readonly { re: RegExp; why: string; but?: string }[] = [
   { re: /\.(sin|cos|tan|asin|acos|atan|atan2|sin_cos|sinh|cosh|tanh|asinh|acosh|atanh|exp|exp2|exp_m1|ln|ln_1p|log|log2|log10|powf|powi|cbrt|hypot)\s*\(/, why: 'a rounded function of the standard library: the game has its own (maths.rs), the same bits as the TypeScript and on every machine' },
   { re: /\.mul_add\s*\(/, why: 'a fused multiply-add rounds once where the TypeScript rounds twice' },
   { re: /\.(sqrt|floor|trunc|ceil|round|round_ties_even|fract|rem_euclid|div_euclid)\s*\(/, why: 'the standard library\'s method: the exact operations come from rust/prim by name (add one there if it is exact by the standard)' },
-  { re: /\bf32\b/, why: 'a single where the TypeScript holds a double', but: 'sim/src/single.rs' },   // (the one file that names it: a pose is STORED as the TypeScript's Float32Array stores it)
   { re: /relaxed/i, why: 'relaxed SIMD rounds as the machine likes: it belongs to dressing, never to the simulation' },
   { re: /\b(UnsafeCell|RefCell|Cell|OnceCell|Atomic\w+)\b/, why: 'a static written through a cell: what the crate keeps between calls is a `static mut` with a row in STATICS (the games\' state, scratch or a copy), so the build can say which' },
   { re: /\bextern\s+crate\s+std\b|\bstd::/, why: 'the standard library: the crate is no_std so that no hash map, thread, clock or file can be named' },
@@ -179,7 +178,8 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/weather.rs ROOF_LIST': 'SCRATCH · a level\'s roofs as its boxes are handed over, read back at the end of that one question',
   'sim/src/state.rs PUTS': 'SCRATCH · how many times a slot was written whole: whose the tables beside a block are',
   'sim/src/glow.rs SWEPT': 'SCRATCH · how many metres the last step of the light field swept; read by a test, by nothing of a game',
-  'sim/src/glow.rs NEXT': 'SCRATCH · one pass of the bounce, written before any of it is read back',
+  'sim/src/glow.rs CASTS': 'COPY · what the light field\'s lines meet of a game\'s statics, made of the box world and held to it row by row before it is read (the world\'s count of writes); made again wherever a row is another',
+  'sim/src/glow.rs WAYS': 'COPY · the lines\' directions and what each counts for on a face: a table of numbers, worked out once and the same for every game',
   'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs WIND': 'SCRATCH · the wind\'s share of each square metre of the plan, written by the host before a step that has wind', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',
 };
 /** the `static mut`s of the simulation's crate that have no row above, and the rows that name none */
