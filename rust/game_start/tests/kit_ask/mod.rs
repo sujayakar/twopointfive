@@ -323,6 +323,28 @@ pub trait KitAsk {
     fn sam_sneaking(&self) -> bool;
     /// is he down in a crouch
     fn sam_is_low(&self) -> bool;
+    /// the moves he can be in the middle of: a boot, a lock under his tools, a blow at a man, a body in his hands
+    fn sam_in_a_move(&self) -> (bool, bool, bool, bool);
+    /// a boot started at this door
+    fn sam_starts_kick(&mut self, d: DoorId);
+    /// a lock started
+    fn sam_starts_pick(&mut self, d: DoorId);
+    /// a blow started at this man
+    fn sam_starts_takedown(&mut self, gd: GuardId);
+    /// a body taken up
+    fn sam_starts_drag(&mut self, gd: GuardId);
+    /// a door's lock: locked, broken, how far it is picked
+    fn lock_state(&self, d: DoorId) -> (bool, bool, f64);
+    /// where a boot is struck from at this door, near this spot
+    fn kick_spot(&mut self, d: DoorId, near: [f64; 2]) -> [f64; 2];
+    /// where a man works a lock at this door, near this spot
+    fn work_spot(&mut self, d: DoorId, near: [f64; 2]) -> [f64; 2];
+    /// is this a nav cell no plan can leave
+    fn stranded(&self, at: [f64; 2]) -> bool;
+    /// is this nav cell blocked
+    fn cell_blocked(&self, at: [f64; 2]) -> bool;
+    /// a man with his fix here, suspicious, on his own feet
+    fn man_goes_to_look(&mut self, gd: GuardId, at: [f64; 2]);
     /// is he on a knee off a boot
     fn on_a_knee(&self, gd: GuardId) -> bool;
     /// has a man's belief in a door come to a boot on its way
@@ -681,6 +703,21 @@ impl KitAsk for Play {
     fn sam_sprinting(&self) -> bool { self.g.pl[self.g.player].sprinting }
     fn sam_sneaking(&self) -> bool { game::unseen::sam_sneaks(&self.g, self.g.player) }
     fn sam_is_low(&self) -> bool { self.g.pl[self.g.player].crouch }
+    fn sam_in_a_move(&self) -> (bool, bool, bool, bool) { let p = &self.g.pl[self.g.player]; (p.kick.is_some(), p.picking.is_some(), p.takedown.is_some(), p.dragging.is_some()) }
+    fn sam_starts_kick(&mut self, d: DoorId) { game::player::start_kick(&mut self.g, d, None, None); }
+    fn sam_starts_pick(&mut self, d: DoorId) { game::player::start_picking(&mut self.g, d); }
+    fn sam_starts_takedown(&mut self, gd: GuardId) { game::player::start_takedown(&mut self.g, gd, None, None, None); }
+    fn sam_starts_drag(&mut self, gd: GuardId) { game::game::game_toggle_drag(&mut self.g, Some(gd)); }
+    fn lock_state(&self, d: DoorId) -> (bool, bool, f64) { (game::doors::door_locked(&self.g, d), game::doors::door_lock_broken(&self.g, d), game::doors::door_pick(&self.g, d)) }
+    fn kick_spot(&mut self, d: DoorId, near: [f64; 2]) -> [f64; 2] { let s = game::doors::doors_kick_spot(&mut self.g, d, [near[0], 0.0, near[1]]); [s.pos[0], s.pos[2]] }
+    fn work_spot(&mut self, d: DoorId, near: [f64; 2]) -> [f64; 2] { let s = game::doors::doors_work_spot(&mut self.g, d, [near[0], 0.0, near[1]], None, None); [s.pos[0], s.pos[2]] }
+    fn stranded(&self, at: [f64; 2]) -> bool { game::guards::stranded_at(&self.g, at[0], at[1]) }
+    fn cell_blocked(&self, at: [f64; 2]) -> bool { game::scene_collision::nav_grid_is_blocked(&self.g, at[0], at[1]) }
+    fn man_goes_to_look(&mut self, gd: GuardId, at: [f64; 2]) {
+        self.man_suspects(gd, at);
+        let m = &mut self.g.gd[gd];
+        (m.react_t, m.search_t, m.hold, m.pinned) = (0.0, 0.0, false, false);
+    }
     fn on_a_knee(&self, gd: GuardId) -> bool { self.g.gd[gd].door_down_until > self.g.time }
     fn walking_to_boot(&self, gd: GuardId) -> bool { self.g.m.doorforce.states.as_ref().and_then(|s| s.men.get(gd)).and_then(|m| m.kick.as_ref()).map_or(false, |k| k.phase == game::doorforce::KickPhase::Walk) }
     fn on_a_door(&self, gd: GuardId) -> bool { self.g.m.doorforce.states.as_ref().and_then(|s| s.men.get(gd)).map_or(false, |m| m.on.is_some()) }
