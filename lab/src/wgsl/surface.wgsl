@@ -166,6 +166,12 @@ fn aimLamp(i: u32, x: vec3f, u: vec2f) -> Aim {
   }
   return a;
 }
+/** a point of a lamp to ask whether it is seen: where more of its light comes from (the nearer parts of a long one), more often. Its direction and how far */
+fn aimSeen(i: u32, x: vec3f, u: vec2f) -> vec4f {
+  let l = &lamps[i]; if ((*l).kind != 0u) { let a = aimLamp(i, x, u); return vec4f(a.dir, a.dist); } let hu = length((*l).u); let hv = length((*l).v); let eu = (*l).u / hu; let ev = (*l).v / hv; let d = x - (*l).at; let pu = dot(d, eu); let pv = dot(d, ev); let h = abs(dot(d, (*l).n));
+  let cv = clamp(pv, -hv, hv) - pv; let du = max(sqrt(h * h + cv * cv), 0.02); let tu = du * tan(mix(atan((-hu - pu) / du), atan((hu - pu) / du), u.x)); let dv = max(sqrt(h * h + tu * tu), 0.02); let tv = dv * tan(mix(atan((-hv - pv) / dv), atan((hv - pv) / dv), u.y));
+  let q = (*l).at + eu * (pu + tu) + ev * (pv + tv) - x; let t = length(q); return vec4f(q / max(t, 1e-4), t);
+}
 /** the light a lamp lands on a surface at x facing n (n = 0: a leaf, either side) with nothing in the way: exact for a rectangle (its edges' integral) */
 fn lampE(i: u32, x: vec3f, n: vec3f) -> vec3f {
   let l = &lamps[i]; if ((*l).on <= 0.0) { return vec3f(0.0); } let d = (*l).at - x; let dist = length(d); if (dist > (*l).reach) { return vec3f(0.0); } let leaf = all(n == vec3f(0.0));
@@ -187,7 +193,7 @@ fn lampCoat(i: u32, s: Surf, V: vec3f) -> vec3f {
   let l = &lamps[i]; if ((*l).on <= 0.0) { return vec3f(0.0); } let d0 = (*l).at - s.x; let dist = length(d0); if (dist > (*l).reach) { return vec3f(0.0); } let R = reflect(-V, s.n); let a = max(s.rough * s.rough, 0.002);
   if ((*l).kind == 0u) {                                             // a rectangle: how much of the coat's lobe it covers, along each of its sides. Never brighter than it is
     if (dot(d0, (*l).n) >= 0.0) { return vec3f(0.0); } let den = dot(R, (*l).n); if (den > -0.02 || dot(s.n, R) <= 0.0) { return vec3f(0.0); } let t = dot(d0, (*l).n) / den; let q = s.x + R * t - (*l).at; let hu = length((*l).u); let hv = length((*l).v); let x = dot(q, (*l).u) / (hu * hu); let y = dot(q, (*l).v) / (hv * hv);
-    let w = a * t * 1.3; let su = w / hu / max(-den, 0.15); let sv = w / hv / max(-den, 0.15); let cov = max(atan((1.0 - x) / su) + atan((1.0 + x) / su), 0.0) * max(atan((1.0 - y) / sv) + atan((1.0 + y) / sv), 0.0) * (1.0 / (PI * PI));
+    let w = 2.0 * a * t; let su = w / hu / max(-den, 0.15); let sv = w / hv / max(-den, 0.15); let cov = 0.25 * max((1.0 - x) * inverseSqrt(su * su + (1.0 - x) * (1.0 - x)) + (1.0 + x) * inverseSqrt(su * su + (1.0 + x) * (1.0 + x)), 0.0) * max((1.0 - y) * inverseSqrt(sv * sv + (1.0 - y) * (1.0 - y)) + (1.0 + y) * inverseSqrt(sv * sv + (1.0 + y) * (1.0 + y)), 0.0);
     return fresnel(coatF0(s), max(dot(s.n, V), 0.02)) * (*l).radiance * ((*l).on * cov * sat(1.0 - pow(dist / (*l).reach, 4.0)));
   }
   let p = aimLamp(i, s.x, vec2f(0.5)); let widen = (*l).area * 0.5 / max(p.dist, 0.2); return min(p.E * coatOf(s, V, p.dir, widen), (*l).radiance * (*l).on * fresnel(coatF0(s), max(dot(s.n, V), 0.02)));
