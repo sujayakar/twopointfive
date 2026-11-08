@@ -52,6 +52,7 @@ import { HOURS_OF, skyFrom } from '../draw/sky';
 import { fogFrom } from '../draw/fog';
 import { makeFogFrame } from '../render/fogofwar';
 import { WeatherPicture } from '../picture/weather';
+import { SNOW_LOOK, snowLookOfQuery } from '../picture/snow/look';
 import type { Vec3 } from '../math/vec';
 
 const LOW_PITCH = 24 * Math.PI / 180, HIGH_PITCH = 55 * Math.PI / 180;
@@ -87,7 +88,7 @@ async function main(): Promise<void> {
   wallSidesConfig.on = lookAmounts.walls > 0;
   lookConfig.kept = lookKeptOf(D.f[sky() + Sky.kept] < 0 ? undefined : D.f[sky() + Sky.kept], q.get('kept'));
   weatherKindConfig.on = true; snowConfig.on = D.u[sky() + Sky.snowLevel] !== 0;
-  if (snowConfig.on) { snowLookConfig.surface = true; snowLookConfig.glow = true; snowLookConfig.sparkle = true; snowLookConfig.under = true; }
+  if (snowConfig.on) { snowLookOfQuery(q); snowLookConfig.surface = SNOW_LOOK.on; snowLookConfig.wisps = SNOW_LOOK.wisps; snowLookConfig.tracks = SNOW_LOOK.on && SNOW_LOOK.tracks; snowLookConfig.glow = SNOW_LOOK.on && SNOW_LOOK.glow; snowLookConfig.sparkle = SNOW_LOOK.on && SNOW_LOOK.sparkle; snowLookConfig.under = SNOW_LOOK.under; snowLookConfig.grains = SNOW_LOOK.grains || SNOW_LOOK.oneAir; }
   glassBreakConfig.on = true; initCutSwitch(); roundConfig.gpu = cutConfig.on;
   COATFINISH.on = true; SOLIDGLASS.on = true;
 

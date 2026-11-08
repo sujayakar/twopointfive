@@ -1,11 +1,11 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 2348759272;
+export const LAYOUT = 1880829904;
 /** what a host may ask for: what is made together is asked for together */
-export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, all = 4095 }
+export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, snow = 4096, all = 8191 }
 /** each section's place in the table the module answers with */
-export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, rims = 30, fires = 31, fireTable = 32, decals = 33, decalKeys = 34, decalHead = 35, winds = 36, gusts = 37, heat = 38, air = 39, windRoofs = 40, roofs = 41, ceilings = 42, doorBoxes = 43, openPanes = 44, resets = 45, count = 46 }
+export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, rims = 30, fires = 31, fireTable = 32, decals = 33, decalKeys = 34, decalHead = 35, winds = 36, gusts = 37, heat = 38, air = 39, windRoofs = 40, roofs = 41, ceilings = 42, doorBoxes = 43, openPanes = 44, resets = 45, feet = 46, things = 47, blasts = 48, snowWords = 49, count = 50 }
 
 /** the fog: one row */
 export const enum Fog {
@@ -823,6 +823,92 @@ export const enum Reset {
   what = 2,
   /** words a row */
   row = 3,
+}
+
+/** a man, as what stands on the snow and breathes over it */
+export const enum Foot {
+  /** u32 */
+  id = 0,
+  /** u32 */
+  says = 1,
+  /** f32 × 3 */
+  pos = 2,
+  /** f32 × 3 */
+  vel = 5,
+  /** f32 */
+  yaw = 8,
+  /** f32 × 3 */
+  hips = 9,
+  /** f32 × 3 */
+  head = 12,
+  /** f32 × 3 */
+  chest = 15,
+  /** f32 × 3 */
+  footL = 18,
+  /** f32 × 3 */
+  footR = 21,
+  /** f32 × 3 */
+  toeL = 24,
+  /** f32 × 3 */
+  toeR = 27,
+  /** f32 × 3: where his head faces */
+  facing = 30,
+  /** words a row */
+  row = 33,
+}
+
+/** a part of a thing that moves over the ground: each of a prop's parts, a thrown thing, a chunk of debris */
+export const enum Thing {
+  /** u32: 0 a prop's part · 1 a thrown thing · 2 a chunk */
+  kind = 0,
+  /** u32 */
+  key = 1,
+  /** u32 */
+  part = 2,
+  /** u32: 1 at rest · 2 lying on something that is not the ground */
+  says = 3,
+  /** f32 × 3 */
+  c = 4,
+  /** f32 × 3 */
+  h = 7,
+  /** f32 */
+  yaw = 10,
+  /** f32 × 2: where the whole thing stands, its velocity and its turn (a prop's) */
+  at = 11,
+  /** f32 × 3 */
+  vel = 13,
+  /** f32 */
+  spin = 16,
+  /** f32: the whole thing's radius and weight, and how far over the floor this part's underside hangs */
+  radius = 17,
+  /** f32 */
+  mass = 18,
+  /** f32 */
+  foot = 19,
+  /** words a row */
+  row = 20,
+}
+
+/** a blast went off */
+export const enum SnowBlast {
+  /** u32 */
+  tick = 0,
+  /** u32 */
+  serial = 1,
+  /** f32 × 3 */
+  at = 2,
+  /** f32 */
+  radius = 5,
+  /** words a row */
+  row = 6,
+}
+
+/** what snow a static is, by its place: 0 none · 1 snow · 2 trodden · 3 old */
+export const enum SnowWord {
+  /** u32 */
+  w = 0,
+  /** words a row */
+  row = 1,
 }
 
 /** what a box may say it is made of, by its number in Rust */

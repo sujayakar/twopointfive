@@ -80,11 +80,12 @@ pub mod men;
 pub mod resets;
 pub mod rims;
 pub mod sky;
+pub mod snow;
 pub mod view;
 pub mod wet;
 pub mod winds;
 
-groups! { fog view sky boxes lights men doorways rims events fires decals air }
+groups! { fog view sky boxes lights men doorways rims events fires decals air snow }
 
 sections! {
     fog: fog::Fog = fog;
@@ -133,6 +134,10 @@ sections! {
     door_boxes: boxes::Leaf = winds.leaves;
     open_panes: boxes::Word = winds.open;
     resets: resets::Reset = resets;
+    feet: snow::Foot = snow.feet;
+    things: snow::Thing = snow.things;
+    blasts: snow::SnowBlast = snow.blasts;
+    snow_words: snow::SnowWord = snow.words;
 }
 
 /// the numbers of a page's look (src/draw/look.ts writes them in this order): the boxes', then the men's
@@ -162,6 +167,7 @@ pub struct Drawn {
     pub fire_table: Vec<fires::FireTable>,
     pub winds: winds::Winds,
     pub resets: Vec<resets::Reset>,
+    pub snow: snow::Snow,
 }
 impl Drawn {
     /// A TICK HAS RUN: the sections of `want`, made again from the game as it stands
@@ -181,6 +187,7 @@ impl Drawn {
         if want & want::events != 0 { self.events.take(g); resets::fill(g, &mut self.resets); }
         if want & want::fires != 0 { self.fires.clear(); fires::fill(g, &mut self.fires, &mut self.fire_table); }
         if want & want::air != 0 { self.winds.take(g, again && self.had & want::air != 0); }
+        if want & want::snow != 0 { self.snow.take(g); }
         self.had = if again { self.had | want } else { want };
         if want & want::doorways != 0 && self.doorways.len() != g.level.doors.len() { self.doorways.clear(); doorways::fill(g, &mut self.doorways); }
     }

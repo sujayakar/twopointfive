@@ -4,7 +4,7 @@ import '../../src/game/game';
 import { WEAPONS } from '../../src/game/weapons';
 import { messBurst, messOpened, messWall, messEvicted } from '../../src/game/floormess';
 import { bangScorch, bulletMark, chipMark, kickScuff } from '../../src/game/marks';
-import { clearSnowBlast } from '../../src/game/snowBlast';
+import { clearSnowBlast, snowBlastAt } from '../../src/game/snowBlast';
 import { clearSnowMarks } from '../../src/game/snowMarks';
 import { clearSnowTracks } from '../../src/game/snowTracks';
 
@@ -50,6 +50,7 @@ export const OUT: Record<string, (g: any, e: any) => void> = {
   WallFeel: (g, e) => { OUT_HOST.wallFeel?.(g, e.at); },
   MessEvicted: (g, e) => { messEvicted(g, e.c, e.h, e.yaw, e.rot, e.mat, e.kind); },
   EndCard: (g, e) => { OUT_HOST.endCard?.(g); },
+  SnowBlast: (g, e) => { snowBlastAt(g, e.at, e.radius); },
 };
 /** after an apply: every event of the step, in the order the rules made them */
 export function dispatchOut(g: any, events: { arm: string; e: any }[]): void { for (const { arm, e } of events) OUT[arm](g, e); }
