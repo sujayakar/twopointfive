@@ -43,7 +43,6 @@
 // FAIL.   AUTOLOCK_BREAK=1 = the soft lock left off: 21 and 22 must FAIL.
 // exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
-import { standWall, wallBetween } from './standwall.ts';
 import { sample } from './sweep.ts';
 
 export async function autocamCheck(): Promise<boolean> {
