@@ -3,6 +3,7 @@
 // now) and a flake that leaves the disc is carried round to its far side. WISPS: fine snow the wind runs low over the open ground in streamers, one more particle of the ring, told by the
 // aspect it is filed with. ONE SNOW IN ONE AIR: the flakes and the wisps ride the simulated field among the walls, and a wisp is snow that air lifts where it is fast enough. The picture's
 // own; its dice are its own; nothing reads it.
+import type { SweptSnow } from '../../ui/sweepSnow';
 import { clamp, type Vec3 } from '../../math/vec';
 import type { FollowCamera } from '../../game/camera';
 import { snowConfig, snowLookConfig, lookConfig } from '../../render/frame';
@@ -169,6 +170,9 @@ export class SnowFx {
   private grainsOn(): boolean { return SNOW_LOOK.grains && !SNOW_LOOK.oneAir && snowLookConfig.grains && this.air.live; }
   private oneAirOn(): boolean { return SNOW_LOOK.oneAir && snowLookConfig.grains && this.air.live; }
   private wispsWanted(): boolean { return SNOW_LOOK.wisps && snowLookConfig.wisps; }
+  private snowing(): boolean { return (this.E.weather?.snow ?? 0) > 0.001; }
+  /** this snow, as the F8 sweep's two rows read and flip it */
+  readonly swept: SweptSnow = { look: SNOW_LOOK, wisps: SNOWWISPS, snowing: () => this.snowing(), oneAirOn: () => this.oneAirOn() && this.snowing(), wispsOn: () => this.wispsWanted() && this.snowing(), lookByte: wispLookByte, still: () => this.wispsOn ? '' : 'the air is too slow to lift snow' };
   /** the storm field's share at ground point (x, z), of the roofs in force: what the GPU's own throws then keep of a wisp record (particles.wgsl wispShare) */
   private stormShare(x: number, z: number): number {
     const D = this.D, s = this.winds.active.list.find(w => w.kind === 'storm'); if (!s) return 0;
