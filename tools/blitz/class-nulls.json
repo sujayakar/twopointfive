@@ -102,7 +102,7 @@
 "furnblast::Member":["group"],
 "game::Game":["snowField","snowTracks","rigFits","dice","aimTarget","aimGuard","aimFriend","useDoor","reachInterior","hover","aimSnap","act","puppet","clearing","localSeat","cmdBuf","hostCam","hostInput"],
 "game::GamePuppet":["goal","aim"],
-"game::Guard":["foe","unit","civ","skill","lastKnown","covers","ledAt","held","bubble","downKind","downBy","wound","lineFail","bodyDuty","dropped","pathGoal","slung","second","bigOut","workStow","dazzledAt","alertRef","fixRef","searchPlan","pieing","pieLast","piePrev","standoff","stallRef","script","task","leader","post"],
+"game::Guard":["foe","unit","civ","skill","lastKnown","covers","ledAt","held","bubble","downKind","downBy","lineFail","bodyDuty","dropped","pathGoal","slung","second","bigOut","workStow","dazzledAt","alertRef","fixRef","searchPlan","pieing","pieLast","piePrev","standoff","stallRef","script","task","leader","post"],
 "game::GuardBodyDuty":["spot"],
 "game::GuardScript":["goal"],
 "game::GuardScriptOver":["face"],

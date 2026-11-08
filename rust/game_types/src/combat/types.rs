@@ -52,21 +52,6 @@ impl Default for AcrossArm { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum KillGuardZone {
-    Side,
-    Leg,
-}
-impl KillGuardZone {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KillGuardZone::Side => "side",
-            KillGuardZone::Leg => "leg",
-        }
-    }
-}
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DropFromHandKind {
     Pistol,
     Rifle,

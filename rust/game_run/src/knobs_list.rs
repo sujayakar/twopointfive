@@ -1202,11 +1202,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("turn.aim_acc", offset_of!(Knobs, turn.aim_acc), false),
     ("turn.body", offset_of!(Knobs, turn.body), false),
     ("turn.body_acc", offset_of!(Knobs, turn.body_acc), false),
-    ("wound.centre", offset_of!(Knobs, wound.centre), false),
-    ("wound.head", offset_of!(Knobs, wound.head), false),
-    ("wound.lead", offset_of!(Knobs, wound.lead), false),
-    ("wound.depth", offset_of!(Knobs, wound.depth), false),
-    ("wound.back_room", offset_of!(Knobs, wound.back_room), false),
     ("doorpath.at", offset_of!(Knobs, doorpath.at), false),
     ("doorpath.out_m", offset_of!(Knobs, doorpath.out_m), false),
     ("doorpath.in_m", offset_of!(Knobs, doorpath.in_m), false),
@@ -4592,11 +4587,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.turn.aim_acc;
     let _: &f64 = &k.turn.body;
     let _: &f64 = &k.turn.body_acc;
-    let _: &f64 = &k.wound.centre;
-    let _: &f64 = &k.wound.head;
-    let _: &f64 = &k.wound.lead;
-    let _: &f64 = &k.wound.depth;
-    let _: &f64 = &k.wound.back_room;
     let _: &f64 = &k.doorpath.at;
     let _: &f64 = &k.doorpath.out_m;
     let _: &f64 = &k.doorpath.in_m;
