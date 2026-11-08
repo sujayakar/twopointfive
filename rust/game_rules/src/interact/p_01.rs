@@ -174,7 +174,7 @@ pub fn wedge_digit(g: &Game, input: InputId) -> bool {
 /// a row done by the key, a digit or a click: what updateInteract hands on as Game.act (interact.ts give)
 pub fn give(g: &mut Game, r: Option<&crate::game::Interactable>) {
     let r = match r { Some(r) => r, None => return };
-    if r.kind == crate::game::InteractableKind::Cancel || !r.in_reach || r.verb.is_none() || r.running.unwrap_or(false) || crate::samstun::sam_staggered(g, None) { return; }
+    if r.kind == crate::game::InteractableKind::Cancel || !r.in_reach || r.verb.is_none() || r.running.unwrap_or(false) || crate::samstun::sam_staggered(g, &crate::seats::here(g), None) { return; }
     crate::lightswitch::switch_let_go(g);
     g.act = Some(r.clone());
 }
@@ -429,7 +429,7 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
             if ask && can {
                 close_selector(g, down);
                 if whistle {
-                    if !crate::samstun::sam_staggered(g, None) { crate::whistle::try_whistle(g); }
+                    if !crate::samstun::sam_staggered(g, &crate::seats::here(g), None) { crate::whistle::try_whistle(g); }
                 } else { give(g, lit.as_ref()); }
                 return;
             }
@@ -484,7 +484,7 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
     let listed = g.pl[pl].sel.open;
     let quick = !g.pl[pl].sel.moved && g.pl[pl].sel.down_t < (if stays { g.k.handring.hold_secs } else { TAP_SECS });
     close_selector(g, false);
-    if !listed && row_now.is_none() && g.puppet.is_none() && !crate::samstun::sam_staggered(g, None) {
+    if !listed && row_now.is_none() && g.puppet.is_none() && !crate::samstun::sam_staggered(g, &crate::seats::here(g), None) {
         let w = empty_word(g, None);
         let time = g.time;
         g.pl[pl].sel.word = w.clone();

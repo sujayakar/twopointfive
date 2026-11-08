@@ -449,7 +449,7 @@ pub fn director_fire_triggers(g: &mut crate::game::Game, r: DirectorRunId, fresh
                     Some(TriggerDefWho::AnyUnit) => DirectorInsideVolumeWho::AnyUnit,
                     Some(TriggerDefWho::Unit(u)) => DirectorInsideVolumeWho::Unit(u.clone()),
                 };
-                director_inside_volume(g, r, t.volume.as_deref().unwrap(), &who)
+                director_inside_volume(g, &crate::seats::here(g), r, t.volume.as_deref().unwrap(), &who)
             }
             TriggerDefKind::When => unreachable!("P.when has no page caller: a trigger of this kind is never made"),
         };
@@ -1127,10 +1127,10 @@ fn in_volume(v: &crate::scene_level::VolumeDef, p: V3) -> bool {
     m::abs(lx) <= v.h[0] && m::abs(lz) <= v.h[2] && p[1] >= v.c[1] - v.h[1] - 0.1 && p[1] <= v.c[1] + v.h[1] + 2.0
 }
 /// (director.ts Director.insideVolume)
-pub fn director_inside_volume(g: &crate::game::Game, r: DirectorRunId, id_2: &str, who: &crate::director::DirectorInsideVolumeWho) -> bool {
+pub fn director_inside_volume(g: &crate::game::Game, seat: &crate::seats::SeatRef, r: DirectorRunId, id_2: &str, who: &crate::director::DirectorInsideVolumeWho) -> bool {
     let g = &*g;
     let Some(v) = g.level.volumes.as_ref().and_then(|l| l.iter().find(|x| x.name == id_2)) else { return false };
-    let pl = &g.pl[g.player];
+    let pl = &g.pl[seat.player];
     let alive = |gd: GuardId| g.gd[gd].state != crate::game::GuardState::Dead;
     let sam = !pl.down && in_volume(v, g.ch[pl.ch].pos);
     let units = &g.tab.director_run[r].units;
@@ -1157,8 +1157,8 @@ pub fn director_query_state(g: &crate::game::Game, r: DirectorRunId, u: &crate::
     director_guard_of(g, r, u).ok().map(|gd| g.gd[gd].state)
 }
 /// (director.ts Query.room, of 'sam')
-pub fn director_query_room_sam(g: &crate::game::Game) -> String {
-    let p = g.ch[g.pl[g.player].ch].pos;
+pub fn director_query_room_sam(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> String {
+    let p = g.ch[g.pl[seat.player].ch].pos;
     crate::chronicle::room_of(g, p)
 }
 /// (director.ts Query.pos, of a man)

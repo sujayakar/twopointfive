@@ -300,7 +300,7 @@ pub fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
 
     // the grab and the takedown, with one gate
     {
-        let free = g.pl[pl].takedown.is_none() && !g.pl[pl].down && g.pl[pl].holding.is_none() && !crate::samstun::sam_staggered(g, None) && g.pl[pl].breaker_move.is_none();
+        let free = g.pl[pl].takedown.is_none() && !g.pl[pl].down && g.pl[pl].holding.is_none() && !crate::samstun::sam_staggered(g, &crate::seats::here(g), None) && g.pl[pl].breaker_move.is_none();
         let bare = crate::close::close_bare(g);
         let two = crate::close::close_lethal(g) && !bare;
         let knife = !bare && crate::input::input_lmb_hit(g, input) && !crate::stalk::stalk_has(g, &crate::seats::here(g));

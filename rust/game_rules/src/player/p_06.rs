@@ -197,7 +197,7 @@ pub fn update_wanding(g: &mut crate::game::Game, dt: f64) {
         stop_wand(g, None);
     } else if !crate::wand::wand_fits(g, d) || crate::doors::doors_side(g, d, pos) != w.side {
         stop_wand(g, Some("the door moved — the wand is out"));
-    } else if crate::samstun::sam_staggered(g, None) || g.time < g.pl[pl].dazzled_until {
+    } else if crate::samstun::sam_staggered(g, &crate::seats::here(g), None) || g.time < g.pl[pl].dazzled_until {
         stop_wand(g, None);
     } else {
         let along = g.dr[d].def.width * 0.5;

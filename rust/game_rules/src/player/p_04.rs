@@ -108,7 +108,7 @@ pub fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bool {
         stack_hold(g, p);
         return false;
     }
-    if crate::samstun::sam_staggered(g, None) {
+    if crate::samstun::sam_staggered(g, &crate::seats::here(g), None) {
         let w = w!(g, p);
         w.up = Some(0.0);
         w.rise = Some(0.0);
@@ -171,7 +171,7 @@ pub fn stack_lean(g: &mut crate::game::Game, dt: f64, cam: CameraId, pl: PlayerI
     if w0.lean.is_none() { return 0.0; }
     let ws = g.k.wallsnap;
     let (t, n) = (w0.along, w0.n);
-    if crate::samstun::sam_rooted(g, None) {
+    if crate::samstun::sam_rooted(g, &crate::seats::here(g), None) {
         let l = un(w0.lean);
         return un(w0.lean_dir) * (ws.lean_along + w0.lean_more.unwrap_or(0.0)) * l * l * (3.0 - 2.0 * l);
     }
