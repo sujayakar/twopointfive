@@ -857,6 +857,8 @@ pub struct StartView {
     pub pick: String,
     /// the address starts something, so the list is not the way in
     pub playing: bool,
+    /// the row a visit that names none and has started none opens on: the short list's first
+    pub first: String,
 }
 
 /// a mission's sheet
@@ -871,6 +873,31 @@ pub struct SheetView {
     pub as_pick: bool,
     /// its kind's gear screen is the quiet one
     pub quiet: bool,
+}
+
+/// what a mission's page says of it while it loads
+#[derive(Clone, Debug, Default)]
+pub struct BriefView {
+    /// the row of the list (empty: the address starts none, and the rest is empty too)
+    pub id: String,
+    pub title: String,
+    /// what it is ('solo' for the plain night)
+    pub kind: String,
+    /// the heading it is under
+    pub group_title: String,
+    pub place: String,
+    pub blurb: String,
+    pub lean_words: String,
+    /// the team as this address deploys it
+    pub team: String,
+    /// its level's file
+    pub level: String,
+    /// a lesson's: where we are and why
+    pub scene: String,
+    /// a lesson's: what it teaches
+    pub teaches: Vec<String>,
+    /// the way in the address asks for: 0 the level's own, k its k-th
+    pub way: f64,
 }
 
 /// what the pause and end cards say of the short list, on a page one of its rows started
