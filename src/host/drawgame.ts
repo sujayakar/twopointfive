@@ -6,6 +6,8 @@ import { Want } from '../draw/sections';
 import { Commands } from '../draw/commands';
 import { HAND } from '../draw/hand';
 import type { SaveRow } from '../ui/runcard';
+import { CURSOR_DOUBLES, sampleCursor, type CursorAt, type CursorCanvas, type CursorLens } from '../view/cursor';
+import { readCursorView, readDebriefView, readTickView, type CursorView, type DebriefView, type TickView } from '../view/read';
 
 /** what a start is handed beside the level (rust/game_start/src/handed.rs PARTS) */
 export interface Start { level: Uint8Array; words: string; mannequin: Uint8Array; mannequinBin: Uint8Array; cast: Uint8Array; castLook: Uint8Array; seed: number; seats?: number }
@@ -106,6 +108,23 @@ export class DrawGame {
     this.draw();
   }
   private said: Float64Array | null = null;
+  /** the last answer's bytes, kept */
+  private bytes(): Uint8Array { const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0; return new Uint8Array(this.memory.buffer.slice(p, p + n)); }
+  private told = { tick: -1, h: 0, view: null as TickView | null };
+  /** WHAT A HUD IS TOLD of the game as its last tick left it (src/view): read once a tick, however often it is asked */
+  view(): TickView {
+    const T = this.told; if (!T.view || T.tick !== this.ticks || T.h !== this.h) { this.X.face_tick_view(this.h); T.view = readTickView(this.bytes()); T.tick = this.ticks; T.h = this.h; }
+    return T.view;
+  }
+  private cursorN = new Float64Array(CURSOR_DOUBLES); private pointed = { tick: -1, h: 0, view: { under: null } as CursorView };
+  /** WHAT THE CURSOR IS ON, through the camera as it stands: asked again when the cursor, the camera or the game has moved */
+  cursor(input: CursorAt, cam: CursorLens, canvas: CursorCanvas): CursorView {
+    const T = this.pointed, moved = sampleCursor(this.cursorN, input, cam, canvas);
+    if (moved || T.tick !== this.ticks || T.h !== this.h) { T.view = this.handed(new Uint8Array(this.cursorN.buffer), p => { this.X.face_cursor_view(this.h, -1, p); return readCursorView(this.bytes()); }); T.tick = this.ticks; T.h = this.h; }
+    return T.view;
+  }
+  /** what the end card shows of the run, asked as it opens */
+  debrief(): DebriefView { this.X.face_debrief_view(this.h); return readDebriefView(this.bytes()); }
   /** how the run ended, in a word, and why; null while it is being played */
   verdict(): { won: boolean; word: string; why: string } | null { const r = this.X.face_verdict(this.h); if (!r) return null; const [word, ...why] = this.answer().split('\n'); return { won: r === 2, word, why: why.join(' ') }; }
   /** this run's saves as a card lays them out, the one to go back to, and the mission's clock now */
