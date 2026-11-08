@@ -18,7 +18,7 @@
 // The WGSL itself is compile-checked through the page (__wgsl with the scene prelude — CLAUDE.md), not here.
 import { standUp, ROOT, fake } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
-const { WALLPEN_HOOKS } = await import(`${ROOT}/src/game/wallpen.ts`);   // (did a round go on through the wall it struck: the thin walls' own hook)
+const { WALLPEN_STATS } = await import(`${ROOT}/src/game/wallpen.ts`);   // (did a round go on through the wall it struck: the thin walls' own count)
 const { Particles, RINGS, MAX_EMITS, MAX_NEW_PER_FRAME, KIND_RING, MAX_QUEUE, BLOCK_HDR_BYTES, REC_BYTES } = await import(`${ROOT}/src/render/particles.ts`);
 const H = BLOCK_HDR_BYTES / 4, RW = REC_BYTES / 4;   // the uniform block's header words / an emit record's words (records at BLOCK_HDR_BYTES + REC_BYTES·r)
 const { fireWeapon, detonateStun } = await import(`${ROOT}/src/game/combat.ts`);
@@ -56,13 +56,12 @@ async function stage(seed: number, on = true) {
 const WALL: Vec3 = [21.5, 1.2, 10.0];       // the corridor's north wall in front of him: plaster ('wall' in the palette → drywall recipe)
 const countKinds = (q: any[]) => { const c: Record<string, number> = { spark: 0, debris: 0, dust: 0, casing: 0 }; for (const e of q) c[e.kind] += e.count; return c; };
 /** A ROUND'S CHIPS AND DUST WHERE IT STRUCK, and whether it went on: the emits within 0.3 m of the point his round first strikes, on his side of that face
- *  (the recipe's sit 0.015 and 0.07 m off it), and the things the round crossed by the thin walls' own hook. A round that stops in the wall owes the whole
+ *  (the recipe's sit 0.015 and 0.07 m off it), and the things the round crossed by the thin walls' own count. A round that stops in the wall owes the whole
  *  queue to that site — 'and nothing else', as these lines always read it; one that goes on through also chips the far face and what it meets beyond, which
  *  wallpen-check and decals-sites hold, and is counted at its strike alone. PARTSITES_BREAK=1, the red path: the site is read a metre along the wall. */
 function shotAt(game: any, to: Vec3, fire: () => void, flush: () => any[]): { q: any[]; all: Record<string, number>; site: Record<string, number> | null; through: boolean } {
   const from = [...game.player.char.muzzle] as Vec3, d = v3.normalize(v3.sub(to, from)), h = game.col.raycast(from, d, 40);
-  let crossed = 0; const was = WALLPEN_HOOKS.crossed; WALLPEN_HOOKS.crossed = (g2: any, x: any, who: number) => { crossed++; was?.(g2, x, who); };
-  try { fire(); } finally { WALLPEN_HOOKS.crossed = was; }
+  const c0 = WALLPEN_STATS.crossed; fire(); const crossed = WALLPEN_STATS.crossed - c0;
   const q = flush(), all = countKinds(q); if (!h) return { q, all, site: null, through: crossed > 0 };
   const p = v3.mad(from, d, h.t), c: Vec3 = [p[0] + (BREAK === '1' ? 1 : 0), p[1], p[2]], n = h.n;
   const near = q.filter((e: any) => (e.kind === 'debris' || e.kind === 'dust') && Math.hypot(e.pos[0] - c[0], e.pos[1] - c[1], e.pos[2] - c[2]) <= 0.3 && (e.pos[0] - c[0]) * n[0] + (e.pos[1] - c[1]) * n[1] + (e.pos[2] - c[2]) * n[2] > -1e-3);

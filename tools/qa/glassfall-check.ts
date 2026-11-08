@@ -13,8 +13,8 @@
 //            with the pool refusing every plate, is ONE GAME: the same hearing events at the same ticks, the same footfall levels, the same litter in the
 //            same cells, the same landings waiting, the same digest and the same raw bits of everything but the debris pool after every tick
 //   module   the volley with RUST.falls on is the volley with it off after every tick, and the rules were the module's
-//   snapshot with the row on, a snapshot taken mid-volley (landings waiting, glass on the floor) and put back plays the next 260 ticks to the
-//            same state's word after each (SIMSTATE_BREAK=1 — a put back that writes no block — must fail it)
+//   snapshot with the row on, a snapshot taken mid-volley (landings waiting, glass on the floor; the harness's own, W.snapshot: the Rust game kept beside
+//            the file) and put back plays the next 260 ticks to the same state's word after each
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
 import { standUp, ROOT, fake } from './headless.ts';
 import { CONF_FAR, floatPartition } from './office-pane.ts';
@@ -28,7 +28,6 @@ const S: any = await import(`${ROOT}/src/sim/sim.ts`), FH: any = await import(`$
 const { SHARDS, SHARD_STATS } = SM, { GB_STATS } = GBM;
 type Vec3 = [number, number, number];
 const DT = 1 / 60, BREAK = process.env.GLASSFALL_BREAK === '1';
-if (process.env.SIMSTATE_BREAK === '1') { const P = (await import(`${ROOT}/src/sim/state.ts`) as any).SimState.prototype, put = P.put; P.put = function (this: unknown, c: unknown[]) { if (c.length === 0) put.call(this, c); }; }   // (tools/qa/simstate-check.ts's red path: a take put back writes nothing)
 const argv = process.argv.slice(2); const flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 let fails = 0;
 const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
@@ -108,14 +107,14 @@ export async function glassfallCheck(): Promise<boolean> {
      }
 
   // ---- snapshot: the falls in the module, taken and put back while glass is in the air and on the floor
-  if (!BREAK) { const RB: any = await import(`${ROOT}/src/game/rollback.ts`), was = { row: S.RUST.falls }; hush(true); let line = '', ok = false;
-    try { const { game, frame } = await stage(1, { row: true }); let f = 0; for (; f < 200; f++) frame(f);
-      const snap = RB.takeSnapshot(game), h0 = RB.stateHash(game), waiting = game.falls.waiting, cells = game.falls.cells().length, home = !!game.falls.home, first: string[] = [];
-      for (let k = 0; k < 260; k++) { frame(f + k); first.push(RB.stateHash(game)); }
+  if (!BREAK) { const was = { row: S.RUST.falls }, word = (g: any) => JSON.stringify(g.stateWords()); hush(true); let line = '', ok = false;   // (the state's word is the Rust game's own)
+    try { const { W, game, frame } = await stage(1, { row: true }); let f = 0; for (; f < 200; f++) frame(f);
+      const snap = W.snapshot('glassfall', true), h0 = word(game), waiting = game.falls.waiting, cells = game.falls.cells().length, home = !!game.falls.home, first: string[] = [];
+      for (let k = 0; k < 260; k++) { frame(f + k); first.push(word(game)); }
       const after = game.falls.cells().length;
-      RB.restoreSnapshot(snap); const stood = RB.stateHash(game) === h0 && game.falls.waiting === waiting && game.falls.cells().length === cells && !!game.falls.home;
-      let part = -1; for (let k = 0; k < 260; k++) { frame(f + k); if (part < 0 && RB.stateHash(game) !== first[k]) part = k; }
-      ok = stood && part < 0 && home && waiting > 0 && cells > 0 && after > cells && snap.simViews === 0;
+      W.restore(snap); const stood = word(game) === h0 && game.falls.waiting === waiting && game.falls.cells().length === cells && !!game.falls.home;
+      let part = -1; for (let k = 0; k < 260; k++) { frame(f + k); if (part < 0 && word(game) !== first[k]) part = k; }
+      ok = stood && part < 0 && home && waiting > 0 && cells > 0 && after > cells;
       line = `taken at tick 200 with ${waiting} landings waiting and glass in ${cells} cells (${after} cells 260 ticks on), the store at home in the block: ${home} · put back: the state's word, the landings and the glass as taken: ${stood} · ${part < 0 ? '260 ticks, the same word after each' : 'the word parts at tick ' + part}`;
     } finally { hush(false); S.RUST.falls = was.row; }
     verdict(ok, 'snapshot: with the falls in the module, a snapshot taken while glass is falling and put back plays on as it did', line); }
