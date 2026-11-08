@@ -2,7 +2,7 @@
 // visualize who's doing it and the path on the ground?)". No words: a ring at the thrower's feet in his element's colour, a dashed line along his walk to a
 // small ring where he will throw from, the arc, a ring where the thing comes to rest and, for a frag, two dotted ones: the radius it kills in and, fainter, the radius it wounds in. Fainter while it
 // is only the highlighted row of the throw page; full from the order until the thing leaves his hand. Drawn into the overlay's #traj SVG, under Sam's own
-// throw arc. While the plan on the floor is drawn it draws a frag and a can itself (ui/planfloor.ts), and this draws the 40 mm's. Reads only; no state but its nodes.
+// throw arc. The plan on the floor draws a frag and a can itself (ui/planfloor.ts), and this draws the 40 mm's. Reads only; no state but its nodes.
 import type { Vec3 } from '../math/vec';
 import type { HudCam, HudSource } from '../view/hud';
 import type { TickView } from '../view/read';
@@ -28,7 +28,7 @@ export class SquadThrowViz {
     this.root.appendChild(g); return E;
   }
   update(src: HudSource, view: TickView, cam: HudCam, w: number, h: number, edge: number) {
-    const plans = view.plan ? view.throws.filter(t => t.kind === 'shell') : view.throws;
+    const plans = view.throws.filter(t => t.kind === 'shell');
     // one path per part: a point out of the view BREAKS the line there (never a chord across the gap), and a ring the view's edge cuts keeps the part of it in view
     const path = (pts: Vec3[] | undefined, closed: boolean) => {
       if (!pts || pts.length < 2) return '';

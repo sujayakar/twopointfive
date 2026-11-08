@@ -93,7 +93,7 @@ function waitSet(B: Bot, gd: any) {
 }
 
 /** the word's key as the floor plan marks it by a man of the pair who waits on it (`view.plan`: the overlay draws exactly this list); a check with no view fails */
-const pairKey = (B: Bot) => { const P = B.g.view.plan; if (!P) B.fail('no plan in the view'); return P!.own.doors.filter((d: any) => d.why === 'pair'); };
+const pairKey = (B: Bot) => { if (B.g.view.me < 0) B.fail('no view'); return B.g.view.plan.own.doors.filter((d: any) => d.why === 'pair'); };
 
 export const steps: Record<string, (B: Bot) => void> = {
   // (the mission's lines name the right button for the man in his arm: close.ts heldClicks, on in the page and held off on the frozen stand — raised here with

@@ -39,7 +39,7 @@ async function rig(seed: number, squad = 4) {
     /** the HUD's B line with the cursor on p */
     hudB(p: number[]): string { W.cursorAt([p[0], p[1], p[2]]); R.step(2); return (blockOf(O)?.[0]?.opts ?? []).find((o: any) => o.key === 'B')?.text ?? ''; },
     tail() { return O.log[O.log.length - 1]; },
-    listed() { const P = game.view.plan; if (!P) throw new Error('no plan in the view'); return P.own.men.length; },
+    listed() { if (game.view.me < 0) throw new Error('no view'); return game.view.plan.own.men.length; },
     stacked() { return R.team.filter((m: any) => m.state !== 'dead').every((m: any) => O.of(m)?.order === 'stack' && O.of(m)?.arrived); },
     /** everybody back on Sam, nothing of the door tools running */
     home() { O.give('fallIn', O.targetAt(game.player.char.pos), 'all'); R.until(() => game.doorTools.ops.length === 0, 40); R.step(60); },

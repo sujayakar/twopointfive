@@ -688,7 +688,7 @@
 "why": "state propSeen",
 "params": [],
 "sig": "pub fn clear_snow_marks(g: &mut crate::game::Game)",
-"bodyFile": "snow_marks/b_01.rs",
+"bodyFile": "snow_marks/base.rs",
 "mode": "body",
 "answer": null
 },
@@ -707,7 +707,7 @@
 }
 ],
 "sig": "pub fn clear_snow_tracks(g: &mut crate::game::Game, t: &mut crate::snow_tracks::SnowTracks)",
-"bodyFile": "snow_tracks/b_01.rs",
+"bodyFile": "snow_tracks/base.rs",
 "mode": "body",
 "answer": null
 },

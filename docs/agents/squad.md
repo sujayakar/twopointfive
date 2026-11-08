@@ -247,8 +247,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   F on the door when it's queued vs live. maybe black background to lighting up to yellow background"): a stack waits on the word from the moment
   it is ordered, so the cap was on the door at once and looked the same walking or stood. Now every door that waits on the key carries its cap:
   DARK while its men are still on their way (their feet not on their places, or a fight has them) or while the press would not send it, LIT in
-  their colour once they stand there and the press sends them. A picture only, on on both stands like the rest of `PLAN`; `?keylit=0` = the cap
-  only on the door the key would send now, on its plate; debugger: 'plan ▸ the key on a door is dark until it is live'. Line 6b' of `probes.ts
+  their colour once they stand there and the press sends them. A picture only, on on both stands like the rest of `PLAN`; debugger: 'plan ▸ the key on a door is dark until it is live'. Line 6b' of `probes.ts
   plan`, `KEYLIT_BREAK=1` fails it, both stands. Driven on the real page (the same drive): the cap read near black with a dim F while the four
   walked to a door, and their colour with a dark F once all four stood. NOT measured; nobody has played either; never seen on a GPU.
 - **Q and F are the squad's only keys; the ring carries every order: ON IN THE PAGE since 10-22** (`CMDRING.only`, `ringSeats` in
@@ -1139,7 +1138,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   thing's face point, its normal, weight) and `workJob(g, c)` (what: verb `breakerOff | breakerOn | drive`, seconds in, seconds it takes) — reads only; the pose is not this file's.
 - **Since 2026-11-08 what the plan, the throws and the rings list is the Rust game's** (`view.plan`, `view.throws`, `view.ring`, `view.hand`: `rust/game_rules/src/view/plan.rs`, `throws.rs`, `rings.rs`; `src/game/floorplan.ts` keeps only the `PLAN` table, and `src/ui/planfloor.ts`, `squadthrowviz.ts`, `cmdring.ts` read the view). Older bullets below name `floorPlan`, `waitsOnKey`, `squadThrowPlans`, `ringView`: their rules are those files' now.  nobody has seen any of it on a GPU.
 - **The squad's plan is drawn on the floor** (`src/game/floorplan.ts` = WHAT, `src/ui/planfloor.ts` = the drawing, index.html `.plan …` = the look; `PLAN.on` ON on every stand — it is picture only —
-  `?noplan` = nothing drawn; Tab ▸ Squad ▸ Order menu & keys ▸ 'plan drawn on the floor' + three part rows, this visit only; page rebuild/plan-on-floor/read-first.md).
+  Tab ▸ Squad ▸ Order menu & keys ▸ 'plan drawn on the floor' + three part rows, this visit only; page rebuild/plan-on-floor/read-first.md).
   `floorPlan(g)` ONLY READS: the squad's assignments as they stand (`orders.of(gd)`), each man's own nav path (`gd.path` from `gd.pathI` where `gd.pathGoal` is this order's and the path runs
   to it, else the nav grid's answer kept ≤ `reaskSecs` in the ASKER'S own store (`PlanKept`, since 2026-10-23: the module keeps nothing; see 'An order's line starts on the leg he is on'); no way on the floor = nothing drawn, never a line through a wall), the
   open menu's men, and the books of whatever waits on the key. Per living teammate WITH A MARK (`Assignment.post`, or the order's own `goal` a step off it with no `via`: the unasked cover's
