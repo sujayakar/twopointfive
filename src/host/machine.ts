@@ -21,14 +21,16 @@ const KEPT_ROWS = 'twopointsix.rows', PICKS = 'twopointsix.picks';
 export function keepRow(name: string, v: number, def: number): void { const o = json(KEPT_ROWS); if (v === def) delete o[name]; else o[name] = v; try { localStorage.setItem(KEPT_ROWS, JSON.stringify(o)); } catch { /* no store */ } }
 /** the panel's picks are the visit's */
 export function keepPick(name: string, word: string): void { try { const o = JSON.parse(sessionStorage.getItem(PICKS) ?? '{}') as Record<string, string>; o[name] = word; sessionStorage.setItem(PICKS, JSON.stringify(o)); } catch { /* no store */ } }
+/** what a start's kept rows are put on: the game, so that a restart turns them again and a play record says them */
+export interface Turns { shown(): readonly ShownRow[]; turn(name: string, value: number): void; pick(name: string, word: string): void }
 /** before a game is made: what the rows kept say, each in its row's range, and the visit's picks. The address's own word for one wins. */
-function keptRows(q: URLSearchParams, rows: readonly ShownRow[], C: Commands): void {
+function keptRows(q: URLSearchParams, game: Turns): void {
   const o = json(KEPT_ROWS);
-  for (const r of rows) { const k = o[r.name]; if (r.kept && typeof k === 'number' && Number.isFinite(k) && !q.has(`knob.${r.name}`)) C.knob(r.name, Math.min(r.hi, Math.max(r.lo, k)) / r.scale); }
-  try { const p = JSON.parse(sessionStorage.getItem(PICKS) ?? '{}') as Record<string, string>; for (const [name, word] of Object.entries(p)) if (typeof word === 'string' && !q.has(name)) C.act(name, 0, word); } catch { /* no store */ }
+  for (const r of game.shown()) { const k = o[r.name]; if (r.kept && typeof k === 'number' && Number.isFinite(k) && !q.has(`knob.${r.name}`)) game.turn(r.name, Math.min(r.hi, Math.max(r.lo, k)) / r.scale); }
+  try { const p = JSON.parse(sessionStorage.getItem(PICKS) ?? '{}') as Record<string, string>; for (const [name, word] of Object.entries(p)) if (typeof word === 'string' && !q.has(name)) game.pick(name, word); } catch { /* no store */ }
 }
-export function machineBefore(q: URLSearchParams, level: string, C: Commands, rows: readonly ShownRow[] = []): void {
-  keptRows(q, rows, C);
+export function machineBefore(q: URLSearchParams, level: string, C: Commands, game?: Turns): void {
+  if (game) keptRows(q, game);
   const taught = /^tut-/.test(level), word = q.has('hard') ? (q.get('hard') === '0' ? 'standard' : 'hard') : q.get('difficulty');
   const hard = word === 'hard' || (word !== 'standard' && kept('twopointsix.difficulty') === 'hard' && (!taught || q.has('lessonhard')));
   if (hard) C.difficulty(1);

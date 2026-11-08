@@ -178,7 +178,7 @@ async function main(): Promise<void> {
     // (the run's tape: not of a title's floor, which nobody plays, nor of a page that measures)
     if (!title && !unkept && !q.has('noreplay')) game.tape = new HandTape(HAND.count);
     if (game.tape) built = await buildName();
-    machineBefore(q, name, game.commands, game.shown());
+    machineBefore(q, name, game.commands, game);
     game.start({ level, words: location.search, mannequin, mannequinBin, cast, castLook, seed, named: { level: name, build: built } });
     machineAfter(game.commands, !benchSceneWaits() && !heldPage(q));
   }
