@@ -1,4 +1,4 @@
-// WHAT THE PAGES ARE BUILT FROM AND NOTHING NAMES: functions, methods, fields and constants of a file that stays (tools/draw/held.tsv) whose name is written once in the whole of src, tools and levels
+// WHAT THE PAGES ARE BUILT FROM AND NOTHING NAMES: functions, methods, fields and constants of a file that stays (tools/draw/held.ts --stays) whose name is written once in the whole of src, tools and levels
 // (comments aside; a word of a string counts), in its own declaration. A name asked for by a string, or put together at run time, is written somewhere and so is not here; a file written by a program is skipped.
 //   bun run tools/draw/unused.ts          each with its lines, and the sum
 //   bun run tools/draw/unused.ts --cut    …taken out, with the comment above it, over again until there are none; the type checks see what was cut wrongly
@@ -10,7 +10,8 @@ const ROOT = resolve(import.meta.dir, '../..'), CUT = process.argv.includes('--c
 const ts = await import(process.env.TS_LIB ?? join(ROOT, 'vendor/typescript/lib/typescript.js')).then(m => m.default ?? m) as typeof import('typescript');
 const every: string[] = [], walk = (d: string): void => { for (const x of readdirSync(join(ROOT, d))) { if (x === 'node_modules' || x === 'target' || x.startsWith('.')) continue; const p = `${d}/${x}`; if (statSync(join(ROOT, p)).isDirectory()) walk(p); else if (/\.(ts|mts|cjs|mjs|js|html|sh|py)$/.test(x)) every.push(p); } };
 for (const d of ['src', 'tools', 'levels']) walk(d); for (const x of readdirSync(ROOT)) if (x.endsWith('.html')) every.push(x);
-const stays = readFileSync(join(import.meta.dir, 'held.tsv'), 'utf8').split('\n').filter(l => l.startsWith('stays\t')).map(l => l.slice(6));
+const asked = Bun.spawnSync(['bun', 'run', join(import.meta.dir, 'held.ts'), '--stays']); if (asked.exitCode !== 0) { console.error(asked.stderr.toString()); process.exit(2); }
+const stays = asked.stdout.toString().split('\n').filter(Boolean);
 
 interface Dead { file: string; name: string; kind: string; from: number; to: number; lines: number }
 function look(): Dead[] {

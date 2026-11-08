@@ -894,8 +894,8 @@ but synthetic writes still work.
   line reads that count now). So a named rule is where to look, not the verdict: trap the thing the line is about before calling it a fault. A line no set of words flips is not a held row's doing: the tool says so, and what the shipped stand itself makes of it.
 - **A switch that only moves WHEN something lands is still a switch** (11-05; the planners' pace, after the multiplayer goal's read). `PLAN_PACE`
   (`src/render/planPace.ts`, the page's `?planpace=old`) was first read by `main.ts` alone and kept out of the registry as a picture's pace. That is a
-  special case with a cost: a word `main.ts` reads by itself is in no recipe and no recording, and a server's stand (`tools/mp/stand.ts`:
-  `shippedBoot` and `pageSwitches`) never reads it, so a host's page and its server can stand differently. So it is registered like any other: read in
+  special case with a cost: a word `main.ts` reads by itself is in no recipe and no recording, and a server's stand
+  never reads it, so a host's page and its server can stand differently. So it is registered like any other: read in
   `pageSwitches`, a `FROZEN_HOLDS` row (`TPS_PLANPACE=1 (a picture only)`), `STAND_ENV`, the knob registry, `JOURNAL_KNOBS`, and `applyKnobs` puts it
   down for a file with no table for it; `openings-check` holds all of that on both stands. THE RULE FOR THE NEXT ONE: any word that moves when
   something runs or lands, in the tick or in the picture, goes through `pageSwitches` and the registry; `main.ts` reads no such word by itself.
@@ -1419,7 +1419,7 @@ but synthetic writes still work.
   under a squad's mission), `weather.fits`, and the dust in the rooms as the picture is handed it. A page and a co-op server differed in exactly
   these.
   ON THE ADDRESS NOW: the start tables (`tools/blitz/start.ts`, the Rust start with it), the two-seat stand (`seats-run.ts standTwo`: `seats.ts`,
-  `thrice`, `show-seat-check`), a page's tape in `tools/qa/rerun.ts` and so EVERY co-op machine (`tools/mp/stand.ts standRecipe`, `freshRecipe`),
+  `thrice`, `show-seat-check`), a page's tape in `tools/qa/rerun.ts`,
   the play-through (`playthrough.ts`: `--set WEATHER.kind` goes onto the address), `tools/blitz/starts.ts`, `picks-probes --boot`. NOT YET:
   every other tool that calls `startFromQuery` on a game stood plain (about 160 files); when the last is moved, `kitSoloStand`, `KIT_SOLO.stand`
   and the late `setKind` in `startFromQuery` go.
@@ -1439,7 +1439,7 @@ but synthetic writes still work.
   (`plain`) and does read a level. WHAT WRITES WHAT: in the TypeScript the knob tables and the difficulty module's own state are the PROCESS'S, so an address that names a level leaves the tables
   on it, as a tool's own `setDifficulty` does, and one that names none leaves them as they stand; such a call names no game, so it runs the TypeScript's body and does not cross to a Rust game an older
   stand left alive, which takes it by the scan if it is stepped again ((6): `surface.ts hostOf`, `scan.ts SETTING`). In Rust they are the game's own. A host's tables win: `standUp`'s new `tables` is laid right after the
-  address's reading (a co-op machine's `tools/mp/stand.ts`, a page's tape in `rerun.ts`, as a page lays `recipeTables`), and a Rust start HANDED knob tables (`stand_handed`, part 6) does not read the
+  address's reading (a page's tape in `rerun.ts`, as a page lays `recipeTables`), and a Rust start HANDED knob tables (`stand_handed`, part 6) does not read the
   address's difficulty at all (`StartOpts.difficulty`), because that host already has.
   THE CHECKS: `bun run tools/blitz/start-levels.ts` and `--seats 2` hold the Rust start to this one mission by mission; `--again` holds a second
   start in one process to the first; `--words '&hard'` holds every mission's hard start, the knob tables and the difficulty module's record with it; `tests/hard.rs` and the probe `levers-address` (`LEVERS_ADDRESS_BREAK=1` must fail) hold the reading; `tools/qa/rowset-check.ts` reads the order of the address's reader off its source (`ROWSET_ORDER_BREAK=1`

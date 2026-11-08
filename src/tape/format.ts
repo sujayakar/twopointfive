@@ -12,7 +12,8 @@
 // first of a file): `m` = the men who moved, `x` = the men whose doing changed, `d` = the doors that moved; a keyframe lists every man and every door there is.
 // A man is named by his index in `cast` (append-only: a restart's new men are new entries). decode() below unfolds all of it into plain per-sample tables.
 
-import type { Recipe } from '../net/wire';
+/** what a run is stood again from: the die, the page's address, every knob table, the kit */
+interface Recipe { seed: number | null; search: string; levelFile?: string; scenario: string | null; env: unknown; knobs: unknown; stand?: 'page' | 'shipped' | 'frozen'; words?: Record<string, string>; tables?: Record<string, unknown>; kit?: { on: boolean; members: unknown[] } }
 
 export const REPLAY_VERSION = 1;
 /** how a 'mark' line that files a PAGE ERROR starts (ui/replaykey.ts files one at the play moment the error came; the viewer and replay-at.ts find them by it) */

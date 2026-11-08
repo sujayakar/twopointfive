@@ -199,8 +199,8 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
   if (process.env.ALL) {
     const bad = [];
     for (const id of s0.rows) { await open(); await goRow(id); await page.waitForTimeout(300); const st = await stateOf(page);
-      await page.keyboard.press('Enter'); await page.waitForTimeout(500);
-      const ok = await Promise.all([deployed(), page.keyboard.press('Enter')]).then(() => true, () => false);
+      // (listened for before a key: a lesson, with no kit to pick, loads on the first Enter)
+      let gone = false; const load = deployed().then(() => gone = true, () => false); await page.keyboard.press('Enter'); await Promise.race([load, page.waitForTimeout(500)]); if (!gone) await page.keyboard.press('Enter'); const ok = await load;
       log(id, ok ? new URL(page.url()).search : 'NO LOAD'); if (!ok || !st.loadout || !st.loadout.deployInView) bad.push(id); }
     check(bad.length === 0, `every one of the ${s0.rows.length} missions: highlighted, its loadout on the page with Deploy in view, Enter Enter loads it`, bad.length ? `failed: ${bad.join(', ')}` : 'all loaded');
   }

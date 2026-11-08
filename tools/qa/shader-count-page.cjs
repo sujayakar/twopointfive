@@ -42,7 +42,7 @@ const COUNT = () => {
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   const ctx = await browser.newContext({ viewport: { width: 320, height: 180 }, deviceScaleFactor: 1 });
-  await ctx.addInitScript(() => { window.__testVisible = true; });
+  await ctx.addInitScript(() => { });
   await ctx.addInitScript(COUNT);
   const seenText = new Set(), seenPipe = new Set(); const out = []; let red = 0;
   for (const addr of WALK) {

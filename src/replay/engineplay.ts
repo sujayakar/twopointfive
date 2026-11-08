@@ -149,7 +149,7 @@ export async function tapeFromUrl(q: URLSearchParams): Promise<TapePlay | 'moved
 }
 /** the tape's own query, with this visit's keys: what the page must be booted on to be the recording's page */
 export function tapeSearch(tape: RunTape, now: URLSearchParams, v: string): string { return recipeSearch(tape.recipe, now, { [PLAYTAPE]: v, ...(now.has('at') ? { at: now.get('at') ?? '' } : {}) }); }
-/** STEPS NOBODY SAW ARE OVER (a replay's seek, a networked page that slept and caught up — net/page.ts): the mixer back as it was, and the queues those steps
+/** STEPS NOBODY SAW ARE OVER (a replay's seek): the mixer back as it was, and the queues those steps
  *  built up let go, or they would all land on the first frame drawn */
 export function unseenDone(h: { audio: { enabled: boolean; setVolumes(): void }; smoke: { emitters: { kind: string }[] } | null; engine: { particles?: { clear(): void } | null; resetTaa?(why?: string): void } }, audioWas: boolean, why: string): void {
   h.audio.enabled = audioWas; h.audio.setVolumes();

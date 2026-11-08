@@ -588,12 +588,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   own point, not to the man or lamp the reticle would snap to (`updateAim`'s snap writes the reticle; near a snap his predicted facing is a little off the
   game's); a shot fired inside the records does not raise his gun. THIN: `legsOwn` is a list kept by hand beside `updatePlayer`'s early returns (a beat
   added there and not to the list is walked through, and no check would say so). COST on the cloud box under load: forty six records 3 to 6 ms, eight
-  about 0.3 to 0.8 ms, beside 6 to 9 ms for one whole tick (the first cut paid 2.7 ms a call before its first record). ON THE NETWORKED PAGE (`net.md`): `Game.hostAfter` hands the
-  host's camera what the SHOWN seat's tick left (`hostSeat`) and puts that seat's live view back; the page's own side (`net/page.ts` setting `localSeat` to
-  the seat the server gave it and sampling its record through that seat's view) is the networked page's to write; a game stood headless from a recipe
-  (`tools/mp/stand.ts`, `tools/qa/rerun.ts`) reads the seat count off the recipe's address (`standUp({ search })`). BY HAND, once: a game server stood from
-  `?roomclear&squad4&seats=2` with two seat keys, two seated scripted clients and a watcher walked 600 ticks and each matched 20 of 20 state words; no check
-  holds a two-seat game over sockets yet, and no PAGE has sat in the second seat of one. CHECK: `bun run tools/qa/seats-check.ts` on both stands
+  about 0.3 to 0.8 ms, beside 6 to 9 ms for one whole tick (the first cut paid 2.7 ms a call before its first record). CHECK: `bun run tools/qa/seats-check.ts` on both stands
   (`TPS_PROFILE=shipped` in front for the page's), 17 lines: one seat is plain, two men stand apart, each walks from his own record, each orders his own
   pair onto his own door, the fog is the team's, a two-seat game rolls back to the bit, a look ahead of forty six records from a seat marked remote (a walk, a sprint, C and a crouch walk back, Shift in the crouch, a coast; the
   mark changes a record only where the record check is on, the page's stand), and the last twenty six again from the middle of the sprint,

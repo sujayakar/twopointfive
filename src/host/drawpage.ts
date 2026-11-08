@@ -135,8 +135,8 @@ async function main(): Promise<void> {
   if (COOP.on && !tape && !kitPicture && q.has(NET_JOIN) && !(q.has(NETPLAY) && netKeyed(q))) { if (await coopFromUrl(q) === 'moved') return; q.delete(NET_JOIN); }
   const coop = tape || kitPicture ? null : await netAsked(q); if (coop === 'moved') return;
   TITLE.coop = () => COOP.on ? coopRows : null;
-  // (a game hosted from here stands on the module, on this machine's settings; both players play the kit as issued)
-  HOSTED.setup = scenario => { const w = new URLSearchParams(scenario), C = new Commands(); w.set('nokit', ''); machineBefore(w, w.get('levelFile') ?? '', C); return { stand: 'module', commands: commandText(C.take()) }; };
+  // (a game hosted from here stands on this machine's settings; both players play the kit as issued)
+  HOSTED.setup = scenario => { const w = new URLSearchParams(scenario), C = new Commands(); w.set('nokit', ''); machineBefore(w, w.get('levelFile') ?? '', C); return { commands: commandText(C.take()) }; };
   { const to = tape || coop ? null : pickRedirect(location.search); if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }
   const canvas = document.getElementById('view') as HTMLCanvasElement;
   // (the Team & kit picture has no HUD)
@@ -463,7 +463,7 @@ async function main(): Promise<void> {
   if (title) { drawTitle(); if (missionsReopenAsked() && !startPage()) openStartPage(); }
   else if (brief) startWaits(brief, { drawn: () => told.frames, measuring: () => quality.calibrating, settling: on => { settling = on; }, settled: () => { boot.mark('settled'); }, run: () => { input.keys.clear(); input.buttons = 0; input.endFrame(); thaw = true; audio.start(); input.focusGame(); afresh(); } });
   else card.off();
-  loading.style.display = 'none'; debuggerPanel({ game, engine, smoke, cam, quality, input, chars: ch, marks: decals, over: hud, card: e => !pause.up && !!hud?.overlay.cardUp && hud.overlay.cardKey(e), hud: () => ({ fps: told.fps, union: engine.timer.unionMs(rendered) }) });
+  loading.style.display = 'none'; debuggerPanel({ game, engine, smoke, cam, quality, input, chars: ch, marks: decals, over: hud, net, card: e => !pause.up && !!hud?.overlay.cardUp && hud.overlay.cardKey(e), hud: () => ({ fps: told.fps, union: engine.timer.unionMs(rendered) }) });
   // (for a tool: the page's parts, and frames stepped by hand)
   const steps = (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last'): void => { if (title || brief?.up) { title = false; reel.poke(); brief?.off(); card.off(); } for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } };
   Object.assign(window, { __draw: { game, hud, played: play ? played : null, seesAs, get watched() { return watched; }, books, kit, measure, reel, pics, engine, world, audio, pause, cam, input, quality, told, fog, weather, smoke, get held() { return held; }, set held(v: boolean) { held = v; afresh(); }, run: steps } });
