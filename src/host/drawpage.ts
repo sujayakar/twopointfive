@@ -74,6 +74,7 @@ import { lookNumbers } from '../draw/look';
 import { sampleHand } from '../draw/hand';
 import { HOURS_OF, skyFrom } from '../draw/sky';
 import { fogFrom } from '../draw/fog';
+import { smokeFrom } from '../draw/smoke';
 import { makeFogFrame } from '../render/fogofwar';
 import { WeatherPicture } from '../picture/weather';
 import { SNOW_LOOK, snowLookOfQuery } from '../picture/snow/look';
@@ -245,6 +246,7 @@ async function main(): Promise<void> {
     { const e = D.u[view() + View.ended]; if (e !== ended) { ended = e; if (e) onEnded(); } }
     D.fresh();
     if (!measure.freezing) { skyFrom(engine, D); fogFrom(fog, D); }   // (a take over a held world flips what these write)
+    smokeFrom(smoke, D);
     rimsFrom(rims, D); weather.frame(cam); dustFrom(engine.particles!, D);
     { const o = view(); engine.settings.nvAmount = D.f[o + View.night]; engine.settings.hitFlash = D.f[o + View.hit]; }
     game.look(lookNumbers(engine.settings, engine.world, !!ch.cast));
