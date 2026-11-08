@@ -214,7 +214,7 @@ export async function packsideCheck(): Promise<boolean> {
       for (let i = 0; i < KT.KIT_MEMBERS; i++) KT.KIT.members[i] = { ...KT.kitDefault(i), big: i % 2 ? 'hammer' : 'shotgun' };
       const W: any = await hushed(() => H.standUp({ uploadEvery: 4, seed: 1, cast: true })); const g = W.game, I = W.input;
       const BS = KT.BIGSLOT, was = { on: BS.on }; BS.on = true; g.godMode = true;
-      await hushed(() => g.roomClear.start(1));
+      await hushed(() => g.roomClear.start(1)); W.step(1 / 60);   // (what a man wears is what the game last told the page: a step on)
       const mates = g.guards.filter((m: any) => BK.bigCarried(g, m.char) !== null);
       let drawn = 0, sided = 0;
       const run = (secs: number, keys: string[] = []) => { for (const k of keys) I.keys.add(k); for (let i = 0; i < secs * 60; i++) { W.step(1 / 60); const out: any[] = []; CB.handProps(g, out);
