@@ -116,7 +116,6 @@ fn where_a_machine_looks_does_not_part_the_two_machines() {
         let mut drawn = game_draw::Drawn::default();
         (0..90).filter_map(|k| {
             if looks {
-                p.g.engine.view_focus = Some(fire);
                 let c = &mut p.g.tab.camera[p.host.cam];
                 (c.target, c.pos, c.yaw, c.distance) = (fire, [fire[0], fire[1] + 12.0, fire[2] + 9.0], 0.4 + k as f64 * 0.01, 14.0);
             }
