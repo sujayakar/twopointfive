@@ -23,7 +23,7 @@ fn grid(g: &Game) -> &[u16] {
 }
 
 /// May a flood stand on this cell: on the grid, not shut, not a doorway.   (cleared.ts:47 free)
-fn free(g: &mut Game, dc: &JsMap<crate::Num, DoorId>, x: f64, z: f64) -> bool {
+fn free(g: &Game, dc: &JsMap<crate::Num, DoorId>, x: f64, z: f64) -> bool {
     if !(x >= 0.0 && z >= 0.0 && x < g.col.nav.w && z < g.col.nav.h) { return false; }
     let i = crate::scene_collision::nav_grid_idx(g, x, z);
     // (`+ 0.0`: a Map's key is the same for −0 and 0, Num's is by bits)
@@ -33,28 +33,37 @@ fn free(g: &mut Game, dc: &JsMap<crate::Num, DoorId>, x: f64, z: f64) -> bool {
 /// The rooms of the level: a flood from the floor on either face of every door. Built once: a game has one nav grid, rebaked in place.   (cleared.ts ClearedRooms.build)
 pub fn cleared_rooms_build(g: &mut crate::game::Game) {
     if g.cleared.room_of_cell.is_some() { return; }
-    let (w, h, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let dc = crate::guards::door_cells(g);
+    let (grid_new, sizes, seeds) = rooms_of(g, &dc);
+    g.cleared.sizes = sizes;
+    g.cleared.seeds = seeds;
+    g.cleared.known_room = vec![0; g.cleared.sizes.len()];
+    g.cleared.known = 0.0;
+    g.cleared.room_of_cell = Some(grid_new);
+}
+
+/// The room at each cell of the floor, each room's size and the cells its doors flood from.
+fn rooms_of(g: &Game, dc: &JsMap<crate::Num, DoorId>) -> (Vec<u16>, Vec<f64>, JsMap<DoorId, [f64; 2]>) {
+    let (w, h, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let mut grid_new = vec![0u16; (w * h) as usize];
     let mut seen = vec![0u8; (w * h) as usize];
-    g.cleared.sizes = vec![0.0];
-    g.cleared.seeds.clear();
-    let list = g.doors.list.clone();
-    for d in list {
-        g.cleared.seeds.set(d, [-1.0, -1.0]);
+    let mut sizes = vec![0.0];
+    let mut seeds: JsMap<DoorId, [f64; 2]> = JsMap::new();
+    for &d in &g.doors.list {
+        seeds.set(d, [-1.0, -1.0]);
         for b in [1.0, -1.0] {
             let th = g.dr[d].def.closed_dir;
             let c = g.dr[d].frame_centre;
             let mut sx = m::floor((c[0] - m::sin(th) * b) / cs);
             let mut sz = m::floor((c[2] + m::cos(th) * b) / cs);
-            if !free(g, &dc, sx, sz) {
+            if !free(g, dc, sx, sz) {
                 let mut found = false;
                 'search: for r in 1..=2i32 {
                     for dz in -r..=r {
                         for dx in -r..=r {
                             let x = sx + dx as f64;
                             let z = sz + dz as f64;
-                            if free(g, &dc, x, z)
+                            if free(g, dc, x, z)
                                 && ((x + 0.5) * cs - c[0]) * -m::sin(th) * b + ((z + 0.5) * cs - c[2]) * m::cos(th) * b > 0.0
                             {
                                 sx = x;
@@ -68,7 +77,7 @@ pub fn cleared_rooms_build(g: &mut crate::game::Game) {
                 if !found { continue; }
             }
             let s0 = crate::scene_collision::nav_grid_idx(g, sx, sz);
-            g.cleared.seeds.get_mut(d).unwrap()[if b > 0.0 { 0 } else { 1 }] = s0;
+            seeds.get_mut(d).unwrap()[if b > 0.0 { 0 } else { 1 }] = s0;
             if seen[s0 as usize] != 0 { continue; }
             let mut q = vec![s0];
             seen[s0 as usize] = 1;
@@ -81,7 +90,7 @@ pub fn cleared_rooms_build(g: &mut crate::game::Game) {
                 for (dx, dz) in [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)] {
                     let nx = x + dx;
                     let nz = z + dz;
-                    if !free(g, &dc, nx, nz) { continue; }
+                    if !free(g, dc, nx, nz) { continue; }
                     let n = crate::scene_collision::nav_grid_idx(g, nx, nz);
                     if seen[n as usize] == 0 {
                         seen[n as usize] = 1;
@@ -91,14 +100,26 @@ pub fn cleared_rooms_build(g: &mut crate::game::Game) {
                 qi += 1;
             }
             if q.len() as f64 > ROOM_MAX_CELLS { continue; } // (open floor: its cells stay 0)
-            let id = g.cleared.sizes.len();
-            g.cleared.sizes.push(q.len() as f64);
+            let id = sizes.len();
+            sizes.push(q.len() as f64);
             for &cc in &q { grid_new[cc as usize] = id as u16; }
         }
     }
-    g.cleared.known_room = vec![0; g.cleared.sizes.len()];
-    g.cleared.known = 0.0;
-    g.cleared.room_of_cell = Some(grid_new);
+    (grid_new, sizes, seeds)
+}
+
+/// …the room at each cell, of the game shared: the game's own where a rule has built it, else made for the asker to keep
+pub fn cleared_rooms_grid_of(g: &Game, dc: &JsMap<crate::Num, DoorId>) -> Vec<u16> {
+    match &g.cleared.room_of_cell { Some(r) => r.clone(), None => rooms_of(g, dc).0 }
+}
+
+/// The room `p` stands in, of such a grid (0: none, a doorway, open floor).
+pub fn cleared_room_in(g: &Game, grid: &[u16], p: V3) -> f64 {
+    let cell = g.col.nav.cell;
+    let x = m::floor(p[0] / cell);
+    let z = m::floor(p[2] / cell);
+    if x < 0.0 || z < 0.0 || x >= g.col.nav.w || z >= g.col.nav.h { return 0.0; }
+    cell_at(grid, crate::scene_collision::nav_grid_idx(g, x, z)).unwrap_or(0.0)
 }
 
 /// What `dearFor`'s price list answers for a cell. The room map and what is known are read live, as the closure's shared arrays were.   (cleared.ts:102)
@@ -128,12 +149,7 @@ pub fn cleared_rooms_reset(g: &mut crate::game::Game) {
 /// The room `p` stands in (0: none, a doorway, open floor).   (cleared.ts ClearedRooms.roomAt)
 pub fn cleared_rooms_room_at(g: &mut crate::game::Game, p: V3) -> f64 {
     cleared_rooms_build(g);
-    let cell = g.col.nav.cell;
-    let x = m::floor(p[0] / cell);
-    let z = m::floor(p[2] / cell);
-    if x < 0.0 || z < 0.0 || x >= g.col.nav.w || z >= g.col.nav.h { return 0.0; }
-    let i = crate::scene_collision::nav_grid_idx(g, x, z);
-    cell_at(grid(g), i).unwrap_or(0.0)
+    cleared_room_in(g, grid(g), p)
 }
 
 /// Has the team been in the room `p` stands in (open floor and doorways: yes).   (cleared.ts ClearedRooms.knownAt)

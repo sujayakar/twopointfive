@@ -1,11 +1,11 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 4156334564;
+export const LAYOUT = 1759162836;
 /** what a host may ask for: what is made together is asked for together */
-export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, all = 8191 }
+export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, shot = 8192, all = 16383 }
 /** each section's place in the table the module answers with */
-export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, rims = 30, fires = 31, fireTable = 32, decals = 33, decalKeys = 34, decalHead = 35, winds = 36, gusts = 37, heat = 38, air = 39, windRoofs = 40, roofs = 41, ceilings = 42, doorBoxes = 43, openPanes = 44, resets = 45, traffic = 46, dust = 47, count = 48 }
+export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, rims = 30, fires = 31, fireTable = 32, shot = 33, shotThreats = 34, shotFight = 35, decals = 36, decalKeys = 37, decalHead = 38, winds = 39, gusts = 40, heat = 41, air = 42, windRoofs = 43, roofs = 44, ceilings = 45, doorBoxes = 46, openPanes = 47, resets = 48, traffic = 49, dust = 50, count = 51 }
 
 /** the fog: one row */
 export const enum Fog {
@@ -115,14 +115,18 @@ export const enum View {
   target = 35,
   /** u32: what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it */
   locks = 38,
+  /** u32: the view is the shown man's own, for the camera that runs itself to frame */
+  own = 39,
+  /** u32: a show has the frame */
+  showing = 40,
   /** u32: the run's end card is due: 1 it was lost, 2 won (0: not yet) */
-  ended = 39,
+  ended = 41,
   /** f32: night vision's amount, and how hard he has just been hit */
-  night = 40,
+  night = 42,
   /** f32 */
-  hit = 41,
+  hit = 43,
   /** words a row */
-  row = 42,
+  row = 44,
 }
 
 /** the sky: one row */
@@ -713,6 +717,62 @@ export const enum FireTable {
   soot = 60,
   /** words a row */
   row = 63,
+}
+
+/** the shown seat's: no row while the view is not his own to frame */
+export const enum Shot {
+  /** f32 × 3: where he stands */
+  at = 0,
+  /** f32 × 3: the squad's newest beat, the door's floor, the room's middle, and how much of the frame each has (0: none) */
+  beat = 3,
+  /** f32 */
+  beatW = 6,
+  /** f32 × 3 */
+  door = 7,
+  /** f32 */
+  doorW = 10,
+  /** f32 × 3 */
+  room = 11,
+  /** f32 */
+  roomW = 14,
+  /** f32: the hand's zoom is scaled by this where he stands */
+  zoomK = 15,
+  /** u32: a button is down */
+  hold = 16,
+  /** u32: his feet are still this tick */
+  still = 17,
+  /** u32: nothing stands in a turn's way but the clocks: no man held, no arc up, no wall taken, the camera not locked */
+  free = 18,
+  /** f32 × 2: how fast he moves over the floor (X, Z) */
+  vel = 19,
+  /** u32: hostile men the picture shows in his line, or this near in his line or not */
+  shown = 21,
+  /** u32: the zoom is the mode's to move (no lesson holds it) */
+  zoomFree = 22,
+  /** f32: seconds since he fired */
+  firedAgo = 23,
+  /** u32: the soft lock's man: 0 nobody · 1 a man, standing here · 2 a man Sam holds (no place: the frame as it is) */
+  lock = 24,
+  /** f32 × 3 */
+  lockAt = 25,
+  /** f32: how strongly he holds the frame, and whether the button down is the stalk's own held click (it stills nothing) */
+  lockS = 28,
+  /** u32 */
+  lockStalk = 29,
+  /** u32: somebody the picture shows is onto him: a fight, and the zoom does not come in */
+  onto = 30,
+  /** words a row */
+  row = 31,
+}
+
+/** a man framed, on the floor: `threats` are those he could shoot, `fight` those of the sway's fight (shown, and in his line a moment ago) */
+export const enum ShotMan {
+  /** f32 */
+  x = 0,
+  /** f32 */
+  z = 1,
+  /** words a row */
+  row = 2,
 }
 
 /** who a record is, in the same order: the id of what made it (its tick; the arm in the top byte and its place among that tick's) */

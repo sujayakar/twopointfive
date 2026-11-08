@@ -72,16 +72,7 @@ pub fn cover_ready(g: &mut Game) -> Vec<CoverOpeningId> {
 /// The level's openings: its doors, and the gaps of its nav grid that are not a door's own doorway. (cover.ts build)
 pub fn cover_build(g: &mut Game) {
     g.cover.nav = true;
-    let list = g.doors.list.clone();
-    let mut doors: Vec<CoverOpeningId> = Vec::new();
-    for d in list {
-        let th = g.dr[d].def.closed_dir;
-        let fc = g.dr[d].frame_centre;
-        let id = alloc::format!("door:{}", g.dr[d].def.name);
-        let half = g.dr[d].def.width * 0.5;
-        doors.push(g.tab.cover_opening.push(Opening { id, kind: OpeningKind::Door, at: [fc[0], CHEST, fc[2]], n: [-m::sin(th), m::cos(th)], half, door: Some(d), pass: None, far: None }));
-    }
-    let mut gaps: Vec<CoverOpeningId> = Vec::new();
+    let doors = door_openings(g);
     let nav = GapsOfNav { w: g.col.nav.w, h: g.col.nav.h, cell: g.col.nav.cell, blocked: g.col.nav.blocked.clone() };
     let k = g.k.cover;
     // (the statics' sight alone decides what a gap is)
@@ -93,14 +84,39 @@ pub fn cover_build(g: &mut Game) {
         found.extend(gaps_of(&nav, false, &k, Some(&mut solid)));
         found
     };
+    let kept = openings_kept(doors, found);
+    g.cover.openings = kept.into_iter().map(|o| g.tab.cover_opening.push(o)).collect();
+}
+
+/// …the same rows made of the game shared and kept by the asker: what `cover_build` would find, for somebody who may not write the game. `None`: the box world may not be asked now
+pub fn cover_openings_of(g: &Game) -> Option<Vec<Opening>> {
+    let ask = crate::ask::WorldAsk::try_of(g).ok()?.over(crate::ask::Over::statics());
+    let nav = GapsOfNav { w: g.col.nav.w, h: g.col.nav.h, cell: g.col.nav.cell, blocked: g.col.nav.blocked.clone() };
+    let k = g.k.cover;
+    let mut solid = |a: V3, b: V3| ask.line(a, b, crate::ask::Line::Sight);
+    let mut found = gaps_of(&nav, true, &k, Some(&mut solid));
+    found.extend(gaps_of(&nav, false, &k, Some(&mut solid)));
+    Some(openings_kept(door_openings(g), found))
+}
+
+/// an opening for each door of the level
+fn door_openings(g: &Game) -> Vec<Opening> {
+    g.doors.list.iter().map(|&d| {
+        let th = g.dr[d].def.closed_dir;
+        let fc = g.dr[d].frame_centre;
+        Opening { id: alloc::format!("door:{}", g.dr[d].def.name), kind: OpeningKind::Door, at: [fc[0], CHEST, fc[2]], n: [-m::sin(th), m::cos(th)], half: g.dr[d].def.width * 0.5, door: Some(d), pass: None, far: None }
+    }).collect()
+}
+
+/// the doors, then each gap found that is no door's own doorway and no gap already kept
+fn openings_kept(doors: Vec<Opening>, found: Vec<Opening>) -> Vec<Opening> {
+    let n = doors.len();
+    let mut kept = doors;
     for o in found {
-        let oat = o.at;
-        if doors.iter().any(|&d| v3::dist_xz(g.tab.cover_opening[d].at, oat) < 1.0) || gaps.iter().any(|&x| v3::dist_xz(g.tab.cover_opening[x].at, oat) < 0.6) { continue; }
-        let o = g.tab.cover_opening.push(o);
-        gaps.push(o);
+        if kept[..n].iter().any(|d| v3::dist_xz(d.at, o.at) < 1.0) || kept[n..].iter().any(|x| v3::dist_xz(x.at, o.at) < 0.6) { continue; }
+        kept.push(o);
     }
-    doors.extend(gaps);
-    g.cover.openings = doors;
+    kept
 }
 
 /// His order leaves his eyes spare now. (cover.ts spare)

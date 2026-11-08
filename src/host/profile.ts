@@ -53,7 +53,7 @@ import { LIVED, livedOfQuery } from '../scene/lived';
 import { SHAPES } from '../scene/shapes';
 import { ROOMCLEAR } from '../game/roomclear';
 import { FIXEDSTEP } from './loop';
-import { autoTuneApply } from './autocam';
+import { autoTuneApply } from './autoframe';
 import { TWEEN } from './tween';
 import { EVENPACE, FLIGHT_PAGE } from './pace';
 import { findMeStarts } from './findme';

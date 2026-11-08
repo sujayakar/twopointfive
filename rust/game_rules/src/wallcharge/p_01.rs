@@ -39,7 +39,7 @@ pub fn wall_pt(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, du: f
 }
 
 /// wallPt's arithmetic, on the box's centre and half sizes.
-fn wall_pt_of(c: V3, h: V3, w: &crate::wallcharge::WallSpot, du: f64, off: f64, y: f64) -> V3 {
+pub fn wall_pt_of(c: V3, h: V3, w: &crate::wallcharge::WallSpot, du: f64, off: f64, y: f64) -> V3 {
     if w.along_x { [w.u + du, y, c[2] + w.side * (h[2] + off)] } else { [c[0] + w.side * (h[0] + off), y, w.u + du] }
 }
 

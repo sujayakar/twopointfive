@@ -252,7 +252,7 @@ import { TOLD } from './told';
 import { TORCH } from './calmtorch';
 import { BACKKEY } from './backkey';
 import { FIXEDSTEP } from '../host/loop';
-import { AUTOCAM } from '../host/autocam';
+import { AUTOCAM } from '../host/autoframe';
 import { TWEEN } from '../host/tween';
 import { SAVEPIC } from '../host/savepic';
 import { EVENPACE } from '../host/pace';

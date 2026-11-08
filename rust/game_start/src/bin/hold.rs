@@ -156,7 +156,7 @@ fn kept_head(kept: &[u8], file: &str) -> Result<(Vec<String>, usize), String> {
 }
 
 /// the parts of a frame's drawing that are timed, by the sections they are asked with
-const DRAWN: [(&str, u32); 12] = [("fog", game_draw::want::fog), ("view", game_draw::want::view), ("sky", game_draw::want::sky), ("boxes", game_draw::want::boxes), ("lights", game_draw::want::lights), ("men", game_draw::want::men), ("rims", game_draw::want::rims), ("events", game_draw::want::events), ("fires", game_draw::want::fires), ("boxes and marks", game_draw::want::boxes | game_draw::want::decals), ("air", game_draw::want::air), ("the level's look", game_draw::want::level_look)];
+const DRAWN: [(&str, u32); 13] = [("fog", game_draw::want::fog), ("view", game_draw::want::view), ("sky", game_draw::want::sky), ("boxes", game_draw::want::boxes), ("lights", game_draw::want::lights), ("men", game_draw::want::men), ("rims", game_draw::want::rims), ("events", game_draw::want::events), ("fires", game_draw::want::fires), ("boxes and marks", game_draw::want::boxes | game_draw::want::decals), ("air", game_draw::want::air), ("the level's look", game_draw::want::level_look), ("the shot", game_draw::want::shot)];
 
 /// ONE RUN DRAWN, in this process
 fn drawn(dir: &str, r: &Run) -> Result<String, String> {

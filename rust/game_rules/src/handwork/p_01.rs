@@ -179,9 +179,11 @@ pub fn rack_face(g: &crate::game::Game, from: V3) -> crate::handwork::RackFace {
 }
 
 /// What Sam's hands are on, if a verb of his that plants him is running. (handwork.ts samWork)
-pub fn sam_work(g: &mut crate::game::Game) -> Option<crate::handwork::SamWork> {
+pub fn sam_work(g: &mut crate::game::Game) -> Option<crate::handwork::SamWork> { sam_work_of(g, &crate::seats::here(g)) }
+/// …this seat's, of the game shared
+pub fn sam_work_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::handwork::SamWork> {
     if g.puppet.is_some() { return None; }
-    let pl = g.player;
+    let pl = seat.player;
     let c = g.pl[pl].ch;
     let p = g.ch[c].pos;
     if g.pl[pl].breaker_move.is_some() {
@@ -192,10 +194,10 @@ pub fn sam_work(g: &mut crate::game::Game) -> Option<crate::handwork::SamWork> {
         let f = rack_face(g, p);
         return Some(SamWork { kind: SamWorkKind::Drive, p: f.p, n: f.n, at: None });
     }
-    if let Some(j) = crate::wallcharge::wall_charge_sam_job(g) { return Some(SamWork { kind: SamWorkKind::Wall, p: j.p, n: j.n, at: Some(j.at) }); }
-    if let Some(d) = crate::doortools::door_tools_sam_job(g, &crate::seats::here(g)) { return Some(SamWork { kind: SamWorkKind::Door, p: d.p, n: d.n, at: Some(d.at) }); }
+    if let Some(j) = crate::wallcharge::wall_charge_sam_job_of(g, seat) { return Some(SamWork { kind: SamWorkKind::Wall, p: j.p, n: j.n, at: Some(j.at) }); }
+    if let Some(d) = crate::doortools::door_tools_sam_job(g, seat) { return Some(SamWork { kind: SamWorkKind::Door, p: d.p, n: d.n, at: Some(d.at) }); }
     if let Some(j) = crate::defuse::defuse_sam_job(g) { return Some(SamWork { kind: SamWorkKind::Defuse, p: j.p, n: j.n, at: Some(j.at) }); }
-    if let Some(s) = crate::lightswitch::switch_hand(g) { return Some(SamWork { kind: SamWorkKind::Switch, p: s.p, n: s.n, at: None }); }
+    if let Some(s) = crate::lightswitch::switch_hand_of(g, pl) { return Some(SamWork { kind: SamWorkKind::Switch, p: s.p, n: s.n, at: None }); }
     None
 }
 

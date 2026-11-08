@@ -22,7 +22,7 @@ export class Drawn {
   readonly n = new Uint32Array(Section.count);
   private buffer: ArrayBufferLike | null = null;
 
-  constructor(private X: DrawFace, private memory: WebAssembly.Memory, private want: number) {}
+  constructor(private X: DrawFace, private memory: WebAssembly.Memory, /** what the next tick is asked to leave */ public want: number) {}
 
   /** A TICK HAS RUN: its sections are made, and lie here until the next */
   take(h: number): void { this.lay(this.X.face_draw(h, this.want) >>> 0); }

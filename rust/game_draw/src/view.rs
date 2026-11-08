@@ -41,6 +41,10 @@ section! {
         pub target: [f32; 3],
         /// what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it
         pub locks: u32,
+        /// the view is the shown man's own, for the camera that runs itself to frame
+        pub own: u32,
+        /// a show has the frame
+        pub showing: u32,
         /// the run's end card is due: 1 it was lost, 2 won (0: not yet)
         pub ended: u32,
         /// night vision's amount, and how hard he has just been hit
@@ -82,6 +86,8 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
         spectating: (g.spectate >= 0.0) as u32,
         peek: cam.peek_offset.map_or([0.0; 3], f3),
         kick: cam.kick.map_or([0.0; 3], f3),
+        own: crate::shot::view_own(g) as u32,
+        showing: game::director::director_showing(g) as u32,
         cuts: cam.desired_serial,
         cut: f3(cam.desired),
         night: g.pl[pl].nv_amount as f32,

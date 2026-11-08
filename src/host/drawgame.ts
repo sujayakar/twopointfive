@@ -5,6 +5,7 @@ import { Drawn, drawRefused, type DrawFace } from '../draw/drawn';
 import { Want } from '../draw/sections';
 import { Commands } from '../draw/commands';
 import { HAND } from '../draw/hand';
+import { AUTOCAM, SHOT_NUMBERS } from './autoframe';
 import type { SaveRow } from '../ui/runcard';
 import { CURSOR_DOUBLES, sampleCursor, type CursorAt, type CursorCanvas, type CursorLens } from '../view/cursor';
 import { readCursorView, readDebriefView, readTickView, type CursorView, type DebriefView, type TickView } from '../view/read';
@@ -63,7 +64,7 @@ export class DrawGame {
   /** A GAME LOST TO A PANIC STANDS AGAIN, from the best save of it or from its run's first step: the save's label, '' for the start, null where nothing of it is kept */
   recover(newest: boolean): string | null {
     const h = this.X.face_recover(this.h, newest ? 1 : 0); if (!h) return null;
-    this.lost = null; this.h = h; const label = this.answer(); this.said = null; this.draw(); return label;
+    this.lost = null; this.h = h; const label = this.answer(); this.said = null; this.shotSaid = 0; this.draw(); return label;
   }
 
   /** A GAME, from its start; what has been commanded by now is done to it before it is made */
@@ -76,7 +77,7 @@ export class DrawGame {
     if (this.h) { this.X.face_drop(this.h); this.h = 0; }
     try { this.h = this.X.face_start(at, n, -1, o.seed, o.seats ?? 1, DRESS | SENSES); } finally { this.X.face_free(at, n); }
     if (!this.h) throw new FaceError('no room for another game in this module');
-    this.ticks = 0; this.said = null;
+    this.ticks = 0; this.said = null; this.shotSaid = 0;
     // (room asked for and given back: the allocator keeps it, and a step seldom has to grow the memory)
     this.X.face_reserve(64 * 1048576);
     this.draw();
@@ -108,6 +109,16 @@ export class DrawGame {
     this.draw();
   }
   private said: Float64Array | null = null;
+  /** what a read of the camera's scene is made by (host/autoframe.ts: the player may tune it), when it is another than was last said */
+  private sayShot(): void {
+    const N = this.shotNumbers; let same = this.shotSaid !== 0;
+    for (let i = 0; i < N.length; i++) { const v = AUTOCAM[SHOT_NUMBERS[i]]; if (v !== N[i]) { N[i] = v; same = false; } }
+    if (same) return;
+    const at = this.X.face_alloc(N.length * 8) >>> 0; new Float64Array(this.memory.buffer, at, N.length).set(N);
+    try { this.X.face_draw_shot(this.h, at, N.length); } finally { this.X.face_free(at, N.length * 8); }
+    this.shotSaid = 1;
+  }
+  private shotNumbers = new Float64Array(SHOT_NUMBERS.length); private shotSaid = 0;   // (1: this game has been told)
   /** the last answer's bytes, kept */
   private bytes(): Uint8Array { const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0; return new Uint8Array(this.memory.buffer.slice(p, p + n)); }
   private told = { tick: -1, h: 0, view: null as TickView | null };
@@ -147,5 +158,5 @@ export class DrawGame {
   turnAgain(): void { for (const [name, value] of this.turned) this.commands.knob(name, value); }
   /** a name that crosses by its number */
   nameOf(i: number): string { this.X.face_draw_name(this.h, i); return this.answer(); }
-  private draw(): void { this.drawn.take(this.h); }
+  private draw(): void { this.sayShot(); this.drawn.take(this.h); }
 }

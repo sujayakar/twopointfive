@@ -309,9 +309,13 @@ pub fn wall_charge_setting(g: &crate::game::Game, seat: &crate::seats::SeatRef) 
 
 /// The charge Sam is setting by hand, for whoever stands him at it. `at` is a copy: see notes, player.ts:2145 (wallcharge.ts WallCharge.samJob)
 pub fn wall_charge_sam_job(g: &mut crate::game::Game) -> Option<crate::wallcharge::WallChargeSamJob> {
-    let height = g.k.wallcharge.height;
-    let (wall, at) = match g.wall_charge.sam.as_ref() { Some(s) => (s.wall.clone(), s.at), None => return None };
-    Some(WallChargeSamJob { p: wall_pt(g, &wall, 0.0, 0.0, Some(height)), n: wall_n(&wall), at })
+    wall_charge_sam_job_of(g, &crate::seats::here(g))
+}
+/// …this seat's, of the game shared
+pub fn wall_charge_sam_job_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::wallcharge::WallChargeSamJob> {
+    let s = seat.wall_charge.sam.as_ref()?;
+    let b = &g.tab.boxes[s.wall.box_];
+    Some(WallChargeSamJob { p: wall_pt_of(b.c, b.h, &s.wall, 0.0, 0.0, g.k.wallcharge.height), n: wall_n(&s.wall), at: s.at })
 }
 
 /// Broken off, nothing spent; true: there was one to break off (wallcharge.ts WallCharge.cancel)

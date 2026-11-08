@@ -16,7 +16,7 @@ import type { Vec3 } from '../math/vec';
 import { PLAN } from '../game/floorplan';
 import { camCap } from '../host/keymap';
 import { FINDME, FINDME_WIDTH, FINDME_MATES, AUTOVIEW, setAutoView, setFindMe, resetFindMe, outlineWant, outlineInk, OUTLINE_LOOK, type OutlineHue } from '../host/findme';
-import { AUTOCAM, AUTOTUNE, AUTO_MODES, AUTO_RANGE, setAutoMode, setAutoTune, autoTuneOwn, resetAutoTune, type AutoMode } from '../host/autocam';
+import { AUTOCAM, AUTOTUNE, AUTO_MODES, AUTO_RANGE, setAutoMode, setAutoTune, autoTuneOwn, resetAutoTune, type AutoMode } from '../host/autoframe';
 import { makeOutlineMan, type OutlineFrame, type OutlineMan } from '../render/outline';
 
 /** where the ring would be drawn for the seat's own man (its centre on the floor), null = none: the row off, or he is down */

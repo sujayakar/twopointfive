@@ -1597,6 +1597,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on the page while the board leaves it spare (`KEYMAP.camSpace`, docs/agents/player.md); under `?camspace=0` it is Ctrl as it was, and there a double
   tap is two more presses of it: on Windows Ctrl then W still closes the tab. NEVER SEEN ON A GPU by anyone here; how fast the view should come round,
   whether 250 / 300 ms is the right tap and 10 px the right let-go are first guesses in `BEHIND`, `TAPTWICE` and `CARRY`.
+- (The camera's own half now lies in `src/host/autoframe.ts`, the read off the copy in `src/host/autocam.ts`: `docs/agents/rust.md`, 2026-11-08.)
 - **The camera runs itself: a double tap of the camera's key puts it on, the key held with the mouse or a walk key gives the view back** (`src/host/autocam.ts`,
   `AUTOCAM.on`, 10-23; the maintainer: "double tap space just turns on auto camera mode, and then space + movement disables to go to manual mode", and "the
   squad AI is already magical and just tapping Q feels amazing. i think we can do the same for the camera"). SWITCH: on in the page (`?autocam=0` = the page as it

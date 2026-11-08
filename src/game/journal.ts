@@ -33,7 +33,7 @@ import { PLAN_PACE } from '../render/planPace';
 import { REACH_PACE } from '../render/reach';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { WALLSKIN } from './wallskin';
-import { AUTOCAM, autoTuneOld } from '../host/autocam';
+import { AUTOCAM, autoTuneOld } from '../host/autoframe';
 import { PRESSURE } from './pressure';
 import { DOORSHOT } from './doorblast';
 import { LIGHT_IN } from '../sim/lightshome';

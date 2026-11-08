@@ -99,7 +99,7 @@ import { TOLD } from '../game/told';
 import { TORCH } from '../game/calmtorch';
 import { BACKKEY } from '../game/backkey';
 import { FIXEDSTEP } from './loop';
-import { AUTOCAM, autoTuneApply } from './autocam';
+import { AUTOCAM, autoTuneApply } from './autoframe';
 import { TWEEN } from './tween';
 import { SAVEPIC } from './savepic';
 import { EVENPACE, FLIGHT_PAGE } from './pace';

@@ -104,11 +104,16 @@ pub fn clear_between(g: &mut crate::game::Game, p: &[f64], q: &[f64]) -> bool {
 
 /// May anything be done to him at all by Sam's hands. (close.ts closeSubject)
 pub fn close_subject(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() { return false; }
-    if g.gd[gd].team == crate::teams::Team::Operative || crate::fogofwar::fog_of_war_hidden(g, gd) { return false; }
-    if g.gd[gd].civ.is_some() && crate::rescue::rescue_is_hostage(g, gd) { return false; }
-    true
+    subject_up(g, gd) && !crate::fogofwar::fog_of_war_hidden(g, gd) && !subject_hostage(g, gd)
 }
+/// …of the game shared
+pub fn close_subject_of(g: &crate::game::Game, gd: GuardId) -> bool {
+    subject_up(g, gd) && !crate::fogofwar::fog_of_war_hides(g, gd) && !subject_hostage(g, gd)
+}
+fn subject_up(g: &crate::game::Game, gd: GuardId) -> bool {
+    g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && g.gd[gd].team != crate::teams::Team::Operative
+}
+fn subject_hostage(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].civ.is_some() && crate::rescue::rescue_is_hostage(g, gd) }
 
 /// What Sam could do to this man from `p`: the one test the rows, the click and the ready pose share. (close.ts closeAt)
 pub fn close_at(g: &mut crate::game::Game, gd: GuardId, p: &[f64]) -> crate::close::CloseOffer {

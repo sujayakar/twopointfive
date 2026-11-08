@@ -294,12 +294,11 @@ pub fn turn_secs(g: &mut crate::game::Game, by: CharId, sw: &crate::lightswitch:
 }
 
 /// What breaks the plant off: he is down, has a man or a body in hand, is folded by a blast, or has been moved off the plate. (lightswitch.ts plantBroken)
-pub fn plant_broken(g: &mut crate::game::Game, h: &crate::lightswitch::Hand) -> bool {
-    let pl = g.player;
+pub fn plant_broken(g: &mut crate::game::Game, h: &crate::lightswitch::Hand) -> bool { plant_broken_of(g, g.player, h) }
+fn plant_broken_of(g: &crate::game::Game, pl: PlayerId, h: &crate::lightswitch::Hand) -> bool {
     let p = &g.pl[pl];
     if p.down || p.holding.is_some() || p.takedown.is_some() || p.dragging.is_some() || p.wall.is_some() { return true; }
-    let c = p.ch;
-    crate::samstun::sam_staggered(g, None) || v3::dist_xz(h.sw.pos, g.ch[c].pos) > 1.6
+    crate::samstun::staggered_now(g, pl) || v3::dist_xz(h.sw.pos, g.ch[p.ch].pos) > 1.6
 }
 
 /// A click or any row given lets go of Sam's plant at the plate. (lightswitch.ts switchLetGo)
@@ -313,10 +312,12 @@ pub fn switch_let_go(g: &mut crate::game::Game) {
 }
 
 /// The plate Sam is planted at, while he is. (lightswitch.ts switchHand)
-pub fn switch_hand(g: &mut crate::game::Game) -> Option<crate::lightswitch::SwitchHand> {
-    let c = g.pl[g.player].ch;
-    let h = g.m.lightswitch.states.as_ref()?.hands.iter().find(|x| x.plant && x.c == c)?.clone();
-    if g.time >= h.at && g.time - h.at < h.dur && !plant_broken(g, &h) { Some(SwitchHand { p: h.sw.pos, n: h.sw.n }) } else { None }
+pub fn switch_hand(g: &mut crate::game::Game) -> Option<crate::lightswitch::SwitchHand> { switch_hand_of(g, g.player) }
+/// …this man's, of the game shared
+pub fn switch_hand_of(g: &crate::game::Game, pl: PlayerId) -> Option<crate::lightswitch::SwitchHand> {
+    let c = g.pl[pl].ch;
+    let h = g.m.lightswitch.states.as_ref()?.hands.iter().find(|x| x.plant && x.c == c)?;
+    if g.time >= h.at && g.time - h.at < h.dur && !plant_broken_of(g, pl, h) { Some(SwitchHand { p: h.sw.pos, n: h.sw.n }) } else { None }
 }
 
 /// Work a switch: off, each burning fixture seen to go and marked as a hand's; on, what the hand put out or the room as authored. (lightswitch.ts flipSwitch)

@@ -35,6 +35,7 @@
 //!   face_knobs(h)                      every knob a person may turn, at face_out: its name's length (its top bit: a yes or no), the name, what it is turned to (f64)
 //!   face_draw_name(h, i)               a name that crosses by its number (a sound's), at face_out
 //!   face_draw_look(h, p, n)                 what the page says of its look (game_draw::LOOK numbers), once and when it changes
+//!   face_draw_shot(h, p, n)                 what the page's own camera table says a shot is read by (game_draw::shot::Numbers), once and when it changes
 //!   face_draw_layout() -> stamp        the stamp of the sections' declarations (and their text at face_out): a page whose offsets are of another is refused
 //!   face_poke(h, what, v) -> 1 | 0     a host's switch written between ticks, by number: 0 god mode · 1 the AI on · 2 infinite ammunition · 3 the
 //!                                      player unseen · 4 the launcher's held button let go unsent (the pause card: host/loop.ts). `v` != 0 = on.
@@ -228,6 +229,14 @@ pub unsafe extern "C" fn face_draw_look(h: u32, p: *const f64, n: usize) {
     if n != game_draw::LOOK { panic!("face_draw_look: {} numbers, and a look is {}", n, game_draw::LOOK); }
     let v = std::slice::from_raw_parts(p, n);
     super::with(h, |k| k.drawn.look(v));
+}
+/// # Safety
+/// `p` names `n` numbers the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_draw_shot(h: u32, p: *const f64, n: usize) {
+    if n != game_draw::shot::Numbers::COUNT { panic!("face_draw_shot: {} numbers, and a shot is made by {}", n, game_draw::shot::Numbers::COUNT); }
+    let v = std::slice::from_raw_parts(p, n);
+    super::with(h, |k| k.drawn.shot.numbers = game_draw::shot::Numbers::read(v));
 }
 #[no_mangle]
 pub extern "C" fn face_saves(h: u32) {

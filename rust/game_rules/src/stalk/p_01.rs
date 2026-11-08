@@ -152,7 +152,10 @@ pub fn pressed(g: &mut crate::game::Game) -> Option<GuardId> {
 
 /// May the wait at a corner be his this frame: on a wall (not the stack), hands empty, room to come up. (stalk.ts cornerGate)
 pub fn corner_gate(g: &mut crate::game::Game) -> bool {
-    let me = g.player;
+    corner_hands(g, g.player) && !(g.pl[g.player].crouch && !crate::player::can_stand(g))
+}
+/// …but for the room to come up, which only a writer can ask
+fn corner_hands(g: &crate::game::Game, me: PlayerId) -> bool {
     let (kind, drawn) = match &g.pl[me].wall {
         None => return false,
         Some(w) => (w.kind, w.drawn),
@@ -170,9 +173,9 @@ pub fn corner_gate(g: &mut crate::game::Game) -> bool {
         || g.pl[me].picking.is_some()
         || g.pl[me].wanding.is_some()
         || crate::game::player_list_open(g, me)
-        || !able(g)
-        || shut(g)
-        || (g.pl[me].crouch && !crate::player::can_stand(g)))
+        || crate::samstun::staggered_now(g, me)
+        || g.pl[me].breaker_move.is_some()
+        || crate::rails::rails_shuts(g, "stalk"))
 }
 
 /// The man the wait at a corner takes this frame: the nearest who has come past him. (stalk.ts cornerMan)
@@ -543,6 +546,11 @@ pub fn stalk_key_took(g: &mut crate::game::Game) {
     r.armed = Some(false);
     g.stats.stalk.grabs += 1;
     g.stats.stalk.last = String::from("grab");
+}
+
+/// Is the wait at a corner on his body this tick: `stalk_wait`'s answer by whether it has one, of the game shared. The room to come up is what the tick asked as it took the wait.
+pub fn stalk_waiting(g: &crate::game::Game, me: PlayerId) -> bool {
+    g.m.stalk.state.get(me).is_some_and(|row| row.wait == Some(true) && g.time - row.t <= 0.1) && g.pl[me].wall.is_some() && corner_hands(g, me)
 }
 
 /// The man being stalked right now. (stalk.ts stalkOn)

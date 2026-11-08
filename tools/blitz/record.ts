@@ -6,9 +6,9 @@
 import { openSync, writeSync, closeSync, readFileSync } from 'node:fs';
 
 /** which arguments are a pointer and its length, by the face's own signatures */
-export const POINTERS: Record<string, [number, number][]> = { face_new: [[0, 1], [2, 3]], face_new_at: [[0, 1]], face_keep_given: [[0, 1], [2, 3]], face_import_into: [[1, 2]], face_lesson: [[1, 2]], face_host: [[1, 2]], face_host_half: [[1, 2]], face_hand: [[2, 3], [4, 5]], face_commands: [[1, 2]], face_draw_look: [[1, 2]], face_write: [[1, 2]], face_hostwrite: [[2, 3]], face_give: [[2, 3]], face_call: [[3, 4]], face_ask: [[4, 5]], face_checkpoint: [[1, 2]], face_probe_results: [[1, 2]], face_saves_in: [[1, 2]], face_loaded: [[1, 2]], face_part: [[0, 1]] };
+export const POINTERS: Record<string, [number, number][]> = { face_new: [[0, 1], [2, 3]], face_new_at: [[0, 1]], face_keep_given: [[0, 1], [2, 3]], face_import_into: [[1, 2]], face_lesson: [[1, 2]], face_host: [[1, 2]], face_host_half: [[1, 2]], face_hand: [[2, 3], [4, 5]], face_commands: [[1, 2]], face_draw_look: [[1, 2]], face_draw_shot: [[1, 2]], face_write: [[1, 2]], face_hostwrite: [[2, 3]], face_give: [[2, 3]], face_call: [[3, 4]], face_ask: [[4, 5]], face_checkpoint: [[1, 2]], face_probe_results: [[1, 2]], face_saves_in: [[1, 2]], face_loaded: [[1, 2]], face_part: [[0, 1]] };
 /** nothing a call of these does reaches the game */
-export const READERS = /^face_(alloc|free|out_ptr|out_len|panic_ptr|panic_len|panic_clear|mem|parts|part_name|part_addr|part_len|part_hashes|die_n|time|rows|out_n|slot|kept_n|kept_state|kept_block|export|reserve|puppet_warm|draw|draw_layout|draw_look|draw_name|frame)$/;
+export const READERS = /^face_(alloc|free|out_ptr|out_len|panic_ptr|panic_len|panic_clear|mem|parts|part_name|part_addr|part_len|part_hashes|die_n|time|rows|out_n|slot|kept_n|kept_state|kept_block|export|reserve|puppet_warm|draw|draw_layout|draw_look|draw_shot|draw_name|frame)$/;
 export const ROLL = 0xfffe, END = 0xffff, MEM = 0xfffc;
 class Writer { private b = Buffer.alloc(1 << 20); private n = 0; constructor(private fd: number) {}
   private room(k: number) { if (this.n + k > this.b.length) { this.flush(); if (k > this.b.length) this.b = Buffer.alloc(k * 2); } }

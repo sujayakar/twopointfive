@@ -338,6 +338,9 @@ pub fn weather_under_roof(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
     ::sim::weather::under_roof(wx_read(g), x, z)
 }
 
+/// …as the tick left the footprints, of the game shared
+pub fn weather_under_roof_of(g: &crate::game::Game, x: f64, z: f64) -> bool { ::sim::weather::under_roof(wx_read(g), x, z) }
+
 /// The rain bed's level at a listener (0..1). (weather.ts Weather.rainBed)
 pub fn weather_rain_bed(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
     weather_sync_roofs(g, None);

@@ -65,6 +65,8 @@ pub fn sam_staggered(g: &mut crate::game::Game, now: Option<f64>) -> bool {
     let p = g.player;
     now < g.pl[p].stagger_until
 }
+/// …this man, now, of the game shared
+pub fn staggered_now(g: &crate::game::Game, p: PlayerId) -> bool { !g.pl[p].down && g.puppet.is_none() && !g.touring && g.time < g.pl[p].stagger_until }
 
 /// How blind he is right now: 1 for the body of a dazzle, easing to 0 over its last `fade` seconds.   (samstun.ts samBlind)
 pub fn sam_blind(g: &mut crate::game::Game, now: Option<f64>) -> f64 {

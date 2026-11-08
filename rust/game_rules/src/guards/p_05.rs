@@ -450,9 +450,15 @@ pub fn door_cells(g: &mut crate::game::Game) -> JsMap<crate::Num, DoorId> {
     if let Some(cells) = &g.m.guards.door_cells_of {
         return cells.clone();
     }
+    let cells = door_cells_of(g);
+    g.m.guards.door_cells_of = Some(cells.clone());
+    cells
+}
+
+/// …worked out afresh, of the game shared
+pub fn door_cells_of(g: &crate::game::Game) -> JsMap<crate::Num, DoorId> {
     let mut cells: JsMap<crate::Num, DoorId> = JsMap::new();
-    let list = g.doors.list.clone();
-    for d in list {
+    for &d in &g.doors.list {
         let hinge = g.dr[d].def.hinge;
         let (hx, hz) = (hinge[0], hinge[1]);
         let closed_dir = g.dr[d].def.closed_dir;
@@ -474,7 +480,6 @@ pub fn door_cells(g: &mut crate::game::Game) -> JsMap<crate::Num, DoorId> {
             a += 0.2;
         }
     }
-    g.m.guards.door_cells_of = Some(cells.clone());
     cells
 }
 

@@ -18,7 +18,7 @@ fn key(i: f64) -> Num { Num(i + 0.0) }
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// a nav cell on the grid and not blocked (roomread.ts roomRead's free)
-fn free(g: &mut Game, x: f64, z: f64) -> bool {
+fn free(g: &Game, x: f64, z: f64) -> bool {
     let (w, h) = (g.col.nav.w, g.col.nav.h);
     if !(x >= 0.0 && z >= 0.0 && x < w && z < h) { return false; }
     let i = nav_grid_idx(g,x, z);
@@ -26,32 +26,27 @@ fn free(g: &mut Game, x: f64, z: f64) -> bool {
 }
 
 /// a cell of the space: no door's frame and no leafless opening's line (roomread.ts roomRead's inner)
-fn inner(i: f64, dc: &JsMap<Num, DoorId>, line_of: &JsMap<Num, CoverOpeningId>) -> bool {
+fn inner(i: f64, dc: &JsMap<Num, DoorId>, line_of: &JsMap<Num, usize>) -> bool {
     !dc.has(key(i)) && !line_of.has(key(i))
 }
 
-/// The space round `p` and its ways out; pure, draws no dice. `reach`: metres of walking followed; `hint`: whose side, with `p` on a line; `ring`:
-/// the keys a locked leaf is judged against, default the team's. (roomread.ts roomRead)
-pub fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hint: Option<V3>, ring: Option<&JsSet<String>>) -> crate::roomread::RoomRead {
-    let reach = reach.unwrap_or(9.0);
-    let hint = hint.unwrap_or(p);
+/// THE FLOOR A WALK FROM `p` COVERS: the cell it starts from, the cells it reaches and in how many steps, and the way each opening was come to (by its place in `opens`,
+/// the space's cell by its line, the first met). Of the game shared; `None`: no floor by `p`. (roomread.ts roomRead, its walk)
+pub fn room_space(g: &Game, opens: &[&crate::cover::Opening], dc: &JsMap<Num, DoorId>, p: V3, reach: f64, hint: V3) -> Option<RoomSpace> {
     let (w, cs) = (g.col.nav.w, g.col.nav.cell);
-    let dc = crate::guards::door_cells(g);
-    let opens = crate::cover::cover_ready(g);
     // the cells of every leafless opening's own line, near enough to matter
-    let mut line_of: JsMap<Num, CoverOpeningId> = JsMap::new();
-    for &o in opens.iter() {
-        let (o_at, o_n, o_half, o_door) = { let q = &g.tab.cover_opening[o]; (q.at, q.n, q.half, q.door) };
-        if o_door.is_some() || flat(o_at, p) > reach + 3.0 { continue; }
-        let (tx, tz, w_) = (-o_n[1], o_n[0], m::max(0.0, o_half - 0.34));
+    let mut line_of: JsMap<Num, usize> = JsMap::new();
+    for (i, q) in opens.iter().enumerate() {
+        if q.door.is_some() || flat(q.at, p) > reach + 3.0 { continue; }
+        let (tx, tz, w_) = (-q.n[1], q.n[0], m::max(0.0, q.half - 0.34));
         let k = m::ceil(w_ / cs) + 1.0;
         let mut a = -k;
         while a <= k {
-            let x = o_at[0] + tx * a * cs * 0.5;
-            let z = o_at[2] + tz * a * cs * 0.5;
+            let x = q.at[0] + tx * a * cs * 0.5;
+            let z = q.at[2] + tz * a * cs * 0.5;
             if !(m::abs(a * cs * 0.5) > w_ + 1e-6 || nav_grid_is_blocked(g,x, z)) {
-                let i = nav_grid_idx(g,m::floor(x / cs), m::floor(z / cs));
-                line_of.set(key(i), o);
+                let c = nav_grid_idx(g,m::floor(x / cs), m::floor(z / cs));
+                line_of.set(key(c), i);
             }
             a += 1.0;
         }
@@ -59,7 +54,7 @@ pub fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hint: Opt
     // where the walk starts: the point's own cell, else the free cell by it nearest the hint
     let mut sx = m::floor(p[0] / cs);
     let mut sz = m::floor(p[2] / cs);
-    let start_ok = free(g, sx, sz) && { let i = nav_grid_idx(g,sx, sz); inner(i, &dc, &line_of) };
+    let start_ok = free(g, sx, sz) && { let i = nav_grid_idx(g,sx, sz); inner(i, dc, &line_of) };
     if !start_ok {
         let mut best = -1.0_f64;
         let mut bd = f64::INFINITY;
@@ -71,25 +66,21 @@ pub fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hint: Opt
                     let z = sz + dz as f64;
                     if !free(g, x, z) { continue; }
                     let i = nav_grid_idx(g,x, z);
-                    if !inner(i, &dc, &line_of) { continue; }
+                    if !inner(i, dc, &line_of) { continue; }
                     let d = m::hyp2((x + 0.5) * cs - hint[0], (z + 0.5) * cs - hint[2]) + 2.0 * m::hyp2((x + 0.5) * cs - p[0], (z + 0.5) * cs - p[2]);
                     if d < bd { bd = d; best = i; }
                 }
             }
             r += 1;
         }
-        if best < 0.0 {
-            let room = crate::cleared::cleared_rooms_room_at(g, p);
-            let known = crate::cleared::cleared_rooms_known_at(g, p);
-            return RoomRead { at: [p[0], 0.0, p[2]], room, known, cells: Vec::new(), steps: JsMap::new(), ways: Vec::new() };
-        }
+        if best < 0.0 { return None; }
         sx = js::rem(best, w);
         sz = js::to_i32(best / w) as f64;
     }
     let max = m::ceil(reach / cs);
     let mut steps: JsMap<Num, f64> = JsMap::new();
     let mut cells: Vec<f64> = vec![nav_grid_idx(g,sx, sz)];
-    let mut edge: JsMap<CoverOpeningId, f64> = JsMap::new(); // the space's cell by each way's line, the first met
+    let mut edge: Vec<(usize, f64)> = Vec::new(); // the space's cell by each way's line, the first met
     steps.set(key(cells[0]), 0.0);
     let mut qi = 0;
     while qi < cells.len() {
@@ -102,11 +93,11 @@ pub fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hint: Opt
             if !free(g, nx, nz) { continue; }
             let n = nav_grid_idx(g,nx, nz);
             let o = match dc.get(key(n)) {
-                Some(&d) => opens.iter().copied().find(|&q| g.tab.cover_opening[q].door == Some(d)),
+                Some(&d) => opens.iter().position(|q| q.door == Some(d)),
                 None => line_of.get(key(n)).copied(),
             };
             if let Some(o) = o {
-                if !edge.has(o) { edge.set(o, c); }
+                if !edge.iter().any(|e| e.0 == o) { edge.push((o, c)); }
                 continue;
             }
             if s >= max || steps.has(key(n)) { continue; }
@@ -115,6 +106,35 @@ pub fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hint: Opt
         }
         qi += 1;
     }
+    Some(RoomSpace { at: [(sx + 0.5) * cs, 0.0, (sz + 0.5) * cs], cells, steps, edge })
+}
+
+/// what a walk covered (`room_space`)
+pub struct RoomSpace { pub at: V3, pub cells: Vec<f64>, pub steps: JsMap<Num, f64>, pub edge: Vec<(usize, f64)> }
+
+/// which way a way out faces from the space's cell by its line: the opening's normal turned into the space, and the floor a stride past it
+pub fn way_beyond(g: &Game, o: &crate::cover::Opening, c: f64) -> ([f64; 2], V3, f64, f64) {
+    let (w, cs) = (g.col.nav.w, g.col.nav.cell);
+    let ex = (js::rem(c, w) + 0.5) * cs;
+    let ez = (js::to_i32(c / w) as f64 + 0.5) * cs;
+    let s = if (ex - o.at[0]) * o.n[0] + (ez - o.at[2]) * o.n[1] >= 0.0 { 1.0 } else { -1.0 };
+    let in_n = [o.n[0] * s, o.n[1] * s];
+    (in_n, [o.at[0] - in_n[0], 0.0, o.at[2] - in_n[1]], ex, ez)
+}
+
+/// The space round `p` and its ways out; pure, draws no dice. `reach`: metres of walking followed; `hint`: whose side, with `p` on a line; `ring`:
+/// the keys a locked leaf is judged against, default the team's. (roomread.ts roomRead)
+pub fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hint: Option<V3>, ring: Option<&JsSet<String>>) -> crate::roomread::RoomRead {
+    let reach = reach.unwrap_or(9.0);
+    let hint = hint.unwrap_or(p);
+    let dc = crate::guards::door_cells(g);
+    let opens = crate::cover::cover_ready(g);
+    let space = { let rows: Vec<&crate::cover::Opening> = opens.iter().map(|&o| &g.tab.cover_opening[o]).collect(); room_space(g, &rows, &dc, p, reach, hint) };
+    let Some(RoomSpace { at, cells, steps, edge }) = space else {
+        let room = crate::cleared::cleared_rooms_room_at(g, p);
+        let known = crate::cleared::cleared_rooms_known_at(g, p);
+        return RoomRead { at: [p[0], 0.0, p[2]], room, known, cells: Vec::new(), steps: JsMap::new(), ways: Vec::new() };
+    };
     let own_ring: JsSet<String>;
     let ring: &JsSet<String> = match ring {
         Some(r) => r,
@@ -131,13 +151,10 @@ pub fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hint: Opt
         }
     };
     let mut ways: Vec<RoomWay> = Vec::new();
-    for (o, &c) in edge.iter() {
-        let (o_at, o_n, d) = { let q = &g.tab.cover_opening[o]; (q.at, q.n, q.door) };
-        let ex = (js::rem(c, w) + 0.5) * cs;
-        let ez = (js::to_i32(c / w) as f64 + 0.5) * cs;
-        let s = if (ex - o_at[0]) * o_n[0] + (ez - o_at[2]) * o_n[1] >= 0.0 { 1.0 } else { -1.0 };
-        let in_n = [o_n[0] * s, o_n[1] * s];
-        let beyond: V3 = [o_at[0] - in_n[0], 0.0, o_at[2] - in_n[1]];
+    for &(i, c) in edge.iter() {
+        let o = opens[i];
+        let (o_at, d) = { let q = &g.tab.cover_opening[o]; (q.at, q.door) };
+        let (in_n, beyond, ex, ez) = way_beyond(g, &g.tab.cover_opening[o], c);
         let far = match d {
             Some(d) => { let side = side_sign(&door_face(g, d), beyond); crate::cleared::cleared_rooms_room_by(g, d, side) }
             None => crate::cleared::cleared_rooms_room_at(g, beyond),
@@ -160,7 +177,7 @@ pub fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hint: Opt
     js::sort_by(&mut ways, |a, b| js::or(a.dist - b.dist, if tab[a.o].id < tab[b.o].id { -1.0 } else { 1.0 }));
     let room = crate::cleared::cleared_rooms_room_at(g, p);
     let known = crate::cleared::cleared_rooms_known_at(g, p);
-    RoomRead { at: [(sx + 0.5) * cs, 0.0, (sz + 0.5) * cs], room, known, cells, steps, ways }
+    RoomRead { at, room, known, cells, steps, ways }
 }
 
 /// the part of a door `side_sign` reads (the TypeScript's structural parameter)

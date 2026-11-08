@@ -80,13 +80,14 @@ pub mod marks;
 pub mod men;
 pub mod resets;
 pub mod rims;
+pub mod shot;
 pub mod sky;
 pub mod traffic;
 pub mod view;
 pub mod wet;
 pub mod winds;
 
-groups! { fog view sky boxes lights men doorways rims events fires decals air level_look }
+groups! { fog view sky boxes lights men doorways rims events fires decals air level_look shot }
 
 sections! {
     fog: fog::Fog = fog;
@@ -122,6 +123,9 @@ sections! {
     rims: rims::Rim = rims;
     fires: fires::Fire = fires;
     fire_table: fires::FireTable = fire_table;
+    shot: shot::Shot = shot.rows;
+    shot_threats: shot::ShotMan = shot.threats;
+    shot_fight: shot::ShotMan = shot.fight;
     decals: boxes::Word = marks.words;
     decal_keys: marks::DecalKey = marks.keys;
     decal_head: marks::DecalHead = marks.head;
@@ -157,6 +161,7 @@ pub struct Drawn {
     pub traffic: traffic::Traffic,
     pub dust: Vec<dust::DustLook>,
     pub rims: Vec<rims::Rim>,
+    pub shot: shot::AutoRead,
     tick: Option<u32>,
     stood: u32,
     /// the distance the host's camera was on its way to as the step was handed it
@@ -184,6 +189,7 @@ impl Drawn {
         if want & want::lights != 0 { self.lights.take(g, again && self.had & want::lights != 0); }
         if want & want::men != 0 { self.men.take(g, again && self.had & want::men != 0); }
         if want & want::rims != 0 { self.rims.clear(); rims::fill(g, &mut self.rims); }
+        if want & want::shot != 0 { self.shot.take(g, now, again && self.had & want::shot != 0); } else { self.shot.unasked(); }
         if want & want::events != 0 { self.events.take(g); resets::fill(g, &mut self.resets); }
         if want & want::level_look != 0 { self.dust.clear(); dust::fill(g, &mut self.dust); self.traffic.take(g); }
         if want & want::fires != 0 { self.fires.clear(); fires::fill(g, &mut self.fires, &mut self.fire_table); }
@@ -199,7 +205,7 @@ impl Drawn {
         if self.want & want::decals != 0 { self.marks.frame(g, &self.boxes); }
     }
     /// the game is another than the one last drawn (a start, a game put back, another seat): nothing is drawn through it
-    pub fn cut(&mut self) { self.boxes.cut(); self.lights.cut(); self.men.cut(); self.events.cut(); self.marks.cut(); self.tick = None; self.stood += 1; }
+    pub fn cut(&mut self) { self.boxes.cut(); self.lights.cut(); self.men.cut(); self.events.cut(); self.marks.cut(); self.shot.cut(); self.tick = None; self.stood += 1; }
     /// what the page says of its look
     pub fn look(&mut self, v: &[f64]) { let (boxes, men) = v.split_at(boxes::LOOK); self.boxes.set_look(boxes::Look::read(boxes)); self.men.swaps = core::array::from_fn(|i| men[i] as u32); }
     pub fn table(&mut self) -> &[u32] {
