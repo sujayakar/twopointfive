@@ -228,6 +228,12 @@ impl Play {
         if let Some(why) = game::orders::squad_orders_give(&mut self.g, id, Some(&t), Some(who), None) { panic!("the order '{}' at ({}, {}) was refused: {}", id, at[0], at[1], why); }
     }
 
+    /// the same, where the place may be one the order is not for (a man stood in a doorway): the game's reason if it refused
+    pub fn tries_order(&mut self, id: &str, at: [f64; 2], who: game::orders::Who) -> Option<String> {
+        let t = game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]);
+        game::orders::squad_orders_give(&mut self.g, id, Some(&t), Some(who), None)
+    }
+
     /// THE SAME ORDER FROM ANOTHER SEAT (0 = the first player): given as that player gives it, on his own menu and to his own men.
     pub fn seat_orders(&mut self, seat: usize, id: &str, at: [f64; 2], who: game::orders::Who) {
         let s = self.g.seats[seat];

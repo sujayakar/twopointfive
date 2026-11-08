@@ -1951,6 +1951,8 @@ pub enum Is {
     Covers,
     /// he is on a door, waiting for the word: the door's tools and the room fight read his place in the stack
     Stacks,
+    /// his eyes are his own on his mark too, wherever it has named nothing to watch (on the walk to a mark they are under every order)
+    LooksAbout,
     /// a man under it who is sent to throw goes back to it afterwards
     Resumed,
     /// once he has arrived he goes low when a man of the other pair stands in his line
