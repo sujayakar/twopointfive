@@ -152,8 +152,7 @@ pub fn fog_of_war_faces_lift(g: &mut crate::game::Game) {
 }
 
 /// The frame's list of boxes as it stands BEFORE the fog cuts it, kept for a viewer's draw with the fog off: the doors live in place of the copies the
-/// fog keeps of them, what the men the fog leaves out carry, and the infrared lines a tube would show, whether or not the run's own picture was one (game_draw
-/// takes them, or not). Nothing is kept where no viewer has asked. Called just before `fog_of_war_things`.   (fogofwar.ts FogOfWar.things, its head; Game.fogLift)
+/// fog keeps of them. Nothing is kept where no viewer has asked. Called just before `fog_of_war_things`.   (fogofwar.ts FogOfWar.things, its head)
 pub fn keep_raw(g: &mut crate::game::Game, list: &[AnyBoxId]) {
     if !g.fog_picture.viewer { return; }
     let mut raw = core::mem::take(&mut g.fog_picture.raw_list);
@@ -166,8 +165,6 @@ pub fn keep_raw(g: &mut crate::game::Game, list: &[AnyBoxId]) {
         i = (g.fog_of_war.door_from + g.fog_of_war.door_n) as usize;
     }
     while i < list.len() { raw.push(list[i]); i += 1; }
-    crate::combat::hidden_props(g, &mut raw);
-    if !crate::irlaser::ir_viewer(g) { crate::irlaser::ir_beams(g, &mut raw); }
     g.fog_picture.raw_list = raw;
     g.fog_picture.raw_at = g.fog_of_war.frame_no;
 }
