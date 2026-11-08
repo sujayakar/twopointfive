@@ -13,7 +13,7 @@
 // rolled arris LOOKS like, and what it catches from the game's camera, is a page's to show: the arithmetic in line 2's detail is said, not barred.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 export async function rolledCheck(): Promise<boolean> {
   const BRK = process.env.ROLLED_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };

@@ -11,7 +11,7 @@
 // page's to show (tools/qa/weather-look.cjs).
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT, main } from './here.ts';
 export async function rainWallsCheck(): Promise<boolean> {
   const BRK = process.env.RAINWALLS_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
@@ -79,7 +79,7 @@ export async function rainWallsCheck(): Promise<boolean> {
   // (4) who asks, and the switch
   { const F = await import(`${ROOT}/src/render/frame.ts`) as any, was = F.rainWallsConfig.on; let onT = '', offT = '';
     try { F.rainWallsConfig.on = true; onT = F.scenePrelude(); F.rainWallsConfig.on = false; offT = F.scenePrelude(); } finally { F.rainWallsConfig.on = was; }
-    const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
+    const main = readFileSync(`${ROOT}/src/host/pictureopens.ts`, 'utf8');
     const asked = /if \(depth >= 1\.0 \|\| outdoorsXZ\(Pend\.xz\) \|\| \(RAIN_WALLS && !wxUnderRoof\(Pend\.xz\)\)\) \{/.test(vol) && /else if \(RAIN_WALLS && rainOverWall\(Pend\)\) \{ \}[^\n]*\n\s*else if \(!rainOutdoors\(Pend\.xz\)\) \{ discard; \}/.test(draw) && /fn rainOverWall\(P: vec3f\) -> bool \{\s*let p = P\.xz;\s*return !wxUnderRoof\(p\) && /.test(pc);
     const rings = /if \(depth < 1\.0 && outdoorsXZ\(Pend\.xz\)\) \{ let sp = splashAt\(Pend\);/.test(vol);
     verdict(was === true && body === WANT && IN === 0.2 && asked && rings && /const RAIN_WALLS: bool = true;/.test(onT) && /const RAIN_WALLS: bool = false;/.test(offT) && /q\.has\('norainwalls'\)\) rainWallsConfig\.on = false;/.test(main),
@@ -88,3 +88,5 @@ export async function rainWallsCheck(): Promise<boolean> {
   console.log(`=== rainwalls: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }
+
+if (import.meta.main) await main([rainWallsCheck]);

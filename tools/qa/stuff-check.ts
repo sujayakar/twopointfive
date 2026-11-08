@@ -9,7 +9,7 @@
 // this asks it. What a material LOOKS like on a desk is a page's still and then a GPU's. The same on both stands: nothing here is a rule of play and no
 // stand's word reaches it. What every box WAS drawn as before the colour rule went, against what it is now, is tools/qa/stuff-audit.ts.
 import { readFileSync, readdirSync } from 'node:fs';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 import { fromBefore, paintUsers, rowOf } from '../levels/paintUsers.ts';
 const ST = await import(`${ROOT}/src/scene/stuff.ts`), { PAINT_STUFF, stuffOfName, rowWord, BOX_STUFFS, saidFor, namePaints, paintOf, toned, tonedAs, madeOf, drawnAs, saidAs, wordFor, worded, repainted, repaintWord, NAMED_COATS } = ST;
 const { LOOK_NAMES, LOOK_PAINTED, lookStuffOf } = await import(`${ROOT}/src/render/lookTex.ts`);
@@ -70,7 +70,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
 // 5. NOTHING ASKS A COLOUR: the same numbers are whatever their box says; a box that says nothing is plain whatever its colour; rain, a tone, a repaint change nothing
 { const mud = [...GWOT_PALETTE.mud], a = makeBox({ c: [3, 1, 4], h: [0.5, 0.5, 0.5], albedo: mud }), b = makeBox({ c: [3, 1, 4], h: [0.5, 0.5, 0.5], albedo: mud, stuff: 'wood' }), c = makeBox({ c: [3, 1, 4], h: [0.5, 0.5, 0.5], albedo: mud, stuff: 'mud wall' });
   const before = cls(c); c.albedo = [mud[0] * 0.5, mud[1] * 0.5, mud[2] * 0.52]; const wet = cls(c); c.albedo = [0.9, 0.1, 0.9]; const pink = cls(c);
-  const srcs = ['src/render/gbuffer.ts', 'src/scene/levelKit.ts', 'src/scene/officeGen.ts', 'src/scene/levelLoad.ts', 'src/main.ts'].map(f => readFileSync(`${ROOT}/${f}`, 'utf8')).join('\n');
+  const srcs = ['src/render/gbuffer.ts', 'src/scene/levelKit.ts', 'src/scene/officeGen.ts', 'src/scene/levelLoad.ts', 'src/host/drawpage.ts'].map(f => readFileSync(`${ROOT}/${f}`, 'utf8')).join('\n');
   const wgsl = readdirSync(`${ROOT}/src/render/shaders`).filter(f => f.endsWith('.wgsl')).map(f => readFileSync(`${ROOT}/src/render/shaders/${f}`, 'utf8')).join('\n');
   const gone = ['lookStuff', 'lookNamed', 'lookNeedPaints', 'classWgsl', 'LOOK_OF', 'LOOK_BY_NAME', 'LOOK_MATCH', 'FINISH_BY_ALBEDO', 'surfTryConfig'].filter(n => new RegExp(`\\b${n}\\b`).test(srcs) || (GB as any)[n] !== undefined);
   const shader = ['lookClass', 'surfClass', 'surfaceTry'].filter(n => new RegExp(`\\b${n}\\s*\\(`).test(wgsl)).concat(/\bSURF_TRY\b/.test(wgsl) ? ['SURF_TRY'] : []);
@@ -80,7 +80,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     `mud's paint, no word: ${said(cls(a))} · saying wood: ${said(cls(b))} · mud wall dry ${said(before)}, wet ${said(wet)}, pink ${said(pink)} · still in the code: ${gone.join(', ') || 'none'} · in a shader: ${shader.join(', ') || 'none'}`); }
 
 // 6. the page: the look's word is made from the boxes alone, and the two words that gave the colour rule back are no longer the look page's
-{ const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8') + readFileSync(`${ROOT}/src/engine.ts`, 'utf8'), wired = main.includes('this.world.setStuffOf(lookWordOf(), lookCoreOf())') && !/setStuffOf\(lookWordOf\(\)\)/.test(main);
+{ const main = readFileSync(`${ROOT}/src/host/drawpage.ts`, 'utf8') + readFileSync(`${ROOT}/src/engine.ts`, 'utf8'), wired = main.includes('this.world.setStuffOf(lookWordOf(), lookCoreOf())') && !/setStuffOf\(lookWordOf\(\)\)/.test(main);
   const core = lookCoreOf(), cut = makeBox({ c: [0, 1, 0], h: [1, 1, 0.2], albedo: [0.4, 0.4, 0.4], stuff: 'block' }); const own = core(cut); cut.cutCoreStuff = 'slab'; const other = core(cut); cut.cutCoreStuff = 'plain' as any; const none = core(cut);
   check(wired && !lookPageWord('names', '0') && !lookPageWord('words', '0') && !/q\.get\('names'\)|q\.get\('words'\)|q\.has\('surf'\)/.test(main) && own === lookStuffOf('block') && other === lookStuffOf('slab') && none === 0,
     '6 the page makes the look\'s word from what each box says, with no rows and no paint handed over; `?names=0`, `?words=0` and `?surf` are read nowhere; an old break\'s cut faces are the stuff of its box, or of its core where the box says one',

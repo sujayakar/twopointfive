@@ -119,10 +119,10 @@ export class DrawGame {
     this.X.face_out_clear(this.h);   // (what the tick told its host is in its sections now)
     this.ms.step = t1 - t0; this.ms.draw = performance.now() - t1;
   }
-  private tick(dt: number, keys: string, told = VIEW | SAVES): void {
+  private tick(dt: number, keys: string): void {
     const n = this.enc.encodeInto(keys, new Uint8Array(this.memory.buffer, this.keys, DrawGame.KEYS)).written;
     this.X.face_hand(this.h, 0, this.hand, HAND.count * 8, this.keys, n);
-    this.X.face_step(this.h, dt, told);
+    this.X.face_step(this.h, dt, VIEW | SAVES);
     this.ticks++; this.done++;
   }
   /** it is walked through a tape: nobody commands it but the tape */
@@ -171,8 +171,8 @@ export class DrawGame {
    *  handed (the keys' text its answer); a tick, then a turn of the event loop. The game stands at its moment again after, and nobody was shown any of it */
   async warm(n: number, hand: (N: Float64Array, i: number) => string, turn: () => Promise<void>): Promise<void> {
     const k = this.X.face_moment(this.h); if (!k) return;
-    const T = this.tape, at = this.ticks, told = this.walked ? 0 : VIEW | SAVES; this.tape = null;   // (a tape keeps what was played)
-    try { for (let i = 0; i < n; i++) { const keys = hand(this.numbersOf(), i); this.tick(1 / 60, keys, told); this.X.face_out_clear(this.h); await turn(); } } catch (e) { if (!this.lost) throw e; /* (lost in them: it stands again below, and is lost in play if it is to be) */ }
+    const T = this.tape, at = this.ticks; this.tape = null;   // (a tape keeps what was played)
+    try { for (let i = 0; i < n; i++) { const keys = hand(this.numbersOf(), i); this.tick(1 / 60, keys); this.X.face_out_clear(this.h); await turn(); } } catch (e) { if (!this.lost) throw e; /* (lost in them: it stands again below, and is lost in play if it is to be) */ }
     finally { this.momentBack(k, at); this.momentDrop(k); this.tape = T; this.draw(); }   // (…and its sections are of where it stands, before anybody asks which game they are of)
   }
   /** what has been commanded is done now, between two ticks, and what it changed is there to be read: the next step would do the same things first */

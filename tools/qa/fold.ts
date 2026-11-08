@@ -21,7 +21,7 @@
 //             `"folded":false`. On, a row answers its page value and a write is refused and leaves NO trace in what the row answers while off. So
 //             nothing passes between a folded check and an unfolded one in either direction. For a host that stands some checks on the Rust game
 //             (folded: that game has the rows as constants) and keeps the rest on the TypeScript tick as they are until they are restaged.
-//             · THE FOLD STARTS OFF where it is asked for check by check: under TPS_GAME=table with no QA_FOLD=1, and under QA_FOLD_ONLY (so what the
+//             · THE FOLD STARTS OFF where it is asked for check by check: under QA_FOLD_ONLY (so what the
 //               harness writes as it loads, a word given by hand, is there for the unfolded checks as with no word; a folded check does not have it,
 //               and that is not said). Under QA_FOLD=1 alone, rust and audit it starts on. The notice on stderr says which.
 //             · CALL `foldFor` BETWEEN CHECKS, before the next check's fence opens (probes.ts run() → holds.ts asProbe). The fence takes the mode as it
@@ -74,7 +74,7 @@ export function settledYesNo(rows: readonly SwitchRow[], depth: number): SwitchR
 export function foldWanted(env: Record<string, string | undefined> = process.env): boolean {
   if (!['1', '0', '', undefined].includes(env.QA_FOLD)) throw new Error(`QA_FOLD=${env.QA_FOLD}: 1 lays the fold of the settled switch rows (tools/qa/fold.ts); 0 or nothing leaves it to the word that stands the game, and the default word folds`);
   // (the word with nothing in front is the Rust host's to say too: tools/blitz/word.ts DEFAULT_WORD, the one line that makes `table` the default)
-  return env.QA_FOLD === '1' || ['rust', 'audit', 'table'].includes(env.TPS_GAME ?? DEFAULT_WORD);
+  return env.QA_FOLD === '1' || ['rust', 'audit'].includes(env.TPS_GAME ?? DEFAULT_WORD);
 }
 
 export const FOLD = { on: false, rows: 0, skipped: [] as string[], missing: [] as string[] };
@@ -109,12 +109,12 @@ const count = (row: string, value: unknown, w = writer()): void => { const k = `
 export const hostOf = (root: unknown, path: readonly string[]): Record<string, unknown> | null => { let h = root; for (const k of path) h = (h as Record<string, unknown> | null)?.[k]; return h && typeof h === 'object' ? h as Record<string, unknown> : null; };
 let through = false;   // (the check's red path, FOLD_BREAK=1: a write is counted and TAKES)
 /** the laid fold is on (see the head, FOR ONE CHECK AT A TIME). As the process starts: QA_FOLD_FOR where a parent left it; else on under QA_FOLD=1 with no
- *  QA_FOLD_ONLY; else off where the fold is asked for check by check (QA_FOLD_ONLY, TPS_GAME=table); else on. */
+ *  QA_FOLD_ONLY; else off where the fold is asked for check by check (QA_FOLD_ONLY); else on. */
 export function foldStartsOn(env: Record<string, string | undefined> = process.env): boolean {
   if (!['1', '0', '', undefined].includes(env.QA_FOLD_FOR)) throw new Error(`QA_FOLD_FOR=${env.QA_FOLD_FOR}: 1 = the laid fold is on, 0 = off (tools/qa/fold.ts foldFor writes it for a child)`);
   if (env.QA_FOLD_FOR) return env.QA_FOLD_FOR === '1';
   if (env.QA_FOLD_ONLY) return false;
-  return env.QA_FOLD === '1' || env.TPS_GAME !== 'table';
+  return true;
 }
 let active = foldStartsOn();
 function lay(L: Laid, host: Record<string, unknown>): void {

@@ -12,7 +12,7 @@
 // generator against its level file. What a kept place LOOKS like is a page's to show.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 export async function keptCheck(): Promise<boolean> {
   const BRK = process.env.KEPT_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
@@ -39,12 +39,12 @@ export async function keptCheck(): Promise<boolean> {
     verdict(rows.every((r, i) => got[i] === r[2]), 'the frame takes the address\'s &kept for the visit, else the level\'s own word, else 0; held to 0 to 1; a word that is no number, empty or blank leaves the level\'s',
       rows.map((r, i) => `(${r[0]}, ${r[1] === null ? 'none' : `'${r[1]}'`}) → ${got[i]}`).join(' · ')); }
   // 3. the text: one writer, one reader, and every place the word acts
-  const look = text('src/render/shaders/look.wgsl'), marks = text('src/render/shaders/markings.wgsl'), gb = text('src/render/gbuffer.ts'), main = text('src/main.ts'), exp = text('tools/levels/export.ts');
+  const look = text('src/render/shaders/look.wgsl'), marks = text('src/render/shaders/markings.wgsl'), gb = text('src/render/gbuffer.ts'), main = text('src/host/drawpage.ts'), exp = text('tools/levels/export.ts');
   const between = (a: string, b: string) => { const i = look.indexOf(a), j = look.indexOf(b); return i < 0 || j < i ? '' : look.slice(i, j); };
   const surface = between('fn lookSurface(', '  // ---- USE on a wall somebody keeps'), standing = between('  // ---- WEATHER on anything that stands on the ground or lies in the open', '  // ---- USE on a wall somebody keeps');
   { const pins: [string, boolean][] = [
       ['the uniform\'s writer puts the word at c.x', gb.includes('k.cavity * c, k.size, lookConfig.kept, ')],
-      ['every way a level enters the page hands its word over and writes the uniform', count(main, "lookConfig.kept = lookKeptOf(level.kept, q.get('kept'));") === 1 && /function hostLevel\([^\n]*\n  lookConfig\.kept = lookKeptOf[^\n]*\n  engine\.gbuffer\.setLook\(\);/.test(main) && count(main, 'hostLevel(engine, level, q);') === 1 && count(main, 'populateHost(engine, level)') === 1],
+      ['the page takes the level\'s word off the picture before the engine is made ready', count(main, 'lookConfig.kept = lookKeptOf(D.f[sky() + Sky.kept]') === 1 && main.indexOf('lookConfig.kept = ') < main.indexOf('engine.init(')],
       ['look.wgsl reads it in one place', count(look, 'lookCfg.c.x') === 1 && look.includes('fn lookKept() -> f32 { return clamp(lookCfg.c.x, 0.0, 1.0); }')],
       ['a surface asks it once: how far the place is left to the weather', count(surface, 'lookKept()') === 1 && surface.includes('let left = 1.0 - lookKept();')],
       ['how wild a surface is is its stuff\'s word × the place\'s', surface.includes('let wildS = step(0.001, keep.y);') && surface.includes('let wild = select(0.0, wildS * left, cls != 0u);') && count(surface, 'wildS > 0.0') === 2 && count(surface, 'wildS ==') === 0 && count(surface, '- wildS') === 0],   // (the stuff's word alone gates only the two rules that are the weather's own, which ask the weather's amount beside it; nothing else goes by the stuff alone)

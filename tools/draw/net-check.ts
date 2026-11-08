@@ -10,7 +10,6 @@ import { characterFiles } from '../blitz/start-pack.ts';
 import { freshStart, standStart } from '../mp/modstand.ts';
 import { drawEnd } from '../../src/host/drawend';
 import { DrawGame } from '../../src/host/drawgame';
-import { sampleHand } from '../../src/draw/hand';
 import { DrawNet } from '../../src/host/drawnet';
 import { shownAs } from '../../src/host/myname';
 import { NetDoor } from '../../src/net/door';
@@ -44,9 +43,6 @@ const door = new NetDoor('', 'g', 'a', 'Ada'); (door as unknown as { ws: unknown
 FORESEE.on = true;
 let deaf = 0; const net = new DrawNet(door, start, game, () => { deaf++; });
 net.start({ level: new Uint8Array(readFileSync(resolve(ROOT, 'levels', start.file))), mannequin, mannequinBin, cast, castLook });
-// (the ticks the page plays and throws away before the first, as a page does: the server's game and the second player's are played none, and every word below must still be theirs)
-{ const eye = new FollowCamera(), none = new Set<string>(), walk = new Set(['KeyW']), o = D.at[Section.view] + View.follow; eye.target = [D.f[o], D.f[o + 1], D.f[o + 2]]; eye.rebuild();
-  await game.warm(36, (N, i) => sampleHand(N, { keys: i >= 12 ? walk : none, pressed: none, buttons: i >= 24 ? 1 : 0, clicked: 0, wheel: 0, mouseX: 640, mouseY: 300 }, eye, { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 }), async () => { /* */ }); }
 if (BREAK) { const n = (net as unknown as { net: { step(c: WireCmd[]): void; ticks: number } }).net, step = n.step.bind(n); n.step = c => step(n.ticks === 200 ? [{ ...c[0], k: ['KeyS'] }, c[1]] : c); }
 
 const cam = new FollowCamera(), canvas = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 }, input = { keys: new Set<string>(), pressed: new Set<string>(), buttons: 0, clicked: 0, wheel: 0, mouseX: 640, mouseY: 300 };

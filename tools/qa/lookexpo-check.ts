@@ -12,7 +12,7 @@ import { lookConfig } from '../../src/render/frame';
 import { lookExpoFrame, lookExpoBound, lookNightSkyE, LOOK_EXPO } from '../../src/render/lookexpo';
 import { lookGrade, lookGradeFrame, LOOK_GRADE } from '../../src/render/lookgrade';
 import { hourExposure, LUX_PER_UNIT, HOUR_SUN_LUX } from '../../src/render/photometry';
-import { HOURS } from '../../src/game/hours';
+import { HOURS } from './sunrow';
 import { PLACE, PLACE_W, PLACE_H, PLACE_BYTES, PLACE_WORDS, PLACE_NEAR, SKY_WORDS } from '../../src/render/placeField';
 import { placeMask, placeWall, placeRoof, doorStep, DOOR_STEPS, DOOR_PER_STOP } from '../../src/scene/placePlan';
 import { makeBox, BoxFlag } from '../../src/scene/boxes';
@@ -112,7 +112,7 @@ check(gain(SHADE[1], OUT, { u: lvl(1), ue: lvl(1) }) === 1 && gain(SHADE[1] * 0.
   // functions, so it says what the rule gives and what the splat gave before it, not that the shader was run. PARTSHOW_BREAK=1 shows a particle with
   // no gain, as it was, and must fail.
   const PB = process.env.PARTSHOW_BREAK === '1', rd = (f: string) => readFileSync(resolve(ROOT, f), 'utf8');
-  const draw = rd('src/render/shaders/particles_draw.wgsl'), parts = rd('src/render/particles.ts'), eng = rd('src/engine.ts'), passes = rd('src/render/passes.ts'), field = rd('src/render/placeField.ts'), main = rd('src/main.ts'), vols = [rd('src/render/shaders/volumetrics.wgsl')];
+  const draw = rd('src/render/shaders/particles_draw.wgsl'), parts = rd('src/render/particles.ts'), eng = rd('src/engine.ts'), passes = rd('src/render/passes.ts'), field = rd('src/render/placeField.ts'), vols = [rd('src/render/shaders/volumetrics.wgsl')];
   const u = lvl(4000), IN = { u, ue: u }, YARD = { u, ue: lvl(1) }, floor = white(4000, 1), brass = 0.6 * floor;   // a case that sends back 0.6 of what the pale floor under it does, deep in a store 4,000 times under the yard
   const surf = (l: number, place: typeof IN) => l * gain(0, OUT, place, SHADE, FLAT, l), show = (l: number, place: typeof IN) => PB ? l : surf(l, place);
   const rIn = show(brass, IN) / surf(floor, IN), rYard = show(brass, YARD) / surf(floor, YARD), gIn = gain(0, OUT, IN, SHADE, FLAT);
@@ -247,7 +247,7 @@ check(gain(SHADE[1], OUT, { u: lvl(1), ue: lvl(1) }) === 1 && gain(SHADE[1] * 0.
   const eng = readFileSync(resolve(ROOT, 'src/engine.ts'), 'utf8'), panel = readFileSync(resolve(ROOT, 'src/ui/lookpanel.ts'), 'utf8');
   check(/this\.lookEyeCfg = lookExpoFrame\(shadeCfg, [^\n]{0,120}hourExp\) \?\? undefined,/.test(eng) && !/\['expo', /.test(panel) && !('expo' in LOOK_DEFAULTS) && !('expo' in lookConfig) && !/lookEyeFrame|roomContrast|lookConfig\.expo\b/.test(eng) && !('roomc' in LOOK_DEFAULTS) && /const placeOn = !!shadeCfg && shadeCfg\[0\] > 0;/.test(eng), 'the model is the only way a place is brought up: the engine runs it wherever the shade row is up, it has no row of its own any more, and the rows it replaced are gone, the Room contrast row with them'); }
 { // ONE EXPOSURE AT EVERY HOUR (the look panel's `hours` and `dark` rows; render/lookexpo.ts lookExpoBound; place_common.wgsl lookExpoFor's last lines)
-  const eng = readFileSync(resolve(ROOT, 'src/engine.ts'), 'utf8'), panel = readFileSync(resolve(ROOT, 'src/ui/lookpanel.ts'), 'utf8'), page = readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8');
+  const eng = readFileSync(resolve(ROOT, 'src/engine.ts'), 'utf8'), panel = readFileSync(resolve(ROOT, 'src/ui/lookpanel.ts'), 'utf8'), page = readFileSync(resolve(ROOT, 'src/host/drawpage.ts'), 'utf8');
   // a night as the field holds it (its own measure, the night's units; read off the block's night): the yard 0.07 under a sky that puts 0.0818 on open ground,
   // a lit room 0.2, the far end of the weakest lit hall 0.031, a dim room 0.02, the unlit room the team starts in 0.0075
   const Y = 0.07, L = 0.2, H = 0.031, D = 0.02, U = 0.0075, SKY_E = 0.0818, N_SHADE: V4 = [0.7, 0.0149, 6, SKY_E], X = N_SHADE[0], NIGHT = lookExpoFrame(N_SHADE, 0.7, 1, lookConfig.glare, 1)!;
@@ -259,7 +259,7 @@ check(gain(SHADE[1], OUT, { u: lvl(1), ue: lvl(1) }) === 1 && gain(SHADE[1] * 0.
     && !/everyHour|smoothstep\(0\.08, 0\.35, up\)\)/.test(eng.slice(eng.indexOf('function lookShade('), eng.indexOf('function lookShade(') + 400)) && /return \[Math\.min\(1, amount\), 0\.5 \* up, 0, /.test(eng) && !/everyHour/.test(eng) && /if \(placeOn\) \{ const own = hourExp < 1 \? lookConfig\.nightSky\?\.\(\) \?\? null : null;/.test(eng)
     && pc.includes('  P = max(P, EXPO_LAMP);') && !/if \(frame\.placeCfg\.z > 0\.0\)|else if \(frame\.eyeCfg\.x > 1\.0\)/.test(pc) && pc.includes('    let over = max(frame.eyeCfg.x, 1.0); var most = over;')
     && /eyesWidest = lookExpoBound\(lookConfig\.dark, lookNightSkyE\(hourExp, shadeCfg\?\.\[3\], own && lookExposure\(null, own\.zenith, own\.horizon\) >= 1 \? /.test(eng) && /, this\.settings\.nvAmount\); \}/.test(eng)
-    && /lookExpoFrame\(shadeCfg, lookConfig\.shade, lookConfig\.eyes, lookConfig\.glare, hourExp\)/.test(eng) && /if \(placeOn\) this\.buildPlace\(\);/.test(eng) && /private buildPlace\(\): void \{ if \(this\.place \|\| this\.placeDead\) return; try \{ this\.place = new PlaceField\(/.test(eng) && /this\.placeDead = true; \} \}/.test(eng) && /lookConfig\.nightSky = \(\) => level\.sky;/.test(page),
+    && /lookExpoFrame\(shadeCfg, lookConfig\.shade, lookConfig\.eyes, lookConfig\.glare, hourExp\)/.test(eng) && /if \(placeOn\) this\.buildPlace\(\);/.test(eng) && /private buildPlace\(\): void \{ if \(this\.place \|\| this\.placeDead\) return; try \{ this\.place = new PlaceField\(/.test(eng) && /this\.placeDead = true; \} \}/.test(eng) && /lookConfig\.nightSky = /.test(page),
     'the model asks no hour and has no row for it: the shade row has no fade into a night, the frame\'s day share is 1, the engine hands the frame the eyes\' widest by the night\'s sky and the goggles whenever the model is on, the shader\'s bound and its white are said with no test of a row, and a device that cannot build the field is asked once and no more (no place of a night is brought up there: the bound waits for a live field)');
   check(NIGHT[0] === 1 && NIGHT[1] === 1 && NIGHT[3] === -2 && DIM === LOOK_EXPO.dim && W1[1] === 2 ** LOOK_EXPO.dark && W0[1] === 1 && DIM < Y / 2 && DIM <= H && LOOK_EXPO.dimSky * SKY_E >= LOOK_EXPO.dim
     && lookExpoBound(1, null)[0] === LOOK_EXPO.dim && Math.abs(lookExpoBound(1, 0.0135)[0] - LOOK_EXPO.dimSky * 0.0135) < 1e-12 && lookExpoBound(1, 0)[0] > 0 && lookExpoBound(1, 0)[0] < 1e-6 && READ === LOOK_EXPO.read
