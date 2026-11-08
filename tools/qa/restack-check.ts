@@ -46,14 +46,14 @@ export async function restackCheck(): Promise<boolean> {
       for (const y of [c[1], 0.05, 1.0, 1.8]) for (const k of [0, 0.35, -0.35]) { const p = [c[0] + nx * k, y, c[2] + nz * k]; W.cursorAt(p); step(2); const h = O.hover?.(); if (h?.kind === 'door' && h.door === d) return p; }
       return null; };
     // the door: the nearest whose far room nobody has stood in, that the four can stack on and the cursor can be put on
-    const s = g.player.char.pos; let D: any = null, t: any = null;
+    const s = g.player.char.pos; let D: any = null;
     for (const d of [...g.doors.list].sort((a: any, b: any) => dist(a.frameCentre, s) - dist(b.frameCentre, s))) { const x = O.targetAt(d.frameCentre); if (x.kind !== 'door' || x.door !== d) continue;
-      const far = g.cleared.roomBy(d, x.side > 0 ? -1 : 1); if (!far || g.cleared.isKnown(far)) continue; if (O.whyNot(stackDef, O.forMen(x, all()), all()) || !aimOf(d)) continue; D = d; t = x; break; }
+      const far = g.cleared.roomBy(d, x.side > 0 ? -1 : 1); if (!far || g.cleared.isKnown(far)) continue; if (O.whyNot(stackDef, O.forMen(x, all()), all()) || !aimOf(d)) continue; D = d; break; }
     if (!D) { line(false, 'a door to stack on with a room behind it nobody has stood in', 'none'); return false; }
     const stacked = () => all().every((m: any) => O.of(m)?.order === 'stack' && O.of(m)?.door === D && O.of(m)?.arrived);
     /** all four stacked and set on the door, whatever went before (true: they are) */
     const stack = (): boolean => { until(() => T.ops.length === 0, 60); O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); step(60); O.give('stack', O.forMen(O.targetAt(D.frameCentre), all()), 'all'); return until(stacked, 40) && (step(20), stacked()); };
-    const opOn = () => T.ops.find((o: any) => o.door === D), far = () => g.cleared.roomBy(D, t.side > 0 ? -1 : 1), unknown = () => !!far() && !g.cleared.isKnown(far());
+    const opOn = () => T.ops.find((o: any) => o.door === D);
 
     const said: [any, string][] = [], shown: string[] = [], say0 = g.say.bind(g), msg0 = g.msg.bind(g);
     g.say = (who: any, text: string, ...r: any[]) => { said.push([who, text]); return say0(who, text, ...r); }; g.msg = (text: string, ...r: any[]) => { shown.push(text); return msg0(text, ...r); };

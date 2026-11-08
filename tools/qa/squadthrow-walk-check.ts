@@ -51,7 +51,7 @@ export async function squadthrowWalkCheck(): Promise<boolean> {
   try {
     // ───────────── 1 · the walk, the frag, back to his hold ─────────────
     await guard('walk and frag', async () => {
-      const R = await rig(11, true), { game, O } = R, c = spots(R, 'frag')[0];
+      const R = await rig(11, true), { O } = R, c = spots(R, 'frag')[0];
       if (!c) { verdict(false, 'a spot nobody has a throw to and one man can walk to a throw for', `none found on the office with the four holding at ${R.team.map((m: any) => p2(m.char.pos)).join(' ')}`); return; }
       const w = walked(R, c.at, 'frag', 'Digit1'), m = w.man;
       verdict(!!w.row && !w.row.off && /^frag there · 2 left/.test(w.row.text) && w.pre.length === 1 && w.pre[0].preview === true && (w.pre[0].walk?.length ?? 0) > 1 && w.pre[0].points.length > 2,

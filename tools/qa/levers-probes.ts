@@ -1,23 +1,19 @@
 // The 'levers' family (THE DIFFICULTY LEVERS — game/difficulty.ts LEVERS / setLever, ui/levers.ts on the mission sheet and the loadout screen), run through probes.ts:
 //   bun run tools/qa/probes.ts levers | levers-rules | levers-screens | levers-run | levers-address          (or this file: bun run tools/qa/levers-probes.ts [name …])
 // PASS / FAIL each, all headless. Nothing here looks at a picture.
-//   levers-rules    the module alone: standard and hard put every lever on the level's own rung and read back as that level with nothing moved (on a plain
-//                   structure and on The block, whose hard carries the stun charges); each lever moved alone writes its own rows and no other's; hard's rungs set
+//   levers-rules    the module alone: each lever moved alone writes its own rows and no other's; hard's rungs set
 //                   lever by lever over standard read as hard; the level's switch puts every lever back; a moved lever is kept on this machine, read back at the
 //                   next page load, left out of a Training lesson, and a ?fog= / ?enemyai= / ?enemykit= on the URL stands over it for the visit; links carry a moved lever
 //                   only where the machine could not keep it, and with none moved are the links they were; every room clear's row says whether squads hold its
 //                   level, as its level file has it (ScenarioEntry.squads → difficulty.ts squadsOf), and is worded so
-//   levers-screens  the real screens on a fake DOM: the mission sheet carries a row per lever under its Standard | Hard row, the lit rung the tables' own; a press
-//                   moves that lever alone and every row's link follows; A / D leave a mix alone; the solo night, a quiet mission and a Training lesson grey the rows; the loadout of a squad mission
-//                   carries the same three rows (its keys' rows unchanged), the solo night's and a Training lesson's carry none, and Deploy loads the link with the levers put right on it
+//   levers-screens  the real screens on a fake DOM: A / D leave a mix alone and the levers brought to hard's rungs light Hard; Standard puts every lever back; the
+//                   loadout opened on a row's hard link deploys that link and closes back to the machine's level; a kept mix's line shows on a squad mission's loadout alone
 //   levers-run      the fog lever's top rung is in force in a Game built after it (over what the machine keeps for the fog's own option)
 //   levers-address  the harness stood from an address (standUp({ address })) holds the difficulty that address names before the game is made, and one that names none leaves
 //                   the tables as they stood. LEVERS_ADDRESS_BREAK=1 leaves the words off: must fail
 // THESE LINES WERE WRITTEN FOR THREE LEVERS and ran, until 2026-11-07, with the fourth lever and the squad fog's off rung held down (told.ts's two switches,
 // by told-check.ts threeLevers). Both are settled up and the hold was refused, so it is out: a line here that counts three levers, or the fog's three rungs,
-// fails by what the game is today. The runs' own pin went the same way (SQUADDEAL.on off, handed to each playthrough).
-import { resolve } from 'node:path';
-import { readFileSync } from 'node:fs';
+// fails by what the game is today.
 import { standUp, ROOT } from './headless.ts';
 import { withDom, El } from './scenario-picker-probes.ts';
 
@@ -25,7 +21,6 @@ const D = await import(`${ROOT}/src/game/difficulty.ts`);
 const { PRESSURE } = await import(`${ROOT}/src/game/pressure.ts`);
 const { DIGIN } = await import(`${ROOT}/src/game/digin.ts`);
 const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
-const { QUIETFOG } = await import(`${ROOT}/src/game/quietfog.ts`);   // (a quiet row's fog lever is live while that rule is on: the page, the shipped stand)
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -56,14 +51,6 @@ export async function leversRules(): Promise<boolean> {
     { const L: any[] = D.LEVERS, keys = L.map(l => l.key).join(','), params = L.map(l => l.param);
       F.verdict(keys === 'fog,ai,kit' && L[0].rungs.length === 3 && L.every(l => l.rungs.length >= 2 && l.rungs.length <= 5 && l.rungs.every((r: any) => r.label.length <= 12 && r.words.length >= 20)) && new Set(params).size === 3 && !params.some(p => ['hard', 'difficulty', 'pressure', 'digin', 'fogcone', 'fogown'].includes(p)),
         'three levers — fog of war (three rungs), enemy AI, enemy kit — each rung with a short label and a line of words, each lever a URL key of its own', L.map(l => `${l.label} [?${l.param}=]: ${l.rungs.map((r: any) => r.id).join(' · ')}`).join('\n    ')); }
-    // ---- a level is every lever on its own rung
-    { const rows: string[] = []; let ok = true;
-      for (const here of ['', 'the block']) { D.difficultyHere(here);
-        for (const lv of D.DIFFICULTIES) { D.setDifficulty(lv, false); const want = D.presetLevers(lv);
-          const good = J(D.leversShown()) === J(want) && D.difficultyNow() === lv && Object.keys(D.leversSet()).length === 0 && !D.leversMixed() && D.leversBase() === lv;
-          ok &&= good; rows.push(`${here || '(a plain level)'} · ${lv}: ${shown()} · fog ${fog()} · stuns ${PRESSURE.stuns}${good ? '' : ' — NOT'}`); } }
-      D.difficultyHere(''); D.setDifficulty('standard', false);
-       }
     // ---- each lever alone, over standard
     { const std = tables(), stdFog = fog(); D.setDifficulty('hard', false); const hard = tables(); D.setDifficulty('standard', false);
       const hardP = JSON.parse(hard).P, hardNoKit = J({ P: { ...hardP, stuns: 0 }, D: JSON.parse(hard).D });
@@ -158,9 +145,6 @@ export async function leversRules(): Promise<boolean> {
       fresh();
       F.verdict(at === 'stuns on The block, none elsewhere' && pinned === '{"kit":"none"}' && back === '{}' && own === '{}' && named && D.structureOfLevel('depot.json') === '', 'the mission sheet shows the kit the level carries on the mission\'s OWN structure (hard: a charge each on The block); a lever put on another rung there is pinned, and one put on the level\'s own rung is let go of',
         `hard: ${at} · guns on The block: moved ${pinned} · stuns again: moved ${back} · every level file HARD_AT names is in the table: ${named}`); }
-    // ---- the words
-    { D.setLever('fog', 'own', false); const mix = D.difficultyWords(D.difficultyNow()), line = D.leversLine(), all = D.leversLine(true); D.setDifficulty('standard', false);
-       }
     // ---- a squad map is worded as one because its ROW says so, and every row says what its level file holds
     { const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), fs = await import('node:fs');
       const rows = (ALL_MISSIONS as any[]).filter(e => e.kind === 'roomclear' && e.level);   // (a Training lesson too: its page reads no lever, but a kept Hard stands on it)
@@ -202,8 +186,6 @@ export async function leversScreens(): Promise<boolean> {
       M.missionsKey({ code: 'KeyD' }); const keyHard = `${shown()} reads ${D.difficultyNow()}`; M.missionsKey({ code: 'KeyA' });
       F.verdict(back === 'team/standard/none moved {} kept (none)' && hrefB === href0 && keyHard === 'cones/hard/none reads hard' && D.difficultyNow() === 'standard',
         'Standard pressed: every lever back on standard\'s rung, nothing kept, the links as they were; with no mix A / D are standard / hard as ever', `${back} · D → ${keyHard}`);
-      S.select(solo.id); const soloRows = leverRowsOf(root); if (quietM) S.select(quietM.id); const quietRows = quietM ? leverRowsOf(root) : []; if (lessonM) S.select(lessonM.id); const lessonRows = lessonM ? leverRowsOf(root) : [];
-      const said = (rows: typeof soloRows) => rows.map(r => `${r.key} ${r.na ? 'greyed' : 'live'}`).join(' · ');
       S.close();
     }); });
   } finally { fresh(); FOG.own = ownWas; }

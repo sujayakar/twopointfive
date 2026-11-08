@@ -40,7 +40,6 @@ async function rig(seed: number, squad = 4) {
     hudB(p: number[]): string { W.cursorAt([p[0], p[1], p[2]]); R.step(2); return (blockOf(O)?.[0]?.opts ?? []).find((o: any) => o.key === 'B')?.text ?? ''; },
     tail() { return O.log[O.log.length - 1]; },
     listed() { return (floorPlan(game).men as any[]).length; },
-    stacked() { return R.team.filter((m: any) => m.state !== 'dead').every((m: any) => O.of(m)?.order === 'stack' && O.of(m)?.arrived); },
     /** everybody back on Sam, nothing of the door tools running */
     home() { O.give('fallIn', O.targetAt(game.player.char.pos), 'all'); R.until(() => game.doorTools.ops.length === 0, 40); R.step(60); },
   };

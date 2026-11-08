@@ -55,7 +55,6 @@ async function stage(scn: string, seed: number, K: Knobs) {
   await quiet(() => R.step(20));
   return R;
 }
-type Rig = Awaited<ReturnType<typeof stage>>;
 
 /** when the grenade is put down: `word` — the order is given on Sam's word, the stack is made, the grenade lands and the word comes a second later (`word2`:
  *  and the word AGAIN a second after that) · `open` — the order goes on its own clock, the grenade lands with the men a few strides short of their marks ·
@@ -84,7 +83,7 @@ interface Run {
   /** a second door on the same word (`pairDoor`): its beats, and when ITS leaf first moved */
   other?: { door: string; beats: { t: number; what: string }[]; goT: number; ended: string };
 }
-const OFF = 1.5, LEAD = 1, AGAIN = 1, NEAR = 2.5, BEGUN = 0.6;
+const OFF = 1.5, LEAD = 1, AGAIN = 1, NEAR = 2.5;
 const tOf = (b: { t: number; what: string }[], re: RegExp) => b.find(x => re.test(x.what))?.t ?? NaN;
 const has = (r: Run, re: RegExp) => r.beats.some(b => re.test(b.what));
 

@@ -123,7 +123,7 @@ async function planLines(): Promise<boolean> {
   }
   // 6b. the word: the stacked door is the one door marked, with the key; the word given, the mark goes
   {
-    const T = g.doorTools, P0 = floorPlan(g), d0: any[] = P0.doors;
+    const P0 = floorPlan(g), d0: any[] = P0.doors;
     R.until(() => (floorPlan(g).men as any[]).every(m => m.there), 40);
     const d1: any[] = floorPlan(g).doors, one = d1[0];
     const jamb = one ? dist(one.a, one.b) : 0, mid = one ? [(one.a[0] + one.b[0]) / 2, 0, (one.a[2] + one.b[2]) / 2] : [0, 0, 0];
