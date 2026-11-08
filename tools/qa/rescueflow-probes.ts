@@ -117,9 +117,10 @@ export const flowStates = guarded(async () => {
     const man = R.hostiles.find((h: any) => INSIDE(h.char.pos, CONF));
     walk(T, [8.2, 0, 11.2]); walk(T, [12.5, 0, 11.2]);
     T.secs(5);
+    const wasHot = flowLog(T).includes('flow:hot:conference');
     if (man && man.state !== 'dead') killGuard(g, man, [1, 0, 0], false, 'shot', 'player');
     const done = T.secs(6, () => R.flow.jobs.size === 0);
-    F.verdict(done && stateOf(R, 'conference') !== 'hot' && R.ops.every((o: any) => o.state === 'dead' || orderOf(T, o) === 'fallIn'), 'he is dead: the room is hot no longer and the man catches up', `state ${stateOf(R, 'conference')} · orders ${R.ops.map((o: any) => orderOf(T, o)).join(' / ')} · ${flowLog(T).filter((w: string) => /hold|done|hot/.test(w)).join(' · ')}`);
+    F.verdict(!!man && wasHot && done && stateOf(R, 'conference') !== 'hot' && R.ops.every((o: any) => o.state === 'dead' || orderOf(T, o) === 'fallIn'), 'he is dead: the room is hot no longer and the man catches up', `the roamer ${man?.callsign ?? 'NONE'} · hot before the kill ${wasHot} · state ${stateOf(R, 'conference')} · orders ${R.ops.map((o: any) => orderOf(T, o)).join(' / ')} · ${flowLog(T).filter((w: string) => /hold|done|hot/.test(w)).join(' · ')}`);
   }
   { // Sam turns into the conference room with both men on him: one holds the corridor; the room walked through is cleared, and is not covered when he passes it again
     const T = await rig(12, { doorMan: 'inside', roamers: 0 }); const R = T.R, g = T.game, said = ears(T); T.secs(0.3);
@@ -130,7 +131,7 @@ export const flowStates = guarded(async () => {
     F.verdict(!!cj && said.some(s => s.text === 'corridor.') && inWith >= 1 && heldNow.length === 0, 'Sam goes into the conference room: the last man holds the corridor at its door (corridor.), the other goes in with him; no opening reads HELD for it (his gun is down the corridor)', `corridor job: ${cj ? cj[0].callsign : 'none'} · men with Sam ${inWith} · held: ${heldNow.join(', ') || 'none'} · ${said.map(s => s.text).join(' ')}`);
   }
   { // a hot room goes cold: the man leaves it unseen, Sam walks the room — not HOT for ever
-    const T = await rig(5, { doorMan: 'inside', roamers: 2, setSecs: 999 }); const R = T.R, g = T.game; T.secs(0.3);
+    const T = await rig(5, { doorMan: 'inside', roamers: 2, setSecs: 999 }); const R = T.R; T.secs(0.3);
     const man = R.hostiles.find((h: any) => INSIDE(h.char.pos, CONF));
     // (he is taken out of the room, out of everybody's sight, the far end of the break room, on the frame it reads hot: a second later the pair may have shot him)
     let wasHot = false; const look = () => { if (wasHot || !man || stateOf(R, 'conference') !== 'hot') return; wasHot = true; man.hold = true; man.char.pos[0] = 33; man.char.pos[2] = 21.5; if (man.char.bones.chest) { man.char.bones.chest[0] = 33; man.char.bones.chest[2] = 21.5; } };

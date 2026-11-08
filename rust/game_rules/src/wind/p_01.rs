@@ -412,14 +412,11 @@ pub fn wind_blows(g: &crate::game::Game) -> bool {
 /// Once a frame: every source's speed for this frame, the active list, and the hand-off to both GPU consumers. (wind.ts Wind.update)
 pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
     let master = wind_of(g);
-    let pool_on = crate::particle_fx::gpu_fx(g);
     let relax = g.k.wind.smoke_relax;
     g.wind.active.clear();
     g.wind.to_pool.list.clear();
     if master <= 0.0 {
-        if pool_on {
-            crate::render_particles::particles_set_wind(g, &[], knobs0());
-        }
+        crate::render_particles::particles_set_wind(g, &[], knobs0());
         crate::smoke_types::smoke_system_like_set_wind(g, &[], relax);
         return;
     }
@@ -522,7 +519,7 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
         }
     }
     g.stats.wind.active += g.wind.active.len() as i32;
-    if pool_on {
+    {
         let f = match g.engine.view_focus {
             Some(f) => f,
             None => {

@@ -386,9 +386,7 @@ pub fn destruction_bang_impulse(g: &mut crate::game::Game, at: V3, eye: V3, chao
     let b = g.k.chaos.imp.bang;
     let strength = b.strength * imp_k(g, chaos);
     g.stats.destruction.destr_imp_bang += 1;
-    if crate::particle_fx::gpu_fx(g) {
-        crate::render_particles::particles_impulse(g, at, b.radius, strength, Some(&crate::render_particles::ImpulseOpts { up: Some(b.up), occlude: Some(true), eye: Some(eye), ..Default::default() }));
-    }
+    crate::render_particles::particles_impulse(g, at, b.radius, strength, Some(&crate::render_particles::ImpulseOpts { up: Some(b.up), occlude: Some(true), eye: Some(eye), ..Default::default() }));
     let imp = crate::sheet_model::ImpulseLike { pos: at, radius: b.radius, strength, up: b.up, bias: [0.0, 0.0, 0.0] };
     let mut blocked = |g: &mut Game, p: V3| crate::scene_collision::solid_blocked(g, eye, [p[0], p[1] + 0.05, p[2]], None);
     let kicked = crate::debris::debris_impulse(g, imp, Some(&mut blocked), Some(who));
@@ -404,9 +402,7 @@ pub fn destruction_impact_impulse(g: &mut crate::game::Game, hit_p: V3, dir: V3,
     let bias: V3 = [(dir[0] - n[0] * dn) * i.bias_k, (dir[1] - n[1] * dn) * i.bias_k, (dir[2] - n[2] * dn) * i.bias_k];
     let at = v3::mad(hit_p, n, 0.03);
     g.stats.destruction.destr_imp_impact += 1;
-    if crate::particle_fx::gpu_fx(g) {
-        crate::render_particles::particles_impulse(g, at, i.radius, strength, Some(&crate::render_particles::ImpulseOpts { up: Some(i.up), bias: Some(bias), ..Default::default() }));
-    }
+    crate::render_particles::particles_impulse(g, at, i.radius, strength, Some(&crate::render_particles::ImpulseOpts { up: Some(i.up), bias: Some(bias), ..Default::default() }));
     if !g.destr.debris.list.is_empty() {
         let imp = crate::sheet_model::ImpulseLike { pos: at, radius: i.debris_m, strength, up: i.up, bias };
         let kicked = crate::debris::debris_impulse(g, imp, None, Some(who));
@@ -441,9 +437,7 @@ pub fn destruction_thud(g: &mut crate::game::Game, pos: V3, scale: Option<f64>, 
     let chaos = chaos_of(g);
     let strength = t.strength * m::max(0.5, m::min(1.5, scale)) * imp_k(g, chaos);
     let at: V3 = [pos[0], m::min(pos[1], 0.3) + 0.03, pos[2]];
-    if crate::particle_fx::gpu_fx(g) {
-        crate::render_particles::particles_impulse(g, at, t.radius, strength, Some(&crate::render_particles::ImpulseOpts { up: Some(t.up), ..Default::default() }));
-    }
+    crate::render_particles::particles_impulse(g, at, t.radius, strength, Some(&crate::render_particles::ImpulseOpts { up: Some(t.up), ..Default::default() }));
     if !g.destr.debris.list.is_empty() {
         // (a thump rocks a chunk, it does not re-blame it: `who` is not handed on, as in the TypeScript)
         let imp = crate::sheet_model::ImpulseLike { pos: at, radius: t.radius * 0.5, strength, up: t.up, bias: [0.0, 0.0, 0.0] };
@@ -509,9 +503,7 @@ pub fn destruction_kill_screen(g: &mut crate::game::Game, item: &crate::destruct
         }
     }
     g.stats.destruction.destr_screens += 1;
-    if crate::particle_fx::gpu_fx(g) {
-        crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, v3::mad(hit_p, n, 0.02), v3::normalize(v3::add(n, [0.0, 0.3, 0.0])), if item.target.is_some() { 22.0 } else { 8.0 }, crate::render_particles::EmitOpts { speed: 3.5, speed_jit: Some(0.7), spread: Some(1.2), life: 0.45, life_jit: Some(0.5), size: 0.0028, ..Default::default() });
-    }
+    crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, v3::mad(hit_p, n, 0.02), v3::normalize(v3::add(n, [0.0, 0.3, 0.0])), if item.target.is_some() { 22.0 } else { 8.0 }, crate::render_particles::EmitOpts { speed: 3.5, speed_jit: Some(0.7), spread: Some(1.2), life: 0.45, life_jit: Some(0.5), size: 0.0028, ..Default::default() });
 }
 
 /// Paper stacks within reach of the hit, or whose column of air the round passed through, become sheets.   (destruction.ts papersNear)
@@ -544,11 +536,9 @@ pub fn destruction_convert_paper(g: &mut crate::game::Game, d: &crate::destructi
     destruction_hide(g, d);
     g.stats.destruction.destr_papers += 1;
     dlog(g, &alloc::format!("paper {} scattered", d.i));
-    let on_gpu = crate::particle_fx::gpu_fx(g);
     let (c, h, albedo) = { let b = seam_box(g, d.box_); (b.c, b.h, b.albedo) };
     let count = m::round(g.k.chaos.sheets_per_stack * m::min(1.6, m::max(0.5, (h[0] * h[2]) / (0.11 * 0.15))) * (0.7 + 0.6 * chaos));
     g.stats.destruction.destr_sheets += count as i32;
-    if !on_gpu { return true; }
     let w = m::min(0.22, m::max(0.12, 2.0 * m::min(h[0], h[2]) * 0.95));
     let asp = m::max(1.0, m::max(h[0], h[2]) / m::max(0.04, m::min(h[0], h[2])));
     let pj = m::max(h[0], h[2]) * 0.8;
@@ -580,9 +570,7 @@ pub fn destruction_hide(g: &mut crate::game::Game, d: &crate::destruction::Destr
 
 /// The escalated material burst on top of impactFx's, scaled by E and the rifle factor: what flies is the picture's, by what the box says it is made of.   (destruction.ts burst)
 pub fn destruction_burst(g: &mut crate::game::Game, hit_p: V3, dir: V3, n: V3, surf: crate::scene_materials::Surf, albedo: V3, e: f64, k: f64, owner: f64, hit: Option<crate::destruction::DestructionBurstHit>) {
-    let on_gpu = crate::particle_fx::gpu_fx(g);
     g.stats.destruction.destr_bursts += 1;
-    if !on_gpu { return; }
     let (mut surf, mut albedo) = (surf, albedo);
     if let Some(h) = hit {
         let see = crate::particle_fx::hit_look(g, crate::particle_fx::HitLookHit { index: h.index, prop: h.prop, box_: h.box_ });
@@ -708,7 +696,6 @@ pub fn destruction_pall_wall(g: &mut crate::game::Game, p: V3, n: V3, t: V3, thi
     let w = g.k.chaos.pall.wall;
     let r = DestructionPallEmitR { radius: w.radius, density: w.density, ttl: w.ttl, speed: w.speed, temp: w.temp, push: w.push, expand: w.expand };
     let tint = crate::dust_look::dust_tint(surf);
-    let on_gpu = crate::particle_fx::gpu_fx(g);
     for side in [1.0, -1.0] {
         if side < 0.0 && !through { break; }
         let near_side = side > 0.0;
@@ -728,7 +715,7 @@ pub fn destruction_pall_wall(g: &mut crate::game::Game, p: V3, n: V3, t: V3, thi
             k += 1.0;
         }
         let count = m::round(w.dust[if near_side { 0 } else { 1 }] * gain);
-        if on_gpu && count > 0.0 && took > 0 {
+        if count > 0.0 && took > 0 {
             let dust = crate::particle_fx::emit_dust(g, [base[0] + nn[0] * 0.3, 0.9, base[2] + nn[2] * 0.3], v3::normalize([nn[0], 0.25, nn[2]]), count, crate::render_particles::EmitOpts { shape: Some(crate::render_particles::EmitShape::Puff), speed: w.dust_speed, speed_jit: Some(0.7), lift: Some(0.12), life: w.dust_life, life_jit: Some(0.35), size: w.dust_size, size_jit: Some(0.4), pos_jit: Some(0.6), color: Some(v3::scale(tint, 0.8)), ..Default::default() });
             g.stats.destruction.pall_dust += dust as i32;
         }
@@ -743,7 +730,6 @@ pub fn destruction_pall_burst(g: &mut crate::game::Game, at: V3, size: Option<f6
     let r = DestructionPallEmitR { radius: b.radius, density: b.density, ttl: b.ttl, speed: b.speed, temp: b.temp, push: b.push, expand: b.expand };
     let s = m::max(0.6, m::min(1.6, size));
     let tint = crate::dust_look::dust_tint(crate::scene_materials::Surf::Concrete);
-    let on_gpu = crate::particle_fx::gpu_fx(g);
     let c: V3 = [at[0], m::max(0.3, at[1]), at[2]];
     let ring = m::max(0.0, m::round(b.ring * s));
     let a0 = destruction_pall_hash(g, at, 97.0) * m::PI * 2.0;
@@ -761,7 +747,7 @@ pub fn destruction_pall_burst(g: &mut crate::game::Game, at: V3, size: Option<f6
     let core = DestructionPallEmitR { temp: b.temp * 2.5, ..r };
     let jc = destruction_pall_hash(g, at, 201.0);
     if destruction_pall_emit(g, core, c, [c[0], c[1] + 0.45, c[2]], [0.0, 1.0, 0.0], jc, b.smoke, Some(b.core_gain)) { took += 1; }
-    if on_gpu && b.dust > 0.0 && took > 0 {
+    if b.dust > 0.0 && took > 0 {
         let dust = crate::particle_fx::emit_dust(g, [c[0], c[1] + 0.2, c[2]], [0.0, 1.0, 0.0], m::round(b.dust * s), crate::render_particles::EmitOpts { shape: Some(crate::render_particles::EmitShape::Puff), speed: b.dust_speed, speed_jit: Some(0.8), lift: Some(0.18), life: b.dust_life, life_jit: Some(0.35), size: b.dust_size, size_jit: Some(0.4), pos_jit: Some(0.5 * s), color: Some(v3::scale(tint, 0.75)), ..Default::default() });
         g.stats.destruction.pall_dust += dust as i32;
     }

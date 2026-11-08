@@ -62,7 +62,6 @@ export async function showWhyCheck(o: { verbose?: boolean; only?: string } = {})
     const said = (m: any) => { const b = m.bubble; return b && g.time - b.t <= b.dur ? b.text as string : null; };
     return { W, g, O, men, foe, step, notes, said, sigFrames: () => sigFrames, sig };
   }
-  type Rig = Awaited<ReturnType<typeof rig>>;
 
   /** the longest straight run of free floor from `p` (16 ways), at least `need` long: its far end, or null */
   function runway(g: any, p: ArrayLike<number>, need: number): V | null {

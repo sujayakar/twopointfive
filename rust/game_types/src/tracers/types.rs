@@ -10,7 +10,6 @@ pub struct Tracers {
     pub live: f64,
     pub lit: f64,
     pub spawned: f64,
-    pub seed: f64,
     pub params: crate::tracers::TracersParams,
 }
 impl Tracers {
@@ -21,7 +20,6 @@ impl Tracers {
             live: 0.0,
             lit: 0.0,
             spawned: 0.0,
-            seed: 1.0,
             params: crate::tracers::TracersParams { speed: 280.0, min_life: 0.042, shutter: 0.011, thickness: 0.012, emissive: 60.0, min_path: 0.5, light_intensity: 4.0, light_range: 4.0, light_radius: 0.06, ember_sparks: 3.0, ember_speed: 5.0, ember_cone: 0.9, ember_life: 0.3, ember_intensity: 2.5, ember_range: 2.5, ember_ttl: 0.06, max_live: 24.0, max_lights: 6.0 },
         }
     }

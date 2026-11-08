@@ -1,5 +1,6 @@
 // WHAT A CHECK READS OF THE SQUAD'S WORDS: the game's own record (`game.view.squad`, rust/game_rules/src/orders/hud.rs), by a man's object, and the open menu's rows
 // as the order table has them. Nothing here works out a word. `doing` ends on what the man covers (' · on the rear'), so a line about his order asks how it starts.
+import { locked } from '../../src/view/seatview.ts';
 const keyName = (code: string): string => code.replace(/^Key|^Digit/, '');
 /** the listed menu's key is gone from the game: a check that wants a menu up on what the cursor is on has it put up by the menu's own call, and a second time down */
 export function menuKey(O: any): void { if (O.menu) { O.close(); return; } O.open(O.hover() ?? undefined); }
@@ -20,7 +21,7 @@ export function cornerOf(g: any): { key: string; text: string }[] { return g.vie
 /** the squad's block, a line a man, the notes and the quick key's line, under its title: what the page lays out (ui/overlay.ts), as one row */
 export function blockOf(O: any): any[] {
   const V = O.g.view.squad; if (!V) return [];
-  const open: string[] | undefined = O.g.view.lesson?.rails?.open, lk = (act: string) => !!open && !open.includes(act), quick = V.quick;
+  const lk = (act: string) => locked(O.g.view, act), quick = V.quick;
   return [{ kind: 'objective', tone: O.toneOf(O.recipients()), label: lk('who') ? 'squad' : `squad · ${V.posture ? `${V.posture} · ` : ''}orders to ${V.who}`, inReach: true, off: false,
     opts: [...V.mates.map((m: any) => ({ key: '', text: `${V.picked ? (m.addressed ? '▸ ' : '· ') : ''}${m.name} · ${m.doing}`, tone: m.pair ?? undefined, gone: m.down })), ...(lk('menu') ? [] : V.notes), ...(quick ? [quick] : [])] }];
 }

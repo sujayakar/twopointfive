@@ -24,7 +24,6 @@ export async function tabBackCheck(): Promise<boolean> {
   console.log(`\n=== tabback: Esc is only the pause, Tab backs out${BRK ? ' (TABBACK_BREAK: another key where Tab is pressed — must fail)' : ''} ===`);
   const { backName } = await import(`${ROOT}/src/game/backkey.ts`); const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-  const { stage, rmbHold, rmbUp } = await import('./fn2000-probes.ts');
   const log = console.log, err = console.error, warn = console.warn;
   const quiet = async <T>(f: () => T | Promise<T>): Promise<T> => { console.log = console.error = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.error = err; console.warn = warn; } };
   const key = (W: any, code: string, n = 1) => { W.input.pressed.add(code); for (let i = 0; i < n; i++) W.step(DT); };

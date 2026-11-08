@@ -337,7 +337,6 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
         g.fx.push(crate::game::GameFxItem { box_: b, ttl: card.ttl });
     }
     // gas, light and powder: the shot from effects.ts
-    let gpu = crate::particle_fx::gpu_fx(g);
     if lead {
         let seed = g.fx_seed;
         g.fx_seed += 1.0;
@@ -350,12 +349,12 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
             track: Some(crate::effects::Track::Muzzle { by: shooter }),
             eject: Some(crate::effects::Track::EjectPort { by: shooter }),
             gas: Some(gas),
-        }, !gpu);
+        });
         for l in lights {
             crate::render_lights::light_set_flash(g, l.pos, l.color, l.intensity, l.range, l.ttl, who);
         }
     }
-    if gpu && lead { crate::particle_fx::muzzle_sparks_fx(g, muzzle, dir, shooter); crate::particle_fx::casing_fx(g, shooter, &def); }
+    if lead { crate::particle_fx::muzzle_sparks_fx(g, muzzle, dir, shooter); crate::particle_fx::casing_fx(g, shooter, &def); }
     if lead { let voice = crate::gunlook::voice_of(g, &def); crate::audio_iface::game_audio_like_play(g, &voice, Some(muzzle), Some(1.0), None); }
 
     // --- hit scan

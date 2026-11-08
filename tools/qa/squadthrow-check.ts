@@ -222,7 +222,7 @@ export async function squadthrowCheck(): Promise<boolean> {
 
     // ───────────── 4 · a silent squad ─────────────
     await guard('silent', async () => {
-      const R = await rig(7, ON, { silent: true }), { O, game } = R, team = R.team;
+      const R = await rig(7, ON, { silent: true }), { game } = R, team = R.team;
       SLM.setSilent(game, true); R.step(5); const was = SLM.squadSilent(game);
       const spot = find(R, [7, 8, 6, 9], at => !!ST.squadThrower(game, team, at, 'stun'));
       if (!spot) { verdict(false, 'a spot a teammate has a stun throw to', 'none'); return; }
