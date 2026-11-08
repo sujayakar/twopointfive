@@ -22,7 +22,6 @@ pub enum OutEvent {
     ReachKeepChanged(crate::out_events::OutReachKeepChanged),
     SmokeSystemLikeClearAll,
     SmokeSystemLikeEmit(crate::out_events::OutSmokeSystemLikeEmit),
-    SmokeSystemLikeKeepHot(crate::out_events::OutSmokeSystemLikeKeepHot),
     SmokeSystemLikeObstaclesChanged(crate::out_events::OutSmokeSystemLikeObstaclesChanged),
     SmokeSystemLikePush(crate::out_events::OutSmokeSystemLikePush),
     WallWearReset,
@@ -123,11 +122,6 @@ pub struct OutReachKeepChanged {
 #[derive(Clone, Debug)]
 pub struct OutSmokeSystemLikeEmit {
     pub e: crate::smoke_types::SmokeEmitter,
-}
-
-#[derive(Clone, Debug)]
-pub struct OutSmokeSystemLikeKeepHot {
-    pub heat: f64,
 }
 
 #[derive(Clone, Debug)]

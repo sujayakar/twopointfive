@@ -31,7 +31,6 @@ export const OUT: Record<string, (g: any, e: any) => void> = {
   ReachKeepChanged: (g, e) => { g.engine.reach?.changed?.(e.rect ?? null, e.hold); },
   SmokeSystemLikeClearAll: (g, e) => { g.smoke?.clearAll?.(); },
   SmokeSystemLikeEmit: (g, e) => { if (e.e.track) e.e.track = trackOf(g, e.e.track); g.smoke?.emit?.(e.e); },
-  SmokeSystemLikeKeepHot: (g, e) => { g.smoke?.keepHot?.(e.heat); },
   SmokeSystemLikeObstaclesChanged: (g, e) => { g.smoke?.obstaclesChanged?.(e.c2, e.r); },
   SmokeSystemLikePush: (g, e) => { g.smoke?.push?.(e.p); },
   SmokeSystemLikeRound: (g, e) => { g.smoke?.round?.(e.from, e.dir, e.len); },

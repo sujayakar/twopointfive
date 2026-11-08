@@ -8397,7 +8397,6 @@ pub struct FireK {
     pub ember_r: f64,
     pub look: crate::knobs::FireKLook,
     pub smoke: crate::knobs::FireKSmoke,
-    pub gas: crate::knobs::FireKGas,
     pub bed: f64,
     pub crack: f64,
     pub bed_secs: f64,
@@ -8444,7 +8443,6 @@ impl FireK {
             ember_r: 0.0,
             look: crate::knobs::FireKLook::zeroed(),
             smoke: crate::knobs::FireKSmoke::zeroed(),
-            gas: crate::knobs::FireKGas::zeroed(),
             bed: 0.0,
             crack: 0.0,
             bed_secs: 0.0,
@@ -8532,49 +8530,6 @@ impl FireKSmoke {
     }
 }
 impl Default for FireKSmoke { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/fire.ts:139 FireK.gas, src/game/fire.ts:139)
-#[derive(Clone, Copy, Debug)]
-pub struct FireKGas {
-    pub on: bool,
-    pub up: f64,
-    pub radius: f64,
-    pub cells: f64,
-    pub density: f64,
-    pub temp: f64,
-    pub speed: f64,
-    pub push: f64,
-    pub jitter: f64,
-    pub every: f64,
-    pub view_r: f64,
-    pub keep: f64,
-    pub ref_: f64,
-    pub lo: f64,
-    pub ease: f64,
-}
-impl FireKGas {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FireKGas {
-            on: false,
-            up: 0.0,
-            radius: 0.0,
-            cells: 0.0,
-            density: 0.0,
-            temp: 0.0,
-            speed: 0.0,
-            push: 0.0,
-            jitter: 0.0,
-            every: 0.0,
-            view_r: 0.0,
-            keep: 0.0,
-            ref_: 0.0,
-            lo: 0.0,
-            ease: 0.0,
-        }
-    }
-}
-impl Default for FireKGas { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/flinch.ts:45 FLINCH, src/game/flinch.ts:45)
 #[derive(Clone, Copy, Debug)]
@@ -13113,7 +13068,7 @@ pub fn page_showwhy() -> ShowwhyK {
 }
 
 pub fn page_fire() -> FireK {
-    crate::knobs::FireK { on: true, names: alloc::vec![String::from("brazier")], height: 1.15, mouth: 1.15, coals: 0.26, coal_swing: 0.6, bed_r: 1.42, depth: 0.4, rates: alloc::vec![0.43, 1.3, 2.7, 4.9, 8.3], weights: alloc::vec![0.8, 0.9, 0.7, 0.45, 0.2], least: 0.6, most: 1.6, wander: 0.14, wander_up: 0.1, lift: 0.5, kick: 0.6, kick_secs: 0.12, bright: 1.25, warm: alloc::vec![1.0, 0.72, 0.51], reach: 1.4, hardy: true, stir_gap: 0.3, size: 1.1, pop_rate: 1.1, pop_slot: 0.2, embers: 60.0, ember_life: 1.7, ember_speed: 1.1, ember_size: 0.004, ember_gain: 0.45, ember_crack: 10.0, ember_r: 30.0, look: crate::knobs::FireKLook { gain: 3.0, core: 4.0, sigma: 2.5, speed: 0.7, tall: 0.95, torn: 1.1, plume: 1.0, shimmer: 0.019, soot: 0.5, breathe: 1.0, react: 1.0, lean: 0.2, steps: 40.0 }, smoke: crate::knobs::FireKSmoke { on: true, up: 1.9, radius: 0.26, cells: 4.0, density: 1.0, temp: 21.0, speed: 0.9, push: 6.0, jitter: 0.5, every: 1.0, view_r: 18.0, lean: 0.12 }, gas: crate::knobs::FireKGas { on: false, up: 0.1, radius: 0.2, cells: 6.0, density: 0.3, temp: 22.0, speed: 1.8, push: 8.0, jitter: 0.6, every: 0.5, view_r: 12.0, keep: 0.8, ref_: 3.2, lo: 0.2, ease: 1.5 }, bed: 0.85, crack: 0.9, bed_secs: 12.0, fog: true, max: 4.0, draw_r: 70.0, wind_max: 3.0 }
+    crate::knobs::FireK { on: true, names: alloc::vec![String::from("brazier")], height: 1.15, mouth: 1.15, coals: 0.26, coal_swing: 0.6, bed_r: 1.42, depth: 0.4, rates: alloc::vec![0.43, 1.3, 2.7, 4.9, 8.3], weights: alloc::vec![0.8, 0.9, 0.7, 0.45, 0.2], least: 0.6, most: 1.6, wander: 0.14, wander_up: 0.1, lift: 0.5, kick: 0.6, kick_secs: 0.12, bright: 1.25, warm: alloc::vec![1.0, 0.72, 0.51], reach: 1.4, hardy: true, stir_gap: 0.3, size: 1.1, pop_rate: 1.1, pop_slot: 0.2, embers: 60.0, ember_life: 1.7, ember_speed: 1.1, ember_size: 0.004, ember_gain: 0.45, ember_crack: 10.0, ember_r: 30.0, look: crate::knobs::FireKLook { gain: 3.0, core: 4.0, sigma: 2.5, speed: 0.7, tall: 0.95, torn: 1.1, plume: 1.0, shimmer: 0.019, soot: 0.5, breathe: 1.0, react: 1.0, lean: 0.2, steps: 40.0 }, smoke: crate::knobs::FireKSmoke { on: true, up: 1.9, radius: 0.26, cells: 4.0, density: 1.0, temp: 21.0, speed: 0.9, push: 6.0, jitter: 0.5, every: 1.0, view_r: 18.0, lean: 0.12 }, bed: 0.85, crack: 0.9, bed_secs: 12.0, fog: true, max: 4.0, draw_r: 70.0, wind_max: 3.0 }
 }
 
 pub fn page_flinch() -> FlinchK {
