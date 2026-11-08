@@ -47,4 +47,10 @@ export class Commands extends Writer {
   quietCams(on: number): void { this.u32(20); this.u32(on); }
   /** encounter back */
   aside(on: number, x: number, z: number): void { this.u32(21); this.u32(on); this.f64(x); this.f64(z); }
+  /** the kit picture: the team's cards (as Kit's text) and how many come (under 0: as it stands), staged again */
+  kitStageCards(kept: string, size: number): void { this.u32(30); this.text(kept); this.i32(size); }
+  /** whose card is open (0 the player) and the row under its highlight */
+  kitStageOpen(who: number, field: string): void { this.u32(31); this.u32(who); this.text(field); }
+  /** where the picture's men should sit in the view (kitView.ts `frame`): aspect, then cx cy h w man; hung 1: door left right keep; column 1: top bottom */
+  kitStageFrame(aspect: number, cx: number, cy: number, h: number, w: number, man: number, hung: number, door: number, left: number, right: number, keep: number, column: number, top: number, bottom: number): void { this.u32(32); this.f64(aspect); this.f64(cx); this.f64(cy); this.f64(h); this.f64(w); this.f64(man); this.u32(hung); this.f64(door); this.f64(left); this.f64(right); this.f64(keep); this.u32(column); this.f64(top); this.f64(bottom); }
 }

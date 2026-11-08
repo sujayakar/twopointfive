@@ -52,7 +52,7 @@ const COMMANDS = join(ROOT, 'src/draw/commands.ts'), C: string[] = ['// Written 
   '/** what a player or a panel does that is not input, in its order, until a step takes it */', 'export class Commands extends Writer {'];
 { const src = (readFileSync(join(ROOT, 'rust/game_run/src/command.rs'), 'utf8').match(/^commands! \{\n([\s\S]*?)^\}/m) ?? die('no commands! in command.rs'))[1]; let doc = '', n = 0;
   for (const l of src.split('\n')) { const t = l.trim(); if (t.startsWith('///')) { doc = t.replace(/^\/\/\/ ?/, ''); continue; }
-    const m = t.match(/^(\d+) (\w+) \{([^}]*)\} = /); if (!m) continue; if (Number(m[1]) !== n++) die(`commands!: ${m[2]} says ${m[1]}`);
+    const m = t.match(/^(\d+) (\w+) \{([^}]*)\} = /); if (!m) continue; if (Number(m[1]) < n) die(`commands!: ${m[2]} says ${m[1]}, and the numbers only go up`); n = Number(m[1]) + 1;
     const F = fieldsOf(m[3], m[2]);
     C.push(`  /** ${doc} */`, `  ${m[2][0].toLowerCase()}${m[2].slice(1)}(${F.map(f => `${f.name}: ${f.k === 'text' ? 'string' : 'number'}`).join(', ')}): void { this.u32(${m[1]});${F.map(f => ` this.${f.k}(${f.name});`).join('')} }`); doc = ''; }
   C.push('}', ''); }
