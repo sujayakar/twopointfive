@@ -20,18 +20,9 @@
 // listens for itself here (it is handed its keys: card.key). The screen's first squad-wide row is the SQUAD KIT: a button for the
 // issued kit and one for each of the cost table's named loadouts this build can carry — one press puts it on all five cards, colours kept (by the keys: A D move
 // the pick along the row, Enter puts it on); the lit one is what the cards are now (none: a mix of your own).
-import type { ScenarioEntry } from '../scene/scenarios';
-import { SCENARIO_KEYS } from '../scene/scenarioList';
-import { MISSIONS, SOLO_KEY, issuedWalls, issuedKit, type Mission } from './missions';
-import { leversHref, fogOffNow } from '../game/difficulty';
-import { sameFog } from '../game/scenarioRun';
-import { quietFogHref, quietFogRow, quietFogAside, soloFogRow } from '../game/quietfog';
-import { hourLive, hourIdOf } from '../game/hours';
-import { weatherOfSearch } from '../game/weatherKinds';
-import { squadSearch, startSize, storeSquad, type SquadSize, type LoadoutKind } from '../game/loadout';
+import { MISSIONS, issuedWalls, issuedKit, type Mission } from './missions';
 import { memberCard, clipKey, type MemberCard } from './kitCard';
 import { desk } from '../view/desk';
-import { Commands } from '../draw/commands';
 import type { TeamView } from '../view/read';
 import { menuTheme } from './theme';
 import { typedInto } from '../host/keymap';
@@ -40,15 +31,21 @@ import { gunIcon, kitIcon } from './kitIcons';
 const CHIP_NARROW = new Set(['smoke', 'bangs', 'frags', 'shells']);
 const CHIP_GAP = 0.65, CHIP_IN = 0.18, CHIP_DIGIT = 0.46;   // a chip's icon row in icon heights: between two things, between a drawing and its count, one digit (startpage.ts's em values for the same)
 
-/** what the screen preps: a scenario's row (scene/scenarios.ts ScenarioEntry fits as it is), or the solo night (`kind: 'solo'`, squad 0) */
-export interface LoadoutEntry { id: string; title: string; kind: LoadoutKind; squad: number; level?: string; group?: string; packs?: { frags?: number } }
+export type SquadSize = 0 | 1 | 2 | 3 | 4;
+/** a number as a squad size, or null (not an integer 0‥4) */
+export function asSquadSize(v: unknown): SquadSize | null { const n = typeof v === 'number' ? v : typeof v === 'string' && /^\d$/.test(v.trim()) ? Number(v) : NaN; return n === 0 || n === 1 || n === 2 || n === 3 || n === 4 ? n : null; }
+/** what this machine last deployed each mission with: a screen opens on it where the desk says it can still be staged */
+const SIZES_KEPT = 'twopointsix.loadout';
+function keptSizes(): Record<string, unknown> { try { const o: unknown = JSON.parse(globalThis.localStorage?.getItem(SIZES_KEPT) ?? 'null'); return o && typeof o === 'object' ? o as Record<string, unknown> : {}; } catch { return {}; } }
+function keptSize(id: string): SquadSize | null { const s = keptSizes().squad; return s && typeof s === 'object' ? asSquadSize((s as Record<string, unknown>)[id]) : null; }
+/** remember `n` for mission `id` (the other keys of the record are kept as they stood) */
+function keepSize(id: string, n: SquadSize) { try { const o = keptSizes(); if (!o.squad || typeof o.squad !== 'object') o.squad = {}; (o.squad as Record<string, unknown>)[id] = n; globalThis.localStorage?.setItem(SIZES_KEPT, JSON.stringify(o)); } catch { /* no store */ } }
+
 export interface LoadoutOpts {
   /** Esc (after the screen has closed itself) */
   back?: () => void;
   /** Deploy, instead of the page load: the query string to load and the size (the co-op dress; the probes) */
   deploy?: (search: string, n: SquadSize) => void;
-  /** the mission's own query string, with whatever else should ride along */
-  search: string;
   /** the size to open on (absent: what was deployed last on this mission, else its own) */
   squad?: SquadSize;
   /** where the screen is put (ui/startpage.ts: in the mission list's sheet) */
@@ -70,7 +67,7 @@ export interface LoadoutOpts {
  *  own (the kit card) takes them first — `key`: true = taken, false = the screen's (W / S off its edge walk on) — and is told when the highlight walks onto
  *  it (`enter`: +1 from above, −1 from below). */
 export interface LoadoutRow { el: HTMLElement; change?: (dir: 1 | -1) => void; confirm?: () => void; key?: (code: string, repeat: boolean) => boolean; enter?: (dir: 1 | -1) => void }
-export interface LoadoutScreen { readonly entry: LoadoutEntry; readonly root: HTMLElement; readonly squad: SquadSize; readonly open: boolean; rows: LoadoutRow[]; sel: number;
+export interface LoadoutScreen { readonly entry: Mission; readonly root: HTMLElement; readonly squad: SquadSize; readonly open: boolean; rows: LoadoutRow[]; sel: number;
   /** the picked member (0 = you, 1‥squad) and his card (null: no cards) */
   readonly member: number; readonly card: MemberCard | null;
   /** the team as the desk last said it */
@@ -81,8 +78,6 @@ export interface LoadoutScreen { readonly entry: LoadoutEntry; readonly root: HT
   readonly kitName: string;
   setSquad(n: SquadSize): boolean; /** gone, with no word to anybody (Back's callback not called) */ close(): void; step(dir: 1 | -1): void; move(dir: 1 | -1): void; pick(i: number): void; deploy(): void; back(): void; paint(): void; search(): string; key(code: string, repeat?: boolean): boolean }
 let current: LoadoutScreen | null = null;
-/** the desk has been told of the fog lever at its bottom rung (moved on the setting rows, which are the page's until the levers are asked of it) */
-let fogTold = false;
 /** whether the keys are the screen's own right now (LoadoutOpts.keys) */
 let currentKeys: (() => boolean) | null = null;
 /** the screen that is up (null: none) */
@@ -91,24 +86,20 @@ export function loadoutOpen(): LoadoutScreen | null { return current; }
 function el(tag: string, cls?: string, text?: string) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 
 /** Open the kit step for a mission. One at a time: a screen already up is closed first, silently. */
-export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts): LoadoutScreen {
+export function openLoadout(entry: Mission, opts: LoadoutOpts): LoadoutScreen {
   current?.close();
   injectStyle();
-  const base = opts.search;
   const pageSearch = typeof location !== 'undefined' ? location.search ?? '' : '';
-  const quietRow = entry.kind === 'solo' ? soloFogRow() : quietFogRow(entry as ScenarioEntry);   // (a quiet mission may be played under the fog: the fog lever is live on its screen with a bottom rung of its own, off; the solo night's link is read as a quiet row's)
-  // WHAT THE DESK IS TOLD OF THE MISSION: its id, the link as it would deploy now (the fog lever is on this screen), and once its file has come the kit and the wall charges its level hands out
-  const linkNow = () => quietFogHref(base, quietRow);
-  let forLink = '', issueText = '', wallsNow = 0;
-  const tellFor = () => { if (fogOffNow() !== fogTold) { fogTold = fogOffNow(); const C = new Commands(); C.lever('fog', fogTold ? 'off' : ''); desk().do(C); }
-    forLink = linkNow(); desk().for(entry.id, forLink, issueText, wallsNow); };
+  // WHAT THE DESK IS TOLD OF THE MISSION: its id, and once its file has come the kit and the wall charges its level hands out. The link it would deploy by is the desk's own
+  let issueText = '', wallsNow = 0;
+  const tellFor = () => { desk().for(entry.id, '', issueText, wallsNow); };
   tellFor();
-  let team: TeamView = desk().team();
+  let team: TeamView = desk().team(), linkSeen = team.link;
   const own = team.sizes.find(c => c.own)?.n ?? 2;
-  const asked = opts.squad;   // (a row's click opens on what this machine deployed that mission with last, else its own size: the page's own ?squad=N is another run's)
-  let squad = (asked !== null && asked !== undefined && team.sizes[asked].ok ? asked : startSize(entry)) as SquadSize;
+  const last = keptSize(entry.id), asked = opts.squad ?? (last !== null && team.sizes[last].ok ? last : asSquadSize(entry.squad) ?? 2);   // (a row's click opens on what this machine deployed that mission with last, else its own size: the page's own ?squad=N is another run's)
+  let squad: SquadSize = asked;
   if (!team.sizes[squad].ok) squad = (team.sizes.find(c => c.ok)?.n ?? own) as SquadSize;
-  desk().size(squad); team = desk().team();
+  desk().size(squad); team = desk().team(); linkSeen = team.link;
   const asIssued = team.asIssued;   // (a Training row: played with the kit as issued whatever this machine keeps — no cards, no squad kit row, and a line saying so)
   const readTeam = () => { team = desk().team(); };
   let open = true;
@@ -215,15 +206,15 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts): LoadoutScre
       S.sel = k; S.rows[S.sel].enter?.(dir); S.paint(); },
     pick(i) { const to = Math.min(squad, Math.max(0, Math.round(i))); if (to !== member) { member = to; mountCard(); drawSlots(); } S.paint(); },
     close,
-    search: () => squadSearch(quietFogHref(quietFogAside(() => leversHref(base)), quietRow), squad, own),   // (a lever moved by hand: the link carries it only where this machine could not keep it — game/difficulty.ts)
+    search: () => desk().team().link,   // (with the size on it; a lever moved by hand only where this machine could not keep it)
     deploy() {
       if (!open || !team.sizes[squad].ok) return;
-      storeSquad(entry.id, squad);
+      keepSize(entry.id, squad);
       const to = S.search(); close(); opts.onDeploy?.(to, squad);
       if (opts.deploy) { opts.deploy(to, squad); return; }
-      // the solo night off the real start card over the plain night: Start, as it has always been — no load (ui/missions.ts's own shortcut, taken here now that
-      // this screen stands between the list and the run); `startSolo(true)` closes the card and then puts your kit on this game's player (ui/menu.ts)
-      if (entry.kind === 'solo' && MISSIONS.startSolo && hourIdOf(new URLSearchParams(to).get('hour')) === hourLive() && weatherOfSearch(to) === weatherOfSearch(pageSearch) && !SCENARIO_KEYS.some(k => k !== SOLO_KEY && new URLSearchParams(pageSearch).has(k)) && sameFog(to, pageSearch)) { MISSIONS.startSolo(true); return; }   // (…at the hour and in the weather the page stands at — game/hours.ts, game/weatherKinds.ts: another of either is a load — and in the fog it stands in: the solo night under the fog off a plain page is a load of its own link, game/quietfog.ts QUIETFOG.solo)
+      // the solo night off the real start card over the plain night: Start, as it has always been — no load (this screen stands between the list and the run), wherever the desk says the link starts
+      // what this page stands (the hour, the weather, the fog); `startSolo(true)` closes the card and then puts your kit on this game's player (ui/menu.ts)
+      if (entry.kind === 'solo' && MISSIONS.startSolo && desk().same(to, pageSearch)) { MISSIONS.startSolo(true); return; }
       const url = location.pathname + to + location.hash;
       if (url === location.pathname + location.search + location.hash) location.reload(); else location.assign(url);
     },
@@ -233,7 +224,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts): LoadoutScre
       opts.back?.();
     },
     paint() {
-      if (linkNow() !== forLink || fogOffNow() !== fogTold) { tellFor(); readTeam(); if (team.cards) drawSlots(); kitCard?.refresh(); }   // (the fog lever moved: the optical wand and the sticky cameras look into the fog of war, so the card and what the mission hands over it are asked again)
+      readTeam(); if (team.link !== linkSeen) { linkSeen = team.link; if (team.cards) drawSlots(); kitCard?.refresh(); }   // (the fog lever moved: the optical wand and the sticky cameras look into the fog of war, so the card and what the mission hands over it are drawn again)
       words.textContent = team.sizes[squad].words;
       note.textContent = team.note; note.className = 'lo-note';
       sizeBtns.forEach((b, n) => { b.classList.toggle('on', n === squad); b.classList.toggle('own', team.sizes[n].own); b.setAttribute('aria-pressed', n === squad ? 'true' : 'false'); });
@@ -280,8 +271,8 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts): LoadoutScre
   ];
   S.rows = rowsNow();
   // A MISSION WHOSE LEVEL FILE HANDS OUT ITS OWN WALL CHARGES OR KIT (the plan's own fetch): the desk is told once the file has come, and the screen asks again. A kit of its own takes the cards away: no squad kit row, the note says so and each man who comes shows what the mission hands him (not when the link this screen deploys carries ?noissue: the desk reads that)
-  if (entry.kind === 'roomclear' && entry.level && !asIssued) void issuedWalls(entry.level).then(n => { if (!n || !open) return; wallsNow = n; tellFor(); readTeam(); pool.title += ' · this mission issues wall charges of its own, whatever the cards carry'; S.paint(); });
-  if (!asIssued && entry.level) void issuedKit(entry.level).then(text => {
+  if (entry.kind === 'roomclear' && !asIssued) void issuedWalls(entry.level).then(n => { if (!n || !open) return; wallsNow = n; tellFor(); readTeam(); pool.title += ' · this mission issues wall charges of its own, whatever the cards carry'; S.paint(); });
+  if (!asIssued) void issuedKit(entry.level).then(text => {
     if (!text || !open) return;
     issueText = text; tellFor(); readTeam(); if (team.cards) return;
     const at = S.rows[S.sel]?.el;
@@ -304,8 +295,6 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts): LoadoutScre
   return S;
 }
 
-/** a mission of the list as this screen takes it: its scenario's row, or the solo night's stand-in */
-export function entryOfMission(m: Mission): LoadoutEntry { return m.scenario ?? { id: m.id, title: m.title, kind: 'solo', squad: 0 }; }
 // every key is the screen's while it has them (registered at module load: ahead of main.ts's Esc — which would close the start card under it — and of the game's Input)
 const eaten = new Set<string>();
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
