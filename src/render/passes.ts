@@ -91,7 +91,7 @@ export class LightingPasses {
   setFog(on: boolean) { if (on !== this.fogOn) { const was = this.hdrUsage(); this.fogOn = on; if (this.hdrUsage() !== was) this.compStale = true; if (!on) this.fogPass?.release(); } }   // (the composite's set is re-made only when the fog changes what hdr must be: with GBAA on — every tier's default — hdr is already a storage texture that can be copied from, and re-making the set made a second hdr / hdrCopy / sharpE pair of the same description, 53 MB at high, beside the first one parked for a minute and a half)
   /** the outline in the dark (render/outline.ts; the engine mirrors its frame each render, null under a debug view): its pass is made the first frame the row is on */
   outline: OutlineFrame | null = null; private outlinePass: OutlinePass | null = null;
-  /** THE OUTLINE BY THE PICTURE reads a copy of the composite (render/outline.ts; the engine mirrors the frame's `on` + `picture` before resize): where
+  /** THE OUTLINE BY THE PICTURE reads a copy of the composite (render/outline.ts; the engine mirrors the frame's `on` before resize): where
    *  GBAA runs that is GBAA's own hdrCopy and this changes nothing; where it does not (render resolution at 100 %, TAAU off) the copy is kept for the
    *  outline — hdr may be copied from, hdrCopy exists — and filled just before its pass. Off = no texture and hdr as it was. */
   outlineCopyOn = false;
@@ -1134,10 +1134,10 @@ export class LightingPasses {
     }
     if (this.fogOn && this.fogFrame) (this.fogPass ??= new FogPass(this.device, this.sceneLayout)).encode(enc, this.fogFrame, this.sharpOn && this.sceneBGOut ? this.sceneBGOut : sceneBG, this.hdr, this.hdrView, this.cw, this.ch, g.depthOView, g.normalOView, g.albedoOView, () => ts('fogofwar'));   // FOG OF WAR: hdr → its copy, then every pixel no eye of the team sees pushed down in place (fogofwar.wgsl) — only while the game's switch is on
     if (this.outline?.on) {
-      const seen = this.outline.picture && this.hdrCopy ? this.hdrCopyView : null;   // (by the picture: this frame's composite as a texture the pass may read)
+      const seen = this.hdrCopy ? this.hdrCopyView : null;   // (this frame's composite as a texture the pass may read)
       if (seen && !this.gbaaOn) enc.copyTextureToTexture({ texture: this.hdr }, { texture: this.hdrCopy! }, [this.cw, this.ch]);   // (GBAA filled it above; without GBAA it is filled here)
       (this.outlinePass ??= new OutlinePass(this.device)).encode(enc, this.outline, this.hdrView, g.idOView, g.depthOView, this.cw, this.ch, seen);
-    } else this.outlinePass?.release();   // THE OUTLINE IN THE DARK: the player's own pixels rimmed, over the fog and under the resolve (outline.wgsl) — only while his Options row is on. By the picture it reads the copy of this frame's composite (setOutlineCopy)
+    } else this.outlinePass?.release();   // THE OUTLINE IN THE DARK: the player's own pixels rimmed, over the fog and under the resolve (outline.wgsl) — only while his Options row is on. It reads the copy of this frame's composite (setOutlineCopy)
     let src = 0;   // which bloom-down0 / post bind group: the history parity under TAAU, the lone hdr group without it
     if (this.taauOn) {   // the TAAU resolve: hdr (internal, jittered) + depth + last output → this frame's output = taaHist[p] at the OUTPUT size; everything below reads that
       this.taaParity ^= 1; src = this.taaParity; this.taaStats.frames++;
