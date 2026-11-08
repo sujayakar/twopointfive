@@ -288,6 +288,12 @@ impl Boxes {
         self.glass.take(g, n);
     }
 
+    /// how many statics, and the frame's own boxes in their order: a box's place in the list is the one, plus its place in the other
+    pub fn statics(&self) -> u32 { self.was.len() as u32 }
+    pub fn own_ids(&self) -> impl Iterator<Item = AnyBoxId> + '_ { self.own.iter().map(|o| o.id) }
+    /// how the `k`th of the frame's own stands this frame
+    pub fn own_stood(&self, k: usize) -> Option<&grid::Stood> { self.stood.get(self.was.len() + k) }
+
     fn earlier(&self, key: u32) -> Option<&Own> {
         let i = self.before.partition_point(|x| x.0 < key);
         // (two boxes under one key: neither is drawn through)
