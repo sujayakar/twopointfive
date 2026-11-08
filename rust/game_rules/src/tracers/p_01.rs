@@ -243,8 +243,6 @@ pub fn tracers_ember(g: &mut crate::game::Game, t: crate::tracers::Tracer) {
     let at = [t.from[0] + t.dir[0] * (t.l - 0.03), t.from[1] + t.dir[1] * (t.l - 0.03), t.from[2] + t.dir[2] * (t.l - 0.03)];
     let was = crate::fogofwar::fog_of_war_begin(g, Some(t.owner));
     if p.ember_sparks > 0.0 {
-        let seed = g.tracers.seed;
-        g.tracers.seed += 1.0;
         let back = [-t.dir[0], -t.dir[1] + 0.3, -t.dir[2]];
         crate::particle_fx::ember_fx(g, at, back, crate::particle_fx::EmberFxO { count: p.ember_sparks, speed: p.ember_speed, cone: p.ember_cone, life: p.ember_life });
     }
