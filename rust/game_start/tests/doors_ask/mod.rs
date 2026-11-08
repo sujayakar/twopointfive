@@ -326,6 +326,28 @@ pub trait DoorsAsk {
     fn walls_own_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]>;
     /// where an item is now
     fn item_at(&self, it: ItemId) -> [f64; 2];
+    /// Shift and the squad's key tapped as a hand does it, the cursor on the thing
+    fn shift_tap(&mut self, at: [f64; 3]);
+    /// Shift and the key kept down: did the ring come up
+    fn shift_held(&mut self, at: [f64; 3]) -> bool;
+    /// a wedge of the ring taken by its digit and every key let go: its words
+    fn wedge_taken(&mut self, words: Option<&str>) -> String;
+    fn keys_let_go(&mut self);
+    /// the squad's smoke left, the smoke cans in the world: where, and is it venting
+    fn smoke_left(&self) -> f64;
+    fn smoke_cans(&mut self) -> Vec<([f64; 2], bool)>;
+    /// the kit's cards set to carry these cans, by card, and the game restarted as the page does on the kit
+    fn cards_carry(&mut self, cards: &[(usize, f64)]);
+    /// is the squad's ring up, who is it for, what it says under it, its wedges
+    fn ring_up(&self) -> bool;
+    fn ring_part(&self) -> Vec<GuardId>;
+    fn ring_caption(&mut self) -> String;
+    fn ring_wedges(&mut self) -> Vec<(f64, String)>;
+    /// STAGING: a ring switch off, for a control
+    fn goal_half_off(&mut self);
+    fn twice_off(&mut self);
+    /// how long a second tap of the key counts as one
+    fn twice_secs(&self) -> f64;
     /// the panes on a door's own wall beside its frame: their span along the wall from the hinge
     fn panes_by(&self, d: DoorId) -> Vec<(f64, f64)>;
     /// a run with something asked each frame
@@ -681,6 +703,57 @@ impl DoorsAsk for Play {
     fn tool_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]> { game::doortools::door_tools_stack_posts(&mut self.g, d, side, men, None).unwrap_or_default().iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
     fn walls_own_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]> { game::orders::squad_orders_stack_posts_on(&mut self.g, &game::ask::Over::OWN, d, side, men, &[], false, None).unwrap_or_default().iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
     fn item_at(&self, it: ItemId) -> [f64; 2] { let q = game::throwables::item_pos(&self.g, it); [q[0], q[2]] }
+    fn shift_tap(&mut self, at: [f64; 3]) {
+        self.cursor_on(at);
+        self.run(3.0 / 60.0);
+        self.key_down("ShiftLeft");
+        let key = self.g.k.cmdring.key.clone();
+        self.key_down(&key);
+        self.run(2.0 / 60.0);
+        self.key_up(&key);
+        self.run(2.0 / 60.0);
+        self.key_up("ShiftLeft");
+        self.run(4.0 / 60.0);
+    }
+    fn shift_held(&mut self, at: [f64; 3]) -> bool {
+        self.cursor_on(at);
+        self.run(3.0 / 60.0);
+        self.key_down("ShiftLeft");
+        let key = self.g.k.cmdring.key.clone();
+        self.key_down(&key);
+        self.until(1.5, |p| p.ring_up()).is_some()
+    }
+    fn wedge_taken(&mut self, words: Option<&str>) -> String {
+        let w = self.ring_wedges();
+        let row = words.map_or(w.first(), |t| w.iter().find(|x| x.1.contains(t))).unwrap_or_else(|| panic!("no wedge {words:?} in {w:?}")).clone();
+        let digit = format!("Digit{}", row.0);
+        self.key_down(&digit);
+        self.frame();
+        self.key_up(&digit);
+        self.keys_let_go();
+        row.1
+    }
+    fn keys_let_go(&mut self) { let key = self.g.k.cmdring.key.clone(); self.key_up(&key); self.key_up("ShiftLeft"); self.run(4.0 / 60.0); }
+    fn smoke_left(&self) -> f64 { game::squadsmoke::squad_smoke_left(&self.g, &game::seats::here(&self.g)) }
+    fn smoke_cans(&mut self) -> Vec<([f64; 2], bool)> {
+        let list: Vec<ItemId> = self.g.items.items.iter().copied().filter(|&i| game::throwables::item_kind(&self.g, i) == game::throwables::ItemKind::Smoke).collect();
+        list.into_iter().map(|i| { let q = game::throwables::item_pos(&self.g, i); ([q[0], q[2]], game::throwables::item_emit_t(&mut self.g, i) > 0.0) }).collect()
+    }
+    fn cards_carry(&mut self, cards: &[(usize, f64)]) {
+        for &(i, n) in cards {
+            let c = &mut self.g.m.kit.kit.members[i];
+            c.smoke = n;
+            if n > 0.0 { (c.frags, c.charges) = (0.0, 0.0); }   // (the pouches: room made for it, as the card's own row asks)
+        }
+        game::game::game_restart(&mut self.g, None);
+    }
+    fn ring_up(&self) -> bool { self.g.orders.cmd_ring.is_some() }
+    fn ring_part(&self) -> Vec<GuardId> { self.g.orders.menu.as_ref().and_then(|m| m.part.clone()).unwrap_or_default() }
+    fn ring_caption(&mut self) -> String { self.view().ring.map_or(String::new(), |r| r.caption) }
+    fn ring_wedges(&mut self) -> Vec<(f64, String)> { self.view().ring.map_or(Vec::new(), |r| r.wedges.iter().map(|w| (w.key, w.text.clone())).collect()) }
+    fn goal_half_off(&mut self) { self.g.k.cmdring.goal_half = false; }
+    fn twice_off(&mut self) { self.g.k.cmdring.twice = false; }
+    fn twice_secs(&self) -> f64 { self.g.k.cmdring.twice_secs }
     fn panes_by(&self, d: DoorId) -> Vec<(f64, f64)> {
         let (f, w) = (game::guards::frame_of(&self.g, d), self.door_w(d));
         let mut out = Vec::new();
