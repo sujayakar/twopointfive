@@ -42,8 +42,8 @@
     s085: { renderScale: 0.85 }, s09: { renderScale: 0.9 }, s10: { renderScale: 1.0 }, s077: { renderScale: 0.77 }, s067: { renderScale: 0.67 }, s07: { renderScale: 0.7 }, s06: { renderScale: 0.6 },   // A: resolution policy
     sharp085: { sharpDirect: true, renderScale: 0.85 }, sharp09: { sharpDirect: true, renderScale: 0.9 },
     noMotion: { taauMotionAlpha: 0, taauSharpenMotion: 0 },      // C1's own A/B: tjank's motion terms off
-    // C2: history reconstruction under motion (taau.wgsl histSharp = Catmull-Rom + k·(CR − bilinear) while resampled) ± a tighter clip under motion
-    c2h05: { taauHistSharp: 0.5 }, c2h1: { taauHistSharp: 1.0 }, c2h1c: { taauHistSharp: 1.0, taauMotionClip: 0.5 }, c2clip: { taauMotionClip: 0.5 },
+    // C2: history reconstruction under motion (taau.wgsl histSharp = Catmull-Rom + k·(CR − bilinear) while resampled)
+    c2h05: { taauHistSharp: 0.5 }, c2h1: { taauHistSharp: 1.0 },
     // C3: GBAA + jitter off + the TAA as a noise pass — needs a 1 : 1 resolve (sharp direct below scale 1, or scale 1.0 itself); motion weight variants
     c3: { sharpDirect: true, gbaa: true, taauPhases: 0 }, c3a7: { sharpDirect: true, gbaa: true, taauPhases: 0, taauMotionAlpha: 0.7 }, c3a1: { sharpDirect: true, gbaa: true, taauPhases: 0, taauMotionAlpha: 1.0 },
     c3u: { gbaa: true, taauPhases: 0 },                              // (ultra / any scale-1.0 boot: no sharp direct to run)

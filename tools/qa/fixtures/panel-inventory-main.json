@@ -121,14 +121,6 @@
  },
  {
   "path": "Frame ▸ Quality & resolution",
-  "kind": "toggle",
-  "label": "ladder: … and climb the output cap",
-  "title": "past the top scale (0.95; 1.0 with sharp direct off) and both divisors, the climb also raises the max internal height toward the WINDOW's device rows in 100-row steps (each costs the per-OUTPUT-pixel kernels: the resolve, sharp direct's U + composite, GBAA, post). Off by default",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Frame ▸ Quality & resolution",
   "kind": "text",
   "label": "",
   "title": "",
@@ -293,33 +285,11 @@
  {
   "path": "Frame ▸ TAAU (temporal AA + upsampling)",
   "kind": "slider",
-  "label": "taau: MOTION clip narrowing",
-  "min": 0,
-  "max": 0.9,
-  "step": 0.05,
-  "title": "the same motion narrows the variance clip box (γσ × (1 − this)) so the history cannot sit as far from what the frame shows while the picture slides — measured to add nothing over the weight term (edge-spread in a 0.3°/frame orbit 1.75 px with or without it) — an A/B row. 0 default = off",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Frame ▸ TAAU (temporal AA + upsampling)",
-  "kind": "slider",
   "label": "taau: MOTION sharpen boost",
   "min": 0,
   "max": 0.6,
   "step": 0.05,
   "title": "what the final blit's contrast-adaptive sharpen gains while the CAMERA moves (the largest screen motion of five points round its look-at, full at half an output pixel a frame): sharpen + this. 0.15 shipped (0.3 with the motion-calm rows off); 0 = off",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Frame ▸ TAAU (temporal AA + upsampling)",
-  "kind": "slider",
-  "label": "taau: A/B lighting jump → weight (ratio, ≤ 1 = off)",
-  "min": 1,
-  "max": 4,
-  "step": 0.1,
-  "title": "OFF by default (1): measured to change nothing on the flickering tube or the lightning (docs/internal/tjank.md) — the clip already follows a switched level within 3 % and the resolve's share of a stroke's first frame is an eighth of the step. What it does when on: a LIGHTING change under a still surface — this frame's 3×3 mean against the history in linear luminance, brighter or darker by more than this ratio and worth a few display steps — takes the new frame at half weight or more: a stroke of lightning through the windows, a fluorescent tube dropping out, a torch pool sweeping onto the floor carry no motion vector, and the clip alone keeps the old light wherever the 3×3 straddles a shadow edge (its box spans both sides) for the dozen frames α 0.1 needs — fat mullion shadows on the flash frame, shadow edges that creep after a switch. 1 = off (the 08-11 resolve)",
   "def": false,
   "extra": ""
  },
@@ -411,14 +381,6 @@
   "title": "per 8×8 output tile at most this many sliver pixels trace their ray (ranked in lane order); 0 = no rays (the conservative remainder rule for the whole class, and the tracer-free kernel)",
   "def": false,
   "extra": ""
- },
- {
-  "path": "Frame ▸ Sharp direct + GBAA",
-  "kind": "select",
-  "label": "sharp: sliver diagnostic paint",
-  "title": "paints the sharp path's fallback pixels into the direct term (the census itself rides in sharpE's alpha every frame: __sharp.census())",
-  "def": false,
-  "extra": "off / slivers magenta / ring yellow / leaks the ray overturned (red = was lent lit)"
  },
  {
   "path": "Frame ▸ Sharp direct + GBAA",
@@ -777,17 +739,6 @@
  },
  {
   "path": "Direct light ▸ Estimator — ReSTIR DI",
-  "kind": "slider",
-  "label": "restir: D5 M cap inside penumbrae (0 = off)",
-  "min": 0,
-  "max": 30,
-  "step": 1,
-  "title": "the temporal confidence cap for pixels whose inherited reservoir carries a blocker-distance hint (a penumbra): shorter memory there turns the reservoir's slow random walk into per-frame noise the shadow filter and the TAA can average — the dim multi-light penumbra grain; 0 = the tier's cap everywhere",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Estimator — ReSTIR DI",
   "kind": "toggle",
   "label": "restir: hue split (a sample of an unbelieved light keeps its own hue)",
   "title": "the believed-visible mix colours only the luminance its own lights carried; the share of the estimate carried by a sample whose light this pixel does not believe visible (tile-dark here, or its own darkSlot) keeps that sample's hue — without it a blocked light's penumbra deep in its own shadow was painted in whatever far dim light the tile still believed: coloured fringes along shadow boundaries under two lights of different colour (docs/internal/direct-quality.md S3). Off = the belief hue as it was",
@@ -864,14 +815,6 @@
   "max": 4,
   "step": 0.25,
   "title": "screen motion per frame, in px at 1000 internal rows (scaled to the target), past which the spatial pass opens at the pixel with the tap count below",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Estimator — ReSTIR DI",
-  "kind": "toggle",
-  "label": "restir: motion — run under a still camera too",
-  "title": "the motion levers are switched on only on frames the CAMERA moved (their work measured +0.2 ms direct at high doing nothing at rest); on = always, so a walking man's own pixels get the levers under a still camera as well",
   "def": false,
   "extra": ""
  },
@@ -2216,39 +2159,6 @@
   "max": 16,
   "step": 0.25,
   "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Denoiser ▸ Diffuse (GI) client",
-  "kind": "slider",
-  "label": "gi: firefly z (0 = off)",
-  "min": 0,
-  "max": 8,
-  "step": 0.25,
-  "title": "an incoming gather texel above its 5×5's mean + z·σ is scaled down to it before it enters any history (the gather's own per-ray bound × cache stays as the preset set it)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Denoiser ▸ Diffuse (GI) client",
-  "kind": "slider",
-  "label": "gi: clamp cut (0 = off)",
-  "min": 0,
-  "max": 2,
-  "step": 0.05,
-  "title": "GI in motion (D): a valid pixel whose long bounce history the clamp had to DRAG — the light there changed (a man's occlusion sliding along the wall beside him) — has its history length cut by how far it moved relative to the box × this (the reflection chain's rule); a drag past most of the box restarts it as young. The next frames weigh the fresh estimate more and the young-history gather rays fire there. 0 = the client as it was",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Denoiser ▸ Diffuse (GI) client",
-  "kind": "slider",
-  "label": "gi: young widen (0 = off)",
-  "min": 0,
-  "max": 4,
-  "step": 0.25,
-  "title": "GI in motion (D): the diffuse à-trous's luminance edge-stop loosened × (1 + this) on texels with under five frames of history (their variance is the spatial stand-in and the neighbours are all they have): steadier, blotchier for those frames. 0 = as it was",
   "def": false,
   "extra": ""
  },
