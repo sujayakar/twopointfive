@@ -134,6 +134,7 @@ declare const Bun: {
   version: string; revision: string; which(name: string): string | null; main: string; argv: string[]; env: Record<string, string | undefined>;
   write(dest: string | URL | BunFile | number, data: string | ArrayBufferView | ArrayBufferLike | Blob | Response | BunFile): Promise<number>;
   file(path: string | URL | number, opts?: { type?: string }): BunFile;
+  which(cmd: string): string | null;
   serve(opts: Record<string, any>): { port: number; hostname: string; url: URL; stop(force?: boolean): void };
   spawn(cmd: string[] | (Record<string, any> & { cmd: string[] }), opts?: Record<string, any>): BunSubprocess;
   spawnSync(cmd: string[] | (Record<string, any> & { cmd: string[] }), opts?: Record<string, any>): BunSyncSubprocess;
