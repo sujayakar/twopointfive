@@ -851,7 +851,7 @@ export async function fogEdge(): Promise<boolean> {
       `open floor: ${f2(across[0])} → ${f2(across[across.length - 1])}, falling ${mono(across, false)}, ${f2(atLine[0])} | ${f2(atLine[1])} either side of the line, ${across.filter(x => x > 0.05 && x < 0.95).length} steps between · pocket's middle at most ${f2(Math.max(...core))} · beside the pillar at least ${f2(Math.min(...beside))} · walls kept: ${wallKept} · up a far wall: ${f2(upWall[0])} → ${f2(upWall[upWall.length - 1])} rising ${mono(upWall, true)} and ${f2(lowWall[0])} → ${f2(lowWall[lowWall.length - 1])} falling ${mono(lowWall, false)} · a man 5 / 15 / 25 cm round a corner: ${man.map(f2).join(' / ')} · one man / five stacked, 15 and 5 cm either side: ${one.map(f2).join(' ')} / ${five.map(f2).join(' ')} · the sliver: ${f2(sliver)} (hard ${sliverHard}) · behind a partition, most: ${f2(tick)} · the largest step beside a leaf's end: ${pop.toFixed(3)} · ajar 10 cm, most: ${f2(ajar)} · steps left ${left} of the hard line's ${was} (${st.map(x => x.join('/')).join(' · ')})`);
   }
   { // the engine replay asks for the page's own fog look
-    const epl: string = fsrc.readFileSync(`${ROOT}/src/replay/engineplay.ts`, 'utf8'), visitWords = /VISIT_FLAGS = \[([^\]]*)\]/.exec(fsrc.readFileSync(`${ROOT}/src/ui/replaykey.ts`, 'utf8'))?.[1] ?? '';
+    const epl: string = fsrc.readFileSync(`${ROOT}/src/replay/engineplay.ts`, 'utf8'), visitWords = /VISIT_FLAGS = \[([^\]]*)\]/.exec(fsrc.readFileSync(`${ROOT}/src/tape/address.ts`, 'utf8'))?.[1] ?? '';
     // (the replays goal's files, read loosely: its calls may move and its list may grow — what must hold is that it asks as it attaches, after its tables and after a FOG table row, and that the visit keeps both words)
     const asked = (epl.match(/g\.fogOfWar\.pageLook\(\)/g) ?? []).length >= 3 && /this\.tables\(\);\s*g\.fogOfWar\.pageLook\(\)/.test(epl) && /name === 'FOG'\)\s*g\.fogOfWar\.pageLook\(\)/.test(epl) && /'fogedge'/.test(visitWords) && /'fogdesat'/.test(visitWords);
     verdict(asked, 'as written: the engine replay asks for the page\'s own fog look as it takes the frame, after its first tables and after every FOG table of the tape\'s, and the visit\'s own ?fogedge / ?fogdesat are kept',
@@ -1047,7 +1047,7 @@ export async function fogThin(): Promise<boolean> {
   }
   { // the replay page leaves the row to the tape
     const pageRows = /const FOG_PAGE = \{ desat: FOG\.desat, edge: FOG\.edge, air: FOG\.air, kept: FOG\.kept \};/.test(fsrc.readFileSync(`${ROOT}/src/game/fogofwar.ts`, 'utf8'));
-    const visit = /VISIT_FLAGS = \[([^\]]*)\]/.exec(fsrc.readFileSync(`${ROOT}/src/ui/replaykey.ts`, 'utf8'))?.[1] ?? '', kept = /'fogthin'/.test(visit);
+    const visit = /VISIT_FLAGS = \[([^\]]*)\]/.exec(fsrc.readFileSync(`${ROOT}/src/tape/address.ts`, 'utf8'))?.[1] ?? '', kept = /'fogthin'/.test(visit);
     verdict(pageRows && !kept, 'as written: the replay page leaves the row to the tape (no row of its fog look, no visit word)', `the page's look as written: ${pageRows} · the visit keeps ?fogthin: ${kept}`);
   }
   { // a fight on a level with marked boxes
