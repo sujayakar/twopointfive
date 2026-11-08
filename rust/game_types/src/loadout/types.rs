@@ -3,9 +3,3 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: a union)
-#[derive(Clone, Debug)]
-pub enum SquadOfQuerySearch {
-    Text(String),
-    URLSearchParams(crate::query::Query),
-}
