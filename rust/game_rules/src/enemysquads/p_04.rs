@@ -857,7 +857,7 @@ fn tick_news(g: &mut Game, q: EnemysquadsSquadId) {
         g.k.squads.ready_beat
     } else {
         let think = g.k.squads.think;
-        pick(g, crate::dice::Who::Group(q.0), think) * beat
+        pick(g, crate::dice::Who::Squad(q), think) * beat
     };
     let decide_at = now + wait;
     let s = &mut g.tab.enemysquads_squad[q];

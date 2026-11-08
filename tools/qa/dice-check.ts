@@ -2,8 +2,7 @@
 //   bun run tools/qa/dice-check.ts            every check below; exit 0 = all pass, 1 = one failed (named)
 //   DICE_BREAK=1 bun run tools/qa/dice-check.ts   the red path: one stray Math.random() is drawn inside the update — 'same seed' must then FAIL
 // WHAT IS HELD:
-//   source     no Math.random call is left in src/game outside civilians.ts withDice (which swaps it for a
-//              constructor's length) — a new one is named with its file and line
+//   source     no Math.random call is left in src/game — a new one is named with its file and line
 //   same seed  two games stood up on one seed, each under a DIFFERENT Math.random, play the same half minute (a firefight in it) digest for digest: nothing of the
 //              simulation reaches Math.random, and the seed alone names the dice
 //   other seed a second seed plays a different half minute
@@ -12,12 +11,14 @@
 //              rolled): there the file leaves a man's aim track out on purpose, so A against B is reported, not held
 //   follow     a tool that puts its own die in Math.random's place (every older probe, a recording, a capture recipe) gets the game's dice from that moment, the own
 //              die standing still, and a save made then carries no die; put back, the own die resumes where it stood
+//   keyed      the keyed draw is the Rust game's to the bit: a thousand draws fold to the word rust/game_types/src/dice.rs's own test holds; and a draw at a clock is
+//              counted by its own site, whoever draws between
 //   default    the harness with no seed asked for has no die of its own (every frozen digest was recorded on the tool's Math.random); TPS_SEED=n gives it one
 import { readdirSync, readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { digestGame, diffDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { saveState, loadState, canSave } = await import(`${ROOT}/src/game/savestate.ts`);
-const { diceInUse, simRandom } = await import(`${ROOT}/src/math/dice.ts`);
+const { diceInUse, drawKey, keyed, newDice, simDraw, simRandom, useDice } = await import(`${ROOT}/src/math/dice.ts`);
 const { ambientState } = await import(`${ROOT}/src/game/dialogue.ts`);
 const { Game } = await import(`${ROOT}/src/game/game.ts`);
 
@@ -54,10 +55,17 @@ const firstDiff = (a: unknown[], b: unknown[]): string => { for (let i = 0; i < 
     readFileSync(`${dir}/${f}`, 'utf8').split('\n').forEach((line, i) => {
       const code = line.replace(/\/\/.*$/, '').replace(/\/\*.*?\*\//g, '');
       if (!/Math\.random/.test(code) || /^\s*(\/\*\*|\*)/.test(line)) return;
-      if (f === 'civilians.ts' && /function withDice/.test(code)) return;
       hits.push(`${f}:${i + 1}`);
     }); }
-  verdict(!hits.length, 'source: no Math.random left in src/game outside civilians.ts withDice', hits.length ? `still drawn at ${hits.join(', ')}` : 'every draw of the simulation goes through simRandom()'); }
+  verdict(!hits.length, 'source: no Math.random left in src/game', hits.length ? `still drawn at ${hits.join(', ')}` : 'every draw of the simulation goes through simRandom()'); }
+
+// ---- keyed
+{ const bits = new DataView(new ArrayBuffer(8)); let h = 0xcbf29ce484222325n;
+  for (let i = 0; i < 1000; i++) { bits.setFloat64(0, keyed(Math.imul(i, 2654435761) >>> 0, drawKey(`m::f#${i}`, i % 37), i / 60, i % 5)); h = (h ^ bits.getBigUint64(0)) * 0x100000001b3n & 0xffffffffffffffffn; }
+  const word = /assert_eq!\(h, (0x[0-9a-f_]+)/.exec(readFileSync(`${ROOT}/rust/game_types/src/dice.rs`, 'utf8'))?.[1].replace(/_/g, '');
+  const was = useDice(newDice(7)), a = [simDraw('a'), simDraw('a')], n = diceInUse()!.n; useDice(newDice(7)); const b = [simDraw('a')]; simDraw('b'); b.push(simDraw('a')); useDice(was);
+  const own = a[0] === b[0] && a[1] === b[1] && a[0] !== a[1] && n === 2;
+  verdict(!!word && BigInt(word) === h && own, 'keyed: the keyed draw is the Rust game\'s to the bit, and moves with no other', `a thousand draws fold to 0x${h.toString(16)}, the Rust test holds ${word} · a site's second draw is its own whoever draws between ${own}`); }
 
 // ---- same seed, other seed
 { Math.random = seeded(11); const A = await standUp({ seed: 4242 }); const a = run(A, 30, 300); const na = A.game.dice.n;

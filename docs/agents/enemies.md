@@ -361,8 +361,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Civilians** (`src/game/civilians.ts`, STATUS E12 d; `tune.civilians` default ON — OFF, or `?nocivilians`, = nobody but the shift, byte for byte; `probes.ts
   civilians-identity` also holds that their calm PRESENCE (greetings off) moves nothing of the shift's seeded three minutes). The cleaner (Marta, id 40) and the late
   worker (Owen, 41) are `Guard` records with `team 'civilian'` (teams.ts: hostile to nobody, nobody hostile to them) and a `civ: Civ` record, kept in `Game.civilians`
-  — NEVER in `Game.guards`, so no AI loop, pairing, rollcall, clear or QRF count sees them; built inside `withDice` (a private mulberry) so their construction draws
-  nothing from Math.random. Authored as DATA (`levels/office.json civilians[]` ← officeGen; docs/level-format.md *Civilians*: marks + wait + task wipe / bin / sit /
+  — NEVER in `Game.guards`, so no AI loop, pairing, rollcall, clear or QRF count sees them. (They were built under a private die, `withDice`;
+  since the keyed draws one man's construction moves nobody's, and it is gone.) Authored as DATA (`levels/office.json civilians[]` ← officeGen; docs/level-format.md *Civilians*: marks + wait + task wipe / bin / sit /
   printer / cooler / shelf / stand + face; character.ts `anim.act` = a whole-body clip layer for the tasks). They perceive through the SAME functions as the men:
   `guards.ts eyeContact` + `sightGain` × `CIV.keenK` 0.6 (narrower `eyeBusy` cone while working, wider `eyeAlarmed` once frightened, × `gunK` when Sam's gun is
   out within `gunM`), smoke via the probe's segment query, hearing = their own pass over `g.events` with hearingCheck's horizons and `col.sound.propagate` (a

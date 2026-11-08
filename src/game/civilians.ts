@@ -44,7 +44,7 @@ import './glass';
 import { RAG_COUNT } from './ragdoll';
 import type { Character } from './character';
 import { hearPath } from './weather';
-import { simRandom, mulberry32, rollOn } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { simRandom, rollOn } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
 
 // ================================================================ authored spots (TODO(LevelData): the phones and the ways off the floor belong in the level file beside the
@@ -116,9 +116,6 @@ const CIV_ID0 = 40;
 // her own dice (line picks, the frozen beat) are mulberry32 (math/dice.ts) off her name — never Math.random, so a floor with her on it and unprovoked is the seeded floor without her
 // (the same die with its state kept ON the record — `dice`, rolled by `rnd` = math/dice.ts rollOn, which captures nothing — so a checkpoint carries it, a loaded
 //  civilian draws on exactly where she was, and a record a rollback snapshot puts into another game rolls its own die, not the first game's)
-/** run `fn` with Math.random swapped for a private seeded die: the Guard / Character constructors draw from Math.random (the idle phase, the look clock) and a civilian's
- *  construction must not move the game's own sequence by one draw (every seeded QA run, every frozen identity digest, is of the floor WITHOUT her) */
-function withDice<T>(seed: number, fn: () => T): T { const R = Math.random; Math.random = mulberry32(seed); try { return fn(); } finally { Math.random = R; } }
 
 // ================================================================ the record (Guard.civ)
 export type CivState = 'work' | 'startled' | 'alarmed' | 'flee' | 'report' | 'phone' | 'cower' | 'held' | 'evacuate' | 'gone';
@@ -339,7 +336,7 @@ function makeCivilian(g: Game, def: CivilianDef, i: number): Guard {
   const fl = torchLightDef(`civlight${id}`, id, 0, 10, 20); fl.enabled = false; fl.intensity = 0;                            // a light record for the plumbing that reads one (the grab asks was it lit): never in the engine, never lit
   const p0 = route.points[0], p1 = route.points[1 % route.points.length];
   const yaw = def.face?.[0] ?? (route.points.length > 1 ? v3.yawTo(p0, p1) : 0);
-  const gd = withDice(hashStr(`civ:${def.name}:${i}`), () => new Guard(g.men, g.ch, id, route, -1, fl, v3.copy(def.tint), { tint2: def.tint2 ? v3.copy(def.tint2) : [0.06, 0.06, 0.08], yaw, name: def.name, team: 'civilian' }));
+  const gd = new Guard(g.men, g.ch, id, route, -1, fl, v3.copy(def.tint), { tint2: def.tint2 ? v3.copy(def.tint2) : [0.06, 0.06, 0.08], yaw, name: def.name, team: 'civilian' });
   gd.foe = null; gd.drawn = false; gd.heardUpTo = g.eventSeq;   // (deaf to what was in the air before she existed)
   const worker = def.kind === 'worker';
   gd.civ = {
