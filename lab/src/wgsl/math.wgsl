@@ -27,6 +27,8 @@ fn unpackRGB(u: u32) -> vec3f { let c = vec3f(f32(u & 255u), f32((u >> 8u) & 255
 
 // ---- what may be kept: numbers only. By the bits, since a compiler that assumes there are no NaNs may drop any test written with comparisons
 const GUARD = true;
+/** dice that fill in evenly, sample after sample (Owen-scrambled Sobol): the reference's */
+const QUASI = false;
 fn finite(x: f32, most: f32) -> f32 { if (!GUARD) { return x; } let b = bitcast<u32>(x); if ((b & 0x7f800000u) == 0x7f800000u) { return 0.0; } return clamp(x, -most, most); }
 /** is it not a number (or no finite one)? Never ask this with a comparison */
 fn bad(x: f32) -> bool { return (bitcast<u32>(x) & 0x7f800000u) == 0x7f800000u; }

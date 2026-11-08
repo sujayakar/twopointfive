@@ -195,12 +195,11 @@ fn lampWeight(i: u32, x: vec3f, n: vec3f) -> f32 {
   let a = aimLamp(i, x, vec2f(0.5)); let c = dot(n, a.dir);
   return lum(a.E) * select(max(c, 0.0) + 0.12 * select(0.0, 1.0, (*l).kind == 0u && c > -0.6), 0.5, all(n == vec3f(0.0)));
 }
-var<private> byReach: bool = false;                                 // (the reference asks every lamp)
+var<private> byReach: bool = false;                                 // (the reference keeps a chance for every lamp)
 /** one lamp drawn in proportion to what it would send: its number and 1 / chance, or none */
 fn drawLamp(x: vec3f, n: vec3f) -> vec2f {
-  var W = 0.0; var pick = -1.0; var w0 = 0.0;
-  var near = vec4f(1.0);
-  for (var i = 0u; i < frame.counts.x; i++) { if (byReach && (i & 3u) == 0u) { near = lampReach(x, i >> 2u); } if (near[i & 3u] <= 0.0) { continue; } let w = lampWeight(i, x, n) * near[i & 3u]; if (w <= 0.0) { continue; } W += w; if (rnd() * W < w) { pick = f32(i); w0 = w; } }
+  var W = 0.0; var pick = -1.0; var w0 = 0.0; var u = rnd(); var near = vec4f(1.0);
+  for (var i = 0u; i < frame.counts.x; i++) { if ((i & 3u) == 0u) { near = lampReach(x, i >> 2u); if (!byReach) { near = mix(vec4f(0.04), vec4f(1.0), near); } } let k = near[i & 3u]; if (k <= 0.0) { continue; } let w = lampWeight(i, x, n) * k; if (w <= 0.0) { continue; } W += w; let q = w / W; if (u < q) { pick = f32(i); w0 = w; u = u / q; } else { u = (u - q) / (1.0 - q); } }
   return vec2f(pick, select(0.0, W / w0, w0 > 0.0));
 }
 // ================================================================ openings: where the sky is, for rays that should look there
@@ -223,10 +222,11 @@ fn openingDir(x: vec3f, u: vec3f) -> vec3f {
   return vec3f(0.0);
 }
 /** a direction for wide incoming light: by the cosine, or through an opening; w = cosine / pdf, weighed so that both may find the same sky (one-sample MIS) */
+fn wideShare(x: vec3f) -> f32 { var any = 0.0; for (var i = 0u; i < frame.counts.y; i++) { any += openingWeight(i, x); } return select(0.0, clamp(any * 1.2, 0.15, 0.5), any > 0.0005); }
+/** the chance wideDir gives a direction */
+fn widePdf(x: vec3f, n: vec3f, d: vec3f) -> f32 { let share = wideShare(x); var p = (1.0 - share) * max(dot(n, d), 0.0) / PI; if (share > 0.0) { p += share * openingPdf(x, d); } return p; }
 fn wideDir(x: vec3f, n: vec3f, u: vec2f, pick: f32) -> vec4f {
-  var any = 0.0; for (var i = 0u; i < frame.counts.y; i++) { any += openingWeight(i, x); }
-  let share = select(0.0, clamp(any * 1.2, 0.15, 0.5), any > 0.0005);
-  var d: vec3f;
+  let share = wideShare(x); var d: vec3f;
   if (pick < share) { d = openingDir(x, vec3f(u, rnd())); if (dot(d, n) <= 0.0) { return vec4f(n, 0.0); } } else { d = cosineDir(n, u); }
   let c = max(dot(n, d), 1e-4); var pdf = (1.0 - share) * c / PI; if (share > 0.0) { pdf += share * openingPdf(x, d); }
   return vec4f(d, c / pdf);

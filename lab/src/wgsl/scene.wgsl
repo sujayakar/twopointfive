@@ -52,8 +52,12 @@ const NOTHING = 0xffffffffu; const LEAF_HIT = 0x80000000u;
 var<private> rngState: u32;
 fn rngInit(p: vec2u, salt: u32) { rngState = pcg(p.x + pcg(p.y + pcg(frame.counts.z + pcg(salt + frame.counts.w)))); }
 fn rngKey(k: u32, salt: u32) { rngState = pcg(k + pcg(frame.counts.z + pcg(salt + frame.counts.w))); }
-fn rnd() -> f32 { rngState = rngState * 747796405u + 2891336453u; let w = ((rngState >> ((rngState >> 28u) + 4u)) ^ rngState) * 277803737u; return f32(((w >> 22u) ^ w) >> 8u) * (1.0 / 16777216.0); }
-fn rnd2() -> vec2f { return vec2f(rnd(), rnd()); }
+var<private> qIndex: u32; var<private> qSeed: u32; var<private> qDim: u32;
+fn owen(x0: u32, seed: u32) -> u32 { var x = reverseBits(x0); x ^= x * 0x3d20adeau; x += seed; x *= (seed >> 16u) | 1u; x ^= x * 0x05526c56u; x ^= x * 0x53a22864u; return reverseBits(x); }
+fn sobol2(i0: u32) -> u32 { var i = i0; var r = 0u; var v = 0x80000000u; for (var k = 0u; k < 20u; k++) { if (i == 0u) { break; } if ((i & 1u) == 1u) { r ^= v; } i >>= 1u; v ^= v >> 1u; } return r; }
+fn quasi() -> vec2f { qDim += 1u; let s = pcg(qSeed + qDim * 0x9e3779b9u); let i = owen(qIndex, s) ; return vec2f(f32(owen(reverseBits(i), pcg(s + 1u)) >> 8u), f32(owen(sobol2(i), pcg(s + 2u)) >> 8u)) * (1.0 / 16777216.0); }
+fn rnd() -> f32 { if (QUASI) { return quasi().x; } rngState = rngState * 747796405u + 2891336453u; let w = ((rngState >> ((rngState >> 28u) + 4u)) ^ rngState) * 277803737u; return f32(((w >> 22u) ^ w) >> 8u) * (1.0 / 16777216.0); }
+fn rnd2() -> vec2f { if (QUASI) { return quasi(); } return vec2f(rnd(), rnd()); }
 /** blue noise over the screen, stepped through the frames by the golden ratio: neighbours differ, and so do frames */
 fn blue2(p: vec2u, k: u32) -> vec2f {
   let o = vec2u((k * 23u) & 63u, (k * 41u) & 63u);

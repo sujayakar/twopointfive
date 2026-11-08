@@ -21,7 +21,7 @@ fn lampsAt(s: Surf, V: vec3f, glossy: bool) -> vec3f {
 }
 /** what comes back along a ray: the whole path tracer. `clear0` = it is the eye's, or a mirror's of it */
 fn walk(ro0: vec3f, rd0: vec3f, depth0: u32, clear0: bool, cut0: f32, spread0: f32, fp0: f32, most: u32) -> vec3f {
-  var ro = ro0; var rd = rd0; var thr = vec3f(1.0); var L = vec3f(0.0); var cut = cut0; var clear = clear0; var depth = depth0; var spread = spread0; var fp = fp0; var wet = false;
+  var ro = ro0; var rd = rd0; var thr = vec3f(1.0); var L = vec3f(0.0); var cut = cut0; var clear = clear0; var depth = depth0; var spread = spread0; var fp = fp0; var wet = false; gCount = 0u;
   for (var b = 0u; b < most + 6u; b++) {
     if (depth > most) { break; }
     fineLeaves = depth < 2u;
@@ -55,11 +55,11 @@ fn walk(ro0: vec3f, rd0: vec3f, depth0: u32, clear0: bool, cut0: f32, spread0: f
     else {
       var n = s.n; var side = 1.0; var alb = m * (1.0 - wf);
       if (any(s.through > vec3f(0.0))) { let pt = lum(s.through) / (lum(s.through) + lum(m)); if (rnd() < pt) { n = -s.n; side = -1.0; alb = s.through / pt; } else { alb = alb / (1.0 - pt); } }
-      let u = rnd2(); let d = wideDir(s.x + s.ng * side * 0.002, n, u, rnd()); if (d.w <= 0.0) { break; }
-      thr *= alb * d.w / PI / (1.0 - pc); rd = d.xyz; if (dot(rd, s.ng) * side <= 0.0) { break; } ro = s.x + s.ng * side * 0.002; clear = false; fp = 1.0;
+      let u = rnd2(); let from0 = s.x + s.ng * side * 0.002; let d = guidedDir(from0, n, u, rnd()); if (d.w <= 0.0) { break; }
+      thr *= alb * d.w / PI / (1.0 - pc); rd = d.xyz; if (dot(rd, s.ng) * side <= 0.0) { break; } ro = from0; gMark(from0, n, rd, thr, L); clear = false; fp = 1.0;
     }
     depth += 1u; cut = 1e9; if (!clear) { spread = 0.02; }
     if (depth > 2u) { let q = clamp(max3(thr), 0.05, 0.95); if (rnd() > q) { break; } thr /= q; }
   }
-  return L;
+  gTell(L); return L;
 }
