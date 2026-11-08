@@ -371,8 +371,8 @@ preferences, etc." No accounts; nothing multiplayer.
   `endStage(game.mission.stage, game.verdict.result)` (`src/cloud/telemetry.ts`): the verdict's end where a run has one (`game/verdict.ts`
   knows every kind's), else the mission's word. The record gained `over`, the verdict in brief (`kind`, `won`, `word`, `why`, `secs`,
   `approach`, `void` = a cheat was on, `clean`, `lost` of `of`, `foesDown` of `foesOf`, `hostagesAlive` of `hostagesOf`), and one end is one
-  record: a word that moves from an end to the other end (a mission failed whose verdict then says won) writes nothing more. Under
-  `?noverdict` there is no verdict to read and a squad's mission writes no `run`, as before. No switch of its own: a record's content
+  record: a word that moves from an end to the other end (a mission failed whose verdict then says won) writes nothing more. On a
+  run's page (a benchmark's scene, a pricing run's level: `main.ts offBooks`) the page hands in no end at all and no mission writes a `run`. No switch of its own: a record's content
   under `?cloudstats=0`. `cloud-check` `telemetry` holds it on a real game (the kill house's room clear, every defender down: the word
   stayed `infiltrate`, one record, `CLEAR`); `CLOUD_BREAK=1` reads the mission's word alone and is red. RECORDS FROM BEFORE this are
   missing every squad win and loss that was not a player down: count those from the kept replays, not from `run`.
