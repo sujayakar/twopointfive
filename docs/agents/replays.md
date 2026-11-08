@@ -658,3 +658,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and 31, squad men standing 106 and 142 of 384, enemies left 267 and 257 of 864, ever alert 790 and 791, the first notice and alert to the hundredth or four, a squad man fell in 90 and 83 runs; hall 11
   and 14 men up of 96, floodlit 31 and 42. So two seeds' losses were the seeds'. 50,000 draws of either die are flat in tenths. TWO MEN OF ONE NUMBER IN TWO LEVELS draw the same as they are made, at one
   seed: the level is not in the key. Never played.
+- **The new page's replay** (2026-11-08; the page that draws, `src/tape/`). A run there is what the module was handed (`handtape.ts`, rust.md), kept as it grows: `keep.ts` is a source of
+  the same keeper and store of kept runs the game's page has (`replay/keeper.ts`, `keepstore.ts`: a piece every five seconds, at once at a run's end, as the page goes and when the game is lost
+  to a panic; `{k:'hands'}` lines, base64 of the tape's bytes and where in it they go), so it goes to a build's backend on the tapes' own rounds and its notes on theirs. There is no shelf
+  and no trace: `?playtape=<visit>` plays it, a killed page's run plays up to its last piece, F7 says it is kept, Shift+F7 and the end card's Replay leave to watch it from the try that is on
+  (`run.ts`). `bar.ts` is the bar (the line with the tries and the notes on it, the pace, the run's own view, notes), `freecam.ts` the picture's camera off the run's view, `pace.ts` the paces (the
+  old player's too). A tape of another build whose mannequin, cast or hand is another is refused in words; else it is played and the bar says the second it is not the run any more. Replays
+  (`replay.html`) lists them with the rest and opens them there. READ ONE: `tools/draw/walk.ts <tape | kept lines>` walks it with no page; `replay-dump.ts` writes a hand-over's as `<visit>.tape`.
+  CHECKS: `tools/draw/tape-check.ts` (every mission, a hands-off player and a hand that does anything, with saves, a load and a restart, walked by a module that is asked nothing to the same
+  die, parts and whole state; `TAPE_BREAK=1`), `keep-check.ts` (`KEEP_BREAK=1`), `walk-check.ts` and the page's, `tape-page.cjs`. MEASURED: 17 to 348 KB a minute packed, 500 to 2,000 ticks a
+  second unseen in bun. NOT THERE YET: the fog off and the night vision of the picture's own, the map, a Send button, the sounds' lanes. Never seen on a GPU, never played by a person.
