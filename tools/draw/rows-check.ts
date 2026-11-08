@@ -41,7 +41,7 @@ for (const L of LEVELS) { const [name, query] = L.split(':');
   const why = (await quiet(() => startFromQuery(W.game, `?levelFile=${name}.json&${query ?? 'roomclear&squad4'}`)) as any)?.why; if (why) { line(false, `${name}: the start was refused`, why); continue; }
   const g = W.game, E = g.engine, world = E.world; const seen = new Map<string, [number, string]>(); let ticks = 0, boxes = 0, lights = 0, cuts = 0, panes = 0, marked = 0;
   let D: Drawn = null as never;
-  DRESS.men = true; world.setStuffOf(lookWordOf(), lookCoreOf());
+  DRESS.men = true; DRESS.wetGround = true; world.setStuffOf(lookWordOf(), lookCoreOf());
   for (let t = 0; t < 420; t++) {
     if (t === 60 || t === 200) g.dropThrowable('frag', [g.player.char.pos[0] + 3, 0, g.player.char.pos[2] + 1]);
     g.godMode = true;
@@ -52,6 +52,7 @@ for (const L of LEVELS) { const [name, query] = L.split(':');
     D.take(H.h); D.frame(H.h, 1, [20, 0, 14]);   // (a frame each tick, as a page draws: the motion words are of the last)
     if (t % 7 && t > 20) continue;
     // the copy's pack
+    (g as any).wetGround.follow(g);   // (what the page's dress step does: the rain's dark on the ground)
     (g as any).drawMen([g.player.char, ...g.guards.map((x: any) => x.char)], false, false, true);
     world.glassFocus = [20, 0, 14];
     world.upload();

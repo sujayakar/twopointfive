@@ -81,6 +81,7 @@ pub mod resets;
 pub mod rims;
 pub mod sky;
 pub mod view;
+pub mod wet;
 pub mod winds;
 
 groups! { fog view sky boxes lights men doorways rims events fires decals air }
