@@ -88,15 +88,6 @@ fn put_out_how(g: &Game, d: &Data) -> String {
 /// is this row the floor's alarm going down (the card gives such a row no pin)
 pub fn alarm_down(e: &crate::chronicle::ChronEvent) -> bool { e.kind == ChronKind::Alarm && !on(&e.data, "up") }
 
-/// The card's floor map's rooms: the office's table, a level's own names, or none. The office's are shortened to fit; a level's names are drawn whole.
-pub fn map_rooms(g: &Game) -> Vec<crate::view::DebriefRoom> {
-    use crate::view::DebriefRoom;
-    if crate::dialogue::is_office(g) {
-        return rooms().into_iter().map(|r| { let label = String::from(r.name.trim_end_matches(" room").trim_end_matches(" office")); DebriefRoom { name: r.name, label, x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 } }).collect();
-    }
-    crate::dialogue::level_rects(g).unwrap_or_default().into_iter().map(|r| { let name = String::from(r.name.strip_prefix("the ").unwrap_or(&r.name)); DebriefRoom { label: name.clone(), name, x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 } }).collect()
-}
-
 /// A row's words: the debrief card's timeline.   (chronicle.ts eventText)
 pub fn event_text(g: &crate::game::Game, e: &crate::chronicle::ChronEvent) -> String {
     let d = &e.data;

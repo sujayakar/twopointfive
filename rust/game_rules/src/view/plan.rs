@@ -35,7 +35,7 @@ pub fn plan_tag(callsign: &str) -> String {
     out.chars().take(3).collect()
 }
 /// a key's code as its cap says it
-fn key_cap(code: &str) -> String { String::from(code.strip_prefix("Key").or(code.strip_prefix("Digit")).unwrap_or(code)) }
+pub fn key_cap(code: &str) -> String { String::from(code.strip_prefix("Key").or(code.strip_prefix("Digit")).unwrap_or(code)) }
 fn ang_diff(a: f64, b: f64) -> f64 {
     let tau = core::f64::consts::PI * 2.0;
     let mut d = (a - b) % tau;
