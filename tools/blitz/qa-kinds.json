@@ -79,8 +79,7 @@
 "GUARD_EYE.far=false"
 ],
 "findme": [
-"FINDTUNED.on=false",
-"AUTOCAM.on=false"
+"FINDTUNED.on=false"
 ],
 "fog-filed": [
 "FOG.things=false"
@@ -599,7 +598,6 @@
 "attentionway": "iv-c",
 "attract": "i",
 "audio-hold": "iii",
-"autocam": "iv-a",
 "autopilot": "iii",
 "autoreload": "iv-b",
 "bangs": "iii",
