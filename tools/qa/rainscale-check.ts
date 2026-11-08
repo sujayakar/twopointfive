@@ -10,7 +10,7 @@
 // texel at the ground grows. A change to those lines that this file can no longer lift is a red line here, not a silent pass. What the picture looks like is
 // the page's to show (tools/qa/weather-look.cjs).
 import { readFileSync } from 'node:fs';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 export async function rainScaleCheck(): Promise<boolean> {
   const BRK = process.env.RAINSCALE_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
