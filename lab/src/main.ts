@@ -7,6 +7,7 @@ import { showError } from './gpu';
 import { run } from './bench';
 import { Watch } from './watch';
 import { Teach } from './teach';
+import { Perf } from './perf';
 import { tourStep } from './tour';
 import { type V3, add, mul, sub, dot, clamp, norm } from './math';
 import { boundsOf } from './scene/world';
@@ -25,6 +26,7 @@ async function main() {
   const teach = new Teach(lab, present, rt, ref, { close() { lab.paused = false; paint(); }, point: () => point }); const study = () => { if (teach.on) { teach.close(); return; } if (method !== rt) act.method(rt); tour = false; lab.paused = true; teach.open(); paint(); };
   const act = { method(m: Method) { method = m; void lab.use(m); paint(); }, level(i: number) { lab.level = i; const l = lab.building.levels[i]!; lab.wantCut = l.cut; lab.camera.want.look = [lab.camera.want.look[0], l.look[1], lab.camera.want.look[2]]; paint(); }, doors(v: number | 'auto') { lab.doorsAuto = v === 'auto'; if (v !== 'auto') for (const d of lab.building.doors) d.want = v; paint(); } };
   (window as never as { teach: Teach }).teach = teach;
+  const SCALES = [0.4, 0.46, 0.53, 0.6, 0.67, 0.75, 0.84, 0.92, 1]; let paceMode: 'auto' | '1' | '2' = 'auto', divisor = 1; const perf = new Perf(lab.gpu.info, { mode: '', label: () => `Pace: ${paceMode === 'auto' ? `auto (every ${divisor === 1 ? '' : '2nd '}refresh)` : paceMode === '1' ? 'every refresh' : 'every 2nd refresh'}`, next() { paceMode = paceMode === 'auto' ? '1' : paceMode === '1' ? '2' : 'auto'; } }); (window as never as { perf: Perf }).perf = perf; lab.smooth = !Q.has('bench');
   const row = (id: string, items: [string, () => boolean, () => void][]) => { const el = $(id); el.textContent = ''; for (const [t, on, go] of items) { const b = document.createElement('button'); b.textContent = t; b.className = on() ? 'on' : ''; b.onclick = () => { go(); paint(); }; el.append(b); } };
   function paint() {
     row('hide', [['Hide', () => false, () => { document.body.classList.add('nopanel'); }]]);
@@ -32,7 +34,7 @@ async function main() {
     row('level', lab.building.levels.map((l, i) => [l.name, () => lab.level === i, () => act.level(i)] as [string, () => boolean, () => void]));
     row('doors', [['Doors open', () => false, () => act.doors(1)], ['shut', () => false, () => act.doors(0)], ['swing', () => lab.doorsAuto, () => act.doors(lab.doorsAuto ? 0 : 'auto')]]);
     row('lamps', (['auto', 'on', 'off'] as const).map(k => ['Lamps ' + k, () => lab.lampsMode === k, () => { lab.lampsMode = k; }] as [string, () => boolean, () => void]));
-    row('view', [['Step through the frame', () => teach.on, study]]);
+    row('view', [['Step through the frame', () => teach.on, study], ['Performance', () => perf.shown, () => perf.toggle()]]);
     row('groups', ['atrium', 'orange', 'green', 'blue', 'gallery', 'studio', 'lounge'].map(k => [k, () => (lab.lampGroup[k] ?? 1) > 0, () => { lab.lampGroup[k] = (lab.lampGroup[k] ?? 1) > 0 ? 0 : 1; }] as [string, () => boolean, () => void]));
     row('weather', [['Clear', () => lab.rain === 0, () => { lab.rain = 0; }], ['Rain', () => lab.rain > 0, () => { lab.rain = 1; }], ['Steam', () => lab.steam > 0, () => { lab.steam = lab.steam > 0 ? 0 : 1; }], ['Smoke', () => lab.smoke.on, () => { if (lab.smoke.on) lab.smoke.clear(); else { toss([0.5, 0.02, 1.5]); toss([6.5, 0.02, -3.0]); } }]]);
     $('mode').textContent = method === rt ? 'Real time' : 'Reference, path traced';
@@ -59,7 +61,7 @@ async function main() {
   canvas.onpointerup = e => { if (drag && drag.moved < 5 && teach.on) teach.click(e.clientX / innerWidth, e.clientY / innerHeight); else if (drag && drag.moved < 5 && lampAt(e.clientX / innerWidth, e.clientY / innerHeight) >= 0) flip(lampAt(e.clientX / innerWidth, e.clientY / innerHeight)); else if (drag && drag.moved < 5) { const d = pickDoor(e.clientX / innerWidth, e.clientY / innerHeight); if (d) { lab.doorsAuto = false; d.want = d.want > 0.5 ? 0 : 1; paint(); } } drag = null; };
   canvas.oncontextmenu = e => e.preventDefault(); canvas.onwheel = e => { e.preventDefault(); tour = false; lab.camera.want.dist *= Math.exp(e.deltaY * 0.0011); };
   const pan = (x: number, z: number) => { const c = lab.camera, s = Math.sin(c.yaw), k = Math.cos(c.yaw); c.want.look = [clamp(c.want.look[0] + x * k + z * s, -18, 18), c.want.look[1], clamp(c.want.look[2] - x * s + z * k, -14, 14)]; };
-  onkeydown = e => { if (e.metaKey || e.ctrlKey) return; const k = e.key.toLowerCase(); held.add(k); if (e.repeat) return; if (k === 'p') act.method(method === rt ? ref : rt); if (k === '1' || k === '2' || k === '3') act.level(Number(k) - 1); if (k === 'f') { torchOn = !torchOn; plant = null; } if (k === 'g') plant = plant ? null : true; if (k === 't' && !teach.on) { study(); return; } if (teach.on && teach.key(k)) { e.preventDefault(); return; } if (k === 'c') tour = !tour; if (k === 'x') void pinEye(); if (k === 'n') toss(); if (k === 'h') document.body.classList.toggle('bare'); if (k === 'o') act.doors(lab.building.doors.some(d => d.want > 0.5) ? 0 : 1); if (k === ' ') lab.paused = !lab.paused; };
+  onkeydown = e => { if (e.metaKey || e.ctrlKey) return; const k = e.key.toLowerCase(); held.add(k); if (e.repeat) return; if (k === 'p') act.method(method === rt ? ref : rt); if (k === '1' || k === '2' || k === '3') act.level(Number(k) - 1); if (k === 'f') { torchOn = !torchOn; plant = null; } if (k === 'g') plant = plant ? null : true; if (k === 't' && !teach.on) { study(); return; } if (teach.on && teach.key(k)) { e.preventDefault(); return; } if (k === 'c') tour = !tour; if (k === 'x') void pinEye(); if (k === 'n') toss(); if (k === 'b') perf.toggle(); if (k === 'h') document.body.classList.toggle('bare'); if (k === 'o') act.doors(lab.building.doors.some(d => d.want > 0.5) ? 0 : 1); if (k === ' ') lab.paused = !lab.paused; };
   onkeyup = e => { held.delete(e.key.toLowerCase()); if (e.key === ' ') teach.hold(false); }; onblur = () => held.clear(); onresize = fit;
   // ---- the torch at the pointer: a lamp like any other
   const hand = lab.building.world.lamps.length; lab.building.world.lamps.push({ kind: 'spot', at: [0, -50, 0], u: [0.03, 0, 0], v: [0, -1, 0], radiance: [52000, 49000, 43000], cos: 0.93, name: 'hand', on: 0 });
@@ -71,26 +73,39 @@ async function main() {
   // ?watch: every write looked at, and the first stage to make a bad number named. Nothing is cleaned meanwhile
   const watch = Q.has('watch') ? await new Watch(lab.graph).init() : null; let looking = false;
   let acc = 0, last = performance.now(), slow = 0, seen = 0, ms = 16, frames = 0, bad = false; setTimeout(() => { $('load').style.opacity = '0'; setTimeout(() => $('load').remove(), 900); }, 300);
-  const loop = () => {
-    requestAnimationFrame(loop); if (bad) return; const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now; ms = ms * 0.95 + dt * 1000 * 0.05;
+  let refreshes = 0, inFlight = 0, calm = 0, hot = 0, since = 0; const loop = (stamp: number) => {
+    requestAnimationFrame(loop); if (bad) return; const t0 = performance.now(); perf.refresh(stamp); refreshes++;
+    // the pace: every refresh if the GPU keeps up, else every second one, evenly. A frame now and then at another gap looks worse than fewer frames
+    divisor = paceMode === 'auto' ? divisor : Number(paceMode); if (divisor > 1 && refreshes % divisor) { perf.skip(); return; }
+    if (inFlight > 1) { perf.note('GPU behind'); perf.skip(); return; }
+    const now = stamp, dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now; ms = ms * 0.95 + dt * 1000 * 0.05; const pf = perf.begin(t0, stamp);
     try {
+      const s0 = performance.now();
       if (method === rt && !lab.paused) {
         acc += dt; let n = 0; while (acc >= TICK && n < 4) { acc -= TICK; n++;
-          const sp = lab.camera.dist * 0.012; if (held.has('w')) pan(0, -sp); if (held.has('s')) pan(0, sp); if (held.has('a')) pan(-sp, 0); if (held.has('d')) pan(sp, 0); if (held.has('q')) lab.camera.want.yaw += 0.02; if (held.has('e')) lab.camera.want.yaw -= 0.02; if (held.size) tour = held.has('c') ? tour : false;
-          if (tour) tourStep(lab, act); lab.step(); } if (n === 4) acc = 0;
+          pf.ticks++; if (held.size) tour = held.has('c') ? tour : false;
+          if (tour) tourStep(lab, act); lab.step(); } if (n === 4) { acc = 0; perf.note('ticks dropped'); } lab.alpha = Math.min(1, acc / TICK);
       }
       if (method === rt) {                                       // the torch at the pointer: from over your shoulder, or from where G planted it
         const r = lab.camera.ray(lab.graph.output[0] / lab.graph.output[1], point.x, point.y), l = lab.building.world.lamps[hand]!, plane = lab.level === 2 ? 0.8 : lab.level === 1 ? 4.2 : 4, at = add(r.from, mul(r.dir, (plane - r.from[1]) / Math.min(r.dir[1], -0.05))); if (plant === true) { const f = lab.level === 2 ? 0.02 : 3.45; plant = add(r.from, mul(r.dir, (f - r.from[1]) / Math.min(r.dir[1], -0.05))); plant[1] = f + 1.25; torchOn = true; }
         const src: V3 = plant ? [...plant] : add(at, [1.2, lab.level === 0 ? 4.5 : 1.35, 2.6]); if (src[1] > lab.cut - 0.1) src[1] = lab.cut - 0.1; l.at = src; l.v = norm(sub(at, src)); lab.scene.lampOn[hand] = torchOn ? 1 : 0; l.on = torchOn ? 1 : 0; void dot;
       }
-      if (teach.on) { const sp = lab.camera.dist * 0.012 * dt * 60; if (held.has('w')) pan(0, -sp); if (held.has('s')) pan(0, sp); if (held.has('a')) pan(-sp, 0); if (held.has('d')) pan(sp, 0); lab.camera.step(dt); if (!teach.due(now)) return; }
+      { const sp = lab.camera.dist * 0.012 * dt * 60; if (held.has('q')) lab.camera.want.yaw += 1.2 * dt; if (held.has('e')) lab.camera.want.yaw -= 1.2 * dt; if (held.has('w')) pan(0, -sp); if (held.has('s')) pan(0, sp); if (held.has('a')) pan(-sp, 0); if (held.has('d')) pan(sp, 0); lab.camera.step(dt); if (teach.on && !teach.due(now)) return; }
+      pf.sim = performance.now() - s0;
       // hold the frame time: fewer pixels when it is dear, more when there is room
       let gpu = 0; for (const v of lab.graph.timer.ms.values()) gpu += v; gpu = lab.graph.timer.span > 0 ? Math.min(gpu, lab.graph.timer.span) : gpu;
-      if (auto && !teach.on && method === rt && ++seen > 45) { const cost = lab.gpu.timestamps && gpu > 0.2 ? gpu : ms; if (cost > 15.0) slow++; else if (cost < 11.0) slow--; else slow = 0; if (slow > 14 && scale > 0.4) { scale = Math.max(0.4, scale - 0.07); slow = 0; seen = 0; fit(); } else if (slow < -90 && scale < 1) { scale = Math.min(1, scale + 0.06); slow = 0; seen = 0; fit(); } }
+      // budget: the gap between drawn frames. Down at once when over it, up only after a long calm, so that the size does not hunt (each change is a hitch)
+      const refresh = perf.vsync, want = paceMode === 'auto' ? refresh * divisor : refresh * Number(paceMode), cost = gpu > 0.2 ? gpu : ms * 0.8; since++;
+      if (auto && !teach.on && method === rt && ++seen > 45) {
+        if (paceMode === 'auto' && refresh < 12) { if (divisor === 1 && cost > refresh * 0.92) { if (++hot > 40) { divisor = 2; hot = 0; perf.note('pace: every 2nd refresh'); since = 0; } } else if (divisor === 2 && cost < refresh * 0.62 && scale >= 0.92) { if (++calm > 400) { divisor = 1; calm = 0; perf.note('pace: every refresh'); since = 0; } } else { hot = Math.max(0, hot - 1); } } else divisor = paceMode === 'auto' ? 1 : divisor;
+        const ix = SCALES.reduce((b, s, k) => Math.abs(s - scale) < Math.abs(SCALES[b]! - scale) ? k : b, 0); if (cost > want * 0.93) slow = Math.max(slow, 0) + 1; else if (cost < want * 0.68) slow = Math.min(slow, 0) - 1; else slow = 0;
+        if (slow > 20 && ix > 0) { scale = SCALES[ix - 1]!; slow = 0; seen = 0; fit(); perf.note(`size down to ${scale}`); since = 0; } else if (slow < -240 && ix < SCALES.length - 1 && since > 600) { scale = SCALES[ix + 1]!; slow = 0; seen = 0; fit(); perf.note(`size up to ${scale}`); since = 0; }
+      }
       const pre = method === ref ? 'ref' : 'rt';
-      if (watch) lab.graph.watch = looking ? null : watch; lab.graph.timer.on = frames % 8 === 0; present.set(lab); lab.draw((e, result) => { const to = lab.gpu.context!.getCurrentTexture().createView(); if (teach.on && method === rt) teach.draw(e, result, to); else present.run(e, lab, result, to, lab.gpu.format, pre); });
+      if (watch) lab.graph.watch = looking ? null : watch; lab.graph.timer.on = teach.on || perf.shown ? frames % 10 === 0 : frames % 30 === 0; if (lab.graph.timer.on) perf.note('passes timed'); const e0 = performance.now(); inFlight++; present.set(lab); lab.draw((e, result) => { const to = lab.gpu.context!.getCurrentTexture().createView(); if (teach.on && method === rt) teach.draw(e, result, to); else present.run(e, lab, result, to, lab.gpu.format, pre); }); pf.send = lab.sendMs; pf.encode = performance.now() - e0 - lab.sendMs; pf.gpu = lab.graph.timer.on ? lab.graph.timer.span : 0; pf.w = lab.graph.render[0]; pf.h = lab.graph.render[1]; void lab.gpu.device.queue.onSubmittedWorkDone().then(() => { inFlight--; });
       if (watch && !looking) { looking = true; void watch.read().then(b => { looking = false; if (b.length) { bad = true; showError(watch.say()); } }); }
       placePins(); placeEye(); if (teach.on) { if (frames % 8 === 0) void teach.probe(); if (frames % 30 === 0) teach.costs(); }
+      perf.end(lab.gpu.device.queue);
       if (++frames % 12 === 0) { const t = [...lab.graph.timer.ms].sort((a, b) => b[1] - a[1]); $('stats').textContent = `${(1000 / ms).toFixed(0)} fps  ${lab.graph.render.join('×')} → ${lab.graph.output.join('×')}\n` + (method === ref ? `${ref.samples} paths a pixel\n` : '') + (gpu ? `GPU ${gpu.toFixed(1)} ms\n` + t.slice(0, 14).map(([k, v]) => k.padEnd(16) + v.toFixed(2)).join('\n') : lab.gpu.info); }
     } catch (e) { bad = true; showError(String((e as Error).stack ?? e)); }
   };

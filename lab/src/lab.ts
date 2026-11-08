@@ -32,6 +32,14 @@ export class Lab {
     this.graph = new Graph(this.gpu, () => math + '\n' + sceneCode + '\n' + wavesCode + '\n' + lampMapCode + '\n' + surfaceCode + '\n', { layout: this.scene.layout, group: this.scene.group });
     this.pose(); for (const p of this.building.world.moving) this.prevAt.set(p, { at: p.at, rot: p.rot });
   }
+  /** in the page: what moves is drawn between its last two ticks (alpha), and the camera goes by the clock, so that motion is even at any frame rate. A run leaves this off */
+  smooth = false; alpha = 1; private wasPose = new Float64Array(0); private nowPose = new Float64Array(0);
+  private keepPose() { const n = this.building.world.moving.length * 12 + this.building.people.length * 6; if (this.nowPose.length !== n) { this.nowPose = new Float64Array(n); this.wasPose = new Float64Array(n); this.savePose(this.nowPose); } const w = this.wasPose; this.wasPose = this.nowPose; this.nowPose = w; this.savePose(this.nowPose); }
+  private savePose(to: Float64Array) { let o = 0; for (const p of this.building.world.moving) { to.set(p.at, o); to.set(p.rot[0], o + 3); to.set(p.rot[1], o + 6); to.set(p.rot[2], o + 9); o += 12; } for (const p of this.building.people) { const l = p.torch >= 0 ? this.building.world.lamps[p.torch] : null; if (l) { to.set(l.at, o); to.set(l.v, o + 3); } o += 6; } }
+  private setPose(f: (i: number) => number) { const g = (o: number): V3 => [f(o), f(o + 1), f(o + 2)]; let o = 0; for (const p of this.building.world.moving) { p.at = g(o); const x = norm(g(o + 3)), y0 = g(o + 6), k = x[0] * y0[0] + x[1] * y0[1] + x[2] * y0[2], y = norm([y0[0] - x[0] * k, y0[1] - x[1] * k, y0[2] - x[2] * k]); p.rot = [x, y, [x[1] * y[2] - x[2] * y[1], x[2] * y[0] - x[0] * y[2], x[0] * y[1] - x[1] * y[0]]]; o += 12; } for (const p of this.building.people) { const l = p.torch >= 0 ? this.building.world.lamps[p.torch] : null; if (l) { l.at = g(o); l.v = norm(g(o + 3)); } o += 6; } }
+  private between() { const a = this.wasPose, b = this.nowPose; if (!this.smooth || this.alpha >= 1 || a.length === 0 || a.length !== b.length) return; let far = 0; for (let i = 0; i < a.length; i += 12) far = Math.max(far, Math.abs(a[i]! - b[i]!)); if (far > 1.5) return; const k = this.alpha; this.setPose(i => a[i]! + (b[i]! - a[i]!) * k); }
+  /** seconds, as drawn */
+  get time() { return (this.tick - (this.smooth ? 1 - this.alpha : 0)) * TICK; }
   private near!: Near; private leaves: Piece[] = []; private mapped = false;
   /** where the eye that the picture is exposed for looks: a point of the world, or a person (by number); null = the middle of the picture */
   eye: V3 | number | null = null;
@@ -50,7 +58,7 @@ export class Lab {
     for (const d of b.doors) { const v = clamp(d.want - d.open, -TICK * 0.9, TICK * 0.9); d.open += v; }
     this.cut += clamp(this.wantCut - this.cut, -TICK * 6, TICK * 6); if (this.wantCut > 1e8) this.cut = this.cut < 9.5 ? Math.min(9.5, this.cut + TICK * 6) : 1e9; else if (this.cut > 1e8) this.cut = 9.4;
     this.rainNow += clamp(this.rain - this.rainNow, -TICK * 0.35, TICK * 0.35); this.wet += clamp((this.rain > 0 ? 1 : 0) - this.wet, -TICK * 0.06, TICK * 0.25);
-    for (const p of b.people) p.step(TICK); this.camera.step(TICK); this.pose();
+    for (const p of b.people) p.step(TICK); if (!this.smooth) this.camera.step(TICK); this.pose(); if (this.smooth) this.keepPose();
   }
   /** the world at a tick, from the start (only what has a memory is stepped) */
   seek(tick: number) { while (this.walked < tick) { this.walked++; for (const p of this.building.people) p.step(TICK); } this.tick = tick; }
@@ -66,15 +74,16 @@ export class Lab {
     const [rw, rh] = this.graph.render, [ow, oh] = this.graph.output, c = this.camera.frame(ow / oh), p = this.prev ?? c, b = this.building, h = this.hourNow; this.sky.update(h);
     const f = new Float32Array(128), u = new Uint32Array(f.buffer); let o = 0; const v = (a: ArrayLike<number>, w = 0) => { f.set([a[0]!, a[1]!, a[2]!, w], o); o += 4; };
     v(c.pos); v(c.right); v(c.up); v(c.fwd); v(p.pos); v(p.right); v(p.up); v(p.fwd); v(h.sun, h.radius); v(h.sunE, 1);
-    f.set([rw, rh, ow, oh], o); o += 4; f.set([this.jitter[0], this.jitter[1], this.prevJitter[0], this.prevJitter[1]], o); o += 4; f.set([this.tick * TICK, this.cut, this.exposure, h.haze * this.haze], o); o += 4; f.set([this.knobs[0]!, this.knobs[1]!, this.knobs[2]!, h.night * 2.2], o); o += 4;
-    this.slots = this.scene.moved(this.tick * TICK, this.wind); this.scene.cull(c, this.cut); this.scene.sendLamps();
+    f.set([rw, rh, ow, oh], o); o += 4; f.set([this.jitter[0], this.jitter[1], this.prevJitter[0], this.prevJitter[1]], o); o += 4; f.set([this.time, this.cut, this.exposure, h.haze * this.haze], o); o += 4; f.set([this.knobs[0]!, this.knobs[1]!, this.knobs[2]!, h.night * 2.2], o); o += 4;
+    this.slots = this.scene.moved(this.time, this.wind); this.scene.cull(c, this.cut); this.scene.sendLamps();
     u.set([Math.min(64, b.world.lamps.length), Math.min(32, b.world.openings.length), this.frameNo, this.seed], o); o += 4; u.set(this.scene.per, o); o += 4; u.set(this.scene.node0, o); o += 4; u.set(this.scene.stepOf, o); o += 4; u.set(this.scene.piece0, o); o += 4; f.set(b.pool, o); o += 4; f.set([b.poolTop, b.poolDeep, 0, 0], o); o += 4; f.set([this.wet, this.rainNow, this.steam, Math.atan2(this.wind[2], this.wind[0])], o); o += 4; f.set([this.smoke.on ? 1 : 0, this.scene.noiseAt, this.dense, 0], o); o += 4; f.set(this.tune, o);
     this.gpu.device.queue.writeBuffer(this.scene.frame, 0, f); this.prev = c; this.prevJitter = this.jitter;
   }
+  sendMs = 0;
   /** draw one frame with the current method; `then` may add its own passes (the canvas) */
   draw(then?: (e: GPUCommandEncoder, result: GPUTexture) => void) {
     const { m, stages } = this.methods.get(this.current)!; if (this.jittered) { const n = (this.frameNo % 16) + 1, hal = (i: number, b: number) => { let r = 0, k = 1 / b; while (i > 0) { r += (i % b) * k; i = Math.floor(i / b); k /= b; } return r; }; this.jitter = [hal(n, 2) - 0.5, hal(n, 3) - 0.5]; } else this.jitter = [0, 0];
-    this.send(); m.frame?.(this); const e = this.gpu.device.createCommandEncoder(); this.graph.timer.begin(); this.water.run(e, this.tick * TICK, this.hourNow.sun, this.building.poolDeep); this.graph.run(e, stages); then?.(e, this.graph.texture(m.result)); const done = this.graph.timer.end(e);
+    const t0 = performance.now(); this.between(); this.send(); m.frame?.(this); this.sendMs = performance.now() - t0; const e = this.gpu.device.createCommandEncoder(); this.graph.timer.begin(); this.water.run(e, this.time, this.hourNow.sun, this.building.poolDeep); this.graph.run(e, stages); then?.(e, this.graph.texture(m.result)); const done = this.graph.timer.end(e);
     this.gpu.device.queue.submit([e.finish()]); done?.(); this.graph.flip(); this.frameNo++; for (const p of this.building.world.moving) this.prevAt.set(p, { at: p.at, rot: p.rot });
   }
   buffer(name: string, bytes: number, usage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC) { let b = this.graph.buffers.get(name); if (!b || b.size < bytes) { b = buffer(this.gpu, name, bytes, usage); this.graph.buffers.set(name, b); } return b; }
