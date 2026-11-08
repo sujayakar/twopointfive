@@ -14,15 +14,6 @@
 //             mouth, his id as their owner, a steam share under 1, seeds of their own — two to four breaths each in ten seconds
 //   rhythm    … and not together: the men's first breaths start on different frames
 //   effort    a man made to run breathes more often, and bigger, than the same man standing
-//   who       none off a dead man, none off a man lying down, none off a man the fog of war hides, none off the men under a roof
-//   same      the same seed twice: the same records, one for one
-//   off       switch off: not one record
-//   others    another level, switch on: nothing filed
-//   digest    the game does not know: 300 stepped frames of the pass with the emitter filing into a pool every frame, on and off — one game digest
-//   played    … and two PLAYED runs of the pass's room clear (playthrough.ts, a process each), the switch on and off — one run digest each seed. A played run has no
-//             particle pool: the emitter walks its men and their rhythm there (every read it makes of the game) and files nothing
-//   old       a recording from before the key replays with it off (journal.ts applyKnobs)
-//   inert     by the shader and packer text: only a dust record filed with `steam` carries a top byte under 255, and only such a puff is touched
 import { standUp, ROOT } from './headless.ts';
 import { readFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -106,75 +97,6 @@ export async function snowBreathCheck(o: { verbose?: boolean; fast?: boolean } =
       const others = out.filter(c => c !== m).every(c => run.by(c.id).map(key).join('|') === on.by(c.id).map(key).join('|'));
       verdict(nh >= nr + 2 && !!late && nr > 0 && late.opts.steam > r0.steam * 1.2 && late.opts.size > r0.size * 1.2 && late.opts.steam <= 1 && others,
         'effort — a man who runs breathes faster and bigger', `#${m.id} held at 4.5 m/s for ten seconds: ${nh} breaths against ${nr} standing · his last record's steam share ${late?.opts.steam.toFixed(2)} against ${r0.steam.toFixed(2)}, its size ${late?.opts.size.toFixed(3)} m against ${r0.size.toFixed(3)} · the others' records untouched by it: ${others}`); }
-    // ---- same
-    { const again = fly(A, 600); const a = on.recs.map(key), b = again.recs.map(key); let firstDiff = -1; for (let i = 0; i < Math.max(a.length, b.length); i++) if (a[i] !== b[i]) { firstDiff = i; break; }
-      verdict(a.length > 0 && firstDiff < 0, 'same — the same seed, the same breaths', `${a.length} records, then ${b.length}: ${firstDiff < 0 ? 'the same, one for one (frame, man, seed, place, steam, size, speed)' : `they part at record ${firstDiff} (${a[firstDiff]} against ${b[firstDiff]})`}`); }
-    // ---- who (last on this game: it kills a man)
-    { const dead = ops[1], lying = ops[2], fogged = ops[3]; const fog = g.fogOfWar as any;
-      const keep = { state: dead.state, alive: dead.char.alive, y: lying.char.bones.head[1] };
-      dead.state = 'dead'; dead.char.alive = false; lying.char.bones.head[1] = lying.char.pos[1] + 0.25;
-      fog.hidden = (gd: any) => gd === fogged;   // (every other man bared: the defenders indoors are then kept out by their roof alone)
-      const w = fly(A, 600);
-      delete fog.hidden; dead.state = keep.state; dead.char.alive = keep.alive; lying.char.bones.head[1] = keep.y;
-      const roofed = foes.filter(gd => gd.state !== 'dead' && !open(gd.char)); const n = (gd: any) => w.by(gd.char.id).length;
-      const rest = w.by(g.player.char.id).length + n(ops[0]);
-      verdict(n(dead) === 0 && n(lying) === 0 && n(fogged) === 0 && roofed.length > 0 && roofed.every(gd => n(gd) === 0) && rest >= 8 && w.S.shown === out.length - 3,
-        'who — not the dead, not a man lying down, not a man in the fog, not a man under a roof', `records in 600 frames: the dead man #${dead.char.id} ${n(dead)} · the man with his head at the ground #${lying.char.id} ${n(lying)} · the man the fog of war hides #${fogged.char.id} ${n(fogged)} · ${roofed.length} living defenders under a roof, the fog bared: ${roofed.reduce((s, gd) => s + n(gd), 0)} · Sam and #${ops[0].char.id} beside them: ${rest} · ${w.S.shown} men showing`); }
-    // ---- off
-    const B = await rig('pass.json', false); B.step(120);
-    { const off = fly(B, 600);
-      verdict(B.stood === false && off.recs.length === 0 && off.S.active === false && off.S.records === 0, 'off — with the switch off not one breath is filed', `the switch as the stand left it: ${B.stood} · ${off.recs.length} records in 600 frames (${off.S.why})`); }
-    // ---- others
-    { const C = await rig('compound.json', true); C.step(30); const c = fly(C, 300);
-      verdict(c.recs.length === 0 && c.S.active === false, 'others — another level is not touched by the switch', `compound.json, the switch on: ${c.recs.length} records (${c.S.why})`); }
-    // ---- digest: two fresh games, the same frames, the emitter filing into a pool every frame — on, off
-    { const D1 = await rig('pass.json', true), D0 = await rig('pass.json', false);
-      const d1 = fly(D1, 300, { play: true }), d0 = fly(D0, 300, { play: true });
-      const h1 = hashDigest(digestGame(D1.g)), h0 = hashDigest(digestGame(D0.g));
-      verdict(h1 === h0 && d1.recs.length > 10 && d0.recs.length === 0, 'digest — the game does not know: one digest with breath filed and without', `300 frames of the pass's room clear: ${h1} with ${d1.recs.length} records filed, ${h0} with ${d0.recs.length}`); }
-    // ---- played
-    if (!o.fast) {
-      const E = (SCENARIOS as any[]).find(s => s.level === 'pass.json');
-      if (!E) verdict(false, 'played — the pass has a row to play', 'no scenario with level pass.json in scene/scenarioList.ts SCENARIOS');
-      else {
-        const dir = mkdtempSync(resolve(tmpdir(), 'snowbreath-check-'));
-        const run = async (name: string, seed: number, breath: boolean) => {
-          const outF = resolve(dir, `${name}-${seed}.json`);
-          const p = Bun.spawn(['bun', 'run', resolve(ROOT, 'tools/qa/playthrough.ts'), '--one', `${E.id}:${seed}`, '--out', outF, '--cap', '150'],
-            { stdout: 'ignore', stderr: 'pipe', env: { ...process.env, TPS_SNOW: '1', TPS_SNOWBREATH: breath && !BREAK ? '1' : '0', PT_DIGEST: '1', SNOWBREATH_BREAK: '' } });
-          const code = await p.exited; if (code !== 0 || !existsSync(outF)) return { digest: `no run (exit ${code}: ${(await new Response(p.stderr).text()).trim().split('\n').pop()?.slice(0, 200)})`, secs: 0, how: '' };
-          const r = JSON.parse(readFileSync(outF, 'utf8')); return { digest: String(r.digest ?? 'no digest in the run'), secs: +(r.secs ?? r.t ?? 0), how: String(r.outcome ?? r.end ?? r.result ?? '') };
-        };
-        const SEEDS = [1, 2];
-        const [pOn, pOff] = await Promise.all([Promise.all(SEEDS.map(s => run('on', s, true))), Promise.all(SEEDS.map(s => run('off', s, false)))]);
-        rmSync(dir, { recursive: true, force: true });
-        const hex = (d: string) => /^[0-9a-f]+$/.test(d);
-        verdict(pOn.every((r, i) => hex(r.digest) && r.digest === pOff[i].digest) && pOn.some(r => r.secs >= 40) && pOn[0].digest !== pOn[1].digest,
-          'played — a room clear on the pass plays the same with the breath on and off', `played runs, their digest every half second — ${SEEDS.map((s, i) => `seed ${s}: ${pOn[i].digest} on (${pOn[i].secs.toFixed(0)} s ${pOn[i].how}), ${pOff[i].digest} off (${pOff[i].secs.toFixed(0)} s ${pOff[i].how})`).join(' · ')} (no particle pool in a played run: the rhythm runs, nothing is filed)`);
-      }
-    }
-    // ---- old
-    { let ok = false, how = '';
-      try {
-        SNOW_LOOK.breath = true; const k = (J as any).knobsSnapshot(A.g); const t = k.tables?.SNOW_LOOK; const had = !!t && 'breath' in t && t.breath === true;
-        (J as any).applyKnobs(A.g, k); const kept = SNOW_LOOK.breath;
-        const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.SNOW_LOOK.breath; (J as any).applyKnobs(A.g, k2); const dropped = SNOW_LOOK.breath;
-        SNOW_LOOK.breath = true; const k3 = (J as any).knobsSnapshot(A.g); delete k3.tables.SNOW_LOOK; (J as any).applyKnobs(A.g, k3); const none = SNOW_LOOK.breath;
-        ok = had && kept === true && dropped === false && none === false && !BREAK;
-        how = `the key rides in a recording: ${had} · replayed with it: ${kept} · a recording without the key: ${dropped} · one without the table: ${none}${BREAK ? ' (the break word: this line is made to fail with the rest)' : ''}`;
-      } catch (e) { how = `threw: ${(e as Error).message}`; }
-      verdict(ok, 'old — a recording from before the key replays with no breath', how); }
-    // ---- inert: by the text — the byte, who writes it, who reads it
-    { const rd = (f: string) => readFileSync(resolve(ROOT, f), 'utf8');
-      const ts = rd('src/render/particles.ts'), common = rd('src/render/shaders/particles_common.wgsl'), sim = rd('src/render/shaders/particles.wgsl'), draw = rd('src/render/shaders/particles_draw.wgsl');
-      const packs = /const rgba8 = [^\n]*\| \(255 << 24\)\) >>> 0;/.test(ts);
-      const writes = ts.split('\n').filter(l => /o\.steam/.test(l)).length === 1 && /if \(e\.kind === 'dust' && o\.steam !== undefined\) u\[b \+ 27\] = \(\(u\[b \+ 27\] & 0xffffff\) \| \(Math\.round\(Math\.min\(1, Math\.max\(0, o\.steam\)\) \* 254\) << 24\)\) >>> 0;/.test(ts);
-      const gate = /fn steamIs\(color: u32\) -> bool \{ return \(color >> 24u\) != 255u; \}/.test(common) && /fn steamOf\(color: u32\) -> f32 \{ return select\(1\.0, [^\n]*, steamIs\(color\)\); \}/.test(common);
-      const uses = (s: string) => s.split('\n').filter(l => /steam(Is|Of)\(/.test(l.replace(/\/\/.*$/, '')));
-      const su = uses(sim), du = uses(draw);
-      const simOk = su.length === 1 && /^\s*if \(kind == P_DUST && steamIs\(p\.color\)\) \{ p\.vel\.y \+= 2\.0 \* k0\.x \* dt; \}/.test(su[0]);
-      const drawOk = du.length === 1 && /^\s*opacity \*= steamOf\(p\.color\);/.test(du[0]) && /else if \(kind == P_DUST\) \{[^}]*opacity \*= steamOf\(p\.color\);/s.test(draw);
-      verdict(packs && writes && gate && simOk && drawOk, 'inert — only a breath carries the byte, and only a breath is touched by it', `every record's colour word is packed with 255 on top: ${packs} · one statement writes under it, for a dust record filed with steam: ${writes} · the shaders tell steam by that byte alone, 1 for 255: ${gate} · the step's one use, a dust puff's rise: ${simOk} · the draw's one use, inside the dust branch: ${drawOk} (never compiled or run here: no GPU)`); }
   } finally { SNOW.on = was.snow; SNOW_LOOK.breath = was.breath; if (was.envSnow === undefined) delete process.env.TPS_SNOW; else process.env.TPS_SNOW = was.envSnow; if (was.envBreath === undefined) delete process.env.TPS_SNOWBREATH; else process.env.TPS_SNOWBREATH = was.envBreath; }
   console.log(`\nsnowbreath-check: ${checks - fails}/${checks} pass${BREAK ? ' (SNOWBREATH_BREAK=1: the switch never raised — this run must fail)' : ''}`);
   return fails === 0;

@@ -63,11 +63,8 @@ pub fn hash01(x: f64) -> f64 {
 /// A new pool.   (debris.ts Debris.constructor)
 pub fn debris_new(g: &crate::game::Game) -> crate::debris::Debris { crate::debris::Debris::blank() }
 
-/// The pool's size on this tier; 64 without one.   (debris.ts Debris.cap)
-pub fn debris_cap(g: &crate::game::Game) -> f64 {
-    let c = g.engine.settings.debris_cap;
-    m::max(4.0, m::floor(c))
-}
+/// The pool's size.   (debris.ts Debris.cap)
+pub const DEBRIS_CAP: f64 = 64.0;
 
 /// Thrown and not yet down; a piece a boot slid is not counted.   (debris.ts Debris.moving)
 pub fn debris_moving(g: &crate::game::Game) -> f64 {
@@ -128,7 +125,7 @@ pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKin
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
     let told = told.unwrap_or(false);
     if !g.m.dress.dress.debris { g.destr.debris.stats.refused += 1.0; return None; }
-    while (g.destr.debris.list.len() as f64) >= debris_cap(g) {
+    while (g.destr.debris.list.len() as f64) >= DEBRIS_CAP {
         let list = g.destr.debris.list.clone();
         let mut ok = |g: &mut Game, c: DebrisChunkId| evictable(g, c);
         let i = crate::break_table::breaks_pick(g, &list, &mut ok);
@@ -272,40 +269,33 @@ pub fn debris_feet(g: &mut crate::game::Game, men: &[crate::debris::FootMan], k:
         let bh = seam_box(g, b).h;
         let bc = seam_box(g, b).c;
         let mass = bh[0] * bh[1] * bh[2] * 8.0 * 600.0;
-        if mass > k.heavy { continue; }
+        let heavy = mass > k.heavy;   // (no boot moves it; what lies on a man down goes whatever it weighs)
         let far = bound_of(bh) + k.radius + k.reach + 0.05;
         let mut near = false;
         for mm in men.iter() {
+            if heavy && !mm.body { continue; }
             let d = far + m::hyp2(mm.vel[0], mm.vel[2]) * k.lead;
             if m::abs(mm.pos[0] - bc[0]) < d && m::abs(mm.pos[2] - bc[2]) < d { near = true; break; }
         }
         if !near { continue; }
-        // its footprint on the floor: a rectangle along its most level long axis
-        let q = rot_of(g, b);
-        let a = axes_of(q);
-        let mut iu = 0usize;
-        for i in 1..3 { if m::abs(a[i][1]) > m::abs(a[iu][1]) { iu = i; } }
-        let (i1, i2) = ((iu + 1) % 3, (iu + 2) % 3);
-        let il = if bh[i1] >= bh[i2] { i1 } else { i2 };
-        let (mut d1x, mut d1z) = (a[il][0], a[il][2]);
-        let dl = m::hyp2(d1x, d1z);
-        if dl < 1e-4 { d1x = 1.0; d1z = 0.0; } else { d1x /= dl; d1z /= dl; }
+        // its footprint on the floor
+        let Footprint { d1x, d1z, e1, e2, hy } = footprint(g, b);
         let (d2x, d2z) = (-d1z, d1x);
-        let (mut e1, mut e2, mut hy) = (0.0, 0.0, 0.0);
-        for i in 0..3 {
-            e1 += m::abs(a[i][0] * d1x + a[i][2] * d1z) * bh[i];
-            e2 += m::abs(a[i][0] * d2x + a[i][2] * d2z) * bh[i];
-            hy += m::abs(a[i][1]) * bh[i];
-        }
         let (bottom, top) = (bc[1] - hy, bc[1] + hy);
         // the men it lies in, or, in nobody, the walking man whose leading foot it is most in the way of
         let (mut ox, mut oz, mut in_n) = (0.0, 0.0, 0.0);
+        let mut deep: Option<(f64, f64, f64)> = None;   // (how far it lies into a man down at its deepest, and the way out of there)
         let mut best: Option<FootBest> = None;
         for mm in men.iter() {
+            if heavy && !mm.body { continue; }
             let fy = mm.pos[1];
-            if bottom > fy + k.floor || top < fy + 0.01 { continue; }
-            let here = debris_foot_gap(g, b, mm.pos[0], mm.pos[2], d1x, d1z, e1, e2, k.radius);
-            if here.gap < -k.inside { ox -= here.dx * here.gap; oz -= here.dz * here.gap; in_n += 1.0; continue; }
+            if bottom > fy + (if mm.body { BODY_OVER } else { k.floor }) || top < fy + 0.01 { continue; }
+            let here = debris_foot_gap(g, b, mm.pos[0], mm.pos[2], d1x, d1z, e1, e2, if mm.body { BODY_RADIUS } else { k.radius });
+            if here.gap < -k.inside {
+                ox -= here.dx * here.gap; oz -= here.dz * here.gap; in_n += 1.0;
+                if mm.body && deep.map_or(true, |d| -here.gap > d.0) { deep = Some((-here.gap, here.dx, here.dz)); }
+                continue;
+            }
             let sp = m::hyp2(mm.vel[0], mm.vel[2]);
             if js::truthy(in_n) || sp <= k.walk { continue; }
             let hit = debris_foot_gap(g, b, mm.pos[0] + mm.vel[0] * k.lead, mm.pos[2] + mm.vel[2] * k.lead, d1x, d1z, e1, e2, k.radius);
@@ -314,12 +304,14 @@ pub fn debris_feet(g: &mut crate::game::Game, men: &[crate::debris::FootMan], k:
             if better { best = Some(FootBest { hit, m: *mm, sp }); }
         }
         if !js::truthy(in_n) && best.is_none() { continue; }
+        // (a man down stays where he is: tried as often as a boot tries, it lies there for good, and nobody is left waiting to hear it scrape)
+        if deep.is_some() && foot_n.unwrap_or(0.0) >= k.give_up { continue; }
         let kk = match book.as_mut() {
             Some(bk) => { bk.shoves += 1.0; bk.shoves }
             None => { g.destr.debris.shoves += 1.0; g.destr.debris.shoves }
         };
         let h = |j: f64| hash01(kk * 149.0 + j);
-        let fn_now = if since > 2.0 { 1.0 } else { foot_n.unwrap_or(0.0) + 1.0 };
+        let fn_now = if since > 2.0 && deep.is_none() { 1.0 } else { foot_n.unwrap_or(0.0) + 1.0 };
         {
             let ch = &mut g.tab.debris_chunk[c];
             ch.foot_at = Some(ch.age);
@@ -331,10 +323,15 @@ pub fn debris_feet(g: &mut crate::game::Game, men: &[crate::debris::FootMan], k:
         let (mut lx, mut lz) = (0.0, 0.0);
         if js::truthy(in_n) {
             let ol = m::hyp2(ox, oz);
-            if ol < 0.02 { s_.walled += 1.0; continue; }
-            dx = ox / ol;
-            dz = oz / ol;
+            match deep {
+                // (his bones may pull all ways at once: then by the deepest)
+                Some((_, wx, wz)) if ol < 0.02 => { dx = wx; dz = wz; }
+                _ if ol < 0.02 => { s_.walled += 1.0; continue; }
+                _ => { dx = ox / ol; dz = oz / ol; }
+            }
             s = k.off * (0.6 + 0.4 * heft);
+            // (off a man down in the one shove: the speed that slides it his depth against the floor's drag)
+            if let Some((d, _, _)) = deep { s = m::max(s, m::min(k.v_max, m::sqrt(2.0 * k.slide * G * d))); }
         } else {
             // ahead of him and aside: off his line to the side it already lies on (hashed when it lies dead ahead)
             let bb = best.unwrap();
@@ -380,7 +377,7 @@ pub fn debris_feet(g: &mut crate::game::Game, men: &[crate::debris::FootMan], k:
             ch.w = [0.0, wy + (h(3.0) - 0.5) * 0.6 * s / m::max(0.08, bound), 0.0];
             (ch.sfx.first().cloned(), !ch.sfx.is_empty())
         };
-        if k.scuff > 0.0 && has_sfx && g.time - g.destr.debris.scuff_at > 0.12 {
+        if k.scuff > 0.0 && has_sfx && deep.is_none() && g.time - g.destr.debris.scuff_at > 0.12 {
             // a scuff for the ear only (no hearing event: his steps already carry his noise)
             g.destr.debris.scuff_at = g.time;
             let f = first_sfx.unwrap();
@@ -471,6 +468,7 @@ pub fn debris_slide(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
             let mut bc = seam_box(g, b).c;
             bc[1] = y0;
             seam_box(g, b).c = bc;
+            if let Some(y) = debris_seat(g, c, false).0 { bc[1] = y; seam_box(g, b).c = bc; }   // (tipped as it was, on what lies there)
             let ch = &mut g.tab.debris_chunk[c];
             ch.rest = true;
             ch.foot = Some(false);
@@ -539,7 +537,9 @@ pub fn debris_slide(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
         }
     };
     let mut nc = bc;
-    nc[1] = top[1] - fl.t + sup + 0.0015 + g.tab.debris_chunk[c].lift.unwrap_or(0.0);
+    // (it goes at the height it lay at, off a pile, and comes down to the floor by a fall's pace and not at a stroke)
+    let floor = top[1] - fl.t + sup + 0.0015 + g.tab.debris_chunk[c].lift.unwrap_or(0.0);
+    nc[1] = m::max(floor, m::min(c0[1], nc[1]) - G * h * 0.25);
     seam_box(g, b).c = nc;
     if !in0 && debris_foot_in(g, b) {
         slide_back(g, b, c0, rot0, yaw0);
@@ -614,12 +614,7 @@ pub fn debris_update(g: &mut crate::game::Game, dt: f64) {
                 }
             } else if (js::to_i32(g.destr.debris.frame + serial) & 31) == 0 {
                 // on a static: a staggered down-ray now and then catches the static going away under it
-                let sup = support_along(g, b, [0.0, 1.0, 0.0]);
-                if bc[1] > sup + 0.02 && crate::scene_collision::raycast(g, [bc[0], bc[1] + 0.02, bc[2]], [0.0, -1.0, 0.0], sup + 0.08).is_none() {
-                    let ch = &mut g.tab.debris_chunk[c];
-                    ch.rest = false;
-                    ch.still_t = 0.0;
-                }
+                debris_resettle(g, c);
             }
             continue;
         }
@@ -790,6 +785,12 @@ pub fn debris_sleep(g: &mut crate::game::Game, c_2: DebrisChunkId, n: V3, on: Op
         return;
     }
     lay_flat(g, b, n, 1.0);
+    {   // (a sheet does not stand on its edge; but one that going down would put through a wall it is clear of leans on that wall)
+        let clear = !debris_foot_in(g, b);
+        let (r0, y0) = (seam_box(g, b).rot, seam_box(g, b).yaw);
+        lay_sheet(g, b, n);
+        if clear && debris_foot_in(g, b) { seam_box(g, b).rot = r0; seam_box(g, b).yaw = y0; }
+    }
     let on_pose = match on { Some(p) => pose_key(g, p), None => 0.0 };
     {
         let ch = &mut g.tab.debris_chunk[c];
@@ -800,20 +801,11 @@ pub fn debris_sleep(g: &mut crate::game::Game, c_2: DebrisChunkId, n: V3, on: Op
         ch.on_pose = on_pose;
         if is_on(ch.foot) { ch.foot = Some(false); }
     }
-    // sit exactly on the surface under it
-    let sup = support_along(g, b, [0.0, 1.0, 0.0]);
-    let bc = seam_box(g, b).c;
-    let from: V3 = [bc[0], bc[1] + 0.05, bc[2]];
-    let st = crate::scene_collision::raycast(g, from, [0.0, -1.0, 0.0], sup + 0.4);
-    let ph = crate::props::prop_system_raycast(g, from, [0.0, -1.0, 0.0], match &st { Some(s) => s.t, None => sup + 0.4 });
-    let t = match (&ph, &st) {
-        (Some(p), _) => Some(p.t),
-        (None, Some(s)) => Some(s.t),
-        (None, None) => None,
-    };
-    if let Some(t) = t {
-        let mut nc = bc;
-        nc[1] = from[1] - t + sup + 0.0015 + g.tab.debris_chunk[c].lift.unwrap_or(0.0);
+    // sit exactly on the surface under it, and on whatever already lies there
+    let (seat, ph) = debris_seat(g, c, false);
+    if let Some(y) = seat {
+        let mut nc = seam_box(g, b).c;
+        nc[1] = y;
         seam_box(g, b).c = nc;
     }
     if let Some(p) = ph {
@@ -823,6 +815,119 @@ pub fn debris_sleep(g: &mut crate::game::Game, c_2: DebrisChunkId, n: V3, on: Op
         ch.on_pose = k;
     }
     if g.tab.debris_chunk[c].glass.is_some() { crate::shards::glass_shards_rested(g, c); }
+}
+
+/// How high above a man down's floor a piece may lie and still be on him (m): a man lying is that high, and a piece on a pile over him is on him all the same.
+const BODY_OVER: f64 = 0.3;
+/// How far from a bone of a man down a piece must lie (m): a limb's reach, where the rule for a man on his feet keeps a stance's.
+const BODY_RADIUS: f64 = 0.18;
+/// How high a thing may stand off its surface and still hold up a piece that merely overlaps it (m). Anything higher holds up only a piece whose middle is over it.
+const HAND: f64 = 0.12;
+
+/// How high above a surface a thing may lie and still be of that surface's pile (m): a thing higher up than this is on something else, and a piece goes under it.
+const PILE: f64 = 0.3;
+
+/// WHERE A PIECE LIES: its centre's height on the surface under it, or on the top of what already lies on that surface over its footprint, so that no two pieces lie
+/// through each other. None = nothing under it. What it found under it, if that is a prop. A piece just landing (it has come through whatever lies there) goes on top of
+/// the pile; a piece already `seated` asks only about what is beneath it.
+fn debris_seat(g: &mut Game, c: DebrisChunkId, seated: bool) -> (Option<f64>, Option<crate::props::PropSystemRaycast>) {
+    let b = g.tab.debris_chunk[c].box_;
+    let sup = support_along(g, b, [0.0, 1.0, 0.0]);
+    let bc = seam_box(g, b).c;
+    let from: V3 = [bc[0], bc[1] + 0.05, bc[2]];
+    let reach = sup + (if seated { 1.0 } else { 0.4 });   // (seated, it may lie on a pile well over the surface)
+    let st = crate::scene_collision::raycast(g, from, [0.0, -1.0, 0.0], reach);
+    let ph = crate::props::prop_system_raycast(g, from, [0.0, -1.0, 0.0], match &st { Some(s) => s.t, None => reach });
+    let t = match (&ph, &st) {
+        (Some(p), _) => Some(p.t),
+        (None, Some(s)) => Some(s.t),
+        (None, None) => None,
+    };
+    let Some(t) = t else { return (None, ph) };
+    let surface = from[1] - t;
+    let top = pile_top(g, b, surface, seated, true);
+    (Some(top + sup + 0.0015 + g.tab.debris_chunk[c].lift.unwrap_or(0.0)), ph)
+}
+
+/// The top of what lies on `surface` over box b's footprint; the surface itself where nothing does. `rubble`: the wall's rubble counts as well as the pool's pieces.
+fn pile_top(g: &mut Game, b: BoxId, surface: f64, seated: bool, rubble: bool) -> f64 {
+    let mine = footprint(g, b);
+    let (bc, sup) = (seam_box(g, b).c, mine.hy);
+    let mut top = surface;
+    let lies: Vec<BoxId> = g.destr.debris.list.iter().map(|&o| &g.tab.debris_chunk[o]).filter(|o| o.rest && o.glass.is_none() && o.box_ != b).map(|o| o.box_)
+        .chain(g.destr.edge_look.rubble.iter().filter(|r| rubble && r.t >= r.t_2 && r.box_ != b).map(|r| r.box_)).collect();
+    for o in lies {
+        let oc = seam_box(g, o).c;
+        let (ob, oh) = (bound_of(seam_box(g, o).h), bound_of(seam_box(g, b).h));
+        if m::abs(oc[0] - bc[0]) > ob + oh || m::abs(oc[2] - bc[2]) > ob + oh { continue; }
+        let theirs = footprint(g, o);
+        if oc[1] - theirs.hy > surface + PILE || !footprints_meet(bc, &mine, oc, &theirs) { continue; }
+        let high = oc[1] + theirs.hy;
+        if seated && high > bc[1] - sup + 0.005 { continue; }
+        if high > surface + HAND && !footprint_has(oc, &theirs, bc) { continue; }
+        top = m::max(top, high);
+    }
+    top
+}
+
+/// Where the rubble of a wall that has just come down lies: at `y` as it was dealt, or on the pool's pieces if some already lie there.
+pub fn debris_rubble_height(g: &mut crate::game::Game, b: BoxId, y: f64) -> f64 {
+    if g.destr.debris.list.is_empty() { return y; }
+    let sup = support_along(g, b, [0.0, 1.0, 0.0]);
+    m::max(y, pile_top(g, b, y - sup, false, false) + sup + 0.0015)
+}
+
+/// A piece at rest on a static or a pile asks now and then what it lies on: gone a little way, it settles there; further, it falls.
+pub fn debris_resettle(g: &mut crate::game::Game, c: DebrisChunkId) {
+    let b = g.tab.debris_chunk[c].box_;
+    let sup = support_along(g, b, [0.0, 1.0, 0.0]);
+    let bc = seam_box(g, b).c;
+    if bc[1] <= sup + 0.02 { return; }
+    match debris_seat(g, c, true).0 {
+        Some(y) if bc[1] - y < 0.1 => { let mut nc = bc; nc[1] = y; seam_box(g, b).c = nc; }
+        _ => {
+            let ch = &mut g.tab.debris_chunk[c];
+            ch.rest = false;
+            ch.still_t = 0.0;
+        }
+    }
+}
+
+/// A box's plan on the floor: a rectangle along its most level long axis, half extents e1 and e2, and its half height.
+#[derive(Clone, Copy)]
+struct Footprint { d1x: f64, d1z: f64, e1: f64, e2: f64, hy: f64 }
+fn footprint(g: &mut Game, b: BoxId) -> Footprint {
+    let bh = seam_box(g, b).h;
+    let a = axes_of(rot_of(g, b));
+    let mut iu = 0usize;
+    for i in 1..3 { if m::abs(a[i][1]) > m::abs(a[iu][1]) { iu = i; } }
+    let (i1, i2) = ((iu + 1) % 3, (iu + 2) % 3);
+    let il = if bh[i1] >= bh[i2] { i1 } else { i2 };
+    let (mut d1x, mut d1z) = (a[il][0], a[il][2]);
+    let dl = m::hyp2(d1x, d1z);
+    if dl < 1e-4 { d1x = 1.0; d1z = 0.0; } else { d1x /= dl; d1z /= dl; }
+    let (d2x, d2z) = (-d1z, d1x);
+    let (mut e1, mut e2, mut hy) = (0.0, 0.0, 0.0);
+    for i in 0..3 {
+        e1 += m::abs(a[i][0] * d1x + a[i][2] * d1z) * bh[i];
+        e2 += m::abs(a[i][0] * d2x + a[i][2] * d2z) * bh[i];
+        hy += m::abs(a[i][1]) * bh[i];
+    }
+    Footprint { d1x, d1z, e1, e2, hy }
+}
+/// Does a plan cover a point?
+fn footprint_has(ac: V3, a: &Footprint, p: V3) -> bool {
+    let (dx, dz) = (p[0] - ac[0], p[2] - ac[2]);
+    m::abs(dx * a.d1x + dz * a.d1z) <= a.e1 && m::abs(-dx * a.d1z + dz * a.d1x) <= a.e2
+}
+/// Do two plans overlap? The separating axes of two rectangles.
+fn footprints_meet(ac: V3, a: &Footprint, bc: V3, b: &Footprint) -> bool {
+    let (dx, dz) = (bc[0] - ac[0], bc[2] - ac[2]);
+    let reach = |x: f64, z: f64, f: &Footprint| m::abs(x * f.d1x + z * f.d1z) * f.e1 + m::abs(-x * f.d1z + z * f.d1x) * f.e2;
+    for (x, z) in [(a.d1x, a.d1z), (-a.d1z, a.d1x), (b.d1x, b.d1z), (-b.d1z, b.d1x)] {
+        if m::abs(dx * x + dz * z) >= reach(x, z, a) + reach(x, z, b) { return false; }
+    }
+    true
 }
 
 /// A chunk's first hard touch: its knock, and the floor told unless it is dressing.   (debris.ts Debris.land)

@@ -86,9 +86,9 @@ src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `save
                      it was let go. NO DOWNLOAD (the maintainer, the same day: "we should get rid of local downloads entirely"; his pick for a file that
                      cannot go: no download, the page says it was not sent, the editor keeps saving its level files) for a kind that has given its
                      download up: a recorder's take ('perf'; `meta.of = 'bench'` on a benchmark's), a benchmark's RESULT ('bench', the BenchResult as
-                     JSON, `tellSaved`), the session journal and an exported checkpoint (the debug panel's 'export chosen', `ui/bindings.ts`; its
+                     JSON, `tellSaved`), and an exported checkpoint (the debug panel's 'export chosen', `ui/bindings.ts`; its
                      kind came off `SAVE_UP.local` the same day). Whoever saved it says where it went (`savedWords`: "is being sent to the developer" /
-                     "will be sent" / "wasn't sent" / "was sent"): the F9 and F8 notes, the F10 note and the checkpoint export's line (each followed by a second one when the file has arrived or
+                     "will be sent" / "wasn't sent" / "was sent"): the F9 and F8 notes and the checkpoint export's line (each followed by a second one when the file has arrived or
                      could not be sent), the benchmark card's line (qa.md). STILL DOWNLOADED (`SAVE_UP.local`, and told to the listener after the
                      click as before; THROWS where the download could not be asked for): the editor's level alone, which stays. A REPLAY IS NO KIND OF
                      THIS DOOR'S (since the replay pages gave their downloads up, the same day) and nothing downloads one: F7 and the engine
@@ -100,7 +100,7 @@ src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `save
                      row on the frozen stand: a page-only table like `GPU_ASK`, no game state reads it. With no listener (the one-file build, the
                      harness, a dev page whose server runs no backend) a take or a journal goes nowhere but the shot server of a page on this machine
                      (`onThisMachine`), and the note then says where it landed (`REC → …`) or that it wasn't saved. WHAT NO DOWNLOAD COSTS, read in the code: with sharing off or no backend a take or a journal cannot be kept at
-                     all (a developer: `?downloads=1`, or after the fact `__saveUp.on = false` in the console and `__journal.save()` /
+                     all (a developer: `?downloads=1`, or after the fact `__saveUp.on = false` in the console and
                      `__perfrec.deliver(__lastPerfDump)`); a page left while a large file is going up loses it (the benchmark card's Close waits up
                      to `BENCH_SEND_MS` for `cloud.filesIdle`, and its line turns to "were sent"); a file HELD on a page that never shows the
                      notice (F9 on a mission opened by its link, first visit) is lost with the page. A long take fits: the backend packs text. A page is one bundle: the replay pages carry no door.
@@ -115,7 +115,7 @@ src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `save
                      hands it to the door; a kind nobody saves, a kind off the list, and a save whose kind is not said outright or by one
                      const are red. A new kind needs no line in the check. Both rules are tried on lines of the check's own. Not seen by it: a
                      download with no address of the page's making and no `download` spelling (a `data:` link built as an object).
-src/render/          passes.ts (pass graph + target lifecycles), frame.ts (uniforms/flags — THE flag table + Frame byte table + the scene prelude incl. TRACE_VARIANT), lights.ts (+ identity
+src/render/          passes.ts (pass graph + target lifecycles), frame.ts (uniforms/flags — THE flag table + Frame byte table + the scene prelude), lights.ts (+ identity
                      maps for the reservoirs), rc.ts (cascades), probe.ts (the light meter / smoke probe queries), gbuffer.ts, texpool.ts (pooled targets + history resampling),
                      denoise.ts (the shared denoiser's pipelines), particles.ts (GPU pool + impulses + wind records), decals.ts, reach.ts (per-light reach masks), wear.ts (traffic
                      map), meshbvh.ts + meshShadows.ts (mesh-traced character shadows at ultra), sdfrig.ts (round-cone proxy fit)
@@ -124,7 +124,7 @@ src/render/shaders/  common.wgsl (structs, flags, box/grid traversal, glassTrace
                      clients) + softtile (the old chains dtemporal / softblur / temporal / giblur went 2026-11-07); fgather.wgsl + gather_split.wgsl (the final gather's helpers and its two programs; gatherStrata variant) over gather_split_common
                      + lighting_common (the reflections over gather_common); rc.wgsl / probe.wgsl (radiance cache, meter); reflect.wgsl + reflect_p5.wgsl (RT reflections; the ultra program), detail.wgsl, markings.wgsl,
                      decals.wgsl; volumetrics.wgsl over vol_common (haze, smoke march, rain: one march on every tier); particles.wgsl / particles_common / particles_draw (+ wind_field.wgsl shared with the solver);
-                     gbuffer.wgsl, cards.wgsl, composite.wgsl (+ its SHARP compute twin) → taau.wgsl (or fxaa.wgsl on ?notaau) → bloom → post (AgX); resample.wgsl (history resampling); trace_lab.wgsl (the traversal lab);
+                     gbuffer.wgsl, cards.wgsl, composite.wgsl (+ its SHARP compute twin) → taau.wgsl (or fxaa.wgsl on ?notaau) → bloom → post (AgX); resample.wgsl (history resampling);
                      smoke_read.wgsl (how every ray and march reads the smoke: appended to the scene prelude after common.wgsl)
 src/smoke/           ONE POOL OF 8³-CELL BRICKS on a level-wide lattice (the *Smoke = one pool of bricks* bullet; the eight 64³ boxes it replaced are in git history before 2026-10-10): smoke.ts
                      (SmokeSystem), smoke.wgsl, smokeGrid.ts (the lattice + the consts both shader sides get), red-black SOR pressure solve, emitters; SoundSeal'd door LEAVES are obstacles (a
@@ -172,7 +172,7 @@ tools/               serve.ts (+ levels-api.ts), build.ts, shot-server.ts, artif
                      qa/ (headless harness: headless.ts, soak.ts, probes.ts, gait.ts = the animation's numbers, audio-render.ts,
                      mesh-shadow-ref.ts = the mesh-shadow BVH / capsule-vs-mesh numbers + the GPU replay fixture, level-probes.ts = the
                      level-as-data identity / validate / round-trip family, fixtures/ (panel-inventory-main.json = the frozen Tab-row inventory),
-                     sessions/*.json.gz = the F10 journal fixtures the gate replays, gpu-quiet.sh,
+                     gpu-quiet.sh,
                      the in-page instruments *.js (served at /qa/<file>.js) and the review-page generators *-page.py — see 'A lane's deliverables' under Workflow)
 docs/                internal/<topic>.md = the notebooks (method, numbers, negatives) + review-ledger.md + architecture-review.md + morning-YYYY-MM-DD.html; review/<topic>.html = the self-contained
                      review pages published as Artifacts; perf/*.json = every measured take; shots/ = captures (shots/ab/ lossless, gitignored); design/ (level-scripting.md) + research/

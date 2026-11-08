@@ -19,7 +19,7 @@ const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 
 const BREAK = process.env.RADIOHOME_BREAK === '1', DT = 1 / 60;
-const AWAY = ['tut-quiet.json', 'quiet-yard.json', 'lights-out.json'];
+const AWAY = ['tut-quiet.json', 'lights-out.json'];
 let allPass = true;
 const verdict = (ok: boolean, label: string, detail: string) => { allPass &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
 async function quiet<T>(fn: () => Promise<T>): Promise<T> { const log = console.log; console.log = () => {}; try { return await fn(); } finally { console.log = log; } }

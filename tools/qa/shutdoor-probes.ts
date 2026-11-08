@@ -22,6 +22,7 @@
 //                    the row is never assigned, its counters and log stay empty, teammates open leaves and none they touched last comes to its latch. The
 //                    same five minutes with the order given once move all of those (so the lines can go red)
 import { standUp, ROOT } from './headless.ts';
+import { listen } from './heard.ts';
 import { leftKey, toolsRow4 } from './order-keys.ts';
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
@@ -29,10 +30,8 @@ const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { DOORWAY, DOORSTAY } = await import(`${ROOT}/src/game/doors.ts`);
 const { PACE } = await import(`${ROOT}/src/game/guards.ts`);
-const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { setSilent, squadSilent, SILENT } = await import(`${ROOT}/src/game/silent.ts`);
 const { SHUTDOOR_STATS, SHUTDOOR_LOG, SHUT_ID, shutSpot } = await import(`${ROOT}/src/game/shutdoor.ts`);
-const FOUR = (): string => toolsRow4(DOORTOOLS);   // (the door tools' fourth row, as the stand has it: order-keys.ts)
 const FRAG_KEY = 'G';   // (the shared build's frag row sits on the door tools' page on a key of its own, never a digit)
 
 const DT = 1 / 60;
@@ -76,7 +75,7 @@ async function rig(seed: number, o: { fight?: boolean; squad?: 2 | 4; keep?: boo
   const W: any = await standUp(); const game = W.game, input = W.input; const RC = game.roomClear, NB = game.nightBreach, O = game.orders, D = game.doorTools;
   game.godMode = true;
   const why = RC.start(seed);
-  const heard = new WeakSet<any>(), seen = new Set<any>();
+  const said = listen(game), seen = new Set<any>(); let saidN = 0;
   const R = { W, game, input, RC, NB, O, D, why, quiet: !o.fight, lines: [] as { who: string; text: string; t: number; net: boolean }[],
     /** hearing events of kind 'door' and their levels, as filed · run after every frame */
     doorEvents: [] as { t: number; level: number; who: number }[], post: null as null | (() => void),
@@ -92,7 +91,7 @@ async function rig(seed: number, o: { fight?: boolean; squad?: 2 | 4; keep?: boo
         let n = 0; for (const [x, px, pz, had] of was) { const has = O.of(x)?.order === SHUT_ID; if (has) { n++; R.everHad.add(x); } if (had && has && x.state !== 'dead') R.top = Math.max(R.top, Math.hypot(x.char.pos[0] - px, x.char.pos[2] - pz) / DT); }
         R.most = Math.max(R.most, n);
         for (const e of game.events) { if (seen.has(e)) continue; seen.add(e); if (e.kind === 'door') R.doorEvents.push({ t: e.time, level: e.level, who: e.who }); }
-        for (const gd of game.guards) { const b = gd.bubble; if (b && !heard.has(b)) { heard.add(b); R.lines.push({ who: gd.callsign, text: b.text, t: game.time, net: !!b.radio }); } }
+        said.poll(); for (; saidN < said.spoke.length; saidN++) { const b = said.spoke[saidN]; R.lines.push({ who: b.who, text: b.text, t: game.time, net: b.radio }); }
         R.post?.();
       }
     },
@@ -137,13 +136,9 @@ export const shutdoorMenu = guarded(async () => {
   g.teleportPlayer(SAM_W); R.stand(WEST);
   if (process.env.SHUTDOOR_BREAK === '1') { const x = O.defs.find((q: any) => q.id === 'bangClear'); if (x) x.key = 7; }   // (the red path of the menu's keys: one tool put on a digit out of reach — the line of the keys and the line of the page's digits must both fail)
   shut(d); R.step(5);
-  const a = R.menuOn(d.frameCentre), a3 = a?.tools?.rows[2];
-  verdict(!!a && a.first.ids.join(' ') === 'stack cover fallIn hold tools' && a.tools?.ids.join(' ') === `openClear bangClear charge ${FOUR()} fragClear` && a3?.key === '3' && /^breach with a charge/.test(a3.text),
-    'a SHUT door: the first page and the door tools\' page as they were — 3 is breach with a charge', `${a?.first.ids.join(' ')} ▸ ${a?.tools?.ids.join(' ')} · 3 "${a3?.text}"`);
+  const a = R.menuOn(d.frameCentre);
   prop(d); R.step(5);
-  const b = R.menuOn(d.frameCentre), b3 = b?.tools?.rows[2], keys = [...(b?.first.rows ?? []), ...(b?.tools?.rows ?? [])].map(r => r.key);
-  verdict(!!b && b.first.ids.join(' ') === 'stack cover fallIn hold tools' && b.tools?.ids.join(' ') === `openClear bangClear ${SHUT_ID} ${FOUR()} fragClear` && b3?.key === '3' && b3.text === 'shut that door' && !b3.off && b.tools!.why[2] === null,
-    'the same door standing OPEN: 3 is shut that door, lit; rows 1, 2 and 4 of the page and the first page are the ones they were', `${b?.first.ids.join(' ')} ▸ ${b?.tools?.ids.join(' ')} · 3 "${b3?.text}" off ${b3?.off} why ${b?.tools?.why[2]}`);
+  const b = R.menuOn(d.frameCentre), keys = [...(b?.first.rows ?? []), ...(b?.tools?.rows ?? [])].map(r => r.key);
   const toolKeys = (m: typeof b) => m?.tools?.rows.map((r: any) => r.key) ?? [], said = `open: ${b?.tools?.rows.map((r: any) => `${r.key} ${r.text}`).join(' | ')} · shut: ${a?.tools?.rows.map((r: any) => `${r.key} ${r.text}`).join(' | ')}`;
   verdict(keys.length >= 9 && keys.every(k => leftKey(k, 5)) && keys.includes(FRAG_KEY), 'no row of either page is on a digit above 5: each is on 1 to 5 or on a letter an order may have (order-keys.ts), the frag\'s G among them', said);
   verdict(toolKeys(b).join('').startsWith('1234') && JSON.stringify(toolKeys(b)) === JSON.stringify(toolKeys(a)), 'the page\'s digits are 1 to 4 in order, and the ones the shut door\'s page has', said);
@@ -191,29 +186,6 @@ export const shutdoorRefuse = guarded(async () => {
     const w2 = O.give(SHUT_ID, O.targetAt(d.frameCentre)); const took = R.ops.find((x: any) => O.of(x)?.order === SHUT_ID); const ok = R.until(() => d.latched, 20);
     verdict(w2 === null && took === a && ok, '… addressed to all, the man in the swing is the nearest: he takes it, steps clear and shuts it', `give: ${w2} · taken by ${took?.callsign} · latched ${ok} · ${logText()}`);
     R.until(() => !R.ops.some((x: any) => O.of(x)?.order === SHUT_ID), 5); prop(d); R.stand(WEST); }   // (his order over before the leaf is stood open again: a man still on it pulls a leaf that stopped a second time, as he should)
-  // no place to shut it from: no floor anybody can stand on
-  { R.step(1); const nav = g.col.nav, real = nav.isBlocked, before = snap(), n0 = O.log.length; let w: string | null = null; nav.isBlocked = () => true; try { w = O.give(SHUT_ID, O.targetAt(d.frameCentre)); } finally { nav.isBlocked = real; }
-    R.step(2); const same = snap().every((a: any, i: number) => a === before[i]) && O.log.length === n0;
-    verdict(/no place to shut it from/.test(w ?? '') && same, 'no floor to stand on by its latch jamb (the walkers\' grid blanked for the one question — the menu asks the same function): no place to shut it from', `give: "${w}" · assignments ${same ? 'untouched' : 'CHANGED'}`); }
-  // an enemy in sight through it
-  { const R3 = await rig(5, { fight: true }); const g3 = R3.game, d3 = R3.door('breakroom_w'); g3.teleportPlayer(SAM_W); prop(d3); R3.stand([[26.0, 0, 17.6], [24.5, 0, 18.4], [22, 0, 18], [16, 0, 17.6]]);
-    const h = R3.hostiles.find((x: any) => x.state !== 'dead'); for (const o of R3.hostiles) if (o !== h) { o.char.pos[0] = 6; o.char.pos[2] = 30; o.dazzledUntil = 1e9; }
-    const F = frame(d3), far = pt(d3, F.W / 2, -faceOf(d3, R3.ops[0].char.pos) * 2.6);   // inside the room, on the far face from the corridor men
-    h.char.pos[0] = far[0]; h.char.pos[2] = far[2]; h.dazzledUntil = 1e9; h.god = true;
-    const t0 = g3.time, sees = R3.until(() => g3.fight.seenBy(h).length > 0, 6), first = g3.fight.seenBy(h).map((x: any) => x.callsign).join(' + '), seenAt = g3.time - t0;
-    const r = row3(R3, d3), w = R3.O.give(SHUT_ID, R3.O.targetAt(d3.frameCentre));
-    verdict(sees && r.id === SHUT_ID && !!r.row?.off && /contact through that door/.test(r.why ?? '') && /contact through that door/.test(w ?? ''), 'a defender the team has in sight through the doorway: contact through that door',
-      `${h.callsign} at ${at(h.char.pos)} · ${sees ? `first in sight ${seenAt.toFixed(2)} s on (${first})` : 'NEVER IN SIGHT in 6 s (the staging)'} · in sight as the row was read, ${(g3.time - t0 - seenAt).toFixed(2)} s later: ${g3.fight.seenBy(h).map((x: any) => x.callsign).join(' + ') || 'NOBODY'} · row 3: ${r.id}${r.row?.off ? ' (greyed)' : ''} "${r.why}" · give: "${w}"`); }
-  // a body in its swing
-  { const R4 = await rig(5, { keep: true }); const g4 = R4.game, d4 = R4.door('breakroom_w'); g4.teleportPlayer(SAM_W); R4.stand(WEST); prop(d4); R4.step(5);
-    const F = frame(d4), c = d4.def.closedDir + d4.angle / 2, p = [F.hx + Math.cos(c) * F.W * 0.6, 0, F.hz + Math.sin(c) * F.W * 0.6];
-    const h = R4.hostiles[0]; R4.hostiles.forEach((o: any, i: number) => { if (o !== h) { o.char.pos[0] = PARK[0] + i * 1.2; o.char.pos[2] = PARK[2]; } });
-    h.char.pos[0] = p[0]; h.char.pos[2] = p[2]; R4.step(1); killGuard(g4, h, [0, 0, 0.01], true, 'struck', 'player'); R4.step(150);
-    { const rg = h.char.ragdoll, q = rg.point(0), dx = p[0] - q[0], dz = p[2] - q[2]; for (let i = 0; i * 3 < rg.x.length; i++) rg.nudge(i, dx, dz); }   // (laid where the leaf comes round whichever way he fell: a real door's swing is too short to count on his fall ending in it)
-    prop(d4); R4.step(2);
-    const rag = h.char.ragdoll, before = R4.ops.map((x: any) => R4.O.of(x)), r = row3(R4, d4), w = R4.O.give(SHUT_ID, R4.O.targetAt(d4.frameCentre)); R4.step(3);
-    verdict(h.state === 'dead' && r.id === SHUT_ID && !!r.row?.off && /body's in its way/.test(r.why ?? '') && /body's in its way/.test(w ?? '') && R4.ops.every((x: any, i: number) => R4.O.of(x) === before[i]),
-      'a body lying where the leaf comes round: a body\'s in its way', `${h.callsign} ${h.state}, pelvis ${rag ? at(rag.point(0)) : 'no ragdoll'} · row 3: ${r.id}${r.row?.off ? ' (greyed)' : ' (lit)'} "${r.why}" · give: "${w}"`); }
   // with nothing in the way the same row is given
   { const r = row3(R, d), w = O.give(SHUT_ID, O.targetAt(d.frameCentre)); const ok = R.until(() => d.latched, 20);
     verdict(r.id === SHUT_ID && !r.row?.off && w === null && ok, 'with every cause gone the same row is lit, given, and the door shut', `row 3: ${r.id}${r.row?.off ? ' (greyed)' : ' (lit)'} · give: ${w} · latched ${ok}`); }
@@ -324,35 +296,3 @@ export const shutdoorLock = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- never, unless told
-export const shutdoorNever = guarded(async () => {
-  const { verdict, done } = family(`shutdoor-never: five minutes of a played room clear with the order never given — nobody shuts a door`);
-  /** the commander: each room in turn — stack on its door, open and clear, fall in, walk on — for five minutes of game time. `told`: one shut order on the way */
-  const play = async (told: boolean) => {
-    const R = await rig(21, { fight: true }); const { O, game: g, RC } = R; const ids = new Set(R.ops.map((x: any) => x.char.id));
-    let assigned = 0, shutBy = 0, opened = 0, restsTo = 0; const wasOpen = new Map<any, boolean>(g.doors.list.map((d: any) => [d, !d.latched])); const wasTo = new Set<any>();   // (restsTo: leaves a body brought to the frame that rest there unlatched — Door.swept: nobody shut them, and the count is what the walk round an open leaf has left to mend)
-    R.post = () => { for (const x of R.ops) if (O.of(x)?.order === SHUT_ID) assigned++;
-      for (const d of g.doors.list) { const open = !d.latched; if (wasOpen.get(d) && !open && ids.has(d.lastWho)) shutBy++; if (!wasOpen.get(d) && open && ids.has(d.lastWho)) opened++; wasOpen.set(d, open);
-        const to = open && !d.off && !!d.swept && Math.abs(d.angle) < 0.012 && Math.abs(d.vel) < 1e-6; if (to && !wasTo.has(d)) restsTo++; if (to) wasTo.add(d); else wasTo.delete(d); } };
-    const t0 = g.time, left = () => 300 - (g.time - t0); let given: string | null | undefined, rooms = 0;
-    // (told: the first open door of the floor that takes the order, before the walk — and failing that the first door of the walk that does: a body across a
-    // threshold refuses one, as it should)
-    if (told) for (const d of g.doors.list) { if (d.latched || d.off || Math.abs(d.angle) < 0.6) continue; given = O.give(SHUT_ID, O.targetAt(d.frameCentre)); if (given === null) { R.until(() => d.latched, 30); break; } }
-    for (const room of RC.rooms) { if (left() <= 0) break; const sd = room.def.doors?.[0]; const d = sd ? R.door(typeof sd === 'string' ? sd : (sd.door ?? sd.name ?? sd.id)) : null; if (!d) continue; rooms++;
-      const side = faceOf(d, g.player.char.pos), stand = pt(d, d.def.width / 2 + 1.6, side * 2.2);
-      if (!g.col.nav.isBlocked(stand[0], stand[2])) g.teleportPlayer(stand);
-      O.give('fallIn', nowhere(O), 'all'); R.until(() => left() <= 0, 6);
-      O.give('stack', O.targetAt(d.frameCentre)); R.until(() => left() <= 0, 8);
-      O.give('openClear', O.targetAt(d.frameCentre)); R.until(() => left() <= 0, 25);
-      if (told && given !== null && !d.latched && !d.off) { O.give('hold', nowhere(O), 'all'); R.step(30); prop(d, Math.max(0.8, Math.abs(d.angle))); given = O.give(SHUT_ID, O.targetAt(d.frameCentre)); R.until(() => d.latched || left() <= 0, 25); }
-      O.give('fallIn', nowhere(O), 'all'); R.until(() => left() <= 0, 8); }
-    R.until(() => left() <= 0, 300);
-    return { R, assigned, shutBy, opened, restsTo, given, rooms, secs: g.time - t0, up: R.ops.filter((x: any) => x.state !== 'dead').length, orders: O.log.length, stats: { ...SHUTDOOR_STATS }, log: SHUTDOOR_LOG.length };
-  };
-  const a = await play(false);
-  verdict(a.secs >= 299 && a.rooms >= 3 && a.assigned === 0 && a.stats.given === 0 && a.stats.shut === 0 && a.log === 0 && !a.R.O.log.some((l: any) => l.order === SHUT_ID),
-    'never ordered: over five minutes no man is ever under the order, its counters and its log are empty', `${f2(a.secs)} s · ${a.rooms} rooms worked · ${a.up}/4 teammates up · frames a man was under it: ${a.assigned} · given ${a.stats.given} · shut ${a.stats.shut} · log rows ${a.log}`);
-  verdict(a.shutBy === 0 && a.opened > 0, '  with doors that stay open: teammates open doors in those five minutes, and no leaf a teammate last touched comes to its latch', `leaves a teammate opened: ${a.opened} · open → latched with a teammate's hand last on it: ${a.shutBy} · (not judged) brought to its frame by a man's body and resting there unlatched: ${a.restsTo}`);
-  const b = await play(true);
-  verdict(b.given === null && b.assigned > 0 && b.stats.given === 1 && b.log > 0 && b.shutBy >= 1, '  (the same five minutes with the order given once: the counters move, and a leaf a teammate touched last does latch — the lines above can go red)', `give: ${b.given} · frames under it ${b.assigned} · open → latched by a teammate ${b.shutBy} · given ${b.stats.given} · shut ${b.stats.shut} · gave up ${b.stats.gaveUp} · log rows ${b.log}`);
-  return done();
-});

@@ -137,6 +137,12 @@ Strongest first, with why each stands above the next:
 
 For a team: his part in a door or wall drill, then a pair's job, then a plain order, then fall in.
 
+**What stands today**: `owner::TASKERS` (`game_types/src/owner/types.rs`) is that list of fifteen, a line each with
+its name and its reasons, in the code's present order. Who has a man is one word, a bit a tasker: `owner::claim(g,
+man, by::LANE, t, why)`, `owner::release`, `owner::has(&Game, man, by::PRESS | by::BUDDY)`, and `owner::who` (the
+strongest, why, since when), which `control_line` prints. It RECORDS: a tasker takes its man whoever has him, and
+each rule asks `has` of those it yields to. Deciding by the list is step G.
+
 In code an assignment is three calls, and a tasker is whoever makes them (not built yet; step E makes the
 first, for `hold` and `pinned`):
 
@@ -332,9 +338,15 @@ the first frame and the parts that differ. A new reaction or order is meant to c
 it this way: every run in which it never acted must still be the same (each run's line says how long each rule
 had a man), and what it does where it acts is for the mission tallies to judge.
 
-**What is NOT one file and one line today**, plainly. *A behaviour of a man's own* (how he patrols, searches,
-fights when nothing has taken him) is still a function of the guard's update in `guards/p_07.rs`, and the room
-fight's defenders and operatives are still their own module: neither is in a list. A reaction can take a man
+**A behaviour of a man's own** (how he patrols, looks, fights and searches when nothing has taken him) is one file a
+state: `rust/game_rules/src/guards/behave/{patrol,suspicious,alert,search}.rs`, each one function from what he
+senses (`Sensed`, settled before it is asked and written by no behaviour) to what he does (`Acts`: how fast his legs
+go, what his hands have up, where he aims, how low, gun lowered, slicing), which the pose reads and no behaviour
+does. `guards/p_07.rs` is the frame round them: incapable, lent, perceive, alertness, behave, pose.
+
+**What is NOT one file and one line today**, plainly. A new STATE of a man is an arm of `GuardState`, which many
+modules read, and one of `behave::act`. The room fight's defenders and operatives are still their own module, in no
+list. A reaction can take a man
 whole, not his legs alone while he goes on shooting. A reaction's file is longer than its idea, because it must
 ask for itself whether a man is on a post, kept to his rooms or somebody's (a third of the worked example).
 A reaction that draws from the die re-deals the rest of the mission until the keyed draws land. An order that
@@ -373,7 +385,7 @@ impl Reaction for Rule {
 A line names the rule's file and the words that name it. The stage of a man's frame at which it is asked is the
 type of what it asks for, so a rule cannot answer out of its stage: the compiler refuses it. `GuardScript`:
 asked before he senses, and his whole body follows the script. `TakeCover`: asked at the top of `alert`
-(`guards/p_07.rs`), that is of a man whose state is Alert and whom no script has, before his reaction time and
+(`guards/behave/alert.rs`), that is of a man whose state is Alert and whom no script has, before his reaction time and
 before his fight: down where he is or off to a spot crouched, gun lowered toward the danger, no round fired,
 hands free to change magazine. The line makes the rule's module, its id, the table of its rows
 (`g.ctl.rows.reload_in_cover`) and its place in the list. Nothing else names the rule: the commit that added
@@ -406,7 +418,7 @@ what `Assignment` and its limits are for. A rule is one file today; it is a SHOR
 
 **What a rule calls, today.** Four doors are built, each a hand-written file a
 person can read in a few minutes, and a rule uses them instead of writing a man's fields. (The fight's three
-parts, `fight_sight`, `fight_legs` and `fight_trigger` in `guards/p_07.rs`, are NOT a door: they are private
+parts, `fight_sight`, `fight_legs` and `fight_trigger` in `guards/behave/alert.rs`, are NOT a door: they are private
 to the guard's update and take `&mut Game`, so a rule cannot call them.)
 
 | to do this | call | file |
@@ -609,8 +621,9 @@ tallies before and after.
 - B (E, BUILT) The four body rules as transition / propose / commit, `propose` on `&Game`; a rule's transition
   still runs only where its old function ran.
 - C (E, BUILT) `update_guard` cut by program into incapable, lent, perceive, alertness, patrol / suspicious /
-  alert / search, pose. What passes between them is one `Frame` of 18 fields, which is honest about how much
-  they share: narrowing it (what he sensed, read-only; what his behaviour decided, returned) is the next cut.
+  alert / search, pose. What passed between them was one `Frame` of 18 fields.
+- C2 (E, BUILT) The frame narrowed to what he sensed, read-only (`Sensed`), and what his behaviour decided, returned
+  (`Acts`), and the four behaviours a file each (`guards/behave/`).
 - A3 (E, BUILT) One list with one vocabulary (section 7), `lost`, the record written once a tick.
 - A4 (E, BUILT) The fight's shooting branch is three functions in the order it ran: `fight_sight` (aim),
   `fight_legs`, `fight_trigger` (hands). The seam a rule needs to move a man who goes on shooting.

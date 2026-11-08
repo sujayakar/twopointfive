@@ -94,28 +94,22 @@ export function lookPageRows(q: URLSearchParams): string[] { return q.getAll('lo
 // THE PICTURE IS THE LOOK'S ON EVERY PAGE, and on every other host of the engine: there is no switch (2026-11-07; the maintainer: "should we work on merging
 // the new look too?", and of the way to do it "single path when possible"). Until then it drew only with a row on the address, and for one step of the build
 // `?look=old` drew the picture as it was. THE PICTURE ONLY: nothing a step of the game reads follows it (what the look's own page added to PLAY is the lab's, below).
-/** THE LOOK LAB: the page that asks for the look BY NAME (a row on the address: `/look`, `/smokelab`, `?look`, `?look=key:value`; or the tag a one-file build
+/** THE LOOK LAB: the page that asks for the look BY NAME (a row on the address: `/look`, `?look`, `?look=key:value`; or the tag a one-file build
  *  carries, where the address takes no flags), which is what the look's own page was before the picture became every page's. What that page did beyond the
- *  picture stays the lab's and is on no other page: its panel opened over the game, its kit and the fog put down (`?lookkit=0`), the trials that rewrite the
- *  level as it loads (`geo`, `lorry`), the hills that rays see (`hills`: the game's own rays meet them too), the seated posts (`?seat=0`) and a snow level's
+ *  picture stays the lab's and is on no other page: its panel opened over the game, its kit and the fog put down (`?lookkit=0`) and a snow level's
  *  broken cloud. Each of those changes what the page's game PLAYS, and a
  *  co-op server, a headless run and a check all play the level as its file has it. main.ts reads this once at boot into LOOK_LAB */
-export function lookLabOn(q: URLSearchParams): boolean { return lookPageRows(q).length > 0 || (typeof document !== 'undefined' && !!document.querySelector?.('meta[name="tps-look"]')); }
+export function lookLabOn(q: URLSearchParams): boolean { return lookPageRows(q).length > 0; }
 /** …as this page booted (main.ts pageSwitches; false on every stand without a page) */
 export const LOOK_LAB = { on: false };
-/** ITS TRIALS: the address's word of each, and the key under which the look panel's button keeps it on this machine */
-export const LOOK_TRIALS = { geo: 'twopointsix.geotry', hills: 'twopointsix.hillrays', lorry: 'twopointsix.lorrytry' } as const;
-export type LookTrial = keyof typeof LOOK_TRIALS;
-/** a trial's switch: the address's own word wins; else what the panel's button last kept on this machine (on, where it kept nothing) */
-export function lookTrialOn(q: URLSearchParams, word: LookTrial): boolean { if (q.has(word)) return q.get(word) !== '0'; try { return localStorage.getItem(LOOK_TRIALS[word]) !== '0'; } catch { return true; } }
-/** the trials this machine keeps OFF and the address does not name, as the address would say them: with these on it, another page is the look this one shows */
-export function lookTrialsKept(q: URLSearchParams): string[] { const lab = lookLabOn(q), off = (Object.keys(LOOK_TRIALS) as LookTrial[]).filter(w => lab && !q.has(w) && !lookTrialOn(q, w)).map(w => `${w}=0`);   // (the trials are the lab's: on a page that is not the lab they are off whatever was kept, and no word says so)
-  let cut: string | null = null; try { cut = localStorage.getItem('twopointsix.cutboxes'); } catch { /* no store: on */ }   // (…and the cut boxes' own switch, which four of the five stand on: scene/cut.ts initCutSwitch)
-  return cut === '0' && !q.has('cutboxes') && !q.has('nocutboxes') ? [...off, 'cutboxes=0'] : off; }
+/** what this machine keeps OFF of the look and the address does not name, as the address would say it */
+export function lookTrialsKept(q: URLSearchParams): string[] {
+  let cut: string | null = null; try { cut = localStorage.getItem('twopointsix.cutboxes'); } catch { /* no store: on */ }   // (the cut boxes' own switch: scene/cut.ts initCutSwitch)
+  return cut === '0' && !q.has('cutboxes') && !q.has('nocutboxes') ? ['cutboxes=0'] : []; }
 /** the other words the page reads once, at boot, into its shader text and its level (main.ts, scene/cut.ts: the look's geometry is cut boxes) */
-const LOOK_PAGE_WORDS: ReadonlySet<string> = new Set([...Object.keys(LOOK_TRIALS), 'roll', 'lorrykit', 'seat', 'firefit', 'longfoot', 'walked', 'firesnow', 'firesoot', 'emberfog', 'cutboxes', 'nocutboxes', 'smokelook', 'nosunglint', 'glintpick', 'holedepth', 'portalworth', 'kept', 'lookworkers']);
+const LOOK_PAGE_WORDS: ReadonlySet<string> = new Set(['firefit', 'longfoot', 'walked', 'firesnow', 'firesoot', 'emberfog', 'cutboxes', 'nocutboxes', 'smokelook', 'nosunglint', 'glintpick', 'holedepth', 'portalworth', 'kept', 'lookworkers']);
 /** a word of an address, decoded, is the look page's own */
-export function lookPageWord(k: string, v: string): boolean { return k === 'look' ? lookRow(v) : k === 'round' ? v === '1' : LOOK_PAGE_WORDS.has(k); }   // (`round=1` is the page's: its round test compiled beside a trial's cut boxes; `round=0` is a rule's off switch, another fight)
+export function lookPageWord(k: string, v: string): boolean { return k === 'look' ? lookRow(v) : k === 'round' ? v === '1' : LOOK_PAGE_WORDS.has(k); }   // (`round=0` is a rule's off switch, another fight)
 /** HOW KEPT THE PLACE IS, for the frame (render/frame.ts lookConfig.kept → look.wgsl lookKept): the address's `&kept=<0‥1>` for the visit, else the level's
  *  own word (its file's meta.kept), else 0, which is every level as it was drawn before the word. 0 = left to the weather and the years: a stuff that fades
  *  blotches and drifts, one that soaks has its damp foot and its runs, old paint is rubbed thin and gone a shade into its wall. 1 = cleaned and painted last

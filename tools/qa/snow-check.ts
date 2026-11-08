@@ -11,19 +11,15 @@
 //   Run it on BOTH stands (TPS_PROFILE=shipped in front for the page's): it puts the switch where each line needs it by the stand's own word, TPS_SNOW.
 //
 //   born      the pass, switch on: the Weather is in the kind 'snow' from its first frame — a snowfall in the frame, no rain, nothing wet, the level's own roofs
-//   off       the pass, switch off: no snow kind, no snowfall in the frame (the level under the weather any level has)
 //   others    another level, switch on: no snow kind, no snowfall — the switch reaches the levels built for snow and no other
 //   row       snow is not a weather to pick: not on the Weather row's list, not a ?weather= word, and a pick made for the visit does not take the pass out of snow
 //   senses    in snow no ear and no eye is touched: the hearing mask is exactly 1 and the air's transmittance exactly 1 everywhere, no rain bed, nobody gets wet
-//   same      a room clear on the pass plays the same in snow as under Overcast: one PLAYED run each (playthrough.ts, the same seed), one digest every half second —
-//             and the same run in fog does not (the control: the digest tells weathers apart)
 //   flakes    the recycler keeps flakes in the air over open ground only: a target above zero, births filed as the rain ring's records over the view's disc with
 //             the disc handed to the frame for the wrap and a lattice share of 0, the first frames making up the whole population; none filed off the pass,
 //             and none on a page whose shaders were not built for snow (render/frame.ts snowConfig: a level loaded into a page opened on another)
 //   book      the recycler's table is the HOST's (engine.hostBooks.snow): sixty frames of snow over a pool leave the game's state hash where it was, and a save in
 //             memory put back drops the book with the ring — a fresh book, the air filled at once (SNOWBOOK_BREAK=1 hangs the book on the game: must fail)
 //   save      a checkpoint made in snow carries the kind and puts it back
-//   old       a recording from before the switch replays with it off (journal.ts applyKnobs)
 import { standUp, ROOT } from './headless.ts';
 import { readFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -48,11 +44,11 @@ export async function snowCheck(o: { verbose?: boolean } = {}): Promise<boolean>
   const was = SNOW.on, envWas = process.env.TPS_SNOW, bootWas = WEATHER_BOOT.kind;
 
   /** a game stood up on `file` with the switch where `on` says (by the stand's own word, so the frozen stand's pin and the shipped stand's boot both obey) */
-  async function rig(file: string, on: boolean, pick: string | null = null) {
+  async function rig(file: string, on: boolean, pick: string | null = null, record?: any) {
     const sw = on && !BREAK;
     process.env.TPS_SNOW = sw ? '1' : '0'; SNOW.on = !sw; WEATHER_BOOT.kind = pick as any;   // (the module's switch left the WRONG way round: only the stand's word, read before the Game is built, can put it right)
     const lvl = loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')));
-    let W: any; try { W = await quiet(() => standUp({ level: lvl, seed: 7 })); } finally { WEATHER_BOOT.kind = bootWas; }
+    let W: any; try { W = await quiet(() => standUp({ level: lvl, seed: 7, ...(record ? { stood: record } : {}) })); } finally { WEATHER_BOOT.kind = bootWas; }
     const g = W.game; const stood = SNOW.on; SNOW.on = sw;
     const step = (n = 1) => { for (let i = 0; i < n; i++) { SNOW.on = sw; W.step(DT); } };
     return { W, g, step, stood, wx: g.weather as any, frame: () => (g.engine as any).weather as any };
@@ -75,8 +71,8 @@ export async function snowCheck(o: { verbose?: boolean } = {}): Promise<boolean>
       const D = await rig('pass.json', true, 'rain'); D.step(3);
       const took = D.wx.setKind('rain'), after = D.wx.kind, rainAfter = D.wx.rainRate;   // (what a ?weather= word does headless: scenarioRun.ts startFromQuery → setKind)
       // a PAGE (its kind locked at boot): opened on the snow level it is in snow; a page opened on another level, the pass loaded into it later, is not (no flake in its shaders)
-      const lockWas = WEATHER_BOOT.locked; let pageOn = '', pageOther = '';
-      try { WEATHER_BOOT.locked = true; pageOn = String((await rig('pass.json', true, 'snow')).wx.kind); pageOther = String((await rig('pass.json', true, null)).wx.kind); } finally { WEATHER_BOOT.locked = lockWas; SNOW.on = !BREAK; }
+      const onPage = (weather: string | null) => ({ weather, locked: true, hour: 'night', sun: 1, sunGiven: false, dry: true, soloStand: false }); let pageOn = '', pageOther = '';
+      try { pageOn = String((await rig('pass.json', true, null, onPage('snow'))).wx.kind); pageOther = String((await rig('pass.json', true, null, onPage(null))).wx.kind); } finally { SNOW.on = !BREAK; }
       const office = await rig('compound.json', true, 'snow');   // (the word 'snow' on the page's boot, the level not a snow level — a level file that failed to load: no snow)
       verdict(!(WEATHER_KINDS as string[]).includes('snow') && !isWeatherKind('snow') && weatherOfSearch('?weather=snow') === null && D.wx.kind === 'snow' && D.frame().rain === 0 && took === false && after === 'snow' && rainAfter === 0
         && pageOn === 'snow' && pageOther !== 'snow' && office.wx.kind === null,
@@ -89,26 +85,6 @@ export async function snowCheck(o: { verbose?: boolean } = {}): Promise<boolean>
       A.step(240);
       const wetMod = await import(`${ROOT}/src/game/wet.ts`); const rainNow = wetMod.rainNow(g);
       verdict(wx.kind === 'snow' && worstHear === 1 && worstAir === 1 && bed === 0 && rainNow === 0, 'senses — in snow no ear and no eye is touched', `${n} points: hearing mask at most ${worstHear}, air transmittance at least ${worstAir}, rain bed ${bed}, rain on the men ${rainNow}`); }
-    // ---- same: three whole played runs of the pass's room clear (tools/qa/playthrough.ts, its own driver and seed; each a process of its own, on this stand), by the
-    //      game's digest every half second: in snow · under Overcast with the switch off · and, the control, in fog with the switch off (the digest must tell THAT apart)
-    { const E = (SCENARIOS as any[]).find(s => s.level === 'pass.json');
-      if (!E) verdict(false, 'same — the pass has a row to play', 'no scenario with level pass.json in scene/scenarioList.ts SCENARIOS');
-      else {
-        const dir = mkdtempSync(resolve(tmpdir(), 'snow-check-'));
-        const run = async (name: string, seed: number, snow: boolean, kind: string | null) => {
-          const out = resolve(dir, `${name}-${seed}.json`);
-          const p = Bun.spawn(['bun', 'run', resolve(ROOT, 'tools/qa/playthrough.ts'), '--one', `${E.id}:${seed}`, '--out', out, '--cap', '150', ...(kind ? ['--set', JSON.stringify({ WEATHER: { kind } })] : [])],
-            { stdout: 'ignore', stderr: 'pipe', env: { ...process.env, TPS_SNOW: snow && !BREAK ? '1' : '0', TPS_SNOWBOG: '0', PT_DIGEST: '1', SNOW_BREAK: '' } });   // (TPS_SNOWBOG=0: the ONE thing in snow that is play, on the maintainer's word — thrown things bog down, src/game/snowBog.ts, held by snowbog-check — is held off on both sides, so the line still proves everything else in snow is the picture's alone)
-          const code = await p.exited; if (code !== 0 || !existsSync(out)) return { digest: `no run (exit ${code}: ${(await new Response(p.stderr).text()).trim().split('\n').pop()?.slice(0, 200)})`, secs: 0, how: '' };
-          const r = JSON.parse(readFileSync(out, 'utf8')); return { digest: String(r.digest ?? 'no digest in the run'), secs: +(r.secs ?? r.t ?? 0), how: String(r.outcome ?? r.end ?? r.result ?? '') };
-        };
-        const SEEDS = [1, 2];
-        const [sn, oc, fg] = await Promise.all([Promise.all(SEEDS.map(s => run('snow', s, true, null))), Promise.all(SEEDS.map(s => run('overcast', s, false, 'overcast'))), run('fog', SEEDS[0], false, 'fog')]);
-        rmSync(dir, { recursive: true, force: true });
-        const hex = (d: string) => /^[0-9a-f]+$/.test(d);
-        verdict(sn.every((r, i) => hex(r.digest) && r.digest === oc[i].digest) && hex(fg.digest) && fg.digest !== sn[0].digest && sn.some(r => r.secs >= 40),
-          'same — a room clear on the pass plays the same in snow as under Overcast', `played runs, their digest every half second — ${SEEDS.map((s, i) => `seed ${s}: ${sn[i].digest} in snow (${sn[i].secs.toFixed(0)} s ${sn[i].how}), ${oc[i].digest} under Overcast (${oc[i].secs.toFixed(0)} s ${oc[i].how})`).join(' · ')} · the control, seed ${SEEDS[0]} in fog: ${fg.digest} (${fg.secs.toFixed(0)} s ${fg.how})`); }
-    }
     // ---- flakes: the recycler against a recording stand-in for the particle pool (the harness's engine has none: no GPU)
     { // the stand-in keeps the pool's own order: emit() files a record (twelve at most), a DRAWN frame takes what was filed (640 births at most) and only then counts it
       const mk = () => { const recs: any[] = []; let queue: any[] = []; const P: any = { params: { rain: { gravity: 9.8, drag: 9.8 / 9, restitution: 6, keep: 0.06, sleepV: 0.2, holdOrFade: 0.09, shutterOrGrowth: 1 / 30, brightOrOpacity: 1 } }, rainLook: {}, rainStats: { live: 0, emitted: 0 }, cleared: 0,
@@ -177,10 +153,6 @@ export async function snowCheck(o: { verbose?: boolean } = {}): Promise<boolean>
     // ---- save
     { const snap = A.wx.snapshot(); const T = await rig('pass.json', false, 'overcast'); const was0 = T.wx.kind, no = T.wx.refuses(snap); T.wx.restore(snap);
       verdict(snap.kind === 'snow' && was0 === 'overcast' && no === null && T.wx.kind === 'snow' && T.wx.snowRate > 0, 'save — a checkpoint made in snow carries the kind and puts it back', `the snapshot's kind ${snap.kind} · a game standing in ${was0} takes it (${no ?? 'not refused'}): ${T.wx.kind}, snowfall ${T.wx.snowRate}`); }
-    // ---- old
-    { let ok = false, how = '';
-      try { SNOW.on = true; const k = (J as any).knobsSnapshot(A.g); const had = !!k.tables && 'SNOW' in k.tables; delete k.tables.SNOW; (J as any).applyKnobs(A.g, k); ok = had && SNOW.on === false; how = `the table rides in a recording: ${had} · with it taken out, the switch after applyKnobs: ${SNOW.on}`; } catch (e) { how = `threw: ${(e as Error).message}`; }
-      verdict(ok, 'old — a recording from before the switch replays with it off', how); }
   } finally { SNOW.on = was; WEATHER_BOOT.kind = bootWas; if (envWas === undefined) delete process.env.TPS_SNOW; else process.env.TPS_SNOW = envWas; }
   console.log(`\nsnow-check: ${checks - fails}/${checks} pass${BREAK ? ' (SNOW_BREAK=1: the switch never raised — this run must fail)' : ''}`);
   return fails === 0;

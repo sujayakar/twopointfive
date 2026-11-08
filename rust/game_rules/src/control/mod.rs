@@ -347,6 +347,7 @@ pub fn control_line(g: &Game, gd: GuardId) -> String {
     if !no.is_empty() { s.push_str(" · said no: "); s.push_str(&no.join(", ")); }
     let (m, p) = (&g.gd[gd], state(g).and_then(|s| s.post.get(gd)).copied().unwrap_or_default());
     let by = |who: &'static str| if who.is_empty() { "the start" } else { who };
+    if let Some((name, _, t)) = crate::owner::who(g, gd) { s.push_str(&format!(" · {} has him for {:.1} s", name, g.time - t)); }
     if m.hold { s.push_str(&format!(" · held to his post by {} for {:.1} s", by(p.hold_by), g.time - p.hold_since)); }
     if m.pinned { s.push_str(&format!(" · pinned by {} for {:.1} s", by(p.pinned_by), g.time - p.pinned_since)); }
     s
@@ -369,7 +370,11 @@ mod tests {
 
     fn stand() -> (Box<Game>, GuardId) {
         let mut g = Box::new(Game::blank());
-        let gd = g.gd.push(crate::game::Guard::blank());
+        let mut body = crate::character::Character::blank();
+        body.man_kept = Some([0.0; 4]);   // (no row on the block: his numbers are kept on his body)
+        let mut man = crate::game::Guard::blank();
+        man.ch = g.ch.push(body);
+        let gd = g.gd.push(man);
         g.guards.push(gd);
         (g, gd)
     }
@@ -408,6 +413,9 @@ mod tests {
         assert!(g.gd[gd].hold && g.gd[gd].pinned);
         g.time = 5.0; settle(&mut g, gd);
         assert_eq!(control_line(&g, gd), "Ruiz: his own for 0.0 s · held to his post by roomfight for 3.0 s · pinned by orders for 1.0 s");
+        crate::owner::claim(&mut g, gd, crate::owner::by::LANE, 5.0, None);
+        assert_eq!(control_line(&g, gd), "Ruiz: his own for 0.0 s · a covered lane has him for 0.0 s · held to his post by roomfight for 3.0 s · pinned by orders for 1.0 s");
+        crate::owner::release(&mut g, gd, crate::owner::by::LANE, 5.0);
         g.time = 6.0; set_hold(&mut g, gd, false, "pressure");
         assert_eq!(state(&g).unwrap().post.get(gd).unwrap().hold_by, "pressure");
         assert!(!g.gd[gd].hold);

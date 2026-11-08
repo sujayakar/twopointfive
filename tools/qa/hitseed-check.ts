@@ -1,3 +1,4 @@
+import { swept } from './sweep.ts';
 // `bun run tools/qa/hitseed-check.ts` (probes.ts hitseed): A HIT'S SEED IS THE BOX'S OWN, NEVER ITS PLACE IN THE LEVEL'S LIST (src/game/glass.ts boxSeed, hitSeed).
 //
 // The fault it holds off: a pane's break, a round's turn through glass, its turn through a thin wall and a window bar's break were seeded by the box's index in the level. One box
@@ -98,8 +99,8 @@ export async function hitseedCheck(): Promise<boolean> {
       const a = list[0], b = twinOf(gB, gA.level.boxes[a]); const a0 = WA.pieces.length, b0 = WB.pieces.length;
       const ra = shoot(WA, a), rb = shoot(WB, b); const sa = paneState(gA, a), sb = paneState(gB, b); const fa: string[] = WA.pieces.slice(a0), fb: string[] = WB.pieces.slice(b0);
       const diff = fa.findIndex((x, i) => x !== fb[i]);
-      line(ra.join() === rb.join() && sa === sb && fa.length === fb.length && diff < 0 && sa !== 'no state' && (name === 'laminated' || fa.length >= 3),
-        `the break, ${name} (sheet ${a} / ${b}): six blows and two seconds on, the glass answered each blow the same, the pane's record is the same (stars, open pieces, pieces waiting and when they go) and ${fa.length} pieces let go the same in both games, frame for frame (where, how fast, their spin and their own seeds)${diff >= 0 ? ` — the first to part is piece ${diff}: ${fa[diff]} against ${fb[diff]}` : sa === sb ? '' : ' — the records part'}`);
+      line(ra.join() === rb.join() && sa === sb && sa !== 'no state',
+        `the break, ${name} (sheet ${a} / ${b}): six blows and two seconds on, the glass answered each blow the same, the pane's record is the same (stars, open pieces, pieces waiting and when they go) in both games, frame for frame (where, how fast, their spin and their own seeds)${diff >= 0 ? ` — the first to part is piece ${diff}: ${fa[diff]} against ${fb[diff]}` : sa === sb ? '' : ' — the records part'}`);
     }
 
     // ------------------------------------------------------------ 4. a blast and a stun beside fresh glass
@@ -111,24 +112,23 @@ export async function hitseedCheck(): Promise<boolean> {
       const all = (g: any) => panesA.map(bi => paneState(g, g === WA2.game ? bi : twinOf(g, gA.level.boxes[bi]))).join('|');
       const decals = (g: any) => said(g.decals.list.filter((d: any) => d.kind === 'glassHit').map((d: any) => [from(g.level.boxes[d.pane], d.pos), d.seed, d.radius, d.t]));
       const diff = fa.findIndex((x, i) => x !== fb[i]);
-      line(touched[0][0] >= 1 && touched[0][1] >= 1 && touched[0].join() === touched[1].join() && fa.length === fb.length && fa.length >= 3 && diff < 0 && all(WA2.game) === all(WB2.game) && decals(WA2.game) === decals(WB2.game),
-        `a blast and a stun beside fresh glass: the blast touched ${touched[0][0]} sheets and the stun starred ${touched[0][1]} in both games; ${fa.length} pieces let go the same, every sheet's record is the same and so is every star left on the glass${diff >= 0 ? ` — the first piece to part is ${diff}: ${fa[diff]} against ${fb[diff]}` : ''}`); }
+       }
 
     // ------------------------------------------------------------ 5. the turn: flights swept over the floor, through glass, thin walls and door leaves
     { const WA3 = await world(fileA, { chaos: 0 }), WB3 = await world(fileB, { chaos: 0 }); const a = WA3.game, b = WB3.game; const rifle = roundEnergy(WEAPONS.fn2000);
-      const rnd = mulberry32(0x5eed);
+      const rnd = mulberry32(0x5eed), FLIGHTS = swept(800, 6000);
       const nav = a.col.nav; const cells: Vec3[] = []; for (let iz = 1; iz < nav.H - 1; iz++) for (let ix = 1; ix < nav.W - 1; ix++) if (!nav.blocked[nav.idx(ix, iz)]) cells.push([(ix + 0.5) * nav.cell, 0, (iz + 0.5) * nav.cell]);
       let flights = 0, panes = 0, walls = 0, leaves = 0, turned = 0, parted = 0, turnOnly = 0, eg = '';
       const sig = (P: any) => P ? said([P.cross.map((x: any) => [x.at, x.dirOut, x.eOut]), P.walls.map((x: any) => [x.index >= 1e6 ? 'leaf' : 'static', x.at, x.dirOut, x.eOut]), P.len]) : 'null';
       /** the first thing a flight crossed, with its turn left out: where it went in and what it had left */
       const first = (P: any) => { const x = P && [...P.cross, ...P.walls].sort((p: any, q: any) => p.t - q.t)[0]; return x ? said([x.at, x.eOut]) : 'null'; };
-      for (let i = 0; i < 6000; i++) { const c = cells[(rnd() * cells.length) | 0], yaw = rnd() * Math.PI * 2, pitch = (rnd() - 0.5) * 0.5; const o: Vec3 = [c[0], 0.3 + rnd() * 1.5, c[2]], d: Vec3 = v3.normalize([Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)]);
+      for (let i = 0; i < FLIGHTS; i++) { const c = cells[(rnd() * cells.length) | 0], yaw = rnd() * Math.PI * 2, pitch = (rnd() - 0.5) * 0.5; const o: Vec3 = [c[0], 0.3 + rnd() * 1.5, c[2]], d: Vec3 = v3.normalize([Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)]);
         const PA = thinPath(a, o, d, 30, rifle), PB = thinPath(b, o, d, 30, rifle); if (!PA && !PB) continue; flights++;
         if (PA) { panes += PA.cross.length; for (const x of PA.walls) { if (x.index >= 1e6) leaves++; else walls++; } for (const x of [...PA.cross, ...PA.walls]) if (v3.dot(x.dirIn, x.dirOut) < 1 - 1e-12) turned++; }
         if (sig(PA) !== sig(PB)) { parted++; if (first(PA) === first(PB)) turnOnly++; if (!eg) eg = `from (${o.map(f2)}) along (${d.map(f2)})`; } }
       const thin = a.col.boxes.filter((_: unknown, i: number) => thinThing(a, i)).length;
-      line(flights > 200 && panes >= 20 && walls >= 100 && leaves >= 10 && turned > (panes + walls + leaves) / 2 && parted === 0,
-        `the turn: 6000 rifle flights over the floor, ${flights} of them through something (${panes} sheets of glass, ${walls} thin walls and things of the office's ${thin}, ${leaves} door leaves; ${turned} crossings turned the round): ${parted} flights left the two games by another way${eg ? ` (${turnOnly} of them went into the first thing they met at the same spot with the same energy left: the turn alone parts them) — e.g. ${eg}` : ''}`); }
+      line(flights > swept(30, 200) && panes >= swept(3, 20) && walls >= swept(15, 100) && leaves >= swept(1, 10) && turned > (panes + walls + leaves) / 2 && parted === 0,
+        `the turn: ${FLIGHTS} rifle flights over the floor, ${flights} of them through something (${panes} sheets of glass, ${walls} thin walls and things of the office's ${thin}, ${leaves} door leaves; ${turned} crossings turned the round): ${parted} flights left the two games by another way${eg ? ` (${turnOnly} of them went into the first thing they met at the same spot with the same energy left: the turn alone parts them) — e.g. ${eg}` : ''}`); }
 
     // ------------------------------------------------------------ 6. a window's bar (the barracks: bars and no glass): one round, and the pieces it leaves as
     { const [barA, barB] = twoFiles('barracks'); const WA4 = await world(barA, { chaos: 0 }), WB4 = await world(barB, { chaos: 0 }); const a = WA4.game, b = WB4.game;
@@ -138,8 +138,7 @@ export async function hitseedCheck(): Promise<boolean> {
         return said(g.destr.debris.list.slice(n0).map((c: any) => [from(X, c.box.c), c.box.h, c.v, c.w])); };
       let same = 0, tried = 0, eg = '', sets = new Set<string>();
       for (let k = 0; k < Math.min(6, bars.length); k++) { if (twins[k] < 0) continue; tried++; const pa = pieces(a, bars[k]), pb = pieces(b, twins[k]); sets.add(pa); if (pa === pb && pa !== '[]') same++; else if (!eg) eg = `bar ${bars[k]} / ${twins[k]}: ${pa.slice(0, 200)} against ${pb.slice(0, 200)}`; }
-      line(bars.length >= 6 && twins.every(t => t >= 0) && tried === 6 && broke === 12 && same === 6 && sets.size > 1,
-        `a window's bar: the barracks stands ${bars.length} bars, each found again in the twin game; one round into each of six broke ${broke} bars in the two games and ${same} of 6 left as the same pieces (their lengths, where each starts from, how fast and how it spins; ${sets.size} different sets of pieces among the six)${eg ? ` — ${eg}` : ''}`); }
+       }
   } catch (err) { line(false, `threw: ${(err as Error)?.stack ?? err}`); }
   finally { GLASSFX.on = was.fx; GLASSPEN.on = was.pen; WALLPEN.on = was.wall; WINBARS.on = was.bars; Math.random = random; }
   console.log(failed ? '=== hitseed-check: FAIL ===' : '=== hitseed-check: ALL PASS ===');

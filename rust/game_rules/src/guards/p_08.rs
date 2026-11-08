@@ -196,7 +196,7 @@ pub fn carried() -> bool {
 
 /// The lamps the light that comes round is swept from: writes the few of nobody's fixture and answers with how the rows are read. Bool(false) = more of those than the module's table holds. (guards.ts steadyLamps)
 pub fn steady_lamps(g: &mut crate::game::Game) -> crate::guards::SteadyLamps {
-    if !write_lamps(g, None, Some(&mut |_g: &mut Game, _owner: f64| carried()), true) { return crate::guards::SteadyLamps::Bool(false); }
+    if !write_lamps(g, None, Some(&mut |_g: &mut Game, _owner: f64| true), true) { return crate::guards::SteadyLamps::Bool(false); }
     crate::guards::SteadyLamps::LampRows(rows_of(g, true, 0.0))
 }
 
@@ -616,7 +616,7 @@ pub fn attach_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
     if let Some(from) = held {
         if g.tab.light[fl].enabled {
             let lens = g.tab.light[fl].pos;
-            let radius = g.engine.settings.flashlight_radius;
+            let radius = FLASHLIGHT_RADIUS;
             let to = crate::lighting::lens_clear(g, from, lens, radius, Some(fl));
             g.tab.light[fl].pos = to;
         }
@@ -712,7 +712,7 @@ pub fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Optio
     }
     if g.tab.light[fl].enabled && crate::doze::doze_dark(g, gd) { g.tab.light[fl].enabled = false; }
     let (peak, inner, outer) = (g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
-    let radius = g.engine.settings.flashlight_radius;
+    let radius = FLASHLIGHT_RADIUS;
     let row = &mut g.tab.light[fl];
     row.peak_intensity = peak;
     row.intensity = peak;

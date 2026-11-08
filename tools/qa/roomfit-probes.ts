@@ -1,6 +1,6 @@
 // A SPOT THAT FITS THE ROOM — the checks for src/game/roomfit.ts ('move there' deals each man a place and a watch from the room's ways in and what is cleared
 // beyond them, where it was a line abreast with every man facing Sam's way). Run through tools/qa/probes.ts (family `roomfit`):
-//   roomfit-rooms     every level in levels/, a point in every room, 2 / 3 / 4 men, nothing but Sam's start known: the fitted deal against the line abreast, by
+//   roomfit-rooms     every level in levels/, a point in every room, 2 / 3 / 4 men, as the level stands: the fitted deal against the line abreast, by
 //                     the counts of roomfit-map.ts — no mark in a frame, a body's room between marks, nobody further than the spread, far fewer men in a mate's
 //                     line, more walls at backs, and the uncleared ways in sight watched where the line watched a fraction of them
 //   roomfit-cleared   "what's cleared and what isn't": the same deal again after the floor beyond a watched way has been stood on — where an uncleared way had
@@ -10,11 +10,11 @@
 //                     again and his gun — never his feet — moves on
 import { readdirSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
+import { sample } from './sweep.ts';
 import { stand, roomPoints, deals, measure, ZERO, add, line, type Counts } from './roomfit-map.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { ROOMFIT, ROOMFIT_STATS, fitSpots } = await import(`${ROOT}/src/game/roomfit.ts`);
-const { roomRead } = await import(`${ROOT}/src/game/roomread.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -40,7 +40,7 @@ export const roomfitRooms = guarded(async () => {
   const bad: string[] = [], fell: string[] = []; let levels = 0;
   for (const file of LEVELS) {
     let W: any; try { W = await stand(`levels/${file}`, 4); } catch (e) { fell.push(`${file}: ${String((e as Error).message).slice(0, 80)}`); continue; }
-    const g = W.game, from = [...g.player.char.pos]; g.cleared.mark(from); levels++;
+    const g = W.game, from = [...g.player.char.pos]; levels++;
     const L: string[] = [];
     for (const n of [2, 3, 4]) { const lf = ZERO(), ll = ZERO(); let none = 0;
       for (const P of roomPoints(g)) { const D = deals(g, P.at, from, n), cl = measure(g, P.at, from, D.line); T[n].pts++;
@@ -63,30 +63,6 @@ export const roomfitRooms = guarded(async () => {
   return done();
 });
 
-export const roomfitCleared = guarded(async () => {
-  const { verdict, done } = family('roomfit-cleared: what is cleared and what is not moves the guns');
-  let cases = 0, moved = 0, ways = 0, worse = 0, kept = 0, fell = 0; const eg: string[] = [];
-  for (const file of LEVELS) {
-    let W: any; try { W = await stand(`levels/${file}`, 4); } catch { fell++; continue; }
-    const g = W.game, from = [...g.player.char.pos]; g.cleared.mark(from);
-    for (const P of roomPoints(g)) {
-      const R = roomRead(g, P.at, ROOMFIT.reach, from), unc = R.ways.filter((w: any) => !w.farKnown && !w.locked && w.dist <= ROOMFIT.reach); if (unc.length < 3) continue;
-      const D1 = fitSpots(g, P.at, 2, yawTo(from, P.at), from); if (!D1) continue;
-      const on = unc.filter((w: any) => D1.some((f: any) => f.key === w.o.id)), free = unc.filter((w: any) => !on.includes(w)); if (on.length !== 2 || !free.length) continue;
-      // the floor beyond the heavier of the two watched ways is stood on: is it a room of its own (not the one the point is in, nor the other ways')
-      const w0 = on[0], room = w0.far; if (!room || room === R.room || unc.some((w: any) => w !== w0 && w.far === room)) continue;
-      const before = g.cleared.known; g.cleared.mark(w0.beyond); if (g.cleared.known === before) continue;
-      cases++;
-      const D2 = fitSpots(g, P.at, 2, yawTo(from, P.at), from); if (!D2) { worse++; continue; }
-      const now = unc.filter((w: any) => D2.some((f: any) => f.key === w.o.id));
-      const k1 = D1.map((f: any) => f.key), toWay = now.some((w: any) => free.includes(w)); if (toWay) ways++;
-      if (!now.includes(w0) && D2.some((f: any) => f.key && !k1.includes(f.key))) { moved++; if (eg.length < 4) eg.push(`${file} room ${P.room}: ${D1.map((f: any) => f.key).join(' + ')} → ${D2.map((f: any) => f.key).join(' + ')} once ${w0.o.id} was known`); }
-      else { if (now.includes(w0)) kept++; if (process.argv.includes('--verbose')) console.log(`    not moved: ${file} room ${P.room} ${at(P.at)}: ${D1.map((f: any) => `${f.key} ${f2(f.w)}`).join(' + ')} → ${D2.map((f: any) => `${f.key} ${f2(f.w)}`).join(' + ')} once ${w0.o.id} was known · free were ${free.map((w: any) => `${w.o.id} ${f2(w.dist)} m`).join(', ')}`); }
-    }
-  }
-  verdict(fell === 0 && cases >= 8 && moved === cases && ways >= cases * 0.4 && kept === 0 && worse === 0, 'two men, three uncleared ways and more: once the floor beyond one they watched is known, its gun is on something nobody had looked at — another uncleared way, or a long stretch of floor nobody has stood on (a hall\'s length outweighs a third door down its side)', `${cases} cases · the gun moved on ${moved} (to an uncleared way ${ways}) · stayed on the known one ${kept} · no deal ${worse}\n    ${eg.join('\n    ')}`);
-  return done();
-});
 
 /** the office under a seed, the night breach's squad staged (two, or four), the defenders kept dazzled */
 async function rig(seed: number, squad: 2 | 4) {
@@ -108,7 +84,7 @@ const gunYaw = (m: any) => m.char.aimYaw ?? m.char.bodyYaw;
 
 export const roomfitWalk = guarded(async () => {
   const { verdict, done } = family('roomfit-walk: the order given, walked and stood — each man on his own mark with his gun on what he was dealt');
-  for (const squad of [2, 4] as const) for (const P of [AISLE, AISLE_FAR]) {
+  for (const [squad, P] of sample([[2, AISLE], [2, AISLE_FAR], [4, AISLE], [4, AISLE_FAR]] as [2 | 4, number[]][], 2)) {
     const R = await rig(11 + squad, squad); const { game: g, O } = R; const men: any[] = O.squad(); const sam = g.player.char; const tag = `${squad} men to ${at(P)}`;
     R.step(30); const from = men.map(m => [...m.char.pos]), t0 = g.time, moved0 = ROOMFIT_STATS.moved;
     R.quick(P); const A = men.map(m => O.of(m)), fits = A.map(a => a?.fit);

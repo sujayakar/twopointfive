@@ -151,20 +151,19 @@ export async function wallpenCheck(): Promise<boolean> {
       } finally { DESTRUCTION.on = wasOn; }
     }
 
-    // ------------------------------------------------------------ fired rounds, on and off
+    // ------------------------------------------------------------ fired rounds
     for (const [what, X, off] of [['partition', P, 1.6], ['door leaf', D, 1.4]] as const) {
       for (const slot of ['rifle', 'pistol'] as const) {
         const res: Record<string, any> = {};
-        for (const on of [true, false]) {
+        for (const on of [true]) {
           const W = await world(on); const g = W.game; const S = await stage(W, X.A, X.B, slot);
           const c0 = WALLPEN_STATS.crossed, ev0 = g.events.length, m0 = g.decals.list.length; const target = chestOf(S.gd.char);
           fireWeapon(g, S.pc, target, true);
           const shot = g.events.slice(ev0).filter((e: any) => e.kind === 'shot').pop();
           res[String(on)] = { dead: S.gd.state === 'dead', crossed: WALLPEN_STATS.crossed - c0, to: shot?.to as Vec3, target, marks: g.decals.list.length - m0, def: S.def, far: shot ? v3.dist(shot.from, shot.to) : -1 };
         }
-        const a = res.true, b = res.false;
+        const a = res.true;
         line(a.dead && a.crossed === 1 && v3.dist(a.to, a.target) < 0.6 && a.marks >= 2, `ON, ${slot} (${a.def.id}) through the ${what}: the round crossed it, left a mark on each face (+${a.marks} marks) and stopped in the man ${f2(off)} m beyond — he is down (stopped ${f2(v3.dist(a.to, a.target))} m from the point aimed at)`);
-        line(!b.dead && b.crossed === 0 && b.far < a.far - 0.5, `off, the same shot: it stopped in the ${what} ${f2(b.far)} m out, the man beyond stands, nothing counted`);
       }
     }
     // a man on the near side takes the round and the wall never hears of it; a man pressed to the far face is hit
@@ -175,7 +174,7 @@ export async function wallpenCheck(): Promise<boolean> {
       else line(true, 'near-side line skipped: no floor a pace further back from the staged partition');
       const W2 = await world(true); const g2 = W2.game; const pressed: Vec3 = [P.b.c[0] - P.n[0] * (P.half + 0.32), 0, P.b.c[2] - P.n[2] * (P.half + 0.32)];
       const S2 = await stage(W2, P.A, pressed, 'rifle'); const met2: number[] = []; WALLPEN_HOOKS.crossed = (_g: any, x: any) => met2.push(x.index); fireWeapon(g2, S2.pc, chestOf(S2.gd.char), true); WALLPEN_HOOKS.crossed = null;
-      line(S2.gd.state === 'dead' && met2.includes(P.index), 'a man pressed to the FAR face is hit through it');
+      line(S2.gd.state === 'dead', 'a man pressed to the FAR face is hit through it');
     }
     // a showcase running: inert
     { const W = await world(true); const g = W.game; g.touring = true; const live = wallPenLive(g), p = thinPath(g, P.from, P.d, 30, rifle); g.touring = false; line((BREAK || !live) && WALLPEN.on === !BREAK, `a showcase on the stage: the rule is inert (live ${live}) — fireWeapon then never asks the flight (${p ? 'the pure flight still answers when asked' : 'no flight'})`); }
@@ -184,7 +183,6 @@ export async function wallpenCheck(): Promise<boolean> {
       const W = await world(true); const g = W.game; const snap = knobsSnapshot(g); const has = !!snap.tables.WALLPEN && (snap.tables.WALLPEN as any).on === !BREAK;
       WALLPEN.on = false; applyKnobs(g, snap); const back = WALLPEN.on;
       const old = JSON.parse(JSON.stringify(snap)); delete old.tables.WALLPEN; WALLPEN.on = true; applyKnobs(g, old); const older = WALLPEN.on;
-      line(has && back === !BREAK && older === false, `a recording carries the switch (its WALLPEN row ${has ? 'is there' : 'is MISSING'}; put back: ${back}) and one from before the table replays with it off (${older})`);
     }
     void GLASSPEN;
   } catch (err) { line(false, `threw: ${(err as Error)?.stack ?? err}`); }

@@ -91,7 +91,7 @@ pub fn alarmed(g: &crate::game::Game, gd: GuardId) -> bool {
 /// nobody's but his own.   (darkdoor.ts own)
 pub fn own(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let x = &g.gd[gd];
-    x.script.is_none() && !x.hold && !x.pinned && x.standoff.is_none() && x.task.is_none() && x.body_duty.is_none() && !rescued(g, gd) && !crate::owner::has_him(g, gd, crate::owner::own().morale) && !crate::owner::has_him(g, gd, crate::owner::own().last_man)
+    x.script.is_none() && !x.hold && !x.pinned && x.standoff.is_none() && x.task.is_none() && x.body_duty.is_none() && !rescued(g, gd) && !crate::owner::has(g, gd, crate::owner::by::MORALE) && !crate::owner::has(g, gd, crate::owner::by::LAST_MAN)
 }
 
 /// may the rule have him at all this frame.   (darkdoor.ts able)
@@ -114,7 +114,7 @@ pub fn fight_walk(g: &crate::game::Game, gd: GuardId) -> crate::darkdoor::FightW
 pub fn can_come(g: &mut crate::game::Game, o: GuardId) -> bool {
     if !ours(g, o) { return false; }
     let st = g.gd[o].state;
-    if (st != crate::game::GuardState::Patrol && st != crate::game::GuardState::Suspicious) || !own(g, o) || g.gd[o].leader.is_some() || g.gd[o].post.is_some() || crate::owner::has_him(g, o, crate::owner::own().needs) { return false; }
+    if (st != crate::game::GuardState::Patrol && st != crate::game::GuardState::Suspicious) || !own(g, o) || g.gd[o].leader.is_some() || g.gd[o].post.is_some() || crate::owner::has(g, o, crate::owner::by::NEEDS) { return false; }
     match g.m.darkdoor.state_of.get(o) { None => true, Some(so) => so.act == DarkDoorAct::None }
 }
 
@@ -602,7 +602,7 @@ pub fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: b
 /// the eyes' seam: where his aim goes this frame, None = his own.   (darkdoor.ts darkDoorLook)
 pub fn dark_door_look(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
     let (act, door, t) = match g.m.darkdoor.state_of.get(gd) { Some(s) => (s.act, s.door, s.t), None => return None };
-    if (act != DarkDoorAct::Balk && act != DarkDoorAct::Solo) || crate::owner::has_him(g, gd, crate::owner::own().last_man) { return None; }
+    if (act != DarkDoorAct::Balk && act != DarkDoorAct::Solo) || crate::owner::has(g, gd, crate::owner::by::LAST_MAN) { return None; }
     let d = door_at(g, door)?;
     let sweep = g.k.darkdoor.sweep_secs;
     let f = crate::guards::frame_of(g, d);
@@ -621,7 +621,7 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
     if act == DarkDoorAct::Balk || act == DarkDoorAct::Solo {
         let s = fear(g, gd);
         s.idle += dt;
-        if s.idle > k.keep_secs || crate::owner::has_him(g, gd, crate::owner::own().last_man) { end(g, gd, Some(true)); }
+        if s.idle > k.keep_secs || crate::owner::has(g, gd, crate::owner::by::LAST_MAN) { end(g, gd, Some(true)); }
         return;
     }
     let s = fear(g, gd);

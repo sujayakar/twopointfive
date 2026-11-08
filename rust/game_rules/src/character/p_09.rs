@@ -338,7 +338,7 @@ pub fn anim_carry_arms_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f6
 pub fn anim_rl_row(g: &crate::game::Game, c: CharId) -> crate::character::LONGRELOADBox {
     let (back, has_feed) = (g.ch[c].anim.reload_back, g.ch[c].anim.feed.is_some());
     let r = crate::character::long_reload();
-    if back && !(has_feed && crate::gunreload::feed_live(g)) {
+    if back && !has_feed {
         let b = r.back;
         crate::character::LONGRELOADBox { at: b.at, pitch: b.pitch, aim_k: b.aim_k, yaw: b.yaw }
     } else {

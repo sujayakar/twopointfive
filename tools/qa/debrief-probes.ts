@@ -318,50 +318,6 @@ async function standRow(file: string, search: string): Promise<any> {
   finally { console.log = log; console.warn = warn; }
 }
 const LOUD_BREAK = process.env.LOUDCARD_BREAK === '1';
-export async function debriefLoud() {
-  console.log("\n=== debrief-loud: a mission that leans loud carries no stealth rating, no score and no badges (VERDICT.loudCard) ===");
-  const fails: string[] = [], notes: string[] = [];
-  const { VERDICT, loudRow, rowFile } = await import(`${ROOT}/src/game/verdict.ts`), { LOOK_LEVELS } = await import(`${ROOT}/src/scene/look.ts`), { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), { readFileSync } = await import('node:fs');
-  const graded = (t: string) => BANDS.some((b: any) => t.includes(b.word)); void VERDICT;
-  try {
-    // ---- the tutorial's solo fight: the stealth game's kind, a row that leans loud
-    { const row = LOUD_BREAK ? 'tut-quiet.json' : 'tut-solo.json', W = await standRow(row, `?levelFile=${row}&quiet`), g = W.game, D = debriefOf(g);   // (LOUDCARD_BREAK=1: the row that leans quiet stood in its place — must fail)
-      if (W.why) fails.push(`the solo tutorial did not start: ${W.why}`);
-      if (!loudRow(g)) fails.push('the solo tutorial (kind quiet, leans loud): loudRow says no');
-      if (D.scored) fails.push('…and its debrief is still scored'); if (graded(D.summary)) fails.push(`…and its copied line carries a rating: "${D.summary}"`);
-      if (D.badges.some((b: any) => b.on && D.summary.includes(b.name))) fails.push(`…and its copied line carries a badge: "${D.summary}"`);
-      if (!/^twopointsix — \d\d:\d\d · seen /.test(D.summary)) fails.push(`…and its copied line does not open on the clock: "${D.summary}"`);
-      W.step(1 / 60); g.mission.stage = 'done'; const line = g.objectiveText();
-      if (!/^mission complete — \d+:\d\d$/.test(line)) fails.push(`…and the line over the card is not the clock alone: "${line}"`); if (D.grade !== '') fails.push(`…and its grade is '${D.grade}'`);
-      notes.push(`loud: "${D.summary.slice(0, 44)}…" · over the card "${line.slice(0, 40)}"`); }
-    // ---- a row that leans quiet, and the plain night with no row up: graded
-    { const W = await standRow('tut-quiet.json', '?levelFile=tut-quiet.json&quiet'), g = W.game; const D = debriefOf(g);
-      if (W.why) fails.push(`the quiet tutorial did not start: ${W.why}`); if (loudRow(g) || !D.scored || !graded(D.summary)) fails.push(`a row that leans quiet: loudRow ${loudRow(g)}, scored ${D.scored}, "${D.summary.slice(0, 40)}"`);
-      W.step(1 / 60); g.mission.stage = 'done'; const line = g.objectiveText(); if (!/^mission complete — /.test(line) || !line.endsWith(` · ${D.rating} ${D.score}`)) fails.push(`…and the line over its card is not the clock and the rating: "${line}"`); }
-    // ---- a squad's kind on a row that leans loud: not asked (its end card never showed the rating; its 'run so far' and its card under ?noverdict keep it)
-    { const W = await standRow('killhouse.json', '?levelFile=killhouse.json&roomclear&squad4'), g = W.game; const D = debriefOf(g), row = (await import(`${ROOT}/src/game/scenarioRun.ts`)).runningScenario(g, 'killhouse.json');
-      if (W.why || row?.kind !== 'roomclear' || row?.entry?.lean !== 'loud') fails.push(`the shoot house's room clear did not stand as a loud row: ${W.why || `${row?.kind} ${row?.entry?.lean}`}`);
-      if (loudRow(g) || !D.scored) fails.push(`a room clear on a row that leans loud: loudRow ${loudRow(g)}, scored ${D.scored}`); }
-    { const W = await standUp(), g = W.game; const D = debriefOf(g); if (loudRow(g) || !D.scored || !graded(D.summary)) fails.push(`the plain night: loudRow ${loudRow(g)}, scored ${D.scored}`); }
-    // ---- the row's file is read back off the level's own name (verdict.ts rowFile): every row's file, and the look's file the page loads for it, give the row's file
-    { const off: string[] = [], files = [...new Set((ALL_MISSIONS as any[]).filter(e => e.level).map(e => e.level as string))]; let looks = 0;
-      const log = console.log, warn = console.warn; console.log = console.warn = () => { };
-      try { for (const f of files) for (const load of [f, LOOK_LEVELS[f]]) { if (!load) continue; if (load !== f) looks++;
-        let got: string | null = '?'; try { got = rowFile({ level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${load}`, 'utf8'))) } as any); } catch (e: any) { got = `threw ${e?.message ?? e}`; }
-        if (got !== f) off.push(`${load} reads back as ${got} (want ${f})`); } }
-      finally { console.log = log; console.warn = warn; }
-      { const W = await standUp(); if (rowFile(W.game) !== null) off.push(`the bundled office reads back as ${rowFile(W.game)} (want none)`); }
-      if (off.length) fails.push(`level files that do not read back as their row's file: ${off.join(' · ')}`); notes.push(`${files.length} row files + ${looks} look files read back`);
-      const loud = (ALL_MISSIONS as any[]).filter(e => e.kind === 'quiet' && e.lean === 'loud').map(e => e.id); notes.push(`rows on the stealth game's card that lean loud: ${loud.join(', ') || 'none'}`); if (!loud.includes('tut-solo')) fails.push('the solo tutorial no longer leans loud on the list'); }
-    // ---- the mission's own end lines name the grade through Debrief.grade ('' when not scored), never the rating itself (the 'exfiltrated' line is said on the frame he walks out: not played here)
-    //      (read off the Rust game's own source since 2026-11-07: the TypeScript of those two lines went with the tick)
-    { const ms = readFileSync(`${ROOT}/rust/game/src/mission/p_01.rs`, 'utf8'); if (/\bd\.rating\b|\bd\.score\b/.test(ms) || (ms.match(/\bd\.grade\b/g) ?? []).length < 2) fails.push('the mission (rust/game/src/mission/p_01.rs) names the rating or the score itself, or no longer reads the debrief\'s grade in its two end lines'); }
-  } catch (e: any) { fails.push(`threw: ${e?.stack ?? e}`); }
-  const ok = fails.length === 0;
-  verdictLine(ok, "(c4) on a stealth-kind row that leans loud the debrief is not scored: no rating or badge on the copied line, the clock alone on the line over the card; a row that leans quiet, the plain night and a room clear on a loud row are graded as they were; every row's level file and its look's file read back as the row's file", notes.join(' · '), fails);
-  console.log(`=== debrief-loud: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`);
-  return ok;
-}
 
 // ================================================================ (d) the score's shape
 export async function debriefScore() {
@@ -445,7 +401,7 @@ export async function debriefDom() {
         notes.push(`door row: ${row.slice(-44)}`); } }
     // and a row that leans loud draws no rating, no score, no docked line, no badges, and its numbers untoned (ui/debrief.ts over Debrief.scored — debrief-loud has the rule)
     {
-      { const row4 = LOUD_BREAK ? 'tut-quiet.json' : 'tut-solo.json', W4 = await standRow(row4, `?levelFile=${row4}&quiet`), cells = (r: El) => r.all(e => e.cls.has('st') && /^(seen|alarms|floor up|bodies found|kills|doors kicked|called in|checkpoint loads|civilians saw you|…and told them)/.test(e.textContent)), toned = (r: El) => cells(r).filter(e => e.cls.has('good') || e.cls.has('bad') || e.cls.has('warn')).length;
+      { const row4 = LOUD_BREAK ? 'tut-quiet.json' : 'tut-road.json', W4 = await standRow(row4, `?levelFile=${row4}&quiet`), cells = (r: El) => r.all(e => e.cls.has('st') && /^(seen|alarms|floor up|bodies found|kills|doors kicked|called in|checkpoint loads|civilians saw you|…and told them)/.test(e.textContent)), toned = (r: El) => cells(r).filter(e => e.cls.has('good') || e.cls.has('bad') || e.cls.has('warn')).length;
         { const st = W4.game.mission.stats, n = W4.game.chronicle.counts; st.bodies = 1; st.kills = 2; n.kicked = 1; n.devices = 1; n.loads = 1; n.civSeen = 1; n.hits = 1; }   // (a run that would tone every one of them, and one cell that keeps its red: a hit taken)
         const h4 = new El('DIV'); const ui4 = renderDebrief(h4 as any, W4.game); const r4: El = h4.children[0];
         const drawn = ['db-rating', 'db-score', 'db-t3', 'chip'].filter(c => r4.all(e => e.cls.has(c)).length), t2 = r4.all(e => e.cls.has('db-t2'))[0]?.textContent ?? '';

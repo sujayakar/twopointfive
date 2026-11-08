@@ -7,7 +7,7 @@
 // WHO STEPS THE GAME: this file, through the loop's `tick` seam (host/loop.ts LoopCtx.tick). On each tick of the page the player's input is sampled into a
 // record (game/cmd.ts sampleCmd, off the page's own camera) and SENT; the game itself is stepped only through the ticks the server has confirmed, each on the
 // records the server decided, by step.ts netStep — the one tick every machine runs. So this page's game is the server's to the bit, and its state word is held
-// against the server's every NET.wordEvery ticks. Round those ticks it does the host's half of one (Game.hostBefore / hostAfter: update's own lines).
+// against the server's every NET.wordEvery ticks. Round those ticks it does the host's half of one (Game.hostAfter: update's own lines).
 // HOW FAST: a page tick walks one confirmed tick, two while more than NET.lead wait (the page's clock and the server's are two clocks). A page far behind
 // (NETPAGE.far ticks: it joined late, its tab slept) CATCHES UP as a replay seeks — the mixer shut, as many ticks a page tick as fit in NETPAGE.farMs, its
 // hands off the keys, nothing drawn between two of those ticks, and the picture's queues let go when it is level again (engineplay.ts unseenDone). Nothing smooths a tick that came late: no playout buffer is built.
@@ -209,7 +209,6 @@ export class NetPlay {
   tick(_dt: number, input: Input, cam: FollowCamera, view: View): void {
     const h = this.host; if (!h) { const a = this.alone; if (a) { a.game.update(_dt, input, cam, view); a.engine.lights.update(_dt, a.game.time); } return; }   // (refused once stood: the loop's own tick)
     const g = h.game, c = this.client, now = performance.now();
-    g.hostBefore(input);
     if (c.behind >= NETPAGE.far) this.catching(true);   // (BEFORE the record: a page that wakes far behind sends no key made at a picture seconds old)
     if (c.seat >= 0 && c.state !== 'waiting') { if (this.audioWas === null) c.beat(this.cmd = sampleCmd(g.hostSeat().view, input, cam, view, this.cmd), now); else c.rest(now); }
     this.walk(); this.foresee();

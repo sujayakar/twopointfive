@@ -55,7 +55,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   static markup under the real sheet. NOT SEEN BY ANYONE: the labels in the condensed face they were sized for, any of it over a sunlit floor at play speed, a lit
   LIGHT bar, a lost man's row, a par clock in front of the objective, the showcase timeline, the close-in windows, the throw arc. NOT TOUCHED, each its owner's and
   still mint mono on this screen: the F7 tag (`ui/replaykey.ts TAG_CSS`), two edges of the engine replay's bar (`replay/engineplay.ts`), the one-off tools
-  (`ui/sceneTweak.ts`, `ui/perfsweep.ts`), the debug floor views (`windviz`, `pictureviz`). TWO OVERLAPS REPORTED ON THIS SCREEN ARE NOT MENDED and were not seen
+  (`ui/perfsweep.ts`), the debug floor views (`windviz`, `pictureviz`). TWO OVERLAPS REPORTED ON THIS SCREEN ARE NOT MENDED and were not seen
   in any of the pictures above: a long order menu reaching the kit column in a window under about 640 px tall (it reached it before; the menu is now 13 px
   shorter), and the objective's diamond drawn over the squad block when the objective lies up and to the left.
 - **The run tally cuts no label** (10-20, a look and one word, no switch: `index.html` `#menu .db-stats`, `#menu .db-grid`; `src/ui/debrief.ts`). The tally on the pause
@@ -629,9 +629,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   33, the relay's quiet row as two 27 of 27 with the first form of this). MEASURED on the one-file build opened from disk, no WebGPU adapter, two
   runs each: before, the page heard nothing and took the frame down at 10.07 s; now it hears the picture's `none` at 0.75 s and the picture hears
   its two `frame` messages. NOT SEEN: the picture itself up on a page from disk (the software adapter had not booted it in 150 s; no GPU here),
-  any browser but Chromium (the first form tested only the word 'null', which Chromium never gives: it changed nothing there). THE CHECK:
-  `bun run build:one && node tools/qa/kitview-disk.cjs` (the built file opened from disk, no adapter, no server: 6 of 6, two runs; `KITDISK_BREAK=1`
-  = a target of '*' put back to `location.origin`, must exit 1: 4 FAIL, the frame down at 10.08 s).
+  any browser but Chromium (the first form tested only the word 'null', which Chromium never gives: it changed nothing there).
   THE QUIET PICTURE (10-17; `host/kitView.ts KIT_VIEW_QUIET`, ON in the page; `?kitloud` = off, forwarded to the picture by `ui/kitView.ts`,
   whose own `KIT_VIEW.quiet` the same word puts off: the picture and its fade exactly as they were, on every kind. A host table like its
   neighbours: nothing in the game reads it, so it has no row in the knob registry or the frozen holds). The maintainer: "quiet missions
@@ -841,11 +839,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   it while it is up. The WORKBENCH: backtick hides / shows its right-hand panel (the inspector) in every mode, Tab does nothing, and its debug views are ⚙ ▸ Renderer ▸ 'debug view'
   in the Characters / Effects modes and the 'view' list in the level top bar's second row in the Level / Materials modes; `[` `]` are still exposure. The native host: backtick
   toggles its panel, no debug-view key); open page / section / scroll kept in
-  localStorage `twopointsix.panel`. Rows for WIND / AIM / WHISTLE / TACTICS / NEEDS / CHAOS / QRF / DEVICES come from
+  localStorage `twopointsix.panel`. Rows for WIND come from
   `knobRows(spec)` (which builds no row for a key the page holds at one value: the bullet 'THE DEBUGGER HAS NO BOX FOR A SETTLED SWITCH' below); everything with custom logic stays hand-written. `tools/qa/panel-inventory.ts` (`probes.ts panel-inventory`, family `ui`) freezes the row inventory against
-  fixtures/panel-inventory-main.json — a row may move but never vanish (but a box of a SETTLED switch, taken out on purpose: its row leaves the fixture too, as on 2026-11-07, the bullet 'THE DEBUGGER HAS NO BOX FOR A SETTLED SWITCH' below; a row REWORDED on purpose: `--reword [map.json]` rewrites only the fixture rows that went missing, each from the live row of the same kind and label, or the label the map gives); `PORT=<dev server port> node tools/qa/panel-keys.cjs` = the keys pressed for real in headless Chromium (the software
+  fixtures/panel-inventory-main.json — a row may move but never vanish by accident (a row goes on purpose by `--gone` or `--write`, as the game's pages did on 2026-11-07; and a box of a SETTLED switch, taken out on purpose: its row leaves the fixture too, as on 2026-11-07, the bullet 'THE DEBUGGER HAS NO BOX FOR A SETTLED SWITCH' below; a row REWORDED on purpose: `--reword [map.json]` rewrites only the fixture rows that went missing, each from the live row of the same kind and label, or the label the map gives); `PORT=<dev server port> node tools/qa/panel-keys.cjs` = the keys pressed for real in headless Chromium (the software
   adapter): backtick opens / shuts the panel from the game, from its search box and from a focused slider, Tab reaches the game, no debug view is stepped (exit 0 / 1, 2 = the script died).
-  Every 'Tab ▸ X ▸ Y' path in this file, in code comments and in docs/internal means the debugger's page X, section Y — the key moved, and on 10-10 the old Sandbox page's sections were dealt to the six game pages above (a 'Tab ▸ Sandbox ▸ …' path is that section on Missions / Squad / Enemy AI / Stealth / Player & weapons now, 'Team feel' the Squad page's sections; sections renamed that day: the two called 'Glass' are 'Glass (the picture)' on Renderer fx and 'Glass breaking' on Destruction, 'Renderer — decals / particles' are 'Decals' / 'Particles', the weather's is 'Weather'); a row's label is unchanged unless the page rebuild/debug-tools/read-first.md lists it (some forty were reworded), so the panel's search finds a row by the words after the last ▸.
+  SINCE 2026-11-07 THE PAGES ARE Sandbox (with the extra enemies), Missions (difficulty, enemy nerve), Weather & wind, Frame and the graphics pages, Audio, Saves: Squad, Enemy, Stealth, Player, Destruction and Effects went, with Missions' staging, room clear, fog of war and hostage rescue rows. A number kept per machine on one of those pages goes on applying with no row to reset it (the Sandbox's 'old tuning: forget it' button drops those stores, saves apart).
+  Every 'Tab ▸ X ▸ Y' path in this file, in code comments and in docs/internal means the debugger's page X, section Y (where the page still stands: most of these paths name pages that went) — the key moved, and on 10-10 the old Sandbox page's sections were dealt to the six game pages above (a 'Tab ▸ Sandbox ▸ …' path is that section on Missions / Squad / Enemy AI / Stealth / Player & weapons now, 'Team feel' the Squad page's sections; sections renamed that day: the two called 'Glass' are 'Glass (the picture)' on Renderer fx and 'Glass breaking' on Destruction, 'Renderer — decals / particles' are 'Decals' / 'Particles', the weather's is 'Weather'); a row's label is unchanged unless the page rebuild/debug-tools/read-first.md lists it (some forty were reworded), so the panel's search finds a row by the words after the last ▸.
   `Weather & wind ▸ Wind — field view` (ui/windviz.ts, drawn by overlay.ts on the 2D canvas): arrows on a floor lattice from `wind.at()`, the sources' cones / gusts, the ≤ 8
   records the particles get, a probe at the cursor; ~0.35 ms CPU at its 534-sample maximum, nothing when off, the frame untouched.
 
@@ -1341,57 +1340,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   for what `none` leaves on. `panel-inventory`: the same 5 reference rows missing before and after (none of the fifteen is in
   its fixture). On the tree this was cut on, `scenetweak` is red on 4 lines before and after for the tree's own reasons (the blast button tells the Rust
   game no blast, among them). Typechecks clean. Never seen on a GPU, and the panel was not opened in a browser for it.
-- **The scene tweak panel (`?tweak`, a ONE OFF tool, 10-15) is not the debugger and not a menu of the game's** (`src/ui/sceneTweak.ts` the panel and its
-  bookkeeping, `src/ui/sceneLayers.ts` the list, `src/render/shaderTune.ts` the shader half; the maintainer on a night clip of the snow pass: "could you make
-  a one off UI for tweaking a scene like this? i'm curious what all the "layers" are for the effects and what variables we can configure"). Any link with
-  `&tweak` gets a small panel (top left, drag it by its head, ▾ folds it): the picture's LAYERS back to front under Light · Ground · Air · Lens, each with a
-  switch and, opened, its numbers on sliders, all live; `copy` puts the changed numbers on the clipboard by the code's own names with what they were, under the
-  file each default lives in (shift = every number); `reset`, `none`, `all`. It changes NO default and is no switch of the game's: without the word nothing of
-  it is made, and the kept copy (localStorage `twopointsix.sceneTweak.<level>`, one a level, put back only on a `?tweak` page so a restart keeps the hand's
-  work) is never read. ONLY A HAND'S MOVE IS A CHANGE: a number the game itself moves later (the hour's exposure) is not copied and not kept; rows the quality
-  ladder owns (march steps, sharpen, the particle caps) are not on the list at all.
-  THE LIST IS BUILT FROM THE TABLES: `table()` makes a row of every number in an authored table (SNOWFX, SNOWWISPS, SNOWGRAINS, SNOWTRACKS, SNOWBLAST,
-  SNOWBREATH, SNOW_SURF, AIR, AIR_SIM), so a number added to one shows up by itself, its hover text the table's own comment (`src/ui/sceneNotes.ts`, GENERATED:
-  `bun run tools/gen-scene-notes.ts` after changing a table's comments; `--check` is red when stale and the check below runs it). `consts()` reads a look's
-  WGSL constants out of the shader text (SNOW_SPARKLE_*, SNOW_GLOW_*, GRAIN_*, WISP_*, FLAKE_*); a move sets an override in `SHADER_TUNE` and rebuilds that ONE
-  program (`LightingPasses.retuneComposite`, `Particles.retune`: both program sets through `ProgramSet.patch`, so cut boxes stay cut, unlike the `__hot*`
-  hooks) — the shader FILES are never changed and with the map empty `tuned(text) === text`, the bundled text itself, which is what every check that reads
-  program text sees; each owner skips a text it already runs, so only a ⟳ row costs a build, and that on release, not while dragged. A layer whose own switch is read at boot is switched off live by MUTING (its weight held at zero; the row and the copied text keep the
-  hand's value); the lying surface alone reloads (`↻`, `?snowlook=0`). Rows marked ◆ are the few the simulation reads too (torches, the sky and moon, the storm's
-  wind: they always were, on the debugger's own sliders) and `none` / `all` leave a ◆ layer's switch be; every other row is picture only. The fog of war is on
-  the list for its SHADE alone (the fog is a rule; its switch stays on the debugger). A row's box takes a number inside the slider's reach or nothing. Marks: `›` reaches the next ones born, `⟳` rebuilds a shader (a
-  short hitch). A NEW LAYER is one `layers.push` in sceneLayers.ts. The check: `bun run tools/qa/scenetweak-check.ts` (also `probes.ts scenetweak`; BOTH
-  stands; `SCENETWEAK_BREAK=1` must fail) — the list, nothing written by making it, every number round-trips, mute, the text, one line of one program, the
-  kept copy, the notes fresh, and 300 frames of the pass on two seeds with every picture-only number moved and every hand switch flipped: one digest. The page
-  half: `node tools/qa/scenetweak-page.cjs` (software adapter: the DOM, real pipelines rebuilt and drawn with, a reload, a page without the word). Never seen
-  on a GPU; nobody has judged a slider's reach by eye.
-  - THE SNOW AS IT STANDS SINCE ONE AIR AND THE BLAST (10-15, after-close step): `Snow in one air` is a layer with a switch (NO SWITCH since 2026-11-07, as `Things mark the snow` and `Blast marks`: the bullet 'EIGHTEEN SWITCHES RULED SETTLED' above) and no numbers — `SNOW_LOOK.oneAir`,
-    read every frame, so LIVE here (shown where the particle shaders were built to read the wind sim). It and `Wind sim` are `mode` switches (how the air
-    runs, not layers to hide): `none` / `all` leave both be, the copied text names one that is off. WHAT NOTHING READS IS DIMMED (`TweakVar.idle` /
-    `TweakLayer.idle`, asked each refresh; `readWhen` throws on a row it cannot find): with the SWITCH on, the Blown grains layer and the blast's `throwS` /
-    `throwShare` / `out` / `up` (the grains stand down on the switch, in force or not); with one air IN FORCE (`oneAirActive`: the switch and a field to
-    ride), the wisps' `speedK` / `gustLen` / `gustPow`; not in force, the flakes' `airLow` / `airHigh` / `airLift` / `skid`, the wisps' `liftLo` / `liftHi` /
-    `dropK`, the blast's `flakes` / `flakeUp` / `flakeLife`. A BLOWN MAN'S BREATH (10-19): while the hard breath rule is on (`character.ts HARDBREATH`,
-    `?hardbreath=0`) the steam reads the rule's numbers, so the Breath layer lists both sets and dims the one nothing reads — the breath table's
-    `everyHard` / `hardK` / `effortUp` / `effortDown` with the rule on, the rule's eight steam numbers (`blown every` … `wind back in`: `HARDBREATH.every`,
-    `puffs`, `count`, `jet`, `size`, `carry`, `up`, `down`; lists `BREATH_SOFT` / `BREATH_HARD` in sceneLayers.ts) with it off. REAL STEAM (10-20): while the breath is gas in the smoke solver
-    (`SNOW_LOOK.steam`, `?breathsteam=0`) the layer also lists `snowBreath.ts BREATHSTEAM`'s twelve numbers (`steam radius` … `steam reach`); it dims them
-    when no solver is drawing (every breath is puffs then), and dims the puffs' own twelve (`BREATH_PUFF`: count, speed, spread, life, size, opacity,
-    colour) when every man steams (`reach` 0). The layer's mute zeroes the steam's `density` with the puffs' `opacity`. The rule's switch and its
-    four chest numbers are no rows: they move bones. The check's `breath` verdict runs the steam's emitter against a recording stand-in for the pool,
-    rule on and off: a dimmed set moved files the same records, a lit one does not; the page check flips the rule in the page's own table
-    (`window.__knobs`) and reads the rows both ways. The blast's `dig` / `digS` rows are held to 3 × and 5 s (the dig is asked again every frame for
-    `digS`, and at the table's own 4 × reach a dig fifty metres wide cost 0.2 to 1.3 s a frame, measured headless); the check's digest run sends `digS`
-    to its short end for the same reason (it was one to thirteen minutes of the run). A dimmed row still moves and still copies. `Blast marks` (Ground, wherever snow lies) is the
-    SNOWBLAST table, its switch `SNOW_LOOK.blast` live (a blast reads it as it goes off), and the one BUTTON on the panel (`TweakLayer.act`): `blast` calls
-    `snowBlastAt` three metres ahead of the player — the snow marked as a frag there would, no blast, no sound; the check's digest run presses it with the
-    switch on. `FLAKE_WALL_IN` is a ⟳ row of Falling flakes (the CPU's copy of it in snowFx.ts is a check's, nothing in the page reads it). The check's
-    tenth verdict (`oneair`) and the page check's own cover these; headless, one air is never IN FORCE (no pool, no field): the in-force dimming is the
-    software page's to prove (its verdict is red unless the page opened with one air in force).
-  - `Things mark the snow` (Ground; the snow goal's own layer, 10-15): the SNOWMARKS table, its switch `SNOW_LOOK.marks` live and a `mode` one (no switch since 2026-11-07); the mark's
-    forming and kick numbers are SNOWTRACKS rows of Boot prints, the puff's motes WISP_MOTE_* rows of Blown wisps: all came by themselves. The panel step
-    after it added only the layer's hover line and reaches held to what the comments say (0‥1 rows, whole-number rows); the check's `notes` verdict is now
-    red on a layer with no hover line, so the next layer added by another hand cannot lack one.
 - **The debrief calls a door what its level calls it (10-19, rides `WORDS.doors`).** A kicked, picked or keyed door's row was worded from the door's
   id ('kicked in the breakroom w door') while the squad's rows said the name its level wrote (`scenarios.doorNames`, `doornames.ts`). Now
   `chronicle.ts eventText(e, g)` and `fmtEvent(e, g)` take the game the row is of, and a door row asks `doorWrittenName` of that door WHEN THE ROW IS

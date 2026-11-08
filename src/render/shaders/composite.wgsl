@@ -871,60 +871,6 @@ fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
   }
   return col;
 }
-/** THE SMOKE LAB'S TWO PICTURES (host/smokelab.ts; `/smokelab`). smoke[0].show is the solver's word, 0 on every other page (nothing below runs then): bit 0 = THE BRICKS,
- *  the wire of every 8³-cell brick that holds something to fetch, the coarse lattice's in blue and the fine one's in amber, drawn where the pixel's ray meets a brick's
- *  near face (and, fainter, its far one) and hidden behind what is solid; bit 1 = THE SPIN, the coarse smoke drawn again by how hard the air in it turns (the curl the
- *  step keeps: smoke.wgsl publish leaves density × spin in the texel's .y while the bit is up), still air blue, the full spin red, over the smoke as it is lit. Both are
- *  drawn at a fixed brightness on the screen (÷ the frame's exposure), so they read the same at any hour. A lab's picture: 48 steps and no care for cost. */
-fn labEdge(f: vec3f, w: f32) -> f32 { let n = step(vec3f(0.5 - w), abs(f - 0.5)); return step(1.5, n.x + n.y + n.z); }
-fn labBox(ro: vec3f, rd: vec3f, inv: vec3f, c: vec3i, e: f32, tin: f32, tmax: f32) -> f32 {
-  let ex = spgExit(ro, rd, inv, c, vec3f(e)); let tout = min(ex.x, min(ex.y, ex.z)); let w = clamp(0.0018 * tin / e, 0.015, 0.12);
-  var a = 0.0;
-  if (tin < tmax) { a = labEdge((ro + rd * tin) / e - vec3f(c), w); }
-  if (tout < tmax) { a = max(a, 0.45 * labEdge((ro + rd * tout) / e - vec3f(c), w)); }
-  return a;
-}
-fn smokeLabOver(color: vec3f, ro: vec3f, rd: vec3f, tmax: f32, jit: f32) -> vec3f {
-  let word = u32(smoke[0].show); var c = color; let lit = 0.5 / max(frame.exposure, 1e-9); let inv = safeInv(rd);
-  if ((word & 2u) != 0u) {
-    let sp = smokeSegment(ro, rd, tmax);
-    if (sp.mask != 0u && sp.tExit > sp.tEnter) {
-      let dt = (sp.tExit - sp.tEnter) / 48.0; var T = 1.0; var acc = vec3f(0.0);
-      for (var i = 0.0; i < 48.0 && T > 0.02; i += 1.0) {
-        let x = smokeTexelAt(ro + rd * (sp.tEnter + (i + jit) * dt));
-        if (x.x > 0.002) {
-          let s = clamp(x.y / x.x, 0.0, 1.0); let a = 1.0 - exp(-x.x * 6.0 * dt);
-          acc += T * a * mix(mix(vec3f(0.08, 0.25, 1.0), vec3f(1.0, 0.9, 0.1), smoothstep(0.0, 0.5, s)), vec3f(1.0, 0.12, 0.04), smoothstep(0.5, 1.0, s)); T *= 1.0 - a;
-        }
-      }
-      c = c * T + acc * lit;
-    }
-  }
-  if ((word & 1u) != 0u) {
-    let e = SPG_B0; let tb = isectBounds(ro, inv, vec3f(0.0), vec3f(SPG_N0) * e);
-    var t = max(tb.x, 0.0) + 1e-3; let tend = min(tb.y, tmax); var a0 = 0.0; var a1 = 0.0;
-    for (var i = 0; i < 160 && t < tend; i++) {
-      let b = vec3i(floor((ro + rd * t) / e)); let ex = spgExit(ro, rd, inv, b, vec3f(e)); let tout = min(ex.x, min(ex.y, ex.z));
-      if (all(b >= vec3i(0)) && all(b < SPG_N0)) {
-        let p = textureLoad(smokePage, b + vec3i(0, SPG_TEXY0, 0), 0).x;
-        if ((p & 0x7fffffffu) != 0u) { a0 = max(a0, labBox(ro, rd, inv, b, e, t - 1e-3, tmax)); }
-        if ((p >> 31u) != 0u) {
-          var tf = t; let tfe = min(tout, tend);
-          for (var j = 0; j < 12 && tf < tfe; j++) {
-            let f = vec3i(floor((ro + rd * tf) / SPG_B1)); let fx = spgExit(ro, rd, inv, f, vec3f(SPG_B1)); let tfo = min(fx.x, min(fx.y, fx.z));
-            if (all(f >= vec3i(0)) && all(f < SPG_N1)) { if (textureLoad(smokePage, f, 0).x != 0u) { a1 = max(a1, labBox(ro, rd, inv, f, SPG_B1, tf - 1e-3, tmax)); } }
-            tf = max(tfo, tf) + 1e-3;
-          }
-        }
-      }
-      t = max(tout, t) + 1e-3;
-    }
-    c = mix(c, vec3f(0.1, 0.8, 1.0) * lit, 0.85 * a0); c = mix(c, vec3f(1.0, 0.55, 0.08) * lit, 0.85 * a1);
-  }
-  return c;
-}
-/** the hot gas of a fire the smoke solver carries (fire.wgsl fireFlameG): the fine lattice's heat there */
-fn fireGas(p: vec3f) -> f32 { return spgFineHot(p).y; }
 /** THE SHIMMER OF THE HOT AIR OVER A FIRE (fire.wgsl fireShimmer; game/fire.ts FIRE.look.shimmer, `?fireheat=0`): how far, in pixels, this pixel reads the
  *  picture aside — the whole composite is a function of the pixel, so the picture behind a fire's column is that function a little off. Nothing nearer than
  *  the column is moved, and nothing nearer is read in its place (the depth here and the depth where it would read both say), and a fire the fog of war
@@ -1136,6 +1082,5 @@ fn compositePixel(pix0: vec2f) -> vec3f {
       color = wxFogApplySurf(color, dirS, zg, select(Ng.xz, vec2f(0.0), ((idg >> 20u) & 0x1FFu) != 0u));
     } else { color = wxFogApply(color, select(dirS, rdT, sky), select(zg, 0.0, sky), sky); }
   } }
-  if (SMOKE_LAB && frame.numSmoke > 0u && smoke[0].show != 0.0) { let dl = worldFromDepth(pixf, min(depth, 1.0)) - frame.camPos; let far = length(dl); color = smokeLabOver(color, frame.camPos, dl / max(far, 1e-6), select(far, 1e4, depth >= 1.0), ign(pixf + f32(frame.frameIdx & 63u) * 5.588238)); }   // (THE SMOKE LAB's pictures, over everything: smokeLabOver above; one read of a uniform on every other page)
   return max(color, vec3f(0.0));
 }

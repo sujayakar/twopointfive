@@ -4,8 +4,8 @@
 // `node tools/qa/shipped-page.cjs` holds equal to the real page switch for switch, and passes everything else through.
 // Still NOT the page: Sam is the scripted commander (god mode, unseen, never fires), the engine is JavaScriptCore not V8, there is no GPU light meter (headless
 // light skips the moon) and no smoke sight lines, and nothing a machine has kept (localStorage) is in it.
-//   bun run tools/qa/ships.ts [--hard] [--weather rain|downpour|fog|dust] [--callout] [--regroup] [--noplaces] [--base | --partial] <any playthrough.ts flags>
-//     --hard      DIFFICULTY.level hard          --weather K   WEATHER.kind (the page's ?weather=)        --callout / --regroup   the last defenders' switches
+//   bun run tools/qa/ships.ts [--hard] [--weather rain|downpour|fog|dust] [--callout] [--noplaces] [--base | --partial] <any playthrough.ts flags>
+//     --hard      DIFFICULTY.level hard          --weather K   WEATHER.kind (the page's ?weather=)        --callout   the last defenders' radio check
 //     --base      the harness's own (frozen) stand, nothing set: the comparison arm
 //     --partial   this wrapper as it was before the shared profile — GLASSFX=on TPS_MOVES=1 TPS_TURN=1 TPS_CAST=1 and the defenders' frags, nothing else: the stand
 //                 every tally made with ships.ts up to the one build 527a92a was run on (it left the pouches rule, the destruction switch, the door walk, the
@@ -26,7 +26,6 @@ for (let i = 0; i < argv.length; i++) { const a = argv[i];
   else if (a === '--hard') hard = true;
   else if (a === '--weather') weather = argv[++i] ?? null;
   else if (a === '--callout') last.push('callout');
-  else if (a === '--regroup') last.push('regroup');
   else if (a === '--noplaces') last.push('noplaces');   // (laststand.ts `places` off: the call out's lines as they were)
   else rest.push(a); }
 const merge = (name: string, o: Record<string, unknown>) => { set[name] = { ...o, ...(set[name] ?? {}) }; };   // (an explicit --set row wins)

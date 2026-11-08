@@ -773,9 +773,6 @@ pub fn door_tools_pods(g: &mut crate::game::Game, d: DoorId, side: f64, n: Optio
     crate::entrypoints::entry_points_clear_of(g, d, &were, &mut |g: &mut Game, p: V3| [along_of(g, d, p) - w / 2.0, -off_of(g, d, p, side)])
 }
 
-/// doorway.ts MARKS (DOORMANNERS.podClear): off on the page, so a point stays where it is (doortools.ts DoorTools.offSwing)
-pub fn door_tools_off_swing(g: &crate::game::Game, p: &crate::doortools::DoorToolsOffSwingP, d: Option<DoorId>, side: f64, taken: &[V3], see: Option<V3>) {}
-
 /// the points before entrypoints.ts looks at them (doortools.ts DoorTools.podsAsWere)
 pub fn door_tools_pods_as_were(g: &mut crate::game::Game, d: DoorId, side: f64, n: Option<f64>) -> Vec<crate::entrypoints::Pod> {
     let n = n.unwrap_or(2.0);

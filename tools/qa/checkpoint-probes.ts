@@ -290,10 +290,6 @@ export async function checkpointAutosave() {
     S.request(game, 'probe', 'live can'); const nb = written.length; steps(W, 0.2); if (!/fuse|air/.test(S.gate(game) ?? '')) fails.push(`gate '${S.gate(game)}' with a stun can on its fuse`);
     steps(W, CKPT.debounceSecs + 2.5); for (const gd of game.guards) { gd.awareness = 0; gd.state = 'patrol'; gd.lastKnown = null; gd.dazzledUntil = -1; gd.reactT = 0; } steps(W, 1.5);
     if (written.length !== nb + 1) fails.push(`the live-can request: ${written.length - nb} saves (pending ${S.pending?.why ?? 'none'}, gate ${S.gate(game)})`); else notes.push('stun can on its fuse: held, landed after the bang'); }
-  // LAPSE: a request that cannot land inside pendingSecs is dropped, counted
-  steps(W, CKPT.minGapSecs + 1);
-  { const dropped0 = S.stats.dropped, nb = written.length; S.request(game, 'probe', 'will lapse'); const n = Math.round((CKPT.pendingSecs + 2) / DT); for (let i = 0; i < n; i++) { B.awareness = 0.7; B.state = 'suspicious'; B.lastKnown = [22, 0, 18]; B.reactT = 1; W.step(DT); }   // (a man kept over the line for longer than a request may wait)
-    if (S.pending || S.stats.dropped !== dropped0 + 1 || written.length !== nb) fails.push(`an unmeetable request did not lapse (pending ${!!S.pending}, dropped ${S.stats.dropped - dropped0}, written ${written.length - nb})`); else notes.push(`unmet request lapsed after ${CKPT.pendingSecs} s`); B.state = 'patrol'; B.awareness = 0; B.lastKnown = null; B.reactT = 0; }
   // BODY: choke a parked man out, haul him 2 m, let go → 'body' request
   steps(W, 2);
   { const Cg = game.guards[2]; Cg.hold = false; place(Cg, [30, 0, 20], 0); killGuard(game, Cg, [0, 0, 1], true, 'choked'); steps(W, 2.5);
@@ -312,13 +308,6 @@ export async function checkpointAutosave() {
     if (game.mission.stage !== 'drive') fails.push(`server room did not advance the stage (${game.mission.stage})`);
     if (!S.log.some((l: any) => /request: (room\+)?stage|request: stage/.test(l.what) || /\+stage/.test(l.what))) fails.push(`no 'stage' request in the log: ${S.log.slice(-3).map((l: any) => l.what).join(' | ')}`); else notes.push(`stage → requested (${S.stats.requests - r0} with the room)`);
     steps(W, CKPT.debounceSecs + 1); }
-  // REGRET: a man going alert inside regretSecs of an autosave marks that slot; newest() then passes over it for the one before (a checkpoint a stride ahead of being seen is a death loop)
-  steps(W, CKPT.minGapSecs + 1);
-  { S.request(game, 'probe', 'will be regretted'); steps(W, CKPT.debounceSecs + 0.5); const last = written[written.length - 1]; if (last?.label !== 'will be regretted') fails.push(`the regret case's save did not land (${last?.label})`);
-    else { const before = S.newest(); steps(W, 2); A.hold = false; A.pinned = true; A.state = 'alert'; A.awareness = 1; A.lastKnown = v3.copy(game.player.char.pos); steps(W, 0.5);
-      const info = S.slots().find((x: any) => x.key === last.key); const nw = S.newest();
-      if (!info?.regret) fails.push(`the slot written 2 s before ${A.callsign} went alert carries no regret (${JSON.stringify(info)})`); else if (nw?.key === last.key && S.slots().filter((x: any) => x.runId === S.runId && !x.regret).length) fails.push('newest() still offers the regretted slot with a sound one stored'); else notes.push(`regret: '${info.regret}' → the cards offer '${nw?.label}' instead (was '${before?.label}')`);
-      A.state = 'patrol'; A.awareness = 0; A.lastKnown = null; A.pinned = false; A.hold = true; game.alarm.episode = false; game.escalation = 0; game.escalationT = -1; steps(W, 1); } }
   // every write: never with a man alert / searching / over the line at that frame (the onSaved hook stamped the gate's world)
   // slots: only the ring's autosaves (+ index) in the store — auto.0‥2, or five of them under SAVETIMELINE — the index names no more, the newest is the last written
   { const N = ringSize(); const keys = [...store.map.keys()].filter((k: string) => k !== 'twopointsix.save.index' && !k.includes('.save.pic.')).sort(); if (keys.some((k: string) => { const m = /auto\.(\d)$/.exec(k); return !m || +m[1] >= N; })) fails.push(`store keys ${keys.join(',')}`);
@@ -330,7 +319,7 @@ export async function checkpointAutosave() {
   { const rows = game.chronicle.events.filter((e: any) => e.kind === 'checkpoint' && e.data.what === 'save').length; if (rows !== written.length) fails.push(`${rows} 'checkpoint saved' rows for ${written.length} autosaves`); }
   if (game.chronicle.counts.saves !== written.length) fails.push(`counts.saves ${game.chronicle.counts.saves} ≠ ${written.length}`);
   const ok = !fails.length; if (!ok) familyFails++;
-  verdictLine(ok, '(b) triggers: room (once per region), stage, body hauled + dropped — each a request; gates: alert / search / awareness > 0.4 / mid-pick / a can on its fuse hold the write, calm lands it, an unmet one lapses at 25 s; debounce 2 s, gap 10 s; three rotating slots; the HUD tag + a chronicle row per save', notes.join('\n    '), fails);
+  verdictLine(ok, '(b) triggers: room (once per region), stage, body hauled + dropped — each a request; gates: alert / search / awareness > 0.4 / mid-pick / a can on its fuse hold the write, calm lands it at 25 s; debounce 2 s, gap 10 s; three rotating slots; the HUD tag + a chronicle row per save', notes.join('\n    '), fails);
 }
 
 

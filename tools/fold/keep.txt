@@ -8,3 +8,13 @@
 # sweep, stuns; DIGIN on, reachM, keeper. So a SETTLED row of either table is laid at its page value every time. Read 2026-11-07.
 written-ok PRESSURE  laid whole from the page's own table; the lay moves only run-time rows
 written-ok DIGIN     laid whole from the page's own table; the lay moves only run-time rows
+
+# Functions that answer a constant today because something is missing, not because a rule was settled: --const-fns leaves their calls.
+not-constant smoke_types::smoke_system_like_drawing   a host's answer that never crossed: the smoke's events take it out
+not-constant smoke_types::smoke_system_like_in_smoke_domain   the same
+not-constant smoke_types::smoke_system_like_round   the same
+not-constant snow_blast::snow_blast_at   a blast's crater in the snow, lost since the Rust game stepped: to be an event
+not-constant savestate::save_store_set   the host's store, to be handed in
+not-constant qrf::own_drill_asked   the host's word, to be handed in
+not-constant furnblast::has   an empty seam, not a settled rule
+not-constant pairup::put_back   an empty seam, not a settled rule

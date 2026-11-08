@@ -29,7 +29,6 @@ import { DOORSHOT } from '../game/doorblast';
 import { DOORPATH } from '../game/doorpath';
 import { WALLSNAP, LEAN_GUN_M } from '../game/wallsnap';
 import { STALK } from '../game/stalk';
-import { TAPSTEP } from '../game/tapstep';
 import { CMDRING } from '../game/cmdring';
 import { SQUADTHROW } from '../game/squadthrow';
 import { moraleFromQuery } from '../game/morale';
@@ -123,8 +122,6 @@ export function pageSwitches(q: URLSearchParams): void {
   SENSE.drift = q.has('smokedrift');   // …and the coarse grid's smoke drifting with the weather's wind under the open sky (rust/sim/src/bricks.rs 3b; game/wind.ts stormDrift): OFF unless the URL says ?smokedrift (it is the grid's, so it acts only with ?cpusense&smokegrid)
   netQuietFromQuery(q);   // the net goes quiet (game/netquiet.ts): a radio check nobody answers and a body found shake the men, the asker's calls get worse, a jumpy man's beam whips to a noise, and the last man backs to the spot his doors sit in one arc from and goes low: ON in the page; ?nonetquiet = the men as they were
   if (q.has('picture')) PICTURE.show = q.get('picture') === 'all' ? 'all' : 'cursor';   // (?picture = the floor shows the picture of the man under the cursor; ?picture=all = every teammate's ideas)
-  STALK.drag = q.get('stalkdrag') === '1' || (q.has('sneaklab') && q.get('stalkdrag') !== '0');   // …and the mouse as a stick from where the press on him was made (a prototype: up in the sneak lab and with ?stalkdrag=1, down in the plain page and on the frozen stand, so no FROZEN_HOLDS row)
-  TAPSTEP.on = q.get('tapstep') === '1' || (q.has('sneaklab') && q.get('tapstep') !== '0');   // …and crouched, the move keys are steps (game/tapstep.ts, a prototype: up in the sneak lab and with ?tapstep=1, down in the plain page and on the frozen stand, so no FROZEN_HOLDS row)
   CMDRING.hint = q.has('cmdhint') && !q.has('nocmdhint');   // …and the mark at the cursor before the key — a glyph beside it and an outline on the floor for what the key would order there (a picture only). A GAME SETTING, off unless chosen: Options ▸ Game keeps it on this machine (ui/options.ts); `?cmdhint` = on for this visit, with the ring or without
   CMDRING.goalHalf = q.get('goalhalf') !== '0';   // …and the first of them, with nothing going, sends half the squad (the pair nearer what the cursor is on) and leaves the rest with him (`?goalhalf=0` = with nothing going the goal is everyone's, as it was)
   CMDRING.twice = q.get('qtwice') !== '0';   // …and the key tapped twice on the same thing is 'fall in' for everyone, every goal gone with it; the first tap still gives its order as it comes up (`?qtwice=0` = the second tap is the key's order again, as it was)
@@ -516,7 +513,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'GUNHAND.on': 'TPS_GUNHAND=1',
   'INHAND.on': 'TPS_INHAND=1',
   'PACKSIDE.on': 'TPS_PACKSIDE=1',
-  'PLANLAY.on': 'TPS_PLANLAY=1',
   'STACKROOM.on': 'TPS_STACKROOM=1',
   'HANDLE.toolNear': 'TPS_TOOLNEAR=1',
   'HANDWORK.on': 'TPS_HANDWORK=1',

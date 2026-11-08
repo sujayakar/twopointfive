@@ -517,27 +517,24 @@ pub fn of_stand(g: &crate::game::Game, s: &crate::laststand::Stand, gd: GuardId)
 /// The owner's bit: the stand claims its men and lets go of every other.   (laststand.ts standSay)
 pub fn stand_say(g: &mut crate::game::Game) {
     let s = g.m.laststand.states.as_ref().and_then(|st| st.stand.clone());
-    let rule = crate::owner::own().stand;
+    let rule = crate::owner::by::STAND;
     let t = g.time;
     let guards = g.guards.clone();   // (neither call touches the list)
     for gd in guards {
         let has = match &s { Some(s) => of_stand(g, s, gd), None => false };
-        if has { crate::owner::claim_man(g, gd, rule, t, None); } else { crate::owner::release_man(g, gd, rule, t); }
+        if has { crate::owner::claim(g, gd, rule, t, None); } else { crate::owner::release(g, gd, rule, t); }
     }
 }
 
 /// Once a frame from RoomFight.tick, after the defenders', the press's and the buddy call's own ticks.   (laststand.ts lastStandTick)
 pub fn last_stand_tick(g: &mut crate::game::Game) {
     step_stand(g);
-    if g.k.laststand.regroup { stand_say(g); }
 }
 
 /// The frame of the endgame: 'most are down' starts it; then the lines waiting, the check, who has moved, the stand.   (laststand.ts stepStand)
 pub fn step_stand(g: &mut crate::game::Game) {
-    if !g.k.laststand.regroup {
-        // (the switch flipped mid-stand; callOut is settled on, so the frame goes on)
-        if let Some(s) = g.m.laststand.states.as_ref().and_then(|st| st.stand.clone()) { dissolve(g, &s); }
-    }
+    // (the switch flipped mid-stand; callOut is settled on, so the frame goes on)
+    if let Some(s) = g.m.laststand.states.as_ref().and_then(|st| st.stand.clone()) { dissolve(g, &s); }
     if !crate::roomclear::room_clear_scenario_active(g) || g.room_clear.end.is_some() || g.rescue.active { return; }
     if g.m.laststand.states.as_ref().map_or(true, |st| st.stale) {
         let all = g.night_breach.hostiles.clone();

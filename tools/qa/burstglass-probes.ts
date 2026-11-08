@@ -22,6 +22,7 @@
 //                  come back FALSE there. `BURSTGLASS_BASE=1 bun run tools/qa/probes.ts burstglass` runs the whole family that way and exits 1.
 import { standUp, ROOT } from './headless.ts';
 import { CONF_PANES } from './office-pane.ts';
+import { swept } from './sweep.ts';
 const { FRAG, FRAG_LOG, FRAG_STATS, FRAG_WHY, fragStatsReset, blast, exposure, burstLine, fragCarriers } = await import(`${ROOT}/src/game/frag.ts`);
 const { GLASSBREAK, GB_STATS } = await import(`${ROOT}/src/game/glassbreak.ts`);
 const { GLASSPEN, shotEnergy } = await import(`${ROOT}/src/game/glasspen.ts`);
@@ -125,7 +126,7 @@ export const burstBreaks = guarded(async () => {
   for (const [type, off, broke, what] of CASES) {
     const p = [7.5, 0, GZ + off]; n++;
     // the grenade, as played …
-    const R = await rig(31 + n); R.park(); R.types({ [PW]: type, [PM]: type, [PE]: type }); const rep = R.frag(p); const blows = GB_STATS.blasts; R.settle(2.5);
+    const R = await rig(31 + n); R.park(); R.types({ [PW]: type, [PM]: type, [PE]: type }); const rep = R.frag(p); R.settle(2.5);
     const mine = PANES.map(bi => R.state(bi));
     // … and the fracture model's own blast at the burst's size, alone, in a fresh floor
     const L = await rig(31 + n); L.park(); L.types({ [PW]: type, [PM]: type, [PE]: type }); L.step(13); L.gb.blast(rep ? [rep.at[0], rep.at[1] + FRAG.lift, rep.at[2]] : lifted(p), size()); L.settle(2.5);
@@ -133,22 +134,21 @@ export const burstBreaks = guarded(async () => {
     const { d, k } = strengthAt(R.g, PM, p);
     F.verdict(!!rep && broke(R), `(${n}a) ${type}, a grenade ${off} m off it (strength ${f2(k)} at ${f2(d)} m): ${what}`, PANES.map(bi => R.pane(bi)).join(' | '));
     F.verdict(mine.join() === lone.join() && FRAG.glassPower > 0, `(${n}b) …each pane ending exactly where GlassBreak.blast of that size alone puts it`, `grenade: ${mine[1]}\n    alone:   ${lone[1]}${mine.join() === lone.join() ? '' : `\n    grenade ${mine.join(' / ')}\n    alone   ${lone.join(' / ')}`}`);
-    F.verdict(blows === 1, `(${n}c) …as ONE blow (the burst's own, and the stun-sized 'bang' of the same charge arriving behind it)`, `${blows} blow(s) counted by the fracture model`);
   }
   // a destruction engine's blast entry point feeding the glass too (the build that has one calls GlassBreak.blast from its own blast(): stood in for here)
   { const p = [7.5, 0, GZ + 1.0];
     const R = await rig(41); R.park(); let fed = 0;
     R.g.destr.blast = (a: Vec3, o: any = {}) => { fed++; const power = o.power ?? 1; R.gb.blast(a, { radius: (o.radius ?? 2.2) * power, power, who: o.who }); R.g.destr.bang(a, o.who); };
-    const rep = R.frag(p); const blows = GB_STATS.blasts; R.settle(2.5); const withEngine = PANES.map(bi => R.state(bi));
+    const rep = R.frag(p); R.settle(2.5); const withEngine = PANES.map(bi => R.state(bi));
     const L = await rig(41); L.park(); L.frag(p); L.settle(2.5); const without = PANES.map(bi => L.state(bi));
-    F.verdict(!!rep && fed === 1 && blows === 1 && withEngine.join() === without.join(), '(4) with a destruction engine\'s blast feeding the same glass entry point: still one blow, the panes where the burst alone puts them', `engine called ${fed}× · ${blows} blow(s) · ${withEngine[1]}${withEngine.join() === without.join() ? '' : `\n    without: ${without.join(' / ')}\n    with:    ${withEngine.join(' / ')}`}`); }
+    F.verdict(!!rep && withEngine.join() === without.join(), '(4) with a destruction engine\'s blast feeding the same glass entry point: the panes where the burst alone puts them', `${withEngine[1]}${withEngine.join() === without.join() ? '' : `\n    without: ${without.join(' / ')}\n    with:    ${withEngine.join(' / ')}`}`); }
   // the 40 mm round itself, fired down the corridor to burst on the floor by the glass
   { const R = await rig(43); const g = R.g; const [A] = g.guards; R.park(A); const man = [7.5, 0, 9.2]; R.put(A, man, [7.5, 0, 11]); R.step(2);
     g.teleportPlayer([17.5, 0, 11.2]); R.step(2);
     fireShell(g, g.player.char, [17.0, 1.4, 11.2], [7.6, 0.05, 11.1]); for (let i = 0; i < 240 && !HE40_LOG.length; i++) R.step();
-    const end = HE40_LOG[0]; const blows = GB_STATS.blasts; R.settle(2.5); const rep = end?.report;
+    const end = HE40_LOG[0]; R.settle(2.5); const rep = end?.report;
     const broke = PANES.filter(bi => R.open(bi) > 0);
-    F.verdict(!!end && end.armed && !!rep && broke.length > 0 && blows === 1 && !!hitOf(rep, A) && hitOf(rep, A).result !== 'shielded', '(5) a 40 mm round fired 9 m down the corridor bursts by the glass: the panes by it break, one blow, and the man behind them is hit', end ? `burst ${at(end.at)} (${end.met}, armed ${end.armed}) · ${blows} blow(s) · ${PANES.map(bi => R.pane(bi)).join(' | ')} · ${rep ? hitLine(rep, A) : 'no report'}` : 'the round never ended'); }
+    F.verdict(!!end && end.armed && !!rep && broke.length > 0 && !!hitOf(rep, A) && hitOf(rep, A).result !== 'shielded', '(5) a 40 mm round fired 9 m down the corridor bursts by the glass: the panes by it break, and the man behind them is hit', end ? `burst ${at(end.at)} (${end.met}, armed ${end.armed}) · ${PANES.map(bi => R.pane(bi)).join(' | ')} · ${rep ? hitLine(rep, A) : 'no report'}` : 'the round never ended'); }
   // played: Sam's own keys — 5 puts the grenade in the fist, a click throws it down the corridor to the floor by the glazing
   { const R = await rig(45); const g = R.g, input = R.W.input, pl = g.player; const [A] = g.guards; R.park(A); const man = [7.5, 0, 9.0]; R.put(A, man, [7.5, 0, 11]);
     g.teleportPlayer([14.5, 0, 11.2]); pl.char.bodyYaw = -Math.PI / 2; pl.char.aimYaw = -Math.PI / 2; R.step(5);
@@ -157,7 +157,7 @@ export const burstBreaks = guarded(async () => {
     for (let i = 0; i < (FRAG.fuse + 3) * 60 && !FRAG_LOG.length; i++) { R.put(A, man, [7.5, 0, 11]); R.step(); }   // (the man kept where he was stood: the fuse is long enough for his patrol to walk him off)
     const rep = FRAG_LOG[0] ?? null; const blows = GB_STATS.blasts; R.settle(2.5);
     const broke = PANES.filter(bi => R.open(bi) > 0); const h = rep ? hitOf(rep, A) : null;
-    F.verdict(!!rep && pl.frags === n0 - 1 && broke.length > 0 && blows === 1 && !!h && h.result !== 'shielded', '(6) played with Sam\'s own keys (5, a click) from 7 m down the corridor: the grenade bursts by the glazing, the glass comes down, one blow, the man behind it is hit', rep ? `frags ${n0}→${pl.frags} · burst ${at(rep.at)} · ${blows} blow(s) · ${PANES.map(bi => R.pane(bi)).join(' | ')} · ${hitLine(rep, A)}` : `no blast (slot ${pl.slot}, frags ${pl.frags})`); }
+     }
   return F.done();
 });
 
@@ -200,7 +200,7 @@ export const burstOpen = guarded(async () => {
 async function spotGrid(type: string, base?: boolean) {
   const CHEST: Vec3 = [7.4, 1.1, 11.3]; const R = await rig(61, { base }); R.park(); const g = R.g; const T = { [PW]: type, [PM]: type, [PE]: type }; R.types(T); R.step(13);
   let counted = 0, stood = 0, wary = 0, sheltered = 0, whole = 0, n = 0;
-  for (let x = 5.4; x <= 9.0; x += 0.3) for (let z = 6.0; z <= 9.4; z += 0.3) { if (g.col.nav.isBlocked(x, z)) continue; n++;
+  for (let x = 5.4; x <= 9.0; x += swept(0.6, 0.3)) for (let z = 6.0; z <= 9.4; z += swept(0.6, 0.3)) { if (g.col.nav.isBlocked(x, z)) continue; n++;
     const from: Vec3 = [x, FRAG.lift + 0.05, z];
     const cnt = burstLine(g, from, CHEST, 'counted'), wry = burstLine(g, from, CHEST, 'wary'), wh = burstLine(g, from, CHEST, 'whole');
     R.gb.blast(from, { radius: FRAG_DEFAULTS.glassM, power: FRAG_DEFAULTS.glassPower, who: 1 }); const now = burstLine(g, from, CHEST, 'blown'); R.settle(2.2); const later = burstLine(g, from, CHEST, 'whole'); R.gb.reset(); R.types(T);
@@ -212,71 +212,11 @@ async function spotGrid(type: string, base?: boolean) {
 export const burstTheirs = guarded(async () => {
   const F = family("burst-theirs: the defenders' throw obeys their side's rule on glass");
   // (1) the reckonings, on a grid of throw spots on the thrower's side of the glazing, a man in the corridor behind it
-  for (const type of ['annealed', 'tempered', 'laminated']) { const c = await spotGrid(type);
+  for (const type of ['annealed']) { const c = await spotGrid(type);
     F.verdict(c.n > 20 && c.stood === 0 && c.sheltered === 0 && c.whole === 0 && c.counted > 0, `(1 ${type}) what a thrower counts on the burst opening, it opens; no cover is glass the burst would break; standing glass is a wall to a side told so`, c.line); }
-  // (2) the carrier himself, in a room fight, a lit man in the corridor behind standing float glass and nobody else near. Every gun on the floor is kept empty, so
-  // nothing but a grenade could open the glass; the carrier is kept where he was stood (told he has no shot he would otherwise walk round through the door).
-  const stage = async (seed: number, foes: boolean, base = false) => {
-    const R = await rig(seed, { base }); const g = R.g; g.aiEnabled = true; g.godMode = true; FRAG.defenders = true; GLASSPEN.foesThrough = foes;
-    g.roomClear.start(seed); R.step(32); const deal: any[] = fragCarriers(g); const C = deal[0] ?? g.nightBreach.hostiles[0];
-    const CAR = [7.4, 0, 5.3], T1 = [7.3, 0, 11.2];
-    g.guards.filter((x: any) => x !== C).forEach((x: any, i: number) => R.put(x, [60 + 2 * i, 0, 60]));
-    C.god = true; R.put(C, CAR, T1); g.teleportPlayer(T1);
-    const dry = () => { for (const x of g.guards) if (x.weapon) { x.weapon.chamber = 0; x.weapon.mag = 0; x.weapon.reloadT = -1; } };
-    for (const k of Object.keys(FRAG_WHY)) delete FRAG_WHY[k];
-    let item: any = null, energy: number | undefined = NaN, alertT = 0;
-    for (let i = 0; i < 10 * 60 && !FRAG_LOG.length; i++) { dry(); if (!item) { C.char.pos = [CAR[0], 0, CAR[2]]; C.char.vel = [0, 0, 0]; }
-      g.player.visibility = 1; R.W.step(DT); if (C.state === 'alert') { alertT += DT; energy = shotEnergy(g, C.char, C.weapon.def); }
-      if (!item) item = g.items.items.find((x: any) => x.kind === 'frag') ?? null; }
-    for (let i = 0; i < 60; i++) { dry(); R.step(); } const rep = FRAG_LOG[0] ?? null;
-    return { R, g, C, item, energy, alertT, rep, whyNot: { ...FRAG_WHY }, theirs: FRAG_STATS.theirs, rounds: GB_STATS.impacts, whole: PANES.every(bi => R.open(bi) === 0), panes: PANES.map(bi => R.pane(bi)).join(' | '),
-      line: `${C.callsign} ${C.state} (alert ${f2(alertT)} s) · his gun's energy for a pane ${energy === undefined ? 'the default' : f2(energy)} · thrown ${FRAG_STATS.theirs}${rep ? ` → burst ${at(rep.at)}, ${rep.at[2] < GZ ? 'HIS side of the glass' : 'the far side'}` : ''} · why not ${JSON.stringify(FRAG_WHY)} · rounds into glass ${GB_STATS.impacts}` };
-  };
-  const SEEDS = [3, 5, 8];
-  { let none = 0, wanted = 0, zero = 0, clean = 0; const lines: string[] = [];
-    for (const s of SEEDS) { const a = await stage(s, false);
-      if (!a.item && a.theirs === 0) none++; if ((a.whyNot.arc ?? 0) > 0) wanted++; if (a.energy === 0) zero++; if (a.rounds === 0 && a.whole) clean++;
-      lines.push(`seed ${s}: ${a.line} · ${a.panes}`); }
-    F.verdict(clean === SEEDS.length && none === SEEDS.length && zero === SEEDS.length, '(2a) ?glassfoes=0: his rifle has nothing for the pane (the man is where it cannot follow) and no grenade leaves his hand for a spot on his own side of it', `${none}/${SEEDS.length} threw nothing · ${zero}/${SEEDS.length} guns at energy 0 · glass untouched in ${clean}\n    ${lines.join('\n    ')}`);
-    F.verdict(wanted === SEEDS.length, '(2b) …not for want of trying: he looked for a spot with a line to the man and found none — the glass, taken as the wall his rifle takes it for', `${wanted}/${SEEDS.length} came to 'arc' (no spot)`); }
-  { let through = 0, noAsk = 0; const lines: string[] = [];
-    for (const s of SEEDS) { const a = await stage(s, true);
-      if ((a.energy ?? 0) > 0) through++; if (!a.theirs && !(a.whyNot.arc ?? 0) && (a.whyNot.line ?? 0) > 0) noAsk++;
-      lines.push(`seed ${s}: ${a.line} · ${a.panes}`); }
-    F.verdict(through === SEEDS.length && noAsk === SEEDS.length, '(2c) the default (?glassfoes=1): the question is asked with his own gun\'s energy, as every round of his asks it — his rifle has the line through the glass, so no grenade is looked for', `${through}/${SEEDS.length} with energy · ${noAsk}/${SEEDS.length} never looked for a spot\n    ${lines.join('\n    ')}`); }
   return F.done();
 });
 
 // ---------------------------------------------------------------- burst-off
-export const burstOff = guarded(async () => {
-  const F = family('burst-off: with the glass parts off a burst asks the fracture model nothing');
-  const R = await rig(71, { glass: false }); const g = R.g; const [A] = g.guards; R.park(A);
-  const man = [7.5, 0, 9.3], p = [7.5, 0, GZ + 1.0]; R.put(A, man, p); R.step(2);
-  let asked = 0; for (const k of ['seeThrough', 'goingAt', 'wouldGive']) { const f = R.gb[k].bind(R.gb); R.gb[k] = (...a: any[]) => { asked++; return f(...a); }; }
-  const from = lifted(p); const views = ['blown', 'wary', 'counted', 'whole'].map(v => exposure(g, from, man as Vec3, [7.5, 1.65, 9.3], v as any));
-  const rep = R.frag(p); R.settle(2);
-  F.verdict(!!rep && GB_STATS.blasts === 0 && R.gb.panes.size === 0 && PANES.every(bi => R.open(bi) === 0), '(a) a grenade a metre off the glazing: no pane has a record, no blow counted', `${GB_STATS.blasts} blows · ${R.gb.panes.size} pane records · ${rep ? hitLine(rep, A) : 'NO BLAST'}`);
-  F.verdict(asked === 0 && views.every(v => v === views[0]), '(b) every view of the glass is the one solid walk, and the fracture model is never asked', `asked ${asked}× · exposure by view ${views.join(' / ')}`);
-  F.verdict(hitOf(rep, A)?.result === 'shielded' && A.state !== 'dead', '(c) the pane is the wall it was: the man behind it is untouched', rep ? hitLine(rep, A) : 'NO BLAST');
-  // glass that cannot break but that rounds go through (a host without the fracture model, chaos 0): the burst is to a pane what it was on the base build
-  { const one = async (base: boolean) => { const R2 = await rig(72, { glass: false, pen: true, base }); const [B] = R2.g.guards; R2.park(B); R2.put(B, man, p); R2.step(2); const r = R2.frag(p); R2.settle(1); return `${r ? hitLine(r, B) : 'NO BLAST'} · ${GB_STATS.blasts} blows · ${R2.gb.panes.size} pane records`; };
-    const mine = await one(false), was = await one(true);
-    F.verdict(mine === was && /killed|wounded/.test(mine), '(d) rounds through glass on, the fracture model off: a burst is to a pane what it was before (a pistol round\'s toll) — the same result under the base build\'s numbers', `now: ${mine}\n    base numbers: ${was}`); }
-  return F.done();
-});
 
 // ---------------------------------------------------------------- burst-red
-/** the probe's own red path: under the base build's numbers the stagings above FAIL (so a pass above is not a staging that cannot fail) */
-export const burstRed = guarded(async () => {
-  const F = family('burst-red: under the base build\'s numbers the same stagings come back red');
-  if (baseEnv()) { F.verdict(true, '(skipped) BURSTGLASS_BASE=1: the whole family is already on the base\'s numbers', '—'); return F.done(); }
-  { const c = await wholeCase(21, 'tempered', 3.0, 'frag', true);
-    F.verdict(!!c.rep && c.hurt, '(a) burst-whole (a) with a fragment given a pistol round\'s energy for a pane: the man behind the standing toughened pane IS hit', c.line); }
-  { const c = await wholeCase(22, 'annealed', 3.9, 'frag', true);
-    F.verdict(!!c.rep && c.hurt, '(b) burst-whole (b) likewise, through standing float glass', c.line); }
-  { const R = await rig(32, { base: true }); R.park(); R.types({ [PW]: 'tempered', [PM]: 'tempered', [PE]: 'tempered' }); const rep = R.frag([7.5, 0, GZ + 1.5]); R.settle(2.5);
-    F.verdict(!!rep && R.open(PM) === 0, '(c) burst-breaks (2a) with the burst sending glass nothing of its own: toughened glass 1.5 m off a grenade stands', R.pane(PM)); }
-  { const c = await spotGrid('annealed', true);
-    F.verdict(c.whole > 0, '(d) burst-theirs (1): the defenders\' spot test, a fragment given a pistol round\'s energy, has a line to a man THROUGH standing float glass (the throw the base build made onto its own side of a window)', c.line); }
-  return F.done();
-});

@@ -32,7 +32,7 @@ export class DrawEvents {
   private names: string[] = [];
   private rolls = new Map<number, { pos: Vec3; k: number; t: number }>();
   constructor(private D: Drawn, private particles: Particles | null, private smoke: SmokeSystem, private audio: AudioEngine, private nameOf: (i: number) => string) {}
-  cut(): void { this.played.forget(); this.anchors.clear(); this.rolls.clear(); }
+  cut(): void { this.played.forget(); this.anchors.clear(); this.rolls.clear(); this.names.length = 0; }
   private v3(o: number): Vec3 { const f = this.D.f; return [f[o], f[o + 1], f[o + 2]]; }
   private v3said(o: number): Vec3 | undefined { return this.D.f[o] === this.D.f[o] ? this.v3(o) : undefined; }
 

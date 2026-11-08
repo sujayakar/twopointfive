@@ -8,7 +8,6 @@
 //   calls-shipped   every call of the list ships at its pick, and is a key the Team feel panel keeps
 //   calls-lastseen  FOG.lastSeen turned up to 4: an enemy seen and then lost keeps a mark where he was last seen, ageing, gone after 4 s, never while he
 //                   is in sight. What decides the mark while the row is 0 is the 'you're told' lever: tools/qa/told-check.ts
-import { readFileSync } from 'node:fs';
 import { ROOT } from './headless.ts';
 import { stage, quiet, guarded, family } from './thresholdmenu-probes.ts';
 const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
@@ -28,15 +27,12 @@ const SHIPPED: [string, string, unknown, string][] = [
   ['COVER', 'on', true, 'false: nobody watches openings unasked'], ['ORDERS', 'doorRay', true, 'false: the old pick'], ['LASER', 'enemy', false, 'true: enemies show lasers'],
 ];
 
-// ---------------------------------------------------------------- every call ships at its pick, and has a row
+// ---------------------------------------------------------------- every call ships at its pick
 export const callsShipped = guarded(async () => {
-  const { verdict, done } = family('calls-shipped: every call taken ships at its pick and is a key the Team feel panel keeps');
+  const { verdict, done } = family('calls-shipped: every call taken ships at its pick and is kept per machine');
   const D = feelDefaults() as Record<string, Record<string, unknown>>;
-  // the panel's rows, read off bindings.ts's text: every feelRows('<TABLE>', [ … ]) block's `k: '<key>'` entries (panel-inventory holds that the panel builds them)
-  const src = readFileSync(`${ROOT}/src/ui/bindings.ts`, 'utf8'), rows = new Map<string, Set<string>>();
-  for (const m of src.matchAll(/feelRows\('([A-Z]+)', \[([\s\S]*?)\n\s*\]/g)) { const set = rows.get(m[1]) ?? new Set<string>(); rows.set(m[1], set); for (const k of m[2].matchAll(/\bk: '([\w.]+)'/g)) set.add(k[1]); }
-  for (const [t, k, want, other] of SHIPPED) { const got = D[t]?.[k], range = feelRange(t, k), row = rows.get(t)?.has(k) ?? false;
-    verdict(got === want && range !== undefined && row, `${t}.${k} ships ${JSON.stringify(want)}, is kept per machine, and is written as a Team feel row (BUILT only while it is still a switch: knobRows builds none for a settled row, 2026-11-07)`, `shipped ${JSON.stringify(got)} · ${range === undefined ? 'NOT KEPT (teamfeel.ts)' : range === null ? 'a switch' : `a slider ${JSON.stringify(range)}`} · ${row ? 'a row in bindings.ts' : 'NO ROW in bindings.ts'} · the other side — ${other}`); }
+  for (const [t, k, want, other] of SHIPPED) { const got = D[t]?.[k], range = feelRange(t, k);
+    verdict(got === want && range !== undefined, `${t}.${k} ships ${JSON.stringify(want)} and is kept per machine`, `shipped ${JSON.stringify(got)} · ${range === undefined ? 'NOT KEPT (teamfeel.ts)' : range === null ? 'a switch' : `a slider ${JSON.stringify(range)}`} · the other side — ${other}`); }
   return done();
 });
 

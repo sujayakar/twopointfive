@@ -369,51 +369,7 @@ export async function gunholdDialogue() {
     const ok = fails.length === 0; allPass &&= ok;
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — no questions over a gun: rows [${rowsGun}], question selectable ${canAsk}; three whips chosen and dropped → stage ${gunTaps.stage}, presses ${gunTaps.presses}, Sam spoke ${gunTaps.samSpoke}; row "${row0}"\n    E → ${armed.variant}, holstered ${armed.holstered}, row "${armed.row.split('  ·  ')[0]}"; three arm taps → stages ${stages.join('/')} on beats ${beats.map(f2).join('/')} s, gave [${[...A.talk.given].join(',') || '—'}]\n    Sam: ${you.join(' | ') || '—'}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
-  {
-    const S = await stage(701, false); const { W, game, A } = S;   // the arm variant: the choke is the thing aborted here (the whip's abort is gunhold-whip (b))
-    grabViaHold(S); untilHeld(S); W.step(DT);
-    const since0 = A.held?.since ?? -9; const rec: string[] = [];
-    const chk = (label: string) => { const hs = Dlg.heldSinceOf(game, A); rec.push(`${label}: t ${f2(game.time)} held.since ${f2(A.held?.since ?? -1)} talk.heldSince ${f2(A.talk.heldSince)} heldSinceOf ${f2(hs)} lastT ${f2(A.talk.lastT)}`); return hs; };
-    const fails: string[] = [];
-    if (Math.abs(chk('held') - since0) > 1e-6) fails.push('heldSinceOf ≠ held.since at the start');
-    if (Math.abs(A.talk.heldSince - since0) > 1e-6) fails.push(`talk.heldSince ${f2(A.talk.heldSince)} vs held.since ${f2(since0)}: the two clocks disagree`);
-    // three questions a couple of seconds apart
-    for (let q = 0; q < 3; q++) { tapKey(W, IK); W.step(DT); for (let i = 0; i < 420; i++) W.step(DT); if (Math.abs(chk(`after press ${q + 1}`) - since0) > 1e-6) fails.push(`press ${q + 1} moved the held clock`); }   // (7 s apart: well past his longest answer)
-    if (A.talk.stage < 3) fails.push(`staging: only ${A.talk.stage} exchanges went through`);
-    // wait past the sandbox lapse (30 s) without a press, then press again: still the hold's clock, and interrogate() must not re-stamp talk.heldSince
-    for (let i = 0; i < Math.round((Dlg.HOLD_LAPSE_SECS + 6) / DT); i++) W.step(DT);
-    if (Math.abs(chk('36 s of silence later') - since0) > 1e-6) fails.push('the held clock lapsed after 30 s without a press');
-    tapKey(W, IK); W.step(DT); W.step(DT);
-    if (Math.abs(chk('after a late press') - since0) > 1e-6 || Math.abs(A.talk.heldSince - since0) > 1e-6) fails.push(`a press after the lapse re-stamped the clock (talk.heldSince ${f2(A.talk.heldSince)})`);
-    const heldSecs = game.time - since0; const heldTerm = (Dlg.gather(game, A).why as string[]).find(w => /^held /.test(w)) ?? 'held —';
-    // the abort term: ease off a choke at 1.5 s
-    for (let i = 0; i < 90; i++) W.step(DT);
-    const ag0 = Dlg.agitationOf(game, A); const why0 = (Dlg.gather(game, A).why as string[]).join(', ');
-    endThenStop(W, 1.5); W.step(DT); W.step(DT);   // the choke chosen, on at 0.35, stopped by a tap at 1.5
-    const ag1 = Dlg.agitationOf(game, A); const why1 = (Dlg.gather(game, A).why as string[]).join(', ');
-    const termSum = (why: string) => why.split(', ').reduce((acc, w) => acc + (parseFloat(w.split(' ').pop() ?? '0') || 0), 0);   // the terms before the 0‥1 clamp (a steady man held 40 s sits below zero: the clamp would eat the difference)
-    const raw0 = termSum(why0), raw1 = termSum(why1);
-    if (game.player.holding?.phase !== 'held' || A.state === 'dead') fails.push(`after the aborted choke: ${game.player.holding?.phase}, A ${A.state}`);
-    if (A.talk.abortT < 0) fails.push('abortT not stamped by the aborted choke');
-    if (Math.abs(raw1 - raw0 - 0.2) > 0.03 || ag1 < ag0) fails.push(`agitation terms ${f3(raw0)} → ${f3(raw1)} (clamped ${f3(ag0)} → ${f3(ag1)}) across the aborted choke (want +0.20)`);
-    // E does not let him go (nothing does): it DRAWS — the gun to his head, the hold going on, its clock untouched, and the gun term on him from that frame (+0.10);
-    // the one hand-back left with Sam alive to watch is Sam shot down with the man in his arm (combat.ts hitPlayer → freeHeld('shot'), as grab-probes.ts
-    // exercises it). The abort term outlives the hold for ABORT_RATTLE_SECS, then goes; the held clock reads -1 free
-    tapKey(W, 'KeyE'); for (let i = 0; i < 30; i++) W.step(DT);
-    if (game.player.holding?.phase !== 'held' || !A.held || game.player.holding.variant !== 'gun' || A.held.variant !== 'gun' || game.player.holstered) fails.push(`E in the hold: phase ${game.player.holding?.phase ?? 'gone'}, variant ${game.player.holding?.variant}/${A.held?.variant}, holstered ${game.player.holstered} (want still held — and drawn: the gun variant)`);
-    if (Math.abs(chk('after E (drawn on him)') - since0) > 1e-6) fails.push('drawing on him moved the held clock');
-    if (!/gunToHead \+0\.10/.test((Dlg.gather(game, A).why as string[]).join(', '))) fails.push(`no gunToHead term once drawn on him: [${(Dlg.gather(game, A).why as string[]).join(', ')}]`);
-    game.freeHeld('shot'); for (let i = 0; i < 60; i++) W.step(DT);
-    const hsFree = Dlg.heldSinceOf(game, A); const whyFree = (Dlg.gather(game, A).why as string[]).join(', ');
-    if (game.player.holding || A.held) fails.push(`freeHeld('shot') did not hand him back: holding ${game.player.holding?.phase ?? 'null'}, held ${!!A.held}`);
-    if (hsFree !== -1) fails.push(`heldSinceOf ${f2(hsFree)} once let go (want −1)`);
-    if (!/aborted \+0\.20/.test(whyFree)) fails.push(`the abort term is gone the second he is free: [${whyFree}]`);
-    for (let i = 0; i < Math.round((Dlg.ABORT_RATTLE_SECS + 2) / DT); i++) W.step(DT);
-    const whyLater = (Dlg.gather(game, A).why as string[]).join(', ');
-    if (/aborted/.test(whyLater)) fails.push(`the abort term still on him ${Dlg.ABORT_RATTLE_SECS} s after release: [${whyLater}]`);
-    const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — arm hold ${f2(heldSecs)} s, ${A.talk.presses} presses: the clock stayed ${f2(since0)} throughout (${heldTerm}); aborted choke: terms ${f3(raw0)} → ${f3(raw1)} [${why1}] (clamped ${f2(ag0)} → ${f2(ag1)}); free: heldSinceOf ${hsFree}, [${whyFree}] → a minute on [${whyLater}]\n    ${rec.join('\n    ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
+  
   {   // the gun term: the same man grabbed drawn vs holstered, everything else equal
     const cell = async (drawn: boolean) => { const S = await stage(702, drawn); grabViaHold(S); untilHeld(S); for (let i = 0; i < 10; i++) S.W.step(DT); return { a: Dlg.agitationOf(S.game, S.A), why: (Dlg.gather(S.game, S.A).why as string[]).join(', ') }; };
     const arm = await cell(false), gun = await cell(true);

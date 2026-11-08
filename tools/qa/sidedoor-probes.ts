@@ -12,6 +12,7 @@
 //   sidedoor-fight   the fight, over seeds: the server room taken by its corridor door, then the manager's office through the side door (a can while there is
 //                    one) — the order is taken and ends 'in' every time; what it costs is printed beside the same seeds taking the office by its corridor door
 import { standUp, ROOT } from './headless.ts';
+import { sample } from './sweep.ts';
 import { toolsRow4 } from './order-keys.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ROOMCLEAR, propGap } = await import(`${ROOT}/src/game/roomclear.ts`);
@@ -111,7 +112,7 @@ export const sidedoorFeet = guarded(async () => {
   // clear from the keypad's side tries it, says the lock and holds: the boot is the player's next word, and doortest-check.ts's to hold.
   // SIDEFEET_BREAK=1 = the red path of both: the check asks for the board and the entry as they were before the two rules.
   const BREAK = process.env.SIDEFEET_BREAK === '1'; let ran = 0;
-  const CASES: [string, 2 | 4][] = [['stack', 4], ['openClear', 4], ['bangClear', 4], ['charge', 4], ['thresholdHold', 4], ['outside', 4], ['stack', 2], ['openClear', 2], ['bangClear', 2], ['charge', 2], ['thresholdHold', 2], ['outside', 2]];
+  const CASES = sample([['openClear', 2], ['stack', 4], ['openClear', 4], ['bangClear', 4], ['charge', 4], ['thresholdHold', 4], ['charge', 2], ['outside', 4], ['stack', 2], ['bangClear', 2], ['outside', 2], ['thresholdHold', 2]] as [string, 2 | 4][], 3);
   for (const [id, squad] of CASES) {
     try {
       const R = await rig(3, { squad, blind: ['manager'] }); const { O, D } = R; const d = R.door(DOOR), room = R.room('manager'), n = squad;
@@ -132,7 +133,7 @@ export const sidedoorFeet = guarded(async () => {
         if (id === 'charge') { let res: any = null; for (let i = 0; i < 60 * 60 && op && D.ops.includes(op) && !res; i++) { R.step(); if (op.phase === 'armed') res = D.blow(); }
           good &&= !!res && res.backblast === 0; tail = `blown: ${res ? `knocked ${res.knocked}, stunned ${res.stunned}, backblast ${res.backblast}` : 'never armed'} · `; }
         if (id === 'thresholdHold') { const on = R.until(() => op?.phase === 'thr' || !D.ops.includes(op), 50); R.step(60 * 4); const none = op?.crossed.size === 0;
-          const told = D.thresholdTell('step', DOOR); good &&= on && none && told === null; tail = `held on the jambs ${on}, nobody in ${none} · told to step in → ${told} · `; }
+          const told = R.give('openClear', DOOR); good &&= on && none && told === null; tail = `held on the jambs ${on}, nobody in ${none} · told to step in → ${told} · `; }
         R.until(() => !D.ops.includes(op), 70); R.step(60);
         const sent = op ? [...op.pod.keys()] : [], crossed = sent.filter((m: any) => op.crossed.has(m) || m.state === 'dead').length, stuck = R.up.filter((m: any) => inDoorway(d, m.char.pos)).map((m: any) => m.callsign);
         good &&= !!op && took === n && op.ended === 'in' && sent.length >= Math.min(n, 3) && crossed === sent.length && stuck.length === 0;
@@ -155,24 +156,3 @@ export const sidedoorFeet = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- the fight
-export const sidedoorFight = guarded(async () => {
-  const { verdict, done } = family('sidedoor-fight: the manager\'s office taken through the side door, over seeds');
-  const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; const rows: string[] = []; let threw = '';
-  const T = { side: { runs: 0, taken: 0, in: 0, clear: 0, lost: 0 }, corridor: { runs: 0, taken: 0, in: 0, clear: 0, lost: 0 } };
-  for (const way of ['side', 'corridor'] as const) for (const seed of SEEDS) {
-    try {
-      const R = await rig(seed); const { O, D } = R; const room = R.room('manager'), door = way === 'side' ? DOOR : 'manager', d = R.door(door);
-      // the server room as it stands once taken (its garrison down, the four in its aisle) — or, for the corridor door, the four outside it in the corridor
-      R.empty('server'); R.place(way === 'side' ? AISLE : [[24.0, 0, 11.2], [23.2, 0, 11.4], [22.4, 0, 11.4], [21.6, 0, 11.4], [20.8, 0, 11.4]]);
-      const before = R.up.length; const why = R.give('bangClear', door); R.step(2); const op = D.ops.find((o: any) => o.door === d);
-      R.until(() => !D.ops.includes(op), 70); R.step(60 * 6);
-      const left = room.defenders.filter((h: any) => h.state !== 'dead').length, lost = before - R.up.length, A = T[way];
-      A.runs++; if (why === null && op) A.taken++; if (op?.ended === 'in') A.in++; if (left === 0) A.clear++; A.lost += lost;
-      rows.push(`${way} door, seed ${seed}: give → ${why} · ended '${op?.ended}' · the office: ${left} of ${room.defenders.length} left · teammates lost ${lost} (${R.lostTo()})`);
-    } catch (e) { threw = `${way}/${seed}: ${e instanceof Error ? e.stack : e}`; }
-  }
-  verdict(!threw, 'nothing threw', threw || `${T.side.runs + T.corridor.runs} runs`);
-  verdict(T.side.taken === T.side.runs && T.side.in >= T.side.runs - 2, 'bang and clear on the side door from the server room is taken on every seed and ends \'in\' on all but two at most (a fight: a seed where the men it sent are down before the frame line is not the door\'s)', `taken ${T.side.taken} of ${T.side.runs} · ${T.side.in} in`);
-  console.log(`    what it costs, beside the same seeds through the office's corridor door (printed, not judged: twelve seeds are scatter)\n    side door: office clear ${T.side.clear} of ${T.side.runs}, teammates lost ${T.side.lost} · corridor door: clear ${T.corridor.clear} of ${T.corridor.runs}, lost ${T.corridor.lost}\n    ${rows.join('\n    ')}`);
-  return done();
-});

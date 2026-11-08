@@ -94,13 +94,13 @@ pub fn walking(g: &Game, gd: GuardId) -> bool {
 
 /// Said as the rescue's tick opens, the frame's senses all in: the record of who is walking.   (rescuecheck.ts rescueCheckSay)
 pub fn rescue_check_say(g: &mut Game) {
-    let rule = crate::owner::own().walk;
+    let rule = crate::owner::by::WALK;
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
         let t = g.time;
-        if walking(g, gd) { crate::owner::claim_man(g, gd, rule, t, None); } else { crate::owner::release_man(g, gd, rule, t); }
+        if walking(g, gd) { crate::owner::claim(g, gd, rule, t, None); } else { crate::owner::release(g, gd, rule, t); }
     }
 }
 

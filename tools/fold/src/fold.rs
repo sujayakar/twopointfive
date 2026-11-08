@@ -1773,6 +1773,29 @@ pub fn pure_fns_of(file: &syn::File, pass: &mut Pass) -> Vec<String> {
 }
 
 /// What the functions of one body file have become: (name, fact) for each free function whose whole body the fold settled.
+/// The free functions of a file that answer a constant whatever they are asked (`fn on(g: &Game) -> bool { true }`): what is left of a rule that was settled
+/// by hand. A call of one folds as a settled row's read does.
+pub fn constant_fns(file: &syn::File) -> Vec<(String, FnFact)> {
+    let mut out = Vec::new();
+    for it in &file.items {
+        let syn::Item::Fn(f) = it else { continue };
+        if f.attrs.iter().any(|a| a.path().is_ident("cfg")) || !matches!(&f.sig.output, syn::ReturnType::Type(_, t) if matches!(&**t, Type::Path(p) if p.path.is_ident("bool"))) {
+            continue;
+        }
+        let e: &Expr = match f.block.stmts.as_slice() {
+            [Stmt::Expr(Expr::Return(syn::ExprReturn { expr: Some(e), .. }), _)] => e,
+            [Stmt::Expr(e, None)] => e,
+            _ => continue,
+        };
+        if let Expr::Lit(l) = e {
+            if let syn::Lit::Bool(b) = &l.lit {
+                out.push((f.sig.ident.to_string(), FnFact::Const(b.value)));
+            }
+        }
+    }
+    out
+}
+
 pub fn fn_facts(src: &str, file: &syn::File) -> Vec<(String, FnFact)> {
     let mut out = Vec::new();
     for it in &file.items {

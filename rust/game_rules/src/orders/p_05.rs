@@ -170,7 +170,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
                     && !squad_orders_in_frame(g, p)
                     && !(crate::doorway::doorway_lane(g, p, None).is_some() && (off.is_some() || crate::doorway::doorway_lane(g, slot, None).is_none()))
                     && !crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [sam_pos[0], 0.45, sam_pos[2]], None)
-                    && !(crate::doorway::doorway_file(g) && squad_orders_on_top(g, &crate::seats::here(g), gd, a));
+                    && !squad_orders_on_top(g, &crate::seats::here(g), gd, a);
                 near_v = Some(v);
                 v
             };
@@ -312,7 +312,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
             let short = crate::roomfight::room_fight_short(g, gd);
             if short { speed = 0.0; mark_clocks(g, a, p); }
             else if (crate::doorway::door_gate_stopped(g, gd) || crate::handleside::handle_gate_stopped(g, gd)) && squad_orders_held_wait(g, a) { mark_clocks(g, a, p); }   // (doorway.ts SHORT: a wait, not a shut way)
-            if crate::clearline::clear_line_live(g, gd) || crate::fireline::fire_line_live(g, gd) { mark_clocks(g, a, p); }   // (off his mark on purpose)
+            if crate::fireline::fire_line_live(g, gd) { mark_clocks(g, a, p); }   // (off his mark on purpose)
             // has he MOVED (his commanded speed says nothing)
             let now = g.time;
             if flat(p, g.tab.orders_assignment[a].anchor) > 0.05 {

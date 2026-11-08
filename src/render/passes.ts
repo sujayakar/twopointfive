@@ -38,7 +38,6 @@ import { TexturePool, TargetOps, texBytes } from './texpool';
 import { capUsage } from './framecap';
 import { Denoiser, dnTravel, dnIters, DN_STRIDES } from './denoise';
 import type { Box } from '../scene/boxes';
-import { tuned } from './shaderTune';   // the scene tweak panel's constant overrides (empty map = compositeSrc itself)
 import { FogPass, type FogFrame } from './fogofwar';   // FOG OF WAR (game/fogofwar.ts): one in-place pass over the composite while its switch is on — nothing while off
 import { OutlinePass, type OutlineFrame } from './outline';   // THE OUTLINE IN THE DARK (host/findme.ts): one scissored blend onto the composite while its Options row is on — nothing while off
 
@@ -71,8 +70,6 @@ const BEAM_MAX = 8, BEAM_HEAD = 32, BEAM_SEG_BYTES = BEAM_HEAD + BEAM_MAX * 48, 
 export interface FireRecord { pos: ArrayLike<number>; r: number; h: number; heat: number; seed: number; time: number; wind: ArrayLike<number>; flick: number; /** the bed of coals' radius, m (0 or absent = none drawn) */ bed?: number; /** under the fog of war (RtLight.fog's numbers): 0 or absent = drawn wherever it stands · 1 = only where the team sees · 2 = only where it does not */ fog?: number; /** how much of its flame is the smoke solver's gas (0‥1; game/fire.ts FIRE.gas) */ gas?: number; /** how far its smoke is the smoke solver's soot (0‥1; game/fire.ts FIRE_LOOK_SMOKE, the look page's ONE COLUMN): the drawn soot hands over by that much */ soot?: number }
 const RESTIR_U_HEAD = 192, RESTIR_U_FWD = 64, RESTIR_U_INV = 128;
 const TF = { Reset: 1, Bypass: 2, Particles: 4, Velocity: 8 } as const;   // TaauParams.flags (TF_* in taau.wgsl)
-/** composite.wgsl as bundled (the scene tweak panel lists its constants off it: render/shaderTune.ts shaderConsts) */
-export function compositeText(): string { return compositeSrc; }
 
 export class LightingPasses {
   width = 0; height = 0;
@@ -161,14 +158,12 @@ export class LightingPasses {
    *  exactly as they were): each gives up a little accuracy for shadow rays. While any is on the encode takes restir.wgsl's RESTIR_TRADE twin, compiled on FIRST USE — a boot with the rows off compiles nothing new; until the twin exists the frame takes the plain program (which never reads the rows' bits). */
   heldAdaptive = false; restirStableRetrace = false; restirDimClass = 0;
   private restirTrade: GPUComputePipeline | null | undefined;   // undefined = never asked; null = compiling, or it failed (the plain program stays)
-  private restirTradeHot = false;   // a hot-swapped restir (hotSwapDirect: __hotRestir / __hotCommon) has no trade twin — the hot program is what runs, the rows stay without effect until a reload
   private restirTradePipe(): GPUComputePipeline | null {
-    if (this.restirTradeHot) return null;
     if (this.restirTrade === undefined) {
       this.restirTrade = null;
       const code = scenePrelude() + directCommonSrc + 'const RESTIR_TRADE: bool = true;\n' + restirSrc;
       this.device.createComputePipelineAsync({ label: 'restirT', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lDirect, this.lRestir] }), compute: { module: makeShader(this.device, code, 'restirT'), entryPoint: 'main' } })
-        .then(p => { if (!this.restirTradeHot) this.restirTrade = p; }, e => reportErrorLine('render.restir.twin', '[restir] the trade twin did not compile — the rows stay without effect', e));
+        .then(p => { this.restirTrade = p; }, e => reportErrorLine('render.restir.twin', '[restir] the trade twin did not compile — the rows stay without effect', e));
     }
     return this.restirTrade;
   }
@@ -474,7 +469,7 @@ export class LightingPasses {
       { binding: 2, visibility: CS, buffer: { type: 'uniform' } },
     ] });
     this.restirU = makeBuffer(device, this.restirUData.byteLength, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'restirU');
-    this.compText = (sharp: boolean, p: string = pre) => p + lightingCommon + decalWgslConsts(10) + decalsSrc + markingsSrc + `const SHARP: bool = ${sharp};\n` + refractCommonSrc + fireSrc + placeCommonSrc + tuned(compositeSrc);   // + decals.wgsl for the glass cracks (its DK_GLASS path; the g-buffer kinds are dead code here) + markings.wgsl (markEmissiveAt); SHARP = the sharp-direct twin (composite.wgsl header)
+    this.compText = (sharp: boolean, p: string = pre) => p + lightingCommon + decalWgslConsts(10) + decalsSrc + markingsSrc + `const SHARP: bool = ${sharp};\n` + refractCommonSrc + fireSrc + placeCommonSrc + compositeSrc;   // + decals.wgsl for the glass cracks (its DK_GLASS path; the g-buffer kinds are dead code here) + markings.wgsl (markEmissiveAt); SHARP = the sharp-direct twin (composite.wgsl header)
     this.buildGbaa = () => { this.pGbaa = device.createComputePipeline(this.gbaaDesc()); };   // (on first use, unless init({ gbaa }) prepared it)
     this.buildSharp = (traced: boolean) => {   // SHARP DIRECT's pipelines, on first use (ensureSharp) unless init({ sharp }) prepared the first three: the composite's compute twin, sharpU (SLIVER_RAYS false — no tracer compiled in — and, only once the sliver rule asks for it, true), the 1 : 1 resolve
       if (!this.pSharpU) {
@@ -558,7 +553,7 @@ export class LightingPasses {
     const late = PIPE_QUEUE.later;
     const cpL = (desc: GPUComputePipelineDescriptor) => late ? laterPipelineAsync(device, desc) : cp(desc);
     const setL = <V,>(make: () => Promise<V | null>, filled: () => boolean, put: (v: V | null) => void) => {   // (`make` is run here, where the pipeline was always made: its module is created inside it, in the order it always was)
-      if (late) { void make().then(v => { if (v && !filled()) put(v); }); return; }   // (a place filled meanwhile — a retune, a hot swap — keeps what it was given: the text that arrives here is the boot's)
+      if (late) { void make().then(v => { if (v && !filled()) put(v); }); return; }   // (a place filled meanwhile keeps what it was given: the text that arrives here is the boot's)
       set(make(), put);
     };
     set(cp({ label: 'restir', layout: lay(sceneLayout, this.lDirect, this.lRestir), compute: { module: makeShader(device, pre + directCommonSrc + 'const RESTIR_TRADE: bool = false;\n' + restirSrc, 'restir'), entryPoint: 'main' } }), p => { this.pRestir = p; });   // (ONE program since 2026-11-07: the direct-motion lane's three levers are bits of its uniform, raised on the frames the camera moved)
@@ -580,63 +575,8 @@ export class LightingPasses {
       if (lateC) setL(() => laterRenderPipelineAsync(device, desc()), () => !!this.pComp, p => { this.pComp = p; });
       else set(renderPipelineAsync(device, desc()), p => { this.pComp = p; }); }
   }
-  /** SCENE TWEAK PANEL (ui/sceneTweak.ts over render/shaderTune.ts): rebuild the composite's programs from its text as SHADER_TUNE has it now — the fragment one, and the compute one
-   *  where this page has built it. All or nothing: every live pipeline stays on an error. Takes its turn behind an earlier retune, so the newest text is the one left installed. */
-  retuneComposite(): Promise<{ ok: boolean; messages: string[] }> {
-    const run = this.retuning.catch(() => { /* its caller has it */ }).then(() => this.retuneCompositeNow());
-    this.retuning = run.then(() => { /* the queue carries no value */ }, () => { /* its caller has it */ });
-    return run;
-  }
-  private retuning: Promise<void> = Promise.resolve();
-  private compTunedAs = compositeSrc;   // the composite text the installed programs were built from (a retune skips a text that already runs; a set built later reads the same text)
-  private async retuneCompositeNow(): Promise<{ ok: boolean; messages: string[] }> {
-    const d = this.device, body = tuned(compositeSrc), bodyLines = body.split('\n').length;
-    if (body === this.compTunedAs) return { ok: true, messages: [] };
-    const wantS = !!this.pSharpU;   // (the compute one only where this page has it)
-    const mods: { key: string; label: string; sharp: boolean; mod: GPUShaderModule; off: number }[] = [];
-    for (const sharp of wantS ? [false, true] : [false]) {
-      const code = this.compText(sharp, scenePrelude()), label = `composite${sharp ? 'S' : ''}`;
-      mods.push({ key: `pComp${sharp ? 'S' : ''}`, label, sharp, mod: d.createShaderModule({ code, label }), off: code.split('\n').length - bodyLines });
-    }
-    const infos = await Promise.all(mods.map(m => m.mod.getCompilationInfo()));
-    const messages = infos.flatMap((info, i) => info.messages.map(m => `${mods[i].label} ${m.type} ${m.lineNum - mods[i].off}:${m.linePos} ${m.message}`));   // (line numbers are composite.wgsl's own)
-    if (infos.some(info => info.messages.some(m => m.type === 'error'))) return { ok: false, messages };
-    const layF = d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lComp] }), layS = d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lCompS] });
-    let ps: (GPUComputePipeline | GPURenderPipeline)[];
-    try {
-      ps = await Promise.all(mods.map(({ label, sharp, mod }): Promise<GPUComputePipeline | GPURenderPipeline> => sharp
-        ? d.createComputePipelineAsync({ label, layout: layS, compute: { module: mod, entryPoint: 'cs' } })
-        : d.createRenderPipelineAsync({ label, layout: layF, vertex: { module: mod, entryPoint: 'vs' }, fragment: { module: mod, entryPoint: 'fs', targets: [{ format: 'rgba16float' }] }, primitive: { topology: 'triangle-list' } })));
-    } catch (e) { return { ok: false, messages: [...messages, `pipeline: ${(e as Error)?.message ?? e}`] }; }
-    const o = this as unknown as Record<string, unknown>;
-    mods.forEach((m, i) => { o[m.key] = ps[i]; });
-    this.compTunedAs = body;
-    return { ok: true, messages };
-  }
 
-  /** Dev / measurement hook (main.ts __hotVol): rebuild the volumetric pipeline from `src` (a volumetrics.wgsl variant; the same prelude is prepended) so an
-   *  edited march can be A/B'd against a staged scene without a reboot. Resolves to the compiler's messages; the old pipeline stays if there is an error. */
-  async hotSwapVol(src: string): Promise<{ ok: boolean; messages: string[] }> {
-    const mod = this.device.createShaderModule({ code: scenePrelude() + lightingCommon + volCommon + placeCommonSrc + dustLookSrc + src, label: 'volumetrics-hot' });
-    const info = await mod.getCompilationInfo();
-    const messages = info.messages.map(m => `${m.type} ${m.lineNum}:${m.linePos} ${m.message}`);
-    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    this.pVol = await this.device.createComputePipelineAsync({ label: 'vol-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lVol] }), compute: { module: mod, entryPoint: 'main' } });
-    return { ok: true, messages };
-  }
 
-  /** Dev / measurement hook (main.ts __hotReflect): rebuild a reflection pipeline from `src` (prelude + lighting_common + gather_common are prepended) — the phase-5 variant if the source
-   *  declares the hit-record bindings (reflect_p5.wgsl), else main's (reflect.wgsl). */
-  async hotSwapReflect(src: string): Promise<{ ok: boolean; messages: string[] }> {
-    const pre = scenePrelude() + lightingCommon + gatherCommonSrc + markingsSrc; const off = pre.split('\n').length - 1;
-    const mod = this.device.createShaderModule({ code: pre + src, label: 'reflect-hot' });
-    const info = await mod.getCompilationInfo();
-    const messages = info.messages.map(m => `${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`);
-    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    const pipe = await this.device.createComputePipelineAsync({ label: 'reflect-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lRefl] }), compute: { module: mod, entryPoint: 'main' } });
-    this.pRefl = pipe;
-    return { ok: true, messages };
-  }
   /** RT reflections (engine.render mirrors settings.rtReflect / rtReflectDiv every frame): the switch the encode reads, and the reflection targets' divisor — a change re-makes THAT set (pooled,
    *  its histories resampled onto the new grid) and nothing else, exactly as a gather-divisor flip does. The targets exist whether or not the pass is on (like the gather's specular field). */
   setRt(on: boolean, div: number) {
@@ -658,65 +598,10 @@ export class LightingPasses {
     this.finishRealloc(R, `divisor → reflections /${div}`, t0);
     this.dropBindGroups();
   }
-  /** hotSwapGather's work: the gather's two pipelines again, from the given texts' helpers (a new common.wgsl, gather_common.wgsl, or a helper of fgather.wgsl reaches
-   *  them; `trace` and `light` themselves are gather_split.wgsl's, and the message says so). Both or neither. */
-  private async hotSwapSplit(src: string, common?: string): Promise<{ ok: boolean; messages: string[] }> {
-    const pre = scenePrelude() + lightingCommon, layout = this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lFGX!] });
-    const note = 'the gather is render/gatherSplit.ts\'s two programs, rebuilt from this text\'s helpers: an edit to `trace` or `light` is made in gather_split.wgsl';
-    let code: string; try { code = pre + splitGatherSrc(src, common); } catch (e) { return { ok: false, messages: [(e as Error).message] }; }
-    const mod = this.device.createShaderModule({ code, label: 'gatherSplit-hot' }), info = await mod.getCompilationInfo();
-    const messages = info.messages.map(m => `${m.type} ${m.lineNum}:${m.linePos} ${m.message}`);
-    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    const cp = (label: string, entryPoint: string) => this.device.createComputePipelineAsync({ label, layout, compute: { module: mod, entryPoint } });
-    const pipes = await Promise.all([cp('gatherTrace-hot', 'trace'), cp('gatherLight-hot', 'light')]);
-    this.pFGX = pipes[0]; this.pFGL = pipes[1];
-    return { ok: true, messages: [note, ...messages] };
-  }
-  /** Dev / measurement hook (main.ts __hotGather): rebuild the gather's programs from an fgather.wgsl variant (its helpers) and, if given, a variant of the gather's own
-   *  common text (shaders/gather_common.wgsl). All three or none: a variant that fails to compile leaves the live ones as they were. */
-  async hotSwapGather(src: string, common?: string): Promise<{ ok: boolean; messages: string[] }> { return this.hotSwapSplit(src, common); }
   /** frames the RT-reflection set may stay allocated with the pass off before it goes back to the pool (setRt; review R1.1) */
   private static readonly RT_IDLE_FRAMES = 600;
   private rtIdle = 0;
-  /** The same for the direct-light pass (main.ts __hotRestir): a restir.wgsl variant against the staged scene — scene prelude AND
-   *  direct_common.wgsl prepended (pass `common` to swap that too). */
-  async hotSwapDirect(src: string, common: string = directCommonSrc): Promise<{ ok: boolean; messages: string[] }> {
-    this.restirTradeHot = true; this.restirTrade = undefined;   // (… nor a lighting-trade twin: built from the bundled text and prelude, it would shadow the hot program)
-    const trade = !/^const RESTIR_TRADE\b/m.test(src) ? 'const RESTIR_TRADE: bool = false;\n' : '';   // (the lighting trades' const: a hot text is the plain program unless it says otherwise)
-    const head = scenePrelude() + common + trade;
-    const mod = this.device.createShaderModule({ code: head + src, label: 'restir-hot' });
-    const info = await mod.getCompilationInfo();
-    const off = head.split('\n').length - 1;
-    const messages = info.messages.map(m => `${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`);
-    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    this.pRestir = await this.device.createComputePipelineAsync({ label: 'restir-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lDirect, this.lRestir] }), compute: { module: mod, entryPoint: 'main' } });
-    return { ok: true, messages };
-  }
 
-  /** direct-quality lane (main.ts __hotSharp): a sharp_direct.wgsl variant against the staged scene — BOTH pipelines (tracer-free + traced) rebuilt from it, direct_common.wgsl prepended as passes builds them */
-  async hotSwapSharp(src: string, common: string = directCommonSrc): Promise<{ ok: boolean; messages: string[] }> {
-    const out: string[] = []; const ps: GPUComputePipeline[] = [];
-    for (const traced of [false, true]) {
-      const head = scenePrelude() + common + `const SLIVER_RAYS: bool = ${traced};\n`;
-      const mod = this.device.createShaderModule({ code: head + src, label: traced ? 'sharpUE-hot' : 'sharpU-hot' });
-      const info = await mod.getCompilationInfo(); const off = head.split('\n').length - 1;
-      out.push(...info.messages.map(m => `${traced ? 'traced' : 'plain'} ${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`));
-      if (info.messages.some(m => m.type === 'error')) return { ok: false, messages: out };
-      ps.push(await this.device.createComputePipelineAsync({ label: traced ? 'sharpUE-hot' : 'sharpU-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lSharpU] }), compute: { module: mod, entryPoint: 'main' } }));
-    }
-    this.pSharpU = ps[0]; this.pSharpUE = ps[1];
-    if (!this.pCompS) { const D = this.sharpDescs(); this.pCompS = this.device.createComputePipeline(D.compS); this.pTaauS = this.device.createComputePipeline(D.taauS); }
-    return { ok: true, messages: out };
-  }
-  /** … and a gbaa.wgsl variant (main.ts __hotGbaa) */
-  async hotSwapGbaa(src: string): Promise<{ ok: boolean; messages: string[] }> {
-    const head = scenePrelude(); const mod = this.device.createShaderModule({ code: head + src, label: 'gbaa-hot' });
-    const info = await mod.getCompilationInfo(); const off = head.split('\n').length - 1;
-    const messages = info.messages.map(m => `${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`);
-    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    this.pGbaa = await this.device.createComputePipelineAsync({ label: 'gbaa-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lGbaa] }), compute: { module: mod, entryPoint: 'main' } });
-    return { ok: true, messages };
-  }
 
   /** (Re)build the ReSTIR reservoir pair for a w×h target: whole 8×8 tiles × 64 texels × 16 B, then one 16-B light-belief record per tile (restir.wgsl tileRecIndex), zero-filled by
    *  the API = no history and no beliefs anywhere (the first frame draws fresh candidates only). A size the pool returns to does not keep reservoirs — they are a frame's worth of

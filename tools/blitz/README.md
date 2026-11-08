@@ -114,13 +114,13 @@ third row (the bare Game's own memo of "the player's" ground speed), which the R
 ### The co-op check
 
 ```sh
-bun run tools/blitz/coop-check.ts [--only held,lock,full] [--no-build]      # about four minutes with the runner built; ALL PASS since 2026-11-07
+bun run tools/blitz/coop-check.ts [--only held,lock,full] [--no-build]      # says so and exits 0 while no kept co-op run is in the tree
 ```
 
 A game of two players held to the kinds of fault a game of two had on the TypeScript game and the translation copied (needs 12 and 13 of the Library's
-blitz/coop-needs.md, mended in rust/game on 2026-11-07). NO TypeScript tick is run: the three games are the kept runs `tools/blitz/kept/two-*.tar.zst`
-(PLAY.md, "Kept runs: the three games of two seats"); `hold.sh` stands each start again from this tree, the native runner steps the Rust game through
-the kept records, and the check reads the whole states the runner keeps.
+blitz/coop-needs.md, mended in rust/game on 2026-11-07). NO TypeScript tick is run: a game is a kept run `tools/blitz/kept/two-*.tar.zst`; `hold.sh` stands
+each start again from this tree, the native runner steps the Rust game through the kept records, and the check reads the whole states the runner keeps.
+No kept co-op run is in the tree now: the three named below parted at tick 1 by design and were deleted (their guard is the native tests), and the check stays for new ones.
 
 - `held`: each of the three plays the series kept with it.
 - `lock` (`two-lock0-9`, `two-lock1-9`): the hands idle; that seat's pair is given `stack` on the locked server door before tick 2 and `openClear` before
