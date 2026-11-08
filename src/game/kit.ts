@@ -1224,8 +1224,6 @@ export const KIT_STAGED: { n: number; ops: Guard[] } = { n: 0, ops: [] };
 export function kitOf(gd: Guard): MemberKit | null { return manOf.get(gd)?.kit ?? null; }
 /** which member a staged teammate is (1 to 4), or 0 */
 export function kitIndex(gd: Guard): number { return manOf.get(gd)?.i ?? 0; }
-/** he wears goggles (nvg.ts isMate / nvgWorn: true for everybody no card has taken them off) */
-export function kitGoggles(gd: Guard): boolean { return !bareEyed.has(gd); }
 /** he is one of a staged team and his card has him carry a pistol (guards.ts handCarry: an operator's sidearm is in his hand, never a hand torch) */
 export function kitPistol(gd: Guard): boolean { return manOf.has(gd) && gd.weapon.def.cls === 'pistol'; }
 /** the breaching shotgun or the hammer in a staged teammate's big slot ('none': the switch off, no card on him, a wall charge there) */
