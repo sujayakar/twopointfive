@@ -5,7 +5,6 @@ holder	tools/blitz/ask-check.ts
 holder	tools/blitz/bridge-check.ts
 holder	tools/blitz/call-game-check.ts
 holder	tools/blitz/classes.ts
-holder	tools/blitz/delete-tick.ts
 holder	tools/blitz/delta-prof.ts
 holder	tools/blitz/die-check.ts
 holder	tools/blitz/dress-tap.ts
@@ -50,10 +49,6 @@ holder	tools/blitz/verdict-of.ts
 holder	tools/blitz/wasm-run.ts
 holder	tools/blitz/window-check.ts
 holder	tools/chars/look/dump_look.ts
-holder	tools/cpu-frame/bench.ts
-holder	tools/cpu-frame/pose-hash.ts
-holder	tools/cpu-frame/raycast-diff.ts
-holder	tools/cpu-frame/tables-hash.ts
 holder	tools/draw/gen.ts
 holder	tools/draw/look-check.ts
 holder	tools/draw/marks-check.ts
@@ -738,8 +733,6 @@ holder	tools/qa/workstow-check.ts
 holder	tools/qa/workthings-probes.ts
 holder	tools/qa/writing-check.ts
 holder	tools/qa/wxwind-check.ts
-holder	tools/retire/retire-check.ts
-holder	tools/retire/retire.ts
 holder	tools/sim/build.ts
 holder	tools/sim/men.ts
 holder	tools/wire/back-check.ts
@@ -969,7 +962,6 @@ left	src/game/startfile.ts
 left	src/game/startle.ts
 left	src/game/stature.ts
 left	src/game/stayask.ts
-left	src/game/stealthfeed.ts
 left	src/game/stealthpose.ts
 left	src/game/stickycam.ts
 left	src/game/stood.ts

@@ -576,7 +576,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and 568 frames, both stands). NO CLIP shows a kill from a hold: the pose is our own, off the knife from behind. Seen only as stick-figure strips on the software path
   (`--move grab-kill,choke-beats,grab-choke`), never on a GPU, never played; the viewer's hold page has the phase (`kill`) with both halves shown.
 - **Stealth poses = the crouch, the creep and the look under a door posed against the reference** (`src/game/stealthpose.ts` = the table `STEALTHPOSE`, a LEAF nothing of the
-  game is imported into; `src/game/stealthfeed.ts stealthFeed(g)` = the feed, called from player.ts; `character.ts stealthLayer / stealthPicture`, numbers `STEALTH`;
+  game is imported into; `character.ts stealthLayer / stealthPicture`, numbers `STEALTH`;
   `STEALTHPOSE.on` — ON in the page, `?nostealthpose` = every pose as it was; OFF in the module and on the frozen stand, `TPS_STEALTHPOSE=1`; a `FROZEN_HOLDS` row, in the knob
   registry and a journal's tables, a recording from before the table replays with it off; halves `idle / walk / rise / creep / cable` + `nod` (below); Tab ▸ Player & weapons ▸ 'Stealth poses
   (crouch, creep, the look under a door)'). The maintainer, 10-12, on a fourth clip of Chaos Theory: "we should use all these videos as references for our stealthy animations"
