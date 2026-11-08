@@ -44,8 +44,6 @@
 "darkfoe::FoeState":["to"],
 "debris::Chunk":["on"],
 "debris::Debris":["fling"],
-"defuse::Defuse":["end","run","from","lastOrder","sam","marker"],
-"defuse::DefuseSnap":["end","sam"],
 "destruction::Destruction":["showChaos"],
 "devices::DeviceLogRow":["sent"],
 "devices::DevicesSnapCamerasItem":["lastSeen"],
