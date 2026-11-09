@@ -44,7 +44,7 @@ export interface SweepFlip { from: Record<string, unknown>; to: Record<string, u
  *  is a flip that is not one. The benchmark's sweep (SweepOpts.inside) takes the build's rows alone: two machines' benchmarks are the same rows */
 export interface SweepExtra { id: string; label: string; flip: (take: { live: boolean }) => SweepFlip | string; liveOnly?: string; warm?: boolean }
 /** how long the blown snow takes to stand at new numbers, with room to spare: a grain's slot lives (top + 0.3) × 1.1 + 0.4 s — 8.4 s under the usual 7 m top — and a first set holds its
- *  slots half a second longer (rust/game_rules/src/snow_fx updateGrains). Twelve seconds covers a snow top of nine and a half metres */
+ *  slots half a second longer (src/picture/snow/fx.ts updateGrains). Twelve seconds covers a snow top of nine and a half metres */
 const SLOW_SNOW_MS = 12000;
 /** a steady light that leaves the picture or comes into it is in every accumulated signal (the reservoirs, the bounce, the reflections), and what a pixel's history
  *  holds steers how many rays it asks for (penumbras, young history, the audit): a second for those to stand at the new set, where a setting's flip gets half of one. Inferred, not measured */

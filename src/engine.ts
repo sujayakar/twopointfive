@@ -128,7 +128,7 @@ export class Engine {
   taaResets = 0; lastTaaReset = '';
   /** THE LOOK PROTOTYPE's loose snow in the air (render/powderField.ts: the powder the wind picks up and a boot kicks, carried by `air` below, drawn by the
    *  composite). Built the first frame the look page has lying snow, an air field and either row up; dropped when any of those goes (the rows at 0, the air
-   *  field replaced). Picture only. rust/game_rules/src/snow_fx files the kicks into it. */
+   *  field replaced). Picture only. src/picture/snow/fx.ts files the kicks into it. */
   powder: PowderField | null = null; private powderAir: unknown = null;
   /** THE LOOK PROTOTYPE's place field (render/placeField.ts: one level of light a room, which the One exposure row shows every place by): built with the
    *  engine and kept; null on a device that cannot make it */
@@ -147,7 +147,7 @@ export class Engine {
   /** … and the one map of the level both read (placeField.ts PlaceMap); which tables each frame block was last sent (WallSides.made; −1 = never) */
   readonly placeMap = new PlaceMap(); private sidesSent = -1; private sidesSentOut = -1;
   place: PlaceField | null = null; private placeWas: PlaceField | null = null; private placeDead = false;
-  /** THE LOOK PROTOTYPE's eye (render/placeField.ts: the place field's own, eased on the GPU): `snap` = it takes its next reading outright and the field is solved to rest first (the first frame, a restart: rust/game_rules/src/air_sim says; a still sets it by hand). Picture only. */
+  /** THE LOOK PROTOTYPE's eye (render/placeField.ts: the place field's own, eased on the GPU): `snap` = it takes its next reading outright and the field is solved to rest first (the first frame, a restart: src/picture/air.ts says; a still sets it by hand). Picture only. */
   lookEye = { snap: true };
   /** this frame's shadeCfg and eyeCfg as the frame was handed them (a tool's and the debugger's) */
   lookShadeCfg: [number, number, number, number] | undefined = undefined; lookEyeCfg: [number, number, number, number] | undefined = undefined;
@@ -441,10 +441,10 @@ export class Engine {
   get decalsOn(): boolean { return this.settings.decals && !!this.decals && this.decals.count > 0; }
   /** Attach the GPU particle system (or null): its passes join the frame from the next render() while settings.gpuParticles is on. */
   setParticles(p: Particles | null) { this.particles = p; }
-  /** THE AIR OVER THE FLOOR (render/airField.ts; rust/game_rules/src/air_sim feeds it): the wind as a small fluid simulation over the level's floor plan — walls, furniture
+  /** THE AIR OVER THE FLOOR (render/airField.ts; src/picture/air.ts feeds it): the wind as a small fluid simulation over the level's floor plan — walls, furniture
    *  and door leaves stand in it, the storm and the vents drive it. Read by the particle step (the blown snow's grains and wisps) and by nothing else: a picture
    *  only. host/drawpage.ts attaches one on every level (`?air=0`: none — null = the engine as it was); the game hands over, once a frame, the ambient wind (`airWind`,
-   *  m/s along x and z, the gust on it) and whether to run at all (`airOn`: rust/game_rules/src/air_sim AIR_SIM.on, live — a perf sweep can flip it mid-take). STEPPED ON
+   *  m/s along x and z, the gust on it) and whether to run at all (`airOn`: src/picture/air.ts AIR_SIM.on, live — a perf sweep can flip it mid-take). STEPPED ON
    *  ITS OWN CLOCK, not once a drawn frame (settings.airSim, live; settings.airEvery): when at least 0.8 of `airEvery` sixtieths of a second have gone by since the last step (a 120 Hz page steps every
    *  other frame, a 30 Hz one once a frame by the solver's own 1/30 s bound), in ONE compute pass timed as 'air' (per-cell work: it does not shrink with the
    *  render scale). */
@@ -493,7 +493,7 @@ export class Engine {
    *  day grid swapped in at night: seven frames of the wrong bounce and the wrong light-meter reading — review R10.1). Not for screen events — resize / scale / checkerboard /
    *  divisor flips leave the world cache valid and must not call this. */
   invalidateWorldCache() { this.rc.invalidateWorld(); for (const parked of this.rcPark.values()) parked.invalidateWorld(); }
-  /** The LEVEL was put back to its start under the picture (rust/game_rules/src/cleanrestart: a restart — lamps that were out burn, holed walls stand, the eye is somewhere else): the
+  /** The LEVEL was put back to its start under the picture (rust/game_rules/src/savestate: a restart — lamps that were out burn, holed walls stand, the eye is somewhere else): the
    *  screen histories, the reservoirs, the haze volume's history and the radiance cache all still hold the level as it stood, 'wrong wholesale'. Each starts from
    *  nothing, as on a boot's first frame, so the fresh level is not blended in over the frames after. */
   restartPicture(why = 'level restarted') { this.passes.restartHistories(why); this.invalidateWorldCache(); this.startPlansOver(); }   // (restartHistories clears the resolve's history and the reservoirs with the rest)

@@ -420,7 +420,7 @@ const STYLE = `
 #missions.one #loadout .lo-kit .kc-clip { min-width: 0; padding: 7px 13px 6px; font: 600 12px/1.3 var(--m-head); letter-spacing: 0.12em; text-transform: uppercase; color: var(--m-soft); background: none; border: 0; border-radius: 0; box-shadow: none; }
 #missions.one #loadout .lo-kit .kc-clip:hover:not(.on):not(.off) { color: var(--m-bright); background: rgba(var(--m-edge),0.1); border: 0; }
 #missions.one #loadout .lo-kit .kc-clip.on { color: var(--m-bright); background: none; box-shadow: inset 0 -2px 0 var(--m-soft); }
-/* the card as a tree (rust/game_rules/src/kittree; the one start page lays it out in full — ui/startpage.ts): a gun's tile over what rides on it */
+/* the card as a tree (rust/game_types/src/knobs/kittree.rs; the one start page lays it out in full — ui/startpage.ts): a gun's tile over what rides on it */
 #loadout .lo-kit .kc-tree .kc-gun { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 #loadout .lo-kit .kc-tree .kc-kids { display: flex; flex-direction: column; gap: 4px; margin: 0 0 0 12px; padding: 0 0 0 8px; border-left: 2px solid rgba(var(--m-edge),0.28); }
 #loadout .lo-kit .kc-tree .kc-kids:empty { display: none; }

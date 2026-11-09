@@ -65,7 +65,7 @@ const SPLASH_FILL: f32 = 0.056; // the light of a ring's own line over that of i
 const SPLASH_GAIN: f32 = 0.05;  // the same for the crown a drop throws up where it lands (a ring growing over 60 ms on outdoor ground)
 
 fn outdoorsXZ(p: vec2f) -> bool { if (lv(WX_KINDS)) { if (frame.cardCfg.y != 0u) { return !wxRoofed(p); } } let I = frame.weatherC; let A = frame.weatherD; return (p.x < I.x || p.y < I.y || p.x > I.z || p.y > I.w) && (p.x < A.x || p.y < A.y || p.x > A.z || p.y > A.w); }   // outside the interior footprint AND outside the annex (the stair tower: a ray ending on its floor is under a roof — its column is not cut out of passing rays, being three metres of air against the facade)
-/** PARTICLE RAIN (experiment, rust/game_rules/src/rain_fx): the share of the lattice's streaks / splash rings KEPT at ground point p — 1 outside the particle layer's disc (frame.weatherE: centre xz,
+/** PARTICLE RAIN (experiment, src/picture/rain.ts): the share of the lattice's streaks / splash rings KEPT at ground point p — 1 outside the particle layer's disc (frame.weatherE: centre xz,
  *  radius, the share it takes), 1 − that share inside its inner 70 %, eased between over the rim the recycler thins its births across (particles.wgsl emit's taper). weatherE.w 0 =
  *  no particle layer anywhere: 1 exactly, and the callers below then multiply by nothing (their untouched statements run). */
 fn rainNearKeep(p: vec2f) -> f32 {
