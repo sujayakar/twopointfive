@@ -207,7 +207,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.yardWallX(24, 9.62, 36.12, 'mud', [{ a: 19.4, b: 20.6, ...DOOR }]);                  // south: the wicket in the shut main gate
   G.wallZ(4, 4.12, 9.12, 'mud');                                                         // west, behind the bunk hut
   G.yardWallZ(4, 9.12, 19.38, 'mud', [{ a: 13.3, b: 14.5, ...DOOR }]);                   // west: gate_w
-  G.wallZ(4, 19.38, 23.88, 'mud');                                                       // west, behind the shed
+  G.wallZ(4, 19.62, 23.88, 'mud');                                                       // west, behind the shed (from its own wall's far face: the corner is the shed's block)
   G.yardWallZ(36, 4.12, 23.88, 'mud', [{ a: 11.3, b: 12.5, ...DOOR }]);                  // east: gate_e
   for (const [x, z] of [[18.3, 24], [21.7, 24], [36, 4], [36, 24], [28, 24], [13, 24], [36, 17], [16, 4], [29.2, 4], [4, 11.4], [4, 16.6]] as const) G.pier(x, z);
   // the main gate's two sheet-metal leaves, shut and barred for the night: paint on the wall either side of the wicket, both faces

@@ -941,7 +941,7 @@ const SKIN: Skin = {
     // the two walks outside the walls, trodden darker as the ground at every door is: along the north wall to the back gate, down the west wall to the side gate
     { const fn = T.floorAt(30, 2.2), fw = T.floorAt(2.1, 10); if (fn) M.path([[39.4, 2.3], [26.2, 2.2], [24.25, 3.3]], 0.55, T.tone(fn, 0.8)); if (fw) M.path([[2.2, 4.4], [2.1, 13.2], [3.3, 14.75]], 0.55, T.tone(fw, 0.8)); }
     // the cook fire behind the kitchen: ash on the ground, soot up the wall
-    G.patch(14.2, 5.35, 1.5, 1.2, 'damp', 0.2); G.patch(14.25, 5.4, 0.8, 0.65, 'oil', 0.7, 0.0128); G.skirt('x', 6.5, 13.7, 14.8, -1, 'iron', 1.25, 0.24);
+    G.patch(14.2, 5.35, 1.5, 1.2, 'damp', 0.2); G.patch(14.25, 5.4, 0.8, 0.65, 'oil', 0.7, 0.0128); G.skirt('x', 6.5, 13.7, 14.8, -1, 'iron', 1.25, 0.248);
     // a chalk hopscotch by the front door (thin lines: the one pale thing on this ground)
     { const chalk = T.tone(P.whitewash, 0.85), x = 20.3, s = 0.5; let z = 20.0;
       for (const two of [false, false, true, false, true, false]) { if (two) { M.outline(x - s, z, x, z + s, 0.05, chalk); M.outline(x, z, x + s, z + s, 0.05, chalk); } else M.outline(x - s / 2, z, x + s / 2, z + s, 0.05, chalk); z += s; } }
