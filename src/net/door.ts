@@ -121,7 +121,7 @@ export class NetDoor {
       const t = setTimeout(() => settle('The game’s server didn’t answer.'), NETDOOR.helloMs);
       ws.onopen = () => void named.then(b => { c.who.build = b; c.hello(); });
       const down = onWay<() => void>(NETWAY, f => f());   // (what comes down the socket, its close too, in the order it came)
-      ws.onmessage = ev => { const came = performance.now(); down(() => { const now = performance.now(); this.heldMs += (now - came - this.heldMs) * (this.heldMs ? 0.1 : 1); c.message(String(ev.data), now); if (!met && (c.welcome || c.bye)) settle(c.welcome ? '' : refusal(c.byeCode)); }); };
+      ws.onmessage = ev => { const came = performance.now(); down(() => { const now = performance.now(); this.heldMs += (now - came - this.heldMs) * (this.heldMs ? 0.1 : 1); c.message(String(ev.data), now); if (c.byeCode === 'seat') forget(); if (!met && (c.welcome || c.bye)) settle(c.welcome ? '' : refusal(c.byeCode)); }); };
       ws.onclose = () => down(() => { if (this.ws !== ws) return; if (!met) settle(c.bye ? refusal(c.byeCode) : 'This page couldn’t reach the game’s server.'); else if (!c.bye) c.broken ||= 'the connection closed'; });
       ws.onerror = () => { /* its close follows */ };
     });
@@ -162,6 +162,7 @@ export class NetDoor {
   private status(): void {
     const c = this.client;
     this.say(c.bad ? 'Your game went out of step with the server. Reload the page to join again.'
+      : c.byeCode === 'seat' ? TAKEN
       : c.bye ? (c.outcome ? 'The mission is over.' : 'The game is over.')
       : c.broken ? 'You lost the connection to the game. Reload the page to join again.'
       : c.state === 'waiting' ? 'The other player isn’t here yet.'
@@ -177,11 +178,14 @@ export class NetDoor {
   }
 }
 
+/** this key opens no seat any more: the tab forgets it, so a page loaded again comes by the game's code (net/lobby.ts) or watches */
+const forget = (): void => { try { sessionStorage.removeItem(KEEP); } catch { /* a browser that keeps nothing */ } };
+const TAKEN = 'Another player has your seat.';
 export const CANT_PLAY = 'This page can’t play that game.';
 /** a server's goodbye before any welcome (wire.ts ByeCode), as the player is told it */
 function refusal(code: string): string {
   return code === 'build' ? 'That game is on another version. Reload the page and join again.'
-    : code === 'seat' ? 'That seat isn’t yours.'
+    : code === 'seat' ? TAKEN
     : code === 'full' ? 'There’s no room left to watch that game.'
     : 'You can’t join that game.';
 }
