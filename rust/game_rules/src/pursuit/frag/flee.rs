@@ -151,18 +151,12 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
             if !g.pl[pl].down { rep.player = Some(BlastResult::Wounded); }
         }
     }
-    if rep.player == Some(BlastResult::Wounded) { crate::condition::condition_hurt(g, &crate::condition::Man::Player(pl)); }
+    if rep.player == Some(BlastResult::Wounded) { crate::condition::condition_hurt(g, c); }
     if rep.player == Some(BlastResult::Wounded) || rep.player == Some(BlastResult::Stunned) {
         let st = g.k.frag.stagger;
         let secs = v3::lerp(st[0], st[1], v3::clamp(j.d / b.wound, 0.0, 1.0));
-        g.pl[pl].stagger_until = m::max(g.pl[pl].stagger_until, g.time + secs);
         let along = away(b.at, g.ch[c].pos);
-        crate::character::anim_hit_from(g, c, Some(along));
-        g.pl[pl].hit_flash = 1.0;
-        g.pl[pl].fire_cd = m::max(g.pl[pl].fire_cd, secs);
-        g.pl[pl].sup.v = m::max(g.pl[pl].sup.v, 1.0);
-        g.pl[pl].sup.kick = m::max(g.pl[pl].sup.kick, 1.0);
-        crate::samstun::fold_cancels(g);
+        crate::samstun::stagger_player(g, secs, along);
         if g.pl[pl].picking.is_some() { g.pl[pl].picking = None; g.pl[pl].f_held = true; }
         if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); g.pl[pl].f_held = true; }
         g.pl[pl].throw_held = false;
@@ -284,19 +278,11 @@ pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::B
                 let u = v3::clamp(j.d / wound, 0.0, 1.0);
                 let st = g.k.frag.stagger;
                 let secs = v3::lerp(st[0], st[1], u);
-                let time = g.time;
                 let w = g.gd[gd].weapon;
-                let man = &mut g.gd[gd];
-                man.stagger_until = m::max(man.stagger_until, time + secs);
-                man.react_t = m::max(man.react_t, secs);
+                crate::condition::fold(g, c, secs);
                 g.fa[w].burst = None;
-                crate::mind::raise(g, gd, 0.92, "frag");
-                if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
-                crate::game::guard_set_path(g, gd, Vec::new());
-                g.gd[gd].path_goal = None;
-                g.gd[gd].path_goal_orbit = false;
-                g.gd[gd].speed = 0.0;
-                if r == BlastResult::Wounded { crate::condition::condition_hurt(g, &crate::condition::Man::Guard(gd)); }
+                crate::condition::dazed(g, gd, secs, at, 0.92, "frag");
+                if r == BlastResult::Wounded { crate::condition::condition_hurt(g, c); }
             }
             crate::character::anim_hit(g, c);
         }

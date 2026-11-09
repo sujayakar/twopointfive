@@ -403,8 +403,8 @@ fn fires(g: &mut Game, o: RoomfightOpId, h: GuardId, to: V3, dt: f64, speed: f64
     let def = weapon_def_of(g, gd);
     let spread = def.ai_spread;
     let hands = (spread.base + m::max(0.0, dist - spread.range_from) * spread.range_k) * sk.spread_k;
-    let sup_v = g.gd[gd].sup.v;
-    let sup_k = if g.tune.suppression && crate::condition::condition_sup(g, crate::condition::Man::Guard(gd), sup_v) >= g.k.suppression.flinch { 1.6 } else { 1.0 };
+    let sup_v = g.cond[g.gd[gd].ch].sup.v;
+    let sup_k = if g.tune.suppression && crate::condition::condition_sup(g, g.gd[gd].ch, sup_v) >= g.k.suppression.flinch { 1.6 } else { 1.0 };
     let string = crate::gunroles::gun_string(g, gd); // a belt-fed gun's string, the Mk 12's single aimed round; 0: the controlled pair
     let grow = if string > 1.0 { crate::gunroles::gun_string_grow(g, gd, js::rem(g.tab.roomfight_op[o].n, string)) } else { 0.0 };
     let feet = m::max(speed, g.tab.roomfight_op[o].feet_sm.unwrap_or(0.0)) * g.k.aimcost.move_k;
@@ -836,7 +836,7 @@ mod tests {
     /// A man on the tables at the origin facing +z (yaw 0), carrying this module's overlay, and his Op.
     fn man_with_overlay() -> (Game, GuardId, RoomfightOpId) {
         let mut g = Game::blank();
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
         let gd = g.gd.push(crate::game::Guard::blank());
         g.gd[gd].ch = c;
         g.gd[gd].script = Some(crate::game::GuardScript { over: Some(crate::game::GuardScriptOver { aim_at: [0.0; 3], face: None, walk: None }), ..Default::default() });

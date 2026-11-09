@@ -96,7 +96,7 @@ pub(super) fn in_contact(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// Pinned by fire or flinching under it.
 pub(super) fn suppressed(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    let sup = &g.gd[gd].sup;
+    let sup = &g.cond[g.gd[gd].ch].sup;
     sup.latched || sup.down_t > 0.0 || sup.v >= g.k.suppression.flinch
 }
 

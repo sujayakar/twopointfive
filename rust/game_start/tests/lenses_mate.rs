@@ -91,7 +91,7 @@ fn the_launchers_camera_sticks_to_a_wall_and_drops_off_a_leaf_or_a_man() {
         p.camera_sent(start, [spot[0], 1.25, spot[1]]);
         let (at, si, rest) = p.last_cam();
         assert!(rest && si == -1.0 && at[1] < 0.3 && dist([at[0], at[2]], spot) < 1.0, "seed {s}: at a man it rests at {at:?} on {si}");
-        assert!(p.g.gd[m].stagger_until > before, "seed {s}: he took no stagger");
+        assert!(p.g.cond[p.g.gd[m].ch].fold_until > before, "seed {s}: he took no stagger");
         assert!(p.up(m), "seed {s}: a camera knocked him out");
     }
 }

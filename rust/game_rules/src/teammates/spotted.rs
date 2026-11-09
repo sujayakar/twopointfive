@@ -632,7 +632,7 @@ mod tests {
         (g, gd)
     }
     fn add_man(g: &mut Game) -> GuardId {
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(g, crate::character::Character::blank());
         let mut man = crate::game::Guard::blank();
         man.ch = c;
         g.gd.push(man)

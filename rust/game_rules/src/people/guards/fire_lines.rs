@@ -728,7 +728,7 @@ mod tests {
     /// a game with one man and his body; nothing below reaches another part
     fn one_man() -> (Box<Game>, GuardId, CharId) {
         let mut g = Box::new(Game::blank());
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
         let mut man = crate::game::Guard::blank();
         man.ch = c;
         let gd = g.gd.push(man);

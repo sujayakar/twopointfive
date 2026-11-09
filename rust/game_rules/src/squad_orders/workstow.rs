@@ -140,7 +140,7 @@ mod tests {
 
     fn man() -> (Box<Game>, GuardId, CharId) {
         let mut g = Box::new(Game::blank());
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
         let mut guard = crate::game::Guard::blank();
         guard.ch = c;
         let gd = g.gd.push(guard);
@@ -225,7 +225,7 @@ mod tests {
         assert!(!stow_fight(&mut g, gd, Some(crate::workstow::StowFightA { yield_t: -1.0 }), &mut op));
         assert_eq!(op.stow_off_t, None);
 
-        g.gd[gd].dazzled_until = 101.0;
+        g.cond[g.gd[gd].ch].blind_until = 101.0;
         assert_eq!(stow_fight(&mut g, gd, None, &mut op), 0.0 < cap);
         assert_eq!(op.stow_off_t, Some(100.0));
     }

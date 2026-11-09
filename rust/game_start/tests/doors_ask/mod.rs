@@ -463,7 +463,7 @@ impl DoorsAsk for Play {
     fn left(&self) -> (f64, f64, f64) { (self.g.door_tools.charges, self.g.door_tools.bangs, self.g.door_tools.frags) }
     fn carries(&mut self, charges: f64, bangs: f64) { self.g.door_tools.charges = charges; self.g.door_tools.bangs = bangs; }
     fn struck(&self, gd: GuardId) -> bool { self.g.gd[gd].down_kind == Some(game::game::DownKind::Struck) }
-    fn staggered(&self, gd: GuardId) -> bool { self.g.time < self.g.gd[gd].stagger_until }
+    fn staggered(&self, gd: GuardId) -> bool { self.g.time < self.g.cond[self.g.gd[gd].ch].fold_until }
     fn frame_at(&self, d: DoorId) -> [f64; 2] { let c = self.g.dr[d].frame_centre; [c[0], c[2]] }
     fn keep_broken(&self, d: DoorId) -> bool { game::doors::door_lock_broken(&self.g, d) }
     fn leaf_put_shut(&mut self, d: DoorId) {
@@ -620,20 +620,20 @@ impl DoorsAsk for Play {
     }
     fn fight_notes(&self, name: &str) -> Vec<String> { self.g.fight.log.iter().filter(|n| n.who == name).map(|n| n.what.clone()).collect() }
     fn rescue_aim(&self) -> f64 { self.g.k.rescue.aim_secs }
-    fn dazzled_for(&mut self, gd: GuardId, secs: f64) { self.g.gd[gd].dazzled_until = self.g.time + secs; }
+    fn dazzled_for(&mut self, gd: GuardId, secs: f64) { self.g.cond[self.g.gd[gd].ch].blind_until = self.g.time + secs; }
     fn room_cleared(&self, id: &str) -> bool { self.g.room_clear.rooms.iter().find(|r| r.def.id == id).is_some_and(|r| r.cleared) }
     fn room_men(&self, id: &str) -> Vec<GuardId> { self.g.room_clear.rooms.iter().find(|r| r.def.id == id).map_or(Vec::new(), |r| r.defenders.clone()) }
     fn gun_on(&self, gd: GuardId) -> Option<GuardId> { self.g.fight.ops.iter().map(|&o| &self.g.tab.roomfight_op[o]).find(|o| o.gd == gd).and_then(|o| o.tgt) }
     fn puppet(&mut self, foe: GuardId, at: [f64; 2], yaw: f64) {
         self.pin_man(foe, at, yaw, GuardState::Patrol, 0.0);
         let t = self.g.time;
-        self.g.gd[foe].dazzled_until = t + 9.0;
+        self.g.cond[self.g.gd[foe].ch].blind_until = t + 9.0;
         self.g.gd[foe].god = true;
         for o in self.g.fight.ops.clone() { self.g.tab.roomfight_op[o].ready_at = t + 1.0; }
         self.g.fight.hot_t = t;
         for m in self.mates() { let c = self.g.gd[m].ch; self.g.gd[foe].god = true; }
     }
-    fn blind_now(&mut self, gd: GuardId) { self.g.gd[gd].dazzled_until = self.g.time + 9.0; }
+    fn blind_now(&mut self, gd: GuardId) { self.g.cond[self.g.gd[gd].ch].blind_until = self.g.time + 9.0; }
     fn order_men(&mut self, id: &str, at: [f64; 2], men: &[GuardId]) -> Option<String> {
         let t = game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]);
         let o = game::orders::GiveOpts { men: Some(men.to_vec()), ..game::orders::GiveOpts::default() };
@@ -722,8 +722,8 @@ impl DoorsAsk for Play {
         c.vel[0].hypot(c.vel[2]) > 0.3 && c.vel[0] * (w[0] - c.pos[0]) + c.vel[2] * (w[2] - c.pos[2]) < 0.0
     }
     fn leaves_gone_round(&self) -> f64 { self.g.doors.rounds }
-    fn blind_secs(&self, m: GuardId) -> f64 { (self.g.gd[m].dazzled_until - self.g.time).max(0.0) }
-    fn fold_secs(&self, m: GuardId) -> f64 { (self.g.gd[m].stagger_until - self.g.time).max(0.0) }
+    fn blind_secs(&self, m: GuardId) -> f64 { (self.g.cond[self.g.gd[m].ch].blind_until - self.g.time).max(0.0) }
+    fn fold_secs(&self, m: GuardId) -> f64 { (self.g.cond[self.g.gd[m].ch].fold_until - self.g.time).max(0.0) }
     fn is_staff(&mut self, m: GuardId) { self.g.gd[m].team = game::teams::Team::Guard; }
     fn entry_pods(&mut self, d: DoorId, side: f64, n: f64) -> Vec<[f64; 2]> { game::doortools::door_tools_pods_as_were(&mut self.g, d, side, Some(n)).iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
     fn shallow_pods(&mut self, d: DoorId, side: f64, n: f64) -> Vec<[f64; 2]> { game::doortools::door_tools_shallow_pods(&mut self.g, d, side, Some(n)).iter().map(|q| [q.pos[0], q.pos[2]]).collect() }

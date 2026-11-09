@@ -738,8 +738,8 @@ pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spe
     }
     let r = g.m.weapons.weapons.get(g.fa[fa].def).unwrap().ai_spread;
     let hands = (r.base + m::max(0.0, dist - r.range_from) * r.range_k) * sk.spread_k;
-    let sup_v = g.gd[gd].sup.v;
-    let sup_k = if g.tune.suppression && crate::condition::condition_sup(g, crate::condition::Man::Guard(gd), sup_v) >= g.k.suppression.flinch { 1.6 } else { 1.0 };
+    let sup_v = g.cond[g.gd[gd].ch].sup.v;
+    let sup_k = if g.tune.suppression && crate::condition::condition_sup(g, g.gd[gd].ch, sup_v) >= g.k.suppression.flinch { 1.6 } else { 1.0 };
     let opts = crate::combat::FireOpts {
         steady: Some(true),
         spread: Some(hands * v3::lerp(p.unsettled_k, 1.0, v3::clamp(lay, 0.0, 1.0)) * sup_k + speed * p.shooter_move_k * 0.5),

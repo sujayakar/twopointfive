@@ -50,7 +50,7 @@ fn fight(seed: u32, sidearms: bool) -> (Option<f64>, f64, (i32, i32), Vec<(bool,
     let mut p = squad(seed);
     let men = p.men_on_the_floor();
     let (foes, rest) = men.split_at(3);
-    for &r in rest { p.man_stands(r, [2.0, 2.0]); p.man_posted(r); p.g.gd[r].dazzled_until = 1e9; }
+    for &r in rest { p.man_stands(r, [2.0, 2.0]); p.man_posted(r); p.g.cond[p.g.gd[r].ch].blind_until = 1e9; }
     let mates = p.mates();
     let (two, off) = mates.split_at(2);
     for &o in off { p.man_stands(o, [10.0, 26.0]); p.man_posted(o); }

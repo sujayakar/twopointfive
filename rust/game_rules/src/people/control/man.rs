@@ -7,10 +7,10 @@ use crate::ids::*;
 pub fn dead(g: &Game, gd: GuardId) -> bool { g.gd[gd].state == GuardState::Dead }
 
 /// He cannot see. It does not say WHAT took his eyes: a flash, a wall charge, a door thrown in his face and the door tools all write it.
-pub fn blind(g: &Game, gd: GuardId) -> bool { g.time < g.gd[gd].dazzled_until }
+pub fn blind(g: &Game, gd: GuardId) -> bool { crate::condition::is_blind(g, g.gd[gd].ch) }
 
 /// He is reeling from a blow or a blast: he neither aims nor fires until it passes.
-pub fn staggered(g: &Game, gd: GuardId) -> bool { g.time < g.gd[gd].stagger_until }
+pub fn staggered(g: &Game, gd: GuardId) -> bool { crate::condition::is_folded(g, g.gd[gd].ch) }
 
 /// Somebody's arm is on him: a hostage hold or a grab.
 pub fn held(g: &Game, gd: GuardId) -> bool { g.gd[gd].held.is_some() }
@@ -68,7 +68,7 @@ mod tests {
     #[test]
     fn a_man_as_he_is_made_is_none_of_these_and_each_clock_turns_its_own_answer() {
         let mut g = Box::new(Game::blank());
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
         let mut man = crate::game::Guard::blank();
         man.ch = c;
         let gd = g.gd.push(man);
@@ -76,10 +76,10 @@ mod tests {
         let all = |g: &Game| [dead(g, gd), blind(g, gd), staggered(g, gd), held(g, gd), saw_his_man_within(g, gd, 5.0), in_a_standoff(g, gd), changing_magazine(g, gd)];
         assert_eq!(all(&g), [false; 7]);
         assert!(still(&g, gd));
-        g.gd[gd].dazzled_until = 10.5;
+        g.cond[g.gd[gd].ch].blind_until = 10.5;
         assert_eq!(all(&g), [false, true, false, false, false, false, false]);
-        g.gd[gd].dazzled_until = 10.0;                    // the moment it ends he can see
-        g.gd[gd].stagger_until = 11.0;
+        g.cond[g.gd[gd].ch].blind_until = 10.0;                    // the moment it ends he can see
+        g.cond[g.gd[gd].ch].fold_until = 11.0;
         g.gd[gd].last_seen_t = 6.0;
         g.gd[gd].reload_t = 0.0;
         assert_eq!(all(&g), [false, false, true, false, true, false, true]);

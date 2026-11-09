@@ -139,7 +139,7 @@ mod tests {
     /// One player, one body, no men: nothing below reaches another part's stub.
     fn lone_player() -> (Box<Game>, CharId) {
         let mut g = Box::new(Game::blank());
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
         g.pl.push(crate::game::Player::blank());
         g.time = 100.0;
         g.pl[g.player].last_fire_t = -10.0;
