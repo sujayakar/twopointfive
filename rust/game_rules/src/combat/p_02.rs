@@ -731,7 +731,8 @@ pub fn start_canister(g: &mut crate::game::Game, it: ItemId) {
     }
     crate::throwables::item_set_emit_t(g, it, seconds);
     let pos = crate::throwables::item_pos(g, it);
-    crate::audio_iface::game_audio_like_play(g, "smokeHiss", Some(pos), Some(1.0), Some(&crate::audio_iface::PlayOpts::Duration { duration: seconds }));
+    // (its hiss is no event: a picture hears it for as long as the can pours, off the can itself)
+    crate::audio_iface::game_audio_like_play(g, "smokePop", Some(pos), Some(0.9), None);
     crate::game::game_msg(g, "smoke deployed");
     let e = crate::game::GameEvent { kind: crate::director::EventKind::Shot, pos: v3::copy(pos), time: g.time, loud: false, serial: g.serial(), ..Default::default() };
     g.events.push(e);

@@ -58,16 +58,16 @@ pub fn smoke_held(g: &crate::game::Game, e: &crate::smoke_types::SmokeEmitter) -
 pub fn smoke_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEmitter) {
     let Some((r, rate)) = held(g, e) else { return };
     smoke_home(g);
-    sim::bricks::emit(g.sim, e.pos[0], e.pos[1], e.pos[2], r, rate, e.ttl);
+    sim::bricks::emit(g.sim, e.pos[0], e.pos[1], e.pos[2], r, rate, e.ttl, e.tint.map_or([0.0; 3], |t| t.map(|v| 1.0 - v)));
 }
 
 /// WHAT LETS SMOKE OUT NOW, each source as old as it is, for a picture of a game put back, which heard none of them begin. The game holds where one stands, how wide it
-/// is, how much it lets out and for how long; how it comes out of it is a can's for all of them, as the game's own smoke rises alike from them all.
+/// is, how much it lets out, of what color and for how long; how it comes out of it is a can's for all of them, as the game's own smoke rises alike from them all.
 pub fn smoke_sources(g: &crate::game::Game) -> Vec<crate::smoke_types::SmokeEmitter> {
     let p = crate::combat::can_params(g);
     sim::bricks::letting(g.sim).map(|e| crate::smoke_types::SmokeEmitter {
         pos: e.at, dir: [0.0, 1.0, 0.0], speed: p.canister_speed, radius: e.radius, density: e.rate / (PI15 * e.radius * e.radius * e.radius), temperature: p.canister_temp, ttl: e.ttl, age: e.age,
-        kind: crate::smoke_types::SmokeEmitterKind::Canister, held: Some(true), ..crate::smoke_types::SmokeEmitter::default()
+        kind: crate::smoke_types::SmokeEmitterKind::Canister, held: Some(true), tint: if e.dye == [0.0; 3] { None } else { Some(e.dye.map(|v| 1.0 - v)) }, ..crate::smoke_types::SmokeEmitter::default()
     }).collect()
 }
 

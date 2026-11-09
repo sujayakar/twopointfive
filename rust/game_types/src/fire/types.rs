@@ -21,10 +21,8 @@ pub struct FireShown {
     pub time: f64,
     pub stir: Option<Vec<f64>>,
     pub stir_at: Option<Vec<f64>>,
-    pub bed: Vec<f64>,
     pub smoke: Vec<f64>,
     pub smokes: f64,
-    pub beds: f64,
     pub ember: Vec<f64>,
     pub embers: f64,
 }

@@ -1263,6 +1263,14 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     doors: doorDefs,   // hinged leaves for the doorway gaps (closedDir 0: leaf runs +X from the hinge along a z-wall; π/2: runs +Z along an x-wall)
     devices,
     vents,             // the HVAC diffusers (rust/game_rules/src/wind): after devices, where loadLevel puts them — the identity probe compares key order too
+    hums: [
+      { name: 'hum_servers', kind: 'servers', pos: [18, 1.2, 7], level: 0.5, radius: 12 },   // the server room
+      { name: 'hum_vending', kind: 'buzz', pos: [29.5, 1.2, 13.2], level: 0.35, radius: 7 },   // the vending machines
+      { name: 'hum_ballast', kind: 'buzz', pos: [16.5, 2.8, 20.6], level: 0.15, radius: 6 },   // the flickering panel's ballast
+      { name: 'hum_air', kind: 'hum', pos: [8, 2.6, 18], level: 0.25, radius: 14 },   // the air handling
+      { name: 'wind_lot', kind: 'wind', pos: [16, 3, 27], level: 0.5, radius: 18, mains: false },   // the wind over the lot
+      { name: 'wind_west', kind: 'wind', pos: [1.5, 3, 20], level: 0.4, radius: 14, mains: false },   // …and along the west side
+    ],
     breaker: { pos: [34.3, 1.35, 9.8], boxes: [brk, brkLed] },
     beacons,
     playerSpawn: [5.1, 0, 15.2],

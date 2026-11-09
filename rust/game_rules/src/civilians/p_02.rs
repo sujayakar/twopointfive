@@ -460,7 +460,7 @@ pub fn step_sound(g: &mut crate::game::Game, gd: GuardId, move_: f64) {
     g.gd[gd].step_phase = g.ch[c].anim.phase;
     if move_ > 0.4 && ((prev < 0.5) != (g.gd[gd].step_phase < 0.5)) {
         let p = g.ch[c].pos;
-        crate::audio_iface::game_audio_like_footstep(g, p, if move_ > 2.0 { 0.7 } else { 0.3 }, false, None);
+        crate::floor::footfall(g, p, if move_ > 2.0 { 0.7 } else { 0.3 }, false);
     }
 }
 
