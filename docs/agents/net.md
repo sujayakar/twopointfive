@@ -154,8 +154,8 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   `bun run tools/qa/lobby-check.ts` (no page, some fifteen seconds; needs `npm ci` in `cloud/`: the words, the code's letters against the control
   plane's own, a refusal whose words are only in its data, a Hard address standing another game than a Standard one, then a stand-in backend, the
   REAL local runner and the REAL game server — a tab hosts, a second joins by the code, the first again is the first seat again, a third is told it
-  is full, a scripted client in each seat walks 240 ticks on the address and key its tab was told; `LOBBY_BREAK=1`, the game made for one player,
-  fails host, join and fight) and `PORT=<free> node tools/qa/lobby-page.cjs` (windows of one headless Chromium against a dev server it starts with a
+  is full, a scripted client in each seat walks 240 ticks on the address and key its tab was told, and a seat left goes to another tab on a key of its
+  own; `LOBBY_BREAK=1`, the game made for one player, fails host, join, fight and left) and `PORT=<free> node tools/qa/lobby-page.cjs` (windows of one headless Chromium against a dev server it starts with a
   stand-in backend: a page with no backend (`cloud=0`) whose Host game says why not and leaves what the solo list remembers alone — in the co-op
   dress the starting page's own deploy hook writes nothing, a hosted game is not that list's to remember — and whose refusal said twice stays up; the
   title's row and the host's list, the block makes the game, the invite, the host's window sent to the LINK comes back through
@@ -167,8 +167,11 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   looked at. A SEAT IS HELD BY WHO IS THERE (2026-11-09; `games.ts openSeat`): its holder has `MP_COME_S` (15 s) to connect, from the moment he was given it
   or, where he waited for the server to start, from the server's first word; past that a seat nobody is connected in is the next one's who asks by the
   code, and its old holder's again if he comes first. No page says goodbye: the server says at once when a seat empties, so a closed tab, a Quit, a
-  crash and a browser that cannot play are one case. The key is the SEAT'S and does not change with its holder: a tab that kept it and is loaded again
-  sits down over whoever is there (the server's rule for a page loaded again). OPEN: a restart is still either player's record; a full game's address pasted into a third tab watches,
+  crash and a browser that cannot play are one case. A SEAT'S KEY IS ITS HOLDER'S: `join` deals another
+  as the seat becomes another's. The server hears of it in the answer to its next heartbeat (`{ok, seatKeys}`), and a hello whose key no seat has is asked
+  about with a heartbeat at once (`ServerHost.ask` → `NetServer.rekey`), so a new player never waits; whoever sits there on the old key is told `seat`
+  and let go. His page says 'Another player has your seat.' and the tab forgets the key (`door.ts forget`): loaded again it comes by the code. A key on
+  its own stays one for a server with no control plane (`lan.ts`). OPEN: a restart is still either player's record; a full game's address pasted into a third tab watches,
   as any keyless `?net=` address does; the scenario's 400 characters and the seats let go need the control plane's functions deployed again.
 - **Two players, two teams to the eye** (2026-11-03; `rust/game_rules/src/seats seatTone` / `playerName`, `src/ui/findmeviz.ts findMeOutline`, `src/game/floorplan.ts
   PlanFor` / `PLAN.others`, `src/ui/planfloor.ts plansToDraw`, `rust/game_rules/src/verdict roster`, `rust/game_rules/src/deathrecap man_of`). The maintainer, from the
@@ -229,14 +232,14 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   SETUP RECORD a host's page hands the control plane and the control plane hands on: `{scenario` (the mission's page address), `seed`, `knobs?: {commands}`
   (anything else in `knobs` is refused), `seats?`, `seatKeys` (one a seat), `build?`, `game?}`, or `{start, seatKeys}` · `MP_SEATKEYS` (where the record carries
   no keys) · `MP_CONTROL` + `MP_SECRET` (heartbeats: POST `{secret, …health}` every 10 s and at once on a change; an answer of 410 = the control plane has no
-  such game and the server stops) · `MP_IDLE_S` (60) · `MP_MAX_S` (3600) · `MP_GRACE_S` (15) · `MP_BUILD` (default: the record's, else the checkout's commit,
+  such game and the server stops; an answer's `seatKeys` = the seats' keys now; one heartbeat waits at a time and says what is so when it goes) · `MP_IDLE_S` (60) · `MP_MAX_S` (3600) · `MP_GRACE_S` (15) · `MP_BUILD` (default: the record's, else the checkout's commit,
   none with uncommitted changes). `GET /health` → `{game, build, state, tick, seats, watchers, slips, lost, lines}`. Exit 0 when done, 1 when its game could
   not be stood or threw, 2 on a bad environment. A HOSTED SERVER NEEDS NO COMPILER: it stands on the checked-in module where that is of its sources. By hand:
   `MP_SETUP='{"scenario":"?roomclear&squad4","seed":7,"seatKeys":["k0"]}' bun run tools/mp/server.ts`, then `bun run tools/mp/bot.ts --key k0` (a scripted
   client: `--lag`, `--jitter`, `--loss`, `--stall`, `--after`, `--ticks`, `--build`, `--predict`).
 - **THE CHECKS.** `bun run tools/qa/mpserver-check.ts` (a server process and scripted clients over real WebSockets; about two minutes, read ALONE: it holds a
   60 Hz server and its clients to the wall clock): the rule and the cores on their own, the settings, refused hellos, same fight, a late joiner, lag, gone, two
-  seats, names, the look ahead, every part, the worse way and a bad connection, the heartbeats, idle. `MPSERVER_BREAK=1` (one record stepped with another walk
+  seats, names, a seat taken by another, the look ahead, every part, the worse way and a bad connection, the heartbeats, idle. `MPSERVER_BREAK=1` (one record stepped with another walk
   key after tick 90) fails the state-word lines, `names`, `ahead` and `every part`. `bun run tools/draw/net-check.ts` (20 s: the server's core, a second player
   and the page's half on a check's clock, through stalls, bunched ticks, a restart and a page asleep; `NET_BREAK=1` fails). `PORT=<dev server> node
   tools/qa/mpclient-page.cjs` (headless Chromium against a real server, a bun client beside it; `--seats 2` = the page in the second seat): its lines are in

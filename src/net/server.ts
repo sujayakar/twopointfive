@@ -8,6 +8,8 @@
 //   sent each tick as it runs; one that is behind — a joiner, a seat come back, a socket that would not take a tick — is sent a stretch of the run on each call
 //   of `advance`, and none while its socket says it is backed up (`drained` lets it go on). So a hello costs nothing however long the game has run, and no tick
 //   is ever lost on the way to a slow reader.
+//   A SEAT'S KEY IS ITS HOLDER'S, and whoever made the game says who that is (`rekey`): a seat that became another's has another key, and one who sits in it on
+//   the old one is told so and let go. A key no seat has is asked about once (`ServerHost.ask`) before it is refused: a new holder comes before the word of him.
 //   WHAT A CLIENT SENDS IS CHECKED before it is kept: a message's length, a record's every field (wire.ts wireOk). A record that is not one is not taken.
 //   IT ENDS ITSELF (`done`): nobody connected for `idleS`, the mission over and the grace run, or `maxS` since it was made. The host exits on it.
 //   BEHIND: a host that cannot keep the rate runs at most NET.catchUp ticks in one go, and past NET.slipAt behind lets the game's clock slip rather than run a
@@ -19,7 +21,8 @@ import { SeatLine } from './timeline';
 
 /** what the host gives: its clock (ms, never going back), one tick of its game on the seats' records (and whatever it does between two ticks), the game's
  *  chained state word after the last tick, and how the mission ended (null while it has not) */
-export interface ServerHost { now(): number; step(cmds: WireCmd[]): void; word(): string; /** the word of the whole game after the last word tick (words.ts foldWhole), where the host has one */ watch?(): string | null; ended(): Outcome | null; }
+export interface ServerHost { now(): number; step(cmds: WireCmd[]): void; word(): string; /** the word of the whole game after the last word tick (words.ts foldWhole), where the host has one */ watch?(): string | null; ended(): Outcome | null;
+  /** ask whoever made the game who holds its seats now, where there is anybody to ask: settled once he has answered (by `rekey`) or has not; never rejected */ ask?(): Promise<void>; }
 /** a connection as the core sees it. `send` answers what became of the text: above 0 it went, below 0 it was taken but the socket is backed up (the host says
  *  `drained` when it no longer is), 0 it was NOT taken */
 export interface Conn { send(text: string): number; close(why: string): void; }
@@ -41,13 +44,16 @@ export class NetServer {
   outcome: Outcome | null = null;
   /** called on every change a control plane would want to hear of at once (a state, a seat filled or left, a client whose game parted, the end) */
   onChange: (() => void) | null = null;
-  private seats: Sitter[]; private peers = new Map<Conn, Peer>();
+  private seats: Sitter[]; private keys: string[]; private peers = new Map<Conn, Peer>();
+  /** connections whose key is being asked about */
+  private strangers = new Set<Conn>();
   /** the run so far: the text of every full stretch's tape message, and the rows of the stretch being run */
   private full: string[] = []; private cur: Row[] = [];
   private born: number; private t0 = 0; private emptySince: number; private endedAt = 0;
   private idleMs: number; private maxMs: number; private graceMs: number;
 
   constructor(private host: ServerHost, private opts: ServerOpts) {
+    this.keys = opts.seatKeys.slice();
     this.seats = opts.seatKeys.map(() => ({ line: new SeatLine(), conn: null, ready: false, prev: null, name: '' }));
     this.born = this.emptySince = host.now();
     this.idleMs = (opts.idleS ?? 60) * 1000; this.maxMs = (opts.maxS ?? 3600) * 1000; this.graceMs = (opts.graceS ?? 15) * 1000;
@@ -63,6 +69,7 @@ export class NetServer {
     if (text.length > NET.maxText) return;
     let m: ToServer; try { m = netParse(text) as ToServer; } catch { return; }
     if (!m || typeof m !== 'object') return;
+    if (this.strangers.has(conn)) return;
     const P = this.peers.get(conn);
     if (!P) { if (m.k === 'hello') this.hello(conn, m); else this.bye(conn, 'hello', 'say hello first'); return; }
     if (P.seat < 0) return;   // (a watcher sends nothing the game hears)
@@ -72,6 +79,7 @@ export class NetServer {
     else if (m.k === 'lost') { if (!P.lost) { P.lost = true; this.lost++; this.onChange?.(); } }
   }
   closed(conn: Conn): void {
+    this.strangers.delete(conn);
     const P = this.peers.get(conn); this.peers.delete(conn);
     if (!P) return;
     if (P.seat >= 0 && this.seats[P.seat].conn === conn) this.leave(this.seats[P.seat]);
@@ -81,13 +89,28 @@ export class NetServer {
   /** the host's socket for `conn` is no longer backed up */
   drained(conn: Conn): void { const P = this.peers.get(conn); if (P) P.slow = false; }
   private leave(S: Sitter): void { S.conn = null; S.ready = false; S.line.reset(); }
-  private hello(conn: Conn, m: Hello): void {
+  /** who holds the seats now, a key a seat */
+  rekey(keys: readonly string[]): void {
+    if (this.done || keys.length !== this.keys.length) return;
+    let moved = false;
+    this.seats.forEach((S, i) => {
+      if (keys[i] === this.keys[i]) return;
+      this.keys[i] = keys[i]; S.name = ''; moved = true;
+      const old = S.conn; if (old) { this.peers.delete(old); this.leave(S); this.bye(old, 'seat', 'your seat is another player\'s now'); }
+    });
+    if (!moved) return;
+    if (!this.peers.size) this.emptySince = this.host.now();
+    this.said();
+  }
+  private hello(conn: Conn, m: Hello, asked = false): void {
     const O = this.opts;
     if (m.proto !== NET.proto) return this.bye(conn, 'proto', `this server speaks wire ${NET.proto}, you speak ${m.proto}`);
     if (m.game !== O.game) return this.bye(conn, 'game', 'this server runs another game');
     if (O.build && m.build !== O.build) return this.bye(conn, 'build', `this game is on build ${O.build}, you are on ${typeof m.build === 'string' && m.build ? m.build.slice(0, 40) : 'one with no name'}`);
     let seat = -1;
-    if (m.key !== undefined) { seat = O.seatKeys.indexOf(m.key); if (seat < 0) return this.bye(conn, 'seat', 'no seat has that key'); }
+    if (m.key !== undefined) { seat = this.keys.indexOf(m.key);
+      if (seat < 0 && !asked && this.host.ask) { this.strangers.add(conn); void this.host.ask().then(() => { if (this.strangers.delete(conn)) this.hello(conn, m, true); }); return; }
+      if (seat < 0) return this.bye(conn, 'seat', 'no seat has that key'); }
     else if (this.watching >= NET.watchers) return this.bye(conn, 'full', 'no room to watch');
     if (seat >= 0) { const S = this.seats[seat]; if (S.conn) { const old = S.conn; this.peers.delete(old); this.leave(S); old.close('the seat was taken again'); } S.conn = conn; S.name = cleanName(m.name); }
     this.peers.set(conn, { seat, at: 0, slow: false, slowAt: 0, lost: false });
@@ -144,5 +167,5 @@ export class NetServer {
   }
   /** the host ends the game from outside (its control plane no longer has it) */
   stop(why: string): void { if (!this.done) this.finish(why); }
-  private finish(why: string): void { this.done = why; this.all(netText({ k: 'bye', code: 'done', why })); for (const c of [...this.peers.keys()]) c.close(why); this.peers.clear(); for (const S of this.seats) this.leave(S); this.onChange?.(); }
+  private finish(why: string): void { this.done = why; this.all(netText({ k: 'bye', code: 'done', why })); for (const c of [...this.peers.keys(), ...this.strangers]) c.close(why); this.peers.clear(); this.strangers.clear(); for (const S of this.seats) this.leave(S); this.onChange?.(); }
 }

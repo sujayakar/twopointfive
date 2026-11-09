@@ -118,7 +118,7 @@ export default defineSchema({
     runner: v.string(),
     /** the setup record as the host sent it: `{ scenario, seed, knobs, seats }` (the server is handed it with `game`, `build` and `seatKeys` added) */
     setup: v.any(),
-    /** a seat proves itself to the server with its key; the server proves its heartbeats with `secret`. Neither is in any public answer but a seat's own key */
+    /** a seat's holder proves himself to the server with its key (another holder, another key); the server proves its heartbeats with `secret`. Neither is in any public answer but a seat's own key */
     seatKeys: v.array(v.string()),
     secret: v.string(),
     /** 'starting' (a server was asked for) · 'waiting' · 'playing' (the server's own words) · 'ended' · 'failed'. The first three are LIVE and count against the cap */

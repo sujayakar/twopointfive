@@ -1,6 +1,6 @@
 // THE DOORS THAT ARE PLAIN HTTP (a deployment answers these at its own site address; everything a page calls is a function, not a door here).
 //   POST /mp/heartbeat   a game server says how it is: `{ game, secret, state: 'waiting'|'playing'|'ended', tick, seats: [connected…], outcome? }`
-//                        200 `{ ok: true }` · 410 = no live game has this id (the server stops) · 403 = not this game's secret · 400 = not a heartbeat
+//                        200 `{ ok: true, seatKeys: [a key a seat, as they are now] }` · 410 = no live game has this id (the server stops) · 403 = not this game's secret · 400 = not a heartbeat
 import { httpRouter } from "convex/server";
 import { ConvexError } from "convex/values";
 import { internal } from "./_generated/api";
@@ -26,7 +26,7 @@ http.route({
       return answer(400, { ok: false, why: "not a heartbeat" });
     try {
       const r = await ctx.runMutation(internal.games.heard, { game, secret, state, tick, seats: seats as boolean[], ...(outcome === undefined ? {} : { outcome }) });
-      return r === "ok" ? answer(200, { ok: true }) : r === "gone" ? answer(410, { ok: false, why: "no live game has this id" }) : answer(403, { ok: false, why: "not this game's secret" });
+      return Array.isArray(r) ? answer(200, { ok: true, seatKeys: r }) : r === "gone" ? answer(410, { ok: false, why: "no live game has this id" }) : answer(403, { ok: false, why: "not this game's secret" });
     } catch (e) {
       return answer(400, { ok: false, why: e instanceof ConvexError ? String(e.data) : "not a heartbeat" });
     }
