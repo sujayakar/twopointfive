@@ -137,6 +137,7 @@ fn hands(g: &mut Game, gd: GuardId, dt: f64) {
     use crate::control::man;
     if man::staggered(g, gd) || man::in_a_standoff(g, gd) || crate::gunslots::side_locked(g, gd) { return; }
     if man::changing_magazine(g, gd) { tick_reload_beat(g, gd, dt); return; }
+    if man::nerve_gone(g, gd) { return; }   // (a man who has broken does nothing for himself: dry, he drops it and runs)
     let spent = man::gun_spent(g, gd);
     let wants = spent >= 1.0 || (spent >= LOW_AT && man::quiet_for(g, gd, LOW_QUIET_SECS));
     if wants && !man::hands_at_work(g, gd) && !man::has_a_man_in_front(g, gd) { begin_reload(g, gd); }
