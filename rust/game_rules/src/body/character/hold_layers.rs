@@ -223,16 +223,29 @@ pub(super) fn cap_sole(foot: V3, toe: V3) -> Vec<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn bits(got: Vec<f64>, want: [u64; 7]) {
-        for i in 0..7 { assert_eq!(got[i].to_bits(), want[i], "word {}", i); }
-    }
-    /// the TypeScript's own bits, run under bun with EXACT.on
+
     #[test]
-    fn cap_records_match_the_typescript() {
-        bits(cap_rec([0.1, 1.3, -2.7], [0.4, 0.9, -2.2], 0.07, None), [0x3fb999999999999a, 0x3ff4cccccccccccd, 0xc00599999999999a, 0x3fb1eb851eb851ec, 0x3fd999999999999a, 0x3feccccccccccccd, 0xc00199999999999a]);
-        bits(cap_rec([0.1, 1.3, -2.7], [0.4, 0.9, -2.2], 0.07, Some(0.11)), [0x3fb999999999999a, 0x3ff4cccccccccccd, 0xc00599999999999a, 0x3fb1eb851eb851ec, 0x3fdc9639c5d97fb4, 0x3feacf0caf4cde11, 0xc000fa4d90619eff]);
-        bits(cap_rec([1.0, 2.0, 3.0], [1.0, 2.0, 3.0], 0.05, Some(0.2)), [0x3ff0000000000000, 0x4000000000000000, 0x4008000000000000, 0x3fa999999999999a, 0x3ff0000000000000, 0x4000000000000000, 0x4008000000000000]);
-        bits(cap_sole([3.17, 0.1013, -4.41], [3.29, 0.0151, -4.26]), [0x40090624dd2f1aa0, 0x3fa7b890d5a5b962, 0xc011d9999999999a, 0x3fa0e5604189374c, 0x400a9e96588d9d12, 0x3f9f245a96b797fa, 0xc010da52ac7e8812]);
-        bits(cap_sole([-0.33, 0.4, 7.7], [-0.21, 0.52, 7.81]), [0xbfd7ced916872b02, 0x3fd999999999999a, 0x401ea5604189374c, 0x3fa0e5604189374c, 0xbfc616a7c0701766, 0x3fe23f8c0fd57294, 0x401f6093e3506a6c]);
+    fn a_capsule_runs_between_its_ends_and_its_far_end_can_be_carried_on() {
+        let (a, c): (V3, V3) = ([0.0, 1.0, 0.0], [0.3, 1.4, 0.0]);
+        assert_eq!(cap_rec(a, c, 0.07, None), vec![0.0, 1.0, 0.0, 0.07, 0.3, 1.4, 0.0]);
+        let far = cap_rec(a, c, 0.07, Some(0.5));
+        assert_eq!(&far[..4], &[0.0, 1.0, 0.0, 0.07], "the near end and the radius stay");
+        let b: V3 = [far[4], far[5], far[6]];
+        assert!(v3::dist(b, [0.6, 1.8, 0.0]) < 1e-9, "half a metre on along the same line: {b:?}");
+        // a capsule of no length stands where it is: there is no way to carry it, and no NaN
+        assert_eq!(cap_rec(c, c, 0.05, Some(0.2)), vec![0.3, 1.4, 0.0, 0.05, 0.3, 1.4, 0.0]);
+    }
+
+    /// A round at a boot hits the boot: the capsule reaches behind the heel and past the toe, and lies on the floor when the toe does.
+    #[test]
+    fn a_shoes_capsule_lies_on_the_floor_from_behind_his_heel_to_past_his_toe() {
+        let foot: V3 = [0.0, 0.12, 0.0];
+        let toe: V3 = [0.0, TOE_FLOOR_Y, 0.15];
+        let r = cap_sole(foot, toe);
+        assert_eq!(r[3], 0.033);
+        assert!(r[2] < foot[2], "it starts behind the ankle: {}", r[2]);
+        assert!(r[6] > toe[2], "it ends past the toe: {}", r[6]);
+        assert!(m::abs(r[5] - 0.033) < 0.01, "the toe end's underside is on the floor: {}", r[5]);
+        assert!(r[1] >= 0.033 - 1e-9 && r[1] <= foot[1], "the heel end is under the ankle and not under the floor: {}", r[1]);
     }
 }

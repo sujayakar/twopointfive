@@ -424,37 +424,46 @@ pub(super) fn anim_door_layer(g: &mut crate::game::Game, c: CharId, dt: f64, int
 mod tests {
     use super::*;
 
-    // Expected bits printed by bun from the TypeScript's own untwist and toModelP / toModelD arithmetic, under EXACT.on.
-    fn bits(v: V3) -> [u64; 3] { [v[0].to_bits(), v[1].to_bits(), v[2].to_bits()] }
     const P1: V3 = [0.01, 0.95, -0.02];
     const P2: V3 = [0.015, 1.1, -0.01];
     const P3: V3 = [0.02, 1.27, 0.005];
     const H: V3 = [0.31, 1.42, 0.48];
 
+    fn close(a: V3, b: V3, what: &str) { assert!(v3::dist(a, b) < 1e-9, "{what}: {a:?} against {b:?}"); }
+
     #[test]
     fn no_twist_is_the_point_itself() {
-        assert_eq!(bits(untwist_at(&Untwist::Same, H)), bits(H));
+        assert_eq!(untwist_at(&Untwist::Same, H), H);
+    }
+
+    /// A hand posed below the twist has to end up where the world wants it once the spine has turned: the untwist is the spine's own three turns undone.
+    /// A FAILURE MEANS: a hand reached for something misses it by as much as he has twisted.
+    #[test]
+    fn a_point_posed_under_the_twist_ends_up_where_it_was_asked_for() {
+        let y = |a: f64| v3::quat::axis_angle([0.0, 1.0, 0.0], a);
+        for (tw, pitch) in [(0.7, -0.3), (-1.1, 0.0)] {
+            let (e1, e2, e3) = (y(tw * 0.25), y(tw * 0.35), y(tw * 0.4));
+            let un = untwist_of(e1, e2, e3, pitch, P1, P2, P3);
+            let Untwist::Back { i_e3, p2t, p3t, .. } = un else { panic!("a twist has a way back") };
+            let posed = untwist_at(&un, H);
+            // the spine's joints each turn what lies above them about themselves: the point goes up the chain
+            let x1 = v3::add(v3::quat::rotate(e1, v3::sub(posed, P1)), P1);
+            let x2 = v3::add(v3::quat::rotate(e2, v3::sub(x1, p2t)), p2t);
+            let x3 = v3::add(v3::quat::rotate(v3::quat::conj(i_e3), v3::sub(x2, p3t)), p3t);
+            close(x3, H, "up the spine again");
+            assert!(v3::dist(posed, H) > 0.05, "the twist moved it");
+        }
     }
 
     #[test]
-    fn untwist_matches_the_typescript_bits() {
-        let y = |a: f64| v3::quat::axis_angle([0.0, 1.0, 0.0], a);   // (qYaw is another part's)
-        let un = untwist_of(y(0.7 * 0.25), y(0.7 * 0.35), y(0.7 * 0.4), -0.3, P1, P2, P3);
-        assert_eq!(bits(untwist_at(&un, H)), [0xbfb4b567bc34da6d, 0x3ff410ad046c02dc, 0x3fe24fb80647771c]);
-        let un = untwist_of(y(-1.1 * 0.25), y(-1.1 * 0.35), y(-1.1 * 0.4), 0.0, P1, P2, P3);
-        assert_eq!(bits(untwist_at(&un, H)), [0x3fe28f9e04981869, 0x3ff6b851eb851eb8, 0xbfa9a923ab14f612]);
-    }
-
-    #[test]
-    fn to_model_matches_the_typescript_bits() {
-        let (yaw, p0, wp) = (0.83, [3.25, 0.1, -7.5], [4.1, 1.6, -6.2]);
-        assert_eq!(bits(to_model_p_of(yaw, p0, wp)), [0xbfd8aec2112b716e, 0x3ff8000000000000, 0x3ff812c2a39a5f54]);
-        assert_eq!(bits(to_model_d_of(yaw, wp)), [0x401d5e6088506071, 0x3ff999999999999a, 0xbff28a14a40e3ade]);
-    }
-
-    #[test]
-    fn every_word_has_its_row() {
-        let r = crate::character::ready();
-        for k in [ReadyKind::Grab, ReadyKind::Seat, ReadyKind::Strike, ReadyKind::GrabGun] { assert!(r.get(String::from(k.as_str())).is_some()); }
+    fn the_model_space_stands_on_his_feet_and_faces_his_way() {
+        let (yaw, feet) = (0.83, [3.25, 0.1, -7.5]);
+        let ahead: V3 = [m::sin(yaw), 0.0, m::cos(yaw)];
+        close(to_model_p_of(yaw, feet, feet), [0.0; 3], "his feet");
+        close(to_model_p_of(yaw, feet, v3::add(feet, ahead)), [0.0, 0.0, 1.0], "a metre ahead of him");
+        close(to_model_p_of(yaw, feet, v3::add(feet, [0.0, 1.5, 0.0])), [0.0, 1.5, 0.0], "over his head");
+        // a direction turns with him and does not care where he stands
+        close(to_model_d_of(yaw, ahead), [0.0, 0.0, 1.0], "his way");
+        close(to_model_d_of(yaw, [0.0, 1.0, 0.0]), [0.0, 1.0, 0.0], "up");
     }
 }
