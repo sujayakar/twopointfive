@@ -19,7 +19,7 @@ pub fn body(g: &mut Game, gd: GuardId, c: CharId, staff: bool, lvl: f64) {
             g.gd[gd].react_t = 1.2;
             let victim = g.gd[o].callsign.clone();
             let breathing = crate::game::is_breathing(g, o);
-            g.gd[gd].witness.saw_body = Some(crate::game::WitnessSawBody { victim: victim.clone(), t: now, breathing });
+            g.gd[gd].witness.saw_body = Some(crate::game::WitnessSawBody { victim: victim.clone(), breathing });
             let men = g.guards.clone();   // (handed on read-only: net_quiet_body cannot take a list that lives in g)
             crate::netquiet::net_quiet_body(g, Some(gd), &men);
             let mut before = 0;
@@ -62,7 +62,7 @@ pub fn body(g: &mut Game, gd: GuardId, c: CharId, staff: bool, lvl: f64) {
                 crate::mind::raise(g, other, 0.45, "guards");
                 let breathing = crate::game::is_breathing(g, o);
                 let t = g.time;
-                g.gd[other].witness.called_to_body = Some(crate::game::WitnessCalledToBody { victim: victim.clone(), t, breathing });
+                g.gd[other].witness.called_to_body = Some(crate::game::WitnessCalledToBody { victim: victim.clone(), breathing });
                 if g.gd[other].task.is_some() { continue; }
                 crate::belief::word(g, other, body);
                 let x = &g.gd[other];

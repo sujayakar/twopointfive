@@ -55,7 +55,6 @@ pub struct CueRow {
     pub text: String,
     pub cls: f64,
     pub rank: f64,
-    pub who: String,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -104,7 +103,6 @@ pub struct Cues {
     pub n: f64,
     pub squelch_due: bool,
     pub heard_row: Option<crate::cues::CuesHeardRow>,
-    pub heard_log: Vec<crate::cues::CuesHeardLogItem>,
     pub heard_said: JsMap<String, f64>,
     pub shout_t: Option<f64>,
 }
@@ -127,7 +125,6 @@ impl Cues {
             n: 0.0,
             squelch_due: false,
             heard_row: None,
-            heard_log: Vec::new(),
             heard_said: JsMap::new(),
             shout_t: None,
         }
@@ -177,38 +174,7 @@ pub struct CuesKinds {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct CuesLogItem {
-    pub t: f64,
-    pub who: String,
-    pub text: String,
-    pub cls: f64,
-    pub kind: crate::cues::CuesLogItemKind,
-    pub drawn: bool,
     pub why: String,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum CuesLogItemKind {
-    #[default] Heard,
-    Stay,
-    Calm,
-    Cover,
-    Flinch,
-    Still,
-    Call,
-    Help,
-    StayOurs,
-    HuntOver,
-    FellBack,
-    Planted,
-    PinnedIn,
-    SquadHears,
-    SquadCopies,
-    SquadWaits,
-    SquadCopiesWaits,
-    SquadStays,
-    SquadQuiet,
-    Surprised,
-    Raw,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -239,14 +205,6 @@ pub struct CuesHeardRow {
     pub text: String,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct CuesHeardLogItem {
-    pub t: f64,
-    pub text: String,
-    pub drawn: bool,
-    pub why: String,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct LINESValue {
     pub cls: f64,
@@ -265,16 +223,6 @@ pub struct KINDGAP {
     pub help: Option<f64>,
     pub stay_ours: Option<f64>,
     pub hunt_over: Option<f64>,
-    pub fell_back: Option<f64>,
-    pub planted: Option<f64>,
-    pub pinned_in: Option<f64>,
-    pub squad_hears: Option<f64>,
-    pub squad_copies: Option<f64>,
-    pub squad_waits: Option<f64>,
-    pub squad_copies_waits: Option<f64>,
-    pub squad_stays: Option<f64>,
-    pub squad_quiet: Option<f64>,
-    pub surprised: Option<f64>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -328,5 +276,5 @@ pub fn classes() -> &'static [(&'static [&'static str], &'static [&'static str],
 pub fn lines() -> JsMap<String, crate::cues::LINESValue> { { let mut t = JsMap::new(); t.set(String::from("help"), crate::cues::LINESValue { cls: 1.0, say: alloc::vec![String::from("moving to the fight — {the}"), String::from("they're hit {at} — moving to them")], now: None, guide: None }); t.set(String::from("huntOver"), crate::cues::LINESValue { cls: 2.0, say: alloc::vec![String::from("lost them — holding {the}"), String::from("lost them — staying {at}")], now: None, guide: None }); t.set(String::from("calm"), crate::cues::LINESValue { cls: 2.0, say: alloc::vec![String::from("quiet now — staying put"), String::from("standing down — holding here")], now: None, guide: None }); t.set(String::from("cover"), crate::cues::LINESValue { cls: 2.0, say: alloc::vec![String::from("one of them down {at} — covering him")], now: None, guide: None }); t.set(String::from("squadQuiet"), crate::cues::LINESValue { cls: 2.0, say: alloc::vec![String::from("{sq}: gone quiet here — still holding")], now: None, guide: None }); t.set(String::from("stayOurs"), crate::cues::LINESValue { cls: 3.0, say: alloc::vec![String::from("they're hit {at} — staying on my door"), String::from("shots {at} — staying on my door")], now: Some(alloc::vec![String::from("they're hit {at} — staying on my post"), String::from("that was {at} — staying on my post")]), guide: None }); t.set(String::from("stay"), crate::cues::LINESValue { cls: 3.0, say: alloc::vec![String::from("shots {at} — holding my room"), String::from("heard that, {the} — holding my room")], now: Some(alloc::vec![String::from("that was {at} — holding my post"), String::from("heard that, {the} — holding my post")]), guide: None }); t.set(String::from("squadStays"), crate::cues::LINESValue { cls: 3.0, say: alloc::vec![String::from("{sq}: still on the doors — nobody goes")], now: None, guide: None }); t.set(String::from("squadHears"), crate::cues::LINESValue { cls: 4.0, say: alloc::vec![String::from("{sq}: heard that — stand by")], now: None, guide: None }); t.set(String::from("squadCopies"), crate::cues::LINESValue { cls: 4.0, say: alloc::vec![String::from("{sq}: copy, {ally} — stand by")], now: None, guide: None }); t.set(String::from("squadWaits"), crate::cues::LINESValue { cls: 3.0, say: alloc::vec![String::from("{sq}: hold — let them come in. Wait for my word!")], now: Some(alloc::vec![String::from("{sq}: hold — let them come in. wait for my word!")]), guide: Some(alloc::vec![String::from("{sq}: hold — let them come in. wait for my call!")]) }); t.set(String::from("squadCopiesWaits"), crate::cues::LINESValue { cls: 3.0, say: alloc::vec![String::from("{sq}: copy, {ally} — hold, let them come in. Wait for my word!")], now: Some(alloc::vec![String::from("{sq}: copy, {ally} — hold, let them come in. wait for my word!")]), guide: Some(alloc::vec![String::from("{sq}: copy, {ally} — hold, let them come in. wait for my call!")]) }); t.set(String::from("fellBack"), crate::cues::LINESValue { cls: 5.0, say: alloc::vec![String::from("{the} is lost — falling back"), String::from("falling back — {the} is lost")], now: None, guide: None }); t.set(String::from("planted"), crate::cues::LINESValue { cls: 5.0, say: alloc::vec![String::from("fell back — set {at}")], now: None, guide: None }); t.set(String::from("pinnedIn"), crate::cues::LINESValue { cls: 5.0, say: alloc::vec![String::from("can't get out — fell back to cover {at}")], now: None, guide: None }); t.set(String::from("still"), crate::cues::LINESValue { cls: 6.0, say: alloc::vec![String::from("they're still out there — holding {the}"), String::from("still out there — staying on this door")], now: Some(alloc::vec![String::from("they're still out there — holding {the}"), String::from("still out there — staying on my post")]), guide: None }); t.set(String::from("surprised"), crate::cues::LINESValue { cls: 0.0, say: alloc::vec![String::from("behind—!"), String::from("there—!")], now: None, guide: None }); t.set(String::from("flinch"), crate::cues::LINESValue { cls: 0.0, say: alloc::vec![String::from("the door—!")], now: None, guide: None }); t } }
 
 /// (src/game/cues.ts:127 KIND_GAP: a table nothing writes)
-pub fn kind_gap() -> crate::cues::KINDGAP { crate::cues::KINDGAP { stay: Some(3.0), calm: Some(4.0), cover: Some(15.0), flinch: None, still: Some(6.0), help: None, stay_ours: Some(3.0), hunt_over: Some(4.0), fell_back: None, planted: None, pinned_in: None, squad_hears: None, squad_copies: None, squad_waits: None, squad_copies_waits: None, squad_stays: None, squad_quiet: None, surprised: None } }
+pub fn kind_gap() -> crate::cues::KINDGAP { crate::cues::KINDGAP { stay: Some(3.0), calm: Some(4.0), cover: Some(15.0), flinch: None, still: Some(6.0), help: None, stay_ours: Some(3.0), hunt_over: Some(4.0) } }
 

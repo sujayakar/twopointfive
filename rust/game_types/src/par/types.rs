@@ -27,7 +27,6 @@ impl Medal {
 pub struct ParResult {
     pub secs: f64,
     pub lost: f64,
-    pub of: f64,
     pub penalty: f64,
     pub total: f64,
     pub shown: f64,

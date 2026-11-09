@@ -323,7 +323,7 @@ pub fn wall_react_upsert(g: &mut Game, row: &crate::wallbreak::LevelChange) -> O
         }
         None => {
             let b = g.tab.wallreact_breach.push(Breach {
-                key: format!("breach:{}:{}", row.id, row.serial), wall: row.id, c0, u, n, lo, hi, at: [0.0, CHEST, 0.0], half: 0.0, into: None, walk, t: g.time,
+                key: format!("breach:{}:{}", row.id, row.serial), wall: row.id, u, n, lo, hi, at: [0.0, CHEST, 0.0], half: 0.0, into: None, walk,
                 cause: cause_of(row.cause), who: row.who, blast_by: None, ops: -1.0, men: JsMap::new(), said: JsSet::new(), tell: Vec::new(), opening: None,
             });
             g.m.wallreact.wall_react.breaches.push(b);

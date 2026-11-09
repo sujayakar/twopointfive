@@ -36,8 +36,6 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::picture::Sta
             sam: Pic { owner: None, look_t: -1e9, ..Pic::default() },
             tell_t: -1e9,
             done: JsSet::new(),
-            view: None,
-            view_t: -1e9,
         });
     }
     g.m.picture.states.as_mut().unwrap()
@@ -793,7 +791,7 @@ pub fn known_places(g: &mut crate::game::Game, men: &[GuardId], max_age: f64) ->
     let mut out = Vec::new();
     for (who, j) in best.iter() {
         if !j.2 {
-            out.push(KnownPlacesItem { who, at: v3::copy(j.0), age: now - j.1 });
+            out.push(KnownPlacesItem { who, at: v3::copy(j.0) });
         }
     }
     out
@@ -867,7 +865,7 @@ pub fn cover_near(g: &mut crate::game::Game, gd: GuardId, around: V3, r: f64, n:
                     break;
                 }
             }
-            out.push(CoverSpot { at: q, stand, low, edge, score: (if stand > 0.0 { 0.7 } else { 1.0 }) + (if edge { 0.4 } else { 0.0 }) - 0.3 * d / m::max(1.0, r) });
+            out.push(CoverSpot { at: q, stand, low, score: (if stand > 0.0 { 0.7 } else { 1.0 }) + (if edge { 0.4 } else { 0.0 }) - 0.3 * d / m::max(1.0, r) });
         }
     }
     js::sort_by(&mut out, |a, b| b.score - a.score);

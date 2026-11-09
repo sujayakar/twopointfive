@@ -53,7 +53,6 @@ impl LeaveWhy {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TeampaceModRanValue {
     pub t: f64,
-    pub why: crate::teampace::RunWhy,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

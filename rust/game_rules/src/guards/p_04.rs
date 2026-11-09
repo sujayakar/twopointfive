@@ -88,7 +88,7 @@ pub fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p: crate:
     let before2 = g.ch[c].pos[2];
     g.tab.guards_standoff[s].replan_t -= dt;
     g.tab.guards_standoff[s].rest_t = m::max(0.0, g.tab.guards_standoff[s].rest_t - dt);
-    let gh = crate::gunhold::gun_hold_feet(g, gd, dt, p, s, crate::gunhold::GunHoldFeetFs { ok: fs.ok, rear: fs.rear, clear: fs.clear });
+    let gh = crate::gunhold::gun_hold_feet(g, gd, dt, p, s, crate::gunhold::GunHoldFeetFs { ok: fs.ok, rear: fs.rear });
     let backing = gh.is_none() && dist < STANDOFF_MIN_M - 0.3;
     let pace_base = if far || backing { g.tune.guard_investigate } else { g.tune.guard_walk };
     let pace_k = if crate::suppression::flinching(g, gd) { g.k.suppression.standoff_pace_k } else { 1.0 };
@@ -242,9 +242,8 @@ pub fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::
                     crate::chronicle::chron_body_found(g, b, gd);
                 }
                 let victim = g.gd[b].callsign.clone();
-                let t = g.time;
                 let breathing = crate::game::is_breathing(g, b);
-                g.gd[gd].witness.saw_body = Some(crate::game::WitnessSawBody { victim, t, breathing });
+                g.gd[gd].witness.saw_body = Some(crate::game::WitnessSawBody { victim, breathing });
             }
             if g.gd[b].down_by != Some(crate::game::DownBy::Guard) {
                 standoff_bark(g, gd, crate::guards::StandoffMoment::Dropped, Some(crate::guards::StandoffBarkForce::Bool(true)), Some(b));
@@ -286,7 +285,7 @@ pub fn can_see(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::CanSee 
             can_see_char(g, gd, pc, true)
         })
     };
-    crate::guards::CanSee { visible: r.visible, dist: r.dist, in_cone: r.in_cone }
+    crate::guards::CanSee { visible: r.visible, dist: r.dist }
 }
 
 /// he sees a man who is up: any player, each asked of on his own seat
@@ -326,7 +325,7 @@ pub fn can_see_char(g: &mut crate::game::Game, gd: GuardId, pc: CharId, is_playe
     let smoke_trans = g.gd[gd].smoke_trans;
     let mut r = eye_contact(g, e, pc, is_player, blind, smoke_trans, Some(through));
     if !is_player && r.visible && crate::roomfight::pair_smoke(g, c, pc) < 0.3 { r.visible = false; }
-    crate::guards::CanSeeChar { visible: r.visible, dist: r.dist, in_cone: r.in_cone }
+    crate::guards::CanSeeChar { visible: r.visible, dist: r.dist }
 }
 
 /// How far a man's eye reaches for a man with `lit` on him.   (guards.ts eyeReach)

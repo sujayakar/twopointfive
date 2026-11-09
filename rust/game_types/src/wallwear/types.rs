@@ -6,34 +6,16 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug, ToBytes)]
 pub struct WallWear {
     pub on: bool,
-    pub stats: crate::wallwear::WallWearStats,
-    pub log: Vec<String>,
-    pub cells: JsMap<crate::Num, Vec<(f64, f64, f64)>>,
-    pub taken: f64,
 }
 impl WallWear {
     /// what a new one holds
     pub fn blank() -> Self {
         WallWear {
             on: true,
-            stats: crate::wallwear::WallWearStats { rounds: 0.0, marks: 0.0, through: 0.0, grown: 0.0, chips: 0.0, puffs: 0.0 },
-            log: Vec::new(),
-            cells: JsMap::new(),
-            taken: 0.0,
         }
     }
 }
 impl Default for WallWear { fn default() -> Self { Self::blank() } }
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct WallWearStats {
-    pub rounds: f64,
-    pub marks: f64,
-    pub through: f64,
-    pub grown: f64,
-    pub chips: f64,
-    pub puffs: f64,
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WEAR {

@@ -93,7 +93,6 @@ pub struct State {
     pub last_t: f64,
     pub men: JsMap<GuardId, crate::coverfire::Man>,
     pub serial: f64,
-    pub base: JsMap<String, f64>,
     pub stats: crate::coverfire::StateStats,
     pub by_id: JsMap<crate::Num, crate::coverfire::StateByIdValue>,
     pub said_t: f64,
@@ -125,7 +124,6 @@ pub struct StateByIdValue {
 
 #[derive(Clone, Debug, Default)]
 pub struct Ask {
-    pub index: f64,
     pub id: f64,
     pub kind: String,
     pub hit: V3,
@@ -164,11 +162,8 @@ pub enum Ask2 {
 
 #[derive(Clone, Debug, Default)]
 pub struct CoverfireOn {
-    pub id: f64,
     pub kind: String,
     pub fired: f64,
-    pub want: f64,
-    pub to: V3,
 }
 
 /// the state this module keeps at its top level

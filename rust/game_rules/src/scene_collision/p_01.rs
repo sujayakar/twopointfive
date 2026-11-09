@@ -542,7 +542,7 @@ pub fn glass_panes(g: &mut crate::game::Game) -> Option<crate::scene_box_mirror:
     match g.col.pane_rows {
         Some(PaneRows::GlassBreak) => {
             let (view, home, sheets) = (crate::glassbreak::glass_break_view(g), crate::glassbreak::glass_break_home(g), crate::glassbreak::glass_break_sheets(g));
-            Some(crate::scene_box_mirror::PaneSource { view, home, sheets: Some(sheets) })
+            Some(crate::scene_box_mirror::PaneSource {  })
         }
         None => None,
     }
@@ -1516,7 +1516,7 @@ mod tests {
 
     #[test]
     fn a_question_says_how_the_rows_are_read() {
-        let r = |steady| LampRows { st: crate::Opaque, leave: 4.0, steady };
+        let r = |steady| LampRows { leave: 4.0, steady };
         assert_eq!(rows_how(None), 0.0);
         assert_eq!(rows_how(Some(r(false))), 1.0);
         assert_eq!(rows_how(Some(r(true))), 3.0);

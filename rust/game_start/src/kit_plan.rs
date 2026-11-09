@@ -3,7 +3,7 @@
 //! value is MEASURED here, the same way for every level. Pure: plain level data in, plain data out; no die, no clock.
 //!
 //! A LEVEL OR A SET. The plan is made from whatever geometry it is handed and reaches for nothing else: a way that names a bespoke set is planned from the set's own records and its
-//! `ref`, with not one record of the level's in reach (`plan_way` is the one place that chooses).
+//! `ref`, with not one record of the level's in reach.
 //!
 //! AUTHORED KEYS ALWAYS WIN. Every value the plan measures can be written on the way and is then taken as written, key by key, never corrected: level numbers tuned in the viewer are
 //! authored data. `src` says, per value, which it was.

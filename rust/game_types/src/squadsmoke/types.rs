@@ -24,17 +24,6 @@ pub struct SQUADSMOKE {
     pub again_secs: f64,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct SquadsmokeModSQUADSMOKELOGItem {
-    pub t: f64,
-    pub who: String,
-    pub from: V3,
-    pub at: V3,
-    pub land: V3,
-    pub rest: V3,
-    pub left: f64,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct SquadArcTo {
     pub from: V3,
@@ -47,7 +36,6 @@ pub struct SquadSmokeThrower {
     pub gd: GuardId,
     pub from: V3,
     pub sol: crate::throwables::ThrowSolution,
-    pub rest: V3,
 }
 
 /// the state this module keeps at its top level
@@ -55,14 +43,11 @@ pub struct SquadSmokeThrower {
 pub struct SquadsmokeMod {
     /// (src/game/squadsmoke.ts:57 states)
     pub states: JsMap<PlayerId, crate::squadsmoke::State>,
-    /// (src/game/squadsmoke.ts:60 SQUADSMOKE_LOG)
-    pub squadsmoke_log: Vec<crate::squadsmoke::SquadsmokeModSQUADSMOKELOGItem>,
 }
 impl SquadsmokeMod {
     pub fn blank() -> Self {
         SquadsmokeMod {
             states: JsMap::new(),
-            squadsmoke_log: Vec::new(),
         }
     }
 }

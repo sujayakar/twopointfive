@@ -45,7 +45,6 @@ pub struct LaserReach {
     pub dir: V3,
     pub l: f64,
     pub dot: bool,
-    pub on: Option<CharId>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

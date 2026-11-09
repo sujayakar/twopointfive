@@ -333,7 +333,7 @@ pub fn box_mirror_open(g: &mut crate::game::Game, boxes: &[BoxId], cells: &[Vec<
     box_mirror_statics(g, boxes, all);
     sim::world_shape(s, w as u32, h as u32, cs, boxes.len() as u32, g.col.mirror.n_tilted as u32);
     // (cells and tiltedAt are held by reference there and read at `again` as they then stand: here they are read from g.col at `again`, and only the numbers kept)
-    g.col.mirror.grid_of = Some(BoxMirrorGridOf { cells: Vec::new(), tilted_at: Vec::new(), w, h, cs });
+    g.col.mirror.grid_of = Some(BoxMirrorGridOf { w, h, cs });
     box_mirror_panes(g);
     let x = &mut g.col.mirror;
     x.own_at = -1.0;

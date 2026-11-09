@@ -3,13 +3,6 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct Fit {
-    pub r0: Vec<f32>,
-    pub r1: Vec<f32>,
-    pub pad: Option<f64>,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct STATURETUNE {
     pub jitter: f64,
@@ -18,20 +11,11 @@ pub struct STATURETUNE {
     pub ease_per_sec: f64,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct StatureModFitsValue {
-    pub of: crate::stature::Fit,
-    pub s: f64,
-    pub fit: crate::stature::Fit,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct StatureMod {
     /// (src/game/stature.ts:47 shown)
     pub shown: JsMap<CharId, f64>,
-    /// (src/game/stature.ts:85 fits)
-    pub fits: JsMap<CharId, crate::stature::StatureModFitsValue>,
     /// (src/game/stature.ts:103 byId)
     pub by_id: Vec<Option<CharId>>,
 }
@@ -39,7 +23,6 @@ impl StatureMod {
     pub fn blank() -> Self {
         StatureMod {
             shown: JsMap::new(),
-            fits: JsMap::new(),
             by_id: alloc::vec![None; 256],
         }
     }

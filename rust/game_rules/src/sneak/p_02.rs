@@ -183,7 +183,6 @@ fn lit_spot(g: &mut Game, q: V3, lo: bool) -> f64 {
     cpu_lit(g, [q[0], y[0], q[2]], [q[0], y[1], q[2]], None, None)
 }
 fn unseen_at(g: &mut Game, w: &Way, t: &[Crumb], q: V3, lo: bool) -> bool {
-    let c = t[w.i as usize];
     let mut l = -1.0;
     let mut lit = |g: &mut Game| {
         if l < 0.0 { l = lit_spot(g, q, lo); }

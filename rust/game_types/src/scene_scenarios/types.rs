@@ -69,7 +69,6 @@ pub struct ScenarioMark {
 pub struct NightBreachData {
     pub team: crate::scene_scenarios::TeamStart,
     pub room: Option<String>,
-    pub lights: Option<String>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -215,7 +214,6 @@ pub struct RescueDataRoom {
     pub where_: Option<String>,
     pub door: String,
     pub bounds: Option<crate::scene_scenarios::Rect>,
-    pub lights: Option<String>,
     pub door_aim: V3,
     pub outside: Option<V3>,
     pub hold: Option<V3>,
@@ -491,7 +489,6 @@ pub struct ResponsePost {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct ResponseData {
-    pub why: String,
     pub site: String,
     pub at: String,
     pub team: String,
@@ -526,159 +523,9 @@ pub struct LevelScenarios {
     pub lesson: Option<crate::scene_scenarios::LessonData>,
     pub par: Option<crate::scene_scenarios::ParData>,
     pub issue: Option<crate::scene_scenarios::IssueData>,
-    pub kit_view: Option<crate::scene_scenarios::KitViewData>,
     pub response: Option<crate::scene_scenarios::ResponseData>,
     pub door_names: Option<Vec<crate::scene_scenarios::LevelScenariosDoorNamesItem>>,
     pub walked: Option<Vec<crate::scene_ways::WayHint>>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct KitViewData {
-    pub ways: Vec<crate::scene_scenarios::KitViewWay>,
-    pub sets: Option<JsMap<String, crate::scene_scenarios::KitViewSet>>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct KitViewWay {
-    pub door: Option<String>,
-    pub side: Option<f64>,
-    pub pin: Option<crate::scene_scenarios::KitViewWayPin>,
-    pub slots: Option<Vec<Option<[f64; 3]>>>,
-    pub light: Option<crate::scene_scenarios::KitViewLightOver>,
-    pub hide: Option<Vec<String>>,
-    pub hide_paint: Option<Vec<String>>,
-    pub hide_more: Option<Vec<String>>,
-    pub room_lights: Option<f64>,
-    pub span: Option<[[f64; 2]; 2]>,
-    pub kind: Option<crate::scene_scenarios::KitViewWayKind>,
-    pub set: Option<String>,
-    pub ref_: Option<[f64; 2]>,
-    pub hand: Option<crate::scene_scenarios::KitViewWayHand>,
-    pub slot_gap: Option<f64>,
-    pub wall: Option<crate::scene_scenarios::KitViewWayWall>,
-    pub lane: Option<f64>,
-    pub out: Option<f64>,
-    pub inside: Option<f64>,
-    pub pane: Option<crate::scene_scenarios::KitViewWayPane>,
-    pub show: Option<Vec<String>>,
-    pub indoors: Option<bool>,
-    pub keep_lights: Option<Vec<String>>,
-    pub day_lights: Option<Vec<String>>,
-    pub lit_inside: Option<bool>,
-    pub add: Option<crate::scene_scenarios::KitViewWayAdd>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitViewWayPin {
-    pub yaw: f64,
-    pub pitch: f64,
-    pub dist: Option<f64>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitViewLightOver {
-    pub porch: Option<crate::scene_scenarios::KitViewLightOverPorch>,
-    pub fill: Option<crate::scene_scenarios::KitViewLightOverFill>,
-    pub room_lights: Option<f64>,
-    pub moon_scale: Option<f64>,
-    pub sky_scale: Option<f64>,
-    pub sam: Option<crate::scene_scenarios::KitViewLightOverSam>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitViewLightOverPorch {
-    pub kind: Option<f64>,
-    pub offset: Option<V3>,
-    pub aim: Option<V3>,
-    pub color: Option<V3>,
-    pub intensity: Option<f64>,
-    pub range: Option<f64>,
-    pub inner_deg: Option<f64>,
-    pub outer_deg: Option<f64>,
-    pub radius: Option<f64>,
-    pub volumetric: Option<f64>,
-    pub broad: Option<bool>,
-    pub fixture: Option<crate::scene_scenarios::KitViewLightOverPorchFixture>,
-    pub day: Option<f64>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitViewLightOverPorchFixture {
-    pub at: V3,
-    pub half: V3,
-    pub glow: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitViewLightOverFill {
-    pub kind: Option<f64>,
-    pub offset: Option<V3>,
-    pub aim: Option<V3>,
-    pub color: Option<V3>,
-    pub intensity: Option<f64>,
-    pub range: Option<f64>,
-    pub inner_deg: Option<f64>,
-    pub outer_deg: Option<f64>,
-    pub radius: Option<f64>,
-    pub volumetric: Option<f64>,
-    pub broad: Option<bool>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitViewLightOverSam {
-    pub on: Option<bool>,
-    pub intensity: Option<f64>,
-    pub inner_deg: Option<f64>,
-    pub outer_deg: Option<f64>,
-    pub volumetric: Option<f64>,
-    pub aim: Option<V3>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum KitViewWayKind {
-    Door,
-    Wall,
-    Gap,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum KitViewWayHand {
-    Left,
-    Right,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitViewWayWall {
-    pub face: Option<f64>,
-    pub thickness: Option<f64>,
-    pub top: Option<f64>,
-}
-
-#[derive(Clone, Debug, ToBytes)]
-pub enum KitViewWayPane {
-    Bool(bool),
-    Arm1(crate::scene_scenarios::KitViewWayPaneArm1),
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct KitViewWayPaneArm1 {
-    pub box_: String,
-    pub stand: Option<[f64; 3]>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct KitViewWayAdd {
-    pub boxes: Option<Vec<crate::scene_level_data::BoxData>>,
-    pub lamps: Option<Vec<crate::scene_level_data::LightData>>,
-    pub laid: Option<bool>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct KitViewSet {
-    pub boxes: Vec<crate::scene_level_data::BoxData>,
-    pub doors: Option<Vec<crate::scene_level_data::DoorData>>,
-    pub lights: Option<Vec<crate::scene_level_data::LightData>>,
-    pub ref_: [f64; 2],
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

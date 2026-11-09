@@ -61,15 +61,6 @@ pub struct Mind {
     pub low: bool,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct NetquietModNETQUIETLOGItem {
-    pub id: f64,
-    pub t: f64,
-    pub kind: crate::netquiet::LineKind,
-    pub text: String,
-    pub radio: bool,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct NETQUIETQA {
     pub broken: bool,
@@ -92,15 +83,12 @@ pub struct NetQuietPose {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct NetquietMod {
-    /// (src/game/netquiet.ts:89 NETQUIET_LOG)
-    pub netquiet_log: Vec<crate::netquiet::NetquietModNETQUIETLOGItem>,
     /// (src/game/netquiet.ts:125 stateOf)
     pub state_of: JsMap<GuardId, crate::netquiet::Mind>,
 }
 impl NetquietMod {
     pub fn blank() -> Self {
         NetquietMod {
-            netquiet_log: Vec::new(),
             state_of: JsMap::new(),
         }
     }

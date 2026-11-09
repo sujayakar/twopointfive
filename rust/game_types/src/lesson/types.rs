@@ -6,7 +6,7 @@ use alloc::{string::String, vec::Vec};
 /// a step's done-test, the one enum of it: one arm a row of LESSON_TESTS (lesson.ts:167-282; a level file's `{ is: '<kind>', … }`, tag from `is`; scenarios.ts:225). Unknown: an `is` no row has, or a word no arm's type holds (empty: a record with no `is`), which never passes (:109). Pace's band is read only by bandCheck: on the page :174 is always true
 #[derive(Clone, Debug)]
 pub enum LessonTest {
-    Unknown { is: String },
+    Unknown { },
     In { area: crate::scene_scenarios::Rect },
     Near { at: V3, r: Option<f64> },
     Flag { flag: String, value: Option<bool> },

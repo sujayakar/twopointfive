@@ -189,7 +189,7 @@ fn digin_same(a: &crate::knobs::DiginK, b: &crate::knobs::DiginK) -> bool {
 
 // ---------------------------------------------------------------- the levers' words
 
-fn set_as_tables(s: DifficultyModSET) -> TablesOfSet { TablesOfSet { fog: s.fog, ai: s.ai, kit: s.kit, told: s.told } }
+fn set_as_tables(s: DifficultyModSET) -> TablesOfSet { TablesOfSet { ai: s.ai, kit: s.kit } }
 
 /// SET[key] as its word.
 fn set_word(s: &DifficultyModSET, key: LeverKey) -> Option<&'static str> {
@@ -323,7 +323,7 @@ pub fn same(a: &crate::difficulty::SameOf, b: &crate::difficulty::SameOf) -> boo
 
 /// the two tables a level and the levers over it write. (difficulty.ts tablesOf)
 pub fn tables_of(g: &crate::game::Game, level: crate::difficulty::Difficulty, set: Option<crate::difficulty::TablesOfSet>) -> crate::difficulty::TablesOf {
-    let set = set.unwrap_or(TablesOfSet { fog: None, ai: None, kit: None, told: None });
+    let set = set.unwrap_or(TablesOfSet { ai: None, kit: None });
     let mut p = crate::pressure::pressure_defaults();
     let mut d = crate::digin::digin_defaults();
     if set.ai.unwrap_or(level) == Difficulty::Hard {
@@ -655,7 +655,7 @@ pub fn squads_held(e: &crate::scene_scenarios::ScenarioEntry) -> crate::difficul
     S::Bool(e.kind == crate::scene_scenarios::ScenarioEntryKind::Roomclear)
 }
 
-/// The same, by whoever knows whether this machine keeps the levers as they stand (no store is read on this side: `levers_kept`).
+/// The same, by whoever knows whether this machine keeps the levers as they stand.
 pub fn difficulty_href_kept(g: &crate::game::Game, href: &str, kept: bool) -> String {
     let now = difficulty_now(g);
     let (path, all) = href_parts(href);

@@ -63,7 +63,6 @@ pub struct RelF {
 pub struct DoorAhead {
     pub d: DoorId,
     pub side: f64,
-    pub at: V3,
     pub dist: f64,
 }
 

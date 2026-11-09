@@ -536,7 +536,7 @@ pub fn row_of(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField) ->
 /// What a step of one row of member i's card would do, nothing written, as his card is worn.   (kit.ts kitPeek)
 pub fn kit_peek(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField, dir: f64) -> crate::kit::KitPeek {
     let p = on_worn(g, i, &mut |g: &mut Game| peek(g, i, field, dir), None);
-    KitPeek { value: p.value, why: p.why, passed: p.passed }
+    KitPeek { value: p.value, why: p.why }
 }
 
 /// A step of one row: the value it lands on, wrapping; or `why` and the value as it stands.   (kit.ts peek)
@@ -575,10 +575,10 @@ pub fn peek(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField, dir:
 pub fn kit_try(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField, dir: f64) -> crate::kit::KitTry {
     on_worn(g, i, &mut |g: &mut Game| {
         let p = peek(g, i, field, dir);
-        if !p.why.is_empty() { return KitTry { ok: false, value: p.value, why: p.why, passed: p.passed }; }
+        if !p.why.is_empty() { return KitTry { ok: false, why: p.why, passed: p.passed }; }
         let row = row_of(g, i, field).expect("peek found the row");
         write_row(g, i, &row, &p.value);
-        KitTry { ok: true, value: p.value, why: p.why, passed: p.passed }
+        KitTry { ok: true, why: p.why, passed: p.passed }
     }, Some(&mut |_g: &mut Game, r: KitTry| r.ok))
 }
 
@@ -703,7 +703,7 @@ fn moved_rows(g: &Game, rows: &[KitRow], a: &mut MemberKit, b: &mut MemberKit) -
 /// What a paste would do, nothing written, as his card is worn.   (kit.ts kitPastePeek)
 pub fn kit_paste_peek(g: &mut crate::game::Game, i: f64, from: &crate::kit::MemberKit) -> crate::kit::KitPastePeek {
     let p = on_worn(g, i, &mut |g: &mut Game| paste_peek(g, i, from), None);
-    KitPastePeek { card: p.card, changed: p.changed, why: p.why }
+    KitPastePeek { changed: p.changed, why: p.why }
 }
 
 /// The card a paste would make, the rows of his it would move, why it would be refused ('' = taken).   (kit.ts pastePeek)

@@ -16,7 +16,6 @@ pub struct PaneCrossLike {
 
 #[derive(Clone, Debug, Default)]
 pub struct GlassFragmentLike {
-    pub pane: f64,
     pub type_: crate::glasspen::PaneType,
     pub kind: crate::shards::GlassFragmentLikeKind,
     pub outline: Vec<V3>,

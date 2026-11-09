@@ -374,7 +374,7 @@ fn fixed_in(g: &mut Game, at: V3, k: f64, who: f64, origins: &[V3], budget: &mut
         g.stats.furnblast.nav_opened += opened.len() as i32; furniture_bump(g);
         let dead = !any_stands(g, &grp.members);
         let walkable = !opened.is_empty();
-        crate::wallbreak::wall_break_note(g, &WallBreakNoteC { kind: LevelChangeKind::Cover, cause: LevelChangeCause::Blast, name: None, id: grp.id, pos: c, rect: [rx0, rz0, rx1, rz1], opened, walkable, sight: true, dead, who });
+        crate::wallbreak::wall_break_note(g, &WallBreakNoteC { kind: LevelChangeKind::Cover, cause: LevelChangeCause::Blast, id: grp.id, pos: c, rect: [rx0, rz0, rx1, rz1], opened, walkable, who });
     }
 }
 /// one static of a piece goes; true = this module hid a SOLID box itself (furnblast.ts Furniture.breakStatic). A member is read for `i` and `ghost` only, so mouth()'s stand-in member needs no row.
@@ -781,7 +781,7 @@ fn mouth_in(g: &mut Game, at: V3, who: f64, r: [f64; 4], budget: &mut f64) {
         if nx1 >= nx0 && nz1 >= nz0 { rect = [nx0, nz0, nx1, nz1]; pos = [(nx0 + nx1) / 2.0, 0.6, (nz0 + nz1) / 2.0]; }
     }
     let walkable = !opened.is_empty();
-    crate::wallbreak::wall_break_note(g, &WallBreakNoteC { kind: LevelChangeKind::Cover, cause: LevelChangeCause::Blast, name: None, id: hid[0], pos, rect, opened, walkable, sight: true, dead: true, who });
+    crate::wallbreak::wall_break_note(g, &WallBreakNoteC { kind: LevelChangeKind::Cover, cause: LevelChangeCause::Blast, id: hid[0], pos, rect, opened, walkable, who });
 }
 /// the way off the blast on the floor; right on it, a drawn direction (furnblast.ts Furniture.away)
 pub fn furniture_away(g: &mut crate::game::Game, at: V3, p: V3) -> V3 {
@@ -819,5 +819,5 @@ pub fn furniture_note_reset(g: &mut crate::game::Game, cause: crate::furnblast::
     if !say { return; }
     let w = crate::scene_world::world();
     let c = match cause { FurnitureNoteResetCause::Load => LevelChangeCause::Load, FurnitureNoteResetCause::Reset => LevelChangeCause::Reset };
-    crate::wallbreak::wall_break_note(g, &WallBreakNoteC { kind: LevelChangeKind::Reset, cause: c, name: None, id: -1.0, pos: [0.0, 0.0, 0.0], rect: [w.min[0], w.min[2], w.max[0], w.max[2]], opened: Vec::new(), walkable: false, sight: false, dead: false, who: crate::consts::NOBODY_ID });
+    crate::wallbreak::wall_break_note(g, &WallBreakNoteC { kind: LevelChangeKind::Reset, cause: c, id: -1.0, pos: [0.0, 0.0, 0.0], rect: [w.min[0], w.min[2], w.max[0], w.max[2]], opened: Vec::new(), walkable: false, who: crate::consts::NOBODY_ID });
 }

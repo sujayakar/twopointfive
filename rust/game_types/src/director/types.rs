@@ -206,7 +206,6 @@ pub struct ProgramDef {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ProgramOpts {
     pub showcase: Option<bool>,
-    pub lower_third: Option<bool>,
     pub end_veil: Option<f64>,
     pub end_hold: Option<f64>,
     pub fresh_encounter: Option<bool>,
@@ -227,7 +226,6 @@ pub struct TriggerDef {
     pub name: Option<String>,
     pub volume: Option<String>,
     pub who: Option<crate::director::TriggerDefWho>,
-    pub once: Option<bool>,
     pub label: Option<String>,
 }
 
@@ -270,11 +268,7 @@ pub struct UnitRef {
 pub struct ManifestExpectsItem {
     pub kind: crate::director::ManifestExpectsItemKind,
     pub program: Option<String>,
-    pub beats: Option<Vec<String>>,
-    pub a: Option<String>,
-    pub b: Option<String>,
     pub max: Option<f64>,
-    pub what: Option<String>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -298,28 +292,6 @@ pub enum LintProblemLevel {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct LogRow {
-    pub t: f64,
-    pub run: f64,
-    pub program: String,
-    pub beat: String,
-    pub kind: crate::director::LogRowKind,
-    pub what: String,
-    pub data: Option<crate::director::Json>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum LogRowKind {
-    #[default] Camera,
-    Radio,
-    Error,
-    Spawn,
-    Drill,
-    Note,
-    Program,
-    Beat,
-    Trigger,
-    Yield,
-    Stimulus,
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -333,54 +305,25 @@ pub enum Json {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct DirectorLastRun {
-    pub serial: f64,
-    pub name: String,
-    pub t: f64,
-    pub finished: bool,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct DirectorFrame {
-    pub look: Option<V3>,
-    pub caption: String,
-    pub sub: String,
-    pub fade: f64,
-    pub lower_third: bool,
-    pub program: String,
-    pub handed_over: bool,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct MarkRef {
-    pub kind: crate::director::MarkRefKind,
     pub id: String,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum MarkRefKind {
-    #[default] Mark,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct DoorRef {
-    pub kind: crate::director::DoorRefKind,
     pub id: String,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum DoorRefKind {
-    #[default] Door,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct VolumeRef {
-    pub kind: crate::director::VolumeRefKind,
     pub id: String,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum VolumeRefKind {
-    #[default] Volume,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
@@ -397,13 +340,7 @@ impl VariantRefId {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct LoadoutRef {
-    pub kind: crate::director::LoadoutRefKind,
     pub id: String,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum LoadoutRefKind {
-    #[default] Loadout,
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -428,8 +365,6 @@ pub struct OrderPatch2 {
     pub flinch: Option<Option<bool>>,
     pub direct: Option<Option<bool>>,
     pub smoke: Option<Option<bool>>,
-    /// INVENTED: true only from a caller that passes a goal it keeps and moves (orders.ts:1519, qrf.ts:828, :851): that one compares by value. goal Some(Some(_)) from anyone else is a new leg, even at the same spot (squad.ts:146)
-    pub held: bool,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -437,10 +372,7 @@ pub struct EventView {
     pub kind: crate::director::EventViewKind,
     pub pos: V3,
     pub level: f64,
-    pub loud: bool,
-    pub who: f64,
     pub name: Option<String>,
-    pub data: Option<crate::director::Json>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -487,61 +419,36 @@ pub enum Cond {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct CondArm0 {
-    pub k: crate::director::CondArm0K,
     pub until: f64,
     pub label: Option<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum CondArm0K {
-    #[default] Time,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CondArm1 {
-    pub k: crate::director::CondArm1K,
     pub due: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum CondArm1K {
-    #[default] Frames,
 }
 
 #[derive(Clone, Debug, ToBytes)]
 pub struct CondArm2 {
-    pub k: crate::director::CondArm2K,
     pub test: crate::director::CondTest,
     pub label: String,
 }
 impl Default for CondArm2 {
     fn default() -> Self {
         CondArm2 {
-            k: crate::director::CondArm2K::Pred,
             test: crate::director::CondTest::Script { id: 0 },
             label: String::new(),
         }
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum CondArm2K {
-    Pred,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct CondArm3 {
-    pub k: crate::director::CondArm3K,
     pub kind: crate::director::CondArm3Kind,
     pub name: Option<String>,
     pub filter: Option<crate::director::EventFilter>,
     pub got: Option<crate::director::EventView>,
     pub tick0: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum CondArm3K {
-    #[default] Event,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -578,14 +485,8 @@ impl CondArm3Kind {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct CondArm4 {
-    pub k: crate::director::CondArm4K,
     pub name: String,
     pub state: crate::director::CondArm4State,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum CondArm4K {
-    #[default] Beat,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -638,8 +539,6 @@ pub struct CameraShotSpec {
     pub dist: f64,
     pub dist_to: Option<f64>,
     pub dur: f64,
-    pub title: Option<String>,
-    pub chapter: Option<f64>,
     /// INVENTED by a review: see the proposals
     pub look: crate::director::Place,
 }
@@ -654,8 +553,6 @@ impl Default for CameraShotSpec {
             dist: 0.0,
             dist_to: None,
             dur: 0.0,
-            title: None,
-            chapter: None,
             look: crate::director::Place::List([0.0; 3]),
         }
     }
@@ -682,17 +579,13 @@ pub struct LiveBeatFlow {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct UnitRec {
-    pub ref_: crate::director::UnitRef,
     pub gd: GuardId,
-    pub loadout: String,
-    pub by: String,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Shot {
     pub spec: crate::director::CameraShotSpec,
     pub t: f64,
-    pub title: String,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -700,11 +593,6 @@ pub struct ShowState {
     pub saved: crate::director::ShowStateSaved,
     pub look: V3,
     pub shot: Option<crate::director::Shot>,
-    pub shot_i: f64,
-    pub chapter_t0: f64,
-    pub chapters: Vec<crate::director::ShowStateChaptersItem>,
-    pub caption: String,
-    pub sub: String,
     pub fade: f64,
     pub fade_to: f64,
     pub fade_rate: f64,
@@ -713,7 +601,6 @@ pub struct ShowState {
     pub variant_on: bool,
     pub puppet: bool,
     pub weather_saved: Option<crate::director::ShowStateWeatherSaved>,
-    pub mission_on: bool,
     pub handed_over: bool,
     pub chaos_set: bool,
 }
@@ -733,12 +620,6 @@ pub struct ShowStateSavedCam {
     pub yaw: f64,
     pub pitch: f64,
     pub dist: f64,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct ShowStateChaptersItem {
-    pub title: String,
-    pub dur: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -761,7 +642,6 @@ pub struct Run {
     pub dt: f64,
     pub tick_n: f64,
     pub dice: crate::dice::Die,
-    pub seed: f64,
     pub beats: Vec<DirectorLiveBeatId>,
     pub fired: JsSet<crate::Num>,
     pub signals: Vec<crate::director::RunSignalsItem>,
@@ -783,8 +663,6 @@ pub struct Run {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct RunSignalsItem {
     pub name: String,
-    pub t: f64,
-    pub data: Option<crate::director::Json>,
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -795,7 +673,6 @@ pub struct RunBurstsItem {
     pub cadence: f64,
     pub spread: f64,
     pub next: f64,
-    pub cond: crate::director::RunBurstsItemCond,
     pub fired: f64,
     /// INVENTED by a review: see the proposals
     pub serial: u32,
@@ -809,7 +686,6 @@ impl Default for RunBurstsItem {
             cadence: 0.0,
             spread: 0.0,
             next: 0.0,
-            cond: crate::director::RunBurstsItemCond::default(),
             fired: 0.0,
             serial: 0,
         }
@@ -821,17 +697,6 @@ pub enum RunBurstsItemAt {
     List(V3),
     Unit(crate::director::UnitRef),
     Mark(crate::director::MarkRef),
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct RunBurstsItemCond {
-    pub k: crate::director::RunBurstsItemCondK,
-    pub label: String,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum RunBurstsItemCondK {
-    #[default] Pred,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -878,10 +743,6 @@ pub enum DirectorSignalData {
 
 #[derive(Clone, Debug, Default)]
 pub struct DirectorPushRow {
-    pub kind: crate::director::DirectorPushRowKind,
-    pub what: String,
-    pub data: Option<crate::director::Json>,
-    pub beat: String,
     pub t: Option<f64>,
 }
 
@@ -916,8 +777,6 @@ pub enum DirectorInsideVolumeWho {
 #[derive(Clone, Debug, Default)]
 pub struct SignalViewS {
     pub name: String,
-    pub t: f64,
-    pub data: Option<crate::director::Json>,
 }
 
 /// (src/game/director.ts:335 TEAMS: a table nothing writes)

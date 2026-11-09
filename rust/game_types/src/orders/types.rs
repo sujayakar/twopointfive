@@ -138,7 +138,6 @@ impl Default for SquadOrders { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct SquadOwner {
-    pub name: String,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -280,7 +279,6 @@ pub struct SquadOrdersLogItem {
     pub who: Vec<String>,
     pub target: String,
     pub auto: Option<bool>,
-    pub laid: Option<bool>,
     /// INVENTED: g.serial() at the push (orders.ts:881 cuts the front): rescue.ts:570 and lesson.ts:113 hold a row as a cursor by identity
     pub serial: u32,
 }
@@ -426,12 +424,10 @@ pub struct OrderDef {
     pub opens: Option<String>,
     pub listed: Option<Vec<crate::orders::TargetKind>>,
     pub hot_key: Option<String>,
-    pub page_only: Option<bool>,
     pub ack: Option<Vec<String>>,
     pub ack_now: Option<Vec<String>>,
     pub on_word: Option<bool>,
     pub free: Option<bool>,
-    pub head: Option<String>,
     pub stands_in: Option<crate::orders::OrderDefStandsIn>,
 }
 impl Default for OrderDef {
@@ -445,12 +441,10 @@ impl Default for OrderDef {
             opens: None,
             listed: None,
             hot_key: None,
-            page_only: None,
             ack: None,
             ack_now: None,
             on_word: None,
             free: None,
-            head: None,
             stands_in: None,
         }
     }
@@ -718,7 +712,6 @@ pub struct SquadOrdersAskedLock {
 #[derive(Clone, Debug, Default)]
 pub struct SquadOrdersWhoTag {
     pub tag: String,
-    pub one: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -761,9 +754,6 @@ pub const WHEEL_STEP: f64 = 60.0;
 
 /// (src/game/orders.ts:336 ORDER_DIGITS)
 pub const ORDER_DIGITS: f64 = 5.0;
-
-/// (src/game/orders.ts:425 WORD_HEAD)
-pub const WORD_HEAD: &str = "on your word";
 
 /// (src/game/orders.ts:2629 LOW: a table nothing writes)
 pub fn low() -> crate::orders::LOW { crate::orders::LOW { stance: crate::character::Stance::LowReady, upper: crate::character::UpperMode::None } }

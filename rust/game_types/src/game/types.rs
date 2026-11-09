@@ -297,21 +297,18 @@ pub enum WitnessSawActKind {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WitnessSawBody {
     pub victim: String,
-    pub t: f64,
     pub breathing: bool,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WitnessCalledToBody {
     pub victim: String,
-    pub t: f64,
     pub breathing: bool,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WitnessSawHeld {
     pub who: String,
-    pub t: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -434,13 +431,6 @@ pub struct Game {
     #[bytes(skip)]
     pub kit_stage: Option<alloc::boxed::Box<crate::kitstage::KitStage>>,
     pub col: crate::scene_collision::StaticCollision,
-    pub snow_field: Option<crate::render_snow_field::SnowField>,
-    pub snow_tracks: Option<crate::snow_tracks::SnowTracks>,
-    pub snow_look_was: f64,
-    pub chars: crate::anim_characters::CharacterRenderer,
-    pub rig_fits: Option<JsMap<crate::Num, crate::game::GameRigFitsValue>>,
-    pub rig_fit_of: JsMap<crate::Num, Option<crate::game::GameRigFitOfValue>>,
-    pub mesh_shadows: crate::render_mesh_shadows::MeshShadows,
     pub player: PlayerId,
     pub guards: Vec<GuardId>,
     pub civilians: Vec<GuardId>,
@@ -557,7 +547,6 @@ pub struct Game {
     #[bytes(skip)]
     pub saves: crate::savestate::Checkpoints,
     pub rack_targets: Vec<FixtureId>,
-    pub mark_lights: Vec<crate::game::GameMarkLightsItem>,
     pub tune: crate::game::GameTune,
     pub engine: crate::host_api::HostApi,
     pub level: crate::scene_level::Level,
@@ -656,13 +645,6 @@ impl Game {
             solo_card: false,
             kit_stage: None,
             col: crate::scene_collision::StaticCollision::blank(),
-            snow_field: None,
-            snow_tracks: None,
-            snow_look_was: -1.0,
-            chars: crate::anim_characters::CharacterRenderer::blank(),
-            rig_fits: None,
-            rig_fit_of: JsMap::new(),
-            mesh_shadows: crate::render_mesh_shadows::MeshShadows::blank(),
             player: PlayerId(0),
             guards: Vec::new(),
             civilians: Vec::new(),
@@ -762,7 +744,6 @@ impl Game {
             door_path: crate::doorpath::DoorPath::blank(),
             saves: crate::savestate::Checkpoints::blank(),
             rack_targets: Vec::new(),
-            mark_lights: Vec::new(),
             tune: crate::game::GameTune { devices: true, lasers: true, camera_suspicion_secs: 0.8, camera_alarm_secs: 2.0, device_cones: true, guard_walk: 1.15, guard_investigate: 1.75, guard_chase: 2.7, player_walk: 1.55, player_sprint: 4.7, player_crouch: 1.3, player_light: 60.0, flash_intensity: 70.0, flash_inner: 7.0, flash_outer: 19.0, detect_rate: 1.6, ocp_duration: 9.0, ocp_notice: crate::game::GameTuneOcpNotice::Glance, vis_slope: 0.2, vis_floor: 0.03, floor_materials: true, muzzle_discipline: true, suppression: true, carbine_guards: crate::game::CarbineDeal::None, suppress_first: true, tracers: true, aim_model: true, teams: true, needs: true, tactics: true, flank_wait: 6.0, lone_wait: 8.0, door_danger: 25.0, door_wait: 6.0, chaos: 0.5, wind: 1.0, moths: true, glass_break: true, glass_shards: true, wall_break: true, debris_impulses: true, qrf: true, qrf_eta: 75.0, qrf_size: 4.0, perimeter: true, perimeter_eta: 45.0, perimeter_size: 2.0, qrf_silent: true, qrf_squad: true, civilians: true, civilian_kill_fails: false, body_light: true },
             engine: crate::host_api::HostApi::default(),
             level: crate::scene_level::Level::default(),
@@ -811,18 +792,6 @@ impl Game {
 }
 impl Default for Game { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct GameRigFitsValue {
-    pub r0: Vec<f32>,
-    pub r1: Vec<f32>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct GameRigFitOfValue {
-    pub r0: Vec<f32>,
-    pub r1: Vec<f32>,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct GamePuppet {
     pub goal: Option<V3>,
@@ -862,17 +831,6 @@ pub struct GameMessagesItem {
     pub t: f64,
     /// INVENTED by a review: see the proposals
     pub serial: u32,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct GameMarkLightsItem {
-    pub target: String,
-    pub box_: f64,
-    pub face: String,
-    pub pos: V3,
-    pub i0: f64,
-    pub area: f64,
-    pub mean_l: V3,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -1108,7 +1066,6 @@ pub struct Player {
     pub near_key: String,
     pub sel: crate::game::PlayerSel,
     pub pace: f64,
-    pub pace_shown_t: f64,
     pub nv: bool,
     pub nv_amount: f64,
     pub light: LightId,
@@ -1219,7 +1176,6 @@ impl Player {
             near_key: String::from(""),
             sel: crate::game::PlayerSel { down_t: -1.0, open: false, moved: false, wheel_acc: 0.0, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, file_t: -1000000000.0, ring: None },
             pace: 1.0,
-            pace_shown_t: -10.0,
             nv: false,
             nv_amount: 0.0,
             light: LightId(0),
@@ -1429,9 +1385,6 @@ pub struct Talk {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct TalkLast {
     pub id: String,
-    pub cell: String,
-    pub stage: String,
-    pub kind: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes)]
@@ -1473,8 +1426,6 @@ pub struct GuardTaskCheckOn {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct UnitInfo {
-    pub name: String,
-    pub spawned_at: f64,
     pub light: bool,
     pub pair: Option<crate::game::PairId>,
     pub seat: Option<f64>,
@@ -2131,9 +2082,6 @@ pub struct Mods {
     pub weather_kinds: crate::weather_kinds::WeatherKindsMod,
     pub kitload: crate::kitload::KitloadMod,
     pub holdfire: crate::holdfire::HoldfireMod,
-    /// (who wrote what, a check's own: in no bytes)
-    #[bytes(skip)]
-    pub owner: crate::owner::OwnerMod,
     pub picture: crate::picture::PictureMod,
     pub destruction_switch: crate::destruction_switch::DestructionSwitchMod,
     pub dress: crate::dress::DressMod,
@@ -2191,12 +2139,10 @@ pub struct Mods {
     pub nvg: crate::nvg::NvgMod,
     pub irlaser: crate::irlaser::IrlaserMod,
     pub gunhold: crate::gunhold::GunholdMod,
-    pub air_sim: crate::air_sim::AirSimMod,
     pub unseen: crate::unseen::UnseenMod,
     pub squadsmoke: crate::squadsmoke::SquadsmokeMod,
     pub squad40: crate::squad40::Squad40Mod,
     pub squadthrow: crate::squadthrow::SquadthrowMod,
-    pub kitanim: crate::kitanim::KitanimMod,
     pub smokebreak: crate::smokebreak::SmokebreakMod,
     pub showwhy: crate::showwhy::ShowwhyMod,
     pub cmd: crate::cmd::CmdMod,
@@ -2245,14 +2191,12 @@ pub struct Mods {
     pub dialogue: crate::dialogue::DialogueMod,
     pub civilians: crate::civilians::CiviliansMod,
     pub orders: crate::orders::OrdersMod,
-    pub seats: crate::seats::SeatsMod,
     pub wallcharge: crate::wallcharge::WallchargeMod,
     pub blast_look: crate::blast_look::BlastLookMod,
     pub particle_fx: crate::particle_fx::ParticleFxMod,
     pub shutdoor: crate::shutdoor::ShutdoorMod,
     pub fixture_break: crate::fixture_break::FixtureBreakMod,
     pub weapons: crate::weapons::WeaponsMod,
-    pub smoke_smoke_grid: crate::smoke_smoke_grid::SmokeSmokeGridMod,
     /// (the picture's: in no bytes)
     #[bytes(skip)]
     pub render_frame: crate::render_frame::RenderFrameMod,
@@ -2283,7 +2227,6 @@ impl Mods {
             weather_kinds: crate::weather_kinds::WeatherKindsMod::blank(),
             kitload: crate::kitload::KitloadMod::blank(),
             holdfire: crate::holdfire::HoldfireMod::blank(),
-            owner: crate::owner::OwnerMod::blank(),
             picture: crate::picture::PictureMod::blank(),
             destruction_switch: crate::destruction_switch::DestructionSwitchMod::blank(),
             dress: crate::dress::DressMod::blank(),
@@ -2339,12 +2282,10 @@ impl Mods {
             nvg: crate::nvg::NvgMod::blank(),
             irlaser: crate::irlaser::IrlaserMod::blank(),
             gunhold: crate::gunhold::GunholdMod::blank(),
-            air_sim: crate::air_sim::AirSimMod::blank(),
             unseen: crate::unseen::UnseenMod::blank(),
             squadsmoke: crate::squadsmoke::SquadsmokeMod::blank(),
             squad40: crate::squad40::Squad40Mod::blank(),
             squadthrow: crate::squadthrow::SquadthrowMod::blank(),
-            kitanim: crate::kitanim::KitanimMod::blank(),
             smokebreak: crate::smokebreak::SmokebreakMod::blank(),
             showwhy: crate::showwhy::ShowwhyMod::blank(),
             cmd: crate::cmd::CmdMod::blank(),
@@ -2389,14 +2330,12 @@ impl Mods {
             dialogue: crate::dialogue::DialogueMod::blank(),
             civilians: crate::civilians::CiviliansMod::blank(),
             orders: crate::orders::OrdersMod::blank(),
-            seats: crate::seats::SeatsMod::blank(),
             wallcharge: crate::wallcharge::WallchargeMod::blank(),
             blast_look: crate::blast_look::BlastLookMod::blank(),
             particle_fx: crate::particle_fx::ParticleFxMod::blank(),
             shutdoor: crate::shutdoor::ShutdoorMod::blank(),
             fixture_break: crate::fixture_break::FixtureBreakMod::blank(),
             weapons: crate::weapons::WeaponsMod::blank(),
-            smoke_smoke_grid: crate::smoke_smoke_grid::SmokeSmokeGridMod::blank(),
             render_frame: crate::render_frame::RenderFrameMod::blank(),
         }
     }
@@ -2470,7 +2409,6 @@ pub struct Stats {
     pub fireline: crate::fireline::FirelineStats,
     pub noshove: crate::noshove::NoshoveStats,
     pub doorforce: crate::doorforce::DoorforceStats,
-    pub glassbreak: crate::glassbreak::GlassbreakStats,
     pub wallpen: crate::wallpen::WallpenStats,
     pub condition: crate::condition::ConditionStats,
     pub morale: crate::morale::MoraleStats,

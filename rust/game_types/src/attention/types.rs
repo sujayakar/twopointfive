@@ -90,19 +90,13 @@ pub struct MemLent {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct AttentionModATTENTIONLOGItem {
-    pub t: f64,
-    pub who: String,
     pub what: String,
-    pub kind: crate::attention::DrawKind,
     pub secs: f64,
-    pub nth: i32,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct LogH {
-    pub kind: crate::attention::DrawKind,
     pub secs: f64,
-    pub nth: i32,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

@@ -187,23 +187,21 @@ pub fn guard_terms(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> crate:
     let settle = v3::lerp(p.unsettled_k, 1.0, v3::clamp(g.gd[gd].aim.track, 0.0, 1.0));
     let tgt = m::min(p.target_move_cap, g.gd[gd].aim.bearing_rate * p.target_move_k);
     let c_vel = g.ch[c].vel;
-    let speed = m::hyp2(c_vel[0], c_vel[2]);
     let on_cost = move_cost(g);
     let a = core::mem::take(&mut g.gd[gd].aim);
     let own = feet_of(g, &a, &c_vel, p.steady_pace, on_cost) * p.shooter_move_k;
     g.gd[gd].aim = a;
-    crate::aim::GuardTerms { hands, settle, tgt, own, speed, spread: hands * settle + tgt + own + extra }
+    crate::aim::GuardTerms { spread: hands * settle + tgt + own + extra }
 }
 
 /// What to hand fireWeapon for this guard's round; stamps `last_shot`. (aim.ts guardRound)
 pub fn guard_round(g: &mut crate::game::Game, gd: GuardId, extra: f64, gated: Option<bool>) -> crate::combat::FireOpts {
-    let gated = gated.unwrap_or(true);
     if !g.tune.aim_model {
         return crate::combat::FireOpts { spread: Some(extra), ..Default::default() };
     }
     let t = guard_terms(g, gd, extra);
-    let (now, track) = (g.time, g.gd[gd].aim.track);
-    g.gd[gd].aim.last_shot = Some(crate::aim::AimStateLastShot { t: now, track, spread: t.spread, speed: t.speed, gated, hands: t.hands, settle: t.settle, tgt: t.tgt, own: t.own });
+    let now = g.time;
+    g.gd[gd].aim.last_shot = Some(crate::aim::AimStateLastShot { t: now });
     crate::combat::FireOpts { spread: Some(t.spread), steady: Some(true), ..Default::default() }
 }
 
@@ -385,9 +383,8 @@ pub fn sam_aim(g: &mut crate::game::Game) -> f64 {
     if !g.tune.aim_model || g.puppet.is_some() {
         return 0.0;
     }
-    let v = g.ch[g.pl[pl].ch].vel;
     let now = g.time;
-    g.pl[pl].aim.last_shot = Some(crate::aim::AimStateLastShot { t: now, track: r.track, spread: r.spread, speed: m::hyp2(v[0], v[2]), gated: false, hands: r.base, settle: r.settle, tgt: r.tgt, own: r.own });
+    g.pl[pl].aim.last_shot = Some(crate::aim::AimStateLastShot { t: now });
     r.spread
 }
 

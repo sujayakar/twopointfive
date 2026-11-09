@@ -55,7 +55,6 @@ pub struct Press {
     pub set_at: f64,
     pub lone_at: Option<f64>,
     pub sprung: Option<bool>,
-    pub listen_at: f64,
     pub moving: bool,
     pub word_at: f64,
     pub go_at: f64,
@@ -285,18 +284,12 @@ pub struct PressureMod {
     pub states: Option<crate::pressure::State>,
     /// (src/game/pressure.ts:305 KITTED)
     pub kitted: JsSet<GuardId>,
-    /// (src/game/pressure.ts:335 PICKETS)
-    pub pickets: JsMap<GuardId, RoomfightRoomId>,
-    /// (src/game/pressure.ts:335 PICKET_WENT)
-    pub picket_went: JsSet<GuardId>,
 }
 impl PressureMod {
     pub fn blank() -> Self {
         PressureMod {
             states: None,
             kitted: JsSet::new(),
-            pickets: JsMap::new(),
-            picket_went: JsSet::new(),
         }
     }
 }

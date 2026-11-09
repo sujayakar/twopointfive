@@ -47,41 +47,10 @@ pub enum LineKind {
     SetLone,
     SetLoneOpen,
 }
-impl LineKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LineKind::Set => "set",
-            LineKind::Go => "go",
-            LineKind::Order => "order",
-            LineKind::Short => "short",
-            LineKind::LastAt => "lastAt",
-            LineKind::In => "in",
-            LineKind::Check1 => "check1",
-            LineKind::CheckN => "checkN",
-            LineKind::CheckStand => "checkStand",
-            LineKind::CheckLoneAt => "checkLoneAt",
-            LineKind::AnsAt => "ansAt",
-            LineKind::AnsFreeAt => "ansFreeAt",
-            LineKind::FewAt => "fewAt",
-            LineKind::LastGo => "lastGo",
-            LineKind::MovedAt => "movedAt",
-            LineKind::MovedFree => "movedFree",
-            LineKind::OrderFrom => "orderFrom",
-            LineKind::OrderStay => "orderStay",
-            LineKind::OrderShut => "orderShut",
-            LineKind::OrderOut => "orderOut",
-            LineKind::Cant => "cant",
-            LineKind::SetOpen => "setOpen",
-            LineKind::SetLone => "setLone",
-            LineKind::SetLoneOpen => "setLoneOpen",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Check {
     pub caller: RoomfightDefId,
-    pub t: f64,
     pub close_at: f64,
     pub due: Vec<crate::laststand::CheckDueItem>,
     pub got: Vec<RoomfightDefId>,
@@ -95,11 +64,8 @@ pub struct CheckDueItem {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct LastStandSaid {
-    pub t: f64,
     pub who: String,
-    pub kind: String,
     pub text: String,
-    pub at: [f64; 2],
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -126,7 +92,6 @@ pub struct State {
     pub at: JsMap<RoomfightDefId, crate::laststand::Said>,
     pub lone_said: bool,
     pub few_n: f64,
-    pub told: JsSet<RoomfightDefId>,
     pub said: Vec<crate::laststand::LastStandSaid>,
     pub stats: crate::laststand::StateStats,
     pub stale: bool,
@@ -168,22 +133,9 @@ pub struct StateStats {
     pub answers: f64,
     pub silent: f64,
     pub last_man: f64,
-    pub stands: f64,
-    pub gathered: f64,
-    pub sent: f64,
-    pub arrived: f64,
-    pub short: f64,
-    pub met: f64,
-    pub died_on_way: f64,
-    pub dropped: f64,
-    pub quiet: f64,
-    pub no_way: f64,
     pub moved: f64,
-    pub dig_orders: f64,
     pub stand_t: f64,
     pub set_t: f64,
-    pub set_men: f64,
-    pub thumps: f64,
     pub lines: f64,
 }
 

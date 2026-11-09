@@ -51,7 +51,6 @@ pub struct SquadNetStats {
 
 #[derive(Clone, Debug, Default)]
 pub struct WhyWords {
-    pub row: String,
     pub ack: String,
 }
 

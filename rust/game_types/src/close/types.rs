@@ -46,7 +46,6 @@ pub struct CloseOffer {
     pub guard: GuardId,
     pub win: Option<crate::close::CloseWindow>,
     pub dist: f64,
-    pub bearing: f64,
     pub in_reach: bool,
     pub clear: bool,
     pub grab: bool,
@@ -70,24 +69,6 @@ pub struct State {
     pub mode: Option<GuardId>,
     pub mode_d: f64,
     pub rmb_t: f64,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct CloseModCLOSELOGItem {
-    pub t: f64,
-    pub who: String,
-    pub what: crate::close::CloseModCLOSELOGItemWhat,
-    pub kind: Option<crate::close::CloseKind>,
-    pub bearing: f64,
-    pub dist: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum CloseModCLOSELOGItemWhat {
-    #[default] Grab,
-    Seat,
-    Take,
-    Unseat,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -183,7 +164,6 @@ pub struct CloseReady {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CloseStation {
     pub pos: V3,
-    pub yaw: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -195,8 +175,6 @@ pub enum CloseTookWhat {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct CloseMod {
-    /// (src/game/close.ts:140 CLOSE_LOG)
-    pub close_log: Vec<crate::close::CloseModCLOSELOGItem>,
     /// (src/game/close.ts:146 STATE)
     pub state: JsMap<PlayerId, crate::close::State>,
     /// (src/game/close.ts:148 SEATED)
@@ -205,7 +183,6 @@ pub struct CloseMod {
 impl CloseMod {
     pub fn blank() -> Self {
         CloseMod {
-            close_log: Vec::new(),
             state: JsMap::new(),
             seated: None,
         }

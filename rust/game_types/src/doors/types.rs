@@ -192,9 +192,7 @@ impl Default for Door { fn default() -> Self { Self::blank() } }
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DoorSwing {
     pub hinge: V3,
-    pub handle: V3,
     pub swing: f64,
-    pub into: [f64; 2],
     pub open: f64,
     pub radius: f64,
     pub closed_dir: f64,
@@ -204,7 +202,6 @@ pub struct DoorSwing {
 #[derive(Clone, Debug, ToBytes)]
 pub struct Doors {
     pub list: Vec<DoorId>,
-    pub store: crate::sim_doorshome::DoorStore,
     pub slabs: crate::sim_slabshome::SlabStore,
     pub rounds: f64,
     pub solids: crate::doors::DoorsSolids,
@@ -214,7 +211,6 @@ impl Doors {
     pub fn blank() -> Self {
         Doors {
             list: Vec::new(),
-            store: crate::sim_doorshome::DoorStore::blank(),
             slabs: crate::sim_slabshome::SlabStore::blank(),
             rounds: 0.0,
             solids: crate::doors::DoorsSolids { carried: 0.0, stopped: 0.0, passed: 0.0, reached: 0.0, held: 0.0, aside: 0.0 },

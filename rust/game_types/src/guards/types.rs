@@ -25,38 +25,14 @@ pub struct Engagement {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct EngageResult {
-    pub outcome: crate::guards::EngageResultOutcome,
-    pub secs: f64,
-    pub kills: Vec<crate::guards::EngageResultKillsItem>,
-    pub rounds: crate::guards::EngageResultRounds,
-    pub operatives_left: f64,
-    pub hostiles_left: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum EngageResultOutcome {
-    #[default] Wiped,
-    Reset,
-    Cleared,
-    Timeout,
-    Superseded,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct EngageResultKillsItem {
-    pub victim: String,
-    pub team: crate::teams::Team,
-    pub by: String,
-    pub t: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct EngageResultRounds {
-    pub guard: Option<f64>,
-    pub operative: Option<f64>,
-    pub hostile: Option<f64>,
-    pub player: Option<f64>,
-    pub civilian: Option<f64>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -71,7 +47,6 @@ pub struct EngagementRounds {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Standoff {
     pub pair: GuardId,
-    pub since: f64,
     pub side: f64,
     pub way: f64,
     pub orbit_goal: Option<V3>,
@@ -92,7 +67,6 @@ pub struct Pair {
     pub key: u32,
     pub held: GuardId,
     pub sam: V3,
-    pub held_axis: V3,
     pub centre: V3,
     pub facing: f64,
     pub aim: V3,
@@ -148,7 +122,6 @@ pub struct SearchSpot {
     pub pos: V3,
     pub cell: f64,
     pub kind: crate::guards::SearchSpotKind,
-    pub hidden: bool,
     pub cover: f64,
     pub dark: f64,
     pub e: Option<f64>,
@@ -263,7 +236,6 @@ pub struct GuardsModGroundTrackValue {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GuardsModBodyMetersValue {
     pub vis: f64,
-    pub e: f64,
     pub t: f64,
 }
 
@@ -290,11 +262,6 @@ pub struct STANDOFFLINESValue {
 
 #[derive(Clone, Debug, Default)]
 pub struct STANDOFFNAMELESS {
-    pub lost: Option<String>,
-    pub enter: Option<String>,
-    pub cornered: Option<String>,
-    pub no_shot: Option<String>,
-    pub line: Option<String>,
     pub dropped: Option<String>,
     pub freed: Option<String>,
     pub hit_him: Option<String>,
@@ -314,12 +281,6 @@ pub struct GuardsModLitSeenValue {
     pub lit: bool,
     pub a: Option<OrdersAssignmentId>,
     pub tgt: Option<crate::guards::LitSeenTgt>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct GuardsModDarkSeenValue {
-    pub t: f64,
-    pub dark: bool,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -347,7 +308,6 @@ pub struct GuardsModLitManSeenValue {
 pub struct NOSIGHT {
     pub visible: bool,
     pub dist: f64,
-    pub in_cone: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -421,8 +381,6 @@ pub enum LineStep {
 pub struct FlankShot {
     pub ok: bool,
     pub rear: f64,
-    pub clear: f64,
-    pub dist: f64,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -442,14 +400,12 @@ pub struct StandoffAlert {
 pub struct CanSee {
     pub visible: bool,
     pub dist: f64,
-    pub in_cone: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CanSeeChar {
     pub visible: bool,
     pub dist: f64,
-    pub in_cone: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -601,8 +557,6 @@ pub struct GuardsMod {
     pub unstick: crate::guards::GuardsModUNSTICK,
     /// (src/game/guards.ts:1545 litSeen)
     pub lit_seen: JsMap<GuardId, crate::guards::GuardsModLitSeenValue>,
-    /// (src/game/guards.ts:1563 darkSeen)
-    pub dark_seen: JsMap<GuardId, crate::guards::GuardsModDarkSeenValue>,
     /// (src/game/guards.ts:1577 litUntil)
     pub lit_until: JsMap<GuardId, f64>,
     /// (src/game/guards.ts:1579 wallSeen)
@@ -634,7 +588,6 @@ impl GuardsMod {
             held_last_frame: JsSet::new(),
             unstick: crate::guards::GuardsModUNSTICK { legs: 0.0, snaps: 0.0, last_snap_t: -1.0, last_snap_who: None },
             lit_seen: JsMap::new(),
-            dark_seen: JsMap::new(),
             lit_until: JsMap::new(),
             wall_seen: JsMap::new(),
             torch_low_seen: JsMap::new(),
@@ -801,7 +754,7 @@ pub fn standoff_lines() -> JsMap<String, crate::guards::STANDOFFLINESValue> { { 
 pub fn standoff_now() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("{held}, stay loose — I'm coming round"), String::from("{held}, stay loose — I'm coming around")); t.set(String::from("{held}! —I can't— I haven't got a line—"), String::from("{held}! —I can't— I don't have a shot—")); t.set(String::from("I have him."), String::from("I've got him.")); t.set(String::from("I— I think I have him—"), String::from("I— I think I've got him—")); t.set(String::from("can't get round him — hold what you've got"), String::from("can't get around him — hold what you've got")); t.set(String::from("no way round. {held}, hang on"), String::from("no way around. {held}, hang on")); t } }
 
 /// (src/game/guards.ts:1020 STANDOFF_NAMELESS: a table nothing writes)
-pub fn standoff_nameless() -> crate::guards::STANDOFFNAMELESS { crate::guards::STANDOFFNAMELESS { lost: None, enter: None, cornered: None, no_shot: None, line: None, dropped: Some(String::from("he's dropped {him} — TAKE HIM")), freed: Some(String::from("he's loose — get clear!")), hit_him: Some(String::from("…christ— I hit {him}—")) } }
+pub fn standoff_nameless() -> crate::guards::STANDOFFNAMELESS { crate::guards::STANDOFFNAMELESS { dropped: Some(String::from("he's dropped {him} — TAKE HIM")), freed: Some(String::from("he's loose — get clear!")), hit_him: Some(String::from("…christ— I hit {him}—")) } }
 
 /// (src/game/guards.ts:1360 UNSTICK_REACH_M)
 pub const UNSTICK_REACH_M: f64 = 2.4;
@@ -903,7 +856,7 @@ pub const SEP_MAX_M: f64 = 0.25;
 pub const SEP_SETTLE_MIN: f64 = 0.02;
 
 /// (src/game/guards.ts:2601 NO_SIGHT: a table nothing writes)
-pub fn no_sight() -> crate::guards::NOSIGHT { crate::guards::NOSIGHT { visible: false, dist: 99.0, in_cone: false } }
+pub fn no_sight() -> crate::guards::NOSIGHT { crate::guards::NOSIGHT { visible: false, dist: 99.0 } }
 
 /// (src/game/guards.ts:2799 BURST_BROKEN_CD)
 pub const BURST_BROKEN_CD: f64 = 0.4;

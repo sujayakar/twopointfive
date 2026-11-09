@@ -7,8 +7,6 @@ use alloc::{string::String, vec::Vec};
 pub struct ImpulseResponse {
     pub gain: f64,
     pub up_k: f64,
-    pub v_max: f64,
-    pub wake: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

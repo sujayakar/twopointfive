@@ -25,7 +25,6 @@ pub struct Piece {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Rec {
     pub t: FixtureId,
-    pub kind: f64,
     pub born: f64,
     pub seed: f64,
     pub seen: f64,

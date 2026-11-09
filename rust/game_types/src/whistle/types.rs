@@ -27,10 +27,7 @@ pub struct Blower {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Heard {
-    pub d: f64,
     pub at: V3,
-    pub direct: bool,
-    pub carry: f64,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -44,9 +41,6 @@ pub struct Resolution {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WhistleModWHISTLELOGItem {
     pub t: f64,
-    pub pos: V3,
-    pub hearers: Vec<String>,
-    pub responder: Option<String>,
     pub answered: Option<String>,
     pub search: bool,
 }

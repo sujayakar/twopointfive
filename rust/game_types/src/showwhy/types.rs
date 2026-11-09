@@ -12,15 +12,6 @@ pub enum Why {
     Hurt,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct WhyNote {
-    pub t: f64,
-    pub who: String,
-    pub why: crate::showwhy::Why,
-    pub signal: Option<crate::character::SignalKind>,
-    pub line: Option<String>,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ShowWhyStats {
     pub waves: i32,
@@ -78,7 +69,6 @@ pub struct OpMemTurnsItem {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub stats: crate::showwhy::ShowWhyStats,
-    pub log: Vec<crate::showwhy::WhyNote>,
     pub after_you_t: f64,
     pub keep_say_t: f64,
     pub line_say_t: f64,

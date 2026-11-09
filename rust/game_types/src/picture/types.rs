@@ -22,16 +22,6 @@ pub enum IdeaHow {
     Told,
     Fix,
 }
-impl IdeaHow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            IdeaHow::Heard => "heard",
-            IdeaHow::Seen => "seen",
-            IdeaHow::Told => "told",
-            IdeaHow::Fix => "fix",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Idea {
@@ -88,29 +78,6 @@ pub struct State {
     pub sam: crate::picture::Pic,
     pub tell_t: f64,
     pub done: JsSet<u32>,
-    pub view: Option<crate::picture::PictureView>,
-    pub view_t: f64,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct PictureView {
-    pub gd: GuardId,
-    pub from: V3,
-    pub ideas: Vec<crate::picture::PictureViewIdeasItem>,
-    pub unsafe_: Vec<[f64; 3]>,
-    pub cover: Vec<crate::picture::CoverSpot>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct PictureViewIdeasItem {
-    pub who: String,
-    pub at: V3,
-    pub age: f64,
-    pub how: crate::picture::IdeaHow,
-    pub w: f64,
-    pub reach: f64,
-    pub lost: bool,
-    pub maybe: Vec<V3>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -118,7 +85,6 @@ pub struct CoverSpot {
     pub at: V3,
     pub stand: f64,
     pub low: f64,
-    pub edge: bool,
     pub score: f64,
 }
 
@@ -126,14 +92,12 @@ pub struct CoverSpot {
 pub struct KnownPlacesItem {
     pub who: crate::picture::Who,
     pub at: V3,
-    pub age: f64,
 }
 impl Default for KnownPlacesItem {
     fn default() -> Self {
         KnownPlacesItem {
             who: crate::picture::Who::Guard(GuardId(0)),
             at: [0.0; 3],
-            age: 0.0,
         }
     }
 }

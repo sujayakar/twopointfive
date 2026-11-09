@@ -154,7 +154,6 @@ pub struct Civ {
     pub told: JsMap<GuardId, f64>,
     pub known_bodies: JsSet<GuardId>,
     pub intel_n: usize,
-    pub outside_call_at: f64,
     pub vis: f64,
     pub dice: crate::dice::Die,
     pub log: Vec<String>,
@@ -171,13 +170,6 @@ pub struct Pending {
     pub pos: Option<V3>,
     pub lvl: Option<f64>,
     pub dead: Option<bool>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct CiviliansModCIVLOGItem {
-    pub t: f64,
-    pub who: String,
-    pub what: String,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -245,7 +237,6 @@ pub struct Work {
 #[derive(Clone, Debug, Default)]
 pub struct PathMetres {
     pub m: f64,
-    pub path: Option<Vec<V3>>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -282,7 +273,6 @@ pub struct Cower {
 #[derive(Clone, Debug, Default)]
 pub struct CivilianSamLine {
     pub text: String,
-    pub id: String,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -296,8 +286,6 @@ pub enum CivPanicWhat {
 pub struct CiviliansMod {
     /// (src/game/civilians.ts:78 ownSpots)
     pub own_spots: Option<crate::civilians::CivSpots>,
-    /// (src/game/civilians.ts:181 CIV_LOG)
-    pub civ_log: Vec<crate::civilians::CiviliansModCIVLOGItem>,
     /// (src/game/civilians.ts:443 floors)
     pub floors: Option<crate::civilians::CiviliansModFloorsValue>,
 }
@@ -305,7 +293,6 @@ impl CiviliansMod {
     pub fn blank() -> Self {
         CiviliansMod {
             own_spots: None,
-            civ_log: Vec::new(),
             floors: None,
         }
     }

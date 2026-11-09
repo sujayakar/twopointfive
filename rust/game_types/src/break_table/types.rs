@@ -39,7 +39,6 @@ pub struct Inside {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BreaksLook {
-    pub on: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -169,7 +168,6 @@ pub struct OpenFace {
     pub lat: Vec<f64>,
     pub seed: f64,
     pub lo: Option<f64>,
-    pub head: Option<f64>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

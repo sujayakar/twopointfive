@@ -5,24 +5,14 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes)]
 pub struct ItemStore {
-    pub at: Vec<f64>,
     pub o: crate::sim_itemshome::ItemStoreO,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    pub home: crate::Opaque,
-    pub b8: f64,
-    pub b4: f64,
     pub cap: f64,
 }
 impl ItemStore {
     /// what a new one holds
     pub fn blank() -> Self {
         ItemStore {
-            at: Vec::new(),
             o: crate::sim_itemshome::ItemStoreO::default(),
-            home: crate::Opaque,
-            b8: 0.0,
-            b4: 0.0,
             cap: 0.0,
         }
     }
@@ -61,14 +51,6 @@ pub struct ItemStoreO {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct ItemIo {
-    pub x: crate::sim_sim::SimExports,
-    pub par: f64,
-    pub ev: f64,
-    pub max_events: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct ITF {
     pub settled: f64,
     pub fired: f64,
@@ -78,19 +60,14 @@ pub struct ITF {
 #[derive(Clone, Debug, Default)]
 pub struct SimItemshomeModITEMSSTEPPED {
     pub there: f64,
-    pub here: f64,
     pub host: f64,
     pub walks: f64,
-    pub asked: f64,
-    pub differ: f64,
-    pub first: String,
     pub rays: f64,
     pub thing_rays: f64,
     pub substeps: f64,
     pub rested: f64,
     pub events: f64,
     pub steps_there: f64,
-    pub steps_here: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -127,16 +104,13 @@ pub struct ItemCols {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct SimItemshomeMod {
-    /// (src/sim/itemshome.ts:121 IO)
-    pub io: Option<crate::sim_itemshome::ItemIo>,
     /// (src/sim/itemshome.ts:137 ITEMS_STEPPED)
     pub items_stepped: crate::sim_itemshome::SimItemshomeModITEMSSTEPPED,
 }
 impl SimItemshomeMod {
     pub fn blank() -> Self {
         SimItemshomeMod {
-            io: None,
-            items_stepped: crate::sim_itemshome::SimItemshomeModITEMSSTEPPED { there: 0.0, here: 0.0, host: 0.0, walks: 0.0, asked: 0.0, differ: 0.0, first: String::from(""), rays: 0.0, thing_rays: 0.0, substeps: 0.0, rested: 0.0, events: 0.0, steps_there: 0.0, steps_here: 0.0 },
+            items_stepped: crate::sim_itemshome::SimItemshomeModITEMSSTEPPED { there: 0.0, host: 0.0, walks: 0.0, rays: 0.0, thing_rays: 0.0, substeps: 0.0, rested: 0.0, events: 0.0, steps_there: 0.0 },
         }
     }
 }

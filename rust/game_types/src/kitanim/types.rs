@@ -28,35 +28,8 @@ impl ReloadKind {
     }
 }
 
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitanimModKITANIMLOGItem {
-    pub t: f64,
-    pub what: crate::kitanim::KitanimModKITANIMLOGItemWhat,
-    pub from: Option<crate::character::KitItem>,
-    pub to: Option<crate::character::KitItem>,
-    pub kind: Option<crate::kitanim::ReloadKind>,
-    pub secs: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum KitanimModKITANIMLOGItemWhat {
-    #[default] Reload,
-    Swap,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct NoteRow {
-    pub kind: Option<crate::kitanim::ReloadKind>,
-    pub from: Option<crate::character::KitItem>,
-    pub to: Option<crate::character::KitItem>,
-    pub what: crate::kitanim::NoteRowWhat,
-    pub secs: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum NoteRowWhat {
-    #[default] Reload,
-    Swap,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -78,20 +51,6 @@ pub struct KitReload {
     pub kind: crate::kitanim::ReloadKind,
     pub row: crate::weapons::WeaponDefReload,
     pub beat: crate::character::ReloadBeat,
-}
-
-/// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
-pub struct KitanimMod {
-    /// (src/game/kitanim.ts:86 KITANIM_LOG)
-    pub kitanim_log: Vec<crate::kitanim::KitanimModKITANIMLOGItem>,
-}
-impl KitanimMod {
-    pub fn blank() -> Self {
-        KitanimMod {
-            kitanim_log: Vec::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

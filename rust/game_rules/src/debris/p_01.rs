@@ -120,7 +120,6 @@ pub fn debris_landings(g: &mut crate::game::Game) {
 /// spawn() without the glass door; `told` = the simulation has this piece's landing.   (debris.ts Debris.spawnRaw)
 pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: BoxId, v: V3, w: V3, who: Option<f64>, told: Option<bool>) -> Option<DebrisChunkId> {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
-    let told = told.unwrap_or(false);
     while (g.destr.debris.list.len() as f64) >= DEBRIS_CAP {
         let list = g.destr.debris.list.clone();
         let mut ok = |g: &mut Game, c: DebrisChunkId| evictable(g, c);
@@ -205,7 +204,7 @@ pub fn debris_impulse(g: &mut crate::game::Game, imp: crate::sheet_model::Impuls
     g.destr.debris.impulses += 1.0;
     let k = g.destr.debris.impulses;
     let di = debris_imp();
-    let resp = crate::sheet_model::ImpulseResponse { gain: di.gain, up_k: di.up_k, v_max: di.v_max, wake: di.wake };
+    let resp = crate::sheet_model::ImpulseResponse { gain: di.gain, up_k: di.up_k };
     let mut i = 0;
     while i < g.destr.debris.list.len() {
         let c = g.destr.debris.list[i];

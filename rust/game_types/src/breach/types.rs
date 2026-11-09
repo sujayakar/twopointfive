@@ -101,7 +101,6 @@ pub enum Phase {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct BreachDrillBeatsItem {
-    pub t: f64,
     pub what: String,
 }
 
@@ -109,7 +108,6 @@ pub struct BreachDrillBeatsItem {
 pub struct OpFlow {
     pub st: crate::breach::FlowSt,
     pub t0: f64,
-    pub wps: Vec<V3>,
     pub sweep: crate::squad::Sweep,
     pub aim: V3,
     pub q: Vec<usize>,
@@ -117,7 +115,6 @@ pub struct OpFlow {
     pub since: f64,
     pub n: f64,
     pub next: f64,
-    pub said: bool,
     pub in_at: f64,
     pub corner_at: f64,
     pub hold_at: f64,

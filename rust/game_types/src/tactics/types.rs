@@ -30,8 +30,6 @@ pub struct Role {
     pub kind: crate::tactics::RoleKind,
     pub plan: TacticsPlanId,
     pub hold_at: Option<V3>,
-    pub route: Vec<V3>,
-    pub len: f64,
     pub bearing: f64,
     pub avoid: Option<JsSet<crate::Num>>,
     pub set: bool,
@@ -47,20 +45,14 @@ pub struct Role {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Plan {
-    pub id: f64,
     pub team: crate::teams::Team,
     pub target: V3,
     pub t0: f64,
     pub replanned_at: f64,
-    pub replans: f64,
     pub members: Vec<GuardId>,
     pub roles: JsMap<GuardId, TacticsRoleId>,
     pub phase: crate::tactics::PlanPhase,
     pub go_t: f64,
-    pub why: String,
-    pub presser_bearing: f64,
-    pub presser_len: f64,
-    pub corridor: JsSet<crate::Num>,
     pub first_arrive_t: f64,
     pub last_radio_t: f64,
     pub contact: bool,
@@ -77,8 +69,6 @@ pub enum PlanPhase {
 pub struct Lone {
     pub fix: V3,
     pub hold_at: Option<V3>,
-    pub los: bool,
-    pub t0: f64,
     pub hold_t: f64,
     pub called: bool,
     pub released: bool,
@@ -145,8 +135,6 @@ pub struct Gate {
     pub path: Option<Vec<V3>>,
     pub path_i: f64,
     pub path_for: Option<V3>,
-    pub stall_ref: Option<V3>,
-    pub stall_t: f64,
     pub can: Option<ItemId>,
     pub toss_t: f64,
     pub land_t: f64,
@@ -215,7 +203,6 @@ pub struct TacticsModKitValue {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct LoneCorner {
     pub p: V3,
-    pub los: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

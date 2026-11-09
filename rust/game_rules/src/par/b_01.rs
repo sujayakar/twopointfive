@@ -43,7 +43,7 @@ pub fn par_result(d: &ParData, secs: f64, lost: f64, of: f64) -> ParResult {
     line.push_str(" · ");
     if medal == Medal::None { line.push_str("no medal"); } else { line.push_str(&medal.as_str().to_uppercase()); }
     if let Some(n) = &next { line.push_str(&format!(" · {} was {}", n.medal.as_str(), clock(n.bar))); }
-    ParResult { secs, lost, of, penalty, total, shown, medal, next, line }
+    ParResult { secs, lost, penalty, total, shown, medal, next, line }
 }
 
 /// the level's par while it is LIVE: the block there, its room clear up, no show running (None = stood down)

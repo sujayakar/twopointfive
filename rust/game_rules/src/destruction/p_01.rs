@@ -132,7 +132,7 @@ pub fn destruction_new(g: &mut crate::game::Game) -> crate::destruction::Destruc
     destruction_index(g);
     g.destr.walls = Box::new(crate::wallbreak::wall_break_new(g));
     g.destr.edge_look = crate::edge_look::edge_look_new(g);
-    g.destr.breaks.look = Some(crate::break_table::BreaksLook { on: g.m.edge_look.edge.on });
+    g.destr.breaks.look = Some(crate::break_table::BreaksLook {  });
     g.destr.furn = crate::furnblast::furniture_new(g);
     core::mem::replace(&mut g.destr, Destruction::blank())
 }
@@ -185,7 +185,7 @@ pub fn destruction_index(g: &mut crate::game::Game) {
             None
         };
         let Some(kind) = kind else { continue };
-        let mut d = Destructible { i: i as f64, kind, box_: b, flags0: flags, mate: None, target: None, group: None };
+        let mut d = Destructible { i: i as f64, kind, box_: b, mate: None, target: None, group: None };
         if kind == DKind::Screen || kind == DKind::Tv {
             if let Some(&t) = g.destr.target_of_box.get(crate::Num(i as f64)) {
                 d.target = Some(t);
@@ -227,7 +227,7 @@ pub fn destruction_index(g: &mut crate::game::Game) {
             let had = g.destr.items.get(best_key).cloned();
             let mut hd = match had {
                 Some(d) => d,
-                None => Destructible { i: best as f64, kind: DKind::Housing, box_: BoxId::from_ix(best), flags0: seam_box(g, BoxId::from_ix(best)).flags, mate: None, target: None, group: None },
+                None => Destructible { i: best as f64, kind: DKind::Housing, box_: BoxId::from_ix(best), mate: None, target: None, group: None },
             };
             hd.kind = DKind::Housing;
             hd.mate = Some(si as f64);

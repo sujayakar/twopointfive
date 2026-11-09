@@ -38,7 +38,7 @@ fn pick(a: V3, h: V3) -> f64 {
 /// (markings.ts faceHalf)
 fn half_of(h: V3, f: usize) -> FaceHalf {
     let ax = face_axes()[f];
-    FaceHalf { hu: pick(ax.u, h), hv: pick(ax.v, h), hn: pick(ax.n, h) }
+    FaceHalf { hn: pick(ax.n, h) }
 }
 
 /// (markings.ts resolveAlbedo)
@@ -76,7 +76,7 @@ pub fn mark_stats(m: &crate::scene_markings::MarkingDef, base: V3, texel_base: O
             for ch in 0..3 { d_albedo[ch] += f[k] * (alb[k][ch] - base[ch]); }
         }
     }
-    MarkStats { texel: t, w, h, f, alb, mean_l, area: (w * t) * (h * t), d_albedo, emask: emask as f64 }
+    MarkStats { f, alb, mean_l, area: (w * t) * (h * t), d_albedo, emask: emask as f64 }
 }
 
 /// The world centre, half sizes and outward normal of a marking's bitmap on box (c, h, yaw): where the game stands its light. (markings.ts markWorldRect)

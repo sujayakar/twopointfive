@@ -6,7 +6,6 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct BlastReport {
     pub at: V3,
-    pub who: f64,
     pub hits: Vec<crate::frag::BlastHit>,
     pub killed: f64,
     pub finished: f64,
@@ -19,12 +18,9 @@ pub struct BlastReport {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct BlastHit {
     pub id: f64,
-    pub name: String,
     pub team: crate::teams::Team,
-    pub d: f64,
     pub exposed: f64,
     pub result: crate::frag::BlastResult,
-    pub down: Option<bool>,
     pub behind: Option<crate::frag::BlastHitBehind>,
 }
 
