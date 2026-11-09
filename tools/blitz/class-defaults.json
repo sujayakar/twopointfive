@@ -23,7 +23,7 @@
 "edge_look::EdgeLook":{"plain":{"last":0}},
 "fogofwar::FogOfWar":{"plain":{"bared":false,"lampN":0,"lookFrames":0,"rawAt":-1,"viewer":false},
 "lists":["lampPick","rawList"]},
-"game::Game":{"plain":{"dynRaw":0,"fogHeld":null,"menBare":false,"menStatured":true,"replayTap":null},
+"game::Game":{"plain":{"dynRaw":0,"fogHeld":null,"mPerPx":0.01,"menBare":false,"menStatured":true,"replayTap":null},
 "typed":{"reachInterior":["Uint8Array",1120],"viewProj":["Float32Array",16]}},
 "game::GameRigFitOfValue":{"plain":{"ms":0,"pad":0,"verts":32194},
 "typed":{"r0":["Float32Array",15],"r1":["Float32Array",15]}},
@@ -52,4 +52,5 @@
 "verdict::Verdict":{"plain":{"kept":null,"taken":null}},
 "wallbreak::Breakable":{"typed":{"dmg":["Float32Array",5],"open":["Uint8Array",5]}},
 "wallbreak::WallBreak":{"typed":{"scratch":["Int32Array",96],"scratch2":["Int32Array",96]}},
-"wallcharge::WallCharge":{"typed":{"nearby":["Int32Array",48]}}}
+"wallcharge::WallCharge":{"typed":{"nearby":["Int32Array",48]}},
+"weather::Weather":{"plain":{"camYaw":0}}}
