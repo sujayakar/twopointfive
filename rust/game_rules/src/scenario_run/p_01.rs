@@ -74,12 +74,10 @@ pub fn fog_of_link(g: &crate::game::Game, q: &crate::query::Query) -> bool {
     if q.has("nofow") || q.has("nofogofwar") {
         return false;
     }
-    let four = q.has("squad4") && !q.has("nightbreach") && !q.has("rescue") && !q.has("quiet");
+    use crate::scene_scenario_list::{kind_of, ScenarioSpecKind as Kind};
     q.has("fow")
         || q.has("fogofwar")
-        || q.has("roomclear")
-        || q.has("rescue")
-        || four
+        || matches!(kind_of(q), Some(Kind::Roomclear | Kind::Rescue))
         || quiet_rung_of_query(g, q) != crate::quietfog::QuietRung::Off
 }
 
