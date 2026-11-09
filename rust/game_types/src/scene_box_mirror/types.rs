@@ -4,54 +4,6 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, Default)]
-pub struct PaneSite {
-    pub u: f64,
-    pub v: f64,
-    pub rot: f64,
-    pub n: f64,
-    pub seed: f64,
-    pub rho: Vec<f64>,
-    pub rz: f64,
-    pub merge: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PaneDice {
-    pub u: f64,
-    pub v: f64,
-    pub cols: f64,
-    pub rows: f64,
-    pub seed: f64,
-    pub hu: f64,
-    pub hv: f64,
-    pub next: f64,
-    pub out: Vec<u8>,
-    pub clumps: Vec<crate::scene_box_mirror::PaneDiceClumpsItem>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PaneDiceClumpsItem {
-    pub k: f64,
-    pub key: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PaneRow {
-    pub bi: f64,
-    pub gone: bool,
-    pub run: bool,
-    pub sites: Vec<crate::scene_box_mirror::PaneSite>,
-    pub open: Vec<u8>,
-    pub pending: Vec<crate::scene_box_mirror::PaneRowPendingItem>,
-    pub dice: Option<crate::scene_box_mirror::PaneDice>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PaneRowPendingItem {
-    pub fid: f64,
-}
-
-#[derive(Clone, Debug, Default)]
 pub struct PaneView {
     pub kind: f64,
     pub bi: Vec<f64>,
@@ -225,34 +177,6 @@ pub struct SceneBoxMirrorModTHINGS {
     pub n: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct NAV {
-    pub no_way: f64,
-    pub ask_host: f64,
-    pub need: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FACE {
-    pub lamp: f64,
-    pub max_lamps: f64,
-    pub blob: f64,
-    pub max_blobs: f64,
-    pub graze_a: f64,
-    pub graze_b: f64,
-    pub over: f64,
-    pub far: f64,
-    pub walled: f64,
-    pub sealed: f64,
-    pub routed: f64,
-    pub routed_door: f64,
-    pub q_lens: f64,
-    pub q_unseen: f64,
-    pub q_smoked: f64,
-    pub a_visible: f64,
-    pub a_in_cone: f64,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct SceneBoxMirrorMod {
@@ -330,12 +254,6 @@ pub const T_CUT: f64 = 2.0;
 /// (src/scene/boxMirror.ts:39 T_PANE_T)
 pub const T_PANE_T: f64 = 3.0;
 
-/// (src/scene/boxMirror.ts:39 T_FLAGS)
-pub const T_FLAGS: f64 = 4.0;
-
-/// (src/scene/boxMirror.ts:39 T_LEAF_FLAGS)
-pub const T_LEAF_FLAGS: f64 = 5.0;
-
 /// (src/scene/boxMirror.ts:39 T_START)
 pub const T_START: f64 = 6.0;
 
@@ -345,104 +263,17 @@ pub const T_ITEMS: f64 = 7.0;
 /// (src/scene/boxMirror.ts:39 T_TILTED)
 pub const T_TILTED: f64 = 8.0;
 
-/// (src/scene/boxMirror.ts:39 T_PANE_BI)
-pub const T_PANE_BI: f64 = 9.0;
-
-/// (src/scene/boxMirror.ts:39 T_WORLDS)
-pub const T_WORLDS: f64 = 10.0;
-
-/// (src/scene/boxMirror.ts:39 T_PT)
-pub const T_PT: f64 = 12.0;
-
 /// (src/scene/boxMirror.ts:39 T_LIST)
 pub const T_LIST: f64 = 13.0;
 
 /// (src/scene/boxMirror.ts:39 T_THING)
 pub const T_THING: f64 = 14.0;
 
-/// (src/scene/boxMirror.ts:39 T_THING_LIVE)
-pub const T_THING_LIVE: f64 = 15.0;
-
 /// (src/scene/boxMirror.ts:40 T_GLASS)
 pub const T_GLASS: f64 = 16.0;
 
-/// (src/scene/boxMirror.ts:40 T_GLASS_W)
-pub const T_GLASS_W: f64 = 17.0;
-
-/// (src/scene/boxMirror.ts:40 T_GLASS_OF)
-pub const T_GLASS_OF: f64 = 18.0;
-
 /// (src/scene/boxMirror.ts:40 T_VIEW)
 pub const T_VIEW: f64 = 19.0;
-
-/// (src/scene/boxMirror.ts:40 T_VIEW_BI)
-pub const T_VIEW_BI: f64 = 20.0;
-
-/// (src/scene/boxMirror.ts:40 T_SNOW)
-pub const T_SNOW: f64 = 21.0;
-
-/// (src/scene/boxMirror.ts:42 GD)
-pub const GD: f64 = 80.0;
-
-/// (src/scene/boxMirror.ts:42 GW)
-pub const GW: f64 = 64.0;
-
-/// (src/scene/boxMirror.ts:42 G_SITE)
-pub const G_SITE: f64 = 9.0;
-
-/// (src/scene/boxMirror.ts:42 G_SITES)
-pub const G_SITES: f64 = 8.0;
-
-/// (src/scene/boxMirror.ts:42 G_DICE_AT)
-pub const G_DICE_AT: f64 = 72.0;
-
-/// (src/scene/boxMirror.ts:42 GW_FLAGS)
-pub const GW_FLAGS: f64 = 1.0;
-
-/// (src/scene/boxMirror.ts:42 GW_COLS)
-pub const GW_COLS: f64 = 2.0;
-
-/// (src/scene/boxMirror.ts:42 GW_ROWS)
-pub const GW_ROWS: f64 = 3.0;
-
-/// (src/scene/boxMirror.ts:42 GW_DSEED)
-pub const GW_DSEED: f64 = 4.0;
-
-/// (src/scene/boxMirror.ts:42 GW_N)
-pub const GW_N: f64 = 5.0;
-
-/// (src/scene/boxMirror.ts:42 GW_SEED)
-pub const GW_SEED: f64 = 13.0;
-
-/// (src/scene/boxMirror.ts:42 GW_OPEN)
-pub const GW_OPEN: f64 = 21.0;
-
-/// (src/scene/boxMirror.ts:42 GW_GOING)
-pub const GW_GOING: f64 = 42.0;
-
-/// (src/scene/boxMirror.ts:42 GW_CRATER)
-pub const GW_CRATER: f64 = 63.0;
-
-/// (src/scene/boxMirror.ts:42 GW_BITS)
-pub const GW_BITS: f64 = 21.0;
-
-/// (src/scene/boxMirror.ts:43 G_GONE)
-pub const G_GONE: f64 = 1.0;
-
-/// (src/scene/boxMirror.ts:43 G_DICE)
-pub const G_DICE: f64 = 2.0;
-
-/// (src/scene/boxMirror.ts:43 G_RUN)
-pub const G_RUN: f64 = 4.0;
-
-/// (src/scene/boxMirror.ts:43 VD)
-pub const VD: f64 = 4.0;
-
-/// (src/scene/boxMirror.ts:43 FRAGS_PER_SITE)
-pub const FRAGS_PER_SITE: f64 = 84.0;
-
-/// (src/scene/boxMirror.ts:43 SECTORS)
-pub const SECTORS: f64 = 12.0;
 
 /// (src/scene/boxMirror.ts:45 THING_SET)
 pub const THING_SET: f64 = 2.0;
@@ -480,14 +311,6 @@ pub const VIEW_BLOWN: f64 = 1.0;
 /// (src/scene/boxMirror.ts:79 VIEW_GIVES)
 pub const VIEW_GIVES: f64 = 2.0;
 
-/// (src/scene/boxMirror.ts:93 NO_SHEETS: a table nothing writes)
-pub fn no_sheets() -> Vec<f64> { Vec::new() }
-
 /// (src/scene/boxMirror.ts:101 MIRRORED: a table nothing writes)
 pub fn mirrored() -> f64 { 4294901770.0 }
 
-/// (src/scene/boxMirror.ts:108 NAV: a table nothing writes)
-pub fn nav() -> crate::scene_box_mirror::NAV { crate::scene_box_mirror::NAV { no_way: -1.0, ask_host: -2.0, need: -3.0 } }
-
-/// (src/scene/boxMirror.ts:109 FACE: a table nothing writes)
-pub fn face() -> crate::scene_box_mirror::FACE { crate::scene_box_mirror::FACE { lamp: 16.0, max_lamps: 256.0, blob: 6.0, max_blobs: 64.0, graze_a: 1.0, graze_b: 2.0, over: 4.0, far: 8.0, walled: 16.0, sealed: 0.0, routed: 1.0, routed_door: 3.0, q_lens: 1.0, q_unseen: 2.0, q_smoked: 4.0, a_visible: 1.0, a_in_cone: 2.0 } }

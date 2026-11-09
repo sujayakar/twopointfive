@@ -27,43 +27,6 @@ impl LayerCast {
 pub struct LoosePose { pub nodes: u32, pub floats: Vec<f32> }
 impl Pose { /** a place at or past this names a row of Game.loose_poses, no place in the pool */ pub const LOOSE: u32 = 0xffff0000; }
 
-/// WHICH TABLE OF A LAYER'S KEPT COLUMNS (anim/skeleton.ts LayerCols): a static table of character.ts, 26 of CharacterAnimator and Character's turnCols. It captures nothing; whose columns they are is said at the call. get and put of each arm are generated from the TypeScript's tables, as their order is the contract with rust/sim/src/layers.rs
-#[derive(Clone, Copy, Debug)]
-pub enum ColsTable {
-    Act,
-    Lean,
-    Gaze,
-    MvPre,
-    MvPost,
-    MvPostArm,
-    HandsPass,
-    RunPlant,
-    Life,
-    LongArm,
-    Wall,
-    Hand,
-    Kick,
-    Tell,
-    Watch,
-    Creep,
-    Stealth,
-    Cable,
-    Kit,
-    Rd,
-    Door,
-    Work,
-    Hold,
-    Held,
-    Big,
-    Throw,
-    Turn,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ColsOf {
-    pub n: f64,
-}
-
 #[derive(Clone, Debug, ToBytes)]
 pub struct PoseSet {
     pub list: Vec<crate::anim_skeleton::Pose>,
@@ -144,11 +107,6 @@ pub struct AnimSkeletonModLAYERSNames {
     pub roles: Vec<String>,
     pub lists: Vec<String>,
     pub nums: Vec<String>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LayerCols {
-    pub n: f64,
 }
 
 #[derive(Clone, Debug, Default)]

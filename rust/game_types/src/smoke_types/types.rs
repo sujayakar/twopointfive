@@ -60,14 +60,6 @@ pub enum SmokeEmitterMode {
     Burst,
     Jet,
 }
-impl SmokeEmitterMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SmokeEmitterMode::Burst => "burst",
-            SmokeEmitterMode::Jet => "jet",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SmokePush {
@@ -85,14 +77,6 @@ pub struct SmokePush {
 pub enum SmokePushLattice {
     Fine,
     Coarse,
-}
-impl SmokePushLattice {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SmokePushLattice::Fine => "fine",
-            SmokePushLattice::Coarse => "coarse",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -120,14 +104,6 @@ pub struct WindGpuSource {
 pub enum WindGpuSourceKind {
     #[default] Jet,
     Storm,
-}
-impl WindGpuSourceKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WindGpuSourceKind::Jet => "jet",
-            WindGpuSourceKind::Storm => "storm",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

@@ -11,7 +11,6 @@ use crate::character::Bone;
 use crate::game::{GuardBodyDuty, GuardBodyDutyRole, GuardBodyDutyStage, GuardBubble, GuardState, GuardTask, GuardTaskCheckOn};
 use crate::teams::Team;
 
-
 // ---- small readers
 
 /// `g.audio.play(name, at, vol)`
@@ -250,18 +249,6 @@ pub fn raise_escalation(g: &mut crate::game::Game, to: f64, except: Option<Guard
             plan_clears(g, Some(false), Some(why));
         }
     }
-}
-
-/// Panel: the floor calm again at once, without touching the men themselves.   (guards.ts standDownEscalation)
-pub fn stand_down_escalation(g: &mut crate::game::Game) {
-    g.escalation = 0.0;
-    g.escalation_t = -1.0;
-    g.alarm.episode = false;
-    g.alarm.placed = false;
-    if g.clearing.is_some() { crate::squad::clearing_cancel(g); }
-    g.clearing = None;
-    g.cleared_at.clear();
-    clear_lockdown(g);
 }
 
 // ---- the net's radio check

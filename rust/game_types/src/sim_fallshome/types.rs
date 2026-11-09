@@ -49,22 +49,6 @@ impl FallStore {
 }
 impl Default for FallStore { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FP {
-    pub t: f64,
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
-    pub name: f64,
-    pub gain: f64,
-    pub rate: f64,
-    pub amount: f64,
-    pub who: f64,
-    pub event: f64,
-    pub level: f64,
-    pub dust: f64,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct SimFallshomeModFALLS {
     pub both: bool,
@@ -93,33 +77,9 @@ pub enum FallStoreLandingKey {
     Rate,
     Amount,
 }
-impl FallStoreLandingKey {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FallStoreLandingKey::Dust => "dust",
-            FallStoreLandingKey::X => "x",
-            FallStoreLandingKey::T => "t",
-            FallStoreLandingKey::Y => "y",
-            FallStoreLandingKey::Z => "z",
-            FallStoreLandingKey::Name => "name",
-            FallStoreLandingKey::Level => "level",
-            FallStoreLandingKey::Who => "who",
-            FallStoreLandingKey::Event => "event",
-            FallStoreLandingKey::Gain => "gain",
-            FallStoreLandingKey::Rate => "rate",
-            FallStoreLandingKey::Amount => "amount",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct FallStoreStep {
-    pub level: f64,
-    pub k: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct StepHere {
     pub level: f64,
     pub k: f64,
 }
@@ -147,9 +107,6 @@ pub const FALL_CELLS_X: f64 = 80.0;
 /// (src/sim/fallshome.ts:20 FALL_CELLS_Z)
 pub const FALL_CELLS_Z: f64 = 56.0;
 
-/// (src/sim/fallshome.ts:20 FALL_CELL_MAX)
-pub const FALL_CELL_MAX: f64 = 0.25;
-
 /// (src/sim/fallshome.ts:20 FALL_MAXP)
 pub const FALL_MAXP: f64 = 96.0;
 
@@ -164,36 +121,6 @@ pub const FALL_LISTS: f64 = 2.0;
 
 /// (src/sim/fallshome.ts:23 NCELLS)
 pub const NCELLS: f64 = 4480.0;
-
-/// (src/sim/fallshome.ts:25 FP: a table nothing writes)
-pub fn fp() -> crate::sim_fallshome::FP { crate::sim_fallshome::FP { t: 0.0, x: 1.0, y: 2.0, z: 3.0, name: 4.0, gain: 5.0, rate: 6.0, amount: 7.0, who: 8.0, event: 9.0, level: 10.0, dust: 11.0 } }
-
-/// (src/sim/fallshome.ts:26 NP)
-pub const NP: f64 = 12.0;
-
-/// (src/sim/fallshome.ts:26 DUE)
-pub const DUE: f64 = 10.0;
-
-/// (src/sim/fallshome.ts:29 LIST)
-pub const LIST: f64 = 1152.0;
-
-/// (src/sim/fallshome.ts:29 O_P)
-pub const O_P: f64 = 4480.0;
-
-/// (src/sim/fallshome.ts:29 O_N)
-pub const O_N: f64 = 6784.0;
-
-/// (src/sim/fallshome.ts:29 O_ANY)
-pub const O_ANY: f64 = 6786.0;
-
-/// (src/sim/fallshome.ts:29 O_LAST)
-pub const O_LAST: f64 = 6787.0;
-
-/// (src/sim/fallshome.ts:30 FALL_LEN)
-pub const FALL_LEN: f64 = 6790.0;
-
-/// (src/sim/fallshome.ts:32 FALL_SOUNDS: a table nothing writes)
-pub fn fall_sounds() -> [String; 2] { [String::from("glassTinkle"), String::from("glassShatter")] }
 
 /// (src/sim/fallshome.ts:35 FALL_UNHEARD)
 pub const FALL_UNHEARD: f64 = 0.0;

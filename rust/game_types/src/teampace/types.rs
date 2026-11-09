@@ -73,50 +73,6 @@ pub struct TeampaceModAimSeenValue {
     pub since: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum IsRunWhy {
-    Blast,
-    Cover,
-    Follow,
-    Told,
-    Close,
-    Fight,
-}
-impl IsRunWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            IsRunWhy::Blast => "blast",
-            IsRunWhy::Cover => "cover",
-            IsRunWhy::Follow => "follow",
-            IsRunWhy::Told => "told",
-            IsRunWhy::Close => "close",
-            IsRunWhy::Fight => "fight",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum TeamLeaveWhy {
-    Blast,
-    Cover,
-    Follow,
-    Told,
-    Close,
-    Fight,
-}
-impl TeamLeaveWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TeamLeaveWhy::Blast => "blast",
-            TeamLeaveWhy::Cover => "cover",
-            TeamLeaveWhy::Follow => "follow",
-            TeamLeaveWhy::Told => "told",
-            TeamLeaveWhy::Close => "close",
-            TeamLeaveWhy::Fight => "fight",
-        }
-    }
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct TeampaceMod {
@@ -152,18 +108,6 @@ pub struct TeampaceStats {
     pub told: i32,
     pub secs: f64,
 }
-
-/// (src/game/teampace.ts:104 PACING_BREAK)
-pub const PACING_BREAK: bool = false;
-
-/// (src/game/teampace.ts:105 DOORBRISK_BREAK: a table nothing writes)
-pub fn doorbrisk_break() -> String { String::from("") }
-
-/// (src/game/teampace.ts:106 WALKAIM_BREAK)
-pub const WALKAIM_BREAK: bool = false;
-
-/// (src/game/teampace.ts:107 BREAK)
-pub const BREAK: bool = false;
 
 /// (src/game/teampace.ts:120 FRAME)
 pub const FRAME: f64 = 0.1;

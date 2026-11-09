@@ -43,22 +43,6 @@ pub fn rescue_over(g: &crate::game::Game) -> bool { g.rescue.result.is_some() }
 /// Dynamic tempo: the clock is running. (rescue.ts Rescue.dynamic)
 pub fn rescue_dynamic(g: &crate::game::Game) -> bool { !g.rescue.t0.is_nan() }
 
-/// What F does for a caller that is not the key. (rescue.ts Rescue.press)
-pub fn rescue_press(g: &mut crate::game::Game) -> Option<crate::rescue::RescuePress> {
-    if !g.rescue.active || g.pl[g.player].down { return None; }
-    crate::doortools::door_tools_sync(g);
-    if !g.door_tools.set.is_empty() {
-        crate::doortools::door_tools_trigger(g, None);
-        return Some(RescuePress::Blow);
-    }
-    match rescue_order_door(g) {
-        Some(RescueOrderDoor::Stack) => Some(RescuePress::Stack),
-        Some(RescueOrderDoor::Go) => Some(RescuePress::Go),
-        Some(RescueOrderDoor::Bang) => Some(RescuePress::Bang),
-        None => None,
-    }
-}
-
 /// Sam's word on the hostage room. (rescue.ts Rescue.orderDoor)
 pub fn rescue_order_door(g: &mut crate::game::Game) -> Option<crate::rescue::RescueOrderDoor> {
     if !g.rescue.active || rescue_over(g) || g.pl[g.player].down { return None; }

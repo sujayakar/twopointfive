@@ -343,20 +343,6 @@ pub fn firearm_rearm(g: &mut crate::game::Game, id: FirearmId) {
     fa.mag = Some(cap - if top_up { 0.0 } else { 1.0 });
 }
 
-/// no magazine holding more than the row's magazine does now (weapons.ts Firearm.fit)
-pub fn firearm_fit(g: &mut crate::game::Game, id: FirearmId) {
-    let def = g.fa[id].def;
-    let cap = row(g, def).mag_capacity;
-    let room = firearm_mag_room(g, id);
-    let fa = &mut g.fa[id];
-    if let Some(n) = fa.mag {
-        if n > room { fa.mag = Some(room); }
-    }
-    for s in fa.spare.iter_mut() {
-        if *s > cap { *s = cap; }
-    }
-}
-
 /// the staged reload's clock: out, in, rack, done, each once (weapons.ts Firearm.update)
 pub fn firearm_update(g: &mut crate::game::Game, id: FirearmId, dt: f64) {
     if !firearm_reloading(g, id) { return; }

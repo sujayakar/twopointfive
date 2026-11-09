@@ -32,15 +32,6 @@ pub enum DropFromHandKind {
     Rifle,
     Torch,
 }
-impl DropFromHandKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DropFromHandKind::Pistol => "pistol",
-            DropFromHandKind::Rifle => "rifle",
-            DropFromHandKind::Torch => "torch",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct HammerSide {

@@ -435,47 +435,6 @@ pub fn dark_foe_tick(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// The debug panel's line: what the rule has of each man it rules.   (darkfoe.ts darkFoeSummary)
-pub fn dark_foe_summary(g: &mut crate::game::Game) -> String {
-    let mut men: Vec<String> = Vec::new();
-    let mut i = 0;
-    while i < g.guards.len() {
-        let gd = g.guards[i];
-        i += 1;
-        if !dark_foe_ruled(g, gd) { continue; }
-        let s = g.m.darkfoe.state_of.get(gd).copied();
-        let has = carries_dark_lamp(g, gd);
-        let what = match s {
-            Some(s) if s.knows || s.word => {
-                if s.lit {
-                    String::from("lamp ON")
-                } else if !s.blind {
-                    String::from("can see")
-                } else if has {
-                    String::from("blind, lamp coming")
-                } else if js::truthy(s.moves) {
-                    String::from("no light, walked")
-                } else {
-                    let c = g.gd[gd].ch;
-                    let pos = g.ch[c].pos;
-                    let why = if dark_foe_sees(g, pos, None) {
-                        String::from(" by lit floor")
-                    } else if dark_foe_kept(g, gd, None).is_some() {
-                        alloc::format!(" ({})", dark_foe_kept(g, gd, None).unwrap_or_default())
-                    } else {
-                        String::new()
-                    };
-                    alloc::format!("no light, blind{}", why)
-                }
-            }
-            _ => String::from("does not know"),
-        };
-        men.push(alloc::format!("{} {}", g.gd[gd].callsign, what));
-    }
-    let list = men.join(" \u{b7} ");
-    alloc::format!("dark \u{25b8} {}", if list.is_empty() { "no defender with a dark light" } else { list.as_str() })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

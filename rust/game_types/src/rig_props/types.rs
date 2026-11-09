@@ -262,13 +262,6 @@ pub struct RigM4 {
     pub gl: crate::rig_props::Seg,
 }
 
-#[derive(Clone, Debug)]
-pub enum TreeValue {
-    Num(f64),
-    Array(Vec<f64>),
-    Arm2(JsMap<String, crate::rig_props::TreeValue>),
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Frame {
     pub o: V3,
@@ -325,28 +318,11 @@ pub enum RigOptsWeapon {
     Carbine,
     Sc20k,
 }
-impl RigOptsWeapon {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RigOptsWeapon::Pistol => "pistol",
-            RigOptsWeapon::Carbine => "carbine",
-            RigOptsWeapon::Sc20k => "sc20k",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RigOptsRifle {
     Hand,
     Slung,
-}
-impl RigOptsRifle {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RigOptsRifle::Hand => "hand",
-            RigOptsRifle::Slung => "slung",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -364,14 +340,6 @@ pub struct KitDraw {
 pub enum RigOptsBig {
     Shotgun,
     Hammer,
-}
-impl RigOptsBig {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RigOptsBig::Shotgun => "shotgun",
-            RigOptsBig::Hammer => "hammer",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -482,20 +450,6 @@ pub struct BIGRIGClear {
     pub shotgun: f64,
 }
 
-#[derive(Clone, Debug)]
-pub enum AssignTreeDstValue {
-    Num(f64),
-    Array(Vec<f64>),
-    Arm2(JsMap<String, crate::rig_props::AssignTreeDstValue>),
-}
-
-#[derive(Clone, Debug)]
-pub enum AssignTreeSrcValue {
-    Num(f64),
-    Array(Vec<f64>),
-    Arm2(JsMap<String, crate::rig_props::AssignTreeSrcValue>),
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PistolFrameP {
     pub adj: Option<crate::rig_props::Adj>,
@@ -519,13 +473,6 @@ pub struct LongLookOf {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct ModelGrip {
-    pub wrist: V3,
-    pub fingers: V3,
-    pub back: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct HolsterBoxesParts {
     pub slide: crate::rig_props::Seg,
     pub grip: crate::rig_props::Seg,
@@ -539,22 +486,8 @@ pub struct CarbineFrame {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct CarbineGrip {
-    pub wrist: V3,
-    pub fingers: V3,
-    pub back: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct LongGripOfG {
     pub off: V3,
-    pub fingers: V3,
-    pub back: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LongGripOf {
-    pub wrist: V3,
     pub fingers: V3,
     pub back: V3,
 }
@@ -579,14 +512,6 @@ pub enum Sc20kFrameWhere {
     Hand,
     Slung,
 }
-impl Sc20kFrameWhere {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Sc20kFrameWhere::Hand => "hand",
-            Sc20kFrameWhere::Slung => "slung",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Sc20kFrame {
@@ -599,34 +524,11 @@ pub enum Sc20kBoxesWhere {
     Hand,
     Slung,
 }
-impl Sc20kBoxesWhere {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Sc20kBoxesWhere::Hand => "hand",
-            Sc20kBoxesWhere::Slung => "slung",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Sc20kGrip {
-    pub wrist: V3,
-    pub fingers: V3,
-    pub back: V3,
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum LongHoldWeapon {
     Carbine,
     Sc20k,
-}
-impl LongHoldWeapon {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LongHoldWeapon::Carbine => "carbine",
-            LongHoldWeapon::Sc20k => "sc20k",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -653,15 +555,6 @@ pub enum RigTorchPosWeapon {
     Carbine,
     Sc20k,
 }
-impl RigTorchPosWeapon {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RigTorchPosWeapon::Pistol => "pistol",
-            RigTorchPosWeapon::Carbine => "carbine",
-            RigTorchPosWeapon::Sc20k => "sc20k",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TorchCarryDirLow {
@@ -674,29 +567,12 @@ pub enum BigClearOfKind {
     Shotgun,
     Hammer,
 }
-impl BigClearOfKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BigClearOfKind::Shotgun => "shotgun",
-            BigClearOfKind::Hammer => "hammer",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum PackSideDimsWhat {
     Rifle,
     Shotgun,
     Hammer,
-}
-impl PackSideDimsWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PackSideDimsWhat::Rifle => "rifle",
-            PackSideDimsWhat::Shotgun => "shotgun",
-            PackSideDimsWhat::Hammer => "hammer",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -715,30 +591,12 @@ pub enum PackSideBindWhat {
     Shotgun,
     Hammer,
 }
-impl PackSideBindWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PackSideBindWhat::Rifle => "rifle",
-            PackSideBindWhat::Shotgun => "shotgun",
-            PackSideBindWhat::Hammer => "hammer",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum PackSideWhat {
     Rifle,
     Shotgun,
     Hammer,
-}
-impl PackSideWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PackSideWhat::Rifle => "rifle",
-            PackSideWhat::Shotgun => "shotgun",
-            PackSideWhat::Hammer => "hammer",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -753,27 +611,11 @@ pub enum BigBoxesKind {
     Shotgun,
     Hammer,
 }
-impl BigBoxesKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BigBoxesKind::Shotgun => "shotgun",
-            BigBoxesKind::Hammer => "hammer",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum HungBoxesWeapon {
     Carbine,
     Sc20k,
-}
-impl HungBoxesWeapon {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HungBoxesWeapon::Carbine => "carbine",
-            HungBoxesWeapon::Sc20k => "sc20k",
-        }
-    }
 }
 
 /// the state this module keeps at its top level
@@ -810,9 +652,6 @@ pub const PROP_FLAGS: f64 = 8.0;
 
 /// (src/game/rigProps.ts:265 GLOW_FLAGS)
 pub const GLOW_FLAGS: f64 = 10.0;
-
-/// (src/game/rigProps.ts:282 RIG_DEFAULTS: a table nothing writes)
-pub fn rig_defaults() -> crate::rig_props::Rig { crate::rig_props::rig() }
 
 /// (src/game/rigProps.ts:349 NO_GLOW: a table nothing writes)
 pub fn no_glow() -> V3 { [0.0, 0.0, 0.0] }

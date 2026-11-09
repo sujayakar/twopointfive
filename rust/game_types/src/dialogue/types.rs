@@ -3,50 +3,6 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, Default)]
-pub struct DialogueSnap {
-    pub recent: Vec<(String, f64)>,
-    pub sam: crate::dialogue::DialogueSnapSam,
-    pub radio: Option<crate::dialogue::DialogueSnapRadio>,
-    pub ambient: crate::dialogue::DialogueSnapAmbient,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct DialogueSnapSam {
-    pub said: Vec<(String, f64)>,
-    pub last: Option<String>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct DialogueSnapRadio {
-    pub done: Vec<String>,
-    pub queue: Vec<crate::dialogue::DialogueSnapRadioQueueItem>,
-    pub reply: Option<crate::dialogue::DialogueSnapRadioReply>,
-    pub last_at: f64,
-    pub esc: f64,
-    pub blackout: bool,
-    pub found: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct DialogueSnapRadioQueueItem {
-    pub at: f64,
-    pub beat: String,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct DialogueSnapRadioReply {
-    pub at: f64,
-    pub text: String,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct DialogueSnapAmbient {
-    pub next: f64,
-    pub played: Vec<(String, f64)>,
-    pub count: f64,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum Knowledge {
     #[default] None,
@@ -355,71 +311,6 @@ impl ShapeKey {
     }
 }
 
-#[derive(Clone, Debug)]
-pub enum IntelKey {
-    Steady,
-    Nervy,
-    Hard,
-    Empty,
-    Pedant,
-    Selfown,
-    Folder,
-    Ramble,
-    Fan,
-    Stoic,
-    Con,
-    Game,
-    Menace,
-    SteadyNone,
-    SteadyHeard,
-    SteadyGlimpsed,
-    SteadySaw,
-    SteadySawHurt,
-    NervyNone,
-    NervyHeard,
-    NervyGlimpsed,
-    NervySaw,
-    NervySawHurt,
-    HardNone,
-    HardHeard,
-    HardGlimpsed,
-    HardSaw,
-    HardSawHurt,
-    None,
-    Heard,
-    Glimpsed,
-    Saw,
-    SawHurt,
-    PedantSteady,
-    PedantNervy,
-    PedantHard,
-    SelfownSteady,
-    SelfownNervy,
-    SelfownHard,
-    FolderSteady,
-    FolderNervy,
-    FolderHard,
-    RambleSteady,
-    RambleNervy,
-    RambleHard,
-    FanSteady,
-    FanNervy,
-    FanHard,
-    StoicSteady,
-    StoicNervy,
-    StoicHard,
-    ConSteady,
-    ConNervy,
-    ConHard,
-    GameSteady,
-    GameNervy,
-    GameHard,
-    MenaceSteady,
-    MenaceNervy,
-    MenaceHard,
-    Text(String),
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct Rect {
     pub name: String,
@@ -555,18 +446,6 @@ pub enum DialoguePickLineK {
     SawHurt,
     Empty,
 }
-impl DialoguePickLineK {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DialoguePickLineK::None => "none",
-            DialoguePickLineK::Heard => "heard",
-            DialoguePickLineK::Glimpsed => "glimpsed",
-            DialoguePickLineK::Saw => "saw",
-            DialoguePickLineK::SawHurt => "sawHurt",
-            DialoguePickLineK::Empty => "*",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DialoguePickWidened {
@@ -574,16 +453,6 @@ pub enum DialoguePickWidened {
     T,
     A,
     Repeat,
-}
-impl DialoguePickWidened {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DialoguePickWidened::Empty => "",
-            DialoguePickWidened::T => "t",
-            DialoguePickWidened::A => "a",
-            DialoguePickWidened::Repeat => "repeat",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
@@ -614,20 +483,6 @@ pub enum SamNeed {
     Arm,
     Lockdown,
     HeldLong,
-}
-impl SamNeed {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SamNeed::Knife => "knife",
-            SamNeed::Blackout => "blackout",
-            SamNeed::Calm => "calm",
-            SamNeed::Alarm => "alarm",
-            SamNeed::Gun => "gun",
-            SamNeed::Arm => "arm",
-            SamNeed::Lockdown => "lockdown",
-            SamNeed::HeldLong => "heldLong",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -806,10 +661,6 @@ pub struct RadioState {
     pub found: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct RadioStateRun {
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RadioStateQueueItem {
     pub at: f64,
@@ -866,19 +717,6 @@ pub enum HostageMoment {
     Alone,
     Secured,
 }
-impl HostageMoment {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HostageMoment::Shot => "shot",
-            HostageMoment::Wait => "wait",
-            HostageMoment::Threat => "threat",
-            HostageMoment::Aimed => "aimed",
-            HostageMoment::Entry => "entry",
-            HostageMoment::Alone => "alone",
-            HostageMoment::Secured => "secured",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct AmbientState {
@@ -886,33 +724,6 @@ pub struct AmbientState {
     pub run: Option<crate::dialogue::AmbientRun>,
     pub played: JsMap<String, f64>,
     pub count: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct TOKENWORSTNOW {
-    pub door: Option<String>,
-    pub code: Option<String>,
-    pub missing: Option<String>,
-    pub body: Option<String>,
-    pub n: Option<String>,
-    pub up: Option<String>,
-    pub post: Option<String>,
-    pub room: Option<String>,
-    pub route: Option<String>,
-    pub partner: Option<String>,
-    pub victim: Option<String>,
-    pub saw_where: Option<String>,
-    pub heard_where: Option<String>,
-    pub partner_route: Option<String>,
-    pub caller: Option<String>,
-    pub checker: Option<String>,
-    pub checked: Option<String>,
-    pub clear_room: Option<String>,
-    pub breaker_room: Option<String>,
-    pub check_eta: Option<String>,
-    pub minutes: Option<String>,
-    pub badge: Option<String>,
-    pub pad_door: Option<String>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -2681,31 +2492,6 @@ pub struct OwnPlace {
     pub d: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct NeedsHoldFacts {
-    pub shift: Option<bool>,
-    pub rollcall_live: Option<bool>,
-    pub blackout: Option<bool>,
-    pub body_found: Option<bool>,
-    pub floor_up: Option<bool>,
-    pub lockdown: Option<bool>,
-    pub episode: Option<bool>,
-    pub heard_small: Option<bool>,
-    pub heard_shots: Option<bool>,
-    pub heard_bang: Option<bool>,
-    pub body_called: Option<bool>,
-    pub body_known: Option<bool>,
-    pub missing_known: Option<bool>,
-    pub held_long: Option<bool>,
-    pub dazzled: Option<bool>,
-    pub saw_shot: Option<bool>,
-    pub saw_drop: Option<bool>,
-    pub alert_now: Option<bool>,
-    pub drew_on_you: Option<bool>,
-    pub partner_known: Option<bool>,
-    pub office: Option<bool>,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct PendingIntelItem {
     pub kind: crate::dialogue::IntelKind,
@@ -2741,150 +2527,6 @@ pub struct SamKeyLineFor {
 pub struct SamRemarkFor {
     pub text: String,
     pub id: String,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct SynthCtxOver {
-    pub facts: Option<crate::dialogue::SynthCtxOverFacts>,
-    pub tokens: Option<crate::dialogue::SynthCtxOverTokens>,
-    pub intel_live: Option<Vec<crate::dialogue::IntelKind>>,
-    pub who: Option<String>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SynthCtxOverFacts {
-    pub shift: Option<bool>,
-    pub rollcall_live: Option<bool>,
-    pub blackout: Option<bool>,
-    pub body_found: Option<bool>,
-    pub floor_up: Option<bool>,
-    pub lockdown: Option<bool>,
-    pub episode: Option<bool>,
-    pub heard_small: Option<bool>,
-    pub heard_shots: Option<bool>,
-    pub heard_bang: Option<bool>,
-    pub body_called: Option<bool>,
-    pub body_known: Option<bool>,
-    pub missing_known: Option<bool>,
-    pub held_long: Option<bool>,
-    pub dazzled: Option<bool>,
-    pub saw_shot: Option<bool>,
-    pub saw_drop: Option<bool>,
-    pub alert_now: Option<bool>,
-    pub drew_on_you: Option<bool>,
-    pub partner_known: Option<bool>,
-    pub office: Option<bool>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct SynthCtxOverTokens {
-    pub door: Option<String>,
-    pub code: Option<String>,
-    pub missing: Option<String>,
-    pub body: Option<String>,
-    pub n: Option<String>,
-    pub up: Option<String>,
-    pub post: Option<String>,
-    pub room: Option<String>,
-    pub route: Option<String>,
-    pub partner: Option<String>,
-    pub victim: Option<String>,
-    pub saw_where: Option<String>,
-    pub heard_where: Option<String>,
-    pub partner_route: Option<String>,
-    pub caller: Option<String>,
-    pub checker: Option<String>,
-    pub checked: Option<String>,
-    pub clear_room: Option<String>,
-    pub breaker_room: Option<String>,
-    pub check_eta: Option<String>,
-    pub minutes: Option<String>,
-    pub badge: Option<String>,
-    pub pad_door: Option<String>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct CoverageMatrix {
-    pub rows: Vec<crate::dialogue::CoverageMatrixRowsItem>,
-    pub total: f64,
-    pub intel: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct CoverageMatrixRowsItem {
-    pub k: String,
-    pub counts: JsMap<String, f64>,
-    pub total: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct SamCoverage {
-    pub rows: Vec<crate::dialogue::SamCoverageRowsItem>,
-    pub q: crate::dialogue::SamCoverageQ,
-    pub key: f64,
-    pub total: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SamCoverageRowsItem {
-    pub s: crate::dialogue::SamStage,
-    pub plain: f64,
-    pub gun: f64,
-    pub arm: f64,
-    pub t: f64,
-    pub k: f64,
-    pub floor: f64,
-    pub total: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SamCoverageQ {
-    pub check_on: Option<f64>,
-    pub clearing: Option<f64>,
-    pub rollcall_live: Option<f64>,
-    pub blackout: Option<f64>,
-    pub door: Option<f64>,
-    pub code: Option<f64>,
-    pub rollcall: Option<f64>,
-    pub lockdown_posts: Option<f64>,
-    pub routes: Option<f64>,
-    pub missing: Option<f64>,
-    pub drive: Option<f64>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct ScriptCoverageItem {
-    pub shape: crate::dialogue::ShapeKey,
-    pub by_t: crate::dialogue::ScriptCoverageItemByT,
-    pub k: String,
-    pub band: String,
-    pub pin: String,
-    pub total: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ScriptCoverageItemByT {
-    pub steady: Option<f64>,
-    pub nervy: Option<f64>,
-    pub hard: Option<f64>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct LineLengthReport {
-    pub men: Vec<crate::dialogue::LineLengthReportMenItem>,
-    pub sam: Vec<crate::dialogue::LineLengthReportSamItem>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct LineLengthReportMenItem {
-    pub where_: String,
-    pub text: String,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct LineLengthReportSamItem {
-    pub where_: String,
-    pub text: String,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -2970,15 +2612,6 @@ impl DialogueMod {
     }
 }
 
-/// (src/game/dialogue.ts:55 KNOWLEDGE: a table nothing writes)
-pub fn knowledge() -> Vec<crate::dialogue::Knowledge> { alloc::vec![crate::dialogue::Knowledge::None, crate::dialogue::Knowledge::Heard, crate::dialogue::Knowledge::Glimpsed, crate::dialogue::Knowledge::Saw, crate::dialogue::Knowledge::SawHurt] }
-
-/// (src/game/dialogue.ts:57 BANDS: a table nothing writes)
-pub fn bands() -> Vec<crate::dialogue::Band> { alloc::vec![crate::dialogue::Band::Low, crate::dialogue::Band::Mid, crate::dialogue::Band::High] }
-
-/// (src/game/dialogue.ts:58 TEMPERAMENTS: a table nothing writes)
-pub fn temperaments() -> Vec<crate::game::Temperament> { alloc::vec![crate::game::Temperament::Steady, crate::game::Temperament::Nervy, crate::game::Temperament::Hard] }
-
 /// (src/game/dialogue.ts:60 STAGES: a table nothing writes)
 pub fn stages() -> Vec<crate::dialogue::StageKey> { alloc::vec![crate::dialogue::StageKey::Num(1.0), crate::dialogue::StageKey::Num(2.0), crate::dialogue::StageKey::Num(3.0), crate::dialogue::StageKey::X] }
 
@@ -2987,12 +2620,6 @@ pub const BAND_MID: f64 = 0.3;
 
 /// (src/game/dialogue.ts:62 BAND_HIGH)
 pub const BAND_HIGH: f64 = 0.6;
-
-/// (src/game/dialogue.ts:66 MAX_CHARS)
-pub const MAX_CHARS: f64 = 90.0;
-
-/// (src/game/dialogue.ts:66 AIM_CHARS)
-pub const AIM_CHARS: f64 = 60.0;
 
 /// (src/game/dialogue.ts:67 INTERROGATE_REACH)
 pub const INTERROGATE_REACH: f64 = 2.0;
@@ -3006,32 +2633,14 @@ pub const HOLD_LAPSE_SECS: f64 = 30.0;
 /// (src/game/dialogue.ts:70 ABORT_RATTLE_SECS)
 pub const ABORT_RATTLE_SECS: f64 = 60.0;
 
-/// (src/game/dialogue.ts:152 NEEDS: a table nothing writes)
-pub fn needs() -> [crate::dialogue::Need; 21] { [crate::dialogue::Need::FloorUp, crate::dialogue::Need::Lockdown, crate::dialogue::Need::Episode, crate::dialogue::Need::HeardSmall, crate::dialogue::Need::HeardShots, crate::dialogue::Need::HeardBang, crate::dialogue::Need::BodyFound, crate::dialogue::Need::BodyCalled, crate::dialogue::Need::BodyKnown, crate::dialogue::Need::MissingKnown, crate::dialogue::Need::Blackout, crate::dialogue::Need::HeldLong, crate::dialogue::Need::RollcallLive, crate::dialogue::Need::Dazzled, crate::dialogue::Need::SawShot, crate::dialogue::Need::SawDrop, crate::dialogue::Need::AlertNow, crate::dialogue::Need::DrewOnYou, crate::dialogue::Need::PartnerKnown, crate::dialogue::Need::Shift, crate::dialogue::Need::Office] }
-
 /// (src/game/dialogue.ts:177 TOKENS: a table nothing writes)
 pub fn tokens() -> [crate::dialogue::Token; 23] { [crate::dialogue::Token::Partner, crate::dialogue::Token::Victim, crate::dialogue::Token::Body, crate::dialogue::Token::Missing, crate::dialogue::Token::Room, crate::dialogue::Token::SawWhere, crate::dialogue::Token::HeardWhere, crate::dialogue::Token::Route, crate::dialogue::Token::PartnerRoute, crate::dialogue::Token::Post, crate::dialogue::Token::Door, crate::dialogue::Token::Caller, crate::dialogue::Token::Checker, crate::dialogue::Token::Checked, crate::dialogue::Token::ClearRoom, crate::dialogue::Token::BreakerRoom, crate::dialogue::Token::CheckEta, crate::dialogue::Token::Minutes, crate::dialogue::Token::N, crate::dialogue::Token::Up, crate::dialogue::Token::Badge, crate::dialogue::Token::Code, crate::dialogue::Token::PadDoor] }
-
-/// (src/game/dialogue.ts:180 TOKEN_WORST: a table nothing writes)
-pub fn token_worst_table() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("partner"), String::from("Lindqvist")); t.set(String::from("victim"), String::from("Lindqvist")); t.set(String::from("body"), String::from("Lindqvist")); t.set(String::from("missing"), String::from("Lindqvist")); t.set(String::from("caller"), String::from("Lindqvist")); t.set(String::from("checker"), String::from("Lindqvist")); t.set(String::from("checked"), String::from("Lindqvist")); t.set(String::from("room"), String::from("the manager's office")); t.set(String::from("sawWhere"), String::from("the manager's office")); t.set(String::from("heardWhere"), String::from("the manager's office")); t.set(String::from("breakerRoom"), String::from("the manager's office")); t.set(String::from("clearRoom"), String::from("the break room side door")); t.set(String::from("route"), String::from("the lobby loop")); t.set(String::from("partnerRoute"), String::from("the lobby loop")); t.set(String::from("post"), String::from("the cubicle door")); t.set(String::from("door"), String::from("the server room door")); t.set(String::from("checkEta"), String::from("in a couple of minutes")); t.set(String::from("minutes"), String::from("fifteen")); t.set(String::from("n"), String::from("three")); t.set(String::from("up"), String::from("three")); t.set(String::from("badge"), String::from("4471")); t.set(String::from("code"), String::from("7391")); t.set(String::from("padDoor"), String::from("the office side door")); t } }
-
-/// (src/game/dialogue.ts:187 TOKEN_WORST_NOW: a table nothing writes)
-pub fn token_worst_now() -> crate::dialogue::TOKENWORSTNOW { crate::dialogue::TOKENWORSTNOW { door: Some(String::from("the phone shop back door")), code: None, missing: None, body: None, n: None, up: None, post: None, room: None, route: None, partner: None, victim: None, saw_where: None, heard_where: None, partner_route: None, caller: None, checker: None, checked: None, clear_room: None, breaker_room: None, check_eta: None, minutes: None, badge: None, pad_door: None } }
-
-/// (src/game/dialogue.ts:190 TOKENS_ALWAYS: a table nothing writes)
-pub fn tokens_always() -> Vec<String> { alloc::vec![String::from("room"), String::from("route"), String::from("post"), String::from("breakerRoom"), String::from("checkEta"), String::from("n"), String::from("up"), String::from("badge")] }
-
-/// (src/game/dialogue.ts:192 TOKENS_BY_K: a table nothing writes)
-pub fn tokens_by_k() -> JsMap<String, Vec<String>> { { let mut t = JsMap::new(); t.set(String::from("none"), Vec::new()); t.set(String::from("heard"), Vec::new()); t.set(String::from("glimpsed"), alloc::vec![String::from("sawWhere")]); t.set(String::from("saw"), alloc::vec![String::from("sawWhere")]); t.set(String::from("sawHurt"), alloc::vec![String::from("victim")]); t } }
 
 /// (src/game/dialogue.ts:209 LINES: a table nothing writes)
 pub fn lines() -> Vec<crate::dialogue::Line> { alloc::vec![crate::dialogue::Line { id: String::from("n1s"), k: crate::dialogue::LineK::None, a: None, t: Some(crate::game::Temperament::Steady), s: crate::dialogue::StageKey::Num(1.0), text: String::from("Easy— easy. I'm not moving. Hands are where you can see them."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("n1n"), k: crate::dialogue::LineK::None, a: None, t: Some(crate::game::Temperament::Nervy), s: crate::dialogue::StageKey::Num(1.0), text: String::from("Wh— who— okay. Okay okay okay. Don't. Please don't."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("n1h"), k: crate::dialogue::LineK::None, a: None, t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(1.0), text: String::from("…That's a bad idea, friend. Mostly for you."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("n1a"), k: crate::dialogue::LineK::None, a: None, t: None, s: crate::dialogue::StageKey::Num(1.0), text: String::from("Where did you— there was nobody there. I checked. There was nobody."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("n1f"), k: crate::dialogue::LineK::None, a: Some(crate::dialogue::LineA::Mid2), t: None, s: crate::dialogue::StageKey::Num(1.0), text: String::from("So it's real. They said weapons out and I thought someone sat on his radio."), needs: Some(alloc::vec![crate::dialogue::Need::FloorUp]), w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("n2s"), k: crate::dialogue::LineK::None, a: None, t: Some(crate::game::Temperament::Steady), s: crate::dialogue::StageKey::Num(2.0), text: String::from("I don't know you. I walk {route} and I sign the sheet. That's the whole job."), needs: None, w: None, only: Some(crate::dialogue::LineOnly::Shift), now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("n2n"), k: crate::dialogue::LineK::None, a: None, t: Some(crate::game::Temperament::Nervy), s: crate::dialogue::StageKey::Num(2.0), text: String::from("I haven't seen your face. I don't want to. I'm looking at the floor— see?"), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("n2h"), k: crate::dialogue::LineK::None, a: None, t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(2.0), text: String::from("You want the tour, reception opens at eight."), needs: None, w: None, only: None, now: None, away: Some(String::from("You want the tour, buy a ticket.")), guide: None, bare: None }, crate::dialogue::Line { id: String::from("n2a"), k: crate::dialogue::LineK::None, a: None, t: None, s: crate::dialogue::StageKey::Num(2.0), text: String::from("Whatever you're here for, it isn't me. I'm nights. I'm nobody."), needs: None, w: None, only: Some(crate::dialogue::LineOnly::Shift), now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("n3a"), k: crate::dialogue::LineK::None, a: None, t: None, s: crate::dialogue::StageKey::Num(3.0), text: String::from("That's it. That's all there is. I do nights and I go home."), needs: None, w: None, only: Some(crate::dialogue::LineOnly::Shift), now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("n3n"), k: crate::dialogue::LineK::None, a: None, t: Some(crate::game::Temperament::Nervy), s: crate::dialogue::StageKey::Num(3.0), text: String::from("I don't KNOW anything— I fill the machine and I walk. That's me. That's all of me."), needs: None, w: None, only: Some(crate::dialogue::LineOnly::Office), now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("n3h"), k: crate::dialogue::LineK::None, a: Some(crate::dialogue::LineA::Low), t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(3.0), text: String::from("Nothing. You get nothing, and you knew that when you grabbed me."), needs: None, w: Some(2.0), only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("nxa"), k: crate::dialogue::LineK::None, a: None, t: None, s: crate::dialogue::StageKey::X, text: String::from("I told you. I just do nights."), needs: None, w: None, only: Some(crate::dialogue::LineOnly::Shift), now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("nxb"), k: crate::dialogue::LineK::None, a: None, t: None, s: crate::dialogue::StageKey::X, text: String::from("Same as before. I don't know. I still don't know."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("nxn"), k: crate::dialogue::LineK::None, a: None, t: Some(crate::game::Temperament::Nervy), s: crate::dialogue::StageKey::X, text: String::from("Please. My arm. I answered you."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("nxh"), k: crate::dialogue::LineK::None, a: None, t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::X, text: String::from("Ask again. Same answer."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("h1s"), k: crate::dialogue::LineK::Heard, a: None, t: Some(crate::game::Temperament::Steady), s: crate::dialogue::StageKey::Num(1.0), text: String::from("So that was you, by {heardWhere}. I wrote it off as the building settling."), needs: Some(alloc::vec![crate::dialogue::Need::HeardSmall]), w: None, only: None, now: Some(String::from("So that was you, by {heardWhere}. I wrote it off as nothing.")), away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("h1n"), k: crate::dialogue::LineK::Heard, a: None, t: Some(crate::game::Temperament::Nervy), s: crate::dialogue::StageKey::Num(1.0), text: String::from("I knew it. I KNEW I heard something. Nobody ever believes me."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("h1h"), k: crate::dialogue::LineK::Heard, a: None, t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(1.0), text: String::from("Should've trusted my ears and come looking for you."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("h1a"), k: crate::dialogue::LineK::Heard, a: None, t: None, s: crate::dialogue::StageKey::Num(1.0), text: String::from("Something's been off all night. So it's a someone. Fine."), needs: None, w: None, only: Some(crate::dialogue::LineOnly::Shift), now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("h1g"), k: crate::dialogue::LineK::Heard, a: None, t: None, s: crate::dialogue::StageKey::Num(1.0), text: String::from("Those were shots. That was you? …Who's down. Tell me who's down."), needs: Some(alloc::vec![crate::dialogue::Need::HeardShots]), w: Some(2.0), only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("h1b"), k: crate::dialogue::LineK::Heard, a: None, t: None, s: crate::dialogue::StageKey::Num(1.0), text: String::from("They found {body}. That was you. And now it's my turn, is it."), needs: Some(alloc::vec![crate::dialogue::Need::BodyKnown]), w: Some(2.0), only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("h2s"), k: crate::dialogue::LineK::Heard, a: None, t: Some(crate::game::Temperament::Steady), s: crate::dialogue::StageKey::Num(2.0), text: String::from("{Partner} is going to love this. I told him it was the vending machine."), needs: Some(alloc::vec![crate::dialogue::Need::PartnerKnown]), w: None, only: Some(crate::dialogue::LineOnly::Office), now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("h2n"), k: crate::dialogue::LineK::Heard, a: None, t: Some(crate::game::Temperament::Nervy), s: crate::dialogue::StageKey::Num(2.0), text: String::from("I called it in as nothing. I SAID nothing. They'll put that on me."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("h2h"), k: crate::dialogue::LineK::Heard, a: None, t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(2.0), text: String::from("You're loud, whoever you are. Loud gets found."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("h2a"), k: crate::dialogue::LineK::Heard, a: None, t: None, s: crate::dialogue::StageKey::Num(2.0), text: String::from("I never saw you. Noises, that's all — and I'm not paid to chase noises."), needs: None, w: None, only: Some(crate::dialogue::LineOnly::Shift), now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("h3a"), k: crate::dialogue::LineK::Heard, a: None, t: None, s: crate::dialogue::StageKey::Num(3.0), text: String::from("I heard things. I didn't see things. That's the truth and it's all of it."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("h3h"), k: crate::dialogue::LineK::Heard, a: Some(crate::dialogue::LineA::Low), t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(3.0), text: String::from("You've had your answer. It was no."), needs: None, w: Some(2.0), only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("hxa"), k: crate::dialogue::LineK::Heard, a: None, t: None, s: crate::dialogue::StageKey::X, text: String::from("Noises. All I ever had was noises."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("hxb"), k: crate::dialogue::LineK::Heard, a: None, t: None, s: crate::dialogue::StageKey::X, text: String::from("I've said it. Ears, not eyes."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("g1s"), k: crate::dialogue::LineK::Glimpsed, a: None, t: Some(crate::game::Temperament::Steady), s: crate::dialogue::StageKey::Num(1.0), text: String::from("Something moved, over in {sawWhere}. I told myself it was the light."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("g1n"), k: crate::dialogue::LineK::Glimpsed, a: None, t: Some(crate::game::Temperament::Nervy), s: crate::dialogue::StageKey::Num(1.0), text: String::from("You were right there. I looked RIGHT at you. Oh no. No no no."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("g1h"), k: crate::dialogue::LineK::Glimpsed, a: None, t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(1.0), text: String::from("Next time the torch stays on you."), needs: None, w: None, only: None, now: Some(String::from("Next time the light stays on you.")), away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("g1a"), k: crate::dialogue::LineK::Glimpsed, a: None, t: None, s: crate::dialogue::StageKey::Num(1.0), text: String::from("I saw— I don't know what I saw. You, I suppose. In {sawWhere}."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("g2a"), k: crate::dialogue::LineK::Glimpsed, a: None, t: None, s: crate::dialogue::StageKey::Num(2.0), text: String::from("A shape. That's what goes in the book. A shape, about your size."), needs: None, w: None, only: Some(crate::dialogue::LineOnly::Shift), now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("g2n"), k: crate::dialogue::LineK::Glimpsed, a: Some(crate::dialogue::LineA::Mid2), t: Some(crate::game::Temperament::Nervy), s: crate::dialogue::StageKey::Num(2.0), text: String::from("I nearly called it. Thumb on the button. I nearly— why didn't I."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("g2h"), k: crate::dialogue::LineK::Glimpsed, a: None, t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(2.0), text: String::from("Half a second sooner with the light and we'd be talking the other way round."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("g3a"), k: crate::dialogue::LineK::Glimpsed, a: None, t: None, s: crate::dialogue::StageKey::Num(3.0), text: String::from("Half a second of you in the dark. That's everything I've got."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("g3h"), k: crate::dialogue::LineK::Glimpsed, a: Some(crate::dialogue::LineA::Low), t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(3.0), text: String::from("No. Work it out yourself."), needs: None, w: Some(2.0), only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("gxa"), k: crate::dialogue::LineK::Glimpsed, a: None, t: None, s: crate::dialogue::StageKey::X, text: String::from("A shape. I keep telling you. A shape."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("gxb"), k: crate::dialogue::LineK::Glimpsed, a: None, t: None, s: crate::dialogue::StageKey::X, text: String::from("That's twice you've asked and twice it's the same."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("s1s"), k: crate::dialogue::LineK::Saw, a: None, t: Some(crate::game::Temperament::Steady), s: crate::dialogue::StageKey::Num(1.0), text: String::from("Everyone on this floor is looking for you. You do know that."), needs: None, w: None, only: None, now: Some(String::from("Every man here is looking for you. You do know that.")), away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("s1n"), k: crate::dialogue::LineK::Saw, a: None, t: Some(crate::game::Temperament::Nervy), s: crate::dialogue::StageKey::Num(1.0), text: String::from("It's you. From {sawWhere}. Okay. Okay— I'm not doing anything. Look. Nothing."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("s1p"), k: crate::dialogue::LineK::Saw, a: Some(crate::dialogue::LineA::High), t: Some(crate::game::Temperament::Nervy), s: crate::dialogue::StageKey::Num(1.0), text: String::from("They're coming— all of them— you heard the radio same as me—"), needs: None, w: Some(2.0), only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("s1h"), k: crate::dialogue::LineK::Saw, a: None, t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(1.0), text: String::from("You. From {sawWhere}. You don't walk out of this building."), needs: None, w: None, only: None, now: Some(String::from("You. From {sawWhere}. You don't walk out of here.")), away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("s1a"), k: crate::dialogue::LineK::Saw, a: None, t: None, s: crate::dialogue::StageKey::Num(1.0), text: String::from("I had you. In {sawWhere}. I had you and I lost you."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("s1d"), k: crate::dialogue::LineK::Saw, a: None, t: None, s: crate::dialogue::StageKey::Num(1.0), text: String::from("I put rounds your way and you still got behind me. …Fine. Fine."), needs: Some(alloc::vec![crate::dialogue::Need::DrewOnYou]), w: Some(2.0), only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("s2s"), k: crate::dialogue::LineK::Saw, a: None, t: Some(crate::game::Temperament::Steady), s: crate::dialogue::StageKey::Num(2.0), text: String::from("Let go now and I count to sixty before I touch the radio. That offer is real."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("s2n"), k: crate::dialogue::LineK::Saw, a: None, t: Some(crate::game::Temperament::Nervy), s: crate::dialogue::StageKey::Num(2.0), text: String::from("What do you want— just say it— say it and I'll say yes—"), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("s2h"), k: crate::dialogue::LineK::Saw, a: None, t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(2.0), text: String::from("Squeeze all you like. I've had worse off my brother."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("s2a"), k: crate::dialogue::LineK::Saw, a: None, t: None, s: crate::dialogue::StageKey::Num(2.0), text: String::from("You've got maybe a minute before someone walks round that corner. Use it."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("s3a"), k: crate::dialogue::LineK::Saw, a: None, t: None, s: crate::dialogue::StageKey::Num(3.0), text: String::from("That's everything. Do what you're going to do."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("s3h"), k: crate::dialogue::LineK::Saw, a: Some(crate::dialogue::LineA::Low), t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(3.0), text: String::from("From me? Nothing. Not a word."), needs: None, w: Some(2.0), only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("sxa"), k: crate::dialogue::LineK::Saw, a: None, t: None, s: crate::dialogue::StageKey::X, text: String::from("I've said it all. Twice."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("sxb"), k: crate::dialogue::LineK::Saw, a: None, t: None, s: crate::dialogue::StageKey::X, text: String::from("Still here. Still nothing new."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("k1s"), k: crate::dialogue::LineK::SawHurt, a: None, t: Some(crate::game::Temperament::Steady), s: crate::dialogue::StageKey::Num(1.0), text: String::from("You shot {victim}. I watched you do it. Don't talk to me like we're talking."), needs: Some(alloc::vec![crate::dialogue::Need::SawShot]), w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("k1n"), k: crate::dialogue::LineK::SawHurt, a: None, t: Some(crate::game::Temperament::Nervy), s: crate::dialogue::StageKey::Num(1.0), text: String::from("{Victim}— is he— you didn't have to— he'd have let you walk past—"), needs: Some(alloc::vec![crate::dialogue::Need::SawShot]), w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("k1h"), k: crate::dialogue::LineK::SawHurt, a: None, t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(1.0), text: String::from("{Victim} had a name. Remember it. Somebody is going to ask you for it."), needs: Some(alloc::vec![crate::dialogue::Need::SawShot]), w: None, only: None, now: None, away: None, guide: None, bare: Some(String::from("He had a name. Somebody is going to make you learn it.")) }, crate::dialogue::Line { id: String::from("k1a"), k: crate::dialogue::LineK::SawHurt, a: None, t: None, s: crate::dialogue::StageKey::Num(1.0), text: String::from("I saw you shoot {victim}. I saw it. Whatever you say next, I saw it."), needs: Some(alloc::vec![crate::dialogue::Need::SawShot]), w: None, only: None, now: None, away: None, guide: None, bare: Some(String::from("I saw you shoot him. I saw it. Whatever you say next, I saw it.")) }, crate::dialogue::Line { id: String::from("k1d"), k: crate::dialogue::LineK::SawHurt, a: None, t: None, s: crate::dialogue::StageKey::Num(1.0), text: String::from("Is {victim} breathing? …Tell me he's breathing."), needs: Some(alloc::vec![crate::dialogue::Need::SawDrop]), w: None, only: None, now: None, away: None, guide: None, bare: Some(String::from("Is he breathing? …Tell me he's breathing.")) }, crate::dialogue::Line { id: String::from("k1e"), k: crate::dialogue::LineK::SawHurt, a: None, t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(1.0), text: String::from("I saw what you did to {victim}. Try it from the front some time."), needs: Some(alloc::vec![crate::dialogue::Need::SawDrop]), w: None, only: None, now: None, away: None, guide: None, bare: Some(String::from("I saw what you did to him. Try it from the front some time.")) }, crate::dialogue::Line { id: String::from("k1g"), k: crate::dialogue::LineK::SawHurt, a: None, t: None, s: crate::dialogue::StageKey::Num(1.0), text: String::from("I saw what you did to {victim}. Get your arm off me."), needs: None, w: Some(0.6), only: None, now: None, away: None, guide: None, bare: Some(String::from("I saw what you did to him. Get your arm off me.")) }, crate::dialogue::Line { id: String::from("k2s"), k: crate::dialogue::LineK::SawHurt, a: None, t: Some(crate::game::Temperament::Steady), s: crate::dialogue::StageKey::Num(2.0), text: String::from("What do you want from me? You've shown me what you are."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("k2n"), k: crate::dialogue::LineK::SawHurt, a: None, t: Some(crate::game::Temperament::Nervy), s: crate::dialogue::StageKey::Num(2.0), text: String::from("Okay! Okay. Anything. Just— not like {victim}. Please. Not like that."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("k2h"), k: crate::dialogue::LineK::SawHurt, a: None, t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(2.0), text: String::from("Every man on this floor heard that. They're not coming to talk."), needs: Some(alloc::vec![crate::dialogue::Need::SawShot]), w: None, only: None, now: Some(String::from("Every man here heard that. They're not coming to talk.")), away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("k2i"), k: crate::dialogue::LineK::SawHurt, a: None, t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(2.0), text: String::from("You put {victim} down in front of me and now you want a chat. No."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: Some(String::from("You put him down in front of me and now you want a chat. No.")) }, crate::dialogue::Line { id: String::from("k2a"), k: crate::dialogue::LineK::SawHurt, a: None, t: None, s: crate::dialogue::StageKey::Num(2.0), text: String::from("{Victim} first, then me — that the plan? Then get on with it."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: Some(String::from("Him first, then me — that the plan? Then get on with it.")) }, crate::dialogue::Line { id: String::from("k3a"), k: crate::dialogue::LineK::SawHurt, a: None, t: None, s: crate::dialogue::StageKey::Num(3.0), text: String::from("You've had all I've got. The rest you took off {victim}."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: Some(String::from("You've had all I've got. The rest you took off him.")) }, crate::dialogue::Line { id: String::from("k3h"), k: crate::dialogue::LineK::SawHurt, a: None, t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(3.0), text: String::from("No."), needs: None, w: Some(2.0), only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("kxa"), k: crate::dialogue::LineK::SawHurt, a: None, t: Some(crate::game::Temperament::Nervy), s: crate::dialogue::StageKey::X, text: String::from("Please. I answered. Please."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("kxb"), k: crate::dialogue::LineK::SawHurt, a: None, t: None, s: crate::dialogue::StageKey::X, text: String::from("Nothing else. There's nothing else. Ask {victim}— oh. Right."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: Some(String::from("Nothing else. There's nothing else. Ask him— oh. Right.")) }, crate::dialogue::Line { id: String::from("kxs"), k: crate::dialogue::LineK::SawHurt, a: None, t: None, s: crate::dialogue::StageKey::X, text: String::from("I've nothing left to tell you and no reason left to lie to you."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("kxh"), k: crate::dialogue::LineK::SawHurt, a: None, t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::X, text: String::from("Still no."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("f2m"), k: crate::dialogue::LineK::Empty, a: None, t: Some(crate::game::Temperament::Steady), s: crate::dialogue::StageKey::Num(2.0), text: String::from("{Missing} hasn't answered his radio. That was you as well, wasn't it."), needs: Some(alloc::vec![crate::dialogue::Need::MissingKnown]), w: Some(1.2), only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("f2l"), k: crate::dialogue::LineK::Empty, a: None, t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(2.0), text: String::from("Hear that? Pairs and doors. You're in a box now."), needs: Some(alloc::vec![crate::dialogue::Need::Lockdown]), w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("f2k"), k: crate::dialogue::LineK::Empty, a: None, t: None, s: crate::dialogue::StageKey::Num(2.0), text: String::from("It's locked down. Nobody walks alone and every door gets pulled to. Good luck."), needs: Some(alloc::vec![crate::dialogue::Need::Lockdown]), w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("f2b"), k: crate::dialogue::LineK::Empty, a: None, t: Some(crate::game::Temperament::Hard), s: crate::dialogue::StageKey::Num(2.0), text: String::from("I heard them call {body} in. I'm telling you nothing."), needs: Some(alloc::vec![crate::dialogue::Need::BodyCalled]), w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("f2c"), k: crate::dialogue::LineK::Empty, a: None, t: Some(crate::game::Temperament::Steady), s: crate::dialogue::StageKey::Num(2.0), text: String::from("After {body} they said weapons out. Should've listened harder."), needs: Some(alloc::vec![crate::dialogue::Need::BodyCalled]), w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("f2f"), k: crate::dialogue::LineK::Empty, a: None, t: None, s: crate::dialogue::StageKey::Num(2.0), text: String::from("I stood over {body} not long ago. I know exactly what you are."), needs: Some(alloc::vec![crate::dialogue::Need::BodyFound]), w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("f2o"), k: crate::dialogue::LineK::Empty, a: None, t: None, s: crate::dialogue::StageKey::Num(2.0), text: String::from("The lights too? …Course it was you."), needs: Some(alloc::vec![crate::dialogue::Need::Blackout]), w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("f2d"), k: crate::dialogue::LineK::Empty, a: None, t: Some(crate::game::Temperament::Nervy), s: crate::dialogue::StageKey::Num(2.0), text: String::from("I still can't see straight. That flash— that was you too, wasn't it—"), needs: Some(alloc::vec![crate::dialogue::Need::Dazzled]), w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("f2r"), k: crate::dialogue::LineK::Empty, a: None, t: None, s: crate::dialogue::StageKey::Num(2.0), text: String::from("That's the check going now. I don't answer it, they come down {route}."), needs: Some(alloc::vec![crate::dialogue::Need::RollcallLive]), w: Some(2.0), only: Some(crate::dialogue::LineOnly::Shift), now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("fxl"), k: crate::dialogue::LineK::Empty, a: None, t: Some(crate::game::Temperament::Steady), s: crate::dialogue::StageKey::X, text: String::from("My arm's gone dead. Whatever this is, finish it."), needs: Some(alloc::vec![crate::dialogue::Need::HeldLong]), w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("fxn"), k: crate::dialogue::LineK::Empty, a: None, t: Some(crate::game::Temperament::Nervy), s: crate::dialogue::StageKey::X, text: String::from("I can't feel my hand. Please. I've been good. I've answered everything."), needs: Some(alloc::vec![crate::dialogue::Need::HeldLong]), w: None, only: None, now: None, away: None, guide: None, bare: None }, crate::dialogue::Line { id: String::from("fxe"), k: crate::dialogue::LineK::Empty, a: Some(crate::dialogue::LineA::High), t: None, s: crate::dialogue::StageKey::X, text: String::from("You're running out of floor. You know that. I can hear it in you."), needs: None, w: None, only: None, now: None, away: None, guide: None, bare: None }] }
 
 /// (src/game/dialogue.ts:309 INTEL_KINDS: a table nothing writes)
 pub fn intel_kinds() -> [crate::dialogue::IntelKind; 11] { [crate::dialogue::IntelKind::CheckOn, crate::dialogue::IntelKind::Clearing, crate::dialogue::IntelKind::RollcallLive, crate::dialogue::IntelKind::Blackout, crate::dialogue::IntelKind::Door, crate::dialogue::IntelKind::Code, crate::dialogue::IntelKind::Rollcall, crate::dialogue::IntelKind::LockdownPosts, crate::dialogue::IntelKind::Routes, crate::dialogue::IntelKind::Missing, crate::dialogue::IntelKind::Drive] }
-
-/// (src/game/dialogue.ts:314 SHAPES: a table nothing writes)
-pub fn shapes() -> Vec<crate::dialogue::ShapeKey> { alloc::vec![crate::dialogue::ShapeKey::Pedant, crate::dialogue::ShapeKey::Selfown, crate::dialogue::ShapeKey::Folder, crate::dialogue::ShapeKey::Ramble, crate::dialogue::ShapeKey::Fan, crate::dialogue::ShapeKey::Stoic, crate::dialogue::ShapeKey::Con, crate::dialogue::ShapeKey::Game, crate::dialogue::ShapeKey::Menace] }
 
 /// (src/game/dialogue.ts:319 INTEL_TEXT: a table nothing writes)
 pub fn intel_text_table() -> JsMap<String, crate::dialogue::INTELTEXTValue> { { let mut t = JsMap::new(); t.set(String::from("checkOn"), crate::dialogue::INTELTEXTValue { steady: None, nervy: Some(String::from("{Checker}'s out looking for {checked}— he went quiet— he'll walk right into us—")), hard: Some(String::from("{Checker}'s walking {checked}'s route. This way. Soon.")), under: Some(String::from("{Checker}'s walking {checked}'s route — he went quiet. He'll come past here.")), pedant: None, selfown: None, folder: None, ramble: None, fan: None, stoic: None, con: None, game: None, menace: None, steady_none: None, steady_heard: None, steady_glimpsed: None, steady_saw: None, steady_saw_hurt: None, nervy_none: None, nervy_heard: None, nervy_glimpsed: None, nervy_saw: None, nervy_saw_hurt: None, hard_none: None, hard_heard: None, hard_glimpsed: None, hard_saw: None, hard_saw_hurt: None, __none: None, __heard: None, __glimpsed: None, __saw: None, __saw_hurt: None, pedant_steady: None, pedant_nervy: None, pedant_hard: None, selfown_steady: None, selfown_nervy: None, selfown_hard: None, folder_steady: None, folder_nervy: None, folder_hard: None, ramble_steady: None, ramble_nervy: None, ramble_hard: None, fan_steady: None, fan_nervy: None, fan_hard: None, stoic_steady: None, stoic_nervy: None, stoic_hard: None, con_steady: None, con_nervy: None, con_hard: None, game_steady: None, game_nervy: None, game_hard: None, menace_steady: None, menace_nervy: None, menace_hard: None, sc: JsMap::new() }); t.set(String::from("clearing"), crate::dialogue::INTELTEXTValue { steady: None, nervy: None, hard: Some(String::from("Rooms are being cleared. {ClearRoom} first. Then this one.")), under: Some(String::from("They're clearing rooms off your last position. {ClearRoom} first.")), pedant: None, selfown: None, folder: None, ramble: None, fan: None, stoic: None, con: None, game: None, menace: None, steady_none: None, steady_heard: None, steady_glimpsed: None, steady_saw: None, steady_saw_hurt: None, nervy_none: None, nervy_heard: None, nervy_glimpsed: None, nervy_saw: None, nervy_saw_hurt: None, hard_none: None, hard_heard: None, hard_glimpsed: None, hard_saw: None, hard_saw_hurt: None, __none: None, __heard: None, __glimpsed: None, __saw: None, __saw_hurt: None, pedant_steady: None, pedant_nervy: None, pedant_hard: None, selfown_steady: None, selfown_nervy: None, selfown_hard: None, folder_steady: None, folder_nervy: None, folder_hard: None, ramble_steady: None, ramble_nervy: None, ramble_hard: None, fan_steady: None, fan_nervy: None, fan_hard: None, stoic_steady: None, stoic_nervy: None, stoic_hard: None, con_steady: None, con_nervy: None, con_hard: None, game_steady: None, game_nervy: None, game_hard: None, menace_steady: None, menace_nervy: None, menace_hard: None, sc: JsMap::new() }); t.set(String::from("rollcallLive"), crate::dialogue::INTELTEXTValue { steady: None, nervy: None, hard: Some(String::from("That's the check. I don't answer, {caller} sends a man. Here.")), under: Some(String::from("That's a check now. No answer from a man and {caller} sends someone round.")), pedant: None, selfown: None, folder: None, ramble: None, fan: None, stoic: None, con: None, game: None, menace: None, steady_none: None, steady_heard: None, steady_glimpsed: None, steady_saw: None, steady_saw_hurt: None, nervy_none: None, nervy_heard: None, nervy_glimpsed: None, nervy_saw: None, nervy_saw_hurt: None, hard_none: None, hard_heard: None, hard_glimpsed: None, hard_saw: None, hard_saw_hurt: None, __none: None, __heard: None, __glimpsed: None, __saw: None, __saw_hurt: None, pedant_steady: None, pedant_nervy: None, pedant_hard: None, selfown_steady: None, selfown_nervy: None, selfown_hard: None, folder_steady: None, folder_nervy: None, folder_hard: None, ramble_steady: None, ramble_nervy: None, ramble_hard: None, fan_steady: None, fan_nervy: None, fan_hard: None, stoic_steady: None, stoic_nervy: None, stoic_hard: None, con_steady: None, con_nervy: None, con_hard: None, game_steady: None, game_nervy: None, game_hard: None, menace_steady: None, menace_nervy: None, menace_hard: None, sc: JsMap::new() }); t.set(String::from("blackout"), crate::dialogue::INTELTEXTValue { steady: None, nervy: None, hard: Some(String::from("Lights out means a man at the breaker, {breakerRoom}. Armed.")), under: Some(String::from("Lights die, one of us goes to the breaker in {breakerRoom} — armed.")), pedant: None, selfown: None, folder: None, ramble: None, fan: None, stoic: None, con: None, game: None, menace: None, steady_none: None, steady_heard: None, steady_glimpsed: None, steady_saw: None, steady_saw_hurt: None, nervy_none: None, nervy_heard: None, nervy_glimpsed: None, nervy_saw: None, nervy_saw_hurt: None, hard_none: None, hard_heard: None, hard_glimpsed: None, hard_saw: None, hard_saw_hurt: None, __none: None, __heard: None, __glimpsed: None, __saw: None, __saw_hurt: None, pedant_steady: None, pedant_nervy: None, pedant_hard: None, selfown_steady: None, selfown_nervy: None, selfown_hard: None, folder_steady: None, folder_nervy: None, folder_hard: None, ramble_steady: None, ramble_nervy: None, ramble_hard: None, fan_steady: None, fan_nervy: None, fan_hard: None, stoic_steady: None, stoic_nervy: None, stoic_hard: None, con_steady: None, con_nervy: None, con_hard: None, game_steady: None, game_nervy: None, game_hard: None, menace_steady: None, menace_nervy: None, menace_hard: None, sc: JsMap::new() }); t.set(String::from("door"), crate::dialogue::INTELTEXTValue { steady: None, nervy: None, hard: Some(String::from("{Door} is keyed. We all carry one. Take mine and get out.")), under: Some(String::from("{Door} is on a key. We all carry one. Mine's on my belt.")), pedant: None, selfown: None, folder: None, ramble: None, fan: Some(String::from("{Door}'s keyed— key's on my belt. Do yours open anything? No?")), stoic: None, con: Some(String::from("{Door}'s keyed; every belt carries one. Here— inspect mine.")), game: None, menace: None, steady_none: None, steady_heard: None, steady_glimpsed: None, steady_saw: None, steady_saw_hurt: None, nervy_none: None, nervy_heard: None, nervy_glimpsed: None, nervy_saw: None, nervy_saw_hurt: None, hard_none: None, hard_heard: None, hard_glimpsed: None, hard_saw: None, hard_saw_hurt: None, __none: None, __heard: None, __glimpsed: None, __saw: None, __saw_hurt: None, pedant_steady: None, pedant_nervy: None, pedant_hard: None, selfown_steady: Some(String::from("…Belt. The key's on my belt. Well played, I suppose.")), selfown_nervy: Some(String::from("…belt. It's on my belt. Please don't make it a whole thing.")), selfown_hard: None, folder_steady: None, folder_nervy: None, folder_hard: None, ramble_steady: None, ramble_nervy: None, ramble_hard: None, fan_steady: None, fan_nervy: None, fan_hard: None, stoic_steady: None, stoic_nervy: None, stoic_hard: None, con_steady: None, con_nervy: None, con_hard: None, game_steady: None, game_nervy: None, game_hard: None, menace_steady: None, menace_nervy: None, menace_hard: None, sc: { let mut t = JsMap::new(); t.set(String::from("selfown-s1"), String::from("…On my belt. The key's on my belt. Eleven years, for this.")); t.set(String::from("selfown-s2"), String::from("…Belt. Left side. Take it— you were going to anyway.")); t.set(String::from("selfown-s3"), String::from("…Belt clip. Under the hi-vis. Nicely done, I suppose.")); t.set(String::from("selfown-n2"), String::from("…This one. On my belt. I heard it as I said it. I HEARD it.")); t.set(String::from("selfown-n3"), String::from("…key. Belt, left side. I don't feel better. You said I would.")); t } }); t.set(String::from("code"), crate::dialogue::INTELTEXTValue { steady: None, nervy: Some(String::from("The pad by {padDoor}— it's {code}— {code}— don't make me say it twice—")), hard: Some(String::from("{PadDoor}: {code} on the pad. Now you know what I know.")), under: Some(String::from("{PadDoor} is on a pad — {code}. Same four digits for all of us.")), pedant: None, selfown: None, folder: None, ramble: None, fan: Some(String::from("The pad on {padDoor} is {code}— do YOU get codes, or is it all wire?")), stoic: None, con: Some(String::from("{PadDoor} takes {code} on the pad, sir. Logged monthly, changed never.")), game: None, menace: None, steady_none: None, steady_heard: None, steady_glimpsed: None, steady_saw: None, steady_saw_hurt: None, nervy_none: None, nervy_heard: None, nervy_glimpsed: None, nervy_saw: None, nervy_saw_hurt: None, hard_none: None, hard_heard: None, hard_glimpsed: None, hard_saw: None, hard_saw_hurt: None, __none: None, __heard: None, __glimpsed: None, __saw: None, __saw_hurt: None, pedant_steady: None, pedant_nervy: None, pedant_hard: None, selfown_steady: None, selfown_nervy: None, selfown_hard: None, folder_steady: None, folder_nervy: None, folder_hard: None, ramble_steady: None, ramble_nervy: None, ramble_hard: None, fan_steady: None, fan_nervy: None, fan_hard: None, stoic_steady: None, stoic_nervy: None, stoic_hard: None, con_steady: None, con_nervy: None, con_hard: None, game_steady: None, game_nervy: None, game_hard: None, menace_steady: None, menace_nervy: None, menace_hard: None, sc: JsMap::new() }); t.set(String::from("rollcall"), crate::dialogue::INTELTEXTValue { steady: None, nervy: Some(String::from("A check— {checkEta}— I don't answer, somebody comes looking.")), hard: Some(String::from("Radio check {checkEta}. Silence gets a man sent. Do the sums.")), under: Some(String::from("Radio check {checkEta}. Miss it, they send a man down your route.")), pedant: None, selfown: None, folder: None, ramble: None, fan: Some(String::from("Radio check's {checkEta}— miss it, they send someone. Do YOU have checks?")), stoic: None, con: Some(String::from("Radio check {checkEta}, sir. No answer, a man walks that route. By the book.")), game: None, menace: None, steady_none: None, steady_heard: None, steady_glimpsed: None, steady_saw: None, steady_saw_hurt: None, nervy_none: None, nervy_heard: None, nervy_glimpsed: None, nervy_saw: None, nervy_saw_hurt: Some(String::from("The check's {checkEta}— {victim} won't answer it— then they ALL come—")), hard_none: None, hard_heard: None, hard_glimpsed: None, hard_saw: None, hard_saw_hurt: None, __none: None, __heard: None, __glimpsed: None, __saw: None, __saw_hurt: None, pedant_steady: None, pedant_nervy: None, pedant_hard: None, selfown_steady: None, selfown_nervy: None, selfown_hard: None, folder_steady: None, folder_nervy: None, folder_hard: None, ramble_steady: None, ramble_nervy: None, ramble_hard: None, fan_steady: None, fan_nervy: None, fan_hard: None, stoic_steady: None, stoic_nervy: None, stoic_hard: None, con_steady: None, con_nervy: None, con_hard: None, game_steady: None, game_nervy: None, game_hard: None, menace_steady: None, menace_nervy: None, menace_hard: None, sc: JsMap::new() }); t.set(String::from("lockdownPosts"), crate::dialogue::INTELTEXTValue { steady: None, nervy: None, hard: Some(String::from("Pairs. A man on {post}. Nobody alone — except you.")), under: Some(String::from("We're paired now. One man holds {post}. Nobody walks alone.")), pedant: None, selfown: None, folder: None, ramble: None, fan: None, stoic: None, con: None, game: None, menace: None, steady_none: None, steady_heard: None, steady_glimpsed: None, steady_saw: None, steady_saw_hurt: None, nervy_none: None, nervy_heard: None, nervy_glimpsed: None, nervy_saw: None, nervy_saw_hurt: None, hard_none: None, hard_heard: None, hard_glimpsed: None, hard_saw: None, hard_saw_hurt: None, __none: None, __heard: None, __glimpsed: None, __saw: None, __saw_hurt: None, pedant_steady: None, pedant_nervy: None, pedant_hard: None, selfown_steady: None, selfown_nervy: None, selfown_hard: None, folder_steady: None, folder_nervy: None, folder_hard: None, ramble_steady: None, ramble_nervy: None, ramble_hard: None, fan_steady: None, fan_nervy: None, fan_hard: None, stoic_steady: None, stoic_nervy: None, stoic_hard: None, con_steady: None, con_nervy: None, con_hard: None, game_steady: None, game_nervy: None, game_hard: None, menace_steady: None, menace_nervy: None, menace_hard: None, sc: JsMap::new() }); t.set(String::from("routes"), crate::dialogue::INTELTEXTValue { steady: None, nervy: Some(String::from("It's {n} of us— me on {route}, {partner} on {partnerRoute}— that's it—")), hard: Some(String::from("{N}. Me, {route}. {Partner}, {partnerRoute}. Happy?")), under: Some(String::from("{N} of us tonight. I've got {route}, {partner} has {partnerRoute}.")), pedant: None, selfown: None, folder: None, ramble: None, fan: Some(String::from("{N} of us— I do {route}, {partner} {partnerRoute}. What's YOUR route like?")), stoic: None, con: Some(String::from("{N} on shift: I take {route}, {partner} {partnerRoute}. All logged, sir.")), game: None, menace: None, steady_none: None, steady_heard: None, steady_glimpsed: None, steady_saw: None, steady_saw_hurt: None, nervy_none: None, nervy_heard: None, nervy_glimpsed: None, nervy_saw: None, nervy_saw_hurt: None, hard_none: None, hard_heard: None, hard_glimpsed: None, hard_saw: None, hard_saw_hurt: None, __none: None, __heard: None, __glimpsed: None, __saw: None, __saw_hurt: None, pedant_steady: None, pedant_nervy: None, pedant_hard: None, selfown_steady: None, selfown_nervy: None, selfown_hard: None, folder_steady: None, folder_nervy: None, folder_hard: None, ramble_steady: None, ramble_nervy: None, ramble_hard: None, fan_steady: None, fan_nervy: None, fan_hard: None, stoic_steady: None, stoic_nervy: None, stoic_hard: None, con_steady: None, con_nervy: None, con_hard: None, game_steady: None, game_nervy: None, game_hard: None, menace_steady: None, menace_nervy: None, menace_hard: None, sc: JsMap::new() }); t.set(String::from("missing"), crate::dialogue::INTELTEXTValue { steady: None, nervy: None, hard: Some(String::from("{Missing} is off the air. His route comes up empty, we lock down.")), under: Some(String::from("Nobody can raise {missing}. His route turns up empty, this all locks down.")), pedant: None, selfown: None, folder: None, ramble: None, fan: None, stoic: None, con: None, game: None, menace: None, steady_none: None, steady_heard: None, steady_glimpsed: None, steady_saw: None, steady_saw_hurt: None, nervy_none: None, nervy_heard: None, nervy_glimpsed: None, nervy_saw: None, nervy_saw_hurt: None, hard_none: None, hard_heard: None, hard_glimpsed: None, hard_saw: None, hard_saw_hurt: None, __none: None, __heard: None, __glimpsed: None, __saw: None, __saw_hurt: None, pedant_steady: None, pedant_nervy: None, pedant_hard: None, selfown_steady: None, selfown_nervy: None, selfown_hard: None, folder_steady: None, folder_nervy: None, folder_hard: None, ramble_steady: None, ramble_nervy: None, ramble_hard: None, fan_steady: None, fan_nervy: None, fan_hard: None, stoic_steady: None, stoic_nervy: None, stoic_hard: None, con_steady: None, con_nervy: None, con_hard: None, game_steady: None, game_nervy: None, game_hard: None, menace_steady: None, menace_nervy: None, menace_hard: None, sc: JsMap::new() }); t.set(String::from("drive"), crate::dialogue::INTELTEXTValue { steady: None, nervy: None, hard: Some(String::from("Your rack went dark on the board. A man is on his way to it.")), under: Some(String::from("Your rack dropped off the board. Somebody's already been sent to look at it.")), pedant: None, selfown: None, folder: None, ramble: None, fan: None, stoic: None, con: None, game: None, menace: None, steady_none: None, steady_heard: None, steady_glimpsed: None, steady_saw: None, steady_saw_hurt: None, nervy_none: None, nervy_heard: None, nervy_glimpsed: None, nervy_saw: None, nervy_saw_hurt: None, hard_none: None, hard_heard: None, hard_glimpsed: None, hard_saw: None, hard_saw_hurt: None, __none: None, __heard: None, __glimpsed: None, __saw: None, __saw_hurt: None, pedant_steady: None, pedant_nervy: None, pedant_hard: None, selfown_steady: None, selfown_nervy: None, selfown_hard: None, folder_steady: None, folder_nervy: None, folder_hard: None, ramble_steady: None, ramble_nervy: None, ramble_hard: None, fan_steady: None, fan_nervy: None, fan_hard: None, stoic_steady: None, stoic_nervy: None, stoic_hard: None, con_steady: None, con_nervy: None, con_hard: None, game_steady: None, game_nervy: None, game_hard: None, menace_steady: None, menace_nervy: None, menace_hard: None, sc: JsMap::new() }); t } }
@@ -3047,9 +2656,6 @@ pub fn drive_away_table() -> crate::dialogue::DRIVEAWAY { crate::dialogue::DRIVE
 
 /// (src/game/dialogue.ts:351 DRIVE_AWAY_GUIDE: a table nothing writes)
 pub fn drive_away_guide() -> crate::dialogue::DRIVEAWAYGUIDE { crate::dialogue::DRIVEAWAYGUIDE { steady: None, nervy: None, hard: Some(String::from("They know it's gone. Somebody's on his way to look.")), under: Some(String::from("They already know it's gone. Somebody's been sent to look.")) } }
-
-/// (src/game/dialogue.ts:358 CHECKON_SELF_WAS)
-pub const CHECKON_SELF_WAS: &str = "I was sent round {checked}'s route — he'd gone quiet. Now I know why.";
 
 /// (src/game/dialogue.ts:358 CHECKON_SELF_NOW)
 pub const CHECKON_SELF_NOW: &str = "I was sent to walk {checked}'s route — he'd gone quiet. Now I know why.";
@@ -3096,35 +2702,11 @@ pub const RECENT_SECS: f64 = 90.0;
 /// (src/game/dialogue.ts:533 RECENT_W)
 pub const RECENT_W: f64 = 0.25;
 
-/// (src/game/dialogue.ts:648 TOKEN_RE)
-pub const TOKEN_RE: &str = "/\\{([A-Za-z]+)\\}/g";
-
-/// (src/game/dialogue.ts:796 SAM_STAGES: a table nothing writes)
-pub fn sam_stages() -> Vec<String> { alloc::vec![String::from("open"), String::from("press"), String::from("ask"), String::from("dry")] }
-
 /// (src/game/dialogue.ts:798 SAM_MAX_CHARS)
 pub const SAM_MAX_CHARS: f64 = 60.0;
 
-/// (src/game/dialogue.ts:800 ARM_HOLD_HAS_KNIFE)
-pub const ARM_HOLD_HAS_KNIFE: bool = true;
-
-/// (src/game/dialogue.ts:803 SAM_NEEDS: a table nothing writes)
-pub fn sam_needs() -> [String; 8] { [String::from("gun"), String::from("arm"), String::from("knife"), String::from("blackout"), String::from("alarm"), String::from("calm"), String::from("lockdown"), String::from("heldLong")] }
-
 /// (src/game/dialogue.ts:931 SAM_RECENT_SECS)
 pub const SAM_RECENT_SECS: f64 = 150.0;
-
-/// (src/game/dialogue.ts:1038 ORIGINALITY_BLOCKLIST: a table nothing writes)
-pub fn originality_blocklist() -> Vec<String> { alloc::vec![String::from("equation"), String::from("daisies"), String::from("cripple"), String::from("tuxedo"), String::from("monkey"), String::from("ninja"), String::from("pick a number"), String::from("wallet"), String::from("wet myself"), String::from("blowpipe"), String::from("training exercise"), String::from("death before dishonor"), String::from("death before dishonour"), String::from("we all die alone"), String::from("i have two"), String::from("the real kind"), String::from("chit-chat"), String::from("chitchat"), String::from("elvis"), String::from("freaking me out"), String::from("freak me out"), String::from("light switch"), String::from("lightswitch"), String::from("poke you"), String::from("sixth grade"), String::from("grade school"), String::from("fisher"), String::from("lambert"), String::from("grimsdott"), String::from("redding"), String::from("third echelon"), String::from("echelon"), String::from("shetland"), String::from("displace"), String::from("bathhouse"), String::from("lighthouse"), String::from("penthouse"), String::from("hokkaido"), String::from("panama"), String::from("guns are for"), String::from("knives are for"), String::from("necks snap"), String::from("snap your neck"), String::from("two kinds of people"), String::from("coma"), String::from("karate"), String::from("kung fu"), String::from("james bond"), String::from("superhero"), String::from("spy movie")] }
-
-/// (src/game/dialogue.ts:1057 SAM_POOL_MIN)
-pub const SAM_POOL_MIN: f64 = 5.0;
-
-/// (src/game/dialogue.ts:1059 SAM_KEY_MIN)
-pub const SAM_KEY_MIN: f64 = 3.0;
-
-/// (src/game/dialogue.ts:1061 SCRIPT_VARIANTS_MIN)
-pub const SCRIPT_VARIANTS_MIN: f64 = 3.0;
 
 /// (src/game/dialogue.ts:1255 RAMBLE_SWALLOWS)
 pub const RAMBLE_SWALLOWS: f64 = 1.0;
@@ -3142,7 +2724,6 @@ pub const SCRIPT_ROTATE: bool = true;
 pub fn room_menace() -> JsMap<String, Vec<crate::dialogue::RoomLine>> { {
     use crate::dialogue::{Him, RoomLine};
     fn s(x: &str) -> String { String::from(x) }
-    fn text(x: &str) -> Him { Him::Text(s(x)) }
     fn keyed(rows: &[(&str, &str)]) -> Him { let mut m = JsMap::new(); for (k, v) in rows { m.set(s(k), s(v)); } Him::Arm1(m) }
     let mut m: JsMap<String, Vec<RoomLine>> = JsMap::new();
     m.set(s("the server room"), alloc::vec![
@@ -3197,12 +2778,6 @@ pub fn room_menace() -> JsMap<String, Vec<crate::dialogue::RoomLine>> { {
     ]);
     m
 } }
-
-/// (src/game/dialogue.ts:1392 KN: a table nothing writes)
-pub fn kn() -> Vec<crate::dialogue::Knowledge> { alloc::vec![crate::dialogue::Knowledge::None, crate::dialogue::Knowledge::Heard, crate::dialogue::Knowledge::Glimpsed] }
-
-/// (src/game/dialogue.ts:1392 KS: a table nothing writes)
-pub fn ks() -> Vec<crate::dialogue::Knowledge> { alloc::vec![crate::dialogue::Knowledge::None, crate::dialogue::Knowledge::Heard, crate::dialogue::Knowledge::Glimpsed, crate::dialogue::Knowledge::Saw] }
 
 /// (src/game/dialogue.ts:1396 SCRIPTS: a table nothing writes)
 pub fn scripts() -> Vec<crate::dialogue::Script> { {
@@ -3683,9 +3258,6 @@ pub const RADIO_REPLY_SECS: f64 = 1.7;
 
 /// (src/game/dialogue.ts:1671 RADIO_EDGE_DELAY)
 pub const RADIO_EDGE_DELAY: f64 = 2.6;
-
-/// (src/game/dialogue.ts:1672 HANDLER_BEATS: a table nothing writes)
-pub fn handler_beats() -> [String; 8] { [String::from("server"), String::from("drive"), String::from("rack"), String::from("alarm"), String::from("lockdown"), String::from("blackout"), String::from("bodyKo"), String::from("bodyDead")] }
 
 /// (src/game/dialogue.ts:1676 HANDLER_LINES: a table nothing writes)
 pub fn handler_lines() -> JsMap<String, Vec<crate::dialogue::HANDLERLINESValueItem>> { { let mut t = JsMap::new(); t.set(String::from("server"), alloc::vec![crate::dialogue::HANDLERLINESValueItem { h: String::from("That's you in. Rack {rack}, east bank. Gently."), s: String::from("Gently is all I've got left at this hour."), h_own: None, s_own: None, h_now: Some(String::from("You're in. Rack {rack}, east bank. Gently.")) }, crate::dialogue::HANDLERLINESValueItem { h: String::from("Server room. Try not to lean on anything load-bearing."), s: String::from("At my age everything I lean on is load-bearing."), h_own: None, s_own: None, h_now: None }, crate::dialogue::HANDLERLINESValueItem { h: String::from("Rack {rack}. And lift with the legs this time."), s: String::from("The legs filed a grievance in the lobby."), h_own: None, s_own: None, h_now: None }]); t.set(String::from("drive"), alloc::vec![crate::dialogue::HANDLERLINESValueItem { h: String::from("Drive shows dark on my board. Nicely done."), s: String::from("Tell my knees. They did the crouching."), h_own: None, s_own: None, h_now: None }, crate::dialogue::HANDLERLINESValueItem { h: String::from("That's the drive. You can stop holding your breath."), s: String::from("That was my back, not my breath."), h_own: None, s_own: None, h_now: None }, crate::dialogue::HANDLERLINESValueItem { h: String::from("Got it. Fire exit, east end. No sightseeing."), s: String::from("I've seen it. It's an office. They're all this office."), h_own: None, s_own: None, h_now: None }]); t.set(String::from("rack"), alloc::vec![crate::dialogue::HANDLERLINESValueItem { h: String::from("They've noticed the rack. Someone's coming to frown at it."), s: String::from("Let him frown. I'll be elsewhere."), h_own: None, s_own: None, h_now: None }, crate::dialogue::HANDLERLINESValueItem { h: String::from("Heads up— a ticket just opened on your rack. Fast, for them."), s: String::from("First time for everything."), h_own: None, s_own: None, h_now: None }]); t.set(String::from("alarm"), alloc::vec![crate::dialogue::HANDLERLINESValueItem { h: String::from("That sounded expensive. You in one piece?"), s: String::from("Define piece. I'm upright."), h_own: None, s_own: None, h_now: None }, crate::dialogue::HANDLERLINESValueItem { h: String::from("Floor's awake now. So am I, thanks for that."), s: String::from("You were asleep?"), h_own: Some(String::from("They're awake now. So am I, thanks for that.")), s_own: None, h_now: None }, crate::dialogue::HANDLERLINESValueItem { h: String::from("Overtime just kicked in, if that helps."), s: String::from("Helps the invoice. Not the corridor."), h_own: None, s_own: Some(String::from("Helps the invoice. Not me.")), h_now: None }]); t.set(String::from("lockdown"), alloc::vec![crate::dialogue::HANDLERLINESValueItem { h: String::from("They've paired up and locked down. Old school."), s: String::from("Old school I can do. I am old school."), h_own: None, s_own: None, h_now: None }, crate::dialogue::HANDLERLINESValueItem { h: String::from("Lockdown. Doors, pairs, the lot. Your doing?"), s: String::from("Allegedly."), h_own: None, s_own: None, h_now: Some(String::from("Lockdown. Doors, pairs, the works. Your doing?")) }]); t.set(String::from("blackout"), alloc::vec![crate::dialogue::HANDLERLINESValueItem { h: String::from("Board says you killed the floor's lights. Subtle."), s: String::from("Subtle was twenty years ago. This is efficient."), h_own: Some(String::from("Board says you killed their lights. Subtle.")), s_own: None, h_now: None }, crate::dialogue::HANDLERLINESValueItem { h: String::from("Blackout. Someone's walking to a breaker, armed and annoyed."), s: String::from("Annoyed I can work with."), h_own: None, s_own: None, h_now: None }]); t.set(String::from("bodyKo"), alloc::vec![crate::dialogue::HANDLERLINESValueItem { h: String::from("They've found your sleeper. He'll wake up embarrassed."), s: String::from("We've all been there."), h_own: None, s_own: None, h_now: None }, crate::dialogue::HANDLERLINESValueItem { h: String::from("Net says man down, breathing. Yours?"), s: String::from("Mine breathe. House style."), h_own: None, s_own: None, h_now: None }]); t.set(String::from("bodyDead"), alloc::vec![crate::dialogue::HANDLERLINESValueItem { h: String::from("They've found him. That's on the record now."), s: String::from("So is the rest of tonight."), h_own: None, s_own: None, h_now: None }, crate::dialogue::HANDLERLINESValueItem { h: String::from("Man down on their net. Not breathing."), s: String::from("I heard. Keep the channel clear."), h_own: None, s_own: None, h_now: None }]); t } }

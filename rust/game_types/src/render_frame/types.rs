@@ -213,5 +213,3 @@ impl RenderFrameMod {
     }
 }
 
-/// (src/render/frame.ts:5 sdfRigSrc: a table nothing writes)
-pub fn sdf_rig_src() -> String { todo!() }

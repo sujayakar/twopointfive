@@ -283,5 +283,3 @@ pub fn trail() -> crate::effects::Trail { crate::effects::Trail { radius: 0.036,
 /// (src/game/effects.ts:180 vent: a table nothing writes)
 pub fn vent() -> crate::effects::Vent { crate::effects::Vent { radius: 0.33, density: 18.0, temp: 0.0, speed: 4.5, rise: 0.15, push: 45.0, expand: 0.0, seconds: 30.0, attack: 0.12, jitter: 0.12, standoff: 0.07, height: 0.12 } }
 
-/// (src/game/effects.ts:200 NO_GAS: a table nothing writes)
-pub fn no_gas() -> crate::smoke_types::SmokeSystemLike { crate::smoke_types::SmokeSystemLike { params: None } }

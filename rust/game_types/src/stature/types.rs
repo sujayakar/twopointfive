@@ -25,25 +25,6 @@ pub struct StatureModFitsValue {
     pub fit: crate::stature::Fit,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct DrawnCapsulesP {
-    pub caps: Vec<Vec<f64>>,
-    pub bound: [f64; 4],
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct DrawnCapsules {
-    pub caps: Vec<Vec<f64>>,
-    pub bound: [f64; 4],
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DrawnBeam {
-    pub from: V3,
-    pub dir: V3,
-    pub k: f64,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct StatureMod {
@@ -70,5 +51,3 @@ pub fn stature() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(Strin
 /// (src/game/stature.ts:31 STATURE_TUNE: a table nothing writes)
 pub fn stature_tune() -> crate::stature::STATURETUNE { crate::stature::STATURETUNE { jitter: 0.015, min: 0.92, max: 1.05, ease_per_sec: 0.25 } }
 
-/// (src/game/stature.ts:65 palette: a table nothing writes)
-pub fn palette() -> Vec<f32> { alloc::vec![0.0; 1024] }

@@ -3,30 +3,6 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SmokeLevel {
-    pub voxel: f64,
-    pub dims: [f64; 3],
-    pub page_base: f64,
-    pub tex_y: f64,
-    pub tile: f64,
-    pub tile_base: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SmokeGrid {
-    pub cap: f64,
-    pub levels: [crate::smoke_smoke_grid::SmokeLevel; 2],
-    pub n0: f64,
-    pub n_page: f64,
-    pub n_tiles: f64,
-    pub page_tex: [f64; 3],
-    pub macro_y: f64,
-    pub macro_dims: [f64; 3],
-    pub atlas_blocks: [f64; 3],
-    pub atlas_tex: [f64; 3],
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SmokeSmokeGridModSmokeGridConfig {
     pub cap: f64,

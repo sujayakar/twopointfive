@@ -75,8 +75,6 @@ pub fn dist_xz(p: V3, a: crate::furnblast::AABB) -> f64 { m::hyp2(m::max_n(&[a.x
 pub fn vol_of(g: &mut crate::game::Game, b: BoxId) -> f64 { let h = seam_box(g, b).h; h[0] * h[1] * h[2] * 8.0 }
 /// two plan rectangles overlap by more than a centimetre (furnblast.ts overPlan)
 pub fn over_plan(a: crate::furnblast::OverPlanA, q: crate::furnblast::OverPlanQ) -> bool { a.x0 < q.x1 - 0.01 && a.x1 > q.x0 + 0.01 && a.z0 < q.z1 - 0.01 && a.z1 > q.z0 + 0.01 }
-/// what asks nothing of a stack: the empty `done` (furnblast.ts NONE_DONE.has)
-pub fn has(_j: f64) -> bool { false }
 
 // ---------------------------------------------------------------- class Furniture: g.destr.furn
 /// (furnblast.ts Furniture.constructor)

@@ -7,9 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-
-
-
 /// QA and the checkpoint: make this man's NEXT deal a named script (`None` = the pools).   (dialogue.ts forceScript)
 pub fn force_script(g: &mut crate::game::Game, talk: GameTalkId, id_2: Option<&str>) {
     g.m.dialogue.script_by_talk.delete(talk);
@@ -19,11 +16,6 @@ pub fn force_script(g: &mut crate::game::Game, talk: GameTalkId, id_2: Option<&s
 /// The deal forced on this man and not yet made: `None` = none pending, `Some(None)` = forced to the pools.   (dialogue.ts forcedScriptOf)
 pub fn forced_script_of(g: &crate::game::Game, talk: GameTalkId) -> Option<Option<String>> {
     g.m.dialogue.forced_by_talk.get(talk).cloned()
-}
-
-/// The script this man's hold plays, if one has been dealt; never deals.   (dialogue.ts peekScript)
-pub fn peek_script(g: &crate::game::Game, talk: GameTalkId) -> Option<crate::dialogue::Script> {
-    g.m.dialogue.script_by_talk.get(talk).cloned().flatten()
 }
 
 /// The script of this id.   (dialogue.ts scriptById)

@@ -7,14 +7,6 @@ pub enum MoraleKDarkRead {
     #[default] Place,
     Watch,
 }
-impl MoraleKDarkRead {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            MoraleKDarkRead::Place => "place",
-            MoraleKDarkRead::Watch => "watch",
-        }
-    }
-}
 
 /// the switch and its numbers: on (?nomorale = every man as steady as he was) and by the shipped
 ///  stand; the harness's frozen stand leaves it off (TPS_MORALE=1 turns it on). Dread is 0‥1: `jumpy` / `broken` are the rungs' lines, `hyst` how far under its

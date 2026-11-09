@@ -39,28 +39,6 @@ pub fn sparks_h(i: f64, k: f64, seed: f64) -> f64 {
     let t = m::sin((i + 1.0) * 12.9898 + k * 78.233 + seed * 53.17) * 43758.5453;
     t - m::floor(t)
 }
-/// `count` sparks in a cone about `dir`, uniform over the cap   (sparks.ts Sparks.emitCone)
-pub fn sparks_emit_cone(g: &mut crate::game::Game, at: V3, dir: V3, o: crate::sparks::SparksEmitConeO, seed: f64) -> Vec<f64> {
-    let dn = v3::normalize(dir);
-    let up: V3 = if m::abs(dn[1]) > 0.9 { [1.0, 0.0, 0.0] } else { [0.0, 1.0, 0.0] };
-    let u = v3::normalize(v3::cross(up, dn));
-    let w = v3::cross(dn, u);
-    let cos_max = m::cos(o.cone);
-    let mut out = Vec::new();
-    let mut i = 0.0;
-    while i < o.count {
-        let cy = 1.0 - sparks_h(i, 1.0, seed) * (1.0 - cos_max);
-        let r = m::sqrt(m::max(0.0, 1.0 - cy * cy));
-        let th = sparks_h(i, 2.0, seed) * core::f64::consts::PI * 2.0;
-        let sp = o.speed * (0.45 + 0.55 * sparks_h(i, 3.0, seed));
-        let (ct, st) = (m::cos(th) * r, m::sin(th) * r);
-        let vel: V3 = [(dn[0] * cy + u[0] * ct + w[0] * st) * sp, (dn[1] * cy + u[1] * ct + w[1] * st) * sp, (dn[2] * cy + u[2] * ct + w[2] * st) * sp];
-        let life = o.life * (0.5 + 0.7 * sparks_h(i, 4.0, seed));
-        out.push(sparks_spawn(g, at, vel, life));
-        i += 1.0;
-    }
-    out
-}
 /// a ground burst: the upward hemisphere narrowed by `spread`, turned toward vertical by `lift`   (sparks.ts Sparks.emitBurst)
 pub fn sparks_emit_burst(g: &mut crate::game::Game, at: V3, o: crate::sparks::SparksEmitBurstO, seed: f64) -> Vec<f64> {
     let mut out = Vec::new();

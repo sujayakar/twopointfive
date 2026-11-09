@@ -54,10 +54,6 @@ pub fn holed(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool
     !crate::scene_collision::solid_blocked(g, a, b, None)
 }
 
-/// A stage let go now or queued. The queue's rows hold no data (the head of this file): a stage with nothing of the tick's in it is not kept at all.
-/// (src/game/blastFeel.ts:105 later)
-pub fn later(g: &mut crate::game::Game, pl: PlayerId, secs: f64, run: &mut dyn FnMut(&mut crate::game::Game)) { run(g); }
-
 /// Combat's stun burst, where it plays the can's report: true = this burst is a wall charge's and its own report is played (the can's is not); false =
 /// not this module's (the switch off, the DRESS row down, a thrown can, a door charge). (src/game/blastFeel.ts:109 wallReport)
 pub fn wall_report(g: &mut crate::game::Game, at: V3) -> bool {

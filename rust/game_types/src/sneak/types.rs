@@ -31,17 +31,6 @@ pub enum Mode {
     Stand,
     Walk,
 }
-impl Mode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Mode::Cross => "cross",
-            Mode::Back => "back",
-            Mode::Wait => "wait",
-            Mode::Stand => "stand",
-            Mode::Walk => "walk",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Crumb {
@@ -206,11 +195,6 @@ pub struct SneakModKeptLinesValue {
     pub map: JsMap<crate::Num, f64>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LeafMovedD {
-    pub angle: f64,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct SneakMod {
@@ -253,15 +237,6 @@ pub struct SneakStats {
     pub noise_walks: i32,
 }
 
-/// (src/game/sneak.ts:143 SNEAK_DEFAULTS: a table nothing writes)
-pub fn sneak_defaults() -> crate::knobs::SneakK { crate::knobs::SneakK::page() }
-
-/// (src/game/sneak.ts:144 LS)
-pub const LS: &str = "twopointsix.sneak";
-
-/// (src/game/sneak.ts:146 KEPT: a table nothing writes)
-pub fn kept() -> [String; 11] { [String::from("on"), String::from("crouch"), String::from("post"), String::from("trail"), String::from("look"), String::from("stand"), String::from("side"), String::from("door"), String::from("cue"), String::from("patience"), String::from("skill")] }
-
 /// (src/game/sneak.ts:157 LINES: a table nothing writes)
 pub fn lines() -> crate::sneak::LINES { crate::sneak::LINES { wait: crate::sneak::LINESWait { lit: String::from("holding. it's lit and he's looking."), near: String::from("holding. too close while he's looking."), long: String::from("holding. too much open light to cross."), open: String::from("holding in the dark. you're stood in the light."), door: String::from("i'm off the door. ready when you are.") }, nag: crate::sneak::LINESNag { lit: String::from("can't cross while it's lit. he's still on it."), near: String::from("he's still facing me. waiting for his back."), long: String::from("it's a long lit stretch. kill the light or go on."), open: String::from("you're stood in the light. i'll hold in the dark."), door: String::from("") }, go: String::from("moving.") } }
 
@@ -283,8 +258,6 @@ pub fn none() -> crate::sneak::Exp { crate::sneak::Exp { seen: false, watched: f
 /// (src/game/sneak.ts:297 MAP_SHORT)
 pub const MAP_SHORT: f64 = 0.05;
 
-/// (src/game/sneak.ts:299 BYEYE_BREAK)
-pub const BYEYE_BREAK: bool = false;
 /// INVENTED: what the eye test is asked about: a spot a man could stand on, or a man's own body (sneak.ts:266 standIn, :284 exposureOf)
 #[derive(Clone, Copy, Debug)]
 pub enum Target { Spot { chest: V3, head: V3 }, Man { c: CharId } }

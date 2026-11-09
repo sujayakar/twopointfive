@@ -144,13 +144,6 @@ pub struct Breakable {
     pub hard: Option<bool>,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct WallsSave {
-    pub v: f64,
-    pub b: Vec<(f64, String, Vec<f64>, Option<f64>)>,
-    pub h: Option<Vec<[f64; 2]>>,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AABB {
     pub x0: f64,
@@ -224,16 +217,6 @@ pub struct WallBreakHungNow {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct WallBreakInventory {
-    pub walls: f64,
-    pub cover: f64,
-    pub wall_m: f64,
-    pub pieces: f64,
-    pub hidden: f64,
-    pub touched: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct WallBreakBreakableAt {
     pub id: f64,
     pub kind: crate::wallbreak::BKind,
@@ -259,36 +242,6 @@ pub struct WallBreakRectBox {
     pub h: V3,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum WallBreakOpenCellsCause {
-    Blast,
-    Fire,
-    Load,
-    Reset,
-    Collapse,
-}
-impl WallBreakOpenCellsCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallBreakOpenCellsCause::Blast => "blast",
-            WallBreakOpenCellsCause::Fire => "fire",
-            WallBreakOpenCellsCause::Load => "load",
-            WallBreakOpenCellsCause::Reset => "reset",
-            WallBreakOpenCellsCause::Collapse => "collapse",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WallBreakRazeBudget {
-    pub chunks: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WallBreakRazeInBudget {
-    pub chunks: f64,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct WallBreakNoteC {
     pub dead: bool,
@@ -302,26 +255,6 @@ pub struct WallBreakNoteC {
     pub rect: [f64; 4],
     pub opened: Vec<f64>,
     pub walkable: bool,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum WallBreakNoteCCause {
-    Blast,
-    Fire,
-    Load,
-    Reset,
-    Collapse,
-}
-impl WallBreakNoteCCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallBreakNoteCCause::Blast => "blast",
-            WallBreakNoteCCause::Fire => "fire",
-            WallBreakNoteCCause::Load => "load",
-            WallBreakNoteCCause::Reset => "reset",
-            WallBreakNoteCCause::Collapse => "collapse",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -368,9 +301,6 @@ pub struct WallbreakStats {
     pub chunks_demoted: i32,
     pub nav_opened: i32,
 }
-
-/// (src/game/wallbreak.ts:81 WALLS_DEFAULTS: a table nothing writes)
-pub fn walls_defaults() -> crate::knobs::WallsK { crate::knobs::WallsK::page() }
 
 /// (src/game/wallbreak.ts:162 HIDE)
 pub const HIDE: f64 = 3.0;

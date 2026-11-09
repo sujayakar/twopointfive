@@ -8,27 +8,11 @@ pub enum RescueKStart {
     #[default] Quiet,
     Hot,
 }
-impl RescueKStart {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueKStart::Quiet => "quiet",
-            RescueKStart::Hot => "hot",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RescueKDoorMan {
     #[default] Inside,
     Corridor,
-}
-impl RescueKDoorMan {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueKDoorMan::Inside => "inside",
-            RescueKDoorMan::Corridor => "corridor",
-        }
-    }
 }
 
 /// The scenario's knobs (Tab ▸ Sandbox ▸ Hostage rescue, __rescue.knobs). Who stands where, the stun, the lights and the clock's dealt length are read at a staging

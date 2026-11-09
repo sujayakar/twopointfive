@@ -150,14 +150,6 @@ pub fn air_dust_update(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// The field as it stands, copied again for the renderer; no book of this module moves. The host calls this through `game_rehand` and takes `gpu` itself. (airDust.ts AirDust.resend)
-pub fn air_dust_resend(g: &mut crate::game::Game) {
-    if !air_dust_on(g) {
-        return;
-    }
-    copy_to_gpu(g);
-}
-
 /// The renderer's copy brought up to the field; the host takes `gpu` when `stats.sends` moves. (airDust.ts AirDust.send)
 pub fn air_dust_send(g: &mut crate::game::Game) {
     copy_to_gpu(g);
@@ -174,6 +166,4 @@ fn copy_to_gpu(g: &mut Game) {
         o[i] = s[i] as f32;
     }
 }
-
-
 

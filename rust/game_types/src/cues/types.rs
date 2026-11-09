@@ -86,14 +86,6 @@ pub enum ManMoved {
     Cover,
     Fallback,
 }
-impl ManMoved {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ManMoved::Cover => "cover",
-            ManMoved::Fallback => "fallback",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes)]
 pub struct Cues {
@@ -218,33 +210,6 @@ pub enum CuesLogItemKind {
     Surprised,
     Raw,
 }
-impl CuesLogItemKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CuesLogItemKind::Heard => "heard",
-            CuesLogItemKind::Stay => "stay",
-            CuesLogItemKind::Calm => "calm",
-            CuesLogItemKind::Cover => "cover",
-            CuesLogItemKind::Flinch => "flinch",
-            CuesLogItemKind::Still => "still",
-            CuesLogItemKind::Call => "call",
-            CuesLogItemKind::Help => "help",
-            CuesLogItemKind::StayOurs => "stayOurs",
-            CuesLogItemKind::HuntOver => "huntOver",
-            CuesLogItemKind::FellBack => "fellBack",
-            CuesLogItemKind::Planted => "planted",
-            CuesLogItemKind::PinnedIn => "pinnedIn",
-            CuesLogItemKind::SquadHears => "squadHears",
-            CuesLogItemKind::SquadCopies => "squadCopies",
-            CuesLogItemKind::SquadWaits => "squadWaits",
-            CuesLogItemKind::SquadCopiesWaits => "squadCopiesWaits",
-            CuesLogItemKind::SquadStays => "squadStays",
-            CuesLogItemKind::SquadQuiet => "squadQuiet",
-            CuesLogItemKind::Surprised => "surprised",
-            CuesLogItemKind::Raw => "raw",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CuesKindT {
@@ -343,33 +308,6 @@ pub enum CuesFileKind {
     Surprised,
     Raw,
 }
-impl CuesFileKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CuesFileKind::Heard => "heard",
-            CuesFileKind::Stay => "stay",
-            CuesFileKind::Calm => "calm",
-            CuesFileKind::Cover => "cover",
-            CuesFileKind::Flinch => "flinch",
-            CuesFileKind::Still => "still",
-            CuesFileKind::Call => "call",
-            CuesFileKind::Help => "help",
-            CuesFileKind::StayOurs => "stayOurs",
-            CuesFileKind::HuntOver => "huntOver",
-            CuesFileKind::FellBack => "fellBack",
-            CuesFileKind::Planted => "planted",
-            CuesFileKind::PinnedIn => "pinnedIn",
-            CuesFileKind::SquadHears => "squadHears",
-            CuesFileKind::SquadCopies => "squadCopies",
-            CuesFileKind::SquadWaits => "squadWaits",
-            CuesFileKind::SquadCopiesWaits => "squadCopiesWaits",
-            CuesFileKind::SquadStays => "squadStays",
-            CuesFileKind::SquadQuiet => "squadQuiet",
-            CuesFileKind::Surprised => "surprised",
-            CuesFileKind::Raw => "raw",
-        }
-    }
-}
 
 #[derive(Clone, Debug, Default)]
 pub struct CuesAdoptMsgsItem {
@@ -383,15 +321,6 @@ pub struct CuesAt {
     pub at: String,
 }
 
-/// (src/game/cues.ts:80 CUES_DEFAULTS: a table nothing writes)
-pub fn cues_defaults() -> crate::knobs::CuesK { crate::knobs::CuesK::page() }
-
-/// (src/game/cues.ts:81 LS)
-pub const LS: &str = "twopointsix.cues";
-
-/// (src/game/cues.ts:83 KEPT: a table nothing writes)
-pub fn kept() -> [String; 3] { [String::from("on"), String::from("squelch"), String::from("stillSecs")] }
-
 /// (src/game/cues.ts:90 CLASSES: a table nothing writes)
 pub fn classes() -> &'static [(&'static [&'static str], &'static [&'static str], &'static [&'static str], f64)] { &[(&["fall back", "falling back", "fell back", "is lost", "out the back", "get back", "behind me", "i'm coming to you"], &[], &[], 5.0), (&["still out there"], &[], &[], 6.0), (&["hold where you are", "lost them", "quiet now", "standing down", "gone quiet", "covering him", "not answering — going back"], &[], &[], 2.0), (&["going round", "going around", "moving round", "moving around", "locked down. box him in", "moving to", "moved on — after them", "coming to you", "coming at", "coming up behind", "with you", "get round", "get around", "hit the others", "on that door", "get in there", "in position", "go go go", "go — go", "go, go", "pushing", "on my way", "two on this room", "everybody, go", "stand and fight", "charge first", "moving up behind", "coming in — i", "bang out", "move up", "putting fire", "covering — move"], &["moving!"], &["set"], 1.0), (&["lock the doors", "on the doors", "back on our doors", "stay on your doors", "digging in", "getting ready", "ready for them", "room ready", "staying on my door", "holding my room", "staying on my post", "holding my post", "let them come", "not coming out", "holding my corner", "holding here", "i've got this door", "on my own"], &[], &[], 3.0)] }
 
@@ -401,5 +330,3 @@ pub fn lines() -> JsMap<String, crate::cues::LINESValue> { { let mut t = JsMap::
 /// (src/game/cues.ts:127 KIND_GAP: a table nothing writes)
 pub fn kind_gap() -> crate::cues::KINDGAP { crate::cues::KINDGAP { stay: Some(3.0), calm: Some(4.0), cover: Some(15.0), flinch: None, still: Some(6.0), help: None, stay_ours: Some(3.0), hunt_over: Some(4.0), fell_back: None, planted: None, pinned_in: None, squad_hears: None, squad_copies: None, squad_waits: None, squad_copies_waits: None, squad_stays: None, squad_quiet: None, surprised: None } }
 
-/// (src/game/cues.ts:134 SQUAD_WORD)
-pub const SQUAD_WORD: &str = "/^[A-Z][a-z]{1,11}: /";

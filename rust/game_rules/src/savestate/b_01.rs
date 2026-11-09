@@ -11,11 +11,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/savestate.ts:860 SaveStore.remove)
 pub fn save_store_remove(g: &crate::game::Game, key: &str) {}
 
-
-
-/// BOUNDARY: the host reads the machine's storage (localStorage) here. No store on this side: None, what `localStorage?.getItem` / a failed read gives. (src/game/savestate.ts:860 SaveStore.get)
-pub fn save_store_get(g: &crate::game::Game, key: &str) -> Option<String> { None }
-
 /// BOUNDARY: the host writes the machine's storage (localStorage) here. No store on this side: false, the interface's "nothing was stored". (src/game/savestate.ts:860 SaveStore.set)
 pub fn save_store_set(g: &crate::game::Game, key: &str, val: &str) -> bool { false }
 

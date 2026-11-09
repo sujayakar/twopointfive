@@ -114,11 +114,6 @@ fn the_word(n: &str) -> String {
 }
 /// `+x.toFixed(2)` (:213)
 fn to_fixed2(x: f64) -> f64 { js::to_fixed(x, 2).parse().unwrap_or(f64::NAN) }
-/// the cell's number as a Set's key: -0 is 0 to a JavaScript Set
-fn room_has(g: &Game, r: RoomfightRoomId, p: V3) -> bool {
-    let c = cell_of(g, p);
-    g.tab.roomfight_room[r].cells.has(crate::Num(c + 0.0))
-}
 
 // ---------------------------------------------------------------- the skeleton's functions
 
@@ -144,17 +139,6 @@ pub fn alive(g: &crate::game::Game, d: RoomfightDefId) -> bool {
 /// a beat between two numbers, off the state's own die (laststand.ts pick)
 pub fn pick(g: &mut crate::game::Game, r: [f64; 2]) -> f64 {
     r[0] + crate::math_dice::roll(&mut st_of(g).die) * (r[1] - r[0])
-}
-
-/// the nav cell of a point (laststand.ts cellOf)
-pub fn cell_of(g: &crate::game::Game, p: V3) -> f64 {
-    let cell = g.col.nav.cell;
-    crate::scene_collision::nav_grid_idx(g, m::floor(p[0] / cell), m::floor(p[2] / cell))
-}
-
-/// is the point on this room's cells (laststand.ts inRoom)
-pub fn in_room(g: &mut crate::game::Game, r: Option<RoomfightRoomId>, p: V3) -> bool {
-    match r { Some(r) => room_has(g, r, p), None => false }
 }
 
 /// a row of the room fight's log (laststand.ts note)
@@ -459,7 +443,6 @@ pub fn tell_only(g: &mut crate::game::Game, c_2: RoomfightDefId) {
         net_at(g, c_2, LineKind::FewAt, &redo);
     }
 }
-
 
 #[cfg(test)]
 mod tests {

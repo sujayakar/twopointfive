@@ -553,14 +553,6 @@ pub fn room_clear_scenario_start(g: &mut crate::game::Game, seed: Option<f64>) -
     None
 }
 
-/// Stop it: the night breach's stop   (roomclear.ts RoomClearScenario.stop)
-pub fn room_clear_scenario_stop(g: &mut crate::game::Game) {
-    if room_clear_scenario_active(g) {
-        crate::nightbreach::night_breach_stop(g);
-    }
-    room_clear_scenario_clear(g);
-}
-
 /// Stage it afresh   (roomclear.ts RoomClearScenario.restage)
 pub fn room_clear_scenario_restage(g: &mut crate::game::Game) {
     if room_clear_scenario_active(g) {

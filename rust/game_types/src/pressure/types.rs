@@ -70,15 +70,6 @@ pub enum PressPhase {
     Word,
     Gather,
 }
-impl PressPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PressPhase::Go => "go",
-            PressPhase::Word => "word",
-            PressPhase::Gather => "gather",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Out {
@@ -106,15 +97,6 @@ pub enum WarnPhase {
     #[default] Heard,
     Called,
     Over,
-}
-impl WarnPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WarnPhase::Heard => "heard",
-            WarnPhase::Called => "called",
-            WarnPhase::Over => "over",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -253,24 +235,11 @@ pub struct StateStats {
     pub look_off: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PRESSUREHOOKS {
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum HookedWhy {
     Push,
     Door,
     Seen,
-}
-impl HookedWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HookedWhy::Push => "push",
-            HookedWhy::Door => "door",
-            HookedWhy::Seen => "seen",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -283,24 +252,6 @@ pub struct Hooked {
 pub struct Target {
     pub t: RoomfightRoomId,
     pub at: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PicketMarksMarksItem {
-    pub pos: V3,
-    pub aim_at: V3,
-    pub drill: Option<bool>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PicketMarksItem {
-    pub pos: V3,
-    pub aim_at: V3,
-    pub drill: Option<bool>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PostPicketRoom {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -350,9 +301,6 @@ impl PressureMod {
     }
 }
 
-/// (src/game/pressure.ts:224 PRESSURE_HOOKS: a table nothing writes)
-pub fn pressure_hooks() -> crate::pressure::PRESSUREHOOKS { crate::pressure::PRESSUREHOOKS {  } }
-
 /// (src/game/pressure.ts:306 ROOM_CELLS)
 pub const ROOM_CELLS: f64 = 500.0;
 
@@ -368,17 +316,8 @@ pub const PAIR_WAIT_SECS: f64 = 6.0;
 /// (src/game/pressure.ts:309 CUE_FIRST_SECS)
 pub const CUE_FIRST_SECS: f64 = 1.0;
 
-/// (src/game/pressure.ts:336 PICKET_DOOR_M)
-pub const PICKET_DOOR_M: f64 = 2.5;
-
 /// (src/game/pressure.ts:1001 CALLED_SECS)
 pub const CALLED_SECS: f64 = 30.0;
-
-/// (src/game/pressure.ts:1106 KEPT: a table nothing writes)
-pub fn kept() -> [String; 21] { [String::from("on"), String::from("press"), String::from("flank"), String::from("fallBack"), String::from("second"), String::from("secondKeeps"), String::from("secondSet"), String::from("maxMen"), String::from("keepRoom"), String::from("keeperLeft"), String::from("organiseK"), String::from("gather"), String::from("warned"), String::from("standPress"), String::from("picket"), String::from("byWay"), String::from("wayOut"), String::from("rescueCrew"), String::from("drilled"), String::from("squadDrill"), String::from("sweep")] }
-
-/// (src/game/pressure.ts:1107 LS)
-pub const LS: &str = "twopointsix.pressure";
 
 /// (src/game/pressure.ts:1108 PRESSURE_DEFAULTS: a table nothing writes)
 pub fn pressure_defaults() -> crate::knobs::PressureK { crate::knobs::PressureK::page() }

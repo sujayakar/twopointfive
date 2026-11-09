@@ -76,15 +76,6 @@ pub enum FlankPhase {
     Go,
     Walk,
 }
-impl FlankPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FlankPhase::Set => "set",
-            FlankPhase::Go => "go",
-            FlankPhase::Walk => "walk",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Peek {
@@ -104,14 +95,6 @@ pub struct Peek {
 pub enum PeekPhase {
     #[default] Out,
     Back,
-}
-impl PeekPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PeekPhase::Out => "out",
-            PeekPhase::Back => "back",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -230,36 +213,6 @@ pub struct StateNearItem {
     pub t: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct LanesSave {
-    pub serial: f64,
-    pub lanes: Vec<crate::lanes::LanesSaveLanesItem>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct LanesSaveLanesItem {
-    pub id: f64,
-    pub from: Vec<f64>,
-    pub at: Vec<f64>,
-    pub t0: f64,
-    pub last_t: f64,
-    pub until: f64,
-    pub weight: f64,
-    pub downs: f64,
-    pub known: bool,
-    pub known_at: f64,
-    pub guns: Vec<Vec<f64>>,
-    pub wedges: Vec<Vec<f64>>,
-    pub round_at: f64,
-    pub stun_at: f64,
-    pub who: Option<Vec<f64>>,
-    pub peek_at: Option<f64>,
-    pub peek_n: Option<f64>,
-    pub peek_part: Option<f64>,
-    pub frag_at: Option<f64>,
-    pub e: Option<f64>,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Stepper {
     pub gd: GuardId,
@@ -270,19 +223,6 @@ pub struct Stepper {
 pub enum FragPlace {
     List(V3),
     Edge,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LanesListItem {
-    pub id: f64,
-    pub from: V3,
-    pub at: V3,
-    pub known: bool,
-    pub weight: f64,
-    pub downs: f64,
-    pub cells: f64,
-    pub until: f64,
-    pub push_until: f64,
 }
 
 /// the state this module keeps at its top level
@@ -298,12 +238,6 @@ impl LanesMod {
         }
     }
 }
-
-/// (src/game/lanes.ts:156 LANES_DEFAULTS: a table nothing writes)
-pub fn lanes_defaults() -> crate::knobs::LanesK { crate::knobs::LanesK::page() }
-
-/// (src/game/lanes.ts:220 SIDE)
-pub const SIDE: &str = "hostile";
 
 /// (src/game/lanes.ts:589 SPOT_RING)
 pub const SPOT_RING: f64 = 0.7;

@@ -77,84 +77,6 @@ impl BoxStuff {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum Stuff {
-    Carpet,
-    Grass,
-    Rubber,
-    Metal,
-    Glass,
-    Wood,
-    Plastic,
-    Fabric,
-    Steel,
-    Enamel,
-    Tarmac,
-    MudWall,
-    Plaster,
-    Block,
-    Earth,
-    Gravel,
-    Slab,
-    Sheet,
-    Cloth,
-    Paint,
-    Veneer,
-    Carpaint,
-    Stucco,
-    Skim,
-    GlossBlock,
-    BoardConcrete,
-    CastPanel,
-    Paver,
-    Brushed,
-    Louvre,
-    FieldStone,
-    MudBrick,
-    Plain,
-    Waits,
-}
-impl Stuff {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Stuff::Carpet => "carpet",
-            Stuff::Grass => "grass",
-            Stuff::Rubber => "rubber",
-            Stuff::Metal => "metal",
-            Stuff::Glass => "glass",
-            Stuff::Wood => "wood",
-            Stuff::Plastic => "plastic",
-            Stuff::Fabric => "fabric",
-            Stuff::Steel => "steel",
-            Stuff::Enamel => "enamel",
-            Stuff::Tarmac => "tarmac",
-            Stuff::MudWall => "mud wall",
-            Stuff::Plaster => "plaster",
-            Stuff::Block => "block",
-            Stuff::Earth => "earth",
-            Stuff::Gravel => "gravel",
-            Stuff::Slab => "slab",
-            Stuff::Sheet => "sheet",
-            Stuff::Cloth => "cloth",
-            Stuff::Paint => "paint",
-            Stuff::Veneer => "veneer",
-            Stuff::Carpaint => "carpaint",
-            Stuff::Stucco => "stucco",
-            Stuff::Skim => "skim",
-            Stuff::GlossBlock => "gloss block",
-            Stuff::BoardConcrete => "board concrete",
-            Stuff::CastPanel => "cast panel",
-            Stuff::Paver => "paver",
-            Stuff::Brushed => "brushed",
-            Stuff::Louvre => "louvre",
-            Stuff::FieldStone => "field stone",
-            Stuff::MudBrick => "mud brick",
-            Stuff::Plain => "plain",
-            Stuff::Waits => "waits",
-        }
-    }
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Paint {
     pub name: String,
@@ -167,25 +89,6 @@ pub struct Paint {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Finish {
     pub rough: Option<f64>,
-    pub metal: Option<bool>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ONEPAINT {
-    pub refuses: bool,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SayPaintSaid {
-    pub stuff: Option<crate::scene_stuff::BoxStuff>,
-    pub does: Option<crate::scene_materials::DoesWord>,
-    pub rough: Option<f64>,
-    pub metal: Option<bool>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct MadeOfFinish {
-    pub rough: f64,
     pub metal: Option<bool>,
 }
 
@@ -209,5 +112,3 @@ impl SceneStuffMod {
     }
 }
 
-/// (src/scene/stuff.ts:131 ONE_PAINT: a table nothing writes)
-pub fn one_paint() -> crate::scene_stuff::ONEPAINT { crate::scene_stuff::ONEPAINT { refuses: false } }

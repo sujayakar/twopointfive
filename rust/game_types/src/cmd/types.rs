@@ -114,5 +114,3 @@ impl CmdMod {
     }
 }
 
-/// (src/game/cmd.ts:73 KEY_CODE)
-pub const KEY_CODE: &str = "/^[A-Za-z0-9]+$/";

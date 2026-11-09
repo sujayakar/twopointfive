@@ -27,24 +27,6 @@ impl RoomClearEnd {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RoomClearState {
-    Off,
-    Taken,
-    Wiped,
-    Live,
-}
-impl RoomClearState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RoomClearState::Off => "off",
-            RoomClearState::Taken => "taken",
-            RoomClearState::Wiped => "wiped",
-            RoomClearState::Live => "live",
-        }
-    }
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct RoomState {
     pub def: crate::scene_scenarios::StructureRoom,
@@ -131,12 +113,6 @@ pub struct PropGapP {
     pub home: [f64; 3],
     pub hx: f64,
     pub hz: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct RoomClearScenarioTeam {
-    pub sam: bool,
-    pub ops: f64,
 }
 
 #[derive(Clone, Debug, Default)]

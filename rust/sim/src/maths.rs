@@ -8,7 +8,6 @@
 //! Do not tidy the arithmetic: `(a - b) - c` is not `a - (b + c)`, a polynomial written by Horner's rule stays one, and a term that looks like it cancels
 //! (`n * n - 0.0`) is there because the other side has it.
 
-use crate::pow10::{POW10, POW10_MIN};
 use prim::{floor, sqrt, trunc};
 
 const INF: f64 = f64::INFINITY;
@@ -403,34 +402,12 @@ pub fn log(x: f64) -> f64 {
     let hfsq = 0.5 * f * f;
     k * LN2HI - ((hfsq - (s * (hfsq + r) + k * LN2LO)) - f)
 }
-const INV_LN10: f64 = 0.4342944819032518;
-const INV_LN2: f64 = 1.4426950408889634;
 /// the whole number nearest y, a half going up (the language's Math.round)
 #[inline]
 pub fn round_half_up(y: f64) -> f64 {
     let f = floor(y);
     let r = if y - f >= 0.5 { f + 1.0 } else { f };
     if r == 0.0 && y < 0.0 { -0.0 } else { r }
-}
-pub fn log10(x: f64) -> f64 {
-    let y = log(x) * INV_LN10;
-    let r = round_half_up(y);
-    // (a power of ten: its exponent, exactly — the product above may sit one place off it)
-    if y != r && (y - r).abs() < 1e-9 && r >= -323.0 && r <= 308.0 && f64::from_bits(POW10[(r as i32 - POW10_MIN) as usize]) == x {
-        return r;
-    }
-    y
-}
-pub fn log2(x: f64) -> f64 {
-    let (mut frac, mut e) = frexp(x);
-    if frac == 0.5 {
-        return (e - 1) as f64; // (a power of two: its exponent, exactly)
-    }
-    if frac < SQRT1_2 {
-        frac *= 2.0;
-        e -= 1;
-    }
-    log(frac) * INV_LN2 + e as f64
 }
 
 // ---- x^y: the whole part of y by squaring on the fraction of x, the rest through e^(y ln x)
@@ -532,30 +509,6 @@ pub fn pow(x: f64, y: f64) -> f64 {
     ldexp(a1, ae)
 }
 
-const TANHP0: f64 = -9.64399179425052238628e-1;
-const TANHP1: f64 = -9.92877231001918586564e1;
-const TANHP2: f64 = -1.61468768441708447952e3;
-const TANHQ0: f64 = 1.12811678491632931402e2;
-const TANHQ1: f64 = 2.23548839060100448583e3;
-const TANHQ2: f64 = 4.84406305325125486048e3;
-const HALF_MAXLOG: f64 = 0.5 * 8.8029691931113054295988e+01;
-pub fn tanh(x: f64) -> f64 {
-    let mut z = x.abs();
-    if z > HALF_MAXLOG {
-        return if x < 0.0 { -1.0 } else { 1.0 };
-    }
-    if z >= 0.625 {
-        let s = exp(2.0 * z);
-        z = 1.0 - 2.0 / (s + 1.0);
-        return if x < 0.0 { -z } else { z };
-    }
-    if x == 0.0 {
-        return x;
-    }
-    let s = x * x;
-    x + x * s * ((TANHP0 * s + TANHP1) * s + TANHP2) / (((s + TANHQ0) * s + TANHQ1) * s + TANHQ2)
-}
-
 // ---- lengths: |x| scaled by the largest, the squares in a compensated sum (src/math/hyp.ts kahan2 / 3 / 4 / N)
 /// one more scaled square into the running sum
 #[inline]
@@ -645,38 +598,5 @@ pub fn hypot4(a: f64, b: f64, c: f64, d: f64) -> f64 {
     kahan_step(y, max, &mut sum, &mut comp);
     kahan_step(z, max, &mut sum, &mut comp);
     kahan_step(w, max, &mut sum, &mut comp);
-    sqrt(sum) * max
-}
-/// the same sum for any number of terms
-pub fn hypot_n(v: &[f64]) -> f64 {
-    match v.len() {
-        2 => return hypot2(v[0], v[1]),
-        3 => return hypot3(v[0], v[1], v[2]),
-        4 => return hypot4(v[0], v[1], v[2], v[3]),
-        _ => {}
-    }
-    let mut max = 0.0;
-    let mut nan = false;
-    for &t in v {
-        let x = t.abs();
-        if x != x {
-            nan = true;
-        } else if x > max {
-            max = x;
-        }
-    }
-    if max == INF {
-        return INF;
-    }
-    if nan {
-        return f64::NAN;
-    }
-    if max == 0.0 {
-        return 0.0;
-    }
-    let (mut sum, mut comp) = (0.0, 0.0);
-    for &t in v {
-        kahan_step(t.abs(), max, &mut sum, &mut comp);
-    }
     sqrt(sum) * max
 }

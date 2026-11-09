@@ -356,11 +356,6 @@ pub fn hour_after_reset(g: &mut crate::game::Game) {
     lamps_out(g);
 }
 
-/// The statics changed under a running game: what the sky reaches is asked afresh. (hours.ts hourWorldChanged)
-pub fn hour_world_changed(g: &mut crate::game::Game) {
-    g.m.hours.reach = crate::hours::SkyReach::blank();
-}
-
 // ---------------------------------------------------------------- the meter's stand-in
 
 /// THE SKY THE GAME'S LIGHT IS WORKED FROM NOW: the hour's as its weather leaves it, else the level's own night. Worked out from state the game keeps, as `exposure_of` is, and never read off the picture's settings, which a panel turns. What `under_weather` tells the picture is this.

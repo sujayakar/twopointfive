@@ -8,14 +8,6 @@ pub enum GunUp {
     Port,
     Aim,
 }
-impl GunUp {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GunUp::Port => "port",
-            GunUp::Aim => "aim",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Hold {
@@ -50,11 +42,6 @@ pub struct St {
 pub struct GunwallModFIGHTValue {
     pub t: f64,
     pub until: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GunWallModel {
-    pub tuck_reach: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -157,5 +144,3 @@ pub const AT_IN: f64 = 0.03;
 /// (src/game/gunwall.ts:131 CLEAR_WIDE)
 pub const CLEAR_WIDE: f64 = 0.1;
 
-/// (src/game/gunwall.ts:135 gunWallModel: a table nothing writes)
-pub fn gun_wall_model() -> crate::gunwall::GunWallModel { crate::gunwall::GunWallModel { tuck_reach: crate::gunwall::TUCK_REACH } }

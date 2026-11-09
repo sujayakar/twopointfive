@@ -152,22 +152,6 @@ pub fn state_part(i: usize, what: u32) -> usize {
 pub fn lights_cap(table: u32) -> usize {
     lights::cap(table)
 }
-/// a camera before its picture (lights.rs CAM_ bits)
-pub fn camera_pan(g: usize, i: usize, dt: f64, live: u32, cones: u32) -> u32 {
-    lights::camera_pan(g, i, dt, live != 0, cones != 0)
-}
-/// …and after it
-pub fn camera_see(g: usize, i: usize, time: f64, dt: f64, visible: u32, gain: f64, x: f64, y: f64, z: f64, suspicion: f64, alarm: f64) -> u32 {
-    lights::camera_see(g, i, time, dt, visible != 0, gain, [x, y, z], suspicion, alarm)
-}
-/// a tripwire before what is in its beam (lights.rs LASER_ bits)
-pub fn laser_open(g: usize, i: usize) -> u32 {
-    lights::laser_open(g, i)
-}
-/// …and after it
-pub fn laser_close(g: usize, i: usize, time: f64, live: u32, cut: f64, sense: f64, held: u32) -> u32 {
-    lights::laser_close(g, i, time, live != 0, cut, sense, held != 0)
-}
 
 // ---- the doors' step (doors.rs: the leaves' state in the game's block, the men near them handed in, each leaf's row of the box world written)
 /// how many rows a table holds (5: the columns of the doors' part of a block)
@@ -251,14 +235,6 @@ pub fn panes_step(r: usize) {
 pub fn panes_type(bi: u32) -> u32 {
     panes::type_of_pane(&cx(), bi)
 }
-/// glassbreak.ts typeOf: by its wall or its place, whatever word it has been given
-/// glassbreak.ts typeOf of a box the level does not hold: indoors, by its place
-pub fn panes_type_box(h0: f64, h1: f64, h2: f64, cy: f64, gap: f64) -> u32 {
-    panes::place_rule(false, h0, h1, h2, cy, gap)
-}
-pub fn panes_type_place(bi: u32) -> u32 {
-    panes::type_place(&cx(), bi)
-}
 pub fn panes_sky(bi: u32) -> i32 {
     panes::sky_known(&cx(), bi)
 }
@@ -292,38 +268,8 @@ pub fn bars_take(bi: u32, flags: u32) -> u32 {
 pub fn bars_blast(x: f64, y: f64, z: f64, reach: f64, statics: usize) -> usize {
     panes::bars_blast(&cx(), [x, y, z], reach, statics, scratch())
 }
-pub fn bars_gone(g: usize) -> u32 {
-    panes::bars_gone(g)
-}
-pub fn bar_gone(g: usize, i: usize) -> u32 {
-    panes::bar_gone(g, i)
-}
-pub fn bar_flags(g: usize, i: usize) -> u32 {
-    panes::bar_flags(g, i)
-}
-pub fn bars_clear(g: usize) {
-    panes::bars_clear(g);
-}
 
 // ---- a round and a pane (pen.rs)
-/// glasspen.ts paneToll: 1 and scratch 0 … 7 (the glass, the normal, the cosine, what it takes, what is left, by a hole) · 0 spent in it
-pub fn pen_toll(bi: u32, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, e: f64, nth: usize) -> u32 {
-    match pen::pane_toll(&cx(), bi, [x, y, z], [dx, dy, dz], e, nth) {
-        Some(t) => {
-            let s = scratch();
-            s[0] = t.ty as f64;
-            s[1] = t.n[0];
-            s[2] = t.n[1];
-            s[3] = t.n[2];
-            s[4] = t.cos;
-            s[5] = t.take;
-            s[6] = t.e_out;
-            s[7] = t.hole as u32 as f64;
-            1
-        }
-        None => 0,
-    }
-}
 /// glasspen.ts paneCrossing: 1 and the crossing → scratch 0 … 24, what it is born in → scratch 25 · 0 spent in it
 pub fn pen_cross(bi: u32, ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64, t: f64, e: f64, nth: usize) -> u32 {
     match pen::pane_crossing(&cx(), bi, [ox, oy, oz], [dx, dy, dz], t, e, nth) {
@@ -392,10 +338,6 @@ pub fn weather_cap(i: u32) -> usize {
         2 => air::AIR_W,
         _ => air::AIR_H,
     }
-}
-/// wet.ts updateWetness, one man: his coat at scratch 0‥5, and back (weather.rs M_*)
-pub fn wet_step(g: usize, w: usize, set: i32, ask: u32, time: f64, dt: f64, x: f64, z: f64, head: f64) {
-    weather::wet_step(weather::of(g), w, set, ask, time, dt, x, z, head, &mut scratch()[..weather::M_LEN])
 }
 /// the dust's table of the block in slot `g`, whose stamp is `stamp`, and the slot's tables made from it (air.rs plan)
 fn air_of(g: usize, stamp: f64) -> (&'static mut air::Air, &'static mut air::Plan) {

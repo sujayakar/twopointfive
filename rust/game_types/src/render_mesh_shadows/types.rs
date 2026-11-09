@@ -31,25 +31,3 @@ impl MeshShadows {
 }
 impl Default for MeshShadows { fn default() -> Self { Self::blank() } }
 
-/// the state this module keeps at its top level
-#[derive(Clone, Debug)]
-pub struct RenderMeshShadowsMod {
-    /// (src/render/meshShadows.ts:27 bvhCache)
-    pub bvh_cache: JsMap<AnimGltfMeshDataId, crate::render_meshbvh::MeshBvh>,
-}
-impl RenderMeshShadowsMod {
-    pub fn blank() -> Self {
-        RenderMeshShadowsMod {
-            bvh_cache: JsMap::new(),
-        }
-    }
-}
-
-/// (src/render/meshShadows.ts:23 NODE_BASE)
-pub const NODE_BASE: f64 = 4.0;
-
-/// (src/render/meshShadows.ts:24 LEVEL_HDR)
-pub const LEVEL_HDR: f64 = 64.0;
-
-/// (src/render/meshShadows.ts:25 REFIT_WG)
-pub const REFIT_WG: f64 = 256.0;

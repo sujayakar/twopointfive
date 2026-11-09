@@ -88,8 +88,3 @@ pub struct RtLightPortal {
 /// (src/render/lights.ts:76 MAX_LIGHTS)
 pub const MAX_LIGHTS: f64 = 64.0;
 
-/// (src/render/lights.ts:83 REACH_BYTES: a table nothing writes)
-pub fn reach_bytes() -> f64 { todo!() }
-
-/// (src/render/lights.ts:85 REACH_VEC4S: a table nothing writes)
-pub fn reach_vec4_s() -> f64 { todo!() }

@@ -60,78 +60,6 @@ pub struct ItemStoreO {
     pub bounces: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum F {
-    Fill,
-    Radius,
-    Yaw,
-    Vx,
-    Vz,
-    Px,
-    Py,
-    Pz,
-    Vy,
-    Spin,
-    Tumble,
-    TumbleRate,
-    Age,
-    Life,
-    Restitution,
-    Friction,
-    Heading,
-    OnPose,
-    Fuse,
-    EmitT,
-}
-impl F {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            F::Fill => "fill",
-            F::Radius => "radius",
-            F::Yaw => "yaw",
-            F::Vx => "vx",
-            F::Vz => "vz",
-            F::Px => "px",
-            F::Py => "py",
-            F::Pz => "pz",
-            F::Vy => "vy",
-            F::Spin => "spin",
-            F::Tumble => "tumble",
-            F::TumbleRate => "tumbleRate",
-            F::Age => "age",
-            F::Life => "life",
-            F::Restitution => "restitution",
-            F::Friction => "friction",
-            F::Heading => "heading",
-            F::OnPose => "onPose",
-            F::Fuse => "fuse",
-            F::EmitT => "emitT",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum U {
-    Kind,
-    Flags,
-    Who,
-    Serial,
-    On,
-    Bounces,
-}
-impl U {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            U::Kind => "kind",
-            U::Flags => "flags",
-            U::Who => "who",
-            U::Serial => "serial",
-            U::On => "on",
-            U::Bounces => "bounces",
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ItemIo {
     pub x: crate::sim_sim::SimExports,
@@ -145,47 +73,6 @@ pub struct ITF {
     pub settled: f64,
     pub fired: f64,
     pub carried: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct IP {
-    pub dt: f64,
-    pub from: f64,
-    pub ask: f64,
-    pub bog: f64,
-    pub rifle_share: f64,
-    pub row: f64,
-    pub events: f64,
-    pub rays: f64,
-    pub thing_rays: f64,
-    pub substeps: f64,
-    pub walked: f64,
-    pub rested: f64,
-    pub snow_top: f64,
-    pub snow_bank: f64,
-    pub snow_packed: f64,
-    pub snow_old: f64,
-    pub snow_dead: f64,
-    pub snow_grip: f64,
-    pub snow_stick: f64,
-    pub roofs: f64,
-    pub roof: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct IE {
-    pub kind: f64,
-    pub row: f64,
-    pub a: f64,
-    pub p: f64,
-    pub v: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct IEK {
-    pub bounce: f64,
-    pub impulse: f64,
-    pub gone: f64,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -284,29 +171,6 @@ pub const NF: f64 = 20.0;
 /// (src/sim/itemshome.ts:50 NC)
 pub const NC: f64 = 26.0;
 
-/// (src/sim/itemshome.ts:54 ITEM_BIT)
-pub const ITEM_BIT: f64 = 128.0;
-
-/// (src/sim/itemshome.ts:104 IP: a table nothing writes)
-pub fn ip() -> crate::sim_itemshome::IP { crate::sim_itemshome::IP { dt: 0.0, from: 1.0, ask: 2.0, bog: 3.0, rifle_share: 4.0, row: 8.0, events: 9.0, rays: 10.0, thing_rays: 11.0, substeps: 12.0, walked: 13.0, rested: 14.0, snow_top: 16.0, snow_bank: 17.0, snow_packed: 18.0, snow_old: 19.0, snow_dead: 20.0, snow_grip: 21.0, snow_stick: 22.0, roofs: 23.0, roof: 24.0 } }
-
-/// (src/sim/itemshome.ts:106 ITEM_PARS)
-pub const ITEM_PARS: f64 = 40.0;
-
 /// (src/sim/itemshome.ts:108 ITEM_ROOFS)
 pub const ITEM_ROOFS: f64 = 4.0;
 
-/// (src/sim/itemshome.ts:111 IE: a table nothing writes)
-pub fn ie() -> crate::sim_itemshome::IE { crate::sim_itemshome::IE { kind: 0.0, row: 1.0, a: 2.0, p: 3.0, v: 6.0 } }
-
-/// (src/sim/itemshome.ts:112 ITEM_EV)
-pub const ITEM_EV: f64 = 9.0;
-
-/// (src/sim/itemshome.ts:113 IEK: a table nothing writes)
-pub fn iek() -> crate::sim_itemshome::IEK { crate::sim_itemshome::IEK { bounce: 0.0, impulse: 1.0, gone: 2.0 } }
-
-/// (src/sim/itemshome.ts:115 ITEM_ROW_EVENTS)
-pub const ITEM_ROW_EVENTS: f64 = 6.0;
-
-/// (src/sim/itemshome.ts:117 ITEMS_HOST)
-pub const ITEMS_HOST: f64 = 1.0;

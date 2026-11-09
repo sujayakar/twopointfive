@@ -20,17 +20,6 @@ pub enum ShellEndMet {
     Floor,
     Static,
 }
-impl ShellEndMet {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ShellEndMet::Prop => "prop",
-            ShellEndMet::Air => "air",
-            ShellEndMet::Man => "man",
-            ShellEndMet::Floor => "floor",
-            ShellEndMet::Static => "static",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Shell {
@@ -40,46 +29,6 @@ pub struct Shell {
     pub flown: f64,
     pub shooter: CharId,
     pub spin: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum BurstMet {
-    Prop,
-    Air,
-    Man,
-    Floor,
-    Static,
-}
-impl BurstMet {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BurstMet::Prop => "prop",
-            BurstMet::Air => "air",
-            BurstMet::Man => "man",
-            BurstMet::Floor => "floor",
-            BurstMet::Static => "static",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DudMet {
-    Prop,
-    Air,
-    Man,
-    Floor,
-    Static,
-}
-impl DudMet {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DudMet::Prop => "prop",
-            DudMet::Air => "air",
-            DudMet::Man => "man",
-            DudMet::Floor => "floor",
-            DudMet::Static => "static",
-        }
-    }
 }
 
 /// the state this module keeps at its top level

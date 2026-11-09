@@ -23,17 +23,6 @@ pub enum GoalMenHow {
     Same,
     Split,
 }
-impl GoalMenHow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GoalMenHow::All => "all",
-            GoalMenHow::Idle => "idle",
-            GoalMenHow::His => "his",
-            GoalMenHow::Same => "same",
-            GoalMenHow::Split => "split",
-        }
-    }
-}
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]

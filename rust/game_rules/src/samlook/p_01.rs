@@ -102,21 +102,6 @@ pub fn slips(g: &mut crate::game::Game) -> bool {
     free(g) && g.pl[g.player].crouch && g.pl[g.player].holstered
 }
 
-/// The man who asks the most room of him, and how much (0..1).   (samlook.ts samSlipMan)
-pub fn sam_slip_man(g: &mut crate::game::Game) -> Option<crate::samlook::SamSlipMan> {
-    if !slips(g) { return None; }
-    let mut best = None;
-    let mut bk = 0.0;
-    let mut i = 0;
-    while i < g.guards.len() {
-        let gd = g.guards[i];
-        i += 1;
-        let k = slip_of(g, gd);
-        if k > bk { bk = k; best = Some(gd); }
-    }
-    best.map(|gd| SamSlipMan { gd, k: bk })
-}
-
 /// The slip as the animator is handed it: the most any man asks, the lean left of it, and where they pull him.   (samlook.ts slipNow)
 pub fn slip_now(g: &mut crate::game::Game) -> Option<crate::samlook::SlipNow> {
     if !slips(g) { return None; }
