@@ -168,7 +168,7 @@ pub unsafe extern "C" fn face_hand(h: u32, seat: usize, p: *const f64, pn: usize
         x.hand_over(seat, cmd);
     });
 }
-/// NOBODY'S HANDS ARE ON A SEAT (game_run hands_off): the hands it is handed from here are his own. `p`, `n`: his plan, a word a line: the seed, the seconds he plays, 1 to throw the breaker
+/// NOBODY'S HANDS ARE ON A SEAT (game_start hands_off): the hands it is handed from here are his own. `p`, `n`: his plan, a word a line: the seed, the seconds he plays, 1 to throw the breaker
 /// first, then doors by name to take first. An empty plan: the seat is the host's again.
 /// # Safety
 /// `p`, `n` name bytes the host wrote into memory from face_alloc.
@@ -178,8 +178,8 @@ pub unsafe extern "C" fn face_hands_off(h: u32, seat: usize, p: *const u8, n: us
     let w: Vec<&str> = text.split('\n').collect();
     super::with(h, |x| x.hands = if text.is_empty() { None } else {
         let num = |i: usize| w.get(i).and_then(|v| v.parse::<f64>().ok()).unwrap_or(0.0);
-        let plan = game_run::hands_off::Plan { seed: num(0) as u32, cap: num(1), breaker: num(2) != 0.0, route: w.iter().skip(3).map(|s| String::from(*s)).collect() };
-        Some((seat, game_run::hands_off::HandsOff::new(x.g.seats[seat], plan)))
+        let plan = game_start::hands_off::Plan { seed: num(0) as u32, cap: num(1), breaker: num(2) != 0.0, route: w.iter().skip(3).map(|s| String::from(*s)).collect() };
+        Some((seat, game_start::hands_off::HandsOff::new(x.g.seats[seat], plan)))
     });
 }
 /// how he stands, as JSON at face_out (empty: nobody is hands off): seconds played, how it ended, orders given, when a round last left a gun, the squad's men up and of how many, defenders left

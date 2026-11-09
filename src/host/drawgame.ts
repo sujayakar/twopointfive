@@ -232,7 +232,7 @@ export class DrawGame {
     const [word, why, secs, way, men, foes, kept, voided, clean] = this.answer().split('\n'), two = (s: string): number[] => s.split(' ').map(Number), [lost, of] = two(men), [foesDown, foesOf] = two(foes), [alive, held] = two(kept);
     return { won: r === 2, word, why, secs: Number(secs), approach: way === '-' ? null : way, lost, of, foesDown, foesOf, hostages: kept === '-' ? null : { alive, of: held }, void: voided === 'true', clean: clean === 'true' };
   }
-  /** nobody's hands are on the seat: a hands-off player takes it (rust/game_run hands_off.rs), or with no plan it is the host's again */
+  /** nobody's hands are on the seat: a hands-off player takes it (rust/game_start hands_off.rs), or with no plan it is the host's again */
   handsOff(plan: HandsOffPlan | null): void { this.handsTo(this.enc.encode(plan ? [plan.seed, plan.cap ?? 240, plan.breaker ? 1 : 0, ...plan.route ?? []].join('\n') : '')); }
   private handsTo(b: Uint8Array): void { this.tape?.hands(b); this.handed(b, (p, n) => this.X.face_hands_off(this.h, 0, p, n)); this.handsKept.done = -1; }
   /** how he stands, null where nobody is hands off */

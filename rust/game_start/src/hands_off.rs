@@ -5,11 +5,19 @@
 //! He knows two things a player does not: which rooms are held, and where the men left in them stand. He never reads how many are behind a door, and orders nothing but
 //! through the keys. The beat between a man showing and the first round is rolled on a die of his own.
 //!
-//! HIS SCRIPT IS ASYNC CODE WITH NO EXECUTOR: an await is 'one tick passes', polled once a tick. It asks the game through `Me::ask`, whose borrow cannot outlive the question.
-use core::cell::{Cell, RefCell};
+//! He is a script of the one scripted player (`player.rs`).
+use crate::player::{at, flat, Feet, Player, Script, Walk, MOVE, V3};
+use alloc::boxed::Box;
+use alloc::format;
+use alloc::rc::Rc;
+use alloc::string::String;
+use alloc::vec;
+use alloc::vec::Vec;
+use core::cell::Cell;
 use core::future::Future;
+use core::ops::Deref;
 use core::pin::Pin;
-use core::task::{Context, Poll, Waker};
+use core::task::{Context, Waker};
 use game::ask::{Line, WorldAsk};
 use game::cmd::PlayerCmd;
 use game::dice::Die;
@@ -18,10 +26,6 @@ use game::ids::{DoorId, GuardId, RoomfightRoomId, SeatId};
 use game::orders::OrderTarget;
 use game::roomfight::Entry;
 use game::teams::Team;
-use game::view::HostNow;
-use std::rc::Rc;
-
-type V3 = [f64; 3];
 
 /// what the hands do beyond taking each held room by its nearest door
 #[derive(Clone, Debug, Default)]
@@ -40,160 +44,33 @@ pub struct Plan {
 pub enum End { Taken, Sam, Cap, Spent }
 impl End { pub fn as_str(self) -> &'static str { match self { End::Taken => "taken", End::Sam => "sam", End::Cap => "cap", End::Spent => "spent" } } }
 
-const MOVE: [&str; 4] = ["KeyW", "KeyA", "KeyS", "KeyD"];
 /// seconds from a man showing to the first round
 const REACT: f64 = 0.6;
-
-fn flat(a: V3, b: V3) -> f64 { (a[0] - b[0]).hypot(a[2] - b[2]) }
-fn at(p: V3) -> String { format!("({:.1}, {:.1})", p[0], p[2]) }
 
 /// a man as he has been shown to him: first, last, and the beat he needs
 #[derive(Clone, Copy)]
 struct Shown { first: f64, last: f64, need: f64 }
 
-/// what the script and the hands share
+/// the player, and what this script keeps beside him
 struct Me {
-    game: Cell<*const Game>,
-    seat: SeatId,
-    /// the lens and the canvas of the hand being made
-    now: RefCell<HostNow>,
-    ahead: Cell<[f64; 2]>,
-    t: Cell<f64>,
-    goal: Cell<Option<V3>>,
-    look: Cell<Option<V3>>,
+    p: Player,
     target: Cell<Option<GuardId>>,
-    /// where he has put the cursor
-    cursor: Cell<Option<[f64; 2]>>,
-    press: RefCell<Vec<String>>,
     given: Cell<u32>,
-    quick_at: Cell<f64>,
-    trace: RefCell<Vec<String>>,
 }
+impl Deref for Me { type Target = Player; fn deref(&self) -> &Player { &self.p } }
 impl Me {
-    /// a question of the game, as the last tick left it
-    fn ask<R>(&self, f: impl FnOnce(&Game) -> R) -> R {
-        // (set for as long as a tick's hand is being made, and only polled inside that: HandsOff::hand)
-        let g = self.game.get();
-        assert!(!g.is_null(), "the hands-off player is asked between two hands");
-        f(unsafe { &*g })
-    }
-    fn world<R>(&self, f: impl FnOnce(&WorldAsk) -> R) -> R { self.ask(|g| f(&WorldAsk::of(g))) }
-    fn seen<R>(&self, f: impl FnOnce(&Game, &game::seats::SeatRef) -> R) -> R { self.ask(|g| f(g, &game::seats::seat(g, self.seat))) }
-    fn say(&self, s: String) {
-        let mut t = self.trace.borrow_mut();
-        t.push(format!("{:6.1}  {}", self.t.get(), s));
-        if t.len() > 400 { t.remove(0); }
-    }
-    fn pos(&self) -> V3 { self.seen(|g, s| g.ch[g.pl[s.player].ch].pos) }
-    fn man_at(&self, gd: GuardId) -> V3 { self.ask(|g| g.ch[g.gd[gd].ch].pos) }
-    fn dead(&self, gd: GuardId) -> bool { self.ask(|g| g.gd[gd].state == GuardState::Dead) }
     /// his teammates still up
     fn up(&self) -> Vec<GuardId> { self.seen(|g, s| game::orders::squad_orders_squad(g, s).into_iter().filter(|&m| g.gd[m].state != GuardState::Dead).collect()) }
     /// defenders still up
     fn left(&self) -> Vec<GuardId> { self.ask(left) }
-    fn screen(&self, p: V3) -> (f64, f64, bool) {
-        let n = self.now.borrow();
-        let (w, h) = (n.client[0], n.client[1]);
-        let (x, y, front) = game::camera::project(&n.view_proj, p, w, h, None, None);
-        (x, y, front && x > 30.0 && x < w - 30.0 && y > 30.0 && y < h - 30.0)
-    }
-    fn on_screen(&self, p: V3) -> bool { self.screen(p).2 }
-    /// what the cursor is on, as the keys read it
-    fn under(&self) -> OrderTarget { let n = self.now.borrow().clone(); self.seen(|g, s| game::orders::target_under(g, s, &n, &mut Vec::new())) }
-    fn name(&self, d: DoorId) -> String { self.ask(|g| g.dr[d].def.name.clone()) }
     fn orders(&self) -> usize { self.seen(|_, s| s.orders.log.len()) }
     fn order_given(&self, n: usize) -> String { self.seen(|_, s| if s.orders.log.len() > n { s.orders.log[s.orders.log.len() - 1].order.clone() } else { String::from("nothing given") }) }
     fn counted(&self, n: usize) -> bool { let given = self.orders() > n; if given { self.given.set(self.given.get() + 1); } given }
     fn ops_on(&self, d: DoorId) -> bool { self.seen(|g, s| s.door_tools.ops.iter().any(|&o| g.tab.doortools_door_op[o].door == d)) }
 
-    // ---- the script's own clock
-    async fn tick(&self) { Once(false).await }
-    async fn ticks(&self, n: u32) { for _ in 0..n { self.tick().await } }
-    async fn wait(&self, secs: f64) { let end = self.t.get() + secs; while self.t.get() < end - 1e-6 { self.tick().await } }
-    async fn until(&self, mut done: impl FnMut(&Me) -> bool, secs: f64) -> bool {
-        let end = self.t.get() + secs;
-        while self.t.get() < end - 1e-6 && !done(self) { self.tick().await }
-        done(self)
-    }
-    /// a key goes down. (The squad's is never pressed twice inside the window of a double press: his second is a second try at an order, never 'fall in')
-    async fn key(&self, code: &str) {
-        let (quick, twice, secs) = self.ask(|g| (code == g.orders.knobs.quick_key, g.k.cmdring.twice, g.k.cmdring.twice_secs));
-        if quick && twice {
-            while self.t.get() < self.quick_at.get() + secs + 0.05 { self.tick().await }
-            self.quick_at.set(self.t.get());
-        }
-        self.press.borrow_mut().push(String::from(code));
-        self.tick().await
-    }
     async fn quick(&self) { let k = self.ask(|g| g.orders.knobs.quick_key.clone()); self.key(&k).await }
 
-    // ---- his feet
-    /// the nearest place a man may stand, on the asked point's own side of a wall where there is one (scene_collision nav_grid_nearest_free_point, asked of the game shared)
-    fn free(&self, p: V3) -> Option<V3> {
-        self.world(|w| {
-            let g = w.shared();
-            let n = &g.col.nav;
-            if !game::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return Some([p[0], 0.0, p[2]]); }
-            let mid = |x: f64, z: f64| [(x + 0.5) * n.cell, 0.0, (z + 0.5) * n.cell];
-            let (gx, gz) = ((p[0] / n.cell).floor().clamp(0.0, n.w - 1.0), (p[2] / n.cell).floor().clamp(0.0, n.h - 1.0));
-            if n.blocked[(gz * n.w + gx) as usize] == 0 { return Some(mid(gx, gz)); }
-            let (mut fallback, mut extra) = (None, 1);
-            for r in 1..8i32 {
-                for dz in -r..=r { for dx in -r..=r {
-                    if dx.abs().max(dz.abs()) != r { continue; }
-                    let (x, z) = (gx + dx as f64, gz + dz as f64);
-                    if x < 0.0 || z < 0.0 || x >= n.w || z >= n.h || n.blocked[(z * n.w + x) as usize] != 0 { continue; }
-                    let q = mid(x, z);
-                    fallback = fallback.or(Some(q));
-                    if !w.line([p[0], 1.0, p[2]], [q[0], 1.0, q[2]], Line::Solid) { return Some(q); }
-                } }
-                if fallback.is_some() { if extra <= 0 { return fallback; } extra -= 1; }
-            }
-            fallback
-        })
-    }
-    fn way(&self, a: V3, b: V3) -> Option<Vec<V3>> { self.world(|w| w.way(a, b, 6000)) }
-    fn way_len(&self, a: V3, b: V3) -> f64 {
-        let Some(w) = self.way(a, b) else { return f64::INFINITY };
-        let (mut l, mut q) = (0.0, a);
-        for p in w { l += flat(q, p); q = p; }
-        l + flat(q, b)
-    }
-    fn solid(&self, a: V3, b: V3) -> bool { self.world(|w| w.line([a[0], 1.1, a[2]], [b[0], 1.1, b[2]], Line::Solid)) }
-    /// walk to `p`; false: stopped early (`stop`, `max` seconds, or not getting anywhere after fresh ways)
-    async fn go(&self, p: V3, max: f64, mut stop: impl FnMut(&Me) -> bool) -> bool {
-        let (mut left, mut again) = (max, 0u32);
-        'afresh: loop {
-            let mut path = self.way(self.pos(), p).unwrap_or_default();
-            if path.last().is_none_or(|&l| flat(l, p) > 0.05) { path.push([p[0], 0.0, p[2]]); }
-            let (t0, last) = (self.t.get(), path.len() - 1);
-            let (mut mark, mut mark_t) = (self.pos(), self.t.get());
-            for (i, &wp) in path.iter().enumerate() {
-                self.goal.set(Some([wp[0], 0.0, wp[2]]));
-                while flat(self.pos(), wp) > if i == last { 0.3 } else { 0.6 } {
-                    self.tick().await;
-                    if stop(self) || self.t.get() - t0 > left { self.goal.set(None); return false; }
-                    let me = self.pos();
-                    if flat(me, mark) > 0.25 || self.target.get().is_some() { mark = me; mark_t = self.t.get(); }
-                    else if self.t.get() - mark_t > 1.2 {
-                        // (a mate in a doorway, a chair, the tip of a leaf: a step to one side, then the other, and a fresh way)
-                        if again >= 8 { self.goal.set(None); return false; }
-                        let (dx, dz) = (wp[0] - me[0], wp[2] - me[2]);
-                        let l = { let l = dx.hypot(dz); if l > 0.0 { l } else { 1.0 } };
-                        let (side, k) = (if again % 2 == 1 { -1.0 } else { 1.0 }, 0.9 + 0.3 * (again >> 1) as f64);
-                        self.goal.set(Some([me[0] - dz / l * side * k - dx / l * 0.3, 0.0, me[2] + dx / l * side * k - dz / l * 0.3]));
-                        let end = self.t.get() + 0.6;
-                        while self.t.get() < end { self.tick().await; if stop(self) { self.goal.set(None); return false; } }
-                        left -= self.t.get() - t0;
-                        again += 1;
-                        continue 'afresh;
-                    }
-                }
-            }
-            self.goal.set(None);
-            return true;
-        }
-    }
+    async fn go(&self, p: V3, max: f64, stop: impl FnMut() -> bool) -> bool { self.p.go(p, max, stop, Walk::default()).await }
 
     // ---- the floor
     /// the rooms still held, and who is at home
@@ -244,7 +121,7 @@ impl Me {
         for y in [1.0, 0.1, 1.8] {
             let p = self.door_at(d, y);
             if !self.on_screen(p) { continue; }
-            self.look.set(Some(p));
+            self.aim(p);
             self.ticks(2).await;
             if let OrderTarget::Door(t) = self.under() { if t.door == d { return true; } }
         }
@@ -252,29 +129,29 @@ impl Me {
     }
 
     // ---- the quick key
-    async fn press(&self, d: DoorId, why: &str) -> bool {
+    async fn quick_on(&self, d: DoorId, why: &str) -> bool {
         if !self.cursor_on(d).await { self.say(format!("(quick · {}: the door is not under the cursor)", self.name(d))); return false; }
         let n = self.orders();
         self.quick().await;
         self.say(format!("quick · {} ({}) → {}", self.name(d), why, self.order_given(n)));
-        self.look.set(None);
+        self.aim_off();
         self.counted(n)
     }
     /// the men sent in through a door they are stacked on: the quick key, or the word's where the quick key is 'stack up' again on such a door
     async fn enter(&self, d: DoorId, why: &str) -> bool {
         let set = self.cursor_on(d).await && { let t = self.under(); self.seen(|g, s| game::autopilot::auto_pick(g, s, &t, Some(false), None).why == game::autopilot::AutoPickWhy::Set) };
-        if !set { return self.press(d, why).await; }
+        if !set { return self.quick_on(d, why).await; }
         let (n, word) = (self.orders(), self.ask(|g| g.orders.knobs.wait_alt.clone()));
         self.key(&word).await;
         self.say(format!("word · {} ({}) → {}", self.name(d), why, self.order_given(n)));
-        self.look.set(None);
+        self.aim_off();
         self.orders() > n || self.ops_on(d)
     }
     /// the cursor on his own feet with no teammate under it: what the quick key calls 'nothing', which is fall in
     async fn on_self(&self) -> bool {
         for (ox, oz) in [(0.0, 0.0), (0.25, 0.0), (-0.25, 0.0), (0.0, 0.25), (0.0, -0.25)] {
             let p = self.pos();
-            self.look.set(Some([p[0] + ox, 0.05, p[2] + oz]));
+            self.aim([p[0] + ox, 0.05, p[2] + oz]);
             self.ticks(2).await;
             if let OrderTarget::None(t) = self.under() { if t.man.is_none() { return true; } }
         }
@@ -285,7 +162,7 @@ impl Me {
         self.on_self().await;
         let n = self.orders();
         self.quick().await;
-        self.look.set(None);
+        self.aim_off();
         self.say(format!("quick · on himself → {}", self.order_given(n)));
         self.counted(n);
     }
@@ -294,21 +171,21 @@ impl Me {
         let (d, post) = (e.door, self.post(e));
         self.say(format!("→ {} ({} at home), from {}", self.name(d), h.men.len(), at(post)));
         let mut sent = false;
-        if !self.sees(d) { self.fall_in().await; self.wait(1.0).await; self.go(post, 60.0, |m| m.sees(d)).await; }
-        for _ in 0..4 { if sent { break; } sent = self.press(d, "stack").await; if !sent { self.go(post, 2.0, |_| false).await; } }
+        if !self.sees(d) { self.fall_in().await; self.wait(1.0).await; self.go(post, 60.0, || self.sees(d)).await; }
+        for _ in 0..4 { if sent { break; } sent = self.quick_on(d, "stack").await; if !sent { self.go(post, 2.0, || false).await; } }
         self.wait(2.5).await;
-        if !self.go(post, 60.0, |_| false).await { self.say(format!("(he did not reach his post: at {})", at(self.pos()))); }
-        if !sent { self.press(d, "stack").await; }
-        self.until(|m| { let up = m.up(); m.seen(|g, s| up.iter().all(|&gd| game::orders::squad_orders_of(g, s, gd).is_some_and(|a| g.tab.orders_assignment[a].arrived))) }, 25.0).await;
+        if !self.go(post, 60.0, || false).await { self.say(format!("(he did not reach his post: at {})", at(self.pos()))); }
+        if !sent { self.quick_on(d, "stack").await; }
+        self.until(|| { let up = self.up(); self.seen(|g, s| up.iter().all(|&gd| game::orders::squad_orders_of(g, s, gd).is_some_and(|a| g.tab.orders_assignment[a].arrived))) }, 25.0).await;
         for k in 0..4 {
             if !h.held(self) || self.up().is_empty() { break; }
             if !self.enter(d, if k > 0 { "again" } else { "go in" }).await { self.wait(1.0).await; continue; }
-            self.until(|m| m.ops_on(d), 3.0).await;
-            self.until(|m| !m.ops_on(d), 70.0).await;
+            self.until(|| self.ops_on(d), 3.0).await;
+            self.until(|| !self.ops_on(d), 70.0).await;
             self.wait(1.5).await;
         }
         self.wait(1.0).await;
-        if let Some(inn) = self.inside(e) { self.go(inn, 25.0, |_| false).await; }
+        if let Some(inn) = self.inside(e) { self.go(inn, 25.0, || false).await; }
         self.wait(1.0).await;
     }
     /// a held room with no teammate left to send: to the door, through it, and to each man in it
@@ -316,31 +193,31 @@ impl Me {
         let d = e.door;
         self.say(format!("→ {} himself ({} at home)", self.name(d), h.men.len()));
         let face = out_pt(e, 0.9, 0.0);
-        self.go(self.free(face).unwrap_or(face), 60.0, |_| false).await;
-        let shut = |m: &Me| m.ask(|g| game::doors::door_locked(g, d) && !game::doors::door_lock_broken(g, d) && game::doors::door_angle(g, d).abs() < 0.3);
-        if shut(self) {
+        self.go(self.free(face).unwrap_or(face), 60.0, || false).await;
+        let shut = || self.ask(|g| game::doors::door_locked(g, d) && !game::doors::door_lock_broken(g, d) && game::doors::door_angle(g, d).abs() < 0.3);
+        if shut() {
             // (the highlight walked to the boot by its key, as a hand walks it)
-            let end = self.t.get() + 2.0;
-            while self.t.get() < end && shut(self) {
+            let end = self.t() + 2.0;
+            while self.t() < end && shut() {
                 let on = self.seen(|g, s| s.nearby.get(g.pl[s.player].near_sel.max(0) as usize).is_some_and(|r| r.kind == InteractableKind::Door && r.verb == Some(Verb::Kick)));
-                self.press.borrow_mut().push(String::from(if on { game::consts::INTERACT_KEY } else { "ArrowDown" }));
-                if on { self.until(|m| !shut(m), 2.5).await; break; }
+                self.down(if on { game::consts::INTERACT_KEY } else { "ArrowDown" });
+                if on { self.until(|| !shut(), 2.5).await; break; }
                 self.ticks(3).await;
             }
         }
-        if let Some(inn) = self.inside(e) { self.go(inn, 20.0, |m| !h.held(m)).await; }
+        if let Some(inn) = self.inside(e) { self.go(inn, 20.0, || !h.held(self)).await; }
         for _ in 0..4 {
             let me = self.pos();
             let Some(m) = h.men.iter().copied().filter(|&m| !self.dead(m)).min_by(|&a, &b| flat(self.man_at(a), me).total_cmp(&flat(self.man_at(b), me))) else { break };
-            self.go(self.man_at(m), 8.0, |me| me.dead(m) || me.target.get().is_some()).await;
-            self.until(|me| me.target.get().is_none(), 6.0).await;
+            self.go(self.man_at(m), 8.0, || self.dead(m) || self.target.get().is_some()).await;
+            self.until(|| self.target.get().is_none(), 6.0).await;
             self.wait(0.3).await;
         }
     }
     /// the breaker thrown by a teammate: the quick key on its panel, then the wait for the dark
     async fn breaker(&self) {
-        let dark = |m: &Me| m.ask(|g| game::sim_lightshome::mains_active(g));
-        if dark(self) || self.up().is_empty() { return; }
+        let dark = || self.ask(|g| game::sim_lightshome::mains_active(g));
+        if dark() || self.up().is_empty() { return; }
         let p = self.ask(|g| g.level.breaker.pos);
         if p == [0.0; 3] { return; }
         let foot = self.free(p).unwrap_or(p);
@@ -348,13 +225,13 @@ impl Me {
         if !self.on_screen(p) {
             self.fall_in().await;
             self.wait(1.0).await;
-            let mut near = slow(move |m: &Me| m.on_screen(p) && m.way_len(m.pos(), foot) < 12.0);
-            self.go(foot, 60.0, move |m| near(m)).await;
+            let near = slow(self, || self.on_screen(p) && self.way_len(self.pos(), foot) < 12.0);
+            self.go(foot, 60.0, near).await;
         }
         let mut given = false;
         for q in [p, [foot[0], 0.05, foot[2]]] {
             if !self.on_screen(q) { continue; }
-            self.look.set(Some(q));
+            self.aim(q);
             self.ticks(2).await;
             if !matches!(self.under(), OrderTarget::Floor(t) if t.thing.is_some()) { continue; }
             let n = self.orders();
@@ -363,7 +240,7 @@ impl Me {
             given = self.counted(n);
             if given { break; }
         }
-        self.look.set(None);
+        self.aim_off();
         if !given { self.say(String::from("(the breaker is not under the cursor: the rooms are taken lit)")); return; }
         if !self.until(dark, 45.0).await { self.say(String::from("(no dark in 45 s)")); }
         self.wait(1.5).await;
@@ -402,8 +279,8 @@ impl Me {
                 let Some(way) = self.way(self.pos(), hp) else { continue };
                 self.say(format!("hunt → {} {}", self.ask(|g| g.gd[h].callsign.clone()), at(hp)));
                 if self.up().is_empty() {
-                    self.go(hp, 30.0, |m| m.dead(h) || m.target.get().is_some()).await;
-                    self.until(|m| m.dead(h) || m.target.get().is_none(), 8.0).await;
+                    self.go(hp, 30.0, || self.dead(h) || self.target.get().is_some()).await;
+                    self.until(|| self.dead(h) || self.target.get().is_none(), 8.0).await;
                     continue;
                 }
                 self.fall_in().await;
@@ -416,17 +293,17 @@ impl Me {
                     back -= l;
                 }
                 // (… from where his floor first comes into the picture: a commander does not walk onto him)
-                let mut near = slow(move |m: &Me| { let q = m.man_at(h); m.on_screen([q[0], 0.05, q[2]]) && m.way_len(m.pos(), q) < 14.0 });
-                if let Some(p) = p { self.go(self.free(p).unwrap_or(p), 40.0, move |m| m.dead(h) || near(m)).await; }
+                let mut near = slow(self, || { let q = self.man_at(h); self.on_screen([q[0], 0.05, q[2]]) && self.way_len(self.pos(), q) < 14.0 });
+                if let Some(p) = p { self.go(self.free(p).unwrap_or(p), 40.0, || self.dead(h) || near()).await; }
                 if !self.dead(h) && !self.up().is_empty() {
                     let q = self.man_at(h);
-                    self.look.set(Some([q[0], 0.05, q[2]]));
+                    self.aim([q[0], 0.05, q[2]]);
                     self.ticks(2).await;
                     let n = self.orders();
                     self.quick().await;
                     self.say(format!("quick · the floor by {} → {}", self.ask(|g| g.gd[h].callsign.clone()), self.order_given(n)));
-                    self.look.set(None);
-                    self.until(|m| m.dead(h), 14.0).await;
+                    self.aim_off();
+                    self.until(|| self.dead(h), 14.0).await;
                 }
             }
         }
@@ -440,16 +317,9 @@ impl Held { fn held(&self, me: &Me) -> bool { self.men.iter().any(|&m| !me.dead(
 fn left(g: &Game) -> Vec<GuardId> { g.guards.iter().copied().filter(|&m| g.gd[m].team == Team::Hostile && g.gd[m].state != GuardState::Dead).collect() }
 fn out_pt(e: &Entry, back: f64, lat: f64) -> V3 { [e.at[0] + e.out[0] * back - e.out[1] * lat, 0.0, e.at[2] + e.out[1] * back + e.out[0] * lat] }
 /// a question that costs a search of the floor, asked four times a second and not every tick
-fn slow(mut f: impl FnMut(&Me) -> bool) -> impl FnMut(&Me) -> bool {
+fn slow<'a>(me: &'a Me, mut f: impl FnMut() -> bool + 'a) -> impl FnMut() -> bool + 'a {
     let (mut next, mut v) = (-1.0, false);
-    move |m: &Me| { if m.t.get() >= next { next = m.t.get() + 0.25; v = f(m); } v }
-}
-
-/// one tick passes
-struct Once(bool);
-impl Future for Once {
-    type Output = ();
-    fn poll(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<()> { if self.0 { Poll::Ready(()) } else { self.0 = true; Poll::Pending } }
+    move || { if me.t() >= next { next = me.t() + 0.25; v = f(); } v }
 }
 
 pub struct HandsOff {
@@ -468,10 +338,7 @@ pub struct HandsOff {
 }
 impl HandsOff {
     pub fn new(seat: SeatId, plan: Plan) -> HandsOff {
-        let me = Rc::new(Me {
-            game: Cell::new(core::ptr::null()), seat, now: RefCell::new(HostNow::default()), ahead: Cell::new([0.0, 1.0]), t: Cell::new(0.0), goal: Cell::new(None), look: Cell::new(None), target: Cell::new(None),
-            cursor: Cell::new(None), press: RefCell::new(Vec::new()), given: Cell::new(0), quick_at: Cell::new(-9.0), trace: RefCell::new(Vec::new()),
-        });
+        let me = Rc::new(Me { p: Player::new(seat, Feet::default()), target: Cell::new(None), given: Cell::new(0) });
         let (cap, seed, own) = (plan.cap, plan.seed, me.clone());
         HandsOff {
             me, script: Box::pin(async move { own.play(&plan).await }), cap, die: Die::new(0xb07u32.wrapping_add(seed.wrapping_mul(131))), shown: Vec::new(), last: None, last_t: -9.0, busy: 0.0, end: None,
@@ -479,16 +346,15 @@ impl HandsOff {
         }
     }
     pub fn end(&self) -> Option<End> { self.end }
-    pub fn t(&self) -> f64 { self.me.t.get() }
+    pub fn t(&self) -> f64 { self.me.t() }
     /// presses of the squad's keys that gave an order
     pub fn given(&self) -> u32 { self.me.given.get() }
-    pub fn trace(&self) -> String { self.me.trace.borrow().join("\n") }
+    pub fn trace(&self) -> String { self.me.p.trace() }
     pub fn shot_at(&self) -> f64 { self.shot_at }
     pub fn stop(&mut self, end: End) {
         if self.end.is_some() { return; }
         self.end = Some(end);
-        self.me.goal.set(None);
-        self.me.look.set(None);
+        self.me.rest();
         self.me.target.set(None);
         self.me.say(format!("ended: {}", end.as_str()));
     }
@@ -507,17 +373,11 @@ impl HandsOff {
         if g.pl[pl].down { return self.stop(End::Sam); }
         if g.room_clear.end == Some(game::roomclear::RoomClearEnd::Taken) || (self.t() > 0.0 && left(g).is_empty()) { return self.stop(End::Taken); }
         if self.t() >= self.cap { return self.stop(End::Cap); }
-        if let Some(c) = me.cursor.get() { (cmd.mx, cmd.my) = (c[0], c[1]); }
-        let m16 = |v: &[f64]| -> [f32; 16] { core::array::from_fn(|i| v[i] as f32) };
-        *me.now.borrow_mut() = HostNow { mouse: [cmd.mx, cmd.my], client: [cmd.w, cmd.h], view_proj: m16(&cmd.view.vp), inv_view_proj: m16(&cmd.view.ivp) };
-        { let f = cmd.view.forward; let l = f[0].hypot(f[2]); if l > 0.0 { me.ahead.set([f[0] / l, f[2] / l]); } }
-        me.game.set(g);
+        me.open(g, cmd);
         let done = self.script.as_mut().poll(&mut Context::from_waker(Waker::noop())).is_ready();
-        if !done { self.aim(g, cmd); }
-        me.game.set(core::ptr::null());
-        if done { return self.stop(End::Spent); }
-        cmd.pressed.append(&mut me.press.borrow_mut());
-        me.t.set(me.t.get() + dt);
+        if done { me.shut(); return self.stop(End::Spent); }
+        self.aim(g, cmd);
+        me.close(cmd, dt);
     }
     /// his hands, once a tick: the walk keys toward the goal, the cursor, the trigger
     fn aim(&mut self, g: &Game, cmd: &mut PlayerCmd) {
@@ -545,25 +405,13 @@ impl HandsOff {
         if best.is_some() { self.last = best; self.last_t = t; }
         if t < self.busy { best = None; }
         me.target.set(best);
-        let mut ahead = None;
-        if let Some(goal) = me.goal.get() {
-            let (dx, dz) = (goal[0] - pos[0], goal[2] - pos[2]);
-            let d = dx.hypot(dz);
-            if d > 0.2 {
-                ahead = Some([pos[0] + dx / d * 6.0, 1.1, pos[2] + dz / d * 6.0]);
-                if best.is_none() {
-                    let f = me.ahead.get();
-                    let (a, b) = ((dx * f[0] + dz * f[1]) / d, (dx * -f[1] + dz * f[0]) / d);
-                    for (on, k) in [(a > 0.3827, 0), (b < -0.3827, 1), (a < -0.3827, 2), (b > 0.3827, 3)] { if on { cmd.keys.push(String::from(MOVE[k])); } }
-                }
-            }
-        }
-        let look = best.map(chest).or(me.look.get()).or(ahead);
-        if let Some(p) = look {
-            let (x, y, front) = game::camera::project(&me.now.borrow().view_proj, p, cmd.w, cmd.h, None, None);
-            if front { cmd.mx = x.clamp(10.0, (cmd.w - 10.0).max(10.0)); cmd.my = y.clamp(10.0, (cmd.h - 10.0).max(10.0)); me.cursor.set(Some([cmd.mx, cmd.my])); }
-        }
+        me.set_busy(best.is_some());
+        me.hands(g, cmd, best.map(chest));
         if best.is_some() && seat.aim_guard == best && !pl.sprinting { cmd.clicked = (cmd.clicked as u32 | 1) as f64; }
-        if game::weapons::firearm_rounds_ready(g, pl.rifle) == 0.0 && !game::weapons::firearm_reloading(g, pl.rifle) { me.press.borrow_mut().push(String::from("KeyR")); }
+        if game::weapons::firearm_rounds_ready(g, pl.rifle) == 0.0 && !game::weapons::firearm_reloading(g, pl.rifle) { me.down("KeyR"); }
     }
+}
+impl Script for HandsOff {
+    fn hand(&mut self, g: &Game, cmd: &mut PlayerCmd, dt: f64) { HandsOff::hand(self, g, cmd, dt) }
+    fn over(&self) -> bool { self.end.is_some() }
 }
