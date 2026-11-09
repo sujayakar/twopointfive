@@ -14,7 +14,7 @@ const { buildOfficeProcedural, OFFICE_PALETTE, OFFICE_FINISH } = await import(`$
 const { rowWord, rowDoes } = await import(`${ROOT}/src/scene/stuff.ts`);   // (what each paint is made of, by its name: written into the file's material rows)
 const { levelToData, loadLevel } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
 const { stampDoes } = await import('./levels/doesWas.ts');   // (what a box nobody spoke for does: the word its colour had. src/scene/materials.ts)
-const { validateLevelData, serializeLevelData, parseLevelData, levelDataDigest, structuralDiff, canonicalLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { levelFaults, serializeLevelData, parseLevelData, levelDataDigest, structuralDiff } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { FINISHES, BUILDING, GRASS_EDGE } = await import(`${ROOT}/tools/levels/lib/officeFloor.ts`);
 
@@ -53,14 +53,14 @@ const data = levelToData(level, {
 });
 
 // 3. validate + serialize
-const errs = validateLevelData(data);
-if (errs.length) { console.error(`validateLevelData: ${errs.length} error(s)\n  ${errs.slice(0, 30).join('\n  ')}`); process.exit(1); }
+const errs = levelFaults(data);
+if (errs.length) { console.error(`${data.name}: ${errs.length} fault(s)\n  ${errs.slice(0, 30).join('\n  ')}`); process.exit(1); }
 const text = serializeLevelData(data);
 
 // 4. the proof: text → LevelData → Level must be the generator's Level, field for field (and the data must survive its own round trip)
 const parsed = parseLevelData(text);
-const dataDiffs: string[] = []; const nData = structuralDiff(canonicalLevelData(data), parsed, dataDiffs);
-const reloaded = loadLevel(parsed);
+const dataDiffs: string[] = []; const nData = structuralDiff(data, parsed, dataDiffs);
+const reloaded = loadLevel(parsed, { validate: false });
 const levelDiffs: string[] = []; const nLevel = structuralDiff(level, reloaded, levelDiffs);
 if (nData || nLevel) {
   console.error(`export REFUSED: the file would not reproduce the level — ${nLevel} Level diff(s), ${nData} data diff(s)`);
