@@ -3,7 +3,7 @@
 //!
 //!   the block of rust/sim the game stands in, zeroed under the layout's word   (sim/state.ts SimState.born)
 //!   the character's rows                                                       (anim/gltf.ts; `gltf.rs`)
-//!   the host: an empty box world and light set, the picture's settings         (host/stub.ts)
+//!   the host: an empty box world and light set         (host/stub.ts)
 //!   the level file read                                                        (scene/levelLoad.ts; `level.rs`)
 //!   the level's marks, its statics into the world, its lights into the set     (standup.ts populateHost; `passes.rs`)
 //!   the die, seeded: the men's construction dice are its first draws           (standup.ts: newDice, useDice)
@@ -14,7 +14,7 @@
 //! One function, `stand`, for every way a game starts natively: a test's scene (`scene.rs` writes a level file), a level of `levels/`, later a host.
 use crate::gltf::{self, GltfFile};
 use crate::json::Json;
-use crate::{level, passes, settings};
+use crate::{level, passes};
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -150,12 +150,10 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     let rig = gltf::character(&mut g, assets.mannequin, cast);
     // the rows that only dress the picture, as this host has them (game/dress.ts DRESS: up on a page, down on a host that draws nothing)
     if !o.dress { g.m.dress.dress = game::dress::DressModDRESS::default(); }
-    // the host with no picture: an empty world and light set, the picture's settings, effectiveScale 1, no skin (stub.ts stubHost)
+    // the host with no picture: an empty world and light set, no skin (stub.ts stubHost)
     g.engine.world = game::scene_boxes::box_world_new(&mut g, game::Opaque, None);
     game::io::set_slot(&mut g, o.slot);   // (the slot is held twice: the game's own word and the box mirror's, which the world's lookups read)
     g.engine.lights = game::render_lights::LightSet::blank();
-    g.engine.settings = settings::default_settings();
-    g.engine.effective_scale = 1.0;
     let (dressing, lived) = (g.k.destruction.on, g.k.lived.on);
     let mut loaded = level::load(&mut g, data, dressing, lived);
     populate_host(&mut g, &mut loaded.boxes);
@@ -163,9 +161,6 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     // (it goes home to the block with the rest of the moving state, in `settle`: until then it draws off its own word)
     g.dice = Some(game::math_dice::sim_dice_new(o.seed as f64));
     g.col.boxes = loaded.boxes.clone();   // (`level.boxes`, which the constructor reads as the collision's list)
-    // (the picture told the level's own night, as every host's stand tells it: standGame's line)
-    g.engine.settings.sky_zenith = g.level.sky.zenith;
-    g.engine.settings.sky_horizon = g.level.sky.horizon;
     game::game::game_new(&mut g, rig, Some(game::game::GameNewOpts { seats: Some(o.seats as f64) }));
     settle(&mut g);
     // A GAME STOOD WITH NO ADDRESS is the harness's plain stand (standGame with `harness`): the solo night's card goes on at the stand, by the

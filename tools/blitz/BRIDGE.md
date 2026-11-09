@@ -59,7 +59,7 @@ Identity serials differ by design. `schema.serial` lists the fields that hold on
 
 ## What the host owns
 
-`g.engine` is carried as far as the tick reads it: the lights' list in its own order with `ir` and `fog_team`, the box world's lists and its ray grid (`statics`, `dynamics`, `all`, `rg_*`, the glass lists), every plain setting, the weather frame, `view_focus`, `sharp_on`, `effective_scale`. `LightId` is seeded from the lights' list, so a light nothing else reaches, the moon, has its row.
+`g.engine` is carried as far as the tick reads it: the lights' list in its own order with `ir` and `fog_team`, the box world's lists and its ray grid (`statics`, `dynamics`, `all`, `rg_*`, the glass lists), the weather frame. `LightId` is seeded from the lights' list, so a light nothing else reaches, the moon, has its row.
 
 Between two ticks the TypeScript's host writes the sampled records, its own camera and Input. `hostHalf(g, knobs, cmds)` (export.ts) writes them as their own small buffer and `io::take_host_half(&mut g, &buf)` takes them and answers the records for `game_step_seats`. Nothing else of the game moves. `cmd_seat.mark` is a serial the host deals: a compare should expect it to differ.
 

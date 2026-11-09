@@ -45,7 +45,6 @@
 "render_snow_field::SnowField":{"typed":{"cover":["Float32Array",112000],"data":["Uint16Array",448000],"hard":["Float32Array",112000],"mound":["Float32Array",112000],"old":["Float32Array",112000],"packed":["Float32Array",112000],"quads":["Uint32Array",44370],"roof":["Float32Array",112000],"wall":["Uint8Array",112000]}},
 "roomfight::RoomFight":{"typed":{"fillMark":["Uint8Array",0]},
 "plain":{"rr":0}},
-"root_settings::RenderSettings":{"plain":{"gpuParticles":true}},
 "snow_tracks::SnowTracks":{"typed":{"data":["Uint8Array",1150720]}},
 "sparks::SparkParams":{"plain":{"life":0.55,"lift":0.5,"speed":20,"spread":0.55}},
 "tracers::Tracers":{"plain":{"seed":1}},

@@ -255,7 +255,7 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   42 play-through digests on seed 1, both stands, equal to step 1515's); with it turned, the build before is the bug (a run that turns on the slider),
   and there is no word that brings that back. What a player sees change: nothing at default; with Brightness turned, his men's goggles and lights no
   longer follow his slider (they follow the mission's hour), and an illuminator's flood is brighter or dimmer in his picture with everything else.
-  THE RULE THIS BEGINS: no sum of the simulation reads the engine's settings. CHECK: `bun run tools/qa/settings-check.ts` (`--static` = its first three
+  THE RULE THIS BEGINS: no sum of the simulation reads the engine's settings. CHECK (that file is gone: the rule stands in the Rust game, `rust.md`, NO RULE READS A PICTURE'S SETTING): `bun run tools/qa/settings-check.ts` (`--static` = its first three
   lines, also `probes.ts settings-reads` in the journal family): `base` the table equals the picture's defaults · the scan reads its own thirteen forms ·
   `reads` a scan of the simulation's files (src/game, scene, anim, math, sim and render/reach.ts: rollback-check's ground; 331 files, 60 reads, all
   under src/game) for every READ of a setting, each COUNTED on a named list of rows that says PICTURE, CARRIED (journal.ts EnvSnap), TO MOVE or TO JUDGE with a date — one read more than a row counts is red (a second read of a key a file already

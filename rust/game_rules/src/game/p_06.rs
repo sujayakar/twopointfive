@@ -470,13 +470,10 @@ pub fn game_draw_characters(g: &mut crate::game::Game, all: &[CharId], statured:
 pub fn game_shown_px(g: &crate::game::Game) -> f64 {
     let seat = &g.tab.cmd_seat[game_host_seat(g)];
     let cam = &g.tab.camera[seat.cam];
-    let sharp_still = g.engine.sharp_on.unwrap_or(false) && g.engine.settings.sharp_decouple;
-    view_px_sum(cam.distance, cam.fov, seat.canvas.height, sharp_still, g.engine.effective_scale)
+    view_px_sum(cam.distance, cam.fov, seat.canvas.height)
 }
 /// its sum
-fn view_px_sum(distance: f64, fov: f64, height: f64, sharp_still: bool, effective_scale: f64) -> f64 {
-    2.0 * distance * (if sharp_still { 1.6 } else { 1.0 }) * m::tan(fov / 2.0) / m::max(200.0, height * (if sharp_still { 1.0 } else { js::or(effective_scale, 1.0) }))
-}
+fn view_px_sum(distance: f64, fov: f64, height: f64) -> f64 { 2.0 * distance * m::tan(fov / 2.0) / m::max(200.0, height) }
 
 #[cfg(test)]
 mod tests {
@@ -484,8 +481,6 @@ mod tests {
     // the bits are the TypeScript's own, under bun with EXACT.on (the formula of game.ts viewPx)
     #[test]
     fn view_px_is_the_typescripts_bits() {
-        for (d, fov, h, sharp, sc, bits) in [(6.5, 0.9, 1080.0, false, 0.75, 0x3f7fc1551f25ec42u64), (6.5, 0.9, 1080.0, true, 0.75, 0x3f830d997916c0f5), (4.25, 1.1, 150.0, false, 0.0, 0x3f9aaeadc2d0442a)] {
-            assert_eq!(view_px_sum(d, fov, h, sharp, sc).to_bits(), bits);
-        }
+        assert_eq!(view_px_sum(4.25, 1.1, 150.0).to_bits(), 0x3f9aaeadc2d0442a);
     }
 }

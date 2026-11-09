@@ -10,8 +10,7 @@ import { chronBlackout } from './chronicle';
 import type { Game, Guard, LightTarget } from './game';
 import { lightFromDef } from '../render/lights';
 import type { RtLight } from '../render/lights';
-import { hourOf, applyHour, nightPicture, sunStrength, sunGiven, setSunStrength, type HourId } from './hours';
-import { ENV } from './env';
+import { hourOf, applyHour, sunStrength, sunGiven, setSunStrength, type HourId } from './hours';
 import { isHostile } from './teams';
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { breakerErrand, workNotHis, workStaysPut } from './workthings';   // (a teammate neither takes the breaker errand nor re-arms it on his own, with that module's switch on)
@@ -147,7 +146,7 @@ export function isDaylight(g: Game): boolean { return dayStates.has(g); }
  *  comes back off), the disabled lights, sky, haze, exposure — and takes the sun out of the set again, so a true → false round trip leaves the light list and the
  *  frame's sky bit for bit as they were (tools/qa probes 'breach-daylight'). Idempotent both ways; a level without a daylight block ignores it. */
 export function setDaylight(g: Game, on: boolean) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('setDaylight', undefined, [g, on]); if (__r !== RUST_PASS) return __r as any; } }
-  const D = g.level.daylight, S = g.engine.settings, L = g.engine.lights;
+  const D = g.level.daylight, L = g.engine.lights;
   const cur = dayStates.get(g);
   if (on) {
     if (cur || !D) return;
@@ -160,14 +159,12 @@ export function setDaylight(g: Game, on: boolean) { { const __s = RUST_SURFACE; 
     for (const grp of D.groupsOn) setGroup(g, grp, true);
     for (const grp of D.groupsOff) setGroup(g, grp, false);
     for (const l of L.lights) if (D.lightsOff.includes(l.name) && l.enabled) { l.enabled = false; g.lightHome.feed(l); st.lightsOff.push(l); }
-    S.skyZenith = v3.copy(D.sky.zenith); S.skyHorizon = v3.copy(D.sky.horizon); S.hazeDensity = D.haze; S.exposure = D.exposure;
     dayStates.set(g, st);
     g.engine.invalidateWorldCache?.();   // the light rig swapped wholesale: the radiance cache (live AND parked grids) re-primes and snaps to the day instead of blending night → day over seven frames — and a parked grid cannot bring the night back on a later ladder hop (review R10.1; the stub engines of tools/qa have none)
   } else {
     if (!cur) return;
     for (const [t, was] of cur.targets) g.lightHome.in(LIGHT_IN.on, t, was ? 1 : 0);
     for (const l of cur.lightsOff) { l.enabled = true; g.lightHome.feed(l); }
-    nightPicture(g, D?.exposure ?? ENV.exposure);
     L.remove(cur.sun);
     const B = cur.blackout;
     if (B && !g.blackout.active) { g.lightHome.in(LIGHT_IN.mains, null, MAINS.active | MAINS.permanent, B.until, B.since, g.blackout.restoredAt); g.lightHome.in(LIGHT_IN.fix, null, 0); }   // a destroyed breaker is still destroyed: the blackout back quietly (no second power-down thump, no man sent again — the round that did that already happened); a restart straight after (the breach's restore, a checkpoint load) mends it as a restart always did

@@ -17,7 +17,7 @@
 //              stretched with distance, non-positional with a lean toward the bearing. It is ambience: no GameEvent, nobody hears it as anything. Now and then a
 //              calm man on screen passes a remark (one bark site, a long cooldown).
 //   WET LOT    while it rains the asphalt slab is darkened and flagged BoxFlag.Gloss (the glossy-floor experiment then mirrors the lamps, the bollards and the lit
-//              facade in it — not the strokes, which stay out of the gloss term like out of everything with history — settings.gloss is switched on with the
+//              facade in it — not the strokes, which stay out of the gloss term like out of everything with history — the picture is told to gloss with the
 //              storm and put back after), eased in over WET_SECS.
 import { Vec3, v3 } from '../math/vec';
 import type { Game } from './game';
@@ -188,7 +188,6 @@ export class Weather {
   /** the paint a box had before the wet lot darkened it, if it is one of those. Read only (a check asks it to find the wet lot; the look does not: what a
    *  slab is made of is the word it says, which rain does not touch) */
   dryPaint(b: Box): Readonly<Vec3> | undefined { for (const t of this.touched) if (t.box === b) return t.albedo; return undefined; }
-  private glossWas: boolean | null = null;   // settings.gloss before the storm switched it on (null = we have not touched it)
 
   constructor(private g: Game) { g.sim.keep(WX_BIT, 'weather');
     { const has = roofsCounted(g.level.boxes, WORLD.ceilingY), most = wxCap(0); if (has > most) console.warn(`the level has ${has} ceiling slabs and the weather's table holds ${most}: the biggest ${most} are its roofs, and rain and wind pass the rest`); }   // (content is never an error)
@@ -363,7 +362,7 @@ export class Weather {
   private setWet(on: boolean) {
     if (on === this.wetOn) return;
     this.wetOn = on;
-    const g = this.g; const S = g.engine.settings as { gloss?: boolean };
+    const g = this.g;
     if (on) {
       const st: Box[] = g.engine.world.statics;
       // the lot's ground: the one big slab whose top is the y = 0 the cars stand on (found by shape, not index — the level is being moved to data; a stage without
@@ -376,11 +375,9 @@ export class Weather {
       // (Box.wetK) and asks this weather whether the ground is wet (`groundWet`), under which roofs, and which slab is the lot. The lot keeps its old way,
       // as measured: its albedo is what a round's material is read from, and it is written here and nowhere else.
       this.lot = asphalt;
-      if (this.wetGloss && S.gloss !== undefined && this.glossWas === null) { this.glossWas = S.gloss; S.gloss = true; }
     } else {
       for (const t of this.touched) { t.box.albedo = t.albedo; t.box.flags = t.flags; t.box.rough = t.rough; t.box.aniso = t.aniso; }   // (set, never deleted: a box keeps its one layout — scene/boxes.ts boxOf)
       this.touched.length = 0; this.lot = undefined;
-      if (this.glossWas !== null) { if (S.gloss === true) S.gloss = this.glossWas; this.glossWas = null; }   // (only if it is still what we set: a gloss switched off by hand during the storm stays off)
     }
     // (the rest of the wet ground is the picture's and follows in this very call, not at the next update: the lot and the yard are never one wet and one dry
     // for a frame drawn with no update between — a pause, the start card, a checkpoint put back. Built after this object: nothing to tell at birth)

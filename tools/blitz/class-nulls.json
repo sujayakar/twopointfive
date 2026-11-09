@@ -256,7 +256,7 @@
 "weapons::BurstState":["off"],
 "weapons::Firearm":["mag","beat","cues","shellT","burst"],
 "weapons::WeaponDef":["burst","auto","tracer"],
-"weather::Weather":["kindNow","fogSpec","flash","glossWas","fits"],
+"weather::Weather":["kindNow","fogSpec","flash","fits"],
 "weather::WeatherStats":["lastThunder"],
 "weather_kinds::WeatherPreset":["fog"],
 "whistle::Resolution":["responder","answeredBy"],

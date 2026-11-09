@@ -10,7 +10,7 @@
 //
 // WHAT AN HOUR DOES, all of it reversible (applyHour(g, 'night') puts back exactly what it found — the light list, every switch, the sky, the storm):
 //   · the level's moon out, the hour's sun in at the moon's place in the light list (never last: a loud minute's flashes must not push it past the 64 a frame draws)
-//   · sky, haze, exposure: engine.settings, as lighting.ts setDaylight writes them for the breach showcase
+//   · sky, haze, exposure: told to the picture from what the game keeps (rust/game_rules/src/hours/told.rs)
 //   · THE FIXTURES. Outside lamps (group 'exterior': the sodium heads) are on a photocell — they burn at dawn and dusk as authored and are OUT at midday and on
 //     an overcast afternoon. Everything indoors is left as authored at every hour: a windowless room is as dark at noon as at midnight and the men who use a room
 //     leave its light on. (Re-made after every restart: game.ts resetLevelState → hourAfterReset.)
@@ -210,7 +210,7 @@ export function cloudLight(d: HourDef, c: number): [number, number] {
 /** the light on level open ground under cover c as a factor of the hour's own (the sun's and the sky's parts together) */
 export function cloudTotal(d: HourDef, c: number): number { const ch = d.cloud ?? 0; return cloudSun(Math.max(clamp(c, 0, 1), ch)) / cloudSun(ch); }
 function underWeather(g: Game, st: HourState) {
-  const W = g.weather, kind = W?.kind ?? null, d = st.def, S = g.engine.settings;
+  const W = g.weather, kind = W?.kind ?? null, d = st.def;
   // the level's own storm: held off while no weather is picked (kept as it stood, to come back with the night); a picked weather is on and stays on
   if (!kind && W?.enabled) { if (st.wasOff) W.setEnabled(false); else if (g.stood.dry) { st.storm ??= W.snapshot(); W.setEnabled(false); } }
   const c = kind ? W!.cloud : 0, [sunK, skyK] = cloudLight(d, c), soft = Math.max(0, cloudSoft(c) - cloudSoft(d.cloud ?? 0));
@@ -223,7 +223,6 @@ function underWeather(g: Game, st: HourState) {
   st.soft = soft; st.skyK = skyK;
   st.sun.color = greyed(d.sun.color, soft); st.sun.volumetric = d.sun.volumetric * (1 - soft);
   const r = d.sun.radius + (Math.max(d.sun.radius, SOFT_RADIUS) - d.sun.radius) * soft; if (r !== st.sun.radius) { st.sun.radius = r; g.engine.reach?.sun(st.sun, r); }
-  S.skyZenith = greyed(d.sky.zenith, soft, skyK); S.skyHorizon = greyed(d.sky.horizon, soft, skyK);
 }
 /** weather.ts Weather.setKind, last: the weather under a running game changed — the hour's storm switch, sun and sky follow (nothing at night) */
 export function hourWeatherChanged(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('hourWeatherChanged', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } const st = states.get(g); if (!st) return; underWeather(g, st); g.engine.invalidateWorldCache?.(); }
@@ -245,7 +244,7 @@ export function applyHour(g: Game, id: HourId): boolean { { const __s = RUST_SUR
   return true;
 }
 function putIn(g: Game, def: HourDef, from?: HourState) {
-  const S = g.engine.settings, L = g.engine.lights, toSun = toSunOf(def), W = g.weather, kind = !!W?.kind;
+  const L = g.engine.lights, toSun = toSunOf(def), W = g.weather, kind = !!W?.kind;
   const st: HourState = { def, toSun, sunK: from ? from.sunK : clamp(g.stood.sun, 0, 1), given: from ? from.given : g.stood.sunGiven || g.stood.sun !== 1, soft: 0, skyK: 1,
     wasOff: kind ? from?.wasOff ?? false : !!W && !W.enabled, moons: [], lamps: new Map(), storm: kind ? from?.storm ?? null : null,
     sun: null as unknown as RtLight };
@@ -256,24 +255,17 @@ function putIn(g: Game, def: HourDef, from?: HourState) {
   st.sun = { name: SUN_NAME, group: SUN_GROUP, kind: 2, pos: [0, 0, 0], dir: v3.scale(toSun, -1), color: v3.copy(def.sun.color), intensity: I, range: 1e6, innerDeg: 0, outerDeg: 0, radius: def.sun.radius,
     volumetric: def.sun.volumetric, owner: 0, enabled: true, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: I, broad: false };
   L.lights.splice(at, 0, st.sun);
-  S.skyZenith = v3.copy(def.sky.zenith); S.skyHorizon = v3.copy(def.sky.horizon); S.hazeDensity = def.haze; S.exposure = def.exposure;
   states.set(g, st);
   underWeather(g, st);   // the storm held off — or a picked weather kept, with its cloud over this sun and sky
   g.engine.reach?.sun(st.sun, st.sun.radius);   // which indoor cells see the sky its way (the direct estimator's candidate domain): the picture's to keep (render/reachKeep.ts), asked once, for the disc the cloud left it
   lampsOut(g, st);
 }
-/** what the picture's settings hold on a level's own night (src/settings.ts, held equal by tools/qa/settings-check.ts) */
+/** what a picture is told on a level's own night (src/settings.ts) */
 export const NIGHT_HAZE = 0.035;
-/** THE PICTURE TOLD THE LEVEL'S OWN NIGHT, once the hour or the show's day taken off was at this exposure: the level's sky, the night's haze and exposure, with a turn of the player's Brightness under it
- *  carried back (untouched = exactly the night's). What the settings held before is the picture's, so the game keeps none of it. */
-export function nightPicture(g: Game, wasExposure: number): void {
-  const S = g.engine.settings; S.skyZenith = v3.copy(g.level.sky.zenith); S.skyHorizon = v3.copy(g.level.sky.horizon); S.hazeDensity = NIGHT_HAZE; S.exposure = ENV.exposure * (S.exposure / wasExposure);
-}
 function takeOut(g: Game, st: HourState) {
   for (const [t, was] of st.lamps) if (!t.on) g.lightHome.in(LIGHT_IN.on, t, was ? 1 : 0);   // (a lamp somebody switched ON under the hour — the perimeter's call for the lot lights — stays as they left it)
   for (const l of st.moons) l.enabled = true;
   g.engine.lights.remove(st.sun);
-  nightPicture(g, st.def.exposure);
   states.delete(g); if (g.weather) g.weather.fogGlow = 1;
   if (st.storm && g.weather && !g.weather.enabled) { g.weather.setEnabled(true); g.weather.restore(st.storm); }   // the storm back where it stood: its dice, its next stroke, the thunder it still owed
 }
