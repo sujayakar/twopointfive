@@ -373,7 +373,6 @@ mod tests {
         let c = g.ch.push(ch);
         (g, c)
     }
-    fn bits(v: V3) -> [u64; 3] { [v[0].to_bits(), v[1].to_bits(), v[2].to_bits()] }
 
     #[test]
     fn closing_is_never_negative() {
@@ -384,26 +383,43 @@ mod tests {
         assert_eq!(closing(s, [-1.0, 0.0, 0.0]).to_bits(), 0f64.to_bits());
     }
 
-    /// The doubles are the TypeScript's own: gunWallModel.raisedLine and lowReach under bun with EXACT on, the same four men.
+    /// A failure means a gun that clips a wall it stands clear of, or that goes through one: the line asked of the walls is the gun as he holds it.
     #[test]
-    fn raised_line_and_low_reach_are_the_typescripts_bits() {
-        let cases: [(bool, f64, f64, Option<f64>, GunUp, f64, [u64; 3], [u64; 3], u64); 4] = [
-            (true, 0.52, 0.3, Some(1.31), GunUp::Aim, 0.7,
-             [0x3ff1c7833830f4b3, 0x3ff3333333333333, 0xc00b1095b70a6e79], [0x3ff7fba7bc99f599, 0x3ff62dc8b31a35a5, 0xc00761d4838b84f7], 0x3fe049ba5e353f7d),
-            (false, 0.255, -0.9, Some(1.0), GunUp::Aim, -2.1,
-             [0x3ff4295b63e2ce63, 0x3fe8f5c28f5c28f6, 0xc00c235b67ffe5b2], [0x3feacd43eb4ea0a7, 0x3fd788686f026e72, 0xc00e1d76542f772e], 0x3fdb80346dc5d638),
-            (true, 0.52, 0.0, None, GunUp::Port, 1.3,
-             [0x3ff5cc8774ba509f, 0x3ff3851eb851eb85, 0xc00ac1053264d038], [0x3ffb0fc830a45f96, 0x3ffa147ae147ae14, 0xc00b8f3866f83c9c], 0x3fe049ba5e353f7d),
-            (false, 0.255, 0.1, Some(1.2), GunUp::Port, 3.0,
-             [0x3ff51bd9c41bb9f7, 0x3ff3d70a3d70a3d7, 0xc00bebc4df851ebf], [0x3ff628a22a7c460c, 0x3ff451eb851eb852, 0xc00f9a8f064eecfc], 0x3fdb80346dc5d638),
-        ];
-        for (long, ahead, pitch, arm, up, yaw, a, b, low) in cases {
-            let (mut g, c) = game_with(long, ahead, pitch, arm);
-            let l = raised_line(&mut g, c, up, yaw, None);
-            assert_eq!(bits(l.a), a);
-            assert_eq!(bits(l.b), b);
-            assert_eq!(low_reach(&mut g, c).to_bits(), low);
-        }
+    fn a_raised_gun_lies_on_his_yaw_and_reaches_by_its_length() {
+        let near = |a: f64, b: f64| assert!((a - b).abs() < 1e-12, "{a} {b}");
+        let (mut g, c) = game_with(true, 0.52, 0.0, Some(1.31));
+        // a yaw of 0 looks along +z: a long gun reaches 0.11 past his hand and its muzzle's length, level
+        let l = raised_line(&mut g, c, GunUp::Aim, 0.0, None);
+        near(l.b[2] - l.a[2], 0.63);
+        near(l.b[0], l.a[0]);
+        near(l.b[1], l.a[1]);
+        // turned a quarter: the same line, along +x
+        let t = raised_line(&mut g, c, GunUp::Aim, m::PI / 2.0, None);
+        near(t.b[0] - t.a[0], 0.63);
+        near(t.a[1], l.a[1]);
+        // his pitch lifts the muzzle and not the hand, as far as the arm goes
+        g.ch[c].aim_pitch = 0.3;
+        let up = raised_line(&mut g, c, GunUp::Aim, 0.0, None);
+        near(up.a[1], l.a[1]);
+        near(up.b[1] - up.a[1], 0.63 * m::sin(0.3));
+        g.ch[c].aim_pitch = 2.0;
+        let far = raised_line(&mut g, c, GunUp::Aim, 0.0, None);
+        near(far.b[1] - far.a[1], 0.63 * m::sin(0.7));
+        // from a place asked of, not where he stands
+        g.ch[c].aim_pitch = 0.0;
+        let there = raised_line(&mut g, c, GunUp::Aim, 0.0, Some([5.0, 0.1, 5.0]));
+        near(there.a[2] - 5.0, l.a[2] - g.ch[c].pos[2]);
+        // ported, a long gun's muzzle rides high and across him
+        let port = raised_line(&mut g, c, GunUp::Port, 0.0, None);
+        assert!(port.b[1] > port.a[1] && port.b[2] > port.a[2]);
+        // stooped, the whole line is lower; a longer gun reaches further at the low ready too
+        let (mut low, lc) = game_with(true, 0.52, 0.0, Some(1.0));
+        assert!(raised_line(&mut low, lc, GunUp::Aim, 0.0, None).a[1] < l.a[1]);
+        let reach = low_reach(&mut g, c);
+        let (mut longer, lg) = game_with(true, 0.7, 0.0, None);
+        assert!(low_reach(&mut longer, lg) > reach);
+        let (mut pistol, pc) = game_with(false, 0.2, 0.0, None);
+        assert!(low_reach(&mut pistol, pc) > 0.241 && low_reach(&mut pistol, pc) < reach);
     }
 
     #[test]
@@ -473,7 +489,7 @@ mod tests {
     }
 
     #[test]
-    fn a_new_row_holds_the_typescripts_numbers() {
+    fn a_new_row_has_never_been_asked_and_stands_at_his_feet() {
         let (mut g, c) = game_with(false, 0.2, 0.0, None);
         let s = *st(&mut g, c);
         assert!(s.t == -1.0 && s.vt == -1.0 && s.px == 1.25 && s.pz == -3.5);

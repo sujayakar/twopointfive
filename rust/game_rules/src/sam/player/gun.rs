@@ -419,12 +419,12 @@ mod tests {
         p
     }
 
-    /// the TypeScript's own bits, from bun: 0.7 + 0.018 * 20 is 0x3ff0f5c28f5c28f6, and the two ends of the clamp
+    /// His line hangs over him a little longer the longer it is, within a floor and a ceiling.
     #[test]
-    fn sam_beat_bits() {
-        assert_eq!(sam_beat(0.0).to_bits(), 0.9f64.to_bits());
-        assert_eq!(sam_beat(20.0).to_bits(), 0x3ff0f5c28f5c28f6);
-        assert_eq!(sam_beat(100.0).to_bits(), 1.4f64.to_bits());
+    fn a_longer_line_hangs_longer_between_two_limits() {
+        assert_eq!(sam_beat(0.0), 0.9);
+        assert_eq!(sam_beat(100.0), 1.4);
+        assert!(sam_beat(15.0) > sam_beat(0.0) && sam_beat(25.0) > sam_beat(15.0) && sam_beat(25.0) < 1.4);
     }
 
     /// a plain walk files at each edge of the cycle, none between

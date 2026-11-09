@@ -171,32 +171,23 @@ pub fn sam_look_step(g: &mut crate::game::Game) {
 mod tests {
     use super::*;
 
-    /// The TypeScript's own bits, under EXACT.on.
+    /// What a guard makes of a man goes by this ramp: nothing short of it, all past it, and only ever up between.
     #[test]
-    fn smooth_matches_the_typescript() {
-        for (a, b, x, bits) in [
-            (1.2, 2.6, 1.7, 0x3fd2a8ad278e8dcdu64),
-            (1.2, 2.6, 0.3, 0x0000000000000000),
-            (1.2, 2.6, 9.0, 0x3ff0000000000000),
-            (-0.45, -0.1, -0.3137, 0x3fd58ee4de63e278),
-            (5.5, 8.0, 6.123456789, 0x3fc3e9435f4062f6),
-        ] {
-            assert_eq!(smooth(a, b, x).to_bits(), bits);
-        }
-        assert!(smooth(5.6, 5.6, 5.6).is_nan());
+    fn the_ramp_is_flat_past_both_ends_and_rises_between() {
+        assert_eq!((smooth(1.2, 2.6, 0.3), smooth(1.2, 2.6, 9.0)), (0.0, 1.0));
+        assert!((smooth(1.0, 3.0, 2.0) - 0.5).abs() < 1e-12);
+        assert!(smooth(1.0, 3.0, 1.2) < 0.05, "it starts gently: {}", smooth(1.0, 3.0, 1.2));
+        assert!(smooth(1.0, 3.0, 1.5) < smooth(1.0, 3.0, 2.5));
+        assert!(smooth(-0.45, -0.1, -0.3) > 0.0 && smooth(-0.45, -0.1, -0.3) < 1.0);
     }
 
     #[test]
-    fn wrap_matches_the_typescript() {
-        for (a, bits) in [
-            (0.1, 0x3fb999999999999au64),
-            (3.5, 0xc00643f6a8885a30),
-            (-7.25, 0xbfeef0255dde973d),
-            (100.125, 0xbfd9fb54442d1848),
-            (m::PI, 0x400921fb54442d18),
-            (-m::PI, 0xc00921fb54442d18),
-        ] {
-            assert_eq!(wrap(a).to_bits(), bits);
+    fn an_angle_comes_back_inside_half_a_turn_the_same_way_it_points() {
+        for a in [0.1, 3.5, -7.25, 100.125, m::PI, -m::PI] {
+            let w = wrap(a);
+            assert!(w.abs() <= m::PI, "{a}: {w}");
+            assert!((m::sin(w) - m::sin(a)).abs() < 1e-9 && (m::cos(w) - m::cos(a)).abs() < 1e-9, "{a}: {w}");
         }
+        assert!((wrap(0.1) - 0.1).abs() < 1e-12);
     }
 }

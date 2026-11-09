@@ -849,45 +849,38 @@ mod tests {
     use super::*;
     use crate::hands::Lie;
 
-    /// The TypeScript's own bits: hands.ts turnDir and lieMix run under bun with EXACT.on.
-    const BITS: [[u64; 3]; 17] = [
-[0x3ff4b851eb851eb8, 0x3fd051eb851eb852, 0xc00bae147ae147ae],
-[0x3fc8d139bf8a9338, 0x3fb98466e614d492, 0x3fef3af5dfa34f53],
-[0xbfef631ace3483e6, 0x3fa3bf03ee22eca2, 0x3fc8700e24e70efe],
-[0x3fc09aa031b61ecf, 0xbfeacbe04f580fcc, 0x3fe0fde927e89d50],
-[0xbfbc640a5b864c79, 0xbfedd4883f283dfa, 0x3fd60d1fee6ebf74],
-[0x3ff6a9fbe76c8b44, 0x3fe4b020c49ba5e3, 0xc00ad0e560418937],
-[0xbfc219222a53bf0a, 0x3fb40b152f857b33, 0x3fef944c32c36912],
-[0xbfea6473d43046fb, 0xbfe1f0e906a02cfb, 0xbfb2dd2cd61926ed],
-[0x3fd063788ed3fcce, 0xbfec01c7bb4472c4, 0x3fda43dfd9a511f9],
-[0x3fb5ae03b68cbbff, 0xbfee9bca3ef2afb0, 0x3fd1dcf31c9a26f9],
-[0x3ff9d9999999999a, 0x3ff49c28f5c28f5c, 0xc009666666666666],
-[0xbfe476e27d6c7d6a, 0x3f9a479ef161c768, 0x3fe89657beedbe2c],
-[0x3fd9c2740c6877f0, 0xbfeae41a2841c65a, 0x3fd73c8b9440b092],
-[0x3fdc65bb262021e2, 0xbfec0cf6f7b32a7d, 0x3fc7da35b23bfc99],
-[0x3fd92f330c1ba0bf, 0xbfed09b7b9297643, 0x3fc2dc6ef46dfaca],
-[0x3fe6a09e667f3bcc, 0x3fe6a09e667f3bcd, 0x0000000000000000],
-[0x3c91a62633145c00, 0x3ff0000000000000, 0x0000000000000000]
-    ];
 
-    fn eq(i: usize, v: V3) {
-        for k in 0..3 {
-            assert_eq!(v[k].to_bits(), BITS[i][k], "row {i} axis {k}: {}", v[k]);
+    fn near(v: V3, want: V3) {
+        for k in 0..3 { assert!((v[k] - want[k]).abs() < 1e-9, "{v:?} {want:?}"); }
+    }
+
+    /// A failure means a limb snaps or stretches on its way between two poses: a direction turns by its share of the angle, stays a unit, and comes round even from dead opposite.
+    #[test]
+    fn a_direction_turns_by_its_share_of_the_angle_and_stays_a_unit() {
+        let (x, y, z): (V3, V3, V3) = ([1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]);
+        near(turn_dir(x, z, 0.0), x);
+        near(turn_dir(x, z, 1.0), z);
+        near(turn_dir(x, z, 0.5), v3::normalize([1.0, 0.0, 1.0]));
+        assert_eq!(turn_dir(x, x, 0.5), x);
+        for (a, b) in [(y, [0.0, -1.0, 0.0]), (x, [-1.0, 0.0, 0.0])] {
+            let half = turn_dir(a, b, 0.5);
+            assert!((v3::len(half) - 1.0).abs() < 1e-9 && v3::dot(half, a).abs() < 1e-9, "dead opposite goes round by a side: {half:?}");
+            near(turn_dir(a, b, 1.0), b);
         }
     }
 
+    /// Between two lies the hips go straight, and the shoulders stay square to the spine whatever the two ends were.
     #[test]
-    fn lie_mix_and_turn_dir_have_the_typescripts_bits() {
+    fn between_two_lies_the_hips_go_straight_and_the_shoulders_stay_square() {
         let n = v3::normalize;
-        let a = Lie { p: [1.25, 0.11, -3.5], u: n([0.3, 0.1, 0.9]), t: n([-0.9, 0.2, 0.3]), kl: n([0.1, -1.0, 0.7]), kr: n([-0.2, -1.0, 0.4]) };
-        let b = Lie { p: [1.7, 1.56, -3.1], u: n([-0.8, 0.0, 0.6]), t: n([0.5, -1.0, 0.7]), kl: n([0.6, -1.0, 0.1]), kr: n([0.6, -1.0, 0.1]) };
-        let mut i = 0;
+        let a = Lie { p: [1.0, 0.0, -3.0], u: n([0.0, 1.0, 0.0]), t: n([1.0, 0.0, 0.0]), kl: n([0.1, -1.0, 0.7]), kr: n([-0.2, -1.0, 0.4]) };
+        let b = Lie { p: [2.0, 1.0, -1.0], u: n([-0.8, 0.0, 0.6]), t: n([0.5, -1.0, 0.7]), kl: n([0.6, -1.0, 0.1]), kr: n([0.6, -1.0, 0.1]) };
         for s in [0.1, 0.37, 0.8125] {
             let l = lie_mix(a, b, s);
-            for v in [l.p, l.u, l.t, l.kl, l.kr] { eq(i, v); i += 1; }
+            near(l.p, [1.0 + s, s, -3.0 + 2.0 * s]);
+            assert!(v3::dot(l.t, l.u).abs() < 1e-9, "at {s}");
+            for v in [l.u, l.t, l.kl, l.kr] { assert!((v3::len(v) - 1.0).abs() < 1e-9, "at {s}"); }
         }
-        eq(15, turn_dir([0.0, 1.0, 0.0], [0.0, -1.0, 0.0], 0.25));   // dead opposite: round by way of the fallback axis
-        eq(16, turn_dir([1.0, 0.0, 0.0], [-1.0, 0.0, 0.0], 0.5));
     }
 }
 

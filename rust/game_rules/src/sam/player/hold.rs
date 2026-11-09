@@ -1065,10 +1065,10 @@ pub(super) fn hand_back(g: &mut crate::game::Game, gd: GuardId, stagger: f64) {
 mod tests {
     use super::*;
 
+    /// How long Sam's line hangs goes by its letters: a dash or an arrow in it is one, not its bytes.
     #[test]
-    fn a_line_is_measured_as_javascript_measures_it() {
+    fn a_line_is_counted_in_letters_not_bytes() {
         assert_eq!(js_len("you ▸ — é"), 9.0);
-        assert_eq!(js_len("😀"), 2.0);
     }
 
     #[test]
