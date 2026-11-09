@@ -51,7 +51,7 @@ export class NetGame {
   step(cmds: readonly WireCmd[]): void {
     const X = this.X, h = this.h;
     cmds.forEach((c, seat) => this.handed([c], (p, n, k, kn) => X.face_record(h, seat, p, n, k, kn)));
-    X.face_step(h, 1 / NET.hz, 0);   // (the saves and a rails level's view are a game of one's)
+    X.face_step(h, 1 / NET.hz, 0);   // (the saves are a game of one's)
     this.w = foldWord(this.w, X.face_die_n(h), this.parts());
     if (wordTick(this.ticks++)) this.wide = foldWhole(this.whole().words);
   }
