@@ -148,7 +148,7 @@ and neither side may link the other. Inside the rules:
 - **A module:** a `pub mod` line in `game_types/src/lib.rs` with its `types.rs`; `pub mod` in its system's
   `mod.rs` and its name in that system's `pub use` in `game_rules/src/lib.rs`; a line in `step_seats_on_first`; a test.
 - **A field:** in its type, with `#[is(…)]` where it does not start at its type's own start. It moves its part's word; a new field of `Game`, `Mods`, `Tabs` or `SeatSet` is a new part: `gate pin`.
-  A seat's field also goes in `SeatRef` and `swap_set`, and a map per seat in `view_rekey`.
+  A seat's field also goes in `SeatRef` and `swap_set`.
 - **A column:** a field of its part in `rust/sim`, inside its size assert. A new part is a `State` field, a `PARTS` row and a `PART_NAMES` name
   (`game_start/src/block.rs`). A new `static mut` needs its `STATICS` row, saying STATE, SCRATCH, COPY or TALLY.
 - **A knob:** `#[k(value)] pub name: f64` in its table. A new table is a file in `knobs/` with `#[derive(Clone, Copy, Debug, ToBytes, Knobs)]`, a

@@ -288,16 +288,6 @@ fn cancel_beat(g: &mut Game, b: DirectorLiveBeatId, why: Option<&str>) {
     note(g, &name, DirectorPushRowKind::Beat, "cancelled", Some(obj(data)));
 }
 
-/// The encounter restarted under a play program: its men are gone, the program ends where it stood.
-pub fn director_on_encounter_restart(g: &mut crate::game::Game) {
-    let Some(r) = running(g) else { return };
-    if !g.director.exiting {
-        note(g, "", DirectorPushRowKind::Program, "reset", None);
-        g.tab.director_run[r].units.clear();
-        director_stop(g, Some(false));
-    }
-}
-
 // ---------------------------------------------------------------- the tick
 /// Once a frame from Game.update, before tacticsTick.
 /// (`_input`, `_cam`: the call surface's row still carries them, and nothing reads them: the host's camera and keys are the game's `host_cam` /
