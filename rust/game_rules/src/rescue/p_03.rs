@@ -329,11 +329,11 @@ pub fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndStat
     let left = standing(g, &hs).len();
     let grade = if lost { RescueResultGrade::Failed } else if left == hs.len() { RescueResultGrade::Clean } else { RescueResultGrade::Costly };
     g.staged.over = true;
+    g.staged.saved = Some(left as f64);
     g.rescue.result = Some(RescueResult {
         state: if lost { RescueResultState::Lost } else { RescueResultState::Rescued },
         grade,
         why: String::from(why),
-        hostages: left as f64,
     });
     rescue_end_act(g);
     if lost { rescue_note(g, &alloc::format!("lost:{}", why)); } else { rescue_note(g, "rescued"); }

@@ -354,8 +354,7 @@ fn ok_pairs_on(g: &Game, seat: &crate::seats::SeatRef, want: Option<f64>) -> boo
 }
 
 fn ok_taken(g: &Game, room: &str) -> bool {
-    if !crate::roomclear::room_clear_scenario_active(g) { return false; }
-    g.room_clear.rooms.iter().find(|r| r.def.id == room).map_or(false, |r| r.cleared)
+    g.staged.rooms.iter().find(|r| r.def.id == room).map_or(false, |r| r.cleared)
 }
 
 fn ok_following(g: &Game, seat: &crate::seats::SeatRef) -> bool {

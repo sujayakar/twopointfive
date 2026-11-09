@@ -147,11 +147,10 @@ fn office_rooms(g: &crate::game::Game) -> (Vec<Rect>, Rect) {
             }
         }
     }
-    if let Some(q) = level.scenarios.as_ref().and_then(|s| s.quiet.as_ref()) {
-        for sp in q.spots.iter() {
-            if !rooms.iter().any(|r| r.name == sp.place) { rooms.push(Rect { name: sp.place.clone(), x0: sp.area.x0, x1: sp.area.x1, z0: sp.area.z0, z1: sp.area.z1 }); }
-        }
-    } else if !rooms.iter().any(|r| r.name.contains("server")) {
+    for sp in level.spots() {
+        if !rooms.iter().any(|r| r.name == sp.place) { rooms.push(Rect { name: sp.place.clone(), x0: sp.area.x0, x1: sp.area.x1, z0: sp.area.z0, z1: sp.area.z1 }); }
+    }
+    if !level.own_places() && !rooms.iter().any(|r| r.name.contains("server")) {
         let s = &level.mission.server_room;
         rooms.push(Rect { name: String::from("the server room"), x0: s.x0, x1: s.x1, z0: s.z0, z1: s.z1 });
     }

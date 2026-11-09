@@ -198,7 +198,7 @@ fn close(g: &mut Game, end: (bool, &'static str, String)) {
     let men: Vec<VerdictMan> = g.verdict.tracks.values().map(|t| VerdictMan { id: t.id, name: t.name.clone(), tone: t.tone, human: t.human, state: t.state, down_at: t.down_at, down_room: t.down_room.clone(), down_by: t.down_by.clone(), down_pos: t.down_pos, drops: t.drops.clone(), path: t.path.clone() }).collect();
     let lost = men.iter().filter(|x| x.state != ManState::Up).count() as f64;
     let foes_down = g.verdict.foes.iter().filter(|&h| g.gd[h].state == crate::game::GuardState::Dead).count() as f64;
-    let hostages = if g.staged.over && !g.staged.captives.is_empty() { Some(RunVerdictHostages { alive: crate::mission::captives_up(g).len() as f64, of: g.staged.captives.len() as f64 }) } else { None };
+    let hostages = g.staged.saved.map(|alive| RunVerdictHostages { alive, of: g.staged.captives.len() as f64 });
     let (won, word, why) = end;
     let res = RunVerdict {
         kind: g.staged.up,

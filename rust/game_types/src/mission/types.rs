@@ -34,7 +34,7 @@ pub struct Facts {
     pub raid: bool,
 }
 
-/// THE MISSION THAT IS UP, AS IT SAYS OF ITSELF: whoever stages one writes it, whoever wants a fact of a mission reads it here, and no rule asks which mission it is.
+/// THE MISSION THAT IS UP, AS IT SAYS OF ITSELF: whoever stages one writes it, whoever wants a fact of a mission reads it here. No rule should ask which mission it is.
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Staged {
     /// its kind, for the cards and the lists (None: the level's own night)
@@ -46,12 +46,16 @@ pub struct Staged {
     pub foes: Vec<GuardId>,
     /// the people its foes hold: nobody fires or throws where they would be hurt
     pub captives: Vec<GuardId>,
+    /// the rooms it is fought for, each with who holds it
+    pub rooms: Vec<crate::roomclear::RoomState>,
     /// which of the level's ways in the team came by
     pub way: f64,
     /// the wall charges it hands out, where it hands out any
     pub walls: Option<f64>,
     /// it has ended, and stays so
     pub over: bool,
+    /// the captives who lived, as it ended
+    pub saved: Option<f64>,
 }
 impl Staged {
     pub fn begin(&mut self, kind: crate::scene_scenarios::MissionKind, facts: crate::mission::Facts) {
@@ -62,7 +66,7 @@ impl Staged {
     pub fn leads(&self, gd: GuardId) -> bool { self.facts.leads_foes && self.foes.contains(&gd) }
     /// It is no mission's floor any more. (Its men go by whoever staged them: their lists stand)
     pub fn down(&mut self) {
-        let (team, foes, captives) = (core::mem::take(&mut self.team), core::mem::take(&mut self.foes), core::mem::take(&mut self.captives));
-        *self = Staged { team, foes, captives, ..Staged::default() };
+        let was = core::mem::take(self);
+        *self = Staged { team: was.team, foes: was.foes, captives: was.captives, rooms: was.rooms, ..Staged::default() };
     }
 }

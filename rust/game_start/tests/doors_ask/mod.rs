@@ -621,8 +621,8 @@ impl DoorsAsk for Play {
     fn fight_notes(&self, name: &str) -> Vec<String> { self.g.fight.log.iter().filter(|n| n.who == name).map(|n| n.what.clone()).collect() }
     fn rescue_aim(&self) -> f64 { self.g.k.rescue.aim_secs }
     fn dazzled_for(&mut self, gd: GuardId, secs: f64) { self.g.gd[gd].dazzled_until = self.g.time + secs; }
-    fn room_cleared(&self, id: &str) -> bool { self.g.room_clear.rooms.iter().find(|r| r.def.id == id).is_some_and(|r| r.cleared) }
-    fn room_men(&self, id: &str) -> Vec<GuardId> { self.g.room_clear.rooms.iter().find(|r| r.def.id == id).map_or(Vec::new(), |r| r.defenders.clone()) }
+    fn room_cleared(&self, id: &str) -> bool { self.g.staged.rooms.iter().find(|r| r.def.id == id).is_some_and(|r| r.cleared) }
+    fn room_men(&self, id: &str) -> Vec<GuardId> { self.g.staged.rooms.iter().find(|r| r.def.id == id).map_or(Vec::new(), |r| r.defenders.clone()) }
     fn gun_on(&self, gd: GuardId) -> Option<GuardId> { self.g.fight.ops.iter().map(|&o| &self.g.tab.roomfight_op[o]).find(|o| o.gd == gd).and_then(|o| o.tgt) }
     fn puppet(&mut self, foe: GuardId, at: [f64; 2], yaw: f64) {
         self.pin_man(foe, at, yaw, GuardState::Patrol, 0.0);

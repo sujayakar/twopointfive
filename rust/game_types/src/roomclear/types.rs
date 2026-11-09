@@ -36,7 +36,6 @@ pub struct RoomState {
 
 #[derive(Clone, Debug, ToBytes)]
 pub struct RoomClearScenario {
-    pub rooms: Vec<crate::roomclear::RoomState>,
     pub end: Option<crate::roomclear::RoomClearEnd>,
     pub end_at: f64,
     pub end_why: String,
@@ -56,7 +55,6 @@ impl RoomClearScenario {
     /// what a new one holds
     pub fn blank() -> Self {
         RoomClearScenario {
-            rooms: Vec::new(),
             end: None,
             end_at: f64::NAN,
             end_why: String::from(""),
@@ -95,13 +93,6 @@ pub struct CheckSquadsS {
     pub rooms: Vec<crate::scene_scenarios::StructureRoom>,
     pub max_men: Option<f64>,
     pub squads: Option<Vec<crate::scene_scenarios::SquadData>>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PropGapP {
-    pub home: [f64; 3],
-    pub hx: f64,
-    pub hz: f64,
 }
 
 #[derive(Clone, Debug, Default)]

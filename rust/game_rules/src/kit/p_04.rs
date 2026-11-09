@@ -318,7 +318,7 @@ pub fn kit_solo_stand(g: &mut crate::game::Game, plain: Option<bool>) {
     let plain = plain.unwrap_or(true);
     g.solo_card = false;
     if !g.stood.solo_stand { return; }
-    let lesson = g.level.scenarios.as_ref().and_then(|s| s.lesson.as_ref()).map_or(false, |l| !l.steps.is_empty());
+    let lesson = g.level.lesson().is_some_and(|l| !l.steps.is_empty());
     if !lesson { kit_solo_if(g, plain); }
 }
 

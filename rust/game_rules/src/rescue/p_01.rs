@@ -46,7 +46,7 @@ fn check_free(g: &mut Game, bad: &mut Vec<String>, what: &str, p: V3) -> bool {
     for i in 0..g.props.props.len() {
         let pr = g.props.props[i];
         let row = &g.tab.props_prop[pr];
-        let gap = crate::roomclear::prop_gap(crate::roomclear::PropGapP { home: row.home, hx: row.hx, hz: row.hz }, p);
+        let gap = crate::props::prop_gap(row.home, row.hx, row.hz, p);
         if gap < 0.3 { prop = Some(pr); break; }
     }
     if let Some(pr) = prop { bad.push(format!("{} ({}, {}): standing in {}", what, js::num_str(p[0]), js::num_str(p[2]), g.tab.props_prop[pr].def.name)); }
@@ -63,7 +63,7 @@ fn check_way(g: &mut Game, a: V3, b: V3) -> bool {
 }
 /// checkRescue's `line`: his eyes reach the point he covers
 fn check_line(g: &mut Game, bad: &mut Vec<String>, what: &str, mk: crate::scene_scenarios::ScenarioMark) {
-    if crate::roomclear::wall_between(g, [mk.pos[0], 1.6, mk.pos[2]], mk.aim_at) { bad.push(format!("{}: no line from his eyes to the point he covers", what)); }
+    if crate::scene_collision::wall_between(g, [mk.pos[0], 1.6, mk.pos[2]], mk.aim_at) { bad.push(format!("{}: no line from his eyes to the point he covers", what)); }
 }
 
 /// The rescue's data against the floor it is laid on. Empty = sound. (rescue.ts checkRescue)
@@ -518,7 +518,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
     g.rescue.door_orders = 0.0;
     g.rescue.blind_rounds = 0.0;
     g.rescue.result = None;
-    g.staged.over = false;
+    (g.staged.over, g.staged.saved) = (false, None);
     g.rescue.act = None;
     g.rescue.cap_by = None;
     g.rescue.executed.clear();

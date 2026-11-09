@@ -14,18 +14,8 @@ pub fn lesson_new(g: &crate::game::Game) -> crate::lesson::Lesson {
 
 /// The lesson in force (None: not live).   (lesson.ts Lesson.data)
 pub fn lesson_data(g: &crate::game::Game) -> Option<&crate::scene_scenarios::LessonData> {
-    let on_rails = match g.level.scenarios.as_ref().and_then(|s| s.lesson.as_ref()) {
-        Some(l) if !l.steps.is_empty() => l.rails.is_some(),
-        _ => return None,
-    };
-    if g.puppet.is_some() {
-        return None;
-    }
-    if g.staged.up.is_some() {
-        g.level.scenarios.as_ref().and_then(|s| s.lesson.as_ref())
-    } else {
-        None
-    }
+    if g.puppet.is_some() || g.staged.up.is_none() { return None; }
+    g.level.lesson().filter(|l| !l.steps.is_empty())
 }
 
 /// The step that is up for the mission that is running: a fresh run is on its first step.   (lesson.ts Lesson.at)
@@ -233,7 +223,7 @@ pub fn lesson_over(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool 
     stage == crate::game::MissionStage::Failed
         || stage == crate::game::MissionStage::Done
         || who_down(g, seat)
-        || (crate::roomclear::room_clear_scenario_active(g) && g.room_clear.end.is_some())
+        || g.staged.over
 }
 
 /// The step's deed is done and the moment is playing out: its own `settle`, or the beat before the next step's card.   (lesson.ts Lesson.settling)

@@ -560,9 +560,8 @@ fn step_wait(g: &mut Game, op: DoorOpId) {
 
 /// the room's id and name, of the mission's own rooms, at a point (`roomOf` in the entry's end)
 fn room_of(g: &Game, p: V3) -> Option<(String, String)> {
-    if !crate::roomclear::room_clear_scenario_active(g) { return None; }
-    let at = crate::roomclear::room_clear_scenario_room_at(g, p);
-    g.room_clear.rooms.iter().find(|r| Some(&r.def.id) == at.as_ref()).map(|r| (r.def.id.clone(), r.def.name.clone()))
+    if g.staged.rooms.is_empty() { return None; }
+    g.level.room_at(p).map(|r| (r.id.clone(), r.name.clone()))
 }
 
 /// through the frame: corners, sectors, the floor looked over; then the order is called
@@ -706,7 +705,7 @@ fn step_enter(g: &mut Game, op: DoorOpId, cx: &Cx) {
         for x in g.guards.clone() {
             if alive(g, x) && g.gd[x].team == crate::teams::Team::Hostile && !crate::runner::runner_nobody(g, x) {
                 let xp = pos_of(g, x);
-                if crate::roomclear::room_clear_scenario_room_at(g, xp).as_ref() == Some(&id) { ins.push(x); }
+                if g.level.room_at(xp).is_some_and(|r| r.id == id) { ins.push(x); }
             }
         }
         let seen = ins.iter().any(|&x| crate::autopilot::in_sight(g, x));

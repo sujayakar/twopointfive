@@ -31,7 +31,7 @@ pub fn fresh(g: &mut crate::game::Game) -> crate::laststand::State {
         Some(p) => p,
         None => {
             let mut p: JsMap<GuardId, String> = JsMap::new();
-            for r in &g.room_clear.rooms { for &gd in &r.defenders { p.set(gd, r.def.id.clone()); } }
+            for r in &g.staged.rooms { for &gd in &r.defenders { p.set(gd, r.def.id.clone()); } }
             p
         }
     };
@@ -51,7 +51,7 @@ pub fn last_stand_tick(g: &mut crate::game::Game) {
 
 /// The frame of the endgame: 'most are down' starts it; then the lines waiting, the check, who has moved, the stand.   (laststand.ts stepStand)
 pub fn step_stand(g: &mut crate::game::Game) {
-    if !crate::roomclear::room_clear_scenario_active(g) || g.room_clear.end.is_some() || crate::rescue::rescue_up(g) { return; }
+    if g.staged.rooms.is_empty() || g.staged.over { return; }
     if g.m.laststand.states.as_ref().map_or(true, |st| st.stale) {
         let all = g.staged.foes.clone();
         let few = m::min(g.k.laststand.few, m::floor(all.len() as f64 / 3.0));

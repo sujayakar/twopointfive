@@ -11,5 +11,5 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 pub fn stay_ask_here(g: &crate::game::Game, squads: &[crate::scene_scenarios::SquadData]) -> bool {
     squads.len() > 1
         && squads.iter().all(|q| q.may_leave == Some(false))
-        && !g.level.scenarios.as_ref().is_some_and(|s| s.lesson.is_some())
+        && g.level.lesson().is_none()
 }

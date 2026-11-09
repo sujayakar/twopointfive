@@ -125,7 +125,6 @@ pub struct RescueResult {
     pub state: crate::rescue::RescueResultState,
     pub grade: crate::rescue::RescueResultGrade,
     pub why: String,
-    pub hostages: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]

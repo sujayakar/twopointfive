@@ -58,7 +58,7 @@ pub fn side_of_team(g: &crate::game::Game) -> crate::qrf::SideOfTeam {
 pub fn callers(g: &crate::game::Game) -> Vec<GuardId> {
     let id = response_of(g).and_then(|r| r.raid).and_then(|a| a.room).filter(|s| !s.is_empty());
     let of: Vec<GuardId> = match &id {
-        Some(id) => match g.room_clear.rooms.iter().find(|r| r.def.id == *id) {
+        Some(id) => match g.staged.rooms.iter().find(|r| r.def.id == *id) {
             Some(room) => room.defenders.clone(),
             None => Vec::new(),
         },

@@ -26,7 +26,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `rescue/`, `rescueend/` | a rescue's cast, F's entry, the captor's clock; the hostages led, and the win |
 | `rescueflow/`, `rescuecheck/`, `rescueflush/` | who covers the openings Sam runs past; their radio check; the men left coming for the hostages |
 | `quiet/`, `quietfog/`, `takecheck/` | a quiet mission's deal and partner, its fog lever, whether anybody is told the thing is gone |
-| `mission/` | what the mission that is up says of itself (`g.staged`: `Facts`, team, foes, captives, rooms, its end; a rule asks a fact there, never the kind), the stealth stages, the counts, the one objective line |
+| `mission/` | what the mission that is up says of itself (`g.staged`: `Facts`, team, foes, captives, rooms, end; a rule asks it and never the kind), the stealth stages, `objective` |
 | `verdict/`, `par/` | how a run ended, latched; the medal clock |
 | `lesson/`, `rails/` | a tutorial's steps and tests; the frame over them: which keys work, the view, what is said |
 | `director/`, `script_tut_*/` | level scripts, and the six that exist |

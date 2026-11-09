@@ -138,7 +138,7 @@ pub fn squad_orders_worked_marks(g: &mut crate::game::Game, d: DoorId, side: f64
                     let mut near_prop = false;
                     for i in 0..g.props.props.len() {
                         let pr = &g.tab.props_prop[g.props.props[i]];
-                        if crate::roomclear::prop_gap(crate::roomclear::PropGapP { home: pr.home, hx: pr.hx, hz: pr.hz }, pos) < 0.3 { near_prop = true; break; }
+                        if crate::props::prop_gap(pr.home, pr.hx, pr.hz, pos) < 0.3 { near_prop = true; break; }
                     }
                     if near_prop { continue; }
                     let mut saw = 0.0;

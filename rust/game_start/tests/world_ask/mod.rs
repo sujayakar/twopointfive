@@ -479,7 +479,7 @@ pub trait NetAsk {
 }
 
 impl NetAsk for Play {
-    fn men_of_room(&self, room: &str) -> Vec<GuardId> { self.g.room_clear.rooms.iter().find(|r| r.def.id == room).map_or(Vec::new(), |r| r.defenders.clone()) }
+    fn men_of_room(&self, room: &str) -> Vec<GuardId> { self.g.staged.rooms.iter().find(|r| r.def.id == room).map_or(Vec::new(), |r| r.defenders.clone()) }
     fn shaken(&self, gd: GuardId) -> f64 { self.g.m.morale.state_of.get(gd).map_or(0.0, |m| m.shock) }
     fn steady(&mut self, gd: GuardId) -> bool { game::morale::training_of(&mut self.g, gd) == game::morale::TrainingOf::Steady }
     fn net_line(&self, text: &str, kind: &str, name: &str) -> bool { game::netquiet::lines().get(String::from(kind)).map_or(false, |r| r.iter().any(|l| l.replace("{name}", name) == text)) }

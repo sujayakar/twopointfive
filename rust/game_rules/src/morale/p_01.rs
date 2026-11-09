@@ -124,7 +124,7 @@ pub fn has_mate(g: &mut crate::game::Game, gd: GuardId) -> bool {
 pub fn band_of(g: &crate::game::Game, gd: GuardId) -> Option<Vec<GuardId>> {
     if let Some(q) = crate::enemysquads::squad_of(g, gd) { return Some(q.men); }
     if g.gd[gd].team != crate::teams::Team::Hostile { return None; }
-    g.room_clear.rooms.iter().find(|r| r.defenders.contains(&gd)).map(|r| r.defenders.clone())
+    g.staged.rooms.iter().find(|r| r.defenders.contains(&gd)).map(|r| r.defenders.clone())
 }
 
 /// the difficulty's mix, read once a tick (morale.ts mixNow)

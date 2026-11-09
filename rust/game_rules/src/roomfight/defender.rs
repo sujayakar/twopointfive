@@ -69,8 +69,7 @@ pub fn room_fight_tick_def(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64
     if crate::owner::has(g, gd, crate::owner::by::MORALE) { return; }
     if crate::owner::has(g, gd, crate::owner::by::RUNNER) { return; }
     if digs_in(g) {
-        let keeps = g.level.scenarios.as_ref().and_then(|s| s.room_clear.as_ref()).and_then(|r| r.dig_in) != Some(false);
-        if keeps && !crate::lanes::lane_throws(g, gd) { crate::digin::dig_in_tick(g, d, dt); }
+        if g.level.digs_in() && !crate::lanes::lane_throws(g, gd) { crate::digin::dig_in_tick(g, d, dt); }
     }
     let mode = g.tab.roomfight_def[d].mode;
     if mode == DefMode::Move { room_fight_tick_move(g, d, dt); return; }

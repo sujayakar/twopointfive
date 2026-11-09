@@ -711,6 +711,15 @@ pub fn prop_system_heard(g: &crate::game::Game, e: &[f64], o: f64) -> crate::pro
     }
 }
 
+/// a floor point's distance to a prop's footprint where it RESTS (0 = inside it)   (roomclear.ts propGap)
+pub fn prop_gap(home: V3, hx: f64, hz: f64, at: V3) -> f64 {
+    let dx = at[0] - home[0];
+    let dz = at[2] - home[1];
+    let c = m::cos(home[2]);
+    let s = m::sin(home[2]);
+    m::hyp2(m::max(0.0, m::abs(c * dx - s * dz) - hx), m::max(0.0, m::abs(s * dx + c * dz) - hz))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

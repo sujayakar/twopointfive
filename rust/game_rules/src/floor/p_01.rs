@@ -38,11 +38,7 @@ pub fn floor_at(p: V3, s: Option<&crate::scene_level_data::SurfacesData>) -> cra
 /// The material under a point on this game's level; a quiet mission's level that declares no surfaces is plain lino. (floor.ts floorOf)
 pub fn floor_of(g: &crate::game::Game, pos: V3) -> crate::floor::FloorMat {
     let l = &g.level;
-    if l.surfaces.is_none() && l.scenarios.as_ref().map_or(false, |s| s.quiet.is_some()) {
-        FloorMat::Lino
-    } else {
-        floor_at(pos, l.surfaces.as_ref())
-    }
+    if l.surfaces.is_none() && l.own_places() { FloorMat::Lino } else { floor_at(pos, l.surfaces.as_ref()) }
 }
 
 /// What the hearing model has under a point, as a HUD says it (None: the floors are all one). (game.ts floorUnderPlayer)

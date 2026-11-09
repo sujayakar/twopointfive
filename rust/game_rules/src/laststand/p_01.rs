@@ -165,7 +165,7 @@ pub fn calm(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
 
 /// where a point is, by the structure's own rooms (laststand.ts where)
 pub fn where_(g: &mut crate::game::Game, p: V3) -> crate::laststand::Where {
-    let rooms = match crate::roomclear::room_clear_scenario_structure(g) { Some(s) => s.rooms, None => Vec::new() };
+    let rooms = g.level.rooms().to_vec();
     let mut best: Option<usize> = None;
     let mut bd = f64::INFINITY;
     for (i, r) in rooms.iter().enumerate() {
@@ -191,8 +191,7 @@ pub fn spoken(g: &mut crate::game::Game, p: V3) -> crate::laststand::Spoken {
         None => return Spoken { id: w.id, the: w.the, at: w.at, spot: None },
     };
     let id = if id_truthy(&r.id) {
-        let structure = crate::roomclear::room_clear_scenario_structure(g);
-        let held = structure.map_or(false, |s| s.rooms.iter().any(|x| Some(x.id.as_str()) == r.id.as_deref()));
+        let held = g.level.rooms().iter().any(|x| Some(x.id.as_str()) == r.id.as_deref());
         if held { r.id.clone() } else { None }
     } else { None };
     let spot = if id.is_some() { None } else {
