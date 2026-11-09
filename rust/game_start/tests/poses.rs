@@ -387,6 +387,17 @@ fn a_fallen_mans_toes_stay_over_the_floor() {
     }
 }
 
+/// THE RULE: his feet do not go through each other, however he turns or sets off: over the whole day his ankles are never nearer than they are at a stand, near enough.
+/// A FAILURE MEANS: a step taken across the other foot.
+#[test]
+fn his_feet_do_not_go_through_each_other() {
+    for s in SEEDS {
+        let mut near = 9.0f64;
+        a_full_day(s, |p, c, _| near = near.min(flat(p.joint(c, Bone::FootL), p.joint(c, Bone::FootR))));
+        assert!(near > 0.15, "seed {s}: his ankles came within {near:.3} m");
+    }
+}
+
 /// THE RULE: however he goes from one thing to another, no joint moves more in one frame than a limb can: a change of what he is doing is a blend and not a cut. (Measured from his hips, so what is left is the pose.)
 /// A FAILURE MEANS: a pop on the screen as a man starts, stops, goes low or changes guns.
 #[test]
