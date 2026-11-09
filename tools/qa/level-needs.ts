@@ -438,8 +438,8 @@ const OWN: Own[] = [
   { name: 'level-lint', some: l => ['tools/qa/level-lint.ts', ...l.map(n => `levels/${n}.json`), '--quiet'] },
   { name: 'kitview-plan', all: ['tools/qa/kitview-plan.ts', '--quiet'], some: l => ['tools/qa/kitview-plan.ts', ...l, '--quiet'] },
   { name: 'floor-order-check', all: ['tools/qa/floor-order-check.ts'], some: l => ['tools/qa/floor-order-check.ts', ...l.map(n => `${n}.json`)] },
-  // the game's own questions (rust/game_start/src/bin/levels.rs)
-  ...['stands', 'doors', 'second-way', 'sight', 'walked', 'charges', 'names', 'rain'].map(q => ({ name: `levels ${q}`, native: true, all: [q], some: (l: string[]) => [q, ...l] })),
+  // the game's own questions (rust/game_start/src/levels.rs)
+  ...['stands', 'doors', 'second-way', 'sight', 'walked', 'charges', 'names', 'rain', 'file'].map(q => ({ name: `levels ${q}`, native: true, all: [q], some: (l: string[]) => [q, ...l] })),
 ];
 async function runOwn(levels: string[], all: boolean, jobs: number): Promise<Line[]> {
   const cmds: { name: string; args: string[]; native?: boolean }[] = [];

@@ -376,7 +376,7 @@ fn a_way_in_on_a_mission_with_one_is_refused_and_a_row_not_drawn_takes_no_press(
     assert_eq!(no.why, "");
     assert!(!row(&sheet(&mut d, "bazaar-quiet"), "way").shown);
     assert_eq!(kept_before, sheet_bytes(&mut d, "bazaar-quiet"));
-    // a mission with two: its second is on its link and on no other's, its dealt is not offered
+    // a mission with two: its second is on its link and on no other's, and a way nobody offers ("any") is refused
     assert!(set(&mut d, "depot-four", "way", "2").ok);
     assert!(!set(&mut d, "depot-four", "way", "any").ok);
     let v = start(&mut d, "");
@@ -493,7 +493,7 @@ fn a_brief_is_the_row_its_address_starts_with_the_team_it_deploys() {
     // (a level being built is played the moment it loads: no brief, whatever else the address says)
     assert_eq!(brief(&mut d, &format!("{}&level=relief", r.link)).id, "");
     assert_eq!(brief(&mut d, "?solo&level=relief").id, "");
-    // (a lesson has its scene and what it teaches; a way the address asks for is that way, and dealt marks none)
+    // (a lesson has its scene and what it teaches; a way the address asks for is that way, and a word that is no number is the level's own)
     let lesson = rows.iter().find(|r| r.lesson).expect("a lesson");
     let b = brief(&mut d, &lesson.link);
     assert!(!b.scene.is_empty() && !b.teaches.is_empty(), "{}", lesson.id);

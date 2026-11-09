@@ -410,7 +410,7 @@ pub fn body_lit(g: &mut crate::game::Game, gd: GuardId, o: GuardId, eye: V3, dis
     let oc = g.gd[o].ch;
     let hp = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
     let at: V3 = [hp[0], hp[1] + 0.25, hp[2]];
-    let trans = crate::sense::smoke_between(g, eye, at) * crate::weather::air_trans(g, eye, at);
+    let trans = crate::sense::clear_between(g, eye, at);
     let b = g.k.body_light;
     if trans < b.smoke {
         return false;

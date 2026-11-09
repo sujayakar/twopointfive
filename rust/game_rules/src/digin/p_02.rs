@@ -180,7 +180,7 @@ pub fn begin(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin:
             // out of the team's earshot: the room says it on its side's net instead
             let guide = crate::words::wg(g, &"copy. we'll be ready for them.", &"heard. they'll find this room ready.");
             let line = one_of(g, crate::dice::Who::Def(d), &["we hear it. getting ready for them here.", "copy. we're digging in.", guide]);
-            crate::game::game_say(g, gd, line, Some(true), None, None);
+            crate::game::game_say(g, gd, line, Some(true), None);
             g.stats.digin.radio += 1;
             cue(g, Some(&mut r), Cue::Radio);
         }
@@ -504,7 +504,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
         g.stats.digin.radio += 1;
         let pool = crate::words::w(g, &["contact! they're here. hold your rooms!", "they're on us. watch your doors!"], &["contact! they're inside. hold your rooms!", "they're in here. watch your doors!"]);
         let line = one_of(g, crate::dice::Who::Def(d), &pool);
-        crate::game::game_say(g, gd, line, Some(true), None, None);
+        crate::game::game_say(g, gd, line, Some(true), None);
         let text = format!("calls contact on the net{}", if heard { "" } else { " (out of the team's earshot)" });
         log(g, Some(gd), &text);
         cue_all(g, Cue::Radio);
@@ -742,10 +742,7 @@ pub fn watch(g: &mut crate::game::Game) {
         } else if let Some(who) = by.gd {
             let lines = [format!("the {} is blocked. something heavy behind it.", dn), format!("the {} is wedged from inside. they know we're here.", dn)];
             let line = one_of(g, crate::dice::Who::Man(who), &lines);
-            crate::game::game_say(g, who, &line, Some(true), None, None);
-        } else {
-            let text = format!("the {} is wedged from inside", dn);
-            crate::game::game_msg(g, &text);
+            crate::game::game_say(g, who, &line, Some(true), None);
         }
         let text = format!("tries {}: wedged", door_name(g, d));
         log(g, by.gd, &text);

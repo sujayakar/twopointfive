@@ -53,7 +53,7 @@ fn way_lights(y: &Json) -> WayLights {
 
 /// ONCE THE MISSION IS UP: the plan of the way it stages, made on the game's own floor, and the stage. A mission that did not start, no block, no such way or a set the block lacks: the stage says there is nothing to stage.
 pub fn begin(g: &mut Game, k: &KitLink) {
-    let asks_none = !["roomclear", "rescue", "nightbreach", "quiet", "squad4"].iter().any(|w| k.q.has(w));
+    let asks_none = game::scene_scenario_list::kind_of(&k.q).is_none();
     let mut st = Box::new(KitStage { quiet_kind: quiet_of(&k.q), asks_none, way: k.way, share: 1.0, still: k.q.has("stillkit"), ..KitStage::default() });
     let way = kitstage::staged_way(g, asks_none);
     let block = k.data.get("scenarios").get("kitView");

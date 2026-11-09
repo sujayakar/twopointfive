@@ -88,7 +88,7 @@ pub fn handler_beat(g: &mut crate::game::Game, beat: crate::dialogue::HandlerBea
     let r = row(g);
     r.done.add(beat);
     r.last_at = now;
-    crate::game::game_msg(g, &alloc::format!("radio: {} \u{25B8} {}", crate::dialogue::HANDLER_TAG, h.replace("{rack}", &rack)));
+    crate::cues::cues_radio(g, &alloc::format!("{} \u{25B8} {}", crate::dialogue::HANDLER_TAG, h.replace("{rack}", &rack)));
     crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.3), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.12 }));
     let at = g.time + crate::dialogue::RADIO_REPLY_SECS;
     row(g).reply = Some(crate::dialogue::RadioStateReply { at, text: s.replace("{rack}", &rack) });
@@ -148,9 +148,9 @@ pub fn tick_radio(g: &mut crate::game::Game) {
             let talking = match &g.pl[pl].bubble { Some(b) => now - b.t < b.dur, None => false };
             if !talking {
                 let dur = m::min(2.4, m::max(1.3, 0.9 + 0.025 * p.text.encode_utf16().count() as f64));   // .length: UTF-16 units
-                let said = alloc::format!("radio: you \u{25B8} {}", p.text);
+                let said = alloc::format!("you \u{25B8} {}", p.text);
                 g.pl[pl].bubble = Some(crate::game::PlayerBubble { text: p.text, t: now, dur, radio: true });
-                crate::game::game_msg(g, &said);
+                crate::cues::cues_radio(g, &said);
             }
         }
     }

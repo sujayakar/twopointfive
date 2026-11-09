@@ -29,7 +29,7 @@ pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::runner::LineKin
     pool.extend(extra.unwrap_or_default());
     let n = pool.len() as f64;
     let at = js::rem(m::floor(crate::dice::draw_of(g, "runner::bark#1", gd) * n), n) as usize;
-    crate::game::game_say(g, gd, &pool[at], Some(false), Some(true), None);
+    crate::game::game_say(g, gd, &pool[at], Some(false), Some(true));
 }
 
 /// distance on the floor   (runner.ts flat)
@@ -143,7 +143,7 @@ pub fn close_foe(g: &mut crate::game::Game, gd: GuardId) -> Option<CharId> {
 }
 
 /// is he the man: broken, alone, dry, and nobody else's   (runner.ts ripe)
-pub fn ripe(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn ripe(g: &crate::game::Game, gd: GuardId) -> bool {
     if !ours(g, gd) || spoken(g, gd) || !reacts(g, gd) || crate::morale::rung_of(g, gd) != 2.0 { return false; }
     let mo = match crate::morale::morale_of(g, gd) { Some(x) if x.alone => x, _ => return false };
     if mo.act == crate::morale::MoraleAct::Bait { return false; }

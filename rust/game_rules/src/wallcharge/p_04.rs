@@ -307,8 +307,6 @@ pub fn wall_charge_sam_tick(g: &mut crate::game::Game) {
     if wall_charge_open_at(g, &s.wall) || wall_charge_charge_on(g, &crate::seats::here(g), &s.wall).is_some() { return; }
     let paid = wall_charge_take(g);
     if paid < 0.0 {
-        let words = wall_charge_none_words(g, &crate::seats::here(g));
-        crate::game::game_msg(g, words.strip_suffix('.').unwrap_or(&words));
         return;
     }
     let index = s.wall.index;
@@ -319,9 +317,6 @@ pub fn wall_charge_sam_tick(g: &mut crate::game::Game) {
     g.wall_charge.stats.by_sam += 1.0;
     crate::audio_iface::game_audio_like_play(g, "lockPick", Some(at), Some(0.6), None);
     crate::furnblast::furniture_warm(g);
-    let f = g.k.doortools.blow_key.replacen("Key", "", 1);
-    let tail = crate::ownblow::blow_tail(false, &f, Some(". "));
-    crate::game::game_msg(g, &alloc::format!("charge set on the wall{}", tail));
     wall_charge_note(g, &alloc::format!("set by the player on wall {}", index));
 }
 
@@ -341,7 +336,6 @@ pub fn wall_charge_sam_job(g: &mut crate::game::Game) -> Option<crate::wallcharg
 pub fn wall_charge_cancel(g: &mut crate::game::Game) -> bool {
     if g.wall_charge.sam.is_none() { return false; }
     g.wall_charge.sam = None;
-    crate::game::game_msg(g, "charge not set");
     true
 }
 

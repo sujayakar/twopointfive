@@ -73,9 +73,17 @@ its worst row. A squad's word ("Bravo: …", `squad_word`) outranks a man's in i
 click; `murmur` when Sam remarks; `heldProtest` from a hostage or a man in Sam's arm. A shout (`is_shout`: the writer put a bang in it) that `cues_overheard` carries by `hear_path` to an ear
 within `k.digin.shout_m` is the `RadioKind::Heard` row. It takes only a free place and gives it up to the next real row.
 
-**The log is not the strip.** `game_msg` writes `g.messages`, the last five lines. No view and no host reads that list. A line reaches the player from it only if it starts `radio: `,
-which `cues_raw` files. The rest are for rules that look back (`guards/frame.rs`, `combat/p_02.rs`, `wallcharge/p_03.rs`) and for tests (`Play::log`). To tell the player
-something use a bubble, a strip row, or a row the view already carries (`mission::objective`, `interact_view`).
+**The strip takes a line whole.** `cues_radio` files a row in the first class with no man's name on it: control, the handler, the staff's net, the roll call. There is no log of what was said. To tell
+the player something use a bubble, a strip row, or a row the view already carries (`mission::objective`, `interact_view`).
+
+**Saying why.** There are two ways, and `told_why.rs` holds them. A press of his own that did nothing calls `interact::refuse`: a greyed row after his rows, for `EMPTY_SHOW_SECS`
+(`empty_view`; `word_kind` tells it from an empty tap, the one word a step takes down early). A row that exists but cannot be done is greyed with its why in its text. Anything else a teammate
+says: `squadnet::team_says`, by the man it is about or the nearest who can speak. `interact::say_why` answers a press with that, and falls back on `refuse` when nobody is there. Sam says a
+code he has just learnt by `say_over_sam`, but not with a man in his arm, because his bubble would hold back the next question.
+
+**What such a line moves.** `say` does for these what it does for any line. A silent squad's hand goes to the radio (`radio_hand`), and that pose moves his bones. A radio bubble makes
+`sup_bark` hold a line back and `cues_cue` skip a cue, and `rescue/p_03.rs` picks a quiet man for its line. No die is drawn and no noise is filed.
+Nobody has seen these rows or lines on a GPU or played them.
 
 **A held man.** `gather` builds `DialogueCtx`: what he knows (`knowledge_of`), how rattled (`agitation_of`, `band_of`), his temperament (`temperament_of`), the facts
 and the tokens a line can use. `pick_line` then asks, in order:
@@ -134,7 +142,7 @@ room clear structure lists. Failing both, `door_words` says the id's words throu
 - **A new script:** a `Script` in `scripts`, with all four `ScriptBeats`. `script_fits` drops it for any man it cannot fill.
 - **A new defender's line on the strip:** a `CueKind` with its row in `LINES` in `cues/` and a class, or `say` with radio on and words that `CLASSES` already ranks. A line in no row of `CLASSES`
   files as class 4.
-- **Say something to the HUD:** `say` for a man. `game_msg` with `radio: ` for control. Anything else in `game_msg` reaches nobody.
+- **Say something to the HUD:** `say` for a man, `team_says` for whoever of the team is there, `refuse` for his own press, `cues_radio` for control.
 - **A strip's numbers:** `rust/game_types/src/knobs/cues.rs`; the edge and the click: `squadnet.rs`. Both turn on a panel or by `?knob.cues.rows=4`.
 - **A door's name:** `doorNames` in the level's generator, then `bun run tools/levels/export.ts <name>`.
 
@@ -159,4 +167,4 @@ holds the HUD to importing nothing of the game.
 ## Not seen
 
 How often lines come in a fight was read in tests, not felt. No check sees a bubble or the strip on a GPU.
-Spoken lines have no lint: a line over length, a banned word in a mouth or a bad token shows only by reading the table. Much that is written to the player through `game_msg` reaches no screen.
+Spoken lines have no lint: a line over length, a banned word in a mouth or a bad token shows only by reading the table.

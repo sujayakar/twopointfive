@@ -118,8 +118,8 @@ pub fn running_verb(g: &Game, seat: &crate::seats::SeatRef) -> String {
 pub fn cancel_sustained(g: &mut Game) -> bool {
     let pl = g.player;
     if g.pl[pl].easing.is_some() { g.pl[pl].easing = None; return true; }
-    if g.pl[pl].picking.is_some() { crate::player::stop_picking(g, None); return true; }
-    if g.pl[pl].wanding.is_some() { crate::player::stop_wand(g, None); return true; }
+    if g.pl[pl].picking.is_some() { crate::player::stop_picking(g); return true; }
+    if g.pl[pl].wanding.is_some() { crate::player::stop_wand(g); return true; }
     if g.pl[pl].coding.is_some() { crate::devices::stop_coding(g); return true; }
     let (held, killing, working) = match &g.pl[pl].holding {
         Some(h) => (true, crate::player::hold_killing(h), h.wind_t >= 0.0 || h.phase == crate::character::HoldPhase::Choke || h.phase == crate::character::HoldPhase::Whip),
@@ -479,18 +479,29 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
     if !listed && row_now.is_none() && g.puppet.is_none() && !crate::samstun::sam_staggered(g, &crate::seats::here(g), None) {
         crate::scene_collision::stands(g);
         let w = empty_word(empty_thing(g, &crate::seats::here(g)).as_ref());
-        let time = g.time;
-        g.pl[pl].sel.word = w.clone();
-        g.pl[pl].sel.word_t = time;
-        let file_t = g.pl[pl].sel.file_t;
-        if time < file_t || time - file_t > crate::handring::EMPTY_AGAIN_SECS {
-            g.pl[pl].sel.file_t = time;
-            crate::game::game_msg(g, &w);
-        }
+        refuse(g, pl, None, &w);
         return;
     }
     if quick && crate::ownblow::own_blow_held(g, row_now.as_ref()) { return; }
     give(g, row_now.as_ref());
+}
+
+/// A press of his own that did nothing says why: a greyed row of its own after his rows, for `EMPTY_SHOW_SECS` from now (a button held on it comes back here each frame).
+/// `kind`: what the word is about. None is an empty tap, the one word the view may take down early.
+pub fn refuse(g: &mut Game, pl: PlayerId, kind: Option<crate::view::ThingKind>, words: &str) {
+    let time = g.time;
+    let s = &mut g.pl[pl].sel;
+    s.word = String::from(words);
+    s.word_t = time;
+    s.word_kind = kind;
+}
+
+/// The answer to a press that a teammate gives: `line` by the man it is about or the nearest who can speak, and with nobody there, `alone` as his own press's word.
+pub fn say_why(g: &mut Game, about: Option<GuardId>, kind: crate::view::ThingKind, line: &str, alone: &str) {
+    if !crate::squadnet::team_says(g, about, line) {
+        let pl = g.player;
+        refuse(g, pl, Some(kind), alone);
+    }
 }
 
 #[cfg(test)]

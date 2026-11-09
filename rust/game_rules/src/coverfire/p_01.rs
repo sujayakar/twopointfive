@@ -61,7 +61,7 @@ fn say_line(g: &mut Game, gd: GuardId) {
     man_of(g, gd).said_t = t;
     state_of(g).said_t = t;
     let line = g.k.coverfire.line.clone();
-    crate::game::game_say(g, gd, &line, None, None, None);
+    crate::game::game_say(g, gd, &line, None, None);
 }
 /// hit: is this body in the lane (coverfire.ts:191)
 fn lane_hit(g: &Game, ch: CharId, from: V3, dx: f64, dz: f64, l2: f64, t_max: f64, l: f64) -> bool {
@@ -741,7 +741,7 @@ pub fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, speed: f64
     let fa = g.gd[gd].weapon;
     if !crate::weapons::firearm_fire(g, fa) {
         crate::guards::begin_reload(g, gd);
-        crate::game::game_say(g, gd, "reloading.", None, None, None);
+        crate::game::game_say(g, gd, "reloading.", None, None);
         return true;
     }
     let r = g.m.weapons.weapons.get(g.fa[fa].def).unwrap().ai_spread;

@@ -134,7 +134,7 @@ pub fn bar_level(g: &mut Game, ids: &[BoxId]) -> usize {
 }
 
 // ---- shapes.ts
-const ARC_PLANES: usize = 5;
+pub const ARC_PLANES: usize = 5;
 fn arc_facets(n_cut: usize) -> f64 { if n_cut <= 1 { 6.0 } else if n_cut <= 3 { 4.0 } else { 2.0 } }
 /// the eight planes that, with the box's own faces, make a box a twelve-sided prism of radius r about its own x (1) or z (3)
 fn ring_planes(r: f64, axis: f64) -> Vec<CutPlane> {
@@ -156,9 +156,9 @@ fn arc_planes(h: V3, axis: f64, rise: f64, n: f64) -> Vec<CutPlane> {
     out
 }
 /// a shape's form, as a box's shape and a piece of trim both carry it
-struct Form<'a> { round: Option<f64>, arc: Option<ShapeFormArc>, cut: Option<&'a [[f64; 4]]>, old: Option<bool> }
+pub struct Form<'a> { pub round: Option<f64>, pub arc: Option<ShapeFormArc>, pub cut: Option<&'a [[f64; 4]]>, pub old: Option<bool> }
 /// a form's planes over a box of half size h (shapes.ts planesOf)
-fn planes_of(h: V3, f: &Form) -> Vec<CutPlane> {
+pub fn planes_of(h: V3, f: &Form) -> Vec<CutPlane> {
     let more: Vec<CutPlane> = f.cut.unwrap_or(&[]).iter().map(|p| cut_plane([p[0], p[1], p[2]], p[3])).collect();
     if let Some(round) = f.round { if round != 0.0 { return ring_planes(m::min(h[1], if round == 1.0 { h[2] } else { h[0] }), round); } }
     if let Some(arc) = f.arc {

@@ -18,7 +18,7 @@ pub fn ambient_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogu
 }
 
 /// Is the floor one the pairs may talk on? (dialogue.ts ambientLive)
-pub fn ambient_live(g: &mut crate::game::Game) -> bool {
+pub fn ambient_live(g: &crate::game::Game) -> bool {
     if !g.ai_enabled || g.quiet_utility || g.puppet.is_some() || g.touring { return false; }
     if crate::guards::escalation_of(g) != 0.0 { return false; }
     if g.alarm.episode { return false; }
@@ -133,7 +133,7 @@ pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
         let own = !is_office(g);
         let raw = pair_said(&line, own);
         let text = said_text(&raw, other.as_deref(), pad.as_ref());
-        crate::game::game_say(g, who, &text, None, None, None);
+        crate::game::game_say(g, who, &text, None, None);
         if let Some(pad) = pad.as_ref() {
             if names_code(&raw) { crate::devices::devices_overhear_said(g, who, &pad.lock_id); }
         }

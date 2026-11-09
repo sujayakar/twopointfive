@@ -15,7 +15,7 @@ fn same_room(a: &Option<crate::scene_scenarios::StructureRoom>, b: &Option<crate
 fn pos_of(g: &Game, gd: GuardId) -> V3 { let c = g.gd[gd].ch; g.ch[c].pos }
 fn bounds_of(b: Grown) -> crate::scene_level::BreachPlanBounds { crate::scene_level::BreachPlanBounds { x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1 } }
 fn rect_bounds(b: crate::scene_scenarios::Rect) -> crate::scene_level::BreachPlanBounds { crate::scene_level::BreachPlanBounds { x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1 } }
-fn say_radio(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None, None); }
+fn say_radio(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None); }
 fn door_name(g: &Game, d: DoorId) -> String { g.dr[d].def.name.clone() }
 fn nav_idx(g: &Game, ix: f64, iz: f64) -> f64 { crate::scene_collision::nav_grid_idx(g, ix, iz) }
 fn nav_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }

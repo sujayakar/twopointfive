@@ -467,7 +467,7 @@ pub fn light_switch_tick(g: &mut crate::game::Game) {
                 if crate::scene_collision::solid_blocked(g, [p[0], 1.3, p[2]], v3::mad(sw.pos, sw.n, 0.05), None) { continue; }
                 flip_switch(g, sw, true, c);
                 g.stats.lightswitch.guard_on += 1;
-                crate::game::game_say(g, gd, "who turned these off?", Some(false), None, None);
+                crate::game::game_say(g, gd, "who turned these off?", Some(false), None);
                 break;
             }
         }

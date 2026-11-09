@@ -247,7 +247,7 @@ pub fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &crate::squad40::Shot, a
     let c = g.gd[gd].ch;
     crate::he40::fire_shell(g, c, a.from, a.to);
     crate::character::anim_fire(g, c);
-    crate::game::game_say(g, gd, "forty out!", None, None, None);
+    crate::game::game_say(g, gd, "forty out!", None, None);
     let callsign = g.gd[gd].callsign.clone();
     let t = g.time;
     g.m.squad40.states.get_mut(pl).unwrap().shown = Some(StateShown { t, text: format!("{} · 40 mm out", callsign) });
@@ -262,7 +262,7 @@ pub fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &crate::squad40::Shot, a
 /// `end` of turnTick: he gives up (`line`) or is done; his turn is over and he goes back
 fn end_turn(g: &mut Game, gd: GuardId, line: Option<&str>) {
     if let Some(l) = line {
-        crate::game::game_say(g, gd, l, None, None, None);
+        crate::game::game_say(g, gd, l, None, None);
         g.stats.squad40.gave_up += 1;
     }
     let key = crate::seats::view_key(g, &crate::seats::here(g));

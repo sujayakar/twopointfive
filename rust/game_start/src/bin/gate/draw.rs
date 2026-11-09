@@ -24,7 +24,7 @@ use crate::rows::{Flags, RUN_SECS, SEED};
 use game_draw::boxes::{Cut, Geo, Mat, Row4, Word};
 use game_draw::{want, Drawn, Row};
 use game_start::hand::act;
-use game_start::moment::Moment;
+use game::savestate::control::Moment;
 use game_start::parts;
 use std::time::Instant;
 

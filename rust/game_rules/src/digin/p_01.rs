@@ -130,7 +130,7 @@ pub fn shout(g: &mut Game, gd: GuardId, text: &str, r: Option<&mut crate::digin:
     let pos = g.ch[c].pos;
     let reach = g.k.digin.shout_m;
     if heard_by(g, pos, reach).is_some() {
-        crate::game::game_say(g, gd, text, None, None, None);
+        crate::game::game_say(g, gd, text, None, None);
         g.stats.digin.shouts += 1;
         cue(g, r, crate::digin::Cue::Shout);
         log(g, Some(gd), &alloc::format!("shouts (heard): {}", text));
@@ -550,7 +550,7 @@ pub fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<&mut cr
             rm.callout = true;
             g.stats.digin.callouts += 1;
             let line = one_of(g, crate::dice::Who::Man(gd), &["movement inside. they're blocking the door.", "furniture moving in there. they know we're coming."]);
-            crate::game::game_say(g, by, line, Some(true), None, None);
+            crate::game::game_say(g, by, line, Some(true), None);
             log(g, Some(by), "calls the furniture he hears");
         }
     }

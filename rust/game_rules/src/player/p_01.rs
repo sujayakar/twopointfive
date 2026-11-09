@@ -145,22 +145,6 @@ pub fn item_name(g: &crate::game::Game, pl: PlayerId) -> String {
     }
 }
 
-/// what 2 pressed again puts on the right button after the load that is up (player.ts nextLoad)
-pub fn next_load(g: &crate::game::Game, rf: FirearmId) -> String {
-    let a = next_attachment(&g.fa[rf].attachments, g.fa[rf].att_idx);
-    String::from(match a {
-        Some(crate::weapons::RifleAttachment::Cam) => "the sticky cameras",
-        Some(crate::weapons::RifleAttachment::He40) => "the 40 mm",
-        _ => "the ring airfoil",
-    })
-}
-
-/// `attachments[(attIdx + 1) % Math.max(1, attachments.length)]`: None where the TypeScript reads undefined (player.ts nextLoad)
-fn next_attachment(attachments: &[crate::weapons::RifleAttachment], att_idx: i32) -> Option<crate::weapons::RifleAttachment> {
-    let i = (att_idx + 1) % core::cmp::max(1, attachments.len() as i32);
-    if i >= 0 { attachments.get(i as usize).copied() } else { None }
-}
-
 /// the rifle as the HUD line names it (player.ts rifleName)
 pub fn rifle_name(g: &crate::game::Game, pl: PlayerId) -> String {
     let rifle = g.pl[pl].rifle;
@@ -194,12 +178,6 @@ pub fn set_holstered(g: &mut crate::game::Game, on: bool, quiet: Option<bool>) {
     }
     if g.pl[pl].slot == crate::game::SlotKind::Rifle { g.pl[pl].equip_t = RIFLE_EQUIP_SECS; }
     if !quiet {
-        let text = if on {
-            String::from(if crate::game::player_rifle_sel(g, pl) { "slung" } else { "holstered" })
-        } else {
-            item_name(g, pl)
-        };
-        crate::game::game_msg(g, &text);
         crate::audio_iface::game_audio_like_play(g, "equip", None, Some(0.45), None);
     }
 }
@@ -384,10 +362,8 @@ pub fn reload_in_hand(g: &mut crate::game::Game, sprinting: Option<bool>, bolt_o
                 }
                 None => crate::character::anim_reload(g, c, None, None),
             }
-            crate::game::game_msg(g, "reloading");
             return true;
         }
-        if g.fa[gun].spare.is_empty() { crate::game::game_msg(g, "no spare magazines"); }
         return false;
     }
     if crate::game::player_rifle_up(g, pl) && !sprinting && !wall_not_stack(g, pl) {
@@ -395,10 +371,6 @@ pub fn reload_in_hand(g: &mut crate::game::Game, sprinting: Option<bool>, bolt_o
         let rack_it = g.fa[rifle].chamber == 0.0;
         let sp = crate::gunreload::shell_plan(g, rifle, Some(false), Some(if bolt_only { 0.0 } else { m::INF }));
         if sp.as_ref().map_or(false, |s| s.idle) {
-            if g.fa[rifle].spare.is_empty() && !bolt_only {
-                let short = def_of(g, def).short.clone();
-                crate::game::game_msg(g, &format!("no more shells for the {}", short));
-            }
             return false;
         }
         let plan = if sp.is_some() { None } else { crate::kitanim::kit_reload(g, rifle, true) };
@@ -412,10 +384,6 @@ pub fn reload_in_hand(g: &mut crate::game::Game, sprinting: Option<bool>, bolt_o
         if crate::weapons::firearm_start_reload(g, rifle, Some(&ev), beat, cues, shells.as_ref()) {
             if let Some(s) = &sp {
                 crate::character::anim_reload(g, c, Some(s.row.dur), Some(shell_row_as_beat(&s.row)));
-                if js::truthy(s.n) {
-                    let short = def_of(g, def).short.clone();
-                    crate::game::game_msg(g, &format!("reloading the {}", short));
-                }
                 return true;
             }
             match plan {
@@ -429,14 +397,7 @@ pub fn reload_in_hand(g: &mut crate::game::Game, sprinting: Option<bool>, bolt_o
                     crate::character::anim_reload(g, c, Some(r.dur), Some(b));
                 }
             }
-            let short = def_of(g, def).short.clone();
-            crate::game::game_msg(g, &format!("reloading the {}", short));
             return true;
-        }
-        if g.fa[rifle].spare.is_empty() {
-            let short = def_of(g, def).short.clone();
-            let text = if def_of(g, def).pellets.is_some() { format!("no more shells for the {}", short) } else { format!("no spare magazines for the {}", short) };
-            crate::game::game_msg(g, &text);
         }
         return false;
     }
@@ -466,16 +427,6 @@ mod tests {
         assert_eq!(sam_beat(0.0).to_bits(), 0.9f64.to_bits());
         assert_eq!(sam_beat(20.0).to_bits(), 0x3ff0f5c28f5c28f6);
         assert_eq!(sam_beat(100.0).to_bits(), 1.4f64.to_bits());
-    }
-
-    /// the load after the one up: round the list; nothing issued reads undefined, which next_load names as the ring
-    #[test]
-    fn next_attachment_goes_round() {
-        use crate::weapons::RifleAttachment::{Cam, He40, Ring};
-        assert_eq!(next_attachment(&[Ring, He40, Cam], 0), Some(He40));
-        assert_eq!(next_attachment(&[Ring, He40, Cam], 2), Some(Ring));
-        assert_eq!(next_attachment(&[Ring, He40, Cam], -1), Some(Ring));
-        assert_eq!(next_attachment(&[], 0), None);
     }
 
     /// a plain walk files at each edge of the cycle, none between

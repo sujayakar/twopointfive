@@ -258,12 +258,6 @@ pub enum CuesFileKind {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct CuesAdoptMsgsItem {
-    pub text: String,
-    pub t: f64,
-}
-
-#[derive(Clone, Debug, Default)]
 pub struct CuesAt {
     pub the: String,
     pub at: String,

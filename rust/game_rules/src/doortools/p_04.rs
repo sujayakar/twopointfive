@@ -338,7 +338,6 @@ pub fn door_tools_cancel_sam(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
     if g.pl[pl].charging.is_none() { return false; }
     g.pl[pl].charging = None;
-    crate::game::game_msg(g, "charge not set");
     true
 }
 
@@ -383,16 +382,13 @@ pub fn door_tools_sam_tick(g: &mut crate::game::Game) {
     crate::handwork::charge_hands(g, c, j.p, j.n, el, set_secs, hand);
     if g.time - s.t0 < set_secs { return; }
     g.pl[pl].charging = None;
-    if !door_tools_take(g, DoorToolsTakeWhat::Charge) { crate::game::game_msg(g, "no charges left"); return; }
+    if !door_tools_take(g, DoorToolsTakeWhat::Charge) { return; }
     g.door_tools.sam_spent += 1.0;
     let row = SetCharge { door: d, side: s.side, by: String::from(crate::ownblow::SAM_BY) };
     let id = g.tab.doortools_set_charge.push(row);
     g.door_tools.set.push(id);
     let at = crate::doors::door_pos(g, d);
     crate::audio_iface::game_audio_like_play(g, "lockPick", Some(at), Some(0.6), None);
-    let key = key_word(g);
-    let text = alloc::format!("charge set on the {}{}", crate::orders::door_words(g, d), crate::ownblow::blow_tail(false, &key, Some(". ")));
-    crate::game::game_msg(g, &text);
     let what = alloc::format!("charge set by hand on {}", g.dr[d].def.name);
     door_tools_note(g, &what);
 }
@@ -406,9 +402,8 @@ pub fn door_tools_tick_set(g: &mut crate::game::Game) {
             if let Some(i) = g.door_tools.set.iter().position(|x| *x == c) { g.door_tools.set.remove(i); }
             door_tools_refund(g, DoorToolsRefundWhat::Charge);
             if by_sam(g, c) { g.door_tools.sam_spent = m::max(0.0, g.door_tools.sam_spent - 1.0); }
-            let words = crate::orders::door_words(g, d);
-            let text = if gone { alloc::format!("the {} is off its hinges, so the charge came off with it", words) } else { alloc::format!("the {} came open, so the charge came off", words) };
-            crate::game::game_msg(g, &text);
+            let setter = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().find(|&m| g.gd[m].callsign == g.tab.doortools_set_charge[c].by);
+            crate::squadnet::team_says(g, setter, if gone { "that door's off its hinges. charge is off." } else { "that door came open. charge is off." });
             let what = alloc::format!("charge off {}: the door {}", g.dr[d].def.name, if gone { "is gone" } else { "opened" });
             door_tools_note(g, &what);
             continue;
@@ -531,7 +526,7 @@ pub fn door_tools_pick_step(g: &mut crate::game::Game, op: DoorOpId) {
         door_tools_off_lock(g, op);
         if t - g.tab.doortools_door_op[op].t0 < kick_cap { return; }
         if flat(p, k.pos) > 1.2 {
-            crate::game::game_say(g, lead, "can't get on the door.", None, None, None);
+            crate::game::game_say(g, lead, "can't get on the door.", None, None);
             door_tools_end(g, op, "never made the lock");
             return;
         }
@@ -591,7 +586,7 @@ pub fn door_tools_to_gun(g: &mut crate::game::Game, op: DoorOpId) -> bool {
     });
     let locked_now = door_tools_locked_out(g, d, side);
     let line = if locked_now { if hammer { "locked. hammer." } else { "locked. shotgun." } } else if hammer { "hammer." } else { "shotgun." };
-    crate::game::game_say(g, by, line, None, None, None);
+    crate::game::game_say(g, by, line, None, None);
     let what = alloc::format!("{}:{}{}", if hammer { "hammer" } else { "gun" }, callsign(g, by), if sp.beside { "" } else { " (in front)" });
     door_tools_beat(g, op, &what);
     true
@@ -686,7 +681,7 @@ pub fn door_tools_gun_step(g: &mut crate::game::Game, op: DoorOpId) {
         crate::weapons::firearm_rearm(g, wid);
         let dur = g.m.weapons.weapons.get(g.fa[wid].def).unwrap().reload.dur;
         with_gun(g, op, |x| x.next_t = t + dur);
-        crate::game::game_say(g, by, "reloading.", None, None, None);
+        crate::game::game_say(g, by, "reloading.", None, None);
         return;
     }
     let lock = crate::doors::door_locked(g, d) && crate::doors::door_latched(g, d);

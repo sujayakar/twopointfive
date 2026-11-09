@@ -67,7 +67,6 @@ pub fn own_blow_held(g: &mut crate::game::Game, r: Option<&crate::game::Interact
     let Some(r) = r else { return false; };
     if r.kind != crate::game::InteractableKind::Charge || r.verb != Some(crate::game::Verb::Blow) { return false; }
     if !own_set(g).map_or(false, |c| c.fatal) { return false; }
-    crate::game::game_msg(g, "too close to your own charge");
     true
 }
 

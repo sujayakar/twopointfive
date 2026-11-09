@@ -228,7 +228,7 @@ pub fn sup_bark(g: &mut crate::game::Game, gd: GuardId, moment: crate::suppressi
     sup.bark_was = Some(moment);
     sup.pending = None;
     g.m.suppression.floor_bark_t = Some(now);
-    crate::game::game_say(g, gd, pool[i], None, None, None);
+    crate::game::game_say(g, gd, pool[i], None, None);
     true
 }
 
@@ -355,7 +355,7 @@ pub fn update_suppression(g: &mut crate::game::Game, dt: f64) {
                     g.gd[gd].sup.bark_was = Some(SupMoment::Pinned);
                     g.m.suppression.floor_bark_t = Some(now);
                     let line = if g.gd[gd].team != crate::teams::Team::Guard { "they've got us pinned!" } else { "he's got us pinned!" };
-                    crate::game::game_say(g, gd, line, Some(true), None, None);
+                    crate::game::game_say(g, gd, line, Some(true), None);
                 } else {
                     let force = g.gd[gd].sup.bark_was == Some(SupMoment::Flinch) && g.time - g.gd[gd].sup.bark_t > 1.5;
                     sup_bark(g, gd, if friendly { SupMoment::Friendly } else { SupMoment::Pinned }, Some(force));
@@ -483,7 +483,7 @@ fn cover_fall(g: &mut Game, kept_open: Option<V3>, as_was: Option<V3>) -> Option
 }
 
 /// A man under fire does not stop to open a door: floor behind a shut one is no cover to him.
-fn through_a_shut_door(g: &mut crate::game::Game, from: V3, path: &[V3]) -> bool {
+fn through_a_shut_door(g: &crate::game::Game, from: V3, path: &[V3]) -> bool {
     let mut a = from;
     for &b in path {
         for i in 0..g.doors.list.len() {

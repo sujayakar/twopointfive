@@ -26,7 +26,7 @@ A ruling that stands on a system's own page is there and not here.
 ## Sam's kit
 
 - "we should just remove the max one wall charge per squad limitation": a man's slots are the only limit (`slot_max`), and no count runs across the squad.
-- "we should also probably just get rid of the ballistic shield, doesn't match the vibes (feels more like swat)": `levelData.ts` refuses the key on a card.
+- "we should also probably just get rid of the ballistic shield, doesn't match the vibes (feels more like swat)": the game refuses a file whose card has the key.
 - "attachments like silencer should be per gun": `suppressed` for the long gun and `side_can` for the sidearm, on `MemberKit`.
 - "ideally rifle attachments should be hierarchical under the rifle": the card's rows are a tree (`tree_up`, `kittree`).
 - "sponge should show up, should only be part of stealth builds by default": `issued` cards carry no `rings`.

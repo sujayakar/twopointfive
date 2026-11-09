@@ -515,7 +515,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
                 let t = g.time;
                 d.say = t + span(g, crate::dice::Who::Man(gd), &every);
                 flush(g, gd, d);
-                crate::game::game_say(g, gd, &lines[k], Some(false), Some(false), Some(false));
+                crate::game::game_say(g, gd, &lines[k], Some(false), Some(false));
                 g.stats.doze.lines += 1;
             }
             continue;

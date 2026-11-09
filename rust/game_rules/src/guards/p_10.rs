@@ -94,7 +94,7 @@ pub fn assign_lockdown(g: &mut crate::game::Game, redeal: bool, except: Option<G
         && g.gd[lead].state != crate::game::GuardState::Alert
         && !g.gd[lead].bubble.as_ref().map_or(false, |bu| now - bu.t < 0.5)
     {
-        crate::game::game_say(g, lead, "you're with me — close up", None, None, None);
+        crate::game::game_say(g, lead, "you're with me — close up", None, None);
     }
     let third = alive.iter().copied().find(|&x| x != a && x != b);
     let cps: Vec<crate::scene_level::Chokepoint> = g.level.chokepoints.clone().unwrap_or_default();
@@ -118,7 +118,7 @@ pub fn assign_lockdown(g: &mut crate::game::Game, redeal: bool, except: Option<G
                 && Some(third) != except
                 && g.gd[third].state != crate::game::GuardState::Alert
             {
-                crate::game::game_say(g, third, &format!("holding the {}", best.name), Some(true), None, None);
+                crate::game::game_say(g, third, &format!("holding the {}", best.name), Some(true), None);
             }
         }
     }
@@ -281,7 +281,7 @@ pub fn lockdown_doors(g: &mut crate::game::Game, gd: GuardId, calm: Option<bool>
         if open { let who = g.ch[c].id; crate::doors::doors_pull_to(g, d, who); }
         if relock {
             let line = if crate::doors::door_noticed(g, d) { "locking this back up" } else if open { "shutting this — and it stays locked" } else { "someone left this unlocked — locking it" };
-            crate::game::game_say(g, gd, line, None, None, None);
+            crate::game::game_say(g, gd, line, None, None);
             crate::doors::door_set_locked(g, d, true);
             crate::doors::door_set_noticed(g, d, true);
             let now = g.time;

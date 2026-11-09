@@ -20,21 +20,13 @@ fn in_rect(p: V3, r: Option<crate::scene_scenarios::Rect>) -> bool {
 /// g.orders.log's last row, as `lastOrder` holds it: its serial
 fn last_log_order(g: &Game, seat: &crate::seats::SeatRef) -> Option<u32> { seat.orders.log.last().map(|l| l.serial) }
 fn hot(g: &Game) -> bool { g.k.rescue.start == crate::knobs::RescueKStart::Hot }
-fn say_radio(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None, None); }
+fn say_radio(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None); }
 
 /// A line in the scenario's log, cut when it grows long. (rescue.ts Rescue.note)
 pub fn rescue_note(g: &mut crate::game::Game, what: &str) {
     let t = g.time;
     g.rescue.log.push(RescueLogItem { t, what: String::from(what) });
     if g.rescue.log.len() > 600 { g.rescue.log.drain(0..150); }
-}
-
-/// A line said once a staging. (rescue.ts Rescue.once)
-pub fn rescue_once(g: &mut crate::game::Game, key: &str, text: &str) {
-    if !g.rescue.said.has(String::from(key)) {
-        g.rescue.said.add(String::from(key));
-        crate::game::game_msg(g, text);
-    }
 }
 
 /// (rescue.ts Rescue.over)
@@ -53,7 +45,6 @@ pub fn rescue_order_door(g: &mut crate::game::Game) -> Option<crate::rescue::Res
         g.tab.doortools_door_gate[gate].go = true;
         g.rescue.door_orders = 2.0;
         rescue_note(g, "order:go");
-        crate::game::game_msg(g, "you: go");
         return Some(RescueOrderDoor::Go);
     }
     if g.rescue.called {
@@ -74,36 +65,30 @@ pub fn rescue_order_door(g: &mut crate::game::Game) -> Option<crate::rescue::Res
         let set = crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), door).is_some();
         if set || g.tab.doortools_door_op[ch].phase == crate::doortools::Phase::Place {
             let set = crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), door).is_some();
-            crate::game::game_msg(g, if set { "the charge is set. press F to blow it" } else { "the charge is not set yet" });
+            if !set {
+                let by = g.tab.doortools_door_op[ch].men.first().copied();
+                crate::interact::say_why(g, by, crate::view::ThingKind::Door, "charge isn't set yet.", "the charge isn't set yet");
+            }
             return None;
         }
     }
-    if on.iter().any(|&o| g.tab.doortools_door_op[o].kind != crate::doortools::DoorToolKind::Outside) {
-        crate::game::game_msg(g, "they are on that door already");
+    if let Some(&o) = on.iter().find(|&&o| g.tab.doortools_door_op[o].kind != crate::doortools::DoorToolKind::Outside) {
+        let by = g.tab.doortools_door_op[o].men.first().copied();
+        crate::interact::say_why(g, by, crate::view::ThingKind::Door, "we're on that door already.", "they're on that door already");
         return None;
     }
     let who = match rescue_pick(g) {
         Some(who) => who,
         None => {
-            crate::game::game_msg(g, if g.rescue.ops.is_empty() { "you're alone, so you'll have to take the hostage room yourself" } else { "nobody's free for the hostage room. everyone still up is covering where you put them (X, then fall in)" });
+            crate::interact::say_why(g, None, crate::view::ThingKind::Door, "we're all holding what you gave us. call us in first.", "you'll have to take the room yourself");
             return None;
         }
     };
     let dyn_ = rescue_dynamic(g) || hot_start;
-    let two = rescue_launch(g, fd, sd, &who.front, &who.side, dyn_)?;
+    rescue_launch(g, fd, sd, &who.front, &who.side, dyn_)?;
     g.rescue.door_orders = if dyn_ { 2.0 } else { 1.0 };
     if hot_start { rescue_start_clock(g, "order"); }
     rescue_note(g, if dyn_ { "order:bang" } else { "order:stack" });
-    let line = if dyn_ {
-        let bang = match &g.rescue.entry {
-            Some(e) => e.ops.iter().any(|e| g.tab.doortools_door_op[e.op].kind == crate::doortools::DoorToolKind::BangClear),
-            None => false,
-        };
-        format!("you: {} and clear — hostage room{}", if bang { "bang" } else { "open" }, two)
-    } else {
-        format!("you: stack up — hostage room{}", two)
-    };
-    crate::game::game_msg(g, &line);
     Some(if dyn_ { RescueOrderDoor::Bang } else { RescueOrderDoor::Stack })
 }
 
@@ -170,14 +155,11 @@ pub fn rescue_pick(g: &mut crate::game::Game) -> Option<crate::rescue::RescuePic
 }
 
 /// One door's order. (rescue.ts Rescue.launch, its `give`)
-fn give(g: &mut Game, gate: DoorGateId, ops: &mut Vec<EntryOpsItem>, why: &mut Vec<String>, who: &[GuardId], d: DoorId, is_side: bool) {
+fn give(g: &mut Game, gate: DoorGateId, ops: &mut Vec<EntryOpsItem>, who: &[GuardId], d: DoorId, is_side: bool) {
     let kind = if g.door_tools.bangs > 0.0 { crate::doortools::DoorToolsOrderKind::BangClear } else { crate::doortools::DoorToolsOrderKind::OpenClear };
     let face = rescue_face_of(g, d);
     match crate::doortools::door_tools_order(g, kind, who, d, face, Some(gate), None) {
-        crate::doortools::DoorToolsOrder::Text(text) => {
-            let door = if is_side { "side door" } else if !crate::dialogue::is_office(g) { "main door" } else { "corridor door" };
-            why.push(format!("{} — {}", door, text));
-        }
+        crate::doortools::DoorToolsOrder::Text(_) => {}
         crate::doortools::DoorToolsOrder::DoorOp(op) => {
             let men = g.tab.doortools_door_op[op].men.clone();
             crate::rescueflow::rescue_flow_release(g, &men);
@@ -193,16 +175,11 @@ fn give(g: &mut Game, gate: DoorGateId, ops: &mut Vec<EntryOpsItem>, why: &mut V
 }
 
 /// F's entry, given: the door tools' order on each door, through one gate. (rescue.ts Rescue.launch)
-pub fn rescue_launch(g: &mut crate::game::Game, fd: DoorId, sd: Option<DoorId>, front: &[GuardId], side: &[GuardId], go: bool) -> Option<String> {
+pub fn rescue_launch(g: &mut crate::game::Game, fd: DoorId, sd: Option<DoorId>, front: &[GuardId], side: &[GuardId], go: bool) -> Option<()> {
     let gate = crate::doortools::door_tools_together(g, Some(go));
     let mut ops: Vec<EntryOpsItem> = Vec::new();
-    let mut why: Vec<String> = Vec::new();
-    if !front.is_empty() { give(g, gate, &mut ops, &mut why, front, fd, false); }
-    if let (false, Some(sd)) = (side.is_empty(), sd) { give(g, gate, &mut ops, &mut why, side, sd, true); }
-    if !why.is_empty() || ops.is_empty() {
-        let line = if why.is_empty() { String::from("nobody to take it") } else { why.join(" · ") };
-        crate::game::game_msg(g, &format!("the hostage room: {}", line));
-    }
+    if !front.is_empty() { give(g, gate, &mut ops, front, fd, false); }
+    if let (false, Some(sd)) = (side.is_empty(), sd) { give(g, gate, &mut ops, side, sd, true); }
     if ops.is_empty() { return None; }
     let is_bang = |g: &Game, e: &EntryOpsItem| g.tab.doortools_door_op[e.op].kind == crate::doortools::DoorToolKind::BangClear;
     let cans = ops.iter().filter(|e| is_bang(g, e)).count();
@@ -210,25 +187,24 @@ pub fn rescue_launch(g: &mut crate::game::Game, fd: DoorId, sd: Option<DoorId>, 
         let line = if cans > 0 {
             let side_can = ops.iter().find(|e| is_bang(g, e)).unwrap().side;
             let door = if side_can { "side" } else if crate::dialogue::is_office(g) { "corridor" } else { "main" };
-            format!("one flashbang left, so it'll go in through the {} door and the teammates at the other door will go in after it", door)
+            format!("one bang left. it goes in the {} door.", door)
         } else {
-            String::from("no flashbangs left, so they'll go in without one")
+            String::from("no bangs left. going in without one.")
         };
-        crate::game::game_msg(g, &line);
+        let by = g.tab.doortools_door_op[ops[0].op].men.first().copied();
+        crate::interact::say_why(g, by, crate::view::ThingKind::Door, &line, line.trim_end_matches('.'));
     }
     let mut taken: Vec<GuardId> = Vec::new();
     for e in &ops { taken.extend(g.tab.doortools_door_op[e.op].men.iter().copied()); }
     let split = rescue_bounds(g).is_some() && (ops.iter().any(|e| e.side) || taken.len() == 1);
-    let tail = if ops.len() > 1 { " · both doors" } else if ops[0].side { " · side door" } else { "" };
     let mut words: Vec<String> = Vec::new();
     for e in &ops {
         let names: Vec<String> = g.tab.doortools_door_op[e.op].men.iter().map(|&m| g.gd[m].callsign.clone()).collect();
         words.push(format!("{}={}", if e.side { "side" } else { "front" }, names.join("+")));
     }
     g.rescue.entry = Some(Entry { ops, gate, men: taken, split, set_t: f64::NAN, go_t: f64::NAN, in_t: f64::NAN });
-    g.rescue.said.delete(String::from("set"));
     if split { rescue_note(g, &format!("split:{}", words.join(","))); }
-    Some(String::from(tail))
+    Some(())
 }
 
 /// Starts clock one; at a free start the men not on an order fall in. (rescue.ts Rescue.startClock)
@@ -257,12 +233,6 @@ pub fn rescue_start_clock(g: &mut crate::game::Game, why: &str) {
 /// Once a frame from the game's update. (rescue.ts Rescue.tick)
 pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Option<CameraId>) {
     if !g.rescue.active { return; }
-    let gone = g.rescue.ops.iter().chain(g.rescue.hostiles.iter()).any(|x| !g.guards.contains(x))
-        || g.rescue.hostages.iter().any(|h| !g.civilians.contains(h));
-    if gone {
-        crate::game::game_restart_encounter(g);
-        if !g.rescue.active { return; }
-    }
     crate::rescuecheck::rescue_check_say(g);
     if g.rescue.cut && cam.is_some() { g.rescue.cut = false; crate::seats::cut_to_men(g); }
     rescue_tick_entry(g);
@@ -874,7 +844,7 @@ pub fn rescue_tick_entry(g: &mut crate::game::Game) {
         g.rescue.entry.as_mut().unwrap().set_t = set_t;
         if split { out.push((set_t, String::from("split:set"), 1.0)); }
         let last = g.tab.doortools_door_op[live[live.len() - 1]].lead;
-        if alive(g, last) { crate::game::game_say(g, last, if live.len() > 1 { "both doors — set." } else { "set." }, None, None, None); }
+        if alive(g, last) { crate::game::game_say(g, last, if live.len() > 1 { "both doors — set." } else { "set." }, None, None); }
     }
     let open_t = g.tab.doortools_door_gate[gate].open_t;
     if let Some(en) = g.rescue.entry.as_mut() {
@@ -886,7 +856,6 @@ pub fn rescue_tick_entry(g: &mut crate::game::Game) {
     js::sort_by(&mut out, |a, b| js::or(a.0 - b.0, a.2 - b.2));
     for o in out { g.rescue.log.push(RescueLogItem { t: o.0, what: o.1 }); }
     let en = match g.rescue.entry.clone() { Some(en) => en, None => return };
-    if !en.set_t.is_nan() && !g.tab.doortools_door_gate[gate].go { rescue_once(g, "set", "stacked and set. press F to send them in"); }
     if !live.is_empty() { return; }
     let up: Vec<GuardId> = en.men.iter().copied().filter(|&o| alive(g, o)).collect();
     if !up.is_empty() && en.ops.iter().all(|e| matches!(e.ended.as_deref(), Some("re-ordered") | Some("nobody left on it"))) {
@@ -904,7 +873,7 @@ pub fn rescue_tick_entry(g: &mut crate::game::Game) {
     let in_room = up.iter().copied().find(|&o| in_rect(pos_of(g, o), b));
     if !theirs && in_room.is_some() {
         rescue_note(g, "clear");
-        crate::game::game_say(g, in_room.unwrap(), "room clear — hostages.", None, None, None);
+        crate::game::game_say(g, in_room.unwrap(), "room clear — hostages.", None, None);
         g.rescue.called = true;
         rescue_end_entry(g, true);
     } else if up.is_empty() {
@@ -998,7 +967,6 @@ pub fn rescue_searched(g: &mut crate::game::Game, o: GuardId) {
 pub fn rescue_end_entry(g: &mut crate::game::Game, called: bool) {
     let en = match g.rescue.entry.take() { Some(en) => en, None => return };
     g.rescue.door_orders = 0.0;
-    g.rescue.said.delete(String::from("set"));
     if !called { return; }
     let s = match rescue_data(g) { Some(s) => s, None => return };
     let mut first = true;

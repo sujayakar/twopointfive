@@ -30,7 +30,7 @@ fn cell_mid(cell: f64, w: f64, i: f64) -> V3 { [(js::rem(i, w) + 0.5) * cell, 0.
 /// `gd.path = []; gd.pathGoal = null`
 fn clear_path(g: &mut Game, gd: GuardId) { crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); }
 /// `g.say(gd, text, true)`
-fn say_net(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None, None); }
+fn say_net(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None); }
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 fn char_id_of(g: &Game, gd: GuardId) -> f64 { g.ch[g.gd[gd].ch].id }
 fn goal_of(g: &Game, gd: GuardId) -> Option<V3> { g.gd[gd].script.as_ref().and_then(|s| s.goal) }

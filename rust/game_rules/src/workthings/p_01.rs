@@ -514,7 +514,7 @@ pub fn work_things_settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate:
     let p = pos(g, gd);
     work_things_hand_off(g, gd, j);
     g.work.jobs.delete(gd);
-    if let Some(line) = line { crate::game::game_say(g, gd, line, None, None, None); }
+    if let Some(line) = line { crate::game::game_say(g, gd, line, None, None); }
     let th = &j.thing;
     let face = if turn { m::atan2(th.n[0], th.n[2]) } else { g.ch[g.gd[gd].ch].body_yaw };
     crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
@@ -573,7 +573,7 @@ pub fn work_things_working(g: &crate::game::Game, seat: &crate::seats::SeatRef, 
 }
 
 /// A line of the module's log, kept to 200. (workthings.ts WorkThings.note)
-pub fn work_things_note(g: &mut crate::game::Game, gd: GuardId, what: &str) {
+pub fn work_things_note(g: &crate::game::Game, gd: GuardId, what: &str) {
 }
 
 /// orders.ts targetAt: a thing a teammate can work near a point. (workthings.ts workNear)

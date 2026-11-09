@@ -26,7 +26,7 @@ struct Cx { d: DoorId, t: f64, el: f64, lead: GuardId, name: String }
 fn tr(b: Option<bool>) -> bool { b.unwrap_or(false) }
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 fn alive(g: &Game, gd: GuardId) -> bool { g.gd[gd].state != crate::game::GuardState::Dead }
-fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, None, None, None); }
+fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, None, None); }
 fn in_ops(g: &Game, seat: &crate::seats::SeatRef, o: DoorOpId) -> bool { seat.door_tools.ops.contains(&o) }
 /// `this.lights ?? NIGHTBREACH.opLights` (settled: on)
 fn light_of(g: &Game, seat: &crate::seats::SeatRef) -> bool { seat.door_tools.lights.unwrap_or(true) }
@@ -153,7 +153,7 @@ pub fn door_tools_charge_gone(g: &mut crate::game::Game, op: DoorOpId, hands: bo
 }
 
 /// the leaf stands open in the team's picture of it (doortools.ts DoorTools.knownOpen)
-pub fn door_tools_known_open(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn door_tools_known_open(g: &crate::game::Game, d: DoorId) -> bool {
     if crate::fogofwar::fog_of_war_door_held(g, d) { m::abs(crate::fogofwar::fog_of_war_door_shown(g, d)) >= OPEN_RAD } else { is_open(g, d) }
 }
 
@@ -483,7 +483,6 @@ fn step_toss(g: &mut Game, op: DoorOpId, cx: &Cx) {
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::Can);
     crate::character::anim_toss_item(g, thc, Some(crate::character::TOSS_QUICK));
     say(g, th, if frag { "frag out!" } else { "bang out!" });
-    if frag { crate::game::game_msg(g, "frag out — stay off the door"); }
     if let Some(i) = &into {
         let inside = -off_of(g, d, i.at, side);
         let al = along_of(g, d, i.at) - w / 2.0;
@@ -815,8 +814,6 @@ fn step_standoff(g: &mut Game, op: DoorOpId, cx: &Cx) {
     };
     if wait { return; }
     say(g, lead, "stood off. your call.");
-    let key = g.k.doortools.blow_key.replacen("Key", "", 1);
-    crate::game::game_msg(g, &format!("charge set on the {}. press {} to blow it", cx.name, key));
     o!(g, op).phase = Phase::Armed;
     o!(g, op).t0 = t;
     door_tools_beat(g, op, "armed");

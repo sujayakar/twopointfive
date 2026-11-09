@@ -360,7 +360,7 @@ pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, 
     s.go_t = -1.0;
     if !s.said && g.time - s.since >= g.k.fireline.cue_s {
         s.said = true;
-        crate::game::game_say(g, gd, "your line — holding.", None, None, None);
+        crate::game::game_say(g, gd, "your line — holding.", None, None);
         g.stats.fireline.cues += 1;
     }
     // The ceiling: then a look for a way round, and again every `againS` (the men of a squad that stopped together do not all look on one frame).

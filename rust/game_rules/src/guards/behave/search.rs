@@ -102,7 +102,7 @@ pub fn search(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -> Acts {
             g.gd[gd].react_t = 0.0;
             g.gd[gd].search_plan = None;
             let line = if staff { "returning to patrol" } else if crate::teams::defender_words(g, gd) { "lost them." } else { "lost him." };
-            crate::game::game_say(g, gd, line, None, None, None);
+            crate::game::game_say(g, gd, line, None, None);
             let _ = crate::chronicle::chron_calm(g, gd);
         }
         if aim_at.is_none() {

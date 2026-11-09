@@ -60,8 +60,6 @@ pub fn net(g: &mut Game, gd: GuardId, text: &str, cls: Option<f64>, chron: Optio
     if g.gd[gd].held.is_some() { return; }
     crate::cues::cues_net(g, gd, text, cls);
     if chron { crate::chronicle::chron_radio(g, gd, text); }
-    let line = format!("{} (radio): {}", g.gd[gd].callsign, text);
-    crate::game::game_msg(g, &line);
 }
 
 /// Where in a band of seconds, by a key: the cast's ids and the check's number, no dice.   (rescuecheck.ts band)

@@ -19,8 +19,8 @@ pub fn spec_of(q: &Query) -> Option<crate::scene_scenario_list::ScenarioSpec> {
     Some(ScenarioSpec { kind, squad, level, seed })
 }
 
-/// `?squad4` alone is the room clear with the four; beside another scenario's flag it is only that scenario's size.
-fn kind_of(q: &Query) -> Option<ScenarioSpecKind> {
+/// WHAT KIND OF MISSION AN ADDRESS NAMES, the one reader of it (none: the solo night). `?squad4` alone is the room clear with the four; beside another scenario's flag it is only that scenario's size.
+pub fn kind_of(q: &Query) -> Option<ScenarioSpecKind> {
     let four = q.has("squad4");
     if q.has("roomclear") || (four && !q.has("nightbreach") && !q.has("rescue") && !q.has("quiet")) {
         Some(ScenarioSpecKind::Roomclear)

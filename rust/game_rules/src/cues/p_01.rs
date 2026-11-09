@@ -151,10 +151,6 @@ fn squads_note(what: &str) -> Option<(&str, SquadSaid, Option<&str>)> {
     if rest.starts_with("quiet:") { return Some((name, SquadSaid::Quiet, None)); }
     None
 }
-/// `+t.toFixed(2)`: the language's text, read back as a number.
-fn fixed2(t: f64) -> f64 {
-    js::to_fixed(t, 2).parse().unwrap_or(t)
-}
 /// A read of the sparse `classT` / `squadT`: past the end or a hole is None.
 fn sparse_get(v: &[Option<f64>], i: usize) -> Option<f64> {
     v.get(i).copied().flatten()
@@ -401,9 +397,9 @@ pub fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kin
     file_done(g, t, text, cls, who, kind, true, "")
 }
 
-/// A row written 'radio: …' (control, the staff's net): on the strip as it always was.   (cues.ts Cues.raw)
-pub fn cues_raw(g: &mut crate::game::Game, text: &str) {
-    if let Some(r) = text.strip_prefix("radio: ") { cues_file(g, r, 0.0, "", CuesFileKind::Raw); }
+/// A row in the first class with no man's name on it: control, the handler, the staff's net.   (cues.ts Cues.raw)
+pub fn cues_radio(g: &mut crate::game::Game, text: &str) {
+    cues_file(g, text, 0.0, "", CuesFileKind::Raw);
 }
 
 /// The row a man's net line files: under his callsign, a squad's word under the squad's name already.
@@ -455,7 +451,7 @@ pub fn cues_ears(g: &mut crate::game::Game) -> Vec<V3> {
 }
 
 /// `done` of `overheard`.
-fn heard_done(g: &mut Game, t: f64, text: &str, why: &str) -> bool {
+fn heard_done(g: &Game, t: f64, text: &str, why: &str) -> bool {
     why.is_empty()
 }
 
@@ -504,14 +500,6 @@ pub fn cues_net_wait(g: &crate::game::Game, cls: f64) -> f64 {
         Some(at) if t >= at => m::max(0.0, at + g.k.cues.gaps.get(c).copied().unwrap_or(0.0) + 0.05 - t),
         _ => 0.0,
     }
-}
-
-/// The message ring has been put back as it was saved: its 'radio: ' rows are the strip's again.   (cues.ts Cues.adopt)
-pub fn cues_adopt(g: &mut crate::game::Game, msgs: &[crate::cues::CuesAdoptMsgsItem]) {
-    g.cues.heard_row = None;
-    let radio: Vec<&crate::cues::CuesAdoptMsgsItem> = msgs.iter().filter(|m| m.text.starts_with("radio: ")).collect();
-    let from = tail_from(radio.len(), g.k.cues.rows);
-    g.cues.rows = radio[from..].iter().map(|m| CueRow { t: m.t, text: String::from(&m.text[7..]), cls: 0.0, rank: 1.0 }).collect();
 }
 
 /// A word over a man and nothing else: the bubble, no strip row, no class clock: nothing the net's own lines wait on (the recap's side call)
@@ -895,14 +883,6 @@ mod tests {
     }
 
     #[test]
-    fn fixed2_is_the_languages() {
-        // (bun: +t.toFixed(2))
-        for (t, want) in [(0.0, 0.0), (0.125, 0.13), (0.375, 0.38), (0.625, 0.63), (0.875, 0.88), (1.125, 1.13), (2.5, 2.5), (1.005, 1.0), (1.015, 1.01), (1.025, 1.02), (8.345, 8.35), (100.125, 100.13), (0.016666666666666666, 0.02), (3.3333333333333335, 3.33), (12.995, 12.99), (12.995, 12.99), (1234.565, 1234.57), (0.005, 0.01), (0.015, 0.01), (7.875, 7.88)] {
-            assert_eq!(fixed2(t).to_bits(), f64::to_bits(want), "{}", t);
-        }
-    }
-
-    #[test]
     fn cue_class_is_the_regexps() {
         for (s, want) in [
             ("moving to the fight — {the}", 1.0),
@@ -1028,10 +1008,8 @@ mod tests {
         let mut game = Game::blank();
         let g = &mut game;
         g.time = 20.0;
-        let msg = |text: &str, t: f64| CuesAdoptMsgsItem { text: String::from(text), t };
-        cues_adopt(g, &[msg("radio: a", 1.0), msg("Sam: x", 2.0), msg("radio: b", 3.0), msg("radio: c", 15.0), msg("radio: d", 16.0)]);
-        let rows: Vec<(f64, &str, f64, f64)> = g.cues.rows.iter().map(|r| (r.t, r.text.as_str(), r.cls, r.rank)).collect();
-        assert_eq!(rows, [(3.0, "b", 0.0, 1.0), (15.0, "c", 0.0, 1.0), (16.0, "d", 0.0, 1.0)]);
+        let cue = |t: f64, text: &str| CueRow { t, text: String::from(text), cls: 0.0, rank: 1.0 };
+        g.cues.rows = vec![cue(3.0, "b"), cue(15.0, "c"), cue(16.0, "d")];
         fn strip(g: &mut Game) -> Vec<(String, f64)> { radio_rows(g).into_iter().map(|r| (alloc::format!("{}: {}", if r.kind == crate::view::RadioKind::Heard { "heard" } else { "radio" }, r.text), g.time - r.age)).collect() }
         fn want(v: &[(&str, f64)]) -> Vec<(String, f64)> { v.iter().map(|r| (String::from(r.0), r.1)).collect() }
         assert_eq!(strip(g), want(&[("radio: c", 15.0), ("radio: d", 16.0)]));

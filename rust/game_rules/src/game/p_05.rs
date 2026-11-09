@@ -48,16 +48,11 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
         DoorSound::Thud => {
             // a boot at the face a shut door opens toward: the slam of it, nothing splintered
             audio_play_rate(g, "doorBash", e.pos, 1.0, 0.8);
-            if let Some(p) = crate::seats::man_by_id(g, e.who) {
-                let tool = match &g.pl[p].kick { Some(k) => k.tool.is_some(), None => false };
-                if !tool { game_msg(g, "it opens toward you, so the frame took the kick. that was loud"); }
-            }
         }
         DoorSound::Clang => {
             // a boot on the steel stair door: the ring of it, no keep to splinter
             audio_play_rate(g, "doorBash", e.pos, 1.0, 0.7);
             audio_play_rate(g, "stairDoor", e.pos, 0.55, 1.3);
-            if crate::seats::is_man_id(g, e.who) { game_msg(g, "it's a steel fire door, so it won't give. that was loud"); }
         }
     }
     // heard: a kick is its own kind, floor-wide; everything else a 'door' noise with a level, placed at the leaf
@@ -195,7 +190,7 @@ pub fn game_interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut
     }
     let pick = if g.gd[gd].civ.is_some() { crate::civilians::civilian_answer(g, gd, lend_rnd(&mut rnd)) } else { crate::dialogue::interrogate(g, gd, lend_rnd(&mut rnd)) };
     let Some(pick) = pick else { return None };
-    crate::guards::say(g, gd, &pick.text, Some(false), Some(true), None);   // (forced: a held man's only voice is his answers)
+    crate::guards::say(g, gd, &pick.text, Some(false), Some(true));   // (forced: a held man's only voice is his answers)
     if let Some(bubble) = g.gd[gd].bubble.as_mut() {
         bubble.dur = v3::clamp(1.2 + 0.07 * pick.text.encode_utf16().count() as f64, 2.5, 6.5);   // held speech runs longer than a bark's cap
     }
@@ -236,7 +231,7 @@ fn audio_play_rate(g: &mut Game, name: &str, pos: V3, gain: f64, rate: f64) {
 pub fn game_clear_nearest_room(g: &mut crate::game::Game) { crate::guards::force_clear(g) }
 
 /// Camera follow position: a spectated guard, `at`, else the player.   (game.ts followPos)
-pub fn game_follow_pos(g: &mut crate::game::Game, at: Option<V3>) -> V3 {
+pub fn game_follow_pos(g: &crate::game::Game, at: Option<V3>) -> V3 {
     let gd = if g.spectate >= 0.0 { g.guards.get(g.spectate as usize).copied() } else { None };
     if let Some(gd) = gd { let c = g.gd[gd].ch; return g.ch[c].pos; }
     if let Some(a) = at { return a; }
@@ -330,22 +325,21 @@ pub fn game_clean_slate(g: &mut crate::game::Game) {
     crate::wind::wind_fresh(g);
 }
 
-/// The player's restart: restartEncounter, the camera cut to the fresh man, the host told to start the picture's histories from nothing.   (game.ts restart)
-pub fn game_restart(g: &mut crate::game::Game, said: Option<&str>) {
-    game_restart_encounter(g);
-    if let Some(s) = said { if !s.is_empty() { crate::game::game_msg(g, s); } }   // (after it: restartEncounter takes the old encounter's lines off the HUD)
-    if !g.touring && !crate::director::director_showing(g) && g.spectate < 0.0 {
-        let seats = g.seats.clone();
-        for s in seats {
-            let lens = g.tab.cmd_seat[s].cam;
-            let p = crate::seats::with_seat(g, s, &mut |g| game_follow_pos(g, None));
-            cut_lens(g, lens, p);
-        }
-        g.restart_cut = true;
-        g.stats.cleanrestart.cuts += 1;
+/// The player's restart, from outside a step: the run's first step stands again with what an evening keeps (savestate/control.rs). In a step it is asked for, and made as the step ends.
+pub fn game_restart(g: &mut crate::game::Game) {
+    crate::savestate::control::restart(g);
+}
+
+/// Every view is cut to its fresh man, unless a show or a spectator has the camera.
+pub fn game_cut_to_men(g: &mut crate::game::Game) {
+    if g.touring || crate::director::director_showing(g) || g.spectate >= 0.0 { return; }
+    let seats = g.seats.clone();
+    for s in seats {
+        let lens = g.tab.cmd_seat[s].cam;
+        let p = crate::seats::with_seat(g, s, &mut |g| game_follow_pos(g, None));
+        cut_lens(g, lens, p);
     }
-    crate::host_api::host_api_restart_picture(g, "level restarted");
-    g.stats.cleanrestart.pictures += 1;
+    g.stats.cleanrestart.cuts += 1;
 }
 
 /// Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored.   (game.ts restartEncounter)
@@ -353,8 +347,6 @@ pub fn game_restart_encounter(g: &mut crate::game::Game) {
     crate::math_dice::use_dice(g);
     crate::quiet::quiet_mission_current(g);
     g.stats.cleanrestart.restarts += 1;
-    g.stats.cleanrestart.lines += g.messages.len() as i32;
-    g.messages.clear();   // (the lines of the encounter that ended go before anything below speaks)
     crate::quiet::quiet_mission_before_restart(g);   // deals this encounter's start BEFORE the fresh Player and Guards read it
     let seats = g.seats.clone();
     for &s in &seats {
@@ -383,7 +375,6 @@ pub fn game_restart_encounter(g: &mut crate::game::Game) {
     crate::dialogue::ambient_restart(g);
     crate::fogofwar::fog_of_war_reset(g);
     crate::game::game_reset_guards(g);
-    if let Some(last) = g.messages.last() { if last.text == "guards reset" { g.messages.pop(); } }
     if crate::lighting::fresh_lights(g) { g.stats.cleanrestart.relit += 1; }
     game_reset_level_state(g);
     crate::lightswitch::light_switch_reset(g);

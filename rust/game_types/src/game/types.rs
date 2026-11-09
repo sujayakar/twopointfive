@@ -422,11 +422,13 @@ pub struct StoodWith {
     pub dry: bool,
     /// a harness game stood plain, whose missions ask the solo card's question by kit_solo_stand
     pub solo_stand: bool,
+    /// the way in asked for: 0 the level's own, k its k-th other, however many the level has (roomclear way_taken)
+    pub way: usize,
 }
 impl StoodWith {
     /// what a game stood with nothing said for it holds: the level's own weather, at the level's own night
     pub fn blank() -> Self {
-        StoodWith { weather: None, locked: false, hour: crate::hours::HourId::Night, sun: 1.0, sun_given: false, dry: true, solo_stand: false }
+        StoodWith { weather: None, locked: false, hour: crate::hours::HourId::Night, sun: 1.0, sun_given: false, dry: true, solo_stand: false, way: 0 }
     }
 }
 impl Default for StoodWith { fn default() -> Self { Self::blank() } }
@@ -509,7 +511,6 @@ pub struct Game {
     pub ocp_cooldown: f64,
     pub last_sting_t: f64,
     pub event_seq: f64,
-    pub messages: Vec<crate::game::GameMessagesItem>,
     pub mission: crate::game::Mission,
     pub chronicle: crate::chronicle::Chronicle,
     pub qrf: crate::qrf::Qrf,
@@ -717,7 +718,6 @@ impl Game {
             ocp_cooldown: 0.0,
             last_sting_t: -100.0,
             event_seq: 0.0,
-            messages: Vec::new(),
             mission: crate::game::Mission { t0: 0.0, stage: crate::game::MissionStage::Infiltrate, drive_t: -1.0, pulled: false, alarm_on: false, sweep_at: -1.0, spotted_t: -100.0, down_card_at: -1.0, hands_on: false, serial: 0, stats: crate::game::MissionStats { qrf_at: -1.0, ..crate::game::MissionStats::default() } },
             chronicle: crate::chronicle::Chronicle::blank(),
             qrf: crate::qrf::Qrf::blank(),
@@ -835,14 +835,6 @@ pub struct GameBeaconsItem {
 pub struct GameFxItem {
     pub box_: FrameBoxId,
     pub ttl: f64,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct GameMessagesItem {
-    pub text: String,
-    pub t: f64,
-    /// INVENTED by a review: see the proposals
-    pub serial: u32,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -1066,7 +1058,6 @@ pub struct Player {
     pub kit_owed: f64,
     pub kit_owed_for: Option<crate::game::PlayerKitOwedFor>,
     pub sling_rest: Option<crate::game::PlayerSlingRest>,
-    pub ocp_hinted: bool,
     pub holstered: bool,
     pub keys: JsSet<String>,
     pub codes: JsSet<String>,
@@ -1176,7 +1167,6 @@ impl Player {
             kit_owed: -1.0,
             kit_owed_for: None,
             sling_rest: None,
-            ocp_hinted: false,
             holstered: true,
             keys: JsSet::new(),
             codes: JsSet::new(),
@@ -1186,7 +1176,7 @@ impl Player {
             hand_wait: 0.0,
             near_sel: 0,
             near_key: String::from(""),
-            sel: crate::game::PlayerSel { down_t: -1.0, open: false, moved: false, wheel_acc: 0.0, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, file_t: -1000000000.0, ring: None },
+            sel: crate::game::PlayerSel { down_t: -1.0, open: false, moved: false, wheel_acc: 0.0, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, word_kind: None, ring: None },
             pace: 1.0,
             nv: false,
             nv_amount: 0.0,
@@ -1296,7 +1286,8 @@ pub struct PlayerSel {
     pub move_latch: f64,
     pub word: String,
     pub word_t: f64,
-    pub file_t: f64,
+    /// the word is why a press did nothing (`interact::refuse`), and this is what it is about. None: an empty tap's, which the view reads off what he stands beside
+    pub word_kind: Option<crate::view::ThingKind>,
     pub ring: Option<crate::game::PlayerSelRing>,
 }
 

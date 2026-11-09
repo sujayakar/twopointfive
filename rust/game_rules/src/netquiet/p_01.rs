@@ -151,7 +151,7 @@ pub fn speak(g: &mut crate::game::Game, gd: GuardId, kind: crate::netquiet::Line
     let len = pool.len() as f64;
     let at = js::rem(m::floor(crate::dice::draw_of(g, "netquiet::speak#1", gd) * len), len) as usize;
     let text = pool[at].replace("{name}", name);
-    crate::game::game_say(g, gd, &text, Some(radio), None, None);
+    crate::game::game_say(g, gd, &text, Some(radio), None);
     let n = mind(g, gd);
     n.bark = 0.0;
     n.last_kind = kind_index(kind);

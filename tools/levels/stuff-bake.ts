@@ -21,7 +21,8 @@ import { fromBefore, paintUsers, rowOf, type Data, type Paints } from './paintUs
 export { fromBefore, paintUsers, rowOf };
 const ROOT = resolve(import.meta.dir, '../..');
 const { rowWord } = await import(`${ROOT}/src/scene/stuff.ts`);
-const { parseLevelData, serializeLevelData, validateLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { parseLevelData, serializeLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { levelFaults } = await import(`${ROOT}/tools/levels/lib/judge.ts`);
 
 /** what each paint user of a file from before WAS drawn as, in paintUsers' order */
 export function wasAll(d: Data): Was[] { const was = wasOf(d.materials); return [...paintUsers(d)].map(({ o }) => { const m = rowOf(d, o); return was(m !== undefined && m !== o.material ? { ...o, material: m } : o); }); }
@@ -52,7 +53,7 @@ if (import.meta.main) {
   for (const f of files) {
     const text = readFileSync(f, 'utf8'), d = parseLevelData(text) as Data;
     if (!fromBefore(d)) { console.log(`${basename(f)}: its rows already say what they are made of — left as it is`); if (OUT) writeFileSync(resolve(OUT, basename(f)), text); continue; }
-    const canon = serializeLevelData(d as never) === text, st = bake(d), errs = validateLevelData(d as never);
+    const canon = serializeLevelData(d as never) === text, st = bake(d), errs = levelFaults(d as never);
     if (errs.length) { console.error(`${basename(f)}: brought forward it does not validate — ${errs.slice(0, 3).join(' | ')}`); bad++; continue; }
     todo++;
     console.log(`${basename(f)}: ${st.rows} rows say their stuff, ${st.said} boxes and parts say their own${st.dropped ? `, ${st.dropped} dropped a word their row now says` : ''}${canon ? '' : ' — NOT in the canonical text before: more than words will move'}${CHECK ? ' (to do)' : ''}`);

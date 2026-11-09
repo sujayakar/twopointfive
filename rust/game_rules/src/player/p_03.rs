@@ -450,11 +450,12 @@ pub fn wall_snap_pending(g: &mut crate::game::Game, dt: f64, cam: CameraId, want
     if p.t <= 0.0 {
         let blocked = p.blocked;
         g.m.player.ws_pend.delete(pl);
-        game_msg_blocked(g, blocked || why.blocked);
+        wall_refused(g, blocked || why.blocked);
     }
 }
-fn game_msg_blocked(g: &mut Game, blocked: bool) {
-    crate::game::game_msg(g, if blocked { "can't get to the wall here" } else { "nothing to put your back to here" });
+fn wall_refused(g: &mut Game, blocked: bool) {
+    let pl = g.player;
+    crate::interact::refuse(g, pl, Some(crate::view::ThingKind::Wall), if blocked { "can't get to that wall" } else { "no wall to take here" });
 }
 
 /// the face a ray from his knee along the stick meets, or None on open floor, a door's leaf, or a face the stick is more along than at. (player.ts pressFace)

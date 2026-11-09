@@ -11,7 +11,8 @@ import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 const { MARKING_TEXEL } = await import(`${ROOT}/src/scene/markings.ts`);
 const { roundMarks, roundRadius } = await import(`${ROOT}/tools/levels/lib/gwotKit.ts`);
-const { LEVEL_DATA_VERSION, serializeLevelData, validateLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { LEVEL_DATA_VERSION, serializeLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { levelFaults } = await import(`${ROOT}/tools/levels/lib/judge.ts`);
 
 type Mark = Record<string, unknown>;
 type Slab = { id: string; name?: string; c: number[]; h: number[]; yaw?: number; rot?: unknown; flags?: string[]; shape?: unknown; material?: string; albedo?: number[]; markings?: Mark[]; [k: string]: unknown };
@@ -103,7 +104,7 @@ if (import.meta.main) {
     const d = JSON.parse(readFileSync(file, 'utf8')) as Doc;
     if (d.version === LEVEL_DATA_VERSION) { console.log(`${file}: already version ${LEVEL_DATA_VERSION}`); continue; }
     try {
-      const { data, rounds } = convertLevel(d), errs = validateLevelData(data);
+      const { data, rounds } = convertLevel(d), errs = levelFaults(data);
       if (errs.length) throw new Error(`${d.name}: the converted file does not validate: ${errs.slice(0, 8).join(' · ')}`);
       writeFileSync(file, serializeLevelData(data));
       console.log(`${file}: ${rounds} round thing${rounds === 1 ? '' : 's'}, ${data.boxes.length} boxes`);

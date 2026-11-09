@@ -41,7 +41,7 @@ fn a_locked_down_floor_that_heard_his_rifle_calls_the_team() {
         p.run(0.2);
         assert_ne!(p.response(), QrfState::Idle, "seed {s}: alarm {} and rifle fire heard: not called", p.alarm());
         assert_eq!(p.response_reason(), Some(QrfReason::Gunfire), "seed {s}");
-        assert!(p.log().iter().any(|l| l.contains("radio:")) || p.said.iter().any(|l| l.radio), "seed {s}: called on the net: {:?}", p.log());
+        assert!(!p.view().radio.is_empty() || p.said.iter().any(|l| l.radio), "seed {s}: called on the net: {:?}", p.view().radio);
         drop(p);
 
         // CONTROL: only heightened

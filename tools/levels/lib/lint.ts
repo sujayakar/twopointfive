@@ -1,4 +1,4 @@
-// Level LINT: the design checks the schema validator (levelData.ts validateLevelData) deliberately does not make — budgets, overlaps, things inside other things. Pure (no GPU, no DOM): tools/qa/level-lint.ts is the CLI over it
+// Level LINT: the design checks a file's own faults (rust/game_start faults.rs) do not make — budgets, overlaps, things inside other things. Pure (no GPU, no DOM): tools/qa/level-lint.ts is the CLI over it
 // (`bun run tools/qa/level-lint.ts levels/office.json`, exit 1 on errors).
 //
 // What stands on the floor and can be walked to is asked of the game itself (rust/game_start levels: stands, doors). It loads the level and reports
@@ -7,7 +7,7 @@
 // 'warn' = probably unintended (duplicate slabs, budgets getting tight),
 // 'info' = worth knowing. `allow` silences a code for listed ids (or '*') with a reason — for legitimately odd authored things.
 import type { Vec3 } from '../../../src/math/vec';
-import { LevelData, validateLevelData, DEVICE_DEFAULTS, floorUsers } from './levelData';
+import { LevelData, DEVICE_DEFAULTS, floorUsers } from './levelData';
 import { loadLevel } from './levelLoad';
 import { Box, BoxFlag, rayBox } from '../../../src/scene/boxes';
 import { WORLD } from '../../../src/scene/world';
@@ -61,11 +61,8 @@ export function lintLevel(data: LevelData, opts: LintOpts = {}): LintReport {
     return { findings, errors: findings.filter(f => f.severity === 'error').length, warnings: findings.filter(f => f.severity === 'warn').length, infos: findings.filter(f => f.severity === 'info').length, ms: t1 - t0, stats };
   };
 
-  // 0. the schema first: lint assumes a valid document (every ref resolves) — schema errors are reported and nothing else runs
-  const verrs = validateLevelData(data);
-  if (verrs.length) { for (const e of verrs.slice(0, 50)) add('error', 'schema', e, idsInMessage(e, data)); return done({ schema: verrs.length }); }
   let level: Level;
-  try { level = loadLevel(data, { validate: false }); } catch (e) { add('error', 'load', String((e as Error).message ?? e)); return done({}); }
+  try { level = loadLevel(data); } catch (e) { add('error', 'load', String((e as Error).message ?? e)); return done({}); }
   const boxes = level.boxes; const boxId = (i: number) => data.boxes[i]?.id ?? `box#${i}`;
 
   // 1. boxes: extents, duplicates, bounds
@@ -164,19 +161,12 @@ export function lintLevel(data: LevelData, opts: LintOpts = {}): LintReport {
         if (!reachable) add('warn', 'keypad-orphan', `keypad '${v.id}': no patrol route has a point whose nearest pad is this one — no man will ever give ITS code up (nor the pair say it); the player can only kick '${v.door}'${data.routes.length ? '' : ' (the level has no routes at all)'}`, [ref]);
       }
     } }
-  // 9b. floors: what stands on each (levelData.ts FLOOR_USERS — the table delete / rename share); a floor nobody names is worth a line (an orphan of a deleted wing)
+  // 9b. floors: what stands on each (levelData.ts floorUsers); a floor nobody names is worth a line (an orphan of a deleted wing)
   const perFloor = data.floors.map(f => `${f.id} ${floorUsers(data, f.id).length}`).join(' · ');
   data.floors.forEach((f, i) => { if (i > 0 && floorUsers(data, f.id).length === 0) add('info', 'floor-empty', `floor '${f.id}'${f.name ? ` (${f.name})` : ''} at y ${f.y}: nothing is on it — delete it, or it is a wing still to be built`, [`floor:${f.id}`]); });
   // 9. mission marks against their rooms
   { const M = data.mission; for (const o of M.objectives) if (o.kind === 'reach') { const d = data.doors.find(x => x.id === o.door); if (d) { const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir); const mx = d.hinge[0] + ux * d.width / 2, mz = d.hinge[1] + uz * d.width / 2; const A = o.area; const dist = Math.max(A.x0 - mx, mx - A.x1, A.z0 - mz, mz - A.z1); if (dist > 1.5) add('warn', 'objective-door', `objective '${o.id}': its door '${o.door}' is ${dist.toFixed(1)} m outside the area's edge — the HUD arrow will point away from the room`, [`mark:${o.id}`]); } } }
   return done({ boxes: boxes.length, props: level.props.length, lights: level.lights.length, areaLights: derivedAreaLightCount(level).lit, doors: data.doors.length, routes: data.routes.length, devices: data.devices.length, markRows, floors: perFloor });
-}
-
-/** ids quoted in a validator message ('box_0012', "light 'desk_lamp'") → selectable refs, best effort */
-export function idsInMessage(msg: string, data: LevelData): string[] {
-  const out: string[] = []; const m = /^(\w+)\[(\d+)\]/.exec(msg);
-  if (m) { const arr = (data as any)[m[1]]; const e = Array.isArray(arr) ? arr[Number(m[2])] : null; if (e?.id) out.push(m[1] === 'boxes' ? e.id : `${m[1].replace(/s$/, '')}:${e.id}`); }
-  return out;
 }
 
 /** One-line summary + the findings as printable lines (CLI / the editor's log). */

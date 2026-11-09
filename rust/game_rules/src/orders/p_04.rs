@@ -370,7 +370,7 @@ pub fn squad_orders_goal_part(g: &mut crate::game::Game, t: &crate::orders::Orde
     let men = match crate::planmode::goal_men(g, t) {
         Some(men) => men,
         None => {
-            crate::game::game_msg(g, crate::planmode::GOAL_NONE);
+            crate::interact::say_why(g, None, crate::view::ThingKind::Wall, crate::planmode::GOAL_NONE, crate::planmode::GOAL_NONE.trim_end_matches('.'));
             g.stats.planmode.none += 1;
             return None;
         }

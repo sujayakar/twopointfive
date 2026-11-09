@@ -110,7 +110,7 @@ Native tests in `rust/game_start/tests/`:
 | `held_doorforce.rs`, `fight_doors.rs`, `dark_rooms.rs` | men who fire, boot and wait at one |
 | `furniture.rs`, `pair.rs` | furniture and blasts, the noise of a shoved chair |
 
-`levels doors` and `levels second-way` (`rust/game_start/src/bin/levels.rs`) hold each level's doors to their size and its rooms to a second way in.
+`levels doors` and `levels second-way` (`rust/game_start/src/levels.rs`) hold each level's doors to their size and its rooms to a second way in.
 `gate`'s pins move if a leaf stands anywhere else.
 
 ## Not seen

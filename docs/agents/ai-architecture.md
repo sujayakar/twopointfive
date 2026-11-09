@@ -183,7 +183,7 @@ Agreed and not built. Assume none of it.
 - **The arbiter's care:** suspend and resume, a minimum grant, reservations of a spot or a door, every `transition` run every tick.
 - **A squad as a value:** members, a lead and a commander that is a seat or an AI, one code for both sides, so `with_seat` and `with_cast` go. `Foe`
   names a man (`Foe::Player` does not). A squad's knowledge is one record of contacts.
-- **A report step:** a rule emits events, and the log, the sounds, the chronicle and the tally apply them after.
+- **A report step:** a rule emits events, and the sounds, the chronicle and the tally apply them after.
 
 ## Not seen
 

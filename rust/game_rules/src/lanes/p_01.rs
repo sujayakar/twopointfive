@@ -659,7 +659,7 @@ pub fn become_known(g: &mut crate::game::Game, l: LanesLaneId, who: GuardId) {
     } else {
         format!("they've got it covered — {}! stay out of their line!", place)
     };
-    crate::game::game_say(g, who, &line, Some(true), None, None);
+    crate::game::game_say(g, who, &line, Some(true), None);
     let now = g.time;
     s(g).said_t = now;
     let r = &g.tab.lanes_lane[l];

@@ -60,6 +60,8 @@ pub struct Play {
     pub host: Host,
     /// frames run so far
     pub frames: usize,
+    /// what each step's end told this host (game::savestate::control), until read
+    pub told: Vec<game::savestate::control::Told>,
     /// EVERY LINE A MAN HAS SPOKEN, in order. Read off each man's speech bubble after every frame (`guards::say` writes one for every line it
     /// lets through, whoever asked for it, and none for a line it drops), so a man who speaks twice inside one frame is heard once.
     pub said: Vec<Said>,
@@ -91,7 +93,7 @@ fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play
     let Stood { mut game, host, refused, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), dress: o.dress, may_refuse: o.may_refuse, ..Default::default() });
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
-    let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), ended: false, smoke: Vec::new(), cursor: None, refused, spoke: Vec::new(), _one: one };
+    let mut p = Play { g: game, host, frames: 0, told: Vec::new(), said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), ended: false, smoke: Vec::new(), cursor: None, refused, spoke: Vec::new(), _one: one };
     p.hear();
     p
 }
@@ -129,6 +131,9 @@ impl Play {
             if front { self.g.tab.input[self.host.input].mouse_x = sx; self.g.tab.input[self.host.input].mouse_y = sy; }
         }
         stand::step(&mut self.g, &self.host, DT);
+        let asked = game::savestate::control::asked(&self.g.out);
+        let told = game::savestate::control::after_step(&mut self.g, DT, asked);
+        if told.kept.is_some() || told.back || told.said.is_some() { self.told.push(told); }
         self.frames += 1;
         show(self);
         let out = core::mem::take(&mut self.g.out);
@@ -326,6 +331,12 @@ impl Play {
     }
     /// a man of the list set down at a place: a test of what he sees from there, where walking him is a test of his legs
     pub fn man_stands(&mut self, gd: GuardId, at: [f64; 2]) { let c = self.g.gd[gd].ch; self.g.ch[c].pos[0] = at[0]; self.g.ch[c].pos[2] = at[1]; }
+    /// the way in the room clear that is up stood its team on: 0 the level's own, k its k-th other
+    pub fn way_taken(&self) -> usize { self.g.room_clear.way as usize }
+    /// where each teammate the mission staged stands (x, z), in the order it staged them
+    pub fn team_at(&self) -> Vec<[f64; 2]> { game::scenario_run::team_of(&self.g).into_iter().map(|m| { let p = self.g.ch[self.g.gd[m].ch].pos; [p[0], p[2]] }).collect() }
+    /// the restart a player presses: the same mission staged again
+    pub fn restaged(&mut self) { game::roomclear::room_clear_scenario_restage(&mut self.g); }
     /// where a seat's player stands
     pub fn seat_at(&mut self, seat: usize) -> [f64; 2] { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| { let p = g.ch[g.pl[g.player].ch].pos; [p[0], p[2]] }) }
     /// A MAN GOES DOWN by combat's own call (`killGuard`: shot, by `by`'s hand), for a test of what follows a death and not of the shot.
@@ -403,8 +414,6 @@ impl Play {
     }
     /// …and what another player's HUD is told (0 = the first)
     pub fn view_of(&self, seat: usize) -> game::view::TickView { game::view::tick_view(&self.g, &game::seats::seat(&self.g, self.g.seats[seat])) }
-    /// the lines on the game's log now, oldest first (it keeps the last five)
-    pub fn log(&self) -> Vec<&str> { self.g.messages.iter().map(|m| m.text.as_str()).collect() }
     /// how the room clear ended and when, on the game's clock (None: it is on)
     pub fn room_clear_end(&self) -> Option<(game::roomclear::RoomClearEnd, f64)> { self.g.room_clear.end.map(|e| (e, self.g.room_clear.end_at)) }
     /// the men of the other side who are up

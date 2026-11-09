@@ -41,7 +41,7 @@ pub fn rescue_flush_line(g: &mut crate::game::Game, by: GuardId, v: GuardId) -> 
     let e: V3 = [pb[0], 1.5, pb[2]];
     let c = match g.ch[cv].bones.get(crate::character::Bone::Chest) { Some(p) => *p, None => v3::add(pv, [0.0, 0.6, 0.0]) };
     if crate::scene_collision::shot_blocked(g, e, c, None, None) { return f64::INFINITY; }
-    if crate::sense::smoke_between(g, e, c) < g.k.rescueflush.smoke_k { f64::INFINITY } else { d }
+    if crate::sense::clear_between(g, e, c) < g.k.rescueflush.smoke_k { f64::INFINITY } else { d }
 }
 
 /// His nearest line on any of `alive`, or Infinity when he cannot hold a gun on anybody. (the closure `has` of ts:94)
@@ -139,7 +139,7 @@ pub fn rescue_flush_tick(g: &mut crate::game::Game) {
             g.rescue.flush.gone_at = g.time;
             let note = format!("flush:gone:{}", g.gd[by].callsign);
             crate::rescue::rescue_note(g, &note);
-            crate::game::game_say(g, by, "the hostages are gone — they're moving them! cut them off!", Some(true), None, None);
+            crate::game::game_say(g, by, "the hostages are gone — they're moving them! cut them off!", Some(true), None);
             g.rescue.flush.next_at = m::min(g.rescue.flush.next_at, g.time + 1.0);
             for (_, s) in g.rescue.flush.sent.iter_mut() { s.at = -1e9; }
         }
@@ -256,7 +256,7 @@ pub fn rescue_flush_send(g: &mut crate::game::Game, h: GuardId, goal: crate::res
         Goal::Out => "on the way out — they don't leave with the hostages!",
         Goal::Noise => "moving on that noise — keep them boxed in!",
     };
-    crate::game::game_say(g, h, text, Some(true), None, None);
+    crate::game::game_say(g, h, text, Some(true), None);
 }
 
 

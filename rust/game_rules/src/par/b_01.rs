@@ -122,8 +122,6 @@ pub fn par_tick(g: &mut Game) {
     let (lost, of) = lost(g);
     let r = par_result(&d, par_secs(g), lost, of);
     g.stats.par.finished += 1;
-    // (said once on the log: the result is filed in the same breath, and a game put back after the end holds it)
-    crate::game::game_msg(g, &r.line);
     g.par.res = Some(r);
 }
 

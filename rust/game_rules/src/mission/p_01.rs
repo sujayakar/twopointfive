@@ -132,12 +132,9 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
             if let Some(w) = crate::quiet::quiet_words(g) {
                 crate::chronicle::chron_objective(g, &format!("reached {}", w.place), None);
                 g.mission.stage = MissionStage::Drive;
-                crate::game::game_msg(g, &format!("{} — {} is in {}", w.place, w.thing, w.holder));
             } else {
                 crate::chronicle::chron_objective(g, "reached the server room", None);
                 g.mission.stage = MissionStage::Drive;
-                let n = js::num_str(g.level.mission.rack.index + 1.0);
-                crate::game::game_msg(g, &format!("you've reached the server room. the drive is in rack {}, the marked one", n));
                 crate::dialogue::handler_beat(g, crate::dialogue::HandlerBeat::Server, Some(1.2));
             }
         }
@@ -156,11 +153,6 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
                 crate::audio_iface::game_audio_like_play(g, "click", Some(rf), Some(0.8), None);
                 crate::audio_iface::game_audio_like_play(g, "magOut", Some(rf), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.55 }));
                 let w = crate::quiet::quiet_words(g);
-                let line = match &w {
-                    Some(w) => format!("you're taking {}. stay on it", w.thing),
-                    None => String::from("you're pulling the drive. stay on it"),
-                };
-                crate::game::game_msg(g, &line);
                 if !g.mission.hands_on {
                     g.mission.hands_on = true;
                     let line = match &w {
@@ -196,7 +188,6 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
                 line.push_str(" · ");
                 line.push_str(&d.grade);
             }
-            crate::game::game_msg(g, &line);
         }
     }
 }
@@ -207,12 +198,6 @@ pub fn cancel_drive(g: &mut crate::game::Game) {
         return;
     }
     g.mission.drive_t = -1.0;
-    let w = crate::quiet::quiet_words(g);
-    let line = match &w {
-        Some(w) => format!("let go of {}", w.thing),
-        None => String::from("let go of the drive"),
-    };
-    crate::game::game_msg(g, &line);
 }
 
 /// The caddy comes free: the rack goes dark, the clunk is heard, and soon a man is sent to look. (mission.ts drivePulled)
@@ -254,11 +239,9 @@ pub fn drive_pulled(g: &mut crate::game::Game) {
         ..crate::game::GameEvent::default()
     });
     g.pl[pl].noise = m::max(g.pl[pl].noise, 0.35);
-    if let Some(w) = &w {
-        crate::game::game_msg(g, &format!("{} out. leave through {}", w.bare, w.outs));
+    if w.is_some() {
         return;
     }
-    crate::game::game_msg(g, &format!("the drive is out and rack {} is dark. leave through the fire exit", n));
     crate::dialogue::handler_beat(g, crate::dialogue::HandlerBeat::Drive, Some(1.5));
 }
 
@@ -309,13 +292,13 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
         g.gd[best].path_goal = None; g.gd[best].path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
     }
     if let Some(w) = &w {
-        crate::game::game_say(g, best, &format!("something's tripped in {} — going to take a look", w.place), Some(true), None, None);
+        crate::game::game_say(g, best, &format!("something's tripped in {} — going to take a look", w.place), Some(true), None);
         let at = g.ch[g.gd[best].ch].pos;
         crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.6), None);
         return;
     }
     let n = js::num_str(g.level.mission.rack.index + 1.0);
-    crate::game::game_say(g, best, &format!("rack {} just dropped off the network — going to take a look", n), Some(true), None, None);
+    crate::game::game_say(g, best, &format!("rack {} just dropped off the network — going to take a look", n), Some(true), None);
     let at = g.ch[g.gd[best].ch].pos;
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.6), None);
     crate::dialogue::handler_beat(g, crate::dialogue::HandlerBeat::Rack, Some(2.6));

@@ -269,7 +269,7 @@ pub fn hostage_call(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pa
             format!("he's got {} — {}! hold your fire, nobody push him", name, where_)
         }
     };
-    crate::game::game_say(g, gd, &text, Some(true), None, None);
+    crate::game::game_say(g, gd, &text, Some(true), None);
     let pos = g.ch[c].pos;
     let at = bone(g, c, crate::character::Bone::Head).unwrap_or(pos);
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.9), None);
@@ -518,7 +518,7 @@ pub fn standoff_bark(g: &mut crate::game::Game, gd: GuardId, moment: crate::guar
         g.tab.guards_standoff[s].last_bark_t = now;
     }
     g.m.guards.floor_bark_t = Some(now);
-    crate::game::game_say(g, gd, &text, None, None, None);
+    crate::game::game_say(g, gd, &text, None, None);
 }
 
 /// Side-step along the current nav path, the body not turned to it. True once the path is consumed. (guards.ts stepAlongPath)
