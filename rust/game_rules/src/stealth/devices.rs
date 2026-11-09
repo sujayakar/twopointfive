@@ -138,7 +138,7 @@ fn sensing(g: &crate::game::Game) -> bool {
 /// Lit-seconds per second a camera's integrator fills at.   (devices.ts lensGain)
 fn lens_gain(g: &crate::game::Game, seat: &crate::seats::SeatRef, dist: f64, range: f64, smoke_trans: f64) -> f64 {
     let pl = seat.player;
-    let light = g.pl[pl].visibility;
+    let light = g.shown[g.pl[pl].ch].visibility;
     let dist_f = v3::clamp(1.0 - (dist - 3.0) / m::max(1.0, range - 3.0), 0.2, 1.0);
     let crouch = if g.pl[pl].crouch { 0.75 } else { 1.0 };
     m::pow(light, 1.5) * dist_f * crouch * v3::clamp((smoke_trans - 0.3) / 0.5, 0.0, 1.0) * crate::kitload::load_seen(g, g.pl[seat.player].ch)

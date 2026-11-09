@@ -225,21 +225,6 @@ fn ground_step(row: &mut crate::guards::GuardsModGroundTrackValue, p: V3, now: f
     }
 }
 
-/// × the sight gain for how Sam is moving as this man sees it. (guards.ts motionFactor)
-pub(super) fn motion_factor(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> f64 {
-    let pp = g.ch[g.pl[g.player].ch].pos;
-    let v = crate::guards::player_ground_vel(g);
-    let lit = g.pl[g.player].visibility;
-    crate::guards::motion_core(g, gd, pp, v, lit, dist)
-}
-
-/// motionFactor's arithmetic for any watched man at `pp` moving at `v`, lit `lit`, `dist` off. (guards.ts motionCore)
-pub(super) fn motion_core(g: &crate::game::Game, gd: GuardId, pp: V3, v: V3, lit: f64, dist: f64) -> f64 {
-    let gp = g.ch[g.gd[gd].ch].pos;
-    let hunts = hunting(g, gd);
-    motion_sum(gp, hunts, pp, v, lit, dist)
-}
-
 /// motionCore's sum, off the eye's place and whether he is hunting.
 fn motion_sum(gp: V3, hunts: bool, pp: V3, v: V3, lit: f64, dist: f64) -> f64 {
     let mut rx = gp[0] - pp[0];
@@ -264,60 +249,38 @@ fn motion_sum(gp: V3, hunts: bool, pp: V3, v: V3, lit: f64, dist: f64) -> f64 {
     k
 }
 
-/// Awareness per second a visible player builds in this man at `dist`. (guards.ts sightGain)
+/// a man an eye has: what the light shows of him, how he moves, whether he is low, the smoke between, and what being next to him is worth
+struct Watched { c: CharId, light: f64, vel: V3, low: bool, smoke: f64, near: f64 }
+
+/// Awareness per second a visible player builds in this man at `dist`.
 pub fn sight_gain(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> f64 {
-    let detect = g.tune.detect_rate;
-    let light = g.pl[g.player].visibility;
-    let dist_f = crate::guards::dist_term(g, dist);
-    let moving = crate::guards::motion_factor(g, gd, dist);
-    let crouch = g.pl[g.player].crouch;
-    let smoke = g.gd[gd].smoke_trans;
-    let keen = if crate::guards::escalation_of(g) >= 1.0 { crate::guards::KEEN } else { 1.0 };
-    let mut rate = detect * m::pow(light, 1.5) * dist_f * (if crouch { 0.75 } else { 1.0 }) * moving * v3::clamp((smoke - 0.3) / 0.5, 0.0, 1.0) * keen;
-    let pp = g.ch[g.pl[g.player].ch].pos;
-    let side = crate::attention::attention_side_k(g, gd, pp);
-    rate *= side * crate::kitload::load_seen(g, g.pl[g.player].ch);
-    if dist < 1.8 {
-        rate = m::max(rate, 3.5 * crate::close::close_near_k(g, gd, dist));
-    }
-    if hunting(g, gd) {
-        rate *= 2.2;
-    }
-    rate
+    let pl = g.player;
+    let c = g.pl[pl].ch;
+    let near = if dist < 1.8 { crate::close::close_near_k(g, gd, dist) } else { 1.0 };
+    let w = Watched { c, light: g.shown[c].visibility, vel: crate::guards::player_ground_vel(g), low: g.pl[pl].crouch, smoke: g.gd[gd].smoke_trans, near };
+    gain(g, gd, &w, dist)
 }
 
-/// sightGain for an AI target `o`: the same formula off his light meter, his crouch, his motion. (guards.ts sightGainOn)
+/// …and an AI man `o`: by the same formula, a lamp he carries and a tube that finds him counted.
 pub fn sight_gain_on(g: &mut crate::game::Game, gd: GuardId, o: GuardId, dist: f64) -> f64 {
-    let detect = g.tune.detect_rate;
-    let c = g.gd[gd].ch;
-    let oc = g.gd[o].ch;
-    let vis = g.gd[o].visibility;
-    let glare = crate::roomfight::lamp_glare(g, c, o);
-    let tube = crate::nvg::nvg_sight(g, gd, o);
-    let light = m::max_n(&[vis, glare, tube]);
-    let dist_f = crate::guards::dist_term(g, dist);
-    let v = g.ch[oc].vel;
-    let op = g.ch[oc].pos;
-    let moving = crate::guards::motion_core(g, gd, op, v, light, dist);
+    let (c, oc) = (g.gd[gd].ch, g.gd[o].ch);
+    let (glare, tube) = (crate::roomfight::lamp_glare(g, c, o), crate::nvg::nvg_sight(g, gd, o));
+    let light = m::max_n(&[g.shown[oc].visibility, glare, tube]);
     let smoke = crate::roomfight::pair_smoke(g, c, oc);
-    let crouched = g.ch[oc].anim.crouch > 0.5;
+    let w = Watched { c: oc, light, vel: g.ch[oc].vel, low: g.ch[oc].anim.crouch > 0.5, smoke: m::min(smoke, 1.0), near: 1.0 };
+    gain(g, gd, &w, dist)
+}
+
+/// What a watched man builds a second in this one's eye.
+fn gain(g: &mut Game, gd: GuardId, w: &Watched, dist: f64) -> f64 {
+    let at = g.ch[w.c].pos;
+    let hunts = hunting(g, gd);
+    let moving = motion_sum(g.ch[g.gd[gd].ch].pos, hunts, at, w.vel, w.light, dist);
     let keen = if crate::guards::escalation_of(g) >= 1.0 { crate::guards::KEEN } else { 1.0 };
-    let mut rate = detect
-        * m::pow(light, 1.5)
-        * dist_f
-        * (if crouched { 0.75 } else { 1.0 })
-        * moving
-        * (if smoke < 1.0 { v3::clamp((smoke - 0.3) / 0.5, 0.0, 1.0) } else { 1.0 })
-        * keen;
-    let op = g.ch[oc].pos;
-    let side = crate::attention::attention_side_k(g, gd, op);
-    rate *= side * crate::kitload::load_seen(g, g.gd[o].ch);
-    if dist < 1.8 {
-        rate = m::max(rate, 3.5);
-    }
-    if hunting(g, gd) {
-        rate *= 2.2;
-    }
+    let mut rate = g.tune.detect_rate * m::pow(w.light, 1.5) * crate::guards::dist_term(g, dist) * (if w.low { 0.75 } else { 1.0 }) * moving * v3::clamp((w.smoke - 0.3) / 0.5, 0.0, 1.0) * keen;
+    rate *= crate::attention::attention_side_k(g, gd, at) * crate::kitload::load_seen(g, w.c);
+    if dist < 1.8 { rate = m::max(rate, 3.5 * w.near); }
+    if hunts { rate *= 2.2; }
     rate
 }
 

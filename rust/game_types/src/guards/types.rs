@@ -4,6 +4,13 @@ use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what litPlace last read the light for besides the man himself: the man he has, or the point he is turning to (guards.ts litPlace's `key`; null is the Option's None)
+/// THE LIGHT ON A MAN: what stands on him, and how visible that makes him, eased
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct Shown {
+    pub visibility: f64,
+    pub irradiance: f64,
+}
+
 #[derive(Clone, Debug, ToBytes)]
 pub enum LitSeenTgt {
     Man { gd: GuardId },
