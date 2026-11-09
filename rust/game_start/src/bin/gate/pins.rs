@@ -1,14 +1,16 @@
 //! THE PINS (`rust/game_start/pins.txt`): what the rows are held to, as text that a commit's diff can be read in. Made by `gate pin`, read by the rows. Four sections.
 //! ROWS: every row's name, a line each, in order: a mission or a run that leaves the list leaves its pins with no row, and a whole `gate` says so.
 //! STARTS: the columns that are refused with the game's words, a line of the columns' names, then a line a part: its name, then an 8-digit word a column, or one word where every column has
-//! the same. A part that joins or leaves the state is then one line of the file: a run's parts at its last second are a column too (`play~depot-four~bangs`). SERIES: a line a run or a start: its name and a colon, then its
-//! figures' word a second (game_start::figures): THIS IS THE PIN. A row whose figures stand and whose parts moved has moved no play. FIGURES: their names, and a hex digit of each a second, which is what lets a moved word say which moved. LINES: what a run played to its end did, as a reader reads it: its name, a colon, the words.
+//! the same, with `.` for a word the column to its left has and `=3` for one that column 3 (from 0) has first. A part that joins or leaves the state is then one line of the file: a run's parts at its last second are a column too (`play~depot-four~bangs`). SERIES: a line a run or a start: its name and a colon, then its
+//! figures' word a second (game_start::figures): THIS IS THE PIN. A row whose figures stand and whose parts moved has moved no play. FIGURES (of a run, not a start, whose parts name what moved): their names where they differ from the line before's, and a hex digit of each a second, which is what lets a moved word say which moved. LINES: what a run played to its end did, as a reader reads it: its name, a colon, the words.
 use crate::rows::Row;
 use std::collections::BTreeMap;
 
 const HEAD: &str = "# THE PINS OF THE GATE. Made by `gate pin`, read by its rows; never by hand. A commit that moves a pin says why (rust/game_start/README.md, \"The gate\").";
 /// no word: this column was recorded before the part was a part
 const NONE: &str = "--------";
+/// this column has the word of the column to its left: most parts stand still from one mission to the next of its own kind
+const SAME: &str = ".";
 
 #[derive(Clone, PartialEq)]
 pub enum Start { Refused(String), Parts(BTreeMap<String, u32>) }
@@ -25,6 +27,7 @@ impl Pins {
     pub fn read(text: &str) -> Pins {
         let mut p = Pins::default();
         let (mut columns, mut section): (Vec<String>, u8) = (Vec::new(), 0);
+        let mut last_names: Vec<String> = Vec::new();
         for l in text.lines() {
             if l.starts_with('#') || l.is_empty() { continue; }
             if l == "rows" { section = 3; continue; }
@@ -34,8 +37,8 @@ impl Pins {
             if l == "figures" { section = 5; continue; }
             if section == 5 {
                 let (head, words) = l.split_once(": ").unwrap_or_else(|| panic!("pins.txt: '{}' is no line of figures", l));
-                if let Some(name) = head.strip_prefix("names ") { p.names.insert(name.to_string(), words.split(',').map(String::from).collect()); }
-                if let Some(name) = head.strip_prefix("digits ") { p.digits.insert(name.to_string(), words.split(' ').map(String::from).collect()); }
+                if head.starts_with("names ") { last_names = words.split(',').map(String::from).collect(); }
+                if let Some(name) = head.strip_prefix("digits ") { p.names.insert(name.to_string(), last_names.clone()); p.digits.insert(name.to_string(), words.split(' ').map(String::from).collect()); }
                 continue;
             }
             if section == 4 {
@@ -58,8 +61,11 @@ impl Pins {
                 }
                 part => {
                     let w: Vec<&str> = rest.split(' ').collect();
+                    let (mut left, mut first) = (NONE, Vec::new());
                     for (i, c) in columns.iter().enumerate() {
-                        let at = if w.len() == 1 { w[0] } else { w[i] };
+                        let at = if w.len() == 1 { w[0] } else if w[i] == SAME { left } else if let Some(k) = w[i].strip_prefix('=') { first[k.parse::<usize>().unwrap_or_else(|_| panic!("pins.txt: '{}' is no column", w[i]))] } else { w[i] };
+                        first.push(at);
+                        left = at;
                         if at == NONE { continue; }
                         if let Some(Start::Parts(m)) = p.starts.get_mut(c) { m.insert(part.to_string(), word(at)); }
                     }
@@ -84,7 +90,7 @@ impl Pins {
             let w: Vec<Option<u32>> = columns.iter().map(|(_, m)| m.get(part).copied()).collect();
             if w.iter().all(|x| x.is_none()) { continue; }
             if w.iter().all(|x| *x == w[0]) { out += &format!("{} {}\n", part, hex(w[0].unwrap())); continue; }
-            out += &format!("{} {}\n", part, w.iter().map(|x| x.map_or(String::from(NONE), hex)).collect::<Vec<_>>().join(" "));
+            out += &format!("{} {}\n", part, w.iter().enumerate().map(|(i, x)| match w[..i].iter().position(|y| y == x) { Some(_) if w[i - 1] == *x => String::from(SAME), Some(k) => format!("={}", k), None => x.map_or(String::from(NONE), hex) }).collect::<Vec<_>>().join(" "));
         }
         out += "series\n";
         let runs: Vec<&String> = rows.iter().filter_map(|r| r.series()).filter_map(|n| self.series.get_key_value(&n).map(|x| x.0)).collect();
@@ -95,7 +101,12 @@ impl Pins {
         let runs: Vec<&String> = rows.iter().filter(|r| r.worded()).filter_map(|r| self.lines.get_key_value(&r.name).map(|x| x.0)).collect();
         for n in runs.iter().copied().chain(self.lines.keys().filter(|n| !runs.contains(n))) { out += &format!("{}: {}\n", n, self.lines[n]); }
         out += "figures\n";
-        for (n, list) in &self.names { out += &format!("names {}: {}\ndigits {}: {}\n", n, list.join(","), n, self.digits[n].join(" ")); }
+        let mut before: Option<&Vec<String>> = None;
+        for (n, list) in &self.names {
+            if before != Some(list) { out += &format!("names {}: {}\n", n, list.join(",")); }
+            out += &format!("digits {}: {}\n", n, self.digits[n].join(" "));
+            before = Some(list);
+        }
         out
     }
     /// which figures moved at a second of a row, by their digits (a figure that moved and kept its digit, one in sixteen, is not named)

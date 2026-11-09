@@ -253,6 +253,12 @@ impl Panes {
         let at = self.holes_at() + h * HOLE_W;
         unsafe { &mut *(self.body.as_mut_ptr().add(at) as *mut Hole) }
     }
+    /// …to read
+    #[inline]
+    pub fn hole_read(&self, h: usize) -> &Hole {
+        let at = self.holes_at() + h * HOLE_W;
+        unsafe { &*(self.body.as_ptr().add(at) as *const Hole) }
+    }
     #[inline]
     fn q(&mut self, i: usize) -> &mut Q {
         let at = self.q_at() + i * Q_W;
