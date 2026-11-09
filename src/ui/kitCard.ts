@@ -52,8 +52,6 @@ export interface MemberCardOpts {
 }
 /** what an idle tile says in its value's place, and its tooltip (CardRow.idle: carried, and of no use on the mission the card is shown for) */
 const IDLE_WORD = 'no use here', IDLE_WHY = 'There\'s no fog of war on this mission, so every room is already shown and it has nothing to look into. It still takes up its pouch.';
-/** what a lent tile says in its value's place, and its tooltip (CardRow.lent: how many the mission hands him over his card) */
-const LENT_WORD = 'mission\u2019s', LENT_WHY = 'issued for this mission, so it takes none of your pouches';
 /** the four bars on a gun's tile, in the order the card says them (CardBar, CardPick.bars) */
 const GUN_STATS: readonly { id: string; label: string; tip: string }[] = [
   { id: 'reach', label: 'Reach', tip: 'reach is how far it can keep its shots on an enemy' },
@@ -326,14 +324,14 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts): 
       b.part.classList.toggle('more', !s && more > 0); b.part.style.left = pct(s ? v : v - more); b.part.style.width = pct(s ? Math.min(s, 1 - v) : more); b.part.style.display = s || more ? '' : 'none';
       b.ref.style.left = pct(r); b.bar.setAttribute('data-score', v.toFixed(3)); b.bar.setAttribute('data-share', s.toFixed(3)); b.bar.setAttribute('data-more', more.toFixed(3)); }
     squadN.classList.toggle('full', !!sq && sq.used >= sq.total && c.used < c.total);   // (room in his own pouches and none in the squad's: the squad's count is why his arrows are dimmed, so it is the one lit)
-    for (const r of view.rows) { const e = rowEls(r), no = said && said.k === r.field ? said.why : '', lent = r.lent > 0, count = r.kind === 'count';
+    for (const r of view.rows) { const e = rowEls(r), no = said && said.k === r.field ? said.why : '', count = r.kind === 'count';
       e.row.classList.toggle('none', r.kind !== 'choice' && r.n === 0); e.row.classList.toggle('fixed', r.fixed);   // (a gun made with its suppressor, or one none fits: the tile has no arrows)
       if (e.stats) { e.stats.box.classList.toggle('off', !r.bars.length);   // (what this gun is good at, beside the gun he is issued: the notch)
         r.bars.forEach(({ now: a, issued: z }, n) => { const b = e.stats!.bars[n], lo = Math.min(a, z); b.fill.style.width = pct(lo); b.gain.style.left = pct(lo); b.gain.style.width = pct(Math.abs(a - z)); b.gain.classList.toggle('loss', a < z); b.ref.style.left = pct(z); b.bar.setAttribute('data-score', a.toFixed(3)); }); }
-      e.val.textContent = r.idle ? (count ? `${r.n} · ${IDLE_WORD}` : IDLE_WORD) : lent ? (count ? (r.n ? `${r.n} · ${LENT_WORD} ${r.lent}` : `${r.lent} · ${LENT_WORD}`) : LENT_WORD) : r.word; e.note.textContent = '';   // (his own count stays in front where he carries some: an arrow pressed always moves what the tile reads)
-      e.row.classList.toggle('idle', r.idle); e.row.classList.toggle('lent', lent); e.row.classList.toggle('zero', !lent && (count ? r.n === 0 : r.none && (r.field === 'big' || r.field === 'wand' || r.field === 'primary'))); e.row.setAttribute('data-noise', String(r.noise));   // (none of the thing carried — a count of none, an empty big slot, no wand; never a fitting switched off —; how loud it is in use: both are drawn on a quiet mission's gear screen only)
-      e.row.title = r.idle ? IDLE_WHY : lent ? LENT_WHY : '';
-      { const key = `${r.field}:${isGun(r.field) || r.field === 'big' ? r.value : ''}${r.can ? ':can' : ''}`; if (e.drawn !== key) { e.drawn = key; e.ico.innerHTML = kitIcon(r.field, r.value, r.icon, r.can); } e.ico.classList.toggle('none', r.none && !lent); }
+      e.val.textContent = r.idle ? (count ? `${r.n} · ${IDLE_WORD}` : IDLE_WORD) : r.word; e.note.textContent = '';   // (his own count stays in front where he carries some: an arrow pressed always moves what the tile reads)
+      e.row.classList.toggle('idle', r.idle); e.row.classList.toggle('zero', (count ? r.n === 0 : r.none && (r.field === 'big' || r.field === 'wand' || r.field === 'primary'))); e.row.setAttribute('data-noise', String(r.noise));   // (none of the thing carried — a count of none, an empty big slot, no wand; never a fitting switched off —; how loud it is in use: both are drawn on a quiet mission's gear screen only)
+      e.row.title = r.idle ? IDLE_WHY : '';
+      { const key = `${r.field}:${isGun(r.field) || r.field === 'big' ? r.value : ''}${r.can ? ':can' : ''}`; if (e.drawn !== key) { e.drawn = key; e.ico.innerHTML = kitIcon(r.field, r.value, r.icon, r.can); } e.ico.classList.toggle('none', r.none); }
       if (no) e.note.textContent = no;
       else { if (r.cost) e.note.append(el('span', 'kc-cost', r.cost), ' · '); e.note.append(r.note); }
       e.row.classList.toggle('sel', cur === r.field); e.row.classList.toggle('changed', r.changed); e.row.classList.toggle('refused', !!no); e.row.classList.toggle('pasted', flash.has(r.field)); e.row.classList.toggle('pasted2', flash.has(r.field) && flashes % 2 === 0);
@@ -358,10 +356,10 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts): 
       pop?.classList.toggle('open', open); e.row.classList.toggle('open', open);
       // (a refusal while the pop-up is open — this gun's, or a set's or a paste's — is said in the pop-up, which lies over the card's own line)
       { const w = guns[e.slot]?.why, no = said && open && (said.k === r.field || said.k === null) ? said.why : ''; if (w) { w.textContent = no; w.classList.toggle('on', !!no); } }
-      const bits = view.rows.filter(c => c.under === e.slot).map(c => ({ c, n: c.idle ? 0 : c.kind === 'count' ? Math.max(c.n, c.lent) : c.n || c.lent ? 1 : 0, lent: c.lent > 0 }));
-      const sig = bits.map(b => `${b.c.field}:${b.n}:${b.lent}:${b.c.idle}`).join();
+      const bits = view.rows.filter(c => c.under === e.slot).map(c => ({ c, n: c.idle ? 0 : c.kind === 'count' ? c.n : c.n ? 1 : 0 }));
+      const sig = bits.map(b => `${b.c.field}:${b.n}:${b.c.idle}`).join();
       if (sig !== e.chipsDrawn) { e.chipsDrawn = sig; e.chips.textContent = '';
-        for (const b of bits) { const c = el('span', `kc-chip${b.n ? '' : ' off'}${b.lent ? ' lent' : ''}${b.c.idle ? ' idle' : ''}`); c.setAttribute('data-chip', b.c.field); c.title = `${b.c.label}: ${b.c.idle ? IDLE_WORD : b.lent ? LENT_WORD : b.c.word}`;
+        for (const b of bits) { const c = el('span', `kc-chip${b.n ? '' : ' off'}${b.c.idle ? ' idle' : ''}`); c.setAttribute('data-chip', b.c.field); c.title = `${b.c.label}: ${b.c.idle ? IDLE_WORD : b.c.word}`;
           c.innerHTML = kitIcon(b.c.field, b.c.value); if (b.c.kind === 'count' && b.n) c.appendChild(el('b', '', String(b.n))); e.chips.appendChild(c); } }
       if (!e.picks || !open) continue;
       for (const p of e.picks) { const P = r.picks.find(x => x.id === p.id); if (!P) continue; const key = `${P.id}:${P.can}`;
