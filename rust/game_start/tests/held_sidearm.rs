@@ -95,7 +95,6 @@ fn dry_in_a_fight_the_sidearm_finishes_it() {
 /// THE CONTROL: the same man dry with a man five metres in front of him changes it.
 /// A FAILURE MEANS: the last man of a fight walks into the next room on an empty gun, and his first pull there is a click and a change.
 #[test]
-#[ignore = "the game: a teammate only changes a magazine on a pull of the trigger: dry on a quiet floor he stays at 0 rounds for ten seconds and more"]
 fn dry_on_a_quiet_floor_he_changes_the_magazine() {
     for seed in [17, 18, 19] {
         let mut p = squad(seed);
