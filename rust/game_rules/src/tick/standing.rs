@@ -52,6 +52,9 @@ pub fn host_new(g: &mut Game) -> Host {
 
 /// THE MEN ON THE LEVEL (the die is in the game already): the constructor, the hour, the host's rows, the mission. The reason where the mission refused to start
 pub fn stand_men(g: &mut Game, men: &Men) -> Option<alloc::string::String> {
+    let spec = men.words.as_ref().map_or_else(|| men.scenario.clone(), crate::scene_scenario_list::spec_of);
+    // (a quiet mission's deal says where the men stand and what they make for: they read it from the level as they are made)
+    if let Some(s) = spec.filter(|s| s.kind == crate::scene_scenarios::MissionKind::Quiet) { crate::quiet::quiet_mission_deal(g, s.seed, men.seats); }
     crate::game::game_new(g, men.rig, Some(crate::game::GameNewOpts { seats: Some(men.seats) }));
     settle(g);
     // A GAME STOOD WITH NO ADDRESS is the harness's plain stand (standGame with `harness`): the solo night's card goes on at the stand, by the
@@ -70,5 +73,7 @@ pub fn stand_men(g: &mut Game, men: &Men) -> Option<alloc::string::String> {
         crate::scenario_run::start_scenario(g, spec)
     } else { return None };
     settle(g);   // (the men the mission made: their poses go home as a tick's opening would take them)
+    crate::lighting::update_targets(g, 0.0);   // the lights painted as they now stand: what the first tick reads before its own paint
+    crate::fire::update_fire(g, 0.0);
     why
 }

@@ -335,72 +335,7 @@ pub fn game_cut_to_men(g: &mut crate::game::Game) {
     g.stats.cleanrestart.cuts += 1;
 }
 
-/// Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored.
-pub fn game_restart_encounter(g: &mut crate::game::Game) {
-    crate::math_dice::use_dice(g);
-    crate::quiet::quiet_mission_current(g);
-    g.stats.cleanrestart.restarts += 1;
-    crate::quiet::quiet_mission_before_restart(g);   // deals this encounter's start BEFORE the fresh Player and Guards read it
-    let seats = g.seats.clone();
-    for &s in &seats {
-        let old = crate::cmd::seat_man(g, s);
-        let light = g.pl[old].light;
-        let c = g.pl[old].ch;
-        crate::sim_men_store::man_leaves(g, c);   // (his row is free for the fresh man)
-        let spawn = g.level.player_spawn;
-        let index = g.tab.cmd_seat[s].index;
-        let at = crate::seats::spot_beside(g, spawn, index);
-        let fn2000 = g.fn2000;
-        let (men, rig) = (g.men, g.rig);
-        let pl = crate::game::player_new(g, men, rig, at, Some(fn2000), Some(index));
-        crate::seats::with_seat(g, s, &mut |g| {
-            g.player = pl;
-            crate::seats::view_rekey(g, old, pl);   // (what the modules keep for this seat's view stays the seat's: seats.ts SEAT_TABLES)
-            g.pl[pl].light = light;
-            crate::kit::kit_fresh(g);
-            let c = g.pl[pl].ch;
-            crate::character::character_update(g, c, 0.0);   // pose and bones exist before this frame's capsule upload
-        });
-    }
-    crate::cues::cues_reset(g);
-    crate::squadnet::squad_net_reset(g);
-    crate::seats::each_seat(g, &mut |v: &mut Game| { crate::holdfire::hold_fire_reset(v); crate::showwhy::reset_show_why(v); });
-    crate::dialogue::ambient_restart(g);
-    crate::fogofwar::fog_of_war_reset(g);
-    crate::game::game_reset_guards(g);
-    if crate::lighting::fresh_lights(g) { g.stats.cleanrestart.relit += 1; }
-    game_reset_level_state(g);
-    crate::lightswitch::light_switch_reset(g);
-    crate::props::prop_system_reset(g);
-    for r in g.rolls.iter_mut() { r.voice = 0.0; }
-    g.rolls.clear();
-    g.events.clear();
-    for &s in &seats { crate::seats::with_seat(g, s, &mut |g| g.use_door = None); }
-    g.called_in = false;
-    g.stood_down = false;
-    // anything still in the air or venting belongs to the encounter that just ended
-    game_clear_aftermath(g);
-    crate::smoke_types::smoke_system_like_clear_all(g);
-    crate::out_events::push_smoke_system_like_clear_all(g);   // (game.ts:1505: the host's solver hears it too)
-    crate::sense::smoke_renew(g);
-    g.engine.host_books = None;
-    for &s in &seats {
-        crate::seats::with_seat(g, s, &mut |g| { g.hover = None; g.interactables = Vec::new(); g.nearby = Vec::new(); g.act = None; });
-    }
-    game_clean_slate(g);
-    crate::devices::devices_reset(g);
-    let t = g.time;
-    g.mission = crate::game::new_mission(t);
-    g.mission.serial = g.serial();   // (a whole write of g.mission is a new run: dialogue.ts:1717 and lesson.ts:320 ask "the same run?" by identity)
-    g.chronicle = crate::chronicle::Chronicle::blank();
-    crate::director::director_on_encounter_restart(g);
-    crate::nightbreach::night_breach_on_encounter_restart(g);
-    crate::rescue::rescue_on_encounter_restart(g);
-    crate::quiet::quiet_mission_on_encounter_restart(g);
-    crate::lighting::update_targets(g, 0.0);   // the lights painted as they now stand: what the next tick reads before its own paint
-    crate::fire::update_fire(g, 0.0);
-}
-
+///
 pub fn game_set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::game::GameSetBlackoutCause) {
     let cause = match cause {
         crate::game::GameSetBlackoutCause::Shot => crate::lighting::SetBlackoutCause::Shot,

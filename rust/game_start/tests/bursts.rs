@@ -3,7 +3,7 @@ use game::ids::GuardId;
 use game_start::play::{nudge, Opts, Play};
 use game_start::scene::{Axis, Scene};
 
-const SEEDS: [u32; 6] = [1, 2, 3, 4, 5, 6];
+const SEEDS: [u32; 6] = [1, 2, 3, 4, 5, 8];
 
 /// Two rooms side by side, a defender in each; three of the team in the west one, side by side in its light so that none is in the line to another, with nothing to see by for a while, so that they do not
 /// shoot back. Each of them is stood on his mark again by `stand`, every frame: they are there to be shot at one by one, not to go anywhere.

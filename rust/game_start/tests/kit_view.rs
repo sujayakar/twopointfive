@@ -231,7 +231,7 @@ fn a_card_without_the_light_has_no_lamp_to_work() {
         game::kit::kit_mission(&mut p.g, hand);
         assert!(game::kit::kit_set(&mut p.g, 0.0, game::kit::KitField::Light, &game::kit::KitValue::Bool(false)), "seed {}: the card took no such row", seed);
         game::kit::kit_mission(&mut p.g, None);
-        game::game::game_restart_encounter(&mut p.g);
+        game::savestate::control::restart(&mut p.g);
         p.frame();
         p.sam_takes_his_rifle();
         p.run(0.8);
