@@ -45,7 +45,7 @@ export class SceneGpu {
     this.pieces = buffer(g, 'pieces', (order.length + Math.max(1, this.maxMoving)) * PIECE_FLOATS * 4, S);
     this.insts = buffer(g, 'insts', (Math.max(1, this.maxInst) + LOOSE) * 64, S); this.lists = buffer(g, 'lists', (order.length + this.maxMoving + (this.maxInst + LOOSE) * 2 + 4) * 4, S); this.listData = new Uint32Array(order.length + this.maxMoving + (this.maxInst + LOOSE) * 2 + 4); this.box = new Float32Array(order.length * 5); order.forEach((p, i) => { const b = boundsOf(p); this.box.set([p.at[0], p.at[1], p.at[2], Math.hypot(...p.half), (b.mx[1] - b.mn[1]) / 2], i * 5); }); this.instData = new Float32Array(this.maxInst * 16);
     { const f = new Float32Array(order.length * PIECE_FLOATS), u = new Uint32Array(f.buffer); order.forEach((p, i) => packPiece(p, f, u, i * PIECE_FLOATS, planeAt.get(p) ?? 0, markAt.get(p) ?? 0)); d.queue.writeBuffer(this.pieces, 0, f); }
-    this.planeAt = planeAt; this.markAt = markAt; this.per = [bs[0]!.perOctant, bs[1]!.perOctant, perMoving, perInst]; this.stepOf = [bs[0]!.perOctant, bs[1]!.perOctant, 0, 0]; this.node0 = [0, rest, movingAt, instAt]; this.piece0 = [0, sets[0]!.length, order.length, 0];
+    this.planeAt = planeAt; this.markAt = markAt; this.per = [bs[0]!.perOctant, bs[1]!.perOctant, this.maxMoving ? perMoving : 0, this.maxInst ? perInst : 0]; /* (an empty tree is no nodes: a walk of one that was never filled would not end) */ this.stepOf = [bs[0]!.perOctant, bs[1]!.perOctant, 0, 0]; this.node0 = [0, rest, movingAt, instAt]; this.piece0 = [0, sets[0]!.length, order.length, 0];
     this.looseLeaf = leaf - 1;
     this.counts = { pieces: order.length, moving: this.maxMoving, leaves: leaf, instances: this.maxInst };
     // ---- the rest
