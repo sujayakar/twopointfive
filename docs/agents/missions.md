@@ -118,7 +118,7 @@ teammates. Only `office.json` has that plan. Elsewhere every teammate is the ord
 
 - **A number:** `rust/game_types/src/knobs/` (`roomclear.rs`, `rescue.rs`, `rescueend.rs`, `rails.rs`, `squaddeal.rs`), or `?knob.rescue.resolve_secs=40`. Medal times: the level.
 - **A new mission of a kind that exists:** follow the `level` skill: a generator in `tools/levels/`, `tools/levels/export.ts`, the `scenarios` block. Then the row in
-  `rows.rs`, the module made, and `bun run tools/qa/level-needs.ts <name>`. A room clear also goes in `LEVELS` in `rust/game_start/src/bin/missions.rs`. The gate's `played` rows find it themselves.
+  `rows.rs`, the module made, and `bun run tools/qa/level-needs.ts <name>`. The gate's `played` rows, `missions.rs` and `coop.rs` find a room clear themselves (`room_clear_files`).
 - **Cut one:** `off_list` on its row. A level whose mission's own rules left stays a plain room clear, as `snatch.json` is.
 - **A new kind:** `ScenarioEntryKind` and `ScenarioSpecKind`, `kind_of`, `SCENARIO_KEYS`, `start_scenario`, `active_scenario`, an arm in `ended` and in `objective`,
   a tick line in `step_seats_on_first`, and its staging at the end of `game_restart_encounter`.

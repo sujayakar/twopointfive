@@ -97,6 +97,13 @@ pub fn all() -> Vec<Row> {
     out.push(level("file"));
     out
 }
+/// the last line of `gate list`: the missions of the list that no run and no seats row plays
+pub fn unplayed_line() -> String {
+    let long: Vec<String> = played::his_missions().into_iter().chain(played::lessons().into_iter().map(String::from)).collect();
+    let unplayed: Vec<String> = all_missions().into_iter().map(|e| e.id).filter(|id| !RUNS.iter().any(|r| r.0 == id) && !SEATS.contains(&id.as_str())).collect();
+    let nowhere: Vec<&str> = unplayed.iter().filter(|id| !long.contains(id)).map(String::as_str).collect();
+    format!("no run and no seats row plays: {} (each has its start rows; `gate long` plays them too, but for: {})", unplayed.join(" "), nowhere.join(" "))
+}
 /// the rows of `gate long` beyond these: a merge has no time for them
 pub fn long() -> Vec<Row> {
     let mut out = Vec::new();
