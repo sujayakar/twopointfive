@@ -25,14 +25,14 @@ pub struct TeamFor {
 impl TeamFor {
     /// The mission as the screen reads it: a lesson played as issued reads neither of its level's blocks, and a link with `noissue` wears the kept cards.
     pub fn new(g: &Game, entry: LoadoutEntry, link: Query, issue: Option<IssueData>, walls: f64) -> TeamFor {
-        let lesson = kit_as_issued(g, &entry);
+        let lesson = kit_as_issued(&entry);
         let levelled = entry.level.is_some() && !lesson;
         let issue = issue.filter(|_| levelled && !link.has("noissue")).map(|d| d.members);
         let walls = if levelled && entry.kind == LoadoutKind::Roomclear { walls } else { 0.0 };
         TeamFor { entry, link, issue, walls }
     }
     /// The kit is not the cards': a lesson's, or the level's own.
-    fn issued_only(&self, g: &Game) -> bool { self.issue.is_some() || kit_as_issued(g, &self.entry) }
+    fn issued_only(&self, g: &Game) -> bool { self.issue.is_some() || kit_as_issued(&self.entry) }
 }
 
 /// There are cards to change.
@@ -46,7 +46,7 @@ fn link_cams(g: &Game, f: &TeamFor) -> f64 {
 
 /// What the mission makes of a card.
 pub fn team_card_for(g: &Game, f: &TeamFor) -> CardFor {
-    CardFor { no_fog: !crate::scenario_run::fog_of_query(g, &f.link), frags: f.entry.packs.and_then(|p| p.frags).unwrap_or(0.0) }
+    CardFor { no_fog: !crate::scenario_run::fog_of_query(g, &f.link) }
 }
 
 /// The stealth card's kit, where it stands for yours.   (loadout.ts syncHand; kit.ts kitStealthHand)
@@ -117,7 +117,7 @@ fn note_line(g: &Game, f: Option<&TeamFor>, c: &SquadChoice, size: f64) -> Strin
     let said = if !c.note.is_empty() { c.note.as_str() } else if c.own { "This mission's own team." } else { "" };
     let Some(f) = f else { return String::from(said) };
     if let Some(cards) = &f.issue { return issue_note(said, &issue_who(cards, size)); }
-    if kit_as_issued(g, &f.entry) { return lesson_note(said); }
+    if kit_as_issued(&f.entry) { return lesson_note(said); }
     String::from(said)
 }
 
@@ -245,7 +245,7 @@ pub fn team_view(g: &mut Game, f: Option<&TeamFor>, clip: Option<&MemberKit>) ->
         sizes: choices.iter().map(|c| TeamSize { n: c.n, ok: c.ok, own: c.own, words: size_words(c.n), note: c.note.clone() }).collect(),
         note: note_line(g, f, at, size),
         cards: on,
-        as_issued: f.is_some_and(|f| kit_as_issued(g, &f.entry)),
+        as_issued: f.is_some_and(|f| kit_as_issued(&f.entry)),
         squad,
         pool: pool_line(g, f, size),
         walls: f.is_some_and(|f| f.walls != 0.0),
