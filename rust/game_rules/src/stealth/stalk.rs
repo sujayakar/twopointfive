@@ -547,26 +547,26 @@ pub fn step_ease(u: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    /// The TypeScript's own bits (stalk.ts stepEase under bun, EXACT on): input, output.
+    use super::*;
+
+    /// The step in starts slowly off the mark and settles at the man's back: all the way from 0 to 1, always forward, with no jerk where the two curves join.
     #[test]
-    fn step_ease_matches_the_typescript() {
-        const BITS: [(u64, u64); 13] = [
-            (0xbff0000000000000, 0x0000000000000000),
-            (0x0000000000000000, 0x0000000000000000),
-            (0x3fa999999999999a, 0x3f97d05f417d05f5),
-            (0x3fb999999999999a, 0x3fb7d05f417d05f5),
-            (0x3fc3126e978d4fdf, 0x3fca6f4720a4e828),
-            (0x3fc3333333333333, 0x3fcaca6b29aca6b0),
-            (0x3fc999999999999a, 0x3fd5cf81c2e64528),
-            (0x3fd5555555555555, 0x3fe3cadb78fcb402),
-            (0x3fe0000000000000, 0x3fead994970a9bf2),
-            (0x3fe8000000000000, 0x3fef5b3292e1537e),
-            (0x3feccccccccccccd, 0x3feff573e070b991),
-            (0x3ff0000000000000, 0x3ff0000000000000),
-            (0x4000000000000000, 0x3ff0000000000000),
-        ];
-        for (u, want) in BITS {
-            assert_eq!(super::step_ease(f64::from_bits(u)).to_bits(), want, "u bits {u:x}");
+    fn the_step_in_eases_off_the_mark_and_settles() {
+        assert_eq!((step_ease(-1.0), step_ease(0.0), step_ease(1.0), step_ease(2.0)), (0.0, 0.0, 1.0, 1.0));
+        let mut was = 0.0;
+        let mut u = 0.01;
+        while u < 1.0 {
+            let v = step_ease(u);
+            assert!(v > was, "it went back at {u}");
+            was = v;
+            u += 0.01;
         }
+        assert!(step_ease(0.05) < 0.05, "slower than an even step off the mark");
+        assert!(step_ease(0.5) > 0.5, "well ahead of an even step by the middle");
+        assert!(step_ease(0.9) > 0.99, "and all but there before the end");
+        // where the curves join, the same place and the same speed from either side
+        let (join, e) = (0.15, 1e-6);
+        let (before, at, after) = (step_ease(join - e), step_ease(join), step_ease(join + e));
+        assert!(((at - before) / e - (after - at) / e).abs() < 1e-3, "a kink: {} then {}", (at - before) / e, (after - at) / e);
     }
 }

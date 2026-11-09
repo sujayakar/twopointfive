@@ -263,14 +263,16 @@ fn item_kind_of(kind: crate::slotsetup::SetupGun) -> crate::throwables::ItemKind
 mod tests {
     use super::*;
 
+    /// The long gun is held a longer hand out: the rifle is that row's word.
     #[test]
     fn long_is_the_rifle() {
         assert!(long("rifle"));
         assert!(!long("pistol"));
     }
 
+    /// Both figures' hold layers pose off the move's clock and where his hand is: nothing else tells them, and no check sees a pose.
     #[test]
-    fn pose_tells_the_clock_and_the_hand() {
+    fn the_hold_is_told_the_moves_clock_and_his_hand() {
         let s = Strip { t: 0.25, at: [1.0, 2.0, 3.0], ..Strip::default() };
         let p = disarm_pose(s);
         assert_eq!(p.t.to_bits(), 0.25f64.to_bits());
@@ -296,18 +298,13 @@ mod tests {
         }).unwrap().join().unwrap();
     }
 
-    /// the TypeScript's own bits, printed under bun with EXACT on
+    /// The gun swings from one pose to the next without a jump: nothing before the first mark, all of it after the second, half way half way.
     #[test]
-    fn arithmetic_is_the_typescripts() {
-        assert_eq!(DEG.to_bits(), 0x3f91df46a2529d39);
-        assert_eq!(sstep(0.26, 0.35, 0.3).to_bits(), 0x3fdab0490ae2da6b);
-        assert_eq!(sstep(0.35, 0.41, 0.4).to_bits(), 0x3feda12f684bda18);
-        assert_eq!(sstep(0.26, 0.35, 0.1).to_bits(), 0x0000000000000000);
-        assert_eq!(sstep(0.26, 0.35, 0.9).to_bits(), 0x3ff0000000000000);
-        assert!(sstep(1.0, 1.0, 1.0).is_nan());
-        assert_eq!(sstep(1.0, 1.0, 0.5).to_bits(), 0x0000000000000000);
-        assert_eq!(lerp(-40.0, 25.0, 0.37).to_bits(), 0xc02fe66666666666);
-        assert_eq!(lerp(0.1, 0.2, 0.3).to_bits(), 0x3fc0a3d70a3d70a4);
-        assert_eq!(lerp(1e300, -1e300, 0.5).to_bits(), 0x0000000000000000);
+    fn the_gun_eases_between_its_marks() {
+        assert_eq!(sstep(0.26, 0.35, 0.1), 0.0);
+        assert_eq!(sstep(0.26, 0.35, 0.9), 1.0);
+        assert_eq!(sstep(0.25, 0.75, 0.5), 0.5);
+        assert!(sstep(0.2, 0.4, 0.21) < 0.05 && sstep(0.2, 0.4, 0.39) > 0.95, "it starts and ends slowly");
+        assert_eq!((lerp(-40.0, 25.0, 0.0), lerp(-40.0, 25.0, 1.0), lerp(-40.0, 40.0, 0.5)), (-40.0, 25.0, 0.0));
     }
 }

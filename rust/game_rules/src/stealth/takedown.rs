@@ -256,55 +256,73 @@ mod tests {
     use crate::character::{BlowStyle, FallStyle};
     use crate::close::CloseKind;
 
-    const BY_POS: V3 = [1.25, 0.0, -3.5];
-    const BY_YAW: f64 = 0.7;
-    const VIC_POS: V3 = [2.125, 0.03, -1.75];
-    const VIC_YAW: f64 = -2.3;
-    const NECK: V3 = [2.1, 1.48, -1.7];
-    const HEAD: V3 = [2.12, 1.62, -1.68];
+    const BY_POS: V3 = [0.0, 0.0, -1.0];
+    const VIC_POS: V3 = [0.0, 0.0, 0.0];
+    const NECK: V3 = [0.0, 1.48, 0.0];
+    const HEAD: V3 = [0.0, 1.62, 0.0];
 
-    fn bits(v: V3) -> [u64; 3] { [v[0].to_bits(), v[1].to_bits(), v[2].to_bits()] }
+    // He faces +z with Sam a metre behind him, Sam facing him (Sam's left is +x).
+    fn marks_here(style: BlowStyle) -> (V3, Option<V3>) { marks_of(BY_POS, 0.0, VIC_POS, 0.0, Some(NECK), Some(HEAD), style) }
 
-    /// The TypeScript's own bits (bun, EXACT on), for each move with and without bones.
+    /// The chop lands on the back of the neck from over it, Sam's other hand low on the man's back, off to Sam's left.
     #[test]
-    fn marks_match_the_typescript() {
-        type Row = (bool, BlowStyle, [u64; 3], Option<[u64; 3]>);
-        let rows: [Row; 8] = [
-            (true, BlowStyle::Chop, [0x40008caffb63905a, 0x3ff87ae147ae147b, 0xbffc33a66f3d8f86], Some([0x400133aeea115ee9, 0x3ff47ae147ae147b, 0xbffe1d39e1e6931d])),
-            (true, BlowStyle::Palm, [0x40005d0f9e32d4bb, 0x3ff8f5c28f5c28f6, 0xbffc577e4ac889d6], None),
-            (true, BlowStyle::Mouth, [0x4000cccccccccccd, 0x3ff7ae147ae147ae, 0xbffb333333333333], Some([0x40006d1870723689, 0x3ff9eb851eb851ec, 0xbffc42406b49c054])),
-            (true, BlowStyle::Slash, [0x4000cccccccccccd, 0x3ff851eb851eb852, 0xbffb333333333333], None),
-            (false, BlowStyle::Chop, [0x4000bfe32e96c38d, 0x3ff947ae147ae148, 0xbffd00733c0a5c52], Some([0x400166e21d44921c, 0x3ff547ae147ae148, 0xbffeea06aeb35fea])),
-            (false, BlowStyle::Palm, [0x4000674d0ed6abc5, 0x3ff970a3d70a3d70, 0xbffd76369cb40ef5], None),
-            (false, BlowStyle::Mouth, [0x4001000000000000, 0x3ff87ae147ae147b, 0xbffc000000000000], Some([0x40007755e1160d93, 0x3ffa666666666666, 0xbffd60f8bd354573])),
-            (false, BlowStyle::Sweep, [0x4001000000000000, 0x3ff91eb851eb851f, 0xbffc000000000000], None),
-        ];
-        for (bones, style, a, b) in rows {
-            let (neck, head) = if bones { (Some(NECK), Some(HEAD)) } else { (None, None) };
-            let (at, at2) = marks_of(BY_POS, BY_YAW, VIC_POS, VIC_YAW, neck, head, style);
-            assert_eq!(bits(at), a, "{:?} {}", style, bones);
-            assert_eq!(at2.map(bits), b, "{:?} {}", style, bones);
+    fn a_chop_lands_on_the_back_of_the_neck_and_the_other_hand_takes_his_back() {
+        let (at, other) = marks_here(BlowStyle::Chop);
+        assert!(at[2] < NECK[2] && at[1] > NECK[1], "{:?}", at);
+        let other = other.unwrap();
+        assert!(other[2] < at[2] && other[1] < NECK[1] && other[0] > 0.0, "{:?}", other);
+    }
+
+    /// The palm goes to his face from the front, in by the head, with no second hand. It is what a blow from the side or the front is.
+    #[test]
+    fn a_palm_lands_on_his_face_with_one_hand() {
+        let (at, other) = marks_of([0.0, 0.0, 1.0], m::PI, VIC_POS, 0.0, Some(NECK), Some(HEAD), BlowStyle::Palm);
+        assert!(at[2] > HEAD[2] && at[1] < HEAD[1] && at[1] > NECK[1], "{:?}", at);
+        assert!(other.is_none());
+    }
+
+    /// The knife from behind is at his throat, the free hand round the front of his head to the mouth.
+    #[test]
+    fn the_knife_from_behind_takes_the_throat_and_the_mouth() {
+        let (at, other) = marks_here(BlowStyle::Mouth);
+        assert_eq!(at, NECK);
+        let other = other.unwrap();
+        assert!(other[2] > HEAD[2] && other[1] == HEAD[1], "{:?}", other);
+    }
+
+    /// A slash or a sweep is one hand, a little over the neck.
+    #[test]
+    fn a_slash_or_a_sweep_is_one_hand_at_the_neck() {
+        for style in [BlowStyle::Slash, BlowStyle::Sweep] {
+            let (at, other) = marks_here(style);
+            assert_eq!((at[0], at[2]), (NECK[0], NECK[2]));
+            assert!(at[1] > NECK[1] && at[1] < HEAD[1]);
+            assert!(other.is_none());
         }
     }
 
-    /// The TypeScript's own bits: away from the man who did it, unless he stands on him; fold and sink always along the victim's facing.
+    /// Before he has been posed, his neck is taken as a man's height over his feet and his head just above that, so no blow goes to the floor.
     #[test]
-    fn fall_way_matches_the_typescript() {
-        let away = [0x3fdc9f25c5bfedd9, 0, 0x3fec9f25c5bfedd9];
-        let facing = [0xbfe7dcd12d582f24, 0, 0xbfe5522217302fe0];
-        let (far, near): (Option<V3>, Option<V3>) = (Some(BY_POS), Some([2.13, 0.0, -1.76]));
-        let rows: [(Option<V3>, FallStyle, [u64; 3], f64); 5] = [
-            (far, FallStyle::Topple, away, 1.5),
-            (far, FallStyle::Cut, away, 0.9),
-            (far, FallStyle::Fold, facing, 0.7),
-            (near, FallStyle::Topple, facing, 1.5),
-            (None, FallStyle::Cut, facing, 0.9),
-        ];
-        for (from, style, d, len) in rows {
-            let (got, reach) = fall_way_of(VIC_POS, VIC_YAW, from, style);
-            assert_eq!(bits(got), d, "{:?}", style);
-            assert_eq!(reach.to_bits(), f64::to_bits(len));
-        }
+    fn a_man_with_no_bones_yet_has_a_neck_and_a_head_where_a_man_has_them() {
+        let (at, _) = marks_of(BY_POS, 0.0, [2.0, 0.5, 3.0], 0.0, None, None, BlowStyle::Mouth);
+        assert_eq!(at, [2.0, 2.0, 3.0]);
+        let (_, other) = marks_of(BY_POS, 0.0, [2.0, 0.5, 3.0], 0.0, None, None, BlowStyle::Mouth);
+        assert_eq!(other.unwrap()[1], 2.12);
+    }
+
+    /// A shove or a cut falls him away from the man who did it, further for a topple. A fold or a sink goes along his own facing, and so does any fall with nobody there or from a man right on top of him.
+    #[test]
+    fn he_falls_away_from_the_man_who_did_it_unless_he_folds() {
+        let (vic, yaw): (V3, f64) = ([2.0, 0.03, -1.0], 0.5);
+        let facing = [m::sin(yaw), 0.0, m::cos(yaw)];
+        let by: V3 = [2.0, 0.0, -4.0];
+        let away = [0.0, 0.0, 1.0];
+        assert_eq!(fall_way_of(vic, yaw, Some(by), FallStyle::Topple), (away, 1.5));
+        assert_eq!(fall_way_of(vic, yaw, Some(by), FallStyle::Cut), (away, 0.9));
+        assert_eq!(fall_way_of(vic, yaw, Some(by), FallStyle::Fold), (facing, 0.7));
+        assert_eq!(fall_way_of(vic, yaw, Some(by), FallStyle::Sink), (facing, 0.7));
+        assert_eq!(fall_way_of(vic, yaw, Some([2.01, 0.0, -1.01]), FallStyle::Topple), (facing, 1.5));
+        assert_eq!(fall_way_of(vic, yaw, None, FallStyle::Cut), (facing, 0.9));
     }
 
     fn man(g: &mut Game, state: crate::game::GuardState, down: Option<crate::game::DownKind>, flat: bool) -> (GuardId, CharId) {

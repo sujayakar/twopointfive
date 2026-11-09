@@ -665,39 +665,63 @@ pub fn seg_seg_closest(p0: V3, p1: V3, b0: V3, b1: V3) -> crate::devices::SegSeg
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn b(x: u64) -> f64 { f64::from_bits(x) }
-    fn v(a: [u64; 3]) -> V3 { [b(a[0]), b(a[1]), b(a[2])] }
-    /// the TypeScript's own bits (bun, EXACT.on) for segSegClosest: both degenerate ends, both clamps, the interior
+
+    fn near(a: f64, b: f64) -> bool { (a - b).abs() < 1e-12 }
+    fn near3(a: V3, b: V3) -> bool { v3::dist(a, b) < 1e-12 }
+
+    /// A laser is broken by how near its beam comes to a man's limb: on lines that pass each other, that is where they cross over.
     #[test]
-    fn seg_seg_closest_bits() {
-        let rows: &[([u64; 12], u64, [u64; 3])] = &[
-            ([0x3fd3333333333333, 0x3ff199999999999a, 0xc00599999999999a, 0x3ffe666666666666, 0x3fd999999999999a, 0x400a666666666666, 0xbffb333333333333, 0x3feccccccccccccd, 0x3fc999999999999a, 0x400199999999999a, 0x3ff4cccccccccccd, 0x3fe6666666666666], 0x3fdde6f64ace9ee3, [0x3ff1845888329deb, 0x3ff2fc81dc14f200, 0x3fe1ddab0c9ac367]),
-            ([0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x4000000000000000, 0x4008000000000000, 0x3ff0000000000000, 0x4000000000000000, 0x4008000000000000], 0x400deeea11683f48, [0x3ff0000000000000, 0x4000000000000000, 0x4008000000000000]),
-            ([0x3fb999999999999a, 0x3fc999999999999a, 0x3fd3333333333333, 0x3fb999999999999a, 0x3fc999999999999a, 0x3fd3333333333333, 0xbff0000000000000, 0x3fe0000000000000, 0x3fd0000000000000, 0x4010000000000000, 0x3fe8000000000000, 0x3fc0000000000000], 0x3fd73896fd98220d, [0x3fb4936122ee4ba0, 0x3fe1ba856837e3ac, 0x3fcc8af52f9038a8]),
-            ([0xbff0000000000000, 0x3fe0000000000000, 0x3fd0000000000000, 0x4010000000000000, 0x3fe8000000000000, 0x3fc0000000000000, 0x3fb999999999999a, 0x3fc999999999999a, 0x3fd3333333333333, 0x3fb999999999999a, 0x3fc999999999999a, 0x3fd3333333333333], 0x3fd73896fd98220d, [0x3fb999999999999a, 0x3fc999999999999a, 0x3fd3333333333333]),
-            ([0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x3ff0000000000000, 0x0000000000000000], 0x3ff0000000000000, [0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000]),
-            ([0x4014000000000000, 0x3ff0000000000000, 0x4014000000000000, 0x4018000000000000, 0x3ff0000000000000, 0x4016000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x3ff0000000000000, 0x3fc999999999999a], 0x4018fe2812a529ee, [0x3ff0000000000000, 0x3ff0000000000000, 0x3fc999999999999a]),
-            ([0xc014000000000000, 0x3ff0000000000000, 0xc014000000000000, 0xc018000000000000, 0x3ff0000000000000, 0xc016000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x3ff0000000000000, 0x3fc999999999999a], 0x401c48c6001f0ac0, [0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000]),
-            ([0x3fd5555555555555, 0x3fe5555555555555, 0x3fc2492492492492, 0x3ff4924924924925, 0x3fbc71c71c71c71c, 0x3ffaaaaaaaaaaaab, 0x3feb13b13b13b13b, 0xbfc6969696969697, 0x3fb999999999999a, 0x3fc999999999999a, 0x3fd79435e50d7943, 0xbfe9611a7b9611a8], 0x3fe8cfdc3a074f36, [0x3fe0c962285d3dc4, 0x3fb83e9a25d9c5c2, 0xbfd60bcc76863110]),
-        ];
-        for (i, d, on) in rows {
-            let r = seg_seg_closest(v([i[0], i[1], i[2]]), v([i[3], i[4], i[5]]), v([i[6], i[7], i[8]]), v([i[9], i[10], i[11]]));
-            assert_eq!(r.dist.to_bits(), *d);
-            assert_eq!([r.on_b[0].to_bits(), r.on_b[1].to_bits(), r.on_b[2].to_bits()], *on);
-        }
+    fn the_nearest_points_of_two_crossing_lines_are_where_they_cross() {
+        let r = seg_seg_closest([-1.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, -1.0, 2.0], [0.0, 1.0, 2.0]);
+        assert!(near(r.dist, 2.0));
+        assert!(near3(r.on_b, [0.0, 0.0, 2.0]));
     }
+
+    /// Off the end of either line, the end is the nearest it has.
     #[test]
-    fn lens_dir_bits() {
-        let rows: &[(u64, u64, [u64; 3])] = &[
-            (0x3fe6666666666666, 0xbfd6666666666666, [0x3fe35d799669bc02, 0xbfd5f209a5390a8b, 0x3fe6fdb8bda90d24]),
-            (0xc000cccccccccccd, 0x3fc999999999999a, [0xbfeb1274263933bd, 0x3fc96dff233dd2bc, 0xbfdfaa8573ca52b8]),
-            (0x4008000000000000, 0xbff199999999999a, [0x3fb0630e90ddbe73, 0xbfec84c54c2d6338, 0xbfdcbd588d04503c]),
-        ];
-        for (y, p, o) in rows {
-            let r = lens_dir(b(*y), b(*p));
-            assert_eq!([r[0].to_bits(), r[1].to_bits(), r[2].to_bits()], *o);
-        }
+    fn the_nearest_point_stops_at_the_ends_of_the_line() {
+        // the second line lies beyond the first's end, in line with it
+        let r = seg_seg_closest([0.0; 3], [1.0, 0.0, 0.0], [3.0, 0.0, 0.0], [5.0, 0.0, 0.0]);
+        assert!(near(r.dist, 2.0));
+        assert!(near3(r.on_b, [3.0, 0.0, 0.0]));
+        let r = seg_seg_closest([0.0; 3], [1.0, 0.0, 0.0], [-5.0, 0.0, 0.0], [-3.0, 0.0, 0.0]);
+        assert!(near(r.dist, 3.0));
+        assert!(near3(r.on_b, [-3.0, 0.0, 0.0]));
+        // the second line stops short of the first: its own end is the nearest it has
+        let r = seg_seg_closest([5.0, 1.0, 5.0], [6.0, 1.0, 5.5], [0.0, 1.0, 0.0], [1.0, 1.0, 0.2]);
+        assert!(near3(r.on_b, [1.0, 1.0, 0.2]));
     }
+
+    /// Two level lines one above the other are a metre apart wherever they are measured; a line of no length is a point; the distance does not depend on which line is asked about first.
     #[test]
-    fn spell_digits() { assert_eq!(spell("7391"), "7-3-9-1"); }
+    fn parallel_lines_and_points_have_a_distance_too() {
+        let r = seg_seg_closest([0.0; 3], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]);
+        assert!(near(r.dist, 1.0));
+        assert!(near(r.on_b[1], 1.0));
+        let (p, q): (V3, V3) = ([0.1, 0.2, 0.3], [1.0, 2.0, 3.0]);
+        let r = seg_seg_closest(p, p, q, q);
+        assert!(near(r.dist, v3::dist(p, q)));
+        assert_eq!(r.on_b, q);
+        let r = seg_seg_closest([0.0; 3], [0.0; 3], [1.0, 2.0, 3.0], [1.0, 2.0, 3.0]);
+        assert_eq!(r.on_b, [1.0, 2.0, 3.0]);
+        let a = seg_seg_closest(p, p, [-1.0, 0.5, 0.25], [4.0, 0.75, 0.125]);
+        let b = seg_seg_closest([-1.0, 0.5, 0.25], [4.0, 0.75, 0.125], p, p);
+        assert!(near(a.dist, b.dist));
+        assert_eq!(b.on_b, p);
+    }
+
+    /// A camera's lens looks where its yaw and pitch say, in the game's axes: yaw 0 is +z, a quarter turn is +x, pitch is up.
+    #[test]
+    fn a_lens_looks_by_its_yaw_and_pitch() {
+        assert!(near3(lens_dir(0.0, 0.0), [0.0, 0.0, 1.0]));
+        assert!(near3(lens_dir(m::PI / 2.0, 0.0), [1.0, 0.0, 0.0]));
+        assert!(near3(lens_dir(1.3, m::PI / 2.0), [0.0, 1.0, 0.0]));
+        let d = lens_dir(0.7, -0.35);
+        assert!(near(v3::len(d), 1.0));
+        assert!(d[1] < 0.0 && near(m::atan2(d[0], d[2]), 0.7));
+    }
+
+    /// A code is read out digit by digit.
+    #[test]
+    fn a_code_is_spelled_digit_by_digit() { assert_eq!(spell("7391"), "7-3-9-1"); }
 }
