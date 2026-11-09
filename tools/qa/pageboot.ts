@@ -28,8 +28,7 @@ export async function pageBoot(setting: string): Promise<Booted> {
   if (!(setting in SETTINGS)) throw new Error(`pageBoot: no setting '${setting}'`);
   const { Engine } = await import(`${ROOT}/src/engine.ts`);
   const { SmokeSystem } = await import(`${ROOT}/src/smoke/smoke.ts`);
-  const { Particles } = await import(`${ROOT}/src/render/particles.ts`), { CharacterRenderer } = await import(`${ROOT}/src/anim/characters.ts`), { MeshShadows } = await import(`${ROOT}/src/render/meshShadows.ts`), { LOOK } = await import(`${ROOT}/src/scene/look.ts`);
-  LOOK.on = true;
+  const { Particles } = await import(`${ROOT}/src/render/particles.ts`), { CharacterRenderer } = await import(`${ROOT}/src/anim/characters.ts`), { MeshShadows } = await import(`${ROOT}/src/render/meshShadows.ts`);
   const { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`);
     const FR = await import(`${ROOT}/src/render/frame.ts`) as Record<string, any>;
   const { DUST_DRAW } = await import(`${ROOT}/src/smoke/dustTint.ts`);

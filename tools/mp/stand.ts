@@ -11,7 +11,6 @@ import { NetGame, type NetFace } from '../../src/net/modgame.ts';
 import { wordTick } from '../../src/net/words.ts';
 import { Commands } from '../../src/draw/commands.ts';
 import { machineBefore } from '../../src/host/machine.ts';
-import { LOOK } from '../../src/scene/look.ts';
 import { characterFiles, pack } from '../blitz/start-pack.ts';
 import { faceHere } from '../blitz/face-build.ts';
 
@@ -22,7 +21,6 @@ const ROOT = resolve(import.meta.dir, '../..');
 export interface StartSetup { search: string; seed: number; commands?: string }
 export function freshStart(setup: StartSetup): NetStart {
   const q = new URLSearchParams(setup.search), named = q.get('levelFile') ?? 'office.json', C = new Commands();
-  LOOK.on = true;
   if (setup.commands === undefined) machineBefore(q, named, C);
   const start: NetStart = { file: named, words: setup.search, seed: setup.seed, seats: Number(q.get('seats') ?? 1), commands: setup.commands ?? commandText(C.take()) };
   const why = startWhy(start); if (why) throw new Error(`the setup: ${why}`);

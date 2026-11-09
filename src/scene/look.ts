@@ -2,31 +2,20 @@
 // gravel, rugs and cots and oil drums for the places (tools/levels/lib/gwotKit.ts is the kit, tools/levels/gwotSkin.ts dresses the loud levels' files in it), helmets and plate carriers against local dress for the men (dress only: weapons, goggles and kit are the gear part's own switch). The men's dress is LOOK ONLY:
 // no weapon number is touched and no dice are drawn by any of it. A level's paint is that level's file: a wall's colour is in the light that comes round a room, which
 // a man's eye reads (sim/glow.rs), so paint plays.
-// ONE SWITCH (and under it `suit`, the sneaking suit: on whenever the look is, looks only). OFF in this module; the PAGE turns it on at boot before the cast is
-// fetched (host/drawpage.ts). It says what the men wear and how a leaf is painted, never which file a level is.
+// It says what the men wear and how a leaf is painted, never which file a level is.
 // No imports here: scene/, game/ and the tools all read it.
-export const LOOK = {
-  on: false,
-  /** THE SNEAKING SUIT (the maintainer, 10-10: "sam should also be in a black sneaking suit in stealth missions (probs not loud ones)"): with the look on, Sam —
-   *  and the partner of a quiet mission as two — wears a black suit with no helmet and no carrier on every mission that is not a squad's loud one (rust/game_rules/src/cast
-   *  sneakSuit: the parts; render/charMaterials.ts SNEAK_SUIT: the cloth). False (`?suit=0`) = the operators' issue dress on every mission, as the look first shipped.
-   *  Nothing with the look off. Looks only. */
-  suit: true,
-};
 
 /** THE MEN'S DRESS FOLLOWS THE PLACE (the maintainer, 10-10: "middle eastern enemies also don't make sense for the office level"): the look's cast and colour
  *  tables — local dress for the defenders, tan issue for the operators — are for the look's places. On the OFFICE family (the bundled office, relief, the texel
  *  variants) the men are dressed as they were before the look: the first cast file and its tables, and of its defenders only the ones dressed for a building
- *  (rust/game_rules/src/cast office_dress: no straw hat, no bandolier). The sneaking suit is the look's on every level (LOOK.suit). Not a knob: it is a fact of the level the
- *  PAGE booted on, said once at boot (host/drawpage.ts, before the cast is fetched); a tool leaves it true, so `LOOK.on` alone still means the look's dress there.
+ *  (rust/game_rules/src/cast office_dress: no straw hat, no bandolier). Not a knob: it is a fact of the level the
+ *  PAGE booted on, said once at boot (host/drawpage.ts, before the cast is fetched); a tool leaves it true: the look's dress.
  *  Looks only. */
 let lookPlace = true;
 /** the page says what its level is: true = one of the look's places (every level but the office family) */
 export function setLookPlace(gwot: boolean) { lookPlace = gwot; }
-/** do the men wear the look's dress here? (the look on AND a place of the look's) */
-export function lookDress(): boolean { return LOOK.on && lookPlace; }
-/** the look on, in a place that is not the look's (the office): the men of the first cast, dressed for a building */
-export function lookOffice(): boolean { return LOOK.on && !lookPlace; }
+/** do the men wear the look's dress here? No: the office, whose men are the first cast's, dressed for a building */
+export function lookDress(): boolean { return lookPlace; }
 /** is the level a page's query boots one of the look's places? No `levelFile` = the bundled office; `office.json` / `office-*.json` = the office family */
 export function placeOfQuery(q: URLSearchParams): boolean {
   const lf = q.get('levelFile'); if (lf && /^[\w.-]+\.json$/.test(lf)) return !/^office(-[\w.-]+)?\.json$/.test(lf);   // (a name host/drawpage.ts's boot will not fetch boots the bundled office)

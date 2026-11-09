@@ -221,7 +221,7 @@ export async function loadCharacterSet(baseUrl: string, castUrl: string | null):
   try { return await loadGltfCast(castUrl, base); } catch (e) { console.error('cast: the new character meshes did not load — the mannequin stands in', e); return base; }
 }
 /** where the cast is, for a page: null under `?mannequin` (the build as it was: one mannequin mesh for everybody) */
-/** THE CAST'S FILE: today's, or the look's (scene/look.ts LOOK — one switch for the whole look: the defenders in local dress, the operators' helmet with its rails; built by the
+/** THE CAST'S FILE: today's, or the look's (scene/look.ts lookDress, the place's: the defenders in local dress, the operators' helmet with its rails; built by the
  *  same tools/chars builder under `--look gwot`, same skeleton, slots and contract, its own 32 parts). Everything that loads a cast asks here. */
 export const CAST_FILE = 'cast.gltf', CAST_FILE_LOOK = 'cast-gwot.gltf';
 export function castFile(look = lookDress()): string { return look ? CAST_FILE_LOOK : CAST_FILE; }

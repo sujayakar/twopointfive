@@ -10,7 +10,7 @@
 import { main, ROOT } from './here.ts';
 import { readFileSync } from 'node:fs';
 const CM = await import(`${ROOT}/src/render/charMaterials.ts`);
-const { LOOK } = await import(`${ROOT}/src/scene/look.ts`);
+const { setLookPlace } = await import(`${ROOT}/src/scene/look.ts`); setLookPlace(false);   // (the first cast's tables, the office's: the look's are asked of by name below)
 const { loadGltfCharacter } = await import(`${ROOT}/src/anim/gltf.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -103,16 +103,14 @@ export async function charmatsTables() {
     if (opCloth.size !== 1) f.push(`operators' uniform cloth differs man to man (${opCloth.size} colours)`);
     if (defShirt.size < 3 || defShirt.has('-1')) f.push(`only ${defShirt.size} shirts dealt over ${N} defenders [${[...defShirt]}]`);
     if (defHead.size < 3) f.push(`only ${defHead.size} heads over ${N} defenders`);
-    // (under the look 1.8×: the defenders' cloth is dealt either side of the mud-brick ground, pale or dark, and their rig is olive drab; the operators' suit a shade paler than it was)
-    if (!(defTop / N > (LOOK.on ? 1.8 : 2) * (opTop / N))) f.push(`from above the sides are too close: operators ${f3(opTop / N)} vs defenders ${f3(defTop / N)} mean luminance`);
-    // (under the look the marking is the trim DUSTED: four fifths of it at 0.8 and a fifth of the suit's cloth — the same top channel, at least half the trim's own there)
-    const isTrim = (c: number[]) => LOOK.on ? c.indexOf(Math.max(...c)) === OP[1].indexOf(Math.max(...OP[1])) && Math.max(...c) > 0.5 * Math.max(...OP[1]) && Math.max(...c) > 2 * Math.min(...c) : c.map(f3).join() === OP[1].map(f3).join();
+    if (!(defTop / N > 2 * (opTop / N))) f.push(`from above the sides are too close: operators ${f3(opTop / N)} vs defenders ${f3(defTop / N)} mean luminance`);
+    const isTrim = (c: number[]) => c.map(f3).join() === OP[1].map(f3).join();
     const mk = slot(pal('operator', OP, 3), 'cloth_plain'); if (!isTrim(mk)) f.push(`an operator's marking (cloth_plain on the models: band, brassards) ${mk.map(f3)} is not his trim ${OP[1]}`);
     { const si = pal('operator', OP, 3, true); if (slot(si, 'cloth_plain').join() !== slot(si, 'cloth_uniform').join() || !isTrim(slot(si, 'accent'))) f.push('on the stand-in an operator\'s shirt is not his uniform, or his armband not his trim'); }
-    const dl = slot(pal('defender', DEF, 3), 'lens'), ds = slot(pal('defender', DEF, 3), 'skin'); if (!LOOK.on && dl.join() !== ds.join()) f.push('a defender\'s lens faces are not his skin (he has no eye-pro)');   // (under the look the slot is his scarf / shawl: its own check below)
+    const dl = slot(pal('defender', DEF, 3), 'lens'), ds = slot(pal('defender', DEF, 3), 'skin'); if (dl.join() !== ds.join()) f.push('a defender\'s lens faces are not his skin (he has no eye-pro)');   // (under the look the slot is his scarf / shawl: its own check below)
     // the look's defender palettes: nothing reads as a pair's marking (no cloth saturated unless it is a brown — red over green over blue with green at 0.72 of red or more —,
     // and on a head or a shoulder never green or blue the top channel), and no warm suit within 0.6 of a stop of the look's ground (mud brick, luminance 0.37)
-    if (LOOK.on) {
+    {
       const D = CM.CHAR_MATS_LOOK.defender!.slots as Record<string, { pick?: number[][] }>;
       for (const n of ['cloth_plain', 'cloth_uniform', 'helmet', 'accent', 'lens']) for (const c of D[n].pick ?? []) {
         const mx = Math.max(...c), sat = (mx - Math.min(...c)) / mx, brown = c[0] >= c[1] && c[1] >= c[2] && c[1] >= 0.72 * c[0];
@@ -131,7 +129,7 @@ export async function charmatsTables() {
     // each other side's ACCENT: on the cast its own row (the irregulars' pale naturals, never the colour of the top it is worn with; a tie darker than its shirt),
     // on the stand-in the shirt's row (the mannequin's accent is an armband region)
     { const dist = (x: number[], y: number[]) => Math.max(Math.abs(x[0] - y[0]), Math.abs(x[1] - y[1]), Math.abs(x[2] - y[2]));
-      let near = 0; for (let id = 1; id <= 140; id++) { const d = pal('defender', DEF, id); if (dist(slot(d, 'accent'), slot(d, 'cloth_plain')) < (LOOK.on ? 0.05 : 0.1) || (!LOOK.on && lum(slot(d, 'accent')) < lum(slot(d, 'cloth_plain')))) near++; }   // (the look: the accent is a turban / skull cap — off-white, cream, grey or near black, never the shirt's own colour; a dark one is allowed, and a dark one on a dark shirt is 0.05 off it at the least)
+      let near = 0; for (let id = 1; id <= 140; id++) { const d = pal('defender', DEF, id); if (dist(slot(d, 'accent'), slot(d, 'cloth_plain')) < 0.1 || (lum(slot(d, 'accent')) < lum(slot(d, 'cloth_plain')))) near++; }
       if (near) f.push(`${near} of 140 defenders wear a tee / straw hat the colour of their top (or darker than it)`);
       const QRF: number[][] = [[0.1, 0.11, 0.13], [0.05, 0.055, 0.06]], CIV: number[][] = [[0.78, 0.62, 0.08], [0.1, 0.12, 0.2]];
       { const c = pal('civilian', CIV, 7);   // (an odd id: the cast's office worker — the even ones are the cleaner, whose accent is her pale apron and kerchief)
