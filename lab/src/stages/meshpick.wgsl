@@ -2,7 +2,7 @@
 // pixels, and whose coarser stand-in's would not. Each round takes a list of nodes and makes the next; what is picked goes into slots.
 struct MeshK { tau: f32, fixed: f32, pieces: u32, most: u32, cone: f32, hide: f32, round: u32, queue: u32, hzb: vec4f };
 struct Local { c0: vec4f, c1: vec4f, c2: vec4f, piece: u32, child: u32, mesh: u32, scale: f32, cam: vec3f };
-// n: 0.. items in the list each round begins with; 24 slots, 25 triangles, 26 turned away by what hid them, 27 and 28 slots and indices said so far, 29 a list was full, 30 indices
+// n: 0.. items in the list each round begins with; 24 slots, 25 triangles, 26 turned away by what hid them, 27 and 28 slots and indices said so far, 29 a list was full, 30 indices, 31 (kept from frame to frame) how many times coarser than asked, so that no list is full
 const N_SLOTS = 24u; const N_TRIS = 25u; const N_HID = 26u; const N_FULL = 29u;
 fn inside(x: vec3f, r: f32) -> bool {
   let v = x - frame.camPos.xyz; let f = dot(v, frame.camFwd.xyz); if (f < 0.25 - r) { return false; } let R = frame.camRight.xyz; let U = frame.camUp.xyz; let tx = length(R); let ty = length(U);
@@ -14,8 +14,9 @@ fn localOf(piece: u32, child: u32) -> Local {
   let o = toLocal(piece, frame.camPos.xyz) / (*p).quad.x; l.cam = vec3f(dot(l.c0.xyz, o) + l.c0.w, dot(l.c1.xyz, o) + l.c1.w, dot(l.c2.xyz, o) + l.c2.w); return l;
 }
 fn outward(l: Local, x: vec3f) -> vec3f { let p = &pieces[l.piece]; let d = x - vec3f(l.c0.w, l.c1.w, l.c2.w); let o = (l.c0.xyz * d.x + l.c1.xyz * d.y + l.c2.xyz * d.z) / dot(l.c0.xyz, l.c0.xyz) * (*p).quad.x - vec3f((*p).r0.w, (*p).r1.w, (*p).r2.w); return (*p).r0.xyz * o.x + (*p).r1.xyz * o.y + (*p).r2.xyz * o.z; }
+fn tauNow() -> f32 { return meshK.tau * max(bitcast<f32>(atomicLoad(&n[31])), 1.0); }
 /** would an error so big (in the mesh's own measure), judged by this ball, be seen? */
-fn shown(l: Local, e: f32, b: vec4f) -> bool { if (meshK.fixed > 0.0) { return e * l.scale > meshK.fixed; } let d = max(distance(l.cam, b.xyz) - b.w, 0.02 / l.scale); return e > meshK.tau * (2.0 * length(frame.camUp.xyz) / frame.size.y) * d; }
+fn shown(l: Local, e: f32, b: vec4f) -> bool { if (meshK.fixed > 0.0) { return e * l.scale > meshK.fixed; } let d = max(distance(l.cam, b.xyz) - b.w, 0.02 / l.scale); return e > tauNow() * (2.0 * length(frame.camUp.xyz) / frame.size.y) * d; }
 /** behind what was drawn? `prev`: by last frame's camera and depth. The ball's square on the screen against the farthest depth in it */
 fn hidden(x: vec3f, r: f32, prev: bool) -> bool {
   let P = select(frame.camPos.xyz, frame.prevPos.xyz, prev); let F = select(frame.camFwd.xyz, frame.prevFwd.xyz, prev); let R = select(frame.camRight.xyz, frame.prevRight.xyz, prev); let U = select(frame.camUp.xyz, frame.prevUp.xyz, prev);
@@ -32,7 +33,7 @@ fn slotOut(l: Local, cluster: u32, second: bool) {
 @compute @workgroup_size(64) fn seed(@builtin(global_invocation_id) id: vec3u) {
   if (id.y >= meshK.pieces) { return; } let k = placed[id.y]; let p = &pieces[k]; let oh = (*p).planes; let head = mrowU(oh); let ball = mrow(oh + 1u); let sc = (*p).quad.x; let at = vec3f(-(*p).r0.w, -(*p).r1.w, -(*p).r2.w) + ball.xyz * sc; let x = (*p).r0.xyz * at.x + (*p).r1.xyz * at.y + (*p).r2.xyz * at.z; let r = ball.w * sc; if (!inside(x, r)) { return; }
   // which level of the object: its coarsest that is not seen to be one
-  let d = max(distance(frame.camPos.xyz, x) - r, 0.02); var may = meshK.tau * (2.0 * length(frame.camUp.xyz) / frame.size.y) * d / sc; if (meshK.fixed > 0.0) { may = meshK.fixed / sc; } var li = head.x - 1u; loop { if (li == 0u || mrow(oh + 3u + li).x <= may) { break; } li -= 1u; }
+  let d = max(distance(frame.camPos.xyz, x) - r, 0.02); var may = tauNow() * (2.0 * length(frame.camUp.xyz) / frame.size.y) * d / sc; if (meshK.fixed > 0.0) { may = meshK.fixed / sc; } var li = head.x - 1u; loop { if (li == 0u || mrow(oh + 3u + li).x <= may) { break; } li -= 1u; }
   let lv = mrowU(oh + 3u + li); if (id.x >= lv.w) { return; } let child = lv.z + id.x; let l = localOf(k, child); let b = mrow(l.mesh + 3u); let cx = outward(l, b.xyz); let cr = b.w * l.scale; if (!inside(cx, cr)) { return; }
   let m = mrowU(l.mesh + 2u); let i = atomicAdd(&n[0], 1u); if (i >= meshK.queue) { atomicStore(&n[N_FULL], 1u); return; } listB[i] = vec2u((k << 11u) | child, (m.y << 4u) | m.z);
 }

@@ -27,9 +27,10 @@ var<workgroup> base: u32; var<workgroup> span: vec2u;
 }
 @compute @workgroup_size(1) fn say() {
   let a = select(0u, atomicLoad(&n[27]), part.x == 1u); let b = min(atomicLoad(&n[24]), part.y); let i = select(0u, atomicLoad(&n[28]), part.x == 1u); let j = min(atomicLoad(&n[30]), part.z); atomicStore(&n[27], b); atomicStore(&n[28], j);
+  let most = max(max(f32(b) / f32(part.y), f32(j) / f32(part.z)), select(0.0, 2.0, atomicLoad(&n[29]) != 0u)); let was = max(bitcast<f32>(atomicLoad(&n[31])), 1.0); atomicStore(&n[31], bitcast<u32>(clamp(was * select(select(1.0, 0.985, most < 0.75), 1.2, most > 0.92), 1.0, 64.0)));
   args[0] = (b - a) * 384u; args[1] = 1u; args[2] = a * 384u; args[3] = 0u; args[4] = j - i; args[5] = 1u; args[6] = i; args[7] = 0u; args[8] = 0u;
 }`;
-export interface Drawn { slots: number; triangles: number; hid: number; full: number; rounds: number[] }
+export interface Drawn { slots: number; triangles: number; hid: number; full: number; /** times coarser than asked, so that no list is full */ coarser: number; rounds: number[] }
 
 export function meshStage(lab: Lab, g: Graph): Stage {
   return { name: 'meshes', over: 'render', code: '', async make() {
@@ -60,7 +61,7 @@ fn at(p: vec2i) -> f32 { let m = vec2i(textureDimensions(src)) - 1; return textu
     return enc => {
       fit(); const ts = (name: string) => g.timer.pass(name), stamp = (name: string) => { const t = ts(name); return t ? { timestampWrites: t } : {}; }, hide = RASTER.hide && !RASTER.freeze && frames++ > 0, many = RASTER.heroes ? heroes : all.length;
       for (let i = 0; i < K.length; i++) { const f = new Float32Array(12), u = new Uint32Array(f.buffer); f[0] = RASTER.tau; f[1] = RASTER.fixed; u[2] = many; u[3] = MOST; f[4] = RASTER.cone ? 1 : 0; f[5] = hide ? 1 : 0; u[6] = Math.max(0, i - 1); u[7] = QUEUE; f[8] = hzbSize[0]; f[9] = hzbSize[1]; f[10] = hzbViews.length; d.queue.writeBuffer(K[i]!, 0, f); }
-      const B = bind(), held = RASTER.freeze && frames > 2; if (!held) enc.clearBuffer(n);
+      const B = bind(), held = RASTER.freeze && frames > 2; if (!held) enc.clearBuffer(n, 0, 124);
       if (!held) { const p = enc.beginComputePass({ label: 'mesh pick', ...stamp('mesh pick') }); p.setBindGroup(0, g.shared.group()); p.setPipeline(seed!); p.setBindGroup(1, B[0]!); p.dispatchWorkgroups(Math.ceil(most / 64), many); p.setPipeline(round!); for (let i = 0; i < ROUNDS; i++) { p.setBindGroup(1, B[i + 1]!); p.dispatchWorkgroups(GROUPS); } p.end(); }
       const draw = (name: string, phase: 0 | 1, held = false) => {
         if (!held) { const p = enc.beginComputePass({ label: name + ' indices', ...stamp(name + ' indices') }); p.setBindGroup(0, g.shared.group()); p.setBindGroup(1, shareG[phase]!); if (RASTER.share) { p.setPipeline(expand!); p.dispatchWorkgroups(1024); } p.setPipeline(say!); p.dispatchWorkgroups(1); p.end(); }
@@ -76,7 +77,7 @@ fn at(p: vec2i) -> f32 { let m = vec2i(textureDimensions(src)) - 1; return textu
 /** the raster alone: for measuring it */
 export const rasterOnly = (): Method => ({ name: 'rasteronly', result: 'id', signals() {}, stages: lab => [rasterStage(lab, lab.graph), meshStage(lab, lab.graph)] });
 async function compiled(d: GPUDevice, label: string, code: string): Promise<GPUShaderModule> { const m = d.createShaderModule({ label, code }), bad = (await m.getCompilationInfo()).messages.filter(x => x.type === 'error'); if (bad.length) { const lines = code.split('\n'); throw new Error(bad.slice(0, 5).map(x => `${label}:${x.lineNum}:${x.linePos} ${x.message}\n   ${lines[x.lineNum - 1]!.slice(Math.max(0, x.linePos - 80), x.linePos + 120)}`).join('\n')); } return m; }
-export async function drawn(lab: Lab): Promise<Drawn> { const u = new Uint32Array(await lab.readBuffer('meshN')); return { slots: u[24]!, triangles: u[25]!, hid: u[26]!, full: u[29]!, rounds: [...u.slice(0, 10)] }; }
+export async function drawn(lab: Lab): Promise<Drawn> { const u = new Uint32Array(await lab.readBuffer('meshN')); return { slots: u[24]!, triangles: u[25]!, hid: u[26]!, full: u[29]!, coarser: Math.max(1, new Float32Array(u.buffer)[31]!), rounds: [...u.slice(0, 10)] }; }
 /** a method with meshes in it: the stage goes in after the raster, and the first hit learns whose ids these are */
 export function withMeshes<M extends Method>(m: M): M {
   const base = m.stages.bind(m);
