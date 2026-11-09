@@ -24,7 +24,7 @@
   ],
   "run": true,
   "tick": 200,
-  "hour": 18.1,
+  "hour": 16.9,
   "wet": 1,
   "rain": 1
  },
@@ -45,7 +45,7 @@
   "samples": 90,
   "run": true,
   "tick": 200,
-  "hour": 18.1,
+  "hour": 16.9,
   "wet": 1,
   "rain": 1
  },
@@ -67,7 +67,7 @@
   "samples": 160,
   "run": true,
   "tick": 200,
-  "hour": 18.1,
+  "hour": 16.9,
   "wet": 1,
   "rain": 1
  },
@@ -89,7 +89,7 @@
   "samples": 160,
   "run": true,
   "tick": 200,
-  "hour": 18.1,
+  "hour": 16.9,
   "wet": 1,
   "rain": 1
  },
@@ -111,7 +111,7 @@
   "samples": 160,
   "run": true,
   "tick": 200,
-  "hour": 18.1,
+  "hour": 16.9,
   "wet": 1,
   "rain": 1
  },
@@ -134,7 +134,8 @@
   "run": true,
   "tick": 200,
   "hour": 11.5,
-  "wet": 0.4
+  "wet": 0.4,
+  "stats": true
  },
  {
   "w": 1280,
