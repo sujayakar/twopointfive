@@ -4,7 +4,7 @@
 //   telemetry.ts  small records of a visit: the machine, a run's outcome, a minute's frame times, an error
 //   prefs.ts      the browser's settings, so another browser handed this one's id opens with them
 //   files.ts      the files the page saves for the player (a benchmark's report, a replay, a recording), into the backend's file storage
-//   notes.ts      what the player wrote on a replay: the notes on a kept visit, the F7 shelf's saved windows
+//   notes.ts      what the player wrote on a replay: the notes on a kept visit
 // A build with no address — the dev server, a checkout, the one-file build, every headless tool — has none of this: `cloudBoot` returns null, no id is made,
 // nothing is asked of any server. THE BUILD AS IT WAS.
 // WHO THE BROWSER IS: a random id it makes once and keeps (localStorage `twopointsix.cloud.pid`). There are no accounts. A link that carries an id
@@ -39,7 +39,6 @@ import { tabLoad, LOADTIME } from './loadtime';
 import { FileSync, FILESYNC } from './files';
 import { LOOPBACK, HTTPS_ADDR, LOCAL_HOST, bare } from './addr';
 import { NoteSync, NOTESYNC, type NoteMarks } from './notes';
-import { shelfNoted, shelfGet } from '../tape/shelf';
 
 /** THE MACHINE'S POWER, in the benchmark report's own words (ui/bench.ts): "plugged in" or "on battery (62 %)". The browser is asked once, on the first
  *  call (no prompt; a browser without the question never answers), and what it handed back is read as it stands on every later call: '' until then.
@@ -282,9 +281,7 @@ export async function cloudNotes(q: URLSearchParams, store: Pick<KeptStore, 'row
     const url = notesUrl(q); if (!url) return false;
     // ONE ROUND AT A TIME, and one more after it where a note was saved meanwhile (typing saves every quarter second): two rounds side by side read the
     // same marks and could land the older words last
-    // (a saved window whose visit is not kept goes up whole through the saved files, as on the game's page: this page files it under its own name)
-    const file = (n: string, b: Blob, k: string, m?: Record<string, string>): boolean => { const F = pageFileSync(q); if (!F || F.add(n, b, k, m) !== 'now') return false; drain(F); return true; };
-    const P = pageNotes ??= { sync: new NoteSync(wire(url), { rows: () => store.rows(), shelf: shelfNoted, shelfFile: shelfGet }, { pid: cloudPid(), marks: lsMarks(), only: sid => visitsNow().includes(sid), file }), busy: null, again: false };
+    const P = pageNotes ??= { sync: new NoteSync(wire(url), { rows: () => store.rows() }, { pid: cloudPid(), marks: lsMarks(), only: sid => visitsNow().includes(sid) }), busy: null, again: false };
     if (P.busy) { P.again = true; return P.busy; }
     P.busy = (async () => { let f = 0; do { P.again = false; f = P.sync.stats.failed; await P.sync.round(); } while (P.again); return P.sync.stats.failed === f; })().finally(() => { P.busy = null; });
     return await P.busy;
@@ -457,7 +454,7 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   const files = new FileSync(W, { pid, sid: deps.sid, build: deps.build, may: may.files, on: filesOn });
   const save: Cloud['save'] = (name, blob, kind, meta, done) => filesOn() && replayMay(q, kind, meta) ? savedWord(files.add(name, blob, kind, meta, done)) : 'off';
   // (what the player wrote on a replay rides with the replays: their word, their list of visits that may go)
-  const notes = deps.store ? new NoteSync(W, { rows: () => deps.store!.rows(), shelf: shelfNoted, shelfFile: shelfGet }, { pid, marks: lsMarks(), may: may.tapes, only: sid => visitsNow().includes(sid), file: (n, b, k, m) => files.add(n, b, k, m) === 'now' }) : null;
+  const notes = deps.store ? new NoteSync(W, { rows: () => deps.store!.rows() }, { pid, marks: lsMarks(), may: may.tapes, only: sid => visitsNow().includes(sid) }) : null;
   const bootMs = typeof performance !== 'undefined' ? Math.round(performance.now()) : 0;   // (the page's open to the game being up, shaders and all)
   const facts = (): PlayFacts => { try { return deps.facts(); } catch { return { scenario: '', stage: '', live: false, stats: {}, preset: '', scale: 1, auto: false }; } };
 

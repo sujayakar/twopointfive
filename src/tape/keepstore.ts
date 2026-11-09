@@ -1,5 +1,5 @@
 // THE KEPT TAPES' STORE: where the pieces of every page visit's tape live in this browser (kept.ts has the format and why), what is let go when the room runs
-// out, and how a visit is read back out of it. IndexedDB, a database of its own (the F7 shelf's is not touched), three stores:
+// out, and how a visit is read back out of it. IndexedDB, a database of its own, three stores:
 //   `visits`  one small row a page visit: when, what, how many pieces, how many bytes, notes put on it
 //   `heads`   the visit's head line as it stands (rewritten only when the switches or the floor changed)
 //   `pieces`  [visit, number] → the piece's line, gzipped where the browser can (a Blob), the plain text where it was written as the page was going away
@@ -11,7 +11,7 @@
 import type { ReplayNote } from './format';
 
 /** `secs` between pieces · `maxMB` of kept tapes at most, and never more than `share` of what the browser says this site may use · `openMs` an open of the
- *  database is waited on (shelf.ts SHELF.openMs: a browser can leave the request with no event at all) · `endMs` after a mission ends its piece is filed,
+ *  database is waited on (a browser can leave the request with no event at all) · `endMs` after a mission ends its piece is filed,
  *  without waiting for the next beat (keeper.ts watch) */
 export const KEEP = { secs: 5, maxMB: 600, share: 0.5, openMs: 5000, endMs: 1000 };
 
