@@ -528,7 +528,7 @@ pub fn lone_corner(g: &mut crate::game::Game, gd: GuardId, fix: V3) -> crate::ta
         }
     }
     let Some(cand) = found else {
-        return LoneCorner { p: point_short_of_end(from, &path, LONE_HOLD_MIN_M + 0.5), los: false };
+        return LoneCorner { p: point_short_of_end(from, &path, LONE_HOLD_MIN_M + 0.5) };
     };
     // onto a wall: the free cell within LONE_COVER_R of it with the most statics about it that still sees the fix
     let cs = g.col.nav.cell;
@@ -571,7 +571,7 @@ pub fn lone_corner(g: &mut crate::game::Game, gd: GuardId, fix: V3) -> crate::ta
             bd = d;
         }
     }
-    LoneCorner { p: best, los: true }
+    LoneCorner { p: best }
 }
 
 /// The call over the net, once per hold; his side comes   (tactics.ts loneCall)
@@ -715,7 +715,7 @@ pub fn tactics_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<
     let l = match row {
         None => {
             let cn = lone_corner(g, gd, fix);
-            let l = Lone { fix: v3::copy(fix), hold_at: Some(cn.p), los: cn.los, t0: g.time, hold_t: 0.0, called: false, released: false, released_why: String::new() };
+            let l = Lone { fix: v3::copy(fix), hold_at: Some(cn.p), hold_t: 0.0, called: false, released: false, released_why: String::new() };
             s(g).lone.set(gd, l.clone());
             clear_path(g, gd);
             g.gd[gd].stall_ref = None;
@@ -1207,8 +1207,6 @@ pub fn try_engage(g: &mut crate::game::Game, gd: GuardId, recs: &[TacticsDangerR
             path: None,
             path_i: 0.0,
             path_for: None,
-            stall_ref: None,
-            stall_t: 0.0,
             can: None,
             toss_t: -1.0,
             land_t: -1.0,

@@ -836,10 +836,10 @@ pub fn breaks_ragged(g: &mut crate::game::Game, b: &crate::break_table::CellGrid
             let other = if axis == 0.0 { 2.0 } else { 0.0 };
             let seed = b.id * 7349.0 + axis * 131.0 + (if sign > 0.0 { 17.0 } else { 0.0 }) + i * 977.0;
             if all {
-                faces.push(OpenFace { axis, sign, lat: vec![1.0, other], seed, lo: None, head: None });
+                faces.push(OpenFace { axis, sign, lat: vec![1.0, other], seed, lo: None });
             } else if wall_like && upper && y0 == 0.0 && y1 > 0.0 {
                 let lo = b.yb[1] - (b.yb[y0 as usize] + b.yb[y1 as usize + 1]) / 2.0;
-                faces.push(OpenFace { axis, sign, lat: vec![1.0], seed, lo: Some(lo), head: None });
+                faces.push(OpenFace { axis, sign, lat: vec![1.0], seed, lo: Some(lo) });
             }
         }
     }
@@ -856,7 +856,7 @@ pub fn breaks_ragged(g: &mut crate::game::Game, b: &crate::break_table::CellGrid
         }
         if all {
             let lat = if thin == 0.0 { vec![2.0, 0.0] } else { vec![0.0, 2.0] };
-            faces.push(OpenFace { axis: 1.0, sign: 1.0, lat, seed: b.id * 7349.0 + 5003.0 + (if thin == 0.0 { z0 } else { x0 }) * 977.0, lo: None, head: None });
+            faces.push(OpenFace { axis: 1.0, sign: 1.0, lat, seed: b.id * 7349.0 + 5003.0 + (if thin == 0.0 { z0 } else { x0 }) * 977.0, lo: None });
         }
     }
     let cut = ragged_cut(g, row, h, &faces);

@@ -26,15 +26,6 @@ pub fn fresh() -> crate::nvg::Team {
 
 /// One row of the QA log, the last 200.   (nvg.ts note)
 pub fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
-    let who = match gd {
-        Some(id) => g.gd[id].callsign.clone(),
-        None => String::from("-"),
-    };
-    let t = g.time;
-    g.m.nvg.nvg_log.push(NvgNote { t, who, what: String::from(what) });
-    if g.m.nvg.nvg_log.len() > 200 {
-        g.m.nvg.nvg_log.drain(..50);
-    }
 }
 
 /// Is the team's state this frame's (or the last few: the rig is drawn after the tick, a paused frame draws again).

@@ -7,7 +7,6 @@ use alloc::{string::String, vec::Vec};
 pub struct WeatherSnap {
     pub kind: Option<crate::weather_kinds::WeatherKind>,
     pub thunder_until: Option<f64>,
-    pub on: bool,
     pub storm: f64,
     pub rain_rate: f64,
     pub wind: [f64; 2],
@@ -89,9 +88,6 @@ pub struct Flash {
     pub stroke: crate::weather::Stroke,
     pub t: f64,
     pub peak: f64,
-    pub dir: V3,
-    pub bearing: f64,
-    pub dist_km: f64,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -116,13 +112,6 @@ pub struct WeatherStats {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WeatherStatsLastThunder {
-    pub at: f64,
-    pub dist_km: f64,
-    pub bearing: f64,
-    pub loud: f64,
-    pub played_at: f64,
-    pub name: String,
-    pub gain: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

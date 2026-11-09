@@ -26,25 +26,20 @@ pub struct SeatRef<'a> {
     pub aim_point: V3,
     pub aim_target: Option<FixtureId>,
     pub aim_guard: Option<GuardId>,
-    pub aim_friend: Option<GuardId>,
     pub aim_snap: Option<V3>,
     pub hover: &'a Option<Interactable>,
     pub interactables: &'a Vec<Interactable>,
     pub nearby: &'a Vec<Interactable>,
     pub act: &'a Option<Interactable>,
-    pub use_door: Option<DoorId>,
     pub view_proj: &'a Option<crate::game::GameViewProj>,
-    pub threat_proximity: f64,
-    pub torch_on_t: f64,
 }
 
 /// the seat a pass is about: the one standing on the game
 pub fn here(g: &Game) -> SeatRef<'_> {
     SeatRef {
         id: g.seat, player: g.player, orders: &g.orders, door_tools: &g.door_tools, work: &g.work, wall_charge: &g.wall_charge,
-        aim_point: g.aim_point, aim_target: g.aim_target, aim_guard: g.aim_guard, aim_friend: g.aim_friend, aim_snap: g.aim_snap,
-        hover: &g.hover, interactables: &g.interactables, nearby: &g.nearby, act: &g.act, use_door: g.use_door, view_proj: &g.view_proj,
-        threat_proximity: g.threat_proximity, torch_on_t: g.torch_on_t,
+        aim_point: g.aim_point, aim_target: g.aim_target, aim_guard: g.aim_guard, aim_snap: g.aim_snap,
+        hover: &g.hover, interactables: &g.interactables, nearby: &g.nearby, act: &g.act, view_proj: &g.view_proj,
     }
 }
 
@@ -54,8 +49,7 @@ pub fn seat(g: &Game, s: SeatId) -> SeatRef<'_> {
     let o = g.tab.cmd_seat[s].own.as_ref().unwrap_or_else(|| panic!("seats::seat: {:?} neither stands on the game nor keeps a set", s));
     SeatRef {
         id: o.seat, player: o.player, orders: &o.orders, door_tools: &o.door_tools, work: &o.work, wall_charge: &o.wall_charge,
-        aim_point: o.aim_point, aim_target: o.aim_target, aim_guard: o.aim_guard, aim_friend: o.aim_friend, aim_snap: o.aim_snap,
-        hover: &o.hover, interactables: &o.interactables, nearby: &o.nearby, act: &o.act, use_door: o.use_door, view_proj: &o.view_proj,
-        threat_proximity: o.threat_proximity, torch_on_t: o.torch_on_t,
+        aim_point: o.aim_point, aim_target: o.aim_target, aim_guard: o.aim_guard, aim_snap: o.aim_snap,
+        hover: &o.hover, interactables: &o.interactables, nearby: &o.nearby, act: &o.act, view_proj: &o.view_proj,
     }
 }

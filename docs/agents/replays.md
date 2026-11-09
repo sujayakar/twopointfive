@@ -38,7 +38,7 @@ saves. The hand and the tick are in `overview.md`; a game over a wire is `net.md
 | `savestate/` (`control.rs`) | when a save is made, under which name, what happens when one goes back |
 | `rust/game_rules/src/state_words.rs` | the hash of the whole game, a word a part |
 
-The numbers of saves are `CkptK` and `SavetimelineK` in `rust/game_types/src/knobs/savestate.rs`. `rollback/` holds only types that nothing uses.
+The numbers of saves are `CkptK` and `SavetimelineK` in `rust/game_types/src/knobs/savestate.rs`.
 
 Tools: `tools/draw/walk.ts` walks a tape with no page and says if it is still the run. `tools/draw/tape-again.ts` plays a tape's hands on this
 checkout and writes a new tape. `tools/draw/tape-make.ts` makes a run from a script. `tools/cloud/pull.ts` reads a hosted build's tapes out of its

@@ -116,11 +116,6 @@ pub fn unseen_live(g: &mut Game) -> bool {
         g.stats.unseen.seconds += dt;
     }
     if live != was {
-        let what = if live { UnseenModUNSEENLOGItemWhat::On } else { UnseenModUNSEENLOGItemWhat::Off };
-        g.m.unseen.unseen_log.push(UnseenModUNSEENLOGItem { t: now, what, why });
-        if g.m.unseen.unseen_log.len() > 200 {
-            g.m.unseen.unseen_log.drain(0..100);
-        }
         if live {
             g.stats.unseen.spells += 1;
             let k = crate::seats::view_key(g, &crate::seats::here(g));

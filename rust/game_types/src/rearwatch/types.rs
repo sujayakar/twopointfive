@@ -11,7 +11,6 @@ pub struct RearPin {
     pub side: f64,
     pub op: Option<DoorOpId>,
     pub cls: f64,
-    pub t0: f64,
     pub seen_t: f64,
     pub a: OrdersAssignmentId,
     pub going: Option<bool>,

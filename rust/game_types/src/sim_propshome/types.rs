@@ -25,27 +25,15 @@ pub struct PropCols {
 
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PropStore {
-    pub epoch: f64,
     pub total: f64,
     pub o: crate::sim_propshome::PropStoreO,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    pub home: crate::Opaque,
-    pub b8: f64,
-    pub b4: f64,
-    pub cap: f64,
 }
 impl PropStore {
     /// what a new one holds
     pub fn blank() -> Self {
         PropStore {
-            epoch: -1.0,
             total: 0.0,
             o: crate::sim_propshome::PropStoreO::default(),
-            home: crate::Opaque,
-            b8: 0.0,
-            b4: 0.0,
-            cap: 0.0,
         }
     }
 }
@@ -73,77 +61,35 @@ pub struct PropStoreO {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PropIo {
-    pub x: crate::sim_sim::SimExports,
-    pub def: f64,
-    pub con: f64,
-    pub leaf: f64,
-    pub way: f64,
-    pub ev: f64,
-    pub par: f64,
     pub max_contacts: f64,
     pub max_leaves: f64,
     pub max_ways: f64,
-    pub max_events: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PD {
-    pub hx: f64,
-    pub hz: f64,
-    pub radius: f64,
-    pub height: f64,
-    pub mass: f64,
-    pub inv_mass: f64,
-    pub inv_i: f64,
-    pub decel: f64,
-    pub visc: f64,
-    pub rest: f64,
     pub chair: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PK {
-    pub x: f64,
-    pub z: f64,
-    pub vx: f64,
-    pub vz: f64,
-    pub radius: f64,
-    pub who: f64,
-    pub mass: f64,
     pub quiet: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PY {
-    pub cx: f64,
-    pub cz: f64,
-    pub ux: f64,
-    pub uz: f64,
     pub half: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PE {
-    pub prop: f64,
-    pub sound: f64,
-    pub roll: f64,
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
-    pub who: f64,
-    pub level: f64,
-    pub speed: f64,
     pub rolling: f64,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct SimPropshomeModPROPSSTEPPED {
     pub there: f64,
-    pub here: f64,
     pub noises: f64,
-    pub asked: f64,
-    pub differ: f64,
-    pub first: String,
     pub swept: f64,
     pub guided: f64,
     pub pairs: f64,
@@ -151,9 +97,7 @@ pub struct SimPropshomeModPROPSSTEPPED {
     pub held: f64,
     pub substeps: f64,
     pub settled: f64,
-    pub settled_here: f64,
     pub settle_walls: f64,
-    pub settle_moved: f64,
 }
 
 /// the state this module keeps at its top level
@@ -168,7 +112,7 @@ impl SimPropshomeMod {
     pub fn blank() -> Self {
         SimPropshomeMod {
             io: None,
-            props_stepped: crate::sim_propshome::SimPropshomeModPROPSSTEPPED { there: 0.0, here: 0.0, noises: 0.0, asked: 0.0, differ: 0.0, first: String::from(""), swept: 0.0, guided: 0.0, pairs: 0.0, walls: 0.0, held: 0.0, substeps: 0.0, settled: 0.0, settled_here: 0.0, settle_walls: 0.0, settle_moved: 0.0 },
+            props_stepped: crate::sim_propshome::SimPropshomeModPROPSSTEPPED { there: 0.0, noises: 0.0, swept: 0.0, guided: 0.0, pairs: 0.0, walls: 0.0, held: 0.0, substeps: 0.0, settled: 0.0, settle_walls: 0.0 },
         }
     }
 }
@@ -189,16 +133,16 @@ pub fn prop_u32() -> [String; 4] { [String::from("flags"), String::from("who"), 
 pub const PROP_HEAD: f64 = 16.0;
 
 /// (src/sim/propshome.ts:87 PD: a table nothing writes)
-pub fn pd() -> crate::sim_propshome::PD { crate::sim_propshome::PD { hx: 0.0, hz: 1.0, radius: 2.0, height: 3.0, mass: 4.0, inv_mass: 5.0, inv_i: 6.0, decel: 7.0, visc: 8.0, rest: 9.0, chair: 10.0 } }
+pub fn pd() -> crate::sim_propshome::PD { crate::sim_propshome::PD { chair: 10.0 } }
 
 /// (src/sim/propshome.ts:89 PK: a table nothing writes)
-pub fn pk() -> crate::sim_propshome::PK { crate::sim_propshome::PK { x: 0.0, z: 1.0, vx: 2.0, vz: 3.0, radius: 4.0, who: 5.0, mass: 6.0, quiet: 7.0 } }
+pub fn pk() -> crate::sim_propshome::PK { crate::sim_propshome::PK { quiet: 7.0 } }
 
 /// (src/sim/propshome.ts:91 PY: a table nothing writes)
-pub fn py() -> crate::sim_propshome::PY { crate::sim_propshome::PY { cx: 0.0, cz: 1.0, ux: 2.0, uz: 3.0, half: 4.0 } }
+pub fn py() -> crate::sim_propshome::PY { crate::sim_propshome::PY { half: 4.0 } }
 
 /// (src/sim/propshome.ts:93 PE: a table nothing writes)
-pub fn pe() -> crate::sim_propshome::PE { crate::sim_propshome::PE { prop: 0.0, sound: 1.0, roll: 2.0, x: 3.0, y: 4.0, z: 5.0, who: 6.0, level: 7.0, speed: 8.0, rolling: 9.0 } }
+pub fn pe() -> crate::sim_propshome::PE { crate::sim_propshome::PE { rolling: 9.0 } }
 
 /// (src/sim/propshome.ts:94 PROP_EV)
 pub const PROP_EV: f64 = 10.0;

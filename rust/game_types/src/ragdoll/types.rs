@@ -5,8 +5,6 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, Default)]
 pub struct RagdollWorld {
-    pub boxes: Vec<BoxId>,
-    pub dynamic_boxes: Vec<BoxId>,
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -109,8 +107,6 @@ pub struct RAG {
     pub head: f64,
     pub sho_l: f64,
     pub sho_r: f64,
-    pub elb_l: f64,
-    pub elb_r: f64,
     pub hand_l: f64,
     pub hand_r: f64,
     pub hip_l: f64,
@@ -122,7 +118,7 @@ pub struct RAG {
 }
 
 /// (src/game/ragdoll.ts:24 RAG: a table nothing writes)
-pub fn rag() -> crate::ragdoll::RAG { crate::ragdoll::RAG { pelvis: 0.0, spine: 1.0, neck: 2.0, head: 3.0, sho_l: 4.0, sho_r: 5.0, elb_l: 6.0, elb_r: 7.0, hand_l: 8.0, hand_r: 9.0, hip_l: 10.0, hip_r: 11.0, knee_l: 12.0, knee_r: 13.0, ank_l: 14.0, ank_r: 15.0 } }
+pub fn rag() -> crate::ragdoll::RAG { crate::ragdoll::RAG { pelvis: 0.0, spine: 1.0, neck: 2.0, head: 3.0, sho_l: 4.0, sho_r: 5.0, hand_l: 8.0, hand_r: 9.0, hip_l: 10.0, hip_r: 11.0, knee_l: 12.0, knee_r: 13.0, ank_l: 14.0, ank_r: 15.0 } }
 
 /// (src/game/ragdoll.ts:25 RAG_COUNT)
 pub const RAG_COUNT: f64 = 16.0;

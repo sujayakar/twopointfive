@@ -401,7 +401,7 @@ pub fn body_visibility(g: &mut crate::game::Game, o: GuardId) -> f64 {
         Some(row) if dt > 0.0 => v3::damp(row.vis, target, 6.0, dt),
         _ => target,
     };
-    g.m.guards.body_meters.set(o, crate::guards::GuardsModBodyMetersValue { vis, e, t: now });
+    g.m.guards.body_meters.set(o, crate::guards::GuardsModBodyMetersValue { vis, t: now });
     vis
 }
 

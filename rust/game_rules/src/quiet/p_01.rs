@@ -450,7 +450,7 @@ pub fn holder_stand(g: &mut crate::game::Game, front: V3, area: Option<crate::qu
             if s < bs { bs = s; best = Some([x, 0.0, z]); clear = c; inside = n; }
         }
     }
-    crate::quiet::HolderStand { pos: best, ok: best.is_some() && clear && inside, clear, inside }
+    crate::quiet::HolderStand { pos: best, clear, inside }
 }
 
 /// the quiet mission that is up on this game   (quiet.ts quietOf)

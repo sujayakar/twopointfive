@@ -5,7 +5,6 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PackExt {
-    pub part: f64,
     pub x0: f64,
     pub x1: f64,
     pub top0: f64,

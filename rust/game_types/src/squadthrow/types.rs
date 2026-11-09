@@ -297,12 +297,7 @@ pub struct LobLim {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct SquadthrowModSQUADTHROWLOGItem {
-    pub t: f64,
-    pub kind: crate::squadthrow::SquadThrowKind,
     pub who: String,
-    pub from: V3,
-    pub at: V3,
-    pub land: V3,
     pub rest: V3,
 }
 

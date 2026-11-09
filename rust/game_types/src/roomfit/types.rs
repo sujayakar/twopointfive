@@ -33,7 +33,6 @@ pub struct Watchable {
     pub w: f64,
     pub key: String,
     pub yaw: f64,
-    pub dist: f64,
     pub way: bool,
 }
 

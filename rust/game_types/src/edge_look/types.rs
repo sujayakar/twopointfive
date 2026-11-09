@@ -33,8 +33,6 @@ pub struct Rubble {
 pub struct Frame {
     pub b: BoxId,
     pub along_x: bool,
-    pub cs: f64,
-    pub sn: f64,
     pub t: f64,
     pub l: f64,
     pub n: f64,

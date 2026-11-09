@@ -10,7 +10,6 @@ pub struct Ground {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SNOWKIND {
-    pub none: f64,
     pub bare: f64,
     pub packed: f64,
     pub old: f64,
@@ -34,4 +33,4 @@ impl SnowBogMod {
 }
 
 /// (src/game/snowBog.ts:39 SNOW_KIND: a table nothing writes)
-pub fn snow_kind() -> crate::snow_bog::SNOWKIND { crate::snow_bog::SNOWKIND { none: 0.0, bare: 1.0, packed: 2.0, old: 3.0, bank: 4.0 } }
+pub fn snow_kind() -> crate::snow_bog::SNOWKIND { crate::snow_bog::SNOWKIND { bare: 1.0, packed: 2.0, old: 3.0, bank: 4.0 } }

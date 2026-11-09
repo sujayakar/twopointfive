@@ -102,11 +102,7 @@ pub fn item_store_new(g: &crate::game::Game, st: crate::Opaque) -> crate::sim_it
     let o = o_of(item_cols());
     let part = crate::sim_state::sim_part(crate::sim_state::P_ITEMS);
     ItemStore {
-        at: places_of(&o),
         o,
-        home: st,
-        b8: (js::to_u32(part) >> 3) as f64,
-        b4: (js::to_u32(part) >> 2) as f64,
         cap: ITEM_ROWS,
     }
 }
@@ -211,8 +207,7 @@ pub fn item_diff(g: &crate::game::Game, a: &[u8], b: &[u8], most: Option<f64>) -
     out
 }
 
-/// colDiff(O, ITEM_F64, ITEM_U32, a, b, rows, who, most, out) over this store's columns (itemshome.ts:143, colstore.ts:58), `who` being the row's serial:
-/// sim_colstore::col_diff cannot do it, its ColDiffO carrying only `bytes`.
+/// colDiff(O, ITEM_F64, ITEM_U32, a, b, rows, who, most, out) over this store's columns (itemshome.ts:143, colstore.ts:58), `who` being the row's serial.
 fn col_diff_items(o: &ItemStoreO, a: &[u8], b: &[u8], rows: usize, most: f64, out: &mut Vec<String>) {
     let at = places_of(o);
     for (c, k) in item_f64().iter().enumerate() {

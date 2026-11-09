@@ -416,7 +416,7 @@ mod tests {
     }
 
     fn face(axis: f64, sign: f64, lat: &[f64], seed: f64, lo: Option<f64>) -> OpenFace {
-        OpenFace { axis, sign, lat: lat.to_vec(), seed, lo, head: None }
+        OpenFace { axis, sign, lat: lat.to_vec(), seed, lo }
     }
 
     #[test]

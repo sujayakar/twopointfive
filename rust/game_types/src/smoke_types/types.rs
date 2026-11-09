@@ -46,7 +46,6 @@ pub struct SmokeEmitter {
     pub lattice: Option<crate::smoke_types::SmokeEmitterLattice>,
     pub confined: Option<bool>,
     pub prio: Option<f64>,
-    pub anchor: Option<V3>,
     pub min_voxels: Option<f64>,
     pub look: Option<bool>,
     /// the game's own smoke holds what it lets out (said as it goes out to the host: out_events)
@@ -82,7 +81,6 @@ pub enum SmokePushLattice {
 #[derive(Clone, Debug, Default)]
 pub struct WindGpuSource {
     pub kind: crate::smoke_types::WindGpuSourceKind,
-    pub name: String,
     pub pos: V3,
     pub dir: V3,
     pub speed: f64,
@@ -91,9 +89,6 @@ pub struct WindGpuSource {
     pub r0: f64,
     pub d_max: f64,
     pub floor_y: Option<f64>,
-    pub interior: Option<[f64; 4]>,
-    pub annex: Option<[f64; 4]>,
-    pub roofs: Option<Vec<Vec<f64>>>,
     pub field: Option<bool>,
     pub bound: crate::smoke_types::WindGpuSourceBound,
     pub kinds: Option<f64>,

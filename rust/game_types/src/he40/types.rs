@@ -5,11 +5,9 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct ShellEnd {
-    pub at: V3,
     pub flown: f64,
     pub armed: bool,
     pub met: crate::he40::ShellEndMet,
-    pub report: Option<crate::frag::BlastReport>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]

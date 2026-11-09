@@ -12,7 +12,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// beside the box (the TypeScript's side table, keyed by the box) and goes when the box's row is freed (`thin_forget`). Picture only: nothing in a
 /// step reads it; a host that draws does (which boxes are a laser's beam or a tracer's streak).   (thinline.ts:17 thinNote)
 pub fn thin_note(g: &mut crate::game::Game, b: AnyBoxId, hw0: f64, k: f64, r: f64, g_2: f64, bl: f64) -> AnyBoxId {
-    g.m.thinline.thin.set(b, crate::thinline::Thin { hw0, k, e: [r, g_2, bl] });
+    g.m.thinline.thin.set(b, crate::thinline::Thin { hw0, k });
     b
 }
 /// A box's row is free again: what was noted of the box that stood in it is gone with it (the TypeScript's tables hold their keys weakly).

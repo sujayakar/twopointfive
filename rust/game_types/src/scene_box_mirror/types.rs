@@ -6,20 +6,15 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug, Default)]
 pub struct PaneView {
     pub kind: f64,
-    pub bi: Vec<f64>,
     pub at: Vec<f64>,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct PaneSource {
-    pub view: Option<crate::scene_box_mirror::PaneView>,
-    pub home: Option<crate::Opaque>,
-    pub sheets: Option<Vec<f64>>,
 }
 
 #[derive(Clone, Debug)]
 pub struct BoxMirror {
-    pub x: crate::sim_sim::SimExports,
     pub slot: f64,
     pub live: bool,
     pub lines: bool,
@@ -77,7 +72,6 @@ impl BoxMirror {
     /// what a new one holds
     pub fn blank() -> Self {
         BoxMirror {
-            x: crate::sim_sim::SimExports::default(),
             slot: -1.0,
             live: false,
             lines: false,
@@ -136,8 +130,6 @@ impl Default for BoxMirror { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, Default)]
 pub struct BoxMirrorGridOf {
-    pub cells: Vec<Vec<f64>>,
-    pub tilted_at: Vec<f64>,
     pub w: f64,
     pub h: f64,
     pub cs: f64,
@@ -180,8 +172,6 @@ pub struct SceneBoxMirrorModTHINGS {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct SceneBoxMirrorMod {
-    /// (src/scene/boxMirror.ts:54 HELD)
-    pub held: Vec<Option<crate::scene_box_mirror::BoxMirror>>,
     /// (src/scene/boxMirror.ts:55 CLOCK)
     pub clock: crate::scene_box_mirror::SceneBoxMirrorModCLOCK,
     /// (src/scene/boxMirror.ts:57 COPIES)
@@ -194,7 +184,6 @@ pub struct SceneBoxMirrorMod {
 impl SceneBoxMirrorMod {
     pub fn blank() -> Self {
         SceneBoxMirrorMod {
-            held: Vec::new(),
             clock: crate::scene_box_mirror::SceneBoxMirrorModCLOCK { n: 0.0 },
             copies: crate::scene_box_mirror::SceneBoxMirrorModCOPIES { n: 0.0 },
             leaves: crate::scene_box_mirror::SceneBoxMirrorModLEAVES { n: 0.0 },

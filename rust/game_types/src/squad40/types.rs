@@ -64,13 +64,7 @@ pub struct StateShown {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Squad40ModSQUAD40LOGItem {
-    pub t: f64,
-    pub who: String,
-    pub from: V3,
-    pub at: V3,
     pub burst: V3,
-    pub left: f64,
-    pub turned: bool,
 }
 
 #[derive(Clone, Debug, Default)]

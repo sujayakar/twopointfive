@@ -983,9 +983,8 @@ pub fn cover_step_halt(g: &mut Game, gd: GuardId) {
 
 /// A change of hands, for the probes' record: the newest 400. (cover.ts note)
 pub fn cover_note(g: &mut Game, gd: GuardId, id_2: Option<&str>) {
-    let (t, who) = (g.time, g.gd[gd].callsign.clone());
     let log = &mut g.cover.log;
-    log.push(CoverLogItem { t, who, id: id_2.map(String::from) });
+    log.push(CoverLogItem {  });
     if log.len() > 400 { let extra = log.len() - 400; log.drain(0..extra); }
 }
 

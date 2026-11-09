@@ -32,8 +32,8 @@ pub(super) fn mem_no(g: &Game, run: &str) -> Option<String> {
     None
 }
 
-/// Checkpoints.load of a key not on the shelf (src/game/savestate.ts:1171). A file's save is the host's: its store is a boundary that holds nothing on
-/// this side (`save_store_get`), and `read` of a key with nothing behind it is "gone". The host that keeps saves hands them over on the shelf.
+/// Checkpoints.load of a key not on the shelf (src/game/savestate.ts:1171). A file's save is the host's: its store is not on
+/// this side, and a key with nothing behind it is "gone". The host that keeps saves hands them over on the shelf.
 fn load_off_shelf(g: &Game, key: &str) -> Option<String> {
     Some(String::from("that checkpoint is gone"))
 }

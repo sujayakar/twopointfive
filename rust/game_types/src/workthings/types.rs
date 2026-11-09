@@ -32,7 +32,6 @@ pub struct WorkThings {
     pub jobs: JsMap<GuardId, crate::workthings::Job>,
     pub hands: JsMap<CharId, crate::workthings::WorkThingsHandsValue>,
     pub cache: Option<crate::workthings::WorkThingsCache>,
-    pub log: Vec<crate::workthings::WorkThingsLogItem>,
 }
 impl WorkThings {
     /// what a new one holds
@@ -42,7 +41,6 @@ impl WorkThings {
             jobs: JsMap::new(),
             hands: JsMap::new(),
             cache: None,
-            log: Vec::new(),
         }
     }
 }
@@ -88,13 +86,6 @@ pub struct WorkThingsCache {
     pub key: String,
     pub t: f64,
     pub list: Vec<crate::workthings::WorkThing>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct WorkThingsLogItem {
-    pub t: f64,
-    pub who: String,
-    pub what: String,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

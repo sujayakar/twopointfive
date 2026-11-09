@@ -175,24 +175,5 @@ pub struct RunVerdictHostages {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KeptNote {
-    pub streak: f64,
-    pub fresh: bool,
-    pub gold: bool,
-    pub ways: crate::verdict::KeptNoteWays,
-    pub lesson: Option<bool>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KeptNoteWays {
-    pub doors: Option<crate::verdict::KeptNoteWaysDoors>,
-    pub quiet: Option<crate::verdict::KeptNoteWaysDoors>,
-    pub walls: Option<crate::verdict::KeptNoteWaysDoors>,
-    pub dark: Option<crate::verdict::KeptNoteWaysDoors>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KeptNoteWaysDoors {
-    pub first: bool,
-    pub clean: bool,
 }
 

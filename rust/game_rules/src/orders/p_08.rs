@@ -306,7 +306,7 @@ pub fn squad_orders_who_tag(g: &crate::game::Game, seat: &crate::seats::SeatRef)
     if seat.orders.menu.as_ref().map_or(false, |x| x.part.is_some()) {
         let men = seat.orders.menu.as_ref().unwrap().men.clone();
         let tag = if !men.is_empty() { squad_orders_who_words(g, seat, Some(&men)) } else { String::from("nobody") };
-        return SquadOrdersWhoTag { tag, one: true };
+        return SquadOrdersWhoTag { tag };
     }
     let menu_man = match seat.orders.menu.as_ref().map(|x| &x.target) {
         Some(OrderTarget::None(t)) => t.man,
@@ -317,14 +317,14 @@ pub fn squad_orders_who_tag(g: &crate::game::Game, seat: &crate::seats::SeatRef)
         (None, Who::Num(n)) => squad_orders_squad(g, seat).get(n as usize).copied(),
         _ => None,
     };
-    if let Some(man) = man { return SquadOrdersWhoTag { tag: g.gd[man].callsign.clone(), one: true }; }
+    if let Some(man) = man { return SquadOrdersWhoTag { tag: g.gd[man].callsign.clone() }; }
     let tag = match seat.orders.who {
         Who::All => String::from(if squad_orders_paired(g, seat) { "GOLD" } else { "all" }),
         Who::Red => String::from("RED"),
         Who::Blue => String::from("BLUE"),
         Who::Num(n) => js::num_str(n),
     };
-    SquadOrdersWhoTag { tag, one: false }
+    SquadOrdersWhoTag { tag }
 }
 
 /// A target in the panel's words: what an order from the menu would be about.   (orders.ts SquadOrders.hoverWords)

@@ -106,7 +106,7 @@ impl PropSystem {
             store: crate::sim_propshome::PropStore::blank(),
             enabled: true,
             friction_scale: 1.0,
-            stats: crate::props::PropSystemStats { awake: 0.0, ms: 0.0 },
+            stats: crate::props::PropSystemStats { awake: 0.0 },
             by_box: JsMap::new(),
             muted: true,
             said: Vec::new(),
@@ -120,9 +120,6 @@ impl Default for PropSystem { fn default() -> Self { Self::blank() } }
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PropSystemStats {
     pub awake: f64,
-    /// (scratch, read by nobody who did not just write it: in no bytes)
-    #[bytes(skip)]
-    pub ms: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

@@ -392,7 +392,7 @@ pub fn wall_break_plan_blast(g: &mut crate::game::Game, at: V3, opts: crate::wal
         Some(h) => Vec::from(h),
         None => match opts.hung { Some(x) => wall_break_hung_at(g, x.wall, at, x.r), None => Vec::new() },
     };
-    let as_item = |p: WallBreakPlanOfItem| WallBreakPlanBlastItem { b: p.b, cells: p.cells, d: p.d };
+    let as_item = |p: WallBreakPlanOfItem| WallBreakPlanBlastItem { b: p.b, cells: p.cells };
     if own.is_empty() { return wall_break_plan_of(g, at, opts, r).into_iter().map(as_item).collect(); }
     // (the boards stand in no line of the plan: hidden as the engine hides a static, and put back)
     let own: Vec<BoxId> = own.iter().map(|&j| box_at(g, j)).collect();
@@ -700,14 +700,11 @@ pub fn wall_break_reset(g: &mut crate::game::Game, silent: Option<bool>) {
     crate::scene_collision::sound_paths_invalidate(g);
     if !silent {
         wall_break_note(g, &WallBreakNoteC {
-            dead: false,
             kind: LevelChangeKind::Reset,
             cause: LevelChangeCause::Reset,
-            name: None,
             who: crate::consts::NOBODY_ID,
             pos: [0.0, 0.0, 0.0],
             id: -1.0,
-            sight: false,
             rect: [world.min[0], world.min[2], world.max[0], world.max[2]],
             opened: Vec::new(),
             walkable: false,

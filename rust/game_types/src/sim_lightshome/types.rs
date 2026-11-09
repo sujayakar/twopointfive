@@ -55,15 +55,11 @@ pub struct Fixture {
     pub light: Option<LightId>,
     pub boxes: Vec<f64>,
     pub base_emissive: V3,
-    pub fluorescent_flicker: bool,
     pub mains: bool,
     pub interactive: bool,
     pub area_lights: Option<Vec<crate::sim_lightshome::FixtureAreaLightsItem>>,
     pub lens: Option<V3>,
     pub i: f64,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    pub st: crate::Opaque,
 }
 impl Fixture {
     /// what a new one holds
@@ -76,13 +72,11 @@ impl Fixture {
             light: None,
             boxes: Vec::new(),
             base_emissive: [0.0; 3],
-            fluorescent_flicker: false,
             mains: false,
             interactive: false,
             area_lights: None,
             lens: None,
             i: 0.0,
-            st: crate::Opaque,
         }
     }
 }
@@ -112,22 +106,6 @@ pub struct FixtureAreaLightsItem {
     pub base: f64,
 }
 
-#[derive(Clone, Copy, Debug, ToBytes)]
-pub struct Mains {
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    pub st: crate::Opaque,
-}
-impl Mains {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Mains {
-            st: crate::Opaque,
-        }
-    }
-}
-impl Default for Mains { fn default() -> Self { Self::blank() } }
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BeaconFact {
     pub light: LightId,
@@ -137,7 +115,6 @@ pub struct BeaconFact {
 
 #[derive(Clone, Debug, ToBytes)]
 pub struct LightHome {
-    pub mains: crate::sim_lightshome::Mains,
     pub lamps: Vec<LightId>,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
@@ -147,7 +124,6 @@ impl LightHome {
     /// what a new one holds
     pub fn blank() -> Self {
         LightHome {
-            mains: crate::sim_lightshome::Mains::blank(),
             lamps: Vec::new(),
             st: crate::Opaque,
         }
@@ -166,15 +142,8 @@ pub struct LIGHTCAPS {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ROWBIT {
-    pub on: f64,
     pub passing: f64,
     pub screen: f64,
-    pub role: f64,
-    pub own: f64,
-    pub area: f64,
-    pub beacon: f64,
-    pub cone: f64,
-    pub steady: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -182,18 +151,11 @@ pub struct LIGHTIN {
     pub on: f64,
     pub break_: f64,
     pub mend: f64,
-    pub toggle: f64,
-    pub blind: f64,
     pub hand: f64,
     pub authored: f64,
     pub base: f64,
-    pub put: f64,
-    pub trip: f64,
-    pub back: f64,
-    pub mains: f64,
     pub fix: f64,
     pub fresh: f64,
-    pub stagger: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -225,10 +187,10 @@ pub fn light_cols() -> [String; 67] { [String::from("n"), String::from("rows"), 
 pub fn light_caps() -> crate::sim_lightshome::LIGHTCAPS { crate::sim_lightshome::LIGHTCAPS { targets: 256.0, rows: 256.0, beacons: 32.0, cameras: 32.0, lasers: 32.0 } }
 
 /// (src/sim/lightshome.ts:37 ROW_BIT: a table nothing writes)
-pub fn row_bit() -> crate::sim_lightshome::ROWBIT { crate::sim_lightshome::ROWBIT { on: 1.0, passing: 2.0, screen: 4.0, role: 24.0, own: 0.0, area: 8.0, beacon: 16.0, cone: 24.0, steady: 32.0 } }
+pub fn row_bit() -> crate::sim_lightshome::ROWBIT { crate::sim_lightshome::ROWBIT { passing: 2.0, screen: 4.0 } }
 
 /// (src/sim/lightshome.ts:42 LIGHT_IN: a table nothing writes)
-pub fn light_in() -> crate::sim_lightshome::LIGHTIN { crate::sim_lightshome::LIGHTIN { on: 0.0, break_: 1.0, mend: 2.0, toggle: 3.0, blind: 4.0, hand: 5.0, authored: 6.0, base: 7.0, put: 8.0, trip: 9.0, back: 10.0, mains: 11.0, fix: 12.0, fresh: 13.0, stagger: 14.0 } }
+pub fn light_in() -> crate::sim_lightshome::LIGHTIN { crate::sim_lightshome::LIGHTIN { on: 0.0, break_: 1.0, mend: 2.0, hand: 5.0, authored: 6.0, base: 7.0, fix: 12.0, fresh: 13.0 } }
 
 /// (src/sim/lightshome.ts:46 CAM: a table nothing writes)
 pub fn cam() -> crate::sim_lightshome::CAM { crate::sim_lightshome::CAM { ok: 1.0, down: 2.0, suspect: 4.0, alarm: 8.0 } }

@@ -34,8 +34,6 @@ pub struct NextRoom {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct StackRoomProbe {
     pub floor: bool,
-    pub cells: f64,
-    pub seed: Option<V3>,
 }
 
 /// the state this module keeps at its top level

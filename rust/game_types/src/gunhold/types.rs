@@ -121,7 +121,6 @@ pub enum BarkKind {
 pub struct GunHoldFeetFs {
     pub ok: bool,
     pub rear: f64,
-    pub clear: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

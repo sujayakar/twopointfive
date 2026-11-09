@@ -3,15 +3,6 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct SeatsModSEATASKS {
-    pub strict: bool,
-    pub shared: bool,
-    pub misses: f64,
-    pub missed: JsSet<String>,
-    pub sites: Option<JsMap<String, f64>>,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ViewOfBodyC {
     pub id: f64,
@@ -64,20 +55,6 @@ impl Default for SeatSet {
             view_proj: None,
             threat_proximity: 0.0,
             torch_on_t: -100.0,
-        }
-    }
-}
-
-/// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
-pub struct SeatsMod {
-    /// (src/game/seats.ts:48 SEAT_ASKS)
-    pub seat_asks: crate::seats::SeatsModSEATASKS,
-}
-impl SeatsMod {
-    pub fn blank() -> Self {
-        SeatsMod {
-            seat_asks: crate::seats::SeatsModSEATASKS { strict: false, shared: false, misses: 0.0, missed: JsSet::new(), sites: None },
         }
     }
 }

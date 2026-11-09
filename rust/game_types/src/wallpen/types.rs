@@ -44,7 +44,6 @@ pub struct WallCross {
     pub n_out: V3,
     pub into: f64,
     pub stuff: crate::wallpen::ThinStuff,
-    pub take: f64,
     pub e_out: f64,
     pub thru: f64,
 }
@@ -62,7 +61,6 @@ pub struct ThinPath {
 pub struct ThinLine {
     pub walls: Vec<crate::wallpen::WallCross>,
     pub panes: f64,
-    pub e: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

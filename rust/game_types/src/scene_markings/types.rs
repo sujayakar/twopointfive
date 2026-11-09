@@ -61,9 +61,6 @@ pub struct MarkingDef {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MarkStats {
-    pub texel: f64,
-    pub w: f64,
-    pub h: f64,
     pub f: [f64; 3],
     pub alb: [V3; 3],
     pub mean_l: V3,
@@ -81,8 +78,6 @@ pub struct FACEAXESItem {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct FaceHalf {
-    pub hu: f64,
-    pub hv: f64,
     pub hn: f64,
 }
 

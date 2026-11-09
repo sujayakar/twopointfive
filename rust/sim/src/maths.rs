@@ -1,4 +1,4 @@
-//! THE GAME'S OWN MATHS — sin, cos, tan, asin, acos, atan, atan2, exp, log, log2, log10, pow, tanh and hypot from + − × ÷ and √ alone.
+//! THE GAME'S OWN MATHS — sin, cos, tan, asin, acos, atan, atan2, exp, log, pow and hypot from + − × ÷ and √ alone.
 //!
 //! This is src/math/exact.ts (and the Kahan sums of src/math/hyp.ts), statement for statement: the same operations in the same order on the same doubles, so
 //! the same bits. The TypeScript file says why the game has maths of its own and where the algorithms come from (the Go standard library's portable math

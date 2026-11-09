@@ -472,8 +472,7 @@ pub fn night_breach_stand_by(g: &mut crate::game::Game, lead: V3, taken: &[V3], 
 
 /// What happened when, on the game clock. (nightbreach.ts NightBreach.note)
 pub fn night_breach_note(g: &mut crate::game::Game, what: &str) {
-    let t = g.time;
-    g.night_breach.log.push(NightBreachLogItem { t, what: String::from(what) });
+    g.night_breach.log.push(NightBreachLogItem { what: String::from(what) });
     if g.night_breach.log.len() > 400 { g.night_breach.log.drain(0..100); }
 }
 
@@ -559,8 +558,7 @@ pub fn night_breach_call_off(g: &mut crate::game::Game) -> Option<String> {
             let d = g.night_breach.drill.as_mut().unwrap();
             d.phase = crate::breach::Phase::Done;
             d.t_done = d.t;
-            let t = d.t;
-            d.beats.push(crate::breach::BreachDrillBeatsItem { t, what: String::from("recalled") });
+            d.beats.push(crate::breach::BreachDrillBeatsItem { what: String::from("recalled") });
             None
         }
         _ => None,
@@ -810,10 +808,10 @@ mod tests {
         d.phase = Phase::Done;
         assert_eq!(night_breach_state(&mut g), NightBreachState::Failed);
         let d = g.night_breach.drill.as_mut().unwrap();
-        d.beats.push(BreachDrillBeatsItem { t: 0.0, what: String::from("recalled") });
+        d.beats.push(BreachDrillBeatsItem { what: String::from("recalled") });
         assert_eq!(night_breach_state(&mut g), NightBreachState::Recalled);
         let d = g.night_breach.drill.as_mut().unwrap();
-        d.beats.push(BreachDrillBeatsItem { t: 0.0, what: String::from("clear") });
+        d.beats.push(BreachDrillBeatsItem { what: String::from("clear") });
         assert_eq!(night_breach_state(&mut g), NightBreachState::Clear);
     }
 

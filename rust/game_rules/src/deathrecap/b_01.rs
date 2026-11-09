@@ -253,7 +253,7 @@ fn file_ripe(g: &mut Game) {
 fn squad_lost(g: &mut Game, d: &RecapDeath) {
     let src = d.from.or(d.by_at).and_then(|s| eighth(s[0] - d.at[0], s[1] - d.at[1]));
     let heard_it = d.loud && match d.from { Some(f) => heard(g, [f[0], 1.3, f[1]]), None => false };
-    g.recap.lost_live.push(LostMan { id: d.victim, name: d.name.clone(), t: d.t, at: d.at, from: None, known_at: f64::INFINITY });
+    g.recap.lost_live.push(LostMan { id: d.victim, t: d.t, at: d.at, from: None, known_at: f64::INFINITY });
     g.recap.lost.push(Lost { src, heard: heard_it, saw: None, players_saw: Vec::new(), done: false });
     g.recap.lost_next = 0.0;
 }

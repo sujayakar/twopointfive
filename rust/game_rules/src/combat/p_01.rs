@@ -338,12 +338,10 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     }
     // gas, light and powder: the shot from effects.ts
     if lead {
-        let seed = g.fx_seed;
         g.fx_seed += 1.0;
         let gain = mf.light_gain * (if def.suppressed { crate::effects::shot().suppressed_gain } else { 1.0 });
         let gas = !crate::fogofwar::fog_of_war_air_hides(g, shooter);
         let lights = crate::effects::spawn_shot(g, muzzle, dir, &crate::effects::SpawnShotO {
-            seed,
             light_gain: Some(gain),
             light_range: mf.light_range,
             track: Some(crate::effects::Track::Muzzle { by: shooter }),

@@ -49,14 +49,6 @@ pub struct K {
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
-pub struct ShutdoorModSHUTDOORLOGItem {
-    pub t: f64,
-    pub who: String,
-    pub door: String,
-    pub what: String,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ShutdoorModSpottedValue {
     pub key: String,
     pub spots: Vec<Option<crate::shutdoor::Spot>>,
@@ -77,8 +69,6 @@ pub struct PlanArm1 {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct ShutdoorMod {
-    /// (src/game/shutdoor.ts:54 SHUTDOOR_LOG)
-    pub shutdoor_log: Vec<crate::shutdoor::ShutdoorModSHUTDOORLOGItem>,
     /// (src/game/shutdoor.ts:58 jobs)
     pub jobs: JsMap<GuardId, crate::shutdoor::Job>,
     /// (src/game/shutdoor.ts:108 spotted)
@@ -87,7 +77,6 @@ pub struct ShutdoorMod {
 impl ShutdoorMod {
     pub fn blank() -> Self {
         ShutdoorMod {
-            shutdoor_log: Vec::new(),
             jobs: JsMap::new(),
             spotted: None,
         }

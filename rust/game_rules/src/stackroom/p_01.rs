@@ -801,8 +801,6 @@ pub fn stack_room_probe(g: &mut crate::game::Game, d: DoorId, side: f64) -> crat
     let seed = match &f { Some(f) => Some(centre(g, f.seed)), None => None };
     crate::stackroom::StackRoomProbe {
         floor: f.is_some(),
-        cells: match &f { Some(f) => f.cells.len() as f64, None => 0.0 },
-        seed,
     }
 }
 

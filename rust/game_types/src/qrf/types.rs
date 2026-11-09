@@ -102,7 +102,6 @@ impl TargetKind {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Perimeter {
     pub state: crate::qrf::PerimeterState,
-    pub called_at: f64,
     pub eta_at: f64,
     pub set_at: f64,
     pub men: Vec<crate::qrf::PerimeterMenItem>,
@@ -262,7 +261,6 @@ impl Default for Qrf { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct QrfLogItem {
-    pub t: f64,
     pub what: String,
 }
 
@@ -282,7 +280,6 @@ pub enum QrfWordKey {
 pub struct QrfWordValue {
     pub at: V3,
     pub t: f64,
-    pub how: String,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -304,7 +301,6 @@ pub struct BudgetOfArm0 {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BudgetOfArm1 {
-    pub budget: Option<()>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -329,7 +325,6 @@ pub struct FixOf {
 #[derive(Clone, Debug, Default)]
 pub struct ResponseWords {
     pub site: String,
-    pub at: String,
     pub team: String,
 }
 

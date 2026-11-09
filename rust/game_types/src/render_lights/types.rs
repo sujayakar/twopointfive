@@ -7,9 +7,6 @@ use alloc::{string::String, vec::Vec};
 pub struct LightSet {
     pub lights: Vec<LightId>,
     pub ir: Vec<LightId>,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    pub device: crate::Opaque,
     pub fog_team: crate::render_lights::LightSetFogTeam,
 }
 impl LightSet {
@@ -18,7 +15,6 @@ impl LightSet {
         LightSet {
             lights: Vec::new(),
             ir: Vec::new(),
-            device: crate::Opaque,
             fog_team: crate::render_lights::LightSetFogTeam { on: false, owners: JsSet::new(), lights: JsSet::new() },
         }
     }
@@ -60,7 +56,6 @@ pub struct RtLight {
     pub mark_ref: Option<f64>,
     pub card: bool,
     pub slot: Option<f64>,
-    pub glass_mask: Option<f64>,
     pub fog: Option<f64>,
     pub fog_ghost: Option<f64>,
     pub fog_by: Option<f64>,
@@ -81,8 +76,6 @@ pub struct RtLightSteady {
 pub struct RtLightPortal {
     pub half_wide: f64,
     pub share: f64,
-    pub deep: Option<f64>,
-    pub rims: Option<f64>,
 }
 
 /// (src/render/lights.ts:76 MAX_LIGHTS)

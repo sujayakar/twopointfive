@@ -8,8 +8,6 @@ use alloc::{string::String, vec::Vec};
 pub struct CastMod {
     /// (src/game/cast.ts:26 worn)
     pub worn: JsMap<CharId, AnimGltfCastVariantId>,
-    /// (src/game/cast.ts:32 fieldBits)
-    pub field_bits: JsMap<crate::ObjKey, f64>,
     /// (src/game/cast.ts:65 hasNvg)
     pub has_nvg: JsMap<AnimGltfCastVariantId, bool>,
 }
@@ -17,7 +15,6 @@ impl CastMod {
     pub fn blank() -> Self {
         CastMod {
             worn: JsMap::new(),
-            field_bits: JsMap::new(),
             has_nvg: JsMap::new(),
         }
     }

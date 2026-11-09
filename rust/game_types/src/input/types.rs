@@ -13,9 +13,7 @@ pub struct Input {
     pub wheel_ctrl: f64,
     pub buttons: f64,
     pub clicked: f64,
-    pub suppress_click: bool,
     pub wheel: f64,
-    pub has_focus: bool,
     pub lock_except: Option<JsSet<String>>,
 }
 impl Input {
@@ -30,9 +28,7 @@ impl Input {
             wheel_ctrl: 0.0,
             buttons: 0.0,
             clicked: 0.0,
-            suppress_click: false,
             wheel: 0.0,
-            has_focus: true,
             lock_except: None,
         }
     }

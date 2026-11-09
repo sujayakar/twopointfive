@@ -54,25 +54,15 @@ pub struct Team {
     pub call_due: bool,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct NvgNote {
-    pub t: f64,
-    pub who: String,
-    pub what: String,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct NvgMod {
-    /// (src/game/nvg.ts:93 NVG_LOG)
-    pub nvg_log: Vec<crate::nvg::NvgNote>,
     /// (src/game/nvg.ts:94 teams)
     pub teams: Option<crate::nvg::Team>,
 }
 impl NvgMod {
     pub fn blank() -> Self {
         NvgMod {
-            nvg_log: Vec::new(),
             teams: None,
         }
     }

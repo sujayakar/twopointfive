@@ -105,8 +105,6 @@ pub enum SentPhase {
 pub struct SquadEvent {
     pub t: f64,
     pub what: crate::enemysquads::SquadEventWhat,
-    pub n: f64,
-    pub why: String,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]

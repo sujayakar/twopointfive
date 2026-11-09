@@ -182,7 +182,7 @@ pub fn team_ran(g: &mut crate::game::Game, gd: GuardId) {
             RunWhy::Told => g.stats.teampace.told += 1,
         },
     }
-    g.m.teampace.ran.set(gd, TeampaceModRanValue { t, why });
+    g.m.teampace.ran.set(gd, TeampaceModRanValue { t });
 }
 
 /// seconds since he last had a reason to run (infinity: never, or the rule is off)   (teampace.ts teamRunAgo)

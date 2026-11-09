@@ -33,17 +33,11 @@ pub struct FallDue {
 
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FallStore {
-    pub base: f64,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    pub home: crate::Opaque,
 }
 impl FallStore {
     /// what a new one holds
     pub fn blank() -> Self {
         FallStore {
-            base: 0.0,
-            home: crate::Opaque,
         }
     }
 }
@@ -51,12 +45,7 @@ impl Default for FallStore { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, Default)]
 pub struct SimFallshomeModFALLS {
-    pub both: bool,
     pub there: f64,
-    pub here: f64,
-    pub asked: f64,
-    pub differ: f64,
-    pub first: String,
     pub dues: f64,
     pub steps: f64,
     pub crunches: f64,
@@ -93,7 +82,7 @@ pub struct SimFallshomeMod {
 impl SimFallshomeMod {
     pub fn blank() -> Self {
         SimFallshomeMod {
-            falls: crate::sim_fallshome::SimFallshomeModFALLS { both: false, there: 0.0, here: 0.0, asked: 0.0, differ: 0.0, first: String::from(""), dues: 0.0, steps: 0.0, crunches: 0.0 },
+            falls: crate::sim_fallshome::SimFallshomeModFALLS { there: 0.0, dues: 0.0, steps: 0.0, crunches: 0.0 },
         }
     }
 }

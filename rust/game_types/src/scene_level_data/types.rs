@@ -24,8 +24,6 @@ impl PropKindName {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct BoxData {
     pub id: String,
-    pub floor: Option<String>,
-    pub group: Option<String>,
     pub name: Option<String>,
     pub c: V3,
     pub h: V3,
@@ -110,7 +108,6 @@ pub enum LightDataKind {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct DoorData {
     pub id: String,
-    pub floor: Option<String>,
     pub hinge: [f64; 2],
     pub closed_dir: f64,
     pub width: f64,
@@ -146,13 +143,11 @@ pub struct Rect {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct SurfacesDataZonesItem {
-    pub id: String,
     pub mat: crate::floor::FloorMat,
     pub x0: f64,
     pub z0: f64,
     pub x1: f64,
     pub z1: f64,
-    pub notes: Option<String>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -169,7 +164,6 @@ pub struct DEVICEDEFAULTS {
 pub struct VENTDEFAULTS {
     pub size: f64,
     pub duty: f64,
-    pub phase: f64,
     pub mains: bool,
 }
 
@@ -177,4 +171,4 @@ pub struct VENTDEFAULTS {
 pub fn device_defaults() -> crate::scene_level_data::DEVICEDEFAULTS { crate::scene_level_data::DEVICEDEFAULTS { pitch: -0.35, fov_deg: 70.0, range: 14.0, sweep_period: 9.0, group: String::from("security"), alarm: String::from("suspicion") } }
 
 /// (tools/levels/lib/levelData.ts:194 VENT_DEFAULTS: a table nothing writes)
-pub fn vent_defaults() -> crate::scene_level_data::VENTDEFAULTS { crate::scene_level_data::VENTDEFAULTS { size: 0.6, duty: 1.0, phase: 0.0, mains: true } }
+pub fn vent_defaults() -> crate::scene_level_data::VENTDEFAULTS { crate::scene_level_data::VENTDEFAULTS { size: 0.6, duty: 1.0, mains: true } }

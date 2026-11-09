@@ -105,7 +105,7 @@ pub fn plate_on(g: &mut crate::game::Game, stand: V3, n: V3, room: f64, d: DoorI
         if crate::doors::door_swing_sweeps(&s, face[0], face[2], Some(0.08)) || crate::doors::door_swing_sweeps(&s, stand[0], stand[2], Some(0.3)) { return None; }
     }
     if crate::scene_collision::solid_blocked(g, [stand[0], 1.3, stand[2]], v3::mad(pos, n, 0.05), None) { return None; }
-    Some(Plate { pos, n, stand: [pos[0] + n[0] * stand_m, 0.0, pos[2] + n[2] * stand_m], floor, door: d, room })
+    Some(Plate { pos, n, stand: [pos[0] + n[0] * stand_m, 0.0, pos[2] + n[2] * stand_m], floor, door: d })
 }
 
 /// The plate a door gives the room on its `side` face: past a jamb along the door's own wall, the latch side first. (lightswitch.ts plateAt)
@@ -217,7 +217,7 @@ pub fn build(g: &mut crate::game::Game) -> Vec<crate::lightswitch::WallSwitch> {
             let gps = by.get(grp).unwrap();
             for p in fewest(g, gps) {
                 let id = out.len() as f64;
-                out.push(WallSwitch { id, pos: p.pos, n: p.n, stand: p.stand, floor: p.floor, door: p.door, room: p.room, targets: targets.clone() });
+                out.push(WallSwitch { id, pos: p.pos, n: p.n, stand: p.stand, floor: p.floor, door: p.door, targets: targets.clone() });
             }
         }
     }
@@ -517,7 +517,7 @@ pub fn switch_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 mod tests {
     use super::*;
 
-    fn plate(x: f64) -> Plate { Plate { door: DoorId(0), n: [0.0; 3], pos: [x, 0.0, 0.0], floor: [0.0; 3], room: 1.0, stand: [0.0; 3] } }
+    fn plate(x: f64) -> Plate { Plate { door: DoorId(0), n: [0.0; 3], pos: [x, 0.0, 0.0], floor: [0.0; 3], stand: [0.0; 3] } }
     fn xs(ps: &[Plate]) -> Vec<f64> { ps.iter().map(|p| p.pos[0]).collect() }
 
     #[test]

@@ -70,10 +70,7 @@ pub fn band(b: [f64; 2], k: f64) -> f64 { b[0] + (b[1] - b[0]) * frac(k * 0.6180
 /// A row of the timeline and of the room fight's log.   (rescuecheck.ts event)
 pub fn event(g: &mut Game, what: RescueCheckEventWhat, gd: Option<GuardId>, why: &str) {
     let who = match gd { Some(id) => g.gd[id].callsign.clone(), None => String::from("-") };
-    let t = g.time;
     let st = st!(g);
-    st.events.push(RescueCheckEvent { t, what, who: who.clone(), why: String::from(why) });
-    if st.events.len() > 120 { st.events.drain(0..40); }
     let note = crate::roomfight::FightNote { t: g.time, who, what: format!("[rescuecheck] {}: {}", what.as_str(), why) };
     g.fight.log.push(note);
     if g.fight.log.len() > 600 { g.fight.log.drain(0..200); }
@@ -178,7 +175,6 @@ pub fn step_check(g: &mut Game, _dt: f64) {
             worded: JsMap::new(),
             kept: JsSet::new(),
             out: None,
-            events: Vec::new(),
         });
     }
     let k = g.k.rescuecheck;
@@ -365,7 +361,7 @@ pub fn tick_out(g: &mut Game, cast: &[CastItem], fight: bool) {
         g.gd[gd].saw_body_t = g.time;
         let victim = g.gd[down].callsign.clone();
         let breathing = crate::game::is_breathing(g, down);
-        g.gd[gd].witness.saw_body = Some(crate::game::WitnessSawBody { victim, t: g.time, breathing });
+        g.gd[gd].witness.saw_body = Some(crate::game::WitnessSawBody { victim, breathing });
         if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
         {
             crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "rescuecheck");

@@ -159,5 +159,4 @@ holds the HUD to importing nothing of the game.
 ## Not seen
 
 How often lines come in a fight was read in tests, not felt. No check sees a bubble or the strip on a GPU.
-Spoken lines have no lint: a line over length, a banned word in a mouth or a bad token shows only by reading the table. `MAX_CHARS`, `AIM_CHARS` and `originality_blocklist` stand for
-that, and nothing reads them. Much that is written to the player through `game_msg` reaches no screen.
+Spoken lines have no lint: a line over length, a banned word in a mouth or a bad token shows only by reading the table. Much that is written to the player through `game_msg` reaches no screen.

@@ -632,7 +632,7 @@ pub fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
     let want = m::min(v3::clamp(m::round(g.tune.perimeter_size), 2.0, 4.0), mk.posts.len() as f64);
     let now = g.time;
     g.qrf.perim = Some(Perimeter {
-        state: PerimeterState::Called, called_at: now, eta_at: now + m::max(5.0, g.tune.perimeter_eta), set_at: -1.0, men: Vec::new(), spawned: 0.0, peeled: 0.0,
+        state: PerimeterState::Called, eta_at: now + m::max(5.0, g.tune.perimeter_eta), set_at: -1.0, men: Vec::new(), spawned: 0.0, peeled: 0.0,
     });
     let lit = if g.targets.iter().any(|t| g.tab.sim_lightshome_fixture[*t].group == "exterior") { ". outside lights coming up" } else { "" };
     let word = format!("all stations — lock {} down, {}. nobody leaves: a man on every way out, {} seconds{}", mk.site, why, m::round(g.tune.perimeter_eta), lit);

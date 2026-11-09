@@ -623,7 +623,7 @@ pub fn laser_reach(g: &mut crate::game::Game, c_2: CharId, self_: Option<GuardId
         }
     }
     if l < 0.05 { return None; }
-    Some(LaserReach { from, dir, l, dot: wh.is_some() || ph.is_some() || l < 30.0, on })
+    Some(LaserReach { from, dir, l, dot: wh.is_some() || ph.is_some() || l < 30.0 })
 }
 
 /// A laser line from `from` along unit `dir` for `l` metres and (dot) the bead where it lands: emissive geometry no ray sees. The one place an infrared box is made.   (combat.ts beamBoxes)

@@ -345,7 +345,7 @@ fn done_test(t: &crate::scene_scenarios::LessonTestKind) -> crate::lesson::Lesso
     use crate::orders::{SquadOrdersMenSel as Sel, Who};
     use crate::scene_scenarios::LessonTestKind as K;
     match t {
-        K::Unknown { is } => T::Unknown { is: is.clone() },
+        K::Unknown { is } => T::Unknown {  },
         K::In { area } => T::In { area: *area },
         K::Near { at, r } => T::Near { at: *at, r: *r },
         K::Flag { flag, value } => T::Flag { flag: flag.clone(), value: *value },
@@ -356,7 +356,7 @@ fn done_test(t: &crate::scene_scenarios::LessonTestKind) -> crate::lesson::Lesso
                 "smoke" => crate::game::SlotKind::Smoke,
                 "flash" => crate::game::SlotKind::Flash,
                 "frag" => crate::game::SlotKind::Frag,
-                _ => return T::Unknown { is: String::from("slot") },
+                _ => return T::Unknown {  },
             };
             T::Slot { slot, drawn: *drawn }
         }
@@ -380,7 +380,7 @@ fn done_test(t: &crate::scene_scenarios::LessonTestKind) -> crate::lesson::Lesso
                 "all" => Who::All,
                 "red" => Who::Red,
                 "blue" => Who::Blue,
-                _ => return T::Unknown { is: String::from("orderTo") },
+                _ => return T::Unknown {  },
             };
             T::OrderTo { who }
         }
@@ -390,7 +390,7 @@ fn done_test(t: &crate::scene_scenarios::LessonTestKind) -> crate::lesson::Lesso
                 Some("all") => Some(Sel::All),
                 Some("red") => Some(Sel::Red),
                 Some("blue") => Some(Sel::Blue),
-                Some(_) => return T::Unknown { is: String::from("stackOn") },
+                Some(_) => return T::Unknown {  },
             };
             T::StackOn { door: door.clone(), who, set: *set }
         }

@@ -23,7 +23,6 @@ impl NeedKind {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct NeedSpot {
-    pub kind: crate::needs::NeedKind,
     pub name: String,
     pub pos: V3,
     pub face: f64,
@@ -62,7 +61,6 @@ pub struct Trip {
     pub kind: crate::needs::NeedKind,
     pub spot: crate::needs::NeedSpot,
     pub phase: crate::needs::TripPhase,
-    pub forced: bool,
     pub t0: f64,
     pub depart_at: f64,
     pub left_at: f64,
@@ -99,13 +97,6 @@ pub struct NeedsModFloorOfValue {
     pub last_depart_at: f64,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct NeedsModNEEDSLOGItem {
-    pub t: f64,
-    pub who: String,
-    pub what: String,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct OwnSpotS {
     pub name: String,
@@ -127,15 +118,12 @@ pub struct NeedsMod {
     pub mem_of: JsMap<GuardId, crate::needs::NeedMem>,
     /// (src/game/needs.ts:121 floorOf)
     pub floor_of: Option<crate::needs::NeedsModFloorOfValue>,
-    /// (src/game/needs.ts:126 NEEDS_LOG)
-    pub needs_log: Vec<crate::needs::NeedsModNEEDSLOGItem>,
 }
 impl NeedsMod {
     pub fn blank() -> Self {
         NeedsMod {
             mem_of: JsMap::new(),
             floor_of: None,
-            needs_log: Vec::new(),
         }
     }
 }
@@ -160,7 +148,7 @@ pub struct NeedsStats {
 pub fn need_kinds() -> Vec<crate::needs::NeedKind> { alloc::vec![crate::needs::NeedKind::Coffee, crate::needs::NeedKind::Smoke, crate::needs::NeedKind::Water, crate::needs::NeedKind::Stretch] }
 
 /// (src/game/needs.ts:39 NEED_SPOTS: a table nothing writes)
-pub fn need_spots() -> JsMap<String, crate::needs::NeedSpot> { { let mut t = JsMap::new(); t.set(String::from("coffee"), crate::needs::NeedSpot { kind: crate::needs::NeedKind::Coffee, name: String::from("the break-room counter"), pos: [34.6, 0.0, 14.4], face: 1.5707963267948966, loop_: None }); t.set(String::from("smoke"), crate::needs::NeedSpot { kind: crate::needs::NeedKind::Smoke, name: String::from("outside the fire exit"), pos: [37.6, 0.0, 22.4], face: 1.1, loop_: None }); t.set(String::from("water"), crate::needs::NeedSpot { kind: crate::needs::NeedKind::Water, name: String::from("the water cooler"), pos: [26.9, 0.0, 22.8], face: 0.7853981633974483, loop_: None }); t.set(String::from("stretch"), crate::needs::NeedSpot { kind: crate::needs::NeedKind::Stretch, name: String::from("the lobby"), pos: [8.4, 0.0, 17.0], face: 0.0, loop_: Some(alloc::vec![[10.8, 0.0, 18.6], [9.6, 0.0, 21.4], [7.4, 0.0, 22.8], [5.4, 0.0, 18.4], [8.4, 0.0, 17.0]]) }); t } }
+pub fn need_spots() -> JsMap<String, crate::needs::NeedSpot> { { let mut t = JsMap::new(); t.set(String::from("coffee"), crate::needs::NeedSpot { name: String::from("the break-room counter"), pos: [34.6, 0.0, 14.4], face: 1.5707963267948966, loop_: None }); t.set(String::from("smoke"), crate::needs::NeedSpot { name: String::from("outside the fire exit"), pos: [37.6, 0.0, 22.4], face: 1.1, loop_: None }); t.set(String::from("water"), crate::needs::NeedSpot { name: String::from("the water cooler"), pos: [26.9, 0.0, 22.8], face: 0.7853981633974483, loop_: None }); t.set(String::from("stretch"), crate::needs::NeedSpot { name: String::from("the lobby"), pos: [8.4, 0.0, 17.0], face: 0.0, loop_: Some(alloc::vec![[10.8, 0.0, 18.6], [9.6, 0.0, 21.4], [7.4, 0.0, 22.8], [5.4, 0.0, 18.4], [8.4, 0.0, 17.0]]) }); t } }
 
 /// (src/game/needs.ts:85 FILL_MIN: a table nothing writes)
 pub fn fill_min() -> JsMap<String, [f64; 2]> { { let mut t = JsMap::new(); t.set(String::from("coffee"), [6.0, 9.0]); t.set(String::from("smoke"), [8.0, 12.0]); t.set(String::from("water"), [6.0, 10.0]); t.set(String::from("stretch"), [5.0, 7.0]); t } }

@@ -1,6 +1,5 @@
 //! THE RECORDS OF A LEVEL FILE THAT THE GAME KEEPS AS ITS OWN TYPES, each type with the member of the file each of its fields is (`read.rs`
-//! reads them). First written from the names the state bridge keeps for every field (tools/blitz/schema.json); it is source like any other from
-//! here: a type that gains a field does not compile until its line here names the member, and a member of the file no line names is found by
+//! reads them). A type that gains a field does not compile until its line here names the member, and a member of the file no line names is found by
 //! the file's own tree (`json.rs unread`).
 #![allow(clippy::all)]
 use crate::read::{field, record, FromJson};
@@ -9,7 +8,7 @@ use alloc::string::String;
 use crate::{json_struct, json_words};
 
 json_struct!(game::scene_scenarios::TeamStart { sam: "sam", sam_yaw: "samYaw", ops: "ops", ops_yaw: "opsYaw" });
-json_struct!(game::scene_scenarios::NightBreachData { team: "team", room: "room", lights: "lights" });
+json_struct!(game::scene_scenarios::NightBreachData { team: "team", room: "room" } drops ["lights"]);
 json_struct!(game::scene_scenarios::Rect { x0: "x0", x1: "x1", z0: "z0", z1: "z1" });
 json_struct!(game::scene_scenarios::StructureDoor { id: "id", from: "from" });
 json_struct!(game::scene_scenarios::StructureMark { pos: "pos", watch: "watch", aim_at: "aimAt" });
@@ -18,7 +17,7 @@ json_words!(game::scene_scenarios::SquadDataTraining { Trained: "trained", Green
 json_struct!(game::scene_scenarios::SquadArrive { door: "door", spawn: "spawn", men: "men" });
 json_struct!(game::scene_scenarios::SquadData { id: "id", name: "name", rooms: "rooms", rally: "rally", barricade: "barricade", may_leave: "mayLeave", training: "training", arrive: "arrive" });
 json_struct!(game::scene_scenarios::StructureData { name: "name", team: "team", rooms: "rooms", starts: "starts", max_men: "maxMen", way_out: "wayOut", dig_in: "digIn", wall_charges: "wallCharges", squads: "squads" });
-json_struct!(game::scene_scenarios::RescueDataRoom { name: "name", where_: "where", door: "door", bounds: "bounds", lights: "lights", door_aim: "doorAim", outside: "outside", hold: "hold" });
+json_struct!(game::scene_scenarios::RescueDataRoom { name: "name", where_: "where", door: "door", bounds: "bounds", door_aim: "doorAim", outside: "outside", hold: "hold" } drops ["lights"]);
 json_struct!(game::scene_scenarios::RescueDataSideFrom { door: "door", bounds: "bounds" });
 json_struct!(game::scene_scenarios::RescueDataSide { door: "door", hold: "hold", from: "from", pair: "pair", stack: "stack", standoff: "standoff" });
 json_struct!(game::scene_scenarios::RescueDataHostagesItem { pos: "pos", face: "face" });
@@ -53,16 +52,6 @@ json_words!(game::kit::KitWeapon { Pistol: "pistol", Rifle: "rifle", Shotgun: "s
 json_words!(game::scene_scenarios::IssueCardLoaded { Ring: "ring", He40: "he40" });
 json_struct!(game::scene_scenarios::IssueCard { weapon: "weapon", suppressed: "suppressed", light: "light", nvg: "nvg", bangs: "bangs", charges: "charges", smoke: "smoke", frags: "frags", walls: "walls", shells: "shells", rings: "rings", loaded: "loaded" });
 json_struct!(game::scene_scenarios::IssueData { members: "members" });
-json_struct!(game::scene_scenarios::KitViewWayPin { yaw: "yaw", pitch: "pitch", dist: "dist" });
-json_struct!(game::scene_scenarios::KitViewLightOverPorchFixture { at: "at", half: "half", glow: "glow" });
-json_struct!(game::scene_scenarios::KitViewLightOverPorch { kind: "kind", offset: "offset", aim: "aim", color: "color", intensity: "intensity", range: "range", inner_deg: "innerDeg", outer_deg: "outerDeg", radius: "radius", volumetric: "volumetric", broad: "broad", fixture: "fixture", day: "day" });
-json_struct!(game::scene_scenarios::KitViewLightOverFill { kind: "kind", offset: "offset", aim: "aim", color: "color", intensity: "intensity", range: "range", inner_deg: "innerDeg", outer_deg: "outerDeg", radius: "radius", volumetric: "volumetric", broad: "broad" });
-json_struct!(game::scene_scenarios::KitViewLightOverSam { on: "on", intensity: "intensity", inner_deg: "innerDeg", outer_deg: "outerDeg", volumetric: "volumetric", aim: "aim" });
-json_struct!(game::scene_scenarios::KitViewLightOver { porch: "porch", fill: "fill", room_lights: "roomLights", moon_scale: "moonScale", sky_scale: "skyScale", sam: "sam" });
-json_words!(game::scene_scenarios::KitViewWayKind { Door: "door", Wall: "wall", Gap: "gap" });
-json_words!(game::scene_scenarios::KitViewWayHand { Left: "left", Right: "right" });
-json_struct!(game::scene_scenarios::KitViewWayWall { face: "face", thickness: "thickness", top: "top" });
-json_struct!(game::scene_scenarios::KitViewWayPaneArm1 { box_: "box", stand: "stand" });
 json_words!(game::scene_level_data::FlagName { NoPrimary: "NoPrimary", NoShadow: "NoShadow", Cutaway: "Cutaway", Gloss: "Gloss", Glass: "Glass" });
 json_words!(game::scene_markings::MarkFace { X: "+x", X2: "-x", Y: "+y", Y2: "-y", Z: "+z", Z2: "-z" });
 json_words!(game::scene_markings::MarkRes { Base: "base", Fine: "fine", Coarse: "coarse" });
@@ -71,26 +60,22 @@ json_struct!(game::scene_markings::MarkingDef { face: "face", res: "res", at: "a
 json_struct!(game::scene_shapes::ShapeFormArc { axis: "axis", rise: "rise" });
 json_struct!(game::scene_level_data::ShapePieceData { off: "off", h: "h", yaw: "yaw", material: "material", albedo: "albedo", rough: "rough", metal: "metal", does: "does", stuff: "stuff", round: "round", arc: "arc", cut: "cut", old: "old" });
 json_struct!(game::scene_level_data::ShapeData { with: "with", round: "round", arc: "arc", cut: "cut", old: "old" });
-json_struct!(game::scene_level_data::BoxData { id: "id", floor: "floor", group: "group", name: "name", c: "c", h: "h", yaw: "yaw", rot: "rot", round: "round", material: "material", albedo: "albedo", emissive: "emissive", rough: "rough", metal: "metal", stuff: "stuff", does: "does", flags: "flags", cut_height: "cutHeight", markings: "markings", shape: "shape" });
+json_struct!(game::scene_level_data::BoxData { id: "id", name: "name", c: "c", h: "h", yaw: "yaw", rot: "rot", round: "round", material: "material", albedo: "albedo", emissive: "emissive", rough: "rough", metal: "metal", stuff: "stuff", does: "does", flags: "flags", cut_height: "cutHeight", markings: "markings", shape: "shape" } drops ["group", "floor"]);
 json_words!(game::scene_level_data::LightDataKind { Spot: "spot", Dir: "dir", Point: "point" });
 json_struct!(game::scene_level_data::LightData { id: "id", kind: "kind", pos: "pos", dir: "dir", color: "color", intensity: "intensity", range: "range", inner_deg: "innerDeg", outer_deg: "outerDeg", group: "group", enabled: "enabled", volumetric: "volumetric", radius: "radius", mains: "mains", broad: "broad", fixture: "fixture" });
-json_struct!(game::scene_scenarios::KitViewWayAdd { boxes: "boxes", lamps: "lamps", laid: "laid" });
-json_struct!(game::scene_scenarios::KitViewWay { door: "door", side: "side", pin: "pin", slots: "slots", light: "light", hide: "hide", hide_paint: "hidePaint", hide_more: "hideMore", room_lights: "roomLights", span: "span", kind: "kind", set: "set", ref_: "ref", hand: "hand", slot_gap: "slotGap", wall: "wall", lane: "lane", out: "out", inside: "inside", pane: "pane", show: "show", indoors: "indoors", keep_lights: "keepLights", day_lights: "dayLights", lit_inside: "litInside", add: "add" });
-json_struct!(game::scene_level_data::DoorData { id: "id", floor: "floor", hinge: "hinge", closed_dir: "closedDir", width: "width", angle: "angle", exterior: "exterior", closer: "closer", min_angle: "minAngle", max_angle: "maxAngle", locked: "locked", lock: "lock", key_side: "keySide", swing: "swing", steel: "steel" });
-json_struct!(game::scene_scenarios::KitViewSet { boxes: "boxes", doors: "doors", lights: "lights", ref_: "ref" });
-json_struct!(game::scene_scenarios::KitViewData { ways: "ways", sets: "sets" });
+json_struct!(game::scene_level_data::DoorData { id: "id", hinge: "hinge", closed_dir: "closedDir", width: "width", angle: "angle", exterior: "exterior", closer: "closer", min_angle: "minAngle", max_angle: "maxAngle", locked: "locked", lock: "lock", key_side: "keySide", swing: "swing", steel: "steel" } drops ["floor"]);
 json_struct!(game::scene_scenarios::ResponseWay { name: "name", door: "door", muster: "muster", entry: "entry", entry_face: "entryFace", coming: "coming", clear: "clear", stairs: "stairs" });
 json_struct!(game::scene_scenarios::ResponsePost { name: "name", pos: "pos", yaw: "yaw", sweep: "sweep" });
 json_struct!(game::scene_scenarios::ResponseDataSweepItem { name: "name", pos: "pos" });
 json_struct!(game::scene_scenarios::ResponseDataRaid { room: "room" });
-json_struct!(game::scene_scenarios::ResponseData { why: "why", site: "site", at: "at", team: "team", tag: "tag", ways: "ways", men: "men", eta: "eta", posts: "posts", outside: "outside", sweep: "sweep", raid: "raid" });
+json_struct!(game::scene_scenarios::ResponseData { site: "site", at: "at", team: "team", tag: "tag", ways: "ways", men: "men", eta: "eta", posts: "posts", outside: "outside", sweep: "sweep", raid: "raid" } drops ["why"]);
 json_struct!(game::scene_scenarios::LevelScenariosDoorNamesItem { door: "door", name: "name" });
 json_struct!(game::scene_ways::WayHint { from: "from", to: "to", weight: "weight" });
-json_struct!(game::scene_scenarios::LevelScenarios { night_breach: "nightBreach", room_clear: "roomClear", rescue: "rescue", places: "places", quiet: "quiet", lesson: "lesson", par: "par", issue: "issue", kit_view: "kitView", response: "response", door_names: "doorNames", walked: "walked" });
+json_struct!(game::scene_scenarios::LevelScenarios { night_breach: "nightBreach", room_clear: "roomClear", rescue: "rescue", places: "places", quiet: "quiet", lesson: "lesson", par: "par", issue: "issue", response: "response", door_names: "doorNames", walked: "walked" } drops ["kitView"]);
 
 json_struct!(game::scene_level_data::Rect { x0: "x0", x1: "x1", z0: "z0", z1: "z1" });
 json_words!(game::floor::FloorMat { Carpet: "carpet", Lino: "lino", Stone: "stone", Tile: "tile", Asphalt: "asphalt", Grass: "grass" });
-json_struct!(game::scene_level_data::SurfacesDataZonesItem { id: "id", mat: "mat", x0: "x0", z0: "z0", x1: "x1", z1: "z1", notes: "notes" });
+json_struct!(game::scene_level_data::SurfacesDataZonesItem { mat: "mat", x0: "x0", z0: "z0", x1: "x1", z1: "z1" } drops ["notes", "id"]);
 json_struct!(game::scene_level_data::SurfacesData { building: "building", grass_edge: "grassEdge", inside: "inside", outside: "outside", verge: "verge", zones: "zones" });
 
 /// A lesson's test (`{ is: 'in', area: … }`): the word `is` says which test it is, and a word this build has no test for is kept as the word.
@@ -138,13 +123,6 @@ impl FromJson for game::scene_scenarios::LessonTestKind {
     }
 }
 
-/// A kit view way's pane: `true`, or the pane's own record.
-impl FromJson for game::scene_scenarios::KitViewWayPane {
-    fn from_json(j: &Json, at: &str) -> Self {
-        match j { Json::Bool(b) => game::scene_scenarios::KitViewWayPane::Bool(*b), _ => game::scene_scenarios::KitViewWayPane::Arm1(FromJson::from_json(j, at)) }
-    }
-}
-
 // ---- the level's own records that the TypeScript loader reads member for member (levelLoad.ts): a device, a vent and a light say `id` where the
 // game's type says `name`; a plan is the file's record without its id
 json_words!(game::scene_level::CivilianDefKind { Cleaner: "cleaner", Worker: "worker" });
@@ -164,13 +142,10 @@ json_struct!(game::scene_level::BreachPlanNext { door: "door", stack: "stack", s
 json_struct!(game::scene_level::BreachPlanBreachLines { breach1: "breach1", bang2: "bang2", going1: "going1", clear1: "clear1", clear2: "clear2", room_clear1: "roomClear1", next1: "next1", radio1: "radio1" });
 json_words!(game::scene_level::BreachPlanBreach { Kick: "kick", Open: "open" });
 json_struct!(game::scene_level::BreachPlan { inward: "inward", hostiles: "hostiles", retreat: "retreat", toss: "toss", flow: "flow", targets: "targets", next: "next", breach_lines: "breachLines", door: "door", room: "room", breach: "breach", bounds: "bounds", from: "from", stack: "stack", stack_face: "stackFace", stack_side: "stackSide", stack_aim: "stackAim", kick_from: "kickFrom", kick_face: "kickFace", fling: "fling", entry: "entry", pod_face: "podFace", entry_aim: "entryAim", search_path: "searchPath", search_face: "searchFace", search_aim_walk: "searchAimWalk", search_aim_there: "searchAimThere", under_aim: "underAim", up_aim: "upAim", form_up: "formUp", form_face: "formFace", lines: "lines" } drops ["id"]);
-json_words!(game::devices::CameraDef2Kind { Camera: "camera" });
-json_struct!(game::devices::CameraDef2 { kind: "kind", name: "id", pos: "pos", yaw: "yaw", pitch: "pitch", sweep: "sweep", sweep_period: "sweepPeriod", fov_deg: "fovDeg", range: "range", group: "group", mains: "mains" } drops ["floor", "notes"]);
-json_words!(game::devices::KeypadDef2Kind { Keypad: "keypad" });
-json_struct!(game::devices::KeypadDef2 { kind: "kind", name: "id", pos: "pos", yaw: "yaw", door: "door", code: "code" } drops ["floor", "notes"]);
-json_words!(game::devices::LaserDef2Kind { Laser: "laser" });
+json_struct!(game::devices::CameraDef2 { name: "id", pos: "pos", yaw: "yaw", pitch: "pitch", sweep: "sweep", sweep_period: "sweepPeriod", fov_deg: "fovDeg", range: "range", group: "group", mains: "mains" } drops ["floor", "notes", "kind"]);
+json_struct!(game::devices::KeypadDef2 { name: "id", pos: "pos", yaw: "yaw", door: "door", code: "code" } drops ["floor", "notes", "kind"]);
 json_words!(game::devices::LaserDef2Alarm { Alarm: "alarm", Suspicion: "suspicion" });
-json_struct!(game::devices::LaserDef2 { kind: "kind", name: "id", from: "from", to: "to", group: "group", mains: "mains", alarm: "alarm" } drops ["floor", "notes"]);
+json_struct!(game::devices::LaserDef2 { name: "id", from: "from", to: "to", group: "group", mains: "mains", alarm: "alarm" } drops ["floor", "notes", "kind"]);
 /// a civilian: named by its `name`, else its id (levelLoad.ts)
 impl FromJson for game::scene_level::CivilianDef {
     fn from_json(j: &Json, at: &str) -> Self {

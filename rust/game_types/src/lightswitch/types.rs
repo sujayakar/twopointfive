@@ -11,7 +11,6 @@ pub struct WallSwitch {
     pub stand: V3,
     pub floor: V3,
     pub door: DoorId,
-    pub room: f64,
     pub targets: Vec<FixtureId>,
 }
 
@@ -39,7 +38,6 @@ pub struct Plate {
     pub n: V3,
     pub pos: V3,
     pub floor: V3,
-    pub room: f64,
     pub stand: V3,
 }
 

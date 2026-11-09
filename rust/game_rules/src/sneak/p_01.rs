@@ -35,11 +35,6 @@ pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// What he did, newest last. (sneak.ts note)
 pub fn note(g: &mut crate::game::Game, gd: GuardId, what: &str) {
-    let c = g.gd[gd].ch;
-    let p = g.ch[c].pos;
-    let item = SneakModSNEAKLOGItem { t: g.time, who: g.gd[gd].callsign.clone(), what: String::from(what), at: [p[0], p[2]] };
-    g.m.sneak.sneak_log.push(item);
-    if g.m.sneak.sneak_log.len() > 300 { g.m.sneak.sneak_log.drain(0..100); }
 }
 
 /// The sneak is live for the squad this frame; one read a frame. (sneak.ts sneakLive)
