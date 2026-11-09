@@ -681,7 +681,7 @@ fn send(g: &mut Game, q: EnemysquadsSquadId, d: RoomfightDefId, role: SentRole, 
         there: None, set_t: None, gone_t: None, back: None,
     });
     match w {
-        Some(x) => { let to = x.path.as_ref().and_then(|p| p.first().copied()).unwrap_or(x.spot); crate::pressure::run(g, d, to, x.door, Some(0.3)); }
+        Some(x) => { let to = x.path.as_ref().and_then(|p| p.first().copied()).unwrap_or(x.spot); crate::roomfight::run(g, d, to, x.door, 0.3, crate::owner::by::SQUAD_LEG); }
         None => crate::pressure::loose(g, d, fix_at),
     }
 }

@@ -141,11 +141,8 @@ pub fn stand_off_spot(g: &mut crate::game::Game, d: RoomfightDefId, t: Roomfight
     None
 }
 
-/// A leg this module orders: he runs to `spot`, off the fight AI, a fallback's move. (pressure.ts run)
-pub fn run(g: &mut crate::game::Game, d: RoomfightDefId, spot: V3, door: Option<DoorId>, fast: Option<f64>) {
-    let pace = g.tune.guard_chase + fast.unwrap_or(0.0);
-    crate::roomfight::send(g, d, crate::roomfight::Leg { by: door, ..crate::roomfight::Leg::to(spot, pace) }, "pressure");
-}
+/// a press's leg, for the old page's crossing
+pub fn run(g: &mut crate::game::Game, d: RoomfightDefId, spot: V3, door: Option<DoorId>, fast: Option<f64>) { crate::roomfight::run(g, d, spot, door, fast.unwrap_or(0.0), crate::owner::by::PRESS); }
 
 /// PRESSURE.stuns: a man with a charge on him, let go at the fight, takes the door he was put down for as the drill, if their side has something that puts the team in that room. (pressure.ts charge)
 pub fn charge(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId, t: Option<RoomfightRoomId>) -> bool {
@@ -485,7 +482,7 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
     let mut others: Vec<RoomfightDefId> = Vec::new();
     if by_way {
         for &x in &defs {
-            if x != d && alive(g, x) && df(g, x).room == my_room && df(g, x).mode != crate::roomfight::DefMode::Free && !state_of(g).of.has(x) && crate::owner::kept(g, gd_of(g, x), crate::owner::by::PRESS).is_none() { others.push(x); }
+            if x != d && alive(g, x) && df(g, x).room == my_room && !crate::roomfight::is_loose(g, x) && !state_of(g).of.has(x) && crate::owner::kept(g, gd_of(g, x), crate::owner::by::PRESS).is_none() { others.push(x); }
         }
     }
     let far_room = by_way && my_room.is_some() && !next_door(g, my_room, tt);
@@ -612,10 +609,10 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
             g.tab.pressure_man[man].charged = Some(c);
             loose(g, d, p_at);
         } else {
-            run(g, d, spot, Some(door), None);
+            crate::roomfight::run(g, d, spot, Some(door), 0.0, crate::owner::by::PRESS);
         }
     } else {
-        run(g, d, spot, Some(door), None);
+        crate::roomfight::run(g, d, spot, Some(door), 0.0, crate::owner::by::PRESS);
     }
     if role == ManRole::Flank {
         state_of(g).stats.flank_sent += 1.0;
@@ -674,11 +671,11 @@ pub fn tick_press(g: &mut crate::game::Game, p: &mut crate::pressure::Press) -> 
         return false;
     }
     // 'go': over when every man of it is down, back at a post, or it is old
-    if up.iter().any(|&x| { let r = &g.tab.pressure_man[x]; r.moving && df(g, r.d).mode == crate::roomfight::DefMode::Move }) && g.time - p.go_at < 90.0 { return false; }
+    if up.iter().any(|&x| { let r = &g.tab.pressure_man[x]; r.moving && crate::roomfight::on_leg_of(g, r.d, crate::owner::by::PRESS) }) && g.time - p.go_at < 90.0 { return false; }
     let now = g.time;
     if up.is_empty() || now - p.go_at > 45.0 || up.iter().all(|&i| {
         let x = &g.tab.pressure_man[i];
-        df(g, x.d).mode == crate::roomfight::DefMode::Hold && !x.moving && (if x.fell { x.fought || now - x.replant_t > 30.0 } else { now - p.go_at > 30.0 })
+        crate::roomfight::at_post(g, x.d) && !x.moving && (if x.fell { x.fought || now - x.replant_t > 30.0 } else { now - p.go_at > 30.0 })
     }) {
         for &x in &up { drop(g, x); }
         return true;
@@ -716,14 +713,14 @@ fn tick_man(g: &mut Game, p: &mut Press, mi: PressureManId, team_in: bool) {
             note(g, gd, &what);
         }
     }
-    if df(g, d).mode == crate::roomfight::DefMode::Move {
+    if crate::roomfight::on_leg_of(g, d, crate::owner::by::PRESS) {
         if !g.tab.pressure_man[mi].moving { drop(g, mi); return; }   // (not moving = the stock fall-back took him: he is its man now)
         let step = boots(g, gd, g.tab.pressure_man[mi].step_t);
         g.tab.pressure_man[mi].step_t = step;
         return;
     }
     if p.phase != PressPhase::Go {
-        if df(g, d).mode == crate::roomfight::DefMode::Free { drop(g, mi); return; }
+        if crate::roomfight::is_loose(g, d) { drop(g, mi); return; }
         if g.tab.pressure_man[mi].moving {   // he has planted (roomfight.ts tickMove): there, in contact on the way, or stopped short
             g.tab.pressure_man[mi].moving = false;
             let contact = g.time - g.gd[gd].last_seen_t < 2.0;
@@ -742,7 +739,7 @@ fn tick_man(g: &mut Game, p: &mut Press, mi: PressureManId, team_in: bool) {
                 note(g, gd, &what);
             } else {
                 g.tab.pressure_man[mi].moving = true;
-                run(g, d, spot, Some(door), None);
+                crate::roomfight::run(g, d, spot, Some(door), 0.0, crate::owner::by::PRESS);
             }
         }
         return;
@@ -750,7 +747,7 @@ fn tick_man(g: &mut Game, p: &mut Press, mi: PressureManId, team_in: bool) {
     // ---- let go at the fight
     if g.tab.pressure_man[mi].fell {
         let now = g.time;
-        if g.tab.pressure_man[mi].moving && df(g, d).mode == crate::roomfight::DefMode::Hold {
+        if g.tab.pressure_man[mi].moving && crate::roomfight::at_post(g, d) {
             let x = &mut g.tab.pressure_man[mi];
             x.moving = false; x.replant_t = now;
             watch_door(g, d, door);
@@ -767,7 +764,7 @@ fn tick_man(g: &mut Game, p: &mut Press, mi: PressureManId, team_in: bool) {
         let fc: Option<CharId> = crate::teams::foe_char(g, gd);
         let spot = g.tab.pressure_man[mi].spot;
         let off = flat(pos_of(g, gd), spot);
-        if !contact && off > 1.5 && { let x = &mut g.tab.pressure_man[mi]; x.tries += 1.0; x.tries < 3.0 } { run(g, d, spot, Some(door), None); return; }
+        if !contact && off > 1.5 && { let x = &mut g.tab.pressure_man[mi]; x.tries += 1.0; x.tries < 3.0 } { crate::roomfight::run(g, d, spot, Some(door), 0.0, crate::owner::by::PRESS); return; }
         let there = off <= 1.5;
         let now = g.time;
         let x = &mut g.tab.pressure_man[mi];
@@ -837,9 +834,9 @@ fn tick_man(g: &mut Game, p: &mut Press, mi: PressureManId, team_in: bool) {
                     let x = &mut g.tab.pressure_man[mi];
                     x.spot = t.spot;
                     if let Some(door) = t.door { x.door = door; }
-                    run(g, d, t.spot, t.door, Some(0.3));
+                    crate::roomfight::run(g, d, t.spot, t.door, 0.3, crate::owner::by::PRESS);
                 } else {
-                    run(g, d, spot, Some(door), Some(0.3));
+                    crate::roomfight::run(g, d, spot, Some(door), 0.3, crate::owner::by::PRESS);
                 }
                 state_of(g).stats.fb_push += 1.0;
                 crate::game::game_say(g, gd, "back — get back! hold the door!", Some(true), None, None);
@@ -956,7 +953,7 @@ pub fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
     let mode_free = crate::roomfight::DefMode::Free;
     // (lostAt ahead of the clock = somebody holds him to his room)
     let room = df(g, d).room;
-    let ok = df(g, d).mode == crate::roomfight::DefMode::Hold && !state_of(g).of.has(d) && room.map_or(false, |r| g.tab.roomfight_room[r].cells.len() as f64 <= ROOM_CELLS) && g.gd[gd].held.is_none() && !(df(g, d).lost_at > g.time)
+    let ok = crate::roomfight::at_post(g, d) && !state_of(g).of.has(d) && room.map_or(false, |r| g.tab.roomfight_room[r].cells.len() as f64 <= ROOM_CELLS) && g.gd[gd].held.is_none() && !(df(g, d).lost_at > g.time)
         && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
         && g.time - df(g, d).moved_at > 6.0 && g.time - state_of(g).tried.get(d).copied().unwrap_or(-100.0) > 6.0 && !state_of(g).outs.iter().any(|o| o.def == d)
         && {
@@ -1065,7 +1062,7 @@ pub fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
             return;
         }
     };
-    run(g, d, spot, door, Some(0.3));
+    crate::roomfight::run(g, d, spot, door, 0.3, crate::owner::by::PRESS);
     state_of(g).outs.push(crate::pressure::Out { door, def: d, moving: true, plant_t: -1.0, fought: false, step_t: -100.0 });
     if why == HookedWhy::Seen {
         state_of(g).stats.fb_last += 1.0;
@@ -1084,7 +1081,7 @@ pub fn tick_out(g: &mut crate::game::Game, o: &mut crate::pressure::Out) -> bool
     let gd = gd_of(g, d);
     if !alive(g, d) || !g.fight.defs.contains(&d) { return true; }
     if o.moving {
-        if df(g, d).mode == crate::roomfight::DefMode::Move { o.step_t = boots(g, gd, o.step_t); return false; }
+        if crate::roomfight::on_leg_of(g, d, crate::owner::by::PRESS) { o.step_t = boots(g, gd, o.step_t); return false; }
         o.moving = false; o.plant_t = g.time;
         state_of(g).stats.fb_planted += 1.0;
         // whoever of his side holds the room he has come into hears it from him: the door he came by is the one to watch
@@ -1093,7 +1090,7 @@ pub fn tick_out(g: &mut crate::game::Game, o: &mut crate::pressure::Out) -> bool
         let mut told = 0;
         let defs: Vec<RoomfightDefId> = g.fight.defs.clone();
         for &x in &defs {
-            if !(x != d && alive(g, x) && df(g, x).mode == crate::roomfight::DefMode::Hold && df(g, x).room == room && flat(pos_of(g, gd_of(g, x)), here) < 12.0) { continue; }
+            if !(x != d && alive(g, x) && crate::roomfight::at_post(g, x) && df(g, x).room == room && flat(pos_of(g, gd_of(g, x)), here) < 12.0) { continue; }
             let i = match (df(g, x).room, o.door) {
                 (Some(r), Some(door)) => g.tab.roomfight_room[r].entries.iter().position(|e| e.door == door),
                 _ => None,
@@ -1137,7 +1134,7 @@ pub fn fight_on(g: &mut crate::game::Game) -> bool {
     for i in 0..g.fight.defs.len() {
         let x = g.fight.defs[i];
         let o = gd_of(g, x);
-        if !alive(g, x) || df(g, x).mode == crate::roomfight::DefMode::Free || crate::control::man::blind(g, o) || g.time - g.gd[o].last_seen_t < 5.0 { return true; }
+        if !alive(g, x) || crate::roomfight::is_loose(g, x) || crate::control::man::blind(g, o) || g.time - g.gd[o].last_seen_t < 5.0 { return true; }
         if df(g, x).noise_at.is_some() && g.time - df(g, x).noise_t < 5.0 && !df(g, x).noise_out { return true; }
     }
     false

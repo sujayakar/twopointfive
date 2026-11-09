@@ -88,11 +88,11 @@ fn free(g: &mut Game, h: GuardId, b: Option<crate::scene_level::BreachPlanBounds
     if crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None) && in_room { return false; }
     if g.time - g.gd[h].last_seen_t < g.k.rescueflush.busy_secs || g.gd[h].saw_foe_this_frame { return false; }
     let f = crate::roomfight::def_of(g, h);
-    if let Some(d) = f { if g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Move { return false; } }
+    if let Some(d) = f { if crate::roomfight::on_leg(g, d) { return false; } }
     let Some(s_at) = g.rescue.flush.sent.get(h).map(|s| s.at) else { return true; };
     if g.time - s_at < g.k.rescueflush.again_secs { return false; }
     let st = g.gd[h].state;
-    let at_rest = match f { None => true, Some(d) => g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold };
+    let at_rest = match f { None => true, Some(d) => crate::roomfight::at_post(g, d) };
     at_rest || st == crate::game::GuardState::Patrol || st == crate::game::GuardState::Suspicious || st == crate::game::GuardState::Search
 }
 

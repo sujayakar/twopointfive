@@ -45,7 +45,7 @@ fn run_then(g: &mut Game, then: LaterThen) {
         LaterThen::MovedAt { d, w } => { st_of(g).stats.moved += 1.0; name_at(g, d, Some(&w)); }
         LaterThen::NameAt { d, w } => name_at(g, d, w.as_ref()),
         LaterThen::NameAtUnlessFree { d, w } => {
-            let free = g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Free;
+            let free = crate::roomfight::is_loose(g, d);
             name_at(g, d, if free { None } else { Some(&w) });
         }
     }
@@ -304,7 +304,7 @@ pub fn tick_moved(g: &mut crate::game::Game) {
         let said = st.at.get_mut(d).unwrap();
         if flat(p, said.still_at) > 0.4 { said.still_at = v3::copy(p); said.still_t = time; }
         let w = spoken(g, p);
-        let free = g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Free;
+        let free = crate::roomfight::is_loose(g, d);
         let now: Option<&str> = match &w.id { Some(id) => Some(id.as_str()), None => w.spot.as_ref().map(|s| s.name.as_str()) };
         let said = st_of(g).at.get_mut(d).unwrap();
         if now == Some(said.key.as_str()) { said.off_t = f64::NAN; continue; }
@@ -328,7 +328,7 @@ pub fn tick_moved(g: &mut crate::game::Game) {
 pub fn start_check(g: &mut crate::game::Game) {
     let men = up_defs(g);
     let can: Vec<RoomfightDefId> = men.iter().copied().filter(|&d| calm(g, d)).collect();
-    let caller = can.iter().copied().find(|&d| g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold)
+    let caller = can.iter().copied().find(|&d| crate::roomfight::at_post(g, d))
         .or_else(|| can.first().copied());
     let time = g.time;
     let st = st_of(g);
@@ -373,7 +373,7 @@ pub fn tick_check(g: &mut crate::game::Game) {
         check_of(g).due[i].at = -1.0;
         let d = due.d;
         if !calm(g, d) { continue; }
-        let free = g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Free;
+        let free = crate::roomfight::is_loose(g, d);
         net_at(g, d, if free { LineKind::AnsFreeAt } else { LineKind::AnsAt }, &LaterRedo::Answer { d, free });
         check_of(g).got.push(d);
         st_of(g).stats.answers += 1.0;
@@ -422,7 +422,7 @@ pub fn lone(st: &mut crate::laststand::State) -> bool {
 
 /// call out only: the one who asked says what the count is, and where he is (laststand.ts tellOnly)
 pub fn tell_only(g: &mut crate::game::Game, c_2: RoomfightDefId) {
-    let free = g.tab.roomfight_def[c_2].mode == crate::roomfight::DefMode::Free;
+    let free = crate::roomfight::is_loose(g, c_2);
     let st = st_of(g);
     let n = st.known.len() as i32;
     let redo = LaterRedo::Tell { d: c_2, n, free };
