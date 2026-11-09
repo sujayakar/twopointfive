@@ -1,5 +1,5 @@
-// A LEVEL'S CLOTHES (src/scene/look.ts): tools/levels/<name>.ts builds the level with its floor's generator (<name>-floor.ts), lets the exporter dress it
-// exactly as it dresses the plain file, and then `skinLevel` changes its clothes — every box where it was, the size it was, with the flags it had:
+// A LEVEL'S CLOTHES (src/scene/look.ts): tools/levels/<name>.ts builds the level with its own `build` (the floor), lets the exporter dress it
+// exactly as it dresses any level, and then `skinLevel` changes its clothes — every box where it was, the size it was, with the flags it had:
 //   · REPAINT   a box's albedo + finish, by its group and the office paint it wore. WHAT THE BOX DOES IS NOT ITS PAINT'S (src/scene/materials.ts, Box.does):
 //               every box has its word before the first repaint (tools/levels/doesWas.ts stampDoes, the exporter's own step) and a repaint leaves it, so
 //               to a round, a charge and a blast the box is exactly what it was, in any paint of any colour;

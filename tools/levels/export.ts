@@ -19,7 +19,6 @@ const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 
 const argv = process.argv.slice(2), floorAt = argv.indexOf('--floor'), FLOOR_TO = floorAt >= 0 ? argv[floorAt + 1] : null, name = argv.find((a, i) => !a.startsWith('--') && (floorAt < 0 || i !== floorAt + 1)), CHECK = argv.includes('--check');
 if (!name || !/^[\w-]+$/.test(name) || !existsSync(resolve(import.meta.dir, `${name}.ts`))) { console.error(`usage: bun run tools/levels/export.ts <name> [--check]   (a generator tools/levels/<name>.ts)`); process.exit(2); }
-if (name.endsWith('-floor')) { console.error(`export: ${name} is what the skin in tools/levels/${name.replace(/-floor$/, '')}.ts builds on, and has no file of its own: export that`); process.exit(2); }
 const gen = await import(resolve(import.meta.dir, `${name}.ts`));
 const OUT = FLOOR_TO ? resolve(FLOOR_TO, `${gen.NAME ?? name}.json`) : resolve(ROOT, `levels/${gen.NAME ?? name}.json`);
 

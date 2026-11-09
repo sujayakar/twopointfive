@@ -112,7 +112,7 @@ stoves, crates, tyres, generators, pickups, lanterns). What makes a level is wha
 | records | a district land office | surveyors' magenta, on the ground only |
 | consulate | a town-house consulate | plum carpet bound in brass |
 
-Other levels have a skin of their own (`tools/levels/<name>.ts` over `<name>-floor.ts`) or are built straight from the kit
+Other levels have a skin of their own (in `tools/levels/<name>.ts`, its `finish` over its `build`) or are built straight from the kit
 (`src/scene/gwotKit.ts`). No two places share an accent or a family of ground marks.
 
 ![The block: green dado, cover plates in the floor](public/assets/menu/block-four.jpg)
