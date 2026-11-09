@@ -1,7 +1,7 @@
-//! THE PINS (`rust/game_start/pins.txt`): what the rows are held to, as text that a commit's diff can be read in. Made by `gate pin`, read by the rows. Three sections.
+//! THE PINS (`rust/game_start/pins.txt`): what the rows are held to, as text that a commit's diff can be read in. Made by `gate pin`, read by the rows. Four sections.
 //! ROWS: every row's name, a line each, in order: a mission or a run that leaves the list leaves its pins with no row, and a whole `gate` says so.
 //! STARTS: the columns that are refused with the game's words, a line of the columns' names, then a line a part: its name, then an 8-digit word a column, or one word where every column has
-//! the same. A part that joins or leaves the state is then one line of the file. SERIES: a line a run: its name and a colon, then a word a second.
+//! the same. A part that joins or leaves the state is then one line of the file. SERIES: a line a run: its name and a colon, then a word a second. LINES: what a run played to its end did, as a reader reads it: its name, a colon, the words.
 use crate::rows::Row;
 use std::collections::BTreeMap;
 
@@ -13,7 +13,7 @@ const NONE: &str = "--------";
 pub enum Start { Refused(String), Parts(BTreeMap<String, u32>) }
 
 #[derive(Default)]
-pub struct Pins { pub rows: Vec<String>, pub starts: BTreeMap<String, Start>, pub series: BTreeMap<String, Vec<u32>> }
+pub struct Pins { pub rows: Vec<String>, pub starts: BTreeMap<String, Start>, pub series: BTreeMap<String, Vec<u32>>, pub lines: BTreeMap<String, String> }
 
 pub fn path() -> std::path::PathBuf { std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("pins.txt") }
 fn hex(w: u32) -> String { format!("{:08x}", w) }
@@ -29,6 +29,12 @@ impl Pins {
             if l == "rows" { section = 3; continue; }
             if l == "starts" { section = 1; continue; }
             if l == "series" { section = 2; continue; }
+            if l == "lines" { section = 4; continue; }
+            if section == 4 {
+                let (name, words) = l.split_once(": ").unwrap_or_else(|| panic!("pins.txt: '{}' is no line of a run", l));
+                p.lines.insert(name.to_string(), words.to_string());
+                continue;
+            }
             if section == 3 { p.rows.push(l.to_string()); continue; }
             if section == 2 {
                 let (name, words) = l.split_once(": ").unwrap_or_else(|| panic!("pins.txt: '{}' is no line of a run", l));
@@ -77,6 +83,9 @@ impl Pins {
         for n in runs.iter().copied().chain(self.series.keys().filter(|n| !runs.contains(n))) {
             out += &format!("{}: {}\n", n, self.series[n].iter().map(|w| hex(*w)).collect::<Vec<_>>().join(" "));
         }
+        out += "lines\n";
+        let runs: Vec<&String> = rows.iter().filter(|r| r.worded()).filter_map(|r| self.lines.get_key_value(&r.name).map(|x| x.0)).collect();
+        for n in runs.iter().copied().chain(self.lines.keys().filter(|n| !runs.contains(n))) { out += &format!("{}: {}\n", n, self.lines[n]); }
         out
     }
     /// what the rows' list has lost and gained against the pinned one, in the words a whole `gate` says it
@@ -92,12 +101,14 @@ impl Pins {
     /// what the children recorded takes the place of what stood (`whole`: of all of it, so a column or a run that is gone goes, and the rows' list is written anew): each thing that moved, in a line
     pub fn take(&mut self, lines: &[String], whole: bool) -> Vec<String> {
         let (mut starts, mut series, mut said): (BTreeMap<String, Start>, BTreeMap<String, Vec<u32>>, Vec<String>) = (BTreeMap::new(), BTreeMap::new(), Vec::new());
+        let mut worded: BTreeMap<String, String> = BTreeMap::new();
         for l in lines {
             let w: Vec<&str> = l.splitn(4, '\t').collect();
             match w[..] {
                 ["start", col, "refused", why] => { starts.insert(col.to_string(), Start::Refused(why.to_string())); }
                 ["start", col, "parts", list] => { starts.insert(col.to_string(), Start::Parts(list.split(' ').map(|x| { let (n, v) = x.split_once('=').unwrap(); (n.to_string(), word(v)) }).collect())); }
                 ["series", name, list] => { series.insert(name.to_string(), list.split(' ').map(word).collect()); }
+                ["line", name, words] => { worded.insert(name.to_string(), words.to_string()); }
                 _ => panic!("a child's pin: '{}'", l),
             }
         }
@@ -118,17 +129,26 @@ impl Pins {
                 Some(a) => said.push(format!("moved  {}: from second {} on (`hold keep` on the build before and `hold check` on this one name the part)", name, a.iter().zip(now).position(|(x, y)| x != y).unwrap_or(a.len().min(now.len())) + 1)),
             }
         }
+        for (name, now) in &worded {
+            match self.lines.get(name) {
+                None => {}
+                Some(a) if a == now => {}
+                Some(a) => said.push(format!("moved  {}: '{}', then '{}'", name, a, now)),
+            }
+        }
         if whole {
             for col in self.starts.keys().filter(|c| !starts.contains_key(*c)) { said.push(format!("moved  start {}: the column is gone", col)); }
             for name in self.series.keys().filter(|n| !series.contains_key(*n)) { said.push(format!("moved  {}: the run is gone", name)); }
-            let now: Vec<String> = crate::rows::all().into_iter().map(|r| r.name).collect();
+            let now: Vec<String> = crate::rows::every().into_iter().map(|r| r.name).collect();
             said.extend(self.rows_differ(&now).into_iter().map(|s| format!("moved  {}", s)));
             self.rows = now;
             self.starts.clear();
             self.series.clear();
+            self.lines.clear();
         }
         self.starts.extend(starts);
         self.series.extend(series);
+        self.lines.extend(worded);
         said
     }
 }
