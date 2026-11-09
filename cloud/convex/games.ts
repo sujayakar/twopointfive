@@ -7,7 +7,8 @@
 //             A server ends itself by the same clocks (it is handed them); this is what holds when it does not.
 // A game that is over is never live again. Its row stays.
 // A SEAT IS HELD BY WHO IS THERE (`openSeat`): its holder has a little while to come, and after it a seat nobody is connected in is the next one's who asks by
-// the code. Nothing is asked of a page that goes: the server says at once when a seat empties, however it was left. Its holder has it back by coming first.
+// the code. Nothing is asked of a page that goes: the server says at once when a seat empties, however it was left. Its holder has it back by coming first. A seat's key
+// is its holder's: it changes as the seat becomes another's, and the server hears of it in a heartbeat's answer (it asks with one when a key is new to it).
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
@@ -190,11 +191,12 @@ export const join = mutation({
     if (g.build !== build) bad("build: the game is another build than this page");
     const mine = g.holders.indexOf(pid), seat = mine >= 0 ? mine : openSeat(g);
     if (seat < 0) bad("full: every seat is taken");
-    const holders = g.holders.slice(), held = heldAt(g).slice();
+    const holders = g.holders.slice(), held = heldAt(g).slice(), seatKeys = g.seatKeys.slice();
+    if (mine < 0 && holders[seat] !== "") seatKeys[seat] = key();
     holders[seat] = pid;
     held[seat] = Date.now();
-    await ctx.db.patch(g._id, { holders, heldAt: held });
-    return view({ ...g, holders }, pid);
+    await ctx.db.patch(g._id, { holders, heldAt: held, seatKeys });
+    return view({ ...g, holders, seatKeys }, pid);
   },
 });
 
@@ -254,10 +256,10 @@ export const unstarted = internalMutation({
   },
 });
 
-/** A HEARTBEAT (http.ts): 'ok' · 'gone' = no live game has this id, and a server told so stops · 'no' = not this game's secret */
+/** A HEARTBEAT (http.ts): the seats' keys now · 'gone' = no live game has this id, and a server told so stops · 'no' = not this game's secret */
 export const heard = internalMutation({
   args: { game: v.string(), secret: v.string(), state: v.string(), tick: v.number(), seats: v.array(v.boolean()), outcome: v.optional(v.any()) },
-  handler: async (ctx, { game, secret, state, tick, seats, outcome }): Promise<"ok" | "gone" | "no"> => {
+  handler: async (ctx, { game, secret, state, tick, seats, outcome }): Promise<string[] | "gone" | "no"> => {
     const id = ctx.db.normalizeId("games", game);
     const g = id ? await ctx.db.get(id) : null;
     if (!g) return "gone";
@@ -279,7 +281,7 @@ export const heard = internalMutation({
       await ctx.db.patch(g._id, { tick, connected: seats, heardAt: now });
       await retire(ctx, g, "ended", "server", { outcome });
     } else await ctx.db.patch(g._id, { state, tick, connected: seats, heardAt: now, seatedAt, heldAt: held });
-    return "ok";
+    return g.seatKeys;
   },
 });
 

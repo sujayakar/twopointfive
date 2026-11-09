@@ -12,16 +12,20 @@
 //   join       a second tab comes through the same door by the code: the second seat, its own key, the same server; the first tab again is the first seat
 //              again; a third tab is told the game has two players; a code nobody has is told so
 //   fight      a scripted client in each seat, on the address and key its tab was told: both walk the same ticks and match every state word
-// The red path: LOBBY_BREAK=1 (the host's game is made for one player) must FAIL `host`, `join` and `fight`.
+//   left       the seat the second left is another tab's who comes by the code, with its own key, and the second's key is refused from then on; one who is
+//              back on the old key before the new player has come is told another player has his seat
+// The red path: LOBBY_BREAK=1 (the host's game is made for one player) must FAIL `host`, `join`, `fight` and `left`.
 // NOT HERE: a browser (lobby-page.cjs), the service itself, a sandbox. EXIT 0 all pass · 1 a failure · 2 the backend's packages are not installed.
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { wire } from '../../src/cloud/wire.ts';
 import { localRunner } from '../mp/runner.ts';
+import { NET } from '../../src/net/wire.ts';
 import { COOP, CODE, Lobby, codeTyped, codeWhole, coopScenario, joinLink, netSearch, lobbyWhy, gameWhy, freshId, freshSeed, type GameView } from '../../src/net/lobby.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 if (!existsSync(`${ROOT}/cloud/node_modules/convex-test`) || !existsSync(`${ROOT}/cloud/node_modules/modal`)) { console.error('lobby-check: the backend\'s packages are not installed — run `npm ci` in cloud/ first'); process.exit(2); }
+process.env.MP_COME_S = '2';   // (a seat's holder has two seconds to connect, read by the functions as they are called)
 const { standIn } = await import(`${ROOT}/cloud/test/standin.ts`);
 // (the control plane's own numbers, read as the stand-in is: by a path the tools' typecheck does not follow, so that program needs none of the backend's packages)
 const { MP } = await import(`${ROOT}/cloud/convex/games.ts`) as { MP: { codeLen: number; codeLetters: string } };
@@ -54,7 +58,7 @@ check(/^[a-z0-9]{40}$/.test(freshId()) && freshId() !== freshId() && Number.isIn
 console.log('settings');
 { const M = await import('../mp/stand.ts'), idle = { k: [], b: 0, m: [640, 360], s: [1280, 720, 1280, 720], v: [0, 0, 0, 0, 0.96, 21, 0.6, 16 / 9, 0] } as never;
   // (the mission is the address without the difficulty's own word, so that two games differ by what the word does and not by its letters)
-  const game = async (said: string): Promise<string> => { const search = coopScenario(said), start = M.freshStart({ search, seed: 7 }), q = new URLSearchParams(search); q.delete('difficulty'); const G = await M.standStart({ ...start, words: '?' + q.toString() }); for (let i = 0; i < 30; i++) G.step([idle, idle]); return `${G.word()} ${G.watch()}`; };
+  const game = async (said: string): Promise<string> => { const search = coopScenario(said), start = M.freshStart({ search, seed: 7 }), q = new URLSearchParams(search); q.delete('difficulty'); const G = await M.standStart({ ...start, words: '?' + q.toString() }); for (let i = 0; i < 30; i++) G.step(Array.from({ length: G.seats }, () => idle)); return `${G.word()} ${G.watch()}`; };
   const [std, hard, bare] = [await game('?roomclear&difficulty=standard'), await game('?roomclear&difficulty=hard'), await game('?roomclear')];
   check(std === bare && hard !== std, `the host's difficulty is the server's: a Hard address stands another game than a Standard one (${hard} · ${std}), and an address that names none is Standard (${bare})`); }
 
@@ -92,8 +96,23 @@ try {
   const [ba, bb] = b ? await Promise.all([bot(a), bot(b)]) : [null, null];
   check(!!ba && !!bb && ba.seat === 0 && bb.seat === 1 && ba.confirmed >= 240 && bb.confirmed >= 240 && !ba.bad && !bb.bad && ba.wordsOk >= 8 && bb.wordsOk >= 8,
     `a client in each seat, on the address and key its tab was told: ${ba && bb ? `seats ${ba.seat} and ${bb.seat} walked ${ba.confirmed} and ${bb.confirmed} ticks and matched ${ba.wordsOk} and ${bb.wordsOk} state words` : 'they did not both play'}`);
+
+  console.log('left');
+  // (the host stays in: the seat that is open is the second's)
+  const knock = (v: GameView): Promise<{ met: string; bye: () => string; ws: WebSocket }> => new Promise(done => { let bye = ''; const ws = new WebSocket(v.address), t = setTimeout(() => done({ met: 'no answer', bye: () => bye, ws }), 8000);
+    ws.onopen = () => ws.send(JSON.stringify({ k: 'hello', proto: NET.proto, game: v.game, build: BUILD, key: v.seatKey }));
+    ws.onmessage = e => { const m = JSON.parse(String(e.data)) as { k: string; code?: string; seat?: number }; if (m.k === 'bye') bye = m.code ?? '?'; if (m.k === 'welcome' || m.k === 'bye') { clearTimeout(t); done({ met: m.k === 'bye' ? `bye ${m.code}` : `seat ${m.seat}`, bye: () => bye, ws }); } }; });
+  const took = async (): Promise<GameView | string> => { const T = tab(), w = await why(T.seat(made.code)); return w || await T.join(made.code); }, said = (v: GameView | string) => typeof v === 'string' ? `"${v}"` : `seat ${v.seat}`;
+  const host = await knock(a); await Bun.sleep(2500);
+  const d = await took(), dIn = typeof d === 'string' ? null : await knock(d), bIn = b ? await knock(b) : null;
+  check(!!b && typeof d !== 'string' && d.seat === 1 && d.seatKey !== b.seatKey && dIn?.met === 'seat 1' && bIn?.met === 'bye seat', `the seat the second left is another tab's, on a key of its own that the server lets in at once (${said(d)}, then ${dIn?.met}); the second's key is refused from then on (${bIn?.met})`);
+  dIn?.ws.close(); await Bun.sleep(2500);
+  const e = await took(), back = typeof d === 'string' ? null : await knock(d); await Bun.sleep(500);
+  const eIn = typeof e === 'string' ? null : await knock(e);
+  check(typeof e !== 'string' && e.seat === 1 && back?.bye() === 'seat' && eIn?.met === 'seat 1' && eIn.bye() === '' && host.met === 'seat 0' && host.bye() === '', `left again, and one back on the old key before the next has come (${back?.met}) is told another player has his seat: bye ${back?.bye() || 'NEVER SAID'}; the next sits (${eIn?.met}); the host never noticed (${host.met})`);
+  for (const k of [host, dIn, bIn, back, eIn]) k?.ws.close();
 } catch (e) { check(false, `the flow stopped: ${String((e as Error)?.message ?? e)}`); }
 
 clearInterval(cron); runner.stopAll(); RS.stop(true); S.stop();
-console.log(fails ? `lobby-check: ${fails} FAILED${BREAK ? ' (LOBBY_BREAK=1: host, join and fight must)' : ''}` : 'lobby-check: all pass');
+console.log(fails ? `lobby-check: ${fails} FAILED${BREAK ? ' (LOBBY_BREAK=1: host, join, fight and left must)' : ''}` : 'lobby-check: all pass');
 process.exit(fails ? 1 : 0);
