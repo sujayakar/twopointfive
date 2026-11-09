@@ -82,17 +82,12 @@ pub fn rescue_flush_victims(g: &mut crate::game::Game, by: GuardId, of: &[GuardI
     out
 }
 
-/// The room fight's record of this man, if he has one. (`g.fight.defs.find(d => d.gd === h)`, ts:140, ts:191)
-fn fight_def_of(g: &Game, h: GuardId) -> Option<RoomfightDefId> {
-    g.fight.defs.iter().copied().find(|&d| g.tab.roomfight_def[d].gd == h)
-}
-
 /// May he be sent now? (the closure `free` of ts:136)
 fn free(g: &mut Game, h: GuardId, b: Option<crate::scene_level::BreachPlanBounds>, in_room: bool) -> bool {
     if crate::owner::kept(g, h, crate::owner::by::MISSION).is_some() || crate::owner::has(g, h, crate::owner::by::WALK) { return false; }
     if crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None) && in_room { return false; }
     if g.time - g.gd[h].last_seen_t < g.k.rescueflush.busy_secs || g.gd[h].saw_foe_this_frame { return false; }
-    let f = fight_def_of(g, h);
+    let f = crate::roomfight::def_of(g, h);
     if let Some(d) = f { if g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Move { return false; } }
     let Some(s_at) = g.rescue.flush.sent.get(h).map(|s| s.at) else { return true; };
     if g.time - s_at < g.k.rescueflush.again_secs { return false; }
@@ -229,15 +224,8 @@ pub fn rescue_flush_point_of(g: &crate::game::Game, goal: crate::rescueflush::Go
 /// Let go to hunt it, as rescue.ts lets a roamer go to the noise; and his word on the net.   (rescueflush.ts RescueFlush.send)
 pub fn rescue_flush_send(g: &mut crate::game::Game, h: GuardId, goal: crate::rescueflush::Goal, at: V3, n: f64, via: Option<&[V3]>) {
     let via: &[V3] = via.unwrap_or(&[]);
-    let f = fight_def_of(g, h);
     crate::rescue::rescue_let_go(g, h);
-    crate::control::set_hold(g, h, false, "rescueflush"); crate::control::set_pinned(g, h, false, "rescueflush");
-    if let Some(d) = f {
-        let time = g.time;
-        let r = &mut g.tab.roomfight_def[d];
-        r.mode = crate::roomfight::DefMode::Free; r.free_at = time; r.rally_at = m::NAN;
-    }
-    if g.gd[h].script.is_some() { crate::squad::end_guard_script(g, h, Some(crate::squad::EndGuardScriptState::Alert)); }
+    crate::roomfight::loose(g, h, "rescueflush");
     crate::mind::set_state(g, h, crate::game::GuardState::Alert, "rescueflush"); crate::mind::set(g, h, 1.0, "rescueflush"); g.gd[h].react_t = 0.0;
     crate::belief::word(g, h, at); clear_path(g, h);
     crate::guards::reset_chase(g, h);

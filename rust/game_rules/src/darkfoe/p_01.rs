@@ -288,37 +288,15 @@ pub fn dark_foe_spot(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<cra
 
 /// The room fight's own 'move' leg: his script's legs, his own senses, planted where he gets to.   (darkfoe.ts walk)
 pub fn walk(g: &mut crate::game::Game, d: RoomfightDefId, goal: V3) {
-    let gd = g.tab.roomfight_def[d].gd;
-    let c = g.gd[gd].ch;
-    let pos = g.ch[c].pos;
-    let row = &mut g.tab.roomfight_def[d];
-    row.mode = crate::roomfight::DefMode::Move;
-    row.move_kind = crate::roomfight::DefMoveKind::Fallback;
-    row.came_by = None;
-    row.move_t = 0.0;
-    row.stall_at = v3::copy(pos);
-    row.stall_t = 0.0;
-    row.rally_at = f64::NAN;
-    crate::control::set_pinned(g, gd, false, "darkfoe");
-    let speed = g.tune.guard_investigate * g.k.darkfoe.stumble_k;
-    crate::squad::order(g, gd, crate::squad::OrderPatch {
-        goal: Some(Some(v3::copy(goal))),
-        speed: Some(Some(speed)),
-        face: Some(None),
-        strafe: Some(Some(false)),
-        aim_at: Some(None),
-        upper: Some(Some(crate::character::UpperMode::Aim)),
-        stance: Some(Some(crate::character::Stance::None)),
-        crouch: Some(Some(false)),
-        ..Default::default()
-    });
+    let pace = g.tune.guard_investigate * g.k.darkfoe.stumble_k;
+    crate::roomfight::send(g, d, crate::roomfight::Leg::to(goal, pace), "darkfoe");
 }
 
 /// Why a blind man with no light may not leave his post now (None = he may).   (darkfoe.ts darkFoeKept)
 pub fn dark_foe_kept(g: &mut crate::game::Game, gd: GuardId, d: Option<RoomfightDefId>) -> Option<String> {
     let d = match d {
         Some(d) => Some(d),
-        None => g.fight.defs.iter().copied().find(|&row| g.tab.roomfight_def[row].gd == gd),
+        None => crate::roomfight::def_of(g, gd),
     };
     let Some(d) = d else { return Some(String::from("not a room's defender")) };
     if let Some(who) = crate::owner::kept(g, gd, crate::owner::by::BREAKER) { return Some(String::from(who)); }
@@ -414,7 +392,7 @@ pub fn dark_foe_tick(g: &mut crate::game::Game, dt: f64) {
         s.blind_for = if s.blind { s.blind_for + dt } else { 0.0 };
         let row = *s;
         if row.blind_for < k.blind_secs + id_share(g, gd, Some(5.0)) * 2.0 || row.moves >= k.moves || row.since < k.again_secs { continue; }
-        let Some(d) = g.fight.defs.iter().copied().find(|&row| g.tab.roomfight_def[row].gd == gd) else { continue };
+        let Some(d) = crate::roomfight::def_of(g, gd) else { continue };
         if dark_foe_kept(g, gd, Some(d)).is_some() { continue; }
         let s = g.m.darkfoe.state_of.get_mut(gd).unwrap();
         s.since = 0.0;
