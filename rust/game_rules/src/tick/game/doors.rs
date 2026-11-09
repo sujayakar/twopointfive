@@ -108,7 +108,7 @@ pub(super) fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
         if crate::condition::down(g, g.gd[gd].ch) { continue; }
         let c = g.gd[gd].ch;
         let speed = g.gd[gd].speed;
-        let bash = g.gd[gd].state == GuardState::Alert && crate::kitload::load_gait(g, &crate::seats::here(g), crate::kitload::LoadGaitWho::Guard(gd), speed) > 2.2;
+        let bash = g.gd[gd].state == GuardState::Alert && crate::kitload::load_gait(g, g.gd[gd].ch, speed) > 2.2;
         let quiet = crate::silent::silent_ease(g, gd);
         let hand = crate::handleside::hand_press(g, gd);
         let round = speed > crate::doorway::ROUND_PACE && crate::doorway::rounds_leaves(g, gd) && !crate::doorway::leaf_stalled(g, gd);

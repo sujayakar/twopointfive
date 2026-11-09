@@ -278,7 +278,7 @@ pub(in crate::outfit) fn kit_player(g: &mut crate::game::Game) {
     if m.suit != SuitId::Issued { g.ch[c].tint = suit_tint(m.suit); }
     if m.trim != TrimId::Issued { g.ch[c].tint2 = trim_tint(m.trim); }
     let worn = if issuing_on(g) { None } else { Some(&m) };
-    crate::kitload::load_wear(g, worn);
+    crate::kitload::load_man(g, g.pl[g.player].ch, 0.0, worn, None);
     kit_alone(g);
 }
 
@@ -348,7 +348,7 @@ pub(in crate::outfit) fn kit_show(g: &mut crate::game::Game) {
     g.ch[c].tint = was.tint;
     g.ch[c].tint2 = was.tint2;
     g.m.kit.issued_player.delete(pl);
-    crate::kitload::load_wear(g, None);
+    crate::kitload::load_man(g, g.pl[g.player].ch, 0.0, None, None);
 }
 
 /// A scenario has just staged its team: each man's card onto him, yours onto you, and the squad's counts moved by what the cards changed.   (kit.ts kitStage)
@@ -391,7 +391,7 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
         let words = if i != 0 { kit_card_words(g, i as f64, &m) } else { String::new() };
         g.m.kit.man_of.set(gd, KitModManOfValue { i: i as f64, kit: m.clone(), words });
         let held = if issuing_on(g) { None } else { Some(&m) };
-        crate::kitload::load_man(g, gd, i as f64, held, Some(n));
+        crate::kitload::load_man(g, g.gd[gd].ch, i as f64, held, Some(n));
         let gun = kit_gun(g, &m);
         let changed = m.weapon != d.weapon || m.suppressed != d.suppressed || (guns_on(g) && m.primary != d.primary);
         if changed && gun != g.fa[g.gd[gd].weapon].def && g.m.weapons.weapons.get(gun).unwrap().enabled {

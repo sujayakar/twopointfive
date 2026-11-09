@@ -10,7 +10,7 @@ pub fn team_tallied(g: &crate::game::Game, gd: GuardId) -> bool {
         || g.gd[gd].down_by != Some(crate::game::DownBy::Guard)
         || g.gd[gd].civ.is_some()
         || g.gd[gd].team == crate::teams::Team::Operative
-        || !crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player)
+        || !crate::teams::hostile_to(g, gd, crate::teams::Team::Player)
     {
         return false;
     }
@@ -41,7 +41,7 @@ pub fn team_tally_tick(g: &mut crate::game::Game) {
             || g.gd[gd].down_by != Some(crate::game::DownBy::Guard)
             || g.gd[gd].civ.is_some()
             || g.gd[gd].team == crate::teams::Team::Operative
-            || !crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player)
+            || !crate::teams::hostile_to(g, gd, crate::teams::Team::Player)
         {
             continue;
         }

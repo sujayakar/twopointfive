@@ -305,7 +305,7 @@ pub fn team_pace(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> f64 {
 pub fn team_legs(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, speed: f64) -> f64 {
     match crate::teampace::team_run_legs(g, seat, gd, speed) {
         Some(legs) => legs,
-        None => crate::kitload::load_pace(g, seat, gd, speed),
+        None => crate::kitload::load_pace(g, g.gd[gd].ch, speed),
     }
 }
 
@@ -319,7 +319,7 @@ pub fn team_turn(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardI
     let rel = v3::wrap_angle(aim_yaw - body_yaw);
     let want = v3::clamp(v3::wrap_angle(to - body_yaw), -1.5, 1.5);
     let turn = g.k.pace.turn;
-    let step = turn * crate::kitload::load_pace_on(g, seat, crate::kitload::LoadPaceOnWho::Guard(gd)) * dt;
+    let step = turn * crate::kitload::load_pace_on(g, g.gd[gd].ch) * dt;
     body_yaw + (if m::abs(want - rel) <= step { want } else { rel + m::sign(want - rel) * step })
 }
 
@@ -328,7 +328,7 @@ pub fn team_lean(g: &mut crate::game::Game, gd: GuardId, was: f64, dt: f64) {
     if g.gd[gd].speed > was && team_paced(g, gd) {
         let now = g.gd[gd].speed;
         let accel = crate::teampace::team_accel(g, gd);
-        let load = crate::kitload::load_pace_on(g, &crate::seats::here(g), crate::kitload::LoadPaceOnWho::Guard(gd));
+        let load = crate::kitload::load_pace_on(g, g.gd[gd].ch);
         g.gd[gd].speed = m::min(now, was + accel * load * dt);
     }
 }
@@ -468,7 +468,7 @@ pub(super) fn flood_from(g: &mut crate::game::Game, from: V3, max_m: f64, keyed:
     let (w, h, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let n = (w * h) as usize;
     let tune_sprint = g.tune.player_sprint;
-    let sprint = m::max(1.0, tune_sprint * crate::kitload::load_sprint_on(g, &crate::seats::here(g)));
+    let sprint = m::max(1.0, tune_sprint * crate::kitload::load_sprint_on(g, g.pl[g.player].ch));
     let mut secs: Vec<f32> = vec![f32::INFINITY; n];
     let mut metres: Vec<f32> = vec![f32::INFINITY; n];
     let mut closed: Vec<bool> = vec![false; n];

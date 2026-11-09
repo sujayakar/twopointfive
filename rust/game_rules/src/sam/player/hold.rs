@@ -441,7 +441,7 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
         let back = ml > 0.0 && mx * f[0] + mz * f[2] < -0.3; // into the rear half: hauling him backwards
         let walk = g.puppet.as_ref().and_then(|x| x.walk).unwrap_or(1.0);
         let pace_in = if ml == 0.0 { 0.0 } else { (if back { HOLD_PACE_BACK } else { HOLD_PACE }) * g.pl[p].pace * walk };
-        let max_speed = crate::kitload::sam_load_pace(g, &crate::seats::here(g), pace_in, None);
+        let max_speed = crate::kitload::sam_load_pace(g, g.pl[g.player].ch, pace_in, None);
         g.pl[p].speed_sm = v3::damp(g.pl[p].speed_sm, max_speed, if max_speed > g.pl[p].speed_sm { 6.0 } else { 12.0 }, dt);
         if ml > 0.0 {
             let sm = g.pl[p].speed_sm;
@@ -586,7 +586,7 @@ fn tail_end(g: &mut Game, dt: f64, speed: f64, c: CharId) {
     pose_gun_light(g);
     let phase = g.ch[c].anim.phase;
     if js::truthy(footfall_due(g, dt, phase, speed)) {
-        let heard = crate::kitload::load_heard(g, &crate::seats::here(g), crate::kitload::LoadHeardWho::Player);
+        let heard = crate::kitload::load_heard(g, g.pl[g.player].ch);
         let at = g.ch[c].pos;
         let loud = crate::floor::tread(g, at, 0.26 * heard, true);
         let (pos, time, serial) = (v3::copy(g.ch[c].pos), g.time, g.serial());

@@ -49,7 +49,7 @@ fn hold_fire_found(g: &crate::game::Game, men: &[GuardId]) -> Option<String> {
         let state = g.gd[h].state;
         if (state == crate::game::GuardState::Alert || state == crate::game::GuardState::Search)
             && g.gd[h].last_seen_t >= 0.0
-            && crate::teams::hostile_to(g, h, crate::teams::HostileToO::Guard(m))
+            && crate::teams::hostile_to(g, h, g.gd[m].team)
         {
             return Some(String::from("a defender has seen them"));
         }

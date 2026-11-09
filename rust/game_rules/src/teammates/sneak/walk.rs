@@ -159,7 +159,7 @@ pub(super) fn eyes_for(g: &crate::game::Game, gd: GuardId) -> Vec<GuardId> {
         let h = g.guards[i];
         i += 1;
         if h == gd || crate::condition::down(g, g.gd[h].ch) { continue; }
-        if !crate::teams::hostile_to(g, h, crate::teams::HostileToO::Guard(gd)) { continue; }
+        if !crate::teams::hostile_to(g, h, g.gd[gd].team) { continue; }
         let hc = g.gd[h].ch;
         if flat(g.ch[hc].pos, p) < r && !crate::control::man::blind(g, h) && !crate::doze::doze_asleep(g, h) { out.push(h); }
     }
@@ -261,7 +261,7 @@ pub(super) fn exposure(g: &mut crate::game::Game, eyes: &[GuardId], c_2: &mut cr
 pub(super) fn exposure_of(g: &mut crate::game::Game, eyes: &[GuardId], gd: GuardId) -> crate::sneak::Exp {
     let c = g.gd[gd].ch;
     let low = g.ch[c].anim.crouch > 0.5;
-    let card = crate::kitload::load_seen(g, &crate::seats::here(g), crate::kitload::LoadSeenWho::Guard(gd));
+    let card = crate::kitload::load_seen(g, g.gd[gd].ch);
     read(g, eyes, &Target::Man { c }, &mut |g: &mut Game| g.gd[gd].visibility, Some(low), Some(card))
 }
 
@@ -351,7 +351,7 @@ pub fn sneak_walk(g: &mut crate::game::Game, gd: GuardId, low: bool, habit: Opti
     while i < g.guards.len() {
         let h = g.guards[i];
         i += 1;
-        if h == gd || crate::condition::down(g, g.gd[h].ch) || !crate::teams::hostile_to(g, h, crate::teams::HostileToO::Guard(gd)) || crate::control::man::blind(g, h) || crate::doze::doze_asleep(g, h) { continue; }
+        if h == gd || crate::condition::down(g, g.gd[h].ch) || !crate::teams::hostile_to(g, h, g.gd[gd].team) || crate::control::man::blind(g, h) || crate::doze::doze_asleep(g, h) { continue; }
         let e = eye_for(g, h, wide);
         let hab = match habit.as_mut() { Some(f) => (*f)(g, h), None => None };
         let mut looks = vec![walk_look(e)];
@@ -360,7 +360,7 @@ pub fn sneak_walk(g: &mut crate::game::Game, gd: GuardId, low: bool, habit: Opti
         men.push(SneakWalkMan { h, x: e.pos[0], z: e.pos[2], open: crate::guards::Eye { half_deg: 180.0, near_deg: 180.0, ..e }, looks, line: JsMap::new() });
     }
     let reach = g.k.guard_eye.range + 0.5;
-    let card = crate::kitload::load_seen(g, &crate::seats::here(g), crate::kitload::LoadSeenWho::Guard(gd));
+    let card = crate::kitload::load_seen(g, g.gd[gd].ch);
     SneakWalk { by: None, gd, low, keen, card, reach, men, memo: JsMap::new() }
 }
 
@@ -466,7 +466,7 @@ pub fn sneak_walk_cost(g: &mut crate::game::Game, this: &mut crate::sneak::Sneak
                         if lit < 0.0 { lit = walk_lit_of(g, w, x, z, Some(0.4)); }
                         let h = w.men[q].h;
                         if !seen_along(g, h, d, w.keen, w.low, Some(w.card), Some(MAP_SHORT), &mut |_| lit) { break; }
-                        rate = eye_rate(g, h, lit, d, w.keen, Some(w.low)) * crate::kitload::load_cross(g, &crate::seats::here(g), crate::kitload::LoadCrossWho::Guard(w.gd));
+                        rate = eye_rate(g, h, lit, d, w.keen, Some(w.low)) * crate::kitload::load_cross(g, g.gd[w.gd].ch);
                     }
                     add[q][k] += rate * dt;
                 }

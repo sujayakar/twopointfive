@@ -82,12 +82,6 @@ pub struct WallReact {
     pub unsub: bool,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum WallReactHeadGd {
-    Guard(GuardId),
-    Sam,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum WallReactManKnowsHow {
     Heard,

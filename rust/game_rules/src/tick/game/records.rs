@@ -225,7 +225,7 @@ pub fn friend_before_muzzle(g: &crate::game::Game, gd: GuardId) -> bool {
             return true;
         }
     }
-    if crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player) {
+    if crate::teams::hostile_to(g, gd, crate::teams::Team::Player) {
         return false;
     }
     crate::seats::men(g).into_iter().any(|pl| !crate::condition::down(g, g.pl[pl].ch) && in_lane(g.ch[g.pl[pl].ch].pos, at, y))

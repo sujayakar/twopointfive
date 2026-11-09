@@ -276,7 +276,7 @@ pub fn sight_gain(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> f64 {
     let mut rate = detect * m::pow(light, 1.5) * dist_f * (if crouch { 0.75 } else { 1.0 }) * moving * v3::clamp((smoke - 0.3) / 0.5, 0.0, 1.0) * keen;
     let pp = g.ch[g.pl[g.player].ch].pos;
     let side = crate::attention::attention_side_k(g, gd, pp);
-    rate *= side * crate::kitload::load_seen(g, &crate::seats::here(g), crate::kitload::LoadSeenWho::Player);
+    rate *= side * crate::kitload::load_seen(g, g.pl[g.player].ch);
     if dist < 1.8 {
         rate = m::max(rate, 3.5 * crate::close::close_near_k(g, gd, dist));
     }
@@ -311,7 +311,7 @@ pub fn sight_gain_on(g: &mut crate::game::Game, gd: GuardId, o: GuardId, dist: f
         * keen;
     let op = g.ch[oc].pos;
     let side = crate::attention::attention_side_k(g, gd, op);
-    rate *= side * crate::kitload::load_seen(g, &crate::seats::here(g), crate::kitload::LoadSeenWho::Guard(o));
+    rate *= side * crate::kitload::load_seen(g, g.gd[o].ch);
     if dist < 1.8 {
         rate = m::max(rate, 3.5);
     }
