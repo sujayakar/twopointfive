@@ -11,7 +11,7 @@ use crate::quietfog::{self, QuietRung};
 use crate::roomclear;
 use crate::scene_scenario_list::{self as list, all_missions, Pick, SOLO_ID, SOLO_KEY, SCENARIO_KEYS};
 use crate::scenario_run;
-use crate::scene_scenarios::{MissionGroup, ScenarioEntry, ScenarioEntryKind};
+use crate::scene_scenarios::{MissionGroup, ScenarioEntry, MissionKind};
 use crate::ui_missions::Lean;
 use crate::view::{BriefView, KeptText, MissionRow, MissionsView, Setting, SettingChoice, SheetView, ShortView, StartRow, StartView};
 use crate::weather_kinds::{self, WeatherKind};
@@ -50,10 +50,10 @@ pub struct Mission {
 impl Mission {
     fn level(&self) -> Option<&str> { self.entry.as_ref().and_then(|e| e.level.as_deref()).filter(|l| !l.is_empty()) }
     fn ways(&self) -> Option<&[String]> { self.entry.as_ref().and_then(|e| e.ways.as_deref()) }
-    fn is_quiet(&self) -> bool { self.entry.as_ref().is_some_and(|e| e.kind == ScenarioEntryKind::Quiet) }
+    fn is_quiet(&self) -> bool { self.entry.as_ref().is_some_and(|e| e.kind == MissionKind::Quiet) }
     fn lesson(&self) -> bool { self.entry.as_ref().is_some_and(lesson_row) }
     /// the lever is live on it with a bottom rung of its own: a quiet mission that is no lesson, and the solo night
-    fn quiet_row(&self) -> bool { self.entry.as_ref().map_or(true, |e| e.kind == ScenarioEntryKind::Quiet && !lesson_row(e)) }
+    fn quiet_row(&self) -> bool { self.entry.as_ref().map_or(true, |e| e.kind == MissionKind::Quiet && !lesson_row(e)) }
     /// Standard | Hard changes something on it: a squad scenario's defenders read it
     fn diff_live(&self) -> bool { self.entry.is_some() && !self.is_quiet() }
     /// a level built for snow has its own weather: no row is drawn for it and its link carries none
@@ -83,16 +83,16 @@ fn solo_night() -> Mission {
 /// The heading a row is under: its own, else by what it is, so that every row is under exactly one.
 fn group_of(e: &ScenarioEntry) -> MissionGroup {
     e.group.unwrap_or(match e.kind {
-        ScenarioEntryKind::Quiet => if e.squad != 0.0 { MissionGroup::QuietTwo } else { MissionGroup::QuietAlone },
-        ScenarioEntryKind::Rescue => MissionGroup::Clock,
+        MissionKind::Quiet => if e.squad != 0.0 { MissionGroup::QuietTwo } else { MissionGroup::QuietAlone },
+        MissionKind::Rescue => MissionGroup::Clock,
         _ => MissionGroup::Raids,
     })
 }
 
 fn mission_of(e: ScenarioEntry) -> Mission {
     let lean = e.lean.unwrap_or(match e.kind {
-        ScenarioEntryKind::Nightbreach => Lean::Either,
-        ScenarioEntryKind::Quiet => Lean::Quiet,
+        MissionKind::Nightbreach => Lean::Either,
+        MissionKind::Quiet => Lean::Quiet,
         _ => Lean::Loud,
     });
     let place = e.place.clone().unwrap_or_else(|| e.level.as_deref().filter(|l| !l.is_empty()).map_or(String::from("The office"), level_words));
@@ -379,7 +379,7 @@ impl Sitting {
 
     /// The structure the mission is fought on, as its levers are lit there ('' = one with no rows of its own).
     fn structure_of(m: &Mission) -> String {
-        m.entry.as_ref().filter(|e| e.kind == ScenarioEntryKind::Roomclear).map_or(String::new(), |e| difficulty::structure_of_level(e.level.as_deref()))
+        m.entry.as_ref().filter(|e| e.kind == MissionKind::Roomclear).map_or(String::new(), |e| difficulty::structure_of_level(e.level.as_deref()))
     }
 
     /// The rows of settings of one mission, in the sheet's order.
@@ -499,7 +499,7 @@ fn difficulty_row(g: &Game, m: &Mission) -> Setting {
     let now = difficulty::difficulty_now(g);
     let level = match now { DifficultyNow::Standard => DifficultyWordsLevel::Standard, DifficultyNow::Hard => DifficultyWordsLevel::Hard, DifficultyNow::Custom => DifficultyWordsLevel::Custom };
     let note = match &m.entry {
-        Some(e) if e.kind == ScenarioEntryKind::Quiet => String::from("a quiet mission uses the level's own shift on either setting"),
+        Some(e) if e.kind == MissionKind::Quiet => String::from("a quiet mission uses the level's own shift on either setting"),
         Some(e) => difficulty::difficulty_words(g, Some(level), Some(&difficulty::squads_held(e))),
         None => String::from("the night shift is the same on either setting"),
     };

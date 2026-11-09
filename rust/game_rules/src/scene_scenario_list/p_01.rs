@@ -1,5 +1,6 @@
 //! WHAT AN ADDRESS ASKS FOR: the kind, the team, the level's file and the seed, read as the page starts it.
 use super::*;
+use crate::scene_scenarios::MissionKind;
 use crate::js;
 use crate::m;
 use crate::query::Query;
@@ -10,37 +11,37 @@ use alloc::string::String;
 pub fn spec_of(q: &Query) -> Option<crate::scene_scenario_list::ScenarioSpec> {
     let kind = kind_of(q)?;
     // a quiet mission is alone unless `squad=1`; any bigger size it is asked for is the one partner
-    let squad = if kind == ScenarioSpecKind::Quiet {
+    let squad = if kind == MissionKind::Quiet {
         if crate::loadout::squad_of(q, false).unwrap_or(0.0) > 0.0 { 1.0 } else { 0.0 }
     } else {
-        crate::loadout::squad_of(q, kind != ScenarioSpecKind::Rescue).unwrap_or(2.0)
+        crate::loadout::squad_of(q, kind != MissionKind::Rescue).unwrap_or(2.0)
     };
     let (level, seed) = place_of(kind, q);
     Some(ScenarioSpec { kind, squad, level, seed })
 }
 
 /// WHAT KIND OF MISSION AN ADDRESS NAMES, the one reader of it (none: the solo night). `?squad4` alone is the room clear with the four; beside another scenario's flag it is only that scenario's size.
-pub fn kind_of(q: &Query) -> Option<ScenarioSpecKind> {
+pub fn kind_of(q: &Query) -> Option<MissionKind> {
     let four = q.has("squad4");
     if q.has("roomclear") || (four && !q.has("nightbreach") && !q.has("rescue") && !q.has("quiet")) {
-        Some(ScenarioSpecKind::Roomclear)
+        Some(MissionKind::Roomclear)
     } else if q.has("nightbreach") {
-        Some(ScenarioSpecKind::Nightbreach)
+        Some(MissionKind::Nightbreach)
     } else if q.has("rescue") {
-        Some(ScenarioSpecKind::Rescue)
+        Some(MissionKind::Rescue)
     } else if q.has("quiet") {
-        Some(ScenarioSpecKind::Quiet)
+        Some(MissionKind::Quiet)
     } else {
         None
     }
 }
 
 /// The level file and the placement seed the query pins for this kind.
-fn place_of(kind: ScenarioSpecKind, q: &Query) -> (Option<String>, Option<f64>) {
+fn place_of(kind: MissionKind, q: &Query) -> (Option<String>, Option<f64>) {
     let level = q.get("levelFile").filter(|lf| is_level_file(lf)).map(String::from);
     let seed = match kind {
-        ScenarioSpecKind::Roomclear => seed_of_word(q.get("roomclear").filter(|s| !s.is_empty()).or(q.get("squad4"))),
-        ScenarioSpecKind::Quiet => seed_of_word(q.get("quiet")),
+        MissionKind::Roomclear => seed_of_word(q.get("roomclear").filter(|s| !s.is_empty()).or(q.get("squad4"))),
+        MissionKind::Quiet => seed_of_word(q.get("quiet")),
         _ => None,
     };
     (level, seed)
@@ -63,7 +64,7 @@ fn is_level_file(lf: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ScenarioSpecKind as K;
+    use MissionKind as K;
 
     // Each address with its kind, its level and its seed's bits, a number read as the language of a page reads one (answered by bun and node, which agree).
     const CASES: &[(&str, Option<K>, Option<&str>, Option<u64>)] = &[

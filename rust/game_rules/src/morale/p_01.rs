@@ -71,7 +71,7 @@ pub fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// a man of the hostage rescue's cast (morale.ts rescued)
-pub fn rescued(g: &crate::game::Game, gd: GuardId) -> bool { g.rescue.active && g.rescue.hostiles.contains(&gd) }
+pub fn rescued(g: &crate::game::Game, gd: GuardId) -> bool { crate::rescue::rescue_up(g) && g.staged.foes.contains(&gd) }
 
 /// may a sequence have him this frame (morale.ts reacts)
 pub fn reacts(g: &crate::game::Game, gd: GuardId) -> bool {

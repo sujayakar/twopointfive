@@ -38,10 +38,7 @@ pub enum NightBreachState {
 
 #[derive(Clone, Debug, ToBytes)]
 pub struct NightBreach {
-    pub active: bool,
     pub drill: Option<crate::breach::BreachDrill>,
-    pub ops: Vec<GuardId>,
-    pub hostiles: Vec<GuardId>,
     pub layout: Option<crate::nightbreach::NightBreachLayout>,
     pub marks: Vec<crate::nightbreach::NightBreachMark>,
     pub staged: f64,
@@ -62,10 +59,7 @@ impl NightBreach {
     /// what a new one holds
     pub fn blank() -> Self {
         NightBreach {
-            active: false,
             drill: None,
-            ops: Vec::new(),
-            hostiles: Vec::new(),
             layout: None,
             marks: Vec::new(),
             staged: 0.0,

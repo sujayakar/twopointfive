@@ -14,36 +14,10 @@ pub struct StartFromQuery {
     pub why: Option<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum ActiveScenario {
-    Nightbreach,
-    Roomclear,
-    Rescue,
-    Quiet,
-}
-impl ActiveScenario {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ActiveScenario::Nightbreach => "nightbreach",
-            ActiveScenario::Roomclear => "roomclear",
-            ActiveScenario::Rescue => "rescue",
-            ActiveScenario::Quiet => "quiet",
-        }
-    }
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct RunningScenario {
-    pub kind: crate::scenario_run::RunningScenarioKind,
+    pub kind: crate::scene_scenarios::MissionKind,
     pub entry: Option<crate::scene_scenarios::ScenarioEntry>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum RunningScenarioKind {
-    #[default] Nightbreach,
-    Roomclear,
-    Rescue,
-    Quiet,
 }
 
 /// (src/game/scenarioRun.ts:18 WORDS: a table nothing writes)

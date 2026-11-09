@@ -70,16 +70,16 @@ pub(crate) fn fall_in_cmp(many: bool, a: (f64, f64, Option<crate::game::PairId>)
 
 /// owner 'nightbreach'.owns: of four, the drill's are the first pair alone
 pub fn nightbreach_owns(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.night_breach.active && crate::nightbreach::night_breach_drill_ops(g).contains(&gd) && crate::nightbreach::night_breach_owns_pair(g)
+    crate::nightbreach::night_breach_up(g) && crate::nightbreach::night_breach_drill_ops(g).contains(&gd) && crate::nightbreach::night_breach_owns_pair(g)
 }
 /// owner 'nightbreach'.release: the drill is the pair's, letting go of one man ends it for both
 pub fn nightbreach_release(g: &mut crate::game::Game, gd: GuardId) -> Option<String> {
-    if g.night_breach.active && crate::nightbreach::night_breach_drill_ops(g).contains(&gd) { crate::nightbreach::night_breach_call_off(g) } else { None }
+    if crate::nightbreach::night_breach_up(g) && crate::nightbreach::night_breach_drill_ops(g).contains(&gd) { crate::nightbreach::night_breach_call_off(g) } else { None }
 }
 /// owner 'nightbreach'.status
 pub fn nightbreach_status(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     use crate::nightbreach::NightBreachState as St;
-    if !g.night_breach.active || !g.night_breach.ops.contains(&gd) { return None; }
+    if !crate::nightbreach::night_breach_up(g) || !g.staged.team.contains(&gd) { return None; }
     let state = crate::nightbreach::night_breach_state(g);
     if !crate::nightbreach::night_breach_drill_ops(g).contains(&gd) {
         return if state == St::Off { None } else { Some(String::from("standing by")) };

@@ -75,13 +75,13 @@ pub fn working(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     }) {
         return true;
     }
-    if g.night_breach.active {
+    if crate::nightbreach::night_breach_up(g) {
         let st = crate::nightbreach::night_breach_state(g);
         if st == crate::nightbreach::NightBreachState::Going || st == crate::nightbreach::NightBreachState::Inside {
             return true;
         }
     }
-    if !g.rescue.active || !crate::rescue::rescue_dynamic(g) {
+    if !crate::rescue::rescue_up(g) || !crate::rescue::rescue_dynamic(g) {
         return false;
     }
     let st = crate::rescue::rescue_state(g);

@@ -57,7 +57,7 @@ fn the_commands_reach_the_stage_and_the_step_holds_it() {
     command::apply(&mut p.g, &b).unwrap();
     step(&mut p);
     assert_eq!((st(&p).who, st(&p).field.as_str()), (2, "bangs"));
-    assert_eq!(st(&p).order[0], game::scenario_run::team_of(&p.g)[1]);
+    assert_eq!(st(&p).order[0], p.g.staged.team[1]);
     assert_eq!(st(&p).veil, veil);
 
     // 32: the frame

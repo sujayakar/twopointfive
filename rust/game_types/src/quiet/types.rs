@@ -12,8 +12,6 @@ pub struct QuietDeal {
 
 #[derive(Clone, Debug, ToBytes)]
 pub struct QuietMission {
-    pub active: bool,
-    pub ops: Vec<GuardId>,
     pub squad: f64,
     pub pin: Option<f64>,
     pub deal: crate::quiet::QuietDeal,
@@ -33,8 +31,6 @@ impl QuietMission {
     /// what a new one holds
     pub fn blank() -> Self {
         QuietMission {
-            active: false,
-            ops: Vec::new(),
             squad: 0.0,
             pin: None,
             deal: crate::quiet::QuietDeal { start: 0.0, spot: 0.0, patrol: -1.0 },

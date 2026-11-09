@@ -20,13 +20,13 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 |---|---|
 | `scene_scenario_list/` | an address read (`spec_of`), a row's link (`pick_search`), the short list (`PICKS`) |
 | `start_list/` | the rows in their groups, a mission's sheet and settings, as the desk (`rust/game_run/src/desk.rs`) answers the page |
-| `scenario_run/` | the one way from an address to a staged game; what is up; quit |
+| `scenario_run/` | the one way from an address to a staged game; its row of the list |
 | `roomclear/`, `squaddeal/` | rooms, marks and the two ends; squads cut along a house whose file names none |
 | `nightbreach/`, `breach/` | the staging a room clear stands on; F's drill |
 | `rescue/`, `rescueend/` | a rescue's cast, F's entry, the captor's clock; the hostages led, and the win |
 | `rescueflow/`, `rescuecheck/`, `rescueflush/` | who covers the openings Sam runs past; their radio check; the men left coming for the hostages |
 | `quiet/`, `quietfog/`, `takecheck/` | a quiet mission's deal and partner, its fog lever, whether anybody is told the thing is gone |
-| `mission/` | the stealth stages, the run's counts, the one objective line (`objective`) |
+| `mission/` | what the mission that is up says of itself (`g.staged`: `Facts`, team, foes, captives, rooms, its end; a rule asks a fact there, never the kind), the stealth stages, the counts, the one objective line |
 | `verdict/`, `par/` | how a run ended, latched; the medal clock |
 | `lesson/`, `rails/` | a tutorial's steps and tests; the frame over them: which keys work, the view, what is said |
 | `director/`, `script_tut_*/` | level scripts, and the six that exist |
@@ -120,7 +120,7 @@ teammates. Only `office.json` has that plan. Elsewhere every teammate is the ord
 - **A new mission of a kind that exists:** follow the `level` skill: a generator in `tools/levels/`, `tools/levels/export.ts`, the `scenarios` block. Then the row in
   `rows.rs`, the module made, and `bun run tools/qa/level-needs.ts <name>`. A room clear also goes in `LEVELS` in `rust/game_start/src/bin/missions.rs`. The gate's `played` rows find it themselves.
 - **Cut one:** `off_list` on its row. A level whose mission's own rules left stays a plain room clear, as `snatch.json` is.
-- **A new kind:** `ScenarioEntryKind` and `ScenarioSpecKind`, `kind_of`, `SCENARIO_KEYS`, `start_scenario`, `active_scenario`, an arm in `ended` and in `objective`,
+- **A new kind:** `MissionKind`, `kind_of`, `SCENARIO_KEYS`, `start_scenario`, its `Facts`, an arm in `ended`, `going` and `objective`,
   a tick line in `step_seats_on_first`, and its staging at the end of `game_restart_encounter`.
 - **A tutorial step:** the level's generator (`tools/levels/tut-road.ts` and its like), then its deed in the scripted player (`road.rs`). A new kind of test is an arm of `LessonTest` and `test_ok`.
 - **A new script:** a `script_tut_*/` folder, an arm of `LevelScriptFn`, `level_script_of`, `beat_frame_new` and `beat_next`.

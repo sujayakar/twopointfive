@@ -9,7 +9,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// Is somebody told that the thing is gone (so that a man is sent to look at its holder)?   (takecheck.ts takeTold)
 pub fn take_told(g: &mut crate::game::Game) -> bool {
-    if !g.quiet.active { return true; }
+    if !crate::quiet::quiet_of(g) { return true; }
     let spot = crate::quiet::quiet_mission_spot(g);
     spot.map_or(false, |s| s.wired.unwrap_or(false))
 }

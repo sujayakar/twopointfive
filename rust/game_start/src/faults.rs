@@ -2,7 +2,7 @@
 //! of); where the file reads whole, the rules a file can be held to by itself: ids that are one thing's, names that point at something, numbers in their range, lists that go together.
 //!
 //! It judges the FILE. What the built floor says (a mark on free floor, a way on foot, a light in a wall) is asked of the game: `levels`, and tools/qa/level-lint.ts.
-use crate::file::{self, BoxData, FlagName, LevelFile, LightData, LightDataKind, Plan};
+use crate::file::{self, BoxData, FlagName, LevelFile, LightData, Plan};
 use crate::json::Json;
 use crate::kit_file::*;
 use crate::level::{does_word, stuff_word, Said};

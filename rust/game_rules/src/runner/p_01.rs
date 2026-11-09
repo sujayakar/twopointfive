@@ -57,7 +57,7 @@ pub fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// nobody's to take: the hostage rescue's cast and the response team   (runner.ts spoken)
 pub fn spoken(g: &crate::game::Game, gd: GuardId) -> bool {
-    (g.rescue.active && g.rescue.hostiles.contains(&gd)) || crate::qrf::qrf_owns(g, gd)
+    (crate::rescue::rescue_up(g) && g.staged.foes.contains(&gd)) || crate::qrf::qrf_owns(g, gd)
 }
 
 /// may the sequence start on him this frame   (runner.ts reacts)

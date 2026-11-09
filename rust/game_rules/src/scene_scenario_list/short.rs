@@ -4,7 +4,7 @@
 use super::*;
 use crate::difficulty::Difficulty;
 use crate::query::{after_mark, decoded, encoded, Query};
-use crate::scene_scenarios::{ScenarioEntry, ScenarioEntryKind};
+use crate::scene_scenarios::{ScenarioEntry, MissionKind};
 use alloc::{format, string::String, vec::Vec};
 
 /// the solo night's word on an address, and its place on the list
@@ -25,13 +25,13 @@ pub fn scenario_query(e: &ScenarioEntry) -> String {
     if let Some(level) = e.level.as_deref().filter(|l| !l.is_empty()) { q.push(format!("levelFile={}", encoded(level))); }
     let kind = e.kind.as_str();
     q.push(match e.seed {
-        Some(seed) if matches!(e.kind, ScenarioEntryKind::Roomclear | ScenarioEntryKind::Quiet) => format!("{}={}", kind, crate::js::num_str(seed)),
+        Some(seed) if matches!(e.kind, MissionKind::Roomclear | MissionKind::Quiet) => format!("{}={}", kind, crate::js::num_str(seed)),
         _ => String::from(kind),
     });
-    if e.kind == ScenarioEntryKind::Quiet {
+    if e.kind == MissionKind::Quiet {
         if e.squad == 1.0 { q.push(String::from("squad=1")); }
     } else if e.squad == 4.0 {
-        q.push(String::from(if e.kind == ScenarioEntryKind::Rescue { "squad=4" } else { "squad4" }));
+        q.push(String::from(if e.kind == MissionKind::Rescue { "squad=4" } else { "squad4" }));
     }
     format!("?{}", q.join("&"))
 }
@@ -64,9 +64,9 @@ pub fn entry_of_query<'a>(q: &Query, list: impl IntoIterator<Item = &'a Scenario
         e.kind.as_str() == s.kind.as_str()
             && e.squad == s.squad
             && e.level.as_deref().unwrap_or("") == s.level.as_deref().unwrap_or("")
-            && (e.kind != ScenarioEntryKind::Roomclear || e.seed == s.seed)
+            && (e.kind != MissionKind::Roomclear || e.seed == s.seed)
             // (a quiet row with no seed of its own is its row whatever deal the address pins)
-            && (e.kind != ScenarioEntryKind::Quiet || e.seed.is_none() || e.seed == s.seed)
+            && (e.kind != MissionKind::Quiet || e.seed.is_none() || e.seed == s.seed)
     })
 }
 

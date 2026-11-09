@@ -41,7 +41,7 @@ pub fn response_of(g: &crate::game::Game) -> Option<crate::scene_scenarios::Resp
 
 /// A squad's room clear under way on a level whose block carries `raid`.   (qrf.ts raid)
 pub fn raid(g: &crate::game::Game) -> bool {
-    if !g.night_breach.active || g.rescue.active { return false; }
+    if !crate::nightbreach::night_breach_up(g) || crate::rescue::rescue_up(g) { return false; }
     response_of(g).map_or(false, |r| r.raid.is_some())
 }
 
@@ -63,7 +63,7 @@ pub fn callers(g: &crate::game::Game) -> Vec<GuardId> {
             Some(room) => room.defenders.clone(),
             None => Vec::new(),
         },
-        None => g.night_breach.hostiles.clone(),
+        None => g.staged.foes.clone(),
     };
     let mut out = Vec::new();
     for x in of {
@@ -128,7 +128,7 @@ pub fn marks_of(g: &mut crate::game::Game) -> Option<crate::qrf::Marks> {
 pub fn room_for(g: &crate::game::Game) -> f64 {
     let n = (crate::guards::MAX_SKINNED - g.civilians.len() as f64) - crate::seats::seat_count(g) - g.guards.len() as f64;
     if raid(g) {
-        m::min(n, crate::scene_scenarios::SQUAD_MAX_MEN - g.night_breach.hostiles.len() as f64 - g.qrf.men.len() as f64)
+        m::min(n, crate::scene_scenarios::SQUAD_MAX_MEN - g.staged.foes.len() as f64 - g.qrf.men.len() as f64)
     } else {
         n
     }
@@ -240,7 +240,7 @@ pub fn live(g: &mut crate::game::Game) -> bool {
     if raid(g) {
         return g.ai_enabled && !crate::seats::all_down(g) && has_response(g);
     }
-    g.ai_enabled && !crate::seats::all_down(g) && !g.night_breach.active && !g.rescue.active && has_response(g)
+    g.ai_enabled && !crate::seats::all_down(g) && !crate::nightbreach::night_breach_up(g) && !crate::rescue::rescue_up(g) && has_response(g)
 }
 
 /// This level has a response team.   (qrf.ts hasResponse)

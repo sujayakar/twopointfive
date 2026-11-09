@@ -57,12 +57,12 @@ pub fn rescue_end_alive(g: &crate::game::Game) -> Vec<GuardId> {
 
 /// A word can be given to the hostages: the run is on and nobody of theirs has them.   (rescueend.ts RescueEnd.free)
 pub fn rescue_end_free(g: &mut crate::game::Game) -> bool {
-    g.rescue.active && g.rescue.result.is_none() && crate::rescue::rescue_captor(g).is_none()
+    crate::rescue::rescue_up(g) && g.rescue.result.is_none() && crate::rescue::rescue_captor(g).is_none()
 }
 
 /// The row on each living hostage in reach.   (rescueend.ts RescueEnd.rows)
 pub fn rescue_end_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::rescueend::RescueEndRows2RowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
-    if !g.rescue.active || g.rescue.result.is_some() { return; }
+    if !crate::rescue::rescue_up(g) || g.rescue.result.is_some() { return; }
     let pl = who(g, &crate::seats::here(g));
     let had = crate::rescue::rescue_captor(g).is_some();
     for h in rescue_end_alive(g) {
@@ -122,7 +122,7 @@ pub fn rescue_end_word(g: &mut crate::game::Game, by: Option<CharId>) -> bool {
 
 /// Once a frame: this frame's Space on a hostage's row; at the run's end they stop where they are.   (rescueend.ts RescueEnd.tick)
 pub fn rescue_end_tick(g: &mut crate::game::Game) {
-    if !g.rescue.active { return; }
+    if !crate::rescue::rescue_up(g) { return; }
     let act = g.act.as_ref().map(|a| (a.kind, a.guard, a.verb));
     if let Some((crate::game::InteractableKind::Guard, Some(guard), Some(verb))) = act {
         if (verb == crate::game::Verb::Lead || verb == crate::game::Verb::Stay) && crate::rescue::rescue_is_hostage(g, guard) {
@@ -182,6 +182,6 @@ pub fn rescue_end_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef)
 
 /// The hostages' rows, from player.ts buildInteractables.   (rescueend.ts rescueEndRows)
 pub fn rescue_end_rows_2(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::rescueend::RescueEndRows2RowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
-    if !g.rescue.active { return; }
+    if !crate::rescue::rescue_up(g) { return; }
     rescue_end_rows(g, p, busy, row, offer);
 }

@@ -250,7 +250,7 @@ fn a_card_without_the_light_has_none_in_a_room_clear() {
     let mut p = Play::level("kit-yard.json", false, &Opts::default());
     p.sam_unhurt();
     assert!(game::kit::kit_set(&mut p.g, 0.0, game::kit::KitField::Light, &game::kit::KitValue::Bool(false)), "the card took no such row");
-    let spec = game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenario_list::ScenarioSpecKind::Roomclear, squad: 4.0, level: None, seed: None };
+    let spec = game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenarios::MissionKind::Roomclear, squad: 4.0, level: None, seed: None };
     if let Some(why) = game::scenario_run::start_scenario(&mut p.g, &spec) { panic!("refused: {}", why); }
     p.frame();
     let pl = p.g.player;

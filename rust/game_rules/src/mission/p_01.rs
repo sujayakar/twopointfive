@@ -118,7 +118,7 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
         }
         g.mission.spotted_t = g.time;
     }
-    if crate::roomclear::room_clear_scenario_active(g) || g.rescue.active {
+    if crate::roomclear::room_clear_scenario_active(g) || crate::rescue::rescue_up(g) {
         // the room clear or the hostage rescue has the floor: no stage of the stealth mission moves under it
     } else if g.mission.stage == MissionStage::Infiltrate {
         let p = player_pos(g, &crate::seats::here(g));

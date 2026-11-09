@@ -207,7 +207,7 @@ fn shown(g: &Game, bared: bool) -> Vec<CharId> {
     let all: Vec<CharId> = players(g).chain(g.guards.iter().map(|&gd| g.gd[gd].ch)).chain(game::civilians::civilians_shown(g).iter().map(|&gd| g.gd[gd].ch)).collect();
     let mut drawn = if bared { all } else { game::fogofwar::fog_of_war_filter(g, &all) };
     // (more men than have a mesh of their own to throw a shadow by: the men down give up their places first)
-    if drawn.len() > 8 && (g.night_breach.active || g.rescue.active) {
+    if drawn.len() > 8 && (game::nightbreach::night_breach_up(g) || game::rescue::rescue_up(g)) {
         let down = |c: &CharId| g.guards.iter().any(|&gd| g.gd[gd].ch == *c && g.gd[gd].state == GuardState::Dead);
         drawn.sort_by_key(down);
     }
@@ -227,7 +227,7 @@ fn suit(g: &Game, c: CharId, player: bool) -> bool {
     if !g.k.look.on { return false; }
     let quiet = match game::scene_look::suit_as(g) {
         Some(asked) => asked.map(|_| true),
-        None => game::scenario_run::active_scenario(g).map(|a| a == game::scenario_run::ActiveScenario::Quiet),
+        None => g.staged.up.map(|a| a == game::scene_scenarios::MissionKind::Quiet),
     };
-    quiet != Some(false) && (player || (quiet == Some(true) && game::scenario_run::team_of(g).iter().any(|gd| g.gd[*gd].ch == c)))
+    quiet != Some(false) && (player || (quiet == Some(true) && g.staged.team.iter().any(|gd| g.gd[*gd].ch == c)))
 }

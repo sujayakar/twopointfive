@@ -90,7 +90,7 @@ fn roster(g: &mut Game) {
         g.verdict.tracks.set(crate::Num(id), track(id, name, Some(tone), true, None));
     }
     let paired = team_paired(g, &crate::seats::here(g));
-    for gd in crate::scenario_run::team_of(g) {
+    for gd in g.staged.team.clone() {
         let id = g.ch[g.gd[gd].ch].id;
         if g.verdict.tracks.has(crate::Num(id)) { continue; }
         let tone = if paired { match g.gd[gd].unit.as_ref().and_then(|u| u.pair) { Some(crate::game::PairId::Red) => Some(Hue::Red), Some(crate::game::PairId::Blue) => Some(Hue::Blue), None => None } } else { None };
@@ -180,11 +180,11 @@ fn watch(g: &mut Game) {
 }
 
 /// The way a won run was won: quiet, dark, walls, doors, in that order.   (verdict.ts Verdict.approach)
-fn approach(g: &Game, kind: Option<crate::scenario_run::ActiveScenario>) -> Approach {
+fn approach(g: &Game, kind: Option<crate::scene_scenarios::MissionKind>) -> Approach {
     let (s, n) = (&g.mission.stats, &g.chronicle.counts);
     // a loaded run lost this module's own latches: for the kinds that can be loaded the chronicle says the same, and for the stealth game the
     // mission's own books decide with it, loaded or not
-    let stealth = kind.is_none() || kind == Some(crate::scenario_run::ActiveScenario::Quiet);
+    let stealth = kind.is_none() || kind == Some(crate::scene_scenarios::MissionKind::Quiet);
     let loaded = g.verdict.resumed && stealth;
     let found = g.verdict.found_at >= 0.0 || (stealth && (s.alerts > 0.0 || s.spotted > 0.0 || n.esc1 + n.esc2 > 0.0));
     if !found { return Approach::Quiet; }
@@ -194,8 +194,8 @@ fn approach(g: &Game, kind: Option<crate::scenario_run::ActiveScenario>) -> Appr
 
 /// The run is over: its one verdict is made, and stays.   (verdict.ts Verdict.close)
 fn close(g: &mut Game, end: (bool, &'static str, String)) {
-    use crate::scenario_run::ActiveScenario as K;
-    let kind = crate::scenario_run::active_scenario(g);
+    use crate::scene_scenarios::MissionKind as K;
+    let kind = g.staged.up;
     let secs = secs(g);
     let men: Vec<VerdictMan> = g.verdict.tracks.values().map(|t| VerdictMan { id: t.id, name: t.name.clone(), tone: t.tone, human: t.human, state: t.state, down_at: t.down_at, down_room: t.down_room.clone(), down_by: t.down_by.clone(), down_pos: t.down_pos, drops: t.drops.clone(), path: t.path.clone() }).collect();
     let lost = men.iter().filter(|x| x.state != ManState::Up).count() as f64;
@@ -286,7 +286,7 @@ pub fn run_view(g: &crate::game::Game) -> crate::view::RunView {
         way: res.and_then(|r| r.approach),
         clean: res.map_or(false, |r| r.clean),
         secs: res.map_or(0.0, |r| r.secs),
-        course: format!("{}|way{}|squad{}|{}", name, g.room_clear.way + 1.0, g.night_breach.ops.len(), level),
+        course: format!("{}|way{}|squad{}|{}", name, g.room_clear.way + 1.0, g.staged.team.len(), level),
         level,
         par: crate::par::par_result_now(g).map(|r| r.shown),
     }

@@ -80,7 +80,7 @@ pub fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// one of the hostage rescue's cast.   (darkdoor.ts rescued)
-pub fn rescued(g: &crate::game::Game, gd: GuardId) -> bool { g.rescue.active && g.rescue.hostiles.contains(&gd) }
+pub fn rescued(g: &crate::game::Game, gd: GuardId) -> bool { crate::rescue::rescue_up(g) && g.staged.foes.contains(&gd) }
 
 /// he knows something is out there.   (darkdoor.ts alarmed)
 pub fn alarmed(g: &crate::game::Game, gd: GuardId) -> bool {

@@ -29,7 +29,7 @@ fn holds(g: &Game, h: GuardId) -> bool {
 }
 /// `nb.ops.filter(o => o.state !== 'dead').length`
 fn ops_up(g: &Game) -> usize {
-    g.night_breach.ops.iter().filter(|o| up(g, **o)).count()
+    g.staged.team.iter().filter(|o| up(g, **o)).count()
 }
 /// `this.rooms.filter(r => !r.cleared).length`
 fn rooms_left(g: &Game) -> usize {
@@ -438,7 +438,7 @@ pub fn way_asked(word: Option<&str>) -> usize {
 }
 /// …of a whole address: only a room clear has ways. A rescue, the night breach, a quiet mission and the solo night have the level's one start, whatever `way` the link still carries.
 pub fn way_of_address(q: &crate::query::Query) -> usize {
-    if crate::scene_scenario_list::kind_of(q) == Some(crate::scene_scenario_list::ScenarioSpecKind::Roomclear) { way_asked(q.get("way")) } else { 0 }
+    if crate::scene_scenario_list::kind_of(q) == Some(crate::scene_scenarios::MissionKind::Roomclear) { way_asked(q.get("way")) } else { 0 }
 }
 /// THE WAY TAKEN of the `ways` a level has, its own among them: past the last = the last.
 pub fn way_taken(asked: usize, ways: usize) -> usize { asked.min(ways.saturating_sub(1)) }
@@ -487,7 +487,7 @@ pub fn room_clear_scenario_staged_line(g: &crate::game::Game) -> String {
     let what = if !g.night_breach.no_drill {
         let room = room_clear_scenario_drill_room(g).map_or(String::from("door"), |r| r.name);
         format!("Press F to stack up on the {}, or X for orders (door tools on any door)", room)
-    } else if !g.night_breach.ops.is_empty() {
+    } else if !g.staged.team.is_empty() {
         String::from("X for your orders (door tools on any door)")
     } else {
         String::from("You're alone")
@@ -495,15 +495,14 @@ pub fn room_clear_scenario_staged_line(g: &crate::game::Game) -> String {
     format!("room clear. {} armed enemies hold {} rooms: {}. {}", g.room_clear.placement.len(), g.room_clear.rooms.len(), names.join(", "), what)
 }
 
-/// up: the night breach is staged on THIS scenario's floor   (roomclear.ts RoomClearScenario.active)
+/// Is it up: the night breach's staging, on this scenario's floor.
 pub fn room_clear_scenario_active(g: &crate::game::Game) -> bool {
-    // (`nb.layout === this.layout`: this scenario's is the only layout there is)
-    g.night_breach.active && g.night_breach.layout.is_some()
+    g.staged.up == Some(crate::scene_scenarios::MissionKind::Roomclear)
 }
 
 /// why it cannot start right now (None = it can)   (roomclear.ts RoomClearScenario.canStart)
 pub fn room_clear_scenario_can_start(g: &mut crate::game::Game) -> Option<String> {
-    if g.night_breach.active {
+    if crate::nightbreach::night_breach_up(g) {
         return Some(String::from("the night breach is already staged — stop it first"));
     }
     let s = match room_clear_scenario_structure(g) {
@@ -633,7 +632,7 @@ pub fn room_clear_scenario_on_staged(g: &mut crate::game::Game) {
     room_clear_scenario_clear(g);
     let dealt_rooms: Vec<String> = dealt.iter().map(|p| p.room.clone()).collect();
     g.room_clear.placement = dealt;
-    let hostiles = g.night_breach.hostiles.clone();
+    let hostiles = g.staged.foes.clone();
     g.room_clear.rooms = s
         .rooms
         .iter()
@@ -659,11 +658,11 @@ pub fn room_clear_scenario_tick(g: &mut crate::game::Game, _dt: f64) {
         }
         return;
     }
-    if g.room_clear.rooms.is_empty() || g.night_breach.hostiles.len() != g.room_clear.placement.len() {
+    if g.room_clear.rooms.is_empty() || g.staged.foes.len() != g.room_clear.placement.len() {
         return;
     }
     crate::enemysquads::squads_tick(g);
-    let live: Vec<GuardId> = g.night_breach.hostiles.iter().copied().filter(|h| holds(g, *h)).collect();
+    let live: Vec<GuardId> = g.staged.foes.iter().copied().filter(|h| holds(g, *h)).collect();
     let mut i = 0;
     while i < g.room_clear.rooms.len() {
         let bounds = g.room_clear.rooms[i].def.bounds;
@@ -704,7 +703,7 @@ pub fn room_clear_scenario_tick(g: &mut crate::game::Game, _dt: f64) {
         }
     }
     let pair_up = ops_up(g);
-    let ops = g.night_breach.ops.len();
+    let ops = g.staged.team.len();
     let play = g.room_clear.end.is_none() && !crate::seats::all_down(g) && !live.is_empty();
     if !g.room_clear.pair_said && pair_up == 0 && ops > 0 {
         g.room_clear.pair_said = true;

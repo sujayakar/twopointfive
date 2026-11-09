@@ -49,7 +49,7 @@ pub fn friend_in_sams_line(g: &mut crate::game::Game, c_2: CharId) -> Option<Gua
         i += 1;
         if !crate::teams::hostile_to(g, o, crate::teams::HostileToO::Player) { ask(g, o, &mut line); }
     }
-    if g.rescue.active {
+    if crate::rescue::rescue_up(g) {
         let mut i = 0;
         while i < g.civilians.len() {
             let o = g.civilians[i];

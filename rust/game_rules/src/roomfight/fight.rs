@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Hard's drilled defenders: only the night breach by itself, under the press's own switch.   (roomfight.ts drilledOn)
 pub fn drilled_on(g: &crate::game::Game) -> bool {
-    g.k.pressure.on && g.k.pressure.drilled && g.night_breach.active && g.night_breach.layout.is_none()
+    g.k.pressure.on && g.k.pressure.drilled && crate::nightbreach::night_breach_up(g) && g.night_breach.layout.is_none()
 }
 
 /// × the seconds a stun canister doubles this man over: DRILLED.shaken for a drilled defender, 1 for anybody else.   (roomfight.ts drilledK)
