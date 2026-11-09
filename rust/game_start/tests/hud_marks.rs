@@ -136,7 +136,7 @@ fn in_a_game_of_two_each_is_told_of_his_own_blindness_and_his_own_meters() {
         assert!(p.view_of(0).marks.blind == 0.0 && p.view_of(1).marks.blind == 0.0, "seed {}: CONTROL: nobody is blind", seed);
         p.g.cond[p.g.pl[second].ch].blind_until = p.g.time + 10.0;
         assert_eq!((p.view_of(0).marks.blind, p.view_of(1).marks.blind), (0.0, 1.0), "seed {}: the second man is dazzled", seed);
-        p.g.pl[first].visibility = 0.25; p.g.pl[second].visibility = 0.75;
+        p.g.shown[p.g.pl[first].ch].visibility = 0.25; p.g.shown[p.g.pl[second].ch].visibility = 0.75;
         p.g.pl[first].noise = 0.5; p.g.pl[second].noise = 0.1;
         let (a, b) = (p.view_of(0).marks, p.view_of(1).marks);
         assert_eq!((a.light, a.noise, b.light, b.noise), (0.25, 0.5, 0.75, 0.1), "seed {}", seed);

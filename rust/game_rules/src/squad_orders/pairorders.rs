@@ -528,7 +528,7 @@ fn pair_orders_body_lit(g: &mut Game, o: GuardId, foe: GuardId, at: V3) -> bool 
     let d = m::hyp3(eye[0] - at[0], eye[1] - at[1], eye[2] - at[2]);
     let (near_m, far_m, lit, lit_near) = (g.k.body_light.near_m, g.k.body_light.far_m, g.k.body_light.lit, g.k.body_light.lit_near);
     let bar = if !g.tune.body_light || d <= near_m { -1.0 } else { lit_near + (lit - lit_near) * m::min(1.0, (d - near_m) / m::max(0.1, far_m - near_m)) };
-    let vis = g.gd[foe].visibility;
+    let vis = g.shown[g.gd[foe].ch].visibility;
     m::max(vis, pair_orders_lit_at(g, at)) >= bar
 }
 

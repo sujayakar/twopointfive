@@ -46,18 +46,11 @@ pub(super) fn game_light_meter(g: &mut crate::game::Game, dt: f64) {
         let eye = bone_or(g, g.gd[gd].ch, Bone::Head, 1.65);
         g.gd[gd].smoke_trans = crate::sense::clear_between(g, eye, chest);
     }
-    for &s in seats.iter() { crate::seats::with_seat(g, s, &mut |g| game_meter_read(g, dt)); }
-}
-
-/// a seat's half of lightMeter, over its view: the light on its man, eased into his visibility
-fn game_meter_read(g: &mut crate::game::Game, dt: f64) {
-    let pl = g.player;
-    let [stands, e] = crate::guards::light_on(g, g.pl[pl].ch);
-    if !e.is_finite() { return; }
-    g.pl[pl].irradiance = stands;
-    let to = game_visibility_of(g, e);
-    let was = g.pl[pl].visibility;
-    g.pl[pl].visibility = if was.is_finite() { v3::damp(was, to, 6.0, dt) } else { to };
+    for &s in seats.iter() {
+        let man = crate::cmd::seat_man(g, s);
+        let c = g.pl[man].ch;
+        crate::guards::light_meter(g, c, dt);
+    }
 }
 
 /// put the highlight on the row of `kind` (the one whose verb is `verb`, if given) in this frame's list; false if none is on offer

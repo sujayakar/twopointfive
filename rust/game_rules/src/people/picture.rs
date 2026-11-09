@@ -276,7 +276,7 @@ fn look_sam(g: &mut crate::game::Game) {
         let shown = if crate::fogofwar::fog_of_war_active(g) {
             !crate::fogofwar::fog_of_war_hidden(g, o)
         } else {
-            d < g.k.picture.made_out_m || ((q[0] - cpos[0]) * fwd[0] + (q[2] - cpos[2]) * fwd[2] > 0.0 && g.gd[o].visibility >= g.k.picture.made_out)
+            d < g.k.picture.made_out_m || ((q[0] - cpos[0]) * fwd[0] + (q[2] - cpos[2]) * fwd[2] > 0.0 && g.shown[g.gd[o].ch].visibility >= g.k.picture.made_out)
         };
         if shown && (!crate::scene_collision::segment_blocked(g, eye, [q[0], 1.1, q[2]], Some(0.02), Some(thr), None) || !crate::scene_collision::segment_blocked(g, eye, [q[0], 1.6, q[2]], Some(0.02), Some(thr), None)) {
             learn(g, None, who, q, now, IdeaHow::Seen, None);
