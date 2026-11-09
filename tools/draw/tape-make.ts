@@ -10,7 +10,7 @@ import { DrawGame, type HandsOffPlan } from '../../src/host/drawgame';
 import { askOf } from '../../src/draw/ask';
 import { HAND, sampleHand } from '../../src/draw/hand';
 import { Section, View } from '../../src/draw/sections';
-import { FollowCamera } from '../../src/game/camera';
+import { FollowCamera } from '../../src/host/camera';
 import { HandTape } from '../../src/tape/handtape';
 import type { Vec3 } from '../../src/math/vec';
 

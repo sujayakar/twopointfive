@@ -74,7 +74,7 @@ Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable b
 - Stand in a guard's flashlight (`__game.guards[i]`, put the player 3–4 m along its `bodyYaw`) → suspicious → alert → guards fire.
 - Key `3` (smoke) / `4` (stun) + LMB → billowing plume within ~3 s (debug view 5 shows volumetrics only). `G` throws nothing in the page
   (`?quickthrow` = the old quick throw for the visit). `5` + LMB throws a frag (it kills Sam too). Debug / sandbox actions are buttons in the debugger (the tweak panel, on the backslash key; Tab is the game's key and opens nothing).
-  `X`, `T`, `Q` and `F` ARE keys again, with a squad on the floor (`src/game/orders.ts`): `X` (or the middle mouse button)
+  `X`, `T`, `Q` and `F` ARE keys again, with a squad on the floor (`rust/game_rules/src/orders`): `X` (or the middle mouse button)
   opens the orders menu on what the cursor is on, `T` steps who takes the order, `Q` is the squad's command: the target's first row with no menu,
   or, on a door the men stand at or wait on, in they go by the entry they pick (`?noautopilot` = the first row always). The `B` KEY gives nothing
   in the page (`src/host/keymap.ts`; `?bkey` = the command on B for the visit), but the command's CODE is still `'KeyB'`: a real key press is Q,
@@ -103,10 +103,7 @@ Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable b
   reason), give a row by its wedge's digit (`__game.view.ring.wedges`; the last is 'more') or `__orders.pick(i)`; then step frames and watch `__orders.log` and the men
   walk. No row is ever on a digit above 5. While the menu is up the digits are not Sam's weapon slots.
 - **Off switches worth knowing when a boot fails or a run looks different**: `?nodestruction`, `?glassfx=0`, `?mannequin`,
-  `?noslots`, `?nodoorpath`, `?radiocheck=0` (each takes one shipped-on feature back out). A headless tool stands the game up
-  as the page opens it (`src/host/profile.ts`); `TPS_PROFILE=frozen` in front of it is the old stand, the newer rules held off, kept
-  for the switch cleanup only (`bun run tools/qa/probes.ts shipped` holds the two apart, and against the real page
-  `PORT=<port> node tools/qa/shipped-page.cjs`).
+  `?noslots`, `?nodoorpath`, `?radiocheck=0` (each takes one shipped-on feature back out).
 
 ## Gotchas
 - HUD GPU timings for render passes (composite/fxaa) are unreliable on Metal TBDR; compute pass timings are fine.

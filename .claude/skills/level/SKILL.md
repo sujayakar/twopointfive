@@ -85,7 +85,7 @@ did not.
   swing moves that level's tallies and par times).
 - **Its starts and its doors are on a way.** The maintainer: "wear, paths in the ground ... can all tell a story for how
   people walk through the level, its logic, leading the player". The look's page wears the floor where the level is walked
-  (`src/scene/ways.ts`), so a start no way leaves from, or a door no way crosses or ends at, tells no story. Give it one
+  (`rust/game_draw/src/traffic.rs`), so a start no way leaves from, or a door no way crosses or ends at, tells no story. Give it one
   with a `scenarios.walked` row (from a named thing to a named thing: a door is one). **check** `levels walked <name>`
   (what is owed is held by name in the level's count file).
 - **A defender sees what he watches.** The dress goal's rule: "a window a mark watches through, or a covered lane crosses,
@@ -104,10 +104,8 @@ did not.
 - **A solid thing by a door is read at that door.** A thing that stops feet (over 0.19 m) laid within a few metres of a door can shut the
   walk grid's cells on a team's way to its stack, and the entry is then another fight. **seen** a log laid across two others by the
   pass's chopping block shut a square metre in front of two doors; the stacks' marks and the charges' places were untouched. **check**
-  after adding or moving such a thing, `bun run tools/qa/bang-tally-diff.ts <row> --before <a worktree of the commit before>` (ten
-  minutes a row, twenty when a door is suspect), and say in the step's notes what it printed. A door it NAMES is yours to explain or
-  to mend; its line says whether both trees were staged alike and gives the command that prints one moved entry. Never read a tally's
-  rows by eye on a few seeds: that blamed the wrong door here, twice.
+  after adding or moving such a thing, `levels stacks <name>` and `levels second-way <name>` (`rust/game_start`), and the level's row of `gate play`; say in the
+  step's notes what they printed.
 - **A corridor players walk runs up the screen, or is wide.** The camera looks from the south, so a wall hides about two metres of floor behind it: a corridor 2.4 m wide running along the
   screen hides whoever is in it. **seen** the sneak lab's first dark corridor, Sam under the top of its south wall. **By eye.**
 - **No door close under a tall wall to its south** (the camera looks from the south: the door is never drawn, never under
@@ -197,7 +195,7 @@ the player for game play", and of the look he wants: "it's all quite intentional
 level that already has its rooms, and moves nobody's fight. The office was the first (`docs/agents/levels.md`, "the office is hand-finished").
 
 - **Read the level first, and tie every item to the read.** Three sources, all headless: the level's marks and routes (`map-plan.ts <mission>
-  --png`), where its ways run (`src/scene/ways.ts`), and where men fall on six seeds of each mission (the tool that traced this went with the TypeScript copy, so a short native run of your own: a test in
+  --png`), where its ways run (`rust/game_draw/src/traffic.rs`), and where men fall on six seeds of each mission (the tool that traced this went with the TypeScript copy, so a short native run of your own: a test in
   `rust/game_start/tests` stands the mission, gives its orders and prints `p.roll()`). Count
   where men fall. **seen** on the office thirteen of thirty-one fell at one side door that nothing in the picture said was there.
 - **Worn paths are data.** `scenarios.walked` rows between names (a door, a route, a room, a named mark), each with a weight beside one lap of a
@@ -375,10 +373,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   second man was put behind a building's corner and stood looking at a wall. **check** the level's scripted player clicks off the mark on purpose (the plan
   mode mission's `TUTPLAN_POSTB=x,z`) and says who took the order.
 - **A level whose idea leans on geometry gets a check of its own** (`tools/qa/<name>-check.ts`, a `_BREAK` path, both
-  stands): the pattern of the glasshouse, the pass, the depot. A check that holds the file against the generator that
-  wrote it runs the generator as the exporter does (`asExporter` in `tools/qa/headless.ts`): the page's own sin and cos
-  round a last bit another way than the file was written with. **seen** the `level-identity` probe red on the shipped stand
-  for that and nothing else. Whether a file is stale is `export.ts <name> --check`'s question, not such a check's.
+  stands): the pattern of the glasshouse, the pass, the depot. Whether a file is stale is `export.ts <name> --check`'s question, not such a check's.
 
 ## 7. The team and its kit
 
@@ -441,9 +436,6 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   in `rust/game_start`, and `gate start <row>` / `gate par <row>`.
 - **Some checks name their levels by hand** (a list inside the tool: the hour and weather probes, the blast and door
   probes, the squad deal). A new level is in none of them until added: `grep -ln "depot" tools/qa/*.ts` shows which.
-- **One stand, every check, once.** A tool with no word in front stands the game as the page opens it (`TPS_PROFILE=shipped`
-  says the same); `TPS_PROFILE=frozen` is the old stand, kept for the switch cleanup only. A tool's own "as shipped" arm from
-  before that is not the page's stand.
 - **The sound replays saved on the level.** `public/assets/replays` holds recorded runs the sounds page plays: the office
   has five (office-loud, chairs, reloads, doors, cans), Mousehole, the compound and the block one each. A step that moves
   the level or how it plays parts them: **seen** a hit seeded another way parted the loud office at its first firefight.

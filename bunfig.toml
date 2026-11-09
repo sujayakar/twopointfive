@@ -1,5 +1,2 @@
-# the state bridge's window for a headless tool under the harness's word (tools/blitz/preload.ts): it does nothing unless TPS_GAME asks (tools/blitz/word.ts)
-preload = ["./tools/blitz/preload.ts"]
-
 [loader]
 ".wgsl" = "text"

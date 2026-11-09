@@ -5,7 +5,7 @@
 //   · DE-DUPLICATED: a page visit is one tape however many dumps carry it (by its visit id and piece number: the fullest copy stands); a single file saved by the key
 //     is a WINDOW of its visit — where the visit's own tape is here the file adds only its notes and 'F7 was pressed here'; single files of one visit with no kept
 //     tape are held against each other by their step numbers, and one that lies inside another is dropped (its notes move over).
-//   · each visit is written to --out as a NORMAL REPLAY FILE (<name>.json.gz): tools/qa/replay-at.ts, its --rerun and the /replay page read it as they read any other.
+//   · each visit is written to --out as a NORMAL REPLAY FILE (<name>.json.gz): as a saved one is.
 //   · each gets a list of MOMENTS WORTH A LOOK made with no note on it: page errors, restarts and loads, the player down, a teammate down (his order, and what took him
 //     down IN THE TAPE'S OWN WORDS — "X down — Y's round", a blast by name and whose burst it was; only where the tape named nothing, the one round that ended
 //     nearest him, marked inferred), a hostage down, the player stunned or blinded by a blast, orders refused, a run's END in the game's own line ('run ended'; a
@@ -25,7 +25,7 @@ import { basename, join } from 'node:path';
 import type { ReplayFile, ReplayNote, ManAt, ManDo } from '../../src/tape/format.ts';
 import { checkReplay, decode, clock, errorMarks, TAPE_VERSION } from '../../src/tape/format.ts';
 
-/** what the index adds to a tape's steps where this checkout cannot walk it (tools/qa/rerun.ts refuses another version's) */
+/** what the index adds to a tape's steps where this checkout cannot walk it */
 const otherVersion = (F: ReplayFile): string => F.rerun && 'v' in F.rerun && F.rerun.v !== TAPE_VERSION ? ' (another version: not walked here)' : '';
 import type { KeptLine, Visit } from '../../src/tape/kept.ts';
 import { assemble, visitsOf } from '../../src/tape/kept.ts';
@@ -395,7 +395,7 @@ if (import.meta.main) {
     const top = M.slice().sort((a, b) => b.weight - a.weight || a.r - b.r).slice(0, showN).sort((a, b) => a.r - b.r);
     E.top = top.map(m => `${clock(m.r)}  ${m.kind}: ${m.text}   [--at ${m.r.toFixed(1)}${m.pos ? ` --spot ${m.pos[0].toFixed(1)},${m.pos[1].toFixed(1)}` : ''}]`);
     const md = [`# ${E.name}`, '', `${E.scenario} · ${clock(E.seconds)} of play · page \`${E.url}\` · build ${E.commit || '?'} · seed ${E.seed ?? '?'}`, `${E.flags ? `Switches: ${E.flags}. ` : ''}Run tape: ${E.tape}. ${E.kept ? `Kept tape, ${E.pieces} pieces${E.missing.length ? `, ${E.missing.length} lost` : ''}.` : E.f7.length ? 'A single file saved by the key.' : 'A whole visit, downloaded from the replay viewer.'}`, '',
-      '## Runs', ...E.runs.map(r => `- ${r}`), '', `## Moments worth a look (${M.length})`, '', 'Read one with `bun run tools/qa/replay-at.ts ' + E.name + '.json.gz --at SECONDS [--spot x,z]`. Words in quotes are the tape\'s own.', '',
+      '## Runs', ...E.runs.map(r => `- ${r}`), '', `## Moments worth a look (${M.length})`, '', 'Words in quotes are the tape\'s own.', '',
       ...M.map(m => `- ${clock(m.r)} (${m.r.toFixed(1)}) **${m.kind}** ${m.text}${m.pos ? ` · spot ${m.pos[0].toFixed(1)},${m.pos[1].toFixed(1)}` : ''}`), ''].join('\n');
     writeFileSync(join(out, `${E.name}.moments.md`), md); patched.delete(id);
   }

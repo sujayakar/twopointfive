@@ -507,7 +507,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       ],
     },
   };
-  // the open floor's names (src/game/dialogue.ts: a held room is its own name; these are for everywhere a held room is not)
+  // the open floor's names (rust/game_rules/src/dialogue: a held room is its own name; these are for everywhere a held room is not)
   // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): both ways are the level's own. The main gate has no leaf
   // (its two are chained back on the inside of the wall), and a picture anchored on the opening had nothing for the kit that works a leaf — the hammer, the
   // shotgun, a door charge, the wand, a bang or a frag on order all stood idle there. So the first way is the first door the team meets through that gate:
@@ -519,7 +519,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'duty office', bounds: { ...R.duty } }, { name: 'wash room', bounds: { ...R.wash } }, { name: 'battery room', bounds: { ...R.battery } },
     { name: 'generator room', bounds: { ...R.generator } }, { name: 'tyre store', bounds: { ...R.tyres } }, { name: 'bay', bounds: { ...R.bay } },
   ] };
-  // what a step sounds like (src/game/floor.ts): the hardstanding inside the wall and the road outside it are asphalt, the huts lino or sealed concrete
+  // what a step sounds like (rust/game_rules/src/floor): the hardstanding inside the wall and the road outside it are asphalt, the huts lino or sealed concrete
   const surfaces: SurfacesData = {
     building: { x0: 4, x1: 36, z0: 4, z1: 24 }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt',
     zones: [
