@@ -17,5 +17,5 @@ pub const ORDER: Row = Row {
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("take him · on your mark") }
 
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    crate::pairorders::p_01::take_issue(g, crate::pairorders::JobMode::Mark, men, t)
+    crate::pairorders::take_issue(g, crate::pairorders::JobMode::Mark, men, t)
 }

@@ -174,7 +174,7 @@ pub fn tick(g: &mut Game, dt: f64) -> Option<Do> {
     if let Some(key) = g.saves.due.take() {
         g.saves.hand = false;
         let run = g.saves.shelf.m.get(key.clone()).map(|e| e.info.run_id.clone());
-        let why = match run { None => Some(String::from("that checkpoint is gone")), Some(r) => super::b_01::mem_no(g, &r) };
+        let why = match run { None => Some(String::from("that checkpoint is gone")), Some(r) => super::mem_no(g, &r) };
         match why { None => return Some(Do::Back { key }), Some(w) => return Some(Do::Say(format!("checkpoint: {w}"))) }
     }
     if crate::rails::rails_live(g) {

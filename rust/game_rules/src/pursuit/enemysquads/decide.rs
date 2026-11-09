@@ -1,12 +1,65 @@
-//! src/game/enemysquads.ts lines 310 to 738
-use super::*;                      // your own module: its types, its other parts' functions
-use crate::ask::Over;
+use super::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{format, string::String, vec::Vec};
+
+/// The net's ask runs on this floor: a floor whose every squad stays in its rooms.   (enemysquads.ts netAsks)
+pub fn net_asks(g: &crate::game::Game) -> bool {
+    match &g.m.enemysquads.states {
+        Some(st) => st.stay_ask == Some(true),
+        None => false,
+    }
+}
+
+/// Hard on a squads level: the table while harder defenders are on and squads are staged, with the map's own rows over it.   (enemysquads.ts squadDrill)
+pub fn squad_drill(g: &crate::game::Game) -> Option<crate::knobs::SquadsK> {
+    let name = match &g.m.enemysquads.states { Some(st) => st.s.name.clone(), None => return None };
+    if !g.k.pressure.on { return None; }
+    let squads = g.k.squads;
+    Some(match g.k.drill_at.rows.get(name) { Some(row) => drill_over(squads, row), None => squads })
+}
+
+/// `{ ...SQUADS, ...row }`: the rows the map names, the table's own for the rest.   (enemysquads.ts:309)
+fn drill_over(mut k: crate::knobs::SquadsK, row: &DrillAtRow) -> crate::knobs::SquadsK {
+    let DrillAtRow::Row { drill_net, net_k, reinforce_k, drill_own, own_up, drill_back, back_beat } = *row;
+    if let Some(v) = drill_net { k.drill_net = v; }
+    if let Some(v) = net_k { k.net_k = v; }
+    if let Some(v) = reinforce_k { k.reinforce_k = v; }
+    if let Some(v) = drill_own { k.drill_own = v; }
+    if let Some(v) = own_up { k.own_up = v; }
+    if let Some(v) = drill_back { k.drill_back = v; }
+    if let Some(v) = back_beat { k.back_beat = v; }
+    k
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A row writes what it names and leaves the rest of the table standing (the map's set, enemysquads.ts:292-302).
+    #[test]
+    fn a_maps_row_writes_only_what_it_names() {
+        let table = crate::knobs::SquadsK::page();
+        let rows = crate::knobs::DrillAtK::page().rows;
+        let compound = drill_over(table, rows.get(String::from("the compound")).unwrap());
+        assert!(compound.drill_net && compound.drill_own && !compound.drill_back);
+        assert_eq!((compound.net_k, compound.reinforce_k, compound.own_up), (1.0, 0.75, 1.0));
+        assert_eq!(compound.back_beat, table.back_beat);
+        assert_eq!(compound.drill_look, table.drill_look);
+        let warehouse = drill_over(table, rows.get(String::from("the warehouse")).unwrap());
+        assert!(!warehouse.drill_net && !warehouse.drill_own && !warehouse.drill_back);
+        assert_eq!((warehouse.net_k, warehouse.reinforce_k), (table.net_k, table.reinforce_k));
+        let barracks = drill_over(table, rows.get(String::from("the barracks")).unwrap());
+        assert!(!barracks.drill_net && barracks.drill_back);
+        assert_eq!(barracks.back_beat, 3.0);
+        assert!(rows.get(String::from("no such map")).is_none());
+    }
+}
+
+use crate::ask::Over;
 
 /// the room's identity: rooms are copied here, the TypeScript compares the one object
 fn same_room(a: &Option<crate::scene_scenarios::StructureRoom>, b: &Option<crate::scene_scenarios::StructureRoom>) -> bool {
@@ -904,7 +957,7 @@ pub fn contact(g: &mut crate::game::Game, q: EnemysquadsSquadId, at: V3, room: O
 }
 
 #[cfg(test)]
-mod tests {
+mod tests_2 {
     use super::*;
     // the TypeScript's own bits: its `along` under EXACT.on, a leg, a leg of no length (one point, at its corner), a leg
     const BITS: [[u64; 3]; 22] = [
@@ -945,5 +998,39 @@ mod tests {
     fn grown_widens_every_side() {
         let g0 = grown(crate::scene_scenarios::Rect { x0: 1.0, x1: 2.0, z0: 3.0, z1: 4.0 }, 0.5);
         assert_eq!((g0.x0, g0.x1, g0.z0, g0.z1), (0.5, 2.5, 2.5, 4.5));
+    }
+}
+
+/// `r3`: to three places; what is not a finite number is not given   (squadWaysRound)
+fn r3(x: Option<f64>) -> Option<f64> {
+    match x { Some(v) if v.is_finite() => Some(m::round(v * 1000.0) / 1000.0), _ => None }
+}
+
+#[cfg(test)]
+mod tests_3 {
+    use super::*;
+    /// the TypeScript's own bits, under bun with EXACT on: `Math.round(x * 1000) / 1000`
+    #[test]
+    fn r3_rounds_to_the_typescripts_bits() {
+        for &(x, want) in &[
+            (0x0000000000000000u64, 0x0000000000000000u64),
+            (0x3ff3c083126e978d, 0x3ff3c28f5c28f5c3),
+            (0x3ff0020c49ba5e35, 0x3ff004189374bc6a),
+            (0x4004000000000000, 0x4004000000000000),
+            (0x40300020c2ee26ba, 0x4030000000000000),
+            (0xbff0020c49ba5e35, 0xbff0000000000000),
+            (0xbf3a36e2eb1c432d, 0x8000000000000000),
+            (0x40934a456d5cfaad, 0x40934a45a1cac083),
+            (0x3fd3333333333334, 0x3fd3333333333333),
+            (0x3e112e0be826d695, 0x0000000000000000),
+        ] {
+            assert_eq!(r3(Some(f64::from_bits(x))).unwrap().to_bits(), want);
+        }
+    }
+    #[test]
+    fn r3_gives_nothing_for_what_is_not_a_finite_number() {
+        assert_eq!(r3(None), None);
+        assert_eq!(r3(Some(f64::INFINITY)), None);
+        assert_eq!(r3(Some(f64::NAN)), None);
     }
 }
