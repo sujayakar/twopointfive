@@ -69,7 +69,8 @@ It returns the light in-scattered and what is left of what lies behind.
 **Smoke has two models.** What eyes see through is the game's: half-meter cells in `rust/sim/src/bricks.rs`, stepped ten times a second, the same
 everywhere. What is drawn is `src/smoke/smoke.wgsl`, a GPU solver on sparse 8³ bricks: a coarse lattice (one brick is one game cell) and a fine one
 for gun gas, out of one pool (`smokeGridConfig`). `smokeFrom` hands the grid over where a step was taken, and the solver is **bent toward it** a
-little every step (`SmokeParams`: `bend`, `pull`). Only the game's own share of a cell is measured; a fire's plume or a breath says so in its `K`
+little every step (`SmokeParams`: `bend`, `pull`), as fast as the gap shows; it thins by the game's law alone. Only the game's own share of a cell is measured;
+a fire's plume or a breath says so in its `K`
 word. After a load or a seek `SmokeSystem.anew` takes the grid whole before the first frame, its color with it (a brick's, two meters square: dust is tan). `SMOKE_LOOK` is how smoke is drawn.
 
 **Eyes.** Buffers hold exposed light. `hourExposure` says what an hour's picture stands for, and every source is drawn at the lesser of its authored
@@ -150,7 +151,8 @@ Checks (`bun run tools/qa/checks.ts <name>`): `frame-layout.ts` (the block again
 `quality-check.ts` (what the ladder decides), `passtimer-check.ts`, `framecap-check.ts` (measuring), `keeppage-check.ts`, `pipequeue-check.ts`,
 `settle-check.ts`, `pace-check.ts` (compiling, pace), `lookexpo-check.ts`, `smokelook-check.ts`, `materials-probes.ts`, `zfight-check.ts`.
 
-Page scripts (`bun run tools/qa/pages.ts <name>`): `wgsl-compile.cjs`, `keeppage-page.cjs`, `weather-page.cjs`, `smokejump-page.cjs` (after a jump the
+Page scripts (`bun run tools/qa/pages.ts <name>`): `wgsl-compile.cjs`, `keeppage-page.cjs`, `weather-page.cjs`, `smokelife-page.cjs` (the running smoke is the
+game's; `--life` on a card), `smokejump-page.cjs` (after a jump the
 drawn smoke is the game's); the tools `framecap-page.cjs`, `perf-sweep-page.cjs`, `shader-count-page.cjs`.
 
 Native tests in `rust/game_start/tests/`: `draw.rs` (drawing changes nothing of the game; frames stand between ticks), `box_tables.rs`, `fog.rs`,
