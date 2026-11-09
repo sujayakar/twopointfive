@@ -889,6 +889,18 @@ fn enter_go(g: &mut Game, op: DoorOpId, t: f64, queue: Vec<DoorToolsDoneItemQueu
     crate::game::game_say(g, lead, "going in.", None, None, None);
 }
 
+/// Of two men of one entry by `d`, is one named to go in before the other: `Some(true)` the first of them, `Some(false)` the second, until the man named is over. None: neither is named, or it is not the one entry.
+pub fn named_before(g: &crate::game::Game, d: DoorId, a: GuardId, b: GuardId) -> Option<bool> {
+    for &op in &crate::seats::here(g).door_tools.ops {
+        let o = &g.tab.doortools_door_op[op];
+        if o.door != d || o.phase != Phase::Enter || !o.men.contains(&a) || !o.men.contains(&b) { continue; }
+        let first = o.first?;
+        if o.crossed.has(first) || g.gd[first].state == crate::game::GuardState::Dead { return None; }
+        return if a == first { Some(true) } else if b == first { Some(false) } else { None };
+    }
+    None
+}
+
 /// the men go in: the lead first, the next `second` later, each to his point of domination (doortools.ts DoorTools.enter)
 pub fn door_tools_enter(g: &mut crate::game::Game, op: DoorOpId) {
     if g.tab.doortools_door_op[op].thr.is_some() { door_tools_step_in(g, op); return; }
@@ -913,6 +925,7 @@ pub fn door_tools_enter(g: &mut crate::game::Game, op: DoorOpId) {
         let said = format!("first:{} · has seen most of the room", g.gd[first].callsign);
         door_tools_beat(g, op, &said);
     }
+    g.tab.doortools_door_op[op].first = Some(first);
     let mut men: Vec<GuardId> = vec![first];
     men.extend(g.tab.doortools_door_op[op].men.iter().copied().filter(|&m| m != first));
     if men.len() > 2 {
