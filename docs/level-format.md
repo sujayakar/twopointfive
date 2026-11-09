@@ -511,7 +511,8 @@ mark, a route's first point, a room's id or name, a place, or `spawn`.
 
 ## How to add a member
 
-1. Its type in `tools/levels/lib/levelData.ts` (or `tools/levels/lib/levelRows.ts`, `tools/levels/lib/scenarios.ts`), its name in `KEYS` or in the block's own list in `validateLevelData`, and its limits there.
+1. Its type in `tools/levels/lib/levelData.ts` (or `tools/levels/lib/levelRows.ts`, `tools/levels/lib/scenarios.ts`), its name in `KEYS` or in the block's
+   own list in `validateLevelData`, and its limits there.
 2. Both directions in `tools/levels/lib/levelLoad.ts`, where the record is not carried as written.
 3. The field in its type under `rust/game_types/src/`, and its line in `rust/game_start/src/records.rs` or `level.rs`. A member with no line stops the start.
 4. Its reader in the rules, its line on this page, then `bun run tools/levels/export.ts <name>` for each level and `bun run tools/qa/level-needs.ts <name> --run`.
