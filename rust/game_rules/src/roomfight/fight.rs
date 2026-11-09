@@ -44,16 +44,10 @@ pub fn chest_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     }
 }
 
-/// What of the light from `a`'s eye to `b`'s chest comes through the smoke, a picked weather's fog on top.   (roomfight.ts pairSmoke)
+/// What of the light from `a`'s eye to `b`'s chest comes through the air.   (roomfight.ts pairSmoke)
 pub fn pair_smoke(g: &mut crate::game::Game, a: CharId, b: CharId) -> f64 {
     let (eye, chest) = (eye_of(g, a), chest_of(g, b));
-    let t = crate::sense::smoke_between(g, eye, chest);
-    if crate::weather::weather_fog(g).is_some() {
-        let ca = chest_of(g, a);
-        t * crate::weather::air_trans(g, ca, chest)
-    } else {
-        t
-    }
+    crate::sense::clear_between(g, eye, chest)
 }
 
 /// The light to read for `o` when `eye` stands inside the cone of his burning weapon light, else 0: as strong beside an hour's light as the lamp is, to eyes used to the place.   (roomfight.ts lampGlare)

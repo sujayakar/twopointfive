@@ -15,7 +15,7 @@ const { rowWord, rowDoes: nameDoes } = await import(`${ROOT}/src/scene/stuff.ts`
 const { levelToData, loadLevel } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
 const { stampDoes, wordWas } = await import('./doesWas.ts');   // (what a box nobody spoke for does: the word its colour had. src/scene/materials.ts)
 const { DOES_DEFAULT } = await import(`${ROOT}/src/scene/materials.ts`);
-const { validateLevelData, serializeLevelData, parseLevelData, levelDataDigest, structuralDiff, canonicalLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { levelFaults, serializeLevelData, parseLevelData, levelDataDigest, structuralDiff } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 
 const argv = process.argv.slice(2), floorAt = argv.indexOf('--floor'), FLOOR_TO = floorAt >= 0 ? argv[floorAt + 1] : null, name = argv.find((a, i) => !a.startsWith('--') && (floorAt < 0 || i !== floorAt + 1)), CHECK = argv.includes('--check');
@@ -94,12 +94,12 @@ if (gen.PALETTE) { const { dropUnworn } = await import('./wornRows.ts'), P = gen
   const clash = Object.keys(P).filter(m => Object.hasOwn(materials, m) && materials[m].albedo.join(',') !== P[m].albedo.join(','));
   if (clash.length) { console.error(`export ${name}: PALETTE names ${clash.length} row(s) the file already has in other numbers: ${clash.join(', ')}`); process.exit(1); }
   dropUnworn(data, P); }
-const errs = validateLevelData(data);
-if (errs.length) { console.error(`validateLevelData: ${errs.length} error(s)\n  ${errs.slice(0, 30).join('\n  ')}`); process.exit(1); }
+const errs = levelFaults(data);
+if (errs.length) { console.error(`${data.name}: ${errs.length} fault(s)\n  ${errs.slice(0, 30).join('\n  ')}`); process.exit(1); }
 const text = serializeLevelData(data);
 const parsed = parseLevelData(text);
 const dataDiffs: string[] = [], levelDiffs: string[] = [];
-const nData = structuralDiff(canonicalLevelData(data), parsed, dataDiffs), nLevel = structuralDiff(level, loadLevel(parsed), levelDiffs);
+const nData = structuralDiff(data, parsed, dataDiffs), nLevel = structuralDiff(level, loadLevel(parsed, { validate: false }), levelDiffs);
 if (nData || nLevel) {
   console.error(`export REFUSED: the file would not reproduce the level — ${nLevel} Level diff(s), ${nData} data diff(s)`);
   for (const d of [...levelDiffs, ...dataDiffs].slice(0, 20)) console.error('  ' + d);
@@ -113,7 +113,7 @@ if (CHECK) {
   if (cur !== text) { console.error(`--check: ${OUT} ${cur === null ? 'does not exist' : 'is STALE'} — run bun run tools/levels/export.ts ${name}`); process.exit(1); }
   console.log(`--check: ${OUT} is up to date`);
 } else { writeFileSync(OUT, text); console.log(`wrote ${OUT}`); }
-// WHAT A LEVEL OWES WHOEVER PLAYS IT, asked of the game the day it is written (rust/game_start/src/bin/levels.rs; the file is written either way). ANOTHER WAY IN: whatever its defenders
+// WHAT A LEVEL OWES WHOEVER PLAYS IT, asked of the game the day it is written (rust/game_start/src/levels.rs; the file is written either way). ANOTHER WAY IN: whatever its defenders
 // wedge, every room with men in it is still reached without a charge. The rule is about a level A SQUAD MISSION PLAYS (any row of the mission list that is not a quiet one), so a
 // red answer fails the export of such a level and is a note on any other. A DEFENDER SEES WHAT HE WATCHES: a red answer fails the export (something was stood in a man's view, or the level
 // has no count file yet: `levels sight <name> --write`). LEVELASK=0 in front skips both for a level still in the making.

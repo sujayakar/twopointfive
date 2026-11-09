@@ -64,7 +64,8 @@ It plays every mission's start and a few runs,
 each row in a child process, so a panic costs only its own rows. Exit 0 pass, 1 a row failed, 64 a wrong word.
 
 - `gate` is the quick kind: rows `start`, `play`, `again`, `save`, `load`, `draw`, `seats`, `par`. `gate save` runs the rows whose name starts with that word.
-- `gate long` adds `played` (each room clear, rescue and night breach to its end by the hands-off player) and `lesson` (the tutorials by a man at the keys).
+- `gate long` adds `played` (each room clear, rescue and night breach to its end by the hands-off player), `lesson` (the tutorials by a man at the keys)
+  and `level` (each question of `levels`).
 - A pin is the figures' word (`game_start::figures`, what play is in plain numbers). Figures moved is play moved, and red; only the parts moved passes and says so.
 - `gate pin [ROW…]` records the pins again and says which moved. `gate breaks` plants each check's fault: the row must pass unbroken, then fail in its check's own words.
 
@@ -76,7 +77,7 @@ each row in a child process, so a panic costs only its own rows. Exit 0 pass, 1 
 
 **Checks.** `bun run tools/qa/checks.ts [group | name …] [--list]`, groups `picture`, `shaders`, `page`, `menus`, `sound`, `levels`, `words`, `build`. Each is a file run in its
 own process, stopped at `CHECK_CAP` minutes. `BY_HAND` names the files no row runs: the backend's, the
-game server's, `zfight-check.ts`, and those of `tools/draw/` that want the module.
+game server's, and those of `tools/draw/` that want the module.
 
 **Page scripts.** `bun run tools/qa/pages.ts [group | name …] [--list]`, groups `boot`, `play`, `menus`, `coop`, `saves`, `cloud`, `replay`, `all`, and `tools`, whose scripts run
 only by name. It starts one dev server with no backend and runs a script at a time, because a page takes the whole box.

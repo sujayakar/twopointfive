@@ -4,10 +4,13 @@
 extern crate alloc;
 pub mod json;
 pub mod lessons;
+pub mod kit_file;
 pub mod kit_plan;
 pub mod kit_set;
 pub mod kit_stage;
 pub mod gltf;
+pub mod faults;
+pub mod file;
 pub mod level;
 pub mod passes;
 pub mod settings;
@@ -16,6 +19,8 @@ pub mod handed;
 #[cfg(feature = "std")]
 pub mod files;
 pub mod scene;
+#[cfg(feature = "std")]
+pub mod levels;
 #[cfg(feature = "std")]
 pub mod play;
 #[cfg(feature = "std")]

@@ -74,12 +74,10 @@ pub fn fog_of_link(g: &crate::game::Game, q: &crate::query::Query) -> bool {
     if q.has("nofow") || q.has("nofogofwar") {
         return false;
     }
-    let four = q.has("squad4") && !q.has("nightbreach") && !q.has("rescue") && !q.has("quiet");
+    use crate::scene_scenario_list::{kind_of, ScenarioSpecKind as Kind};
     q.has("fow")
         || q.has("fogofwar")
-        || q.has("roomclear")
-        || q.has("rescue")
-        || four
+        || matches!(kind_of(q), Some(Kind::Roomclear | Kind::Rescue))
         || quiet_rung_of_query(g, q) != crate::quietfog::QuietRung::Off
 }
 
@@ -163,7 +161,7 @@ pub fn address_before_game(g: &mut crate::game::Game, q: &mut crate::query::Quer
     let kind = if snow { Some(crate::weather_kinds::WeatherKind::Snow) } else { crate::weather_kinds::weather_of(q) };
     // (hours.ts hourAsked: the visit's hour, which the stand lays over the level once the game is made)
     let sun = q.float("sun").filter(|s| s.is_finite());
-    g.stood = crate::game::StoodWith { weather: kind, locked: true, hour: crate::hours::hour_id_of(q.get("hour")), sun: sun.map_or(1.0, |s| s.clamp(0.0, 1.0)), sun_given: sun.is_some(), dry: !q.has("noweather"), solo_stand: false };
+    g.stood = crate::game::StoodWith { weather: kind, locked: true, hour: crate::hours::hour_id_of(q.get("hour")), sun: sun.map_or(1.0, |s| s.clamp(0.0, 1.0)), sun_given: sun.is_some(), dry: !q.has("noweather"), solo_stand: false, way: crate::roomclear::way_of_address(q) };
     kind
 }
 

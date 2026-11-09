@@ -389,7 +389,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.yardWallX(18.6, 25.62, 30.4, 'mud', [], LOW); G.pier(30.4, 18.6, LOW - 0.1);
   G.yardWallZ(12.5, 6.12, 8.38); G.yardWallX(16.5, 30.62, 31.88);                     // the strips behind the shop and past its far end are shut off: one way round
   copingCaps('z', 25.5, 18.3, 21.8, LOW + 0.07); copingCaps('x', 18.6, 23.5, 25.3, LOW + 0.07); copingCaps('x', 18.6, 25.7, 30.1, LOW + 0.07);
-  cap(23.2, 18.6, 0.42, 0.42, LOW + 0.02); cap(30.4, 18.6, 0.42, 0.42, LOW + 0.02);
+  cap(23.2, 18.6, 0.42, 0.42, LOW + 0.02, 0, 0.07); cap(30.4, 18.6, 0.42, 0.42, LOW + 0.02, 0, 0.07);   // (deep enough to lie over the coping's end too)
 
   grp('yard');
   lamp(10.4, 13.2, 'lamp_porch', true);
@@ -416,7 +416,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // long wall, a chair, the generator and its fuel, the snow the broom took heaped by the alley wall
   G.drum(28.2, 19.25, 'rust'); glow('fire_court', 'exterior', { c: [28.2, 0.884, 19.25], h: [0.19, 0.006, 0.19] }, [28.2, 1.05, 19.25], 9, 6.5);
   G.woodPile(26.5, 19.08, 0, 1.1); G.plasticChair(29.1, 19.2, -HALF);
-  G.generator(31.0, 21.1, HALF); capOn(31.0, 21.1, HALF, -0.1, 0, 1.0, 0.56, 1.0, 0.04); G.gasBottle(31.35, 17.0); G.plasticChair(30.6, 17.02, Math.PI); G.jerryCan(30.3, 21.6, 0.2);
+  G.generator(31.0, 21.1, HALF); capOn(31.0, 21.1, HALF, 0.095, 0, 0.61, 0.56, 1.0, 0.04); G.gasBottle(31.35, 17.0); G.plasticChair(30.6, 17.02, Math.PI); G.jerryCan(30.3, 21.6, 0.2);
   bank(27.95, 21.5, 1.3, 0.72, Math.PI);   // (nothing at the long wall's far end: the way round it is the night man's only way to the walk)
   // where the night man smokes: by the chair at the strip's far end, a tin for the ends at its foot (the level's script stands him there: TQ.smoke)
   thing(30.15, 16.92, 0, 0.11, 0.11, 0.06, M.tin, 0.3);

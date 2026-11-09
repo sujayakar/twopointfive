@@ -4,7 +4,7 @@ import type { MarkingDef } from '../../../src/scene/markings';
 import type { ShapeForm } from '../../../src/scene/shapes';
 
 /** Box flags by NAME as they appear in a level file. Only the authored subset: Dynamic / Emissive / AreaLit / Rot are set by the runtime (props, upload,
- *  rust/game_rules/src/game area lights, Box.rot presence) and SoundSeal is a CPU-only door-leaf state — none of them is ever authored, and the validator rejects them. */
+ *  rust/game_rules/src/game area lights, Box.rot presence) and SoundSeal is a CPU-only door-leaf state — none of them is ever authored, and the game's reader refuses them. */
 export const AUTHORED_FLAGS = ['NoPrimary', 'NoShadow', 'Cutaway', 'Gloss', 'Glass'] as const;   // (Glass: experiment E3 — a pane; boxes.ts BoxFlag.Glass)
 export type FlagName = typeof AUTHORED_FLAGS[number];
 /** One static box (scene/boxes.ts Box, minus everything the runtime owns: owner, the Emissive / AreaLit / Rot / Dynamic bits). */

@@ -59,4 +59,6 @@ export class Asks extends Writer {
   kind(search: string): string { this.u32(21); this.text(search); return readWord(this.answer(this.take())); }
   /** where an address that names a row of the short list and nothing to play goes instead (empty: it stays) */
   pick(search: string): string { this.u32(22); this.text(search); return readWord(this.answer(this.take())); }
+  /** every fault of a level file's text, a line each (empty: it is a level) */
+  faults(text: string): string { this.u32(23); this.text(text); return readWord(this.answer(this.take())); }
 }

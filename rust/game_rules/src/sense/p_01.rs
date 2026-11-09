@@ -31,6 +31,17 @@ pub fn smoke_between(g: &crate::game::Game, a: V3, b: V3) -> f64 {
     sim::bricks::trans(g.sim, sim::state::stamp(g.sim), a, b, g.k.sense.smoke.sigma)
 }
 
+/// Is there anything in the air an eye could lose a man in: smoke anywhere, or a picked weather's fog or dust.
+pub fn hazy(g: &crate::game::Game) -> bool {
+    smoky(g) || crate::weather::weather_fog(g).is_some()
+}
+
+/// HOW MUCH OF THE LIGHT ALONG a → b THE AIR LETS THROUGH (1 = clear): the smoke and the weather's fog and dust, one over the other. What every eye asks, a
+/// defender's, a civilian's, a lens's, a teammate's, and the fog of war, which shows the player what those eyes have.
+pub fn clear_between(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
+    smoke_between(g, a, b) * crate::weather::weather_air_trans(g, a, b)
+}
+
 /// WHAT THE GAME HOLDS of a source: how wide it is and what it lets out a second. A source of the picture's alone (`look`) is nothing to the game; one too small to hide anybody is the picture's alone too, and takes no room of the budget.
 fn held(g: &crate::game::Game, e: &crate::smoke_types::SmokeEmitter) -> Option<(f64, f64)> {
     let r = m::max(e.radius, 0.05);

@@ -519,7 +519,7 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   L.s(4.46, 7.1, 0, 0.85, 0.3, 0.3, 'whitewash'); L.d(4.765, 7.1, 0.3, 0.6, 0.004, 0.14, 'glassDark');                                                             // a washing machine
   L.s(4.46, 7.8, 0, 0.85, 0.3, 0.3, 'paintCream'); L.d(4.4, 7.68, 0.85, 0.86, 0.2, 0.07, 'plasticBlack'); L.d(4.4, 7.92, 0.85, 0.86, 0.2, 0.07, 'plasticBlack');    // a cooker
   L.line(8.9, 5.6, 8.9, 10.9, 0.08, 'whitewash'); L.line(11.1, 5.6, 11.1, 10.9, 0.08, 'whitewash'); L.line(6.9, 8.0, 6.9, 10.9, 0.08, 'whitewash');                // the bays
-  L.s(10.3, 12.12, 0.48, 0.54, 0.5, 0.02, 'paintBlue'); L.s(9.75, 12.12, 0, 0.64, 0.32, 0.02, 'rubber'); L.s(10.85, 12.12, 0, 0.64, 0.32, 0.02, 'rubber');         // a bicycle against the kerb wall
+  L.s(10.3, 12.12, 0.48, 0.54, 0.23, 0.02, 'paintBlue'); L.s(9.75, 12.12, 0, 0.64, 0.32, 0.02, 'rubber'); L.s(10.85, 12.12, 0, 0.64, 0.32, 0.02, 'rubber');         // a bicycle against the kerb wall
   L.s(10.8, 12.12, 0.9, 0.94, 0.03, 0.14, 'iron'); L.s(10.05, 12.12, 0.8, 0.86, 0.1, 0.05, 'plasticBlack');
   L.d(10.8, 12.12, 0.64, 0.9, 0.012, 0.012, 'iron'); L.d(10.05, 12.12, 0.54, 0.8, 0.012, 0.012, 'iron');                                                           // the stem and the seat post
   L.d(6.0, 10.6, 0, 0.05, 0.5, 0.02, 'paintGreen', 0.5); L.round(5.6, 10.82, 0, 0.04, 0.3, 'rubber', false); L.round(6.42, 10.36, 0, 0.04, 0.3, 'rubber', false);     // another, flat on the ground

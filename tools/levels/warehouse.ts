@@ -651,7 +651,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     roomClear: {
       name: 'the warehouse', maxMen: 11,
       team: { sam: [8.0, 0, 26.2], samYaw: Math.PI / 2, ops: [[9.4, 0, 25.6], [8.6, 0, 25.4], [7.2, 0, 25.4], [6.4, 0, 25.6]], opsYaw: Math.PI / 2 },
-      // THE OTHER WAY IN (`starts`: stood on only when a run asks — the mission sheet's Way in row, ?way=2, or ?way=any for a dealt one): the dark off the SOUTH-EAST corner,
+      // THE OTHER WAY IN (`starts`: stood on only when a run asks — the mission sheet's Way in row, ?way=2): the dark off the SOUTH-EAST corner,
       // looking up the loading apron. The apron's lamp lights both dock doors; they are eight metres apart, one pair's each on a single word. Kill the lamp
       // or cross its light. (The first spot tried, outside the plant room's own door at the north-west corner, handed the level its best answer for nothing.)
       starts: [{ sam: [36.6, 0, 26.2], samYaw: Math.PI * 0.75, ops: [[35.2, 0, 25.6], [35.2, 0, 26.8], [34.0, 0, 25.6], [34.0, 0, 26.8]], opsYaw: Math.PI * 0.75 }],

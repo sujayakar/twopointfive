@@ -8,28 +8,31 @@ and why they look as they do is `docs/agents/levels.md`; what a mission does wit
 
 | where | what it does |
 |---|---|
-| `tools/levels/lib/levelData.ts` | the schema: `KEYS`, `validateLevelData`, `serializeLevelData`. The export refuses a file it faults |
+| `rust/game_start/src/file.rs`, `kit_file.rs` | the format: every record of a file and the member each field is; the `scenarios.kitView` block's |
+| `rust/game_start/src/faults.rs` | the judge: each fault of a file by its place (`levels file`, the desk's `faults`) |
+| `tools/levels/lib/levelData.ts` | the file's TypeScript types, the order its `KEYS` are written in, `serializeLevelData`, `levelFaults` (asks the judge). The export refuses a file with a fault |
 | `tools/levels/lib/levelRows.ts`, `tools/levels/lib/scenarios.ts` | the TypeScript types of a box, door and light, and of the `scenarios` block |
 | `tools/levels/lib/levelLoad.ts` | `levelToData` writes a file from a generator's `Level`; `loadLevel` reads it back for the tools |
-| `rust/game_start/src/level.rs` | the game's reader, `load`: boxes, props, lights, doors, routes and the small records |
-| `rust/game_start/src/records.rs` | a line for each record the game keeps as its own type (`scenarios`, `surfaces`, `plans`, `devices` and others) |
+| `rust/game_start/src/level.rs` | `load`: what was read, laid into the game |
+| `rust/game_start/src/records.rs` | a line for each record the game keeps as its own type (`scenarios`, `surfaces`, `plans`, `devices` and others); `drops` = a member it lets go, held to its type |
 | `rust/game_types/src/scene_level/`, `scene_level_data/`, `scene_scenarios/` | those types |
 | `rust/game_start/src/kit_plan.rs`, `kit_stage.rs`, `kit_set.rs` | read `scenarios.kitView` straight from the file |
 
-The game takes a file as one the schema has passed. It counts what it asked for (`json.rs`): any member nobody asked for makes `load` panic and name it, and
-`lacks_of` is that list for a tool. So a member the schema does not know fails the export, and one the schema knows but the reader does not fails the start.
+One reader is the judge. Reading says every value that is not what its place wants and every member nobody asked for (`json.rs`), and a start refuses a file with any. `faults.rs` adds the
+rules a file can be held to by itself: ids of one thing each, names that point at something, numbers in their range. They're asked before a level is committed, not at a start. A tool asks
+through the module, so make it after a change to the reader. A written null is a fault, but where this page says null is a word.
 
 Words used below. V3 is three numbers, x, y, z, in meters, with y up; the floor is y 0. Rect is a record `x0`, `x1`, `z0`, `z1`, with x0 at most x1 and z0 at
 most z1. A yaw is radians where 0 faces +z and a quarter turn faces +x (forward is sin yaw, 0, cos yaw). A member is required unless it says a default.
 
 ## The file's head
 
-- `version` number. Must be 2; `load` names anything else as a part it lacks.
+- `version` number. Must be 2; a file that says anything else is told that alone.
 - `name` text. The level's name. `level_script_of` finds its script by it, and the look and the snow go by it (`place_of`, `snow_level`).
 - `meta` record, may be empty.
   - `generator` text. The generator's path; `tools/qa/level-needs.ts` asks that it is in the tree.
   - `bounds` record of `min` and `max`, both V3. The world the level must fit; `tools/levels/lib/lint.ts` reads it, and `WORLD` stands in when it is absent.
-  - `markTexel` number, 0.005 to 0.2 m; default `MARKING_TEXEL`. The size of a marking's base cell in this file. Read by the schema's check of markings and
+  - `markTexel` number, 0.005 to 0.2 m; default `MARKING_TEXEL`. The size of a marking's base cell in this file. Read by `faults.rs` for the markings and
     by the picture (`sky.rs`).
   - `kept` number, 0 to 1; default 0. How kept the place is, for the picture alone: 0 is left to the weather, 1 is cleaned last night (`lookKept`, `sky.rs`).
     The page's `?kept=` wins over it.
@@ -39,7 +42,7 @@ most z1. A yaw is radians where 0 faces +z and a quarter turn faces +x (forward 
   - `rough` number 0 to 1; default matte. The finish the reflection pass reads.
   - `metal` true or false; default false. Bare metal.
   - `stuff` word; default plain. What it is drawn as: a word of `BOX_STUFFS`. The picture's alone.
-  - `does` word; default the row unnamed. What it is to a round, a charge and a blast: a word of `DOES_WORDS`. The rules read this through `does_of`.
+  - `does` word; default the row unnamed. What it is to a round, a charge and a blast: a word of `DoesWord`. The rules read this through `does_of`.
 - `breaker` record: the mains panel of the level.
   - `pos` V3. Where the panel is, for the men sent to it (`lighting/`).
   - `panel`, `led` box ids. The panel is what a man works (`handwork/`, `workthings/`); `combat/` takes both as the breaker's boxes, and the LED is the
@@ -56,22 +59,22 @@ most z1. A yaw is radians where 0 faces +z and a quarter turn faces +x (forward 
     - exfil: `door`; `x`, `z` numbers; `out` unit pair dx, dz. With `out`, you are out past the point going that way and within 1.8 m of it sideways;
       without it, past x (`mission/`).
 
-The schema also asks for a few things the game passes by, which `levelToData` writes: `floors` (at least one, with `id`, `y` and `ceiling`;
-`tools/levels/lib/lint.ts` reads the first ceiling), `connectors` (always an empty list: `load` refuses any row), an `id` on each objective, beacon and plan, an
+A file also says a few things no rule of the game reads, which `levelToData` writes and the reader asks for: `floors` (at least one, with `id`, `y` and `ceiling`;
+`tools/levels/lib/lint.ts` reads the first ceiling), `connectors` (always an empty list), an `id` on each objective, beacon and plan, an
 `id` on each surface zone, and a `kind` of hide, utility or trigger on each volume.
 
 ### How much a level may hold
 
-`tools/levels/lib/caps.ts` holds the schema's numbers and `levelfit/` refuses at start (`level_over`, `stood_over`).
+`level_caps` has the numbers: `faults.rs` holds a file to them and `levelfit/` refuses at start (`level_over`, `stood_over`).
 
 | what | at most | said by |
 |---|---|---|
-| doors | 64 | `DOOR_CAP` |
-| props, and parts in all of them | 128, 512 | `PROP_CAP`, `PROP_PARTS` |
-| beacons, cameras, lasers | 32 each | `LIGHT_CAPS` |
-| lights, switchables, cameras, lasers and the breaker together | 256 | `LIGHT_CAPS` |
-| light rows, counted at start with beacons, cameras and vehicle lamps | 256 | `level_caps`, not the schema |
-| sheets of glass | 256 | `PANE_CAP`, not the schema |
+| doors | 64 | `faults.rs` |
+| props, and parts in all of them | 128, 512 | `faults.rs` |
+| beacons, cameras, lasers | 32 each | `faults.rs` |
+| lights, switchables, cameras, lasers and the breaker together | 256 | `faults.rs` |
+| light rows, counted at start with beacons, cameras and vehicle lamps | 256 | a start alone |
+| sheets of glass | 256 | a start alone (`PANE_CAP`) |
 
 ### What a switch leaves out
 
@@ -95,7 +98,7 @@ switchable whose `id` starts `lived.`. These come last in their lists, so every 
 - `emissive` V3 at least 0; default none. Light it gives off. A box that switches is also in a switchable, which holds its lit value.
 - `rough`, `metal`; default the row's, else matte and not metal.
 - `stuff` word of `BOX_STUFFS`; default the row's, else plain. How it is drawn. No rule reads it.
-- `does` word of `DOES_WORDS`; default the row's, else the default row. What it does. Written by `stampDoes` on every box an export has not worded.
+- `does` word of `DoesWord`; default the row's, else the default row. What it does. Written by `stampDoes` on every box an export has not worded.
 - `flags` list of words; default none.
   - NoPrimary: not drawn to the camera, while rays meet it. A roof or a ceiling (`docs/agents/levels.md`, Roofs).
   - NoShadow: met by no ray and no foot. A decal or a glow card.
@@ -108,7 +111,7 @@ switchable whose `id` starts `lived.`. These come last in their lists, so every 
 
 ### Markings
 
-A marking is a small bitmap on one face (`markings.ts`, carried by `laid_markings`, drawn by `markings.wgsl`). A box with `rot` has none. `markingErrors` holds the rules.
+A marking is a small bitmap on one face (`markings.ts`, carried by `laid_markings`, drawn by `markings.wgsl`). A box with `rot` has none. `faults.rs` holds the rules.
 
 - `face` one of +x, -x, +y, -y, +z, -z.
 - `res` fine, base or coarse; default base. Half, one or two base cells a cell.
@@ -121,7 +124,7 @@ A marking is a small bitmap on one face (`markings.ts`, carried by `laid_marking
 ### Shape
 
 A shape is cut from the box and said in the box's own frame, so it moves and turns with the box. The box still walks as the plain box; a cut changes the picture and
-every ray. `shape_of` carries it and `shape_level` makes the record; `?shapes=0` stands the plain boxes. `shapeErrors` holds the rules.
+every ray. `shape_of` carries it and `shape_level` makes the record; `?shapes=0` stands the plain boxes. `form_faults` holds the rules.
 
 - `round` 1 or 3. A twelve-sided prism about the box's x (1) or z (3). The box must be square across that axis to within 15 hundredths. No `cut` beside it.
 - `arc` record of `axis` (1 or 3) and `rise` (over 0, at most the box's height and half width). The box's top is a round about that axis. Not with `round`.
@@ -270,8 +273,7 @@ The kit lays panes with `paneX` and `paneZ`. A level's most is `PANE_CAP`.
 
 ## plans
 
-`plans` is a record, `roomClear` a list that may be empty, and `breach` an optional record. These are the scripted door drills. The schema checks a room plan's members and lets
-others through; the reader refuses any it has no line for.
+`plans` is a record, `roomClear` a list that may be empty, and `breach` an optional record. These are the scripted door drills.
 
 A room plan, each row of `plans.roomClear`, is read by `squad/`. `doorswing/` and others read its `door`, `room` and `bounds`.
 
@@ -317,7 +319,7 @@ The rooms to take (`roomclear/`, `roomfight/`).
 
 - `name` text. The structure's name.
 - `team` team start, two `ops` at least; default the night breach's start, which needs `plans.breach`.
-- `starts` list of team starts; default none. Other ways in, beside a `team`: way 1 is `team`, way 2 the first of these. `?way=` picks one, and any deals one.
+- `starts` list of team starts; default none. Other ways in, beside a `team`: way 1 is `team`, way 2 the first of these. `?way=` picks one.
 - `maxMen` whole number 1 to `SQUAD_MAX_MEN`; default five. The most defenders alive at once.
 - `wayOut` true or false; default false. On Hard, the men a lost room draws hold one of its doors from back off it (`pressure/`).
 - `digIn` true or false; default true. False: this floor's men never brace a door, take cover or set a gun on a door (`roomfight/`).
@@ -377,7 +379,7 @@ The quiet mission, `quiet/`. The run's seed deals one start, one spot and one pa
   - `rackIndex` whole number; names the switchables that go dark. `front` V3, `halfW` number at least 0: the marker and half the face's width.
   - `wired` true or false; default false. True: emptying it brings a man to look (`takecheck/`).
 - `exits` list of at least one: `name` text, `door`, `x`, `z`, `out` unit pair, `halfW` over 0 (default `EXIT_HALF_W`).
-- `patrols` list of lists of route names; default every route. At most `QUIET_MAX_ROUTES` to a set, and a level with more routes must give sets.
+- `patrols` list of lists of route names; default every route. At most six to a set, and a level with more routes must give sets.
 - `needs` record of `coffee`, `smoke`, `water`, `stretch`, each a stand; a kind left out is not dealt (`need_spot`). `stretch` needs `loop`, its lap.
 - `phones`, `wayouts` lists of stands: where a frightened civilian rings from and gets off the floor (`civilians/`).
 - A stand is `name` text, `pos` V3, `face` number, and for the needs `loop` list of V3.
@@ -494,7 +496,7 @@ shape, whose `material` may be alternatives; `doors` and `lights` lists, optiona
 
 The team from outside (`qrf/`). `tools/qa/level-needs.ts` holds that a level without a block is in `NOBODY_COMES` with its reason.
 
-- `why` text: who they are and where they come from. `level-needs.ts` asks for a sentence, and the game never reads it.
+- `why` text: who they are and where they come from. A file must say it, `level-needs.ts` asks for a sentence, and no rule reads it.
 - `site` text, how control addresses the place. `at` text, the same with its preposition. `team` text with its article. `tag` two to eight capitals; default QRF: their callsigns' stem.
 - `ways` list of at least one, the usual first; a run is dealt one:
   - `name` text with its article; said on the net and drawn on the HUD, so no compass word. `door`; default an open way.
@@ -517,8 +519,9 @@ mark, a route's first point, a room's id or name, a place, or `spawn`.
 
 ## How to add a member
 
-1. Its type in `tools/levels/lib/levelData.ts` (or `tools/levels/lib/levelRows.ts`, `tools/levels/lib/scenarios.ts`), its name in `KEYS` or in the block's
-   own list in `validateLevelData`, and its limits there.
-2. Both directions in `tools/levels/lib/levelLoad.ts`, where the record is not carried as written.
-3. The field in its type under `rust/game_types/src/`, and its line in `rust/game_start/src/records.rs` or `level.rs`. A member with no line stops the start.
+1. The field in its type under `rust/game_types/src/`, and its line in `rust/game_start/src/records.rs`; a record of the file's own has both in `file.rs`
+   or `kit_file.rs`.
+   A member with no line stops the start.
+2. Its limits in `rust/game_start/src/faults.rs`, then the module made (`bun run tools/blitz/face-build.ts --profile play`).
+3. Its type in `tools/levels/lib/levelData.ts` (or `levelRows.ts`, `scenarios.ts`), its name in `KEYS`, and both directions in `levelLoad.ts`, where the record is not carried as written.
 4. Its reader in the rules, its line on this page, then `bun run tools/levels/export.ts <name>` for each level and `bun run tools/qa/level-needs.ts <name> --run`.

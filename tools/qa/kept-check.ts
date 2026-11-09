@@ -18,7 +18,7 @@ export async function keptCheck(): Promise<boolean> {
   console.log(`\n=== kept: how kept a place is, one word a level${BRK ? ' (nothing asks the word: must fail)' : ''} ===`);
   const text = (f: string) => readFileSync(resolve(ROOT, f), 'utf8'), count = (t: string, s: string) => t.split(s).length - 1;
   // 1. the word in the file: there and back
-  { const { parseLevelData, validateLevelData, canonicalLevelData, serializeLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+  { const { parseLevelData, levelFaults, canonicalLevelData, serializeLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
     const { loadLevel, levelToData } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
     const base = parseLevelData(text('levels/white-roof.json')) as any; { const m = { ...base.meta }; delete m.kept; base.meta = m; }   // (a level to stand on, whatever it says of itself today)
     const said = (v: unknown) => ({ ...base, meta: { ...base.meta, kept: v } });
@@ -26,7 +26,7 @@ export async function keptCheck(): Promise<boolean> {
     const back = parseLevelData(serializeLevelData(canonicalLevelData(d))) as any;
     const theirs = { notes: 'x', kept: 0.1, markTexel: 0.05 } as { notes: string };   // (a caller's meta with the two words the Level owns: both are dropped)
     const again = levelToData(lv, { name: d.name, meta: theirs }) as any, none = levelToData(plain, { name: d.name, meta: theirs }) as any;   // (the Level is the one source: a caller's own word is dropped)
-    const errs = (v: unknown) => (validateLevelData(said(v)) as string[]).filter(e => e.includes('meta.kept')).length;
+    const errs = (v: unknown) => (levelFaults(said(v)) as string[]).filter(e => e.includes('meta.kept')).length;
     const ok = !('kept' in plain) && !('kept' in (canonicalLevelData(base) as any).meta) && lv.kept === 0.7 && back.meta.kept === 0.7 && again.meta.kept === 0.7 && again.meta.notes === 'x' && !('kept' in none.meta) && none.meta.notes === 'x' && again.meta.markTexel === base.meta.markTexel && none.meta.markTexel === base.meta.markTexel
       && errs(0.7) === 0 && errs(0) === 0 && errs(1) === 0 && errs(1.5) === 1 && errs(-0.1) === 1 && errs('1') === 1;
     verdict(ok, 'a level file says how kept it is in meta.kept, a number from 0 to 1: it loads to the level, is written back from the level and from nothing else, and is kept by the canonical form; a file without it has no such key, and a number outside 0 to 1 or a string is an error',

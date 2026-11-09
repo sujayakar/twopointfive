@@ -373,7 +373,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // (waded: wind-laid snow, 0.19 m and under, on the side of each thing the pass's wind comes from)
   drift(POST.x0 - 0.42, 11.4, 3.4, 0.6, -HALF, 0.16); drift(POST.x0 - 0.42, 18.3, 2.4, 0.6, -HALF, 0.17);   // the lower wall, outside
   drift(POST.x1 - 0.42, 11.2, 2.6, 0.6, -HALF, 0.16);                                          // the upper wall, inside
-  drift(HUT.x0 - 0.4, 10.3, 1.0, 0.5, -HALF, 0.14); drift(HUT.x0 - 0.4, 13.2, 0.9, 0.5, -HALF, 0.14);   // the hut, under its window and past its door
+  drift(HUT.x0 - 0.36, 10.3, 1.0, 0.5, -HALF, 0.14); drift(HUT.x0 - 0.4, 13.2, 0.9, 0.5, -HALF, 0.14);   // the hut, under its window and past its door
   drift(24.9, COVER_Z - 0.5, 4.4, 0.5, Math.PI, 0.15); drift(28.6, COVER_Z - 0.42, 2.2, 0.5, Math.PI, 0.15);   // the sandbags and the wall, on the gun's side
   drift(30.06, 11.0, 2.2, 0.44, -HALF, 0.14);                                                  // the nest
    drift(35.0, ROAD.z0 + 0.34, 3.4, 0.6, 0, 0.15);

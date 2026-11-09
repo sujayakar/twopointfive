@@ -80,7 +80,7 @@ fn what_a_level_file_says_is_on_the_floor() {
 /// list names it): a level the game ships can no longer start in Rust. Or, on the last line, the reader has stopped refusing what it cannot carry.
 #[test]
 fn every_level_file_is_read_whole_and_a_stranger_is_refused() {
-    use game_start::{files, json, level};
+    use game_start::{faults, files, json};
     let dir = files::root().join("levels");
     let mut n = 0;
     for e in std::fs::read_dir(&dir).unwrap() {
@@ -89,31 +89,25 @@ fn every_level_file_is_read_whole_and_a_stranger_is_refused() {
         if !name.ends_with(".json") { continue; }
         let data = json::parse(&std::fs::read_to_string(&p).unwrap()).unwrap_or_else(|e| panic!("{}: {}", name, e));
         if !data.has("boxes") { continue; }   // (a file of the folder that is not a level: the lint's list)
-        let lacks = std::panic::catch_unwind(|| level::lacks_of(&data)).unwrap_or_else(|_| panic!("{} could not be read (the reader's own words are above)", name));
-        assert!(lacks.is_empty(), "{} is not carried whole: {:?}", name, lacks);
+        assert_eq!(faults::of(&data), [""; 0], "{} has faults", name);
         n += 1;
     }
     assert!(n >= 30, "levels/ holds the game's level files ({} read)", n);
-    // a file from a later reader, and a record with a member the game's type has no field for
-    let mut later = json::parse(&files::level_text("kit-yard.json")).unwrap();
-    if let json::Json::Obj(m, _) = &mut later {
-        let beam = json::obj(vec![("kind", json::s("laser")), ("id", json::s("beam")), ("from", json::nums(&[0.0, 1.0, 0.0])), ("to", json::nums(&[1.0, 1.0, 0.0])), ("colour", json::s("red"))]);
-        for (k, v) in m.iter_mut() { if k == "version" { *v = json::n(3.0); } if k == "devices" { *v = json::arr(vec![beam.clone()]); } }
-    }
-    let lacks = level::lacks_of(&later);
-    assert!(lacks.iter().any(|l| l.starts_with("version")), "a file of another version is named: {:?}", lacks);
-    assert!(lacks.iter().any(|l| l == "devices[0].colour"), "a member no field takes is named by its place: {:?}", lacks);
-    // a file of the version before, whose round things are four slabs: refused by its version, and told the command
-    let mut old = json::parse(&files::level_text("kit-yard.json")).unwrap();
-    if let json::Json::Obj(m, _) = &mut old { for (k, v) in m.iter_mut() { if k == "version" { *v = json::n(1.0); } } }
-    let lacks = std::panic::catch_unwind(|| level::lacks_of(&old)).unwrap_or_else(|_| panic!("a file of version 1 could not be read"));
-    assert!(lacks.iter().any(|l| l.starts_with("version 1") && l.contains("round-convert")), "a file of version 1 is named, with the command: {:?}", lacks);
-    // …and of a record the loader reads by hand, and at the top of the file
-    let mut grown = json::parse(&files::level_text("kit-yard.json")).unwrap();
+    let kit_yard = || json::parse(&files::level_text("kit-yard.json")).unwrap();
+    // a file from a later reader; a file of the version before, whose round things are four slabs: refused by its version, and told the command
+    let mut later = kit_yard();
+    later.set_member("version", json::n(3.0));
+    assert!(faults::of(&later).iter().any(|f| f.starts_with("version")));
+    later.set_member("version", json::n(1.0));
+    assert!(faults::of(&later).iter().any(|f| f.starts_with("version") && f.contains("round-convert")));
+    // a member the game has no reading of, in a record, in a device, at the top of the file: named by its place, and nothing else
+    let mut grown = kit_yard();
+    let beam = json::obj(vec![("kind", json::s("laser")), ("id", json::s("beam")), ("from", json::nums(&[0.0, 1.0, 0.0])), ("to", json::nums(&[1.0, 1.0, 0.0])), ("colour", json::s("red"))]);
+    grown.set_member("devices", json::arr(vec![beam]));
+    grown.set_member("elevators", json::arr(vec![]));
     if let json::Json::Obj(m, _) = &mut grown {
-        m.push(("elevators".to_string(), json::arr(vec![])));
-        for (k, v) in m.iter_mut() { if k == "doors" { if let json::Json::Arr(d) = v { if let json::Json::Obj(door, _) = &mut d[0] { door.push(("auto".to_string(), json::b(true))); } } } }
+        for (k, v) in m.iter_mut() { if k == "doors" { if let json::Json::Arr(d) = v { d[0].set_member("auto", json::b(true)); } } }
     }
-    let lacks = level::lacks_of(&grown);
-    assert_eq!(lacks, ["doors[0].auto", "elevators"], "what a file gained since the reader was written is named, and nothing else");
+    let places: Vec<String> = faults::of(&grown).iter().map(|f| f.split(": ").next().unwrap().to_string()).collect();
+    assert_eq!(places, ["doors[0].auto", "devices[0].colour", "elevators"]);
 }

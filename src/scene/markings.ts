@@ -20,7 +20,7 @@ import { onExact } from '../math/exact';
 /** the base world-space texel (m): a key cap, a text bar, an LED are one of these (fine = half, coarse = double) */
 export const MARKING_TEXEL = 0.025;
 export const MAX_MARKS_PER_BOX = 4;
-export const MAX_CELLS_W = 32; export const MAX_CELLS_H = 32; export const MAX_PAL = 3;
+export const MAX_CELLS_W = 32; export const MAX_CELLS_H = 32; 
 /** GPU table: vec4f rows in the tail of BoxWorld.matBuf; a record = MARK_HEAD_ROWS header rows + ceil(W·H / 48) cell rows (12 cells a float, exact small integers) */
 export const MARK_HEAD_ROWS = 8; export const CELLS_PER_FLOAT = 12; export const CELLS_PER_ROW = 48;
 export const MARK_TABLE_ROWS = 6144;   // 96 KB of table (the office packs ≈ 1.5k rows)
@@ -76,43 +76,6 @@ export function palEntry(p: MarkPal): MarkPal {
   return o;
 }
 export const copyMarkings = (ms: readonly MarkingDef[] | undefined): MarkingDef[] | undefined => ms && ms.length ? ms.map(marking) : undefined;
-
-/** every problem with a marking on a box of half extents h — levelData.ts validate calls it per marking */
-export function markingErrors(m: any, h: Vec3, base = MARKING_TEXEL): string[] {
-  const e: string[] = [];
-  const isNum = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
-  const isVec = (v: unknown) => Array.isArray(v) && v.length === 3 && v.every(x => isNum(x) && x >= 0);
-  if (!m || typeof m !== 'object' || Array.isArray(m)) return ['must be an object'];
-  const KEYS_M = ['face', 'res', 'at', 'size', 'pal', 'cells'];
-  for (const k of Object.keys(m)) if (m[k] !== undefined && !KEYS_M.includes(k)) e.push(`unknown key '${k}' (allowed: ${KEYS_M.join(', ')})`);
-  const f = MARK_FACES.indexOf(m.face); if (f < 0) e.push(`face must be one of ${MARK_FACES.join(' ')}`);
-  if (m.res !== undefined && !MARK_RES.includes(m.res)) e.push(`res must be one of ${MARK_RES.join(' ')}`);
-  const okAt = Array.isArray(m.at) && m.at.length === 2 && m.at.every((x: unknown) => Number.isInteger(x));
-  const okSize = Array.isArray(m.size) && m.size.length === 2 && m.size.every((x: unknown) => Number.isInteger(x)) && m.size[0] >= 1 && m.size[0] <= MAX_CELLS_W && m.size[1] >= 1 && m.size[1] <= MAX_CELLS_H;
-  if (!okAt) e.push('at must be [U0, V0] integers'); if (!okSize) e.push(`size must be [W, H] integers, 1‥${MAX_CELLS_W} × 1‥${MAX_CELLS_H}`);
-  const pal = Array.isArray(m.pal) ? m.pal : null;
-  if (!pal || pal.length < 1 || pal.length > MAX_PAL) e.push(`pal must be 1‥${MAX_PAL} entries`);
-  else pal.forEach((p: any, k: number) => {
-    if (!p || typeof p !== 'object') { e.push(`pal[${k}] must be an object`); return; }
-    for (const q of Object.keys(p)) if (p[q] !== undefined && !['albedo', 'mul', 'rough', 'emit'].includes(q)) e.push(`pal[${k}]: unknown key '${q}'`);
-    if (p.albedo !== undefined && !(isVec(p.albedo) && p.albedo.every((x: number) => x <= 1))) e.push(`pal[${k}].albedo must be a Vec3 in [0, 1]`);
-    if (p.mul !== undefined && !(isNum(p.mul) && p.mul >= 0 && p.mul <= 4)) e.push(`pal[${k}].mul must be in [0, 4]`);
-    if (p.albedo !== undefined && p.mul !== undefined) e.push(`pal[${k}]: albedo OR mul, not both`);
-    if (p.rough !== undefined && !(isNum(p.rough) && p.rough >= 0 && p.rough <= 1)) e.push(`pal[${k}].rough must be in [0, 1]`);
-    if (p.emit !== undefined && !isVec(p.emit)) e.push(`pal[${k}].emit must be a Vec3 ≥ 0`);
-  });
-  if (okSize) {
-    const [W, H] = m.size;
-    if (!(Array.isArray(m.cells) && m.cells.length === H && m.cells.every((r: unknown) => typeof r === 'string' && r.length === W))) e.push(`cells must be ${H} strings of ${W} characters (top row first)`);
-    else { const maxIdx = pal ? pal.length : 0; for (const r of m.cells as string[]) for (const ch of r) { const i = CELL_CHARS.indexOf(ch); if (i < 0 || i > maxIdx) { e.push(`cells: character '${ch}' is not one of '${CELL_CHARS.slice(0, maxIdx + 1)}'`); break; } } }
-    if (f >= 0 && okAt) {
-      const t = texelOf(m, base); const { hu, hv } = faceHalf(h, f); const eps = 1e-6;
-      const u0 = m.at[0] * t, v0 = m.at[1] * t, u1 = (m.at[0] + W) * t, v1 = (m.at[1] + H) * t;
-      if (u0 < -hu - eps || u1 > hu + eps || v0 < -hv - eps || v1 > hv + eps) e.push(`the bitmap [${u0.toFixed(3)}, ${v0.toFixed(3)}]‥[${u1.toFixed(3)}, ${v1.toFixed(3)}] m leaves the face (±${hu.toFixed(3)} × ±${hv.toFixed(3)})`);
-    }
-  }
-  return e;
-}
 
 // ------------------------------------------------------------------------------------------------------------------------------------ authoring: the cell canvas + generators
 /** A W × H cell canvas (j = 0 is the BOTTOM row; toRows() prints top first). The procedural kinds draw into one; several shapes on one face region share one. */

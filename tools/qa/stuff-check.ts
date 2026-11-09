@@ -14,7 +14,7 @@ const ST = await import(`${ROOT}/src/scene/stuff.ts`), { PAINT_STUFF, stuffOfNam
 const { LOOK_NAMES, LOOK_PAINTED, lookStuffOf } = await import(`${ROOT}/src/render/lookTex.ts`);
 const GB = await import(`${ROOT}/src/render/gbuffer.ts`), { lookWordOf, lookCoreOf, LOOK_WORD } = GB;
 const { GWOT_PALETTE, gwotAs } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
-const { parseLevelData, serializeLevelData, validateLevelData, KEYS } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { parseLevelData, serializeLevelData, levelFaults, KEYS } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 const { loadLevel, levelToData } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
 const { lookPageWord } = await import(`${ROOT}/src/scene/look.ts`);
 const { makeBox, wordOf } = await import(`${ROOT}/src/scene/boxes.ts`);
@@ -89,7 +89,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
   if (bi < 0 || wi < 0 || fi < 0 || pi < 0 || ii < 0) check(false, '7 a box says its own word', `the showroom has no concrete box, wooden box, flagged box, inline box or chair to ask (${bi}, ${wi}, ${fi}, ${ii}, ${pi})`);
   else {
     D.boxes[bi].stuff = 'paint'; D.boxes[wi].stuff = 'plain'; D.boxes[fi].stuff = 'slab'; D.props[pi].parts[0].stuff = 'plaster'; D.boxes[ii].stuff = 'enamel';
-    const text = serializeLevelData(D), back = parseLevelData(text) as any, errs = validateLevelData(back), L = loadLevel(back) as any;   // (every box of the file: the lived rooms and the dressing too)
+    const text = serializeLevelData(D), back = parseLevelData(text) as any, errs = levelFaults(back), L = loadLevel(back) as any;   // (every box of the file: the lived rooms and the dressing too)
     const car = cls(L.boxes[bi]), desk = cls(L.boxes[wi]), inl = cls(L.boxes[ii]);
     // back to a file: a word is written only where the box is another thing than its row says; 'plain' is written over a row that says something
     const again = levelToData(L, { materials: back.materials }) as any, same = again.boxes.every((b: any, i: number) => b.stuff === back.boxes[i].stuff) && again.props.every((p: any, i: number) => p.parts.every((q: any, j: number) => q.stuff === back.props[i].parts[j].stuff));
@@ -101,7 +101,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     const KV = FILES.find(f => Object.values((dataOf(f) as any).scenarios?.kitView?.sets ?? {}).some((x: any) => x.boxes?.length));
     const refuse = (w: string, where: 'box' | 'part' | 'set' | 'row' = 'box') => { const X = dataOf(where === 'set' ? KV! : 'library-hall.json') as any;
       if (where === 'box') X.boxes[0].stuff = w; else if (where === 'part') X.props[0].parts[0].stuff = w; else if (where === 'row') X.materials.wood.stuff = w; else (Object.values(X.scenarios.kitView.sets).find((x: any) => x.boxes?.length) as any).boxes[0].stuff = w;
-      return validateLevelData(X).some((e: string) => e.includes('stuff')); };
+      return levelFaults(X).some((e: string) => e.includes('stuff')); };
     const masonry = (LOOK_NAMES as readonly string[]).slice(LOOK_PAINTED).join(', ');
     check(errs.length === 0 && car === lookStuffOf('paint') && desk === 0 && inl === lookStuffOf('enamel') && L.props[pi].parts[0].stuff === 'plaster' && same && kept && placed
       && refuse('mixed') && refuse('banana') && !refuse('waits') && !refuse('veneer') && refuse('banana', 'part') && !refuse('fabric', 'part') && refuse('banana', 'row') && !refuse('veneer', 'row') && refuse('mud brick', 'row') && !!KV && refuse('banana', 'set') && !refuse('steel', 'set')
@@ -164,10 +164,10 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
   const D = dataOf('office.json') as any, M = D.materials, bi = D.boxes.findIndex((b: any) => b.material === 'wood' && b.rot === undefined && b.markings === undefined && b.shape === undefined && !(b.flags ?? []).includes('Glass')), b = D.boxes[bi];
   const up = b.h[1] + 0.02;
   b.shape = { with: [{ off: [0, up, 0], h: [0.05, 0.02, 0.05], material: 'metal' }, { off: [0.12, up, 0], h: [0.05, 0.02, 0.05], material: 'metal', stuff: 'plastic' }, { off: [-0.12, up, 0], h: [0.05, 0.02, 0.05], albedo: [0.31, 0.27, 0.4] }, { off: [0, up, 0.12], h: [0.05, 0.02, 0.05], material: 'wood', stuff: 'plain' }] };
-  const errs = validateLevelData(D), L = loadLevel(D) as any, said = (L.boxes[bi].shape.with as any[]).map(w => w.stuff ?? 'nothing');
+  const errs = levelFaults(D), L = loadLevel(D) as any, said = (L.boxes[bi].shape.with as any[]).map(w => w.stuff ?? 'nothing');
   shapeLevel(L.boxes, true); const stood = (L.boxes as any[]).filter(x => x.piece === true && x.of === bi).map(x => x.stuff ?? 'nothing'); shapeLevel(L.boxes, false);
   const back = (levelToData(L, { materials: M }) as any).boxes[bi].shape.with.map((w: any) => w.stuff ?? 'nothing');
-  const bad = JSON.parse(JSON.stringify(D)); bad.boxes[bi].shape.with[0].stuff = 'banana'; const refused = validateLevelData(bad).some((e: string) => e.includes('banana'));
+  const bad = JSON.parse(JSON.stringify(D)); bad.boxes[bi].shape.with[0].stuff = 'banana'; const refused = levelFaults(bad).some((e: string) => e.includes('banana'));
   const row: string = M.metal?.stuff ?? 'nothing';   // (what the file's own row says the kit's metal is made of)
   check(errs.length === 0 && row !== 'nothing' && said.join() === [row, 'plastic', 'nothing', 'nothing'].join() && stood.join() === said.join() && back.join() === ['nothing', 'plastic', 'nothing', 'plain'].join() && refused,
     '14 a shape\'s piece says its word as a box does: a piece in a named paint is made of what that paint\'s row says, one that says its own word is that, one written as numbers and one that says plain over a row are nothing; the box stood up for each carries the same; the file keeps only the word that is another thing than the row\'s; a word that is no stuff is refused',
