@@ -65,10 +65,11 @@ Any recent `tsc` does the typecheck: `tsc --noEmit -p tsconfig.json`.
 ## Layout
 
 ```
-src/render   passes, WGSL shaders, lights      src/game    the simulation: player, squad, enemies, doors, kit
-src/smoke    the smoke solver                  src/scene   level format, loader, collision, sound paths
+rust/        the game: its rules, its world, what a page is told to draw
+src/render   passes, WGSL shaders, lights      src/draw    the page's half of what the game hands it
+src/smoke    the smoke solver                  src/scene   level format, mission lists, the box world as it is drawn
 src/anim     glTF loader, skinning             src/audio   mixer, score, synthesized effects
-src/ui       menus, HUD, the debugger          src/host    one stand-up and frame order for page and harness
+src/ui       menus, HUD, the debugger          src/host    the page: its boot, frame and cards
 src/tape     replays: the tape, its bar, the map
 levels/      every level as JSON               tools/      dev server, build, level generators, qa/
 public/      models and animations             docs/       level format, notes, captures

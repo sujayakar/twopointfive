@@ -82,27 +82,6 @@ The rows still grow slowly (a few makers still make a row for good), so **the me
 the worst tick (the worst is the first, 21 to 34 ms). Room asked for and given back before the start (`face_free(face_alloc(n), n)`, `--reserve`) is
 kept by the allocator: with `--reserve 32` no step of room-clear-four:1 or mousehole-four:1 grew the memory (143.6 MB at the end of both).
 
-## What `src/sim/sim.ts` needs to bind to this module
-
-- **The names hold.** Every name of `SimExports` / `SIM_EXPORTS` is here with the same parameter count and `sim_abi()` is 34, so `start()` passes as it
-  stands once it is given these bytes. A check that the module exports exactly `SIM_EXPORTS` has to let the `face_*` names by.
-- **The bytes do not fit the loader.** `startModule` compiles synchronously from base64 text in `built.ts`. Chrome compiles on the page's thread only up
-  to 8 MB and `tools/sim/build.ts` is red over 6 MB (`MAX_BYTES`); the smallest build is 11.9 MB (10.8 MB without names). The page needs an asynchronous
-  compile (and then everything that calls `sim()` before it resolves needs a place to wait), or the module under 8 MB. `tools/sim/build.ts` also needs a
-  side for `game`, `game_run` and `game_face` (`SIDES` has none: its `sides` line is red on them today) and a row of `MODULES` for the face.
-- **The block is found the same way**: `state_addr(slot)`, `state_len`, `state_part`. The address differs (92 MB up, not 13 MB) and is always asked.
-- **Slots: two owners today.** `src/sim/state.ts` decides which game's block stands in which slot (`HELD`, `bind`, `park`) and moves blocks by copying.
-  The Rust game holds its slot for as long as it lives (`face_slot(h)`) and reads it without asking. So a game stepped by the face must be PINNED in
-  `SimState` to `face_slot(h)` and never parked, and `face_new` must not pick a slot `HELD` has given to a TypeScript game: either the face takes the
-  slot from the host as a parameter, or `SimState` asks the face. More than 4 games alive at once needs parking on the Rust side too.
-- **Memory growth.** sim.ts says "nothing in the module allocates, so in play the memory never does grow". With the game inside it does, inside a step.
-  Where the shipped code survives it: sim.ts `f64()` / `u8()` / `u32()` / `f32()` (a view of length 0 is made again); state.ts `bind()` and
-  `f32()`, which make `w` / `d` and the kept sub-views again when their length is 0. Where it does not: anything that reads `SimState.w` /
-  `.d` or a kept typed array without passing through `bind()` after a step, which then reads `undefined` without a word (the accessor fields over the
-  block, a tool's `g.sim.w`). So after every `face_step` the host must check `memory.buffer` and make every bound `SimState`'s views again (as `view()` does when a
-  block moves), or reserve the room before play so that no step grows it. With frame boxes 32 MB was enough for the two missions tried.
-- **The page's rows of `RUST`** then call `rust/sim` on the block the Rust game also writes. That is the point of one module; nothing was tried in a page.
-
 ## Worked round, and asked
 
 - **The host's view** (`rails_host_view` after each tick, a level on rails) is a stand-in of the runner's too: `game_run::view`, `face_view`, flag 4.

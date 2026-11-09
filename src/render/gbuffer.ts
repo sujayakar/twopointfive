@@ -317,7 +317,7 @@ export class GBuffer {
   }
   /** the look's numbers alone (the console's `__snow.relook()`) */
   setSnowCfg(cfg: Float32Array) { this.device.queue.writeBuffer(this.snowCfg, 0, cfg.subarray(0, SNOW_CFG_FLOATS)); }
-  /** the traffic map the detail layer reads (render/wear.ts builds it from the level; the viewer never does): r = traffic 0‥255, g = wall proximity 0‥255, one texel per 1/8 m over the world's grid footprint */
+  /** the traffic map the detail layer reads (rust/game_draw/src/traffic.rs builds it from the level; the viewer never does): r = traffic 0‥255, g = wall proximity 0‥255, one texel per 1/8 m over the world's grid footprint */
   private wearTex: GPUTexture; private wearView: GPUTextureView;
   setWearMap(data: Uint8Array, w: number, h: number) {
     this.wearTex.destroy();

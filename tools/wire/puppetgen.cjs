@@ -41,7 +41,7 @@ function emit(e, n, K, st, depth = 0) { if (!K.nodeHolds(n)) return `${e}.w(o);`
   throw new Error('puppetgen: no walk for ' + n.k); }
 const inc = (set, K, T, f) => set.has(`${T.mod}::${T.name}.${f.rust}`) || K.deep(parse(f.ty));
 // THE CHANGED MASK. A row or a top part that differs goes as a mask of its LEAVES and the bytes of the leaves that differ. A leaf is a listed field, or, for a plain struct field that holds listed fields, that struct's own leaves in place (flattened, so a man's animator is many leaves and not one). Rust and the TypeScript walk the same list: `flat` decides for both
-const INV0 = new Set((fs.readFileSync(path.join(tree, 'tools/blitz/import.ts'), 'utf8').match(/'[a-z_0-9]+::[A-Za-z0-9_]+\.[a-z_0-9]+':/g) || []).map(x => x.slice(1, -2)));
+const INV0 = new Set(JSON.parse(fs.readFileSync(path.join(__dirname, 'inverses.json'), 'utf8')));
 const plainOf = f => f.expr !== undefined && /^o\.[A-Za-z_$][\w$]*$/.test(f.expr) ? f.expr.slice(2) : null;
 // (a value with a serial is not flattened: a new serial is another thing, a new object on the puppet, and only the importer's read can tell)
 const hasSerial = n => S.types[n.path].fields.some(x => x.expr === 'B.serialOf(o)');
@@ -97,7 +97,7 @@ const js = (o, key, n, q, f, T, some) => { const acc = /^[A-Za-z_$][\w$]*$/.test
     case 'type': { const X = S.types[n.path]; if (X.k === 'enum') return `{ const v = WORDS_${enums(n.path)}[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && ${acc} !== v) ${acc} = v; }`; return null; }
     default: return null; } };
 const enumNames = new Map(); const enums = p => { if (!enumNames.has(p)) enumNames.set(p, enumNames.size); return enumNames.get(p); };
-const bodies = []; const INVERSES = new Set((fs.readFileSync(path.join(tree, 'tools/blitz/import.ts'), 'utf8').match(/'[a-z_0-9]+::[A-Za-z0-9_]+\.[a-z_0-9]+':/g) || []).map(x => x.slice(1, -2)));
+const bodies = []; const INVERSES = new Set(JSON.parse(fs.readFileSync(path.join(__dirname, 'inverses.json'), 'utf8')));
 for (const [p, T] of Object.entries(S.types)) { if (T.k !== 'struct' || !KS.hold.get(p) || statTypes.has(p) || p === 'crate::game::Stats' || p === S.root) continue; const L0 = [`  function ${fnOf(p)}(o: any, m: number) {`]; let leaf = 0; for (let f of T.fields) { const q = `${T.mod}::${T.name}.${f.rust}`; if (!inc(STEP, KS, T, f)) continue; const n = parse(f.ty); const F0 = flat(T, f); if (F0) { L0.push(F0.self ? `    ${fnOf(F0.path)}(o, m + ${leaf});   // ${f.rust}` : `    { let c = o.${F0.key}; if (!c || typeof c !== 'object') c = o.${F0.key} = C.made(${JSON.stringify(F0.path)}); ${fnOf(F0.path)}(c, m + ${leaf}); }   // ${f.rust}`); leaf += leaves(F0.path); continue; }
     const plainPath = f.expr !== undefined && /^o\.[A-Za-z_$][\w$]*$/.test(f.expr) && !INVERSES.has(q) ? f.expr.slice(2) : null; if (plainPath) f = { ...f, ts: plainPath, expr: undefined };
     let code = null; if (f.expr === undefined && f.ts !== undefined) { if (!KS.nodeHolds(n) || n.k === 'opt' || n.k === 'vec') code = js('o', f.ts, n, q, f, T); }

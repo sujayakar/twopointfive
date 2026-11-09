@@ -1,7 +1,7 @@
 // THE LEDGER — the tutorial's quiet mission: one line through a money changer's shop on a snowing night, alone, and each stretch of it is ONE tool and one
 // small thrill. The level is made for this mission and for nothing else (no shared yard under it): a shop off a bazaar street, its forecourt behind a street
 // wall, a lane along its side, a back court where a man keeps a fire in a drum, and the town standing close round it — shuttered fronts and stalls on the
-// street, the neighbours' upper windows over the back wall. Snow lies on all of it (the level's own weather: src/game/weatherKinds.ts SNOW_LEVELS).
+// street, the neighbours' upper windows over the back wall. Snow lies on all of it (the level's own weather: rust/game_rules/src/weather_kinds SNOW_LEVELS).
 //
 //      x 0      8      12.5      16.5    20        25.5        30.5 32        40
 //   z 2 ┌───────┬──────────── the neighbours' backs, a lit window ────────────┬────────┐

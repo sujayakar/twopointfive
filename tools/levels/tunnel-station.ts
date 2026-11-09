@@ -36,7 +36,7 @@
 //   z 25.6 - - - - - the plough's bank, the rail, the drop - - - -     +==+
 //
 // THE SNOW IS IN THE FILE (group 'snow.*'), laid by hand as the pass's is and with the same pieces: ground, drifts a man wades, banks that stop him (against
-// a wall, never within 1.4 m of a door), caps on the tops of things, trodden paths, ruts. What FALLS is the weather's (src/game/weatherKinds.ts, by name).
+// a wall, never within 1.4 m of a door), caps on the tops of things, trodden paths, ruts. What FALLS is the weather's (rust/game_rules/src/weather_kinds, by name).
 // THE LIGHT: a thin moon on snow and pools of warm light. ON THE MAINS (the generator in the court; the box on the kitchen's yard wall throws them all): the
 // bulbs of the four rooms, the lamps over the kitchen's and the bunkhouse's doors, the lamp over the gate, the lamps of the tunnel's mouth, the light behind
 // the shutters. ON THEIR OWN FUEL: the brazier in the yard, two stoves, the bread oven, the lanterns, the gun truck's head lamps. ON A BATTERY, and only when

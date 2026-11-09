@@ -1,4 +1,4 @@
-// THE COUNTING HOUSE — a quiet mission, alone, built round the DEVICES (src/game/devices.ts): wall cameras that see by the light on him, a strongroom on a
+// THE COUNTING HOUSE — a quiet mission, alone, built round the DEVICES (rust/game_rules/src/devices): wall cameras that see by the light on him, a strongroom on a
 // keypad whose code a man gives up, tripwire beams. A money changer's house in a walled yard at night (the shared walled yard of tools/levels/train-ground.ts,
 // GWOT kit): the counting room in front, the strongroom behind it, a kitchen court against the back wall. THREE men (every one of them knows the code): the clerk, who comes out
 // to smoke in a dark corner of the yard), a man who walks the south side and the east yard, there and back (never the north strip, never up the west yard),
