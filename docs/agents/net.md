@@ -20,9 +20,9 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   scripted client writes every part's word after each word tick (the alarm's own as `block.<part>`), `mpclient-page --words DIR` the page's, and
   `bun run tools/mp/words-diff.ts <files of ONE game>` names the parts and the machines. A READ BETWEEN TWO TICKS WRITES NOTHING OF THE BLOCK (a page's read
   that kept a memo in it parted the alarm with everything equal, 2026-11-08). What a machine LOOKS AT parts nothing (`rust/game_start/tests/coop.rs
-  where_a_machine_looks…`, `a_look_ahead_is_where_the_game_then_has_him`). FOUND 2026-11-08, red in `mpclient-page --seats 2`: on the
-  SECOND player's page `weather` (its `cam_yaw`, the shown seat's, which pans a thunder) and `tab.frame_boxes` (a tracer's and a beam's width in the shown
-  view's pixels) are not the server's, the state word holding throughout. Both are a host's own in the game's record.
+  where_a_machine_looks…`, `a_look_ahead_is_where_the_game_then_has_him`). What a machine SHOWS is no number of the game's either:
+  which ear a thunder is in is asked of the shown seat's camera as it sounds, and a thin line (a beam, a tracer, a charge's firing line) is as thick in the game as it is, widened by the
+  drawer for the shown seat's view (`game_shown_px`; `each_players_view_is_his_own_pictures_alone`).
 - **src/net knows no game**: nothing in it imports `src/game`; hosts are handed WIRE records.
 - **The server's authority over input is one rule** (`src/net/timeline.ts SeatLine.take`, asked once a seat a tick): the seat's own record for that tick if
   it came in time; else the newest record the seat is known by with its one-tick edges off (keys and buttons stay held, the view stays); a record that came

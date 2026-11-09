@@ -5,14 +5,17 @@ use game::game::Game;
 use game::ids::AnyBoxId;
 use game::scene_boxes::Box;
 
-/// the boxes, each with whether it is an infrared line. The world's copy is asked of (a line's end): whoever calls holds the game, and has it proven again
-pub fn boxes(g: &Game, bare: bool, tube: bool) -> Vec<(Box, bool)> {
+/// a box of a viewer's own: whether it is an infrared line, and what was noted of it where it is a thin one
+pub struct Watched { pub b: Box, pub line: bool, pub thin: Option<game::thinline::Thin> }
+
+/// the boxes. The world's copy is asked of (a line's end): whoever calls holds the game, and has it proven again
+pub fn boxes(g: &Game, bare: bool, tube: bool) -> Vec<Watched> {
     let tube = tube && !game::irlaser::ir_viewer(g);
     if !bare && !tube { return Vec::new(); }
     let mut c = g.clone();
     let (mut hidden, mut lines): (Vec<AnyBoxId>, Vec<AnyBoxId>) = (Vec::new(), Vec::new());
     if bare { game::combat::hidden_props(&mut c, &mut hidden); }
     if tube { game::irlaser::ir_beams(&mut c, &mut lines); }
-    let row = |id: &AnyBoxId| c.tab[*id].clone();
-    hidden.iter().map(|b| (row(b), false)).chain(lines.iter().map(|b| (row(b), true))).collect()
+    let row = |id: &AnyBoxId, line: bool| Watched { b: c.tab[*id].clone(), line, thin: c.m.thinline.thin.get(*id).copied() };
+    hidden.iter().map(|b| row(b, false)).chain(lines.iter().map(|b| row(b, true))).collect()
 }

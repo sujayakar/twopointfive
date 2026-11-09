@@ -81,7 +81,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   camera (`attach`, called by `update`): showcases lock real keys and pin the real camera. Between ticks `orders.hostView` / `g.viewProj` point at the host's live objects again,
   as the HUD and the tools always saw them. Read off the seat's view inside a tick (each per seat once there are two): the reticle's pixel snaps and the order menu's cursor ray,
   the walk keys' basis, on-screen-or-not for a line (`viewProj` → bubble vs log row: guards.ts say, civilians, the weather's stroke filter), the thunder's pan, the rain's near
-  field, `mPerPx`, a blast's kick. 
+  field, a blast's kick. 
 - **The rollback snapshot: any tick taken and put back, to the bit** (`src/game/rollback.ts`, `src/math/side.ts`; groundwork for server authority then rollback, nothing
   networked; when it went in nothing called it, and the 21 scripted play-throughs' digests on both stands were the ones from before it. ONE CALLER IN PLAY SINCE: a save
   kept in memory with a team on the floor, `savestate.ts` under `SAVETIMELINE`, `docs/agents/qa.md`). Beside the

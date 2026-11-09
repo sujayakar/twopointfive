@@ -225,7 +225,7 @@ impl Boxes {
     pub fn cut(&mut self) { self.have = 0; self.drawn.clear(); self.glass.cut(); }
 
     /// A TICK HAS RUN: the statics that changed are packed again, and the frame's own boxes are packed where the tick left them (`again`: the tick already taken)
-    pub fn take(&mut self, g: &Game, night: bool, again: bool, watched: &[(Box, bool)]) {
+    pub fn take(&mut self, g: &Game, night: bool, again: bool, watched: &[crate::watched::Watched]) {
         let w = &g.engine.world;
         let (st, all) = (&w.statics, &g.tab.boxes);
         if self.marks.texel == 0.0 { self.marks.texel = self.look.texel; }
@@ -277,22 +277,26 @@ impl Boxes {
         }
         self.own.clear();
         self.leaves.clear();
-        let ir = &g.m.irlaser.ir_made;
+        let (ir, thin, px) = (&g.m.irlaser.ir_made, &g.m.thinline.thin, game::game::game_shown_px(g));
         // (a viewer's own picture: the list before the fog cut it, or the infrared lines of a tube the run's picture was not)
         let raw = &g.fog_picture.raw_list;
         let bare = self.look.bared && g.fog_picture.viewer;
-        let mut list: Vec<(AnyBoxId, &Box)> = (if bare { raw } else { &w.dynamics }).iter().filter(|id| night || !ir.has(**id)).map(|&id| (id, &g.tab[id])).collect();
+        let mut list: Vec<(AnyBoxId, &Box, Option<game::thinline::Thin>)> = (if bare { raw } else { &w.dynamics }).iter().filter(|id| night || !ir.has(**id)).map(|&id| (id, &g.tab[id], thin.get(id).copied())).collect();
         // (a box of no list has a number no box of the game has)
-        list.extend(watched.iter().enumerate().filter(|(_, (_, line))| night || !line).map(|(k, (b, _))| (AnyBoxId::Frame(game::ids::FrameBoxId(u32::MAX - 1 - k as u32)), b)));
+        list.extend(watched.iter().enumerate().filter(|(_, x)| night || !x.line).map(|(k, x)| (AnyBoxId::Frame(game::ids::FrameBoxId(u32::MAX - 1 - k as u32)), &x.b, x.thin)));
         list.truncate(MAX - n);
         let total = n + list.len();
         self.geo.resize(total, Geo::ZERO);
         self.mat.resize(total, Mat::ZERO);
         self.cut.resize(total, Cut::ZERO);
-        for (id, b) in list {
-            let (c, h) = match b.dc { Some(c) => (c, b.dh.unwrap_or(b.h)), None => (b.c, b.h) };
+        for (id, b, thin) in list {
+            let (c, mut h) = match b.dc { Some(c) => (c, b.dh.unwrap_or(b.h)), None => (b.c, b.h) };
             let i = n + self.own.len();
+            // (a thin line is as wide as the shown seat's view has it seen, and dimmer by as much: as thin as it is, it is a crawling row of dashes)
+            let wide = thin.map(|t| (t.hw0, t.k * px)).filter(|&(hw0, hw)| hw > hw0);
+            if let Some((hw0, hw)) = wide { for x in &mut h { if *x == hw0 { *x = hw; } } }
             pack::pack(b, c, h, true, &self.look, &mut self.marks, &mut self.geo[i], &mut self.mat[i], &mut self.cut[i]);
+            if let Some((hw0, hw)) = wide { for k in 4..7 { self.mat[i].w[k] *= (hw0 / hw) as f32; } }
             let s = pack::stuff(b.stuff, &self.look);
             if s > 0 { self.stuffs |= 1 << s; }
             let f = pack::flags(b);
@@ -360,7 +364,7 @@ impl Boxes {
         let t = &g.m.thinline;
         let mut found: Vec<(bool, f64, usize, Option<Option<AnyBoxId>>)> = Vec::new();
         for (k, o) in self.own.iter().enumerate() {
-            if !t.thin.has(o.id) { continue; }
+            if !t.thin.has(o.id) || o.rot.is_none() { continue; }   // (a line of light lies along its own turn: a charge's firing line is thin, and no light)
             let bead = if self.look.air { t.air.get(o.id).copied() } else { None };
             if bead.is_none() && !self.look.mirrors { continue; }
             let c = self.stood[n + k].c;

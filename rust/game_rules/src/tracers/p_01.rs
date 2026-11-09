@@ -188,13 +188,11 @@ fn release_at(g: &mut Game, i: usize) {
 }
 
 /// One frame: a head that reached the end last frame retires, the others advance, one arriving now makes its ember, the lights ride the heads, each streak's box is rewritten tail to head and goes out. (tracers.ts Tracers.update)
-pub fn tracers_update(g: &mut crate::game::Game, dt: f64, out: &mut Vec<AnyBoxId>, m_per_px: Option<f64>) {
-    let m_per_px = m_per_px.unwrap_or(0.0);
+pub fn tracers_update(g: &mut crate::game::Game, dt: f64, out: &mut Vec<AnyBoxId>) {
     if g.tracers.live == 0.0 { return; }
     let p = g.tracers.params;
     let (mut live, mut lit) = (0.0, 0.0);
-    let hw = m::max(p.thickness * 0.5, 0.6 * m_per_px);
-    let gain = (p.thickness * 0.5) / hw * p.emissive;
+    let hw = p.thickness * 0.5;
     for i in 0..g.tracers.pool.len() {
         if !g.tracers.pool[i].alive { continue; }
         if g.tracers.pool[i].arrived && dt > 0.0 {
@@ -227,8 +225,8 @@ pub fn tracers_update(g: &mut crate::game::Game, dt: f64, out: &mut Vec<AnyBoxId
         let b = seam_box(g, t.box_);
         b.c = [t.from[0] + t.dir[0] * mid, t.from[1] + t.dir[1] * mid, t.from[2] + t.dir[2] * mid];
         b.h = [hw, hw, len * 0.5];
-        b.emissive = [t.color[0] * gain, t.color[1] * gain, t.color[2] * gain];
-        noted_thin(g, t.box_, p.thickness * 0.5, 0.6, t.color[0] * p.emissive, t.color[1] * p.emissive, t.color[2] * p.emissive);
+        b.emissive = [t.color[0] * p.emissive, t.color[1] * p.emissive, t.color[2] * p.emissive];
+        noted_thin(g, t.box_, hw, 0.6, t.color[0] * p.emissive, t.color[1] * p.emissive, t.color[2] * p.emissive);
         g.tracers.pool[i].frames += 1.0;
         out.push(t.box_.into());
     }
@@ -310,16 +308,16 @@ mod tests {
         assert_eq!((t.owner, t.dir, t.v), (255.0, [0.0, 0.0, 1.0], 1.0 / 0.042));
         assert_eq!((g.tracers.live, g.tracers.spawned), (1.0, 1.0));
         let mut out = Vec::new();
-        tracers_update(&mut g, 0.0, &mut out, None); // a frozen still: the head has not left, nothing drawn
+        tracers_update(&mut g, 0.0, &mut out); // a frozen still: the head has not left, nothing drawn
         assert_eq!((g.tracers.pool[0].frames, g.tracers.live, out.len()), (0.0, 1.0, 0));
-        tracers_update(&mut g, 0.1, &mut out, None); // reaches the end: stays one frame, drawn there
+        tracers_update(&mut g, 0.1, &mut out); // reaches the end: stays one frame, drawn there
         let t = g.tracers.pool[0];
         assert_eq!((t.s, t.arrived, t.alive, t.frames, g.tracers.live), (1.0, true, true, 1.0, 1.0));
         assert_eq!(out, vec![AnyBoxId::World(t.box_)]);
-        tracers_update(&mut g, 0.0, &mut out, None); // dt 0 never retires, and redraws where it is
+        tracers_update(&mut g, 0.0, &mut out); // dt 0 never retires, and redraws where it is
         assert!(g.tracers.pool[0].alive);
         assert_eq!(out.len(), 2);
-        tracers_update(&mut g, 0.1, &mut out, None);
+        tracers_update(&mut g, 0.1, &mut out);
         assert_eq!((g.tracers.pool[0].alive, g.tracers.live, out.len()), (false, 0.0, 2));
     }) }
 
@@ -386,23 +384,23 @@ mod tests {
         g.tracers.pool[0].light = Some(lamp); // lit by hand: light_set_add is a stub here
         g.tab.light[lamp].age = 9.0;
         let mut out = Vec::new();
-        tracers_update(&mut g, 0.1, &mut out, None);
+        tracers_update(&mut g, 0.1, &mut out);
         let (l, s) = (&g.tab.light[lamp], g.tracers.pool[0].s);
         assert_eq!((l.age, l.enabled, l.pos, g.tracers.lit), (0.0, true, [1.0 + 0.0 * (s - 0.05), 2.0 + 0.0 * (s - 0.05), 3.0 + 1.0 * (s - 0.05)], 1.0));
     }) }
 
     fn bits<const N: usize>(a: [f64; N]) -> [u64; N] { a.map(f64::to_bits) }
 
-    /// dt, mPerPx, then s and the box's c, h, emissive as tracers.ts has them.
-    const FRAMES: [(f64, f64, u64, [u64; 3], [u64; 3], [u64; 3]); 3] = [
-        (0.016, 0.004, 0x40063f63f63f63f6, [0x3ffd2ed775f1c5d9, 0x3ff4f062d8af68b8, 0xc00039bccf15573a], [0x3f789374bc6a7efa, 0x3f789374bc6a7efa, 0x3fee972972972971], [0x404e000000000000, 0x4042000000000000, 0x402e000000000000]),
-        (0.002, 0.0, 0x4009075075075075, [0x3ffeee9efa1fd328, 0x3ff45b20574ab99e, 0xbffb342311a0868a], [0x3f789374bc6a7efa, 0x3f789374bc6a7efa, 0x3fee972972972971], [0x404e000000000000, 0x4042000000000000, 0x402e000000000000]),
-        (0.003, 0.05, 0x400d333333333333, [0x4000c7252032738e, 0x3ff37b3c9533b2f6, 0xbff355213ed14aaa], [0x3f9eb851eb851eb8, 0x3f9eb851eb851eb8, 0x3fee972972972971], [0x4028000000000000, 0x401ccccccccccccc, 0x4008000000000000]),
+    /// dt, then s and the box's c, h, emissive
+    const FRAMES: [(f64, u64, [u64; 3], [u64; 3], [u64; 3]); 3] = [
+        (0.016, 0x40063f63f63f63f6, [0x3ffd2ed775f1c5d9, 0x3ff4f062d8af68b8, 0xc00039bccf15573a], [0x3f789374bc6a7efa, 0x3f789374bc6a7efa, 0x3fee972972972971], [0x404e000000000000, 0x4042000000000000, 0x402e000000000000]),
+        (0.002, 0x4009075075075075, [0x3ffeee9efa1fd328, 0x3ff45b20574ab99e, 0xbffb342311a0868a], [0x3f789374bc6a7efa, 0x3f789374bc6a7efa, 0x3fee972972972971], [0x404e000000000000, 0x4042000000000000, 0x402e000000000000]),
+        (0.003, 0x400d333333333333, [0x4000c7252032738e, 0x3ff37b3c9533b2f6, 0xbff355213ed14aaa], [0x3f789374bc6a7efa, 0x3f789374bc6a7efa, 0x3fee972972972971], [0x404e000000000000, 0x4042000000000000, 0x402e000000000000]),
     ];
 
-    /// The streak's box, frame by frame, against the TypeScript's own bits (tracers.ts under bun with EXACT.on: force a round, update three times; the second has mPerPx 0, the third one that widens it).
+    /// The streak's box, frame by frame, to the bit: as thick as the weapons' table says, whatever view is shown.
     #[test]
-    fn the_streak_has_the_typescripts_bits() { on_a_big_stack(|| {
+    fn the_streak_has_its_bits() { on_a_big_stack(|| {
         let mut g = game(1);
         let pistol = g.m.weapons.weapons.get(crate::weapons::WeaponId::Fiveseven).unwrap().clone();
         let mut def = pistol;
@@ -416,8 +414,8 @@ mod tests {
         assert_eq!(row(b).yaw.to_bits(), 0x3fd4978fa3269ee1);
         assert_eq!(row(b).owner.to_bits(), 0x406fe00000000000);
         let mut out = Vec::new();
-        for (dt, px, s, c, h, e) in FRAMES {
-            tracers_update(&mut g, dt, &mut out, Some(px));
+        for (dt, s, c, h, e) in FRAMES {
+            tracers_update(&mut g, dt, &mut out);
             assert_eq!(g.tracers.pool[0].s.to_bits(), s);
             assert_eq!((bits(row(b).c), bits(row(b).h), bits(row(b).emissive)), (c, h, e));
         }

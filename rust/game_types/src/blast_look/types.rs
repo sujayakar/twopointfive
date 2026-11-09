@@ -67,7 +67,6 @@ pub struct CHARGELOOK {
     pub wire_tape: f64,
     pub wire: f64,
     pub wire_px: f64,
-    pub wire_max: f64,
     pub run: [f64; 3],
     pub short: f64,
     pub wire_albedo: V3,
@@ -343,7 +342,7 @@ impl BlastLookMod {
 pub fn blast() -> crate::blast_look::BLAST { crate::blast_look::BLAST { on: true, stun: true, door: true, glow: false } }
 
 /// (src/game/blastLook.ts:69 CHARGE_LOOK: a table nothing writes)
-pub fn charge_look() -> crate::blast_look::CHARGELOOK { crate::blast_look::CHARGELOOK { frame_half: 0.3, frame_lo: 0.5, frame_hi: 1.6, strip: 0.045, proud: 0.012, strip_albedo: [0.62, 0.46, 0.1], lamp: 0.04, blink_every: 1.1, blink_on: 0.35, lamp_on: [70.0, 5.0, 2.5], lamp_off: [0.008, 0.0008, 0.0005], lamp_spill: 0.0025, led_spill: 0.02, tape: 0.07, wire_tape: 0.04, wire: 0.018, wire_px: 1.4, wire_max: 0.05, run: [0.4, 0.2, 0.6], short: 0.36, wire_albedo: [0.85, 0.36, 0.05], reel: [0.05, 0.035, 0.08], reel_albedo: [0.1, 0.11, 0.08], led: 0.013, led_on: [7.0, 3.6, 0.4] } }
+pub fn charge_look() -> crate::blast_look::CHARGELOOK { crate::blast_look::CHARGELOOK { frame_half: 0.3, frame_lo: 0.5, frame_hi: 1.6, strip: 0.045, proud: 0.012, strip_albedo: [0.62, 0.46, 0.1], lamp: 0.04, blink_every: 1.1, blink_on: 0.35, lamp_on: [70.0, 5.0, 2.5], lamp_off: [0.008, 0.0008, 0.0005], lamp_spill: 0.0025, led_spill: 0.02, tape: 0.07, wire_tape: 0.04, wire: 0.018, wire_px: 1.4, run: [0.4, 0.2, 0.6], short: 0.36, wire_albedo: [0.85, 0.36, 0.05], reel: [0.05, 0.035, 0.08], reel_albedo: [0.1, 0.11, 0.08], led: 0.013, led_on: [7.0, 3.6, 0.4] } }
 
 /// (src/game/blastLook.ts:92 REF: a table nothing writes)
 pub fn ref_() -> crate::blast_look::REF { crate::blast_look::REF { sparks: 160.0, speed: 20.0, life: 0.55, size: 0.0025 } }
