@@ -7,6 +7,7 @@
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
+use crate::owner::By;
 use crate::V3;
 use alloc::vec::Vec;
 
@@ -31,25 +32,41 @@ impl Leg {
 /// The room fight's row of this man, if he is one of its defenders.
 pub fn def_of(g: &Game, gd: GuardId) -> Option<RoomfightDefId> { g.fight.defs.iter().copied().find(|&d| g.tab.roomfight_def[d].gd == gd) }
 
-/// OFF ON A LEG, by the module `by`.
-pub fn send(g: &mut Game, d: RoomfightDefId, leg: Leg, by: &'static str) {
+/// OFF ON A LEG, sent by the tasker `by` (`By::NOBODY`: the room fight itself, or a thing that happened to him).
+pub fn send(g: &mut Game, d: RoomfightDefId, leg: Leg, by: By) {
     let gd = g.tab.roomfight_def[d].gd;
     let here = g.ch[g.gd[gd].ch].pos;
     let row = &mut g.tab.roomfight_def[d];
     row.mode = DefMode::Move;
     row.move_kind = if leg.cover { DefMoveKind::Cover } else { DefMoveKind::Fallback };
+    row.leg_by = by;
     row.came_by = leg.by;
     row.move_t = 0.0;
     row.stall_at = here;
     row.stall_t = 0.0;
     row.rally_at = f64::NAN;   // (no clock of his own to go next door runs on behind it)
-    crate::control::set_pinned(g, gd, false, by);
+    crate::control::set_pinned(g, gd, false, crate::owner::name_of(by).unwrap_or("roomfight"));
     crate::squad::order(g, gd, crate::squad::OrderPatch {
         goal: Some(Some(leg.to)), speed: Some(Some(leg.pace)), face: Some(leg.face), strafe: Some(Some(leg.face.is_some())), aim_at: Some(leg.aim),
         upper: Some(Some(crate::character::UpperMode::Aim)), stance: Some(Some(crate::character::Stance::None)), crouch: Some(Some(leg.cover)),
         ..Default::default()
     });
 }
+
+/// At a run to a place, by that door (or none), `more` over a chase.
+pub fn run(g: &mut Game, d: RoomfightDefId, to: V3, door: Option<DoorId>, more: f64, by: By) {
+    let pace = g.tune.guard_chase + more;
+    send(g, d, Leg { by: door, ..Leg::to(to, pace) }, by);
+}
+
+/// He is on a leg, whoever sent him.
+pub fn on_leg(g: &Game, d: RoomfightDefId) -> bool { g.tab.roomfight_def[d].mode == DefMode::Move }
+/// He is on the leg `by` sent him on. (No: he is planted, loose, or sent elsewhere meanwhile)
+pub fn on_leg_of(g: &Game, d: RoomfightDefId, by: By) -> bool { on_leg(g, d) && g.tab.roomfight_def[d].leg_by == by }
+/// He is at his post.
+pub fn at_post(g: &Game, d: RoomfightDefId) -> bool { g.tab.roomfight_def[d].mode == DefMode::Hold }
+/// He is off it on the fight's own hunt.
+pub fn is_loose(g: &Game, d: RoomfightDefId) -> bool { g.tab.roomfight_def[d].mode == DefMode::Free }
 
 /// OFF HIS POST, on the fight's own hunt: nothing holds him, and whatever script he was on is over. (A man the room fight has no row of is let go the same.)
 pub fn loose(g: &mut Game, gd: GuardId, by: &'static str) {

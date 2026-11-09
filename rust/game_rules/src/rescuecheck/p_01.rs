@@ -135,7 +135,7 @@ pub fn unseen(g: &mut Game, c_2: CastItem) -> bool {
 
 /// A leg of the walk at the pace of a man going to look.   (rescuecheck.ts walk)
 pub fn walk(g: &mut Game, d: RoomfightDefId, to: V3) {
-    crate::pressure::run(g, d, to, None, None);
+    crate::roomfight::run(g, d, to, None, 0.0, crate::owner::by::WALK);
     let gd = g.tab.roomfight_def[d].gd;
     let speed = g.tune.guard_investigate;
     crate::squad::order(g, gd, crate::squad::OrderPatch { speed: Some(Some(speed)), ..Default::default() });
@@ -319,14 +319,14 @@ pub fn tick_out(g: &mut Game, cast: &[CastItem], fight: bool) {
     }
     let step = crate::pressure::boots(g, gd, step_t);
     st!(g).out.as_mut().unwrap().step_t = step;
-    if g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Move {
+    if !crate::roomfight::on_leg_of(g, d, crate::owner::by::WALK) {
         event(g, RescueCheckEventWhat::Abort, Some(gd), "the room fight has him where he stands");
         st!(g).out = None;
         return;
     }
     let learned = match cast.iter().find(|c| c.gd == gd) { Some(c) => !c.learned_at.is_nan(), None => false };
     if fight || learned || loud_heard(g, gd) > heard0 {
-        crate::pressure::run(g, d, m_from, None, None);
+        crate::roomfight::run(g, d, m_from, None, 0.0, crate::owner::by::WALK);
         let why = format!("{}: back to his post at a run", if fight { "a fight on their side" } else if learned { "something of the team in his ears: the rescue has him" } else { "a shot, a boot or a charge in his ears" });
         event(g, RescueCheckEventWhat::Abort, Some(gd), &why);
         st!(g).out = None;
@@ -431,8 +431,8 @@ pub fn let_go(g: &mut Game) {
     let o = match st!(g).out.take() { Some(o) => o, None => return };
     let d = def_of(g, o.gd);
     if let Some(d) = d {
-        if g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Move && alive(g, o.gd) && g.gd[o.gd].held.is_none() && !roused(g, o.gd) {
-            crate::pressure::run(g, d, o.from, None, None);
+        if crate::roomfight::on_leg_of(g, d, crate::owner::by::WALK) && alive(g, o.gd) && g.gd[o.gd].held.is_none() && !roused(g, o.gd) {
+            crate::roomfight::run(g, d, o.from, None, 0.0, crate::owner::by::WALK);
         }
     }
 }
