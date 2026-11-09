@@ -14,49 +14,6 @@ pub struct PaneCrossLike {
     pub hole: bool,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct GlassFragmentLike {
-    pub type_: crate::glasspen::PaneType,
-    pub kind: crate::shards::GlassFragmentLikeKind,
-    pub outline: Vec<V3>,
-    pub centre: V3,
-    pub normal: V3,
-    pub thickness: f64,
-    pub area: f64,
-    pub velocity: V3,
-    pub spin: V3,
-    pub tint: V3,
-    pub grain: f64,
-    pub cause: crate::shards::GlassFragmentLikeCause,
-    pub who: f64,
-    pub seed: f64,
-    pub fall: Option<crate::shards::GlassFragmentLikeFall>,
-    pub landed: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum GlassFragmentLikeKind {
-    #[default] Piece,
-    Sheet,
-    Dagger,
-    Clump,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum GlassFragmentLikeCause {
-    #[default] Blast,
-    Hit,
-    Dice,
-    Support,
-    Rake,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GlassFragmentLikeFall {
-    pub t: f64,
-    pub pos: V3,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct PlateMeta {
     pub gen_: f64,
