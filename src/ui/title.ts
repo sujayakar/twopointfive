@@ -21,7 +21,7 @@ function titleHead(): HTMLElement { const head = el('div', 'head'); head.innerHT
 /** EXTRAS (the title screen's fourth entry: the maintainer, 10-11 — "the showcase and editor and whatever other tools we have … should all be linked in the main menu"): the
  *  tool pages, each a LINK — a tool is its own page (the `.html` names: the dev server forwards them to its routes, the build has them as files); a row whose link is a key of this page (`?bench`) keeps the visitor's other flags (`showHref`) and, ON THE LIVE TITLE, STARTS IN PLACE
  *  (Menu.title hands `TitleShows`) — no page load, the click is the gesture the sound needs; the link is what such a row is while the page still boots, or in a new tab.
- *  (The two showcases that were this list's first section — the night and the day — were removed.) What is listed and what is not, and why: rebuild/menus/tools.md. */
+ *  (The two showcases that were this list's first section — the night and the day — were removed.) */
 export const EXTRAS: { head: string; rows: { id: string; label: string; line: string; href: string }[] }[] = [
   { head: 'Tools', rows: [
     { id: 'replay', label: 'Replays', line: 'Watch a run again. Every run you play is kept.', href: '' },

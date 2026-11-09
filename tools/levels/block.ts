@@ -54,7 +54,7 @@
 //     its turn and a yard lamp stands outside it, so the turn, the south end of the near leg and the west half of the far leg read a steady 1.0 whatever the
 //     breaker says, while its own two men stand east of the lamp's throw under the beacon only. The hall's own emergency lamps sweep the team in the hall
 //     the whole time.
-//   (these numbers are an older build's; the newest, and what the mess table's move did to them, are in docs/agents/levels.md — grep 'THE MESS TABLE')
+//   (these numbers are an older build's, from before the mess table moved)
 //   MEASURED (seeds 1‥12, the four man squad, the scripted commander; won of 12 · men up of 48; Hard and standard play the same run
 //   for run, since nobody leaves a room):
 //     the hall doors  0 ·  0     the heel doors 12 · 40     the dark, then the hall doors (the store by its heel) 11 · 24

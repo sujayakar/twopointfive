@@ -5,7 +5,7 @@
 // on the panel) and the yard is black: the defenders carry no lights and no goggles, the team has goggles. NOBODY COMES TO PUT THE LIGHTS BACK ON: a room
 // clear pins its defenders to their marks (rust/game_rules/src/lighting hands one of them the errand and he says so; he does not walk). THE SHED IS EMPTY ON PURPOSE: with
 // one of the seven holding it (tried, 24 shipped seeds a way) the fight for it is heard, the building's men come out to it, and the team wins 21 of 24 with
-// the lights ON and 22 of 24 with them out — the dark stopped mattering. The trial is rebuild/missions/new/floodlit-shed-held.patch in the project files.
+// the lights ON and 22 of 24 with them out — the dark stopped mattering.
 // What is left burning with the mains out is on batteries and too dim for a bare eye: a red obstruction lamp on the radio mast on the front wall (there to be
 // seen, not to see by: at 6, over the sky, it took the gate and the middle of the yard past 0.2) and a hurricane lantern in each room (so a man who walks in beside one can
 // still be seen and fought at arm's length: the dark is an edge, not a switch that ends the fight; their strength is the mission's dial, 4.5 with the light
@@ -235,7 +235,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     // THE LOCKERS SHADE THE HALL'S LANTERN (the maintainer's pick of 10-16, "Hall lockers"). The lantern stands on the floor in the corner west of them, so with
     // the mains out it lights the guard room's side and a wedge towards the front door, and the back wall, the far corner and the radio room's door are black
     // to a bare eye (floodlit-check reads both). That shade, not cover, is all they do to the fight; how much it is worth has moved with the goggles' infrared
-    // light and is in docs/agents/missions.md. Move the lockers or the lantern and the tallies move.
+    // light. Move the lockers or the lantern and the tallies move.
     P.room('east');
     P.poles(22.12, 1.28, 12.05, W, 3, 1.0, 0.07);                                    // the mast's spare sections, on brackets on the west wall
     P.crate(22.5, 12.45, 0.4, 0.1, C.wood, INK.iron, 'batteries');

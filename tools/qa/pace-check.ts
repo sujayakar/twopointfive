@@ -8,8 +8,7 @@
 // rate the pacer read off them; plays the gaps of a real recording through the readout; reads the wiring off the page's source as text.
 // What it cannot say: that a fast display's picture is even. Nobody here has one, and a headless browser's display runs at 60, where no frame is passed over.
 // Giving way (EVENPACE.giveway) is played the same way: a GPU that takes so long over a frame, the queue's word coming back when it is done, the focus going
-// and coming back. What it cannot say there: that a second window of a real browser on a real GPU starts beside the first (docs/agents/render.md has what
-// two windows of headless Chromium did on the software adapter).
+// and coming back. What it cannot say there: that a second window of a real browser on a real GPU starts beside the first.
 // Waiting for the GPU (EVENPACE.flight) is played on the same model: no more frames with the GPU than the rule allows, as many frames a second as the GPU
 // finishes, the even pace untouched where the work fits it. What it cannot say: how late a real browser's queue answers, which is what the rule's cost on a
 // real machine hangs on (the maintainer's own try of the look page's trial on a 120 Hz laptop is the only word on that).

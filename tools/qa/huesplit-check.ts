@@ -12,7 +12,7 @@
 // WHAT THIS CAN AND CANNOT SAY. No shader runs here. Line 1 holds the order BY ITS TEXT in both writings of the estimator. Line 2 is A MODEL, not the
 // estimator: one ray a frame toward the lamp, no history sample and no neighbour's, which in the kernel thin the fault (a still of the depot measured about a
 // third of a half shadow's light in the lamp's hue where the model says a half). It takes the order from the text line 1 read, so it shows what that order
-// costs. What the picture looks like is the page's to show; it was drawn on the software adapter only (docs/agents/render.md, THE HUE SPLIT ASKS THE BELIEF).
+// costs. What the picture looks like is the page's to show; it was drawn on the software adapter only.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT } from './here.ts';

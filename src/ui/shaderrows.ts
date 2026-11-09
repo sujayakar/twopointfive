@@ -7,8 +7,7 @@
 // THE FIRST-FRAME START IS ON ONLY WHERE A PERSON SITS: a browser a script drives (navigator.webdriver, every page tool) starts with it off,
 // because a tool's first picture and first timing must be the settings' own and not a stand-in's (some forty tools poll for a hook and
 // begin at once). A tool that wants the player's start asks for it: `?firstframe=1`. `?firstframe=0` is a load that waits for every pipeline (a machine nobody has read
-// may need it). What nobody has: ANY time on a real GPU for the first-frame start in this build (docs/agents/render.md has what was seen on its
-// author's Windows machine, and the mend made since).
+// may need it). What nobody has: ANY time on a real GPU for the first-frame start in this build.
 // TWO MORE WENT EARLIER (2026-10-27): Wall cut shaders when needed and Other shaders when needed built a shader the first time a frame asked for it, and the maintainer
 // does not want a compile that waits for play to ask ("i think we shouldn't do truly lazy compilation where then have stutters during gameplay").
 //   firstFrame     ?firstframe=1       gpu/device.ts PIPE_QUEUE.later: the start waits only for the pipelines the first frame draws

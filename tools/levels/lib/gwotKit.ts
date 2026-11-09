@@ -5,7 +5,7 @@
 // officeGen.ts officeKit() (the closure kit every scenario level uses), `gwotOfKit(k, LK)` for levelKit.ts's LevelKit — and every call appends boxes / props /
 // lights to THAT kit's lists, in call order. No existing kit call builds anything different because this file exists.
 // THE GUIDE (palette, every piece with its footprint and what it is to a man — cover, walk-over or decal —, a worked example) is
-// rebuild/play-style-levels/look/read-first.md; tools/levels/gwot-yard.ts is the showroom that lays every piece out once.
+// docs/library.md; tools/levels/gwot-yard.ts is the showroom that lays every piece out once.
 //
 // WHAT A PIECE IS TO THE SIMULATION (rust/game_rules/src/scene_collision): a static box blocks feet and the nav grid only where it stands between y 0.2 and 1.5, so
 //   · COVER / OBSTACLE = a plain static (drums, sandbags, crates, cots, the pickup): feet, sight, rounds and sound all meet it;
@@ -288,8 +288,8 @@ export function gwotKit(host: GwotHost) {
   const r4 = (v: number) => Math.round(v * 1e4) / 1e4;
   /** HOW A WINDOW'S DRESSING STANDS: 'shut' closes the opening to a look and a round (what it is made of is real: cover, and a blind window); 'open' is the
    *  same things put aside, the opening left clear. A LEVEL'S RULE, not the kit's: a window a defender watches through gets the open form
-   *  (rust/game_start levels sight holds every man's line to what he watches), and a shut one costs the team too (measured on the block:
-   *  docs/agents/levels.md), so a window is shut only where its mission's tally was read with it shut */
+   *  (rust/game_start levels sight holds every man's line to what he watches), and a shut one costs the team too (measured on the block),
+   *  so a window is shut only where its mission's tally was read with it shut */
   type Shut = 'shut' | 'open';
   /** a window BOARDED UP (the opening a‥b of a wall along `axis`, y0‥y1): shut = two planks nailed across, one across those, and one hanging by its last
    *  nail — a look and a round pass BETWEEN the planks, not through them. Open = the boards pulled off the opening: one left nailed over the lintel and

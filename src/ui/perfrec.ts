@@ -2,8 +2,8 @@
 // last readback that resolved (compute passes — render-pass timestamps are meaningless on Metal), CPU sections timed in host/measure.ts (game update,
 // render encode, the rest), wall dt, the presented fps, internal res / effective scale / preset, the camera, counts (lights, dynamic boxes, particles,
 // smoke, decals), an AI summary, the weather, and discrete EVENTS (quality ladder steps, settings changes, escalation changes, invalidations it can see).
-// Stop → the dump as JSON to whoever listens at the one door (host/savefile.ts: no download since 2026-10-27, `?downloads=1` = as it was) and, if the shot server is up (:5174), POST /perf?name=… → docs/perf/<name>.json. tools/qa/perf-report.ts turns a dump into the
-// tables docs/internal/renderer-v3 was written from (per-pass mean / σ / p95 / worst, spike frames with the events around them, a contention check).
+// Stop → the dump as JSON to whoever listens at the one door (host/savefile.ts: no download since 2026-10-27, `?downloads=1` = as it was) and, if the shot server is up (:5174), POST /perf?name=… → captures/perf/<name>.json. tools/qa/perf-report.ts turns a dump into the
+// tables (per-pass mean / σ / p95 / worst, spike frames with the events around them, a contention check).
 import type { Engine } from '../engine';
 import type { FollowCamera } from '../host/camera';
 import type { Quality } from './quality';
@@ -18,7 +18,7 @@ export interface PerfFrame {
   gpuSum: number;       // Σ compute (excludes gbuffer/composite/post/fxaa/pdraw)
   gpuUnion?: number;    // the UNION of those passes' intervals on the GPU timeline (GpuTimer.unionMs): what the frame really cost — Metal runs independent passes side by side when
                         // the queue is full (direct beside the whole cascade chain is the normal state at play cadence), and gpuSum then double-counts the overlap by 35–55 %
-                        // of the frame at high / medium (docs/internal/p0a-cascades.md). Absent in dumps recorded before 08-10.
+                        // of the frame at high / medium. Absent in dumps recorded before 08-10.
   res: [number, number]; eff: number; preset: string; adaptive: boolean;
   cam: [number, number, number, number, number];   // look x, z, yaw, pitch, dist
   n: { lights: number; dyn: number; particles: number; smoke: number; decals: number; guards: string; qrf: string; rain: number; stroke: number };
@@ -281,7 +281,7 @@ export class PerfRecorder {
   /** … and whether the browser was handed it as a download */
   lastLocal = false;
   private takeNo = 0;
-  /** the dump out of the process: to the door's listener (a hosted build's backend) + a POST to the shot server on the page; a native host overrides it (Bun.write into docs/perf/) — hence not private */
+  /** the dump out of the process: to the door's listener (a hosted build's backend) + a POST to the shot server on the page; a native host overrides it — hence not private */
   deliver(dump: PerfDump, fated?: (went: Fate) => void): void {
     this.lastSent = false; this.lastLocal = false; const no = ++this.takeNo;
     // (a full take is tens of MB of text: it is not put together where nobody listens at all. The shot server is a thing of a page served from this

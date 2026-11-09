@@ -142,7 +142,7 @@ export function build() {
   // the second man in the corner south of the guardroom, the way to face had no line for him there and he stood looking at a wall): a move's places are the
   // squad's own (rust/game_rules/src/roomfit: a few steps round the click, a wall at the back), so the post is where a hand that lands a metre and a half off still gets two men
   // who see the gate — clear of that corner to the west (the drums below fill it) and of the hall's front door to the east, whose picture stands over the
-  // ground north of it and takes a right click there (clicks swept with `TUTPLAN_POSTB`: docs/agents/missions.md)
+  // ground north of it and takes a right click there (clicks swept with `TUTPLAN_POSTB`)
   G.jersey(24.0, 9.3, 2, 0);
   grp('yard');
   G.drums(20.7, 11.65, 2);                                          // in the corner south of the guardroom: a man put there by a move to the barrier had the guardroom between him and the back gate

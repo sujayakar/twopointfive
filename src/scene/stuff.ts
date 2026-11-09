@@ -223,7 +223,7 @@ export const PLAIN_COATS: readonly BoxStuff[] = ['paint', 'enamel'];
 /** A NAMED COAT IS A KIND OF A PLAIN ONE: 'carpaint' is a coat, on a vehicle. One row a named coat (the look's own material for it, and one thing to a round:
  *  rust/game_rules/src/particle_fx STUFF_SURF): `under` = the plain coats it is a kind of, and stays under when a look repaints the thing; `rough` = HOW SMOOTH THE
  *  COAT IS, whatever it lies on (coatRough below). A car's clear coat: 0.2, under every preset's cut-off for the traced mirror less its fade
- *  (ui/quality.ts RtTier.maxRough), the number agreed with the look's car paint map (docs/agents/render.md "CAR PAINT IS A STUFF"). */
+ *  (ui/quality.ts RtTier.maxRough), the number agreed with the look's car paint map. */
 export interface NamedCoat { readonly under: readonly BoxStuff[]; readonly rough: number }
 export const NAMED_COATS: Partial<Record<BoxStuff, NamedCoat>> = { carpaint: { under: PLAIN_COATS, rough: 0.2 } };
 export const namedCoat = (word: BoxStuff | undefined): NamedCoat | undefined => word !== undefined && Object.hasOwn(NAMED_COATS, word) ? NAMED_COATS[word] : undefined;
