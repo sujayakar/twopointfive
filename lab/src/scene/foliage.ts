@@ -38,14 +38,18 @@ fn folWalk(ro: vec3f, rd: vec3f, t1: f32, lit: bool) -> Fol {
 fn folSlot(s: u32, k: u32) -> vec4u { return bitcast<vec4u>(extra[FOL_SLOTS + (s - 1u) * ${SLOT_ROWS}u + k]); }
 /** what a cell's leaves send along −rd */
 fn folSent(r: vec4u, rd: vec3f) -> vec3f { let q = folSlot(r.z, 0u); let J = vec3f(unpack2x16float(q.x), unpack2x16float(q.y).x); let sun = unpack2x16float(q.y).y; if (sun <= 0.0 || max3(frame.sunE.xyz) <= 0.0) { return J; } let c = folColors(r); var s: Surf; s.albedo = c[0]; s.through = c[1]; return J + leafPhase(s, rd) * frame.sunE.xyz * sun; }
+/** how thick it is at a place */
+fn folSigma(x: vec3f) -> f32 { let g = (x - FOL_LO) / FOL_C; let c = vec3i(floor(g)); if (any(c < vec3i(0)) || any(c >= FOL_N)) { return 0.0; } let r = folCell(c); if ((r.z & 0x80000000u) != 0u) { return 0.0; } return folThick(r, g - floor(g)) * frame.misc2.z; }
+/** what gets to a leaf at x, on the side n looks to, through the leaves within arm's reach: which of a cell's leaves stands outermost is the pixel's own, and is asked there */
+fn folClose(x: vec3f, n: vec3f) -> f32 { let b = basis(n); var T = 0.0; for (var i = 0; i < 4; i++) { let a = f32(i) * 2.0944 + 0.5; let d = select(normalize(n * 0.75 + (b[0] * cos(a) + b[1] * sin(a)) * 0.75), n, i == 3); T += exp(-(folSigma(x + d * 0.09) * 0.16 + folSigma(x + d * 0.26) * ${'0.19'})) * 0.25; } return T; }
 /** the light (all but the sun and the lamps) that lands on a leaf at x from the side n looks to; w = is there any kept. The six ways of a cell, mixed over the eight cells round x */
 fn folLight(x: vec3f, n: vec3f) -> vec4f {
-  if (FOL_MANY < 2u) { return vec4f(0.0); } let g = (x - FOL_LO) / FOL_C - 0.5; let b = vec3i(floor(g)); let f = g - floor(g); var E = vec3f(0.0); var ws = 0.0; let n2 = n * n;
+  if (FOL_MANY < 2u) { return vec4f(0.0); } let g = (x - FOL_LO) / FOL_C - 0.5; let b = vec3i(floor(g)); let f = g - floor(g); var E = vec3f(0.0); var G = vec3f(0.0); var ws = 0.0; let n2 = n * n;
   for (var k = 0; k < 8; k++) { let d = vec3i(k & 1, (k >> 1) & 1, k >> 2); let c = b + d; if (any(c < vec3i(0)) || any(c >= FOL_N)) { continue; } let r = folCell(c); if ((r.z & 0x80000000u) != 0u) { continue; } let w3 = select(1.0 - f, f, d == vec3i(1)); let w = w3.x * w3.y * w3.z + 1e-3;
-    let q0 = folSlot(r.z, 0u); let q1 = folSlot(r.z, 1u); let q2 = folSlot(r.z, 2u); if (f32(q2.w) < 1.0) { continue; }
+    let q0 = folSlot(r.z, 0u); let q1 = folSlot(r.z, 1u); let q2 = folSlot(r.z, 2u); if (f32(q2.w) < 1.0) { continue; } let J = vec3f(unpack2x16float(q0.x), unpack2x16float(q0.y).x); let sv = unpack2x16float(q0.y).y; let cc = folColors(r); G += (J * PI + (cc[0] + cc[1]) * frame.sunE.xyz * (0.25 * sv)) * w;
     let px = vec3f(unpack2x16float(q0.z), unpack2x16float(q0.w).x); let nx = vec3f(unpack2x16float(q0.w).y, unpack2x16float(q1.x)); let py = vec3f(unpack2x16float(q1.y), unpack2x16float(q1.z).x); let ny = vec3f(unpack2x16float(q1.z).y, unpack2x16float(q1.w)); let pz = vec3f(unpack2x16float(q2.x), unpack2x16float(q2.y).x); let nz = vec3f(unpack2x16float(q2.y).y, unpack2x16float(q2.z));
     E += (select(nx, px, n.x > 0.0) * n2.x + select(ny, py, n.y > 0.0) * n2.y + select(nz, pz, n.z > 0.0) * n2.z) * w; ws += w; }
-  return select(vec4f(0.0), vec4f(E / max(ws, 1e-6), 1.0), ws > 0.0);
+  if (ws <= 0.0) { return vec4f(0.0); } let T = folClose(x, n); return vec4f(E / ws * T + G / ws * (1.0 - T), 1.0);
 }
 fn folHas(x: vec3f) -> bool { if (FOL_MANY < 2u) { return false; } let g = (x - FOL_LO) / FOL_C - 0.5; let b = vec3i(floor(g)); for (var k = 0; k < 8; k++) { let c = b + vec3i(k & 1, (k >> 1) & 1, k >> 2); if (any(c < vec3i(0)) || any(c >= FOL_N)) { continue; } let r = folCell(c); if ((r.z & 0x80000000u) == 0u) { return true; } } return false; }
 `;

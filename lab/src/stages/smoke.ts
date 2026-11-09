@@ -139,6 +139,8 @@ export class Smoke {
   constructor(private lab: Lab) {}
   /** a canister where it lies: it burns for `last` seconds */
   drop(at: V3, last = 14, rate = 1) { this.on = true; this.sources.push({ at: [at[0], Math.max(at[1], 0.05) + 0.14, at[2]], born: this.lab.tick, last, rate }); if (this.sources.length > 10) this.sources.shift(); }
+  /** a breath of it */
+  puff(at: V3, rate: number) { this.on = true; this.sources.push({ at: [...at], born: this.lab.tick, last: 2.12, rate: rate * 0.35 }); if (this.sources.length > 10) this.sources.shift(); }
   clear() { this.sources = []; this.fires = []; this.fresh = true; }
   /** fires: each feeds the bricks hot gas and lights the room by a lamp that moves as it flickers */
   fires: { at: V3; size: number }[] = [];

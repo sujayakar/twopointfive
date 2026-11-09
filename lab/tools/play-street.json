@@ -1,0 +1,58 @@
+[
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "p-shop",
+  "dist": 11,
+  "hour": 21,
+  "pitch": 0.8,
+  "yaw": 0.3,
+  "cut": 2.5,
+  "tick": 200,
+  "samples": 140,
+  "run": true,
+  "play": {
+   "at": [
+    0.2,
+    0.17,
+    -2.6
+   ],
+   "up": true,
+   "aim": [
+    -3.0,
+    1.2,
+    -7.0
+   ]
+  }
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "p-pavement",
+  "dist": 10,
+  "hour": 20,
+  "pitch": 0.6,
+  "yaw": 0.3,
+  "tick": 200,
+  "samples": 90,
+  "run": true,
+  "play": {
+   "at": [
+    -3.5,
+    0.13,
+    0.2
+   ],
+   "x": 0.95,
+   "z": 0.28,
+   "aim": [
+    4.0,
+    1.2,
+    0.2
+   ]
+  }
+ }
+]

@@ -9,6 +9,8 @@ import { World, F, type Piece, type Mark, taper } from './world';
 import { Cloth } from './cloth';
 import { Bodies } from './rigid';
 import { exitSign } from './exits';
+import { Solid } from './solid';
+import { Player } from './player';
 import { thrown, duckBody } from './loosethings';
 import type { Air } from './air';
 import { settleCut } from './stand';
@@ -17,7 +19,7 @@ import { plantKit, domeTree, MAPLE, HEDGE, GRASS, tuft, bush, type Kit } from '.
 import { Person, type Stop } from './people';
 
 export interface Door { name: string; hinge: V3; yaw: number; swing: number; open: number; want: number; leaf: Piece[]; local: { at: V3; half: V3 }[]; slide?: V3 }
-export interface Building { world: World; doors: Door[]; people: Person[]; levels: { name: string; cut: number; look: V3 }[]; pool: [number, number, number, number]; poolTop: number; poolDeep: number; place: Place; hung: Mover[]; bodies: Bodies }
+export interface Building { world: World; doors: Door[]; people: Person[]; levels: { name: string; cut: number; look: V3 }[]; pool: [number, number, number, number]; poolTop: number; poolDeep: number; place: Place; hung: Mover[]; bodies: Bodies; solid: Solid; player: Player }
 /** what the air and the water move: a step a tick */
 export interface Mover { step(dt: number, t: number, air: Air): void }
 type Hole = { a: number; b: number; y0: number; y1: number; kind: 'door' | 'window' | 'open'; glass?: boolean; frame?: V3; sky?: 1 | -1; bars?: number };
@@ -248,7 +250,7 @@ export function makeBuilding(): Building {
   w.as('towels', () => { const x = 11.62, top = FL + 1.95, sag = (z: number) => top - 0.10 * (1 - ((z - 0.15) / 1.6) ** 2); for (const z of [-1.45, 1.75]) { w.cylinder([x, FL + 1.0, z], 0.025, 1.0, M.steel!); } let last: V3 = [x, top, -1.45]; for (let i = 1; i <= 8; i++) { const z = -1.45 + i * 0.4, n: V3 = [x, sag(z), z]; w.taper(last, n, 0.004, 0.004, M.rubber!, {}); last = n; }
     const cols: V3[] = [[0.95, 0.95, 0.93], [0.16, 0.42, 0.75], [0.93, 0.55, 0.16]]; cols.forEach((c, i) => { const z = -1.15 + i * 0.86; hung.push(new Cloth(w, { at: [x, sag(z + 0.3), z], u: [0, 0, 1], v: [0, -1, 0], width: 0.62, height: 1.05, nx: 6, ny: 11, held: (a, j) => j === 0 && a % 2 === 0, mat: M.canvas!, tint: c, weight: 0.42, stiff: 0.12 })); for (const k of [0, 0.31, 0.62]) w.box([x - 0.012, sag(z + 0.3) - 0.03, z + k - 0.008], [x + 0.012, sag(z + 0.3) + 0.035, z + k + 0.008], M.wood!, { tint: [1.2, 1.1, 0.9] }); }); });
   // ducks on the water, and what else floats
-  const bodies = new Bodies(w, [{ rect: [px0 + 0.03, pz0 + 0.03, px1 - 0.03, pz1 - 0.03], top: pt - 0.05, bed: pf }], people, doors); bodies.add(duckBody(w, [8.2, pt - 0.07, -4.6], 0.4, 2.6)); for (let i = 0; i < 5; i++) bodies.add(duckBody(w, [7.4 + i * 0.34, pt - 0.06, -5.35 - 0.16 * i], 0.5 + 0.2 * i, 1.35)); for (const b of thrown(w)) bodies.add(b, true); hung.push(bodies);
+  const solid = new Solid(w, doors), bodies = new Bodies(solid, [{ rect: [px0 + 0.03, pz0 + 0.03, px1 - 0.03, pz1 - 0.03], top: pt - 0.05, bed: pf }], people); bodies.add(duckBody(w, [8.2, pt - 0.07, -4.6], 0.4, 2.6)); for (let i = 0; i < 5; i++) bodies.add(duckBody(w, [7.4 + i * 0.34, pt - 0.06, -5.35 - 0.16 * i], 0.5 + 0.2 * i, 1.35)); for (const b of thrown(w)) bodies.add(b, true); hung.push(bodies);
   Q.vacuum(w, [1.6, 0.02, 3.6], 0.8); Q.cake(w, [-9.5, Y + 0.75, -5.2]); Q.plane(w, [10.45, FL + 0.51, 0.3], 0.7); Q.telescope(w, [0.4, ry, -6.6], 2.2, F.CUT); Q.gnome(w, [5.2, FL + 0.49, 3.9], 0.6); Q.dinosaur(w, [2.9, 1.02, 0.2], 1.2);
   w.as('golf', () => { w.taper([8.9, FL + 0.0, 5.6], [8.9, FL + 0.75, 5.6], 0.008, 0.008, M.steel!, {}); w.cylinder([8.9, FL + 0.052, 5.6], 0.054, 0.002, M.rubber!, {}); hung.push(new Cloth(w, { at: [8.91, FL + 0.74, 5.6], u: norm([1, 0, 0.35]), v: [0, -1, 0], width: 0.20, height: 0.14, nx: 5, ny: 3, held: i => i === 0, mat: M.canvas!, tint: [0.9, 0.15, 0.12], weight: 0.1 })); w.ellipsoid([8.2, FL + 0.021, 6.5], [0.021, 0.021, 0.021], M.gloss!, { flags: 0 }); });
   // ---------------------------------------------------------------- people
@@ -259,9 +261,9 @@ export function makeBuilding(): Building {
   who(C.teal as V3, 1.1, true, [{ at: [-9.5, Y, -2.6] }, { at: [-6.0, Y, -2.2] }, { at: [-5.4, Y, -5.6], wait: 2.6, face: -2.2 }, { at: [-7.2, Y, -7.0] }, { at: [-10.9, Y, -3.2], wait: 2.2, face: 0.5 }]);
   who(C.red as V3, 1.2, true, [{ at: [5.6, 0.02, -5.8] }, { at: [10.6, 0.02, -5.6], wait: 2.2, face: 2.6 }, { at: [10.8, 0.02, -2.0] }, { at: [5.2, 0.02, -1.6], wait: 1.8, face: -0.6 }]);
   who(C.red as V3, 1.3, false, [{ at: [14.6, 0, 6.5] }, { at: [14.4, 0, -1.5], wait: 2.6, face: -1.6 }, { at: [13.9, 0, -5.6] }, { at: [14.2, 0, 1.2] }]);
-  settleCut(w, PLACE); settle(w.pieces); bodies.settle(); for (const [p, mask] of freeEdges(w.pieces)) p.flags |= mask << 16; for (const p of w.moving) if (!p.quad && !p.planes?.length && !p.bend) p.flags |= 0xfff << 16;
+  const player = new Player(w, solid, [-1.5, 0.02, 5.4], doors); settleCut(w, PLACE); settle(w.pieces); solid.settle(); for (const [p, mask] of freeEdges(w.pieces)) p.flags |= mask << 16; for (const p of w.moving) if (!p.quad && !p.planes?.length && !p.bend) p.flags |= 0xfff << 16;
   void r; void smooth; void rotZ; void taper; void ({} as Kit);
-  return { hung, bodies, place: PLACE, world: w, doors, people, levels: [{ name: 'Roof', cut: 1e9, look: [0, 3.2, 0] }, { name: 'Upper floor', cut: FL + 2.55, look: [0, 3.4, 0] }, { name: 'Ground floor', cut: 2.55, look: [0, 0.6, 0] }], pool: [px0, pz0, px1, pz1], poolTop, poolDeep: poolTop - pf };
+  return { hung, bodies, solid, player, place: PLACE, world: w, doors, people, levels: [{ name: 'Roof', cut: 1e9, look: [0, 3.2, 0] }, { name: 'Upper floor', cut: FL + 2.55, look: [0, 3.4, 0] }, { name: 'Ground floor', cut: 2.55, look: [0, 0.6, 0] }], pool: [px0, pz0, px1, pz1], poolTop, poolDeep: poolTop - pf };
 }
 
 // ---------------------------------------------------------------- what moves, as a pure function of the tick

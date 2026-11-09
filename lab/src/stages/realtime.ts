@@ -13,6 +13,7 @@ import surf from './surf.wgsl' with { type: 'text' };
 import lamps from './lamps.wgsl' with { type: 'text' };
 import bounceLib from '../wgsl/bounce.wgsl' with { type: 'text' };
 import waterpx from './waterpx.wgsl' with { type: 'text' };
+import { sightStages, sightCode } from './sight';
 import airlight from './airlight.wgsl' with { type: 'text' };
 import haze from './haze.wgsl' with { type: 'text' };
 import type { Place } from '../scene/place';
@@ -136,7 +137,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
         S('first hit', surf, 'render', { id: 'idT', idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }, { past: ['past', 'array<vec4f>', 'read'], pastLeaves: ['pastLeaves', 'array<vec4f>', 'read'] }),
         S('water', waterpx, 'render', { idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }),
         ...cache.stages, ...foliageStages(lab, c, cache.lib), ...lab.smoke.stages(g, c, cache.lib, bounceLib),
-        S('lamps', lamps, 'render', { surf: 'surf', front: 'frontT', sunLeaves: 'sunLeaves' }, { outVis: 'vis', outU: 'lampU', outC: 'lampC', outTone: 'tone' }, {}, { FINE: 4 }),
+        ...sightStages(lab), S('lamps', lamps, 'render', { surf: 'surf', front: 'frontT', sunLeaves: 'sunLeaves' }, { outVis: 'vis', outU: 'lampU', outC: 'lampC', outTone: 'tone' }, {}, { FINE: 4 }),
         S('gather', cache.lib + bounceLib + gather, 'half', { surf: 'surf', front: 'frontT' }, { outE: 'bounce' }, { ...c, hits: ['hits', 'array<vec4u>', 'read_write'] }, { HITS }),
         S('mirror', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2, LAYER: 0 }),
         S('shine', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'shine' }, c, { DIV: 2, LAYER: 1 }),
@@ -145,7 +146,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
         S('air history', 'fn airAt2(p: vec2u) -> vec2f { return textureLoad(airD, p, 0).xy; }\nfn airWas(p: vec2u) -> vec2f { return textureLoad(airP, p, 0).xy; }\n' + temporal.replace('CAP_NOW', 'f32(CAP)'), 'half', { airD: 'airD', 'airD@prev': 'airP', air: 'cur', 'airH@prev': 'hist', 'airM@prev': 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, { outH: 'airH', outM: 'airM' }, {}, { DIV: 2, CAP: 16, SPREAD: 1.0, NARROW: 0, KIND: 0, LAYER: 0, AIR: 1 }),
         S('air blur', airblur, 'half', { airH: 'src', surf: 'surf', haze: 'haze' }, { outB: 'airA' }, {}, { STRIDE: 1 }), S('air blur', airblur, 'half', { airA: 'src', surf: 'surf', haze: 'haze' }, { outB: 'airB' }, {}, { STRIDE: 2 }),
         S('tint', tint, 'render', { surf: 'surf', lampU: 'lampU', [dT.result]: 'tone' }, { outT: 'lampT' }),
-        S('resolve', WHOLE + resolve, 'render', { surf: 'surf', emit: 'emit', front: 'frontT', [dVis.result]: 'vis', lampT: 'lampU', [dB.result]: 'bounce', [dM.result]: 'mirror', [dS.result]: 'shine', lampC: 'lampC', airB: 'air' }, { outC: 'color' }),
+        S('resolve', WHOLE + sightCode + resolve, 'render', { surf: 'surf', emit: 'emit', front: 'frontT', [dVis.result]: 'vis', lampT: 'lampU', [dB.result]: 'bounce', [dM.result]: 'mirror', [dS.result]: 'shine', lampC: 'lampC', airB: 'air' }, { outC: 'color' }, { sight: ['sight', 'array<f32>', 'read'], sightK: ['sightK', 'array<vec4f, 2>', 'uniform'] }),
         ...u.stages, ...rains, ...glows,
       ].map(s => o.edit ? o.edit(s) : s);
     },

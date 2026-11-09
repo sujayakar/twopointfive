@@ -38,5 +38,6 @@ fn leafAo(p: Px) -> vec2f { let w = 0.55 * lum(p.albedo) * 1.8; return mix(vec2f
   }
   let ai = vec2i(id.xy) / 2; let ad = vec2i(textureDimensions(air)); var a = vec4f(0.0); var ws = 0.0; for (var k = 0; k < 4; k++) { let q = clamp(ai + vec2i(k & 1, k >> 1u), vec2i(0), ad - 1); let t = bitcast<f32>(textureLoad(surf, min(q * 2, vec2i(dim) - 1), 0).x); let w = exp(-abs(t - p.t) / (0.04 * p.t + 0.1)) + 1e-3; a += textureLoad(air, q, 0) * w; ws += w; } a /= ws;
   if (part(7u) > 0.0) { c = c * a.a + a.rgb; }
+  if (sightK[0].w > 0.5) { var q = 0.0; if (!p.sky && p.kind != 63u) { q = seenBy(p.x, p.ng); } c = remembered(c, q); }
   textureStore(outC, id.xy, vec4f(min(c, vec3f(500.0)), p.t));
 }

@@ -2,25 +2,16 @@
 // (extended position based dynamics): weight, the air's push on what is dry, the water's on what is wet (each part is lifted by the water it displaces), then contacts:
 // points of one against the shape of the other, pushed apart, held by friction. A body at rest sleeps till something moves near it. No clock, no dice.
 import { type V3, type Rot, add, sub, mul, dot, cross } from '../math';
-import { F, boundsOf, type Piece, type World } from './world';
+import type { Piece } from './world';
 import type { Air } from './air';
 import type { Person } from './people';
 import { wave } from './waves';
+import { type Shape, type Solid, depth, enter, N, out, into } from './solid';
 export interface Pool { rect: [number, number, number, number]; top: number; bed: number }
 type Quat = [number, number, number, number];
-/** a shape: what of a piece is solid. Where it is may change under it */
-interface Shape { at: V3; rot: Rot; half: V3; quad?: [number, number, number, number]; planes?: [V3, number][] }
 const axes = (q: Quat): Rot => { const [x, y, z, w] = q; return [[1 - 2 * (y * y + z * z), 2 * (x * y + z * w), 2 * (x * z - y * w)], [2 * (x * y - z * w), 1 - 2 * (x * x + z * z), 2 * (y * z + x * w)], [2 * (x * z + y * w), 2 * (y * z - x * w), 1 - 2 * (x * x + y * y)]]; };
 const quatOf = (r: Rot): Quat => { const [a, b, c] = r, t = a[0] + b[1] + c[2]; if (t > 0) { const s = Math.sqrt(t + 1) * 2; return [(b[2] - c[1]) / s, (c[0] - a[2]) / s, (a[1] - b[0]) / s, s / 4]; } if (a[0] > b[1] && a[0] > c[2]) { const s = Math.sqrt(1 + a[0] - b[1] - c[2]) * 2; return [s / 4, (b[0] + a[1]) / s, (c[0] + a[2]) / s, (b[2] - c[1]) / s]; } if (b[1] > c[2]) { const s = Math.sqrt(1 + b[1] - a[0] - c[2]) * 2; return [(b[0] + a[1]) / s, s / 4, (c[1] + b[2]) / s, (c[0] - a[2]) / s]; } const s = Math.sqrt(1 + c[2] - a[0] - b[1]) * 2; return [(c[0] + a[2]) / s, (c[1] + b[2]) / s, s / 4, (a[1] - b[0]) / s]; };
-const out = (r: Rot, v: V3): V3 => [r[0][0] * v[0] + r[1][0] * v[1] + r[2][0] * v[2], r[0][1] * v[0] + r[1][1] * v[1] + r[2][1] * v[2], r[0][2] * v[0] + r[1][2] * v[1] + r[2][2] * v[2]], into = (r: Rot, v: V3): V3 => [dot(r[0], v), dot(r[1], v), dot(r[2], v)];
 const turned = (q: Quat, w: V3): Quat => { const [x, y, z, s] = q, a = x + 0.5 * (w[0] * s + w[1] * z - w[2] * y), b = y + 0.5 * (w[1] * s + w[2] * x - w[0] * z), c = z + 0.5 * (w[2] * s + w[0] * y - w[1] * x), d = s - 0.5 * (w[0] * x + w[1] * y + w[2] * z), l = 1 / Math.sqrt(a * a + b * b + c * c + d * d); return [a * l, b * l, c * l, d * l]; };
-/** how deep x is in a shape (under 0: inside), and which way is out */
-const N: V3 = [0, 0, 0]; function depth(s: Shape, x: V3): number {
-  const l = into(s.rot, sub(x, s.at)); let d = -1e9, a = 0, b = 0, c = 0; for (let k = 0; k < 3; k++) { const e = Math.abs(l[k]!) - s.half[k]!; if (e > d) { d = e; a = k === 0 ? Math.sign(l[0]) : 0; b = k === 1 ? Math.sign(l[1]) : 0; c = k === 2 ? Math.sign(l[2]) : 0; } } 
-  if (s.quad) { const [A, B, C, D] = s.quad, gx = 2 * A * l[0], gy = 2 * B * l[1] + D, gz = 2 * C * l[2], g = Math.sqrt(gx * gx + gy * gy + gz * gz); if (g > 1e-9) { const e = (A * l[0] * l[0] + B * l[1] * l[1] + C * l[2] * l[2] + D * l[1] - 1) / g * (1 + 0); if (e > d) { d = e; a = gx / g; b = gy / g; c = gz / g; } } }
-  if (s.planes) for (const [n, w] of s.planes) { const e = n[0] * l[0] + n[1] * l[1] + n[2] * l[2] - w; if (e > d) { d = e; a = n[0]; b = n[1]; c = n[2]; } }
-  const n = out(s.rot, [a, b, c]); N[0] = n[0]; N[1] = n[1]; N[2] = n[2]; return d;
-}
 /** points over a shape that feel for others */
 function feelers(s: Shape): V3[] {
   const p: V3[] = [], [x, y, z] = s.half, place = (v: V3) => add(s.at, out(s.rot, v)), q = s.quad; if (!q) { for (let i = 0; i < 8; i++) p.push(place([i & 1 ? x : -x, i & 2 ? y : -y, i & 4 ? z : -z])); for (const m of s.planes ?? []) void m; return s.planes ? p.filter(v => s.planes!.every(([n, w]) => dot(n, into(s.rot, sub(v, s.at))) < w + 0.02)) : p; }
@@ -46,22 +37,20 @@ export class Body {
   shapesNow() { this.now.forEach((s, i) => { const b = this.shapes[i]!; s.at = add(this.x, out(this.r, b.at)); s.rot = [out(this.r, b.rot[0]), out(this.r, b.rot[1]), out(this.r, b.rot[2])]; }); }
 }
 interface Touch { a: Body; /** a point of a (or, if `rev`, of the world, against a's shape) */ p: V3; s: Shape; b: Body | null; rev: boolean; round?: number; n: V3; push: number; /** how fast it came in */ lagV?: number }
-const STEPS = 6, G = 1;
+const STEPS = 6;
 export class Bodies {
-  readonly all: Body[] = []; private grid = new Map<number, Piece[]>(); private spare: Body[] = []; ms = 0;
-  constructor(private w: World, private pools: Pool[], private people: Person[], private doors: { leaf: Piece[] }[]) {}
-  private key(x: number, y: number, z: number) { return (x + 256) + 512 * ((y + 64) + 256 * (z + 256)); }
-  /** what stands: call when the scene is made */
-  settle() { const mine = new Set(this.all.flatMap(b => b.parts.map(q => q.p))); for (const p of this.w.pieces) { if (p.flags & (F.WATER | F.FAR) || mine.has(p)) continue; const b = boundsOf(p); if (b.mx[0] < -30 || b.mn[0] > 30 || b.mx[2] < -25 || b.mn[2] > 25 || b.mx[1] < -2) continue; for (let x = Math.floor(Math.max(-30, b.mn[0]) / G); x <= Math.floor(Math.min(30, b.mx[0]) / G); x++) for (let y = Math.floor(Math.max(-2, b.mn[1]) / G); y <= Math.floor(b.mx[1] / G); y++) for (let z = Math.floor(Math.max(-25, b.mn[2]) / G); z <= Math.floor(Math.min(25, b.mx[2]) / G); z++) { const k = this.key(x, y, z), l = this.grid.get(k); if (l) l.push(p); else this.grid.set(k, [p]); } } return this; }
+  readonly all: Body[] = []; private spare: Body[] = []; ms = 0;
+  constructor(private solid: Solid, private pools: Pool[], private people: Person[]) {}
   add(b: Body, parked = false) { this.all.push(b); if (parked) { b.parked = true; this.spare.push(b); } return b; }
   /** send one of those kept for it */
   toss(x: V3, v: V3) { const b = this.spare.shift(); if (!b) return; this.spare.push(b); b.put(x, v, [v[2] * 0.6, 1.5, -v[0] * 0.6]); }
-  private near(b: Body, far: number): Piece[] { const out = new Set<Piece>(), r = b.reach + far; for (let x = Math.floor((b.x[0] - r) / G); x <= Math.floor((b.x[0] + r) / G); x++) for (let y = Math.floor((b.x[1] - r) / G); y <= Math.floor((b.x[1] + r) / G); y++) for (let z = Math.floor((b.x[2] - r) / G); z <= Math.floor((b.x[2] + r) / G); z++) for (const p of this.grid.get(this.key(x, y, z)) ?? []) { const m = boundsOf(p); if (m.mn[0] < b.x[0] + r && m.mx[0] > b.x[0] - r && m.mn[1] < b.x[1] + r && m.mx[1] > b.x[1] - r && m.mn[2] < b.x[2] + r && m.mx[2] > b.x[2] - r) out.add(p); } for (const d of this.doors) { const p = d.leaf[0]!; if (Math.hypot(p.at[0] - b.x[0], p.at[1] - b.x[1], p.at[2] - b.x[2]) < Math.hypot(...p.half) + r) out.add(p); } return [...out]; }
+  /** something hits what is first along a ray */
+  strike(a: V3, d: V3, far: number, push: number) { let best = far, who: Body | null = null; for (const b of this.all) if (!b.parked) for (const s of b.now) { const t = enter(s, a, d, best); if (t >= 0 && t < best) { best = t; who = b; } } if (!who) return; who.wake(); const r = sub(add(a, mul(d, best)), who.x), j = mul(d, push); who.v = add(who.v, mul(j, 1 / Math.max(who.m, 0.4))); who.w = add(who.w, who.spun(cross(r, j))); }
   step(dt: number, t: number, air: Air) {
     const t0 = performance.now(), live: Body[] = []; for (const b of this.all) { if (b.parked) continue; if (b.asleep) for (const p of this.people) if (Math.hypot(p.vel[0], p.vel[2]) > 0.2 && Math.hypot(p.pos[0] - b.x[0], p.pos[2] - b.x[2]) < b.reach + 0.55 && b.x[1] > p.pos[1] - 0.2 && b.x[1] < p.pos[1] + 1.9) { b.wake(); break; } if (!b.asleep) live.push(b); } if (!live.length) { this.ms = 0; return; }
     // who may touch whom this tick
     const touches: Touch[] = [], men: { b: Body; who: Person }[] = []; for (const a of live) {
-      const far = 0.03 + Math.hypot(...a.v) * dt, R = a.reach + far; for (const s of this.near(a, far)) { for (const round of a.rounds) touches.push({ a, p: [0, 0, 0], s, b: null, rev: false, round, n: [0, 1, 0], push: 0 }); for (const p of a.points) touches.push({ a, p, s, b: null, rev: false, n: [0, 1, 0], push: 0 }); if (!s.quad && Math.max(...s.half) < 40) for (let i = 0; i < 8; i++) { const c = add(s.at, out(s.rot, [i & 1 ? s.half[0] : -s.half[0], i & 2 ? s.half[1] : -s.half[1], i & 4 ? s.half[2] : -s.half[2]])); if (Math.hypot(c[0] - a.x[0], c[1] - a.x[1], c[2] - a.x[2]) < R) for (const m of a.now) touches.push({ a, p: c, s: m, b: null, rev: true, n: [0, 1, 0], push: 0 }); } }
+      const far = 0.03 + Math.hypot(...a.v) * dt, R = a.reach + far; for (const s of this.solid.near(a.x, R)) { for (const round of a.rounds) touches.push({ a, p: [0, 0, 0], s, b: null, rev: false, round, n: [0, 1, 0], push: 0 }); for (const p of a.points) touches.push({ a, p, s, b: null, rev: false, n: [0, 1, 0], push: 0 }); if (!s.quad && Math.max(...s.half) < 40) for (let i = 0; i < 8; i++) { const c = add(s.at, out(s.rot, [i & 1 ? s.half[0] : -s.half[0], i & 2 ? s.half[1] : -s.half[1], i & 4 ? s.half[2] : -s.half[2]])); if (Math.hypot(c[0] - a.x[0], c[1] - a.x[1], c[2] - a.x[2]) < R) for (const m of a.now) touches.push({ a, p: c, s: m, b: null, rev: true, n: [0, 1, 0], push: 0 }); } }
       for (const b of this.all) { if (b === a || b.parked || (!b.asleep && this.all.indexOf(b) < this.all.indexOf(a))) continue; if (Math.hypot(a.x[0] - b.x[0], a.x[1] - b.x[1], a.x[2] - b.x[2]) > R + b.reach + 0.02) continue; if (b.asleep && (Math.hypot(...a.v) > 0.12 || Math.hypot(...a.w) > 0.6)) { b.wake(); if (!live.includes(b)) live.push(b); } for (const s of b.now) { for (const round of a.rounds) touches.push({ a, p: [0, 0, 0], s, b, rev: false, round, n: [0, 1, 0], push: 0 }); for (const p of a.points) touches.push({ a, p, s, b, rev: false, n: [0, 1, 0], push: 0 }); } for (const s of a.now) for (const p of b.points) touches.push({ a: b, p, s, b: a, rev: false, n: [0, 1, 0], push: 0 }); }
       for (const who of this.people) if (Math.hypot(who.pos[0] - a.x[0], who.pos[2] - a.x[2]) < R + 0.4 && a.x[1] > who.pos[1] - 0.3 && a.x[1] < who.pos[1] + 2) men.push({ b: a, who });
       this.medium(a, dt, t, air);
