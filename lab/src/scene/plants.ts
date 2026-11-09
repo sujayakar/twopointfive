@@ -69,6 +69,8 @@ export function bush(w: World, kit: Kit, at: V3, s: number, seed: number, tint: 
 export function tuft(w: World, kit: Kit, at: V3, h: number, seed: number, tint: V3 = [0.46, 0.55, 0.28]) {
   const r = rng(seed); w.instances.push({ cluster: kit.tufts[Math.floor(r() * kit.tufts.length)]!, at, rot: rotY(r() * 6.28), scale: h, base: at, sway: 0.09, phase: r() * 6.28, tint: [tint[0] * (0.8 + 0.4 * r()), tint[1] * (0.85 + 0.3 * r()), tint[2] * (0.7 + 0.5 * r())] });
 }
+/** how hard the gust blows at a place and time (about 0 to 1.2): what moves the trees moves all that hangs */
+export const gustAt = (p: V3, t: number, wind: V3): number => Math.max(0, 0.55 + 0.45 * Math.sin(t * 0.7 - (p[0] * wind[0] + p[2] * wind[2]) * 0.35));
 /** the wind on one instance at a time: how it leans, and where that puts it. A pure function of the tick */
 export function swayed(i: Instance, t: number, wind: V3): { at: V3; rot: typeof i.rot } {
   const gust = 0.55 + 0.45 * Math.sin(t * 0.7 - (i.base[0] * wind[0] + i.base[2] * wind[2]) * 0.35) + 0.2 * Math.sin(t * 1.9 + i.phase), flick = Math.sin(t * 2.3 + i.phase) * 0.35 + Math.sin(t * 3.7 + i.phase * 1.7) * 0.2;

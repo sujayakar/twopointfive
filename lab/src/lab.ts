@@ -62,10 +62,11 @@ export class Lab {
     for (const d of b.doors) { const v = clamp(d.want - d.open, -TICK * 0.9, TICK * 0.9); d.open += v; }
     this.cut += clamp(this.wantCut - this.cut, -TICK * 6, TICK * 6); if (this.wantCut > 1e8) this.cut = this.cut < 9.5 ? Math.min(9.5, this.cut + TICK * 6) : 1e9; else if (this.cut > 1e8) this.cut = 9.4;
     this.rainNow += clamp(this.rain - this.rainNow, -TICK * 0.35, TICK * 0.35); this.wet += clamp((this.rain > 0 ? 1 : 0) - this.wet, -TICK * 0.06, TICK * 0.25);
-    for (const p of b.people) p.step(TICK); if (!this.smooth) this.camera.step(TICK); this.pose(); if (this.smooth) this.keepPose();
+    for (const p of b.people) p.step(TICK); this.swing(this.tick); if (!this.smooth) this.camera.step(TICK); this.pose(); if (this.smooth) this.keepPose();
   }
   /** the world at a tick, from the start (only what has a memory is stepped) */
-  seek(tick: number) { while (this.walked < tick) { this.walked++; for (const p of this.building.people) p.step(TICK); } this.tick = tick; }
+  private swing(tick: number) { for (const h of this.building.hung) h.step(TICK, tick * TICK, this.wind, this.building.place.still ?? 1); }
+  seek(tick: number) { while (this.walked < tick) { this.walked++; for (const p of this.building.people) p.step(TICK); this.swing(this.walked); } this.tick = tick; }
   private walked = 0;
   pose() {
     const b = this.building, t = this.tick * TICK, on = this.scene?.lampOn; for (const d of b.doors) poseDoor(d);

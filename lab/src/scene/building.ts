@@ -1,5 +1,7 @@
 // THE BUILDING: white outside, one strong color a room inside, a garden and a pool on the terrace, doors that swing.
 import { plan } from './nav';
+import { Hung } from './hung';
+import * as Q from './quirks';
 import type { Place } from './place';
 import { settle, freeEdges } from './faces';
 import { type V3, type Rot, rotY, rotX, rotZ, compose, apply, add, mul, sub, norm, rng, smooth } from '../math';
@@ -9,7 +11,7 @@ import { plantKit, domeTree, MAPLE, HEDGE, GRASS, tuft, bush, type Kit } from '.
 import { Person, type Stop } from './people';
 
 export interface Door { name: string; hinge: V3; yaw: number; swing: number; open: number; want: number; leaf: Piece[]; local: { at: V3; half: V3 }[]; slide?: V3 }
-export interface Building { world: World; doors: Door[]; people: Person[]; levels: { name: string; cut: number; look: V3 }[]; pool: [number, number, number, number]; poolTop: number; poolDeep: number; place: Place }
+export interface Building { world: World; doors: Door[]; people: Person[]; levels: { name: string; cut: number; look: V3 }[]; pool: [number, number, number, number]; poolTop: number; poolDeep: number; place: Place; hung: Hung[] }
 type Hole = { a: number; b: number; y0: number; y1: number; kind: 'door' | 'window' | 'open'; glass?: boolean; frame?: V3; sky?: 1 | -1; bars?: number };
 const FL = 3.4, H = 3.2;                                              // floor to floor; clear height
 
@@ -228,6 +230,9 @@ export function makeBuilding(): Building {
   for (const z of [-5.4, -1.0]) panel('studio', -8.4, R, z, 0.9, 0.45, [10, 8.2, 6.4]); panel('lounge', -8, R, 5.0, 0.8, 0.8, [8, 7.6, 6.6]); panel('landing', 0.4, R, -6.0, 0.5, 0.5, K); panel('landing', 0.4, R, 6.0, 0.5, 0.5, K);
   for (const [x, z] of [[4.35, -1.0], [4.35, 1.9]] as number[][]) { const lamp = w.lamp({ kind: 'sphere', at: [x! + 0.12, FL + 2.3, z!], u: [0.09, 0, 0], v: [0, 0, 0], radiance: [60, 42, 22], name: 'terrace', on: 1, night: true }); w.ellipsoid([x! + 0.12, FL + 2.3, z!], [0.09, 0.09, 0.09], M.glow!, { tint: [1, 0.84, 0.6], lamp, seed: 600, flags: F.CUT | F.GLOW | F.NOSHADOW }); }
 
+  // ---------------------------------------------------------------- what hangs; and one joke each
+  const hung: Hung[] = []; for (const [x, z, yaw, c] of [[-12.6, -6, -Math.PI / 2, C.red], [12.6, 6, Math.PI / 2, C.orange]] as [number, number, number, V3][]) { w.taper([x - Math.sign(x) * 0.5, 6.9, z], [x + Math.sign(x) * 0.9, 7.5, z], 0.03, 0.02, M.steel!, {}); hung.push(new Hung(w, { hinge: [x + Math.sign(x) * 0.35, 7.25, z], yaw, width: 0.9, height: 1.9, n: 5, mat: M.fabric!, tint: c, art: 'runner', back: true, weight: 0.35, flags: 0 })); } { const a: V3 = [-11.2, 8.4, 2.0], b: V3 = [-6.2, 8.4, 2.0]; for (const p of [a, b]) w.cylinder([p[0], 7.5, p[2]], 0.025, 0.95, M.steel!, {}); w.taper(a, b, 0.006, 0.006, M.rubber!, {}); const cols: V3[] = [[0.95, 0.95, 0.93], [0.9, 0.25, 0.2], [0.3, 0.55, 0.85], [0.95, 0.8, 0.3], [0.95, 0.95, 0.93], [0.55, 0.75, 0.5], [0.3, 0.3, 0.33]]; cols.forEach((c, i) => hung.push(new Hung(w, { hinge: [-10.8 + i * 0.68, 8.39, 2.0], yaw: 0, width: i === 3 ? 0.12 : 0.5, height: i === 3 ? 0.3 : 0.55 + 0.25 * (i % 3), n: 4, mat: M.fabric!, tint: c, weight: 0.22, flags: 0 }))); }
+  Q.duck(w, [8.2, pt - 0.03, -4.6], 0.4, 2.2, [1, 0.80, 0.08], 0); for (let i = 0; i < 4; i++) Q.duck(w, [7.5 + i * 0.24, pt - 0.03, -5.15 - 0.12 * i], 0.5 + 0.1 * i, 1.0, [1, 0.80, 0.08], 0); Q.vacuum(w, [1.6, 0.02, 3.6], 0.8); Q.cake(w, [-9.5, Y + 0.75, -5.2]); Q.plane(w, [11.2, FL + 0.95, 7.2], 0.7); Q.telescope(w, [10.8, R + 0.25, 4.6], 2.2); Q.gnome(w, [5.2, FL + 0.52, 3.9], 0.6); Q.dinosaur(w, [2.9, 1.02, 0.2], 1.2); { w.taper([8.9, FL + 0.051, 5.6], [8.9, FL + 0.75, 5.6], 0.008, 0.008, M.steel!, {}); w.cylinder([8.9, FL + 0.052, 5.6], 0.054, 0.002, M.rubber!, {}); hung.push(new Hung(w, { hinge: [8.97, FL + 0.74, 5.6], yaw: 0, width: 0.14, height: 0.14, n: 2, mat: M.fabric!, tint: [0.9, 0.15, 0.12], weight: 0.15, flags: 0 })); w.ellipsoid([8.2, FL + 0.072, 6.5], [0.021, 0.021, 0.021], M.gloss!, { flags: 0 }); }
   // ---------------------------------------------------------------- people
   const who = (color: V3, pace: number, torch: boolean, stops: Stop[]) => people.push(new Person(w, plan(w.pieces, stops), pace, color, people.length, { torch }));
   who(C.orange as V3, 1.25, true, [{ at: [-1.5, 0.02, 6.9] }, { at: [2.4, 0.02, 2.6] }, { at: [2.1, 0.02, -4.2], wait: 2.6, face: 2.2 }, { at: [-2.9, 0.02, -6.2] }, { at: [-3.2, 0.02, 1.0], wait: 2.2, face: -1.5 }]);
@@ -238,7 +243,7 @@ export function makeBuilding(): Building {
   who(C.red as V3, 1.3, false, [{ at: [14.6, 0, 6.5] }, { at: [14.4, 0, -1.5], wait: 2.6, face: -1.6 }, { at: [13.9, 0, -5.6] }, { at: [14.2, 0, 1.2] }]);
   settle(w.pieces); for (const [p, mask] of freeEdges(w.pieces)) p.flags |= mask << 16; for (const p of w.moving) if (!p.quad && !p.planes?.length) p.flags |= 0xfff << 16;
   void r; void smooth; void rotZ; void taper; void ({} as Kit);
-  return { place: PLACE, world: w, doors, people, levels: [{ name: 'Roof', cut: 1e9, look: [0, 3.2, 0] }, { name: 'Upper floor', cut: FL + 2.55, look: [0, 3.4, 0] }, { name: 'Ground floor', cut: 2.55, look: [0, 0.6, 0] }], pool: [px0, pz0, px1, pz1], poolTop, poolDeep: poolTop - pf };
+  return { hung, place: PLACE, world: w, doors, people, levels: [{ name: 'Roof', cut: 1e9, look: [0, 3.2, 0] }, { name: 'Upper floor', cut: FL + 2.55, look: [0, 3.4, 0] }, { name: 'Ground floor', cut: 2.55, look: [0, 0.6, 0] }], pool: [px0, pz0, px1, pz1], poolTop, poolDeep: poolTop - pf };
 }
 
 // ---------------------------------------------------------------- what moves, as a pure function of the tick
