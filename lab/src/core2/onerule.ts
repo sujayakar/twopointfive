@@ -12,7 +12,7 @@ import { PEOPLE, LIMBS } from './carry';
 const SENT = 'fn sentBack(q: Surf, leaf: bool, j: vec2f, rd: vec3f) -> vec3f {';
 const swap = (code: string, a: string, b: string) => { if (!code.includes(a)) throw new Error('a stage has no ' + a); return code.replace(a, () => b); };
 /** `leafNear`: how far bounce rays meet leaves one by one, as a share of how far other things as small */
-export function oneRule(o: { name?: string; leafNear?: number; upscale?: UpscalePart; /** shadows of lamps at what is seen by the cells too */ softLamps?: boolean; edit?: (s: Stage) => Stage } = {}): Method {
+export function oneRule(o: { name?: string; leafNear?: number; upscale?: UpscalePart; /** shadows of lamps at what is seen by the cells too */ softLamps?: boolean; /** changes the rays' text, by stage */ put?: (prelude: string, stage: string) => string; edit?: (s: Stage) => Stage } = {}): Method {
   let lab0: Lab | null = null; const core = (p: string) => secondCore(p, false, o.leafNear ?? 0);
   const edit = (s: Stage): Stage => {
     if (s.name === 'foliage') {
@@ -24,7 +24,7 @@ export function oneRule(o: { name?: string; leafNear?: number; upscale?: Upscale
     else if (s.name === 'lamps') s = { ...s, code: swap(s.code, 'leafTo = select(0.0, 1e9, exact);', o.softLamps ? 'leafTo = select(0.0, 1e9, exact);' : 'footSharp(footW, footS); if (exact) { leafTo = 1e9; }') };
     else if (s.name === 'air light') s = { ...s, code: swap(s.code, 'L += min(B * h.thru, vec3f(12.0));', 'L += min(B * h.thru * blkT + blkL, vec3f(12.0));') };
     if (s.code.includes(SENT)) s = { ...s, code: swap(s.code, SENT, SENT + ' if (leaf && lastLimb > 0u) { return limbSent(rd); }') };
-    if (!s.make && !s.alone && s.code) s = { ...s, core }; return o.edit ? o.edit(s) : s;
+    if (!s.make && !s.alone && s.code) s = { ...s, core: o.put ? p => o.put!(core(p), s.name) : core }; return o.edit ? o.edit(s) : s;
   };
   const m: Method = realtime({ name: o.name ?? 'onerule', edit, ...(o.upscale ? { upscale: o.upscale } : {}) }), was = m.signals, stagesWere = m.stages; m.core2 = true;
   m.stages = lab => { const all = stagesWere.call(m, lab), i = all.findIndex(s => s.name === 'smoke keep'); if (i < 0) return all; lab.buffer('smokeMean', SMOKE_ROWS * 16, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); const when = () => lab.smoke.on;
@@ -39,5 +39,10 @@ export const oneRuleMethods: Record<string, () => Method> = {
   exactgather: also('exactgather', s => s.name === 'gather' ? code(s, 'footSolid(wide, @tune.wide);', 'footSolid(0.0, 0.004);') : s),
   exactcache: also('exactcache', s => s.name === 'cache' && s.code.includes('footSolid(CELL, 1.0);') ? code(s, 'footSolid(CELL, 1.0);', 'footSolid(0.0, 0.004);') : s),
   exactboth: also('exactboth', s => s.name === 'gather' ? code(s, 'footSolid(wide, @tune.wide);', 'footSolid(0.0, 0.004);') : s.name === 'cache' && s.code.includes('footSolid(CELL, 1.0);') ? code(s, 'footSolid(CELL, 1.0);', 'footSolid(0.0, 0.004);') : s),
-   one25: also('one25', s => s.name === 'gather' ? code(s, 'footSolid(wide, @tune.wide);', 'footSolid(wide, 0.5 * @tune.wide);') : s),
+   // what costs what: no cells met, anywhere or by lamps' shadows; no limbs; small things dropped as early as the first core does
+  nocells: () => oneRule({ name: 'nocells', upscale: bilinear, put: p => p.replaceAll('if (blkOn && footS > 0.0 && min(blk.x, leafTo) < best)', 'if (false)').replace('if (blkOn && footS > 0.0) { let b0', 'if (false) { let b0') }),
+  lampsno: () => oneRule({ name: 'lampsno', upscale: bilinear, put: (p, s) => s === 'lamps' ? p.replace('if (blkOn && footS > 0.0) { let b0', 'if (false) { let b0') : p }),
+  nolimbs: () => oneRule({ name: 'nolimbs', upscale: bilinear, put: p => p.replace('if (blkOn && footS > 0.0) { let c = carryHit', 'if (false) { let c = carryHit').replace('if (blkOn && footS > 0.0 && !leafOnly) { T *= exp(-carryTau', 'if (false) { T *= exp(-carryTau') }),
+  early: () => oneRule({ name: 'early', upscale: bilinear, put: p => p.replace('lim = vec4f(t.xy, 1e9, 1e9);', 'lim = vec4f(0.6 * t.x, t.y, 1e9, 1e9); blk.x = lim.x;') }),
+  one25: also('one25', s => s.name === 'gather' ? code(s, 'footSolid(wide, @tune.wide);', 'footSolid(wide, 0.5 * @tune.wide);') : s),
   onerule: () => oneRule(), oneleaf: () => oneRule({ name: 'oneleaf', leafNear: 1 }), onelin: () => oneRule({ name: 'onelin', upscale: bilinear }), oneleaflin: () => oneRule({ name: 'oneleaflin', leafNear: 1, upscale: bilinear }) };
