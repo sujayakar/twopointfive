@@ -3,7 +3,7 @@
 #![allow(dead_code)]
 use game::ids::*;
 use game_start::json::{self, Json};
-use game_start::moment::Moment;
+use game::savestate::control::Moment;
 use game_start::play::{Opts, Play};
 use game_start::scene::Scene;
 

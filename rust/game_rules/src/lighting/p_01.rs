@@ -114,8 +114,7 @@ pub fn update_targets(g: &mut crate::game::Game, dt: f64) {
     }
     let fumble = g.level.breaker.fumble.unwrap_or(2.2);
     let hand_t = crate::sim_lightshome::mains_fix_t(g) + dt;
-    let es = g.engine.settings.emissive_scale;
-    let ev = ::sim::lights::step(g.sim, time, dt, near.is_some(), fumble, es);
+    let ev = ::sim::lights::step(g.sim, time, dt, near.is_some(), fumble);
     if ev & ::sim::lights::EV_RAN_OUT != 0 {
         mains_back(g);
     }
@@ -481,10 +480,6 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
             }
             i += 1;
         }
-        g.engine.settings.sky_zenith = d.sky.zenith;
-        g.engine.settings.sky_horizon = d.sky.horizon;
-        g.engine.settings.haze_density = d.haze;
-        g.engine.settings.exposure = d.exposure;
         g.m.lighting.day_states = Some(st);
         crate::host_api::host_api_invalidate_world_cache(g);
     } else {
@@ -499,8 +494,6 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
             g.tab.light[l].enabled = true;
             crate::sim_lightshome::light_home_feed(g, l);
         }
-        let was = g.level.daylight.as_ref().map_or(g.k.env.exposure, |d| d.exposure);
-        crate::hours::night_picture(g, was);
         crate::render_lights::light_set_remove(g, cur.sun);
         if let Some(b) = cur.blackout {
             if !crate::sim_lightshome::mains_active(g) {

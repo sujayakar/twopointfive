@@ -147,6 +147,11 @@ fn spare_sam(g: &mut Game, st: &mut KitStage, on: bool) {
     if on { if st.a.seen_was.is_none() { st.a.seen_was = Some(g.k.samstun.own_seen); } g.k.samstun.own_seen = false; }
     else if let Some(w) = st.a.seen_was.take() { g.k.samstun.own_seen = w; }
 }
+/// the game's rows a row holds, put back as they were: the tables outlast a staging
+pub(super) fn tables_back(g: &mut Game, st: &mut KitStage) {
+    stay(g, st, false);
+    spare_sam(g, st, false);
+}
 fn mates_can(g: &Game, seat: &crate::seats::SeatRef) -> bool { let me = sam_id(g, seat); g.items.items.iter().any(|&i| th::item_kind(g, i) == th::ItemKind::Flash && !th::item_fired(g, i) && th::item_who(g, i) != me) }
 
 // ------------------------------------------------------------ cans
@@ -616,7 +621,7 @@ fn charge_mate_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     }
     Step::On
 }
-fn charge_sam_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
+fn charge_sam_start(g: &mut Game, st: &KitStage, b: &mut Beat) -> Result<(), String> {
     let q = at(st, [K.own_post[0] * st.latch, K.own_post[1], 0.0]);
     if !free(g, v2(q)) { return Err(String::from("no room at the door")); }
     let d = the_door(st);
@@ -1186,7 +1191,7 @@ fn swap_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     if b.phase == "stow" { super::cards::sam_card(g, st); to(g, b, "draw"); sam_draw(st); return Step::On; }
     swap_up(g, st, b)
 }
-fn turn_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
+fn turn_start(g: &mut Game, st: &KitStage, b: &mut Beat) -> Result<(), String> {
     let (a, c) = (b.yaw + K.turn_deg * R, b.yaw - K.turn_deg * R);
     let y = if m::sin(a) * st.n[0] + m::cos(a) * st.n[1] >= m::sin(c) * st.n[0] + m::cos(c) * st.n[1] { a } else { c };
     b.quiet = true; b.turn = true; b.h_to = 1.1;

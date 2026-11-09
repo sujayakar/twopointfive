@@ -1,4 +1,4 @@
-// A CO-OP GAME ON YOUR OWN NETWORK, by hand, until the page has its host and join screen. It starts ONE game server (tools/mp/server.ts) on this machine,
+// A CO-OP GAME ON YOUR OWN NETWORK, by hand, with no backend. It starts ONE game server (tools/mp/server.ts) on this machine,
 // listening on every interface, for a squad mission of two players, and prints the two addresses to open: one for this machine, one for the other.
 //   bun run tools/mp/lan.ts [--mission '?roomclear&squad4'] [--seed 7] [--port 5300] [--dev http://localhost:5173]
 // EACH MACHINE RUNS ITS OWN PAGE (`bun run dev`, the same commit on both: the server turns a page of another build away). A page must come from localhost,

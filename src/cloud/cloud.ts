@@ -1,5 +1,5 @@
 // THE HOSTED PAGE'S BACKEND, from the page's side. A build that was GIVEN A BACKEND'S ADDRESS (tools/build.ts builds one in where the environment names it —
-// `TPS_CLOUD_URL`; the hosted build's script sets it, tools/host/build.sh) can keep three things there, each in a file of its own beside this one:
+// `TPS_CLOUD_URL`; the hosted build's script sets it, tools/host/build.sh) can keep these there, each in a file of its own beside this one:
 //   tapes.ts      the kept tape of every page visit (what this browser already keeps for the replay viewer)
 //   telemetry.ts  small records of a visit: the machine, a run's outcome, a minute's frame times, an error
 //   prefs.ts      the browser's settings, so another browser handed this one's id opens with them

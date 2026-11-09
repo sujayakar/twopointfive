@@ -112,9 +112,6 @@ fn vars_of(pairs: &[(&str, &str)]) -> JsMap<String, String> { let mut v = JsMap:
 fn the_word(n: &str) -> String {
     if n.starts_with("the ") || n.ends_with(|c: char| c.is_ascii_digit()) { String::from(n) } else { alloc::format!("the {}", n) }
 }
-/// `+x.toFixed(2)` (:213)
-fn to_fixed2(x: f64) -> f64 { js::to_fixed(x, 2).parse().unwrap_or(f64::NAN) }
-
 // ---------------------------------------------------------------- the skeleton's functions
 
 /// a new tally of the endgame (laststand.ts newStats)
@@ -462,14 +459,6 @@ mod tests {
     }
 
     #[test]
-    fn to_fixed2_is_the_languages() {
-        // (x, the bits of `+x.toFixed(2)` under bun)
-        for (x, bits) in TO_FIXED {
-            assert_eq!(to_fixed2(*x).to_bits(), *bits, "{}", x);
-        }
-    }
-
-    #[test]
     fn every_kind_has_its_lines_place_for_place() {
         assert_eq!(LINES.len(), 24);
         for l in LINES {
@@ -499,26 +488,4 @@ mod tests {
         assert_eq!(flat([3.0, 9.0, 0.0], [0.0, -2.0, 4.0]), 5.0);
     }
 
-    const TO_FIXED: &[(f64, u64)] = &[
-        (f64::from_bits(0x3fc0000000000000), 0x3fc0a3d70a3d70a4),
-        (f64::from_bits(0x3fd8000000000000), 0x3fd851eb851eb852),
-        (f64::from_bits(0x3ffa000000000000), 0x3ffa147ae147ae14),
-        (f64::from_bits(0xbfc0000000000000), 0xbfc0a3d70a3d70a4),
-        (f64::from_bits(0xbffa000000000000), 0xbffa147ae147ae14),
-        (f64::from_bits(0x3ff0147ae147ae14), 0x3ff0000000000000),
-        (f64::from_bits(0x4005666666666666), 0x40055c28f5c28f5c),
-        (f64::from_bits(0xbf50624dd2f1a9fc), 0x8000000000000000),
-        (f64::from_bits(0x3f50624dd2f1a9fc), 0x0),
-        (f64::from_bits(0x0), 0x0),
-        (f64::from_bits(0x8000000000000000), 0x0),
-        (f64::from_bits(0x40934a428f5c28f6), 0x40934a47ae147ae1),
-        (f64::from_bits(0x4031555554c62af2), 0x4031547ae147ae14),
-        (f64::from_bits(0xc00921f9f01b866e), 0xc0091eb851eb851f),
-        (f64::from_bits(0x40593fae147ae148), 0x4059400000000000),
-        (f64::from_bits(0x3fe0000000000000), 0x3fe0000000000000),
-        (f64::from_bits(0x444b1ae4d6e2ef50), 0x444b1ae4d6e2ef50),
-        (f64::from_bits(0x3e7ad7f29abcaf48), 0x0),
-        (f64::from_bits(0x4009000000000000), 0x40090a3d70a3d70a),
-        (f64::from_bits(0x404f700000000000), 0x404f70a3d70a3d71),
-    ];
 }

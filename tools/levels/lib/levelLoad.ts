@@ -9,7 +9,7 @@ import type { Vec3 } from '../../../src/math/vec';
 import { Box, BoxFlag, makeBox, ROUGH_DEFAULT, type BoxStuff, type DoesWord } from '../../../src/scene/boxes';
 import { DOES_DEFAULT, doesSaid } from '../../../src/scene/materials';
 import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, DeviceDef, CivilianDef, VentDef, VolumeDef, MarkDef } from './level';
-import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, MarkData, validateLevelData, flagsToBits, bitsToFlags } from './levelData';
+import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, MarkData, flagsToBits, bitsToFlags } from './levelData';
 import { copyMarkings } from '../../../src/scene/markings';
 import { formOf, type BoxShape, type ShapePiece } from '../../../src/scene/shapes';
 
@@ -32,14 +32,9 @@ export function fitPropFootprint(parts: readonly { off: Vec3; h: Vec3; yaw?: num
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ LevelData → Level
-/** Build the runtime Level from level data. Validates first (throws listing every problem) unless told the caller already has. Every vector is copied:
- *  the game mutates its Level (box flags, scratch routes) and two loads must never share state. */
-export function loadLevel(data: LevelData, opts: { validate?: boolean } = {}): Level {
-  if (opts.validate !== false) {
-    const errs = validateLevelData(data);
-    if (errs.length) throw new Error(`level '${data?.name ?? '?'}' (v${(data as any)?.version} vs loader v${LEVEL_DATA_VERSION}): ${errs.length} error(s)\n  ${errs.slice(0, 20).join('\n  ')}${errs.length > 20 ? `\n  … ${errs.length - 20} more` : ''}`);
-  }
-  const mats = new Map(Object.entries(data.materials));   // (own keys only — validate already refused 'constructor' & co. as material names)
+/** Build the runtime Level from level data, which is a level (judge.ts says where it is none). Every vector is copied: the caller may mutate its Level and two loads never share state. */
+export function loadLevel(data: LevelData): Level {
+  const mats = new Map(Object.entries(data.materials));   // (own keys only: 'constructor' & co. are no material's names)
   const albedoOf = (o: { material?: string; albedo?: Vec3 }): Vec3 => {
     if (o.material === undefined) return V(o.albedo!);
     const m = mats.get(o.material); if (!m) throw new Error(`level '${data.name}': unknown material '${o.material}'`); return V(m.albedo);
@@ -67,7 +62,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean } = {}): L
     const marks = copyMarkings(b.markings); if (marks) p.marks = marks;   // (through markings.ts marking(): the same structure the generator builds)
     // the finish (Box.rough / metal): the box's own, else its material's; absent both = matte dielectric — nothing written, so a file without finishes loads to
     // the very Level it always did (`metal` is only ever carried as true: false is the default and stays unwritten, as levelToData writes it)
-    Object.assign(p, finishOf(b), saidOf(b));   // (what it is made of — scene/stuff.ts: the box's own word, else its material's; 'plain' is no word, and validate has refused every word a box cannot be)
+    Object.assign(p, finishOf(b), saidOf(b));   // (what it is made of — scene/stuff.ts: the box's own word, else its material's; 'plain' is no word, and a word no box can be is a fault of the file)
     if (b.shape) {   // A SHAPE (scene/shapes.ts): carried on the box as authored — its planes copied, a piece's paint, finish and word resolved as a box's are; given to the box when the level is stood up
       const s = b.shape, sh: BoxShape = { ...formOf(s) };
       if (s.with) sh.with = s.with.map((w): ShapePiece => ({ off: V(w.off), h: V(w.h), ...(w.yaw ? { yaw: w.yaw } : {}), ...(w.material !== undefined || w.albedo !== undefined ? { albedo: albedoOf(w), ...finishOf(w), ...saidOf(w) } : {}), ...formOf(w) }));   // (no paint: the piece wears its box's paint, finish and word — shapes.ts shapeLevel)
@@ -112,7 +107,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean } = {}): L
   const vents: VentDef[] | undefined = data.vents?.map(v => { const o: VentDef = { name: v.id, pos: V(v.pos), dir: V(v.dir), speed: v.speed, spread: v.spread, reach: v.reach }; for (const k of ['size', 'period', 'duty', 'phase', 'mains'] as const) if (v[k] !== undefined) (o as any)[k] = v[k]; return o; });   // (id → name, floor / notes dropped like a door's; optional fields written iff present)
   const planOf = <T extends RoomClearPlanData>(p: T): Omit<T, 'id'> => { const q = clone(p) as any; delete q.id; return q; };
   const clearPlans: RoomClearPlan[] = data.plans.roomClear.map(p => planOf(p) as RoomClearPlan);
-  // mission: the fixed thread's three objectives back onto Level.mission's shape (validate guaranteed one of each)
+  // mission: the fixed thread's three objectives back onto Level.mission's shape (a level has one of each)
   const ob = <K extends ObjectiveData['kind']>(k: K) => data.mission.objectives.find(o => o.kind === k) as Extract<ObjectiveData, { kind: K }>;
   const reach = ob('reach'), drive = ob('drive'), exfil = ob('exfil');
   const level: Level = {
@@ -135,7 +130,6 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean } = {}): L
     ...(data.meta.kept !== undefined ? { kept: data.meta.kept } : {}),
     ...(data.scenarios ? { scenarios: clone(data.scenarios) } : {}),   // (the runtime structs verbatim: lib/scenarios.ts)
   };
-  // TODO(G2): data.floors / data.connectors → per-floor nav + stair links. data.volumes → Level.volumes above (the Director's onEnter).
   // data.surfaces → Level.surfaces, what rust/game_rules/src/floor reads for this level's footsteps: non-enumerable, so a Level compared or written as data is what it was
   // (a file with none: rust/game_rules/src/floor's own office map).
   if (data.surfaces) Object.defineProperty(level, 'surfaces', { value: clone(data.surfaces), enumerable: false, writable: true, configurable: true });
@@ -179,7 +173,7 @@ export interface LevelToDataOpts {
   /** (not `markTexel` or `kept`: those two are the Level's own and are written from it. Either one in an object passed here is dropped) */
   meta?: Omit<LevelData['meta'], 'markTexel' | 'kept'>;
   /** pass-through for what Level has no slot for yet */
-  volumes?: LevelData['volumes']; connectors?: LevelData['connectors'];
+  volumes?: LevelData['volumes'];
 }
 /** Convert a runtime Level (the procedural generator's, or a loaded one) into level data. Optional fields are written iff the Level had them, so
  *  loadLevel(levelToData(L)) reproduces L key for key; ids are generated deterministically (see boxIdFor) unless supplied. */
@@ -276,7 +270,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     volumes: level.volumes ? level.volumes.map((v): LevelData['volumes'][number] => ({ id: v.name, kind: v.kind, c: V(v.c), h: V(v.h), ...(v.yaw !== undefined ? { yaw: v.yaw } : {}) })) : clone(opts.volumes ?? []), devices: (level.devices ?? []).map(deviceData),   // (a Level that carried volumes writes them back; one without keeps the pass-through)
     ...(level.marks?.length ? { marks: level.marks.map((m): MarkData => ({ id: m.name, pos: V(m.pos), ...(m.yaw !== undefined ? { yaw: m.yaw } : {}) })) } : {}),
     ...(level.vents ? { vents: level.vents.map((d): VentData => { const v: VentData = { id: d.name, pos: V(d.pos), dir: V(d.dir), speed: d.speed, spread: d.spread, reach: d.reach }; for (const k of ['size', 'period', 'duty', 'phase', 'mains'] as const) if (d[k] !== undefined) (v as any)[k] = d[k]; return v; }) } : {}),
-    connectors: clone(opts.connectors ?? []),
+    connectors: [],
     mission: { playerSpawn: V(level.playerSpawn), objectives: [
       { id: 'reach_room', kind: 'reach', area: { x0: M.serverRoom.x0, x1: M.serverRoom.x1, z0: M.serverRoom.z0, z1: M.serverRoom.z1 }, door: M.entryDoor },
       { id: 'pull_drive', kind: 'drive', rackIndex: M.rack.index, front: V(M.rack.front), halfW: M.rack.halfW },

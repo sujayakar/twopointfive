@@ -124,7 +124,7 @@ export function build() {
   // ---- the guardroom: two doors on two walls, two men. The first plan ----
   const GUARD = hut({ x0: 15, z0: 6.5, x1: 21, z1: 11, kind: 'block', floor: 'slab', doors: [{ name: 'guard', side: 's', at: 17.2 }, { name: 'guard_side', side: 'e', at: 7.8 }] });
   grp('guardroom.room');
-  G.cot(15.7, 7.6, 0); G.trunk(16.9, 7.0, 0); G.table(19.3, 10.2, 1.2, 0.6, 0); G.plasticChair(19.3, 9.5, 0); G.bulb(18.0, 8.6, 'bulb_guardroom', 'guardroom');
+  G.cot(15.95, 7.6, 0); G.trunk(16.9, 7.0, 0); G.table(19.3, 10.2, 1.2, 0.6, 0); G.plasticChair(19.3, 9.5, 0); G.bulb(18.0, 8.6, 'bulb_guardroom', 'guardroom');
   G.stove(15.55, 10.4); G.gasBottle(20.55, 10.55); G.rug(17.9, 8.7, 2.0, 1.4, 'baluch');
 
   // ---- the hall: the gun behind its bags at the far end looks down the room at the front door; the back door is at the gunner's shoulder ----
@@ -142,7 +142,7 @@ export function build() {
   // the second man in the corner south of the guardroom, the way to face had no line for him there and he stood looking at a wall): a move's places are the
   // squad's own (rust/game_rules/src/roomfit: a few steps round the click, a wall at the back), so the post is where a hand that lands a metre and a half off still gets two men
   // who see the gate — clear of that corner to the west (the drums below fill it) and of the hall's front door to the east, whose picture stands over the
-  // ground north of it and takes a right click there (clicks swept with `TUTPLAN_POSTB`)
+  // ground north of it and takes a right click there
   G.jersey(24.0, 9.3, 2, 0);
   grp('yard');
   G.drums(20.7, 11.65, 2);                                          // in the corner south of the guardroom: a man put there by a move to the barrier had the guardroom between him and the back gate

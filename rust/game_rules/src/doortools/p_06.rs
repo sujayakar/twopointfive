@@ -153,7 +153,7 @@ pub fn door_tools_charge_gone(g: &mut crate::game::Game, op: DoorOpId, hands: bo
 }
 
 /// the leaf stands open in the team's picture of it (doortools.ts DoorTools.knownOpen)
-pub fn door_tools_known_open(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn door_tools_known_open(g: &crate::game::Game, d: DoorId) -> bool {
     if crate::fogofwar::fog_of_war_door_held(g, d) { m::abs(crate::fogofwar::fog_of_war_door_shown(g, d)) >= OPEN_RAD } else { is_open(g, d) }
 }
 

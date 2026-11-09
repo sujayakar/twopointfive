@@ -30,7 +30,7 @@ pub fn handle_of(g: &mut crate::game::Game, d: DoorId) -> V3 {
 }
 
 /// A line of the order's log, newest last. (shutdoor.ts note)
-pub fn note(g: &mut crate::game::Game, gd: GuardId, d: DoorId, what: &str) {
+pub fn note(g: &crate::game::Game, gd: GuardId, d: DoorId, what: &str) {
 }
 
 /// Does d stand open (off its hinges it reads wide open: its row is there, greyed). (shutdoor.ts standsOpen)

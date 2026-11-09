@@ -25,7 +25,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 |---|---|
 | `hours/` | the hours (`hours()`), one laid over the level and taken off, cloud on the light, the sky's light on a man |
 | `weather_kinds/` | the seven kinds (`weather_presets`), which a player may pick (`WEATHER_ROW`), the snow levels (`snow_levels`) |
-| `weather/` | what is in force: kind, roofs, storm, strokes, thunder, the wet lot; `hear_path`, `loud_len`, `air_trans` |
+| `weather/` | what is in force: kind, roofs, storm, strokes, thunder, the wet lot; `hear_path`, `loud_len`, `weather_air_trans` |
 | `air_dust/` | the fog's share in each half-meter cell, carried through openings and settling back |
 | `wind/` | the sources of moving air: storm, vents, gusts at outside doors, broken windows |
 | `wet/` | who is soaked and who dries; Sam's drips and prints |
@@ -54,7 +54,7 @@ The page's half reads those rows and writes nothing back:
 ## How it works
 
 **An hour is laid over a level** (`apply_hour`, `put_in`). Night is no record: the level as built. Any other hour puts the moon out, puts a sun in at
-the moon's place in the light list, writes sky, haze and exposure from its `HourDef`, and at midday and on the gray day opens the switch of every
+the moon's place in the light list, gives `told` sky, haze and exposure from its `HourDef`, and at midday and on the gray day opens the switch of every
 `exterior` lamp (`lamps_out`). `take_out` puts everything back. `is_daylight` is the drill's day show, false under any hour.
 
 **Cloud moves light.** A picked kind's `cloud` takes light off the ground (`cloud_sun`), moves what is left from the sun to the sky (`cloud_light`),
@@ -82,7 +82,7 @@ other roll.
 | what | who reads it | the road |
 |---|---|---|
 | rain's noise | every ear (`hearing_check`, `whistle/`, `roomfight/`…) | `hear_path` stretches a path by `hear_mask`: less under a roof, more after thunder. `loud_len` undoes it when loud |
-| fog, dust | men, teammates, civilians, cameras | `air_trans` multiplies into `smoke_between`, so fog blinds by smoke's own thresholds (`sight_gain`) |
+| fog, dust | men, teammates, civilians, cameras, the team's fog of war | `clear_between` (`sense/`): `air_trans` over `smoke_between`, so fog blinds by smoke's own thresholds (`sight_gain`) |
 | lightning | the light meter's stand-in | `stroke_light`, under a picked weather only |
 | sun, sky, cloud | every question of light | `light_in` adds `sun_light`, `dome_light`; `open_rays` keeps by cell which rays reach the sky (`SkyReach`, in no save) |
 | the hour | `darkdoor/`, `calmtorch/`, the kit picture's porch lamp | `hour_of`, `hour_has_lamps_out` |
@@ -162,7 +162,7 @@ is made and sets `StoodWith`, the kind locked for that game.
   `ScenarioEntryWeather`.
 - **An hour:** its row in `hours()`; a new one also `HourId`, `HOUR_ROW` and `HOURS_OF` in `src/draw/sky.ts`.
 - **A snow level:** its name in `snow_levels()`, its boxes painted by word (the `level` skill).
-- **A rule that hears or sees:** call `hear_path` and multiply by `air_trans`.
+- **A rule that hears or sees:** call `hear_path`, and ask `clear_between` of the air.
 - **A new source of air:** a `WindWhy`, its speed in `wind_update`.
 - **A thing the picture needs:** a row in `rust/game_draw/src/sky.rs` or `winds.rs`, then `tools/draw/gen.ts`, then the reader.
 
@@ -186,5 +186,5 @@ and run no shader. Page script: `bun run tools/qa/pages.ts weather-page` (on the
 ## Not seen
 
 Everything drawn is the maintainer's to judge on a GPU: a page check here proves only that the rows arrive. No check hears thunder or the rain. No
-native test asks `snow_bog_at` directly; only `gate`'s pins move if a landing changes. Smoke cuts the team's fog of war and weather's fog and dust do
-not (`fogofwar/` does not read `air_trans`), so a teammate may be blind to a man the player is shown.
+native test asks `snow_bog_at` directly; only `gate`'s pins move if a landing changes. The picture's fog of war asks no air: past what the weather's fog
+lets an eye through (about 20 m) the floor is drawn as seen, under the weather's own haze, with nobody on it.

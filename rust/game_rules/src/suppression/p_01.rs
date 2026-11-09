@@ -483,7 +483,7 @@ fn cover_fall(g: &mut Game, kept_open: Option<V3>, as_was: Option<V3>) -> Option
 }
 
 /// A man under fire does not stop to open a door: floor behind a shut one is no cover to him.
-fn through_a_shut_door(g: &mut crate::game::Game, from: V3, path: &[V3]) -> bool {
+fn through_a_shut_door(g: &crate::game::Game, from: V3, path: &[V3]) -> bool {
     let mut a = from;
     for &b in path {
         for i in 0..g.doors.list.len() {

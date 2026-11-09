@@ -451,8 +451,8 @@ fn wetCoatSpec(id: u32, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f, Ei: 
 // ---- SNOW GLOW (const SNOW_GLOW in the scene prelude: render/frame.ts snowLookConfig.glow ← rust/game_rules/src/weather_kinds SNOW_LOOK.glow; false = every statement of it is dead code) ----
 // The look of light INSIDE lying snow, as an approximation (no scattering is computed): on a snow pixel a lamp's light does not stop at the terminator. It wraps a
 // little past it, what comes through has lost the lamp's own hue and most of its red, and shade on snow leans to blue. PICTURE ONLY, by where it stands: this module
-// is the last word on a primary hit's colour and nothing reads its output back into the lighting (the meter and the probes are probe.wgsl, the bounce is
-// lighting_common.wgsl hitRadiance → common.wgsl directIrradiance; neither is touched, and evalLight is called here as the wet coat above calls it, unchanged).
+// is the last word on a primary hit's colour and nothing reads its output back into the lighting (the bounce is
+// lighting_common.wgsl hitRadiance → common.wgsl directIrradiance, which is not touched, and evalLight is called here as the wet coat above calls it, unchanged).
 // A snow pixel is one whose normal target's alpha is under 1 (gbuffer.wgsl fsBox after snowBox, snow.wgsl fsSnow: 1∕3 = snow, 2∕3 = thin snow at its edge).
 // PER LIGHT that reaches the cell, scored square-on (no receiver cosine) as the wet coat scores it: with c = N·L,
 //   past the terminator (−WRAP < c < 0)  GAIN · ((c + WRAP) ∕ WRAP)²          the wrap: nothing at −WRAP, GAIN at the terminator

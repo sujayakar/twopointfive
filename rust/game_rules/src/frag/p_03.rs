@@ -714,7 +714,7 @@ pub fn frag_away(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// The arc comes DOWN ON THE FLOOR within `tol` of where he means it.   (frag.ts lands)
-pub fn lands(g: &mut crate::game::Game, sol: V3, p: V3, tol: f64) -> bool {
+pub fn lands(g: &crate::game::Game, sol: V3, p: V3, tol: f64) -> bool {
     sol[1] <= g.k.frag.lift + 0.1 && flat(sol, p) <= tol
 }
 

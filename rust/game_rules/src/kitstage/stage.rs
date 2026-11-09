@@ -443,10 +443,8 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
             if row.enabled && row.intensity > 0.0 {
                 row.intensity *= moon_scale;
                 st.moon_at = Some(LightAs { light: l, intensity: row.intensity });
-                let (z, h) = (g.engine.settings.sky_zenith, g.engine.settings.sky_horizon);
+                let (z, h) = crate::hours::told::sky_now(g);
                 let sky = ([z[0] * sky_scale, z[1] * sky_scale, z[2] * sky_scale], [h[0] * sky_scale, h[1] * sky_scale, h[2] * sky_scale]);
-                g.engine.settings.sky_zenith = sky.0;
-                g.engine.settings.sky_horizon = sky.1;
                 st.sky_at = Some(sky);
             }
         }
@@ -560,38 +558,23 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
 }
 
 /// WHAT EVERY STAGING STARTS FROM: the mission as its start left it, and the stage as it then is. A staged game is never mended and never grows: it is thrown away whole.
-pub fn keep_base(g: &mut Game) {
-    let Some(mut st) = take(g) else { return };
-    st.base = Some(Base(alloc::sync::Arc::new((Box::new(g.clone()), block_of(g.sim), (*st).clone()))));
-    g.kit_stage = Some(st);
-}
-fn block_of(slot: usize) -> Vec<u8> { unsafe { core::slice::from_raw_parts(::sim::state::addr(slot) as *const u8, core::mem::size_of::<::sim::state::State>()).to_vec() } }
+pub fn keep_base(g: &mut Game) { crate::savestate::control::keep_first(g); }
 
 /// THE MISSION FROM ITS START and the team staged again, as the cards, the size and the open card now stand.
 pub fn restage(g: &mut Game) {
     let Some(mut was) = take(g) else { return };
-    let Some(base) = was.base.clone() else { was.due = false; g.kit_stage = Some(was); return };
     // (the file's order, as team indexes: every row id the stage holds is dead after this)
     let team = crate::scenario_run::team_of(g);
     let keep: Vec<usize> = was.order.iter().filter_map(|x| team.iter().position(|t| t == x)).collect();
-    let mut n = base.0.0.clone();
-    // (what the host holds of the game goes on: its count of serials, what the steps told it and the record of its hand; and what the cards and the size are)
-    n.serial_next = n.serial_next.max(g.serial_next);
-    n.out = core::mem::take(&mut g.out);
-    n.cmd_buf = g.cmd_buf.take();
-    // (the cards, the notes, the words on them; what is keyed by a man or a player is of the game thrown away, and a restart's new men would answer to it)
-    let of_base = core::mem::replace(&mut n.m.kit, g.m.kit.clone());
-    (n.m.kit.man_of, n.m.kit.bare_eyed, n.m.kit.kit_staged, n.m.kit.issued_player, n.m.kit.you_bare) = (of_base.man_of, of_base.bare_eyed, of_base.kit_staged, of_base.issued_player, of_base.you_bare);
-    (n.k.nightbreach.squad, n.k.rescue.squad) = (g.k.nightbreach.squad, g.k.rescue.squad);
-    crate::scene_collision::unstand(&mut n);
-    ::sim::state::put(g.sim, &base.0.1);
-    crate::scene_collision::stands(&mut n);
-    *g = *n;
-    let mut st = Box::new(base.0.2.clone());
-    (st.base, st.want, st.field, st.size, st.frame, st.aspect) = (Some(base), was.want, was.field.clone(), was.size, was.frame, was.aspect);
+    // (the tables go on as they are, so what a row wrote for its length is put back first)
+    acts::tables_back(g, &mut was);
+    if !crate::savestate::control::again(g) { was.due = false; g.kit_stage = Some(was); return; }
+    let Some(mut st) = take(g) else { return };
+    (st.want, st.field, st.size, st.frame, st.aspect) = (was.want, was.field.clone(), was.size, was.frame, was.aspect);
     (st.roused_men, st.roused_alarms) = (was.roused_men, was.roused_alarms);
     (st.veil, st.still, st.shown, st.keep) = (was.veil, was.still, was.shown, Some(keep));
     acts::carry(&was.a, &mut st.a);
+    // (new men, who take the cards and the size as they now stand)
     crate::game::game_restart_encounter(g);
     place(g, &mut st);
     // (another picture than the last: nothing of it is blended into this one)
@@ -750,7 +733,6 @@ pub fn after(g: &mut Game) {
         let up = st.a.beat.as_ref().map_or(false, |b| b.row == Act::QuietGun) && st.a.rise > 0.0;
         if up { let c = g.pl[g.player].ch; let a = &mut g.ch[c].anim; a.crouch = m::min(a.crouch, 1.0 - QK.half * st.a.rise); } else { st.a.rise = 0.0; }
     }
-    if let Some((z, h)) = st.sky_at { g.engine.settings.sky_zenith = z; g.engine.settings.sky_horizon = h; }
     // (the team stands under a roof: no weather on the men, whatever the level's own roof test makes of a ceiling the camera never draws)
     if st.plan.as_ref().map_or(false, |p| p.indoors) {
         let pl = g.player;

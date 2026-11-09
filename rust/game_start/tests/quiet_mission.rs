@@ -2,11 +2,9 @@
 mod stealth_ask;
 use game::game::{InteractableKind, Verb};
 use game::game::MissionStage as Stage;
-use game::savestate::control::{self, Do};
-use game_start::moment::Moment;
+use game::savestate::control;
 use game_start::play::{dist, Opts, Play};
 use stealth_ask::StealthAsk;
-use std::collections::BTreeMap;
 
 fn bazaar(pin: u32) -> Play {
     let mut p = Play::mission("bazaar.json", &format!("?levelFile=bazaar.json&quiet={pin}"), &Opts { seed: 4, ..Default::default() });
@@ -62,16 +60,8 @@ fn walking_out_before_the_thing_is_taken_ends_nothing() {
 fn a_save_on_a_quiet_mission_carries_the_deal() {
     for pin in [1, 2, 3] {
         let mut p = bazaar(pin);
-        let mut kept: BTreeMap<String, Moment> = BTreeMap::new();
-        let back = |p: &mut Play, kept: &mut BTreeMap<String, Moment>| match control::tick(&mut p.g, 1.0 / 60.0) {
-            Some(Do::Keep { key, .. }) => { kept.insert(key, Moment::of(&p.g)); }
-            Some(Do::Back { key }) => {
-                let was = control::abandoned(&p.g);
-                p.g = kept[&key].stands(p.g.sim);
-                control::put_back(&mut p.g, &key, was);
-            }
-            _ => {}
-        };
+        let mut kept: Vec<String> = Vec::new();
+        let back = |p: &mut Play, kept: &mut Vec<String>| kept.extend(p.told.drain(..).filter_map(|t| t.kept));
         for _ in 0..60 { p.frame(); back(&mut p, &mut kept); }
         p.key_down("F5");
         p.frame();
@@ -83,7 +73,7 @@ fn a_save_on_a_quiet_mission_carries_the_deal() {
         for _ in 0..120 { p.frame(); back(&mut p, &mut kept); }
         p.key_up("KeyW");
         assert!(dist(p.sam_at(), sam) > 0.5, "pin {pin}: CONTROL: he walked away from the save");
-        let key = kept.keys().next().unwrap().clone();
+        let key = kept[0].clone();
         assert_eq!(control::ask_load(&mut p.g, &key), None, "pin {pin}: the load was refused");
         p.frame();
         back(&mut p, &mut kept);

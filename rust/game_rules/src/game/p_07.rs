@@ -45,7 +45,7 @@ pub fn game_light_meter(g: &mut crate::game::Game, dt: f64) {
         let pc = g.pl[pl].ch;
         let chest = bone_or(g, pc, Bone::Chest, 1.1);
         let eye = bone_or(g, g.gd[gd].ch, Bone::Head, 1.65);
-        g.gd[gd].smoke_trans = crate::sense::smoke_between(g, eye, chest) * crate::weather::air_trans(g, eye, chest);
+        g.gd[gd].smoke_trans = crate::sense::clear_between(g, eye, chest);
     }
     for &s in seats.iter() { crate::seats::with_seat(g, s, &mut |g| game_meter_read(g, dt)); }
 }

@@ -585,7 +585,7 @@ pub fn room_clear_scenario_clear(g: &mut crate::game::Game) {
 }
 
 /// what happened when, on the game clock   (roomclear.ts RoomClearScenario.note)
-pub fn room_clear_scenario_note(g: &mut crate::game::Game, what: &str) {
+pub fn room_clear_scenario_note(g: &crate::game::Game, what: &str) {
 }
 
 /// the night breach's staging asks who the defenders are: every staging is the knob's placement, first attempt (SAMESTART)   (roomclear.ts RoomClearScenario.deal)

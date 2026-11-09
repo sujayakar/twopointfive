@@ -1,9 +1,9 @@
 // THE FIXED STEP: the game is stepped in whole ticks of 1 / hz whatever the display's rate; this says how many a frame runs and what is owed after them (the
 // frame order round them is the host's: drawpage.ts).
-/** the fixed step's knobs. `on`: the switch (off = the variable step, the loop as it was). `hz`: ticks a second. `snap` (s): a frame time within this of a whole number of
+/** the fixed step's knobs. `hz`: ticks a second. `snap` (s): a frame time within this of a whole number of
  *  refreshes of a common display is taken as exactly that (a 60 Hz display's 16.6‥16.8 ms frames are each ONE tick, never the 0-then-2 a raw accumulator beats out).
  *  `maxTicks`: the most ticks one frame may run (a hitch longer than that is dropped, not caught up). */
-export const FIXEDSTEP = { on: false, hz: 60, snap: 0.0004, maxTicks: 4 };
+export const FIXEDSTEP = { hz: 60, snap: 0.0004, maxTicks: 4 };
 const RATES = [50, 60, 72, 75, 90, 100, 120, 144, 165, 240];
 /** `dt` moved onto the nearest whole number (1‥3) of refreshes of a common display when it is within `tol` of one; otherwise as given */
 export function snapDt(dt: number, tol = FIXEDSTEP.snap): number {

@@ -304,7 +304,7 @@ pub fn squad_orders_word_row_of(g: &crate::game::Game, t: &crate::orders::OrderT
 }
 
 /// The open menu's page that has the 'wait for my word' row (orders.ts SquadOrders.wordPage)
-pub fn squad_orders_word_page(g: &mut crate::game::Game, m: &crate::orders::Menu) -> Option<String> {
+pub fn squad_orders_word_page(g: &crate::game::Game, m: &crate::orders::Menu) -> Option<String> {
     if m.page.is_some() { return None; }
     for &d in &m.rows {
         let opens = g.tab.orders_order_def[d].opens.clone();
@@ -836,7 +836,7 @@ pub fn squad_orders_refresh(g: &mut crate::game::Game) {
 }
 
 /// Is the open menu's list stale now (orders.ts SquadOrders.due)
-pub fn squad_orders_due(g: &mut crate::game::Game, m: &crate::orders::Menu) -> bool {
+pub fn squad_orders_due(g: &crate::game::Game, m: &crate::orders::Menu) -> bool {
     if let Some(p) = &m.page {
         if g.orders.defs.iter().any(|&d| { let r = &g.tab.orders_order_def[d]; r.opens.as_ref() == Some(p) && r.stands_in.is_some() }) { return true; }
     }

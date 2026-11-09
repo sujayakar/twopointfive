@@ -136,8 +136,7 @@ dropped and `cargo test`'s threads take turns. A test that stands a second game 
 2. The block of `rust/sim` the game stands in, zeroed under the layout's word (`stand.rs`).
 3. The character: skeleton, skin, clips, the cast's meshes and variants, from the glTF files' bytes (`gltf.rs`). The page reads the same files for its
    own drawing with `src/anim/gltf.ts`.
-4. The host: an empty box world and light set, the picture's settings (the game's `box_world_new`; `settings.rs`, a copy of the values of
-   `defaultSettings` in `src/settings.ts`, kept by hand: no check holds the two equal).
+4. The host: an empty box world and light set (the game's `box_world_new`).
 5. The level file read into the `Level`, its boxes and routes as rows (`level.rs`). The records the game keeps as its own types (a mission's `scenarios`,
    the footsteps' map, devices, civilians, vents, the drill plans) and the file's own records the game crate has a type for (a box with its shape and
    markings, a light, a door) go through `read.rs` and `records.rs`, a line a type.
@@ -160,27 +159,26 @@ before it empties the list.
 
 ### What the start reads of a level file, and what it does not
 
-Every file under `levels/` is read whole. `stand` REFUSES a file with anything the reader does not carry, and names it: a level stood without part
-of itself is another level.
+Every file under `levels/` is read whole. `stand` REFUSES a file with any fault of the reading, and names them all: a level stood without part of itself is
+another level.
 
-- **The file's own tree keeps the account** (`json.rs`). An object remembers which of its members were asked for, so when a file has been read,
-  whatever nobody asked for is named by its place (such as `doors[0].auto`): a record the reader has no line for, or a member a record has gained.
-  There is no second list of a record's members to keep beside its reader. What the loader leaves behind by rule (a floor, an author's notes, the
-  editor's block) it passes by in so many words (`skip`).
-- **A record the game keeps as its own type is read by that type** (`records.rs`): one line says which member of the file each field is, so a type
-  that gains a field does not compile until its line names the member. A box, a light and a door are read as the file's own record types (`BoxData`,
-  `LightData`, `DoorData`) and then laid. Props, switchables, routes, volumes and the mission's objectives have no record type in the game crate and
-  are read member by member.
-- NOT READ: `connectors` (a stair or a ladder between floors). A file with one is refused, and today every file's list is empty.
-- NOT CHECKED: the file's own rules (`validateLevelData`, `tools/levels/lib/levelData.ts`, which `tools/level-export.ts` runs on what it writes). A wrong
-  value stops the reader with its place in the file, a wrong level does not.
+- **The format is `file.rs`** (and `kit_file.rs`, the Team & kit picture's block), a line a record: which member of the file each field is. A record the game
+  keeps as its own type is read by that type (`records.rs`), so a type that gains a field does not compile until its line names the member. A value that is
+  not what its place wants is said by its place and the reading goes on (`read.rs`), so a file is told everything at once.
+- **The file's own tree keeps the account** (`json.rs`). An object remembers which of its members were asked for, so when a file has been read, whatever
+  nobody asked for is named by its place (such as `doors[0].auto`). A member the game lets go (a floor, an author's notes) is read by its type first
+  (a record's `drops`).
+- **The rules beside the reading are `faults.rs`**: ids of one thing each, names that point at something, numbers in their range, lists that go together.
+  `gate` asks them of every file (`level file`), a tool of the file it made (`levels judge`), a start not, and no page carries them.
 
 Every row of the mission list is stood, twice over, by the gate's `start` rows ("The gate", below).
 
-## Levels: what a level owes whoever plays it (`src/bin/levels.rs`)
+## Levels: what a level owes whoever plays it (`src/levels.rs`, the program `src/bin/levels.rs`)
 
 ```
 cd rust/game_start
+cargo run --release --bin levels -- file [level …]         # its file has no fault
+cargo run --release --bin levels -- judge < FILE           # every fault of a file that is nowhere yet
 cargo run --release --bin levels -- second-way [level …]   # every room the defenders can shut has another way in
 cargo run --release --bin levels -- sight [level …]        # a defender sees what he watches
 cargo run --release --bin levels -- walked [level …]       # its starts and its doors are on a way
@@ -271,7 +269,7 @@ gate                 # every row, four at a time. Exit 0 = all pass · 1 = a row
 gate save            # only rows whose name starts with a word: `gate start`, `gate "start depot-four"`
 gate pin [ROW…]      # record the pins again and say which moved; nothing moved = the file is as it was, byte for byte
 gate breaks          # each row of the breaks' table plays unbroken and must PASS, then each break must FAIL in its check's own words. Exit 0 = all did
-gate long            # the quick kind, then the rows a merge has no time for (`played`, `lesson`)
+gate long            # the quick kind, then the rows a merge has no time for (`played`, `lesson`, `level …`)
 gate list            # the rows
 gate tests [BINARY [TEST]]   # the whole native test set: no part of the quick kind
 ```
@@ -318,6 +316,8 @@ The rows, each with what it holds and then its breaks:
 - **long: `lesson <id>`:** the six tutorials, by a man at the keys (`src/lessons/`). Every step goes by on its deed, the run ends, and it owes what a run
   owes. Not pinned: a change of play moves its seconds and not what it holds. `gate long` plays them again with him reading each line. Break: `third`
   nothing he does reaches the game from the third step on.
+- **long: `level <question>`:** each question of `levels`. What every level owes whoever plays it, asked of all of them: 43 s of one core. `level file`, a
+  second of it, is of the quick kind. Break: `spoiled` the question's own red path.
 
 The runs (`RUNS` in `rows.rs`) reach the office's night breach under `doors`, a room clear in the rain (`depot-four`) under `bangs`, `compound-four` under
 `doors`, `mousehole-four` under `kit`, `glasshouse-four` and `killhouse-four` and a rescue under `push`, a quiet night (`bazaar-quiet`) under `fires`, the
@@ -329,9 +329,8 @@ counts and seconds, every red test by name with its panic line, what is ignored 
 badly or a build that failed. `gate tests squad_doors [test]` is that binary alone, or that test. `--break=BINARY` plants a red, to show that one is read.
 
 **What the runs played to their ends do not hold.** The hands-off player is one player on one seed, and Sam cannot go down: a run holds the floor, not
-whether the mission can be survived, and his teammates die more often than a good player's would. `owes` holds what the game may never do and counts what
-smells; its counts are pinned and not judged, so a count that goes up is a pin moved, which a commit says why of. It holds one seat, and nothing of Sam's
-speed. Neither player says a mission is any good to play.
+whether the mission can be survived. `owes` holds what the game may never do and counts what smells; its counts are pinned and not judged, so a count that
+goes up is a pin moved. It holds one seat, and nothing of Sam's speed.
 
 **What it does not hold.** A row holds a game to itself, to its pins or to the same game by another road, never that it is any good, and a mistake made at
 a pin passes: `start` a game at rest, `play` and `again` what the runs' hands reach, `save` the three seconds after each moment, `seats` a fight nobody

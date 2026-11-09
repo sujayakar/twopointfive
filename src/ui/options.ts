@@ -61,12 +61,9 @@ const RING_SMALL = 'hold it a moment for a ring of everything you can do here, t
 const WHO_WHAT = 'Who takes the next order', WHO_DEAD = "this key doesn't do anything now. hold Shift and tap B to send part of the squad";
 const whoRowGone = () => !keysOf('KeyT').length;
 /** THE SQUAD'S KEYS AS THE PAGE HAS THEM (rust/game_rules/src/cmdring `only`: the command key and the word's are the squad's only keys, and the wheel carries every
- *  order). The command key's row says both of its presses and the word's row says what the word does. Neither letter of the wheel (H and G: with a wheel
- *  up the letters are nobody's, with nothing up they give nothing) is listed.
- *  With `goals` (the sprint key with the command key gives one more thing to a part of the squad: nothing else picks a part of it) the list has
- *  that press as a row of its own, both caps following their keys, and the who key, which then steps nobody anywhere, says so. The codes are written
- *  in the words (Shift, B): the list names the keys as they are bound. `?qonly=0` = the rows as they were; `?goals=0` = no row for the part of the
- *  squad, and the who row's words as they were */
+ *  order). The command key's row says both of its presses and the word's row says what the word does.
+ *  The sprint key with the command key gives one more thing to a part of the squad (nothing else picks a part of it): that press is a row of its own, both caps following their
+ *  keys, and the who key, which then steps nobody anywhere, says so. The codes are written in the words (Shift, B): the list names the keys as they are bound. */
 const CMD_WHAT = 'Order the squad', CMD_TAP = 'tap it to give the usual order where your cursor is', CMD_HOLD = 'hold it a moment to open the wheel with every order, then pick with 1 to 5 or a click', CMD_SMALL = `${CMD_TAP}. ${CMD_HOLD}`;
 /** … and with the key tapped twice being 'fall in' (rust/game_rules/src/cmdring `twice`; `?qtwice=0` = the row's words as they were) the command key's row says so */
 const CMD_TWICE = `${CMD_TAP}. tap it twice to call everyone back to you. ${CMD_HOLD}`;
@@ -74,16 +71,15 @@ const PART_WHAT = 'Send part of the squad to one more thing', PART_SMALL = 'hold
 const WORD_WHAT = "Send in everyone who's waiting", WORD_SMALL = 'it also blows a charge the squad set';
 type KeyRow = [string[], string, string?];
 /** the Squad group's rows as the board has them (the note above). Pure: the three facts are handed in */
-export function squadRows(rows: KeyRow[], only: boolean, goals: boolean, twice = false): KeyRow[] {
-  if (!only) return rows;
+export function squadRows(rows: KeyRow[], twice = false): KeyRow[] {
   return rows.flatMap((r): KeyRow[] => { const k = r[0][0];
-    return k === 'H' || k === 'G' ? [] : k === 'B' ? [[r[0], CMD_WHAT, twice ? CMD_TWICE : CMD_SMALL], ...(goals ? [[['Shift', 'B'], PART_WHAT, PART_SMALL] as KeyRow] : [])] : k === 'F' ? [[r[0], WORD_WHAT, WORD_SMALL]] : [r]; });
+    return k === 'B' ? [[r[0], CMD_WHAT, twice ? CMD_TWICE : CMD_SMALL], [['Shift', 'B'], PART_WHAT, PART_SMALL]] : k === 'F' ? [[r[0], WORD_WHAT, WORD_SMALL]] : [r]; });
 }
 /** what the Controls list is built from that can change under it (a key given or taken, a rule ticked in the debugger): the list is built once */
 /** is the key tapped twice 'fall in' in the game that is up (off on a tutorial mission until a step lists it: rust/game_rules/src/rails `twice`) */
 const twiceNow = () => deps?.game.fallIn ?? true;
 const listNow = () => `${whoRowGone()} ${twiceNow()}`;
-const PACE_WHAT = 'Walking pace', SPRINT_WHAT = 'Sprint';
+const SPRINT_WHAT = 'Sprint';
 /** the sprint's row while Shift in a crouch is a fast crouch walk (rust/game_rules/src/player CROUCHRUN): what the same key does crouched, and that it is heard
  *  (each footfall louder than a walk's: it is no sneak) */
 export const sprintSmall = (): string | undefined => "hold it while you're crouched to stay low and move faster, but it's louder than walking";
@@ -91,8 +87,7 @@ export const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
   { group: 'Move', rows: [
     [['W', 'A', 'S', 'D'], 'Move'],
     [['Shift'], SPRINT_WHAT],
-    [['C'], 'Crouch'],
-    [['Wheel'], PACE_WHAT, 'slower is quieter'],
+    [['C'], 'Crouch', 'slower and quiet'],
     [['Q'], WALL_WHAT, WALL_SMALL],   // (wallLine below: its words while the row has no key)
     [['Ctrl', 'Mouse'], 'Orbit the camera'],
     [['Ctrl', 'Wheel'], 'Zoom'],
@@ -122,8 +117,6 @@ export const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
     [['B'], 'The usual order for that spot, at once'],
     [['T'], WHO_WHAT, 'everyone, red, blue or one teammate'],
     [['F'], 'Go', 'tells a waiting squad to go, and blows a charge the squad set'],
-    [['H'], 'With the orders up: the big tool on a door, smoke on the floor'],
-    [['G'], 'With the orders up: frag and clear'],
   ] },
   { group: 'Game', rows: [
     [['Esc'], 'Pause'],
@@ -383,10 +376,9 @@ function controls(body: HTMLElement, host: KeyHost) {
   for (const g of KEYS) {
     const box = el('div', 'op-kgroup'); box.appendChild(el('div', 'op-sec', g.group));
     const tabbed: typeof g.rows = g.group === 'Game' ? g.rows.flatMap(r => r[0][0] === 'Esc' ? [r, [['Tab'], 'Pause on your objectives and your squad, and back'] as typeof r, [['Tab'], 'Back out of a list'] as typeof r] : [r]) : g.rows;   // (the objectives card; rust/game_rules/src/backkey: the key Esc gave up)
-    const geared = tabbed.flatMap(r => r[1] === PACE_WHAT ? [] : r[1] === 'Crouch' ? [[r[0], r[1], 'slower and quiet'] as typeof r] : [r]);   // (rust/game_rules/src/player TWOGEARS: the wheel is nobody's pace, the crouch is the sneak)
-    const low = sprintSmall(), paced = !low ? geared : geared.map(r => r[1] === SPRINT_WHAT ? [r[0], r[1], low] as typeof r : r);   // (CROUCHRUN: Shift is not only the sprint)
+    const low = sprintSmall(), paced = !low ? tabbed : tabbed.map(r => r[1] === SPRINT_WHAT ? [r[0], r[1], low] as typeof r : r);   // (CROUCHRUN: Shift is not only the sprint)
     const rows = !slotNow() ? paced : g.group === 'Kit' ? [SLOT_ROW, ...paced] : paced.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
-    for (const [caps, what, small0] of g.group === 'Squad' ? squadRows(rows, true, true, twiceNow()) : rows) {
+    for (const [caps, what, small0] of g.group === 'Squad' ? squadRows(rows, twiceNow()) : rows) {
       const small1 = what === WHO_WHAT ? WHO_DEAD : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
       if (what === WHO_WHAT && whoRowGone()) continue;   // (quick orders are the whole squad's: rust/game_rules/src/cmdring wholeSquad)
       const r = el('div', 'op-krow'), c = el('div', 'op-caps');

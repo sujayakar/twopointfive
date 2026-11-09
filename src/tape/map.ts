@@ -47,7 +47,7 @@ export class TapeMap {
     const now = performance.now(); if (now - this.drawn < EVERY) return; this.drawn = now;
     if (this.d.at() < this.floorAt || this.d.at() - this.floorAt > FLOOR) { this.floor = this.d.floor(); this.floorAt = this.d.at(); }
     const M = this.d.now(), v = this.d.view(), notes = this.d.notes.flatMap((n, i) => n.pos ? [{ x: n.pos[0], z: n.pos[1], i: i + 1 }] : []);
-    const scene: MapScene = { men: M.men.map(m => ({ ...m, ring: m.team === 'operative' ? null : MAP_RING[m.state] ?? null })), doors: M.doors, shots: [], notes, cam: { x: v.look[0], z: v.look[2], fx: -Math.sin(v.yaw), fz: -Math.cos(v.yaw) } };
+    const scene: MapScene = { men: M.men.map(m => ({ ...m, ring: m.team === 'operative' ? null : MAP_RING[m.state] ?? null })), doors: M.doors, notes, cam: { x: v.look[0], z: v.look[2], fx: -Math.sin(v.yaw), fz: -Math.cos(v.yaw) } };
     this.scene = scene; this.draw();
   }
   private scene: MapScene | null = null;
@@ -58,7 +58,7 @@ export class TapeMap {
       let L = this.laid.get(cv);
       if (!L || L.W !== W || L.H !== H || L.dpr !== dpr || L.floor !== this.floor) {
         cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height;
-        const fit = mapFit(this.floor.bounds, W, H, big ? 26 : 6), f = c.getContext('2d'); if (f) drawFloor(f, W, H, dpr, { ...this.floor, doors: [] }, fit); L = { c, W, H, dpr, fit, floor: this.floor }; this.laid.set(cv, L);
+        const fit = mapFit(this.floor.bounds, W, H, big ? 26 : 6), f = c.getContext('2d'); if (f) drawFloor(f, W, H, dpr, this.floor, fit); L = { c, W, H, dpr, fit, floor: this.floor }; this.laid.set(cv, L);
       }
       const x = cv.getContext('2d'); if (!x) continue; x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, cv.width, cv.height); x.drawImage(L.c, 0, 0); drawScene(x, dpr, scene, L.fit, big);
     }

@@ -1,16 +1,14 @@
-// THE CONTROLS LIST SAYS THE SQUAD'S KEYS AS THE PAGE HAS THEM, AND NAMES NO PLAN MODE (src/ui/options.ts squadRows; rust/game_rules/src/cmdring `only`, `goals`).
+// THE CONTROLS LIST SAYS THE SQUAD'S KEYS AS THE PAGE HAS THEM, AND NAMES NO PLAN MODE (src/ui/options.ts squadRows; rust/game_rules/src/cmdring `only`).
 // The maintainer, 10-26: "let's remove plan mode and update the tutorials accordingly". On the page the squad's keys are the command key and the word's;
 // Shift with the command key sends a part of the squad to one more thing. Reads the module and the screen's source as text: no stand, no page.
 //   bun run tools/qa/squadkeys-check.ts
-//   as built   with `only` off the rows are handed back untouched
-//   keys       with `only` and `goals`: the command key's row says its tap and its hold, a row of the sprint key with that key follows it (both caps are
+//   keys       the command key's row says its tap and its hold, a row of the sprint key with that key follows it (both caps are
 //              rows' own, so they follow a rebinding), and the word's row says what the word does
-//   menu       the orders menu's row and the two rows that are keys of that menu alone (H, G) are listed only while the menu has a key, and then
-//              the menu's row says nothing of the middle button
-//   no part    with `goals` off there is no row for a part of the squad
-//   words      nothing the rows say with `goals` on names plan mode; in the screen's source the "Plan mode circles" row and the who row's
-//              plan mode words are behind `goals` being off, or are not there at all (plan mode out of the game)
-// SQUADKEYS_BREAK=1 asks for the rows with `goals` off where the page has it on: 'keys' must FAIL.
+//   letters    the two rows that were keys of the orders menu alone (H, G) are not listed
+//   twice      with the key tapped twice being 'fall in' the command key's row says so
+//   words      nothing the rows say names plan mode; in the screen's source the "Plan mode circles" row and the who row's
+//              plan mode words are not there at all (plan mode out of the game)
+// SQUADKEYS_BREAK=1 takes the rows as built, not as squadRows says them: 'keys' must FAIL.
 // The page's half (Options ▸ Controls as drawn, the older card's key list) is not here.
 const ROOT = new URL('../..', import.meta.url).pathname.replace(/\/$/, '');
 import { readFileSync } from 'node:fs';
@@ -18,26 +16,20 @@ import { readFileSync } from 'node:fs';
 type Row = [string[], string, string?];
 export async function squadKeysCheck(): Promise<boolean> {
   const BREAK = process.env.SQUADKEYS_BREAK === '1';
-  console.log(`\n=== squadkeys: the Controls list says the squad's keys as the page has them${BREAK ? ' — SQUADKEYS_BREAK: the rows asked for with goals off' : ''} ===`);
+  console.log(`\n=== squadkeys: the Controls list says the squad's keys as the page has them${BREAK ? ' — SQUADKEYS_BREAK: the rows as built' : ''} ===`);
   let all = true; const line = (ok: boolean, label: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); };
   const { squadRows, KEYS } = await import(`${ROOT}/src/ui/options.ts`), src = readFileSync(`${ROOT}/src/ui/options.ts`, 'utf8');
   const built: Row[] = (KEYS as { group: string; rows: Row[] }[]).find(g => g.group === 'Squad')?.rows ?? [];
   const say = (rows: Row[]) => rows.map(r => `[${r[0].join(' + ')}] ${r[1]}`).join(' · '), has = (rows: Row[], k: string) => rows.some(r => r[0].length === 1 && r[0][0] === k);
-  // ---- as built
-  const a = squadRows(built, false, true) as Row[];
-  line(a === built && built.length === 5, 'as built: with the squad on its older keys the five rows are handed back untouched', say(a));
   // ---- keys
-  const k = squadRows(built, true, !BREAK) as Row[], cmd = k.findIndex(r => r[0].length === 1 && r[0][0] === 'B'), part = k[cmd + 1], word = k.find(r => r[0][0] === 'F');
+  const k = (BREAK ? built : squadRows(built)) as Row[], cmd = k.findIndex(r => r[0].length === 1 && r[0][0] === 'B'), part = k[cmd + 1], word = k.find(r => r[0][0] === 'F');
   line(cmd === 0 && k[0][1] === 'Order the squad' && /tap it/.test(k[0][2] ?? '') && /hold it a moment to open the wheel/.test(k[0][2] ?? '') && !!part && part[0].join('+') === 'Shift+B' && /part of the squad/.test(part[1]) && /hold Shift and tap B\b/.test(part[2] ?? '') && /wheel/.test(part[2] ?? '')
     && !!word && /everyone who's waiting/.test(word[1]) && has(k, 'T'),
     "keys: the command key's row says its tap and its hold, the sprint key with it is the next row, and the word's row says what it does", say(k));
   // ---- letters
   line(!has(k, 'H') && !has(k, 'G'), "letters: the wheel's two letters are not listed", say(k));
-  // ---- no part
-  const n = squadRows(built, true, false) as Row[];
-  line(!n.some(r => r[0].length > 1) && n.length === k.length - (BREAK ? 0 : 1), 'no part: with goals off there is no row for a part of the squad', say(n));
   // ---- twice (the key tapped twice is 'fall in', rust/game_rules/src/cmdring `twice`: the command key's row says so, and only then)
-  const tw = squadRows(built, true, true, true) as Row[], twSaid = tw[0]?.[2] ?? '';
+  const tw = squadRows(built, true) as Row[], twSaid = tw[0]?.[2] ?? '';
   line(/tap it twice to call everyone back to you/.test(twSaid) && /tap it to give the usual order/.test(twSaid) && /hold it a moment to open the wheel/.test(twSaid) && !/twice/.test(k[0][2] ?? '') && tw.length === k.length,
     "twice: with the key tapped twice being 'fall in' the command key's row says so between its tap and its hold, and without the rule it does not", `"${twSaid}"`);
   // ---- words

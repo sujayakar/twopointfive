@@ -7,17 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// QA and the checkpoint: make this man's NEXT deal a named script (`None` = the pools).   (dialogue.ts forceScript)
-pub fn force_script(g: &mut crate::game::Game, talk: GameTalkId, id_2: Option<&str>) {
-    g.m.dialogue.script_by_talk.delete(talk);
-    g.m.dialogue.forced_by_talk.set(talk, id_2.map(String::from));
-}
-
-/// The deal forced on this man and not yet made: `None` = none pending, `Some(None)` = forced to the pools.   (dialogue.ts forcedScriptOf)
-pub fn forced_script_of(g: &crate::game::Game, talk: GameTalkId) -> Option<Option<String>> {
-    g.m.dialogue.forced_by_talk.get(talk).cloned()
-}
-
 /// The script of this id.   (dialogue.ts scriptById)
 pub fn script_by_id(id_2: &str) -> Option<crate::dialogue::Script> {
     scripts().into_iter().find(|sc| sc.id == id_2)
@@ -221,17 +210,6 @@ mod tests {
         assert!(fact(&c, Need::Office));
         assert!(!fact(&c, Need::HeardShots));
         assert!(!fact(&c, Need::Shift));
-    }
-
-    #[test]
-    fn a_forced_deal_tells_the_pools_from_none_pending() {
-        let mut g = Game::blank();
-        let t = GameTalkId(0);
-        assert_eq!(forced_script_of(&mut g, t), None);
-        force_script(&mut g, t, None);
-        assert_eq!(forced_script_of(&mut g, t), Some(None));
-        force_script(&mut g, t, Some("pedant-s1"));
-        assert_eq!(forced_script_of(&mut g, t), Some(Some(String::from("pedant-s1"))));
     }
 
     #[test]

@@ -104,11 +104,12 @@ fn an_office_partition_goes_off_as_board() {
 }
 
 /// a man down on the far side of The Pass's partition, by where the charge will open it, and his bones
-fn man_down(p: &mut Play, at: [f64; 2]) -> game::ids::GuardId {
+fn man_down(p: &mut Play, at: [f64; 2]) -> game::ids::GuardId { man_down_facing(p, at, None) }
+fn man_down_facing(p: &mut Play, at: [f64; 2], yaw: Option<f64>) -> game::ids::GuardId {
     let gd = p.mates().into_iter().filter(|&gd| p.up(gd)).last().expect("somebody to lay down");   // (the charge is set: the order needs nobody now)
     let c = p.g.gd[gd].ch;
     p.g.ch[c].pos = [at[0], 0.0, at[1]];
-    (p.g.ch[c].body_yaw, p.g.ch[c].aim_yaw) = (0.0, 0.0);   // (turned along the wall, whatever he was looking at: how he falls is the scene's. One who falls against its foot is a case of its own)
+    if let Some(yaw) = yaw { (p.g.ch[c].body_yaw, p.g.ch[c].aim_yaw) = (yaw, yaw); }   // (how he falls is the scene's: whichever way he was looking, or the way a check turned him)
     p.frame();
     game::combat::kill_guard(&mut p.g, gd, [1.0, 0.0, 0.0], Some(true), None, None, None);
     p.run(3.0);   // (he falls, and is still)
@@ -128,6 +129,7 @@ fn lying_on(p: &Play, gd: game::ids::GuardId) -> Vec<String> {
         for s in spots.iter() {
             if (s[0] - b.c[0]).abs() > reach + 0.1 || (s[2] - b.c[2]).abs() > reach + 0.1 { continue; }
             if b.c[1] - b.h[1] > s[1] + 0.1 { continue; }   // (it lies clear above him, on something else that stands: a sill)
+            if b.c[1] + b.h[1] < s[1] { continue; }   // (its top is under his bone: he lies on it, and he hides it)
             // his bone in the piece's own frame, level with it: within its outline by more than a hand
             let l = game::v3::quat::rotate(inv, [s[0] - b.c[0], 0.0, s[2] - b.c[2]]);
             if l[0].abs() < b.h[0] - 0.02 && l[2].abs() < b.h[2] - 0.02 && reach >= 0.05 { out.push(format!("a piece at {:?} half {:?} over his bone at {:?}", b.c, b.h, s)); break; }
@@ -148,6 +150,24 @@ fn a_piece_does_not_come_to_rest_on_a_man_down() {
         let on = lying_on(&p, gd);
         assert!(on.is_empty(), "seed {s}: {} pieces lie over the man down: {}", on.len(), on.join("; "));
     }
+}
+
+/// THE RULE: a man who falls with his head or his chest against the wall's foot has no piece on him either, whichever way he was looking when he fell.
+/// A FAILURE MEANS: a slab lies on him where a slab has nowhere to slide to: the wall behind him holds it there.
+#[test]
+fn a_piece_does_not_come_to_rest_on_a_man_at_the_walls_foot() {
+    let mut bad = Vec::new();
+    for s in [1, 4, 8, 9] {
+        for yaw in [core::f64::consts::FRAC_PI_2, -core::f64::consts::FRAC_PI_2] {
+            let (mut p, c) = pass(s);
+            let gd = man_down_facing(&mut p, [20.9, 9.0], Some(yaw));
+            game::wallcharge::wall_charge_blow(&mut p.g, Some(c), Some(true));
+            p.run(8.0);
+            let on = lying_on(&p, gd);
+            if !on.is_empty() { bad.push(format!("seed {s} yaw {yaw:.1}: {}", on.join("; "))); }
+        }
+    }
+    assert!(bad.is_empty(), "{} lie under a piece:\n{}", bad.len(), bad.join("\n"));
 }
 
 /// THE CONTROL: the same blast with him left where he stood lays pieces on the spot he would have lain on, so the rule above is not a blast that throws nothing there.

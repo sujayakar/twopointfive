@@ -166,7 +166,7 @@ pub unsafe extern "C" fn face_start(p: *const u8, n: usize, slot: i32, seed: u32
 }
 #[no_mangle]
 pub extern "C" fn face_drop(h: u32) {
-    saves::shelf_off(h, |_| true);
+    saves::shelf_off(h);
     moment::off(h);
     GAMES.with(|v| if let Some(x) = v.borrow_mut().get_mut((h as usize).wrapping_sub(1)) { *x = None; });
 }
@@ -187,7 +187,7 @@ pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
     with(h, |x| {
         game::game::game_step_seats(&mut x.g, dt, &cmds);
         saves::dealt(&x.g);
-        if flags & SAVES != 0 { saves::saves(h, x, dt); }
+        if flags & SAVES != 0 { saves::saves(h, x, dt); } else { saves::restart_turn(h, x); }
     });
 }
 /// the host has taken (or does not want) the out events: the list is a step's output and no part of the state, so nothing else empties it

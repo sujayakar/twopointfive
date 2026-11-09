@@ -3,7 +3,7 @@
 //!
 //!   the block of rust/sim the game stands in, zeroed under the layout's word   (sim/state.ts SimState.born)
 //!   the character's rows                                                       (anim/gltf.ts; `gltf.rs`)
-//!   the host: an empty box world and light set, the picture's settings         (host/stub.ts)
+//!   the host: an empty box world and light set         (host/stub.ts)
 //!   the level file read                                                        (tools/levels/lib/levelLoad.ts; `level.rs`)
 //!   the level's marks, its statics into the world, its lights into the set     (standup.ts populateHost; `passes.rs`)
 //!   the die, seeded: the men's construction dice are its first draws           (standup.ts: newDice, useDice)
@@ -14,7 +14,7 @@
 //! One function, `stand`, for every way a game starts natively: a test's scene (`scene.rs` writes a level file), a level of `levels/`, later a host.
 use crate::gltf::{self, GltfFile};
 use crate::json::Json;
-use crate::{level, passes, settings};
+use crate::{level, passes};
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -57,9 +57,7 @@ pub struct StartOpts {
 }
 impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, link: None, dress: false, difficulty: true, may_refuse: false } } }
 
-/// THE HOST'S OWN HALF of a stood game: the Input a hand writes, the camera that follows, the canvas's size (headless.ts standUp: `input`, `cam`, `canvas`).
-#[derive(Clone, Copy, Debug)]
-pub struct Host { pub input: InputId, pub cam: CameraId, pub canvas: game::host_hud::View }
+pub use game::standing::Host;
 
 pub struct Stood {
     pub game: Box<Game>,
@@ -85,36 +83,7 @@ fn populate_host(g: &mut Game, boxes: &mut Vec<BoxId>) {
     for ld in g.level.lights.clone().iter() { let l = game::render_lights::light_from_def(g, ld); game::render_lights::light_set_add(g, l); }
 }
 
-/// the state that still moves, at home in the game's block (state.ts settle, as `Game.stepSeats` says it when a tick opens: the die, the pose pool, the smoke grid)
-pub fn settle(g: &mut Game) {
-    game::math_dice::use_dice(g);
-    game::posehome::pose_home_tend(g);
-    // what the TypeScript's stores say of themselves in the block's head as they are made or moved in (state.ts keep, settle), and the Rust stores,
-    // which hold their part of the block from the start, do not: the pose pool (2), the doors (4), the furniture (32), the thrown things (128) and the
-    // men's columns (256) are at home. No rule reads these bits; the block is then the block the TypeScript start leaves, to the byte.
-    sim::state::state(g.sim).head.homes |= 2 | 4 | 32 | 128 | 256;
-}
-
-/// the canvas of a host that draws nothing (headless.ts standUp `canvas`)
-fn canvas() -> game::host_hud::View { game::host_hud::View { client_width: 1600.0, client_height: 1000.0, width: 1600.0, height: 1000.0 } }
-
-/// THE HOST'S OWN INPUT AND CAMERA for a game that stands (headless.ts standUp): a detached Input with the cursor where the harness always put it,
-/// a canvas of 1600 by 1000, a follow camera on the level's spawn, and the box world listed once.
-pub fn host_new(g: &mut Game) -> Host {
-    let input = game::input::input_detached(g);
-    g.tab.input[input].mouse_x = 800.0;
-    g.tab.input[input].mouse_y = 500.0;
-    let canvas = canvas();
-    let cam = g.tab.camera.push(game::camera::FollowCamera::blank());
-    g.tab.camera[cam].target = g.level.player_spawn;
-    g.tab.camera[cam].aspect = canvas.width / canvas.height;
-    game::camera::follow_camera_rebuild(g, cam);
-    game::scene_boxes::box_world_listed(g);
-    // (the host's camera and keys are handed to the game here, once, as standGame hands a TypeScript host's: game.ts hostCam)
-    g.host_cam = Some(cam);
-    g.host_input = Some(input);
-    Host { input, cam, canvas }
-}
+pub use game::standing::{canvas, host_new, settle};
 
 /// THE HOST OF A GAME THAT WAS HANDED ITS ROWS ELSEWHERE (a start made by another host and brought across): the game's own `host_cam` and
 /// `host_input`, on this host's canvas. None where the game was handed none.
@@ -159,50 +128,39 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     let rig = gltf::character(&mut g, assets.mannequin, cast);
     // the rows that only dress the picture, as this host has them (game/dress.ts DRESS: up on a page, down on a host that draws nothing)
     if !o.dress { g.m.dress.dress = game::dress::DressModDRESS::default(); }
-    // the host with no picture: an empty world and light set, the picture's settings, effectiveScale 1, no skin (stub.ts stubHost)
+    // the host with no picture: an empty world and light set, no skin (stub.ts stubHost)
     g.engine.world = game::scene_boxes::box_world_new(&mut g, game::Opaque, None);
     game::game::stand_in(&mut g, o.slot);
     g.engine.lights = game::render_lights::LightSet::blank();
-    g.engine.settings = settings::default_settings();
-    g.engine.effective_scale = 1.0;
     let (dressing, lived) = (g.k.destruction.on, g.k.lived.on);
     let mut loaded = level::load(&mut g, data, dressing, lived);
     populate_host(&mut g, &mut loaded.boxes);
+    g.col.boxes = loaded.boxes.clone();   // (`level.boxes`, which the constructor reads as the collision's list)
+    let men = game::standing::Men {
+        rig,
+        seats: o.seats as f64,
+        words: address.as_ref().map(|q| kit.as_ref().map_or_else(|| q.clone(), crate::kit_stage::mission_words)),
+        scenario: o.scenario.clone(),
+    };
+    // (THE LEVEL AS IT STANDS BEFORE THE MEN: what a restart stands them on again)
+    game::savestate::control::keep_level(&mut g, &men);
     // the die BEFORE the Game is made: its constructor rolls the men's construction dice
     // (it goes home to the block with the rest of the moving state, in `settle`: until then it draws off its own word)
     g.dice = Some(game::math_dice::sim_dice_new(o.seed as f64));
-    g.col.boxes = loaded.boxes.clone();   // (`level.boxes`, which the constructor reads as the collision's list)
-    // (the picture told the level's own night, as every host's stand tells it: standGame's line)
-    g.engine.settings.sky_zenith = g.level.sky.zenith;
-    g.engine.settings.sky_horizon = g.level.sky.horizon;
-    game::game::game_new(&mut g, rig, Some(game::game::GameNewOpts { seats: Some(o.seats as f64) }));
-    settle(&mut g);
-    // A GAME STOOD WITH NO ADDRESS is the harness's plain stand (standGame with `harness`): the solo night's card goes on at the stand, by the
-    // harness's own flag (host/profile.ts shippedBoot raises it). A game stood FROM AN ADDRESS has no such flag, as a page has none: nothing is
-    // put on at the stand, and the address's own question is asked once its mission is staged (`start_at_address`)
-    if address.is_none() {
-        g.stood.solo_stand = true;
-        game::kit::kit_solo_stand(&mut g, None);
+    let why = game::standing::stand_men(&mut g, &men);
+    // (a picture of a mission that refused is a picture of nothing, never a stop)
+    if let (Some(why), None, false) = (why.as_ref(), kit.as_ref(), o.may_refuse) {
+        match o.link.as_deref() {
+            Some(l) => panic!("the game refused the start from '{}': {}", l, why),
+            None => panic!("the game refused the {}: {}", o.scenario.as_ref().map_or("mission", |s| s.kind.as_str()), why),
+        }
     }
-    // the visit's hour laid over the level's own night (standGame's line: the hour is the address's, read before the game was made)
-    { let hour = g.stood.hour; if hour != game::hours::HourId::Night { game::hours::apply_hour(&mut g, hour); } }
-    let host = host_new(&mut g);
-    let mut refused = None;
-    if let Some(q) = address.as_ref() {
-        let words = kit.as_ref().map(crate::kit_stage::mission_words);
-        let r = game::scenario_run::start_at_address(&mut g, words.as_ref().unwrap_or(q));
-        // (a picture of a mission that refused is a picture of nothing, never a stop)
-        if let (Some(why), None, false) = (r.why.as_ref(), kit.as_ref(), o.may_refuse) { panic!("the game refused the start from '{}': {}", o.link.as_deref().unwrap_or(""), why); }
-        refused = r.why;
-        settle(&mut g);
-        if let Some(k) = kit.as_ref() { crate::kit_stage::begin(&mut g, k); settle(&mut g); }
-    } else if let Some(spec) = o.scenario.as_ref() {
-        if let Some(why) = game::scenario_run::start_scenario(&mut g, spec) { panic!("the game refused the {}: {}", spec.kind.as_str(), why); }
-        settle(&mut g);   // (the men the mission made: their poses go home as a tick's opening would take them)
-    }
+    if let Some(k) = kit.as_ref() { crate::kit_stage::begin(&mut g, k); settle(&mut g); }
     // (what the light under a roof is worked out from is made behind the loading, and not in the first step, whichever host stands it)
     game::scene_collision::light_ready(&mut g);
-    Stood { game: g, host, level: loaded, rig, refused }
+    let host = host_of(&g).expect("the men's lines make the host's rows");
+    game::savestate::control::stood(&mut g);   // (a copy of it kept now is of this stand)
+    Stood { game: g, host, level: loaded, rig, refused: why }
 }
 
 /// ONE FRAME OF A HOST WITH NO PICTURE (headless.ts `step`): the game's update on the host's Input and camera, the camera after the man, the lights'
