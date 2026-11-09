@@ -130,7 +130,7 @@ fn a_lever_of_the_difficulty_goes_over_whole() {
     assert_eq!((p.g.m.difficulty.cone_visit, p.g.k.fog.cone), (Some(!was), !was));
 }
 
-/// THE RULE: a card the player picked reaches his man on the first start after it and on every one after that.
+/// THE RULE: a wand the player picked for a teammate reaches him on the next try and on every one after that, and the mission's words said again take nothing off him.
 /// A FAILURE MEANS: the kit screen's choice is on the card and no man carries it, or it is lost on the second try.
 #[test]
 fn a_card_reaches_its_man_on_every_restart() {
@@ -141,12 +141,18 @@ fn a_card_reaches_its_man_on_every_restart() {
         let bangs = p.g.m.kit.kit.members[1].bangs;
         assert!(game::kit::kit_set(&mut p.g, 1.0, KitField::Bangs, &KitValue::Num((bangs - 1.0).max(0.0))) && game::kit::kit_set(&mut p.g, 1.0, KitField::Wand, &KitValue::Bool(true)));
     }
+    let carried = |p: &Play| {
+        assert!(p.g.m.kit.kit.members[1].wand, "the card lost it");
+        p.mates().into_iter().filter(|&m| game::wandorder::carries(&p.g, m)).count()
+    };
     for tries in 1..=3 {
         assert!(control::restart(&mut p.g, None));
         p.run(0.5);
-        assert!(p.g.m.kit.kit.members[1].wand, "try {tries}: the card lost it");
-        let carry = p.mates().into_iter().filter(|&m| game::kit::kit_of(&p.g, m).is_some_and(|k| k.wand)).count();
-        assert!(carry >= 1, "try {tries}: nobody carries the wand on the card");
+        assert_eq!(carried(&p), 1, "try {tries}: one man carries the wand on the card");
+        // (the words of the start once more, on the mission that is up: it stands as it stands)
+        game::scenario_run::start_from_query(&mut p.g, &game::scenario_run::StartFromQuerySearch::Text("?levelFile=office.json&roomclear&squad4".into()));
+        p.run(0.1);
+        assert_eq!(carried(&p), 1, "try {tries}: a second start took it off him");
     }
 }
 
