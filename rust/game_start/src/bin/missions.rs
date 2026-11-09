@@ -18,12 +18,16 @@ use game::game::GuardState;
 use game::ids::GuardId;
 use game::orders::Who;
 use game::teams::Team;
-use game_start::play::{dist, Opts, Play};
+use game_start::play::{dist, room_clear_files, Opts, Play};
 use std::collections::BTreeMap;
 
-/// Thirteen room clears by their level, and the missions of the list whose defenders are in no squad by their id.
-const LEVELS: [&str; 17] = ["barracks", "block", "compound", "defuse", "depot", "floodlit", "glasshouse", "hall", "killhouse", "mousehole", "office", "pass", "records",
-    "hostage-rescue", "rescue-consulate", "rescue-registry", "night-breach"];
+/// every room clear of the mission list by its level, and by their ids the missions whose defenders are in no squad
+fn every_mission() -> Vec<String> {
+    use game::scene_scenarios::ScenarioEntryKind::{Nightbreach, Rescue};
+    let clears = room_clear_files().into_iter().map(|f| f.trim_end_matches(".json").to_string());
+    clears.chain(game::scene_scenario_list::scenarios().into_iter().filter(|e| matches!(e.kind, Nightbreach | Rescue)).map(|e| e.id)).collect()
+}
+
 /// an order every so many frames, the first half a second in
 const ORDER_EVERY: usize = 300;
 const ORDER_FIRST: usize = 30;
@@ -156,8 +160,9 @@ fn main() {
         }
         i += 1;
     }
-    if levels.is_empty() { levels = LEVELS.iter().map(|l| l.to_string()).collect(); }
-    for l in &levels { if !LEVELS.contains(&l.as_str()) { fail(&format!("no mission '{l}' ({})", LEVELS.join(" "))); } }
+    let every = every_mission();
+    if levels.is_empty() { levels = every.clone(); }
+    for l in &levels { if !every.contains(l) { fail(&format!("no mission '{l}' ({})", every.join(" "))); } }
     if one {
         let runs: Vec<Run> = seeds.iter().map(|&s| play(&levels[0], both[0], s, secs)).collect();
         println!("{}", row(&levels[0], both[0], &runs));
