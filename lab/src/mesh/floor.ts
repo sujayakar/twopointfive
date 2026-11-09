@@ -40,7 +40,7 @@ export function relief(list: Stone[], dags: Dag[], n: number, under: number): Me
       const gx = v.map(p => (p[0] + SIDE / 2) / step), gz = v.map(p => (p[2] + SIDE / 2) / step), den = (gx[1]! - gx[0]!) * (gz[2]! - gz[0]!) - (gx[2]! - gx[0]!) * (gz[1]! - gz[0]!); if (Math.abs(den) < 1e-9) continue;
       for (let z = Math.max(0, Math.ceil(Math.min(...gz))); z <= Math.min(n, Math.floor(Math.max(...gz))); z++) for (let x = Math.max(0, Math.ceil(Math.min(...gx))); x <= Math.min(n, Math.floor(Math.max(...gx))); x++) {
         const b = ((x - gx[0]!) * (gz[2]! - gz[0]!) - (gx[2]! - gx[0]!) * (z - gz[0]!)) / den, e = ((gx[1]! - gx[0]!) * (z - gz[0]!) - (x - gx[0]!) * (gz[1]! - gz[0]!)) / den; if (b < 0 || e < 0 || b + e > 1) continue; const y = v[0]![1] * (1 - b - e) + v[1]![1] * b + v[2]![1] * e, o = z * N + x; if (y <= h[o]!) continue; h[o] = y;
-        const i0 = c.tri[t]!, i1 = c.tri[t + 1]!, i2 = c.tri[t + 2]!; for (let k = 0; k < 3; k++) { const a = (P.col[i0 * 4 + k]! * (1 - b - e) + P.col[i1 * 4 + k]! * b + P.col[i2 * 4 + k]! * e) / 255; col[o * 4 + k] = q(255 * a * s.tint[k]!); } col[o * 4 + 3] = 230;
+        const i0 = c.tri[t]!, i1 = c.tri[t + 1]!, i2 = c.tri[t + 2]!; for (let k = 0; k < 3; k++) { const a = Math.sqrt(P.col[i0 * 4 + k]! * (1 - b - e) + P.col[i1 * 4 + k]! * b + P.col[i2 * 4 + k]! * e); col[o * 4 + k] = q(255 * a * s.tint[k]!); } col[o * 4 + 3] = 230;
       }
     }
   }

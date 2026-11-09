@@ -150,14 +150,16 @@ export class Simplifier {
       ver[keep]!++; if (key > worst) worst = key; if (apart > off) off = apart;
       const m = this.round(keep, 0), ring = this.near.slice(0, m); for (let i = 0; i < m; i++) { const c = this.cost(keep, ring[i]!); if (c < Infinity) this.push(c, keep, ring[i]!); }
     }
+    // what is left faces as its triangles do: their vector area is that of all they stand for, so light falls on them as it did
+    for (let v = 0; v < nv; v++) { if (gone[v] || locked[v]) continue; let x = 0, y = 0, z = 0; const r = this.rings[v]!; for (let i = 0; i < this.ringN[v]!; i++) { const t = r[i]!; if (dead[t]) continue; const a = T[t * 3]! * 3, b = T[t * 3 + 1]! * 3, c = T[t * 3 + 2]! * 3, ux = V[b]! - V[a]!, uy = V[b + 1]! - V[a + 1]!, uz = V[b + 2]! - V[a + 2]!, wx = V[c]! - V[a]!, wy = V[c + 1]! - V[a + 1]!, wz = V[c + 2]! - V[a + 2]!; x += uy * wz - uz * wy; y += uz * wx - ux * wz; z += ux * wy - uy * wx; } const l = Math.hypot(x, y, z); if (l < 1e-30) continue; N[v * 3] = x / l; N[v * 3 + 1] = y / l; N[v * 3 + 2] = z / l; moved[v] = 1; }
     const out = new Uint32Array(left * 3), to = new Int32Array(nv).fill(-1); let o = 0;
     for (let t = 0; t < nt; t++) { if (dead[t]) continue; for (let k = 0; k < 3; k++) { const l = T[t * 3 + k]!; let g = to[l]!; if (g < 0) { if (!moved[l]) g = was[l]!; else { g = pool.add(); pool.pos[g * 3] = V[l * 3]! + cx; pool.pos[g * 3 + 1] = V[l * 3 + 1]! + cy; pool.pos[g * 3 + 2] = V[l * 3 + 2]! + cz; for (let q = 0; q < 3; q++) pool.nrm[g * 3 + q] = N[l * 3 + q]!; for (let q = 0; q < 4; q++) pool.col[g * 4 + q] = C[l * 4 + q]!; pool.spread[g] = S[l]!; } to[l] = g; } out[o++] = g; } }
     return { tri: out, error: Math.sqrt(worst), apart: Math.sqrt(off) };
   }
   /** what it says that its neighbors do not: of color, and of the way it faces */
   private says(v: number): number {
-    const n = this.round(v, 0), C = this.C; if (n < 3) return 0; let c = 0; for (let k = 0; k < 3; k++) { let m = 0; for (let i = 0; i < n; i++) m += C[this.near[i]! * 4 + k]!; c = Math.max(c, Math.abs(m / n - C[v * 4 + k]!)); }
-    return COLOR * c / 255 + NORMAL * Math.sqrt(2 * this.odd(v));
+    const n = this.round(v, 0), C = this.C; if (n < 3) return 0; let c = 0; for (let k = 0; k < 3; k++) { let m = 0; for (let i = 0; i < n; i++) m += C[this.near[i]! * 4 + k]!; c = Math.max(c, Math.abs(Math.sqrt(m / n) - Math.sqrt(C[v * 4 + k]!))); }
+    return COLOR * c + NORMAL * Math.sqrt(2 * this.odd(v));
   }
   /** how far a vertex's normal is from what its neighbors' would make of it (1 − cos) */
   private odd(v: number): number {

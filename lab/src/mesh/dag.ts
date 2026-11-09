@@ -47,7 +47,7 @@ function cutUp(pool: Pool, tri: Uint32Array, turn: number): Uint32Array[] {
 }
 /** `least`: where to stop, in triangles */
 export function buildDag(m: Mesh, least = 24): Dag {
-  const nv = m.pos.length / 3, pool = new Pool(nv * 2 + 64); pool.n = nv; pool.pos.set(m.pos); pool.nrm.set(m.nrm); for (let i = 0; i < nv * 4; i++) pool.col[i] = m.col[i]!;
+  const nv = m.pos.length / 3, pool = new Pool(nv * 2 + 64); pool.n = nv; pool.pos.set(m.pos); pool.nrm.set(m.nrm); for (let i = 0; i < nv * 4; i++) pool.col[i] = (m.col[i]! / 255) ** 2;
   const simp = new Simplifier(), clusters: Cluster[] = [], none: Ball = { x: 0, y: 0, z: 0, r: 0 };
   let live: Cluster[] = cutUp(pool, m.tri, 0.31).map(tri => { const b = ballOf(pool, tri); return { tri, apart: 0, error: 0, ball: b, parentError: Infinity, parentBall: none, bound: b, level: 0 }; }); clusters.push(...live);
   let owner = new Int32Array(0), level = 0;
