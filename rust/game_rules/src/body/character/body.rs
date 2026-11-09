@@ -70,6 +70,7 @@ fn limb_rows(n: &AnimNodes) -> Vec<(usize, f64, usize, usize)> {
 pub fn man_new(g: &mut crate::game::Game, body: crate::character::Character) -> CharId {
     let c = g.ch.push(body);
     g.cond.push(crate::condition::Cond::blank());
+    g.load.push(None);
     c
 }
 

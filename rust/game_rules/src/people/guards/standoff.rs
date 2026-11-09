@@ -107,7 +107,7 @@ fn pair_sight_rate(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards::Pa
     let lit = m::pow(light, 1.5);
     let smoke = v3::clamp((g.gd[gd].smoke_trans - 0.3) / 0.5, 0.0, 1.0);
     let keen = if escalation_of(g) >= 1.0 { KEEN } else { 1.0 };
-    let load = crate::kitload::load_seen(g, &crate::seats::here(g), crate::kitload::LoadSeenWho::Player);
+    let load = crate::kitload::load_seen(g, g.pl[g.player].ch);
     let mut rate = detect * lit * dist_f * smoke * keen * PAIR_LEGIBLE * load;
     if dist < 1.8 {
         rate = m::max(rate, 3.5);

@@ -304,7 +304,7 @@ fn plan(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, p: V3, i: i64, 
     let eyes = if k_.skill > 0.0 { eyes_for(g, gd) } else { Vec::new() };
     let low_walk = crouch_out(man, low, Mode::Walk);
     let keen_f = if crate::guards::escalation_of(g) >= 1.0 { crate::guards::KEEN } else { 1.0 };
-    let card_f = crate::kitload::load_seen(g, &crate::seats::here(g), crate::kitload::LoadSeenWho::Guard(gd));
+    let card_f = crate::kitload::load_seen(g, g.gd[gd].ch);
     let here = if !eyes.is_empty() { exposure_of(g, &eyes, gd) } else { none() };
     let off = s.off;
     let t = &mut s.trail;
@@ -402,7 +402,7 @@ fn plan(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, p: V3, i: i64, 
                 let too_long = stretch > k_.cross_m;
                 let waited = if man.mode == Mode::Wait && man.wait_t >= 0.0 { now - man.wait_t } else { 0.0 };
                 let cheap = end >= 0 && watched && !too_long && {
-                    let card = crate::kitload::load_cross(g, &crate::seats::here(g), crate::kitload::LoadCrossWho::Guard(gd));
+                    let card = crate::kitload::load_cross(g, g.gd[gd].ch);
                     cross_cost(g, &w.eyes, t, first as f64, end as f64, Some(card)) <= k_.budget
                 };
                 let walked = on_walk
