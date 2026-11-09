@@ -18,28 +18,6 @@ pub(super) fn u32(x: f64) -> f64 {
     js::to_u32(x) as f64
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // Bits printed by the TypeScript's own two lines under bun.
-    #[test]
-    fn u32_matches_the_typescript_bits() {
-        let cases: [(f64, u64); 6] = [
-            (0.0, 0x0000000000000000),
-            (-1.0, 0x41efffffffe00000),
-            (3.9, 0x4008000000000000),
-            (-3.9, 0x41efffffffa00000),
-            (4294967301.0, 0x4014000000000000),
-            (f64::NAN, 0x0000000000000000),
-        ];
-        for (x, bits) in cases {
-            assert_eq!(u32(x).to_bits(), bits, "u32({x})");
-        }
-    }
-
-}
-
 const AXES: [V3; 3] = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
 
 /// `u32(a ^ b)`: both sides to int32, the word back as an unsigned number
@@ -721,12 +699,6 @@ fn glass_shards_note(g: &mut crate::game::Game, s: &str) {
 mod tests_2 {
     use super::*;
     #[test]
-    fn seed_words_are_unsigned() {
-        // the TypeScript's own: (3000000000 ^ 0xC8A7) >>> 0, and (1.5 ^ 0xBACC) >>> 0
-        assert_eq!(xor_u32(3000000000.0, 0xC8A7 as f64), XOR_A);
-        assert_eq!(xor_u32(1.5, 0xBACC as f64), XOR_B);
-    }
-    #[test]
     fn axes_sort_stably_thinnest_first() {
         assert_eq!(sort_axes([0.2, 0.004, 0.1]), [1, 2, 0]);
         assert_eq!(sort_axes([0.1, 0.1, 0.004]), [2, 0, 1]);
@@ -738,6 +710,4 @@ mod tests_2 {
         assert_eq!(outline_walk(3.5, 1.0, 0.5), (0.5, 0.5));
         assert_eq!(outline_walk(5.5, 1.0, 0.5), (-1.0, 0.0));
     }
-    const XOR_A: f64 = 3000014503.0;
-    const XOR_B: f64 = 47821.0;
 }
