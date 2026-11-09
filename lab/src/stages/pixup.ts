@@ -26,7 +26,7 @@ export const pixUp = (lab: Lab, w: Weights, name = 'pixels'): UpscalePart => ({ 
     ${layer(1, of('a'), s => `max(${s}, vec4f(0.0))`)}
     ${layer(2, of('b'), s => `tanh(${s})`)}
     { let dl = array<f32, 9>(${Array.from({ length: 9 }, (_, k) => of('c')(k)).join(', ')}); for (var k = 0; k < 9; k++) { let w = exp(lw[k] + 2.5 * dl[k]); acc += tap[k] * w; wa += w; } }
-    var cur = acc / max(wa, 1e-6); cur = clamp(cur + (cur - mean) * (0.6 * ${of('c')(11)}), lo, hi9); let trust = exp(2.0 * ${of('c')(9)}); let wide = exp(1.5 * ${of('c')(10)}); var o = cur; _ = cm;`)
+    var cur = acc / max(wa, 1e-6); cur = clamp(cur, lo, hi9); let trust = exp(2.0 * ${of('c')(9)}); let wide = exp(1.5 * ${of('c')(10)}); var o = cur; _ = cm;`)
     .replace('* 1.1; let dv', '* 1.1 * wide; let dv').replace('/ (n * mix(1.0, 0.55, go) + 1.0)', '/ (n * mix(1.0, 0.55, go) * trust + 1.0)');
   code = 'fn lim1(x: f32) -> f32 { return clamp(x, -3.0, 3.0); }\nfn lim(x: vec3f) -> vec3f { return x; }\n' + code; code = code.replace(' let cm = lim(vec3f(0.0)).x;', '').replace(' _ = cm;', '').replace('fn lim(x: vec3f) -> vec3f { return x; }\n', '');
   if (!code.includes('* trust') || !code.includes('* wide') || !code.includes('lw[ki]') || !code.includes('tap[ki]') || sizes[0]![0] !== IN) throw new Error('the upscaler has changed under the learned hand');
