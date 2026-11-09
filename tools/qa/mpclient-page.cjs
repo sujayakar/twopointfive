@@ -123,7 +123,9 @@ async function drive({ N, BREAK, NO_AHEAD, PICK, WORDS }) {
     let way = '', room = -1, last = ''; for (const k of ['KeyW', 'KeyS', 'KeyD', 'KeyA']) { const d = await go(k); last = k; if (d > room) { room = d; way = k; } if (d >= 2.5) break; }
     if (last !== way) { await go(BACK[way]); room = await go(way); }
     await stood();
-    const k = BACK[way]; for (let i = 0; i < 2; i++) { step(10, [k]); await tick0(); }   // (turned back, and asleep at once: not walked back to the wall he started from)
+    // (turned back, and asleep at once: not walked back to the wall he started from. A page that hitched is catching up with its hands off the keys: asleep once the key has gone out)
+    const k = BACK[way], t0 = performance.now(), out = () => { const r = C.pending[C.pending.length - 1]; return !!r && r[1].k.includes(k); };
+    for (let i = 0; (i < 2 || S().far || !out()) && performance.now() - t0 < 30000; i++) { step(10, [k]); await tick0(); }
     const a = pos(), down = man().down; if (rest) C.rest(performance.now());
     // (past the last tick he said anything for, half a second let him come to a stand: what the server does with a man nobody speaks for)
     const lastSaid = Math.max(C.confirmed, ...C.pending.map(q => q[0])), was = C.walk; let quiet = null;
