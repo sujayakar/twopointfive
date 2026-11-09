@@ -9,8 +9,9 @@ and why they look as they do is `docs/agents/levels.md`; what a mission does wit
 | where | what it does |
 |---|---|
 | `rust/game_start/src/file.rs`, `kit_file.rs` | the format: every record of a file and the member each field is; the `scenarios.kitView` block's |
-| `rust/game_start/src/faults.rs` | the judge: each fault of a file by its place (`levels file`, the desk's `faults`) |
-| `tools/levels/lib/levelData.ts` | the file's TypeScript types, the order its `KEYS` are written in, `serializeLevelData`, `levelFaults` (asks the judge). The export refuses a file with a fault |
+| `rust/game_start/src/faults.rs` | the judge: each fault of a file by its place (`levels file`, `levels judge`). No page carries it |
+| `tools/levels/lib/levelData.ts` | the file's TypeScript types, the order its `KEYS` are written in, `serializeLevelData` |
+| `tools/levels/lib/judge.ts` | `levelFaults`: the judge, asked by a tool. The export refuses a file with a fault |
 | `tools/levels/lib/levelRows.ts`, `tools/levels/lib/scenarios.ts` | the TypeScript types of a box, door and light, and of the `scenarios` block |
 | `tools/levels/lib/levelLoad.ts` | `levelToData` writes a file from a generator's `Level`; `loadLevel` reads it back for the tools |
 | `rust/game_start/src/level.rs` | `load`: what was read, laid into the game |
@@ -19,8 +20,8 @@ and why they look as they do is `docs/agents/levels.md`; what a mission does wit
 | `rust/game_start/src/kit_plan.rs`, `kit_stage.rs`, `kit_set.rs` | read `scenarios.kitView` straight from the file |
 
 One reader is the judge. Reading says every value that is not what its place wants and every member nobody asked for (`json.rs`), and a start refuses a file with any. `faults.rs` adds the
-rules a file can be held to by itself: ids of one thing each, names that point at something, numbers in their range. They're asked before a level is committed, not at a start. A tool asks
-through the module, so make it after a change to the reader. A written null is a fault, but where this page says null is a word.
+rules a file can be held to by itself: ids of one thing each, names that point at something, numbers in their range. They're asked before a level is committed, not at a start.
+A written null is a fault, but where this page says null is a word.
 
 Words used below. V3 is three numbers, x, y, z, in meters, with y up; the floor is y 0. Rect is a record `x0`, `x1`, `z0`, `z1`, with x0 at most x1 and z0 at
 most z1. A yaw is radians where 0 faces +z and a quarter turn faces +x (forward is sin yaw, 0, cos yaw). A member is required unless it says a default.
@@ -516,6 +517,6 @@ mark, a route's first point, a room's id or name, a place, or `spawn`.
 1. The field in its type under `rust/game_types/src/`, and its line in `rust/game_start/src/records.rs`; a record of the file's own has both in `file.rs`
    or `kit_file.rs`.
    A member with no line stops the start.
-2. Its limits in `rust/game_start/src/faults.rs`, then the module made (`bun run tools/blitz/face-build.ts --profile play`).
+2. Its limits in `rust/game_start/src/faults.rs`.
 3. Its type in `tools/levels/lib/levelData.ts` (or `levelRows.ts`, `scenarios.ts`), its name in `KEYS`, and both directions in `levelLoad.ts`, where the record is not carried as written.
 4. Its reader in the rules, its line on this page, then `bun run tools/levels/export.ts <name>` for each level and `bun run tools/qa/level-needs.ts <name> --run`.

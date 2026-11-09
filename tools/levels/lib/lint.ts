@@ -7,7 +7,7 @@
 // 'warn' = probably unintended (duplicate slabs, budgets getting tight),
 // 'info' = worth knowing. `allow` silences a code for listed ids (or '*') with a reason — for legitimately odd authored things.
 import type { Vec3 } from '../../../src/math/vec';
-import { LevelData, levelFaults, DEVICE_DEFAULTS, floorUsers } from './levelData';
+import { LevelData, DEVICE_DEFAULTS, floorUsers } from './levelData';
 import { loadLevel } from './levelLoad';
 import { Box, BoxFlag, rayBox } from '../../../src/scene/boxes';
 import { WORLD } from '../../../src/scene/world';
@@ -61,11 +61,8 @@ export function lintLevel(data: LevelData, opts: LintOpts = {}): LintReport {
     return { findings, errors: findings.filter(f => f.severity === 'error').length, warnings: findings.filter(f => f.severity === 'warn').length, infos: findings.filter(f => f.severity === 'info').length, ms: t1 - t0, stats };
   };
 
-  // 0. the schema first: lint assumes a valid document (every ref resolves) — schema errors are reported and nothing else runs
-  const verrs = levelFaults(data);
-  if (verrs.length) { for (const e of verrs.slice(0, 50)) add('error', 'schema', e, idsInMessage(e, data)); return done({ schema: verrs.length }); }
   let level: Level;
-  try { level = loadLevel(data, { validate: false }); } catch (e) { add('error', 'load', String((e as Error).message ?? e)); return done({}); }
+  try { level = loadLevel(data); } catch (e) { add('error', 'load', String((e as Error).message ?? e)); return done({}); }
   const boxes = level.boxes; const boxId = (i: number) => data.boxes[i]?.id ?? `box#${i}`;
 
   // 1. boxes: extents, duplicates, bounds
@@ -170,13 +167,6 @@ export function lintLevel(data: LevelData, opts: LintOpts = {}): LintReport {
   // 9. mission marks against their rooms
   { const M = data.mission; for (const o of M.objectives) if (o.kind === 'reach') { const d = data.doors.find(x => x.id === o.door); if (d) { const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir); const mx = d.hinge[0] + ux * d.width / 2, mz = d.hinge[1] + uz * d.width / 2; const A = o.area; const dist = Math.max(A.x0 - mx, mx - A.x1, A.z0 - mz, mz - A.z1); if (dist > 1.5) add('warn', 'objective-door', `objective '${o.id}': its door '${o.door}' is ${dist.toFixed(1)} m outside the area's edge — the HUD arrow will point away from the room`, [`mark:${o.id}`]); } } }
   return done({ boxes: boxes.length, props: level.props.length, lights: level.lights.length, areaLights: derivedAreaLightCount(level).lit, doors: data.doors.length, routes: data.routes.length, devices: data.devices.length, markRows, floors: perFloor });
-}
-
-/** ids quoted in a fault ('box_0012', "light 'desk_lamp'") → selectable refs, best effort */
-export function idsInMessage(msg: string, data: LevelData): string[] {
-  const out: string[] = []; const m = /^(\w+)\[(\d+)\]/.exec(msg);
-  if (m) { const arr = (data as any)[m[1]]; const e = Array.isArray(arr) ? arr[Number(m[2])] : null; if (e?.id) out.push(m[1] === 'boxes' ? e.id : `${m[1].replace(/s$/, '')}:${e.id}`); }
-  return out;
 }
 
 /** One-line summary + the findings as printable lines (CLI / the editor's log). */
