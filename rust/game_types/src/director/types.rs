@@ -74,12 +74,6 @@ pub enum CondTest {
     Script { id: u32 },
     Burst { serial: u32 },
 }
-/// e.near's first argument, DoorRef | Place (director.ts:102, :1092)
-#[derive(Clone, Debug)]
-pub enum NearWhat {
-    Door { d: crate::director::DoorRef },
-    Place { p: crate::director::Place },
-}
 /// what a level script's define pass names and its beats read: one arm a script (scriptgen.cjs)
 #[derive(Clone, Debug, ToBytes, Default)]
 pub enum ScriptVars {
@@ -189,14 +183,6 @@ pub enum PlanKind {
     #[default] Breach,
     RoomClear,
 }
-impl PlanKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PlanKind::Breach => "breach",
-            PlanKind::RoomClear => "roomClear",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct LoadoutSpec {
@@ -297,24 +283,6 @@ pub enum ManifestExpectsItemKind {
     Within,
     Never,
 }
-impl ManifestExpectsItemKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ManifestExpectsItemKind::Order => "order",
-            ManifestExpectsItemKind::Within => "within",
-            ManifestExpectsItemKind::Never => "never",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ManifestSystems {
-    pub civilians: Option<bool>,
-    pub needs: Option<bool>,
-    pub qrf: Option<bool>,
-    pub autosave: Option<bool>,
-    pub their_frags: Option<bool>,
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct LintProblem {
@@ -326,14 +294,6 @@ pub struct LintProblem {
 pub enum LintProblemLevel {
     #[default] Error,
     Warn,
-}
-impl LintProblemLevel {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LintProblemLevel::Error => "error",
-            LintProblemLevel::Warn => "warn",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -360,23 +320,6 @@ pub enum LogRowKind {
     Trigger,
     Yield,
     Stimulus,
-}
-impl LogRowKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LogRowKind::Camera => "camera",
-            LogRowKind::Radio => "radio",
-            LogRowKind::Error => "error",
-            LogRowKind::Spawn => "spawn",
-            LogRowKind::Drill => "drill",
-            LogRowKind::Note => "note",
-            LogRowKind::Program => "program",
-            LogRowKind::Beat => "beat",
-            LogRowKind::Trigger => "trigger",
-            LogRowKind::Yield => "yield",
-            LogRowKind::Stimulus => "stimulus",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -417,13 +360,6 @@ pub struct MarkRef {
 pub enum MarkRefKind {
     #[default] Mark,
 }
-impl MarkRefKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            MarkRefKind::Mark => "mark",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct DoorRef {
@@ -435,13 +371,6 @@ pub struct DoorRef {
 pub enum DoorRefKind {
     #[default] Door,
 }
-impl DoorRefKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorRefKind::Door => "door",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct VolumeRef {
@@ -452,67 +381,6 @@ pub struct VolumeRef {
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum VolumeRefKind {
     #[default] Volume,
-}
-impl VolumeRefKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            VolumeRefKind::Volume => "volume",
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct RouteRef {
-    pub kind: crate::director::RouteRefKind,
-    pub id: String,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum RouteRefKind {
-    #[default] Route,
-}
-impl RouteRefKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RouteRefKind::Route => "route",
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct GroupRef {
-    pub kind: crate::director::GroupRefKind,
-    pub id: String,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum GroupRefKind {
-    #[default] Group,
-}
-impl GroupRefKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GroupRefKind::Group => "group",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct VariantRef {
-    pub kind: crate::director::VariantRefKind,
-    pub id: crate::director::VariantRefId,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum VariantRefKind {
-    #[default] Variant,
-}
-impl VariantRefKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            VariantRefKind::Variant => "variant",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
@@ -536,31 +404,6 @@ pub struct LoadoutRef {
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum LoadoutRefKind {
     #[default] Loadout,
-}
-impl LoadoutRefKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LoadoutRefKind::Loadout => "loadout",
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct DeviceRef {
-    pub kind: crate::director::DeviceRefKind,
-    pub id: String,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum DeviceRefKind {
-    #[default] Device,
-}
-impl DeviceRefKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DeviceRefKind::Device => "device",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -587,13 +430,6 @@ pub struct OrderPatch2 {
     pub smoke: Option<Option<bool>>,
     /// INVENTED: true only from a caller that passes a goal it keeps and moves (orders.ts:1519, qrf.ts:828, :851): that one compares by value. goal Some(Some(_)) from anyone else is a new leg, even at the same spot (squad.ts:146)
     pub held: bool,
-}
-
-#[derive(Clone, Debug)]
-pub enum OrderPatch2AimAt {
-    List(V3),
-    Unit(crate::director::UnitRef),
-    Mark(crate::director::MarkRef),
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -660,13 +496,6 @@ pub struct CondArm0 {
 pub enum CondArm0K {
     #[default] Time,
 }
-impl CondArm0K {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CondArm0K::Time => "time",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CondArm1 {
@@ -677,13 +506,6 @@ pub struct CondArm1 {
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum CondArm1K {
     #[default] Frames,
-}
-impl CondArm1K {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CondArm1K::Frames => "frames",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -706,13 +528,6 @@ impl Default for CondArm2 {
 pub enum CondArm2K {
     Pred,
 }
-impl CondArm2K {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CondArm2K::Pred => "pred",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct CondArm3 {
@@ -727,13 +542,6 @@ pub struct CondArm3 {
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum CondArm3K {
     #[default] Event,
-}
-impl CondArm3K {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CondArm3K::Event => "event",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -779,26 +587,11 @@ pub struct CondArm4 {
 pub enum CondArm4K {
     #[default] Beat,
 }
-impl CondArm4K {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CondArm4K::Beat => "beat",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum CondArm4State {
     #[default] Done,
     Started,
-}
-impl CondArm4State {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CondArm4State::Done => "done",
-            CondArm4State::Started => "started",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -834,50 +627,6 @@ pub enum BeatState {
     Running,
     Cancelled,
 }
-impl BeatState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BeatState::Done => "done",
-            BeatState::Failed => "failed",
-            BeatState::Running => "running",
-            BeatState::Cancelled => "cancelled",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Query {
-    pub t: f64,
-    pub time: f64,
-    pub escalation: f64,
-    pub mains_on: bool,
-    pub daylight: bool,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct DrillRef {
-    pub kind: crate::director::DrillRefKind,
-    pub name: String,
-    pub beat: String,
-    pub phase: String,
-    pub t: f64,
-    pub done: bool,
-    pub aborted: bool,
-    pub cleared: bool,
-    pub ops: Vec<crate::director::UnitRef>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum DrillRefKind {
-    #[default] Drill,
-}
-impl DrillRefKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DrillRefKind::Drill => "drill",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes)]
 pub struct CameraShotSpec {
@@ -912,75 +661,6 @@ impl Default for CameraShotSpec {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct BeatCtx {
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PuppetSpec {
-    pub goal: Option<crate::director::Place>,
-    pub aim: Option<crate::director::Place>,
-    pub crouch: Option<bool>,
-    pub walk: Option<f64>,
-    pub fixtures: Option<bool>,
-    pub throw_at: Option<crate::director::Place>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct SamView {
-    pub pos: V3,
-    pub yaw: f64,
-    pub speed: f64,
-    pub crouch: bool,
-    pub holstered: bool,
-    pub slot: String,
-    pub nv: bool,
-    pub hover: Option<crate::director::SamViewHover>,
-    pub rows: Vec<String>,
-    pub holding: Option<crate::director::SamViewHolding>,
-    pub dragging: Option<String>,
-    pub takedown: bool,
-    pub easing: Option<String>,
-    pub picking: Option<String>,
-    pub coding: Option<String>,
-    pub drive_t: f64,
-    pub pulled: bool,
-    pub stage: String,
-    pub codes: Vec<String>,
-    pub keys: Vec<String>,
-    pub aim_target: Option<String>,
-    pub aim_guard: Option<String>,
-    pub ocp: f64,
-    pub canisters: f64,
-    pub flashbangs: f64,
-    pub door_push: Option<String>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct SamViewHover {
-    pub kind: String,
-    pub verb: Option<String>,
-    pub in_reach: bool,
-    pub who: Option<String>,
-    pub running: bool,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct SamViewHolding {
-    pub who: String,
-    pub phase: String,
-    pub variant: String,
-    pub t: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ProgramApi {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DirectorApi {
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct LiveBeat {
     pub name: String,
@@ -1006,65 +686,6 @@ pub struct UnitRec {
     pub gd: GuardId,
     pub loadout: String,
     pub by: String,
-}
-
-#[derive(Clone, Debug)]
-pub enum DrillImpl {
-    Breach(crate::director::DrillImplBreach),
-    Clear(crate::director::DrillImplClear),
-    Hold,
-    Exchange(crate::director::DrillImplExchange),
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DrillImplBreach {
-    pub forwarded: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct DrillImplClear {
-    pub d: RoomClearId,
-    pub clock: f64,
-    pub last_phase: String,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct DrillImplExchange {
-    pub e: crate::guards::Engagement,
-}
-
-#[derive(Clone, Debug)]
-pub struct DrillRun {
-    pub ref_: crate::director::DrillRef,
-    pub impl_: crate::director::DrillImpl,
-    pub beat: String,
-    pub owner: String,
-    pub ops: Vec<crate::director::UnitRef>,
-    pub men: Vec<GuardId>,
-    pub times: JsMap<String, f64>,
-    pub t: f64,
-    pub phase: String,
-    pub done: bool,
-    pub aborted: bool,
-    pub cleared: bool,
-}
-impl Default for DrillRun {
-    fn default() -> Self {
-        DrillRun {
-            ref_: crate::director::DrillRef::default(),
-            impl_: crate::director::DrillImpl::Breach(crate::director::DrillImplBreach::default()),
-            beat: String::new(),
-            owner: String::new(),
-            ops: Vec::new(),
-            men: Vec::new(),
-            times: JsMap::new(),
-            t: 0.0,
-            phase: String::new(),
-            done: false,
-            aborted: false,
-            cleared: false,
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -1212,13 +833,6 @@ pub struct RunBurstsItemCond {
 pub enum RunBurstsItemCondK {
     #[default] Pred,
 }
-impl RunBurstsItemCondK {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RunBurstsItemCondK::Pred => "pred",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct RunKicksItem {
@@ -1232,38 +846,6 @@ pub struct RunKicksItem {
 pub struct RunObjective {
     pub text: String,
     pub pos: Option<V3>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct RunSystemsSaved {
-    pub civilians: Option<bool>,
-    pub needs: Option<bool>,
-    pub qrf: Option<bool>,
-    pub autosave: Option<bool>,
-}
-
-#[derive(Clone, Debug)]
-pub struct BeatFailure {
-    pub name: String,
-    pub message: String,
-    pub stack: Option<String>,
-    pub cause: Option<crate::Opaque>,
-}
-impl BeatFailure {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        BeatFailure {
-            name: String::new(),
-            message: String::new(),
-            stack: None,
-            cause: None,
-        }
-    }
-}
-impl Default for BeatFailure { fn default() -> Self { Self::blank() } }
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct UTIL {
 }
 
 #[derive(Clone, Debug, Default)]
@@ -1295,19 +877,6 @@ pub enum DirectorSignalData {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct DirectorChapters {
-    pub list: Vec<crate::director::DirectorChaptersListItem>,
-    pub i: f64,
-    pub frac: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct DirectorChaptersListItem {
-    pub title: String,
-    pub dur: f64,
-}
-
-#[derive(Clone, Debug, Default)]
 pub struct DirectorPushRow {
     pub kind: crate::director::DirectorPushRowKind,
     pub what: String,
@@ -1330,52 +899,10 @@ pub enum DirectorPushRowKind {
     Yield,
     Stimulus,
 }
-impl DirectorPushRowKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DirectorPushRowKind::Camera => "camera",
-            DirectorPushRowKind::Radio => "radio",
-            DirectorPushRowKind::Error => "error",
-            DirectorPushRowKind::Spawn => "spawn",
-            DirectorPushRowKind::Drill => "drill",
-            DirectorPushRowKind::Note => "note",
-            DirectorPushRowKind::Program => "program",
-            DirectorPushRowKind::Beat => "beat",
-            DirectorPushRowKind::Trigger => "trigger",
-            DirectorPushRowKind::Yield => "yield",
-            DirectorPushRowKind::Stimulus => "stimulus",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DirectorStartOpts {
     pub seed: Option<f64>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PlanRef {
-    pub kind: crate::director::PlanRefKind,
-    pub id: String,
-    pub plan: crate::director::PlanKind,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum PlanRefKind {
-    #[default] Plan,
-}
-impl PlanRefKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PlanRefKind::Plan => "plan",
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum DirectorPlanOf {
-    BreachPlan(crate::scene_level::BreachPlan),
-    RoomClearPlan(crate::scene_level::RoomClearPlan),
 }
 
 #[derive(Clone, Debug)]
@@ -1393,14 +920,8 @@ pub struct SignalViewS {
     pub data: Option<crate::director::Json>,
 }
 
-/// (src/game/director.ts:330 UTIL: a table nothing writes)
-pub fn util() -> crate::director::UTIL { crate::director::UTIL {  } }
-
 /// (src/game/director.ts:335 TEAMS: a table nothing writes)
 pub fn teams() -> Vec<String> { alloc::vec![String::from("guard"), String::from("operative"), String::from("hostile")] }
-
-/// (src/game/director.ts:377 SHOWCASE_VERBS: a table nothing writes)
-pub fn showcase_verbs() -> [String; 16] { [String::from("stage"), String::from("puppet"), String::from("press"), String::from("click"), String::from("camera"), String::from("caption"), String::from("chapters"), String::from("fade"), String::from("variant"), String::from("shift"), String::from("select"), String::from("view"), String::from("weather"), String::from("mission"), String::from("handover"), String::from("chaos")] }
 
 /// (src/game/director.ts:394 MAX_RESUMES)
 pub const MAX_RESUMES: f64 = 64.0;

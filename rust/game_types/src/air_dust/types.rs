@@ -3,14 +3,6 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, Default)]
-pub struct AirDustSnap {
-    pub acc: f64,
-    pub cur: f64,
-    pub s: Vec<f64>,
-    pub stat: String,
-}
-
 #[derive(Clone, Debug, ToBytes)]
 pub struct AirDust {
     pub dirty: bool,

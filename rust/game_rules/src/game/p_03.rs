@@ -73,10 +73,3 @@ pub fn guard_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, id_2:
     id
 }
 
-/// The snow's field and what the wind and the dust hold are handed to the GPU whole again next frame. Host's call (putback.ts). (game.ts Game.rehand)
-pub fn game_rehand(g: &mut crate::game::Game) {
-    g.snow_look_was = -1.0;
-    crate::air_sim::air_resend(g);
-    crate::air_dust::air_dust_resend(g);
-}
-

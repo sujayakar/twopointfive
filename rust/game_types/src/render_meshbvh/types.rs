@@ -29,17 +29,3 @@ pub struct MeshBvhStats {
     pub median_splits: f64,
 }
 
-/// (src/render/meshbvh.ts:15 LEAF_MAX)
-pub const LEAF_MAX: f64 = 4.0;
-
-/// (src/render/meshbvh.ts:17 MESH_MAX_CHARS)
-pub const MESH_MAX_CHARS: f64 = 8.0;
-
-/// (src/render/meshbvh.ts:18 BINS)
-pub const BINS: f64 = 12.0;
-
-/// (src/render/meshbvh.ts:19 MAX_DEPTH)
-pub const MAX_DEPTH: f64 = 40.0;
-
-/// (src/render/meshbvh.ts:186 LEAF_PAD)
-pub const LEAF_PAD: f64 = 0.0001;

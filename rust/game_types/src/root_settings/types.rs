@@ -169,12 +169,4 @@ pub enum RenderSettingsSmokeDiffuseWeight {
     #[default] Max,
     Bilinear,
 }
-impl RenderSettingsSmokeDiffuseWeight {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RenderSettingsSmokeDiffuseWeight::Max => "max",
-            RenderSettingsSmokeDiffuseWeight::Bilinear => "bilinear",
-        }
-    }
-}
 

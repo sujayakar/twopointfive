@@ -115,47 +115,6 @@ pub struct PairordersModPAIRLOGItem {
     pub serial: u32,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PairOrdersJobOf {
-    pub foe: GuardId,
-    pub mode: crate::pairorders::PairOrdersJobOfMode,
-    pub go: bool,
-    pub set: bool,
-    pub set_said: bool,
-    pub t0: f64,
-    pub born: f64,
-    pub check_t: f64,
-    pub wait_t: f64,
-    pub heel_t: f64,
-    pub going: bool,
-    pub scuffled: bool,
-    pub was_following: bool,
-    pub handed: Option<bool>,
-    pub watcher: Option<GuardId>,
-    pub watch_t: f64,
-    pub seen_t: f64,
-    pub force: bool,
-    pub cue_t: f64,
-    pub cue_by: Option<GuardId>,
-    pub cued: bool,
-    pub back_said: Option<bool>,
-    pub back_t: Option<f64>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum PairOrdersJobOfMode {
-    #[default] Mark,
-    Now,
-}
-impl PairOrdersJobOfMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PairOrdersJobOfMode::Mark => "mark",
-            PairOrdersJobOfMode::Now => "now",
-        }
-    }
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum PairOrdersMarkBy {
     Row,
@@ -211,5 +170,3 @@ pub struct PairordersStats {
     pub anyway: i32,
 }
 
-/// (src/game/pairorders.ts:110 STEADY_BREAK)
-pub const STEADY_BREAK: bool = false;

@@ -296,12 +296,6 @@ pub fn kit_worn(g: &mut crate::game::Game, n: Option<f64>, cards: Option<&[crate
     lend(g, &base, &t, n, &cards, mine)
 }
 
-/// The cards are the player's own layout: read, or put back as a recording had it (kit.ts kitOwn)
-pub fn kit_own(g: &mut crate::game::Game, v: Option<bool>) -> bool {
-    if let Some(v) = v { g.m.kit.deal_own = v; }
-    g.m.kit.deal_own
-}
-
 /// Member i's card as he wears it (kit.ts kitShown)
 pub fn kit_shown(g: &mut crate::game::Game, i: f64) -> crate::kit::MemberKit {
     kit_worn(g, None, None).swap_remove(i as usize)

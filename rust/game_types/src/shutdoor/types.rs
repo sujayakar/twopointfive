@@ -30,15 +30,6 @@ pub enum JobPhase {
     Shut,
     Wait,
 }
-impl JobPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            JobPhase::Go => "go",
-            JobPhase::Shut => "shut",
-            JobPhase::Wait => "wait",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct K {

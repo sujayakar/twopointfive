@@ -41,17 +41,6 @@ pub enum EngageResultOutcome {
     Timeout,
     Superseded,
 }
-impl EngageResultOutcome {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            EngageResultOutcome::Wiped => "wiped",
-            EngageResultOutcome::Reset => "reset",
-            EngageResultOutcome::Cleared => "cleared",
-            EngageResultOutcome::Timeout => "timeout",
-            EngageResultOutcome::Superseded => "superseded",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct EngageResultKillsItem {
@@ -108,10 +97,6 @@ pub struct Pair {
     pub facing: f64,
     pub aim: V3,
     pub vel: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PairKey {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -184,17 +169,6 @@ pub enum SearchSpotKind {
     Corner,
     Leaf,
 }
-impl SearchSpotKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SearchSpotKind::Wall => "wall",
-            SearchSpotKind::Prop => "prop",
-            SearchSpotKind::Open => "open",
-            SearchSpotKind::Corner => "corner",
-            SearchSpotKind::Leaf => "leaf",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SearchSpotSamplesItem {
@@ -225,16 +199,6 @@ pub enum SearchPlanPhase {
     Walk,
     Sweep,
 }
-impl SearchPlanPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SearchPlanPhase::Done => "done",
-            SearchPlanPhase::Look => "look",
-            SearchPlanPhase::Walk => "walk",
-            SearchPlanPhase::Sweep => "sweep",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Pieing {
@@ -255,15 +219,6 @@ pub enum PieingPhase {
     Approach,
     Cross,
 }
-impl PieingPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PieingPhase::Slice => "slice",
-            PieingPhase::Approach => "approach",
-            PieingPhase::Cross => "cross",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Rollcall {
@@ -281,15 +236,6 @@ pub enum RollcallStage {
     #[default] Idle,
     Called,
     Asked,
-}
-impl RollcallStage {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RollcallStage::Idle => "idle",
-            RollcallStage::Called => "called",
-            RollcallStage::Asked => "asked",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -314,34 +260,11 @@ pub struct GuardsModGroundTrackValue {
     pub vel: V3,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct BODYLIGHTDEFAULTS {
-    pub lit: f64,
-    pub lit_near: f64,
-    pub near_m: f64,
-    pub far_m: f64,
-    pub smoke: f64,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GuardsModBodyMetersValue {
     pub vis: f64,
     pub e: f64,
     pub t: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GuardsModBodyProbeNValue {
-    pub t: f64,
-    pub n: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LINEDEBUG {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct STANDOFFDEBUG {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -428,10 +351,6 @@ pub struct NOSIGHT {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct BREACHHOOKS {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct ShotRelationE {
     pub kind: crate::director::EventKind,
     pub who: Option<f64>,
@@ -442,15 +361,6 @@ pub enum ShotRelation {
     None,
     Own,
     Threat,
-}
-impl ShotRelation {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ShotRelation::None => "none",
-            ShotRelation::Own => "own",
-            ShotRelation::Threat => "threat",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -479,29 +389,11 @@ pub enum AlertCause {
     Sound,
     Sight,
 }
-impl AlertCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AlertCause::Body => "body",
-            AlertCause::Radio => "radio",
-            AlertCause::Sound => "sound",
-            AlertCause::Sight => "sight",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DoorTamper {
     Picked,
     Forced,
-}
-impl DoorTamper {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorTamper::Picked => "picked",
-            DoorTamper::Forced => "forced",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -523,15 +415,6 @@ pub enum LineStep {
     Clear,
     None,
     Step,
-}
-impl LineStep {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LineStep::Clear => "clear",
-            LineStep::None => "none",
-            LineStep::Step => "step",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -581,14 +464,6 @@ pub enum FreeCellNearTest {
     Room,
     Walk,
 }
-impl FreeCellNearTest {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FreeCellNearTest::Room => "room",
-            FreeCellNearTest::Walk => "walk",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum UnstickBegin {
@@ -596,30 +471,12 @@ pub enum UnstickBegin {
     Snapped,
     No,
 }
-impl UnstickBegin {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            UnstickBegin::Leg => "leg",
-            UnstickBegin::Snapped => "snapped",
-            UnstickBegin::No => "no",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum UnstickStep {
     Done,
     Stale,
     Walking,
-}
-impl UnstickStep {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            UnstickStep::Done => "done",
-            UnstickStep::Stale => "stale",
-            UnstickStep::Walking => "walking",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -661,28 +518,11 @@ pub enum RigOf {
     Carbine,
     Sc20k,
 }
-impl RigOf {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RigOf::Pistol => "pistol",
-            RigOf::Carbine => "carbine",
-            RigOf::Sc20k => "sc20k",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum LongRigOf {
     Carbine,
     Sc20k,
-}
-impl LongRigOf {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LongRigOf::Carbine => "carbine",
-            LongRigOf::Sc20k => "sc20k",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -690,33 +530,11 @@ pub enum HandCarry {
     Torch,
     Weapon,
 }
-impl HandCarry {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HandCarry::Torch => "torch",
-            HandCarry::Weapon => "weapon",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum InHand {
     Torch,
     Weapon,
-}
-impl InHand {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            InHand::Torch => "torch",
-            InHand::Weapon => "weapon",
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum InViewVp {
-    Array(Vec<f64>),
-    Float32Array(Vec<f32>),
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -748,16 +566,6 @@ pub enum PlanClearsCause {
     Body,
     Panel,
 }
-impl PlanClearsCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PlanClearsCause::Search => "search",
-            PlanClearsCause::Missing => "missing",
-            PlanClearsCause::Body => "body",
-            PlanClearsCause::Panel => "panel",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum EndEngagementOutcome {
@@ -766,17 +574,6 @@ pub enum EndEngagementOutcome {
     Cleared,
     Timeout,
     Superseded,
-}
-impl EndEngagementOutcome {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            EndEngagementOutcome::Wiped => "wiped",
-            EndEngagementOutcome::Reset => "reset",
-            EndEngagementOutcome::Cleared => "cleared",
-            EndEngagementOutcome::Timeout => "timeout",
-            EndEngagementOutcome::Superseded => "superseded",
-        }
-    }
 }
 
 /// the state this module keeps at its top level
@@ -886,12 +683,6 @@ pub const MOTION_NEAR_FLOOR: f64 = 0.8;
 /// (src/game/guards.ts:266 MOTION_HUNT_FLOOR)
 pub const MOTION_HUNT_FLOOR: f64 = 0.7;
 
-/// (src/game/guards.ts:368 BODY_LIGHT_DEFAULTS: a table nothing writes)
-pub fn body_light_defaults() -> crate::guards::BODYLIGHTDEFAULTS { crate::guards::BODYLIGHTDEFAULTS { lit: 0.22, lit_near: 0.04, near_m: 2.0, far_m: 5.0, smoke: 0.3 } }
-
-/// (src/game/guards.ts:403 BODY_LIGHT_LS)
-pub const BODY_LIGHT_LS: &str = "twopointsix.bodyLight";
-
 /// (src/game/guards.ts:493 BODY_DUTY_CAP)
 pub const BODY_DUTY_CAP: f64 = 45.0;
 
@@ -936,9 +727,6 @@ pub const LINE_FAIL_M: f64 = 0.75;
 
 /// (src/game/guards.ts:671 LINE_WALK_CLEAR_M)
 pub const LINE_WALK_CLEAR_M: f64 = 0.5;
-
-/// (src/game/guards.ts:674 LINE_DEBUG: a table nothing writes)
-pub fn line_debug() -> crate::guards::LINEDEBUG { crate::guards::LINEDEBUG {  } }
 
 /// (src/game/guards.ts:826 STANDOFF_MIN_M)
 pub const STANDOFF_MIN_M: f64 = 3.5;
@@ -1000,9 +788,6 @@ pub const SHIELD_RELEASE_BEAT_MIN: f64 = 0.35;
 /// (src/game/guards.ts:846 SHIELD_RELEASE_BEAT_JITTER)
 pub const SHIELD_RELEASE_BEAT_JITTER: f64 = 0.3;
 
-/// (src/game/guards.ts:856 STANDOFF_DEBUG: a table nothing writes)
-pub fn standoff_debug() -> crate::guards::STANDOFFDEBUG { crate::guards::STANDOFFDEBUG {  } }
-
 /// (src/game/guards.ts:900 PAIR_LEGIBLE)
 pub const PAIR_LEGIBLE: f64 = 3.0;
 
@@ -1017,9 +802,6 @@ pub fn standoff_now() -> JsMap<String, String> { { let mut t = JsMap::new(); t.s
 
 /// (src/game/guards.ts:1020 STANDOFF_NAMELESS: a table nothing writes)
 pub fn standoff_nameless() -> crate::guards::STANDOFFNAMELESS { crate::guards::STANDOFFNAMELESS { lost: None, enter: None, cornered: None, no_shot: None, line: None, dropped: Some(String::from("he's dropped {him} — TAKE HIM")), freed: Some(String::from("he's loose — get clear!")), hit_him: Some(String::from("…christ— I hit {him}—")) } }
-
-/// (src/game/guards.ts:1318 SIGHTS_COS)
-pub const SIGHTS_COS: f64 = 0.866;
 
 /// (src/game/guards.ts:1360 UNSTICK_REACH_M)
 pub const UNSTICK_REACH_M: f64 = 2.4;
@@ -1036,17 +818,8 @@ pub const UNSTICK_SNAP_REACH_M: f64 = 3.5;
 /// (src/game/guards.ts:1360 UNSTICK_BODY_R)
 pub const UNSTICK_BODY_R: f64 = 0.15;
 
-/// (src/game/guards.ts:1578 WALL_BREAK)
-pub const WALL_BREAK: bool = false;
-
-/// (src/game/guards.ts:1585 FLOOR_BREAK)
-pub const FLOOR_BREAK: bool = false;
-
 /// (src/game/guards.ts:1586 FLOOR_TOP)
 pub const FLOOR_TOP: f64 = 0.249;
-
-/// (src/game/guards.ts:1641 TORCH_WALL_BREAK)
-pub const TORCH_WALL_BREAK: bool = false;
 
 /// (src/game/guards.ts:1759 SEARCH_RADIUS_M)
 pub const SEARCH_RADIUS_M: f64 = 9.0;
@@ -1234,5 +1007,3 @@ pub fn team_tint() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(Stri
 /// (src/game/guards.ts:3475 TEAM_TINT2: a table nothing writes)
 pub fn team_tint2() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(String::from("guard"), [0.02, 0.02, 0.025]); t.set(String::from("operative"), [0.05, 0.07, 0.06]); t.set(String::from("hostile"), [0.09, 0.08, 0.05]); t.set(String::from("player"), [0.1, 0.32, 0.18]); t.set(String::from("civilian"), [0.05, 0.06, 0.1]); t } }
 
-/// (src/game/guards.ts:3591 BREACH_HOOKS: a table nothing writes)
-pub fn breach_hooks() -> crate::guards::BREACHHOOKS { crate::guards::BREACHHOOKS {  } }

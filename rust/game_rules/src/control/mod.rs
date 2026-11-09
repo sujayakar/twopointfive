@@ -37,10 +37,6 @@ use crate::ids::*;
 use crate::V3;
 use alloc::{format, string::String, vec::Vec};
 
-/// what of a man a rule may be granted
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Channel { Legs, Aim, Hands }
-
 /// where in a man's frame a rule is asked
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Stage { Body, Cover }
@@ -139,8 +135,6 @@ impl<T: Default + Clone> PerMan<T> {
         &mut self.rows[i]
     }
     pub fn get(&self, gd: GuardId) -> Option<&T> { self.rows.get(gd.ix()) }
-    /// every man's row, by his id
-    pub fn iter(&self) -> impl Iterator<Item = (GuardId, &T)> { self.rows.iter().enumerate().map(|(i, r)| (GuardId::from_ix(i), r)) }
 }
 
 fn asked<R: Reaction>(g: &Game, gd: GuardId) -> Option<Intent> { R::propose(g, gd).map(Ask::intent) }
@@ -254,7 +248,6 @@ pub struct ControlState {
     pub mind: PerMan<crate::mind::Note>,
 }
 impl ControlState {
-    pub fn blank() -> Self { ControlState::default() }
     pub fn of(&self, gd: GuardId) -> Option<&Control> { self.men.get(gd.ix()).and_then(|c| c.as_ref()) }
     fn row(&mut self, gd: GuardId) -> &mut Control {
         let i = gd.ix();
@@ -353,11 +346,6 @@ pub fn control_line(g: &Game, gd: GuardId) -> String {
     if m.hold { s.push_str(&format!(" · held to his post by {} for {:.1} s", by(p.hold_by), g.time - p.hold_since)); }
     if m.pinned { s.push_str(&format!(" · pinned by {} for {:.1} s", by(p.pinned_by), g.time - p.pinned_since)); }
     s
-}
-
-/// every man of the floor, a line each
-pub fn control_summary(g: &Game) -> String {
-    g.guards.iter().map(|&gd| control_line(g, gd)).collect::<Vec<_>>().join("\n")
 }
 
 /// how many man-ticks each rule has had a man, a rule a clause: `a live grenade 212 · broke and ran 0 · … · head down under fire 31`
@@ -488,5 +476,3 @@ mod tests {
         assert_eq!(control_line(&g, gd), "Alvarez: shaken by a blast for 0.0 s · said no: a live grenade, broke and ran");
     }
 }
-pub use ::game_types::control::types;
-pub use types::*;

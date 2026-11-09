@@ -23,16 +23,6 @@ pub enum StPhase {
     Thru,
     Turn,
 }
-impl StPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            StPhase::Go => "go",
-            StPhase::Wait => "wait",
-            StPhase::Thru => "thru",
-            StPhase::Turn => "turn",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Spot {
@@ -46,10 +36,6 @@ pub struct Spot {
 pub struct Face {
     pub stand: Option<crate::handleside::Spot>,
     pub via: Option<[V3; 2]>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct HANDLEDEBUG {
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -142,5 +128,3 @@ pub struct HandlesideStats {
     pub tool_posts: i32,
 }
 
-/// (src/game/handleside.ts:66 HANDLE_DEBUG: a table nothing writes)
-pub fn handle_debug() -> crate::handleside::HANDLEDEBUG { crate::handleside::HANDLEDEBUG {  } }

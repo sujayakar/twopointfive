@@ -378,16 +378,6 @@ pub fn reset_qrf(g: &mut crate::game::Game) {
     g.qrf = crate::qrf::Qrf::blank();
 }
 
-/// Panel: take the whole response back out of the world now.   (qrf.ts qrfStandDown)
-pub fn qrf_stand_down(g: &mut crate::game::Game) {
-    let men = all_men(g);
-    reset_qrf(g);
-    for m in men {
-        if g.guards.contains(&m) { crate::guards::despawn_unit(g, m); }
-    }
-    crate::game::game_note(g, "QRF stood down (sandbox)");
-}
-
 /// Ask for the response team; refused on the radio once one has come. Returns whether it was requested now.   (qrf.ts requestQrf)
 pub fn request_qrf(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> bool {
     let m0 = marks_of(g);

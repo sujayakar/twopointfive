@@ -98,22 +98,6 @@ pub enum Phase {
     Enter,
     Restack,
 }
-impl Phase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Phase::Clear => "clear",
-            Phase::Bang => "bang",
-            Phase::Kick => "kick",
-            Phase::Approach => "approach",
-            Phase::Breach => "breach",
-            Phase::Stack => "stack",
-            Phase::Done => "done",
-            Phase::Wait => "wait",
-            Phase::Enter => "enter",
-            Phase::Restack => "restack",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct BreachDrillBeatsItem {
@@ -147,17 +131,6 @@ pub enum FlowSt {
     Corner,
     Centre,
 }
-impl FlowSt {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FlowSt::Hold => "hold",
-            FlowSt::Wait => "wait",
-            FlowSt::Into => "into",
-            FlowSt::Corner => "corner",
-            FlowSt::Centre => "centre",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BreachLive {
@@ -172,27 +145,6 @@ pub struct BreachLive {
 pub struct BreachDrillNewOpts {
     pub guarantee_downs: Option<bool>,
     pub live: Option<crate::breach::BreachLive>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct BreachDrillRoutePatch {
-    pub goal: Option<V3>,
-    pub speed: Option<f64>,
-    pub face: Option<f64>,
-    pub strafe: Option<bool>,
-    pub aim_at: Option<V3>,
-    pub stance: Option<crate::character::Stance>,
-    pub stack_side: Option<f64>,
-    pub crouch: Option<bool>,
-    pub lean: Option<f64>,
-    pub upper: Option<crate::character::UpperMode>,
-    pub light: Option<bool>,
-    pub arrived: Option<bool>,
-    pub hot: Option<bool>,
-    pub flinch: Option<bool>,
-    pub direct: Option<bool>,
-    pub smoke: Option<bool>,
-    pub over: Option<crate::game::GuardScriptOver>,
 }
 
 /// (src/game/breach.ts:26 RUN)

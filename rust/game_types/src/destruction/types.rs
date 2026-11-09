@@ -115,18 +115,6 @@ pub enum DKind {
     Binder,
     Tv,
 }
-impl DKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DKind::Screen => "screen",
-            DKind::Paper => "paper",
-            DKind::Housing => "housing",
-            DKind::Clutter => "clutter",
-            DKind::Binder => "binder",
-            DKind::Tv => "tv",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct DestructionCaps {
@@ -164,12 +152,6 @@ pub struct DestructionDustQueueItem {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct ChaosTune {
-    pub chaos: Option<f64>,
-    pub debris_impulses: Option<bool>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct LaneMark {
     pub look: f64,
     pub r: [f64; 2],
@@ -182,16 +164,6 @@ pub enum DestructionTakeK {
     Puff,
     Knock,
     Decal,
-}
-impl DestructionTakeK {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DestructionTakeK::Paper => "paper",
-            DestructionTakeK::Puff => "puff",
-            DestructionTakeK::Knock => "knock",
-            DestructionTakeK::Decal => "decal",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -212,22 +184,6 @@ pub struct DestructionDoorsForOpts {
 pub struct DestructionWallsForOpts {
     pub radius: Option<f64>,
     pub power: Option<f64>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DestructionTestImpulseKind {
-    Bang,
-    Thud,
-    Impact,
-}
-impl DestructionTestImpulseKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DestructionTestImpulseKind::Bang => "bang",
-            DestructionTestImpulseKind::Thud => "thud",
-            DestructionTestImpulseKind::Impact => "impact",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -296,12 +252,6 @@ pub struct DestructionStats {
 
 /// (src/game/destruction.ts:152 PALL_DIRS: a table nothing writes)
 pub fn pall_dirs() -> Vec<[f64; 2]> { alloc::vec![[1.0, 0.0], [0.7071, 0.7071], [0.0, 1.0], [-0.7071, 0.7071], [-1.0, 0.0], [-0.7071, -0.7071], [0.0, -1.0], [0.7071, -0.7071]] }
-
-/// (src/game/destruction.ts:153 CHAOS_DEFAULTS: a table nothing writes)
-pub fn chaos_defaults() -> crate::knobs::ChaosK { crate::knobs::ChaosK::page() }
-
-/// (src/game/destruction.ts:154 LS_KEY)
-pub const LS_KEY: &str = "twopointsix.chaos";
 
 /// (src/game/destruction.ts:187 LANE_MARK: a table nothing writes)
 pub fn lane_mark() -> JsMap<String, crate::destruction::LaneMark> { { let mut t = JsMap::new(); t.set(String::from("dent"), crate::destruction::LaneMark { look: 0.0, r: [0.036, 0.045], s: [0.7, 0.9] }); t.set(String::from("shred"), crate::destruction::LaneMark { look: 1.0, r: [0.06, 0.075], s: [0.85, 0.85] }); t.set(String::from("crack"), crate::destruction::LaneMark { look: 2.0, r: [0.085, 0.11], s: [0.9, 0.9] }); t } }

@@ -222,5 +222,3 @@ pub fn step(g: &mut Game, h: &Host, dt: f64) {
     game::input::input_end_frame(g, h.input);
 }
 
-#[allow(dead_code)]
-fn unused() -> String { String::new() }

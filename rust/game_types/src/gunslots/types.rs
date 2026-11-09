@@ -31,14 +31,6 @@ pub enum SideHung {
     Carbine,
     Sc20k,
 }
-impl SideHung {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SideHung::Carbine => "carbine",
-            SideHung::Sc20k => "sc20k",
-        }
-    }
-}
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]

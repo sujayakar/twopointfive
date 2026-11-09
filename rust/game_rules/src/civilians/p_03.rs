@@ -816,17 +816,6 @@ pub fn evacuation_check(g: &mut crate::game::Game) {
     }
 }
 
-/// the switch and the fail rule, kept on the machine: the browser's storage is the host's, and with no storage the TypeScript's own try does nothing (civilians.ts saveCivTune)
-pub fn save_civ_tune(g: &crate::game::Game) {}
-
-
-/// the switch flipped live (civilians.ts setCivilians)
-pub fn set_civilians(g: &mut crate::game::Game, on: bool) {
-    g.tune.civilians = on;
-    save_civ_tune(g);
-    reset_civilians(g);
-}
-
 /// the panel's and the probes' buttons: frighten one now, or send her to a phone (civilians.ts civPanic)
 pub fn civ_panic(g: &mut crate::game::Game, gd: Option<GuardId>, what: Option<crate::civilians::CivPanicWhat>) -> String {
     let what = what.unwrap_or(CivPanicWhat::Panic);
@@ -859,30 +848,6 @@ pub fn civ_panic(g: &mut crate::game::Game, gd: Option<GuardId>, what: Option<cr
     if st != CivState::Work && st != CivState::Startled && st != CivState::Cower { return format!("{} is already {}", name, st.as_str()); }
     to_alarmed(g, gd, CivCause::Panel, pp, false);
     format!("{} panics (as if she had seen you where you stand)", name)
-}
-
-/// a check of the spots and every civilian's marks against the level: free nav cells, every spot reachable (civilians.ts checkCivSpots)
-pub fn check_civ_spots(g: &mut crate::game::Game) -> Vec<String> {
-    use crate::scene_collision::{nav_grid_find_path, nav_grid_is_blocked};
-    let mut errs: Vec<String> = Vec::new();
-    let found = civ_spots(g);
-    let spots: Vec<CivSpot> = found.phones.into_iter().chain(found.exits).collect();
-    for s in &spots {
-        if nav_grid_is_blocked(g, s.pos[0], s.pos[2]) { errs.push(format!("{} ({}, {}) is not a free nav cell", s.name, js::num_str(s.pos[0]), js::num_str(s.pos[2]))); }
-    }
-    let defs = g.level.civilians.clone().unwrap_or_default();
-    for def in &defs {
-        for (i, p) in def.points.iter().enumerate() {
-            if nav_grid_is_blocked(g, p[0], p[2]) { errs.push(format!("{} mark {} ({}, {}) is not a free nav cell", def.name, i, js::num_str(p[0]), js::num_str(p[2]))); }
-        }
-        for s in &spots {
-            if nav_grid_find_path(g, def.points[0], s.pos, Some(6000.0), None).is_none() { errs.push(format!("{} cannot reach {} from her first mark", def.name, s.name)); }
-        }
-        for i in 1..def.points.len() {
-            if nav_grid_find_path(g, def.points[i - 1], def.points[i], Some(6000.0), None).is_none() { errs.push(format!("{}: no path mark {} → {}", def.name, i - 1, i)); }
-        }
-    }
-    errs
 }
 
 #[cfg(test)]

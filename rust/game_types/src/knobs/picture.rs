@@ -8,15 +8,6 @@ pub enum PictureKShow {
     Off,
     Cursor,
 }
-impl PictureKShow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PictureKShow::All => "all",
-            PictureKShow::Off => "off",
-            PictureKShow::Cursor => "cursor",
-        }
-    }
-}
 
 /// the switch and every number of it (UNTUNED by play)
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]

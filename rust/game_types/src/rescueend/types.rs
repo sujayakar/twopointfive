@@ -21,78 +21,10 @@ impl RescueEnd {
 }
 impl Default for RescueEnd { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct RescueEndSnap {
-    pub lead: Option<f64>,
-    pub clear_at: f64,
-    pub led: bool,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct RescueEndRowsRowOver {
-    pub kind: Option<crate::rescueend::RescueEndRowsRowOverKind>,
-    pub pos: Option<V3>,
-    pub line1: Option<String>,
-    pub line2: Option<String>,
-    pub in_reach: Option<bool>,
-    pub off: Option<bool>,
-    pub progress: Option<f64>,
-    pub target: Option<FixtureId>,
-    pub door: Option<DoorId>,
-    pub guard: Option<GuardId>,
-    pub verb: Option<crate::game::Verb>,
-    pub running: Option<bool>,
-    pub close: Option<crate::close::CloseKind>,
-    pub past: Option<bool>,
-    pub framed: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RescueEndRowsRowOverKind {
-    Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
-}
-impl RescueEndRowsRowOverKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueEndRowsRowOverKind::Cam => "cam",
-            RescueEndRowsRowOverKind::Guard => "guard",
-            RescueEndRowsRowOverKind::Breaker => "breaker",
-            RescueEndRowsRowOverKind::Door => "door",
-            RescueEndRowsRowOverKind::Light => "light",
-            RescueEndRowsRowOverKind::Body => "body",
-            RescueEndRowsRowOverKind::Objective => "objective",
-            RescueEndRowsRowOverKind::Held => "held",
-            RescueEndRowsRowOverKind::Wall => "wall",
-            RescueEndRowsRowOverKind::Switch => "switch",
-            RescueEndRowsRowOverKind::Charge => "charge",
-            RescueEndRowsRowOverKind::Cancel => "cancel",
-        }
-    }
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RescueEndWon {
     Out,
     Cleared,
-}
-impl RescueEndWon {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueEndWon::Out => "out",
-            RescueEndWon::Cleared => "cleared",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]

@@ -17,24 +17,6 @@ pub struct GpSite {
     pub hits: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum FrameSide {
-    Left,
-    Right,
-    Bottom,
-    Top,
-}
-impl FrameSide {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FrameSide::Left => "left",
-            FrameSide::Right => "right",
-            FrameSide::Bottom => "bottom",
-            FrameSide::Top => "top",
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug)]
 pub enum Tag {
     Num(f64),
@@ -190,9 +172,6 @@ pub const GP_WEB_RING: f64 = 0.45;
 
 /// (src/game/glassPattern.ts:37 GP_REMAINDER)
 pub const GP_REMAINDER: f64 = -2.0;
-
-/// (src/game/glassPattern.ts:157 NB_SAMPLES)
-pub const NB_SAMPLES: f64 = 6.0;
 
 /// (src/game/glassPattern.ts:272 GP_DICE_JIT)
 pub const GP_DICE_JIT: f64 = 0.6;

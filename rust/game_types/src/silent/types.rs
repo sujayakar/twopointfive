@@ -10,16 +10,6 @@ pub enum By {
     Tool,
     Api,
 }
-impl By {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            By::Start => "start",
-            By::Order => "order",
-            By::Tool => "tool",
-            By::Api => "api",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
@@ -43,14 +33,6 @@ pub enum SilentModSILENTLOGItemTo {
     #[default] Silent,
     Loud,
 }
-impl SilentModSILENTLOGItemTo {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SilentModSILENTLOGItemTo::Silent => "silent",
-            SilentModSILENTLOGItemTo::Loud => "loud",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SilentModSeatsValue {
@@ -62,14 +44,6 @@ pub struct SilentModSeatsValue {
 pub enum SilentBoot {
     First,
     Again,
-}
-impl SilentBoot {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SilentBoot::First => "first",
-            SilentBoot::Again => "again",
-        }
-    }
 }
 
 /// the state this module keeps at its top level

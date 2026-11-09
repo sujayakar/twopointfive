@@ -145,14 +145,6 @@ pub struct BreakRowLandSfxItem {
     pub gain: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct FurnSave {
-    pub v: f64,
-    pub s: Vec<f64>,
-    pub p: Vec<f64>,
-    pub m: Option<Vec<f64>>,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SteelPart {
     pub box_: BoxId,
@@ -177,10 +169,6 @@ pub struct Member {
     pub group: Option<crate::furnblast::Group>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct NONEDONE {
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct BreakClassOfB {
     pub does: Option<String>,
@@ -202,79 +190,10 @@ pub struct OverPlanQ {
     pub z1: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct FurnitureInventory {
-    pub groups: f64,
-    pub members: f64,
-    pub hidden: f64,
-    pub gone_props: f64,
-    pub list: Vec<crate::furnblast::FurnitureInventoryListItem>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct FurnitureInventoryListItem {
-    pub id: f64,
-    pub members: Vec<f64>,
-    pub a: crate::furnblast::AABB,
-    pub heavy: f64,
-    pub surf: crate::scene_materials::Surf,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FurnitureFixedBudget {
-    pub chunks: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum FurnitureBreakStaticMode {
-    Apart,
-    Shatter,
-}
-impl FurnitureBreakStaticMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FurnitureBreakStaticMode::Apart => "apart",
-            FurnitureBreakStaticMode::Shatter => "shatter",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FurnitureBreakStaticBudget {
-    pub chunks: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum FurnitureThrowPieceMode {
-    Apart,
-    Shatter,
-}
-impl FurnitureThrowPieceMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FurnitureThrowPieceMode::Apart => "apart",
-            FurnitureThrowPieceMode::Shatter => "shatter",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FurnitureThrowPieceBudget {
-    pub chunks: f64,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum FurnitureSteelMode {
     Apart,
     Shatter,
-}
-impl FurnitureSteelMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FurnitureSteelMode::Apart => "apart",
-            FurnitureSteelMode::Shatter => "shatter",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -282,46 +201,11 @@ pub enum FurnitureFragmentsMode {
     Apart,
     Shatter,
 }
-impl FurnitureFragmentsMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FurnitureFragmentsMode::Apart => "apart",
-            FurnitureFragmentsMode::Shatter => "shatter",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FurniturePushableBudget {
-    pub chunks: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FurnitureBreakPropBudget {
-    pub chunks: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FurnitureMouthStackDone {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FurnitureMouthBudget {
-    pub chunks: f64,
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum FurnitureNoteResetCause {
     Load,
     Reset,
-}
-impl FurnitureNoteResetCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FurnitureNoteResetCause::Load => "load",
-            FurnitureNoteResetCause::Reset => "reset",
-        }
-    }
 }
 
 /// the state this module keeps at its top level
@@ -374,5 +258,3 @@ pub const STEEL_SHEETS_ROOM: f64 = 16.0;
 /// (src/game/furnblast.ts:128 STEEL_CARCASS_MOST)
 pub const STEEL_CARCASS_MOST: f64 = 2.2;
 
-/// (src/game/furnblast.ts:142 NONE_DONE: a table nothing writes)
-pub fn none_done() -> crate::furnblast::NONEDONE { crate::furnblast::NONEDONE {  } }

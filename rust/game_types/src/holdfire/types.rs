@@ -9,15 +9,6 @@ pub enum LiftWhy {
     Order,
     Drill,
 }
-impl LiftWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LiftWhy::Shot => "shot",
-            LiftWhy::Order => "order",
-            LiftWhy::Drill => "drill",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
@@ -69,5 +60,3 @@ pub struct HoldfireStats {
     pub lifts: [i32; 3],
 }
 
-/// (src/game/holdfire.ts:100 WAITS: a table nothing writes)
-pub fn waits() -> Vec<String> { alloc::vec![String::from("place"), String::from("standoff"), String::from("armed")] }

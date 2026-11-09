@@ -87,13 +87,6 @@ pub struct PropIo {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct PT {
-    pub asleep: f64,
-    pub dirty: f64,
-    pub rolling: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct PD {
     pub hx: f64,
     pub hz: f64,
@@ -141,36 +134,6 @@ pub struct PE {
     pub level: f64,
     pub speed: f64,
     pub rolling: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PP {
-    pub dt: f64,
-    pub props: f64,
-    pub contacts: f64,
-    pub leaves: f64,
-    pub ways: f64,
-    pub flags: f64,
-    pub friction: f64,
-    pub cas_decel: f64,
-    pub cas_visc: f64,
-    pub cas_spin: f64,
-    pub cas_start: f64,
-    pub cas_stop: f64,
-    pub events: f64,
-    pub wrong: f64,
-    pub swept: f64,
-    pub guided: f64,
-    pub pairs: f64,
-    pub walls: f64,
-    pub held: f64,
-    pub substeps: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PF {
-    pub enabled: f64,
-    pub castor: f64,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -225,18 +188,6 @@ pub fn prop_u32() -> [String; 4] { [String::from("flags"), String::from("who"), 
 /// (src/sim/propshome.ts:33 PROP_HEAD)
 pub const PROP_HEAD: f64 = 16.0;
 
-/// (src/sim/propshome.ts:35 PT: a table nothing writes)
-pub fn pt() -> crate::sim_propshome::PT { crate::sim_propshome::PT { asleep: 1.0, dirty: 2.0, rolling: 4.0 } }
-
-/// (src/sim/propshome.ts:37 PROP_SOUNDS: a table nothing writes)
-pub fn prop_sounds() -> [String; 3] { [String::from("scrape"), String::from("thud"), String::from("roll")] }
-
-/// (src/sim/propshome.ts:43 PROP_BIT)
-pub const PROP_BIT: f64 = 32.0;
-
-/// (src/sim/propshome.ts:83 SWAPPED: a table nothing writes)
-pub fn swapped() -> [String; 3] { [String::from("flags"), String::from("who"), String::from("id")] }
-
 /// (src/sim/propshome.ts:87 PD: a table nothing writes)
 pub fn pd() -> crate::sim_propshome::PD { crate::sim_propshome::PD { hx: 0.0, hz: 1.0, radius: 2.0, height: 3.0, mass: 4.0, inv_mass: 5.0, inv_i: 6.0, decel: 7.0, visc: 8.0, rest: 9.0, chair: 10.0 } }
 
@@ -251,12 +202,6 @@ pub fn pe() -> crate::sim_propshome::PE { crate::sim_propshome::PE { prop: 0.0, 
 
 /// (src/sim/propshome.ts:94 PROP_EV)
 pub const PROP_EV: f64 = 10.0;
-
-/// (src/sim/propshome.ts:96 PP: a table nothing writes)
-pub fn pp() -> crate::sim_propshome::PP { crate::sim_propshome::PP { dt: 0.0, props: 1.0, contacts: 2.0, leaves: 3.0, ways: 4.0, flags: 5.0, friction: 6.0, cas_decel: 7.0, cas_visc: 8.0, cas_spin: 9.0, cas_start: 10.0, cas_stop: 11.0, events: 12.0, wrong: 13.0, swept: 14.0, guided: 15.0, pairs: 16.0, walls: 17.0, held: 18.0, substeps: 19.0 } }
-
-/// (src/sim/propshome.ts:98 PF: a table nothing writes)
-pub fn pf() -> crate::sim_propshome::PF { crate::sim_propshome::PF { enabled: 1.0, castor: 2.0 } }
 
 /// (src/sim/propshome.ts:99 PROP_PARS)
 pub const PROP_PARS: f64 = 24.0;

@@ -690,25 +690,6 @@ pub fn prompt_for(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::Pr
     else if next == StageKey::Num(3.0) { PromptFor { text: String::from("ask what he knows"), spent: false } }
     else { PromptFor { text: String::from("he's got nothing left"), spent: true } }
 }
-/// One line for the panel and probes: his cell, the next press, what he has said, what he would give next.   (dialogue.ts dialogueSummary)
-pub fn dialogue_summary(g: &mut crate::game::Game, gd: GuardId) -> String {
-    let ctx = gather(g, gd);
-    let talk = g.gd[gd].talk;
-    let next = stage_key_of(g.tab.game_talk[talk].stage + 1.0);
-    let sc = peek_script(g, talk);
-    let live = sc.as_ref().filter(|x| script_live(x, &ctx));
-    let it = intel_for(g, &ctx, talk, live);
-    let row = &g.tab.game_talk[talk];
-    let why = if ctx.why.is_empty() { String::from("—") } else { ctx.why.join(", ") };
-    let script = match sc.as_ref() { Some(x) => alloc::format!("{} ({})", x.id, x.shape.as_str()), None => String::from("—") };
-    let gives = if gives_at(ctx.t, ctx.band).contains(&next) { " (gives)" } else { "" };
-    let gave = if row.given.is_empty() { String::new() } else { alloc::format!(" · gave {}", row.given.keys().join("/")) };
-    let last = match row.last.as_ref() { Some(l) => alloc::format!(" · last: {} @{} s{}", l.id, l.cell, l.stage), None => String::new() };
-    alloc::format!("{} ({}{}) · cell {}·{}·{} · A {} [{}] · script {} · next press: stage {}{} · said {}{} · next intel: {}{}",
-        g.gd[gd].callsign, ctx.t.as_str(), if g.gd[gd].state == crate::game::GuardState::Dead { ", down" } else { "" },
-        ctx.k.as_str(), ctx.band.as_str(), ctx.t.as_str(), js::to_fixed(ctx.a, 2), why, script, stage_str(next), gives, row.said.len(), gave,
-        it.as_ref().map_or("—", |x| x.kind.as_str()), last)
-}
 
 #[cfg(test)]
 mod tests {

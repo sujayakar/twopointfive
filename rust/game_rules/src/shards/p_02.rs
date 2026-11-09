@@ -648,7 +648,6 @@ pub fn glass_shards_update(g: &mut crate::game::Game, _dt: f64) {
     g.shards.sounds_this_frame = 0.0;
 }
 
-
 /// A restart: nothing pending, no litter.   (shards.ts GlassShards.reset)
 pub fn glass_shards_reset(g: &mut crate::game::Game) {
     glass_shards_clear(g);
@@ -683,27 +682,6 @@ pub fn glass_shards_note(g: &mut crate::game::Game, s: &str) {
     let line = alloc::format!("{} {}", js::to_fixed(g.time, 2), s);
     g.shards.log.push(line);
     if g.shards.log.len() > 60 { g.shards.log.remove(0); }
-}
-
-/// A hand test: a fragment of `area` m² let go at `at`, thrown along `dir`.   (shards.ts GlassShards.test)
-pub fn glass_shards_test(g: &mut crate::game::Game, at: V3, dir: Option<V3>, area: Option<f64>, kind: Option<crate::shards::GlassShardsTestKind>, type_: Option<crate::glasspen::PaneType>) -> bool {
-    use crate::shards::{GlassFragmentLikeCause as Cause, GlassFragmentLikeKind as Kind, GlassShardsTestKind as TestKind};
-    let dir = dir.unwrap_or([0.0, 0.0, 1.0]);
-    let area = area.unwrap_or(0.06);
-    let kind = match kind.unwrap_or(TestKind::Piece) { TestKind::Piece => Kind::Piece, TestKind::Sheet => Kind::Sheet, TestKind::Dagger => Kind::Dagger, TestKind::Clump => Kind::Clump };
-    let type_ = type_.unwrap_or(crate::glasspen::PaneType::Annealed);
-    let n: V3 = if m::hyp2(dir[0], dir[2]) > 1e-6 { v3::normalize([dir[0], 0.0, dir[2]]) } else { [0.0, 0.0, 1.0] };
-    let s = m::sqrt(area) / 2.0;
-    let u_: V3 = [n[2], 0.0, -n[0]];
-    let corner = |a: f64, b: f64| -> V3 { [at[0] + u_[0] * a * s, at[1] + b * s, at[2] + u_[2] * a * s] };
-    let outline = vec![corner(-1.0, -1.0), corner(1.0, -1.0), corner(1.0, 1.0), corner(-1.0, 1.0)];
-    g.shards.serial += 1.0;
-    let seed = u32(m::imul(js::to_i32(g.shards.serial), js::to_i32(2654435761.0)) as f64);
-    let f = GlassFragmentLike {
-        pane: -1.0, type_, kind, outline, centre: v3::copy(at), normal: n, thickness: 0.006, area, velocity: [n[0] * 0.8, -0.3, n[2] * 0.8], spin: [2.0, 0.5, -1.5], tint: [0.72, 0.8, 0.82],
-        grain: if kind == Kind::Clump { 0.009 } else { 0.0 }, cause: Cause::Hit, who: crate::consts::NOBODY_ID, seed, fall: None, landed: None,
-    };
-    glass_shards_release(g, &f)
 }
 
 #[cfg(test)]

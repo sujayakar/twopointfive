@@ -44,16 +44,6 @@ pub fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// both switches: settled on the page (netquiet.ts live)
-pub fn live(g: &mut crate::game::Game) -> bool {
-    true
-}
-
-/// live, and the check's breakage is never set by the game (netquiet.ts fed)
-pub fn fed(g: &mut crate::game::Game) -> bool {
-    true
-}
-
 /// the loud noises his ears have counted (netquiet.ts loudOf)
 pub fn loud_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     let h = &g.gd[gd].witness.heard;

@@ -24,21 +24,6 @@ pub struct DarkFoeSpot {
     pub mate: bool,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DarkFoeOf {
-    pub knows: bool,
-    pub word: bool,
-    pub blind: bool,
-    pub ask: f64,
-    pub lit: bool,
-    pub against: f64,
-    pub held: f64,
-    pub blind_for: f64,
-    pub moves: f64,
-    pub since: f64,
-    pub to: Option<V3>,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct DarkfoeMod {

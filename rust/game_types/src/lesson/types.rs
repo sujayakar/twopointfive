@@ -43,12 +43,6 @@ pub enum LessonTest {
     Any { of: Vec<crate::lesson::LessonTest> },
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct LessonSnap {
-    pub i: f64,
-    pub done: Vec<(String, f64)>,
-}
-
 #[derive(Clone, Debug, ToBytes)]
 pub struct Lesson {
     pub i: f64,
@@ -93,43 +87,7 @@ pub struct StepSeen {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct StepSeenLastOrder {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct StepSeenLastPair {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LessonRun {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct TestKind {
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum PairSel {
-    All,
-    Red,
-    Blue,
-}
-impl PairSel {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PairSel::All => "all",
-            PairSel::Red => "red",
-            PairSel::Blue => "blue",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct AfterLogItem {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct AfterLast {
 }
 
 #[derive(Clone, Debug, Default)]
@@ -146,38 +104,8 @@ pub struct LessonStats {
     pub finished: i32,
 }
 
-/// (src/game/lesson.ts:37 WHISTLE_LINE)
-pub const WHISTLE_LINE: &str = "/\\bV whistles\\b/g";
-
-/// (src/game/lesson.ts:39 WHEEL_LINE)
-pub const WHEEL_LINE: &str = "/\\bHold Space, wheel to kick, let go\\b/g";
-
 /// (src/game/lesson.ts:39 WHEEL_RING)
 pub const WHEEL_RING: &str = "Hold Space, then 2 kicks it";
-
-/// (src/game/lesson.ts:41 GRAB_BEHIND)
-pub const GRAB_BEHIND: &str = "/\\b([Pp])ress \\[?Space\\]? behind (him|the near guard) to grab him\\b/g";
-
-/// (src/game/lesson.ts:41 GRAB_KEY)
-pub const GRAB_KEY: &str = "/\\b([Pp])ress \\[?Space\\]? to grab him\\b/g";
-
-/// (src/game/lesson.ts:44 KNIFE_OR)
-pub const KNIFE_OR: &str = "/\\bRight click to knock him out, or left click to use the knife\\b/g";
-
-/// (src/game/lesson.ts:44 KNIFE_HIM)
-pub const KNIFE_HIM: &str = "/\\bleft click to knife him\\b/g";
-
-/// (src/game/lesson.ts:44 KNIFE_KILL)
-pub const KNIFE_KILL: &str = "/\\bleft-click to kill him with the knife\\b/g";
-
-/// (src/game/lesson.ts:51 TOKENS: a table nothing writes)
-pub fn tokens() -> Vec<(crate::Opaque, crate::FnField)> { alloc::vec![(crate::Opaque, crate::FnField), (crate::Opaque, crate::FnField), (crate::Opaque, crate::FnField), (crate::Opaque, crate::FnField)] }
-
-/// (src/game/lesson.ts:58 LESSON_TOKENS: a table nothing writes)
-pub fn lesson_tokens() -> Vec<String> { alloc::vec![String::from("grab him"), String::from("grab him from behind"), String::from("knock him out"), String::from("take him out")] }
-
-/// (src/game/lesson.ts:59 TOKEN)
-pub const TOKEN: &str = "/\\{([A-Za-z][A-Za-z' ]*)\\}/g";
 
 /// (src/game/lesson.ts:129 PAIR_WHATS: a table nothing writes)
 pub fn pair_whats() -> Vec<String> { alloc::vec![String::from("mark"), String::from("now"), String::from("set"), String::from("go"), String::from("go:F"), String::from("go:hands"), String::from("down")] }

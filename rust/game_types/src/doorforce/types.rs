@@ -42,15 +42,6 @@ pub enum KickPhase {
     Set,
     Walk,
 }
-impl KickPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KickPhase::Kick => "kick",
-            KickPhase::Set => "set",
-            KickPhase::Walk => "walk",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Man {
@@ -98,37 +89,6 @@ pub struct KickStep {
     pub move_: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DoorForceBelief {
-    pub sure: f64,
-    pub at: V3,
-    pub seen: bool,
-    pub age: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DoorForceOn {
-    pub door: DoorId,
-    pub fired: f64,
-    pub kick: Option<crate::doorforce::DoorForceOnKick>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DoorForceOnKick {
-    Kick,
-    Set,
-    Walk,
-}
-impl DoorForceOnKick {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorForceOnKick::Kick => "kick",
-            DoorForceOnKick::Set => "set",
-            DoorForceOnKick::Walk => "walk",
-        }
-    }
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct DoorforceMod {
@@ -159,5 +119,3 @@ pub struct DoorforceStats {
     pub no_kick: i32,
 }
 
-/// (src/game/doorforce.ts:94 BREAK)
-pub const BREAK: bool = false;

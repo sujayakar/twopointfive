@@ -127,9 +127,6 @@ pub fn rag() -> crate::ragdoll::RAG { crate::ragdoll::RAG { pelvis: 0.0, spine: 
 /// (src/game/ragdoll.ts:25 RAG_COUNT)
 pub const RAG_COUNT: f64 = 16.0;
 
-/// (src/game/ragdoll.ts:26 N)
-pub const N: f64 = 16.0;
-
 /// (src/game/ragdoll.ts:28 RADIUS: a table nothing writes)
 pub fn radius() -> Vec<f64> { alloc::vec![0.12, 0.13, 0.07, 0.11, 0.07, 0.07, 0.05, 0.05, 0.05, 0.05, 0.09, 0.09, 0.065, 0.065, 0.06, 0.06] }
 
@@ -138,9 +135,6 @@ pub fn mass() -> Vec<f64> { alloc::vec![12.0, 15.0, 3.0, 5.0, 3.0, 3.0, 2.0, 2.0
 
 /// (src/game/ragdoll.ts:32 TRUNK: a table nothing writes)
 pub fn trunk() -> Vec<f64> { alloc::vec![0.0, 1.0, 2.0, 4.0, 5.0, 10.0, 11.0] }
-
-/// (src/game/ragdoll.ts:33 TRUNK_SET: a table nothing writes)
-pub fn trunk_set() -> Vec<u8> { alloc::vec![0; 16] }
 
 /// (src/game/ragdoll.ts:35 STICKS: a table nothing writes)
 pub fn sticks() -> Vec<[f64; 2]> { alloc::vec![[2.0, 3.0], [4.0, 6.0], [6.0, 8.0], [5.0, 7.0], [7.0, 9.0], [10.0, 12.0], [12.0, 14.0], [11.0, 13.0], [13.0, 15.0]] }
@@ -159,9 +153,6 @@ pub fn knees() -> Vec<[f64; 3]> { alloc::vec![[10.0, 12.0, 14.0], [11.0, 13.0, 1
 
 /// (src/game/ragdoll.ts:45 HIP_CONE_COS)
 pub const HIP_CONE_COS: f64 = 0.25881904510252074;
-
-/// (src/game/ragdoll.ts:45 NECK_CONE_COS)
-pub const NECK_CONE_COS: f64 = 0.573576436351046;
 
 /// (src/game/ragdoll.ts:47 H)
 pub const H: f64 = 0.005555555555555556;
@@ -208,5 +199,3 @@ pub const MAX_AWAKE: f64 = 12.0;
 /// (src/game/ragdoll.ts:55 Y_MIN)
 pub const Y_MIN: f64 = 0.03;
 
-/// (src/game/ragdoll.ts:412 erR: a table nothing writes)
-pub fn er_r() -> Vec<f64> { alloc::vec![0.0; 9] }

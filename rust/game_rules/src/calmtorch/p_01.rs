@@ -172,7 +172,3 @@ pub fn click(g: &mut crate::game::Game, gd: GuardId, on: bool) {
     crate::audio_iface::game_audio_like_play(g, "click", Some(pos), Some(0.25), None);
 }
 
-/// The load has posed the lights: time counts again. (calmtorch.ts calmTorchPosed)
-pub fn calm_torch_posed(g: &mut crate::game::Game) {
-    g.m.calmtorch.posing = false;
-}

@@ -113,35 +113,6 @@ pub struct SLF {
     pub bits: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SP {
-    pub dt: f64,
-    pub row: f64,
-    pub height: f64,
-    pub thick: f64,
-    pub hu: f64,
-    pub closed: f64,
-    pub fcx: f64,
-    pub fcz: f64,
-    pub but: f64,
-    pub ask: f64,
-    pub scrape: f64,
-    pub slam: f64,
-    pub slide: f64,
-    pub bounce: f64,
-    pub tip: f64,
-    pub landed: f64,
-    pub land_x: f64,
-    pub land_z: f64,
-    pub rested: f64,
-    pub nudged: f64,
-    pub nudge_max: f64,
-    pub laid: f64,
-    pub rays: f64,
-    pub gathers: f64,
-    pub substeps: f64,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct SimSlabshomeModSLABSSTEPPED {
     pub there: f64,
@@ -180,9 +151,6 @@ pub const SLAB_CAP: f64 = 64.0;
 /// (src/sim/slabshome.ts:25 SLAB_F64: a table nothing writes)
 pub fn slab_f64() -> [String; 17] { [String::from("px"), String::from("py"), String::from("pz"), String::from("vx"), String::from("vy"), String::from("vz"), String::from("a"), String::from("spin"), String::from("tip"), String::from("tipV"), String::from("t"), String::from("ang"), String::from("wedged"), String::from("bw"), String::from("bl"), String::from("bx"), String::from("by")] }
 
-/// (src/sim/slabshome.ts:26 SLAB_U32: a table nothing writes)
-pub fn slab_u32() -> [String; 4] { [String::from("flags"), String::from("who"), String::from("door"), String::from("row")] }
-
 /// (src/sim/slabshome.ts:28 SLAB_HEAD)
 pub const SLAB_HEAD: f64 = 16.0;
 
@@ -195,14 +163,3 @@ pub const SLAB_BIT: f64 = 64.0;
 /// (src/sim/slabshome.ts:44 SWAPPED: a table nothing writes)
 pub fn swapped() -> [String; 3] { [String::from("flags"), String::from("who"), String::from("door")] }
 
-/// (src/sim/slabshome.ts:112 SP: a table nothing writes)
-pub fn sp() -> crate::sim_slabshome::SP { crate::sim_slabshome::SP { dt: 0.0, row: 1.0, height: 2.0, thick: 3.0, hu: 4.0, closed: 5.0, fcx: 6.0, fcz: 7.0, but: 8.0, ask: 9.0, scrape: 10.0, slam: 11.0, slide: 12.0, bounce: 13.0, tip: 14.0, landed: 16.0, land_x: 17.0, land_z: 18.0, rested: 19.0, nudged: 20.0, nudge_max: 21.0, laid: 22.0, rays: 23.0, gathers: 24.0, substeps: 25.0 } }
-
-/// (src/sim/slabshome.ts:114 SLAB_PARS)
-pub const SLAB_PARS: f64 = 32.0;
-
-/// (src/sim/slabshome.ts:116 SLAB_STEPPED)
-pub const SLAB_STEPPED: f64 = 0.0;
-
-/// (src/sim/slabshome.ts:116 SLAB_HOST)
-pub const SLAB_HOST: f64 = 1.0;

@@ -147,10 +147,6 @@ pub struct CoverLogItem {
     pub id: Option<String>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct CoverNav {
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct CoverReadsValue {
     pub t: f64,
@@ -207,5 +203,3 @@ pub const EYE: f64 = 1.55;
 /// (src/game/cover.ts:189 CHEST)
 pub const CHEST: f64 = 1.1;
 
-/// (src/game/cover.ts:191 COMPASS: a table nothing writes)
-pub fn compass() -> Vec<String> { alloc::vec![String::from("south"), String::from("south-east"), String::from("east"), String::from("north-east"), String::from("north"), String::from("north-west"), String::from("west"), String::from("south-west")] }

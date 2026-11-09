@@ -93,16 +93,6 @@ pub enum CastSide {
     Defender,
     Responder,
 }
-impl CastSide {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CastSide::Civilian => "civilian",
-            CastSide::Operator => "operator",
-            CastSide::Defender => "defender",
-            CastSide::Responder => "responder",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct CastInfo {

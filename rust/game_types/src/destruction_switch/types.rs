@@ -25,5 +25,3 @@ impl DestructionSwitchMod {
     }
 }
 
-/// (src/game/destructionSwitch.ts:32 DRESS_GROUP)
-pub const DRESS_GROUP: &str = "dressing";

@@ -2244,44 +2244,6 @@ pub fn forget_heard(g: usize) {
         p.settle();
     }
 }
-/// where each of a row's fields stands (bytes from its start), for the host's reads, and how long a row is
-pub fn field(i: u32) -> usize {
-    match i {
-        0 => offset_of!(Row, d),
-        1 => offset_of!(Row, w),
-        2 => offset_of!(Row, e),
-        3 => offset_of!(Row, hits),
-        4 => offset_of!(Row, c),
-        5 => offset_of!(Row, hu),
-        6 => offset_of!(Row, hv),
-        7 => offset_of!(Row, ht),
-        8 => offset_of!(Row, energy),
-        9 => offset_of!(Row, damage),
-        10 => offset_of!(Row, next_think),
-        11 => offset_of!(Row, last_dir),
-        12 => offset_of!(Row, last_uv),
-        13 => offset_of!(Row, sound_at),
-        14 => offset_of!(Row, who),
-        15 => offset_of!(Row, key),
-        16 => offset_of!(Row, ty),
-        17 => offset_of!(Row, u_axis),
-        18 => offset_of!(Row, exterior),
-        19 => offset_of!(Row, hit_n),
-        20 => offset_of!(Row, n_open),
-        21 => offset_of!(Row, d_next),
-        22 => offset_of!(Row, walkable),
-        23 => offset_of!(Row, q0),
-        24 => offset_of!(Row, qn),
-        25 => size_of::<Row>(),
-        26 => size_of::<Q>(),
-        27 => offset_of!(Q, at),
-        28 => offset_of!(Q, from),
-        29 => offset_of!(Q, k),
-        30 => offset_of!(Q, fid),
-        31 => offset_of!(Q, cause),
-        _ => 0,
-    }
-}
 pub fn q_addr(g: usize) -> usize {
     let p = pn(g);
     offset_of!(crate::state::State, panes) + HEAD + p.q_at() * 8
@@ -2307,19 +2269,6 @@ pub fn clear_holes(g: usize) {
         p.clear_holes();
         p.settle();
     }
-}
-/// glassbreak.ts typeOf
-pub fn type_place(c: &Ctx, bi: u32) -> u32 {
-    let s = match sheet_of(world(c.w), bi) {
-        Some(s) => s,
-        None => return ANNEALED,
-    };
-    let (h0, h1, h2, cy) = {
-        let o = world(c.w);
-        let b = rec(o, bi as usize);
-        (b[R_H], b[R_H + 1], b[R_H + 2], b[R_C + 1])
-    };
-    type_by_place(c, s, h0, h1, h2, cy)
 }
 /// glassbreak.ts fill's open threshold: the midpoint between the last clump out and the next in
 pub fn dice_threshold(g: usize, bi: u32) -> f64 {

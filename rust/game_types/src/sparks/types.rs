@@ -46,14 +46,6 @@ impl Sparks {
 impl Default for Sparks { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct SparksEmitConeO {
-    pub count: f64,
-    pub speed: f64,
-    pub cone: f64,
-    pub life: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct SparksEmitBurstO {
     pub count: f64,
     pub speed: f64,

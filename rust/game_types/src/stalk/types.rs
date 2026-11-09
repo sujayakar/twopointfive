@@ -64,24 +64,6 @@ pub struct StalkKeys {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct POLISHUP {
-    pub turn_in: bool,
-    pub corner_show: bool,
-    pub yank_with: bool,
-    pub catch_long: f64,
-    pub jolt: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct POLISHDOWN {
-    pub turn_in: bool,
-    pub corner_show: bool,
-    pub yank_with: bool,
-    pub catch_long: f64,
-    pub jolt: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct StalkTell {
     pub gd: GuardId,
     pub at: V3,
@@ -121,8 +103,3 @@ pub struct StalkStats {
     pub last: String,
 }
 
-/// (src/game/stalk.ts:225 POLISH_UP: a table nothing writes)
-pub fn polish_up() -> crate::stalk::POLISHUP { crate::stalk::POLISHUP { turn_in: true, corner_show: true, yank_with: true, catch_long: 1.1, jolt: 0.6 } }
-
-/// (src/game/stalk.ts:226 POLISH_DOWN: a table nothing writes)
-pub fn polish_down() -> crate::stalk::POLISHDOWN { crate::stalk::POLISHDOWN { turn_in: false, corner_show: false, yank_with: false, catch_long: 1.0, jolt: 0.0 } }

@@ -143,29 +143,12 @@ pub enum RescueResultState {
     #[default] Lost,
     Rescued,
 }
-impl RescueResultState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueResultState::Lost => "lost",
-            RescueResultState::Rescued => "rescued",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RescueResultGrade {
     #[default] Failed,
     Clean,
     Costly,
-}
-impl RescueResultGrade {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueResultGrade::Failed => "failed",
-            RescueResultGrade::Clean => "clean",
-            RescueResultGrade::Costly => "costly",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -192,16 +175,6 @@ pub enum Role {
     Captor,
     Roamer,
 }
-impl Role {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Role::Guard => "guard",
-            Role::Door => "door",
-            Role::Captor => "captor",
-            Role::Roamer => "roamer",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DefMark {
@@ -217,18 +190,6 @@ pub enum DefCrew {
     Wait,
     Going,
     In,
-}
-impl DefCrew {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DefCrew::Empty => "",
-            DefCrew::Cross => "cross",
-            DefCrew::Out => "out",
-            DefCrew::Wait => "wait",
-            DefCrew::Going => "going",
-            DefCrew::In => "in",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -260,10 +221,6 @@ impl RescueStep {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct RescueLastOrder {
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct RescueSearchAValue {
     pub a: OrdersAssignmentId,
@@ -281,31 +238,11 @@ pub enum RescueState {
     Secured,
     Running,
 }
-impl RescueState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueState::Lost => "lost",
-            RescueState::Off => "off",
-            RescueState::Rescued => "rescued",
-            RescueState::Staged => "staged",
-            RescueState::Secured => "secured",
-            RescueState::Running => "running",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RescueRoomPointWhich {
     Hold,
     Outside,
-}
-impl RescueRoomPointWhich {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueRoomPointWhich::Hold => "hold",
-            RescueRoomPointWhich::Outside => "outside",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -313,47 +250,12 @@ pub enum RescueMode {
     Door,
     Free,
 }
-impl RescueMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueMode::Door => "door",
-            RescueMode::Free => "free",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RescuePress {
-    Bang,
-    Blow,
-    Stack,
-    Go,
-}
-impl RescuePress {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescuePress::Bang => "bang",
-            RescuePress::Blow => "blow",
-            RescuePress::Stack => "stack",
-            RescuePress::Go => "go",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RescueOrderDoor {
     Bang,
     Stack,
     Go,
-}
-impl RescueOrderDoor {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueOrderDoor::Bang => "bang",
-            RescueOrderDoor::Stack => "stack",
-            RescueOrderDoor::Go => "go",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -366,14 +268,6 @@ pub struct RescuePick {
 pub enum RescueEndState {
     Lost,
     Rescued,
-}
-impl RescueEndState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueEndState::Lost => "lost",
-            RescueEndState::Rescued => "rescued",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]

@@ -34,13 +34,6 @@ pub struct KitNearValue {
     pub k: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct IrLightState {
-    pub sam: bool,
-    pub men: Vec<GuardId>,
-    pub shown: bool,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct IrlightMod {
@@ -54,9 +47,6 @@ impl IrlightMod {
         }
     }
 }
-
-/// (src/game/irlight.ts:104 NEAR_BREAK)
-pub const NEAR_BREAK: bool = false;
 
 /// (src/game/irlight.ts:107 WAND_KEY0)
 pub const WAND_KEY0: f64 = -1.0;

@@ -280,15 +280,6 @@ pub fn posture_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Opti
     let w = crate::unseen::unseen_word(g, seat);
     Some(loud_word(w.as_deref()))
 }
-/// `posture.mark`   (silent.ts:248): what the posture's seam should call
-pub fn posture_mark(g: &crate::game::Game, seat: &crate::seats::SeatRef, def: OrdersOrderDefId) -> &'static str {
-    if squad_silent(g, seat) && crate::orders::rows::id_is(&g.tab.orders_order_def[def].id, crate::orders::Is::Loud) { " · LOUD" } else { "" }
-}
-/// `posture.given`   (silent.ts:249): what the posture's seam should call
-pub fn posture_given(g: &mut crate::game::Game, def: OrdersOrderDefId) {
-    let loud = crate::orders::rows::id_is(&g.tab.orders_order_def[def].id, crate::orders::Is::Loud);
-    silent_tool(g, loud);
-}
 fn seam_posture(g: &mut Game) -> crate::orders::SquadOrdersPosture { crate::orders::SquadOrdersPosture {} }   // (the one maker of a posture is this module: a posture that is Some IS these three functions, and p_orders_03 calls silent_tool on that reading)
 
 /// once a frame, before the orders pose the men: the rows, a new cast, the one line when loud reaches the squad   (silent.ts silentTick)

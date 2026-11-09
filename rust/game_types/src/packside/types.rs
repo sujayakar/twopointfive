@@ -32,47 +32,6 @@ pub struct Memo {
     pub back: JsMap<crate::Num, Vec<crate::packside::BackPt>>,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct PackChar {
-    pub cast: Option<crate::packside::PackCharCast>,
-    pub mesh: crate::packside::PackCharMesh,
-    pub skin: crate::packside::PackCharSkin,
-    pub node_by_name: JsMap<String, f64>,
-    pub nodes: Vec<crate::packside::PackCharNodesItem>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PackCharCast {
-    pub parts: Vec<String>,
-    pub variants: Option<Vec<crate::packside::PackCharCastVariantsItem>>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PackCharCastVariantsItem {
-    pub side: String,
-    pub mask: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PackCharMesh {
-    pub positions: Vec<f32>,
-    pub part: Option<Vec<u8>>,
-    pub vertex_count: f64,
-    pub joints: Vec<f64>,
-    pub weights: Vec<f64>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PackCharSkin {
-    pub joints: Vec<f64>,
-    pub inverse_bind: Vec<f32>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PackCharNodesItem {
-    pub name: String,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SidePlace {
     pub o: V3,
@@ -89,15 +48,6 @@ pub enum SideBindWhat {
     Rifle,
     Shotgun,
     Hammer,
-}
-impl SideBindWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SideBindWhat::Rifle => "rifle",
-            SideBindWhat::Shotgun => "shotgun",
-            SideBindWhat::Hammer => "hammer",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -138,9 +88,6 @@ pub const ZB: f64 = -0.15;
 
 /// (src/game/packside.ts:106 BAND)
 pub const BAND: f64 = 0.04;
-
-/// (src/game/packside.ts:106 TRUNK)
-pub const TRUNK: &str = "/^DEF-(hips|spine\\.00[1-3]|thigh\\.[LR])$/";
 
 /// (src/game/packside.ts:106 REACH)
 pub const REACH: f64 = 0.14;

@@ -799,21 +799,3 @@ pub fn cue(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::sneak::Man, li
     true
 }
 
-/// The panel's line.   (sneak.ts sneakSummary)
-pub fn sneak_summary(g: &mut crate::game::Game) -> String {
-    if !g.k.sneak.on { return String::from("off"); }
-    if !sneak_live(g) { return String::from("on · not live (the squad is loud, found out, or a defender is hunting)"); }
-    let men = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None);
-    let mut rows: Vec<String> = Vec::new();
-    for gd in men {
-        let mode = match g.m.sneak.states.as_ref().and_then(|s| s.men.get(gd)) {
-            Some(man) => man.mode.as_str(),
-            None => "not following",
-        };
-        rows.push(format!("{}: {}", g.gd[gd].callsign, mode));
-    }
-    let squad = if rows.is_empty() { String::from("no squad") } else { rows.join(" · ") };
-    let trail = match g.m.sneak.states.as_ref() { Some(s) => s.trail.len() as f64 * 0.4, None => 0.0 };
-    let st = &g.stats.sneak;
-    format!("on · {} · trail {} m · waits {} crossings {} shade {} back-offs {}", squad, js::to_fixed(trail, 0), st.waits, st.crossings, st.shade, st.back_offs)
-}

@@ -383,26 +383,6 @@ pub fn geometry<'a>(level: &'a PlanLevel, block: Option<&'a PlanBlock>, way: &Wa
 #[derive(Clone, Copy, Default)]
 pub struct PlanOpts<'a> { pub floor: Option<&'a Floor>, pub free: Option<&'a dyn Fn(f64, f64) -> bool>, pub hidden_stand: bool, pub also_hide: &'a [String] }
 
-/// …and the plan from it. A set has its own floor, and so has a level with a piece added here: the level's `floor` and `free` are not handed on, for a `free` made on the bare level puts a man inside
-/// the added crate and says nothing. What the caller says of the way's `hide` is the way's, whatever it is planned on.
-pub fn plan_way(level: &PlanLevel, block: Option<&PlanBlock>, way: &Way, ref_: V2, opts: &PlanOpts) -> Planned {
-    let g = match geometry(level, block, way, ref_) {
-        Some(g) => g,
-        None => {
-            let mut p = plan(&PlanLevel::default(), way, ref_, &PlanOpts::default());
-            let name = way.set.clone().unwrap_or_default();
-            p.problems = vec![format!("no set '{}' in the block's sets", name)];
-            p.set = way.set.clone();
-            return p;
-        }
-    };
-    let own = g.set.is_none() && matches!(g.level, Cow::Borrowed(_));
-    let said = PlanOpts { floor: None, free: None, hidden_stand: opts.hidden_stand, also_hide: opts.also_hide };
-    let mut p = plan(&g.level, way, g.ref_, if own { opts } else { &said });
-    p.set = g.set;
-    p
-}
-
 /// THE PLAN AS THE CHILD MAKES IT: two passes on the floor as the game has it. The first plans with the way's `hide` still standing on that floor and hands what is out of the picture to `sink`
 /// (the child puts those boxes under the ground and rebakes; `free` must answer for the floor that leaves). The second plans again with the first's occluders named as already out, none where the way
 /// writes its `hide`, and sinks what it finds. The plan handed back is the second's, with the occluders of both and the first pass's problem of a non-thing occluder: the second is told those ids are

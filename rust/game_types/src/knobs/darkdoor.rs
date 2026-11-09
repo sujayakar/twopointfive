@@ -8,15 +8,6 @@ pub enum DarkdoorKWho {
     All,
     Rest,
 }
-impl DarkdoorKWho {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DarkdoorKWho::None => "none",
-            DarkdoorKWho::All => "all",
-            DarkdoorKWho::Rest => "rest",
-        }
-    }
-}
 
 /// the switch and its numbers: on (?nodarkdoor = every man walks into the dark as he did) and by
 ///  the shipped stand; the harness's frozen stand leaves it off (TPS_DARKDOOR=1 turns it on — with TPS_MORALE=1: it acts only under MORALE.on). `who` = who is

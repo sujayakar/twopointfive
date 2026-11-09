@@ -66,14 +66,6 @@ pub fn floor(p: V3) -> V3 {
     [p[0], 0.0, p[2]]
 }
 
-/// (picture.ts nameOf)
-pub fn name_of(g: &crate::game::Game, w: crate::picture::Who) -> String {
-    match w {
-        Who::Player => String::from("Player"),
-        Who::Guard(o) => g.gd[o].callsign.clone(),
-    }
-}
-
 /// (picture.ts up)
 pub fn up(g: &mut crate::game::Game, w: crate::picture::Who) -> bool {
     match w {
@@ -1074,118 +1066,6 @@ pub fn picture_step(g: &mut crate::game::Game, gd: GuardId, key: u32, mark: V3, 
 }
 
 // ---------------------------------------------------------------- showing it (the host's floor view; nothing of the tick calls these)
-/// whose picture the floor shows: the fighter nearest the aim point, None with the view not on the cursor (picture.ts pictureShown)
-pub fn picture_shown(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<GuardId> {
-    if g.k.picture.show != crate::knobs::PictureKShow::Cursor {
-        return None;
-    }
-    let aim = seat.aim_point;
-    let mut best = None;
-    let mut bd = 2.5;
-    let mut i = 0;
-    while i < g.guards.len() {
-        let gd = g.guards[i];
-        i += 1;
-        if !fighter(g, gd) {
-            continue;
-        }
-        let d = flat(g.ch[g.gd[gd].ch].pos, aim);
-        if d < bd {
-            bd = d;
-            best = Some(gd);
-        }
-    }
-    best
-}
-
-/// viewOf1 with no count ticked; the flag falls to false after, as written (picture.ts viewOf)
-pub fn view_of(g: &mut crate::game::Game, gd: GuardId, ground: bool) -> crate::picture::PictureView {
-    g.m.picture.viewing = true;
-    let r = view_of1(g, gd, ground);
-    g.m.picture.viewing = false;
-    r
-}
-
-/// one man's picture as the floor view draws it (picture.ts viewOf1)
-pub fn view_of1(g: &mut crate::game::Game, gd: GuardId, ground: bool) -> crate::picture::PictureView {
-    let c = g.ch[g.gd[gd].ch].pos;
-    let show_m = g.k.picture.show_m;
-    let mut ideas: Vec<PictureViewIdeasItem> = Vec::new();
-    for i in ideas_of(g, gd) {
-        let who = name_of(g, i.who);
-        let w = idea_weight(g, i);
-        let reach = idea_reach(g, i);
-        let maybe = maybe_of(g, i);
-        ideas.push(PictureViewIdeasItem { who, at: i.at, age: g.time - i.t, how: i.how, w, reach, lost: i.lost, maybe });
-    }
-    let mut unsafe_: Vec<[f64; 3]> = Vec::new();
-    if ground && !ideas.is_empty() {
-        let (x0, z0) = (m::round(c[0]), m::round(c[2]));
-        let span = m::ceil(show_m) as i32;
-        for ix in -span..=span {
-            for iz in -span..=span {
-                let q: V3 = [x0 + ix as f64 + 0.25, 0.0, z0 + iz as f64 + 0.25];
-                if flat(q, c) > show_m || crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) {
-                    continue;
-                }
-                let e = exposed_at(g, gd, q, None);
-                if e > 0.0 {
-                    unsafe_.push([q[0], q[2], e]);
-                }
-            }
-        }
-    }
-    let cover = if ground { cover_near(g, gd, c, show_m, Some(6.0), None) } else { Vec::new() };
-    PictureView { gd, from: [c[0], 0.05, c[2]], ideas, unsafe_, cover }
-}
-
-/// what the floor view draws this frame; the ground and the cover re-read four times a second (picture.ts pictureViews)
-pub fn picture_views(g: &mut crate::game::Game) -> Vec<crate::picture::PictureView> {
-    let show = g.k.picture.show;
-    if show == crate::knobs::PictureKShow::Off || g.touring {
-        return Vec::new();
-    }
-    if show == crate::knobs::PictureKShow::All {
-        let mut men: Vec<GuardId> = Vec::new();
-        let mut i = 0;
-        while i < g.guards.len() {
-            let gd = g.guards[i];
-            i += 1;
-            if fighter(g, gd) && g.gd[gd].team == crate::teams::Team::Operative {
-                men.push(gd);
-            }
-        }
-        let mut out = Vec::new();
-        for gd in men {
-            out.push(view_of(g, gd, false));
-        }
-        return out;
-    }
-    let shown = picture_shown(g, &crate::seats::here(g));
-    state_of(g);
-    let gd = match shown {
-        Some(gd) => gd,
-        None => {
-            st!(g).view = None;
-            return Vec::new();
-        }
-    };
-    let now = g.time;
-    let (view_gd, view_t) = {
-        let s = st!(g);
-        (s.view.as_ref().map(|v| v.gd), s.view_t)
-    };
-    if view_gd != Some(gd) || now - view_t >= 0.25 || now < view_t {
-        let v = view_of(g, gd, true);
-        let s = st!(g);
-        s.view = Some(v);
-        s.view_t = now;
-    } else {
-        let c = g.ch[g.gd[gd].ch].pos;
-        st!(g).view.as_mut().unwrap().from = [c[0], 0.05, c[2]];
-    }
-    vec![st!(g).view.clone().unwrap()]
-}
 
 #[cfg(test)]
 mod tests {

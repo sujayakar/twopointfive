@@ -119,23 +119,6 @@ pub fn as_issued(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::
     g.m.kit.issuing = KitModIssuing::Bool(false);
 }
 
-/// Every card back as issued.   (kit.ts kitReset; its kitSave is the host's)
-pub fn kit_reset(g: &mut crate::game::Game) {
-    for i in 0..CARDS {
-        let c = kit_default(g, i as f64);
-        g.m.kit.kit.members[i] = c;
-        g.m.kit.kit_note[i] = String::new();
-    }
-    g.m.kit.kept0 = None;
-    g.m.kit.kept_wand = Vec::new();
-    g.m.kit.deal_own = false;
-    g.m.kit.stealth_you = None;
-    if g.m.kit.hand.is_some() && g.m.kit.loud_you.is_some() {
-        let c = loud_issue(g);
-        g.m.kit.loud_you = Some(c);
-    }
-}
-
 // ------------------------------------------------------------ on the floor
 
 /// The card a staged teammate was staged with (a copy taken then).   (kit.ts kitOf)

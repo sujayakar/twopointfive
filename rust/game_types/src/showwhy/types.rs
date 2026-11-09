@@ -11,17 +11,6 @@ pub enum Why {
     Keep,
     Hurt,
 }
-impl Why {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Why::Door => "door",
-            Why::Stack => "stack",
-            Why::Line => "line",
-            Why::Keep => "keep",
-            Why::Hurt => "hurt",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WhyNote {

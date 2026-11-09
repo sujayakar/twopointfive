@@ -53,17 +53,6 @@ pub enum FlagName {
     Gloss,
     Glass,
 }
-impl FlagName {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FlagName::NoPrimary => "NoPrimary",
-            FlagName::NoShadow => "NoShadow",
-            FlagName::Cutaway => "Cutaway",
-            FlagName::Gloss => "Gloss",
-            FlagName::Glass => "Glass",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct ShapeData {
@@ -116,15 +105,6 @@ pub enum LightDataKind {
     #[default] Spot,
     Dir,
     Point,
-}
-impl LightDataKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LightDataKind::Spot => "spot",
-            LightDataKind::Dir => "dir",
-            LightDataKind::Point => "point",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

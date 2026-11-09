@@ -9,5 +9,3 @@ pub struct WsCornerAngle {
     pub dist: f64,
 }
 
-/// (src/game/wallsnap.ts:26 LEAN_GUN_M)
-pub const LEAN_GUN_M: f64 = 0.42;

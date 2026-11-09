@@ -9,15 +9,6 @@ pub enum Mode {
     Free,
     Dark,
 }
-impl Mode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Mode::Off => "off",
-            Mode::Free => "free",
-            Mode::Dark => "dark",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum Why {
@@ -68,23 +59,6 @@ pub struct NvgNote {
     pub t: f64,
     pub who: String,
     pub what: String,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct NvgState {
-    pub mode: crate::nvg::Mode,
-    pub why: crate::nvg::Why,
-    pub quiet_for: f64,
-    pub men: Vec<crate::nvg::NvgStateMenItem>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct NvgStateMenItem {
-    pub gd: GuardId,
-    pub down: bool,
-    pub dark: bool,
-    pub dim: bool,
-    pub black: bool,
 }
 
 /// the state this module keeps at its top level

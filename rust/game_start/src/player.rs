@@ -246,7 +246,6 @@ impl Player {
         self.button(bits, false);
         self.ticks(3).await
     }
-    pub async fn wheel(&self, notches: i32) { for _ in 0..notches.abs() { self.wheel.set(self.wheel.get() + 100.0 * notches.signum() as f64); self.ticks(2).await; } }
     /// the host's view turned, and pulled back
     pub fn turn_view(&self, yaw: f64) { let l = self.lens.get(); self.lens.set([l[0] + yaw, l[1]]); }
     pub fn zoom_view(&self, delta: f64) { let l = self.lens.get(); self.lens.set([l[0], l[1] + delta]); }

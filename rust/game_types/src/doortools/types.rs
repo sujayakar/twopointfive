@@ -88,71 +88,6 @@ impl DoorTools {
 }
 impl Default for DoorTools { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Debug, Default)]
-pub struct DoorToolsDoneItem {
-    pub kind: crate::doortools::DoorToolKind,
-    pub door: DoorId,
-    pub side: f64,
-    pub coded: Option<bool>,
-    pub men: Vec<GuardId>,
-    pub lead: GuardId,
-    pub fled: Option<JsSet<GuardId>>,
-    pub fled_w: Option<f64>,
-    pub fled_t: Option<f64>,
-    pub fled_said: Option<bool>,
-    pub fled_go: Option<bool>,
-    pub rear: JsSet<GuardId>,
-    pub lane: Option<crate::doortools::DoorToolsDoneItemLane>,
-    pub from: JsMap<GuardId, V3>,
-    pub phase: crate::doortools::Phase,
-    pub t0: f64,
-    pub bang_held: bool,
-    pub frag: Option<bool>,
-    pub frag_way_t: Option<f64>,
-    pub leaf_a: Option<f64>,
-    pub leaf_t: Option<f64>,
-    pub mine: JsMap<GuardId, OrdersAssignmentId>,
-    pub post: JsMap<GuardId, crate::orders::StackPost>,
-    pub kick: Option<crate::doortools::DoorToolsDoneItemKick>,
-    pub no_gun: Option<bool>,
-    pub big: Option<bool>,
-    pub open_t: f64,
-    pub can: Option<ItemId>,
-    pub toss_t: f64,
-    pub land_t: f64,
-    pub bang_t: f64,
-    pub bang_at: Option<V3>,
-    pub queue: Vec<crate::doortools::DoorToolsDoneItemQueueItem>,
-    pub set_t: f64,
-    pub stow_off_t: Option<f64>,
-    pub pod: JsMap<GuardId, crate::entrypoints::Pod>,
-    pub on_pod: JsMap<GuardId, f64>,
-    pub slice: JsMap<GuardId, crate::doortools::DoorToolsDoneItemSliceValue>,
-    pub crossed: JsMap<GuardId, f64>,
-    pub corner: JsMap<GuardId, crate::doortools::DoorToolsDoneItemCornerValue>,
-    pub search: Option<Option<DoortoolsRoomSearchId>>,
-    pub first: Option<GuardId>,
-    pub threw: Option<GuardId>,
-    pub aim: Option<crate::doortools::DoorToolsDoneItemAim>,
-    pub pass: Option<crate::doortools::DoorToolsDoneItemPass>,
-    pub beats: Vec<crate::doortools::DoorToolsDoneItemBeatsItem>,
-    pub on_word: bool,
-    pub word: Option<WordId>,
-    pub hold: f64,
-    pub ready_t: f64,
-    pub gate: Option<DoorGateId>,
-    pub thr: Option<crate::doortools::Threshold>,
-    pub thr_hold: Option<bool>,
-    pub thr_pre: Option<crate::doortools::DoorToolsDoneItemThrPre>,
-    pub worded: Option<bool>,
-    pub last_stack: Option<bool>,
-    pub last_hold: Option<bool>,
-    pub last_tossed: Option<f64>,
-    pub other: Option<JsMap<DoorId, crate::doortools::DoorToolsDoneItemOtherValue>>,
-    pub threat: Option<crate::doortools::DoorToolsDoneItemThreat>,
-    pub ended: String,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum DoorToolKind {
     #[default] Charge,
@@ -316,26 +251,6 @@ pub enum Phase {
     Thr,
     Pocket,
 }
-impl Phase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Phase::Slice => "slice",
-            Phase::Kick => "kick",
-            Phase::Held => "held",
-            Phase::Stack => "stack",
-            Phase::Wait => "wait",
-            Phase::Place => "place",
-            Phase::Standoff => "standoff",
-            Phase::Armed => "armed",
-            Phase::Enter => "enter",
-            Phase::Fuse => "fuse",
-            Phase::Ready => "ready",
-            Phase::Toss => "toss",
-            Phase::Thr => "thr",
-            Phase::Pocket => "pocket",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorToolsDoneItemKick {
@@ -476,15 +391,6 @@ pub enum ThresholdFirst {
     Can,
     Done,
 }
-impl ThresholdFirst {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ThresholdFirst::Burst => "burst",
-            ThresholdFirst::Can => "can",
-            ThresholdFirst::Done => "done",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorToolsDoneItemThrPre {
@@ -505,11 +411,6 @@ pub struct DoorToolsDoneItemThreat {
     pub room: Option<RoomfightRoomId>,
     pub room_t: Option<f64>,
     pub deal: Option<JsMap<GuardId, crate::doortools::ThreatWatch>>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct DoorToolsDoneItemThreatRoom {
-    pub cells: JsSet<crate::Num>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -568,10 +469,6 @@ pub struct DoorToolsStats {
 pub struct DoorToolsLed {
     pub entries: f64,
     pub by_seen: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DoorToolsSamOf {
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -733,16 +630,6 @@ pub struct PIEGUN {
 pub struct DoortoolsModSKYValue {
     pub n: f64,
     pub open: bool,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct UnderSkyRoom {
-    pub cells: JsSet<crate::Num>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct OpenFloorRoom {
-    pub cells: JsSet<crate::Num>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -926,26 +813,11 @@ pub enum DoorToolsCanThreshold {
     Bool(bool),
 }
 
-#[derive(Clone, Debug)]
-pub enum DoorToolsThresholdOn {
-    Text(String),
-    DoorOp(DoorOpId),
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DoorToolsThresholdThenWhat {
     Bang,
     Step,
     Leave,
-}
-impl DoorToolsThresholdThenWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorToolsThresholdThenWhat::Bang => "bang",
-            DoorToolsThresholdThenWhat::Step => "step",
-            DoorToolsThresholdThenWhat::Leave => "leave",
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -967,14 +839,6 @@ pub enum DoorToolsThenOnWordWhat {
     Bang,
     Step,
 }
-impl DoorToolsThenOnWordWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorToolsThenOnWordWhat::Bang => "bang",
-            DoorToolsThenOnWordWhat::Step => "step",
-        }
-    }
-}
 
 #[derive(Clone, Debug)]
 pub enum DoorToolsThenOnWord {
@@ -987,15 +851,6 @@ pub enum DoorToolsCanThresholdThenWhat {
     Bang,
     Step,
     Leave,
-}
-impl DoorToolsCanThresholdThenWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorToolsCanThresholdThenWhat::Bang => "bang",
-            DoorToolsCanThresholdThenWhat::Step => "step",
-            DoorToolsCanThresholdThenWhat::Leave => "leave",
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -1010,22 +865,6 @@ pub enum DoorToolsCanThresholdThenT {
 pub enum DoorToolsCanThresholdThen {
     Text(String),
     Bool(bool),
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DoorToolsThresholdTellWhat {
-    Bang,
-    Step,
-    Leave,
-}
-impl DoorToolsThresholdTellWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorToolsThresholdTellWhat::Bang => "bang",
-            DoorToolsThresholdTellWhat::Step => "step",
-            DoorToolsThresholdTellWhat::Leave => "leave",
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -1107,14 +946,6 @@ pub enum DoorToolsWaitsOnKind {
     #[default] Stack,
     Word,
 }
-impl DoorToolsWaitsOnKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorToolsWaitsOnKind::Stack => "stack",
-            DoorToolsWaitsOnKind::Word => "word",
-        }
-    }
-}
 
 #[derive(Clone, Debug, Default)]
 pub struct DoorToolsGoMenOnlyItem {
@@ -1134,12 +965,6 @@ pub enum DoorToolsAway {
     Guard(GuardId),
     Alone,
     No,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DoorToolsOffSwingP {
-    pub pos: V3,
-    pub watch: Option<V3>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -1202,9 +1027,6 @@ impl DoortoolsMod {
     }
 }
 
-/// (src/game/doortools.ts:114 WORDCUTS_BREAK)
-pub const WORDCUTS_BREAK: bool = false;
-
 /// (src/game/doortools.ts:601 LEAF_EDGE)
 pub const LEAF_EDGE: f64 = 0.1;
 
@@ -1232,14 +1054,8 @@ pub const THR_PAGE: &str = "thr";
 /// (src/game/doortools.ts:614 PIE_WAIT)
 pub const PIE_WAIT: f64 = 2.5;
 
-/// (src/game/doortools.ts:614 KNEE_EYE)
-pub const KNEE_EYE: f64 = 0.95;
-
 /// (src/game/doortools.ts:614 PIE_GUN: a table nothing writes)
 pub fn pie_gun() -> crate::doortools::PIEGUN { crate::doortools::PIEGUN { after: 0.2, step: 0.12, most: 3.0, every: 0.4 } }
-
-/// (src/game/doortools.ts:622 PRE: a table nothing writes)
-pub fn pre() -> Vec<String> { alloc::vec![String::from("stack"), String::from("ready"), String::from("place"), String::from("standoff"), String::from("armed")] }
 
 /// (src/game/doortools.ts:757 OPEN_RAD)
 pub const OPEN_RAD: f64 = 0.6;

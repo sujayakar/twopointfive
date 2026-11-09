@@ -124,18 +124,6 @@ pub fn beam_walled(g: &mut crate::game::Game, o: V3, fan: &[V3], m: f64, held: b
     true
 }
 
-/// beamWalled of a beam laid by hand, from `o` along `d` (guards.ts beamWalledAt)
-pub fn beam_walled_at(g: &mut crate::game::Game, o: V3, d: V3, m: f64, held: Option<bool>) -> bool {
-    let held = held.unwrap_or(false);
-    let fan = beam_fan(d);
-    beam_walled(g, o, &fan, m, held)
-}
-
-/// what one ray of a beam ends on (guards.ts beamRayEnd)
-pub fn beam_ray_end(g: &mut crate::game::Game, o: V3, r: V3, m: f64) -> f64 {
-    ray_end(g, o, r, m)
-}
-
 /// where a carried light will burn: at its lens `p`, or this side of the wall the lens is carried through from `held` (guards.ts burnsFrom)
 pub fn burns_from(g: &mut crate::game::Game, held: V3, p: V3) -> V3 {
     if crate::scene_collision::segment_blocked(g, held, p, None, None, None) {
@@ -144,15 +132,6 @@ pub fn burns_from(g: &mut crate::game::Game, held: V3, p: V3) -> V3 {
     } else {
         p
     }
-}
-
-/// a living man's weapon light, for the checks: nothing before he has a pose (guards.ts beamLens)
-pub fn beam_lens(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
-    let c = g.gd[gd].ch;
-    let held = g.ch[c].bones.get(crate::character::Bone::UpperArmR).copied()?;
-    let l = g.gd[gd].flashlight;
-    let p = g.tab.light[l].pos;
-    Some(burns_from(g, held, p))
 }
 
 /// somebody not of his side in the beam, this side of what it ends on (guards.ts wallDark `manIn`)

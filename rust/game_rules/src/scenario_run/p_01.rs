@@ -229,15 +229,6 @@ fn running_kind(kind: ActiveScenario) -> RunningScenarioKind {
     }
 }
 
-fn quit_kind(kind: ActiveScenario) -> QuitScenario {
-    match kind {
-        ActiveScenario::Nightbreach => QuitScenario::Nightbreach,
-        ActiveScenario::Roomclear => QuitScenario::Roomclear,
-        ActiveScenario::Rescue => QuitScenario::Rescue,
-        ActiveScenario::Quiet => QuitScenario::Quiet,
-    }
-}
-
 /// The scenario that is up, in the picker's words. None: none is up.   (scenarioRun.ts runningScenario)
 pub fn running_scenario(g: &crate::game::Game, level_file: Option<&str>, list: Option<&[crate::scene_scenarios::ScenarioEntry]>) -> Option<crate::scenario_run::RunningScenario> {
     let kind = active_scenario(g)?;
@@ -266,29 +257,5 @@ pub fn running_scenario(g: &crate::game::Game, level_file: Option<&str>, list: O
         None => capitalised(&word(kind.as_str())),
     };
     Some(RunningScenario { kind: running_kind(kind), squad, entry, title, team, saves: None })
-}
-
-/// Quit whichever scenario is up, back to the floor the start card sits over. What was stopped, or None.   (scenarioRun.ts quitScenario)
-pub fn quit_scenario(g: &mut crate::game::Game, fog: Option<bool>) -> Option<crate::scenario_run::QuitScenario> {
-    let fog = fog.unwrap_or(false);
-    let was = active_scenario(g);
-    if was.is_some() {
-        crate::stickycam::sticky_visit_set(g, 0.0);
-    }
-    match was {
-        Some(ActiveScenario::Roomclear) => crate::roomclear::room_clear_scenario_stop(g),
-        Some(ActiveScenario::Nightbreach) => crate::nightbreach::night_breach_stop(g),
-        Some(ActiveScenario::Rescue) => crate::rescue::rescue_stop(g),
-        Some(ActiveScenario::Quiet) => crate::quiet::quiet_mission_stop(g),
-        None => {}
-    }
-    if was.is_some() {
-        g.k.nightbreach.squad = 2.0;
-        g.k.rescue.squad = 2.0;
-        g.fog_of_war.on = fog;
-        crate::quietfog::quiet_fog_end(g);
-        crate::stickycam::sticky_visit_set(g, 0.0);
-    }
-    was.map(quit_kind)
 }
 

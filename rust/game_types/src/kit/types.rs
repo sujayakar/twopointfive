@@ -280,10 +280,6 @@ impl KitPreset {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct Store {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct BUILT {
     pub smoke: f64,
     pub bangs: f64,
@@ -314,20 +310,6 @@ pub struct CANMIXESValue {
     pub label: String,
     pub smoke: f64,
     pub stun: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct YOUGUNSCAN {
-    pub pistol: Option<String>,
-    pub rifle: Option<String>,
-    pub shotgun: Option<String>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct KITPRESETSItem {
-    pub id: String,
-    pub label: String,
-    pub line: String,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes)]
@@ -390,20 +372,6 @@ pub struct KitModYouBareValue {
     pub nvg: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum KindOf {
-    You,
-    Mate,
-}
-impl KindOf {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KindOf::You => "you",
-            KindOf::Mate => "mate",
-        }
-    }
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct StealthKept {
     pub stealth: Option<crate::kit::MemberKit>,
@@ -413,22 +381,6 @@ pub struct StealthKept {
 pub struct DealTable {
     pub kits: Vec<Vec<crate::kit::MemberKit>>,
     pub words: JsSet<String>,
-}
-
-#[derive(Clone, Debug)]
-pub enum SlotsCheck {
-    Arm0(crate::kit::SlotsCheckArm0),
-    Arm1(crate::kit::SlotsCheckArm1),
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct SlotsCheckArm0 {
-    pub table: crate::kit::SlotTable,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct SlotsCheckArm1 {
-    pub why: String,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -476,12 +428,6 @@ pub struct KitLoadoutsItem {
 pub struct KitRowCost {
     pub pouches: f64,
     pub rate: String,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct KitName {
-    pub title: String,
-    pub sub: String,
 }
 
 #[derive(Clone, Debug)]
@@ -577,20 +523,6 @@ pub struct KitLessonPageRowPacks {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct KeptNow {
-    pub charges: Option<f64>,
-    pub walls: Option<f64>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct KitYouLightPl {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct KitYouNvgPl {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct KitPoolIssued {
     pub bangs: f64,
     pub charges: f64,
@@ -674,20 +606,11 @@ impl KitMod {
 /// (src/game/kit.ts:128 KIT_MEMBERS)
 pub const KIT_MEMBERS: f64 = 5.0;
 
-/// (src/game/kit.ts:130 KIT_LS)
-pub const KIT_LS: &str = "twopointsix.kit";
-
 /// (src/game/kit.ts:135 ISSUED_FRAGS: a table nothing writes)
 pub fn issued_frags() -> Vec<f64> { alloc::vec![1.0, 1.0, 1.0, 0.0, 0.0] }
 
-/// (src/game/kit.ts:137 ISSUED_SHELLS: a table nothing writes)
-pub fn issued_shells() -> Vec<f64> { alloc::vec![1.0, 0.0, 0.0, 0.0, 0.0] }
-
 /// (src/game/kit.ts:138 SHELLS_MAX)
 pub const SHELLS_MAX: f64 = 4.0;
-
-/// (src/game/kit.ts:140 SHELLS_MATE_MAX)
-pub const SHELLS_MATE_MAX: f64 = 1.0;
 
 /// (src/game/kit.ts:142 CAMS_MAX)
 pub const CAMS_MAX: f64 = 3.0;
@@ -703,9 +626,6 @@ pub const FRAGS_MAX: f64 = 3.0;
 
 /// (src/game/kit.ts:158 BUILT: a table nothing writes)
 pub fn built() -> crate::kit::BUILT { crate::kit::BUILT { smoke: 4.0, bangs: 2.0, frags: 2.0, shells: 3.0 } }
-
-/// (src/game/kit.ts:160 COUNTS0: a table nothing writes)
-pub fn counts0() -> [String; 4] { [String::from("smoke"), String::from("bangs"), String::from("frags"), String::from("shells")] }
 
 /// (src/game/kit.ts:178 SUITS: a table nothing writes)
 pub fn suits() -> JsMap<String, crate::kit::SUITSValue> { { let mut t = JsMap::new(); t.set(String::from("black"), crate::kit::SUITSValue { label: String::from("black"), tint: [0.045, 0.05, 0.055] }); t.set(String::from("grey"), crate::kit::SUITSValue { label: String::from("urban grey"), tint: [0.16, 0.17, 0.18] }); t.set(String::from("navy"), crate::kit::SUITSValue { label: String::from("navy"), tint: [0.035, 0.055, 0.13] }); t.set(String::from("olive"), crate::kit::SUITSValue { label: String::from("olive drab"), tint: [0.1, 0.115, 0.055] }); t.set(String::from("jungle"), crate::kit::SUITSValue { label: String::from("jungle green"), tint: [0.045, 0.11, 0.055] }); t.set(String::from("khaki"), crate::kit::SUITSValue { label: String::from("khaki"), tint: [0.3, 0.26, 0.17] }); t.set(String::from("desert"), crate::kit::SUITSValue { label: String::from("desert tan"), tint: [0.4, 0.32, 0.2] }); t } }
@@ -734,9 +654,6 @@ pub const STUN_MAX: f64 = 4.0;
 /// (src/game/kit.ts:208 SMOKE_MATE_MAX)
 pub const SMOKE_MATE_MAX: f64 = 2.0;
 
-/// (src/game/kit.ts:250 SLOT_FIELD: a table nothing writes)
-pub fn slot_field() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("smoke"), String::from("smoke")); t.set(String::from("stun"), String::from("bangs")); t.set(String::from("frag"), String::from("frags")); t.set(String::from("shell40"), String::from("shells")); t.set(String::from("doorCharge"), String::from("charges")); t.set(String::from("wallCharge"), String::from("walls")); t.set(String::from("shotgun"), String::from("shotgun")); t.set(String::from("wand"), String::from("wand")); t.set(String::from("stickyCam"), String::from("cams")); t.set(String::from("hammer"), String::from("hammer")); t.set(String::from("sponge"), String::from("rings")); t } }
-
 /// (src/game/kit.ts:252 SLOT_AMOUNT: a table nothing writes)
 pub fn slot_amount() -> JsMap<String, crate::FnField> { { let mut t = JsMap::new(); t.set(String::from("smoke"), crate::FnField); t.set(String::from("bangs"), crate::FnField); t.set(String::from("frags"), crate::FnField); t.set(String::from("shells"), crate::FnField); t.set(String::from("charges"), crate::FnField); t.set(String::from("walls"), crate::FnField); t.set(String::from("shotgun"), crate::FnField); t.set(String::from("hammer"), crate::FnField); t.set(String::from("cams"), crate::FnField); t.set(String::from("rings"), crate::FnField); t.set(String::from("wand"), crate::FnField); t } }
 
@@ -758,26 +675,14 @@ pub fn big_trim() -> Vec<String> { alloc::vec![String::from("hammer"), String::f
 /// (src/game/kit.ts:277 SET_LOADOUT: a table nothing writes)
 pub fn set_loadout() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("quiet"), String::from("quiet")); t.set(String::from("loud"), String::from("stun")); t } }
 
-/// (src/game/kit.ts:381 MORE_BREAK)
-pub const MORE_BREAK: bool = false;
-
 /// (src/game/kit.ts:383 DEAL_TOOL: a table nothing writes)
 pub fn deal_tool() -> Vec<(f64, String)> { alloc::vec![(2.0, String::from("shotgun")), (4.0, String::from("hammer"))] }
-
-/// (src/game/kit.ts:400 STEALTH_BREAK)
-pub const STEALTH_BREAK: bool = false;
-
-/// (src/game/kit.ts:448 DEAL_BREAK)
-pub const DEAL_BREAK: bool = false;
 
 /// (src/game/kit.ts:450 DEALT: a table nothing writes)
 pub fn dealt() -> [String; 4] { [String::from("charges"), String::from("bangs"), String::from("frags"), String::from("smoke")] }
 
 /// (src/game/kit.ts:450 DEAL_TURN: a table nothing writes)
 pub fn deal_turn() -> Vec<f64> { alloc::vec![1.0, 3.0, 2.0, 4.0] }
-
-/// (src/game/kit.ts:771 GUN_NOTE: a table nothing writes)
-pub fn gun_note() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("fn2000"), String::from("FN2000: small flash, but every 5.56 is heard as gunfire")); t.set(String::from("aks74u"), String::from("AKS-74U: bursts, a bright flash, tracers, the hard report")); t.set(String::from("fiveseven"), String::from("Five-seveN: the one gun the floor does not hear as gunfire")); t.set(String::from("guard9mm"), String::from("9 mm service pistol: loud, single shots")); t.set(String::from("m870"), String::from("M870: no suppressor fits it — every shell is heard as gunfire")); t.set(String::from("ak74m"), String::from("")); t.set(String::from("akms"), String::from("")); t.set(String::from("pkm"), String::from("")); t.set(String::from("mk12"), String::from("Mk 12: holds its group across a yard · single shots, slow to come round, no launcher")); t.set(String::from("mp7"), String::from("MP7: the floor does not hear it as gunfire · no reach past a room, no launcher")); t.set(String::from("mk46"), String::from("Mk 46: a hundred on the belt to hold a lane · slow to come round, long to reload, no launcher")); t.set(String::from("m1014"), String::from("M1014: a room, as fast as the trigger is pulled · opens no lock, no reach, no launcher")); t.set(String::from("hk45"), String::from("HK45: the quietest gun there is · a short magazine, a slower hand")); t.set(String::from("g18"), String::from("Glock 18: a long magazine on automatic · loud, and it climbs")); t.set(String::from("mk18bare"), String::from("FN2000 without its suppressor: a bright flash and the hard report")); t.set(String::from("g19bare"), String::from("Five-seveN without its suppressor: every round is heard as gunfire")); t } }
 
 /// (src/game/kit.ts:790 GUN_SHORT: a table nothing writes)
 pub fn gun_short() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("fn2000"), String::from("FN2000")); t.set(String::from("aks74u"), String::from("AKS-74U")); t.set(String::from("fiveseven"), String::from("Five-seveN")); t.set(String::from("guard9mm"), String::from("9 mm pistol")); t.set(String::from("m870"), String::from("M870 shotgun")); t.set(String::from("ak74m"), String::from("")); t.set(String::from("akms"), String::from("")); t.set(String::from("mk12"), String::from("Mk 12")); t.set(String::from("mp7"), String::from("MP7")); t.set(String::from("mk46"), String::from("Mk 46")); t.set(String::from("m1014"), String::from("M1014")); t.set(String::from("hk45"), String::from("HK45")); t.set(String::from("g18"), String::from("Glock 18")); t.set(String::from("pkm"), String::from("")); t.set(String::from("mk18bare"), String::from("FN2000")); t.set(String::from("g19bare"), String::from("Five-seveN")); t } }
@@ -791,12 +696,6 @@ pub fn trim_row() -> crate::kit::KitRow { crate::kit::KitRow { get: None, field:
 /// (src/game/kit.ts:794 YOU_GUNS: a table nothing writes)
 pub fn you_guns() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("rifle"), String::from("FN2000 + Five-seveN")); t.set(String::from("pistol"), String::from("Five-seveN only")); t.set(String::from("shotgun"), String::from("M870 shotgun + Five-seveN")); t } }
 
-/// (src/game/kit.ts:797 YOU_GUNS_CAN: a table nothing writes)
-pub fn you_guns_can_table() -> crate::kit::YOUGUNSCAN { crate::kit::YOUGUNSCAN { pistol: Some(String::from("Suppressed Five-seveN")), rifle: None, shotgun: None } }
-
-/// (src/game/kit.ts:802 SHOTGUN_NOTE)
-pub const SHOTGUN_NOTE: &str = "drops a man across a room, poor down a corridor; shoots a lock off its door";
-
 /// (src/game/kit.ts:807 cansRow: a table nothing writes)
 pub fn cans_row() -> crate::kit::KitRow { crate::kit::KitRow { get: None, field: crate::kit::KitField::Cans, label: String::from("Cans"), values: alloc::vec![crate::kit::KitValue::Text(String::from("issued")), crate::kit::KitValue::Text(String::from("smoke")), crate::kit::KitValue::Text(String::from("even")), crate::kit::KitValue::Text(String::from("stun"))], item: None } }
 
@@ -806,14 +705,3 @@ pub fn big_word() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(S
 /// (src/game/kit.ts:827 BIG_NOTE: a table nothing writes)
 pub fn big_note() -> JsMap<String, [String; 2]> { { let mut t = JsMap::new(); t.set(String::from("none"), [String::from(""), String::from("")]); t.set(String::from("shotgun"), [String::from("shoots a lock off · heard as gunfire"), String::from("shoots a lock off · heard as gunfire")]); t.set(String::from("hammer"), [String::from("breaks a lock from either side · loud, not gunfire"), String::from("breaks a lock from either side · loud, not gunfire")]); t.set(String::from("wall"), [String::from("a door through a wall, where one is set"), String::from("a door through a wall, where one is set")]); t } }
 
-/// (src/game/kit.ts:1007 KIT_PRESETS: a table nothing writes)
-pub fn kit_presets() -> Vec<crate::kit::KITPRESETSItem> { alloc::vec![crate::kit::KITPRESETSItem { id: String::from("issued"), label: String::from("As issued"), line: String::from("the build as it was") }, crate::kit::KITPRESETSItem { id: String::from("quiet"), label: String::from("Quiet set"), line: String::from("suppressed pistol, no white light, black") }, crate::kit::KITPRESETSItem { id: String::from("loud"), label: String::from("Loud set"), line: String::from("bare carbine, light, more stun") }] }
-
-/// (src/game/kit.ts:1034 PASTE_BREAK)
-pub const PASTE_BREAK: bool = false;
-
-/// (src/game/kit.ts:1171 WHOLE_BREAK)
-pub const WHOLE_BREAK: bool = false;
-
-/// (src/game/kit.ts:1171 PICKED_BREAK)
-pub const PICKED_BREAK: bool = false;

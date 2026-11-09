@@ -48,12 +48,6 @@ pub struct QUIETRUNGSItem {
     pub words: String,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct QuietFogRowE {
-    pub kind: String,
-    pub group: Option<String>,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct QuietfogMod {

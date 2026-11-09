@@ -175,9 +175,6 @@ pub fn fog_of_war_filter(g: &crate::game::Game, all: &[CharId]) -> Vec<CharId> {
     all.iter().copied().filter(|&c| !g.fog_of_war.hidden_chars.has(c)).collect()
 }
 
-/// The engine replay's word for a few frames under the page's fog look: the look's rows are settled at the page's values, and there is no other to put back.   (FogOfWar.pageLook)
-pub fn fog_of_war_page_look(g: &crate::game::Game) {}
-
 #[cfg(test)]
 mod tests {
     use super::*;

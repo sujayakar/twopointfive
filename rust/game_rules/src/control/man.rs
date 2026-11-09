@@ -6,10 +6,6 @@ use crate::ids::*;
 /// He is dead. (A man down and bleeding, or one who has fled the level, is not: `down_kind`, `fled`.)
 pub fn dead(g: &Game, gd: GuardId) -> bool { g.gd[gd].state == GuardState::Dead }
 
-/// He fights the player's side, by the game's one table of who fights whom (teams::is_hostile). A civilian and a teammate are not; the night
-/// staff of a quiet mission are.
-pub fn enemy(g: &Game, gd: GuardId) -> bool { crate::teams::is_hostile(g, g.gd[gd].team, crate::teams::Team::Player) }
-
 /// He cannot see. It does not say WHAT took his eyes: a flash, a wall charge, a door thrown in his face and the door tools all write it.
 pub fn blind(g: &Game, gd: GuardId) -> bool { g.time < g.gd[gd].dazzled_until }
 

@@ -36,13 +36,6 @@ pub struct Lane {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct Hold {
-    pub speed: f64,
-    /// INVENTED: dealt when a hold starts; a new hold of the same man counts as new
-    pub serial: u32,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct FireLineFeet {
     pub goal: Option<V3>,
     pub speed: f64,

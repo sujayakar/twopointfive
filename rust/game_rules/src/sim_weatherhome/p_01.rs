@@ -43,8 +43,6 @@ pub fn wx_out(n: f64) -> Vec<f64> {
 }
 
 pub mod wx_knobs {
-    /// The body this line of the TypeScript has: nothing. rustknobs.ts:59 replaces it, and that needs `g` (notes, Skeleton).   (weatherhome.ts WX_KNOBS.here)
-    pub fn here() {}
 }
 
 #[cfg(test)]

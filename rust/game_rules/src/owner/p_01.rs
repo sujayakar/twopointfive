@@ -66,10 +66,6 @@ pub fn who(g: &Game, gd: GuardId) -> Option<(&'static str, &'static str, f64)> {
 }
 
 // ---- by number, for the page's checks (the call table's rows)
-/// `claim`, the tasker by its bit
-pub fn claim_man(g: &mut Game, gd: GuardId, rule: f64, t: f64, why: Option<f64>) { claim(g, gd, By(js::to_u32(rule)), t, why); }
-/// `release`, the tasker by its bit
-pub fn release_man(g: &mut Game, gd: GuardId, rule: f64, t: f64) { release(g, gd, By(js::to_u32(rule)), t); }
 
 #[cfg(test)]
 mod tests {

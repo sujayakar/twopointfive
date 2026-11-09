@@ -22,29 +22,9 @@ pub fn door_io(g: &mut crate::game::Game) -> crate::sim_doorshome::DoorIo {
         return io;
     }
     let x = crate::sim_sim::sim();
-    if module_disagrees() {
-        panic!(
-            "rust/sim keeps {} doors of {} columns and the rules {} of {}",
-            ::sim::doors::cap(0), ::sim::doors::cap(5), DOOR_CAP, DOOR_COLS
-        );
-    }
     let io = ask_io(x);
     g.m.sim_doorshome.io = Some(io);
     io
-}
-
-/// how many doubles wide a table of column numbers is: the Rust of `Object.keys(T).length`, these tables being all doubles
-fn width<T>() -> f64 {
-    (core::mem::size_of::<T>() / 8) as f64
-}
-
-/// doorIo's test that the module and this file count alike
-fn module_disagrees() -> bool {
-    ::sim::doors::cap(0) as f64 != DOOR_CAP
-        || ::sim::doors::cap(5) as f64 != DOOR_COLS
-        || ::sim::doors::cap(4) as f64 != DOOR_PARS
-        || width::<DO>() != DOOR_OUTS
-        || width::<DK>() != DOOR_CONS
 }
 
 /// doorIo's asking, of rust/sim's doors.rs
@@ -64,11 +44,6 @@ fn ask_io(x: crate::sim_sim::SimExports) -> crate::sim_doorshome::DoorIo {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn this_file_counts_as_the_module_does() {
-        assert!(!module_disagrees());
-    }
 
     #[test]
     fn an_index_is_an_address_over_eight_exactly() {

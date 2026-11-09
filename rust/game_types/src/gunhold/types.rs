@@ -31,20 +31,6 @@ pub enum Phase {
     Peek,
     Flank,
 }
-impl Phase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Phase::Back => "back",
-            Phase::Run => "run",
-            Phase::Cover => "cover",
-            Phase::Plan => "plan",
-            Phase::Line => "line",
-            Phase::React => "react",
-            Phase::Peek => "peek",
-            Phase::Flank => "flank",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct St {
@@ -83,22 +69,12 @@ pub struct GunHoldStats {
     pub free_t: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GUNHOLDDEBUG {
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct LINES {
     pub gun: Vec<String>,
     pub shot: Vec<String>,
     pub round: Vec<String>,
     pub gone: Vec<String>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PartOf {
-    pub k: crate::gunhold::Known,
-    pub st: crate::gunhold::St,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -140,16 +116,6 @@ pub enum BarkKind {
     Gone,
     Gun,
 }
-impl BarkKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BarkKind::Shot => "shot",
-            BarkKind::Round => "round",
-            BarkKind::Gone => "gone",
-            BarkKind::Gun => "gun",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct GunHoldFeetFs {
@@ -190,12 +156,6 @@ impl GunholdMod {
         }
     }
 }
-
-/// (src/game/gunhold.ts:76 GUNHOLD_DEFAULTS: a table nothing writes)
-pub fn gunhold_defaults() -> crate::knobs::GunholdK { crate::knobs::GunholdK::page() }
-
-/// (src/game/gunhold.ts:90 GUNHOLD_DEBUG: a table nothing writes)
-pub fn gunhold_debug() -> crate::gunhold::GUNHOLDDEBUG { crate::gunhold::GUNHOLDDEBUG {  } }
 
 /// (src/game/gunhold.ts:111 HEAR_M)
 pub const HEAR_M: f64 = 7.0;
