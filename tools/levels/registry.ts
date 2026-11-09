@@ -1,5 +1,5 @@
 // THE REGISTRY — the hostage rescue's level: one lit gallery straight to the room, two rooms you may run past, and a long dark locked way round to its other door.
-// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; rebuild/scenario-levels/contract.md the how-to):
+// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; docs/agents/levels.md the how-to):
 //   bun run tools/levels/export.ts registry [--check]   → levels/registry.json, with its `scenarios.rescue` block
 //   page: ?levelFile=registry.json&rescue
 //

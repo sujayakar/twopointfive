@@ -1,13 +1,13 @@
-// Turn a perf recording (src/ui/perfrec.ts, F9 in the game → docs/perf/<name>.json or a download) into the tables docs/internal/renderer-v3 was written from.
-//   bun run tools/qa/perf-report.ts docs/perf/perf-2026-08-10T….json [--spikes 12] [--pass direct]
+// Turn a perf recording (src/ui/perfrec.ts, F9 in the game → captures/perf/<name>.json or the backend) into tables.
+//   bun run tools/qa/perf-report.ts captures/perf/<name>.json [--spikes 12] [--pass direct]
 //   bun run tools/qa/perf-report.ts <sweep take>.json --md      (a sweep take's feature table as markdown, nothing else)
 import { readFileSync } from 'fs';
 import { benchReport, type BenchResult } from '../../src/ui/bench';   // a BENCHMARK take (Extras ▸ Benchmark / ?bench, src/ui/bench.ts): the report its card showed, printed first, as the machine's own word
 import { stallLines, type StallTake } from './perf-stalls';   // the frames that took several usual frames, and where the file says the time went
 import { sweepText, sweepMarkdown, smokeText } from './perf-sweep';   // a SWEEP take (F8, src/ui/perfsweep.ts): a table per feature flipped — printed after the plain tables; --md = that table as markdown, alone
 // gpuSum = Σ of per-pass durations; gpuUnion (dumps from 08-10 on) = the union of the passes' intervals on the GPU timeline. Metal runs independent passes side by
-// side when the queue is full, so Σ double-counts the overlap (35–55 % of the frame at high / medium in the field — the '7–13 ms cascade bursts' were exactly that:
-// docs/internal/p0a-cascades.md). Where a dump has the union, the tables print it beside Σ; budgets and gates should read the UNION.
+// side when the queue is full, so Σ double-counts the overlap (35–55 % of the frame at high / medium in the field — the '7–13 ms cascade bursts' were exactly that).
+// Where a dump has the union, the tables print it beside Σ; budgets and gates should read the UNION.
 type Frame = { t: number; dt: number; fps: number; cpu: { update: number; render: number; other: number }; gpu: Record<string, number>; gpuSum: number; gpuUnion?: number; res: [number, number]; eff: number; preset: string; adaptive: boolean; cam: number[]; n: Record<string, number | string> };
 type Ev = { t: number; frame: number; kind: string; text: string };
 const arg = (k: string, d?: string) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };

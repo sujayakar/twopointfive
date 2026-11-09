@@ -30,8 +30,7 @@ pub struct SquadsK {
     #[k(40.0)] pub hold_secs: f64,
     /// HARD ON A SQUADS LEVEL: A DRILLED GARRISON. Read only with harder defenders on (pressure.ts PRESSURE.on — the difficulty row's hard — and its row
     ///  `squadDrill`) and squads staged: standard, and hard on a level with no squads, never reach a row of it. The same eleven, the same three choices, the
-    ///  same words on the net; what changes is how well drilled they are, each rule its own switch (record
-    ///  rebuild/hard-everywhere/round2-squad-maps.md — which of them bite, and which are shipped off):
+    ///  same words on the net; what changes is how well drilled they are, each rule its own switch:
     ///  `drillNet`    THEY LET THE TEAM COMMIT: × `netK` (2) the thinking beat (`think`) and the net's lag (`netLag`) of a squad that could send men out
     ///                (`mayGo`: allowed to leave, nobody of its own still out, two to spare), and × `reinforceK` the beat of a hit squad's men in its
     ///                other rooms before they come (`reinforce`). A drilled garrison does not run at the first noise: a squad that hears of a fight and could go says so
@@ -97,7 +96,7 @@ pub struct SquadsK {
 
 /// hard on a squads level (SQUADS.drill*): the table while harder defenders are on, their `squadDrill` row is, and squads are staged in this game — else null
 /// WHAT HARD IS ON ONE SQUAD MAP, by its structure's name (`scenarios.roomClear.name`): rows of the drill read in place of SQUADS' own while
-///  `SQUADS.drillByMap` is on. A map not named here gets the table's rows. Record: rebuild/hard-everywhere/round2-squad-maps.md
+///  `SQUADS.drillByMap` is on. A map not named here gets the table's rows.
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct DrillAtK {
     #[k({ let mut t = JsMap::new(); t.set(String::from("the block, three squads"), crate::enemysquads::DrillAtRow::Row { drill_net: Some(true), net_k: Some(2.0), reinforce_k: Some(2.0), drill_own: Some(false), own_up: None, drill_back: Some(false), back_beat: None }); t.set(String::from("the warehouse"), crate::enemysquads::DrillAtRow::Row { drill_net: Some(false), net_k: None, reinforce_k: None, drill_own: Some(false), own_up: None, drill_back: Some(false), back_beat: None }); t.set(String::from("the block"), crate::enemysquads::DrillAtRow::Row { drill_net: Some(false), net_k: None, reinforce_k: None, drill_own: Some(false), own_up: None, drill_back: Some(false), back_beat: None }); t.set(String::from("the compound"), crate::enemysquads::DrillAtRow::Row { drill_net: Some(true), net_k: Some(1.0), reinforce_k: Some(0.75), drill_own: Some(true), own_up: Some(1.0), drill_back: Some(false), back_beat: None }); t.set(String::from("the barracks"), crate::enemysquads::DrillAtRow::Row { drill_net: Some(false), net_k: None, reinforce_k: None, drill_own: Some(false), own_up: None, drill_back: Some(true), back_beat: Some(3.0) }); t })] pub rows: JsMap<String, crate::enemysquads::DrillAtRow>,

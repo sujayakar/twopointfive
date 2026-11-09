@@ -2,7 +2,7 @@
 //! StaticCollision), laid out flat for the systems here that ask it things: the line tests (lines.rs) and the circle against the boxes (collide.rs).
 //!
 //! WHOSE IT IS. While the rules that move a box are TypeScript, a box is a TypeScript object and THAT is the truth: what stands here is a copy, written by
-//! src/scene/boxMirror.ts and proven against the objects at the start of every tick (docs/agents/rust.md, "the box world's copy"). Nothing here is state of
+//! src/scene/boxMirror.ts and proven against the objects at the start of every tick (docs/agents/rust.md). Nothing here is state of
 //! the game: a copy that is thrown away is made again from the objects.
 //!
 //! No allocation: every table is a fixed size, so the module's memory never grows and a view the TypeScript side holds over it never dies. A level too big for

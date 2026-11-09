@@ -17,7 +17,6 @@
 // THE BREAKER takes the lamps, the counting room's bulb, both gate lenses and the court's beam (the strongroom's lens and the north beam are on batteries),
 // and PLAYED it is no answer for a quiet player: it hangs in the lit lane the shack's man stands in, every man comes up wary
 // the moment it goes, the nearest has it back in within seconds, and while it is out the emergency beacon on the north wall sweeps the dark north strip.
-// The page is rebuild/missions/new/vault.md in the project files.
 import type { QuietData } from '../../src/scene/scenarios';
 import type { DeviceDef } from './lib/level';
 import { BoxFlag } from '../../src/scene/boxes';

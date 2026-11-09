@@ -1,4 +1,4 @@
-// CHARACTER MATERIALS: a man is shaded per MATERIAL SLOT instead of as one flat figure in two tints (notes: rebuild/characters-loud/materials/notes.md).
+// CHARACTER MATERIALS: a man is shaded per MATERIAL SLOT instead of as one flat figure in two tints.
 //
 // THE CONTRACT WITH THE MESHES is the slot NAMES: a glTF primitive whose material is named after a slot (`skin`, `cloth_uniform`, `cloth_plain`, `webbing`,
 // `boot`, `helmet`, `metal_dark`, `rubber`, `lens`, the optional tenth `accent` = each side's ONE odd-coloured thing: the operators' pair marking on the helmet band and brassards, the irregulars' pale naturals (the straw hat, the tee under an open jacket), the tucked shirt's tie, and the eleventh `eye` = the whites of the eyes, the same off-white on every side) puts its faces

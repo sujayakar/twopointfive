@@ -1,6 +1,6 @@
 // LIVED-IN ROOMS for the two quiet levels played as two (tools/levels/crossing.ts, tools/levels/quiet-relay.ts): the small pen their `furnish()` steps draw with.
 // Everything it adds is a LIVED thing (lib/lived.ts): a box in the editor group `lived.<room>`, a loose prop named `lived.<room>.<what>` — left out by the
-// loader with the switch off, so off is the level as it was. The contract: rebuild/play-style-levels/rooms/read-first.md.
+// loader with the switch off, so off is the level as it was. The contract: lib/lived.ts.
 // Rules it keeps for its callers: paint only from the GWOT kit's palette (the simulation reads paint; these two levels have no second look file), NO light and
 // no emissive box (the hiding dark is the level), no Math.random (a piece is what its arguments say). What it cannot keep for them — off every door's line,
 // every authored point and every patrol leg — levels stands holds.

@@ -4,7 +4,7 @@
 // and nothing it hung on the device outlives it (a listener, an open error scope, a method put over the device's, its `lost`), that a thing the device called
 // invalid is not kept (a module with a compile error, a layout with a validation error, the stand-in made after a failed compile), that a lost device is dropped
 // and the next lease opens another, and which window is a shell (`keepRole`). What it does to a real load is a page check (tools/qa/keeppage-page.cjs) and,
-// for the seconds, a measurement on a machine with a GPU (docs/agents/render.md).
+// for the seconds, a measurement on a machine with a GPU.
 //   bun run tools/qa/keeppage-check.ts                    exit 0 = every check passed, 1 = one failed
 //   KEEPPAGE_BREAK=1 bun run tools/qa/keeppage-check.ts   every maker goes straight to the device (nothing is kept): must FAIL
 // the stand-in browser, in place BEFORE the module is loaded: a GPUDevice whose prototype makes things and counts them

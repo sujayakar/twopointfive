@@ -358,7 +358,7 @@ export class BoxWorld {
   /** bumped by rust/game_rules/src/wallbreak whenever a static was appended, re-shaped in place or cut off at runtime (a holed wall's pieces): upload() re-packs changed statics by
    *  itself; a host that mirrors the statics elsewhere (the native engine's acceleration structure) folds this into its static serial */
   geomSerial = 0;
-  // ---- THE STATIC SLICE, PACKED ONCE (the CPU-frame lane, docs/internal/cpu-frame.md): the 782 statics used to be re-packed every frame — 4 trig calls, an f16 pack, matWord,
+  // ---- THE STATIC SLICE, PACKED ONCE: the 782 statics used to be re-packed every frame — 4 trig calls, an f16 pack, matWord,
   // the marking slot lookup a box — for words that never change. Now every static's PACK INPUTS (centre, yaw, halves, flags, owner, albedo, emissive, cutHeight, the finish, the
   // marking gain, the rotation, the marking list's identity + length) are shadowed per INDEX in `statShadow`, and a box whose inputs read equal to its shadow keeps the words it
   // packed before (the geo / mat arrays are written only by this class); anything else — a hidden static, a dimmed fixture, a moved editor box, a replaced Box object with other

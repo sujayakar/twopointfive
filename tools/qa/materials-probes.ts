@@ -1,4 +1,4 @@
-// Renderer v3 PHASE 4 — materials, ray-traced reflections, the detail layer (docs/internal/p4-materials.md) — the CPU-held / pure parts. The passes need the
+// Renderer v3 PHASE 4 — materials, ray-traced reflections, the detail layer — the CPU-held / pure parts. The passes need the
 // GPU (the Browser pane: boots, toggles, __png identity, the cost tables); what a headless bun can hold is everything AROUND them:
 //   materials-finish     the finish (rough / metal) through the level format: the office file carries it per material and per box, loadLevel resolves box over
 //                        material, an old file (no finish anywhere) loads to boxes without one, levelToData writes only what the paint does not say, the

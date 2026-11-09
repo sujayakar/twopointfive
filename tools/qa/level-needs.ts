@@ -207,7 +207,7 @@ export function bareGround(L: LevelFile, starts: number[][] = []): Stretch[] {
  *  (render/rc.ts, `defaultRcConfig`) and reads it, where a ray lands on a face, one probe spacing along that face's normal, blended between the four
  *  probes round that point in plan. A wall is a hand thick: a thing stood against one has faces whose read lands beside or beyond the wall, among
  *  probes that stand in the room behind it. If a lamp lights that room and not this one, the thing can glow with the other room's light (the
- *  manager's shelves against the lit store: docs/agents/render.md, 08-12 and, on a man, 10-20; the maintainer's shots of 10-23 on the shelves again).
+ *  manager's shelves against the lit store, 08-12 and, on a man, 10-20; the maintainer's shots of 10-23 on the shelves again).
  *  THE MEASURE, in plan, from the file alone. A WALL is cut as tools/qa/bouncewalls-check.ts cuts one (casts a shadow, from the floor to the ceiling,
  *  long and thin: a mast or a pillar is not; its numbers are typed again here, and a turned wall is kept here), and the line of a door the file does
  *  not hold open. Between a face and a probe a wall counts a hand's width short of each end, so that a line grazing its end goes round it. A LAMP is a
@@ -329,7 +329,7 @@ export function facingLights(L: LevelFile): KeyPair[] { const K = KEY, { parted,
 const startsOf = (o: unknown): number[][] => !o || typeof o !== 'object' ? [] : Object.entries(o as Record<string, unknown>).flatMap(([k, v]) =>
   (k === 'sam' || k === 'playerSpawn') && Array.isArray(v) && v.length === 3 && v.every(n => typeof n === 'number') ? [[v[0] as number, v[2] as number]] : startsOf(v));
 /** NOBODY COMES HERE, ON PURPOSE: the levels with a mission row and no response team, each with why in a few words (the long form is the response
- *  team's two bullets of docs/agents/enemies.md). A level with neither a `scenarios.response` block nor a line here has not answered. `block` and
+ *  team's bullet of docs/agents/enemies.md). A level with neither a `scenarios.response` block nor a line here has not answered. `block` and
  *  `hall` are in neither on purpose: either would suit a team and has none yet, the maintainer's call. */
 export const NOBODY_COMES: Record<string, string> = {
   'quiet-relay': 'a hilltop, nobody within reach, and its wired spot brings its own men', vault: 'private hired guards who call nobody', 'lights-out': 'its one idea is the mains',

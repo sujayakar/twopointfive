@@ -49,7 +49,7 @@ import { lookMarks } from './lookMarks';
 const PLAIN_NOTES = 'The kill house: a five-room shoot house on a range, a room clear for the four run against a par clock (scenarios.par). Regenerate: bun run tools/levels/export.ts killhouse';
 
 /** THE PAR (rust/game_rules/src/par): seconds for each medal, and what a teammate lost adds. Set from 24 seeds a way of the scripted commander as shipped
- *  (rebuild/missions/new/killhouse.md has the spread: clocks 39‥141 s, median 85 careful and 66 straight at the doors): gold is a fast
+ *  (the spread: clocks 39‥141 s, median 85 careful and 66 straight at the doors): gold is a fast
  *  run with nobody lost, silver a clean run at the careful median, bronze a clean slow one or a quick one that lost a man; a man lost costs the gold-to-silver gap (25 s),
  *  so one man lost is one medal */
 export const PAR: ParData = { gold: 65, silver: 90, bronze: 120, lossSecs: 25 };

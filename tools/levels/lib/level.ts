@@ -12,7 +12,7 @@ export type { LightDef };
 export type WeaponId = 'fiveseven' | 'guard9mm' | 'aks74u' | 'ak74m' | 'akms' | 'fn2000' | 'm870' | 'mk12' | 'mp7' | 'mk46' | 'm1014' | 'hk45' | 'g18' | 'pkm' | 'mk18bare' | 'g19bare';
 
 /** One man's beat. `weapon`: the rust/game_rules/src/weapons row he carries (absent = the 9 mm service pistol) — dealt at spawn (rust/game_rules/src/game Guard); nobody on this level is authored one
- *  yet (the carbine lanes decide who: docs/internal/sc20k-design.md §3.5). `keys`: the keys on his belt, by lock name (rust/game_rules/src/doors DoorDef.lock) — what Sam takes off
+ *  yet (the carbine lanes decide who). `keys`: the keys on his belt, by lock name (rust/game_rules/src/doors DoorDef.lock) — what Sam takes off
  *  him when he gives the keyed door up under questioning (rust/game_rules/src/player take_key); absent = the floor key every man on nights carries (rust/game_rules/src/doors FLOOR_KEY). The leaves
  *  themselves treat every man on the staff as keyed (rust/game_rules/src/game, `key: true`): a route authored keyless would want that contact narrowed too. */
 export interface PatrolRoute { name: string; points: Vec3[]; wait: number[]; weapon?: WeaponId; keys?: string[]; }

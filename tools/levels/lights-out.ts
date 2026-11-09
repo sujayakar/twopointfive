@@ -18,7 +18,6 @@
 // the sentry's turn, which got out clean before the lock, is shot at the keyway on both deals.
 // THREE men: the window's sentry on the north side, one walks the east strip
 // past the fire door and the east gate, one keeps the cook fire on the south side.
-// The page is rebuild/missions/new/duo.md in the project files.
 import type { KitViewData, QuietData } from '../../src/scene/scenarios';
 import type { DeviceDef } from './lib/level';
 import { BoxFlag } from '../../src/scene/boxes';

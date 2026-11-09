@@ -1,5 +1,5 @@
 // THE DEPOT — a motor pool at night: three huts round a floodlit yard, and a dark signals hut and a store's hatch that look across it.
-// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; rebuild/scenario-levels/contract.md the how-to):
+// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; docs/agents/levels.md the how-to):
 //   bun run tools/levels/export.ts depot [--check]     → levels/depot.json, with its `scenarios.roomClear` block
 //   page: ?levelFile=depot.json&roomclear&squad4
 //

@@ -1,7 +1,7 @@
 // THE COMPOUND — a walled compound for the four squad, in the Door Kickers mould: a perimeter wall with three ways through it, yard on every side of a main
 // house of eight rooms off one corridor, and three outbuildings (a garage, a shed, a guard hut) the yard has to be crossed past. Eight held rooms, twenty-four
 // leaves, four squads of defenders.
-// A level generator in the scenario levels' shape (tools/levels/block.ts is what it was cut from; rebuild/scenario-levels/contract.md the how-to):
+// A level generator in the scenario levels' shape (tools/levels/block.ts is what it was cut from; docs/agents/levels.md the how-to):
 //   bun run map:export compound     → levels/compound.json, with its `scenarios.roomClear` block (rooms + squads) and its footstep `surfaces`
 //   bun run map:check compound      → the kit's one check (validator, lint, structure, squads, nav from every way in, footsteps, start card, seeded runs)
 //   page: ?levelFile=compound.json&roomclear&squad4     (the start card's row 'The compound')
@@ -22,7 +22,7 @@
 //     two approach yards (tried: a man at the sala's window shot the team at the gate, eleven metres off, before a door was touched). FOUR LOOPS inside:
 //     corridor → kitchen → pantry → corridor, corridor → bunk room → back bedroom → corridor, corridor → office → spare room → corridor, corridor → sala →
 //     hall → corridor. Small rooms (the pantry 3 × 5, the hall 3 × 4.3) and two big ones (the sala 8 × 4.3, the garage 6.3 × 5.8).
-//   · FOUR SQUADS, ELEVEN MEN (scenarios.roomClear.squads — scene/scenarios.ts SquadData, rebuild/enemy-squads/squad-format.md): YARD = the shed (FOUR men:
+//   · FOUR SQUADS, ELEVEN MEN (scenarios.roomClear.squads — scene/scenarios.ts SquadData, docs/level-format.md): YARD = the shed (FOUR men:
 //     the guard room) and the garage (one: the bait) — five in two rooms, so the one squad with men to spare, and all four of the shed cross the yard to the
 //     garage when it is hit; GATE = the hut's one man, who stays at his gate (mayLeave false); WEST = the kitchen and the sala, one a room, nobody to spare;
 //     KEEP = the office, the bunk room and the back bedroom, who do not leave (mayLeave false) and may wedge only their corridor doors. Yard 5, gate 1, west 2,
@@ -57,8 +57,8 @@
 //         z 24 +--------+----------------------[ main gate ]+---+-----+
 //                                                 (x 22..25)
 //
-// HOW IT WAS TUNED (the scripted four, Standard, 16 seeds a layout; the record and the 144-seed tallies are in
-// rebuild/enemy-squads/map-compound.md): the first layout (team at the main gate, an open garage bay, a hall open to the corridor, a door on the corridor's east
+// HOW IT WAS TUNED (the scripted four, Standard, 16 seeds a layout):
+// the first layout (team at the main gate, an open garage bay, a hall open to the corridor, a door on the corridor's east
 // end, windows on the sala and the office) left 2 men in 10 standing: two thirds of the defenders run at the first bang, and in open ground they arrive from
 // every side at once. What moved it: the team start by the dark gate (the outbuildings fall first, the house is met from one end), doors instead of open mouths
 // onto the forecourt, no window onto an approach, the back door into a room nobody holds — and the squads a yard apart, so a team that keeps moving meets

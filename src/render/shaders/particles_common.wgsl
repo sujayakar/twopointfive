@@ -53,7 +53,7 @@ const SHARD_WALL_KEEP: f32 = 0.8;
 const SHARD_REST_TILT: f32 = 0.35;
 const SHARD_GLINT_CAP: f32 = 14.0;
 const SHARD_F0: f32 = 0.04;
-// … and its LOOK in the splat (particles_draw.wgsl shardVertex / shardFragment; taste constants, argued on rebuild/glass/shards.md)
+// … and its LOOK in the splat (particles_draw.wgsl shardVertex / shardFragment; taste constants)
 const SHARD_MIN_PX: f32 = 1.6;        // a fragment narrower than this on screen is drawn this wide: its body thinned by the area ratio, its glint by the square root of it (a sub-pixel sliver still flashes)
 const SHARD_BODY_A: f32 = 0.10;       // how much of what is behind it a face takes away (two Fresnel losses + the tint) …
 const SHARD_RIM_A: f32 = 0.45;        // … and its cut edge (the light runs along the glass and leaves by the edge: darker against a bright floor, brighter against a dark one)
