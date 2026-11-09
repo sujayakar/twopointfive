@@ -64,7 +64,7 @@ fn squad_found(g: &Game, men: &[GuardId]) -> Option<String> {
         let h = g.guards[i];
         i += 1;
         let state = g.gd[h].state;
-        if (state == crate::game::GuardState::Alert || state == crate::game::GuardState::Search) && crate::teams::hostile_to(g, h, crate::teams::HostileToO::Guard(men[0])) {
+        if (state == crate::game::GuardState::Alert || state == crate::game::GuardState::Search) && crate::teams::hostile_to(g, h, g.gd[men[0]].team) {
             return Some(String::from(if state == crate::game::GuardState::Alert { "a defender alert" } else { "a defender searching" }));
         }
     }

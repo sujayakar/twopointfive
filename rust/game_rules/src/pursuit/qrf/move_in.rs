@@ -518,7 +518,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
         while i < g.guards.len() {
             let o = g.guards[i];
             i += 1;
-            if crate::condition::down(g, g.gd[o].ch) || g.gd[o].civ.is_some() || !crate::teams::hostile_to(g, m, crate::teams::HostileToO::Guard(o)) || crate::rails::rails_down(g, o) { continue; }
+            if crate::condition::down(g, g.gd[o].ch) || g.gd[o].civ.is_some() || !crate::teams::hostile_to(g, m, g.gd[o].team) || crate::rails::rails_down(g, o) { continue; }
             let oc = g.gd[o].ch;
             let vo = crate::guards::can_see_char(g, m, oc, false);
             if !vo.visible { continue; }

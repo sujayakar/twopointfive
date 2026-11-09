@@ -65,6 +65,9 @@ fn limb_rows(n: &AnimNodes) -> Vec<(usize, f64, usize, usize)> {
 }
 // ---- construction and the plain frames ----
 
+/// Is a player's hand on this man.
+pub fn is_player(g: &crate::game::Game, c: CharId) -> bool { matches!(g.ch[c].who, crate::character::Who::Player(_)) }
+
 /// A man stands: his body, and a row of each part a man has.
 pub fn man_new(g: &mut crate::game::Game, body: crate::character::Character) -> CharId {
     let c = g.ch.push(body);
