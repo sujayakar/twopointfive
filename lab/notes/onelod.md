@@ -31,5 +31,6 @@ What was learned
 - A look at a cell is nearly all waiting: one ray a thread, every fourth frame, took 0.7 ms (the foliage's) to 0.12.
 
 (Surfaces: better in nine views of eleven, the same on the shelf, 0.02 worse on the roof by day. Over blocks of 16 pixels the garden and the shelf are 0.1 and 0.3 worse. Forest's memory is computed, the rest counted.)
+- A room with no windows and no power, by day: 7.8e-6 of light in the second core, 7.5e-6 in the first, 4.7e-6 by the reference; the room beside it has 0.16. Cells do not leak.
 
 Open: leaves lit by lamps (street by night, blocks 8 to 14 %); the pool's wall and leaves in mirrors; smoke itself is too bright in its middle in both cores; forest and pass were not measured.
