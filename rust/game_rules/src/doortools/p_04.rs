@@ -28,6 +28,12 @@ fn by_sam(g: &Game, c: ChargeId) -> bool { g.tab.doortools_set_charge[c].by == c
 fn charge_order_on(g: &Game, seat: &crate::seats::SeatRef, d: DoorId) -> bool {
     seat.door_tools.ops.iter().any(|o| { let x = &g.tab.doortools_door_op[*o]; x.kind == DoorToolKind::Charge && x.door == d })
 }
+/// Is `p` where a charge on a door that is not `but` throws back: one set on it, or one ordered.
+pub fn in_anothers_blast(g: &Game, seat: &crate::seats::SeatRef, but: DoorId, p: V3) -> bool {
+    let reach = g.k.doortools.backblast_m + 0.2;
+    let near = |d: DoorId| d != but && v3::dist_xz(p, g.dr[d].frame_centre) < reach;
+    seat.door_tools.set.iter().any(|&c| near(g.tab.doortools_set_charge[c].door)) || g.doors.list.iter().any(|&d| near(d) && charge_order_on(g, seat, d))
+}
 /// op.word && op.kind !== 'bangClear'
 fn on_word(g: &Game, op: DoorOpId) -> bool { let o = &g.tab.doortools_door_op[op]; o.word.is_some() && o.kind != DoorToolKind::BangClear }
 /// Write through op.kick if it is still there (a TypeScript write to a kick some call has since dropped is lost: so here).
@@ -149,7 +155,43 @@ pub fn door_tools_start_charge(g: &mut crate::game::Game, men: &[GuardId], t: &c
     let tail = if by_hand { String::from("stand off on a charge set by hand") } else { alloc::format!("{} sets it", callsign(g, lead)) };
     let what = alloc::format!("ordered · {} · {}", names.join(", "), tail);
     door_tools_beat(g, op, &what);
+    door_tools_out_of_blast(g, op);
     DoorToolsStartCharge::Arm1(())
+}
+
+/// A charge has been ordered: the men standing off from another, where that leaves them at its door or in its blast, are dealt their marks again.
+fn door_tools_out_of_blast(g: &mut Game, op: DoorOpId) {
+    let d = g.tab.doortools_door_op[op].door;
+    for o in g.door_tools.ops.clone() {
+        let x = &g.tab.doortools_door_op[o];
+        if o == op || x.kind != DoorToolKind::Charge || !matches!(x.phase, Phase::Place | Phase::Standoff | Phase::Armed) { continue; }
+        let (door, side, lead, men, placing) = (x.door, x.side, x.lead, x.men.clone(), x.phase == Phase::Place);
+        let reach = g.k.doortools.backblast_m + 0.2;
+        let fc = g.dr[d].frame_centre;
+        let at_it = men.iter().any(|&m| g.tab.doortools_door_op[o].post.get(m).map_or(false, |p| flat(p.pos, fc) < reach || crate::doorway::before_another_door(g, p.pos, door)));
+        if !at_it { continue; }
+        let Some(posts) = door_tools_standoff_posts(g, door, side, men.len() as f64, Some(&men)) else { continue };
+        let rest: Vec<GuardId> = men.iter().copied().filter(|&m| m != lead).collect();
+        let spots: Vec<V3> = posts[1..].iter().map(|p| p.pos).collect();
+        let groups: Vec<f64> = posts[1..].iter().map(|p| p.group.unwrap_or(0.0)).collect();
+        let mut deal = vec![(lead, posts[0])];
+        for (m, at) in crate::orders::squad_orders_pair(g, &rest, &spots, Some(&groups), None) { deal.push((m, *posts.iter().find(|p| p.pos == at).unwrap())); }
+        let name = crate::orders::door_words(g, door);
+        for (m, p) in deal {
+            g.tab.doortools_door_op[o].post.set(m, p);
+            if m == lead && placing { continue; }   // (he is at the door: off it to the new place when it is set)
+            let a = crate::doortools::standing_off(g, door, &p, &name);
+            door_tools_assign(g, o, m, &a);
+        }
+        if !placing {
+            let t = g.time;
+            let x = &mut g.tab.doortools_door_op[o];
+            x.phase = Phase::Standoff;
+            x.t0 = t;
+            if x.hold == 1.0 { x.hold = 0.0; }
+        }
+        door_tools_beat(g, o, "stood off again, out of the other charge's way");
+    }
 }
 
 /// A charge the player set stands on this face with no squad order on the door: the row is 'stand off'.   (doortools.ts looseOn)

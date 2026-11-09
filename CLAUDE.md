@@ -19,12 +19,12 @@ bun run dev            # tools/serve.ts → http://localhost:5173 (game at /, /s
 bun run build          # tools/build.ts → dist/
 bun run typecheck      # src/      ← before every commit (no vendor/typescript in a cloud checkout: a system `tsc --noEmit -p tsconfig.json`)
 bun run typecheck:qa   # tools/qa (its own tsconfig)
-(cd rust && cargo test -p game_start)                     # the game's rules: rust/game_start/README.md says how to write one; no check of the game is written in TypeScript
+(cd rust/game_start && cargo test)                        # the game's rules: rust/game_start/README.md says how to write one; no check of the game is written in TypeScript
+(cd rust/game_start && cargo run --release --bin gate)    # what a build is held to, natively (`gate pin`, `gate breaks`; README.md there)
 bun run tools/qa/checks.ts [group|name … --list]          # the picture, the shaders' texts, the page, the menus, the sounds, the level files: a minute
 bun run tools/qa/pages.ts [group|name …]                  # the real page in a browser on the software adapter, one script at a time
 bun run tools/qa/knobs-check.ts                           # after adding a knob table
 bun run tools/sim/build.ts                                # after any change under rust/ → src/sim/built.ts, src/dress/built.ts; `--check` is red on a stale one
-bun run tools/qa/soak.ts --seeds 1,2,3 --minutes 12 --quiet   # after gameplay changes
 ```
 Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`.
 

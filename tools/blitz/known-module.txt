@@ -1,1 +1,0 @@
-# WHAT THE MODULE'S START MAY DIFFER IN FROM THE NATIVE START (tools/blitz/start-module.ts): a pattern, a tab, the reason. One thing.

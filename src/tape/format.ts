@@ -20,9 +20,6 @@ export const REPLAY_VERSION = 1;
 export const ERROR_MARK = 'the page hit an error: ';
 /** a restart's mark opens with this (game/replaybuf.ts writes it: a fresh run, the men and the clock's story start over; a checkpoint load is not one) */
 export const RESTART_MARK = 'restart (';
-/** where the run a file ENDS in began: the last restart's moment (seconds from the file's start); 0 when the file holds none — its first sample is that run's, or as
- *  far back as the ring went. The viewer opens a file saved from the end card ('card') here: the card is about THIS run, and the ring may hold the tries before it. */
-export const lastRun = (f: { lines: ReplayLine[] }): number => f.lines.reduce((r, l) => l.k === 'mark' && typeof l.text === 'string' && l.text.startsWith(RESTART_MARK) && l.r > r ? l.r : r, 0);
 /** is this line a page error's */
 export const isErrorMark = (l: ReplayLine): boolean => l.k === 'mark' && typeof l.text === 'string' && l.text.startsWith(ERROR_MARK);
 /** the page errors a file holds, oldest first: the moment (seconds from the file's start) and the error's words */

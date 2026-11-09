@@ -3,7 +3,7 @@ import { SideMap } from '../math/side';
 import { Vec3, Quat, quat } from '../math/vec';
 import { WORLD } from './world';
 import { makeBuffer, writeWordsIfChanged } from '../gpu/device';
-import { CutPlane, CutGlass, cutConfig, cutClip, CUT_CLIP, packCut, CUT_STRIDE, BOX_CUT_BIT, MAX_CUT_PLANES } from './cut';
+import { CutPlane, CutGlass, cutConfig, cutClip, CUT_CLIP, packCut, CUT_STRIDE, BOX_CUT_BIT } from './cut';
 import type { BoxShape } from './shapes';
 import { AIR_ROWS } from './airGrid';
 import { packRoundRows, ROUND_CORE_W } from './round';

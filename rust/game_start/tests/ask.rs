@@ -16,13 +16,6 @@ fn two_rooms(seed: u32) -> Play {
     p.run(0.5);
     p
 }
-/// every word of the game's state, a word a part: the game's own parts, then rust/sim's block
-fn words(p: &mut Play) -> Vec<u32> {
-    let (mut w, mut words) = (game::bytes::W::new(), Vec::new());
-    game::state_words::state_words(&mut p.g, &mut w, &mut words);
-    words.extend(game_start::block::part_hashes(0));
-    words
-}
 
 /// A FAILURE MEANS: a question asked of the statics alone meets a door's leaf, one asked with a leaf let through meets that leaf (or misses another), or a wall
 /// stops being a wall to either.
@@ -94,7 +87,7 @@ fn asking_of_a_world_that_is_not_changes_nothing() {
         let box_ = p.g.col.boxes[wall];
         let over = Over { open: vec![wall as u32], extra: vec![box_], ..Over::but_door(&p.g, d) };
         assert!(!over.plain());
-        let before = words(&mut p);
+        let before = p.words();
         let shots = p.g.stats.glasspen.clone();
         for k in 0..48 {
             let th = k as f64 * 0.131;
@@ -107,7 +100,7 @@ fn asking_of_a_world_that_is_not_changes_nothing() {
             }
         }
         p.g.stats.glasspen = shots;   // (a tally of a round's lines asked through panes: no part of the world)
-        let after = words(&mut p);
+        let after = p.words();
         let parts: Vec<String> = game::state_words::state_names().into_iter().enumerate().filter(|(i, _)| after[*i] != before[*i]).map(|(_, n)| n).collect();
         assert!(parts.is_empty() && after == before, "seed {}: asking moved {:?}", seed, parts);
     }
@@ -194,8 +187,8 @@ fn a_way_asked_shared_is_the_way_the_tick_is_given() {
         assert_eq!(way(&p, [f64::NAN, 0.0, 12.0], b), None, "seed {seed}");
         assert_eq!(way(&p, a, [12.0, 0.0, f64::NAN]), None, "seed {seed}");
         // and it changes nothing
-        let before = words(&mut p);
+        let before = p.words();
         let _ = way(&p, a, b);
-        assert_eq!(before, words(&mut p), "seed {seed}: asked, a word of the state moved");
+        assert_eq!(before, p.words(), "seed {seed}: asked, a word of the state moved");
     }
 }

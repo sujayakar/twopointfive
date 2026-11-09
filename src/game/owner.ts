@@ -7,9 +7,8 @@
 // A rule says so as it takes him and as it lets go (`claimMan`, `releaseMan`), or as the one tick its lists can change in ends, and whoever wants to know reads the word (`hasHim`, `ownerOf`). What
 // a rule keeps about what it is doing with him stays the rule's own, and an answer that turns on what moves between its ticks (who is alive, what he just heard, a time) is the rule's own read, not the word. Nothing here decides anything: an asker's own list of who it yields to is a mask written where it asks.
 //
-// THE RANKS ARE THIS TABLE AND ONLY THIS TABLE, strongest first, in the order the game decides by: `updateGuard` for his body, then who may move him off his post. A rank decides who
-// is shown as having him, never who may take him. Where two modules disagree today about who outranks whom the table cannot say so and does not settle it: the list is
-// docs/agents/enemies.md, "who has a man".
+// THE RANKS ARE THIS TABLE AND ONLY THIS TABLE, strongest first, in the order the game decides by: `updateGuard` for his body, then who may move him off his post. A rule may take a man only
+// if none above it has him (the Rust game's owner::kept).
 //
 // Imports nothing at run time (the module is a leaf of src/game's cycle, so a top-level `ownerWitness` line in a rule's file is safe wherever the cycle starts). TypeScript for now;
 // `claimMan` and `releaseMan` move to Rust with the behaviours (wave 3 of the port), and this file is small so that it can.
@@ -24,15 +23,18 @@ const RULES = [
   { name: 'morale', why: ['a blast has him ducked or broken'] },
   { name: 'startle', why: ['caught alone at first sight, running for cover'] },
   // WHO MAY MOVE HIM OFF HIS POST
+  { name: 'mission', why: ['the mission\'s script holds him where he is'] },
+  { name: 'lastMan', why: ['the last man up, at his act'] },
+  { name: 'dig', why: ['on his way to his cover, or at a door with a wedge'] },
   { name: 'squadLeg', why: ['his squad has sent him, or is about to'] },
   { name: 'squadWord', why: ['his squad has heard and not yet said what it does, or has him going round or looking'] },
-  { name: 'lastMan', why: ['the last man up, at his act'] },
   { name: 'lane', why: ['held short of a covered lane, or looking round its corner'] },
-  { name: 'press', why: ['the press has him, or he stays to keep the room it leaves'] },
+  { name: 'dug', why: ['set on his door'] },
   { name: 'walk', why: ['walking to the post of a mate who does not answer, nothing learned of the team by it'] },
   { name: 'breaker', why: ['out for the lights, or waiting to be sent'] },
-  { name: 'needs', why: ['off for a coffee, a smoke, some water or a stretch'] },
   { name: 'squad', why: ['at rest, his squad\'s call'] },
+  { name: 'press', why: ['the press has him, or he stays to keep the room it leaves'] },
+  { name: 'needs', why: ['off for a coffee, a smoke, some water or a stretch'] },
 ] as const;
 export type OwnerRule = typeof RULES[number]['name'];
 

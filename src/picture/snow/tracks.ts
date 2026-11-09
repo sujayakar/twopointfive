@@ -214,8 +214,6 @@ export function formSnowTracks(T: SnowTracks, dt: number) {
   }
   T.forming.length = n;
 }
-/** every mark still forming, formed now (a check's, and a restart's that keeps the map) */
-export function settleSnowTracks(T: SnowTracks) { for (const m of T.forming) { m.age = m.delay + m.sink; } formSnowTracks(T, 0); }
 
 /** press a capsule from (ax, az) to (bx, bz), `r` m about its spine (`r0` at its first end, if another), into the bytes (never lifts what is already pressed): 255 inside, 128 on its outline, 0 half a skirt out */
 function press(T: Stamp, ax: number, az: number, bx: number, bz: number, r: number, r0 = r) {

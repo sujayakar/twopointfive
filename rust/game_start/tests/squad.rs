@@ -94,12 +94,6 @@ fn too_close_is_as_he_stands_in_the_same_tick() {
 /// A FAILURE MEANS: a question of the squad's words writes the game (with a charge set, so that the lines ask the box world too). Two machines ask at different times.
 #[test]
 fn asking_writes_nothing_with_a_charge_set() {
-    fn words(p: &mut Play) -> Vec<u32> {
-        let (mut w, mut words) = (game::bytes::W::new(), Vec::new());
-        game::state_words::state_words(&mut p.g, &mut w, &mut words);
-        words.extend(game_start::block::part_hashes(0));
-        words
-    }
     for seed in SEEDS {
         let run = |ask: bool| -> Vec<Vec<u32>> {
             let (mut p, door) = charged(seed);
@@ -107,7 +101,7 @@ fn asking_writes_nothing_with_a_charge_set() {
             let mut out = Vec::new();
             for _ in 0..4 {
                 for _ in 0..30 { p.frame(); if ask { assert!(says_you(&p), "seed {}: the question must reach the box world: {:?}", seed, p.view().corner); } }
-                out.push(words(&mut p));
+                out.push(p.words());
             }
             out
         };

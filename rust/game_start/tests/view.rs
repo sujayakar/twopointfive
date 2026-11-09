@@ -6,13 +6,6 @@ use game_start::play::{Opts, Play};
 
 const SEEDS: [u32; 3] = [1, 2, 3];
 
-/// every word of the game's state, a word a part: the game's own parts, then rust/sim's block
-fn words(p: &mut Play) -> Vec<u32> {
-    let (mut w, mut words) = (game::bytes::W::new(), Vec::new());
-    game::state_words::state_words(&mut p.g, &mut w, &mut words);
-    words.extend(game_start::block::part_hashes(0));
-    words
-}
 
 /// A FAILURE MEANS: asking what a HUD is told changes the game. Two machines of one game ask at different times and as often as they draw: a question
 /// that writes would part them. The same run twice, one asked after every frame and one never, equal in every part of the state after every second.
@@ -27,7 +20,7 @@ fn asking_the_view_writes_nothing() {
                 if s == 2 { p.order("fallIn", at, Who::All); }
                 if s == 5 { if let Some(&h) = p.hostiles().first() { p.falls(h, game::game::DownBy::Player); } }
                 for _ in 0..60 { p.frame(); if ask { let v = p.view(); assert!(v.mission.is_some()); } }
-                out.push(words(&mut p));
+                out.push(p.words());
             }
             out
         };

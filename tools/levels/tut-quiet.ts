@@ -19,7 +19,7 @@
 //       │           stalls against the wall · the alley behind (ruts, a lantern)    │
 //  z 28 └────────────────────────────────────────────────────────────────────────────┘
 //
-// THE LINE (scenarios.lesson; tools/qa/lessons/tut-quiet.ts plays it by input alone):
+// THE LINE (scenarios.lesson):
 //   the lane        light: out of the porch lamp, round the shop's corner, along the trodden path to the mark.
 //   the long wall   sound, then hands: a whistle at the mark and the player steps behind the long wall. The back court's man leaves his fire and comes the
 //                   long way round, along the walk on the wall's other side, to where the sound was, and stands looking at it with his back to the wall's
@@ -97,7 +97,7 @@ export const MATERIALS = { ...GWOT_MATERIALS, ...SNOW_MATERIALS };
 
 const HALF = Math.PI / 2;
 type P3 = [number, number, number];
-/** the places the scripted player and the lesson name (tools/qa/lessons/tut-quiet.ts imports these, so a moved wall moves the script) */
+/** the places the lesson names */
 /** well down the lane, past the first dark: being here passes the step `dark` whatever the light meter reads */
 const DEEP: [number, number, number] = [17.6, 0, 17.7];
 export const TQ = {

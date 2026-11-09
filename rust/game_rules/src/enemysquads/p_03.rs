@@ -501,11 +501,10 @@ pub fn look_out(g: &mut crate::game::Game) {
     let first = def!(g, bgo[0]).gd;
     crate::game::game_say(g, first, &line, Some(true), None, None);
 }
-/// not a man on his way to cover or wedging a door; not one who knows a covered lane lies that way   (enemysquads.ts lookOut's `may`)
+/// not one who knows a covered lane lies that way   (enemysquads.ts lookOut's `may`)
 fn may_look(g: &mut Game, d: RoomfightDefId, at: V3) -> bool {
     let gd = def!(g, d).gd;
-    let ph = crate::digin::dig_in_phase(g, gd);
-    (ph == "idle" || ph == "set") && !crate::lanes::lane_bars(g, gd, Some(at)) && !crate::lanes::lane_known_at(g, gd, Some(at))
+    !crate::lanes::lane_bars(g, gd, Some(at)) && !crate::lanes::lane_known_at(g, gd, Some(at))
 }
 
 /// Is that place in, or within three metres of, the room a holding man's door leads to.   (enemysquads.ts lostRoomHas)

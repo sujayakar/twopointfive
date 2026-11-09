@@ -137,8 +137,6 @@ export function madeOf(ctx: SfxContext, name: string, t: SoundTune, plain: (base
   if (KEPT.size >= 12) KEPT.delete(KEPT.keys().next().value as string);
   KEPT.set(key, out); return out;
 }
-/** the take as written: its layers (none for a take that is not built of the instruments) and its seed */
-export const writtenOf = (ctx: SfxContext, name: string, base: string, plain: (base: string) => SfxBuffer | null): Made | null => madeOf(ctx, name, { base }, plain);
 /** the tuned buffer the mixer is handed: the take under the tune, then the high-pass and the bell, then the guard (below). Always a buffer of its own. */
 export function renderTune(ctx: SfxContext, name: string, t: SoundTune, plain: (base: string) => SfxBuffer | null, solo?: number): SfxBuffer | null {
   const m = madeOf(ctx, name, t, plain, solo); if (!m) return null;

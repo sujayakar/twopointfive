@@ -114,7 +114,7 @@ pub fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
         let hand = crate::handleside::hand_press(g, gd);
         let round = speed > crate::doorway::ROUND_PACE && crate::doorway::rounds_leaves(g, gd) && !crate::doorway::leaf_stalled(g, gd);
         of.push(Some(c));
-        contacts.push(DoorContact { pos: g.ch[c].pos, radius: 0.34, bash, who: g.ch[c].id, quiet, key: Some(true), hand, round: Some(round), ..DoorContact::zeroed() });
+        contacts.push(DoorContact { pos: g.ch[c].pos, radius: 0.34, bash, who: g.ch[c].id, quiet, weak: Some(crate::doorway::only_brushes(g, gd)), key: Some(true), hand, round: Some(round), ..DoorContact::zeroed() });
     }
     let n0 = contacts.len();
     crate::civilians::civilian_door_contacts(g, &mut contacts);

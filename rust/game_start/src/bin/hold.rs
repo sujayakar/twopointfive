@@ -36,105 +36,15 @@
 //!
 //! WHAT IT PROVES: two builds that write the same bytes played the same game on these floors under these hands, part for part.
 //! WHAT IT DOES NOT: anything the hands do not reach. Each hand's file says what it reaches and what it does not.
-use game::game::GuardState;
-use game_start::play::{dist, Button, Opts, Play};
+use game_start::hand::{act, hands_dir, others, read_hand};
+use game_start::parts;
+use game_start::play::{Opts, Play};
 use std::io::{Read, Write};
 
 const DEFAULT_LEVELS: [&str; 21] = ["barracks:clear", "block:clear", "compound:clear", "defuse:clear", "depot:clear", "floodlit:clear", "glasshouse:clear",
     "hall:clear", "killhouse:clear", "mousehole:clear", "records:clear", "pass:clear", "snatch:clear",
     "office", "consulate", "registry", "bazaar", "lights-out", "crossing", "police-post", "library-hall"];
 const MAGIC: &[u8; 8] = b"hold 2\n\0";
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-enum Place { Nearest, Door, Sam, At(f64, f64) }
-#[derive(Clone, Debug)]
-enum What { Order(String, Place, game::orders::Who), Fire(Place), Can(game::game::ThrowKind, Place), KeyDown(&'static str), KeyUp(&'static str), Point(Place), Press, Release }
-/// `at`: (the frame, what is done, which line of the file it is of); `lines`: the file's lines that do something, as written
-struct Hand { unhurt: bool, at: Vec<(usize, What, usize)>, lines: Vec<String> }
-
-fn hands_dir() -> std::path::PathBuf { std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("hands") }
-
-/// a hand's file read for a run of `frames` frames: every line as the frames it happens on, in the file's order within a frame
-fn read_hand(text: &str, frames: usize) -> Hand {
-    let mut h = Hand { unhurt: false, at: Vec::new(), lines: Vec::new() };
-    let place = |w: &str| -> Place {
-        match w { "nearest" => Place::Nearest, "door" => Place::Door, "sam" => Place::Sam, xz => { let mut p = xz.split(',').map(|v| v.parse::<f64>().unwrap_or_else(|_| panic!("a place is nearest, door, sam or X,Z: '{}'", xz))); Place::At(p.next().unwrap(), p.next().expect("X,Z")) } }
-    };
-    for (n, line) in text.lines().enumerate() {
-        let line = line.split('#').next().unwrap().trim();
-        if line.is_empty() { continue; }
-        let w: Vec<&str> = line.split_whitespace().collect();
-        let bad = || -> ! { panic!("line {} of the hand is not one this tool knows: '{}'", n + 1, line) };
-        if w == ["unhurt"] { h.unhurt = true; continue; }
-        let secs = |v: &str| -> usize { (v.parse::<f64>().unwrap_or_else(|_| bad()) * 60.0).round() as usize };
-        let (first, step, rest) = match w[0] {
-            "at" if w.len() > 2 => (secs(w[1]), 0, &w[2..]),
-            "every" if w.len() > 4 && w[2] == "from" => (secs(w[3]), secs(w[1]).max(1), &w[4..]),
-            _ => bad(),
-        };
-        let what = match rest {
-            ["order", id, at, who] => What::Order(id.to_string(), place(at), match *who { "all" => game::orders::Who::All, "red" => game::orders::Who::Red, "blue" => game::orders::Who::Blue, _ => bad() }),
-            ["fire", at] => What::Fire(place(at)),
-            ["frag", at] => What::Can(game::game::ThrowKind::Frag, place(at)),
-            ["flash", at] => What::Can(game::game::ThrowKind::Flash, place(at)),
-            _ => bad(),
-        };
-        h.lines.push(rest.join(" "));
-        let of = h.lines.len() - 1;
-        let mut f = first;
-        while f < frames {
-            match &what {
-                // (the rifle comes up over 0.8 s, the cursor rests 0.3 s on the place, the trigger is down two frames)
-                What::Fire(p) => for (d, x) in [(0, What::KeyDown("Digit2")), (6, What::KeyUp("Digit2")), (48, What::Point(*p)), (66, What::Press), (68, What::Release)] { h.at.push((f + d, x, of)); },
-                x => h.at.push((f, x.clone(), of)),
-            }
-            if step == 0 { break; }
-            f += step;
-        }
-    }
-    h.at.sort_by_key(|x| x.0);   // (a stable sort: lines of one frame stay in the file's order)
-    h
-}
-
-/// the men standing who are not of Sam's squad, nearest to Sam first
-fn others(p: &Play) -> Vec<game::ids::GuardId> {
-    let sam = p.sam_at();
-    let mut v: Vec<game::ids::GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative && p.g.gd[gd].state != GuardState::Dead && p.g.gd[gd].down_kind.is_none()).collect();
-    v.sort_by(|x, y| dist(p.at(*x), sam).partial_cmp(&dist(p.at(*y), sam)).unwrap());
-    v
-}
-fn place_of(p: &Play, at: Place) -> Option<[f64; 2]> {
-    match at {
-        Place::Sam => Some(p.sam_at()),
-        Place::At(x, z) => Some([x, z]),
-        Place::Nearest => others(p).first().map(|&m| p.at(m)),
-        Place::Door => {
-            let him = others(p).first().map(|&m| p.at(m))?;
-            let mut doors: Vec<[f64; 2]> = p.g.doors.list.iter().map(|&d| { let c = p.g.dr[d].frame_centre; [c[0], c[2]] }).collect();
-            doors.sort_by(|a, b| dist(*a, him).partial_cmp(&dist(*b, him)).unwrap());
-            doors.first().copied()
-        }
-    }
-}
-
-/// one line of a hand done to the game; Err says why it could not be (the game's own refusal of an order, or nobody to do it to)
-fn act(p: &mut Play, what: &What) -> Result<(), String> {
-    let nobody = || String::from("nobody is left");
-    match what {
-        What::Order(id, at, who) => {
-            let at = place_of(p, *at).ok_or_else(nobody)?;
-            let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
-            match game::orders::squad_orders_give(&mut p.g, id, Some(&t), Some(who.clone()), None) { Some(why) => Err(why), None => Ok(()) }
-        }
-        What::Can(kind, at) => { let at = place_of(p, *at).ok_or_else(nobody)?; game::game::game_drop_throwable(&mut p.g, *kind, [at[0], 0.0, at[1]]); Ok(()) }
-        What::KeyDown(k) => { p.key_down(k); Ok(()) }
-        What::KeyUp(k) => { p.key_up(k); Ok(()) }
-        What::Point(at) => { let at = place_of(p, *at).ok_or_else(nobody)?; p.point_at(at); Ok(()) }
-        What::Press => { p.press(Button::Left); Ok(()) }
-        What::Release => { p.release(Button::Left); Ok(()) }
-        What::Fire(_) => unreachable!("read_hand writes a shot out as its keys"),
-    }
-}
 
 struct Run { level: String, clear: bool, hand: String, seed: u32, secs: f64 }
 impl Run {
@@ -171,9 +81,10 @@ fn drawn(dir: &str, r: &Run) -> Result<String, String> {
     let (mut boxes, mut men, mut lights) = (0, 0, 0);
     for k in 0..frames {
         while next < hand.at.len() && hand.at[next].0 <= k { let _ = act(&mut p, &hand.at[next].1); next += 1; }
-        p.frame();
-        let before = if k % 60 == 0 { Some(p.words()) } else { None };
         let mut between = 0.0;
+        let mut wrong = None;
+        p.frame_shown(|p| {
+        let before = if k % 60 == 0 { Some(p.words()) } else { None };
         for (i, (_, want)) in DRAWN.iter().enumerate() {
             let t = std::time::Instant::now();
             d[i].take(&p.g, *want);
@@ -185,7 +96,7 @@ fn drawn(dir: &str, r: &Run) -> Result<String, String> {
             d[i].frame(&p.g, 0.5, focus);
             d[i].frame(&p.g, 1.0, focus);
             between += t.elapsed().as_secs_f64() * 1e6 / 2.0;
-            if d[i].table().is_empty() { return Err(String::from("no section lies anywhere")); }
+            if d[i].table().is_empty() { wrong = Some(String::from("no section lies anywhere")); }
         }
         let n = DRAWN.len();
         cost[n].0 += between;
@@ -194,8 +105,10 @@ fn drawn(dir: &str, r: &Run) -> Result<String, String> {
         lights = lights.max(d[4].lights.rows.len());
         men = men.max(d[5].men.men.len());
         let h = d[3].boxes.head[0];
-        if h.count as usize != d[3].boxes.geo.len() || h.visible as usize + h.visible_cut as usize != d[3].boxes.visible.len() { return Err(format!("frame {}: the boxes' head does not say what their lists hold", k)); }
-        if let Some(b) = before { if b != p.words() { return Err(format!("frame {}: drawing the game changed it", k)); } }
+        if h.count as usize != d[3].boxes.geo.len() || h.visible as usize + h.visible_cut as usize != d[3].boxes.visible.len() { wrong = Some(format!("frame {}: the boxes' head does not say what their lists hold", k)); }
+        if let Some(b) = before { if b != p.words() { wrong = Some(format!("frame {}: drawing the game changed it", k)); } }
+        });
+        if let Some(why) = wrong { return Err(why); }
     }
     let said: Vec<String> = DRAWN.iter().map(|x| x.0).chain(["between ticks"]).zip(&cost).map(|(n, c)| format!("{n} {:.0} ({:.0})", c.0 / frames as f64, c.1)).collect();
     Ok(format!("{} frames · at most {} boxes, {} lights, {} men · microseconds a frame, mean (worst): {}", frames, boxes, lights, men, said.join(", ")))
@@ -208,7 +121,7 @@ fn one(dir: &str, r: &Run, check: bool, but: &[String]) -> Result<String, String
     let hand = read_hand(&std::fs::read_to_string(format!("{}/{}.hand", dir, r.hand)).map_err(|e| format!("{}/{}.hand: {}", dir, r.hand, e))?, frames);
     let file = format!("{}/{}.h", dir, r.tag());
     // the parts: the game's own (game::state_words), then rust/sim's block (`sim.dice`, `sim.poses`, …)
-    let names: Vec<String> = game::state_words::state_names().into_iter().chain(game_start::block::PART_NAMES.iter().map(|s| format!("sim.{}", s))).collect();
+    let names = parts::names();
     let n = names.len();
     let mut kept: Vec<u8> = Vec::new();
     // (then: the kept file's part names, where its frames begin and how wide one is; pairs: the parts compared, as (its place now, its place then))
@@ -246,13 +159,9 @@ fn one(dir: &str, r: &Run, check: bool, but: &[String]) -> Result<String, String
     for k in 0..frames {
         while next < hand.at.len() && hand.at[next].0 <= k { match act(&mut p, &hand.at[next].1) { Ok(()) => { done += 1; did[hand.at[next].2] += 1; } Err(why) => { undone += 1; why_not[hand.at[next].2] = why; } } next += 1; }
         p.frame();
-        w.b.clear();
-        // (the game's own parts, then rust/sim's block a part at a time)
-        game::state_words::state_words(&mut p.g, &mut w, &mut words);
-        words.extend(game_start::block::part_hashes(0));
-        let mut all = 0xcbf2_9ce4_8422_2325u64;
-        for (i, x) in words.iter().enumerate() { all = (all ^ *x as u64).wrapping_mul(0x0000_0100_0000_01b3); row[8 + i] = (*x ^ (*x >> 8) ^ (*x >> 16) ^ (*x >> 24)) as u8; }
-        row[..8].copy_from_slice(&all.to_le_bytes());
+        parts::words(&mut p.g, &mut w, &mut words);
+        for (i, x) in words.iter().enumerate() { row[8 + i] = (*x ^ (*x >> 8) ^ (*x >> 16) ^ (*x >> 24)) as u8; }
+        row[..8].copy_from_slice(&parts::fold(&words).to_le_bytes());
         match &mut out {
             Some(f) => f.write_all(&row).unwrap(),
             None => {

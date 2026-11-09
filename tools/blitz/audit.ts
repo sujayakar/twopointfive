@@ -1,4 +1,4 @@
-// THE AUDIT'S WALKS (PLAY.md, `play.ts --audit`): where two whole states of the game differ, field by field, by the bridge's schema. The headless host
+// THE AUDIT'S WALKS (PLAY.md): where two whole states of the game differ, field by field, by the bridge's schema. The headless host
 // (rust-host.ts) uses them to say what TypeScript wrote into the puppet between two ticks; nothing here writes a game.
 import { SCHEMA, parse } from './export.ts';
 // ---- where in a state a byte is: the bridge's walk, entered only where one of the asked places lies. A value of a fixed width that holds none is stepped over.

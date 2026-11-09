@@ -174,22 +174,6 @@ pub fn press_keeps_home(g: &mut crate::game::Game, d: RoomfightDefId, stop_clock
     aim(g, d).map(|a| a.t) == Some(keep) && stays_home(g, d)
 }
 
-/// digin.ts asks this before a man starts on his room: true = he is in a press or on his beat toward one. (pressure.ts pressWants)
-pub fn press_wants(g: &mut crate::game::Game, def: RoomfightDefId) -> bool {
-    if !g.k.pressure.on {
-        return false;
-    }
-    if g.m.pressure.states.is_none() {
-        return false;
-    }
-    let now = g.time;
-    if ready_man(g, def, now) {
-        return true;
-    }
-    let Some(st) = g.m.pressure.states.as_ref() else { return false };
-    st.think.has(def) || st.of.get(def).map_or(false, |m| !g.tab.pressure_man[*m].fell)
-}
-
 /// digin.ts asks this too: true = a press has left him to keep his room, and a mate of that room has gone. (pressure.ts pressKeeps)
 pub fn press_keeps(g: &crate::game::Game, def: RoomfightDefId) -> bool {
     if !g.k.pressure.on {
