@@ -19,6 +19,8 @@ import { skyMap, skyCode, tread, TROD } from './scene/skymap';
 import { foliageCode } from './scene/foliage';
 import { blockCode } from './core2/blocks';
 import { measureBlocks } from './core2/measure';
+import { Carry } from './core2/carry';
+import { carryRow } from './core2/blocks';
 import { Air, airCode, airRows, BREEZE } from './scene/air';
 import { type V3, clamp, norm } from './math';
 import math from './wgsl/math.wgsl' with { type: 'text' };
@@ -42,7 +44,7 @@ export class Lab {
   /** is what the character cannot see drawn as remembered? */ fog = false;
   tick = 0; frameNo = 0; seed = 0; hour = 15.2; hourNow!: Hour; level = 0; cut = 1e9; wantCut = 1e9; knobs = [0, 0, 0, 0]; lampsMode: 'auto' | 'on' | 'off' = 'auto'; wind: V3 = norm([1, 0, 0.35]); exposure = 0; paused = false;
   private prev: ReturnType<Camera['frame']> | null = null; prevAt = new Map<Piece, { at: V3; rot: Piece['rot'] }>(); slots = new Map<Piece, number>(); jitter: [number, number] = [0, 0]; private prevJitter: [number, number] = [0, 0];
-  /** the second core's cells, once found; those that keep light */ measured = ''; litCells = { many: 0, at: new Float32Array(8) };
+  /** the second core's cells, once found; those that keep light */ measured = ''; litCells = { many: 0, at: new Float32Array(8) }; private readonly carry = new Carry();
   methods = new Map<string, { m: Method; stages: Stage[] }>(); current = ''; doorsAuto = false; torch: { on: boolean; at: V3; dir: V3 } | null = null; jittered = true; haze = 1; /** how much of the moon there is, and is there power */ moon = 1; mains = true; /** how much snow lies, and how hard it falls */ snow = 0; /** what lies with none falling */ lies = 0; snowfall = 0; snowNow = 0; readonly trod = new Uint8Array(TROD.n[0] * TROD.n[1]); rain = 0; rainNow = 0; wet = 0; /** how wet the ground stays with no rain falling */ soaked = 0; steam = 1; lampGroup: Record<string, number> = {}; dense = 1; readonly tune = defaults(); readonly smoke = new Smoke(this); readonly lampOff = new Set<number>();
   async open(canvas: HTMLCanvasElement | null, scene = 'rooftop', load: Strain | null = null) {
     this.gpu = await openGpu(canvas); this.building = (SCENES[scene] ?? SCENES.rooftop!)(); if (load) strain(this.building, load); for (let i = 0; i < 3; i++) this.building.world.lamps.push({ kind: 'sphere', at: [0, -60, 0], u: [0.2, 0, 0], v: [0, 0, 0], radiance: [330, 125, 27], name: 'fire', on: 0 }); this.building.world.lamps.push({ kind: 'sphere', at: [0, -60, 0], u: [0.05, 0, 0], v: [0, 0, 0], radiance: [16000, 11000, 5600], name: 'flash', on: 0 }); this.air = new Air(this.building.place, this.building.world, this.building.doors); this.near = new Near(this.building.world.pieces); this.leaves = this.building.doors.flatMap(d => d.leaf); this.sky = new Sky(this.gpu); await this.sky.init();
@@ -117,7 +119,7 @@ export class Lab {
     const f = new Float32Array(160), u = new Uint32Array(f.buffer); let o = 0; const v = (a: ArrayLike<number>, w = 0) => { f.set([a[0]!, a[1]!, a[2]!, w], o); o += 4; };
     v(c.pos); v(c.right); v(c.up); v(c.fwd); v(p.pos); v(p.right); v(p.up); v(p.fwd); v(h.sun, h.radius); v(h.sunE, 1);
     f.set([rw, rh, ow, oh], o); o += 4; f.set([this.jitter[0], this.jitter[1], this.prevJitter[0], this.prevJitter[1]], o); o += 4; f.set([this.time, this.cut, this.exposure, h.haze * this.haze], o); o += 4; f.set([this.knobs[0]!, this.knobs[1]!, this.scene.joinRow, h.night * 2.2 * (this.mains ? 1 : 0)], o); o += 4;
-    this.slots = (this.scene.sendAir(this.air), this.scene.sendRipples(this.ripples), this.scene.moved()); this.scene.cull(c, this.cut); this.scene.sendLamps();
+    this.slots = (this.scene.sendAir(this.air), this.scene.sendRipples(this.ripples), this.scene.moved()); if (this.measured) this.carry.frame(this, carryRow(this.scene.blocks, this.scene.blockRow)); this.scene.cull(c, this.cut); this.scene.sendLamps();
     u.set([Math.min(64, b.world.lamps.length), Math.min(32, b.world.openings.length), this.frameNo, this.seed], o); o += 4; u.set(this.scene.per, o); o += 4; u.set(this.scene.node0, o); o += 4; u.set(this.scene.stepOf, o); o += 4; u.set(this.scene.piece0, o); o += 4; f.set(b.pool, o); o += 4; f.set([b.poolTop, b.poolDeep, this.gone, this.scene.airRow], o); o += 4; f.set([this.wet, this.rainNow, this.mains ? 1 : 0, Math.atan2(this.air.way[2], this.air.way[0])], o); o += 4; f.set([this.smoke.on ? 1 : 0, this.scene.noiseAt, this.dense, this.air.strength], o); o += 4; { const me = b.player.body.pos; this.tune.set(this.playing ? [me[0], me[1] + 1.0, me[2]] : [0, -999, 0], 25); } f.set(this.look(), o); f.set([this.snow, this.snowNow, Math.max(0, Math.min(0.1, this.time - this.drawnAt)), this.ripples.live ? 1 : 0], o + 32); u.set(this.scene.fine, o + 36); this.drawnAt = this.time;
     this.gpu.device.queue.writeBuffer(this.scene.frame, 0, f); this.prev = c; this.prevJitter = this.jitter;
   }

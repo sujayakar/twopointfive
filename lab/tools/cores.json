@@ -8,10 +8,9 @@
 "denlin",
 "onelin",
 "oneleaflin",
-"denlin",
-"onelin"
+"denlin"
 ],
-"paths": 900,
+"paths": 700,
 "name": "garden",
 "dist": 22,
 "hour": 14.0,
@@ -31,10 +30,9 @@
 "denlin",
 "onelin",
 "oneleaflin",
-"denlin",
-"onelin"
+"denlin"
 ],
-"paths": 900,
+"paths": 700,
 "name": "tree",
 "dist": 6,
 "hour": 16.4,
@@ -55,10 +53,9 @@
 "denlin",
 "onelin",
 "oneleaflin",
-"denlin",
-"onelin"
+"denlin"
 ],
-"paths": 900,
+"paths": 700,
 "name": "ground day",
 "dist": 34,
 "hour": 15.0,

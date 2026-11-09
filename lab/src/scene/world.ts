@@ -16,6 +16,7 @@ export interface Piece {
   /** what moves it, by name */ rig?: string;
   /** of triangles: its object's row (mesh/pack.ts) */ mesh?: number;
   /** a plate of a cloth: how its normal leans at (−x −y) (+x −y) (−x +y) (+x +y), and where its middle is on the cloth */ bend?: number[]; cell?: [number, number];
+  /** up to what width a ray meets it as it is (blocks.ts: classOf), where something stands for it after that */ cls?: number;
 }
 /** a sign painted on one face: rect in metres about the face's middle, a cell of the atlas, a color */
 export interface Mark { face: number; at: [number, number]; size: [number, number]; art: string; color: V3; turn?: number }

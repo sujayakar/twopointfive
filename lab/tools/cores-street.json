@@ -8,10 +8,9 @@
 "denlin",
 "onelin",
 "oneleaflin",
-"denlin",
-"onelin"
+"denlin"
 ],
-"paths": 900,
+"paths": 700,
 "name": "k2-store",
 "dist": 14,
 "look": [
@@ -33,10 +32,9 @@
 "denlin",
 "onelin",
 "oneleaflin",
-"denlin",
-"onelin"
+"denlin"
 ],
-"paths": 900,
+"paths": 700,
 "name": "k1-street-day",
 "dist": 27,
 "look": [
@@ -58,10 +56,9 @@
 "denlin",
 "onelin",
 "oneleaflin",
-"denlin",
-"onelin"
+"denlin"
 ],
-"paths": 900,
+"paths": 700,
 "name": "shelf",
 "dist": 4.5,
 "look": [

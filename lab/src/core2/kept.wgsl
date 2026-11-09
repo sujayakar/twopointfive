@@ -23,11 +23,15 @@ fn folWalk(ro: vec3f, rd: vec3f, t1: f32, lit: bool) -> Fol {
   var o: Fol; if (lit) { o.L = blkL; o.T = vec3f(blkT); return o; }            /* (what nearest has found on its way) */
   let was = blk; blk = vec4f(0.0, 0.0, 1e9, 1e9); let hid = noLeaves; noLeaves = false; o.T = exp(-vec3f(1.0, 0.86, 1.1) * blockWalk(ro, rd, 0.0, t1, 1e9, false).tau); blk = was; noLeaves = hid; return o;
 }
+/** what the limb that the last ray stopped in sends back along it */
+fn limbSent(rd: vec3f) -> vec3f { let slot = frameLit() + lastLimb; let q0 = keptRow(slot, 0u); let q1 = keptRow(slot, 1u); let q2 = keptRow(slot, 2u); let w = rd * rd; return keptSix(q0, q1, q2, 0u, rd.x < 0.0) * w.x + keptSix(q0, q1, q2, 1u, rd.y < 0.0) * w.y + keptSix(q0, q1, q2, 2u, rd.z < 0.0) * w.z; }
+/** how many cells keep light: limbs come after them */
+fn frameLit() -> u32 { return bitcast<u32>(extra[BLK_CARRY].y); }
 fn leafCell(x: vec3f) -> u32 { let c = cellAt(vec3i(floor(x / 0.32))); if (c == 0u || (bitcast<vec4u>(extra[BLK_CELLS + (c - 1u) * 2u]).x >> 24u) < 128u) { return 0u; } return c; }
 /** what a leaf at x sends back along a ray that met it: as its cell does */
-fn folBack(x: vec3f, rd: vec3f) -> vec3f { let c = leafCell(x); if (c == 0u) { return vec3f(0.0); } return cellSent(c, bitcast<vec4u>(extra[BLK_CELLS + (c - 1u) * 2u]), rd, rd); }
+fn folBack(x: vec3f, rd: vec3f) -> vec3f { if (lastLimb > 0u) { return limbSent(rd); } let c = leafCell(x); if (c == 0u) { return vec3f(0.0); } return cellSent(c, bitcast<vec4u>(extra[BLK_CELLS + (c - 1u) * 2u]), rd, rd); }
 /** the same, the sun's own apart */
-fn folJ(x: vec3f) -> vec3f { let c = leafCell(x); if (c == 0u) { return vec3f(0.0); } let slot = bitcast<vec4u>(extra[BLK_CELLS + (c - 1u) * 2u + 1u]).z; if (slot == 0u) { return vec3f(0.0); } let q = keptRow(slot, 0u); return vec3f(unpack2x16float(q.x), unpack2x16float(q.y).x); }
+fn folJ(x: vec3f, rd: vec3f) -> vec3f { if (lastLimb > 0u) { return limbSent(rd); } let c = leafCell(x); if (c == 0u) { return vec3f(0.0); } let slot = bitcast<vec4u>(extra[BLK_CELLS + (c - 1u) * 2u + 1u]).z; if (slot == 0u) { return vec3f(0.0); } let q = keptRow(slot, 0u); return vec3f(unpack2x16float(q.x), unpack2x16float(q.y).x); }
 /** the light (all but the sun and the lamps) that lands on a leaf at x from the side n looks to; w = is there any kept. open: how much of that side its own twig leaves open; the rest sees that twig's leaves */
 fn folLight(x: vec3f, n: vec3f, open: f32) -> vec4f {
   let g = x / 0.32 - 0.5; let b = vec3i(floor(g)); let f = g - floor(g); var E = vec3f(0.0); var G = vec3f(0.0); var ws = 0.0; let n2 = n * n;

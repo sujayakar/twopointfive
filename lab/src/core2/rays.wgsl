@@ -25,7 +25,7 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
     var i = 0u;
     while (i < per) {
       walked += 1u; let n = &nodes[b0 + i]; let lf = (*n).leaf; let cnt = lf & 15u;
-      let far = select(best, min(best, lim[(lf >> 4u) & 3u]), cnt == 0u && s != 2u);      /* (a node knows the biggest class under it; the moving tree is all class 3) */
+      let far = select(best, min(best, lim[(lf >> 4u) & 3u]), cnt == 0u);      /* (a node knows the biggest class under it) */
       if (!boxHit(n, ro, inv, tm, far)) { i = (*n).skip; continue; }
       let first = pb + (lf >> 4u);
       for (var j = 0u; j < cnt; j++) {
@@ -59,8 +59,9 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
       }
       i++;
     } if (!found) { best = solid; } }
+  lastLimb = 0u; if (blkOn && footS > 0.0) { let c = carryHit(ro, rd, tmin, best); if (c.y > 0.0) { best = c.x; lastLimb = u32(c.y); id = LEAF_HIT | (lastLimb - 1u); code = CARRY_CODE; } }
   blkL = vec3f(0.0); blkT = 1.0;
-  if (blkOn && footS > 0.0 && min(blk.x, leafTo) < best) { let b = blockWalk(ro, rd, max(tmin, min(blk.x, leafTo)), best, select(1e9, -log(1.0 - rnd()), BLK_DICE), !BLK_DICE); if (b.cell != NOTHING) { best = b.t; id = LEAF_HIT | b.cell; code = CELL_CODE; } else if (!BLK_DICE) { blkL = b.L; blkT = exp(-b.tau); } }
+  if (blkOn && footS > 0.0 && min(blk.x, leafTo) < best) { let b = blockWalk(ro, rd, max(tmin, min(blk.x, leafTo)), best, select(1e9, -log(1.0 - rnd()), BLK_DICE), !BLK_DICE); if (b.cell != NOTHING) { lastLimb = 0u; best = b.t; id = LEAF_HIT | b.cell; code = CELL_CODE; } else if (!BLK_DICE) { blkL = b.L; blkT = exp(-b.tau); } }
   var h: Hit; h.t = best; h.piece = id; h.code = code; h.thru = vec3f(1.0); h.gt = g0.x; h.gpiece = gp; h.gcode = gc; if (g0.x >= best) { h.gpiece = NOTHING; }
   if (g0.x < best) { h.thru *= unpackTint(bitcast<u32>(g0.y)); } if (g1.x < best) { h.thru *= unpackTint(bitcast<u32>(g1.y)); }
   return h;
@@ -71,7 +72,7 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
     let sm = s == 3u; let per = select(frame.per[s], frame.fine.x, sm); let b0 = select(frame.node0[s] + oc * frame.step[s], frame.fine.y + oc * frame.fine.z, sm); let pb = select(frame.piece0[s], frame.fine.w, sm);
     var i = 0u;
     while (i < per) {
-      let n = &nodes[b0 + i]; let lf = (*n).leaf; let cnt = lf & 15u; let far = select(tmax, min(tmax, lim[(lf >> 4u) & 3u]), cnt == 0u && s != 2u);
+      let n = &nodes[b0 + i]; let lf = (*n).leaf; let cnt = lf & 15u; let far = select(tmax, min(tmax, lim[(lf >> 4u) & 3u]), cnt == 0u);
       if (!boxHit(n, ro, inv, tmin, far)) { i = (*n).skip; continue; }
       let first = pb + (lf >> 4u);
       for (var j = 0u; j < cnt; j++) {
@@ -105,7 +106,7 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
       }
       i++;
     } }
-  if (blkOn && footS > 0.0) { let b0 = select(min(blk.x, leafTo), blk.x, noLeaves); if (b0 < tmax) { T *= exp(-blockWalk(ro, rd, max(tmin, b0), tmax, 1e9, false).tau); } }
+  if (blkOn && footS > 0.0) { T *= exp(-carryTau(ro, rd, tmin, tmax)); let b0 = select(min(blk.x, leafTo), blk.x, noLeaves); if (b0 < tmax) { T *= exp(-blockWalk(ro, rd, max(tmin, b0), tmax, 1e9, false).tau); } }
   if (frame.misc2.x > 0.5) { T *= smokeThrough(ro + rd * tmin, rd, tmax); }
   return T;
 }
@@ -130,6 +131,7 @@ fn blockWalk(ro: vec3f, rd: vec3f, t0: f32, t1: f32, want: f32, lit: bool) -> Bl
     if (p == 0u) { let e = (BLK_LO + (vec3f(c) + ahead) * BRICK - ro) * inv; t = max(min3(e), t) + 1e-3; continue; }
     let per = 8u >> level; let h = FINEST * f32(1u << level); let q = clamp(vec3i(floor((g - vec3f(c)) * f32(per))), vec3i(0), vec3i(i32(per) - 1)); let lo = BLK_LO + vec3f(c) * BRICK + vec3f(q) * h;
     let e = (lo + ahead * h - ro) * inv; var out = max(min3(e), t); if (level < 3u && blk[level + 1u] > t) { out = min(out, blk[level + 1u]); } if (blk.x > t) { out = min(out, blk.x); }
+    if (level < 2u) { let u = vec3u(clamp(vec3i(floor((g - vec3f(c)) * 2.0)), vec3i(0), vec3i(1))); if (blkWord(BLK_BRICKS, (p - 1u) * 588u + 576u + u.x + 2u * (u.y + 2u * u.z)) == 0u) { let e2 = (BLK_LO + (vec3f(c) + 0.5 * (vec3f(u) + ahead)) * BRICK - ro) * inv; t = max(min3(e2), t) + 1e-3; continue; } }      /* (nothing in the 0.64 m round here) */
     let cell = blkWord(BLK_BRICKS, (p - 1u) * 588u + array<u32, 4>(0u, 512u, 576u, 584u)[level] + u32(q.x) + per * (u32(q.y) + per * u32(q.z)));
     if (cell != 0u && cell != fromCell) {
       let r = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u]); let B = cellBox(r, lo, h); let u = (B.lo - ro) * inv; let v = (B.hi - ro) * inv; let ta = max(t - 1e-3, max3(min(u, v))); let tb = min(min(out, te), min3(max(u, v)));
