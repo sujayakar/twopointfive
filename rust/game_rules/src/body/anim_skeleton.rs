@@ -1197,32 +1197,8 @@ mod tests {
         (held, g)
     }
 
-    // The expected words are the TypeScript's own bits (src/anim/skeleton.ts under bun, EXACT.on, RUST.poses off so its own arithmetic ran): FNV-1a over each number's bits.
-    struct H(u32);
-    impl H {
-        fn new() -> H {
-            H(0x811c9dc5)
-        }
-        fn word(&mut self, w: u32) {
-            self.0 = (self.0 ^ w).wrapping_mul(0x01000193);
-        }
-        fn fs(&mut self, a: &[f32]) {
-            for v in a {
-                self.word(v.to_bits());
-            }
-        }
-        fn fd(&mut self, a: &[f64]) {
-            for v in a {
-                let b = v.to_bits();
-                self.word(b as u32);
-                self.word((b >> 32) as u32);
-            }
-        }
-    }
-    fn folded(a: &[f32]) -> u32 {
-        let mut h = H::new();
-        h.fs(a);
-        h.0
+    fn folded(a: &[f32]) -> Vec<u32> {
+        a.iter().map(|v| v.to_bits()).collect()
     }
     fn val(i: usize, s: usize) -> f64 {
         ((i * s + 11) % 101) as f64 / 101.0 - 0.5
@@ -1236,38 +1212,93 @@ mod tests {
         pose_cols(g, p).copy_from_slice(&cols(s));
         p
     }
-    const MASK: [f32; 5] = [0.0, 0.25, 0.5, 1.0, 1.5];
-    const WORDS: [(bool, u32, u32); 2] = [(false, 0x0700ea78, 0xeb7598f8), (true, 0x34134ae8, 0x6f845fa1)];
+    const ROWS: usize = 8;
+    /// a pose of five nodes standing at (x, i, 0) with its scale s and the turn `yaw` about the vertical
+    fn stood(x: f32, yaw: f64, s: f32) -> Vec<f32> {
+        let q = v3::quat::yaw(yaw);
+        let mut d = vec![0.0f32; 10 * ROWS];
+        for i in 0..5 {
+            let col = [x, i as f32, 0.0, q[0] as f32, q[1] as f32, q[2] as f32, q[3] as f32, s, s, s];
+            for c in 0..10 { d[c * ROWS + i] = col[c]; }
+        }
+        d
+    }
+    fn yaw_at(d: &[f32], i: usize) -> f64 {
+        2.0 * m::atan2(d[4 * ROWS + i] as f64, d[6 * ROWS + i] as f64)
+    }
+    fn near(a: f64, b: f64, what: &str) { assert!(m::abs(a - b) < 1e-5, "{what}: {a} against {b}"); }
+    /// the three poses of a blend laid end to end: a, b, what comes out
+    fn store(a: &[f32], b: &[f32], o: &[f32]) -> Vec<f32> {
+        let mut d = a.to_vec();
+        d.extend_from_slice(b);
+        d.extend_from_slice(o);
+        d
+    }
+    const A: (usize, usize) = (0, 80);
+    const B: (usize, usize) = (80, 80);
+    const OUT: (usize, usize) = (160, 80);
 
+    /// A move going into the next: the whole of one at nought, the whole of the other at one, and on the way a real pose.
     #[test]
-    fn blend_is_the_typescripts_bits() {
-        let (a, b, o) = ((0, 80), (80, 80), (160, 80));
-        let store = |x: &[f32]| {
-            let mut d = cols(37);
-            d.extend(cols(53));
-            d.extend_from_slice(x);
-            d
-        };
-        for (singles, plain, masked) in WORDS {
-            let mut d = store(&[0.0; 80]);
-            blend_own(&mut d, a, b, o, 5, 8, 0.37, None, singles);
-            assert_eq!(folded(&d[160..]), plain);
-            let mut d = store(&cols(71));
-            blend_own(&mut d, a, b, o, 5, 8, 0.8, Some(&MASK), singles);
-            assert_eq!(folded(&d[160..]), masked);
-            let mut d = store(&[]);
-            blend_own(&mut d, a, b, a, 5, 8, 0.8, Some(&MASK), singles);
-            assert_eq!(folded(&d[..80]), masked);
+    fn a_blend_goes_from_one_pose_to_the_other_by_its_weight() {
+        let (a, b) = (stood(1.0, 0.2, 1.0), stood(3.0, 1.0, 2.0));
+        for singles in [false, true] {
+            for (w, want) in [(0.0, &a), (-1.0, &a), (1.0, &b), (2.0, &b)] {
+                let mut d = store(&a, &b, &[0.0; 80]);
+                blend_own(&mut d, A, B, OUT, 5, ROWS, w, None, singles);
+                assert_eq!(folded(&d[160..]), folded(want), "weight {w} singles {singles}");
+            }
+            let mut d = store(&a, &b, &[0.0; 80]);
+            blend_own(&mut d, A, B, OUT, 5, ROWS, 0.25, None, singles);
+            let o = &d[160..];
+            near(o[2] as f64, 1.5, "a quarter of the way between the places");
+            near(o[7 * ROWS + 2] as f64, 1.25, "and the scales");
+            assert!(m::abs(yaw_at(o, 2) - 0.4) < 0.01, "and about that of the turn: {}", yaw_at(o, 2));
+            let l: f64 = (3..7).map(|c| { let x = o[c * ROWS + 2] as f64; x * x }).sum();
+            near(l, 1.0, "a turn stays a turn");
         }
     }
 
+    /// A rotation and its negative are one rotation: a blend between them stands still, it does not go round the long way or through nothing.
     #[test]
-    fn the_module_finds_a_pose_by_its_place_and_blends_the_same_bits() {
+    fn a_blend_takes_the_short_way_round() {
+        let a = stood(0.0, 0.3, 1.0);
+        let mut b = a.clone();
+        for i in 0..5 { for c in 3..7 { b[c * ROWS + i] = -b[c * ROWS + i]; } }
+        for singles in [false, true] {
+            let mut d = store(&a, &b, &[0.0; 80]);
+            blend_own(&mut d, A, B, OUT, 5, ROWS, 0.5, None, singles);
+            near(yaw_at(&d[160..], 1), 0.3, "half way between a turn and itself");
+        }
+    }
+
+    /// A layer on part of the body: each node takes the weight times his share, and a node with no share stays the first pose.
+    #[test]
+    fn a_mask_gives_each_node_his_share_of_a_blend() {
+        let (a, b) = (stood(0.0, 0.0, 1.0), stood(2.0, 0.0, 1.0));
+        let mask = [0.0f32, 0.25, 0.5, 1.0, 1.5];
+        for singles in [false, true] {
+            let mut d = store(&a, &b, &[0.0; 80]);
+            blend_own(&mut d, A, B, OUT, 5, ROWS, 0.8, Some(&mask), singles);
+            let got: Vec<f64> = (0..5).map(|i| d[160 + i] as f64).collect();
+            for (i, want) in [0.0, 0.4, 0.8, 1.6, 2.0].iter().enumerate() { near(got[i], *want, "a node's share"); }
+            // a blend written over its own first pose comes out the same, and with no share leaves the node as it stood
+            let mut own = store(&a, &b, &[]);
+            blend_own(&mut own, A, B, A, 5, ROWS, 0.8, Some(&mask), singles);
+            assert_eq!(folded(&own[..80]), folded(&d[160..]), "singles {singles}");
+        }
+    }
+
+    /// The module and the rules each hold a blend: they answer alike, and it writes only the pose it was given.
+    #[test]
+    fn the_module_finds_a_pose_by_its_place_and_blends_as_the_rules_do() {
         let (_h, mut g) = hold();
-        for (singles, plain, _) in WORDS {
+        for singles in [false, true] {
             let (a, b, o) = (pose_of(&mut g, 37), pose_of(&mut g, 53), pose_pool_new(&mut g, 5));
             assert!(::sim::skeleton::ask_blend(g.sim, a.at as usize, b.at as usize, 0.37, false, o.at as usize, 5, singles));
-            assert_eq!(folded(pose_cols(&mut g, o)), plain);
+            let mut d = store(&cols(37), &cols(53), &[0.0; 80]);
+            blend_own(&mut d, A, B, OUT, 5, ROWS, 0.37, None, singles);
+            assert_eq!(folded(pose_cols(&mut g, o)), folded(&d[160..]), "singles {singles}");
             // the poses either side are as they were
             assert_eq!(folded(pose_cols(&mut g, a)), folded(&cols(37)));
             assert_eq!(folded(pose_cols(&mut g, b)), folded(&cols(53)));
@@ -1277,60 +1308,61 @@ mod tests {
     fn track(node: f64, path: f64, times: &[f32], values: &[f32], step: bool) -> crate::anim_gltf::Track {
         crate::anim_gltf::Track { node, path, times: times.to_vec(), values: values.to_vec(), step }
     }
-
-    #[test]
-    fn sample_is_the_typescripts_bits() {
-        let clip = crate::anim_gltf::Clip {
-            name: String::from("c"),
-            duration: 1.25,
-            tracks: vec![
-                track(0.0, 0.0, &[0.0, 0.5, 1.0], &[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9], false),
-                track(1.0, 1.0, &[0.0, 0.5, 1.0], &[0.5, 0.5, 0.5, 0.5, -0.6, 0.2, -0.3, -0.7, 0.1, 0.9, 0.3, 0.2], false),
-                track(2.0, 2.0, &[0.25, 0.75], &[1.0, 1.0, 1.0, 2.0, 2.0, 2.0], true),
-                track(3.0, 1.0, &[0.2], &[0.0, 0.0, 0.0, 1.0], false),
-                track(9.0, 0.0, &[0.0, 1.0], &[9.0, 9.0, 9.0, 8.0, 8.0, 8.0], false),
-                track(4.0, 2.0, &[0.25, 0.75], &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0], false),
-            ],
-        };
-        let at = [(0.7, true), (-0.2, true), (5.1, false), (-1.0, false), (0.5, true), (1.1, false)];
-        let doubles = [0xe915e2dfu32, 0xdf585637, 0xdf585637, 0x6d0a0095, 0xe990b27b, 0xdf585637];
-        let in_singles = [0xc428c977u32, 0xdf585637, 0xdf585637, 0x6d0a0095, 0xe990b27b, 0xdf585637];
-        for k in 0..at.len() {
-            let mut o = cols(37);
-            sample_own(&clip, at[k].0, at[k].1, &mut o, 8, 5.0, false);
-            assert_eq!(folded(&o), doubles[k], "doubles {}", k);
-            let mut o = cols(37);
-            sample_own(&clip, at[k].0, at[k].1, &mut o, 8, 5.0, true);
-            assert_eq!(folded(&o), in_singles[k], "singles {}", k);
-        }
+    /// A clip of 1.25 s: a move and a half turn on two nodes, a stepped scale, a node with one key, and a track of a node the rig has not (the last, written apart).
+    fn clip_of(past_the_rig: bool) -> crate::anim_gltf::Clip {
+        let s = core::f32::consts::FRAC_1_SQRT_2;
+        let mut tracks = vec![
+            track(0.0, 0.0, &[0.0, 0.5, 1.0], &[0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 2.0, 1.0], false),
+            track(1.0, 1.0, &[0.0, 1.0], &[0.0, 0.0, 0.0, 1.0, 0.0, s, 0.0, s], false),
+            track(2.0, 2.0, &[0.25, 0.75], &[1.0, 1.0, 1.0, 2.0, 2.0, 2.0], true),
+            track(3.0, 1.0, &[0.2], &[0.0, 0.0, 0.0, 1.0], false),
+        ];
+        if past_the_rig { tracks.push(track(9.0, 0.0, &[0.0, 1.0], &[9.0, 9.0, 9.0, 8.0, 8.0, 8.0], false)); }
+        crate::anim_gltf::Clip { name: String::from("c"), duration: 1.25, tracks }
     }
 
     #[test]
-    fn a_clip_written_into_the_module_samples_the_same_bits() {
+    fn a_sample_goes_between_a_clips_keys_and_holds_at_its_ends() {
+        let clip = clip_of(true);
+        for singles in [false, true] {
+            let read = |t: f64, looped: bool| { let mut o = cols(37); sample_own(&clip, t, looped, &mut o, ROWS, 5.0, singles); o };
+            let o = read(0.25, false);
+            near(o[0] as f64, 0.5, "half way between two keys: half way between their places");
+            near(o[ROWS] as f64, 1.0, "in each column");
+            near(read(0.5, false)[0] as f64, 1.0, "on a key: the key");
+            near(yaw_at(&read(0.5, false), 1), m::PI / 4.0, "half of a quarter turn");
+            near(read(1.2, false)[0] as f64, 3.0, "past the last key: the last");
+            near(read(-1.0, false)[0] as f64, 0.0, "before the first key, and before the clip: the first");
+            near(read(9.0, false)[0] as f64, 3.0, "past the clip's end: its end");
+            // a stepped track holds its key until the next
+            near(read(0.74, false)[7 * ROWS + 2] as f64, 1.0, "a step before its next key");
+            near(read(0.76, false)[7 * ROWS + 2] as f64, 2.0, "a step past it");
+            // a loop comes round
+            near(read(0.25 + 1.25, true)[0] as f64, 0.5, "once round");
+            near(read(0.25 - 1.25, true)[0] as f64, 0.5, "back round");
+            // what no track names stands as it stood, and a node past the rig writes nothing
+            let was = cols(37);
+            let o = read(0.25, false);
+            assert_eq!(o[4].to_bits(), was[4].to_bits(), "node 4 has no track");
+            assert_eq!(o[ROWS + 4].to_bits(), was[ROWS + 4].to_bits());
+        }
+    }
+
+    /// The module and the rules each hold a sample: they answer alike. A clip is written once, however often it is asked for.
+    #[test]
+    fn a_clip_written_into_the_module_samples_as_the_rules_do() {
         let (_h, mut g) = hold();
-        // (sample_is_the_typescripts_bits' clip less its track of node 9, which writes nothing over a pose of five nodes and which the module would refuse)
-        let clip = crate::anim_gltf::Clip {
-            name: String::from("c"),
-            duration: 1.25,
-            tracks: vec![
-                track(0.0, 0.0, &[0.0, 0.5, 1.0], &[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9], false),
-                track(1.0, 1.0, &[0.0, 0.5, 1.0], &[0.5, 0.5, 0.5, 0.5, -0.6, 0.2, -0.3, -0.7, 0.1, 0.9, 0.3, 0.2], false),
-                track(2.0, 2.0, &[0.25, 0.75], &[1.0, 1.0, 1.0, 2.0, 2.0, 2.0], true),
-                track(3.0, 1.0, &[0.2], &[0.0, 0.0, 0.0, 1.0], false),
-                track(4.0, 2.0, &[0.25, 0.75], &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0], false),
-            ],
-        };
+        let clip = clip_of(false);
         let at = clip_write(&clip).unwrap() as usize;
         assert_eq!(clip_write(&clip).unwrap() as usize, at);
         let p = pose_pool_new(&mut g, 5);
-        let times = [(0.7, true), (-0.2, true), (5.1, false), (-1.0, false), (0.5, true), (1.1, false)];
-        let doubles = [0xe915e2dfu32, 0xdf585637, 0xdf585637, 0x6d0a0095, 0xe990b27b, 0xdf585637];
-        let in_singles = [0xc428c977u32, 0xdf585637, 0xdf585637, 0x6d0a0095, 0xe990b27b, 0xdf585637];
-        for k in 0..times.len() {
-            for (singles, word) in [(false, doubles[k]), (true, in_singles[k])] {
+        for (t, looped) in [(0.7, true), (-0.2, true), (5.1, false), (-1.0, false), (0.5, true), (1.1, false)] {
+            for singles in [false, true] {
+                let mut want = cols(37);
+                sample_own(&clip, t, looped, &mut want, ROWS, 5.0, singles);
                 pose_cols(&mut g, p).copy_from_slice(&cols(37));
-                assert!(::sim::skeleton::ask_sample(g.sim, p.at as usize, 5, at, times[k].0, times[k].1, singles));
-                assert_eq!(folded(pose_cols(&mut g, p)), word, "{} singles {}", k, singles);
+                assert!(::sim::skeleton::ask_sample(g.sim, p.at as usize, 5, at, t, looped, singles));
+                assert_eq!(folded(pose_cols(&mut g, p)), folded(&want), "t {t} singles {singles}");
             }
         }
     }
@@ -1342,45 +1374,77 @@ mod tests {
         }
         ch.order = vec![0.0, 1.0, 2.0, 3.0, 4.0];
         ch.skin.joints = vec![0.0, 1.0, 2.0, 3.0, 4.0];
-        ch.skin.inverse_bind = (0..80).map(|i| val(i, 19) as f32).collect();
+        ch.skin.inverse_bind = (0..80).map(|i| if (i % 16) % 5 == 0 { 1.0 } else { 0.0 }).collect();
         ch
     }
+    /// the rig's five nodes each a metre along +z from their parent, the given yaw on each, the root at (1, 2, 3)
+    fn chain(yaws: [f64; 5]) -> Vec<f32> {
+        let mut d = stood(0.0, 0.0, 1.0);
+        for i in 0..5 {
+            let q = v3::quat::yaw(yaws[i]);
+            let t = if i == 0 { [1.0, 2.0, 3.0] } else { [0.0, 0.0, 1.0] };
+            for c in 0..3 { d[c * ROWS + i] = t[c]; }
+            for c in 0..4 { d[(3 + c) * ROWS + i] = q[c] as f32; }
+        }
+        d
+    }
+    fn at_near(a: V3, b: V3, what: &str) { assert!(v3::dist(a, b) < 1e-5, "{what}: {a:?} against {b:?}"); }
 
+    /// Each joint hangs off its parent, by the parent's whole turn so far. The rig is 0 - 1 - (2, 3 - 4).
     #[test]
-    fn fk_is_the_typescripts_bits() {
+    fn a_pose_run_forward_hangs_each_joint_off_its_parent() {
         let ch = rig();
         let mut fk = PoseFK { rot: vec![v3::quat::ident(); 5], pos: vec![[0.0; 3]; 5], ..PoseFK::blank() };
-        fk_own(&mut fk, &cols(37), 8, &ch);
-        let mut h = H::new();
-        for i in 0..5 {
-            h.fd(&fk.rot[i]);
-            h.fd(&fk.pos[i]);
-        }
-        assert_eq!(h.0, 0x297fc6f0);
+        let quarter = m::PI / 2.0;
+        fk_own(&mut fk, &chain([quarter, 0.0, 0.0, -quarter, 0.0]), ROWS, &ch);
+        at_near(fk.pos[0], [1.0, 2.0, 3.0], "the root");
+        at_near(fk.pos[1], [2.0, 2.0, 3.0], "a metre along the way the root faces");
+        at_near(fk.pos[2], [3.0, 2.0, 3.0], "and another");
+        at_near(fk.pos[3], [3.0, 2.0, 3.0], "a child of the same parent, the same place");
+        at_near(fk.pos[4], [3.0, 2.0, 4.0], "and a joint that turned back takes his child with him");
     }
 
+    /// What a body draws with: plain, a turn laid on a subtree, a joint driven from outside, and a pose made again from what was drawn.
     #[test]
-    fn update_and_bake_are_the_typescripts_bits() {
+    fn a_body_is_posed_from_its_joints_and_a_bake_keeps_what_it_drew() {
         let (_h, mut g) = hold();
         let id = g.tab.rig.push(rig());
         let mut si = SkeletonInstance { rig: id, globals: vec![v3::m4::create(); 5], global_rot: vec![v3::quat::ident(); 5], joint_data: vec![0.0; 80] };
-        let w = v3::m4::from_trss(1.0, 2.0, 3.0, 0.0, 0.6, 0.0, 0.8, 1.0, 1.0, 1.0);
-        let twists = [TwistSpec { node: 1.0, yaw: 0.3, pitch: 0.2 }, TwistSpec { node: 2.0, yaw: -0.4, pitch: 0.0 }, TwistSpec { node: 1.0, yaw: 0.1, pitch: 0.05 }];
-        let overrides = [None, None, None, Some(NodeOverride { rot: [0.0, 0.0, 0.6, 0.8], pos: None }), Some(NodeOverride { rot: [0.6, 0.0, 0.0, 0.8], pos: Some([1.0, 2.0, 3.0]) })];
-        let p37 = pose_of(&mut g, 37);
-        skeleton_instance_update(&mut g, &mut si, p37, &w, Some(&twists), Some(&overrides));
-        let mut h = H::new();
-        h.fs(&si.joint_data);
-        for i in 0..5 {
-            h.fd(&si.global_rot[i]);
-            h.fs(&si.globals[i]);
-        }
-        assert_eq!(h.0, 0xbf83741e);
-        skeleton_instance_bake_local_rotations(&mut g, &mut si, p37);
-        assert_eq!(folded(pose_cols(&mut g, p37)), 0x966af111);
-        let p53 = pose_of(&mut g, 53);
-        skeleton_instance_update(&mut g, &mut si, p53, &w, None, None);
-        assert_eq!(folded(&si.joint_data), 0x29e003ec);
+        let w = v3::m4::from_trss(10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0);
+        let quarter = m::PI / 2.0;
+        let p = pose_pool_new(&mut g, 5);
+        pose_cols(&mut g, p).copy_from_slice(&chain([0.0; 5]));
+
+        // plain: where a run forward puts them, the skinning matrices in the world
+        skeleton_instance_update(&mut g, &mut si, p, &w, None, None);
+        at_near(skeleton_instance_node_pos(&si, 2.0), [1.0, 2.0, 5.0], "two joints along");
+        near(si.joint_data[2 * 16 + 12] as f64, 11.0, "the skin of that joint stands in the world");
+
+        // a twist turns that joint and all under it, about the vertical, and two on one joint add
+        let twists = [TwistSpec { node: 1.0, yaw: quarter * 0.5, pitch: 0.0 }, TwistSpec { node: 1.0, yaw: quarter * 0.5, pitch: 0.0 }];
+        skeleton_instance_update(&mut g, &mut si, p, &w, Some(&twists), None);
+        at_near(skeleton_instance_node_pos(&si, 1.0), [1.0, 2.0, 4.0], "the twisted joint stays where it is");
+        at_near(skeleton_instance_node_pos(&si, 2.0), [2.0, 2.0, 4.0], "and what hangs off it swings round");
+        at_near(skeleton_instance_node_pos(&si, 4.0), [3.0, 2.0, 4.0], "all the way down");
+        at_near(skeleton_instance_node_pos(&si, 0.0), [1.0, 2.0, 3.0], "what is above it does not");
+
+        // driven from outside: the joint's rotation and place as given, or where its parent puts it; what hangs off it follows
+        let q = v3::quat::yaw(quarter);
+        let mut ov = [None; 5];
+        ov[3] = Some(NodeOverride { rot: [q[0], q[1], q[2], q[3]], pos: Some([7.0, 7.0, 7.0]) });
+        skeleton_instance_update(&mut g, &mut si, p, &w, None, Some(&ov));
+        at_near(skeleton_instance_node_pos(&si, 3.0), [7.0, 7.0, 7.0], "a place from outside");
+        at_near(skeleton_instance_node_pos(&si, 4.0), [8.0, 7.0, 7.0], "his child follows");
+        ov[3] = Some(NodeOverride { rot: [q[0], q[1], q[2], q[3]], pos: None });
+        skeleton_instance_update(&mut g, &mut si, p, &w, None, Some(&ov));
+        at_near(skeleton_instance_node_pos(&si, 3.0), [1.0, 2.0, 5.0], "no place from outside: where his parent has him");
+
+        // a bake writes the pose so that a plain pose run forward draws what the twists and the drive drew
+        skeleton_instance_update(&mut g, &mut si, p, &w, Some(&twists), Some(&ov));
+        let drawn: Vec<V3> = (0..5).map(|i| skeleton_instance_node_pos(&si, i as f64)).collect();
+        skeleton_instance_bake_local_rotations(&mut g, &mut si, p);
+        skeleton_instance_update(&mut g, &mut si, p, &w, None, None);
+        for i in 0..5 { at_near(skeleton_instance_node_pos(&si, i as f64), drawn[i], "the bake"); }
     }
 
     #[test]

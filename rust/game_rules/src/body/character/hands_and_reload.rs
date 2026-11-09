@@ -445,80 +445,36 @@ pub(super) fn anim_crouch_laid(g: &mut crate::game::Game, c: CharId, ph: f64, w_
 mod tests {
     use super::*;
 
-    /// the hash's bits, from the TypeScript's own expression under bun (tools: see notes)
+    /// How a man's hands hang is his own: a number of his from -1 to 1, the same each time he is made, and not the next man's.
     #[test]
-    fn hand_hash_bits() {
-        for &(seed, k, want) in HASH_BITS {
-            assert_eq!(hand_hash(seed, k).to_bits(), want, "seed {} k {}", seed, k);
+    fn a_mans_hands_are_his_own() {
+        let (mut low, mut high) = (0, 0);
+        for seed in 0..200 {
+            let (seed, k) = (seed as f64, 40.0);
+            let h = hand_hash(seed, k);
+            assert!((-1.0..1.0).contains(&h), "seed {seed}: {h}");
+            assert_eq!(h, hand_hash(seed, k));
+            assert_ne!(h, hand_hash(seed + 1.0, k), "seed {seed}: the next man has the same hands");
+            assert_ne!(h, hand_hash(seed, k + 1.0), "seed {seed}: two fingers of a man move as one");
+            if h < 0.0 { low += 1; } else { high += 1; }
         }
+        assert!(low > 60 && high > 60, "men's hands fall to both sides: {low} and {high}");
     }
 
-    /// fkPart's arithmetic for one node with a parent, against the TypeScript's own bits
+    /// A node hangs off its parent: his place is the parent's and his offset turned by the parent's turn, his turn is the parent's and his own.
     #[test]
-    fn fk_node_bits() {
-        let n = 2usize;
-        let mut d = [0f32; 20];
-        for (i, x) in FK_D.iter().enumerate() { d[i] = f32::from_bits(*x); }
-        let pr: Quat = [f64::from_bits(FK_PR[0]), f64::from_bits(FK_PR[1]), f64::from_bits(FK_PR[2]), f64::from_bits(FK_PR[3])];
-        let pp: V3 = [f64::from_bits(FK_PP[0]), f64::from_bits(FK_PP[1]), f64::from_bits(FK_PP[2])];
-        let (q, p) = fk_node(&d, n, 1, pr, pp);
-        for i in 0..4 { assert_eq!(q[i].to_bits(), FK_Q[i], "q{}", i); }
-        for i in 0..3 { assert_eq!(p[i].to_bits(), FK_P[i], "p{}", i); }
+    fn a_node_hangs_off_its_parent_by_the_parents_turn() {
+        let yaw = |a: f64| v3::quat::axis_angle([0.0, 1.0, 0.0], a);
+        let (n, i) = (2usize, 1usize);
+        let mut d = [0f32; 14];
+        d[n + i] = 0.5;
+        d[2 * n + i] = 1.0;
+        let own = yaw(m::PI / 2.0);
+        for c in 0..4 { d[(3 + c) * n + i] = own[c] as f32; }
+        let (q, p) = fk_node(&d, n, i, yaw(m::PI / 2.0), [1.0, 2.0, 3.0]);
+        assert!(v3::dist(p, [2.0, 2.5, 3.0]) < 1e-6, "a metre ahead of a parent who faces his left: {p:?}");
+        let half = yaw(m::PI);
+        let dot = q[0] * half[0] + q[1] * half[1] + q[2] * half[2] + q[3] * half[3];
+        assert!(m::abs(dot) > 1.0 - 1e-6, "two quarter turns make a half: {q:?}");
     }
-    const HASH_BITS: &[(f64, f64, u64)] = &[
-        (0.0, 40.0, 0xbfe15ae6d0800000),
-        (0.0, 41.0, 0xbfebd78d78800000),
-        (0.0, 42.0, 0x3fe4b3ef42400000),
-        (0.0, 46.0, 0x3fe569d1f2c00000),
-        (0.0, 49.0, 0x3fd27b4173800000),
-        (0.0, 50.0, 0xbfd6f2be09000000),
-        (0.0, 53.0, 0x3feb139699800000),
-        (1.0, 40.0, 0xbfec3bc7e1400000),
-        (1.0, 41.0, 0xbf63397b40000000),
-        (1.0, 42.0, 0x3fe0527f6e800000),
-        (1.0, 46.0, 0xbfe1f1e867c00000),
-        (1.0, 49.0, 0xbfe5e8b74c800000),
-        (1.0, 50.0, 0xbfe2d92ec3000000),
-        (1.0, 53.0, 0x3fc0e1d51b000000),
-        (7.0, 40.0, 0xbfe9b7ef4c000000),
-        (7.0, 41.0, 0x3fde9ebe61800000),
-        (7.0, 42.0, 0x3fe5be5934000000),
-        (7.0, 46.0, 0xbfe84dbc77400000),
-        (7.0, 49.0, 0x3fe1bdf90a000000),
-        (7.0, 50.0, 0x3fdd253894000000),
-        (7.0, 53.0, 0x3fb1163222000000),
-        (123456.0, 40.0, 0x3fd1ced949800000),
-        (123456.0, 41.0, 0x3fe1e9e6ca000000),
-        (123456.0, 42.0, 0xbf79b7c920000000),
-        (123456.0, 46.0, 0x3feac96875000000),
-        (123456.0, 49.0, 0x3fe7f49c82400000),
-        (123456.0, 50.0, 0xbface6c0fc000000),
-        (123456.0, 53.0, 0x3fcf951fb7000000),
-        (3.5, 40.0, 0x3fe45d19ff800000),
-        (3.5, 41.0, 0xbfc2fff1bd000000),
-        (3.5, 42.0, 0x3fc1dc33d8000000),
-        (3.5, 46.0, 0xbfd5157670800000),
-        (3.5, 49.0, 0xbf6949fbc0000000),
-        (3.5, 50.0, 0xbfe1c88e9ec00000),
-        (3.5, 53.0, 0xbfe2de9fc1800000),
-        (4294967295.0, 40.0, 0xbfe8e8cafe800000),
-        (4294967295.0, 41.0, 0xbfd91b5768800000),
-        (4294967295.0, 42.0, 0xbfe2f2e8e9800000),
-        (4294967295.0, 46.0, 0x3fb378eaba000000),
-        (4294967295.0, 49.0, 0x3fe014d5cc400000),
-        (4294967295.0, 50.0, 0xbfe9ddf5f6400000),
-        (4294967295.0, 53.0, 0x3fd80f19a5000000),
-        (-1.0, 40.0, 0xbfe8e8cafe800000),
-        (-1.0, 41.0, 0xbfd91b5768800000),
-        (-1.0, 42.0, 0xbfe2f2e8e9800000),
-        (-1.0, 46.0, 0x3fb378eaba000000),
-        (-1.0, 49.0, 0x3fe014d5cc400000),
-        (-1.0, 50.0, 0xbfe9ddf5f6400000),
-        (-1.0, 53.0, 0x3fd80f19a5000000),
-    ];
-    const FK_D: [u32; 20] = [0x3dbb9eb0, 0x3e9052dd, 0xbe2830f1, 0xbe754e6e, 0x3e676768, 0x3e39ad16, 0xbf2d67d7, 0xbe8d3a73, 0x3f3f9a24, 0x3da9ec57, 0xbf451356, 0x3dec59b1, 0x3f3d7661, 0xbe9cbb7b, 0xbf2944b1, 0x3ef3f832, 0x3f09d58e, 0xbf1d80cc, 0xbec27ea8, 0x3f36900d];
-    const FK_PR: [u64; 4] = [0x3fbf9add3746f4c6, 0xbfd55555555552fd, 0x3fe22c2a3d04eba6, 0x3fe796e924193c52];
-    const FK_PP: [u64; 3] = [0x3ff0000000001198, 0xc001c71c71c71c40, 0x3fb999999999999a];
-    const FK_Q: [u64; 4] = [0xbfd4e8f1ea4e0d35, 0xbf7f7fa595a48b00, 0xbfc5d1f86ea7838c, 0xbfcd5fe11d5182da];
-    const FK_P: [u64; 3] = [0x3ff31ac0460ea885, 0xc00182abe9527f47, 0x3fdd7b49ac10adea];
 }

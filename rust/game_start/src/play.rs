@@ -568,6 +568,20 @@ impl Play {
     /// The spot the rounds past him have sent him to, while he is on his way or about to go (the suppression rule's cover spot); `None`: not sent.
     pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.cond[self.g.gd[gd].ch].sup.cover.map(|p| [p[0], p[2]]) }
 
+    /// Sam's body: what the readers of a pose below are asked about
+    pub fn sam_body(&self) -> game::ids::CharId { self.g.pl[self.g.player].ch }
+    /// where a joint of that body stands in the world this frame
+    pub fn joint(&self, c: game::ids::CharId, j: game::character::Bone) -> [f64; 3] { *self.g.ch[c].bones.get(j).expect("the joint") }
+    /// every joint of that body, in one order
+    pub fn joints_named(&self, c: game::ids::CharId) -> Vec<(game::character::Bone, [f64; 3])> { let b = &self.g.ch[c].bones; b.keys().into_iter().map(|k| (k, *b.get(k).unwrap())).collect() }
+    /// which way that body faces
+    pub fn body_yaw(&self, c: game::ids::CharId) -> f64 { self.g.ch[c].body_yaw }
+    /// the line of the gun in that body's hands: its muzzle and which way it points
+    pub fn gun_line(&self, c: game::ids::CharId) -> ([f64; 3], [f64; 3]) { (self.g.ch[c].muzzle, self.g.ch[c].gun_dir) }
+    /// tell that body to lean round an edge (-1 to 1; 0 lets it come back), and how far it is shown as leaning now
+    pub fn lean(&mut self, c: game::ids::CharId, by: f64) { self.g.ch[c].anim.lean = by; }
+    pub fn lean_shown(&self, c: game::ids::CharId) -> f64 { self.g.ch[c].anim.lean_sm }
+
     /// is he down low (crouched or lower: what a man does behind cover, or with a grenade near)
     pub fn low(&self, gd: GuardId) -> bool { self.g.ch[self.g.gd[gd].ch].anim.crouch_target >= 0.5 }
     /// is he in the stack's stance (set on a door)

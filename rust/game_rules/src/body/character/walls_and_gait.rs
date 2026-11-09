@@ -36,27 +36,6 @@ pub(super) fn clip_at(g: &mut Game, c: CharId, clip: ClipId, t: f64) -> ::sim::l
 /// RUNARMS: the run's own arms carried close
 pub(super) fn anim_run_arms(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, w: f64, ws: f64) { anim_layer(g, c, |s, _, k| ::sim::layers::run_arms(s, at(pose), w, ws, k)); }
 
-/// the sum of a run clip's stances from its toes, with no animator in it
-fn stance_of(ty: &[Vec<f64>], tz: &[Vec<f64>]) -> Option<AnimStanceOf> {
-    let mm = ty[0].len();
-    let mut cs: Vec<f64> = Vec::with_capacity(ty.len());
-    for k in 0..ty.len() {
-        let ys = &ty[k];
-        let lo = m::min_n(ys) + 0.02;
-        let (mut sx, mut cx, mut n) = (0.0, 0.0, 0);
-        for i in 0..mm {
-            if ys[i] <= lo && tz[k][(i + 1) % mm] < tz[k][(i + mm - 1) % mm] {
-                sx += m::sin(2.0 * m::PI * i as f64 / mm as f64);
-                cx += m::cos(2.0 * m::PI * i as f64 / mm as f64);
-                n += 1;
-            }
-        }
-        cs.push(if n != 0 { js::rem(m::atan2(sx, cx) / (2.0 * m::PI) + 1.0, 1.0) } else { m::NAN });
-    }
-    if !cs[0].is_finite() || !cs[1].is_finite() { return None; }
-    let cc = js::rem(m::atan2(m::sin(4.0 * m::PI * cs[0]) + m::sin(4.0 * m::PI * cs[1]), m::cos(4.0 * m::PI * cs[0]) + m::cos(4.0 * m::PI * cs[1])) / (4.0 * m::PI) + 1.0, 0.5);
-    Some(AnimStanceOf { c: cc, c_l: cs[0], c_r: cs[1] })
-}
 /// SOFT_KNEE: each leg re-solved with its reach eased below full extension
 pub(super) fn anim_soft_knees(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, w: f64) { anim_layer(g, c, |s, _, _| ::sim::layers::soft_knees(s, at(pose), w)); }
 
@@ -296,36 +275,4 @@ pub(super) fn anim_tell_layer(g: &mut crate::game::Game, c: CharId, t: f64) {
     let kind = g.ch[c].anim.tell_k;
     let (watch, dur) = (kind == TellKind::Watch, tell_dur_of(kind));
     anim_layer(g, c, |s, an, k| ::sim::layers::tell_layer(s, an, t, watch, dur, k));
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// stanceOf's arithmetic against the bits the TypeScript prints under EXACT
-    #[test]
-    fn stance_of_bits() {
-        let n = 37;
-        let mut ty = vec![vec![0.0; n], vec![0.0; n]];
-        let mut tz = vec![vec![0.0; n], vec![0.0; n]];
-        for i in 0..n {
-            let p = i as f64 / n as f64;
-            ty[0][i] = 0.1 + 0.08 * m::sin(2.0 * m::PI * p + 0.3) + 0.01 * m::sin(4.0 * m::PI * p + 1.0);
-            tz[0][i] = -0.2 * m::cos(2.0 * m::PI * p + 0.3);
-            ty[1][i] = 0.1 + 0.08 * m::sin(2.0 * m::PI * (p + 0.52) + 0.3) + 0.01 * m::sin(4.0 * m::PI * p + 2.0);
-            tz[1][i] = -0.2 * m::cos(2.0 * m::PI * (p + 0.52) + 0.3);
-        }
-        let s = stance_of(&ty, &tz).unwrap();
-        assert_eq!(s.c.to_bits(), 0x3fcacf914c1bacf8);
-        assert_eq!(s.c_l.to_bits(), 0x3fe759f22983759f);
-        assert_eq!(s.c_r.to_bits(), 0x3fc83759f2298370);
-    }
-
-    /// a foot that never qualifies is None
-    #[test]
-    fn stance_of_none() {
-        let ty = vec![vec![0.0, 0.0, 0.0, 0.0], vec![0.0, 0.0, 0.0, 0.0]];
-        let tz = vec![vec![1.0, 1.0, 1.0, 1.0], vec![1.0, 1.0, 1.0, 1.0]];
-        assert!(stance_of(&ty, &tz).is_none());
-    }
 }
