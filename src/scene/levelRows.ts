@@ -32,7 +32,7 @@ export interface BoxData {
   rough?: number; metal?: boolean;
   /** Box.stuff: what the box is made of, where its material's row does not say it (scene/stuff.ts: a material of the look, 'plain', 'waits', 'glass' or
    *  'rubber'); absent = what its material's row says, and plain for a box with an inline albedo. Nothing is read off the colour. The picture's alone (the
-   *  look, and what a round's hit looks like: game/particleFx.ts HITSTUFF): no rule of the game reads it. */
+   *  look, and what a round's hit looks like: rust/game_rules/src/particle_fx HITSTUFF): no rule of the game reads it. */
   stuff?: string;
   /** Box.does: what the box does, where its material's row does not say it (scene/materials.ts); absent = what its material's row says, and the default
    *  row for a box with an inline albedo. 'unnamed' (the default row) is written only over a row that says something else. */
@@ -77,5 +77,5 @@ export interface LightData {
   /** BoxData.id of the emissive glow card that represents the fixture (goes dark with the light) */
   fixture?: string;
 }
-/** A hinged leaf in a doorway gap (game/doors.ts DoorDef minus the runtime albedo). The FRAME (jambs, head, stops) is ordinary boxes, group 'doorframe.<id>'. */
-export interface DoorData { id: string; floor?: string; hinge: [number, number]; closedDir: number; width: number; angle?: number; exterior?: boolean; closer?: boolean; minAngle?: number; maxAngle?: number; locked?: boolean; /** which key turns it; absent = the floor key */ lock?: string; keySide?: 1 | -1; /** the side the leaf opens into, +1 = the CCW side of the closed leaf (doors.ts DoorDef.swing); absent = dealt from the level: into the room it serves (game/doorswing.ts) */ swing?: 1 | -1; /** a steel fire door: a boot only rings off it, no pick opens it (doors.ts DoorDef.steel — the QRF's west stair door) */ steel?: boolean; }
+/** A hinged leaf in a doorway gap (rust/game_rules/src/doors DoorDef minus the runtime albedo). The FRAME (jambs, head, stops) is ordinary boxes, group 'doorframe.<id>'. */
+export interface DoorData { id: string; floor?: string; hinge: [number, number]; closedDir: number; width: number; angle?: number; exterior?: boolean; closer?: boolean; minAngle?: number; maxAngle?: number; locked?: boolean; /** which key turns it; absent = the floor key */ lock?: string; keySide?: 1 | -1; /** the side the leaf opens into, +1 = the CCW side of the closed leaf (doors.ts DoorDef.swing); absent = dealt from the level: into the room it serves (rust/game_rules/src/doorswing) */ swing?: 1 | -1; /** a steel fire door: a boot only rings off it, no pick opens it (doors.ts DoorDef.steel — the QRF's west stair door) */ steel?: boolean; }

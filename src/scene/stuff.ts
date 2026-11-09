@@ -34,7 +34,7 @@ const PALETTE_STUFF = {
 
 export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
   ...PALETTE_STUFF,
-  // ---- the office's paints (scene/officeGen.ts OFFICE_PALETTE: the names the simulation knows a paint by, game/particleFx.ts MAT_SURF)
+  // ---- the office's paints (scene/officeGen.ts OFFICE_PALETTE: the names the simulation knows a paint by, rust/game_rules/src/particle_fx MAT_SURF)
   wood: 'wood', woodDark: 'wood',   // (planks: the name is a bench, a crate and a pallet as well as a desk. A desk's smooth board is 'veneer', and the desk says so itself)
   carpet: 'cloth', carpetBlue: 'cloth', carpetRed: 'cloth', chair: 'fabric',   // (a carpet is the coarse weave; a seat's cloth the fine one)
   wall: 'plaster', ceiling: 'plaster', wallDark: 'block', concrete: 'block', stone: 'slab', lino: 'slab',
@@ -48,7 +48,7 @@ export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
   partRed: 'plain', partBlue: 'plain',   // (cubicle partitions, which say fabric themselves; and a car's body, lived things)
   partTan: 'cloth',     // (a partition; and a hut's stucco walls, drawn as cloth because the tan is a cream rug's, darkened)
   red: 'plain',         // (an extinguisher's enamel; and tape, a ball, a mast's lamps)
-  asphalt: 'tarmac',    // (the car park, the road: the look's tarmac since 11-05, and concrete to the picture of a round's hit wet or dry (game/particleFx.ts STUFF_SURF: dry, its paint always was; wet, its tone read as metal). Until 11-04 its grey was drawn as bare iron, iron's grey darkened; the lived kit's iron fittings, in the same numbers, say metal themselves: livedPieces.ts INK.iron. A thing painted in it that is no lot says its own word: the compound's mud at the pump is earth)
+  asphalt: 'tarmac',    // (the car park, the road: the look's tarmac since 11-05, and concrete to the picture of a round's hit wet or dry (rust/game_rules/src/particle_fx STUFF_SURF: dry, its paint always was; wet, its tone read as metal). Until 11-04 its grey was drawn as bare iron, iron's grey darkened; the lived kit's iron fittings, in the same numbers, say metal themselves: livedPieces.ts INK.iron. A thing painted in it that is no lot says its own word: the compound's mud at the pump is earth)
   glassFrame: 'plain',  // (a window's frame; and every outside door's leaf, painted from the same numbers as the game runs)
   // ---- the snow kit's (the look lays its own snow over a thing; the paint under it stays plain)
   snow: 'plain', snowOld: 'plain', snowPacked: 'plain',
@@ -88,7 +88,7 @@ export const stuffOfName = (name: string): Stuff | undefined => Object.hasOwn(PA
  *  out; nothing for a name the table does not know. Spread into the row the exporter writes. */
 export const rowWord = (name: string): { stuff?: Stuff } => { const w = stuffOfName(name); return w !== undefined ? { stuff: w } : {}; };
 /** WHAT A BOX MAY SAY IT IS MADE OF (Box.stuff, a level file's `stuff` on a box or a prop's part): a material of the look, plain, waits, or one of TWO THINGS THE LOOK HAS NO
- *  MATERIAL FOR and draws plain, by the box's finish, but which the picture of a round's hit reads (game/particleFx.ts HITSTUFF): 'glass' — a solid thing of
+ *  MATERIAL FOR and draws plain, by the box's finish, but which the picture of a round's hit reads (rust/game_rules/src/particle_fx HITSTUFF): 'glass' — a solid thing of
  *  glass with nothing modelled behind it (a car's window), which is NOT a pane (a sheet a round shatters says so with its flag, BoxFlag.Glass: the pane
  *  engine's) — and 'rubber' (a tyre: dark, and by its colour alone it would be taken for metal). A material is a
  *  name the look has a NUMBER for (lookTex.ts lookStuffOf): the stone and the brick under a mud wall are layers the mud wall shows, and no box is made of them. */
@@ -221,7 +221,7 @@ export function worded<T extends { albedo?: readonly number[]; stuff?: BoxStuff;
  *  thing in whichever its look has, so a rule about "a plain coat" is about all of them. */
 export const PLAIN_COATS: readonly BoxStuff[] = ['paint', 'enamel'];
 /** A NAMED COAT IS A KIND OF A PLAIN ONE: 'carpaint' is a coat, on a vehicle. One row a named coat (the look's own material for it, and one thing to a round:
- *  game/particleFx.ts STUFF_SURF): `under` = the plain coats it is a kind of, and stays under when a look repaints the thing; `rough` = HOW SMOOTH THE
+ *  rust/game_rules/src/particle_fx STUFF_SURF): `under` = the plain coats it is a kind of, and stays under when a look repaints the thing; `rough` = HOW SMOOTH THE
  *  COAT IS, whatever it lies on (coatRough below). A car's clear coat: 0.2, under every preset's cut-off for the traced mirror less its fade
  *  (ui/quality.ts RtTier.maxRough), the number agreed with the look's car paint map (docs/agents/render.md "CAR PAINT IS A STUFF"). */
 export interface NamedCoat { readonly under: readonly BoxStuff[]; readonly rough: number }
@@ -231,7 +231,7 @@ export const namedCoat = (word: BoxStuff | undefined): NamedCoat | undefined => 
  *  whatever number a kit, a skin or a hand wrote beside the word (a vehicle's body took a truck enamel's satin, a cot's and a locker's too, or nothing at
  *  all: it showed next to nothing of what stands round it). The word decides; a thing that should not shine like a car does not say it is car paint.
  *  Smoother stays smoother (a body wet with rain). ROUGHNESS ONLY: whether a thing is bare metal stays its paint's (a piece the game breaks off a thing
- *  is given the thing's own finish and flag, game/breakTable.ts; what a thing DOES is its other word, scene/materials.ts, and reads neither).
+ *  is given the thing's own finish and flag, rust/game_rules/src/break_table; what a thing DOES is its other word, scene/materials.ts, and reads neither).
  *  WHERE: read by the one function that hands a box's finish to the GPU (scene/boxes.ts matWord), so it holds for a level's statics, a shape's pieces, a
  *  piece blown off a car and anything made later that says the word. No box is changed and no level file carries the number: `Box.rough` is what the file
  *  gave, always.

@@ -117,7 +117,7 @@ fn vsKind(vi: u32) -> VOut {
   let p = poolR.parts[slot];
   if (p.age >= p.life) { return cull(); }
   let kind = p.bits & PB_KIND; let asleep = (p.bits & PB_ASLEEP) != 0u;
-  if (kind != P_RAIN && (p.bits & PB_OURS) == 0u && !((p.bits & PB_KEPT) != 0u && fogKeptOn()) && fogSeenBins(p.pos) < 0.5) { return cull(); }   // (the fog of war's full picture: a spark, a puff, a chip, a case, a leaf of paper or a shard over floor nobody on the team sees is not drawn, unless it is the team's own doing (PB_OURS — game/fogofwar.ts FOG.ours) — the weather is the same everywhere and stays; 1 while no sight table is written)
+  if (kind != P_RAIN && (p.bits & PB_OURS) == 0u && !((p.bits & PB_KEPT) != 0u && fogKeptOn()) && fogSeenBins(p.pos) < 0.5) { return cull(); }   // (the fog of war's full picture: a spark, a puff, a chip, a case, a leaf of paper or a shard over floor nobody on the team sees is not drawn, unless it is the team's own doing (PB_OURS — rust/game_rules/src/fogofwar FOG.ours) — the weather is the same everywhere and stays; 1 while no sight table is written)
   if (kind != P_SPARK) { partAt = vec4f(p.pos, select(1.0, clamp(luminance(unpackRgb8(p.color)), 0.05, 1.0), kind == P_DEBRIS || kind == P_DUST || kind == P_CASING || kind == P_SHEET)); }
   let k1 = em.kp[kind * 2u + 1u];
   if (kind == P_SHEET) { return sheetVertex(p, corner, k1); }
@@ -133,7 +133,7 @@ fn vsKind(vi: u32) -> VOut {
     mode = 0.0; softR = 0.03;
   } else if (kind == P_DUST) {
     width = 2.0 * p.size * (1.0 + k1.z * u);            // diameter, growing
-    mode = 2.0; opacity = k1.w * (1.0 - u) * (1.0 - u) * smoothstep(0.0, max(k1.x, 1e-3), p.age); softR = max(width * 0.25, 0.05) * k1.y;   // (k1.x = fade-in s 0.06, k1.y = softness × 1: params.dust's look slots — game/particleFx.ts DUST_LOOK)
+    mode = 2.0; opacity = k1.w * (1.0 - u) * (1.0 - u) * smoothstep(0.0, max(k1.x, 1e-3), p.age); softR = max(width * 0.25, 0.05) * k1.y;   // (k1.x = fade-in s 0.06, k1.y = softness × 1: params.dust's look slots — rust/game_rules/src/particle_fx DUST_LOOK)
     opacity *= steamOf(p.color);                        // STEAM (snowBreath.ts): a breath's own share of the puff's opacity — 1 for every other puff
   } else {                                             // debris / casing: a motion streak in flight, a dash at its resting angle once down
     let halfLen = p.size * select(0.55 * max(1.0, unpack2x16float(p.aux).x), 2.0, kind == P_CASING);   // a chip is barely longer than wide (× its aspect: a splinter is three chips long); a case is four diameters long
@@ -343,10 +343,10 @@ fn wispMotes(q: vec2f, ppm: f32, s: f32, g: f32, motes: f32, glintK: f32) -> f32
   }
   return g * WISP_HAZE * (1.0 + WISP_HAZE_FAR * hazeUp * motes) + sqrt(g) * acc * WISP_MOTE_GAIN;
 }
-/** A WISP of blowing snow (game/snowFx.ts SNOWWISPS; particles.wgsl wispStep moves and lights it): a long soft streak along its own motion — head where it is, tail
+/** A WISP of blowing snow (rust/game_rules/src/snow_fx SNOWWISPS; particles.wgsl wispStep moves and lights it): a long soft streak along its own motion — head where it is, tail
  *  its stretch (the colour word's first byte ÷ 255 × 2 s, × 0.6‥1.4 per wisp) back along its velocity, never further than it has lived — as wide as its size, widening
  *  by three fifths over its life, faded in and out; mode 2.25 (fs: a puff's soft falloff about the streak's spine, combed into strands, thin at the tail), its weight
- *  em.rainCfgC.z × 0.5‥1.5 per wisp, its seed in prm2.w's fraction. WITH MOTES ASKED FOR (the colour word's top byte: game/snowFx.ts wispLookByte) the same quad is
+ *  em.rainCfgC.z × 0.5‥1.5 per wisp, its seed in prm2.w's fraction. WITH MOTES ASKED FOR (the colour word's top byte: rust/game_rules/src/snow_fx wispLookByte) the same quad is
  *  a puff of pinpoint motes over a breath of haze, not a combed streak (fs, wispMotes) — the stretch is then only the puff's lean. */
 fn wispVertex(p: Particle, cx: f32, cy: f32) -> VOut {
   let half = frame.screen * 0.5;
@@ -374,7 +374,7 @@ fn wispVertex(p: Particle, cx: f32, cy: f32) -> VOut {
   o.zlin = distance(frame.camPos, mix(tail, head, cx));
   return o;
 }
-/** A GRAIN of blown snow (game/snowFx.ts SNOWGRAINS; particles.wgsl grainStep moves and lights it): the flake's own soft dot, far smaller — a dash a shutter long
+/** A GRAIN of blown snow (rust/game_rules/src/snow_fx SNOWGRAINS; particles.wgsl grainStep moves and lights it): the flake's own soft dot, far smaller — a dash a shutter long
  *  along its motion (a dot in calm air), never wider on screen than GRAIN_MAX_PX nor thinner than GRAIN_MIN_PX (thinner: drawn that wide, dimmed by as much). Nothing
  *  drawn while it lies (spin < 0). Its light is the step's (shade) × what the step says shows of it this frame (omgZ: weight × fade × the radius' rim). Mode 4:
  *  the flake's fragment, to the letter. */
@@ -565,7 +565,7 @@ fn rainFragment(v: VOut) -> FOut {
   return fo;
 }
 
-// ================================================================== the glass shard (particles.wgsl shardAir / shardLight fly and light it; game/shards.ts files them)
+// ================================================================== the glass shard (particles.wgsl shardAir / shardLight fly and light it; rust/game_rules/src/shards files them)
 fn shardHash(s: u32, k: u32) -> f32 { var x = s ^ (k * 0x9E3779B9u); x ^= x >> 16u; x *= 0x7feb352du; x ^= x >> 15u; x *= 0x846ca68bu; x ^= x >> 16u; return f32(x >> 8u) / 16777216.0; }
 /** The glass fragment. OUTLINE: the quad with each corner cut by a chord at a hashed angle and depth — an irregular four- to eight-sided sliver, the same every frame for
  *  one fragment, antialiased over a pixel. LOOK: glass hides almost nothing — the face takes SHARD_BODY_A of what is behind it ('over' with nearly no colour of its own), the

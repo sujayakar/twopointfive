@@ -8,7 +8,7 @@
 //   outline  a rim round him and his teammates where they are dark as drawn, by the picture, part by part: his true silhouette, drawn by the renderer from the
 //            pixels that are his (render/outline.ts). Its numbers are settled there and in OUTLINE_LOOK, below
 //   turn     which way the view turns under Ctrl + the mouse: 1 = as it was · -1 = the other way
-// pan and turn change the seat's VIEW, and the view is the player's input (game/cmd.ts carries it as data, tick by tick): a recording replays the view
+// pan and turn change the seat's VIEW, and the view is the player's input (rust/game_rules/src/cmd carries it as data, tick by tick): a recording replays the view
 // it was made with whatever these say today, and no rule of the game reads this table. ring is the HUD's alone and outline the picture's: nobody's senses,
 // no light meter and no digest can tell either on from off.
 // KEPT PER MACHINE (localStorage `twopointsix.findme`), read as this module loads and again when the page says which starts are in force (findMeStarts);
@@ -17,7 +17,7 @@
 // its start by hand is one of those: these are rows on trial, and their starts are what the maintainer's own hand is settling. A line an older build kept
 // whole is written again that way as the page reads it under its own starts, and a row that is no longer one (the outline's width, strength, fade, light rows,
 // teammates' width and colour, settled 2026-11-08; the double tap's, gone with the auto camera) reads as if it were not named. No imports, on purpose:
-// the loop (host/loop.ts) and the engine replay's own view (replay/engineplay.ts, its Ctrl turn) read the table and nothing of the game or the page comes with it.
+// the loop (src/host/drawpage.ts) and the engine replay's own view (replay/engineplay.ts, its Ctrl turn) read the table and nothing of the game or the page comes with it.
 
 export interface FindMe { pan: number; ring: boolean; outline: boolean; turn: 1 | -1 }
 /** every row as it was BUILT: the module's own starts, and the frozen stand's (no rim) */
@@ -39,7 +39,7 @@ const START: FindMe = { ...FINDME_BUILT };
 /** the starts in force: as built until the switch says otherwise (findMeStarts). What Reset puts back, and what a kept line is written against */
 export const FINDME_START: Readonly<FindMe> = START;
 /** the rims' inks as displayed, before the tone map: the pale one they were first drawn in, and at its full the player's yellow
- *  and the two pairs' red and blue (a teammate of a squad with no pairs: blue); `purple` is the second player's own man in a game of two (a player's man has his seat's tone: game/seats.ts seatTone) */
+ *  and the two pairs' red and blue (a teammate of a squad with no pairs: blue); `purple` is the second player's own man in a game of two (a player's man has his seat's tone: rust/game_rules/src/seats seatTone) */
 export const OUTLINE_INK = { pale: [0.42, 0.5, 0.55], you: [0.95, 0.72, 0.12], red: [0.95, 0.22, 0.16], blue: [0.2, 0.45, 1], purple: [0.74, 0.32, 0.98] };
 export type OutlineHue = 'you' | 'red' | 'blue' | 'purple';
 /** `out` = the ink of a man of that hue, OUTLINE_LOOK.colour of the way from the pale one */

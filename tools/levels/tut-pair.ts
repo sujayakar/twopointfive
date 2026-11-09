@@ -2,7 +2,7 @@
 // second man makes possible. Its own ground (nothing shared with another level but the GWOT kit's pieces): a walled yard 33 × 23 m with a truck gate chained
 // shut, a way in through a fallen stretch of its wall, two shipping containers end to end across it (a third stood across the mouth of the gap between
 // them), the watch's camp in the truck park beyond them, walled on its south side, and an
-// office court with a fuel point at the far end. The rules are the quiet pair's (game/pairorders.ts, workthings.ts) on the frame (game/rails.ts), in an
+// office court with a fuel point at the far end. The rules are the quiet pair's (rust/game_rules/src/pairorders, workthings.ts) on the frame (rust/game_rules/src/rails), in an
 // order a first-time player can follow, with the mains and the dark added.
 //
 //        x 5         16  18.4      24      29                38
@@ -287,7 +287,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const opened = (door: string) => [{ is: 'door', door, state: 'open' }, { is: 'door', door, state: 'broken' }];
   const lesson: LessonData = {
     title: 'As two',
-    // THE FRAME (game/rails.ts). From the first step: the walk, the view, the aim, the knee. Each key is switched on by the step that teaches it and stays on.
+    // THE FRAME (rust/game_rules/src/rails). From the first step: the walk, the view, the aim, the knee. Each key is switched on by the step that teaches it and stays on.
     // `orders` = the squad's rows this night: his key on a man, on a thing to work, and anywhere else (the partner comes back). `rows` = the verbs the
     // interaction key offers: no row for the fuse box (the partner's work here), none for a lock, a body or a light plate.
     rails: { allow: ['move', 'camera', 'zoom', 'aim'], orders: ['pairMark', 'work', 'fallIn'], rows: ['grab', 'question', 'choke', 'push', 'pull', 'code', 'nocode', 'drive'] },

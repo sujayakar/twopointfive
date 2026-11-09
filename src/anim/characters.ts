@@ -9,7 +9,7 @@ export const JOINT_STRIDE = 64; // joint slots per character in the jointMats bu
 export const MAX_CHARS = 16;
 /** bytes per CharInst (gbuffer.wgsl): tint.xyz + jointOffset · tint2.xyz + owner · wet (coat, beads, rain, phase) · wetK (bead density, bead size, trail length, roughness wet) ·
  *  wetK2 (roughness dry, darken exponent, darken multiplier, specular gain) · wetK3 (waterline height in bind-pose m above the sole, the wicking band above it, THE CAST'S PART MASK as u32
- *  bits, 0) — the last four rows are the wet-character look (game/wet.ts), all zero for a dry man; the part mask (anim/gltf.ts loadGltfCast: which parts of the cast mesh this man wears)
+ *  bits, 0) — the last four rows are the wet-character look (rust/game_rules/src/wet), all zero for a dry man; the part mask (anim/gltf.ts loadGltfCast: which parts of the cast mesh this man wears)
  *  is 0 on the mannequin = every vertex drawn, the two tints by matSel, exactly as it always was */
 export const CHAR_INST_BYTES = 96;
 const INST_F32 = CHAR_INST_BYTES / 4;
@@ -73,7 +73,7 @@ export class CharacterRenderer implements SkinnedDrawable {
   }
 
   /** Set instance i's joint matrices + tint; call finish() after all instances. `wet` writes the sixteen wet-look floats at the given offset of the instance
-   *  block (game/wet.ts wetInstance + wetKnobs + wetLineRow: coat, beads, rain, phase, the eight look knobs, the waterline row) — omitted (the viewer, a dry man) they are zero, and the
+   *  block (rust/game_rules/src/wet wetInstance + wetKnobs + wetLineRow: coat, beads, rain, phase, the eight look knobs, the waterline row) — omitted (the viewer, a dry man) they are zero, and the
    *  g-buffer shades him exactly as it always did. `parts`: the cast's part mask for this man (0 = the mannequin: everything, as it was). */
   setInstance(i: number, jointData: Float32Array, tint: Vec3, tint2: Vec3, owner: number, wet?: (out: Float32Array, offset: number) => void, parts = 0) {
     this.jointStaging.set(jointData, i * JOINT_STRIDE * 16);
@@ -102,7 +102,7 @@ export class CharacterRenderer implements SkinnedDrawable {
   /** …and their material rows, where one changed */
   materialsOut(queue: GPUQueue) { if (this.matDirty) { queue.writeBuffer(this.charMats, 0, this.matData.buffer, 0, MAX_CHARS * CHAR_MAT_BYTES); this.matDirty = false; } }
   private scratch = new Float32Array(CHAR_MAT_FLOATS);
-  // DRAWING BETWEEN TICKS (host/tween.ts): the palette as the last tick staged it (instance i's joints at i × jointFloats), who instance i is, and a write of the PICTURE's own
+  // DRAWING BETWEEN TICKS (src/host/between.ts): the palette as the last tick staged it (instance i's joints at i × jointFloats), who instance i is, and a write of the PICTURE's own
   // palette — a blend of two ticks', in an array of the caller's — over the GPU's copy. The staging is never written by it: what the game staged is what the next tick finds.
   get staged(): Float32Array { return this.jointStaging; }
   readonly jointFloats = JOINT_STRIDE * 16;

@@ -7,7 +7,7 @@
 // No lights, no emissive boxes, no dice but the hash of an index. Bodies wear the kit's palette (a paint of it says what the thing does: scene/stuff.ts PAINT_DOES,
 // scene/materials.ts); the colours named here are accents only.
 // A piece's FRONT is its local +Z and its back −Z (the wall side): yaw 0 = on a north wall facing south, π = on a south wall, π/2 = on a west wall facing east,
-// −π/2 = on an east wall. Heights are metres off the floor. What the destruction finds by SHAPE (game/destruction.ts index): a pale thin NoShadow sheet with its
+// −π/2 = on an east wall. Heights are metres off the floor. What the destruction finds by SHAPE (rust/game_rules/src/destruction index): a pale thin NoShadow sheet with its
 // longer half 0.08‥0.2 above 0.3 m is PAPER (flies); a small solid (half ≤ 0.17, ≤ 20 l) standing 0.7‥1.6 m up is CLUTTER (knocked off) — the pieces say which they make.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';

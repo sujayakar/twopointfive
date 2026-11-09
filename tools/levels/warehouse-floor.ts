@@ -37,9 +37,9 @@
 // The plant room, the lockers and the break room are held by nobody: rooms the fog keeps shut until somebody looks, and the north side's way round.
 //
 // The shell is the office's (exterior walls on x 4 / 36, z 4 / 24): the weather's INTERIOR rectangle and the world bounds typed into the shaders hold without a
-// change. No stair tower: the response team is gated off under the scenarios — but game/weather.ts still types the office's tower in as ANNEX (x 1.1..4,
+// change. No stair tower: the response team is gated off under the scenarios — but rust/game_rules/src/weather still types the office's tower in as ANNEX (x 1.1..4,
 // z 9.33..12.87), and the fire exit opens beside it: in the storm that patch of the west verge stays dry and the door lets no gust in. Known, left: the only
-// doorway the north corridor's end can take is this one, and the rectangle is not a level's to move. The footstep surface map is still the office's (game/floor.ts), as on every level.
+// doorway the north corridor's end can take is this one, and the rectangle is not a level's to move. The footstep surface map is still the office's (rust/game_rules/src/floor), as on every level.
 // NO BREACH PLAN: no F drill — all four teammates are the order menu's from the first frame. Only the old demo's kit (src/scene/officeGen.ts officeKit).
 // Units: meters. +X east, +Z south, +Y up.
 // NOT SEEN DRAWN: laid out on paper and checked headless (validator, level-lint, the scenario probes, scripted play-throughs); nobody has looked at it on a GPU.
@@ -724,6 +724,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // the debrief calls a spot that is no room of the structure
   scenarios.places = { areas: [{ name: 'plant room', bounds: { ...R.plant } }, { name: 'locker room', bounds: { ...R.lockers } }, { name: 'break room', bounds: { ...R.brk } }, { name: 'service corridor', bounds: { ...R.ncorr } }, { name: 'staff corridor', bounds: { ...R.wcorr } }] };
   scenarios.kitView = WAREHOUSE_KITVIEW;
-  scenarios.doorNames = [{ door: 'lb', name: 'locker room to break room door' }, { door: 'p_s', name: 'plant room door' }, { door: 'l_s', name: 'locker room door' }, { door: 'b_s', name: 'break room door' }];   // (doorNames: what a row calls the doors no room of the level names — game/doornames.ts; no bearing in a name)
+  scenarios.doorNames = [{ door: 'lb', name: 'locker room to break room door' }, { door: 'p_s', name: 'plant room door' }, { door: 'l_s', name: 'locker room door' }, { door: 'b_s', name: 'break room door' }];   // (doorNames: what a row calls the doors no room of the level names — rust/game_rules/src/doornames; no bearing in a name)
   return { level, scenarios, groups: trace.groups, surfaces };
 }

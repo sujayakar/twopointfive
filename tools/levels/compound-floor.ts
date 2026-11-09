@@ -882,10 +882,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'alley', bounds: { x0: 33.12, x1: 35.88, z0: 4.12, z1: 23.88 } }, { name: 'alley', bounds: { x0: 30.62, x1: 33.12, z0: 19.12, z1: 23.88 } },
     { name: 'forecourt', bounds: { x0: 10.5, x1: 30.62, z0: 19.12, z1: 23.88 } },
   ] };
-  // what a row calls the doors no room of the structure names (scenarios.doorNames — game/doornames.ts; no bearing in a name)
+  // what a row calls the doors no room of the structure names (scenarios.doorNames — rust/game_rules/src/doornames; no bearing in a name)
   const doorNames = [{ door: 'p_back', name: 'pantry back door' }, { door: 'c_n', name: 'spare room door' }, { door: 'hall_n', name: 'corridor-side front hall door' }, { door: 'p_s', name: 'corridor-side pantry door' }, { door: 'yard_sw', name: 'forecourt to side yard door' }, { door: 'gate_w', name: 'side yard gate' }, { door: 'gate_n', name: 'back gate' }];
   const scenarios: LevelScenarios = { roomClear, places, kitView: COMPOUND_KITVIEW, doorNames };
-  // ---------------- what is underfoot (game/floor.ts: which step sounds, and how far it carries to their ears) ----------------
+  // ---------------- what is underfoot (rust/game_rules/src/floor: which step sounds, and how far it carries to their ears) ----------------
   // `building` is everything inside the perimeter wall and its base is the YARD: packed earth, which the six materials have no word for — 'asphalt' is the
   // nearest (hard, a little under lino; 'grass' would hand the team a silent approach the picture does not promise). Over it: the house's tiled floor and the
   // three outbuildings' bare slabs. Outside the wall: the scrub north and west (x or z under 3.2, where the grass slabs are — the team starts on it), asphalt

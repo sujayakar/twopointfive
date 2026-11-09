@@ -5,7 +5,7 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 1428–1443 -->
-- **The dialogue pass = every line fits who says it and where** (`src/game/words.ts`, ONE switch `WORDS.on`: ON in the page — `?oldwords` = every line as it was — OFF in the module and on the
+- **The dialogue pass = every line fits who says it and where** (`rust/game_rules/src/words`, ONE switch `WORDS.on`: ON in the page — `?oldwords` = every line as it was — OFF in the module and on the
   frozen harness stand, `TPS_WORDS=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables; off = the build by run digest, since a bubble's time on screen is its length). `w(now, was)`
   is evaluated WHERE A LINE IS READ, never in a table built as a module loads; a table row that changes carries an optional field (`now`, `own`, `away`, `bare`, `only`, `office`) resolved at the read
   site. HOSTAGES have their own voice (dialogue.ts `HOSTAGE_LINES` by moment — wait / threat / aimed / shot / entry / alone / secured + the team's answer — said through civilians.ts `hostageSay`,
@@ -13,7 +13,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   team as 'them', never says the team's label for a mate (`spokenName` null → 'one of ours'; the squad net's `mate()` says 'Ten'), is the hard man when held (`temperamentOf`) and runs none of
   the night watchman's scripts (`only: 'shift'` / `needs: ['office']` rows). OFFICE THINGS (corridor, lift, fourth floor, desks, cleaning staff, security, the server room) are said only where
   `isOffice(level)`; elsewhere the level's own place names or words that name nothing. Door ids are said through orders.ts `doorIdWords` (compass letters as words, no token dropped). A DOOR WHOSE ID IS SHORTHAND
-  is named by the rooms it joins (`src/game/doornames.ts`: 'hall-side mess door', 'mess hall to galley door', 'outer galley door', 'bunks 2 door from bunks 1', 'first / second day room door' off the level's room clear structure, hung on the
+  is named by the rooms it joins (`rust/game_rules/src/doornames`: 'hall-side mess door', 'mess hall to galley door', 'outer galley door', 'bunks 2 door from bunks 1', 'first / second day room door' off the level's room clear structure, hung on the
   Door at Game construction; never the office, never a Training lesson's level — its lines name its doors; `shorthandId(id)` is THE test, tactics.ts asks it too: a compass letter or whole compass word, one or two letters, letters with a digit, no vowel, 'off' / 'his' — a bare number is a word, 'back_1' is said 'back 1'; a place it is taken from that is itself named by a bearing is left out of the name) and that ONE name is what the squad's rows (orders.ts `doorWords(d)`), a defender's call (tactics.ts `gateCall`) and digin.ts's wedged-door line
   say; `rescue.ts doorName` still says by id. No bearing is said on a squad row: roomfit.ts `wayWords / runWords` and cover.ts `nameOf` name the place watched (dialogue.ts `watchedPlace`),
   else 'the opening' / 'the far end'. A door or wall CHARGE's report carries `GameEvent.charge` (combat.ts detonateStun `borrowed`; not saved, as `frag` is not) and is called a charge, not a
@@ -29,7 +29,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   held: Team & kit 'N stun', the HUD's 'stun canister', the key card's 'smoke · stun · frag'; what it DOES is 'stunned'. Tab rows (the debugger) say what the code says and are not
   player lines. A new row or line about this can takes the word of the place it stands in. `tools/qa/squadthrow-check.ts` asserts the rows' text. Never seen on a GPU; nobody has
   played the renamed rows.
-- **The end card's verdict is one or two words in capitals, never a sentence** (`src/game/verdict.ts`; the card and its switch are the 'Every run ends on a verdict' bullet in menus.md):
+- **The end card's verdict is one or two words in capitals, never a sentence** (`rust/game_rules/src/verdict`; the card and its switch are the 'Every run ends on a verdict' bullet in menus.md):
   won — CLEAR · RESCUED · OUT (a solo mission walked out of); lost — DOWN (every player down; the why is 'by <who>') · WIPED (the team) · DEAD (the man who was
   to be taken alive) · GOT AWAY (he left the floor) · LOST (the hostages) · BLOWN (the charge went off) · FAILED (a mission stage failed). The why under it is the mission's own end
   line (`roomclear.endWhy`, `rescue.result.why`), not a new sentence. Small words: the tag 'cheats' (a cheat was on: nothing is kept of the try), the count rows
@@ -56,7 +56,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   them placeholders: the writing pass is the maintainer's. Read by the dialogue pass and left as they are — a frightened man's short words, no bearings, nothing a trained squad
   says — but for ONE: `with` had 'on you. light it up.', which reads as an order to open fire; it is 'on you. get a light in there.' (their sibling line is 'lights on — go.').
   Read in the source; never heard in play.
-- **The net goes quiet: its lines** (10-13, the enemy morale goal's third slice; `src/game/netquiet.ts` `LINES`, said through `g.say` on the net — `body` aloud once nobody is
+- **The net goes quiet: its lines** (10-13, the enemy morale goal's third slice; `rust/game_rules/src/netquiet` `LINES`, said through `g.say` on the net — `body` aloud once nobody is
   left on it; the switch `NETQUIET.on`, its words and its check are the 'The net goes quiet' bullet in enemies.md). Six kinds: `name`, the first man who does not answer, his name
   again, flat, as the squad's own ask names him ("{name}. … {name}."); `why`, a second or later silence with others still on the net ("why's nobody answering?"); `last`, nobody
   at all left on the net ("is anyone left on this net?"); `body`, the finder of a man nobody heard go — never a man who heard the shot ("he's down. nobody heard a thing?");
@@ -67,7 +67,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   sneak.ts lines have it, enemysquads.ts writes "I'm" — no rule yet). A squad of one never says `alone` (`knowsSquad` wants two men). The pick is by index off the game's die, so
   the two mends move no draw; after them `probes.ts netquiet` is ALL PASS on the frozen stand (`TPS_MORALE=1 TPS_NETQUIET=1`) and on shipped, and the `words` family on
   both. Read, not heard; never seen on a GPU.
-- **A guard's attention: its lines** (10-13, the attention goal's step; `src/game/attention.ts`, six small pools said through `g.say`, never on the net; the rule, its
+- **A guard's attention: its lines** (10-13, the attention goal's step; `rust/game_rules/src/attention`, six small pools said through `g.say`, never on the net; the rule, its
   switch `ATTENTION.on` and its checks are the attention bullet in stealth.md). The split is by side: `gd.team === 'guard'` = the night staff, anybody else = a defender.
   `WARY` / `WARY_FOE`, the second taking inside his memory, said INSTEAD of 'huh?' ("again?", "…that's twice." / "again. stay sharp.", "twice now."); `SPENT` / `SPENT_FOE`,
   the taking that is no look at all — he draws and searches ("no. somebody's doing that.", "that's no accident. come out." / "that's bait. search the place.", "someone's
@@ -80,7 +80,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   taking's alone; a larger `spent` would have a third taking say 'twice'); "stay sharp" from a defender with no mate in earshot. The pick is by index off the game's die: the
   mend moves no draw; after it `probes.ts attention` (2 probes) is ALL PASS on frozen (`TPS_ATTENTION=1`) and on shipped, and the `words` family on both. Read, not heard.
 
-- **A shout heard: a hidden defender's shout that reaches an ear is a quiet row on the strip** (10-16, `src/game/cues.ts overheard`; the maintainer's call on the open
+- **A shout heard: a hidden defender's shout that reaches an ear is a quiet row on the strip** (10-16, `rust/game_rules/src/cues overheard`; the maintainer's call on the open
   question 'a shout from a defender you can't see': yes — a quiet row on the radio strip, only when the shout really reaches the player's ears or a living teammate's,
   no name, no place). Switch `CUES.overheard`: ON in the page (`?overheard=0` = such a shout is no row, as it was), OFF in the module and on the frozen stand
   (`TPS_OVERHEARD=1` raises it; `TPS_PROFILE=shipped` has it up); a `FROZEN_HOLDS` row; `CUES` now rides a recording (`JOURNAL_KNOBS`), and a recording from before the
@@ -111,7 +111,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rule asks who is hostile to the player, not which mission: the night staff's shouts under a quiet mission's fog are rows too — NOT measured (the 24 runs are loud
   missions) and nobody has played it.
 
-- **On a defender's net 'they' and 'them' are the team; the hostages are named** (10-18, read against the hostage rescue's ending, `src/game/rescueflush.ts`). Two of
+- **On a defender's net 'they' and 'them' are the team; the hostages are named** (10-18, read against the hostage rescue's ending, `rust/game_rules/src/rescueflush`). Two of
   its radio lines used the two words for the hostages and for the team in one breath — "they're gone — they're moving them! cut them off!" and "on the way out
   — they don't leave with them!" — which on the strip, with no picture, takes a second read. Now "the hostages are gone — they're moving them! cut them off!"
   and "on the way out — they don't leave with the hostages!": the hostages are named once (the defenders' net already says "moving to the hostage door!") and

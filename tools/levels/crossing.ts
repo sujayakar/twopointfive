@@ -156,7 +156,7 @@ export const QUIET: QuietData = {
   },
 };
 
-/** scenarios.response (game/qrf.ts, rust/game_start/tests/response_team.rs): WHO COMES WHEN THE CROSSING GOES LOUD. The road's vehicle gates are welded for the night, so
+/** scenarios.response (rust/game_rules/src/qrf, rust/game_start/tests/response_team.rs): WHO COMES WHEN THE CROSSING GOES LOUD. The road's vehicle gates are welded for the night, so
  *  they come on foot from the house's side, by one of its two yard gates. Character yaws (forward = [sin, 0, cos]: 0 looks down the plan, toward the road). */
 export const RESPONSE: ResponseData = {
   why: 'A border post: the company that mans it sleeps in its lines up the road, with a duty section dressed and a telephone to the customs house.',
@@ -435,7 +435,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   if (lorryPark1 - lorryPark0 !== 5) throw new Error(`crossing: the gear screen's way hides the 5 boxes of the lorry park's crates and tyres and the two calls laid ${lorryPark1 - lorryPark0}`);
   const lorryParkOut = Array.from({ length: lorryPark1 - lorryPark0 }, (_, k) => `box_${String(lorryPark0 + k).padStart(4, '0')}`);
   const kitView: KitViewData = { ways: [{ door: 'gate_s', ref: [15.9, 25.9], side: -1, hide: lorryParkOut, add: kitAdd }] };
-  // what a row calls the doors (scenarios.doorNames — game/doornames.ts; no bearing in a name): the level lists no rooms, so each is named by what it is known by above —
+  // what a row calls the doors (scenarios.doorNames — rust/game_rules/src/doornames; no bearing in a name): the level lists no rooms, so each is named by what it is known by above —
   // the two gates the duty section comes by as RESPONSE names them, the rest by what stands outside or which wall the leaf is in
   const doorNames = [{ door: 'off_imp', name: 'customs office to impound door' }, { door: 'gate_n', name: 'customs yard gate' }, { door: 'gate_ne', name: 'impound yard gate' }, { door: 'gate_s', name: 'lorry park gate' }, { door: 'gate_w', name: 'tea stall wicket' }, { door: 'gate_e', name: 'ditch wicket' }, { door: 'fence_e', name: 'kerb wall door' }, { door: 'hut_e', name: 'boom hut back door' }, { door: 'rec_w', name: 'records yard door' }, { door: 'imp_e', name: 'impound yard door' }, { door: 'shed_w', name: 'shed door' }];
   return { level, scenarios: { quiet: QUIET, response: RESPONSE, kitView, doorNames }, groups: trace.groups, surfaces };

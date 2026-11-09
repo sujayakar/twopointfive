@@ -1,11 +1,11 @@
 // Dice shared by the simulation's seams. mulberry32 is the one seeded die the QA harness, the checkpoints' identity claim and the session journal all mean by
-// 'seeded' (tools/qa seeds Math.random with the same function). A die the session JOURNAL installs as Math.random for the simulation (game/journal.ts) carries the
+// 'seeded' (tools/qa seeds Math.random with the same function). A die the session JOURNAL installs as Math.random for the simulation (rust/game_rules/src/journal) carries the
 // die it displaced on `.sys`, and the systems that are NOT the simulation — the mixer's rate jitter and noise beds (audio/), the smoke solver's per-frame emitter
 // jitter (smoke/smoke.ts) — draw through sysRandom(): under a recording they leave the seeded stream to the game alone (a replay has no mixer or solver to draw),
 // while a plainly seeded Math.random (the capture recipes' determinism checklist, the harness) still reaches them exactly as it always did.
 /** mulberry32: a small, fast, seedable uniform [0, 1) generator */
 export function mulberry32(a: number): () => number { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-/** a die a rollback snapshot can hold (game/rollback.ts): its whole state is the word `dice`, on an object, and nothing is captured — `mulberry32(seed)` keeps the same
+/** a die a rollback snapshot can hold (rust/game_rules/src/rollback): its whole state is the word `dice`, on an object, and nothing is captured — `mulberry32(seed)` keeps the same
  *  word inside a closure, where no snapshot can read it or put it back, so a die that LIVES IN GAME STATE from tick to tick is one of these (a die made and spent
  *  inside one call may stay a mulberry32). `roll(dieOf(seed))` gives the sequence `mulberry32(seed)` gives, draw for draw. */
 export interface Die { dice: number }
@@ -22,7 +22,7 @@ export type SimDie = (() => number) & { sys?: () => number };
 export function sysRandom(): number { const r = Math.random as SimDie; return (r.sys ?? r)(); }
 
 // THE SIMULATION'S OWN DIE. Every draw the game makes goes through simRandom() below (no file under src/game calls Math.random for one any more: tools/qa/dice-check.ts
-// holds that). A Game stood up with a seed (host/standup.ts StandOpts.seed — the page always is) OWNS a die: one mulberry32 word on the Game, so the stream is the
+// holds that). A Game stood up with a seed (src/host/drawpage.ts StandOpts.seed — the page always is) OWNS a die: one mulberry32 word on the Game, so the stream is the
 // game's alone (nothing else in the page can draw from it), a checkpoint carries where it stands (savestate.ts `dice`), and two machines given the same seed and the
 // same inputs roll the same numbers — what a server and a client predicting off it need. A Game stood up without one (the QA harness, whose tools seed Math.random)
 // draws Math.random exactly as it always did, number for number.

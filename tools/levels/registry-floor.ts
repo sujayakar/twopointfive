@@ -29,7 +29,7 @@
 //     z 24 +--------+-------+-------+----------------+-----------+
 //
 // The shell is the office's (exterior walls on x 4 / 36, z 4 / 24) so what the game still keys to that footprint — the weather's INTERIOR rectangle, the world
-// bounds typed into the shaders — holds without a change. The footstep surface map is still game/floor.ts's, the OFFICE's rectangles in code, whatever level
+// bounds typed into the shaders — holds without a change. The footstep surface map is still rust/game_rules/src/floor's, the OFFICE's rectangles in code, whatever level
 // is loaded: the floors below are painted for the picture, a step here sounds as the office's floor at that spot does.
 // Only the old demo's kit (src/scene/officeGen.ts officeKit: its walls, doors, glass, furniture, lights, palette and markings). Units: meters. +X east, +Z south, +Y up.
 import type { Vec3 } from '../../src/math/vec';
@@ -459,6 +459,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // THE FLOOR, BY NAME (scene/scenarios.ts PlacesData — words only, nothing in the simulation reads it): this level has no room-clear structure, so without
   // these a line that says where ('holding …') had only the OFFICE's words for it — the captor 'holding the server room' in the registrar's office
   scenarios.places = { areas: [{ name: "registrar's office", bounds: { ...R.office } }, { name: 'reading room', bounds: { ...R.reading } }, { name: 'copy room', bounds: { ...R.copy } }, { name: 'hall', bounds: { ...R.hall } }, { name: 'gallery', bounds: { ...R.gallery } }, { name: 'lobby', bounds: { ...R.lobby } }, { name: 'stacks', bounds: { ...R.stacks } }, { name: 'sorting room', bounds: { ...R.sorting } }] };
-  scenarios.doorNames = [{ door: 'stacks_w', name: 'lobby-side stacks door' }];   // (doorNames: what a row calls the doors no room of the level names — game/doornames.ts; no bearing in a name)
+  scenarios.doorNames = [{ door: 'stacks_w', name: 'lobby-side stacks door' }];   // (doorNames: what a row calls the doors no room of the level names — rust/game_rules/src/doornames; no bearing in a name)
   return { level, scenarios, groups: trace.groups };
 }

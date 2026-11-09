@@ -258,14 +258,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // the stealth mission's three places, because the level format wants them
     mission: { serverRoom: { ...SERVICE }, entryDoor: 'service', rack: { index: 0, front: [8.0, 1.0, 9.7], halfW: 0.3 }, exfilDoor: 'lounge', exfilX: 18.5, exfilZ: 12.0, exfilOut: [1, 0] },
   };
-  // ---- what is underfoot (game/floor.ts): pavers and a skimmed floor are stone, the lounge a carpet
+  // ---- what is underfoot (rust/game_rules/src/floor): pavers and a skimmed floor are stone, the lounge a carpet
   const surfaces: SurfacesData = {
     building: { x0: 5, x1: 35, z0: 5, z1: 23.5 }, grassEdge: 0, inside: 'stone', outside: 'stone', verge: 'stone',
     zones: [{ id: 'lounge', mat: 'carpet', x0: 11.5, z0: 9, x1: 17, z1: 15 }],
   };
   // ---- how the roof is walked (rust/game_draw/src/traffic.rs: the look's page wears its floors by it). Nobody patrols a roof and no team is staged on this one, so its ways
   // are all its author's: whoever comes up comes by the stair, a fitter goes to the plant and to the service room, the others to the lounge's door and
-  // through the lounge. A way's ends are names, so the roof names three of its places (these are words the game may say of this level: game/dialogue.ts)
+  // through the lounge. A way's ends are names, so the roof names three of its places (these are words the game may say of this level: rust/game_rules/src/dialogue)
   const places = { areas: [{ name: 'stair landing', bounds: { x0: 31, x1: 34.5, z0: 13.6, z1: 15.6 } }, { name: 'plant pad', bounds: { x0: 8, x1: 16, z0: 17.5, z1: 22 } }, { name: 'service room', bounds: { ...SERVICE } }] };
   const walked = [{ from: 'stair landing', to: 'lounge', weight: 3 }, { from: 'stair landing', to: 'service', weight: 3 }, { from: 'stair landing', to: 'plant pad', weight: 2 }, { from: 'service', to: 'plant pad', weight: 2 }, { from: 'service room', to: 'between' }, { from: 'between', to: 'lounge' }];
   return { level, scenarios: { places, walked, doorNames: [{ door: 'service', name: 'service door' }, { door: 'lounge', name: 'lounge door' }, { door: 'between', name: 'service to lounge door' }] }, groups: trace.groups, surfaces };

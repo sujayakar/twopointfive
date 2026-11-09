@@ -378,7 +378,7 @@ export const CHAR_MATS_LOOK: Partial<Record<CharSide, SideTable>> = {
     standIn: { accent: 'cloth_plain', lens: 'skin' },
   },
 };
-/** THE SNEAKING SUIT (scene/look.ts LOOK.suit; who wears it and when: game/cast.ts sneakSuit — Sam, and a quiet mission's partner, on a mission that is not a squad's
+/** THE SNEAKING SUIT (scene/look.ts LOOK.suit; who wears it and when: rust/game_rules/src/cast sneak_suit — Sam, and a quiet mission's partner, on a mission that is not a squad's
  *  loud one): an operator's THIRD set of rows. The cast has no part of its own for it (32 of 32 are dealt), so it is the operator's own suit part — uniform, vest and
  *  boots — drawn without the helmet and the back kit (cast.ts castParts) and shaded here as one matt black: cloth, rig, boots and gloves within a third of a stop of
  *  each other, the rig told from the cloth by its finish alone (harder, a little glossier), so under a lamp he reads as a man in a suit with a harness and in the
@@ -403,7 +403,7 @@ export const SNEAK_SUIT: SideTable = {
   standIn: { cloth_plain: 'cloth_uniform', accent: 'cloth_plain' },
 };
 /** the table a side is drawn from NOW: the look's while its switch is on and it has one for the side, else CHAR_MATS' — and for an operator in the sneaking suit
- *  (`suit`: the caller's word, game/cast.ts sneakSuit) the suit's */
+ *  (`suit`: the caller's word, rust/game_rules/src/cast sneak_suit) the suit's */
 export function charMatsOf(side: CharSide, suit = false): SideTable { return suit && side === 'operator' ? SNEAK_SUIT : (lookDress() && CHAR_MATS_LOOK[side]) || CHAR_MATS[side]; }
 /** the tables as shipped (the panel's reset; `resetCharMats`) */
 const SHIPPED = JSON.stringify(CHAR_MATS), SHIPPED_LOOK = JSON.stringify(CHAR_MATS_LOOK), SHIPPED_SUIT = JSON.stringify(SNEAK_SUIT);

@@ -2,7 +2,7 @@
 // whitewashed block building whose whole front is glazed (the glasshouse, a long room of seedling benches behind six tall panes, 0.3 m off the ground to
 // 2.4) and whose inside walls between the glasshouse, the lab and the office are glass from 0.5 m to 2.4. Seven men. The forecourt is floodlit off the eaves
 // and the glazed rooms are dark, so whoever walks onto the forecourt is seen from three rooms at once by men he cannot see, and their rounds come through
-// the panes (game/glasspen.ts; a pane is a toll, not a wall). The other three sides are blank block wall. The store, on the back, is the one room with no
+// the panes (rust/game_rules/src/glasspen; a pane is a toll, not a wall). The other three sides are blank block wall. The store, on the back, is the one room with no
 // glass in any wall; it has its own door on the dark back lot, and a row of seed racks stands between that room and its door to the lab.
 // TWO WAYS IN (scenarios.roomClear.team / starts[0]), BOTH IN THE DARK AND OUT OF EVERY DEFENDER MARK'S SIGHT: the side of the building, round the corner
 // from the glass (stepping onto the lit forecourt in front of the panes is the player's own decision); or the back lot, on the back door.
@@ -299,7 +299,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // the stealth mission's three places, because the level format wants them (the room clear stands the mission still): the office, a point on its back wall, the front door
     mission: { serverRoom: { ...OFFICE }, entryDoor: 'office', rack: { index: 0, front: [28.2, 1.0, 8.5], halfW: 0.3 }, exfilDoor: 'front', exfilX: 20.0, exfilZ: 18.6, exfilOut: [0, 1] },
   };
-  // ---- what is underfoot (game/floor.ts): gravel and dirt outside are 'asphalt' (the nearest the six have to earth); the building stands on a concrete slab
+  // ---- what is underfoot (rust/game_rules/src/floor): gravel and dirt outside are 'asphalt' (the nearest the six have to earth); the building stands on a concrete slab
   // ('stone'), lino laid in the lab and the office, the glasshouse's mat a carpet
   const surfaces: SurfacesData = {
     building: { x0: 0, x1: 40, z0: 0, z1: 28 }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt',

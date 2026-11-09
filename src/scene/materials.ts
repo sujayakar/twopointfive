@@ -22,14 +22,14 @@
 
 /** what a round knocks out of a thing, and the class a wall of it is to the wall engine, a round and a charge */
 export type Surf = 'metal' | 'plastic' | 'glass' | 'wood' | 'cardboard' | 'drywall' | 'concrete' | 'carpet' | 'fabric' | 'foliage';
-/** how a blast breaks a piece of furniture (game/furnblast.ts FURN_BREAK has a row a class) */
+/** how a blast breaks a piece of furniture (rust/game_rules/src/furnblast FURN_BREAK has a row a class) */
 export type BreakClass = 'wood' | 'board' | 'metal' | 'hard' | 'soft';
-/** lying snow, by how trodden it is (render/snowField.ts, game/snowBog.ts) */
+/** lying snow, by how trodden it is (render/snowField.ts, rust/game_rules/src/snow_bog) */
 export type SnowKind = 'snow' | 'snowPacked' | 'snowOld';
 
 /** WHAT A MATERIAL DOES: every column a rule reads. An absent flag is false; an absent word is none. */
 export interface Does {
-  /** a round's hit (game/particleFx.ts), how tough a wall of it is (wallbreak.ts), what a round goes through (wallpen.ts), what a charge is told (wallcharge.ts) */
+  /** a round's hit (rust/game_rules/src/particle_fx), how tough a wall of it is (wallbreak.ts), what a round goes through (wallpen.ts), what a charge is told (wallcharge.ts) */
   surf: Surf;
   /** how a blast breaks furniture of it (furnblast.ts, winbars.ts) */
   breaks: BreakClass;
@@ -54,7 +54,7 @@ export interface Does {
   screen?: true;
   /** lying snow (snowBog.ts, airSim.ts, the blast's mouth, and the picture's snow field) */
   snow?: SnowKind;
-  /** THE WORD IT TAKES WHILE SOAKED, for the one slab the weather soaks in place (the lot: game/weather.ts). Nothing is kept: whoever asks what a round
+  /** THE WORD IT TAKES WHILE SOAKED, for the one slab the weather soaks in place (the lot: rust/game_rules/src/weather). Nothing is kept: whoever asks what a round
    *  knocks out of the lot while the ground is wet is answered from this (doesWet below). Absent = the same wet as dry. As measured: wet tarmac sparks. */
   wet?: string;
 }

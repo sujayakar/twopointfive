@@ -5,7 +5,7 @@ import type { Commands } from '../draw/commands';
 import { KIT_KEPT } from '../view/desk';
 import { autosaveKept, sandboxKept } from './sandbox';
 
-/** the levers' keys and the address's word for each (game/difficulty.ts) */
+/** the levers' keys and the address's word for each (rust/game_rules/src/difficulty) */
 const LEVERS: readonly (readonly [string, string])[] = [['fog', 'fog'], ['ai', 'enemyai'], ['kit', 'enemykit'], ['told', 'told']];
 /** this machine keeps difficulty levers of its own */
 export const leversKept = (): boolean => Object.keys(json('twopointsix.levers')).length > 0;

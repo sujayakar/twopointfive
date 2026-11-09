@@ -247,7 +247,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     // north wall, and out by the front door to the south
     mission: { serverRoom: { ...R.eroom.bounds }, entryDoor: 'hall_2', rack: { index: 0, front: [25.6, 1.0, 7.5], halfW: 0.3 }, exfilDoor: 'front', exfilX: 20.0, exfilZ: 17.6, exfilOut: [0, 1] },
   });
-  // ---------------- what is underfoot (game/floor.ts: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
+  // ---------------- what is underfoot (rust/game_rules/src/floor: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
   // above, rect for rect. `building` is the whole world so the plan is all zones (first match wins): outside every zone is the lot's asphalt.
   // The workshops' dark finish is the paint the office lays on its server room's raised floor; here it is a workshop's hard floor, so 'stone'.
   const surfaces: SurfacesData = {

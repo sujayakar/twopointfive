@@ -36,7 +36,7 @@ export function fitPropFootprint(parts: readonly { off: Vec3; h: Vec3; yaw?: num
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ LevelData → Level
 /** the name of the file a loaded level came from (LevelData.name) — beside the Level, not on it: its shape is what generators and round trips compare.
- *  Asked by game/weather.ts for a level built for snow (game/weatherKinds.ts SNOW_LEVELS). A Level nobody loaded from data (a generator's, a bare stage) has none. */
+ *  Asked by rust/game_rules/src/weather for a level built for snow (rust/game_rules/src/weather_kinds SNOW_LEVELS). A Level nobody loaded from data (a generator's, a bare stage) has none. */
 const levelNames = new WeakMap<Level, string>();
 export function levelNameOf(level: Level | null | undefined): string | null { return (level && levelNames.get(level)) ?? null; }
 /** Build the runtime Level from level data. Validates first (throws listing every problem) unless told the caller already has. Every vector is copied:
@@ -141,8 +141,8 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
     playerSpawn: V(data.mission.playerSpawn),
     routes, chokepoints, clearPlans,
     ...(civilians ? { civilians } : {}),
-    ...(data.volumes.length ? { volumes: data.volumes.map((v): VolumeDef => ({ name: v.id, kind: v.kind, c: V(v.c), h: V(v.h), ...(v.yaw !== undefined ? { yaw: v.yaw } : {}) })) } : {}),   // the level script's trigger volumes (game/director.ts onEnter) — written iff authored, so a level with none loads key for key as before
-    ...(data.marks?.length ? { marks: data.marks.map((m): MarkDef => ({ name: m.id, pos: V(m.pos), ...(m.yaw !== undefined ? { yaw: m.yaw } : {}) })) } : {}),   // the level's named marks (scene/ways.ts, game/director.ts) — written iff the file names any, so a level with none loads key for key as before
+    ...(data.volumes.length ? { volumes: data.volumes.map((v): VolumeDef => ({ name: v.id, kind: v.kind, c: V(v.c), h: V(v.h), ...(v.yaw !== undefined ? { yaw: v.yaw } : {}) })) } : {}),   // the level script's trigger volumes (rust/game_rules/src/director onEnter) — written iff authored, so a level with none loads key for key as before
+    ...(data.marks?.length ? { marks: data.marks.map((m): MarkDef => ({ name: m.id, pos: V(m.pos), ...(m.yaw !== undefined ? { yaw: m.yaw } : {}) })) } : {}),   // the level's named marks (rust/game_rules/src/scene_ways, rust/game_rules/src/director) — written iff the file names any, so a level with none loads key for key as before
     sky: { zenith: V(data.sky.zenith), horizon: V(data.sky.horizon) },
     mission: { serverRoom: { x0: reach.area.x0, x1: reach.area.x1, z0: reach.area.z0, z1: reach.area.z1 }, entryDoor: reach.door, rack: { index: drive.rackIndex, front: V(drive.front), halfW: drive.halfW }, exfilDoor: exfil.door, exfilX: exfil.x, exfilZ: exfil.z, ...(exfil.out ? { exfilOut: [exfil.out[0], exfil.out[1]] as [number, number] } : {}) },
     ...(data.meta.markTexel !== undefined ? { markTexel: data.meta.markTexel } : {}),
@@ -150,7 +150,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
     ...(data.scenarios ? { scenarios: clone(data.scenarios) } : {}),   // (the runtime structs verbatim: scene/scenarios.ts)
   };
   // TODO(G2): data.floors / data.connectors → per-floor nav + stair links. data.volumes → Level.volumes above (the Director's onEnter).
-  // data.surfaces → Level.surfaces, what game/floor.ts reads for this level's footsteps: non-enumerable, so a Level compared or written as data is what it was
+  // data.surfaces → Level.surfaces, what rust/game_rules/src/floor reads for this level's footsteps: non-enumerable, so a Level compared or written as data is what it was
   // (a file with none: floor.ts's own office map, which level-probes.ts holds equal to the office file's block).
   if (data.surfaces) Object.defineProperty(level, 'surfaces', { value: clone(data.surfaces), enumerable: false, writable: true, configurable: true });
   levelNames.set(level, data.name);

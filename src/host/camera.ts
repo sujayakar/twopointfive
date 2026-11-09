@@ -41,7 +41,7 @@ export class FollowCamera {
     return this.pin;
   }
   update(dt: number, follow: Vec3, aimPoint: Vec3 | null) { this.frame(); this.step(dt, follow, aimPoint); }
-  /** update()'s two halves, for a host that steps the camera with the game and draws at its own rate (host/loop.ts under the fixed step). `frame()`, once a drawn
+  /** update()'s two halves, for a host that steps the camera with the game and draws at its own rate (src/host/drawpage.ts under the fixed step). `frame()`, once a drawn
    *  frame: 'previous' ← the matrix the last frame was DRAWN with. `step()`, once a game tick: the follow itself. */
   frame() { m4.copy(this.prevViewProj, this.kickDrawn ?? this.viewProj); this.kickDrawn = null; }   // (rebuild() may run again later in the frame; a kicked or posed frame's 'previous' is the matrix that frame was DRAWN with)
   step(dt: number, follow: Vec3, aimPoint: Vec3 | null) {
@@ -55,8 +55,8 @@ export class FollowCamera {
     this.rebuild();
   }
 
-  /** A PICTURE-ONLY KICK (game/blastFeel.ts writes it once a frame; null = none): metres added to the look-at for the frame's render and nothing else. The loop
-   *  (host/loop.ts) calls kickIn() right before the render and kickOut() after the HUD has drawn against the same picture, so whatever reads the camera inside
+  /** A PICTURE-ONLY KICK (rust/game_rules/src/blast_feel writes it once a frame; null = none): metres added to the look-at for the frame's render and nothing else. The loop
+   *  (src/host/drawpage.ts) calls kickIn() right before the render and kickOut() after the HUD has drawn against the same picture, so whatever reads the camera inside
    *  Game.update — the aim ray, WASD's basis, the on-screen tests, the session journal — reads it as it was without the kick, to the bit (rebuild() from the same
    *  look-at, angles and distance gives the same matrices). */
   kick: Vec3 | null = null;
@@ -66,7 +66,7 @@ export class FollowCamera {
   kickIn() { const k = this.kick; if (!k || this.kickHeld) return; this.kickHeld = this.target; this.target = v3.add(this.target, k); this.rebuild(); }
   kickOut() { const t = this.kickHeld; if (!t) return; m4.copy(this.kickVP, this.viewProj); this.kickDrawn = this.kickVP; this.kickHeld = null; this.target = t; this.rebuild(); }
 
-  /** A PICTURE-ONLY POSE (host/tween.ts, drawing between ticks: the camera stood between where its last two ticks left it): look-at, angles and distance for the
+  /** A PICTURE-ONLY POSE (src/host/between.ts, drawing between ticks: the camera stood between where its last two ticks left it): look-at, angles and distance for the
    *  frame's render and the HUD laid over it, the tick's own put back by drawOut() — to the bit, as with the kick. The loop calls drawIn() before kickIn() and
    *  drawOut() after kickOut(). */
   private drawHeld: { target: Vec3; yaw: number; pitch: number; distance: number } | null = null; private drawVP = m4.create();
