@@ -2,8 +2,12 @@
 //! page asks by the list below (`asks!`, whose caller on the page is made from it by `bun run tools/draw/gen.ts`) and is answered with a view.
 //!
 //! The bytes of an ask: its number (u32), then its fields in order, as a command's. A PRESS changes the desk and answers `Pressed`; every other ask changes nothing.
-use crate::command::{Bytes, Field};
-use crate::kept;
+use super::command::{Bytes, Field};
+use super::kept;
+use crate::json::{parse, Json};
+use crate::read::{At, Faults, FromJson};
+use alloc::{boxed::Box, format, string::{String, ToString}, vec, vec::Vec};
+use core::any::Any;
 use game::game::Game;
 use game::bytes::{ToBytes, W};
 use game::kit::{self, CardFor, KitPreset, MemberKit, TeamFor};
@@ -12,9 +16,6 @@ use game::query::{after_mark, Query};
 use game::scene_scenarios::IssueData;
 use game::start_list::{self, Sitting};
 use game::view::{BriefView, CardView, KeptText, MissionsView, Pressed, SheetView, ShortView, StartView, TeamView};
-use game_start::json::{parse, Json};
-use game_start::read::{At, Faults, FromJson};
-use std::any::Any;
 
 pub struct Desk {
     pub g: Box<Game>,
@@ -36,8 +37,8 @@ impl Default for Desk { fn default() -> Self { Desk::new() } }
 impl Desk {
     /// The host's commands, done as a start is done them: what this machine keeps and what the address says.
     pub fn machine(&mut self, b: &[u8]) -> Result<(), String> {
-        crate::command::apply(&mut self.g, b)?;
-        self.list.said(crate::command::levers_said(b));
+        super::command::apply(&mut self.g, b)?;
+        self.list.said(super::command::levers_said(b));
         self.kept = kept::write(&mut self.g);
         Ok(())
     }

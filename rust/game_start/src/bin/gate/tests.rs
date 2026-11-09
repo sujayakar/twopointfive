@@ -8,7 +8,7 @@ use std::sync::{mpsc, Arc, Mutex};
 use std::time::Instant;
 
 /// EVERY CRATE OF rust/ WITH TESTS, in the order they are built. A crate with a tests folder or a #[test] that is not here fails the run by name.
-const CRATES: [&str; 6] = ["game_start", "game_run", "game_types", "game_rules", "game_draw", "sim"];
+const CRATES: [&str; 5] = ["game_start", "game_types", "game_rules", "game_draw", "sim"];
 
 fn rust() -> PathBuf { PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..") }
 

@@ -1,5 +1,5 @@
 //! THE KIT PICTURE'S COMMANDS, AS A HOST HANDS THEM: bytes in, the stage moved, and the game stepped by the one step every host uses. A failure means a host's list no longer reaches the stage, or the tick no longer holds it.
-use game_run::command;
+use game_start::host::command;
 use game_start::play::{Opts, Play};
 
 fn u32s(o: &mut Vec<u8>, x: u32) { o.extend(x.to_le_bytes()); }
