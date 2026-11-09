@@ -296,63 +296,6 @@ fn slice_across(g: &mut Game, op: DoorOpId, gd: GuardId, w: f64, sgn: f64) -> bo
     let p = match o!(g, op).post.get(gd) { Some(q) => q.pos, None => pos_of(g, gd) };
     o!(g, op).men.len() > 2 && (if super::along_of(g, d, p) < w / 2.0 { -1.0 } else { 1.0 }) != sgn
 }
-/// each man's stations across the opening, all on Sam's side of the frame line
-pub(super) fn door_tools_to_slice(g: &mut crate::game::Game, op: DoorOpId) {
-    use crate::character::{Stance, UpperMode};
-    let (d, side, lead) = (o!(g, op).door, o!(g, op).side, o!(g, op).lead);
-    let w = g.dr[d].def.width;
-    let name = crate::orders::door_words(g, d);
-    let light = lights_of(g, &crate::seats::here(g));
-    let start = mark_of(g, op, lead);
-    let sgn = if super::along_of(g, d, start) < w / 2.0 { -1.0 } else { 1.0 };
-    // ONE arc for everybody, from the lead's own jamb out, round the front of the door and in to the far wall
-    let mut arc: Vec<V3> = vec![start];
-    let ours = door_tools_leaf_ours(g, d, side);
-    let back = g.k.doortools.slice_back;
-    let mut rows: Vec<(f64, f64)> = g.k.doortools.thr_arc.iter().map(|r| (r[0], r[1])).collect();
-    rows.push((w / 2.0, 2.0)); rows.push((w - 0.25, 1.8)); rows.push((w + 0.45, 1.2));
-    for (a, b) in rows {
-        let b = b * back;
-        let al = if sgn < 0.0 { a } else { w - a };
-        let q = door_pt(g, d, al, b, side, None);
-        let prev = arc[arc.len() - 1];
-        if ours && al < 0.0 { continue; }
-        if !nav_blocked(g, q[0], q[2]) && ((ours && super::along_of(g, d, prev) < 0.0) || !crate::scene_collision::solid_blocked(g, [prev[0], 0.45, prev[2]], [q[0], 0.45, q[2]], None)) { arc.push(q); }
-    }
-    for gd in o!(g, op).men.clone() {
-        if !slice_across(g, op, gd, w, sgn) || o!(g, op).rear.has(gd) { continue; }
-        let here = mark_of(g, op, gd);
-        let looks = door_tools_slice_looks(g, op, here, -sgn);
-        let l0 = looks[0];
-        o!(g, op).slice.set(gd, DoorToolsDoneItemSliceValue { pts: vec![here], looks: vec![looks], i: 0.0, j: 0.0, t: f64::NAN, ahead: None, pie: None });
-        door_tools_assign(g, op, gd, &DoorToolsAssignA { post: Some(here), face: Some(v3::yaw_to(here, l0)), watch: Some(l0), stance: Some(Stance::None), upper: Some(UpperMode::Aim), light: Some(light), search: Some(true), going: format!("slicing · {}", name), there: format!("holding outside · {}", name), ..Default::default() });
-    }
-    let mut file: Vec<GuardId> = vec![lead];
-    for m_ in o!(g, op).men.clone() {
-        if m_ != lead && !slice_across(g, op, m_, w, sgn) && !o!(g, op).rear.has(m_) { file.push(m_); }
-    }
-    for k in 0..file.len() {
-        let gd = file[k];
-        let n = core::cmp::max(1, arc.len() as i64 - 2 * k as i64) as usize;
-        let here = mark_of(g, op, gd);
-        let pts: Vec<V3> = if k == 0 { arc[..n].to_vec() } else { let mut v = vec![here]; v.extend_from_slice(&arc[1..n]); v };
-        let mut looks: Vec<Vec<V3>> = Vec::new();
-        for (i, q) in pts.iter().copied().enumerate() {
-            let l = door_tools_slice_looks(g, op, q, sgn);
-            looks.push(if i == 0 || l.len() < 3 { l } else { vec![l[2], l[1], l[2]] });
-        }
-        let (p0, l0) = (pts[0], looks[0][0]);
-        o!(g, op).slice.set(gd, DoorToolsDoneItemSliceValue { pts, looks, i: 0.0, j: 0.0, t: f64::NAN, ahead: if k == 0 { None } else { Some(file[k - 1]) }, pie: None });
-        door_tools_assign(g, op, gd, &DoorToolsAssignA { post: Some(p0), face: Some(v3::yaw_to(p0, l0)), watch: Some(l0), stance: Some(Stance::None), upper: Some(UpperMode::Aim), light: Some(light), search: Some(true), going: format!("slicing · {}", name), there: format!("slicing · {}", name), ..Default::default() });
-    }
-    let now = g.time;
-    o!(g, op).phase = Phase::Slice;
-    o!(g, op).t0 = now;
-    door_tools_beat(g, op, "slice");
-    let l = o!(g, op).lead;
-    crate::game::game_say(g, l, "working it from outside.", None, None);
-}
-
 /// this door's leaf comes round onto face `side`: a one-way door worked from the face it opens toward
 fn door_tools_leaf_ours(g: &crate::game::Game, d: DoorId, side: f64) -> bool {
     if !crate::doors::doors_swing_of(g, d).one_way { return false; }

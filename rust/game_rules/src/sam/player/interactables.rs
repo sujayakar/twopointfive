@@ -190,8 +190,6 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
             rows.push(status(&base, if gun { "the pistol coming up to his head…" } else { "holstering it to get both hands on him again…" }));
         } else if hold.phase == crate::character::HoldPhase::Choke || (hold.wind_t >= 0.0 && !gun) {
             rows.push(running(&base, crate::game::Verb::Choke, "choking him out… — Space or a step and he breathes again", Some(if hold.phase == crate::character::HoldPhase::Choke { hold.t / k.choke } else { 0.0 })));
-        } else if hold_killing(&hold) {
-            rows.push(status(&base, "the knife…"));
         } else if hold.phase == crate::character::HoldPhase::Whip || (hold.wind_t >= 0.0 && gun) {
             rows.push(running(&base, crate::game::Verb::Whip, "pistol-whip… — Space or a step checks it", Some(if hold.phase == crate::character::HoldPhase::Whip { hold.t / k.whip } else { 0.0 })));
         } else if let (Some(cv), true) = (cv, gun) {

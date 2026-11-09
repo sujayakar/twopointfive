@@ -11,13 +11,8 @@ pub fn free_held(g: &mut crate::game::Game, why: crate::player::FreeHeldWhy) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     let Some(h) = g.pl[pl].holding.as_ref() else { return };
-    let (killing, h_t, h_g) = (hold_killing(h), h.t, h.g);
+    let h_g = h.g;
     let shot = why == crate::player::FreeHeldWhy::Shot;
-    if shot && killing && h_t >= kill_cut(g) {
-        kill_out(g);
-        g.ch[c].anim.hold_pose = None;
-        return;
-    }
     hand_back(g, h_g, if shot { 0.6 } else { 0.3 });
     g.pl[pl].holding = None;
     g.ch[c].anim.hold_pose = None;

@@ -391,7 +391,6 @@ pub(super) fn room_clear_scenario_start(g: &mut crate::game::Game, seed: Option<
     if room_clear_scenario_active(g) {
         if let Some(want) = want {
             g.k.roomclear.seed = want;
-            g.room_clear.fresh = 0.0;
             // (against the seed ON THE FLOOR, not the knob)
             if want != g.room_clear.seed || room_clear_scenario_way_now(g) != g.staged.way {
                 room_clear_scenario_restage(g);
@@ -400,17 +399,11 @@ pub(super) fn room_clear_scenario_start(g: &mut crate::game::Game, seed: Option<
         return None;
     }
     let seed0 = g.k.roomclear.seed;
-    let fresh0 = g.room_clear.fresh;
     if let Some(want) = want {
         g.k.roomclear.seed = want;
     }
-    g.room_clear.fresh = match (want, g.dice.as_ref()) {
-        (None, Some(d)) => fresh_seed_of(d.seed),
-        _ => 0.0,
-    };
     if let Some(why) = room_clear_scenario_can_start(g) {
         g.k.roomclear.seed = seed0;
-        g.room_clear.fresh = fresh0;
         return Some(why);
     }
     g.room_clear.attempt = 0.0;

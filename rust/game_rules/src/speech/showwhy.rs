@@ -212,7 +212,7 @@ fn waits(g: &mut crate::game::Game, op: DoorOpId) -> bool {
         return false;
     }
     match r.phase {
-        crate::doortools::Phase::Ready | crate::doortools::Phase::Armed | crate::doortools::Phase::Held => true,
+        crate::doortools::Phase::Ready | crate::doortools::Phase::Armed => true,
         crate::doortools::Phase::Stack => !r.ready_t.is_nan(),
         crate::doortools::Phase::Thr => r.thr.as_ref().map_or(false, |x| x.told),
         _ => false,

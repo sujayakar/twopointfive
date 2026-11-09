@@ -146,7 +146,7 @@ fn partner_of(g: &crate::game::Game) -> Option<GuardId> { g.guards.iter().copied
 
 /// is `v` within the record's below and above; a kind with neither field has nothing to refuse
 fn band(v: f64, t: &crate::lesson::LessonTest) -> bool {
-    let (LessonTest::Meter { below, above, .. } | LessonTest::Pace { below, above }) = t else { return true };
+    let LessonTest::Meter { below, above, .. } = t else { return true };
     below.map_or(true, |b| v < b) && above.map_or(true, |a| v > a)
 }
 
@@ -177,7 +177,6 @@ fn passes(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> bool {
         T::Near { at, r } => { let p = own_pos(g, &crate::seats::here(g)); m::hyp2(p[0] - at[0], p[2] - at[2]) < r.unwrap_or(1.2) }
         T::Flag { flag, value } => flag_of(g, *flag) == value.unwrap_or(true),
         T::Slot { slot, drawn } => { let p = who(g, &crate::seats::here(g)); g.pl[p].slot == *slot && drawn.map_or(true, |d| !g.pl[p].holstered == d) }
-        T::Pace { .. } => true,   // (TWOGEARS.on: the wheel is nobody's pace and the line goes by)
         T::Meter { which, .. } => { let p = who(g, &crate::seats::here(g)); let v = if *which == LessonMeter::Noise { g.pl[p].noise } else { g.pl[p].visibility }; band(v, t) }
         T::Stage { stage } => stage_index(g.mission.stage.as_str()) >= stage_index(stage.as_str()) && g.mission.stage != crate::game::MissionStage::Failed,
         T::Door { door, state } => ok_door(g, door, *state),
@@ -409,7 +408,7 @@ fn ok_watching(g: &Game, seat: &crate::seats::SeatRef, a: V3, r: Option<f64>, n:
 fn finite(v: f64) -> bool { v.is_finite() }
 /// a row's `below` and `above`
 fn band_check(t: &crate::lesson::LessonTest) -> Option<String> {
-    let (below, above) = match t { LessonTest::Pace { below, above } | LessonTest::Meter { below, above, .. } => (*below, *above), _ => (None, None) };
+    let (below, above) = match t { LessonTest::Meter { below, above, .. } => (*below, *above), _ => (None, None) };
     let bad = |v: Option<f64>| v.map_or(false, |v| !finite(v));
     if (below.is_none() && above.is_none()) || bad(below) || bad(above) { Some(String::from("below and / or above: numbers")) } else { None }
 }
@@ -418,7 +417,7 @@ fn band_check(t: &crate::lesson::LessonTest) -> Option<String> {
 fn kind_word(t: &LessonTest) -> &'static str {
     use LessonTest as T;
     match t {
-        T::In { .. } => "in", T::Near { .. } => "near", T::Flag { .. } => "flag", T::Slot { .. } => "slot", T::Pace { .. } => "pace", T::Meter { .. } => "meter",
+        T::In { .. } => "in", T::Near { .. } => "near", T::Flag { .. } => "flag", T::Slot { .. } => "slot", T::Meter { .. } => "meter",
         T::Stage { .. } => "stage", T::Door { .. } => "door", T::Target { .. } => "target", T::Men { .. } => "men", T::Did { .. } => "did", T::Downed { .. } => "downed",
         T::Body { .. } => "body", T::Calm { .. } => "calm", T::Loaded => "loaded", T::Reload => "reload", T::Launcher { .. } => "launcher", T::Burst { .. } => "burst",
         T::Threw { .. } => "threw", T::OrderTo { .. } => "orderTo", T::StackOn { .. } => "stackOn", T::PairsOn { .. } => "pairsOn", T::Word { .. } => "word", T::Taken { .. } => "taken",
@@ -622,15 +621,12 @@ mod tests {
         assert!(band(0.5, &meter(Some(1.0), Some(0.0))) && !band(1.0, &meter(Some(1.0), None)) && !band(0.0, &meter(None, Some(0.0))));
         assert!(band(9.0, &LessonTest::Loaded));
         assert!(band_check(&meter(None, None)).is_some() && band_check(&meter(Some(f64::NAN), None)).is_some() && band_check(&meter(Some(1.0), None)).is_none());
-        let pace = |below, above| LessonTest::Pace { below, above };
-        assert!(band(0.5, &pace(Some(1.0), None)) && !band(1.5, &pace(Some(1.0), None)));
-        assert!(band_check(&pace(None, None)).is_some() && band_check(&pace(None, Some(0.5))).is_none());
         assert!(band_check(&LessonTest::Loaded).is_some());   // (t.below and t.above are undefined on any other kind)
     }
     #[test]
     fn the_skeletons_tables_say_what_the_typescript_says() {
         // (the lists in lesson.ts testFault's messages, run under bun)
-        let kinds = [LessonTest::Pace { below: None, above: None }, LessonTest::Loaded, LessonTest::Following, LessonTest::Cue { name: String::new() }, LessonTest::All { of: Vec::new() }];
+        let kinds = [LessonTest::Loaded, LessonTest::Following, LessonTest::Cue { name: String::new() }, LessonTest::All { of: Vec::new() }];
         for k in &kinds { assert!(lesson_tests().has(String::from(kind_word(k)))); }
         assert_eq!(stage_index("infiltrate"), 0);
         assert_eq!(stage_index("done"), 3);

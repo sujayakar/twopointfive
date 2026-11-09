@@ -93,7 +93,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
         let op = &g.tab.doortools_door_op[o];
         if op.word.is_some() { continue; }
         let held = op.thr.is_some() && op.phase == Phase::Thr;
-        if held || (big && (op.on_word || matches!(op.phase, Phase::Held | Phase::Armed | Phase::Standoff | Phase::Place))) {
+        if held || (big && (op.on_word || matches!(op.phase, Phase::Armed | Phase::Standoff | Phase::Place))) {
             let men: Vec<GuardId> = op.men.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect();
             let why = if held { WaitWhy::Thr } else if op.kind == crate::doortools::DoorToolKind::Charge { WaitWhy::Charge } else { WaitWhy::Tool };
             let word = men.iter().any(|m| addr.contains(m));

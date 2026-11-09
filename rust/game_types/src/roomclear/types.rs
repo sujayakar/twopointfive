@@ -35,7 +35,6 @@ pub struct RoomClearScenario {
     pub placement: Vec<crate::roomclear::Placement>,
     pub seed: f64,
     pub attempt: f64,
-    pub fresh: f64,
     pub pair_said: bool,
     pub entry_said: bool,
     pub team_said: bool,

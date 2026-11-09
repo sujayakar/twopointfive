@@ -189,7 +189,7 @@ fn door_tools_waiting4(g: &crate::game::Game, seat: &crate::seats::SeatRef, men:
         let o = &dop!(g, op);
         if any_shared(&o.men, men)
             && o.word.is_none()
-            && (o.on_word || matches!(o.phase, Phase::Held | Phase::Armed | Phase::Standoff | Phase::Place))
+            && (o.on_word || matches!(o.phase, Phase::Armed | Phase::Standoff | Phase::Place))
         {
             out.push(DoorToolsWaiting4Item::DoorOp(op));
         }
@@ -560,7 +560,7 @@ pub fn door_tools_go_men(g: &mut crate::game::Game, men: &[GuardId], only: Optio
         let Some(op) = op else { continue };
         dop!(g, op).on_word = false;
         dop!(g, op).word = Some(w);
-        if matches!(dop!(g, op).phase, Phase::Ready | Phase::Held | Phase::Armed | Phase::Thr) {
+        if matches!(dop!(g, op).phase, Phase::Ready | Phase::Armed | Phase::Thr) {
             dop!(g, op).hold = 1.0;
         }
         door_tools_beat(g, op, "the word");
@@ -710,7 +710,7 @@ fn door_tools_word_tick(g: &mut crate::game::Game) {
             dop!(g, op).hold = 0.0;
             match dop!(g, op).phase {
                 Phase::Ready => door_tools_open(g, op),
-                Phase::Wait | Phase::Held => door_tools_enter(g, op),
+                Phase::Wait => door_tools_enter(g, op),
                 _ => {}
             }
         }
@@ -731,8 +731,6 @@ fn word_goes(g: &mut Game, op: DoorOpId) {
             }
             None => dop!(g, op).word = None,
         }
-    } else if dop!(g, op).phase == Phase::Held {
-        dop!(g, op).hold = 2.0;
     } else if kind == DoorToolKind::Threshold && dop!(g, op).thr.is_some() {
         dop!(g, op).hold = 0.0;
         if dop!(g, op).phase == Phase::Thr {
@@ -1531,7 +1529,7 @@ mod tests {
         for p in [Phase::Stack, Phase::Ready, Phase::Place, Phase::Standoff, Phase::Armed] {
             assert!(is_pre(p));
         }
-        for p in [Phase::Kick, Phase::Toss, Phase::Fuse, Phase::Wait, Phase::Enter, Phase::Slice, Phase::Held, Phase::Thr, Phase::Pocket] {
+        for p in [Phase::Kick, Phase::Toss, Phase::Fuse, Phase::Wait, Phase::Enter, Phase::Thr, Phase::Pocket] {
             assert!(!is_pre(p));
         }
     }
