@@ -143,18 +143,8 @@ pub fn stand_off_spot(g: &mut crate::game::Game, d: RoomfightDefId, t: Roomfight
 
 /// A leg this module orders: he runs to `spot`, off the fight AI, a fallback's move. (pressure.ts run)
 pub fn run(g: &mut crate::game::Game, d: RoomfightDefId, spot: V3, door: Option<DoorId>, fast: Option<f64>) {
-    let fast = fast.unwrap_or(0.0);
-    let gd = gd_of(g, d);
-    let here = pos_of(g, gd);
-    let de = dfm(g, d);
-    de.mode = crate::roomfight::DefMode::Move; de.move_kind = crate::roomfight::DefMoveKind::Fallback; de.came_by = door; de.move_t = 0.0; de.stall_at = here; de.stall_t = 0.0; de.rally_at = m::NAN;
-    crate::control::set_pinned(g, gd, false, "pressure");
-    let speed = g.tune.guard_chase + fast;
-    crate::squad::order(g, gd, crate::squad::OrderPatch {
-        goal: Some(Some(spot)), speed: Some(Some(speed)), face: Some(None), strafe: Some(Some(false)), aim_at: Some(None),
-        upper: Some(Some(crate::character::UpperMode::Aim)), stance: Some(Some(crate::character::Stance::None)), crouch: Some(Some(false)),
-        ..Default::default()
-    });
+    let pace = g.tune.guard_chase + fast.unwrap_or(0.0);
+    crate::roomfight::send(g, d, crate::roomfight::Leg { by: door, ..crate::roomfight::Leg::to(spot, pace) }, "pressure");
 }
 
 /// PRESSURE.stuns: a man with a charge on him, let go at the fight, takes the door he was put down for as the drill, if their side has something that puts the team in that room. (pressure.ts charge)
@@ -350,11 +340,8 @@ pub fn learn(g: &mut crate::game::Game) {
 /// handed to the fight AI as the stock rally hands a man over: off his post, roused, the fight's place his fix. (pressure.ts loose)
 pub fn loose(g: &mut crate::game::Game, d: RoomfightDefId, at: V3) {
     let gd = gd_of(g, d);
-    if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
     let now = g.time;
-    let de = dfm(g, d);
-    de.mode = crate::roomfight::DefMode::Free; de.free_at = now; de.rally_at = m::NAN;
-    crate::control::set_hold(g, gd, false, "pressure"); crate::control::set_pinned(g, gd, false, "pressure");
+    crate::roomfight::loose(g, gd, "pressure");
     crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "pressure");
     crate::mind::raise(g, gd, 0.92, "pressure");
     if now - g.gd[gd].last_seen_t > 1.0 { crate::belief::word(g, gd, at); }

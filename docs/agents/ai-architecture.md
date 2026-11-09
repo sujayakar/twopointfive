@@ -80,7 +80,8 @@ above it in the list. `claim` itself refuses nobody, so the list decides only wh
 the last man ask it; other rules ask `has` of those they give way to.
 
 **Posts.** `hold` (he stays where he stands) and `pinned` (the room fight has him this tick) go through `set_hold` and `set_pinned`, which note the
-writer.
+writer. A defender leaves his post and comes back by `roomfight/post.rs` alone: `send` (on a `Leg`), `loose` (on the fight's own hunt), `back_on`. No
+rule writes his `mode`.
 
 **Limits have no one home.** What a man may do is asked of the module that knows: `lane_bars`, `round_held`, `silent_holds_glass`,
 `room_fight_cover_passes`, `press_keeps_home`, `stays_in_rooms`. A new rule that moves a man asks them for itself.
@@ -160,6 +161,7 @@ Native tests in `rust/game_start/tests/`:
 | `men_under_fire.rs` | the duck, the startled beat, the blast, the man who drops it and runs |
 | `hands.rs` | a reload goes on and begins by itself |
 | `attention.rs`, `witness.rs`, `senses.rs` | a calm man's eye, who knows what, smoke and light |
+| `post.rs` | a defender sent from his post, and what takes him off it |
 | `orders.rs` | the 40 mm order in a fight; `every_row_holds_its_own_order` |
 | `squads.rs`, `squads_radio.rs`, `net_quiet.rs`, `pursuit.rs` | groups: the net, the radio check, two men on one fix |
 
