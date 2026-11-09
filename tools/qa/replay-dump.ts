@@ -13,7 +13,7 @@ import { closeSync, createReadStream, existsSync, mkdirSync, openSync, readFileS
 import { createGunzip, gunzipSync } from 'node:zlib';
 import { basename, join } from 'node:path';
 import { clock, type ReplayNote } from '../../src/tape/format.ts';
-import { visitsOf, type KeptLine, type Visit } from '../../src/tape/kept.ts';
+import { visitsOf, type KeptLine, type OldFile, type Visit } from '../../src/tape/kept.ts';
 import { handsOf } from '../../src/tape/keep.ts';
 import { HandWalk } from '../../src/tape/handtape.ts';
 
@@ -114,7 +114,7 @@ if (import.meta.main) {
   };
 
   /** a whole file of the old kind: its notes, and what it says of itself. Not decoded */
-  const oldFile = (F: { session?: string; savedAt?: string; seconds?: number; url?: string; commit?: string; seed?: number | null; level?: { scenario?: string; file?: string }; notes?: ReplayNote[] }, from: string): void => {
+  const oldFile = (F: OldFile, from: string): void => {
     const E = entry(F.session ?? `file-${String(F.savedAt ?? from)}`, 'old', from); report.old++;
     if (E.kind === 'old') { E.startedAt ||= F.savedAt ?? ''; E.seconds = Math.max(E.seconds, F.seconds ?? 0); E.url ||= F.url ?? ''; E.commit ||= F.commit ?? ''; E.seed ??= F.seed ?? null; E.scenario ||= F.level?.scenario ?? F.level?.file ?? ''; }
     addNotes(E, F.notes ?? []);
@@ -136,23 +136,23 @@ if (import.meta.main) {
       if (!/^\s*\{\s*"k"\s*:/.test(first)) {   // a whole file, not lines: a saved replay file of the old kind (small enough to read whole)
         const buf = readFileSync(p), F = JSON.parse(isGz(buf) ? new TextDecoder().decode(gunzipSync(buf)) : buf.toString('utf8')) as { kind?: string };
         if (F?.kind !== 'replay') { console.log(`${from}: not a replay`); report.unreadable.push(from); continue; }
-        say(`${from}: ${OLD_KIND}`); oldFile(F as Parameters<typeof oldFile>[0], from); continue;
+        say(`${from}: ${OLD_KIND}`); oldFile(F as OldFile, from); continue;
       }
       say(`${from}: a hand-over file`);
       let nBad = 0;
-      const visits = new Map<string, Visit>(), hands = new Map<string, KeptLine[]>(), pieces = new Map<string, number>();
+      const visits = new Map<string, Visit>(), hands = new Map<string, KeptLine[]>(), pieces = new Set<string>();
       await eachLine(p, line => {
         let L: KeptLine; try { L = JSON.parse(line) as KeptLine; } catch { nBad++; return; }
         if (!L || typeof L !== 'object' || typeof L.k !== 'string') { nBad++; return; }
         if (L.k === 'dump') say(`  made ${L.at} · lists ${L.visits.length} visit(s)`);
         else if (L.k === 'head' || L.k === 'notes') visitsOf([L], visits);
         else if (L.k === 'hands') hands.set(L.sid, [...(hands.get(L.sid) ?? []), L]);
-        else if (L.k === 'piece') pieces.set(L.sid, (pieces.get(L.sid) ?? 0) + 1);
+        else if (L.k === 'piece') pieces.add(L.sid);
         else if (L.k === 'file') oldFile(L.file, from);
         else if (L.k === 'f7') oldFile({ session: L.session, savedAt: L.savedAt, seconds: L.seconds, level: { scenario: L.scenario }, notes: L.notes ?? [] }, from);
       });
-      for (const sid of new Set([...visits.keys(), ...hands.keys(), ...pieces.keys()])) {
-        const V = visits.get(sid), H = V?.head as (Visit['head'] & { hands?: number }) | null | undefined, lines = hands.get(sid);
+      for (const sid of new Set([...visits.keys(), ...hands.keys(), ...pieces])) {
+        const V = visits.get(sid), H = V?.head, lines = hands.get(sid);
         const kind = lines ? 'hands' : pieces.has(sid) || (H && !H.hands) ? 'old' : IX.entries[sid]?.kind ?? 'none', E = entry(sid, kind, from);
         if (H) { E.scenario = H.level?.scenario ?? H.level?.file ?? E.scenario; E.url = H.url ?? E.url; E.commit = H.commit ?? E.commit; E.seed = H.seed ?? E.seed; E.startedAt ||= H.at; }
         addNotes(E, V?.notes ?? []);
