@@ -228,7 +228,7 @@ fn character_pack_side_pass(g: &mut crate::game::Game, id: CharId) {
         if !(b.has(Bone::Hips) && b.has(Bone::Spine2) && b.has(Bone::ThighL) && b.has(Bone::ThighR) && b.has(Bone::UpperArmL) && b.has(Bone::UpperArmR)) { return; }
     }
     let qi = v3::quat::conj(v3::quat::yaw(g.ch[id].body_yaw));
-    let old = crate::rig_props::big_back_of(bone(g, id, Bone::Hips), bone(g, id, Bone::Spine2), bone(g, id, Bone::ThighL), bone(g, id, Bone::ThighR), bone(g, id, Bone::UpperArmL), bone(g, id, Bone::UpperArmR), crate::rig_props::bigrig().hammer.back, Some(big_clear));
+    let old = crate::rig_props::big_back_of(bone(g, id, Bone::Hips), bone(g, id, Bone::Spine2), bone(g, id, Bone::ThighL), bone(g, id, Bone::ThighR), bone(g, id, Bone::UpperArmL), bone(g, id, Bone::UpperArmR), crate::rig_props::BIGRIG.hammer.back, Some(big_clear));
     let g0 = v3::quat::rotate(qi, v3::sub(v3::mad(old.o, old.z, big_grab), g.ch[id].pos)); let d0 = v3::quat::rotate(qi, old.z);
     let r3 = g.ch[id].skel.global_rot[n.spine3]; let d1 = v3::quat::rotate(r3, sd.z);
     let s3 = node_pos(g, id, n.spine3);
@@ -385,35 +385,7 @@ fn character_in_hand_word(g: &mut crate::game::Game, id: CharId, dt: f64, cur: O
 // ---- the turn ----
 
 /// His yaws come round to the AI's wish as a mass. (Character.turnWeigh)
-fn character_turn_weigh(g: &mut crate::game::Game, id: CharId, dt: f64) {
-    anim_rule_slot(g, id);
-    character_turn_weigh_ask(g, id, dt);
-}
-/// where a layer's columns start on the bench's `args`
-const TURN_COLS_AT: usize = crate::anim_skeleton::LAYER_COLS_AT as usize;
-/// The bench's arguments, the rule, and his columns back; the column order is Character.turnCols. (Character.turnWeighAsk)
-fn character_turn_weigh_ask(g: &mut crate::game::Game, id: CharId, dt: f64) {
-    // LAYERS.knobs?.() is rustknobs' knobsNow: the list again, unless a tick has already handed it
-    if !g.m.rustknobs.rust_knobs.tick { crate::rustknobs::knobs_to_rust(g); }
-    {
-        let ch = &g.ch[id];
-        let a = &mut ::sim::skeleton::bench().args;
-        a[0] = dt; a[1] = ch.pos[0]; a[2] = ch.pos[2]; a[3] = ch.turn.h; a[4] = ch.turn.k;
-        // from LAYER_COLS_AT, Character.turnCols.get: rust/sim/src/layers.rs turn_weigh gives the order
-        let o = TURN_COLS_AT;
-        for i in 0..9 { a[o + i] = 0.0; }
-        if let Some(t) = ch.tn { a[o] = 1.0; a[o + 1] = t.body; a[o + 2] = t.aim; a[o + 3] = t.wb; a[o + 4] = t.wa; a[o + 5] = t.ib; a[o + 6] = t.ia; a[o + 7] = t.x; a[o + 8] = t.z; }
-        a[o + 9] = ch.anim.turn_lead; a[o + 10] = ch.body_yaw; a[o + 11] = ch.aim_yaw;
-    }
-    let code = ::sim::layers::turn_weigh();
-    anim_rule_ran(g, id, code as f64);
-    // Character.turnCols.put
-    let mut c = [0.0f64; 12];
-    c.copy_from_slice(&::sim::skeleton::bench_read().args[TURN_COLS_AT..TURN_COLS_AT + 12]);
-    let ch = &mut g.ch[id];
-    ch.tn = if js::truthy(c[0]) { Some(CharacterTn { body: c[1], aim: c[2], wb: c[3], wa: c[4], ib: c[5], ia: c[6], x: c[7], z: c[8] }) } else { None };
-    ch.anim.turn_lead = c[9]; ch.body_yaw = c[10]; ch.aim_yaw = c[11];
-}
+fn character_turn_weigh(g: &mut crate::game::Game, id: CharId, dt: f64) { ::sim::layers::turn_weigh(&mut g.ch[id], dt, &g.k); }
 /// His AI is about to ease his yaws: they read back as it left them; one written since is the new wish. (Character.turnBegin)
 pub fn character_turn_begin(g: &mut crate::game::Game, id: CharId) {
     let c = &mut g.ch[id];

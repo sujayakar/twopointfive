@@ -21,6 +21,7 @@
 //! of that row, lists nothing of it, and returns HOST with the row: the host names the mistake. Nothing of play is such a question: a pane of glass
 //! is judged here (glass.rs), lying snow is asked here (`bog_at`, over the world's table of what snow each static is), a ray of no length meets
 //! nothing, and no length is too long.
+use game_types::knobs::Knobs;
 use crate::lines::{ray_rule, ray_things, RAY_HOST};
 use crate::maths::{atan2, hypot2, hypot3, round_half_up};
 use crate::state::state;
@@ -292,10 +293,10 @@ fn things(d: &mut Walk, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, tmax:
 /// Throwables.ray: the closest hit among the statics and the leaves (collision.ts raycast) and the furniture: how far, the face's normal, and the id
 /// of the thing of furniture PLUS ONE (0: a wall, a floor, a leaf)
 #[allow(clippy::too_many_arguments)]
-fn hit_of(d: &mut Walk, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, tmax: f64) -> Option<(f64, f64, f64, f64, usize)> {
+fn hit_of(d: &mut Walk, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, tmax: f64, tune: &Knobs) -> Option<(f64, f64, f64, f64, usize)> {
     let mut out = [0.0f64; 4];
     d.rays += 1.0;
-    let k = ray_rule(d.w, x, y, z, dx, dy, dz, tmax, 0, -1, d.ask, &mut out);
+    let k = ray_rule(d.w, x, y, z, dx, dy, dz, tmax, 0, -1, d.ask, &mut out, tune);
     if k == RAY_HOST {
         d.host = true; // (a ray that is no number: lines.rs ray_rule)
         return None;
@@ -330,7 +331,7 @@ fn list(n: &mut usize, kind: f64, row: usize, a: f64, p0: f64, p1: f64, p2: f64,
 
 /// Throwables.update for the rows PAR[P_FROM] down to 0 of the game in slot `g`, over world `w` (which stands with the game's own leaves and its
 /// furniture in it). → DONE · HOST (row PAR[P_ROW]: nothing of it written) · WRONG.
-pub fn update(g: usize, w: usize) -> u32 {
+pub fn update(g: usize, w: usize, tune: &Knobs) -> u32 {
     let c = &mut state(g).items;
     let p = par();
     p[P_EVENTS] = 0.0;
@@ -415,7 +416,7 @@ pub fn update(g: usize, w: usize) -> u32 {
                 let il = 1.0 / len;
                 let (d0, d1, d2) = (m0 * il, m1 * il, m2 * il);
                 // sphere-vs-box CCD from the centre ray: contact happens radius/cos(incidence) before the centre would hit
-                let mut hit = hit_of(&mut d, px, py, pz, d0, d1, d2, len + radius * 3.5);
+                let mut hit = hit_of(&mut d, px, py, pz, d0, d1, d2, len + radius * 3.5, tune);
                 if d.host {
                     break;
                 }

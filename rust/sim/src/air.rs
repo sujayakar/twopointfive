@@ -6,7 +6,7 @@
 //!
 //! WHAT IS NOT STATE and is made again (`Plan`, a set a slot of the blocks, as bricks.rs's tables): which cells are roofed and the lists walked over them are the roofs',
 //! and which edges a leaf stands across is the leaves'. Whose a slot's set is goes by the block's stamp (src/sim/state.ts SimState.stamp).
-use crate::knobs::{k, AIRDUST_DIFFUSE, AIRDUST_RECHECK_SECS, AIRDUST_SETTLE, AIRDUST_STEP};
+use game_types::knobs::Knobs;
 use crate::lines;
 use crate::maths::{cos, hypot2, sin};
 use crate::state::GAMES;
@@ -124,8 +124,8 @@ pub struct Said {
 
 /// the fixed step in use (airDust.ts stepSecs): held to what the explicit scheme and a frame can take
 #[inline]
-fn step_secs() -> f64 {
-    let h = k(AIRDUST_STEP);
+fn step_secs(tune: &Knobs) -> f64 {
+    let h = tune.airdust.step;
     if h >= 1.0 / 240.0 && h <= 0.1 {
         h
     } else {
@@ -180,7 +180,7 @@ impl Air {
         }
     }
     /// airDust.ts ask: is the way along edge `e` clear of every static
-    fn ask(&self, wo: usize, ask: u32, e: usize, probes: &mut f64) -> bool {
+    fn ask(&self, wo: usize, ask: u32, e: usize, probes: &mut f64, tune: &Knobs) -> bool {
         let i = e >> 1;
         let j = if e & 1 != 0 { i + AIR_W } else { i + 1 };
         let ax = X0 + ((i % AIR_W) as f64 + 0.5) * AIR_CELL;
@@ -189,24 +189,24 @@ impl Air {
         let bz = Z0 + ((j / AIR_W) as f64 + 0.5) * AIR_CELL;
         for y in PROBE_Y.iter() {
             *probes += 1.0;
-            if lines::solid_line(wo, -1, ask, ax, *y, az, bx, *y, bz) != Some(true) && lines::solid_line(wo, -1, ask, bx, *y, bz, ax, *y, az) != Some(true) {
+            if lines::solid_line(wo, -1, ask, ax, *y, az, bx, *y, bz, tune) != Some(true) && lines::solid_line(wo, -1, ask, bx, *y, bz, ax, *y, az, tune) != Some(true) {
                 return true;
             }
         }
         false
     }
     /// airDust.ts recheck: the shut edges asked again, a share of the list a step
-    fn recheck(&mut self, p: &Plan, wo: usize, ask: u32, h: f64, probes: &mut f64) {
+    fn recheck(&mut self, p: &Plan, wo: usize, ask: u32, h: f64, probes: &mut f64, tune: &Knobs) {
         let n = self.n_edges as usize;
         if n == 0 {
             return;
         }
-        let per = js_min(n as f64, js_max(1.0, js_ceil(n as f64 * h / js_max(0.25, or_zero(k(AIRDUST_RECHECK_SECS)))))) as usize;
+        let per = js_min(n as f64, js_max(1.0, js_ceil(n as f64 * h / js_max(0.25, or_zero(tune.airdust.recheck_secs))))) as usize;
         let mut cur = self.cur as usize;
         for _ in 0..per {
             let e = p.edges[cur] as usize;
             cur = (cur + 1) % n;
-            if self.stat[e] == 0 && self.ask(wo, ask, e, probes) {
+            if self.stat[e] == 0 && self.ask(wo, ask, e, probes, tune) {
                 self.stat[e] = 1;
             }
         }
@@ -270,11 +270,11 @@ impl Air {
         }
     }
     /// airDust.ts stepOnce: one step of the equation → the most any cell moved
-    fn step_once(&mut self, p: &Plan, dt: f64, open_out: &mut f64) -> f64 {
+    fn step_once(&mut self, p: &Plan, dt: f64, open_out: &mut f64, tune: &Knobs) -> f64 {
         let next = unsafe { &mut *core::ptr::addr_of_mut!(NEXT) };
         let leak = self.leak;
-        let ks = js_min(0.2, js_max(0.0, or_zero(k(AIRDUST_DIFFUSE))) * dt / (AIR_CELL * AIR_CELL));
-        let r = js_min(0.5, js_max(0.0, or_zero(k(AIRDUST_SETTLE))) * dt);
+        let ks = js_min(0.2, js_max(0.0, or_zero(tune.airdust.diffuse)) * dt / (AIR_CELL * AIR_CELL));
+        let r = js_min(0.5, js_max(0.0, or_zero(tune.airdust.settle)) * dt);
         let (mut moved, mut open) = (0.0, 0.0);
         let n = self.n_cells as usize;
         for q in 0..n {
@@ -338,35 +338,35 @@ impl Air {
         self.n_edges = ne as f64;
     }
     /// …and with the switch on: every opening asked, the leaves read, and run on until it stands still (the level opens with the dust already in its open doorways)
-    pub fn settle(&mut self, p: &mut Plan, wo: usize, set: i32, ask: u32, said: &mut Said) {
+    pub fn settle(&mut self, p: &mut Plan, wo: usize, set: i32, ask: u32, said: &mut Said, tune: &Knobs) {
         let n = self.n_edges as usize;
         for q in 0..n {
             let e = p.edges[q] as usize;
-            self.stat[e] = if self.ask(wo, ask, e, &mut said.probes) { 1 } else { 0 };
+            self.stat[e] = if self.ask(wo, ask, e, &mut said.probes, tune) { 1 } else { 0 };
         }
         Air::leaves(p, wo, set);
-        let h = step_secs();
+        let h = step_secs(tune);
         let mut i = 0;
         while i < 1500 {
             said.steps += 1.0;
-            if !(self.step_once(p, h, &mut said.open) > 1e-4) {
+            if !(self.step_once(p, h, &mut said.open, tune) > 1e-4) {
                 break;
             }
             i += 1;
         }
     }
     /// airDust.ts update: through the openings as they stand this tick
-    pub fn update(&mut self, p: &mut Plan, wo: usize, set: i32, ask: u32, dt: f64, said: &mut Said) {
-        let h = step_secs();
+    pub fn update(&mut self, p: &mut Plan, wo: usize, set: i32, ask: u32, dt: f64, said: &mut Said, tune: &Knobs) {
+        let h = step_secs(tune);
         self.acc += dt;
         let mut n = 0;
         while self.acc >= h && n < 4 {
             n += 1;
             self.acc -= h;
-            self.recheck(p, wo, ask, h, &mut said.probes);
+            self.recheck(p, wo, ask, h, &mut said.probes, tune);
             Air::leaves(p, wo, set);
             said.steps += 1.0;
-            said.moved += self.step_once(p, h, &mut said.open);
+            said.moved += self.step_once(p, h, &mut said.open, tune);
         }
         if self.acc > h {
             self.acc = h;

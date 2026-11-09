@@ -7,22 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// where a layer's own numbers, its columns and a path of keys go on the bench (args is index 0 of `POSE_BENCH.args`)
-const COLS: usize = crate::anim_skeleton::LAYER_COLS_AT as usize;
-const HAND_COLS: usize = crate::anim_skeleton::HAND_COLS_AT as usize;
-const KEYS: usize = crate::anim_skeleton::LAYER_KEYS_AT as usize;
-const KEY: usize = crate::anim_skeleton::LAYER_KEY as usize;
-
-/// the bench's doubles: a layer's numbers go here, in the order its Rust comment gives (skeleton.ts `f64()` at `POSE_BENCH.args`)
-#[inline(always)]
-fn args() -> &'static mut [f64] {
-    &mut ::sim::skeleton::bench().args
-}
-/// the same doubles, to read
-#[inline(always)]
-fn args_read() -> &'static [f64] {
-    &::sim::skeleton::bench_read().args
-}
 
 // ---- what stands between a body and the skeleton's calls
 
@@ -31,83 +15,7 @@ fn rot(g: &mut Game, pose: crate::anim_skeleton::Pose, i: usize) -> Quat { crate
 /// `pose.setRot(i, q)`, a node by the list's usize
 fn set_rot(g: &mut Game, pose: crate::anim_skeleton::Pose, i: usize, q: Quat) { crate::anim_skeleton::pose_set_rot(g, pose, i as f64, q) }
 
-/// the three poses a layer that lays a clip or shapes an arm is handed: pA, pB, rest
-fn ats_abr(g: &Game, c: CharId) -> (usize, usize, usize) {
-    let an = &g.ch[c].anim;
-    (an.p_a.at as usize, an.p_b.at as usize, an.rest.at as usize)
-}
-/// the three poses a cycle is laid with: pA, pB, pC
-fn ats_abc(g: &Game, c: CharId) -> (usize, usize, usize) {
-    let an = &g.ch[c].anim;
-    (an.p_a.at as usize, an.p_b.at as usize, an.p_c.at as usize)
-}
-
 // ---- the layers' columns: get / put, in the order the module's layer is handed them
-
-fn act_cols_get(an: &Anim, c: &mut [f64], o: usize) { c[o] = an.slump_w; }
-fn act_cols_put(an: &mut Anim, c: &[f64], o: usize) { an.slump_w = c[o]; }
-fn lean_cols_get(an: &Anim, c: &mut [f64], o: usize) { c[o] = an.lean_sm; }
-fn lean_cols_put(an: &mut Anim, c: &[f64], o: usize) { an.lean_sm = c[o]; }
-fn gaze_cols_get(an: &Anim, c: &mut [f64], o: usize) {
-    let gz = &an.gz;
-    c[o] = gz.w; c[o + 1] = gz.pitch; c[o + 2] = gz.yaw_ref; c[o + 3] = if gz.yaw_init { 1.0 } else { 0.0 };
-}
-fn gaze_cols_put(an: &mut Anim, c: &[f64], o: usize) {
-    let gz = &mut an.gz;
-    gz.w = c[o]; gz.pitch = c[o + 1]; gz.yaw_ref = c[o + 2]; gz.yaw_init = c[o + 3] != 0.0;
-}
-fn mv_pre_cols_get(an: &Anim, c: &mut [f64], o: usize) {
-    let (m, dp, gt) = (&an.mvs, &an.mv2.dip, &an.mv_out);
-    c[o] = m.back; c[o + 1] = m.climb; c[o + 2] = m.yaw; c[o + 3] = m.rock; c[o + 4] = m.sho; c[o + 5] = m.head; c[o + 6] = m.glide.x; c[o + 7] = m.glide.v; c[o + 8] = m.hip_y; c[o + 9] = dp.x; c[o + 10] = dp.v;
-    c[o + 11] = gt.g; c[o + 12] = gt.u; c[o + 13] = gt.st; c[o + 14] = if gt.live { 1.0 } else { 0.0 }; c[o + 15] = an.mv2_shown.dip; c[o + 16] = an.sights_lift;
-}
-fn mv_pre_cols_put(an: &mut Anim, c: &[f64], o: usize) {
-    {
-        let m = &mut an.mvs;
-        m.back = c[o]; m.climb = c[o + 1]; m.yaw = c[o + 2]; m.rock = c[o + 3]; m.sho = c[o + 4]; m.head = c[o + 5]; m.glide.x = c[o + 6]; m.glide.v = c[o + 7]; m.hip_y = c[o + 8];
-    }
-    an.mv2.dip.x = c[o + 9]; an.mv2.dip.v = c[o + 10];
-    let gt = &mut an.mv_out;
-    gt.g = c[o + 11]; gt.u = c[o + 12]; gt.st = c[o + 13]; gt.live = c[o + 14] != 0.0;
-    an.mv2_shown.dip = c[o + 15]; an.sights_lift = c[o + 16];
-}
-fn mv_post_cols_get(an: &Anim, c: &mut [f64], o: usize) {
-    let (m, p) = (&an.mvs, &an.mv_po);
-    c[o] = m.fl_t; c[o + 1] = m.fl_k; c[o + 2] = m.st_t; c[o + 3] = m.ht_t; c[o + 4] = m.dz.x; c[o + 5] = m.dz.v; c[o + 6] = m.dz_sd; c[o + 7] = m.dz_t; c[o + 8] = m.cf.x; c[o + 9] = m.cf.v; c[o + 10] = m.cf_t;
-    c[o + 11] = m.hu.x; c[o + 12] = m.hu.v; c[o + 13] = m.hu_t; c[o + 14] = m.sk.x; c[o + 15] = m.sk.v; c[o + 16] = p.stw; c[o + 17] = p.stn; c[o + 18] = p.dzw; c[o + 19] = if p.gun { 1.0 } else { 0.0 };
-    for i in 0..3 { c[o + 20 + i] = p.gun_p[i]; }
-    for i in 0..4 { c[o + 23 + i] = p.gun_r[i]; }
-}
-fn mv_post_cols_put(an: &mut Anim, c: &[f64], o: usize) {
-    {
-        let m = &mut an.mvs;
-        m.fl_t = c[o]; m.fl_k = c[o + 1]; m.st_t = c[o + 2]; m.ht_t = c[o + 3]; m.dz.x = c[o + 4]; m.dz.v = c[o + 5]; m.dz_sd = c[o + 6]; m.dz_t = c[o + 7]; m.cf.x = c[o + 8]; m.cf.v = c[o + 9]; m.cf_t = c[o + 10];
-        m.hu.x = c[o + 11]; m.hu.v = c[o + 12]; m.hu_t = c[o + 13]; m.sk.x = c[o + 14]; m.sk.v = c[o + 15];
-    }
-    let p = &mut an.mv_po;
-    p.stw = c[o + 16]; p.stn = c[o + 17]; p.dzw = c[o + 18]; p.gun = c[o + 19] != 0.0;
-    p.gun_p = [c[o + 20], c[o + 21], c[o + 22]];
-    p.gun_r = [c[o + 23], c[o + 24], c[o + 25], c[o + 26]];
-}
-fn mv_post_arm_cols_get(an: &Anim, c: &mut [f64], o: usize) { c[o] = an.mvs.ts_t; c[o + 1] = an.mvs.arm_l; }
-fn mv_post_arm_cols_put(an: &mut Anim, c: &[f64], o: usize) { an.mvs.ts_t = c[o]; an.mvs.arm_l = c[o + 1]; }
-fn hands_pass_cols_get(an: &Anim, c: &mut [f64], o: usize) {
-    let h = &an.hn;
-    c[o] = h.grip[0]; c[o + 1] = h.grip[1]; c[o + 2] = h.fired; c[o + 3] = h.off; c[o + 4] = h.gun;
-}
-fn hands_pass_cols_put(an: &mut Anim, c: &[f64], o: usize) {
-    let h = &mut an.hn;
-    h.grip[0] = c[o]; h.grip[1] = c[o + 1]; h.fired = c[o + 2]; h.off = c[o + 3]; h.gun = c[o + 4];
-}
-/// handCols' get (character.ts:3403, another part's table, read here by handsPassAsk): the hand pass's 130 columns over; nothing comes back in that ask
-fn hand_cols_get(an: &Anim, c: &mut [f64], o: usize) {
-    let h = &an.hn;
-    for sd in 0..2 {
-        let (b, nt) = (&h.base[sd], &h.note[sd]);
-        for i in 0..60 { c[o + sd * 60 + i] = b[i] as f64; }
-        for i in 0..5 { c[o + 120 + sd * 5 + i] = nt[i] as f64; }
-    }
-}
 
 // ---- the action clip
 
@@ -147,111 +55,33 @@ pub(super) fn anim_act_layer(g: &mut crate::game::Game, c: CharId, dt: f64) -> f
     w
 }
 
-/// The action's clip over the pose at weight `w`, and the slump. (character.ts actPose)
+/// The action's clip over the pose at weight `w`, and the slump.
 fn anim_act_pose(g: &mut crate::game::Game, c: CharId, clip: ClipId, w: f64, dt: f64) {
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_act_pose_ask(g, c, slot, clip, w, dt);
-}
-
-/// rust/sim layers act_pose, asked. (character.ts actPoseAsk)
-fn anim_act_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, clip: ClipId, w: f64, dt: f64) {
-    let m = args();
-    m[0] = w;
-    let n = g.ch[c].anim.p_a.nodes as f64;
-    m[1] = crate::anim_skeleton::clip_no(g, clip, n);
-    let an = &g.ch[c].anim;
-    m[2] = an.act_t; m[3] = if an.act_loop { 1.0 } else { 0.0 }; m[4] = dt; m[5] = an.slump;
-    act_cols_get(an, args(), COLS);
-    let (at, at_b, at_rest) = ats_abr(g, c);
-    let code = ::sim::layers::act_pose(g_2 as usize, at, at_b, at_rest) as f64;
-    crate::anim_skeleton::layer_ran(g, code, c);
-    act_cols_put(&mut g.ch[c].anim, args(), COLS);
+    let clip = crate::anim_skeleton::clip_no(g, clip, g.ch[c].anim.p_a.nodes as f64);
+    anim_layer(g, c, |s, an, k| ::sim::layers::act_pose(s, an, clip, w, dt, k));
 }
 
 // ---- MOVES
 
-/// Before the stances and the arms: the recoil's sums bled off and the pelvis's share of how a side carries itself. What the trunk layer needs. (character.ts mvPre)
+/// Before the stances and the arms: the recoil's sums bled off and the pelvis's share of how a side carries itself. What the trunk layer needs.
 pub(super) fn anim_mv_pre(g: &mut crate::game::Game, c: CharId, dt: f64, move_w: f64, stand_w: f64) -> crate::character::MvGait {
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_mv_pre_ask(g, c, slot, dt, move_w, stand_w);
+    anim_layer(g, c, |s, an, k| ::sim::layers::mv_pre(s, an, dt, move_w, stand_w, k));
     g.ch[c].anim.mv_out
 }
 
-/// A lean round an edge, eased. (character.ts leanBody)
-pub(super) fn anim_lean_body(g: &mut crate::game::Game, c: CharId, dt: f64) {
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_lean_body_ask(g, c, slot, dt);
-}
+/// A lean round an edge, eased.
+pub(super) fn anim_lean_body(g: &mut crate::game::Game, c: CharId, dt: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::lean_body(s, an, dt)); }
 
-/// rust/sim layers lean_body, asked. (character.ts leanBodyAsk)
-fn anim_lean_body_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64) {
-    let a = args();
-    a[0] = dt; a[1] = g.ch[c].anim.lean;
-    lean_cols_get(&g.ch[c].anim, args(), COLS);
-    let at = g.ch[c].anim.p_a.at as usize;
-    let code = ::sim::layers::lean_body(g_2 as usize, at) as f64;
-    crate::anim_skeleton::layer_ran(g, code, c);
-    lean_cols_put(&mut g.ch[c].anim, args(), COLS);
-}
-
-/// The gaze stabiliser's working out: the yaw the neck and head take out this frame. (character.ts gazeKeep)
+/// The gaze stabiliser's working out: the yaw the neck and head take out this frame.
 pub(super) fn anim_gaze_keep(g: &mut crate::game::Game, c: CharId, dt: f64, want_w: f64, crouch_pose: f64, w_sprint: f64) -> f64 {
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_gaze_keep_ask(g, c, slot, dt, want_w, crouch_pose, w_sprint)
+    let mut fix = 0.0;
+    anim_layer(g, c, |s, an, _| ::sim::layers::gaze_keep(s, an, dt, want_w, crouch_pose, w_sprint, &mut fix));
+    fix
 }
 
-/// rust/sim layers gaze_keep, asked. (character.ts gazeKeepAsk)
-fn anim_gaze_keep_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, want_w: f64, crouch_pose: f64, w_sprint: f64) -> f64 {
-    let a = args();
-    let an = &g.ch[c].anim;
-    let gl = an.gaze_local;
-    a[0] = dt; a[1] = want_w; a[2] = crouch_pose; a[3] = w_sprint; a[4] = an.nv_a; a[5] = an.mvs.hu.x; a[6] = an.mvs.sk.x; a[7] = gl[0]; a[8] = gl[1]; a[9] = gl[2];
-    gaze_cols_get(an, args(), COLS);
-    let at = an.p_a.at as usize;
-    let code = ::sim::layers::gaze_keep(g_2 as usize, at) as f64;
-    crate::anim_skeleton::layer_ran(g, code, c);
-    gaze_cols_put(&mut g.ch[c].anim, args(), COLS);
-    args_read()[COLS + 4]
-}
-
-/// The slot a rule of the character's that keeps no pose is asked in. (character.ts ruleSlot)
-pub(super) fn anim_rule_slot(g: &mut crate::game::Game, c: CharId) -> f64 {
-    crate::anim_skeleton::layer_slot(g, c)
-}
-
-/// What such a rule's export answered. (character.ts ruleRan)
-pub(super) fn anim_rule_ran(g: &mut crate::game::Game, c: CharId, code: f64) {
-    crate::anim_skeleton::layer_ran(g, code, c);
-}
-
-/// rust/sim layers mv_pre, asked. (character.ts mvPreAsk)
-fn anim_mv_pre_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, move_w: f64, stand_w: f64) {
-    let a = args();
-    let an = &g.ch[c].anim;
-    a[0] = dt; a[1] = move_w; a[2] = stand_w; a[3] = an.trained; a[4] = if an.long_gun { 1.0 } else { 0.0 }; a[5] = an.dip; a[6] = an.lg.w.x; a[7] = an.upper_w.aim;
-    mv_pre_cols_get(an, args(), COLS);
-    let at = an.p_a.at as usize;
-    let code = ::sim::layers::mv_pre(g_2 as usize, at) as f64;
-    crate::anim_skeleton::layer_ran(g, code, c);
-    mv_pre_cols_put(&mut g.ch[c].anim, args(), COLS);
-}
-
-/// The trunk's share, into pA right before the long gun's own trunk set. (character.ts mvTrunk)
+/// The trunk's share, into pA right before the long gun's own trunk set.
 pub(super) fn anim_mv_trunk(g: &mut crate::game::Game, c: CharId, w: f64, o: crate::character::MvGait, aim_pass: bool) {
-    if w < 0.003 { return; }
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_mv_trunk_ask(g, c, slot, w, o, aim_pass);
-}
-
-/// rust/sim layers mv_trunk, asked. (character.ts mvTrunkAsk)
-fn anim_mv_trunk_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64, o: crate::character::MvGait, aim_pass: bool) {
-    let a = args();
-    let an = &g.ch[c].anim;
-    let m = &an.mvs;
-    a[0] = w; a[1] = o.g; a[2] = o.u; a[3] = o.st; a[4] = if aim_pass { 1.0 } else { 0.0 }; a[5] = an.phase; a[6] = an.speed; a[7] = m.rock; a[8] = m.sho; a[9] = m.head;
-    let at = an.p_a.at as usize;
-    let code = ::sim::layers::mv_trunk(g_2 as usize, at) as f64;
-    crate::anim_skeleton::layer_ran(g, code, c);
+    if w >= 0.003 { anim_layer(g, c, |s, an, k| ::sim::layers::mv_trunk(s, an, w, o, aim_pass, k)); }
 }
 
 /// MOVES, the second pass: the arms the fight does not read, after every other layer: the magazine change, the hand to his ribs, a figure kept down. (character.ts mvArms)
@@ -285,7 +115,7 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
             && (pist || (mv_on(g, MvOnK::Reload) && long_gun && (reload_mag || has_feed)))
             && !busy && throw_t < 0.0 && strike_t < 0.0 && no_tool { 1.0 } else { 0.0 };
         if want > 0.0 || g.ch[c].anim.mv2.rw.x != 0.0 {
-            let rate = mv2().reload.rate;
+            let rate = MV2.reload.rate;
             let rw = &mut g.ch[c].anim.mv2.rw;
             spring_step(rw, want, rate, dt);
             if want == 0.0 && rw.x < 0.01 { rw.x = 0.0; rw.v = 0.0; }
@@ -304,10 +134,10 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
         let an = &g.ch[c].anim;
         let (hurt, aim, clutch_in, off_hand) = (an.hurt, an.upper_w.aim, an.clutch, an.throw_t < 0.0 && an.strike_t < 0.0 && an.big_tool.is_none());
         let reload_shown = an.mv2_shown.reload;
-        let rest = if hurt > 0.0 { v3::clamp(hurt, 0.0, 1.0) * mv2().hurt.arm * (1.0 - v3::smoothstep(0.1, 0.5, aim)) * (if off_hand { 1.0 } else { 0.0 }) } else { 0.0 };
+        let rest = if hurt > 0.0 { v3::clamp(hurt, 0.0, 1.0) * MV2.hurt.arm * (1.0 - v3::smoothstep(0.1, 0.5, aim)) * (if off_hand { 1.0 } else { 0.0 }) } else { 0.0 };
         let want = if mv_on(g, MvOnK::Clutch) && reload_shown == 0.0 && !busy { v3::clamp(m::max(clutch_in, rest), 0.0, 1.0) } else { 0.0 };
         if want > 0.0 || g.ch[c].anim.mv2.cl.x != 0.0 {
-            let rate = mv2().clutch.rate;
+            let rate = MV2.clutch.rate;
             let cl = &mut g.ch[c].anim.mv2.cl;
             spring_step(cl, want, rate, dt);
             if want == 0.0 && cl.x < 0.01 { cl.x = 0.0; cl.v = 0.0; }
@@ -330,7 +160,7 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
         let want = if on && (an.mv2.bd.x < 0.02 || an.mv2.bd_k == bound) { 1.0 } else { 0.0 };
         if on && an.mv2.bd.x < 0.02 { an.mv2.bd_k = bound; }
         if want > 0.0 || an.mv2.bd.x != 0.0 {
-            let rate = mv2().bound.rate;
+            let rate = MV2.bound.rate;
             let bd = &mut g.ch[c].anim.mv2.bd;
             spring_step(bd, want, rate, dt);
             if want == 0.0 && !on && bd.x < 0.01 { bd.x = 0.0; bd.v = 0.0; }
@@ -356,126 +186,32 @@ pub(super) fn anim_trunk_frame(g: &crate::game::Game, c: CharId) -> crate::chara
     AnimTrunkFrame { left, up, fwd: v3::cross(left, up) }
 }
 
-/// The long gun's magazine change on the support arm: the gun's own way of being fed, where it has one. (character.ts reloadArm)
+/// The long gun's magazine change on the support arm: the gun's own way of being fed, where it has one.
 fn anim_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) {
+    use crate::gunreload::{FeedBeat, FeedMarks, FeedPath};
     let an = &g.ch[c].anim;
-    let (feed, b, n, port) = (an.feed, an.rl_b, an.feed_n, an.feed_port);
-    let own = match feed {
-        Some(model) => {
-            let beat = crate::gunreload::FeedBeat { dur: b.dur, out: b.out, in_: b.in_, rack: b.rack, pull: b.pull };
-            match crate::gunreload::feed_path(g, model, beat, n, port) {
-                Some(crate::gunreload::FeedPath::Arm0(p)) => Some(AnimReloadArmAskOwn::Arm0(p)),
-                Some(crate::gunreload::FeedPath::Arm1(p)) => Some(AnimReloadArmAskOwn::Arm1(p)),
-                None => None,
-            }
-        }
-        None => None,
+    let (feed, b, n, port, back) = (an.feed, an.rl_b, an.feed_n, an.feed_port, an.reload_back);
+    let own = feed.and_then(|model| crate::gunreload::feed_path(g, model, FeedBeat { dur: b.dur, out: b.out, in_: b.in_, rack: b.rack, pull: b.pull }, n, port));
+    let marks = |r: &Mv2ReloadBox| FeedMarks { mag: r.mag, strip: r.strip, handle: r.handle, pull: r.pull, hf: r.hf, hb: r.hb };
+    let (marks, keys) = match own {
+        Some(FeedPath::Arm1(p)) => (p.marks.unwrap_or(marks(&MV2.reload.box_)), None),
+        Some(FeedPath::Arm0(p)) => (marks(if back { &MV2.reload.back } else { &MV2.reload.box_ }), Some(p.keys)),
+        None => (marks(if back { &MV2.reload.back } else { &MV2.reload.box_ }), None),
     };
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    if let Some(AnimReloadArmAskOwn::Arm0(p)) = &own {
-        crate::anim_skeleton::layer_fits("a reload's list of the hand's stations (gunreload.ts feedPath)", p.keys.len() as f64, crate::anim_skeleton::LAYER_KEYS_MAX, None);
+    if let Some(k) = &keys {
+        crate::anim_skeleton::layer_fits("a reload's list of the hand's stations (gunreload.ts feedPath)", k.len() as f64, crate::anim_skeleton::LAYER_KEYS_MAX, None);
     }
-    anim_reload_arm_ask(g, c, slot, t, w, own.as_ref());
+    anim_layer(g, c, |s, an, k| ::sim::layers::reload_arm(s, an, t, w, &marks, keys.as_deref(), k));
 }
 
-/// A reload's beat and the left hand's fix as the module's layers are handed them: args 3‥9 and 11‥14. (character.ts beatToBench)
-fn anim_beat_to_bench(g: &mut crate::game::Game, c: CharId) {
-    let a = args();
-    let an = &g.ch[c].anim;
-    let (b, f) = (&an.rl_b, &an.hand_fix[0]);
-    a[3] = b.dur; a[4] = b.out; a[5] = b.in_; a[6] = b.rack; a[7] = if b.pull { 1.0 } else { 0.0 }; a[8] = b.keep; a[9] = b.fresh;
-    for i in 0..4 { a[11 + i] = f[i]; }
-}
+/// A pistol's magazine change, the support hand's.
+fn anim_pistol_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::pistol_reload_arm(s, an, t, w, k)); }
 
-/// rust/sim layers reload_arm, asked through the hand pass's columns. (character.ts reloadArmAsk)
-fn anim_reload_arm_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, t: f64, w: f64, own: Option<&crate::character::AnimReloadArmAskOwn>) {
-    let a = args();
-    let keys = match own { Some(AnimReloadArmAskOwn::Arm0(p)) => Some(&p.keys), _ => None };
-    let an = &g.ch[c].anim;
-    let (trained, reload_back, long_gun) = (an.trained, an.reload_back, an.long_gun);
-    // K: [mag, strip, handle, pull, hf, hb]
-    let r = mv2().reload;
-    let bx = [r.box_.mag, r.box_.strip, r.box_.handle, r.box_.pull, r.box_.hf, r.box_.hb];
-    let k = match own {
-        Some(AnimReloadArmAskOwn::Arm1(p)) => match p.marks {
-            Some(f) => [f.mag, f.strip, f.handle, f.pull, f.hf, f.hb],
-            None => bx,
-        },
-        _ if reload_back => [r.back.mag, r.back.strip, r.back.handle, r.back.pull, r.back.hf, r.back.hb],
-        _ => bx,
-    };
-    a[0] = t; a[1] = w; a[2] = v3::clamp(trained, 0.0, 1.0);
-    anim_beat_to_bench(g, c);
-    a[10] = if long_gun { 1.0 } else { 0.0 };
-    a[15] = match keys { Some(ks) => ks.len() as f64, None => -1.0 };
-    for i in 0..3 {
-        a[16 + i] = k[0][i]; a[19 + i] = k[1][i]; a[22 + i] = k[2][i]; a[25 + i] = k[3][i]; a[28 + i] = k[4][i]; a[31 + i] = k[5][i];
-    }
-    if let Some(ks) = keys {
-        for (i, kk) in ks.iter().enumerate() {
-            let q = KEYS + i * KEY;
-            let at = match kk.at { crate::gunreload::FeedKeyAt::Pouch => None, crate::gunreload::FeedKeyAt::List(p) => Some(p) };
-            a[q] = kk.t;
-            a[q + 1] = if at.is_some() { 0.0 } else { 1.0 };
-            a[q + 2] = match at { Some(p) => p[0], None => 0.0 };
-            a[q + 3] = match at { Some(p) => p[1], None => 0.0 };
-            a[q + 4] = match at { Some(p) => p[2], None => 0.0 };
-            a[q + 5] = match kk.how { crate::gunreload::FeedKeyHow::Top => 1.0, crate::gunreload::FeedKeyHow::Pouch => 2.0, crate::gunreload::FeedKeyHow::Mag => 0.0 };
-            a[q + 6] = kk.grip;
-        }
-    }
-    let (slot, (at, at_b, at_rest)) = (g_2 as usize, ats_abr(g, c));
-    anim_hands_ask(g, c, &mut |_g| ::sim::layers::reload_arm(slot, at, at_b, at_rest) as f64);
-}
+/// The support hand pressed to his ribs.
+fn anim_clutch_arm(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::clutch_arm(s, an, w, k)); }
 
-/// A pistol's magazine change, the support hand's. (character.ts pistolReloadArm)
-fn anim_pistol_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) {
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_pistol_reload_arm_ask(g, c, slot, t, w);
-}
-
-/// rust/sim layers pistol_reload_arm, asked through the hand pass's columns. (character.ts pistolReloadArmAsk)
-fn anim_pistol_reload_arm_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, t: f64, w: f64) {
-    let a = args();
-    a[0] = t; a[1] = w;
-    anim_beat_to_bench(g, c);
-    let (slot, (at, at_b, at_rest)) = (g_2 as usize, ats_abr(g, c));
-    anim_hands_ask(g, c, &mut |_g| ::sim::layers::pistol_reload_arm(slot, at, at_b, at_rest) as f64);
-}
-
-/// The support hand pressed to his ribs. (character.ts clutchArm)
-fn anim_clutch_arm(g: &mut crate::game::Game, c: CharId, w: f64) {
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_clutch_arm_ask(g, c, slot, w);
-}
-
-/// rust/sim layers clutch_arm, asked through the hand pass's columns. (character.ts clutchArmAsk)
-fn anim_clutch_arm_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64) {
-    let a = args();
-    let f = &g.ch[c].anim.hand_fix[0];
-    a[0] = w;
-    for i in 0..4 { a[1 + i] = f[i]; }
-    let (slot, (at, at_b, at_rest)) = (g_2 as usize, ats_abr(g, c));
-    anim_hands_ask(g, c, &mut |_g| ::sim::layers::clutch_arm(slot, at, at_b, at_rest) as f64);
-}
-
-/// A figure kept down: wrists behind the back, or hands on the head. (character.ts boundArms)
-fn anim_bound_arms(g: &mut crate::game::Game, c: CharId, w: f64, kind: f64) {
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_bound_arms_ask(g, c, slot, w, kind);
-}
-
-/// rust/sim layers bound_arms, asked through the hand pass's columns. (character.ts boundArmsAsk)
-fn anim_bound_arms_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64, kind: f64) {
-    let a = args();
-    let an = &g.ch[c].anim;
-    let (f, gl) = (&an.hand_fix, an.gaze_local);
-    a[0] = w; a[1] = kind;
-    for i in 0..3 { a[2 + i] = gl[i]; }
-    for i in 0..4 { a[5 + i] = f[0][i]; a[9 + i] = f[1][i]; }
-    let (slot, (at, at_b, at_rest)) = (g_2 as usize, ats_abr(g, c));
-    anim_hands_ask(g, c, &mut |_g| ::sim::layers::bound_arms(slot, at, at_b, at_rest) as f64);
-}
+/// A figure kept down: wrists behind the back, or hands on the head.
+fn anim_bound_arms(g: &mut crate::game::Game, c: CharId, w: f64, kind: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::bound_arms(s, an, w, kind, k)); }
 
 /// The reactions: where the dazzle is from in his own frame, then their body, then their arms. (character.ts mvPost)
 pub(super) fn anim_mv_post(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
@@ -488,56 +224,18 @@ pub(super) fn anim_mv_post(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
     anim_mv_post_arms(g, c, dt, gate);
 }
 
-/// The reactions' body, summed into one turn of the trunk, one of the head and one move of the pelvis. (character.ts mvPostBody)
+/// The reactions' body, summed into one turn of the trunk, one of the head and one move of the pelvis.
 fn anim_mv_post_body(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_mv_post_body_ask(g, c, slot, dt, gate);
+    let fold = fold_on(g, Some(g.ch[c].anim.fold_too));
+    anim_layer(g, c, |s, an, k| ::sim::layers::mv_post_body(s, an, dt, gate, fold, k));
 }
 
-/// rust/sim layers mv_post_body, asked. (character.ts mvPostBodyAsk)
-fn anim_mv_post_body_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, gate: f64) {
-    let a = args();
-    let an = &g.ch[c].anim;
-    let (m, dz) = (&an.mvs, &an.dazzle);
-    a[0] = dt; a[1] = gate; a[2] = an.trained; a[3] = an.lg.w.x; a[4] = m.fl_k_to;
-    for j in 0..3 { a[5 + j] = m.fl_d[j]; a[8 + j] = m.st_d[j]; a[11 + j] = m.ht_d[j]; a[17 + j] = m.dz_d[j]; }
-    a[14] = m.ht_side;
-    a[15] = if dz.is_some() { 1.0 } else { 0.0 };
-    a[16] = match dz { Some(d) => d.k, None => 0.0 };
-    a[20] = an.clutch;
-    let fold_too = an.fold_too;
-    a[21] = if fold_on(g, Some(fold_too)) { 1.0 } else { 0.0 };
-    a[22] = if fold_too { 1.0 } else { 0.0 };
-    let an = &g.ch[c].anim;
-    a[23] = an.hurt; a[24] = an.hurt_side; a[25] = an.upper_w.aim; a[26] = an.speed; a[27] = an.phase; a[28] = an.shaken; a[29] = an.mvs.ts_t; a[30] = an.mvs.ts_rel;
-    mv_post_cols_get(an, args(), COLS);
-    let at = an.p_a.at as usize;
-    let code = ::sim::layers::mv_post_body(g_2 as usize, at) as f64;
-    crate::anim_skeleton::layer_ran(g, code, c);
-    mv_post_cols_put(&mut g.ch[c].anim, args(), COLS);
-}
-
-/// The reactions' arms, after their body: the start's, a blinded man's gun and hand, the toss. (character.ts mvPostArms)
+/// The reactions' arms, after their body: the start's, a blinded man's gun and hand, the toss.
 fn anim_mv_post_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
     let an = &g.ch[c].anim;
     let (m, p) = (&an.mvs, &an.mv_po);
     if !(p.stw > 0.003) && !p.gun && !(p.dzw > 0.003) && !(m.ts_t >= 0.0) { return; }
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_mv_post_arms_ask(g, c, slot, dt, gate);
-}
-
-/// rust/sim layers mv_post_arms, asked through its own columns and the hand pass's. (character.ts mvPostArmsAsk)
-fn anim_mv_post_arms_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, gate: f64) {
-    let a = args();
-    let an = &g.ch[c].anim;
-    let (m, p, gl, f) = (&an.mvs, &an.mv_po, &an.gaze_local, &an.hand_fix[0]);
-    a[0] = dt; a[1] = gate; a[2] = an.lg.w.x; a[3] = m.ts_rel; a[4] = m.dz_t; a[12] = p.stw; a[13] = p.stn; a[14] = p.dzw; a[15] = if p.gun { 1.0 } else { 0.0 };
-    for i in 0..3 { a[5 + i] = gl[i]; a[16 + i] = p.gun_p[i]; }
-    for i in 0..4 { a[8 + i] = f[i]; a[19 + i] = p.gun_r[i]; }
-    mv_post_arm_cols_get(an, args(), COLS);
-    let (slot, (at, at_b, at_rest)) = (g_2 as usize, ats_abr(g, c));
-    anim_hands_ask(g, c, &mut |_g| ::sim::layers::mv_post_arms(slot, at, at_b, at_rest) as f64);
-    mv_post_arm_cols_put(&mut g.ch[c].anim, args(), COLS);
+    anim_layer(g, c, |s, an, k| ::sim::layers::mv_post_arms(s, an, dt, gate, k));
 }
 
 // ---- procedural layers
@@ -625,19 +323,8 @@ pub(super) fn anim_hand(g: &mut crate::game::Game, c: CharId, pose: crate::anim_
     }
 }
 
-/// MOVES, crouched: the kneeling foot's toe brought back onto the floor. (character.ts toesUp)
-pub(super) fn anim_toes_up(g: &mut crate::game::Game, c: CharId, w: f64) {
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_toes_up_ask(g, c, slot, w);
-}
-
-/// rust/sim layers toes_up, asked. (character.ts toesUpAsk)
-fn anim_toes_up_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64) {
-    args()[0] = w;
-    let at = g.ch[c].anim.p_a.at as usize;
-    let code = ::sim::layers::toes_up(g_2 as usize, at) as f64;
-    crate::anim_skeleton::layer_ran(g, code, c);
-}
+/// MOVES, crouched: the kneeling foot's toe brought back onto the floor.
+pub(super) fn anim_toes_up(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::toes_up(s, an, w)); }
 
 /// The man's own small hash of `k` to −1‥1 (handsBuild's `h`): the die of how his hands hang, drawing nothing from the game's. (character.ts:2984)
 fn hand_hash(seed: f64, k: f64) -> f64 {
@@ -651,7 +338,7 @@ fn hand_hash(seed: f64, k: f64) -> f64 {
 /// This man's relaxed hands, as the turn from the library's fist on each digit joint, and the index laid straight for the trigger hand. (character.ts handsBuild)
 fn anim_hands_build(g: &mut crate::game::Game, c: CharId) {
     use v3::quat;
-    let hd = hand();
+    let hd = &HAND;
     let (seed, nodes, rest) = (g.ch[c].anim.hn.seed, g.ch[c].anim.p_a.nodes, g.ch[c].anim.rest);
     let p = crate::anim_skeleton::pose_new(g, nodes as usize);   // (its own scratch, once a man)
     crate::anim_skeleton::pose_copy(g, p, rest);
@@ -716,11 +403,11 @@ fn anim_hands_build(g: &mut crate::game::Game, c: CharId) {
     crate::anim_skeleton::pose_done(g, p);   // (the scratch is dropped)
 }
 
-/// The hand pass: digit joints of pA only. (character.ts handsPass)
+/// The hand pass: digit joints of pA only.
 pub(super) fn anim_hands_pass(g: &mut crate::game::Game, c: CharId, dt: f64, full_l: f64, full_r: f64, gun_r: f64) {
     if g.ch[c].anim.hn.built != g.ch[c].anim.hn.seed { anim_hands_build(g, c); }
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_hands_pass_ask(g, c, slot, dt, full_l, full_r, gun_r);
+    hand_tables_now(&mut g.ch[c].anim);
+    anim_layer(g, c, |s, an, _| ::sim::layers::hands_pass(s, an, dt, [full_l, full_r], gun_r));
 }
 
 /// The kept run of doubles current for the man's hand tables (made again when the tables are)
@@ -739,76 +426,21 @@ fn hand_tables_now(an: &mut Anim) {
     an.hn_flat_of = built;
 }
 
-/// rust/sim layers hands_pass, asked. (character.ts handsPassAsk)
-fn anim_hands_pass_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, full_l: f64, full_r: f64, gun_r: f64) {
-    let a = args();
-    let an = &mut g.ch[c].anim;
-    a[0] = dt; a[1] = full_l; a[2] = full_r; a[3] = gun_r; a[4] = if an.grip[0] { 1.0 } else { 0.0 }; a[5] = if an.grip[1] { 1.0 } else { 0.0 }; a[6] = an.trained;
-    hands_pass_cols_get(an, args(), COLS);
-    hand_cols_get(an, args(), HAND_COLS);
-    hand_tables_now(an);
-    let t = an.hn_flat.as_ref().unwrap();
-    a[KEYS..KEYS + t.len()].copy_from_slice(t);
-    let at = an.p_a.at as usize;
-    let code = ::sim::layers::hands_pass(g_2 as usize, at) as f64;
-    crate::anim_skeleton::layer_ran(g, code, c);
-    hands_pass_cols_put(&mut g.ch[c].anim, args(), COLS);
-}
+/// Stance, body half.
+pub(super) fn anim_stance_body(g: &mut crate::game::Game, c: CharId, w: f64, speed: f64, stand: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::stance_body(s, an, w, speed, stand)); }
 
-/// Stance, body half. (character.ts stanceBody)
-pub(super) fn anim_stance_body(g: &mut crate::game::Game, c: CharId, w: f64, speed: f64, stand: f64) {
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_stance_body_ask(g, c, slot, w, speed, stand);
-}
-
-/// rust/sim layers stance_body, asked. (character.ts stanceBodyAsk)
-fn anim_stance_body_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64, speed: f64, stand: f64) {
-    let a = args();
-    let an = &g.ch[c].anim;
-    let st = &an.st;
-    a[0] = w; a[1] = speed; a[2] = stand; a[3] = st.blade.x; a[4] = st.squat.x; a[5] = st.lean.x; a[6] = st.head_pitch.x; a[7] = st.head_yaw.x; a[8] = an.stack_press_sm;
-    let at = an.p_a.at as usize;
-    let code = ::sim::layers::stance_body(g_2 as usize, at) as f64;
-    crate::anim_skeleton::layer_ran(g, code, c);
-}
-
-/// The stand pose: the idle and over it the cycle. (character.ts standPose)
+/// The stand pose: the idle and over it the cycle.
 pub(super) fn anim_stand_pose(g: &mut crate::game::Game, c: CharId, ph: f64, w_idle: f64, w_walk: f64, w_jog: f64, w_sprint: f64) {
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_stand_pose_ask(g, c, slot, ph, w_idle, w_walk, w_jog, w_sprint);
+    let (idle, idle_t) = (clip_of(g, c, "Idle_Loop"), g.ch[c].anim.idle_t);
+    let idle = clip_at(g, c, idle, idle_t);
+    let mut at = |name: &'static str, of: f64| { let clip = clip_of(g, c, name); let t = of * g.tab.clip[clip].duration; clip_at(g, c, clip, t) };
+    let (jog, sprint, walk) = (at("Jog_Fwd_Loop", ph), at("Sprint_Loop", ph), at("Walk_Loop", ph + WALK_PHASE));
+    let cycle = ::sim::layers::Cycle { ph, w_idle, w_walk, w_jog, w_sprint, idle, jog, sprint, walk };
+    anim_layer(g, c, |s, an, k| ::sim::layers::stand_pose(s, an, &cycle, k));
 }
 
-/// rust/sim layers stand_pose, asked. (character.ts standPoseAsk)
-fn anim_stand_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, ph: f64, w_idle: f64, w_walk: f64, w_jog: f64, w_sprint: f64) {
-    let a = args();
-    let an = &g.ch[c].anim;
-    let n = an.p_a.nodes as f64;
-    let i0 = (js::to_i32(m::floor(ph * 64.0)) & 63) as usize;
-    let idle = *an.clips.get("Idle_Loop").unwrap();
-    let jog = *an.clips.get("Jog_Fwd_Loop").unwrap();
-    let sprint = *an.clips.get("Sprint_Loop").unwrap();
-    let walk = *an.clips.get("Walk_Loop").unwrap();
-    a[0] = ph; a[1] = w_idle; a[2] = w_walk; a[3] = w_jog; a[4] = w_sprint; a[5] = an.idle_t;
-    a[6] = crate::anim_skeleton::clip_no(g, idle, n);
-    a[7] = crate::anim_skeleton::clip_no(g, jog, n);
-    a[8] = ph * g.tab.clip[jog].duration;
-    a[9] = crate::anim_skeleton::clip_no(g, sprint, n);
-    a[10] = ph * g.tab.clip[sprint].duration;
-    a[11] = crate::anim_skeleton::clip_no(g, walk, n);
-    a[12] = (ph + WALK_PHASE) * g.tab.clip[walk].duration;
-    let an = &g.ch[c].anim;
-    a[13] = ph; a[14] = an.jog_hips_y[i0] as f64; a[15] = an.jog_hips_y[(i0 + 1) & 63] as f64; a[16] = an.jog_hips_mean; a[17] = an.run_k; a[18] = an.jog_mid;
-    a[19] = an.sprint_mid; a[20] = an.sprint_floor_y;
-    let (at, at_b, at_c) = ats_abc(g, c);
-    let code = ::sim::layers::stand_pose(g_2 as usize, at, at_b, at_c) as f64;
-    crate::anim_skeleton::layer_ran(g, code, c);
-}
-
-/// The crouch laid over the stand pose. (character.ts crouchLaid)
-pub(super) fn anim_crouch_laid(g: &mut crate::game::Game, c: CharId, ph: f64, w_move: f64, crouch_pose: f64) {
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_crouch_laid_ask(g, c, slot, ph, w_move, crouch_pose);
-}
+/// The crouch laid over the stand pose.
+pub(super) fn anim_crouch_laid(g: &mut crate::game::Game, c: CharId, ph: f64, w_move: f64, crouch_pose: f64) { anim_crouch_laid_ask(g, c, ph, w_move, crouch_pose); }
 
 #[cfg(test)]
 mod tests {

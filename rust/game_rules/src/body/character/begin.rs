@@ -484,7 +484,7 @@ pub fn anim_flinch_from(g: &mut crate::game::Game, c: CharId, toward: Option<V3>
     }
     if fl_t >= 0.0 && fl_t < 0.34 * d { return; }
     if fl_t >= 0.0 {
-        g.ch[c].anim.mvs.fl_t = 0.14 * d * v3::clamp(curve(fl_t / d, &crate::character::mv_flinch_env()), 0.0, 1.0);
+        g.ch[c].anim.mvs.fl_t = 0.14 * d * v3::clamp(curve(fl_t / d, &crate::character::MV_FLINCH_ENV), 0.0, 1.0);
         return;
     }
     let fl_d = match toward { Some(w) => anim_flat_model(g, c, w, [0.0, 0.0, 1.0]), None => [0.0, 0.0, 1.0] };
@@ -509,7 +509,7 @@ pub fn anim_startle_from(g: &mut crate::game::Game, c: CharId, toward: Option<V3
 pub fn anim_hit_from(g: &mut crate::game::Game, c: CharId, along: Option<V3>) {
     if !mv_on(g, crate::character::MvOnK::Flinch) { g.ch[c].anim.hit_t = 0.0; return; }
     let ht_t = g.ch[c].anim.mvs.ht_t;
-    let e0 = if ht_t >= 0.0 { v3::clamp(curve(ht_t, &crate::character::mv_hit_env()), 0.0, 1.0) } else { 0.0 };
+    let e0 = if ht_t >= 0.0 { v3::clamp(curve(ht_t, &crate::character::MV_HIT_ENV), 0.0, 1.0) } else { 0.0 };
     g.ch[c].anim.mvs.ht_t = 0.07 * e0;
     if e0 > 0.15 { return; }
     let ht_d = match along { Some(w) => anim_flat_model(g, c, w, [0.0, 0.0, -1.0]), None => [0.0, 0.0, -1.0] };
@@ -563,7 +563,7 @@ pub fn anim_strike(g: &mut crate::game::Game, c: CharId, kind: Option<crate::cha
 pub fn anim_blow(g: &mut crate::game::Game, c: CharId, style: crate::character::BlowStyle, at: V3, at2: Option<V3>, o: Option<&crate::character::BlowOpts>) {
     let none = crate::character::BlowOpts::default();
     let o = o.unwrap_or(&none);
-    let tail = if o.tail == Some(true) { crate::character::blow().tail } else { 0.0 };
+    let tail = if o.tail == Some(true) { crate::character::BLOW.tail } else { 0.0 };
     let live = o.live;
     let a = &mut g.ch[c].anim;
     a.bw = Some(crate::character::BlowRun { style, t: 0.0, hit: o.hit.unwrap_or(0.28), end: o.end.unwrap_or(0.62), tail, rise: o.rise.unwrap_or(true), at, at2, live });

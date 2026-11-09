@@ -19,8 +19,8 @@ pub(super) fn blows_near(b: &crate::character::BlowsNearB) -> Vec<f64> {
 
 /// The game's own key tables against what a layer of the module is handed, said by name as an animator is made.   (character.ts layerTablesFit)
 pub(super) fn layer_tables_fit() {
-    let cross_jab = knife_blow();
-    let blows: [(&str, usize); 4] = [("cross", cross_jab.cross.keys.len()), ("jab", cross_jab.jab.keys.len()), ("slash", knife_slash().keys.len()), ("back", knife_back().keys.len())];
+    let cross_jab = &KNIFE_BLOW;
+    let blows: [(&str, usize); 4] = [("cross", cross_jab.cross.keys.len()), ("jab", cross_jab.jab.keys.len()), ("slash", KNIFE_SLASH.keys.len()), ("back", KNIFE_BACK.keys.len())];
     for (k, n) in blows {
         crate::anim_skeleton::layer_fits(&alloc::format!("the knife's {} blow", k), n as f64, KNIFE_KEYS_MAX, None);
     }
@@ -83,7 +83,7 @@ mod tests {
     #[test]
     fn knife_keys_hold_the_typescripts_bits() {
         let mut h = FNV;
-        let (kb, slash, back) = (knife_blow(), knife_slash(), knife_back());
+        let (kb, slash, back) = (&KNIFE_BLOW, &KNIFE_SLASH, &KNIFE_BACK);
         let all: [&[BlowKey]; 4] = [&kb.cross.keys, &kb.jab.keys, &slash.keys, &back.keys];
         for keys in all {
             for k in keys {
@@ -117,14 +117,14 @@ mod tests {
 
 /// How long a landed blow or shell is followed through before the tool may start back, s. (character.ts bigRebound)
 pub fn big_rebound(kind: crate::character::BigReboundKind) -> f64 {
-    let t = crate::character::bigmove();
+    let t = &crate::character::BIGMOVE;
     if kind == crate::character::BigReboundKind::Hammer { t.hammer.rebound } else { t.shotgun.kick_in + t.shotgun.kick_out }
 }
 
 /// His hands are off his own gun for the big slot's tool this frame: from `hide` of the equip until `show` of the stow. (character.ts bigOff)
 pub fn big_off(b: crate::character::BigOffB) -> bool {
     if !(b.t >= 0.0) { return false; }
-    let s = crate::character::bigmove().snug;
+    let s = &crate::character::BIGMOVE.snug;
     if b.end >= 0.0 && b.t >= b.end { return (b.t - b.end) / m::max(1e-3, b.stow) < s.show; }
     b.t >= s.hide * b.equip
 }

@@ -123,7 +123,6 @@ fn glass_break_ask<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: 
     crate::scene_collision::window(g, &mut |g| {
         crate::scene_collision::rules_statics(g);
         if !crate::scene_collision::standing(g) { panic!("glass: the box world's copy will not stand for the rule: rust/sim/src/panes.rs has nothing to ask"); }
-        if !g.m.rustknobs.rust_knobs.tick { crate::rustknobs::knobs_to_rust(g); }
         let dynamic = g.col.dynamic_boxes.clone();
         let set = crate::scene_box_mirror::box_mirror_leaves(g, &dynamic);
         if set == -2.0 { panic!("glass: more leaves than a list of the module holds"); }
@@ -159,10 +158,10 @@ pub fn glass_break_stood(g: &mut crate::game::Game) {
     g.glass_break.sheet_list = None;
     let mut l = glass_break_sheets(g);
     crate::scene_collision::glass_wrote(g);
-    glass_break_ask(g, &mut |_g, _s, _w| {
+    glass_break_ask(g, &mut |g, _s, _w| {
         let mut i = 0;
         while i < l.len() {
-            l[i + 2] = ::sim::panes_sky(js::to_u32(l[i])) as f64;
+            l[i + 2] = ::sim::panes_sky(js::to_u32(l[i]), &g.k) as f64;
             i += 3;
         }
     });
@@ -359,14 +358,14 @@ fn glass_break_stand_in(g: &mut crate::game::Game, v: crate::glassbreak::PaneFra
 
 /// the type of pane bi as it will break; None for anything not a sheet (glassbreak.ts GlassBreak.typeOfPane)
 pub fn glass_break_type_of_pane(g: &mut crate::game::Game, bi: f64) -> Option<crate::glasspen::PaneType> {
-    let t = glass_break_ask(g, &mut |_g, _s, _w| ::sim::panes_type(js::to_u32(bi)));
+    let t = glass_break_ask(g, &mut |g, _s, _w| ::sim::panes_type(js::to_u32(bi), &g.k));
     if t as f64 == NO_TYPE { None } else { Some(type_word(t)) }
 }
 
 /// make pane bi break as `type_` from here on, whole first; None = back to typeOf (glassbreak.ts GlassBreak.setType)
 pub fn glass_break_set_type(g: &mut crate::game::Game, bi: f64, type_: Option<crate::glasspen::PaneType>) {
     let ty = match type_ { Some(t) => type_index(t), None => NO_OVER as u32 };
-    glass_break_ask(g, &mut |_g, s, _w| { ::sim::panes::set_type(s as usize, js::to_u32(bi), ty); });
+    glass_break_ask(g, &mut |g, s, _w| { ::sim::panes::set_type(s as usize, js::to_u32(bi), ty); });
     crate::scene_collision::wrote(g);
     if let Some(src) = g.glass_break.gusts.get(Num(bi)).copied() {
         if let Some(i) = g.wind.all.iter().position(|s| *s == src) { g.wind.all.remove(i); }
@@ -390,8 +389,8 @@ pub fn glass_break_impact(g: &mut crate::game::Game, bi: f64, x: V3, dir: Option
     let thr = match through { None => -1, Some(true) => 1, Some(false) => 0 };
     let v = glass_break_ask(g, &mut |g, _s, _w| {
         let r = match dir {
-            Some(d) => ::sim::panes_impact(js::to_u32(bi), x[0], x[1], x[2], 1, d[0], d[1], d[2], energy, who, thr),
-            None => ::sim::panes_impact(js::to_u32(bi), x[0], x[1], x[2], 0, 0.0, 0.0, 0.0, energy, who, thr),
+            Some(d) => ::sim::panes_impact(js::to_u32(bi), x[0], x[1], x[2], 1, d[0], d[1], d[2], energy, who, thr, &g.k),
+            None => ::sim::panes_impact(js::to_u32(bi), x[0], x[1], x[2], 0, 0.0, 0.0, 0.0, energy, who, thr, &g.k),
         };
         glass_break_drain(g);
         r
@@ -410,7 +409,7 @@ pub fn glass_break_impact(g: &mut crate::game::Game, bi: f64, x: V3, dir: Option
 pub fn glass_break_widen(g: &mut crate::game::Game, bi: f64, x: V3) -> f64 {
     if !glass_break_live(g) { return 0.0; }
     let n = glass_break_ask(g, &mut |g, _s, _w| {
-        let r = ::sim::panes_widen(js::to_u32(bi), x[0], x[1], x[2]);
+        let r = ::sim::panes_widen(js::to_u32(bi), x[0], x[1], x[2], &g.k);
         glass_break_drain(g);
         r
     });
@@ -430,7 +429,7 @@ pub fn glass_break_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::
             ::sim::panes_blast_begin(at[0], at[1], at[2]);
             let n = ::sim::panes_sheets() as usize;
             for i in 0..n {
-                if ::sim::panes_blast_sheet(i, at[0], at[1], at[2], radius, power, who) != 0 { changed += 1.0; }
+                if ::sim::panes_blast_sheet(i, at[0], at[1], at[2], radius, power, who, &g.k) != 0 { changed += 1.0; }
                 if ::sim::panes::take_wrote() { crate::scene_collision::wrote(g); }
                 glass_break_drain(g);
             }
@@ -479,7 +478,7 @@ pub fn glass_break_view(g: &crate::game::Game) -> Option<crate::scene_box_mirror
 /// the rule's whole answer at a point: a piece out, or the view in hand counts the glass there out (glassbreak.ts GlassBreak.ruleOpen)
 pub fn glass_break_rule_open(g: &mut crate::game::Game, bi: f64, p: V3) -> bool {
     if g.glass_break.view_of.is_none() { return glass_break_open_at(g, bi, p); }
-    glass_break_ask(g, &mut |_g, _s, w| ::sim::glass_open(w as usize, js::to_u32(bi), p[0], p[1], p[2]) == 1)
+    glass_break_ask(g, &mut |g, _s, w| ::sim::glass_open(w as usize, js::to_u32(bi), p[0], p[1], p[2], &g.k) == 1)
 }
 
 // ---------------------------------------------------------------- per frame
@@ -514,7 +513,7 @@ pub fn glass_break_update(g: &mut crate::game::Game, dt: f64) {
             }
             ::sim::panes::men_set(k);
             for r in 0..n {
-                ::sim::panes_step(r);
+                ::sim::panes_step(r, &g.k);
                 if ::sim::panes::take_wrote() { crate::scene_collision::wrote(g); }
                 glass_break_drain(g);
             }
@@ -545,7 +544,7 @@ fn glass_break_update_gusts(g: &mut crate::game::Game) {
                 let box_ = box_at(g, bi).unwrap();
                 let (yaw, c) = { let b = seam_box(g, box_); (b.yaw, b.c) };
                 let nrm = normal_on(yaw, if u_axis == 0 { 0.0 } else { 2.0 });
-                let sky = glass_break_ask(g, &mut |_g, _s, _w| ::sim::panes_sky(js::to_u32(bi)));
+                let sky = glass_break_ask(g, &mut |g, _s, _w| ::sim::panes_sky(js::to_u32(bi), &g.k));
                 let inward: V3 = if sky > 0 { v3::scale(nrm, -1.0) } else { nrm };   // away from the face the sky is over
                 let reach = g.k.wind.door_reach;
                 let d_max = ::sim::wind::CUT_K * reach;   // (WIND_FIELD.cutK: its one home is the module's SHAPE)
@@ -626,7 +625,7 @@ pub fn glass_break_pane_info(g: &mut crate::game::Game, bi: f64) -> Option<crate
     } else {
         (false, false, 0.0, 0.0)
     };
-    let exterior = glass_break_ask(g, &mut |_g, _s, _w| ::sim::panes_sky(js::to_u32(bi))) != 0;
+    let exterior = glass_break_ask(g, &mut |g, _s, _w| ::sim::panes_sky(js::to_u32(bi), &g.k)) != 0;
     let open_fraction = glass_break_open_fraction(g, bi);
     let walkable = glass_break_walkable(g, bi);
     Some(GlassBreakPaneInfo { open_fraction, gone })

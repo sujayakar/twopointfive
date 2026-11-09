@@ -36,8 +36,6 @@ pub struct Bench {
     /// a pose run forward: every node's model-space rotation (x y z w), then every node's origin (x y z)
     pub rot: [f64; MAX_NODES * 4],
     pub pos: [f64; MAX_NODES * 3],
-    /// a question's own numbers, and its answer where that is a few doubles
-    pub args: [f64; ARGS],
     pub pose: [S; POSES * MAX_NODES * NODE],
     pub mask: [S; MAX_NODES],
     /// the rig: every node's parent (−1 = none), and the nodes parents first
@@ -48,7 +46,6 @@ pub struct Bench {
 static mut BENCH: Bench = Bench {
     rot: [0.0; MAX_NODES * 4],
     pos: [0.0; MAX_NODES * 3],
-    args: [0.0; ARGS],
     pose: [S::ZERO; POSES * MAX_NODES * NODE],
     mask: [S::ZERO; MAX_NODES],
     parent: [0; MAX_NODES],
@@ -94,9 +91,6 @@ fn abs(x: f64) -> f64 {
     f64::from_bits(x.to_bits() & 0x7fff_ffff_ffff_ffff)
 }
 
-/// how many doubles a question's own numbers may be (the IK's eleven; a layer's numbers, the state it keeps between ticks, the hand pass's columns and a
-/// path of keys handed to it: layers.rs)
-pub const ARGS: usize = 1024;
 
 /// A RIG AS A FUNCTION SEES IT
 pub struct Rig<'a> {

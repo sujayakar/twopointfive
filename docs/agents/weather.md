@@ -156,8 +156,7 @@ is made and sets `StoodWith`, the kind locked for that game.
 
 ## To change it
 
-- **A number:** `rust/game_types/src/knobs/`: `weather.rs` (`WxSimK`), `wet.rs`, `wind.rs`, `air_dust.rs`, `fire.rs`, `snow_bog.rs`. One that
-  `rust/sim/` reads also has its name in `rust/sim/src/knobs.rs` and its line in `rust/game_rules/src/tick/rustknobs.rs`.
+- **A number:** `rust/game_types/src/knobs/`: `weather.rs` (`WxSimK`), `wet.rs`, `wind.rs`, `air_dust.rs`, `fire.rs`, `snow_bog.rs`.
 - **A kind:** its row in `WeatherKindsMod::blank`. A new one is also a word of `WeatherKind`, `weather_kinds()`, `ALL_KINDS`, `WEATHER_ROW` and
   `ScenarioEntryWeather`.
 - **An hour:** its row in `hours()`; a new one also `HourId`, `HOUR_ROW` and `HOURS_OF` in `src/draw/sky.ts`.
