@@ -4,23 +4,17 @@ import type { SfxBuffer, SfxContext } from './backend';
 import { noiseBuffer, toneNoise } from './webaudio';
 
 export type AmbienceKind = 'hum' | 'servers' | 'wind' | 'buzz';
-export interface AmbienceLoop { buffer: SfxBuffer; filter: { type: 'lowpass' | 'bandpass'; freq: number; Q?: number }; wobble?: { rateHz: number; depthHz: number } }
-
-/** one ambience emitter's loop: its buffer (fresh noise each call, off the system die) and its own tone filter */
-export function ambienceLoop(sc: SfxContext, kind: AmbienceKind): AmbienceLoop {
-  if (kind === 'servers') return { buffer: toneNoise(sc, 3, [118, 236, 355], 0.5), filter: { type: 'lowpass', freq: 1800 } };
-  if (kind === 'hum') return { buffer: toneNoise(sc, 3, [50, 100, 150], 0.15), filter: { type: 'lowpass', freq: 600 } };
-  if (kind === 'buzz') return { buffer: toneNoise(sc, 2, [100, 200, 300, 400], 0.05), filter: { type: 'bandpass', freq: 240, Q: 2 } };
-  return { buffer: noiseBuffer(sc, 4), filter: { type: 'lowpass', freq: 500, Q: 0.5 }, wobble: { rateHz: 0.11, depthHz: 250 } };
-}
-/** the emitters the mixer stands up (the office's places): where, what, its level at the emitter, how far it carries */
-export const AMBIENCE_OFFICE: { what: string; pos: [number, number, number]; kind: AmbienceKind; base: number; radius: number }[] = [
-  { what: 'server room', pos: [18, 1.2, 7], kind: 'servers', base: 0.5, radius: 12 },
-  { what: 'vending machines', pos: [29.5, 1.2, 13.2], kind: 'buzz', base: 0.35, radius: 7 },
-  { what: 'flickering panel ballast', pos: [16.5, 2.8, 20.6], kind: 'buzz', base: 0.15, radius: 6 },
-  { what: 'air handling', pos: [8, 2.6, 18], kind: 'hum', base: 0.25, radius: 14 },
-  { what: 'wind outside', pos: [16, 3, 27], kind: 'wind', base: 0.5, radius: 18 },
-  { what: 'wind outside, west', pos: [1.5, 3, 20], kind: 'wind', base: 0.4, radius: 14 },
+/** what hums in a room, by its kind (a level says where: docs/level-format.md 'Hums'): its loop (fresh noise each call, off the system die) and its own tone filter */
+export interface AmbienceLoop { made: (sc: SfxContext) => SfxBuffer; filter: { type: 'lowpass' | 'bandpass'; freq: number; Q?: number }; wobble?: { rateHz: number; depthHz: number } }
+export const AMBIENCE: Record<AmbienceKind, AmbienceLoop> = {
+  servers: { made: sc => toneNoise(sc, 3, [118, 236, 355], 0.5), filter: { type: 'lowpass', freq: 1800 } },
+  hum: { made: sc => toneNoise(sc, 3, [50, 100, 150], 0.15), filter: { type: 'lowpass', freq: 600 } },
+  buzz: { made: sc => toneNoise(sc, 2, [100, 200, 300, 400], 0.05), filter: { type: 'bandpass', freq: 240, Q: 2 } },
+  wind: { made: sc => noiseBuffer(sc, 4), filter: { type: 'lowpass', freq: 500, Q: 0.5 }, wobble: { rateHz: 0.11, depthHz: 250 } },
+};
+/** what the listening page plays of each, at a level the office's has */
+export const HUMS: { what: string; kind: AmbienceKind; base: number }[] = [
+  { what: 'server room', kind: 'servers', base: 0.5 }, { what: 'vending machines', kind: 'buzz', base: 0.35 }, { what: 'air handling', kind: 'hum', base: 0.25 }, { what: 'wind outside', kind: 'wind', base: 0.5 },
 ];
 /** the ambience panners' distance law */
 export const AMBIENCE_DISTANCE = { ref: 2, rolloff: 1 };

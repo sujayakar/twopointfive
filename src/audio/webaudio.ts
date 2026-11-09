@@ -6,7 +6,7 @@ import type { Vec3 } from '../math/vec';
 import type { AudioBackend, BackendVoice, BusName, PlayOpts, SfxBuffer, SfxContext } from './backend';
 import { sysRandom } from '../math/dice';
 
-interface WaVoice { src: AudioBufferSourceNode; gain: GainNode; tone?: BiquadFilterNode; occ?: BiquadFilterNode; panner?: PannerNode; }
+interface WaVoice { src: AudioBufferSourceNode; gain: GainNode; tone?: BiquadFilterNode; occ?: BiquadFilterNode; panner?: PannerNode; send?: GainNode; }
 
 /** the master chain: a gain at `level` → the compressor → the context's destination; returns the gain (what every bus feeds). Here so a page that plays or MEASURES something
  *  through 'the game's master chain' (the score's listening page, an OfflineAudioContext) builds this one and not a copy of its numbers. */
@@ -79,15 +79,16 @@ export class WebAudioBackend implements AudioBackend {
     if (o.envelope) { const e = o.envelope; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(e.peak, t + e.rise); g.gain.setValueAtTime(e.peak, t + e.hold); g.gain.linearRampToValueAtTime(0, t + e.end); }
     else g.gain.value = o.gain;
     node.connect(g).connect(this.bus(o.bus));
-    if (o.send !== undefined && o.send > 0) { const send = ctx.createGain(); send.gain.value = Math.min(1, o.send); g.connect(send).connect(this.revSend); }
-    src.start(t); if (o.envelope) src.stop(t + o.envelope.end + 0.1); else if (o.loop && o.maxSecs) src.stop(t + o.maxSecs);
+    if (o.send !== undefined && o.send > 0) { const send = ctx.createGain(); send.gain.value = Math.min(1, o.send); g.connect(send).connect(this.revSend); v.send = send; }
+    src.start(t); if (o.envelope) src.stop(t + o.envelope.end + 0.1);
     return v;
   }
-  setVoice(bv: BackendVoice, patch: { pos?: Vec3; cutoffHz?: number; gain?: number; rate?: number }, tc: number): void {
+  setVoice(bv: BackendVoice, patch: { pos?: Vec3; cutoffHz?: number; gain?: number; rate?: number; send?: number }, tc: number): void {
     const v = bv as WaVoice; const t = this.ctx.currentTime;
     if (patch.pos && v.panner) { v.panner.positionX.setTargetAtTime(patch.pos[0], t, tc); v.panner.positionY.setTargetAtTime(patch.pos[1], t, tc); v.panner.positionZ.setTargetAtTime(patch.pos[2], t, tc); }
     if (patch.cutoffHz !== undefined) { const f = v.occ ?? v.tone; if (f) f.frequency.setTargetAtTime(patch.cutoffHz, t, tc); }
     if (patch.gain !== undefined) v.gain.gain.setTargetAtTime(patch.gain, t, tc);
+    if (patch.send !== undefined && v.send) v.send.gain.setTargetAtTime(Math.min(1, patch.send), t, tc);
     if (patch.rate !== undefined) v.src.playbackRate.setTargetAtTime(patch.rate, t, tc);
   }
   stop(bv: BackendVoice, fadeMs: number): void {

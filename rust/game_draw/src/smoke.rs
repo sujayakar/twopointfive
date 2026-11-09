@@ -24,9 +24,17 @@ section! {
         pub rho: [f32; 128],
         /// a byte a cell: 1 = open toward +x · 2 = up · 4 = toward +z · 8 = asked
         pub open: [u32; 32],
+        /// what is missing from its color: a byte of nothing, then 1 − tint as r, g, b (smoke.wgsl WHAT IS IN A CELL)
+        pub dye: u32,
     }
 }
 const _: () = assert!(CELLS == 128 && WORDS == 32);
+
+/// a color nobody sees is none
+fn dye(d: [f64; 3]) -> u32 {
+    let w = d.map(|v| ((v * 255.0 + 0.5) as u32).min(255));
+    if w.iter().all(|v| *v < 8) { 0 } else { w[0] << 8 | w[1] << 16 | w[2] << 24 }
+}
 
 #[derive(Default)]
 pub struct Smoke {
@@ -57,7 +65,7 @@ impl Smoke {
         self.at.resize(s.wide * s.deep, Word { w: 0 });
         for b in 0..sim::bricks::MAX_BRICKS {
             let Some(b) = s.brick(b) else { continue };
-            self.bricks.push(SmokeBrick { rho: core::array::from_fn(|c| b.rho[c] as f32), open: b.open });
+            self.bricks.push(SmokeBrick { rho: core::array::from_fn(|c| b.rho[c] as f32), open: b.open, dye: dye(b.dye) });
             self.at[b.z * s.wide + b.x].w = self.bricks.len() as u32;
         }
     }

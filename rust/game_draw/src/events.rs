@@ -114,13 +114,10 @@ event! {
         pub name: u32,
         /// it has a place; 0 = it is in the ears
         pub placed: u32,
-        /// the roll it follows, one more than the roll's voice (0: none)
-        pub follows: u32,
         pub pos: [f32; 3],
         /// NaN: not said
         pub gain: f32,
         pub rate: f32,
-        pub duration: f32,
         pub lowpass: f32,
         pub pan: f32,
         pub wet: f32,
@@ -130,18 +127,27 @@ event! {
     /// a footfall
     pub struct Footfall {
         pub own: u32,
-        /// what it landed on, one more than its number in FLOORS (0: not said)
+        /// what it landed on, by its number in FLOORS
         pub floor: u32,
         pub pos: [f32; 3],
         pub loud: f32,
     }
 }
 section! {
-    /// a thing that rolls, and how hard
-    pub struct Roll {
-        pub voice: u32,
-        pub at: [f32; 2],
+    /// a thing that sounds for as long as it goes on, as it stands: a chair that rolls, a fire that burns, a can that pours, what hums in a room
+    pub struct Lasting {
+        /// the sound's name's number (`face_draw_name`), and which of that name it is
+        pub name: u32,
+        pub id: u32,
+        pub at: [f32; 3],
+        pub gain: f32,
+        /// how hard it goes, 0 to 1: its level and pitch ride it (a fire at full heat two thirds)
         pub hard: f32,
+        /// how long it has gone on, and how much longer it will (NaN: nobody knows)
+        pub age: f32,
+        pub left: f32,
+        /// how far off there is nothing of it (0: as far as it carries)
+        pub reach: f32,
     }
 }
 section! {
@@ -175,7 +181,7 @@ pub struct Events {
     pub anchors: Vec<Anchor>,
     pub sounds: Vec<Sound>,
     pub footfalls: Vec<Footfall>,
-    pub rolls: Vec<Roll>,
+    pub lasting: Vec<Lasting>,
     pub heard: Vec<Heard>,
     /// every name a sound has had, by its number
     pub names: Vec<String>,
@@ -202,8 +208,7 @@ impl Events {
         for e in &g.out { self.one(tick, g, e); }
         self.heard.clear();
         self.heard.push(Heard { time: g.time as f32, rain: self.rain, tension: tension(g) as f32, run: g.mission.serial });
-        self.rolls.clear();
-        for r in &g.rolls { self.rolls.push(Roll { voice: r.voice as u32, at: [r.x as f32, r.z as f32], hard: r.k as f32 }); }
+        self.lasting(g);
         // (what the marks and the feels threw this tick)
         if let Some(s) = game::render_decals::mark_set(g) { for e in &s.thrown { self.one(tick, g, e); } }
         self.wakes(tick, g);
@@ -235,16 +240,16 @@ impl Events {
                 });
             }
             E::GameAudioLikePlay(e) => {
-                let name = match self.names.iter().position(|n| *n == e.name) { Some(i) => i, None => { self.names.push(e.name.clone()); self.names.len() - 1 } };
+                let name = self.name(&e.name);
                 let (o, serial) = (e.opts.as_ref(), self.sounds.len() as u32);
                 self.sounds.push(Sound {
-                    tick, serial, name: name as u32, placed: e.pos.is_some() as u32, follows: o.and_then(|o| o.tok).map_or(0, |t| t as u32 + 1), pos: e.pos.map_or([0.0; 3], f3), gain: opt(e.gain),
-                    rate: opt(o.and_then(|o| o.rate)), duration: opt(o.and_then(|o| o.duration)), lowpass: opt(o.and_then(|o| o.lowpass)), pan: opt(o.and_then(|o| o.pan)), wet: opt(o.and_then(|o| o.wet)),
+                    tick, serial, name, placed: e.pos.is_some() as u32, pos: e.pos.map_or([0.0; 3], f3), gain: opt(e.gain),
+                    rate: opt(o.and_then(|o| o.rate)), lowpass: opt(o.and_then(|o| o.lowpass)), pan: opt(o.and_then(|o| o.pan)), wet: opt(o.and_then(|o| o.wet)),
                 });
             }
             E::GameAudioLikeFootstep(e) => {
                 let serial = self.footfalls.len() as u32;
-                self.footfalls.push(Footfall { tick, serial, own: e.is_player as u32, floor: e.mat.as_ref().map_or(0, |m| *m as u32 + 1), pos: f3(e.pos), loud: e.loudness as f32 });
+                self.footfalls.push(Footfall { tick, serial, own: e.is_player as u32, floor: e.mat as u32, pos: f3(e.pos), loud: e.loudness as f32 });
             }
             E::GameAudioLikeRain(e) => self.rain = e.level as f32,
             E::SmokeSystemLikePush(e) => self.push(tick, &e.p),
@@ -252,6 +257,31 @@ impl Events {
             E::SmokeSystemLikeEmit(e) => self.source(tick, g, &e.e),
             _ => {}
         }
+    }
+
+    /// a sound's name's number
+    fn name(&mut self, name: &str) -> u32 { (match self.names.iter().position(|n| n == name) { Some(i) => i, None => { self.names.push(String::from(name)); self.names.len() - 1 } }) as u32 }
+
+    /// what sounds for as long as it goes on
+    fn lasting(&mut self, g: &Game) {
+        use game::throwables as t;
+        const FOREVER: f64 = f64::NAN;
+        self.lasting.clear();
+        for r in g.rolls.iter().filter(|r| r.voice > 0.0) { self.goes("chairRoll", r.voice as u32, [r.x, 0.05, r.z], game::game::roll_voice().gain, r.k, [FOREVER; 2], 0.0); }
+        for (ix, &f) in g.targets.iter().enumerate() {
+            if game::fire::is_fire(g, f) && game::fire::burns(g, f) { self.goes("fireBed", ix as u32, game::fire::mouth_of(g, f).pos, g.k.fire.bed, game::fire::heat_of(g, f) * 2.0 / 3.0, [FOREVER; 2], 0.0); }
+        }
+        for &i in g.items.items.iter().filter(|&&i| t::item_kind(g, i) == t::ItemKind::Smoke && t::item_fired(g, i) && t::item_emit_t(g, i) > 0.0) {
+            // (one let go under other numbers than a can's now: nobody knows how long ago)
+            let (left, all) = (t::item_emit_t(g, i), game::combat::can_params(g).canister_duration);
+            self.goes("smokeHiss", t::item_serial(g, i) as u32, game::v3::add(t::item_pos(g, i), [0.0, 0.1, 0.0]), 1.0, 1.0, [if left > all { FOREVER } else { all - left }, left], 0.0);
+        }
+        let dark = game::sim_lightshome::mains_active(g);
+        for (ix, h) in g.level.hums.iter().flatten().enumerate().filter(|(_, h)| !dark || h.mains == Some(false)) { self.goes(h.kind.as_str(), ix as u32, h.pos, h.level, 1.0, [FOREVER; 2], h.radius); }
+    }
+    fn goes(&mut self, name: &str, id: u32, at: [f64; 3], gain: f64, hard: f64, [age, left]: [f64; 2], reach: f64) {
+        let name = self.name(name);
+        self.lasting.push(Lasting { name, id, at: f3(at), gain: gain as f32, hard: hard as f32, age: age as f32, left: left as f32, reach: reach as f32 });
     }
 
     /// a source of smoke, and what it does to the air

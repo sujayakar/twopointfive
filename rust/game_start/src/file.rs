@@ -10,7 +10,7 @@ use crate::kit_file::KitView;
 use crate::read::{blank, field, At, Faults, FromJson};
 use alloc::{format, string::String, vec::Vec};
 use game::js::JsMap;
-use game::scene_level::{BreachPlan, CivilianDef, DeviceDef, RoomClearPlan, VentDef};
+use game::scene_level::{BreachPlan, CivilianDef, DeviceDef, HumDef, RoomClearPlan, VentDef};
 use game::scene_level_data::{PropKindName, SurfacesData};
 use game::scene_markings::MarkingDef;
 use game::scene_scenarios::LevelScenarios;
@@ -169,12 +169,12 @@ impl FromJson for Nothing {
 pub struct LevelFile {
     pub version: f64, pub name: String, pub meta: Meta, pub floors: Vec<Floor>, pub materials: JsMap<String, Material>, pub surfaces: Option<SurfacesData>,
     pub boxes: Vec<BoxData>, pub props: Vec<Prop>, pub lights: Vec<LightData>, pub switchables: Vec<Switchable>, pub doors: Vec<DoorData>, pub routes: Vec<Route>, pub chokepoints: Vec<Chokepoint>,
-    pub civilians: Option<Vec<CivilianDef>>, pub volumes: Vec<game::scene_level::VolumeDef>, pub marks: Option<Vec<game::scene_level::MarkDef>>, pub devices: Vec<DeviceDef>, pub vents: Option<Vec<VentDef>>,
+    pub civilians: Option<Vec<CivilianDef>>, pub volumes: Vec<game::scene_level::VolumeDef>, pub marks: Option<Vec<game::scene_level::MarkDef>>, pub devices: Vec<DeviceDef>, pub vents: Option<Vec<VentDef>>, pub hums: Option<Vec<HumDef>>,
     pub connectors: Vec<Nothing>, pub mission: Mission, pub breaker: Breaker, pub beacons: Vec<Beacon>, pub sky: Sky, pub daylight: Option<Daylight>, pub plans: Plans, pub scenarios: Option<Scenarios>,
 }
 json_struct!(LevelFile {
     version: "version", name: "name", meta: "meta", floors: "floors", materials: "materials", surfaces: "surfaces", boxes: "boxes", props: "props", lights: "lights", switchables: "switchables", doors: "doors",
-    routes: "routes", chokepoints: "chokepoints", civilians: "civilians", volumes: "volumes", marks: "marks", devices: "devices", vents: "vents", connectors: "connectors", mission: "mission",
+    routes: "routes", chokepoints: "chokepoints", civilians: "civilians", volumes: "volumes", marks: "marks", devices: "devices", vents: "vents", hums: "hums", connectors: "connectors", mission: "mission",
     breaker: "breaker", beacons: "beacons", sky: "sky", daylight: "daylight", plans: "plans", scenarios: "scenarios",
 });
 
