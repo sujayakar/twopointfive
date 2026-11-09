@@ -17,6 +17,11 @@ pub fn a_box(id: &str, c: [f64; 3], h: [f64; 3], material: &str, flags: &[&str])
     json::obj(m)
 }
 
+/// …saying what it does, whatever its paint's row says
+pub fn a_box_of(id: &str, c: [f64; 3], h: [f64; 3], material: &str, does: &str) -> Json {
+    json::obj(vec![("id", json::s(id)), ("group", json::s("added")), ("c", json::nums(&c)), ("h", json::nums(&h)), ("material", json::s(material)), ("does", json::s(does))])
+}
+
 /// A SCENE AND A FEW BOXES OF ITS LEVEL'S FILE MORE: the file is written, stood by the one start, and taken away.
 pub fn scene_with(sc: &Scene, more: Vec<Json>, o: &Opts) -> Play { scene_plus(sc, more, Vec::new(), o) }
 /// …and a few devices.
