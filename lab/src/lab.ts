@@ -23,7 +23,7 @@ import surfaceCode from './wgsl/surface.wgsl' with { type: 'text' };
 import { Ripples, rippleCode, rippleRows } from './scene/waves';
 import wavesCode from './wgsl/waves.wgsl' with { type: 'text' };
 import { Water } from './water';
-import { defaults, graded } from './tune';
+import { defaults, graded, KNOBS } from './tune';
 import { Smoke } from './stages/smoke';
 import { Near } from './scene/near';
 import { mapLamps, lampMapCode } from './lampmap';
@@ -115,7 +115,7 @@ export class Lab {
     u.set([Math.min(64, b.world.lamps.length), Math.min(32, b.world.openings.length), this.frameNo, this.seed], o); o += 4; u.set(this.scene.per, o); o += 4; u.set(this.scene.node0, o); o += 4; u.set(this.scene.stepOf, o); o += 4; u.set(this.scene.piece0, o); o += 4; f.set(b.pool, o); o += 4; f.set([b.poolTop, b.poolDeep, this.gone, this.scene.airRow], o); o += 4; f.set([this.wet, this.rainNow, this.mains ? 1 : 0, Math.atan2(this.air.way[2], this.air.way[0])], o); o += 4; f.set([this.smoke.on ? 1 : 0, this.scene.noiseAt, this.dense, this.air.strength], o); o += 4; { const me = b.player.body.pos; this.tune.set(this.playing ? [me[0], me[1] + 1.0, me[2]] : [0, -999, 0], 25); } f.set(this.look(), o); f.set([this.snow, this.snowNow, Math.max(0, Math.min(0.1, this.time - this.drawnAt)), this.ripples.live ? 1 : 0], o + 32); u.set(this.scene.fine, o + 36); this.drawnAt = this.time;
     this.gpu.device.queue.writeBuffer(this.scene.frame, 0, f); this.prev = c; this.prevJitter = this.jitter;
   }
-  /** the knobs as they are now: the level's look at this hour, on what is turned */ look(): Float32Array { const f = this.looked; f.set(this.tune); graded(this.building.place.grade, this.hour, f); return f; } private looked = new Float32Array(32);
+  /** the knobs as they are now: the level's look at this hour, on what is turned */ look(): Float32Array { const f = this.looked; f.set(this.tune); graded(this.building.place.grade, this.hour, f); /* where torches are most of the light, what is kept must follow them */ if (this.torches > 0) { let lit = 0; this.building.world.lamps.forEach((l, i) => { if (l.kind !== 'spot' && this.scene.lampOn[i]! > 0.05 && l.at[1] > -20) lit++; }); if (lit < 8) f[KNOBS.keep.i] = Math.min(f[KNOBS.keep.i]!, 36); } return f; } private looked = new Float32Array(32);
   /** how many torches have a picture of their own this frame */ torches = 0;
   sendMs = 0; private drawnAt = 0;
   /** draw one frame with the current method; `then` may add its own passes (the canvas) */

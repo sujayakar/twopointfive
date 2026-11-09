@@ -165,7 +165,7 @@ export class Smoke {
   stages(g: Graph, cacheBind: NonNullable<Stage['buffers']>, cacheLib: string, bounceLib: string): Stage[] {
     const lab = this.lab, B = (n: string, bytes: number) => lab.buffer(n, bytes, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); B('smokeM', WORDS * 4); B('smokeA', CELLS * 8); B('smokeB', CELLS * 8); B('smokeQ', CELLS * 8); B('smokeP', CELLS * 8); B('smokeW', CELLS * 4); B('smokeR', CELLS * 4); B('smokeG', SMOKE.slots * 64 * 16); B('smokeD', SMOKE.slots * 16);
     lab.uniform('smokeK', new Float32Array(4)); lab.uniform('smokeDoors', new Float32Array(256)); lab.uniform('smokeSources', new Float32Array(128)); lab.uniform('smokePushes', new Float32Array(256)); lab.uniform('smokeK2', new Float32Array(4)); lab.uniform('smokeK3', new Float32Array(4)); lab.uniform('changes', new Float32Array(36)); g.bind('smokeAtlas', lab.scene.smokeTex); g.bind('smokePage', lab.scene.smokePage);
-    const go = () => this.on && this.dt > 0, K: NonNullable<Stage['buffers']> = { smokeK: ['smokeK', 'vec4f', 'uniform'], sources: ['smokeSources', 'array<vec4f, 32>', 'uniform'] }, rw = (n: string, t: string): [string, string, 'read_write'] => [n, t, 'read_write'], ro = (n: string, t: string): [string, string, 'read'] => [n, t, 'read'];
+    const go = () => this.on && this.dt > 0, /* (lit anew while the world stands still, too: lamps and the hour do not) */ shown = () => this.on && this.steps > 0, K: NonNullable<Stage['buffers']> = { smokeK: ['smokeK', 'vec4f', 'uniform'], sources: ['smokeSources', 'array<vec4f, 32>', 'uniform'] }, rw = (n: string, t: string): [string, string, 'read_write'] => [n, t, 'read_write'], ro = (n: string, t: string): [string, string, 'read'] => [n, t, 'read'];
     const MA = { M: rw('smokeM', 'array<atomic<u32>>') }, MR = { M: ro('smokeM', 'array<u32>') }, MW = { M: rw('smokeM', 'array<u32>') }, V2 = 'array<vec2u>', F = 'array<f32>', U = 'array<u32>';
     const S = (name: string, code: string, buffers: NonNullable<Stage['buffers']>, over: Stage['over'] = BRICK, consts?: Record<string, number>): Stage => ({ name, over, code: head + code, buffers, when: go, ...(consts ? { consts } : {}) });
     const half = SMOKE.slots * 512, twice = (name: string, code: string, buffers: NonNullable<Stage['buffers']>): Stage[] => [0, 1].map(k => ({ ...S(name, code, buffers, BRICK, { FROM: k ? half : 0, TO: k ? 0 : half }), when: () => go() && this.flip === k }));
@@ -179,9 +179,9 @@ export class Smoke {
       ...Array.from({ length: SMOKE.pairs * 2 }, (_, i) => S('smoke press', solveCode, { ...MR, W: ro('smokeW', U), P: rw('smokeP', F) }, BRICK, { PARITY: i & 1 })),
       S('smoke free', freedCode, { ...MR, W: ro('smokeW', U), Va: ro('smokeA', V2), P: ro('smokeP', F), Vb: rw('smokeB', V2), D: rw('smokeD', F) }),
       S('smoke page', doneCode, { ...MW, D: ro('smokeD', F) }, ONE),
-      { ...S('smoke light', '', {}), code: signals + cacheLib + bounceLib + head + lightCode, buffers: { ...cacheBind, Vb: ro('smokeB', V2), G: rw('smokeG', V2), M: ro('smokeM', U), changes: ['changes', 'Changes', 'uniform'] } },
-      { ...S('smoke show', publishCode, { ...MR, W: ro('smokeW', U), Vb: ro('smokeB', V2), G: ro('smokeG', V2), Q: ro('smokeQ', F), smokeK: ['smokeK3', 'vec4f', 'uniform'] }), writes: { atlas: 'smokeAtlas' }, alone: true },
-      { ...S('smoke show', pageCode, MR, { groups: () => [Math.ceil(PG / 64), 1, 1] }), writes: { page: 'smokePage' }, alone: true },
+      { ...S('smoke light', '', {}), when: shown, code: signals + cacheLib + bounceLib + head + lightCode, buffers: { ...cacheBind, Vb: ro('smokeB', V2), G: rw('smokeG', V2), M: ro('smokeM', U), changes: ['changes', 'Changes', 'uniform'] } },
+      { ...S('smoke show', publishCode, { ...MR, W: ro('smokeW', U), Vb: ro('smokeB', V2), G: ro('smokeG', V2), Q: ro('smokeQ', F), smokeK: ['smokeK3', 'vec4f', 'uniform'] }), writes: { atlas: 'smokeAtlas' }, alone: true, when: shown },
+      { ...S('smoke show', pageCode, MR, { groups: () => [Math.ceil(PG / 64), 1, 1] }), writes: { page: 'smokePage' }, alone: true, when: shown },
       { name: 'smoke keep', over: BRICK, code: '', async make() { return enc => { if (go()) enc.copyBufferToBuffer(g.buffers.get('smokeB')!, 0, g.buffers.get('smokeA')!, 0, CELLS * 8); }; } },
     ];
   }
