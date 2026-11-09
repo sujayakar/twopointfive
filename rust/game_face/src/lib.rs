@@ -42,7 +42,7 @@ struct Held {
     /// what the last tick left to be drawn (a host that draws)
     drawn: game_draw::Drawn,
     /// the seat nobody's hands are on, and who plays it
-    hands: Option<(usize, game_run::hands_off::HandsOff)>,
+    hands: Option<(usize, game_start::hands_off::HandsOff)>,
     /// what the save controller has said to the player, until the host asks
     said: Vec<String>,
 }

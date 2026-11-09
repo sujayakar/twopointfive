@@ -3,7 +3,6 @@
 pub mod actions;
 pub mod command;
 pub mod desk;
-pub mod hands_off;
 pub mod kept;
 pub mod knobs;
 mod knobs_list;
