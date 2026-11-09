@@ -125,28 +125,6 @@ pub fn devices_pad_near(g: &crate::game::Game, p: V3) -> Option<crate::devices::
     }
     best.map(|i| g.devices.keypads[i].clone())
 }
-/// `Number.isFinite(x) ? x : d`, restore's guard on what a save holds
-fn finite_or(x: f64, d: f64) -> f64 { if x.is_finite() { x } else { d } }
-/// From a checkpoint: reset first, then what the save holds; an unfinished code is broken off.   (devices.ts Devices.restore)
-pub fn devices_restore(g: &mut crate::game::Game, s: &crate::devices::DevicesSnap) {
-    use crate::sim_lightshome::{camera_machine_put, laser_machine_put};
-    devices_reset(g);
-    for (i, cs) in s.cameras.iter().enumerate() {
-        let c = match g.devices.cameras.get(i) { Some(c) => *c, None => continue };
-        let rest = g.tab.devices_camera_rt[c].def.yaw;
-        camera_machine_put(g, c, finite_or(cs.yaw, rest), finite_or(cs.phase, 0.0), m::max(0.0, finite_or(cs.seen, 0.0)), cs.state, finite_or(cs.reported_at, -100.0), cs.last_seen, cs.dead_called);
-    }
-    for (i, ls) in s.lasers.iter().enumerate() {
-        let l = match g.devices.lasers.get(i) { Some(l) => *l, None => continue };
-        laser_machine_put(g, l, finite_or(ls.last_trip_at, -100.0), js::to_i32(ls.trips) as f64, ls.dead_called, ls.held);
-    }
-    let from = s.log.len().saturating_sub(48);
-    g.devices.log = s.log[from..].to_vec();
-    g.devices.radio_count = js::to_i32(s.radio_count) as f64;
-    g.devices.seq = m::max(g.devices.seq, js::to_i32(s.seq) as f64);
-    let pl = g.player;
-    if g.pl[pl].coding.is_some() { stop_coding(g); }
-}
 /// A fresh encounter: integrators, states, trip clocks, the log (`seq` runs on).   (devices.ts Devices.reset)
 pub fn devices_reset(g: &mut crate::game::Game) {
     for c in g.devices.cameras.clone() {

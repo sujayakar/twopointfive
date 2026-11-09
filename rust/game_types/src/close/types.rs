@@ -10,16 +10,6 @@ pub enum CloseKind {
     Front,
     Seat,
 }
-impl CloseKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CloseKind::Behind => "behind",
-            CloseKind::Side => "side",
-            CloseKind::Front => "front",
-            CloseKind::Seat => "seat",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum CloseId {
@@ -99,16 +89,6 @@ pub enum CloseModCLOSELOGItemWhat {
     Take,
     Unseat,
 }
-impl CloseModCLOSELOGItemWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CloseModCLOSELOGItemWhat::Grab => "grab",
-            CloseModCLOSELOGItemWhat::Seat => "seat",
-            CloseModCLOSELOGItemWhat::Take => "take",
-            CloseModCLOSELOGItemWhat::Unseat => "unseat",
-        }
-    }
-}
 
 #[derive(Clone, Debug, Default)]
 pub struct SITCLIP {
@@ -126,31 +106,12 @@ pub enum NoteWhat {
     Take,
     Unseat,
 }
-impl NoteWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            NoteWhat::Grab => "grab",
-            NoteWhat::Seat => "seat",
-            NoteWhat::Take => "take",
-            NoteWhat::Unseat => "unseat",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum CloseRmb {
     Press,
     Tap,
     Hold,
-}
-impl CloseRmb {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CloseRmb::Press => "press",
-            CloseRmb::Tap => "tap",
-            CloseRmb::Hold => "hold",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -230,14 +191,6 @@ pub enum CloseTookWhat {
     Grab,
     Take,
 }
-impl CloseTookWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CloseTookWhat::Grab => "grab",
-            CloseTookWhat::Take => "take",
-        }
-    }
-}
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
@@ -274,9 +227,6 @@ pub struct CloseStats {
 
 /// (src/game/close.ts:40 DEGR)
 pub const DEGR: f64 = 0.017453292519943295;
-
-/// (src/game/close.ts:115 CLOSE_DEFAULTS: a table nothing writes)
-pub fn close_defaults() -> crate::knobs::CloseK { crate::knobs::CloseK::page() }
 
 /// (src/game/close.ts:117 BEHIND_COS)
 pub const BEHIND_COS: f64 = -0.25;

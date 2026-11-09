@@ -327,14 +327,6 @@ pub fn door_tools_alone(g: &mut crate::game::Game, n: f64) {
     g.door_tools.charges = m::max(0.0, m::floor(n));
 }
 
-/// a checkpoint's charge back on its door, as he set it   (doortools.ts DoorTools.setBack)
-pub fn door_tools_set_back(g: &mut crate::game::Game, d: DoorId, side: f64) {
-    if crate::doors::door_off(g, d) || door_tools_charge_on(g, &crate::seats::here(g), d).is_some() { return; }
-    let t = g.time;
-    let c = g.tab.doortools_set_charge.push(crate::doortools::SetCharge { door: d, side, t, by: String::from(crate::ownblow::SAM_BY) });
-    g.door_tools.set.push(c);
-}
-
 /// the charge set on this door, if any   (doortools.ts DoorTools.chargeOn)
 pub fn door_tools_charge_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId) -> Option<ChargeId> {
     seat.door_tools.set.iter().copied().find(|&c| g.tab.doortools_set_charge[c].door == d)

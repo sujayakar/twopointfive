@@ -14,10 +14,6 @@ pub struct State {
     pub why: String,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct StateHold {
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct UnseenModUNSEENLOGItem {
     pub t: f64,
@@ -29,18 +25,6 @@ pub struct UnseenModUNSEENLOGItem {
 pub enum UnseenModUNSEENLOGItemWhat {
     #[default] Off,
     On,
-}
-impl UnseenModUNSEENLOGItemWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            UnseenModUNSEENLOGItemWhat::Off => "off",
-            UnseenModUNSEENLOGItemWhat::On => "on",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct UnseenModPlacedValue {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -88,8 +72,3 @@ pub struct UnseenStats {
     pub cues: i32,
 }
 
-/// (src/game/unseen.ts:88 UNSEEN_DEFAULTS: a table nothing writes)
-pub fn unseen_defaults() -> crate::knobs::UnseenK { crate::knobs::UnseenK::page() }
-
-/// (src/game/unseen.ts:108 WALLBEAT_BREAK)
-pub const WALLBEAT_BREAK: bool = false;

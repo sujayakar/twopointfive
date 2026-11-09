@@ -189,18 +189,6 @@ pub fn room_fight_seen_by(g: &crate::game::Game, h: GuardId) -> Vec<GuardId> {
     out
 }
 
-/// The sight test between two AI men in one call; stateless, anybody may ask it of any pair.   (roomfight.ts RoomFight.sightOn)
-pub fn room_fight_sight_on(g: &mut crate::game::Game, viewer: GuardId, target: GuardId) -> crate::roomfight::RoomFightSightOn {
-    let target_ch = g.gd[target].ch;
-    let vis = crate::guards::can_see_char(g, viewer, target_ch, false);
-    let meter = op_of(g, viewer)
-        .and_then(|o| g.tab.roomfight_op[o].meters.get(target))
-        .map_or(0.0, |meter| meter.m);
-    let known = meter >= g.fight.skill.get(crate::roomfight::RoomFightSkillKey::Operative).unwrap().notice;
-    let rate = if vis.visible { room_fight_rate_on(g, viewer, target, vis.dist, Some(known)) } else { 0.0 };
-    crate::roomfight::RoomFightSightOn { visible: vis.visible, rate, dist: vis.dist, sighting: rate > 0.25 }
-}
-
 pub(super) fn op_id(g: &Game, gd: GuardId) -> Option<RoomfightOpId> { g.fight.ops.iter().copied().find(|&o| g.tab.roomfight_op[o].gd == gd) }
 
 /// `g.col.segmentBlocked(a, b)`

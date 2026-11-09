@@ -45,11 +45,6 @@ fn is_live(g: &Game) -> bool {
     }
 }
 
-/// The team's state while it is live.   (nvg.ts live)
-pub fn live(g: &mut crate::game::Game) -> Option<crate::nvg::Team> {
-    if is_live(g) { g.m.nvg.teams.clone() } else { None }
-}
-
 /// `live(g)?.men.get(gd)` with no copy of the team: the readers below are asked once for each pair of men a frame.
 fn live_man(g: &Game, gd: GuardId) -> Option<Man> {
     if !is_live(g) {

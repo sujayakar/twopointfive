@@ -53,23 +53,3 @@ pub fn ir_viewer(g: &crate::game::Game) -> bool {
     g.seats.iter().any(|&s| g.pl[crate::seats::seat(g, s).player].nv_amount > 0.5)
 }
 
-/// Is this box an infrared line the step drew for its own tube (`ir_note`)?   (irlaser.ts irMade)
-pub fn ir_made(g: &mut crate::game::Game, b: AnyBoxId) -> bool {
-    g.m.irlaser.ir_made.has(b)
-}
-
-/// The band of a man's weapon laser this frame. IR.on is settled on.   (irlaser.ts laserBand)
-pub fn laser_band(g: &crate::game::Game, gd: GuardId) -> crate::irlaser::LaserBand {
-    if crate::nvg::nvg_worn(g, gd) && crate::nvg::nvg_down(g, gd) { LaserBand::Ir } else { LaserBand::Visible }
-}
-
-/// An infrared line would end on one of his own: a player, or a man of a team not hostile to his.   (irlaser.ts paintsOwn)
-pub fn paints_own(g: &mut crate::game::Game, gd: GuardId, on: CharId) -> bool {
-    let team = g.gd[gd].team;
-    if crate::seats::man_of(g, Some(on)).is_some() { return !crate::teams::is_hostile(g, team, crate::teams::Team::Player); }
-    let o = g.guards.iter().copied().find(|&x| g.gd[x].ch == on);
-    match o {
-        Some(o) => { let other = g.gd[o].team; !crate::teams::is_hostile(g, team, other) }
-        None => false,
-    }
-}

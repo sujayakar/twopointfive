@@ -45,57 +45,6 @@ impl Default for Turn {
     }
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct TurnBack {
-    pub post: Option<V3>,
-    pub going: String,
-    pub order: String,
-    pub face: Option<f64>,
-    pub there: String,
-    pub t0: Option<f64>,
-    pub follow: Option<f64>,
-    pub watch: Option<V3>,
-    pub door: Option<DoorId>,
-    pub strafe: Option<bool>,
-    pub stance: Option<crate::character::Stance>,
-    pub upper: Option<crate::character::UpperMode>,
-    pub stack_side: Option<f64>,
-    pub move_: Option<crate::doortools::DoorToolsDoneItemLaneBackMove>,
-    pub set_line: Option<String>,
-    pub group: Option<f64>,
-    pub set_said: Option<bool>,
-    pub goal: Option<V3>,
-    pub arrived: Option<bool>,
-    pub held_set: Option<bool>,
-    pub held_fire: Option<bool>,
-    pub arr_t: Option<f64>,
-    pub moved_t: Option<f64>,
-    pub light: Option<bool>,
-    pub low: Option<bool>,
-    pub yield_t: Option<f64>,
-    pub face_now: Option<f64>,
-    pub search: Option<bool>,
-    pub search_t: Option<f64>,
-    pub via: Option<Vec<V3>>,
-    pub anchor: Option<V3>,
-    pub mark: Option<V3>,
-    pub mark_t: Option<f64>,
-    pub had: Option<V3>,
-    pub back_n: Option<f64>,
-    pub shy: Option<DoorId>,
-    pub thru: Option<DoorId>,
-    pub via_for: Option<V3>,
-    pub via_t: Option<f64>,
-    pub pace: Option<f64>,
-    pub spare: Option<bool>,
-    pub from: Option<V3>,
-    pub foe: Option<GuardId>,
-    pub crouch: Option<bool>,
-    pub lean: Option<f64>,
-    pub fit: Option<crate::roomfit::Fit>,
-    pub tries: Option<crate::doortools::DoorToolsDoneItemLaneBackTries>,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub rounds: JsMap<GuardId, f64>,
@@ -175,9 +124,6 @@ pub struct Squad40Stats {
     pub refused: i32,
     pub gave_up: i32,
 }
-
-/// (src/game/squad40.ts:73 BREAK)
-pub const BREAK: bool = false;
 
 /// (src/game/squad40.ts:148 none)
 pub const none: &str = "no 40 mm left.";

@@ -15,14 +15,6 @@ pub enum SquadThrowKind {
     #[default] Frag,
     Stun,
 }
-impl SquadThrowKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SquadThrowKind::Frag => "frag",
-            SquadThrowKind::Stun => "stun",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Arc {
@@ -264,44 +256,6 @@ pub struct StateShown {
     pub text: String,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct StateCaught {
-    pub key: String,
-    pub t: f64,
-    pub who: Option<String>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct StateKeptValue {
-    pub key: String,
-    pub t: f64,
-    pub th: Option<crate::squadthrow::SquadThrower>,
-    pub line: Option<Vec<V3>>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadThrowKeptCol {
-    pub s: Option<crate::squadthrow::SquadThrowKeptColS>,
-    pub q: Option<crate::squadthrow::SquadThrowKeptColQ>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadThrowKeptColS {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadThrowKeptColQ {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadThrowKeptOrders {
-    pub r: Option<crate::squadthrow::SquadThrowKeptOrdersR>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadThrowKeptOrdersR {
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct SquadThrowKeptDuck {
     pub gd: GuardId,
@@ -475,5 +429,3 @@ pub struct SquadthrowStats {
 /// (src/game/squadthrow.ts:117 THROW_PAGE)
 pub const THROW_PAGE: &str = "throw";
 
-/// (src/game/squadthrow.ts:143 TICK_KEPT: a table nothing writes)
-pub fn tick_kept() -> Vec<String> { alloc::vec![String::from("frag.WALLS_FOR"), String::from("seenwalk.shared")] }

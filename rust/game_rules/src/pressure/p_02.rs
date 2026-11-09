@@ -1164,13 +1164,6 @@ pub fn awaiting(g: &mut crate::game::Game) -> bool {
 pub fn stood_to(g: &mut crate::game::Game) -> bool {
     g.k.pressure.warned && state_of(g).warn.map_or(false, |w| w.call_t >= 0.0 && w.phase == WarnPhase::Over)
 }
-/// a man of the reaction force: a report stands (or its room was hit only just now) and the room it points at is not his. (pressure.ts readyMan)
-pub fn ready_man(g: &mut crate::game::Game, d: RoomfightDefId, now: f64) -> bool {
-    if !g.k.pressure.warned { return false; }
-    let w = match state_of(g).warn { Some(w) => w, None => return false };
-    if w.room.is_none() || df(g, d).room == w.room { return false; }
-    w.phase != WarnPhase::Over || (w.call_t >= 0.0 && now - w.hit_t.unwrap_or(m::NAN) < g.k.pressure.stand_grace)
-}
 
 #[cfg(test)]
 mod tests {

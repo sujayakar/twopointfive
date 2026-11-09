@@ -5,7 +5,6 @@ use crate::{ids::*, js::*, Quat, V3};
 #[allow(unused_imports)]
 use alloc::{string::String, vec::Vec};
 
-
 // ---- what the by-hand scripts call: the verbs of a level script, which are closures of the TypeScript's D, P, c and q objects. No TypeScript function has these names.
 
 /// INVENTED: B.fn(ctx) at director.ts:586: the beat's frame before its first step. Body by hand, with the nine scripts
@@ -157,7 +156,6 @@ pub fn beat_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBea
     out
 }
 
-
 /// INVENTED: what q.door answers (director.ts:127, :849); `swing` is D.swing, DOORWAY.oneWay being settled true on the page
 #[derive(Clone, Copy, Debug)]
 pub struct QueryDoor { pub angle: f64, pub open: bool, pub latched: bool, pub locked: bool, pub broken: bool, pub swing: f64 }
@@ -167,17 +165,6 @@ pub mod util {
     use crate::{ids::*, js::*, Quat, V3};
     #[allow(unused_imports)]
     use alloc::{string::String, vec::Vec};
-    /// (src/game/director.ts:331 UTIL.distXZ)
-    pub fn dist_xz(a: V3, b: V3) -> f64 { todo!() }
-
-    /// (src/game/director.ts:332 UTIL.lerp)
-    pub fn lerp(a: V3, b: V3, t: f64) -> [f64; 3] { todo!() }
-
-    /// (src/game/director.ts:332 UTIL.add)
-    pub fn add(a: V3, b: V3) -> [f64; 3] { todo!() }
-
-    /// (src/game/director.ts:333 UTIL.ahead)
-    pub fn ahead(p: V3, yaw: f64, d: f64, y: Option<f64>) -> [f64; 3] { todo!() }
 
 }
 

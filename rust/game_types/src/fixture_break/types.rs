@@ -120,11 +120,6 @@ pub struct FixtureBreakModFLOOR {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct SPARKS {
-    pub sparks: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct RestOn {
     pub y: f64,
     pub flat: bool,
@@ -174,5 +169,3 @@ pub fn down() -> V3 { [0.0, -1.0, 0.0] }
 /// (src/game/fixtureBreak.ts:99 REST_AT: a table nothing writes)
 pub fn rest_at() -> Vec<f64> { alloc::vec![0.15, 0.5, 0.85] }
 
-/// (src/game/fixtureBreak.ts:192 SPARKS: a table nothing writes)
-pub fn sparks() -> crate::fixture_break::SPARKS { crate::fixture_break::SPARKS { sparks: 0.0 } }

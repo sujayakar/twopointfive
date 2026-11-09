@@ -715,9 +715,6 @@ pub fn lose(g: &mut crate::game::Game, gd: GuardId) {
     g.stats.darkdoor.drops += 1;
 }
 
-/// QA: is he green as the rule deals it.   (darkdoor.ts darkDoorGreen)
-pub fn dark_door_green(g: &mut crate::game::Game, gd: GuardId) -> bool { green_man(g, gd) }
-
 #[cfg(test)]
 mod tests {
     use super::*;

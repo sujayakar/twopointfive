@@ -22,12 +22,6 @@ pub struct SimSimModFELL {
     pub reds: JsMap<String, f64>,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum ArrayBufferLike {
-    ArrayBuffer(crate::Opaque),
-    SharedArrayBuffer(crate::Opaque),
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct SimSimMod {
@@ -108,8 +102,3 @@ impl SimSimMod {
 /// (src/sim/sim.ts:21 SIM_ABI)
 pub const SIM_ABI: f64 = 34.0;
 
-/// (src/sim/sim.ts:373 RULES_ROW)
-pub const RULES_ROW: &str = "a rule's step (doors, furniture, leaves, thrown things)";
-
-/// (src/sim/sim.ts:399 OWN_MATHS: a table nothing writes)
-pub fn own_maths() -> Vec<String> { alloc::vec![String::from("maths"), String::from("poses"), String::from("doors"), String::from("props"), String::from("slabs"), String::from("items")] }

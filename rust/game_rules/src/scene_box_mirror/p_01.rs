@@ -192,20 +192,6 @@ fn planes_put(cuts: &mut [f64], mut p: usize, b: &SBox) {
     }
 }
 
-/// is row `o` (flags at `fi`) box b as it stands, a memory that holds rows and planes together.   (boxMirror.ts same)
-pub fn same(g: &mut crate::game::Game, m: &[f64], fl: &[u32], o: f64, fi: f64, b: BoxId, kind: f64, cut0: f64) -> bool {
-    row_same(m, o as usize, fl[fi as usize], m, cut0 as usize, seam_box(g, b), kind)
-}
-
-/// write box b into row `o`, its cut record into record `cut_row`, a memory that holds rows and planes together.   (boxMirror.ts put)
-pub fn put(g: &mut crate::game::Game, m: &mut Vec<f64>, fl: &mut Vec<u32>, o: f64, fi: f64, b: BoxId, kind: f64, cut0: f64, cut_row: f64) {
-    let x = seam_box(g, b);
-    row_put(m, o as usize, &mut fl[fi as usize], x, kind, cut_row);
-    if (kind as u32) & K_CUT_ != 0 {
-        planes_put(m, cut0 as usize + (cut_row * CUT_ROW) as usize, x);
-    }
-}
-
 /// what a box sends back of the light on it, of 255
 fn back_of(b: &SBox) -> u8 { (v3::clamp(crate::hours::lum(b.albedo), 0.0, 1.0) * 255.0) as u8 }
 /// static `i`'s row in world `w` is box b: the row of the statics' table, the planes in the cut table.

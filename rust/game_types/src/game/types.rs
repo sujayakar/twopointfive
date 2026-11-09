@@ -3,15 +3,6 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// WHAT HIS DUTY HAS HIS GUN ON. In the TypeScript `covers` holds a vector by reference: the room fight's own D.pt, which it moves in place, or a fresh point. A copy of D.pt would go stale inside the tick, so the first case names the source instead
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub enum Covers {
-    /// the point of his own Def in the room fight (roomfight.ts, enemysquads.ts, powerout.ts: cover(gd, D.pt)): read it there
-    HisPost,
-    /// a point given once (nightbreach.ts:114, rescue.ts:915)
-    At(V3),
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum ThrowKind {
     #[default] Smoke,
@@ -189,17 +180,6 @@ pub enum SlotKind {
     Flash,
     Frag,
 }
-impl SlotKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SlotKind::Pistol => "pistol",
-            SlotKind::Rifle => "rifle",
-            SlotKind::Smoke => "smoke",
-            SlotKind::Flash => "flash",
-            SlotKind::Frag => "frag",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum GuardState {
@@ -313,16 +293,6 @@ pub enum WitnessSawActKind {
     Choked,
     Grab,
 }
-impl WitnessSawActKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WitnessSawActKind::Shot => "shot",
-            WitnessSawActKind::Struck => "struck",
-            WitnessSawActKind::Choked => "choked",
-            WitnessSawActKind::Grab => "grab",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WitnessSawBody {
@@ -425,14 +395,6 @@ pub struct GameEvent {
 pub enum GameEventCause {
     Shot,
     Ocp,
-}
-impl GameEventCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GameEventCause::Shot => "shot",
-            GameEventCause::Ocp => "ocp",
-        }
-    }
 }
 
 /// What a game was stood with (src/game/stood.ts): its own record, set once at the stand, and the one rules read
@@ -862,10 +824,6 @@ pub struct GameRigFitOfValue {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct GameSmokeOwned {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct GamePuppet {
     pub goal: Option<V3>,
     pub aim: Option<V3>,
@@ -978,29 +936,12 @@ pub enum GameTuneOcpNotice {
     #[default] Glance,
     Investigate,
 }
-impl GameTuneOcpNotice {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GameTuneOcpNotice::Glance => "glance",
-            GameTuneOcpNotice::Investigate => "investigate",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum CarbineDeal {
     #[default] None,
     Reyes,
     All,
-}
-impl CarbineDeal {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CarbineDeal::None => "none",
-            CarbineDeal::Reyes => "reyes",
-            CarbineDeal::All => "all",
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -1085,15 +1026,6 @@ pub enum MissionRating {
     Ghost,
     Panther,
     Assault,
-}
-impl MissionRating {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            MissionRating::Ghost => "ghost",
-            MissionRating::Panther => "panther",
-            MissionRating::Assault => "assault",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -1372,19 +1304,6 @@ pub enum PlayerKitOwedFor {
     Can,
     Knife,
 }
-impl PlayerKitOwedFor {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PlayerKitOwedFor::Pistol => "pistol",
-            PlayerKitOwedFor::Rifle => "rifle",
-            PlayerKitOwedFor::Smoke => "smoke",
-            PlayerKitOwedFor::Flash => "flash",
-            PlayerKitOwedFor::Frag => "frag",
-            PlayerKitOwedFor::Can => "can",
-            PlayerKitOwedFor::Knife => "knife",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PlayerSlingRest {
@@ -1468,14 +1387,6 @@ pub struct PlayerKickTool {
 pub enum PlayerKickToolKind {
     #[default] Shotgun,
     Hammer,
-}
-impl PlayerKickToolKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PlayerKickToolKind::Shotgun => "shotgun",
-            PlayerKickToolKind::Hammer => "hammer",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -1870,13 +1781,6 @@ pub struct GuardHeld {
 pub enum GuardHeldBy {
     #[default] Player,
 }
-impl GuardHeldBy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GuardHeldBy::Player => "player",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct GuardBubble {
@@ -1908,29 +1812,12 @@ pub enum GuardBodyDutyRole {
     #[default] Finder,
     Called,
 }
-impl GuardBodyDutyRole {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GuardBodyDutyRole::Finder => "finder",
-            GuardBodyDutyRole::Called => "called",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum GuardBodyDutyStage {
     #[default] Fan,
     To,
     Cover,
-}
-impl GuardBodyDutyStage {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GuardBodyDutyStage::Fan => "fan",
-            GuardBodyDutyStage::To => "to",
-            GuardBodyDutyStage::Cover => "cover",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -1976,19 +1863,6 @@ pub struct ROLLVOICE {
     pub grace: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SMOKESTIR {
-    pub body: f64,
-    pub foot: f64,
-    pub above: f64,
-    pub back: f64,
-    pub low: f64,
-    pub kick_r: f64,
-    pub kick: f64,
-    pub most: f64,
-    pub gap: f64,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct GuardNewLook {
     pub tint2: Option<V3>,
@@ -2007,14 +1881,6 @@ pub enum GameFreeHeldWhy {
     Shot,
     Cancel,
 }
-impl GameFreeHeldWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GameFreeHeldWhy::Shot => "shot",
-            GameFreeHeldWhy::Cancel => "cancel",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum GameSetBlackoutCause {
@@ -2023,63 +1889,11 @@ pub enum GameSetBlackoutCause {
     Debug,
     Hand,
 }
-impl GameSetBlackoutCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GameSetBlackoutCause::Shot => "shot",
-            GameSetBlackoutCause::Ocp => "ocp",
-            GameSetBlackoutCause::Debug => "debug",
-            GameSetBlackoutCause::Hand => "hand",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum GameLightEventCause {
     Shot,
     Ocp,
-}
-impl GameLightEventCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GameLightEventCause::Shot => "shot",
-            GameLightEventCause::Ocp => "ocp",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GameSelectVerbKind {
-    Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
-}
-impl GameSelectVerbKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GameSelectVerbKind::Cam => "cam",
-            GameSelectVerbKind::Guard => "guard",
-            GameSelectVerbKind::Breaker => "breaker",
-            GameSelectVerbKind::Door => "door",
-            GameSelectVerbKind::Light => "light",
-            GameSelectVerbKind::Body => "body",
-            GameSelectVerbKind::Objective => "objective",
-            GameSelectVerbKind::Held => "held",
-            GameSelectVerbKind::Wall => "wall",
-            GameSelectVerbKind::Switch => "switch",
-            GameSelectVerbKind::Charge => "charge",
-            GameSelectVerbKind::Cancel => "cancel",
-        }
-    }
 }
 
 /// (src/game/game.ts:341 PLAYER_MAX_HITS)
@@ -2088,26 +1902,17 @@ pub const PLAYER_MAX_HITS: f64 = 1.0;
 /// (src/game/game.ts:42 MARK_LIGHT_MIN_I0)
 pub const MARK_LIGHT_MIN_I0: f64 = 0.05;
 
-/// (src/game/game.ts:249 KIT_ORDER: a table nothing writes)
-pub fn kit_order() -> Vec<crate::game::SlotKind> { alloc::vec![crate::game::SlotKind::Pistol, crate::game::SlotKind::Rifle, crate::game::SlotKind::Smoke, crate::game::SlotKind::Flash, crate::game::SlotKind::Frag] }
-
 /// (src/game/game.ts:296 BODY_DOOR_PARTICLES: a table nothing writes)
 pub fn body_door_particles() -> Vec<f64> { alloc::vec![0.0, 1.0, 3.0, 12.0, 13.0, 14.0, 15.0] }
 
 /// (src/game/game.ts:508 CALLSIGNS: a table nothing writes)
 pub fn callsigns() -> Vec<String> { alloc::vec![String::from("Kowalski"), String::from("Novak"), String::from("Reyes"), String::from("Okafor"), String::from("Lindqvist"), String::from("Brandt"), String::from("Marsh")] }
 
-/// (src/game/game.ts:511 CARBINE_DEALS: a table nothing writes)
-pub fn carbine_deals() -> Vec<String> { alloc::vec![String::from("none"), String::from("reyes"), String::from("all")] }
-
 /// (src/game/game.ts:516 TEMPERAMENT: a table nothing writes)
 pub fn temperament() -> &'static [(&'static str, crate::game::Temperament)] { &[("Kowalski", crate::game::Temperament::Steady), ("Novak", crate::game::Temperament::Nervy), ("Reyes", crate::game::Temperament::Hard), ("Okafor", crate::game::Temperament::Steady), ("Lindqvist", crate::game::Temperament::Nervy), ("Brandt", crate::game::Temperament::Hard), ("Marsh", crate::game::Temperament::Steady)] }
 
 /// (src/game/game.ts:778 ROLL_VOICE: a table nothing writes)
 pub fn roll_voice() -> crate::game::ROLLVOICE { crate::game::ROLLVOICE { gain: 0.5, full_v: 2.5, min_v: 0.12, grace: 0.5 } }
-
-/// (src/game/game.ts:782 SMOKE_STIR: a table nothing writes)
-pub fn smoke_stir() -> crate::game::SMOKESTIR { crate::game::SMOKESTIR { body: 0.24, foot: 0.12, above: 0.5, back: 0.3, low: 0.2, kick_r: 0.17, kick: 0.9, most: 2.2, gap: 0.35 } }
 
 impl Guard {
     /// (game.ts Guard's constructor) look_phase: simRandom() * 10, DRAWN BEFORE his Character is made, as the field initialiser runs first. foe goes None for a side not hostile to the player. His body's muzzle_ahead is the weapon's row: the caller sets it, as the constructor does

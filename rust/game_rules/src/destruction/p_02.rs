@@ -410,19 +410,6 @@ pub fn destruction_impact_impulse(g: &mut crate::game::Game, hit_p: V3, dir: V3,
     }
 }
 
-/// The impulse of a `kind` event at `at` alone: only what already lies about moves.   (destruction.ts testImpulse)
-pub fn destruction_test_impulse(g: &mut crate::game::Game, at: V3, kind: Option<crate::destruction::DestructionTestImpulseKind>, dir: Option<V3>, who: Option<f64>) {
-    let kind = kind.unwrap_or(DestructionTestImpulseKind::Bang);
-    let dir = dir.unwrap_or([1.0, 0.0, 0.0]);
-    let who = who.unwrap_or(crate::consts::NOBODY_ID);
-    let chaos = chaos_of(g);
-    match kind {
-        DestructionTestImpulseKind::Bang => destruction_bang_impulse(g, at, [at[0], m::max(at[1] + 0.3, 0.95), at[2]], chaos, who),
-        DestructionTestImpulseKind::Impact => destruction_impact_impulse(g, at, v3::normalize(dir), [0.0, 1.0, 0.0], chaos, who),
-        DestructionTestImpulseKind::Thud => destruction_thud(g, at, Some(1.0), Some(who)),
-    }
-}
-
 /// A thump on the floor at `pos`: the litter within a stride twitches.   (destruction.ts thud)
 pub fn destruction_thud(g: &mut crate::game::Game, pos: V3, scale: Option<f64>, who: Option<f64>) {
     let scale = scale.unwrap_or(1.0);

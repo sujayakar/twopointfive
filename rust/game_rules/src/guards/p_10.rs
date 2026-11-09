@@ -399,13 +399,6 @@ pub fn despawn_unit(g: &mut crate::game::Game, gd: GuardId) -> bool {
     true
 }
 
-/// Take every spawned man out.   (guards.ts despawnUnits)
-pub fn despawn_units(g: &mut crate::game::Game) {
-    for gd in g.guards.clone() {
-        if g.gd[gd].unit.is_some() { despawn_unit(g, gd); }
-    }
-}
-
 /// The engagement on this game, done or not. A copy: re-ask for it to see it move.   (guards.ts engagementOf)
 pub fn engagement_of(g: &crate::game::Game) -> Option<crate::guards::Engagement> {
     g.m.guards.engagements.clone()

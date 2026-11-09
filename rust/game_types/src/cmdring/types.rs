@@ -23,25 +23,6 @@ pub struct RingState {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct RingView {
-    pub x: f64,
-    pub y: f64,
-    pub zoom: f64,
-    pub lit: f64,
-    pub tone: Option<String>,
-    pub caption: String,
-    pub wedges: Vec<crate::cmdring::RingViewWedgesItem>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct RingViewWedgesItem {
-    pub key: f64,
-    pub text: String,
-    pub off: bool,
-    pub opens: bool,
-}
-
-#[derive(Clone, Debug, Default)]
 pub struct SeatRow {
     pub key: Option<f64>,
     pub hot_key: Option<String>,
@@ -60,30 +41,6 @@ pub struct FlatRow {
     pub free: Option<bool>,
     pub targets: Vec<String>,
     pub listed: Option<Vec<String>>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RingHint {
-    Door,
-    Wall,
-    Man,
-    Floor,
-    Foe,
-    Thing,
-    Squad,
-}
-impl RingHint {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RingHint::Door => "door",
-            RingHint::Wall => "wall",
-            RingHint::Man => "man",
-            RingHint::Floor => "floor",
-            RingHint::Foe => "foe",
-            RingHint::Thing => "thing",
-            RingHint::Squad => "squad",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -105,15 +62,6 @@ pub enum RingLatch {
     Stay,
     Hold,
     Give,
-}
-impl RingLatch {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RingLatch::Stay => "stay",
-            RingLatch::Hold => "hold",
-            RingLatch::Give => "give",
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

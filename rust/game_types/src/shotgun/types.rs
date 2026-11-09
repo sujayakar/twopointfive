@@ -47,14 +47,6 @@ pub enum BreachSpotClose {
     Shotgun,
     Hammer,
 }
-impl BreachSpotClose {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BreachSpotClose::Shotgun => "shotgun",
-            BreachSpotClose::Hammer => "hammer",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BreachSpot {

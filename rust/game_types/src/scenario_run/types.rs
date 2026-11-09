@@ -4,18 +4,6 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug)]
-pub enum SameFogA {
-    Text(String),
-    URLSearchParams(crate::query::Query),
-}
-
-#[derive(Clone, Debug)]
-pub enum SameFogB {
-    Text(String),
-    URLSearchParams(crate::query::Query),
-}
-
-#[derive(Clone, Debug)]
 pub enum StartFromQuerySearch {
     Text(String),
     URLSearchParams(crate::query::Query),
@@ -61,34 +49,6 @@ pub enum RunningScenarioKind {
     Roomclear,
     Rescue,
     Quiet,
-}
-impl RunningScenarioKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RunningScenarioKind::Nightbreach => "nightbreach",
-            RunningScenarioKind::Roomclear => "roomclear",
-            RunningScenarioKind::Rescue => "rescue",
-            RunningScenarioKind::Quiet => "quiet",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum QuitScenario {
-    Nightbreach,
-    Roomclear,
-    Rescue,
-    Quiet,
-}
-impl QuitScenario {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            QuitScenario::Nightbreach => "nightbreach",
-            QuitScenario::Roomclear => "roomclear",
-            QuitScenario::Rescue => "rescue",
-            QuitScenario::Quiet => "quiet",
-        }
-    }
 }
 
 /// (src/game/scenarioRun.ts:18 WORDS: a table nothing writes)

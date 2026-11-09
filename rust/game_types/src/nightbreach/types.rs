@@ -35,21 +35,6 @@ pub enum NightBreachState {
     Inside,
     Recalled,
 }
-impl NightBreachState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            NightBreachState::Clear => "clear",
-            NightBreachState::Set => "set",
-            NightBreachState::Failed => "failed",
-            NightBreachState::Off => "off",
-            NightBreachState::Going => "going",
-            NightBreachState::Staged => "staged",
-            NightBreachState::Stacking => "stacking",
-            NightBreachState::Inside => "inside",
-            NightBreachState::Recalled => "recalled",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes)]
 pub struct NightBreach {
@@ -130,14 +115,6 @@ pub enum NightBreachOrder {
     Stack,
     Go,
 }
-impl NightBreachOrder {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            NightBreachOrder::Stack => "stack",
-            NightBreachOrder::Go => "go",
-        }
-    }
-}
 
 #[derive(Clone, Debug, Default)]
 pub struct NightBreachObjective {
@@ -165,9 +142,6 @@ pub fn squad4() -> Vec<crate::nightbreach::SQUAD4Item> { alloc::vec![crate::nigh
 
 /// (src/game/nightbreach.ts:96 SQUAD4_BUDGET)
 pub const SQUAD4_BUDGET: f64 = 10.0;
-
-/// (src/game/nightbreach.ts:98 NONE: a table nothing writes)
-pub fn none() -> Vec<GuardId> { Vec::new() }
 
 /// (src/game/nightbreach.ts:99 NUMBER: a table nothing writes)
 pub fn number() -> Vec<String> { alloc::vec![String::from("no"), String::from("one"), String::from("two"), String::from("three"), String::from("four"), String::from("five"), String::from("six")] }

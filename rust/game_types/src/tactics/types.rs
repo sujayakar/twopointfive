@@ -9,15 +9,6 @@ pub enum TacticsPenalty {
     Cells { w: f64, door_idx: Option<JsSet<crate::Num>>, door_mult: f64, avoid: Option<JsSet<crate::Num>> },
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct TacticsTune {
-    pub tactics: bool,
-    pub flank_wait: f64,
-    pub lone_wait: f64,
-    pub door_danger: f64,
-    pub door_wait: f64,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RoleKind {
     #[default] Second,
@@ -81,15 +72,6 @@ pub enum PlanPhase {
     Approach,
     Done,
 }
-impl PlanPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PlanPhase::Push => "push",
-            PlanPhase::Approach => "approach",
-            PlanPhase::Done => "done",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Lone {
@@ -109,16 +91,6 @@ pub enum DangerWhy {
     Drop,
     Press,
     Rounds,
-}
-impl DangerWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DangerWhy::Body => "body",
-            DangerWhy::Drop => "drop",
-            DangerWhy::Press => "press",
-            DangerWhy::Rounds => "rounds",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -146,21 +118,6 @@ pub enum GatePhase {
     Open,
     Toss,
     Stacked,
-}
-impl GatePhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GatePhase::Slice => "slice",
-            GatePhase::Bang => "bang",
-            GatePhase::Cross => "cross",
-            GatePhase::Stack => "stack",
-            GatePhase::Done => "done",
-            GatePhase::Wait => "wait",
-            GatePhase::Open => "open",
-            GatePhase::Toss => "toss",
-            GatePhase::Stacked => "stacked",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -227,14 +184,6 @@ pub enum GateAction {
     #[default] Slice,
     Toss,
 }
-impl GateAction {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GateAction::Slice => "slice",
-            GateAction::Toss => "toss",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct TState {
@@ -250,27 +199,6 @@ pub struct TState {
     pub deal_fail_t: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct TacticsSnap {
-    pub danger: Vec<crate::tactics::TacticsSnapDangerItem>,
-    pub cleared: Vec<[f64; 3]>,
-    pub last_lone_call_t: f64,
-    pub deal_fail_t: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct TacticsSnapDangerItem {
-    pub door: f64,
-    pub team: crate::teams::Team,
-    pub until: f64,
-    pub t0: f64,
-    pub why: crate::tactics::DangerWhy,
-    pub victim: Option<String>,
-    pub banged: bool,
-    pub entered: bool,
-    pub called: bool,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TacMove {
     pub move_: f64,
@@ -279,21 +207,9 @@ pub struct TacMove {
     pub crouch: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct TACTICSDEFAULTS {
-    pub flank_wait: f64,
-    pub lone_wait: f64,
-    pub door_danger: f64,
-    pub door_wait: f64,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TacticsModKitValue {
     pub stuns: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct TACTICSDEBUG {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -318,14 +234,6 @@ pub struct SliceStations {
 pub enum GateMateRole {
     Lead,
     Second,
-}
-impl GateMateRole {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GateMateRole::Lead => "lead",
-            GateMateRole::Second => "second",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -379,15 +287,6 @@ pub struct TacticsStats {
     pub entries: i32,
     pub lone_entries: i32,
 }
-
-/// (src/game/tactics.ts:64 TACTICS_DEFAULTS: a table nothing writes)
-pub fn tactics_defaults() -> crate::tactics::TACTICSDEFAULTS { crate::tactics::TACTICSDEFAULTS { flank_wait: 6.0, lone_wait: 8.0, door_danger: 25.0, door_wait: 6.0 } }
-
-/// (src/game/tactics.ts:65 LS_KEY)
-pub const LS_KEY: &str = "twopointsix.tactics";
-
-/// (src/game/tactics.ts:66 KEPT: a table nothing writes)
-pub fn kept() -> [String; 4] { [String::from("flankWait"), String::from("loneWait"), String::from("doorDanger"), String::from("doorWait")] }
 
 /// (src/game/tactics.ts:86 JOIN_M)
 pub const JOIN_M: f64 = 6.0;
@@ -515,5 +414,3 @@ pub const TOSS_AIR_CAP: f64 = 2.2;
 /// (src/game/tactics.ts:100 GO_AFTER_BANG)
 pub const GO_AFTER_BANG: f64 = 0.35;
 
-/// (src/game/tactics.ts:161 TACTICS_DEBUG: a table nothing writes)
-pub fn tactics_debug() -> crate::tactics::TACTICSDEBUG { crate::tactics::TACTICSDEBUG {  } }

@@ -55,15 +55,6 @@ pub enum Issue {
     Arm1(()),
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WandOrderJobsItem {
-    pub gd: GuardId,
-    pub door: DoorId,
-    pub side: f64,
-    pub live: bool,
-    pub knelt: bool,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct WandorderMod {

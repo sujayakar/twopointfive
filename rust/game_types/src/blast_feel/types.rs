@@ -156,8 +156,3 @@ impl BlastFeelMod {
     }
 }
 
-/// (src/game/blastFeel.ts:81 LS_KEY)
-pub const LS_KEY: &str = "twopointsix.blastfeel";
-
-/// (src/game/blastFeel.ts:97 FRAME)
-pub const FRAME: f64 = 0.016666666666666666;

@@ -189,11 +189,6 @@ pub fn quiet_mission_current(g: &mut crate::game::Game) {
     }
 }
 
-/// deal afresh on the same run   (quiet.ts QuietMission.restage)
-pub fn quiet_mission_restage(g: &mut crate::game::Game) {
-    if g.quiet.active { crate::game::game_restart_encounter(g); }
-}
-
 /// restartEncounter's FIRST act: the deal, written into the level before the fresh Player and Guards read it   (quiet.ts QuietMission.beforeRestart)
 pub fn quiet_mission_before_restart(g: &mut crate::game::Game) {
     if !g.quiet.active { return; }

@@ -82,10 +82,6 @@ pub struct Step {
     pub t0: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct StepKey {
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub men: JsMap<GuardId, crate::picture::Pic>,
@@ -126,45 +122,6 @@ pub struct CoverSpot {
     pub score: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct IdeaSnap {
-    pub who: f64,
-    pub at: V3,
-    pub age: f64,
-    pub known: f64,
-    pub how: crate::picture::IdeaHow,
-    pub by: f64,
-    pub lost: bool,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PicSnap {
-    pub ideas: Vec<crate::picture::IdeaSnap>,
-    pub downs: Vec<[f64; 2]>,
-    pub heard: Vec<[f64; 2]>,
-    pub look: f64,
-    pub step: Option<crate::picture::PicSnapStep>,
-    pub step_bad: Option<V3>,
-    pub step_in: Option<f64>,
-    pub step_next: Option<f64>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PicSnapStep {
-    pub mark: V3,
-    pub at: V3,
-    pub low: bool,
-    pub look: f64,
-    pub since: Option<f64>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PictureSnap {
-    pub men: Vec<Option<crate::picture::PicSnap>>,
-    pub sam: crate::picture::PicSnap,
-    pub tell: f64,
-}
-
 #[derive(Clone, Copy, Debug)]
 pub struct KnownPlacesItem {
     pub who: crate::picture::Who,
@@ -182,24 +139,8 @@ impl Default for KnownPlacesItem {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct SafestSetsSetsItemItem {
-    pub pos: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PictureStepKey {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct PictureStep {
     pub at: V3,
-    pub low: bool,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PictureStepOf {
-    pub at: V3,
-    pub mark: V3,
     pub low: bool,
 }
 

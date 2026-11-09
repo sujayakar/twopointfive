@@ -14,8 +14,6 @@ macro_rules! asg { ($g:expr, $a:expr) => { $g.tab.orders_assignment[$a] } }
 
 fn pos_of(g: &Game, h: GuardId) -> V3 { g.ch[g.gd[h].ch].pos }
 fn floor_of(p: V3) -> V3 { [p[0], 0.0, p[2]] }
-/// ?pairorders and the harness's PAIRORDERS: host work, the address word writes g.k.pair.on before the game runs; nothing for the sim to do   (pairorders.ts flags)
-pub fn flags(g: &mut Game) {}
 
 /// a man's name in a line, or 'that man'   (pairorders.ts nameOf)
 pub fn name_of(g: &Game, h: GuardId) -> String {

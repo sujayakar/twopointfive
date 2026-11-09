@@ -73,36 +73,6 @@ impl Throwables {
 }
 impl Default for Throwables { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ItemFields {
-    pub kind: crate::throwables::ItemKind,
-    pub pos: V3,
-    pub vel: V3,
-    pub radius: f64,
-    pub restitution: f64,
-    pub friction: f64,
-    pub yaw: f64,
-    pub spin: f64,
-    pub settled: bool,
-    pub age: f64,
-    pub fuse: f64,
-    pub fired: bool,
-    pub life: f64,
-    pub tumble: f64,
-    pub tumble_rate: f64,
-    pub emit_t: f64,
-    pub fill: f64,
-    pub bounces: f64,
-    pub heading: f64,
-    pub who: f64,
-    pub on: Option<PropId>,
-    pub on_pose: f64,
-    pub serial: f64,
-    pub side: Option<crate::teams::Team>,
-    pub clatters: Option<f64>,
-    pub carried: Option<bool>,
-}
-
 #[derive(Clone, Debug, ToBytes)]
 pub struct Item {
     pub r: f64,
@@ -126,10 +96,6 @@ impl Item {
     }
 }
 impl Default for Item { fn default() -> Self { Self::blank() } }
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct BogGround {
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SC20KITEM {

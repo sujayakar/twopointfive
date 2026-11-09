@@ -163,13 +163,6 @@ impl Chronicle {
 }
 impl Default for Chronicle { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Debug)]
-pub enum ChronDataValue {
-    Text(String),
-    Num(f64),
-    Bool(bool),
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ChronCountKey {
     Heard,
@@ -196,36 +189,6 @@ pub enum ChronCountKey {
     Hits,
     Saves,
     Loads,
-}
-impl ChronCountKey {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ChronCountKey::Heard => "heard",
-            ChronCountKey::SeenUp => "seenUp",
-            ChronCountKey::Esc1 => "esc1",
-            ChronCountKey::Esc2 => "esc2",
-            ChronCountKey::ShotsNearMen => "shotsNearMen",
-            ChronCountKey::LightsShot => "lightsShot",
-            ChronCountKey::Ocps => "ocps",
-            ChronCountKey::Blackouts => "blackouts",
-            ChronCountKey::Kicked => "kicked",
-            ChronCountKey::Picked => "picked",
-            ChronCountKey::Intel => "intel",
-            ChronCountKey::Thrown => "thrown",
-            ChronCountKey::Grabs => "grabs",
-            ChronCountKey::Contacts => "contacts",
-            ChronCountKey::Radio => "radio",
-            ChronCountKey::CivSeen => "civSeen",
-            ChronCountKey::CivReported => "civReported",
-            ChronCountKey::CivComplied => "civComplied",
-            ChronCountKey::CivKO => "civKO",
-            ChronCountKey::CivKilled => "civKilled",
-            ChronCountKey::Devices => "devices",
-            ChronCountKey::Hits => "hits",
-            ChronCountKey::Saves => "saves",
-            ChronCountKey::Loads => "loads",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -302,15 +265,6 @@ pub enum DebriefState {
     Done,
     Sofar,
 }
-impl DebriefState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DebriefState::Down => "down",
-            DebriefState::Done => "done",
-            DebriefState::Sofar => "sofar",
-        }
-    }
-}
 
 #[derive(Clone, Debug, Default)]
 pub struct ROOMSItem {
@@ -328,96 +282,10 @@ pub struct BANDSItem {
     pub blurb: String,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct PIN {
-    pub down: Option<crate::chronicle::PINDown>,
-    pub shot: Option<crate::chronicle::PINDown>,
-    pub blackout: Option<crate::chronicle::PINDown>,
-    pub heard: Option<crate::chronicle::PINDown>,
-    pub objective: Option<crate::chronicle::PINDown>,
-    pub grab: Option<crate::chronicle::PINDown>,
-    pub ocp: Option<crate::chronicle::PINDown>,
-    pub thrown: Option<crate::chronicle::PINDown>,
-    pub radio: Option<crate::chronicle::PINDown>,
-    pub spotted: Option<crate::chronicle::PINDown>,
-    pub contact: Option<crate::chronicle::PINDown>,
-    pub lost: Option<crate::chronicle::PINDown>,
-    pub calm: Option<crate::chronicle::PINDown>,
-    pub alarm: Option<crate::chronicle::PINDown>,
-    pub light_shot: Option<crate::chronicle::PINDown>,
-    pub interrogated: Option<crate::chronicle::PINDown>,
-    pub key_taken: Option<crate::chronicle::PINDown>,
-    pub ko: Option<crate::chronicle::PINDown>,
-    pub kill: Option<crate::chronicle::PINDown>,
-    pub body_found: Option<crate::chronicle::PINDown>,
-    pub door_kicked: Option<crate::chronicle::PINDown>,
-    pub lock_picked: Option<crate::chronicle::PINDown>,
-    pub hit: Option<crate::chronicle::PINDown>,
-    pub need_break: Option<crate::chronicle::PINDown>,
-    pub civilian_spotted: Option<crate::chronicle::PINDown>,
-    pub civilian_reported: Option<crate::chronicle::PINDown>,
-    pub civilian_complied: Option<crate::chronicle::PINDown>,
-    pub civilian_ko: Option<crate::chronicle::PINDown>,
-    pub civilian_killed: Option<crate::chronicle::PINDown>,
-    pub camera_spotted: Option<crate::chronicle::PINDown>,
-    pub camera_alarm: Option<crate::chronicle::PINDown>,
-    pub laser_tripped: Option<crate::chronicle::PINDown>,
-    pub device_down: Option<crate::chronicle::PINDown>,
-    pub code_learned: Option<crate::chronicle::PINDown>,
-    pub code_entered: Option<crate::chronicle::PINDown>,
-    pub checkpoint: Option<crate::chronicle::PINDown>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PINDown {
-    pub glyph: String,
-    pub cls: String,
-    pub label: String,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct RoomsOfItem {
-    pub name: String,
-    pub x0: f64,
-    pub x1: f64,
-    pub z0: f64,
-    pub z1: f64,
-}
-
-#[derive(Clone, Debug)]
-pub enum IsChatterDataValue {
-    Text(String),
-    Num(f64),
-    Bool(bool),
-}
-
-#[derive(Clone, Debug)]
-pub enum ChronicleAddDataValue {
-    Text(String),
-    Num(f64),
-    Bool(bool),
-}
-
 #[derive(Clone, Debug)]
 pub enum ChronicleRecentKey {
     Text(String),
     Num(f64),
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ChronicleHeardRowE {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ChronicleBindHeardE {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ChronicleHeardCountedE {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ChronicleMarkHeardCountedE {
 }
 
 #[derive(Clone, Debug)]
@@ -444,14 +312,6 @@ pub struct FixtureNameTg {
 pub enum ChronDoorKind {
     DoorKicked,
     LockPicked,
-}
-impl ChronDoorKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ChronDoorKind::DoorKicked => "doorKicked",
-            ChronDoorKind::LockPicked => "lockPicked",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -486,15 +346,6 @@ pub enum SummaryLineState {
     Done,
     Sofar,
 }
-impl SummaryLineState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SummaryLineState::Down => "down",
-            SummaryLineState::Done => "done",
-            SummaryLineState::Sofar => "sofar",
-        }
-    }
-}
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
@@ -521,9 +372,6 @@ pub const SOFT_EVENTS: f64 = 520.0;
 
 /// (src/game/chronicle.ts:97 PATH_CAP)
 pub const PATH_CAP: f64 = 4000.0;
-
-/// (src/game/chronicle.ts:97 PATH_SECS)
-pub const PATH_SECS: f64 = 0.5;
 
 /// (src/game/chronicle.ts:100 HEARD_MERGE_SECS)
 pub const HEARD_MERGE_SECS: f64 = 8.0;
@@ -558,5 +406,3 @@ pub fn need_short() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set
 /// (src/game/chronicle.ts:504 INTEL: a table nothing writes)
 pub fn intel() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("door"), String::from("the keyed door (and his key)")); t.set(String::from("code"), String::from("a door code")); t.set(String::from("routes"), String::from("a colleague's route")); t.set(String::from("rollcall"), String::from("when the radio check is due")); t.set(String::from("rollcallLive"), String::from("that a radio check is on now")); t.set(String::from("checkOn"), String::from("that a man is out looking for a colleague")); t.set(String::from("clearing"), String::from("which room the pair is clearing")); t.set(String::from("blackout"), String::from("who is on the breaker")); t.set(String::from("lockdownPosts"), String::from("where the lockdown posts are")); t.set(String::from("missing"), String::from("that a man is missed")); t.set(String::from("drive"), String::from("that the rack is being looked at")); t } }
 
-/// (src/game/chronicle.ts:507 PIN: a table nothing writes)
-pub fn pin() -> crate::chronicle::PIN { crate::chronicle::PIN { down: Some(crate::chronicle::PINDown { glyph: String::from("✚"), cls: String::from("down"), label: String::from("you went down") }), shot: None, blackout: Some(crate::chronicle::PINDown { glyph: String::from("✦"), cls: String::from("light"), label: String::from("OCP / light") }), heard: None, objective: None, grab: None, ocp: Some(crate::chronicle::PINDown { glyph: String::from("✦"), cls: String::from("light"), label: String::from("OCP / light") }), thrown: None, radio: None, spotted: Some(crate::chronicle::PINDown { glyph: String::from("◉"), cls: String::from("seen"), label: String::from("spotted") }), contact: None, lost: None, calm: None, alarm: Some(crate::chronicle::PINDown { glyph: String::from("!"), cls: String::from("alarm"), label: String::from("alarm up") }), light_shot: Some(crate::chronicle::PINDown { glyph: String::from("✦"), cls: String::from("light"), label: String::from("OCP / light") }), interrogated: None, key_taken: None, ko: Some(crate::chronicle::PINDown { glyph: String::from("z"), cls: String::from("ko"), label: String::from("knockout") }), kill: Some(crate::chronicle::PINDown { glyph: String::from("✕"), cls: String::from("kill"), label: String::from("kill") }), body_found: Some(crate::chronicle::PINDown { glyph: String::from("◇"), cls: String::from("body"), label: String::from("body found") }), door_kicked: Some(crate::chronicle::PINDown { glyph: String::from("▮"), cls: String::from("door"), label: String::from("door kicked / picked") }), lock_picked: Some(crate::chronicle::PINDown { glyph: String::from("▯"), cls: String::from("door"), label: String::from("door kicked / picked") }), hit: None, need_break: None, civilian_spotted: Some(crate::chronicle::PINDown { glyph: String::from("◉"), cls: String::from("seen"), label: String::from("a civilian saw / told") }), civilian_reported: Some(crate::chronicle::PINDown { glyph: String::from("☎"), cls: String::from("alarm"), label: String::from("a civilian saw / told") }), civilian_complied: None, civilian_ko: Some(crate::chronicle::PINDown { glyph: String::from("z"), cls: String::from("ko"), label: String::from("knockout") }), civilian_killed: Some(crate::chronicle::PINDown { glyph: String::from("✕"), cls: String::from("kill"), label: String::from("kill") }), camera_spotted: Some(crate::chronicle::PINDown { glyph: String::from("◎"), cls: String::from("seen"), label: String::from("camera / beam") }), camera_alarm: Some(crate::chronicle::PINDown { glyph: String::from("◎"), cls: String::from("alarm"), label: String::from("camera / beam") }), laser_tripped: Some(crate::chronicle::PINDown { glyph: String::from("≋"), cls: String::from("seen"), label: String::from("camera / beam") }), device_down: None, code_learned: None, code_entered: None, checkpoint: None } }

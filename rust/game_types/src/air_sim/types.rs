@@ -21,12 +21,6 @@ pub struct AirSimStats {
     pub calm: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct AirHandle {
-    pub w: f64,
-    pub h: f64,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct AirState {
     pub w: f64,
@@ -75,14 +69,3 @@ impl AirSimMod {
     }
 }
 
-/// (src/game/airSim.ts:30 AIR_CELLS)
-pub const AIR_CELLS: f64 = 5.0;
-
-/// (src/game/airSim.ts:32 AIR_SOURCES)
-pub const AIR_SOURCES: f64 = 16.0;
-
-/// (src/game/airSim.ts:51 CAND)
-pub const CAND: f64 = 8.0;
-
-/// (src/game/airSim.ts:90 HIDDEN)
-pub const HIDDEN: f64 = 3.0;

@@ -66,8 +66,3 @@ pub struct InFloodREntriesItem {
     pub door: DoorId,
 }
 
-/// (src/game/squadnet.ts:134 NET_ROW)
-pub const NET_ROW: f64 = 26.0;
-
-/// (src/game/squadnet.ts:137 NET_INSET)
-pub const NET_INSET: f64 = 0.15;

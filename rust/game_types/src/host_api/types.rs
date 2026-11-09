@@ -50,6 +50,3 @@ pub struct HostBooks {
     pub rain: Option<crate::rain_fx::RainState>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct HostApiGbuffer {
-}

@@ -808,46 +808,6 @@ pub fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) 
     }
 }
 
-/// The panel's button and the probes: send a man now; a note says why not. (needs.ts needsSend)
-pub fn needs_send(g: &mut crate::game::Game, gd: Option<GuardId>, kind: Option<crate::needs::NeedKind>) -> String {
-    let kind = kind.unwrap_or(NeedKind::Coffee);
-    let Some(gd) = gd else { return key("no such man") };
-    if !g.tune.needs {
-        return key("needs are switched off");
-    }
-    let cs = g.gd[gd].callsign.clone();
-    if g.gd[gd].state == GuardState::Dead {
-        return format!("{} is down", cs);
-    }
-    if g.gd[gd].team != Team::Guard || g.gd[gd].unit.is_some() {
-        return format!("{} is not on the night staff", cs);
-    }
-    if !needs_live(g) {
-        return key("not now (the tour / daylight / the response team / the AI off / the player down)");
-    }
-    if !floor_calm(g) {
-        return key("not now — the floor is up (or in the dark)");
-    }
-    let why = if man_calm(g, gd, CALM_AWARENESS) { None } else { Some(interrupt_of(g, gd).unwrap_or_else(|| key("busy"))) };
-    if let Some(why) = why {
-        return format!("{} would not go now: {}", cs, why);
-    }
-    if !mem(g, gd).dealt {
-        deal(g, gd);
-    }
-    if let Some(t) = mem(g, gd).trip.as_ref() {
-        return format!("{} is already {} ({})", cs, if t.phase == TripPhase::Telegraph { "about to go" } else { "away" }, t.kind.as_str());
-    }
-    if !schedule_trip(g, gd, kind, true) {
-        let place = match need_spot(g, kind) {
-            Some(s) => s.name,
-            None => format!("a place for {} (this floor has none)", kind.as_str()),
-        };
-        return format!("{} cannot get to {} from where he stands", cs, place);
-    }
-    format!("{}: {} — watch him (walks in {} s)", cs, kind.as_str(), g.k.needs.announce_lead)
-}
-
 /// The probes: put a man's need at a level; false if he does not carry that kind. (needs.ts needsSetLevel)
 pub fn needs_set_level(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs::NeedKind, level: f64) -> bool {
     if !mem(g, gd).dealt {
@@ -861,7 +821,6 @@ pub fn needs_set_level(g: &mut crate::game::Game, gd: GuardId, kind: crate::need
         None => false,
     }
 }
-
 
 #[cfg(test)]
 mod tests {

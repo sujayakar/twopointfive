@@ -12,9 +12,3 @@ pub enum PlayOpts {
     ChairRoll { tok: f64 },
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GameAudioLike {
-}
-
-/// (src/game/audio_iface.ts:13 nullAudio: a table nothing writes)
-pub fn null_audio() -> crate::audio_iface::GameAudioLike { crate::audio_iface::GameAudioLike::default() }

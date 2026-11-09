@@ -169,16 +169,6 @@ pub fn game_escalate(g: &mut crate::game::Game) {
     crate::guards::raise_escalation(g, to, None, None, None);
 }
 
-/// Panel: straight back to calm. (game.ts Game.standDown)
-pub fn game_stand_down(g: &mut crate::game::Game) {
-    crate::guards::stand_down_escalation(g);
-}
-
-/// Panel: what each unfound body reads on the light meter. (game.ts Game.bodyLightSummary)
-pub fn game_body_light_summary(g: &mut crate::game::Game) -> String {
-    crate::guards::body_light_summary(g)
-}
-
 /// Is this record somebody on the floor right now: a man of the shift, a unit or a civilian? (game.ts Game.onFloor)
 pub fn game_on_floor(g: &crate::game::Game, gd: GuardId) -> bool {
     g.guards.contains(&gd) || g.civilians.contains(&gd)
@@ -228,42 +218,6 @@ pub fn game_free_held(g: &mut crate::game::Game, why: crate::game::GameFreeHeldW
         crate::game::GameFreeHeldWhy::Cancel => crate::player::FreeHeldWhy::Cancel,
     };
     crate::player::free_held(g, why);
-}
-
-/// The living man nearest Sam within `reach` metres; `foe`: only men hostile to the player. (game.ts Game.nearestLivingGuard)
-pub fn game_nearest_living_guard(g: &crate::game::Game, seat: &crate::seats::SeatRef, reach: Option<f64>, foe: Option<bool>) -> Option<GuardId> {
-    let foe = foe.unwrap_or(false);
-    let mut best: Option<GuardId> = None;
-    let mut bd = reach.unwrap_or(m::INF);
-    for gd in g.guards.clone() {
-        if g.gd[gd].state == crate::game::GuardState::Dead || (foe && !crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player)) { continue; }
-        let d = v3::dist_xz(g.ch[g.gd[gd].ch].pos, g.ch[g.pl[seat.player].ch].pos);
-        if d <= bd { bd = d; best = Some(gd); }
-    }
-    best
-}
-
-/// Sandbox: lean on whoever is within reach; a note if nobody is. (game.ts Game.interrogateNearest)
-pub fn game_interrogate_nearest(g: &mut crate::game::Game, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) -> Option<crate::dialogue::DialoguePick> {
-    if g.pl[g.player].down { game_note(g, "you're down \u{2014} nobody answers to a man on the floor"); return None; }
-    let Some(gd) = game_nearest_living_guard(g, &crate::seats::here(g), Some(crate::dialogue::INTERROGATE_REACH), Some(true)) else {
-        game_note(g, &format!("nobody hostile within {} m to lean on \u{2014} walk up to a living guard", js::num_str(crate::dialogue::INTERROGATE_REACH)));
-        return None;
-    };
-    let pick = game_interrogate(g, gd, rnd);
-    if pick.is_none() {
-        let line = format!("{} is in reach but there is something solid between you", g.gd[gd].callsign);
-        game_note(g, &line);
-    }
-    pick
-}
-
-/// Panel: the interrogation engine's read of the man nearest Sam, at any distance. (game.ts Game.dialogueSummary)
-pub fn game_dialogue_summary(g: &mut crate::game::Game) -> String {
-    let Some(gd) = game_nearest_living_guard(g, &crate::seats::here(g), Some(m::INF), Some(true)) else { return String::from("dialogue: nobody left standing"); };
-    let d = v3::dist_xz(g.ch[g.gd[gd].ch].pos, g.ch[g.pl[g.player].ch].pos);
-    let s = crate::dialogue::dialogue_summary(g, gd);
-    if d <= crate::dialogue::INTERROGATE_REACH { format!("dialogue \u{25B8} {} \u{B7} in reach", s) } else { format!("dialogue \u{25B8} {} \u{B7} {} m off", s, js::to_fixed(d, 1)) }
 }
 
 /// `g.audio.play(name, pos, gain)`.
@@ -329,22 +283,6 @@ pub fn game_clear_aftermath(g: &mut crate::game::Game) {
     }
 }
 
-/// The FN2000 in or out of the kit, applied to the man standing there now.   (game.ts setLoadout)
-pub fn game_set_loadout(g: &mut crate::game::Game, with_rifle: bool) {
-    g.fn2000 = with_rifle;
-    let pl = g.player;
-    if !with_rifle && g.pl[pl].slot == crate::game::SlotKind::Rifle {
-        g.pl[pl].slot = crate::game::SlotKind::Pistol;
-        let rifle = g.pl[pl].rifle;
-        if crate::weapons::firearm_reloading(g, rifle) {
-            let c = g.pl[pl].ch;
-            crate::character::anim_cancel_reload(g, c);
-        }
-        crate::weapons::firearm_cancel_reload(g, rifle);
-    }
-    g.pl[pl].has_rifle = with_rifle;
-}
-
 /// Was this fixture's switch on in the level as authored.   (game.ts authoredOn)
 pub fn game_authored_on(g: &crate::game::Game, t: FixtureId) -> bool { crate::sim_lightshome::fixture_authored(g, t) }
 
@@ -379,12 +317,6 @@ pub fn game_reset_level_state(g: &mut crate::game::Game) {
     crate::hours::hour_after_reset(g);
     crate::air_dust::air_dust_reset(g);
 }
-
-/// (game.ts crackTest)
-pub fn game_crack_test(g: &mut crate::game::Game) -> f64 { crate::glass::crack_test(g) }
-
-/// (game.ts wetSummary)
-pub fn game_wet_summary(g: &crate::game::Game) -> String { crate::wet::wet_summary(g) }
 
 /// The clocks the last try left running, as a new Game has them.   (game.ts cleanSlate)
 pub fn game_clean_slate(g: &mut crate::game::Game) {

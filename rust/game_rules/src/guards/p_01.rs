@@ -7,7 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-
 /// A bone of a body, or a stand-in where it has none yet (`c.bones.head ?? …`).
 pub(crate) fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, or: V3) -> V3 {
     match g.ch[c].bones.get(bone) {
@@ -57,7 +56,6 @@ pub fn eyes_on(g: &mut crate::game::Game, gd: GuardId, at: V3) {
     man.sight_t = now;
     man.last_seen_t = now;
 }
-
 
 /// Gunfire filed and not through this man's ears yet that hearingCheck will count when it next runs for him; `bangs` counts a stun charge or a door blown too. (guards.ts gunfireDue)
 pub fn gunfire_due(g: &crate::game::Game, gd: GuardId, bangs: Option<bool>) -> bool {
@@ -424,29 +422,6 @@ pub fn body_lit(g: &mut crate::game::Game, gd: GuardId, o: GuardId, eye: V3, dis
         v3::lerp(b.lit_near, b.lit, v3::clamp((dist - b.near_m) / m::max(0.1, b.far_m - b.near_m), 0.0, 1.0))
     };
     vis >= bar
-}
-
-
-/// Panel and QA: what each unfound body on the floor reads now. It eases the meters, as the TypeScript's does. (guards.ts bodyLightSummary)
-pub fn body_light_summary(g: &mut crate::game::Game) -> String {
-    let mut parts: Vec<String> = Vec::new();
-    let mut i = 0;
-    while i < g.guards.len() {
-        let o = g.guards[i];
-        i += 1;
-        if g.gd[o].state != crate::game::GuardState::Dead || g.gd[o].found {
-            continue;
-        }
-        let v = crate::guards::body_visibility(g, o);
-        let e = match g.m.guards.body_meters.get(o) {
-            Some(row) => js::to_fixed(row.e, 3),
-            None => String::from("?"),
-        };
-        parts.push(alloc::format!("{} {} (E {})", g.gd[o].callsign, js::to_fixed(v, 2), e));
-    }
-    let list = if parts.is_empty() { String::from("nobody down unfound") } else { parts.join(" · ") };
-    let b = g.k.body_light;
-    alloc::format!("bodies by light ▸ {} · bar {} from {} m (any light inside {} m) · {}", if g.tune.body_light { "on" } else { "OFF" }, js::num_str(b.lit), js::num_str(b.far_m), js::num_str(b.near_m), list)
 }
 
 #[cfg(test)]

@@ -36,26 +36,6 @@ pub struct WallWearStats {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct WearDecal {
-    pub kind: crate::render_decals::DecalKind,
-    pub pos: V3,
-    pub n: V3,
-    pub t: V3,
-    pub radius: f64,
-    pub param: f64,
-    pub seed: f64,
-    pub serial: f64,
-    pub pane: f64,
-    pub box_: Option<BoxId>,
-    pub local: Option<crate::render_decals::DecalLocal>,
-    pub look: Option<bool>,
-    pub box_idx: f64,
-    pub hidden: bool,
-    pub wear_half: Option<f64>,
-    pub wear_mat: Option<f64>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct WEAR {
     pub curve: f64,
     pub vary: f64,
@@ -67,5 +47,3 @@ pub struct WEAR {
 /// (src/game/wallwear.ts:32 WEAR: a table nothing writes)
 pub fn wear() -> crate::wallwear::WEAR { crate::wallwear::WEAR { curve: 0.4, vary: 0.25, exit_chips_from: 0.3, max_births: 16.0, max_cells: 256.0 } }
 
-/// (src/game/wallwear.ts:42 PALE: a table nothing writes)
-pub fn pale() -> V3 { [0.86, 0.85, 0.82] }

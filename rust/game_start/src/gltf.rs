@@ -280,5 +280,3 @@ pub fn character(g: &mut Game, mannequin: GltfFile, cast: Option<GltfFile>) -> R
     g.tab.rig.push(GltfCharacter { nodes: base.nodes, order: base.order, roots: base.roots, skin: base.skin, mesh, clips, node_by_name: base.node_by_name, cast })
 }
 
-#[allow(dead_code)]
-fn unused(_: &str) -> String { format!("") }

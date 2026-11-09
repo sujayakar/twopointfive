@@ -171,12 +171,6 @@ pub struct StaticCollisionLampQ {
     pub rows: Option<crate::scene_collision::LampRows>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ShotPanesItem {
-    pub bi: f64,
-    pub t: f64,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct SceneCollisionModBOTH {
     pub on: bool,
@@ -205,11 +199,6 @@ pub struct SceneCollisionModSENSED {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct SENSEWATCH {
-    pub see: Option<crate::FnField>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct SceneCollisionModLAMPS {
     pub parts: f64,
 }
@@ -226,12 +215,6 @@ pub struct SceneCollisionModPRICED {
     pub needs: f64,
     pub cells: f64,
     pub waits: bool,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct BothPanesItem {
-    pub bi: f64,
-    pub t: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -281,21 +264,7 @@ pub struct ThingsAsk {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct ThingsBothT {
-    pub t: f64,
-    pub n: V3,
-    pub prop: crate::Opaque,
-    pub box_: BoxId,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct SegmentBlockedPanesItem {
-    pub bi: f64,
-    pub t: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SegmentBlockedAskPanesItem {
     pub bi: f64,
     pub t: f64,
 }
@@ -367,12 +336,6 @@ pub struct GridStepK {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct SegmentBlockedHerePanesItem {
-    pub bi: f64,
-    pub t: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct Raycast {
     pub t: f64,
     pub index: f64,
@@ -408,23 +371,12 @@ impl SceneCollisionMod {
     }
 }
 
-/// (src/scene/collision.ts:48 SEG_PAD)
-pub const SEG_PAD: f64 = 0.05;
-
 /// (src/scene/collision.ts:87 FEET_Y)
 pub const FEET_Y: f64 = 0.2;
 
 /// (src/scene/collision.ts:87 BAKE_Y)
 pub const BAKE_Y: f64 = 0.25;
 
-/// (src/scene/collision.ts:90 shotPanes: a table nothing writes)
-pub fn shot_panes() -> Vec<crate::scene_collision::ShotPanesItem> { Vec::new() }
-
-/// (src/scene/collision.ts:113 SENSE_WATCH: a table nothing writes)
-pub fn sense_watch() -> crate::scene_collision::SENSEWATCH { crate::scene_collision::SENSEWATCH { see: None } }
-
 /// (src/scene/collision.ts:132 SIGHT_EYES)
 pub const SIGHT_EYES: f64 = 7.0;
 
-/// (src/scene/collision.ts:133 bothPanes: a table nothing writes)
-pub fn both_panes() -> Vec<crate::scene_collision::BothPanesItem> { Vec::new() }

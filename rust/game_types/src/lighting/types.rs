@@ -45,14 +45,6 @@ pub enum LightEventCause {
     Shot,
     Ocp,
 }
-impl LightEventCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LightEventCause::Shot => "shot",
-            LightEventCause::Ocp => "ocp",
-        }
-    }
-}
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

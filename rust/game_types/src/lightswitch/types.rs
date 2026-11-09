@@ -129,9 +129,6 @@ pub struct LightswitchStats {
 /// (src/game/lightswitch.ts:121 WALL_TOP)
 pub const WALL_TOP: f64 = 2.2;
 
-/// (src/game/lightswitch.ts:200 NONE: a table nothing writes)
-pub fn none() -> Vec<crate::lightswitch::WallSwitch> { Vec::new() }
-
 /// (src/game/lightswitch.ts:303 PLATE: a table nothing writes)
 pub fn plate() -> V3 { [0.62, 0.6, 0.55] }
 

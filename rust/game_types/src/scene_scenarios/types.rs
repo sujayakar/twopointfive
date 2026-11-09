@@ -126,15 +126,6 @@ pub enum SquadDataTraining {
     Green,
     Mixed,
 }
-impl SquadDataTraining {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SquadDataTraining::Trained => "trained",
-            SquadDataTraining::Green => "green",
-            SquadDataTraining::Mixed => "mixed",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct SquadArrive {
@@ -166,15 +157,6 @@ pub enum RouteOpeningKind {
     #[default] Door,
     Glass,
     Doorway,
-}
-impl RouteOpeningKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RouteOpeningKind::Door => "door",
-            RouteOpeningKind::Glass => "glass",
-            RouteOpeningKind::Doorway => "doorway",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -481,14 +463,6 @@ pub enum IssueCardLoaded {
     Ring,
     He40,
 }
-impl IssueCardLoaded {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            IssueCardLoaded::Ring => "ring",
-            IssueCardLoaded::He40 => "he40",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct IssueData {
@@ -666,28 +640,11 @@ pub enum KitViewWayKind {
     Wall,
     Gap,
 }
-impl KitViewWayKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KitViewWayKind::Door => "door",
-            KitViewWayKind::Wall => "wall",
-            KitViewWayKind::Gap => "gap",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum KitViewWayHand {
     Left,
     Right,
-}
-impl KitViewWayHand {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KitViewWayHand::Left => "left",
-            KitViewWayHand::Right => "right",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

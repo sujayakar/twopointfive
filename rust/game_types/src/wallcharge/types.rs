@@ -141,17 +141,6 @@ pub enum Phase {
     Armed,
     Enter,
 }
-impl Phase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Phase::Wait => "wait",
-            Phase::Place => "place",
-            Phase::Standoff => "standoff",
-            Phase::Armed => "armed",
-            Phase::Enter => "enter",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallChargeDoneItemHole {
@@ -188,14 +177,6 @@ pub struct PodHold {
 pub enum WallChargeDoneItemStageValue {
     Lane,
     Pod,
-}
-impl WallChargeDoneItemStageValue {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallChargeDoneItemStageValue::Lane => "lane",
-            WallChargeDoneItemStageValue::Pod => "pod",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -325,14 +306,6 @@ pub enum WallOpStageValue {
     Lane,
     Pod,
 }
-impl WallOpStageValue {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallOpStageValue::Lane => "lane",
-            WallOpStageValue::Pod => "pod",
-        }
-    }
-}
 
 #[derive(Clone, Debug, Default)]
 pub struct WallChargeRowsRowOver {
@@ -425,10 +398,6 @@ pub enum WallChargeValid {
     Bool(bool),
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WallChargeKeptWalksM {
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct WallChargeAssignA {
     pub post: Option<V3>,
@@ -518,59 +487,6 @@ pub struct WallChargeHoleAt {
     pub half: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct WallChargeSamRowsRowOver {
-    pub kind: Option<crate::wallcharge::WallChargeSamRowsRowOverKind>,
-    pub pos: Option<V3>,
-    pub line1: Option<String>,
-    pub line2: Option<String>,
-    pub in_reach: Option<bool>,
-    pub off: Option<bool>,
-    pub progress: Option<f64>,
-    pub target: Option<FixtureId>,
-    pub door: Option<DoorId>,
-    pub guard: Option<GuardId>,
-    pub verb: Option<crate::game::Verb>,
-    pub running: Option<bool>,
-    pub close: Option<crate::close::CloseKind>,
-    pub past: Option<bool>,
-    pub framed: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum WallChargeSamRowsRowOverKind {
-    Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
-}
-impl WallChargeSamRowsRowOverKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallChargeSamRowsRowOverKind::Cam => "cam",
-            WallChargeSamRowsRowOverKind::Guard => "guard",
-            WallChargeSamRowsRowOverKind::Breaker => "breaker",
-            WallChargeSamRowsRowOverKind::Door => "door",
-            WallChargeSamRowsRowOverKind::Light => "light",
-            WallChargeSamRowsRowOverKind::Body => "body",
-            WallChargeSamRowsRowOverKind::Objective => "objective",
-            WallChargeSamRowsRowOverKind::Held => "held",
-            WallChargeSamRowsRowOverKind::Wall => "wall",
-            WallChargeSamRowsRowOverKind::Switch => "switch",
-            WallChargeSamRowsRowOverKind::Charge => "charge",
-            WallChargeSamRowsRowOverKind::Cancel => "cancel",
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WallChargeSamJob {
     pub p: V3,
@@ -591,9 +507,6 @@ impl WallchargeMod {
         }
     }
 }
-
-/// (src/game/wallcharge.ts:212 WALLCHARGE_DEFAULTS: a table nothing writes)
-pub fn wallcharge_defaults() -> crate::knobs::WallchargeK { crate::knobs::WallchargeK::page() }
 
 /// (src/game/wallcharge.ts:284 FACE)
 pub const FACE: f64 = 0.06;

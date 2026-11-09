@@ -32,34 +32,10 @@ pub struct WX {
     pub air_stat: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WXKNOBS {
-    pub here: crate::FnField,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WXWATCH {
-    pub on: bool,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct RoofsCountedBoxesItem {
     pub c: Vec<f64>,
     pub h: Vec<f64>,
-}
-
-/// the state this module keeps at its top level
-#[derive(Clone, Debug)]
-pub struct SimWeatherhomeMod {
-    /// (src/sim/weatherhome.ts:12 OFF)
-    pub off: Vec<f64>,
-}
-impl SimWeatherhomeMod {
-    pub fn blank() -> Self {
-        SimWeatherhomeMod {
-            off: Vec::new(),
-        }
-    }
 }
 
 /// (src/sim/weatherhome.ts:8 WX: a table nothing writes)
@@ -68,8 +44,3 @@ pub fn wx() -> crate::sim_weatherhome::WX { crate::sim_weatherhome::WX { live: 0
 /// (src/sim/weatherhome.ts:11 WX_BIT)
 pub const WX_BIT: f64 = 1024.0;
 
-/// (src/sim/weatherhome.ts:29 WX_KNOBS: a table nothing writes)
-pub fn wx_knobs() -> crate::sim_weatherhome::WXKNOBS { crate::sim_weatherhome::WXKNOBS { here: crate::FnField } }
-
-/// (src/sim/weatherhome.ts:33 WX_WATCH: a table nothing writes)
-pub fn wx_watch() -> crate::sim_weatherhome::WXWATCH { crate::sim_weatherhome::WXWATCH { on: false } }

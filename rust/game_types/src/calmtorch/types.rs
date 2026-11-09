@@ -12,15 +12,6 @@ pub struct TorchState {
     pub held: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct CalmTorchOf {
-    pub dark: bool,
-    pub read: f64,
-    pub against: f64,
-    pub ask: f64,
-    pub held: f64,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct CalmtorchMod {

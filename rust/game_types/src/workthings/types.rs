@@ -147,14 +147,6 @@ impl Default for WorkThingsNear {
 }
 
 #[derive(Clone, Debug)]
-pub enum WorkThingsOn {
-    Floor(crate::orders::OrderTargetFloor),
-    Door(crate::orders::OrderTargetDoor),
-    None(crate::orders::OrderTargetNone),
-    Foe(crate::orders::OrderTargetFoe),
-}
-
-#[derive(Clone, Debug)]
 pub enum WorkThingsIssue {
     Text(String),
     Arm1(()),
@@ -172,14 +164,6 @@ impl Default for WorkNear {
             target: crate::orders::OrderTarget::Floor(crate::orders::OrderTargetFloor::default()),
         }
     }
-}
-
-#[derive(Clone, Debug)]
-pub enum WorkOn {
-    Floor(crate::orders::OrderTargetFloor),
-    Door(crate::orders::OrderTargetDoor),
-    None(crate::orders::OrderTargetNone),
-    Foe(crate::orders::OrderTargetFoe),
 }
 
 /// the state this module keeps at its top level

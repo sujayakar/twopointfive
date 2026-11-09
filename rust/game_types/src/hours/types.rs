@@ -193,5 +193,3 @@ pub const DOOR_M: f64 = 7.0;
 /// (src/game/hours.ts:308 GROUND_ALBEDO)
 pub const GROUND_ALBEDO: f64 = 0.25;
 
-/// (src/game/hours.ts:341 NO_BOXES: a table nothing writes)
-pub fn no_boxes() -> Vec<BoxId> { Vec::new() }

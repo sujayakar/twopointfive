@@ -84,5 +84,3 @@ pub struct FlyShard {
 /// (src/game/shardModel.ts:28 SHARD: a table nothing writes)
 pub fn shard() -> crate::shard_model::SHARD { crate::shard_model::SHARD { gravity: 9.8, drag: 0.5, restitution: 0.4, keep: 0.78, sleep_v: 0.3, fade: 5.0, rough: 0.07, scatter: 0.1, ref_size: 0.01, drag_max: 6.0, ang_damp: 0.3, e_jit: 0.8, skitter: 0.45, spin_k: 28.0, spin_max: 60.0, wall_e: 0.3, wall_keep: 0.8, rest_tilt: 0.35, glint_cap: 14.0, f0: 0.04, life: 60.0 } }
 
-/// (src/game/shardModel.ts:52 SHARD_IMP: a table nothing writes)
-pub fn shard_imp() -> crate::sheet_model::ImpulseResponse { crate::sheet_model::ImpulseResponse { gain: 0.45, up_k: 0.5, v_max: 4.5, wake: 0.25 } }

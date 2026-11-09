@@ -591,11 +591,6 @@ fn write_row(g: &mut Game, i: f64, row: &KitRow, v: &KitValue) {
     g.m.kit.kit_note[at] = String::new();
 }
 
-/// Step one row to its next or last value, wrapping; kept. Returns the value the row now has.   (kit.ts kitStep)
-pub fn kit_step(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField, dir: f64) -> crate::kit::KitValue {
-    kit_try(g, i, field, dir).value
-}
-
 /// Set one row outright; refused for a value the row does not offer, or one his pouches have no room for.   (kit.ts kitSet)
 pub fn kit_set(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField, v: &crate::kit::KitValue) -> bool {
     on_worn(g, i, &mut |g: &mut Game| set_row(g, i, field, v), Some(&mut |_g: &mut Game, ok: bool| ok))
@@ -663,17 +658,6 @@ pub fn kit_preset_why(g: &mut crate::game::Game, i: f64, p: crate::kit::KitPrese
         let c = kit_preset_card(g, i, p);
         card_why(g, i, &c).unwrap_or_default()
     }, None)
-}
-
-/// A set on all five at once (always a legal fill).   (kit.ts kitPresetAll)
-pub fn kit_preset_all(g: &mut crate::game::Game, p: crate::kit::KitPreset) {
-    for at in 0..(KIT_MEMBERS as usize) {
-        let t = table_in_force(g);
-        let c = set_card_base(g, at as f64, p, t.as_ref());
-        g.m.kit.kit.members[at] = c;
-        g.m.kit.kit_note[at] = String::new();
-    }
-    g.m.kit.deal_own = false;
 }
 
 /// Which set member i's card is, if it is exactly one.   (kit.ts kitPresetOf)
@@ -751,9 +735,6 @@ pub fn kit_paste(g: &mut crate::game::Game, i: f64, from: &crate::kit::MemberKit
 pub fn kit_wears(g: &mut crate::game::Game, i: f64, from: &crate::kit::MemberKit) -> bool {
     kit_paste_peek(g, i, from).changed.is_empty()
 }
-
-
-
 
 /// `out[field] = v` of a stored value, for a row with no reader of its own (one its value was found on, so the value's kind fits the field).
 fn put_field(card: &mut MemberKit, field: KitField, v: &KitValue) {

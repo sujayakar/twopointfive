@@ -43,14 +43,6 @@ pub enum KitanimModKITANIMLOGItemWhat {
     #[default] Reload,
     Swap,
 }
-impl KitanimModKITANIMLOGItemWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KitanimModKITANIMLOGItemWhat::Reload => "reload",
-            KitanimModKITANIMLOGItemWhat::Swap => "swap",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct NoteRow {
@@ -66,31 +58,6 @@ pub enum NoteRowWhat {
     #[default] Reload,
     Swap,
 }
-impl NoteRowWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            NoteRowWhat::Reload => "reload",
-            NoteRowWhat::Swap => "swap",
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct KitLockMaxKIT {
-    pub stow: JsMap<crate::character::KitItem, f64>,
-    pub reach: JsMap<crate::character::KitItem, f64>,
-    pub draw: JsMap<crate::character::KitItem, f64>,
-    pub far: f64,
-    pub swap_k: f64,
-    pub front: Option<crate::kitanim::KitLockMaxKITFront>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct KitLockMaxKITFront {
-    pub stow: f64,
-    pub reach: f64,
-    pub draw: f64,
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct KitShowV {
@@ -104,14 +71,6 @@ pub struct KitShowV {
 pub enum KitShowVRifle {
     Hand,
     Slung,
-}
-impl KitShowVRifle {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KitShowVRifle::Hand => "hand",
-            KitShowVRifle::Slung => "slung",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -147,5 +106,3 @@ pub struct KitanimStats {
     pub owed: i32,
 }
 
-/// (src/game/kitanim.ts:83 KITANIM_DEFAULTS: a table nothing writes)
-pub fn kitanim_defaults() -> crate::knobs::KitanimK { crate::knobs::KitanimK::page() }

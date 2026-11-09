@@ -58,7 +58,6 @@ pub fn fog_of_war_show(g: &mut crate::game::Game, gd: GuardId, on: bool) {
     if on { g.fog_of_war.shown.add(gd); } else { g.fog_of_war.shown.delete(gd); }
 }
 
-
 /// `blank` is the field initialisers, and the TypeScript's constructor only keeps `g`. (FogOfWar constructor)
 pub fn fog_of_war_new(g: &crate::game::Game) -> crate::fogofwar::FogOfWar {
     crate::fogofwar::FogOfWar::blank()
@@ -552,7 +551,6 @@ pub fn fog_of_war_sight_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool
     crate::scene_collision::segment_blocked(g, a, b, Some(0.02), Some(through), None)
 }
 
-
 /// One eye on one living man, walls and leaves only, inside the eye's field. (FogOfWar.lineToMan)
 pub fn fog_of_war_line_to_man(g: &mut crate::game::Game, e: crate::fogofwar::FogEye, gd: GuardId, chest: V3) -> bool {
     let pc = g.gd[gd].ch;
@@ -598,17 +596,6 @@ pub fn fog_of_war_eye_on_body(g: &mut crate::game::Game, e: crate::fogofwar::Fog
     let hp = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(v) => *v, None => g.ch[c].pos };
     let at = [hp[0], m::max(hp[1], 0.0) + 0.3, hp[2]];
     fog_of_war_in_field(g, e, at) && !fog_of_war_sight_blocked(g, e.pos, at)
-}
-
-/// Can any eye see this point. (FogOfWar.eyeOn)
-pub fn fog_of_war_eye_on(g: &mut crate::game::Game, p: V3) -> bool {
-    let mut i = 0;
-    while i < g.fog_of_war.eyes.len() {
-        let e = g.fog_of_war.eyes[i];
-        i += 1;
-        if fog_of_war_in_field(g, e, p) && !fog_of_war_sight_blocked(g, e.pos, p) { return true; }
-    }
-    false
 }
 
 /// Does anybody on the team see this door: a line to the leaf where it stands or where the picture has it. (FogOfWar.doorSeen)

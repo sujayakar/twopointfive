@@ -16,14 +16,6 @@ pub enum NetFeedWhat {
     #[default] Body,
     Asked,
 }
-impl NetFeedWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            NetFeedWhat::Body => "body",
-            NetFeedWhat::Asked => "asked",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct NetquietfeedModNETFEED {

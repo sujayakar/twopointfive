@@ -83,15 +83,6 @@ pub enum HeadDown {
     None,
     Displace,
 }
-impl HeadDown {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HeadDown::Down => "down",
-            HeadDown::None => "none",
-            HeadDown::Displace => "displace",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct GuardFireMods {
