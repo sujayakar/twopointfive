@@ -23,7 +23,7 @@ struct SP {
   dt: f32, time: f32, buoyancy: f32, weight: f32,
   vortConf: f32, velDamp: f32, densDecay: f32, tempDecay: f32,
   turbulence: f32, omega: f32, flushEps: f32, ring: u32,          // ring: CELLS of air kept round the smoke (1‥8; 8 = every brick that holds smoke has all 26 neighbours)
-  stirConf: f32, pad17: f32, numDirty: u32, bakeAll: u32,          // stirConf: × MORE vorticity confinement right round a moving body (forces, emBody; 0 = one strength everywhere, as it was)
+  stirConf: f32, law: f32, numDirty: u32, bakeAll: u32,          // stirConf: × MORE vorticity confinement right round a moving body (forces, emBody; 0 = one strength everywhere, as it was)
   softLo: f32, softHi: f32, softEps: f32, softDecay: f32,         // the pool's soft ceiling: between softLo and softHi of CAP in use the flush threshold rises to softEps and thin smoke decays softDecay/s faster
   thinDecay: f32, thinBelow: f32, readSkip: f32, fresh: f32,       // density under thinBelow decays up to thinDecay/s faster, always (0 = off): how far a plume's faint skirt spreads before it is gone · fresh: WHO GIVES WAY below
   viewX: f32, viewZ: f32, viewR: f32, viewBias: f32,              // where the camera looks (floor plan) and how far round it counts as seen: past viewR, rising to full at 2 viewR, the pool's ceiling comes sooner and harder (farOf); bias 0 = one ceiling for all
@@ -856,7 +856,8 @@ fn lumps(p: vec3f) -> f32 {
 }
 /** the game's smoke in a cell, bent: `g` of it stands there, the grid holds h.x about it and h.y is drawn. The mean over a brick moves by the share of the way the rate says, whatever is in its cells. */
 fn bendTo(g: f32, h: vec2f, P: vec3f, dt: f32) -> f32 {
-  let o = bentThrough(h.x, 1.5) - bentThrough(h.y, 1.5); let a = select(1.0 - exp(-sp.bend * o * o * dt), 1.0, sp.whole > 0.0);
+  let o = bentThrough(h.x, 1.5) - bentThrough(h.y, 1.5); var f = o * o; if (sp.law > 1.5) { f = abs(o); } if (sp.law > 2.5) { f = max(o * o, 0.3 * abs(o)); }
+  let a = select(1.0 - exp(-sp.bend * f * dt), 1.0, sp.whole > 0.0);
   let d = h.x - h.y;
   let thick = 2.0 * g / max(g + h.y, 1e-6);   // (1 where a cell holds what the brick does, toward 2 in its billows, 0 in its gaps)
   if (d <= 0.0) { return g * max(1.0 + a * d / max(h.y, 1e-6) * (2.0 - thick), 0.0); }
@@ -916,7 +917,9 @@ fn injectDecay(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) 
     var kd = vec4f(0.0); if (kinds) { kd = unpack4x8unorm(V[V_CURL + i].x); }
     // (the pool's soft ceiling: as it fills, THIN smoke goes faster — the body of a plume is untouched, its faint skirts give their bricks back)
     var faint = 1.0 - smoothstep(0.0, thin, v.x);
-    v.x *= exp(-(sp.densDecay + extra * faint) * k.dt);
+    var h = vec2f(-1.0, 0.0); if (bent) { h = bentHere(c); }
+    var decay = sp.densDecay; if (sp.law > 0.5 && h.x > 0.0) { decay *= mix(smoothstep(0.95, 1.1, h.y / h.x), 1.0, kd.x); }
+    v.x *= exp(-(decay + extra * faint) * k.dt);
     v.y *= exp(-(sp.tempDecay + cool * faint) * k.dt);
     let Pw = worldP(k, c); var fed = false;
     for (var w = 0u; w < 2u; w++) {
@@ -935,7 +938,6 @@ fn injectDecay(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) 
     }
     var held = false;
     if (bent) {
-      let h = bentHere(c);
       if (h.x >= 0.0) {
         let own = v.x * kd.x; let g = bendTo(v.x - own, h, Pw, k.dt); v.x = own + g; held = h.x > 0.5 * least;
         if (kinds) { kd.x = own / max(v.x, 1e-6); }
