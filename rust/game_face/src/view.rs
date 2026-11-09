@@ -61,6 +61,7 @@ pub extern "C" fn face_tally(h: u32) {
     });
     super::out(s.into_bytes());
 }
+/// every knob a person may turn, at face_out: its name's length (its top bit: a yes or no), the name, what it is turned to (f64)
 #[no_mangle]
 pub extern "C" fn face_knobs(h: u32) {
     let b = super::with(h, |x| {

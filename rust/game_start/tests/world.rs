@@ -37,6 +37,7 @@ fn a_round_through_a_wall_leaves_the_far_hole_then_the_mark_it_wears() {
     let from = p.g.ch[p.g.pl[p.g.player].ch].muzzle;
     let along = |q: [f64; 3]| (q[0] - from[0]) * (24.0 - from[0]) + (q[2] - from[2]) * (10.0 - from[2]);
     let worn: Vec<u32> = mark_set(&p.g).unwrap().wear.cells.iter().flat_map(|c| c.1.clone()).collect();
+    assert_eq!(worn.len(), crossed, "each wall crossed counts the round, once");
     for (k, pair) in marks.chunks_exact(2).take(crossed).enumerate() {
         let (far, went_in) = (pair[0], pair[1]);
         assert!(along(far.pos) > along(went_in.pos), "wall {k}: the mark told first is not the far face's");

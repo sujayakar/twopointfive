@@ -5,8 +5,7 @@
 //! It is about the seat it is HANDED (`SeatRef`): any seat of the game, standing on it or not, so a machine asks about the one it shows.
 //!
 //! A SECTION IS FILLED BY ITS RULE'S OWN MODULE (`mission::objective`), by the functions the tick runs: nothing is worded or judged twice. No rule calls
-//! this module. A new section: its struct in game_types, its line here, its type on the wire (tools/wire), the HUD's read of it, and the page's own
-//! TypeScript for it deleted in the same commit.
+//! this module. A new section: its struct in game_types, its line here, `bun run tools/draw/gen.ts`, and the HUD's read of it.
 use super::*;
 use crate::game::Game;
 use alloc::string::String;

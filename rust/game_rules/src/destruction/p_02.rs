@@ -564,7 +564,6 @@ pub fn destruction_hide(g: &mut crate::game::Game, d: &crate::destruction::Destr
         }
     }
     crate::scene_collision::wrote(g);
-    let (c, h) = { let x = seam_box(g, b); (x.c, x.h) };
 }
 
 /// The escalated material burst on top of impactFx's, scaled by E and the rifle factor: what flies is the picture's, by what the box says it is made of.   (destruction.ts burst)
