@@ -1,3 +1,4 @@
+// A big body is written once here and asked in a loop: the compile pastes every call. Credit: Stephen Jayakar, from his pull request 1.
 // GPU particles — the simulation (EXPERIMENT, render/particles.ts; prelude = scene + lighting_common + particles_common). Two kernels in one compute pass:
 //   emit    one thread per particle born this frame: finds its emit record (the CPU queued them: kind, shape, seed, the ring slots it was dealt), draws
 //           its direction / speed / life / size from a hash of (seed, index) — no Math.random anywhere on the path, so a ?paused capture repeats — and

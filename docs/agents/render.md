@@ -129,6 +129,7 @@ program is in, up to a cap.
 - **Something new drawn:** `overview.md` has the section's way. A new box field goes in `pack.rs` and the layouts in `src/scene/boxes.ts`.
 - **A kernel's text:** `bun run tools/qa/checks.ts shaders`, and `node tools/qa/wgsl-compile.cjs` asks a browser's compiler. A grown kernel costs
   Windows compile time (`inline` counts it) and nears the software adapter's limit (`kernel-stack.cjs`).
+  A big body is asked in a loop. Credit: Stephen Jayakar, from his pull request 1.
 
 **To measure.** F9 records frames (`tools/qa/perf-report.ts`). F8 flips each of `SWEEP_ROWS` over a held world and `tools/qa/perf-sweep.ts` says what
 it gave back: only that says what a feature costs. F6 keeps every target of two whole frames with the renderer's trace (`tools/qa/capture-read.ts`);

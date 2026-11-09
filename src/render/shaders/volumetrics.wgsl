@@ -1,3 +1,4 @@
+// A big body is written once here and asked in a loop: the compile pastes every call. Credit: Stephen Jayakar, from his pull request 1.
 // Half-resolution (quarter with the lossy volQuarter option: frame.lossyCfg.y is the divisor) volumetrics: (a) thin haze lit by spot/point lights with ray-traced shadows (visible beams),
 // (b) ray-marched smoke domains lit by the same lights (shadow rays + self-shadowing) and by the RC mean radiance, (c) the weather's rain / splashes / sky flash.
 // Output: rgb = in-scattered radiance, a = transmittance toward the surface.
