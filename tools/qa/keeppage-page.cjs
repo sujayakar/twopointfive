@@ -11,12 +11,10 @@
 // THE FRAMES ARE NOT DRAWN unless REAL=1 (the software adapter takes minutes over a frame of the level). REAL=1 adds to `kept` one
 // drawn frame of the second mission read back, held equal pixel for pixel to `fresh`'s: the kept pipelines draw the picture a whole load's draw. Game logic,
 // the DOM and (REAL=1) the software adapter's picture: nothing here has been seen on a GPU.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
-const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', BREAK = process.env.KEEPPAGE_BREAK === '1', REAL = process.env.REAL === '1';
+const PAGE = require('./page.cjs').page({ name: 'keeppage-page' }), { check, note: log } = PAGE;
+const QUALITY = process.env.QUALITY || 'verylow', BREAK = process.env.KEEPPAGE_BREAK === '1', REAL = process.env.REAL === '1';
 const ONLY = (process.env.JOBS === 'all' ? '' : process.env.JOBS || 'kept,fresh').split(',').map(s => s.trim()).filter(Boolean);
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
-const BASE = `http://localhost:${PORT}/`, REST = `paused&mute&quality=${QUALITY}&seed=7`;
+const BASE = PAGE.url().slice(0, -1), REST = `paused&mute&quality=${QUALITY}&seed=7`;
 const A = `levelFile=depot.json&roomclear&squad4&${REST}`, SECOND = `?levelFile=registry.json&rescue&keeppage=1&${REST}`, FRAMES = 120;
 const want = (name) => !ONLY.length || ONLY.includes(name);
 
@@ -38,9 +36,8 @@ const SHELL = () => ({ keeper: !!window.__pageKeeper, seats: window.__pageKeeper
   frame: !!document.getElementById('kept-page'), game: !!window.__game, mark: window.__mark || null, href: location.href, role: window.__keptPage ? window.__keptPage.role : null });
 
 (async () => {
-  let red = 0; const fail = (name, why) => { red++; console.log(`- FAIL — ${name}: ${why}`); }, pass = (name, what) => console.log(`- ok — ${name}: ${what}`);
-  const open = async (flags = FLAGS) => { const browser = await chromium.launch({ headless: true, channel: 'chromium', args: flags }); const page = await (await browser.newContext({ viewport: { width: 1024, height: 576 }, deviceScaleFactor: 1 })).newPage();
-    const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300))); page.on('console', m => { if ((m.type() === 'error' || m.type() === 'warning') && !/Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 300)); });
+  const fail = (name, why) => check(false, `${name}: ${why}`), pass = (name, what) => console.log(`- ok — ${name}: ${what}`);
+  const open = async () => { const { browser, page, errors: errs } = await PAGE.open({ browser: await PAGE.launch(), size: [1024, 576], errors: { warnings: true, skip: /Failed to load resource/ } });
     const docs = []; page.on('request', r => { if (r.isNavigationRequest() && r.frame() === page.mainFrame()) docs.push(r.url()); });
     return { browser, page, errs, docs }; };
   const frameOf = (page) => page.frames().find(f => f.parentFrame() === page.mainFrame() && f.name() !== 'x' && /^http/.test(f.url())) || null;
@@ -93,5 +90,5 @@ const SHELL = () => ({ keeper: !!window.__pageKeeper, seats: window.__pageKeeper
     pass(name, `a whole load of ${url.replace(BASE, '')} plays digest ${d}${want('kept') ? ', the kept page\'s' : ''}${REAL && pic ? `; one drawn frame ${pic.w}×${pic.h} equal byte for byte (${pic.lit} lit bytes)` : ''}`);
   } catch (e) { fail(name, String(e.message || e)); } await browser.close(); }
 
-  console.log(red ? `keeppage-page: ${red} FAILED` : 'keeppage-page: all ok'); process.exit(red ? 1 : 0);
+  await PAGE.end(PAGE.fails ? `keeppage-page: ${PAGE.fails} FAILED` : 'keeppage-page: all ok');
 })().catch(e => { console.error(e); process.exit(1); });

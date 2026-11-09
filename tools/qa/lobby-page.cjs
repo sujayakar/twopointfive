@@ -18,16 +18,13 @@
 //                    link not read) — the join line and the same-fight line must FAIL
 // The windows are driven by script (frames stepped, none drawn): what two PLAYERS see and feel on a GPU is not what this checks. NOT HERE: Convex's own
 // local backend, the hosted backend and its sandboxes, two machines. exit 0 = pass · 1 = a line failed · 2 = something could not be started
-const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/opt/node-tools/node_modules/playwright');
+const { page: pageRun, NOISE } = require('./page.cjs');
 const path = require('node:path'), cp = require('node:child_process'), fs = require('node:fs');
 const ROOT = path.resolve(__dirname, '../..');
-const PORT = process.env.PORT || 5351, CPORT = Number(process.env.CLOUD_PORT) || 3251, BREAK = process.env.LOBBY_BREAK === '1', QUALITY = process.env.QUALITY || 'verylow';
+const PORT = process.env.PORT || 5351, PAGE = pageRun({ name: 'lobby-page', port: PORT }), line = PAGE.check, CPORT = Number(process.env.CLOUD_PORT) || 3251, BREAK = process.env.LOBBY_BREAK === '1', QUALITY = process.env.QUALITY || 'verylow';
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : d; };
 const N = Number(arg('ticks', '300')), NAV = Math.max(60000, Number(process.env.NAV_MS) || 480000), BASE = `http://localhost:${PORT}/`, CLOUD = `http://127.0.0.1:${CPORT}`, KEY = 'page-check-key', WORDS = 'paused&mute&quality=' + QUALITY;
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog', '--no-sandbox'];
-const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage|Failed to load resource/;
 const T0 = Date.now(), log = (...a) => { if (process.env.LOBBY_SAY) console.log(`  [${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a); };
-let fails = 0; const line = (ok, what) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}`); if (!ok) fails++; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const until = async (f, ms = 20000) => { const t = Date.now(); for (;;) { const v = await f().catch(() => null); if (v || Date.now() - t > ms) return v; await sleep(250); } };
 const admin = async (fn, args) => { const r = await fetch(`${CLOUD}/api/query`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Convex ${KEY}` }, body: JSON.stringify({ path: fn, format: 'convex_encoded_json', args: [args] }) }); const j = await r.json(); if (j.status !== 'success') throw new Error(`${fn}: ${JSON.stringify(j).slice(0, 200)}`); return j.value; };
@@ -41,12 +38,12 @@ const admin = async (fn, args) => { const r = await fetch(`${CLOUD}/api/query`, 
   kids.push(cp.spawn('bun', ['run', 'test/standin.ts', String(CPORT)], { cwd: path.join(ROOT, 'cloud'), env: { ...process.env, STANDIN_KEY: KEY, MP_IDLE_S: '900', MP_START_S: '300', MP_SILENT_S: '300' }, stdio: 'ignore' }));
   { const env = { ...process.env, PORT: String(PORT), TPS_DEV_CLOUD: CLOUD, MP_CLOUD_KEY: KEY }; delete env.TPS_LOCAL_CLOUD; delete env.MP_SERVER;
     kids.push(cp.spawn('bun', ['run', 'tools/serve.ts'], { cwd: ROOT, env, stdio: 'ignore' })); }
-  const done = async (code, browser) => { try { await browser?.close(); } catch { /* gone */ } stopKids(); await sleep(500); process.exit(code); };
+  const done = async code => { await PAGE.close(); stopKids(); await sleep(500); process.exit(code); };
   await until(async () => (await fetch(`${CLOUD}/__stats`)).ok); const build = await until(async () => { const r = await fetch(`${BASE}qa/commit`); return r.ok ? (await r.text()).trim() : ''; }, 60000);
   if (!build || !(await until(async () => (await admin('runners:list', {})).some(r => r.builds.includes(build)), 30000))) { console.log('lobby-page: the dev server did not come up as its backend\'s runner'); return done(2); }
-  const browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}), args: FLAGS }).catch(() => null); if (!browser) { console.log('lobby-page: the browser did not start'); return done(2); }
-  const ctx = await browser.newContext({ viewport: { width: 640, height: 360 } }), errs = [];   // (ONE browser, two of its windows: they share what a browser keeps, and each is its own tab)
-  const open = async name => { const p = await ctx.newPage(); p.setDefaultTimeout(300000); p.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text())) errs.push(`${name}: ${m.text().slice(0, 200)}`); }); p.on('pageerror', e => errs.push(`${name}: PAGEERROR ${String(e).slice(0, 300)}`)); return p; };
+  const ctx = await PAGE.context({ size: [640, 360] }).catch(() => null); if (!ctx) { console.log('lobby-page: the browser did not start'); return done(2); }
+  const errs = [];   // (ONE browser, two of its windows: they share what a browser keeps, and each is its own tab)
+  const open = async name => (await PAGE.open({ context: ctx, timeout: 300000, errors: { into: errs, as: `${name}: `, skip: [NOISE, /Failed to load resource/] } })).page;
   const inGame = (p, ms) => p.waitForFunction(() => { const q = new URLSearchParams(location.search); return q.has('seed') && q.has('net'); }, null, { timeout: ms }).then(() => true, () => false);
   // (the address is the game's before the game's page is: wait for the page itself, then for its boot, then for its client)
   const stood = async p => { await p.waitForFunction(() => !!window.__ready, null, { timeout: NAV }); await p.evaluate(() => window.__ready); await p.waitForFunction(() => !!window.__net && !!window.__draw, null, { timeout: 60000 }); };
@@ -143,6 +140,6 @@ const admin = async (fn, args) => { const r = await fetch(`${CLOUD}/api/query`, 
       line(/already has two players/.test(full) && !left, `full: a third window that opened the link was told "${full}", and the code is off its address`); }
     line(errs.length === 0, `no page error${errs.length ? `: ${errs.slice(0, 3).join(' | ')}` : ''}`);
   } catch (e) { line(false, `the windows could not be driven: ${String(e && e.stack || e).slice(0, 400)}${errs.length ? ` · page errors: ${errs.slice(0, 3).join(' | ')}` : ''}`); }
-  console.log(fails ? `lobby-page: ${fails} line${fails === 1 ? '' : 's'} FAILED${BREAK ? ' (LOBBY_BREAK=1: the join line and the same-fight line must)' : ''}` : 'lobby-page: every line passed');
-  return done(fails ? 1 : 0, browser);
+  console.log(PAGE.fails ? `lobby-page: ${PAGE.fails} line${PAGE.fails === 1 ? '' : 's'} FAILED${BREAK ? ' (LOBBY_BREAK=1: the join line and the same-fight line must)' : ''}` : 'lobby-page: every line passed');
+  return done(PAGE.fails ? 1 : 0);
 })().catch(e => { console.log(`lobby-page: ${String(e && e.stack || e).slice(0, 400)}`); process.exit(2); });

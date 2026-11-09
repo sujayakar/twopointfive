@@ -15,12 +15,10 @@
 // leaves the renderer alone: the same verdicts over drawn frames, for one job at a time and a long wait.
 // Game logic and DOM only: nothing here judges a picture of the level. With an outDir it keeps a still of each brief as Chromium lays it out (the brief is
 // plain DOM, so that still is the brief; the level behind it has never been seen on a GPU by this tool).
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const PAGE = require('./page.cjs').page({ name: 'loadbrief-page' }), { check, note: log } = PAGE;
 const fs = require('fs'), path = require('path');
-const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', outDir = process.argv[2] || '', BREAK = process.env.LOADBRIEF_BREAK === '1', REAL = process.env.REAL === '1';
+const QUALITY = process.env.QUALITY || 'verylow', outDir = process.argv[2] || '', BREAK = process.env.LOADBRIEF_BREAK === '1', REAL = process.env.REAL === '1';
 const ONLY = (process.env.JOBS === 'all' ? '' : process.env.JOBS || 'night breach,tutorial').split(',').map(s => s.trim()).filter(Boolean);
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 if (outDir) fs.mkdirSync(outDir, { recursive: true });
 
 const JOBS = [
@@ -50,12 +48,10 @@ const centre = (page, sel) => page.evaluate(s => { const r = document.querySelec
 const runs = async (page, from, secs = 300) => { for (const end = Date.now() + secs * 1000; Date.now() < end;) { const c = await page.evaluate(CLOCK); if (c.t > from + 1e-6) return c; await page.waitForTimeout(500); } return null; };
 
 (async () => {
-  let red = 0; const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   for (const job of JOBS) {
-    const page = await (await browser.newContext({ viewport: { width: 1024, height: 576 }, deviceScaleFactor: 1 })).newPage();
-    const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300))); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 300)); });
+    const { page, errors: errs } = await PAGE.open({ size: [1024, 576], errors: { skip: /Failed to load resource/ } });
     const brief = !job.off && !job.paused, query = (BREAK && brief ? 'loadbrief=0&' : '') + job.query;
-    const url = `http://localhost:${PORT}/?${query}&quality=${QUALITY}`; log(`${job.name}: ${url}`);
+    const url = PAGE.url(`${query}&quality=${QUALITY}`); log(`${job.name}: ${url}`);
     const r = {}; let ok = false, why = '';
     try {
       await page.goto(url, { waitUntil: 'commit' });
@@ -101,13 +97,10 @@ const runs = async (page, from, secs = 300) => { for (const end = Date.now() + s
       ok = words && mid && gone;
       why = JSON.stringify({ words, id: r.boot.id, title: r.boot.title, map: r.still ? (r.still.picture ? r.still.level : 'NONE') : undefined, live: r.ready.cls, held: r.heldFor, mid, gone, after: { brief: r.after.brief, menu: r.after.menu }, clock: r.clock && +r.clock.t.toFixed(3), keys: r.clock && r.clock.held });
     }
-    if (!ok) red++;
     const says = job.off ? 'under ?loadbrief=0: no brief, the title\'s head and the status line with no buttons while it boots, the run under way with nothing pressed'
       : job.paused ? 'the automation boot: no brief at any point, a script\'s frames run'
       : `${job.name}: its own brief from the first tick, held until started (${job.how}), then the run`;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${says} — ${why}`);
+    check(ok, `${says} — ${why}`);
   }
-  await browser.close();
-  console.log(`=== loadbrief-page: ${red ? 'FAILURES above' : 'ALL PASS'} ===`);
-  process.exit(red ? 1 : 0);
+  await PAGE.end(`=== loadbrief-page: ${PAGE.fails ? 'FAILURES above' : 'ALL PASS'} ===`);
 })();

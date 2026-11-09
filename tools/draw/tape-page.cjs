@@ -1,21 +1,16 @@
 // A RUN ON THE PAGE THAT DRAWS IS KEPT AND PLAYED AGAIN: the page on the software adapter, stepped by hand. A run with a save, a load and a restart is played, F7 keeps it, the page of it walks it to the same state,
 // is sought both ways, its camera taken off and given back, its pace turned, a note kept on it. Never a GPU's judgement.
 //   PORT=<a dev server> node tools/draw/tape-page.cjs [--out dir]      exit 0 = every check passed, 1 = a FAIL, 2 = the script died
-const { chromium } = (() => { try { return require('playwright'); } catch { return require('/opt/node-tools/node_modules/playwright'); } })();
+const PAGE = require('../qa/page.cjs').page({ name: 'tape-page', detail: 'json' }), { check } = PAGE;
 const { mkdirSync } = require('node:fs');
-const PORT = process.env.PORT || 5199, at = process.argv.indexOf('--out'), OUT = at > 0 ? process.argv[at + 1] : null;
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog', '--no-sandbox'];
-let fails = 0;
-const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${got === undefined ? '' : `   (${JSON.stringify(got)})`}`); if (!ok) fails++; };
+const at = process.argv.indexOf('--out'), OUT = at > 0 ? process.argv[at + 1] : null;
 // (a page that plays a run has the game keep what a viewer's own picture is made from: its whole state is every such walk's, the run's own in its die and its parts)
 const same = (a, b) => a.die === b.die && a.parts === b.parts, whole = (a, b) => same(a, b) && a.state === b.state;
 (async () => {
-  const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM || '/usr/bin/chromium', args: FLAGS }), ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  const ctx = await PAGE.context();
   const open = async (words, ready = true) => {
-    const page = await ctx.newPage(), errors = []; page.setDefaultTimeout(600000);
-    page.on('pageerror', x => errors.push(String(x && x.stack || x).slice(0, 500)));
-    page.on('console', m => { const t = m.text(); if (m.type() === 'error' || /Invalid|error:/.test(t)) errors.push(t.slice(0, 300)); });
-    await page.goto(`http://localhost:${PORT}/?${words}`, { timeout: 300000 });
+    const { page, errors, go } = await PAGE.open({ context: ctx, timeout: 600000, errors: { also: /Invalid|error:/ } });
+    await go(words, { timeout: 300000 });
     if (ready) { await page.waitForFunction(() => !!window.__ready && !!window.__draw, null, { timeout: 600000 }); await page.evaluate(() => window.__ready); }
     return { page, errors };
   };
@@ -93,8 +88,8 @@ const same = (a, b) => a.die === b.die && a.parts === b.parts, whole = (a, b) =>
       P.seek(200); for (let i = 0; i < 600 && P.seeking; i++) d.run(1, [], 'none'); const back = P.at, up = !G.lost; d.run(P.total, [], 'none'); return { lost, stood, back, up, card: !!document.querySelector('#fatal[style*="flex"]'), m: G.mark(true) }; });
     check(s.lost && s.stood === 400 && Math.abs(s.back - 200) < 3 && s.up && !s.card && whole(s.m, s1.m), 'lost to a panic, it stands, is sought back and ends the same', s); await L.page.close(); }
   // ---- live: a person's page, its own frames
-  { const small = await browser.newContext({ viewport: { width: 320, height: 180 }, deviceScaleFactor: 1, storageState: await ctx.storageState({ indexedDB: true }) }), page = await small.newPage(), errors = []; page.setDefaultTimeout(600000); page.on('pageerror', x => errors.push(String(x).slice(0, 300)));
-    await page.goto(`http://localhost:${PORT}/?quality=verylow&mute&playtape=${sid}`, { timeout: 300000 }); await page.waitForFunction(() => !!window.__ready && !!window.__draw && !!document.getElementById('tapebig'), null, { timeout: 600000 }); await page.evaluate(() => window.__ready);
+  { const { context: small, page, errors, go } = await PAGE.open({ size: [320, 180], options: { storageState: await ctx.storageState({ indexedDB: true }) }, timeout: 600000, errors: { console: false } });
+    await go(`quality=verylow&mute&playtape=${sid}`, { timeout: 300000 }); await page.waitForFunction(() => !!window.__ready && !!window.__draw && !!document.getElementById('tapebig'), null, { timeout: 600000 }); await page.evaluate(() => window.__ready);
     const still0 = await page.evaluate(() => window.__draw.played.at); await page.evaluate(() => document.getElementById('tapebig').click());
     const went = await page.waitForFunction(() => window.__draw.played.at >= 12, null, { timeout: 400000 }).then(() => true).catch(() => false), s = await page.evaluate(() => { const P = window.__draw.played; return { at: P.at, paused: P.paused, parted: P.parted, big: !!document.getElementById('tapebig'), frames: window.__draw.told.frames }; });
     check(still0 === 0 && went && !s.paused && s.parted === null && !s.big && errors.length === 0, 'on a person\'s page it waits under the play button, and plays by the page\'s own frames', { still0, ...s, errors: errors.slice(0, 3) }); await small.close(); }
@@ -113,7 +108,5 @@ const same = (a, b) => a.die === b.die && a.parts === b.parts, whole = (a, b) =>
     check(!!was && s.old && /older version/.test(s.line) && /older version of the game/.test(b) && !/older/.test(s0.said) && parted === null, 'a run of an older version of the game is said to be one, on the list and on the bar, and plays as it was', { was, ...s, bar: b, parted, own: s0.said }); }
   // ---- refused in words
   const N = await open('paused&quality=verylow&mute&playtape=20200101T000000-none', false); await N.page.waitForFunction(() => /saved in this browser/.test(document.body.textContent), null, { timeout: 300000 }).then(async () => check(await N.page.evaluate(() => { const c = document.getElementById('taperefuse'); return !!c && document.getElementById('fatal').style.display !== 'flex' && !/\n\s+at |\.ts:/.test(c.textContent) && c.querySelector('a').textContent === '\u2039 Main menu'; }), 'a replay that is gone is refused in words, with a way back')).catch(() => check(false, 'a replay that is gone is refused in words'));
-  await browser.close();
-  console.log(fails ? `=== tape page: ${fails} FAILED ===` : '=== tape page: ALL PASS ===');
-  process.exit(fails ? 1 : 0);
+  await PAGE.end(PAGE.fails ? `=== tape page: ${PAGE.fails} FAILED ===` : '=== tape page: ALL PASS ===');
 })().catch(e => { console.error(e); process.exit(2); });

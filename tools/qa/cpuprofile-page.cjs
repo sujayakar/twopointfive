@@ -8,12 +8,11 @@
 //   PORT=<a dev server's port> node tools/qa/cpuprofile-page.cjs --query '<the address's words>' [--do '<js>' | env PAGE_DO='<js>'] [--out <file.json>] [--raw <dir>] [--depth 14] [--least 2] [--tasks 3]
 // The picture is real only on a machine with an adapter, but the CPU's side of a frame is what is asked here. Milliseconds are the machine's own: what
 // compares is one branch against another, and one address against another on the same machine.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
 const argv = process.argv.slice(2), flag = (n, d) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; };
 const PORT = process.env.PORT; if (!PORT) { console.error('PORT=<the dev server\'s port> is needed'); process.exit(2); }
+const PAGE = require('./page.cjs').page({ name: 'cpuprofile-page', port: PORT, flags: ['--enable-unsafe-webgpu'] }), { note: log } = PAGE;   // (the machine's own adapter, not the software one: what is measured is a real frame)
 const QUERY = flag('--query', '').replace(/^\?/, ''), DO = flag('--do', process.env.PAGE_DO || ''), OUT = flag('--out', ''), RAW = flag('--raw', ''), DEPTH = +flag('--depth', 14), LEAST = +flag('--least', 2) / 100, LIMIT = +flag('--limit', 300) * 1000, TASKS = +flag('--tasks', 3);
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 if (!DO) { console.error('nothing to run: --do \'<js>\' or PAGE_DO'); process.exit(2); }
 
 /** a profile as a tree by function: ms of its own and with what it called; and the same for each of its dearest tasks */
@@ -45,11 +44,8 @@ function read(profile) {
 }
 
 (async () => {
-  const browser = await chromium.launch({ args: ['--enable-unsafe-webgpu'] }), ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
-  await ctx.addInitScript(() => { });
-  const page = await ctx.newPage(), cdp = await ctx.newCDPSession(page), errors = [], said = [], takes = [];
-  page.on('pageerror', e => { errors.push(String(e).slice(0, 300)); log('PAGEERROR', String(e).slice(0, 200)); });
-  page.on('console', m => { const x = m.text(); if (/^[A-Z]{4,} \{/.test(x)) said.push(x); if (m.type() === 'error') errors.push(x.slice(0, 300)); });
+  const { browser, context: ctx, page, errors, go } = await PAGE.open({ size: [1920, 1080] }), cdp = await ctx.newCDPSession(page), said = [], takes = [];
+  page.on('console', m => { const x = m.text(); if (/^[A-Z]{4,} \{/.test(x)) said.push(x); });
   await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: 100 });
   await page.exposeFunction('__profStart', async () => { await cdp.send('Profiler.start'); });
   await page.exposeFunction('__profStop', async tag => { const { profile } = await cdp.send('Profiler.stop'); const r = read(profile); takes.push({ tag: String(tag), ...r });
@@ -57,7 +53,7 @@ function read(profile) {
     log(`== ${tag}: ${r.ms} ms profiled, ${r.busy} ms of them at work (${r.gc} ms collecting garbage)`); for (const l of r.tree) console.log('   ' + l); console.log('   — costing most themselves: ' + r.own.slice(0, 14).map(o => `${o[0]} ${o[1]}`).join(' · '));
     for (const k of r.tasks) { console.log(`   -- a task ${k.at} ms into the stretch: ${k.busy} ms at work (${k.gc} ms collecting garbage)`); for (const l of k.tree) console.log('      ' + l); console.log('      — costing most themselves: ' + k.own.slice(0, 8).map(o => `${o[0]} ${o[1]}`).join(' · ')); } });
   await page.addInitScript(() => { window.__prof = { start: () => window.__profStart(), stop: tag => window.__profStop(tag) }; });
-  log('goto', QUERY); await page.goto(`http://localhost:${PORT}/?${QUERY}`, { waitUntil: 'commit' });
+  log('goto', QUERY); await go(QUERY, { waitUntil: 'commit' });
   await page.waitForFunction(() => !!window.__ready, null, { timeout: LIMIT }); await Promise.race([page.evaluate(() => window.__ready.then(() => true)), new Promise((_, rej) => setTimeout(() => rej(new Error('the page was not ready in time')), LIMIT))]);
   await page.evaluate(() => { try { window.__draw.run(0); } catch { } });
   const adapter = await page.evaluate(async () => { const a = navigator.gpu && await navigator.gpu.requestAdapter(); return a ? `${a.info.vendor} ${a.info.architecture}` : 'no adapter'; });
@@ -65,5 +61,5 @@ function read(profile) {
   await Promise.race([page.evaluate(`(async () => { ${DO} })()`), new Promise((_, rej) => setTimeout(() => rej(new Error('the script did not end in time')), LIMIT))]);
   for (const s of said) console.log(s.slice(0, 4000));
   if (OUT) fs.writeFileSync(OUT, JSON.stringify({ query: QUERY, adapter, browser: browser.version(), errors, said, takes }, null, 1));
-  await browser.close(); process.exit(errors.length ? 1 : 0);
+  await PAGE.end('', errors.length ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

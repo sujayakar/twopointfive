@@ -9,11 +9,10 @@
 // Then the Cmd key of a Mac (no keyup for the letter) and a Dvorak board, by key events built by hand.
 // PASS / FAIL lines, exit 1 on a FAIL or a page error. Nothing here needs a GPU, and nothing here has been seen on one: the door picture behind the tiles
 // (ui/kitView.ts) is not up on this adapter.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs');
 const path = require('path');
 const outDir = process.argv[2] || '';
-const PORT = process.env.PORT || 5199;
+const PAGE = require('./page.cjs').page({ name: 'kitpaste-page', gpu: false }), { check } = PAGE;
 const KEY = 'twopointsix.kit';
 const CARDS = { v: 2, members: [
   { smoke: 1, bangs: 1, frags: 1, shells: 1 },
@@ -22,19 +21,14 @@ const CARDS = { v: 2, members: [
   { charges: 2 },
   {},
 ] };
-let fails = 0; const errors = [];
-const check = (ok, label, detail) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
+const errors = [];
 if (outDir) fs.mkdirSync(outDir, { recursive: true });
 const J = JSON.stringify;
 
 async function open(browser, extra, mission = 'depot-four') {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  await ctx.addInitScript(([k, v]) => { try { localStorage.setItem(k, v); } catch { /* no store */ }
-    window.__kitWrites = 0; const set = Storage.prototype.setItem; Storage.prototype.setItem = function (key, val) { if (key === k) window.__kitWrites++; return set.call(this, key, val); };
-    addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '#fatal { display: none !important; }'; document.head.appendChild(s); }); }, [KEY, J(CARDS)]);
-  const page = await ctx.newPage();
-  page.on('pageerror', e => { if (/WebGPU|adapter/i.test(String(e))) return; errors.push(String(e).slice(0, 200)); });
-  await page.goto(`http://localhost:${PORT}/?loadout=${mission}&paused&mute${extra}`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+  const { context: ctx, page, go } = await PAGE.open({ browser, size: [1440, 900], fatalOff: true, errors: { into: errors, console: false, thrown: /WebGPU|adapter/i }, init: [[([k, v]) => { try { localStorage.setItem(k, v); } catch { /* no store */ }
+    window.__kitWrites = 0; const set = Storage.prototype.setItem; Storage.prototype.setItem = function (key, val) { if (key === k) window.__kitWrites++; return set.call(this, key, val); }; }, [KEY, J(CARDS)]]] });
+  await go(`loadout=${mission}&paused&mute${extra}`, { waitUntil: 'domcontentloaded', timeout: 180000 });
   await page.waitForSelector('#missions.one.on #loadout .lo-slot.in', { timeout: 60000 }); await page.waitForTimeout(600);
   const read = () => page.evaluate(k => { const q = (s, r = document) => [...r.querySelectorAll(s)], lo = '#missions.one #loadout';
     const btn = id => document.querySelector(`${lo} .kc-clip[data-clip="${id}"]`), box = e => { const r = e?.getBoundingClientRect(); return r ? { top: Math.round(r.top), left: Math.round(r.left), right: Math.round(r.right), w: Math.round(r.width) } : null; };
@@ -53,7 +47,7 @@ const kitOf = m => ({ bangs: m?.bangs, charges: m?.charges, frags: m?.frags, smo
 const counted = m => J({ ...kitOf(m), big: '' });
 
 (async () => {
-  const browser = await chromium.launch({ headless: true, args: ['--disable-gpu'] });
+  const browser = await PAGE.launch();
   { const P = await open(browser, ''), chk = check;
     const a = await P.read(); await P.shot('paste-0-open');
     const N = a.tree ? 1 : 3;   // (the card laid out as a tree has the one reset where the three sets stood: the named kits are the screen's row)
@@ -105,8 +99,6 @@ const counted = m => J({ ...kitOf(m), big: '' });
     const a = await P.read(), cards = await P.page.evaluate(() => document.querySelectorAll('#missions.one #loadout .kc').length);
     check(cards === 0 && !a.copy && !/copy/.test(a.legend) && a.legend.length > 0, 'a mission that issues its own kit (the long hall): no cards, so no Copy or Paste, and the key line does not name them', `cards ${cards} · ${a.legend}`);
     await P.ctx.close(); }
-  await browser.close();
   check(errors.length === 0, 'no page error', errors.join(' | ') || 'none');
-  console.log(fails ? `\n=== kitpaste-page: ${fails} FAILED ===` : '\n=== kitpaste-page: ALL PASS ===');
-  process.exit(fails ? 1 : 0);
+  await PAGE.end();
 })().catch(e => { console.error(e); process.exit(2); });

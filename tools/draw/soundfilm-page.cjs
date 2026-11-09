@@ -5,16 +5,12 @@
 // THE CAPTURE RULE this holds: capture() in the same task as the render reads the frame; the same call from a LATER task (a timer, another frame's
 // callback that runs before that frame's render) reads a canvas whose picture has been handed on — the 'late capture' line prints what it got.
 // Exit 0 = every line passed, 1 = a line failed, 2 = the script died.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const { page: pageRun, SOFTWARE } = require('../qa/page.cjs'), PAGE = pageRun({ name: 'soundfilm-page', detail: 'words', port: process.env.PORT || 5264, flags: [...SOFTWARE, '--mute-audio', '--autoplay-policy=no-user-gesture-required'] }), line = PAGE.check;
 const fs = require('fs'), os = require('os'), path = require('path'), cp = require('child_process');
-const PORT = process.env.PORT || 5264, QUALITY = process.env.QUALITY || 'verylow', OUT = process.argv[2] || '';
+const QUALITY = process.env.QUALITY || 'verylow', OUT = process.argv[2] || '';
 const [VW, VH] = (process.env.SIZE || '480x270').split('x').map(Number), VERBOSE = !!process.env.VERBOSE, RULE_ONLY = !!process.env.RULE_ONLY;   // (a small view: on a shared machine a software frame can take most of a minute)
 const ROOT = path.join(__dirname, '../..');
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist',
-  '--disable-gpu-watchdog', '--mute-audio', '--autoplay-policy=no-user-gesture-required'];
 
-let failed = 0;
-const line = (ok, label, detail = '') => { if (!ok) failed++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? ` (${detail})` : ''}`); };
 const near = (a, b, e = 0.011) => Math.abs(a - b) <= e;
 
 (async () => {
@@ -24,18 +20,9 @@ const near = (a, b, e = 0.011) => Math.abs(a - b) <= e;
   cp.execFileSync('bun', ['build', entry, '--target', 'browser', '--format', 'iife', '--outfile', bundle], { cwd: ROOT, stdio: ['ignore', 'ignore', 'inherit'] });
   const code = fs.readFileSync(bundle, 'utf8');
 
-  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
-  const ctx = await browser.newContext({ viewport: { width: VW, height: VH } });
-  const page = await ctx.newPage();
-  const errors = [];
-  page.on('pageerror', e => errors.push(String(e)));
-  page.on('console', m => {
-    if (VERBOSE && m.text().startsWith('film: ')) console.error(`  ${m.text()}`);
-    if (m.type() !== 'error') return; const at = (m.location() || {}).url || '';
-    if (/\/favicon\.ico$/.test(at)) return;
-    errors.push(/Failed to load resource/.test(m.text()) ? `${m.text()} ${at}` : m.text());
-  });
-  await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute`, { timeout: 240000 });
+  const { context: ctx, page, errors, go } = await PAGE.open({ size: [VW, VH], errors: { skipAt: /\/favicon\.ico$/ } });
+  if (VERBOSE) page.on('console', m => { if (m.text().startsWith('film: ')) console.error(`  ${m.text()}`); });
+  await go(`paused&quality=${QUALITY}&mute`, { timeout: 240000 });
   await page.waitForFunction(() => !!window.__ready && !!window.__draw && !!window.__engine && !!window.__runFrames, null, { timeout: 900000 });
   await page.evaluate(async () => { await window.__ready; window.__testVisible = true; window.__draw.smoke.params.enabled = false; });   // (no smoke solver: its step is the dear part of a software frame)
   await page.waitForFunction(() => { const v = document.getElementById('view'); return !!v && v.clientWidth > 0 && v.width > 0; }, null, { timeout: 120000 });
@@ -185,8 +172,7 @@ const near = (a, b, e = 0.011) => Math.abs(a - b) <= e;
   await page.evaluate(() => window.__film && window.__film.dispose());
   line(await page.locator('#sndfilm').count() === 0, 'nothing of it is left in the page');
   line(errors.length === 0, 'no page errors', errors.slice(0, 3).join(' | '));
-  await browser.close();
+  await PAGE.close();
   try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* a temp dir */ }
-  console.log(failed ? `=== soundfilm-page: ${failed} FAILED ===` : '=== soundfilm-page: ALL PASS ===');
-  process.exit(failed ? 1 : 0);
+  await PAGE.end();
 })().catch(e => { console.error(e); process.exit(2); });
