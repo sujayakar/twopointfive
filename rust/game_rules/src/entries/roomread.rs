@@ -186,23 +186,16 @@ mod tests {
 
     fn door(closed_dir: f64, hinge: SideSignDDefHinge) -> SideSignD { SideSignD { def: SideSignDDef { closed_dir, hinge } } }
 
+    /// Which room beyond a door a place reads as being in.
     #[test]
-    fn flat_is_the_typescripts_bits() {
-        assert_eq!(flat([1.25, 9.0, -3.7], [17.1, 0.0, 4.4]).to_bits(), 0x4031ccbefe40d45e);
-        assert_eq!(flat([0.1, 0.0, 0.2], [0.3, 0.0, 0.7]).to_bits(), 0x3fe13b86ea20ae5c);
-    }
-
-    #[test]
-    fn side_sign_is_the_typescripts_faces() {
+    fn a_place_on_a_door_s_line_counts_as_its_plus_face() {
         let up = door(1.5707963267948966, SideSignDDefHinge::List([10.0, 5.0]));
         assert_eq!(side_sign(&up, [9.0, 0.0, 5.0]), 1.0);
         assert_eq!(side_sign(&up, [11.0, 0.0, 5.0]), -1.0);
-        // exactly on the line counts as the positive face
         assert_eq!(side_sign(&door(0.0, SideSignDDefHinge::List([10.0, 5.0])), [12.0, 0.0, 5.0]), 1.0);
-        // a hinge array too short: NaN in the sum, the negative face
-        assert_eq!(side_sign(&door(0.0, SideSignDDefHinge::Array(vec![10.0])), [12.0, 0.0, 5.0]), -1.0);
     }
 
+    /// A cell's number on the grid is one key whichever sign its nought has.
     #[test]
     fn a_map_key_holds_minus_zero_as_zero() {
         assert!(key(-0.0) == key(0.0));

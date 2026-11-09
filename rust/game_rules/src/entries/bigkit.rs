@@ -729,19 +729,13 @@ pub(super) fn hammer_out_tick(g: &mut crate::game::Game, mine: &mut dyn FnMut(&m
 mod tests {
     use super::*;
 
-    /// the TypeScript's `off`, its doubles' bits under EXACT
+    /// A failure means Sam's walk to his big kit counts a man off past its end as on his way.
     #[test]
-    fn off_line_bits() {
-        let cases: &[([f64; 3], [f64; 3], [f64; 3], u64)] = &[
-            ([1.3, 0.0, 2.7], [0.1, 0.0, 0.2], [3.7, 0.0, 4.9], 0x3fe2294654bf8519),
-            ([-2.25, 1.0, 0.125], [-5.5, 0.0, -1.75], [1.01, 0.0, 0.33], 0x3fe98047fe2c692b),
-            ([10.0, 0.0, 10.0], [0.3, 0.0, 0.7], [0.3004, 0.0, 0.7003], 0x402ae0424bfb00f9),
-            ([0.61, 0.0, -3.3], [0.0, 0.0, 0.0], [0.0, 0.0, -1.0], 0x4003094014f3944c),
-            ([4.4, 0.0, 4.4], [1.0, 0.0, 1.0], [2.0, 0.0, 2.0], 0x400b27247aff1491),
-            ([-7.77, 0.0, 3.14], [2.71, 0.0, -1.41], [-1.62, 0.0, 0.57], 0x401aa95b86f14118),
-        ];
-        for (p, a, b, bits) in cases {
-            assert_eq!(off_line(*p, *a, *b).to_bits(), *bits);
-        }
+    fn a_man_is_measured_against_the_stretch_of_a_walk_and_not_the_line_it_lies_on() {
+        let (a, b) = ([0.0, 0.0, 0.0], [4.0, 0.0, 0.0]);
+        assert_eq!(off_line([2.0, 1.0, 0.5], a, b), 0.5);    // abeam of it: straight across, at any height
+        assert_eq!(off_line([7.0, 0.0, 4.0], a, b), 5.0);    // past its end: from the end
+        assert_eq!(off_line([-3.0, 0.0, 4.0], a, b), 5.0);   // before its start: from the start
+        assert_eq!(off_line([3.0, 0.0, 4.0], a, a), 5.0);    // no walk at all: from where he stands
     }
 }

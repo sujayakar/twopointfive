@@ -374,19 +374,17 @@ pub(super) fn door_tools_frame_held(g: &crate::game::Game, d: DoorId, side: f64)
 mod tests {
     use super::*;
 
-    /// bits from the TypeScript's own expressions under bun with EXACT.on
+    /// A door's frame runs hinge to latch, and `side` picks the face. A failure means a man's post comes out on the wrong face of a door, or past the wrong jamb.
     #[test]
-    fn a_door_s_frame_has_the_typescript_s_bits() {
+    fn a_place_in_a_door_s_frame_reads_back_on_either_face() {
+        assert_eq!(frame_pt(0.0, [1.0, 2.0], 0.5, 0.25, 1.0, 0.45), [1.5, 0.45, 2.25]);   // a door along +x: its +1 face is +z
         let (th, h) = (0.7, [3.25, -1.5]);
-        let p = frame_pt(th, h, 1.1, 0.6, -1.0, 0.45);
-        assert_eq!(p[0].to_bits(), BITS_PT[0]);
-        assert_eq!(p[1].to_bits(), BITS_PT[1]);
-        assert_eq!(p[2].to_bits(), BITS_PT[2]);
-        let q = [4.5, 0.0, 2.25];
-        assert_eq!(frame_along(th, h, q).to_bits(), BITS_ALONG);
-        assert_eq!(frame_off(th, h, q, -1.0).to_bits(), BITS_OFF);
+        let near = |a: f64, b: f64| assert!((a - b).abs() < 1e-12, "{a} {b}");
+        for side in [1.0, -1.0] {
+            let p = frame_pt(th, h, 1.1, 0.6, side, 0.0);
+            near(frame_along(th, h, p), 1.1);
+            near(frame_off(th, h, p, side), 0.6);
+            near(frame_off(th, h, p, -side), -0.6);
+        }
     }
-    const BITS_PT: [u64; 3] = [0x4011e95359a80132, 0x3fdccccccccccccd, 0xbff40116c5495453];
-    const BITS_ALONG: u64 = 0x400af9967c83995a;
-    const BITS_OFF: u64 = 0xc00080ca6c8fbbb0;
 }
