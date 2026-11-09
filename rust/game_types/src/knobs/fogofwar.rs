@@ -32,7 +32,7 @@ pub struct FogK {
     #[k(10.0)] pub call_secs: f64,
     #[k(3.0)] pub call_gap: f64,
     #[k(3.0)] pub call_known: f64,
-    /// smoke along the line: transmittance under this and the man is lost in the plume (the guards' own bar — guards.ts eyeContact; 0 = smoke hides nobody)
+    /// the air along the line (smoke, and a picked weather's fog and dust): transmittance under this and the man is lost in it (the guards' own bar — guards.ts eyeContact; 0 = the air hides nobody)
     #[k(0.3)] pub smoke: f64,
     /// seconds a man stays drawn after the last frame somebody saw him
     #[k(0.25)] pub linger: f64,
