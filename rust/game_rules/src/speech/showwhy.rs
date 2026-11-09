@@ -120,7 +120,7 @@ fn masked(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let r = &g.tab.roomfight_op[o];
     if crate::condition::down(g, g.gd[h].ch)
         || !(r.line_t > 0.0)
-        || !matches!(r.line_by, Some(crate::roomfight::OpLineBy::Player))
+        || !r.line_by.is_some_and(|f| crate::character::is_player(g, f))
         || g.time - r.line_at > 0.1
     {
         return false;

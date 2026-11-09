@@ -159,7 +159,7 @@ pub(super) fn eyes_for(g: &crate::game::Game, gd: GuardId) -> Vec<GuardId> {
         let h = g.guards[i];
         i += 1;
         if h == gd || crate::condition::down(g, g.gd[h].ch) { continue; }
-        if !crate::teams::hostile_to(g, h, crate::teams::HostileToO::Guard(gd)) { continue; }
+        if !crate::teams::hostile_to(g, h, g.gd[gd].team) { continue; }
         let hc = g.gd[h].ch;
         if flat(g.ch[hc].pos, p) < r && !crate::control::man::blind(g, h) && !crate::doze::doze_asleep(g, h) { out.push(h); }
     }
@@ -351,7 +351,7 @@ pub fn sneak_walk(g: &mut crate::game::Game, gd: GuardId, low: bool, habit: Opti
     while i < g.guards.len() {
         let h = g.guards[i];
         i += 1;
-        if h == gd || crate::condition::down(g, g.gd[h].ch) || !crate::teams::hostile_to(g, h, crate::teams::HostileToO::Guard(gd)) || crate::control::man::blind(g, h) || crate::doze::doze_asleep(g, h) { continue; }
+        if h == gd || crate::condition::down(g, g.gd[h].ch) || !crate::teams::hostile_to(g, h, g.gd[gd].team) || crate::control::man::blind(g, h) || crate::doze::doze_asleep(g, h) { continue; }
         let e = eye_for(g, h, wide);
         let hab = match habit.as_mut() { Some(f) => (*f)(g, h), None => None };
         let mut looks = vec![walk_look(e)];

@@ -8,12 +8,12 @@ use alloc::boxed::Box;
 
 /// The reticle passes this man over: he is not the player's enemy.   (friends.ts friendNoSnap)
 pub fn friend_no_snap(g: &crate::game::Game, gd: GuardId) -> bool {
-    !crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player)
+    !crate::teams::hostile_to(g, gd, crate::teams::Team::Player)
 }
 
 /// A man of his own side whose body the cursor's ray should know it landed on.   (friends.ts friendOnRay)
 pub fn friend_on_ray(g: &crate::game::Game, gd: GuardId) -> bool {
-    !crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player)
+    !crate::teams::hostile_to(g, gd, crate::teams::Team::Player)
 }
 
 /// Is anybody in a fight, as far as Sam's own gun is concerned.   (friends.ts friendsInFight)
@@ -25,7 +25,7 @@ fn friends_in_fight(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool
         let gd = g.guards[i];
         i += 1;
         if crate::condition::down(g, g.gd[gd].ch) || !g.ch[g.gd[gd].ch].alive { continue; }
-        if crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player) {
+        if crate::teams::hostile_to(g, gd, crate::teams::Team::Player) {
             let state = g.gd[gd].state;
             if state == crate::game::GuardState::Alert || state == crate::game::GuardState::Search { return true; }
         } else if g.gd[gd].unit.is_some() && g.time - crate::roomfight::room_fight_hot_of(g, gd) < quiet_s {
@@ -46,7 +46,7 @@ fn friend_in_sams_line(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if !crate::teams::hostile_to(g, o, crate::teams::HostileToO::Player) { ask(g, o, &mut line); }
+        if !crate::teams::hostile_to(g, o, crate::teams::Team::Player) { ask(g, o, &mut line); }
     }
     if g.rescue.active {
         let mut i = 0;

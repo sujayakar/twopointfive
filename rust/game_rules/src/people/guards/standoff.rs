@@ -168,7 +168,7 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
         _ => return false,
     };
     let held_team = g.gd[p.held].team;
-    if (held_team != g.gd[gd].team && held_team != crate::teams::Team::Civilian) || !crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player) {
+    if (held_team != g.gd[gd].team && held_team != crate::teams::Team::Civilian) || !crate::teams::hostile_to(g, gd, crate::teams::Team::Player) {
         return false;
     }
     if !pair_in_view(g, gd, &p) {

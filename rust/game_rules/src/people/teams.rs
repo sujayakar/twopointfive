@@ -50,15 +50,8 @@ pub fn team_of_id(g: &crate::game::Game, id_2: f64) -> crate::teams::Team {
     g.guards.iter().find(|&&x| g.ch[g.gd[x].ch].id == id_2).map_or(Team::Guard, |&x| g.gd[x].team)
 }
 
-/// Is `o` (an AI man, or the player) an enemy of this man's side.   (teams.ts hostileTo)
-pub fn hostile_to(g: &crate::game::Game, gd: GuardId, o: crate::teams::HostileToO) -> bool {
-    let a = g.gd[gd].team;
-    let b = match o {
-        HostileToO::Player => Team::Player,
-        HostileToO::Guard(o) => g.gd[o].team,
-    };
-    is_hostile(g, a, b)
-}
+/// Is a man of `side` an enemy of this man's side.
+pub fn hostile_to(g: &crate::game::Game, gd: GuardId, side: crate::teams::Team) -> bool { is_hostile(g, g.gd[gd].team, side) }
 
 /// The body his foe is: the player he has in mind, or the hostile AI man; none when he has nobody.   (teams.ts foeChar)
 pub fn foe_char(g: &crate::game::Game, gd: GuardId) -> Option<CharId> {

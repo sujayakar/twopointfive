@@ -213,7 +213,7 @@ pub struct Op {
     pub door_by: Option<crate::roomfight::OpDoorBy>,
     pub funnel_t: f64,
     pub line_t: f64,
-    pub line_by: Option<crate::roomfight::OpLineBy>,
+    pub line_by: Option<CharId>,
     pub line_at: f64,
     pub wall_t: f64,
     pub step_until: f64,
@@ -282,18 +282,6 @@ pub struct OpDoorBy {
     pub t: f64,
     pub at: V3,
     pub door: DoorId,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes)]
-pub enum OpLineBy {
-    Guard(GuardId),
-    Player,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum RoomFightFriendInLine {
-    Guard(GuardId),
-    Player,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

@@ -525,8 +525,8 @@ fn wall_react_reflood(g: &mut Game, opened: &[f64]) {
 // ================================================================ (b) noticing
 
 /// (wallreact.ts WallReact.head)
-fn wall_react_head(g: &Game, seat: &crate::seats::SeatRef, gd: WallReactHeadGd) -> V3 {
-    let p = match gd { WallReactHeadGd::Sam => player_pos(g, seat), WallReactHeadGd::Guard(gd) => pos_of(g, gd) };
+fn wall_react_head(g: &Game, gd: GuardId) -> V3 {
+    let p = pos_of(g, gd);
     [p[0], EYE, p[2]]
 }
 
@@ -633,7 +633,7 @@ fn wall_react_heard(g: &mut Game, b: WallreactBreachId, row: &crate::wallbreak::
         if crate::condition::down(g, g.gd[gd].ch) { continue; }
         let made = char_id(g, gd) == row.who;
         if !made {
-            let head = wall_react_head(g, &crate::seats::here(g), WallReactHeadGd::Guard(gd));
+            let head = wall_react_head(g, gd);
             if !hears(g, head, src, r) { continue; }
         }
         let team = g.gd[gd].team;
@@ -692,7 +692,7 @@ pub fn wall_react_notice(g: &mut Game) {
             for gd in g.guards.clone() {
                 if gd == t.by || crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].team != g.gd[t.by].team || g.tab.wallreact_breach[b].men.has(gd) { continue; }
                 if flat(pos_of(g, gd), pos_of(g, t.by)) >= tell_m { continue; }
-                let (from, to) = (wall_react_head(g, &crate::seats::here(g), WallReactHeadGd::Guard(t.by)), wall_react_head(g, &crate::seats::here(g), WallReactHeadGd::Guard(gd)));
+                let (from, to) = (wall_react_head(g, t.by), wall_react_head(g, gd));
                 if crate::scene_collision::sound_paths_propagate(g, from, to, None).path_len < tell_m { wall_react_man_knows(g, b, gd, WallReactManKnowsHow::Told); }
             }
         }

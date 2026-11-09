@@ -162,7 +162,7 @@ fn watch(g: &mut Game) {
     // the defenders: every man hostile to the player this run has met
     for i in 0..g.guards.len() {
         let h = g.guards[i];
-        if !g.verdict.foes.has(h) && g.gd[h].team != crate::teams::Team::Operative && crate::teams::hostile_to(g, h, crate::teams::HostileToO::Player) { g.verdict.foes.add(h); }
+        if !g.verdict.foes.has(h) && g.gd[h].team != crate::teams::Team::Operative && crate::teams::hostile_to(g, h, crate::teams::Team::Player) { g.verdict.foes.add(h); }
     }
     let mut hunting = false;
     for h in g.verdict.foes.keys() {
