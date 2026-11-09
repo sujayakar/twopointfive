@@ -228,7 +228,7 @@ fn character_pack_side_pass(g: &mut crate::game::Game, id: CharId) {
         if !(b.has(Bone::Hips) && b.has(Bone::Spine2) && b.has(Bone::ThighL) && b.has(Bone::ThighR) && b.has(Bone::UpperArmL) && b.has(Bone::UpperArmR)) { return; }
     }
     let qi = v3::quat::conj(v3::quat::yaw(g.ch[id].body_yaw));
-    let old = crate::rig_props::big_back_of(bone(g, id, Bone::Hips), bone(g, id, Bone::Spine2), bone(g, id, Bone::ThighL), bone(g, id, Bone::ThighR), bone(g, id, Bone::UpperArmL), bone(g, id, Bone::UpperArmR), crate::rig_props::bigrig().hammer.back, Some(big_clear));
+    let old = crate::rig_props::big_back_of(bone(g, id, Bone::Hips), bone(g, id, Bone::Spine2), bone(g, id, Bone::ThighL), bone(g, id, Bone::ThighR), bone(g, id, Bone::UpperArmL), bone(g, id, Bone::UpperArmR), crate::rig_props::BIGRIG.hammer.back, Some(big_clear));
     let g0 = v3::quat::rotate(qi, v3::sub(v3::mad(old.o, old.z, big_grab), g.ch[id].pos)); let d0 = v3::quat::rotate(qi, old.z);
     let r3 = g.ch[id].skel.global_rot[n.spine3]; let d1 = v3::quat::rotate(r3, sd.z);
     let s3 = node_pos(g, id, n.spine3);

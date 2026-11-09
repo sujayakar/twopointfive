@@ -76,7 +76,7 @@ pub(super) fn q_ang(a: &[f32], i: f64, s: f64, b: &[f32], k: f64) -> f64 {
 
 /// MOVES.entry's lane: something (dx, dz) from a man stands before his muzzle. (character.ts inDipLane)
 pub fn in_dip_lane(dx: f64, dz: f64, gun_yaw: f64) -> bool {
-    let l = mv2().dip.lane;
+    let l = MV2.dip.lane;
     let fx = m::sin(gun_yaw);
     let fz = m::cos(gun_yaw);
     let along = dx * fx + dz * fz;
