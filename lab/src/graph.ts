@@ -83,7 +83,7 @@ export class Graph {
   source(s: Stage): string {
     let k = 0; const out: string[] = [this.guard === 'off' ? this.prelude().replace('const GUARD = true;', 'const GUARD = false;') : this.prelude()];
     for (const [c, v] of Object.entries(s.consts ?? {})) out.push(`const ${c} = ${Number.isInteger(v) ? v : v.toFixed(8)};`);
-    for (const [ref, v] of Object.entries(s.reads ?? {})) { const f = this.signals.get(ref.split('@')[0]!)?.format; if (!f) throw new Error(`${s.name} reads ${ref}, which nothing declares`); out.push(`@group(1) @binding(${k++}) var ${v}: ${f.startsWith('depth') ? 'texture_depth_2d' : `texture_2d<${SCALAR[f] ?? 'f32'}>`};`); }
+    for (const [ref, v] of Object.entries(s.reads ?? {})) { const f = this.signals.get(ref.split('@')[0]!)?.format; if (!f) throw new Error(`${s.name} reads ${ref}, which nothing declares`); out.push(`@group(1) @binding(${k++}) var ${v}: ${f.startsWith('depth') ? 'texture_depth_2d' : `texture_${this.signals.get(ref.split('@')[0]!)!.solid ? 3 : 2}d<${SCALAR[f] ?? 'f32'}>`};`); }
     for (const [v, n] of Object.entries(s.writes ?? {})) { const f = this.signals.get(n)?.format; if (!f) throw new Error(`${s.name} writes ${n}, which nothing declares`); out.push(`@group(1) @binding(${k++}) var ${v}: texture_storage_${this.signals.get(n)!.solid ? 3 : 2}d<${f}, write>;`); }
     for (const [v, [, type, access]] of Object.entries(s.buffers ?? {})) out.push(`@group(1) @binding(${k++}) var<${access === 'uniform' ? 'uniform' : 'storage, ' + access}> ${v}: ${type};`);
     // WHAT IS READ BACK NEXT FRAME IS CHECKED, whether or not its author thought of it: a stage cannot reach a history but through this. One bad value there
@@ -103,7 +103,7 @@ export class Graph {
       if (this.built.has(s) || this.drawn.has(s)) return;
       if (s.make) { this.drawn.set(s, await s.make(this)); return; }
       const entries: GPUBindGroupLayoutEntry[] = [], names: [string, 'r' | 'w' | 'b'][] = []; let k = 0; const visibility = GPUShaderStage.COMPUTE;
-      for (const ref of Object.keys(s.reads ?? {})) { const f = this.signals.get(ref.split('@')[0]!)!.format; entries.push({ binding: k++, visibility, texture: { sampleType: f.startsWith('depth') ? 'depth' : SCALAR[f] ? 'uint' : UNFILTERABLE.has(f) ? 'unfilterable-float' : 'float' } }); names.push([ref, 'r']); }
+      for (const ref of Object.keys(s.reads ?? {})) { const f = this.signals.get(ref.split('@')[0]!)!.format; entries.push({ binding: k++, visibility, texture: { sampleType: f.startsWith('depth') ? 'depth' : SCALAR[f] ? 'uint' : UNFILTERABLE.has(f) ? 'unfilterable-float' : 'float', viewDimension: this.signals.get(ref.split('@')[0]!)!.solid ? '3d' : '2d' } }); names.push([ref, 'r']); }
       for (const n of Object.values(s.writes ?? {})) { entries.push({ binding: k++, visibility, storageTexture: { access: 'write-only', format: this.signals.get(n)!.format, viewDimension: this.signals.get(n)!.solid ? '3d' : '2d' } }); names.push([n, 'w']); }
       for (const [b, , access] of Object.values(s.buffers ?? {})) { entries.push({ binding: k++, visibility, buffer: { type: access === 'uniform' ? 'uniform' : access === 'read' ? 'read-only-storage' : 'storage' } }); names.push([b, 'b']); }
       const layout = d.createBindGroupLayout({ label: s.name, entries }), code = this.source(s);

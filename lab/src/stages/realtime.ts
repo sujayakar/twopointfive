@@ -13,6 +13,9 @@ import surf from './surf.wgsl' with { type: 'text' };
 import lamps from './lamps.wgsl' with { type: 'text' };
 import bounceLib from '../wgsl/bounce.wgsl' with { type: 'text' };
 import waterpx from './waterpx.wgsl' with { type: 'text' };
+import airlight from './airlight.wgsl' with { type: 'text' };
+import haze from './haze.wgsl' with { type: 'text' };
+import type { Place } from '../scene/place';
 import foliage from './foliage.wgsl' with { type: 'text' };
 import { SLOT_ROWS } from '../scene/foliage';
 import gather from './gather.wgsl' with { type: 'text' };
@@ -99,6 +102,13 @@ export const bilinear: UpscalePart = { name: 'bilinear', stages(g) { g.signal('p
 export const noDenoise: DenoisePart = { name: 'none', stages: ({ signal }) => ({ stages: [], result: signal }) };
 export const taauUp: UpscalePart = { name: 'taau', stages(g) { g.signal('picture', 'rgba16float', 'output', true); return { result: 'picture', stages: [{ name: 'upscale', over: 'output', reads: { color: 'color', 'picture@prev': 'hist', aux: 'auxT', airD: 'airD' }, writes: { outT: 'picture' }, buffers: { taauK: ['taauK', 'vec4f', 'uniform'] }, code: taau }] }; } };
 
+/** where light is kept in the air: over the rooms and six metres round them */
+const airGrid = (p: Place) => { const h = 0.3, lo = [0, 1, 2].map(k => Math.min(...p.rooms.map(r => r[k]!)) - (k === 1 ? 0.3 : 6)), hi = [0, 1, 2].map(k => Math.max(...p.rooms.map(r => r[k + 3]!)) + (k === 1 ? 1.5 : 6)); return { h, lo, n: lo.map((v, k) => Math.ceil((hi[k]! - v) / h)) }; };
+const airLightCode = (p: Place) => { const g = airGrid(p); return `const AL_LO = vec3f(${g.lo.map(v => v.toFixed(3)).join(', ')}); const AL_N = vec3u(${g.n.map(v => v + 'u').join(', ')}); const AL_H = ${g.h}; const AL_MANY = ${g.n[0]! * g.n[1]! * g.n[2]!}u;\n`; };
+function airLightStages(lab: Lab, bind: NonNullable<Stage['buffers']>, lib: string): Stage[] {
+  const p = lab.building.place, g = airGrid(p), many = g.n[0]! * g.n[1]! * g.n[2]!, groups = Math.ceil(many / 64); lab.buffer('airKept', many * 16); if (!lab.graph.signals.has('airLight')) lab.graph.bind('airLight', lab.gpu.device.createTexture({ label: 'air light', dimension: '3d', size: g.n as [number, number, number], format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC }));
+  return [{ name: 'air light', over: { groups: () => [Math.min(65535, groups), Math.ceil(groups / 65535), 1] }, code: signals + airLightCode(p) + lib + bounceLib + airlight, buffers: { ...bind, kept: ['airKept', 'array<vec4u>', 'read_write'] }, writes: { outLight: 'airLight' } }];
+}
 /** the light in the foliage: a look more a slot, then handed to where every ray reads it */
 function foliageStages(lab: Lab, bind: NonNullable<Stage['buffers']>, lib: string): Stage[] {
   const f = lab.scene.foliage, bytes = f.slots * SLOT_ROWS * 16; lab.buffer('foliage', bytes, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); lab.buffer('foliageAt', f.at.byteLength, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST); lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('foliageAt')!, 0, f.at);
@@ -112,7 +122,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
     name: o.name ?? 'realtime', result: 'picture', glow: 'rt',
     signals(g, lab) {
       g.signal('surf', 'rgba32uint', 'render', true).signal('aux', 'rgba16float', 'render').signal('emit', 'rgba16float', 'render').signal('front', 'rgba32uint', 'render');
-      g.signal('vis', 'rgba16float', 'render').signal('lampU', 'rgba16float', 'render').signal('bounce', 'rgba16float', 'half').signal('mirror', 'rgba16float', 'half').signal('shine', 'rgba16float', 'half').signal('lampT', 'rgba16float', 'render').signal('tone', 'rgba16float', 'half').signal('lampC', 'rgba16float', 'render').signal('air', 'rgba16float', 'half').signal('airA', 'rgba16float', 'half').signal('airB', 'rgba16float', 'half').signal('airD', 'rgba16float', 'half', true).signal('airH', 'rgba16float', 'half', true).signal('airM', 'rgba16float', 'half', true).signal('color', 'rgba16float', 'render');
+      g.signal('vis', 'rgba16float', 'render').signal('lampU', 'rgba16float', 'render').signal('bounce', 'rgba16float', 'half').signal('mirror', 'rgba16float', 'half').signal('shine', 'rgba16float', 'half').signal('lampT', 'rgba16float', 'render').signal('tone', 'rgba16float', 'half').signal('lampC', 'rgba16float', 'render').signal('air', 'rgba16float', 'half').signal('haze', 'rgba16float', 'half').signal('airA', 'rgba16float', 'half').signal('airB', 'rgba16float', 'half').signal('airD', 'rgba16float', 'half', true).signal('airH', 'rgba16float', 'half', true).signal('airM', 'rgba16float', 'half', true).signal('color', 'rgba16float', 'render');
       lab.buffer('past', Math.max(1, lab.building.world.moving.length) * 64); lab.buffer('pastLeaves', (Math.max(1, lab.building.world.instances.length) + LOOSE) * 48); lab.uniform('changes', new Float32Array(36)); lab.uniform('taauK', new Float32Array(4)); const pl = new Float32Array(72), ps = lab.building.world.plumes.slice(0, 8); ps.forEach((p, i) => { pl.set([...p.at, p.r], i * 4); pl.set([p.h, p.k, 0, 0], 36 + i * 4); }); pl[32] = ps.length; lab.uniform('plumes', pl);
     },
     stages(lab) {
@@ -131,9 +141,9 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
         S('mirror', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2, LAYER: 0 }),
         S('shine', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'shine' }, c, { DIV: 2, LAYER: 1 }),
         ...dVis.stages, ...dT.stages, ...dB.stages, ...dM.stages, ...dS.stages,
-        S('air', cache.lib + air, 'half', { surf: 'surf' }, { outA: 'air', outD: 'airD' }, { ...c, plumes: ['plumes', 'array<vec4f, 18>', 'uniform'] }),
+        ...airLightStages(lab, c, cache.lib), S('haze', airLightCode(lab.building.place) + haze, 'half', { surf: 'surf', airLight: 'light' }, { outA: 'haze' }), S('air', air, 'half', { surf: 'surf' }, { outA: 'air', outD: 'airD' }),
         S('air history', 'fn airAt2(p: vec2u) -> vec2f { return textureLoad(airD, p, 0).xy; }\nfn airWas(p: vec2u) -> vec2f { return textureLoad(airP, p, 0).xy; }\n' + temporal.replace('CAP_NOW', 'f32(CAP)'), 'half', { airD: 'airD', 'airD@prev': 'airP', air: 'cur', 'airH@prev': 'hist', 'airM@prev': 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, { outH: 'airH', outM: 'airM' }, {}, { DIV: 2, CAP: 16, SPREAD: 1.0, NARROW: 0, KIND: 0, LAYER: 0, AIR: 1 }),
-        S('air blur', airblur, 'half', { airH: 'src', surf: 'surf' }, { outB: 'airA' }, {}, { STRIDE: 1 }), S('air blur', airblur, 'half', { airA: 'src', surf: 'surf' }, { outB: 'airB' }, {}, { STRIDE: 2 }),
+        S('air blur', airblur, 'half', { airH: 'src', surf: 'surf', haze: 'haze' }, { outB: 'airA' }, {}, { STRIDE: 1 }), S('air blur', airblur, 'half', { airA: 'src', surf: 'surf', haze: 'haze' }, { outB: 'airB' }, {}, { STRIDE: 2 }),
         S('tint', tint, 'render', { surf: 'surf', lampU: 'lampU', [dT.result]: 'tone' }, { outT: 'lampT' }),
         S('resolve', WHOLE + resolve, 'render', { surf: 'surf', emit: 'emit', front: 'frontT', [dVis.result]: 'vis', lampT: 'lampU', [dB.result]: 'bounce', [dM.result]: 'mirror', [dS.result]: 'shine', lampC: 'lampC', airB: 'air' }, { outC: 'color' }),
         ...u.stages, ...rains, ...glows,
