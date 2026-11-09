@@ -547,18 +547,6 @@ pub fn wind_by_name(g: &crate::game::Game, name: &str) -> Option<WindWindSourceI
     g.wind.all.iter().copied().find(|&s| g.tab.wind_wind_source[s].name == name)
 }
 
-/// A restart: every vent at once where its own cycle has it, with the mains in.
-pub fn wind_fresh(g: &mut crate::game::Game) {
-    let t = g.time;
-    for k in 0..g.wind.all.len() {
-        let id = g.wind.all[k];
-        let s = &mut g.tab.wind_wind_source[id];
-        if s.why == WindWhy::Vent {
-            s.on = if vent_due(s.vent.as_ref().unwrap(), t) { 1.0 } else { 0.0 };
-        }
-    }
-}
-
 /// One line per source for the panel.
 fn wind_describe(g: &crate::game::Game) -> Vec<String> {
     g.wind

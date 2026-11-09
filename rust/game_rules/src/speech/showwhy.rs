@@ -60,12 +60,6 @@ fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// A fresh encounter: nothing shown, nothing owed.
-pub fn reset_show_why(g: &mut crate::game::Game) {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
-    g.m.showwhy.states.delete(key);
-}
-
 /// One row of the log, which keeps its last 120 to 200.
 fn note(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, why: crate::showwhy::Why, signal: Option<crate::character::SignalKind>, line: Option<&str>) {
     let st = st_row(g, pl);
