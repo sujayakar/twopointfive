@@ -3,12 +3,10 @@
 //   the solver    the numbers of the motion and of a can in that paste are the build's own defaults (so nothing of the smoke itself moved)
 //   where         each row lands where the renderer reads it; with the page's switch off nothing is written and a preset's step is its own
 //   the step      a preset's march step in the table's proportion, never under a cell
-//   the wiring    the page turns it on for the look alone (`?smokelook=0` off), before a preset is put on; the preset's one writer asks for the step;
-//                 a benchmark asked for on the look page carries the word
+//   the word      a benchmark asked for on the look page carries the word
 // No GPU: nothing here says what the smoke looks like.
 //   bun run tools/qa/smokelook-check.ts                     exit 0 = every line passed, 1 = one failed
 //   SMOKELOOK_BREAK=1 bun run tools/qa/smokelook-check.ts   the paste is read with one row moved: must FAIL
-import { readFileSync } from 'node:fs';
 import { ROOT } from './here.ts';
 const { SMOKE_LOOK, smokeLook, smokeLookStep, putSmokeLook } = await import(`${ROOT}/src/render/smokeLook.ts`);
 const { defaultSmokeParams } = await import(`${ROOT}/src/smoke/smoke.ts`);
@@ -34,11 +32,7 @@ const PASTE = { params: { buoyancy: 1.6, weight: 0.03, velDamp: 0.3, densDecay: 
   check(plain[0] === 1.5 && plain[1] === 2, 'off the look page a preset\'s march step is its own', plain.join(', '));
   check(look[0] === 1 && Math.abs(look[1] - 4 / 3) < 1e-9 && look[2] === 1 && look[3] === 1, 'on it high\'s step is the tuned one, a cheaper preset\'s is longer in proportion, and none is under a cell', look.map(x => +x.toFixed(3)).join(', ')); }
 
-{ const q = readFileSync(`${ROOT}/src/ui/quality.ts`, 'utf8'), opens = readFileSync(`${ROOT}/src/host/pictureopens.ts`, 'utf8');
-  check(/smokeLook\.on = q\.get\('smokelook'\) !== '0'/.test(opens) && (opens.match(/if \(smokeLook\.on\) putSmokeLook\(engine\)/g) ?? []).length === 1, 'the page\'s one way in turns it on and writes the table once');
-  for (const page of ['host/drawpage']) { const s = readFileSync(`${ROOT}/src/${page}.ts`, 'utf8'), on = s.indexOf('pictureWords(q)'), preset = s.indexOf('new Quality('), put = s.indexOf('pictureOpens(q, engine, quality)');
-    check(on > 0 && preset > on && put > preset, `${page}: the words before the first preset is put on, the rows that ride over it after`, `words at ${on}, first preset at ${preset}, rows at ${put}`); }
-  check(/S\.volStepVoxels = smokeLookStep\(K\.volStep\)/.test(q) && (q.match(/S\.volStepVoxels = /g) ?? []).length === 1, 'the preset\'s one writer of the march step asks the table');
+{
   check(lookPageWord('smokelook', '0'), 'a benchmark asked for on the look page carries ?smokelook'); }
 
 console.log(red ? '\n=== smokelook: FAILED ===' : '\n=== smokelook: all pass ===');

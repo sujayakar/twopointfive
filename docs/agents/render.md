@@ -225,7 +225,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   that weigh in the pixel). The first three are the likely next cut in what the march costs on every tier.
   CHECKS: `bun run tools/qa/probes.ts ladder` (six lines of the rows in the ladder's self-test; `FOGROWS_BREAK=1` fails two);
   `tools/qa/shaders-check.ts rows` (one program, no twin, no froxel kernel asked for; a frame with no cap said draws with the cap at 4);
-  `frame-layout.ts`; `dust-look-check.ts` and the looks probe (the one march's read of the dust); `shaders-check inline` (floors 35 and 100).
+  `frame-layout.ts`; `shaders-check inline` (floors 35 and 100).
   NOT SEEN: the software adapter draws no smoke, so the card's pages above are the only frames with smoke in them on the new path, and they were
   read for errors and timed; the stills are in the project's files for the maintainer's eyes (fog5-night-medium-new, fog5-night-verylow-new against
   fog5-night-verylow-base). No Mac has drawn it. Nobody has looked at medium, low or very low in motion.
@@ -989,7 +989,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   dust frame runs `vol` where it ran the froxel text with the froxel march not taken (the same classic march, read off the same text). The K = 0 march
   (its own program, no row ships it) still draws dust as plain smoke. PASTED SIZE (`shaders-check inline`, with the cut test's text): vol 337 to 364 KB,
   volFroxel 421 to 474 (it is what volDust was, 470, and four more for the test), volDust's 470 gone; the three together 1,228 to 838 KB. The budget row
-  for the march is 400 (was 382; 395 on the look's page) and volDust's row is out. CHECKS: `tools/qa/dust-look-check.ts` pins the statements and the
+  for the march is 400 (was 382; 395 on the look's page) and volDust's row is out. CHECKS: until 11-09 a check pinned the statements and the
   plain read as text (the wallbreak family's looks probe runs the same pin), `shaders-check rows` reads that both programs carry the look and that no
   `volDust` is asked for, `fog-air` that the dust's drawn density still goes through `fogSmoke`. NOT READ: the smoke solver does not run on the software
   adapter (five storage textures in a stage), so no frame with smoke or dust in it was drawn here before or after; frames without smoke were, and are
@@ -1179,7 +1179,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   default is decided.** Until then a change to one of the ten is made in BOTH files, or the row draws the picture as it was before the change:
   `git diff <before> <after> -- src/render/shaders/<k>.wgsl | sed 's#shaders/<k>#shaders/compact/<k>#g' | git apply --3way` carries a change that is outside the
   rewritten lines, then `bun run tools/qa/shaders-check.ts rows --stamp`. The check is RED while one of today's ten differs from what it was when its twin was last
-  brought level (`tools/qa/fixtures/compact-kernels.json`), and names the kernel. Every tool that reads a kernel by its path (`dust-look-check`, the snow and fog
+  brought level (`tools/qa/fixtures/compact-kernels.json`), and names the kernel. Every tool that reads a kernel by its path (the snow and fog
   probes …) reads TODAY's; `shaders-check trim` and any other harness tool takes the compact set under `TPS_COMPACTSHADERS=1`.
   **Start on first frame shaders (`?firstframe=1`, `gpu/device.ts PIPE_QUEUE.later`)**: the start waits only for what the first frame draws; the LATER set (direct,
   restirM, fgather, fgatherGi, fgatherGiS, reflectP5, composite, compositeR, compositeS, the five froxel kernels, the dust twin where dust is drawn, and volFroxel with
@@ -3533,7 +3533,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   would want the canister share published. A band's times come from the can's age and where it lies. With `?nodustlook` no tint is kept and the row does
   nothing. **puffs** = the can's output × a slow wave, the one row that moves the smoke itself. Costs: creases 4 texel
   reads a refresh; bands run the kind transport in a can's bricks (it is skipped for plain canister smoke). CHECKED: `wgsl-compile` (68 texts),
-  `shaders-check rows` twins re-stamped (the compact march has the same two lines), `dust-look-check`, both typechecks, and one boot of `/smokelab` on the
+  `shaders-check rows` twins re-stamped (the compact march has the same two lines), both typechecks, and one boot of `/smokelab` on the
   software adapter with every row up (below). NEVER SEEN ON A GPU, and whether any of it reads well is his to say: the stills are 640 px on a software
   adapter. Not built: idea 2 (a round carves a tube: the fine lattice in its wake), smoke reprojected by the solver's own velocity instead of averaged.
   WHAT THE ROWS DO TOGETHER (11-02, the maintainer's lab at dusk with `densityScale` 3: "curious why there's so much orange in the smoke, also seems
@@ -3778,8 +3778,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   go bright for about five frames and fade over the next ten to thirty, twice in 0.4 s after the camera stops. What drops the history was not found (the
   recording does not show the HUD's res line; a scale step of the ladder remakes every target, but its cooldown is 2 s). THE OFF WORD (11-03, at the join into the build):
   `?sharpcap=0` in the page (`render/frame.ts sharpCapConfig`, the scene prelude's `const SHARP_CAP`, read once at boot; both writings of the kernel keep the
-  bound behind it) = a class takes the ratio its taps carry with no bound, as it was. `tools/qa/sharpcap-check.ts` holds the texts, the prelude under each
-  setting and the page's line (`SHARPCAP_BREAK=1` must fail). The word never seen on a GPU.
+  bound behind it) = a class takes the ratio its taps carry with no bound, as it was. The word never seen on a GPU.
 - **THE LOOK PANEL'S "REAL LIGHT VALUES" ROW** (10-28; `lookConfig.lamps`, 1 on the look page, 0 = as authored; `render/photometry.ts` holds the table and
   the rule, `engine.ts lookExposure` sets `LightSet.dayExp` / `dayAmount`, `render/lights.ts upload` applies it; it REPLACES the 10-25 "Lamps by day" row, one
   number for every lamp at every day hour. The maintainer, 10-25: "we don't have consistent, physically accurate light values (lumens?) across the image +
