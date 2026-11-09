@@ -113,18 +113,6 @@ pub const BENCH_NODES: f64 = 128.0;
 /// (src/anim/skeleton.ts:17 BENCH_SLOT)
 pub const BENCH_SLOT: f64 = 1280.0;
 
-/// (src/anim/skeleton.ts:102 LAYER_COLS_AT)
-pub const LAYER_COLS_AT: f64 = 64.0;
-
-/// (src/anim/skeleton.ts:104 HAND_COLS_AT)
-pub const HAND_COLS_AT: f64 = 128.0;
-
-/// (src/anim/skeleton.ts:106 LAYER_KEYS_AT)
-pub const LAYER_KEYS_AT: f64 = 264.0;
-
-/// (src/anim/skeleton.ts:106 LAYER_KEY)
-pub const LAYER_KEY: f64 = 7.0;
-
 /// (src/anim/skeleton.ts:106 LAYER_KEYS_MAX)
 pub const LAYER_KEYS_MAX: f64 = 48.0;
 

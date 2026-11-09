@@ -57,8 +57,8 @@ clips; stance, wall, kick, carry, long gun; lock work, the hold and the held; th
 poses; ready pose, kit errands, reload, throw, blow, hit; the big tool, a lean; the reactions; a whole-body clip (`anim_act_layer`); fingers (`anim_hands_pass`);
 goggles and a smoke. Then `twists` carry the aim down the spine. Each layer stands down, by an eased weight, for whatever else has the arms.
 
-**A layer has two halves.** An `anim_*` function in `character/` puts its numbers and kept springs on the bench's `args` and calls the layer in `layers.rs`, which
-works on the pose where it lies. What a layer keeps stays in `Anim` and crosses as columns (`lean_cols_get`). It reads numbers by `k(NAME)` and nodes by `role(NAME)`.
+**A layer** is a function of `layers.rs` that works on the pose where it lies: it takes his animation as it is (`an: &mut Anim`), the knob tables (`tune`) and what only this
+call knows, and asks nodes by `role(NAME)`. What it keeps from tick to tick is in `Anim`. An `anim_*` function in `character/` decides when, and calls it by `anim_layer`.
 
 **A pose** is ten columns of singles, a row a node. A man's poses live in the game's block (`Poses`), so a rollback restores them. `pose_home_tend` rebuilds the pool when
 a man has left, and `stage_open` lends a place to a man made inside the tick. Clips are authored data outside any game, one copy a process.
@@ -118,10 +118,11 @@ files for skeleton and clips; the page reads them for the mesh (`loadCharacterSe
 ## To change it
 
 - **A number:** `knobs/character.rs` (`hold`, `moves`, `mv`, `turn`, `runarms`, `runready`, `hardbreath`, `kit`), `knobs/stealthpose.rs`, `knobs/kitanim.rs`, `knobs/condition.rs`. The panel or
-  `?knob.moves.steady=0` turns one. Tables with no panel are functions in `rust/game_types/src/character/types.rs`: `stances`, `blend`, `sneak`, `creep`, `life`, `mv2`, `long_reload`.
+  `?knob.moves.steady=0` turns one. Tables with no panel stand in `rust/game_types/src/character/types.rs`: statics (`SNEAK`, `CREEP`, `LIFE`, `MV2`) and functions (`stances`,
+  `blend`, `long_reload`).
 - **A number for a layer:** a field of its knob table, read as `tune.kit.close.drift`; one nobody turns is in a static of `character/types.rs` (`LIFE`, `CREEP`).
-- **A new layer:** a `pub fn` in `layers.rs`; an `anim_*` and `anim_*_ask` pair (copy `anim_lean_body`); a line in `anim_update_standing` where it should write over what is
-  under it; its kept springs in `Anim`, with columns. Add it to the stand-down lists of what it gives way to.
+- **A new layer:** a `pub fn` in `layers.rs` (copy `lean_body`); an `anim_*` that calls it by `anim_layer`; a line in `anim_update_standing` where it should write over what is
+  under it; its kept springs in `Anim`. Add it to the stand-down lists of what it gives way to.
 - **A one-shot:** an `anim_*` function that starts a clock in `Anim` (`sig_t`), advanced and read in the layer's place. Rules call that function, never the layer.
 - **A new clip:** put the animation in `AnimationLibrary_Godot_Standard.gltf`. `gltf.rs` takes every animation by name. For a whole-body clip a rule sets `anim.act` to an `AnimAct`
   with its name. In a layer, call `sample_clip` with `clip_of` and blend under a mask. A clip the game cannot do without goes in `need` in `anim_new`, which panics without it.

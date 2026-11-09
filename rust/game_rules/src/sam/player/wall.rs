@@ -351,8 +351,8 @@ pub(super) fn wall_snap(g: &mut crate::game::Game, cam: CameraId, why: Option<&m
             let r = foot_at(bone(crate::character::Bone::FootR), bone(crate::character::Bone::ToeR));
             let feet = match (l, r) {
                 (Some(l), Some(r)) => Some(crate::character::AnimWallTakeFeet {
-                    l: crate::character::AnimWallTakeFeetL { p: l.0, yaw: l.1 },
-                    r: crate::character::AnimWallTakeFeetR { p: r.0, yaw: r.1 },
+                    l: crate::character::AnimFootSpot { p: l.0, yaw: l.1 },
+                    r: crate::character::AnimFootSpot { p: r.0, yaw: r.1 },
                 }),
                 _ => None,
             };

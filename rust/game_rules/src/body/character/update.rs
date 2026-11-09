@@ -87,7 +87,7 @@ pub(super) fn anim_update(g: &mut crate::game::Game, c: CharId, dt: f64) { anim_
 // ---- helpers of updateStanding
 
 /// A clip of his rig by its name (`this.clips.Walk_Loop`).
-fn clip_of(g: &Game, c: CharId, name: &'static str) -> ClipId { *g.ch[c].anim.clips.get(name).unwrap() }
+pub(super) fn clip_of(g: &Game, c: CharId, name: &'static str) -> ClipId { *g.ch[c].anim.clips.get(name).unwrap() }
 /// A clip's length (`c.Walk_Loop.duration`).
 fn clip_dur(g: &Game, c: CharId, name: &'static str) -> f64 { g.tab.clip[clip_of(g, c, name)].duration }
 /// `bigOff(this.bigTool)`: the skeleton's parameter is the fields it reads.
