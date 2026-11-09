@@ -11,13 +11,6 @@ fn why_not_linked() -> String {
     String::new()
 }
 
-/// The module's face: rust/sim is linked, so nothing is compiled or started and the check of its version is what is left.
-fn start() -> crate::sim_sim::SimExports {
-    let no = why_not_linked();
-    if !no.is_empty() { panic!("{}", no); }
-    SimExports {  }
-}
-
 /// Why this build cannot run the module ('' = it can).
 pub fn sim_why_not() -> String {
     why_not_linked()
@@ -38,7 +31,6 @@ mod tests {
     fn this_face_was_written_against_the_linked_simulation() {
         assert_eq!(SIM_ABI, ::sim::ABI as f64);
         assert_eq!(sim_why_not(), "");
-        start();
         sim();
     }
 

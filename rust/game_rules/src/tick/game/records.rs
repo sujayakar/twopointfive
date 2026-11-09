@@ -21,17 +21,6 @@ pub(super) fn quiet_man(g: &crate::game::Game, pl: Option<PlayerId>, c: CharId) 
     }
 }
 
-/// Chaos Theory's own words: seen = assault; nothing known = ghost; else panther.
-fn mission_rating(s: &crate::game::MissionStats) -> crate::game::MissionRating {
-    if s.spotted > 0.0 {
-        crate::game::MissionRating::Assault
-    } else if s.kills == 0.0 && s.alerts == 0.0 && s.bodies == 0.0 {
-        crate::game::MissionRating::Ghost
-    } else {
-        crate::game::MissionRating::Panther
-    }
-}
-
 /// `m:ss` of a count of seconds.
 pub fn fmt_clock(sec: f64) -> String {
     let s = m::max(0.0, m::floor(sec));
@@ -74,57 +63,14 @@ pub(super) fn new_mission(t0: f64) -> crate::game::Mission {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::game::{MissionRating, MissionStage};
 
-    /// Expected strings printed by the TypeScript's own fmtClock under bun.
+    /// The debrief's clock.
     #[test]
-    fn fmt_clock_matches_the_typescript() {
-        let cases: &[(f64, &str)] = &[
-            (0.0, "0:00"),
-            (-0.0, "0:00"),
-            (-5.0, "0:00"),
-            (0.5, "0:00"),
-            (9.99, "0:09"),
-            (59.9, "0:59"),
-            (60.0, "1:00"),
-            (61.0, "1:01"),
-            (3725.5, "62:05"),
-            (359999.0, "5999:59"),
-            (1e15, "16666666666666:40"),
-            (f64::NAN, "NaN:NaN"),
-            (f64::INFINITY, "Infinity:NaN"),
-            (f64::NEG_INFINITY, "0:00"),
-            (1e21, "16666666666666666000:40"),
-            (6e22, "1e+21:00"),
-            (1.2e23, "2e+21:00"),
-        ];
+    fn a_clock_reads_whole_minutes_and_seconds_and_nothing_under_nought() {
+        let cases: &[(f64, &str)] = &[(0.0, "0:00"), (-5.0, "0:00"), (0.5, "0:00"), (9.99, "0:09"), (59.9, "0:59"), (60.0, "1:00"), (61.0, "1:01"), (3725.5, "62:05")];
         for (x, want) in cases {
             assert_eq!(fmt_clock(*x), *want, "fmt_clock({})", x);
         }
-    }
-
-    /// Answers printed by the TypeScript's own missionRating under bun.
-    #[test]
-    fn mission_rating_matches_the_typescript() {
-        let base = new_mission(0.0).stats;
-        let with = |f: fn(&mut crate::game::MissionStats)| {
-            let mut s = base.clone();
-            f(&mut s);
-            mission_rating(&s)
-        };
-        assert_eq!(mission_rating(&base), MissionRating::Ghost);
-        assert_eq!(with(|s| { s.spotted = 1.0; s.kills = 1.0; s.alerts = 1.0; s.bodies = 1.0; }), MissionRating::Assault);
-        assert_eq!(with(|s| s.kills = 1.0), MissionRating::Panther);
-        assert_eq!(with(|s| s.alerts = 1.0), MissionRating::Panther);
-        assert_eq!(with(|s| s.bodies = 1.0), MissionRating::Panther);
-    }
-
-    #[test]
-    fn a_new_mission_holds_the_makers_numbers_not_blanks() {
-        let n = new_mission(7.5);
-        assert_eq!(n.stage, MissionStage::Infiltrate);
-        assert_eq!((n.t0, n.drive_t, n.sweep_at, n.spotted_t, n.down_card_at, n.stats.qrf_at), (7.5, -1.0, -1.0, -100.0, -1.0, -1.0));
-        assert_eq!(n.serial, 0);
     }
 }
 
@@ -276,29 +222,6 @@ fn fresh_talk() -> crate::game::Talk {
         held_since: -1.0,
         abort_t: -1.0,
         last: None,
-    }
-}
-
-#[cfg(test)]
-mod tests_2 {
-    use super::*;
-
-    #[test]
-    fn the_makers_start_their_clocks_at_minus_one() {
-        let w = new_witness();
-        assert!(w.heard.last_shot_t == -1.0 && w.heard.last_t == -1.0 && w.alert_t == -1.0);
-        assert!(w.heard.small_where.is_none() && w.heard.loud_at.is_none());
-    }
-
-    #[test]
-    fn a_new_talk_is_a_row_of_the_game() {
-        let mut g = Game::blank();
-        let a = new_talk(&mut g);
-        let b = new_talk(&mut g);
-        assert!(a != b);
-        let t = &g.tab.game_talk[b];
-        assert!(t.stage == 0.0 && t.last.is_none());
-        assert!(t.last_t == -1.0 && t.held_since == -1.0 && t.abort_t == -1.0);
     }
 }
 

@@ -465,9 +465,15 @@ fn view_px_sum(distance: f64, fov: f64, height: f64) -> f64 { 2.0 * distance * m
 #[cfg(test)]
 mod tests {
     use super::*;
-    // the bits are the TypeScript's own, under bun with EXACT.on
+
+    /// How much floor a pixel of the picture covers: more the further off the camera is, and a tiny window counts as two hundred pixels high.
     #[test]
-    fn view_px_is_the_typescripts_bits() {
-        assert_eq!(view_px_sum(4.25, 1.1, 150.0).to_bits(), 0x3f9aaeadc2d0442a);
+    fn a_pixel_covers_more_floor_from_further_off_and_a_tiny_window_is_no_smaller_than_two_hundred() {
+        let (fov, h) = (1.1, 720.0);
+        assert!(m::abs(view_px_sum(8.0, fov, h) - 2.0 * view_px_sum(4.0, fov, h)) < 1e-12, "twice as far: twice the floor");
+        assert!(view_px_sum(8.0, fov, 1440.0) < view_px_sum(8.0, fov, h), "a taller picture has smaller pixels");
+        assert_eq!(view_px_sum(8.0, fov, 150.0), view_px_sum(8.0, fov, 200.0));
+        // the whole picture's height covers what the lens sees at that distance
+        assert!(m::abs(view_px_sum(8.0, fov, h) * h - 2.0 * 8.0 * m::tan(fov / 2.0)) < 1e-12);
     }
 }

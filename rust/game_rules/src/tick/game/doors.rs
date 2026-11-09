@@ -420,11 +420,17 @@ fn game_door_after(g: &mut crate::game::Game, own: Option<&mut crate::doors::Doo
 #[cfg(test)]
 mod tests {
     use super::*;
-    // the bits are the TypeScript's own, under bun with EXACT.on (the formula of game.ts visibilityOf, with vec.ts clamp)
+
+    /// What the guards and his meter go by: nothing in the dark, all of it in good light, and between them by the log of the light.
+    /// A FAILURE MEANS: the dark does not hide him, or a lamp does not show him.
     #[test]
-    fn visibility_is_the_typescripts_bits() {
-        for (s, f, e, bits) in [(0.37, 0.013, 0.2, 0x3ff0000000000000u64), (0.37, 0.013, 0.0, 0x0000000000000000), (0.5, 0.02, 0.0213, 0x3fa01f1dcedece09)] {
-            assert_eq!(visibility_sum(s, f, e).to_bits(), bits);
-        }
+    fn the_light_meter_reads_nothing_in_the_dark_and_rises_by_the_log_of_the_light_to_one() {
+        let (slope, floor) = (0.37, 0.013);
+        let meter = |e: f64| visibility_sum(slope, floor, e);
+        for e in [0.0, -1.0, floor * 0.5, floor] { assert_eq!(meter(e), 0.0, "{e} of light"); }
+        assert_eq!(meter(1e6), 1.0);
+        let (a, b, c) = (meter(floor * 2.0), meter(floor * 4.0), meter(floor * 8.0));
+        assert!(a > 0.0 && a < 1.0);
+        assert!(m::abs((b - a) - (c - b)) < 1e-12 && b > a, "each doubling of the light adds the same: {a} {b} {c}");
     }
 }

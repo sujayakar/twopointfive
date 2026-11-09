@@ -9,7 +9,6 @@ pub mod gpu_device;
 pub mod host_api;
 pub mod input;
 pub mod math_dice;
-pub mod math_hyp;
 pub mod out_events;
 pub mod savestate;
 pub mod seats;
