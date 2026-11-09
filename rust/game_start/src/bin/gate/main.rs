@@ -5,19 +5,21 @@
 //!   gate pin [ROW…]      record the pins again (all, or the rows named) and say which moved; writes pins.txt
 //!   gate breaks          each row of the breaks' table plays unbroken and must PASS; then each of its breaks must FAIL, in its check's own words. exit 0 = all did
 //!   gate list            the rows
+//!   gate tests [BINARY [TEST]]   the whole native test set (tests.rs); no part of the quick kind
 //!
 //! A row is a line of a child process of this tool (`gate one ROW… [--break=NAME] [--pin]`), because a game is one a process and because a game that panics takes only its own rows with it.
 //! The rows of one run share a child, since the run is played once for all of them. The longest kinds are started first, and the rows are printed in their order.
 mod draw;
 mod pins;
 mod rows;
+mod tests;
 
 use rows::{Flags, Job, Row};
 use std::collections::BTreeMap;
 use std::process::{Command, Stdio};
 use std::sync::{mpsc, Arc, Mutex};
 
-const USAGE: &str = "gate [ROW…]         every row, or those whose name starts with one of the words\ngate pin [ROW…]     record the pins again and say which moved\ngate breaks         every check's own fault planted: each must FAIL in its words\ngate list           the rows";
+const USAGE: &str = "gate [ROW…]         every row, or those whose name starts with one of the words\ngate pin [ROW…]     record the pins again and say which moved\ngate breaks         every check's own fault planted: each must FAIL in its words\ngate list           the rows\ngate tests [BINARY [TEST]]   the whole native test set";
 
 /// what a child said of a row
 #[derive(Clone)]
@@ -185,6 +187,7 @@ fn main() {
             let h = std::thread::Builder::new().stack_size(1 << 30).spawn(move || rows::one(&names, flags)).unwrap();
             if h.join().is_ok() { 0 } else { 2 }
         }
+        Some("tests") => tests::run(&a[1..]),
         Some("list") => { for r in rows::all() { println!("{}", r.name); } 0 }
         Some("pin") => pin(pick(rows::all(), &a[1..]), a.len() == 1),
         Some("breaks") if a.len() == 1 => breaks(),
