@@ -13,7 +13,7 @@ fn torchSpot(l: u32, x: vec3f) -> vec3f { let b = basis(lamps[l].n); let v = x -
 export const torchLeaves = `
 fn leafTorch(k: u32, l: u32, x: vec3f, n: vec3f, r: vec2f) -> f32 {
   let q = torchSpot(l, x); if (q.z < 0.2 || any(abs(q.xy) > vec2f(0.99))) { return 1.0; } let base = vec2f(vec2u(k & 3u, k >> 2u) * ${TILE}u); let px = 2.0 * torchWide(l) * q.z / ${TILE}.0; let g = vec2f(q.x * 0.5 + 0.5, 0.5 - q.y * 0.5) * ${TILE}.0; let a = r.x * 6.2832; let m = mat2x2f(cos(a), sin(a), -sin(a), cos(a)); var s = 0.0;
-  for (var j = 0u; j < 4u; j++) { let off = m * (array<vec2f, 4>(vec2f(0.3, 0.1), vec2f(-0.2, 0.55), vec2f(-0.75, -0.3), vec2f(0.45, -0.8))[j] * 1.2); let d = textureLoad(torchTex, vec2i(base + clamp(g + off, vec2f(0.0), vec2f(${TILE - 1}.0))), 0); let over = q.z - 0.1 / max(d, 1e-5) - px; s += select(1.0, 0.07 * exp(-7.0 * over), d > 0.0 && over > 0.014); }
+  for (var j = 0u; j < 4u; j++) { let off = m * (array<vec2f, 4>(vec2f(0.3, 0.1), vec2f(-0.2, 0.55), vec2f(-0.75, -0.3), vec2f(0.45, -0.8))[j] * 1.2); let d = textureLoad(torchTex, vec2i(base + clamp(g + off, vec2f(0.0), vec2f(${TILE - 1}.0))), 0); let over = q.z - 0.1 / max(d, 1e-5) - px; s += select(1.0, 0.0, d > 0.0 && over > 0.014); }
   return s * 0.25;
 }
 `;

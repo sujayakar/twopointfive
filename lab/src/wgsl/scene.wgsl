@@ -83,30 +83,32 @@ fn meet(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> bool {
   var tn = max3(mn); var tf = min3(mx);
   if (tn >= tf || tf < tmin || tn >= tmax) { return false; }
   var code = select(select(select(5u, 4u, d.z > 0.0), select(3u, 2u, d.y > 0.0), tn == mn.y), select(1u, 0u, d.x > 0.0), tn == mn.x);   // 0 -x 1 +x 2 -y 3 +y 4 -z 5 +z
+  // from where the ray enters its box: from far off, a thin round thing's roots are lost in the rounding
+  let sh = tn; let e0 = o + d * sh;
   if ((flags & QUAD) != 0u) {
     let q = (*p).quad; let qa = q.xyz * d;
-    let A = dot(qa, d); let B = dot(qa, o) + 0.5 * q.w * d.y; let C = dot(q.xyz * o, o) + q.w * o.y - 1.0;
+    let A = dot(qa, d); let B = dot(qa, e0) + 0.5 * q.w * d.y; let C = dot(q.xyz * e0, e0) + q.w * e0.y - 1.0;
     let disc = B * B - A * C;
     if (A > 1e-9) {
       if (disc <= 0.0) { return false; }
-      let s = sqrt(disc); let t0 = (-B - s) / A; let t1 = (-B + s) / A;
+      let s = sqrt(disc); let t0 = (-B - s) / A + sh; let t1 = (-B + s) / A + sh;
       if (t0 > tn) { tn = t0; code = CODE_QUAD; } tf = min(tf, t1);
     } else if (A < -1e-9) {                                          // along a taper: inside is outside the two roots, on the nappe that is really there
       if (disc > 0.0) {
-        let s = sqrt(disc); let t0 = (-B + s) / A; let t1 = (-B - s) / A;    // (A < 0: t0 < t1)
+        let s = sqrt(disc); let t0 = (-B + s) / A + sh; let t1 = (-B - s) / A + sh;    // (A < 0: t0 < t1)
         if (1.0 - 0.5 * q.w * (o.y + d.y * t0) > 0.0) { tf = min(tf, t0); } else { if (t1 > tn) { tn = t1; code = CODE_QUAD; } }
       }
-    } else if (abs(B) > 1e-9) { let t0 = -0.5 * C / B; if (B > 0.0) { tf = min(tf, t0); } else if (t0 > tn) { tn = t0; code = CODE_QUAD; } } else if (C > 0.0) { return false; }
+    } else if (abs(B) > 1e-9) { let t0 = sh - 0.5 * C / B; if (B > 0.0) { tf = min(tf, t0); } else if (t0 > tn) { tn = t0; code = CODE_QUAD; } } else if (C > 0.0) { return false; }
   }
   let np = flags & 15u;
   for (var i = 0u; i < np; i++) {
-    let pl = extra[(*p).planes + i]; let den = dot(pl.xyz, d); let num = pl.w - dot(pl.xyz, o);
+    let pl = extra[(*p).planes + i]; let den = dot(pl.xyz, d); let num = pl.w - dot(pl.xyz, e0);
     if (abs(den) < 1e-12) { if (num < 0.0) { return false; } continue; }
-    let t = num / den; if (den < 0.0) { if (t > tn) { tn = t; code = 7u + i; } } else { tf = min(tf, t); }
+    let t = num / den + sh; if (den < 0.0) { if (t > tn) { tn = t; code = 7u + i; } } else { tf = min(tf, t); }
   }
   let nc = (flags >> 4u) & 3u; for (var i = 0u; i < nc; i++) {        // the curves: each one stay of its own
-    let q = extra[(*p).planes + np + 2u * i].xyz; let e = o - extra[(*p).planes + np + 2u * i + 1u].xyz; let A = dot(q * d, d); let B = dot(q * d, e); let C = dot(q * e, e) - 1.0;
-    if (A < 1e-9) { if (C > 0.0) { return false; } continue; } let disc = B * B - A * C; if (disc <= 0.0) { return false; } let s = sqrt(disc); let t0 = (-B - s) / A; if (t0 > tn) { tn = t0; code = 16u + i; } tf = min(tf, (-B + s) / A);
+    let q = extra[(*p).planes + np + 2u * i].xyz; let e = e0 - extra[(*p).planes + np + 2u * i + 1u].xyz; let A = dot(q * d, d); let B = dot(q * d, e); let C = dot(q * e, e) - 1.0;
+    if (A < 1e-9) { if (C > 0.0) { return false; } continue; } let disc = B * B - A * C; if (disc <= 0.0) { return false; } let s = sqrt(disc); let t0 = (-B - s) / A + sh; if (t0 > tn) { tn = t0; code = 16u + i; } tf = min(tf, (-B + s) / A + sh);
   }
   if ((flags & WATER) != 0u) {                                       // water: somewhere in its box, where the ray meets the waves
     let a = max(tn, tmin); if (a >= tf) { return false; } let n = 5; let st = (tf - a) / f32(n); var t0 = a; var f0 = o.y + d.y * a - waveHeight(ro.xz + rd.xz * a, frame.misc.x); let above = f0 > 0.0; var found = false;
