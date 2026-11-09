@@ -73,7 +73,7 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
         h.t += dt;
         h.swap_t += dt;
     }
-    g.pl[p].fire_cd -= dt;
+    g.arms[g.pl[p].ch].fire_cd -= dt;
     let k = g.k.hold.secs;
     let dist = g.k.hold.dist;
     let mut speed = 0.0;
@@ -310,11 +310,11 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
         let pistol = g.pl[p].pistol;
         let gun_held = gun && phase_now == Ph::Held;
         if gun_held {
-            if !swapping && crate::input::input_lmb_hit(g, input) && !hold!(g, p).fire_queued && g.pl[p].fire_cd <= 0.0 {
+            if !swapping && crate::input::input_lmb_hit(g, input) && !hold!(g, p).fire_queued && g.arms[g.pl[p].ch].fire_cd <= 0.0 {
                 if crate::weapons::firearm_can_fire(g, pistol) {
                     hold!(g, p).fire_queued = true;
                 } else {
-                    g.pl[p].fire_cd = 0.25;
+                    g.arms[g.pl[p].ch].fire_cd = 0.25;
                     let muzzle = g.ch[c].muzzle;
                     crate::audio_iface::game_audio_like_play(g, "dryFire", Some(muzzle), Some(0.7), None);
                 }
@@ -341,7 +341,7 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
             hold!(g, p).fire_queued = false;
             if crate::weapons::firearm_fire(g, pistol) {
                 let time = g.time;
-                g.pl[p].fire_cd = HOLD_FIRE_CD;
+                g.arms[g.pl[p].ch].fire_cd = HOLD_FIRE_CD;
                 g.pl[p].last_fire_t = time;
                 hold!(g, p).shot_t = time;
                 let ag = match g.aim_guard {
@@ -686,7 +686,7 @@ fn swap_hold(g: &mut crate::game::Game) {
     if let Some(held) = g.gd[gd].held.as_mut() {
         held.variant = to;
     }
-    g.pl[p].fire_cd = m::max(g.pl[p].fire_cd, swap);
+    g.arms[g.pl[p].ch].fire_cd = m::max(g.arms[g.pl[p].ch].fire_cd, swap);
     cancel_ask(g);
     if to == Var::Gun {
         g.pl[p].slot = crate::game::SlotKind::Pistol;
@@ -1013,7 +1013,7 @@ fn whip_out(g: &mut crate::game::Game) {
     let pos = v3::copy(g.ch[hc].pos);
     prop_noise(g, pos, WHIP_NOISE);
     g.pl[p].holding = None;
-    g.pl[p].fire_cd = m::max(g.pl[p].fire_cd, 0.5);
+    g.arms[g.pl[p].ch].fire_cd = m::max(g.arms[g.pl[p].ch].fire_cd, 0.5);
 }
 
 /// He comes out of the arm his own man and an instant witness; a man already down is only unhooked.

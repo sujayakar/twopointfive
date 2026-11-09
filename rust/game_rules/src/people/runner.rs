@@ -458,7 +458,7 @@ fn drop(g: &mut crate::game::Game, gd: GuardId) {
         crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "runner");
         crate::mind::set(g, gd, 0.0, "runner");
         crate::mind::foe(g, gd, None, "runner");
-        crate::aim::aim_state_clear(&mut g.gd[gd].aim);
+        crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
         g.gd[gd].pieing = None;
         g.gd[gd].search_plan = None;
         g.gd[gd].standoff = None;

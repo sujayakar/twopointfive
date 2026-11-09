@@ -826,7 +826,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
     });
     crate::disarm::disarm_begin(g);
     if let Some(k) = kind { crate::close::close_took(g, gd, crate::close::CloseTookWhat::Grab, k, b0, r0); }
-    g.pl[p].fire_cd = m::max(g.pl[p].fire_cd, g.k.hold.secs.grab);
+    g.arms[g.pl[p].ch].fire_cd = m::max(g.arms[g.pl[p].ch].fire_cd, g.k.hold.secs.grab);
     let chest = v3::add(g.ch[gc].pos, [0.0, 1.4, 0.0]);
     crate::disarm::disarm_catch(g, chest);
     let ev = crate::game::GameEvent {

@@ -74,6 +74,7 @@ pub fn man_new(g: &mut crate::game::Game, body: crate::character::Character) -> 
     g.cond.push(crate::condition::Cond::blank());
     g.load.push(None);
     g.shown.push(crate::guards::Shown::default());
+    g.arms.push(crate::aim::Arms::blank());
     c
 }
 
