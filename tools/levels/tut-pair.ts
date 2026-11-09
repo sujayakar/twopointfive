@@ -19,7 +19,7 @@
 //        │             ← the strip round the south container's end is open
 //   z 26 └───────────────────────────────────────────────────┘
 //
-// THE LINE (scenarios.lesson; tools/qa/lessons/tut-pair.ts plays it by input alone):
+// THE LINE (scenarios.lesson; tools/qa/tut-pair-page.cjs plays it by real keys):
 //   the gate yard     the partner follows, low when the player is low. The squad's key on a man: the partner works round to that man's back, says "set" and
 //                     waits; the word (F) sends him, and he falls in again by himself.
 //   the truck park    two men who see each other. The squad's key on the far one; the player goes to the near one's back himself; his own grab is the
@@ -52,7 +52,6 @@
 //         the far side of the stub: the near man has no line to any step of it, wherever he looks.
 //       – NO 'LEAD HIM' STEP BUT THE FIRST WAITS ON WHERE THE PARTNER IS. He stands back out of a line by his own rule; a step that waited on him was a
 //         dead end the day he judged the way lit.
-//     The scripted run plays at that light (tools/qa/lessons/tut-pair.ts mode.floor; lesson-run's --floor reaches the partner's own meter).
 //   · A MAN'S POST is on the middle of a nav cell (x and z ending .25 or .75) where his facing matters to a stride: a man put on a cell's edge takes one step
 //     onto it and stands as that step turned him.
 //   · NOBODY IS LEFT TO MEND THE MAINS. The game sends the nearest calm man to the box when the lights die (lighting.ts). Here the last man on his feet is in
@@ -89,7 +88,7 @@ const SCREEN = { x: 12.9, z: 16.9 };
 const SOUTH_Z = 21.03;
 /** the wall along the south of the watch's camp: its line, and where it starts (the south container's east face) */
 const PEN = { z: 22.5, x0: 18.42 };
-/** the places the scripted player and the lesson name (tools/qa/lessons/tut-pair.ts imports these, so a moved wall moves the script) */
+/** the places the lesson names */
 export const TP = {
   start: P(3.5, 24.9), mate: P(2.6, 25.8),   // outside the wall, on the road by their pickup, in the moon: the first picture has both of them in it
   first: P(9.4, 20.0),             // the first mark: round the end of the low wall, in its moon shadow, at the first man's back
@@ -283,7 +282,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const flag = (f: string) => ({ is: 'flag', flag: f });
   const pair = (what: string) => ({ is: 'pair', what });
   const mark = (p: P3): P3 => [p[0], 1, p[2]], chest = (p: P3): P3 => [p[0], 1.2, p[2]];
-  // (the far man's name on the net: the roster's third, as the routes are written — game.ts CALLSIGNS. lesson-check refuses a name nobody on the floor has)
+  // (the far man's name on the net: the roster's third, as the routes are written — game.ts CALLSIGNS.)
   const FAR_MAN = 'Reyes';
   const opened = (door: string) => [{ is: 'door', door, state: 'open' }, { is: 'door', door, state: 'broken' }];
   const lesson: LessonData = {
