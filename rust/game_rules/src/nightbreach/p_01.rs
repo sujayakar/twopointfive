@@ -199,8 +199,7 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
                 .map(|(_, h)| *h)
                 .collect();
             let (a, b) = (g.night_breach.ops[0], g.night_breach.ops[1]);
-            let opts = crate::breach::BreachDrillNewOpts { guarantee_downs: Some(false), live: Some(live) };
-            let drill = crate::breach::breach_drill_new(g, p, a, b, &men, Some(opts));
+            let drill = crate::breach::breach_drill_new(g, p, a, b, &men, live);
             g.night_breach.drill = Some(drill);
             crate::breach::breach_drill_start(g);
         }
@@ -267,22 +266,22 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
 
 /// `live`'s one home is the drill: with no drill it is the staging's fresh one, no orders given. (nightbreach.ts:161, 268)
 fn live_of(g: &Game) -> crate::breach::BreachLive {
-    g.night_breach.drill.as_ref().and_then(|d| d.live).unwrap_or_else(staged_live)
+    g.night_breach.drill.as_ref().map_or_else(staged_live, |d| d.live)
 }
 
 /// What a staging opens with, the settled rows at the page's values. (nightbreach.ts:261)
 fn staged_live() -> crate::breach::BreachLive {
-    crate::breach::BreachLive { orders: 0.0, lights: true, loud_boot: true, stun: true, set_hold: None }
+    crate::breach::BreachLive { orders: 0.0, stun: true }
 }
 
 /// `live.orders = n`. (nightbreach.ts:303, 304, 319)
 fn live_set_orders(g: &mut Game, orders: f64) {
-    if let Some(l) = g.night_breach.drill.as_mut().and_then(|d| d.live.as_mut()) { l.orders = orders; }
+    if let Some(d) = g.night_breach.drill.as_mut() { d.live.orders = orders; }
 }
 
 /// `live.stun = false`. (nightbreach.ts:306)
 fn live_stun_off(g: &mut Game) {
-    if let Some(l) = g.night_breach.drill.as_mut().and_then(|d| d.live.as_mut()) { l.stun = false; }
+    if let Some(d) = g.night_breach.drill.as_mut() { d.live.stun = false; }
 }
 
 /// Every man of the list down or fled. (nightbreach.ts:352, 381)
@@ -787,7 +786,7 @@ mod tests {
         assert_eq!(night_breach_state(&mut g), NightBreachState::Stacking);
         g.night_breach.drill.as_mut().unwrap().t_set = 1.0;
         assert_eq!(night_breach_state(&mut g), NightBreachState::Set);
-        g.night_breach.drill.as_mut().unwrap().live = Some(crate::breach::BreachLive { orders: 2.0, lights: true, loud_boot: true, stun: true, set_hold: None });
+        g.night_breach.drill.as_mut().unwrap().live = crate::breach::BreachLive { orders: 2.0, stun: true };
         assert_eq!(night_breach_state(&mut g), NightBreachState::Going);
         let d = g.night_breach.drill.as_mut().unwrap();
         d.phase = Phase::Done;
