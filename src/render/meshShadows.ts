@@ -17,7 +17,6 @@ import { makeBuffer, makeBufferWithData, makeShader, computePipelineAsync } from
 import { GltfCharacter, MeshData } from '../anim/gltf';
 import { JOINT_STRIDE, CHAR_INST_BYTES } from '../anim/characters';
 import { MeshBvh, buildMeshBvh, topologyDigest, LEAF_MAX, LEAF_PAD, MESH_MAX_CHARS } from './meshbvh';
-import { scenePrelude } from './frame';
 
 export { MESH_MAX_CHARS };
 export const NODE_BASE = 4;          // vec4u elements before the first node

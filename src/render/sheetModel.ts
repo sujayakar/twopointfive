@@ -38,11 +38,6 @@ export const SHEET = {
   life: 60,       // s a sheet lies there before it fades (the LONG ring recycles the oldest before that under load)
 };
 
-export interface SheetState { p: Vec3; v: Vec3; n: Vec3; w: Vec3; asleep: boolean; age: number; /** s of blast wind still carrying it (impulses; absent / 0 = still air) */ gust?: number; }
-
-
-
-
 // ================================================================== IMPULSES (render/particles.ts Particles.impulse → particles.wgsl applyImpulses; sites in
 // game/destruction.ts): a game event — a stun charge going off, a round landing beside settled litter, a body or a boot or a shoved desk thumping the floor —
 // pushes every live particle of the kinds it names within its radius, and WAKES the ones lying asleep so paper already on the floor goes up again. One record
