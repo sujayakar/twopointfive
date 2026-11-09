@@ -53,7 +53,7 @@ a last wedge, more. Only a tutorial can ask for pages (`squad_orders_flat_ring`)
 
 **Giving** (`squad_orders_give`) is one path for tap, ring and word: `only` narrows who is asked, `squad_orders_for_men` picks the face of a door,
 `can` and `valid` may refuse, `issue` hands each man his `Assignment` (`squad_orders_assign`, which finds his way), `squad_orders_same_ways` puts men
-sent together on one way, then one man assents.
+sent together on one way, then one man assents. A refusal is said by the man it is about, and "nobody's free for that." by the nearest (`say_why`).
 
 **The tick** (`squad_orders_tick`) runs after the door tools, `rear_watch_tick`, `cover_tick` and `pair_orders_tick`. For each man: give way to the
 fight if it has him, run the row's `tick`, then the leg, to his mark by `via` or to his place in the file. Then cover, `spotted.rs` and `fireline.rs` may

@@ -479,7 +479,7 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
     crate::character::character_ragdollize(g, c, true, dir, quiet);
     let dead = how == DownKind::Shot;
     let hostage = crate::rescue::rescue_is_hostage(g, gd);
-    let (name, label, her) = (g.cv[cid].name.clone(), g.cv[cid].label.clone(), g.cv[cid].her.clone());
+    let (name, label) = (g.cv[cid].name.clone(), g.cv[cid].label.clone());
     if by == DownBy::Player {
         if dead {
             g.stats.civilians.killed += 1;
@@ -506,13 +506,8 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
             let text = format!("MISSION FAILED — you killed {}, the {}. press Enter to restart", name, label);
             crate::game::game_msg(g, &text);
         } else if !hostage {
-            let text = match line {
-                Some(l) => String::from(l),
-                None => if dead { format!("CIVILIAN CASUALTY — {}, the {}, is dead. that is on your record, and they will find {}", name, label, her) }
-                    else if how == DownKind::Choked { format!("{} choked out — breathing. a civilian: that costs, and they may find {}", name, her) }
-                    else { format!("{} out cold — breathing. a civilian: that costs, and they may find {}", name, her) },
-            };
-            crate::game::game_msg(g, &text);
+            if let Some(l) = line { crate::game::game_msg(g, l); }
+            crate::squadnet::team_says(g, None, if dead { "that was a civilian." } else { "civilian's out. still breathing." });
         }
     } else if !hostage {
         let text = match line { Some(l) => String::from(l), None => format!("{}, the {}, is down", name, label) };
