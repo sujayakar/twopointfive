@@ -7,7 +7,7 @@ use crate::ids::*;
 use alloc::{collections::BTreeMap, vec::Vec};
 
 /// every character the game poses, in the order the pool is filled: the players' men, the shift, the civilians
-fn posed_chars(g: &mut Game) -> Vec<CharId> {
+fn posed_chars(g: &Game) -> Vec<CharId> {
     let mut out = Vec::new();
     for pl in crate::seats::men(g) { out.push(g.pl[pl].ch); }
     for i in 0..g.guards.len() { out.push(g.gd[g.guards[i]].ch); }

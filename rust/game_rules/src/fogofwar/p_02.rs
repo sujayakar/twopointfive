@@ -87,7 +87,7 @@ fn bone_or(g: &crate::game::Game, c: CharId, b: crate::character::Bone, y: f64) 
 fn chest_of(g: &crate::game::Game, c: CharId) -> V3 { bone_or(g, c, crate::character::Bone::Chest, 1.1) }
 
 /// `men as players`
-fn players(g: &mut crate::game::Game) -> Vec<PlayerId> { crate::seats::men(g) }
+fn players(g: &crate::game::Game) -> Vec<PlayerId> { crate::seats::men(g) }
 
 fn is_dead(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].state == crate::game::GuardState::Dead }
 
@@ -385,7 +385,7 @@ pub fn fog_of_war_eye_of(g: &crate::game::Game, c_2: CharId) -> crate::fogofwar:
 }
 
 /// The player a call is worded for: with two, the first one up. (FogOfWar.caller)
-pub fn fog_of_war_caller(g: &mut crate::game::Game) -> PlayerId {
+pub fn fog_of_war_caller(g: &crate::game::Game) -> PlayerId {
     if g.seats.len() == 1 { return g.player; }
     match crate::seats::men_up(g).first() {
         Some(&p) => p,
@@ -394,7 +394,7 @@ pub fn fog_of_war_caller(g: &mut crate::game::Game) -> PlayerId {
 }
 
 /// Where `p` lies for the player's man, by the way he looks. (FogOfWar.sideOf)
-pub fn fog_of_war_side_of(g: &mut crate::game::Game, p: V3) -> crate::close::CloseId {
+pub fn fog_of_war_side_of(g: &crate::game::Game, p: V3) -> crate::close::CloseId {
     let pl = fog_of_war_caller(g);
     let c = g.pl[pl].ch;
     let l = gaze_of(g, c);
@@ -410,7 +410,7 @@ pub fn fog_of_war_side_of(g: &mut crate::game::Game, p: V3) -> crate::close::Clo
 }
 
 /// The words of one call: in the player's own room the side of him, else the place by the level's room names, behind him said first. (FogOfWar.callWords)
-pub fn fog_of_war_call_words(g: &mut crate::game::Game, kind: crate::fogofwar::FogOfWarCallWordsKind, p: V3) -> String {
+pub fn fog_of_war_call_words(g: &crate::game::Game, kind: crate::fogofwar::FogOfWarCallWordsKind, p: V3) -> String {
     let side = fog_of_war_side_of(g, p);
     let there = crate::dialogue::place_name(g, p);
     let me = fog_of_war_caller(g);

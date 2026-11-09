@@ -119,7 +119,7 @@ pub(super) fn gun_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     quiet_tick(g, st, b)
 }
 /// THE SUIT, THE TRIM: no walk, no turn: he leans half a step toward the pool so that a shoulder catches it, holds, and leans back (down throughout)
-pub(super) fn lean_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
+pub(super) fn lean_start(g: &mut Game, st: &KitStage, b: &mut Beat) -> Result<(), String> {
     if b.man.is_some() { return Err(String::from("Sam's")); }
     let face = st.plan.as_ref().map_or(0.0, |x| x.wall.face);
     let t = at(st, [0.0, face + KIT_PLAN.off_face, 0.0]);
@@ -133,7 +133,7 @@ pub(super) fn lean_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Resul
     sam_stand(g, st);
     Ok(())
 }
-pub(super) fn lean_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
+pub(super) fn lean_tick(g: &mut Game, st: &KitStage, b: &mut Beat) -> Step {
     let c = g.pl[g.player].ch;
     let p = g.ch[c].pos;
     let el = g.time - b.pt;

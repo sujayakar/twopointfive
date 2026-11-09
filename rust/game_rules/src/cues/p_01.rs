@@ -451,7 +451,7 @@ pub fn cues_ears(g: &mut crate::game::Game) -> Vec<V3> {
 }
 
 /// `done` of `overheard`.
-fn heard_done(g: &mut Game, t: f64, text: &str, why: &str) -> bool {
+fn heard_done(g: &Game, t: f64, text: &str, why: &str) -> bool {
     why.is_empty()
 }
 

@@ -137,7 +137,7 @@ fn flagged(g: &Game, boxes: &[BoxId], flag: f64) -> f64 {
 }
 
 /// Singles of the pool one man fills at most, over the men who stand; 0 for a thing with no cast. Written here on the Stood's own lists: posehome.ts's two functions have no other caller and are still stubs.   (posehome.ts manSingles, eachPosed)
-fn man_singles_of(g: &mut Game, s: &crate::levelfit::Stood) -> f64 {
+fn man_singles_of(g: &Game, s: &crate::levelfit::Stood) -> f64 {
     let (Some(guards), Some(civilians)) = (&s.guards, &s.civilians) else { return 0.0 };
     if s.seats.is_none() || s.player.is_none() { return 0.0; }
     let mut bodies: Vec<CharId> = Vec::new();

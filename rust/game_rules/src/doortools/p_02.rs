@@ -366,7 +366,7 @@ pub fn door_tools_locked_out(g: &crate::game::Game, d: DoorId, side: f64) -> boo
 }
 
 /// locked against the team on the face it opens toward: a boot only drives it onto its frame   (doortools.ts DoorTools.frameHeld)
-pub fn door_tools_frame_held(g: &mut crate::game::Game, d: DoorId, side: f64) -> bool {
+pub fn door_tools_frame_held(g: &crate::game::Game, d: DoorId, side: f64) -> bool {
     if g.dr[d].def.steel.unwrap_or(false) || is_open(g, d) || !door_tools_locked_out(g, d, side) { return false; }
     let w = g.dr[d].def.width;
     let from = door_pt(g, d, w / 2.0, 0.6, side, None);

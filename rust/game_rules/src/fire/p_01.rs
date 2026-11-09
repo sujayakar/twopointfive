@@ -165,7 +165,7 @@ pub fn burns(g: &crate::game::Game, t: FixtureId) -> bool {
 }
 
 /// The wind at a fire's flame: as it blows, how hard, and what leans the flame (capped).   (fire.ts windAt)
-pub fn wind_at(g: &mut crate::game::Game, mouth: V3) -> crate::fire::WindAt {
+pub fn wind_at(g: &crate::game::Game, mouth: V3) -> crate::fire::WindAt {
     let (height, wind_max) = (g.k.fire.height, g.k.fire.wind_max);
     let wv = crate::wind::wind_at(g, [mouth[0], mouth[1] + height * 0.6, mouth[2]], None);
     let wl = m::hyp2(wv[0], wv[2]);
