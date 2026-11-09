@@ -16,6 +16,7 @@ interface Level {
   materials: number[];      // what the shape's parts are made of
   spread: number;           // normals it lost: the mean of 1 - |their mean|. It becomes roughness
   rides: string[];          // for each part, the bone or twig that carries it: fewer, the coarser
+  open?: number; shade?: number;   // of a skin (gravel, bark): how open what it lost was to the sky, and how much of a low sun it shades. No color mends either (notes/meshes.md: a relief flattened to 26 mm is 85 % too bright at low sun)
   soft: number;             // metres: how far the motion it drops still swings (rms). It thins and widens what it covers
 }
 // Pieces: solids of the lab (box, planes, curves), each with a range of widths [from, to) of its own if the maker wants finer control than a level
@@ -27,7 +28,8 @@ interface Level {
 How the engine uses it
 - The width of a ray is f(t) = w + s t, shifted by up to half an octave either way by ONE die a ray. A level is used where from <= f < the next one's from. So all objects on a ray agree, and there is no seam between levels or objects.
 - Past `gone` the object is in the world's cells. They are measured by rays through its coarsest level, from six sides; nothing has to be authored for that.
-- What separates space (walls, floors, doors, big panels) has gone = 0. Rooms do not leak because of a level.
+- What separates space (walls, floors, doors, big panels, the strip over a door) has gone = 0. Rooms do not leak because of a level. Size can not tell: its maker says so.
+- The world's cells are 0.32 and 0.64 m and no wider (wider ones span walls), and hold one side of a wall.
 - Everything that moves has bounds that hold at every level, so the tree need not know which is in use.
 
 What a maker must keep between neighbouring levels, each one at the width where it takes over, alone on a grey floor
