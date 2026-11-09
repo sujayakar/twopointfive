@@ -88,18 +88,6 @@ fn staged(p: &mut Play, key: &str) -> Vec<String> {
     bad
 }
 
-/// the one mark that breaks the rule, as the level has it: `the_office_rescue_marks_stand_on_floor`
-const OFFICE_ROAMER: &str = "roamer 2 ";
-
-/// THE RULE: a rescue's marks stand on free floor. A FAILURE MEANS: a man is stood inside the furniture and pushed out of it on the first frame.
-#[test]
-#[ignore = "the game: the office's rescue stands roamer 2 at (7.2, 6.4) in the conference table, and he is pushed 0.50 m out"]
-fn the_office_rescue_marks_stand_on_floor() {
-    let mut p = Play::mission("office.json", "?levelFile=office.json&rescue&squad=2", &Opts { seed: 3, ..Default::default() });
-    let bad: Vec<_> = staged(&mut p, "rescue");
-    assert!(bad.is_empty(), "{bad:#?}");
-}
-
 /// THE RULE (a rescue once vanished from levels/test-rooms.json and only this check saw it): every level file whose data names a mission of a kind stages it, with the cast on its marks. A lesson's level shows its lesson.
 /// A FAILURE MEANS: a mission row opens an empty floor.
 #[test]
@@ -114,7 +102,7 @@ fn every_level_stages_the_missions_it_names() {
         for (key, words) in kinds(&data) {
             n += 1;
             let mut p = Play::mission(name, &format!("?levelFile={name}&{words}"), &Opts { seed: 3, ..Default::default() });
-            for w in staged(&mut p, key) { if !(name == "office.json" && w.starts_with(OFFICE_ROAMER)) { bad.push(format!("{name} {key}: {w}")); } }
+            for w in staged(&mut p, key) { bad.push(format!("{name} {key}: {w}")); }
             if lesson { p.frame(); if p.view().lesson.is_none() { bad.push(format!("{name}: no lesson showing")); } }
         }
     }

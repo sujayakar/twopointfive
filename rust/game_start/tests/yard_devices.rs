@@ -38,7 +38,6 @@ fn the_yard_is_lit_off_the_mains_and_dark_with_them_out() {
 /// THE SAME RULE at the places the game has moved from: the gate and the middle of the yard, the mains out, under 0.2 to a bare eye (the old check's bar: it read 0.00 to 0.13 on the meter it was written on, the battery lamp on the mast counted),
 /// and the radio room's tube better than its eye by 0.15.
 #[test]
-#[ignore = "the game: with the mains out the gate reads 0.21 and mid yard 0.25 to a bare eye (bar 0.2); the radio room's eye 0.81, tube 0.94 (bar 0.15 between)"]
 fn the_gate_and_the_middle_of_the_yard_are_dark_with_the_mains_out() {
     let mut p = Play::mission("floodlit.json", "?levelFile=floodlit.json&roomclear&squad4", &seed(1));
     p.g.god_mode = true;
